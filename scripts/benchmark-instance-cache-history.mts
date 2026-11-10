@@ -3,7 +3,7 @@ import {readFileSync,writeFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
 import {parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
 import {transformSelection} from '../src/services/directSolidTools'
-import {SolidInstanceBatchCache} from '../src/services/solidInstanceBatchCache'
+import {SolidInstanceBatchCache} from '../src/kernel/solidInstanceBatchCache'
 const [fixture,output]=process.argv.slice(2)
 if(!fixture||!output)throw Error('Usage: fixture.json report.json')
 const first=parseDirectDocument(readFileSync(fixture,'utf8')),source=first.bodies.find(b=>!b.instance)

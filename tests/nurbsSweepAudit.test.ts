@@ -1,12 +1,12 @@
 import {expect,it} from 'vitest'
-import {inspectSweepSeams,type SweepSeamDeclaration} from '../src/services/nurbsSweepAudit'
-import type {NurbsSurface} from '../src/services/nurbsSurface'
-import {trimNurbsSurface} from '../src/services/nurbsSurface'
-import {lineNurbsCurve,roundPolylineNurbsCurve,transitionPolylineNurbsCurve,sweepNurbsCurve} from '../src/services/nurbsConstructors'
-import {decomposeNurbsCurve} from '../src/services/nurbsCurve'
+import {inspectSweepSeams,type SweepSeamDeclaration} from '../src/kernel/nurbsSweepAudit'
+import type {NurbsSurface} from '../src/kernel/nurbsSurface'
+import {trimNurbsSurface} from '../src/kernel/nurbsSurface'
+import {lineNurbsCurve,roundPolylineNurbsCurve,transitionPolylineNurbsCurve,sweepNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {decomposeNurbsCurve} from '../src/kernel/nurbsCurve'
 import {readFileSync} from 'node:fs'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 const plane=(y:number):NurbsSurface=>({degreeU:1,degreeV:2,knotsU:[0,0,1,1],knotsV:[0,0,0,1,1,1],controlPoints:[0,1].map(x=>[0,.5,1].map(v=>[x,y+v,0])),weights:[[1,1,1],[1,1,1]]})
 const seam:SweepSeamDeclaration={patches:[0,1],boundaries:['vMax','vMin'],order:2,normalScale:1,jetTolerance:1e-8}
 it('preserves regularity and bounded jet evidence through WASM without promoting exact G1/G2',()=>{

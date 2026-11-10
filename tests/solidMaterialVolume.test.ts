@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {materialExpectation,validMaterial} from '../src/services/solidMaterialVolume'
+import {materialExpectation,validMaterial} from '../src/kernel/solidMaterialVolume'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 const cases=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/material-segment/contract.json',import.meta.url),'utf8')).cases
 const mode=(c:any)=>c.request.op==='cad_material_chord'?'chord' as const:'segment' as const

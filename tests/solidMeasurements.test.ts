@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {measureSolidVertices,measureSolidManifoldMetrics,measureSolidEdgeCurvature,measureSolidMassProperties} from '../src/services/solidMeasurements'
-import {createBrepBox,createBrepCylinder,createBrepSphere,booleanNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
+import {measureSolidVertices,measureSolidManifoldMetrics,measureSolidEdgeCurvature,measureSolidMassProperties} from '../src/kernel/solidMeasurements'
+import {createBrepBox,createBrepCylinder,createBrepSphere,booleanNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep,tessellateNurbsBrep,transformNurbsBrep} from '../src/kernel/geometry/brep'
 const body=(brep:ReturnType<typeof createBrepBox>)=>({id:'body',name:'Body',brep,mesh:tessellateNurbsBrep(brep)})
 it('measures vertices across bodies without modifying their documents',()=>{
  const a=body(createBrepBox([0,0,0],[1,1,1])),b=body(createBrepBox([3,4,12],[4,5,13]))

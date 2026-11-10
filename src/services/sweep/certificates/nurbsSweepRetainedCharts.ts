@@ -1,6 +1,6 @@
-import type {NurbsBrep} from '../../geometry/brep'
+import type {NurbsBrep} from '../../../kernel/geometry/brep'
 import type {SurfaceLinearInjectivityAudit} from './nurbsSweepAudit'
-import {callGeometryRust} from '../../geometry/kernel'
+import {callGeometryRust} from '../../../kernel/geometry/kernel'
 export interface SweepRetainedChartEvidence {
  allChartsCertified:boolean
  cells:number

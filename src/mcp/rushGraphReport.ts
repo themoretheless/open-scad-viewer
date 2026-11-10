@@ -1,8 +1,8 @@
-import { evaluateRushGraphGeometry } from '../services/rushGraphChecks'
+import { evaluateRushGraphGeometry } from '../language/rushGraphChecks'
 import type { McpServer } from '@modelcontextprotocol/server'
 import { z } from 'zod/v4'
 import type { McpGeometryService } from './geometryService'
-import { compileRushGraph, rushGraphSchema } from '../services/rushGraph'
+import { compileRushGraph, rushGraphSchema } from '../language/rushGraph'
 import { renderRushGraphPreviews } from './rushGraphPreview'
 
 function buildLineStarts(source: string): number[] {

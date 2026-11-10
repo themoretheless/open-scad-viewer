@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {addCertifiedErrorUpper,sqrtTwoCertifiedErrorUpper} from '../src/services/nurbsErrorComposition'
+import {addCertifiedErrorUpper,sqrtTwoCertifiedErrorUpper} from '../src/kernel/nurbsErrorComposition'
 it('encloses a lost half-ulp term and preserves exact zero contributions',()=>{
  expect(addCertifiedErrorUpper(1,2**-53)).toBe(1+2**-52)
  expect(addCertifiedErrorUpper(0,Number.MIN_VALUE)).toBe(Number.MIN_VALUE)

@@ -1,10 +1,10 @@
 import {expect,it} from 'vitest'
-import {callNurbsRust} from '../src/services/geometry/nurbs'
+import {callNurbsRust} from '../src/kernel/geometry/nurbs'
 import {readFileSync} from 'node:fs'
-import {circleNurbsCurve,bezierNurbsCurve,streamProgressiveNurbsProfiles,previewProgressiveNurbsProfiles,progressiveSweepNurbsPatches,progressiveSweepNurbsProfiles,type NurbsScaleLaw} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface,type NurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {circleNurbsCurve,bezierNurbsCurve,streamProgressiveNurbsProfiles,previewProgressiveNurbsProfiles,progressiveSweepNurbsPatches,progressiveSweepNurbsProfiles,type NurbsScaleLaw} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface,type NurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 import {readSweepPatchViewportEvidence} from '../src/services/sweepViewportEvidence'
 const law=(a:number,b:number):NurbsScaleLaw=>({degree:1,knots:[2,2,6,6],values:[a,b],weights:[1,1]})
 const profile=()=>bezierNurbsCurve([[1,0,0],[2,0,1]],[1,2])
@@ -305,7 +305,7 @@ it('streams reachable Rush sweep levels while preserving synchronous graph outpu
 })
 
 it('cancels the Rush parser between sweep levels and leaves its serialized queue usable',async()=>{
- const {parseOpenSCAD,AbortedError}=await import('../src/services/openscadParser')
+ const {parseOpenSCAD,AbortedError}=await import('../src/language/openscadParser')
  const source=readFileSync('examples/rush/progressive-sweep.r','utf8')
  let cancelled=false,levels=0
  await expect(parseOpenSCAD(source,{shouldAbort:()=>cancelled,onSweepPreview:(_id,preview)=>{
@@ -351,8 +351,8 @@ it('streams refused graph previews without promoting them into a scene',async()=
 
 
 it('places scene previews through nested affine transforms in graph order',async()=>{
- const {progressiveScenePreviewMapper}=await import('../src/services/rushFrontendScene')
- const {transformNurbsSurfacePatches}=await import('../src/services/nurbsSurface')
+ const {progressiveScenePreviewMapper}=await import('../src/language/rushFrontendScene')
+ const {transformNurbsSurfacePatches}=await import('../src/kernel/nurbsSurface')
  const document=compileRushFrontend(readFileSync('examples/rush/progressive-sweep.r','utf8')).document
  const sweepId=document.nodes.find(n=>n.op==='progressive_sweep')!.id
  const display=document.nodes.find(n=>n.op==='nurbs_patches_tessellate')!

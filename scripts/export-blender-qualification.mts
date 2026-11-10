@@ -1,9 +1,9 @@
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {emptyDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {createSolidInstance} from '../src/services/solidInstances'
-import {exportSolidBlenderSnapshot} from '../src/services/solidBlenderExchange'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {createSolidInstance} from '../src/kernel/solidInstances'
+import {exportSolidBlenderSnapshot} from '../src/kernel/solidBlenderExchange'
 const directory=resolve(process.argv[2]??'/tmp/solid-blender-qualification')
 mkdirSync(directory,{recursive:true})
 for(const width of [2,7]){

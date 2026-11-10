@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {applySolidSceneEdit,type SolidSceneEditOptions} from '../src/services/solidSceneEdit'
+import {applySolidSceneEdit,type SolidSceneEditOptions} from '../src/kernel/solidSceneEdit'
 import {emptyDirectDocument} from '../src/services/directModeling'
 
 it('rejects duplicate requests with missing, repeated or occupied identities before geometry work',()=>{

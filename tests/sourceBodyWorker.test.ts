@@ -1,6 +1,6 @@
 import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/services/sourceBodyArchive'
 import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {afterEach,expect,it} from 'vitest'
 import {readFileSync,writeFileSync,appendFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'

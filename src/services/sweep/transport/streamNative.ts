@@ -1,5 +1,5 @@
-import {callNurbsRust} from '../../geometry/nurbs'
-import type {ProgressiveSweepStreamOptions} from '../../nurbsConstructors'
+import {callNurbsRust} from '../../../kernel/geometry/nurbs'
+import type {ProgressiveSweepStreamOptions} from '../../../kernel/nurbsConstructors'
 
 /** Browser scheduling and cancellation only; Rust owns source snapshots and refinement. */
 export async function* streamNativeSweep<P,R>(request:Record<string,unknown>,control:ProgressiveSweepStreamOptions):AsyncGenerator<P,R,void>{

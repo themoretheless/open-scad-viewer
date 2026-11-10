@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
-import {circleNurbsCurve,type NurbsScaleLaw} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {repairNurbsCircleSweepSections} from '../src/services/nurbsCircleSectionRepair'
-import {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody} from '../src/services/geometry/brep'
+import {circleNurbsCurve,type NurbsScaleLaw} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
+import {repairNurbsCircleSweepSections} from '../src/kernel/nurbsCircleSectionRepair'
+import {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody} from '../src/kernel/geometry/brep'
 const law=(a:number,b:number):NurbsScaleLaw=>({degree:1,knots:[0,0,1,1],values:[a,b],weights:[1,1]})
 it('shares the correction budget across stations and never publishes partial results',()=>{
  const curve=circleNurbsCurve([0,0,0],[0,0,1],.5)
@@ -29,8 +29,8 @@ it('rebuilds scale/twist walls and caps with exact profile G2 and a composed bou
 })
 it('carries explicit circle correction through Rush units, viewport evidence and Solid',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const source=readFileSync('examples/rush/progressive-miter-circle-corrected-hollow.r','utf8')
  const graph=compileRushFrontend(source)
@@ -60,8 +60,8 @@ it('composes circle repair before spatial cap projection and revalidates the fin
  expect(body.boundaryCertificate.errorUpper).toBeGreaterThanOrEqual(body.sectionCorrection!.wallDisplacementUpper!)
  expect(body.volume.solidGeometryCertified).toBe(true)
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const graph=compileRushFrontend(readFileSync('examples/rush/progressive-miter-spatial-circle-corrected-hollow.r','utf8'))
  const built=buildOwnNurbs(graph.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
@@ -69,8 +69,8 @@ it('composes circle repair before spatial cap projection and revalidates the fin
 })
 it('revalidates authored affine laws after circle correction through Rush',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const graph=compileRushFrontend(readFileSync('examples/rush/progressive-miter-affine-circle-corrected-hollow.r','utf8'))
  const node=graph.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!

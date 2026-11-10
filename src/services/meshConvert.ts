@@ -5,8 +5,8 @@
  * per-object identities are not carried across.
  */
 import type { MeshData } from '../core/mesh'
-import type { PolygonMesh } from './geometry/polygon'
-import { inspectNurbsMesh, type NurbsMesh } from './geometry/tessellation'
+import type { PolygonMesh } from '../kernel/geometry/polygon'
+import { inspectNurbsMesh, type NurbsMesh } from '../kernel/geometry/tessellation'
 import { flattenExportMeshes } from './meshExportAdapter'
 import { exportMeshFormat, exportMeshFormatCompressed } from './meshExportFormats'
 import {
@@ -96,7 +96,7 @@ export async function exportMesh(
   const quality = options.quality ?? 'viewport'
   const source = typeof options.source === 'string' ? options.source.trim() : ''
   if (Array.isArray(mesh) && quality !== 'viewport' && source.length > 0) {
-    const { evaluateExportMeshes } = await import('./geometryBuildEngine')
+    const { evaluateExportMeshes } = await import('../kernel/geometryBuildEngine')
     const candidateQualities: readonly ('ultra' | 'high')[] = quality === 'ultra' ? ['ultra', 'high'] : ['high']
     for (const candidate of candidateQualities) {
       try {

@@ -4,7 +4,7 @@ import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {Worker} from 'node:worker_threads'
 import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
-import {wholeWallExpectation,validWholeWall} from '../src/services/solidWholeWall'
+import {wholeWallExpectation,validWholeWall} from '../src/kernel/solidWholeWall'
 
 assert.ok(process.argv[2],'Provide a qualification output directory')
 const directory=resolve(process.argv[2])

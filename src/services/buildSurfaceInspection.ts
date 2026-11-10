@@ -1,5 +1,5 @@
-import type {PolygonMesh} from './geometry/polygon'
-import {callGeometryRust} from './geometry/kernel'
+import type {PolygonMesh} from '../kernel/geometry/polygon'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 
 export interface BuildSurfaceOptions {
   buildDirection: [number,number,number]

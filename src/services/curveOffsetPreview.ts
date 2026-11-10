@@ -1,4 +1,4 @@
-import type {NurbsCurve} from './nurbsCurve'
+import type {NurbsCurve} from '../kernel/nurbsCurve'
 import type {CurveOffsetDiagnostics} from './curveOffsetDiagnostics'
 export function offsetPreviewSegments(curves:NurbsCurve[],diagnostics:CurveOffsetDiagnostics|null){
  const segments=curves.flatMap(c=>c.degree===1?c.controlPoints.slice(1).map((b,i)=>({a:c.controlPoints[i]!,b})):[])

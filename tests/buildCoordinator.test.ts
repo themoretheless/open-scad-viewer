@@ -14,7 +14,7 @@ import {
   type GeometryBuildSuccess,
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
-} from '../src/services/geometryWorkerProtocol'
+} from '../src/kernel/geometryWorkerProtocol'
 import type { MeshData } from '../src/core/mesh'
 
 class FakeWorker implements WorkerLike {

@@ -1,4 +1,4 @@
-import { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
+import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import { type SourceSeamResult, type SourceBodyResult } from '../../services/sourceBody'
 import { sourceBodyRecordOptions } from '../../services/sourceBodyArchive'
 import { type SourceWallResult } from '../../services/sourceWallTransport'
@@ -178,7 +178,7 @@ async function exportStepCurrent() {
   const snapshot=structuredClone(body)
   error.value=''
   try {
-    const {exportSolidStepCurrent}=await import('../../services/solidStepExchange')
+    const {exportSolidStepCurrent}=await import('../../kernel/solidStepExchange')
     download(await exportSolidStepCurrent(snapshot),'edited-body.step')
   } catch(e){error.value=e instanceof Error?e.message:String(e)}
 }
@@ -187,7 +187,7 @@ async function exportStepAssembly() {
   const snapshot=structuredClone(document.value)
   error.value=''
   try {
-    const {exportSolidStepAssembly}=await import('../../services/solidStepAssembly')
+    const {exportSolidStepAssembly}=await import('../../kernel/solidStepAssembly')
     download(await exportSolidStepAssembly(snapshot),'edited-scene.step')
   } catch(e){error.value=e instanceof Error?e.message:String(e)}
 }
@@ -195,7 +195,7 @@ async function exportStepOriginal() {
   if(restoringDraft.value)return
   error.value = ''
   try {
-    const {exportSolidStepOriginal} = await import('../../services/solidStepExchange')
+    const {exportSolidStepOriginal} = await import('../../kernel/solidStepExchange')
     download(await exportSolidStepOriginal(), 'retained-model.step')
   } catch (e) { error.value = e instanceof Error ? e.message : String(e) }
 }

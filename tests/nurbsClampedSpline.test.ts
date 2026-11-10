@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {clampedSplineNurbsCurve,hermiteNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve,trimNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {clampedSplineNurbsCurve,hermiteNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve,trimNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 
 it('reproduces a cubic and its first two derivatives with nonuniform authored parameters',()=>{
  const t=[-2,-.7,.3,2],points=t.map(x=>[x,x*x,x**3] as [number,number,number])

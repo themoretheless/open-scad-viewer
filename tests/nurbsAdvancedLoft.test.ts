@@ -1,10 +1,10 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {autoGuidedLoftNurbsCurves,matchNurbsLoftEnds,naturalLoftNurbsCurves,lineNurbsCurve,circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {createNaturalBrepSectionLoft,inspectNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {autoGuidedLoftNurbsCurves,matchNurbsLoftEnds,naturalLoftNurbsCurves,lineNurbsCurve,circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {createNaturalBrepSectionLoft,inspectNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 const section=(z:number)=>lineNurbsCurve([0,0,z],[1,0,z])
 it('automatically discovers sorted reversed guides and nonuniform stations through WASM',()=>{
  const guides=[lineNurbsCurve([.75,0,2],[.75,0,0]),lineNurbsCurve([.25,0,0],[.25,0,2])]
@@ -37,8 +37,8 @@ it.each(['auto-guided-loft.r','natural-loft-solid.r','g2-loft-surface.r'])('buil
 })
 
 it('preserves the new capped loft as authoritative BRep through the editor Solid bridge',async()=>{
- const {parseOpenSCAD}=await import('../src/services/openscadParser')
- const {sceneMeshesToSolidDocument,meshDataToEditablePolygon}=await import('../src/services/solidBridge')
+ const {parseOpenSCAD}=await import('../src/language/openscadParser')
+ const {sceneMeshesToSolidDocument,meshDataToEditablePolygon}=await import('../src/kernel/solidBridge')
  const {meshObjectStats}=await import('../src/services/meshEditing')
  const scene=await parseOpenSCAD(readFileSync('examples/rush/natural-loft-solid.r','utf8'))
  const solid=sceneMeshesToSolidDocument(scene.meshes)

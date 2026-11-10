@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
-import {inspectNurbsBrep,createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {meshToNurbsBrep,meshToNurbs,meshToSdf,meshToSubdivision,tessellateNurbsPatches} from '../src/services/geometry/reconstruction'
-import {evaluateSdf,tessellateSdf} from '../src/services/geometry/sdf'
-import {tessellateSubdivision} from '../src/services/geometry/subdivision'
-import {parseOpenSCAD} from '../src/services/openscadParser'
+import {inspectNurbsBrep,createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {meshToNurbsBrep,meshToNurbs,meshToSdf,meshToSubdivision,tessellateNurbsPatches} from '../src/kernel/geometry/reconstruction'
+import {evaluateSdf,tessellateSdf} from '../src/kernel/geometry/sdf'
+import {tessellateSubdivision} from '../src/kernel/geometry/subdivision'
+import {parseOpenSCAD} from '../src/language/openscadParser'
 const cube=()=>tessellateNurbsBrep(createBrepBox([-1,-1,-1],[1,1,1]),1)
 it('reconstructs exact NURBS patches and bounded smoothed patches through WASM',()=>{
  const mesh=cube(),exact=meshToNurbs(mesh)

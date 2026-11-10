@@ -3,7 +3,7 @@ import {
   decomposeNurbsCurve, elevateNurbsCurve, evaluateNurbsCurve, insertNurbsKnot,
   nurbsBasisDerivatives, nurbsCurveBounds, reverseNurbsCurve, splitNurbsCurve,
   trimNurbsCurve, validateNurbsCurve, type NurbsCurve,
-} from '../src/services/nurbsCurve'
+} from '../src/kernel/nurbsCurve'
 
 const circle: NurbsCurve = {
   degree: 2, knots: [0, 0, 0, 1, 1, 1],

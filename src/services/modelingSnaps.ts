@@ -1,4 +1,4 @@
-import {evaluateNurbsCurve,evaluateNurbsCurvePoints,type NurbsCurve} from './nurbsCurve'
+import {evaluateNurbsCurve,evaluateNurbsCurvePoints,type NurbsCurve} from '../kernel/nurbsCurve'
 import type { DirectSketch, Point2 } from './directModeling'
 import type { Vec3, SketchPlane } from './directSketchGeometry'
 export type SnapKind = 'vertex' | 'midpoint' | 'center' | 'edge' | 'intersection' | 'axis' | 'grid' | 'quadrant' | 'tangent' | 'perpendicular' | 'origin' | 'bounds-center'

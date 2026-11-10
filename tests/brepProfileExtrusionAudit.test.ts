@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { executeBrepNativeProgram } from '../src/services/brepNativeExecutor'
+import { executeBrepNativeProgram } from '../src/kernel/brepNativeExecutor'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 import {
   analyzeNurbsBrep,
@@ -7,9 +7,9 @@ import {
   createBrepCylinder,
   extrudeBrepCurves,
   type NurbsBrep,
-} from '../src/services/geometry/brep'
-import { validateBrepProfile } from '../src/services/geometry/brepProfile'
-import { elevateNurbsCurve, insertNurbsKnot, type NurbsCurve } from '../src/services/nurbsCurve'
+} from '../src/kernel/geometry/brep'
+import { validateBrepProfile } from '../src/kernel/geometry/brepProfile'
+import { elevateNurbsCurve, insertNurbsKnot, type NurbsCurve } from '../src/kernel/nurbsCurve'
 
 function circle(): NurbsCurve {
   return {

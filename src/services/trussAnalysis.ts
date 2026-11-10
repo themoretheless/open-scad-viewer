@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 
 export type TrussVector = [number, number, number]
 export interface TrussMember {

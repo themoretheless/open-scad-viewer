@@ -1,6 +1,6 @@
 import {expect, it, vi} from 'vitest'
-import {evaluateRushGraphGeometry, requireRushGraphChecks} from '../src/services/rushGraphChecks'
-import {parseOpenSCAD} from '../src/services/openscadParser'
+import {evaluateRushGraphGeometry, requireRushGraphChecks} from '../src/language/rushGraphChecks'
+import {parseOpenSCAD} from '../src/language/openscadParser'
 
 it('measures target snapshots independently, reuses their build and retains assertion order', async () => {
   const shown = await parseOpenSCAD('cube([10,3,4]);')

@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {formulaNurbsCurve,type NurbsFormulaToken} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {formulaNurbsCurve,type NurbsFormulaToken} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 import {readFileSync} from 'node:fs'
 
 it('evaluates polynomial coordinate formulas and derivatives after normalized domain conversion',()=>{

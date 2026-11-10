@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {worldPoint,type SketchPlane} from '../services/directSketchGeometry'
 import type {Point2} from '../services/directModeling'
-import type {ProfilePreparationReport} from '../services/solidProfilePreparation'
+import type {ProfilePreparationReport} from '../kernel/solidProfilePreparation'
 import {computed} from 'svet'
 import {profileIntersectionDiagnostics} from '../services/profileIntersectionDiagnostics'
 const props=defineProps<{mode:'preview'|'status';report:ProfilePreparationReport;locale?:string;project?:(point:number[],pane:'2d'|'3d')=>number[];pane?:'2d'|'3d';plane?:SketchPlane;view?:number}>()

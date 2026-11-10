@@ -1,9 +1,9 @@
 import {requirePolylineSketch} from './retainedSketchProfile'
-import { callGeometryRust } from './geometry/kernel'
+import { callGeometryRust } from '../kernel/geometry/kernel'
 import type { DirectSketch, Point2 } from './directModeling'
 import { sampleCurve } from './directSketchGeometry'
-import type { NurbsCurve } from './nurbsCurve'
-import { solveRushGraphSketch, type SketchConstraint as SolverConstraint } from './rushGraphSketch'
+import type { NurbsCurve } from '../kernel/nurbsCurve'
+import { solveRushGraphSketch, type SketchConstraint as SolverConstraint } from '../language/rushGraphSketch'
 export type SketchDimension = {kind:'length';a:number;b:number} | {kind:'angle';a:number;b:number;c:number} | {kind:'horizontal'|'vertical';a:number;b:number} | {kind:'radius'|'diameter'}
 export interface DimensionResult { points:Point2[]; measurements:{value:number|null;label:Point2;lines:Point2[][]}[] }
 const measuredCache = new WeakMap<DirectSketch, DimensionResult>()

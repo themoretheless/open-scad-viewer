@@ -1,10 +1,10 @@
 import {readFileSync} from 'node:fs'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,checkedProfileSweepNurbsSurface} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
+import {bezierNurbsCurve,checkedProfileSweepNurbsSurface} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 // Fixtures and assertions only; source jets, frame integration, G2 and embedding run in Rust.
 const path:NurbsCurve={degree:3,knots:[0,0,0,0,.25,.25,.25,.5,.5,.5,.75,.75,.75,1,1,1,1],
  controlPoints:[[3,0,0],[3,1,.125],[1,3,.125],[0,3,0],[-1,3,-.125],[-3,1,-.125],[-3,0,0],[-3,-1,.125],[-1,-3,.125],[0,-3,0],[1,-3,-.125],[3,-1,-.125],[3,0,0]],weights:Array(13).fill(1),periodic:false}

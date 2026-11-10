@@ -14,7 +14,7 @@ import {
   type ManifoldPlanBackend,
   type ManifoldPlanPayloadFamily,
 } from './manifoldPlanBackend'
-import { AbortedError, OpenSCADParseError } from './openscadErrors'
+import { AbortedError, OpenSCADParseError } from '../language/openscadErrors'
 import {
   executeSemanticProgram,
   SemanticProgramExecutionError,

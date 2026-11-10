@@ -12,7 +12,7 @@ if(preparedPath&&(resolve(preparedPath)===root||resolve(preparedPath).startsWith
 const previousPath='docs/qualification/own-rust-cad-v52.json',previous=JSON.parse(bytes(previousPath))
 const changed=[...execFileSync('git',['diff','--name-only','HEAD'],{cwd:root,encoding:'utf8'}).trim().split('\n'),...execFileSync('git',['ls-files','--others','--exclude-standard'],{cwd:root,encoding:'utf8'}).trim().split('\n')]
 const additions=changed.filter(path=>path==='docs/design/sweep-qualification-catalog.json'||path==='docs/qualification/historical-record-restoration-20261009.json'||path.startsWith('docs/qualification/native-integration-20261009/')||/^(crates\/.*\.(rs|toml|json)|src\/.*\.(ts|vue|css)|tests\/.*\.(ts|mjs)|scripts\/.*\.(mjs|mts)|vite.*\.ts|docs\/languages\/.*\.json)$/.test(path))
-const deliveryPaths=['scripts/qualificationKernelModuleDelivery.mjs','src/services/geometry/kernelCompilationRequired.ts','src/workers/manifoldPlanQualification.worker.ts']
+const deliveryPaths=['scripts/qualificationKernelModuleDelivery.mjs','src/kernel/geometry/kernelCompilationRequired.ts','src/workers/manifoldPlanQualification.worker.ts']
 const paths=[...new Set([...previous.sourceBundle.paths.filter(p=>existsSync(resolve(root,p))),...additions,...deliveryPaths,...execFileSync('git',['ls-files','crates/brep-core/src','crates/nurbs-core/src','crates/geometry-bridge/src','crates/bridge-cam/src','crates/bridge-analysis/src','crates/bridge-svg/src'],{cwd:root,encoding:'utf8'}).trim().split('\n').filter(p=>p.endsWith('.rs'))])].filter(p=>existsSync(resolve(root,p))).sort()
 
 const wasm=bytes('public/wasm/geometry-kernel.wasm'),wasmSha256=sha(wasm)

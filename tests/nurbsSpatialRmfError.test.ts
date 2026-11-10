@@ -1,7 +1,7 @@
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
-import {callNurbsRust} from '../src/services/geometry/nurbs'
-import {bezierNurbsCurve} from '../src/services/nurbsConstructors'
+import {callNurbsRust} from '../src/kernel/geometry/nurbs'
+import {bezierNurbsCurve} from '../src/kernel/nurbsConstructors'
 type Proof={continuousBound:boolean;withinBudget:boolean;errorUpper:number|null;cells:number;patches:unknown[]|null;solidCertified:boolean;globalEmbeddingCertified:boolean;capJoinsCertified:boolean}
 const constant=(v:number[])=>bezierNurbsCurve([v,v])
 function request(){
@@ -83,8 +83,8 @@ it('certifies parameter spatial RMF and charges copied seam through packaged WAS
 
 it('carries antipodal closed RMF correction through Rush and viewport with strict refusal',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
  const {readSweepPatchViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const source=readFileSync('examples/rush/closed-antipodal-spatial-rmf-progressive-sweep.r','utf8')
  const document=compileRushFrontend(source).document
@@ -98,8 +98,8 @@ it('carries antipodal closed RMF correction through Rush and viewport with stric
 
 it('carries closed spatial RMF through Rush to viewport with strict refusal',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
  const {readSweepPatchViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const source=readFileSync('examples/rush/closed-spatial-rmf-affine-progressive-sweep.r','utf8')
  const document=compileRushFrontend(source).document
@@ -113,8 +113,8 @@ it('carries closed spatial RMF through Rush to viewport with strict refusal',asy
 
 it('uses explicit RMF precision options in ordinary Rush construction',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
  const {readSweepPatchViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const source=readFileSync('examples/rush/closed-spatial-rmf-affine-progressive-sweep.r','utf8')
   .replace('initial_sections: 5,max_sections: 17','initial_sections: 129,max_sections: 129')
@@ -134,8 +134,8 @@ it('uses explicit RMF precision options in ordinary Rush construction',async()=>
 
 it.each(['closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r','closed-spatial-rmf-affine-body-certified.r','closed-periodic-spatial-rmf-affine-body-certified.r','open-spatial-rmf-affine-corrected-body-certified.r','open-spatial-rmf-varying-affine-hollow-corrected-body.r','open-spatial-rmf-parameter-varying-affine-hollow-corrected-body.r'])('owns spatial RMF body error through Rush and recomputes Solid admission: %s',async(file)=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
  const {readSweepBodyBoundaryViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const source=readFileSync(`examples/rush/${file}`,'utf8')
@@ -169,11 +169,11 @@ it.each(['closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r','closed-s
 
 it.each(['closed-spatial-rmf-affine-hollow-body-certified.r','closed-spatial-rmf-varying-affine-hollow-body.r','closed-periodic-spatial-rmf-varying-affine-hollow-body.r','closed-spatial-rmf-parameter-varying-affine-hollow-body.r','closed-periodic-spatial-rmf-parameter-varying-affine-hollow-body.r','closed-periodic-spatial-rmf-multiple-holes-body.r','closed-periodic-spatial-rmf-parameter-multiple-holes-body.r'])('certifies spatial RMF shell roles and refuses exhausted global work: %s',async(file)=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
  const {readSweepBodyBoundaryViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
- const {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/services/nurbsSweepEmbedding')
+ const {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/kernel/nurbsSweepEmbedding')
  const source=readFileSync(`examples/rush/${file}`,'utf8')
  const built=await buildOwnNurbsAsync(compileRushFrontend(source).document,{action:'build',display:{segments:2,subdivisionLevels:0}})
  if(!('nativeGeometry' in built))throw Error('Missing retained hollow spatial RMF body')

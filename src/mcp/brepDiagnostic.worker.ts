@@ -1,5 +1,5 @@
 import {parentPort} from 'node:worker_threads'
-import {diagnosticWorkerRuntime} from '../services/brepDiagnosticWorkerRuntime'
+import {diagnosticWorkerRuntime} from '../kernel/brepDiagnosticWorkerRuntime'
 if (!parentPort) throw new Error('B-rep diagnostic worker requires a parent port')
 let terminalPosted = false
 const receive = diagnosticWorkerRuntime((message, transfer) => {

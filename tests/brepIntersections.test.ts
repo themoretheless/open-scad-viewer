@@ -1,11 +1,11 @@
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {evaluateNurbsSurface,insertNurbsSurfaceKnot} from '../src/services/nurbsSurface'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {evaluateNurbsSurface,insertNurbsSurfaceKnot} from '../src/kernel/nurbsSurface'
 import {expect,it} from 'vitest'
-import {createBrepSphere,createBrepCylinder,createBrepFrustum,createBrepTorus,transformNurbsBrep} from '../src/services/geometry/brep'
-import {intersectionTraceToNurbsCurve,intersectNurbsSurfaceSurface,intersectNurbsCurveSegment,evaluateIntersectionTrace,intersectNurbsCurvePlane,intersectNurbsCurveSurface,intersectNurbsSurfacePlane,intersectNurbsCurveCurve,intersectNurbsCurveRuledSurface,intersectSphereSphere,intersectSphereCylinder,intersectSphereCone,intersectConeCone,intersectCylinderCylinder,intersectPlaneSphere,intersectPlaneCylinder,intersectPlaneCone,intersectPlaneTorus,intersectSphereTorus,intersectCylinderTorus,intersectConeTorus,intersectTorusTorus} from '../src/services/geometry/intersections'
-import type {NurbsBrep} from '../src/services/geometry/brep'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
-import {intersectionTraceToNurbsCurveSegments} from '../src/services/geometry/intersections'
+import {createBrepSphere,createBrepCylinder,createBrepFrustum,createBrepTorus,transformNurbsBrep} from '../src/kernel/geometry/brep'
+import {intersectionTraceToNurbsCurve,intersectNurbsSurfaceSurface,intersectNurbsCurveSegment,evaluateIntersectionTrace,intersectNurbsCurvePlane,intersectNurbsCurveSurface,intersectNurbsSurfacePlane,intersectNurbsCurveCurve,intersectNurbsCurveRuledSurface,intersectSphereSphere,intersectSphereCylinder,intersectSphereCone,intersectConeCone,intersectCylinderCylinder,intersectPlaneSphere,intersectPlaneCylinder,intersectPlaneCone,intersectPlaneTorus,intersectSphereTorus,intersectCylinderTorus,intersectConeTorus,intersectTorusTorus} from '../src/kernel/geometry/intersections'
+import type {NurbsBrep} from '../src/kernel/geometry/brep'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
+import {intersectionTraceToNurbsCurveSegments} from '../src/kernel/geometry/intersections'
 
 it('admits the entire ruled trace interval before returning native curves',()=>{
  for(const middle of [3,.25,1]){

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed,ref,toRaw,watch} from 'svet'
-import type {NurbsSurface} from '../services/nurbsSurface'
-import type {OffsetDeviationOptions} from '../services/nurbsOffsetDeviation'
+import type {NurbsSurface} from '../kernel/nurbsSurface'
+import type {OffsetDeviationOptions} from '../kernel/nurbsOffsetDeviation'
 import {useOffsetDeviationInspection} from '../services/useOffsetDeviationInspection'
 const props=defineProps<{surfaces:[NurbsSurface,NurbsSurface];active:boolean;ru:boolean}>()
 const label=(ru:string,en:string)=>props.ru?ru:en

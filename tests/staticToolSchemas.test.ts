@@ -2,7 +2,7 @@ import { InMemoryTransport, McpServer, type JSONRPCMessage, type StandardSchemaW
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod/v4'
 import { createStaticToolRegistration } from '../src/mcp/staticToolSchemas'
-import { rushGraphSchema } from '../src/services/rushGraph'
+import { rushGraphSchema } from '../src/language/rushGraph'
 
 type Response = {id: number; result?: Record<string, unknown>; error?: unknown}
 

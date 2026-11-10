@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
-import { OpenSCADParseError, parseOpenSCAD } from '../src/services/openscadParser'
+import { OpenSCADParseError, parseOpenSCAD } from '../src/language/openscadParser'
 
 const stableProfile = { languageProfile: 'openscad/stable-2021.01' as const }
 

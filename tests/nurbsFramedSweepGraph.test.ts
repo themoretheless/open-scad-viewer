@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
-import {evaluateNurbsSurface,type NurbsSurface} from '../src/services/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
+import {evaluateNurbsSurface,type NurbsSurface} from '../src/kernel/nurbsSurface'
 import {readFileSync} from 'node:fs'
 const source=()=>readFileSync('examples/rush/framed-sweep.r','utf8')
 

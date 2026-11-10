@@ -3,7 +3,7 @@ import {
   BREP_CAPABILITY_MATRIX,
   assertBrepCapabilityAllowsTopology,
   brepCapability,
-} from '../src/services/geometry/brepCapability'
+} from '../src/kernel/geometry/brepCapability'
 import {
   cancelGeometryKernel,
   issueGeometryLease,
@@ -12,8 +12,8 @@ import {
   resetGeometryKernelCancel,
   assertGeometryLeaseCurrent,
   GeometryLeaseError,
-} from '../src/services/geometry/kernelLeases'
-import { createSelectionTransferService } from '../src/services/geometry/selectionTransfer'
+} from '../src/kernel/geometry/kernelLeases'
+import { createSelectionTransferService } from '../src/kernel/geometry/selectionTransfer'
 import { topoIdFromParts } from '../src/core/topologyLineage'
 
 describe('B-rep product seam', () => {

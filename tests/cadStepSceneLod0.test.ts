@@ -1,5 +1,5 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest'
-import type {DirectStepLod0Import,DirectStepSceneImport} from '../src/services/cadNurbsStep'
+import type {DirectStepLod0Import,DirectStepSceneImport} from '../src/kernel/cadNurbsStep'
 import {parseDirectDocument} from '../src/services/directModeling'
 import {stringifyMeshJson} from '../src/services/meshJson'
 
@@ -7,11 +7,11 @@ const {bridge,tessellate}=vi.hoisted(()=>({
   bridge:vi.fn<(op:string,args:{text:string})=>unknown>(),
   tessellate:vi.fn(()=>{throw Error('exact tessellation must not be used for mixed LOD-0')}),
 }))
-vi.mock('../src/services/geometry/kernel',()=>({callGeometryRust:bridge}))
-vi.mock('../src/services/geometry/brep',async importOriginal=>({...await importOriginal<typeof import('../src/services/geometry/brep')>(),tessellateNurbsBrep:tessellate}))
+vi.mock('../src/kernel/geometry/kernel',()=>({callGeometryRust:bridge}))
+vi.mock('../src/kernel/geometry/brep',async importOriginal=>({...await importOriginal<typeof import('../src/kernel/geometry/brep')>(),tessellateNurbsBrep:tessellate}))
 
-import {importDirectStepLod0,importDirectStepScene} from '../src/services/cadNurbsStep'
-import {importStepForWorkbench,inspectStepRoute} from '../src/services/cadStepRouting'
+import {importDirectStepLod0,importDirectStepScene} from '../src/kernel/cadNurbsStep'
+import {importStepForWorkbench,inspectStepRoute} from '../src/kernel/cadStepRouting'
 import {stepLod0Cache} from '../src/services/stepLod0Cache'
 
 const model={bodies:[{outerShell:0,innerShells:[]}],vertices:[],edges:[],loops:[],faces:[],shells:[],topologyIds:{bodies:['body-1']}}

@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest'
-import { BrepInspectionCache } from '../src/services/brepInspectionCache'
-import { createBrepBox, inspectNurbsBrep } from '../src/services/geometry/brep'
+import { BrepInspectionCache } from '../src/kernel/brepInspectionCache'
+import { createBrepBox, inspectNurbsBrep } from '../src/kernel/geometry/brep'
 
 const box = (size: number) => createBrepBox([0, 0, 0], [size, size, size])
 

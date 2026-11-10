@@ -9,7 +9,7 @@ import {
   hitTestCompoundPath, cutCompoundPathAtHit, knifeSplitCompoundPath,
   findDragSnap, computeDistanceMarks, intersectingPathDirections,
   type PathFillMesh, type PathGradient,
-} from '../src/services/geometry/path2d'
+} from '../src/kernel/geometry/path2d'
 
 function meshArea(mesh: PathFillMesh): number {
   let area = 0

@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {validCurveOffsetConstruction} from '../src/services/curveOffsetConstruction'
 import {DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 const evidence={version:1 as const,scope:'at-construction' as const,sourceId:'removed-source',distanceMm:2,toleranceMm:.01,errorUpperMm:.001,method:'outward-source-offset-bevel-wire/1' as const,segmentCount:4,crossings:1,contacts:0,uncertain:0,complete:true,regionTopologyCertified:false as const}
 it('preserves historical construction evidence through serialization, edits, undo and redo',async()=>{
  await warmGeometryKernel()

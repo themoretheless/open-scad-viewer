@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 // module these tests use the normal installed package. Every geometry call still
 // executes the real Rust ABI; production delivery and worker bootstrap are not
 // replaced or claimed by this test.
-vi.mock('../src/services/geometry/kernelCompilation', async importOriginal => {
+vi.mock('../src/kernel/geometry/kernelCompilation', async importOriginal => {
   const path = process.env.OWN_EXACT_FULL_ROUND_WASM
   if (!path) return importOriginal()
   const { readFileSync } = await import('node:fs')
@@ -16,11 +16,11 @@ vi.mock('../src/services/geometry/kernelCompilation', async importOriginal => {
   const module = new WebAssembly.Module(bytes)
   return { compileGeometryKernelArtifactSync: () => module, compileGeometryKernelArtifact: async () => module }
 })
-import * as nativeExecutor from '../src/services/brepNativeExecutor'
-import { buildBrepSemanticScene } from '../src/services/brepSemanticScene'
+import * as nativeExecutor from '../src/kernel/brepNativeExecutor'
+import { buildBrepSemanticScene } from '../src/kernel/brepSemanticScene'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 import { restoreExactFullRoundSnapshot } from '../src/services/exactFullRoundSnapshot'
-import { isGeometryEvaluationResultPayload } from '../src/services/geometryWorkerProtocol'
+import { isGeometryEvaluationResultPayload } from '../src/kernel/geometryWorkerProtocol'
 import { geometrySceneFromMeshes, meshesFromGeometryScene } from '../src/core/scene'
 import { remapNativeFaceSelection } from '../src/services/nativeFaceSelection'
 import type { PickHit } from '../src/render/rendererContracts'

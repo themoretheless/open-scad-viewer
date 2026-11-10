@@ -173,8 +173,8 @@ async function worker(options) {
   const sourceStart = await sourceSnapshot()
   const importStart = performance.now()
   const [{ parseOpenSCAD }, { buildMeshBvh }, { extractSemanticEdges }, { geometryAssetId, geometrySceneFromMeshes, geometrySceneTransferables }, { inspectMesh }, { buildBinaryStl }, { isGeometryEvaluationResultPayload }] = await Promise.all([
-    import('../src/services/openscadParser.ts'), import('../src/services/meshBvh.ts'), import('../src/services/meshTopology.ts'), import('../src/core/scene.ts'), import('../src/services/meshInspection.ts'), import('../src/services/meshExport.ts'),
-    import('../src/services/geometryWorkerProtocol.ts'),
+    import('../src/language/openscadParser.ts'), import('../src/services/meshBvh.ts'), import('../src/services/meshTopology.ts'), import('../src/core/scene.ts'), import('../src/services/meshInspection.ts'), import('../src/services/meshExport.ts'),
+    import('../src/kernel/geometryWorkerProtocol.ts'),
   ])
   const moduleImportMs = performance.now() - importStart
   const gcEvents = []

@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest'
 import {withEditableSketchPath, editablePathAnchors} from '../src/services/editableSketchPath'
 import {emptyDirectDocument, parseDirectDocument, DirectHistory, extrudeDirectSketch} from '../src/services/directModeling'
-import {pathFromPolygon, smoothPath, setPathAnchorPosition, setAnchorHandle, dragAlignGuides} from '../src/services/geometry/path2d'
+import {pathFromPolygon, smoothPath, setPathAnchorPosition, setAnchorHandle, dragAlignGuides} from '../src/kernel/geometry/path2d'
 import {outlineSketchStroke,simplifySketchPath} from '../src/services/editableSketchOperations'
 import {transformSketch} from '../src/services/directSketchGeometry'
 

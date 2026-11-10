@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { BOX_DEFAULTS, generateBox } from '../src/services/boxGenerator'
 import { extractSemanticEdges } from '../src/services/meshTopology'
-import { GeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { GeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 const engine = new GeometryBuildEngine()
 async function executeIndependentOpenScad({source}:{source:string;files:never[];quality:string;time:number}) {
   return engine.buildSource(source,{quality:'full',purpose:'analysis'})

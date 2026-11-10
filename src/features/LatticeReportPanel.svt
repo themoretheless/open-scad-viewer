@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed,ref,shallowRef,watch} from 'svet'
 import type {MeshData} from '../core/mesh'
-import type {LighteningOptions} from '../services/solidLightening'
+import type {LighteningOptions} from '../kernel/solidLightening'
 import type {LatticePrintSettings} from '../services/latticePrintSettings'
 import {analyzeLatticePrintability,optimizeLatticeForPrint,formatLatticePrintReport,latticeSlicerHintsJson,type LatticePrintReport} from '../services/latticePrintReport'
 import {analyzeLatticeStrength,formatLatticeStrengthReport,latticeMaterials,latticeStructureHint,weakSpotMarkerMeshes,type LatticeLoadCase,type LatticeStrengthReport} from '../services/latticeStrength'

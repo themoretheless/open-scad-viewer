@@ -1,12 +1,12 @@
 import {describe,it,expect} from 'vitest'
-import {extrudePolygonProfile,brushPolygonMesh,sculptPolygonMesh,inspectPolygonMesh} from '../src/services/geometry/polygon'
-import {extrudeSubdivision,brushSubdivision,sculptSubdivision,tessellateSubdivision} from '../src/services/geometry/subdivision'
-import {evaluateSdf,sculptSdf,sculptSdfSphere,tessellateSdf,type SdfField,type SdfStroke} from '../src/services/geometry/sdf'
-import {brushNurbsCurve,brushNurbsSurface,sculptNurbsCurve,sculptNurbsSurface,extrudeNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
+import {extrudePolygonProfile,brushPolygonMesh,sculptPolygonMesh,inspectPolygonMesh} from '../src/kernel/geometry/polygon'
+import {extrudeSubdivision,brushSubdivision,sculptSubdivision,tessellateSubdivision} from '../src/kernel/geometry/subdivision'
+import {evaluateSdf,sculptSdf,sculptSdfSphere,tessellateSdf,type SdfField,type SdfStroke} from '../src/kernel/geometry/sdf'
+import {brushNurbsCurve,brushNurbsSurface,sculptNurbsCurve,sculptNurbsSurface,extrudeNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
 import {brushDisplace,meshCentroid,sculptMesh} from '../src/services/meshEditing'
-import {SCULPT_FALLOFFS,SCULPT_KINDS,buildSculptBrush,isFractionalSculptKind,validateSculptBrush,type GeometryBrush,type SculptBrush} from '../src/services/geometryEditing'
+import {SCULPT_FALLOFFS,SCULPT_KINDS,buildSculptBrush,isFractionalSculptKind,validateSculptBrush,type GeometryBrush,type SculptBrush} from '../src/kernel/geometryEditing'
 
 const square=[[-1,-1],[1,-1],[1,1],[-1,1]]
 const cube=()=>extrudePolygonProfile({outer:square,holes:[]},[0,0,2])

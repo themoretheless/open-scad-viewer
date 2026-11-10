@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {closedSplineNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve,trimNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {closedSplineNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve,trimNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 
 it('matches the independent symmetric cubic loop and both seam derivatives',()=>{
  const p:[number,number,number][]=[[1,0,0],[0,1,0],[-1,0,0],[0,-1,0],[1,0,0]]

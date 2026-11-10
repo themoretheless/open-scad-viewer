@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BREP_CAPABILITY_MATRIX,
   assertBrepCapabilityAllowsTopology,
-} from '../src/services/geometry/brepCapability'
+} from '../src/kernel/geometry/brepCapability'
 
 type JsonObject = Record<string, unknown>
 type IndexRow = {

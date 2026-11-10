@@ -2,7 +2,7 @@ import {isOriginalQuadricGraphReport,type OriginalQuadricGraphQuery,type Origina
 import {validQuadricQueryOptions,isOriginalQuadricCarrierReport,type OriginalQuadricCarrierQuery,type OriginalQuadricCarrierReport} from './originalQuadricCarrierProtocol'
 import {MAX_PATCH_EXACT_WORK,isOriginalPatchContactsReport,type OriginalPatchContactsQuery,type OriginalPatchContactsReport} from './originalPatchContactsProtocol'
 import {isSurfaceIsoTargetReport,type SurfaceIsoTargetReport,type SurfaceIsoTargetQuery} from './surfaceIsoTargetProtocol'
-import type {NurbsSurface} from './nurbsSurface'
+import type {NurbsSurface} from '../kernel/nurbsSurface'
 import {isSurfaceAuditReport,type SurfaceSelfIntersectionReport} from './surfaceSelfIntersectionProtocol'
 /** Read-only diagnostics on a caller-owned module; does not register a production provider. */
 export class SurfaceSelfIntersectionBrowser {

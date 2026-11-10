@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {approximateVariablePitchHelixNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {approximateVariablePitchHelixNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 it('matches independent variable-pitch axial law for both revolution signs',()=>{
  for(const turns of [.75,-.75]){
   const a=approximateVariablePitchHelixNurbsCurve([3,4,5],2,7,turns,2,11,23,1e-4)

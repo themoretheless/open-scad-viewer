@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {approximateEllipticHelixNurbsCurve,approximateConicalHelixNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {approximateEllipticHelixNurbsCurve,approximateConicalHelixNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 
 it('matches independent elliptical helix samples within the ideal interpolation estimate',()=>{
  const a=approximateEllipticHelixNurbsCurve([3,4,5],2,4,-7,-1.5,37,1e-4)

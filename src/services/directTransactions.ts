@@ -1,8 +1,8 @@
 import {cleanSketchContours,outlineSketchStroke} from './editableSketchOperations'
 import {applyDirectExtrusionProfile,type DirectExtrusionOptions} from './directExtrusion'
 import {parseDirectDocument,serializeDirectDocument,type DirectDocument} from './directModeling'
-import {applySolidSceneEdit,type SolidSceneEditOptions} from './solidSceneEdit'
-import {addSolidPrimitive,type SolidPrimitiveOptions} from './solidPrimitive'
+import {applySolidSceneEdit,type SolidSceneEditOptions} from '../kernel/solidSceneEdit'
+import {addSolidPrimitive,type SolidPrimitiveOptions} from '../kernel/solidPrimitive'
 import {setLiveBodyPattern,type LiveBodyPattern} from './liveBodyPattern'
 
 export type DirectAction =

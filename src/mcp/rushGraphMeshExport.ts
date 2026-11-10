@@ -1,8 +1,8 @@
-import { evaluateRushGraphGeometry, requireRushGraphChecks, RushGraphCheckError } from '../services/rushGraphChecks'
+import { evaluateRushGraphGeometry, requireRushGraphChecks, RushGraphCheckError } from '../language/rushGraphChecks'
 import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/server';
 import type { McpGeometryService } from './geometryService';
-import { compileRushGraph, rushGraphSchema } from '../services/rushGraph';
+import { compileRushGraph, rushGraphSchema } from '../language/rushGraph';
 import { exportMeshFormatCompressed, MESH_EXPORT_FORMATS, meshExportBase64 } from '../services/meshExportFormats';
 import { flattenExportMeshes } from '../services/meshExportAdapter';
 export function registerRushGraphMeshExport(server: McpServer, geometry: McpGeometryService) {

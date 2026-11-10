@@ -1,9 +1,9 @@
 import {sketchProfile} from './retainedSketchProfile'
 import { extrudeSketchBrep, parseDirectDocument, type DirectBody, type DirectDocument, type DirectSketch } from './directModeling'
 import { cross3, xyPlane, type SketchPlane } from './directSketchGeometry'
-import { booleanNurbsBrep, extrudeBrepCurves, tessellateNurbsBrep, transformNurbsBrep, type NurbsBrep } from './geometry/brep'
-import { authorBrepProfile, transformBrepProfile, validateBrepProfile } from './geometry/brepProfile'
-import { booleanPolygonMeshes } from './geometry/polygon'
+import { booleanNurbsBrep, extrudeBrepCurves, tessellateNurbsBrep, transformNurbsBrep, type NurbsBrep } from '../kernel/geometry/brep'
+import { authorBrepProfile, transformBrepProfile, validateBrepProfile } from '../kernel/geometry/brepProfile'
+import { booleanPolygonMeshes } from '../kernel/geometry/polygon'
 import { stringifyMeshJson } from './meshJson'
 
 export function sameSketchPlane(a: SketchPlane = xyPlane(), b: SketchPlane = xyPlane()) {

@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {authorBrepProfile,certifyBrepProfile,verifyBrepProfileCertificate,certifyBrepProfileMeasure,verifyBrepProfileMeasureCertificate,certifyBrepCurveAgreement,verifyBrepCurveAgreementCertificate} from '../src/services/geometry/brepProfile'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
+import {authorBrepProfile,certifyBrepProfile,verifyBrepProfileCertificate,certifyBrepProfileMeasure,verifyBrepProfileMeasureCertificate,certifyBrepCurveAgreement,verifyBrepCurveAgreementCertificate} from '../src/kernel/geometry/brepProfile'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 
 it('checks exact area ratios and rejects forged bounds and scope',()=>{
  const p=authorBrepProfile({kind:'rectangle',size:[8,8],center:false})

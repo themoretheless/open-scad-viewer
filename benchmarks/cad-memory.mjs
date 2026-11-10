@@ -13,7 +13,7 @@ const root = fileURLToPath(new URL('../', import.meta.url))
 const startedAt = new Date().toISOString()
 const out = process.argv[2] ?? path.join(root, 'tmp', 'performance', `cad-memory-${startedAt.replace(/[:.]/g, '-')}.json`)
 const fixture = cpuFixtures.find(item => item.id === 'dense-sphere')
-const fingerprintPaths = ['benchmarks/cad-memory.mjs', 'benchmarks/cpu-fixtures.mjs', 'src/services/cadGeometryKernel.ts', 'src/services/openscadParser.ts', 'src/services/meshTopology.ts', 'package-lock.json']
+const fingerprintPaths = ['benchmarks/cad-memory.mjs', 'benchmarks/cpu-fixtures.mjs', 'src/kernel/cadGeometryKernel.ts', 'src/language/openscadParser.ts', 'src/services/meshTopology.ts', 'package-lock.json']
 const fingerprint = () => Promise.all(fingerprintPaths.map(async relative => ({ path: relative, sha256: createHash('sha256').update(await readFile(path.join(root, relative))).digest('hex') })))
 const source = await fingerprint()
 const wasmMemories = []
@@ -27,8 +27,8 @@ WebAssembly.instantiate = async function (...args) {
 let module
 let parseOpenSCAD
 try {
-  const parser = await import('../src/services/openscadParser.ts')
-  const kernel = await import('../src/services/cadGeometryKernel.ts')
+  const parser = await import('../src/language/openscadParser.ts')
+  const kernel = await import('../src/kernel/cadGeometryKernel.ts')
   parseOpenSCAD = parser.parseOpenSCAD
   module = await kernel.defaultGeometryKernel.warm()
 } finally { WebAssembly.instantiate = instantiate }

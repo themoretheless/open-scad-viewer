@@ -1,5 +1,5 @@
-import {callGeometryRust} from '../../geometry/kernel'
-import type {NurbsBrep} from '../../geometry/brep'
+import {callGeometryRust} from '../../../kernel/geometry/kernel'
+import type {NurbsBrep} from '../../../kernel/geometry/brep'
 import type {SweepProjectiveSeamAudit} from './nurbsSweepAudit'
 export interface MiterStationSmoothness {
  method:'retained-miter-station-joins'

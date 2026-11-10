@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import os from 'node:os'
 import { DirectHistory, emptyDirectDocument } from '../src/services/directModeling'
-import { createBrepGear, tessellateNurbsBrep } from '../src/services/geometry/brep'
+import { createBrepGear, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
 
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex')
 const results = []

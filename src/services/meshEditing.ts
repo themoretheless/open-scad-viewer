@@ -1,7 +1,7 @@
-import {callGeometryRust} from './geometry/kernel'
-import type { SculptBrush } from './geometryEditing'
-import { brushPolygonMesh, sculptPolygonMesh, deformPolygonMesh, extrudePolygonProfile, exportPolygonStl, inspectPolygonMesh, normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
-import { booleanManifoldInKernel, checkManifoldInKernel, repairManifoldInKernel, MANIFOLD_BOOLEAN_DEFAULT_OPTIONS, type KernelManifoldRepair, type KernelManifoldReport, type ManifoldBooleanOp, type ManifoldBooleanOptions } from './geometry/manifoldAnalysis'
+import {callGeometryRust} from '../kernel/geometry/kernel'
+import type { SculptBrush } from '../kernel/geometryEditing'
+import { brushPolygonMesh, sculptPolygonMesh, deformPolygonMesh, extrudePolygonProfile, exportPolygonStl, inspectPolygonMesh, normalizePolygonMesh, type PolygonMesh } from '../kernel/geometry/polygon'
+import { booleanManifoldInKernel, checkManifoldInKernel, repairManifoldInKernel, MANIFOLD_BOOLEAN_DEFAULT_OPTIONS, type KernelManifoldRepair, type KernelManifoldReport, type ManifoldBooleanOp, type ManifoldBooleanOptions } from '../kernel/geometry/manifoldAnalysis'
 import { stringifyMeshJson } from './meshJson'
 import { parseBinaryStl } from '../exchange/stlImport'
 

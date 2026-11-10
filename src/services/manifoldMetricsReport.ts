@@ -1,4 +1,4 @@
-import type { KernelManifoldMetrics } from './geometry/manifoldAnalysis'
+import type { KernelManifoldMetrics } from '../kernel/geometry/manifoldAnalysis'
 
 export type ManifoldMetricsExportFormat = 'json' | 'csv'
 export interface ManifoldMetricsReportRow {

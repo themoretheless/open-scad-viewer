@@ -1,5 +1,5 @@
-import { checkManifoldInKernel, type KernelManifoldReport } from './geometry/manifoldAnalysis'
-import type { PolygonMesh } from './geometry/polygon'
+import { checkManifoldInKernel, type KernelManifoldReport } from '../kernel/geometry/manifoldAnalysis'
+import type { PolygonMesh } from '../kernel/geometry/polygon'
 
 const reports = new WeakMap<PolygonMesh, KernelManifoldReport>()
 

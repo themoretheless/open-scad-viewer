@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
 import {decimateLattice} from '../src/services/latticeDecimation'
-import {inspectPolygonMesh,type PolygonMesh} from '../src/services/geometry/polygon'
+import {inspectPolygonMesh,type PolygonMesh} from '../src/kernel/geometry/polygon'
 /** Closed oriented box with subdivided top/bottom grids and quad strip walls. */
 function gridBox(n:number,size=10,height=4):PolygonMesh{
  const d=size/n,row=n+1,positions:number[]=[],indices:number[]=[]

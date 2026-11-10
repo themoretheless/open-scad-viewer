@@ -1,9 +1,9 @@
 import {describe,expect,it} from 'vitest'
-import {buildBrepSemanticScene} from '../src/services/brepSemanticScene'
+import {buildBrepSemanticScene} from '../src/kernel/brepSemanticScene'
 import {lowerOpenSCADToSemanticProgram} from '../src/language/semantic/semanticProgramLowerer'
 import {editExactFullRoundSceneMesh} from '../src/services/exactFullRoundHistoryScene'
 import {restoreExactFullRoundSnapshot,createExactFullRoundSnapshot} from '../src/services/exactFullRoundSnapshot'
-import {callGeometryRust} from '../src/services/geometry/kernel'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
 import {assertNativeReferenceCurrent,nativeFaceReference} from '../src/core/nativeGeometry'
 import {geometrySceneFromMeshes,meshesFromGeometryScene} from '../src/core/scene'
 const build=()=>buildBrepSemanticScene(lowerOpenSCADToSemanticProgram('// @language openscad-viewer/brep-1\nfull_round_exact([5,4,3]) cube([4,8,6]);'),{quality:'preview',segments:4})

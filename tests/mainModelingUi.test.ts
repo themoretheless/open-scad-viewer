@@ -6,7 +6,7 @@ import CadWorkbenchPanel from '../src/features/CadWorkbenchPanel.svt'
 import {previewMeshes} from '../src/services/mainModeling'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
 import {sampleCurve} from '../src/services/directSketchGeometry'
-import {inspectPolygonMesh} from '../src/services/geometry/polygon'
+import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 class Node {
  parent:Node|null=null;children:Node[]=[];props:Record<string,any>={};style:Record<string,any>={};text='';value:any='';selected=false
  constructor(public tag:string){}

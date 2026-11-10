@@ -3,10 +3,10 @@ import type {
   FaceDistanceResult,
   PointMeasurement,
   ShellDistanceResult,
-} from '../../solidMeasurements'
+} from '../../../kernel/solidMeasurements'
 import { finite, vector, type MainSolidExpectation } from '../../mainSolidProtocol'
-import type { NurbsCurveDistance } from '../../nurbsCurve'
-import type { NurbsSurfaceDistance } from '../../nurbsSurface'
+import type { NurbsCurveDistance } from '../../../kernel/nurbsCurve'
+import type { NurbsSurfaceDistance } from '../../../kernel/nurbsSurface'
 import { arrayOf, distanceWitnessConsistent } from '../mainSolidExpectation'
 import { isNonnegativeFinite, isOrderedInterval } from './predicates'
 

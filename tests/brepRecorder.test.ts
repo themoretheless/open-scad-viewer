@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { CadKernelHandle, CadKernelOps } from '../src/services/cadKernelOps'
-import { createBrepRecordingKernelOps } from '../src/services/solid/brepRecorder'
-import { rushGraphNurbsSchema } from '../src/services/rushGraphNurbs'
+import type { CadKernelHandle, CadKernelOps } from '../src/kernel/cadKernelOps'
+import { createBrepRecordingKernelOps } from '../src/kernel/solid/brepRecorder'
+import { rushGraphNurbsSchema } from '../src/language/rushGraphNurbs'
 
 /**
  * The recorder only needs distinct handle identities from the polygon track, so the

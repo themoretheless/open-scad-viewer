@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest'
 import { placeAssembly, frameMatrix, multiplyFrames, type AssemblyComponent } from '../benchmarks/rush/rushGraphAssembly-reference'
-import { compileRushGraph, setRushGraphParameters, RUSH_GRAPH_ASSEMBLY_EXAMPLE } from '../src/services/rushGraph'
+import { compileRushGraph, setRushGraphParameters, RUSH_GRAPH_ASSEMBLY_EXAMPLE } from '../src/language/rushGraph'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 const frame = { origin: [0,0,0] as [number,number,number], rotation: [0,0,0] as [number,number,number] }
 export const components: AssemblyComponent[] = [
   {id:'base',input:'body',anchors:[{id:'top',...frame,origin:[0,0,5]}],placement:frame},

@@ -2,10 +2,10 @@ import { stringifyMeshJson } from '../src/services/meshJson'
 import {expect,it} from 'vitest'
 import {EXAMPLES} from '../src/data/examples'
 import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
-import {parseOpenSCAD} from '../src/services/openscadParser'
-import {sceneMeshesToSolidDocument} from '../src/services/solidBridge'
+import {parseOpenSCAD} from '../src/language/openscadParser'
+import {sceneMeshesToSolidDocument} from '../src/kernel/solidBridge'
 import {parseDirectDocument} from '../src/services/directModeling'
-import {analyzeNurbsBrep, booleanNurbsBrep, tessellateNurbsBrep, type NurbsBrep} from '../src/services/geometry/brep'
+import {analyzeNurbsBrep, booleanNurbsBrep, tessellateNurbsBrep, type NurbsBrep} from '../src/kernel/geometry/brep'
 import {identity,rotateY,scale,translate} from '../src/services/math3d'
 
 async function cylinder() {

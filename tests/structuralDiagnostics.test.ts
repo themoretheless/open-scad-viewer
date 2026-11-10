@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest'
-import {GeometryKernelError} from '../src/services/geometry/kernel'
+import {GeometryKernelError} from '../src/kernel/geometry/kernel'
 import {solveTruss, type TrussModel} from '../src/services/trussAnalysis'
 import {solveFrame, type FrameModel} from '../src/services/frameAnalysis'
 import {diagnoseFrame, diagnoseTruss} from '../src/services/structuralDiagnostics'

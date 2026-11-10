@@ -1,7 +1,7 @@
 /** Transport only: feature construction, history and proof credits belong to Rust. */
 import { deepFreeze } from '../core/objects'
-import { callGeometryRust } from './geometry/kernel'
-import type { NurbsBrep } from './geometry/brep'
+import { callGeometryRust } from '../kernel/geometry/kernel'
+import type { NurbsBrep } from '../kernel/geometry/brep'
 export interface ExactHistoryBudget {
   readonly maxRevisions?: number
   readonly maxBytes?: number

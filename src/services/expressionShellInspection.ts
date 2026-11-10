@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import {expressionShellExpectation,expressionRecipeIdentity,validExpressionShell,type ExpressionShellOptions,type ExpressionShellResult} from './expressionShell'
 export interface ExpressionInspectionOptions extends ExpressionShellOptions {
  inspectionLimits:{

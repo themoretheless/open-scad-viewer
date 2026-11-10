@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { formatCode } from '../src/services/codeFormat'
-import { compileRushFrontend } from '../src/services/rushFrontend'
+import { compileRushFrontend } from '../src/language/rushFrontend'
 it('uses two spaces and attaches closing parentheses without changing geometry',()=>{
  const source='// @rush/1\nfn f x: int -> Geometry\n    ret hull(\n        sphere(x),\n        sphere(2),\n    )\nshow f(3)'
  const formatted=formatCode(source)

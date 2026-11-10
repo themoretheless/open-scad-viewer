@@ -8,7 +8,7 @@ import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPacka
 
 const output=path.resolve(process.argv[2]??'/private/tmp/solid-draft-pending-browser')
 await mkdir(output,{recursive:true})
-const source='src/services/solidDraftHeadStore.ts'
+const source='src/kernel/solidDraftHeadStore.ts'
 const bundle=await build({entryPoints:[source],bundle:true,format:'esm',platform:'browser',write:false})
 const javascript=bundle.outputFiles[0].contents
 const server=createServer((req,res)=>{

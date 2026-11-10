@@ -1,8 +1,8 @@
 import {it,expect} from 'vitest'
 import {splitSolid} from '../src/services/directSolidTools'
-import {createBrepBox,createBrepSphere,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/services/geometry/brep'
-import {bounds} from '../src/services/cadWorkbench'
-import {extrudePolygonProfile,inspectPolygonMesh} from '../src/services/geometry/polygon'
+import {createBrepBox,createBrepSphere,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
+import {bounds} from '../src/kernel/cadWorkbench'
+import {extrudePolygonProfile,inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 const body=()=>{const brep=createBrepBox([0,0,0],[10,10,10]);return {id:'stock',name:'Stock',brep,mesh:tessellateNurbsBrep(brep,1)}}
 it('splits retained B-rep into oriented positive and negative halves with matching display meshes',()=>{
  const input=body(),before=JSON.stringify(input)

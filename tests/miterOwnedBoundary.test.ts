@@ -1,12 +1,12 @@
 import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody} from '../src/services/geometry/brep'
-import {callGeometryRust} from '../src/services/geometry/kernel'
-import {constructMiterOwnedBoundary,reconstructMiterOwnedBoundary,type MiterOwnedSourceRequest} from '../src/services/nurbsMiterOwnedBoundary'
-import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
+import {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody} from '../src/kernel/geometry/brep'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
+import {constructMiterOwnedBoundary,reconstructMiterOwnedBoundary,type MiterOwnedSourceRequest} from '../src/kernel/nurbsMiterOwnedBoundary'
+import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 const scalar=(value:number)=>({degree:1,knots:[0,0,1,1],controlPoints:[[value,0,0],[value,0,0]],weights:[1,1],periodic:false})
 const law=(value:number)=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})
 it('replays original source for native station bounds and refuses injected proofs and exhausted work',()=>{

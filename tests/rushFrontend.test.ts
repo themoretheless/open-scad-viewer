@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 const source=`// @rush/1
 param radius = 20mm range 1mm..50mm
 param height = 10mm range 1mm..30mm

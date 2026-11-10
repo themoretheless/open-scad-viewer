@@ -1,6 +1,6 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import ts from 'typescript'
-import {parseOpenSCAD} from '../../src/services/openscadParser'
+import {parseOpenSCAD} from '../../src/language/openscadParser'
 import {referenceCaptureLegacyOutcome,referenceLegacyMeshBytes,referenceLegacySceneBytes,referenceLegacySha256} from '../../tests/support/referenceLegacyDirectEvaluatorOracle'
 const test=readFileSync('tests/legacyDirectEvaluatorOracle.test.ts','utf8')
 const literal=test.slice(test.indexOf('Object.freeze([')+'Object.freeze('.length,test.indexOf('\n])')+2)

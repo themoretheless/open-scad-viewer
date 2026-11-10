@@ -6,7 +6,7 @@ import { geometryAssetId } from '../core/scene'
 import { createExactFullRoundSnapshot, restoreExactFullRoundSnapshot } from './exactFullRoundSnapshot'
 import { createExactFullRoundHistory, restoreExactFullRoundHistory, editExactFullRoundHistory,
   currentExactFullRoundArtifact, type ExactHistoryBudget, type ExactFullRoundHistoryEdit } from './exactFullRoundHistory'
-import { prepareExactFullRoundDisplay } from './geometry/brepExactDisplay'
+import { prepareExactFullRoundDisplay } from '../kernel/geometry/brepExactDisplay'
 import { buildMeshBvh } from './meshBvh'
 import { extractSemanticEdges } from './meshTopology'
 

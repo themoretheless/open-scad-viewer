@@ -1,4 +1,4 @@
-import type {OffsetEnvelope} from '../../nurbsSurfaceOffset'
+import type {OffsetEnvelope} from '../../../kernel/nurbsSurfaceOffset'
 import {finite,type MainSolidExpectation} from '../../mainSolidProtocol'
 import {arrayOf} from '../mainSolidExpectation'
 export function validOffsetEnvelope(job:Extract<MainSolidExpectation,{kind:'offsetEnvelope'}>,value:unknown,validateTangent:(job:MainSolidExpectation,value:unknown)=>boolean):boolean {

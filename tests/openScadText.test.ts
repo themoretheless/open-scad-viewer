@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { defaultGeometryKernel } from '../src/services/cadGeometryKernel'
-import { OpenScadProject, type OpenScadProjectFileInput } from '../src/services/openScadProject'
+import { defaultGeometryKernel } from '../src/kernel/cadGeometryKernel'
+import { OpenScadProject, type OpenScadProjectFileInput } from '../src/language/openScadProject'
 import {
   OPENSCAD_2021_TEXT_EM_SCALE,
   OPENSCAD_TEXT_MAX_CODE_POINTS,
@@ -12,7 +12,7 @@ import {
   renderOpenScadText,
   type OpenScadTextContour,
   type OpenScadTextParameters,
-} from '../src/services/openScadText'
+} from '../src/language/openScadText'
 
 const BASIC = new Uint8Array(readFileSync(
   new URL('./fixtures/Basic-Regular.ttf', import.meta.url),

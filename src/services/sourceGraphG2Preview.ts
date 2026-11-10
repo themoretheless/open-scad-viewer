@@ -1,6 +1,6 @@
-import {callNurbsRust} from './geometry/nurbs'
-import type {NurbsSurface} from './nurbsSurface'
-import type {NurbsCurve} from './nurbsCurve'
+import {callNurbsRust} from '../kernel/geometry/nurbs'
+import type {NurbsSurface} from '../kernel/nurbsSurface'
+import type {NurbsCurve} from '../kernel/nurbsCurve'
 export interface SourceGraphPreviewOptions {radiusMm:number;radiusToleranceMm:number;maxWork?:number;maxCells?:number}
 export interface SourceGraphPreview {
  patch:NurbsSurface

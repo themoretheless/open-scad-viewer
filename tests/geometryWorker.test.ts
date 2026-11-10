@@ -5,8 +5,8 @@ import {
   type GeometryBuildRequest,
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
-} from '../src/services/geometryWorkerProtocol'
-import { OpenSCADParseError } from '../src/services/openscadParser'
+} from '../src/kernel/geometryWorkerProtocol'
+import { OpenSCADParseError } from '../src/language/openscadParser'
 import { sha256Hex } from '../src/core/sha256'
 
 const parseOpenSCADMock = vi.hoisted(() => vi.fn())
@@ -14,8 +14,8 @@ const parseOpenSCADMock = vi.hoisted(() => vi.fn())
 // provider invokes parseOpenSCAD directly.
 const warmGeometryKernelMock = vi.hoisted(() => vi.fn(() => Promise.resolve()))
 
-vi.mock('../src/services/openscadParser', async importOriginal => {
-  const original = await importOriginal<typeof import('../src/services/openscadParser')>()
+vi.mock('../src/language/openscadParser', async importOriginal => {
+  const original = await importOriginal<typeof import('../src/language/openscadParser')>()
   return { ...original, parseOpenSCAD: parseOpenSCADMock, warmGeometryKernel: warmGeometryKernelMock }
 })
 
@@ -131,7 +131,7 @@ afterEach(() => {
 })
 
 it('delivers queued cancellation before publishing a long selection batch', async () => {
-  await (await import('../src/services/geometry/kernel')).warmGeometryKernel()
+  await (await import('../src/kernel/geometry/kernel')).warmGeometryKernel()
   parseOpenSCADMock.mockResolvedValueOnce(identityResult({entityId: 'entity:a', operationId: 'op:a', instanceId: 'entity:a'}))
   class CancelDuringSelection extends FakeWorkerScope {
     override postMessage(event: GeometryWorkerEvent, options: {transfer?: Transferable[]} = {}) {
@@ -517,7 +517,7 @@ describe('geometry Worker lifecycle', () => {
   })
 
   it('stops a running parse cooperatively when a cancel message arrives mid-build', async () => {
-    const { AbortedError } = await import('../src/services/openscadParser')
+    const { AbortedError } = await import('../src/language/openscadParser')
     parseOpenSCADMock.mockImplementation(async (
       _source: string,
       options?: { shouldAbort?: () => boolean },
@@ -564,7 +564,7 @@ describe('geometry Worker lifecycle', () => {
   })
 
   it('supersedes a running parse cooperatively when a newer build arrives', async () => {
-    const { AbortedError } = await import('../src/services/openscadParser')
+    const { AbortedError } = await import('../src/language/openscadParser')
     parseOpenSCADMock.mockImplementation(async (
       source: string,
       options?: { shouldAbort?: () => boolean },

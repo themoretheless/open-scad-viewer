@@ -1,4 +1,4 @@
-import type {DirectStepLod0Import,DirectStepLod0Shell} from './cadNurbsStep'
+import type {DirectStepLod0Import,DirectStepLod0Shell} from '../kernel/cadNurbsStep'
 import {storageGet,storageKeys,storageRemove,storageSet} from './safeStorage'
 
 const INDEX_KEY='open-scad-viewer.step-lod0-index-v1'

@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {extrudePolygonProfile,inspectPolygonMesh} from '../src/services/geometry/polygon'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {extrudePolygonProfile,inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 import {pushPullFace,bevelSolidEdge,shellSolid,solidTopology} from '../src/services/directSolidTools'
 const body=()=>({id:'mesh',name:'Stock',mesh:tessellateNurbsBrep(createBrepBox([0,0,0],[10,10,10]),1)})
 const volume=(b:ReturnType<typeof body>)=>{const r=inspectPolygonMesh(b.mesh);expect(r.closed).toBe(true);expect(r.degenerateTriangles).toBe(0);return r.signedVolumeMm3}

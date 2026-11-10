@@ -1,6 +1,6 @@
 import {it,expect,vi,afterEach} from 'vitest'
 import {IDBFactory} from 'fake-indexeddb'
-import {readSolidDraftSnapshot,writeSolidDraftSnapshot,removeSolidDraftSnapshot,solidDraftSnapshotId} from '../src/services/solidDraftStore'
+import {readSolidDraftSnapshot,writeSolidDraftSnapshot,removeSolidDraftSnapshot,solidDraftSnapshotId} from '../src/kernel/solidDraftStore'
 afterEach(()=>vi.unstubAllGlobals())
 it('stores large immutable snapshots and removes only the superseded snapshot',async()=>{
  vi.stubGlobal('indexedDB',new IDBFactory())
@@ -20,7 +20,7 @@ it('rejects invalid references and reports unavailable durable storage',async()=
 })
 
 it('collects only old unpublished snapshots while retaining all document heads',async()=>{
- const {collectSolidDraftSnapshots}=await import('../src/services/solidDraftStore')
+ const {collectSolidDraftSnapshots}=await import('../src/kernel/solidDraftStore')
  vi.stubGlobal('indexedDB',new IDBFactory())
  const locks:string[]=[]
  vi.stubGlobal('navigator',{locks:{request:(name:string,_options:unknown,action:()=>unknown)=>{locks.push(name);return Promise.resolve(action())}}})

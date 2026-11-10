@@ -2,7 +2,7 @@
 import {computed} from 'svet'
 import type {MeshData} from '../core/mesh'
 import {sceneBody} from '../services/mainModeling'
-import {bounds} from '../services/cadWorkbench'
+import {bounds} from '../kernel/cadWorkbench'
 const props=defineProps<{meshes:MeshData[];selection:number[];project:(p:number[])=>number[]|null;revision:number}>()
 const emit=defineEmits<{resize:[dimensions:number[]]}>()
 const box=computed(()=>{try{return bounds(props.selection.map(i=>sceneBody(props.meshes[i],i)))}catch{return null}})

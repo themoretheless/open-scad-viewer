@@ -6,7 +6,7 @@ import {advancedPatchCases} from './advanced-patch-fixtures'
 import {originalPatchFixture,originalPatchKnotFixture,originalPatchAlgebraicBoundaryFixture} from './original-patch-fixtures'
 import {nonlinearSurfaceCases,spatialSurfaceCases,isoTargetFixture,offCenterSpatialSurface} from './surface-self-fixtures'
 import {SurfaceSelfIntersectionBrowser} from '../../src/services/surfaceSelfIntersectionBrowser'
-import type {NurbsSurface} from '../../src/services/nurbsSurface'
+import type {NurbsSurface} from '../../src/kernel/nurbsSurface'
 function graph():NurbsSurface{return{degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],controlPoints:[0,.5,1].map(x=>[[x,0,x*x],[x,1,x*x]]),weights:[[1,1],[1,1],[1,1]],periodicU:false,periodicV:false}}
 async function qualify(){
  const module=await WebAssembly.compile(await(await fetch('/__audit.wasm')).arrayBuffer())

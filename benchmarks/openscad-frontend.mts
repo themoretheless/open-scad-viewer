@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
-import {compileOpenSCAD, TT} from '../src/services/openscadCompiler'
-import {scadCompileRust, warmLanguageKernel} from '../src/services/languages/kernel'
+import {compileOpenSCAD, TT} from '../src/language/openscadCompiler'
+import {scadCompileRust, warmLanguageKernel} from '../src/language/languages/kernel'
 
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex')
 const profile = 'openscad/stable-2021.01'
@@ -56,7 +56,7 @@ for (const count of [1, 100, 500]) {
   samples.push({calls: count * 2, sourceLength: source.length, sourceSha256: hash(source),
     typescript: stats(times.typescript), rustWasm: stats(times.rustWasm)})
 }
-const inputs = ['src/services/openscadCompiler.ts', 'src/services/languages/kernel.ts',
+const inputs = ['src/language/openscadCompiler.ts', 'src/language/languages/kernel.ts',
   'src/generated/language-kernel/bytes.ts', 'benchmarks/openscad-frontend.mts']
 console.log(JSON.stringify({node: process.version, arch: process.arch, platform: process.platform,
   method: '5 warmups, 21 alternating samples. Full AST parity outside timing. Rust includes request encoding, WASM parsing/serialization, response decoding and ABI frees. TS returns its native AST. Includes allocations/GC; excludes imports and cold initialization. Not a geometry or browser benchmark.',

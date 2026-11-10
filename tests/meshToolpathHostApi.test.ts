@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {callGeometryRust} from '../src/services/geometry/kernel'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
 import {
   emitPolygonMeshGcode,
   emitPolygonMeshGcodeJob,
@@ -8,7 +8,7 @@ import {
   parseGcodePreview,
   sectionPolygonMesh,
   type PolygonMesh,
-} from '../src/services/geometry/polygon'
+} from '../src/kernel/geometry/polygon'
 
 function boxMesh(): PolygonMesh {
   // Unit cube [0,10]^3 as independent triangles (positions xyz, indices).

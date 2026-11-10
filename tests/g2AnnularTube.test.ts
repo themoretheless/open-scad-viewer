@@ -1,7 +1,7 @@
 import {beforeAll,expect,it} from 'vitest'
 import {createG2AnnularTube} from '../src/services/geometricG2'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
-import {tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
+import {tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {emptyDirectDocument,parseDirectDocument} from '../src/services/directModeling'
 import {stringifyMeshJson} from '../src/services/meshJson'
 // Actual Rust/WASM qualification. Requires the matching rebuilt geometry kernel.

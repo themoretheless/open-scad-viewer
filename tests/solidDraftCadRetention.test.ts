@@ -3,7 +3,7 @@ import {afterEach,expect,it,vi} from 'vitest'
 import {IDBFactory} from 'fake-indexeddb'
 import {DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
 import {transformSelection} from '../src/services/directSolidTools'
-import {readSolidDraftHead,writeSolidDraftHead} from '../src/services/solidDraftHeadStore'
+import {readSolidDraftHead,writeSolidDraftHead} from '../src/kernel/solidDraftHeadStore'
 
 afterEach(()=>vi.unstubAllGlobals())
 

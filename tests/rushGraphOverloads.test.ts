@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
-import { compileRushGraph } from '../src/services/rushGraph'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileRushGraph } from '../src/language/rushGraph'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 
 const header = '// @rush/1\n'
 it('accepts three positional dimensions and offsets without changing vector semantics', async () => {

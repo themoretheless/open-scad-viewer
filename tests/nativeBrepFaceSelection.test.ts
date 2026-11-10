@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
 import {selectedBrepSupport,solidTopology} from '../src/services/directSolidTools'
-import {createBrepBox,tessellateNurbsBrep,createBrepSphere} from '../src/services/geometry/brep'
-import {exportDirectStepV9,importDirectStepV9} from '../src/services/cadNurbsStep'
+import {createBrepBox,tessellateNurbsBrep,createBrepSphere} from '../src/kernel/geometry/brep'
+import {exportDirectStepV9,importDirectStepV9} from '../src/kernel/cadNurbsStep'
 it('keeps authored selection identities attached to geometry after STEP reorders topology',async()=>{
  const {selectedBrepStraightEdge}=await import('../src/services/directSolidTools')
  const source=createBrepBox([2,3,4],[7,11,13])
@@ -60,7 +60,7 @@ it('refuses a curved tessellation triangle as an authored planar support',()=>{
  expect(()=>selectedBrepSupport({id:'s',name:'Sphere',brep,mesh},[0])).toThrow('one authored')
 })
 it('refuses multiple authored supports on one plane rather than guessing a face',async()=>{
- const {booleanNurbsBrep}=await import('../src/services/geometry/brep')
+ const {booleanNurbsBrep}=await import('../src/kernel/geometry/brep')
  const brep=booleanNurbsBrep(createBrepBox([0,0,0],[2,2,2]),createBrepBox([5,0,0],[7,2,2]),'union'),mesh=tessellateNurbsBrep(brep,1)
  const face=solidTopology(mesh).faces.find(f=>f.normal[2]>.99)!
  expect(()=>selectedBrepSupport({id:'pair',name:'Pair',brep,mesh},face.triangles)).toThrow('one authored')
@@ -79,7 +79,7 @@ it('resolves straight box edges in either direction and refuses diagonals and no
 })
 it('refuses a tessellated chord even when its endpoints match a curved authored edge',async()=>{
  const {selectedBrepStraightEdge}=await import('../src/services/directSolidTools')
- const {createBrepCylinder}=await import('../src/services/geometry/brep')
+ const {createBrepCylinder}=await import('../src/kernel/geometry/brep')
  const brep=createBrepCylinder(3,5),mesh=tessellateNurbsBrep(brep,1),body={id:'c',name:'Cylinder',brep,mesh}
  const curved=brep.edges.find(e=>e.curve.controlPoints.length>2)!
  const endpoints=curved.vertices.map(i=>brep.vertices[i].point)

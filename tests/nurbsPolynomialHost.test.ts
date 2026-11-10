@@ -1,11 +1,11 @@
 import {expect, it} from 'vitest'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
 import {
   hyperboloidOneSheetNurbsSurface, hyperboloidTwoSheetNurbsSurface,
   polynomialGraphNurbsSurface, polynomialNurbsCurve, polynomialNurbsSurface,
   rationalPolynomialNurbsCurve, rationalPolynomialNurbsSurface,
-} from '../src/services/nurbsConstructors'
+} from '../src/kernel/nurbsConstructors'
 
 it('preserves non-unit polynomial domains through the packaged host', () => {
   const c = polynomialNurbsCurve([-2,3], [[1,2,3],[2,-1,0],[0,0,4]])

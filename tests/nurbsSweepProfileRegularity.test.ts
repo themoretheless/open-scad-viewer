@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {inspectSweepProfileRegularity} from '../src/services/nurbsSweepAudit'
-import {circleNurbsCurve} from '../src/services/nurbsConstructors'
+import {inspectSweepProfileRegularity} from '../src/kernel/nurbsSweepAudit'
+import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
 
 it('covers outer and hole tangents continuously with one shared budget',()=>{
  const profiles=[circleNurbsCurve([0,0,0],[0,0,1],.5),circleNurbsCurve([0,0,0],[0,0,-1],.2)]

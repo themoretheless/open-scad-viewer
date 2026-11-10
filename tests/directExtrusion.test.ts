@@ -1,6 +1,6 @@
 import { describe,expect,it } from 'vitest'
 import { applyDirectExtrusionProfile, extrudeSketchProfile, buildDirectExtrusion } from '../src/services/directExtrusion'
-import { analyzeNurbsBrep, createBrepBox, tessellateNurbsBrep } from '../src/services/geometry/brep'
+import { analyzeNurbsBrep, createBrepBox, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
 import { type DirectDocument, type DirectSketch } from '../src/services/directModeling'
 import { facePlane, solidTopology } from '../src/services/directSolidTools'
 const polygon=(id:string,points:[number,number][]):DirectSketch=>({id,name:id,closed:true,points})
@@ -57,7 +57,7 @@ import {combineSketchProfiles,unionSketchProfiles,withRetainedProfile,sketchProf
 import {parseDirectDocument,extrudeSketchBrep,DirectHistory} from '../src/services/directModeling'
 import {transformSketch} from '../src/services/directSketchGeometry'
 import {transformSelection} from '../src/services/directSolidTools'
-import {booleanBrepProfiles} from '../src/services/geometry/brepProfile'
+import {booleanBrepProfiles} from '../src/kernel/geometry/brepProfile'
 describe('retained compound sketch profiles',()=>{
  const inputs=():DirectSketch[]=>[rectangle('rect',-4,-3,7,6),{id:'circle',name:'circle',closed:true,points:[],analytic:{kind:'circle',center:[3,0],radius:2,start:0,sweep:360}}]
  it('retains mixed line/arc definitions through union, document reload and exact extrusion',()=>{

@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest'
-import {GeometryKernelError} from '../src/services/geometry/kernel'
+import {GeometryKernelError} from '../src/kernel/geometry/kernel'
 import {optimizeTrussTopology, solveTruss, type TrussMember} from '../src/services/trussAnalysis'
 
 const member = (nodes:[number,number]):TrussMember => ({nodes, youngMpa:200_000, areaMm2:100})

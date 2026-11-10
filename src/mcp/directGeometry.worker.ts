@@ -1,11 +1,11 @@
 import { parentPort } from 'node:worker_threads'
 import type { GeometryExecutionDescriptor } from '../core/geometryExecution'
 import { meshTransferables } from '../core/mesh'
-import { defaultGeometryKernel } from '../services/cadGeometryKernel'
+import { defaultGeometryKernel } from '../kernel/cadGeometryKernel'
 import {
   defaultGeometryBuildEngine,
   type GeometryBuildResult,
-} from '../services/geometryBuildEngine'
+} from '../kernel/geometryBuildEngine'
 import {
   DIRECT_GEOMETRY_IDENTITY,
   DIRECT_GEOMETRY_PROTOCOL_VERSION,

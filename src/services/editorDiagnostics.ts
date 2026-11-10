@@ -1,4 +1,4 @@
-import type { GeometryBuildError } from './geometryWorkerProtocol'
+import type { GeometryBuildError } from '../kernel/geometryWorkerProtocol'
 
 export interface EditorDiagnostic {
   readonly severity: 'error' | 'warning'

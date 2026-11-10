@@ -1,5 +1,5 @@
-import type {NurbsCurve} from '../../nurbsCurve'
-import {callNurbsRust} from '../../geometry/nurbs'
+import type {NurbsCurve} from '../../../kernel/nurbsCurve'
+import {callNurbsRust} from '../../../kernel/geometry/nurbs'
 export interface NurbsSectionProjection {
  curves:NurbsCurve[]|null
  displacementUpper:number|null

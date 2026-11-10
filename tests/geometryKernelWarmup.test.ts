@@ -2,7 +2,7 @@ import {expect,it,vi} from 'vitest'
 
 it('initializes asynchronously and retries a failed compile',async()=>{
  vi.resetModules()
- const kernel=await import('../src/services/geometry/kernel')
+ const kernel=await import('../src/kernel/geometry/kernel')
  const instantiate=vi.spyOn(WebAssembly,'instantiate').mockRejectedValueOnce(new Error('injected compile failure'))
  try{
   await expect(kernel.warmGeometryKernel()).rejects.toThrow('injected compile failure')
@@ -16,7 +16,7 @@ it('initializes asynchronously and retries a failed compile',async()=>{
 
 it('shares warmup and never replaces a synchronously initialized native owner',async()=>{
  vi.resetModules()
- const kernel=await import('../src/services/geometry/kernel')
+ const kernel=await import('../src/kernel/geometry/kernel')
  const first=kernel.warmGeometryKernel(),second=kernel.warmGeometryKernel()
  expect(second).toBe(first)
  const created=kernel.callGeometryRust<{handle:string}>('mesh_picking',{action:'create',vertices:[-1,-1,0,1,-1,0,0,1,0],indices:[0,1,2],stride:3,leafSize:1})

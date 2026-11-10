@@ -1,5 +1,5 @@
 import { createApp, markRaw } from 'svet'
-import { sourceFileExtension } from './services/rushFrontendDetect'
+import { sourceFileExtension } from './language/rushFrontendDetect'
 import App from './App.svt'
 import { EXAMPLES } from './data/examples'
 import { storageGet, storageGetEnum, storageKeys, storageRemove, storageSet } from './services/safeStorage'

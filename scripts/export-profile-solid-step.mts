@@ -3,11 +3,11 @@ import {mkdirSync,writeFileSync,readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {sweepStepArtifactProvenance} from './sweep-step-provenance.mjs'
-import {createProgressiveBrepProfileBody} from '../src/services/geometry/brep'
-import {evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {exportDirectStepV5} from '../src/services/cadNurbsStep'
-import {inspectSweepCoedgeExact} from '../src/services/nurbsSweepAudit'
+import {createProgressiveBrepProfileBody} from '../src/kernel/geometry/brep'
+import {evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {exportDirectStepV5} from '../src/kernel/cadNurbsStep'
+import {inspectSweepCoedgeExact} from '../src/kernel/nurbsSweepAudit'
 const root=resolve(process.argv[2]??'/tmp/profile-solid-step')
 mkdirSync(root,{recursive:true})
 const sha=(value:string|Buffer)=>createHash('sha256').update(value).digest('hex')

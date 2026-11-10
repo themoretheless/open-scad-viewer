@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {formulaNurbsSurface,type NurbsSurfaceFormulaToken} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {formulaNurbsSurface,type NurbsSurfaceFormulaToken} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 import {readFileSync} from 'node:fs'
 
 it('preserves two-variable polynomial points and jets after domain normalization',()=>{

@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {createBrepGraphBuilder, mirrorMatrix, rotationMatrix, scaleMatrix, translationMatrix} from '../src/services/solid/brepGraph';
+import {createBrepGraphBuilder, mirrorMatrix, rotationMatrix, scaleMatrix, translationMatrix} from '../src/kernel/solid/brepGraph';
 
 it('builds graph matrices through the shared native affine API', () => {
     expect(translationMatrix(2, -3, 5)).toEqual([[1, 0, 0, 2], [0, 1, 0, -3], [0, 0, 1, 5], [0, 0, 0, 1]]);

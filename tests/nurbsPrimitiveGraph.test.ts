@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { parseOpenSCAD } from '../src/services/openscadParser'
-import { buildOwnNurbs } from '../src/services/rushGraphNurbsKernel'
-import { compileRushGraphNurbs } from '../src/services/rushGraphNurbsCompiler'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
+import { buildOwnNurbs } from '../src/language/rushGraphNurbsKernel'
+import { compileRushGraphNurbs } from '../src/language/rushGraphNurbsCompiler'
 import { importMeshFile } from '../src/exchange/meshImport'
 
 it('validates dimensions and lowers primitive parameters through the language WASM', () => {

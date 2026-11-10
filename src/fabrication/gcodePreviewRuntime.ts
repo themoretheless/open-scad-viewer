@@ -1,6 +1,6 @@
-import { emitPolygonMeshGcode, emitPolygonMeshGcodeJob, inspectGcode } from '../services/geometry/polygon'
+import { emitPolygonMeshGcode, emitPolygonMeshGcodeJob, inspectGcode } from '../kernel/geometry/polygon'
 import { flattenGroupGeometry } from '../services/meshFlatten'
-import { warmGeometryKernel } from '../services/geometry/kernel'
+import { warmGeometryKernel } from '../kernel/geometry/kernel'
 import { checkGcodePreviewJob, type GcodePreviewJob, type GcodePreviewRequest, type GcodePreviewResponse } from './gcodePreviewProtocol'
 import { assertPrintReady, PrintReadinessError } from './printReadiness'
 

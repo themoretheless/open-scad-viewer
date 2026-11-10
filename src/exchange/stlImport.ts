@@ -1,5 +1,5 @@
-import {decodeMeshBytesInKernel,renderTriangleSoupInKernel} from '../services/geometry/meshImportKernel'
-import {GeometryKernelError} from '../services/geometry/kernel'
+import {decodeMeshBytesInKernel,renderTriangleSoupInKernel} from '../kernel/geometry/meshImportKernel'
+import {GeometryKernelError} from '../kernel/geometry/kernel'
 import type { MeshData, SceneEntityId } from '../core/mesh'
 import { geometryAssetId } from '../core/scene'
 import { buildMeshBvh } from '../services/meshBvh'

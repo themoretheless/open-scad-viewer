@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createRushGraphHttpServer } from '../src/mcp/rushGraphHttp'
-import { RUSH_GRAPH_UNITS_EXAMPLE } from '../src/services/rushGraph'
+import { RUSH_GRAPH_UNITS_EXAMPLE } from '../src/language/rushGraph'
 const servers: ReturnType<typeof createRushGraphHttpServer>[] = []
 afterEach(async () => { for (const server of servers.splice(0)) { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())) } })
 async function start() {

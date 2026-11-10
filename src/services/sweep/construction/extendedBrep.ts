@@ -1,7 +1,7 @@
 import type {ExactAffineLatticePlacement} from './brep'
 // Original-request native candidates and their explicit transport ownership.
-import type {NurbsBrep} from '../../geometry/brep/core'
-import {constructMiterOwnedBoundary,constructProgressiveMiterOwnedBoundary,constructUnbudgetedDirectMiterBoundary,progressiveMiterOwnedRequest,reconstructMiterOwnedBoundary,type MiterOwnedBoundaryReport,type DirectMiterOwnedSourceRequest,type UnbudgetedAnnularMiterBoundaryReport} from '../../nurbsMiterOwnedBoundary'
+import type {NurbsBrep} from '../../../kernel/geometry/brep/core'
+import {constructMiterOwnedBoundary,constructProgressiveMiterOwnedBoundary,constructUnbudgetedDirectMiterBoundary,progressiveMiterOwnedRequest,reconstructMiterOwnedBoundary,type MiterOwnedBoundaryReport,type DirectMiterOwnedSourceRequest,type UnbudgetedAnnularMiterBoundaryReport} from '../../../kernel/nurbsMiterOwnedBoundary'
 
 import {inspectMiterProfileSmoothness,type MiterProfileSmoothness} from '../../miterProfileSmoothness'
 
@@ -9,23 +9,23 @@ import {type SweepBoundaryCertificate} from '../../sweepBoundaryCertificate'
 
 import {planMiterBody,ownedMiterSharpStations,previewMiterWalls} from '../../miterBodyLayout'
 
-import {correctMiterSweepSections,type SweepSectionCorrection} from '../../nurbsSectionProjection'
+import {correctMiterSweepSections,type SweepSectionCorrection} from '../../../kernel/nurbsSectionProjection'
 
 import {inspectSweepRetainedCorrespondence,inspectSweepRetainedDecomposition,inspectSweepRetainedCaps,inspectSweepRetainedCapDecomposition,type SweepRetainedCaps,type SweepRetainedCorrespondence} from '../../sweepRetainedCorrespondence'
 
-import {inspectSweepEmbedding,DEFAULT_SWEEP_EMBEDDING_BUDGETS,type SweepEmbeddingAudit,inspectSweepVolume,inspectSweepVolumeAndCharts,inspectSweepVolumeAndChartsAsync,DEFAULT_SWEEP_VOLUME_BUDGETS,type SweepVolumeAudit} from '../../nurbsSweepEmbedding'
+import {inspectSweepEmbedding,DEFAULT_SWEEP_EMBEDDING_BUDGETS,type SweepEmbeddingAudit,inspectSweepVolume,inspectSweepVolumeAndCharts,inspectSweepVolumeAndChartsAsync,DEFAULT_SWEEP_VOLUME_BUDGETS,type SweepVolumeAudit} from '../../../kernel/nurbsSweepEmbedding'
 
 import type {DirectSketch} from '../../directModeling'
 
-import {callGeometryRust} from '../../geometry/kernel'
+import {callGeometryRust} from '../../../kernel/geometry/kernel'
 
-import type {NurbsCurve} from '../../nurbsCurve'
+import type {NurbsCurve} from '../../../kernel/nurbsCurve'
 
-import type {NurbsSurface} from '../../nurbsSurface'
+import type {NurbsSurface} from '../../../kernel/nurbsSurface'
 
-import {normalizePolygonMesh} from '../../geometry/polygon'
+import {normalizePolygonMesh} from '../../../kernel/geometry/polygon'
 
-import type {PolygonMesh,PolygonBuild} from '../../geometry/polygon'
+import type {PolygonMesh,PolygonBuild} from '../../../kernel/geometry/polygon'
 
 import type {RustChangeSet,TopoId} from '../../../core/topologyLineage'
 
@@ -36,15 +36,15 @@ import type {RustChangeSet,TopoId} from '../../../core/topologyLineage'
 import {nativeSweepPlanarCapSelections,readNativeSweepPlanarCapFaces} from './nativeCapSelections'
 export {readNativeSweepPlanarCapFaces} from './nativeCapSelections'
 
-import {miterNurbsProfileSections} from '../../nurbsConstructors'
+import {miterNurbsProfileSections} from '../../../kernel/nurbsConstructors'
 
-import {inspectProgressiveMiterIdealCapDomains,inspectProgressiveMiterCapProjection,inspectProgressiveMiterCapParallelism,inspectProgressiveMiterWalls,streamProgressiveMiterNurbsProfiles,type ProgressiveMiterOptions,type ProgressiveMiterResult} from '../../nurbsConstructors'
+import {inspectProgressiveMiterIdealCapDomains,inspectProgressiveMiterCapProjection,inspectProgressiveMiterCapParallelism,inspectProgressiveMiterWalls,streamProgressiveMiterNurbsProfiles,type ProgressiveMiterOptions,type ProgressiveMiterResult} from '../../../kernel/nurbsConstructors'
 
-import {inspectSweepContours,inspectSweepProfileRegularity,type SweepProfileRegularityAudit,type SweepContourAudit} from '../../nurbsSweepAudit'
+import {inspectSweepContours,inspectSweepProfileRegularity,type SweepProfileRegularityAudit,type SweepContourAudit} from '../../../kernel/nurbsSweepAudit'
 
-import {inspectSweepRetainedWallCharts,type SweepRetainedChartEvidence} from '../../nurbsSweepRetainedCharts'
+import {inspectSweepRetainedWallCharts,type SweepRetainedChartEvidence} from '../../../kernel/nurbsSweepRetainedCharts'
 
-import {inspectSweepCapContacts,inspectSweepCapPairs,type SweepCapPairEvidence,type SweepCapContactEvidence} from '../../nurbsSweepCapContacts'
+import {inspectSweepCapContacts,inspectSweepCapPairs,type SweepCapPairEvidence,type SweepCapContactEvidence} from '../../../kernel/nurbsSweepCapContacts'
 
 // Route original requests and station metadata by object identity. Rust replays
 // and compares actual geometry/certificates before deriving modifier bounds.
@@ -111,7 +111,7 @@ export interface MiterBrepBody {model:NurbsBrep;report:{profileSmoothness:MiterP
 
 export interface NativeDirectMiterGeometry extends MiterBrepBody {
  report:MiterBrepBody['report'] & {
-  sweepMiterReplay:{sourceKind:'direct-annular';source:import('../../nurbsMiterOwnedBoundary').UnbudgetedDirectMiterSourceRequest}
+  sweepMiterReplay:{sourceKind:'direct-annular';source:import('../../../kernel/nurbsMiterOwnedBoundary').UnbudgetedDirectMiterSourceRequest}
   budget:null;boundaryErrorWithinBudget:null
   boundaryErrorUpper:number|null;filledCapErrorUpper:[number,number]|null
   boundaryCertificate:UnbudgetedAnnularMiterBoundaryReport['boundaryCertificate']
@@ -143,7 +143,7 @@ export const createNativeDirectMiterGeometry=(loops:NurbsCurve[][],points:[numbe
   planarCapFaces:owned.planarCapFaces,retainedAnnularFilling:owned.retainedAnnularFilling,retainedSmoothness:owned.retainedSmoothness}}
 }
 
-import type {NurbsScaleLaw,ProgressiveGuidedSurfaceSweepOptions,ProgressiveMultiSweepResult} from '../../nurbsConstructors'
+import type {NurbsScaleLaw,ProgressiveGuidedSurfaceSweepOptions,ProgressiveMultiSweepResult} from '../../../kernel/nurbsConstructors'
 
 export type ProgressiveBrepSweepOptions=ProgressiveGuidedSurfaceSweepOptions & {capCorrection?:{quantum:number;tolerance:number;maxWork:number};circleCorrection?:{quantum:number;tolerance:number;maxWork:number};
  /** Explicit native radial caps; requires a kernel with this operation. */
@@ -257,7 +257,7 @@ export const createProgressiveBrepProfileBody=(loops:NurbsCurve[][],path:NurbsCu
 }
 
 
-import {sweepAffineLawPayload,sweepFrameLawPayload,sweepGuidePayload} from '../../nurbsConstructors'
+import {sweepAffineLawPayload,sweepFrameLawPayload,sweepGuidePayload} from '../../../kernel/nurbsConstructors'
 
 
 
@@ -266,8 +266,8 @@ import {sweepAffineLawPayload,sweepFrameLawPayload,sweepGuidePayload} from '../.
  */
 export async function* streamProgressiveBrepProfileBody(
  loops:NurbsCurve[][],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,
- options:ProgressiveBrepSweepOptions,control:import('../../nurbsConstructors').ProgressiveSweepStreamOptions={},
-):AsyncGenerator<import('../../nurbsConstructors').ProgressiveSweepPreview,ProgressiveBrepBody,void>{
+ options:ProgressiveBrepSweepOptions,control:import('../../../kernel/nurbsConstructors').ProgressiveSweepStreamOptions={},
+):AsyncGenerator<import('../../../kernel/nurbsConstructors').ProgressiveSweepPreview,ProgressiveBrepBody,void>{
  const checkAbort=()=>{
   control.signal?.throwIfAborted()
   if(control.shouldAbort?.())throw new DOMException('Build cancelled','AbortError')
@@ -306,9 +306,9 @@ export async function* streamProgressiveBrepProfileBody(
  }finally{await stream.return(undefined as never)}
 }
 
-import {decomposeNurbsCurve} from '../../nurbsCurve'
+import {decomposeNurbsCurve} from '../../../kernel/nurbsCurve'
 
-import {previewProgressiveNurbsProfiles,streamProgressiveNurbsProfiles} from '../../nurbsConstructors'
+import {previewProgressiveNurbsProfiles,streamProgressiveNurbsProfiles} from '../../../kernel/nurbsConstructors'
 export function transformOriginalMiterBody(source:CertifiedMiterBoundaryOwner,matrix:number[][],options:{quantum:number;maxWork:number;maxDeviation:number}) {
  const owner=miterProofOwners.get(source)
  if(!owner)throw new Error('Affine placement requires constructor-owned boundary evidence')

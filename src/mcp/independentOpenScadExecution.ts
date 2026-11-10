@@ -6,8 +6,8 @@ import {
 import {
   OpenScadProject,
   type OpenScadProjectFileInput,
-} from '../services/openScadProject'
-import { parseOpenScadProject } from '../services/openscadParser'
+} from '../language/openScadProject'
+import { parseOpenScadProject } from '../language/openscadParser'
 
 export type IndependentOpenScadProjectFile = Readonly<{
   path: string

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {SolidDisplayCache,solidDisplayKey,type DisplayMesh} from '../src/services/solidDisplayCache'
+import {SolidDisplayCache,solidDisplayKey,type DisplayMesh} from '../src/kernel/solidDisplayCache'
 const value=():DisplayMesh=>({mesh:{positions:new Float64Array([0,0,0,1,0,0,0,1,0]),indices:new Uint32Array([0,1,2])},map:[0],normals:[[0,0,1]]})
 it('retains a complete 1000-instance scan and keys retained surfaces independently of display mesh',()=>{
  const cache=new SolidDisplayCache(),keys=[]

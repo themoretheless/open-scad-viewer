@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest'
-import { compileRushGraph, RUSH_GRAPH_LOFT_EXAMPLE } from '../src/services/rushGraph'
+import { compileRushGraph, RUSH_GRAPH_LOFT_EXAMPLE } from '../src/language/rushGraph'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 
 it('builds a closed offset taper in the production worker with either profile winding', async () => {
   const runtime = new DirectGeometrySupervisor()

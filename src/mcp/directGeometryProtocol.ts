@@ -21,12 +21,12 @@ import {
   GeometryProviderContractError,
   type GeometryBuildResult,
   type GeometryEngineAvailabilityCause,
-} from '../services/geometryBuildEngine'
+} from '../kernel/geometryBuildEngine'
 import {
   GEOMETRY_WORKER_PAYLOAD_LIMITS,
   isGeometryEvaluationResultPayload,
-} from '../services/geometryWorkerProtocol'
-import { AbortedError, OpenSCADParseError } from '../services/openscadErrors'
+} from '../kernel/geometryWorkerProtocol'
+import { AbortedError, OpenSCADParseError } from '../language/openscadErrors'
 import { isWellFormedUnicode as wellFormed } from '../core/unicode'
 import { truncateWellFormed } from '../core/unicode'
 import { record, ownData, exactDataKeys, positiveSafeInteger } from '../core/plainData'

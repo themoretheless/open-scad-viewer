@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { compileRushGraph } from '../src/services/rushGraph'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { compileRushGraph } from '../src/language/rushGraph'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 const header='// @rush/1\n'
 const compile=(text:string)=>compileRushFrontend(header+text)
 const source=readFileSync('examples/rush-frontend/generic-functions.r','utf8')

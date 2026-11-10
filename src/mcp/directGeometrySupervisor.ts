@@ -8,7 +8,7 @@ import {
 } from '../core/geometryExecution'
 import {
   type GeometryBuildResult,
-} from '../services/geometryBuildEngine'
+} from '../kernel/geometryBuildEngine'
 import type { McpGeometryBuildRuntime } from './geometryService'
 import { GeometryBusyError, GeometryDeadlineExceededError } from './geometryService'
 import {

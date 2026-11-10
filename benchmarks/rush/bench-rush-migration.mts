@@ -1,6 +1,6 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
-import {compileRushFrontend as rust} from '../../src/services/rushFrontend'
+import {compileRushFrontend as rust} from '../../src/language/rushFrontend'
 import {compileRushFrontend as ts} from './rush-frontend-typescript-reference'
 const samples=['examples/skadis-box/skadis-dovetail.rush.scad','examples/rush-frontend/generic-functions.scad','examples/rush-frontend/range-pattern.scad'];
 const results=[]

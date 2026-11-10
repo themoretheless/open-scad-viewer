@@ -108,7 +108,7 @@ it('preserves analytic arc snaps in a serialized rotated workplane',()=>{
 })
 
 it('keeps retained rational edges exact after cloning and respects every degree-one knot span',async()=>{
- const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ const {warmGeometryKernel}=await import('../src/kernel/geometry/kernel');await warmGeometryKernel()
  const curve={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[10,0],[10,10],[0,10]],weights:[1,Math.SQRT1_2,1]}
  const geometry=structuredClone(sketchSnapGeometry([{id:'r',name:'Rational',closed:false,points:[],retainedProfile:{loops:[[curve]]}}]))
  expect(geometry.segments).toHaveLength(16)

@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {approximateCatenoidNurbsPatches,approximateCatenoidNurbsSurface} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {approximateCatenoidNurbsPatches,approximateCatenoidNurbsSurface} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 it('matches independent catenoid radius and preserves full circle seam controls',()=>{
  const a=approximateCatenoidNurbsSurface([3,4,5],2,-2,3,1e-4)
  for(let i=0;i<=100;i++){

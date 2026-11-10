@@ -1,5 +1,5 @@
 import type { Aabb3, Ray3 } from './math3d'
-import { GeometryKernelError } from './geometry/kernel'
+import { GeometryKernelError } from '../kernel/geometry/kernel'
 
 export interface SceneAabbItem {
   readonly id: number

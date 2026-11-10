@@ -3,7 +3,7 @@ import {
   type FunctionValue,
   type RangeValue,
   type Value,
-} from '../../services/openscadCompiler'
+} from '../openscadCompiler'
 import { nextUp } from '../../core/float'
 
 export interface OpenScadValueSemanticsContext {

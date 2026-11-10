@@ -1,11 +1,11 @@
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
 import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
-import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 
 it('owns antipodal holonomy error and independently audits retained hollow Solid',async()=>{
  const source=readFileSync('examples/rush/closed-antipodal-spatial-rmf-affine-hollow-body.r','utf8')

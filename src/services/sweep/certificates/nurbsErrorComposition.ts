@@ -1,4 +1,4 @@
-import {kernelRuntime} from '../../geometry/kernel'
+import {kernelRuntime} from '../../../kernel/geometry/kernel'
 /** Outward rounding and invalid/overflow refusal are owned by Rust
  * (`nurbs_core::numerics::error_upper`); scalar ABI exports avoid a JSON
  * round-trip per composition. The kernel returns NaN on refusal. */

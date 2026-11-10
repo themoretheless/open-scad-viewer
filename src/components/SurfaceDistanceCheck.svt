@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type {NurbsSurfaceDistance} from '../services/nurbsSurface'
+import type {NurbsSurfaceDistance} from '../kernel/nurbsSurface'
 const props=defineProps<{value:NurbsSurfaceDistance|null;error:string;pending:boolean;retryVisible:boolean;ru:boolean}>()
 const opened=defineModel<boolean>('opened',{required:true}),budget=defineModel<number>('budget',{required:true})
 const emit=defineEmits<{retry:[]}>()

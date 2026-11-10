@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,coonsNurbsPatch} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve,reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {bezierNurbsCurve,coonsNurbsPatch} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve,reverseNurbsCurve} from '../src/kernel/nurbsCurve'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 import {readFileSync} from 'node:fs'
 
 const points:[number,number,number][][]=[

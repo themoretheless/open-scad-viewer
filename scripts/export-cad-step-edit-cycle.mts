@@ -3,7 +3,7 @@ import {mkdirSync, readFileSync, writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {emptyDirectDocument} from '../src/services/directModeling'
-import {prepareSolidStepImport, exportSolidStepCurrent} from '../src/services/solidStepExchange'
+import {prepareSolidStepImport, exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 import {pushPullFace, solidTopology} from '../src/services/directSolidTools'
 const source=resolve('docs/qualification/cad-roadmap-2026-09-28/cap-step-exchange')
 const directory=resolve(process.argv[2]??'output/qualification/cad-step-edit-cycle')

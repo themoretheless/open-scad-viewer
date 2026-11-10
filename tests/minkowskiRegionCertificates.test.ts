@@ -1,9 +1,9 @@
-import {elevateNurbsCurve} from '../src/services/nurbsCurve'
-import {certifyBrepCurveImageAgreement,verifyBrepCurveImageAgreement,booleanBrepProfiles} from '../src/services/geometry/brepProfile'
+import {elevateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {certifyBrepCurveImageAgreement,verifyBrepCurveImageAgreement,booleanBrepProfiles} from '../src/kernel/geometry/brepProfile'
 import {retracingImageFirst,retracingImageSecond,cuspImageFirst,cuspImageSecond} from './fixtures/minkowski-cases'
 import {multispanFirst,multispanSecond} from './fixtures/bezier-region-cases'
 import {expect,it} from 'vitest'
-import {minkowskiBrepProfiles,minkowskiOffsetBrepProfile,verifyBrepMinkowskiCertificate,certifyBrepSpanIntersections,verifyBrepSpanIntersections,certifyBrepAlgebraicIntersections,verifyBrepAlgebraicIntersections,certifyBrepMultispanAgreement,verifyBrepMultispanAgreement,offsetBrepProfile,validateBrepProfile} from '../src/services/geometry/brepProfile'
+import {minkowskiBrepProfiles,minkowskiOffsetBrepProfile,verifyBrepMinkowskiCertificate,certifyBrepSpanIntersections,verifyBrepSpanIntersections,certifyBrepAlgebraicIntersections,verifyBrepAlgebraicIntersections,certifyBrepMultispanAgreement,verifyBrepMultispanAgreement,offsetBrepProfile,validateBrepProfile} from '../src/kernel/geometry/brepProfile'
 import {minkowskiL,minkowskiKernel,minkowskiFrame,minkowskiSquare,minkowskiNeck,zeroJetRegion,retracedLine,monotoneStationary,spanFirst,spanSecond,rationalKnotFirst,rationalKnotSecond} from './fixtures/minkowski-cases'
 it('computes an exact filled Minkowski sum for nonconvex polygons and holes',()=>{
  for(const [loops,area] of [[[minkowskiL],27],[minkowskiFrame,140]] as const){const a={loops:[...loops]},b={loops:[minkowskiKernel]},r=minkowskiBrepProfiles(a,b,0)

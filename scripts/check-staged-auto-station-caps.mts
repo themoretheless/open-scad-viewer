@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
 import {writeLinear,decodePacked} from '../src/services/wasmHost'
-import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 const [root,output,nativeRoot]=process.argv.slice(2)
 assert.ok(root&&output&&nativeRoot)
 const raw=process.argv.includes('--raw-built')

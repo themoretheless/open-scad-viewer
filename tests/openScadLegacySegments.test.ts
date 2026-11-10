@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {resolveLegacyOpenScadSegments,roundLegacyOpenScadSegments} from '../src/services/openScadLegacySegments'
+import {resolveLegacyOpenScadSegments,roundLegacyOpenScadSegments} from '../src/language/openScadLegacySegments'
 import {referenceLegacySegments} from '../benchmarks/rush/openScadLegacySegments-reference'
 it('preserves rounding, caps and preview reduction from the frozen viewer-subset rule',()=>{
  for(const requested of [null,-1.5,-.5,-.49999999999999994,-0,0,.49999999999999994,.5,1.5,47.5,48.5,255.5,256.5,1000,1e308,Number.MAX_SAFE_INTEGER])

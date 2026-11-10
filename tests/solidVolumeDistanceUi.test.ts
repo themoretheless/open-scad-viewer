@@ -2,7 +2,7 @@ import {createRenderer,h,nextTick,shallowReactive} from 'svet'
 import {it,expect,vi} from 'vitest'
 import {readFileSync} from 'node:fs'
 const mock=vi.hoisted(()=>({run:vi.fn(),cancel:vi.fn(),dispose:vi.fn()}))
-vi.mock('../src/services/solidPreviewWorker',()=>({createSolidPreviewWorker:()=>mock}))
+vi.mock('../src/kernel/solidPreviewWorker',()=>({createSolidPreviewWorker:()=>mock}))
 import Panel from '../src/components/SolidVolumeDistance.svt'
 const cases=JSON.parse(readFileSync('docs/qualification/cad-roadmap-2026-09-28/solid-distance-2026-09-30/contract-fixtures.json','utf8')).cases
 class Node{parent:Node|null=null;children:Node[]=[];props:Record<string,any>={};text='';value:any;checked=false;constructor(public tag:string){}addEventListener(){}removeEventListener(){}get tagName(){return this.tag.toUpperCase()}}

@@ -4,7 +4,7 @@ import {dirname,join} from 'node:path'
 import {createHash} from 'node:crypto'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
 import {writeLinear,decodePacked} from '../src/services/wasmHost'
-import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 import {correctedC2Path} from './corrected-c2-sources.mjs'
 
 const [root,output,buildReceipt]=process.argv.slice(2)

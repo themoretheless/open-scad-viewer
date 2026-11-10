@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it,vi} from 'vitest'
-import {profileBridgeChordExpectation,validProfileBridgeChordReport,type ProfileBridgeChordOptions} from '../src/services/nurbsProfileBridgeChords'
+import {profileBridgeChordExpectation,validProfileBridgeChordReport,type ProfileBridgeChordOptions} from '../src/kernel/nurbsProfileBridgeChords'
 import {mainSolidExpectation,mainSolidResult,MAIN_SOLID_JOB_KINDS,type MainSolidRequest} from '../src/services/mainSolidProtocol'
 import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
 const fixture=JSON.parse(readFileSync('docs/qualification/mapped-retained-carrier-2026-10-08/profile-bridge-native-transport-2026-10-10.json','utf8'))

@@ -19,9 +19,9 @@ import {
   transformMesh,
 } from '../src/services/meshEditing'
 import { isWorkspaceMode, WORKSPACE_MODES } from '../src/services/workspaceModes'
-import { meshDocumentToSolidDocument, solidDocumentToMeshDocument } from '../src/services/solidBridge'
+import { meshDocumentToSolidDocument, solidDocumentToMeshDocument } from '../src/kernel/solidBridge'
 import { emptyDirectDocument } from '../src/services/directModeling'
-import { inspectPolygonMesh } from '../src/services/geometry/polygon'
+import { inspectPolygonMesh } from '../src/kernel/geometry/polygon'
 
 describe('workspace modes', () => {
   it('exposes Solid · Mesh, source being a drawer rather than a workspace', () => {

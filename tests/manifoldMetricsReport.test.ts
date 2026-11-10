@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { KernelManifoldMetrics } from '../src/services/geometry/manifoldAnalysis'
+import type { KernelManifoldMetrics } from '../src/kernel/geometry/manifoldAnalysis'
 import { serializeManifoldMetricsReport } from '../src/services/manifoldMetricsReport'
 
 const metrics = (): KernelManifoldMetrics => ({

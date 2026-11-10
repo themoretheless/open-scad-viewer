@@ -1,6 +1,6 @@
 import { IDENTITY_4, OPC_RELATIONSHIPS_NAMESPACE, OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES, OPENSCAD_IMPORT_MAX_ZIP_ENTRIES, OPENSCAD_IMPORT_MAX_ZIP_EXPANDED_BYTES, OpenScadImportDataError, THREE_MF_START_PART_RELATIONSHIP, UTF8_FATAL } from '../openScadImport'
 import type { Matrix4, OpenScadImportPreparationBudget, XmlElement, ZipCentralEntry } from '../openScadImport'
-import type { OpenScadProjectFile } from '../../services/openScadProject'
+import type { OpenScadProjectFile } from '../../language/openScadProject'
 import { attributeNs, childElementsNs, parseXml, requiredAttributeNs } from './parseXml'
 import { boundedCount, dataError, finiteNumber } from './parseOpenScadStl'
 import { crc32, inflateRaw, zip64EntryValues, zipDirectoryInfo, zipPath } from './parseOpenScadAmf'

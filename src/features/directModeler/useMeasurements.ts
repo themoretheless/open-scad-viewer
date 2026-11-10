@@ -1,11 +1,11 @@
 import { type Vec3 } from '../../services/directSketchGeometry'
-import { createSolidClearanceWorker } from '../../services/solidClearanceWorker'
-import { type CadPairReport } from '../../services/cadInspection'
-import { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
-import { solidVertexCount, type PointMeasurement, type CurveMeasurement, type FaceDistanceResult, type ShellDistanceResult } from '../../services/solidMeasurements'
-import { type NurbsCurveDistance } from '../../services/nurbsCurve'
+import { createSolidClearanceWorker } from '../../kernel/solidClearanceWorker'
+import { type CadPairReport } from '../../kernel/cadInspection'
+import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
+import { solidVertexCount, type PointMeasurement, type CurveMeasurement, type FaceDistanceResult, type ShellDistanceResult } from '../../kernel/solidMeasurements'
+import { type NurbsCurveDistance } from '../../kernel/nurbsCurve'
 import { type DirectDocument, type DirectBody } from '../../services/directModeling'
-import type { KernelManifoldMetrics } from '../../services/geometry/manifoldAnalysis'
+import type { KernelManifoldMetrics } from '../../kernel/geometry/manifoldAnalysis'
 import { serializeManifoldMetricsReport, type ManifoldMetricsExportFormat, type ManifoldMetricsReportRow } from '../../services/manifoldMetricsReport'
 import { computed, ref, shallowRef, watchEffect, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 import { download } from './helpers'
@@ -24,7 +24,7 @@ export function useMeasurements(options: MeasurementsOptions) {
   const { document, edgeIndex, label, props, selectedBody, selectedBodies, selection } = options
 const volumeDistanceOpen=ref(false),volumeContact=shallowRef<Vec3[]|null>(null)
 const materialPathOpen=ref(false)
-const materialPathOverlay=shallowRef<import('../../services/solidMaterialVolume').MaterialOverlay|null>(null)
+const materialPathOverlay=shallowRef<import('../../kernel/solidMaterialVolume').MaterialOverlay|null>(null)
 const measurementOpen=ref(false),measureTarget=ref(''),measureA=ref(1),measureB=ref(2),curveParameter=ref(.5)
 const formatMeasurement=(value:number)=>value!==0&&Math.abs(value)<1e-6?value.toExponential(3):value.toFixed(6)
 const clearanceOpen=ref(false),clearanceRevision=ref(0),clearanceRetryVisible=ref(false)

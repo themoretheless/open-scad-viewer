@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {hermiteNurbsPatch,type NurbsCornerJets} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {hermiteNurbsPatch,type NurbsCornerJets} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 
 const jet=(u:number,v:number)=>[
  [u+2*v+u*v,u*u+v**3+u**3*v*v,u**3*v**3],

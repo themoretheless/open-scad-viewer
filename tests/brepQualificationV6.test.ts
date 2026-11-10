@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import Ajv2020 from 'ajv/dist/2020.js'
 import {describe,expect,it} from 'vitest'
-import {BREP_CAPABILITY_MATRIX,assertBrepCapabilityAllowsTopology} from '../src/services/geometry/brepCapability'
+import {BREP_CAPABILITY_MATRIX,assertBrepCapabilityAllowsTopology} from '../src/kernel/geometry/brepCapability'
 
 type Row={id:string;plan:string;evidence:string;maturity:string;releaseState:'shipped'|'candidate';dependencies:string[]}
 const root=resolve(import.meta.dirname,'..')

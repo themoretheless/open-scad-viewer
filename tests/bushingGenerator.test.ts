@@ -6,7 +6,7 @@ import {
 } from '../src/services/bushingGenerator'
 import { extractCustomizerParameters } from '../src/services/scadCustomizer'
 import { extractSemanticEdges } from '../src/services/meshTopology'
-import { GeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { GeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 
 const engine = new GeometryBuildEngine()
 

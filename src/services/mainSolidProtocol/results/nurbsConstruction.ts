@@ -6,8 +6,8 @@ import {
   type MainSolidExpectation,
   type MainSolidResults,
 } from '../../mainSolidProtocol'
-import type { SolidBooleanResult } from '../../solidBoolean'
-import type { SolidBrepToolResult } from '../../solidBrepTool'
+import type { SolidBooleanResult } from '../../../kernel/solidBoolean'
+import type { SolidBrepToolResult } from '../../../kernel/solidBrepTool'
 import { arrayOf, numericSequenceOf } from '../mainSolidExpectation'
 import { isNonnegativeFinite, isSafeNonnegativeCount, validDirectDocument } from './predicates'
 

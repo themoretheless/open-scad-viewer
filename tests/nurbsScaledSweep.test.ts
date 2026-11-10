@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,scaledSweepNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
+import {bezierNurbsCurve,scaledSweepNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
 
 it('preserves independent rational radius and trajectory laws through WASM',()=>{
  const profile=bezierNurbsCurve([[1,0,0],[1,1,0],[0,1,0]],[1,Math.SQRT1_2,1])

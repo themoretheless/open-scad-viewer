@@ -1,18 +1,18 @@
-import {brepSourceSnapshot} from '../src/services/geometry/brep/sourceSnapshot'
+import {brepSourceSnapshot} from '../src/kernel/geometry/brep/sourceSnapshot'
 import {readFileSync,mkdirSync,writeFileSync,existsSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {expect,it} from 'vitest'
 import {DirectHistory,parseDirectDocument,type DirectBody} from '../src/services/directModeling'
-import {createBrepBox,tessellateNurbsBrep,booleanNurbsBrep,inspectNurbsBrep,type NurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,tessellateNurbsBrep,booleanNurbsBrep,inspectNurbsBrep,type NurbsBrep} from '../src/kernel/geometry/brep'
 import {transformSelection,pushPullFace,solidTopology,splitSolid} from '../src/services/directSolidTools'
 import {stringifyMeshJson} from '../src/services/meshJson'
 // Evidence comes from the final body of each exercised history, not a reconstructed fixture.
 async function exportMixedHistoryEvidence(body:DirectBody,volume:number,bounds:number[][]){
  const directory=process.env.CAD_MIXED20_STEP_OUTPUT
  if(!directory)return
- const {exportSolidStepCurrent}=await import('../src/services/solidStepExchange')
- const {importDirectStepV9}=await import('../src/services/cadNurbsStep')
+ const {exportSolidStepCurrent}=await import('../src/kernel/solidStepExchange')
+ const {importDirectStepV9}=await import('../src/kernel/cadNurbsStep')
  mkdirSync(directory,{recursive:true})
  const manifestPath=resolve(directory,'manifest.json')
  const manifest=existsSync(manifestPath)?JSON.parse(readFileSync(manifestPath,'utf8')):{schema:'cad-roadmap-step/1',units:'mm',toleranceMm:1e-6,relativeVolumeTolerance:1e-8,parts:[]}
@@ -86,7 +86,7 @@ it('preserves topology identities through 20 mixed geometry edits, full history 
 
 it('preserves bracket, rational flange and hollow enclosure through 20 affine edits and every history snapshot',async()=>{
  const parts=await controlParts()
- const {analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+ const {analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
  for(const [name,brep,volume] of parts){
   const history=new DirectHistory({version:1,sketches:[],bodies:[body(brep,name)]})
   const ids=history.document.bodies[0].brep!.topologyIds
@@ -127,7 +127,7 @@ async function controlParts(){
 }
 
 it.each(['bracket','flange','enclosure'])('pushes the upper support of %s with preserved identity and analytic volume',async name=>{
- const {analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+ const {analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
  const part=(await controlParts()).find(p=>p[0]===name)!
  const [,brep,volume]=part
  {
@@ -158,7 +158,7 @@ it('matches native cap edits through the public WASM selection path',()=>{
 })
 
 it.each(['bracket','flange','enclosure'])('preserves 20 sequential cap edits and complete undo/redo for %s',async name=>{
- const {analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+ const {analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
  const [,brep,volume]=(await controlParts()).find(p=>p[0]===name)!
  const area=name==='bracket'?325:name==='flange'?375*Math.PI:264
  const history=new DirectHistory({version:1,sketches:[],bodies:[body(brep,name)]})
@@ -196,7 +196,7 @@ it.each(['bracket','flange','enclosure'])('preserves 20 sequential cap edits and
 },60000)
 
 it.each(['bracket','flange','enclosure'])('preserves %s through 20 mixed cap, rotation, translation and scale edits',async name=>{
- const {analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+ const {analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
  const [,brep,initialVolume]=(await controlParts()).find(p=>p[0]===name)!
  let volume=initialVolume,area=name==='bracket'?325:name==='flange'?375*Math.PI:264
  const history=new DirectHistory({version:1,sketches:[],bodies:[body(brep,name)]})
@@ -234,10 +234,10 @@ it.each(['bracket','flange','enclosure'])('preserves %s through 20 mixed cap, ro
 },60000)
 
 it.each([2,-2])('preserves dimensions through union, cap push %s mm, exact fillet, STEP and history',async(distance)=>{
- const {solidExactEdgeFeature}=await import('../src/services/solidExactEdgeFeature')
- const {analyzeNurbsBrep}=await import('../src/services/geometry/brep')
- const {exportSolidStepCurrent}=await import('../src/services/solidStepExchange')
- const {importDirectStepV9}=await import('../src/services/cadNurbsStep')
+ const {solidExactEdgeFeature}=await import('../src/kernel/solidExactEdgeFeature')
+ const {analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {exportSolidStepCurrent}=await import('../src/kernel/solidStepExchange')
+ const {importDirectStepV9}=await import('../src/kernel/cadNurbsStep')
  const a=createBrepBox([0,0,0],[12,10,10]),b=createBrepBox([8,0,0],[20,10,10])
  const history=new DirectHistory({version:1,sketches:[],bodies:[body(a,'a'),body(b,'b')]})
  const snapshots=[stringifyMeshJson(history.document)]
@@ -265,8 +265,8 @@ it.each([2,-2])('preserves dimensions through union, cap push %s mm, exact fille
 
 it('preserves the bracket through 20 Boolean, face, transform and exact-fillet edits',async()=>{
  const {cadRoadmapParts}=await import('../benchmarks/cad-roadmap-fixtures')
- const {analyzeNurbsBrep}=await import('../src/services/geometry/brep')
- const {solidExactEdgeFeature}=await import('../src/services/solidExactEdgeFeature')
+ const {analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {solidExactEdgeFeature}=await import('../src/kernel/solidExactEdgeFeature')
  const initial=cadRoadmapParts().find(p=>p.body.id==='bracket')!.body
  const history=new DirectHistory({version:1,sketches:[],bodies:[initial]})
  const snapshots=[stringifyMeshJson(history.document)]
@@ -309,8 +309,8 @@ it('preserves the bracket through 20 Boolean, face, transform and exact-fillet e
  const volume=(area-(1-Math.PI/4))*height;save(rounded,volume)
  const moved=transformSelection(history.document,['bracket'],[1,0,0],[0,0,1],0,1).bodies[0];offset++
  save(moved,volume)
- const {exportSolidStepCurrent}=await import('../src/services/solidStepExchange')
- const {importDirectStepV9}=await import('../src/services/cadNurbsStep')
+ const {exportSolidStepCurrent}=await import('../src/kernel/solidStepExchange')
+ const {importDirectStepV9}=await import('../src/kernel/cadNurbsStep')
  exportMixedUiHistory(initial.id,snapshots)
  await exportMixedHistoryEvidence(moved,volume,[[offset,0,0],[offset+length,30,height]])
  const imported=importDirectStepV9(await exportSolidStepCurrent(moved)).model
@@ -329,8 +329,8 @@ it('preserves the bracket through 20 Boolean, face, transform and exact-fillet e
 
 it('preserves the flange through 20 mixed face, hole-Boolean, transform and circular-fillet edits',async()=>{
  const {cadRoadmapParts}=await import('../benchmarks/cad-roadmap-fixtures')
- const {analyzeNurbsBrep,createBrepCylinder,transformNurbsBrep}=await import('../src/services/geometry/brep')
- const {solidExactEdgeFeature}=await import('../src/services/solidExactEdgeFeature')
+ const {analyzeNurbsBrep,createBrepCylinder,transformNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {solidExactEdgeFeature}=await import('../src/kernel/solidExactEdgeFeature')
  const initial=cadRoadmapParts().find(p=>p.body.id==='flange')!.body
  const history=new DirectHistory({version:1,sketches:[],bodies:[initial]})
  const snapshots=[stringifyMeshJson(history.document)]
@@ -377,8 +377,8 @@ it('preserves the flange through 20 mixed face, hole-Boolean, transform and circ
  const moved=transformSelection(history.document,['flange'],[1,0,0],[0,0,1],0,1).bodies[0];offset++
  save(moved,volume)
  expect(snapshots).toHaveLength(21);expect(new Set(snapshots).size).toBe(21)
- const {exportSolidStepCurrent}=await import('../src/services/solidStepExchange')
- const {importDirectStepV9}=await import('../src/services/cadNurbsStep')
+ const {exportSolidStepCurrent}=await import('../src/kernel/solidStepExchange')
+ const {importDirectStepV9}=await import('../src/kernel/cadNurbsStep')
  exportMixedUiHistory(initial.id,snapshots)
  await exportMixedHistoryEvidence(moved,volume,[[offset-20,-20,0],[offset+20,20,height]])
  const imported=importDirectStepV9(await exportSolidStepCurrent(moved)).model
@@ -391,8 +391,8 @@ it('preserves the flange through 20 mixed face, hole-Boolean, transform and circ
 
 it('preserves the enclosure through 20 mixed face, hole-Boolean, transform and layered-fillet edits',async()=>{
  const {cadRoadmapParts}=await import('../benchmarks/cad-roadmap-fixtures')
- const {analyzeNurbsBrep}=await import('../src/services/geometry/brep')
- const {solidExactEdgeFeature}=await import('../src/services/solidExactEdgeFeature')
+ const {analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {solidExactEdgeFeature}=await import('../src/kernel/solidExactEdgeFeature')
  const initial=cadRoadmapParts().find(p=>p.body.id==='enclosure')!.body
  const history=new DirectHistory({version:1,sketches:[],bodies:[initial]})
  const snapshots=[stringifyMeshJson(history.document)]
@@ -440,8 +440,8 @@ it('preserves the enclosure through 20 mixed face, hole-Boolean, transform and l
  const moved=transformSelection(history.document,['enclosure'],[1,0,0],[0,0,1],0,1).bodies[0];offset++
  save(moved,volume)
  expect(snapshots).toHaveLength(21);expect(new Set(snapshots).size).toBe(21)
- const {exportSolidStepCurrent}=await import('../src/services/solidStepExchange')
- const {importDirectStepV9}=await import('../src/services/cadNurbsStep')
+ const {exportSolidStepCurrent}=await import('../src/kernel/solidStepExchange')
+ const {importDirectStepV9}=await import('../src/kernel/cadNurbsStep')
  exportMixedUiHistory(initial.id,snapshots)
  await exportMixedHistoryEvidence(moved,volume,[[offset,0,0],[offset+40,30,height]])
  const imported=importDirectStepV9(await exportSolidStepCurrent(moved)).model

@@ -1,6 +1,6 @@
-import {callGeometryRust} from '../../geometry/kernel'
-import type {NurbsBrep} from '../../geometry/brep'
-import type {NurbsCurve} from '../../nurbsCurve'
+import {callGeometryRust} from '../../../kernel/geometry/kernel'
+import type {NurbsBrep} from '../../../kernel/geometry/brep'
+import type {NurbsCurve} from '../../../kernel/nurbsCurve'
 import {type NativeSweepCapContactBudgets} from './nurbsSweepCapContacts'
 
 export interface SweepRetainedCorrespondence {

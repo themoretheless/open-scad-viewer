@@ -1,10 +1,10 @@
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
-import {prepareSolidProfile} from '../src/services/solidProfilePreparation'
+import {prepareSolidProfile} from '../src/kernel/solidProfilePreparation'
 import {sampleCurve,type AnalyticCurve} from '../src/services/directSketchGeometry'
 import {buildDirectExtrusion} from '../src/services/directExtrusion'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 import type {DirectDocument} from '../src/services/directModeling'
 const directory=resolve(process.argv[2]??'/tmp/arc-profile-step');mkdirSync(directory,{recursive:true})
 const parts=[]

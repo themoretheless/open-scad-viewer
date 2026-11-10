@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import type {FrameMember, FrameRestraint, FrameSupport, FrameVector} from './frameAnalysis'
 import type {TrussMember, TrussVector} from './trussAnalysis'
 

@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
-import {inspectSweepCapPairs} from '../src/services/nurbsSweepCapContacts'
-import {createRationalBrepSectionLoft} from '../src/services/geometry/brep'
-import {circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
+import {inspectSweepCapPairs} from '../src/kernel/nurbsSweepCapContacts'
+import {createRationalBrepSectionLoft} from '../src/kernel/geometry/brep'
+import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
 const loops=(z:number)=>[[circleNurbsCurve([0,0,z],[0,0,1],.5)],[reverseNurbsCurve(circleNurbsCurve([0,0,z],[0,0,1],.2))]]
 const budgets={clearance:0,distanceTolerance:.001,maxInjectivityCells:1000,maxPairs:1000,maxPairCells:1000}
 it('qualifies actual nonunit cap charts and preserves face IDs on unresolved pairs',()=>{

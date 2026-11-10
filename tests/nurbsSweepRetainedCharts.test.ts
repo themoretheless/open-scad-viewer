@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
-import {inspectSurfaceLinearInjectivity} from '../src/services/nurbsSweepAudit'
-import {inspectSweepRetainedWallCharts} from '../src/services/nurbsSweepRetainedCharts'
-import {createRationalBrepSectionLoft} from '../src/services/geometry/brep'
-import {circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
+import {inspectSurfaceLinearInjectivity} from '../src/kernel/nurbsSweepAudit'
+import {inspectSweepRetainedWallCharts} from '../src/kernel/nurbsSweepRetainedCharts'
+import {createRationalBrepSectionLoft} from '../src/kernel/geometry/brep'
+import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
 const quarter={degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],controlPoints:[[[1,0,0],[1,0,5]],[[1,1,0],[1,1,5]],[[0,1,0],[0,1,5]]],weights:[[1,1],[Math.sqrt(.5),Math.sqrt(.5)],[1,1]],periodicU:false,periodicV:false}
 it('proves a full rational quarter chart with one oblique projection and refuses folds',()=>{
  const report=inspectSurfaceLinearInjectivity(quarter,1000)

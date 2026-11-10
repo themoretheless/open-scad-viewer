@@ -4,11 +4,11 @@ import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
 import ts from 'typescript'
-import {CadGeometryKernel} from '../src/services/cadGeometryKernel'
+import {CadGeometryKernel} from '../src/kernel/cadGeometryKernel'
 import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
 import {compileWasmArtifact} from '../src/services/wasmArtifact'
 import {extrudeDirectSketch, type DirectBody} from '../src/services/directModeling'
-import {spatialGraph, lighteningCells, type LighteningOptions} from '../src/services/solidLightening'
+import {spatialGraph, lighteningCells, type LighteningOptions} from '../src/kernel/solidLightening'
 
 // Pin the pre-port implementation. Only its pure graph/cell exports are called;
 // external geometry imports are unavailable in the reference module. Evaluate

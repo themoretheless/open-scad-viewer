@@ -7,9 +7,9 @@ import {
   type DirectDocument,
   type DirectHistory,
 } from '../../services/directModeling'
-import { isGeometryKernelReady, warmGeometryKernel } from '../../services/geometry/kernel'
+import { isGeometryKernelReady, warmGeometryKernel } from '../../kernel/geometry/kernel'
 import { storageGet, storageSet } from '../../services/safeStorage'
-import { readSolidDraftHead, writeSolidDraftHead } from '../../services/solidDraftHeadStore'
+import { readSolidDraftHead, writeSolidDraftHead } from '../../kernel/solidDraftHeadStore'
 import {
   collectSolidDraftSnapshots,
   readSolidDraftSnapshot,
@@ -17,8 +17,8 @@ import {
   solidDraftSnapshotId,
   withSolidDraftLock,
   writeSolidDraftSnapshot,
-} from '../../services/solidDraftStore'
-import { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
+} from '../../kernel/solidDraftStore'
+import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import type { Pane } from './helpers'
 
 export interface UseDraftPersistenceOptions {

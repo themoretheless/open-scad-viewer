@@ -1,4 +1,4 @@
-import type {OffsetContactBand,OffsetContactTangent,OffsetSourceBoundary,TrimmedOffsetContactBand} from '../../nurbsSurfaceOffset'
+import type {OffsetContactBand,OffsetContactTangent,OffsetSourceBoundary,TrimmedOffsetContactBand} from '../../../kernel/nurbsSurfaceOffset'
 import {finite,type MainSolidExpectation} from '../../mainSolidProtocol'
 import {arrayOf} from '../mainSolidExpectation'
 export type OffsetContactExpectation=Extract<MainSolidExpectation,{kind:'offsetContactTangent'|'offsetSourceBoundary'|'trimmedOffsetContactBand'|'offsetContactBand'}>

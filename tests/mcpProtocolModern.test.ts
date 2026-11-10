@@ -9,7 +9,7 @@ import { BoundedTransport, MAX_MCP_SUBSCRIPTIONS } from '../src/mcp/boundedTrans
 import { createOpenScadMcpServer } from '../src/mcp/createServer'
 import { DuckDbModelStore } from '../src/mcp/duckdbModelStore'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
-import { GeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { GeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 
 interface JsonRpcResponse {
   jsonrpc: '2.0'

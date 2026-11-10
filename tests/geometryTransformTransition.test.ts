@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { geometryTransformTransition } from '../src/services/geometryTransformTransition'
+import { geometryTransformTransition } from '../src/kernel/geometryTransformTransition'
 import { identity, rotateZ, scale, translate } from '../src/services/math3d'
 
 it('rotates rigidly through 180 degrees while interpolating translation and scale', () => {

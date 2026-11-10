@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {naturalSplineNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve,trimNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {naturalSplineNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve,trimNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 
 it('matches the independent natural cubic solution and one-sided first/second derivatives',()=>{
  const points:[number,number,number][]=[[0,0,0],[1,2,-1],[3,0,2]]

@@ -1,6 +1,6 @@
 // Pure helpers of DirectModeler.svt: no component state, extracted by scripts/vue-extract-pure.mjs.
-import { type PolygonMesh } from '../../services/geometry/polygon'
-import { type DisplayMesh } from '../../services/solidDisplayCache'
+import { type PolygonMesh } from '../../kernel/geometry/polygon'
+import { type DisplayMesh } from '../../kernel/solidDisplayCache'
 
 export type Pane = '2d' | '3d'
 

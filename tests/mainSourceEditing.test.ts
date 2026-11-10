@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest'
-import {parseOpenSCAD} from '../src/services/openscadParser'
+import {parseOpenSCAD} from '../src/language/openscadParser'
 import {mainOperation} from '../src/services/mainModeling'
 import {patchMainSource,restoreSourceHistory,boundedSourceHistory} from '../src/services/mainSourceEditing'
 it('edits one top-level expression and preserves declarations, modules and unrelated primitives',async()=>{

@@ -8,9 +8,9 @@ import {
   type GeometryExecutionDescriptor,
 } from '../src/core/geometryExecution'
 import { sha256Hex } from '../src/core/sha256'
-import { geometryExecutionForError } from '../src/services/geometryBuildEngine'
-import { GEOMETRY_WORKER_PAYLOAD_LIMITS } from '../src/services/geometryWorkerProtocol'
-import { OpenSCADParseError } from '../src/services/openscadErrors'
+import { geometryExecutionForError } from '../src/kernel/geometryBuildEngine'
+import { GEOMETRY_WORKER_PAYLOAD_LIMITS } from '../src/kernel/geometryWorkerProtocol'
+import { OpenSCADParseError } from '../src/language/openscadErrors'
 import {
   DIRECT_GEOMETRY_IDENTITY,
   DIRECT_GEOMETRY_PROTOCOL_VERSION,

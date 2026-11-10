@@ -1,7 +1,7 @@
 import {parentPort,workerData} from 'node:worker_threads'
 import {parseDirectDocument,serializeDirectDocument} from '../services/directModeling'
 import {executeDirectTransaction} from '../services/directTransactions'
-import {warmGeometryKernel} from '../services/geometry/kernel'
+import {warmGeometryKernel} from '../kernel/geometry/kernel'
 try{
  await warmGeometryKernel()
  const result=executeDirectTransaction(parseDirectDocument(workerData.document),workerData.script)

@@ -1,4 +1,4 @@
-import {callNurbsRust} from './geometry/nurbs'
+import {callNurbsRust} from '../kernel/geometry/nurbs'
 export interface FrozenGraphRestoreOptions {maxBytes?:number;maxWork?:number;maxPairs?:number}
 export type FrozenGraphFormat='native-convex-graph-volume/1'|'native-convex-graph-volume/2'
 export interface FrozenGraphExpectation {format:FrozenGraphFormat;geometryText:string;maxBytes:number;maxWork:number;maxPairs:number}

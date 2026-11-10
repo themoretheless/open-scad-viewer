@@ -3,7 +3,7 @@ import {
   SOLID_ENGINEERING_MATERIALS,
   estimateSolidMassGrams,
   solidMaterialRgb,
-} from '../src/services/solidMaterial'
+} from '../src/kernel/solidMaterial'
 import { inspectMeshManifoldDiagnostics } from '../src/services/meshInspection'
 import { computeGcodeLayerSummary } from '../src/fabrication/gcodePreviewGeometry'
 import {

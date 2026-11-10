@@ -1,11 +1,11 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {bezierNurbsCurve,circleNurbsCurve,miterNurbsProfileSections} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {createMiterBrepProfileBody,inspectNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
-import {exportDirectStepV5,importDirectStepV5} from '../src/services/cadNurbsStep'
+import {bezierNurbsCurve,circleNurbsCurve,miterNurbsProfileSections} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
+import {createMiterBrepProfileBody,inspectNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
+import {exportDirectStepV5,importDirectStepV5} from '../src/kernel/cadNurbsStep'
 
 it('retains rational miter controls and agrees with independent right-angle extrusion geometry',()=>{
   const profile=bezierNurbsCurve([[1,0,0],[1.5,1,0],[2,0,0]],[1,.7,2])
@@ -43,8 +43,8 @@ it('lowers miter limits and spatial sites through Rush, parser and Solid',async(
   const built=buildOwnNurbs(compiled.document,{action:'build'})
   expect(built.report.construction?.[node.id]).toMatchObject({sections:4,globalEmbeddingCertified:false,roundingCertified:false})
   expect(()=>compileRushFrontend(source.replace('miter_limit: 2','miter_limit: 2mm'))).toThrow()
-  const {parseOpenSCAD}=await import('../src/services/openscadParser')
-  const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
+  const {parseOpenSCAD}=await import('../src/language/openscadParser')
+  const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
   const scene=await parseOpenSCAD(source)
   const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
   expect(readSweepViewportEvidence(scene.meshes[0]!.nativeGeometry)).toMatchObject({solidGeometryCertified:true,continuousBound:true})
@@ -79,8 +79,8 @@ it('preserves a hollow closed miter body without caps through Rush, Solid and ST
   expect(charts.cells).toBeLessThanOrEqual(20000)
   expect(compileRushFrontend(source.replace('closed: true','closed: false')).document.nodes.find(n=>n.op==='brep_miter_sweep')).toMatchObject({closed:false})
   expect(()=>compileRushFrontend(source.replace('closed: true','closed: 1mm'))).toThrow()
-  const {parseOpenSCAD}=await import('../src/services/openscadParser')
-  const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
+  const {parseOpenSCAD}=await import('../src/language/openscadParser')
+  const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
   const scene=await parseOpenSCAD(source)
   const body=sceneMeshesToSolidDocument(scene.meshes).bodies[0]!.brep!
   expect(body.faces).toHaveLength(32)
@@ -88,7 +88,7 @@ it('preserves a hollow closed miter body without caps through Rush, Solid and ST
   expect(body.bodies[0]!.innerShells).toEqual([1])
   expect(body.faces.every(f=>f.holes.length===0)).toBe(true)
   expect(inspectNurbsBrep(body)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})
-  const {inspectSweepSeams}=await import('../src/services/nurbsSweepAudit')
+  const {inspectSweepSeams}=await import('../src/kernel/nurbsSweepAudit')
   // Every path corner, including the cyclic join, has regular adjacent charts
   // but an intentionally sharp miter normal. Closed topology cannot certify G1.
   const cornerSeams=Array.from({length:4},(_,layer)=>({
@@ -100,7 +100,7 @@ it('preserves a hollow closed miter body without caps through Rush, Solid and ST
   expect(cornerAudit.inspectedSeams).toBe(4)
   expect(cornerAudit.exactG1G2Certified).toBe(false)
   expect(cornerAudit.seams.every(seam=>!seam.withinJetBudget)).toBe(true)
-  const {inspectSweepRetainedWallCharts}=await import('../src/services/nurbsSweepRetainedCharts')
+  const {inspectSweepRetainedWallCharts}=await import('../src/kernel/nurbsSweepRetainedCharts')
   const folded=structuredClone(body)
   const closing=folded.faces[24]!.surface
   for(const row of closing.controlPoints)row[1]=[...row[0]!]
@@ -128,9 +128,9 @@ it('carries explicit bounded cap correction from Rush through parser to the reta
  expect(certificate.errorUpper).toBeGreaterThanOrEqual(certificate.wallErrorUpper)
  expect(certificate.errorUpper).toBeGreaterThanOrEqual(Math.max(...certificate.filledCapErrorUpper))
  expect(certificate.errorUpper).toBeLessThanOrEqual(1e-9)
- const {parseOpenSCAD}=await import('../src/services/openscadParser')
- const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
- const {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/services/nurbsSweepEmbedding')
+ const {parseOpenSCAD}=await import('../src/language/openscadParser')
+ const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
+ const {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/kernel/nurbsSweepEmbedding')
  const scene=await parseOpenSCAD(source)
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  expect(scene.meshes.map(mesh=>readSweepViewportEvidence(mesh.nativeGeometry)).filter(Boolean)).toEqual([expect.objectContaining({solidGeometryCertified:true,continuousBound:true,wallRegularityCertified:true,profileRegularityCertified:true})])

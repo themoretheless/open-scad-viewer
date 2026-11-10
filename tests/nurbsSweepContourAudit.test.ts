@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {inspectSweepContours} from '../src/services/nurbsSweepAudit'
-import {bezierNurbsCurve} from '../src/services/nurbsConstructors'
+import {inspectSweepContours} from '../src/kernel/nurbsSweepAudit'
+import {bezierNurbsCurve} from '../src/kernel/nurbsConstructors'
 const square=(x:number,y:number,size:number)=>{
  const points=[[x,y,0],[x+size,y,0],[x+size,y+size,0],[x,y+size,0]]
  return points.map((p,i)=>({...bezierNurbsCurve([p,points[(i+1)%4]!]),weights:[1,2]}))
@@ -33,7 +33,7 @@ it('refuses outside, nested and touching holes and preserves independent zero bu
  expect(inspectSweepContours([nonplanar],options)).toMatchObject({capDomainCertified:false,planeAxis:null})
 })
 it('qualifies actual segmented circle primitives without rounded decomposition',async()=>{
- const {circleNurbsCurve}=await import('../src/services/nurbsConstructors')
+ const {circleNurbsCurve}=await import('../src/kernel/nurbsConstructors')
  const loops=[10,2].map(radius=>[circleNurbsCurve([0,0,0],[0,0,1],radius)])
  expect(inspectSweepContours(loops,options).capDomainCertified).toBe(true)
 })

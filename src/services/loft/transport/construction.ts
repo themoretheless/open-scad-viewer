@@ -1,7 +1,7 @@
-import type {NurbsCurve} from '../../nurbsCurve'
-import type {NurbsSurface} from '../../nurbsSurface'
-import type {RationalReparameterization} from '../../nurbsFoundation'
-import {callNurbsRust} from '../../geometry/nurbs'
+import type {NurbsCurve} from '../../../kernel/nurbsCurve'
+import type {NurbsSurface} from '../../../kernel/nurbsSurface'
+import type {RationalReparameterization} from '../../../kernel/nurbsFoundation'
+import {callNurbsRust} from '../../../kernel/geometry/nurbs'
 
 export const controlTangentLoftNurbsCurves = (curves: NurbsCurve[], parameters: number[], startTangents: [number,number,number][], endTangents: [number,number,number][]): NurbsSurface => callNurbsRust('surface_control_tangent_loft', {curves, parameters, start_tangents:startTangents, end_tangents:endTangents})
 export const guidedLoftNurbsCurves = (curves: NurbsCurve[], parameters: number[], guides: NurbsCurve[], guideParameters: number[], startTangents?: [number,number,number][], endTangents?: [number,number,number][]): NurbsSurface => callNurbsRust('surface_guided_loft', {curves, parameters, guides, guide_parameters:guideParameters, start_tangents:startTangents, end_tangents:endTangents})

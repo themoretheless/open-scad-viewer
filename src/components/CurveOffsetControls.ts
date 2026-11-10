@@ -1,9 +1,9 @@
 import {Fragment,h} from 'svet'
 import CadQuantityInput from './CadQuantityInput.svt'
-import type {CurveOffsetReport} from '../services/solidCurveOffset'
+import type {CurveOffsetReport} from '../kernel/solidCurveOffset'
 type Join='smooth'|'bevel'|'trim-nonzero'|'trim-evenodd'
 interface Props {
- locale:string;join:Join;distance:number;tolerance:number;state?:{report:CurveOffsetReport|null;trimmedReport:import('../services/solidTrimmedCurveOffset').TrimmedOffsetReport|null}|null
+ locale:string;join:Join;distance:number;tolerance:number;state?:{report:CurveOffsetReport|null;trimmedReport:import('../kernel/solidTrimmedCurveOffset').TrimmedOffsetReport|null}|null
  'onUpdate:join'?:(value:Join)=>void
  'onUpdate:distance'?:(value:number)=>void
  'onUpdate:tolerance'?:(value:number)=>void

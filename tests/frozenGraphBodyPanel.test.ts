@@ -1,7 +1,7 @@
 import {createRenderer,nextTick,ref,h} from 'svet'
 import {it,expect,vi} from 'vitest'
 const state=vi.hoisted(()=>({tasks:[] as any[],worker:null as any}))
-vi.mock('../src/services/solidPreviewWorker',()=>({createSolidPreviewWorker:()=>{state.tasks=[];state.worker={cancel:vi.fn(),dispose:vi.fn(),run:vi.fn((job:any)=>new Promise((resolve,reject)=>state.tasks.push({resolve,reject,job})))};return state.worker}}))
+vi.mock('../src/kernel/solidPreviewWorker',()=>({createSolidPreviewWorker:()=>{state.tasks=[];state.worker={cancel:vi.fn(),dispose:vi.fn(),run:vi.fn((job:any)=>new Promise((resolve,reject)=>state.tasks.push({resolve,reject,job})))};return state.worker}}))
 import Panel from '../src/components/FrozenGraphBodyPanel.svt'
 it('loads a display-only body, selects an edge and invalidates late data on cancel',async()=>{
  const node=(type:string):any=>({type,tagName:type.toUpperCase(),children:[],props:{},parent:null,text:'',get options(){return this.children.filter((n:any)=>n.type==='option')},addEventListener(){},removeEventListener(){},getRootNode(){return {}},setAttribute(){},removeAttribute(){}})

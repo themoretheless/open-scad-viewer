@@ -4,7 +4,7 @@ import {
   MAX_GEOMETRY_SOURCE_CHARACTERS,
 } from '../core/geometryExecution'
 import { sha256Hex } from '../core/sha256'
-import { isGeometryEvaluationResultPayload } from '../services/geometryWorkerProtocol'
+import { isGeometryEvaluationResultPayload } from '../kernel/geometryWorkerProtocol'
 import { isWellFormedUnicode as wellFormed } from '../core/unicode'
 import { truncateWellFormed } from '../core/unicode'
 import { record, ownData, exactDataKeys, nonNegativeSafeInteger } from '../core/plainData'

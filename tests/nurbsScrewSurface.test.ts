@@ -1,10 +1,10 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {approximateScrewNurbsSurfaces,bezierNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {approximateScrewNurbsSurfaces,bezierNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 it('matches independent rational-profile screw coordinates at retained subdomains',()=>{
  const profile=bezierNurbsCurve([[1,0,0],[2,0,1]],[1,2])
  for(const [turns,height] of [[1,4],[-.5,-3]]){

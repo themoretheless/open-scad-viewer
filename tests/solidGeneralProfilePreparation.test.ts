@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {prepareSolidProfile} from '../src/services/solidProfilePreparation'
+import {prepareSolidProfile} from '../src/kernel/solidProfilePreparation'
 import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
-import {evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
+import {evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
 import {worldPoint} from '../src/services/directSketchGeometry'
 import {mainSolidExpectation,mainSolidResult,type MainSolidJob} from '../src/services/mainSolidProtocol'
 

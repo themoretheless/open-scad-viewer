@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import {sourceBodyRecordOptions,type SourceBodyRecord} from './sourceBodyArchive'
 import type {SourceBodyResult,SourceBodyDefinition} from './sourceBody'
 import type {MainSolidWorkerClient} from './mainSolidWorkerClient'

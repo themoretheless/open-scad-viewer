@@ -1,16 +1,16 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { compileOpenSCAD } from '../src/services/openscadCompiler'
+import { compileOpenSCAD } from '../src/language/openscadCompiler'
 import {
   bindOpenScad,
   bindProgramCacheKey,
   compileBindCacheSize,
   prepareOpenScadFrontEnd,
   resetCompileBindCache,
-} from '../src/services/openscadBinder'
-import { isKernelSectionHandle, isKernelSolidHandle, KernelHandleTable } from '../src/services/geometryKernel'
-import { positionKernelError } from '../src/services/openscadErrors'
+} from '../src/language/openscadBinder'
+import { isKernelSectionHandle, isKernelSolidHandle, KernelHandleTable } from '../src/kernel/geometryKernel'
+import { positionKernelError } from '../src/language/openscadErrors'
 
 function allFrozen(value: unknown): boolean {
   if (!value || typeof value !== 'object') return true
@@ -78,10 +78,10 @@ describe('OpenSCAD bind phase', () => {
 
   it('keeps compiler, binder and kernel-port sources free of Manifold imports', () => {
     const files = [
-      '../src/services/openscadCompiler.ts',
-      '../src/services/openscadBinder.ts',
-      '../src/services/geometryKernel.ts',
-      '../src/services/openscadParser.ts',
+      '../src/language/openscadCompiler.ts',
+      '../src/language/openscadBinder.ts',
+      '../src/kernel/geometryKernel.ts',
+      '../src/language/openscadParser.ts',
       '../src/services/svgGeometry.ts',
     ]
     for (const file of files) {

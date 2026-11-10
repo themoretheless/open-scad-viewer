@@ -5,7 +5,7 @@ import { McpServer, WebStandardStreamableHTTPServerTransport } from '@modelconte
 import { registerRushGraphTools } from './rushGraphTools'
 import { HeadlessGeometryService } from './geometryService'
 import { DirectGeometrySupervisor } from './directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../kernel/geometryBuildEngine'
 
 /** Stateless, catalog-free endpoint. Put behind HTTPS and access control for remote use. */
 export function createRushGraphHttpServer() {

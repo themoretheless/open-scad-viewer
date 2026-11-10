@@ -1,4 +1,4 @@
-import type { GeometryBuildError, GeometryWorkerEvent } from '../geometryWorkerProtocol'
+import type { GeometryBuildError, GeometryWorkerEvent } from '../../kernel/geometryWorkerProtocol'
 import type { GeometryBuildInput } from '../buildCoordinator'
 import type { GeometryQuality } from '../../core/build'
 

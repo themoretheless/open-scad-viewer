@@ -1,4 +1,4 @@
-import {callNurbsRust} from '../../geometry/nurbs'
+import {callNurbsRust} from '../../../kernel/geometry/nurbs'
 /** Conditional cap-set Hausdorff bound. Premises must belong to the same
  * original sweep and actual retained caps; this function is not admission.
  * Exact region correspondence + ideal ownership + nonsingular projection

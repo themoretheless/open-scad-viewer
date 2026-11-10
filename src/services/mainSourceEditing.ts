@@ -1,5 +1,5 @@
 import type {MeshData} from '../core/mesh'
-import {compileOpenSCAD} from './openscadCompiler'
+import {compileOpenSCAD} from '../language/openscadCompiler'
 import {directBodiesScad} from './directBodiesScad'
 import type {DirectDocument} from './directModeling'
 import {sceneBody} from './meshFlatten'

@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest'
-import { compileRushGraph } from '../src/services/rushGraph'
+import { compileRushGraph } from '../src/language/rushGraph'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 const document = (nodes: unknown[]) => ({ language:'rush/ir-1', units:'mm', parameters:[], segments:24, nodes, root:(nodes.at(-1) as {id:string}).id })
 const box = {id:'b',op:'box',size:[10,10,10]}
 it('executes new CAD operations in the production worker with closed output and measured volumes', async () => {

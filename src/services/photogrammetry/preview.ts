@@ -1,6 +1,6 @@
 import type {MeshData} from '../../core/mesh'
 import type {PhotoReconstruction, PhotoSurface} from './kernel'
-import {fillVertexNormalsInKernel} from '../geometry/meshAnalysis'
+import {fillVertexNormalsInKernel} from '../../kernel/geometry/meshAnalysis'
 import {buildMeshBvh} from '../meshBvh'
 import {extractSemanticEdges} from '../meshTopology'
 

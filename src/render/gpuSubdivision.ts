@@ -9,8 +9,8 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
-import type { SubdivisionCage, SubdivisionRefined } from '../services/geometry/subdivision'
-import type { GeometryBrush } from '../services/geometryEditing'
+import type { SubdivisionCage, SubdivisionRefined } from '../kernel/geometry/subdivision'
+import type { GeometryBrush } from '../kernel/geometryEditing'
 
 import CATMULL_CLARK_WGSL from '../../crates/compute-core/shaders/catmull_clark.wgsl?raw'
 import { packUndirectedEdgeKey } from '../services/math3d'

@@ -1,6 +1,6 @@
 import {Fragment,h} from 'svet'
 import CadQuantityInput from './CadQuantityInput.svt'
-import type {CoonsBoundaryPreparation} from '../services/nurbsConstructors'
+import type {CoonsBoundaryPreparation} from '../kernel/nurbsConstructors'
 
 interface Props {
  enabled:boolean;budget:number;locale:string;reports?:CoonsBoundaryPreparation['report'][]

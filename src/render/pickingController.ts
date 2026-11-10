@@ -1,7 +1,7 @@
 import { rayAabbDistance, type Aabb3, type Vec3 } from '../services/math3d'
 import type { MeshBvhHit } from '../services/meshBvh'
 import type { NativePickingCache } from '../services/nativePickingCache'
-import { selectedCornerInKernel } from '../services/geometry/viewport'
+import { selectedCornerInKernel } from '../kernel/geometry/viewport'
 import type { MeshProvenanceRun } from '../core/mesh'
 import type { PickHit, SelectionMode } from './rendererContracts'
 import {

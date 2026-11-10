@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {previewProgressiveNurbsProfiles,type AuthoredProgressiveSweepOptions} from '../src/services/nurbsConstructors'
+import {evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {previewProgressiveNurbsProfiles,type AuthoredProgressiveSweepOptions} from '../src/kernel/nurbsConstructors'
 
 const profile:NurbsCurve={degree:1,knots:[0,0,1,1],controlPoints:[[1,0,0],[2,0,0]],weights:[1,2],periodic:false}
 const path:NurbsCurve={...profile,knots:[2,2,5,5],controlPoints:[[0,0,0],[0,0,10]],weights:[1,1]}

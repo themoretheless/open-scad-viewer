@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest'
-import * as kernel from '../src/services/geometry/kernel'
-import { exportMeshArtifactInKernel } from '../src/services/geometry/meshArtifactExport'
+import * as kernel from '../src/kernel/geometry/kernel'
+import { exportMeshArtifactInKernel } from '../src/kernel/geometry/meshArtifactExport'
 
 const mesh = { positions: [0,0,0,2,0,0,0,3,0], indices: [0,1,2] }
 

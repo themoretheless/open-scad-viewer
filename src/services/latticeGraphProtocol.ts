@@ -1,5 +1,5 @@
 import type {MeshData} from '../core/mesh'
-import type {LighteningOptions} from './solidLightening'
+import type {LighteningOptions} from '../kernel/solidLightening'
 import type {TrussVector} from './trussAnalysis'
 import {fitsClonedBufferBudget} from './clonedBufferBudget'
 

@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import Ajv2020 from 'ajv/dist/2020.js'
 import {describe,expect,it} from 'vitest'
-import {BREP_CAPABILITY_MATRIX} from '../src/services/geometry/brepCapability'
+import {BREP_CAPABILITY_MATRIX} from '../src/kernel/geometry/brepCapability'
 
 const root=resolve(import.meta.dirname,'..')
 const bytes=(path:string)=>readFileSync(resolve(root,path))

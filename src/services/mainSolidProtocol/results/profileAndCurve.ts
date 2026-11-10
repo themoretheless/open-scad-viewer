@@ -1,12 +1,12 @@
 import { validCurveOffsetDiagnostics } from '../../curveOffsetDiagnostics'
-import { validateProfileIntersectionReport } from '../../geometry/profileIntersections'
+import { validateProfileIntersectionReport } from '../../../kernel/geometry/profileIntersections'
 import {
   finite,
   vector,
   type MainSolidExpectation,
   type MainSolidResults,
 } from '../../mainSolidProtocol'
-import type { NurbsCurve } from '../../nurbsCurve'
+import type { NurbsCurve } from '../../../kernel/nurbsCurve'
 import { arrayOf } from '../mainSolidExpectation'
 import { isNonnegativeFinite, validDirectDocument } from './predicates'
 

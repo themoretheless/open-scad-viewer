@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 
 export type FrameVector = [number, number, number]
 /** Rotational restraint mask: 3 translations, then 3 rotations. */

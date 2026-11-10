@@ -42,7 +42,7 @@ const implementation=[
  'crates/brep-core/src/analytic/loft.rs','crates/brep-core/src/analytic.rs',
  'crates/brep-core/src/analytic_features.rs','crates/brep-core/src/lib.rs',
  'crates/geometry-bridge/src/lib.rs','crates/geometry-bridge/src/tests.rs',
- 'src/services/geometry/brep.ts','src/services/geometry/brepCapability.ts',
+ 'src/kernel/geometry/brep.ts','src/kernel/geometry/brepCapability.ts',
 ]
 const specs=[
  {
@@ -113,7 +113,7 @@ for(const spec of specs){
   dependencies:dependencies.map(capability=>({capability,requiredMaturity:'Qualified'})),
   scope:{included:spec.included,excluded:spec.excluded},
   matrix:spec.rows.map(([id,expected])=>({id,expected,blocksQualification:true})),
-  bindings:{implementation,registry:'src/services/geometry/brepCapability.ts',evidenceJson:evidence},
+  bindings:{implementation,registry:'src/kernel/geometry/brepCapability.ts',evidenceJson:evidence},
   evidence:{state:'qualified',notes:[
    'Only exact bounded rational/NURBS cells with native, bridge and product WASM coverage are released.',
    'Every unsupported row is typed-refused before source mutation; no mesh, healing, approximation or fallback is reachable.',

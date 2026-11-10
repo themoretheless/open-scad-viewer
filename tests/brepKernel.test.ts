@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {booleanNurbsBrep,chamferNurbsBrep,chamferNurbsBrepEdges,createBrepBox,createFacetedBrepCylinder,createFacetedBrepLoft,createFacetedBrepRevolve,createFacetedBrepSphere,createFacetedBrepSweep,extrudeBrepPolygon,filletNurbsBrep,filletNurbsBrepEdges,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/services/geometry/brep'
-import {parseOpenSCAD} from '../src/services/openscadParser'
+import {booleanNurbsBrep,chamferNurbsBrep,chamferNurbsBrepEdges,createBrepBox,createFacetedBrepCylinder,createFacetedBrepLoft,createFacetedBrepRevolve,createFacetedBrepSphere,createFacetedBrepSweep,extrudeBrepPolygon,filletNurbsBrep,filletNurbsBrepEdges,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/kernel/geometry/brep'
+import {parseOpenSCAD} from '../src/language/openscadParser'
 import {withSelectionSurfaces} from '../src/services/meshSurfaceGroups'
 import {transformSelection} from '../src/services/directSolidTools'
 it('shares topology across own NURBS and polygon kernels with stable face groups',()=>{

@@ -1,8 +1,8 @@
 import {beforeAll,expect,it} from 'vitest'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {assembleClosedNurbsPatches,createG2AnnularTube} from '../src/services/geometricG2'
-import {createBrepBox} from '../src/services/geometry/brep'
-import type {NurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox} from '../src/kernel/geometry/brep'
+import type {NurbsBrep} from '../src/kernel/geometry/brep'
 beforeAll(async()=>{await warmGeometryKernel()})
 function patches(model:NurbsBrep){const reversed=model.faces.map(()=>false);for(const use of model.shells[0].faces)reversed[use.face]=use.reversed;return {surfaces:model.faces.map(f=>structuredClone(f.surface)),reversed}}
 it('sews independent rounded support and end patches into one admitted body',()=>{

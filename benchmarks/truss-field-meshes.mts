@@ -4,7 +4,7 @@ import {performance} from 'node:perf_hooks'
 import {trussFieldMeshes} from '../src/services/trussFieldMeshes'
 import type {TrussModel,TrussResponse} from '../src/services/trussAnalysis'
 import type {MeshData} from '../src/core/mesh'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
 import {compileWasmArtifact} from '../src/services/wasmArtifact'
 

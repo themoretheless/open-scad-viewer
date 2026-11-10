@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { z } from 'zod/v4'
-import { compileRushGraph, rushGraphSchema, type Expression } from '../src/services/rushGraph'
+import { compileRushGraph, rushGraphSchema, type Expression } from '../src/language/rushGraph'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 const local = (name: string): Expression => ({ local: name })
 const model = (size: Expression, extra = {}) => ({ language: 'rush/ir-1', units: 'mm', parameters: [], nodes: [{ id: 'part', op: 'box', size: [size, 1, 1] }], root: 'part', ...extra })
 const width = (expr: Expression, extra = {}) => compileRushGraph(model(expr, extra)).source

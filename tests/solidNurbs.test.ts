@@ -1,7 +1,7 @@
-import {constructSolidSurface,buildSolidSurface} from '../src/services/solidSurfaceConstruction'
+import {constructSolidSurface,buildSolidSurface} from '../src/kernel/solidSurfaceConstruction'
 import { describe, expect, it } from 'vitest'
 import { emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
-import { solidDocumentToMeshDocument } from '../src/services/solidBridge'
+import { solidDocumentToMeshDocument } from '../src/kernel/solidBridge'
 import { importRushGraphNurbs } from '../src/exchange/solidNurbsImport'
 import {
   createSolidNurbsCurve,
@@ -11,9 +11,9 @@ import {
   nurbsCurveToSketch,
   sampleSolidNurbsCurve,
   updateSolidNurbsControlPoint,
-} from '../src/services/solidNurbs'
-import { evaluateNurbsSurface, trimNurbsSurface } from '../src/services/nurbsSurface'
-import { evaluateNurbsCurve, insertNurbsKnot } from '../src/services/nurbsCurve'
+} from '../src/kernel/solidNurbs'
+import { evaluateNurbsSurface, trimNurbsSurface } from '../src/kernel/nurbsSurface'
+import { evaluateNurbsCurve, insertNurbsKnot } from '../src/kernel/nurbsCurve'
 
 describe('Solid native NURBS bridge', () => {
   it('retains rational definitions in the Solid document and validates edits', () => {
@@ -167,7 +167,7 @@ describe('Solid surface construction',()=>{
  })
 })
 
-import {measureSurfaceBoundaries} from '../src/services/solidSurfaceDiagnostics'
+import {measureSurfaceBoundaries} from '../src/kernel/solidSurfaceDiagnostics'
 it('measures a surface seam without treating sampled agreement as a whole-domain certificate',()=>{
  const a=createSolidNurbsSurface('a').surface,b=structuredClone(a)
  a.controlPoints=a.controlPoints.map(row=>row.map(([x,y])=>[x,y,0]))
@@ -184,7 +184,7 @@ it('measures a surface seam without treating sampled agreement as a whole-domain
  expect(()=>measureSurfaceBoundaries(a,b,{...options,toleranceMm:0})).toThrow('positive')
 })
 
-import {reduceSolidCurve} from '../src/services/solidCurveReduction'
+import {reduceSolidCurve} from '../src/kernel/solidCurveReduction'
 it('accepts exact curve reduction and retains the original on a refused tolerance',()=>{
  const d=emptyDirectDocument(),c=createSolidNurbsCurve('line');c.curve.controlPoints=[[0,0,0],[1,0,0],[2,0,0],[3,0,0]];d.curves!.push(c)
  const before=structuredClone(d),accepted=reduceSolidCurve(d,'line',1,0)
@@ -196,7 +196,7 @@ it('accepts exact curve reduction and retains the original on a refused toleranc
  expect(rejected.certificate.hausdorffErrorUpper).toBeGreaterThan(0);expect(rejected.document).toEqual(d)
 })
 
-import {reduceSolidSurface} from '../src/services/solidCurveReduction'
+import {reduceSolidSurface} from '../src/kernel/solidCurveReduction'
 it.each(['u','v'] as const)('reduces a planar surface in %s with preserved identity and an accepted bound',axis=>{
  const d=emptyDirectDocument(),s=createSolidNurbsSurface('plane');s.surface.controlPoints=Array.from({length:3},(_,i)=>Array.from({length:3},(_,j)=>[i,j,0]));s.surface.weights=Array.from({length:3},()=>[1,1,1]);d.surfaces!.push(s)
  const before=structuredClone(d),result=reduceSolidSurface(d,'plane',axis,1,1e-12)
@@ -233,7 +233,7 @@ it('keeps patch source geometry on refusal and supports an explicitly reversed b
  expect(()=>constructSolidSurface(d,d.curves!.map(c=>c.id),'nurbs-patch','bad',undefined,[false,false,true,false])).toThrow('corner weights')
 })
 
-import {rebuildSolidCurve} from '../src/services/solidCurveReduction'
+import {rebuildSolidCurve} from '../src/kernel/solidCurveReduction'
 it('rebuilds a curve with requested controls while preserving identity and source on refusal',()=>{
  const d=emptyDirectDocument(),c=createSolidNurbsCurve('rebuild')
  c.curve={degree:2,knots:[2,2,2,5,5,5],controlPoints:[[0,0,0],[1,2,0],[2,0,0]],weights:[1,1,1]}
@@ -250,7 +250,7 @@ it('rebuilds a curve with requested controls while preserving identity and sourc
  expect(()=>rebuildSolidCurve(d,c.id,3,3,.1)).toThrow('control count')
 })
 
-import {rebuildSolidSurface} from '../src/services/solidCurveReduction'
+import {rebuildSolidSurface} from '../src/kernel/solidCurveReduction'
 it.each(['u','v'] as const)('rebuilds a rational surface in %s while preserving identity and rollback',axis=>{
  const d=emptyDirectDocument(),s=createSolidNurbsSurface('rebuild-surface')
  s.surface.controlPoints=Array.from({length:3},(_,i)=>Array.from({length:3},(_,j)=>[i,j,i===1&&j===1?1:0]))
@@ -292,7 +292,7 @@ it('preserves a rational cylindrical patch through Solid history and serializati
  }
 })
 
-import {framedSweepNurbsCurve,prepareCoonsBoundaryWeights,coonsNurbsPatch} from '../src/services/nurbsConstructors'
+import {framedSweepNurbsCurve,prepareCoonsBoundaryWeights,coonsNurbsPatch} from '../src/kernel/nurbsConstructors'
 it('rotates a profile along a rational arc and refuses excessive sampled deviation',()=>{
  const profile={degree:1,controlPoints:[[1,0,0],[1.2,0,0]],weights:[1,1],knots:[0,0,1,1]}
  const path={degree:2,controlPoints:[[1,0,0],[1,1,0],[0,1,0]],weights:[1,Math.SQRT1_2,1],knots:[0,0,0,1,1,1]}
@@ -357,7 +357,7 @@ it.each(['u','v'] as const)('rebuilds the periodic %s surface axis and preserves
  expect(rebuildSolidSurface(d,'periodic-surface',axis,1,5,0).document).toEqual(before)
 })
 
-import {matchNurbsSurfaceJets} from '../src/services/nurbsConstructors'
+import {matchNurbsSurfaceJets} from '../src/kernel/nurbsConstructors'
 it('matches rational surface first and second jets through the native protocol',()=>{
  const reference={degreeU:3,degreeV:3,knotsU:[2,2,2,2,5,5,5,5],knotsV:[-1,-1,-1,-1,3,3,3,3],controlPoints:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>[i,j,.15*i*i+.1*i*j+.2*j*j])),weights:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>1+.03*i+.02*j+.01*i*j))}
  const edited=structuredClone(reference);edited.controlPoints.forEach(row=>row.forEach(p=>p[0]+=20))
@@ -371,7 +371,7 @@ it('matches rational surface first and second jets through the native protocol',
  expect({reference,edited}).toEqual(before)
 })
 
-import {matchSolidSurface} from '../src/services/solidSurfaceMatching'
+import {matchSolidSurface} from '../src/kernel/solidSurfaceMatching'
 it.each([false,true])('gates surface matching and preserves identities (reversed=%s)',reverse=>{
  const d=emptyDirectDocument(),a=createSolidNurbsSurface('reference'),b=createSolidNurbsSurface('edited')
  a.surface.weights=a.surface.weights.map((row,i)=>row.map((_,j)=>1+.03*i+.02*j))
@@ -395,7 +395,7 @@ it.each([false,true])('gates surface matching and preserves identities (reversed
  expect(()=>matchSolidSurface(d,a.id,a.id,options)).toThrow('different')
 })
 
-import {prepareSolidSurfaceSeams} from '../src/services/solidSurfaceMatching'
+import {prepareSolidSurfaceSeams} from '../src/kernel/solidSurfaceMatching'
 it('prepares incompatible surface bases as one immutable, bounded document edit',()=>{
  const d=emptyDirectDocument(),a=createSolidNurbsSurface('prepare-a'),b=createSolidNurbsSurface('prepare-b')
  b.surface.degreeV=3;b.surface.knotsV=[0,0,0,0,1,1,1,1]
@@ -440,7 +440,7 @@ it('accepts identical seam bases with a zero positional budget',()=>{
  expect(d).toEqual(before)
 })
 
-import {matchSolidCurve} from '../src/services/solidCurveMatching'
+import {matchSolidCurve} from '../src/kernel/solidCurveMatching'
 describe('Certified curve endpoint matching',()=>{
  it.each([['start','start'],['start','end'],['end','start'],['end','end']] as const)('preserves identities and rational definitions for %s to %s',(a,b)=>{
   const document=emptyDirectDocument();document.curves=[createSolidNurbsCurve('a'),createSolidNurbsCurve('b')]

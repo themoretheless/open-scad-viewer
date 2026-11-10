@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
-import {authorBrepProfile,transformBrepProfile} from '../src/services/geometry/brepProfile'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
+import {authorBrepProfile,transformBrepProfile} from '../src/kernel/geometry/brepProfile'
 import {withRetainedProfile} from '../src/services/retainedSketchProfile'
-import {applySolidRevolve,type SolidRevolveOptions} from '../src/services/solidRevolve'
+import {applySolidRevolve,type SolidRevolveOptions} from '../src/kernel/solidRevolve'
 import type {DirectDocument} from '../src/services/directModeling'
 const options:SolidRevolveOptions={sketchId:'profile',geometry:'exact',operation:'new',targetId:'',id:'result',name:'Revolved',tessellation:2,axis:'y',offset:0,angle:360,segments:32}
 it('revolves retained rational circular controls without replacing them by display chords',async()=>{

@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,composeNurbsCurves} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {bezierNurbsCurve,composeNurbsCurves} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 import {readFileSync} from 'node:fs'
 
 it('evaluates rational Bezier controls through the packaged geometry host',()=>{

@@ -17,7 +17,7 @@ import {
   GeometryBuildEngine,
   geometryExecutionForError,
   type GeometryBackendProvider,
-} from '../src/services/geometryBuildEngine'
+} from '../src/kernel/geometryBuildEngine'
 import {
   expectedPublicErrorRetryable,
 } from '../src/mcp/errorContract'

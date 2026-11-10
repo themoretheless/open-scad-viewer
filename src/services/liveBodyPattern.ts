@@ -1,5 +1,5 @@
 import type {DirectBody, DirectDocument} from './directModeling'
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 
 export type LiveBodyPattern =
  | {kind:'grid';rows:number;columns:number;spacing:[number,number]}

@@ -15,7 +15,7 @@ import {identity, type Mat4} from '../src/services/math3d'
 assert.ok(process.argv[2], 'Pass the baseline webgpuRenderer.ts path (a clean worktree checkout)')
 const baselineUrl = pathToFileURL(resolve(process.argv[2]))
 
-type RendererModule = typeof import('../src/services/webgpuRenderer')
+type RendererModule = typeof import('../src/render/webgpuRenderer')
 
 class FakeBuffer {
   readonly contents: Uint8Array
@@ -128,7 +128,7 @@ function runRep(h: ReturnType<typeof createHarness>, fixture: ReturnType<typeof 
 
 const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)]
 
-const candidate: RendererModule = await import('../src/services/webgpuRenderer')
+const candidate: RendererModule = await import('../src/render/webgpuRenderer')
 const baseline: RendererModule = await import(baselineUrl.href)
 const globalStub = globalThis as { GPUBufferUsage: unknown }
 const previousUsage = globalStub.GPUBufferUsage

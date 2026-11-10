@@ -1,5 +1,5 @@
-import { createBrowserBrepDiagnosticExecutor } from '../../src/services/brepDiagnosticBrowser'
-import { isBrepDiagnosticMessage, type BrepDiagnosticRequest } from '../../src/services/brepDiagnosticProtocol'
+import { createBrowserBrepDiagnosticExecutor } from '../../src/kernel/brepDiagnosticBrowser'
+import { isBrepDiagnosticMessage, type BrepDiagnosticRequest } from '../../src/kernel/brepDiagnosticProtocol'
 import { createNativeGeometryArtifact, isNativeGeometryArtifact } from '../../src/core/nativeGeometry'
 
 const lane = createBrowserBrepDiagnosticExecutor()

@@ -1,6 +1,6 @@
 import {compileTextRust} from '../../src/services/geometryRustKernel'
-import {compileRushGraph} from '../../src/services/rushGraph'
-import {parseOpenSCAD} from '../../src/services/openscadParser'
+import {compileRushGraph} from '../../src/language/rushGraph'
+import {parseOpenSCAD} from '../../src/language/openscadParser'
 import {readFileSync} from 'node:fs'
 const g:any=compileTextRust(readFileSync('examples/skadis-box/skadis-dovetail.rush.scad','utf8'))
 for(const root of ['n23','n35','n55','n50','n56','n54','n57','n80','n83','n73','n84','n95']){

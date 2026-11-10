@@ -4,15 +4,15 @@ import {
   parseOpenScadProjectSource,
   type CallNode,
   type Statement,
-} from '../src/services/openscadCompiler'
-import { OpenScadProject, OpenScadProjectError } from '../src/services/openScadProject'
+} from '../src/language/openscadCompiler'
+import { OpenScadProject, OpenScadProjectError } from '../src/language/openScadProject'
 import {
   OPENSCAD_PROJECT_COMPILE_ERROR_CODES,
   OPENSCAD_PROJECT_MAX_DEPENDENCY_EXPANSIONS,
   OPENSCAD_PROJECT_MAX_EXPANDED_SYNTAX_NODES,
   OpenScadProjectCompileError,
   compileOpenScadProject,
-} from '../src/services/openScadProjectCompiler'
+} from '../src/language/openScadProjectCompiler'
 
 function allFrozen(value: unknown): boolean {
   if (!value || typeof value !== 'object') return true

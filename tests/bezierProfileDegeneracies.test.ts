@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
-import {analyzeNurbsBrep,extrudeBrepCurves,inspectNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {reverseNurbsCurve,trimNurbsCurve} from '../src/services/nurbsCurve'
-import {authorBrepProfile,booleanBrepProfiles,normalizeBrepProfile,validateBrepProfile} from '../src/services/geometry/brepProfile'
-import {pathFromCircle} from '../src/services/geometry/path2d'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
+import {analyzeNurbsBrep,extrudeBrepCurves,inspectNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {reverseNurbsCurve,trimNurbsCurve} from '../src/kernel/nurbsCurve'
+import {authorBrepProfile,booleanBrepProfiles,normalizeBrepProfile,validateBrepProfile} from '../src/kernel/geometry/brepProfile'
+import {pathFromCircle} from '../src/kernel/geometry/path2d'
 const line=(a:number[],b:number[]):NurbsCurve=>({degree:1,knots:[0,0,1,1],controlPoints:[a,b],weights:[1,1],periodic:false})
 const cubic=(points:number[][]):NurbsCurve=>({degree:3,knots:[0,0,0,0,1,1,1,1],controlPoints:points,weights:[1,1,1,1],periodic:false})
 it('preserves a curved double contact through an affine change of coordinates',()=>{

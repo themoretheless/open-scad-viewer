@@ -2,12 +2,12 @@ import {readFileSync} from 'node:fs'
 import {IDBFactory} from 'fake-indexeddb'
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 import {emptyDirectDocument} from '../src/services/directModeling'
-import {prepareSolidStepImport, exportSolidStepOriginal, exportSolidStepCurrent} from '../src/services/solidStepExchange'
-import * as store from '../src/services/cadStepIndexedDb'
-import * as kernel from '../src/services/geometry/kernel'
+import {prepareSolidStepImport, exportSolidStepOriginal, exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
+import * as store from '../src/kernel/cadStepIndexedDb'
+import * as kernel from '../src/kernel/geometry/kernel'
 import {pushPullFace,solidTopology} from '../src/services/directSolidTools'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {exportSolidStepAssembly} from '../src/services/solidStepAssembly'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {exportSolidStepAssembly} from '../src/kernel/solidStepAssembly'
 
 const source=readFileSync(new URL('./fixtures/step-v6/self-authored-ap242-assembly.step',import.meta.url),'utf8')
 beforeEach(()=>vi.stubGlobal('indexedDB',new IDBFactory()))
@@ -129,8 +129,8 @@ it('does not access retained native data before warm-up and recovers after failu
 })
 
 it('exports current edited B-rep geometry rather than its retained STEP source',async()=>{
- const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
- const {importDirectStepV9}=await import('../src/services/cadNurbsStep')
+ const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {importDirectStepV9}=await import('../src/kernel/cadNurbsStep')
  const brep=transformNurbsBrep(createBrepBox([0,0,0],[2,3,4]),[[2,0,0,5],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
  const mesh=tessellateNurbsBrep(brep)
  const text=await exportSolidStepCurrent({id:'edited',name:'Edited',brep,mesh})
@@ -144,7 +144,7 @@ it.each([
  ['bracket',7150,22],['enclosure',7680,22],['flange',3000*Math.PI,8],
 ] as const)('imports, edits and re-exports the current %s STEP',async(name,volume,height)=>{
  const {pushPullFace,solidTopology}=await import('../src/services/directSolidTools')
- const {analyzeNurbsBrep,inspectNurbsBrep}=await import('../src/services/geometry/brep')
+ const {analyzeNurbsBrep,inspectNurbsBrep}=await import('../src/kernel/geometry/brep')
  const text=readFileSync(new URL(`../docs/qualification/cad-roadmap-2026-09-28/cap-step-exchange/${name}.step`,import.meta.url),'utf8')
  const initial=emptyDirectDocument(),before=structuredClone(initial)
  const imported=await prepareSolidStepImport(text,initial)

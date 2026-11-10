@@ -4,21 +4,21 @@ import {writeFileSync,readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {deepStrictEqual} from 'node:assert'
 import {createHash} from 'node:crypto'
-import {circleNurbsCurve,miterNurbsProfileSections} from '../src/services/nurbsConstructors'
+import {circleNurbsCurve,miterNurbsProfileSections} from '../src/kernel/nurbsConstructors'
 
-import {reverseNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
-import {createMiterBrepProfileBody,createProgressiveMiterBrepProfileBody,createRationalBrepSectionLoft,transformNurbsBrep} from '../src/services/geometry/brep'
+import {reverseNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
+import {createMiterBrepProfileBody,createProgressiveMiterBrepProfileBody,createRationalBrepSectionLoft,transformNurbsBrep} from '../src/kernel/geometry/brep'
 
-import {projectSweepSections} from '../src/services/nurbsSectionProjection'
+import {projectSweepSections} from '../src/kernel/nurbsSectionProjection'
 import {inspectSweepRetainedCorrespondence,inspectSweepRetainedCaps} from '../src/services/sweepRetainedCorrespondence'
 
-import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 import {readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
 import {miterLawMatrixSource,miterLawMatrixName,type MiterLawMatrixMode} from './miter-law-matrix-sources'
-import type {NurbsBrep} from '../src/services/geometry/brep'
+import type {NurbsBrep} from '../src/kernel/geometry/brep'
 
 export function buildMiterStepFixtures(root:string){
 const loops=[[circleNurbsCurve([0,0,0],[0,0,1],.5)],[reverseNurbsCurve(circleNurbsCurve([0,0,0],[0,0,1],.2))]]

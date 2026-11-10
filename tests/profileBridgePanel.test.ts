@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs'
 import {createRenderer,nextTick,ref,h} from 'svet'
 import {it,expect,vi} from 'vitest'
 const state=vi.hoisted(()=>({tasks:[] as any[],worker:null as any}))
-vi.mock('../src/services/solidPreviewWorker',()=>({createSolidPreviewWorker:()=>{
+vi.mock('../src/kernel/solidPreviewWorker',()=>({createSolidPreviewWorker:()=>{
  state.tasks=[];state.worker={cancel:vi.fn(),dispose:vi.fn(),run:vi.fn((job:any)=>new Promise((resolve,reject)=>state.tasks.push({resolve,reject,job})))}
  return state.worker
 }}))

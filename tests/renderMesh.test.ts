@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { CadGeometryKernel } from '../src/services/cadGeometryKernel'
-import { withCadMesh, type CadMeshViews } from '../src/services/geometry/kernel'
-import { renderMeshInKernel, type KernelRenderMesh } from '../src/services/geometry/meshAnalysis'
+import { CadGeometryKernel } from '../src/kernel/cadGeometryKernel'
+import { withCadMesh, type CadMeshViews } from '../src/kernel/geometry/kernel'
+import { renderMeshInKernel, type KernelRenderMesh } from '../src/kernel/geometry/meshAnalysis'
 
 type Vec3 = [number, number, number]
 // Independent host oracle for the former triangle-order, rounded-normal contract.

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {callNurbsRust} from '../src/services/geometry/nurbs'
+import {callNurbsRust} from '../src/kernel/geometry/nurbs'
 it('transports native retained face ownership without claiming embedding',()=>{
  const model={faces:[null,null],shells:[{closed:true,faces:[{face:0,reversed:false}]},{closed:true,faces:[{face:1,reversed:true}]}],bodies:[{outerShell:0,innerShells:[1]}]}
  const audit=(value:unknown,maxFaces=2)=>callNurbsRust('sweep_retained_body_coverage_audit',{model:value,maxFaces})

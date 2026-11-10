@@ -4,7 +4,7 @@ import {
   createKernelWasmMemory,
   collectTransferableBuffers,
   GeometryWorkerPool,
-} from '../src/services/geometryWorkerPool'
+} from '../src/kernel/geometryWorkerPool'
 
 describe('Hardware Multithreading & Shared Memory Worker Pool', () => {
   it('detects hardware concurrency and shared memory capabilities', () => {

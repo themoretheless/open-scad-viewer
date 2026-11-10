@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest'
 import {analyzeLatticePrintability,optimizeLatticeForPrint,formatLatticePrintReport,latticeSlicerHintsJson} from '../src/services/latticePrintReport'
 import {analyzeLatticeStrength,formatLatticeStrengthReport,latticeMaterials,latticeStructureHint,weakSpotMarkerMeshes} from '../src/services/latticeStrength'
-import type {LighteningOptions} from '../src/services/solidLightening'
+import type {LighteningOptions} from '../src/kernel/solidLightening'
 
 const channel:LighteningOptions={pattern:'grid',axis:'x',cell:20,rib:1.35,rim:2,bottom:.6,top:0,seed:42,jitter:0,lineWidth:.45,perimeters:3}
 const spatial:LighteningOptions={pattern:'octet',axis:'z',cell:15,rib:3.2,rim:0,bottom:0,top:0,seed:42,jitter:0,lineWidth:.45,perimeters:3,skin:0,openTop:true}

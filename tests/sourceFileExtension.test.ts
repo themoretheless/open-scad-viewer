@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { sourceFileExtension, withSourceExtension } from '../src/services/rushFrontendDetect'
+import { sourceFileExtension, withSourceExtension } from '../src/language/rushFrontendDetect'
 
 it('names Rush documents .r and OpenSCAD documents .scad', () => {
   expect(sourceFileExtension('// @rush/1\nshow box(1mm,1mm,1mm)')).toBe('.r')

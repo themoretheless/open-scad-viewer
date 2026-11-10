@@ -1,13 +1,13 @@
 import {setImmediate as realSetImmediate} from 'node:timers'
-import {createSolidNurbsCurve} from '../src/services/solidNurbs'
+import {createSolidNurbsCurve} from '../src/kernel/solidNurbs'
 import {createRenderer,h,nextTick,shallowReactive,shallowRef} from 'svet'
 import {it,expect,vi,afterEach,beforeAll} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {IDBFactory} from 'fake-indexeddb'
-import * as stepStore from '../src/services/cadStepIndexedDb'
-import * as geometryKernel from '../src/services/geometry/kernel'
-import * as transparencyKernel from '../src/services/geometry/transparentBspKernel'
+import * as stepStore from '../src/kernel/cadStepIndexedDb'
+import * as geometryKernel from '../src/kernel/geometry/kernel'
+import * as transparencyKernel from '../src/kernel/geometry/transparentBspKernel'
 import { useModelingGrid } from '../src/services/modelingGrid'
 import DirectModeler from '../src/features/DirectModeler.svt'
 beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.svt');await import('../src/components/ProfileIntersectionPresentation.svt')})
@@ -40,10 +40,10 @@ import {extrudeDirectSketch,parseDirectDocument,type DirectDocument} from '../sr
 import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/services/directModelingTools'
 import {solidTopology} from '../src/services/directSolidTools'
 import {sampleCurve} from '../src/services/directSketchGeometry'
-import {inspectPolygonMesh} from '../src/services/geometry/polygon'
+import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 import {stringifyMeshJson} from '../src/services/meshJson'
-import {createBrepBox,createBrepTube,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
-vi.mock('../src/services/solidDraftHeadStore',()=>({readSolidDraftHead:async()=>null,writeSolidDraftHead:async(key:string,_expected:string|null,text:string)=>({key,revision:crypto.randomUUID(),text})}))
+import {createBrepBox,createBrepTube,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+vi.mock('../src/kernel/solidDraftHeadStore',()=>({readSolidDraftHead:async()=>null,writeSolidDraftHead:async(key:string,_expected:string|null,text:string)=>({key,revision:crypto.randomUUID(),text})}))
 const previewWorkerRun=vi.hoisted(()=>vi.fn())
 const downloadArtifactBytes=vi.hoisted(()=>vi.fn())
 vi.mock('../src/services/downloadArtifact',()=>({downloadBytes:downloadArtifactBytes}))
@@ -57,39 +57,39 @@ const bodyEdgesWorkerRun=vi.hoisted(()=>vi.fn())
 const faceSketchWorkerRun=vi.hoisted(()=>vi.fn())
 const bodySnapsWorkerRun=vi.hoisted(()=>vi.fn())
 const sketchSnapsWorkerRun=vi.hoisted(()=>vi.fn())
-vi.mock('../src/services/solidPreviewWorker',async()=>{
- const {bodySnapGeometry}=await import('../src/services/solidSnapGeometry')
+vi.mock('../src/kernel/solidPreviewWorker',async()=>{
+ const {bodySnapGeometry}=await import('../src/kernel/solidSnapGeometry')
  const {sketchSnapGeometry}=await import('../src/services/modelingSnaps')
- const {prepareSolidFaceSketch}=await import('../src/services/solidFaceSketch')
- const {solidBodyEdges}=await import('../src/services/solidBodyEdges')
+ const {prepareSolidFaceSketch}=await import('../src/kernel/solidFaceSketch')
+ const {solidBodyEdges}=await import('../src/kernel/solidBodyEdges')
  const {solidTopology}=await import('../src/services/directSolidTools')
  const {retainedProfileDisplay}=await import('../src/services/retainedSketchProfile')
- const {tessellateSolidNurbsSurface,sampleSolidNurbsCurve}=await import('../src/services/solidNurbs')
- const {measureSurfaceBoundaries}=await import('../src/services/solidSurfaceDiagnostics')
- const {measureFaceDistance,measureShellDistance}=await import('../src/services/solidMeasurements')
- const {measureNurbsSurfaceDistance}=await import('../src/services/nurbsSurface')
- const {measureNurbsCurveDistance}=await import('../src/services/nurbsCurve')
- const {measureSolidVertices,measureSolidEdgeCurvature}=await import('../src/services/solidMeasurements')
- const {addSolidPrimitive}=await import('../src/services/solidPrimitive')
+ const {tessellateSolidNurbsSurface,sampleSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
+ const {measureSurfaceBoundaries}=await import('../src/kernel/solidSurfaceDiagnostics')
+ const {measureFaceDistance,measureShellDistance}=await import('../src/kernel/solidMeasurements')
+ const {measureNurbsSurfaceDistance}=await import('../src/kernel/nurbsSurface')
+ const {measureNurbsCurveDistance}=await import('../src/kernel/nurbsCurve')
+ const {measureSolidVertices,measureSolidEdgeCurvature}=await import('../src/kernel/solidMeasurements')
+ const {addSolidPrimitive}=await import('../src/kernel/solidPrimitive')
  const {importSolidRushGraph}=await import('../src/exchange/solidRushGraphImport')
- const {prepareSolidDisplay}=await import('../src/services/solidDisplayPreparation')
+ const {prepareSolidDisplay}=await import('../src/kernel/solidDisplayPreparation')
  const {parseDirectDocument}=await import('../src/services/directModeling')
  const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
- const {applySolidRevolve}=await import('../src/services/solidRevolve')
- const {applySolidBodyEdit}=await import('../src/services/solidBodyEdit')
- const {applySolidProfileEdit}=await import('../src/services/solidProfileEdit')
- const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
- const {refitSolidNurbs}=await import('../src/services/solidCurveReduction')
- const {buildSolidSurface}=await import('../src/services/solidSurfaceConstruction')
- const {matchSolidCurve}=await import('../src/services/solidCurveMatching')
- const {matchSolidSurface,prepareSolidSurfaceSeams}=await import('../src/services/solidSurfaceMatching')
- const {applySolidPointEdit}=await import('../src/services/solidPointEdit')
- const {applySolidSketchEdit}=await import('../src/services/solidSketchEdit')
- const {applySolidBoolean}=await import('../src/services/solidBoolean')
- const {applySolidMinkowski}=await import('../src/services/solidMinkowski')
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
- const {applySolidBrepTool}=await import('../src/services/solidBrepTool')
- const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
+ const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
+ const {applySolidBodyEdit}=await import('../src/kernel/solidBodyEdit')
+ const {applySolidProfileEdit}=await import('../src/kernel/solidProfileEdit')
+ const {prepareSolidProfile}=await import('../src/kernel/solidProfilePreparation')
+ const {refitSolidNurbs}=await import('../src/kernel/solidCurveReduction')
+ const {buildSolidSurface}=await import('../src/kernel/solidSurfaceConstruction')
+ const {matchSolidCurve}=await import('../src/kernel/solidCurveMatching')
+ const {matchSolidSurface,prepareSolidSurfaceSeams}=await import('../src/kernel/solidSurfaceMatching')
+ const {applySolidPointEdit}=await import('../src/kernel/solidPointEdit')
+ const {applySolidSketchEdit}=await import('../src/kernel/solidSketchEdit')
+ const {applySolidBoolean}=await import('../src/kernel/solidBoolean')
+ const {applySolidMinkowski}=await import('../src/kernel/solidMinkowski')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
+ const {applySolidBrepTool}=await import('../src/kernel/solidBrepTool')
+ const {applySolidNurbsEdit}=await import('../src/kernel/solidNurbsEdit')
  return {createSolidPreviewWorker:()=>({run:(job:any,options:any)=>(job.kind==='sketchSnaps'?sketchSnapsWorkerRun(job):job.kind==='bodySnaps'?bodySnapsWorkerRun(job):job.kind==='faceSketch'?faceSketchWorkerRun(job):job.kind==='bodyEdges'?bodyEdgesWorkerRun(job):job.kind==='topology'?topologyWorkerRun(job):job.kind==='curveDisplay'?undefined:job.kind==='profileDisplay'?undefined:job.kind==='surfaceMesh'?surfaceDisplayWorkerRun(job):job.kind==='surfaceBoundary'?boundaryWorkerRun(job):['shellDistance','faceDistance','surfaceDistance','curveDistance','measureVertices','measureEdge','manifoldMetrics'].includes(job.kind)?measurementWorkerRun(job):job.kind==='primitive'?primitiveWorkerRun(job):job.kind==='displayMesh'?displayWorkerRun(job):previewWorkerRun(job,options))??Promise.resolve().then(()=>(job.kind==='sketchSnaps'?sketchSnapGeometry(structuredClone([job.sketch])):job.kind==='bodySnaps'?bodySnapGeometry(job.body):job.kind==='faceSketch'?prepareSolidFaceSketch(job.body,job.face):job.kind==='bodyEdges'?solidBodyEdges(job.body):job.kind==='topology'?solidTopology(job.mesh):job.kind==='curveDisplay'?sampleSolidNurbsCurve(job.curve):job.kind==='profileDisplay'?retainedProfileDisplay(job.profile):job.kind==='surfaceMesh'?tessellateSolidNurbsSurface(job.item):job.kind==='surfaceBoundary'?measureSurfaceBoundaries(job.a,job.b,job.options):job.kind==='shellDistance'?measureShellDistance(job.options):job.kind==='faceDistance'?measureFaceDistance(job.options):job.kind==='surfaceDistance'?measureNurbsSurfaceDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='curveDistance'?measureNurbsCurveDistance(job.a,job.b,job.toleranceMm,job.maxCells):job.kind==='measureVertices'?measureSolidVertices(job.a,job.indexA,job.b,job.indexB):job.kind==='measureEdge'?measureSolidEdgeCurvature(job.body,job.edge,job.parameter):job.kind==='primitive'?addSolidPrimitive(job.document,job.options):job.kind==='rushGraphImport'?importSolidRushGraph(job.document,job.text,job.group):job.kind==='displayMesh'?prepareSolidDisplay(job.mesh,job.brep,job.segments):job.kind==='restoreDocument'?parseDirectDocument(job.text):job.kind==='brepTool'?applySolidBrepTool(job.document,job.options):job.kind==='nurbsEdit'?applySolidNurbsEdit(job.document,job.options):job.kind==='pointEdit'?applySolidPointEdit(job.document,job.options):job.kind==='sketchEdit'?applySolidSketchEdit(job.document,job.options):job.kind==='minkowski3d'?applySolidMinkowski(job.document,job.options):job.kind==='boolean'?applySolidBoolean(job.document,job.options):job.kind==='sceneEdit'?applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document):job.document,job.options):job.kind==='curveMatch'?matchSolidCurve(...job.args):job.kind==='surfaceMatch'?matchSolidSurface(...job.args):job.kind==='seamPrepare'?prepareSolidSurfaceSeams(...job.args):job.kind==='surfaceBuild'?buildSolidSurface(job.document,job.options):job.kind==='nurbsRefit'?refitSolidNurbs(job.document,job.options):job.kind==='profilePrepare'?prepareSolidProfile(job.document,job.ids,job.tolerance):job.kind==='profileEdit'?applySolidProfileEdit(job.document,job.options):job.kind==='bodyEdit'?applySolidBodyEdit(job.document,job.options):job.kind==='revolve'?applySolidRevolve(job.document,job.options):applyDirectExtrusionProfile(job.document,job.options))),cancel:()=>{},dispose:()=>{}})}
 })
 afterEach(()=>{previewWorkerRun.mockReset();downloadArtifactBytes.mockReset();displayWorkerRun.mockReset();primitiveWorkerRun.mockReset();measurementWorkerRun.mockReset();boundaryWorkerRun.mockReset();surfaceDisplayWorkerRun.mockReset();topologyWorkerRun.mockReset();bodyEdgesWorkerRun.mockReset();faceSketchWorkerRun.mockReset();bodySnapsWorkerRun.mockReset();sketchSnapsWorkerRun.mockReset()})
@@ -98,9 +98,9 @@ vi.mock('../src/services/svgWorkerClient',()=>({createSvgWorkerClient:()=>({run:
 afterEach(()=>svgWorkerRun.mockReset())
 const contactWorkerRun=vi.hoisted(()=>vi.fn())
 const clearanceWorkerRun=vi.hoisted(()=>vi.fn())
-vi.mock('../src/services/solidClearanceWorker',async()=>{
- const {inspectCadPairs}=await import('../src/services/cadInspection')
- const {inspectSolidIntersections}=await import('../src/services/solidDiagnostics')
+vi.mock('../src/kernel/solidClearanceWorker',async()=>{
+ const {inspectCadPairs}=await import('../src/kernel/cadInspection')
+ const {inspectSolidIntersections}=await import('../src/kernel/solidDiagnostics')
  return {createSolidClearanceWorker:()=>({run:(job:any)=>job.kind==='meshContacts'?contactWorkerRun(job)??Promise.resolve().then(()=>inspectSolidIntersections(job.mesh,{maxWork:job.maxWork,maxContacts:job.maxContacts})):clearanceWorkerRun(job)??Promise.resolve(inspectCadPairs(job.bodies)),cancel:()=>{},dispose:()=>{}})}
 })
 afterEach(()=>{clearanceWorkerRun.mockReset();contactWorkerRun.mockReset()})
@@ -1568,7 +1568,7 @@ it('duplicates a source-instance pair with the copied instance linked to the cop
 
 it('saves and reloads a document larger than the localStorage draft quota',async()=>{
  await geometryKernel.warmGeometryKernel();vi.stubGlobal('indexedDB',new IDBFactory())
- const {solidDraftSnapshotId,readSolidDraftSnapshot}=await import('../src/services/solidDraftStore')
+ const {solidDraftSnapshotId,readSolidDraftSnapshot}=await import('../src/kernel/solidDraftStore')
  const seed:DirectDocument={version:1,sketches:[],bodies:[{...extrudeDirectSketch({id:'p',name:'Big draft body',closed:true,points:[[0,0],[2,0],[2,3],[0,3]]},4,'large-body')}],groups:Array.from({length:60},(_,i)=>({name:`Group ${i}`,source:' '.repeat(70000)}))}
  const ui=await mount({seedDocument:seed})
  await vi.waitFor(()=>expect(solidDraftSnapshotId(ui.serialized())).not.toBeNull())
@@ -1586,7 +1586,7 @@ it('saves and reloads a document larger than the localStorage draft quota',async
 
 it('does not publish a delayed large draft after undo saves a newer small state',async()=>{
  await geometryKernel.warmGeometryKernel();vi.stubGlobal('indexedDB',new IDBFactory())
- const store=await import('../src/services/solidDraftStore')
+ const store=await import('../src/kernel/solidDraftStore')
  const seed:DirectDocument={version:1,sketches:[],bodies:[],groups:Array.from({length:60},(_,i)=>({name:`Group ${i}`,source:' '.repeat(70000)}))}
  const marker=await store.writeSolidDraftSnapshot(stringifyMeshJson(seed))
  let finish!:(value:string)=>void
@@ -1603,7 +1603,7 @@ it('does not publish a delayed large draft after undo saves a newer small state'
 
 it('retains the last durable draft when the next IndexedDB write fails',async()=>{
  await geometryKernel.warmGeometryKernel();vi.stubGlobal('indexedDB',new IDBFactory())
- const store=await import('../src/services/solidDraftStore')
+ const store=await import('../src/kernel/solidDraftStore')
  const seed:DirectDocument={version:1,sketches:[],bodies:[],groups:Array.from({length:60},(_,i)=>({name:`Group ${i}`,source:' '.repeat(70000)}))}
  const ui=await mount({seedDocument:seed})
  await vi.waitFor(()=>expect(store.solidDraftSnapshotId(ui.serialized())).not.toBeNull())
@@ -1617,7 +1617,7 @@ it('retains the last durable draft when the next IndexedDB write fails',async()=
 
 it('refuses a delayed draft restore after a new seed and undo even when history is empty again',async()=>{
  await geometryKernel.warmGeometryKernel();vi.stubGlobal('indexedDB',new IDBFactory())
- const store=await import('../src/services/solidDraftStore')
+ const store=await import('../src/kernel/solidDraftStore')
  const body=extrudeDirectSketch({id:'p',name:'Old restored body',closed:true,points:[[0,0],[2,0],[2,3],[0,3]]},4,'old-body')
  const oldText=stringifyMeshJson({version:1,sketches:[],bodies:[body]}),marker=await store.writeSolidDraftSnapshot(oldText)
  let finish!:(text:string)=>void
@@ -1656,7 +1656,7 @@ it('exports Blender from the file menu and persists the same identity on repeat 
 
 it('exports manifold metrics for every selected body as JSON and CSV without editing the document',async()=>{
  const box=createBrepBox([0,0,0],[2,3,4]),cylinder=createBrepCylinder(2,5)
- const {measureSolidManifoldMetrics}=await import('../src/services/solidMeasurements')
+ const {measureSolidManifoldMetrics}=await import('../src/kernel/solidMeasurements')
  measurementWorkerRun.mockImplementation((job:any)=>job.kind==='manifoldMetrics'?Promise.resolve(measureSolidManifoldMetrics(job.mesh)):undefined)
  const ui=await mount({seedDocument:{version:1,sketches:[],bodies:[
   {id:'box',name:'Metrics box',brep:box,mesh:tessellateNurbsBrep(box,1)},
@@ -2109,7 +2109,7 @@ it('ignores late extrusion success and failure after edits, cancellation and pan
 })
 
 it('rejects an old revolve preview after undo and reuses the latest completed result on Apply',async()=>{
- const {applySolidRevolve}=await import('../src/services/solidRevolve')
+ const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise(resolve=>requests.push({job,resolve})))
  const ui=await mount();await ui.click('Profile');const before=ui.doc()
@@ -2130,7 +2130,7 @@ it('rejects an old revolve preview after undo and reuses the latest completed re
 })
 
 it('keeps only the newest body edit and ignores a result after Escape',async()=>{
- const {applySolidBodyEdit}=await import('../src/services/solidBodyEdit')
+ const {applySolidBodyEdit}=await import('../src/kernel/solidBodyEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
  const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
@@ -2151,7 +2151,7 @@ it('keeps only the newest body edit and ignores a result after Escape',async()=>
 })
 
 it.each(['success','failure'] as const)('isolates a reopened body command from late %s of the closed panel',async outcome=>{
- const {applySolidBodyEdit}=await import('../src/services/solidBodyEdit')
+ const {applySolidBodyEdit}=await import('../src/kernel/solidBodyEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
  const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
@@ -2182,7 +2182,7 @@ it.each(['success','failure'] as const)('isolates a reopened body command from l
 })
 
 it.each([false,true])('waits for the released Push/Pull handle result; cancel=%s',async cancel=>{
- const {applySolidBodyEdit}=await import('../src/services/solidBodyEdit')
+ const {applySolidBodyEdit}=await import('../src/kernel/solidBodyEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise(resolve=>requests.push({job,resolve})))
  const ui=await mount();await ui.click('Cube');await ui.click('Faces')
@@ -2201,7 +2201,7 @@ it.each([false,true])('waits for the released Push/Pull handle result; cancel=%s
 })
 
 it('invalidates a pending profile offset on parameter changes and panel close',async()=>{
- const {applySolidProfileEdit}=await import('../src/services/solidProfileEdit')
+ const {applySolidProfileEdit}=await import('../src/kernel/solidProfileEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
  const ui=await mount();await ui.click('Profile');const before=ui.doc();await ui.click('Offset')
@@ -2219,7 +2219,7 @@ it('invalidates a pending profile offset on parameter changes and panel close',a
 })
 
 it('does not show or commit the old Boolean preview after swapping target roles',async()=>{
- const {applySolidProfileEdit}=await import('../src/services/solidProfileEdit')
+ const {applySolidProfileEdit}=await import('../src/kernel/solidProfileEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
  const document={version:1,sketches:[{id:'plate',name:'Plate',closed:true,points:[[0,0],[8,0],[8,6],[0,6]]},{id:'hole',name:'Hole',closed:true,points:[[2,2],[3,2],[3,3],[2,3]]}],bodies:[]}
@@ -2236,7 +2236,7 @@ it('does not show or commit the old Boolean preview after swapping target roles'
 })
 
 it('discards old profile preparation diagnostics after changing tolerance',async()=>{
- const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
+ const {prepareSolidProfile}=await import('../src/kernel/solidProfilePreparation')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise(resolve=>requests.push({job,resolve})))
  const document={version:1,sketches:[{id:'a',name:'A',closed:false,points:[[0,0],[10,0],[10,10]]},{id:'b',name:'B',closed:false,points:[[10,10],[0,10],[0,.005]]}],bodies:[]}
@@ -2256,7 +2256,7 @@ it('discards old profile preparation diagnostics after changing tolerance',async
 })
 
 it('ignores an old refit certificate after parameter changes and Escape',async()=>{
- const {refitSolidNurbs}=await import('../src/services/solidCurveReduction')
+ const {refitSolidNurbs}=await import('../src/kernel/solidCurveReduction')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise(resolve=>requests.push({job,resolve})))
  const curve=createSolidNurbsCurve('refit');curve.name='Refit curve';curve.curve.controlPoints=[[0,0,0],[1,0,0],[2,0,0],[3,0,0]]
@@ -2274,7 +2274,7 @@ it('ignores an old refit certificate after parameter changes and Escape',async()
 
 it('discards a surface construction after input reversal and cancellation',async()=>{
  await geometryKernel.warmGeometryKernel()
- const {buildSolidSurface}=await import('../src/services/solidSurfaceConstruction')
+ const {buildSolidSurface}=await import('../src/kernel/solidSurfaceConstruction')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise(resolve=>requests.push({job,resolve})))
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');a.name='Section A';b.name='Section B';b.curve.controlPoints=b.curve.controlPoints.map(([x,y,z])=>[x,y,z+10])
@@ -2298,7 +2298,7 @@ it.each(['summary','select'])('keeps native Enter on %s while a command is activ
 })
 
 it('ignores stale curve matching after changing endpoint roles and cancelling',async()=>{
- const {matchSolidCurve}=await import('../src/services/solidCurveMatching')
+ const {matchSolidCurve}=await import('../src/kernel/solidCurveMatching')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise(resolve=>requests.push({job,resolve})))
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');a.name='Match A';b.name='Match B';b.curve.controlPoints.forEach(p=>p[0]+=50)
@@ -2315,7 +2315,7 @@ it('ignores stale curve matching after changing endpoint roles and cancelling',a
 })
 
 it('keeps the latest transform preview and drops an instance response after Escape',async()=>{
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise(resolve=>requests.push({job,resolve})))
  const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Transform selection')
@@ -2331,8 +2331,8 @@ it('keeps the latest transform preview and drops an instance response after Esca
 })
 
 it('discards Boolean replies after Escape, operand changes, document edits and panel close',async()=>{
- const {applySolidBoolean}=await import('../src/services/solidBoolean')
- const {applySolidMinkowski}=await import('../src/services/solidMinkowski')
+ const {applySolidBoolean}=await import('../src/kernel/solidBoolean')
+ const {applySolidMinkowski}=await import('../src/kernel/solidMinkowski')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='boolean'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const brep=createBrepCylinder(3,5),built=tessellateNurbsBrep(brep,4)
@@ -2356,7 +2356,7 @@ it('discards Boolean replies after Escape, operand changes, document edits and p
 })
 
 it('uses the latest corner candidate and ignores circular copies after Escape',async()=>{
- const {applySolidSketchEdit}=await import('../src/services/solidSketchEdit')
+ const {applySolidSketchEdit}=await import('../src/kernel/solidSketchEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='sketchEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Profile');const before=ui.doc();await ui.click('Fillet')
@@ -2442,7 +2442,7 @@ it('cancels gizmo history publication after the final worker response',async()=>
 })
 
 it('waits for the released translation, discards a canceled result and commits the latest drag once',async()=>{
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Cube');const before=ui.doc(),svg=ui.svg()
@@ -2479,7 +2479,7 @@ it.each(['Escape','invalid-input','selection-change'])('cancels numeric history 
 
 it('publishes the validated transform response without another history geometry clone',async()=>{
  const {DirectHistory}=await import('../src/services/directModeling')
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
  let request!:{job:any;resolve:(value:any)=>void}
  previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?new Promise(resolve=>{request={job,resolve}}):undefined)
  const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Properties')
@@ -2496,7 +2496,7 @@ it('publishes the validated transform response without another history geometry 
 })
 
 it('accepts units in numeric transforms and cancels pending work on malformed input',async()=>{
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Profile');const before=ui.doc();await ui.click('Properties')
@@ -2529,7 +2529,7 @@ it.each([['ΔX','1 rad'],['ΔY','NaN'],['ΔZ','Infinity'],['Z rotation','2 cm'],
 })
 
 it('invalidates a pending numeric transform when its input changes',async()=>{
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Profile');const before=ui.doc();await ui.click('Properties')
@@ -2542,7 +2542,7 @@ it('invalidates a pending numeric transform when its input changes',async()=>{
 })
 
 it.each(['rotate','scale'])('coalesces %s drag requests and commits only the last released result',async(kind)=>{
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Cube');await ui.click('Gizmo: '+kind);const before=ui.doc(),svg=ui.svg()
@@ -2572,7 +2572,7 @@ it.each(['rotate','scale'])('coalesces %s drag requests and commits only the las
 })
 
 it('queues CV drags, keeps the latest release, and discards a late CV after Escape',async()=>{
- const {applySolidPointEdit}=await import('../src/services/solidPointEdit')
+ const {applySolidPointEdit}=await import('../src/kernel/solidPointEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='pointEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('+ NURBS surface');const before=ui.doc(),svg=ui.svg()
@@ -2595,7 +2595,7 @@ it('queues CV drags, keeps the latest release, and discards a late CV after Esca
 })
 
 it('keeps the CV panel available and invalidates a numeric edit when coordinates change',async()=>{
- const {applySolidPointEdit}=await import('../src/services/solidPointEdit')
+ const {applySolidPointEdit}=await import('../src/kernel/solidPointEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='pointEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('+ NURBS surface');const before=ui.doc()
@@ -2611,8 +2611,8 @@ it('keeps the CV panel available and invalidates a numeric edit when coordinates
 })
 
 it('commits a mixed sketch/body drag once and ignores a canceled analytic handle reply',async()=>{
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
- const {applySolidPointEdit}=await import('../src/services/solidPointEdit')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
+ const {applySolidPointEdit}=await import('../src/kernel/solidPointEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise(resolve=>requests.push({job,resolve})))
  const ui=await mount();await ui.click('Profile');await ui.click('Cube',true);const before=ui.doc()
@@ -2632,7 +2632,7 @@ it('commits a mixed sketch/body drag once and ignores a canceled analytic handle
 })
 
 it('cancels native NURBS commands on parameter changes and Esc, then commits one undoable result',async()=>{
- const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
+ const {applySolidNurbsEdit}=await import('../src/kernel/solidNurbsEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='nurbsEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('+ NURBS curve');const before=ui.doc()
@@ -2650,7 +2650,7 @@ it('cancels native NURBS commands on parameter changes and Esc, then commits one
 })
 
 it('ignores native NURBS replies after selection, document replacement and closure',async()=>{
- const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
+ const {applySolidNurbsEdit}=await import('../src/kernel/solidNurbsEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='nurbsEdit'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const ui=await mount();await ui.click('+ NURBS curve');const before=ui.doc()
@@ -2662,7 +2662,7 @@ it('ignores native NURBS replies after selection, document replacement and closu
 })
 
 it.each(['success','failure'] as const)('discards native bridge %s after changing the destination group',async outcome=>{
- const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
+ const {applySolidNurbsEdit}=await import('../src/kernel/solidNurbsEdit')
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');a.name='First';b.name='Second';b.curve.controlPoints.forEach(p=>p[0]+=60)
  const ui=await mount({seedDocument:{version:1,sketches:[],bodies:[],curves:[a,b],groups:[{name:'Destination',source:''}]}})
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
@@ -2681,7 +2681,7 @@ it.each(['success','failure'] as const)('discards native bridge %s after changin
 })
 
 it('invalidates bridge creation when tension changes and saves one undoable dependent curve',async()=>{
- const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
+ const {applySolidNurbsEdit}=await import('../src/kernel/solidNurbsEdit')
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');a.name='First';b.name='Second';b.curve.controlPoints.forEach(p=>p[0]+=60)
  const ui=await mount({seedDocument:{version:1,sketches:[],bodies:[],curves:[a,b]}})
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
@@ -2702,7 +2702,7 @@ it('invalidates bridge creation when tension changes and saves one undoable depe
 })
 
 it('discards stale B-rep measurements and canceled detail changes',async()=>{
- const {applySolidBrepTool}=await import('../src/services/solidBrepTool')
+ const {applySolidBrepTool}=await import('../src/kernel/solidBrepTool')
  const ui=await mount({seedDocument:cylinderSeed()});await ui.click('Imported cylinder');await ui.click('B-rep detail');const before=ui.doc()
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='brepTool'?new Promise(resolve=>requests.push({job,resolve})):undefined)
@@ -2717,7 +2717,7 @@ it('discards stale B-rep measurements and canceled detail changes',async()=>{
 })
 
 it('ignores a section from an older plane and a diagnostic reply after Escape',async()=>{
- const {applySolidBrepTool}=await import('../src/services/solidBrepTool')
+ const {applySolidBrepTool}=await import('../src/kernel/solidBrepTool')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='brepTool'&&job.options.kind==='display'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Cube');await ui.click('Body diagnostics')
@@ -2853,7 +2853,7 @@ it('cancels worker import on Escape and new edits, then applies one undoable imp
 })
 
 it('keeps working geometry while display refinement is pending and rejects replies after smooth toggle and Escape',async()=>{
- const {prepareSolidDisplay}=await import('../src/services/solidDisplayPreparation')
+ const {prepareSolidDisplay}=await import('../src/kernel/solidDisplayPreparation')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  displayWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
  const ui=await mount({seedDocument:cylinderSeed()});await flushClearance()
@@ -2878,7 +2878,7 @@ it('keeps working geometry while display refinement is pending and rejects repli
 })
 
 it('discards pending display refinement when the panel closes and retries on reopening',async()=>{
- const {prepareSolidDisplay}=await import('../src/services/solidDisplayPreparation')
+ const {prepareSolidDisplay}=await import('../src/kernel/solidDisplayPreparation')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  displayWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
  const ui=await mount({seedDocument:cylinderSeed()});await flushClearance();expect(requests).toHaveLength(1)
@@ -2987,7 +2987,7 @@ it.each([false,true])('discards RushGraph file read after group change; failure=
 })
 
 it('cancels primitive construction on Escape, parameter change and closure, then adds one undoable body',async()=>{
- const {addSolidPrimitive}=await import('../src/services/solidPrimitive')
+ const {addSolidPrimitive}=await import('../src/kernel/solidPrimitive')
  const ui=await mount(),before=ui.doc()
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  primitiveWorkerRun.mockImplementation(job=>new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
@@ -3004,7 +3004,7 @@ it('cancels primitive construction on Escape, parameter change and closure, then
 })
 
 it('cancels stale G2 tube requests and retries with the corrected transition size',async()=>{
- const {addSolidPrimitive}=await import('../src/services/solidPrimitive')
+ const {addSolidPrimitive}=await import('../src/kernel/solidPrimitive')
  const ui=await mount(),before=ui.doc()
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  primitiveWorkerRun.mockImplementation(job=>new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
@@ -3029,7 +3029,7 @@ it('cancels stale G2 tube requests and retries with the corrected transition siz
 })
 
 it('keeps independent end transitions through cancellation, Retry and history',async()=>{
- const {addSolidPrimitive}=await import('../src/services/solidPrimitive')
+ const {addSolidPrimitive}=await import('../src/kernel/solidPrimitive')
  const ui=await mount(),before=ui.doc()
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  primitiveWorkerRun.mockImplementation(job=>new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
@@ -3054,7 +3054,7 @@ it('keeps independent end transitions through cancellation, Retry and history',a
 })
 
 it('discards vertex measurement replies after a changed input and Escape without editing history',async()=>{
- const {measureSolidVertices}=await import('../src/services/solidMeasurements')
+ const {measureSolidVertices}=await import('../src/kernel/solidMeasurements')
  const ui=await mount();await ui.click('Box');const before=ui.doc()
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  measurementWorkerRun.mockImplementation(job=>job.kind==='measureVertices'?new Promise(resolve=>requests.push({job,resolve})):undefined)
@@ -3072,7 +3072,7 @@ it('discards vertex measurement replies after a changed input and Escape without
 })
 
 it('shows only the current edge curvature and ignores errors after the panel closes',async()=>{
- const {measureSolidEdgeCurvature}=await import('../src/services/solidMeasurements')
+ const {measureSolidEdgeCurvature}=await import('../src/kernel/solidMeasurements')
  const seed=cylinderSeed(),edge=seed.bodies[0].brep!.edges.findIndex(e=>e.curve.degree===2)
  const ui=await mount({seedDocument:seed});await ui.click('Imported cylinder');await ui.click('Edges')
  ui.all().find(n=>n.props['aria-label']==='Select edge')!.props.onChange({target:{value:String(edge)}});await flushClearance()
@@ -3092,7 +3092,7 @@ it('shows only the current edge curvature and ignores errors after the panel clo
 })
 
 it('ignores boundary reports after changed boundaries, selection and Escape',async()=>{
- const {measureSurfaceBoundaries}=await import('../src/services/solidSurfaceDiagnostics')
+ const {measureSurfaceBoundaries}=await import('../src/kernel/solidSurfaceDiagnostics')
  const fixture=readFileSync('tests/fixtures/solid-surface-boundary.json','utf8'),ui=await mount({},fixture)
  await ui.click('Surface A');await ui.click('Surface B',true);const before=ui.doc()
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
@@ -3115,7 +3115,7 @@ it('ignores boundary reports after changed boundaries, selection and Escape',asy
 
 it('keeps surface display tied to current geometry, cancels and retries without document edits',async()=>{
  await geometryKernel.warmGeometryKernel()
- const {tessellateSolidNurbsSurface}=await import('../src/services/solidNurbs')
+ const {tessellateSolidNurbsSurface}=await import('../src/kernel/solidNurbs')
  const fixture=readFileSync('tests/fixtures/solid-surface-boundary.json','utf8')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  surfaceDisplayWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
@@ -3181,7 +3181,7 @@ it.each(['success','failure'])('ignores a late topology response after changing 
 
 it('drops authored edge responses after changing the body or leaving edge mode',async()=>{
  await geometryKernel.warmGeometryKernel()
- const {solidBodyEdges}=await import('../src/services/solidBodyEdges')
+ const {solidBodyEdges}=await import('../src/kernel/solidBodyEdges')
  const make=(id:string,size:number)=>{const brep=createBrepBox([0,0,0],[size,size,size]);return {id,name:id,brep,mesh:tessellateNurbsBrep(brep,2)}}
  const a=make('Edges A',10),b=make('Edges B',20),requests:{job:any;resolve:(value:any)=>void}[]=[]
  bodyEdgesWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
@@ -3205,7 +3205,7 @@ it('drops authored edge responses after changing the body or leaving edge mode',
 
 it('does not apply a late sketch plane after selecting another body',async()=>{
  await geometryKernel.warmGeometryKernel()
- const {prepareSolidFaceSketch}=await import('../src/services/solidFaceSketch')
+ const {prepareSolidFaceSketch}=await import('../src/kernel/solidFaceSketch')
  const make=(id:string,size:number)=>{const brep=createBrepBox([0,0,0],[size,size,size]);return {id,name:id,brep,mesh:tessellateNurbsBrep(brep,2)}}
  const a=make('Plane A',10),b=make('Plane B',20),requests:{job:any;resolve:(value:any)=>void}[]=[]
  faceSketchWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
@@ -3228,7 +3228,7 @@ it('does not apply a late sketch plane after selecting another body',async()=>{
 
 it('discards body snap responses after hiding a body and retries failed visible targets',async()=>{
  await geometryKernel.warmGeometryKernel()
- const {bodySnapGeometry}=await import('../src/services/solidSnapGeometry')
+ const {bodySnapGeometry}=await import('../src/kernel/solidSnapGeometry')
  const make=(id:string,size:number)=>{const brep=createBrepBox([0,0,0],[size,size,size]);return {id,name:id,brep,mesh:tessellateNurbsBrep(brep,2)}}
  const a=make('Snaps A',10),b=make('Snaps B',20)
  const requests:{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}[]=[]
@@ -3254,7 +3254,7 @@ it('discards body snap responses after hiding a body and retries failed visible 
 
 it('rebuilds snap targets after deletion and undo without accepting the previous snapshot result',async()=>{
  await geometryKernel.warmGeometryKernel()
- const {bodySnapGeometry}=await import('../src/services/solidSnapGeometry')
+ const {bodySnapGeometry}=await import('../src/kernel/solidSnapGeometry')
  const make=(id:string,size:number)=>{const brep=createBrepBox([0,0,0],[size,size,size]);return {id,name:id,brep,mesh:tessellateNurbsBrep(brep,2)}}
  const a=make('History snaps A',10),b=make('History snaps B',20)
  const requests:{job:any;resolve:(value:any)=>void}[]=[]
@@ -3301,7 +3301,7 @@ it('blocks drawing with incomplete sketch snaps, discards cancelled replies and 
 
 it('previews point trimming, cancels without edits and commits the retained end with undo',async()=>{
  await geometryKernel.warmGeometryKernel()
- const {evaluateNurbsCurve}=await import('../src/services/nurbsCurve')
+ const {evaluateNurbsCurve}=await import('../src/kernel/nurbsCurve')
  const source={version:1,bodies:[],sketches:[],curves:[{id:'arc',name:'Trim target',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[10,0,0],[10,10,0],[0,10,0]],weights:[1,Math.SQRT1_2,1]}}]}
  const ui=await mount({},JSON.stringify(source)),before=ui.doc()
  await ui.click('Trim target');await ui.click('Trim NURBS at point')
@@ -3328,7 +3328,7 @@ it('previews point trimming, cancels without edits and commits the retained end 
 
 it('discards obsolete point trim previews after input changes and Escape',async()=>{
  await geometryKernel.warmGeometryKernel()
- const {applySolidNurbsEdit}=await import('../src/services/solidNurbsEdit')
+ const {applySolidNurbsEdit}=await import('../src/kernel/solidNurbsEdit')
  const requests:{job:any;resolve:(value:any)=>void}[]=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='nurbsEdit'&&job.options.kind==='trim-point'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const source={version:1,bodies:[],sketches:[],curves:[{id:'line',name:'Trim line',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,0,0],[10,0,0]],weights:[1,1]}}]}
@@ -3420,7 +3420,7 @@ it('retries failed diagnostic workers without modifying the body',async()=>{
 })
 
 it('ignores an in-flight diagnostic result when a plane field becomes invalid',async()=>{
- const {applySolidBrepTool}=await import('../src/services/solidBrepTool')
+ const {applySolidBrepTool}=await import('../src/kernel/solidBrepTool')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='brepTool'&&job.options.kind==='display'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Cube');await ui.click('Body diagnostics');const before=ui.doc(),old=requests[0]
@@ -3457,7 +3457,7 @@ it('navigates all detected contacts and never calls an incomplete empty scan cle
 })
 
 it('discards a contact report computed with an older inspection effort',async()=>{
- const {inspectSolidIntersections}=await import('../src/services/solidDiagnostics')
+ const {inspectSolidIntersections}=await import('../src/kernel/solidDiagnostics')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  contactWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
  const ui=await mount();await ui.click('Cube');await ui.click('Body diagnostics');const before=ui.doc()
@@ -3571,7 +3571,7 @@ it('invalidates global shell reports on budget changes, cancellation and invalid
 })
 
 it('invalidates a pending transform on malformed input and rebuilds when validity returns',async()=>{
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Transform selection')
@@ -3595,9 +3595,9 @@ it.each([
  ['Revolve','Angle, °','revolve','180'],
  ['Fillet','Radius, mm','sketchEdit','2'],
 ] as const)('discards %s preview on invalid quantity and resumes at the same value',async(command,field,kind,value)=>{
- const {applySolidRevolve}=await import('../src/services/solidRevolve')
+ const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
  const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
- const {applySolidSketchEdit}=await import('../src/services/solidSketchEdit')
+ const {applySolidSketchEdit}=await import('../src/kernel/solidSketchEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind===kind?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Profile');const before=ui.doc()
@@ -3624,7 +3624,7 @@ it.each([
 it.each([
  ['Lock',false],['Lock',true],['Hide',false],['Hide',true],
 ] as const)('invalidates body preview on %s with completed=%s',async(action,completed)=>{
- const {applySolidBodyEdit}=await import('../src/services/solidBodyEdit')
+ const {applySolidBodyEdit}=await import('../src/kernel/solidBodyEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise(resolve=>requests.push({job,resolve})))
  const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
@@ -3648,7 +3648,7 @@ it.each([
 
 
 it('retries a failed body calculation without changing inputs or adding history before Apply',async()=>{
- const {applySolidBodyEdit}=await import('../src/services/solidBodyEdit')
+ const {applySolidBodyEdit}=await import('../src/kernel/solidBodyEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
  const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
@@ -3718,8 +3718,8 @@ it('opens guided subtraction without cloning the history for every selected body
 })
 
 it.each(['CAD_CRASH','CAD_TIMEOUT','CAD_TRANSPORT','CAD_PROTOCOL'])('recovers Boolean from %s without changing operands or history on failure',async code=>{
- const {applySolidBoolean}=await import('../src/services/solidBoolean')
- const {applySolidMinkowski}=await import('../src/services/solidMinkowski')
+ const {applySolidBoolean}=await import('../src/kernel/solidBoolean')
+ const {applySolidMinkowski}=await import('../src/kernel/solidMinkowski')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='boolean'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const brep=createBrepCylinder(3,5),mesh=tessellateNurbsBrep(brep,4)
@@ -3740,7 +3740,7 @@ it.each(['CAD_CRASH','CAD_TIMEOUT','CAD_TRANSPORT','CAD_PROTOCOL'])('recovers Bo
 
 it.each(['Extrude · E','Revolve'])('retries %s preview after a worker crash and commits only the successful result',async command=>{
  const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
- const {applySolidRevolve}=await import('../src/services/solidRevolve')
+ const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>['extrusion','revolve'].includes(job.kind)?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const ui=await mount();await ui.click('Profile');const before=ui.doc()
@@ -3766,7 +3766,7 @@ it.each([
  ['Extrude · E',false],['Extrude · E',true],['Revolve',false],['Revolve',true],
 ] as const)('ignores cancelled retry for %s with late failure=%s after reopening',async(command,lateFailure)=>{
  const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
- const {applySolidRevolve}=await import('../src/services/solidRevolve')
+ const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>['extrusion','revolve'].includes(job.kind)?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const ui=await mount();await ui.click('Profile');const before=ui.doc()
@@ -3794,7 +3794,7 @@ it.each([
  ['Extrude · E',false],['Extrude · E',true],['Revolve',false],['Revolve',true],
 ] as const)('refreshes %s after destination group change with late failure=%s',async(command,lateFailure)=>{
  const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
- const {applySolidRevolve}=await import('../src/services/solidRevolve')
+ const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>['extrusion','revolve'].includes(job.kind)?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const ui=await mount({seedDocument:{version:1,sketches:[{id:'s',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}],bodies:[],groups:[{name:'Destination',source:''}]}});await ui.click('Profile');const before=ui.doc()
@@ -3816,7 +3816,7 @@ it.each([
 })
 
 it.each(['Fillet','DogEar','Circular copies'])('retries sketch command %s after a worker failure',async command=>{
- const {applySolidSketchEdit}=await import('../src/services/solidSketchEdit')
+ const {applySolidSketchEdit}=await import('../src/kernel/solidSketchEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='sketchEdit'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const ui=await mount();await ui.click('Profile');const before=ui.doc();await ui.click(command)
@@ -3835,7 +3835,7 @@ it.each(['Fillet','DogEar','Circular copies'])('retries sketch command %s after 
 })
 
 it.each(['Fillet','DogEar','Circular copies'].flatMap(command=>[false,true].map(failure=>({command,failure}))))('refreshes sketch $command after group change; late failure=$failure',async({command,failure})=>{
- const {applySolidSketchEdit}=await import('../src/services/solidSketchEdit')
+ const {applySolidSketchEdit}=await import('../src/kernel/solidSketchEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='sketchEdit'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const ui=await mount({seedDocument:{version:1,sketches:[{id:'s',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}],bodies:[],groups:[{name:'Destination',source:''}]}})
@@ -3982,7 +3982,7 @@ it('reuses CPU transparency geometry during orbit and invalidates it after scene
 })
 
 it('refreshes transparent world fragments after smooth refinement and orbit settle without changing the cylinder',async()=>{
- const {prepareSolidDisplay}=await import('../src/services/solidDisplayPreparation')
+ const {prepareSolidDisplay}=await import('../src/kernel/solidDisplayPreparation')
  const build=vi.spyOn(transparencyKernel,'buildTransparentBsp'),requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  displayWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
  try{
@@ -4070,7 +4070,7 @@ it('prepares incompatible Coons weights with budget refusal, cancel and exact so
 })
 
 it('ignores stale Coons preparation bounds and errors after retry and cancellation',async()=>{
- const {buildSolidSurface}=await import('../src/services/solidSurfaceConstruction')
+ const {buildSolidSurface}=await import('../src/kernel/solidSurfaceConstruction')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='surfaceBuild'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const points=[[[0,0,0],[2,0,0]],[[0,2,0],[2,2,0]],[[0,0,0],[0,2,0]],[[2,0,0],[2,2,0]]]
@@ -4141,7 +4141,7 @@ it('refuses a drag with pending snaps without materializing or cloning history g
 })
 it('revolves a retained holed profile in exact mode and preserves it through cancel and Undo',async()=>{
  await geometryKernel.warmGeometryKernel()
- const {authorBrepProfile}=await import('../src/services/geometry/brepProfile')
+ const {authorBrepProfile}=await import('../src/kernel/geometry/brepProfile')
  const {withRetainedProfile}=await import('../src/services/retainedSketchProfile')
  const profile=authorBrepProfile({kind:'polygon',rings:[[[3,0],[6,0],[6,4],[3,4]],[[4,1],[4,3],[5,3],[5,1]]]})
  const sketch=withRetainedProfile({id:'retained',name:'Retained holes',closed:true,points:[]},profile)
@@ -4184,7 +4184,7 @@ it('marks rational profile crossings in both views and refuses Enter without cha
 })
 
 it('discards a late rational crossing diagnostic after Escape',async()=>{
- const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
+ const {prepareSolidProfile}=await import('../src/kernel/solidProfilePreparation')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const arch={id:'arch',name:'Late arch',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,5],[2,0]],weights:[1,.8,1]}}
@@ -4221,7 +4221,7 @@ it.each(['en','ru'])('keeps the complete command registry identified and explain
 for(const locale of ['en','ru'])it('localizes source deletion and group deletion dependencies without changing history: '+locale,async()=>{
  await geometryKernel.warmGeometryKernel()
  const base=extrudeDirectSketch({id:'profile',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'source')
- const {createSolidInstance}=await import('../src/services/solidInstances')
+ const {createSolidInstance}=await import('../src/kernel/solidInstances')
  const seed=createSolidInstance({version:1,sketches:[],bodies:[{...base,name:'Source',group:'Sources'}],groups:[{name:'Sources',source:''}]},'source','linked',[[1,0,0,20],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
  seed.bodies[1].name='Linked';seed.bodies[1].group='Copies'
  const ui=await mount({locale},stringifyMeshJson(seed)),before=ui.doc()
@@ -4281,7 +4281,7 @@ for(const locale of ['en','ru'])it('locates invalid vertex and curvature input w
 })
 
 for(const locale of ['en','ru'])it('localizes current measurement worker failures and retries both reports: '+locale,async()=>{
- const {measureSolidVertices,measureSolidEdgeCurvature}=await import('../src/services/solidMeasurements')
+ const {measureSolidVertices,measureSolidEdgeCurvature}=await import('../src/kernel/solidMeasurements')
  const ui=await mount({locale,seedDocument:cylinderSeed()});await ui.click('Imported cylinder');await ui.click(locale==='ru'?'Рёбра':'Edges')
  const picker=ui.all().find(n=>n.props['aria-label']===(locale==='ru'?'Выбрать ребро':'Select edge'))!
  picker.props.onKeydown({key:'ArrowDown',preventDefault(){},stopPropagation(){}});await flushClearance()
@@ -4398,7 +4398,7 @@ it('creates a retained numeric slot from its prepared preview and preserves hist
  await commandKey(ui,'Escape');expect(ui.doc()).toEqual(after)
 })
 it('discards cancelled and superseded numeric slot preparation replies',async()=>{
- const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation');const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ const {prepareSolidProfile}=await import('../src/kernel/solidProfilePreparation');const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Slot');const before=ui.doc();expect(requests).toHaveLength(1)
  const field=ui.all().find(n=>n.props['aria-label']==='End coordinate X')!;field.props['onUpdate:modelValue'](10);await flushClearance();expect(requests).toHaveLength(2)
@@ -4415,7 +4415,7 @@ it.each(['en','ru'])('localizes numeric slot worker failure and recovers through
 })
 
 it('cancels automatic slot creation after a mouse drag while its profile worker is pending',async()=>{
- const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation');const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
+ const {prepareSolidProfile}=await import('../src/kernel/solidProfilePreparation');const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Slot');const before=ui.doc(),svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
  svg.props.onPointerdown({...ui.event(svg,40,-40),altKey:true});svg.props.onPointermove({...ui.event(svg,50,-40),altKey:true});svg.props.onPointerup({...ui.event(svg,50,-40),altKey:true});await flushClearance();expect(ui.doc()).toEqual(before)
@@ -4436,7 +4436,7 @@ it.each([
  ['ru','Profile preparation requires open polylines, arcs or NURBS curves.','Выберите открытые ломаные, дуги или NURBS'],
 ])('localizes profile preparation refusal and retries without consuming inputs (%s, %s)',async(locale,message,visible)=>{
  await geometryKernel.warmGeometryKernel()
- const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
+ const {prepareSolidProfile}=await import('../src/kernel/solidProfilePreparation')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='profilePrepare'?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
  const sketches=[{id:'first',name:'First chain',closed:false,points:[[0,0],[10,0],[10,6]]},{id:'second',name:'Second chain',closed:false,points:[[10,6],[0,6],[0,0]]}]
@@ -4585,7 +4585,7 @@ it('discards canceled Minkowski results and leaves source bodies untouched on re
  const seed={version:1 as const,sketches:[],bodies:[{id:'a',name:'First',mesh:box3d([0,0,0],[2,3,4])},{id:'b',name:'Second',mesh:box3d([-1,-1,-1],[1,1,1])}]}
  const ui=await mount({seedDocument:seed});await ui.click('First');await ui.click('Second',true);const before=ui.doc()
  let finish!:(r:unknown)=>void;previewWorkerRun.mockImplementationOnce(()=>new Promise(r=>{finish=r}));await ui.click('Minkowski sum');await commandKey(ui,'Escape')
- const {applySolidMinkowski}=await import('../src/services/solidMinkowski');finish(applySolidMinkowski(seed as any,{ids:['a','b'],createdId:'late',ru:false}));await flushClearance();expect(ui.doc()).toEqual(before)
+ const {applySolidMinkowski}=await import('../src/kernel/solidMinkowski');finish(applySolidMinkowski(seed as any,{ids:['a','b'],createdId:'late',ru:false}));await flushClearance();expect(ui.doc()).toEqual(before)
  await ui.click('First');await ui.click('Second',true);previewWorkerRun.mockRejectedValueOnce(Error('Minkowski 3D refused: work budget exceeded'));await ui.click('Minkowski sum');expect(ui.doc()).toEqual(before);expect(ui.all().some(n=>n.props.role==='alert')).toBe(true)
 })
 
@@ -4609,7 +4609,7 @@ it('refuses an invalid Minkowski source tolerance without adding a body or histo
 it('shows source-only topology without claiming the sum topology',async()=>{
  // Render-only weaker claims; the worker's certificate binding and the actual
  // nonstar geometry paths have separate protocol and cross-runtime checks.
- const {applySolidMinkowski}=await import('../src/services/solidMinkowski')
+ const {applySolidMinkowski}=await import('../src/kernel/solidMinkowski')
  for(const proved of [true,false]){
   const seed={version:1 as const,sketches:[],bodies:[createBrepBox([0,0,0],[2,3,4]),createBrepBox([-1,-1,-1],[1,1,1])].map((brep,i)=>({id:i?'b':'a',name:i?'Second':'First',brep,mesh:tessellateNurbsBrep(brep,1)}))}
   const ui=await mount({seedDocument:seed});await ui.click('First');await ui.click('Second',true)
@@ -4676,8 +4676,8 @@ for(const locale of ['en','ru'])it('rejects a shared version replaced during dec
 
 it('restores the committed durable geometry after reference publication fails and the editor is reopened',async()=>{
  await geometryKernel.warmGeometryKernel();vi.stubGlobal('indexedDB',new IDBFactory())
- const heads=await import('../src/services/solidDraftHeadStore')
- const actual=await vi.importActual<typeof import('../src/services/solidDraftHeadStore')>('../src/services/solidDraftHeadStore')
+ const heads=await import('../src/kernel/solidDraftHeadStore')
+ const actual=await vi.importActual<typeof import('../src/kernel/solidDraftHeadStore')>('../src/kernel/solidDraftHeadStore')
  const read=vi.spyOn(heads,'readSolidDraftHead').mockImplementation(actual.readSolidDraftHead)
  const write=vi.spyOn(heads,'writeSolidDraftHead').mockImplementation(actual.writeSolidDraftHead)
  const safe=await import('../src/services/safeStorage'),original=safe.storageSet
@@ -4709,7 +4709,7 @@ it('restores the committed durable geometry after reference publication fails an
 })
 
 it.each(['Escape','selection'])('drops a late duplicate after %s and permits a fresh duplicate',async(action)=>{
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('Cube');const before=ui.doc()
@@ -4725,7 +4725,7 @@ it.each(['Escape','selection'])('drops a late duplicate after %s and permits a f
 })
 
 it('retains the model after a duplicate worker failure and allows retry',async()=>{
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
  let fail=true
  previewWorkerRun.mockImplementation(job=>{
   if(job.kind!=='sceneEdit')return undefined

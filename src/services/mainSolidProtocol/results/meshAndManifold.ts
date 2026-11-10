@@ -1,4 +1,4 @@
-import type { DisplayMesh } from '../../solidDisplayCache'
+import type { DisplayMesh } from '../../../kernel/solidDisplayCache'
 import {
   finite,
   isNumericSequence,
@@ -6,13 +6,13 @@ import {
   type MainSolidExpectation,
   type MainSolidResults,
 } from '../../mainSolidProtocol'
-import type { PolygonMesh } from '../../geometry/polygon'
-import type { KernelManifoldMetrics } from '../../geometry/manifoldAnalysis'
+import type { PolygonMesh } from '../../../kernel/geometry/polygon'
+import type { KernelManifoldMetrics } from '../../../kernel/geometry/manifoldAnalysis'
 import type { MeshBooleanResult, MeshRepairResult } from '../../meshEditing'
 import type { ImportedMesh } from '../../../exchange/meshImport'
 import type { MeshConvertResult, MeshExportArtifact } from '../../meshConvert'
 import { convertedMeshFileName, MESH_IMPORT_FORMATS } from '../../meshFormats'
-import type { SurfaceBoundaryReport } from '../../solidSurfaceDiagnostics'
+import type { SurfaceBoundaryReport } from '../../../kernel/solidSurfaceDiagnostics'
 import { arrayOf, numericSequenceOf } from '../mainSolidExpectation'
 import { validManifoldRepair, validManifoldReport, validRepairMesh } from './manifoldRepair'
 import { isNonnegativeFinite, isSafeIntegerValue, isSafeNonnegativeCount } from './predicates'

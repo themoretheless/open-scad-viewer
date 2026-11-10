@@ -1,6 +1,6 @@
 import {createSpecificationSheets,type DrawingPartMetadata,type DrawingSpecificationRow} from './drawingSpecification'
 import type {DirectBody} from './directModeling'
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 export interface DrawingSheetOptions {template:'A5'|'A4'|'A3'|'A2'|'Letter';scale:number;title:string;author:string;perBody:boolean;portrait?:boolean;hidden?:'show'|'hide'|'dash';dimensions?:boolean;occlusion?:'mesh'|'brep';frame?:'simple'|'detail'|'assembly';drawingNumber?:string;revision?:string;material?:string;linkedDimensions?:DrawingDimension[];vertexLabels?:boolean;specification?:boolean;parts?:DrawingPartMetadata[];locale?:'ru'|'en'}
 export interface DrawingDimension {bodyId:string;vertices:[number,number];topologySignature:string;vertexIds?:[string,string];view:'top'|'front'|'right';axis:'horizontal'|'vertical'}
 export interface DrawingReference {bodyId:string;topologySignature:string;vertices:number[][];vertexIds:string[]}

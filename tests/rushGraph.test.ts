@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { compileRushGraph, setRushGraphParameters, RUSH_GRAPH_EXAMPLE } from '../src/services/rushGraph'
+import { compileRushGraph, setRushGraphParameters, RUSH_GRAPH_EXAMPLE } from '../src/language/rushGraph'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 
 describe('Rush IR/1 frontend', () => {

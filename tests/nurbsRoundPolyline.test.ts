@@ -1,10 +1,10 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {circleNurbsCurve,roundPolylineNurbsCurve,transitionPolylineNurbsCurve} from '../src/services/nurbsConstructors'
-import {createProgressiveBrepProfileBody,inspectNurbsBrep} from '../src/services/geometry/brep'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {circleNurbsCurve,roundPolylineNurbsCurve,transitionPolylineNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {createProgressiveBrepProfileBody,inspectNurbsBrep} from '../src/kernel/geometry/brep'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 
 it('preserves the requested circular radius through the packaged host',()=>{
   const curve=roundPolylineNurbsCurve([[0,0,0],[10,0,0],[10,10,0]],2)
@@ -78,8 +78,8 @@ it.each([['round',roundPolylineNurbsCurve],['transition',transitionPolylineNurbs
   const node=compiled.document.nodes.find(n=>n.op==='brep_progressive_sweep')!
   const built=buildOwnNurbs(compiled.document,{action:'build'})
   expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,closedPath:true,seamContinuity:'C0',globalEmbeddingCertified:false})
-  const {parseOpenSCAD}=await import('../src/services/openscadParser')
-  const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
+  const {parseOpenSCAD}=await import('../src/language/openscadParser')
+  const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
   const scene=await parseOpenSCAD(source)
   const body=sceneMeshesToSolidDocument(scene.meshes).bodies[0]!.brep!
   expect(body.shells).toHaveLength(2)

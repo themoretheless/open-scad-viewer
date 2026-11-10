@@ -1,6 +1,6 @@
 import type { GeometryAnalysis, McpGeometryService } from '../geometryService'
 import type { GeometryBuildPurpose, GeometryExecutionDescriptor } from '../../core/geometryExecution'
-import { GeometryCapabilityUnavailableError, GeometryEngineUnavailableError, GeometryLanguageContractError, geometryExecutionForError } from '../../services/geometryBuildEngine'
+import { GeometryCapabilityUnavailableError, GeometryEngineUnavailableError, GeometryLanguageContractError, geometryExecutionForError } from '../../kernel/geometryBuildEngine'
 import type { IndependentArtifactFormat } from '../independentArtifactCache'
 import { ModelNotFoundError, buildDiagnostic, isAbortError, publicToolError } from '../publicError'
 import type { ModelStore, StoredBuild } from '../modelStore'

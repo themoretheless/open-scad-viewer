@@ -1,5 +1,5 @@
 import CurrentCurveChainInspection from './CurrentCurveChainInspection.svt'
-import type {SolidNurbsCurve} from '../services/solidNurbs'
+import type {SolidNurbsCurve} from '../kernel/solidNurbs'
 import {h,type FunctionalComponent} from 'svet'
 import type {CurveOffsetConstruction} from '../services/curveOffsetConstruction'
 const CurveOffsetConstructionInfo:FunctionalComponent<{value?:CurveOffsetConstruction;locale:string;curves:SolidNurbsCurve[];ids:string[];onResult?:(value:{curves:SolidNurbsCurve[];diagnostics:import('../services/curveOffsetDiagnostics').CurveOffsetDiagnostics}|null)=>void}>=({value:v,locale,curves,ids,onResult})=>{

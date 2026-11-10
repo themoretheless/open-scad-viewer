@@ -1,5 +1,5 @@
 import type {Ref} from 'svet'
-import {createSolidPreviewWorker} from './solidPreviewWorker'
+import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
 import {expressionInspectionExpectation,type ExpressionInspectionOptions} from './expressionShellInspection'
 import type {MainSolidWorkerClient} from './mainSolidWorkerClient'
 import {useBoundNativeInspection} from './useBoundNativeInspection'

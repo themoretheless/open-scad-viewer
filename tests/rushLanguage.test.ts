@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { isRushFrontend, isRush } from '../src/services/rushFrontendDetect'
-import { compileRushGraph } from '../src/services/rushGraphCompiler'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { isRushFrontend, isRush } from '../src/language/rushFrontendDetect'
+import { compileRushGraph } from '../src/language/rushGraphCompiler'
 import { highlightCode } from '../src/services/codeHighlight'
 
 it('executes Rush through the rebuilt language WASM and existing CAD backend', () => {
@@ -22,7 +22,7 @@ it('executes Rush through the rebuilt language WASM and existing CAD backend', (
 })
 
 it('routes Rush source through the render entrypoint', async () => {
-  const { parseOpenSCAD } = await import('../src/services/openscadParser')
+  const { parseOpenSCAD } = await import('../src/language/openscadParser')
   const result = await parseOpenSCAD('// @rush/1\nshow box(2mm,3mm,4mm)')
   expect(result.meshes).toHaveLength(1)
 })

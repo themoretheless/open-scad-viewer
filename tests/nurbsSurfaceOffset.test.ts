@@ -1,9 +1,9 @@
 import {curvedTangentFixture} from './fixtures/offset-contact-tangent'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 import {beforeAll,expect,it} from 'vitest'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
-import type {NurbsSurface} from '../src/services/nurbsSurface'
-import {certifyNurbsOffsetContactTangent,certifyNurbsOffsetSourceBoundary,certifyTrimmedNurbsOffsetContactBand,certifyNurbsOffsetContactBand,evaluateNurbsSurfaceOffset,boundNurbsSurfaceOffset,boundNurbsSurfaceOffsetJacobian,certifyNurbsOffsetContactSection,findNurbsOffsetCandidateBoxes} from '../src/services/nurbsSurfaceOffset'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
+import type {NurbsSurface} from '../src/kernel/nurbsSurface'
+import {certifyNurbsOffsetContactTangent,certifyNurbsOffsetSourceBoundary,certifyTrimmedNurbsOffsetContactBand,certifyNurbsOffsetContactBand,evaluateNurbsSurfaceOffset,boundNurbsSurfaceOffset,boundNurbsSurfaceOffsetJacobian,certifyNurbsOffsetContactSection,findNurbsOffsetCandidateBoxes} from '../src/kernel/nurbsSurfaceOffset'
 beforeAll(async()=>{await warmGeometryKernel()})
 const plane=():NurbsSurface=>({degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false})
 function contains(bounds:number[][],point:number[]){point.forEach((x,k)=>{expect(bounds[k][0]).toBeLessThanOrEqual(x);expect(bounds[k][1]).toBeGreaterThanOrEqual(x)})}

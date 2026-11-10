@@ -1,8 +1,8 @@
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
-import {circleNurbsCurve,type NurbsScaleLaw} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody} from '../src/services/geometry/brep'
+import {circleNurbsCurve,type NurbsScaleLaw} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
+import {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody} from '../src/kernel/geometry/brep'
 import {inspectMiterProfileSmoothness} from '../src/services/miterProfileSmoothness'
 const law=(value:number):NurbsScaleLaw=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})
 const loops=[[circleNurbsCurve([0,0,0],[0,0,1],.5)],[reverseNurbsCurve(circleNurbsCurve([0,0,0],[0,0,1],.2))]]
@@ -45,8 +45,8 @@ it('keeps a complete G1 profile claim when exact G2 fails, within one shared wor
 })
 it('carries independent G1 and unproved G2 through joint-mode Rush, viewport evidence and Solid',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const graph=compileRushFrontend(readFileSync('examples/rush/miter-g1-profile-frame-guide-affine.r','utf8'))
@@ -60,8 +60,8 @@ it('carries independent G1 and unproved G2 through joint-mode Rush, viewport evi
 
 it('certifies every closed joint-mode profile seam within the declared aggregate budget',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const graph=compileRushFrontend(readFileSync('examples/rush/closed-miter-frame-guide-affine-hollow.r','utf8'))
  const built=buildOwnNurbs(graph.document,{action:'build',display:{segments:4,subdivisionLevels:0}})

@@ -11,7 +11,7 @@ import type {TrussModel} from '../src/services/trussAnalysis'
 import {resolveTrussScenario} from '../src/services/trussScenario'
 import {DirectHistory,parseDirectDocument,serializeDirectDocument,extrudeDirectSketch} from '../src/services/directModeling'
 import {previewMeshes} from '../src/services/mainModeling'
-import type {LighteningOptions} from '../src/services/solidLightening'
+import type {LighteningOptions} from '../src/kernel/solidLightening'
 
 const artifactBytes=readFileSync('public/wasm/geometry-kernel.wasm')
 const expectedArtifact={sha256:createHash('sha256').update(artifactBytes).digest('hex'),byteLength:artifactBytes.length}
@@ -55,7 +55,7 @@ it('rejects a mismatched worker artifact before decoding and recovers with a mat
 },30_000)
 
 it('rounds all rotated cuboid edges with endpoint radii through the real body-edit worker',async()=>{
-  const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
   const source=createBrepBox([-7,3,-2],[3,11,4]),a=.37,b=-.61
   const brep=transformNurbsBrep(source,[
     [Math.cos(a)*Math.cos(b),-Math.sin(a),Math.cos(a)*Math.sin(b),17],
@@ -76,7 +76,7 @@ it('rounds all rotated cuboid edges with endpoint radii through the real body-ed
 },60_000)
 
 it('rounds all rotated cuboid edges with constant radii through the real body-edit worker',async()=>{
-  const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
   const source=createBrepBox([-7,3,-2],[3,11,4]),a=.37,b=-.61
   const brep=transformNurbsBrep(source,[
     [Math.cos(a)*Math.cos(b),-Math.sin(a),Math.cos(a)*Math.sin(b),17],
@@ -134,7 +134,7 @@ it('prepares and extrudes polynomial rounded profiles through the shipped worker
   const prepared=await client.run({kind:'profilePrepare',document,ids:document.curves.map(c=>c.id),tolerance:0})
   expect(prepared.report.accepted).toBe(true)
   const extruded=await client.run({kind:'extrusion',document:prepared.document,options:{sketchIds:[prepared.document.sketches[0].id],height:5,offset:-2,operation:'new',targetId:'',id:'rounded'}})
-  const {analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const {analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
   expect(analyzeNurbsBrep(extruded.bodies[0].brep!).signedVolumeMm3).toBeCloseTo(150,6)
   expect(JSON.stringify(document)).toBe(before)
 },30000)
@@ -448,10 +448,10 @@ it('accepts compact scene snapshots with exact parity and rejects invalid geomet
  expect(linked.bodies[1].instance?.sourceId).toBe('source')
 })
 it('revolves retained holed profiles through postMessage and preserves source controls and identities',async()=>{
- const {warmGeometryKernel}=await import('../src/services/geometry/kernel')
- const {authorBrepProfile}=await import('../src/services/geometry/brepProfile')
+ const {warmGeometryKernel}=await import('../src/kernel/geometry/kernel')
+ const {authorBrepProfile}=await import('../src/kernel/geometry/brepProfile')
  const {withRetainedProfile}=await import('../src/services/retainedSketchProfile')
- const {applySolidRevolve}=await import('../src/services/solidRevolve')
+ const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
  await warmGeometryKernel()
  const profile=authorBrepProfile({kind:'polygon',rings:[[[3,0],[6,0],[6,4],[3,4]],[[4,1],[4,3],[5,3],[5,1]]]})
  const sketch=withRetainedProfile({id:'profile',name:'Holed',closed:true,points:[]},profile)
@@ -469,7 +469,7 @@ it('revolves retained holed profiles through postMessage and preserves source co
 })
 it('builds a retained holed loft through postMessage without changing source profiles',async()=>{
  const {retainedLoftFixture}=await import('./support/retainedLoftFixture')
- const {applySolidSceneEdit}=await import('../src/services/solidSceneEdit')
+ const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
  const sketches=await retainedLoftFixture()
  const document={version:1 as const,bodies:[],sketches},before=structuredClone(document)
  const options={operation:'loft' as const,id:'base',ids:['base','top'],createdId:'loft',x:0,y:0,z:0,axis:'z' as const,angle:0,scale:1}
@@ -485,8 +485,8 @@ it('builds a retained holed loft through postMessage without changing source pro
 })
 
 it('preserves retained profile segment provenance across the real worker boundary',async()=>{
- const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
- const {warmGeometryKernel}=await import('../src/services/geometry/kernel')
+ const {prepareSolidProfile}=await import('../src/kernel/solidProfilePreparation')
+ const {warmGeometryKernel}=await import('../src/kernel/geometry/kernel')
  await warmGeometryKernel()
  const document={version:1 as const,bodies:[],sketches:[
   {id:'arc',name:'Arc',closed:false,points:[[999,999],[998,998]] as [number,number][],analytic:{kind:'arc' as const,center:[0,0] as [number,number],radius:2,start:0,sweep:-180}},
@@ -520,8 +520,8 @@ it('retains multispan trim proofs and incomplete budgets across real postMessage
 
 it('prepares original general NURBS through the real worker boundary',async()=>{
  const {emptyDirectDocument}=await import('../src/services/directModeling')
- const {prepareSolidProfile}=await import('../src/services/solidProfilePreparation')
- const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ const {prepareSolidProfile}=await import('../src/kernel/solidProfilePreparation')
+ const {warmGeometryKernel}=await import('../src/kernel/geometry/kernel');await warmGeometryKernel()
  const document=emptyDirectDocument()
  document.curves=[{id:'nurbs',name:'NURBS',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}}]
  document.sketches=[{id:'line',name:'Line',closed:false,points:[[2,0],[2,2],[0,2],[0,0]]}]
@@ -536,7 +536,7 @@ it('prepares original general NURBS through the real worker boundary',async()=>{
 
 it('converges oblique sphere distances across the real worker boundary',async()=>{
  const {obliqueSphereRequests}=await import('./fixtures/oblique-sphere-distance')
- const {validSolidDistance,solidDistanceExpectation}=await import('../src/services/solidDistance')
+ const {validSolidDistance,solidDistanceExpectation}=await import('../src/kernel/solidDistance')
  const client=new MainSolidWorkerClient(realWorker);clients.push(client)
  for(const {options,expected} of await obliqueSphereRequests()){
   const before=structuredClone(options),r=await client.run({kind:'solidDistance',options})
@@ -647,7 +647,7 @@ it('qualifies center tangent regularity through real WASM and worker, including 
  const seam=await client.run({kind:'offsetContactTangent',options:{...options,a:periodic,b:seamPlane,fixedInterval:[0,1e-6],secondDomain:[[.49,.51],[.15,.25]]}})
  expect(seam).toMatchObject({contactStatus:'unresolved',centerRegularityProven:false,centerTangentIntervalsMm:null})
  // The fixture's numerical proposal uses the same published WASM as the host.
- const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ const {warmGeometryKernel}=await import('../src/kernel/geometry/kernel');await warmGeometryKernel()
  for(const rotated of [false,true]){
   const {options,tangents}=curvedTangentFixture(rotated),r=await client.run({kind:'offsetContactTangent',options})
   expect(r.centerRegularityProven).toBe(true)
@@ -667,7 +667,7 @@ it('qualifies local envelopes through the real worker with work stops, invalid i
  expect(limited.cells[0].arcParameter).toEqual([0,1])
  await expect(client.run({kind:'offsetEnvelope',options:{...options,maxCells:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
  expect((await client.run({kind:'offsetEnvelope',options})).envelopeRegularityProven).toBe(true)
- const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ const {warmGeometryKernel}=await import('../src/kernel/geometry/kernel');await warmGeometryKernel()
  for(const rotated of [false,true]){
   const {options}=curvedTangentFixture(rotated)
   expect((await client.run({kind:'offsetEnvelope',options:{...options,maxCells:511}})).envelopeRegularityProven).toBe(true)
@@ -703,7 +703,7 @@ it('qualifies actual finite envelope patches in the real worker with authored ca
  expect(limited.qualification).toMatchObject({finiteNurbsPatchProven:false,visitedCells:1})
  await expect(client.run({kind:'offsetEnvelopeFit',options:{...options,maxCells:0}})).rejects.toMatchObject({code:'NURBS_INVALID_INPUT'})
  expect((await client.run({kind:'offsetEnvelopeFit',options})).qualification!.finiteNurbsPatchProven).toBe(true)
- const {warmGeometryKernel}=await import('../src/services/geometry/kernel');await warmGeometryKernel()
+ const {warmGeometryKernel}=await import('../src/kernel/geometry/kernel');await warmGeometryKernel()
  for(const rotated of [false,true]){
   const {options}=curvedTangentFixture(rotated)
   const r=await client.run({kind:'offsetEnvelopeFit',options:{...options,toleranceMm:1e-3,maxCells:511}})
@@ -780,7 +780,7 @@ it('keeps replacement profile coverage after a genuine cancelled worker reply ar
  const {useProfileBridgeInspection}=await import('../src/services/useProfileBridgeInspection')
  const fixture=JSON.parse(readFileSync('docs/qualification/mapped-retained-carrier-2026-10-08/profile-bridge-native-transport-2026-10-10.json','utf8')).wholeCoverage
  const {op:_,...input}=fixture.request
- const options=shallowRef<import('../src/services/nurbsProfileBridgeChords').ProfileBridgeChordOptions|undefined>(structuredClone(input))
+ const options=shallowRef<import('../src/kernel/nurbsProfileBridgeChords').ProfileBridgeChordOptions|undefined>(structuredClone(input))
  const active=ref(true),scope=effectScope(),heldPort=realWorker();let starts=0
  const client=new MainSolidWorkerClient(()=>starts++===0?heldPort:realWorker());clients.push(client)
  const controller=scope.run(()=>useProfileBridgeInspection(options,active,client))!

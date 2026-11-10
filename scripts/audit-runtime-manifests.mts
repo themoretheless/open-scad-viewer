@@ -37,13 +37,13 @@ export function assessRuntimeBinding(
 
 /** A fresh-process smoke audit, never a qualification run or evidence publisher. */
 export async function auditRuntimeManifests() {
-  const {isGeometryKernelReady} = await import('../src/services/geometry/kernel')
+  const {isGeometryKernelReady} = await import('../src/kernel/geometry/kernel')
   assert.equal(isGeometryKernelReady(), false, 'Runtime audit requires a fresh geometry realm')
   const {default: packed} = await import('../src/generated/geometry-kernels/bytes')
   const {unpackBrotliWasmBase64} = await import('../src/services/wasmBrotliPacking')
   const {setOptionalWasmCompiler} = await import('../src/services/wasmCompilation')
   const {compileWasmArtifact} = await import('../src/services/wasmArtifact')
-  const {GeometryBuildEngine} = await import('../src/services/geometryBuildEngine')
+  const {GeometryBuildEngine} = await import('../src/kernel/geometryBuildEngine')
   const artifact = unpackBrotliWasmBase64(packed)
   const artifactSha256 = sha256(artifact)
   const publicArtifact = readFileSync(new URL('../public/wasm/geometry-kernel.wasm', import.meta.url))

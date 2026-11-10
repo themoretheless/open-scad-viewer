@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {measureShellDistance,type ShellDistanceOptions} from '../src/services/solidMeasurements'
+import {measureShellDistance,type ShellDistanceOptions} from '../src/kernel/solidMeasurements'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
 const read=(name:string)=>JSON.parse(readFileSync(new URL(`./fixtures/${name}-distance.json`,import.meta.url),'utf8'))

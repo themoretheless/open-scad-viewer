@@ -28,7 +28,7 @@ import {
   GeometryCapabilityUnavailableError,
   GeometryEngineUnavailableError,
   GeometryLanguageContractError,
-} from '../services/geometryBuildEngine'
+} from '../kernel/geometryBuildEngine'
 import type { CustomizerValue } from '../services/scadCustomizer'
 import {
   OPENSCAD_PROJECT_MAX_BLOB_BYTES,
@@ -37,7 +37,7 @@ import {
   OPENSCAD_PROJECT_MAX_SOURCE_BYTES,
   OPENSCAD_PROJECT_MAX_TOTAL_BYTES,
   normalizeOpenScadProjectPath,
-} from '../services/openScadProject'
+} from '../language/openScadProject'
 import { buildBinaryStl, buildObj } from '../services/meshExport'
 import {
   DEFAULT_MAX_IN_FLIGHT_REQUESTS,

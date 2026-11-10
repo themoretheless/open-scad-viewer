@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto'
 import {unionSketchProfiles} from '../src/services/retainedSketchProfile'
 import {transformSketch} from '../src/services/directSketchGeometry'
 import {buildDirectExtrusion} from '../src/services/directExtrusion'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 import type {DirectSketch} from '../src/services/directModeling'
 const directory=resolve(process.argv[2]??'/tmp/retained-profile-step');mkdirSync(directory,{recursive:true})
 const source:DirectSketch[]=[{id:'rect',name:'Rectangle',closed:true,points:[[-4,-3],[3,-3],[3,3],[-4,3]]},{id:'circle',name:'Circle',closed:true,points:[],analytic:{kind:'circle',center:[3,0],radius:2,start:0,sweep:360}}]

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {circleNurbsCurve} from '../src/services/nurbsConstructors'
+import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
 import {planMiterBody,partitionMiterSections,ownedMiterSharpStations,previewMiterWalls} from '../src/services/miterBodyLayout'
 
 const ring=(z:number,r:number)=>circleNurbsCurve([0,0,z],[0,0,1],r)

@@ -1,4 +1,4 @@
-import { ParserInputError, preflightIgesInput, preflightStlInput } from './parserInputBudgets'
+import { ParserInputError, preflightIgesInput, preflightStlInput } from '../language/parserInputBudgets'
 import { buildStepRawArtifact } from './stepRawArtifact'
 
 export type ExchangeCorpusFormat = 'step' | 'iges' | 'stl'

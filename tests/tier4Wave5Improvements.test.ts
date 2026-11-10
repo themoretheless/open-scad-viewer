@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { inspectIgesHeaderMetadata } from '../src/services/cadIges'
+import { inspectIgesHeaderMetadata } from '../src/kernel/cadIges'
 import { computeSurfaceGroupAreaSummary } from '../src/services/meshSurfaceGroups'
 import {
   isOpenScadBuiltinFunction,
   findClosestOpenScadBuiltinFunction,
-} from '../src/services/openScadBuiltinFunctions'
+} from '../src/language/openScadBuiltinFunctions'
 import { generateDrawingTitleBlockSvg } from '../src/services/drawingSheets'
 import { describePublicErrorCode, PUBLIC_ERROR_CODES } from '../src/mcp/errorContract'
 import { describePublicErrorCode as describePublicErrorCodeFromPublicError } from '../src/mcp/publicError'

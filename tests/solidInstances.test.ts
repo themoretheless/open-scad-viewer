@@ -1,9 +1,9 @@
-import {SolidInstanceBatchCache} from '../src/services/solidInstanceBatchCache'
-import {transformPolygonMesh} from '../src/services/geometry/polygon'
+import {SolidInstanceBatchCache} from '../src/kernel/solidInstanceBatchCache'
+import {transformPolygonMesh} from '../src/kernel/geometry/polygon'
 import {it,expect} from 'vitest'
-import {createSolidInstance,detachSolidInstances,resolveSolidInstances,transformSolidInstance} from '../src/services/solidInstances'
+import {createSolidInstance,detachSolidInstances,resolveSolidInstances,transformSolidInstance} from '../src/kernel/solidInstances'
 import {emptyDirectDocument,DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
-import {createBrepBox,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,tessellateNurbsBrep,transformNurbsBrep} from '../src/kernel/geometry/brep'
 import {stringifyMeshJson} from '../src/services/meshJson'
 import {transformSelection,transformBodies,pushPullFace,splitSolid} from '../src/services/directSolidTools'
 const placement=[[1,0,0,10],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
@@ -211,7 +211,7 @@ it('reads all instance identities after async undo without expanding retained ge
 })
 
 it('matches full-document Rust transforms while isolating untouched scene objects',async()=>{
- const {callGeometryRust}=await import('../src/services/geometry/kernel')
+ const {callGeometryRust}=await import('../src/kernel/geometry/kernel')
  const seed=emptyDirectDocument();seed.bodies.push(box(2))
  const document=createSolidInstance(seed,'source','instance',placement)
  document.sketches=[{id:'untouched-sketch',name:'Sketch',closed:true,points:[[0,0],[1,0],[0,1]]}]

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, shallowRef, watch } from 'svet'
 import type { MeshData } from '../core/mesh'
-import { GCODE_FLAVORS, type GcodeFlavor, type JobSettingsInput, type ToolpathSettingsInput } from '../services/geometry/polygon'
-import { downloadCad } from '../services/cadDrawing'
+import { GCODE_FLAVORS, type GcodeFlavor, type JobSettingsInput, type ToolpathSettingsInput } from '../kernel/geometry/polygon'
+import { downloadCad } from '../kernel/cadDrawing'
 import { drawGcodeLayer, gcodeLayerRange, gcodeMeshBounds } from '../fabrication/gcodePreviewGeometry'
 import { gcodePreviewMoveCount } from '../fabrication/gcodePreviewTransport'
 import { GCODE_PREVIEW_MAX_BYTES, type GcodePreviewDocument } from '../fabrication/gcodePreviewProtocol'

@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest'
-import {createBrepBox} from '../src/services/geometry/brep'
-import {exportDirectIgesV2,importDirectIgesV2} from '../src/services/cadIges'
-import {exportDirectStepV4,importDirectStepV4} from '../src/services/cadNurbsStep'
+import {createBrepBox} from '../src/kernel/geometry/brep'
+import {exportDirectIgesV2,importDirectIgesV2} from '../src/kernel/cadIges'
+import {exportDirectStepV4,importDirectStepV4} from '../src/kernel/cadNurbsStep'
 
 describe('V11 direct interchange successors',()=>{
   it('roundtrips an IGES graph without reconstruction',()=>{

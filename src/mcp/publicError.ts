@@ -1,15 +1,15 @@
 import { randomUUID } from 'node:crypto'
-import { AbortedError, OpenSCADParseError } from '../services/openscadErrors'
+import { AbortedError, OpenSCADParseError } from '../language/openscadErrors'
 import { OpenScadImportPositionedError } from '../exchange/openScadImport'
-import { OpenScadProjectError } from '../services/openScadProject'
-import { OpenScadProjectCompileError } from '../services/openScadProjectCompiler'
-import { OpenScadSurfaceError } from '../services/openScadSurface'
-import { OpenScadTextPositionedError } from '../services/openScadText'
+import { OpenScadProjectError } from '../language/openScadProject'
+import { OpenScadProjectCompileError } from '../language/openScadProjectCompiler'
+import { OpenScadSurfaceError } from '../language/openScadSurface'
+import { OpenScadTextPositionedError } from '../language/openScadText'
 import {
   GeometryCapabilityUnavailableError,
   GeometryEngineUnavailableError,
   GeometryLanguageContractError,
-} from '../services/geometryBuildEngine'
+} from '../kernel/geometryBuildEngine'
 import {
   ArtifactSizeError,
   CustomizerValueError,

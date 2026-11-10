@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {measureFaceDistance,type FaceDistanceOptions} from '../src/services/solidMeasurements'
+import {measureFaceDistance,type FaceDistanceOptions} from '../src/kernel/solidMeasurements'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/face-distance.json',import.meta.url),'utf8'))

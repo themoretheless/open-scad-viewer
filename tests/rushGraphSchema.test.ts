@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod/v4'
-import { expressionSchema, rushGraphSchema } from '../src/services/rushGraph'
+import { expressionSchema, rushGraphSchema } from '../src/language/rushGraph'
 
 const corpus = JSON.parse(readFileSync(new URL('../crates/rush-runtime/tests/fixtures/schema-parity.json', import.meta.url), 'utf8')) as {
   cases: Array<{ name: string; input: unknown; expected?: unknown; error?: boolean }>

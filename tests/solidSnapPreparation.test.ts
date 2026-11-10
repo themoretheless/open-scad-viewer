@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest'
-import {SolidSnapPreparation} from '../src/services/solidSnapPreparation'
+import {SolidSnapPreparation} from '../src/kernel/solidSnapPreparation'
 import type {DirectBody} from '../src/services/directModeling'
 import type {SnapGeometry} from '../src/services/modelingSnaps'
 const body=(id:string):DirectBody=>({id,name:id,mesh:{positions:new Float64Array([0,0,0,1,0,0,0,1,0]),indices:new Uint32Array([0,1,2])}})

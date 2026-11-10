@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const { spawn } = vi.hoisted(() => ({ spawn: vi.fn() }))
 vi.mock('node:child_process', () => ({ spawn }))
-vi.mock('../src/services/rushGraphNurbs', () => ({ compileRushGraphNurbs: vi.fn() }))
+vi.mock('../src/language/rushGraphNurbs', () => ({ compileRushGraphNurbs: vi.fn() }))
 import { runOwnNurbs } from '../src/mcp/rushGraphNurbsRuntime'
 
 class Child extends EventEmitter {

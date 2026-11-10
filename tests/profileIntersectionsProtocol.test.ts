@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
-import {validateProfileIntersectionReport} from '../src/services/geometry/profileIntersections'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
+import {validateProfileIntersectionReport} from '../src/kernel/geometry/profileIntersections'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 const curve:NurbsCurve={degree:1,knots:[0,0,1,1],controlPoints:[[0,0],[1,1]],weights:[1,1]}
 const loops=[[curve],[curve]]
 const options={toleranceMm:1e-7,maxPairs:128,maxBoxes:32768}

@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {inspectBoundaryAgreement} from '../src/services/solidBoundaryAgreement'
+import {inspectBoundaryAgreement} from '../src/kernel/solidBoundaryAgreement'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
 const fixtures=JSON.parse(readFileSync(new URL('./fixtures/boundary-agreement.json',import.meta.url),'utf8')).cases

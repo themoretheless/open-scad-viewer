@@ -2,7 +2,7 @@ import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 const directory=resolve(process.argv[2]??'output/qualification/cad-roadmap-step')
 mkdirSync(directory,{recursive:true})
 const parts=[]

@@ -1,9 +1,9 @@
-import type { CallNode, Statement, Value } from '../../../services/openscadCompiler'
+import type { CallNode, Statement, Value } from '../../openscadCompiler'
 import { LegacyBindingCompatibilityError, MAX_EXTRUDE_SLICES } from '../openscadSemanticLowerer'
 import type { EvalContext, PassedCallChildren, SemanticShape } from '../openscadSemanticLowerer'
 import { arg, evalNodes, evaluateStableCompatibilityArguments, semanticProjectAssetRequired, stableCompatibilityDeprecation } from './evalExpression'
 import { canonicalNumber, finiteNumber, semanticValueType, stableWarning, vectorValue } from './semanticValueType'
-import { evaluationError, isStableProfile } from '../../../services/openScadStableExpressionEval'
+import { evaluationError, isStableProfile } from '../../openScadStableExpressionEval'
 import { frameChildren, invoke, primitiveColor, semanticSegments, semanticSegmentsFromRequested, semanticSlot, unionReduceInternal } from './evalPreparedNodes'
 
 export function makeCylinder(node: CallNode, ctx: EvalContext): SemanticShape[] {

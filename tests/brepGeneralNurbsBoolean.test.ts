@@ -5,7 +5,7 @@ import {
  createFreeformBrepCuboid,
  generalNurbsBoolean,
  generalNurbsBooleanModel,
-} from '../src/services/geometry/brep'
+} from '../src/kernel/geometry/brep'
 
 describe('general multispan NURBS Boolean product',()=>{
  it('authors all exact-region operations in the 2x1, 1x2, and 2x2 cell',()=>{

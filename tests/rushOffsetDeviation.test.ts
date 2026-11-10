@@ -1,6 +1,6 @@
 import {beforeAll,expect,it} from 'vitest'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 import {runOwnNurbs} from '../src/mcp/rushGraphNurbsRuntime'
 const document={language:'rush/nurbs-1',units:'mm',nodes:[
  {id:'a',op:'plane_patch',origin:[0,0,0],axis_u:[1,0,0],axis_v:[0,1,0]},

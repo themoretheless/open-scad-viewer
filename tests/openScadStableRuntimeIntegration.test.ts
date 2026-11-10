@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const source = `

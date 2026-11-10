@@ -1,6 +1,6 @@
 import type {DirectBody} from './directModeling'
-import {callGeometryRust} from './geometry/kernel'
-import {normalizePolygonMesh,type PolygonBuild} from './geometry/polygon'
+import {callGeometryRust} from '../kernel/geometry/kernel'
+import {normalizePolygonMesh,type PolygonBuild} from '../kernel/geometry/polygon'
 /** Sampled shell; spacing is a grid limit, not an exact B-rep tolerance. */
 export function sampledShell(body:DirectBody,openings:number[],thickness:number,requestedStep?:number,adaptive=false):DirectBody {
  const mesh=normalizePolygonMesh(callGeometryRust<PolygonBuild>('cad_sampled_shell',{mesh:body.mesh,openings,thickness,step:requestedStep??0,adaptive}))

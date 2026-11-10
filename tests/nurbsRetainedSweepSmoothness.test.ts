@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import type {ProgressiveGuidedSurfaceSweepOptions} from '../src/services/nurbsConstructors'
-import {bezierNurbsCurve,circleNurbsCurve,inspectProgressiveRetainedStationSeams} from '../src/services/nurbsConstructors'
+import type {ProgressiveGuidedSurfaceSweepOptions} from '../src/kernel/nurbsConstructors'
+import {bezierNurbsCurve,circleNurbsCurve,inspectProgressiveRetainedStationSeams} from '../src/kernel/nurbsConstructors'
 const profile=bezierNurbsCurve([[1,0,0],[2,0,0]])
 const path=bezierNurbsCurve([[0,0,0],[0,0,4]])
 const scale={degree:1,knots:[0,0,1,1],values:[1,1],weights:[1,1]}

@@ -1,6 +1,6 @@
 import {afterEach, expect, it, vi} from 'vitest'
 import {HeadlessGeometryService} from '../src/mcp/geometryService'
-import {GeometryBuildEngine, geometryExecutionForError} from '../src/services/geometryBuildEngine'
+import {GeometryBuildEngine, geometryExecutionForError} from '../src/kernel/geometryBuildEngine'
 import {ACTIVE_GEOMETRY_MANIFEST_VERSIONS,GEOMETRY_MANIFEST_ARCHIVE} from '../src/core/geometryExecution'
 
 function fixture(warm: () => Promise<void>) {

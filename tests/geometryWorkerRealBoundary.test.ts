@@ -11,7 +11,7 @@ import {
   isGeometryWorkerEvent,
   type GeometryBuildRequest,
   type GeometryWorkerEvent,
-} from '../src/services/geometryWorkerProtocol'
+} from '../src/kernel/geometryWorkerProtocol'
 import {
   MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY,
   MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION,

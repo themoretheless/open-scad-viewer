@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {ref} from 'svet'
-import type {NurbsSurface} from '../services/nurbsSurface'
+import type {NurbsSurface} from '../kernel/nurbsSurface'
 import ProfileBridgeCheck from './ProfileBridgeCheck.svt'
 import OffsetDeviationCheck from './OffsetDeviationCheck.svt'
 defineProps<{surfaces:[NurbsSurface,NurbsSurface];active:boolean;ru:boolean}>()

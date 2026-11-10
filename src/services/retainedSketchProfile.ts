@@ -1,6 +1,6 @@
 import type {DirectSketch,Point2} from './directModeling'
-import {authorBrepProfile,booleanBrepProfiles,offsetBrepProfile,transformBrepProfile,validateBrepProfile,type BrepProfile,type BrepProfileBooleanOperation} from './geometry/brepProfile'
-import {callGeometryRust} from './geometry/kernel'
+import {authorBrepProfile,booleanBrepProfiles,offsetBrepProfile,transformBrepProfile,validateBrepProfile,type BrepProfile,type BrepProfileBooleanOperation} from '../kernel/geometry/brepProfile'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 
 const profileDisplayCache = new WeakMap<BrepProfile, Point2[][]>()
 /** Display samples only. All modelling uses retainedProfile.loops. */

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { analyzeSurfaceArea, cpuSurfaceArea, webgpuSurfaceArea, type SurfaceInput } from '../src/services/geometryCompute'
+import { analyzeSurfaceArea, cpuSurfaceArea, webgpuSurfaceArea, type SurfaceInput } from '../src/kernel/geometryCompute'
 
 const input = (): SurfaceInput => ({
   vertices: new Float32Array([0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 1, 0, 3, 0, 0, 0, 1]),

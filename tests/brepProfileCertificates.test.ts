@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {authorBrepProfile,certifyBrepProfile,transformBrepProfile,validateBrepProfile,verifyBrepProfileCertificate} from '../src/services/geometry/brepProfile'
-import {callGeometryRust} from '../src/services/geometry/kernel'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
+import {authorBrepProfile,certifyBrepProfile,transformBrepProfile,validateBrepProfile,verifyBrepProfileCertificate} from '../src/kernel/geometry/brepProfile'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 const line=(a:number[],b:number[]):NurbsCurve=>({degree:1,knots:[0,0,1,1],controlPoints:[a,b],weights:[1,1],periodic:false})
 const cubic=(p:number[][],weights=[1,1,1,1]):NurbsCurve=>({degree:3,knots:[0,0,0,0,1,1,1,1],controlPoints:p,weights,periodic:false})
 const reverse=(c:NurbsCurve):NurbsCurve=>({...c,controlPoints:[...c.controlPoints].reverse(),weights:[...c.weights].reverse()})

@@ -1,8 +1,8 @@
 import {ref,shallowRef,watch,onUnmounted,type Ref} from 'svet'
 import type {DirectDocument} from '../../services/directModeling'
-import type {SolidBooleanOptions} from '../../services/solidBoolean'
-import type {BrepBooleanOperation} from '../../services/geometry/brep'
-import {createSolidPreviewWorker} from '../../services/solidPreviewWorker'
+import type {SolidBooleanOptions} from '../../kernel/solidBoolean'
+import type {BrepBooleanOperation} from '../../kernel/geometry/brep'
+import {createSolidPreviewWorker} from '../../kernel/solidPreviewWorker'
 interface BooleanOptions<T> {
  document:Ref<DirectDocument>;snapDocument:Ref<DirectDocument>;selectedIds:Readonly<Ref<string[]>>;selection:Ref<string>;extraSelection:Ref<string[]>;ru:Readonly<Ref<boolean>>;mode:Ref<'2d'|'3d'>;brepSegments:Ref<number>;error:Ref<string>;props:Readonly<{open:boolean}>
  label:(ru:string,en:string)=>string;commit:(document:DirectDocument)=>void;fit:(pane:'3d')=>void;cancelCommand:()=>void;run:(action:()=>void)=>void
@@ -14,7 +14,7 @@ export function useBooleanOperations<T>(state:BooleanOptions<T>) {
 const booleanWorker=createSolidPreviewWorker(),booleanPending=ref(false)
 const booleanKind=ref<'boolean'|'minkowski3d'>('boolean')
 const minkowskiDeviation=ref(1)
-const minkowskiProof=shallowRef<import('../../services/solidMinkowski').SolidMinkowskiResult|null>(null)
+const minkowskiProof=shallowRef<import('../../kernel/solidMinkowski').SolidMinkowskiResult|null>(null)
 watch(document,()=>{minkowskiProof.value=null},{flush:'sync'})
 let booleanGeneration=0
 function cancelBoolean(){booleanGeneration++;booleanWorker.cancel();booleanPending.value=false}

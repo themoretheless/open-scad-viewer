@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {bodySnapGeometry} from '../src/services/solidSnapGeometry'
-import {createBrepBox,createBrepCylinder,createBrepSphere,tessellateNurbsBrep,type NurbsBrep} from '../src/services/geometry/brep'
+import {bodySnapGeometry} from '../src/kernel/solidSnapGeometry'
+import {createBrepBox,createBrepCylinder,createBrepSphere,tessellateNurbsBrep,type NurbsBrep} from '../src/kernel/geometry/brep'
 import {facePlane,solidTopology} from '../src/services/directSolidTools'
 import {unprojectDirectPlane,projectDirectPoint,defaultDirectCamera} from '../src/services/directModelingTools'
 import {worldPoint} from '../src/services/directSketchGeometry'

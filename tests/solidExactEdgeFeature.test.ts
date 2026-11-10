@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {solidExactEdgeFeature} from '../src/services/solidExactEdgeFeature'
+import {solidExactEdgeFeature} from '../src/kernel/solidExactEdgeFeature'
 import {solidTopology} from '../src/services/directSolidTools'
-import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep,transformNurbsBrep} from '../src/kernel/geometry/brep'
 import {DirectHistory,parseDirectDocument} from '../src/services/directModeling'
 import {stringifyMeshJson} from '../src/services/meshJson'
 
@@ -87,7 +87,7 @@ it('authors a linear radius law and a three-edge spherical corner',()=>{
 
 it('exposes audited concave-prism convex-edge rounds through the WASM bridge without widening the old capability',async()=>{
  const {extrudeSketchProfile}=await import('../src/services/directExtrusion')
- const {exactSimplePrismFillet,exactConvexPrismFillet,transformNurbsBrep}=await import('../src/services/geometry/brep')
+ const {exactSimplePrismFillet,exactConvexPrismFillet,transformNurbsBrep}=await import('../src/kernel/geometry/brep')
  const brep=extrudeSketchProfile([{id:'profile',name:'Bracket',closed:true,points:[[0,0],[40,0],[40,5],[5,5],[5,30],[0,30]]}],20)
  const before=stringifyMeshJson(brep)
  const edgeAt=(x:number,y:number)=>brep.edges.findIndex(e=>{const [a,b]=e.vertices.map(i=>brep.vertices[i].point);return a[0]===x&&b[0]===x&&a[1]===y&&b[1]===y&&Math.abs(a[2]-b[2])>19})
@@ -121,7 +121,7 @@ it('exposes audited concave-prism convex-edge rounds through the WASM bridge wit
 
 it('rounds a C-profile outer corner without crossing its notch',async()=>{
  const {extrudeSketchProfile}=await import('../src/services/directExtrusion')
- const {exactSimplePrismFillet}=await import('../src/services/geometry/brep')
+ const {exactSimplePrismFillet}=await import('../src/kernel/geometry/brep')
  const brep=extrudeSketchProfile([{id:'c',name:'C profile',closed:true,points:[[0,0],[10,0],[10,2],[2,2],[2,8],[10,8],[10,10],[0,10]]}],5)
  const before=stringifyMeshJson(brep)
  const edge=brep.edges.findIndex(e=>e.vertices.every(i=>brep.vertices[i].point[0]===0&&brep.vertices[i].point[1]===0))
@@ -134,7 +134,7 @@ it('rounds a C-profile outer corner without crossing its notch',async()=>{
 
 it('refuses holed and disconnected prisms atomically',async()=>{
  const {extrudeSketchProfile}=await import('../src/services/directExtrusion')
- const {exactSimplePrismFillet,booleanNurbsBrep}=await import('../src/services/geometry/brep')
+ const {exactSimplePrismFillet,booleanNurbsBrep}=await import('../src/kernel/geometry/brep')
  const holed=extrudeSketchProfile([
   {id:'outer',name:'Outer',closed:true,points:[[0,0],[20,0],[20,20],[0,20]]},
   {id:'hole',name:'Hole',closed:true,points:[[5,5],[5,15],[15,15],[15,5]]},
@@ -151,7 +151,7 @@ it('refuses holed and disconnected prisms atomically',async()=>{
 
 it('rounds complete circular rims of the roadmap flange through the annular WASM API',async()=>{
  const {cadRoadmapParts}=await import('../benchmarks/cad-roadmap-fixtures')
- const {exactAnnularFillet,transformNurbsBrep}=await import('../src/services/geometry/brep')
+ const {exactAnnularFillet,transformNurbsBrep}=await import('../src/kernel/geometry/brep')
  const body=cadRoadmapParts().find(p=>p.body.id==='flange')!.body,model=body.brep!
  const before=stringifyMeshJson(model)
  const outerTop=model.edges.flatMap((e,i)=>e.curve.degree===2&&e.vertices.every(v=>{const p=model.vertices[v].point;return Math.abs(p[2]-6)<1e-8&&Math.abs(Math.hypot(p[0],p[1])-20)<1e-8})?[i]:[])
@@ -180,7 +180,7 @@ it('rounds complete circular rims of the roadmap flange through the annular WASM
 
 it('rounds complete enclosure chains without opening its cavity through the WASM API',async()=>{
  const {cadRoadmapParts}=await import('../benchmarks/cad-roadmap-fixtures')
- const {exactLayeredPrismFillet,transformNurbsBrep}=await import('../src/services/geometry/brep')
+ const {exactLayeredPrismFillet,transformNurbsBrep}=await import('../src/kernel/geometry/brep')
  const body=cadRoadmapParts().find(p=>p.body.id==='enclosure')!.body,model=body.brep!
  const before=stringifyMeshJson(model)
  const edges=model.edges.flatMap((e,i)=>e.vertices.every(v=>model.vertices[v].point[0]===0&&model.vertices[v].point[1]===0)?[i]:[])

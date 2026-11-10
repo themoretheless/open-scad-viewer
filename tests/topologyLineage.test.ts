@@ -7,7 +7,7 @@ import {
   nativeEdgeReference,
   topoIdFromParts,
 } from '../src/core/topologyLineage'
-import { createSelectionTransferService } from '../src/services/geometry/selectionTransfer'
+import { createSelectionTransferService } from '../src/kernel/geometry/selectionTransfer'
 
 describe('native topology lineage', () => {
   it('transfers edge selection across split/merge and rejects stale snapshots', () => {

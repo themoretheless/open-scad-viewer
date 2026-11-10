@@ -1,7 +1,7 @@
 /** Native source-span/resource policy and complete retained station layout. */
-import {callGeometryRust} from './geometry/kernel'
-import type {NurbsCurve} from './nurbsCurve'
-import type {NurbsSurface} from './nurbsSurface'
+import {callGeometryRust} from '../kernel/geometry/kernel'
+import type {NurbsCurve} from '../kernel/nurbsCurve'
+import type {NurbsSurface} from '../kernel/nurbsSurface'
 export interface MiterBodyPlan {edges:number;spans:number;maxSteps:number}
 export const planMiterBody=(loops:NurbsCurve[][],sites:number,closed:boolean,initialSteps:number,maxSteps:number):MiterBodyPlan=>
  callGeometryRust('brep_miter_body_plan',{loops,sites,closed,initialSteps,maxSteps})

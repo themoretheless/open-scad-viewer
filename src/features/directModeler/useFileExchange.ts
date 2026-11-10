@@ -15,7 +15,7 @@ import { stripMeshExtension } from '../../services/meshFormats'
 import { manifoldPreferenceSnapshot } from '../../services/manifoldPreferences'
 import { formatMeshImportNotice } from '../../exchange/meshImportReport'
 import { stringifyMeshJson } from '../../services/meshJson'
-import type { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
+import type { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import { download, type Pane } from './helpers'
 import { useSvgExchange } from './useSvgExchange'
 
@@ -334,7 +334,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
       if (!file) return
       if (file.size > 16 * 1024 * 1024) throw Error('STEP file exceeds 16 MiB.')
       const text = await file.text()
-      const { prepareSolidStepImport } = await import('../../services/solidStepExchange')
+      const { prepareSolidStepImport } = await import('../../kernel/solidStepExchange')
       if (isRestoreDisposed() || !props.open || document.value !== before)
         throw Error('The scene changed during STEP import. Import again to add its bodies.')
       cancelCommand()
@@ -374,7 +374,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
     error.value = ''
     const before = document.value
     try {
-      const { exportSolidBlenderSnapshot } = await import('../../services/solidBlenderExchange')
+      const { exportSolidBlenderSnapshot } = await import('../../kernel/solidBlenderExchange')
       if (document.value !== before || isRestoreDisposed())
         throw Error(label('Сцена изменилась. Повторите экспорт.', 'The scene changed. Export again.'))
       // Validate support before assigning identity or persisting metadata.

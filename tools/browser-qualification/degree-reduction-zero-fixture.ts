@@ -1,5 +1,5 @@
-import {reduceNurbsCurveDegreeCertified} from '../../src/services/nurbsFoundation'
-import type {NurbsCurve} from '../../src/services/nurbsCurve'
+import {reduceNurbsCurveDegreeCertified} from '../../src/kernel/nurbsFoundation'
+import type {NurbsCurve} from '../../src/kernel/nurbsCurve'
 type Check=(value:boolean,label:string)=>void
 const quadratic=(points:number[][],weights=[1,1,1]):NurbsCurve=>({degree:2,knots:[0,0,0,1,1,1],controlPoints:points,weights,periodic:false})
 const perturbed=()=>quadratic([[1,0],[1,0],[1+Number.EPSILON,0]])

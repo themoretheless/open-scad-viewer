@@ -1,5 +1,5 @@
 import type {NativeGeometryArtifact} from '../../../core/nativeGeometry'
-import {callGeometryRust} from '../../geometry/kernel'
+import {callGeometryRust} from '../../../kernel/geometry/kernel'
 export interface SweepViewportEvidence {
  nodeId:string
  solidGeometryCertified:boolean

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { directCornerTool, directRevolveTool, applyDirectRevolve } from '../src/services/directProfileTools'
 import { DirectHistory, emptyDirectDocument, extrudeDirectSketch, type DirectSketch } from '../src/services/directModeling'
-import { inspectPolygonMesh } from '../src/services/geometry/polygon'
+import { inspectPolygonMesh } from '../src/kernel/geometry/polygon'
 const square:DirectSketch={id:'s',name:'Square',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}
 const area=(s:DirectSketch)=>Math.abs(s.points.reduce((sum,p,i)=>{const q=s.points[(i+1)%s.points.length];return sum+p[0]*q[1]-p[1]*q[0]},0))/2
 const opts={axis:'y' as const,offset:0,angle:360,segments:64}
@@ -70,7 +70,7 @@ describe('direct corner and revolve operations',()=>{
 })
 
 import {parseDirectDocument} from '../src/services/directModeling'
-import {prepareSolidProfile} from '../src/services/solidProfilePreparation'
+import {prepareSolidProfile} from '../src/kernel/solidProfilePreparation'
 describe('native profile preparation',()=>{
  const document=()=>({...emptyDirectDocument(),sketches:[
   {id:'a',name:'First',closed:false,points:[[10,10],[10,0]] as [number,number][]},

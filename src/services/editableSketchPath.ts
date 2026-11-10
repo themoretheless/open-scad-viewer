@@ -1,5 +1,5 @@
 import type {DirectSketch, Point2} from './directModeling'
-import {flattenPath, pathToRing, type BezierPathJson} from './geometry/path2d'
+import {flattenPath, pathToRing, type BezierPathJson} from '../kernel/geometry/path2d'
 
 export const SKETCH_PATH_TOLERANCE_MM = 0.02
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {inspectMaterialChord,inspectMaterialSegment,materialExpectation,validMaterial} from '../src/services/solidMaterialVolume'
+import {inspectMaterialChord,inspectMaterialSegment,materialExpectation,validMaterial} from '../src/kernel/solidMaterialVolume'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})

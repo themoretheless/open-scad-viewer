@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { selectDisplayRepresentation } from '../src/services/geometry/displayPolicy'
+import { selectDisplayRepresentation } from '../src/kernel/geometry/displayPolicy'
 
 const base = {
   projectedPixels: 400,

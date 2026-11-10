@@ -1,10 +1,10 @@
 import {readFileSync} from 'node:fs'
 import {IDBFactory} from 'fake-indexeddb'
 import {describe,expect,it} from 'vitest'
-import {exportDirectStepV10,importDirectStepV10} from '../src/services/cadNurbsStep'
-import {importTessellatedStepV10} from '../src/services/cadStep'
-import {importStepForWorkbench} from '../src/services/cadStepRouting'
-import {loadProjectStepModel,saveProjectStepModel} from '../src/services/cadStepIndexedDb'
+import {exportDirectStepV10,importDirectStepV10} from '../src/kernel/cadNurbsStep'
+import {importTessellatedStepV10} from '../src/kernel/cadStep'
+import {importStepForWorkbench} from '../src/kernel/cadStepRouting'
+import {loadProjectStepModel,saveProjectStepModel} from '../src/kernel/cadStepIndexedDb'
 
 const assembly=()=>readFileSync(new URL('./fixtures/step-v6/self-authored-ap242-assembly.step',import.meta.url),'utf8')
 const identityRelationshipFixture=()=>readFileSync(new URL('./fixtures/step-v9/self-authored-ap242-cylinder.step',import.meta.url),'utf8')

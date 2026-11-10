@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest'
 import {createStepLod0BenchmarkFixture} from '../benchmarks/step-lod0-fixture'
-import {estimateDirectStepLod0Hausdorff} from '../src/services/cadNurbsStep'
-import {importStepForWorkbench} from '../src/services/cadStepRouting'
+import {estimateDirectStepLod0Hausdorff} from '../src/kernel/cadNurbsStep'
+import {importStepForWorkbench} from '../src/kernel/cadStepRouting'
 import {MAX_LOD0_DURABLE_BYTES,MAX_LOD0_MEMORY_BYTES,stepLod0Cache} from '../src/services/stepLod0Cache'
 
 const values=new Map<string,string>()

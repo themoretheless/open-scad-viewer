@@ -1,9 +1,9 @@
 import { deepFreeze } from '../core/objects'
 /** Lossless exact-body snapshots. Hashes bind storage; Rust proves geometry. */
 import { createNativeGeometryArtifact, isNativeGeometryArtifact, type NativeGeometryArtifact } from '../core/nativeGeometry'
-import { callGeometryRust } from './geometry/kernel'
+import { callGeometryRust } from '../kernel/geometry/kernel'
 import { packNativeGeometrySnapshot, readNativeGeometryData } from './nativeGeometrySnapshot'
-import type { ExactRationalBrepGeometry } from './brepNativeExecutor'
+import type { ExactRationalBrepGeometry } from '../kernel/brepNativeExecutor'
 
 const ENCODING = 'exact-full-round-snapshot/1'
 function restore(artifact: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {

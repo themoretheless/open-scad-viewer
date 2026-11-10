@@ -1,6 +1,6 @@
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import type { MeshSourceReference, SceneEntityId } from '../core/mesh'
-import type { CadKernelHandle, CadKernelOps } from '../services/cadKernelOps'
+import type { CadKernelHandle, CadKernelOps } from '../kernel/cadKernelOps'
 import type {
   CallNode,
   FunctionNode,
@@ -8,14 +8,14 @@ import type {
   OpenScadLanguageProfile,
   Statement,
   Value,
-} from '../services/openscadCompiler'
-import { AbortedError } from '../services/openscadErrors'
-import type { RGBA } from '../services/openscadColors'
+} from '../language/openscadCompiler'
+import { AbortedError } from '../language/openscadErrors'
+import type { RGBA } from '../language/openscadColors'
 import type { PreparedOpenScadImportAssets } from '../exchange/openScadImport'
-import type { OpenScadProject } from '../services/openScadProject'
-import type { OpenScadStableScope } from '../services/openScadStableScope'
-import type { PreparedOpenScadSurfaceAssets } from '../services/openScadSurface'
-import type { PreparedOpenScadTextAssets } from '../services/openScadText'
+import type { OpenScadProject } from '../language/openScadProject'
+import type { OpenScadStableScope } from '../language/openScadStableScope'
+import type { PreparedOpenScadSurfaceAssets } from '../language/openScadSurface'
+import type { PreparedOpenScadTextAssets } from '../language/openScadText'
 
 export type ExportMeshQuality = 'viewport' | 'high' | 'ultra'
 
@@ -49,7 +49,7 @@ export interface ParseOptions {
    */
   onYield?: () => void
   /** Approximate sweep levels; never authoritative scene results. */
-  onSweepPreview?: import('../services/rushGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview']
+  onSweepPreview?: import('../language/rushGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview']
   /** Injectable monotonic clock for deterministic phase-timing tests. */
   now?: () => number
   /** Injectable macrotask yield used by cooperative-cancellation tests. */

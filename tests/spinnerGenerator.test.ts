@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, computeSpinnerParameterSuggestions, generateSpinner, generateSpinnerSafe } from '../src/services/spinnerGenerator'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import { exportMesh } from '../src/services/meshConvert'
 
 describe('spinner generator', () => {

@@ -5,8 +5,8 @@ import {
 } from '../src/services/meshBvh'
 
 import type { BvhRay, MeshBvh, MeshBvhHit, RaycastMeshBvhOptions } from '../src/services/meshBvh'
-import { createPickingSnapshotInKernel } from '../src/services/geometry/meshAnalysis'
-import { callGeometryRust } from '../src/services/geometry/kernel'
+import { createPickingSnapshotInKernel } from '../src/kernel/geometry/meshAnalysis'
+import { callGeometryRust } from '../src/kernel/geometry/kernel'
 
 // Exercise the shipped Rust/WASM query, including upload and disposal. The
 // worker BVH supplies construction options only; Rust owns the query snapshot.

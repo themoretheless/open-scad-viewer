@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {approximateArchimedeanSpiralNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {approximateArchimedeanSpiralNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 it('matches independent linear-radius spiral for growth contraction and origin start',()=>{
  for(const [start,end] of [[1,5],[5,0],[0,5]]){
   const a=approximateArchimedeanSpiralNurbsCurve([3,4,5],start!,end!,23,743,1e-4)

@@ -7,7 +7,7 @@ import { ModelRevisionConflictError, isWellFormedUnicode } from '../../modelStor
 import type { StoredBuild } from '../../modelStore'
 import { ModelNotFoundError } from '../../publicError'
 import { analysisToWire, artifactUri, modelRevisionUri, modelToWire, selectorSchema, sha256, toolOutputSchema } from '../officialToolInputSchema'
-import { attachGeometryExecutionToError } from '../../../services/geometryBuildEngine'
+import { attachGeometryExecutionToError } from '../../../kernel/geometryBuildEngine'
 import { buildToWire, comparisonDelta, comparisonSide, errorResult, recordFailure, resolveSource, safeFileName, sameExecutionContext, textResult } from '../persistedFailureStatus'
 import { z } from 'zod/v4'
 import type { McpServerContext } from './context'

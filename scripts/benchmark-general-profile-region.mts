@@ -4,13 +4,13 @@ import {mkdir,readFile,writeFile} from 'node:fs/promises'
 import {performance} from 'node:perf_hooks'
 import path from 'node:path'
 import {tmpdir} from 'node:os'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
-import {validateBrepProfile} from '../src/services/geometry/brepProfile'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
+import {validateBrepProfile} from '../src/kernel/geometry/brepProfile'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 import identity from '../src/generated/geometry-kernels/identity'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
 import {decodePacked,writeLinear} from '../src/services/wasmHost'
-import type {BrepProfile} from '../src/services/geometry/brepProfile'
+import type {BrepProfile} from '../src/kernel/geometry/brepProfile'
 function loop(x:number,y:number,size:number):NurbsCurve[]{
  const p=[[x,y],[x+size,y],[x+size,y+size],[x,y+size]]
  const wire:NurbsCurve[]=p.map((a,i)=>({degree:1,knots:[0,0,1,1],controlPoints:[a,p[(i+1)%4]],weights:[1,1],periodic:false}))

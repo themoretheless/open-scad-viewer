@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {checkedProfileSweepNurbsSurface,lineNurbsCurve,bezierNurbsCurve,circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {checkedProfileSweepNurbsSurface,lineNurbsCurve,bezierNurbsCurve,circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 
 it('matches an independent rational profile and scale equation on a straight path',()=>{
  const profile=bezierNurbsCurve([[2,0,0],[2,2,1],[0,2,2]],[1,2,1])

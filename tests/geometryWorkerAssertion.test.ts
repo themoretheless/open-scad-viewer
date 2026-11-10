@@ -4,7 +4,7 @@ import {
   type GeometryBuildRequest,
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
-} from '../src/services/geometryWorkerProtocol'
+} from '../src/kernel/geometryWorkerProtocol'
 import { sha256Hex } from '../src/core/sha256'
 
 class IntegrationWorkerScope {
@@ -41,7 +41,7 @@ describe('geometry Worker assertion integration', () => {
   it('bounds hung initialization and ignores its late rejection', async () => {
     const scope = new IntegrationWorkerScope()
     vi.stubGlobal('self', scope)
-    const {defaultGeometryKernel} = await import('../src/services/cadGeometryKernel')
+    const {defaultGeometryKernel} = await import('../src/kernel/cadGeometryKernel')
     let rejectWarm!: (error: Error) => void
     vi.spyOn(defaultGeometryKernel, 'warm').mockImplementation(() => new Promise((_resolve, reject) => { rejectWarm = reject }))
     await import('../src/workers/geometry.worker')
@@ -64,7 +64,7 @@ describe('geometry Worker assertion integration', () => {
   it.each([0, 350])('carries a real parser assertion through one terminal event after %i ms cold startup', async delayMs => {
     const scope = new IntegrationWorkerScope()
     vi.stubGlobal('self', scope)
-    const {defaultGeometryKernel} = await import('../src/services/cadGeometryKernel')
+    const {defaultGeometryKernel} = await import('../src/kernel/cadGeometryKernel')
     const warm = defaultGeometryKernel.warm.bind(defaultGeometryKernel)
     let pending: ReturnType<typeof warm> | undefined
     vi.spyOn(defaultGeometryKernel, 'warm').mockImplementation(() => pending ??= new Promise<void>(resolve => setTimeout(resolve, delayMs)).then(warm))

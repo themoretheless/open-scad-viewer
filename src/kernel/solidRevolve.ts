@@ -1,0 +1,59 @@
+import {sketchProfile,requirePolylineSketch} from '../services/retainedSketchProfile'
+import {applyDirectRevolve,type DirectRevolveOptions} from '../services/directProfileTools'
+import {parseDirectDocument,type DirectDocument,type DirectSketch,type DirectBody} from '../services/directModeling'
+import {xyPlane,cross3,type Vec3} from '../services/directSketchGeometry'
+import {booleanNurbsBrep,revolveBrepProfile,createFacetedBrepRevolve,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep'
+import {stringifyMeshJson} from '../services/meshJson'
+import {callGeometryRust} from './geometry/kernel'
+import {transformBrepProfile} from './geometry/brepProfile'
+export interface SolidRevolveOptions extends DirectRevolveOptions {
+ sketchId:string;geometry:'exact'|'faceted';operation:'new'|'union'|'difference';targetId:string;id:string;name:string;tessellation:number
+}
+function authoredRevolve(sketch:DirectSketch, options:SolidRevolveOptions) {
+ if(!sketch.retainedProfile)requirePolylineSketch(sketch)
+ const axis=options.axis,offset=options.offset
+ const sourcePoints=sketch.retainedProfile?.loops.flatMap(loop=>loop.flatMap(curve=>curve.controlPoints))??sketch.points
+ const signed=sourcePoints.map(point=>axis==='y'?point[0]-offset:point[1]-offset)
+ if(signed.some(value=>Math.abs(value)>1e-7&&Math.sign(value)!==Math.sign(signed.find(v=>Math.abs(v)>1e-7)!)))throw Error('The revolve profile must stay on one side of its axis.')
+ const sign=Math.sign(signed.find(value=>Math.abs(value)>1e-7)??1)
+ let profile=sketch.points.map(point=>[Math.abs(axis==='y'?point[0]-offset:point[1]-offset),axis==='y'?point[1]:point[0]] as [number,number])
+ const area=profile.reduce((sum,p,i)=>{const q=profile[(i+1)%profile.length];return sum+p[0]*q[1]-q[0]*p[1]},0)
+ if(area<0)profile=profile.reverse()
+ let local:NurbsBrep
+ if(sketch.retainedProfile){
+  if(options.geometry!=='exact')throw Error('Retained profile revolution requires exact geometry.')
+  const matrix=axis==='y'?[sign,0,0,0,0,1,0,0,0,0,1,0,-sign*offset,0,0,1]:[0,1,0,0,sign,0,0,0,0,0,1,0,-sign*offset,0,0,1]
+  const retained=transformBrepProfile(sketchProfile(sketch),matrix)
+  local=callGeometryRust<{model:NurbsBrep}>('brep_semantic_geometry',{node:{kind:'rotate-extrude-analytic',valueType:{space:'d3'},angleDegrees:options.angle},inputs:[{kind:'profile',profile:retained}]}).model
+ }else local=options.geometry==='exact'?revolveBrepProfile(profile,options.angle):createFacetedBrepRevolve(profile,options.segments)
+ const brep=structuredClone(local),plane=sketch.plane??xyPlane(),normal=cross3(plane.u,plane.v)
+ const apply=(point:number[])=>axis==='y'
+  ? plane.origin.map((value,i)=>value+plane.u[i]*(offset+sign*point[0])+plane.v[i]*point[2]-normal[i]*sign*point[1])
+  : plane.origin.map((value,i)=>value+plane.u[i]*point[2]+plane.v[i]*(offset+sign*point[0])+normal[i]*sign*point[1])
+ for(const vertex of brep.vertices)vertex.point=apply(vertex.point) as Vec3
+ for(const edge of brep.edges)edge.curve.controlPoints=edge.curve.controlPoints.map(apply)
+ for(const face of brep.faces)face.surface.controlPoints=face.surface.controlPoints.map(row=>row.map(apply))
+ return brep
+}
+
+/** One result for both preview and commit, including empty Boolean results. */
+export function applySolidRevolve(document:DirectDocument,options:SolidRevolveOptions):DirectDocument {
+ const sketch=document.sketches.find(s=>s.id===options.sketchId)
+ if(!sketch)throw Error('Select a sketch.')
+ if(!sketch.retainedProfile||options.geometry!=='exact')requirePolylineSketch(sketch)
+ const target=document.bodies.find(b=>b.id===options.targetId)
+ if(options.operation!=='new'&&!target)throw Error('Select the target body.')
+ if(options.geometry==='exact'&&options.operation!=='new'&&!target?.brep)throw Error('Exact B-rep revolve combination requires an authored B-rep target.')
+ const native=options.geometry==='exact'||Math.abs(options.angle)===360
+ if(!native&&options.operation!=='new'&&target?.brep)throw Error('Partial faceted revolve cannot be combined with an authored B-rep.')
+ if(!native||options.operation!=='new'&&!target?.brep)return applyDirectRevolve(document,sketch.id,options,options.operation,options.targetId,options.id)
+ let brep=authoredRevolve(sketch,options)
+ if(options.operation!=='new')brep=booleanNurbsBrep(target!.brep!,brep,options.operation)
+ let body:DirectBody|null=null
+ if(brep.bodies.length){
+  const mesh=tessellateNurbsBrep(brep,options.tessellation)
+  body={...(options.operation==='new'?{id:options.id,name:options.name}:target!),brep,mesh:{positions:mesh.positions,indices:mesh.indices}}
+ }
+ const next={...document,bodies:options.operation==='new'?[...document.bodies,...(body?[body]:[])]:document.bodies.flatMap(b=>b.id===options.targetId?(body?[body]:[]):[b])}
+ return parseDirectDocument(stringifyMeshJson(next))
+}

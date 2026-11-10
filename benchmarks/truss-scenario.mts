@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
 import {resolveTrussScenario, type TrussScenario} from '../src/services/trussScenario'
 import {solveTruss, type TrussVector} from '../src/services/trussAnalysis'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
 import {compileWasmArtifact} from '../src/services/wasmArtifact'
 

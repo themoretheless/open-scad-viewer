@@ -1,10 +1,10 @@
 import { expect, it } from 'vitest'
-import { compileRushGraph, RUSH_GRAPH_ASSEMBLY_EXAMPLE } from '../src/services/rushGraph'
+import { compileRushGraph, RUSH_GRAPH_ASSEMBLY_EXAMPLE } from '../src/language/rushGraph'
 import { placeAssembly } from '../benchmarks/rush/rushGraphAssembly-reference'
 import { inspectRushGraphInterference } from '../src/mcp/rushGraphInterference'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 const frame={origin:[0,0,0] as [number,number,number],rotation:[0,0,0] as [number,number,number]}
 it('retains nested leaf identity and correct world sources',async()=>{
  const inner=structuredClone(RUSH_GRAPH_ASSEMBLY_EXAMPLE)

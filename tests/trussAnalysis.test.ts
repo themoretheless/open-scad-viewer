@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest'
-import {GeometryKernelError, callGeometryRust} from '../src/services/geometry/kernel'
+import {GeometryKernelError, callGeometryRust} from '../src/kernel/geometry/kernel'
 import {solveTruss, type TrussModel, type TrussWrenchModel} from '../src/services/trussAnalysis'
 
 const bar = (): TrussModel => ({

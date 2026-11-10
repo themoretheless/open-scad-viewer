@@ -8,8 +8,8 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { LanguageDiagnosticCode } from '../src/core/languageContract'
-import { compileOpenSCAD, TT, type OpenScadLanguageProfile } from '../src/services/openscadCompiler'
-import { scadCompileRust } from '../src/services/languages/kernel'
+import { compileOpenSCAD, TT, type OpenScadLanguageProfile } from '../src/language/openscadCompiler'
+import { scadCompileRust } from '../src/language/languages/kernel'
 
 interface Fixture {
   contract: string

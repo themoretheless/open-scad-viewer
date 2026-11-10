@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { parseOpenSCAD } from '../src/services/openscadParser'
-import { setRushGraphParameters } from '../src/services/rushGraph'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
+import { setRushGraphParameters } from '../src/language/rushGraph'
 import type { MeshData } from '../src/core/mesh'
 
 const original = readFileSync('examples/skadis-box/skadis-dovetail.scad', 'utf8')

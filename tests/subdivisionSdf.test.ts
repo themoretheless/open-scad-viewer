@@ -1,9 +1,9 @@
-import {booleanPolygonMeshes} from '../src/services/geometry/polygon'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {booleanPolygonMeshes} from '../src/kernel/geometry/polygon'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {expect,it} from 'vitest'
-import {tessellateSubdivision} from '../src/services/geometry/subdivision'
-import {evaluateSdf,tessellateSdf,type SdfField} from '../src/services/geometry/sdf'
-import {parseOpenSCAD} from '../src/services/openscadParser'
+import {tessellateSubdivision} from '../src/kernel/geometry/subdivision'
+import {evaluateSdf,tessellateSdf,type SdfField} from '../src/kernel/geometry/sdf'
+import {parseOpenSCAD} from '../src/language/openscadParser'
 const cage={vertices:[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],faces:[[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]}
 it('refines a closed cube and retains six authored patches',()=>{
  const mesh=tessellateSubdivision(cage,2);expect(mesh.report.closed).toBe(true);expect(mesh.report.triangleCount).toBe(192);expect(new Set(mesh.faceIds).size).toBe(6);expect(mesh.report.signedVolumeMm3).toBeGreaterThan(0);expect(mesh.report.signedVolumeMm3).toBeLessThan(8)

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed,onUnmounted,ref,shallowRef,watch} from 'svet'
-import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
+import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
 import type {FrozenGraphDisplay} from '../services/frozenGraphBody'
 const props=defineProps<{active:boolean;ru:boolean}>()
 const emit=defineEmits<{display:[FrozenGraphDisplay|null];fit:[]}>()

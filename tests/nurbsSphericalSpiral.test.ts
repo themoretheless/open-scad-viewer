@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {approximateSphericalSpiralNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {approximateSphericalSpiralNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 it('matches independent spherical coordinates and radial equation across poles',()=>{
  for(const [p,q,phase] of [[1,.5,-90],[-.75,.25,23],[.5,-.75,47]]){
   const a=approximateSphericalSpiralNurbsCurve([3,4,5],2,p!,q!,31,phase!,1e-4)

@@ -3,12 +3,12 @@ import {expect, it} from 'vitest'
 import {isNativeGeometryArtifact} from '../src/core/nativeGeometry'
 import {assertGeometryScene, geometrySceneFromMeshes, meshesFromGeometryScene} from '../src/core/scene'
 import {DirectHistory, directBodiesScad, emptyDirectDocument, parseDirectDocument} from '../src/services/directModeling'
-import {booleanNurbsBrep, createBrepBox, tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {meshToNurbsBrep} from '../src/services/geometry/reconstruction'
-import {isGeometryEvaluationResultPayload} from '../src/services/geometryWorkerProtocol'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
-import {parseOpenSCAD} from '../src/services/openscadParser'
-import {sceneMeshesToSolidDocument} from '../src/services/solidBridge'
+import {booleanNurbsBrep, createBrepBox, tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {meshToNurbsBrep} from '../src/kernel/geometry/reconstruction'
+import {isGeometryEvaluationResultPayload} from '../src/kernel/geometryWorkerProtocol'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
+import {parseOpenSCAD} from '../src/language/openscadParser'
+import {sceneMeshesToSolidDocument} from '../src/kernel/solidBridge'
 
 const emptyGraph = (display: boolean) => ({
   language: 'rush/nurbs-1', units: 'mm',

@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest'
 import {screenTrussMembers,validatePrintStrengthProfile} from '../src/services/trussScreening'
-import {callGeometryRust} from '../src/services/geometry/kernel'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
 import {solveTruss, type TrussModel, type TrussResponse} from '../src/services/trussAnalysis'
 
 const model:TrussModel={nodesMm:[[0,0,0],[10,0,0]],members:[{nodes:[0,1],youngMpa:2000,areaMm2:2}],

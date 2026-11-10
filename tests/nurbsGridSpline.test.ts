@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {gridSplineNurbsSurface} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {gridSplineNurbsSurface} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 
 it('reproduces independent bilinear geometry on nonuniform authored parameters',()=>{
  const u=[-2,-1.5,1,3],v=[0,.3,2],points=u.map(x=>v.map(y=>[x,y,x*y] as [number,number,number]))

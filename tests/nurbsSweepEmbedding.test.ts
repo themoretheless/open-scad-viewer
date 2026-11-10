@@ -1,13 +1,13 @@
 import {expect,it} from 'vitest'
-import {createRationalBrepSectionLoft,createPeriodicBrepSectionLoft,createProgressiveMiterBrepProfileBody,transformNurbsBrep} from '../src/services/geometry/brep'
-import {circleNurbsCurve,miterNurbsProfileSections} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
+import {createRationalBrepSectionLoft,createPeriodicBrepSectionLoft,createProgressiveMiterBrepProfileBody,transformNurbsBrep} from '../src/kernel/geometry/brep'
+import {circleNurbsCurve,miterNurbsProfileSections} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
 import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
 import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
-import {inspectSweepEmbedding,inspectSweepVolume,type SweepEmbeddingBudgets} from '../src/services/nurbsSweepEmbedding'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
+import {inspectSweepEmbedding,inspectSweepVolume,type SweepEmbeddingBudgets} from '../src/kernel/nurbsSweepEmbedding'
 import {inspectSweepRetainedCorrespondence,inspectSweepRetainedCaps} from '../src/services/sweepRetainedCorrespondence'
-import {inspectNativeSweepCapContacts} from '../src/services/nurbsSweepCapContacts'
+import {inspectNativeSweepCapContacts} from '../src/kernel/nurbsSweepCapContacts'
 const budgets:SweepEmbeddingBudgets={toleranceUv:1e-8,maxExactWork:1000000,
  maxTrimPairs:1000,maxTrimCells:10000,maxTrimDomainCells:100000,maxSpans:100,maxLinearCells:10000,
  maxPairs:100,maxCells:10000,maxDomainCells:100000,cellsPerPair:16,domainCellsPerPair:1000,

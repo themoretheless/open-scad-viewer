@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {sphereNurbsSurface,cylinderNurbsSurface,coneNurbsSurface} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface,type NurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {sphereNurbsSurface,cylinderNurbsSurface,coneNurbsSurface} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface,type NurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 import {readFileSync} from 'node:fs'
 
 it('preserves independent sphere, cylinder and cone equations through the packaged kernel',()=>{

@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {hermiteNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve,trimNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {hermiteNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve,trimNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 import {readFileSync} from 'node:fs'
 
 it('interpolates authored positions and one-sided tangents on nonuniform parameter intervals',()=>{

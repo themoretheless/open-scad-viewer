@@ -1,6 +1,6 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import type {MeshData, SceneEntityId} from '../core/mesh'
-import type {LighteningOptions, LighteningPattern} from './solidLightening'
+import type {LighteningOptions, LighteningPattern} from '../kernel/solidLightening'
 import type {LatticeGraphMesh} from './latticeGraphProtocol'
 import {flattenGroupGeometry} from './meshFlatten'
 import {importedStlToMeshData} from '../exchange/stlImport'

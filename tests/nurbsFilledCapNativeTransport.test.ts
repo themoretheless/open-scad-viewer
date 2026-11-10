@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {callNurbsRust} from '../src/services/geometry/nurbs'
+import {callNurbsRust} from '../src/kernel/geometry/nurbs'
 const premises={idealCapDomainsCertified:true,retainedCapRegionsExact:true,projectionNormalDots:[[1,1],[-1,-1]],endpointContourErrorUpper:[0,0],correctionDisplacementUpper:.125,decompositionErrorUpper:[0,0],parallelPlanesCertified:[true,false]}
 it('keeps native conditional cap bounds distinct from continuous admission',()=>{
  const report=callNurbsRust<{capErrorUpper:[number,number]|null;continuousBound:boolean}>('sweep_filled_cap_error_upper',premises)

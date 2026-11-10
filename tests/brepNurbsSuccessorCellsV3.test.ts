@@ -7,7 +7,7 @@ import {
  createBrepBox,
  createCanonicalBezierGraphSolid,
  createCanonicalRationalGraphSolid,
-} from '../src/services/geometry/brep'
+} from '../src/kernel/geometry/brep'
 
 describe('append-only NURBS Boolean successor cells',()=>{
  it('certifies V4 unequal spans and strict containment per operation',()=>{

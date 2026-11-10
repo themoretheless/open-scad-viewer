@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {analyzeCertifiedFreeformNurbsBrep,analyzeCertifiedNurbsBrep,analyzeNurbsBrep,auditedMultiEdgeFillet,auditedParallelFrameSweep,createBrepBox,createBrepCylinder,createBrepFrustum,createBrepSphere,createBrepTorus,createBrepTube,createFreeformBrepCuboid,createFreeformBrepCuboidBump,tessellateCertifiedFreeformNurbsBrep,tessellateCertifiedNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {analyzeCertifiedFreeformNurbsBrep,analyzeCertifiedNurbsBrep,analyzeNurbsBrep,auditedMultiEdgeFillet,auditedParallelFrameSweep,createBrepBox,createBrepCylinder,createBrepFrustum,createBrepSphere,createBrepTorus,createBrepTube,createFreeformBrepCuboid,createFreeformBrepCuboidBump,tessellateCertifiedFreeformNurbsBrep,tessellateCertifiedNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {transformSelection} from '../src/services/directSolidTools'
 
 it('integrates rational surfaces and trims independently of the display mesh',()=>{
@@ -30,7 +30,7 @@ it('transforms centroid and inertia with the authored body',()=>{
 })
 
 it('retains B-rep identities and outward orientation through affine reflections',async()=>{
- const {transformNurbsBrep}=await import('../src/services/geometry/brep')
+ const {transformNurbsBrep}=await import('../src/kernel/geometry/brep')
  const source=createBrepSphere(3),before=JSON.stringify(source)
  const reflected=transformNurbsBrep(source,[[-2,0,0,10],[0,3,0,-5],[0,0,4,6],[0,0,0,1]])
  expect(reflected.topologyIds).toEqual(source.topologyIds)

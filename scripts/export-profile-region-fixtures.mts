@@ -3,7 +3,7 @@ import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {combineSketchProfiles} from '../src/services/retainedSketchProfile'
 import {buildDirectExtrusion} from '../src/services/directExtrusion'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 import type {DirectSketch} from '../src/services/directModeling'
 const directory=resolve(process.argv[2]??'/tmp/profile-regions-step');mkdirSync(directory,{recursive:true})
 const plate=():DirectSketch=>({id:'plate',name:'Plate',closed:true,points:[[-4,-3],[4,-3],[4,3],[-4,3]]})

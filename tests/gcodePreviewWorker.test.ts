@@ -7,8 +7,8 @@ import { prepareGcodePreviewTransfer } from '../src/fabrication/gcodePreviewWork
 import { PrintReadinessError } from '../src/fabrication/printReadiness'
 
 const geometry = vi.hoisted(() => ({ emit: vi.fn(), emitJob: vi.fn(), parse: vi.fn(), flatten: vi.fn(), warm: vi.fn(), printReady: vi.fn() }))
-vi.mock('../src/services/geometry/kernel', () => ({ warmGeometryKernel: geometry.warm }))
-vi.mock('../src/services/geometry/polygon', () => ({
+vi.mock('../src/kernel/geometry/kernel', () => ({ warmGeometryKernel: geometry.warm }))
+vi.mock('../src/kernel/geometry/polygon', () => ({
   emitPolygonMeshGcode: geometry.emit,
   emitPolygonMeshGcodeJob: geometry.emitJob,
   inspectGcode: geometry.parse,

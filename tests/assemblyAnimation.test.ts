@@ -1,8 +1,8 @@
 import {describe,it,expect} from 'vitest'
 import {evaluateAssemblyEasing,findPoseBoundingBoxOverlaps,sampleAssemblyAnimation,validateAssemblyAnimation,type AssemblyAnimation} from '../src/services/assemblyAnimation'
 import {emptyDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {inspectPolygonMesh} from '../src/services/geometry/polygon'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 function seed(){const d=emptyDirectDocument(),brep=createBrepBox([0,0,0],[2,2,2]);d.bodies.push({id:'part',name:'Part',brep,mesh:tessellateNurbsBrep(brep,1)});return d}
 const animation:AssemblyAnimation={version:1,frames:[{time:0,poses:[{id:'part',translation:[0,0,0],angle:0,scale:1}],camera:{yaw:350*Math.PI/180,pitch:0}},{time:2,poses:[{id:'part',translation:[10,0,0],angle:0,scale:1}],camera:{yaw:10*Math.PI/180,pitch:.4}}]}
 describe('native assembly keyframes',()=>{

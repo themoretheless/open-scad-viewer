@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type {ShellDistanceResult} from '../services/solidMeasurements'
+import type {ShellDistanceResult} from '../kernel/solidMeasurements'
 defineProps<{value:ShellDistanceResult;ru:boolean}>()
 const label=(ru:boolean,a:string,b:string)=>ru?a:b
 </script>

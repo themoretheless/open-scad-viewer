@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest'
 
 describe('freeform NURBS STEP product seam', () => {
   it('keeps freeform peer separate from analytic and faceted STEP', () => {
-    const freeform = readFileSync('src/services/cadNurbsStep.ts', 'utf8')
-    const analytic = readFileSync('src/services/cadAnalyticStep.ts', 'utf8')
-    const faceted = readFileSync('src/services/cadStep.ts', 'utf8')
+    const freeform = readFileSync('src/kernel/cadNurbsStep.ts', 'utf8')
+    const analytic = readFileSync('src/kernel/cadAnalyticStep.ts', 'utf8')
+    const faceted = readFileSync('src/kernel/cadStep.ts', 'utf8')
     expect(freeform).toContain('brep_nurbs_export_step_freeform')
     expect(freeform).toContain('brep_nurbs_import_step_freeform')
     expect(freeform).toContain('brep_nurbs_export_step_trimmed')

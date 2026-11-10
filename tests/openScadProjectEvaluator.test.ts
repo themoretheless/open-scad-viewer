@@ -4,11 +4,11 @@ import {
   OPENSCAD_2021_01_BUILTIN_MODULES,
   OPENSCAD_2021_01_SMOKE_FIXTURES,
 } from '../src/core/openScad2021Contract'
-import { OpenScadProject } from '../src/services/openScadProject'
-import { parseOpenSCAD, parseOpenScadProject } from '../src/services/openscadParser'
+import { OpenScadProject } from '../src/language/openScadProject'
+import { parseOpenSCAD, parseOpenScadProject } from '../src/language/openscadParser'
 import { OpenScadImportPositionedError } from '../src/exchange/openScadImport'
-import { OpenScadSurfaceError } from '../src/services/openScadSurface'
-import { OpenScadTextPositionedError } from '../src/services/openScadText'
+import { OpenScadSurfaceError } from '../src/language/openScadSurface'
+import { OpenScadTextPositionedError } from '../src/language/openScadText'
 
 const RGBA_PNG_2X2 = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGUlEQVR4nGNgAIL///8LMjQ0NCg6ODgYAgAyLgWhbk/ABgAAAABJRU5ErkJggg=='
 const BASIC_TTF = new Uint8Array(readFileSync(

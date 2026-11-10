@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import { formatCode } from '../src/services/codeFormat'
 
 const header = '// @rush/1\n'

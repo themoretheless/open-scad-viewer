@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
 import { OPENSCAD_2021_01_BUILTIN_MODULES } from '../src/core/openScad2021Contract'
-import { AbortedError, OpenSCADParseError, parseOpenSCAD } from '../src/services/openscadParser'
+import { AbortedError, OpenSCADParseError, parseOpenSCAD } from '../src/language/openscadParser'
 import { EXAMPLES } from '../src/data/examples'
 import { matchMeshesByProvenance } from '../src/services/meshInspection'
 

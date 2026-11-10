@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import { formatCode } from '../src/services/codeFormat'
 
 function check(expression: string, expected: number) {

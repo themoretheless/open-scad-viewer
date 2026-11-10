@@ -5,7 +5,7 @@ import { utf8ByteLength, utf8Compare } from '../src/core/utf8Order'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 import { encodeSemanticProgram } from '../src/language/semantic/semanticProgramCodec'
 import { normalizeSemanticProgram } from '../src/language/semantic/semanticProgramValidator'
-import { warmGeometryKernel } from '../src/services/geometry/kernel'
+import { warmGeometryKernel } from '../src/kernel/geometry/kernel'
 
 // The semantic lowering fast paths must be observationally identical to the encode-based
 // implementations they replace; these references are those implementations.

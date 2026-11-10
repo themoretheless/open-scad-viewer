@@ -5,10 +5,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import os from 'node:os'
 import { parseArgs } from 'node:util'
-import { CadGeometryKernel } from '../src/services/cadGeometryKernel'
-import { callGeometryRust, withCadMesh } from '../src/services/geometry/kernel'
+import { CadGeometryKernel } from '../src/kernel/cadGeometryKernel'
+import { callGeometryRust, withCadMesh } from '../src/kernel/geometry/kernel'
 import { geometryAssetId } from '../src/core/scene'
-import { analyzeSolidInKernel, buildBvhInKernel, extractSemanticEdgesInKernel, renderMeshInKernel } from '../src/services/geometry/meshAnalysis'
+import { analyzeSolidInKernel, buildBvhInKernel, extractSemanticEdgesInKernel, renderMeshInKernel } from '../src/kernel/geometry/meshAnalysis'
 
 const { values } = parseArgs({ options: {
   out: { type: 'string' }, samples: { type: 'string', default: '9' }, warmups: { type: 'string', default: '3' },
@@ -18,8 +18,8 @@ assert(Number.isInteger(sampleCount) && sampleCount >= 1 && sampleCount <= 100)
 assert(Number.isInteger(warmups) && warmups >= 0 && warmups <= 20)
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex')
 const paths = [
-  'benchmarks/solid-analysis.mts', 'src/services/geometry/kernel.ts', 'src/services/geometry/module.ts',
-  'src/services/geometry/meshAnalysis.ts', 'src/services/cadGeometryKernel.ts',
+  'benchmarks/solid-analysis.mts', 'src/kernel/geometry/kernel.ts', 'src/kernel/geometry/module.ts',
+  'src/kernel/geometry/meshAnalysis.ts', 'src/kernel/cadGeometryKernel.ts',
   'crates/geometry-bridge/src/mesh.rs', 'crates/geometry-bridge/src/mesh_render.rs', 'crates/geometry-bridge/src/mesh_analysis.rs',
   'crates/polygon-core/src/solid/bvh.rs', 'crates/polygon-core/src/solid/edges.rs',
   'crates/polygon-core/src/lib.rs', 'crates/polygon-core/src/mesh_topology.rs', 'src/core/scene.ts',

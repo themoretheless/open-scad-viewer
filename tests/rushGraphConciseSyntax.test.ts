@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { formatCode } from '../src/services/codeFormat'
-import { compileRushGraph } from '../src/services/rushGraph'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileRushGraph } from '../src/language/rushGraph'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 
 const header = '// @rush/1\n'
 const compile = (source: string) => compileRushFrontend(header + source)

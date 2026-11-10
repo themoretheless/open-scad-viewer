@@ -1,5 +1,5 @@
-import {warmGeometryKernel} from '../../src/services/geometry/kernel'
-import {authorBrepProfile,booleanBrepProfiles,transformBrepProfile} from '../../src/services/geometry/brepProfile'
+import {warmGeometryKernel} from '../../src/kernel/geometry/kernel'
+import {authorBrepProfile,booleanBrepProfiles,transformBrepProfile} from '../../src/kernel/geometry/brepProfile'
 import {withRetainedProfile} from '../../src/services/retainedSketchProfile'
 export async function retainedLoftFixture(){
  await warmGeometryKernel()

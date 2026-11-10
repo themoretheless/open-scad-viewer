@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
-import { createBrepCylinder, tessellateNurbsBrep } from '../src/services/geometry/brep'
+import { createBrepCylinder, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
 import { pushPullFace, solidTopology } from '../src/services/directSolidTools'
-import { inspectPolygonMesh } from '../src/services/geometry/polygon'
+import { inspectPolygonMesh } from '../src/kernel/geometry/polygon'
 
 it('pushes a displayed cylinder cap through the retained B-rep editor', () => {
   const brep = createBrepCylinder(3, 5)

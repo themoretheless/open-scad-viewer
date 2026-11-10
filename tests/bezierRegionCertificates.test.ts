@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {callGeometryRust} from '../src/services/geometry/kernel'
-import {certifyBrepAlgebraicIntersections,verifyBrepAlgebraicIntersections,certifyBrepMultispanAgreement,verifyBrepMultispanAgreement,offsetBrepRegionsCertified,verifyBrepOffsetRegions,normalizeBrepProfile} from '../src/services/geometry/brepProfile'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
+import {certifyBrepAlgebraicIntersections,verifyBrepAlgebraicIntersections,certifyBrepMultispanAgreement,verifyBrepMultispanAgreement,offsetBrepRegionsCertified,verifyBrepOffsetRegions,normalizeBrepProfile} from '../src/kernel/geometry/brepProfile'
 import {bezierLine} from './fixtures/bezier-algebraic-cases'
 import {irrationalQuartic,irrationalContactLine,nondyadicTangency,nondyadicContactLine,irrationalLoop,irrationalCusp,multipleFiberFirst,multipleFiberSecond,multispanFirst,multispanSecond,regionBox,curvedRegion} from './fixtures/bezier-region-cases'
 it('isolates irrational crossings, non-dyadic multiple contacts and separated fibers',()=>{

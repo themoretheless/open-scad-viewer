@@ -1,5 +1,5 @@
 import {parseDirectDocument,serializeDirectDocument,type DirectDocument,type DirectBody} from './directModeling'
-import {applySolidSceneEdit} from './solidSceneEdit'
+import {applySolidSceneEdit} from '../kernel/solidSceneEdit'
 export type AssemblyEasing = 'linear' | 'easeInOutCubic' | 'easeOutBack'
 export interface AssemblyPose {id:string;translation:[number,number,number];angle:number;rotation?:[number,number,number];scale:number}
 export interface AssemblyKeyframe {time:number;poses:AssemblyPose[];camera:{yaw:number;pitch:number};easing?:AssemblyEasing}

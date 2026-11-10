@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {wholeWallExpectation,validWholeWall} from '../src/services/solidWholeWall'
+import {wholeWallExpectation,validWholeWall} from '../src/kernel/solidWholeWall'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 const cases=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/whole-wall/contract.json',import.meta.url),'utf8')).cases
 it('accepts native full wall bounds and explicit refusal or wide intervals',()=>{
@@ -53,7 +53,7 @@ it('rejects missing original face pairs and forged coverage, source or convergen
  expect(validWholeWall(wholeWallExpectation(cases[3].request),r)).toBe(false)
 })
 it('accepts current packaged WASM control-hull bounds without weakening pair validation',async()=>{
- const {inspectWholeWall}=await import('../src/services/solidWholeWall')
+ const {inspectWholeWall}=await import('../src/kernel/solidWholeWall')
  const c=cases[0],r=inspectWholeWall(c.request),e=wholeWallExpectation(c.request)
  expect(r.coverage.pairs.some(p=>p.reason==='control-hull-distance-bound')).toBe(true)
  expect(validWholeWall(e,r)).toBe(true)

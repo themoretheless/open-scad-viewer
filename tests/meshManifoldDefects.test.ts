@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest'
 import {cachedMeshManifoldReport, meshManifoldDefectLabels} from '../src/services/meshManifoldDefects'
-import type {KernelManifoldReport} from '../src/services/geometry/manifoldAnalysis'
+import type {KernelManifoldReport} from '../src/kernel/geometry/manifoldAnalysis'
 
 const openTetra = {
   positions: Float64Array.from([0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 2]),

@@ -4,7 +4,7 @@ import { BUSHING_DEFAULTS, computeBushingParameterSuggestions, fdmRadialClearanc
 import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, computeSpinnerParameterSuggestions, generateSpinner, generateSpinnerSafe, type SpinnerParameterSuggestion } from '../services/spinnerGenerator'
 import { computed, nextTick, ref, watch } from 'svet'
 import { stringifyMeshJson } from '../services/meshJson'
-import { compileRushGraph } from '../services/rushGraphCompiler'
+import { compileRushGraph } from '../language/rushGraphCompiler'
 import { createMechanicalDocument, GEAR_DEFAULTS, PLANETARY_DEFAULTS, THREAD_DEFAULTS } from '../services/mechanicalGeneratorContract'
 const props=defineProps<{open:boolean;locale:'ru'|'en'}>()
 const emit=defineEmits<{close:[];generate:[source:string,name:string];downloadCurrent:[]}>()

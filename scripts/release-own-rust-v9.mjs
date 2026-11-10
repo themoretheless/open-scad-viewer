@@ -7,8 +7,8 @@ if(existsSync(resolve(root,'docs/qualification/own-rust-cad-v9.json')))throw new
 const previousPath='docs/qualification/own-rust-cad-v8.json',previous=JSON.parse(bytes(previousPath))
 const paths=[...new Set([...previous.sourceBundle.paths,
   'crates/brep-core/src/close_topology.rs','crates/brep-core/src/lib.rs',
-  'crates/geometry-bridge/src/lib.rs','src/services/geometry/brep.ts',
-  'src/services/geometry/brepCapability.ts','tests/brepQualificationV12.test.ts',
+  'crates/geometry-bridge/src/lib.rs','src/kernel/geometry/brep.ts',
+  'src/kernel/geometry/brepCapability.ts','tests/brepQualificationV12.test.ts',
 ])].sort()
 const wasmPath='src/generated/geometry-kernels/kernel_bg.wasm',wasm=bytes(wasmPath),wasmSha256=sha(wasm)
 writeFileSync(resolve(root,'src/core/ownRustCadEvidence.ts'),`// Exact artifact checked by the own Rust CAD qualification corpus.

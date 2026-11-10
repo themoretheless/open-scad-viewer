@@ -1,5 +1,5 @@
 import type { OrbitCamera } from '../../services/directModelingTools'
-import { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
+import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import { SourceBodyDisplay } from '../../services/sourceBodyDisplay'
 import { type SourceBodyResult } from '../../services/sourceBody'
 import { projectDirectPoint } from '../../services/directModelingTools'

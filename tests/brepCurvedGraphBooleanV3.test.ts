@@ -4,7 +4,7 @@ import {
  booleanNurbsBrep,
  createBrepBox,
  createCanonicalBezierGraphSolid,
-} from '../src/services/geometry/brep'
+} from '../src/kernel/geometry/brep'
 
 describe('curved graph Boolean V3 WASM seam',()=>{
  it('serializes exact U/V degree 2/3 intersection and difference certificates',()=>{

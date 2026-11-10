@@ -1,5 +1,5 @@
 import type {MeshData} from '../core/mesh'
-import {bounds} from './cadWorkbench'
+import {bounds} from '../kernel/cadWorkbench'
 import {sceneBody} from './mainModeling'
 import type {Vec3} from './directSketchGeometry'
 /** Authored vertices, feature-edge midpoints and body centers, with a bounded UI budget. */

@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
-import {streamProgressiveBrepProfileBody,createPeriodicBrepSectionLoft,createRationalBrepSectionLoft,createProgressiveBrepProfileBody,inspectNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {circleNurbsCurve,circleNurbsArc,bezierNurbsCurve,type NurbsScaleLaw} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {exportDirectStepV5,importDirectStepV5} from '../src/services/cadNurbsStep'
+import {streamProgressiveBrepProfileBody,createPeriodicBrepSectionLoft,createRationalBrepSectionLoft,createProgressiveBrepProfileBody,inspectNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {circleNurbsCurve,circleNurbsArc,bezierNurbsCurve,type NurbsScaleLaw} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
+import {exportDirectStepV5,importDirectStepV5} from '../src/kernel/cadNurbsStep'
 const loops=(z:number,s=1)=>[[circleNurbsCurve([0,0,z],[0,0,1],3*s)],[reverseNurbsCurve(circleNurbsCurve([0,0,z],[0,0,1],s))]]
 const law=(a:number,b:number):NurbsScaleLaw=>({degree:1,knots:[0,0,1,1],values:[a,b],weights:[1,1]})
 function expectBodyRefinementReports(previews:unknown[],levels:unknown[],label='body') {
@@ -76,9 +76,9 @@ it('roundtrips capped rational walls and holes through AP242 WASM transport',()=
 
 it('builds retained hollow body through Rush and the real editor entrypoint',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
- const {parseOpenSCAD}=await import('../src/services/openscadParser')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
+ const {parseOpenSCAD}=await import('../src/language/openscadParser')
  const source=readFileSync('examples/rush/progressive-hollow-body.r','utf8')
  const graph=compileRushFrontend(source)
  const node=graph.document.nodes.find(n=>n.op==='brep_progressive_sweep')!
@@ -89,7 +89,7 @@ it('builds retained hollow body through Rush and the real editor entrypoint',asy
  expect(scene.meshes[0]!.indices.length).toBeGreaterThan(0)
  expect(scene.meshes[0]!.faceIdsAuthoritative).toBe(true)
  expect(scene.meshes[0]!.nativeGeometry?.kind).toBe('brep')
- const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
+ const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
  const solid=sceneMeshesToSolidDocument(scene.meshes)
  expect(solid.bodies[0]!.brep!.faces.filter(f=>f.holes.length)).toHaveLength(2)
  expect(inspectNurbsBrep(solid.bodies[0]!.brep!).boundaryEdgeCount).toBe(0)
@@ -98,8 +98,8 @@ it('builds retained hollow body through Rush and the real editor entrypoint',asy
 
 it('retains anisotropic hollow profiles and moving centers through Rush and Solid',async()=>{
  const {readFileSync}=await import('node:fs')
- const {parseOpenSCAD}=await import('../src/services/openscadParser')
- const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
+ const {parseOpenSCAD}=await import('../src/language/openscadParser')
+ const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
  const scene=await parseOpenSCAD(readFileSync('examples/rush/affine-hollow-body.r','utf8'))
  const body=sceneMeshesToSolidDocument(scene.meshes).bodies[0]!
  expect(body.brep!.faces.filter(f=>f.holes.length)).toHaveLength(2)
@@ -109,10 +109,10 @@ it('retains anisotropic hollow profiles and moving centers through Rush and Soli
 
 it('retains a closed hollow sweep as periodic outer and inner shells without caps',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
- const {parseOpenSCAD}=await import('../src/services/openscadParser')
- const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
+ const {parseOpenSCAD}=await import('../src/language/openscadParser')
+ const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
  const source=readFileSync('examples/rush/closed-progressive-hollow-body.r','utf8')
  const graph=compileRushFrontend(source),node=graph.document.nodes.find(n=>n.op==='brep_progressive_sweep')!
  const built=buildOwnNurbs(graph.document,{action:'build'})
@@ -149,8 +149,8 @@ it('sews authored repeated sections through the direct periodic WASM API',()=>{
 
 it('closes full-turn twist with anisotropic and offset laws and rejects a mismatching vector seam',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const extra='axis_scale: {degree: 2,knots: [0,0,0,1,1,1],values: [[1,1,1],[1.2,0.8,1],[1,1,1]],weights: [1,1,1]},center_law: {degree: 2,knots: [0,0,0,1,1,1],values: [[0,0,0],[0.1mm,0,0],[0,0,0]],weights: [1,1,1]},'
  const source=readFileSync('examples/rush/closed-progressive-hollow-body.r','utf8').replace('values: [0deg,0deg]','values: [0deg,360deg]').replace('normal: [0,0,1],initial_sections',extra+'normal: [0,0,1],initial_sections').replace('.brep_tessellate(4)','.brep_tessellate(2)')
  const graph=compileRushFrontend(source),node=graph.document.nodes.find(n=>n.op==='brep_progressive_sweep')!
@@ -246,8 +246,8 @@ it('clamps body stream levels to cap-reserved face limits and retains cap refusa
 
 it.each(['progressive-hollow-body','authored-progressive-hollow-body','affine-hollow-body','contact-progressive-hollow-body','closed-progressive-hollow-body'])('streams %s while preserving native body definitions and cap refusal',async(name)=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs,buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs,buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
   const document=compileRushFrontend(readFileSync(`examples/rush/${name}.r`,'utf8')).document
   const node=document.nodes.find(n=>n.op==='brep_progressive_sweep')!
   const expected=buildOwnNurbs(document,{action:'build'}),reports:unknown[]=[]
@@ -263,7 +263,7 @@ it.each(['progressive-hollow-body','authored-progressive-hollow-body','affine-ho
 
 it('cancels Rush body parsing on a wall preview and recovers on the same parser queue',async()=>{
  const {readFileSync}=await import('node:fs')
- const {parseOpenSCAD,AbortedError}=await import('../src/services/openscadParser')
+ const {parseOpenSCAD,AbortedError}=await import('../src/language/openscadParser')
  const source=readFileSync('examples/rush/contact-progressive-hollow-body.r','utf8')
  let cancelled=false,levels=0
  await expect(parseOpenSCAD(source,{shouldAbort:()=>cancelled,onSweepPreview:(_id,preview)=>{

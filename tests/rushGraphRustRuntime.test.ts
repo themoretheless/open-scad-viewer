@@ -1,8 +1,8 @@
 import {describe,expect,it} from 'vitest'
-import {compileRushGraph,hashRushGraphDocument,RushGraphError,setRushGraphParameters} from '../src/services/rushGraph'
-import {compileRushGraphNurbs,hashNurbsDocument} from '../src/services/rushGraphNurbs'
-import {rushFrontendControls} from '../src/services/rushFrontend'
-import {prepareGraphRust} from '../src/services/languages/kernel'
+import {compileRushGraph,hashRushGraphDocument,RushGraphError,setRushGraphParameters} from '../src/language/rushGraph'
+import {compileRushGraphNurbs,hashNurbsDocument} from '../src/language/rushGraphNurbs'
+import {rushFrontendControls} from '../src/language/rushFrontend'
+import {prepareGraphRust} from '../src/language/languages/kernel'
 
 const sphere=()=>({language:'rush/ir-1',units:'mm',parameters:[],nodes:[{id:'Shape',op:'sphere',radius:1}],root:'Shape'})
 

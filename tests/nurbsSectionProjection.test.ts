@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
-import {circleNurbsCurve,miterNurbsProfileSections} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {projectNurbsSection,projectSweepSections,projectAuthoredNurbsSection} from '../src/services/nurbsSectionProjection'
-import {createRationalBrepSectionLoft,createMiterBrepProfileBody} from '../src/services/geometry/brep'
-import {inspectSweepEmbedding,inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {circleNurbsCurve,miterNurbsProfileSections} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
+import {projectNurbsSection,projectSweepSections,projectAuthoredNurbsSection} from '../src/kernel/nurbsSectionProjection'
+import {createRationalBrepSectionLoft,createMiterBrepProfileBody} from '../src/kernel/geometry/brep'
+import {inspectSweepEmbedding,inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 
 it('corrects the actual spatial endpoint once for walls and cap with a bounded curve displacement',()=>{
  const profiles=[circleNurbsCurve([0,0,0],[0,0,1],.5),reverseNurbsCurve(circleNurbsCurve([0,0,0],[0,0,1],.2))]

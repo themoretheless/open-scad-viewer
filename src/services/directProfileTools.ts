@@ -1,7 +1,7 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import {requirePolylineSketch} from './retainedSketchProfile'
 import { bakeSketch } from './directSketchGeometry'
-import { normalizePolygonMesh, type PolygonMesh, booleanPolygonMeshes } from './geometry/polygon'
+import { normalizePolygonMesh, type PolygonMesh, booleanPolygonMeshes } from '../kernel/geometry/polygon'
 import { parseDirectDocument, type DirectSketch, type DirectBody, type DirectDocument, type Point2 } from './directModeling'
 import { stringifyMeshJson } from './meshJson'
 

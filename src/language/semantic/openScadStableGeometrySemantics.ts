@@ -7,8 +7,8 @@
  * Manifold's interior-division count).
  */
 
-import { languageRequest } from '../../services/languages/kernel'
-import type { RangeValue } from '../../services/openscadCompiler'
+import { languageRequest } from '../languages/kernel'
+import type { RangeValue } from '../openscadCompiler'
 import {
   OPENSCAD_2021_GEOMETRY_EPSILON,
   resolveOpenScadSweepFragments,

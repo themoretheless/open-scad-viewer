@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {computed,onUnmounted,ref,shallowRef,watchEffect} from 'svet'
-import type {NurbsBrep} from '../services/geometry/brep'
-import type {SolidDistanceResult,VolumeValidityLimits} from '../services/solidDistance'
-import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
+import type {NurbsBrep} from '../kernel/geometry/brep'
+import type {SolidDistanceResult,VolumeValidityLimits} from '../kernel/solidDistance'
+import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
 const props=defineProps<{active:boolean;ru:boolean;a?:NurbsBrep;b?:NurbsBrep;same:boolean;names:[string,string]}>()
 const emit=defineEmits<{state:[active:boolean,point:Array<[number,number,number]>|null]}>()
 const label=(a:string,b:string)=>props.ru?a:b

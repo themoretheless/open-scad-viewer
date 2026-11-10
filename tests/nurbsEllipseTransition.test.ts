@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {ellipseTransitionNurbsSurface} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {ellipseTransitionNurbsSurface} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 function angular(u:number):[number,number]{
  const t=u*4,q=Math.min(3,Math.floor(t)),s=t-q,a=(1-s)**2,b=2*Math.SQRT1_2*s*(1-s),c=s*s,x=(a+b)/(a+b+c),y=(b+c)/(a+b+c)
  return ([[x,y],[-y,x],[-x,-y],[y,-x]] as [number,number][])[q]!

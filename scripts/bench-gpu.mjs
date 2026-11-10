@@ -102,10 +102,10 @@ async function captureHeapProfiles(context, page) {
 await mkdir(dirname(output), { recursive: true })
 await mkdir(output)
 const source = await sourceEvidence()
-const rendererPath = join(root, 'src/services/webgpuRenderer.ts')
+const rendererPath = join(root, 'src/render/webgpuRenderer.ts')
 const overridePath = value('--renderer-source') ? resolve(root, value('--renderer-source')) : null
 const rendererBytes = await readFile(overridePath ?? rendererPath)
-const rendererSource = { module: 'src/services/webgpuRenderer.ts', overridePath, sha256: sha256(rendererBytes), effectiveSourceSha256: sha256(JSON.stringify(source.files.map(file => file.path === 'src/services/webgpuRenderer.ts' ? { path: file.path, sha256: sha256(rendererBytes) } : file))) }
+const rendererSource = { module: 'src/render/webgpuRenderer.ts', overridePath, sha256: sha256(rendererBytes), effectiveSourceSha256: sha256(JSON.stringify(source.files.map(file => file.path === 'src/render/webgpuRenderer.ts' ? { path: file.path, sha256: sha256(rendererBytes) } : file))) }
 await writeFile(join(output, 'renderer-source.ts'), rendererBytes)
 let browser, server
 const errors = []

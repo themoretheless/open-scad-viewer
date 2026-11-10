@@ -1,6 +1,6 @@
 import {readFileSync, writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
-import {callGeometryRust, warmGeometryKernel} from '../src/services/geometry/kernel'
+import {callGeometryRust, warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {runGeneralBoundaryChecks} from './generalBoundaryChecks.mjs'
 import {sweepStepArtifactProvenance} from './sweep-step-provenance.mjs'
 const path = process.argv[2] ?? 'crates/geometry-bridge/tests/fixtures/general-frame-cap-certificate-v1.json'

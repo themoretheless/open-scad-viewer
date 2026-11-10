@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest'
 import {NativePickingCache} from '../src/services/nativePickingCache'
-import * as meshAnalysis from '../src/services/geometry/meshAnalysis'
-import {callGeometryRust} from '../src/services/geometry/kernel'
+import * as meshAnalysis from '../src/kernel/geometry/meshAnalysis'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
 
 it('reuses uploads, evicts bounded cache entries and disposes every owned handle',()=>{
  const upload=vi.spyOn(meshAnalysis,'createPickingSnapshotInKernel')

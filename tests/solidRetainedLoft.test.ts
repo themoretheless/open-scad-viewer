@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {createRuledSketchLoft,analyzeNurbsBrep} from '../src/services/geometry/brep'
+import {createRuledSketchLoft,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
 import {retainedLoftFixture} from './support/retainedLoftFixture'
 it('preserves rational contours and holes in a scaled translated ruled loft with the expected volume',async()=>{
  const sketches=await retainedLoftFixture(),before=structuredClone(sketches)

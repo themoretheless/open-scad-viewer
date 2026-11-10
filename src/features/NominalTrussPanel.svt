@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed,onUnmounted,ref,shallowRef,watch} from 'svet'
 import type {MeshData} from '../core/mesh'
-import type {LighteningOptions} from '../services/solidLightening'
+import type {LighteningOptions} from '../kernel/solidLightening'
 import type {NominalLatticeGraph} from '../services/latticeGraphProtocol'
 import type {TrussLoadCase,TrussScenario} from '../services/trussScenario'
 import {computeNominalLatticeGraph,computePrintStrengthProfile,computeStructuralProfileCatalog,computeTrussField,computeTrussScenario,computeTrussScreening,computeTrussTopology} from '../services/mainSolidWorker'

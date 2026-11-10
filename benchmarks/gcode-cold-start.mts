@@ -3,8 +3,8 @@ import {spawnSync} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {performance} from 'node:perf_hooks'
 import {fileURLToPath} from 'node:url'
-import {executeGcodePreview, executeGcodePreviewAsync} from '../src/services/gcodePreviewRuntime'
-import type {GcodePreviewRequest, GcodePreviewResponse} from '../src/services/gcodePreviewProtocol'
+import {executeGcodePreview, executeGcodePreviewAsync} from '../src/fabrication/gcodePreviewRuntime'
+import type {GcodePreviewRequest, GcodePreviewResponse} from '../src/fabrication/gcodePreviewProtocol'
 import identity from '../src/generated/geometry-kernels/identity'
 
 const mode = process.argv[2]

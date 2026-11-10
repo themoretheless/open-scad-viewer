@@ -6,17 +6,17 @@ import type {
   ModuleNode,
   Statement,
   Value,
-} from '../services/openscadCompiler'
+} from '../language/openscadCompiler'
 import {
   compactDiagnosticText,
   evaluationError,
   isFunctionValue,
-} from '../services/openScadStableExpressionEval'
+} from '../language/openScadStableExpressionEval'
 import type {
   OpenScad2021LegacyImportFormat,
   OpenScadImportForcedAsset,
 } from '../exchange/openScadImport'
-import type { OpenScadProject } from '../services/openScadProject'
+import type { OpenScadProject } from '../language/openScadProject'
 import { formatOpenScadValue, isOpenScadRange } from '../language/semantic/openScadValueSemantics'
 import type { EvalContext } from './types'
 

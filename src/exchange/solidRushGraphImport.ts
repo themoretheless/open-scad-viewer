@@ -1,7 +1,7 @@
 import {parseDirectDocument,type DirectDocument} from '../services/directModeling'
 import {stringifyMeshJson} from '../services/meshJson'
 import {importRushGraphNurbs} from './solidNurbsImport'
-import {warmLanguageKernel} from '../services/languages/kernel'
+import {warmLanguageKernel} from '../language/languages/kernel'
 /** Worker entry point: build native definitions and validate the complete replacement. */
 export async function importSolidRushGraph(document:DirectDocument,text:string,group?:string):Promise<DirectDocument>{
  await warmLanguageKernel()

@@ -1,4 +1,4 @@
-import { detectHardwareConcurrency, type WorkerPoolDiagnostics, type WorkerPoolStats } from './geometryWorkerPool'
+import { detectHardwareConcurrency, type WorkerPoolDiagnostics, type WorkerPoolStats } from '../kernel/geometryWorkerPool'
 import type { MainSolidJob, MainSolidResults } from './mainSolidProtocol'
 import {
   MainSolidWorkerClient,

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
-import { compileRushFrontend } from '../src/services/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
+import { compileRushFrontend } from '../src/language/rushFrontend'
 const text=readFileSync('examples/rush-frontend/planetary-spinner.r','utf8')
 // The one spinner source lives in the runtime crate; Rush expands
 // planetary_spinner(...) into it, so the OpenSCAD route must produce the same meshes.

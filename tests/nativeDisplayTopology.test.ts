@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest'
 import {solidTopology} from '../src/services/directSolidTools'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 it('groups a box into six oriented supports and twelve physical edges with stable triangle membership',()=>{
  const mesh=tessellateNurbsBrep(createBrepBox([0,0,0],[2,3,4]),3)
  const topology=solidTopology(mesh)

@@ -10,9 +10,9 @@ import {
   isGeometryWorkerEvent,
   isGeometryWorkerRequest,
   type GeometryWorkerEvent,
-} from '../src/services/geometryWorkerProtocol'
+} from '../src/kernel/geometryWorkerProtocol'
 import type { MeshData } from '../src/core/mesh'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import { sha256Hex } from '../src/core/sha256'
 
 const envelope = {

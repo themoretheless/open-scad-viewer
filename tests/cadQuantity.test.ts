@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateSafeMathExpression, parseCadQuantity } from '../src/services/cadQuantity'
+import { evaluateSafeMathExpression, parseCadQuantity } from '../src/kernel/cadQuantity'
 describe('CAD quantities through WASM',()=>{
   it.each([['2 cm','length',20],['1 in','length',25.4],['-1,5mm','length',-1.5],['1e-3 m','length',1],['3.141592653589793 rad','angle',180],['90°','angle',90]] as const)('normalizes %s', (text,kind,value)=>{
     const result=parseCadQuantity(text,kind);expect(result.valid).toBe(true)

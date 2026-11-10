@@ -1,8 +1,8 @@
 import {afterEach, expect, it, vi} from 'vitest'
-import {compileGeometryKernelArtifact} from '../src/services/geometry/kernelCompilation'
+import {compileGeometryKernelArtifact} from '../src/kernel/geometry/kernelCompilation'
 import {assertVerifiedWasmModule} from '../src/services/wasmArtifact'
 import identity from '../src/generated/geometry-kernels/identity'
-import {installGeometryKernelFromTrustedHost} from '../src/services/geometry/kernel'
+import {installGeometryKernelFromTrustedHost} from '../src/kernel/geometry/kernel'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
 import {decodePacked} from '../src/services/wasmHost'
 

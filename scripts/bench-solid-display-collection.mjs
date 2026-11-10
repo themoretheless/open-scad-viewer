@@ -2,7 +2,7 @@ import {readFile,writeFile} from 'node:fs/promises'
 import ts from 'typescript'
 import {createHash} from 'node:crypto'
 import {performance} from 'node:perf_hooks'
-const source=await readFile(new URL('../src/services/solidGeometryDisplayQueue.ts',import.meta.url),'utf8')
+const source=await readFile(new URL('../src/kernel/solidGeometryDisplayQueue.ts',import.meta.url),'utf8')
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText
 const {SolidGeometryDisplayQueue}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'))
 const items=Array.from({length:1000},(_,i)=>({id:String(i),curve:{degree:3,knots:Array.from({length:104},(_,j)=>j),weights:Array(100).fill(1),controlPoints:Array.from({length:100},(_,j)=>[i,j,Math.sin(j)])}}))

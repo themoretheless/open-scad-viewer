@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { LanguageDiagnosticCode } from '../src/core/languageContract'
-import { scadEvalRust } from '../src/services/languages/kernel'
+import { scadEvalRust } from '../src/language/languages/kernel'
 
 interface Fixture {
   contract: string

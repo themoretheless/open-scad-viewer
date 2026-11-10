@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {callGeometryRust} from '../src/services/geometry/kernel'
-import type {NurbsBrep} from '../src/services/geometry/brep'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
+import type {NurbsBrep} from '../src/kernel/geometry/brep'
 import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
 import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
 

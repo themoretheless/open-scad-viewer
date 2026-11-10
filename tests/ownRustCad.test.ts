@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import Module from '../src/services/geometry/module';
-import { compileRushFrontend } from '../src/services/rushFrontend';
-import { parseOpenSCAD } from '../src/services/openscadParser';
+import Module from '../src/kernel/geometry/module';
+import { compileRushFrontend } from '../src/language/rushFrontend';
+import { parseOpenSCAD } from '../src/language/openscadParser';
 describe('own Rust CAD qualification v1', () => {
     it('preserves analytic volumes and closed boundaries in overlapping and nested CSG', async () => {
         for (const [source, volume] of [

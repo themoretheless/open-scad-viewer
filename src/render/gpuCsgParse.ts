@@ -1,5 +1,5 @@
 /** Lowers OpenSCAD statements into a flat GPU CSG preview tree. */
-import { compileOpenSCAD, type Statement, type CallNode, type Expr } from '../services/openscadCompiler'
+import { compileOpenSCAD, type Statement, type CallNode, type Expr } from '../language/openscadCompiler'
 import type { CsgOp, GpuCsgNode, GpuCsgPrimitive, GpuCsgTerm, GpuCsgTree } from './gpuCsgTypes'
 import { createCsgPrimitive, resetCsgIdCounter, identityMat4, multiplyMat4, rotationEulerMat4, scaleMat4, translationMat4 } from './gpuCsgPrimitives'
 

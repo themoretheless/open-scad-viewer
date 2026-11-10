@@ -1,9 +1,9 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {EXAMPLES} from '../src/data/examples'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
-import {analyzeNurbsBrep,inspectNurbsBrep,type NurbsBrep} from '../src/services/geometry/brep'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
+import {analyzeNurbsBrep,inspectNurbsBrep,type NurbsBrep} from '../src/kernel/geometry/brep'
 
 function circularLensArea(r:number,R:number,d:number):number {
   return r*r*Math.acos((d*d+r*r-R*R)/(2*d*r))

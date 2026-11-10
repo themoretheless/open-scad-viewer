@@ -1,7 +1,7 @@
 // assetEvaluator: makeImport.
-import type { CadKernelHandle } from '../../services/cadKernelOps'
+import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
-import type { CallNode, ExpressionArgument, Value } from '../../services/openscadCompiler'
+import type { CallNode, ExpressionArgument, Value } from '../../language/openscadCompiler'
 
 import { formatOpenScadValue } from '../../language/semantic/openScadValueSemantics'
 
@@ -13,7 +13,7 @@ import {
 import {
   OpenScadProjectError,
   resolveOpenScadProjectPath,
-} from '../../services/openScadProject'
+} from '../../language/openScadProject'
 
 import {
   loadPreparedOpenScadImport,
@@ -28,7 +28,7 @@ import {
   OpenScadSurfaceDataError,
   OpenScadSurfaceError,
   triangulateOpenScadSurface,
-} from '../../services/openScadSurface'
+} from '../../language/openScadSurface'
 
 import {
   OpenScadTextError,
@@ -36,9 +36,9 @@ import {
   renderOpenScadText,
   type OpenScadTextErrorCode,
   type OpenScadTextParameters,
-} from '../../services/openScadText'
+} from '../../language/openScadText'
 
-import { nextColor } from '../../services/openscadColors'
+import { nextColor } from '../../language/openscadColors'
 
 import {
   type EvalContext,

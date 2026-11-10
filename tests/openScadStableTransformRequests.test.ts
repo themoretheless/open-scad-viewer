@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest'
-import * as kernel from '../src/services/languages/kernel'
+import * as kernel from '../src/language/languages/kernel'
 import {resolveOpenScadRotate,resolveOpenScadMirror,resolveOpenScadMultmatrix,resolveOpenScadTranslate,resolveOpenScadScale} from '../src/language/semantic/openScadStableTransformSemantics'
 
 it('returns matrix classification with construction instead of a second analysis request',()=>{

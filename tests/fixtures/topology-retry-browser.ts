@@ -1,8 +1,8 @@
 // Test-only fault injection. Open on a separate origin to isolate saved drafts.
 import {createApp,h,ref} from 'svet'
 import DirectModeler from '../../src/features/DirectModeler.svt'
-import {warmGeometryKernel} from '../../src/services/geometry/kernel'
-import {createBrepBox,tessellateNurbsBrep} from '../../src/services/geometry/brep'
+import {warmGeometryKernel} from '../../src/kernel/geometry/kernel'
+import {createBrepBox,tessellateNurbsBrep} from '../../src/kernel/geometry/brep'
 import type {MainSolidRequest} from '../../src/services/mainSolidProtocol'
 const NativeWorker=window.Worker,requests=ref(0),injected=ref(false)
 window.Worker=class extends NativeWorker {

@@ -1,11 +1,11 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {bezierNurbsCurve,boundaryFillNurbsSurfaces} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {tessellateNurbsPatches} from '../src/services/geometry/reconstruction'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {bezierNurbsCurve,boundaryFillNurbsSurfaces} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {tessellateNurbsPatches} from '../src/kernel/geometry/reconstruction'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 
 it('lowers positional boundary cycle and length center through Rush',()=>{
  const source=readFileSync('examples/rush/boundary-fill.r','utf8'),g=compileRushFrontend(source)

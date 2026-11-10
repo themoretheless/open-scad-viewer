@@ -1,4 +1,4 @@
-import type {LaserMachineProfile} from '../services/geometry/laser'
+import type {LaserMachineProfile} from '../kernel/geometry/laser'
 
 export interface LaserMachinePreset {
   id:string

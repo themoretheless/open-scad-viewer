@@ -2,7 +2,7 @@ import {
   preflightStepInput,
   type ParserInputBudgets,
   type ParserPreflightStats,
-} from './parserInputBudgets'
+} from '../language/parserInputBudgets'
 
 export interface RawStepEntity {
   readonly id: number

@@ -1,5 +1,5 @@
 import type { SemanticNode } from '../core/semanticProgram'
-import type { CadKernelHandle, CadKernelOps } from './cadKernelOps'
+import type { CadKernelHandle, CadKernelOps } from '../kernel/cadKernelOps'
 import type {
   SemanticBackendBeginContext,
   SemanticBackendCloseOutcome,

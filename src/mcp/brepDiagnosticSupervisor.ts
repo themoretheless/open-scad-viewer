@@ -1,5 +1,5 @@
 import {Worker} from 'node:worker_threads'
-import {BrepDiagnosticExecutor, type BrepDiagnosticExecutorOptions, type BrepDiagnosticWorkerPort} from '../services/brepDiagnosticExecutor'
+import {BrepDiagnosticExecutor, type BrepDiagnosticExecutorOptions, type BrepDiagnosticWorkerPort} from '../kernel/brepDiagnosticExecutor'
 
 function nodePort(): BrepDiagnosticWorkerPort {
   const worker = new Worker(new URL('./brepDiagnostic.worker.mjs', import.meta.url), {

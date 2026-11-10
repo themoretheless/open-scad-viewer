@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest'
-import * as kernel from '../src/services/languages/kernel'
-import {languageRequest} from '../src/services/languages/kernel'
+import * as kernel from '../src/language/languages/kernel'
+import {languageRequest} from '../src/language/languages/kernel'
 
 it('preserves exact degree values, nonfinite results and signed zero in a batch',()=>{
  const response=languageRequest(35,{calls:[
@@ -27,7 +27,7 @@ it('bounds the batch and validates function names and argument counts',()=>{
  expect(languageRequest(35,{calls:[]})).toEqual({ok:true,value:[]})
 })
 
-import {evaluateDegreeBatch,evaluateDegreeScalar} from '../src/services/openScadDegreeMath'
+import {evaluateDegreeBatch,evaluateDegreeScalar} from '../src/language/openScadDegreeMath'
 it('chunks large batches in order and preserves scalar pair edge cases',()=>{
  const calls=Array.from({length:2051},(_,i)=>({function:'sin' as const,args:[i%2?30:90]}))
  expect(evaluateDegreeBatch(calls)).toEqual(calls.map((_,i)=>i%2?.5:1))

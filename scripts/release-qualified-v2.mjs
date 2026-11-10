@@ -79,7 +79,7 @@ const capabilities = [
     included: ['Finite AP214/AP242 analytic and bicubic solid graph with explicit SI context and rigid placements', 'At most 32 bodies and one cavity per body', 'Opaque topology metadata roundtrip or explicit identity-loss report for metadata-free input'],
     excluded: ['FACETED_BREP', 'STL or OBJ', 'More than 32 bodies', 'More than one cavity per body', 'Arbitrary third-party entity graphs', 'Silent identity preservation'],
     matrix: [['STEP2-SI-IDENTITY-ROUNDTRIP', 'Complete'], ['STEP2-METADATA-FREE-LOSS', 'Complete'], ['STEP2-MULTIBODY-ONE-CAVITY', 'Complete'], ['STEP2-BODY-33', 'typed-refuse'], ['STEP2-CAVITY-2', 'typed-refuse'], ['STEP2-FACETED', 'typed-refuse']],
-    implementation: ['crates/brep-core/src/step_interchange.rs', 'crates/brep-core/src/nurbs_step_solid.rs', 'crates/geometry-bridge/src/lib.rs', 'src/services/cadAnalyticStep.ts', 'src/services/cadNurbsStep.ts'],
+    implementation: ['crates/brep-core/src/step_interchange.rs', 'crates/brep-core/src/nurbs_step_solid.rs', 'crates/geometry-bridge/src/lib.rs', 'src/kernel/cadAnalyticStep.ts', 'src/kernel/cadNurbsStep.ts'],
     oracles: ['step_interchange::v2_roundtrip_preserves_identity_and_context', 'step_interchange::v2_import_without_metadata_reports_identity_loss', 'geometry_bridge::tests::step_successor_bridge_reports_identity_preservation_and_loss', 'tests/cadAnalyticStep.test.ts', 'tests/cadNurbsStep.test.ts'],
   },
   {
@@ -87,7 +87,7 @@ const capabilities = [
     included: ['One or more selected vertical edges of one audited axis-aligned cuboid', 'Finite positive constant radius with exact circular profile and complete ChangeSet'],
     excluded: ['Curved source edges', 'Non-cuboids', 'Non-vertical edges', 'Variable radius', 'General corner transition networks', 'Mesh bevel relabeling'],
     matrix: [['FILLET-MULTI-VERTICAL', 'Complete'], ['FILLET-NONVERTICAL', 'typed-refuse'], ['FILLET-NONCUBOID', 'typed-refuse'], ['FILLET-RADIUS-COLLAPSE', 'typed-refuse']],
-    implementation: ['crates/brep-core/src/analytic_features.rs', 'crates/geometry-bridge/src/lib.rs', 'src/services/geometry/brep.ts'],
+    implementation: ['crates/brep-core/src/analytic_features.rs', 'crates/geometry-bridge/src/lib.rs', 'src/kernel/geometry/brep.ts'],
     oracles: ['analytic_features::successor_multi_edge_fillet_is_context_audit_and_naming_bound', 'geometry_bridge::tests::audited_feature_successors_cross_the_bridge_with_certificates', 'tests/brepMassProperties.test.ts::publishes audited finite feature successors and refuses bent frames'],
   },
   {
@@ -95,7 +95,7 @@ const capabilities = [
     included: ['Finite simple polygon profile translated between collinear stations under fixed, rotation-minimizing, or rmf spelling', 'Constant parallel frame with audited closed solid and complete ChangeSet'],
     excluded: ['Bent paths', 'Frenet rotation', 'Twist or scale laws', 'Self-intersecting profiles', 'Faceted sweep relabeling'],
     matrix: [['SWEEP-STRAIGHT-RMF', 'Complete'], ['SWEEP-STRAIGHT-FIXED', 'Complete'], ['SWEEP-BENT-RMF', 'typed-refuse'], ['SWEEP-INVALID-FRAME-LAW', 'typed-refuse']],
-    implementation: ['crates/brep-core/src/analytic_features.rs', 'crates/geometry-bridge/src/lib.rs', 'src/services/geometry/brep.ts'],
+    implementation: ['crates/brep-core/src/analytic_features.rs', 'crates/geometry-bridge/src/lib.rs', 'src/kernel/geometry/brep.ts'],
     oracles: ['analytic_features::successor_parallel_sweep_certifies_and_bent_rmf_refuses', 'geometry_bridge::tests::audited_feature_successors_cross_the_bridge_with_certificates', 'tests/brepMassProperties.test.ts::publishes audited finite feature successors and refuses bent frames'],
   },
   {
@@ -103,7 +103,7 @@ const capabilities = [
     included: ['Audited planar exact-profile solids and one-body no-cavity exact rational cylinders', 'Positive finite chord tolerance with at most 20000 triangles', 'Two-sided analytic deviation plus shared-edge identity, orientation, and no-T-junction coverage'],
     excluded: ['Spheres, tori, cones, cavities, and generic freeform surfaces', 'Tolerance requiring more than the triangle budget', 'Display tessellation without certificate'],
     matrix: [['TESS-PLANAR-BOX', 'Complete'], ['TESS-RATIONAL-CYLINDER', 'Complete'], ['TESS-TINY-TOLERANCE', 'typed-refuse'], ['TESS-NAMING-MUTATION', 'typed-refuse'], ['TESS-SPHERE', 'typed-refuse']],
-    implementation: ['crates/geometry-bridge/src/brep.rs', 'crates/geometry-bridge/src/lib.rs', 'src/services/geometry/brep.ts'],
+    implementation: ['crates/geometry-bridge/src/brep.rs', 'crates/geometry-bridge/src/lib.rs', 'src/kernel/geometry/brep.ts'],
     oracles: ['crates/geometry-bridge/tests/analytic_brep_tessellation.rs::certified_planar_and_rational_cells_publish_two_sided_coverage', 'crates/geometry-bridge/tests/analytic_brep_tessellation.rs::certified_tessellation_has_typed_budget_mutation_and_shape_refusals', 'tests/brepMassProperties.test.ts::publishes finite certified mass and tessellation enclosures'],
   },
   {
@@ -111,7 +111,7 @@ const capabilities = [
     included: ['Audited exact axis-aligned or rigidly placed boxes, cylinders, tubes, and planar exact-profile prisms', 'Finite interval enclosures for area, volume, centroid, and inertia'],
     excluded: ['Spheres, tori, cones, and generic freeform solids', 'Quadrature estimates relabeled as certified', 'Incomplete naming evidence'],
     matrix: [['MASS-BOX', 'Complete'], ['MASS-CYLINDER', 'Complete'], ['MASS-TUBE', 'Complete'], ['MASS-PROFILE-PRISM', 'Complete'], ['MASS-RIGID-SCALE', 'Complete'], ['MASS-SPHERE', 'typed-refuse'], ['MASS-NAMING-MUTATION', 'typed-refuse']],
-    implementation: ['crates/brep-core/src/analysis.rs', 'crates/geometry-bridge/src/lib.rs', 'src/services/geometry/brep.ts'],
+    implementation: ['crates/brep-core/src/analysis.rs', 'crates/geometry-bridge/src/lib.rs', 'src/kernel/geometry/brep.ts'],
     oracles: ['analysis::certified_mass_encloses_box_cylinder_tube_and_exact_profile', 'analysis::certified_mass_is_scale_and_rigid_transform_stable_and_refuses_mutation', 'tests/brepMassProperties.test.ts::publishes finite certified mass and tessellation enclosures'],
   },
 ].map(capability => ({ qualified: true, deps: [], unresolved: [], ...capability }))
@@ -124,7 +124,7 @@ const canonicalHash = paths => {
 }
 const nativeHash = canonicalHash(['crates/brep-core/src/predicate_evidence.rs', 'crates/brep-core/src/trim_sew.rs', 'crates/brep-core/src/solid_audit.rs', 'crates/brep-core/src/analytic_features.rs', 'crates/brep-core/src/nurbs_ss_g6.rs', 'crates/brep-core/src/analysis.rs', 'crates/brep-core/src/step_interchange.rs', 'crates/brep-topology/src/persistent_naming.rs'])
 const bridgeHash = canonicalHash(['crates/geometry-bridge/src/lib.rs', 'crates/geometry-bridge/src/tests.rs', 'crates/geometry-bridge/tests/analytic_brep_tessellation.rs'])
-const productHash = canonicalHash(['src/services/geometry/brep.ts', 'src/services/cadAnalyticStep.ts', 'src/services/cadNurbsStep.ts', 'tests/brepMassProperties.test.ts', 'tests/brepProductSeam.test.ts', 'tests/topologyLineage.test.ts'])
+const productHash = canonicalHash(['src/kernel/geometry/brep.ts', 'src/kernel/cadAnalyticStep.ts', 'src/kernel/cadNurbsStep.ts', 'tests/brepMassProperties.test.ts', 'tests/brepProductSeam.test.ts', 'tests/topologyLineage.test.ts'])
 const runRecords = [
   { id: `focused-native-workspace-${runDate}`, result: 'pass', artifactHash: nativeHash },
   { id: `geometry-bridge-certificate-seams-${runDate}`, result: 'pass', artifactHash: bridgeHash },
@@ -157,7 +157,7 @@ for (const capability of capabilities) {
     matrix,
     bindings: {
       implementation: capability.implementation,
-      registry: 'src/services/geometry/brepCapability.ts',
+      registry: 'src/kernel/geometry/brepCapability.ts',
       evidenceJson: evidencePath,
     },
     evidence: {
@@ -242,7 +242,7 @@ write('docs/qualification/brep-capability-registry-release-full-v2.json', {
   schema: 'open-scad-viewer/brep-capability-registry-release', schemaVersion: 2,
   gate: 'G8-full', planId: 'brep-capability-registry-release-full-v2',
   successorOf: 'docs/qualification/brep-capability-registry-release-full-v1.json',
-  registry: 'src/services/geometry/brepCapability.ts',
+  registry: 'src/kernel/geometry/brepCapability.ts',
   closedMatrix: 'docs/qualification/brep-full-closed-matrix-v2.json',
   g8Index: 'docs/qualification/plans/g8-full-matrix-index-v2.json',
   capabilities: shipped,

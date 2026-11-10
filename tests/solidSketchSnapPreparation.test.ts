@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest'
-import {SolidSketchSnapPreparation} from '../src/services/solidSketchSnapPreparation'
+import {SolidSketchSnapPreparation} from '../src/kernel/solidSketchSnapPreparation'
 import {sketchSnapGeometry,type SnapGeometry} from '../src/services/modelingSnaps'
 import type {DirectSketch} from '../src/services/directModeling'
 const sketch=(id:string):DirectSketch=>({id,name:id,closed:false,points:[[0,0],[10,0]]})

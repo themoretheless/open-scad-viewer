@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {callGeometryRust} from '../src/services/geometry/kernel'
-import {certifyBrepCurveNonlinearAgreement,verifyBrepCurveNonlinearAgreementCertificate,certifyBrepCurveIntersections,verifyBrepCurveIntersectionsCertificate,offsetBrepWireCertified,verifyBrepOffsetWireCertificate,validateBrepProfile,booleanBrepProfiles,normalizeBrepProfile} from '../src/services/geometry/brepProfile'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
+import {certifyBrepCurveNonlinearAgreement,verifyBrepCurveNonlinearAgreementCertificate,certifyBrepCurveIntersections,verifyBrepCurveIntersectionsCertificate,offsetBrepWireCertified,verifyBrepOffsetWireCertificate,validateBrepProfile,booleanBrepProfiles,normalizeBrepProfile} from '../src/kernel/geometry/brepProfile'
 import {nonlinearFirst,nonlinearSecond,nonlinearWire,fourthOrderContact,contactLine,degreeEightLoop,nonprimitiveLoop,exactCusp,cornerWire,squareWire,bezierLine} from './fixtures/bezier-algebraic-cases'
 it('proves a non-rational parameter correspondence and uses it in production booleans',()=>{
  const c=certifyBrepCurveNonlinearAgreement(nonlinearFirst,nonlinearSecond,[0,1],[0,1])

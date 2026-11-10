@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {checkLatticeGraphInput,isNominalLatticeGraph,type NominalLatticeGraph} from '../src/services/latticeGraphProtocol'
 import {mainSolidResult} from '../src/services/mainSolidProtocol'
-import type {LighteningOptions} from '../src/services/solidLightening'
+import type {LighteningOptions} from '../src/kernel/solidLightening'
 
 const graph=():NominalLatticeGraph=>({modelKind:'nominal-bounding-box-axial',nodes:[[0,0,0],[1,0,0],[0,1,0],[0,0,1]],edges:[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]]})
 it('admits only bounded, distinct three-dimensional nominal graphs',()=>{

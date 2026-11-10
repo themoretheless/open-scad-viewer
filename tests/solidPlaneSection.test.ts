@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {inspectSolidDisplay} from '../src/services/solidDiagnostics'
-import {solidExactEdgeFeature} from '../src/services/solidExactEdgeFeature'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {inspectSolidDisplay} from '../src/kernel/solidDiagnostics'
+import {solidExactEdgeFeature} from '../src/kernel/solidExactEdgeFeature'
 const fixture=()=>tessellateNurbsBrep(createBrepBox([0,0,0],[10,8,6]))
 it.each([[0,0,1],[1,0,0],[0,1,0],[1,1,1]])('places a closed section on the requested world-space plane %j',(...normal)=>{
  const mesh=fixture(),before=structuredClone(mesh),offset=3
@@ -70,7 +70,7 @@ it('localizes orientation conflicts and degenerate triangles with source indices
 })
 
 it('locates an overlapping pair through WASM with original triangle outlines',async()=>{
- const {inspectSolidIntersections}=await import('../src/services/solidDiagnostics')
+ const {inspectSolidIntersections}=await import('../src/kernel/solidDiagnostics')
  const mesh={positions:new Float64Array([0,0,0,2,0,0,0,2,0]),indices:new Uint32Array([0,1,2,0,1,2])}
  const result=inspectSolidIntersections(mesh)
  expect(result.contact?.triangles).toEqual([0,1])
@@ -81,7 +81,7 @@ it('locates an overlapping pair through WASM with original triangle outlines',as
 })
 
 it('enumerates every overlap and distinguishes an empty partial scan from completion',async()=>{
- const {inspectSolidIntersections}=await import('../src/services/solidDiagnostics')
+ const {inspectSolidIntersections}=await import('../src/kernel/solidDiagnostics')
  const mesh={positions:new Float64Array([0,0,0,2,0,0,0,2,0]),indices:new Uint32Array([0,1,2,0,1,2,0,1,2])}
  const all=inspectSolidIntersections(mesh)
  expect(all.complete).toBe(true);expect(all.contacts.map(c=>c.triangles)).toEqual([[0,1],[0,2],[1,2]])

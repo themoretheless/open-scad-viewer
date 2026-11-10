@@ -2,7 +2,7 @@ import {readFileSync,writeFileSync,mkdirSync,existsSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import {resolve} from 'node:path'
 import {expect,it} from 'vitest'
-import {inspectNurbsBrep,analyzeNurbsBrep} from '../src/services/geometry/brep'
+import {inspectNurbsBrep,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
 
 // Verify real browser exports against independently checked service histories.
 const root=process.env.CAD_MIXED_UI_EVIDENCE
@@ -24,8 +24,8 @@ it.runIf(!!root&&!!fixtures).each((process.env.CAD_MIXED_UI_PARTS??'bracket,encl
  }
  const output=process.env.CAD_MIXED_UI_STEP_OUTPUT
  if(output){
-  const {exportSolidStepCurrent}=await import('../src/services/solidStepExchange')
-  const {importDirectStepV9}=await import('../src/services/cadNurbsStep')
+  const {exportSolidStepCurrent}=await import('../src/kernel/solidStepExchange')
+  const {importDirectStepV9}=await import('../src/kernel/cadNurbsStep')
   const final=JSON.parse(readFileSync(resolve(root!,`${name}-20.json`),'utf8')).bodies.find((b:any)=>b.id===name)
   const first=await exportSolidStepCurrent(final)
   const second=await exportSolidStepCurrent({...final,brep:importDirectStepV9(first).model})

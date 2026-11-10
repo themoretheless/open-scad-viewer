@@ -1,5 +1,5 @@
-import type {NurbsCurve} from '../../nurbsCurve'
-import {callNurbsRust} from '../../geometry/nurbs'
+import type {NurbsCurve} from '../../../kernel/nurbsCurve'
+import {callNurbsRust} from '../../../kernel/geometry/nurbs'
 export interface CircleSectionRepair {curves:NurbsCurve[]|null;displacementUpper:number|null;work:number;reason:string}
 /** Bounded candidate correction only: compose its displacement with the ideal
  * family bound, rebuild owned edges/caps, and revalidate geometry admission. */

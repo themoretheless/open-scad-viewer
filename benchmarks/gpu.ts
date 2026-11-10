@@ -1,7 +1,7 @@
 import type { MeshData } from '../src/core/mesh'
 import { identity } from '../src/services/math3d'
 import { buildMeshBvh } from '../src/services/meshBvh'
-import { WebGPURenderer } from '../src/services/webgpuRenderer'
+import { WebGPURenderer } from '../src/render/webgpuRenderer'
 
 interface Options {
   triangles: number[]

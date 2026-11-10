@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed,ref,toRaw,watch,nextTick} from 'svet'
-import type {NurbsSurface} from '../services/nurbsSurface'
-import type {ProfileBridgeChordOptions} from '../services/nurbsProfileBridgeChords'
+import type {NurbsSurface} from '../kernel/nurbsSurface'
+import type {ProfileBridgeChordOptions} from '../kernel/nurbsProfileBridgeChords'
 import {useProfileBridgeInspection} from '../services/useProfileBridgeInspection'
 const props=defineProps<{surfaces:[NurbsSurface,NurbsSurface];active:boolean;ru:boolean}>()
 const label=(ru:string,en:string)=>props.ru?ru:en

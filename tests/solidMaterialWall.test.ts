@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {materialWallExpectation,validMaterialWall} from '../src/services/solidMaterialWall'
+import {materialWallExpectation,validMaterialWall} from '../src/kernel/solidMaterialWall'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 const cases=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/material-wall/contract.json',import.meta.url),'utf8')).cases
 it('accepts native full wall bounds and explicit refusal or wide intervals',()=>{

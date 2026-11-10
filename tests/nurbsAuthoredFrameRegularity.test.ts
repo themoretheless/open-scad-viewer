@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
-import {inspectAuthoredFrameRegularity} from '../src/services/nurbsAuthoredFrameRegularity'
-import {progressiveSweepNurbsProfiles,previewProgressiveNurbsProfiles,streamProgressiveNurbsProfiles,type AuthoredProgressiveSweepOptions} from '../src/services/nurbsConstructors'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
+import {inspectAuthoredFrameRegularity} from '../src/kernel/nurbsAuthoredFrameRegularity'
+import {progressiveSweepNurbsProfiles,previewProgressiveNurbsProfiles,streamProgressiveNurbsProfiles,type AuthoredProgressiveSweepOptions} from '../src/kernel/nurbsConstructors'
 
 const normal:NurbsCurve={degree:1,knots:[31,31,41,41],controlPoints:[[0,0,1],[0,0,1]],weights:[1,1],periodic:false}
 it('certifies whole authored traversal after subdivision without promoting a sweep bound',()=>{

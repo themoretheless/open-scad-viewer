@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,circleNurbsCurve,previewProgressiveNurbsProfiles} from '../src/services/nurbsConstructors'
-import {createProgressiveBrepProfileBody} from '../src/services/geometry/brep'
-import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {bezierNurbsCurve,circleNurbsCurve,previewProgressiveNurbsProfiles} from '../src/kernel/nurbsConstructors'
+import {createProgressiveBrepProfileBody} from '../src/kernel/geometry/brep'
+import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 const profile=bezierNurbsCurve([[4.1,0,0],[4.2,0,0]])
 const path=circleNurbsCurve([0,0,0],[0,0,1],4)
 const scale={degree:1,knots:[0,0,1,1],values:[1,1],weights:[1,1]}

@@ -5,7 +5,7 @@ import {
   preflightIgesInput,
   preflightStepInput,
   preflightStlInput,
-} from '../src/services/parserInputBudgets'
+} from '../src/language/parserInputBudgets'
 import { buildStepRawArtifact } from '../src/services/stepRawArtifact'
 
 const budgets = { ...DEFAULT_PARSER_INPUT_BUDGETS, entities: 2, depth: 2, faces: 1, controlPoints: 2 }

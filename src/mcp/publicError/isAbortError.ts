@@ -1,8 +1,8 @@
-import { AbortedError, OpenSCADParseError } from '../../services/openscadErrors'
+import { AbortedError, OpenSCADParseError } from '../../language/openscadErrors'
 import { ArtifactSizeError, CustomizerValueError, GeometryBusyError, GeometryDeadlineExceededError, InvalidGeometryError } from '../geometryService'
 import { MAX_STORED_DIAGNOSTIC_MESSAGE_LENGTH, MAX_STORED_DIAGNOSTIC_NAME_LENGTH } from '../modelStore'
 import type { BuildDiagnostic } from '../modelStore'
-import { GeometryCapabilityUnavailableError, GeometryEngineUnavailableError, GeometryLanguageContractError } from '../../services/geometryBuildEngine'
+import { GeometryCapabilityUnavailableError, GeometryEngineUnavailableError, GeometryLanguageContractError } from '../../kernel/geometryBuildEngine'
 import { publicToolError } from './publicToolError'
 import { truncateWellFormed } from '../../core/unicode'
 

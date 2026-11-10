@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
-import {analyzeNurbsBrep,booleanNurbsBrep,createBrepBox,createBrepCylinder,createBrepTube,extrudeBrepCurves,inspectNurbsBrep,nurbsBrepToPolygon,tessellateNurbsBrep,transformNurbsBrep} from '../src/services/geometry/brep'
-import {parseOpenSCAD} from '../src/services/openscadParser'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
-import {GeometryKernelError} from '../src/services/geometry/kernel'
+import {analyzeNurbsBrep,booleanNurbsBrep,createBrepBox,createBrepCylinder,createBrepTube,extrudeBrepCurves,inspectNurbsBrep,nurbsBrepToPolygon,tessellateNurbsBrep,transformNurbsBrep} from '../src/kernel/geometry/brep'
+import {parseOpenSCAD} from '../src/language/openscadParser'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
+import {GeometryKernelError} from '../src/kernel/geometry/kernel'
 
 it('rejects malformed legacy B-rep documents without trapping the shared WASM instance',()=>{
  const legacy=createBrepBox([0,0,0],[2,2,2]);delete legacy.topologyIds

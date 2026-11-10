@@ -5,9 +5,9 @@ import {mkdir,readFile,writeFile} from 'node:fs/promises'
 import {resolve} from 'node:path'
 import {brotliDecompressSync} from 'node:zlib'
 import identity from '../src/generated/geometry-kernels/identity'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
-import {importDirectStepV9} from '../src/services/cadNurbsStep'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
+import {importDirectStepV9} from '../src/kernel/cadNurbsStep'
 import {DirectHistory,parseDirectDocument,serializeDirectDocument,type DirectDocument} from '../src/services/directModeling'
 
 const replayHistory=process.argv.includes('--replay-history')

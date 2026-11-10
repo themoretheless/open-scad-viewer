@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {inspectFrenetFrameRegularity} from '../src/services/nurbsFrenetFrameRegularity'
+import {bezierNurbsCurve,circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {inspectFrenetFrameRegularity} from '../src/kernel/nurbsFrenetFrameRegularity'
 
 const zero=()=>({...bezierNurbsCurve([[0,0,0],[0,0,0]]),knots:[7,7,9,9]})
 it('covers the original spatial Frenet frame on an independent authored domain',()=>{

@@ -2,9 +2,9 @@ import 'fake-indexeddb/auto'
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {emptyDirectDocument} from '../src/services/directModeling'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {exportSolidStepAssembly} from '../src/services/solidStepAssembly'
-import {prepareSolidStepImport} from '../src/services/solidStepExchange'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {exportSolidStepAssembly} from '../src/kernel/solidStepAssembly'
+import {prepareSolidStepImport} from '../src/kernel/solidStepExchange'
 import {stringifyMeshJson} from '../src/services/meshJson'
 const directory=resolve(process.argv[2]??'/tmp/cad-component-fixture');mkdirSync(directory,{recursive:true})
 const document=emptyDirectDocument()

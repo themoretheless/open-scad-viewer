@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest'
-import {SolidGeometryDisplayQueue} from '../src/services/solidGeometryDisplayQueue'
+import {SolidGeometryDisplayQueue} from '../src/kernel/solidGeometryDisplayQueue'
 
 it('allows cancellation during scene key collection before sending worker jobs',async()=>{
  let clock=0

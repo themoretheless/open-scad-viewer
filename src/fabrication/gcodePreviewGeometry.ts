@@ -1,4 +1,4 @@
-import type { GcodePreviewMove, GcodePreviewResult } from '../services/geometry/polygon'
+import type { GcodePreviewMove, GcodePreviewResult } from '../kernel/geometry/polygon'
 import type { GcodeSceneMesh } from './gcodePreviewProtocol'
 import { GCODE_MOVE_ROW_WIDTH, gcodePreviewMoveRows } from './gcodePreviewTransport'
 

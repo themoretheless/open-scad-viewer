@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {previewProgressiveNurbsProfiles,type AuthoredProgressiveSweepOptions} from '../src/services/nurbsConstructors'
+import {evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {previewProgressiveNurbsProfiles,type AuthoredProgressiveSweepOptions} from '../src/kernel/nurbsConstructors'
 
 it('carries original-profile and retained decomposition error through the packaged Rust API',()=>{
  const profile:NurbsCurve={degree:1,knots:[0,...Array.from({length:33},(_,i)=>i),32],

@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
-import {scaledSweepNurbsCurve,checkedProfileSweepNurbsSurface,bezierNurbsCurve,circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {scaledSweepNurbsCurve,checkedProfileSweepNurbsSurface,bezierNurbsCurve,circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 const profile=bezierNurbsCurve([[1,0,0],[2,0,0]])
 const path=bezierNurbsCurve([[0,0,0],[0,0,5]])
 const scale={degree:1,knots:[10,10,14,14],values:[1,2],weights:[3,1]}

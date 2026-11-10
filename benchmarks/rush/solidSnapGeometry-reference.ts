@@ -2,7 +2,7 @@
 import { bodyPoints, type DirectBody } from '../../src/services/directModeling'
 import { cross3, type Vec3 } from '../../src/services/directSketchGeometry'
 import { solidTopology } from '../../src/services/directSolidTools'
-import { evaluateNurbsCurve } from '../../src/services/nurbsCurve'
+import { evaluateNurbsCurve } from '../../src/kernel/nurbsCurve'
 import type { SnapGeometry } from '../../src/services/modelingSnaps'
 
 const cache=new WeakMap<DirectBody,SnapGeometry>()

@@ -2,7 +2,7 @@ import type {MeshData} from '../core/mesh'
 import type {StructuralProfileFamily,StructuralProfileProperties} from './structuralProfiles'
 import type {TrussTopologyResponse} from './trussAnalysis'
 import type {AxialScreeningRow,PrintStrengthProfile,ThermalStrengthResult,ValidatedPrintProfile} from './trussScreening'
-import {isMeshData} from './geometryWorkerProtocol/isRecord'
+import {isMeshData} from '../kernel/geometryWorkerProtocol/isRecord'
 
 const finite=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value)
 const positive=(value:unknown)=>finite(value)&&value>0

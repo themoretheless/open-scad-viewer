@@ -5,13 +5,13 @@ import {describe,expect,it} from 'vitest'
 import {
  assertBrepCapabilityAllowsTopology,
  BREP_CAPABILITY_MATRIX,
-} from '../src/services/geometry/brepCapability'
+} from '../src/kernel/geometry/brepCapability'
 import {
  createBrepBox,
  exactConvexChamfer,
  exactConvexPrismFillet,
  exactVariableRadiusFillet,
-} from '../src/services/geometry/brep'
+} from '../src/kernel/geometry/brep'
 
 type Row={id:string;plan:string;evidence:string;maturity:string;releaseState:'shipped'|'candidate'}
 const root=resolve(import.meta.dirname,'..')

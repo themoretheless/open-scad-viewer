@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
-import type {NurbsBrep,SmoothStationWallCandidate} from '../src/services/geometry/brep'
-import {createPeriodicBrepSectionLoft,createRationalBrepSectionLoft} from '../src/services/geometry/brep'
-import {callGeometryRust} from '../src/services/geometry/kernel'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
+import type {NurbsBrep,SmoothStationWallCandidate} from '../src/kernel/geometry/brep'
+import {createPeriodicBrepSectionLoft,createRationalBrepSectionLoft} from '../src/kernel/geometry/brep'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
 const signs=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1],[1,0]]
 const section=(x:number,z:number):NurbsCurve[][]=>[[{
  degree:2,knots:[0,0,0,.25,.25,.5,.5,.75,.75,1,1,1],

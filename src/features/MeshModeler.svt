@@ -17,7 +17,7 @@ import CommandPalette from '../components/CommandPalette.svt'
 
 import type { PaletteCommand } from '../services/commandSearch'
 
-import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../services/geometryEditing'
+import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../kernel/geometryEditing'
 
 import { meshCentroid, sculptMesh } from '../services/meshEditing'
 
@@ -49,7 +49,7 @@ import {
   type MeshWorkspaceDocument,
 } from '../services/meshEditing'
 
-import { createSolidPreviewWorker } from '../services/solidPreviewWorker'
+import { createSolidPreviewWorker } from '../kernel/solidPreviewWorker'
 
 import { useMainSolidTask } from './useMainSolidTask'
 
@@ -57,7 +57,7 @@ import { defaultDirectCamera, projectDirectPoint } from '../services/directModel
 
 import { projectMeshModelerObject,cachedMeshModelerStats } from '../services/meshModelerProjection'
 
-import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/kernel'
+import { isGeometryKernelReady, warmGeometryKernel } from '../kernel/geometry/kernel'
 
 import { storageGet, storageSet } from '../services/safeStorage'
 
@@ -79,9 +79,9 @@ import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '
 
 import { downloadBytes } from '../services/downloadArtifact'
 
-import type { PolygonMesh } from '../services/geometry/polygon'
+import type { PolygonMesh } from '../kernel/geometry/polygon'
 
-import type { KernelManifoldReport } from '../services/geometry/manifoldAnalysis'
+import type { KernelManifoldReport } from '../kernel/geometry/manifoldAnalysis'
 import {useMeshModeler} from './MeshModeler/useMeshModeler'
 const props = defineProps<{ open: boolean; locale: string; seedDocument?: MeshWorkspaceDocument | null; paletteRequest?: number }>()
 const emit = defineEmits<{ close: []; exportToSolid: [doc: MeshWorkspaceDocument] }>()

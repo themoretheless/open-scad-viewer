@@ -1,5 +1,5 @@
-import {CadGeometryKernel} from '../../src/services/cadGeometryKernel'
-import {analyzeSolidCooperativelyInKernel, analyzeSolidInKernel, type KernelSolidAnalysis} from '../../src/services/geometry/meshAnalysis'
+import {CadGeometryKernel} from '../../src/kernel/cadGeometryKernel'
+import {analyzeSolidCooperativelyInKernel, analyzeSolidInKernel, type KernelSolidAnalysis} from '../../src/kernel/geometry/meshAnalysis'
 
 let active = false
 let cancelled = false

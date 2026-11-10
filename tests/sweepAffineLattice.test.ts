@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {createProgressiveMiterBrepProfileBody,reconstructCertifiedMiterStations,transformCertifiedMiterBody} from '../src/services/geometry/brep'
+import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
+import {createProgressiveMiterBrepProfileBody,reconstructCertifiedMiterStations,transformCertifiedMiterBody} from '../src/kernel/geometry/brep'
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {isNativeGeometryArtifact} from '../src/core/nativeGeometry'
 const law=(value:number)=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})
@@ -59,8 +59,8 @@ it('checks intermediate model and certificate against native placement replay',(
 
 it('keeps transformed-bound evidence through actual Rush and repeated placements',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs,buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs,buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const text=readFileSync('examples/rush/progressive-miter-oblique-circle-corrected-hollow.r','utf8')
  const compiled=compileRushFrontend(text)
@@ -75,7 +75,7 @@ it('keeps transformed-bound evidence through actual Rush and repeated placements
 })
 
 it('transports the whole boundary atomically in the native affine opcode',async()=>{
- const {callGeometryRust}=await import('../src/services/geometry/kernel')
+ const {callGeometryRust}=await import('../src/kernel/geometry/kernel')
  const original=source(),before=structuredClone(original)
  const request={model:original.model,sourceCertificate:original.boundaryCertificate,matrix:shear,
   quantum:options.quantum,maxWork:options.maxWork,budget:options.maxDeviation}
@@ -105,8 +105,8 @@ it('transports the whole boundary atomically in the native affine opcode',async(
 
 it.each(['miter-periodic-moving-axis-guide-affine-hollow.r','miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r','closed-periodic-frame-guide-affine-hollow.r'])('admits %s shear and reflection through bound native replay',async(fixture)=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const text=readFileSync(`examples/rush/${fixture}`,'utf8')
  const transformed=text.replace('.brep_tessellate(4)',
@@ -132,8 +132,8 @@ it.each(['miter-periodic-moving-axis-guide-affine-hollow.r','miter-periodic-movi
  expect(isNativeGeometryArtifact(tampered)).toBe(false)
  // Exercise the public integrity boundary for the changed receipt; actual
  // model mutation and native replay binding are checked separately above.
- const {ownNurbsDisplayMesh}=await import('../src/services/rushFrontendScene')
- const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
+ const {ownNurbsDisplayMesh}=await import('../src/language/rushFrontendScene')
+ const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
  const carrier=ownNurbsDisplayMesh(transformedBody.mesh!,'entity:native/integrity-check',transformedBody.nativeGeometry!).mesh
  expect(isNativeGeometryArtifact(carrier.nativeGeometry)).toBe(true)
  expect(()=>sceneMeshesToSolidDocument([{...carrier,nativeGeometry:tampered}])).toThrow(/Invalid native B-rep snapshot/)
@@ -145,8 +145,8 @@ it.each(['miter-periodic-moving-axis-guide-affine-hollow.r','miter-periodic-movi
 
 it('admits reflected automatic periodic caps with exact off-lattice native arithmetic',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow.r','utf8')
  const reflected=source.replace('.brep_tessellate(4)', '.transform(matrix: [[-1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]).brep_tessellate(4)')

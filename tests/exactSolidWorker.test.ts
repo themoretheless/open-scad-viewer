@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { buildExactSolidsInWorker, type ExactSolidWorkerPort } from '../src/services/solid/exactSolidClient'
-import { runExactSolidRequest } from '../src/services/solid/exactSolidRuntime'
-import { evaluateExactSolids } from '../src/services/geometryBuildEngine'
-import { buildExactSolidBodies } from '../src/services/solid/brepBuild'
-import { EXACT_SOLID_TIMEOUT_MS, isExactSolidRequest, isExactSolidResponse, type ExactSolidRequest } from '../src/services/solid/exactSolidProtocol'
+import { buildExactSolidsInWorker, type ExactSolidWorkerPort } from '../src/kernel/solid/exactSolidClient'
+import { runExactSolidRequest } from '../src/kernel/solid/exactSolidRuntime'
+import { evaluateExactSolids } from '../src/kernel/geometryBuildEngine'
+import { buildExactSolidBodies } from '../src/kernel/solid/brepBuild'
+import { EXACT_SOLID_TIMEOUT_MS, isExactSolidRequest, isExactSolidResponse, type ExactSolidRequest } from '../src/kernel/solid/exactSolidProtocol'
 import * as directDocument from '../src/services/directModeling'
 
 class FakeWorker extends EventTarget implements ExactSolidWorkerPort {
@@ -154,7 +154,7 @@ it('retains Rush swept B-rep and cap holes through the exact-solid worker client
  const bodies=await pending
  expect(bodies).toHaveLength(1)
  expect(bodies[0]!.brep!.faces.filter(face=>face.holes.length===1)).toHaveLength(2)
- const {inspectNurbsBrep}=await import('../src/services/geometry/brep')
+ const {inspectNurbsBrep}=await import('../src/kernel/geometry/brep')
  expect(inspectNurbsBrep(bodies[0]!.brep!)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})
  expect(worker.terminate).toHaveBeenCalledOnce()
 })

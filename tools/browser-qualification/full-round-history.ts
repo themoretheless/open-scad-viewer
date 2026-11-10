@@ -1,8 +1,8 @@
 import {ExactFullRoundHistoryBrowser} from '../../src/services/exactFullRoundHistoryBrowser'
-import {buildBrepSemanticScene} from '../../src/services/brepSemanticScene'
-import {lowerOpenSCADToSemanticProgram} from '../../src/services/semanticProgramLowerer'
+import {buildBrepSemanticScene} from '../../src/kernel/brepSemanticScene'
+import {lowerOpenSCADToSemanticProgram} from '../../src/language/semantic/semanticProgramLowerer'
 import {restoreExactFullRoundSnapshot} from '../../src/services/exactFullRoundSnapshot'
-import {callGeometryRust,warmGeometryKernel} from '../../src/services/geometry/kernel'
+import {callGeometryRust,warmGeometryKernel} from '../../src/kernel/geometry/kernel'
 async function qualification(){
  await warmGeometryKernel()
  const scene=await buildBrepSemanticScene(lowerOpenSCADToSemanticProgram('// @language openscad-viewer/brep-1\nfull_round_exact([5,4,3]) cube([4,8,6]);'),{quality:'preview',segments:4})

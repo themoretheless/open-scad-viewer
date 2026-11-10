@@ -1,8 +1,8 @@
 import {beforeAll,expect,it} from 'vitest'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {createG2SurfaceBridge,inspectBrepGeometricG2,createG2AnnularTube} from '../src/services/geometricG2'
-import {createBrepBox} from '../src/services/geometry/brep'
-import type {NurbsSurface} from '../src/services/nurbsSurface'
+import {createBrepBox} from '../src/kernel/geometry/brep'
+import type {NurbsSurface} from '../src/kernel/nurbsSurface'
 beforeAll(async()=>{await warmGeometryKernel()})
 const support=(offset:number):NurbsSurface=>({degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],
  controlPoints:[[0,0],[1,.25],[2,0]].map(([x,y])=>[[x,offset+y,0],[x,offset+y+1,0]]),weights:[[1,1],[.5,.5],[1,1]]})

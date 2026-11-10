@@ -8,15 +8,15 @@ import {cpus,totalmem,release} from 'node:os'
 import {performance} from 'node:perf_hooks'
 import {isDeepStrictEqual} from 'node:util'
 import {execFileSync} from 'node:child_process'
-import {compileRushFrontend as rust} from '../../src/services/rushFrontend'
+import {compileRushFrontend as rust} from '../../src/language/rushFrontend'
 import {compileRushFrontend as typescript} from './rush-frontend-typescript-reference'
-import {parseOpenSCAD,type ParseResult} from '../../src/services/openscadParser'
+import {parseOpenSCAD,type ParseResult} from '../../src/language/openscadParser'
 
 const output=process.argv.find(value=>value.startsWith('--output='))?.slice('--output='.length) ?? 'output/rush-end-to-end-benchmark.json'
 const input='examples/skadis-box/skadis-dovetail.rush.scad'
 const source=readFileSync(input,'utf8')
 const sha=(data:Uint8Array|string)=>createHash('sha256').update(data).digest('hex')
-const files=[input,'benchmarks/rush/rush-frontend-typescript-reference.ts','benchmarks/rush/rushGraph-runtime-reference.ts','benchmarks/rush/rushFrontendNurbs-runtime-reference.ts','benchmarks/rush/rushGraphNurbs-runtime-reference.ts','src/services/rushFrontend.ts','src/services/rushGraph.ts','src/services/openscadParser.ts','src/generated/geometry-kernels/kernel_bg.wasm','benchmarks/rush/bench-rush-end-to-end.mts']
+const files=[input,'benchmarks/rush/rush-frontend-typescript-reference.ts','benchmarks/rush/rushGraph-runtime-reference.ts','benchmarks/rush/rushFrontendNurbs-runtime-reference.ts','benchmarks/rush/rushGraphNurbs-runtime-reference.ts','src/language/rushFrontend.ts','src/language/rushGraph.ts','src/language/openscadParser.ts','src/generated/geometry-kernels/kernel_bg.wasm','benchmarks/rush/bench-rush-end-to-end.mts']
 const hashes=Object.fromEntries(files.map(path=>[path,sha(readFileSync(path))]))
 const reference=typescript(source),actual=rust(source)
 if(reference.source!==actual.source)throw new Error('Generated sources must be byte-identical for this comparison')

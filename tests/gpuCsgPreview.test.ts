@@ -17,7 +17,7 @@ import {
   type GpuCsgNode,
 } from '../src/render/gpuCsgPreview'
 import { WebGPURenderer } from '../src/render/webgpuRenderer'
-import { compileOpenSCAD } from '../src/services/openscadCompiler'
+import { compileOpenSCAD } from '../src/language/openscadCompiler'
 
 describe('gpuCsgPreview math and primitives', () => {
   it('computes 4x4 matrix multiplication and translations correctly', () => {

@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {planeNurbsPatch,bilinearNurbsPatch,bezierNurbsSurface} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {planeNurbsPatch,bilinearNurbsPatch,bezierNurbsSurface} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 import {readFileSync} from 'node:fs'
 
 it('preserves affine planes and nonplanar bilinear corners through WASM',()=>{

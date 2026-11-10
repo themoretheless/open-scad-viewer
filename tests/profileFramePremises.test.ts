@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {checkedProfileSweepNurbsSurface,bezierNurbsCurve} from '../src/services/nurbsConstructors'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
+import {checkedProfileSweepNurbsSurface,bezierNurbsCurve} from '../src/kernel/nurbsConstructors'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 // Authored inputs only: frame premises and all certificates execute in Rust.
 const law={degree:1,knots:[0,0,1,1],values:[1,1],weights:[1,1]}
 it('delivers an exact tilted-plane Bishop premise and a bounded work refusal through WASM',()=>{

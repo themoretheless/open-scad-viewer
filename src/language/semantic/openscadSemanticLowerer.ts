@@ -1,4 +1,4 @@
-import {resolveLegacyOpenScadSegments,roundLegacyOpenScadSegments} from '../../services/openScadLegacySegments'
+import {resolveLegacyOpenScadSegments,roundLegacyOpenScadSegments} from '../openScadLegacySegments'
 import type { GeometryQuality } from '../../core/build'
 import {
   deriveSemanticAmbiguityGroupId,
@@ -49,13 +49,13 @@ import {
   type OpenScadLanguageProfile,
   type Statement,
   type Value,
-} from '../../services/openscadCompiler'
-import { AbortedError, OpenSCADParseError } from '../../services/openscadErrors'
+} from '../openscadCompiler'
+import { AbortedError, OpenSCADParseError } from '../openscadErrors'
 import {
   createDeferredOpenScadBuiltinArguments,
   evaluateOpenScadBuiltinFunction,
   type OpenScadBuiltinValue,
-} from '../../services/openScadBuiltinFunctions'
+} from '../openScadBuiltinFunctions'
 import {
   formatOpenScadValue,
   isOpenScadRange,
@@ -64,7 +64,7 @@ import {
   openScadTruthy,
   openScadUnary,
 } from './openScadValueSemantics'
-import { OpenScadStableScope } from '../../services/openScadStableScope'
+import { OpenScadStableScope } from '../openScadStableScope'
 import {
   MAX_EVAL_DEPTH,
   MAX_EVAL_OPS,
@@ -83,8 +83,8 @@ import {
   registerArrayValue,
   stableOverlayContext,
   type StableFunctionValue,
-} from '../../services/openScadStableExpressionEval'
-import { createOpenScadStableRuntimeVariables } from '../../services/openScadStableRuntime'
+} from '../openScadStableExpressionEval'
+import { createOpenScadStableRuntimeVariables } from '../openScadStableRuntime'
 import {
   attestSemanticProgram,
   encodeSemanticProgram,

@@ -4,17 +4,17 @@ import {readFileSync} from 'node:fs'
 
 import {deepStrictEqual} from 'node:assert'
 import {createHash} from 'node:crypto'
-import {bezierNurbsCurve,circleNurbsCurve} from '../src/services/nurbsConstructors'
+import {bezierNurbsCurve,circleNurbsCurve} from '../src/kernel/nurbsConstructors'
 
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {createProgressiveBrepProfileBody} from '../src/services/geometry/brep'
-import type {ProgressiveGuidedSurfaceSweepOptions as ProgressiveBrepSweepOptions} from '../src/services/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
+import {createProgressiveBrepProfileBody} from '../src/kernel/geometry/brep'
+import type {ProgressiveGuidedSurfaceSweepOptions as ProgressiveBrepSweepOptions} from '../src/kernel/nurbsConstructors'
 
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 import {readSweepBodyBoundaryViewportEvidence,readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
 
-import type {NurbsBrep} from '../src/services/geometry/brep'
+import type {NurbsBrep} from '../src/kernel/geometry/brep'
 
 export function buildProfileStepFixtures(law:(a:number,b:number)=>{degree:number;knots:number[];values:number[];weights:number[]}){
 // Independent fixed-frame conical annulus: linear radius 1 -> 2 over10mm.

@@ -1,6 +1,6 @@
 import {h} from 'svet'
-import type {SolidNurbsCurve} from '../services/solidNurbs'
-import type {CurveOffsetReport} from '../services/solidCurveOffset'
+import type {SolidNurbsCurve} from '../kernel/solidNurbs'
+import type {CurveOffsetReport} from '../kernel/solidCurveOffset'
 import {offsetPreviewSegments} from '../services/curveOffsetPreview'
 interface Props {curves:SolidNurbsCurve[];id?:string;report?:CurveOffsetReport|null;ids?:string[];diagnostics?:import('../services/curveOffsetDiagnostics').CurveOffsetDiagnostics;project:(point:[number,number,number])=>number[];sample?:(curve:SolidNurbsCurve['curve'])=>number[][]}
 export default function CurveOffsetPreview(p:Props){

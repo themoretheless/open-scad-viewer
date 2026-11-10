@@ -21,9 +21,9 @@ import {
   intersectNurbsSurfaceSurfaceCertified,
   verifyNurbsSurfaceSurfaceCoverage,
   reparameterizeNurbsCurveExact,
-} from '../src/services/nurbsFoundation'
-import {evaluateNurbsCurve, type NurbsCurve} from '../src/services/nurbsCurve'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+} from '../src/kernel/nurbsFoundation'
+import {evaluateNurbsCurve, type NurbsCurve} from '../src/kernel/nurbsCurve'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 
 const arc: NurbsCurve = {
   degree: 2,

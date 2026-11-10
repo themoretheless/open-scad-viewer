@@ -2,7 +2,7 @@ import { inflateSync } from 'node:zlib'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { InMemoryTransport, McpServer, type JSONRPCMessage } from '@modelcontextprotocol/server'
 import { registerRushGraphNurbsTools } from '../src/mcp/rushGraphNurbsTools'
-import { RUSH_GRAPH_NURBS_EXAMPLE, RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/rushGraphNurbs'
+import { RUSH_GRAPH_NURBS_EXAMPLE, RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/language/rushGraphNurbs'
 
 type RpcValue = Record<string, unknown>
 type ToolResult = {

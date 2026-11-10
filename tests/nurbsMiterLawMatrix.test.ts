@@ -1,8 +1,8 @@
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {miterLawMatrixModes,miterLawMatrixSource} from '../scripts/miter-law-matrix-sources'
 import {expect,it} from 'vitest'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 import {readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
 import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
 

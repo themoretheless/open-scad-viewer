@@ -1,10 +1,10 @@
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
-import {createBrepBox,booleanNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,booleanNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {pushPullFace,solidTopology} from '../src/services/directSolidTools'
-import {solidExactEdgeFeature} from '../src/services/solidExactEdgeFeature'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
+import {solidExactEdgeFeature} from '../src/kernel/solidExactEdgeFeature'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 import type {DirectBody} from '../src/services/directModeling'
 
 // Export the actual public command chain for independent OpenCascade checks.

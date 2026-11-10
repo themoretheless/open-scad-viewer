@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
-import { buildExactSolidBodies, InexactSolidError } from '../src/services/solid/brepBuild'
+import { parseOpenSCAD } from '../src/language/openscadParser'
+import { buildExactSolidBodies, InexactSolidError } from '../src/kernel/solid/brepBuild'
 
 /** Both workspaces are fed by one evaluation: meshes for Mesh, the plan for Solid. */
 async function evaluate(source: string) {

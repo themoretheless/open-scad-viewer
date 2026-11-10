@@ -7,7 +7,7 @@ import {
   checkManifoldInKernel,
   metricsManifoldInKernel,
   repairManifoldInKernel,
-} from '../src/services/geometry/manifoldAnalysis'
+} from '../src/kernel/geometry/manifoldAnalysis'
 
 const publicBytes = readFileSync('public/wasm/geometry-kernel.wasm')
 const generatedBytes = readFileSync('src/generated/geometry-kernels/kernel_bg.wasm')

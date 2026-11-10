@@ -1,7 +1,7 @@
 import type {MeshData} from '../core/mesh'
 import type {ExactFullRoundHistoryEdit,ExactHistoryBudget} from './exactFullRoundHistory'
-import {hasSafeSuccessPayload} from './geometryWorkerProtocol/isGeometryEvaluationResultPayload'
-import {isMeshData} from './geometryWorkerProtocol/isRecord'
+import {hasSafeSuccessPayload} from '../kernel/geometryWorkerProtocol/isGeometryEvaluationResultPayload'
+import {isMeshData} from '../kernel/geometryWorkerProtocol/isRecord'
 export interface ExactHistoryWorkerRequest {
   type:'exact-history-edit/1'
   id:string

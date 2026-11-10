@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import type {MeshData} from '../core/mesh'
 import type {TrussInput, TrussResponse} from './trussAnalysis'
 import {importedStlToMeshData} from '../exchange/stlImport'

@@ -1,6 +1,6 @@
 import type { DirectBody } from './directModeling'
-import { callGeometryRust } from './geometry/kernel'
-import { normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
+import { callGeometryRust } from '../kernel/geometry/kernel'
+import { normalizePolygonMesh, type PolygonMesh } from '../kernel/geometry/polygon'
 
 export function extendedShell(
   body: DirectBody,

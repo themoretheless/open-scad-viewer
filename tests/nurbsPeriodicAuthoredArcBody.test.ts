@@ -1,12 +1,12 @@
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
-import {tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
+import {tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
 import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
-import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 
 const sources=['arc-length-periodic-authored-spatial-body-boundary.r']
 it.each(sources)('qualifies periodic authored arc original error and fresh retained Solid: %s',async file=>{

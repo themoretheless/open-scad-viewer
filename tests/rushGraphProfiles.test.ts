@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { compileRushGraph } from '../src/services/rushGraph'
+import { compileRushGraph } from '../src/language/rushGraph'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 const doc = (nodes: unknown[], root = 'part', extra = {}) => ({ language: 'rush/ir-1', units: 'mm', parameters: [], nodes, root, ...extra })
 async function build(document: unknown) {
   const runtime = new DirectGeometrySupervisor()

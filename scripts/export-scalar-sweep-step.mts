@@ -2,10 +2,10 @@ import assert from 'node:assert/strict'
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
-import {scaledSweepNurbsCurve,checkedProfileSweepNurbsSurface,bezierNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface,isoNurbsCurve} from '../src/services/nurbsSurface'
+import {scaledSweepNurbsCurve,checkedProfileSweepNurbsSurface,bezierNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface,isoNurbsCurve} from '../src/kernel/nurbsSurface'
 import {createCappedBrepLoftSurfaces} from '../src/services/sweep/construction/brep'
-import {exportDirectStepV5,importDirectStepV5} from '../src/services/cadNurbsStep'
+import {exportDirectStepV5,importDirectStepV5} from '../src/kernel/cadNurbsStep'
 import {sweepStepArtifactProvenance} from './sweep-step-provenance.mjs'
 const root=resolve(process.argv[2]??'/tmp/scalar-sweep-step');mkdirSync(root,{recursive:true})
 const ring=[[-1,-1,0],[1,-1,0],[1,1,0],[-1,1,0]],profiles=ring.map((p,i)=>bezierNurbsCurve([p,ring[(i+1)%4]!]))

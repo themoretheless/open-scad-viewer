@@ -1,8 +1,8 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest'
 import type {DirectDocument} from '../src/services/directModeling'
 const {native}=vi.hoisted(()=>({native:vi.fn()}))
-vi.mock('../src/services/geometry/nurbs',()=>({callNurbsRust:native}))
-import {offsetSolidCurve} from '../src/services/solidCurveOffset'
+vi.mock('../src/kernel/geometry/nurbs',()=>({callNurbsRust:native}))
+import {offsetSolidCurve} from '../src/kernel/solidCurveOffset'
 const curve={degree:1,knots:[0,0,1,1],weights:[1,1],controlPoints:[[0,0],[10,0]]}
 const options={id:'source',createdId:'offset',distance:2,toleranceMm:.01,maxCells:512,maxPairs:1000}
 function source(z?:number):DirectDocument{return {version:1,sketches:[],bodies:[],curves:[{id:'source',name:'Profile',group:'group',curve:{...structuredClone(curve),controlPoints:curve.controlPoints.map(p=>z===undefined?[...p]:[...p,z])}}]}}

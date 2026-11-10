@@ -1,12 +1,12 @@
 // The RushGraph frontends are a separate WASM kernel. Keeping this importer out of
 // `solidNurbs.ts` keeps that kernel off the startup graph: it is reached only through a
 // dynamic import at the single call site that opens a RushGraph document.
-import { buildOwnNurbs } from '../services/rushGraphNurbsKernel'
-import type { NurbsCurve } from '../services/nurbsCurve'
-import { validateNurbsCurve } from '../services/nurbsCurve'
-import type { NurbsSurface } from '../services/nurbsSurface'
-import { validateNurbsSurface } from '../services/nurbsSurface'
-import type { SolidDocumentWithNurbs, SolidNurbsCurve, SolidNurbsSurface } from '../services/solidNurbs'
+import { buildOwnNurbs } from '../language/rushGraphNurbsKernel'
+import type { NurbsCurve } from '../kernel/nurbsCurve'
+import { validateNurbsCurve } from '../kernel/nurbsCurve'
+import type { NurbsSurface } from '../kernel/nurbsSurface'
+import { validateNurbsSurface } from '../kernel/nurbsSurface'
+import type { SolidDocumentWithNurbs, SolidNurbsCurve, SolidNurbsSurface } from '../kernel/solidNurbs'
 
 export function importRushGraphNurbs(document: unknown): Pick<SolidDocumentWithNurbs, 'curves' | 'surfaces'> {
   const built = buildOwnNurbs(document, { action: 'build', display: { segments: 16, subdivisionLevels: 1 } })

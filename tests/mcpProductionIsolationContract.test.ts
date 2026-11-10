@@ -150,8 +150,8 @@ describe('MCP production geometry isolation contract', () => {
     expect(closure.map(file => file.name)).toEqual(expect.arrayContaining([
       'src/mcp/directGeometry.worker.ts',
       'src/mcp/directGeometryProtocol.ts',
-      'src/services/geometryBuildEngine.ts',
-      'src/services/openscadParser.ts',
+      'src/kernel/geometryBuildEngine.ts',
+      'src/language/openscadParser.ts',
     ]))
     for (const file of closure) {
       expect(

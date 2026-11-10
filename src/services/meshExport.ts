@@ -1,6 +1,6 @@
 import type { MeshData } from '../core/mesh'
-import { exportSceneInKernel } from './geometry/meshFileExport'
-import { GeometryKernelError } from './geometry/kernel'
+import { exportSceneInKernel } from '../kernel/geometry/meshFileExport'
+import { GeometryKernelError } from '../kernel/geometry/kernel'
 
 export const MAX_EXPORT_TRIANGLES = 750_000
 

@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import Module from '../src/services/geometry/module';
+import Module from '../src/kernel/geometry/module';
 
 it('preserves Euler order, identity and closed winding through native solid transforms', async () => {
     const {CadSolid} = await Module();

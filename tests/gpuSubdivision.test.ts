@@ -6,7 +6,7 @@ import {
   runGpuBrushSubdivision,
   CATMULL_CLARK_WGSL,
 } from '../src/render/gpuSubdivision'
-import type { SubdivisionCage } from '../src/services/geometry/subdivision'
+import type { SubdivisionCage } from '../src/kernel/geometry/subdivision'
 
 function createUnitCubeCage(): SubdivisionCage {
   return {

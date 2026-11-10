@@ -12,7 +12,7 @@ import {
   normalizeOpenScadProjectPath,
   resolveOpenScadProjectPath,
   type OpenScadProjectFileInput,
-} from '../src/services/openScadProject'
+} from '../src/language/openScadProject'
 
 function expectProjectError(
   operation: () => unknown,

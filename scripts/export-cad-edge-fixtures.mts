@@ -1,10 +1,10 @@
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {solidTopology} from '../src/services/directSolidTools'
-import {solidExactEdgeFeature} from '../src/services/solidExactEdgeFeature'
-import {exportSolidStepCurrent} from '../src/services/solidStepExchange'
+import {solidExactEdgeFeature} from '../src/kernel/solidExactEdgeFeature'
+import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 const directory=resolve('output/qualification/cad-roadmap-edges')
 mkdirSync(directory,{recursive:true})
 const brep=createBrepBox([0,0,0],[10,8,6]),mesh=tessellateNurbsBrep(brep)

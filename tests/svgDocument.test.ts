@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { contoursExtrusion, contoursSvg, svgContours, svgPreview, SVG_MAX_BYTES } from '../src/services/svgGeometry'
 import { parseOpenScadSvg, loadOpenScadImport, OpenScadImportDataError } from '../src/exchange/openScadImport'
-import { OpenScadProject } from '../src/services/openScadProject'
+import { OpenScadProject } from '../src/language/openScadProject'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 
 const wrap = (body: string, size = 40) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}mm" height="${size}mm" viewBox="0 0 ${size} ${size}">${body}</svg>`

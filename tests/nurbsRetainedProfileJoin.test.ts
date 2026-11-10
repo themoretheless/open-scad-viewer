@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 import {readSweepPatchViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {bezierNurbsCurve,inspectProgressiveRetainedProfileJoin,inspectProgressiveRetainedDecompositionJoins,inspectProgressiveRetainedDecompositionSmoothness} from '../src/services/nurbsConstructors'
+import {bezierNurbsCurve,inspectProgressiveRetainedProfileJoin,inspectProgressiveRetainedDecompositionJoins,inspectProgressiveRetainedDecompositionSmoothness} from '../src/kernel/nurbsConstructors'
 const profiles=[bezierNurbsCurve([[0,0,0],[1,0,0]]),bezierNurbsCurve([[1,0,0],[2,0,0]])]
 const path=bezierNurbsCurve([[0,0,0],[0,0,4]])
 const scale={degree:1,knots:[0,0,1,1],values:[1,1],weights:[1,1]}

@@ -1,11 +1,11 @@
 import {readFileSync} from 'node:fs'
 import {expect, it} from 'vitest'
 import {z} from 'zod/v4'
-import {compileRushGraphNurbs, rushGraphNurbsSchema} from '../src/services/rushGraphNurbs'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
-import {analyzeNurbsBrep, inspectNurbsBrep, type NurbsBrep} from '../src/services/geometry/brep'
-import {parseOpenSCAD} from '../src/services/openscadParser'
+import {compileRushGraphNurbs, rushGraphNurbsSchema} from '../src/language/rushGraphNurbs'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
+import {analyzeNurbsBrep, inspectNurbsBrep, type NurbsBrep} from '../src/kernel/geometry/brep'
+import {parseOpenSCAD} from '../src/language/openscadParser'
 import {ownNurbsLanguage} from '../src/mcp/rushGraphNurbsTools'
 
 const circle = (id: string, radius: number) => ({

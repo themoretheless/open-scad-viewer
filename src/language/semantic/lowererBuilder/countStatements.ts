@@ -38,18 +38,18 @@ import type {
   OpenScadLanguageProfile,
   Statement,
   Value,
-} from '../../../services/openscadCompiler'
+} from '../../openscadCompiler'
 
-import { OpenSCADParseError } from '../../../services/openscadErrors'
+import { OpenSCADParseError } from '../../openscadErrors'
 
 import {
   formatOpenScadValue,
   isOpenScadRange,
 } from '../openScadValueSemantics'
 
-import type { OpenScadStableScope } from '../../../services/openScadStableScope'
+import type { OpenScadStableScope } from '../../openScadStableScope'
 
-import { isFunctionValue } from '../../../services/openScadStableExpressionEval'
+import { isFunctionValue } from '../../openScadStableExpressionEval'
 import { SemanticShape } from './MAX_SHAPES'
 import { SemanticProgramBuilder } from './SemanticProgramBuilder'
 

@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest'
-import {brepSourceSnapshot} from '../src/services/geometry/brep/sourceSnapshot'
-import type {NurbsBrep} from '../src/services/geometry/brep'
+import {brepSourceSnapshot} from '../src/kernel/geometry/brep/sourceSnapshot'
+import type {NurbsBrep} from '../src/kernel/geometry/brep'
 
 describe('B-rep wire identity',()=>{
  const model:NurbsBrep={vertices:[],edges:[],loops:[],faces:[],shells:[],bodies:[],toleranceMm:1e-7,topologyIds:{vertices:[],edges:[],loops:[],faces:[],shells:[],bodies:[]}}

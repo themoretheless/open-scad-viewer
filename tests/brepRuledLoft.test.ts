@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest'
-import {createRuledBrepLoft,inspectNurbsBrep,analyzeNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createRuledBrepLoft,inspectNurbsBrep,analyzeNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 type P=[number,number,number]
 const base:P[]=[[-1,-1,0],[1,-1,0],[1,1,0],[-1,1,0]]
 const c=Math.SQRT1_2

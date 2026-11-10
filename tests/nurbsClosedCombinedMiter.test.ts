@@ -1,8 +1,8 @@
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {it,expect} from 'vitest'
-import {circleNurbsCurve,progressiveMiterNurbsProfiles,type NurbsVectorLaw} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {createProgressiveMiterBrepProfileBody} from '../src/services/geometry/brep'
+import {circleNurbsCurve,progressiveMiterNurbsProfiles,type NurbsVectorLaw} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
+import {createProgressiveMiterBrepProfileBody} from '../src/kernel/geometry/brep'
 const law=(value:number)=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})
 const points:[number,number,number][]=[[0,0,0],[10,0,0],[10,10,0],[0,10,0]]
 const frameAxis:NurbsVectorLaw={degree:1,knots:[0,0,.25,.5,.75,1,1],values:[[1,-1,0],[1,1,0],[-1,1,0],[-1,-1,0],[1,-1,0]],weights:[1,1,1,1,1]}
@@ -30,8 +30,8 @@ it('refuses endpoint mismatches and insufficient proof budget for the same combi
 })
 it('preserves closed combined mode through Rush and actual Solid admission',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const graph=compileRushFrontend(readFileSync('examples/rush/closed-miter-frame-guide-affine-hollow.r','utf8'))
  const node=graph.document.nodes.find(node=>node.op==='brep_progressive_miter_sweep')!

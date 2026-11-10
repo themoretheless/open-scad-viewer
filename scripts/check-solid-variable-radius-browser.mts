@@ -3,7 +3,7 @@ import {createServer} from 'node:http'
 import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
-import {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
 import {stringifyMeshJson} from '../src/services/meshJson'
 const directory=path.resolve(process.argv[2]??'/tmp/variable-radius-browser'),root=path.resolve('dist'),keyboard=process.argv.includes('--keyboard')
 await mkdir(directory,{recursive:true})

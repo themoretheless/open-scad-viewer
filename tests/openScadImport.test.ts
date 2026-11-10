@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { deflateRawSync, gzipSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 import differential from './fixtures/open-scad-import-2021.json'
-import { OpenScadProject, type OpenScadProjectFileInput } from '../src/services/openScadProject'
+import { OpenScadProject, type OpenScadProjectFileInput } from '../src/language/openScadProject'
 import {
   OPENSCAD_IMPORT_CAPABILITIES,
   OPENSCAD_IMPORT_MAX_PROJECT_ZIP_EXPANDED_BYTES,

@@ -1,4 +1,4 @@
-import {callNurbsRust} from '../../geometry/nurbs'
+import {callNurbsRust} from '../../../kernel/geometry/nurbs'
 
 /** Two-sided Hausdorff bound for the complete constructed boundary union.
  * Wall jets already include authored frames/guides/miter and stored rounding;

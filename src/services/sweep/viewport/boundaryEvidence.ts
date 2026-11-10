@@ -3,7 +3,7 @@ export {readSweepViewportEvidence,type SweepViewportEvidence} from './sweepViewp
 import {readNativeGeometryData} from '../../nativeGeometrySnapshot'
 import {readAnnularG2Evidence} from '../../annularG2Evidence'
 import type {NativeGeometryArtifact} from '../../../core/nativeGeometry'
-import {MAX_SWEEP_SEAM_WORK} from '../../nurbsSweepAudit'
+import {MAX_SWEEP_SEAM_WORK} from '../../../kernel/nurbsSweepAudit'
 /** Presentation of native constructor-owned body error; no Solid admission. */
 export function readSweepBodyBoundaryViewportEvidence(artifact:NativeGeometryArtifact|undefined){
  if(!artifact||artifact.kind!=='brep')return null

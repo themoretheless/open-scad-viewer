@@ -1,5 +1,5 @@
 import type {DirectDocument} from './directModeling'
-import {callNurbsRust} from './geometry/nurbs'
+import {callNurbsRust} from '../kernel/geometry/nurbs'
 import {validCurveOffsetDiagnostics,type CurveOffsetDiagnostics} from './curveOffsetDiagnostics'
 /** Inspect current ordered retained chords; historical offset summaries are ignored. */
 export function inspectCurrentCurveChain(document:DirectDocument,ids:string[],maxPairs=1000000):CurveOffsetDiagnostics {

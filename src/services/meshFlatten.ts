@@ -1,7 +1,7 @@
 import type { MeshData } from '../core/mesh';
 
-import { callGeometryRust } from './geometry/kernel';
-import { normalizePolygonMesh, type PolygonMesh } from './geometry/polygon';
+import { callGeometryRust } from '../kernel/geometry/kernel';
+import { normalizePolygonMesh, type PolygonMesh } from '../kernel/geometry/polygon';
 
 /** Rust owns placement, reflected winding and exact-coordinate welding.
  * Scene-owned typed views are encoded directly by valueBinaryCodec (wire-identical to the

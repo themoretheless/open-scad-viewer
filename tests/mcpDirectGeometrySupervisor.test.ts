@@ -11,7 +11,7 @@ import {
   type GeometryBuildPurpose,
   type GeometryEngineRegistrySnapshot,
 } from '../src/core/geometryExecution'
-import { OpenSCADParseError } from '../src/services/openscadErrors'
+import { OpenSCADParseError } from '../src/language/openscadErrors'
 import {
   DIRECT_GEOMETRY_IDENTITY,
   DIRECT_GEOMETRY_PROTOCOL_VERSION,

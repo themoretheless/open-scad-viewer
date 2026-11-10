@@ -11,7 +11,7 @@ import {
   GeometryProviderContractError,
   GeometryManifestRevocationRegistry,
   type GeometryBackendProvider,
-} from '../src/services/geometryBuildEngine'
+} from '../src/kernel/geometryBuildEngine'
 import {
   computeGeometryManifestDigest,
   GEOMETRY_MANIFEST_ARCHIVE,

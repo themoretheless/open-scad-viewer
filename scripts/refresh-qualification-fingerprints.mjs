@@ -20,9 +20,9 @@ const RUNTIME_EVIDENCE_PATHS = [
   'docs/qualification/runtime-direct-api-a27ee2-2026-11-09/report.json',
 ]
 const MODULE_DELIVERY_PATHS = [
-  'src/services/geometry/kernel.ts',
-  'src/services/geometry/kernelCompilation.ts',
-  'src/services/geometry/kernelCompilationRequired.ts',
+  'src/kernel/geometry/kernel.ts',
+  'src/kernel/geometry/kernelCompilation.ts',
+  'src/kernel/geometry/kernelCompilationRequired.ts',
   'src/services/wasmArtifact.ts',
   'vite.qualification.config.ts',
 ]

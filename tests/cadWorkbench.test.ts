@@ -1,10 +1,10 @@
 import {describe,it,expect} from 'vitest'
-import {cadOperation,bounds,type CadOptions} from '../src/services/cadWorkbench'
+import {cadOperation,bounds,type CadOptions} from '../src/kernel/cadWorkbench'
 import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
-import {inspectPolygonMesh} from '../src/services/geometry/polygon'
-import {inspectCadPairs} from '../src/services/cadInspection'
-import {cadDrawing} from '../src/services/cadDrawing'
-import {createBrepBox,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep} from '../src/services/geometry/brep'
+import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
+import {inspectCadPairs} from '../src/kernel/cadInspection'
+import {cadDrawing} from '../src/kernel/cadDrawing'
+import {createBrepBox,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep} from '../src/kernel/geometry/brep'
 const box=(id='0',x=0)=>extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[x,0],[x+10,0],[x+10,10],[x,10]]},10,id)
 const options:CadOptions={action:'union',ids:['0'],sketches:[],axis:[0,0,1],origin:[0,0,0],amount:5,count:3,width:2,height:1,depth:12,pitch:1,secondary:4,mode:'plain',pathId:'',profileIds:[]}
 const doc=(...bodies:ReturnType<typeof box>[]):DirectDocument=>({version:1,sketches:[],bodies})
@@ -103,10 +103,10 @@ describe('CAD workbench geometry',()=>{
  it('produces vector drawings with dimensions and section',()=>{const d=cadDrawing([box()],5);expect(d.svg).toContain('10.00 mm');expect(d.svg).toContain('SECTION Z=5.00');expect(d.pdf).toContain('xref\n0 6');expect(d.pdf).toContain('/Type /Page')})
 })
 
-it('round-trips faceted STEP as closed solids and rejects analytic files',async()=>{const {exportFacetedStep,importFacetedStep}=await import('../src/services/cadStep');const text=exportFacetedStep([box(),box('1',20)]),b=importFacetedStep(text);expect(b).toHaveLength(2);expect(volume(doc(...b))).toBeCloseTo(2000);expect(()=>importFacetedStep(text.replace('FACE_SURFACE','ADVANCED_FACE'))).toThrow('supports planar')})
+it('round-trips faceted STEP as closed solids and rejects analytic files',async()=>{const {exportFacetedStep,importFacetedStep}=await import('../src/kernel/cadStep');const text=exportFacetedStep([box(),box('1',20)]),b=importFacetedStep(text);expect(b).toHaveLength(2);expect(volume(doc(...b))).toBeCloseTo(2000);expect(()=>importFacetedStep(text.replace('FACE_SURFACE','ADVANCED_FACE'))).toThrow('supports planar')})
 it('lofts sections and sweeps an open path',()=>{const sketches=[{id:'a',name:'a',closed:true,points:[[0,0],[4,0],[4,4],[0,4]] as [number,number][]},{id:'b',name:'b',closed:true,points:[[0,0],[2,0],[2,2],[0,2]] as [number,number][],plane:{origin:[0,0,10] as [number,number,number],u:[1,0,0] as [number,number,number],v:[0,1,0] as [number,number,number]}},{id:'path',name:'path',closed:false,points:[[0,0],[0,10],[10,10]] as [number,number][]}];expect(volume(cadOperation(doc(),{...options,action:'loft',profileIds:['a','b'],sketches}))).toBeGreaterThan(0);expect(volume(cadOperation(doc(),{...options,action:'sweep',profileIds:['a'],pathId:'path',sketches}))).toBeGreaterThan(0)})
 it('persists bounded joint positions and applies absolute slider travel after source rebuild',async()=>{
- const {jointOptions,saveCadJoint}=await import('../src/services/cadJoints'),{patchMainSource}=await import('../src/services/mainSourceEditing'),{parseOpenSCAD}=await import('../src/services/openscadParser'),{sceneBody}=await import('../src/services/mainModeling')
+ const {jointOptions,saveCadJoint}=await import('../src/kernel/cadJoints'),{patchMainSource}=await import('../src/services/mainSourceEditing'),{parseOpenSCAD}=await import('../src/language/openscadParser'),{sceneBody}=await import('../src/services/mainModeling')
  const source='cube(10);translate([20,0,0]) cube(10);',meshes=(await parseOpenSCAD(source)).meshes,before=doc(...meshes.map(sceneBody)),o={...options,action:'joint' as const,ids:['0','1'],mode:'slider',amount:5},d=cadOperation(before,jointOptions(source,before.bodies,o,-10,10)),saved=saveCadJoint(patchMainSource(source,meshes,d),d.bodies,o,-10,10),rebuilt=(await parseOpenSCAD(saved)).meshes.map(sceneBody),next=jointOptions(saved,rebuilt,{...o,amount:8},-10,10)
  expect(next.amount).toBe(3);expect(()=>jointOptions(saved,rebuilt,{...o,amount:11},-10,10)).toThrow('limits');expect(bounds(cadOperation(doc(...rebuilt),next).bodies).max[2]).toBe(18)
 })
@@ -165,7 +165,7 @@ it('drafts a rotated translated prism in its own axis frame',()=>{
  expect(()=>cadOperation(input,{...options,action:'draft',axis:[0,0,1]})).toThrow('prism')
 })
 it('samples polyline arclength in native batches with clamping and repeated vertices',async()=>{
- const {pathPoint,pathPoints}=await import('../src/services/cadWorkbench')
+ const {pathPoint,pathPoints}=await import('../src/kernel/cadWorkbench')
  const path=[[0,0,0],[0,0,0],[3,0,0],[3,4,0]],before=JSON.stringify(path)
  const fractions=[-1,0,3/7,.5,1,2]
  const expected=[[0,0,0],[0,0,0],[3,0,0],[3,.5,0],[3,4,0],[3,4,0]]
@@ -175,7 +175,7 @@ it('samples polyline arclength in native batches with clamping and repeated vert
  expect(JSON.stringify(path)).toBe(before)
 })
 it('rejects invalid path sampling atomically and recovers on a valid path',async()=>{
- const {pathPoints}=await import('../src/services/cadWorkbench')
+ const {pathPoints}=await import('../src/kernel/cadWorkbench')
  for(const path of [[],[[0,0]],[[0,0],[0,0]],[[0,0],[1,2,3]],[[0,0],[Infinity,1]]])expect(()=>pathPoints(path,[.5])).toThrow()
  expect(()=>pathPoints([[0,0],[1,0]],[0,NaN])).toThrow()
  expect(()=>pathPoints([[0,0],[1,0]],Array(4097).fill(0))).toThrow('4096')
@@ -198,7 +198,7 @@ it('does not preserve a stale B-rep after a mesh-only threading request',()=>{
  expect(JSON.stringify(input)).toBe(before)
 })
 it('applies native mesh threading in either axis frame and preserves body metadata',async()=>{
- const {buildRushGraphThread}=await import('../src/services/rushGraphThreads')
+ const {buildRushGraphThread}=await import('../src/language/rushGraphThreads')
  const cutter=buildRushGraphThread({diameter:4,pitch:1,length:2,internal:false,wall:1,clearance:0,starts:1,left_handed:false,segments_per_turn:16})
  const removed=inspectPolygonMesh(cutter.mesh).signedVolumeMm3
  const input=doc(box()),before=JSON.stringify(input)

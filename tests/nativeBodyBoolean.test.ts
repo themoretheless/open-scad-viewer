@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
-import {cadOperation,type CadOptions} from '../src/services/cadWorkbench'
-import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep,createBrepTorus,transformNurbsBrep} from '../src/services/geometry/brep'
-import {inspectPolygonMesh} from '../src/services/geometry/polygon'
+import {cadOperation,type CadOptions} from '../src/kernel/cadWorkbench'
+import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep,createBrepTorus,transformNurbsBrep} from '../src/kernel/geometry/brep'
+import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 const options:CadOptions={action:'union',ids:['a','b'],sketches:[],axis:[0,0,1],origin:[0,0,0],amount:0,count:3,width:1,height:1,depth:1,pitch:1,secondary:1,mode:'min',pathId:'',profileIds:[]}
 const body=(id:string,min:number[],max:number[])=>{const brep=createBrepBox(min,max);return {id,name:id,brep,mesh:tessellateNurbsBrep(brep,1)}}
 const stock=()=>({version:1 as const,sketches:[],bodies:[body('a',[0,0,0],[10,10,10]),body('b',[5,0,0],[15,10,10]),body('unselected',[30,0,0],[31,1,1])]})
@@ -46,7 +46,7 @@ it('refuses invalid later operands, mixed representations and unsupported curved
  expect(tolerant.bodies).toHaveLength(1);expect(tolerant.bodies[0].brep.toleranceMm).toBeGreaterThan(1e-6)
 })
 it('retains rational cylindrical walls after an admitted curved Boolean',async()=>{
- const {createBrepCylinder}=await import('../src/services/geometry/brep')
+ const {createBrepCylinder}=await import('../src/kernel/geometry/brep')
  const bodies=[4,2].map((radius,i)=>{const brep=createBrepCylinder(radius,5);return {id:i?'b':'a',name:'Cylinder',brep,mesh:tessellateNurbsBrep(brep,4)}})
  const result=cadOperation({version:1,sketches:[],bodies},{...options,action:'difference'}).bodies[0]
  expect(analyzeNurbsBrep(result.brep!).signedVolumeMm3).toBeCloseTo(60*Math.PI,6)

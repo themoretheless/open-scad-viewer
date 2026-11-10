@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { importDirectStepV3 } from '../src/services/cadNurbsStep'
+import { importDirectStepV3 } from '../src/kernel/cadNurbsStep'
 
 describe('step-interchange/3 direct product seam', () => {
   it('imports the self-authored analytic topology fixture directly', () => {

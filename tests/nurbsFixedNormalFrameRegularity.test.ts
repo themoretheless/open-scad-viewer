@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {inspectFixedNormalFrameRegularity} from '../src/services/nurbsFixedNormalFrameRegularity'
+import {bezierNurbsCurve,circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {inspectFixedNormalFrameRegularity} from '../src/kernel/nurbsFixedNormalFrameRegularity'
 
 const zero=()=>bezierNurbsCurve([[0,0,0],[0,0,0]])
 

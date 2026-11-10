@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
-import {evaluateNativeOpenScadGeometry} from '../src/services/openscadNativeGeometry'
-import {inspectPolygonMesh} from '../src/services/geometry/polygon'
-import {parseOpenSCAD} from '../src/services/openscadParser'
-import {callGeometryRust} from '../src/services/geometry/kernel'
+import {evaluateNativeOpenScadGeometry} from '../src/language/openscadNativeGeometry'
+import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
+import {parseOpenSCAD} from '../src/language/openscadParser'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
 it('executes evaluated variables, user modules and loops entirely through the Rust plan',()=>{
  const result=evaluateNativeOpenScadGeometry('w=2;module part(x){translate([x,0,0])cube([w,3,4],center=true);}for(x=[1,5])part(x);')
  expect(result.ok).toBe(true);if(!result.ok)throw Error('Native evaluation failed')

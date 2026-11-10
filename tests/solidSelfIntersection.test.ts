@@ -2,7 +2,7 @@ import {normalizeRefinedNativeEvidence} from './helpers/refinedNativeEvidence'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {MainSolidWorkerClient} from '../src/services/mainSolidWorkerClient'
-import {selfIntersectionExpectation,validSelfIntersection} from '../src/services/solidSelfIntersection'
+import {selfIntersectionExpectation,validSelfIntersection} from '../src/kernel/solidSelfIntersection'
 const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/surface-contact-native/face-contact-api-fixtures.json',import.meta.url),'utf8')).cases[0]
 const {model,toleranceUv,op,...limits}=fixture.request
 const expectation=selfIntersectionExpectation(model,toleranceUv,limits,6)
@@ -96,7 +96,7 @@ it('terminates obsolete work and validates the current worker reply',async()=>{
 })
 
 it('validates actual WASM reports for full coverage and each exhausted budget',async()=>{
- const {inspectSelfIntersection}=await import('../src/services/solidSelfIntersection')
+ const {inspectSelfIntersection}=await import('../src/kernel/solidSelfIntersection')
  const before=JSON.stringify(model)
  for(const [maxSpans,maxPairs] of [[6,100],[1,100],[6,1]]){
   const l={...limits,maxPairs},r=inspectSelfIntersection(model,toleranceUv,l,maxSpans)
@@ -139,7 +139,7 @@ it('accepts actual native cylinder linear-projection reports without certifying 
 it('qualifies actual WASM complete cylinder face and pair proofs',async()=>{
  const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/curved-volume-2026-10-01/complete-cylinder-native.json',import.meta.url),'utf8'))
  const {model,toleranceUv,maxSpans,op,...limits}=fixture.request
- const {inspectSelfIntersection}=await import('../src/services/solidSelfIntersection')
+ const {inspectSelfIntersection}=await import('../src/kernel/solidSelfIntersection')
  const before=JSON.stringify(model),r=inspectSelfIntersection(model,toleranceUv,limits,maxSpans)
  expect(validSelfIntersection(selfIntersectionExpectation(model,toleranceUv,limits,maxSpans),r)).toBe(true)
  expect(r.allFacesInjective).toBe(true);expect(r.spans).toBe(102)
@@ -175,7 +175,7 @@ it('checks native perspective face proofs against source coefficients and comple
 })
 
 it('authors actual WASM sphere equators with matching rational edge and trim traversals',async()=>{
- const {callGeometryRust}=await import('../src/services/geometry/kernel')
+ const {callGeometryRust}=await import('../src/kernel/geometry/kernel')
  const model=callGeometryRust<any>('brep_nurbs_sphere',{radius:3})
  expect(model.faces).toHaveLength(8);expect(model.edges).toHaveLength(12)
  for(const face of model.faces){
@@ -189,7 +189,7 @@ it('authors actual WASM sphere equators with matching rational edge and trim tra
 it('qualifies actual WASM perspective face proofs and exhausted aggregate budgets',async()=>{
  const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/curved-volume-2026-10-01/projective-face-native.json',import.meta.url),'utf8'))
  const {model,toleranceUv,maxSpans,op,...limits}=fixture.request
- const {inspectSelfIntersection}=await import('../src/services/solidSelfIntersection')
+ const {inspectSelfIntersection}=await import('../src/kernel/solidSelfIntersection')
  const before=JSON.stringify(model)
  const complete=inspectSelfIntersection(model,toleranceUv,limits,maxSpans)
  expect(complete.spans).toBe(136)
@@ -212,7 +212,7 @@ it('qualifies actual WASM perspective face proofs and exhausted aggregate budget
 it('qualifies owned quotient charts in actual WASM and keeps exhausted coverage explicit',async()=>{
  const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/pole-quotient/combined-native.json',import.meta.url),'utf8'))
  const {model,toleranceUv,maxSpans,op,...limits}=fixture.request
- const {inspectSelfIntersection}=await import('../src/services/solidSelfIntersection')
+ const {inspectSelfIntersection}=await import('../src/kernel/solidSelfIntersection')
  const before=JSON.stringify(model)
  for(const budget of [maxSpans,600,256,255]){
   const r=inspectSelfIntersection(model,toleranceUv,limits,budget)
@@ -281,7 +281,7 @@ it('cancels an audited request when the audit mode changes and ignores its late 
 
 it('transports complete variable-radius annular certificates from the rebuilt WASM',async()=>{
  const {gunzipSync}=await import('node:zlib')
- const {inspectSelfIntersection}=await import('../src/services/solidSelfIntersection')
+ const {inspectSelfIntersection}=await import('../src/kernel/solidSelfIntersection')
  const limits={maxPairs:1000,maxCells:1000000,maxDomainCells:8000000,cellsPerPair:4096,domainCellsPerPair:100000,maxBoxes:64}
  const audit={exactWork:1000000,trimPairs:10000,trimCells:10000,trimDomainCells:1000000}
  for(let i=0;i<4;i++){

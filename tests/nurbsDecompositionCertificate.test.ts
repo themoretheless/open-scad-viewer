@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {decomposeNurbsCurve,inspectNurbsDecomposition,inspectNurbsDecompositionBatch,type NurbsCurve} from '../src/services/nurbsCurve'
+import {decomposeNurbsCurve,inspectNurbsDecomposition,inspectNurbsDecompositionBatch,type NurbsCurve} from '../src/kernel/nurbsCurve'
 it('transports original rational span bounds, budget refusal and independent translation',()=>{
  const curve:NurbsCurve={degree:2,knots:[0,0,0,.4,1,1,1],controlPoints:[[0,0,0],[.3,.8,0],[.7,-.2,0],[1,0,0]],weights:[1,.75,1.25,2],periodic:false}
  const before=structuredClone(curve),parts=decomposeNurbsCurve(curve)

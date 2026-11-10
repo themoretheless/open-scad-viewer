@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 
 it('refuses and diagnoses an authored continuous bound despite zero sampled error through Rush and async previews',async()=>{
  const source=readFileSync('examples/rush/authored-progressive-sweep.r','utf8')

@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {checkedVariablePipeNurbsSurface,lineNurbsCurve,bezierNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {checkedVariablePipeNurbsSurface,lineNurbsCurve,bezierNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 it('preserves the linear cone radius between authored stations',()=>{
  const result=checkedVariablePipeNurbsSurface(lineNurbsCurve([0,0,0],[0,0,10]),lineNurbsCurve([1,0,0],[3,0,0]),[1,0,0],8,1e-8)
  expect(result.report).toMatchObject({accepted:true,continuousBound:false})

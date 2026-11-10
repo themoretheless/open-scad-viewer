@@ -2,8 +2,8 @@ import {describe,it,expect,vi} from 'vitest'
 import {deflateRawSync,constants} from 'node:zlib'
 import {encodeBinary,decodeBinary} from '../src/services/valueBinaryCodec'
 import {unpackWasm} from '../src/services/wasmPacking'
-import {callGeometryRust,createRustSurfaceEvaluator} from '../src/services/geometry/kernel'
-import {prepareGraphRust} from '../src/services/languages/kernel'
+import {callGeometryRust,createRustSurfaceEvaluator} from '../src/kernel/geometry/kernel'
+import {prepareGraphRust} from '../src/language/languages/kernel'
 
 describe('dependency-free WASM boundary',()=>{
  it('preserves safe signed/unsigned 64-bit boundaries and refuses unsafe integers',()=>{

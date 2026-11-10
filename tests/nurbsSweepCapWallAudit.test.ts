@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
-import {inspectSweepCapWalls,inspectSweepCoedgeAgreement,inspectSweepCoedgeExact,inspectSweepBoundaryCoverage} from '../src/services/nurbsSweepAudit'
-import {inspectSweepCapContacts,inspectNativeSweepCapContacts} from '../src/services/nurbsSweepCapContacts'
-import {createRationalBrepSectionLoft} from '../src/services/geometry/brep'
-import {circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
+import {inspectSweepCapWalls,inspectSweepCoedgeAgreement,inspectSweepCoedgeExact,inspectSweepBoundaryCoverage} from '../src/kernel/nurbsSweepAudit'
+import {inspectSweepCapContacts,inspectNativeSweepCapContacts} from '../src/kernel/nurbsSweepCapContacts'
+import {createRationalBrepSectionLoft} from '../src/kernel/geometry/brep'
+import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
 const loops=(z:number)=>[[circleNurbsCurve([0,0,z],[0,0,1],.5)],[reverseNurbsCurve(circleNurbsCurve([0,0,z],[0,0,1],.2))]]
 it('excludes all stored hollow-loft wall interiors against each coordinate-plane cap',()=>{
  const model=createRationalBrepSectionLoft([loops(0),loops(5),loops(10)]),before=structuredClone(model)

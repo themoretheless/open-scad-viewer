@@ -1,4 +1,4 @@
-import { installGeometryKernelFromTrustedHost } from '../services/geometry/kernel'
+import { installGeometryKernelFromTrustedHost } from '../kernel/geometry/kernel'
 import { isMcpManifoldPlanQualificationTerminal } from '../services/manifoldPlanQualificationProtocol'
 import { manifoldPlanQualificationWorkerRuntime } from '../services/manifoldPlanQualificationWorkerRuntime'
 

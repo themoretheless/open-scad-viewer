@@ -1,4 +1,4 @@
-import { callGeometryRust, warmGeometryKernel } from './geometry/kernel'
+import { callGeometryRust, warmGeometryKernel } from '../kernel/geometry/kernel'
 
 /** Shared browser/worker/Node SVG boundary. All document interpretation stays in Rust. */
 import { SVG_MAX_BYTES, SVG_MAX_FONT_BYTES, SVG_MAX_TOTAL_FONT_BYTES, SVG_MAX_FONTS } from './svgLimits'

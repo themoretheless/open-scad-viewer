@@ -1,10 +1,10 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,guidedLoftNurbsCurves,controlTangentLoftNurbsCurves} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
-import {compileRushGraphNurbs} from '../src/services/rushGraphNurbsCompiler'
+import {bezierNurbsCurve,guidedLoftNurbsCurves,controlTangentLoftNurbsCurves} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
+import {compileRushGraphNurbs} from '../src/language/rushGraphNurbsCompiler'
 import {importMeshFile} from '../src/exchange/meshImport'
 
 it('lowers guide references and checks tangent units through Rush',()=>{
@@ -80,7 +80,7 @@ it('preserves base boundaries with multiple interior guides through WASM',()=>{
 })
 
 it('imports a closed loft shared seam through the published WASM STEP route',async()=>{
- const {importDirectStepV9}=await import('../src/services/cadNurbsStep')
+ const {importDirectStepV9}=await import('../src/kernel/cadNurbsStep')
  const imported=importDirectStepV9(readFileSync('tests/fixtures/loft/closed-shared-seam.step','utf8'))
  expect(imported.model.edges).toHaveLength(3)
  expect(imported.model.bodies).toHaveLength(0)

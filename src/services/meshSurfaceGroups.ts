@@ -1,5 +1,5 @@
 import type {MeshData} from '../core/mesh'
-import {surfaceGroupsInKernel} from './geometry/meshAnalysis'
+import {surfaceGroupsInKernel} from '../kernel/geometry/meshAnalysis'
 import {createSelectionSurfacePublisher} from './selectionSurfacePublisher'
 /** Connected smooth patches inferred by the native topology kernel. */
 export function inferSurfaceIds(vertices:Float32Array,indices:Uint32Array,angleDegrees=30):Uint32Array {

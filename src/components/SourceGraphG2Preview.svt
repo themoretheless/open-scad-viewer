@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import {computed,onUnmounted,ref,shallowRef,toRaw,watch} from 'svet'
-import type {NurbsSurface} from '../services/nurbsSurface'
-import {createNurbsSurfaceEvaluator,extractNurbsSurfaceIsocurvePoints} from '../services/nurbsSurface'
+import type {NurbsSurface} from '../kernel/nurbsSurface'
+import {createNurbsSurfaceEvaluator,extractNurbsSurfaceIsocurvePoints} from '../kernel/nurbsSurface'
 import type {SourceGraphPreview} from '../services/sourceGraphG2Preview'
-import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
+import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
 import CadQuantityInput from './CadQuantityInput.svt'
 type Point=[number,number,number]
 const props=defineProps<{surfaces:[NurbsSurface,NurbsSurface];active:boolean;ru:boolean}>()

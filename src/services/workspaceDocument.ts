@@ -1,4 +1,4 @@
-import { isRushFrontend } from './rushFrontendDetect'
+import { isRushFrontend } from '../language/rushFrontendDetect'
 import { parseParameterPresets, type ParameterPreset } from './parameterPresets'
 
 /**

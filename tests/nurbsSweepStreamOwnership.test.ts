@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,circleNurbsCurve,progressiveMiterNurbsProfiles,progressiveSweepNurbsProfiles,streamProgressiveMiterNurbsProfiles,streamProgressiveNurbsProfiles,type NurbsScaleLaw} from '../src/services/nurbsConstructors'
-import {createProgressiveMiterBrepProfileBody,createProgressiveBrepProfileBody,streamProgressiveMiterBrepProfileBody,streamProgressiveBrepProfileBody} from '../src/services/geometry/brep'
+import {bezierNurbsCurve,circleNurbsCurve,progressiveMiterNurbsProfiles,progressiveSweepNurbsProfiles,streamProgressiveMiterNurbsProfiles,streamProgressiveNurbsProfiles,type NurbsScaleLaw} from '../src/kernel/nurbsConstructors'
+import {createProgressiveMiterBrepProfileBody,createProgressiveBrepProfileBody,streamProgressiveMiterBrepProfileBody,streamProgressiveBrepProfileBody} from '../src/kernel/geometry/brep'
 const law=(a:number,b=a):NurbsScaleLaw=>({degree:1,knots:[0,0,1,1],values:[a,b],weights:[1,1]})
 const line=()=>bezierNurbsCurve([[.1,0,0],[.2,0,0]])
 const points=():[number,number,number][]=>[[0,0,0],[0,0,10]]

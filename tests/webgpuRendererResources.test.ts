@@ -4,8 +4,8 @@ import type { MeshData } from '../src/core/mesh'
 import { geometryAssetId } from '../src/core/scene'
 import { WebGPURenderer } from '../src/render/webgpuRenderer'
 import * as sceneBounds from '../src/services/sceneAabbIndex'
-import * as meshAnalysis from '../src/services/geometry/meshAnalysis'
-import {callGeometryRust} from '../src/services/geometry/kernel'
+import * as meshAnalysis from '../src/kernel/geometry/meshAnalysis'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
 
 class FakeBuffer {
   destroyCalls = 0

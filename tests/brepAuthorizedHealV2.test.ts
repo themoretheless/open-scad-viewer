@@ -3,8 +3,8 @@ import {
   authorizedHealNurbsBrep,
   createBrepBox,
   type AuthorizedHealOperation,
-} from '../src/services/geometry/brep'
-import {callGeometryRust} from '../src/services/geometry/kernel'
+} from '../src/kernel/geometry/brep'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
 
 describe('authorized heal v2 WASM product seam',()=>{
  it('executes a nonzero native endpoint snap without mutating its source',()=>{

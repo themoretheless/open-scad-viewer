@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { AbortedError, OpenSCADParseError } from '../src/services/openscadParser'
+import { AbortedError, OpenSCADParseError } from '../src/language/openscadParser'
 import {
   GeometryBuildEngine,
   GeometryCapabilityUnavailableError,
   GeometryEngineUnavailableError,
   GeometryLanguageContractError,
-} from '../src/services/geometryBuildEngine'
+} from '../src/kernel/geometryBuildEngine'
 import {
   ArtifactSizeError,
   CustomizerValueError,
@@ -14,8 +14,8 @@ import {
   InvalidGeometryError,
 } from '../src/mcp/geometryService'
 import { CatalogQuotaError, ModelRevisionConflictError } from '../src/mcp/modelStore'
-import { OpenScadProjectError } from '../src/services/openScadProject'
-import { OpenScadProjectCompileError } from '../src/services/openScadProjectCompiler'
+import { OpenScadProjectError } from '../src/language/openScadProject'
+import { OpenScadProjectCompileError } from '../src/language/openScadProjectCompiler'
 import {
   buildDiagnostic,
   ModelNotFoundError,

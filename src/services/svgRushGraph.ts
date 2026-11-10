@@ -1,6 +1,6 @@
-import { defaultGeometryKernel } from './cadGeometryKernel'
-import { compileRushGraph } from './rushGraphCompiler'
-import type { RushGraph, RushGraphCompilation } from './rushGraph'
+import { defaultGeometryKernel } from '../kernel/cadGeometryKernel'
+import { compileRushGraph } from '../language/rushGraphCompiler'
+import type { RushGraph, RushGraphCompilation } from '../language/rushGraph'
 import { contoursExtrusion, type SvgContours } from './svgGeometry'
 import { MAX_WORKSPACE_SOURCE_LENGTH } from './workspaceDocument'
 

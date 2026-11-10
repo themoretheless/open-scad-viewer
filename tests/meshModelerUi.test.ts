@@ -7,7 +7,7 @@ const downloadBytes=vi.hoisted(()=>vi.fn())
 vi.mock('../src/services/downloadArtifact',()=>({downloadBytes}))
 const repairControl=vi.hoisted(()=>({defer:false,events:[] as {phase:string;completed:number;total:number}[],resolve:(value?:unknown)=>{},reject:(reason?:unknown)=>{},cancel:vi.fn(),dispose:vi.fn()}))
 const manifoldControl=vi.hoisted(()=>({defer:false,events:[] as {phase:string;completed:number;total:number}[],resolve:(value?:unknown)=>{},reject:(reason?:unknown)=>{},cancel:vi.fn(),dispose:vi.fn()}))
-vi.mock('../src/services/solidPreviewWorker',async()=>{
+vi.mock('../src/kernel/solidPreviewWorker',async()=>{
  const {booleanMeshObjectsDetailed,repairMeshObject}=await import('../src/services/meshEditing')
  const {importMeshFile}=await import('../src/exchange/meshImport')
  const {exportPolygonMesh}=await import('../src/services/meshConvert')
@@ -38,8 +38,8 @@ vi.mock('../src/services/solidPreviewWorker',async()=>{
 afterEach(()=>{downloadBytes.mockClear();for(const control of [repairControl,manifoldControl]){control.defer=false;control.events=[];control.resolve=()=>{};control.reject=()=>{};control.cancel.mockClear();control.dispose.mockClear()}})
 
 const gate = vi.hoisted(()=>({resolve:()=>{}, promise:Promise.resolve(),ready:false}))
-vi.mock('../src/services/geometry/kernel', async importOriginal=>({
-  ...await importOriginal<typeof import('../src/services/geometry/kernel')>(),
+vi.mock('../src/kernel/geometry/kernel', async importOriginal=>({
+  ...await importOriginal<typeof import('../src/kernel/geometry/kernel')>(),
   isGeometryKernelReady:()=>false,
   warmGeometryKernel:()=>gate.promise,
 }))

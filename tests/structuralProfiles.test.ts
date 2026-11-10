@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest'
-import {GeometryKernelError} from '../src/services/geometry/kernel'
+import {GeometryKernelError} from '../src/kernel/geometry/kernel'
 import {listStructuralProfiles, lookupStructuralProfile} from '../src/services/structuralProfiles'
 
 it('computes IPE 200 properties within the fillet allowance through real WASM', () => {

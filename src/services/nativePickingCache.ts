@@ -1,6 +1,6 @@
 /** Renderer-owned native snapshots, keyed by the shared GPU vertex buffer. */
-import {callGeometryRust,GeometryKernelError} from './geometry/kernel'
-import {createPickingSnapshotInKernel} from './geometry/meshAnalysis'
+import {callGeometryRust,GeometryKernelError} from '../kernel/geometry/kernel'
+import {createPickingSnapshotInKernel} from '../kernel/geometry/meshAnalysis'
 import type {BvhRay,MeshBvhHit,RaycastMeshBvhOptions} from './meshBvh'
 
 export class NativePickingCache {

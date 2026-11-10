@@ -1,9 +1,9 @@
 import {describe,expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {createBrepBox} from '../src/services/geometry/brep'
-import {exportDirectStepV5,importDirectStepV5} from '../src/services/cadNurbsStep'
-import {exportRetainedStepForWorkbench,importStepForWorkbench,inspectStepRoute,retainedStepSession} from '../src/services/cadStepRouting'
-import {cadOperation,type CadOptions} from '../src/services/cadWorkbench'
+import {createBrepBox} from '../src/kernel/geometry/brep'
+import {exportDirectStepV5,importDirectStepV5} from '../src/kernel/cadNurbsStep'
+import {exportRetainedStepForWorkbench,importStepForWorkbench,inspectStepRoute,retainedStepSession} from '../src/kernel/cadStepRouting'
+import {cadOperation,type CadOptions} from '../src/kernel/cadWorkbench'
 
 const values=new Map<string,string>()
 Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{

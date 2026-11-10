@@ -1,6 +1,6 @@
-import type { CallNode } from '../../../services/openscadCompiler'
+import type { CallNode } from '../../openscadCompiler'
 import type { EvalContext, SemanticShape } from '../openscadSemanticLowerer'
-import { evaluationError } from '../../../services/openScadStableExpressionEval'
+import { evaluationError } from '../../openScadStableExpressionEval'
 import { arg } from './evalExpression'
 import { frameChildren, invoke, nodeValueType } from './evalPreparedNodes'
 

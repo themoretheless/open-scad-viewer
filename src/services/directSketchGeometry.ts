@@ -1,5 +1,5 @@
 import {transformRetainedSketch,offsetRetainedSketch,requirePolylineSketch} from './retainedSketchProfile'
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import type { DirectSketch, Point2 } from './directModeling'
 import { dot3, cross3, unit3, type Vec3 } from './math3d'
 export { dot3, cross3, unit3, type Vec3 }

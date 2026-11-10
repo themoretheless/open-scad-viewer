@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
 import { stringifyMeshJson } from '../services/meshJson'
 import { fileURLToPath } from 'node:url';
-import { compileRushGraphNurbs } from '../services/rushGraphNurbs';
-import type { OwnNurbsRequest, buildOwnNurbs } from '../services/rushGraphNurbsKernel';
+import { compileRushGraphNurbs } from '../language/rushGraphNurbs';
+import type { OwnNurbsRequest, buildOwnNurbs } from '../language/rushGraphNurbsKernel';
 export type { OwnNurbsRequest };
 export type OwnNurbsResult = ReturnType<typeof buildOwnNurbs> | {
     ok: false;

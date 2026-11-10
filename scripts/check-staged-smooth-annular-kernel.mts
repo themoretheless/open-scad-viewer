@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import {performance} from 'node:perf_hooks'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
 import {writeLinear,decodePacked} from '../src/services/wasmHost'
-import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 
 const [root,output,nativeRoot]=process.argv.slice(2)
 assert.ok(nativeRoot,'Rust original-source capture root required')

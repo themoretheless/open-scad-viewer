@@ -7,7 +7,7 @@ import { MAX_INDEPENDENT_ARTIFACT_CACHE_BYTES, MAX_INDEPENDENT_ARTIFACT_CACHE_EN
 import { MAX_MODEL_SOURCE_LENGTH } from '../../modelStore'
 import { ResourceNotFoundError, ResourceTemplate, SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/server'
 import { OPENSCAD_2021_01_CONTRACT } from '../../../core/openScad2021Contract'
-import { OPENSCAD_PROJECT_MAX_BLOB_BYTES, OPENSCAD_PROJECT_MAX_FILES, OPENSCAD_PROJECT_MAX_SOURCE_BYTES, OPENSCAD_PROJECT_MAX_TOTAL_BYTES } from '../../../services/openScadProject'
+import { OPENSCAD_PROJECT_MAX_BLOB_BYTES, OPENSCAD_PROJECT_MAX_FILES, OPENSCAD_PROJECT_MAX_SOURCE_BYTES, OPENSCAD_PROJECT_MAX_TOTAL_BYTES } from '../../../language/openScadProject'
 import { engineRegistryToWire, officialCapabilitiesToWire, resourceVariable, sha256 } from '../officialToolInputSchema'
 import { canonicalJson, immutableEngineManifestToWire, staticEngineManifestToWire } from '../../engineManifest'
 import type { McpServerContext } from './context'

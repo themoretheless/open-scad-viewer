@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
 import {DirectSolidCapabilityError,pushPullFace,shellSolid,solidTopology} from '../src/services/directSolidTools'
-import {createBrepBox,createBrepSphere,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/services/geometry/brep'
-import {inspectPolygonMesh} from '../src/services/geometry/polygon'
+import {createBrepBox,createBrepSphere,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
+import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 const stock=()=>{const brep=createBrepBox([0,0,0],[10,10,10]);return {id:'b',name:'Stock',brep,mesh:tessellateNurbsBrep(brep,1)}}
 const top=(b:ReturnType<typeof stock>)=>solidTopology(b.mesh).faces.findIndex(f=>f.normal[2]>.99)
 const check=(b:ReturnType<typeof pushPullFace>,volume:number)=>{

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {languageRequest} from '../src/services/languages/kernel'
+import {languageRequest} from '../src/language/languages/kernel'
 import {automaticTwistSlices,automaticNonuniformSlices} from '../benchmarks/rush/openScadExtrudeSlices-reference'
 
 it('matches the frozen TS subdivision rules across twist, taper and fragment policies',()=>{

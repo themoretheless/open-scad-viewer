@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {measureNurbsSurfaceDistance,type NurbsSurface} from '../src/services/nurbsSurface'
+import {measureNurbsSurfaceDistance,type NurbsSurface} from '../src/kernel/nurbsSurface'
 import {mainSolidExpectation,mainSolidResult,type MainSolidJob} from '../src/services/mainSolidProtocol'
 import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
 const plane=(z:number):NurbsSurface=>({degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,z],[0,10,z]],[[10,0,z],[10,10,z]]],weights:[[1,1],[1,1]]})

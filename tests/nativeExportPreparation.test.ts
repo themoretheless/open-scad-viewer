@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest'
-import * as kernel from '../src/services/geometry/kernel'
-import { prepareExportMeshInKernel } from '../src/services/geometry/meshAnalysis'
+import * as kernel from '../src/kernel/geometry/kernel'
+import { prepareExportMeshInKernel } from '../src/kernel/geometry/meshAnalysis'
 
 it('copies raw subarray views and releases inputs/results on native success and refusal', () => {
   const points = new Float32Array([99,0,0,0,0,0,1, 1,0,0,0,0,1, 0,1,0,0,0,1,99]).subarray(1,19)

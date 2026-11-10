@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { executeBrepNativeProgram, type BrepNativeOutput } from '../src/services/brepNativeExecutor'
-import { BrepSemanticBackendError } from '../src/services/brepSemanticErrors'
-import { analyzeNurbsBrep, inspectNurbsBrep, tessellateNurbsBrep } from '../src/services/geometry/brep'
+import { executeBrepNativeProgram, type BrepNativeOutput } from '../src/kernel/brepNativeExecutor'
+import { BrepSemanticBackendError } from '../src/kernel/brepSemanticErrors'
+import { analyzeNurbsBrep, inspectNurbsBrep, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 import type { SemanticExecutionControl } from '../src/language/semantic/semanticProgramExecutor'
 
@@ -245,7 +245,7 @@ describe('analytic B-rep native program execution', () => {
 })
 
 it('enforces reduced-node arity and result space inside the Rust endpoint',async()=>{
- const {callGeometryRust}=await import('../src/services/geometry/kernel')
+ const {callGeometryRust}=await import('../src/kernel/geometry/kernel')
  const node={kind:'box',valueType:{space:'d3'},size:[1,1,1],center:false}
  expect(()=>callGeometryRust('brep_semantic_geometry',{node,inputs:[{kind:'solid'}]})).toThrow(/cannot consume operands/)
  expect(()=>callGeometryRust('brep_semantic_geometry',{node:{...node,valueType:{space:'d2'}},inputs:[]})).toThrow(/result space/)
@@ -253,7 +253,7 @@ it('enforces reduced-node arity and result space inside the Rust endpoint',async
 })
 
 it('rejects unknown singleton Boolean operations in Rust for profiles and solids',async()=>{
- const {callGeometryRust}=await import('../src/services/geometry/kernel')
+ const {callGeometryRust}=await import('../src/kernel/geometry/kernel')
  for(const space of ['d2','d3']){
   const node=space==='d2'?{kind:'circle-analytic',valueType:{space},radius:2}:{kind:'box',valueType:{space},size:[1,1,1],center:false}
   const operand=callGeometryRust('brep_semantic_geometry',{node,inputs:[]})
@@ -263,7 +263,7 @@ it('rejects unknown singleton Boolean operations in Rust for profiles and solids
 })
 
 it('derives the display policy hash natively with byte-identical host semantics',async()=>{
- const {callGeometryRust}=await import('../src/services/geometry/kernel')
+ const {callGeometryRust}=await import('../src/kernel/geometry/kernel')
  const {sha256Hex}=await import('../src/core/sha256')
  for(const policy of [{quality:'preview',segments:4},{quality:'full',segments:32},{quality:'preview',segments:1}]){
   const plan=callGeometryRust<{policy:string;displayPolicyHash:string}>('brep_scene_plan',policy)

@@ -8,9 +8,9 @@ import {
   LANGUAGE_CONTRACT,
   type LanguageDiagnosticCode,
 } from '../src/core/languageContract'
-import { compileOpenSCAD } from '../src/services/openscadCompiler'
-import { OpenSCADParseError } from '../src/services/openscadErrors'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileOpenSCAD } from '../src/language/openscadCompiler'
+import { OpenSCADParseError } from '../src/language/openscadErrors'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import { QUALITY_TARGETS } from '../src/core/qualityTargets'
 
 interface Fixture {

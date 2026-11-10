@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {inspectSweepExactStripJets,inspectSweepProjectiveStripJets,inspectSweepProjectiveSeams,type SweepSeamDeclaration} from '../src/services/nurbsSweepAudit'
-import type {NurbsSurface} from '../src/services/nurbsSurface'
+import {inspectSweepExactStripJets,inspectSweepProjectiveStripJets,inspectSweepProjectiveSeams,type SweepSeamDeclaration} from '../src/kernel/nurbsSweepAudit'
+import type {NurbsSurface} from '../src/kernel/nurbsSurface'
 const quarter=(turn:number):NurbsSurface=>({degreeU:1,degreeV:2,knotsU:[0,0,1,1],knotsV:[0,0,0,1,1,1],
  controlPoints:[0,1].map(z=>[[1,0],[1,1],[0,1]].map(([a,b])=>{let x=a!,y=b!;for(let i=0;i<turn;i++)[x,y]=[-y,x];return [x,y,z]})),
  weights:Array.from({length:2},()=>[1,Math.SQRT1_2,1]),periodicU:false,periodicV:false})
@@ -59,7 +59,7 @@ it('requires every declared cyclic seam and shares exact work including closure'
  expect({patches,seams}).toEqual(before)
 })
 it('audits actual progressive sweep profile joins with affine laws on a shared station grid',async()=>{
- const {progressiveSweepNurbsProfiles}=await import('../src/services/nurbsConstructors')
+ const {progressiveSweepNurbsProfiles}=await import('../src/kernel/nurbsConstructors')
  const profiles=[0,1,2,3].map(turn=>{const s=quarter(turn);return {degree:2,knots:[0,0,0,1,1,1],controlPoints:s.controlPoints[0]!,weights:[1,Math.SQRT1_2,1],periodic:false}})
  const path={degree:1,knots:[0,0,1,1],controlPoints:[[0,0,0],[0,0,8]],weights:[1,1],periodic:false}
  const law=(value:number)=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})

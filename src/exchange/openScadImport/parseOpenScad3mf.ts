@@ -1,6 +1,6 @@
 import { OPENSCAD_IMPORT_DEFAULT_CURVE_SEGMENTS, OPENSCAD_IMPORT_MAX_2D_POINTS, OPENSCAD_IMPORT_MAX_CONTOURS, OPENSCAD_IMPORT_MAX_TRIANGLES, OPENSCAD_IMPORT_MAX_VERTICES, OPENSCAD_IMPORT_MAX_XML_DEPTH, OPENSCAD_IMPORT_MAX_XML_ELEMENTS, OpenScadImportDataError, THREE_MF_CORE_NAMESPACE, UTF8_FATAL } from '../openScadImport'
 import type { DxfEntity, DxfPair, DxfSegment, Matrix2, Matrix4, OpenScadImportGeometry2D, OpenScadImportGeometry3D, OpenScadImportPoint2, OpenScadImportPreparationBudget, OpenScadImportRegion2D, ThreeMfObject, XmlElement } from '../openScadImport'
-import type { OpenScadProjectFile } from '../../services/openScadProject'
+import type { OpenScadProjectFile } from '../../language/openScadProject'
 import { readSvgDocument } from '../../services/svgDocument'
 import type { SvgOptions } from '../../services/svgDocument'
 import { appendRawMesh, attributeNs, childElementNs, childElementsNs, multiply4, parseXml, unitScale } from './parseXml'

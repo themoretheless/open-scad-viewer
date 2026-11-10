@@ -82,7 +82,7 @@ it('binds generated geometry and language identities to packaged bytes', async (
 it('keeps the real geometry kernel uninitialized on an unverified hook and can recover', async () => {
   vi.resetModules()
   const host = await import('../src/services/wasmCompilation')
-  const kernel = await import('../src/services/geometry/kernel')
+  const kernel = await import('../src/kernel/geometry/kernel')
   host.setOptionalWasmCompiler(async () => new WebAssembly.Module(bytes))
   try {
     await expect(kernel.warmGeometryKernel()).rejects.toMatchObject({code: 'WASM_ARTIFACT_MISMATCH'})
@@ -90,7 +90,7 @@ it('keeps the real geometry kernel uninitialized on an unverified hook and can r
     host.setOptionalWasmCompiler(undefined)
     await kernel.warmGeometryKernel()
     expect(kernel.isGeometryKernelReady()).toBe(true)
-    const {parseGcodePreview} = await import('../src/services/geometry/polygon')
+    const {parseGcodePreview} = await import('../src/kernel/geometry/polygon')
     expect(parseGcodePreview('G1 X0 Y0 Z0\nM83\nG1 X1 E1\n').extrusionMm).toBe(1)
   } finally { host.setOptionalWasmCompiler(undefined) }
 })

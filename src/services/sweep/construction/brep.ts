@@ -5,15 +5,15 @@ import {type SweepBoundaryCertificate} from '../certificates/sweepBoundaryCertif
 import {type SweepSectionCorrection} from './nurbsSectionProjection'
 import {type SweepRetainedCaps,type SweepRetainedCorrespondence} from '../certificates/sweepRetainedCorrespondence'
 import {type SweepEmbeddingAudit,type SweepVolumeAudit} from '../certificates/nurbsSweepEmbedding'
-import {callGeometryRust} from '../../geometry/kernel'
-import type {NurbsCurve} from '../../nurbsCurve'
-import type {NurbsSurface} from '../../nurbsSurface'
-import type {NurbsBrep} from '../../geometry/brep/core'
-import {type ProgressiveMiterOptions,type ProgressiveMiterResult} from '../../nurbsConstructors'
+import {callGeometryRust} from '../../../kernel/geometry/kernel'
+import type {NurbsCurve} from '../../../kernel/nurbsCurve'
+import type {NurbsSurface} from '../../../kernel/nurbsSurface'
+import type {NurbsBrep} from '../../../kernel/geometry/brep/core'
+import {type ProgressiveMiterOptions,type ProgressiveMiterResult} from '../../../kernel/nurbsConstructors'
 import {type SweepProfileRegularityAudit,type SweepContourAudit} from '../certificates/nurbsSweepAudit'
 import {type SweepRetainedChartEvidence} from '../certificates/nurbsSweepRetainedCharts'
 import {type SweepCapPairEvidence,type SweepCapContactEvidence} from '../certificates/nurbsSweepCapContacts'
-import type {NurbsScaleLaw,ProgressiveGuidedSurfaceSweepOptions,ProgressiveMultiSweepResult} from '../../nurbsConstructors'
+import type {NurbsScaleLaw,ProgressiveGuidedSurfaceSweepOptions,ProgressiveMultiSweepResult} from '../../../kernel/nurbsConstructors'
 
 /** Ordered rational loops per section, with audited planar cap trim regions.
  * Preserves manifold incidence; global embedding/self-intersections are unproven. */
@@ -30,7 +30,7 @@ export interface SmoothStationWallCandidate {
 /** Bounded candidate only: no regularity, embedding or Solid certificate. */
 export const proposeSmoothStationWalls=(sections:NurbsCurve[][][],sharp:number[],closed:boolean,quantum:number,tolerance:number,maxWork:number):SmoothStationWallCandidate=>callGeometryRust('brep_nurbs_smooth_station_walls',{sections,sharp,closed,quantum,tolerance,maxWork})
 
-export interface ProgressiveMiterBrepBody {sweepMiterReplay?:unknown;profileSmoothness:MiterProfileSmoothness;boundaryCertificate:SweepBoundaryCertificate;retainedCapDecomposition:import('../certificates/sweepRetainedCorrespondence').SweepRetainedCapDecomposition|null;retainedDecomposition:import('../certificates/sweepRetainedCorrespondence').SweepRetainedDecomposition|null;capParallelism:import('../../nurbsConstructors').ProgressiveMiterCapParallelism|null;boundaryErrorWithinBudget:boolean|null;boundaryErrorUpper:number|null;filledCapErrorUpper:[number,number]|null;idealCapDomains:import('../../nurbsConstructors').ProgressiveMiterIdealCapDomains|null;capProjection:import('../../nurbsConstructors').ProgressiveMiterCapProjection|null;retainedWallErrorUpper:number|null;sectionCorrection?:Omit<SweepSectionCorrection,'sections'>;model:NurbsBrep;approximation:ProgressiveMiterResult;wallAudit:import('../certificates/nurbsSweepAudit').SweepWallAudit;retainedCorrespondence:SweepRetainedCorrespondence;retainedCaps:SweepRetainedCaps|null;retainedWallCharts:SweepRetainedChartEvidence;capDomains:[SweepContourAudit,SweepContourAudit]|null;capContacts:SweepCapContactEvidence[]|null;capPairs:SweepCapPairEvidence|null;embedding:SweepEmbeddingAudit|null;volume:SweepVolumeAudit;globalEmbeddingCertified:false}
+export interface ProgressiveMiterBrepBody {sweepMiterReplay?:unknown;profileSmoothness:MiterProfileSmoothness;boundaryCertificate:SweepBoundaryCertificate;retainedCapDecomposition:import('../certificates/sweepRetainedCorrespondence').SweepRetainedCapDecomposition|null;retainedDecomposition:import('../certificates/sweepRetainedCorrespondence').SweepRetainedDecomposition|null;capParallelism:import('../../../kernel/nurbsConstructors').ProgressiveMiterCapParallelism|null;boundaryErrorWithinBudget:boolean|null;boundaryErrorUpper:number|null;filledCapErrorUpper:[number,number]|null;idealCapDomains:import('../../../kernel/nurbsConstructors').ProgressiveMiterIdealCapDomains|null;capProjection:import('../../../kernel/nurbsConstructors').ProgressiveMiterCapProjection|null;retainedWallErrorUpper:number|null;sectionCorrection?:Omit<SweepSectionCorrection,'sections'>;model:NurbsBrep;approximation:ProgressiveMiterResult;wallAudit:import('../certificates/nurbsSweepAudit').SweepWallAudit;retainedCorrespondence:SweepRetainedCorrespondence;retainedCaps:SweepRetainedCaps|null;retainedWallCharts:SweepRetainedChartEvidence;capDomains:[SweepContourAudit,SweepContourAudit]|null;capContacts:SweepCapContactEvidence[]|null;capPairs:SweepCapPairEvidence|null;embedding:SweepEmbeddingAudit|null;volume:SweepVolumeAudit;globalEmbeddingCertified:false}
 // Bind source certificates to the exact constructor-owned geometry. Mutation,
 // JSON copies or caller-authored evidence cannot transfer an old boundary bound.
 export interface CertifiedMiterBoundaryOwner {model:NurbsBrep;boundaryCertificate:SweepBoundaryCertificate}
@@ -73,10 +73,10 @@ export const createPeriodicBrepSectionLoft=(sections:NurbsCurve[][][]):NurbsBrep
 /** Streams side-wall previews on the body face budget, then constructs audited
  * caps/seams. A preview level never contains an authoritative B-rep body.
  */
-export async function* streamProgressiveBrepProfileBody(loops:NurbsCurve[][],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,control:import('../../nurbsConstructors').ProgressiveSweepStreamOptions={}):AsyncGenerator<import('../../nurbsConstructors').ProgressiveSweepPreview,ProgressiveBrepBody,void>{return yield* nativeBodyStream({kind:'profile',loops,path,scale,twist,options},control)}
+export async function* streamProgressiveBrepProfileBody(loops:NurbsCurve[][],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,control:import('../../../kernel/nurbsConstructors').ProgressiveSweepStreamOptions={}):AsyncGenerator<import('../../../kernel/nurbsConstructors').ProgressiveSweepPreview,ProgressiveBrepBody,void>{return yield* nativeBodyStream({kind:'profile',loops,path,scale,twist,options},control)}
 
 /** Stream retained miter walls; build topology only after acceptance and a cancellation boundary. */
-export async function* streamProgressiveMiterBrepProfileBody(loops:NurbsCurve[][],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions,control:import('../../nurbsConstructors').ProgressiveSweepStreamOptions={}):AsyncGenerator<import('../../nurbsConstructors').ProgressiveSweepPreview,ProgressiveMiterBrepBody,void>{return yield* nativeBodyStream({kind:'miter',loops,points,scale,twist,options},control)}
+export async function* streamProgressiveMiterBrepProfileBody(loops:NurbsCurve[][],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions,control:import('../../../kernel/nurbsConstructors').ProgressiveSweepStreamOptions={}):AsyncGenerator<import('../../../kernel/nurbsConstructors').ProgressiveSweepPreview,ProgressiveMiterBrepBody,void>{return yield* nativeBodyStream({kind:'miter',loops,points,scale,twist,options},control)}
 
 export interface NurbsLoftCap { surface:NurbsSurface; trims:NurbsCurve[][] }
 export interface LoftEmbeddingLimits {
@@ -117,7 +117,7 @@ function releaseBody(result:unknown):void{
  if(owner){nativeOwners.delete(result);ownerCleanup.unregister(result);try{callGeometryRust('brep_sweep_release_owner',{owner})}catch{/* Preserve cancellation if the kernel has closed. */}}
 }
 function callBodyRust<T>(op:string,request:Record<string,unknown>):T{return captureBody(callGeometryRust<T>(op,request))}
-async function* nativeBodyStream<P,B>(request:Record<string,unknown>,control:import('../../nurbsConstructors').ProgressiveSweepStreamOptions):AsyncGenerator<P,B,void>{
+async function* nativeBodyStream<P,B>(request:Record<string,unknown>,control:import('../../../kernel/nurbsConstructors').ProgressiveSweepStreamOptions):AsyncGenerator<P,B,void>{
  const checkAbort=()=>{control.signal?.throwIfAborted();if(control.shouldAbort?.())throw new DOMException('Build cancelled','AbortError')}
  checkAbort()
  const {stream}=callGeometryRust<{stream:string}>('brep_sweep_stream_start',request)

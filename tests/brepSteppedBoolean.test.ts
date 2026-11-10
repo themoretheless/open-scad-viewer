@@ -3,7 +3,7 @@ import {
   analyzeNurbsBrep, booleanNurbsBrep, createBrepBox, createBrepCylinder,
   inspectNurbsBrep, tessellateNurbsBrep, transformNurbsBrep,
   type BrepBooleanOperation,
-} from '../src/services/geometry/brep'
+} from '../src/kernel/geometry/brep'
 
 const translated = (model: ReturnType<typeof createBrepCylinder>, x: number, z: number) =>
   transformNurbsBrep(model, [[1,0,0,x], [0,1,0,0], [0,0,1,z], [0,0,0,1]])

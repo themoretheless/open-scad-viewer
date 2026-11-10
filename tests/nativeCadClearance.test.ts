@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest'
-import {inspectCadPairs} from '../src/services/cadInspection'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {inspectCadPairs} from '../src/kernel/cadInspection'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 const box=(name:string,min:number[],max:number[])=>{const brep=createBrepBox(min,max);return {id:name,name,brep,mesh:tessellateNurbsBrep(brep,1)}}
 it('measures separated, touching, overlapping and contained solid meshes',()=>{
  const a=box('A',[0,0,0],[10,10,10])

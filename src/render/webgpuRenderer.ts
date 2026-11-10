@@ -12,8 +12,8 @@ import {
   type CameraState,
 } from '../services/cameraHistory'
 import { NativePickingCache } from '../services/nativePickingCache'
-import { warmGeometryKernel } from '../services/geometry/kernel'
-import { clientRayInKernel, projectPointInKernel } from '../services/geometry/viewport'
+import { warmGeometryKernel } from '../kernel/geometry/kernel'
+import { clientRayInKernel, projectPointInKernel } from '../kernel/geometry/viewport'
 import type { MeshData } from '../core/mesh'
 import {
   ISO_PITCH,
@@ -91,7 +91,7 @@ import { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline
 export { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline'
 import { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
 export { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
-export { GeometryWorkerPool, detectHardwareConcurrency } from '../services/geometryWorkerPool'
+export { GeometryWorkerPool, detectHardwareConcurrency } from '../kernel/geometryWorkerPool'
 import {
   CLICK_MOVE_THRESHOLD,
   DEFAULT_DISTANCE,

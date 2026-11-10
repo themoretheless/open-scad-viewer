@@ -1,5 +1,5 @@
 import { buildStepRawArtifact } from './stepRawArtifact'
-import { preflightIgesInput, preflightStlInput, ParserInputError } from './parserInputBudgets'
+import { preflightIgesInput, preflightStlInput, ParserInputError } from '../language/parserInputBudgets'
 import type { UntrustedParserJob, UntrustedParserResult } from './untrustedParserWorker'
 
 export function executeUntrustedParserJob(job: UntrustedParserJob): UntrustedParserResult {

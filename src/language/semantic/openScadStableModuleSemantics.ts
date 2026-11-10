@@ -1,4 +1,4 @@
-import { languageRequest } from '../../services/languages/kernel'
+import { languageRequest } from '../languages/kernel'
 /**
  * Kernel-neutral pieces of the OpenSCAD 2021.01 built-in-module contract.
  *

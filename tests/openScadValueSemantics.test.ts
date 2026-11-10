@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TT, type RangeValue, type Value } from '../src/services/openscadCompiler'
+import { TT, type RangeValue, type Value } from '../src/language/openscadCompiler'
 import {
   formatOpenScadValue,
   materializeOpenScadRange,

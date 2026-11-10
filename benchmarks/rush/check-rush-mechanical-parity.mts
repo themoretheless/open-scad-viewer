@@ -2,7 +2,7 @@
 import {spawnSync} from 'node:child_process'
 import {writeFileSync} from 'node:fs'
 import {buildRushGraphGear} from './rushGraphGears-reference'
-import {buildRushGraphThread} from '../../src/services/rushGraphThreads'
+import {buildRushGraphThread} from '../../src/language/rushGraphThreads'
 import {buildRushGraphPlanetary} from './rushGraphPlanetary-reference'
 import {GEAR_DEFAULTS,THREAD_DEFAULTS,PLANETARY_DEFAULTS} from '../../src/services/mechanicalGeneratorContract'
 const functions:any={gear:buildRushGraphGear,thread:buildRushGraphThread,planetary:buildRushGraphPlanetary}

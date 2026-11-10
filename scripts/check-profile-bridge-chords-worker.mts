@@ -3,7 +3,7 @@ import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import {Worker} from 'node:worker_threads'
 import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
-import {type ProfileBridgeChordOptions} from '../src/services/nurbsProfileBridgeChords'
+import {type ProfileBridgeChordOptions} from '../src/kernel/nurbsProfileBridgeChords'
 import identity from '../src/generated/geometry-kernels/identity'
 import {verifyPackedWasmChunk} from './verify-packed-wasm.mjs'
 assert(process.argv[2],'Provide an output report path')

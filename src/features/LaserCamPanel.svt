@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import {computed,reactive,ref,shallowRef,watch} from 'svet'
 import type {MeshData} from '../core/mesh'
-import {downloadCad} from '../services/cadDrawing'
-import {emitLaserFrame,emitLaserGrbl,previewLaserFrame,previewLaserPlan,type LaserMachineProfile,type LaserPlan,type LaserPreviewOperation,type LaserProgram,type LaserSummary} from '../services/geometry/laser'
+import {downloadCad} from '../kernel/cadDrawing'
+import {emitLaserFrame,emitLaserGrbl,previewLaserFrame,previewLaserPlan,type LaserMachineProfile,type LaserPlan,type LaserPreviewOperation,type LaserProgram,type LaserSummary} from '../kernel/geometry/laser'
 import {gcodeMeshBounds} from '../fabrication/gcodePreviewGeometry'
 import {planLaserMeshSection} from '../fabrication/laserSectionPlanning'
 import {LASER_MACHINE_PRESETS,LASER_MATERIAL_PRESETS,machineProfileFromPreset,presetPower} from '../fabrication/laserProfiles'
-import {meshDataToPolygon} from '../services/solidBridge'
+import {meshDataToPolygon} from '../kernel/solidBridge'
 
 const props=defineProps<{meshes:MeshData[];selection:number[];source:string;ready:boolean;locale:string}>()
 const label=(ru:string,en:string)=>props.locale==='ru'?ru:en

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { CadGeometryKernel } from '../src/services/cadGeometryKernel'
-import { loadCadKernelOps } from '../src/services/cadKernelOps'
-import { analyzeSolidCooperativelyInKernel, analyzeSolidInKernel } from '../src/services/geometry/meshAnalysis'
-import { decodeNurbsResult, kernelRuntime } from '../src/services/geometry/kernel'
+import { CadGeometryKernel } from '../src/kernel/cadGeometryKernel'
+import { loadCadKernelOps } from '../src/kernel/cadKernelOps'
+import { analyzeSolidCooperativelyInKernel, analyzeSolidInKernel } from '../src/kernel/geometry/meshAnalysis'
+import { decodeNurbsResult, kernelRuntime } from '../src/kernel/geometry/kernel'
 import { buildMeshBvh } from '../src/services/meshBvh'
 import { extractSemanticEdges } from '../src/services/meshTopology'
 

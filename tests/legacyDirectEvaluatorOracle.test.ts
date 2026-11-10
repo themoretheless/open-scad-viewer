@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import {
   ORACLE_CASES,
   ORACLE_REVIEW,
@@ -194,7 +194,7 @@ describe('independent pinned direct-evaluator differential oracle', () => {
     const testSource = readFileSync(new URL('./legacyDirectEvaluatorOracle.test.ts', import.meta.url), 'utf8')
     const productionImports = testSource.match(/^\s*import\s+.*['"]\.\.\/src\/.*$/gm) ?? []
     expect(productionImports).toEqual([
-      "import { parseOpenSCAD } from '../src/services/openscadParser'",
+      "import { parseOpenSCAD } from '../src/language/openscadParser'",
     ])
   })
 

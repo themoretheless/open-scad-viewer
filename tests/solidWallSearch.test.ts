@@ -1,9 +1,9 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {wallSearchCandidates,wholeWallSearchCandidates} from '../src/services/solidWallSearch'
-import {inspectMaterialWall,materialWallExpectation,validMaterialWall} from '../src/services/solidMaterialWall'
-import {transformNurbsBrep} from '../src/services/geometry/brep'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
+import {wallSearchCandidates,wholeWallSearchCandidates} from '../src/kernel/solidWallSearch'
+import {inspectMaterialWall,materialWallExpectation,validMaterialWall} from '../src/kernel/solidMaterialWall'
+import {transformNurbsBrep} from '../src/kernel/geometry/brep'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
 const fixtures=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/material-wall/contract.json',import.meta.url),'utf8')).cases
 it('finds original material walls after rigid rotation and translation without editing the source',()=>{
  for(const name of ['cube-wall']){

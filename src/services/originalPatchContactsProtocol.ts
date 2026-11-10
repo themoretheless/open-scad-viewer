@@ -1,5 +1,5 @@
-import type {NurbsCurve} from './nurbsCurve'
-import type {NurbsSurface} from './nurbsSurface'
+import type {NurbsCurve} from '../kernel/nurbsCurve'
+import type {NurbsSurface} from '../kernel/nurbsSurface'
 import type {ParameterBox3} from './surfaceIsoTargetProtocol'
 export const MAX_PATCH_EXACT_WORK=1_000_000
 export interface OriginalPatchContactsQuery {curve:NurbsCurve;patch:NurbsSurface;tolerance:number;maxSpans:number;maxExactWork:number}

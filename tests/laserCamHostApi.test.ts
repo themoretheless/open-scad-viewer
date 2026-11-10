@@ -6,8 +6,8 @@ import {
   previewLaserFrame,
   previewLaserPlan,
   type LaserPlan,
-} from '../src/services/geometry/laser'
-import type {PolygonMesh} from '../src/services/geometry/polygon'
+} from '../src/kernel/geometry/laser'
+import type {PolygonMesh} from '../src/kernel/geometry/polygon'
 import {planLaserMeshSection} from '../src/fabrication/laserSectionPlanning'
 
 function boxMesh():PolygonMesh {

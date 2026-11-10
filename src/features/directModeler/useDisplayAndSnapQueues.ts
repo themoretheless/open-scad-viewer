@@ -1,13 +1,13 @@
 import { computed, onUnmounted, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import type { DirectBody, DirectDocument, DirectSketch, Point2 } from '../../services/directModeling'
 import type { MainSolidResults } from '../../services/mainSolidProtocol'
-import type { NurbsCurve } from '../../services/nurbsCurve'
-import { SolidCurveDisplayQueue } from '../../services/solidCurveDisplayQueue'
-import { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
-import { SolidProfileDisplayQueue } from '../../services/solidProfileDisplayQueue'
-import { SolidSketchSnapPreparation } from '../../services/solidSketchSnapPreparation'
-import { SolidSnapPreparation } from '../../services/solidSnapPreparation'
-import { SolidSurfaceDisplayQueue } from '../../services/solidSurfaceDisplayQueue'
+import type { NurbsCurve } from '../../kernel/nurbsCurve'
+import { SolidCurveDisplayQueue } from '../../kernel/solidCurveDisplayQueue'
+import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
+import { SolidProfileDisplayQueue } from '../../kernel/solidProfileDisplayQueue'
+import { SolidSketchSnapPreparation } from '../../kernel/solidSketchSnapPreparation'
+import { SolidSnapPreparation } from '../../kernel/solidSnapPreparation'
+import { SolidSurfaceDisplayQueue } from '../../kernel/solidSurfaceDisplayQueue'
 
 type SolidTopology = MainSolidResults['topology']
 

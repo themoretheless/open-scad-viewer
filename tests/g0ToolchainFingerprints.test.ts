@@ -203,7 +203,7 @@ describe('G0/G1 re-freeze generator', {timeout: 120_000}, () => {
   it('rejects a source race before publishing and preserves an existing destination', () => {
     const root = fixture()
     const prepared = prepare(root)
-    const candidatePath = resolve(root, 'src/services/openscadSemanticLowerer.ts')
+    const candidatePath = resolve(root, 'src/language/semantic/openscadSemanticLowerer.ts')
     const originalCandidate = readFileSync(candidatePath)
     writeFileSync(candidatePath, `${originalCandidate.toString('utf8')}\n`)
     expect(() => publishQualificationRefresh(prepared)).toThrow(/changed during re-freeze/u)

@@ -1,11 +1,11 @@
 import {primitiveCreationError} from '../../services/primitiveCreationError'
 import { primitiveKinds, type Pane } from './helpers'
-import { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
+import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import { type DirectSketch, type DirectDocument, type DirectHistory } from '../../services/directModeling'
 import { validateSimpleSketch } from '../../services/directSketchGeometry'
 import { sketchDimensions } from '../../services/directDimensions'
-import { createSolidNurbsCurve, createSolidNurbsSurface } from '../../services/solidNurbs'
-import { type SolidNurbsEditOptions } from '../../services/solidNurbsEdit'
+import { createSolidNurbsCurve, createSolidNurbsSurface } from '../../kernel/solidNurbs'
+import { type SolidNurbsEditOptions } from '../../kernel/solidNurbsEdit'
 import { computed, ref, watch, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 
 export interface PrimitivesOptions {

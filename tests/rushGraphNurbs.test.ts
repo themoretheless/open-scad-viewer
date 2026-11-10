@@ -1,10 +1,10 @@
 import { expect, it } from 'vitest';
-import { compileRushGraphNurbs, RUSH_GRAPH_NURBS_EXAMPLE, RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/rushGraphNurbs';
-import { buildOwnNurbs } from '../src/services/rushGraphNurbsKernel';
+import { compileRushGraphNurbs, RUSH_GRAPH_NURBS_EXAMPLE, RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/language/rushGraphNurbs';
+import { buildOwnNurbs } from '../src/language/rushGraphNurbsKernel';
 import { runOwnNurbs } from '../src/mcp/rushGraphNurbsRuntime';
-import { extrudeNurbsCurve, revolveNurbsCurve, loftNurbsCurves } from '../src/services/nurbsConstructors';
-import { evaluateNurbsSurface } from '../src/services/nurbsSurface';
-import type { NurbsCurve } from '../src/services/nurbsCurve';
+import { extrudeNurbsCurve, revolveNurbsCurve, loftNurbsCurves } from '../src/kernel/nurbsConstructors';
+import { evaluateNurbsSurface } from '../src/kernel/nurbsSurface';
+import type { NurbsCurve } from '../src/kernel/nurbsCurve';
 import { nurbsProcessFixtures } from '../benchmarks/nurbs-process-fixtures';
 const line: NurbsCurve = { degree: 1, knots: [0, 0, 1, 1], controlPoints: [[10, 0, 0], [10, 0, 20]], weights: [1, 1] };
 it('builds an exact rational cylinder surface from its generating line', () => {

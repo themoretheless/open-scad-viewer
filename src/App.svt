@@ -25,7 +25,7 @@ import ModelingGridControls from './components/ModelingGridControls.svt'
 import MaterialControls from './features/MaterialControls.svt'
 import { clamp } from './services/math3d'
 import { stringifyMeshJson } from './services/meshJson'
-import { isRushFrontend, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension } from './services/rushFrontendDetect'
+import { isRushFrontend, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension } from './language/rushFrontendDetect'
 import {readSweepViewportEvidence,readSweepPatchViewportEvidence,readSweepBodyBoundaryViewportEvidence} from './services/sweepViewportEvidence'
 import { highlightCode } from './services/codeHighlight'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect } from 'svet'
@@ -44,7 +44,7 @@ import { useAppearance } from './composables/useAppearance'
 import { useEditorFind } from './composables/useEditorFind'
 import { emptyDirectDocument } from './services/directModeling'
 import { type WorkspaceMode, WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './services/workspaceModes'
-import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, meshDataToEditablePolygon, polygonToMeshObject } from './services/solidBridge'
+import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, meshDataToEditablePolygon, polygonToMeshObject } from './kernel/solidBridge'
 import { emptyMeshDocument, type MeshWorkspaceDocument } from './services/meshEditing'
 const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.svt'))
 const MeshModeler = defineAsyncComponent(() => import('./features/MeshModeler.svt'))
@@ -59,7 +59,7 @@ import ViewCube from './components/ViewCube.svt'
 import type { GeometryQuality } from './core/build'
 import { type MeshData } from './core/mesh'
 import { MAX_PARAMETER_PRESETS } from './services/parameterPresets'
-import { analyzeSurfaceArea, type GeometryComputeResult } from './services/geometryCompute'
+import { analyzeSurfaceArea, type GeometryComputeResult } from './kernel/geometryCompute'
 import { EXAMPLE_CATALOG, EXAMPLES } from './data/examples'
 import { assertExampleCatalog } from './services/exampleCatalog'
 import { buildPaletteDescriptors, buildShortcutHelpGroups, resolveKeyboardCommand, type CommandId, type CommandScope, type PaletteCommandId, type PaletteCommandRuntimeState } from './services/commandRegistry'
@@ -280,7 +280,7 @@ async function buildSolidGroup(request: { name: string; source: string; replaces
   solidBuildAbort = abort
   error.value = ''
   try {
-    const { buildExactSolidsInWorker } = await import('./services/solid/exactSolidClient')
+    const { buildExactSolidsInWorker } = await import('./kernel/solid/exactSolidClient')
     const built = await buildExactSolidsInWorker(request.source, abort.signal)
     if (abort.signal.aborted) return false
     if (built.length === 0) {
@@ -619,7 +619,7 @@ watchEffect(async () => {
     compactControls.value = {parameters: [], errors: []}
     return
   }
-  const controls = (await import('./services/rushFrontend')).rushFrontendControls(source)
+  const controls = (await import('./language/rushFrontend')).rushFrontendControls(source)
   if (code.value === source) compactControls.value = controls
 })
 const customizerParameters = computed(() => {

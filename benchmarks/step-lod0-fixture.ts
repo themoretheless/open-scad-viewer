@@ -1,5 +1,5 @@
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {exportDirectStepV9} from '../src/services/cadNurbsStep'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {exportDirectStepV9} from '../src/kernel/cadNurbsStep'
 
 export interface StepLod0BenchmarkFixture {
   exactText:string

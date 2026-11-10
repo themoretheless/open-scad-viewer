@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest'
-import {CadGeometryKernel} from '../src/services/cadGeometryKernel'
-import {surfaceGroupsInKernel} from '../src/services/geometry/meshAnalysis'
-import {kernelRuntime} from '../src/services/geometry/kernel'
+import {CadGeometryKernel} from '../src/kernel/cadGeometryKernel'
+import {surfaceGroupsInKernel} from '../src/kernel/geometry/meshAnalysis'
+import {kernelRuntime} from '../src/kernel/geometry/kernel'
 import {inferSurfaceIds} from '../src/services/meshSurfaceGroups'
 
 it('matches host groups for real display meshes and owns detached result buffers', async () => {

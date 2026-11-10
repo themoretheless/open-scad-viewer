@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {inspectSweepExactStripJets,inspectSweepProjectiveStripJets} from '../src/services/nurbsSweepAudit'
-import {bezierNurbsCurve,inspectProgressiveRetainedStationSeams} from '../src/services/nurbsConstructors'
-import type {NurbsSurface} from '../src/services/nurbsSurface'
+import {inspectSweepExactStripJets,inspectSweepProjectiveStripJets} from '../src/kernel/nurbsSweepAudit'
+import {bezierNurbsCurve,inspectProgressiveRetainedStationSeams} from '../src/kernel/nurbsConstructors'
+import type {NurbsSurface} from '../src/kernel/nurbsSurface'
 
 const next=(x:number,steps:number)=>{
  const view=new DataView(new ArrayBuffer(8));view.setFloat64(0,x)

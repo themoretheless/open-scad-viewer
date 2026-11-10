@@ -9,7 +9,7 @@ import ModelingGridControls from '../../../components/ModelingGridControls.svt'
 import WorkspaceActionBar from '../../../components/WorkspaceActionBar.svt'
 import CommandPalette from '../../../components/CommandPalette.svt'
 import type { PaletteCommand } from '../../../services/commandSearch'
-import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../../../services/geometryEditing'
+import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../../../kernel/geometryEditing'
 import { meshCentroid, sculptMesh } from '../../../services/meshEditing'
 import {
   MeshHistory,
@@ -38,11 +38,11 @@ import {
   type MeshSelectMode,
   type MeshWorkspaceDocument,
 } from '../../../services/meshEditing'
-import { createSolidPreviewWorker } from '../../../services/solidPreviewWorker'
+import { createSolidPreviewWorker } from '../../../kernel/solidPreviewWorker'
 import { useMainSolidTask } from '../.././useMainSolidTask'
 import { defaultDirectCamera, projectDirectPoint } from '../../../services/directModelingTools'
 import { projectMeshModelerObject,cachedMeshModelerStats } from '../../../services/meshModelerProjection'
-import { isGeometryKernelReady, warmGeometryKernel } from '../../../services/geometry/kernel'
+import { isGeometryKernelReady, warmGeometryKernel } from '../../../kernel/geometry/kernel'
 import { storageGet, storageSet } from '../../../services/safeStorage'
 import { MESH_IMPORT_ACCEPT, stripMeshExtension } from '../../../exchange/meshImport'
 import { manifoldPreferenceSnapshot } from '../../../services/manifoldPreferences'
@@ -53,8 +53,8 @@ import { formatMeshRepairNotice } from '../../../services/meshRepairReport'
 import { meshManifoldDefectLabels } from '../../../services/meshManifoldDefects'
 import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../../../services/meshConvert'
 import { downloadBytes } from '../../../services/downloadArtifact'
-import type { PolygonMesh } from '../../../services/geometry/polygon'
-import type { KernelManifoldReport } from '../../../services/geometry/manifoldAnalysis'
+import type { PolygonMesh } from '../../../kernel/geometry/polygon'
+import type { KernelManifoldReport } from '../../../kernel/geometry/manifoldAnalysis'
 import type {MeshModelerProps,MeshModelerEmit} from '../useMeshModeler'
 import type {ShallowRef,Ref} from 'svet'
 export interface MeshInteractionContext {

@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {parseOpenSCAD} from '../src/services/openscadParser'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
-import {compileRushGraphNurbs,rushGraphNurbsSchema} from '../src/services/rushGraphNurbs'
+import {parseOpenSCAD} from '../src/language/openscadParser'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
+import {compileRushGraphNurbs,rushGraphNurbsSchema} from '../src/language/rushGraphNurbs'
 import {readFileSync} from 'node:fs'
 import {z} from 'zod/v4'
 

@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
 import { exportMeshFormat, MESH_EXPORT_FORMATS } from '../src/services/meshExportFormats';
-import { buildOwnNurbs } from '../src/services/rushGraphNurbsKernel';
-import { RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/rushGraphNurbs';
-import { OpenScadProject } from '../src/services/openScadProject';
+import { buildOwnNurbs } from '../src/language/rushGraphNurbsKernel';
+import { RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/language/rushGraphNurbs';
+import { OpenScadProject } from '../src/language/openScadProject';
 import { parseOpenScad3mf, parseOpenScadAmf, parseOpenScadStl, parseOpenScadOff } from '../src/exchange/openScadImport';
 const built = buildOwnNurbs(RUSH_GRAPH_NURBS_SURFACE_EXAMPLE, { action: 'build' });
 if (!('mesh' in built) || !built.mesh)
@@ -79,7 +79,7 @@ it('keeps touching scene parts independent instead of rejecting a welded aggrega
 
 it('admits compressible 3MF documents larger than the final artifact limit', async () => {
     const { exportMeshFormatCompressed } = await import('../src/services/meshExportFormats');
-    const { export3mfModelInKernel } = await import('../src/services/geometry/meshArtifactExport');
+    const { export3mfModelInKernel } = await import('../src/kernel/geometry/meshArtifactExport');
     const large = { ...mesh, positions: [...mesh.positions, ...new Array<number>(270000).fill(Math.PI)] };
     expect(export3mfModelInKernel(large).length).toBeGreaterThan(4 * 1024 * 1024);
     expect(() => exportMeshFormat(large, '3mf')).toThrow('4 MiB');
@@ -88,7 +88,7 @@ it('admits compressible 3MF documents larger than the final artifact limit', asy
 });
 
 it('validates the actual exported 3MF parts and their cumulative resource budget', async () => {
-    const { export3mfModelInKernel } = await import('../src/services/geometry/meshArtifactExport');
+    const { export3mfModelInKernel } = await import('../src/kernel/geometry/meshArtifactExport');
     const invalid = { ...mesh, indices: [0,1,999999] };
     expect(() => export3mfModelInKernel({ ...mesh, parts: [mesh, invalid] })).toThrow('Malformed');
     const oversized = { ...mesh, positions: [...mesh.positions, ...new Array<number>(899976).fill(0)] };
@@ -97,7 +97,7 @@ it('validates the actual exported 3MF parts and their cumulative resource budget
 
 it.each([false, true])('writes consistent native ZIP headers and CRC with compression=%s', async compressed => {
     const { inflateRawSync, crc32 } = await import('node:zlib');
-    const { export3mfInKernel } = await import('../src/services/geometry/meshArtifactExport');
+    const { export3mfInKernel } = await import('../src/kernel/geometry/meshArtifactExport');
     const data = export3mfInKernel(mesh, compressed);
     expect(export3mfInKernel(mesh, compressed)).toEqual(data);
     const view = new DataView(data.buffer, data.byteOffset, data.byteLength);

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,inspectProgressiveSweepIdealCapDomains} from '../src/services/nurbsConstructors'
+import {bezierNurbsCurve,inspectProgressiveSweepIdealCapDomains} from '../src/kernel/nurbsConstructors'
 const square=(lo:number,hi:number,reverse=false)=>{
  const p=[[lo,lo,lo],[hi,lo,hi],[hi,hi,hi],[lo,hi,lo]]
  if(reverse)p.reverse()

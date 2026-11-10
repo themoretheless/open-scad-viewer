@@ -1,5 +1,5 @@
-import type {NurbsSurface} from '../../src/services/nurbsSurface'
-import {evaluateNurbsSurfaceOffset,type OffsetContactBandOptions} from '../../src/services/nurbsSurfaceOffset'
+import type {NurbsSurface} from '../../src/kernel/nurbsSurface'
+import {evaluateNurbsSurfaceOffset,type OffsetContactBandOptions} from '../../src/kernel/nurbsSurfaceOffset'
 /** Numerical tube proposal; the query independently certifies its interval. */
 export function curvedTangentFixture(rotated=false):{options:OffsetContactBandOptions;tangents:number[][]}{
  const a:NurbsSurface={degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],controlPoints:[[3,0],[3,3],[0,3]].map(p=>[[p[0],p[1],0],[p[0],p[1],5]]),weights:[1,Math.SQRT1_2,1].map(w=>[w,w]),periodicU:false,periodicV:false}

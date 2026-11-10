@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest'
-import {cadOperation,bounds,type CadOptions} from '../src/services/cadWorkbench'
-import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/services/geometry/brep'
+import {cadOperation,bounds,type CadOptions} from '../src/kernel/cadWorkbench'
+import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
 const options:CadOptions={action:'align',ids:['1','0','2'],sketches:[],axis:[1,0,0],origin:[0,0,0],amount:0,count:3,width:1,height:1,depth:1,pitch:1,secondary:1,mode:'min',pathId:'',profileIds:[]}
 const document=()=>({version:1 as const,sketches:[],bodies:[0,11,40].map((x,i)=>{const brep=createBrepBox([x,0,0],[x+2+i,3,4]);return {id:String(i),name:`Part ${i}`,brep,mesh:tessellateNurbsBrep(brep,1)}})})
 it('aligns to the first selected body and keeps B-rep and mesh synchronized',()=>{

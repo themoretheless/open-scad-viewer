@@ -1,0 +1,464 @@
+import {streamNativeSweep} from '../services/sweep/transport/streamNative'
+import type {ProgressiveOriginalFrameSmoothness,ProgressiveClosedPathFrameSmoothness,ProgressiveClosedAuthoredFrameSmoothness,ProgressiveClosedGuidedFrameSmoothness,ProgressiveRetainedDecompositionJoins,ProgressiveRetainedDecompositionSmoothness} from '../services/sweep/certificates/progressiveSweepApi'
+import type { RationalReparameterization } from './nurbsFoundation'
+/** Surface construction is implemented by the own Rust kernel. */
+import { type NurbsCurve } from './nurbsCurve'
+import { type NurbsSurface } from './nurbsSurface'
+import { callNurbsRust } from './geometry/nurbs'
+import {inspectAuthoredFrameRegularity,type AuthoredFrameRegularity} from './nurbsAuthoredFrameRegularity'
+import {inspectRetainedPatchRegularity,type RetainedPatchRegularity} from './nurbsRetainedPatchRegularity'
+import {inspectFrenetFrameRegularity,type FrenetFrameRegularity} from './nurbsFrenetFrameRegularity'
+import {inspectFixedNormalFrameRegularity,type FixedNormalFrameRegularity} from './nurbsFixedNormalFrameRegularity'
+/** Rational sphere surface; its poles are intentional parameter singularities. */
+export const sphereNurbsSurface = (center: [number,number,number], radius: number): NurbsSurface => callNurbsRust('surface_sphere',{center,radius})
+/** Circular cylinder side, without caps. */
+export const cylinderNurbsSurface = (center: [number,number,number], radius: number, height: number): NurbsSurface => callNurbsRust('surface_cylinder',{center,radius,height})
+/** Circular cone side, without a base cap; singular apex. */
+export const coneNurbsSurface = (center: [number,number,number], radius: number, height: number): NurbsSurface => callNurbsRust('surface_cone',{center,radius,height})
+/** Bounded reverse Polish coordinate expressions; constants and results use model mm coordinates. */
+export type NurbsFormulaToken = number | 't' | 'neg' | '+' | '-' | '*' | '/'
+export const formulaNurbsCurve = (domain: [number,number], expressions: [NurbsFormulaToken[] | string,NurbsFormulaToken[] | string,NurbsFormulaToken[] | string]): NurbsCurve => callNurbsRust('curve_formula',{domain,expressions})
+export type NurbsSurfaceFormulaToken = Exclude<NurbsFormulaToken,'t'> | 'u' | 'v'
+/** Two-variable rational coordinate formulas, converted algebraically on [0,1]^2. */
+export const formulaNurbsSurface = (domain: [number,number,number,number], expressions: [NurbsSurfaceFormulaToken[] | string,NurbsSurfaceFormulaToken[] | string,NurbsSurfaceFormulaToken[] | string]): NurbsSurface => callNurbsRust('surface_formula',{domain,expressions})
+/** Natural tensor cubic interpolation of rectangular 2..11 site grids per axis. */
+export const gridSplineNurbsSurface = (points: [number,number,number][][], parametersU: number[], parametersV: number[]): NurbsSurface => callNurbsRust('surface_grid_spline',{points,parameters_u:parametersU,parameters_v:parametersV})
+export type NurbsCornerJets = [[[number,number,number],[number,number,number]],[[number,number,number],[number,number,number]]]
+/** Bicubic patch from normalized corner positions, u/v tangents and mixed uv jets. */
+export const hermiteNurbsPatch = (corners: NurbsCornerJets, tangentU: NurbsCornerJets, tangentV: NurbsCornerJets, twist: NurbsCornerJets): NurbsSurface => callNurbsRust('surface_hermite_patch',{corners,tangent_u:tangentU,tangent_v:tangentV,twist})
+/** Closed cubic site interpolation, repeated endpoint required; clamped knot encoding. */
+export const closedSplineNurbsCurve = (points: [number,number,number][], parameters: number[]): NurbsCurve => callNurbsRust('curve_closed_spline',{points,parameters})
+/** Cubic interpolation with endpoint dP/dt tangents, normalized parameter domain. */
+export const clampedSplineNurbsCurve = (points: [number,number,number][], parameters: number[], startTangent: [number,number,number], endTangent: [number,number,number]): NurbsCurve => callNurbsRust('curve_clamped_spline',{points,parameters,start_tangent:startTangent,end_tangent:endTangent})
+/** Natural cubic interpolation through sites; normalized domain and zero endpoint second derivatives. */
+export const naturalSplineNurbsCurve = (points: [number,number,number][], parameters: number[]): NurbsCurve => callNurbsRust('curve_natural_spline',{points,parameters})
+/** Cubic Hermite interpolation; tangents are dP/dt for authored parameters, output domain [0,1]. */
+export const hermiteNurbsCurve = (points: [number,number,number][], tangents: [number,number,number][], parameters: number[]): NurbsCurve => callNurbsRust('curve_hermite',{points,tangents,parameters})
+export interface NurbsHelixApproximation {
+ curve:NurbsCurve
+ report:{spans:number;budget:number;realArithmeticErrorEstimate:number;continuousBound:false;roundingCertified:false;method:'uniform-angle-cubic-Hermite-fourth-derivative-estimate'|'uniform-abscissa-cubic-Hermite-fourth-derivative-estimate'|'catenary-profile-Hermite-rational-revolution'|'radial-ruled-helix-Hermite'|'clothoid-Hermite-composite-Simpson'|'profile-screw-helix-Hermite'}
+}
+/** Budget limits the ideal Hermite remainder estimate; binary64 rounding remains uncertified. */
+export const approximateHelixNurbsCurve=(center:[number,number,number],radius:number,height:number,turns:number,phaseDegrees:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_helix',{center,radius,height,turns,phase_degrees:phaseDegrees,max_deviation:maxDeviation})
+/** Elliptical constant XY radii; the estimate excludes binary64 rounding. */
+export const approximateEllipticHelixNurbsCurve=(center:[number,number,number],radiusX:number,radiusY:number,height:number,turns:number,phaseDegrees:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_elliptic_helix',{center,radius_x:radiusX,radius_y:radiusY,height,turns,phase_degrees:phaseDegrees,max_deviation:maxDeviation})
+/** Circular radius varies linearly between nonnegative endpoints; zero-radius apex allowed. */
+export const approximateConicalHelixNurbsCurve=(center:[number,number,number],startRadius:number,endRadius:number,height:number,turns:number,phaseDegrees:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_conical_helix',{center,start_radius:startRadius,end_radius:endRadius,height,turns,phase_degrees:phaseDegrees,max_deviation:maxDeviation})
+export const planeNurbsPatch = (origin: [number,number,number], axisU: [number,number,number], axisV: [number,number,number]): NurbsSurface => callNurbsRust('surface_plane',{origin,axisU,axisV})
+export const bilinearNurbsPatch = (corners: [[ [number,number,number], [number,number,number] ],[ [number,number,number], [number,number,number] ]]): NurbsSurface => callNurbsRust('surface_bilinear',{corners})
+/** Rational tensor-product Bezier surface; degree inferred from control net. */
+export const bezierNurbsSurface = (points: [number,number,number][][], weights?: number[][]): NurbsSurface => callNurbsRust('surface_bezier',{points,weights})
+/** One rational Bezier span, degree inferred from 2..26 control points. */
+export const bezierNurbsCurve = (points: [number,number,number][], weights?: number[]): NurbsCurve => callNurbsRust('curve_bezier',{points,weights})
+/** Clamped curves with exactly matching endpoints; degree elevation and C0 seams. */
+export const miterNurbsProfileSections = (profiles: NurbsCurve[], points: [number,number,number][], normal: [number,number,number], miterLimit = 4, closed = false): NurbsCurve[][] => callNurbsRust('curve_miter_sections',{profiles,points,normal,miter_limit:miterLimit,closed})
+export const transitionPolylineNurbsCurve = (points: [number,number,number][], setback: number, closed = false): NurbsCurve => callNurbsRust('curve_transition_polyline',{points,setback,closed})
+export const roundPolylineNurbsCurve = (points: [number,number,number][], radius: number, closed = false): NurbsCurve => callNurbsRust('curve_round_polyline',{points,radius,closed})
+export const composeNurbsCurves = (curves: NurbsCurve[]): NurbsCurve => callNurbsRust('curve_compose',{curves})
+export const lineNurbsCurve = (start: [number,number,number], end: [number,number,number]): NurbsCurve => callNurbsRust('curve_line',{start,end})
+/** Equal normalized parameter intervals per segment; closure repeats the first point. */
+export const polylineNurbsCurve = (points: [number,number,number][], closed = false): NurbsCurve => callNurbsRust('curve_polyline',{points,closed})
+/** Start direction is the least-aligned Cartesian axis projected into the circle plane. */
+export const circleNurbsCurve = (center: [number,number,number], normal: [number,number,number], radius: number): NurbsCurve => callNurbsRust('curve_circle',{center,normal,radius})
+export const circleNurbsArc = (center: [number,number,number], normal: [number,number,number], radius: number, startDegrees: number, sweepDegrees: number): NurbsCurve => callNurbsRust('curve_circle_arc',{center,normal,radius,startDegrees,sweepDegrees})
+/** Rational ellipse arc; axes are independent 3D radius vectors. Angles use degrees. */
+export const ellipseNurbsArc = (center: [number, number, number], axisU: [number, number, number], axisV: [number, number, number], startDegrees = 0, sweepDegrees = 360): NurbsCurve =>
+  callNurbsRust('curve_ellipse_arc', { center, axisU, axisV, startDegrees, sweepDegrees })
+/** Rational ellipsoid surface; poles are parameter singularities. */
+export const ellipsoidNurbsSurface = (center: [number, number, number], radii: [number, number, number]): NurbsSurface =>
+  callNurbsRust('surface_ellipsoid', { center, radii })
+/** Ring torus surface with an elliptical tube; majorRadius must exceed radialRadius. */
+export const torusNurbsSurface = (center: [number, number, number], majorRadius: number, radialRadius: number, axialRadius = radialRadius): NurbsSurface =>
+  callNurbsRust('surface_torus', { center, majorRadius, radialRadius, axialRadius })
+/** Polynomial parabola; t is dimensionless and maps affinely from the curve parameter. */
+export const parabolaNurbsCurve = (center: [number,number,number], axisU: [number,number,number], axisV: [number,number,number], start: number, end: number): NurbsCurve => callNurbsRust('curve_parabola',{center,axisU,axisV,start,end})
+/** Rational hyperbola branch; its parameter is not affine in the analytic t. */
+export const hyperbolaNurbsCurve = (center: [number,number,number], axisU: [number,number,number], axisV: [number,number,number], start: number, end: number): NurbsCurve => callNurbsRust('curve_hyperbola',{center,axisU,axisV,start,end})
+export const ellipticCylinderNurbsSurface = (center: [number,number,number], radiusX: number, radiusY: number, height: number): NurbsSurface => callNurbsRust('surface_elliptic_cylinder',{center,radiusX,radiusY,height})
+export const coneFrustumNurbsSurface = (center: [number,number,number], bottomRadius: number, topRadius: number, height: number): NurbsSurface => callNurbsRust('surface_cone_frustum',{center,bottomRadius,topRadius,height})
+/** z=a*x²+b*x*y+c*y²+d*x+e*y+f in mm coordinates. */
+export const quadraticNurbsPatch = (bounds: [number,number,number,number], coefficients: [number,number,number,number,number,number]): NurbsSurface => callNurbsRust('surface_quadratic_patch',{bounds,coefficients})
+/** Uncapped one-sheet hyperboloid; start/end bound the analytic hyperbolic parameter. */
+export const hyperboloidOneSheetNurbsSurface = (center: [number,number,number], radii: [number,number,number], start: number, end: number): NurbsSurface =>
+  callNurbsRust('surface_hyperboloid_one_sheet', {center,radii,start,end})
+/** One connected sheet; start >= 0. A zero start introduces a singular pole. */
+export const hyperboloidTwoSheetNurbsSurface = (center: [number,number,number], radii: [number,number,number], start: number, end: number, lower = false): NurbsSurface =>
+  callNurbsRust('surface_hyperboloid_two_sheet', {center,radii,start,end,lower})
+/** Power coefficients c[i][j] for z=sum(c[i][j]*x^i*y^j); exact basis conversion. */
+export const polynomialGraphNurbsSurface = (bounds: [number,number,number,number], coefficients: number[][]): NurbsSurface =>
+  callNurbsRust('surface_polynomial_graph', {bounds,coefficients})
+/** XYZ power coefficients by increasing degree; output parameter is normalized to [0,1]. */
+export const polynomialNurbsCurve = (domain: [number,number], coefficients: [number,number,number][]): NurbsCurve =>
+  callNurbsRust('curve_polynomial_parametric', {domain,coefficients})
+/** XYZ power coefficients c[i][j]; normalized output domains, degree <= 12 per direction. */
+export const polynomialNurbsSurface = (domain: [number,number,number,number], coefficients: [number,number,number][][]): NurbsSurface =>
+  callNurbsRust('surface_polynomial_parametric', {domain,coefficients})
+/** Homogeneous XYZ/W power coefficients. Mixed-sign Bernstein weights are rejected. */
+export const rationalPolynomialNurbsCurve = (domain: [number,number], coefficients: [number,number,number,number][]): NurbsCurve =>
+  callNurbsRust('curve_rational_polynomial', {domain,coefficients})
+/** Homogeneous XYZ/W power coefficients c[i][j]; conservative positive-weight admission. */
+export const rationalPolynomialNurbsSurface = (domain: [number,number,number,number], coefficients: [number,number,number,number][][]): NurbsSurface =>
+  callNurbsRust('surface_rational_polynomial', {domain,coefficients})
+/** Exact translation sweep; the profile frame does not rotate along the path. */
+export const sweepNurbsCurve=(profile:NurbsCurve,path:NurbsCurve):NurbsSurface=>callNurbsRust('surface_sweep',{profile,path})
+/** Fixed-axis rotation with rational conic angle parameterization, plus path translation. */
+export const twistSweepNurbsCurve=(profile:NurbsCurve,path:NurbsCurve,origin:[number,number,number],axis:[number,number,number],startDegrees:number,sweepDegrees:number):NurbsSurface=>
+ callNurbsRust('surface_twist_sweep',{profile,path,origin,axis,start_degrees:startDegrees,sweep_degrees:sweepDegrees})
+/** Local profile x/width interpolates the guides; transverse axes are dimensionless. */
+export const twoGuideSweepNurbsCurve=(profile:NurbsCurve,guideA:NurbsCurve,guideB:NurbsCurve,width:number,axisY:[number,number,number],axisZ:[number,number,number]):NurbsSurface=>
+ callNurbsRust('surface_two_guide_sweep',{profile,guide_a:guideA,guide_b:guideB,width,axis_y:axisY,axis_z:axisZ})
+/** Dimensionless positive rational scale law; knots define its authored domain. */
+export interface NurbsScaleLaw {
+ degree:number
+ knots:number[]
+ values:number[]
+ weights:number[]
+}
+/** Fixed orientation; origin is the profile scaling center in model coordinates. */
+export const scaledSweepNurbsCurve=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,origin:[number,number,number]):NurbsSurface=>
+ callNurbsRust('brep_sweep_constructor',{operation:'surface_scaled_sweep',profile,path,origin,scale})
+/** Rust RMF transport admitted by a whole-domain deviation certificate. */
+export const checkedProfileSweepNurbsSurface=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,normal:[number,number,number],sections:number,maxDeviation:number,maxCells?:number):FramedSweepResult=>
+ callNurbsRust('brep_sweep_constructor',{operation:'surface_profile_sweep',profile,path,scale,normal,sections,maxDeviation,...(maxCells===undefined?{}:{maxCells})})
+export interface NurbsVectorLaw {degree:number;knots:number[];values:[number,number,number][];weights:number[]}
+export interface ProgressiveSweepOptions {
+ axisScale?:NurbsVectorLaw
+ centerLaw?:NurbsVectorLaw
+ normal:[number,number,number]
+ orientation?:'rmf'|'fixed'|'fixed_normal'|'frenet'|'corrected_frenet'
+ spacing?:'parameter'|'arc_length'
+ initialSections?:number
+ maxSections?:number
+ maxDeviation:number
+ lengthTolerance?:number
+ lengthMaxCells?:number
+ rmfTransportSteps?:number
+ errorMaxCells?:number
+ errorMaxProducts?:number
+}
+/** Complete orientation independent of path tangent; native reports distinguish
+ * certified retained-patch error from sampled transport acceptance. */
+export interface AuthoredProgressiveSweepOptions extends Omit<ProgressiveSweepOptions,'orientation'> {
+ orientation:'authored'
+ frameAxis:NurbsVectorLaw
+ frameNormal:NurbsVectorLaw
+ frameRegularityMaxCells?:number
+}
+export type ProgressiveSurfaceSweepOptions=ProgressiveSweepOptions|AuthoredProgressiveSweepOptions
+/** A spatial rail controls normal direction; this does not force profile contact. */
+export interface GuidedProgressiveSweepOptions extends Omit<ProgressiveSweepOptions,'orientation'> {
+ orientation?:'rmf'|'fixed_normal'|'frenet'|'corrected_frenet'
+ orientationGuide:NurbsCurve
+ /** Contact parameter in selected profile domain; default reference index is zero. */
+ contactAnchor?:{profileIndex?:number;parameter:number}
+}
+export type ProgressiveGuidedSurfaceSweepOptions=ProgressiveSurfaceSweepOptions|GuidedProgressiveSweepOptions
+export const sweepGuidePayload=(options:ProgressiveGuidedSurfaceSweepOptions)=>callNurbsRust<{orientation_guide?:NurbsCurve;contact_profile?:number;contact_parameter?:number}>('brep_sweep_law_payload',{kind:'guide',options})
+export const sweepFrameLawPayload=(options:{orientation?:string;frameAxis?:NurbsVectorLaw;frameNormal?:NurbsVectorLaw})=>callNurbsRust<{frame_axis?:NurbsCurve;frame_normal?:NurbsCurve}>('brep_sweep_law_payload',{kind:'frame',options})
+/** Positive dimensionless axis scale and local-frame center offsets in mm. */
+export const sweepAffineLawPayload=(options:Pick<ProgressiveSweepOptions,'axisScale'|'centerLaw'>)=>callNurbsRust<{axis_scale:NurbsCurve|null;center_law:NurbsCurve|null}>('brep_sweep_law_payload',{kind:'affine',options})
+export interface ProgressiveSweepReport {
+ authoredFrameRegularity?:AuthoredFrameRegularity
+ retainedPatchRegularity?:RetainedPatchRegularity
+ sourceFrameRegularity?:FrenetFrameRegularity|FixedNormalFrameRegularity
+ sourceFrameSmoothness?:ProgressiveOriginalFrameSmoothness
+ closedSourceFrameSmoothnessC1?:ProgressiveClosedPathFrameSmoothness
+ closedSourceFrameSmoothness?:ProgressiveClosedAuthoredFrameSmoothness|ProgressiveClosedPathFrameSmoothness|ProgressiveClosedGuidedFrameSmoothness
+ retainedDecompositionSmoothness?:ProgressiveRetainedDecompositionJoins
+ retainedDecompositionG1Fallback?:ProgressiveRetainedDecompositionSmoothness
+ accepted:boolean
+ sections:number
+ stations:number
+ continuousErrorUpper:number|null
+ /** Maximum of certified profiles; does not certify unresolved profiles. */
+ knownProfileErrorUpper:number|null
+ /** Original stored end contours; excludes decomposition, correction and filled caps. */
+ originalSectionEndpointErrorUpper?:number|null
+ /** Retained end contours including decomposition; excludes correction/filled caps. */
+ endpointContourErrorUpper?:[number,number]|null
+ errorCertificateCells:number
+ decompositionProducts:number
+ errorCertificateReason:string|null
+ continuousErrorScope:'retained-patches-relative-to-original-profile-transport'
+ sampledControlDeviation:number
+ budget:number
+ closedPath:boolean
+ lengthResidualUpper:number|null
+ continuousBound:boolean
+ roundingCertified:boolean
+ seamContinuity:'C0'|'open'
+ method:'progressive-fourfold-section-refinement'
+}
+/** Attach a separate whole-law Rust premise without changing native admission. */
+export interface ProgressiveSweepResult {patches:NurbsSurface[]|null;report:ProgressiveSweepReport;levels:ProgressiveSweepReport[]}
+/** Simultaneous scale/twist; twist values use degrees, normalized traversal. */
+export const progressiveSweepNurbsPatches=(profile:NurbsCurve,path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveSweepResult=>callNurbsRust('brep_sweep_constructor',{operation:'surface_progressive_sweep',profile,path,scale,twist,options})
+export interface ProgressiveMultiSweepResult extends ProgressiveSweepResult {profilePatchRanges:[number,number][]|null}
+/** Shared stations/budget for ordered curves; preserves boundaries, without sewing or caps. */
+export const progressiveSweepNurbsProfiles=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions):ProgressiveMultiSweepResult=>callNurbsRust('brep_sweep_constructor',{operation:'surface_progressive_sweep_profiles',profiles,path,scale,twist,options})
+export interface ProgressiveSweepPreview<R=ProgressiveSweepReport|ProgressiveMiterReport> {
+ preview:true
+ patches:NurbsSurface[]
+ profilePatchRanges:[number,number][]
+ report:R
+}
+/** One preview level; unaccepted patches are not construction results. */
+export const previewProgressiveNurbsProfiles=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,sections:number):ProgressiveSweepPreview<ProgressiveSweepReport>=>callNurbsRust('brep_sweep_constructor',{operation:'surface_progressive_sweep_level',preview_sections:sections,profiles,path,scale,twist,options})
+export interface ProgressiveSweepStreamOptions {
+ /** Worker cancellation state, sampled at the same boundaries as signal. */
+ shouldAbort?:()=>boolean
+ signal?:AbortSignal
+}
+/** With authored frames and a guide, frameAxis defines the axis and the projected guide defines the normal. */
+export interface ProgressiveMiterOptions {
+ orientationGuide?:NurbsCurve
+ frameAxis?:NurbsVectorLaw
+ frameNormal?:NurbsVectorLaw
+ axisScale?:NurbsVectorLaw
+ centerLaw?:NurbsVectorLaw
+ capDomainBudgets?:{tolerance:number;maxPairs:number;maxCells:number;maxExactWork:number}
+ retainedDecompositionBudgets?:{maxProducts:number;maxFaces:number}
+ capProjectionBudgets?:{maxCells:number;maxExactWork:number}
+ circleCorrection?:{quantum:number;tolerance:number;maxWork:number}
+ capCorrection?:{quantum:number;tolerance:number;maxWork:number;authoredFrame?:boolean}
+ capWallMaxWalls?:number
+ contourAuditBudgets?:{tolerance:number;maxPairs:number;maxCells:number}
+ retainedWallMaxInjectivityCells?:number
+ capPairAuditBudgets?:Omit<import('./nurbsSweepAudit').SweepWallAuditOptions,'sharedBoundaries'>
+ embeddingBudgets?:import('./nurbsSweepEmbedding').SweepEmbeddingBudgets
+ volumeBudgets?:import('./nurbsSweepEmbedding').SweepVolumeBudgets
+ wallAuditBudgets?:Omit<import('./nurbsSweepAudit').SweepWallAuditOptions,'sharedBoundaries'>
+ normal:[number,number,number]
+ closed?:boolean
+ miterLimit?:number
+ initialSteps?:number
+ maxSteps?:number
+ maxDeviation:number
+}
+export interface ProgressiveMiterReport {
+ accepted:boolean;profileRegularityCertified:boolean;wallRegularityCertified:boolean|null;regularityCells:number;unresolvedWallPatches:[number,number][];certifiedErrorUpper:number|null;endpointContourErrorUpper:[number,number]|null;errorCertificateCells:number;errorCertificateReason:string|null;phaseResolved:boolean;frameTransportCertified:boolean;frameTransportReason:string|null;continuousErrorUpper:number;affineLawsApplied:boolean;authoredFramesApplied:boolean;orientationGuideApplied:boolean;continuousErrorMethod:'interval-authored-axis-guide-frame-interpolation'|'rational-law-derivative-interpolation-real-arithmetic'|'interval-affine-law-interpolation'|'interval-authored-frame-interpolation'|'interval-guide-frame-interpolation';steps:number;sections:number;stations:number;sampledControlDeviation:number;budget:number
+ closedPath:boolean;holonomyCorrectionRadians:number;continuousBound:false;roundingCertified:false
+ seamContinuity:'C0'|'open';method:'progressive-miter-fourfold-section-refinement'
+}
+export interface ProgressiveMiterResult {sections:NurbsCurve[][]|null;levels:ProgressiveMiterReport[];report:ProgressiveMiterReport}
+export interface ProgressiveMiterPreview {preview:true;sections:NurbsCurve[][];report:ProgressiveMiterReport}
+export const progressiveMiterPayload=(profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions)=>({profiles,points,scale,twist,options})
+/** Miter stations are retained at every level; laws and holonomy use normalized polyline length. Twist values are degrees. */
+export const progressiveMiterNurbsProfiles=(profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions):ProgressiveMiterResult=>
+ callNurbsRust('brep_sweep_constructor',{operation:'curve_progressive_miter',...progressiveMiterPayload(profiles,points,scale,twist,options)})
+export const previewProgressiveMiterNurbsProfiles=(profiles:NurbsCurve[],points:[number,number,number][],scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveMiterOptions,steps:number):ProgressiveMiterPreview=>
+ callNurbsRust('brep_sweep_constructor',{operation:'curve_progressive_miter_level',...progressiveMiterPayload(profiles,points,scale,twist,options),preview_steps:steps})
+/** Geometric prerequisite only: material ownership and boundary pairing are separate. */
+export interface ProgressiveMiterCapProjection {
+ normalDots:[[number,number],[number,number]]|null
+ reversesOrientation:[boolean,boolean]|null
+ cells:number;exactWork:number;reason:string|null
+ method:'original-endpoint-plane-projection';continuousBound:false
+}
+export interface ProgressiveMiterCapParallelism {
+ parallel:[boolean,boolean]|null
+ cells:number;exactWork:number;reason:string|null
+ method:'original-endpoint-plane-parallelism';continuousBound:false
+}
+export interface ProgressiveMiterIdealCapDomains {
+ idealCapDomainsCertified:boolean;localDomainCertified:boolean;sourcePlaneAxis:number|null
+ endpointNormals:[[[number,number],[number,number],[number,number]],[[number,number],[number,number],[number,number]]]|null
+ cells:number;pairs:number;exactWork:number;reason:string|null
+ method:'original-profile-endpoint-material-domains';continuousBound:false
+}
+export const clampedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[],startTangent:[number,number,number],endTangent:[number,number,number]):NurbsSurface=>callNurbsRust('surface_clamped_loft',{curves,parameters,start_tangent:startTangent,end_tangent:endTangent})
+export const boundaryFillNurbsSurfaces=(boundaries:NurbsCurve[],center:[number,number,number]):NurbsSurface[]=>callNurbsRust('surface_boundary_fill',{boundaries,center})
+export const triangularNurbsPatch=(base:NurbsCurve,sideA:NurbsCurve,sideB:NurbsCurve):NurbsSurface=>callNurbsRust('surface_triangular_patch',{base,side_a:sideA,side_b:sideB})
+export const gordonNurbsSurface=(uCurves:NurbsCurve[],vCurves:NurbsCurve[],parametersU:number[],parametersV:number[]):NurbsSurface=>callNurbsRust('surface_gordon',{u_curves:uCurves,v_curves:vCurves,parameters_u:parametersU,parameters_v:parametersV})
+export const closedLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[]):NurbsSurface=>callNurbsRust('surface_closed_loft',{curves,parameters})
+export const naturalLoftNurbsCurves=(curves:NurbsCurve[],parameters:number[],sectionMappings?:Array<RationalReparameterization|null>):NurbsSurface=>callNurbsRust('surface_natural_loft',{curves,parameters,section_mappings:sectionMappings})
+export const loftAlignedNurbsCurves=(curves:NurbsCurve[]):NurbsSurface=>callNurbsRust('loft_aligned',{curves})
+
+import {validateSculptBrush,type GeometryDeformation,type GeometryBrush,type SculptBrush} from './geometryEditing'
+export { loftNurbsCurves, extrudeNurbsCurve, revolveNurbsCurve, inspectProgressiveMiterCapProjection, inspectProgressiveMiterCapParallelism, inspectProgressiveMiterIdealCapDomains, inspectProgressiveMiterWalls, streamProgressiveMiterNurbsProfiles, streamProgressiveNurbsProfiles } from './nurbsConstructors/loftNurbsCurves'
+/** Sculpts the control polygon/net; knots and weights are untouched. */
+export const sculptNurbsCurve=(curve:NurbsCurve,brush:SculptBrush):NurbsCurve=>{validateSculptBrush(brush);return callNurbsRust('nurbs_sculpt_curve',{curve,brush})}
+export const sculptNurbsSurface=(surface:NurbsSurface,brush:SculptBrush):NurbsSurface=>{validateSculptBrush(brush);return callNurbsRust('nurbs_sculpt_surface',{surface,brush})}
+/** Nonlinear edits affect control points, not the exact pointwise surface image. */
+export const deformNurbsCurve=(curve:NurbsCurve,deformation:GeometryDeformation):NurbsCurve=>callNurbsRust('nurbs_deform_curve',{curve,deformation})
+export const deformNurbsSurface=(surface:NurbsSurface,deformation:GeometryDeformation):NurbsSurface=>callNurbsRust('nurbs_deform_surface',{surface,deformation})
+export const brushNurbsCurve=(curve:NurbsCurve,brush:GeometryBrush):NurbsCurve=>callNurbsRust('nurbs_brush_curve',{curve,brush})
+export const brushNurbsSurface=(surface:NurbsSurface,brush:GeometryBrush):NurbsSurface=>callNurbsRust('nurbs_brush_surface',{surface,brush})
+
+/** Homogeneous Coons patch with compatible corner weights and positive control weights; boundaries: bottom, top, left, right. */
+export const coonsNurbsPatch=(boundaries:NurbsCurve[]):NurbsSurface=>callNurbsRust('surface_coons_patch',{boundaries})
+
+/** Native diagnostics for one complete, untrimmed surface; not a Solid certificate. */
+export interface ProfileSweepGeometryCertificate {
+ certified:boolean
+ scope?:'single-untrimmed-surface'
+ reason?:string
+ maxCellsPerPredicate?:number
+ regularity?:{certified:boolean;interiorBasisC1:boolean;cells:number;unresolvedCells:number;scope:'all-original-knot-rectangles'}
+ embedding?:{certified:boolean;cells:number;reason:string;scope:string;method:string;contractionUpper?:number|null;absoluteWinding?:number}
+ solidTopologyCertified:false
+ pairwiseFaceContactsCertified?:false
+}
+export interface FramedSweepResult {
+ surface:NurbsSurface|null
+ report:{geometryCertificate?:ProfileSweepGeometryCertificate;accepted:boolean;sampledControlDeviation:number;budget:number;stations:number;sections:number;closedPath?:boolean;seamContinuity?:'C0'|'G1'|'G2'|'open';seamCertificate?:{certified:boolean;order:number;exact:boolean;regularityCertified:boolean;work:number;reason:string;scope:string;method:string}|null;continuousBound:boolean;method:'double-reflection-fourfold-section-refinement';continuousCertificate?:{errorUpper:number|null;withinBudget:boolean;cells:number;maxCells:number;method:string;reason:string|null;scope:'matched-parameter-profile-deviation';regularityCertified:false;globalEmbeddingCertified:false;seamSmoothnessCertified:false}}
+}
+/** Sampled refinement diagnostic only; not a certified continuous error bound. */
+export const framedSweepNurbsCurve=(profile:NurbsCurve,path:NurbsCurve,normal:[number,number,number],sections:number,maxDeviation:number):FramedSweepResult=>
+ callNurbsRust('surface_framed_sweep',{profile,path,normal,sections,maxDeviation})
+
+export type SurfaceJetBoundary='uMin'|'uMax'|'vMin'|'vMax'
+export interface SurfaceSeamRegularity {
+ certified:boolean
+ unresolvedIntervals?:[number,number][]
+ reason?:string
+}
+export interface SurfaceJetMatchResult {
+ surface:NurbsSurface
+ report:{
+  continuityOrder:1|2
+  normalScale:number
+  method:'homogeneous-normalized-boundary-jets'
+  regularityCertified:boolean
+  referenceRegularity?:SurfaceSeamRegularity
+  editedRegularity?:SurfaceSeamRegularity
+  seamBasis:'exact-affine-knot-correspondence'
+  modifiedLayers:number
+  accepted:boolean
+  maxError:number
+  errorUpper:number
+  tangentialSmoothnessCertified:boolean
+  reason:'accepted'|'unproven-regularity'|'unproven-tangential-smoothness'|'deviation-exceeds-budget'
+  errorBounds:{
+   wholeSeam:true
+   normalizedParameters:true
+   method:'outward-homogeneous-jet-difference-hull'
+   positionUpper:number
+   firstDerivativeUpper:number
+   secondDerivativeUpper:number|null
+   mixedDerivativeUpper:number|null
+  }
+ }
+}
+/** Native whole-seam regularity and derivative-error gate; apply only accepted results. */
+export const matchNurbsSurfaceJets=(reference:NurbsSurface,edited:NurbsSurface,referenceBoundary:SurfaceJetBoundary,editedBoundary:SurfaceJetBoundary,order:1|2,scale=1,reverse=false,maxError=1e-6):SurfaceJetMatchResult=>
+ callNurbsRust('surface_match_jets',{reference,edited,referenceBoundary,editedBoundary,order,scale,reverse,maxError})
+
+export interface SurfacePreparationResult {
+ reference:NurbsSurface
+ edited:NurbsSurface
+ report:{accepted:boolean;reason:'accepted'|'deviation-exceeds-budget'|'unproven-parameter-normalization';budget:number;referenceErrorUpper?:number;editedErrorUpper?:number;wholeSurface?:true;method?:'outward-homogeneous-Bernstein-difference'}
+ basis:{degree:number;controlCount:number;normalizedSeam:true;editedReversed:boolean;referenceDomain:[number,number];editedDomain:[number,number];periodicityRemoved:{reference:boolean;edited:boolean}}
+}
+export const prepareNurbsSurfaceSeams=(reference:NurbsSurface,edited:NurbsSurface,referenceBoundary:SurfaceJetBoundary,editedBoundary:SurfaceJetBoundary,reverse:boolean,maxError:number,openPeriodic=false):SurfacePreparationResult=>
+ callNurbsRust('surface_prepare_seams',{reference,edited,referenceBoundary,editedBoundary,reverse,maxError,openPeriodic})
+
+export interface CurveMatchResult {
+ curve:NurbsCurve
+ report:{accepted:boolean;positionErrorUpper:number;sineAngleUpper:number|null;angleDegreesUpper:number|null;maxAngleDegrees:number;regularityCertified:boolean;orientationCertified:boolean;method:'outward-endpoint-handle-wedge';reason:string}
+}
+export const matchNurbsCurveG1=(reference:NurbsCurve,edited:NurbsCurve,referenceEnd:'start'|'end',editedEnd:'start'|'end',maxAngleDegrees=1e-6):CurveMatchResult=>
+ callNurbsRust('curve_match_g1',{reference,edited,referenceEnd,editedEnd,maxAngleDegrees})
+
+export interface CoonsBoundaryPreparation {
+ curve:NurbsCurve
+ report:{accepted:boolean;errorUpper:number;budget:number;wholeCurve:true;method:'outward-homogeneous-Bernstein-difference'}
+}
+/** Preserve boundary parameters; return the source definition if the bound exceeds budget. */
+export const prepareCoonsBoundaryWeights=(curve:NurbsCurve,maxError:number):CoonsBoundaryPreparation=>
+ {const result=callNurbsRust<CoonsBoundaryPreparation>('curve_prepare_coons_weights',{curve,maxError});return result.report.accepted?result:{...result,curve:structuredClone(curve)}}
+
+export const approximateVariablePitchHelixNurbsCurve=(center:[number,number,number],radius:number,height:number,turns:number,startPitch:number,endPitch:number,phaseDegrees:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_variable_pitch_helix',{center,radius,height,turns,start_pitch:startPitch,end_pitch:endPitch,phase_degrees:phaseDegrees,max_deviation:maxDeviation})
+
+export const approximateInvoluteNurbsCurve=(center:[number,number,number],radius:number,startRadians:number,endRadians:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_involute',{center,radius,start_radians:startRadians,end_radians:endRadians,max_deviation:maxDeviation})
+
+export const approximateLogarithmicSpiralNurbsCurve=(center:[number,number,number],radius:number,growth:number,startRadians:number,endRadians:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_logarithmic_spiral',{center,radius,growth,start_radians:startRadians,end_radians:endRadians,max_deviation:maxDeviation})
+
+export const approximateLissajousNurbsCurve=(center:[number,number,number],amplitudes:[number,number,number],frequencies:[number,number,number],phasesDegrees:[number,number,number],maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_lissajous',{center,amplitudes,frequencies,phases_degrees:phasesDegrees,max_deviation:maxDeviation})
+
+export const approximateTrochoidNurbsCurve=(center:[number,number,number],rollingRadius:number,tracingRadius:number,startRadians:number,endRadians:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_trochoid',{center,rolling_radius:rollingRadius,tracing_radius:tracingRadius,start_radians:startRadians,end_radians:endRadians,max_deviation:maxDeviation})
+export const approximateCycloidNurbsCurve=(center:[number,number,number],radius:number,startRadians:number,endRadians:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_cycloid',{center,radius,start_radians:startRadians,end_radians:endRadians,max_deviation:maxDeviation})
+
+export const approximateEpicycloidNurbsCurve=(center:[number,number,number],fixedRadius:number,rollingRadius:number,startRadians:number,endRadians:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_epicycloid',{center,fixed_radius:fixedRadius,rolling_radius:rollingRadius,start_radians:startRadians,end_radians:endRadians,max_deviation:maxDeviation})
+
+export const approximateHypocycloidNurbsCurve=(center:[number,number,number],fixedRadius:number,rollingRadius:number,startRadians:number,endRadians:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_hypocycloid',{center,fixed_radius:fixedRadius,rolling_radius:rollingRadius,start_radians:startRadians,end_radians:endRadians,max_deviation:maxDeviation})
+
+export const approximateArchimedeanSpiralNurbsCurve=(center:[number,number,number],startRadius:number,endRadius:number,startDegrees:number,endDegrees:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_archimedean_spiral',{center,start_radius:startRadius,end_radius:endRadius,start_degrees:startDegrees,end_degrees:endDegrees,max_deviation:maxDeviation})
+
+export const approximateCatenaryNurbsCurve=(center:[number,number,number],scale:number,startX:number,endX:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_catenary',{center,scale,start_x:startX,end_x:endX,max_deviation:maxDeviation})
+
+export interface NurbsCatenoidApproximation {surface:NurbsSurface;report:NurbsHelixApproximation["report"]}
+export const approximateCatenoidNurbsSurface=(center:[number,number,number],scale:number,startZ:number,endZ:number,maxDeviation:number):NurbsCatenoidApproximation=>
+ callNurbsRust('surface_catenoid',{center,scale,start_z:startZ,end_z:endZ,max_deviation:maxDeviation})
+
+export interface NurbsHelicoidApproximation {surface:NurbsSurface;report:NurbsHelixApproximation["report"]}
+export const approximateHelicoidNurbsSurface=(center:[number,number,number],innerRadius:number,outerRadius:number,height:number,turns:number,phaseDegrees:number,maxDeviation:number):NurbsHelicoidApproximation=>
+ callNurbsRust('surface_helicoid',{center,inner_radius:innerRadius,outer_radius:outerRadius,height,turns,phase_degrees:phaseDegrees,max_deviation:maxDeviation})
+
+export const approximateToroidalSpiralNurbsCurve=(center:[number,number,number],majorRadius:number,minorRadius:number,majorTurns:number,minorTurns:number,majorPhaseDegrees:number,minorPhaseDegrees:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_toroidal_spiral',{center,major_radius:majorRadius,minor_radius:minorRadius,major_turns:majorTurns,minor_turns:minorTurns,major_phase_degrees:majorPhaseDegrees,minor_phase_degrees:minorPhaseDegrees,max_deviation:maxDeviation})
+export const approximateTorusKnotNurbsCurve=(center:[number,number,number],majorRadius:number,minorRadius:number,p:number,q:number,majorPhaseDegrees:number,minorPhaseDegrees:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_torus_knot',{center,major_radius:majorRadius,minor_radius:minorRadius,p,q,major_phase_degrees:majorPhaseDegrees,minor_phase_degrees:minorPhaseDegrees,max_deviation:maxDeviation})
+
+export const extrudeNurbsCurvePatches=(curve:NurbsCurve,vector:[number,number,number]):NurbsSurface[]=>callNurbsRust('surface_extrude_patches',{curve,vector})
+
+export const approximateSphericalSpiralNurbsCurve=(center:[number,number,number],radius:number,longitudeTurns:number,latitudeTurns:number,longitudePhaseDegrees:number,latitudePhaseDegrees:number,maxDeviation:number):NurbsHelixApproximation=>
+ callNurbsRust('curve_spherical_spiral',{center,radius,longitude_turns:longitudeTurns,latitude_turns:latitudeTurns,longitude_phase_degrees:longitudePhaseDegrees,latitude_phase_degrees:latitudePhaseDegrees,max_deviation:maxDeviation})
+
+export interface NurbsClothoidApproximation {
+ curve:NurbsCurve
+ report:NurbsHelixApproximation['report'] & {quadratureIntervals:number;quadratureErrorEstimate:number;hermiteErrorEstimate:number}
+}
+export const approximateClothoidNurbsCurve=(center:[number,number,number],length:number,startCurvature:number,endCurvature:number,phaseDegrees:number,maxDeviation:number):NurbsClothoidApproximation=>
+ callNurbsRust('curve_clothoid',{center,length,start_curvature:startCurvature,end_curvature:endCurvature,phase_degrees:phaseDegrees,max_deviation:maxDeviation})
+
+export interface NurbsScrewApproximation {patches:NurbsSurface[];report:NurbsHelixApproximation['report']}
+export const approximateScrewNurbsSurfaces=(profile:NurbsCurve,origin:[number,number,number],axis:[number,number,number],height:number,turns:number,phaseDegrees:number,maxDeviation:number):NurbsScrewApproximation=>
+ callNurbsRust('surface_screw',{profile,origin,axis,height,turns,phase_degrees:phaseDegrees,max_deviation:maxDeviation})
+
+export interface NurbsCatenoidPatchesApproximation {patches:NurbsSurface[];report:NurbsHelixApproximation["report"]}
+export const approximateCatenoidNurbsPatches=(center:[number,number,number],scale:number,startZ:number,endZ:number,maxDeviation:number):NurbsCatenoidPatchesApproximation=>
+ callNurbsRust('surface_catenoid_patches',{center,scale,start_z:startZ,end_z:endZ,max_deviation:maxDeviation})
+
+/** Circular authored stations, with sampled frame refinement only. */
+export const checkedPipeNurbsSurface=(path:NurbsCurve,radius:number,normal:[number,number,number],sections:number,maxDeviation:number):FramedSweepResult=>
+ callNurbsRust('surface_pipe',{path,radius,normal,sections,max_deviation:maxDeviation})
+
+export const checkedVariablePipeNurbsSurface=(path:NurbsCurve,radius:NurbsCurve,normal:[number,number,number],sections:number,maxDeviation:number):FramedSweepResult=>
+ callNurbsRust("surface_variable_pipe",{path,radius,normal,sections,max_deviation:maxDeviation})
+
+export interface NurbsHelicoidPatchesApproximation {patches:NurbsSurface[];report:NurbsHelixApproximation["report"]}
+export const approximateHelicoidNurbsPatches=(center:[number,number,number],innerRadius:number,outerRadius:number,height:number,turns:number,phaseDegrees:number,maxDeviation:number):NurbsHelicoidPatchesApproximation=>
+ callNurbsRust("surface_helicoid_patches",{center,inner_radius:innerRadius,outer_radius:outerRadius,height,turns,phase_degrees:phaseDegrees,max_deviation:maxDeviation})
+
+export const checkedRibbonNurbsSurface=(path:NurbsCurve,width:NurbsCurve,normal:[number,number,number],sections:number,maxDeviation:number):FramedSweepResult=>
+ callNurbsRust("surface_ribbon",{path,width,normal,sections,max_deviation:maxDeviation})
+
+export interface NurbsCircleSection {center:[number,number,number];normal:[number,number,number];seam:[number,number,number];radius:number}
+export const circleTransitionNurbsSurface=(start:NurbsCircleSection,end:NurbsCircleSection):NurbsSurface=>
+ callNurbsRust("surface_circle_transition",{start_center:start.center,start_normal:start.normal,start_seam:start.seam,start_radius:start.radius,end_center:end.center,end_normal:end.normal,end_seam:end.seam,end_radius:end.radius})
+
+export interface NurbsEllipseSection {center:[number,number,number];axisU:[number,number,number];axisV:[number,number,number]}
+export const ellipseTransitionNurbsSurface=(start:NurbsEllipseSection,end:NurbsEllipseSection):NurbsSurface=>
+ callNurbsRust("surface_ellipse_transition",{start_center:start.center,start_axis_u:start.axisU,start_axis_v:start.axisV,end_center:end.center,end_axis_u:end.axisU,end_axis_v:end.axisV})
+
+export interface NurbsRectangleSection {center:[number,number,number];axisU:[number,number,number];axisV:[number,number,number]}
+export const circleRectangleTransitionNurbsPatches=(circle:NurbsCircleSection,rectangle:NurbsRectangleSection):NurbsSurface[]=>
+ callNurbsRust("surface_circle_rectangle_transition",{circle_center:circle.center,circle_normal:circle.normal,circle_seam:circle.seam,circle_radius:circle.radius,rectangle_center:rectangle.center,rectangle_axis_u:rectangle.axisU,rectangle_axis_v:rectangle.axisV})
+
+export * from '../services/loft/transport/construction'
+
+export * from '../services/sweep/certificates/progressiveSweepApi'

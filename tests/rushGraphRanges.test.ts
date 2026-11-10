@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { setRushGraphParameters } from '../src/services/rushGraph'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { setRushGraphParameters } from '../src/language/rushGraph'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import { resolveInterval } from '../benchmarks/rush/rushGraphRange-reference'
 import { magnitude } from '../benchmarks/rush/rushGraphUnits-reference'
 const fail = (_code:string,_path:string,message:string):never => {throw new Error(message)}

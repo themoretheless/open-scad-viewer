@@ -45,8 +45,8 @@ const instantiate=WebAssembly.instantiate.bind(WebAssembly)
 ;(WebAssembly as any).instantiate=async(...args:any[])=>{const r=await(instantiate as any)(...args);instrument(r instanceof Instance?r:r.instance);return r}
 async function phase<T>(name:string,run:()=>T|Promise<T>):Promise<T>{const start=performance.now();try{return await run()}finally{report.phases.push({name,milliseconds:performance.now()-start});save()}}
 try{
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
  const {readNativeGeometryData}=await import('../src/services/nativeGeometrySnapshot')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const document=compileRushFrontend(source).document,before=JSON.stringify(document)

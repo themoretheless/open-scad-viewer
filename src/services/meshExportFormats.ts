@@ -1,5 +1,5 @@
-import { export3mfInKernel, exportMeshArtifactInKernel } from './geometry/meshArtifactExport';
-import { type NurbsMesh } from './geometry/tessellation';
+import { export3mfInKernel, exportMeshArtifactInKernel } from '../kernel/geometry/meshArtifactExport';
+import { type NurbsMesh } from '../kernel/geometry/tessellation';
 import { MESH_EXPORT_FORMATS, type MeshExportFormat } from './meshFormats';
 export { MESH_EXPORT_FORMATS, type MeshExportFormat };
 type ExportMesh = NurbsMesh & { parts?: NurbsMesh[] };

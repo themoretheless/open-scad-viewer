@@ -8,7 +8,7 @@ if(existsSync(resolve(root,'docs/qualification/own-rust-cad-v43.json')))throw ne
 const previousPath='docs/qualification/own-rust-cad-v42.json',previous=JSON.parse(bytes(previousPath))
 const changed=[...execFileSync('git',['diff','--name-only','HEAD'],{cwd:root,encoding:'utf8'}).trim().split('\n'),...execFileSync('git',['ls-files','--others','--exclude-standard'],{cwd:root,encoding:'utf8'}).trim().split('\n')]
 const additions=changed.filter(path=>['vite.config.ts','vite.qualification.config.ts','scripts/qualificationKernelModuleDelivery.mjs','src/workers/manifoldPlanQualification.worker.ts'].includes(path)||/^(crates\/.*\.(rs|toml)|src\/services\/.*\.ts|src\/workers\/geometry\.worker\.ts|src\/App\.vue|docs\/languages\/.*\.json)$/.test(path))
-const deliveryPaths=['scripts/qualificationKernelModuleDelivery.mjs','src/services/geometry/kernelCompilationRequired.ts','src/workers/manifoldPlanQualification.worker.ts']
+const deliveryPaths=['scripts/qualificationKernelModuleDelivery.mjs','src/kernel/geometry/kernelCompilationRequired.ts','src/workers/manifoldPlanQualification.worker.ts']
 const paths=[...new Set([...previous.sourceBundle.paths,...additions,...deliveryPaths,...execFileSync('git',['ls-files','crates/brep-core/src','crates/nurbs-core/src','crates/geometry-bridge/src'],{cwd:root,encoding:'utf8'}).trim().split('\n').filter(p=>p.endsWith('.rs'))])].sort()
 
 const wasm=bytes('public/wasm/geometry-kernel.wasm'),wasmSha256=sha(wasm)

@@ -1,4 +1,4 @@
-import type {SolidMinkowskiResult} from '../../solidMinkowski'
+import type {SolidMinkowskiResult} from '../../../kernel/solidMinkowski'
 import {finite,type MainSolidExpectation} from '../../mainSolidProtocol'
 
 export function validMinkowskiResult(job:Extract<MainSolidExpectation,{kind:'minkowski3d'}>,value:unknown,validateDocument:(value:unknown)=>boolean):boolean {

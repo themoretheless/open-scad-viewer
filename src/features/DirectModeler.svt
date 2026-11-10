@@ -18,49 +18,49 @@ import type {BoundaryMeshReport} from '../services/expressionBoundaryMesh'
 import type {ExpressionMeshReport} from '../services/expressionMesh'
 import CpuOrbitCanvas from '../components/CpuOrbitCanvas.svt'
 import {previewMeshes as manufacturingMeshes} from '../services/mainModeling'
-import {faceAbsenceProven } from '../services/solidSelfIntersection'
-import type {NurbsSurfaceDistance} from '../services/nurbsSurface'
+import {faceAbsenceProven } from '../kernel/solidSelfIntersection'
+import type {NurbsSurfaceDistance} from '../kernel/nurbsSurface'
 import type {MainSolidJob} from '../services/mainSolidProtocol'
 import SceneObjectControls from '../components/SceneObjectControls.svt'
 import { connectedEdgeChain } from '../services/edgeSelection'
 import CadQuantityInput from '../components/CadQuantityInput.svt'
 import RunoutControls from '../components/RunoutControls.svt'
 import {numericRectangle,numericSlotSources} from '../services/numericSketchAuthoring'
-import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../services/solidSurfaceDiagnostics'
+import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../kernel/solidSurfaceDiagnostics'
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect } from 'svet'
-import {solidVertexCount} from '../services/solidMeasurements'
-import {isSolidProfileEdit,type SolidProfileEditOptions} from '../services/solidProfileEdit'
-import {isSolidSceneEdit} from '../services/solidSceneEdit'
-import {isSolidBodyEdit,type SolidBodyEditOptions} from '../services/solidBodyEdit'
-import {assignSolidMaterial} from '../services/solidMaterial'
+import {solidVertexCount} from '../kernel/solidMeasurements'
+import {isSolidProfileEdit,type SolidProfileEditOptions} from '../kernel/solidProfileEdit'
+import {isSolidSceneEdit} from '../kernel/solidSceneEdit'
+import {isSolidBodyEdit,type SolidBodyEditOptions} from '../kernel/solidBodyEdit'
+import {assignSolidMaterial} from '../kernel/solidMaterial'
 import { stringifyMeshJson } from '../services/meshJson'
 import { rayTriangleDistance } from '../services/math3d'
 import ModelingFloorGrid from '../components/ModelingFloorGrid.svt'
 import ModelingGridControls from '../components/ModelingGridControls.svt'
 import WorkspaceActionBar from '../components/WorkspaceActionBar.svt'
-import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
+import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
 import { sameSketchPlane } from '../services/directExtrusion'
 import { useModelingGrid } from '../services/modelingGrid'
 import { resolveModelingSnap, type SnapKind, type SnapGeometry } from '../services/modelingSnaps'
 import CommandPalette from '../components/CommandPalette.svt'
-import type {NurbsCurve,NurbsScreenProjection} from '../services/nurbsCurve'
+import type {NurbsCurve,NurbsScreenProjection} from '../kernel/nurbsCurve'
 import { bodyPoints, DirectHistory, directBodiesScad, parseDirectDocument, serializeDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from '../services/directModeling'
-import type {SolidSketchEditOptions} from '../services/solidSketchEdit'
+import type {SolidSketchEditOptions} from '../kernel/solidSketchEdit'
 import { validateSimpleSketch, slotSketch, sampleCurve, bakeSketch, trimSketch, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../services/directSketchGeometry'
 import { storageGet, storageSet } from '../services/safeStorage'
-import type {SolidBooleanOptions} from '../services/solidBoolean'
+import type {SolidBooleanOptions} from '../kernel/solidBoolean'
 import { defaultDirectCamera, directExtrusionTool, projectDirectPoint, unprojectDirectXY, unprojectDirectPlane } from '../services/directModelingTools'
 import { MESH_IMPORT_ACCEPT } from '../exchange/meshImport'
 import ManifoldSettings from '../components/ManifoldSettings.svt'
 import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS } from '../services/meshConvert'
-import { solidDocumentToMeshDocument } from '../services/solidBridge'
-import type {SolidBrepToolOptions} from '../services/solidBrepTool'
-import type {SolidNurbsEditOptions} from '../services/solidNurbsEdit'
-import { type SolidNurbsCurve } from '../services/solidNurbs'
-import type { SurfaceJetBoundary} from '../services/nurbsConstructors'
-import {isSolidNurbsRefit } from '../services/solidCurveReduction'
-import {isSolidSurfaceBuild,type buildSolidSurface} from '../services/solidSurfaceConstruction'
-import { type BrepMassProperties, type BrepBooleanOperation } from '../services/geometry/brep'
+import { solidDocumentToMeshDocument } from '../kernel/solidBridge'
+import type {SolidBrepToolOptions} from '../kernel/solidBrepTool'
+import type {SolidNurbsEditOptions} from '../kernel/solidNurbsEdit'
+import { type SolidNurbsCurve } from '../kernel/solidNurbs'
+import type { SurfaceJetBoundary} from '../kernel/nurbsConstructors'
+import {isSolidNurbsRefit } from '../kernel/solidCurveReduction'
+import {isSolidSurfaceBuild,type buildSolidSurface} from '../kernel/solidSurfaceConstruction'
+import { type BrepMassProperties, type BrepBooleanOperation } from '../kernel/geometry/brep'
 import { touchPointers, panes, collectDragNodes, profileBooleanOperation, isProfileCommand, selectIndexKey, download, resizeSplit, canvasOf, primitiveKinds, PRIMITIVE_ICONS } from './directModeler/helpers'
 import type { Pane } from './directModeler/helpers'
 import { usePrimitives } from './directModeler/usePrimitives'
@@ -498,7 +498,7 @@ const profileBridgePanel=ref<InstanceType<typeof SurfacePairChecks>|null>(null)
 const frozenBodyPanel=ref<InstanceType<typeof FrozenGraphBodyPanel>|null>(null),frozenBodyDisplay=shallowRef<import('../services/frozenGraphBody').FrozenGraphDisplay|null>(null),frozenBodyEdge=ref<number|null>(null)
 function showFrozenBody(value:import('../services/frozenGraphBody').FrozenGraphDisplay|null){frozenBodyDisplay.value=value;if(value){mode.value='3d';if(!document.value.sketches.length)sketchPaneOpen.value=false;void nextTick(()=>fit('3d',false,true))}}
 const sourceGraphDisplay=shallowRef<{lines:[number,number,number][][];witness:[number,number,number]|null}|null>(null)
-const profileBridgeSurfaces=computed(()=>selectedSurfacePair.value?selectedSurfacePair.value.map(id=>document.value.surfaces!.find(s=>s.id===id)!.surface) as [import('../services/nurbsSurface').NurbsSurface,import('../services/nurbsSurface').NurbsSurface]:null)
+const profileBridgeSurfaces=computed(()=>selectedSurfacePair.value?selectedSurfacePair.value.map(id=>document.value.surfaces!.find(s=>s.id===id)!.surface) as [import('../kernel/nurbsSurface').NurbsSurface,import('../kernel/nurbsSurface').NurbsSurface]:null)
 type SolidTopology=import('../services/mainSolidProtocol').MainSolidResults['topology']
 const {
   snapPreparation,
@@ -695,7 +695,7 @@ watch(()=>props.open,open=>{if(!open)advancedOp.value=null},{flush:'sync'})
 const bodyEditWorker=createSolidPreviewWorker()
 let bodyEditGeneration=0,bodyEditApplyGeneration:number|null=null
 const chainProject=(point:[number,number,number])=>project(point,'3d')
-const currentChain=shallowRef<{curves:import('../services/solidNurbs').SolidNurbsCurve[];diagnostics:import('../services/curveOffsetDiagnostics').CurveOffsetDiagnostics}|null>(null)
+const currentChain=shallowRef<{curves:import('../kernel/solidNurbs').SolidNurbsCurve[];diagnostics:import('../services/curveOffsetDiagnostics').CurveOffsetDiagnostics}|null>(null)
 const curveOffsetState=shallowRef<Awaited<ReturnType<typeof import('../services/previewSolidCurveOffset').previewSolidCurveOffset>>|null>(null)
 const bodyEditPending=ref(false),bodyEditResult=shallowRef<DirectDocument|null>(null),bodyEditError=ref('')
 function cancelBodyEdit(){curveOffsetState.value=null;bodyEditApplyGeneration=null;bodyEditGeneration++;bodyEditWorker.cancel();bodyEditPending.value=false;bodyEditResult.value=null;preparedProfileResult.value=null;nurbsRefitResult.value=null;surfaceBuildResult.value=null;curveMatchResult.value=null;surfaceMatchResult.value=null;seamPrepareResult.value=null;bodyEditError.value=''}
@@ -1069,7 +1069,7 @@ async function undo(redo = false) {
 }
 watch(()=>[props.open,document.value,lockedIds.value.join(','),activeGroup.value],()=>{if(historyPending.value)cancelHistoryRestore()},{flush:'sync'})
 onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose()})
-function addSketch(points: Point2[], closed: boolean, analytic?: import('../services/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../services/geometry/brepProfile').BrepProfile) {
+function addSketch(points: Point2[], closed: boolean, analytic?: import('../services/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../kernel/geometry/brepProfile').BrepProfile) {
   validateSimpleSketch(points,closed)
   const d = history.document, id = crypto.randomUUID()
   d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, ...(retainedProfile?{retainedProfile}:{}), plane: JSON.parse(JSON.stringify(activePlane.value)), ...(workplaneBodyId.value?{supportBodyId:workplaneBodyId.value}:{}) })

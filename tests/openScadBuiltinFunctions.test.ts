@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { OPENSCAD_2021_01_BUILTIN_FUNCTIONS } from '../src/core/openScad2021Contract'
-import { compileOpenSCAD, type AssignNode, type FunctionValue } from '../src/services/openscadCompiler'
+import { compileOpenSCAD, type AssignNode, type FunctionValue } from '../src/language/openscadCompiler'
 import {
   OPENSCAD_2021_01_BUILTIN_FUNCTION_NAMES,
   evaluateOpenScadBuiltinFunction,
   isOpenScadBuiltinFunctionName,
   type OpenScadBuiltinFunctionContext,
   type OpenScadBuiltinValue,
-} from '../src/services/openScadBuiltinFunctions'
+} from '../src/language/openScadBuiltinFunctions'
 
 const functionSentinel = Object.freeze({ kind: 'test-function' })
 

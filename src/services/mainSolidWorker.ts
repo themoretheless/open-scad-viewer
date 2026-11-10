@@ -1,5 +1,5 @@
 import {parseBondedSolidInput} from './bondedSolidProtocol'
-import type {CadOptions} from './cadWorkbench'
+import type {CadOptions} from '../kernel/cadWorkbench'
 import type {MeshData} from '../core/mesh'
 import type {PickHit} from '../render/rendererContracts'
 import type {DirectDocument} from './directModeling'
@@ -8,7 +8,7 @@ import type {TrussInput,TrussModel,TrussResponse,TrussTopologyLoadCase,TrussTopo
 import type {AxialLimits,PrintStrengthProfile,ThermalStrengthRequest} from './trussScreening'
 import {resolveTrussScenario, type TrussScenario} from './trussScenario'
 import {checkLatticeGraphInput, checkLatticeGraphMeshInput, type LatticeGraphMesh} from './latticeGraphProtocol'
-import type {LighteningOptions} from './solidLightening'
+import type {LighteningOptions} from '../kernel/solidLightening'
 import {MainSolidWorkerClient,type MainSolidRunOptions} from './mainSolidWorkerClient'
 
 // One warm worker serves all main-solid/CAD operations; the geometry kernel is
@@ -26,7 +26,7 @@ export function computeCadOperation(document:DirectDocument,options:CadOptions):
  return shared.run({kind:'cad',document,options})
 }
 
-export function computeCadInspection(bodies:import('./directModeling').DirectBody[]):Promise<import('./cadInspection').CadPairReport[]>{
+export function computeCadInspection(bodies:import('./directModeling').DirectBody[]):Promise<import('../kernel/cadInspection').CadPairReport[]>{
  return shared.run({kind:'inspect',bodies})
 }
 

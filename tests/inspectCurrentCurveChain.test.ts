@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest'
 const native=vi.hoisted(()=>vi.fn())
-vi.mock('../src/services/geometry/nurbs',()=>({callNurbsRust:native}))
+vi.mock('../src/kernel/geometry/nurbs',()=>({callNurbsRust:native}))
 import {inspectCurrentCurveChain} from '../src/services/inspectCurrentCurveChain'
 const curve={degree:1,knots:[0,0,1,1],weights:[1,1],controlPoints:[[0,0],[2,0]]}
 const document={version:1 as const,bodies:[],sketches:[],curves:[{id:'a',name:'A',curve}]}

@@ -1,7 +1,7 @@
 import {coverageExpectation,validCoverage,type SourceWallCoverageOptions,type SourceWallCoverageResult} from './sourceWallCoverageTransport'
 import {scanExpectation,validScan,type SourceWallScanOptions,type SourceWallScanResult} from './sourceWallScanTransport'
 import {wallExpectation,validWall,type SourceWallOptions,type SourceWallResult} from './sourceWallTransport'
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 /** Original native recipes only; display intervals never authorize geometry. */
 export interface SourceBodyDefinition {
  /** Native restore selects the original projective carrier when present. */

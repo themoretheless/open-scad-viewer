@@ -1,8 +1,8 @@
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
 
 // Exercise the ordinary authored Rush command against the real WASM kernel.

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,inspectProgressiveMiterWalls,previewProgressiveMiterNurbsProfiles,type NurbsScaleLaw} from '../src/services/nurbsConstructors'
+import {bezierNurbsCurve,inspectProgressiveMiterWalls,previewProgressiveMiterNurbsProfiles,type NurbsScaleLaw} from '../src/kernel/nurbsConstructors'
 const law=(value:number):NurbsScaleLaw=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})
 const profiles=[bezierNurbsCurve([[.1,0,0],[.2,0,0]])]
 const points:[number,number,number][]=[[0,0,0],[0,0,10]]
@@ -33,8 +33,8 @@ it('retains cyclic C0 ownership independently of unresolved global geometry',()=
  expect(()=>inspectProgressiveMiterWalls(profiles,sites,law(1),law(0),opts,broken,budgets)).toThrow(/exact retained seam/)
 })
 it('retains the same bounded evidence in synchronous and streamed body construction',async()=>{
- const {circleNurbsCurve}=await import('../src/services/nurbsConstructors')
- const {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody}=await import('../src/services/geometry/brep')
+ const {circleNurbsCurve}=await import('../src/kernel/nurbsConstructors')
+ const {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody}=await import('../src/kernel/geometry/brep')
  const loops=[[circleNurbsCurve([0,0,0],[0,0,1],.2)]]
  const opts={...options,retainedWallMaxInjectivityCells:10000,wallAuditBudgets:{...budgets,maxInjectivityCells:0,maxPairs:0,maxPairCells:0}}
  const sync=createProgressiveMiterBrepProfileBody(loops,points,law(1),law(0),opts)
@@ -63,13 +63,13 @@ it('keeps profile-side ownership inside explicit closed loops',()=>{
  }
 })
 it('audits both actual retained cap domains and preserves zero-budget refusal',async()=>{
- const {circleNurbsCurve}=await import('../src/services/nurbsConstructors')
- const {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody}=await import('../src/services/geometry/brep')
- const {reverseNurbsCurve}=await import('../src/services/nurbsCurve')
+ const {circleNurbsCurve}=await import('../src/kernel/nurbsConstructors')
+ const {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody}=await import('../src/kernel/geometry/brep')
+ const {reverseNurbsCurve}=await import('../src/kernel/nurbsCurve')
  const loops=[[circleNurbsCurve([0,0,0],[0,0,1],.5)],[reverseNurbsCurve(circleNurbsCurve([0,0,0],[0,0,1],.2))]]
  const opts={...options,retainedWallMaxInjectivityCells:10000,wallAuditBudgets:{...budgets,maxInjectivityCells:0,maxPairs:0,maxPairCells:0},contourAuditBudgets:{tolerance:.001,maxPairs:10000,maxCells:10000}}
  const body=createProgressiveMiterBrepProfileBody(loops,points,law(1),law(0),opts)
- const {DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/services/nurbsSweepEmbedding')
+ const {DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/kernel/nurbsSweepEmbedding')
  const shortVolume=createProgressiveMiterBrepProfileBody(loops,points,law(1),law(0),{
   ...opts,volumeBudgets:{...DEFAULT_SWEEP_VOLUME_BUDGETS,maxPairs:1},
  })

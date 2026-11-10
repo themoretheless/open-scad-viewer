@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {validFaceContacts} from '../src/services/solidFaceContacts'
+import {validFaceContacts} from '../src/kernel/solidFaceContacts'
 function fixture(){
  const limits={maxPairs:1,maxCells:1000,maxDomainCells:1000,cellsPerPair:1000,domainCellsPerPair:1000,maxBoxes:0}
  const e:any={toleranceUv:1e-8,limits,domains:[0,1].map(()=>({uv:[[0,1],[0,1]],edges:[7],vertices:[3,4],periodic:false,carrierKey:'original-carrier'}))}

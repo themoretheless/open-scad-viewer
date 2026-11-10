@@ -1,6 +1,6 @@
 import { stringifyMeshJson } from '../src/services/meshJson'
 import {expect,it} from 'vitest'
-import {createBrepCylinder,createBrepFrustum,createBrepTube,createBrepTorus,inspectNurbsBrep,analyzeNurbsBrep,tessellateNurbsBrep,booleanNurbsBrep,createBrepBox,extrudeBrepPolygon} from '../src/services/geometry/brep'
+import {createBrepCylinder,createBrepFrustum,createBrepTube,createBrepTorus,inspectNurbsBrep,analyzeNurbsBrep,tessellateNurbsBrep,booleanNurbsBrep,createBrepBox,extrudeBrepPolygon} from '../src/kernel/geometry/brep'
 import {transformSelection} from '../src/services/directSolidTools'
 
 it('tessellates exact curved solids without open seams across display resolutions',()=>{
@@ -60,7 +60,7 @@ it('extrudes concave outer boundaries with several holes without filling notches
 })
 
 it('revolves a concave turning section into exact rational patches',async()=>{
- const {revolveBrepProfile}=await import('../src/services/geometry/brep')
+ const {revolveBrepProfile}=await import('../src/kernel/geometry/brep')
  const profile:[number,number][]=[[1,0],[3,0],[3,2],[2,2],[2,5],[1,5]]
  const model=revolveBrepProfile(profile)
  expect(model.faces).toHaveLength(24)
@@ -108,7 +108,7 @@ it('keeps volumes and manifold incidence in rotated, holed, concave Boolean chai
 })
 
 it('preserves curved trim seams and pole topology for exact spheres, tori and apex cones',async()=>{
- const {createBrepSphere,createBrepTorus}=await import('../src/services/geometry/brep')
+ const {createBrepSphere,createBrepTorus}=await import('../src/kernel/geometry/brep')
  for(const [body,volume] of [[createBrepSphere(3),36*Math.PI],[createBrepTorus(8,2),64*Math.PI*Math.PI],[createBrepFrustum(3,0,4),12*Math.PI],[createBrepFrustum(0,3,4),12*Math.PI]] as const){
   let previous=0
   for(const segments of [1,2,4,8,16]){
@@ -123,7 +123,7 @@ it('preserves curved trim seams and pole topology for exact spheres, tori and ap
 })
 
 it('makes watertight exact partial revolutions with planar end caps',async()=>{
- const {revolveBrepProfile}=await import('../src/services/geometry/brep')
+ const {revolveBrepProfile}=await import('../src/kernel/geometry/brep')
  for(const profile of [[[0,0],[3,0],[3,4],[0,4]],[[1,0],[3,0],[3,4],[1,4]]] as [number,number][][]){
   for(const angle of [30,-90,137,270]){
    const body=revolveBrepProfile(profile,angle),volume=Math.PI*(9-profile[0][0]**2)*4*Math.abs(angle)/360

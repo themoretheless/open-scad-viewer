@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {describe,expect,it} from 'vitest'
-import {BREP_CAPABILITY_MATRIX} from '../src/services/geometry/brepCapability'
+import {BREP_CAPABILITY_MATRIX} from '../src/kernel/geometry/brepCapability'
 
 const read=(path:string)=>JSON.parse(readFileSync(path,'utf8'))
 

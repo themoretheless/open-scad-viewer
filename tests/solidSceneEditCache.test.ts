@@ -1,9 +1,9 @@
 import {expect,it,vi} from 'vitest'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {parseDirectDocument,serializeDirectDocument,type DirectDocument} from '../src/services/directModeling'
-import {applySolidSceneEdit} from '../src/services/solidSceneEdit'
-import {SolidInstanceBatchCache} from '../src/services/solidInstanceBatchCache'
+import {applySolidSceneEdit} from '../src/kernel/solidSceneEdit'
+import {SolidInstanceBatchCache} from '../src/kernel/solidInstanceBatchCache'
 it('reuses transformed instance batches during authoritative result validation',async()=>{
  await warmGeometryKernel()
  const brep=createBrepBox([0,0,0],[2,3,4]),mesh=tessellateNurbsBrep(brep,1)

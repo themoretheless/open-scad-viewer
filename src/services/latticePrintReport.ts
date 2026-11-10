@@ -1,5 +1,5 @@
-import {callGeometryRust} from './geometry/kernel'
-import type {LighteningOptions} from './solidLightening'
+import {callGeometryRust} from '../kernel/geometry/kernel'
+import type {LighteningOptions} from '../kernel/solidLightening'
 import type {LatticePrintSettings} from './latticePrintSettings'
 
 export type Bilingual = {ru: string; en: string}

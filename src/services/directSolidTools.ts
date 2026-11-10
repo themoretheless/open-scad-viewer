@@ -1,9 +1,9 @@
-import {validateBrepProfile} from './geometry/brepProfile'
+import {validateBrepProfile} from '../kernel/geometry/brepProfile'
 import {withRetainedProfile} from './retainedSketchProfile'
-import { normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
+import { normalizePolygonMesh, type PolygonMesh } from '../kernel/geometry/polygon'
 import type { DirectBody } from './directModeling'
 import type { Vec3, SketchPlane } from './directSketchGeometry'
-import { callGeometryRust } from './geometry/kernel'
+import { callGeometryRust } from '../kernel/geometry/kernel'
 export interface SolidFace { triangles:number[]; normal:Vec3; offset:number; vertices:number[]; center:Vec3 }
 export interface SolidEdge { a:number; b:number; faces:[number,number] }
 export type DirectSolidCapabilityCode =

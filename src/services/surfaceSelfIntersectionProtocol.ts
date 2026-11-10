@@ -1,4 +1,4 @@
-import type {NurbsSurface} from './nurbsSurface'
+import type {NurbsSurface} from '../kernel/nurbsSurface'
 export type ExactUvScalar={numerator:string;denominator:string}
 export type ExactUvPair=[[ExactUvScalar,ExactUvScalar],[ExactUvScalar,ExactUvScalar]]
 export interface SurfaceSelfIntersectionReport {

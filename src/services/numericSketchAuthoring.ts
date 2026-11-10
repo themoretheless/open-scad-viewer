@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import type {DirectDocument,Point2} from './directModeling'
 import {type AnalyticCurve,type SketchPlane} from './directSketchGeometry'
 /** Lower-left corner and positive local dimensions. No document mutation. */

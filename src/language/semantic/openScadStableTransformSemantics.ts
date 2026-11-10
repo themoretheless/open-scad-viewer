@@ -1,4 +1,4 @@
-import { languageRequest } from '../../services/languages/kernel'
+import { languageRequest } from '../languages/kernel'
 /**
  * Kernel-neutral transform plans for OpenSCAD 2021.01.
  *

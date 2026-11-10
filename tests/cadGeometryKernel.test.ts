@@ -1,8 +1,8 @@
-import type { CadToplevel } from '../src/services/geometry/module'
+import type { CadToplevel } from '../src/kernel/geometry/module'
 import { describe, expect, it, vi } from 'vitest'
-import { CadGeometryKernel } from '../src/services/cadGeometryKernel'
-import { defaultGeometryKernel } from '../src/services/cadGeometryKernel'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { CadGeometryKernel } from '../src/kernel/cadGeometryKernel'
+import { defaultGeometryKernel } from '../src/kernel/cadGeometryKernel'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 
 function deleted(value: object): boolean {
   return (value as { isDeleted(): boolean }).isDeleted()

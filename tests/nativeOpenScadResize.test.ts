@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {languageRequest} from '../src/services/languages/kernel'
+import {languageRequest} from '../src/language/languages/kernel'
 import {resolveOpenScadResize} from '../src/language/semantic/openScadStableGeometrySemantics'
-import {parseOpenSCAD} from '../src/services/openscadParser'
+import {parseOpenSCAD} from '../src/language/openscadParser'
 
 it('preserves overflow ratios and ignores nonpositive targets before checking extents',()=>{
   expect(resolveOpenScadResize({dimension:2,newsize:[Number.MAX_VALUE,0],extents:[Number.MIN_VALUE,0],auto:true})).toEqual({scales:[Infinity,Infinity],applied:true,valid:true})

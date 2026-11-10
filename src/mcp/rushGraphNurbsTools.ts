@@ -1,7 +1,7 @@
 import { MESH_EXPORT_FORMATS } from '../services/meshExportFormats';
 import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/server';
-import { rushGraphNurbsSchema, compileRushGraphNurbs, RUSH_GRAPH_NURBS_GUIDE, RUSH_GRAPH_NURBS_EXAMPLE, RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../services/rushGraphNurbs';
+import { rushGraphNurbsSchema, compileRushGraphNurbs, RUSH_GRAPH_NURBS_GUIDE, RUSH_GRAPH_NURBS_EXAMPLE, RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../language/rushGraphNurbs';
 import { runOwnNurbs } from './rushGraphNurbsRuntime';
 import { renderRushGraphPreviews } from './rushGraphPreview';
 const annotations = { readOnlyHint: true, openWorldHint: false };
@@ -88,7 +88,7 @@ export function registerRushGraphNurbsTools(server: McpServer) {
                 intersectNurbsCurveCurveCertified,
                 intersectNurbsCurveSurfaceCertified,
                 intersectNurbsSurfaceSurfaceCertified,
-            } = await import('../services/nurbsFoundation');
+            } = await import('../kernel/nurbsFoundation');
             if (input.mode === 'curve_curve') {
                 return text(intersectNurbsCurveCurveCertified(input.first as never, input.second as never));
             }

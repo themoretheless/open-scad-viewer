@@ -1,4 +1,4 @@
-import type {NurbsCurve} from './nurbsCurve'
+import type {NurbsCurve} from '../kernel/nurbsCurve'
 import type {ParameterBox3} from './surfaceIsoTargetProtocol'
 export const MAX_QUADRIC_EXACT_WORK=1_000_000
 export type QuadricMatrix=[[number,number,number,number],[number,number,number,number],[number,number,number,number],[number,number,number,number]]

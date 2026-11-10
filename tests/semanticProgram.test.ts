@@ -37,7 +37,7 @@ import {
   requireTrustedSemanticLowering,
 } from '../src/language/semantic/semanticProgramLowerer'
 import { lowerOpenSCADToSemanticProgramUnchecked } from '../src/language/semantic/openscadSemanticLowerer'
-import { OpenSCADParseError } from '../src/services/openscadErrors'
+import { OpenSCADParseError } from '../src/language/openscadErrors'
 
 function clone<T>(value: T): T { return structuredClone(value) }
 

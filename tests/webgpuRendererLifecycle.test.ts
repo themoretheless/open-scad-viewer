@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import * as geometryKernel from '../src/services/geometry/kernel'
+import * as geometryKernel from '../src/kernel/geometry/kernel'
 import {
   WebGPURenderer,
   type RendererLifecycleEvent,

@@ -1,7 +1,7 @@
-import type {NurbsSurface} from '../../nurbsSurface'
-import type {NurbsCurve} from '../../nurbsCurve'
-import type {NurbsScaleLaw,ProgressiveGuidedSurfaceSweepOptions} from '../../nurbsConstructors'
-import {callNurbsRust} from '../../geometry/nurbs'
+import type {NurbsSurface} from '../../../kernel/nurbsSurface'
+import type {NurbsCurve} from '../../../kernel/nurbsCurve'
+import type {NurbsScaleLaw,ProgressiveGuidedSurfaceSweepOptions} from '../../../kernel/nurbsConstructors'
+import {callNurbsRust} from '../../../kernel/geometry/nurbs'
 
 const progressiveSweepSourcePayload=(path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions)=>
  callNurbsRust<Record<string,unknown>>('brep_sweep_law_payload',{kind:'source',path,scale,twist,options})

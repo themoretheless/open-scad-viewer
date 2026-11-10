@@ -40,7 +40,7 @@ it('terminates cancelled contact work and ignores a captured stale reply',async(
  }finally{client.dispose()}
 })
 it('matches native fixtures through the production WASM operation',async()=>{
- const {inspectFaceContacts}=await import('../src/services/solidFaceContacts')
+ const {inspectFaceContacts}=await import('../src/kernel/solidFaceContacts')
  for(const f of fixtures)for(const [q,r] of [[f.request,f.result],[f.partialRequest,f.partialResult]]){
   const j=job(q),before=JSON.stringify(j.model),result=inspectFaceContacts(j.model,j.toleranceUv,j.limits)
   expect(normalizeRefinedNativeEvidence(result,{...r,groupedPairs:0,groupCells:0,disjointGroups:[]})).toEqual({...r,groupedPairs:0,groupCells:0,disjointGroups:[]})

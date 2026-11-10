@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest'
-import {inspectSweepWalls, type SweepWallAuditOptions} from '../src/services/nurbsSweepAudit'
-import type {NurbsSurface} from '../src/services/nurbsSurface'
+import {inspectSweepWalls, type SweepWallAuditOptions} from '../src/kernel/nurbsSweepAudit'
+import type {NurbsSurface} from '../src/kernel/nurbsSurface'
 
 const plane = (x: number, y = 0): NurbsSurface => ({
   degreeU: 1, degreeV: 1, knotsU: [0,0,1,1], knotsV: [0,0,1,1],

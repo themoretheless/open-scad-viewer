@@ -3,7 +3,7 @@ import {validNeighborTangencyRequest,validNeighborTangencyReport,type NeighborTa
 import {validSupportTangencyRequest,validSupportTangencyReport,type SupportTangencyRequest,type SupportTangencyReport} from './expressionSupportTangency'
 import {validExpressionRadiusRequest,validExpressionRadiusReport,type ExpressionRadiusRequest,type ExpressionRadiusReport} from './expressionRadiusCheck'
 import {validBoundaryMesh,validBoundaryMeshLimits,type BoundaryMeshLimits,type BoundaryMeshReport} from './expressionBoundaryMesh'
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import type {SourceBodyOptions} from './sourceBody'
 import {validExpressionDisplay,validExpressionDisplayLimits,type ExpressionDisplayLimits,type ExpressionDisplayReport} from './expressionDisplay'
 import {validExpressionMesh,validExpressionMeshLimits,type ExpressionMeshLimits,type ExpressionMeshReport} from './expressionMesh'

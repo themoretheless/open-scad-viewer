@@ -10,7 +10,7 @@ import {
   defaultGeometryBuildEngine,
   GeometryBuildEngine,
   type GeometryBuildResult,
-} from '../services/geometryBuildEngine'
+} from '../kernel/geometryBuildEngine'
 import { buildBinaryStl, buildObj } from '../services/meshExport'
 import { inspectMesh } from '../services/meshInspection'
 import {

@@ -79,7 +79,7 @@ it('warms the real embedded language kernel after the streaming deadline', async
   vi.resetModules()
   const {setOptionalWasmCompiler} = await import('../src/services/wasmCompilation')
   setOptionalWasmCompiler(compileStreamingWasm)
-  const {warmLanguageKernel, isLanguageKernelReady, scadCompileRust} = await import('../src/services/languages/kernel')
+  const {warmLanguageKernel, isLanguageKernelReady, scadCompileRust} = await import('../src/language/languages/kernel')
   vi.stubGlobal('fetch', vi.fn().mockImplementation(() => new Promise(() => {})))
   expect(isLanguageKernelReady()).toBe(false)
   const warming = warmLanguageKernel()

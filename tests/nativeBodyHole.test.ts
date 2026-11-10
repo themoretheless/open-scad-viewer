@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
-import {cadOperation,type CadOptions} from '../src/services/cadWorkbench'
-import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/services/geometry/brep'
-import {inspectPolygonMesh} from '../src/services/geometry/polygon'
+import {cadOperation,type CadOptions} from '../src/kernel/cadWorkbench'
+import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
+import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 const options:CadOptions={action:'hole',ids:['a'],sketches:[],axis:[0,0,1],origin:[5,5,0],amount:0,count:3,width:2,height:3,depth:12,pitch:1,secondary:4,mode:'plain',pathId:'',profileIds:[]}
 const stock=()=>{const brep=createBrepBox([0,0,0],[10,10,10]);return {version:1 as const,sketches:[],bodies:[{id:'a',name:'Stock',brep,mesh:tessellateNurbsBrep(brep,1)}]}}
 it('cuts through and blind holes while retaining rational cylindrical walls',()=>{

@@ -1,5 +1,5 @@
-import type {NurbsBrep} from '../../geometry/brep'
-import {callGeometryRust} from '../../geometry/kernel'
+import type {NurbsBrep} from '../../../kernel/geometry/brep'
+import {callGeometryRust} from '../../../kernel/geometry/kernel'
 import {type SweepCapWallAudit,type SweepCapBoundaryAudit,type SweepCoedgeAgreementAudit,type SweepCoedgeExactAudit,type SweepBoundaryCoverageAudit} from './nurbsSweepAudit'
 type Boundary='uMin'|'uMax'|'vMin'|'vMax'
 export interface SweepCapContactEvidence {

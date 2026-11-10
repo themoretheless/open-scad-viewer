@@ -1,11 +1,11 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {bezierNurbsCurve,circleNurbsCurve,progressiveSweepNurbsPatches} from '../src/services/nurbsConstructors'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {bezierNurbsCurve,circleNurbsCurve,progressiveSweepNurbsPatches} from '../src/kernel/nurbsConstructors'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 import {readSweepPatchViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {createProgressiveBrepProfileBody} from '../src/services/geometry/brep'
-import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {createProgressiveBrepProfileBody} from '../src/kernel/geometry/brep'
+import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 
 it('certifies closed planar RMF with joint original rational scale/affine/center and full-turn twist',()=>{
  const profile=bezierNurbsCurve([[6,0,1],[6,0,2]])

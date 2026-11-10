@@ -1,12 +1,12 @@
-import type { CadKernelHandle } from '../services/cadKernelOps'
+import type { CadKernelHandle } from '../kernel/cadKernelOps'
 import { boundedSceneEntityId } from '../core/boundedSceneEntityId'
 import type { SceneEntityId, SourceOperationId } from '../core/mesh'
-import { AbortedError, OpenSCADParseError, positionKernelError } from '../services/openscadErrors'
+import { AbortedError, OpenSCADParseError, positionKernelError } from '../language/openscadErrors'
 import {
   createDeferredOpenScadBuiltinArguments,
   evaluateOpenScadBuiltinFunction,
   type OpenScadBuiltinValue,
-} from '../services/openScadBuiltinFunctions'
+} from '../language/openScadBuiltinFunctions'
 import {
   TT,
   type CallNode,
@@ -14,7 +14,7 @@ import {
   type ExpressionArgument,
   type FunctionValue,
   type Value,
-} from '../services/openscadCompiler'
+} from '../language/openscadCompiler'
 import {
   formatOpenScadValue,
   openScadIndex,
@@ -37,12 +37,12 @@ import {
   registerArrayValue,
   stableOverlayContext,
   type StableFunctionValue,
-} from '../services/openScadStableExpressionEval'
+} from '../language/openScadStableExpressionEval'
 import {
   queryPreparedOpenScadDxfCross,
   queryPreparedOpenScadDxfDimension,
 } from '../exchange/openScadImport'
-import type { RGBA } from '../services/openscadColors'
+import type { RGBA } from '../language/openscadColors'
 import {
   StableBuiltinValueError,
   type EvalContext,

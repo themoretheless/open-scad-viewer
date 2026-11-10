@@ -3,9 +3,9 @@ import {performance} from 'node:perf_hooks'
 import {createHash} from 'node:crypto'
 import {expect,it} from 'vitest'
 import {parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
-import {resolveSolidInstances} from '../src/services/solidInstances'
+import {resolveSolidInstances} from '../src/kernel/solidInstances'
 import {stringifyMeshJson} from '../src/services/meshJson'
-import {SolidInstanceBatchCache} from '../src/services/solidInstanceBatchCache'
+import {SolidInstanceBatchCache} from '../src/kernel/solidInstanceBatchCache'
 
 it.runIf(!!process.env.CAD_INSTANCE_PROFILE_INPUT)('profiles bounded instance restoration without changing serialized geometry',()=>{
  const text=readFileSync(process.env.CAD_INSTANCE_PROFILE_INPUT!,'utf8')

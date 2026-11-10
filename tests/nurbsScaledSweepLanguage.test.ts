@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 
 it('lowers scale records through packaged Rush frontend and enforces physical dimensions',()=>{
  const source=readFileSync('examples/rush/scaled-sweep.r','utf8')

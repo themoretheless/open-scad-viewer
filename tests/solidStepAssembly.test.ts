@@ -1,7 +1,7 @@
 import {afterEach,expect,it,vi} from 'vitest'
-import {exportSolidStepAssembly} from '../src/services/solidStepAssembly'
+import {exportSolidStepAssembly} from '../src/kernel/solidStepAssembly'
 import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
-import * as kernel from '../src/services/geometry/kernel'
+import * as kernel from '../src/kernel/geometry/kernel'
 import type {DirectDocument} from '../src/services/directModeling'
 afterEach(()=>vi.restoreAllMocks())
 const scene=():DirectDocument=>({version:1,sketches:[],bodies:cadRoadmapParts().map(f=>({...f.body,group:'Parts'}))})

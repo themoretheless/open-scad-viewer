@@ -1,10 +1,10 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {bezierNurbsCurve,progressiveSweepNurbsPatches} from '../src/services/nurbsConstructors'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {bezierNurbsCurve,progressiveSweepNurbsPatches} from '../src/kernel/nurbsConstructors'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 import {readSweepPatchViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {createProgressiveBrepProfileBody} from '../src/services/geometry/brep'
+import {createProgressiveBrepProfileBody} from '../src/kernel/geometry/brep'
 const profile=bezierNurbsCurve([[0,-1,1],[0,-1,2]])
 const path=bezierNurbsCurve([[0,0,0],[.5,0,0],[1,1,0]])
 const scale={degree:1,knots:[0,0,1,1],values:[1,2],weights:[1,1]}

@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest'
-import * as kernel from '../src/services/geometry/kernel'
-import { placeSolidMeshInKernel } from '../src/services/geometry/meshAnalysis'
+import * as kernel from '../src/kernel/geometry/kernel'
+import { placeSolidMeshInKernel } from '../src/kernel/geometry/meshAnalysis'
 
 const vertices = () => new Float32Array([0,0,0,0,0,1, 1,0,0,0,0,1, 0,1,0,0,0,1])
 const matrix = () => new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1])

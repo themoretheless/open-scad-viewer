@@ -1,13 +1,13 @@
-import {solidDocumentToMeshDocument} from '../src/services/solidBridge'
+import {solidDocumentToMeshDocument} from '../src/kernel/solidBridge'
 import {directBodiesScad} from '../src/services/directBodiesScad'
 import {beforeAll,expect,it} from 'vitest'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {readFileSync} from 'node:fs'
 import {gunzipSync} from 'node:zlib'
 import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/services/sourceBodyArchive'
 import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
-import {exportSolidStepAssembly} from '../src/services/solidStepAssembly'
-import {exportSolidBlenderSnapshot} from '../src/services/solidBlenderExchange'
+import {exportSolidStepAssembly} from '../src/kernel/solidStepAssembly'
+import {exportSolidBlenderSnapshot} from '../src/kernel/solidBlenderExchange'
 import type {SourceBodyOptions} from '../src/services/sourceBody'
 const fixture=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-body-request.json.gz',import.meta.url))).toString())
 const options=():SourceBodyOptions=>{const {op:_op,...o}=structuredClone(fixture);return o}

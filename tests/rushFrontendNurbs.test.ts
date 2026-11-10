@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { expect,it } from 'vitest'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {parseOpenSCAD} from '../src/services/openscadParser'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {parseOpenSCAD} from '../src/language/openscadParser'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 const source=readFileSync('examples/rush-frontend/nurbs-boolean.r','utf8')
 it('lowers compact parameters and mesh booleans to own Rust and renders directly',async()=>{
  const compiled=compileRushFrontend(source)

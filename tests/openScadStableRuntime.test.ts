@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createOpenScadStableRuntimeVariables,
   OPENSCAD_2021_DEFAULT_VIEW,
-} from '../src/services/openScadStableRuntime'
+} from '../src/language/openScadStableRuntime'
 
 describe('OpenSCAD 2021.01 host runtime variables', () => {
   it('uses the pinned 2021 camera, tessellation, animation and render defaults', () => {

@@ -2,7 +2,7 @@ import { checkRushGraphNumericType, type RushGraphNumericType } from './rushGrap
 import { resolveInterval } from './rushGraphRange-reference'
 import { planetarySpinnerTemplate } from './planetarySpinnerTemplate-reference'
 import { buildRushGraphGear } from './rushGraphGears-reference'
-import { buildRushGraphThread } from '../../src/services/rushGraphThreads'
+import { buildRushGraphThread } from '../../src/language/rushGraphThreads'
 import { buildRushGraphPlanetary } from './rushGraphPlanetary-reference'
 import { MECHANICAL_GENERATOR_GUIDE, createMechanicalDocument } from '../../src/services/mechanicalGeneratorContract'
 import { buildRushGraphLoft } from './rushGraphLoft-reference'

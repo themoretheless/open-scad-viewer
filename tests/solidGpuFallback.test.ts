@@ -1,5 +1,5 @@
 import {afterEach,expect,it,vi} from 'vitest'
-import {SolidGpuLayer} from '../src/services/solidGpuView'
+import {SolidGpuLayer} from '../src/kernel/solidGpuView'
 afterEach(()=>vi.unstubAllGlobals())
 function fixture(){
  let lose!:()=>void,frame!:FrameRequestCallback

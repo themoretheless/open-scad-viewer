@@ -1,6 +1,6 @@
 import {it,expect,vi,afterEach} from 'vitest'
 import {IDBFactory} from 'fake-indexeddb'
-import {readSolidDraftHead,writeSolidDraftHead} from '../src/services/solidDraftHeadStore'
+import {readSolidDraftHead,writeSolidDraftHead} from '../src/kernel/solidDraftHeadStore'
 afterEach(()=>vi.unstubAllGlobals())
 it('aborts a draft superseded while its put request is pending',async()=>{
  vi.stubGlobal('indexedDB',new IDBFactory())

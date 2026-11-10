@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import Module, {type Vec2} from '../src/services/geometry/module';
+import Module, {type Vec2} from '../src/kernel/geometry/module';
 
 it('keeps signed rectangle sizes, centering and collapsed profiles', async () => {
     const {CrossSection} = await Module();

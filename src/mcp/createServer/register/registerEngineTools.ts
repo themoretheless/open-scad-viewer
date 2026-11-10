@@ -39,7 +39,7 @@ export function registerEngineTools(ctx: McpServerContext): void {
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   }, async () => {
     try {
-      const { BREP_CAPABILITY_MATRIX } = await import('../../../services/geometry/brepCapability')
+      const { BREP_CAPABILITY_MATRIX } = await import('../../../kernel/geometry/brepCapability')
       return textResult({
         cross_engine_fallback: false as const,
         capabilities: BREP_CAPABILITY_MATRIX.map(entry => ({

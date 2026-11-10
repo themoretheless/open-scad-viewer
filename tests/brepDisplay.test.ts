@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {createBrepBox,prepareBrepDisplay} from '../src/services/geometry/brep'
+import {createBrepBox,prepareBrepDisplay} from '../src/kernel/geometry/brep'
 it('prepares native display buffers with flat unit normals and mesh area',()=>{
  const display=prepareBrepDisplay(createBrepBox([0,0,0],[2,3,4]),1)
  expect(display).not.toHaveProperty('positions')

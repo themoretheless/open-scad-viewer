@@ -1,8 +1,8 @@
 import {it,expect} from 'vitest'
 import {emptyDirectDocument} from '../src/services/directModeling'
-import {createBrepBox,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {createSolidInstance} from '../src/services/solidInstances'
-import {exportSolidBlenderSnapshot} from '../src/services/solidBlenderExchange'
+import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {createSolidInstance} from '../src/kernel/solidInstances'
+import {exportSolidBlenderSnapshot} from '../src/kernel/solidBlenderExchange'
 it('exports current instance geometry and stable project/body identities',()=>{
  const document=emptyDirectDocument(),brep=createBrepBox([0,0,0],[2,3,4])
  document.bodies.push({id:'source',name:'Part',material:{name:'Copper',color:'#b87333',metallic:1,roughness:.2},brep,mesh:tessellateNurbsBrep(brep,1)})

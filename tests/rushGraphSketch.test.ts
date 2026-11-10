@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { solveRushGraphSketch, type SketchPoint, type SketchConstraint } from '../src/services/rushGraphSketch'
-import { compileRushGraph, setRushGraphParameters, RUSH_GRAPH_SKETCH_EXAMPLE, RushGraphError } from '../src/services/rushGraph'
+import { solveRushGraphSketch, type SketchPoint, type SketchConstraint } from '../src/language/rushGraphSketch'
+import { compileRushGraph, setRushGraphParameters, RUSH_GRAPH_SKETCH_EXAMPLE, RushGraphError } from '../src/language/rushGraph'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 const points: SketchPoint[] = [{ id: 'a', position: [0.2, -0.1] }, { id: 'b', position: [19, 1] }, { id: 'c', position: [21, 9] }, { id: 'd', position: [-1, 11] }]
 const constraints: SketchConstraint[] = [
   { id: 'origin', kind: 'fix', point: 'a', at: [0, 0] },

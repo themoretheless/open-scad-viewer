@@ -1,8 +1,8 @@
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
 import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
 

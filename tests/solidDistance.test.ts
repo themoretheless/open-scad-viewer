@@ -1,8 +1,8 @@
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
 import {obliqueSphereRequests} from './fixtures/oblique-sphere-distance'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {solidDistanceExpectation,validSolidDistance} from '../src/services/solidDistance'
+import {solidDistanceExpectation,validSolidDistance} from '../src/kernel/solidDistance'
 const cases=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/solid-distance-2026-09-30/contract-fixtures.json',import.meta.url),'utf8')).cases
 it('accepts native containment, invalid-volume, contact and separated-volume reports',()=>{
  for(const c of cases)expect(validSolidDistance(solidDistanceExpectation(c.request),c.result)).toBe(true)
@@ -67,7 +67,7 @@ it('terminates an obsolete solid-distance request and rejects incomplete proof i
 })
 
 it('validates actual WASM volume-distance responses without changing either input',async()=>{
- const {measureSolidDistance}=await import('../src/services/solidDistance')
+ const {measureSolidDistance}=await import('../src/kernel/solidDistance')
  for(const [index,c] of cases.entries()){
   const before=JSON.stringify(c.request),r=measureSolidDistance(c.request)
   expect(validSolidDistance(solidDistanceExpectation(c.request),r)).toBe(true)
@@ -128,8 +128,8 @@ it('validates native exact-sphere volume and separation without accepting incomp
 })
 
 it('qualifies actual WASM exact sphere distances across the tested radius scales',async()=>{
- const {callGeometryRust}=await import('../src/services/geometry/kernel')
- const {measureSolidDistance}=await import('../src/services/solidDistance')
+ const {callGeometryRust}=await import('../src/kernel/geometry/kernel')
+ const {measureSolidDistance}=await import('../src/kernel/solidDistance')
  for(const radius of [0.000011444091796875,0.375,1.5,6,12,786432]){
   const a=callGeometryRust<any>('brep_nurbs_sphere',{radius}),contained=radius===786432
   const b=contained?callGeometryRust<any>('brep_nurbs_sphere',{radius:3}):structuredClone(a),offset=2*radius+2
@@ -156,8 +156,8 @@ it('qualifies actual WASM exact sphere distances across the tested radius scales
 })
 
 it('audits multispan NURBS trim boundaries in WASM and retains unknown when trim work runs out',async()=>{
- const {warmGeometryKernel}=await import('../src/services/geometry/kernel')
- const {measureSolidDistance}=await import('../src/services/solidDistance')
+ const {warmGeometryKernel}=await import('../src/kernel/geometry/kernel')
+ const {measureSolidDistance}=await import('../src/kernel/solidDistance')
  await warmGeometryKernel()
  const request=structuredClone(cases[3].request)
  const coedge=request.a.loops[request.a.faces[0].outer].coedges[0],curve=coedge.pcurve
@@ -177,7 +177,7 @@ it('audits multispan NURBS trim boundaries in WASM and retains unknown when trim
 })
 
 it('converges oblique sphere clearances with original-face witnesses in actual WASM',async()=>{
- const {measureSolidDistance}=await import('../src/services/solidDistance')
+ const {measureSolidDistance}=await import('../src/kernel/solidDistance')
  for(const {options,expected} of await obliqueSphereRequests()){
   const before=structuredClone(options),r=measureSolidDistance(options)
   expect(validSolidDistance(solidDistanceExpectation(options),r)).toBe(true)

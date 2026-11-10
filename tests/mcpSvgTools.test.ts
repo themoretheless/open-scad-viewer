@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { InMemoryTransport, McpServer, type JSONRPCMessage } from '@modelcontextprotocol/server'
 import { registerRushGraphSvgTools } from '../src/mcp/rushGraphSvgTools'
 import { HeadlessGeometryService, type GeometryAnalysis } from '../src/mcp/geometryService'
-import { setRushGraphParameters, type RushGraph } from '../src/services/rushGraph'
+import { setRushGraphParameters, type RushGraph } from '../src/language/rushGraph'
 
 interface ToolResult {
   isError?: boolean

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateNurbsCurve } from '../src/services/nurbsCurve'
+import { evaluateNurbsCurve } from '../src/kernel/nurbsCurve'
 import {
   type NurbsSurface,
   validateNurbsSurface,
@@ -11,7 +11,7 @@ import {
   trimNurbsSurface,
   isoNurbsCurve,
   nurbsSurfaceBounds,
-} from '../src/services/nurbsSurface'
+} from '../src/kernel/nurbsSurface'
 
 function weightedPatch(): NurbsSurface {
   return {

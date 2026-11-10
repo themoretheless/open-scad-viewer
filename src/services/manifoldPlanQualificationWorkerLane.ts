@@ -1,4 +1,4 @@
-import { compileGeometryKernelArtifact } from './geometry/kernelCompilation'
+import { compileGeometryKernelArtifact } from '../kernel/geometry/kernelCompilation'
 import { assertVerifiedWasmModule } from './wasmArtifact'
 import geometryArtifactIdentity from '../generated/geometry-kernels/identity'
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'

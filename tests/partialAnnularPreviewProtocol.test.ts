@@ -44,7 +44,7 @@ it('drops a partial-annular preview delivered after cancellation and replacement
 })
 
 it('accepts and executes the partial-annular request through the complete worker handler',async()=>{
- const {createBrepTube,tessellateNurbsBrep,partialAnnularPreview}=await import('../src/services/geometry/brep')
+ const {createBrepTube,tessellateNurbsBrep,partialAnnularPreview}=await import('../src/kernel/geometry/brep')
  const {createMainSolidWorkerHandler}=await import('../src/services/mainSolidWorkerRuntime')
  const brep=createBrepTube(20,5,6)
  const source={id:'annular',name:'Annular',brep,mesh:tessellateNurbsBrep(brep,2)}

@@ -1,12 +1,12 @@
 import { expect, it } from 'vitest'
 import { buildRushGraphGear } from '../benchmarks/rush/rushGraphGears-reference'
 import { buildRushGraphPlanetary } from '../benchmarks/rush/rushGraphPlanetary-reference'
-import { buildRushGraphThread, threadRadiusAt } from '../src/services/rushGraphThreads'
+import { buildRushGraphThread, threadRadiusAt } from '../src/language/rushGraphThreads'
 import { GEAR_DEFAULTS, PLANETARY_DEFAULTS, THREAD_DEFAULTS, createMechanicalDocument } from '../src/services/mechanicalGeneratorContract'
-import { compileRushGraph } from '../src/services/rushGraph'
+import { compileRushGraph } from '../src/language/rushGraph'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 
 it('builds all default generators through the production worker',async()=>{
   const runtime = new DirectGeometrySupervisor()

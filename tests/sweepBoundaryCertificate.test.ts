@@ -19,9 +19,9 @@ it('owns its cap bound pair rather than retaining caller-mutable evidence',()=>{
 })
 
 it('fails complete construction certification when original cap or retained region work is exhausted',async()=>{
- const {circleNurbsCurve}=await import('../src/services/nurbsConstructors')
- const {createProgressiveMiterBrepProfileBody}=await import('../src/services/geometry/brep')
- const {DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/services/nurbsSweepEmbedding')
+ const {circleNurbsCurve}=await import('../src/kernel/nurbsConstructors')
+ const {createProgressiveMiterBrepProfileBody}=await import('../src/kernel/geometry/brep')
+ const {DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/kernel/nurbsSweepEmbedding')
  const loops=[[circleNurbsCurve([0,0,0],[0,0,1],.5)],[circleNurbsCurve([0,0,0],[0,0,-1],.2)]]
  const law={degree:1,knots:[0,0,1,1],values:[1,1],weights:[1,1]}
  const twist={...law,values:[0,0]}
@@ -46,8 +46,8 @@ it('fails complete construction certification when original cap or retained regi
 })
 
 it('bounds nonparallel filled caps in the moving-axis guide affine family and refuses the full budget',async()=>{
- const {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody}=await import('../src/services/geometry/brep')
- const {reverseNurbsCurve}=await import('../src/services/nurbsCurve')
+ const {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody}=await import('../src/kernel/geometry/brep')
+ const {reverseNurbsCurve}=await import('../src/kernel/nurbsCurve')
  const ring=(r:number)=>[
   [[r,0],[r,r],[0,r]],[[0,r],[-r,r],[-r,0]],
   [[-r,0],[-r,-r],[0,-r]],[[0,-r],[r,-r],[r,0]],
@@ -83,8 +83,8 @@ it('bounds nonparallel filled caps in the moving-axis guide affine family and re
 
 it('carries the nonparallel cap budget and explicit chart work through Rush and JSON',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs,buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs,buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
  const source=readFileSync('examples/rush/miter-moving-frame-guide-affine-hollow-corrected.r','utf8')
  const graph=compileRushFrontend(source).document
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!

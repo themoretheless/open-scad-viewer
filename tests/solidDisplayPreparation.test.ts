@@ -1,9 +1,9 @@
 import {readFileSync} from 'node:fs'
 import {parseDirectDocument} from '../src/services/directModeling'
 import {expect,it} from 'vitest'
-import {createBrepBox,createBrepSphere,createBrepTorus,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import type {PolygonMesh} from '../src/services/geometry/polygon'
-import {prepareSolidDisplay} from '../src/services/solidDisplayPreparation'
+import {createBrepBox,createBrepSphere,createBrepTorus,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import type {PolygonMesh} from '../src/kernel/geometry/polygon'
+import {prepareSolidDisplay} from '../src/kernel/solidDisplayPreparation'
 import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
 // Independent JS reference for picking correspondence and crease-aware normal averaging.
 function stats(mesh:PolygonMesh){

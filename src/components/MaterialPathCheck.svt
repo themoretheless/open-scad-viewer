@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import {computed,onUnmounted,ref,shallowRef,watch,watchEffect} from 'svet'
-import type {NurbsBrep} from '../services/geometry/brep'
-import type {MaterialOptions,MaterialResult,MaterialOverlay} from '../services/solidMaterialVolume'
-import {wallSearchCandidates,wholeWallSearchCandidates} from '../services/solidWallSearch'
-import type {MaterialWallOptions,MaterialWallResult} from '../services/solidMaterialWall'
-import type {WholeWallOptions,WholeWallResult} from '../services/solidWholeWall'
-import {createSolidPreviewWorker} from '../services/solidPreviewWorker'
-import {evaluateNurbsSurface} from '../services/nurbsSurface'
+import type {NurbsBrep} from '../kernel/geometry/brep'
+import type {MaterialOptions,MaterialResult,MaterialOverlay} from '../kernel/solidMaterialVolume'
+import {wallSearchCandidates,wholeWallSearchCandidates} from '../kernel/solidWallSearch'
+import type {MaterialWallOptions,MaterialWallResult} from '../kernel/solidMaterialWall'
+import type {WholeWallOptions,WholeWallResult} from '../kernel/solidWholeWall'
+import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
+import {evaluateNurbsSurface} from '../kernel/nurbsSurface'
 const props=defineProps<{active:boolean;ru:boolean;model?:NurbsBrep}>()
 const emit=defineEmits<{state:[active:boolean,overlay:MaterialOverlay|null]}>()
 const label=(ru:string,en:string)=>props.ru?ru:en

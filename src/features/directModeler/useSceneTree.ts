@@ -1,6 +1,6 @@
 import { type DirectBody, type DirectDocument, type DirectSketch, type DirectHistory } from '../../services/directModeling'
 import { type Pane, DEFAULT_GROUP_SOURCE } from './helpers'
-import { type SolidNurbsCurve, type SolidNurbsSurface } from '../../services/solidNurbs'
+import { type SolidNurbsCurve, type SolidNurbsSurface } from '../../kernel/solidNurbs'
 import { computed, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 
 export interface SceneTreeOptions {

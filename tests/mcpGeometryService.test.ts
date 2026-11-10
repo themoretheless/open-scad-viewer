@@ -12,7 +12,7 @@ import { MAX_MODEL_SOURCE_LENGTH } from '../src/mcp/modelStore'
 import {
   GeometryBuildEngine,
   geometryExecutionForError,
-} from '../src/services/geometryBuildEngine'
+} from '../src/kernel/geometryBuildEngine'
 
 describe('HeadlessGeometryService', () => {
   const service = new HeadlessGeometryService()

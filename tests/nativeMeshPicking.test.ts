@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {callGeometryRust} from '../src/services/geometry/kernel'
-import {createPickingSnapshotInKernel} from '../src/services/geometry/meshAnalysis'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
+import {createPickingSnapshotInKernel} from '../src/kernel/geometry/meshAnalysis'
 import type {MeshBvhHit} from '../src/services/meshBvh'
 import reference from '../crates/mesh-query/tests/fixtures/bvh-query-parity-v1.json'
 

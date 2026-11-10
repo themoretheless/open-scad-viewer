@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 // module these tests use the normal installed package. Every geometry call still
 // executes the real Rust ABI; production delivery and worker bootstrap are not
 // replaced or claimed by this test.
-vi.mock('../src/services/geometry/kernelCompilation', async importOriginal => {
+vi.mock('../src/kernel/geometry/kernelCompilation', async importOriginal => {
   const path = process.env.OWN_EXACT_FULL_ROUND_WASM
   if (!path) return importOriginal()
   const { readFileSync } = await import('node:fs')
@@ -15,11 +15,11 @@ vi.mock('../src/services/geometry/kernelCompilation', async importOriginal => {
   const module = new WebAssembly.Module(bytes)
   return { compileGeometryKernelArtifactSync: () => module, compileGeometryKernelArtifact: async () => module }
 })
-import { callGeometryRust } from '../src/services/geometry/kernel'
+import { callGeometryRust } from '../src/kernel/geometry/kernel'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 import { createExactFullRoundSnapshot, restoreExactFullRoundSnapshot } from '../src/services/exactFullRoundSnapshot'
 import { createNativeGeometryArtifact, isNativeGeometryArtifact, nativeFaceReference, assertNativeReferenceCurrent } from '../src/core/nativeGeometry'
-import { prepareExactFullRoundDisplay } from '../src/services/geometry/brepExactDisplay'
+import { prepareExactFullRoundDisplay } from '../src/kernel/geometry/brepExactDisplay'
 
 function construct(height: number): { artifact: any; program: any } {
   const source = '// @language openscad-viewer/brep-1\nfull_round_exact([5,4,3]) cube([4,8,'+height+']);'

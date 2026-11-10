@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { nurbsToPolygonMesh, polygonBoundaryNurbsCurves } from '../src/services/geometry/polygonBridge'
-import { booleanPolygonMeshes, polygonBoundaryLoops, thickenPolygonMesh, transformPolygonMesh, inspectPolygonMesh, exportPolygonStl } from '../src/services/geometry/polygon'
-import { evaluateNurbsCurve } from '../src/services/nurbsCurve'
-import { extrudeNurbsCurve } from '../src/services/nurbsConstructors'
-import type { NurbsSurface } from '../src/services/nurbsSurface'
+import { nurbsToPolygonMesh, polygonBoundaryNurbsCurves } from '../src/kernel/geometry/polygonBridge'
+import { booleanPolygonMeshes, polygonBoundaryLoops, thickenPolygonMesh, transformPolygonMesh, inspectPolygonMesh, exportPolygonStl } from '../src/kernel/geometry/polygon'
+import { evaluateNurbsCurve } from '../src/kernel/nurbsCurve'
+import { extrudeNurbsCurve } from '../src/kernel/nurbsConstructors'
+import type { NurbsSurface } from '../src/kernel/nurbsSurface'
 const plane: NurbsSurface = { degreeU: 1, degreeV: 1, knotsU: [0,0,1,1], knotsV: [0,0,1,1], controlPoints: [[[0,0,0],[0,10,0]],[[10,0,0],[10,10,0]]], weights: [[1,1],[1,1]] }
 describe('two independent Rust libraries through the WASM bridge', () => {
   it('passes a NURBS mesh into polygon operations and its boundary back into NURBS', () => {

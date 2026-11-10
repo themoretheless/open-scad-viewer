@@ -2,12 +2,12 @@ import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {correctedRegularBodySources} from '../scripts/sweep-body-matrix-sources.mjs'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
-import {tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
+import {tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
 import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
-import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 
 it.each(correctedRegularBodySources)('preserves corrected regular whole-body proof, preview and fresh Solid: %s',async file=>{
  const source=readFileSync(`examples/rush/${file}`,'utf8')

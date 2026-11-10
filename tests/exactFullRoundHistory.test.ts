@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 // Candidate qualification executes real Rust. Ordinary runs use the installed package.
-vi.mock('../src/services/geometry/kernelCompilation', async original => {
+vi.mock('../src/kernel/geometry/kernelCompilation', async original => {
   const path=process.env.OWN_HISTORY_WASM
   if(!path)return original()
   const report=JSON.parse(readFileSync(new URL('../docs/qualification/full-round-history-bridge-wasm-2026-11-02/report.json',import.meta.url),'utf8'))

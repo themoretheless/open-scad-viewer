@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { tessellateNurbsSurface, thickenNurbsMesh, exportNurbsStl, inspectNurbsMesh, type NurbsMesh, type NurbsTrim } from '../src/services/geometry/tessellation'
-import type { NurbsSurface } from '../src/services/nurbsSurface'
-import { revolveNurbsCurve } from '../src/services/nurbsConstructors'
+import { tessellateNurbsSurface, thickenNurbsMesh, exportNurbsStl, inspectNurbsMesh, type NurbsMesh, type NurbsTrim } from '../src/kernel/geometry/tessellation'
+import type { NurbsSurface } from '../src/kernel/nurbsSurface'
+import { revolveNurbsCurve } from '../src/kernel/nurbsConstructors'
 
 const plane: NurbsSurface = {
   degreeU: 1, degreeV: 1, knotsU: [0, 0, 1, 1], knotsV: [0, 0, 1, 1],

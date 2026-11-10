@@ -1,5 +1,5 @@
-import type {NurbsBrep} from './geometry/brep'
-import {callNurbsRust} from './geometry/nurbs'
+import type {NurbsBrep} from '../kernel/geometry/brep'
+import {callNurbsRust} from '../kernel/geometry/nurbs'
 export interface GeometricG2Report {
  method:'owned-boundary-geometric-G2-intervals'
  complete:boolean;withinTolerance:boolean
@@ -45,9 +45,9 @@ export interface G2SurfaceBridgeReport {
  internalSeams:{patches:[number,number];inspection:NonNullable<GeometricG2Report['seams'][number]['inspection']>}[]
 }
 /** Open transition surfaces. The returned receipt never authorizes a solid. */
-export function createG2SurfaceBridge(a:import('./nurbsSurface').NurbsSurface,b:import('./nurbsSurface').NurbsSurface,options:{boundaries:['uMin'|'uMax'|'vMin'|'vMax','uMin'|'uMax'|'vMin'|'vMax'];gains:[number,number];reverseU?:[boolean,boolean];maxPatches?:number;tolerances?:[number,number,number];maxCells?:number},checkAbort?:()=>void):{patches:import('./nurbsSurface').NurbsSurface[];report:G2SurfaceBridgeReport} {
+export function createG2SurfaceBridge(a:import('../kernel/nurbsSurface').NurbsSurface,b:import('../kernel/nurbsSurface').NurbsSurface,options:{boundaries:['uMin'|'uMax'|'vMin'|'vMax','uMin'|'uMax'|'vMin'|'vMax'];gains:[number,number];reverseU?:[boolean,boolean];maxPatches?:number;tolerances?:[number,number,number];maxCells?:number},checkAbort?:()=>void):{patches:import('../kernel/nurbsSurface').NurbsSurface[];report:G2SurfaceBridgeReport} {
  checkAbort?.()
- const result=callNurbsRust<{patches:import('./nurbsSurface').NurbsSurface[];report:G2SurfaceBridgeReport}>('brep_g2_surface_bridge',{a,b,...options,reverseU:options.reverseU??[false,false],maxPatches:options.maxPatches??256,tolerances:options.tolerances??[1e-7,1e-7,1e-5],maxCells:options.maxCells??256})
+ const result=callNurbsRust<{patches:import('../kernel/nurbsSurface').NurbsSurface[];report:G2SurfaceBridgeReport}>('brep_g2_surface_bridge',{a,b,...options,reverseU:options.reverseU??[false,false],maxPatches:options.maxPatches??256,tolerances:options.tolerances??[1e-7,1e-7,1e-5],maxCells:options.maxCells??256})
  checkAbort?.()
  return result
 }
@@ -73,14 +73,14 @@ export interface G2RunoutReport {
  internalSeams:NonNullable<GeometricG2Report['seams'][number]['inspection']>[]
 }
 /** Native open runout construction. Unresolved receipts remain available for diagnostics. */
-export function createG2RunoutSurface(source:import('./nurbsSurface').NurbsSurface,plane:import('./nurbsSurface').NurbsSurface,
- targetPcurve:import('./nurbsCurve').NurbsCurve,
+export function createG2RunoutSurface(source:import('../kernel/nurbsSurface').NurbsSurface,plane:import('../kernel/nurbsSurface').NurbsSurface,
+ targetPcurve:import('../kernel/nurbsCurve').NurbsCurve,
  options:{sourceBoundary:'uMin'|'uMax'|'vMin'|'vMax';sourceTrace:{at:number;along:[number,number]};transverseUv:[number,number];
   gains:[number,number];reverseU?:[boolean,boolean];maxPatches?:number;tolerances?:[number,number,number];maxCells?:number;maxExactWork?:number},
- checkAbort?:()=>void):{patches:import('./nurbsSurface').NurbsSurface[];report:G2RunoutReport} {
+ checkAbort?:()=>void):{patches:import('../kernel/nurbsSurface').NurbsSurface[];report:G2RunoutReport} {
  checkAbort?.()
  const maxCells=options.maxCells??100000,maxExactWork=options.maxExactWork??1000000
- const result=callNurbsRust<{patches:import('./nurbsSurface').NurbsSurface[];report:G2RunoutReport}>('brep_g2_runout_surface',{
+ const result=callNurbsRust<{patches:import('../kernel/nurbsSurface').NurbsSurface[];report:G2RunoutReport}>('brep_g2_runout_surface',{
   source,plane,targetPcurve,...options,reverseU:options.reverseU??[false,false],maxPatches:options.maxPatches??256,
   tolerances:options.tolerances??[1e-7,1e-5,1e-4],maxCells,maxExactWork})
  checkAbort?.()
@@ -171,15 +171,15 @@ export function validG2RunoutResult(value:unknown,maxCells:number,maxExactWork:n
  }catch{return false}
 }
 /** World-curve input and physical tangent lengths are interpreted by Rust. */
-export function createG2WorldRunout(source:import('./nurbsSurface').NurbsSurface,plane:import('./nurbsSurface').NurbsSurface,
- targetCurve:import('./nurbsCurve').NurbsCurve,options:{sourceBoundary:'uMin'|'uMax'|'vMin'|'vMax';sourcePosition:number;tangentLengthMm:number;flipSide:boolean;reverse:boolean}):ReturnType<typeof createG2RunoutSurface> {
+export function createG2WorldRunout(source:import('../kernel/nurbsSurface').NurbsSurface,plane:import('../kernel/nurbsSurface').NurbsSurface,
+ targetCurve:import('../kernel/nurbsCurve').NurbsCurve,options:{sourceBoundary:'uMin'|'uMax'|'vMin'|'vMax';sourcePosition:number;tangentLengthMm:number;flipSide:boolean;reverse:boolean}):ReturnType<typeof createG2RunoutSurface> {
  const result=callNurbsRust<ReturnType<typeof createG2RunoutSurface>>('brep_g2_runout_surface',{source,plane,targetCurve,...options,
   reverseU:[false,options.reverse],maxPatches:256,maxCells:100000,maxExactWork:1000000,tolerances:[1e-7,1e-5,1e-4]})
  if(!validG2RunoutResult(result,100000,1000000,256))throw Error('Native runout receipt or seam coverage is invalid')
  return result
 }
 /** Sew full retained support, blend and end patches. Native admission is atomic. */
-export function assembleClosedNurbsPatches(surfaces:import('./nurbsSurface').NurbsSurface[],reversed:boolean[],options:{tolerance?:number;requireFullG2?:boolean;sources?:NurbsBrep[];projectionHints?:(null|[[number,number,number],[number,number,number]])[];maxCorrespondenceWork?:number;maxSmoothnessWork?:number}={},checkAbort?:()=>void):{model:NurbsBrep;report:ClosedNurbsPatchNetworkReport} {
+export function assembleClosedNurbsPatches(surfaces:import('../kernel/nurbsSurface').NurbsSurface[],reversed:boolean[],options:{tolerance?:number;requireFullG2?:boolean;sources?:NurbsBrep[];projectionHints?:(null|[[number,number,number],[number,number,number]])[];maxCorrespondenceWork?:number;maxSmoothnessWork?:number}={},checkAbort?:()=>void):{model:NurbsBrep;report:ClosedNurbsPatchNetworkReport} {
  checkAbort?.()
  const result=callNurbsRust<{model:NurbsBrep;report:ClosedNurbsPatchNetworkReport}>('brep_closed_patch_network',{surfaces,reversed,...options,tolerance:options.tolerance??1e-8,requireFullG2:options.requireFullG2??true})
  checkAbort?.()

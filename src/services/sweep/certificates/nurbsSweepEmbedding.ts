@@ -1,6 +1,6 @@
-import {inspectSweepRetainedWallCharts,type SweepRetainedChartEvidence} from '../../nurbsSweepRetainedCharts'
-import type {NurbsBrep} from '../../geometry/brep'
-import {callGeometryRust,NurbsCurveError} from '../../geometry/kernel'
+import {inspectSweepRetainedWallCharts,type SweepRetainedChartEvidence} from '../../../kernel/nurbsSweepRetainedCharts'
+import type {NurbsBrep} from '../../../kernel/geometry/brep'
+import {callGeometryRust,NurbsCurveError} from '../../../kernel/geometry/kernel'
 import type {NativeSweepCapContactBudgets} from './nurbsSweepCapContacts'
 
 export interface SweepEmbeddingBudgets {

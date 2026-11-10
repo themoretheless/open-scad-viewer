@@ -5,8 +5,8 @@ import {
   stepInertialOrbitCamera,
   type OrbitCameraState,
 } from '../src/services/cameraGestures'
-import { inspectStepHeaderMetadata } from '../src/services/cadStepConformance'
-import { extractOpenScadDependencies } from '../src/services/openScadProject'
+import { inspectStepHeaderMetadata } from '../src/kernel/cadStepConformance'
+import { extractOpenScadDependencies } from '../src/language/openScadProject'
 import {
   computeLinearPatternOffsets,
   computeCircularPatternTransforms,

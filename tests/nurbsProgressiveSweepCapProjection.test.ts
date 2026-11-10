@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,inspectProgressiveSweepCapProjection} from '../src/services/nurbsConstructors'
-import type {NurbsSurface} from '../src/services/nurbsSurface'
+import {bezierNurbsCurve,inspectProgressiveSweepCapProjection} from '../src/kernel/nurbsConstructors'
+import type {NurbsSurface} from '../src/kernel/nurbsSurface'
 
 const points=[[-2,-2,0],[2,-2,0],[2,2,0],[-2,2,0]]
 const profiles=points.map((p,i)=>bezierNurbsCurve([p,points[(i+1)%4]!]))

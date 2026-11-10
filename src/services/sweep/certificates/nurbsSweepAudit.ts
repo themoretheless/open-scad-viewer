@@ -1,6 +1,6 @@
-import {callNurbsRust} from '../../geometry/nurbs'
-import type {NurbsSurface} from '../../nurbsSurface'
-import type {NurbsCurve} from '../../nurbsCurve'
+import {callNurbsRust} from '../../../kernel/geometry/nurbs'
+import type {NurbsSurface} from '../../../kernel/nurbsSurface'
+import type {NurbsCurve} from '../../../kernel/nurbsCurve'
 // Native seam-set budget; every individual native predicate remains
 // bounded to one million operations.
 export const MAX_SWEEP_SEAM_WORK=2000000
@@ -147,7 +147,7 @@ export interface SweepContourAudit {
 }
 /** Continuous planar domain ownership; loop zero is outer, remaining loops holes. */
 export function inspectSweepContours(
- loops: import('../../nurbsCurve').NurbsCurve[][],
+ loops: import('../../../kernel/nurbsCurve').NurbsCurve[][],
  options: {tolerance:number;maxPairs:number;maxCells:number},
 ):SweepContourAudit {
  return callNurbsRust('sweep_contour_audit',{loops,...options})
@@ -163,7 +163,7 @@ export interface SweepCapBoundaryAudit {
 }
 /** Whole-curve deviation for the stored bilinear cap composed with a UV curve. */
 export function inspectSweepCapBoundary(
- surface:NurbsSurface,world:import('../../nurbsCurve').NurbsCurve,uv:import('../../nurbsCurve').NurbsCurve,
+ surface:NurbsSurface,world:import('../../../kernel/nurbsCurve').NurbsCurve,uv:import('../../../kernel/nurbsCurve').NurbsCurve,
  options:{tolerance:number;maxProducts:number},
 ):SweepCapBoundaryAudit {
  return callNurbsRust('sweep_cap_boundary_audit',{surface,world,uv,...options})
@@ -198,7 +198,7 @@ export interface SweepCoedgeAgreementAudit {
 }
 /** Native whole-domain composition bound; exhausted cells leave it unresolved. */
 export function inspectSweepCoedgeAgreement(
- surface:NurbsSurface,world:import('../../nurbsCurve').NurbsCurve,uv:import('../../nurbsCurve').NurbsCurve,
+ surface:NurbsSurface,world:import('../../../kernel/nurbsCurve').NurbsCurve,uv:import('../../../kernel/nurbsCurve').NurbsCurve,
  options:{reversed:boolean;tolerance:number;maxCells:number},
 ):SweepCoedgeAgreementAudit {
  return callNurbsRust('sweep_coedge_agreement_audit',{surface,world,uv,...options})
@@ -212,7 +212,7 @@ export interface SweepCoedgeExactAudit {
 }
 /** Exact polynomial identity of the stored binary64 geometry, without tolerance. */
 export function inspectSweepCoedgeExact(
- surface:NurbsSurface,world:import('../../nurbsCurve').NurbsCurve,uv:import('../../nurbsCurve').NurbsCurve,
+ surface:NurbsSurface,world:import('../../../kernel/nurbsCurve').NurbsCurve,uv:import('../../../kernel/nurbsCurve').NurbsCurve,
  options:{reversed:boolean;maxWork:number},
 ):SweepCoedgeExactAudit {
  return callNurbsRust('sweep_coedge_exact_audit',{surface,world,uv,...options})
@@ -225,7 +225,7 @@ export interface SweepBoundaryCoverageAudit {
  globalEmbeddingCertified:false
 }
 /** Complete boundary image; backtracking and trim ownership are separate. */
-export function inspectSweepBoundaryCoverage(surface:NurbsSurface,uv:import('../../nurbsCurve').NurbsCurve,boundary:'uMin'|'uMax'|'vMin'|'vMax'):SweepBoundaryCoverageAudit {
+export function inspectSweepBoundaryCoverage(surface:NurbsSurface,uv:import('../../../kernel/nurbsCurve').NurbsCurve,boundary:'uMin'|'uMax'|'vMin'|'vMax'):SweepBoundaryCoverageAudit {
  return callNurbsRust('sweep_boundary_coverage_audit',{surface,uv,boundary})
 }
 

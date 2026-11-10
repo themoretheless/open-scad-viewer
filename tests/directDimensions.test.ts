@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest'
 import { directCornerTool } from '../src/services/directProfileTools'
 import {bridgeNurbsCurves,sketchDimensions,sketchDimensionStatus,editSketchDimension} from '../src/services/directDimensions'
-import {evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
+import {evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
 import {emptyDirectDocument,parseDirectDocument,DirectHistory,type DirectSketch} from '../src/services/directModeling'
 const curve=(x:number):NurbsCurve=>({degree:2,knots:[0,0,0,1,1,1],controlPoints:[[x,0,0],[x+1,2,0],[x+3,1,0]],weights:[1,2,1]})
 const norm=(v:number[])=>Math.hypot(...v)

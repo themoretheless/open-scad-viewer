@@ -1,4 +1,4 @@
-import { callGeometryRust } from './geometry/kernel'
+import { callGeometryRust } from '../kernel/geometry/kernel'
 const FOV_Y = Math.PI / 4
 
 export interface PinchPoint { x: number; y: number }

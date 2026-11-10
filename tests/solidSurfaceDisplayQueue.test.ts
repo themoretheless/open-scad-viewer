@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest'
-import {SolidSurfaceDisplayQueue} from '../src/services/solidSurfaceDisplayQueue'
-import {createSolidNurbsSurface,tessellateSolidNurbsSurface} from '../src/services/solidNurbs'
+import {SolidSurfaceDisplayQueue} from '../src/kernel/solidSurfaceDisplayQueue'
+import {createSolidNurbsSurface,tessellateSolidNurbsSurface} from '../src/kernel/solidNurbs'
 it('deduplicates geometry, retains bounded results and reports unavailable surfaces',async()=>{
  const a=createSolidNurbsSurface('a'),b=structuredClone(a);b.id='b';b.surface.controlPoints[0][0][2]+=1
  const run=vi.fn(async({item})=>tessellateSolidNurbsSurface(item)),queue=new SolidSurfaceDisplayQueue({run,cancel:vi.fn()},1)

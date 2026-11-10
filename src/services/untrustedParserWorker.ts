@@ -1,5 +1,5 @@
 import type { StepRawArtifact } from './stepRawArtifact'
-import type { ParserInputBudgets, ParserPreflightStats } from './parserInputBudgets'
+import type { ParserInputBudgets, ParserPreflightStats } from '../language/parserInputBudgets'
 
 export type UntrustedParserJob =
   | { readonly kind: 'step-raw'; readonly text: string; readonly budgets?: ParserInputBudgets }

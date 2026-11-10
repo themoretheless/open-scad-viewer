@@ -1,11 +1,11 @@
 // geometryEvaluator: EvalNodesFn.
-import type { CadKernelHandle } from '../../services/cadKernelOps'
+import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
 import { clamp01 } from '../../services/math3d'
 
-import { resolveLegacyOpenScadSegments } from '../../services/openScadLegacySegments'
+import { resolveLegacyOpenScadSegments } from '../../language/openScadLegacySegments'
 
-import type { CallNode, ExpressionArgument, Statement, Value } from '../../services/openscadCompiler'
+import type { CallNode, ExpressionArgument, Statement, Value } from '../../language/openscadCompiler'
 
 import { formatOpenScadValue } from '../../language/semantic/openScadValueSemantics'
 
@@ -48,9 +48,9 @@ import {
 import {
   evaluationError,
   isStableProfile,
-} from '../../services/openScadStableExpressionEval'
+} from '../../language/openScadStableExpressionEval'
 
-import { CSS_COLORS, nextColor, type RGBA } from '../../services/openscadColors'
+import { CSS_COLORS, nextColor, type RGBA } from '../../language/openscadColors'
 
 import {
   compatibilityDxfProfile,

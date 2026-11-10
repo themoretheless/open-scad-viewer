@@ -1,13 +1,13 @@
 import { remapSemanticNode } from '../remapSemanticNode'
 export { remapSemanticNode } from '../remapSemanticNode'
-import type { CallNode, ExpressionArgument, ModuleNode, Statement, Value } from '../../../services/openscadCompiler'
+import type { CallNode, ExpressionArgument, ModuleNode, Statement, Value } from '../../openscadCompiler'
 import { SemanticProgramBuilder, resolveStableExpressionArguments } from '../openscadSemanticLowerer'
 import type { EvalContext, SemanticShape } from '../openscadSemanticLowerer'
-import { OpenScadStableScope } from '../../../services/openScadStableScope'
+import { OpenScadStableScope } from '../../openScadStableScope'
 import { SEMANTIC_PROGRAM_EXECUTION_VERSION, semanticNodeInputs, semanticNodeProducerOperationNames, semanticResultItems } from '../../../core/semanticProgram'
 import type { SemanticColor, SemanticDynamicSlot, SemanticExecutionPlanV1, SemanticNode, SemanticOccurrence, SemanticOutputRef, SemanticProgramCoreV1, SemanticResult } from '../../../core/semanticProgram'
 import { callExpressionArguments, evalExpression } from './evalExpression'
-import { evaluationError, isStableProfile, overlayDynamicVariables } from '../../../services/openScadStableExpressionEval'
+import { evaluationError, isStableProfile, overlayDynamicVariables } from '../../openScadStableExpressionEval'
 import { frameChildren, invoke, semanticSlot } from './evalPreparedNodes'
 
 export function evalUserModule(

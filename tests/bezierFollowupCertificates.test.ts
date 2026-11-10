@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
-import {offsetBrepCurveCertified,verifyBrepCurveOffsetCertificate,certifyBrepCurveProjectiveAgreement,verifyBrepCurveProjectiveAgreementCertificate,certifyBrepCurveEndpointContacts,verifyBrepCurveEndpointContactsCertificate,validateBrepProfile,booleanBrepProfiles} from '../src/services/geometry/brepProfile'
-import {callGeometryRust} from '../src/services/geometry/kernel'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
+import {offsetBrepCurveCertified,verifyBrepCurveOffsetCertificate,certifyBrepCurveProjectiveAgreement,verifyBrepCurveProjectiveAgreementCertificate,certifyBrepCurveEndpointContacts,verifyBrepCurveEndpointContactsCertificate,validateBrepProfile,booleanBrepProfiles} from '../src/kernel/geometry/brepProfile'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
 const quadratic=(y:number):NurbsCurve=>({degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,y],[2,0]],weights:[1,1,1],periodic:false})
 it('checks pointwise normal offsets and rejects moved output and changed tolerances',()=>{
  const curve:NurbsCurve={degree:4,knots:[0,0,0,0,0,1,1,1,1,1],controlPoints:[[0,0],[2,0],[4,1],[6,3],[8,4]],weights:[1,2,3,2,1],periodic:false}

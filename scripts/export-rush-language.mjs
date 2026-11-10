@@ -1,9 +1,9 @@
-import { RUSH_FRONTEND_GUIDE } from '../src/services/rushFrontend.ts'
+import { RUSH_FRONTEND_GUIDE } from '../src/language/rushFrontend.ts'
 import { MECHANICAL_GENERATOR_EXAMPLES } from '../src/services/mechanicalGeneratorContract.ts'
 // Run: node --import tsx scripts/export-rush-language.mjs
 import { writeFileSync } from 'node:fs'
 import { z } from 'zod/v4'
-import { rushGraphSchema, RUSH_GRAPH_GUIDE, RUSH_GRAPH_EXAMPLE, RUSH_GRAPH_FUNCTIONAL_GUIDE, RUSH_GRAPH_FUNCTIONAL_EXAMPLE, RUSH_GRAPH_UNITS_GUIDE, RUSH_GRAPH_UNITS_EXAMPLE, RUSH_GRAPH_SKETCH_GUIDE, RUSH_GRAPH_SKETCH_EXAMPLE, RUSH_GRAPH_ASSEMBLY_EXAMPLE, RUSH_GRAPH_LOFT_EXAMPLE } from '../src/services/rushGraph.ts'
+import { rushGraphSchema, RUSH_GRAPH_GUIDE, RUSH_GRAPH_EXAMPLE, RUSH_GRAPH_FUNCTIONAL_GUIDE, RUSH_GRAPH_FUNCTIONAL_EXAMPLE, RUSH_GRAPH_UNITS_GUIDE, RUSH_GRAPH_UNITS_EXAMPLE, RUSH_GRAPH_SKETCH_GUIDE, RUSH_GRAPH_SKETCH_EXAMPLE, RUSH_GRAPH_ASSEMBLY_EXAMPLE, RUSH_GRAPH_LOFT_EXAMPLE } from '../src/language/rushGraph.ts'
 for (const [kind,document] of Object.entries(MECHANICAL_GENERATOR_EXAMPLES)) writeFileSync(new URL(`../docs/languages/rush-1.${kind}.example.json`,import.meta.url),JSON.stringify(document,null,2)+'\n')
 const json = value => JSON.stringify(value, null, 2) + '\n'
 writeFileSync(new URL('../docs/languages/rush-1.schema.json', import.meta.url), json(z.toJSONSchema(rushGraphSchema)))

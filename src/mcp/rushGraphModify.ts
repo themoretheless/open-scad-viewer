@@ -1,7 +1,7 @@
 import { z } from 'zod/v4'
 import type { McpServer } from '@modelcontextprotocol/server'
 import type { McpGeometryService } from './geometryService'
-import { compileRushGraph, rushGraphSchema } from '../services/rushGraph'
+import { compileRushGraph, rushGraphSchema } from '../language/rushGraph'
 const length = z.number().finite().positive().max(1e6)
 export const modificationSchema = z.discriminatedUnion('operation', [
   z.object({ operation:z.literal('resize'), size:z.tuple([length,length,length]), anchor:z.enum(['origin','minimum','center']).default('minimum') }).strict(),

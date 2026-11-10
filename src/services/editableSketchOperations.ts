@@ -1,9 +1,9 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import type {DirectSketch} from './directModeling'
 import {withEditableSketchPath, SKETCH_PATH_TOLERANCE_MM} from './editableSketchPath'
 import {withRetainedProfile} from './retainedSketchProfile'
-import {authorBrepProfile} from './geometry/brepProfile'
-import {outlineStrokeStyled, pathFromPolygon, pathFromCircle, pathToRing, simplifyPath,normalizePathRings} from './geometry/path2d'
+import {authorBrepProfile} from '../kernel/geometry/brepProfile'
+import {outlineStrokeStyled, pathFromPolygon, pathFromCircle, pathToRing, simplifyPath,normalizePathRings} from '../kernel/geometry/path2d'
 
 function sourcePath(sketch:DirectSketch) {
   if(sketch.retainedProfile) throw Error('Select a source path, not an already filled region.')
@@ -36,7 +36,7 @@ export function simplifySketchPath(sketch:DirectSketch,tolerance:number):DirectS
 export function cleanSketchContours(sketch:DirectSketch,tolerance:number,id:string):DirectSketch {
  if(!Number.isFinite(tolerance)||tolerance<0.0001||tolerance>10)throw Error('Cleanup tolerance must be between 0.0001 and 10 mm.')
  if(!sketch.closed){const cleaned=simplifySketchPath(sketch,tolerance);return {...cleaned,id,name:sketch.name+' · clean'}}
- if(sketch.retainedProfile){const profile=callGeometryRust<import('./geometry/brepProfile').BrepProfile>('brep_profile_cleanup',{loops:sketch.retainedProfile.loops,deviation:tolerance});return withRetainedProfile({...sketch,id,name:sketch.name+' · clean'},profile)}
+ if(sketch.retainedProfile){const profile=callGeometryRust<import('../kernel/geometry/brepProfile').BrepProfile>('brep_profile_cleanup',{loops:sketch.retainedProfile.loops,deviation:tolerance});return withRetainedProfile({...sketch,id,name:sketch.name+' · clean'},profile)}
  const input=[pathToRing(simplifyPath(sourcePath(sketch),tolerance),tolerance)]
  const rings=normalizePathRings(input,'evenodd')
  if(!rings.length)throw Error('Contour cleanup produced an empty region.')

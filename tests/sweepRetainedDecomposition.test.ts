@@ -1,13 +1,13 @@
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
-import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/services/nurbsSweepEmbedding'
+import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 import {expect,it} from 'vitest'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
-import {createRationalBrepSectionLoft,createProgressiveMiterBrepProfileBody} from '../src/services/geometry/brep'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
+import {createRationalBrepSectionLoft,createProgressiveMiterBrepProfileBody} from '../src/kernel/geometry/brep'
 import {inspectSweepRetainedCorrespondence,inspectSweepRetainedDecomposition,inspectSweepRetainedCapDecomposition} from '../src/services/sweepRetainedCorrespondence'
 it('binds periodic hollow profiles with joint authored frame, guide and affine laws through Rush',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const graph=compileRushFrontend(readFileSync('examples/rush/miter-periodic-frame-guide-affine-hollow.r','utf8')).document
  const before=structuredClone(graph)
  const curves=graph.nodes.filter(n=>n.op==='curve')
@@ -24,8 +24,8 @@ it.each([
  ['zero affine scale','values: [[2,1,1],[2,1,1]]','values: [[0,1,1],[0,1,1]]','scale must be positive'],
 ])('refuses periodic joint-mode %s without mutating its source graph',async(_name,from,to,reason)=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const source=readFileSync('examples/rush/miter-periodic-frame-guide-affine-hollow.r','utf8')
  expect(source).toContain(from)
  const graph=compileRushFrontend(source.replace(from,to)).document
@@ -51,8 +51,8 @@ it('covers exactly closed periodic hollow profiles through the complete boundary
  expect(exhausted.profile.exactG1G2Certified).toBe(false)
  expect(loops).toEqual(before)
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const graph=compileRushFrontend(readFileSync('examples/rush/miter-periodic-hollow.r','utf8')).document
  const curves=graph.nodes.filter(n=>n.op==='curve')
  expect(curves).toHaveLength(2)
@@ -75,8 +75,8 @@ it('covers an unclamped hollow source through retained walls, filled caps and th
  expect(body.boundaryCertificate).toMatchObject({continuousBound:true,withinBudget:true,reason:null})
  expect(loops).toEqual(before)
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const graph=compileRushFrontend(readFileSync('examples/rush/miter-unclamped-hollow.r','utf8')).document
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
  const built=buildOwnNurbs(graph,{action:'build',display:{segments:4,subdivisionLevels:0}})
@@ -209,8 +209,8 @@ it('requires complete actual wall domains on the exact coefficient route',()=>{
 
 it('certifies filled caps and admits the original moving-axis periodic Rush fixture into Solid',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const graph=compileRushFrontend(readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow.r','utf8')).document
  const before=structuredClone(graph)
@@ -225,8 +225,8 @@ it('certifies filled caps and admits the original moving-axis periodic Rush fixt
 
 it('refuses periodic moving-axis endpoint correction when retained wall regularity is unproved',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow-corrected.r','utf8')
  const graph=compileRushFrontend(source.replace('initial_steps: 16', 'retained_wall_max_injectivity_cells: 1, initial_steps: 16')).document
  const before=structuredClone(graph)
@@ -236,8 +236,8 @@ it('refuses periodic moving-axis endpoint correction when retained wall regulari
 
 it('certifies the moving-axis periodic Rush body with explicit authored-plane caps',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r','utf8')
  const graph=compileRushFrontend(source).document,before=structuredClone(graph)
@@ -257,8 +257,8 @@ it.each([
  ['cap_correction_tolerance: 0.000000001mm,','', 'Miter cap correction requires a displacement tolerance'],
 ])('refuses authored cap mode mutation %s',async(from,to,reason)=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r','utf8')
  expect(source).toContain(from)
  const graph=compileRushFrontend(source.replace(from,to)).document,before=structuredClone(graph)

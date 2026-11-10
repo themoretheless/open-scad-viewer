@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {circleNurbsCurve,bezierNurbsCurve,twoGuideSweepNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {circleNurbsCurve,bezierNurbsCurve,twoGuideSweepNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 
 it('preserves rational profile and independently parameterized guides through WASM',()=>{
  const profile=bezierNurbsCurve([[0,0,0],[2,1,1]],[1,3])

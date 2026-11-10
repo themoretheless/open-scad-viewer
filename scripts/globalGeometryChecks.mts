@@ -1,5 +1,5 @@
 // Qualification assertions and transport only. Every geometric operation is Rust.
-import {callGeometryRust as call} from '../src/services/geometry/kernel'
+import {callGeometryRust as call} from '../src/kernel/geometry/kernel'
 const requireCheck=(condition:unknown,message:string)=>{if(!condition)throw Error(message)}
 export function runGlobalGeometryChecks(fixtures:any,progress=(message:string)=>{}) {
  const cases:any[]=[]

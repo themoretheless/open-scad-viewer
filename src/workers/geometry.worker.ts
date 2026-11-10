@@ -1,19 +1,19 @@
 import {sha256Hex} from '../core/sha256'
-import {ownNurbsDisplayMesh} from '../services/rushFrontendScene'
-import {tessellateNurbsPatches} from '../services/geometry/reconstruction'
+import {ownNurbsDisplayMesh} from '../language/rushFrontendScene'
+import {tessellateNurbsPatches} from '../kernel/geometry/reconstruction'
 import {
   defaultGeometryBuildEngine,
   geometryExecutionForError,
   GeometryCapabilityUnavailableError,
   GeometryEngineUnavailableError,
   GeometryLanguageContractError,
-} from '../services/geometryBuildEngine'
-import { AbortedError, OpenSCADParseError } from '../services/openscadParser'
-import { isExactSolidRequest } from '../services/solid/exactSolidProtocol'
+} from '../kernel/geometryBuildEngine'
+import { AbortedError, OpenSCADParseError } from '../language/openscadParser'
+import { isExactSolidRequest } from '../kernel/solid/exactSolidProtocol'
 import { meshTransferables } from '../core/mesh'
 import {createSelectionSurfacePublisher} from '../services/selectionSurfacePublisher'
-import {surfaceGroupsInKernel} from '../services/geometry/meshAnalysis'
-import {warmGeometryKernel} from '../services/geometry/kernel'
+import {surfaceGroupsInKernel} from '../kernel/geometry/meshAnalysis'
+import {warmGeometryKernel} from '../kernel/geometry/kernel'
 import type { GeometryExecutionDescriptor } from '../core/geometryExecution'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
@@ -25,7 +25,7 @@ import {
   type GeometryCancelReason,
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
-} from '../services/geometryWorkerProtocol'
+} from '../kernel/geometryWorkerProtocol'
 
 interface ActiveJob {
   request: GeometryBuildRequest
@@ -391,7 +391,7 @@ self.addEventListener('message', (event: MessageEvent<unknown>) => {
   if (event.data && typeof event.data === 'object' && 'kind' in event.data && event.data.kind === 'exact-solid') {
     if (highestAcceptedJobId !== -1 || !isExactSolidRequest(event.data)) return
     exactJobStarted = true
-    void import('../services/solid/exactSolidRuntime')
+    void import('../kernel/solid/exactSolidRuntime')
       .then(({ runExactSolidRequest }) => runExactSolidRequest(event.data))
       .then(response => self.postMessage(response))
       .catch(() => self.postMessage({

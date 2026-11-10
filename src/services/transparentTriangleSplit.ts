@@ -1,4 +1,4 @@
-import { callGeometryRust } from './geometry/kernel'
+import { callGeometryRust } from '../kernel/geometry/kernel'
 /** A vertex starts with xyz; remaining linear attributes are interpolated at cuts. */
 export type TransparentVertex = readonly number[]
 export type TransparentTriangle = readonly [TransparentVertex, TransparentVertex, TransparentVertex]

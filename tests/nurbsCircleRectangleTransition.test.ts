@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {circleRectangleTransitionNurbsPatches} from '../src/services/nurbsConstructors'
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {circleRectangleTransitionNurbsPatches} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 const circle={center:[0,0,0] as [number,number,number],normal:[0,0,1] as [number,number,number],seam:[1,0,0] as [number,number,number],radius:2}
 const rectangle={center:[1,2,5] as [number,number,number],axisU:[3,0,0] as [number,number,number],axisV:[0,1,0] as [number,number,number]}
 it('retains four compact patches, independent boundaries and linear interior',()=>{

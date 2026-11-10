@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { OpenScadProject } from '../src/services/openScadProject'
-import { parseOpenSCAD, parseOpenScadProject } from '../src/services/openscadParser'
+import { OpenScadProject } from '../src/language/openScadProject'
+import { parseOpenSCAD, parseOpenScadProject } from '../src/language/openscadParser'
 
 const stable = { languageProfile: 'openscad/stable-2021.01' as const, quality: 'full' as const }
 const DIMENSIONED_DXF = readFileSync(

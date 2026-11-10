@@ -1,9 +1,9 @@
 import {describe, expect, it, vi} from 'vitest'
 
 const calls = vi.hoisted(() => ({ rust: vi.fn() }))
-vi.mock('../src/services/geometry/kernel', () => ({ callGeometryRust: calls.rust }))
+vi.mock('../src/kernel/geometry/kernel', () => ({ callGeometryRust: calls.rust }))
 
-import { prepareSdfGpu, primeSdfGpu, tessellateSdfGpuAware, type SdfField, type SdfGrid } from '../src/services/geometry/sdf'
+import { prepareSdfGpu, primeSdfGpu, tessellateSdfGpuAware, type SdfField, type SdfGrid } from '../src/kernel/geometry/sdf'
 
 const field: SdfField = { kind: 'sphere', center: [0, 0, 0], radius: 10 }
 const grid: SdfGrid = { min: [-12, -12, -12], max: [12, 12, 12], cells: [8, 8, 8] }

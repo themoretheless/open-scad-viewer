@@ -15,7 +15,7 @@ import {
   type GeometryJobId,
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
-} from './geometryWorkerProtocol'
+} from '../kernel/geometryWorkerProtocol'
 import { sha256Hex } from '../core/sha256'
 import type { GeometryQuality } from '../core/build'
 import {

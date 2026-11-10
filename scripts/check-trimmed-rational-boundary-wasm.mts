@@ -8,7 +8,7 @@ import {load} from '../tests/fixtures/raw-import-loader.mjs'
 import identity from '../src/generated/geometry-kernels/identity'
 if(typeof(module as any).registerHooks==='function')(module as any).registerHooks({load})
 else module.register(new URL('../tests/fixtures/raw-import-loader.mjs',import.meta.url),import.meta.url)
-const {callNurbsRust}=await import('../src/services/geometry/nurbs')
+const {callNurbsRust}=await import('../src/kernel/geometry/nurbs')
 const {unpackBrotliWasmBase64}=await import('../src/services/wasmBrotliPacking')
 const packed=(await import('../src/generated/geometry-kernels/bytes')).default
 const wasm=readFileSync('public/wasm/geometry-kernel.wasm'),sha=createHash('sha256').update(wasm).digest('hex')

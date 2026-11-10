@@ -3,13 +3,13 @@ import {
   compileOpenSCAD,
   type CallNode,
   type Statement,
-} from '../src/services/openscadCompiler'
-import { OpenScadProject } from '../src/services/openScadProject'
+} from '../src/language/openscadCompiler'
+import { OpenScadProject } from '../src/language/openScadProject'
 import {
   compileOpenScadProject,
   OpenScadProjectCompileError,
-} from '../src/services/openScadProjectCompiler'
-import { parseOpenSCAD, parseOpenScadProject } from '../src/services/openscadParser'
+} from '../src/language/openScadProjectCompiler'
+import { parseOpenSCAD, parseOpenScadProject } from '../src/language/openscadParser'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const stable = { languageProfile: 'openscad/stable-2021.01' as const }

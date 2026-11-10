@@ -188,7 +188,7 @@ it('extrudes a document in the worker without mutating its source',async()=>{
 })
 
 it('uses the same exact revolve result for new, union and complete subtraction',async()=>{
- const {inspectPolygonMesh}=await import('../src/services/geometry/polygon')
+ const {inspectPolygonMesh}=await import('../src/kernel/geometry/polygon')
  const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
  const document={version:1 as const,sketches:[{id:'profile',name:'Profile',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}],bodies:[]}
  const options={sketchId:'profile',axis:'y' as const,offset:0,angle:360,segments:32,geometry:'exact' as const,operation:'new' as const,targetId:'',id:'revolved',name:'Exact revolve',tessellation:8}
@@ -207,7 +207,7 @@ it('uses the same exact revolve result for new, union and complete subtraction',
 
 it('splits a body in the worker, retaining its identity and source snapshot',async()=>{
  const {extrudeDirectSketch}=await import('../src/services/directModeling')
- const {inspectPolygonMesh}=await import('../src/services/geometry/polygon')
+ const {inspectPolygonMesh}=await import('../src/kernel/geometry/polygon')
  const sketch={id:'s',name:'Square',closed:true,points:[[0,0],[10,0],[10,10],[0,10]] as [number,number][]}
  const document={version:1 as const,sketches:[sketch],bodies:[extrudeDirectSketch(sketch,10,'stock')]}
  const before=JSON.stringify(document),messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
@@ -247,7 +247,7 @@ it('returns profile gap diagnostics and the accepted contour through the worker 
 })
 
 it('returns validated NURBS refit certificates for curve and surface edits',async()=>{
- const {createSolidNurbsCurve}=await import('../src/services/solidNurbs')
+ const {createSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
  const {mainSolidResult}=await import('../src/services/mainSolidProtocol')
  const curve=createSolidNurbsCurve('curve');curve.curve.controlPoints=[[0,0,0],[1,0,0],[2,0,0],[3,0,0]]
  const surface={id:'surface',name:'Plane',segmentsU:4,segmentsV:4,surface:{degreeU:2,degreeV:2,knotsU:[0,0,0,1,1,1],knotsV:[0,0,0,1,1,1],controlPoints:Array.from({length:3},(_,i)=>Array.from({length:3},(_,j)=>[i,j,0])),weights:Array.from({length:3},()=>[1,1,1])}}
@@ -278,7 +278,7 @@ it('preserves the sweep refinement report on worker refusal and success',async()
 })
 
 it('carries curve, surface and seam proof reports through the actual worker protocol',async()=>{
- const {createSolidNurbsCurve}=await import('../src/services/solidNurbs')
+ const {createSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
  const {mainSolidResult}=await import('../src/services/mainSolidProtocol')
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');b.curve.controlPoints.forEach(p=>p[0]+=50)
  const surface={degreeU:3,degreeV:3,knotsU:[0,0,0,0,1,1,1,1],knotsV:[0,0,0,0,1,1,1,1],controlPoints:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>[i,j,.15*i*i+.1*i*j+.2*j*j])),weights:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>1+.03*i+.02*j+.01*i*j))}
@@ -313,7 +313,7 @@ it('updates linked geometry in the scene worker preview without changing its sou
 })
 
 it('builds a ruled solid loft in the worker with its requested identity',async()=>{
- const {analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+ const {analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
  const points=[[0,0],[10,0],[10,10],[0,10]]
  const document={version:1,sketches:[{id:'a',name:'A',closed:true,points},{id:'b',name:'B',closed:true,points,plane:{origin:[0,0,5],u:[1,0,0],v:[0,1,0]}}],bodies:[]},before=JSON.stringify(document)
  const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
@@ -324,7 +324,7 @@ it('builds a ruled solid loft in the worker with its requested identity',async()
 })
 
 it('runs exact Boolean groups in a worker with one anchor ID, empty results and immutable inputs',async()=>{
- const {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+ const {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
  const {mainSolidResult}=await import('../src/services/mainSolidProtocol')
  const body=(id:string,min:number,max:number)=>{const brep=createBrepBox([min,0,0],[max,10,10]),mesh=tessellateNurbsBrep(brep,4);return {id,name:id,brep,mesh:{positions:mesh.positions,indices:mesh.indices}}}
  const document={version:1 as const,sketches:[],bodies:[body('A',0,10),body('B',5,15),body('C',15,20)]}
@@ -377,7 +377,7 @@ it('keeps numeric sketch transforms in the support plane in the worker',async()=
 })
 
 it('edits a CV and its dependent bridge, and moves mesh vertices without changing the source',async()=>{
- const {createSolidNurbsCurve}=await import('../src/services/solidNurbs')
+ const {createSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
  const {bridgeNurbsCurves}=await import('../src/services/directDimensions')
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b')
  b.curve.controlPoints=b.curve.controlPoints.map(p=>[p[0]+50,p[1],p[2]])
@@ -413,9 +413,9 @@ it('edits analytic circle/arc handles and sketch vertices in isolated worker sna
 })
 
 it('runs native NURBS commands with stable identities and preserved knot/elevation geometry',async()=>{
- const {createSolidNurbsCurve,createSolidNurbsSurface}=await import('../src/services/solidNurbs')
- const {evaluateNurbsCurve}=await import('../src/services/nurbsCurve')
- const {evaluateNurbsSurface}=await import('../src/services/nurbsSurface')
+ const {createSolidNurbsCurve,createSolidNurbsSurface}=await import('../src/kernel/solidNurbs')
+ const {evaluateNurbsCurve}=await import('../src/kernel/nurbsCurve')
+ const {evaluateNurbsSurface}=await import('../src/kernel/nurbsSurface')
  const source={version:1 as const,sketches:[],bodies:[],curves:[createSolidNurbsCurve('curve')],surfaces:[createSolidNurbsSurface('surface')]}
  const snapshot=JSON.stringify(source),messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(m=>messages.push(m))
  async function edit(options:any){await handle({version:1,id:messages.length+1,job:{kind:'nurbsEdit',document:source,options}});const reply=messages.at(-1)!;expect(reply.ok).toBe(true);return (reply as any).result}
@@ -447,9 +447,9 @@ it('runs native NURBS commands with stable identities and preserved knot/elevati
 })
 
 it('creates a dependent bridge and runs B-rep properties/detail in the worker',async()=>{
- const {createSolidNurbsCurve}=await import('../src/services/solidNurbs')
- const {evaluateNurbsCurve}=await import('../src/services/nurbsCurve')
- const {createBrepBox,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
+ const {createSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
+ const {evaluateNurbsCurve}=await import('../src/kernel/nurbsCurve')
+ const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const {mainSolidResult,mainSolidExpectation}=await import('../src/services/mainSolidProtocol')
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');b.curve.controlPoints.forEach(p=>p[0]+=60)
  const brep=createBrepBox([0,0,0],[10,20,30]),mesh=tessellateNurbsBrep(brep,2)
@@ -481,8 +481,8 @@ it('creates a dependent bridge and runs B-rep properties/detail in the worker',a
 
 it('restores compact linked geometry through the authoritative document parser',async()=>{
  const {emptyDirectDocument,serializeDirectDocument,parseDirectDocument}=await import('../src/services/directModeling')
- const {createSolidInstance}=await import('../src/services/solidInstances')
- const {createBrepBox,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
+ const {createSolidInstance}=await import('../src/kernel/solidInstances')
+ const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const {stringifyMeshJson}=await import('../src/services/meshJson')
  const source=emptyDirectDocument(),brep=createBrepBox([0,0,0],[2,3,4])
  source.bodies.push({id:'source',name:'Source',brep,mesh:tessellateNurbsBrep(brep,1)})
@@ -528,7 +528,7 @@ it('imports RushGraph definitions into a validated document without mutating or 
 })
 
 it('measures vertices and curvature in the worker and validates numeric response shapes',async()=>{
- const {createBrepCylinder,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
+ const {createBrepCylinder,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
  const brep=createBrepCylinder(3,5),body={id:'c',name:'Cylinder',brep,mesh:tessellateNurbsBrep(brep,2)}
  const edge=brep.edges.findIndex(e=>e.curve.degree===2),messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(m=>messages.push(m))
@@ -537,7 +537,7 @@ it('measures vertices and curvature in the worker and validates numeric response
  expect(messages[0]).toMatchObject({ok:true,result:{distanceMm:0}})
  expect(messages[1].ok).toBe(true)
  if(messages[1].ok){
-  const r=messages[1].result as import('../src/services/solidMeasurements').CurveMeasurement
+  const r=messages[1].result as import('../src/kernel/solidMeasurements').CurveMeasurement
   expect(r.radiusMm).toBeCloseTo(3,8)
   expect(mainSolidResult(mainSolidExpectation(edgeJob),r)).toBe(true)
   expect(mainSolidResult(mainSolidExpectation(edgeJob),{...r,radiusMm:-1})).toBe(false)
@@ -553,7 +553,7 @@ it('returns validated manifold metrics through the worker protocol',async()=>{
  await createMainSolidWorkerHandler(message=>messages.push(message))({version:1,id:1,job})
  expect(messages[0]).toMatchObject({ok:true,kind:'manifoldMetrics',result:{vertexCount:4,triangleCount:4,edgeCount:6,eulerCharacteristic:2,componentCount:1,watertight:true}})
  if(!messages[0].ok)throw Error('Manifold metrics failed')
- const result=messages[0].result as import('../src/services/geometry/manifoldAnalysis').KernelManifoldMetrics
+ const result=messages[0].result as import('../src/kernel/geometry/manifoldAnalysis').KernelManifoldMetrics
  expect(result.signedVolume).toBeCloseTo(1/6,10)
  expect(result.surfaceArea).toBeCloseTo((3+Math.sqrt(3))/2,10)
  expect(result.components[0].genus).toBe(0)
@@ -571,7 +571,7 @@ it('reports sampled surface boundaries through the worker with bounded result va
  await handle({version:1,id:1,job})
  expect(messages[0]).toMatchObject({ok:true,result:{samplingOnly:true,maxGapMm:.25,maxTangentPlaneAngleDeg:0,sampledWithinTolerance:false}})
  if(messages[0].ok){
-  const result=messages[0].result as import('../src/services/solidSurfaceDiagnostics').SurfaceBoundaryReport
+  const result=messages[0].result as import('../src/kernel/solidSurfaceDiagnostics').SurfaceBoundaryReport
   expect(mainSolidResult(mainSolidExpectation(job),result)).toBe(true)
   expect(mainSolidResult(mainSolidExpectation(job),{...result,samples:result.samples.slice(1)})).toBe(false)
   expect(mainSolidResult(mainSolidExpectation(job),{...result,maxGapMm:Infinity})).toBe(false)
@@ -583,7 +583,7 @@ it('reports sampled surface boundaries through the worker with bounded result va
 })
 
 it('tessellates surface display into owned transferable buffers and rejects malformed meshes',async()=>{
- const {createSolidNurbsSurface,tessellateSolidNurbsSurface}=await import('../src/services/solidNurbs')
+ const {createSolidNurbsSurface,tessellateSolidNurbsSurface}=await import('../src/kernel/solidNurbs')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
  const item=createSolidNurbsSurface('surface'),before=JSON.stringify(item),messages:MainSolidResponse[]=[]
  let transferred=0
@@ -600,10 +600,10 @@ it('tessellates surface display into owned transferable buffers and rejects malf
 })
 
 it('samples retained profile loops in the worker without changing rational geometry',async()=>{
- const {authorBrepProfile}=await import('../src/services/geometry/brepProfile')
+ const {authorBrepProfile}=await import('../src/kernel/geometry/brepProfile')
  const {retainedProfileDisplay}=await import('../src/services/retainedSketchProfile')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
- const {SolidProfileDisplayQueue}=await import('../src/services/solidProfileDisplayQueue')
+ const {SolidProfileDisplayQueue}=await import('../src/kernel/solidProfileDisplayQueue')
  const profile=authorBrepProfile({kind:'circle',radius:7}),before=JSON.stringify(profile)
  const job={kind:'profileDisplay' as const,profile},messages:MainSolidResponse[]=[]
  await createMainSolidWorkerHandler(m=>messages.push(m))({version:1,id:1,job})
@@ -630,9 +630,9 @@ it('samples retained profile loops in the worker without changing rational geome
 })
 
 it('samples rational curve display in a cancellable queue with exact input keys',async()=>{
- const {createSolidNurbsCurve,sampleSolidNurbsCurve}=await import('../src/services/solidNurbs')
+ const {createSolidNurbsCurve,sampleSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
- const {SolidCurveDisplayQueue}=await import('../src/services/solidCurveDisplayQueue')
+ const {SolidCurveDisplayQueue}=await import('../src/kernel/solidCurveDisplayQueue')
  const item=createSolidNurbsCurve('curve'),before=JSON.stringify(item)
  const job={kind:'curveDisplay' as const,curve:item.curve},messages:MainSolidResponse[]=[]
  await createMainSolidWorkerHandler(m=>messages.push(m))({version:1,id:1,job})
@@ -663,7 +663,7 @@ it('samples rational curve display in a cancellable queue with exact input keys'
 it('prepares mesh topology in the worker and rejects invalid picking indices',async()=>{
  const {solidTopology}=await import('../src/services/directSolidTools')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
- const {createBrepBox,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
+ const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const mesh=tessellateNurbsBrep(createBrepBox([0,0,0],[10,12,14]),2),before=structuredClone(mesh)
  const job={kind:'topology' as const,mesh},messages:MainSolidResponse[]=[]
  await createMainSolidWorkerHandler(m=>messages.push(m))({version:1,id:1,job})
@@ -686,8 +686,8 @@ it('prepares mesh topology in the worker and rejects invalid picking indices',as
 })
 
 it('prepares authored edges in a worker with bounded vertex references',async()=>{
- const {createBrepCylinder,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
- const {solidBodyEdges}=await import('../src/services/solidBodyEdges')
+ const {createBrepCylinder,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {solidBodyEdges}=await import('../src/kernel/solidBodyEdges')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
  const brep=createBrepCylinder(3,5),body={id:'edges',name:'Edges',brep,mesh:tessellateNurbsBrep(brep,2)}
  const job={kind:'bodyEdges' as const,body},before=structuredClone(body),messages:MainSolidResponse[]=[]
@@ -705,7 +705,7 @@ it('prepares authored edges in a worker with bounded vertex references',async()=
 })
 
 it('prepares a planar face workplane and rejects a stale face index',async()=>{
- const {createBrepBox,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
+ const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const {solidTopology}=await import('../src/services/directSolidTools')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
  const brep=createBrepBox([0,0,0],[10,12,14]),body={id:'workplane',name:'Workplane',brep,mesh:tessellateNurbsBrep(brep,2)}
@@ -723,8 +723,8 @@ it('prepares a planar face workplane and rejects a stale face index',async()=>{
 })
 
 it('prepares cloneable exact snap geometry in a worker and validates curve intervals',async()=>{
- const {createBrepCylinder,tessellateNurbsBrep}=await import('../src/services/geometry/brep')
- const {bodySnapGeometry}=await import('../src/services/solidSnapGeometry')
+ const {createBrepCylinder,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {bodySnapGeometry}=await import('../src/kernel/solidSnapGeometry')
  const {resolveModelingSnap}=await import('../src/services/modelingSnaps')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
  const brep=createBrepCylinder(5,10),body={id:'snap-body',name:'Snaps',brep,mesh:tessellateNurbsBrep(brep,2)},before=structuredClone(body)
@@ -776,7 +776,7 @@ it('prepares planar sketch snap targets in the worker and rejects malformed resu
 })
 
 it('trims an open rational curve at a picked point in the worker without changing its identity',async()=>{
- const {evaluateNurbsCurve}=await import('../src/services/nurbsCurve')
+ const {evaluateNurbsCurve}=await import('../src/kernel/nurbsCurve')
  const document={version:1 as const,sketches:[],bodies:[],curves:[{id:'trim-target',name:'Trim target',curve:{degree:2,knots:[0,0,0,1,1,1],controlPoints:[[10,0,0],[10,10,0],[0,10,0]],weights:[1,Math.SQRT1_2,1]}}]}
  const before=structuredClone(document),messages:MainSolidResponse[]=[],handler=createMainSolidWorkerHandler(m=>messages.push(structuredClone(m)))
  await handler({version:1,id:1,job:{kind:'nurbsEdit',document,options:{kind:'trim-point',id:'trim-target',point:[8,6,0],keep:'end',maxDistance:.01}}})
@@ -803,7 +803,7 @@ it('trims a screen-picked curve in model coordinates and preserves depth',async(
 it('keeps the midpoint projection of a tilted rational arc through the worker',async()=>{
  const curve={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[10,0,10],[10,10,15],[0,10,15]],weights:[1,Math.SQRT1_2,1]}
  const document={version:1 as const,sketches:[],bodies:[],curves:[{id:'tilted',name:'Tilted',curve}]}
- const {evaluateNurbsCurve}=await import('../src/services/nurbsCurve')
+ const {evaluateNurbsCurve}=await import('../src/kernel/nurbsCurve')
  const p=evaluateNurbsCurve(curve,.5).point
  const messages:MainSolidResponse[]=[],handler=createMainSolidWorkerHandler(m=>messages.push(structuredClone(m)))
  await handler({version:1,id:1,job:{kind:'nurbsEdit',document,options:{kind:'trim-point',id:'tilted',point:p,keep:'start',maxDistance:.01}}})

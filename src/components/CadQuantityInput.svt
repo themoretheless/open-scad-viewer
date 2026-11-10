@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, useId, watch } from 'svet'
-import { evaluateSafeMathExpression, parseCadQuantity, type QuantityKind } from '../services/cadQuantity'
+import { evaluateSafeMathExpression, parseCadQuantity, type QuantityKind } from '../kernel/cadQuantity'
 defineOptions({ inheritAttrs: false, evaluateSafeMathExpression })
 const props = withDefaults(defineProps<{modelValue: number; kind?: QuantityKind; locale?: string; min?: number; max?: number}>(), {kind:'length',locale:'en'})
 const emit = defineEmits<{'update:modelValue':[number]; validity:[boolean]}>()

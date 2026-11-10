@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import type { SemanticNode, SemanticValueType } from '../src/core/semanticProgram'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 import { executeSemanticProgram } from '../src/language/semantic/semanticProgramExecutor'
@@ -15,7 +15,7 @@ import type {
   CadKernelHandle,
   CadKernelOps,
   CadKernelSolidAnalysis,
-} from '../src/services/cadKernelOps'
+} from '../src/kernel/cadKernelOps'
 import {
   evaluateOpenSCADViaInjectedManifoldPlan,
   evaluateOpenSCADViaManifoldPlanForQualification,
@@ -293,10 +293,10 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       }
     }
     for (const directory of ['core/', 'components/']) visit(new URL(directory, root))
-    files.push(fileURLToPath(new URL('../src/services/openscadCompiler.ts', import.meta.url)))
+    files.push(fileURLToPath(new URL('../src/language/openscadCompiler.ts', import.meta.url)))
     const scanned = files.map(file => relative(rootPath, file).split(sep).join('/'))
     expect(scanned).toContain('core/geometryExecution.ts')
-    expect(scanned).toContain('services/openscadCompiler.ts')
+    expect(scanned).toContain('language/openscadCompiler.ts')
     const importsManifold = /(?:from\s*|import\s*\()['"]manifold-3d\//
     for (const file of files) expect(readFileSync(file, 'utf8')).not.toMatch(importsManifold)
     expect(readFileSync(new URL('../src/services/manifoldPlanBackend.ts', import.meta.url), 'utf8'))
@@ -306,7 +306,7 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
       .not.toMatch(forbiddenPlanImports)
     expect(readFileSync(new URL('../src/services/legacyV5Assembler.ts', import.meta.url), 'utf8'))
       .not.toMatch(forbiddenPlanImports)
-    expect(readFileSync(new URL('../src/services/cadKernelOps.ts', import.meta.url), 'utf8'))
+    expect(readFileSync(new URL('../src/kernel/cadKernelOps.ts', import.meta.url), 'utf8'))
       .not.toMatch(importsManifold)
     visit(new URL('services/', root))
     for (const file of files) expect(readFileSync(file, 'utf8')).not.toMatch(importsManifold)

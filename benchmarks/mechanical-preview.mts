@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import os from 'node:os'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
-import { compileRushGraph } from '../src/services/rushGraph'
+import { compileRushGraph } from '../src/language/rushGraph'
 import { createMechanicalDocument } from '../src/services/mechanicalGeneratorContract'
 import { renderRushGraphPreviews } from '../src/mcp/rushGraphPreview'
 

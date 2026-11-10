@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
-import {inspectProfileIntersections} from '../src/services/geometry/profileIntersections'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
+import {inspectProfileIntersections} from '../src/kernel/geometry/profileIntersections'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 const line=(a:number[],b:number[]):NurbsCurve=>({degree:1,knots:[0,0,1,1],controlPoints:[a,b],weights:[1,1]})
 describe('retained profile intersection Rust/WASM boundary',()=>{
   it('locates a rational crossing while retaining source geometry and indices',()=>{
@@ -48,7 +48,7 @@ it('runs profile pair diagnostics through the worker and validates its source sn
   if(!response.ok)throw Error('Worker did not return diagnostics')
   expect(mainSolidResult(expected,response.result)).toBe(true)
   expect(JSON.stringify(job)).toBe(before)
-  const forged=structuredClone(response.result) as import('../src/services/geometry/profileIntersections').ProfileIntersectionReport
+  const forged=structuredClone(response.result) as import('../src/kernel/geometry/profileIntersections').ProfileIntersectionReport
   forged.pairs[0]!.first.loop=1
   expect(mainSolidResult(expected,forged)).toBe(false)
 })

@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs'
 import {gunzipSync} from 'node:zlib'
 import {it,expect,vi} from 'vitest'
 const native=vi.hoisted(()=>vi.fn())
-vi.mock('../src/services/geometry/nurbs',()=>({callNurbsRust:native}))
+vi.mock('../src/kernel/geometry/nurbs',()=>({callNurbsRust:native}))
 import {displayFrozenGraphBody} from '../src/services/frozenGraphBody'
 const artifact=JSON.parse(gunzipSync(readFileSync('tests/fixtures/frozen-graph-body.json.gz')).toString())
 function result():any{const g=artifact.geometry,n=g.faces.length;return {representation:'native-exact-graph-body',artifact:structuredClone(artifact),report:{method:'native-frozen-graph-body-restore/1',nativeVolumeCertified:true,globalEmbeddingCertified:true,faces:n,edges:g.edges.length,vertices:g.vertices.length,bodies:1,openEdges:0,pairProducts:n*(n-1)/2,allPairsReproved:true,internalG2Joins:1,curvatureLimitPerMm:10,absoluteCurvatureUpper:9,signedVolumeMm3:g.signedVolume,coefficientWork:100,maxWork:10000000,maxPairs:10000,maxBytes:4194304,radiusLawCertified:false,thicknessCertified:false,applicationAdmitted:false},display:{method:'native-exact-graph-edges/1',segments:8,edges:g.edges.map((e:any,edge:number)=>({edge,root:e.root,points:Array.from({length:9},()=>[0,0,0])})),sampleStorageErrorUpperMm:0,polylineDeviationCertified:false}}}

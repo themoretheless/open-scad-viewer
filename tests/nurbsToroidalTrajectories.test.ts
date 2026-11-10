@@ -1,10 +1,10 @@
-import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
+import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {extrudeNurbsCurvePatches,approximateToroidalSpiralNurbsCurve,approximateTorusKnotNurbsCurve} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {extrudeNurbsCurvePatches,approximateToroidalSpiralNurbsCurve,approximateTorusKnotNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 it('matches independent toroidal coordinates for signed and fractional turns',()=>{
  for(const [p,q] of [[.5,1.25],[-.75,.5],[2,3]]){
   const a=approximateToroidalSpiralNurbsCurve([3,4,5],3,1,p!,q!,23,47,1e-4)

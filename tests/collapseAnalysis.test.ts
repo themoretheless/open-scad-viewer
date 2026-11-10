@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest'
-import {GeometryKernelError} from '../src/services/geometry/kernel'
+import {GeometryKernelError} from '../src/kernel/geometry/kernel'
 import {solveFrameCollapse, type FrameCollapseModel} from '../src/services/frameAnalysis'
 
 // Propped cantilever, L = 1000 mm, two elements, unit force at mid-span.

@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
-import {inspectSweepCapBoundary} from '../src/services/nurbsSweepAudit'
-import {createRationalBrepSectionLoft} from '../src/services/geometry/brep'
-import {circleNurbsCurve} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
+import {inspectSweepCapBoundary} from '../src/kernel/nurbsSweepAudit'
+import {createRationalBrepSectionLoft} from '../src/kernel/geometry/brep'
+import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
 const loops=(z:number)=>[[circleNurbsCurve([0,0,z],[0,0,1],.5)],[reverseNurbsCurve(circleNurbsCurve([0,0,z],[0,0,1],.2))]]
 it('bounds every stored cap coedge against its retained world edge without sampling',()=>{
  const model=createRationalBrepSectionLoft([loops(0),loops(10)]),before=structuredClone(model)

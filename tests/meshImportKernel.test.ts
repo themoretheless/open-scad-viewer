@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {decodeMeshBytesInKernel,renderTriangleSoupInKernel} from '../src/services/geometry/meshImportKernel'
+import {decodeMeshBytesInKernel,renderTriangleSoupInKernel} from '../src/kernel/geometry/meshImportKernel'
 
 it('copies detached import buffers before releasing their native handle',()=>{
  const bytes=new TextEncoder().encode('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n')

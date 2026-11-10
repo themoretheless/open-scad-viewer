@@ -1,5 +1,5 @@
 import { cross3, xyPlane, transformSketch, type SketchPlane } from './directSketchGeometry'
-import { booleanPolygonMeshes, type PolygonMesh } from './geometry/polygon'
+import { booleanPolygonMeshes, type PolygonMesh } from '../kernel/geometry/polygon'
 import { extrudeDirectSketch, parseDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from './directModeling'
 import { stringifyMeshJson } from './meshJson'
 

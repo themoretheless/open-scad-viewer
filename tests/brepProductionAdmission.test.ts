@@ -7,7 +7,7 @@ vi.mock('../src/language/semantic/semanticProgramLowerer',async importOriginal=>
  // on the process-local trust set. Trust itself is covered elsewhere.
  return {...original,requireTrustedSemanticLowering:(value:unknown)=>value as SemanticLoweringSuccess}
 })
-import {executeBrepNativeProgram} from '../src/services/brepNativeExecutor'
+import {executeBrepNativeProgram} from '../src/kernel/brepNativeExecutor'
 import {lowerOpenSCADToSemanticProgram} from '../src/language/semantic/semanticProgramLowerer'
 const PROGRAMS:Record<string,string>={
  difference:'difference(){cube(3);translate([2,0,0]) cube(1);}',

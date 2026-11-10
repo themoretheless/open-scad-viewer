@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {addSolidPrimitive,type SolidPrimitiveKind,type SolidPrimitiveOptions} from '../src/services/solidPrimitive'
+import {addSolidPrimitive,type SolidPrimitiveKind,type SolidPrimitiveOptions} from '../src/kernel/solidPrimitive'
 import {emptyDirectDocument} from '../src/services/directModeling'
-import {analyzeNurbsBrep} from '../src/services/geometry/brep'
+import {analyzeNurbsBrep} from '../src/kernel/geometry/brep'
 const options=(kind:SolidPrimitiveKind):SolidPrimitiveOptions=>({kind,id:kind,name:kind,size:20,topRadius:5,innerRadius:7,round:'exact',segments:4,group:'Parts'})
 it.each([
  ['box',8000],['wedge',4000],['cylinder',2000*Math.PI],['cone',2000*Math.PI/3],

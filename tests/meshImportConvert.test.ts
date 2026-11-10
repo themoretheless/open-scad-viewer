@@ -10,8 +10,8 @@ import {
   MeshImportError,
   stripMeshExtension,
 } from '../src/exchange/meshImport'
-import { buildOwnNurbs } from '../src/services/rushGraphNurbsKernel'
-import { RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/rushGraphNurbs'
+import { buildOwnNurbs } from '../src/language/rushGraphNurbsKernel'
+import { RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/language/rushGraphNurbs'
 
 const built = buildOwnNurbs(RUSH_GRAPH_NURBS_SURFACE_EXAMPLE, { action: 'build' })
 if (!('mesh' in built) || !built.mesh) throw new Error('Missing mesh')

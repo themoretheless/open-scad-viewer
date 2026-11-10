@@ -7,7 +7,7 @@ import { PrintReadinessError } from '../src/fabrication/printReadiness'
 
 const service = vi.hoisted(() => ({ run: vi.fn(), cancel: vi.fn(), dispose: vi.fn(), download: vi.fn(), draw: vi.fn(), health: vi.fn(), discover: vi.fn(), send: vi.fn() }))
 vi.mock('../src/fabrication/gcodePreviewWorker', () => ({ createGcodePreviewWorker: () => ({ run: service.run, cancel: service.cancel, dispose: service.dispose }) }))
-vi.mock('../src/services/cadDrawing', () => ({ downloadCad: service.download }))
+vi.mock('../src/kernel/cadDrawing', () => ({ downloadCad: service.download }))
 vi.mock('../src/fabrication/gcodePreviewGeometry', async importOriginal => ({ ...await importOriginal<object>(), drawGcodeLayer: service.draw }))
 vi.mock('../src/fabrication/printerCompanion', () => ({
   PRINTER_COMPANION_DEFAULT_URL: 'http://127.0.0.1:17890',

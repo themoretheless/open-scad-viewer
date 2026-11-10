@@ -1,9 +1,9 @@
 import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,circleNurbsCurve,progressiveMiterNurbsProfiles,previewProgressiveMiterNurbsProfiles,streamProgressiveMiterNurbsProfiles,inspectProgressiveMiterCapProjection,inspectProgressiveMiterIdealCapDomains,miterNurbsProfileSections,type NurbsScaleLaw,type NurbsVectorLaw} from '../src/services/nurbsConstructors'
-import {reverseNurbsCurve} from '../src/services/nurbsCurve'
-import {inspectProgressiveMiterWalls} from '../src/services/nurbsConstructors'
-import {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody,inspectNurbsBrep} from '../src/services/geometry/brep'
+import {bezierNurbsCurve,circleNurbsCurve,progressiveMiterNurbsProfiles,previewProgressiveMiterNurbsProfiles,streamProgressiveMiterNurbsProfiles,inspectProgressiveMiterCapProjection,inspectProgressiveMiterIdealCapDomains,miterNurbsProfileSections,type NurbsScaleLaw,type NurbsVectorLaw} from '../src/kernel/nurbsConstructors'
+import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
+import {inspectProgressiveMiterWalls} from '../src/kernel/nurbsConstructors'
+import {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody,inspectNurbsBrep} from '../src/kernel/geometry/brep'
 const law=(a:number,b=a):NurbsScaleLaw=>({degree:1,knots:[0,0,1,1],values:[a,b],weights:[1,1]})
 const profile=()=>bezierNurbsCurve([[0.1,0,0],[0.2,0,0]])
 const straight:[number,number,number][]=[[0,0,0],[0,0,10]]
@@ -152,8 +152,8 @@ it('transports authored miter frames and certifies the actual retained surfaces'
 })
 it('preserves authored miter frames from Rush into actual Solid admission',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-authored-frame-hollow.r','utf8')
  const compiled=compileRushFrontend(source)
@@ -163,13 +163,13 @@ it('preserves authored miter frames from Rush into actual Solid admission',async
  const built=buildOwnNurbs(compiled.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,authoredFramesApplied:true,continuousBound:true,retainedCaps:{exact:true},volume:{solidGeometryCertified:true}})
  expect(built.nativeGeometry).toBeDefined()
- const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/services/geometry/brep').NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/kernel/geometry/brep').NurbsBrep
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
 })
 it.each(['miter-combined-frame-guide-affine-hollow.r','miter-combined-frame-guide-affine-hollow-corrected.r'])('admits authored-axis guide affine Rush %s with explicit combined provenance',async(file)=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const source=readFileSync('examples/rush/'+file,'utf8')
  const compiled=compileRushFrontend(source)
@@ -177,13 +177,13 @@ it.each(['miter-combined-frame-guide-affine-hollow.r','miter-combined-frame-guid
  const built=buildOwnNurbs(compiled.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,authoredFramesApplied:true,orientationGuideApplied:true,affineLawsApplied:true,continuousErrorMethod:'interval-authored-axis-guide-frame-interpolation',continuousBound:true,retainedCaps:{exact:true},volume:{solidGeometryCertified:true}})
  expect(built.nativeGeometry).toBeDefined()
- const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/services/geometry/brep').NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/kernel/geometry/brep').NurbsBrep
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
 })
 it('admits combined authored frame affine Rush bodies into Solid',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-combined-frame-affine-hollow.r','utf8')
  const compiled=compileRushFrontend(source)
@@ -193,13 +193,13 @@ it('admits combined authored frame affine Rush bodies into Solid',async()=>{
  const built=buildOwnNurbs(compiled.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,authoredFramesApplied:true,affineLawsApplied:true,continuousBound:true,retainedCaps:{exact:true},volume:{solidGeometryCertified:true}})
  expect(built.nativeGeometry).toBeDefined()
- const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/services/geometry/brep').NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/kernel/geometry/brep').NurbsBrep
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
 })
 it('admits guide affine Rush bodies into Solid',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-guide-affine-hollow.r','utf8')
  const compiled=compileRushFrontend(source)
@@ -208,7 +208,7 @@ it('admits guide affine Rush bodies into Solid',async()=>{
  const built=buildOwnNurbs(compiled.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,authoredFramesApplied:false,orientationGuideApplied:true,affineLawsApplied:true,continuousBound:true,retainedCaps:{exact:true},volume:{solidGeometryCertified:true}})
  expect(built.nativeGeometry).toBeDefined()
- const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/services/geometry/brep').NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/kernel/geometry/brep').NurbsBrep
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
 })
 it('certifies closed hollow affine shells and admits the actual body into Solid',async()=>{
@@ -236,8 +236,8 @@ it('certifies closed hollow affine shells and admits the actual body into Solid'
 })
 it('preserves affine miter dimensions and certificates from Rush into the native body',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-affine-hollow.r','utf8')
  const compiled=compileRushFrontend(source)
@@ -248,7 +248,7 @@ it('preserves affine miter dimensions and certificates from Rush into the native
  const built=buildOwnNurbs(compiled.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({accepted:true,affineLawsApplied:true,continuousBound:true,retainedCorrespondence:{exact:true},retainedCaps:{exact:true},volume:{solidGeometryCertified:true}})
  expect(built.nativeGeometry).toBeDefined()
- const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/services/geometry/brep').NurbsBrep
+ const model=readNativeGeometryData(built.nativeGeometry!).geometry as import('../src/kernel/geometry/brep').NurbsBrep
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
 })
 it('transports affine miter laws with independent domains and certified refinement',()=>{
@@ -354,8 +354,8 @@ it('streams the native history without promoting previews and cancels between le
 
 it('transfers certified retained scale/twist hollow Rush geometry to Solid',async()=>{
  const {readFileSync}=await import('node:fs')
- const {parseOpenSCAD}=await import('../src/services/openscadParser')
- const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
+ const {parseOpenSCAD}=await import('../src/language/openscadParser')
+ const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
  const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
  const source=readFileSync('examples/rush/progressive-miter-certified-hollow.r','utf8')
  const scene=await parseOpenSCAD(source)
@@ -371,16 +371,16 @@ it('transfers certified retained scale/twist hollow Rush geometry to Solid',asyn
 
 it('retains Rush rational topology after streamed previews and refuses dimensioned options',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
- const {parseOpenSCAD}=await import('../src/services/openscadParser')
- const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
+ const {parseOpenSCAD}=await import('../src/language/openscadParser')
+ const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
  const source=readFileSync('examples/rush/progressive-miter-hollow-body.r','utf8')
  const compiled=compileRushFrontend(source),node=compiled.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
  expect(node).toMatchObject({closed:true,max_steps:64,twist:{values:[0,360]}})
  expect(()=>compileRushFrontend(source.replace('max_steps: 64','max_steps: 64mm'))).toThrow()
  expect(()=>compileRushFrontend(source.replace('values: [1,1.5,1]','values: [1mm,1.5mm,1mm]'))).toThrow()
- const previews:import('../src/services/nurbsConstructors').ProgressiveSweepPreview[]=[]
+ const previews:import('../src/kernel/nurbsConstructors').ProgressiveSweepPreview[]=[]
  const built=await buildOwnNurbsAsync(compiled.document,{action:'build'},{onSweepPreview:(_id,preview)=>{previews.push(preview)}})
  expect(previews.length).toBeGreaterThan(1)
  expect(previews[0]!.report.accepted).toBe(false)
@@ -436,8 +436,8 @@ it('reports independent profile and retained-wall regularity through WASM',()=>{
 
 it('retains cap-pair evidence in the open Rush construction report',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbsAsync}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
  const source=readFileSync('examples/rush/progressive-miter-hollow-body.r','utf8')
   .replace(/points: \[\[[^\n]+/,'points: [[0,0,0],[10mm,0,0]],')
   .replace('closed: true','closed: false').replace('values: [1,1.5,1]','values: [1,1,1]')
@@ -472,7 +472,7 @@ it('corrects progressive endpoint caps with bounded retained displacement and ma
  expect(next.value.boundaryCertificate).toEqual(body.boundaryCertificate)
  expect(body.boundaryCertificate).toMatchObject({continuousBound:true,withinBudget:true,reason:null})
  expect(loops).toEqual(before)
- const {DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/services/nurbsSweepEmbedding')
+ const {DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/kernel/nurbsSweepEmbedding')
  const noCapWork={...opts,volumeBudgets:{...DEFAULT_SWEEP_VOLUME_BUDGETS,capBudgets:{...DEFAULT_SWEEP_VOLUME_BUDGETS.capBudgets,maxExactWork:0}}}
  expect(()=>createProgressiveMiterBrepProfileBody(loops,straight,law(1),law(0),noCapWork)).toThrow('filled retained cap regions unproved')
  const denied=streamProgressiveMiterBrepProfileBody(loops,straight,law(1),law(0),noCapWork)
@@ -482,8 +482,8 @@ it('corrects progressive endpoint caps with bounded retained displacement and ma
 
 it('transports progressive cap correction through Rush into construction evidence',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const source=readFileSync('examples/rush/miter-guide-hollow.r','utf8').replace('initial_steps:', 'cap_correction_tolerance: 0.00000001mm, cap_correction_max_work: 1000000, initial_steps:')
  const graph=compileRushFrontend(source).document
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -492,16 +492,16 @@ it('transports progressive cap correction through Rush into construction evidenc
  expect(built.report.construction?.[node.id]).toMatchObject({sectionCorrection:{reason:'bounded-section-interpolation',exactPlanarSections:[0,1]},continuousBound:true,retainedCorrespondence:{exact:true}})
  expect(()=>buildOwnNurbs(compileRushFrontend(source.replace('cap_correction_max_work: 1000000','cap_correction_max_work: 0')).document,{action:'build'})).toThrow(/correction unproved/)
  expect(()=>buildOwnNurbs(compileRushFrontend(source.replace('cap_correction_tolerance: 0.00000001mm, ','')).document,{action:'build'})).toThrow('requires a displacement tolerance')
- const {parseOpenSCAD}=await import('../src/services/openscadParser')
- const {sceneMeshesToSolidDocument}=await import('../src/services/solidBridge')
+ const {parseOpenSCAD}=await import('../src/language/openscadParser')
+ const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
  const scene=await parseOpenSCAD(source)
  expect(sceneMeshesToSolidDocument(scene.meshes).bodies).toHaveLength(1)
 })
 
 it('composes correction with authored wall error and refuses an oversized combined frame/affine correction',async()=>{
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  const source=readFileSync('examples/rush/miter-combined-frame-affine-hollow-corrected.r','utf8')
  const graph=compileRushFrontend(source).document
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -521,13 +521,13 @@ it('transports original endpoint projection prerequisites with shared exact-work
  const frameNormal:NurbsVectorLaw={degree:1,knots:[7,7,9,9],values:[[0,3,0],[0,3,0]],weights:[1,1]}
  const opts={...options,maxSteps:16,maxDeviation:.01,frameAxis,frameNormal}
  const body=createProgressiveMiterBrepProfileBody(loops,straight,law(1),law(0),opts)
- const caps=body.model.faces.slice(-2).map(face=>face.surface) as [import('../src/services/nurbsSurface').NurbsSurface,import('../src/services/nurbsSurface').NurbsSurface]
+ const caps=body.model.faces.slice(-2).map(face=>face.surface) as [import('../src/kernel/nurbsSurface').NurbsSurface,import('../src/kernel/nurbsSurface').NurbsSurface]
  const before=structuredClone({loops,caps,opts})
  const report=inspectProgressiveMiterCapProjection(loops.flat(),straight,law(1),law(0),opts,caps)
  expect(report).toMatchObject({reason:null,continuousBound:false,method:'original-endpoint-plane-projection'})
  expect(report.normalDots).toHaveLength(2)
  expect(body.capProjection).toEqual(report)
- const {inspectProgressiveMiterCapParallelism}=await import('../src/services/nurbsConstructors')
+ const {inspectProgressiveMiterCapParallelism}=await import('../src/kernel/nurbsConstructors')
  const parallel=inspectProgressiveMiterCapParallelism(loops.flat(),straight,law(1),law(0),opts,caps)
  expect(parallel).toMatchObject({parallel:[true,true],reason:null,continuousBound:false,method:'original-endpoint-plane-parallelism'})
  expect(body.capParallelism).toEqual(parallel)
@@ -555,8 +555,8 @@ it('transports original ideal material domains and preserves them in Rush eviden
  expect(r).toMatchObject({idealCapDomainsCertified:true,localDomainCertified:true,reason:null,continuousBound:false})
  expect(inspectProgressiveMiterIdealCapDomains(loops.flat(),straight,law(1),law(0),opts,[1,1],{tolerance:.001,maxPairs:1000,maxCells:r.cells-1,maxExactWork:1000000}).idealCapDomainsCertified).toBe(false)
  const {readFileSync}=await import('node:fs')
- const {compileRushFrontend}=await import('../src/services/rushFrontend')
- const {buildOwnNurbs}=await import('../src/services/rushGraphNurbsKernel')
+ const {compileRushFrontend}=await import('../src/language/rushFrontend')
+ const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
  for(const file of ['miter-guide-affine-hollow-corrected.r','miter-combined-frame-affine-hollow-corrected.r']){
   const graph=compileRushFrontend(readFileSync('examples/rush/'+file,'utf8')).document
   const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -570,7 +570,7 @@ it('transports original ideal material domains and preserves them in Rush eviden
   expect(bounds.every(bound=>bound<=payload.sweepEvidence.boundaryErrorUpper)).toBe(true)
   expect(payload.sweepEvidence.capParallelism.parallel).toEqual([true,true])
   expect(payload.sweepEvidence.boundaryErrorWithinBudget).toBe(true)
-  const {evaluateNurbsSurface}=await import('../src/services/nurbsSurface')
+  const {evaluateNurbsSurface}=await import('../src/kernel/nurbsSurface')
   for(let end=0;end<2;end++){
    const cap=payload.geometry.faces.at(end===0?-2:-1).surface
    const ua=cap.knotsU[cap.degreeU],ub=cap.knotsU[cap.controlPoints.length]

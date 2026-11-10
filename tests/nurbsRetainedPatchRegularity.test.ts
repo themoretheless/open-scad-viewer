@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,previewProgressiveNurbsProfiles} from '../src/services/nurbsConstructors'
-import type {NurbsSurface} from '../src/services/nurbsSurface'
-import {inspectRetainedPatchRegularity} from '../src/services/nurbsRetainedPatchRegularity'
+import {bezierNurbsCurve,previewProgressiveNurbsProfiles} from '../src/kernel/nurbsConstructors'
+import type {NurbsSurface} from '../src/kernel/nurbsSurface'
+import {inspectRetainedPatchRegularity} from '../src/kernel/nurbsRetainedPatchRegularity'
 
 const patch=(fold=false):NurbsSurface=>({degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],
  controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[fold?-1:1,1,0]]],weights:[[1,1],[1,1]]})

@@ -1,7 +1,7 @@
 import {beforeAll,it,expect} from 'vitest'
 import {numericRectangle,numericSlotSources} from '../src/services/numericSketchAuthoring'
-import {warmGeometryKernel} from '../src/services/geometry/kernel'
-import {prepareSolidProfile} from '../src/services/solidProfilePreparation'
+import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
+import {prepareSolidProfile} from '../src/kernel/solidProfilePreparation'
 import {xyPlane} from '../src/services/directSketchGeometry'
 beforeAll(warmGeometryKernel)
 it('bounds rectangle corners, dimensions and non-finite input',()=>{

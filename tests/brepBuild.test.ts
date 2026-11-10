@@ -5,8 +5,8 @@ import {
   rotationMatrix,
   translationMatrix,
   type BrepValue,
-} from '../src/services/solid/brepGraph'
-import { buildExactSolidBodies, InexactSolidError } from '../src/services/solid/brepBuild'
+} from '../src/kernel/solid/brepGraph'
+import { buildExactSolidBodies, InexactSolidError } from '../src/kernel/solid/brepBuild'
 import { emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
 
 const nodeId = (value: BrepValue): string => {

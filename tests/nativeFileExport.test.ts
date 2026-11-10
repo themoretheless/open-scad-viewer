@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest'
-import * as kernel from '../src/services/geometry/kernel'
+import * as kernel from '../src/kernel/geometry/kernel'
 import { buildBinaryStl, buildObj } from '../src/services/meshExport'
 import type { MeshData } from '../src/core/mesh'
 

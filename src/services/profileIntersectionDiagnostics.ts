@@ -1,5 +1,5 @@
-import type {NurbsCurve} from './nurbsCurve'
-import type {ProfileIntersectionReport,ProfileSegmentReference} from './geometry/profileIntersections'
+import type {NurbsCurve} from '../kernel/nurbsCurve'
+import type {ProfileIntersectionReport,ProfileSegmentReference} from '../kernel/geometry/profileIntersections'
 
 export interface ProfileIntersectionMarker {
   kind:'intersection'

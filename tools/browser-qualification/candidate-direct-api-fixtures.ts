@@ -1,10 +1,10 @@
 import {degreeReductionZeroCases} from './degree-reduction-zero-fixture'
-import {ellipseNurbsArc} from '../../src/services/nurbsConstructors'
-import {evaluateNurbsCurve} from '../../src/services/nurbsCurve'
-import {measureNurbsSurfaceDistance, type NurbsSurface} from '../../src/services/nurbsSurface'
-import {booleanNurbsBrep, createBrepBox, tessellateNurbsBrep} from '../../src/services/geometry/brep'
-import {checkManifoldInKernel} from '../../src/services/geometry/manifoldAnalysis'
-import {exportDirectStepV9, importDirectStepV9} from '../../src/services/cadNurbsStep'
+import {ellipseNurbsArc} from '../../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve} from '../../src/kernel/nurbsCurve'
+import {measureNurbsSurfaceDistance, type NurbsSurface} from '../../src/kernel/nurbsSurface'
+import {booleanNurbsBrep, createBrepBox, tessellateNurbsBrep} from '../../src/kernel/geometry/brep'
+import {checkManifoldInKernel} from '../../src/kernel/geometry/manifoldAnalysis'
+import {exportDirectStepV9, importDirectStepV9} from '../../src/kernel/cadNurbsStep'
 
 /** Finite candidate probes; neither provider admission nor application routing is changed. */
 export function runCandidateFixtures() {

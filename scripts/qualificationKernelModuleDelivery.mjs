@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url'
-const kernel = fileURLToPath(new URL('../src/services/geometry/kernel.ts', import.meta.url))
-const required = fileURLToPath(new URL('../src/services/geometry/kernelCompilationRequired.ts', import.meta.url))
+const kernel = fileURLToPath(new URL('../src/kernel/geometry/kernel.ts', import.meta.url))
+const required = fileURLToPath(new URL('../src/kernel/geometry/kernelCompilationRequired.ts', import.meta.url))
 
 /** The qualification Worker receives a verified immutable module. Its runtime
  * must not import or parse the embedded byte payload, including in Vite dev.

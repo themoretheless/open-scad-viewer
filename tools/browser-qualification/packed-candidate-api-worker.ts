@@ -4,7 +4,7 @@
 const workerScope=self as DedicatedWorkerGlobalScope
 workerScope.onmessage=async event=>{
  try{
-  const kernel=await import('../../src/services/geometry/kernel')
+  const kernel=await import('../../src/kernel/geometry/kernel')
   await kernel.warmGeometryKernel()
   const {default:identity}=await import('../../src/generated/geometry-kernels/identity')
   if(identity.sha256!==event.data.identity.sha256||identity.byteLength!==event.data.identity.byteLength)throw Error('Independent packed artifact identity mismatch')

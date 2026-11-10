@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {extrudePolygonProfile} from '../src/services/geometry/polygon'
+import {extrudePolygonProfile} from '../src/kernel/geometry/polygon'
 import {inspectStructuralSections,sectionTorsion} from '../src/services/structuralSections'
 import {mainSolidResult,isBoundaryConnectivity} from '../src/services/mainSolidProtocol'
 

@@ -1,5 +1,5 @@
 import type { TransparentTriangle } from './transparentTriangleSplit'
-import { buildTransparentBsp, type PackedTransparentBsp } from './geometry/transparentBspKernel'
+import { buildTransparentBsp, type PackedTransparentBsp } from '../kernel/geometry/transparentBspKernel'
 export interface TransparentFragment { readonly owner:string; readonly triangle:TransparentTriangle }
 /** Rust builds and cuts once. Camera traversal reuses detached numeric buffers. */
 export class TransparentBsp {

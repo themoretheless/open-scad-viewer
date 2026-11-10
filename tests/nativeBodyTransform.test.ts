@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
 import {transformBodies} from '../src/services/directSolidTools'
-import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/services/geometry/brep'
-import {inspectPolygonMesh} from '../src/services/geometry/polygon'
+import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
+import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 const bodies=()=>[0,8].map((x,i)=>{const brep=createBrepBox([x,0,0],[x+2,4,6]);return {id:String(i),name:`Part ${i}`,brep,mesh:tessellateNurbsBrep(brep,1)}})
 it('rotates and scales mesh and B-rep about the shared selection pivot in Rust',()=>{
  const input=bodies(),before=JSON.stringify(input)

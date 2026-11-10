@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
-import {selfIntersectionExpectation,validSelfIntersection,inspectSelfIntersection} from '../src/services/solidSelfIntersection'
+import {transformNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
+import {selfIntersectionExpectation,validSelfIntersection,inspectSelfIntersection} from '../src/kernel/solidSelfIntersection'
 import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
 
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})

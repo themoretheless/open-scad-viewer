@@ -1,8 +1,8 @@
 import {meshObjectStats,buildEdgeList} from './meshEditing'
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import {projectDirectPoint, type OrbitCamera } from './directModelingTools'
-import { inspectPolygonMesh, type PolygonMesh } from './geometry/polygon'
-import type { KernelManifoldReport } from './geometry/manifoldAnalysis'
+import { inspectPolygonMesh, type PolygonMesh } from '../kernel/geometry/polygon'
+import type { KernelManifoldReport } from '../kernel/geometry/manifoldAnalysis'
 
 // Editing publishes a new mesh. Reuse its topology report while only the camera moves.
 const orientation = new WeakMap<PolygonMesh, number>()

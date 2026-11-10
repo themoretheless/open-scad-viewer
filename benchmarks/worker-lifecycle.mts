@@ -15,8 +15,8 @@ const hash = (value: string | Uint8Array) => createHash('sha256').update(value).
 const inputs = [
   'benchmarks/worker-lifecycle.mts', 'src/mcp/directGeometrySupervisor.ts',
   'src/mcp/directGeometry.worker.mjs', 'src/mcp/directGeometry.worker.ts',
-  'src/services/openscadParser.ts', 'src/services/cadKernelOps.ts',
-  'src/services/geometry/meshAnalysis.ts', 'src/services/geometry/kernel.ts',
+  'src/language/openscadParser.ts', 'src/kernel/cadKernelOps.ts',
+  'src/kernel/geometry/meshAnalysis.ts', 'src/kernel/geometry/kernel.ts',
   'src/generated/geometry-kernels/bytes.ts', 'src/generated/language-kernel/bytes.ts',
   'src/generated/wasm-brotli/bytes.ts', 'src/services/wasmBrotliPacking.ts',
   'src/services/wasmPacking.ts', 'crates/Cargo.toml', 'scripts/build-wasm-brotli.mjs',

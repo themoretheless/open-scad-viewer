@@ -1,9 +1,9 @@
 import {createHash} from 'node:crypto'
 import {describe,expect,it} from 'vitest'
-import {createBrepBox} from '../src/services/geometry/brep'
-import {exportDirectStepV9} from '../src/services/cadNurbsStep'
-import {importStepV6WithResolver,type StepExternalResolver} from '../src/services/cadStepExternalResolver'
-import {importStepForWorkbench} from '../src/services/cadStepRouting'
+import {createBrepBox} from '../src/kernel/geometry/brep'
+import {exportDirectStepV9} from '../src/kernel/cadNurbsStep'
+import {importStepV6WithResolver,type StepExternalResolver} from '../src/kernel/cadStepExternalResolver'
+import {importStepForWorkbench} from '../src/kernel/cadStepRouting'
 
 const sha=(text:string)=>createHash('sha256').update(text).digest('hex')
 const reference=(text:string,uri:string)=>text.replace('ENDSEC;\nEND-ISO',`#62000=DOCUMENT_FILE('${uri}','','',(),(),(),());\nENDSEC;\nEND-ISO`)

@@ -13,7 +13,7 @@ import {
  createCanonicalMultispanGraphSolid,
  tessellateCertifiedNurbsBrep,
  transformNurbsBrep,
-} from '../src/services/geometry/brep'
+} from '../src/kernel/geometry/brep'
 
 const root=resolve(import.meta.dirname,'..')
 const read=(path:string)=>JSON.parse(readFileSync(resolve(root,path),'utf8')) as Record<string,unknown>

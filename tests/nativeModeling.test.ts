@@ -1,8 +1,8 @@
 import {describe,it,expect} from 'vitest'
-import {extrudePolygonProfile,revolvePolygonProfile,extrudePolygonFaces,deformPolygonMesh} from '../src/services/geometry/polygon'
-import {extrudeSubdivision,sweepSubdivision,tessellateSubdivision} from '../src/services/geometry/subdivision'
-import {evaluateSdf,sculptSdfSphere,deformSdf,type SdfField} from '../src/services/geometry/sdf'
-import {solveNativeSketch} from '../src/services/geometry/sketch'
+import {extrudePolygonProfile,revolvePolygonProfile,extrudePolygonFaces,deformPolygonMesh} from '../src/kernel/geometry/polygon'
+import {extrudeSubdivision,sweepSubdivision,tessellateSubdivision} from '../src/kernel/geometry/subdivision'
+import {evaluateSdf,sculptSdfSphere,deformSdf,type SdfField} from '../src/kernel/geometry/sdf'
+import {solveNativeSketch} from '../src/kernel/geometry/sketch'
 const square=[[0,0],[2,0],[2,2],[0,2]]
 describe('native modeling through WASM',()=>{
  it('extrudes holes and revolves a profile touching the axis',()=>{

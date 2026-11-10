@@ -1,8 +1,8 @@
-import { evaluateRushGraphGeometry, requireRushGraphChecks, RushGraphCheckError } from '../services/rushGraphChecks'
+import { evaluateRushGraphGeometry, requireRushGraphChecks, RushGraphCheckError } from '../language/rushGraphChecks'
 import type { McpServer } from '@modelcontextprotocol/server'
 import { z } from 'zod/v4'
 import type { McpGeometryService } from './geometryService'
-import { compileRushGraph, rushGraphSchema } from '../services/rushGraph'
+import { compileRushGraph, rushGraphSchema } from '../language/rushGraph'
 import { svgPreview, svgProfile, contoursSvg, contoursExtrusion, meshSvgContours, SVG_MAX_BYTES, type SvgOptions } from '../services/svgGeometry'
 import { svgProfileRushGraph } from '../services/svgRushGraph'
 

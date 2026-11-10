@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 
 /** Nominal dimensions of one rolled I-section, millimetres. */
 export interface StructuralProfileDims {

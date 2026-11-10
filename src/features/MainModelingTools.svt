@@ -7,12 +7,12 @@ import {sceneSnapPoints} from '../services/mainSnapping'
 import {patchMainSource} from '../services/mainSourceEditing'
 import {computeMainSolid,computeCadOperation,cancelMainSolid} from '../services/mainSolidWorker'
 import CadDimensionsOverlay from './CadDimensionsOverlay.svt'
-import type {CadOptions} from '../services/cadWorkbench'
+import type {CadOptions} from '../kernel/cadWorkbench'
 const CadWorkbenchPanel=defineAsyncComponent(()=>import('./CadWorkbenchPanel.svt'))
 import MainModelingOverlay from './MainModelingOverlay.svt'
 import MainSketchTools from './MainSketchTools.svt'
 import {facePlane} from '../services/directSolidTools'
-import {booleanPolygonMeshes} from '../services/geometry/polygon'
+import {booleanPolygonMeshes} from '../kernel/geometry/polygon'
 import {xyPlane,type SketchPlane} from '../services/directSketchGeometry'
 import type {DirectBody,DirectDocument} from '../services/directModeling'
 import type {Ray3} from '../services/math3d'
@@ -30,7 +30,7 @@ const working=ref(false)
 let solidGeneration=0
 onUnmounted(cancelMainSolid)
 const dimensionOpen=ref(false)
-const workbenchOpen=ref(false),workbenchAction=ref<import('../services/cadWorkbench').CadAction>('union')
+const workbenchOpen=ref(false),workbenchAction=ref<import('../kernel/cadWorkbench').CadAction>('union')
 const previewEpoch=ref(0)
 const boxSelect=ref(false)
 const size=ref(20),op=ref<MainOperation|null>(null),error=ref(''),previewing=ref(false)

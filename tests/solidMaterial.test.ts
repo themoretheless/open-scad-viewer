@@ -1,6 +1,6 @@
 import {stringifyMeshJson} from '../src/services/meshJson'
 import {expect,it} from 'vitest'
-import {assignSolidMaterial} from '../src/services/solidMaterial'
+import {assignSolidMaterial} from '../src/kernel/solidMaterial'
 import {DirectHistory,parseDirectDocument} from '../src/services/directModeling'
 import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
 import {transformSelection,splitSolid} from '../src/services/directSolidTools'

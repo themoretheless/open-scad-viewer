@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
 import {profileIntersectionDiagnostics} from '../src/services/profileIntersectionDiagnostics'
-import type {ProfileIntersectionReport} from '../src/services/geometry/profileIntersections'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
+import type {ProfileIntersectionReport} from '../src/kernel/geometry/profileIntersections'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 const line=(a:number[],b:number[]):NurbsCurve=>({degree:1,knots:[0,0,1,1],controlPoints:[a,b],weights:[1,1]})
 function report(first:number,second:number):ProfileIntersectionReport {
  return {scope:'distinct-profile-segment-pairs',complete:false,totalPairs:1,visitedPairs:1,resolvedPairs:0,unvisitedPairs:0,boxesVisited:1,maxPairs:1,maxBoxes:1,toleranceMm:1e-7,

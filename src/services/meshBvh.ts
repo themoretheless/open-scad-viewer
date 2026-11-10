@@ -18,7 +18,7 @@
  */
 
 import type { MeshBvh } from '../core/mesh'
-import { buildBvhInKernel } from './geometry/meshAnalysis'
+import { buildBvhInKernel } from '../kernel/geometry/meshAnalysis'
 
 export type { MeshBvh } from '../core/mesh'
 

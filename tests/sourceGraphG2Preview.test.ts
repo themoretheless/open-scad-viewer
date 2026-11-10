@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest'
 const native=vi.hoisted(()=>vi.fn())
-vi.mock('../src/services/geometry/nurbs',()=>({callNurbsRust:native}))
+vi.mock('../src/kernel/geometry/nurbs',()=>({callNurbsRust:native}))
 import {createSourceGraphG2Preview} from '../src/services/sourceGraphG2Preview'
 const surface={degreeU:1,degreeV:6,knotsU:[0,0,1,1],knotsV:[...Array(7).fill(0),...Array(7).fill(1)],controlPoints:[0,1].map(x=>Array.from({length:7},(_,y)=>[x,y/6,0])),weights:[Array(7).fill(1),Array(7).fill(1)]}
 const width={degree:1,knots:[0,0,1,1],controlPoints:[[.1,0,0],[.1,0,0]],weights:[1,1]}

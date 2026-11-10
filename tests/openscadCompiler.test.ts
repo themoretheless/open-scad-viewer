@@ -6,8 +6,8 @@ import {
   compileOpenSCAD,
   TT,
   type Expr,
-} from '../src/services/openscadCompiler'
-import { OpenSCADParseError } from '../src/services/openscadErrors'
+} from '../src/language/openscadCompiler'
+import { OpenSCADParseError } from '../src/language/openscadErrors'
 
 const FULL_PROFILE = { languageProfile: 'openscad/stable-2021.01' } as const
 type CanonicalSyntaxId = typeof OPENSCAD_2021_01_SYNTAX_CONSTRUCTS[number]['id']
@@ -61,7 +61,7 @@ describe('OpenSCAD compiler front-end', () => {
     } catch (error) {
       expect(error).toMatchObject({ line: 2, column: 7 })
     }
-    const compilerSource = readFileSync(fileURLToPath(new URL('../src/services/openscadCompiler.ts', import.meta.url)), 'utf8')
+    const compilerSource = readFileSync(fileURLToPath(new URL('../src/language/openscadCompiler.ts', import.meta.url)), 'utf8')
     expect(compilerSource).not.toContain('manifold-3d')
   })
 

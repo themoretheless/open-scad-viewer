@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
-import {bezierNurbsCurve,lineNurbsCurve,extrudeNurbsCurve} from '../src/services/nurbsConstructors'
-import {transformNurbsCurve,evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {transformNurbsSurface,transformNurbsSurfacePatches,evaluateNurbsSurface} from '../src/services/nurbsSurface'
-import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
+import {bezierNurbsCurve,lineNurbsCurve,extrudeNurbsCurve} from '../src/kernel/nurbsConstructors'
+import {transformNurbsCurve,evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {transformNurbsSurface,transformNurbsSurfacePatches,evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
+import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 const m=[[-2,.5,0,3],[0,1,1,-4],[1,0,.25,2],[0,0,0,1]]
 it('uses native affine rational curve and surface transforms',()=>{
  const curve=bezierNurbsCurve([[0,0,0],[2,3,1],[4,0,2]],[1,2,1]),transformed=transformNurbsCurve(curve,m)

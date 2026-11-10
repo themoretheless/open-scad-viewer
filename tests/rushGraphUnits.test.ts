@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { compileRushGraph, setRushGraphParameters, RushGraphError, type Expression } from '../src/services/rushGraph'
+import { compileRushGraph, setRushGraphParameters, RushGraphError, type Expression } from '../src/language/rushGraph'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 import { DirectGeometrySupervisor } from '../src/mcp/directGeometrySupervisor'
-import { defaultGeometryBuildEngine } from '../src/services/geometryBuildEngine'
+import { defaultGeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 const q = (value: number, unit: 'mm' | 'cm' | 'm' | 'in' | 'deg' | 'rad' = 'mm'): Expression => ({ op: 'quantity', value, unit })
 const model = (width: Expression, extra = {}) => ({ language: 'rush/ir-1', units: 'mm', type_policy: 'strict', parameters: [], nodes: [{ id: 'part', op: 'box', size: [width, q(2), q(3)] }], root: 'part', ...extra })
 

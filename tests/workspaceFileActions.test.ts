@@ -14,7 +14,7 @@ const control = vi.hoisted(() => ({
 }))
 const download = vi.hoisted(() => vi.fn())
 
-vi.mock('../src/services/solidPreviewWorker', () => ({
+vi.mock('../src/kernel/solidPreviewWorker', () => ({
   createSolidPreviewWorker: () => ({ run: control.run, cancel: control.cancel, dispose: control.dispose }),
 }))
 vi.mock('../src/appHelpers', async importOriginal => ({

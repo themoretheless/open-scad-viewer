@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import type { PolygonMesh } from '../src/services/geometry/polygon'
+import type { PolygonMesh } from '../src/kernel/geometry/polygon'
 import {
   assertPrintReady,
   formatPrintReadiness,
   PrintReadinessError,
   type PrintReadinessErrorCode,
 } from '../src/fabrication/printReadiness'
-import type { SolidIntersectionOptions } from '../src/services/solidDiagnostics'
+import type { SolidIntersectionOptions } from '../src/kernel/solidDiagnostics'
 
 const positions = Float64Array.from([
   0, 0, 0, 10, 0, 0, 10, 10, 0, 0, 10, 0,

@@ -5,8 +5,8 @@ import {
   searchFunctionReference,
   type ReferenceLanguage,
 } from '../src/data/functionReference'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const languages: ReferenceLanguage[] = ['openscad', 'rush']

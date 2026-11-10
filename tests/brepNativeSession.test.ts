@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
-import {callGeometryRust} from '../src/services/geometry/kernel'
+import {callGeometryRust} from '../src/kernel/geometry/kernel'
 import {semanticResultItems} from '../src/core/semanticProgram'
 import {lowerOpenSCADToSemanticProgram} from '../src/language/semantic/semanticProgramLowerer'
-import {analyzeNurbsBrep,type NurbsBrep} from '../src/services/geometry/brep'
+import {analyzeNurbsBrep,type NurbsBrep} from '../src/kernel/geometry/brep'
 const run=(args:Record<string,unknown>)=>callGeometryRust<Record<string,unknown>>('brep_session',args)
 const solidType={space:'d3',geometryKind:'solid',representation:'analytic-brep',evidence:{tag:'representation-preserving'}}
 const node={id:0,kind:'box',valueType:solidType,size:[1,1,1],center:false}

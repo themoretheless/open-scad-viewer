@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest'
-import {booleanBrepProfiles,signedAreaBrepProfileLoop,validateBrepProfile,transformBrepProfile} from '../src/services/geometry/brepProfile'
-import {GeometryKernelError} from '../src/services/geometry/kernel'
-import {evaluateNurbsCurve,reverseNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
+import {booleanBrepProfiles,signedAreaBrepProfileLoop,validateBrepProfile,transformBrepProfile} from '../src/kernel/geometry/brepProfile'
+import {GeometryKernelError} from '../src/kernel/geometry/kernel'
+import {evaluateNurbsCurve,reverseNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
 
 function rectangle(x:number,y:number,w:number,h:number):NurbsCurve[] {
   const p=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]]
@@ -79,7 +79,7 @@ describe('retained 2D B-rep profiles',()=>{
 it('retains a general NURBS profile through validation, document reload, affine placement and extrusion',async()=>{
   const {emptyDirectDocument,serializeDirectDocument,parseDirectDocument}=await import('../src/services/directModeling')
   const {withRetainedProfile}=await import('../src/services/retainedSketchProfile')
-  const {extrudeBrepCurves,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const {extrudeBrepCurves,analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
   const loop=rectangle(0,0,2,2)
   loop[0]={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}
   const original=JSON.stringify(loop),profile=validateBrepProfile([loop])
@@ -101,7 +101,7 @@ it('retains a general NURBS profile through validation, document reload, affine 
 })
 
 it('keeps holes, nested islands and separate components in a general rational region',async()=>{
-  const {extrudeBrepCurves,analyzeNurbsBrep}=await import('../src/services/geometry/brep')
+  const {extrudeBrepCurves,analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
   const outer=rectangle(0,0,2,2)
   outer[0]={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}
   const rings=[rectangle(.5,.5,.75,.75),rectangle(.75,.75,.25,.25),rectangle(3,0,1,1),outer]

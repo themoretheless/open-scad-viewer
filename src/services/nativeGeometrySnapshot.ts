@@ -1,4 +1,4 @@
-import {callGeometryRust} from './geometry/kernel'
+import {callGeometryRust} from '../kernel/geometry/kernel'
 import {isNativeGeometryArtifact,type NativeGeometryArtifact} from '../core/nativeGeometry'
 
 /** Storage transport only. Rust restores the exact original JSON bytes; every

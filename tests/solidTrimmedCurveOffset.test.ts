@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest'
 const native=vi.hoisted(()=>vi.fn())
-vi.mock('../src/services/geometry/nurbs',()=>({callNurbsRust:native}))
-import {offsetTrimmedSolidCurve} from '../src/services/solidTrimmedCurveOffset'
+vi.mock('../src/kernel/geometry/nurbs',()=>({callNurbsRust:native}))
+import {offsetTrimmedSolidCurve} from '../src/kernel/solidTrimmedCurveOffset'
 const curve={degree:1,knots:[0,0,1,2,3,3],weights:[1,1,1,1],controlPoints:[[0,0],[2,0],[0,2],[0,0]]}
 const source={version:1 as const,bodies:[],sketches:[],curves:[{id:'a',name:'A',curve}]}
 const options={id:'a',createdId:'new',distance:1,toleranceMm:0.01,maxCells:100,maxPairs:100,maxWitnessChecks:100,fillRule:'nonzero' as const,intersectionToleranceMm:0.001}

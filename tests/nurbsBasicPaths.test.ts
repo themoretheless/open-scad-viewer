@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {lineNurbsCurve,polylineNurbsCurve,circleNurbsCurve,circleNurbsArc} from '../src/services/nurbsConstructors'
-import {evaluateNurbsCurve} from '../src/services/nurbsCurve'
-import {compileRushFrontend} from '../src/services/rushFrontend'
+import {lineNurbsCurve,polylineNurbsCurve,circleNurbsCurve,circleNurbsArc} from '../src/kernel/nurbsConstructors'
+import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
+import {compileRushFrontend} from '../src/language/rushFrontend'
 import {readFileSync} from 'node:fs'
 
 it('preserves affine paths and explicit clamped closure through WASM',()=>{

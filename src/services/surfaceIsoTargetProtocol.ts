@@ -1,4 +1,4 @@
-import type {NurbsSurface} from './nurbsSurface'
+import type {NurbsSurface} from '../kernel/nurbsSurface'
 export type ParameterBox3=[[number,number],[number,number],[number,number]]
 export interface SurfaceIsoTargetReport {
  schema:'nurbs-surface-iso-target-window/1'

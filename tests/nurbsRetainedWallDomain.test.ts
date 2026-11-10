@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {callNurbsRust} from '../src/services/geometry/nurbs'
-import {createRationalBrepSectionLoft} from '../src/services/geometry/brep'
-import type {NurbsCurve} from '../src/services/nurbsCurve'
+import {callNurbsRust} from '../src/kernel/geometry/nurbs'
+import {createRationalBrepSectionLoft} from '../src/kernel/geometry/brep'
+import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 it('transports complete retained wall domains and exact coedges under one work budget',()=>{
  const line=(a:number[],b:number[]):NurbsCurve=>({degree:1,knots:[0,0,1,1],controlPoints:[a,b],weights:[1,1],periodic:false})
  const ring=(z:number)=>[[line([0,0,z],[1,0,z]),line([1,0,z],[1,1,z]),line([1,1,z],[0,1,z]),line([0,1,z],[0,0,z])]]

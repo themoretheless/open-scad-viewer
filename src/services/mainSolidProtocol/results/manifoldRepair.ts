@@ -1,5 +1,5 @@
-import type {PolygonMesh} from '../../geometry/polygon'
-import type {KernelManifoldRepair,KernelManifoldReport} from '../../geometry/manifoldAnalysis'
+import type {PolygonMesh} from '../../../kernel/geometry/polygon'
+import type {KernelManifoldRepair,KernelManifoldReport} from '../../../kernel/geometry/manifoldAnalysis'
 import {finite,isNumericSequence} from '../../mainSolidProtocol'
 import {numericSequenceOf} from '../mainSolidExpectation'
 

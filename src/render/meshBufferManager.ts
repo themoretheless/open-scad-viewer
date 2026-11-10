@@ -1,4 +1,4 @@
-import { geometryTransformTransition } from '../services/geometryTransformTransition'
+import { geometryTransformTransition } from '../kernel/geometryTransformTransition'
 import { invert, type Aabb3, type Mat4 } from '../services/math3d'
 import type { NativePickingCache } from '../services/nativePickingCache'
 import type { MeshData } from '../core/mesh'

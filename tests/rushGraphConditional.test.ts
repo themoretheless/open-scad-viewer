@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
-import { compileRushFrontend } from '../src/services/rushFrontend'
-import { compileRushGraph } from '../src/services/rushGraph'
-import { parseOpenSCAD } from '../src/services/openscadParser'
+import { compileRushFrontend } from '../src/language/rushFrontend'
+import { compileRushGraph } from '../src/language/rushGraph'
+import { parseOpenSCAD } from '../src/language/openscadParser'
 const compile=(source:string)=>compileRushFrontend('// @rush/1\n'+source)
 
 it('selects scalar branches lazily and keeps parameter-dependent canonical expressions',()=>{

@@ -1,7 +1,7 @@
 import { z } from 'zod/v4'
 import type { McpServer } from '@modelcontextprotocol/server'
 import type { McpGeometryService, GeometryAnalysis } from './geometryService'
-import { compileRushGraph, rushGraphSchema } from '../services/rushGraph'
+import { compileRushGraph, rushGraphSchema } from '../language/rushGraph'
 export async function inspectRushGraphInterference(document: unknown, geometry: McpGeometryService, signal?: AbortSignal) {
   const compiled = compileRushGraph(document)
   const leaves = compiled.assembly_components.filter(c => !c.is_assembly)

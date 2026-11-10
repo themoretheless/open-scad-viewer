@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {measureNurbsCurveDistance,evaluateNurbsCurve,type NurbsCurve} from '../src/services/nurbsCurve'
+import {measureNurbsCurveDistance,evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
 import {mainSolidExpectation,mainSolidResult,type MainSolidJob} from '../src/services/mainSolidProtocol'
 import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
 const line=(points:number[][]):NurbsCurve=>({degree:1,knots:[0,0,1,1],controlPoints:points,weights:[1,1]})

@@ -7,7 +7,7 @@ import {
   evaluateNurbsCurveLength,
   subdivideNurbsCurvePolylineAdaptive,
   type NurbsCurve,
-} from '../src/services/nurbsCurve'
+} from '../src/kernel/nurbsCurve'
 import {
   closestPointOnNurbsSurface,
   computeNurbsSurfaceBoundingBox,
@@ -15,7 +15,7 @@ import {
   evaluateNurbsSurfaceNormal,
   extractNurbsSurfaceIsocurvePoints,
   type NurbsSurface,
-} from '../src/services/nurbsSurface'
+} from '../src/kernel/nurbsSurface'
 
 describe('WebGPU compute feature negotiation', () => {
   afterEach(() => vi.unstubAllGlobals())

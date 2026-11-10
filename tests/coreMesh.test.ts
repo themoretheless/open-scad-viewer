@@ -88,9 +88,12 @@ function isParserModule(specifier: string): boolean {
   return /(?:^|\/)openscadParser(?:\.[cm]?[jt]sx?)?$/.test(withoutQuery)
 }
 
+const SERVICE_DOMAINS = new Set(['services', 'kernel', 'language', 'exchange', 'render', 'fabrication'])
+
 function isServiceModule(specifier: string): boolean {
   const withoutQuery = specifier.replace(/[?#].*$/, '')
-  return withoutQuery.split('/').includes('services')
+  // `src/services` is being split into domain directories (refactor plan M10); core may import none of them.
+  return withoutQuery.split('/').some(part => SERVICE_DOMAINS.has(part))
 }
 
 /** Source path relative to the root with '/' separators on every platform. */
@@ -173,8 +176,8 @@ describe('core mesh publication', () => {
       .sort()
 
     expect(parserConsumers).toEqual([
+      'kernel/geometryBuildEngine.ts',
       'mcp/independentOpenScadExecution.ts',
-      'services/geometryBuildEngine.ts',
       'workers/geometry.worker.ts',
     ])
     expect(coreServiceImports).toEqual([])

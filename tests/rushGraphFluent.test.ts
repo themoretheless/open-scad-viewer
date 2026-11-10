@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest'
-import { compileRushFrontend, rushFrontendControls } from '../src/services/rushFrontend'
-import { compileRushGraph, RushGraphError } from '../src/services/rushGraph'
-import { parseOpenSCAD } from '../src/services/openscadParser'
-import { checkRushGraphGeometry } from '../src/services/rushGraphChecks'
+import { compileRushFrontend, rushFrontendControls } from '../src/language/rushFrontend'
+import { compileRushGraph, RushGraphError } from '../src/language/rushGraph'
+import { parseOpenSCAD } from '../src/language/openscadParser'
+import { checkRushGraphGeometry } from '../src/language/rushGraphChecks'
 const header = '// @rush/1\n'
 const body = 'body = box([2mm,3mm,4mm])\nshow body\n'
 it('collects all scalar violations and retains editable controls', () => {

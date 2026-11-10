@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {certifiedSweepBoundaryErrorUpper,filledMiterCapErrorUpper} from '../src/services/nurbsFilledCapError'
+import {certifiedSweepBoundaryErrorUpper,filledMiterCapErrorUpper} from '../src/kernel/nurbsFilledCapError'
 const premises={idealCapDomainsCertified:true,retainedCapRegionsExact:true,projectionNormalDots:[[1,1],[-2,-1]] as [[number,number],[number,number]],endpointContourErrorUpper:[.01,.02] as [number,number],correctionDisplacementUpper:.25}
 it('bounds both filled caps across reflected plane projection and correction',()=>{
  const r=filledMiterCapErrorUpper(premises)!

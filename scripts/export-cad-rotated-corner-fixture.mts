@@ -1,7 +1,7 @@
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
-import {createBrepBox,transformNurbsBrep,tessellateNurbsBrep} from '../src/services/geometry/brep'
+import {createBrepBox,transformNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {stringifyMeshJson} from '../src/services/meshJson'
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})
 const source=createBrepBox([-7,3,-2],[3,11,4]),a=.37,b=-.61

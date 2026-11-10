@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {compileRushFrontend} from '../src/services/rushFrontend'
-import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/services/rushGraphNurbsKernel'
+import {compileRushFrontend} from '../src/language/rushFrontend'
+import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 import {readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
 const source=()=>readFileSync('examples/rush/progressive-miter-reconstructed-stations.r','utf8')
 const request={action:'build' as const,display:{segments:4,subdivisionLevels:0}}

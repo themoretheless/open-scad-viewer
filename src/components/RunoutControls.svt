@@ -3,7 +3,7 @@ import {computed} from 'svet'
 import CadQuantityInput from './CadQuantityInput.svt'
 import type {DirectDocument} from '../services/directModeling'
 import type {G2RunoutReport} from '../services/geometricG2'
-import type {SurfaceJetBoundary} from '../services/nurbsConstructors'
+import type {SurfaceJetBoundary} from '../kernel/nurbsConstructors'
 const props=defineProps<{label:(ru:string,en:string)=>string;locale:string;surfaces:NonNullable<DirectDocument['surfaces']>;curves:NonNullable<DirectDocument['curves']>;curveInvalid:boolean;planeInvalid:boolean;report?:G2RunoutReport}>()
 const inputs=defineModel<string[]>('inputs',{required:true})
 const boundary=defineModel<SurfaceJetBoundary>('boundary',{required:true})

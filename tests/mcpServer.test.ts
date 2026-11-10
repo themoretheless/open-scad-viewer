@@ -1,5 +1,5 @@
 import { CURRENT_RUNTIME_GEOMETRY_EVIDENCE } from '../src/core/currentRuntimeGeometryEvidence'
-import { compileRushGraph } from '../src/services/rushGraph'
+import { compileRushGraph } from '../src/language/rushGraph'
 import { RUSH_GRAPH_PREVIEW_TRIANGLE_LIMIT } from '../src/mcp/rushGraphPreview'
 import { CURRENT_GEOMETRY_MANIFEST_VERSIONS, GEOMETRY_MANIFEST_ARCHIVE } from '../src/core/geometryExecution'
 import { createHash } from 'node:crypto'
@@ -1143,7 +1143,7 @@ describe('OpenSCAD MCP server', () => {
 
 describe('RushGraph MCP language workflow', () => {
   it('serves a model-ready schema and compiles, edits and checks a structured model', async () => {
-    const { RUSH_GRAPH_EXAMPLE } = await import('../src/services/rushGraph')
+    const { RUSH_GRAPH_EXAMPLE } = await import('../src/language/rushGraph')
     const { request, initialize } = await connectedServer()
     expect(initialize.instructions).toContain('openscad_check')
     expect(initialize.instructions).toContain('First call rush_language')

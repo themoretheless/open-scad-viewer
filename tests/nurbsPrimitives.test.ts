@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest'
-import { ellipseNurbsArc, ellipsoidNurbsSurface, torusNurbsSurface } from '../src/services/nurbsConstructors'
-import { evaluateNurbsCurve } from '../src/services/nurbsCurve'
-import { evaluateNurbsSurface } from '../src/services/nurbsSurface'
-import { parabolaNurbsCurve, hyperbolaNurbsCurve, ellipticCylinderNurbsSurface, coneFrustumNurbsSurface, quadraticNurbsPatch } from '../src/services/nurbsConstructors'
+import { ellipseNurbsArc, ellipsoidNurbsSurface, torusNurbsSurface } from '../src/kernel/nurbsConstructors'
+import { evaluateNurbsCurve } from '../src/kernel/nurbsCurve'
+import { evaluateNurbsSurface } from '../src/kernel/nurbsSurface'
+import { parabolaNurbsCurve, hyperbolaNurbsCurve, ellipticCylinderNurbsSurface, coneFrustumNurbsSurface, quadraticNurbsPatch } from '../src/kernel/nurbsConstructors'
 
 it('preserves conic equations and surface dimensions through WASM', () => {
   const parabola = parabolaNurbsCurve([0,0,0], [2,0,0], [0,3,0], -2,3)

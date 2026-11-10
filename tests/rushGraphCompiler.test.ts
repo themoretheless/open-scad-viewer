@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import * as graph from '../src/services/rushGraph'
-import * as graphRuntime from '../src/services/rushGraphCompiler'
-import * as nurbs from '../src/services/rushGraphNurbs'
-import * as nurbsRuntime from '../src/services/rushGraphNurbsCompiler'
-import { compileRushFrontend } from '../src/services/rushFrontend'
+import * as graph from '../src/language/rushGraph'
+import * as graphRuntime from '../src/language/rushGraphCompiler'
+import * as nurbs from '../src/language/rushGraphNurbs'
+import * as nurbsRuntime from '../src/language/rushGraphNurbsCompiler'
+import { compileRushFrontend } from '../src/language/rushFrontend'
 
 it('preserves facade function and error constructor identity', () => {
   expect(graph.compileRushGraph).toBe(graphRuntime.compileRushGraph)

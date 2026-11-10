@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {inspectSweepExactStripJets,inspectSweepExactSeams,type SweepSeamDeclaration} from '../src/services/nurbsSweepAudit'
-import type {NurbsSurface} from '../src/services/nurbsSurface'
+import {inspectSweepExactStripJets,inspectSweepExactSeams,type SweepSeamDeclaration} from '../src/kernel/nurbsSweepAudit'
+import type {NurbsSurface} from '../src/kernel/nurbsSurface'
 const plane=(y:number):NurbsSurface=>({degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[0,1].map(x=>[[x,y,0],[x,y+1,0]]),weights:[[1,1],[1,1]],periodicU:false,periodicV:false})
 it('includes the closing seam in exact cyclic C1 qualification and refuses C2 or a damaged closure',()=>{
  const base=[[1,0],[1,1],[1,1],[0,1]]
