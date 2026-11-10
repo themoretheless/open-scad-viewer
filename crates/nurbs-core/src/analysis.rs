@@ -1,4 +1,10 @@
 //! Диффгеом и меры (read-only запросы).
+pub mod boundary_partition;
+pub mod curve_partition_agreement;
+pub mod curve_surface_affine;
+pub mod moving_radius;
+pub mod retained_wall_domain_certificate;
+pub mod retained_wall_domain;
 pub mod surface_boundary;
 pub mod affine_volume;
 pub mod class_a;

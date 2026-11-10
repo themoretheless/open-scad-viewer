@@ -1,4 +1,6 @@
 //! Прямое редактирование, морфинг и сглаживание.
+pub mod constrained_surface;
+pub mod polyhedral_spline;
 pub mod curve_extension;
 pub mod edit;
 pub mod weight_edit;

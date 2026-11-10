@@ -1,5 +1,5 @@
 //! Exact full rectangular trim and world-boundary identity premise.
-use super::{curve,surface,curve_surface_agreement,Result,input};
+use crate::{curve,surface,curve_surface_agreement,Result,input};
 #[cfg(feature="codec")]
 use value_codec::{Value,json,Deserialize};
 #[cfg(feature="codec")]

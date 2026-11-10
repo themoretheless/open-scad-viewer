@@ -6,8 +6,8 @@
 /// Task-oriented API views; existing flat module paths remain supported.
 pub mod domains;
 pub mod numerics;
-pub mod constrained_surface;
-pub mod polyhedral_spline;
+pub use crate::editing::constrained_surface;
+pub use crate::editing::polyhedral_spline;
 pub mod core;
 pub mod distance;
 pub mod construct;
@@ -170,8 +170,8 @@ pub use crate::sweeps::audit::wall as sweep_wall_audit;
 pub use crate::sweeps::audit::contour as sweep_contour_audit;
 pub use crate::sweeps::audit::cap_boundary as sweep_cap_boundary;
 pub use crate::sweeps::audit::cap_wall as sweep_cap_wall;
-pub mod retained_wall_coefficients;
-pub mod retained_wall_domain_certificate;
+pub use crate::core::retained_wall_coefficients;
+pub use crate::analysis::retained_wall_domain_certificate;
 pub use crate::sweeps::audit::seam as sweep_seam_audit;
 pub use crate::trim::trim_domain;
 pub use crate::trim::trim_region_audit;
@@ -230,24 +230,24 @@ pub use distance::obb_tree;
 pub use analysis::normal_cone;
 pub use foundation::bezier_extraction;
 
-pub mod uv_curve_crossings;
+pub use crate::distance::uv_curve_crossings;
 
 pub mod surface_quotient_injectivity;
 
 pub mod normal_alignment;
 
-pub mod curve_surface_plane;
+pub use crate::core::curve_surface_plane;
 
-pub mod curve_surface_affine;
+pub use crate::analysis::curve_surface_affine;
 
-pub mod planar_area;
+pub use crate::trim::planar_area;
 
 #[cfg(feature = "codec")]
-pub mod loft_reparameterization;
+pub use crate::construct::loft_reparameterization;
 
 mod sweep_support;
 
-pub mod retained_wall_domain;
+pub use crate::analysis::retained_wall_domain;
 
 pub use sweeps::seam_set as sweep_seam_set;
 
@@ -271,9 +271,9 @@ pub use offset::face_loops as offset_face_loops;
 
 pub use offset::patch_boundary as offset_patch_boundary;
 
-pub mod curve_partition_agreement;
+pub use crate::analysis::curve_partition_agreement;
 
-pub mod boundary_partition;
+pub use crate::analysis::boundary_partition;
 
 pub mod contact_normal_agreement;
 
@@ -281,7 +281,7 @@ pub use offset::contact_predictor as offset_contact_predictor;
 
 pub use offset::contact_path as offset_contact_path;
 
-pub mod curve_axis_driver;
+pub use crate::distance::curve_axis_driver;
 
 pub use offset::path_trims as offset_path_trims;
 
@@ -289,21 +289,21 @@ pub use offset::path_pcurves as offset_path_pcurves;
 
 pub mod curve_surface_lift;
 
-pub mod curve_point_identity;
+pub use crate::core::curve_point_identity;
 
-pub mod surface_flux;
+pub use crate::distance::surface_flux;
 
-pub mod moving_radius;
+pub use crate::analysis::moving_radius;
 
 pub mod moving_envelope;
 
-pub mod surface_projection_jacobian;
+pub use crate::core::surface_projection_jacobian;
 pub mod profile_projection_jacobian;
 pub mod profile_projected_jordan;
 
-pub mod curve_quadratic_separator;
+pub use crate::core::curve_quadratic_separator;
 
-pub mod surface_projected_jordan;
+pub use crate::trim::surface_projected_jordan;
 
 pub mod surface_self_chord;
 
@@ -357,7 +357,7 @@ pub use crate::construct::surfaces::optical_shapes;
 pub use crate::construct::surfaces::wing_loft;
 pub use crate::construct::surfaces::profile_spring;
 pub use crate::construct::curves::radial_cam;
-pub mod synchronized_boundary_normals;
+pub use crate::distance::synchronized_boundary_normals;
 /// Whole original-span strict coordinate clocks for rational curves.
 #[path = "analysis/curve_coordinate_clock.rs"]
 pub mod curve_coordinate_clock;
