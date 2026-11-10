@@ -1,169 +1,181 @@
 //! Indexed boundary topology over exact rational curve/surface definitions.
 //! Validation certifies combinatorial incidence, not geometric solid validity.
-mod exact_affine_source;
-mod rational_identity;
+// Module families (ADR 0012, refactor plan M8); old paths below are re-exports.
+pub mod body_analysis;
+pub mod boolean;
+pub mod contact;
+pub mod features;
+pub mod intersection;
+pub mod minkowski;
+pub mod model;
+pub mod parts;
+pub mod profile;
+pub mod source_body;
+pub mod sweep_offset;
+use crate::source_body::exact_affine_source;
+use crate::source_body::rational_identity;
 #[cfg(feature = "codec")]
 mod serialization;
 pub use brep_topology::{MAX_COEDGES, MAX_ENTITIES, MAX_FACES};
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 use std::collections::{BTreeMap, BTreeSet};
 
-pub mod aag;
-pub mod aag_features;
-pub mod aag_fillets;
-pub mod analysis;
-pub mod analytic;
-pub mod analytic_boolean;
-pub mod analytic_features;
+pub use crate::features::aag;
+pub use crate::features::aag_features;
+pub use crate::features::aag_fillets;
+pub use crate::body_analysis::analysis;
+pub use crate::parts::analytic;
+pub use crate::boolean::analytic_boolean;
+pub use crate::features::analytic_features;
 pub use nurbs_intersect::analytic_ss;
 /// Section-authored geometric blades.
-pub mod blade;
-pub mod boolean_robustness;
-mod boolean_support;
-mod box_sphere_boolean;
-pub mod circular_blend;
-pub mod direct_edit;
-pub mod edge_tangency;
+pub use crate::parts::blade;
+pub use crate::boolean::boolean_robustness;
+use crate::boolean::boolean_support;
+use crate::boolean::box_sphere_boolean;
+pub use crate::features::circular_blend;
+pub use crate::features::direct_edit;
+pub use crate::features::edge_tangency;
 #[doc(hidden)]
-pub mod face_senses;
-pub mod feature_family;
-pub mod feature_graph;
-pub mod feature_history;
-pub mod feature_ops;
-pub mod gear;
-pub mod history_snapshots;
-mod imprint_assembly;
-pub mod journal;
-pub mod keypoints;
-pub mod same_surface_uv_boolean;
-pub mod retained_uv_boolean;
-mod retained_uv_rim;
-mod sphere_mate;
-pub mod tolerant_boolean;
-pub mod worm;
+pub use crate::model::face_senses;
+pub use crate::model::feature_family;
+pub use crate::model::feature_graph;
+pub use crate::model::feature_history;
+pub use crate::features::feature_ops;
+pub use crate::parts::gear;
+pub use crate::model::history_snapshots;
+use crate::boolean::imprint_assembly;
+pub use crate::model::journal;
+pub use crate::model::keypoints;
+pub use crate::boolean::same_surface_uv_boolean;
+pub use crate::boolean::retained_uv_boolean;
+use crate::boolean::retained_uv_rim;
+use crate::contact::sphere_mate;
+pub use crate::boolean::tolerant_boolean;
+pub use crate::parts::worm;
 pub use gear::{GearGeometry, GearSpec, gear, gear_with_report};
-mod body_edit;
-pub mod boundary_agreement;
-pub mod boundary_certificate;
-pub mod boundary_embedding;
-pub mod boundary_hull_contact;
-pub mod close_topology;
-pub mod contact_bind;
-pub mod contact_end;
-pub mod contact_graft;
-pub mod contact_trim;
-pub mod corner_close;
+use crate::features::body_edit;
+pub use crate::contact::boundary_agreement;
+pub use crate::contact::boundary_certificate;
+pub use crate::contact::boundary_embedding;
+pub use crate::contact::boundary_hull_contact;
+pub use crate::boolean::close_topology;
+pub use crate::contact::contact_bind;
+pub use crate::contact::contact_end;
+pub use crate::contact::contact_graft;
+pub use crate::contact::contact_trim;
+pub use crate::boolean::corner_close;
 /// `nurbs-intersect` owns coverage verification; the lifted arrangement check lives in
 /// `uv_coverage` because it needs kernel arrangements.
 pub mod coverage_verifier {
     pub use crate::uv_coverage::verify_lifted_uv_arrangement_coverage;
     pub use nurbs_intersect::coverage_verifier::*;
 }
-mod cylinder_sphere_boolean;
-pub mod edge_partition;
-pub mod face_contact;
-pub mod face_contacts;
-pub mod face_crossings;
-pub mod face_curvature;
-pub mod face_cut;
-pub mod face_domain;
-pub mod face_injectivity;
-pub mod face_replacement;
-pub mod face_window;
-pub mod fillet_contact;
-pub mod fillet_radius;
-pub mod imprint_pipeline;
-pub mod intersections;
-pub mod nurbs_ss_g6;
-pub mod nurbs_ss_general;
-mod operation_tolerance;
-pub mod operations;
-pub mod radius_transition_body;
-pub mod region_replacement;
-pub mod ss_face_membership;
-pub mod ss_trimmed_face;
-pub mod sweep_boundary_owned;
+use crate::boolean::cylinder_sphere_boolean;
+pub use crate::features::edge_partition;
+pub use crate::contact::face_contact;
+pub use crate::contact::face_contacts;
+pub use crate::intersection::face_crossings;
+pub use crate::body_analysis::face_curvature;
+pub use crate::boolean::face_cut;
+pub use crate::model::face_domain;
+pub use crate::body_analysis::face_injectivity;
+pub use crate::features::face_replacement;
+pub use crate::model::face_window;
+pub use crate::contact::fillet_contact;
+pub use crate::features::fillet_radius;
+pub use crate::boolean::imprint_pipeline;
+pub use crate::intersection::intersections;
+pub use crate::intersection::nurbs_ss_g6;
+pub use crate::intersection::nurbs_ss_general;
+use crate::features::operation_tolerance;
+pub use crate::boolean::operations;
+pub use crate::sweep_offset::radius_transition_body;
+pub use crate::features::region_replacement;
+pub use crate::intersection::ss_face_membership;
+pub use crate::intersection::ss_trimmed_face;
+pub use crate::sweep_offset::sweep_boundary_owned;
 #[cfg(test)]
 mod sweep_boundary_owned_tests;
 /// Authored trimmed patch networks with continuous admission audits.
-pub mod trimmed_shell;
-pub mod watertight;
+pub use crate::source_body::trimmed_shell;
+pub use crate::body_analysis::watertight;
 pub use operation_tolerance::{
     ModelToleranceHandoff, admit_operation_input, enforce_model_tolerance_handoff,
 };
-pub mod affine_lattice;
-pub mod bezier_profile;
-pub mod boundary_contact_tube;
-pub mod closed_solid;
+pub use crate::minkowski::affine_lattice;
+pub use crate::profile::bezier_profile;
+pub use crate::contact::boundary_contact_tube;
+pub use crate::model::closed_solid;
 #[cfg(feature = "codec")]
-pub mod defects;
+pub use crate::body_analysis::defects;
 #[cfg(feature = "codec")]
-pub mod healing;
+pub use crate::features::healing;
 #[cfg(feature = "codec")]
-pub mod healing_report;
+pub use crate::features::healing_report;
 #[cfg(feature = "codec")]
-pub mod import_policy;
-pub mod freeform_cuboid;
-pub mod source_exchange_plan;
+pub use crate::model::import_policy;
+pub use crate::parts::freeform_cuboid;
+pub use crate::source_body::source_exchange_plan;
 #[cfg(all(test, feature = "codec"))]
 mod exchange_fixtures;
 pub use freeform_cuboid::{freeform_cuboid_solid, freeform_cuboid_with_bump_face};
-pub mod material_chord;
-pub mod material_segment;
-pub mod material_wall;
-pub mod material_wall_coverage;
-pub mod minkowski3d;
-pub mod mixed_root_model;
-pub mod pcurve_repair;
-pub mod planar_trim;
+pub use crate::source_body::material_chord;
+pub use crate::source_body::material_segment;
+pub use crate::source_body::material_wall;
+pub use crate::source_body::material_wall_coverage;
+pub use crate::minkowski::minkowski3d;
+pub use crate::model::mixed_root_model;
+pub use crate::features::pcurve_repair;
+pub use crate::boolean::planar_trim;
 pub use nurbs_intersect::predicate_evidence;
-pub mod prism;
-pub mod prism_frame;
-pub mod profile_certificate;
-mod profile_imprint;
+pub use crate::profile::prism;
+pub use crate::profile::prism_frame;
+pub use crate::profile::profile_certificate;
+use crate::profile::profile_imprint;
 #[cfg(feature = "codec")]
-pub mod profile_intersections;
-pub mod profile_region;
-pub mod ray_parity;
-pub mod root_model;
-pub mod rounded_patch_network;
-pub mod self_intersection;
-pub mod shared_boundary;
-pub mod shell_distance;
-pub mod shell_nesting;
-pub mod shell_orientation;
-pub mod shell_relation;
-pub mod shell_thickness;
-pub mod sketch;
-pub mod solid_audit;
-pub mod solid_distance;
-pub mod source_implicit_body;
-mod sphere_boolean;
-mod stepped_prism;
-pub mod sweep_affine_boundary;
-pub mod sweep_cap_contacts;
-pub mod sweep_miter_layout;
-pub mod sweep_miter_owned;
-pub mod sweep_retained_caps;
-pub mod sweep_retained_charts;
-pub mod sweep_retained_decomposition;
-pub mod sweep_retained_walls;
-pub mod sweep_smoothness;
-pub mod sweep_station_reconstruction;
+pub use crate::intersection::profile_intersections;
+pub use crate::profile::profile_region;
+pub use crate::body_analysis::ray_parity;
+pub use crate::model::root_model;
+pub use crate::features::rounded_patch_network;
+pub use crate::intersection::self_intersection;
+pub use crate::contact::shared_boundary;
+pub use crate::body_analysis::shell_distance;
+pub use crate::body_analysis::shell_nesting;
+pub use crate::body_analysis::shell_orientation;
+pub use crate::body_analysis::shell_relation;
+pub use crate::body_analysis::shell_thickness;
+pub use crate::parts::sketch;
+pub use crate::body_analysis::solid_audit;
+pub use crate::body_analysis::solid_distance;
+pub use crate::source_body::source_implicit_body;
+use crate::boolean::sphere_boolean;
+use crate::profile::stepped_prism;
+pub use crate::sweep_offset::sweep_affine_boundary;
+pub use crate::sweep_offset::sweep_cap_contacts;
+pub use crate::sweep_offset::sweep_miter_layout;
+pub use crate::sweep_offset::sweep_miter_owned;
+pub use crate::sweep_offset::sweep_retained_caps;
+pub use crate::sweep_offset::sweep_retained_charts;
+pub use crate::sweep_offset::sweep_retained_decomposition;
+pub use crate::sweep_offset::sweep_retained_walls;
+pub use crate::sweep_offset::sweep_smoothness;
+pub use crate::sweep_offset::sweep_station_reconstruction;
 #[cfg(feature = "codec")]
-pub mod tolerance_unify;
-pub mod transactions;
-pub mod transform;
-mod transform_plane_charts;
-pub mod trim_sew;
-pub mod trimmed_edge_contact;
-pub mod trimmed_vertex_contact;
-pub mod uv_arrangement;
-pub mod uv_coverage;
-mod uv_regions;
-pub mod volume_validity;
-pub mod wall_clearance;
-pub mod wall_opposition;
+pub use crate::features::tolerance_unify;
+pub use crate::model::transactions;
+pub use crate::model::transform;
+use crate::model::transform_plane_charts;
+pub use crate::boolean::trim_sew;
+pub use crate::source_body::trimmed_edge_contact;
+pub use crate::source_body::trimmed_vertex_contact;
+pub use crate::boolean::uv_arrangement;
+pub use crate::boolean::uv_coverage;
+use crate::boolean::uv_regions;
+pub use crate::body_analysis::volume_validity;
+pub use crate::source_body::wall_clearance;
+pub use crate::source_body::wall_opposition;
 pub use analytic::{
     AffinePose, AffineStationLimits, AffineStationWalls, FiberedBody, FiberedBodyAttempt,
     FiberedBodyLimits, FiberedBodyReport, LoftCap, SmoothStationWalls, affine_station_walls,
@@ -272,9 +284,9 @@ impl std::ops::DerefMut for Model {
         &mut self.0
     }
 }
-mod model_identity;
-mod model_report;
-mod model_validation;
+use crate::model::model_identity;
+use crate::model::model_report;
+use crate::body_analysis::model_validation;
 pub use model_report::Report;
 pub(crate) use model_validation::validate_pole_boundary;
 
@@ -347,179 +359,178 @@ fn line(a: Vec<f64>, b: Vec<f64>) -> Curve {
 #[cfg(test)]
 mod tests;
 
-pub mod planar_cap;
-pub mod rack;
-pub mod thread;
+pub use crate::profile::planar_cap;
+pub use crate::parts::rack;
+pub use crate::parts::thread;
 
-mod control_hull_separation;
-mod face_contact_groups;
+use crate::contact::control_hull_separation;
+use crate::contact::face_contact_groups;
 
 #[cfg(test)]
 mod spatial_rmf_qualification;
 
-pub mod sweep_retained;
+pub use crate::sweep_offset::sweep_retained;
 
-pub mod miter_seams;
+pub use crate::sweep_offset::miter_seams;
 
-pub mod offset_end_boundary;
+pub use crate::sweep_offset::offset_end_boundary;
 
-pub mod trimmed_face_recipe;
+pub use crate::source_body::trimmed_face_recipe;
 
-pub mod source_contact_point;
+pub use crate::source_body::source_contact_point;
 
-pub mod source_boundary_fragment;
-pub mod source_carrier_point;
+pub use crate::source_body::source_boundary_fragment;
+pub use crate::source_body::source_carrier_point;
 
-pub mod source_contour_proposal;
+pub use crate::source_body::source_contour_proposal;
 
-pub mod source_region_restore;
+pub use crate::source_body::source_region_restore;
 
-pub mod source_contour_winding;
+pub use crate::source_body::source_contour_winding;
 
-pub mod source_world_wire;
+pub use crate::source_body::source_world_wire;
 
-mod source_line_chart_root;
+use crate::source_body::source_line_chart_root;
 
-pub mod source_shared_edge;
+pub use crate::source_body::source_shared_edge;
 
-pub mod source_shared_edge_restore;
+pub use crate::source_body::source_shared_edge_restore;
 
-pub mod source_edge_restriction;
+pub use crate::source_body::source_edge_restriction;
 
-pub mod source_boundary_network;
+pub use crate::source_body::source_boundary_network;
 
-pub mod source_boundary_display;
+pub use crate::source_body::source_boundary_display;
 
-pub mod source_region_display;
+pub use crate::source_body::source_region_display;
 
-pub mod source_collapsed_boundary;
+pub use crate::source_body::source_collapsed_boundary;
 
-pub mod source_shell_incidence;
+pub use crate::source_body::source_shell_incidence;
 
-pub mod source_shell_restore;
+pub use crate::source_body::source_shell_restore;
 
-pub mod source_body_restore;
+pub use crate::source_body::source_body_restore;
 
-pub mod source_face_contacts;
+pub use crate::source_body::source_face_contacts;
 
-pub mod source_allowed_contact;
+pub use crate::source_body::source_allowed_contact;
 
-pub mod source_plane_fiber;
+pub use crate::source_body::source_plane_fiber;
 
-pub mod source_pole_plane_image;
+pub use crate::source_body::source_pole_plane_image;
 
-pub mod source_pole_paired_contact;
-pub mod source_profile_boundary_identity;
+pub use crate::source_body::source_pole_paired_contact;
+pub use crate::source_body::source_profile_boundary_identity;
 
-pub mod source_paired_fiber_contact;
+pub use crate::source_body::source_paired_fiber_contact;
 
-pub mod source_fiber_boundary;
+pub use crate::source_body::source_fiber_boundary;
 
-pub mod source_fiber_contact;
+pub use crate::source_body::source_fiber_contact;
 
-pub mod source_affine_use;
+pub use crate::source_body::source_affine_use;
 
-pub mod source_mapped_edge;
-pub mod source_projective_body_restore;
-pub mod source_projective_edge;
-pub mod source_projective_shell_restore;
-pub mod source_projective_use;
+pub use crate::source_body::source_mapped_edge;
+pub use crate::source_body::source_projective_body_restore;
+pub use crate::source_body::source_projective_edge;
+pub use crate::source_body::source_projective_shell_restore;
+pub use crate::source_body::source_projective_use;
 
-pub mod trimmed_shell_recipe;
+pub use crate::source_body::trimmed_shell_recipe;
 
-pub mod offset_edge_supports;
+pub use crate::sweep_offset::offset_edge_supports;
 
-pub mod linear_canal;
+pub use crate::source_body::linear_canal;
 
-pub mod linear_canal_body;
+pub use crate::source_body::linear_canal_body;
 
-pub mod source_root_parameter;
+pub use crate::source_body::source_root_parameter;
 
-pub mod source_halfplane_side;
+pub use crate::source_body::source_halfplane_side;
 
-pub mod source_interior_fiber;
+pub use crate::source_body::source_interior_fiber;
 
-pub mod source_interior_boundary;
+pub use crate::source_body::source_interior_boundary;
 
-pub mod source_interior_contact;
+pub use crate::source_body::source_interior_contact;
 
-pub mod source_vertex_links;
+pub use crate::source_body::source_vertex_links;
 
-pub mod source_vertex_contact;
+pub use crate::source_body::source_vertex_contact;
 
-pub mod source_hull_separation;
+pub use crate::source_body::source_hull_separation;
 
-pub mod source_shell_geometry;
+pub use crate::source_body::source_shell_geometry;
 
-pub mod graph_body;
-pub mod source_box;
-pub mod source_volume;
+pub use crate::source_body::graph_body;
+pub use crate::source_body::source_box;
+pub use crate::source_body::source_volume;
 
-pub mod source_body_model;
+pub use crate::source_body::source_body_model;
 
-pub mod source_body_topology;
+pub use crate::source_body::source_body_topology;
 
-pub mod source_pole_tangency;
-pub mod source_seam_tangency;
+pub use crate::source_body::source_pole_tangency;
+pub use crate::source_body::source_seam_tangency;
 
-pub mod source_inverse_shear;
+pub use crate::source_body::source_inverse_shear;
 
-pub mod source_root_refinement;
+pub use crate::source_body::source_root_refinement;
 
-pub mod source_exchange_endpoints;
+pub use crate::source_body::source_exchange_endpoints;
 
-pub mod source_exchange_trims;
+pub use crate::source_body::source_exchange_trims;
 
 
-pub mod source_support_shell;
+pub use crate::source_body::source_support_shell;
 
-pub mod source_pole_planar_contact;
+pub use crate::source_body::source_pole_planar_contact;
 
-pub mod source_ruled_projection_contact;
+pub use crate::source_body::source_ruled_projection_contact;
 
-pub mod source_planar_material_hull;
+pub use crate::source_body::source_planar_material_hull;
 
-pub mod source_corner_plane_image;
+pub use crate::source_body::source_corner_plane_image;
 
-pub mod source_face_gap;
+pub use crate::source_body::source_face_gap;
 
-pub mod source_planar_flux;
+pub use crate::source_body::source_planar_flux;
 
-pub mod source_material_segment;
-pub mod source_profile_body;
-pub mod source_retained_face_gap;
-pub mod source_shared_chord_map;
-pub mod source_wall_anchor;
-pub mod source_wall_pair;
+pub use crate::source_body::source_material_segment;
+pub use crate::source_body::source_profile_body;
+pub use crate::source_body::source_retained_face_gap;
+pub use crate::source_body::source_shared_chord_map;
+pub use crate::source_body::source_wall_anchor;
+pub use crate::source_body::source_wall_pair;
 
-pub mod source_material_chord;
+pub use crate::source_body::source_material_chord;
 
-pub mod source_material_wall;
-pub mod source_wall_search;
+pub use crate::source_body::source_material_wall;
+pub use crate::source_body::source_wall_search;
 
-pub mod source_wall_scan;
+pub use crate::source_body::source_wall_scan;
 
-pub mod source_wall_coverage;
+pub use crate::source_body::source_wall_coverage;
 
-pub mod source_wall_self_coverage;
+pub use crate::source_body::source_wall_self_coverage;
 
-pub mod wall_search;
+pub use crate::source_body::wall_search;
 
-pub mod retained_annular_cap;
+pub use crate::sweep_offset::retained_annular_cap;
 
-pub mod topology_reference;
+pub use crate::model::topology_reference;
 
-#[path = "cuboid_primitive.rs"]
-mod cuboid_primitive;
+use crate::parts::cuboid_primitive;
 pub use cuboid_primitive::cuboid;
 
-pub mod exact_graph_strip;
-pub mod source_curved_boundary_contact;
-pub mod source_paired_projection_contact;
+pub use crate::source_body::exact_graph_strip;
+pub use crate::source_body::source_curved_boundary_contact;
+pub use crate::source_body::source_paired_projection_contact;
 
-pub mod rational_cap_translation;
+pub use crate::source_body::rational_cap_translation;
 
-pub mod rational_cap_affine;
+pub use crate::source_body::rational_cap_affine;
 
-pub mod algebraic_model;
+pub use crate::model::algebraic_model;
 pub use algebraic_model::{AlgebraicModel, ExactBooleanOptions, ExactModel};

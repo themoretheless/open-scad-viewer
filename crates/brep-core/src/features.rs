@@ -1,0 +1,23 @@
+//! `features` module family (refactor plan M8).
+pub mod aag;
+pub mod aag_features;
+pub mod aag_fillets;
+pub mod analytic_features;
+pub mod circular_blend;
+pub mod direct_edit;
+pub mod edge_tangency;
+pub mod feature_ops;
+pub(crate) mod body_edit;
+pub mod edge_partition;
+pub mod face_replacement;
+pub mod fillet_radius;
+pub(crate) mod operation_tolerance;
+pub mod region_replacement;
+#[cfg(feature = "codec")]
+pub mod healing;
+#[cfg(feature = "codec")]
+pub mod healing_report;
+pub mod pcurve_repair;
+pub mod rounded_patch_network;
+#[cfg(feature = "codec")]
+pub mod tolerance_unify;

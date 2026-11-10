@@ -5,6 +5,12 @@ import {readFileSync, existsSync} from 'node:fs'
 import {resolve} from 'node:path'
 
 export const MODULE_LAYERS = {
+  // Module families of brep-core (refactor plan M8), ordered to minimise references
+  // against the order; the remaining upward edges are pinned and may only shrink.
+  'brep-core': {
+    profile: 0, model: 1, minkowski: 2, contact: 3, sweep_offset: 4, parts: 5, source_body: 6,
+    intersection: 7, boolean: 8, body_analysis: 9, features: 10,
+  },
   'nurbs-core': {
     numerics: 0, core: 1, foundation: 2, certificates: 2, distance: 2, analysis: 3, trim: 3,
     intersection: 4, offset: 4, join: 4, editing: 4, construct: 5, sweeps: 5, tessellation: 5,
@@ -16,10 +22,10 @@ function stripCommentsAndStrings(text) {
   return text.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ').replace(/r#*"(?:[^"\\]|\\.)*"#*|"(?:[^"\\]|\\.)*"/g, '""')
 }
 
-/** alias -> top-level module, from `pub use crate::a::b[ as c];` lines in the crate root. */
+/** alias -> top-level module, from `[pub] use crate::a::b[ as c];` lines in the crate root. */
 export function rootAliases(libText) {
   const aliases = {}
-  for (const m of stripCommentsAndStrings(libText).matchAll(/\bpub(?:\([^)]*\))?\s+use\s+(?:crate::)?([a-z_][\w]*)((?:::[a-z_][\w]*)*)(?:\s+as\s+([a-z_][\w]*))?\s*;/g)) {
+  for (const m of stripCommentsAndStrings(libText).matchAll(/(?:\bpub(?:\([^)]*\))?\s+)?\buse\s+(?:crate::)?([a-z_][\w]*)((?:::[a-z_][\w]*)*)(?:\s+as\s+([a-z_][\w]*))?\s*;/g)) {
     const segments = (m[1] + m[2]).split('::')
     aliases[m[3] ?? segments.at(-1)] = segments[0]
   }

@@ -1,0 +1,22 @@
+//! `boolean` module family (refactor plan M8).
+pub mod analytic_boolean;
+pub mod boolean_robustness;
+pub(crate) mod boolean_support;
+pub(crate) mod box_sphere_boolean;
+pub(crate) mod imprint_assembly;
+pub mod same_surface_uv_boolean;
+pub mod retained_uv_boolean;
+pub(crate) mod retained_uv_rim;
+pub mod tolerant_boolean;
+pub mod close_topology;
+pub mod corner_close;
+pub(crate) mod cylinder_sphere_boolean;
+pub mod face_cut;
+pub mod imprint_pipeline;
+pub mod operations;
+pub mod planar_trim;
+pub(crate) mod sphere_boolean;
+pub mod trim_sew;
+pub mod uv_arrangement;
+pub mod uv_coverage;
+pub(crate) mod uv_regions;
