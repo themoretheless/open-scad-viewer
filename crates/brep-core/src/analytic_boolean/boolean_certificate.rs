@@ -133,6 +133,31 @@ pub(super) fn model_bounds(model: &Model) -> ([f64; 3], [f64; 3]) {
     (min, max)
 }
 
+/// Axis-aligned box of every face's control net. Rational surfaces with
+/// positive weights lie in the convex hull of their control points, so unlike
+/// the vertex box of [`model_bounds`] this encloses curved faces that bulge
+/// between vertices, and separation of two such boxes proves disjointness.
+pub(super) fn control_bounds(model: &Model) -> ([f64; 3], [f64; 3]) {
+    let (mut min, mut max) = model_bounds(model);
+    for face in &model.faces {
+        for point in face.surface.control_points.iter().flatten() {
+            for i in 0..3 {
+                min[i] = min[i].min(point[i]);
+                max[i] = max[i].max(point[i]);
+            }
+        }
+    }
+    (min, max)
+}
+
+/// Strictly separated control-net boxes, beyond a small absolute margin.
+pub(super) fn control_boxes_separated(a: &Model, b: &Model) -> bool {
+    let (amin, amax) = control_bounds(a);
+    let (bmin, bmax) = control_bounds(b);
+    amin.iter().chain(&amax).chain(&bmin).chain(&bmax).all(|x| x.is_finite())
+        && (0..3).any(|i| amax[i] < bmin[i] - 1e-9 || bmax[i] < amin[i] - 1e-9)
+}
+
 pub(super) type CylinderEnvelope = ([f64; 3], [f64; 3], f64, [f64; 2]);
 
 pub(super) fn cylinder_envelope(model: &Model) -> Result<CylinderEnvelope> {

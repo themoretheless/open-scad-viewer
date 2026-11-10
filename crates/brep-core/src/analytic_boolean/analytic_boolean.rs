@@ -51,10 +51,7 @@ pub fn analytic_boolean(
     if matches!(class_a, AnalyticClass::Tube | AnalyticClass::Frustum)
         || matches!(class_b, AnalyticClass::Tube | AnalyticClass::Frustum)
     {
-        let (amin, amax) = model_bounds(a);
-        let (bmin, bmax) = model_bounds(b);
-        let separated = (0..3).any(|i| amax[i] < bmin[i] - 1e-9 || bmax[i] < amin[i] - 1e-9);
-        return if separated {
+        return if control_boxes_separated(a, b) {
             empty_algebra_pair(
                 a,
                 b,
@@ -69,12 +66,24 @@ pub fn analytic_boolean(
         };
     }
 
+    // Cones and tori: provably disjoint operands (separated control-net
+    // boxes) take the empty algebra; any possible contact is refused.
     if matches!(class_a, AnalyticClass::Cone | AnalyticClass::Torus)
         || matches!(class_b, AnalyticClass::Cone | AnalyticClass::Torus)
     {
-        return Err(refuse(
-            "Cone/torus Boolean is query-only and outside the frozen matrix",
-        ));
+        return if control_boxes_separated(a, b) {
+            empty_algebra_pair(
+                a,
+                b,
+                operation,
+                SpatialRelation::Disjoint,
+                vec![Coverage::Complete],
+            )
+        } else {
+            Err(refuse(
+                "Cone/torus Boolean contact is query-only and outside the frozen matrix",
+            ))
+        };
     }
 
     // Axial cylinder × sphere: exact rings through the sphere-mate engine.

@@ -189,22 +189,54 @@ fn disjoint_cones_union_is_certified() {
     model.validate().unwrap();
 }
 
-#[test]
-fn disjoint_tori_boolean_is_query_only_refuse() {
-    let a = crate::torus(4., 1.).unwrap();
-    let b0 = crate::torus(4., 1.).unwrap();
-    let b = crate::transform::affine(
-        &b0,
+fn shifted(model: &crate::Model, by: [f64; 3]) -> crate::Model {
+    crate::transform::affine(
+        model,
         [
-            [1., 0., 0., 30.],
-            [0., 1., 0., 0.],
-            [0., 0., 1., 0.],
+            [1., 0., 0., by[0]],
+            [0., 1., 0., by[1]],
+            [0., 0., 1., by[2]],
             [0., 0., 0., 1.],
         ],
     )
-    .unwrap();
-    let error = analytic_boolean(&a, &b, "union").unwrap_err();
-    assert_eq!(error.code, "BREP_ANALYTIC_BOOLEAN_REFUSED");
+    .unwrap()
+}
+
+#[test]
+fn disjoint_tori_and_apex_cones_take_the_empty_algebra() {
+    let torus = crate::torus(4., 1.).unwrap();
+    let cone = crate::frustum(2., 0., 4.).unwrap();
+    let sphere = crate::sphere(1.5).unwrap();
+    for (a, b) in [
+        (torus.clone(), shifted(&torus, [30., 0., 0.])),
+        (cone.clone(), shifted(&cone, [0., 0., 9.])),
+        (cone.clone(), shifted(&torus, [0., 20., 0.])),
+        (shifted(&sphere, [12., 0., 0.]), cone.clone()),
+    ] {
+        for operation in ["union", "difference", "intersection"] {
+            let (model, cert) = analytic_boolean(&a, &b, operation).unwrap();
+            assert!(cert.all_complete(), "{operation}");
+            if operation != "intersection" {
+                model.validate().unwrap();
+            }
+        }
+    }
+}
+
+#[test]
+fn touching_or_overlapping_cones_and_tori_still_refuse() {
+    let torus = crate::torus(4., 1.).unwrap();
+    let cone = crate::frustum(2., 0., 4.).unwrap();
+    for (a, b) in [
+        (torus.clone(), shifted(&torus, [5., 0., 0.])),
+        (cone.clone(), shifted(&cone, [1., 0., 1.])),
+        // Control boxes overlap although the solids may not touch: refused,
+        // never guessed disjoint.
+        (cone.clone(), shifted(&torus, [0., 0., 3.5])),
+    ] {
+        let error = analytic_boolean(&a, &b, "union").unwrap_err();
+        assert_eq!(error.code, "BREP_ANALYTIC_BOOLEAN_REFUSED");
+    }
 }
 
 #[test]
