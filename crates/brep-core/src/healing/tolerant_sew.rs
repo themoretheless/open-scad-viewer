@@ -96,7 +96,10 @@ pub fn sew_tolerant(model: &Model, budget: SewingBudget) -> Result<HealingRun> {
 #[derive(Clone, Debug)]
 pub struct CertifiedSewingRun {
     pub run: HealingRun,
-    pub tolerance_handoff: crate::ModelToleranceHandoff,
+    /// Tolerance contract and audit of the published model. `None` when the
+    /// run rolled back: nothing is published, and the returned input may be
+    /// the intentionally invalid gapped model, which no audit can certify.
+    pub tolerance_handoff: Option<crate::ModelToleranceHandoff>,
 }
 
 pub fn sew_tolerant_certified(model: &Model, budget: SewingBudget) -> Result<CertifiedSewingRun> {
@@ -269,12 +272,16 @@ pub fn sew_tolerant_certified(model: &Model, budget: SewingBudget) -> Result<Cer
     } else {
         0.
     };
-    let tolerance_handoff = crate::enforce_model_tolerance_handoff(
-        cad_predicates::OperationBoundary::Sewing,
-        input_mm,
-        measured_output_mm,
-        &mut run.model,
-    )?;
+    let tolerance_handoff = if run.report.status == HealingStatus::RolledBack {
+        None
+    } else {
+        Some(crate::enforce_model_tolerance_handoff(
+            cad_predicates::OperationBoundary::Sewing,
+            input_mm,
+            measured_output_mm,
+            &mut run.model,
+        )?)
+    };
     run.report.output_hash = model_hash(&run.model);
     run.report.validate()?;
     Ok(CertifiedSewingRun {

@@ -48,10 +48,11 @@ fn analytic_fillet_enforces_the_same_handoff() {
 fn sewing_publishes_measured_handoff_and_typed_input_refusal() {
     let model = gap_model();
     let certified = sew_tolerant_certified(&model, sewing_budget(&model)).unwrap();
-    assert!(certified.tolerance_handoff.measured_output_mm > 0.);
+    let handoff = certified.tolerance_handoff.as_ref().unwrap();
+    assert!(handoff.measured_output_mm > 0.);
     assert!(certified.run.model.tolerance_mm >= model.tolerance_mm);
-    assert!(certified.run.model.tolerance_mm >= certified.tolerance_handoff.measured_output_mm);
-    assert!(certified.tolerance_handoff.audit.ok);
+    assert!(certified.run.model.tolerance_mm >= handoff.measured_output_mm);
+    assert!(handoff.audit.ok);
 
     let mut invalid = model.clone();
     invalid.tolerance_mm = 0.;
