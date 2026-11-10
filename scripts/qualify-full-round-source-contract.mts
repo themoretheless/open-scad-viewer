@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer.ts'
-import { encodeSemanticProgram, decodeSemanticProgram } from '../src/services/semanticProgramCodec.ts'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer.ts'
+import { encodeSemanticProgram, decodeSemanticProgram } from '../src/language/semantic/semanticProgramCodec.ts'
 import assert from 'node:assert/strict'
 const directory = resolve(process.argv[2] ?? 'docs/qualification/full-round-host-contract-2026-11-02')
 mkdirSync(directory, { recursive: true })

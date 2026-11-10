@@ -12,7 +12,7 @@ import type {
   SemanticCarrierKey,
   SemanticProgramBackend,
   SemanticRuntimeValue,
-} from './semanticProgramExecutor'
+} from '../language/semantic/semanticProgramExecutor'
 import {
   backendError,
   unsupportedBrepNode,

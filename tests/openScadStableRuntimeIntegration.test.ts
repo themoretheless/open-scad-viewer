@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseOpenSCAD } from '../src/services/openscadParser'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const source = `
   echo($t, $preview, $vpt, $vpr, $vpd, $vpf, $parent_modules);

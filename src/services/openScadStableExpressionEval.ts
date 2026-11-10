@@ -27,7 +27,7 @@ import {
   openScadBinary,
   openScadTruthy,
   type OpenScadValueSemanticsContext,
-} from './openScadValueSemantics'
+} from '../language/semantic/openScadValueSemantics'
 export { isStableProfile, evaluationError, registerArrayValue, stableOverlayContext, overlayDynamicVariables, isListComprehensionExpression, isFunctionValue, compactDiagnosticText, appendComprehensionValues } from './openScadStableExpressionEval/isStableProfile'
 export { createStableExpressionEvaluators } from './openScadStableExpressionEval/createStableExpressionEvaluators'
 

@@ -7,7 +7,7 @@ import {BREP_DIAGNOSTIC_IDENTITY, BREP_DIAGNOSTIC_LIMITS, diagnosticEnvelope, is
   isBrepDiagnosticRequest, type BrepDiagnosticRequest} from '../src/services/brepDiagnosticProtocol'
 import {createBrepDiagnosticSupervisor} from '../src/mcp/brepDiagnosticSupervisor'
 import {buildBrepSemanticScene} from '../src/services/brepSemanticScene'
-import {lowerOpenSCADToSemanticProgram} from '../src/services/semanticProgramLowerer'
+import {lowerOpenSCADToSemanticProgram} from '../src/language/semantic/semanticProgramLowerer'
 
 const source = '// @language openscad-viewer/brep-1\nlinear_extrude(3)difference(){circle(4);circle(2);}'
 const policy = {quality: 'preview' as const, segments: 4}

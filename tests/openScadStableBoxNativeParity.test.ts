@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import * as native from '../src/services/openScadStablePrimitiveSemantics'
+import * as native from '../src/language/semantic/openScadStablePrimitiveSemantics'
 import * as reference from '../benchmarks/rush/openScadStablePrimitive-reference'
 
 it('preserves box plans and ordered warnings against the frozen TS implementation',()=>{

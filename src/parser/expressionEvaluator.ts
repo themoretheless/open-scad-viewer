@@ -21,7 +21,7 @@ import {
   openScadMember,
   openScadTruthy,
   openScadUnary,
-} from '../services/openScadValueSemantics'
+} from '../language/semantic/openScadValueSemantics'
 import {
   MAX_EVAL_OPS,
   MAX_EVALUATED_VALUE_UNITS,

@@ -1,14 +1,14 @@
 import {expect,it,vi} from 'vitest'
-import type {SemanticLoweringSuccess} from '../src/services/semanticProgramLowerer'
-vi.mock('../src/services/semanticProgramLowerer',async importOriginal=>{
- const original=await importOriginal<typeof import('../src/services/semanticProgramLowerer')>()
+import type {SemanticLoweringSuccess} from '../src/language/semantic/semanticProgramLowerer'
+vi.mock('../src/language/semantic/semanticProgramLowerer',async importOriginal=>{
+ const original=await importOriginal<typeof import('../src/language/semantic/semanticProgramLowerer')>()
  // Defense in depth: a tampered program must be refused by native admission
  // even if host-side lowering trust were bypassed, so admission cannot rely
  // on the process-local trust set. Trust itself is covered elsewhere.
  return {...original,requireTrustedSemanticLowering:(value:unknown)=>value as SemanticLoweringSuccess}
 })
 import {executeBrepNativeProgram} from '../src/services/brepNativeExecutor'
-import {lowerOpenSCADToSemanticProgram} from '../src/services/semanticProgramLowerer'
+import {lowerOpenSCADToSemanticProgram} from '../src/language/semantic/semanticProgramLowerer'
 const HEADER='// @language openscad-viewer/brep-1\n'
 const SOURCE='difference(){cube(3);translate([2,0,0]) cube(1);}'
 const lower=(text:string)=>lowerOpenSCADToSemanticProgram(text)

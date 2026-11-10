@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import * as native from '../src/services/openScadStableTransformSemantics'
+import * as native from '../src/language/semantic/openScadStableTransformSemantics'
 import * as reference from '../benchmarks/rush/openScadStableTransform-reference'
 
 it('preserves native matrix classification and ordered warnings for all transform plans',()=>{

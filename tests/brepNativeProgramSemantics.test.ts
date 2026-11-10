@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { executeBrepNativeProgram, type BrepNativeOutput } from '../src/services/brepNativeExecutor'
 import { BrepSemanticBackendError } from '../src/services/brepSemanticErrors'
 import { analyzeNurbsBrep, inspectNurbsBrep, tessellateNurbsBrep } from '../src/services/geometry/brep'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
-import type { SemanticExecutionControl } from '../src/services/semanticProgramExecutor'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
+import type { SemanticExecutionControl } from '../src/language/semantic/semanticProgramExecutor'
 
 // Native-session successor of the retired per-node TypeScript BrepSemanticBackend
 // suite: identical geometry/behavioral assertions, zero host lease state.

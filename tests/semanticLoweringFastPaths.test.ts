@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { sha256Hex } from '../src/core/sha256'
 import { utf8ByteLength, utf8Compare } from '../src/core/utf8Order'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
-import { encodeSemanticProgram } from '../src/services/semanticProgramCodec'
-import { normalizeSemanticProgram } from '../src/services/semanticProgramValidator'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
+import { encodeSemanticProgram } from '../src/language/semantic/semanticProgramCodec'
+import { normalizeSemanticProgram } from '../src/language/semantic/semanticProgramValidator'
 import { warmGeometryKernel } from '../src/services/geometry/kernel'
 
 // The semantic lowering fast paths must be observationally identical to the encode-based

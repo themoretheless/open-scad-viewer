@@ -10,7 +10,7 @@ import {
   OpenScadProjectCompileError,
 } from '../src/services/openScadProjectCompiler'
 import { parseOpenSCAD, parseOpenScadProject } from '../src/services/openscadParser'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const stable = { languageProfile: 'openscad/stable-2021.01' as const }
 

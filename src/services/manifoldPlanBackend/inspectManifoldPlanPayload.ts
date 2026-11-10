@@ -2,7 +2,7 @@ import { loadCadKernelOps } from '../cadKernelOps'
 import type { CadKernelHandle, CadKernelOps, CadKernelSolidAnalysis } from '../cadKernelOps'
 import { MANIFOLD_PLAN_CARRIERS, MANIFOLD_PLAN_PAYLOAD, ManifoldPlanBackend } from '../manifoldPlanBackend'
 import type { ManifoldPlanCarrier, ManifoldPlanPayload, ManifoldPlanPayloadFamily, ManifoldPlanPayloadView, OwnedManifoldPlanPayload } from '../manifoldPlanBackend'
-import type { SemanticCarrierKey, SemanticRuntimeValue } from '../semanticProgramExecutor'
+import type { SemanticCarrierKey, SemanticRuntimeValue } from '../../language/semantic/semanticProgramExecutor'
 import type { SemanticNode, SemanticValueType } from '../../core/semanticProgram'
 
 export type ManifoldPlanBackendErrorCode =

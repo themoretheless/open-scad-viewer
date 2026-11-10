@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {resolveOpenScadPolygon as native} from '../src/services/openScadStablePrimitiveSemantics'
+import {resolveOpenScadPolygon as native} from '../src/language/semantic/openScadStablePrimitiveSemantics'
 import {resolveOpenScadPolygon as reference} from '../benchmarks/rush/openScadStablePrimitive-reference'
 it('preserves polygon conversion, limits and ordered warnings through packed WASM',()=>{
  const pointSets:unknown[]=[undefined,[],[[0,0]],[[0,0],[1,0],[0,1]],[[NaN,0],[1,0],[0,1]],[[Infinity,0],[1,0]],[[0,0],['bad',1],[0,1]],[[0,0,0],[1,0]]]

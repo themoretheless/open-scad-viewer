@@ -16,7 +16,7 @@ vi.mock('../src/services/geometry/kernelCompilation', async importOriginal => {
   return { compileGeometryKernelArtifactSync: () => module, compileGeometryKernelArtifact: async () => module }
 })
 import { callGeometryRust } from '../src/services/geometry/kernel'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 import { createExactFullRoundSnapshot, restoreExactFullRoundSnapshot } from '../src/services/exactFullRoundSnapshot'
 import { createNativeGeometryArtifact, isNativeGeometryArtifact, nativeFaceReference, assertNativeReferenceCurrent } from '../src/core/nativeGeometry'
 import { prepareExactFullRoundDisplay } from '../src/services/geometry/brepExactDisplay'

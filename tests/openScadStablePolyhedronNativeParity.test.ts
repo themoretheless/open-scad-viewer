@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {resolveOpenScadPolyhedron as native} from '../src/services/openScadStablePrimitiveSemantics'
+import {resolveOpenScadPolyhedron as native} from '../src/language/semantic/openScadStablePrimitiveSemantics'
 import {resolveOpenScadPolyhedron as reference} from '../benchmarks/rush/openScadStablePrimitive-reference'
 
 it('preserves polyhedron faces, stopping points and ordered warnings through packed WASM',()=>{

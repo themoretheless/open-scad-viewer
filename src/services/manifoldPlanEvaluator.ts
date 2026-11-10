@@ -19,11 +19,11 @@ import {
   executeSemanticProgram,
   SemanticProgramExecutionError,
   type SemanticExecutionResult,
-} from './semanticProgramExecutor'
+} from '../language/semantic/semanticProgramExecutor'
 import {
   lowerOpenSCADToSemanticProgram,
   type SemanticLoweringSuccess,
-} from './semanticProgramLowerer'
+} from '../language/semantic/semanticProgramLowerer'
 
 const MAX_SOURCE_LENGTH = 250_000
 

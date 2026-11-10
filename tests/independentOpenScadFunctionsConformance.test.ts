@@ -4,7 +4,7 @@ import {
   OPENSCAD_2021_01_FUNCTION_COUNT,
 } from '../src/core/openScad2021Contract'
 import { parseOpenSCAD } from '../src/services/openscadParser'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const fullProfile = { languageProfile: 'openscad/stable-2021.01' as const }
 

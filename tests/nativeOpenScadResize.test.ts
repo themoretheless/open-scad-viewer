@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {languageRequest} from '../src/services/languages/kernel'
-import {resolveOpenScadResize} from '../src/services/openScadStableGeometrySemantics'
+import {resolveOpenScadResize} from '../src/language/semantic/openScadStableGeometrySemantics'
 import {parseOpenSCAD} from '../src/services/openscadParser'
 
 it('preserves overflow ratios and ignores nonpositive targets before checking extents',()=>{

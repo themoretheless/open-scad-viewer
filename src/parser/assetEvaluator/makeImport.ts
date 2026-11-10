@@ -3,12 +3,12 @@ import type { CadKernelHandle } from '../../services/cadKernelOps'
 
 import type { CallNode, ExpressionArgument, Value } from '../../services/openscadCompiler'
 
-import { formatOpenScadValue } from '../../services/openScadValueSemantics'
+import { formatOpenScadValue } from '../../language/semantic/openScadValueSemantics'
 
 import {
   resolveOpenScadFragments,
   type OpenScadFragmentResolutionInput,
-} from '../../services/openScadStableModuleSemantics'
+} from '../../language/semantic/openScadStableModuleSemantics'
 
 import {
   OpenScadProjectError,

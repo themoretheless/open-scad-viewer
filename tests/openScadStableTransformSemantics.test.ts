@@ -9,7 +9,7 @@ import {
   type OpenScadMatrix4,
   type OpenScadStableTransformContext,
   type OpenScadStableTransformWarning,
-} from '../src/services/openScadStableTransformSemantics'
+} from '../src/language/semantic/openScadStableTransformSemantics'
 
 const identity: OpenScadMatrix4 = [
   1, 0, 0, 0,

@@ -32,14 +32,14 @@ import {
 import {
   formatOpenScadValue,
   openScadTruthy,
-} from './openScadValueSemantics'
+} from '../language/semantic/openScadValueSemantics'
 import {
   resolveOpenScadColor,
   resolveOpenScadOffset,
-} from './openScadStableModuleSemantics'
+} from '../language/semantic/openScadStableModuleSemantics'
 import {
   resolveOpenScadChildrenSelection,
-} from './openScadStableGeometrySemantics'
+} from '../language/semantic/openScadStableGeometrySemantics'
 import { OpenScadStableScope } from './openScadStableScope'
 import {
   MAX_EVAL_DEPTH,

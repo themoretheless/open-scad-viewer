@@ -9,7 +9,7 @@ import {
   resolveOpenScadSquare,
   type OpenScadStablePrimitiveContext,
   type OpenScadStablePrimitiveWarning,
-} from '../src/services/openScadStablePrimitiveSemantics'
+} from '../src/language/semantic/openScadStablePrimitiveSemantics'
 
 function harness(checkParameterRanges = false) {
   const warnings: OpenScadStablePrimitiveWarning[] = []

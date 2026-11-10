@@ -6,8 +6,8 @@ import {assertBrepCapabilityAllowsTopology} from './geometry/brepCapability'
 import type {NurbsBrep} from './geometry/brep'
 import type {BrepProfile} from './geometry/brepProfile'
 import {BrepSemanticBackendError} from './brepSemanticErrors'
-import {requireTrustedSemanticLowering,type SemanticLoweringSuccess} from './semanticProgramLowerer'
-import {checkSemanticExecutionControl,SemanticProgramExecutionError,type SemanticExecutionControl} from './semanticProgramExecutor'
+import {requireTrustedSemanticLowering,type SemanticLoweringSuccess} from '../language/semantic/semanticProgramLowerer'
+import {checkSemanticExecutionControl,SemanticProgramExecutionError,type SemanticExecutionControl} from '../language/semantic/semanticProgramExecutor'
 
 export type ExactRationalBrepGeometry={kind:'solid';representation:'rational-brep';model:Readonly<{format:'exact-rational-nurbs-brep/1'} & Record<string,unknown>>;artifact:Readonly<Record<string,unknown>>}
 type Geometry={kind:'solid';representation?:never;model:NurbsBrep}|ExactRationalBrepGeometry|{kind:'profile';profile:BrepProfile}

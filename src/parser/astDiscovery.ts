@@ -17,7 +17,7 @@ import type {
   OpenScadImportForcedAsset,
 } from '../exchange/openScadImport'
 import type { OpenScadProject } from '../services/openScadProject'
-import { formatOpenScadValue, isOpenScadRange } from '../services/openScadValueSemantics'
+import { formatOpenScadValue, isOpenScadRange } from '../language/semantic/openScadValueSemantics'
 import type { EvalContext } from './types'
 
 export function valueToString(value: Value): string {

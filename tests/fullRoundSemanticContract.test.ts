@@ -2,11 +2,11 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { deriveSemanticCapabilityClosure, deriveSemanticOperationId, deriveSemanticOccurrenceId, deriveSemanticSceneEntityId, semanticNodeInputs, semanticNodeProducerOperationNames } from '../src/core/semanticProgram'
 import type { SemanticProgramCoreV1 } from '../src/core/semanticProgram'
-import { validateNodes } from '../src/services/semanticProgramValidator/validateNodes'
-import { validateOperations } from '../src/services/semanticProgramValidator/fail'
-import { validateOccurrenceProduction } from '../src/services/semanticProgramValidator/validateOccurrenceProduction'
-import { remapSemanticNode } from '../src/semantic/lowererBuilder'
-import { nodeMustReturnValueAfterReduction } from '../src/services/semanticProgramExecutor/checkSemanticExecutionControl'
+import { validateNodes } from '../src/language/semantic/semanticProgramValidator/validateNodes'
+import { validateOperations } from '../src/language/semantic/semanticProgramValidator/fail'
+import { validateOccurrenceProduction } from '../src/language/semantic/semanticProgramValidator/validateOccurrenceProduction'
+import { remapSemanticNode } from '../src/language/semantic/lowererBuilder'
+import { nodeMustReturnValueAfterReduction } from '../src/language/semantic/semanticProgramExecutor/checkSemanticExecutionControl'
 
 function fixture(): SemanticProgramCoreV1 {
   const core = JSON.parse(readFileSync(new URL('../crates/geometry-bridge/src/brep_production/fixtures/nestedTransform.json', import.meta.url), 'utf8'))
@@ -74,9 +74,9 @@ describe('exact Full Round semantic contract', () => {
   })
 })
 
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
-import { normalizeSemanticProgram } from '../src/services/semanticProgramValidator'
-import { encodeSemanticProgram, decodeSemanticProgram } from '../src/services/semanticProgramCodec'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
+import { normalizeSemanticProgram } from '../src/language/semantic/semanticProgramValidator'
+import { encodeSemanticProgram, decodeSemanticProgram } from '../src/language/semantic/semanticProgramCodec'
 
 describe('exact Full Round source lowering', () => {
   const header = '// @language openscad-viewer/brep-1\n// @requires geometry.brep\n'

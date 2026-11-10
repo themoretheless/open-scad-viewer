@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseOpenSCAD } from '../src/services/openscadParser'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const stableProfile = { languageProfile: 'openscad/stable-2021.01' as const }
 

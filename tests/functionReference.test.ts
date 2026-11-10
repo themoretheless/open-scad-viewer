@@ -7,7 +7,7 @@ import {
 } from '../src/data/functionReference'
 import { compileRushFrontend } from '../src/services/rushFrontend'
 import { parseOpenSCAD } from '../src/services/openscadParser'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 
 const languages: ReferenceLanguage[] = ['openscad', 'rush']
 const examples = FUNCTION_REFERENCE.flatMap(entry => languages.flatMap(language => {

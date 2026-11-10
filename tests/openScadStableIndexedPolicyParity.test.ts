@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import * as native from '../src/services/openScadStablePrimitiveSemantics'
+import * as native from '../src/language/semantic/openScadStablePrimitiveSemantics'
 import * as reference from '../benchmarks/rush/openScadStablePrimitive-reference'
 it('preserves indexed limit admission, error priority and convexity plans',()=>{
  const values:unknown[]=[undefined,null,'Infinity',true,-1,-0,0,1,2.9,NaN,Infinity,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER+1]

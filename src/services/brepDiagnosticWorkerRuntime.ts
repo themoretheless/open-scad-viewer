@@ -1,6 +1,6 @@
 import {meshTransferables} from '../core/mesh'
 import {buildBrepSemanticScene} from './brepSemanticScene'
-import {lowerOpenSCADToSemanticProgram} from './semanticProgramLowerer'
+import {lowerOpenSCADToSemanticProgram} from '../language/semantic/semanticProgramLowerer'
 import {diagnosticEnvelope, diagnosticError, isBrepDiagnosticMessage, isBrepDiagnosticRequest,
   type BrepDiagnosticMessage} from './brepDiagnosticProtocol'
 

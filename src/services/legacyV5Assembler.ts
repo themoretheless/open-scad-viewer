@@ -22,7 +22,7 @@ import {
   type ManifoldPlanPayload,
   type ManifoldPlanPayloadFamily,
 } from './manifoldPlanBackend'
-import type { SemanticExecutionResult } from './semanticProgramExecutor'
+import type { SemanticExecutionResult } from '../language/semantic/semanticProgramExecutor'
 
 const MAX_TRIANGLES = 750_000
 

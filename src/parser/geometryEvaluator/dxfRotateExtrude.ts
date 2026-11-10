@@ -7,13 +7,13 @@ import { resolveLegacyOpenScadSegments } from '../../services/openScadLegacySegm
 
 import type { CallNode, ExpressionArgument, Statement, Value } from '../../services/openscadCompiler'
 
-import { formatOpenScadValue } from '../../services/openScadValueSemantics'
+import { formatOpenScadValue } from '../../language/semantic/openScadValueSemantics'
 
 import {
   resolveOpenScadFragments,
   type OpenScadFragmentResolutionInput,
   type OpenScadStableModuleSemanticsContext,
-} from '../../services/openScadStableModuleSemantics'
+} from '../../language/semantic/openScadStableModuleSemantics'
 
 import {
   resolveOpenScadCircle,
@@ -24,7 +24,7 @@ import {
   resolveOpenScadSphere,
   resolveOpenScadSquare,
   type OpenScadStablePrimitiveContext,
-} from '../../services/openScadStablePrimitiveSemantics'
+} from '../../language/semantic/openScadStablePrimitiveSemantics'
 
 import {
   resolveOpenScadMirror,
@@ -35,7 +35,7 @@ import {
   resolveOpenScadViewerAxisAngle,
   type OpenScadStableTransformContext,
   type OpenScadStableTransformPlan,
-} from '../../services/openScadStableTransformSemantics'
+} from '../../language/semantic/openScadStableTransformSemantics'
 
 import {
   resolveOpenScad2dMultmatrix,
@@ -43,7 +43,7 @@ import {
   resolveOpenScadResize,
   resolveOpenScadRotateExtrude,
   type OpenScadStableGeometryContext,
-} from '../../services/openScadStableGeometrySemantics'
+} from '../../language/semantic/openScadStableGeometrySemantics'
 
 import {
   evaluationError,

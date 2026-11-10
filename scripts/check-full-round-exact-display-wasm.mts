@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { encodeBinary, decodeBinary } from '../src/services/valueBinaryCodec.ts'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer.ts'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer.ts'
 
 const [wasmPath, directory, nativePath] = process.argv.slice(2)
 assert(wasmPath && directory && nativePath, 'Expected WASM, report directory and native frozen artifact')

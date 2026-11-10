@@ -15,7 +15,7 @@ import {
 } from '../core/geometryExecution'
 import { parseOpenSCAD, warmGeometryKernel } from './openscadParser'
 import { buildBrepSemanticScene } from './brepSemanticScene'
-import { lowerOpenSCADToSemanticProgram } from './semanticProgramLowerer'
+import { lowerOpenSCADToSemanticProgram } from '../language/semantic/semanticProgramLowerer'
 import { sha256Hex } from '../core/sha256'
 
 const EXECUTION_BY_ERROR = new WeakMap<object, GeometryExecutionDescriptor>()

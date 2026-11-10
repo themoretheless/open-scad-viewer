@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {executeBrepNativeProgram} from '../src/services/brepNativeExecutor'
-import {lowerOpenSCADToSemanticProgram} from '../src/services/semanticProgramLowerer'
+import {lowerOpenSCADToSemanticProgram} from '../src/language/semantic/semanticProgramLowerer'
 const lower=(body:string)=>lowerOpenSCADToSemanticProgram('// @language openscad-viewer/brep-1\n'+body)
 it('executes polygonal analytic revolutions through the Rust graph',async()=>{
  for(const angle of [90,360]){

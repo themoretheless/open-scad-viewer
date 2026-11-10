@@ -8,7 +8,7 @@ import {
   openScadTruthy,
   openScadUnary,
   type OpenScadValueSemanticsContext,
-} from '../src/services/openScadValueSemantics'
+} from '../src/language/semantic/openScadValueSemantics'
 
 function harness() {
   const warnings: string[] = []

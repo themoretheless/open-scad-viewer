@@ -3,8 +3,8 @@ import type { Expr, ExpressionArgument, FunctionValue, ListComprehensionExpressi
 import { MAX_EVAL_DEPTH, MAX_EVAL_OPS, MAX_RANGE_ITEMS } from '../openScadStableExpressionEval'
 import type { StableExpressionEvalContext, StableExpressionEvalHost, StableExpressionEvaluators, StableFunctionValue } from '../openScadStableExpressionEval'
 import { OpenScadStableScope } from '../openScadStableScope'
-import { formatOpenScadValue, isOpenScadRange, materializeOpenScadRange, openScadBinary, openScadTruthy } from '../openScadValueSemantics'
-import type { OpenScadValueSemanticsContext } from '../openScadValueSemantics'
+import { formatOpenScadValue, isOpenScadRange, materializeOpenScadRange, openScadBinary, openScadTruthy } from '../../language/semantic/openScadValueSemantics'
+import type { OpenScadValueSemanticsContext } from '../../language/semantic/openScadValueSemantics'
 import { appendComprehensionValues, compactDiagnosticText, deepEqual, evaluationError, isFunctionValue, isListComprehensionExpression, isStableProfile, overlayDynamicVariables, registerArrayValue, stableOverlayContext, truthy } from './isStableProfile'
 
 export function createStableExpressionEvaluators<C extends StableExpressionEvalContext>(

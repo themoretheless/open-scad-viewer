@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from 'vitest'
 import {buildBrepSemanticScene} from '../src/services/brepSemanticScene'
-import {lowerOpenSCADToSemanticProgram} from '../src/services/semanticProgramLowerer'
+import {lowerOpenSCADToSemanticProgram} from '../src/language/semantic/semanticProgramLowerer'
 import {geometrySceneFromMeshes, meshesFromGeometryScene} from '../src/core/scene'
 import {isGeometryEvaluationResultPayload} from '../src/services/geometryWorkerProtocol'
 import {inspectNurbsBrep} from '../src/services/geometry/brep'

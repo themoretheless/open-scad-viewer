@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest'
 import {buildBrepSemanticScene} from '../src/services/brepSemanticScene'
-import {lowerOpenSCADToSemanticProgram} from '../src/services/semanticProgramLowerer'
+import {lowerOpenSCADToSemanticProgram} from '../src/language/semantic/semanticProgramLowerer'
 import {editExactFullRoundSceneMesh} from '../src/services/exactFullRoundHistoryScene'
 import {restoreExactFullRoundSnapshot,createExactFullRoundSnapshot} from '../src/services/exactFullRoundSnapshot'
 import {callGeometryRust} from '../src/services/geometry/kernel'

@@ -8,12 +8,12 @@ import {
   encodeSemanticProgramCore,
   encodeSemanticTessellationPolicy,
   semanticProgramHash,
-} from '../src/services/semanticProgramCodec'
+} from '../src/language/semantic/semanticProgramCodec'
 import {
   normalizeSemanticProgram,
   SemanticProgramValidationError,
-} from '../src/services/semanticProgramValidator'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+} from '../src/language/semantic/semanticProgramValidator'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 import {
   makeReferenceLinearChainProgramV1,
   makeReferenceSemanticProgramV1,

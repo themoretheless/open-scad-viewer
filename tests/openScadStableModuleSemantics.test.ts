@@ -7,7 +7,7 @@ import {
   resolveOpenScadSweepFragments,
   type OpenScadStableModuleWarning,
   type OpenScadStableModuleSemanticsContext,
-} from '../src/services/openScadStableModuleSemantics'
+} from '../src/language/semantic/openScadStableModuleSemantics'
 
 function harness() {
   const warnings: OpenScadStableModuleWarning[] = []

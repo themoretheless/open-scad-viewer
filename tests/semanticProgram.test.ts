@@ -18,25 +18,25 @@ import {
   encodeSemanticProgramCore,
   semanticProgramHash,
   semanticTessellationPolicyHash,
-} from '../src/services/semanticProgramCodec'
+} from '../src/language/semantic/semanticProgramCodec'
 import {
   normalizeDecodedSemanticProgram,
   normalizeSemanticProgram,
   semanticSourceDescriptor,
   SemanticProgramValidationError,
-} from '../src/services/semanticProgramValidator'
+} from '../src/language/semantic/semanticProgramValidator'
 import {
   executeSemanticProgram,
   SemanticProgramExecutionError,
   type SemanticCarrierKey,
   type SemanticBackendPayloadLease,
   type SemanticProgramBackend,
-} from '../src/services/semanticProgramExecutor'
+} from '../src/language/semantic/semanticProgramExecutor'
 import {
   lowerOpenSCADToSemanticProgram,
   requireTrustedSemanticLowering,
-} from '../src/services/semanticProgramLowerer'
-import { lowerOpenSCADToSemanticProgramUnchecked } from '../src/services/openscadSemanticLowerer'
+} from '../src/language/semantic/semanticProgramLowerer'
+import { lowerOpenSCADToSemanticProgramUnchecked } from '../src/language/semantic/openscadSemanticLowerer'
 import { OpenSCADParseError } from '../src/services/openscadErrors'
 
 function clone<T>(value: T): T { return structuredClone(value) }

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { executeBrepNativeProgram } from '../src/services/brepNativeExecutor'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
 import {
   analyzeNurbsBrep,
   booleanNurbsBrep,

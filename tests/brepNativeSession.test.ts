@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {callGeometryRust} from '../src/services/geometry/kernel'
 import {semanticResultItems} from '../src/core/semanticProgram'
-import {lowerOpenSCADToSemanticProgram} from '../src/services/semanticProgramLowerer'
+import {lowerOpenSCADToSemanticProgram} from '../src/language/semantic/semanticProgramLowerer'
 import {analyzeNurbsBrep,type NurbsBrep} from '../src/services/geometry/brep'
 const run=(args:Record<string,unknown>)=>callGeometryRust<Record<string,unknown>>('brep_session',args)
 const solidType={space:'d3',geometryKind:'solid',representation:'analytic-brep',evidence:{tag:'representation-preserving'}}

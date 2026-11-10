@@ -7,7 +7,7 @@ import {
   resolveOpenScadRotateExtrude,
   type OpenScadStableGeometryWarning,
   type OpenScadStableGeometryContext,
-} from '../src/services/openScadStableGeometrySemantics'
+} from '../src/language/semantic/openScadStableGeometrySemantics'
 
 function harness() {
   const warnings: OpenScadStableGeometryWarning[] = []

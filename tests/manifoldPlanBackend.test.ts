@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { parseOpenSCAD } from '../src/services/openscadParser'
 import type { SemanticNode, SemanticValueType } from '../src/core/semanticProgram'
-import { lowerOpenSCADToSemanticProgram } from '../src/services/semanticProgramLowerer'
-import { executeSemanticProgram } from '../src/services/semanticProgramExecutor'
+import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
+import { executeSemanticProgram } from '../src/language/semantic/semanticProgramExecutor'
 import {
   MANIFOLD_PLAN_CARRIERS,
   ManifoldPlanBackend,
