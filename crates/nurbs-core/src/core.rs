@@ -1,7 +1,7 @@
 //! Core types and point semantics: curves, surfaces, bounds, affine frames.
+pub mod conditioning;
 pub mod affine;
 pub mod bounds;
-pub mod canonical;
 pub mod coordinate_frame;
 pub mod geometry;
 pub mod curve;

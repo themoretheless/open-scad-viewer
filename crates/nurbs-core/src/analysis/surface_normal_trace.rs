@@ -5,7 +5,7 @@ use crate::{
     Result, check,
     curve::Curve,
     distance_bounds::{Interval as I, box_distance},
-    numerics::curve_jets,
+    distance::curve_jets,
     surface::Surface,
     surface_measure::jets,
 };

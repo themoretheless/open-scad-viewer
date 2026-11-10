@@ -1,4 +1,5 @@
 //! Прямое редактирование, морфинг и сглаживание.
+pub mod curve_extension;
 pub mod edit;
 pub mod weight_edit;
 pub mod surface_edit;

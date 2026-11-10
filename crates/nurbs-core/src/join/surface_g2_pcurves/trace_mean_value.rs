@@ -4,7 +4,7 @@
 //! charts and proved regularity make the shape field continuous at crossed
 //! knots, so its piecewise derivative bounds cover the complete integral.
 use super::*;
-use crate::{numerics::curve_jets, surface_measure::jets};
+use crate::{distance::curve_jets, surface_measure::jets};
 
 #[derive(Clone, Copy)]
 struct D {

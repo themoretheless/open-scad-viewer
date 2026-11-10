@@ -1,4 +1,5 @@
 //! Непрерывность и сшивка.
+pub mod section_phase;
 pub mod continuity;
 pub mod curve_join;
 pub mod surface_join;

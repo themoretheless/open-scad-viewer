@@ -1,4 +1,5 @@
 //! Обрезка: домены, точечный трим, аудит регионов.
+pub mod trimmed_surface_distance;
 pub mod trim_domain;
 pub mod trim_point;
 pub mod trim_region_audit;

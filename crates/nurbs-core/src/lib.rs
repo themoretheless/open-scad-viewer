@@ -28,15 +28,15 @@ pub use crate::analysis::curve_pullback;
 pub use crate::construct::surfaces::function_surface;
 pub use crate::join::periodic_seam;
 pub use crate::join::curve_join;
-pub use numerics::conditioning;
+pub use crate::core::conditioning;
 pub use crate::core::coordinate_frame;
-pub use crate::construct::surfaces::sections::sections;
+pub use crate::foundation::sections;
 pub use crate::construct::surfaces::sections::section_projection;
 pub use crate::construct::surfaces::sections::circle_sweep_repair;
 pub use crate::construct::surfaces::sections::miter_section_correction;
 pub use crate::construct::surfaces::sections::sweep_section_projection;
 pub use crate::construct::surfaces::sections::circle_repair as section_circle_repair;
-pub use crate::construct::surfaces::sections::phase as section_phase;
+pub use crate::join::section_phase;
 pub use crate::editing::weight_edit;
 pub use crate::editing::linear_simplification;
 pub use crate::construct::curves::engineering_profiles;
@@ -53,7 +53,7 @@ pub use crate::analysis::surface_differential;
 pub use crate::analysis::curve_measure;
 pub use crate::analysis::curve_extrema;
 pub use crate::analysis::curve_analysis;
-pub use crate::core::canonical;
+pub use crate::foundation::canonical;
 pub use crate::editing::direct_edit;
 pub use crate::editing::morph;
 pub use crate::editing::fairing;
@@ -61,7 +61,7 @@ pub use crate::editing::fairing::{curvature_comb_samples, curve_torsion_at};
 pub use crate::analysis::geodesic;
 pub use crate::analysis::unrolling;
 pub use crate::construct::curves::biarc;
-pub use crate::construct::curves::curve_extension;
+pub use crate::editing::curve_extension;
 pub use distance::interval_eval;
 pub use crate::distance::curve_distance;
 pub use crate::certificates::curve_decomposition_certificate;
@@ -127,7 +127,7 @@ pub use crate::offset::chord::{
     fill_selection as chord_fill_selection, intersection as chord_intersection,
     winding as chord_winding, witness as chord_witness,
 };
-use numerics::curve_jets;
+use distance::curve_jets;
 pub use crate::offset::curve_offset;
 pub use crate::analysis::class_a::{gaussian_and_mean_curvature_grid, zebra_reflection_stripes};
 pub use crate::analysis::frechet;
@@ -176,7 +176,7 @@ pub use crate::sweeps::audit::seam as sweep_seam_audit;
 pub use crate::trim::trim_domain;
 pub use crate::trim::trim_region_audit;
 pub use crate::trim::trim_simplicity;
-pub use crate::distance::trimmed_surface_distance;
+pub use crate::trim::trimmed_surface_distance;
 
 pub use math_core::{Error, Result};
 pub(crate) const INVALID_INPUT: &str = "NURBS_INVALID_INPUT";
@@ -228,7 +228,7 @@ pub use numerics::sturm;
 pub use distance::convex_distance;
 pub use distance::obb_tree;
 pub use analysis::normal_cone;
-pub use numerics::bezier_extraction;
+pub use foundation::bezier_extraction;
 
 pub mod uv_curve_crossings;
 

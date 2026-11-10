@@ -1,4 +1,5 @@
 //! Curve constructors: primitives, profiles, spirals, interpolation splines.
+pub use crate::editing::curve_extension;
 pub mod airfoil;
 pub mod archimedean_spiral;
 pub mod biarc;
@@ -7,7 +8,6 @@ pub mod circular_rolling;
 pub mod clothoid;
 pub mod closed_spline;
 pub mod curve_chain;
-pub mod curve_extension;
 pub mod curve_reconstruction;
 pub mod engineering_profiles;
 pub mod formula;
