@@ -121,7 +121,11 @@ fn periodic_lifted_loop_is_retained_and_closes_on_surface() {
         ],
         weights: vec![vec![1.; 2]; 3], periodic_u: true, periodic_v: false,
     };
-    let a = face_model_with_surface(periodic.clone(), &[vec![rectangle(1.8, 0., 2.2, 1.)]]);
+    // The bilinear periodic surface has a knot at u = 2, so the loop has
+    // vertices there: each edge stays inside one span, where the image of a
+    // UV segment is the straight 3D edge the fixture builds.
+    let loop_uv = vec![[1.8, 0.], [2., 0.], [2.2, 0.], [2.2, 1.], [2., 1.], [1.8, 1.]];
+    let a = face_model_with_surface(periodic.clone(), &[vec![loop_uv]]);
     let result = run(&a, &a, UvBooleanOperation::Union);
     result.validate_continuous(100_000).unwrap();
     assert_eq!(result.faces.len(), 1);
