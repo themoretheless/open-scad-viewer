@@ -1,6 +1,6 @@
 //! Original-source candidate constructions, without solid admission claims.
 use crate::*;
-pub(super) fn build(mut v:Value)->Result<Value> {
+pub(super) fn build(v: Value) -> Result<Value> {
             use nurbs_core::progressive_sweep::{Options, Orientation, Spacing};
             let automatic_mode=v["op"].as_str().is_some_and(|op|op.contains("profile_auto_body"));
             let annular_mode=v["op"].as_str().is_some_and(|op|op.contains("profile_annular_body")||automatic_mode);
