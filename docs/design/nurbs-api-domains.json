@@ -175,7 +175,6 @@
     "curve_axis_driver",
     "surface_flux",
     "convex_distance",
-    "obb_tree",
     "normal_cone",
     "analysis",
     "distance",

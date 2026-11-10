@@ -205,7 +205,6 @@ pub mod queries {
     pub use crate::curve_axis_driver;
     pub use crate::surface_flux;
     pub use crate::convex_distance;
-    pub use crate::obb_tree;
     pub use crate::normal_cone;
     pub use crate::analysis;
     pub use crate::distance;

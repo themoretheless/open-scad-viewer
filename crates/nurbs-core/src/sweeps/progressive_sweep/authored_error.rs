@@ -96,11 +96,6 @@ pub(super) fn patch_error(
     let section = section_interpolation(sweep, count, max_cells)?;
     patch_error_from_section(sweep, count, max_products, section)
 }
-#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
-pub(super) fn patch_error_with_length(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,
-    shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<PatchErrorReport>{
-    patch_error_with_path_evidence(sweep,count,max_cells,max_products,shared_length,None)
-}
 pub(super) fn patch_error_with_path_evidence(sweep:&Sweep<'_>,count:usize,max_cells:usize,max_products:usize,
     shared_length:Option<&crate::curve_measure::DivisionReport>,shared_chord:Option<&GlobalChord>)->Result<PatchErrorReport>{
     check(max_products<=1000000,"Patch decomposition work exceeds1000000 products")?;

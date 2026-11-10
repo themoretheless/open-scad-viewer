@@ -22,15 +22,6 @@ pub(crate) struct Pair {
     pub work: usize,
     pub max_work: usize,
 }
-#[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
-pub(crate) fn curve_box(
-    p: &Curve,
-    range: [f64; 2],
-    used: &mut usize,
-    max: usize,
-) -> Result<[[f64; 2]; 2]> {
-    curve_box_oriented(p, range, used, max, false)
-}
 pub(crate) fn curve_box_oriented(
     p: &Curve,
     range: [f64; 2],

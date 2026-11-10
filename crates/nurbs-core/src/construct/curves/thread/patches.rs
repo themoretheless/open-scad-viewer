@@ -149,8 +149,6 @@ pub(super) struct Parameters {
     pub(super) root: f64,
     pub(super) lead: f64,
     pub(super) maximum_z: f64,
-    #[allow(dead_code, reason = "no caller in this crate; remove or wire up")]
-    pub(super) quarter_angle: f64,
 }
 pub(super) fn parameters(spec: Spec) -> Result<Parameters> {
     require_finite_f64(spec.diameter, "thread_diameter")?;
@@ -184,12 +182,11 @@ pub(super) fn parameters(spec: Spec) -> Result<Parameters> {
         "Thread axial size exceeds coordinate limits",
     )?;
     let direction = if spec.hand == Hand::Right { 1. } else { -1. };
-    let quarter_angle = direction * std::f64::consts::FRAC_PI_2;
+    let _quarter_angle = direction * std::f64::consts::FRAC_PI_2;
     Ok(Parameters {
         crest,
         root,
         lead,
         maximum_z,
-        quarter_angle,
     })
 }

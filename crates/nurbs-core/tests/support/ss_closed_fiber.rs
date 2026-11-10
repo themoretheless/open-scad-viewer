@@ -1,3 +1,4 @@
+#![allow(dead_code, reason = "shared by several test modules; each uses a subset")]
 use nurbs_core::{
     ss_intersection::{self as ss, FiberAxis, FiberSources, QualifiedFiber},
     surface::Surface,

@@ -16,7 +16,6 @@ pub mod dual;
 pub mod interval_eval;
 pub mod interval_newton;
 pub mod normal_cone;
-pub mod obb_tree;
 pub mod robust_solvers;
 pub mod simd_kernels;
 pub mod sparse_linalg;
