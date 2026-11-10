@@ -274,9 +274,49 @@ pub fn build_uv_region_sheet(
         model.faces.push(Face { surface: surface.clone(), outer: wires[0], holes: wires[1..].to_vec() });
         model.shells[0].faces.push(FaceUse { face, reversed });
     }
+    split_shell_components(&mut model);
     model.rebuild_topology_ids();
     validate_staged(&model)?;
     Ok(model)
+}
+
+/// Regions that share no edge are separate sheets: like UV islands of a cap,
+/// each connected group of faces owns its own open shell, since a shell must
+/// be connected. Groups keep first-face order.
+fn split_shell_components(model: &mut Model) {
+    let mut parent: Vec<usize> = (0..model.faces.len()).collect();
+    fn root(parent: &mut [usize], mut i: usize) -> usize {
+        while parent[i] != i {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        i
+    }
+    let mut owner = vec![usize::MAX; model.edges.len()];
+    for (face, f) in model.faces.iter().enumerate() {
+        for &wire in std::iter::once(&f.outer).chain(&f.holes) {
+            for coedge in &model.loops[wire].coedges {
+                if owner[coedge.edge] == usize::MAX {
+                    owner[coedge.edge] = face;
+                } else {
+                    let (x, y) = (root(&mut parent, owner[coedge.edge]), root(&mut parent, face));
+                    parent[x] = y;
+                }
+            }
+        }
+    }
+    let uses = std::mem::take(&mut model.shells[0].faces);
+    let mut groups: Vec<(usize, Vec<FaceUse>)> = Vec::new();
+    for face_use in uses {
+        let r = root(&mut parent, face_use.face);
+        match groups.iter_mut().find(|(g, _)| *g == r) {
+            Some((_, list)) => list.push(face_use),
+            None => groups.push((r, vec![face_use])),
+        }
+    }
+    if !groups.is_empty() {
+        model.shells = groups.into_iter().map(|(_, faces)| Shell { faces, closed: false }).collect();
+    }
 }
 
 fn sole_face_use(model: &Model, face: usize) -> Result<FaceUse> {
@@ -319,10 +359,14 @@ pub fn boolean_same_surface_uv_retained_with_limits(
     model.inherit_topology_ids(&[a, b]);
     let result_faces = model.1.faces.clone();
     if !result_faces.is_empty() {
-        model.1.lineage.push(TopologyLineageRecord {
-            operation: "merge".into(), entity_kind: "face".into(),
-            parents: vec![a.1.faces[face_a], b.1.faces[face_b]], children: result_faces.clone(),
-        });
+        // Each result face merges both source faces; a merge has exactly one
+        // child, so a result of several faces records one merge per face.
+        for &child in &result_faces {
+            model.1.lineage.push(TopologyLineageRecord {
+                operation: "merge".into(), entity_kind: "face".into(),
+                parents: vec![a.1.faces[face_a], b.1.faces[face_b]], children: vec![child],
+            });
+        }
         model.refresh_change_set(&[a, b]);
     }
     validate_staged(&model)?;
