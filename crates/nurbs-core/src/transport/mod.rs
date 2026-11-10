@@ -4,6 +4,10 @@ mod loft_requests;
 mod certificate_requests;
 mod offset_requests;
 mod exact_primitive_requests;
+mod parametric_primitives;
+mod surface_offset_requests;
+mod editing_and_continuity;
+mod core_queries;
 use super::*;
 use crate::surface::Surface;
 #[path="../retained_body_coverage.rs"]
