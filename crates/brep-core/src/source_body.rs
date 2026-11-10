@@ -1,6 +1,5 @@
 //! `source_body` module family (refactor plan M8).
-pub(crate) mod exact_affine_source;
-pub(crate) mod rational_identity;
+pub mod offset_edge_supports;
 pub mod trimmed_shell;
 pub mod source_exchange_plan;
 pub mod material_chord;
@@ -9,7 +8,6 @@ pub mod material_wall;
 pub mod material_wall_coverage;
 pub mod source_implicit_body;
 pub mod trimmed_edge_contact;
-pub mod trimmed_vertex_contact;
 pub mod wall_clearance;
 pub mod wall_opposition;
 pub mod trimmed_face_recipe;

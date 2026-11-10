@@ -80,35 +80,19 @@ pub fn plane_cylinder_rim(
     Ok(spans)
 }
 
-/// Rational end-transition support with cubic smoothstep radius in rational arc
-/// parameter u. This is a cross-section radius law, not a general variable-radius
-/// rolling-ball envelope certificate. Zero-radius ends collapse to a point; they require explicit
-/// degenerate topology handling before this can participate in a sewn solid.
-pub fn plane_cylinder_transition(
+struct TransitionProductControls {
+    controls: Vec<Vec<Vec<f64>>>,
+    weights: Vec<Vec<f64>>,
+    center_controls: Vec<Vec<f64>>,
+    center_weights: Vec<f64>,
+}
+
+fn transition_product_controls(
+    unit: &Curve,
+    law: [f64; 4],
     outer_radius: f64,
     height: f64,
-    start_radius: f64,
-    end_radius: f64,
-    start: f64,
-    sweep: f64,
-) -> Result<CircularBlendSpan> {
-    if [outer_radius, height, start_radius, end_radius, start, sweep]
-        .iter()
-        .any(|v| !v.is_finite())
-        || start_radius < 0.
-        || end_radius < 0.
-        || start_radius.max(end_radius) <= 0.
-        || outer_radius <= start_radius.max(end_radius)
-        || height <= start_radius.max(end_radius)
-        || sweep.abs() < 1e-12
-        || sweep.abs() > std::f64::consts::FRAC_PI_2
-    {
-        return Err(invalid(
-            "Circular transition requires fitting nonnegative end radii and a nonzero arc of at most pi/2",
-        ));
-    }
-    let unit = arc(1., 0., start, sweep);
-    let law = [start_radius, start_radius, end_radius, end_radius];
+) -> TransitionProductControls {
     let angular_binomial = [1., 2., 1.];
     let law_binomial = [1., 3., 3., 1.];
     let product_binomial = [1., 5., 10., 10., 5., 1.];
@@ -151,65 +135,139 @@ pub fn plane_cylinder_transition(
             }
         }
     }
+    TransitionProductControls {
+        controls,
+        weights,
+        center_controls,
+        center_weights,
+    }
+}
+
+fn snap_transition_endpoints_and_rails(
+    grid: &mut TransitionProductControls,
+    unit: &Curve,
+    outer_radius: f64,
+    height: f64,
+    start_radius: f64,
+    end_radius: f64,
+) -> Result<()> {
+    let meridian_weights = [1., std::f64::consts::FRAC_1_SQRT_2, 1.];
     // Author shared endpoint definitions directly, avoiding multiply/divide
     // roundoff in equivalent homogeneous endpoint coefficients.
     for (k, r, angular_index) in [(0, start_radius, 0), (5, end_radius, 2)] {
         let point = &unit.control_points[angular_index];
-        center_controls[k] = vec![
+        grid.center_controls[k] = vec![
             (outer_radius - r) * point[0],
             (outer_radius - r) * point[1],
             height - r,
         ];
-        controls[k] = [
+        grid.controls[k] = [
             (outer_radius - r, height),
             (outer_radius, height),
             (outer_radius, height - r),
         ]
         .map(|(radial, z)| vec![radial * point[0], radial * point[1], z])
         .to_vec();
-        weights[k] = meridian_weights.to_vec();
+        grid.weights[k] = meridian_weights.to_vec();
         if r == 0. {
-            controls[k] = vec![center_controls[k].clone(); 3];
+            grid.controls[k] = vec![grid.center_controls[k].clone(); 3];
             // The adjacent radius-law control also equals zero. Its Euclidean
             // point is independent of meridian v, just like the pole row.
             // Repeated multiply/divide through different meridian weights
             // otherwise introduces one-ulp transverse changes in this row.
             let adjacent = if k == 0 { 1 } else { 4 };
-            center_controls[adjacent][2] = height;
+            grid.center_controls[adjacent][2] = height;
             for d in 0..2 {
                 if point[d] == unit.control_points[1][d] {
-                    center_controls[adjacent][d] = outer_radius * point[d];
+                    grid.center_controls[adjacent][d] = outer_radius * point[d];
                 }
             }
-            controls[adjacent] = vec![center_controls[adjacent].clone(); 3];
+            grid.controls[adjacent] = vec![grid.center_controls[adjacent].clone(); 3];
         }
     }
     // First align the two cylinder-side meridian control columns in XY.
     // Independently weighted accumulation/division can split them by an ulp.
     // Preserve the original contact rail and copy it into the tangent column.
-    for row in &mut controls {
-        row[1][0]=row[2][0];
-        row[1][1]=row[2][1];
+    for row in &mut grid.controls {
+        row[1][0] = row[2][0];
+        row[1][1] = row[2][1];
     }
     // Keep rounding-scale projective variation on the inward side of the
     // contact rail. Endpoint/seam and collapsed rows stay definition-exact.
     // This is a bounded authoring perturbation, not exact analytic tangency;
     // radius/normal qualification must still inspect the resulting surface.
     for k in 1..5 {
-        if controls[k].iter().all(|p|p==&controls[k][0]) {continue;}
+        if grid.controls[k].iter().all(|p| p == &grid.controls[k][0]) {
+            continue;
+        }
         for d in 0..2 {
-            let x=controls[k][1][d];
-            if x!=0. {
-                let bits=x.to_bits();
-                let moved=f64::from_bits(bits.checked_sub(16).ok_or_else(||invalid("Transition coordinate correction overflow"))?);
-                if !moved.is_finite() {return Err(invalid("Transition coordinate correction is not finite"));}
-                controls[k][1][d]=moved;
+            let x = grid.controls[k][1][d];
+            if x != 0. {
+                let bits = x.to_bits();
+                let moved = f64::from_bits(
+                    bits.checked_sub(16)
+                        .ok_or_else(|| invalid("Transition coordinate correction overflow"))?,
+                );
+                if !moved.is_finite() {
+                    return Err(invalid("Transition coordinate correction is not finite"));
+                }
+                grid.controls[k][1][d] = moved;
             }
         }
     }
     // The plane contact and its meridian tangent controls have authored
     // height H. Product-degree arithmetic must not introduce a Z residual.
-    for row in &mut controls {row[0][2]=height;row[1][2]=height;}
+    for row in &mut grid.controls {
+        row[0][2] = height;
+        row[1][2] = height;
+    }
+    Ok(())
+}
+
+/// Rational end-transition support with cubic smoothstep radius in rational arc
+/// parameter u. This is a cross-section radius law, not a general variable-radius
+/// rolling-ball envelope certificate. Zero-radius ends collapse to a point; they require explicit
+/// degenerate topology handling before this can participate in a sewn solid.
+pub fn plane_cylinder_transition(
+    outer_radius: f64,
+    height: f64,
+    start_radius: f64,
+    end_radius: f64,
+    start: f64,
+    sweep: f64,
+) -> Result<CircularBlendSpan> {
+    if [outer_radius, height, start_radius, end_radius, start, sweep]
+        .iter()
+        .any(|v| !v.is_finite())
+        || start_radius < 0.
+        || end_radius < 0.
+        || start_radius.max(end_radius) <= 0.
+        || outer_radius <= start_radius.max(end_radius)
+        || height <= start_radius.max(end_radius)
+        || sweep.abs() < 1e-12
+        || sweep.abs() > std::f64::consts::FRAC_PI_2
+    {
+        return Err(invalid(
+            "Circular transition requires fitting nonnegative end radii and a nonzero arc of at most pi/2",
+        ));
+    }
+    let unit = arc(1., 0., start, sweep);
+    let law = [start_radius, start_radius, end_radius, end_radius];
+    let mut grid = transition_product_controls(&unit, law, outer_radius, height);
+    snap_transition_endpoints_and_rails(
+        &mut grid,
+        &unit,
+        outer_radius,
+        height,
+        start_radius,
+        end_radius,
+    )?;
+    let TransitionProductControls {
+        controls,
+        weights,
+        center_controls,
+        center_weights,
+    } = grid;
     let knots: Vec<_> = std::iter::repeat_n(0., 6)
         .chain(std::iter::repeat_n(1., 6))
         .collect();

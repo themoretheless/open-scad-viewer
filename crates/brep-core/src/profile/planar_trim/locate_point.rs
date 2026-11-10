@@ -135,142 +135,77 @@ pub(super) fn material(operation: &str, a: bool, b: bool) -> bool {
     }
 }
 
-/// Regularized Boolean of material-left planar loops. Empty output is valid.
-/// A point contact contributes no area; separate tangent components remain
-/// separate loops. Near-coincidence/ambiguous sewing fails without fallback.
-pub fn boolean(
-    a: &[Vec<Curve>],
-    b: &[Vec<Curve>],
+fn classify_piece_against_other(
+    piece: Span,
+    from_a: bool,
+    source_origin: Point,
+    other: &Region,
     operation: &str,
+    epsilon: f64,
+) -> Result<Option<Span>> {
+    let midpoint = piece.position(0.5)?;
+    let (other_left, other_right) = match other.location(midpoint)? {
+        PointLocation::Inside => (true, true),
+        PointLocation::Outside => (false, false),
+        PointLocation::Boundary => {
+            let coincident: Vec<_> = other
+                .spans
+                .iter()
+                .filter(|s| same_carrier(&piece, s, epsilon) && s.contains(midpoint, epsilon * 16.))
+                .collect();
+            if coincident.is_empty() {
+                return Err(ambiguous(
+                    "Fragment classification falls in a noncoincident boundary tolerance band",
+                ));
+            }
+            let tangent = piece.tangent(0.5)?;
+            let mut direction = None;
+            for neighbor in coincident {
+                let domain = neighbor.curve.domain();
+                let t =
+                    (neighbor.parameter(midpoint, epsilon * 8.)? - domain[0]) / (domain[1] - domain[0]);
+                let same = dot(tangent, neighbor.tangent(t)?) > 0.;
+                if direction.is_some_and(|d| d != same) {
+                    return Err(ambiguous(
+                        "Conflicting coincident boundary material sides",
+                    ));
+                }
+                direction = Some(same);
+            }
+            let same = direction.unwrap();
+            (same, !same)
+        }
+    };
+    let left = if from_a {
+        material(operation, true, other_left)
+    } else {
+        material(operation, other_left, true)
+    };
+    let right = if from_a {
+        material(operation, false, other_right)
+    } else {
+        material(operation, other_right, false)
+    };
+    if left == right {
+        return Ok(None);
+    }
+    if left {
+        Ok(Some(piece))
+    } else {
+        Ok(Some(Span::from_curve(
+            piece.curve.reverse()?,
+            piece.loop_id,
+            epsilon,
+            source_origin,
+        )?))
+    }
+}
+
+fn sew_planar_fragments(
+    fragments: &[Fragment],
+    epsilon: f64,
     tolerance: f64,
 ) -> Result<Vec<Vec<Curve>>> {
-    if !matches!(operation, "union" | "intersection" | "difference" | "xor") {
-        return Err(invalid(
-            "Planar Boolean must be union, intersection, difference or xor",
-        ));
-    }
-    let origin = if a.iter().any(|wire| !wire.is_empty()) {
-        region_origin(a)
-    } else {
-        region_origin(b)
-    };
-    let a = Region::parse_at(a, tolerance, origin)?;
-    let b = Region::parse_at(b, tolerance, origin)?;
-    a.validate()?;
-    b.validate()?;
-    if a.spans.len() + b.spans.len() > MAX_SPANS {
-        return Err(limit());
-    }
-    let epsilon = a.epsilon.max(b.epsilon);
-    let mut acuts: Vec<Vec<f64>> = a.spans.iter().map(|s| s.curve.domain().to_vec()).collect();
-    let mut bcuts: Vec<Vec<f64>> = b.spans.iter().map(|s| s.curve.domain().to_vec()).collect();
-    for (i, sa) in a.spans.iter().enumerate() {
-        for (j, sb) in b.spans.iter().enumerate() {
-            for p in intersections(sa, sb, epsilon, tolerance)? {
-                acuts[i].push(sa.parameter(p, epsilon * 8.)?);
-                bcuts[j].push(sb.parameter(p, epsilon * 8.)?);
-            }
-        }
-    }
-    let mut fragments: Vec<Fragment> = Vec::new();
-    let mut fragment_work = 0usize;
-    for (from_a, source, other, cuts) in [(true, &a, &b, &mut acuts), (false, &b, &a, &mut bcuts)] {
-        for (span, cut) in source.spans.iter().zip(cuts) {
-            cut.sort_by(f64::total_cmp);
-            cut.dedup_by(|a, b| *a == *b);
-            for parameters in cut.windows(2) {
-                fragment_work += 1;
-                if fragment_work > MAX_FRAGMENTS {
-                    return Err(limit());
-                }
-                if parameters[1] - parameters[0] <= 64. * f64::EPSILON * (1. + parameters[0].abs())
-                {
-                    if distance(
-                        point(&span.local_curve, parameters[0])?,
-                        point(&span.local_curve, parameters[1])?,
-                    ) > epsilon * 8.
-                    {
-                        return Err(ambiguous(
-                            "Distinct geometric events cannot be isolated in the source parameter precision",
-                        ));
-                    }
-                    continue;
-                }
-                let curve = span.curve.trim(parameters[0], parameters[1])?;
-                let piece = Span::from_curve(curve, span.loop_id, epsilon, source.origin)?;
-                let midpoint = piece.position(0.5)?;
-                let (other_left, other_right) = match other.location(midpoint)? {
-                    PointLocation::Inside => (true, true),
-                    PointLocation::Outside => (false, false),
-                    PointLocation::Boundary => {
-                        let coincident: Vec<_> = other
-                            .spans
-                            .iter()
-                            .filter(|s| {
-                                same_carrier(&piece, s, epsilon)
-                                    && s.contains(midpoint, epsilon * 16.)
-                            })
-                            .collect();
-                        if coincident.is_empty() {
-                            return Err(ambiguous(
-                                "Fragment classification falls in a noncoincident boundary tolerance band",
-                            ));
-                        }
-                        let tangent = piece.tangent(0.5)?;
-                        let mut direction = None;
-                        for neighbor in coincident {
-                            let domain = neighbor.curve.domain();
-                            let t = (neighbor.parameter(midpoint, epsilon * 8.)? - domain[0])
-                                / (domain[1] - domain[0]);
-                            let same = dot(tangent, neighbor.tangent(t)?) > 0.;
-                            if direction.is_some_and(|d| d != same) {
-                                return Err(ambiguous(
-                                    "Conflicting coincident boundary material sides",
-                                ));
-                            }
-                            direction = Some(same);
-                        }
-                        let same = direction.unwrap();
-                        (same, !same)
-                    }
-                };
-                let left = if from_a {
-                    material(operation, true, other_left)
-                } else {
-                    material(operation, other_left, true)
-                };
-                let right = if from_a {
-                    material(operation, false, other_right)
-                } else {
-                    material(operation, other_right, false)
-                };
-                if left == right {
-                    continue;
-                }
-                let selected = if left {
-                    piece
-                } else {
-                    Span::from_curve(
-                        piece.curve.reverse()?,
-                        piece.loop_id,
-                        epsilon,
-                        source.origin,
-                    )?
-                };
-                let duplicate = fragments.iter().any(|f| {
-                    same_carrier(&selected, &f.span, epsilon)
-                        && distance(selected.p0, f.span.p0) <= epsilon * 16.
-                        && distance(selected.p1, f.span.p1) <= epsilon * 16.
-                });
-                if !duplicate {
-                    fragments.push(Fragment {
-                        span: selected,
-                        source_loop: span.loop_id + if from_a { 0 } else { a.loops.len() },
-                    });
-                }
-            }
-        }
-    }
     let mut used = vec![false; fragments.len()];
     let mut loops = Vec::new();
     while let Some(first) = used.iter().position(|v| !*v) {
@@ -334,6 +269,97 @@ pub fn boolean(
     Ok(loops)
 }
 
+/// Regularized Boolean of material-left planar loops. Empty output is valid.
+/// A point contact contributes no area; separate tangent components remain
+/// separate loops. Near-coincidence/ambiguous sewing fails without fallback.
+pub fn boolean(
+    a: &[Vec<Curve>],
+    b: &[Vec<Curve>],
+    operation: &str,
+    tolerance: f64,
+) -> Result<Vec<Vec<Curve>>> {
+    if !matches!(operation, "union" | "intersection" | "difference" | "xor") {
+        return Err(invalid(
+            "Planar Boolean must be union, intersection, difference or xor",
+        ));
+    }
+    let origin = if a.iter().any(|wire| !wire.is_empty()) {
+        region_origin(a)
+    } else {
+        region_origin(b)
+    };
+    let a = Region::parse_at(a, tolerance, origin)?;
+    let b = Region::parse_at(b, tolerance, origin)?;
+    a.validate()?;
+    b.validate()?;
+    if a.spans.len() + b.spans.len() > MAX_SPANS {
+        return Err(limit());
+    }
+    let epsilon = a.epsilon.max(b.epsilon);
+    let mut acuts: Vec<Vec<f64>> = a.spans.iter().map(|s| s.curve.domain().to_vec()).collect();
+    let mut bcuts: Vec<Vec<f64>> = b.spans.iter().map(|s| s.curve.domain().to_vec()).collect();
+    for (i, sa) in a.spans.iter().enumerate() {
+        for (j, sb) in b.spans.iter().enumerate() {
+            for p in intersections(sa, sb, epsilon, tolerance)? {
+                acuts[i].push(sa.parameter(p, epsilon * 8.)?);
+                bcuts[j].push(sb.parameter(p, epsilon * 8.)?);
+            }
+        }
+    }
+    let mut fragments: Vec<Fragment> = Vec::new();
+    let mut fragment_work = 0usize;
+    for (from_a, source, other, cuts) in [(true, &a, &b, &mut acuts), (false, &b, &a, &mut bcuts)] {
+        for (span, cut) in source.spans.iter().zip(cuts) {
+            cut.sort_by(f64::total_cmp);
+            cut.dedup_by(|a, b| *a == *b);
+            for parameters in cut.windows(2) {
+                fragment_work += 1;
+                if fragment_work > MAX_FRAGMENTS {
+                    return Err(limit());
+                }
+                if parameters[1] - parameters[0] <= 64. * f64::EPSILON * (1. + parameters[0].abs())
+                {
+                    if distance(
+                        point(&span.local_curve, parameters[0])?,
+                        point(&span.local_curve, parameters[1])?,
+                    ) > epsilon * 8.
+                    {
+                        return Err(ambiguous(
+                            "Distinct geometric events cannot be isolated in the source parameter precision",
+                        ));
+                    }
+                    continue;
+                }
+                let curve = span.curve.trim(parameters[0], parameters[1])?;
+                let piece = Span::from_curve(curve, span.loop_id, epsilon, source.origin)?;
+                let Some(selected) = classify_piece_against_other(
+                    piece,
+                    from_a,
+                    source.origin,
+                    other,
+                    operation,
+                    epsilon,
+                )?
+                else {
+                    continue;
+                };
+                let duplicate = fragments.iter().any(|f| {
+                    same_carrier(&selected, &f.span, epsilon)
+                        && distance(selected.p0, f.span.p0) <= epsilon * 16.
+                        && distance(selected.p1, f.span.p1) <= epsilon * 16.
+                });
+                if !duplicate {
+                    fragments.push(Fragment {
+                        span: selected,
+                        source_loop: span.loop_id + if from_a { 0 } else { a.loops.len() },
+                    });
+                }
+            }
+        }
+    }
+    sew_planar_fragments(&fragments, epsilon, tolerance)
+}
+
 /// Euclidean parallel region with round joins. Boundary tubes are analytic
 /// line strips / circular bands plus endpoint disks. Union dilates material;
 /// subtraction erodes it, including all holes and disconnected components.
@@ -352,7 +378,7 @@ pub fn offset(loops:&[Vec<Curve>],amount:f64,tolerance:f64)->Result<Vec<Vec<Curv
   let band=match span.carrier{
    Carrier::Line=>{
     let n=mul(left(sub(span.p1,span.p0)),width/distance(span.p0,span.p1));
-    crate::sketch::polygon_wire(vec![world(add(span.p0,n)),world(sub(span.p0,n)),world(sub(span.p1,n)),world(add(span.p1,n))])?
+    crate::sketch_wire::polygon_wire(vec![world(add(span.p0,n)),world(sub(span.p0,n)),world(sub(span.p1,n)),world(add(span.p1,n))])?
    }
    Carrier::Circle{center,radius,..}=>{
     let scaled=|r:f64|->Result<Curve>{let mut c=span.local_curve.clone();for p in &mut c.control_points{let q=world(add(center,mul(sub([p[0],p[1]],center),r/radius)));p[0]=q[0];p[1]=q[1];}c.validate()?;Ok(c)};
@@ -375,7 +401,7 @@ pub fn offset(loops:&[Vec<Curve>],amount:f64,tolerance:f64)->Result<Vec<Vec<Curv
   for p in [span.p0,span.p1]{if !endpoints.contains(&p){endpoints.push(p);}}
  }
  for endpoint in endpoints{
-  let center=world(endpoint);let mut disk=crate::sketch::circle_wire(width)?;
+  let center=world(endpoint);let mut disk=crate::sketch_wire::circle_wire(width)?;
   for curve in &mut disk{for p in &mut curve.control_points{p[0]+=center[0];p[1]+=center[1];}}
   result=boolean(&result,&[disk],operation,tolerance)?;
   if result.is_empty(){return Ok(result);}
@@ -385,23 +411,23 @@ pub fn offset(loops:&[Vec<Curve>],amount:f64,tolerance:f64)->Result<Vec<Vec<Curv
 #[cfg(test)]mod offset_tests{
  use super::super::*;
  fn area(loops:&[Vec<Curve>])->f64{loops.iter().map(|w|signed_area(w,1e-7).unwrap()).sum()}
- fn rectangle(w:f64,h:f64)->Vec<Curve>{crate::sketch::polygon_wire(vec![[0.,0.],[w,0.],[w,h],[0.,h]]).unwrap()}
+ fn rectangle(w:f64,h:f64)->Vec<Curve>{crate::sketch_wire::polygon_wire(vec![[0.,0.],[w,0.],[w,h],[0.,h]]).unwrap()}
  #[test]fn rectangle_round_expansion_and_sharp_erosion(){
   let source=vec![rectangle(6.,4.)];
   for (d,expected) in [(1.,24.+20.+PI),(-1.,8.)]{let r=offset(&source,d,1e-7).unwrap();assert!((area(&r)-expected).abs()<1e-7,"{d}: {}",area(&r));}
  }
  #[test]fn circle_radius_changes_and_empty_erosion(){
-  let source=vec![crate::sketch::circle_wire(2.).unwrap()];
+  let source=vec![crate::sketch_wire::circle_wire(2.).unwrap()];
   for (d,expected) in [(1.,9.*PI),(-0.5,2.25*PI)]{let r=offset(&source,d,1e-7).unwrap();assert!((area(&r)-expected).abs()<1e-7,"{d}: {}",area(&r));}
   assert!(offset(&source,-3.,1e-7).unwrap().is_empty());
  }
  #[test]fn mixed_semicircle_rounds_outer_corners_and_erodes_to_a_circular_segment(){
-  let mut wire=crate::sketch::circle_wire(2.).unwrap();wire.truncate(2);wire.push(Curve::from_polyline(vec![vec![-2.,0.],vec![2.,0.]]).unwrap());
+  let mut wire=crate::sketch_wire::circle_wire(2.).unwrap();wire.truncate(2);wire.push(Curve::from_polyline(vec![vec![-2.,0.],vec![2.,0.]]).unwrap());
   let grown=offset(&[wire.clone()],0.5,1e-7).unwrap();assert!((area(&grown)-(3.25*PI+2.)).abs()<1e-7);
   let eroded=offset(&[wire],-0.5,1e-7).unwrap();let expected=2.25*(1_f64/3.).acos()-0.5*2_f64.sqrt();assert!((area(&eroded)-expected).abs()<1e-7);
  }
  #[test]fn holes_shrink_or_grow_with_material(){
-  let mut hole=crate::sketch::circle_wire(1.).unwrap();for c in &mut hole{for p in &mut c.control_points{p[0]+=4.;p[1]+=3.;}}
+  let mut hole=crate::sketch_wire::circle_wire(1.).unwrap();for c in &mut hole{for p in &mut c.control_points{p[0]+=4.;p[1]+=3.;}}
   let source=orient_even_odd(&[rectangle(8.,6.),hole],1e-7).unwrap();
   for (d,expected) in [(0.5,62.),(-0.5,35.-2.25*PI)]{let r=offset(&source,d,1e-7).unwrap();assert_eq!(r.len(),2);assert!((area(&r)-expected).abs()<1e-7,"{d}: {}",area(&r));}
  }
@@ -409,7 +435,7 @@ pub fn offset(loops:&[Vec<Curve>],amount:f64,tolerance:f64)->Result<Vec<Vec<Curv
 
 #[cfg(test)]mod offset_topology_tests{
  use super::super::*;
- fn disk(x:f64,r:f64)->Vec<Curve>{let mut wire=crate::sketch::circle_wire(r).unwrap();for c in &mut wire{for p in &mut c.control_points{p[0]+=x;}}wire}
+ fn disk(x:f64,r:f64)->Vec<Curve>{let mut wire=crate::sketch_wire::circle_wire(r).unwrap();for c in &mut wire{for p in &mut c.control_points{p[0]+=x;}}wire}
  fn area(loops:&[Vec<Curve>])->f64{loops.iter().map(|w|signed_area(w,1e-7).unwrap()).sum()}
  #[test]fn expansion_merges_separate_islands(){
   let source=vec![disk(-1.5,1.),disk(1.5,1.)];
@@ -422,7 +448,7 @@ pub fn offset(loops:&[Vec<Curve>],amount:f64,tolerance:f64)->Result<Vec<Vec<Curv
   let r=offset(&source,1.5,1e-7).unwrap();assert_eq!(r.len(),1);assert!((area(&r)-PI*5.5*5.5).abs()<1e-7);
  }
  #[test]fn erosion_can_split_a_narrow_neck(){
-  let ring=crate::sketch::polygon_wire(vec![[-3.,-2.],[-1.,-2.],[-1.,-0.2],[1.,-0.2],[1.,-2.],[3.,-2.],[3.,2.],[1.,2.],[1.,0.2],[-1.,0.2],[-1.,2.],[-3.,2.]]).unwrap();
+  let ring=crate::sketch_wire::polygon_wire(vec![[-3.,-2.],[-1.,-2.],[-1.,-0.2],[1.,-0.2],[1.,-2.],[3.,-2.],[3.,2.],[1.,2.],[1.,0.2],[-1.,0.2],[-1.,2.],[-3.,2.]]).unwrap();
   let r=offset(&[ring],-0.3,1e-7).unwrap();assert_eq!(r.len(),2);validate(&r,1e-7).unwrap();
   let extra=0.12-0.2*0.05_f64.sqrt()-0.09*(2_f64/3.).asin();assert!((area(&r)-2.*(4.76+extra)).abs()<1e-7);
  }

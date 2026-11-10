@@ -12,8 +12,9 @@ pub mod parts;
 pub mod profile;
 pub mod source_body;
 pub mod sweep_offset;
-use crate::source_body::exact_affine_source;
-use crate::source_body::rational_identity;
+use crate::profile::exact_affine_source;
+use crate::profile::rational_identity;
+pub(crate) use crate::profile::sketch_wire;
 #[cfg(feature = "codec")]
 mod serialization;
 pub use brep_topology::{MAX_COEDGES, MAX_ENTITIES, MAX_FACES};
@@ -30,31 +31,31 @@ pub use crate::features::analytic_features;
 pub use nurbs_intersect::analytic_ss;
 /// Section-authored geometric blades.
 pub use crate::parts::blade;
-pub use crate::boolean::boolean_robustness;
-use crate::boolean::boolean_support;
+pub use crate::model::boolean_robustness;
+use crate::model::boolean_support;
 use crate::boolean::box_sphere_boolean;
-pub use crate::features::circular_blend;
+pub use crate::parts::circular_blend;
 pub use crate::features::direct_edit;
 pub use crate::features::edge_tangency;
 #[doc(hidden)]
 pub use crate::model::face_senses;
-pub use crate::model::feature_family;
-pub use crate::model::feature_graph;
-pub use crate::model::feature_history;
+pub use crate::features::feature_family;
+pub use crate::features::feature_graph;
+pub use crate::features::feature_history;
 pub use crate::features::feature_ops;
 pub use crate::parts::gear;
-pub use crate::model::history_snapshots;
+pub use crate::features::history_snapshots;
 use crate::boolean::imprint_assembly;
-pub use crate::model::journal;
+pub use crate::features::journal;
 pub use crate::model::keypoints;
 pub use crate::boolean::same_surface_uv_boolean;
 pub use crate::boolean::retained_uv_boolean;
 use crate::boolean::retained_uv_rim;
-use crate::contact::sphere_mate;
+use crate::boolean::sphere_mate;
 pub use crate::boolean::tolerant_boolean;
 pub use crate::parts::worm;
 pub use gear::{GearGeometry, GearSpec, gear, gear_with_report};
-use crate::features::body_edit;
+use crate::model::body_edit;
 pub use crate::contact::boundary_agreement;
 pub use crate::contact::boundary_certificate;
 pub use crate::contact::boundary_embedding;
@@ -79,11 +80,11 @@ pub use crate::intersection::face_crossings;
 pub use crate::body_analysis::face_curvature;
 pub use crate::boolean::face_cut;
 pub use crate::model::face_domain;
-pub use crate::body_analysis::face_injectivity;
+pub use crate::model::face_injectivity;
 pub use crate::features::face_replacement;
 pub use crate::model::face_window;
 pub use crate::contact::fillet_contact;
-pub use crate::features::fillet_radius;
+pub use crate::contact::fillet_radius;
 pub use crate::boolean::imprint_pipeline;
 pub use crate::intersection::intersections;
 pub use crate::intersection::nurbs_ss_g6;
@@ -99,7 +100,7 @@ pub use crate::sweep_offset::sweep_boundary_owned;
 mod sweep_boundary_owned_tests;
 /// Authored trimmed patch networks with continuous admission audits.
 pub use crate::source_body::trimmed_shell;
-pub use crate::body_analysis::watertight;
+pub use crate::contact::watertight;
 pub use operation_tolerance::{
     ModelToleranceHandoff, admit_operation_input, enforce_model_tolerance_handoff,
 };
@@ -114,7 +115,7 @@ pub use crate::features::healing;
 #[cfg(feature = "codec")]
 pub use crate::features::healing_report;
 #[cfg(feature = "codec")]
-pub use crate::model::import_policy;
+pub use crate::features::import_policy;
 pub use crate::parts::freeform_cuboid;
 pub use crate::source_body::source_exchange_plan;
 #[cfg(all(test, feature = "codec"))]
@@ -127,16 +128,16 @@ pub use crate::source_body::material_wall_coverage;
 pub use crate::minkowski::minkowski3d;
 pub use crate::model::mixed_root_model;
 pub use crate::features::pcurve_repair;
-pub use crate::boolean::planar_trim;
+pub use crate::profile::planar_trim;
 pub use nurbs_intersect::predicate_evidence;
 pub use crate::profile::prism;
 pub use crate::profile::prism_frame;
 pub use crate::profile::profile_certificate;
-use crate::profile::profile_imprint;
+use crate::boolean::profile_imprint;
 #[cfg(feature = "codec")]
 pub use crate::intersection::profile_intersections;
 pub use crate::profile::profile_region;
-pub use crate::body_analysis::ray_parity;
+pub use crate::model::ray_parity;
 pub use crate::model::root_model;
 pub use crate::features::rounded_patch_network;
 pub use crate::intersection::self_intersection;
@@ -153,23 +154,23 @@ pub use crate::source_body::source_implicit_body;
 use crate::boolean::sphere_boolean;
 use crate::profile::stepped_prism;
 pub use crate::sweep_offset::sweep_affine_boundary;
-pub use crate::sweep_offset::sweep_cap_contacts;
+pub use crate::contact::sweep_cap_contacts;
 pub use crate::sweep_offset::sweep_miter_layout;
 pub use crate::sweep_offset::sweep_miter_owned;
 pub use crate::sweep_offset::sweep_retained_caps;
 pub use crate::sweep_offset::sweep_retained_charts;
 pub use crate::sweep_offset::sweep_retained_decomposition;
 pub use crate::sweep_offset::sweep_retained_walls;
-pub use crate::sweep_offset::sweep_smoothness;
+pub use crate::contact::sweep_smoothness;
 pub use crate::sweep_offset::sweep_station_reconstruction;
 #[cfg(feature = "codec")]
 pub use crate::features::tolerance_unify;
-pub use crate::model::transactions;
+pub use crate::features::transactions;
 pub use crate::model::transform;
 use crate::model::transform_plane_charts;
 pub use crate::boolean::trim_sew;
 pub use crate::source_body::trimmed_edge_contact;
-pub use crate::source_body::trimmed_vertex_contact;
+pub use crate::contact::trimmed_vertex_contact;
 pub use crate::boolean::uv_arrangement;
 pub use crate::boolean::uv_coverage;
 use crate::boolean::uv_regions;
@@ -372,7 +373,7 @@ pub use crate::sweep_offset::sweep_retained;
 
 pub use crate::sweep_offset::miter_seams;
 
-pub use crate::sweep_offset::offset_end_boundary;
+pub use crate::boolean::offset_end_boundary;
 
 pub use crate::source_body::trimmed_face_recipe;
 
@@ -438,7 +439,7 @@ pub use crate::source_body::source_projective_use;
 
 pub use crate::source_body::trimmed_shell_recipe;
 
-pub use crate::sweep_offset::offset_edge_supports;
+pub use crate::source_body::offset_edge_supports;
 
 pub use crate::source_body::linear_canal;
 
@@ -531,5 +532,5 @@ pub use crate::source_body::rational_cap_translation;
 
 pub use crate::source_body::rational_cap_affine;
 
-pub use crate::model::algebraic_model;
+pub use crate::boolean::algebraic_model;
 pub use algebraic_model::{AlgebraicModel, ExactBooleanOptions, ExactModel};

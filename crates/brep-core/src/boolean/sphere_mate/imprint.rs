@@ -373,6 +373,131 @@ impl<'m, M: Mate> Imprint<'m, M> {
         Ok(Some(edges))
     }
 
+    fn seam_end_station(
+        &mut self,
+        o: usize,
+        model: &Model,
+        edges: &[(usize, f64, f64)],
+        phi: f64,
+        id: Option<usize>,
+    ) -> Option<(f64, VKey)> {
+        let id = id?;
+        let point = self.asm.specials[id].point;
+        for (e, phi0, phi1) in edges {
+            for (vi, _vphi) in [(0usize, *phi0), (1usize, *phi1)] {
+                let v = model.edges[*e].vertices[vi];
+                if dist(model.vertices[v].point, point) <= self.band + 1e-9 * self.sphere.radius {
+                    self.asm.specials[id].orig = Some((o, v));
+                }
+            }
+        }
+        Some((phi, VKey::Special(id)))
+    }
+
+    fn emit_seam_station_piece(
+        &mut self,
+        o: usize,
+        model: &Model,
+        face: usize,
+        circle_idx: usize,
+        edges: &[(usize, f64, f64)],
+        (pa, ka): (f64, VKey),
+        (pb, kb): (f64, VKey),
+    ) -> Result<()> {
+        if pb - pa < EVENT_GAP {
+            return Err(unsupported(
+                "Sphere Boolean: coincident stations on a seam circle",
+            ));
+        }
+        if pb - pa > std::f64::consts::FRAC_PI_2 + 1e-9 {
+            return Err(unsupported(
+                "Sphere Boolean: seam circle piece is not covered by one sphere edge",
+            ));
+        }
+        let mid = (pa + pb) / 2.;
+        let mut owner = None;
+        for (e, phi0, phi1) in edges {
+            let (elo, ehi) = (phi0.min(*phi1), phi0.max(*phi1));
+            let local = elo + (mid - elo).rem_euclid(TAU);
+            if local > elo && local < ehi {
+                owner = Some((*e, *phi0, *phi1));
+                break;
+            }
+        }
+        let Some((e, phi0, phi1)) = owner else {
+            return Err(unsupported(
+                "Sphere Boolean: seam circle piece escapes the sphere edges",
+            ));
+        };
+        let forward = phi1 > phi0;
+        let circle = &self.circles[circle_idx];
+        let limit = self.band + 1e-9 * self.sphere.radius;
+        let ta = curve_parameter_of(&model.edges[e].curve, circle.point_at(pa), limit)?;
+        let tb = curve_parameter_of(&model.edges[e].curve, circle.point_at(pb), limit)?;
+        let snap = |t: f64| {
+            if t < 1e-9 {
+                0.
+            } else if t > 1. - 1e-9 {
+                1.
+            } else {
+                t
+            }
+        };
+        let (t_lo, t_hi) = (snap(ta.min(tb)), snap(ta.max(tb)));
+        for (t, key) in [
+            (if forward { t_lo } else { t_hi }, ka),
+            (if forward { t_hi } else { t_lo }, kb),
+        ] {
+            if let VKey::Special(id) = key
+                && self.asm.specials[id].orig.is_none()
+                && t > 0.
+                && t < 1.
+            {
+                let known = self
+                    .asm
+                    .splits
+                    .get(&(o, e))
+                    .is_some_and(|table| {
+                        table
+                            .iter()
+                            .any(|(et, eid)| *eid == id && (et - t).abs() <= 1e-12)
+                    });
+                if !known {
+                    self.asm.attach_edge(id, o, e, t);
+                }
+            }
+        }
+        let whole = t_lo == 0. && t_hi == 1.;
+        let (key, curve) = if whole {
+            (EKey::Orig(o, e), model.edges[e].curve.clone())
+        } else {
+            let table = self.asm.splits.get(&(o, e)).cloned().unwrap_or_default();
+            let n = table.len() + 1;
+            let j = (0..n)
+                .find(|&j| {
+                    let lo = if j == 0 { 0. } else { table[j - 1].0 };
+                    let hi = if j == n - 1 { 1. } else { table[j].0 };
+                    (lo - t_lo).abs() <= 1e-12 && (hi - t_hi).abs() <= 1e-12
+                })
+                .ok_or_else(|| {
+                    unsupported("Sphere Boolean: seam piece does not match the edge split")
+                })?;
+            (
+                EKey::Piece(o, e, j),
+                normalized(model.edges[e].curve.trim(t_lo, t_hi)?),
+            )
+        };
+        let curve = if forward { curve } else { curve.reverse()? };
+        self.asm.push_net([ka, kb], curve);
+        self.arcs.push(Arc {
+            face,
+            patch: None,
+            key,
+            reversed: !forward,
+        });
+        Ok(())
+    }
+
     /// Pieces of a seam circle: every inside interval is covered by original
     /// sphere edges, split where a mate edge hit lies inside one of them.
     /// Hits that coincide with sphere vertices become those vertices.
@@ -394,28 +519,8 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     "Sphere Boolean: seam circle carries interior seam events",
                 ));
             }
-            // Stations: interval ends, then every sphere vertex on the circle
-            // strictly inside the interval.
             let mut stations: Vec<(f64, VKey)> = Vec::new();
-            let end_station =
-                |phi: f64, id: Option<usize>, this: &mut Self| -> Result<Option<(f64, VKey)>> {
-                    let Some(id) = id else { return Ok(None) };
-                    // A hit at a sphere vertex takes that vertex's identity.
-                    let point = this.asm.specials[id].point;
-                    for (e, phi0, phi1) in &edges {
-                        for (vi, vphi) in [(0usize, *phi0), (1usize, *phi1)] {
-                            let v = model.edges[*e].vertices[vi];
-                            if dist(model.vertices[v].point, point)
-                                <= this.band + 1e-9 * this.sphere.radius
-                            {
-                                this.asm.specials[id].orig = Some((o, v));
-                            }
-                            let _ = vphi;
-                        }
-                    }
-                    Ok(Some((phi, VKey::Special(id))))
-                };
-            if let Some(st) = end_station(span[0], ends[0], self)? {
+            if let Some(st) = self.seam_end_station(o, model, &edges, span[0], ends[0]) {
                 stations.push(st);
             }
             let (lo, hi) = (span[0], span[1]);
@@ -440,113 +545,22 @@ impl<'m, M: Mate> Imprint<'m, M> {
                 }
             }
             stations.sort_by(|a, b| a.0.total_cmp(&b.0));
-            if let Some(st) = end_station(span[1], ends[1], self)? {
+            if let Some(st) = self.seam_end_station(o, model, &edges, span[1], ends[1]) {
                 stations.push(st);
             } else {
                 let first = stations[0];
                 stations.push((first.0 + TAU, first.1));
             }
             for w in 0..stations.len() - 1 {
-                let (pa, ka) = stations[w];
-                let (pb, kb) = stations[w + 1];
-                if pb - pa < EVENT_GAP {
-                    return Err(unsupported(
-                        "Sphere Boolean: coincident stations on a seam circle",
-                    ));
-                }
-                if pb - pa > std::f64::consts::FRAC_PI_2 + 1e-9 {
-                    return Err(unsupported(
-                        "Sphere Boolean: seam circle piece is not covered by one sphere edge",
-                    ));
-                }
-                // The sphere edge covering [pa, pb].
-                let mid = (pa + pb) / 2.;
-                let mut owner = None;
-                for (e, phi0, phi1) in &edges {
-                    let (elo, ehi) = (phi0.min(*phi1), phi0.max(*phi1));
-                    let local = elo + (mid - elo).rem_euclid(TAU);
-                    if local > elo && local < ehi {
-                        owner = Some((*e, *phi0, *phi1));
-                        break;
-                    }
-                }
-                let Some((e, phi0, phi1)) = owner else {
-                    return Err(unsupported(
-                        "Sphere Boolean: seam circle piece escapes the sphere edges",
-                    ));
-                };
-                let forward = phi1 > phi0;
-                // Edge parameters of the station points, inverted on the
-                // edge curve itself (meridians and equator arcs are
-                // parameterized differently).
-                let circle = &self.circles[i];
-                let limit = self.band + 1e-9 * self.sphere.radius;
-                let ta = curve_parameter_of(&model.edges[e].curve, circle.point_at(pa), limit)?;
-                let tb = curve_parameter_of(&model.edges[e].curve, circle.point_at(pb), limit)?;
-                let (t_lo, t_hi) = (ta.min(tb), ta.max(tb));
-                let snap = |t: f64| {
-                    if t < 1e-9 {
-                        0.
-                    } else if t > 1. - 1e-9 {
-                        1.
-                    } else {
-                        t
-                    }
-                };
-                let (t_lo, t_hi) = (snap(t_lo), snap(t_hi));
-                // Register interior hits as splits of this sphere edge.
-                for (t, key) in [
-                    (if forward { t_lo } else { t_hi }, ka),
-                    (if forward { t_hi } else { t_lo }, kb),
-                ] {
-                    if let VKey::Special(id) = key
-                        && self.asm.specials[id].orig.is_none()
-                        && t > 0.
-                        && t < 1.
-                    {
-                        let known = self
-                            .asm
-                            .splits
-                            .get(&(o, e))
-                            .map(|table| {
-                                table
-                                    .iter()
-                                    .any(|(et, eid)| *eid == id && (et - t).abs() <= 1e-12)
-                            })
-                            .unwrap_or(false);
-                        if !known {
-                            self.asm.attach_edge(id, o, e, t);
-                        }
-                    }
-                }
-                let whole = t_lo == 0. && t_hi == 1.;
-                let (key, curve) = if whole {
-                    (EKey::Orig(o, e), model.edges[e].curve.clone())
-                } else {
-                    let table = self.asm.splits.get(&(o, e)).cloned().unwrap_or_default();
-                    let n = table.len() + 1;
-                    let j = (0..n)
-                        .find(|&j| {
-                            let lo = if j == 0 { 0. } else { table[j - 1].0 };
-                            let hi = if j == n - 1 { 1. } else { table[j].0 };
-                            (lo - t_lo).abs() <= 1e-12 && (hi - t_hi).abs() <= 1e-12
-                        })
-                        .ok_or_else(|| {
-                            unsupported("Sphere Boolean: seam piece does not match the edge split")
-                        })?;
-                    (
-                        EKey::Piece(o, e, j),
-                        normalized(model.edges[e].curve.trim(t_lo, t_hi)?),
-                    )
-                };
-                let curve = if forward { curve } else { curve.reverse()? };
-                self.asm.push_net([ka, kb], curve);
-                self.arcs.push(Arc {
+                self.emit_seam_station_piece(
+                    o,
+                    model,
                     face,
-                    patch: None,
-                    key,
-                    reversed: !forward,
-                });
+                    i,
+                    &edges,
+                    stations[w],
+                    stations[w + 1],
+                )?;
             }
         }
         Ok(())

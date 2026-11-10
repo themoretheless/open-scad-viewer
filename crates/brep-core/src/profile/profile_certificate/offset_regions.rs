@@ -150,7 +150,7 @@ pub(super) fn rounded(rings: &Rings, deviation: f64) -> Result<(Rings, Vec<Vec<V
                     ])
                 })
                 .collect::<Result<Vec<_>>>()?;
-            component.push(crate::sketch::polygon_wire(points)?);
+            component.push(crate::sketch_wire::polygon_wire(points)?);
         }
         components.push(component);
     }
