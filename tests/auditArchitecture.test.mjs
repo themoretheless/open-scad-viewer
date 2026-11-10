@@ -118,3 +118,10 @@ test('baseline update keeps keys owned by other audits', () => {
   const baseline = {sizes: {}, layers: [], clippy: {k: 3}}
   assert.deepEqual(nextBaseline({sizes: {}, layers: []}, baseline).clippy, {k: 3})
 })
+
+test('clippy warnings in a file shared through #[path] count once, for the owning crate', async () => {
+  const {countClippy} = await import('../scripts/audit-clippy.mjs')
+  const warning = file => JSON.stringify({reason: 'compiler-message', message: {level: 'warning', message: 'unused', code: {code: 'dead_code'},
+    spans: [{is_primary: true, file_name: file, line_start: 3, column_start: 1}]}})
+  assert.deepEqual(countClippy([warning('k/examples/../../j/examples/support/a.rs'), warning('j/examples/support/a.rs')].join('\n')), {j: 1})
+})

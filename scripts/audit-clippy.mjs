@@ -2,7 +2,7 @@
 // Pins live in `architecture-baseline.json` under `clippy`; `--update` lowers them.
 import {execFileSync} from 'node:child_process'
 import {readFileSync, writeFileSync} from 'node:fs'
-import {resolve} from 'node:path'
+import {posix, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 
 /** {crate: unique warning count} from `cargo clippy --message-format=json` output. */
@@ -15,10 +15,12 @@ export function countClippy(jsonLines) {
     if (!message || message.level !== 'warning' || !message.spans?.length) continue
     const span = message.spans.find(s => s.is_primary) ?? message.spans[0]
     if (span.file_name.startsWith('/')) continue // dependency or toolchain source
-    const key = `${message.code?.code ?? message.message}|${span.file_name}:${span.line_start}:${span.column_start}`
+    // A file shared through `#[path]` is reported under each including crate's relative path.
+    const file = posix.normalize(span.file_name)
+    const key = `${message.code?.code ?? message.message}|${file}:${span.line_start}:${span.column_start}`
     if (seen.has(key)) continue
     seen.add(key)
-    const crate = span.file_name.split('/')[0]
+    const crate = file.split('/')[0]
     counts[crate] = (counts[crate] ?? 0) + 1
   }
   return Object.fromEntries(Object.entries(counts).sort())

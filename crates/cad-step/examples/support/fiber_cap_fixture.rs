@@ -1,7 +1,7 @@
 //! Analytic curved cap on the actual shared-root, four-face body network.
-#[path = "fiber_cut_fixture.rs"]
+#[path = "../../../brep-core/examples/support/fiber_cut_fixture.rs"]
 mod sheets;
-#[path = "curved_trim_fixture.rs"]
+#[path = "../../../brep-core/examples/support/curved_trim_fixture.rs"]
 mod stock;
 use brep_core::{Model, face_cut::{FiberCapRequest, FiberFaceRequest}};
 use nurbs_core::{ss_intersection::FiberAxis, surface::Surface};

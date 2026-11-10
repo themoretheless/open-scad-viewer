@@ -52,6 +52,10 @@
 
 Интеграционные тесты `geometry-bridge` `box_sphere_tessellation::box_sphere_results_tessellate_within_their_vertex_bounds`, `gear_tessellation::gears_take_part_in_booleans`, `tolerant_sweep_tessellation::tolerant_results_across_a_placement_sweep_tessellate_closed` падают и после M1, и на экспорте `HEAD` без правок рефакторинга. Это существующие ошибки, к M1 не относятся; раньше они не попадали в список, потому что падение юнит-тестов `geometry-bridge` останавливало прогон до интеграционных целей.
 
+Интеграционный тест `brep-core/tests/region_network.rs::prepared_corner_sectors_replace_atomically_and_share_the_saved_diagonal` падает (`region_network.rs:115`) и на `453710cff`, до рефакторинга. Существующая ошибка.
+
+`audit-clippy` считал предупреждение в файле, подключённом через `#[path]` из другого крейта, отдельно для каждого пути (`cad-step/examples/../../brep-core/...`) и приписывал его подключающему крейту. Теперь путь нормализуется, предупреждение считается один раз за крейтом-владельцем файла; пины пересчитаны (2764).
+
 ### Исправления в инструментах аудита
 
 - `audit-architecture --update` терял ключ `clippy`, которым владеет `audit-clippy`. Теперь чужие ключи сохраняются, есть тест. Пины clippy восстановлены из истории.
