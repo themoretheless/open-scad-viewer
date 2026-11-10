@@ -69,9 +69,9 @@ pub(super) fn outward_normal(
         .flat_map(|s| s.faces.iter())
         .find(|use_| use_.face == face)
         .is_some_and(|use_| use_.reversed);
-    let sampler = SurfaceSampler::new(&model.faces[face].surface)?;
+    let sampler = SurfaceRefSampler::new(&model.faces[face].surface)?;
     let [u, v] = face_parameters(model, face, u, v);
-let Some(mut n) = sampler.evaluate(u, v)?.unit_normal() else {
+    let Some(mut n) = sampler.evaluate(u, v)?.unit_normal() else {
         return Ok(None);
     };
     if reversed {
@@ -82,13 +82,9 @@ let Some(mut n) = sampler.evaluate(u, v)?.unit_normal() else {
 
 /// Surface point of one face at (u, v).
 pub(super) fn face_point(model: &Model, face: usize, u: f64, v: f64) -> Result<[f64; 3]> {
-    let sampler = SurfaceSampler::new(&model.faces[face].surface)?;
+    let sampler = SurfaceRefSampler::new(&model.faces[face].surface)?;
     let [u, v] = face_parameters(model, face, u, v);
-let p = sampler.evaluate(u, v)?.point;
-    if p.len() != 3 {
-        return Err(pockets_error("pocket matching expects 3D surface points"));
-    }
-    Ok([p[0], p[1], p[2]])
+    sampler.point(u, v)
 }
 
 /// Ray-parity probe: is `point` inside material? `None` = unresolved.

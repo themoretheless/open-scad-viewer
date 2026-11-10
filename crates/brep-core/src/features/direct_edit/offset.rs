@@ -1,4 +1,5 @@
 use super::*;
+use nurbs_core::curve::CurveSampler;
 
 /// Options for [`offset_face`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -255,11 +256,14 @@ pub(super) fn offset_cylinder(
         if !matches!(aag_edge.class, DihedralClass::Smooth | DihedralClass::Tangent) {
             continue;
         }
-        let uses: Vec<usize> = aag_edge.uses.iter().map(|u| u.face).collect();
-        let inside = uses.iter().any(|u| group_faces.contains(u));
-        let outside = uses.iter().find(|u| !group_faces.contains(u));
+        let inside = aag_edge.uses.iter().any(|u| group_faces.contains(&u.face));
         if inside {
-            if let Some(&other) = outside {
+            if let Some(other) = aag_edge
+                .uses
+                .iter()
+                .map(|u| u.face)
+                .find(|u| !group_faces.contains(u))
+            {
                 return Err(error(
                     OFFSET_UNSUPPORTED,
                     format!(
@@ -301,7 +305,7 @@ pub(super) fn offset_cylinder(
                     ));
                 }
                 let scaled = radial_scale(&axis, *old_r, *new_r, [point[0], point[1], point[2]]);
-                *point = scaled.to_vec();
+                point.copy_from_slice(&scaled);
             }
         }
         // Vertices of any group face loop sitting on the old radius move out.
@@ -357,18 +361,20 @@ pub(super) fn offset_cylinder(
                 // on the control polygon outside the arc, so sample the
                 // curve itself). Uniform radial scaling of the control net
                 // then re-authors the circle at the new radius exactly.
-                let domain = edge.curve.domain();
+                let curve_sampler = CurveSampler::new(&edge.curve)?;
+                let domain = curve_sampler.domain();
                 let mut all_on_radius = true;
                 // Interior samples only: periodic rim curves may exclude the
                 // seam endpoint from the active domain.
                 for i in 1..8 {
                     guard.tick()?;
                     let t = domain[0] + (domain[1] - domain[0]) * i as f64 / 8.;
-                    let point = edge.curve.evaluate(t)?.point;
-                    if point.len() != 3
-                        || (radial_distance(&axis, [point[0], point[1], point[2]]) - old_r).abs()
-                            > linear * 4.
-                    {
+                    if edge.curve.control_points.first().map_or(0, Vec::len) != 3 {
+                        all_on_radius = false;
+                        break;
+                    }
+                    let point = curve_sampler.point3(t)?;
+                    if (radial_distance(&axis, point) - old_r).abs() > linear * 4. {
                         all_on_radius = false;
                         break;
                     }
@@ -385,7 +391,7 @@ pub(super) fn offset_cylinder(
                 for p in &mut curve.control_points {
                     let scaled =
                         radial_scale(&axis, *old_r, *new_r, [p[0], p[1], p[2]]);
-                    *p = scaled.to_vec();
+                    p.copy_from_slice(&scaled);
                 }
                 staged.edges[e].curve = curve;
             }
@@ -404,14 +410,19 @@ pub(super) fn offset_cylinder(
         }
     }
     let recomputed_edges = changed_edges.len();
-    for (f, staged_face) in staged.faces.clone().iter().enumerate() {
+    let factors: Vec<f64> = plan
+        .iter()
+        .map(|(old_r, new_r, _)| new_r / old_r)
+        .collect();
+    for f in 0..staged.faces.len() {
         guard.tick()?;
         if group_faces.contains(&f) {
             continue;
         }
+        let source_face = &model.faces[f];
         // Does the face use any changed edge?
-        let uses_changed = std::iter::once(&staged_face.outer)
-            .chain(&staged_face.holes)
+        let uses_changed = std::iter::once(&source_face.outer)
+            .chain(&source_face.holes)
             .any(|&ring| {
                 staged.loops[ring]
                     .coedges
@@ -430,7 +441,7 @@ pub(super) fn offset_cylinder(
                 ),
             ));
         }
-        let s = &staged_face.surface;
+        let s = &staged.faces[f].surface;
         if s.degree_u != 1 || s.degree_v != 1 || s.control_points.len() != 2 || s.control_points[0].len() != 2
         {
             return Err(error(
@@ -448,8 +459,8 @@ pub(super) fn offset_cylinder(
         // every rim) take the outermost rim's factor. Axial components are
         // kept, so the patch stays planar and bilinear. Anything in between
         // (a control net we cannot attribute) is refused.
-        let face_groups: BTreeSet<usize> = std::iter::once(&staged_face.outer)
-            .chain(&staged_face.holes)
+        let face_groups: BTreeSet<usize> = std::iter::once(&source_face.outer)
+            .chain(&source_face.holes)
             .flat_map(|&ring| staged.loops[ring].coedges.iter())
             .filter(|c| changed_edges.contains(&c.edge))
             .filter_map(|c| {
@@ -466,10 +477,6 @@ pub(super) fn offset_cylinder(
             ));
         }
         let outer_group = *face_groups.iter().next_back().expect("nonempty");
-        let factors: Vec<f64> = plan
-            .iter()
-            .map(|(old_r, new_r, _)| new_r / old_r)
-            .collect();
         let max_old = plan[outer_group].0;
         for p in staged.faces[f].surface.control_points.iter_mut().flatten() {
             if p.len() != 3 {
@@ -495,7 +502,7 @@ pub(super) fn offset_cylinder(
                 }
             };
             let scaled = radial_scale(&axis, 1., factor, [p[0], p[1], p[2]]);
-            *p = scaled.to_vec();
+            p.copy_from_slice(&scaled);
         }
         let s = &staged.faces[f].surface;
         let origin: [f64; 3] = {
@@ -519,7 +526,7 @@ pub(super) fn offset_cylinder(
         }
         let u = mul(du, 1. / len_u);
         let v = mul(dv, 1. / len_v);
-        for &ring in std::iter::once(&staged_face.outer).chain(&staged_face.holes) {
+        for &ring in std::iter::once(&source_face.outer).chain(&source_face.holes) {
             for ci in 0..staged.loops[ring].coedges.len() {
                 let coedge = &staged.loops[ring].coedges[ci];
                 if !changed_edges.contains(&coedge.edge) {

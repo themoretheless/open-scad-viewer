@@ -16,8 +16,9 @@
 
 use crate::analysis::surface_classify::{Axis, SurfaceClass, classify_surface, face_area};
 use crate::{Error, Model, Result};
+use nurbs_core::curve::CurveSampler;
 use nurbs_core::foundation::guards::{Budget, BudgetGuard, Fnv1a, require_finite_f64};
-use nurbs_core::surface::SurfaceSampler;
+use nurbs_core::surface::SurfaceRefSampler;
 
 /// Default interior sample count per edge. Enough to expose sign changes on
 /// single-inflection curves; cost is linear in edge count.
@@ -568,9 +569,10 @@ fn classify_edge(
     let domain = edge.curve.domain();
     require_finite_f64(domain[0], "edge.domain[0]")?;
     require_finite_f64(domain[1], "edge.domain[1]")?;
+    let edge_sampler = CurveSampler::new(&edge.curve)?;
     let samplers = [
-        SurfaceSampler::new(&model.faces[uses[0].face].surface)?,
-        SurfaceSampler::new(&model.faces[uses[1].face].surface)?,
+        SurfaceRefSampler::new(&model.faces[uses[0].face].surface)?,
+        SurfaceRefSampler::new(&model.faces[uses[1].face].surface)?,
     ];
     // One coedge of each incident face, to map edge parameters into face UV.
     let coedge_of = |face: usize| -> Option<&crate::Coedge> {
@@ -583,6 +585,10 @@ fn classify_edge(
     else {
         return Ok(DihedralClass::Boundary);
     };
+    let pcurve_samplers = [
+        CurveSampler::new(&coedge_a.pcurve).map_err(|_| aag_error("AAG expects valid 2D pcurves"))?,
+        CurveSampler::new(&coedge_b.pcurve).map_err(|_| aag_error("AAG expects valid 2D pcurves"))?,
+    ];
 
     let mut classes = Vec::with_capacity(samples);
     let (mut sign_min, mut sign_max) = (f64::INFINITY, f64::NEG_INFINITY);
@@ -592,7 +598,7 @@ fn classify_edge(
         guard.tick()?;
         let t = (i + 1) as f64 / (samples + 1) as f64;
         let u = domain[0] + t * (domain[1] - domain[0]);
-        let eval = edge.curve.evaluate(u)?;
+        let eval = edge_sampler.evaluate(u)?;
         let (Some(d1), true) = (&eval.d1, eval.point.len() == 3) else {
             return Ok(DihedralClass::Degenerate);
         };
@@ -617,16 +623,15 @@ fn classify_edge(
             // pcurves must therefore be sampled at the fraction that maps to
             // THIS sample's 3D point — coedge traversal directions along the
             // shared edge differ, so a bare shared t compares opposite ends.
-            let pcurve_domain = coedge.pcurve.domain();
+            let pcurve_domain = pcurve_samplers[side].domain();
             let f = if coedge.reversed { 1. - t } else { t };
             let pu = pcurve_domain[0] + f * (pcurve_domain[1] - pcurve_domain[0]);
-            let uv = coedge.pcurve.evaluate(pu)?.point;
-            if uv.len() != 2 {
-                return Err(aag_error("AAG expects 2D pcurves"));
-            }
+            let uv = pcurve_samplers[side]
+                .point2(pu)
+                .map_err(|_| aag_error("AAG expects 2D pcurves"))?;
             let uv = nurbs_core::periodic_trim::wrapped_surface_parameters(
                 &model.faces[uses[side].face].surface,
-                [uv[0], uv[1]],
+                uv,
             )?;
             let Some(mut n) = samplers[side].evaluate(uv[0], uv[1])?.unit_normal() else {
                 // A pole or a singular chart gives no reliable normal: this is

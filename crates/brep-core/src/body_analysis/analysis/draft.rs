@@ -31,7 +31,7 @@ use crate::direct_edit::{
 use crate::operations::loop_vertices;
 use crate::{Error, Model, Result};
 use nurbs_core::foundation::guards::{Budget, BudgetGuard};
-use nurbs_core::surface::SurfaceSampler;
+use nurbs_core::surface::SurfaceRefSampler;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Error code when the draft request itself is malformed.
@@ -98,15 +98,12 @@ fn normal_axis_angles(
     guard: &mut BudgetGuard,
 ) -> Result<(usize, f64, f64)> {
     let surface = &model.faces[face].surface;
-    let sampler = SurfaceSampler::new(surface)?;
+    let sampler = SurfaceRefSampler::new(surface)?;
     let du = knot_domain(&surface.knots_u, surface.degree_u);
     let dv = knot_domain(&surface.knots_v, surface.degree_v);
     let hu = (du[1] - du[0]) * 1e-5;
     let hv = (dv[1] - dv[0]) * 1e-5;
-    let point = |u: f64, v: f64| -> Result<[f64; 3]> {
-        let p = sampler.evaluate(u, v)?.point;
-        Ok([p[0], p[1], p[2]])
-    };
+    let point = |u: f64, v: f64| -> Result<[f64; 3]> { sampler.point(u, v) };
     let mut min = f64::INFINITY;
     let mut max = f64::NEG_INFINITY;
     let mut samples = 0usize;

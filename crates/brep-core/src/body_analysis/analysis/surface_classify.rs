@@ -35,7 +35,7 @@
 use crate::{Error, Model, Result};
 use nurbs_core::core::surface::Surface;
 use nurbs_core::foundation::guards::{Budget, BudgetGuard, require_finite_f64};
-use nurbs_core::surface::SurfaceSampler;
+use nurbs_core::surface::SurfaceRefSampler;
 
 /// Sample grid side per face (9×9 = 81 evaluations). Fixed so classification
 /// cost is predictable and budget-chargeable.
@@ -136,7 +136,7 @@ struct Sample {
 /// Sample a regular interior grid of points and unit normals. Pole/singular
 /// samples (no unit normal) are skipped; budget ticks once per evaluation.
 fn sample_surface(
-    sampler: &SurfaceSampler,
+    sampler: &SurfaceRefSampler<'_>,
     guard: &mut BudgetGuard,
 ) -> Result<Vec<Sample>> {
     let surface = sampler.definition();
@@ -680,7 +680,7 @@ pub fn classify_surface(
     }
     let mut guard: BudgetGuard = budget.guard("surface-classify");
     guard.check()?;
-    let sampler = SurfaceSampler::new(surface)?;
+    let sampler = SurfaceRefSampler::new(surface)?;
     let samples = sample_surface(&sampler, &mut guard)?;
     guard.check()?;
     if samples.len() < MIN_SAMPLES {

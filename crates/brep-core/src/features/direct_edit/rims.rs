@@ -188,20 +188,19 @@ pub(super) fn merge_coplanar_rims(
             }
             let record = |ring: usize, out: &mut Vec<RingUse>| {
                 let wire = &model.loops[ring];
-                let iter: Vec<RingUse> = wire
-                    .coedges
-                    .iter()
-                    .filter(|c| !rim_edges.contains(&c.edge))
-                    .map(|c| {
-                        let reversed = c.reversed ^ flipped;
-                        RingUse {
-                            edge: c.edge,
-                            reversed,
-                            start: model.edges[c.edge].vertices[usize::from(reversed)],
-                        }
-                    })
-                    .collect();
-                out.extend(iter);
+                out.extend(
+                    wire.coedges
+                        .iter()
+                        .filter(|c| !rim_edges.contains(&c.edge))
+                        .map(|c| {
+                            let reversed = c.reversed ^ flipped;
+                            RingUse {
+                                edge: c.edge,
+                                reversed,
+                                start: model.edges[c.edge].vertices[usize::from(reversed)],
+                            }
+                        }),
+                );
             };
             // Hole loops: fully rim → dropped with the feature; partially
             // rim → shared mouth, refused; untouched → kept as a hole ring.
@@ -297,13 +296,11 @@ pub(super) fn merge_coplanar_rims(
         // holes. Two positive rings would mean a disconnected region.
         let seed_plane = face_plane_fit(model, *component.iter().next().expect("non-empty"))?;
         let area_of = |ring: &[RingUse]| -> f64 {
-            let points: Vec<[f64; 3]> = ring
-                .iter()
-                .map(|use_| model.vertices[use_.start].point)
-                .collect();
-            let n = points.len();
+            let n = ring.len();
             let area = (0..n).fold([0.; 3], |sum, i| {
-                add(sum, cross(points[i], points[(i + 1) % n]))
+                let p = model.vertices[ring[i].start].point;
+                let q = model.vertices[ring[(i + 1) % n].start].point;
+                add(sum, cross(p, q))
             });
             0.5 * dot(area, seed_plane.normal)
         };

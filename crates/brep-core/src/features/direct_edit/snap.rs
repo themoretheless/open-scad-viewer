@@ -1,8 +1,9 @@
 use super::*;
 use crate::analysis::surface_classify::classify_surface;
 use crate::watertight::Closure;
+use nurbs_core::curve::CurveSampler;
 use nurbs_core::foundation::min_zone_fit::min_zone_flatness;
-use nurbs_core::surface::{Surface, SurfaceSampler};
+use nurbs_core::surface::{Surface, SurfaceRefSampler};
 
 const FIT_SAMPLES: usize = 9;
 const BOUNDARY_WEIGHT: usize = 16;
@@ -45,7 +46,7 @@ fn analytic_face_count(model: &Model, budget: &Budget) -> Result<usize> {
 }
 
 fn sample_grid(surface: &Surface, guard: &mut BudgetGuard) -> Result<Vec<[f64; 3]>> {
-    let sampler = SurfaceSampler::new(surface)?;
+    let sampler = SurfaceRefSampler::new(surface)?;
     let domain_u = [
         surface.knots_u[surface.degree_u],
         surface.knots_u[surface.knots_u.len() - 1 - surface.degree_u],
@@ -62,8 +63,7 @@ fn sample_grid(surface: &Surface, guard: &mut BudgetGuard) -> Result<Vec<[f64; 3
                 domain_u[0] + (i as f64 + 0.5) / FIT_SAMPLES as f64 * (domain_u[1] - domain_u[0]);
             let v =
                 domain_v[0] + (j as f64 + 0.5) / FIT_SAMPLES as f64 * (domain_v[1] - domain_v[0]);
-            let point = sampler.evaluate(u, v)?.point;
-            points.push([point[0], point[1], point[2]]);
+            points.push(sampler.point(u, v)?);
         }
     }
     Ok(points)
@@ -295,24 +295,22 @@ fn cylinder_target(
         target.degree_v = 1;
         target.knots_v = vec![domain[0], domain[0], domain[1], domain[1]];
     }
-    target.validate()?;
+    let original_sampler = SurfaceRefSampler::new(original)?;
+    let target_sampler = SurfaceRefSampler::new(&target)?;
     let boundary_face = &source.faces[face];
     let mut max_boundary_deviation = 0f64;
     for wire in std::iter::once(boundary_face.outer).chain(boundary_face.holes.iter().copied()) {
         for coedge in &source.loops[wire].coedges {
             guard.tick()?;
-            let domain = coedge.pcurve.domain();
+            let pcurve_sampler = CurveSampler::new(&coedge.pcurve)?;
+            let domain = pcurve_sampler.domain();
             for sample in 0..=16 {
                 let t = domain[0] + sample as f64 / 16. * (domain[1] - domain[0]);
-                let uv = coedge.pcurve.evaluate(t)?.point;
-                let uv = nurbs_core::periodic_trim::wrapped_surface_parameters(
-                    original,
-                    [uv[0], uv[1]],
-                )?;
-                let a = original.evaluate(uv[0], uv[1])?.point;
-                let b = target.evaluate(uv[0], uv[1])?.point;
-                max_boundary_deviation =
-                    max_boundary_deviation.max(dist([a[0], a[1], a[2]], [b[0], b[1], b[2]]));
+                let uv = pcurve_sampler.point2(t)?;
+                let uv = nurbs_core::periodic_trim::wrapped_surface_parameters(original, uv)?;
+                let a = original_sampler.point(uv[0], uv[1])?;
+                let b = target_sampler.point(uv[0], uv[1])?;
+                max_boundary_deviation = max_boundary_deviation.max(dist(a, b));
             }
         }
     }

@@ -60,7 +60,7 @@ use crate::aag::{Aag, DihedralClass, FaceAttrs};
 use crate::analysis::surface_classify::{Axis, SurfaceClass};
 use crate::{Error, Model, Result};
 use nurbs_core::foundation::guards::{Budget, BudgetGuard, require_finite_f64};
-use nurbs_core::surface::SurfaceSampler;
+use nurbs_core::surface::SurfaceRefSampler;
 
 /// Sample grid side per face for angular-span and axial-extent estimation.
 const HOLE_SAMPLE_GRID: usize = 9;
@@ -174,7 +174,7 @@ fn face_samples(
     face: usize,
     guard: &mut BudgetGuard,
 ) -> Result<Vec<[f64; 3]>> {
-    let sampler = SurfaceSampler::new(&model.faces[face].surface)?;
+    let sampler = SurfaceRefSampler::new(&model.faces[face].surface)?;
     let n = HOLE_SAMPLE_GRID;
     let mut points = Vec::with_capacity(n * n);
     for i in 0..n {
@@ -184,14 +184,11 @@ fn face_samples(
             let u = i as f64 / (n - 1) as f64;
             let v = j as f64 / (n - 1) as f64;
             let [u, v] = face_parameters(model, face, u, v);
-let p = sampler.evaluate(u, v)?.point;
-            if p.len() != 3 {
-                return Err(features_error("hole matching expects 3D surface points"));
-            }
+            let p = sampler.point(u, v)?;
             require_finite_f64(p[0], "sample.x")?;
             require_finite_f64(p[1], "sample.y")?;
             require_finite_f64(p[2], "sample.z")?;
-            points.push([p[0], p[1], p[2]]);
+            points.push(p);
         }
     }
     Ok(points)
@@ -279,24 +276,21 @@ fn is_void_wall(
             .flat_map(|s| s.faces.iter())
             .find(|u| u.face == face)
             .is_some_and(|u| u.reversed);
-        let sampler = SurfaceSampler::new(&model.faces[face].surface)?;
+        let sampler = SurfaceRefSampler::new(&model.faces[face].surface)?;
         for i in 0..3 {
             guard.tick()?;
             let u = (i as f64 + 0.5) / 3.;
             let v = (i as f64 + 0.5) / 3.;
             let [u, v] = face_parameters(model, face, u, v);
-let eval = sampler.evaluate(u, v)?;
+            let eval = sampler.evaluate(u, v)?;
             let Some(mut n) = eval.unit_normal() else {
                 continue;
             };
             if reversed {
                 n = [-n[0], -n[1], -n[2]];
             }
-            let p = &eval.point;
-            if p.len() != 3 {
-                return Err(features_error("hole matching expects 3D surface points"));
-            }
-            let rel = sub([p[0], p[1], p[2]], axis.point);
+            let p = eval.point;
+            let rel = sub(p, axis.point);
             let radial = sub(rel, crate_scale(axis.direction, dot(rel, axis.direction)));
             let r = norm(radial);
             if r <= 0. {

@@ -28,7 +28,7 @@ use crate::aag::{Aag, DihedralClass};
 use crate::analysis::surface_classify::{Axis, SurfaceClass, classify_surface};
 use crate::{Error, Model, Result};
 use nurbs_core::foundation::guards::{Budget, BudgetGuard, require_finite_f64};
-use nurbs_core::surface::SurfaceSampler;
+use nurbs_core::surface::SurfaceRefSampler;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Default relative spread (`(max - min) / max`) below which a chain reads as
@@ -134,7 +134,7 @@ struct FaceInfo {
 /// mean/gaussian curvatures (`k1,2 = H ± √(H²−K)`). `None` when no sample
 /// produced a finite nonzero curvature (planar or singular).
 fn principal_radius(surface: &crate::Face, budget: &BudgetGuard) -> Result<Option<f64>> {
-    let sampler = SurfaceSampler::new(&surface.surface)?;
+    let sampler = SurfaceRefSampler::new(&surface.surface)?;
     let knots_u = &surface.surface.knots_u;
     let knots_v = &surface.surface.knots_v;
     let du = surface.surface.degree_u;

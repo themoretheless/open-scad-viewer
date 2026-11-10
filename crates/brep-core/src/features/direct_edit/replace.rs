@@ -1,8 +1,8 @@
 use super::*;
 use crate::analysis::surface_classify::classify_surface;
-use nurbs_core::curve::Curve;
+use nurbs_core::curve::{Curve, CurveSampler};
 use nurbs_core::foundation::project_curve_report;
-use nurbs_core::surface::{Surface, SurfaceSampler};
+use nurbs_core::surface::{Surface, SurfaceRefSampler};
 
 /// Proof that one re-authored edge and its target pcurve describe the same
 /// geometry. Exact identities report their actual predicate work; bounded
@@ -149,19 +149,20 @@ fn project_parameter(curve: &Curve, point: [f64; 3]) -> Result<f64> {
                 "Curve projection produced no candidate",
             )
         })?;
-    let domain = curve.domain();
+    let sampler = CurveSampler::new(curve)?;
+    let domain = sampler.domain();
     let mut t = (0.5 * (best.parameter_interval[0] + best.parameter_interval[1]))
         .clamp(domain[0], domain[1]);
-    let evaluated = curve.evaluate(t)?.point;
-    let delta = sub([evaluated[0], evaluated[1], evaluated[2]], point);
+    let evaluated = sampler.point3(t)?;
+    let delta = sub(evaluated, point);
     let mut best_distance2 = dot(delta, delta);
     // The certified intervals isolate stationary roots, but an interval's
     // midpoint is not necessarily its closest point. Add deterministic seeds
     // and choose by measured distance before local refinement.
     for i in 0..=64 {
         let candidate = domain[0] + (domain[1] - domain[0]) * i as f64 / 64.;
-        let q = curve.evaluate(candidate)?.point;
-        let delta = sub([q[0], q[1], q[2]], point);
+        let q = sampler.point3(candidate)?;
+        let delta = sub(q, point);
         let distance2 = dot(delta, delta);
         if distance2 < best_distance2 {
             t = candidate;
@@ -169,7 +170,7 @@ fn project_parameter(curve: &Curve, point: [f64; 3]) -> Result<f64> {
         }
     }
     for _ in 0..12 {
-        let ev = curve.evaluate(t)?;
+        let ev = sampler.evaluate(t)?;
         let q = [ev.point[0], ev.point[1], ev.point[2]];
         let d = sub(q, point);
         let distance2 = dot(d, d);
@@ -185,9 +186,9 @@ fn project_parameter(curve: &Curve, point: [f64; 3]) -> Result<f64> {
                 if tb - ta <= 0. {
                     break;
                 }
-                let a = curve.evaluate(ta)?.point;
-                let b = curve.evaluate(tb)?.point;
-                mul(sub([b[0], b[1], b[2]], [a[0], a[1], a[2]]), 1. / (tb - ta))
+                let a = sampler.point3(ta)?;
+                let b = sampler.point3(tb)?;
+                mul(sub(b, a), 1. / (tb - ta))
             }
         };
         let f = dot(d, deriv);
@@ -202,8 +203,8 @@ fn project_parameter(curve: &Curve, point: [f64; 3]) -> Result<f64> {
         let mut accepted = false;
         for _ in 0..16 {
             let candidate = (t - scale * step).clamp(domain[0], domain[1]);
-            let q = curve.evaluate(candidate)?.point;
-            let delta = sub([q[0], q[1], q[2]], point);
+            let q = sampler.point3(candidate)?;
+            let delta = sub(q, point);
             if dot(delta, delta) <= distance2 {
                 accepted = (candidate - t).abs() > 0.;
                 t = candidate;
@@ -471,9 +472,9 @@ pub fn replace_face(
         }
     }
     let mut planes: BTreeMap<usize, PlaneEq> = BTreeMap::new();
-    let mut plane_of = |m: &Model,
-                        f: usize,
-                        planes: &mut BTreeMap<usize, PlaneEq>|
+    let plane_of = |m: &Model,
+                    f: usize,
+                    planes: &mut BTreeMap<usize, PlaneEq>|
      -> Result<PlaneEq> {
         if let Some(p) = planes.get(&f) {
             return Ok(*p);
@@ -491,21 +492,14 @@ pub fn replace_face(
     let mut frames: BTreeMap<usize, PlaneFrame> = BTreeMap::new();
     for &e in &face_edges {
         guard.tick()?;
-        let others: Vec<usize> = adjacency[e]
-            .iter()
-            .copied()
-            .filter(|&f| f != face)
-            .collect();
-        if others.len() != 1 {
+        let mut other_iter = adjacency[e].iter().copied().filter(|&f| f != face);
+        let (Some(n), None) = (other_iter.next(), other_iter.next()) else {
+            let count = adjacency[e].iter().filter(|&&f| f != face).count();
             return Err(error(
                 REPLACE_UNSUPPORTED,
-                format!(
-                    "Edge {e} has {} neighboring faces; exactly one is supported",
-                    others.len()
-                ),
+                format!("Edge {e} has {count} neighboring faces; exactly one is supported"),
             ));
-        }
-        let n = others[0];
+        };
         neighbor_of.insert(e, n);
         plane_of(source, n, &mut planes)?;
         if let Some(frame) = plane_frame(&source.faces[n].surface) {
@@ -525,22 +519,16 @@ pub fn replace_face(
     let mut substitute: BTreeMap<usize, [f64; 3]> = BTreeMap::new();
     for &v in &face_vertices {
         guard.tick()?;
-        let non: Vec<usize> = incidence[v]
-            .iter()
-            .copied()
-            .filter(|&f| f != face)
-            .collect();
-        if non.len() != 2 {
+        let mut non_iter = incidence[v].iter().copied().filter(|&f| f != face);
+        let (Some(n1), Some(n2), None) = (non_iter.next(), non_iter.next(), non_iter.next()) else {
+            let count = incidence[v].iter().filter(|&&f| f != face).count();
             return Err(error(
                 REPLACE_UNSUPPORTED,
-                format!(
-                    "Vertex {v} touches {} other faces; exactly two are supported",
-                    non.len()
-                ),
+                format!("Vertex {v} touches {count} other faces; exactly two are supported"),
             ));
-        }
-        let p1 = plane_of(source, non[0], &mut planes)?;
-        let p2 = plane_of(source, non[1], &mut planes)?;
+        };
+        let p1 = plane_of(source, n1, &mut planes)?;
+        let p2 = plane_of(source, n2, &mut planes)?;
         let Some((lp, ld)) = intersect_planes(p1, p2, 1e-9) else {
             return Err(error(
                 REPLACE_UNSUPPORTED,
@@ -679,7 +667,7 @@ pub fn replace_face(
     let mut recomputed_pcurves = 0usize;
     let mut correspondences = Vec::new();
     let mut max_residual = 0f64;
-    let target_sampler = SurfaceSampler::new(target)?;
+    let target_sampler = SurfaceRefSampler::new(target)?;
     for (f, mface) in source.faces.iter().enumerate() {
         for &ring in std::iter::once(&mface.outer).chain(&mface.holes) {
             for ci in 0..source.loops[ring].coedges.len() {
@@ -743,15 +731,17 @@ pub fn replace_face(
                         (false, agreement.cells)
                     };
                     correspondences.push(EdgeCorrespondenceCertificate { edge: e, exact: is_exact, agreement_cells: cells, max_residual_mm: 0. });
+                    let pcurve_sampler = CurveSampler::new(&pcurve)?;
+                    let edge_sampler = CurveSampler::new(&staged.edges[e].curve)?;
                     let mut edge_residual = 0f64;
                     for i in 0..=8 {
                         let frac = i as f64 / 8.;
                         let t = domain[0] + frac * (domain[1] - domain[0]);
-                        let uv = pcurve.evaluate(t)?.point;
-                        let sp = target_sampler.evaluate(uv[0], uv[1])?.point;
+                        let uv = pcurve_sampler.point2(t)?;
+                        let sp = target_sampler.point(uv[0], uv[1])?;
                         let te = domain[0] + (if coedge.reversed { 1. - frac } else { frac }) * (domain[1] - domain[0]);
-                        let q = staged.edges[e].curve.evaluate(te)?.point;
-                        let residual = dist([sp[0], sp[1], sp[2]], [q[0], q[1], q[2]]);
+                        let q = edge_sampler.point3(te)?;
+                        let residual = dist(sp, q);
                         edge_residual = edge_residual.max(residual);
                         max_residual = max_residual.max(residual);
                     }
