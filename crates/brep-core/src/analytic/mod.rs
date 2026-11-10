@@ -22,9 +22,9 @@ pub use rational_loft::{
 pub use rational_loft::{
     capped_loft_surfaces, natural_section_loft, periodic_section_loft, rational_section_loft,
 };
-pub use rational_loft_legacy::{LoftCap, capped_loft_with_caps, capped_loft_with_caps_checked};
+pub use trimmed_cap_loft::{LoftCap, capped_loft_with_caps, capped_loft_with_caps_checked};
 
-mod rational_loft_legacy;
+mod trimmed_cap_loft;
 
 mod cylinder;
 mod fibered_body;
