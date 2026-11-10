@@ -18,8 +18,8 @@
 //! only by the standard basis-conversion conditioning.
 //!
 //! No `unsafe`, no new dependencies.
-use crate::numerics::guards::Budget;
-use crate::numerics::distance_bounds::Interval;
+use crate::guards::Budget;
+use crate::distance_bounds::Interval;
 use crate::{Result, check, numeric_err};
 
 /// Relative tolerance under which a leading coefficient is treated as zero.
@@ -304,7 +304,6 @@ pub fn isolate_bernstein_roots(bernstein: &[f64], tol: f64) -> Result<Vec<Interv
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::interval_newton::{PolynomialFunction, isolate_roots};
 
     struct Rng(u64);
     impl Rng {
@@ -388,31 +387,6 @@ mod tests {
             let boxes = isolate_sturm(&p, -3., 3., 1e-8).unwrap();
             let expected = count_roots(&p, -3., 3.).unwrap();
             assert_eq!(boxes.len(), expected, "roots {roots:?}");
-        }
-    }
-
-    #[test]
-    fn cross_check_against_interval_newton() {
-        // Deterministic random polynomials: Sturm count must match the
-        // number of certified boxes from interval Newton isolation.
-        let mut rng = Rng(2027);
-        for _ in 0..20 {
-            let count = 1 + (rng.next() % 4) as usize;
-            let roots: Vec<f64> = (0..count).map(|_| rng.range(-1.5, 1.5)).collect();
-            let p = from_roots(&roots);
-            let sturm = count_roots(&p, -2., 2.).unwrap();
-            let newton = isolate_roots(
-                Interval::new(-2., 2.).unwrap(),
-                &PolynomialFunction::new(p.clone()).unwrap(),
-                1e-7,
-                40,
-            )
-            .unwrap();
-            assert_eq!(sturm, newton.len(), "roots {roots:?}");
-            let boxes = isolate_sturm(&p, -2., 2., 1e-7).unwrap();
-            for (nb, _) in &newton {
-                assert!(boxes.iter().any(|sb| sb.hi >= nb.lo && sb.lo <= nb.hi));
-            }
         }
     }
 

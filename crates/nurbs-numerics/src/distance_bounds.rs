@@ -3,7 +3,7 @@ use crate::{Result, check, numeric};
 
 /// Overflow-safe interval midpoint `a/2 + b/2`.
 #[inline(always)]
-pub(crate) fn midpoint(a: f64, b: f64) -> f64 {
+pub fn midpoint(a: f64, b: f64) -> f64 {
     a * 0.5 + b * 0.5
 }
 
@@ -98,7 +98,7 @@ impl Interval {
     }
 }
 
-pub(crate) fn box_distance(a: &[Interval], b: &[Interval]) -> Result<(f64, f64)> {
+pub fn box_distance(a: &[Interval], b: &[Interval]) -> Result<(f64, f64)> {
     check(
         a.len() == b.len(),
         "Box distance requires identical spatial dimensions",

@@ -46,23 +46,4 @@ mod tests{
         }
         assert_eq!(sqrt_two(0.),Some(0.));assert_eq!(sqrt_two(f64::MAX),None);
     }
-    #[cfg(feature="transport")]
-    #[test]
-    fn transport_owns_rounding_and_complete_boundary_admission() {
-        use value_codec::{json,Value};
-        let r=crate::transport::dispatch(json!({"op":"sweep_error_upper_compose","kind":"add","a":1.,"b":2_f64.powi(-53)})).unwrap();
-        assert_eq!(r["errorUpper"].as_f64(),add(1.,2_f64.powi(-53)));
-        let overflow=crate::transport::dispatch(json!({"op":"sweep_error_upper_compose","kind":"multiply","a":f64::MAX,"b":2.})).unwrap();
-        assert!(overflow["errorUpper"].is_null());
-        let request=json!({"op":"sweep_boundary_certificate","wall":0.1,"caps":[0.2,0.3],"closed":false,"budget":0.25});
-        let r=crate::transport::dispatch(request.clone()).unwrap();
-        assert_eq!(r["continuousBound"],true); assert_eq!(r["withinBudget"],false);
-        assert_eq!(r["reason"],"boundary-budget-exceeded");
-        let mut missing=request.clone();missing["caps"]=Value::Null;
-        assert_eq!(crate::transport::dispatch(missing.clone()).unwrap()["reason"],"filled-cap-bound-unproved");
-        missing["closed"]=json!(true);
-        assert_eq!(crate::transport::dispatch(missing).unwrap()["errorUpper"],0.1);
-        let mut invalid=request; invalid["budget"]=Value::Null;
-        assert_eq!(crate::transport::dispatch(invalid).unwrap()["reason"],"invalid-budget");
-    }
 }

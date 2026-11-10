@@ -1,8 +1,8 @@
 //! Products of Bernstein polynomials held as outward intervals, with exact binomials
 //! where binary64 can represent them.
-use crate::{Result, check, numerics::distance_bounds::Interval};
+use crate::{Result, check, distance_bounds::Interval};
 
-pub(crate) fn choose(n: usize, k: usize) -> f64 {
+pub fn choose(n: usize, k: usize) -> f64 {
     // n <= 50: all integer intermediates and results fit u64, and the result
     // is below 2^53, hence exactly representable as binary64.
     let mut v = 1u64;
@@ -11,7 +11,7 @@ pub(crate) fn choose(n: usize, k: usize) -> f64 {
     }
     v as f64
 }
-pub(crate) fn binomials(n: usize) -> Result<Vec<Interval>> {
+pub fn binomials(n: usize) -> Result<Vec<Interval>> {
     if n <= 48 {
         return Ok((0..=n).map(|k| Interval::point(choose(n, k))).collect());
     }
@@ -27,7 +27,7 @@ pub(crate) fn binomials(n: usize) -> Result<Vec<Interval>> {
     }
     Ok(out)
 }
-pub(crate) fn mul(a: &[Interval], b: &[Interval]) -> Result<Vec<Interval>> {
+pub fn mul(a: &[Interval], b: &[Interval]) -> Result<Vec<Interval>> {
     let (p, q) = (a.len() - 1, b.len() - 1);
     // Position composition keeps degree <=160; graph jet residuals need <=256.
     check(

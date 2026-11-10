@@ -3,27 +3,27 @@
 use crate::{Result, check};
 use math_core::{next_down, next_up};
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct I {
-    pub(crate) lo: f64,
-    pub(crate) hi: f64,
+pub struct I {
+    pub lo: f64,
+    pub hi: f64,
 }
 impl I {
-    pub(crate) fn point(x: f64) -> Self {
+    pub fn point(x: f64) -> Self {
         Self { lo: x, hi: x }
     }
-    pub(crate) fn add(self, b: Self) -> Self {
+    pub fn add(self, b: Self) -> Self {
         Self {
             lo: next_down(self.lo + b.lo),
             hi: next_up(self.hi + b.hi),
         }
     }
-    pub(crate) fn sub(self, b: Self) -> Self {
+    pub fn sub(self, b: Self) -> Self {
         Self {
             lo: next_down(self.lo - b.hi),
             hi: next_up(self.hi - b.lo),
         }
     }
-    pub(crate) fn mul(self, b: Self) -> Self {
+    pub fn mul(self, b: Self) -> Self {
         let v = [
             self.lo * b.lo,
             self.lo * b.hi,
@@ -35,7 +35,7 @@ impl I {
             hi: next_up(v.iter().copied().fold(f64::NEG_INFINITY, f64::max)),
         }
     }
-    pub(crate) fn div_positive(self, b: Self) -> Result<Self> {
+    pub fn div_positive(self, b: Self) -> Result<Self> {
         check(
             b.lo > 0. && b.hi.is_finite(),
             "Seam certificate denominator is not separated from zero",
@@ -45,11 +45,11 @@ impl I {
             hi: next_up(1. / b.lo),
         }))
     }
-    pub(crate) fn finite(self) -> bool {
+    pub fn finite(self) -> bool {
         self.lo.is_finite() && self.hi.is_finite()
     }
 }
-pub(crate) fn insert<const N: usize>(
+pub fn insert<const N: usize>(
     knots: &mut Vec<f64>,
     controls: &mut Vec<[I; N]>,
     p: usize,
@@ -84,7 +84,7 @@ pub(crate) fn insert<const N: usize>(
     *controls = next;
     Ok(())
 }
-pub(crate) fn choose(n: usize, k: usize) -> I {
+pub fn choose(n: usize, k: usize) -> I {
     let mut x = I::point(1.);
     for i in 0..k.min(n - k) {
         x = x

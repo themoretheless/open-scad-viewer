@@ -254,16 +254,16 @@ pub(super) fn predicted_reduction(j: &[Vec<f64>], g: &[f64], d: &[f64]) -> f64 {
 // ---------------------------------------------------------------------------
 
 #[cfg(test)]
-pub(crate) mod test_helpers {
+pub mod test_helpers {
     use super::LeastSquaresProblem;
     use crate::Result;
 
-    pub(crate) fn approx_eq(a: f64, b: f64, tol: f64) -> bool {
+    pub fn approx_eq(a: f64, b: f64, tol: f64) -> bool {
         (a - b).abs() <= tol
     }
 
     /// Rosenbrock residuals: f₁ = 10(x₂ − x₁²), f₂ = 1 − x₁.
-    pub(crate) struct Rosenbrock;
+    pub struct Rosenbrock;
     impl LeastSquaresProblem for Rosenbrock {
         fn residual(&self, x: &[f64]) -> Result<Vec<f64>> {
             Ok(vec![10. * (x[1] - x[0] * x[0]), 1. - x[0]])

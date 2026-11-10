@@ -34,7 +34,7 @@ fn equal_products(a: &Q, b: &Q, c: &Q, d: &Q, used: &mut usize, max: usize) -> b
     }
     lhs == rhs
 }
-pub(crate) fn tensor(weights: &[Vec<f64>], used: &mut usize, max: usize) -> bool {
+pub fn tensor(weights: &[Vec<f64>], used: &mut usize, max: usize) -> bool {
     if weights.is_empty()
         || weights.len() > 33
         || weights[0].is_empty()
@@ -90,6 +90,6 @@ pub(crate) fn tensor(weights: &[Vec<f64>], used: &mut usize, max: usize) -> bool
     }
     true
 }
-pub(crate) fn sequence(weights: &[f64], used: &mut usize, max: usize) -> bool {
+pub fn sequence(weights: &[f64], used: &mut usize, max: usize) -> bool {
     tensor(&[weights.to_vec()], used, max)
 }

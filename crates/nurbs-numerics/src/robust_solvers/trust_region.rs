@@ -2,7 +2,7 @@ use super::{
     LeastSquaresProblem, SolverOptions, SolverReport, StepStrategy, StopReason,
     check_problem_consistency, cholesky_solve, dot, norm2, normal_equations, predicted_reduction,
 };
-use crate::numerics::guards::{Budget, require_finite_slice};
+use crate::guards::{Budget, require_finite_slice};
 use crate::{Result, check};
 
 /// Cauchy step `d_u = −(gᵀg / ‖Jg‖²) g` and its model length along −g.

@@ -1318,6 +1318,7 @@ dependencies = [
  "num-bigint",
  "num-rational",
  "num-traits",
+ "nurbs-numerics",
  "osv-math",
  "value-codec",
 ]
@@ -1328,6 +1329,15 @@ version = "0.1.0"
 dependencies = [
  "cad-predicates",
  "nurbs-core",
+ "osv-math",
+ "value-codec",
+]
+
+[[package]]
+name = "nurbs-numerics"
+version = "0.1.0"
+dependencies = [
+ "num-rational",
  "osv-math",
  "value-codec",
 ]

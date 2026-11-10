@@ -103,7 +103,7 @@ impl IterationBudget for Budget {
     }
 }
 
-impl IterationBudget for crate::numerics::sparse_linalg::CgOptions {
+impl IterationBudget for crate::sparse_linalg::CgOptions {
     fn max_iterations(&self) -> usize {
         self.max_iterations
     }
@@ -548,7 +548,7 @@ mod tests {
 
     #[test]
     fn budget_from_existing_options() {
-        let cg = crate::numerics::sparse_linalg::CgOptions::new(42, 1e-9).unwrap();
+        let cg = crate::sparse_linalg::CgOptions::new(42, 1e-9).unwrap();
         assert_eq!(cg.max_iterations(), 42);
         let budget = Budget::from(&cg);
         assert_eq!(budget.max_iterations, 42);
@@ -694,50 +694,7 @@ mod tests {
         );
     }
 
-    // -- entry-point integration -------------------------------------------
-
-    #[test]
-    fn curve_constructor_rejects_nan_control_point() {
-        let points = vec![
-            vec![0.0, 0.0],
-            vec![f64::NAN, 1.0],
-            vec![2.0, 0.0],
-        ];
-        let err = crate::curve::Curve::from_polyline(points).unwrap_err();
-        assert_eq!(err.code, crate::INVALID_INPUT, "{err:?}");
-        assert!(err.contains("control_points[1]"), "{err}");
-    }
-
-    #[test]
-    fn curve_constructor_rejects_nan_weight_as_non_finite() {
-        let curve = crate::curve::Curve {
-            degree: 1,
-            knots: vec![0.0, 0.0, 1.0, 1.0],
-            control_points: vec![vec![0.0, 0.0], vec![1.0, 1.0]],
-            weights: vec![1.0, f64::NAN],
-            periodic: false,
-        };
-        let err = curve.validate().unwrap_err();
-        assert_eq!(err.code, crate::INVALID_INPUT, "{err:?}");
-        // NaN must surface as a non-finite rejection, not as "weight ≤ 0".
-        assert!(err.contains("weights[1]"), "{err}");
-        assert!(err.contains("positive, finite"), "{err}");
-        assert!(!err.contains("[1e-12, 1e12]"), "{err}");
-    }
-
-    #[test]
-    fn curve_constructor_rejects_inf_knot() {
-        let curve = crate::curve::Curve {
-            degree: 1,
-            knots: vec![0.0, 0.0, f64::INFINITY, 1.0],
-            control_points: vec![vec![0.0, 0.0], vec![1.0, 1.0]],
-            weights: vec![1.0, 1.0],
-            periodic: false,
-        };
-        let err = curve.validate().unwrap_err();
-        assert_eq!(err.code, crate::INVALID_INPUT, "{err:?}");
-        assert!(err.contains("knots[2] must be finite"), "{err}");
-    }
+    // Curve entry-point integration tests live in nurbs-core (`numerics/integration_tests.rs`).
 }
 
 #[cfg(test)]

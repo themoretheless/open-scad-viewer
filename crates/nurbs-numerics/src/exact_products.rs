@@ -1,5 +1,5 @@
 //! Exact sign of a small sum of original finite binary64 products.
-pub(crate) fn sum_sign(terms: &[(f64, f64)]) -> std::cmp::Ordering {
+pub fn sum_sign(terms: &[(f64, f64)]) -> std::cmp::Ordering {
     debug_assert!(terms.len() <= 8 && terms.iter().all(|(a, b)| a.is_finite() && b.is_finite()));
     fn parts(x: f64) -> (bool, u64, i32) {
         let bits = x.to_bits();

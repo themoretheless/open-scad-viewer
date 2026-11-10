@@ -2,7 +2,7 @@ use super::{
     LeastSquaresProblem, SolverOptions, SolverReport, StopReason, check_problem_consistency,
     cholesky_solve, norm2, normal_equations, predicted_reduction,
 };
-use crate::numerics::guards::{Budget, require_finite_slice};
+use crate::guards::{Budget, require_finite_slice};
 use crate::{Result, check};
 
 /// Standalone Levenberg–Marquardt solver with adaptive damping (Nielsen's

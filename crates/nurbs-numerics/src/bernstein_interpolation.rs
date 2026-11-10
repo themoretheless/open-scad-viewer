@@ -6,12 +6,12 @@ use crate::{check, distance_bounds::Interval as I, Result};
 #[cfg(test)]
 /// Each row encloses the Bernstein coefficients of one nodal basis function.
 /// Insufficient work refuses before allocating a coefficient basis.
-pub(crate) fn basis(nodes: &[f64], max_work: usize) -> Result<(Option<Vec<Vec<I>>>, usize)> {
+pub fn basis(nodes: &[f64], max_work: usize) -> Result<(Option<Vec<Vec<I>>>, usize)> {
     basis_on(nodes, [0., 1.], max_work)
 }
 /// Preserve original node coordinates; rounded normalization changes the
 /// polynomial interpolation problem and cannot establish exact coefficients.
-pub(crate) fn basis_on(
+pub fn basis_on(
     nodes: &[f64],
     domain: [f64; 2],
     max_work: usize,
@@ -68,7 +68,7 @@ pub(crate) fn basis_on(
 }
 
 /// Enclose coefficients of a polynomial of degree at most samples.len()-1.
-pub(crate) fn reconstruct(samples: &[I], basis: &[Vec<I>]) -> Result<Vec<I>> {
+pub fn reconstruct(samples: &[I], basis: &[Vec<I>]) -> Result<Vec<I>> {
     check(
         !samples.is_empty()
             && basis.len() == samples.len()
@@ -87,7 +87,7 @@ pub(crate) fn reconstruct(samples: &[I], basis: &[Vec<I>]) -> Result<Vec<I>> {
         .collect()
 }
 
-pub(crate) fn reconstruct_tensor(
+pub fn reconstruct_tensor(
     samples: &[Vec<I>],
     bases: [&[Vec<I>]; 2],
     max_work: usize,

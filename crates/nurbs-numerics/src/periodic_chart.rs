@@ -3,13 +3,13 @@
 use crate::{Result, check, distance_bounds::Interval};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct Chart {
+pub struct Chart {
     pub range: Interval,
     /// Translation for this chart image; None means an aggregate of many wraps.
     pub shift: Option<Interval>,
 }
 
-pub(crate) fn charts(
+pub fn charts(
     range: Interval,
     domain: [f64; 2],
     periodic: bool,

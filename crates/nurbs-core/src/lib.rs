@@ -179,25 +179,9 @@ pub use crate::trim::trim_simplicity;
 pub use crate::trim::trimmed_surface_distance;
 
 pub use math_core::{Error, Result};
-pub(crate) const INVALID_INPUT: &str = "NURBS_INVALID_INPUT";
-pub(crate) const NUMERIC_ERROR: &str = "NURBS_NUMERIC_ERROR";
-pub(crate) const RESOURCE_LIMIT: &str = "NURBS_RESOURCE_LIMIT";
-pub(crate) fn input(message: impl Into<String>) -> Error {
-    Error::new(INVALID_INPUT, message)
-}
-pub(crate) fn numeric_err(message: impl Into<String>) -> Error {
-    Error::new(NUMERIC_ERROR, message)
-}
-pub(crate) fn resource(message: impl Into<String>) -> Error {
-    Error::new(RESOURCE_LIMIT, message)
-}
-
-pub(crate) fn check(condition: bool, message: &str) -> Result<()> {
-    math_core::ensure(condition, INVALID_INPUT, message)
-}
-pub(crate) fn numeric(condition: bool, message: &str) -> Result<()> {
-    math_core::ensure(condition, NUMERIC_ERROR, message)
-}
+pub(crate) use nurbs_numerics::{
+    INVALID_INPUT, NUMERIC_ERROR, RESOURCE_LIMIT, check, input, numeric, numeric_err, resource,
+};
 #[cfg(feature = "transport")]
 mod transport;
 #[cfg(feature = "transport")]

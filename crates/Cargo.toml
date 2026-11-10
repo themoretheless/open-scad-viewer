@@ -20,6 +20,7 @@ members = [
     "nurbs-intersect",
     "cad-step",
     "nurbs-core",
+    "nurbs-numerics",
     "polygon-core",
     "gcode-core",
     "gcode-optimize",
@@ -72,6 +73,7 @@ mechanics-core = { version = "0.1.0", path = "mechanics-core" }
 rush-runtime = { version = "0.1.0", path = "rush-runtime" }
 rush-frontend = { version = "0.1.0", path = "rush-frontend" }
 nurbs-core = { version = "0.1.0", path = "nurbs-core", default-features = false }
+nurbs-numerics = { version = "0.1.0", path = "nurbs-numerics", default-features = false }
 openscad-core = { version = "0.1.0", path = "openscad-core" }
 photogrammetry-core = { version = "0.1.0", path = "photogrammetry-core" }
 photogrammetry-ffi = { version = "0.1.0", path = "photogrammetry-ffi" }
@@ -184,4 +186,8 @@ opt-level = "z"
 # 32.8/87.6/116.5 -> 17.0/44.9/61.1 ms) than "z". The browser kernel keeps "z" through
 # scripts/build-geometry-kernels.mjs, so the shipped WASM bytes do not change.
 [profile.release.package.nurbs-core]
+opt-level = 3
+
+# Split out of nurbs-core (plan O3); keeps the same native and browser profiles.
+[profile.release.package.nurbs-numerics]
 opt-level = 3

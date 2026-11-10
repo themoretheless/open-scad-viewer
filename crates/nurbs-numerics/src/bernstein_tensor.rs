@@ -1,7 +1,7 @@
 //! Shared outward tensor-Bernstein polynomial arithmetic. No sampled geometry
 //! or public proof callback. Product degrees are bounded before integer choose.
 use crate::{Result, check, distance_bounds::Interval as I};
-pub(crate) type Net = Vec<Vec<I>>;
+pub type Net = Vec<Vec<I>>;
 fn choose(n: usize, k: usize) -> u64 {
     let mut c = 1u64;
     for j in 0..k.min(n - k) {
@@ -9,7 +9,7 @@ fn choose(n: usize, k: usize) -> u64 {
     }
     c
 }
-pub(crate) fn derivative(a: &Net, axis: usize) -> Result<Net> {
+pub fn derivative(a: &Net, axis: usize) -> Result<Net> {
     let p = if axis == 0 {
         a.len() - 1
     } else {
@@ -31,7 +31,7 @@ pub(crate) fn derivative(a: &Net, axis: usize) -> Result<Net> {
     }
     Ok(out)
 }
-pub(crate) fn product(a: &Net, b: &Net) -> Result<Net> {
+pub fn product(a: &Net, b: &Net) -> Result<Net> {
     let [m, n] = [a.len() - 1, a[0].len() - 1];
     let [p, q] = [b.len() - 1, b[0].len() - 1];
     check(
@@ -56,7 +56,7 @@ pub(crate) fn product(a: &Net, b: &Net) -> Result<Net> {
     }
     Ok(out)
 }
-pub(crate) fn minus(a: Net, b: Net) -> Result<Net> {
+pub fn minus(a: Net, b: Net) -> Result<Net> {
     check(
         (a.len(), a[0].len()) == (b.len(), b[0].len()),
         "Tensor Bernstein subtraction requires equal degrees",
@@ -98,7 +98,7 @@ fn restricted_hull(a: &[I], t: I) -> Result<I> {
         restricted.iter().map(|x|x.hi).fold(f64::NEG_INFINITY,f64::max))
 }
 
-pub(crate) fn evaluate_line(mut a: Vec<I>, t: I) -> Result<I> {
+pub fn evaluate_line(mut a: Vec<I>, t: I) -> Result<I> {
     let hull = I::new(
         a.iter().map(|x| x.lo).fold(f64::INFINITY, f64::min),
         a.iter().map(|x| x.hi).fold(f64::NEG_INFINITY, f64::max),
@@ -120,7 +120,7 @@ pub(crate) fn evaluate_line(mut a: Vec<I>, t: I) -> Result<I> {
     }
     a[0].intersect(hull.lo, hull.hi)?.intersect(restricted.lo,restricted.hi)
 }
-pub(crate) fn evaluate(a: &Net, t: [I; 2]) -> Result<I> {
+pub fn evaluate(a: &Net, t: [I; 2]) -> Result<I> {
     let rows = a
         .iter()
         .map(|r| evaluate_line(r.clone(), t[1]))
