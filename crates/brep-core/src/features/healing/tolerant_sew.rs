@@ -90,7 +90,7 @@ fn append_skip_reasons(report: &mut crate::healing_report::HealingReport) {
 /// same write-set weighting as the authorized transaction. Cap refusals and
 /// post-repair residual gaps never expose a partially sewn model.
 pub fn sew_tolerant(model: &Model, budget: SewingBudget) -> Result<HealingRun> {
-    sew_tolerant_certified(model, budget).map(|certified| certified.run)
+    sew_tolerant_inner(model, budget).map(|(run, _)| run)
 }
 
 #[derive(Clone, Debug)]
@@ -100,6 +100,27 @@ pub struct CertifiedSewingRun {
 }
 
 pub fn sew_tolerant_certified(model: &Model, budget: SewingBudget) -> Result<CertifiedSewingRun> {
+    let input_mm = model.tolerance_mm;
+    let (mut run, handoff) = sew_tolerant_inner(model, budget)?;
+    let tolerance_handoff = match handoff {
+        Some(tolerance_handoff) => tolerance_handoff,
+        None => crate::enforce_model_tolerance_handoff(
+            cad_predicates::OperationBoundary::Sewing,
+            input_mm,
+            0.,
+            &mut run.model,
+        )?,
+    };
+    Ok(CertifiedSewingRun {
+        run,
+        tolerance_handoff,
+    })
+}
+
+fn sew_tolerant_inner(
+    model: &Model,
+    budget: SewingBudget,
+) -> Result<(HealingRun, Option<crate::ModelToleranceHandoff>)> {
     crate::admit_operation_input(cad_predicates::OperationBoundary::Sewing, model.tolerance_mm)?;
     // Endpoint-gap inputs are intentionally invalid solids; the existing defect
     // audit and staged transaction validate the repaired output instead.
@@ -264,23 +285,21 @@ pub fn sew_tolerant_certified(model: &Model, budget: SewingBudget) -> Result<Cer
         skipped_details,
     });
     append_skip_reasons(&mut run.report);
-    let measured_output_mm = if run.report.status == HealingStatus::Complete {
-        measured.into_iter().fold(0.0_f64, f64::max)
+    let tolerance_handoff = if run.report.status == HealingStatus::Complete {
+        let measured_output_mm = measured.into_iter().fold(0.0_f64, f64::max);
+        let handoff = crate::enforce_model_tolerance_handoff(
+            cad_predicates::OperationBoundary::Sewing,
+            input_mm,
+            measured_output_mm,
+            &mut run.model,
+        )?;
+        run.report.output_hash = model_hash(&run.model);
+        Some(handoff)
     } else {
-        0.
+        None
     };
-    let tolerance_handoff = crate::enforce_model_tolerance_handoff(
-        cad_predicates::OperationBoundary::Sewing,
-        input_mm,
-        measured_output_mm,
-        &mut run.model,
-    )?;
-    run.report.output_hash = model_hash(&run.model);
     run.report.validate()?;
-    Ok(CertifiedSewingRun {
-        run,
-        tolerance_handoff,
-    })
+    Ok((run, tolerance_handoff))
 }
 
 #[cfg(test)]
