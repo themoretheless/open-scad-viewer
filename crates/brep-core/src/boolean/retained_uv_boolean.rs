@@ -413,8 +413,10 @@ fn replace_faces(source: &Model, selected: &[usize], shell: usize, reversed: boo
     for (i, face) in source.faces.iter().enumerate() {
         if chosen.contains(&i) { continue; }
         let mut face = face.clone();
+        // Read the source loop before the face is renumbered.
+        let outer = source.loops[face.outer].clone();
         face.outer = model.loops.len();
-        model.loops.push(source.loops[face.outer].clone());
+        model.loops.push(outer);
         face.holes.clear();
         for &wire in &source.faces[i].holes {
             face.holes.push(model.loops.len());
@@ -478,10 +480,21 @@ fn replace_faces(source: &Model, selected: &[usize], shell: usize, reversed: boo
     model.edges.iter_mut().for_each(|e| e.vertices = e.vertices.map(|v| vertex_map[v].unwrap()));
     model.inherit_topology_ids(&[source]);
     let children = model.1.faces[new_face..].to_vec();
-    model.1.lineage.push(TopologyLineageRecord {
-        operation: "merge".into(), entity_kind: "face".into(),
-        parents: selected.iter().map(|&face| source.1.faces[face]).collect(), children,
-    });
+    let parents: Vec<_> = selected.iter().map(|&face| source.1.faces[face]).collect();
+    // One face into several is a split; several into one a merge; several
+    // into several records one merge per result face (a merge has one child).
+    if parents.len() == 1 && children.len() > 1 {
+        model.1.lineage.push(TopologyLineageRecord {
+            operation: "split".into(), entity_kind: "face".into(), parents, children,
+        });
+    } else {
+        for child in children {
+            model.1.lineage.push(TopologyLineageRecord {
+                operation: "merge".into(), entity_kind: "face".into(),
+                parents: parents.clone(), children: vec![child],
+            });
+        }
+    }
     model.refresh_change_set(&[source]);
     validate_staged(&model)?;
     Ok(model)
