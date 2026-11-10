@@ -48,6 +48,26 @@ pub fn analytic_boolean(
         return cylinder_pair_boolean(a, b, operation);
     }
 
+    // Axial cone or frustum × sphere: exact circles through the sphere-mate
+    // engine. Anything the cell does not recognize falls through to the
+    // separation checks and refusals below.
+    if matches!(
+        (class_a, class_b),
+        (AnalyticClass::Cone | AnalyticClass::Frustum, AnalyticClass::Sphere)
+            | (AnalyticClass::Sphere, AnalyticClass::Cone | AnalyticClass::Frustum)
+    ) && operation != "xor"
+        && let Some(result) = cone_sphere_boolean::boolean(a, b, operation)?
+    {
+        result.validate()?;
+        let classification = classify_chart_events(
+            ChartKind::AnalyticCircle,
+            vec![],
+            &[(0.5, CellLabel::Outside)],
+        )?;
+        let cert = certificate_for(operation, vec![Coverage::Complete], classification, true, &result)?;
+        return Ok((result, cert));
+    }
+
     if matches!(class_a, AnalyticClass::Tube | AnalyticClass::Frustum)
         || matches!(class_b, AnalyticClass::Tube | AnalyticClass::Frustum)
     {

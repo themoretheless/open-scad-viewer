@@ -224,12 +224,25 @@ fn disjoint_tori_and_apex_cones_take_the_empty_algebra() {
 }
 
 #[test]
+fn axial_frustum_sphere_is_certified_for_every_operation() {
+    let frustum = crate::frustum(4., 2., 10.).unwrap();
+    let ball = shifted(&crate::sphere(3.5).unwrap(), [0., 0., 5.]);
+    for operation in ["union", "difference", "intersection"] {
+        let (model, cert) = analytic_boolean(&frustum, &ball, operation).unwrap();
+        assert!(cert.all_complete() && cert.solid_audit_ok, "{operation}");
+        model.validate().unwrap();
+    }
+}
+
+#[test]
 fn touching_or_overlapping_cones_and_tori_still_refuse() {
     let torus = crate::torus(4., 1.).unwrap();
     let cone = crate::frustum(2., 0., 4.).unwrap();
     for (a, b) in [
         (torus.clone(), shifted(&torus, [5., 0., 0.])),
         (cone.clone(), shifted(&cone, [1., 0., 1.])),
+        // A true cone meeting a sphere: outside the cone/sphere cell.
+        (cone.clone(), shifted(&crate::sphere(1.).unwrap(), [0., 0., -0.5])),
         // Control boxes overlap although the solids may not touch: refused,
         // never guessed disjoint.
         (cone.clone(), shifted(&torus, [0., 0., 3.5])),

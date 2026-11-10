@@ -63,6 +63,7 @@ pub mod contact_graft;
 pub mod contact_trim;
 pub mod corner_close;
 pub mod coverage_verifier;
+mod cone_sphere_boolean;
 mod cylinder_sphere_boolean;
 pub mod edge_partition;
 pub mod face_contact;
