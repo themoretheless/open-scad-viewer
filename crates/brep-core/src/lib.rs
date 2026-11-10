@@ -284,7 +284,6 @@ impl std::ops::DerefMut for Model {
         &mut self.0
     }
 }
-use crate::model::model_identity;
 use crate::model::model_report;
 use crate::body_analysis::model_validation;
 pub use model_report::Report;
