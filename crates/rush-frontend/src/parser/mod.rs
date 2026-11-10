@@ -8,10 +8,8 @@ include!("../parser_match.rs");
 mod statement_check_tests;
 
 mod statement;
-mod parser;
 mod number;
 pub use statement::*;
-use parser::*;
 pub use number::*;
 
 mod tokens;

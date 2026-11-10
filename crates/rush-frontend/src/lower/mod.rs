@@ -18,10 +18,8 @@ include!("../lower_match.rs");
 include!("../lower_traits.rs");
 
 mod v;
-mod compiler;
 mod compile;
 use v::*;
-use compiler::*;
 pub use compile::*;
 
 mod nodes;
