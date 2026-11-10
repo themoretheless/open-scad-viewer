@@ -303,3 +303,120 @@ fn repeated_evaluation_is_stable_and_finite() {
         ));
     }
 }
+
+#[test]
+fn curve_sampler_is_bit_exact_with_curve_evaluate_and_full_width_cox_de_boor() {
+    fn reference_full_basis(p: usize, k: &[f64], n: usize, u: f64) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+        let domain = [k[p], k[n]];
+        let mut span = p;
+        if u == domain[1] {
+            span = n - 1;
+            while span > 0 && k[span] == u {
+                span -= 1;
+            }
+        } else {
+            while span + 1 < k.len() && k[span + 1] <= u {
+                span += 1;
+            }
+        }
+        let mut b = vec![0.; k.len() - 1];
+        b[span] = 1.;
+        let mut d1 = vec![0.; b.len()];
+        let mut d2 = d1.clone();
+        for order in 1..=p {
+            let mut next = vec![0.; k.len() - order - 1];
+            let mut first = next.clone();
+            let mut second = next.clone();
+            for i in 0..next.len() {
+                let left = k[i + order] - k[i];
+                let right = k[i + order + 1] - k[i + 1];
+                if left != 0. {
+                    next[i] += (u - k[i]) / left * b[i];
+                    first[i] += order as f64 / left * b[i];
+                    second[i] += order as f64 / left * d1[i];
+                }
+                if right != 0. {
+                    next[i] += (k[i + order + 1] - u) / right * b[i + 1];
+                    first[i] -= order as f64 / right * b[i + 1];
+                    second[i] -= order as f64 / right * d1[i + 1];
+                }
+            }
+            b = next;
+            d1 = first;
+            d2 = second;
+        }
+        (b, d1, d2)
+    }
+
+    let mut rng = Rng(2026);
+    let mut curves: Vec<Curve> = (0..20).map(|_| random_curve(&mut rng)).collect();
+    // Repeated interior knot + rational weights + periodic curve + 2D pcurve.
+    curves.push(Curve {
+        degree: 3,
+        knots: vec![0., 0., 0., 0., 0.25, 0.5, 0.5, 0.75, 1., 1., 1., 1.],
+        control_points: (0..8).map(|i| vec![i as f64 * 0.7 - 1.2, (i * i) as f64 * 0.3, -2. + i as f64]).collect(),
+        weights: vec![1., 0.7, 1.8, 0.5, 2.3, 0.9, 1.4, 1.],
+        periodic: false,
+    });
+    curves.push(Curve {
+        degree: 2,
+        knots: vec![-2., -1., 0., 1., 2., 3., 4., 5.],
+        control_points: vec![
+            vec![1., 0., 0.5],
+            vec![0., 1.2, -0.3],
+            vec![-1., -0.4, 0.8],
+            vec![1., 0., 0.5],
+            vec![0., 1.2, -0.3],
+        ],
+        weights: vec![1., 1.5, 0.8, 1., 1.5],
+        periodic: true,
+    });
+    let curve2d = Curve {
+        degree: 2,
+        knots: vec![0., 0., 0., 0.4, 1., 1., 1.],
+        control_points: vec![vec![0.1, 0.2], vec![0.5, 0.9], vec![0.8, -0.3], vec![1.2, 0.4]],
+        weights: vec![1., 1.7, 0.6, 1.1],
+        periodic: false,
+    };
+
+    for c in &curves {
+        let sampler = CurveSampler::new(c).unwrap();
+        let [a, b] = c.domain();
+        let (p, n) = (c.degree, c.control_points.len());
+        for step in 0..=32 {
+            let frac = step as f64 / 32.;
+            let u = if step == 0 { a } else if step == 32 { b } else { a + frac * (b - a) };
+            let (ref_b, ref_d1, ref_d2) = reference_full_basis(p, &c.knots, n, u);
+            let got_b = basis(p, &c.knots, n, u, c.periodic).unwrap();
+            for i in 0..n {
+                assert_eq!(got_b.basis[i].to_bits(), ref_b[i].to_bits());
+                assert_eq!(got_b.d1[i].to_bits(), ref_d1[i].to_bits());
+                assert_eq!(got_b.d2[i].to_bits(), ref_d2[i].to_bits());
+            }
+            let ev = c.evaluate(u).unwrap();
+            let sv = sampler.evaluate(u).unwrap();
+            let p3 = sampler.point3(u).unwrap();
+            let pf3 = sampler.point_at_fraction3(frac).unwrap();
+            for axis in 0..3 {
+                assert_eq!(sv.point[axis].to_bits(), ev.point[axis].to_bits());
+                assert_eq!(p3[axis].to_bits(), ev.point[axis].to_bits());
+                assert_eq!(pf3[axis].to_bits(), ev.point[axis].to_bits());
+            }
+            assert_eq!(sv.rounding_bound.to_bits(), ev.rounding_bound.to_bits());
+        }
+    }
+
+    let sampler2d = CurveSampler::new(&curve2d).unwrap();
+    for step in 0..=16 {
+        let frac = step as f64 / 16.;
+        let [a, b] = curve2d.domain();
+        let u = if step == 0 { a } else if step == 16 { b } else { a + frac * (b - a) };
+        let ev = curve2d.evaluate(u).unwrap();
+        let p2 = sampler2d.point2(u).unwrap();
+        let pf2 = sampler2d.point_at_fraction2(frac).unwrap();
+        assert_eq!(p2[0].to_bits(), ev.point[0].to_bits());
+        assert_eq!(p2[1].to_bits(), ev.point[1].to_bits());
+        assert_eq!(pf2[0].to_bits(), ev.point[0].to_bits());
+        assert_eq!(pf2[1].to_bits(), ev.point[1].to_bits());
+    }
+}

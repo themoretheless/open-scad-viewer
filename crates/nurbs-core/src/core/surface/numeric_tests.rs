@@ -18,13 +18,24 @@ fn rational_boundary_uses_its_active_origin_without_cancellation() {
     let before = surface.clone();
     let mut cached = SurfaceEvaluator::new(&surface).unwrap();
     let snapshot = SurfaceSampler::new(&surface).unwrap();
+    let borrowed = SurfaceRefSampler::new(&surface).unwrap();
     for i in 0..=20 {
         let v = i as f64 / 20.;
         let expected_y = 2. * v / (1. + v);
+        let direct = surface.evaluate(1., v).unwrap();
+        let ref_eval = borrowed.evaluate(1., v).unwrap();
+        let ref_pt = borrowed.point(1., v).unwrap();
+        let snap_pt = snapshot.point(1., v).unwrap();
+        for axis in 0..3 {
+            assert_eq!(ref_eval.point[axis].to_bits(), direct.point[axis].to_bits());
+            assert_eq!(ref_pt[axis].to_bits(), direct.point[axis].to_bits());
+            assert_eq!(snap_pt[axis].to_bits(), direct.point[axis].to_bits());
+        }
         for p in [
-            surface.evaluate(1., v).unwrap(),
+            direct,
             cached.evaluate(1., v).unwrap(),
             snapshot.evaluate(1., v).unwrap(),
+            ref_eval,
         ] {
             assert_eq!(p.point[0], 0., "v={v}: {:?}", p.point);
             assert_eq!(p.point[2], 1.);

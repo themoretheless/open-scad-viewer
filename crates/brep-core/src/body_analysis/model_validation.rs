@@ -1,36 +1,130 @@
 use crate::{
-    MAX_COEDGES, MAX_ENTITIES, MAX_FACES, Model, Report, TopoKind, boundary_agreement, curve_point,
-    distance, invalid, require,
+    MAX_COEDGES, MAX_ENTITIES, MAX_FACES, Model, Report, TopoKind, boundary_agreement, invalid,
+    require,
 };
-use nurbs_core::{Error, Result, curve::Curve, surface::{Surface, SurfaceSampler}};
-use std::collections::{BTreeMap, BTreeSet};
+use nurbs_core::{
+    Error, Result,
+    curve::{Curve, CurveSampler},
+    surface::{Surface, SurfaceRefSampler},
+};
+use std::collections::HashSet;
+
+#[inline]
+fn distance2(a: [f64; 2], b: [f64; 2]) -> f64 {
+    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2)).sqrt()
+}
+
+#[inline]
+fn distance3(a: [f64; 3], b: [f64; 3]) -> f64 {
+    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
+}
 
 // Preserve independent authored UV clocks during legacy sampled checks too.
 // Geometric admission still requires the continuous/exact boundary owners.
-fn coedge_uv(c: &crate::Coedge, world: &Curve, fraction: f64) -> Result<Vec<f64>> {
-    if let Some(trim) = c.trim().filter(|t| t.curve_parameter == world.domain()) {
+fn resolve_coedge_uv_window(
+    c: &crate::Coedge,
+    pcurve: &CurveSampler<'_>,
+    world_domain: [f64; 2],
+) -> Result<Option<[f64; 2]>> {
+    if let Some(trim) = c.trim().filter(|t| t.curve_parameter == world_domain) {
         // Subrange world trims also serve as diagnostic-only proof windows;
         // they do not replace the topology's complete loop (see BoundaryUse).
         trim.validate()?;
-        let d = c.pcurve.domain();
-        require(trim.pcurve_parameter.iter().all(|t| *t >= d[0] && *t <= d[1]),
-            "Coedge UV trim lies outside its pcurve domain")?;
-        let t = trim.pcurve_parameter[0] * (1. - fraction)
-            + trim.pcurve_parameter[1] * fraction;
-        c.pcurve.evaluate(t).map(|v| v.point)
-    } else { curve_point(&c.pcurve, fraction) }
+        let d = pcurve.domain();
+        require(
+            trim.pcurve_parameter.iter().all(|t| *t >= d[0] && *t <= d[1]),
+            "Coedge UV trim lies outside its pcurve domain",
+        )?;
+        Ok(Some(trim.pcurve_parameter))
+    } else {
+        Ok(None)
+    }
+}
+
+#[inline]
+fn sample_pcurve_uv(
+    pcurve: &CurveSampler<'_>,
+    uv_window: Option<[f64; 2]>,
+    fraction: f64,
+) -> Result<[f64; 2]> {
+    if let Some(w) = uv_window {
+        let t = w[0] * (1. - fraction) + w[1] * fraction;
+        pcurve.point2(t)
+    } else {
+        pcurve.point_at_fraction2(fraction)
+    }
+}
+
+struct PreparedEdge<'a> {
+    sampler: CurveSampler<'a>,
+    endpoints: [[f64; 3]; 2],
+}
+
+struct CoedgeSampleCtx<'a> {
+    raw_surface: &'a Surface,
+    surface: &'a SurfaceRefSampler<'a>,
+    surface_periodic: bool,
+    coedge: &'a crate::Coedge,
+    prepared_edge: &'a PreparedEdge<'a>,
+    pcurve: &'a CurveSampler<'a>,
+    window: Option<[f64; 2]>,
+    uv0: [f64; 2],
+    uv1: [f64; 2],
+    tol: f64,
+}
+
+fn check_coedge_sampled_agreement(
+    ctx: &CoedgeSampleCtx<'_>,
+    uv_ring: &mut Vec<[f64; 2]>,
+) -> Result<()> {
+    let check_pair = |raw_uv: [f64; 2], q: [f64; 3]| -> Result<()> {
+        let uv = if ctx.surface_periodic {
+            nurbs_core::periodic_trim::wrapped_surface_parameters(ctx.raw_surface, raw_uv)?
+        } else {
+            raw_uv
+        };
+        let p = ctx.surface.point(uv[0], uv[1])?;
+        require(
+            distance3(p, q) <= ctx.tol,
+            "pcurve/surface and 3D edge disagree at sampled parameters",
+        )
+    };
+    let rev = ctx.coedge.reversed;
+    uv_ring.push(ctx.uv0);
+    check_pair(ctx.uv0, ctx.prepared_edge.endpoints[usize::from(rev)])?;
+    for i in 1..8 {
+        let t = i as f64 / 8.;
+        let raw_uv = sample_pcurve_uv(ctx.pcurve, ctx.window, t)?;
+        uv_ring.push(raw_uv);
+        let edge_t = if rev { 1. - t } else { t };
+        let q = ctx.prepared_edge.sampler.point_at_fraction3(edge_t)?;
+        check_pair(raw_uv, q)?;
+    }
+    check_pair(ctx.uv1, ctx.prepared_edge.endpoints[usize::from(!rev)])
+}
+
+fn signed_uv_ring_area(uv: &[[f64; 2]]) -> f64 {
+    (0..uv.len())
+        .map(|i| {
+            let a = uv[i];
+            let b = uv[(i + 1) % uv.len()];
+            (a[0] - uv[0][0]) * (b[1] - uv[0][1]) - (b[0] - uv[0][0]) * (a[1] - uv[0][1])
+        })
+        .sum::<f64>()
 }
 
 impl Model {
     pub fn loop_uv(&self, id: usize, segments: usize) -> Result<Vec<[f64; 2]>> {
         require((1..=64).contains(&segments), "Edge sampling must be 1..64")?;
         let wire = self.loops.get(id).ok_or_else(|| invalid("Unknown loop"))?;
-        let mut uv = Vec::new();
+        let mut uv = Vec::with_capacity(wire.coedges.len() * segments);
         for c in &wire.coedges {
+            let pcurve = CurveSampler::new(&c.pcurve)?;
+            require(pcurve.dimension() == 2, "pcurve must be 2D")?;
+            let world_domain = self.edges[c.edge].curve.domain();
+            let window = resolve_coedge_uv_window(c, &pcurve, world_domain)?;
             for i in 0..segments {
-                let p = coedge_uv(c, &self.edges[c.edge].curve, i as f64 / segments as f64)?;
-                require(p.len() == 2, "pcurve must be 2D")?;
-                uv.push([p[0], p[1]]);
+                uv.push(sample_pcurve_uv(&pcurve, window, i as f64 / segments as f64)?);
             }
         }
         Ok(uv)
@@ -107,6 +201,29 @@ impl Model {
             "Invalid B-rep tolerance (1e-10..1e-2 mm)",
         )?;
         let tol = self.tolerance_mm;
+        self.validate_ids_and_tolerances(count)?;
+        let prepared_edges = self.validate_vertices_and_edges(tol)?;
+        self.validate_faces_and_loops(&prepared_edges, tol, sampled_agreement)?;
+        let boundary = self.count_boundary_edges();
+        Ok(Report {
+            vertex_count: self.vertices.len(),
+            edge_count: self.edges.len(),
+            loop_count: self.loops.len(),
+            face_count: self.faces.len(),
+            shell_count: self.shells.len(),
+            body_count: self.bodies.len(),
+            boundary_edge_count: boundary,
+            topology_valid: true,
+            geometry_agreement: if sampled_agreement {
+                "sampled_with_tolerance"
+            } else {
+                "not_checked"
+            },
+            solid_geometry_status: "not_certified",
+        })
+    }
+
+    fn validate_ids_and_tolerances(&self, count: usize) -> Result<()> {
         require(
             self.1.vertices.len() == self.vertices.len()
                 && self.1.edges.len() == self.edges.len()
@@ -125,15 +242,18 @@ impl Model {
             .chain(&self.1.faces)
             .chain(&self.1.shells)
             .chain(&self.1.bodies);
-        let ids: BTreeSet<_> = all_ids.clone().collect();
-        require(ids.len() == all_ids.count(), "Topology IDs must be unique")?;
-        for (kind, ids) in self.identity_groups() {
+        let mut ids = HashSet::with_capacity(count);
+        for id in all_ids {
+            require(ids.insert(id), "Topology IDs must be unique")?;
+        }
+        for (kind, group_ids) in self.identity_groups() {
             require(
-                ids.iter().all(|id| id.kind() == kind),
+                group_ids.iter().all(|id| id.kind() == kind),
                 "Topology ID prefix does not match its entity kind",
             )?;
             require(
-                ids.iter()
+                group_ids
+                    .iter()
                     .all(|id| self.1.change_set.nodes.get(id) == Some(&kind)),
                 "Authoritative change set is missing a topology entity",
             )?;
@@ -152,6 +272,10 @@ impl Model {
                 "Invalid local edge/vertex tolerance",
             )?;
         }
+        Ok(())
+    }
+
+    fn validate_vertices_and_edges(&self, tol: f64) -> Result<Vec<PreparedEdge<'_>>> {
         let mut vertex_used = vec![false; self.vertices.len()];
         for v in &self.vertices {
             require(
@@ -159,12 +283,10 @@ impl Model {
                 "Invalid vertex coordinates",
             )?;
         }
+        let mut prepared = Vec::with_capacity(self.edges.len());
         for e in &self.edges {
-            e.curve.validate()?;
-            require(
-                e.curve.control_points[0].len() == 3,
-                "Edge curve must be 3D",
-            )?;
+            let sampler = CurveSampler::new(&e.curve)?;
+            require(sampler.dimension() == 3, "Edge curve must be 3D")?;
             if e.degenerate {
                 let pole = self.vertices[e.vertices[0]].point;
                 require(
@@ -183,26 +305,40 @@ impl Model {
                     "Constant edge requires an explicit collapsed-boundary marker",
                 )?;
             }
+            let mut endpoints = [[0.; 3]; 2];
             for (i, &v) in e.vertices.iter().enumerate() {
-                let point = &self
+                let point = self
                     .vertices
                     .get(v)
                     .ok_or_else(|| invalid("Edge references unknown vertex"))?
                     .point;
                 vertex_used[v] = true;
+                let ep = sampler.point_at_fraction3(i as f64)?;
                 require(
-                    distance(&curve_point(&e.curve, i as f64)?, point) <= tol,
+                    distance3(ep, point) <= tol,
                     "Edge endpoint does not match vertex",
                 )?;
+                endpoints[i] = ep;
             }
+            prepared.push(PreparedEdge { sampler, endpoints });
         }
         require(vertex_used.iter().all(|v| *v), "Unused vertex")?;
+        Ok(prepared)
+    }
+
+    fn validate_faces_and_loops(
+        &self,
+        prepared_edges: &[PreparedEdge<'_>],
+        tol: f64,
+        sampled_agreement: bool,
+    ) -> Result<()> {
         let mut loop_owner = vec![None; self.loops.len()];
         let mut edge_used = vec![false; self.edges.len()];
+        let mut uv_ring = Vec::with_capacity(64);
         for (fi, f) in self.faces.iter().enumerate() {
-            // Sampling the same immutable face must not revalidate its complete
-            // control net for every coedge parameter.
-            let surface = SurfaceSampler::new(&f.surface)?;
+            // Borrowed sampler validates the face control net once without cloning it.
+            let surface = SurfaceRefSampler::new(&f.surface)?;
+            let surface_periodic = f.surface.periodic_u || f.surface.periodic_v;
             for (li, &l) in std::iter::once(&f.outer).chain(&f.holes).enumerate() {
                 let wire = self
                     .loops
@@ -213,18 +349,20 @@ impl Model {
                     "Loop belongs to multiple faces or is repeated",
                 )?;
                 require(!wire.coedges.is_empty(), "Empty face loop")?;
+                uv_ring.clear();
                 let mut previous: Option<usize> = None;
                 let mut first = None;
-                let mut previous_uv: Option<Vec<f64>> = None;
+                let mut previous_uv: Option<[f64; 2]> = None;
                 let mut first_uv = None;
                 for c in &wire.coedges {
                     let edge = self
                         .edges
                         .get(c.edge)
                         .ok_or_else(|| invalid("Coedge references unknown edge"))?;
+                    let prepared_edge = &prepared_edges[c.edge];
                     edge_used[c.edge] = true;
-                    c.pcurve.validate()?;
-                    require(c.pcurve.control_points[0].len() == 2, "pcurve must be 2D")?;
+                    let pcurve = CurveSampler::new(&c.pcurve)?;
+                    require(pcurve.dimension() == 2, "pcurve must be 2D")?;
                     if edge.degenerate && sampled_agreement {
                         validate_pole_boundary(
                             &f.surface,
@@ -240,55 +378,54 @@ impl Model {
                         first = Some(start);
                     }
                     previous = Some(end);
-                    let uv0 = coedge_uv(c, &edge.curve, 0.)?;
-                    let uv1 = coedge_uv(c, &edge.curve, 1.)?;
-                    if let Some(p) = &previous_uv {
-                        require(distance(p, &uv0) <= 1e-9, "Loop UV chain is disconnected")?;
+                    let window =
+                        resolve_coedge_uv_window(c, &pcurve, prepared_edge.sampler.domain())?;
+                    let uv0 = sample_pcurve_uv(&pcurve, window, 0.)?;
+                    let uv1 = sample_pcurve_uv(&pcurve, window, 1.)?;
+                    if let Some(p) = previous_uv {
+                        require(distance2(p, uv0) <= 1e-9, "Loop UV chain is disconnected")?;
                     } else {
                         first_uv = Some(uv0);
                     }
                     previous_uv = Some(uv1);
-                    // Diagnostic callers replace these samples with full-interval
-                    // verification and retain per-use mismatch/unknown results.
                     if sampled_agreement {
-                        for i in 0..=8 {
-                            let t = i as f64 / 8.;
-                            let uv = coedge_uv(c, &edge.curve, t)?;
-                            let uv = if f.surface.periodic_u || f.surface.periodic_v {
-                                nurbs_core::periodic_trim::wrapped_surface_parameters(&f.surface, [uv[0], uv[1]])?
-                            } else { [uv[0], uv[1]] };
-                            let p = surface.evaluate(uv[0], uv[1])?.point;
-                            let q = curve_point(&edge.curve, if c.reversed { 1. - t } else { t })?;
-                            require(
-                                distance(&p, &q) <= tol,
-                                "pcurve/surface and 3D edge disagree at sampled parameters",
-                            )?;
-                        }
+                        check_coedge_sampled_agreement(
+                            &CoedgeSampleCtx {
+                                raw_surface: &f.surface,
+                                surface: &surface,
+                                surface_periodic,
+                                coedge: c,
+                                prepared_edge,
+                                pcurve: &pcurve,
+                                window,
+                                uv0,
+                                uv1,
+                                tol,
+                            },
+                            &mut uv_ring,
+                        )?;
                     }
                 }
                 require(previous == first, "Loop is not closed")?;
-                let uv_close = distance(previous_uv.as_ref().unwrap(), first_uv.as_ref().unwrap()) <= 1e-9;
-                let periodic_close = if f.surface.periodic_u || f.surface.periodic_v {
-                    let end = previous_uv.as_ref().unwrap();
-                    let start = first_uv.as_ref().unwrap();
-                    let wrapped = nurbs_core::periodic_trim::wrapped_surface_parameters(
-                        &f.surface,
-                        [end[0], end[1]],
-                    )?;
-                    distance(&wrapped, start) <= 1e-9
+                let end_uv = previous_uv.unwrap();
+                let start_uv = first_uv.unwrap();
+                let uv_close = distance2(end_uv, start_uv) <= 1e-9;
+                let periodic_close = if surface_periodic {
+                    let wrapped =
+                        nurbs_core::periodic_trim::wrapped_surface_parameters(&f.surface, end_uv)?;
+                    distance2(wrapped, start_uv) <= 1e-9
                 } else {
                     false
                 };
-                require(uv_close || periodic_close, "UV loop is not closed on its lifted chart")?;
-                let uv = self.loop_uv(l, 8)?;
-                let area = (0..uv.len())
-                    .map(|i| {
-                        let a = uv[i];
-                        let b = uv[(i + 1) % uv.len()];
-                        (a[0] - uv[0][0]) * (b[1] - uv[0][1])
-                            - (b[0] - uv[0][0]) * (a[1] - uv[0][1])
-                    })
-                    .sum::<f64>();
+                require(
+                    uv_close || periodic_close,
+                    "UV loop is not closed on its lifted chart",
+                )?;
+                let area = if sampled_agreement {
+                    signed_uv_ring_area(&uv_ring)
+                } else {
+                    signed_uv_ring_area(&self.loop_uv(l, 8)?)
+                };
                 require(
                     if li == 0 { area > 0. } else { area < 0. },
                     "Outer UV loop must be CCW and hole loops CW",
@@ -297,40 +434,37 @@ impl Model {
         }
         require(loop_owner.iter().all(Option::is_some), "Unused loop")?;
         require(edge_used.iter().all(|v| *v), "Unused edge")?;
-        let boundary = self
-            .shells
-            .iter()
-            .map(|s| {
-                let mut uses = BTreeMap::<usize, usize>::new();
-                for u in &s.faces {
-                    let f = &self.faces[u.face];
-                    for &l in std::iter::once(&f.outer).chain(&f.holes) {
-                        for c in &self.loops[l].coedges {
-                            if !self.edges[c.edge].degenerate {
-                                *uses.entry(c.edge).or_default() += 1;
+        Ok(())
+    }
+
+    fn count_boundary_edges(&self) -> usize {
+        let mut uses = vec![0u32; self.edges.len()];
+        let mut touched = Vec::new();
+        let mut boundary = 0usize;
+        for s in &self.shells {
+            touched.clear();
+            for u in &s.faces {
+                let f = &self.faces[u.face];
+                for &l in std::iter::once(&f.outer).chain(&f.holes) {
+                    for c in &self.loops[l].coedges {
+                        if !self.edges[c.edge].degenerate {
+                            let slot = &mut uses[c.edge];
+                            if *slot == 0 {
+                                touched.push(c.edge);
                             }
+                            *slot += 1;
                         }
                     }
                 }
-                uses.values().filter(|n| **n == 1).count()
-            })
-            .sum();
-        Ok(Report {
-            vertex_count: self.vertices.len(),
-            edge_count: self.edges.len(),
-            loop_count: self.loops.len(),
-            face_count: self.faces.len(),
-            shell_count: self.shells.len(),
-            body_count: self.bodies.len(),
-            boundary_edge_count: boundary,
-            topology_valid: true,
-            geometry_agreement: if sampled_agreement {
-                "sampled_with_tolerance"
-            } else {
-                "not_checked"
-            },
-            solid_geometry_status: "not_certified",
-        })
+            }
+            for &edge_idx in &touched {
+                if uses[edge_idx] == 1 {
+                    boundary += 1;
+                }
+                uses[edge_idx] = 0;
+            }
+        }
+        boundary
     }
 }
 

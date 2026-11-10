@@ -1,13 +1,15 @@
 mod basis;
 mod decompose;
+mod evaluator;
 mod knot_ops;
 #[path = "curve/serialization.rs"]
 #[cfg(feature = "codec")]
 mod serialization;
 use crate::{Result, check, numeric, numeric_err, resource};
-pub(crate) use basis::continuity_meta;
+pub(crate) use basis::{continuity_meta, stack_basis_validated};
 pub use basis::{Basis, LocalBasis, basis, basis_funs_ders, find_span, find_span_hinted};
 pub use decompose::Segment;
+pub use evaluator::{CurveEvaluator, CurveSampler};
 pub use knot_ops::{clamped, merge_near_knots, multiplicity_eps, normalize_knots};
 
 /// Dimension-flexible NURBS control data.
@@ -235,21 +237,7 @@ impl Curve {
                     "Periodic curves must explicitly repeat the first degree control points and weights at the end",
                 )?;
             }
-            let period = domain[1] - domain[0];
-            let scale = self.knots.iter().map(|k| k.abs()).fold(0., f64::max);
-            for i in 0..self.knots.len() - period_controls {
-                let difference = self.knots[i + period_controls] - self.knots[i];
-                check(
-                    (difference - period).abs()
-                        <= 32.
-                            * f64::EPSILON
-                            * scale
-                                .max(difference.abs())
-                                .max(period.abs())
-                                .max(f64::from_bits(1)),
-                    "Periodic exterior knots must repeat with the active period",
-                )?;
-            }
+            validate_periodic_knots(&self.knots, period_controls, domain)?;
         }
         Ok(())
     }
@@ -262,10 +250,14 @@ impl Curve {
             parameters.len() <= 4096,
             "Batch curve evaluation exceeds 4096 parameters",
         )?;
-        self.validate()?;
+        let sampler = CurveSampler::new(self)?;
+        let dim = sampler.dimension();
         parameters
             .iter()
-            .map(|&u| Ok(self.evaluate_validated(u)?.point))
+            .map(|&u| {
+                let eval = self.evaluate_stack_validated(sampler.domain, sampler.scale, u)?;
+                Ok(eval.point[..dim].to_vec())
+            })
             .collect()
     }
     pub fn sample_uniform(&self, segments: usize, include_end: bool) -> Result<Vec<Vec<f64>>> {
@@ -273,76 +265,112 @@ impl Curve {
             (1..=4096).contains(&segments),
             "Curve uniform sampling segments must be in [1, 4096]",
         )?;
-        self.validate()?;
-        let [start, end] = self.domain();
+        let sampler = CurveSampler::new(self)?;
+        let [start, end] = sampler.domain;
+        let dim = sampler.dimension();
         let count = if include_end { segments + 1 } else { segments };
         (0..count)
             .map(|i| {
                 let u = start + (end - start) * (i as f64) / (segments as f64);
-                Ok(self.evaluate_validated(u)?.point)
+                let eval = self.evaluate_stack_validated(sampler.domain, sampler.scale, u)?;
+                Ok(eval.point[..dim].to_vec())
             })
             .collect()
     }
     /// Evaluation without re-validation; callers must have validated `self`.
     pub(crate) fn evaluate_validated(&self, u: f64) -> Result<Evaluation> {
-        let b = basis(
+        let scale = self.weights.iter().copied().fold(0., f64::max);
+        self.evaluate_validated_with(self.domain(), scale, u)
+    }
+    pub(crate) fn evaluate_validated_with(
+        &self,
+        domain: [f64; 2],
+        scale: f64,
+        u: f64,
+    ) -> Result<Evaluation> {
+        let dim = self.control_points[0].len();
+        let eval = self.evaluate_stack_validated(domain, scale, u)?;
+        let c = eval.continuity.unwrap_or(2);
+        Ok(Evaluation {
+            point: eval.point[..dim].to_vec(),
+            d1: (c >= 1).then(|| eval.d1[..dim].to_vec()),
+            d2: (c >= 2).then(|| eval.d2[..dim].to_vec()),
+            domain: eval.domain,
+            continuity: eval.continuity,
+            derivative_status: eval.derivative_status,
+            derivative_side: eval.derivative_side,
+            rounding_bound: eval.rounding_bound,
+        })
+    }
+    pub(super) fn evaluate_stack_validated(
+        &self,
+        domain: [f64; 2],
+        scale: f64,
+        u: f64,
+    ) -> Result<StackCurveEval> {
+        let b = stack_basis_validated(
             self.degree,
             &self.knots,
             self.control_points.len(),
+            domain,
             u,
             self.periodic,
         )?;
         let dim = self.control_points[0].len();
-        let scale = self.weights.iter().copied().fold(0., f64::max);
-        let index = b
-            .basis
+        let first_off = b.basis[..b.len]
             .iter()
             .position(|v| *v > 0.)
             .ok_or_else(|| numeric_err("Empty basis support"))?;
-        let origin = &self.control_points[index];
+        let origin = &self.control_points[b.base + first_off];
         let mut weight = CompensatedSum::new();
         let mut w1 = CompensatedSum::new();
         let mut w2 = CompensatedSum::new();
-        let mut point: Vec<CompensatedSum> = (0..dim).map(|_| CompensatedSum::new()).collect();
-        let mut d1: Vec<CompensatedSum> = (0..dim).map(|_| CompensatedSum::new()).collect();
-        let mut d2: Vec<CompensatedSum> = (0..dim).map(|_| CompensatedSum::new()).collect();
-        for i in 0..self.control_points.len() {
+        let mut point_acc: [CompensatedSum; 3] = std::array::from_fn(|_| CompensatedSum::new());
+        let mut d1_acc: [CompensatedSum; 3] = std::array::from_fn(|_| CompensatedSum::new());
+        let mut d2_acc: [CompensatedSum; 3] = std::array::from_fn(|_| CompensatedSum::new());
+        for j in 0..b.len {
+            let i = b.base + j;
             let w = self.weights[i] / scale;
-            weight.add(b.basis[i] * w);
-            w1.add(b.d1[i] * w);
-            w2.add(b.d2[i] * w);
+            weight.add(b.basis[j] * w);
+            w1.add(b.d1[j] * w);
+            w2.add(b.d2[j] * w);
+            let cp = &self.control_points[i];
             for axis in 0..dim {
-                let coordinate = self.control_points[i][axis] - origin[axis];
-                point[axis].add(b.basis[i] * w * coordinate);
-                d1[axis].add(b.d1[i] * w * coordinate);
-                d2[axis].add(b.d2[i] * w * coordinate);
+                let coordinate = cp[axis] - origin[axis];
+                point_acc[axis].add(b.basis[j] * w * coordinate);
+                d1_acc[axis].add(b.d1[j] * w * coordinate);
+                d2_acc[axis].add(b.d2[j] * w * coordinate);
             }
         }
         let weight = weight.value();
         let w1 = w1.value();
         let w2 = w2.value();
-        let rounding = rounding_bound(&point, weight);
-        let mut point: Vec<f64> = point.iter().map(|a| a.value()).collect();
-        let mut d1: Vec<f64> = d1.iter().map(|a| a.value()).collect();
-        let mut d2: Vec<f64> = d2.iter().map(|a| a.value()).collect();
+        let rounding = rounding_bound(&point_acc[..dim], weight);
         numeric(
             weight > 0. && weight.is_finite(),
             "Rational denominator lost its positive finite value",
         )?;
+        let mut point = [0.; 3];
+        let mut d1 = [0.; 3];
+        let mut d2 = [0.; 3];
         for axis in 0..dim {
-            point[axis] /= weight;
-            d1[axis] = (d1[axis] - w1 * point[axis]) / weight;
-            d2[axis] = (d2[axis] - 2. * w1 * d1[axis] - w2 * point[axis]) / weight;
-            point[axis] += origin[axis];
+            let rel = point_acc[axis].value() / weight;
+            d1[axis] = (d1_acc[axis].value() - w1 * rel) / weight;
+            d2[axis] = (d2_acc[axis].value() - 2. * w1 * d1[axis] - w2 * rel) / weight;
+            point[axis] = rel + origin[axis];
         }
         numeric(
-            point.iter().chain(&d1).chain(&d2).all(|v| v.is_finite()),
+            point[..dim]
+                .iter()
+                .chain(&d1[..dim])
+                .chain(&d2[..dim])
+                .all(|v| v.is_finite()),
             "Rational evaluation exhausted finite precision",
         )?;
-        Ok(Evaluation {
+        Ok(StackCurveEval {
             point,
-            d1: (b.continuity.unwrap_or(2) >= 1).then_some(d1),
-            d2: (b.continuity.unwrap_or(2) >= 2).then_some(d2),
+            d1,
+            d2,
             domain: b.domain,
             continuity: b.continuity,
             derivative_status: b.derivative_status,
@@ -355,6 +383,41 @@ impl Curve {
         bounds(&self.control_points)
     }
 }
+
+pub(super) struct StackCurveEval {
+    pub(super) point: [f64; 3],
+    pub(super) d1: [f64; 3],
+    pub(super) d2: [f64; 3],
+    pub(super) domain: [f64; 2],
+    pub(super) continuity: Option<i32>,
+    pub(super) derivative_status: &'static str,
+    pub(super) derivative_side: &'static str,
+    pub(super) rounding_bound: f64,
+}
+
+pub(crate) fn validate_periodic_knots(
+    knots: &[f64],
+    period_controls: usize,
+    domain: [f64; 2],
+) -> Result<()> {
+    let period = domain[1] - domain[0];
+    let scale = knots.iter().map(|k| k.abs()).fold(0., f64::max);
+    for i in 0..knots.len() - period_controls {
+        let difference = knots[i + period_controls] - knots[i];
+        check(
+            (difference - period).abs()
+                <= 32.
+                    * f64::EPSILON
+                    * scale
+                        .max(difference.abs())
+                        .max(period.abs())
+                        .max(f64::from_bits(1)),
+            "Periodic exterior knots must repeat with the active period",
+        )?;
+    }
+    Ok(())
+}
+
 pub use crate::bounds::{Bounds, from_points as bounds};
 
 pub(super) fn multiplicity(knots: &[f64], u: f64) -> usize {
@@ -439,110 +502,6 @@ impl Homogeneous {
     }
 }
 
-/// Validate-once curve evaluator: `new()` runs `Curve::validate()` a single
-/// time, then `evaluate()` reuses a cached span hint (monotone sampling fast
-/// path) and the O(p²) local basis with no full-width allocations.
-pub struct CurveEvaluator<'a> {
-    curve: &'a Curve,
-    domain: [f64; 2],
-    scale: f64,
-    span: usize,
-}
-impl<'a> CurveEvaluator<'a> {
-    pub fn new(curve: &'a Curve) -> Result<Self> {
-        curve.validate()?;
-        Ok(Self {
-            curve,
-            domain: curve.domain(),
-            scale: curve.weights.iter().copied().fold(0., f64::max),
-            span: curve.degree,
-        })
-    }
-    fn locate(&mut self, u: f64) -> Result<usize> {
-        let p = self.curve.degree;
-        let n = self.curve.control_points.len();
-        if u == self.domain[1] {
-            self.span = n - 1;
-            return Ok(n - 1);
-        }
-        let k = &self.curve.knots;
-        let s = self.span;
-        if s >= p && s + 1 < k.len() && u >= k[s] && u < k[s + 1] {
-            return Ok(s);
-        }
-        let s = find_span(p, k, n, u)?;
-        self.span = s;
-        Ok(s)
-    }
-    pub fn evaluate(&mut self, u: f64) -> Result<Evaluation> {
-        check(
-            u.is_finite() && u >= self.domain[0] && u <= self.domain[1],
-            "Parameter is outside the active knot domain",
-        )?;
-        let span = self.locate(u)?;
-        let p = self.curve.degree;
-        let local = basis_funs_ders(p, &self.curve.knots, span, u, 2)?;
-        let dim = self.curve.control_points[0].len();
-        let first = local
-            .values
-            .iter()
-            .position(|v| *v > 0.)
-            .ok_or_else(|| numeric_err("Empty basis support"))?;
-        let origin = &self.curve.control_points[span - p + first];
-        let mut weight = CompensatedSum::new();
-        let mut w1 = CompensatedSum::new();
-        let mut w2 = CompensatedSum::new();
-        let mut point: Vec<CompensatedSum> = (0..dim).map(|_| CompensatedSum::new()).collect();
-        let mut d1: Vec<CompensatedSum> = (0..dim).map(|_| CompensatedSum::new()).collect();
-        let mut d2: Vec<CompensatedSum> = (0..dim).map(|_| CompensatedSum::new()).collect();
-        for j in 0..=p {
-            let i = span - p + j;
-            let w = self.curve.weights[i] / self.scale;
-            weight.add(local.values[j] * w);
-            w1.add(local.d1[j] * w);
-            w2.add(local.d2[j] * w);
-            for axis in 0..dim {
-                let coordinate = self.curve.control_points[i][axis] - origin[axis];
-                point[axis].add(local.values[j] * w * coordinate);
-                d1[axis].add(local.d1[j] * w * coordinate);
-                d2[axis].add(local.d2[j] * w * coordinate);
-            }
-        }
-        let weight = weight.value();
-        let w1 = w1.value();
-        let w2 = w2.value();
-        let rounding = rounding_bound(&point, weight);
-        let mut point: Vec<f64> = point.iter().map(|a| a.value()).collect();
-        let mut d1: Vec<f64> = d1.iter().map(|a| a.value()).collect();
-        let mut d2: Vec<f64> = d2.iter().map(|a| a.value()).collect();
-        numeric(
-            weight > 0. && weight.is_finite(),
-            "Rational denominator lost its positive finite value",
-        )?;
-        for axis in 0..dim {
-            point[axis] /= weight;
-            d1[axis] = (d1[axis] - w1 * point[axis]) / weight;
-            d2[axis] = (d2[axis] - 2. * w1 * d1[axis] - w2 * point[axis]) / weight;
-            point[axis] += origin[axis];
-        }
-        numeric(
-            point.iter().chain(&d1).chain(&d2).all(|v| v.is_finite()),
-            "Rational evaluation exhausted finite precision",
-        )?;
-        let (continuity, status, side) =
-            continuity_meta(p, &self.curve.knots, self.domain, u, self.curve.periodic);
-        Ok(Evaluation {
-            point,
-            d1: (continuity.unwrap_or(2) >= 1).then_some(d1),
-            d2: (continuity.unwrap_or(2) >= 2).then_some(d2),
-            domain: self.domain,
-            continuity,
-            derivative_status: status,
-            derivative_side: side,
-            rounding_bound: rounding,
-        })
-    }
-}
 impl Curve {
     /// Classic de Boor evaluation in homogeneous space, provided as an
     /// evaluator independent of the basis-function path for cross-checking.
@@ -638,66 +597,6 @@ impl Curve {
             })
             .collect::<Result<Vec<_>>>()?;
         de_casteljau_homogeneous(&controls, t)
-    }
-}
-
-#[cfg(test)]
-mod hinted_span_tests {
-    use super::{find_span, find_span_hinted};
-
-    fn lcg(state: &mut u64) -> f64 {
-        *state = state
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        (*state >> 11) as f64 / (1u64 << 53) as f64
-    }
-
-    #[test]
-    fn hinted_matches_binary_search_on_random_inputs() {
-        // Non-uniform knots with a repeated interior knot.
-        let degree = 3;
-        let knots = [0., 0., 0., 0., 1., 2., 2., 3., 4., 4., 4., 4.];
-        let n = 8;
-        let mut state = 0xDEADBEEFCAFEF00D;
-        for case in 0..2000 {
-            let u = 4. * lcg(&mut state);
-            let u = match case % 5 {
-                0 => 0.,
-                1 => 4.,
-                2 => 2., // exactly on the repeated knot
-                _ => u,
-            };
-            // Hints cover valid spans, stale spans and out-of-range garbage.
-            let mut hint = (lcg(&mut state) * 1000.) as usize;
-            let expected = find_span(degree, &knots, n, u).unwrap();
-            let got = find_span_hinted(degree, &knots, n, u, &mut hint).unwrap();
-            assert_eq!(got, expected, "u={u} initial hint mismatch");
-            assert_eq!(hint, expected, "hint must be updated to the span");
-        }
-    }
-
-    #[test]
-    fn hinted_monotone_sequence_is_stable() {
-        let degree = 2;
-        let knots = [0., 0., 0., 1., 2., 3., 3., 3.];
-        let n = 5;
-        let mut hint = usize::MAX;
-        for i in 0..=64 {
-            let u = 3. * i as f64 / 64.;
-            let got = find_span_hinted(degree, &knots, n, u, &mut hint).unwrap();
-            assert_eq!(got, find_span(degree, &knots, n, u).unwrap());
-        }
-    }
-
-    #[test]
-    fn hinted_rejects_invalid_arguments() {
-        let knots = [0., 0., 0., 1., 1., 1.];
-        let mut hint = 0;
-        assert!(find_span_hinted(0, &knots, 3, 0.5, &mut hint).is_err());
-        assert!(find_span_hinted(2, &knots, 2, 0.5, &mut hint).is_err());
-        assert!(find_span_hinted(2, &knots[..5], 3, 0.5, &mut hint).is_err());
-        assert!(find_span_hinted(2, &knots, 3, -0.5, &mut hint).is_err());
-        assert!(find_span_hinted(2, &knots, 3, f64::NAN, &mut hint).is_err());
     }
 }
 

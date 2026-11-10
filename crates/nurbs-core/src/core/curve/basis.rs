@@ -12,55 +12,78 @@ pub struct Basis {
     pub derivative_side: &'static str,
 }
 
-pub fn basis(p: usize, k: &[f64], n: usize, u: f64, periodic: bool) -> Result<Basis> {
-    let domain = validate_basis(p, k, n)?;
+/// Zero-allocation active-window Cox–de Boor basis (`base .. base + len`).
+/// Produces IEEE-754 bit-identical values and derivatives to [`basis`] on the
+/// non-zero support while avoiding all `3 + 3·p` full-width `Vec` allocations.
+pub(crate) struct StackBasis {
+    pub(crate) base: usize,
+    pub(crate) len: usize,
+    pub(crate) basis: [f64; 27],
+    pub(crate) d1: [f64; 27],
+    pub(crate) d2: [f64; 27],
+    pub(crate) domain: [f64; 2],
+    pub(crate) continuity: Option<i32>,
+    pub(crate) derivative_status: &'static str,
+    pub(crate) derivative_side: &'static str,
+}
+
+pub(crate) fn stack_basis_validated(
+    p: usize,
+    k: &[f64],
+    n: usize,
+    domain: [f64; 2],
+    u: f64,
+    periodic: bool,
+) -> Result<StackBasis> {
     check(
         u.is_finite() && u >= domain[0] && u <= domain[1],
         "Parameter is outside the active knot domain",
     )?;
-    let mut span = p;
-    if u == domain[1] {
-        span = n - 1;
-        while span > 0 && k[span] == u {
-            span -= 1;
-        }
+    let span = if u == domain[1] {
+        p + k[p..n].partition_point(|&kv| kv < u) - 1
     } else {
-        while span + 1 < k.len() && k[span + 1] <= u {
-            span += 1;
-        }
-    }
-    let mut b = vec![0.; k.len() - 1];
-    b[span] = 1.;
-    let mut d1 = vec![0.; b.len()];
-    let mut d2 = d1.clone();
+        p + k[p + 1..=n].partition_point(|&kv| kv <= u)
+    };
+    let base = span - p;
+    let mut b = [0.; 27];
+    let mut d1 = [0.; 27];
+    let mut d2 = [0.; 27];
+    b[p] = 1.;
     for order in 1..=p {
-        let mut next = vec![0.; k.len() - order - 1];
-        let mut first = next.clone();
-        let mut second = next.clone();
-        for i in 0..next.len() {
+        let order_f = order as f64;
+        for j in (p - order)..=p {
+            let i = base + j;
             let left = k[i + order] - k[i];
             let right = k[i + order + 1] - k[i + 1];
+            let (mut next_j, mut first_j, mut second_j) = (0., 0., 0.);
             if left != 0. {
-                next[i] += (u - k[i]) / left * b[i];
-                first[i] += order as f64 / left * b[i];
-                second[i] += order as f64 / left * d1[i];
+                next_j += (u - k[i]) / left * b[j];
+                first_j += order_f / left * b[j];
+                second_j += order_f / left * d1[j];
             }
             if right != 0. {
-                next[i] += (k[i + order + 1] - u) / right * b[i + 1];
-                first[i] -= order as f64 / right * b[i + 1];
-                second[i] -= order as f64 / right * d1[i + 1];
+                next_j += (k[i + order + 1] - u) / right * b[j + 1];
+                first_j -= order_f / right * b[j + 1];
+                second_j -= order_f / right * d1[j + 1];
             }
+            b[j] = next_j;
+            d1[j] = first_j;
+            d2[j] = second_j;
         }
-        b = next;
-        d1 = first;
-        d2 = second;
     }
+    let len = p + 1;
     let (continuity, status, side) = continuity_meta(p, k, domain, u, periodic);
     numeric(
-        b.iter().chain(&d1).chain(&d2).all(|v| v.is_finite()),
+        b[..len]
+            .iter()
+            .chain(&d1[..len])
+            .chain(&d2[..len])
+            .all(|v| v.is_finite()),
         "Knot scale exhausted finite derivative precision",
     )?;
-    Ok(Basis {
+    Ok(StackBasis {
+        base,
+        len,
         basis: b,
         d1,
         d2,
@@ -68,6 +91,32 @@ pub fn basis(p: usize, k: &[f64], n: usize, u: f64, periodic: bool) -> Result<Ba
         continuity,
         derivative_status: status,
         derivative_side: side,
+    })
+}
+
+pub fn basis(p: usize, k: &[f64], n: usize, u: f64, periodic: bool) -> Result<Basis> {
+    let domain = validate_basis(p, k, n)?;
+    let sb = stack_basis_validated(p, k, n, domain, u, periodic)?;
+    let span_scale = (domain[1] - domain[0]).max(p as f64);
+    numeric(
+        k.windows(2)
+            .all(|w| w[1] == w[0] || (span_scale / (w[1] - w[0])).is_finite()),
+        "Knot scale exhausted finite derivative precision",
+    )?;
+    let mut b = vec![0.; n];
+    let mut d1 = vec![0.; n];
+    let mut d2 = vec![0.; n];
+    b[sb.base..sb.base + sb.len].copy_from_slice(&sb.basis[..sb.len]);
+    d1[sb.base..sb.base + sb.len].copy_from_slice(&sb.d1[..sb.len]);
+    d2[sb.base..sb.base + sb.len].copy_from_slice(&sb.d2[..sb.len]);
+    Ok(Basis {
+        basis: b,
+        d1,
+        d2,
+        domain: sb.domain,
+        continuity: sb.continuity,
+        derivative_status: sb.derivative_status,
+        derivative_side: sb.derivative_side,
     })
 }
 

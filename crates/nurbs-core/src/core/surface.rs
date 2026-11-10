@@ -1,7 +1,7 @@
 #[path = "surface/serialization.rs"]
 #[cfg(feature = "codec")]
 mod serialization;
-use crate::curve::{Curve, basis, bounds};
+use crate::curve::{Curve, basis, bounds, stack_basis_validated, validate_basis, validate_periodic_knots};
 use crate::{Result, check, numeric};
 use math_core::{cross, dot, norm};
 
@@ -144,9 +144,58 @@ impl Surface {
             max / min <= 1e12,
             "NURBS surface weight conditioning must not exceed 1e12 across the complete net.",
         )?;
-        for axis in [Axis::U, Axis::V] {
-            for c in self.axis_curves(axis) {
-                c.validate()?;
+        self.validate_axis_lines(nv)
+    }
+    fn validate_axis_lines(&self, nv: usize) -> Result<()> {
+        let nu = self.control_points.len();
+        let domain_u = validate_basis(self.degree_u, &self.knots_u, nu)?;
+        for v in 0..nv {
+            check(
+                (0..nu).all(|u| self.control_points[u][v].iter().all(|x| x.abs() <= 1e9)),
+                "Control points must have consistent dimensions and finite coordinates bounded by 1e9",
+            )?;
+            check(
+                (0..nu).all(|u| (1e-12..=1e12).contains(&self.weights[u][v])),
+                "Weights must be positive, finite, and in [1e-12, 1e12]",
+            )?;
+            if self.periodic_u {
+                let period_controls = nu - self.degree_u;
+                check(
+                    period_controls > self.degree_u,
+                    "A periodic curve needs at least degree+1 unwrapped control points",
+                )?;
+                for i in 0..self.degree_u {
+                    check(
+                        self.weights[i][v] == self.weights[period_controls + i][v]
+                            && self.control_points[i][v]
+                                == self.control_points[period_controls + i][v],
+                        "Periodic curves must explicitly repeat the first degree control points and weights at the end",
+                    )?;
+                }
+                if v == 0 {
+                    validate_periodic_knots(&self.knots_u, period_controls, domain_u)?;
+                }
+            }
+        }
+        let domain_v = validate_basis(self.degree_v, &self.knots_v, nv)?;
+        if self.periodic_v {
+            let period_controls = nv - self.degree_v;
+            check(
+                period_controls > self.degree_v,
+                "A periodic curve needs at least degree+1 unwrapped control points",
+            )?;
+            for u in 0..nu {
+                for i in 0..self.degree_v {
+                    check(
+                        self.weights[u][i] == self.weights[u][period_controls + i]
+                            && self.control_points[u][i]
+                                == self.control_points[u][period_controls + i],
+                        "Periodic curves must explicitly repeat the first degree control points and weights at the end",
+                    )?;
+                }
+                if u == 0 {
+                    validate_periodic_knots(&self.knots_v, period_controls, domain_v)?;
+                }
             }
         }
         Ok(())
@@ -156,43 +205,149 @@ impl Surface {
         self.evaluate_validated(u, v)
     }
     pub(crate) fn evaluate_validated(&self, u: f64, v: f64) -> Result<Evaluation> {
-        let bu = basis(
+        let domain_u = [
+            self.knots_u[self.degree_u],
+            self.knots_u[self.control_points.len()],
+        ];
+        let domain_v = [
+            self.knots_v[self.degree_v],
+            self.knots_v[self.control_points[0].len()],
+        ];
+        let scale = self.weights.iter().flatten().copied().fold(0., f64::max);
+        self.evaluate_validated_with(domain_u, domain_v, scale, u, v)
+    }
+    pub(crate) fn evaluate_point_validated_with(
+        &self,
+        domain_u: [f64; 2],
+        domain_v: [f64; 2],
+        scale: f64,
+        u: f64,
+        v: f64,
+    ) -> Result<[f64; 3]> {
+        Ok(self
+            .evaluate_jet_validated_with(domain_u, domain_v, scale, u, v)?
+            .point)
+    }
+    pub(crate) fn evaluate_validated_with(
+        &self,
+        domain_u: [f64; 2],
+        domain_v: [f64; 2],
+        scale: f64,
+        u: f64,
+        v: f64,
+    ) -> Result<Evaluation> {
+        let jet = self.evaluate_jet_validated_with(domain_u, domain_v, scale, u, v)?;
+        let su = jet.continuity_u.unwrap_or(2);
+        let sv = jet.continuity_v.unwrap_or(2);
+        let first = su >= 1 && sv >= 1;
+        let second = su >= 2 && sv >= 2;
+        let (mut normal, mut gaussian, mut mean) = (None, None, None);
+        if first {
+            let direction = cross(jet.du, jet.dv);
+            let magnitude = norm(direction);
+            let speed_u = norm(jet.du);
+            let speed_v = norm(jet.dv);
+            if magnitude > 1e-12 * speed_u * speed_v && speed_u > 0. && speed_v > 0. {
+                let n = direction.map(|val| val / magnitude);
+                normal = Some(n);
+                if second {
+                    let e = dot(jet.du, jet.du);
+                    let f = dot(jet.du, jet.dv);
+                    let g = dot(jet.dv, jet.dv);
+                    let l = dot(n, jet.duu);
+                    let m = dot(n, jet.duv);
+                    let nn = dot(n, jet.dvv);
+                    let determinant = magnitude * magnitude;
+                    let k = (l * nn - m * m) / determinant;
+                    let h = (e * nn - 2. * f * m + g * l) / (2. * determinant);
+                    gaussian = k.is_finite().then_some(k);
+                    mean = h.is_finite().then_some(h);
+                }
+            }
+        }
+        Ok(Evaluation {
+            point: jet.point,
+            du: (su >= 1).then_some(jet.du),
+            dv: (sv >= 1).then_some(jet.dv),
+            duu: (su >= 2).then_some(jet.duu),
+            duv: first.then_some(jet.duv),
+            dvv: (sv >= 2).then_some(jet.dvv),
+            normal,
+            gaussian_curvature: gaussian,
+            mean_curvature: mean,
+            derivative_status: if !first || !second {
+                "insufficient_continuity"
+            } else if normal.is_none() {
+                "singular"
+            } else {
+                "available"
+            },
+            derivative_side_u: jet.side_u,
+            derivative_side_v: jet.side_v,
+            domain_u: jet.domain_u,
+            domain_v: jet.domain_v,
+            rounding_bound: None,
+        })
+    }
+    fn evaluate_jet_validated_with(
+        &self,
+        domain_u: [f64; 2],
+        domain_v: [f64; 2],
+        scale: f64,
+        u: f64,
+        v: f64,
+    ) -> Result<SurfaceJet> {
+        let bu = stack_basis_validated(
             self.degree_u,
             &self.knots_u,
             self.control_points.len(),
+            domain_u,
             u,
             self.periodic_u,
         )?;
-        let bv = basis(
+        let bv = stack_basis_validated(
             self.degree_v,
             &self.knots_v,
             self.control_points[0].len(),
+            domain_v,
             v,
             self.periodic_v,
         )?;
-        let uj = [&bu.basis, &bu.d1, &bu.d2];
-        let vj = [&bv.basis, &bv.d1, &bv.d2];
-        let scale = self.weights.iter().flatten().copied().fold(0., f64::max);
+        let uj = [&bu.basis[..bu.len], &bu.d1[..bu.len], &bu.d2[..bu.len]];
+        let vj = [&bv.basis[..bv.len], &bv.d1[..bv.len], &bv.d2[..bv.len]];
         // Use the same active-support origin as SurfaceEvaluator. An inactive
         // corner can introduce cancellation on an otherwise exact boundary.
-        let first_u = bu.basis.iter().position(|value| *value > 0.)
-            .ok_or_else(|| crate::numeric_err("Empty basis support"))?;
-        let first_v = bv.basis.iter().position(|value| *value > 0.)
-            .ok_or_else(|| crate::numeric_err("Empty basis support"))?;
+        let first_u = bu.base
+            + bu.basis[..bu.len]
+                .iter()
+                .position(|value| *value > 0.)
+                .ok_or_else(|| crate::numeric_err("Empty basis support"))?;
+        let first_v = bv.base
+            + bv.basis[..bv.len]
+                .iter()
+                .position(|value| *value > 0.)
+                .ok_or_else(|| crate::numeric_err("Empty basis support"))?;
         let origin = &self.control_points[first_u][first_v];
         let derivatives = [(0, 0), (1, 0), (0, 1), (2, 0), (1, 1), (0, 2)];
         let mut homogeneous = [[0.; 4]; 6];
-        for (out, (ou, ov)) in homogeneous.iter_mut().zip(derivatives) {
-            for (i, basis_u) in uj[ou].iter().enumerate() {
-                for (j, basis_v) in vj[ov].iter().enumerate() {
-                    let coefficient = basis_u * basis_v * (self.weights[i][j] / scale);
+        for iu_off in 0..bu.len {
+            let i = bu.base + iu_off;
+            let cp_row = &self.control_points[i];
+            let w_row = &self.weights[i];
+            for iv_off in 0..bv.len {
+                let j = bv.base + iv_off;
+                let w_norm = w_row[j] / scale;
+                let cp = &cp_row[j];
+                let rel = [cp[0] - origin[0], cp[1] - origin[1], cp[2] - origin[2]];
+                for (out, (ou, ov)) in homogeneous.iter_mut().zip(derivatives) {
+                    let coefficient = uj[ou][iu_off] * vj[ov][iv_off] * w_norm;
                     if coefficient == 0. {
                         continue;
                     }
                     out[3] += coefficient;
-                    for d in 0..3 {
-                        out[d] += coefficient * (self.control_points[i][j][d] - origin[d]);
-                    }
+                    out[0] += coefficient * rel[0];
+                    out[1] += coefficient * rel[1];
+                    out[2] += coefficient * rel[2];
                 }
             }
         }
@@ -216,59 +371,22 @@ impl Surface {
             [point, du, dv, duu, duv, dvv]
                 .iter()
                 .flatten()
-                .all(|v| v.is_finite()),
+                .all(|val| val.is_finite()),
             "NURBS surface evaluation exceeded finite numeric bounds.",
         )?;
-        let su = bu.continuity.unwrap_or(2);
-        let sv = bv.continuity.unwrap_or(2);
-        let first = su >= 1 && sv >= 1;
-        let second = su >= 2 && sv >= 2;
-        let (mut normal, mut gaussian, mut mean) = (None, None, None);
-        if first {
-            let direction = cross(du, dv);
-            let magnitude = norm(direction);
-            let speed_u = norm(du);
-            let speed_v = norm(dv);
-            if magnitude > 1e-12 * speed_u * speed_v && speed_u > 0. && speed_v > 0. {
-                let n = direction.map(|v| v / magnitude);
-                normal = Some(n);
-                if second {
-                    let e = dot(du, du);
-                    let f = dot(du, dv);
-                    let g = dot(dv, dv);
-                    let l = dot(n, duu);
-                    let m = dot(n, duv);
-                    let nn = dot(n, dvv);
-                    let determinant = magnitude * magnitude;
-                    let k = (l * nn - m * m) / determinant;
-                    let h = (e * nn - 2. * f * m + g * l) / (2. * determinant);
-                    gaussian = k.is_finite().then_some(k);
-                    mean = h.is_finite().then_some(h);
-                }
-            }
-        }
-        Ok(Evaluation {
+        Ok(SurfaceJet {
             point,
-            du: (su >= 1).then_some(du),
-            dv: (sv >= 1).then_some(dv),
-            duu: (su >= 2).then_some(duu),
-            duv: first.then_some(duv),
-            dvv: (sv >= 2).then_some(dvv),
-            normal,
-            gaussian_curvature: gaussian,
-            mean_curvature: mean,
-            derivative_status: if !first || !second {
-                "insufficient_continuity"
-            } else if normal.is_none() {
-                "singular"
-            } else {
-                "available"
-            },
-            derivative_side_u: bu.derivative_side,
-            derivative_side_v: bv.derivative_side,
+            du,
+            dv,
+            duu,
+            duv,
+            dvv,
+            continuity_u: bu.continuity,
+            continuity_v: bv.continuity,
+            side_u: bu.derivative_side,
+            side_v: bv.derivative_side,
             domain_u: bu.domain,
             domain_v: bv.domain,
-            rounding_bound: None,
         })
     }
     pub fn edit_axis(&self, axis: Axis, edit: impl Fn(&Curve) -> Result<Curve>) -> Result<Self> {
@@ -422,270 +540,28 @@ impl Surface {
         )
     }
 }
-pub fn loft(curves: &[Curve]) -> Result<Surface> {
-    check(
-        (2..=256).contains(&curves.len()),
-        "Loft requires 2..256 compatible curves.",
-    )?;
-    for c in curves {
-        c.validate()?;
-    }
-    let b = &curves[0];
-    check(
-        b.control_points[0].len() == 3
-            && curves.iter().all(|c| {
-                c.degree == b.degree
-                    && c.knots == b.knots
-                    && c.control_points.len() == b.control_points.len()
-                    && c.control_points[0].len() == 3
-            }),
-        "Loft curves must have identical degree, knots, dimension and control count; refine them first.",
-    )?;
-    let mut kv = vec![0.];
-    kv.extend((0..curves.len()).map(|i| i as f64));
-    kv.push((curves.len() - 1) as f64);
-    let result = Surface {
-        degree_u: b.degree,
-        degree_v: 1,
-        knots_u: b.knots.clone(),
-        knots_v: kv,
-        control_points: (0..b.control_points.len())
-            .map(|i| curves.iter().map(|c| c.control_points[i].clone()).collect())
-            .collect(),
-        weights: (0..b.weights.len())
-            .map(|i| curves.iter().map(|c| c.weights[i]).collect())
-            .collect(),
-        periodic_u: b.periodic,
-        periodic_v: false,
-    };
-    result.validate()?;
-    Ok(result)
+struct SurfaceJet {
+    point: [f64; 3],
+    du: [f64; 3],
+    dv: [f64; 3],
+    duu: [f64; 3],
+    duv: [f64; 3],
+    dvv: [f64; 3],
+    continuity_u: Option<i32>,
+    continuity_v: Option<i32>,
+    side_u: &'static str,
+    side_v: &'static str,
+    domain_u: [f64; 2],
+    domain_v: [f64; 2],
 }
-pub fn extrude(c: &Curve, vector: [f64; 3]) -> Result<Surface> {
-    check(
-        vector.iter().all(|v| v.is_finite()) && norm(vector) > 0.,
-        "Extrusion vector must be finite and nonzero.",
-    )?;
-    c.validate()?;
-    let mut second = c.clone();
-    second.control_points = c
-        .control_points
-        .iter()
-        .map(|p| p.iter().enumerate().map(|(i, x)| x + vector[i]).collect())
-        .collect();
-    loft(&[c.clone(), second])
-}
-pub fn revolve(c: &Curve, origin: [f64; 3], axis: [f64; 3], angle: f64) -> Result<Surface> {
-    c.validate()?;
-    check(
-        c.control_points[0].len() == 3
-            && origin
-                .iter()
-                .chain(&axis)
-                .chain([angle].iter())
-                .all(|v| v.is_finite())
-            && norm(axis) > 0.
-            && angle != 0.
-            && angle.abs() <= 360.,
-        "Revolution requires 3D data, a nonzero axis and angle within +/-360 degrees.",
-    )?;
-    let unit = axis.map(|v| v / norm(axis));
-    let arcs = (angle.abs() / 90.).ceil() as usize;
-    let delta = angle * std::f64::consts::PI / 180. / arcs as f64;
-    let mut kv = vec![0.; 3];
-    for i in 1..arcs {
-        kv.extend([i as f64, i as f64]);
-    }
-    kv.extend([arcs as f64; 3]);
-    let aw: Vec<f64> = (0..=2 * arcs)
-        .map(|j| if j % 2 == 1 { (delta / 2.).cos() } else { 1. })
-        .collect();
-    let points = c
-        .control_points
-        .iter()
-        .map(|p| {
-            let relative: [f64; 3] = std::array::from_fn(|i| p[i] - origin[i]);
-            let projection = dot(relative, unit);
-            let center: [f64; 3] = std::array::from_fn(|i| origin[i] + projection * unit[i]);
-            let radial: [f64; 3] = std::array::from_fn(|i| p[i] - center[i]);
-            let perpendicular = cross(unit, radial);
-            aw.iter()
-                .enumerate()
-                .map(|(j, w)| {
-                    if j == 2 * arcs && angle.abs() == 360. {
-                        return p.clone();
-                    }
-                    (0..3)
-                        .map(|i| {
-                            center[i]
-                                + (((j as f64 * delta / 2.).cos()) * radial[i]
-                                    + ((j as f64 * delta / 2.).sin()) * perpendicular[i])
-                                    / w
-                        })
-                        .collect()
-                })
-                .collect()
-        })
-        .collect();
-    let result = Surface {
-        degree_u: c.degree,
-        degree_v: 2,
-        knots_u: c.knots.clone(),
-        knots_v: kv,
-        control_points: points,
-        weights: c
-            .weights
-            .iter()
-            .map(|w| aw.iter().map(|v| w * v).collect())
-            .collect(),
-        periodic_u: c.periodic,
-        periodic_v: false,
-    };
-    result.validate()?;
-    Ok(result)
-}
+
+#[path = "surface/construction.rs"]
+mod construction;
+pub use construction::{extrude, loft, loft_aligned, revolve, ruled_surface, sweep};
 
 #[path = "surface/evaluator.rs"]
 mod evaluator;
-pub use evaluator::{SurfaceEvaluator, SurfaceSampler};
-
-/// Exact translational sweep P(u)+Q(v)-Q(v_start). Profile orientation is fixed;
-/// this is not a Frenet-frame sweep. Rational data and both parameterizations survive.
-pub fn sweep(profile: &Curve, path: &Curve) -> Result<Surface> {
-    profile.validate()?;
-    path.validate()?;
-    check(
-        profile.control_points[0].len() == 3 && path.control_points[0].len() == 3,
-        "Sweep requires two 3D curves",
-    )?;
-    let start = path.evaluate(path.domain()[0])?.point;
-    let profile_max = profile.weights.iter().copied().fold(0., f64::max);
-    let path_max = path.weights.iter().copied().fold(0., f64::max);
-    let profile_min = profile
-        .weights
-        .iter()
-        .copied()
-        .fold(f64::INFINITY, f64::min);
-    let path_min = path.weights.iter().copied().fold(f64::INFINITY, f64::min);
-    // Common homogeneous scale does not affect either rational parameterization.
-    // Preserve admitted products; otherwise remove only the common source scales.
-    let normalize = profile_max * path_max > 1e12 || profile_min * path_min < 1e-12;
-    let (profile_scale, path_scale) = if normalize {
-        (profile_max, path_max)
-    } else {
-        (1., 1.)
-    };
-    let s = Surface {
-        degree_u: profile.degree,
-        degree_v: path.degree,
-        knots_u: profile.knots.clone(),
-        knots_v: path.knots.clone(),
-        control_points: profile
-            .control_points
-            .iter()
-            .map(|p| {
-                path.control_points
-                    .iter()
-                    .map(|q| (0..3).map(|i| p[i] + (q[i] - start[i])).collect())
-                    .collect()
-            })
-            .collect(),
-        weights: profile
-            .weights
-            .iter()
-            .map(|w| {
-                path.weights
-                    .iter()
-                    .map(|v| (w / profile_scale) * (v / path_scale))
-                    .collect()
-            })
-            .collect(),
-        periodic_u: profile.periodic,
-        periodic_v: path.periodic,
-    };
-    s.validate()?;
-    Ok(s)
-}
-/// Compatible section construction: normalize domains, elevate degrees and unify
-/// knot multiplicities without changing section geometry. V remains piecewise linear.
-pub fn loft_aligned(curves: &[Curve]) -> Result<Surface> {
-    check(
-        (2..=256).contains(&curves.len()),
-        "Loft requires 2..256 sections",
-    )?;
-    for c in curves {
-        c.validate()?;
-        check(c.control_points[0].len() == 3, "Loft requires 3D sections")?;
-    }
-    let degree = curves.iter().map(|c| c.degree).max().unwrap();
-    let mut sections = Vec::new();
-    for c in curves {
-        let [a, b] = c.domain();
-        let mut c = c.trim(a, b)?;
-        c.knots.iter_mut().for_each(|k| *k = (*k - a) / (b - a));
-        if c.degree < degree {
-            c = c.elevate(degree)?;
-        }
-        sections.push(c);
-    }
-    let mut unique: Vec<f64> = sections
-        .iter()
-        .flat_map(|c| c.knots.iter().copied())
-        .filter(|k| *k > 0. && *k < 1.)
-        .collect();
-    unique.sort_by(f64::total_cmp);
-    unique.dedup();
-    for k in unique {
-        let count = sections
-            .iter()
-            .map(|c| c.knots.iter().filter(|&&v| v == k).count())
-            .max()
-            .unwrap();
-        for c in &mut sections {
-            let existing = c.knots.iter().filter(|&&v| v == k).count();
-            if existing < count {
-                *c = c.insert(k, count - existing)?;
-            }
-            check(
-                c.control_points.len() <= 256,
-                "Aligned loft exceeds 256 section controls",
-            )?;
-        }
-    }
-    loft(&sections)
-}
-
-/// Creates a linear ($q=1$) ruled surface between two 3D NURBS curves `c0` and `c1`
-/// with $v \in [0, 1]$ and V-knots `[0, 0, 1, 1]`.
-///
-/// When `c0` and `c1` already share identical degree, knot vector, periodicity, and
-/// control point count, their control polygons and weights are linearly interpolated
-/// directly; otherwise their parameter domains, degrees, and knot multiplicities are
-/// unified via [`loft_aligned`].
-pub fn ruled_surface(c0: &Curve, c1: &Curve) -> Result<Surface> {
-    c0.validate()?;
-    c1.validate()?;
-    check(
-        c0.control_points[0].len() == 3 && c1.control_points[0].len() == 3,
-        "Ruled surface requires 3D curves.",
-    )?;
-    if c0.degree == c1.degree
-        && c0.knots == c1.knots
-        && c0.control_points.len() == c1.control_points.len()
-        && c0.periodic == c1.periodic
-    {
-        loft(&[c0.clone(), c1.clone()])
-    } else {
-        loft_aligned(&[c0.clone(), c1.clone()])
-    }
-}
-
-impl Surface {
-    /// Creates a linear ($q=1$) ruled surface between two 3D NURBS curves `c0` and `c1`.
-    pub fn ruled_surface(c0: &Curve, c1: &Curve) -> Result<Self> {
-        ruled_surface(c0, c1)
-    }
-}
+pub use evaluator::{SurfaceEvaluator, SurfaceRefSampler, SurfaceSampler};
 
 #[cfg(test)]
 #[path = "surface/construction_tests.rs"]

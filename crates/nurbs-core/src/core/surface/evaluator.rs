@@ -186,18 +186,66 @@ impl<'a> SurfaceEvaluator<'a> {
 #[derive(Clone)]
 pub struct SurfaceSampler {
     surface: Surface,
+    domain_u: [f64; 2],
+    domain_v: [f64; 2],
+    scale: f64,
 }
 impl SurfaceSampler {
     pub fn new(surface: &Surface) -> Result<Self> {
-        surface.validate()?;
+        let borrowed = SurfaceRefSampler::new(surface)?;
         Ok(Self {
             surface: surface.clone(),
+            domain_u: borrowed.domain_u,
+            domain_v: borrowed.domain_v,
+            scale: borrowed.scale,
         })
     }
     pub fn evaluate(&self, u: f64, v: f64) -> Result<Evaluation> {
-        self.surface.evaluate_validated(u, v)
+        self.surface
+            .evaluate_validated_with(self.domain_u, self.domain_v, self.scale, u, v)
+    }
+    pub fn point(&self, u: f64, v: f64) -> Result<[f64; 3]> {
+        self.surface
+            .evaluate_point_validated_with(self.domain_u, self.domain_v, self.scale, u, v)
     }
     pub fn definition(&self) -> &Surface {
         &self.surface
+    }
+}
+
+/// Borrowed validate-once surface sampler that avoids cloning the control net.
+#[derive(Clone, Copy)]
+pub struct SurfaceRefSampler<'a> {
+    surface: &'a Surface,
+    domain_u: [f64; 2],
+    domain_v: [f64; 2],
+    scale: f64,
+}
+impl<'a> SurfaceRefSampler<'a> {
+    pub fn new(surface: &'a Surface) -> Result<Self> {
+        surface.validate()?;
+        Ok(Self {
+            surface,
+            domain_u: [
+                surface.knots_u[surface.degree_u],
+                surface.knots_u[surface.control_points.len()],
+            ],
+            domain_v: [
+                surface.knots_v[surface.degree_v],
+                surface.knots_v[surface.control_points[0].len()],
+            ],
+            scale: surface.weights.iter().flatten().copied().fold(0., f64::max),
+        })
+    }
+    pub fn evaluate(&self, u: f64, v: f64) -> Result<Evaluation> {
+        self.surface
+            .evaluate_validated_with(self.domain_u, self.domain_v, self.scale, u, v)
+    }
+    pub fn point(&self, u: f64, v: f64) -> Result<[f64; 3]> {
+        self.surface
+            .evaluate_point_validated_with(self.domain_u, self.domain_v, self.scale, u, v)
+    }
+    pub fn definition(&self) -> &'a Surface {
+        self.surface
     }
 }
