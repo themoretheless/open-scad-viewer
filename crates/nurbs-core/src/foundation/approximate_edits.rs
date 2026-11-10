@@ -70,7 +70,7 @@ pub fn remove_curve_knot_report(
     knots.remove(index);
     let candidate = refit_curve(source, source.degree, knots)?;
     // Certify the actual returned candidate, not a rounded reinsertion of it.
-    let report = crate::curve_deviation::inspect(
+    let report = crate::distance::curve_deviation::inspect(
         source,
         &candidate,
         (max_error * 0.01).max(1e-12),
@@ -108,7 +108,7 @@ pub fn rebuild_curve_report(
         "Maximum error must be finite and nonnegative",
     )?;
     let candidate = rebuild_candidate(source, degree, control_count)?;
-    let report = crate::curve_deviation::inspect(
+    let report = crate::distance::curve_deviation::inspect(
         source,
         &candidate,
         (max_error * 0.01).max(1e-12),
@@ -186,7 +186,7 @@ pub fn reduce_curve_degree_report(
         (true, 0.)
     } else {
         // Bound the returned candidate directly; rounded elevation is not its image.
-        let report = crate::curve_deviation::inspect(
+        let report = crate::distance::curve_deviation::inspect(
             source,
             &candidate,
             (max_error * 0.01).max(1e-12),
@@ -287,7 +287,7 @@ pub fn reduce_surface_axis_report(
     // coincidence is not a proven zero bound (the archived contract in
     // docs/design/nurbs-knot-removal.md), so the certificate always carries
     // the outward-rounded positional bound: a zero budget is never accepted.
-    let error = crate::continuity::deviation::positional_upper(source, &candidate)?;
+    let error = crate::foundation::surface_deviation::positional_upper(source, &candidate)?;
     let accepted = error <= max_error;
     let tolerance = context(tolerance);
     Ok(SurfaceEdit {
@@ -377,7 +377,7 @@ pub fn remove_surface_knots_report(
         cursor += 1;
     }
     let candidate = source.edit_axis(axis, |c| refit_curve(c, degree, knots.clone()))?;
-    let error = crate::continuity::deviation::positional_upper(source, &candidate)?;
+    let error = crate::foundation::surface_deviation::positional_upper(source, &candidate)?;
     let accepted = error <= max_error;
     Ok(SurfaceEdit {
         surface: if accepted { candidate } else { source.clone() },

@@ -6,11 +6,7 @@ use crate::{
     surface_join::{Boundary, Decision, boundary_box},
     surface_shape_operator,
 };
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Orientation {
-    Same,
-    Opposite,
-}
+pub use crate::analysis::surface_boundary::Orientation;
 #[derive(Clone, Debug)]
 pub struct BranchBounds {
     pub normal_lower: f64,

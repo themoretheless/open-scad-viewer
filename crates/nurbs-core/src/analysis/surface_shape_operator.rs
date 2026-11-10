@@ -112,8 +112,8 @@ pub(crate) fn from_graph_jets(j:&jets::Jets,frame:([usize;3],[f64;2]))->Result<O
     }
     Ok(Some(shape))
 }
-fn graph_proposal(s:&Surface,edge:crate::surface_join::Boundary,range:[f64;2],reverse:bool)->Option<([usize;3],[f64;2])> {
-    use crate::surface_join::Boundary;
+fn graph_proposal(s:&Surface,edge:crate::analysis::surface_boundary::Boundary,range:[f64;2],reverse:bool)->Option<([usize;3],[f64;2])> {
+    use crate::analysis::surface_boundary::Boundary;
     let d=[[s.knots_u[s.degree_u],s.knots_u[s.control_points.len()]],[s.knots_v[s.degree_v],s.knots_v[s.control_points[0].len()]]];
     let (fixed,max)=match edge {Boundary::UMin=>(0,false),Boundary::UMax=>(0,true),Boundary::VMin=>(1,false),Boundary::VMax=>(1,true)};
     let mut t=range[0]*0.5+range[1]*0.5;if reverse{t=1.-t;}
@@ -362,7 +362,7 @@ fn rectangle_bounds_impl(
 /// knot in the query requires a C2 basis; storage seam closure is not inferred.
 pub fn boundary_bounds(
     surface: &Surface,
-    edge: crate::surface_join::Boundary,
+    edge: crate::analysis::surface_boundary::Boundary,
     range: [f64; 2],
     reverse: bool,
 ) -> Result<Report> {
@@ -374,7 +374,7 @@ pub fn boundary_bounds(
             && range[1] <= 1.,
         "Tensor boundary range must lie in [0,1]",
     )?;
-    use crate::surface_join::Boundary;
+    use crate::analysis::surface_boundary::Boundary;
     let (p, k, n) = match edge {
         Boundary::UMin | Boundary::UMax => (
             surface.degree_v,
@@ -409,9 +409,9 @@ pub fn boundary_bounds(
         }
     }
     let frame=graph_proposal(surface,edge,range,reverse);
-    let graph=frame.map(|frame|crate::surface_g1::boundary_graph_jets(surface,edge,range,reverse,frame)).transpose()?;
+    let graph=frame.map(|frame|crate::analysis::surface_boundary::boundary_graph_jets(surface,edge,range,reverse,frame)).transpose()?;
     let mut result: Option<Shape> = None;
-    for (index,j) in crate::surface_g1::boundary_jets(surface, edge, range, reverse)?.iter().enumerate() {
+    for (index,j) in crate::analysis::surface_boundary::boundary_jets(surface, edge, range, reverse)?.iter().enumerate() {
         let graph_shape=if let (Some(frame),Some(graph))=(frame,graph.as_ref()) {from_graph_jets(&graph[index],frame)?}else{None};
         let Some(shape) = (if graph_shape.is_some(){graph_shape}else{from_jets(j)?}) else {
             return Ok(Report {

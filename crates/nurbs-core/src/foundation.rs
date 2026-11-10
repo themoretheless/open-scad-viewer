@@ -18,6 +18,7 @@ use serialization::tolerance_evidence;
 #[cfg(feature = "codec")]
 pub use serialization::{project_curve, project_surface};
 
+pub mod surface_deviation;
 pub mod sections;
 pub mod bezier_extraction;
 pub mod canonical;

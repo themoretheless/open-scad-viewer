@@ -1,11 +1,12 @@
 //! Диффгеом и меры (read-only запросы).
+pub mod surface_boundary;
 pub mod affine_volume;
 pub mod class_a;
 pub mod cloud_normals;
 pub mod cloud_segmentation;
 pub mod curvature_spectrum;
 pub mod curve_analysis;
-pub mod curve_deviation;
+pub use crate::distance::curve_deviation;
 pub mod curve_differential;
 pub mod curve_extrema;
 pub mod curve_measure;

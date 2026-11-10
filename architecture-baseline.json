@@ -91,12 +91,8 @@
   ],
   "mechanical": [],
   "moduleLayers": [
-    "nurbs-core: analysis -> join",
     "nurbs-core: analysis -> sweeps",
-    "nurbs-core: foundation -> analysis",
-    "nurbs-core: foundation -> join",
-    "nurbs-core: offset -> construct",
-    "nurbs-core: sweeps -> transport"
+    "nurbs-core: offset -> construct"
   ],
   "functions": {
     "crates/brep-core/src/aag_features.rs::find_holes@1": 243,
@@ -636,7 +632,7 @@
     "mesh-query": 1,
     "mesh-section": 1,
     "mesh-topology": 1,
-    "nurbs-core": 1180,
+    "nurbs-core": 1179,
     "openscad-core": 7,
     "photogrammetry-core": 6,
     "planar-geometry": 1,

@@ -34,7 +34,7 @@ pub(crate) fn translated_cell_upper(
     let bb = crate::curve_distance::restricted_controls(b, bspan, t)?;
     let wa = aa.iter().map(|p| p[dimension]).collect::<Vec<_>>();
     let wb = bb.iter().map(|p| p[dimension]).collect::<Vec<_>>();
-    let denominator = crate::curve_surface_composition::mul(&wa, &wb)?;
+    let denominator = crate::numerics::bernstein_product::mul(&wa, &wb)?;
     let weight = Interval::new(
         denominator
             .iter()
@@ -49,8 +49,8 @@ pub(crate) fn translated_cell_upper(
     for axis in 0..dimension {
         let av = aa.iter().map(|p| p[axis]).collect::<Vec<_>>();
         let bv = bb.iter().map(|p| p[axis]).collect::<Vec<_>>();
-        let left = crate::curve_surface_composition::mul(&av, &wb)?;
-        let right = crate::curve_surface_composition::mul(&bv, &wa)?;
+        let left = crate::numerics::bernstein_product::mul(&av, &wb)?;
+        let right = crate::numerics::bernstein_product::mul(&bv, &wa)?;
         let delta = Interval::point(a.control_points[aspan - a.degree][axis])
             .sub(Interval::point(b.control_points[bspan - b.degree][axis]))?
             .sub(Interval::point(translation[axis]))?;

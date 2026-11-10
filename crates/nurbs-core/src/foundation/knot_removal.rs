@@ -69,7 +69,7 @@ pub fn assess_knot_removal(
     // at the reported bound.
     let budget = if max_passes == 0 { 4096 } else { max_passes };
     let mut accuracy = 1e-12;
-    let mut bound = crate::curve_deviation::inspect(curve, &candidate, accuracy, budget)?
+    let mut bound = crate::distance::curve_deviation::inspect(curve, &candidate, accuracy, budget)?
         .bounds[1];
     // Fixed-point iteration on the certified bound, under a unified budget
     // guard (8 passes, matching the historical cap).
@@ -81,7 +81,7 @@ pub fn assess_knot_removal(
             break;
         }
         accuracy = next_accuracy;
-        let next = crate::curve_deviation::inspect(curve, &candidate, accuracy, budget)?
+        let next = crate::distance::curve_deviation::inspect(curve, &candidate, accuracy, budget)?
             .bounds[1];
         let stable = (next - bound).abs() <= 1e-12 * bound.max(1e-300);
         bound = next;

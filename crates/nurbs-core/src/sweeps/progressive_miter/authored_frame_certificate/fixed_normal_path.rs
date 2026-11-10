@@ -110,22 +110,6 @@ fn fixed_normal_values_cell(
     Ok(out)
 }
 
-#[test]
-fn adaptive_values_cover_regular_turning_tangent_and_reject_partial_work() {
-    let twist=crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
-    for (points,weights) in [
-        (vec![vec![0.,0.,0.],vec![1.,1.,0.],vec![2.,-1.,0.],vec![3.,0.,0.]],vec![1.,2.,2.,1.]),
-        (vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![1.,1.,0.],vec![2.,0.,0.],vec![1.,0.,0.]],vec![1.;5]),
-    ] {
-        let degree=points.len()-1;
-        let path=Curve {degree,knots:[vec![0.;degree+1],vec![1.;degree+1]].concat(),control_points:points,weights,periodic:false};
-        let report=certify_fixed_normal_path_values(&path,[0.,0.,1.],&twist,[0.,1.],10000).unwrap();
-        assert_eq!(report.status,Status::Certified);
-        assert!(report.cells>0);
-        assert_eq!(certify_fixed_normal_path_values(&path,[0.,0.,1.],&twist,[0.,1.],0).unwrap().status,Status::Unresolved);
-        assert_eq!(certify_fixed_normal_path_values(&path,[0.,0.,1.],&twist,[0.,1.],report.cells-1).unwrap().status,Status::Unresolved);
-    }
-}
 
 /// Original path frame and authored laws have independent traversal domains
 /// after length inversion. Only relative pose is returned; translation belongs
@@ -224,185 +208,199 @@ pub fn certify_fixed_normal_path(
     apply_twist(out, twist, traversal, max_cells)
 }
 
-#[test]
-fn curved_fixed_normal_jets_match_analytic_original_path_and_refuse_partial_work() {
-    // C(t)=(t,t²,0), on an independent authored domain [2,5].
-    let path = Curve { degree:2, knots:vec![2.,2.,2.,5.,5.,5.],
-        control_points:vec![vec![0.,0.,0.],vec![0.5,0.,0.],vec![1.,1.,0.]], weights:vec![1.;3], periodic:false };
-    let twist = crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
-    let r = certify_fixed_normal_path(&path,[0.,0.,1.],&twist,[0.25,0.5],1000).unwrap();
-    assert_eq!(r.status,Status::Certified); assert!(r.single_span);
-    // Value endpoints use original derivative restrictions, including both
-    // authored endpoints, rather than zero-width derivative division.
-    for t in [0.,0.375,1.] {
-        let v=certify_fixed_normal_path_values(&path,[0.,0.,1.],&twist,[t,t],1000).unwrap();
-        assert_eq!(v.status,Status::Certified);
-        let h=(1.+4.*t*t).sqrt();
-        for (bounds,x) in v.longitudinal.unwrap().into_iter().zip([1./h,2.*t/h,0.]) {
-            assert!(bounds[0]<=x && x<=bounds[1]);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn adaptive_values_cover_regular_turning_tangent_and_reject_partial_work() {
+        let twist=crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
+        for (points,weights) in [
+            (vec![vec![0.,0.,0.],vec![1.,1.,0.],vec![2.,-1.,0.],vec![3.,0.,0.]],vec![1.,2.,2.,1.]),
+            (vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![1.,1.,0.],vec![2.,0.,0.],vec![1.,0.,0.]],vec![1.;5]),
+        ] {
+            let degree=points.len()-1;
+            let path=Curve {degree,knots:[vec![0.;degree+1],vec![1.;degree+1]].concat(),control_points:points,weights,periodic:false};
+            let report=certify_fixed_normal_path_values(&path,[0.,0.,1.],&twist,[0.,1.],10000).unwrap();
+            assert_eq!(report.status,Status::Certified);
+            assert!(report.cells>0);
+            assert_eq!(certify_fixed_normal_path_values(&path,[0.,0.,1.],&twist,[0.,1.],0).unwrap().status,Status::Unresolved);
+            assert_eq!(certify_fixed_normal_path_values(&path,[0.,0.,1.],&twist,[0.,1.],report.cells-1).unwrap().status,Status::Unresolved);
         }
-        let short=certify_fixed_normal_path_values(&path,[0.,0.,1.],&twist,[t,t],v.cells-1).unwrap();
+    }
+    #[test]
+    fn curved_fixed_normal_jets_match_analytic_original_path_and_refuse_partial_work() {
+        // C(t)=(t,t²,0), on an independent authored domain [2,5].
+        let path = Curve { degree:2, knots:vec![2.,2.,2.,5.,5.,5.],
+            control_points:vec![vec![0.,0.,0.],vec![0.5,0.,0.],vec![1.,1.,0.]], weights:vec![1.;3], periodic:false };
+        let twist = crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
+        let r = certify_fixed_normal_path(&path,[0.,0.,1.],&twist,[0.25,0.5],1000).unwrap();
+        assert_eq!(r.status,Status::Certified); assert!(r.single_span);
+        // Value endpoints use original derivative restrictions, including both
+        // authored endpoints, rather than zero-width derivative division.
+        for t in [0.,0.375,1.] {
+            let v=certify_fixed_normal_path_values(&path,[0.,0.,1.],&twist,[t,t],1000).unwrap();
+            assert_eq!(v.status,Status::Certified);
+            let h=(1.+4.*t*t).sqrt();
+            for (bounds,x) in v.longitudinal.unwrap().into_iter().zip([1./h,2.*t/h,0.]) {
+                assert!(bounds[0]<=x && x<=bounds[1]);
+            }
+            let short=certify_fixed_normal_path_values(&path,[0.,0.,1.],&twist,[t,t],v.cells-1).unwrap();
+            assert_eq!(short.status,Status::Unresolved);
+            assert!(short.longitudinal.is_none() && short.transverse.is_none());
+        }
+        let scale=crate::sweeps::progressive_sweep::constant_vector_law([1.,0.,0.]).unwrap();
+        let qs=[[[1.,1.],[0.,0.],[0.,0.]],[[2.,2.],[0.,0.],[0.,0.]]];
+        let batch=certify_fixed_normal_control_values(&path,[0.,0.,1.],&scale,&twist,None,&qs,[0.25,0.5],1000).unwrap();
+        assert_eq!(batch.status,Status::Certified);
+        let short=certify_fixed_normal_control_values(&path,[0.,0.,1.],&scale,&twist,None,&qs,[0.25,0.5],batch.cells-1).unwrap();
+        assert_eq!(short.status,Status::Unresolved);
+        for t in [0.25_f64,0.375,0.5] {
+            let h=1.+4.*t*t;
+            let values=[1./h.sqrt(),2.*t/h.sqrt(),0.];
+            let first=[-4.*t/h.powf(1.5),2./h.powf(1.5),0.];
+            let second=[(-4.+32.*t*t)/h.powf(2.5),-24.*t/h.powf(2.5),0.];
+            let axis=r.longitudinal.as_ref().unwrap();
+            for (bounds,expected) in [axis.value,axis.first,axis.second].into_iter().zip([values,first,second]) {
+                for k in 0..3 { assert!(bounds[k][0]<=expected[k] && expected[k]<=bounds[k][1]); }
+            }
+            let n=r.transverse.as_ref().unwrap();
+            assert!(n.value[2][0]<=1. && n.value[2][1]>=1.);
+            for bounds in [n.first,n.second] { for k in 0..3 {assert!(bounds[k][0]<=0. && bounds[k][1]>=0.);} }
+        }
+        let short=certify_fixed_normal_path(&path,[0.,0.,1.],&twist,[0.25,0.5],r.cells-1).unwrap();
         assert_eq!(short.status,Status::Unresolved);
         assert!(short.longitudinal.is_none() && short.transverse.is_none());
+        let line=crate::primitives::line([0.;3],[0.,0.,10.]).unwrap();
+        let singular=certify_fixed_normal_path(&line,[0.,0.,1.],&twist,[0.,1.],1000).unwrap();
+        assert_eq!(singular.status,Status::Unresolved);
+        assert!(singular.longitudinal.is_none() && singular.transverse.is_none());
     }
-    let scale=crate::sweeps::progressive_sweep::constant_vector_law([1.,0.,0.]).unwrap();
-    let qs=[[[1.,1.],[0.,0.],[0.,0.]],[[2.,2.],[0.,0.],[0.,0.]]];
-    let batch=certify_fixed_normal_control_values(&path,[0.,0.,1.],&scale,&twist,None,&qs,[0.25,0.5],1000).unwrap();
-    assert_eq!(batch.status,Status::Certified);
-    let short=certify_fixed_normal_control_values(&path,[0.,0.,1.],&scale,&twist,None,&qs,[0.25,0.5],batch.cells-1).unwrap();
-    assert_eq!(short.status,Status::Unresolved);
-    for t in [0.25_f64,0.375,0.5] {
-        let h=1.+4.*t*t;
-        let values=[1./h.sqrt(),2.*t/h.sqrt(),0.];
-        let first=[-4.*t/h.powf(1.5),2./h.powf(1.5),0.];
-        let second=[(-4.+32.*t*t)/h.powf(2.5),-24.*t/h.powf(2.5),0.];
-        let axis=r.longitudinal.as_ref().unwrap();
-        for (bounds,expected) in [axis.value,axis.first,axis.second].into_iter().zip([values,first,second]) {
-            for k in 0..3 { assert!(bounds[k][0]<=expected[k] && expected[k]<=bounds[k][1]); }
+    #[test]
+    fn fixed_normal_interior_projection_singularity_is_not_hidden_by_regular_endpoints(){
+        // C(t)=(t²-t,0,t): tangent is parallel to seed only at t=1/2.
+        let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+            control_points:vec![vec![0.;3],vec![-0.5,0.,0.5],vec![0.,0.,1.]],
+            weights:vec![1.;3],periodic:false};
+        let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
+        for t in [0.,1.] {
+            let r=certify_fixed_normal_path_values(&path,[0.,0.,1.],&zero,[t,t],1000).unwrap();
+            assert_eq!(r.status,Status::Certified);
         }
-        let n=r.transverse.as_ref().unwrap();
-        assert!(n.value[2][0]<=1. && n.value[2][1]>=1.);
-        for bounds in [n.first,n.second] { for k in 0..3 {assert!(bounds[k][0]<=0. && bounds[k][1]>=0.);} }
-    }
-    let short=certify_fixed_normal_path(&path,[0.,0.,1.],&twist,[0.25,0.5],r.cells-1).unwrap();
-    assert_eq!(short.status,Status::Unresolved);
-    assert!(short.longitudinal.is_none() && short.transverse.is_none());
-    let line=crate::primitives::line([0.;3],[0.,0.,10.]).unwrap();
-    let singular=certify_fixed_normal_path(&line,[0.,0.,1.],&twist,[0.,1.],1000).unwrap();
-    assert_eq!(singular.status,Status::Unresolved);
-    assert!(singular.longitudinal.is_none() && singular.transverse.is_none());
-}
-
-#[test]
-fn fixed_normal_interior_projection_singularity_is_not_hidden_by_regular_endpoints(){
-    // C(t)=(t²-t,0,t): tangent is parallel to seed only at t=1/2.
-    let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
-        control_points:vec![vec![0.;3],vec![-0.5,0.,0.5],vec![0.,0.,1.]],
-        weights:vec![1.;3],periodic:false};
-    let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
-    for t in [0.,1.] {
-        let r=certify_fixed_normal_path_values(&path,[0.,0.,1.],&zero,[t,t],1000).unwrap();
-        assert_eq!(r.status,Status::Certified);
-    }
-    for interval in [[0.,1.],[0.5,0.5]] {
-        let r=certify_fixed_normal_path_values(&path,[0.,0.,1.],&zero,interval,1000).unwrap();
+        for interval in [[0.,1.],[0.5,0.5]] {
+            let r=certify_fixed_normal_path_values(&path,[0.,0.,1.],&zero,interval,1000).unwrap();
+            assert_eq!(r.status,Status::Unresolved);
+            assert!(r.longitudinal.is_none()&&r.transverse.is_none()&&r.binormal.is_none());
+        }
+        let r=certify_fixed_normal_path(&path,[0.,0.,1.],&zero,[0.,1.],1000).unwrap();
         assert_eq!(r.status,Status::Unresolved);
+        assert_eq!(r.reason,Some("fixed-normal-projection-unresolved"));
         assert!(r.longitudinal.is_none()&&r.transverse.is_none()&&r.binormal.is_none());
     }
-    let r=certify_fixed_normal_path(&path,[0.,0.,1.],&zero,[0.,1.],1000).unwrap();
-    assert_eq!(r.status,Status::Unresolved);
-    assert_eq!(r.reason,Some("fixed-normal-projection-unresolved"));
-    assert!(r.longitudinal.is_none()&&r.transverse.is_none()&&r.binormal.is_none());
-}
-
-#[test]
-fn fixed_normal_complete_cover_subdivides_original_circle_and_refuses_partial_cover(){
-    let path=crate::primitives::circle([0.;3],[0.,0.,1.],5.).unwrap();
-    let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
-    let whole=certify_fixed_normal_cover(&path,[0.,0.,1.],&zero,10000).unwrap();
-    assert_eq!(whole.status,Status::Certified);
-    let intervals=whole.intervals.as_ref().unwrap();
-    assert!(intervals.len()>1);
-    assert_eq!(intervals.first().unwrap().traversal[0],0.);
-    assert_eq!(intervals.last().unwrap().traversal[1],1.);
-    for pair in intervals.windows(2){assert_eq!(pair[0].traversal[1],pair[1].traversal[0]);}
-    for interval in intervals {
-        let t=(interval.traversal[0]+interval.traversal[1])/2.;
-        let p=path.evaluate(t).unwrap().point;
-        for k in 0..2 {let expected=p[k]/5.;let bound=interval.binormal.value[k];assert!(bound[0]<=expected&&expected<=bound[1]);}
-    }
-    let short=certify_fixed_normal_cover(&path,[0.,0.,1.],&zero,whole.cells-1).unwrap();
-    assert_eq!(short.status,Status::Unresolved);assert!(short.intervals.is_none());
-    let empty=certify_fixed_normal_cover(&path,[0.,0.,1.],&zero,0).unwrap();
-    assert_eq!(empty.status,Status::Unresolved);assert_eq!(empty.cells,0);assert!(empty.intervals.is_none());
-    let singular=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
-        control_points:vec![vec![0.;3],vec![-0.5,0.,0.5],vec![0.,0.,1.]],weights:vec![1.;3],periodic:false};
-    let refused=certify_fixed_normal_cover(&singular,[0.,0.,1.],&zero,1000).unwrap();
-    assert_eq!(refused.status,Status::Unresolved);assert!(refused.intervals.is_none());
-    assert!(refused.cells<=1000);
-    #[cfg(feature="transport")]
-    {
-        use value_codec::json;
-        let r=crate::transport::dispatch(json!({"op":"sweep_fixed_normal_frame_regularity",
-            "path":path,"normal":[0.,0.,1.],"twist":zero,"maxCells":10000})).unwrap();
-        assert_eq!(r["regularityCertified"],true);
-        assert_eq!(r["cells"],whole.cells);
-        assert_eq!(r["certifiedIntervals"],whole.certified_intervals);
-        for flag in ["continuousBound","surfaceRegularityCertified","globalEmbeddingCertified"] {assert_eq!(r[flag],false);}
-    }
-}
-
-#[test]
-fn closed_circle_knot_contact_blocks_single_span_remainder_without_endpoint_jet_proof(){
-    let path=crate::primitives::circle([0.;3],[0.,0.,1.],5.).unwrap();
-    let mut twist=crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
-    twist.control_points[1][0]=std::f64::consts::TAU;
-    let aligned=certify_fixed_normal_path(&path,[0.,0.,1.],&twist,[0.25,0.25+1./256.],10000).unwrap();
-    let interior=certify_fixed_normal_path(&path,[0.,0.,1.],&twist,[0.25+1./1024.,0.25+1./256.],10000).unwrap();
-    eprintln!("aligned status={:?} single_span={} reason={:?} cells={}; interior status={:?} single_span={} cells={}",aligned.status,aligned.single_span,aligned.reason,aligned.cells,interior.status,interior.single_span,interior.cells);
-    assert!(aligned.status!=Status::Certified||!aligned.single_span);
-    assert_eq!(interior.status,Status::Certified);assert!(interior.single_span);
-}
-
-#[test]
-fn original_coordinate_plane_has_constant_projected_normal_jets() {
-    let twist=crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
-    for axis in 0..3 {for sign in [-1.,1.] {
-        let mut points=vec![vec![0.;3];3];
-        for (i,p) in points.iter_mut().enumerate() {
-            p[axis]=17.;p[(axis+1)%3]=i as f64*0.5;
-            p[(axis+2)%3]=if i==2 {1.}else {0.};
+    #[test]
+    fn fixed_normal_complete_cover_subdivides_original_circle_and_refuses_partial_cover(){
+        let path=crate::primitives::circle([0.;3],[0.,0.,1.],5.).unwrap();
+        let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
+        let whole=certify_fixed_normal_cover(&path,[0.,0.,1.],&zero,10000).unwrap();
+        assert_eq!(whole.status,Status::Certified);
+        let intervals=whole.intervals.as_ref().unwrap();
+        assert!(intervals.len()>1);
+        assert_eq!(intervals.first().unwrap().traversal[0],0.);
+        assert_eq!(intervals.last().unwrap().traversal[1],1.);
+        for pair in intervals.windows(2){assert_eq!(pair[0].traversal[1],pair[1].traversal[0]);}
+        for interval in intervals {
+            let t=(interval.traversal[0]+interval.traversal[1])/2.;
+            let p=path.evaluate(t).unwrap().point;
+            for k in 0..2 {let expected=p[k]/5.;let bound=interval.binormal.value[k];assert!(bound[0]<=expected&&expected<=bound[1]);}
         }
-        let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
-            control_points:points,weights:vec![1.,2.,1.],periodic:false};
-        let mut normal=[0.;3];normal[axis]=sign*3.;
-        let report=certify_fixed_normal_path(&path,normal,&twist,[0.25,0.5],1000).unwrap();
-        assert_eq!(report.status,Status::Certified);
-        let n=report.transverse.unwrap();
-        for k in 0..3 {
-            let expected=if k==axis {sign}else {0.};
-            assert!(n.value[k][0]<=expected&&expected<=n.value[k][1]);
-            assert!(n.first[k][0]<=0.&&n.first[k][1]>=0.);
-            assert!(n.second[k][0]<=0.&&n.second[k][1]>=0.);
-            assert!(n.first[k][1]-n.first[k][0]<1e-10);
-            assert!(n.second[k][1]-n.second[k][0]<1e-10);
+        let short=certify_fixed_normal_cover(&path,[0.,0.,1.],&zero,whole.cells-1).unwrap();
+        assert_eq!(short.status,Status::Unresolved);assert!(short.intervals.is_none());
+        let empty=certify_fixed_normal_cover(&path,[0.,0.,1.],&zero,0).unwrap();
+        assert_eq!(empty.status,Status::Unresolved);assert_eq!(empty.cells,0);assert!(empty.intervals.is_none());
+        let singular=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+            control_points:vec![vec![0.;3],vec![-0.5,0.,0.5],vec![0.,0.,1.]],weights:vec![1.;3],periodic:false};
+        let refused=certify_fixed_normal_cover(&singular,[0.,0.,1.],&zero,1000).unwrap();
+        assert_eq!(refused.status,Status::Unresolved);assert!(refused.intervals.is_none());
+        assert!(refused.cells<=1000);
+        #[cfg(feature="transport")]
+        {
+            use value_codec::json;
+            let r=crate::transport::dispatch(json!({"op":"sweep_fixed_normal_frame_regularity",
+                "path":path,"normal":[0.,0.,1.],"twist":zero,"maxCells":10000})).unwrap();
+            assert_eq!(r["regularityCertified"],true);
+            assert_eq!(r["cells"],whole.cells);
+            assert_eq!(r["certifiedIntervals"],whole.certified_intervals);
+            for flag in ["continuousBound","surfaceRegularityCertified","globalEmbeddingCertified"] {assert_eq!(r[flag],false);}
         }
-    }}
-}
-
-#[test]
-fn relative_values_separate_original_path_parameter_from_length_station_laws(){
-    let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.;3],vec![0.,0.,0.5],vec![0.,1.,1.]],weights:vec![1.;3],periodic:false};
-    let scale=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
-    let twist=crate::primitives::line([0.;3],[0.25,0.,0.]).unwrap();
-    let qs=[[[1.,1.],[0.,0.],[0.,0.]]];
-    let r=certify_fixed_normal_relative_values(&path,[1.,0.,0.],&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],1000).unwrap();
-    assert_eq!(r.status,Status::Certified);let bounds=r.values.as_ref().unwrap()[0];
-    for u in [0.2_f64,0.25,0.3]{for s in [0.6_f64,0.65,0.7]{
-        let a=0.25*s;let d=(1.+4.*u*u).sqrt();
-        let expected=[(1.+s)*a.cos(),(1.+s)*a.sin()/d,-2.*u*(1.+s)*a.sin()/d];
-        for k in 0..3{assert!(bounds[k][0]<=expected[k]&&expected[k]<=bounds[k][1],"{bounds:?} vs {expected:?}");}
-    }}
-    let short=certify_fixed_normal_relative_values(&path,[1.,0.,0.],&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],r.cells-1).unwrap();
-    assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
-}
-
-#[test]
-fn axial_value_premise_preserves_seed_sign_and_falls_back_for_nonplanar_source(){
-    let scale=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
-    let twist=crate::primitives::line([0.;3],[0.25,0.,0.]).unwrap();
-    let qs=[[[1.,1.],[0.,0.],[0.,0.]]];
-    for x in [0_f64,0.25]{for sign in [-1_f64,1.]{
-        let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.;3],vec![0.,0.,0.5],vec![x,1.,1.]],weights:vec![1.;3],periodic:false};
-        let r=certify_fixed_normal_relative_values(&path,[sign,0.,0.],&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],1000).unwrap();
-        assert_eq!(r.status,Status::Certified);let bounds=r.values.unwrap()[0];
-        for u in [0.2_f64,0.25,0.3]{for s in [0.6_f64,0.65,0.7]{
-            let d=(4.*x*x*u*u+4.*u*u+1.).sqrt();let t=[2.*x*u/d,2.*u/d,1./d];
-            let raw=[1.-t[0]*t[0],-t[0]*t[1],-t[0]*t[2]];
-            let len=raw.iter().map(|v|v*v).sum::<f64>().sqrt();let n=raw.map(|v|sign*v/len);
-            let b=[t[1]*n[2]-t[2]*n[1],t[2]*n[0]-t[0]*n[2],t[0]*n[1]-t[1]*n[0]];
-            for k in 0..3{let expected=(1.+s)*(n[k]*(0.25*s).cos()+b[k]*(0.25*s).sin());
-                assert!(bounds[k][0]<=expected&&expected<=bounds[k][1],"{bounds:?} vs {expected}");}
+    }
+    #[test]
+    fn closed_circle_knot_contact_blocks_single_span_remainder_without_endpoint_jet_proof(){
+        let path=crate::primitives::circle([0.;3],[0.,0.,1.],5.).unwrap();
+        let mut twist=crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
+        twist.control_points[1][0]=std::f64::consts::TAU;
+        let aligned=certify_fixed_normal_path(&path,[0.,0.,1.],&twist,[0.25,0.25+1./256.],10000).unwrap();
+        let interior=certify_fixed_normal_path(&path,[0.,0.,1.],&twist,[0.25+1./1024.,0.25+1./256.],10000).unwrap();
+        eprintln!("aligned status={:?} single_span={} reason={:?} cells={}; interior status={:?} single_span={} cells={}",aligned.status,aligned.single_span,aligned.reason,aligned.cells,interior.status,interior.single_span,interior.cells);
+        assert!(aligned.status!=Status::Certified||!aligned.single_span);
+        assert_eq!(interior.status,Status::Certified);assert!(interior.single_span);
+    }
+    #[test]
+    fn original_coordinate_plane_has_constant_projected_normal_jets() {
+        let twist=crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
+        for axis in 0..3 {for sign in [-1.,1.] {
+            let mut points=vec![vec![0.;3];3];
+            for (i,p) in points.iter_mut().enumerate() {
+                p[axis]=17.;p[(axis+1)%3]=i as f64*0.5;
+                p[(axis+2)%3]=if i==2 {1.}else {0.};
+            }
+            let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],
+                control_points:points,weights:vec![1.,2.,1.],periodic:false};
+            let mut normal=[0.;3];normal[axis]=sign*3.;
+            let report=certify_fixed_normal_path(&path,normal,&twist,[0.25,0.5],1000).unwrap();
+            assert_eq!(report.status,Status::Certified);
+            let n=report.transverse.unwrap();
+            for k in 0..3 {
+                let expected=if k==axis {sign}else {0.};
+                assert!(n.value[k][0]<=expected&&expected<=n.value[k][1]);
+                assert!(n.first[k][0]<=0.&&n.first[k][1]>=0.);
+                assert!(n.second[k][0]<=0.&&n.second[k][1]>=0.);
+                assert!(n.first[k][1]-n.first[k][0]<1e-10);
+                assert!(n.second[k][1]-n.second[k][0]<1e-10);
+            }
         }}
-    }}
+    }
+    #[test]
+    fn relative_values_separate_original_path_parameter_from_length_station_laws(){
+        let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.;3],vec![0.,0.,0.5],vec![0.,1.,1.]],weights:vec![1.;3],periodic:false};
+        let scale=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
+        let twist=crate::primitives::line([0.;3],[0.25,0.,0.]).unwrap();
+        let qs=[[[1.,1.],[0.,0.],[0.,0.]]];
+        let r=certify_fixed_normal_relative_values(&path,[1.,0.,0.],&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],1000).unwrap();
+        assert_eq!(r.status,Status::Certified);let bounds=r.values.as_ref().unwrap()[0];
+        for u in [0.2_f64,0.25,0.3]{for s in [0.6_f64,0.65,0.7]{
+            let a=0.25*s;let d=(1.+4.*u*u).sqrt();
+            let expected=[(1.+s)*a.cos(),(1.+s)*a.sin()/d,-2.*u*(1.+s)*a.sin()/d];
+            for k in 0..3{assert!(bounds[k][0]<=expected[k]&&expected[k]<=bounds[k][1],"{bounds:?} vs {expected:?}");}
+        }}
+        let short=certify_fixed_normal_relative_values(&path,[1.,0.,0.],&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],r.cells-1).unwrap();
+        assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
+    }
+    #[test]
+    fn axial_value_premise_preserves_seed_sign_and_falls_back_for_nonplanar_source(){
+        let scale=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
+        let twist=crate::primitives::line([0.;3],[0.25,0.,0.]).unwrap();
+        let qs=[[[1.,1.],[0.,0.],[0.,0.]]];
+        for x in [0_f64,0.25]{for sign in [-1_f64,1.]{
+            let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.;3],vec![0.,0.,0.5],vec![x,1.,1.]],weights:vec![1.;3],periodic:false};
+            let r=certify_fixed_normal_relative_values(&path,[sign,0.,0.],&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],1000).unwrap();
+            assert_eq!(r.status,Status::Certified);let bounds=r.values.unwrap()[0];
+            for u in [0.2_f64,0.25,0.3]{for s in [0.6_f64,0.65,0.7]{
+                let d=(4.*x*x*u*u+4.*u*u+1.).sqrt();let t=[2.*x*u/d,2.*u/d,1./d];
+                let raw=[1.-t[0]*t[0],-t[0]*t[1],-t[0]*t[2]];
+                let len=raw.iter().map(|v|v*v).sum::<f64>().sqrt();let n=raw.map(|v|sign*v/len);
+                let b=[t[1]*n[2]-t[2]*n[1],t[2]*n[0]-t[0]*n[2],t[0]*n[1]-t[1]*n[0]];
+                for k in 0..3{let expected=(1.+s)*(n[k]*(0.25*s).cos()+b[k]*(0.25*s).sin());
+                    assert!(bounds[k][0]<=expected&&expected<=bounds[k][1],"{bounds:?} vs {expected}");}
+            }}
+        }}
+    }
 }

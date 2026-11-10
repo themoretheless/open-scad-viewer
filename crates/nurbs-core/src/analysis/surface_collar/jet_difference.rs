@@ -455,8 +455,8 @@ fn graph_difference_bounds_frame(base:[I;5],delta:[I;5],max_work:usize,cartesian
     Ok((bound,w.used))
 }
 pub struct G2Report {
-    pub decision: crate::surface_join::Decision,
-    pub orientation: Option<crate::surface_g2::Orientation>,
+    pub decision: crate::analysis::surface_boundary::Decision,
+    pub orientation: Option<crate::analysis::surface_boundary::Orientation>,
     /// Whole-seam upper bounds exist only after complete admission.
     pub upper: Option<[f64; 3]>,
     pub witness_parameter: Option<f64>,
@@ -525,7 +525,7 @@ fn inspect_g2_frame(
     max_work: usize,
     cross_gain: f64,
 ) -> Result<G2Report> {
-    use crate::surface_join::Decision;
+    use crate::analysis::surface_boundary::Decision;
     source.validate()?;
     pcurve.validate()?;
     candidate.validate()?;
@@ -567,9 +567,9 @@ fn inspect_g2_frame(
                 .mul(I::point(direction[0]))?,
         )?;
     let orientation = if determinant.lo > 0. {
-        crate::surface_g2::Orientation::Same
+        crate::analysis::surface_boundary::Orientation::Same
     } else if determinant.hi < 0. {
-        crate::surface_g2::Orientation::Opposite
+        crate::analysis::surface_boundary::Orientation::Opposite
     } else {
         return Ok(report);
     };
@@ -703,8 +703,8 @@ fn inspect_g2_frame(
     report.decision = Decision::WithinTolerance;
     report.orientation = Some(if cross_gain < 0. {
         match orientation {
-            crate::surface_g2::Orientation::Same => crate::surface_g2::Orientation::Opposite,
-            crate::surface_g2::Orientation::Opposite => crate::surface_g2::Orientation::Same,
+            crate::analysis::surface_boundary::Orientation::Same => crate::analysis::surface_boundary::Orientation::Opposite,
+            crate::analysis::surface_boundary::Orientation::Opposite => crate::analysis::surface_boundary::Orientation::Same,
         }
     } else {
         orientation

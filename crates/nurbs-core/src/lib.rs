@@ -66,7 +66,7 @@ pub use distance::interval_eval;
 pub use crate::distance::curve_distance;
 pub use crate::certificates::curve_decomposition_certificate;
 use crate::core::exact_curve_segments;
-pub use crate::analysis::curve_deviation;
+pub use crate::distance::curve_deviation;
 pub use crate::analysis::curve_plane;
 pub use crate::tessellation::curve_tessellation;
 pub use crate::offset::surface_offset;

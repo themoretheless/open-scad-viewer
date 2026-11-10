@@ -1,5 +1,6 @@
 //! Distance computations: curve-curve, surface-surface, curve-surface, and trimmed-surface distance.
 pub(crate) mod curve_jets;
+pub mod curve_deviation;
 pub mod curve_distance;
 pub mod curve_surface_distance;
 pub(crate) mod subdivision;

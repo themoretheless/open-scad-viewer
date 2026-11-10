@@ -1,7 +1,8 @@
 //! Whole-surface positional error on a common parameter domain. All homogeneous
 //! conversion, knot insertion and Bernstein products use outward intervals.
-use super::regularity::{I,insert,choose};
-use crate::{Result,check,surface::Surface,intersection::next_up};
+use crate::numerics::outward_interval::{I,insert,choose};
+use crate::{Result,check,surface::Surface};
+use math_core::next_up;
 type H=[I;4];
 struct Net {p:usize,q:usize,u:Vec<f64>,v:Vec<f64>,h:Vec<Vec<H>>}
 impl Net {

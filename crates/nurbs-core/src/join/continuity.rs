@@ -24,7 +24,7 @@ pub use projective_collection::{
     inspect_projective_seam_collection,
 };
 pub mod curve_match;
-pub mod deviation;
+pub use crate::foundation::surface_deviation as deviation;
 pub mod preparation;
 mod regularity;
 mod station_scale;

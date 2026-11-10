@@ -655,5 +655,5 @@ pub(super) fn rebuild_product_factor(p: usize, q: usize, i: usize, j: usize) -> 
     [next_down(n[0] / d[1]), next_up(n[1] / d[0])]
 }
 pub(super) fn rebuild_surface_error(a: &Surface, b: &Surface) -> Result<f64> {
-    crate::continuity::deviation::positional_upper(a, b)
+    crate::foundation::surface_deviation::positional_upper(a, b)
 }
