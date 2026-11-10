@@ -168,6 +168,62 @@ pub fn overlap_aabb(
     Ok(found)
 }
 
+/// Separating-axis test of a triangle against an inclusive box (Akenine-
+/// Moeller): the three box axes, the triangle normal and the nine edge cross
+/// products. Touching counts as intersecting.
+fn triangle_touches_box(t: [V3; 3], min: V3, max: V3) -> bool {
+    let center: V3 = std::array::from_fn(|k| min[k] * 0.5 + max[k] * 0.5);
+    let half: V3 = std::array::from_fn(|k| max[k] * 0.5 - min[k] * 0.5);
+    let v = t.map(|p| std::array::from_fn::<f64, 3, _>(|k| p[k] - center[k]));
+    let sub = |a: V3, b: V3| -> V3 { std::array::from_fn(|k| a[k] - b[k]) };
+    let cross = |a: V3, b: V3| -> V3 {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    };
+    let dot = |a: V3, b: V3| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    let edges = [sub(v[1], v[0]), sub(v[2], v[1]), sub(v[0], v[2])];
+    let separated = |axis: V3| {
+        let projections = v.map(|p| dot(p, axis));
+        let radius = (0..3).map(|k| half[k] * axis[k].abs()).sum::<f64>();
+        let lo = projections.iter().copied().fold(f64::INFINITY, f64::min);
+        let hi = projections
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max);
+        lo > radius || hi < -radius
+    };
+    let unit = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
+    if unit.iter().any(|&axis| separated(axis)) || separated(cross(edges[0], edges[1])) {
+        return false;
+    }
+    !edges
+        .iter()
+        .any(|&e| unit.iter().any(|&u| separated(cross(e, u))))
+}
+
+/// IDs, in ascending order, of the triangles whose surface touches the
+/// inclusive box `[min, max]`: an exact answer for the separating-axis test,
+/// unlike the bounding-box answer of [`overlap_aabb`]. Degenerate boxes
+/// (one or more zero extents) are allowed; invalid ones match nothing.
+pub fn intersect_aabb(
+    bvh: &MeshBvh,
+    vertices: &[f32],
+    indices: &[u32],
+    stride: usize,
+    min: V3,
+    max: V3,
+) -> Result<Vec<u32>, QueryError> {
+    let mut found = overlap_aabb(bvh, vertices, indices, stride, min, max)?;
+    found.retain(|&id| {
+        triangle_points(vertices, indices, stride, id)
+            .is_some_and(|t| triangle_touches_box(t, min, max))
+    });
+    Ok(found)
+}
+
 fn by_distance_then_id(a: &Neighbor, b: &Neighbor) -> std::cmp::Ordering {
     a.distance
         .total_cmp(&b.distance)
@@ -409,6 +465,62 @@ mod tests {
                 assert_eq!(got, want);
             }
         }
+    }
+
+    #[test]
+    fn exact_box_query_matches_a_sampled_surface_check() {
+        let mut rng = Lcg(0xB0C5);
+        let (vertices, indices) = soup(&mut rng, 400);
+        let tree = build_mesh_bvh(&vertices, &indices, 3, 4);
+        let mut refined_away = 0;
+        for _ in 0..60 {
+            let c = rng.point(10.);
+            let half = rng.point(1.5).map(f64::abs);
+            let lo: V3 = std::array::from_fn(|k| c[k] - half[k]);
+            let hi: V3 = std::array::from_fn(|k| c[k] + half[k]);
+            let broad = overlap_aabb(&tree, &vertices, &indices, 3, lo, hi).unwrap();
+            let exact = intersect_aabb(&tree, &vertices, &indices, 3, lo, hi).unwrap();
+            assert!(exact.iter().all(|id| broad.contains(id)));
+            refined_away += broad.len() - exact.len();
+            let inside = |p: V3| (0..3).all(|k| lo[k] <= p[k] && p[k] <= hi[k]);
+            for &id in &broad {
+                let t = triangle_points(&vertices, &indices, 3, id).unwrap();
+                // Any sampled surface point inside the box proves contact.
+                let hit = (0..=20).any(|i| {
+                    (0..=20 - i).any(|j| {
+                        let (a, b) = (i as f64 / 20., j as f64 / 20.);
+                        inside(std::array::from_fn(|k| {
+                            t[0][k] + a * (t[1][k] - t[0][k]) + b * (t[2][k] - t[0][k])
+                        }))
+                    })
+                });
+                if hit {
+                    assert!(exact.contains(&id), "missed triangle {id}");
+                }
+            }
+        }
+        assert!(refined_away > 0, "the exact test never pruned a candidate");
+        // A triangle crossing a box without a vertex inside it.
+        let vertices = [-5., 0., 0., 5., 0., 0., 0., 5., 0.];
+        let tree = build_mesh_bvh(&vertices, &[0, 1, 2], 3, 1);
+        let hit = intersect_aabb(
+            &tree,
+            &vertices,
+            &[0, 1, 2],
+            3,
+            [-0.5, 0.5, -0.5],
+            [0.5, 1., 0.5],
+        );
+        assert_eq!(hit.unwrap(), [0]);
+        let miss = intersect_aabb(
+            &tree,
+            &vertices,
+            &[0, 1, 2],
+            3,
+            [3., 3., -0.5],
+            [4., 4., 0.5],
+        );
+        assert!(miss.unwrap().is_empty());
     }
 
     #[test]
