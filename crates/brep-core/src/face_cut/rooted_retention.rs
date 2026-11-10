@@ -133,10 +133,35 @@ pub fn plan_rooted_retention(
                                 })?,
                         };
                     }
-                    Ok(OwnedCut {
-                        endpoints,
-                        curves: cut.curves.clone(),
-                    })
+                    // A generated cut reaches a cutter root only within
+                    // rounding: the root vertex comes from the edge split.
+                    // Within the model tolerance, the cut end is that vertex.
+                    let mut curves = cut.curves.clone();
+                    for (i, end) in cut.endpoints.iter().enumerate() {
+                        if !matches!(end, RootEnd::Crossing { .. }) {
+                            continue;
+                        }
+                        let vertex = model.vertices[endpoints[i]].point;
+                        let curve = if i == 0 { curves.first_mut() } else { curves.last_mut() };
+                        let Some(curve) = curve else { continue };
+                        let point = if i == 0 {
+                            curve.control_points.first_mut()
+                        } else {
+                            curve.control_points.last_mut()
+                        };
+                        if let Some(point) = point
+                            && point.len() == 3
+                        {
+                            let gap = (0..3).map(|k| (point[k] - vertex[k]).powi(2)).sum::<f64>().sqrt();
+                            if gap > model.tolerance_mm {
+                                return Err(invalid(
+                                    "Cut end lies farther than the model tolerance from its cutter root",
+                                ));
+                            }
+                            point.copy_from_slice(&vertex);
+                        }
+                    }
+                    Ok(OwnedCut { endpoints, curves })
                 })
                 .collect::<Result<Vec<_>>>()
         })
