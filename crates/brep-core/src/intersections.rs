@@ -6,38 +6,20 @@
 //! yet have independent coverage certificates. Even `NumericallyResolved` MUST
 //! NOT be consumed as a certificate authorizing a topology change. No triangles,
 //! fitted curves, snapping, or tessellation participate in these queries.
-use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
+use nurbs_core::{Result, curve::Curve};
 
-mod cone_cone;
-mod cone_torus;
-mod cylinder_cylinder;
-mod cylinder_torus;
 mod plane_cone;
-mod plane_cylinder;
 mod plane_sphere;
 mod plane_torus;
 pub(crate) mod recognize;
-mod sphere_cone;
 mod sphere_cylinder;
 pub mod sphere_sphere;
-mod sphere_torus;
 #[cfg(test)]
 mod test_utils;
-mod torus_torus;
-pub use cone_cone::{ConeConeComponent, intersect_cone_cone};
-pub use cone_torus::{ConeTorusComponent, intersect_cone_torus};
-pub use cylinder_cylinder::{CylinderCylinderComponent, intersect_cylinder_cylinder};
-pub use cylinder_torus::{CylinderTorusComponent, intersect_cylinder_torus};
-pub use plane_cone::{PlaneConeComponent, intersect_plane_cone};
-pub use plane_cylinder::{PlaneCylinderComponent, intersect_plane_cylinder};
-pub use plane_sphere::{PlanePatchCurve, PlaneSphereComponent, intersect_plane_sphere};
-pub use plane_torus::{PlaneTorusComponent, TorusPatchCurve, intersect_plane_torus};
-pub use sphere_cone::{SphereConeComponent, intersect_sphere_cone};
-pub use sphere_cylinder::{CylinderPatchCurve, SphereCylinderComponent, intersect_sphere_cylinder};
 pub use sphere_sphere::{SpherePatchCircle, SphereSphereComponent, intersect_sphere_sphere};
-pub use sphere_torus::{SphereTorusComponent, intersect_sphere_torus};
-pub use torus_torus::{TorusTorusComponent, intersect_torus_torus};
 
+/// Analytic pair solvers are owned by `brep-intersect` (ADR 0011); the kernel keeps the
+/// recognisers it uses itself.
 pub use plane_cone::{CanonicalCone, recognize_cone};
 pub use plane_torus::recognize_torus;
 pub use sphere_cylinder::{CanonicalCylinder, recognize_cylinder};
@@ -46,7 +28,7 @@ pub use sphere_sphere::recognize as recognize_sphere;
 /// Shared query vocabulary; `nurbs-intersect` owns these types (ADR 0011).
 pub use nurbs_intersect::{Contact, Coverage, CurvePoint, Options, Plane, Report, Unresolved, UnresolvedReason};
 /// The query engine (curve and surface queries against planes, curves and surfaces) is owned
-/// by `nurbs-intersect` (ADR 0011). The analytic pair solvers above stay in the kernel (M3).
+/// by `nurbs-intersect` (ADR 0011).
 pub use nurbs_intersect::{
     CurveCurveComponent, CurvePlaneComponent, CurveRuledSurfaceComponent, CurveSegmentComponent,
     CurveSurfaceComponent, OverlapCorrespondence, OverlapCorrespondenceKind, SurfacePlaneComponent,
