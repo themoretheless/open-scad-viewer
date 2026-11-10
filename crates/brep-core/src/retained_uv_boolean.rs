@@ -319,6 +319,30 @@ fn split_shell_components(model: &mut Model) {
     }
 }
 
+/// Face lineage records with the cardinality of their change kind, over
+/// distinct parents (an operand combined with itself is one parent): one
+/// face into one persists, one into several splits, several merge into each
+/// result face separately, since a merge has exactly one child.
+fn face_lineage(mut parents: Vec<crate::TopoId>, children: Vec<crate::TopoId>) -> Vec<TopologyLineageRecord> {
+    parents.sort();
+    parents.dedup();
+    let record = |operation: &str, parents: Vec<crate::TopoId>, children: Vec<crate::TopoId>| TopologyLineageRecord {
+        operation: operation.into(),
+        entity_kind: "face".into(),
+        parents,
+        children,
+    };
+    match (parents.len(), children.len()) {
+        (_, 0) => vec![],
+        (1, 1) => vec![record("persist", parents, children)],
+        (1, _) => vec![record("split", parents, children)],
+        _ => children
+            .into_iter()
+            .map(|child| record("merge", parents.clone(), vec![child]))
+            .collect(),
+    }
+}
+
 fn sole_face_use(model: &Model, face: usize) -> Result<FaceUse> {
     let uses = model.shells.iter().flat_map(|s| &s.faces).filter(|u| u.face == face).collect::<Vec<_>>();
     match uses.as_slice() {
@@ -359,14 +383,8 @@ pub fn boolean_same_surface_uv_retained_with_limits(
     model.inherit_topology_ids(&[a, b]);
     let result_faces = model.1.faces.clone();
     if !result_faces.is_empty() {
-        // Each result face merges both source faces; a merge has exactly one
-        // child, so a result of several faces records one merge per face.
-        for &child in &result_faces {
-            model.1.lineage.push(TopologyLineageRecord {
-                operation: "merge".into(), entity_kind: "face".into(),
-                parents: vec![a.1.faces[face_a], b.1.faces[face_b]], children: vec![child],
-            });
-        }
+        let parents = vec![a.1.faces[face_a], b.1.faces[face_b]];
+        model.1.lineage.extend(face_lineage(parents, result_faces.clone()));
         model.refresh_change_set(&[a, b]);
     }
     validate_staged(&model)?;
@@ -481,20 +499,7 @@ fn replace_faces(source: &Model, selected: &[usize], shell: usize, reversed: boo
     model.inherit_topology_ids(&[source]);
     let children = model.1.faces[new_face..].to_vec();
     let parents: Vec<_> = selected.iter().map(|&face| source.1.faces[face]).collect();
-    // One face into several is a split; several into one a merge; several
-    // into several records one merge per result face (a merge has one child).
-    if parents.len() == 1 && children.len() > 1 {
-        model.1.lineage.push(TopologyLineageRecord {
-            operation: "split".into(), entity_kind: "face".into(), parents, children,
-        });
-    } else {
-        for child in children {
-            model.1.lineage.push(TopologyLineageRecord {
-                operation: "merge".into(), entity_kind: "face".into(),
-                parents: parents.clone(), children: vec![child],
-            });
-        }
-    }
+    model.1.lineage.extend(face_lineage(parents, children));
     model.refresh_change_set(&[source]);
     validate_staged(&model)?;
     Ok(model)

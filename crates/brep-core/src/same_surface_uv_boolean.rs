@@ -207,7 +207,9 @@ fn transform_regions(
 fn point_on_segment(p: [f64; 2], s: Segment, tolerance: f64) -> bool {
     let d = sub(s.b, s.a);
     let scale = length(d).max(1.);
-    cross(sub(p, s.a), d).abs() <= tolerance * scale
+    // |cross| is the distance to the line times the segment length; compare
+    // the distance itself, so short segments do not widen the band.
+    cross(sub(p, s.a), d).abs() <= tolerance * length(d)
         && dot(sub(p, s.a), sub(p, s.b)) <= tolerance * scale
         && dot(sub(p, s.a), d) >= -tolerance * scale
 }
