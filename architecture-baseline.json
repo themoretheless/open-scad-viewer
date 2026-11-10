@@ -112,8 +112,7 @@
     "brep-core: sweep_offset -> body_analysis",
     "brep-core: sweep_offset -> boolean",
     "brep-core: sweep_offset -> parts",
-    "brep-core: sweep_offset -> source_body",
-    "nurbs-core: analysis -> sweeps"
+    "brep-core: sweep_offset -> source_body"
   ],
   "functions": {
     "crates/brep-core/src/body_analysis/analysis/mass_properties.rs::mass_properties@1": 206,
@@ -406,8 +405,6 @@
     "crates/mesh-section/src/lib.rs::svg_contours@1": 166,
     "crates/mesh-topology/src/edges.rs::extract_semantic_edges@1": 179,
     "crates/mesh-topology/src/edges/cooperative.rs::extract_semantic_edges_cooperative@1": 197,
-    "crates/nurbs-core/src/analysis/affine_volume/graph_translation.rs::certify@1": 164,
-    "crates/nurbs-core/src/analysis/affine_volume/material_plane.rs::inspect_material_plane@1": 187,
     "crates/nurbs-core/src/analysis/curve_pullback.rs::project@1": 164,
     "crates/nurbs-core/src/analysis/curve_surface_agreement/boundary_coefficients.rs::inspect@1": 166,
     "crates/nurbs-core/src/analysis/curve_surface_agreement/bspline_trace.rs::verify@1": 211,
@@ -464,6 +461,8 @@
     "crates/nurbs-core/src/reparameterization_retention.rs::certify@1": 179,
     "crates/nurbs-core/src/ss_intersection/grids_excluded_ss.rs::plane_plane_line@1": 163,
     "crates/nurbs-core/src/ss_intersection/intersect_surface_surface.rs::intersect_surface_surface@1": 294,
+    "crates/nurbs-core/src/sweeps/affine_volume/graph_translation.rs::certify@1": 164,
+    "crates/nurbs-core/src/sweeps/affine_volume/material_plane.rs::inspect_material_plane@1": 187,
     "crates/nurbs-core/src/sweeps/audit/contour.rs::inspect@1": 205,
     "crates/nurbs-core/src/sweeps/progressive_miter.rs::new@1": 157,
     "crates/nurbs-core/src/sweeps/progressive_miter.rs::preview_retained_at@1": 175,

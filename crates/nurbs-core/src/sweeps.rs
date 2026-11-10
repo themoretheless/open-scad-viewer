@@ -7,6 +7,8 @@
 //! `sweep_*_audit`/`sweep_cap_*` modules (now `audit::{pair, wall, contour,
 //! seam, cap_boundary, cap_wall}`). Old paths keep working through re-export
 //! shims in `lib.rs`.
+pub mod affine_volume;
+pub mod fibered_volume;
 pub mod framed_sweep;
 pub mod profile_sweep;
 pub mod progressive_sweep;
