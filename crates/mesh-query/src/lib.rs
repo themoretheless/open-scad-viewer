@@ -13,7 +13,9 @@ pub mod scene_bvh;
 pub mod semantic_pick;
 pub use bvh::{MeshBvh, build_mesh_bvh, build_mesh_bvh_cooperative};
 pub use bvh_query::{Hit, Query, QueryError, raycast};
-pub use bvh_range::{Neighbor, RefitError, nearest, overlap_aabb, refit, within_radius};
+pub use bvh_range::{
+    Neighbor, RefitError, intersect_aabb, nearest, overlap_aabb, refit, within_radius,
+};
 pub use math_core::{Error, Result};
 pub use mesh_topology::MeshView;
 pub use proximity::{

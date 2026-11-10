@@ -41,8 +41,7 @@ pub fn encode(bvh: &MeshBvh) -> Vec<u8> {
         .node_count
         .min(bvh.bounds.len() / 6)
         .min(bvh.nodes.len() / 2);
-    let mut bytes =
-        Vec::with_capacity(HEADER + node_count * (6 + 2) * 4 + bvh.triangles.len() * 4);
+    let mut bytes = Vec::with_capacity(HEADER + node_count * (6 + 2) * 4 + bvh.triangles.len() * 4);
     bytes.extend_from_slice(MAGIC);
     bytes.extend_from_slice(&FORMAT_VERSION.to_le_bytes());
     for count in [node_count, node_count * 2, bvh.triangles.len()] {
@@ -133,7 +132,17 @@ mod tests {
         let mut vertices = Vec::new();
         for i in 0..40 {
             let x = i as f32 * 0.75;
-            vertices.extend([x, 0., (i % 5) as f32, x + 1., 0.5, 0., x, 1., (i % 3) as f32]);
+            vertices.extend([
+                x,
+                0.,
+                (i % 5) as f32,
+                x + 1.,
+                0.5,
+                0.,
+                x,
+                1.,
+                (i % 3) as f32,
+            ]);
         }
         let indices: Vec<u32> = (0..120).collect();
         let tree = build_mesh_bvh(&vertices, &indices, 3, 2);
