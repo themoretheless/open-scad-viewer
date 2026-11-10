@@ -242,7 +242,10 @@ fn unresolved_slabs_and_nonprismatic_curves_refuse_without_changing_operands() {
     assert_eq!(failure.code, "BREP_NURBS_BOOLEAN_UNPROVED", "{}", failure.message);
     assert!(failure.message.contains("Z slab"));
     assert_eq!(original, value_codec::to_string(&a).unwrap());
-    assert!(boolean(&a, &brep_core::frustum(3., 2., 4.).unwrap(), "union").is_err());
+    // A coaxial frustum inside the cylinder is a supported revolution pair:
+    // the union is the cylinder itself.
+    let union = boolean(&a, &brep_core::frustum(3., 2., 4.).unwrap(), "union").unwrap();
+    assert!((volume(&union) - std::f64::consts::PI * 45.).abs() < 1e-4);
 }
 
 #[test]

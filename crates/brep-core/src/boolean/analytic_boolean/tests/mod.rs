@@ -253,6 +253,21 @@ fn axial_torus_sphere_is_certified_for_every_operation() {
 }
 
 #[test]
+fn coaxial_cylinder_cone_pairs_are_certified_for_every_operation() {
+    let cylinder = crate::cylinder(2., 6.).unwrap();
+    let cone = shifted(&crate::frustum(4., 0., 8.).unwrap(), [0., 0., 1.]);
+    for operation in ["union", "difference", "intersection"] {
+        let (model, cert) = analytic_boolean(&cylinder, &cone, operation).unwrap();
+        assert!(cert.all_complete() && cert.solid_audit_ok, "{operation}");
+        model.validate().unwrap();
+    }
+    // A cylinder swallowed by a wider cone: the difference is empty.
+    let small = shifted(&crate::cylinder(0.5, 1.).unwrap(), [0., 0., 2.]);
+    let (_, cert) = analytic_boolean(&small, &cone, "difference").unwrap();
+    assert!(cert.all_complete());
+}
+
+#[test]
 fn touching_or_overlapping_cones_and_tori_still_refuse() {
     let torus = crate::torus(4., 1.).unwrap();
     let cone = crate::frustum(2., 0., 4.).unwrap();

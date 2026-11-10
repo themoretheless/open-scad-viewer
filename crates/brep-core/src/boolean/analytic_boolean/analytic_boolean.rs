@@ -68,6 +68,43 @@ pub fn analytic_boolean(
         return Ok((result, cert));
     }
 
+    // Coaxial cylinders, frusta and cones: the planar Boolean of their
+    // meridian sections, revolved.
+    let revolved = |class| {
+        matches!(
+            class,
+            AnalyticClass::FiniteCylinder | AnalyticClass::Frustum | AnalyticClass::Cone
+        )
+    };
+    if revolved(class_a) && revolved(class_b) && operation != "xor" {
+        match coaxial_revolution_boolean::boolean(a, b, operation)? {
+            Some(coaxial_revolution_boolean::Outcome::Solid(result)) => {
+                let classification = classify_chart_events(
+                    ChartKind::AnalyticCircle,
+                    vec![],
+                    &[(0.5, CellLabel::Outside)],
+                )?;
+                let cert = certificate_for(
+                    operation,
+                    vec![Coverage::Complete],
+                    classification,
+                    true,
+                    &result,
+                )?;
+                return Ok((result, cert));
+            }
+            Some(coaxial_revolution_boolean::Outcome::Empty) => {
+                let relation = if operation == "intersection" {
+                    SpatialRelation::Disjoint
+                } else {
+                    SpatialRelation::BContainsA
+                };
+                return empty_algebra_pair(a, b, operation, relation, vec![Coverage::Complete]);
+            }
+            None => {}
+        }
+    }
+
     if matches!(class_a, AnalyticClass::Tube | AnalyticClass::Frustum)
         || matches!(class_b, AnalyticClass::Tube | AnalyticClass::Frustum)
     {
