@@ -242,6 +242,17 @@ fn axial_cone_and_frustum_sphere_are_certified_for_every_operation() {
 }
 
 #[test]
+fn axial_torus_sphere_is_certified_for_every_operation() {
+    let torus = crate::torus(3., 1.).unwrap();
+    let ball = shifted(&crate::sphere(3.).unwrap(), [0., 0., 0.5]);
+    for operation in ["union", "difference", "intersection"] {
+        let (model, cert) = analytic_boolean(&torus, &ball, operation).unwrap();
+        assert!(cert.all_complete() && cert.solid_audit_ok, "{operation}");
+        model.validate().unwrap();
+    }
+}
+
+#[test]
 fn touching_or_overlapping_cones_and_tori_still_refuse() {
     let torus = crate::torus(4., 1.).unwrap();
     let cone = crate::frustum(2., 0., 4.).unwrap();

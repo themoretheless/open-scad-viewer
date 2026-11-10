@@ -65,6 +65,7 @@ pub mod corner_close;
 pub mod coverage_verifier;
 mod cone_sphere_boolean;
 mod cylinder_sphere_boolean;
+mod torus_sphere_boolean;
 pub mod edge_partition;
 pub mod face_contact;
 pub mod face_contacts;

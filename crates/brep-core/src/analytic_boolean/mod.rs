@@ -13,6 +13,7 @@ use crate::box_sphere_boolean;
 use crate::coverage_verifier::verify_complete_report;
 use crate::cone_sphere_boolean;
 use crate::cylinder_sphere_boolean;
+use crate::torus_sphere_boolean;
 use crate::imprint_pipeline::{self, SpatialRelation};
 use crate::intersections::{Coverage, Options, Plane, Report};
 use crate::solid_audit::audit_solid;
