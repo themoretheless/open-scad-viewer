@@ -69,11 +69,18 @@ fn midpoint(d: [f64; 2]) -> f64 {
 }
 fn make(a: &Curve, b: &Curve, domain: [f64; 2], spans: [usize; 2]) -> Result<Cell> {
     let interval = Interval::new(domain[0], domain[1])?;
-    let upper = box_distance(
+    let separate = box_distance(
         &enclosure(a, spans[0], interval)?,
         &enclosure(b, spans[1], interval)?,
     )?
     .1;
+    // Two separate enclosures stay at least as wide as each curve's own
+    // variation over the cell, so for nearly equal curves the gap closes
+    // only linearly with bisection. Enclosing the difference A(t) - B(t)
+    // itself shrinks with the difference; both are valid upper bounds.
+    let zero = vec![0.; a.control_points[0].len()];
+    let difference = translated_cell_upper(a, spans[0], b, spans[1], domain, &zero)?;
+    let upper = separate.min(difference);
     let mut lower = 0_f64;
     for t in [domain[0], midpoint(domain), domain[1]] {
         let i = Interval::point(t);

@@ -252,3 +252,134 @@ fn point_inversion_recovers_points_of_the_curve() {
     // against rounding error, one such query in five ran out of iterations.
     assert!(converged * 100 >= total * 99, "{converged} of {total} converged");
 }
+
+fn surface(rng: &mut Lcg) -> nurbs_core::surface::Surface {
+    let axis = |rng: &mut Lcg| {
+        let degree = 1 + rng.below(3);
+        let interior = rng.below(3);
+        let end = rng.range(1., 3.);
+        let mut inner: Vec<f64> = (0..interior)
+            .map(|i| end * (i as f64 + rng.range(0.2, 0.8)) / interior as f64)
+            .collect();
+        inner.sort_by(f64::total_cmp);
+        (
+            degree,
+            degree + 1 + interior,
+            [vec![0.; degree + 1], inner, vec![end; degree + 1]].concat(),
+        )
+    };
+    let (degree_u, nu, knots_u) = axis(rng);
+    let (degree_v, nv, knots_v) = axis(rng);
+    let rational = rng.below(2) == 0;
+    let s = nurbs_core::surface::Surface {
+        degree_u,
+        degree_v,
+        knots_u,
+        knots_v,
+        control_points: (0..nu)
+            .map(|i| {
+                (0..nv)
+                    .map(|j| vec![i as f64 + rng.range(-0.3, 0.3), j as f64 + rng.range(-0.3, 0.3), rng.range(-1., 1.)])
+                    .collect()
+            })
+            .collect(),
+        weights: (0..nu)
+            .map(|_| (0..nv).map(|_| if rational { rng.range(0.5, 2.) } else { 1. }).collect())
+            .collect(),
+        periodic_u: false,
+        periodic_v: false,
+    };
+    s.validate().unwrap();
+    s
+}
+
+fn domains(s: &nurbs_core::surface::Surface) -> ([f64; 2], [f64; 2]) {
+    (
+        [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
+        [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
+    )
+}
+
+#[test]
+fn surface_edits_preserve_points_and_iso_curves_lie_on_the_surface() {
+    use nurbs_core::surface::Axis;
+    let mut rng = Lcg(0x5AFE);
+    for _ in 0..120 {
+        let s = surface(&mut rng);
+        let ([u0, u1], [v0, v1]) = domains(&s);
+        let ku = rng.range(u0 + 0.1 * (u1 - u0), u1 - 0.1 * (u1 - u0));
+        let kv = rng.range(v0 + 0.1 * (v1 - v0), v1 - 0.1 * (v1 - v0));
+        let inserted = s
+            .edit_axis(Axis::U, |c| c.insert(ku, 1))
+            .unwrap()
+            .edit_axis(Axis::V, |c| c.elevate(c.degree + 1))
+            .unwrap();
+        let box_ = [u0 + 0.2 * (u1 - u0), u1 - 0.1 * (u1 - u0), v0 + 0.1 * (v1 - v0), kv];
+        let trimmed = s.trim(box_).unwrap();
+        for i in 0..=8 {
+            for j in 0..=8 {
+                let (u, v) = (u0 + (u1 - u0) * i as f64 / 8., v0 + (v1 - v0) * j as f64 / 8.);
+                let p = s.evaluate(u, v).unwrap().point;
+                let q = inserted.evaluate(u, v).unwrap().point;
+                for k in 0..3 {
+                    assert!((p[k] - q[k]).abs() <= 1e-9, "axis edit moved ({u},{v})");
+                }
+                let iso = s.iso(Axis::U, u).unwrap().evaluate(v).unwrap().point;
+                for k in 0..3 {
+                    assert!((p[k] - iso[k]).abs() <= 1e-9, "iso U at {u} leaves the surface");
+                }
+                let iso = s.iso(Axis::V, v).unwrap().evaluate(u).unwrap().point;
+                for k in 0..3 {
+                    assert!((p[k] - iso[k]).abs() <= 1e-9, "iso V at {v} leaves the surface");
+                }
+                let (tu, tv) = (
+                    (box_[0] + (box_[1] - box_[0]) * i as f64 / 8.).min(box_[1]),
+                    (box_[2] + (box_[3] - box_[2]) * j as f64 / 8.).min(box_[3]),
+                );
+                let (p, q) = (s.evaluate(tu, tv).unwrap().point, trimmed.evaluate(tu, tv).unwrap().point);
+                for k in 0..3 {
+                    assert!((p[k] - q[k]).abs() <= 1e-9, "trim moved ({tu},{tv})");
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn approximate_edits_undo_exact_ones_within_their_certificate() {
+    use nurbs_core::foundation::approximate_edits::{reduce_curve_degree_report, remove_curve_knot_report};
+    let mut rng = Lcg(0xED17);
+    let (mut removed, mut reduced) = (0, 0);
+    for _ in 0..120 {
+        let source = curve(&mut rng);
+        let [a, b] = source.domain();
+        let knot = rng.range(a + 0.1 * (b - a), b - 0.1 * (b - a));
+        let inserted = source.insert(knot, 1).unwrap();
+        let edit = remove_curve_knot_report(&inserted, knot, 1e-9, None).unwrap();
+        let certificate = &edit.certificate;
+        if certificate.accepted {
+            removed += 1;
+            assert_eq!(edit.curve.control_points.len(), source.control_points.len());
+            for step in 0..=32 {
+                let u = a + (b - a) * step as f64 / 32.;
+                let (p, q) = (point(&source, u), point(&edit.curve, u));
+                let d = p.iter().zip(&q).map(|(x, y)| (x - y) * (x - y)).sum::<f64>().sqrt();
+                assert!(d <= certificate.error_upper + 1e-12, "removal error {d} above its bound");
+            }
+        }
+        let elevated = source.elevate(source.degree + 1).unwrap();
+        let edit = reduce_curve_degree_report(&elevated, source.degree, 1e-9, None).unwrap();
+        if edit.certificate.accepted {
+            reduced += 1;
+            for step in 0..=32 {
+                let u = a + (b - a) * step as f64 / 32.;
+                let (p, q) = (point(&source, u), point(&edit.curve, u));
+                let d = p.iter().zip(&q).map(|(x, y)| (x - y) * (x - y)).sum::<f64>().sqrt();
+                assert!(d <= edit.certificate.error_upper + 1e-12, "reduction error {d} above its bound");
+            }
+        }
+    }
+    // Undoing an exact edit is the easy case for both operations.
+    assert!(removed >= 108, "knot removal accepted {removed} of 120");
+    assert!(reduced >= 108, "degree reduction accepted {reduced} of 120");
+}

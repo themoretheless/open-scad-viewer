@@ -470,6 +470,8 @@ pub fn refit_curve(source: &Curve, degree: usize, knots: Vec<f64>) -> Result<Cur
                 knots[i + 1..=i + degree].iter().sum::<f64>() / degree as f64
             }
         })
+        // A rounded average of equal end knots can land one ulp outside.
+        .map(|u| u.clamp(knots[degree], knots[count]))
         .collect::<Vec<_>>();
     let matrix = parameters
         .iter()
