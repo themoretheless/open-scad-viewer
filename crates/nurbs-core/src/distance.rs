@@ -1,5 +1,7 @@
 //! Distance computations: curve-curve, surface-surface, curve-surface, and trimmed-surface distance.
 pub(crate) mod curve_jets;
+pub mod polar_surface_differential;
+pub mod rational_pole_differential;
 pub mod curve_axis_driver;
 pub mod surface_flux;
 pub mod synchronized_boundary_normals;

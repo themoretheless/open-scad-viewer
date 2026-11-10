@@ -154,8 +154,8 @@ fn validate(
     )?;
     let mut first = [free; 2];
     first[axis] = drive;
-    crate::normal_alignment::validate_rectangle(surfaces[0], first, spans)?;
-    crate::normal_alignment::validate_rectangle(surfaces[1], second, spans)
+    crate::analysis::normal_alignment::validate_rectangle(surfaces[0], first, spans)?;
+    crate::analysis::normal_alignment::validate_rectangle(surfaces[1], second, spans)
 }
 /// Candidate U is the original driving source parameter; candidate V is the
 /// rational arc parameter. Matching natural domains forbid a silent re-map.

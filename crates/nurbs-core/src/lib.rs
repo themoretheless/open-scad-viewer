@@ -232,9 +232,16 @@ pub use foundation::bezier_extraction;
 
 pub use crate::distance::uv_curve_crossings;
 
-pub mod surface_quotient_injectivity;
+pub use crate::join::surface_quotient_injectivity;
 
-pub mod normal_alignment;
+/// Public facade: the implementation lives in `analysis::normal_alignment` (ADR 0012); the
+/// profile and boundary types it used to re-export stay reachable here.
+pub mod normal_alignment {
+    pub use crate::analysis::normal_alignment::*;
+    pub use crate::surface_boundary_secant::{OriginalBoundarySecant,boundary_secant_bounds,OriginalBoundaryDirection,boundary_secant_direction_bounds};
+    pub use crate::surface_weight_profile::{WeightProfile,ProfileDirection,ProfileBoundary,ProfilePathReport,ProfilePoleLimits,ProfilePoleNormal,ProfilePoleCover,ProfileSection,ProfileEndTransition,ProfileTransitionRail,TransitionRegularityReport,qualify_weight_profile};
+    pub use crate::profile_section_bridge::{ProfileSectionBridge,ProfileBridgeRail,RailConstrainedBridge,ProfileBridgeChordCoverage};
+}
 
 pub use crate::core::curve_surface_plane;
 
@@ -245,7 +252,7 @@ pub use crate::trim::planar_area;
 #[cfg(feature = "codec")]
 pub use crate::construct::loft_reparameterization;
 
-mod sweep_support;
+use crate::core::sweep_support;
 
 pub use crate::analysis::retained_wall_domain;
 
@@ -275,7 +282,7 @@ pub use crate::analysis::curve_partition_agreement;
 
 pub use crate::analysis::boundary_partition;
 
-pub mod contact_normal_agreement;
+pub use crate::analysis::contact_normal_agreement;
 
 pub use offset::contact_predictor as offset_contact_predictor;
 
@@ -287,7 +294,7 @@ pub use offset::path_trims as offset_path_trims;
 
 pub use offset::path_pcurves as offset_path_pcurves;
 
-pub mod curve_surface_lift;
+pub use crate::analysis::curve_surface_lift;
 
 pub use crate::core::curve_point_identity;
 
@@ -295,41 +302,40 @@ pub use crate::distance::surface_flux;
 
 pub use crate::analysis::moving_radius;
 
-pub mod moving_envelope;
+pub use crate::analysis::moving_envelope;
 
 pub use crate::core::surface_projection_jacobian;
-pub mod profile_projection_jacobian;
-pub mod profile_projected_jordan;
+pub use crate::analysis::profile_projection_jacobian;
+pub use crate::trim::profile_projected_jordan;
 
 pub use crate::core::curve_quadratic_separator;
 
 pub use crate::trim::surface_projected_jordan;
 
-pub mod surface_self_chord;
+pub use crate::join::surface_self_chord;
 
-pub mod surface_self_chord_coverage;
+pub use crate::join::surface_self_chord_coverage;
 
-pub mod factored_surface_normals;
+pub use crate::join::factored_surface_normals;
 
-pub mod polar_surface_differential;
+pub use crate::distance::polar_surface_differential;
 
-pub mod profile_expression_radius;
+pub use crate::join::profile_expression_radius;
 
-pub mod profile_expression_bernstein;
+pub use crate::join::profile_expression_bernstein;
 
 pub use numerics::bernstein_interpolation as bernstein_interpolation;
 
-pub mod rational_pole_differential;
+pub use crate::distance::rational_pole_differential;
 
-pub mod profile_section_bridge;
+pub use crate::join::profile_section_bridge;
 
-pub mod surface_boundary_secant;
+pub use crate::analysis::surface_boundary_secant;
 
-pub mod surface_weight_profile;
+pub use crate::analysis::surface_weight_profile;
 pub use crate::join::surface_blend;
 pub use crate::join::radius_transition;
-#[path = "join/corner_blend.rs"]
-pub mod corner_blend;
+pub use crate::join::corner_blend;
 
 pub use crate::construct::surfaces::bellows;
 
@@ -344,8 +350,7 @@ pub mod surface_g2_pcurves;
 #[path = "join/surface_g1_pcurves.rs"]
 pub mod surface_g1_pcurves;
 
-#[path = "analysis/surface_coordinate_flow.rs"]
-pub mod surface_coordinate_flow;
+pub use crate::analysis::surface_coordinate_flow;
 
 pub use crate::construct::surfaces::worm_wheel;
 
@@ -359,8 +364,6 @@ pub use crate::construct::surfaces::profile_spring;
 pub use crate::construct::curves::radial_cam;
 pub use crate::distance::synchronized_boundary_normals;
 /// Whole original-span strict coordinate clocks for rational curves.
-#[path = "analysis/curve_coordinate_clock.rs"]
-pub mod curve_coordinate_clock;
+pub use crate::analysis::curve_coordinate_clock;
 
-#[path = "construct/surfaces/original_graph_transition.rs"]
-pub mod original_graph_transition;
+pub use crate::construct::surfaces::original_graph_transition;

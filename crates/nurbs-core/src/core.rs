@@ -1,4 +1,5 @@
 //! Core types and point semantics: curves, surfaces, bounds, affine frames.
+pub(crate) mod sweep_support;
 pub mod curve_point_identity;
 pub mod curve_quadratic_separator;
 pub mod curve_surface_plane;

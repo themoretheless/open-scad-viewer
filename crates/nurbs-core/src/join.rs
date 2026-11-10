@@ -1,4 +1,12 @@
 //! Непрерывность и сшивка.
+pub mod corner_blend;
+pub mod factored_surface_normals;
+pub mod surface_quotient_injectivity;
+pub mod profile_expression_bernstein;
+pub mod profile_expression_radius;
+pub mod profile_section_bridge;
+pub mod surface_self_chord;
+pub mod surface_self_chord_coverage;
 pub mod section_phase;
 pub mod continuity;
 pub mod curve_join;

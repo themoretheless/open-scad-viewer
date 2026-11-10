@@ -120,8 +120,8 @@ fn normal(
             s.control_points[0][0][2],
         ],
     )?;
-    let du = crate::normal_alignment::differentiate_net(&net, degree, 0, domain)?;
-    let dv = crate::normal_alignment::differentiate_net(&net, degree, 1, domain)?;
+    let du = crate::analysis::normal_alignment::differentiate_net(&net, degree, 0, domain)?;
+    let dv = crate::analysis::normal_alignment::differentiate_net(&net, degree, 1, domain)?;
     let Some(x) = b.lift(&h, &net, degree, domain)? else {
         return Ok(None);
     };

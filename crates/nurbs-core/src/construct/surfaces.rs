@@ -1,4 +1,5 @@
 //! Surface constructors: patches, lofts, section-driven and transition surfaces.
+pub mod original_graph_transition;
 pub mod boundary_fill;
 pub mod catenoid;
 pub mod coons;

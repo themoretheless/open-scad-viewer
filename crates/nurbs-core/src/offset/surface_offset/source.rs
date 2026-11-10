@@ -80,7 +80,7 @@ fn parameter_branches(
     domain: [[f64; 2]; 2],
     max_spans: usize,
 ) -> Result<Vec<[[f64; 2]; 2]>> {
-    crate::normal_alignment::validate_rectangle(s, domain, max_spans)?;
+    crate::analysis::normal_alignment::validate_rectangle(s, domain, max_spans)?;
     let counts = [s.control_points.len(), s.control_points[0].len()];
     let degrees = [s.degree_u, s.degree_v];
     let knots = [&s.knots_u, &s.knots_v];
@@ -171,7 +171,7 @@ fn bounds_on(
         distance.is_finite(),
         "Surface offset distance must be finite",
     )?;
-    let (normal, spans) = crate::normal_alignment::normal_bounds(s, domain, max_spans)?;
+    let (normal, spans) = crate::analysis::normal_alignment::normal_bounds(s, domain, max_spans)?;
     let mut out = Bounds {
         image: None,
         unit_normals: None,
@@ -274,7 +274,7 @@ fn jacobian_bounds_on(
         distance.is_finite(),
         "Surface offset distance must be finite",
     )?;
-    let (source, spans) = crate::normal_alignment::jet_bounds(s, domain, max_spans)?;
+    let (source, spans) = crate::analysis::normal_alignment::jet_bounds(s, domain, max_spans)?;
     let mut out = JacobianBounds {
         image: None,
         derivatives: None,

@@ -1,4 +1,13 @@
 //! Диффгеом и меры (read-only запросы).
+pub mod curve_coordinate_clock;
+pub mod surface_coordinate_flow;
+pub mod contact_normal_agreement;
+pub mod curve_surface_lift;
+pub mod moving_envelope;
+pub mod profile_projection_jacobian;
+pub mod surface_boundary_secant;
+pub mod surface_weight_profile;
+pub mod normal_alignment;
 pub mod boundary_partition;
 pub mod curve_partition_agreement;
 pub mod curve_surface_affine;

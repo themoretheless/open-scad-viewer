@@ -1,4 +1,5 @@
 //! Обрезка: домены, точечный трим, аудит регионов.
+pub mod profile_projected_jordan;
 pub mod planar_area;
 pub mod surface_projected_jordan;
 pub mod trimmed_surface_distance;
