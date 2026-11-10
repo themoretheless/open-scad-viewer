@@ -11,7 +11,8 @@ fn distance(a: [f64; 3], b: [f64; 3]) -> f64 {
 struct Piece {
     edge: usize,
     vertices: [usize; 2],
-    interval: [f64; 2],
+    /// Normalized interval of the piece along the original edge.
+    unit: [f64; 2],
 }
 
 pub(crate) fn subdivide_and_sew_linear_rims(
@@ -20,6 +21,21 @@ pub(crate) fn subdivide_and_sew_linear_rims(
     new_edge_range: std::ops::Range<usize>,
     new_vertex_start: usize,
 ) -> Result<()> {
+    // A new vertex that coincides with a retained vertex is that vertex:
+    // without the alias, a rim edge from a retained corner never matches the
+    // retained edge it replaces.
+    let mut alias = (0..model.vertices.len()).collect::<Vec<_>>();
+    for vertex in new_vertex_start..model.vertices.len() {
+        let p = model.vertices[vertex].point;
+        if let Some(old) = (0..new_vertex_start)
+            .find(|&old| distance(model.vertices[old].point, p) <= model.tolerance_mm)
+        {
+            alias[vertex] = old;
+        }
+    }
+    for edge in new_edge_range.clone() {
+        model.edges[edge].vertices = model.edges[edge].vertices.map(|v| alias[v]);
+    }
     let mut cuts = BTreeMap::<usize, Vec<(f64, usize)>>::new();
     for old in 0..source_edge_count {
         let edge = &model.edges[old];
@@ -32,6 +48,9 @@ pub(crate) fn subdivide_and_sew_linear_rims(
         let dd = d.iter().map(|v| v * v).sum::<f64>();
         if dd <= model.tolerance_mm.powi(2) { continue; }
         for vertex in new_vertex_start..model.vertices.len() {
+            if alias[vertex] != vertex {
+                continue;
+            }
             let p = model.vertices[vertex].point;
             let t = (0..3).map(|i| (p[i] - a[i]) * d[i]).sum::<f64>() / dd;
             if t <= model.tolerance_mm || t >= 1. - model.tolerance_mm { continue; }
@@ -60,7 +79,7 @@ pub(crate) fn subdivide_and_sew_linear_rims(
             };
             let interval = [domain[0] + previous * (domain[1] - domain[0]), domain[0] + t * (domain[1] - domain[0])];
             let curve = original.curve.trim(interval[0], interval[1])?;
-            let piece = Piece { edge, vertices: [start, vertex], interval };
+            let piece = Piece { edge, vertices: [start, vertex], unit: [previous, t] };
             if edge == old {
                 model.edges[old].vertices = piece.vertices;
                 model.edges[old].curve = curve;
@@ -73,7 +92,6 @@ pub(crate) fn subdivide_and_sew_linear_rims(
         }
         pieces.insert(old, list);
     }
-    if pieces.is_empty() { return Ok(()); }
     for wire in &mut model.loops {
         let mut rebuilt = Vec::new();
         for coedge in &wire.coedges {
@@ -87,11 +105,16 @@ pub(crate) fn subdivide_and_sew_linear_rims(
                 Box::new(list.iter())
             };
             for piece in iter {
-                let mut pcurve = coedge.pcurve.clone();
-                let pd = pcurve.domain();
+                // The pcurve follows the coedge, which runs against the edge
+                // when reversed: edge fraction t is pcurve fraction 1 - t.
+                let pd = coedge.pcurve.domain();
                 let parameter = |t: f64| pd[0] + t * (pd[1] - pd[0]);
-                pcurve = pcurve.trim(parameter(piece.interval[0]), parameter(piece.interval[1]))?;
-                if coedge.reversed { pcurve = pcurve.reverse()?; }
+                let [u0, u1] = if coedge.reversed {
+                    [1. - piece.unit[1], 1. - piece.unit[0]]
+                } else {
+                    piece.unit
+                };
+                let pcurve = coedge.pcurve.trim(parameter(u0), parameter(u1))?;
                 rebuilt.push(Coedge::new(piece.edge, coedge.reversed, pcurve));
             }
         }
@@ -99,10 +122,19 @@ pub(crate) fn subdivide_and_sew_linear_rims(
     }
     // Replace each new rim edge by the unique old piece with the same retained
     // endpoints. Interior arrangement edges have no such counterpart.
+    // Retained edges without cuts are candidates as a whole.
+    let whole: Vec<Piece> = (0..source_edge_count)
+        .filter(|old| !pieces.contains_key(old) && !model.edges[*old].degenerate)
+        .map(|old| Piece {
+            edge: old,
+            vertices: model.edges[old].vertices,
+            unit: [0., 1.],
+        })
+        .collect();
     let mut replacements = BTreeMap::<usize, (usize, bool)>::new();
     for new in new_edge_range {
         let vertices = model.edges[new].vertices;
-        let matches = pieces.values().flatten().filter(|piece| {
+        let matches = pieces.values().flatten().chain(&whole).filter(|piece| {
             (piece.vertices == vertices) || (piece.vertices == [vertices[1], vertices[0]])
         }).collect::<Vec<_>>();
         if matches.len() > 1 {
