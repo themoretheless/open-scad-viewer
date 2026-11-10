@@ -77,58 +77,9 @@ fn surface_domains(s: &Surface) -> ([f64; 2], [f64; 2]) {
     )
 }
 
-/// Расстояние до ближайшего *другого* узла (в обе стороны) по оси.
-fn knot_clearance(knots: &[f64], t: f64) -> f64 {
-    knots
-        .iter()
-        .filter_map(|&k| {
-            let d = (k - t).abs();
-            (d > 0.).then_some(d)
-        })
-        .fold(f64::INFINITY, f64::min)
-}
-
-/// Вторая производная по u в точке (u,v) или None.
-fn suu_at(surface: &Surface, u: f64, v: f64) -> Result<Option<[f64; 3]>> {
-    Ok(surface.evaluate(u, v)?.second_derivatives().map(|d| d.0))
-}
-fn svv_at(surface: &Surface, u: f64, v: f64) -> Result<Option<[f64; 3]>> {
-    Ok(surface.evaluate(u, v)?.second_derivatives().map(|d| d.2))
-}
-
-/// Центральная разность вторых производных; у границ — односторонняя.
-/// `f` извлекает нужную компоненту второго джета.
-fn third_component(
-    surface: &Surface,
-    u: f64,
-    v: f64,
-    axis_is_u: bool,
-    h: f64,
-    f: impl Fn(&Surface, f64, f64) -> Result<Option<[f64; 3]>>,
-) -> Result<Option<[f64; 3]>> {
-    let at = |u: f64, v: f64| f(surface, u, v);
-    let (plus, minus, center) = if axis_is_u {
-        (at(u + h, v)?, at(u - h, v)?, at(u, v)?)
-    } else {
-        (at(u, v + h)?, at(u, v - h)?, at(u, v)?)
-    };
-    let scale = |a: [f64; 3], b: [f64; 3], denom: f64| {
-        [
-            (a[0] - b[0]) / denom,
-            (a[1] - b[1]) / denom,
-            (a[2] - b[2]) / denom,
-        ]
-    };
-    Ok(match (plus, minus, center) {
-        (Some(p), Some(m), _) => Some(scale(p, m, 2. * h)),
-        (Some(p), None, Some(c)) => Some(scale(p, c, h)),
-        (None, Some(m), Some(c)) => Some(scale(c, m, h)),
-        _ => None,
-    })
-}
-
-/// (items 994) Третий джет в точке. Шаг: 1e-5 от локального спана,
-/// ограниченный ¼ клиренса до узлов и половиной длины домена.
+/// (items 994) Третий джет в точке: точные рациональные производные
+/// третьего порядка (`Surface::derivatives`). В узле берётся производная
+/// спана справа, на конце домена — последнего спана.
 pub fn third_jet(surface: &Surface, u: f64, v: f64) -> Result<ThirdJet> {
     surface.validate()?;
     let (du, dv) = surface_domains(surface);
@@ -136,24 +87,12 @@ pub fn third_jet(surface: &Surface, u: f64, v: f64) -> Result<ThirdJet> {
         u.is_finite() && du[0] <= u && u <= du[1] && v.is_finite() && dv[0] <= v && v <= dv[1],
         "Third-derivative query lies outside the surface domain",
     )?;
-    let span_u = (du[1] - du[0]).max(1e-300);
-    let span_v = (dv[1] - dv[0]).max(1e-300);
-    let h_u = (1e-5 * span_u)
-        .min(0.25 * knot_clearance(&surface.knots_u, u))
-        .max(1e-12 * span_u);
-    let h_v = (1e-5 * span_v)
-        .min(0.25 * knot_clearance(&surface.knots_v, v))
-        .max(1e-12 * span_v);
-    let missing = || {
-        crate::numeric_err(
-            "higher_derivative_map: second derivatives unavailable at the query point",
-        )
-    };
+    let d = surface.derivatives(u, v, 3)?;
     Ok(ThirdJet {
-        suuu: third_component(surface, u, v, true, h_u, suu_at)?.ok_or_else(missing)?,
-        suuv: third_component(surface, u, v, false, h_v, suu_at)?.ok_or_else(missing)?,
-        suvv: third_component(surface, u, v, true, h_u, svv_at)?.ok_or_else(missing)?,
-        svvv: third_component(surface, u, v, false, h_v, svv_at)?.ok_or_else(missing)?,
+        suuu: d[3][0],
+        suuv: d[2][1],
+        suvv: d[1][2],
+        svvv: d[0][3],
     })
 }
 
@@ -561,15 +500,15 @@ mod tests {
         for &(u, v) in &[(0.3, 0.4), (0.7, 0.5), (0.5, 0.1)] {
             let jet = third_jet(&s, u, v).unwrap();
             assert!(
-                (jet.suuu[2] - 6.).abs() < 1e-3,
+                (jet.suuu[2] - 6.).abs() < 1e-9,
                 "suuu.z {} at ({},{})",
                 jet.suuu[2],
                 u,
                 v
             );
             assert!(jet.suuu[0].abs() < 1e-9 && jet.suuu[1].abs() < 1e-9);
-            assert!(norm(jet.svvv) < 1e-6, "svvv {}", norm(jet.svvv));
-            assert!(norm(jet.suuv) < 1e-3, "suuv {}", norm(jet.suuv));
+            assert!(norm(jet.svvv) < 1e-9, "svvv {}", norm(jet.svvv));
+            assert!(norm(jet.suuv) < 1e-9, "suuv {}", norm(jet.suuv));
         }
     }
 
