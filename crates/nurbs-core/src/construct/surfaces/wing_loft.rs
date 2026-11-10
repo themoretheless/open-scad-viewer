@@ -9,7 +9,7 @@
 //! sweep shifts the section by span*tan(sweep) along +X, dihedral shifts
 //! it by |span|*tan(dihedral) along +Y, taper scales the local section
 //! about the leading edge.
-use crate::foundation::guards::{assert_finite_slice_debug, require_finite_f64};
+use crate::numerics::guards::{assert_finite_slice_debug, require_finite_f64};
 use crate::surface::Surface;
 use crate::{Result, check, curve::Curve};
 

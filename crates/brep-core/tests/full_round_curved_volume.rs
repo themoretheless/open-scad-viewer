@@ -1,6 +1,4 @@
-use brep_core::{
-    boundary_embedding, face_contacts, feature_ops::full_round_curved::build, volume_validity,
-};
+use brep_core::{boundary_embedding, face_contacts, feature_ops::full_round_curved::build, volume_validity};
 use nurbs_core::curve::Curve;
 
 #[test]

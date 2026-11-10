@@ -152,8 +152,8 @@ fn admitted_patch_body_step_roundtrip_retains_closed_curvature_bounded_boundary(
     let admitted = r::trim_and_sew_embedded_g2_patch_set(
         &m, &requests, "embedded-step", 1e-8, limits(), fixture::fan,
     ).unwrap();
-    let (step, _, _) = brep_core::export_step_v9(admitted.model()).unwrap();
-    let (back, _, _) = brep_core::import_step_v9(&step).unwrap();
+    let (step, _, _) = cad_step::export_step_v9(admitted.model()).unwrap();
+    let (back, _, _) = cad_step::import_step_v9(&step).unwrap();
     back.validate().unwrap();
     if let Ok(path) = std::env::var("EMBEDDED_PATCH_STEP_OUTPUT") {
         std::fs::write(path, &step).unwrap();

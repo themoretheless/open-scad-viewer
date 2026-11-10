@@ -1,8 +1,5 @@
 //! Independent guards for a constructive six-patch corner, not solid admission.
-use brep_core::{
-    Coedge, Edge, Face, FaceUse, Loop, Model, Shell, Vertex, face_curvature as c, face_domain,
-    region_replacement::propose_corner_patch_network,
-};
+use brep_core::{Coedge, Edge, Face, FaceUse, Loop, Model, Shell, Vertex, face_curvature as c, face_domain, region_replacement::propose_corner_patch_network};
 use nurbs_core::{
     curve::Curve,
     surface::{Axis, Surface},

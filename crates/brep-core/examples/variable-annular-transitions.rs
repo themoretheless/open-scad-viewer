@@ -1,8 +1,6 @@
 //! Reproducible native fixtures; no general fillet/body validity certificate.
-use brep_core::{
-    circular_blend::{partial_annular_variable_arc, plane_cylinder_transition},
-    export_step_v9,
-};
+use brep_core::{circular_blend::{partial_annular_variable_arc, plane_cylinder_transition}};
+use cad_step::{export_step_v9};
 
 fn main() {
     let directory = std::env::args().nth(1).expect("output directory");

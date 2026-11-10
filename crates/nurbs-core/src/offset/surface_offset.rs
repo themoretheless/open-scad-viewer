@@ -459,7 +459,7 @@ fn offset_net(
     // not propagate into downstream evaluation.
     for row in &result.control_points {
         for p in row {
-            crate::foundation::guards::require_finite_slice(p, "offset_control_points")?;
+            crate::numerics::guards::require_finite_slice(p, "offset_control_points")?;
         }
     }
     result.validate()?;

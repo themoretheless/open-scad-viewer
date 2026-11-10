@@ -21,7 +21,7 @@ pub fn inspect(curve: &Curve, max_cells: usize) -> Result<Report> {
 pub(crate) fn inspect_speed(curve: &Curve, max_cells: usize) -> Result<(Report,Option<f64>)> {
     curve.validate()?;
     check(max_cells <= 100000, "Curve regularity budget exceeds100000")?;
-    let mut pending: Vec<_> = crate::certificates::audit::curve_span_domains(curve);
+    let mut pending: Vec<_> = crate::core::span_domains::curve_span_domains(curve);
     let mut report = Report {
         spanwise_regular: false,
         cells: 0,

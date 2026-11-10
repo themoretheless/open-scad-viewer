@@ -8,7 +8,7 @@
 //! enumeration: nonempty-span filtering and natural-domain extraction.
 //! Only that machinery lives here; audit semantics stay per-module.
 #[cfg(test)]
-use crate::{curve::Curve, surface::Surface};
+use crate::curve::Curve;
 
 /// Indices `i` in `degree..count` with `knots[i] < knots[i + 1]`, i.e. the
 /// nonempty knot spans. Fully repeated (empty) spans carry no interior and

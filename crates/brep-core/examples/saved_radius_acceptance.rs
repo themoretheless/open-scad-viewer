@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !fresh.within_tolerance {
         return Err("Saved skin radius unproven after reload".into());
     }
-    let (step, _, _) = brep_core::export_step_v5(&restored)?;
+    let (step, _, _) = cad_step::export_step_v5(&restored)?;
     let report = value_codec::json!({"savedSkinRadiusWithinTolerance":true,"radialErrorUpperMm":fresh.radial_error_upper_mm,"coefficientWork":fresh.coefficient_work,"cells":combined.cells,"exactWork":combined.exact_work,"contactG1WithinTolerance":combined.tangency.within_tolerance,"contactNormalUpper":combined.tangency.seams.iter().map(|s|s.proof.normal_chord_upper).collect::<Vec<_>>(),"radiusField":field,"variable":variable,"trimEndpointRadiiMm":[2.*field[1]+field[3],8.*field[1]+field[3]],"patchFace":result.graft.patch_face,"g2Claim":false,"globalEmbeddingClaim":false});
     std::fs::create_dir_all(&root)?;
     std::fs::write(root.join("rolling.step"), step)?;

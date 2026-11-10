@@ -109,7 +109,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         !bad.proven,
         "Local seam certificates must not admit an opposite-wall crossing"
     );
-    let (step, _, _) = brep_core::export_step_v5(&built.model)?;
+    let (step, _, _) = cad_step::export_step_v5(&built.model)?;
     let sha = Sha256::digest(step.as_bytes())
         .iter()
         .map(|b| format!("{b:02x}"))

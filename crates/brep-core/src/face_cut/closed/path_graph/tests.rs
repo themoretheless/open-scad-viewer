@@ -190,22 +190,11 @@ fn dangling_bridge_trees_crossed_paths_and_exhaustion_do_not_publish_slits() {
     assert_eq!(m, before);
 }
 #[test]
-fn step_round_trip_exports_the_actual_compacted_graph_result() {
+#[cfg(feature = "codec")]
+fn compacted_graph_result_matches_the_exchange_fixture() {
     let (m, p) = fixture();
     let r = partition_path_graph(&m, 0, &p, 1e-8, Default::default()).unwrap();
-    let (text, out, _) = crate::export_step_v9(&r.model).unwrap();
-    assert!(out.complete);
-    let (restored, import, _) = crate::import_step_v9(&text).unwrap();
-    assert!(import.complete);
-    assert_eq!(restored.faces.len(), r.model.faces.len());
-    assert_eq!(restored.edges.len(), r.model.edges.len());
-    assert_eq!(restored.loops.len(), r.model.loops.len());
-    assert_eq!(
-        crate::watertight::inspect(&restored, 100000)
-            .unwrap()
-            .status,
-        crate::watertight::Closure::WithinTolerance
-    );
+    crate::exchange_fixtures::assert_matches("face_cut_path_graph", value_codec::json!({"model": value_codec::to_value(&r.model).unwrap()}));
 }
 
 #[test]

@@ -248,11 +248,11 @@ pub fn qualify_weight_profile<'a>(
 #[path = "surface_weight_profile/tests/mod.rs"]
 mod tests;
 
-#[path="surface_weight_profile/methods_ProfileSection______profile.rs"]
-mod methods_profile_section___profile;
-#[path="surface_weight_profile/methods_ProfileEndTransition______section.rs"]
-mod methods_profile_end_transition___section;
-#[path="surface_weight_profile/methods_WeightProfile_source__section.rs"]
-mod methods_weight_profile_source_section;
-#[path="surface_weight_profile/methods_WeightProfile_source__inspect_profile_path.rs"]
-mod methods_weight_profile_source_inspect_profile_path;
+#[path="surface_weight_profile/profile.rs"]
+mod profile;
+#[path="surface_weight_profile/end_transition_section.rs"]
+mod end_transition_section;
+#[path="surface_weight_profile/weight_profile_section.rs"]
+mod weight_profile_section;
+#[path="surface_weight_profile/inspect_profile_path.rs"]
+mod inspect_profile_path;

@@ -149,7 +149,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             use sha2::{Digest, Sha256};
             let name = case_name;
             let file = format!("{name}.step");
-            let (step, _, _) = brep_core::export_step_v5(&out.partition.model)?;
+            let (step, _, _) = cad_step::export_step_v5(&out.partition.model)?;
             let digest = Sha256::digest(step.as_bytes())
                 .iter()
                 .map(|b| format!("{b:02x}"))

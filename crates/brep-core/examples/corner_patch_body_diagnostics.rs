@@ -116,7 +116,7 @@ fn main() {
         )
         .unwrap();
     }
-    let (step, _, _) = brep_core::export_step_v5(&body.model).unwrap();
+    let (step, _, _) = cad_step::export_step_v5(&body.model).unwrap();
     std::fs::write(dir.join("candidate.step"), step).unwrap();
     let report = value_codec::json!({"qualifiedForDeclaredGates":all,"closure":format!("{:?}",closure.closure.status),"allTrimsValid":trims.all_valid,"faces":body.model.faces.len(),"edges":body.model.edges.len(),"vertices":body.model.vertices.len(),"euler":brep_topology::explorer::euler_characteristic(&body.model.0),"fields":fields,"seams":seams,"radius":radius,"farRadii":far_radii,"requestedRadius":requested_radius,"binaryBoundaries":binary,"farStops":"planar sharp; not G2","globalSelfIntersectionQualified":false,"scope":"Canonical cube; closed boundary, all face curvature and original-cube bounds, 15 selected whole G2 interfaces. Not general NURBS trimming or a global self-intersection certificate."});
     std::fs::write(

@@ -70,7 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )?,
     )?;
     assert!(accepted, "Exchange copy failed fresh boundary/trim checks");
-    let (text, _, _) = brep_core::export_step_v5(&model)?;
+    let (text, _, _) = cad_step::export_step_v5(&model)?;
     std::fs::write(dir.join("candidate-unit-planar-uv.step"), text)?;
     Ok(())
 }

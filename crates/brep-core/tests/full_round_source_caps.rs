@@ -1,7 +1,4 @@
-use brep_core::{
-    feature_ops::full_round_curved::{build, source_caps},
-    profile_certificate::original_restriction::plane,
-};
+use brep_core::{feature_ops::full_round_curved::{build, source_caps}, profile_certificate::original_restriction::plane};
 use nurbs_core::{curve::Curve, surface::Surface};
 fn surface() -> Surface {
     Surface {

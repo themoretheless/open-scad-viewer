@@ -421,8 +421,8 @@ fn distance_impl(
         crate::distance::subdivision::run(&mut search, &mut queue, cells, max_cells, tolerance_mm)?;
     let best = search.best.unwrap();
     // Result control points must be finite before leaving the module (1093).
-    crate::foundation::guards::require_finite_vec(&best.points[0], "curve distance point a")?;
-    crate::foundation::guards::require_finite_vec(&best.points[1], "curve distance point b")?;
+    crate::numerics::guards::require_finite_vec(&best.points[0], "curve distance point a")?;
+    crate::numerics::guards::require_finite_vec(&best.points[1], "curve distance point b")?;
     Ok(CurveDistance {
         distance_interval_mm: [outcome.lower, best.upper],
         parameters: best.parameters,
@@ -709,7 +709,7 @@ pub fn nearest_point(
         point.len() == curve.control_points[0].len(),
         "Point dimensions must match the curve",
     )?;
-    crate::foundation::guards::require_finite_vec(point, "point")?;
+    crate::numerics::guards::require_finite_vec(point, "point")?;
     let constant = Curve {
         degree: 1,
         knots: vec![0., 0., 1., 1.],

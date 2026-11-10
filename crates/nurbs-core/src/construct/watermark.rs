@@ -36,7 +36,7 @@
 //! при (почти) вырожденном спектре ковариации сетки (куб, шар) выбор осей
 //! PCA нестабилен и стойкость к поворотам не гарантируется.
 
-use crate::foundation::guards::{hash_slice, require_finite_f64};
+use crate::numerics::guards::{hash_slice, require_finite_f64};
 use crate::{Result, check, numeric, resource, surface::Surface};
 
 /// Кратность повторного кода (мажоритарное декодирование).

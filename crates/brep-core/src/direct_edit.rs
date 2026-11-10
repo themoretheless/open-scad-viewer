@@ -401,7 +401,6 @@ mod dirty;
 use dirty::rebuilt_faces_in_place;
 pub use dirty::{DirtyRegion, dirty_region_for_result};
 mod audit;
-use audit::validate_staged;
 pub use audit::{
     DIRECT_EDIT_AUDIT_REFUSED, DirectEditCommit, DirectEditTransaction, DirectEditUndoRecord,
     DirectEditValidationReport, IncrementalRebuildReport, complete_incremental_rebuild,

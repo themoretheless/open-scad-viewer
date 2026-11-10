@@ -586,7 +586,7 @@ subprocess lifetime, and session-local artifact cache.
   protocol, MEMFS child, fail-closed subprocess supervisor, and MCP-facing
   execution service. `scripts/official-openscad-runtime.mjs` is the explicit
   checksum-verifying installer; it is never part of the browser graph.
-- `src/App.vue`: workspace UI, file actions, settings, stale/error state, and
+- `src/App.svt`: workspace UI, file actions, settings, stale/error state, and
   viewer controls.
 - `tests/`: mathematical and geometry golden tests plus protocol, contract-
   boundary, publication, visibility, camera, and recovery unit tests.
@@ -799,19 +799,9 @@ The TypeScript host layers are decomposed by single responsibility (SOLID / DRY 
   - `src/parser/expressionEvaluator.ts` — expression evaluation, OpenSCAD 2021.01 lexical/dynamic scope resolution, built-in function dispatch, and DXF dimension/cross queries.
   - `src/parser/assetEvaluator.ts` — bounded VFS asset evaluators (`makeText`, `makeImport`, `makeSurface`, `compatibilityDxfProfile`).
   - `src/parser/geometryEvaluator.ts` — 2D/3D primitives, transforms, Booleans, hulls, Minkowski sums, and linear/rotational extrusions.
-- **MCP Server (`src/mcp/server/*` & `src/mcp/createServer.ts`)**:
+- **MCP Server (`src/mcp/createServer.ts`, `src/mcp/createServer/*`)**:
+  - `src/mcp/createServer/createOpenScadMcpServer.ts` — tool, resource and prompt registration, Zod schemas and wire mappers.
   - `src/mcp/server/contracts.ts` — server instructions, host isolation contracts (`MCP_GEOMETRY_HOST_CONTRACT`), URI builders, and surrogate-safe string truncation (`truncateWellFormed`).
-  - `src/mcp/server/schemas.ts` — Zod input/output schemas for all MCP tools.
-  - `src/mcp/server/wireMappers.ts` — wire-format mappers for models, builds, diagnostics, and comparison reports.
-  - `src/mcp/server/registerTools.ts` & `src/mcp/server/registerResourcesAndPrompts.ts` — modular registration of catalog/engine tools, resources, and prompts.
-- **OpenSCAD Asset Importers (`src/importers/*` & `src/services/openScadImport.ts`)**:
-  - `src/importers/types.ts` — import budgets, contracts, `OpenScadProjectAssetError`, and 2D/3D mesh/polygon builders.
-  - `src/importers/stlOffImporter.ts` — ASCII/binary STL and OFF parsers (`parseOpenScadStl`, `parseOpenScadOff`, `triangulateFace3D`).
-  - `src/importers/xmlAndArchive.ts` — entity-safe XML parser (`parseXml`), CRC32, ZIP/ZIP64/GZIP decoders (`unzip3mf`, `gunzipAmf`), and AMF/3MF model parsers.
-  - `src/importers/dxfImporter.ts` — DXF section/group readers, contour stitcher, `dxf_dim`/`dxf_cross` metadata resolvers, and `buildDxfQueryPaths`.
-- **Semantic Program Lowerer & Validator (`src/semantic/*`, `src/services/openscadSemanticLowerer.ts` & `src/services/semanticProgramValidator.ts`)**:
-  - `src/semantic/schemaPrimitives.ts` — `SemanticProgramValidationError` and primitive schema/node/operation/template validators.
-  - `src/semantic/occurrenceValidator.ts` — occurrence hierarchy, module activation anchors, `children()` continuation edges, and output-reference validators.
-  - `src/semantic/lowererBuilder.ts` — `SemanticProgramBuilder`, `registerOperations`, and O(V+E) postorder DAG canonicalizer (`canonicalizeCompletedDag`).
-  - `src/semantic/lowererExpressionEval.ts` — expression evaluator, built-in function dispatcher, compatibility argument binder, and AST module/function collectors.
-  - `src/semantic/lowererGeometryOps.ts` — affine matrices, color/segment resolution, 2D/3D primitive constructors, and `dxf_linear_extrude` / `dxf_rotate_extrude` lowering.
+- **OpenSCAD Asset Importers (`src/services/openScadImport.ts`, `src/services/openScadImport/*`)**: import budgets and contracts, ASCII/binary STL and OFF, entity-safe XML, ZIP/ZIP64/GZIP, AMF/3MF and DXF readers with `dxf_dim`/`dxf_cross` metadata.
+- **Semantic Program Lowerer & Validator (`src/services/openscadSemanticLowerer*`, `src/services/semanticProgramValidator*`)**: schema, occurrence and output-reference validation, expression evaluation and geometry lowering.
+  - `src/semantic/lowererBuilder.ts` — `SemanticProgramBuilder`, `registerOperations`, and O(V+E) postorder DAG canonicalizer (`canonicalizeCompletedDag`); currently used by tests only.

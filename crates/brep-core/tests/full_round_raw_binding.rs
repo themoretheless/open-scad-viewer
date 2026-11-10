@@ -1,8 +1,4 @@
-use brep_core::{
-    feature_ops::full_round_curved::build,
-    profile_certificate::original_restriction::wire::{jordan, nesting},
-    Model,
-};
+use brep_core::{feature_ops::full_round_curved::build, profile_certificate::original_restriction::wire::{jordan, nesting}, Model};
 use num_rational::BigRational as Q;
 use num_traits::{FromPrimitive, ToPrimitive};
 use nurbs_core::curve::Curve;

@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let closure = watertight::inspect(&out.model, 100000)?;
     let trims =
         brep_core::face_domain::audit_trim_regions(&out.model, 1e-8, 10000, 100000, 100000)?;
-    let (step, _, _) = brep_core::export_step_v5(&out.model)?;
+    let (step, _, _) = cad_step::export_step_v5(&out.model)?;
     let model = value_codec::to_string(&out.model)?;
     let digest = |b: &[u8]| {
         Sha256::digest(b)

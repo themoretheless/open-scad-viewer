@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    face_cut::{self, Segment},
-};
+use brep_core::{Model, face_cut::{self, Segment}};
 use nurbs_core::{curve::Curve, surface::Surface};
 
 fn rectangle(lo: [f64; 2], hi: [f64; 2]) -> Vec<Curve> {

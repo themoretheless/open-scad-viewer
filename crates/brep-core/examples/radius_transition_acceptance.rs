@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if restored != out.model {
         return Err("Saved model changed on reload".into());
     }
-    let (step, _, _) = brep_core::export_step_v5(&restored)?;
+    let (step, _, _) = cad_step::export_step_v5(&restored)?;
     let digest = |b: &[u8]| {
         Sha256::digest(b)
             .iter()

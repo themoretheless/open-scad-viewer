@@ -4,9 +4,7 @@
 //! genus-changing results, the stated tolerance audited on every fitted
 //! edge, and explicit refusals.
 use brep_core::tolerant_boolean::{self, TOLERANT_FLOOR, boolean as candidate_boolean};
-use brep_core::{
-    Model, analysis::mass_properties, boolean, cuboid, cylinder, sphere, torus, transform,
-};
+use brep_core::{Model, analysis::mass_properties, boolean, cuboid, cylinder, sphere, torus, transform};
 
 fn translate(model: &Model, at: [f64; 3]) -> Model {
     transform::affine(

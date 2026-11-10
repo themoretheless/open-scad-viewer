@@ -160,8 +160,8 @@ pub fn distance(c: &Curve, s: &Surface, tolerance: f64, max_cells: usize) -> Res
         crate::distance::subdivision::run(&mut search, &mut queue, work, max_cells, tolerance)?;
     let best = search.best.unwrap();
     // Result control points must be finite before leaving the module (1093).
-    crate::foundation::guards::require_finite_vec(&best.points[0], "curve point")?;
-    crate::foundation::guards::require_finite_vec(&best.points[1], "surface point")?;
+    crate::numerics::guards::require_finite_vec(&best.points[0], "curve point")?;
+    crate::numerics::guards::require_finite_vec(&best.points[1], "surface point")?;
     Ok(Report {
         distance_interval: [outcome.lower, best.upper],
         curve_parameter: best.t,

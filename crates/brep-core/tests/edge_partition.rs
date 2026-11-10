@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    edge_partition::{self, PcurveCut},
-};
+use brep_core::{Model, edge_partition::{self, PcurveCut}};
 fn cuts(model: &Model, edge: usize, fraction: f64) -> Vec<PcurveCut> {
     model
         .loops

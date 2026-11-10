@@ -11,7 +11,7 @@
 //! never a silently approximate answer. A nonpositive diagonal entry (which
 //! would break both the Jacobi preconditioner and the SPD premise) is
 //! reported as a numeric error as well.
-use crate::foundation::guards::{Budget, require_finite_slice};
+use crate::numerics::guards::{Budget, require_finite_slice};
 use crate::{Result, check, numeric};
 
 /// Compressed sparse row matrix with sorted column indices per row.

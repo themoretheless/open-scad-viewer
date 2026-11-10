@@ -1,6 +1,4 @@
-use brep_core::{
-    Model, TopoId, analysis::mass_properties, boolean, cuboid, cylinder, sphere, tube,
-};
+use brep_core::{Model, TopoId, analysis::mass_properties, boolean, cuboid, cylinder, sphere, tube};
 
 fn translate(mut model: Model, offset: [f64; 3]) -> Model {
     for vertex in &mut model.vertices {

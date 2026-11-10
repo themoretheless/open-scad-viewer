@@ -18,8 +18,8 @@
 //! only by the standard basis-conversion conditioning.
 //!
 //! No `unsafe`, no new dependencies.
-use crate::foundation::guards::Budget;
-use crate::interval_eval::Interval;
+use crate::numerics::guards::Budget;
+use crate::numerics::distance_bounds::Interval;
 use crate::{Result, check, numeric_err};
 
 /// Relative tolerance under which a leading coefficient is treated as zero.

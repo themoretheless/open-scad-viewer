@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let depth = 8. - surface.evaluate(0.5, 0.5)?.point[2];
     assert!((depth - 0.1).abs() < 1e-12);
-    let (step, _, _) = brep_core::export_step_v5(&built.model)?;
+    let (step, _, _) = cad_step::export_step_v5(&built.model)?;
     let sha = Sha256::digest(step.as_bytes())
         .iter()
         .map(|b| format!("{b:02x}"))

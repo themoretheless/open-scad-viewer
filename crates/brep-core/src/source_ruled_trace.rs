@@ -8,12 +8,15 @@ pub(crate) struct Certificate<'a> {
     curve: Curve,
 }
 impl Certificate<'_> {
+    #[cfg(test)]
     pub(crate) fn source(&self) -> &Surface {
         self.source
     }
+    #[cfg(test)]
     pub(crate) fn axes(&self) -> [usize; 2] {
         self.axes
     }
+    #[cfg(test)]
     pub(crate) fn linear_axis(&self) -> usize {
         self.linear
     }
@@ -115,15 +118,19 @@ pub(crate) struct MonotoneCoordinate<'t, 's> {
     increasing: bool,
 }
 impl<'t, 's> MonotoneCoordinate<'t, 's> {
+    #[cfg(test)]
     pub(crate) fn trace(&self) -> &'t Certificate<'s> {
         self.trace
     }
+    #[cfg(test)]
     pub(crate) fn coordinate(&self) -> usize {
         self.coordinate
     }
+    #[cfg(test)]
     pub(crate) fn increasing(&self) -> bool {
         self.increasing
     }
+    #[cfg(test)]
     /// Exact coordinate image of the complete original trace. Clamping
     /// preserves endpoint coordinates even with unequal positive weights.
     pub(crate) fn coordinate_range(&self) -> [f64; 2] {
@@ -132,9 +139,11 @@ impl<'t, 's> MonotoneCoordinate<'t, 's> {
         let b = c.control_points[c.control_points.len() - 1][self.coordinate];
         [a.min(b), a.max(b)]
     }
+    #[cfg(test)]
     pub(crate) fn parameter_domain(&self) -> [f64; 2] {
         self.trace.curve().domain()
     }
+    #[cfg(test)]
     /// Monotonicity lifts certified endpoint evaluations to an enclosure of
     /// every point on the requested subinterval, including both endpoints.
     pub(crate) fn coordinate_enclosure(
@@ -183,12 +192,15 @@ pub(crate) struct CoordinatePreimage<'p, 't, 's> {
     pub(crate) cells: usize,
 }
 impl<'p, 't, 's> CoordinatePreimage<'p, 't, 's> {
+    #[cfg(test)]
     pub(crate) fn owner(&self) -> &'p MonotoneCoordinate<'t, 's> {
         self.owner
     }
+    #[cfg(test)]
     pub(crate) fn target(&self) -> [f64; 2] {
         self.target
     }
+    #[cfg(test)]
     /// Retain all candidates outside the definitely interior interval between
     /// two uncertain endpoints. This split alone proves no contact ownership.
     pub(crate) fn exterior_domains(&self, roots: [[f64; 2]; 2]) -> Result<Vec<[f64; 2]>> {
@@ -218,6 +230,7 @@ impl<'p, 't, 's> CoordinatePreimage<'p, 't, 's> {
     }
 }
 impl<'t, 's> MonotoneCoordinate<'t, 's> {
+    #[cfg(test)]
     pub(crate) fn coordinate_preimage<'p>(
         &'p self,
         target: [f64; 2],
@@ -264,6 +277,7 @@ impl<'t, 's> MonotoneCoordinate<'t, 's> {
         Ok(out)
     }
 }
+#[cfg(test)]
 pub(crate) fn certify_monotone_coordinate<'t, 's>(
     trace: &'t Certificate<'s>,
     coordinate: usize,

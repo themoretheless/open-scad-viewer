@@ -24,10 +24,10 @@ pub fn approximate(
         c.control_points[0].len() == 3 && c.control_points.len() <= 32,
         "Helical sweep requires a 3D curve with at most 32 controls",
     )?;
-    crate::foundation::guards::require_finite_f64(height, "height")?;
-    crate::foundation::guards::require_finite_f64(start_angle, "start_angle")?;
-    crate::foundation::guards::require_finite_f64(twist, "twist")?;
-    crate::foundation::guards::require_finite_f64(budget, "budget")?;
+    crate::numerics::guards::require_finite_f64(height, "height")?;
+    crate::numerics::guards::require_finite_f64(start_angle, "start_angle")?;
+    crate::numerics::guards::require_finite_f64(twist, "twist")?;
+    crate::numerics::guards::require_finite_f64(budget, "budget")?;
     check(
         budget > 0.,
         "Helical sweep requires a positive error budget",

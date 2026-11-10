@@ -135,10 +135,7 @@ fn cancelled_publication_preserves_redo_and_skips_checks_for_stale_edits() {
 
 #[test]
 fn full_model_boolean_transaction_preserves_geometry_and_identity_through_history() {
-    use brep_core::{
-        boolean,
-        transactions::{ModelSnapshot, ModelStore},
-    };
+    use brep_core::{boolean, transactions::{ModelSnapshot, ModelStore}};
     let original = cuboid([0., 0., 0.], [6., 6., 6.]).unwrap();
     let original_ids = original.1.faces.clone();
     let mut store = ModelStore::new(ModelSnapshot::new(original).unwrap());

@@ -3,10 +3,7 @@
 mod sheets;
 #[path = "curved_trim_fixture.rs"]
 mod stock;
-use brep_core::{
-    Model,
-    face_cut::{FiberCapRequest, FiberFaceRequest},
-};
+use brep_core::{Model, face_cut::{FiberCapRequest, FiberFaceRequest}};
 use nurbs_core::{ss_intersection::FiberAxis, surface::Surface};
 pub fn build() -> (Model, Model, Vec<FiberCapRequest>) {
     let square = [1., -2., 4.];

@@ -10,13 +10,9 @@ pub fn abi_alloc(len: usize) -> usize {
     if len > LIMIT {
         return 0;
     }
-    let mut buf = Vec::<u8>::with_capacity(len);
-    // SAFETY: u8 has no drop glue or validity invariants for uninitialized bytes before host write,
-    // and abi_free reconstructs Vec with exact len/cap.
-    unsafe {
-        buf.set_len(len);
-    }
-    Box::into_raw(buf.into_boxed_slice()) as *mut u8 as usize
+    // The host writes every byte before any read; the buffer stays `MaybeUninit` until then.
+    // `abi_free` rebuilds the allocation with the same length and `u8` layout.
+    Box::into_raw(Box::<[u8]>::new_uninit_slice(len)) as *mut u8 as usize
 }
 
 /// # Safety
@@ -58,4 +54,23 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
         }
     };
     packed(crate::abi_language(op, value))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{LIMIT, abi_alloc, abi_free};
+
+    #[test]
+    fn request_buffers_round_trip_and_respect_the_limit() {
+        assert_eq!(abi_alloc(LIMIT + 1), 0);
+        for len in [0, 1, 4096] {
+            let ptr = abi_alloc(len);
+            assert_ne!(ptr, 0);
+            // The host writes every byte before the module reads any.
+            unsafe { std::ptr::write_bytes(ptr as *mut u8, 0xA5, len) };
+            let bytes = unsafe { std::slice::from_raw_parts(ptr as *const u8, len) };
+            assert!(bytes.iter().all(|&b| b == 0xA5));
+            unsafe { abi_free(ptr, len) };
+        }
+    }
 }

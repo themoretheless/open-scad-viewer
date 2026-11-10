@@ -8,7 +8,7 @@ pub fn exact_bezier_controls(c: &Curve, max_control_rows: usize) -> Option<Vec<C
     if max_control_rows == 0 || max_control_rows > 4096 || c.validate().is_err() {
         return None;
     }
-    let rows = crate::certificates::audit::curve_span_domains(c).len()
+    let rows = crate::core::span_domains::curve_span_domains(c).len()
         .checked_mul(c.degree.checked_add(1)?)?;
     if rows > max_control_rows { return None; }
     crate::exact_curve_segments::inspect(c)

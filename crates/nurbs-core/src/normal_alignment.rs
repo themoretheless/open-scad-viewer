@@ -698,8 +698,8 @@ pub fn endpoint_chord_excluded(
 #[path = "normal_alignment/tests/mod.rs"]
 mod tests;
 
-#[path="normal_alignment/methods_OriginalNormalCache_a__new.rs"]
-mod methods_original_normal_cache_a_new;
+#[path="normal_alignment/new.rs"]
+mod new;
 #[path="normal_alignment/algorithm_restrict_net.rs"]
 mod algorithm_restrict_net;
 use algorithm_restrict_net::restrict_net;

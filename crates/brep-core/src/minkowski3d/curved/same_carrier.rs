@@ -2,7 +2,6 @@
 //! Different carriers or nonlinear changes of UV coordinates are not inferred.
 use super::*;
 mod plan;
-pub(crate) use plan::component as same_carrier_component;
 #[derive(Clone, Debug, PartialEq)]
 pub struct SameCarrierMergeCertificate {
     pub version: u32,

@@ -1,7 +1,4 @@
-use brep_core::{
-    rational_section_loft,
-    sweep_cap_contacts::{self, Budgets},
-};
+use brep_core::{rational_section_loft, sweep_cap_contacts::{self, Budgets}};
 use nurbs_core::primitives::circle;
 fn budgets() -> Budgets {
     Budgets {

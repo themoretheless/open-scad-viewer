@@ -1,5 +1,4 @@
 pub mod vec3_ext;
-pub mod interval_vec3;
-pub mod exact_curve_segments;
+pub(crate) use crate::numerics::interval_vec3;
 pub mod audit;
-pub mod error_upper;
+pub use crate::numerics::error_upper;

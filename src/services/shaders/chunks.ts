@@ -2,9 +2,10 @@
  * Shared WGSL chunks and the CPU-side mirror of the uniform layouts.
  *
  * Since phase 3 of the shader refactor, the canonical WGSL chunk text lives
- * in Rust (`crates/raster-core/src/chunks.rs`) and the layout values in
- * `crates/raster-core/src/layout.rs`; the `wgsl_export` codegen emits them
- * into `generated/sources.ts` and `generated/layouts.ts`. This module only
+ * in Rust (`raster-core/src/chunks.rs` in the external `forma` repository)
+ * and the layout values in `raster-core/src/layout.rs`; forma's `wgsl_export`
+ * codegen emits `generated/sources.ts` and `generated/layouts.ts`, which are
+ * copied here. This repository has no generator for them. This module only
  * re-exports those generated constants (plus the `sceneStruct` composer), so
  * the WGSL text and the upload offsets each have exactly one source of truth.
  */

@@ -1,6 +1,7 @@
 # ADR 0012: Module layer ratchet inside the kernel crates
 
-- Status: proposed
+- Status: accepted
+- Decision: accepted for `nurbs-core` (repository owner, 2026-11-10); enforced by `scripts/moduleLayers.mjs`.
 - Date: 2026-11-10
 - Evidence: `docs/refactor/ARCHITECTURE.md` sections 4 and 5,
   `tools/refactor-audit/nurbs_layers.py`, `tools/refactor-audit/brep_families.py`

@@ -1,11 +1,6 @@
 //! Whole retained-body regression for shared-generator endpoint projection.
 //! Source error, saved profile jets, and material admission are independent.
-use brep_core::{
-    analytic::{EndpointCapCorrection, progressive_profile_body_with_automatic_caps},
-    boundary_embedding, face_contacts,
-    retained_annular_cap::reference_filling,
-    sweep_cap_contacts, volume_validity,
-};
+use brep_core::{analytic::{EndpointCapCorrection, progressive_profile_body_with_automatic_caps}, boundary_embedding, face_contacts, retained_annular_cap::reference_filling, sweep_cap_contacts, volume_validity};
 use nurbs_core::{
     curve::Curve,
     primitives::circle,

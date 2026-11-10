@@ -4,8 +4,6 @@ use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
 type Poly = Vec<Vec<I>>;
 
 mod report;
-#[cfg(test)]
-mod tests;
 pub use report::*;
 
 mod collar;

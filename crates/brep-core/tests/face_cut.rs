@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    face_cut::{self, Segment},
-};
+use brep_core::{Model, face_cut::{self, Segment}};
 use nurbs_core::curve::Curve;
 fn setup() -> (Model, usize, [usize; 2], Segment) {
     let model = brep_core::cuboid([0.; 3], [8.; 3]).unwrap();

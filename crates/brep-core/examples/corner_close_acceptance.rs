@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         100000,
         1000000,
     )?;
-    let (step, _, _) = brep_core::export_step_v5(&out.model)?;
+    let (step, _, _) = cad_step::export_step_v5(&out.model)?;
     let sha = Sha256::digest(step.as_bytes())
         .iter()
         .map(|b| format!("{b:02x}"))

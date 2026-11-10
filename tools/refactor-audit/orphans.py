@@ -9,7 +9,7 @@ mods = list(csv.DictReader(open(os.path.join(A, 'moddecls.tsv')), delimiter='\t'
 git = lambda *a: subprocess.run(['git', '-C', ROOT, *a], capture_output=True, text=True).stdout
 tracked = set(git('ls-files', 'crates').split('\n'))
 status = {l[3:].strip(): l[:2] for l in git('status', '--porcelain').split('\n') if l}
-refd = set(re.findall(r'crates/[A-Za-z0-9_./-]+\.rs', git('grep', '-hoE', r'crates/[A-Za-z0-9_./-]+\.rs', '--', '.', ':!docs/qualification', ':!crates/*/src/**', ':!crates/*/tests/**')))
+refd = set(re.findall(r'crates/[A-Za-z0-9_./-]+\.rs', git('grep', '-hoE', r'crates/[A-Za-z0-9_./-]+\.rs', '--', '.', ':!docs/qualification', ':!docs/refactor', ':!architecture-baseline.json', ':!crates/*/src/**', ':!crates/*/tests/**')))
 OUTSIDE = {'modelgraph-runtime', 'independent-modeling', 'tensor-core', 'math-core', 'raster-core', 'modelgraph-text', 'compute-core'}
 TRIV = re.compile(r'^[\s{}()\[\];,]*$')
 def norm(path):

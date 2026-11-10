@@ -157,7 +157,7 @@ fn main() {
             )
             .unwrap();
             let step_written = if std::env::var_os("OSV_CENTRAL_GRAPH_STEP").is_some() {
-                let (text, _, _) = brep_core::export_step_v5(&graft.model).unwrap();
+                let (text, _, _) = cad_step::export_step_v5(&graft.model).unwrap();
                 std::fs::write(path.with_extension("graft.step"), text).unwrap();
                 true
             } else {

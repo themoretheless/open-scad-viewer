@@ -312,7 +312,7 @@ pub fn distance(
         (1..=8000000).contains(&max_domain_cells),
         "Trimmed surface distance needs 1..8000000 domain cells",
     )?;
-    let axis_lower = crate::radial_bounds::axis_separation_lower(a, b);
+    let axis_lower = crate::distance::radial_bounds::axis_separation_lower(a, b);
     let aa = patches(a)?;
     let bb = patches(b)?;
     if aa.len().saturating_mul(bb.len()) > max_cells {
@@ -367,8 +367,8 @@ pub fn distance(
     let upper_bound_mm = best.as_ref().map(|w| w.upper);
     // Result control points must be finite before leaving the module (1093).
     if let Some(w) = &best {
-        crate::foundation::guards::require_finite_point(&w.points[0], "trimmed point a")?;
-        crate::foundation::guards::require_finite_point(&w.points[1], "trimmed point b")?;
+        crate::numerics::guards::require_finite_point(&w.points[0], "trimmed point a")?;
+        crate::numerics::guards::require_finite_point(&w.points[1], "trimmed point b")?;
     }
     Ok(TrimmedDistance {
         lower_bound_mm: outcome.lower,

@@ -39,3 +39,18 @@ dead-code passes; the rest takes about two minutes.
 - `do yeet e` is read as `return e`, because `syn` 2 has no `yeet_expr`.
 
 `audit-rs` is a standalone package with its own lock file. It is not a member of `crates/`.
+
+## Gates in CI
+
+The audit above is a measurement. The rules that block regressions live in `scripts/` and run in CI:
+
+| Rule | Script | Pinned in `architecture-baseline.json` |
+| --- | --- | --- |
+| File size, crate layering | `scripts/audit-architecture.mjs` | `sizes`, `layers` |
+| Every `.rs` under a package is compiled | `scripts/rustModuleTree.mjs` via the audit | `unreachable` |
+| No `methods_*`, `*_impl_N`, `*_cases_N`, `*_part_N` file names | the audit | `mechanical` |
+| Functions up to 150 lines | `scripts/functionSizes.mjs` via the audit | `functions` |
+| Clippy warnings per crate may only go down | `scripts/audit-clippy.mjs` (CI job `rust`) | `clippy` |
+
+Pinned entries may shrink or disappear; `node scripts/audit-architecture.mjs --update` and
+`node scripts/audit-clippy.mjs --update` lower the pins after a fix.

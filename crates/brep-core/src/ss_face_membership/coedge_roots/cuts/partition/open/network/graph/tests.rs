@@ -149,7 +149,8 @@ fn three_source_paths_join_three_distinct_hole_pairs_as_one_actual_cycle() {
     assert_eq!(m, before);
 }
 #[test]
-fn one_model_retains_both_general_bridge_graphs_and_edited_step_topology() {
+#[cfg(feature = "codec")]
+fn one_model_retains_both_general_bridge_graphs_and_matches_the_exchange_fixture() {
     let c = curves(0.0625);
     let pair = fixtures(&c);
     let m = combined(&pair[0], &pair[1]);
@@ -168,11 +169,5 @@ fn one_model_retains_both_general_bridge_graphs_and_edited_step_topology() {
     assert_eq!(r.models()[0].faces.len(), 4);
     assert_eq!(r.models()[0].shells[0].faces.len(), 2);
     assert_eq!(r.models()[0].shells[1].faces.len(), 2);
-    let (text, out, _) = crate::export_step_v9(&r.models()[0]).unwrap();
-    assert!(out.complete);
-    let (restored, import, _) = crate::import_step_v9(&text).unwrap();
-    assert!(import.complete);
-    assert_eq!(restored.faces.len(), 4);
-    assert_eq!(restored.edges.len(), r.models()[0].edges.len());
-    assert_eq!(restored.shells.len(), 2);
+    crate::exchange_fixtures::assert_matches("ss_open_network_graph", value_codec::json!({"model": value_codec::to_value(&r.models()[0]).unwrap()}));
 }

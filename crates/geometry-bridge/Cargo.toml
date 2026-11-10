@@ -22,8 +22,6 @@ bridge-codec = { workspace = true }
 bridge-cam = { workspace = true }
 bridge-analysis = { workspace = true }
 bridge-svg = { workspace = true }
-gcode-core = { workspace = true }
-laser-core = { workspace = true }
 mesh-io = { workspace = true }
 mesh-topology = { workspace = true }
 mesh-query = { workspace = true }
@@ -42,15 +40,13 @@ brep-topology = { workspace = true, features = ["codec"] }
 brep-core = { workspace = true, features = ["codec"] }
 cad-predicates = { workspace = true, features = ["codec"] }
 planar-geometry = { workspace = true }
-resvg = { version = "=0.47.0", default-features = false, features = ["text", "raster-images"] }
 subdivision-core = { workspace = true, features = ["codec"] }
 sdf-core = { workspace = true, features = ["codec"] }
 nurbs-core = { workspace = true, features = ["transport"] }
 polygon-core = { workspace = true, features = ["codec"] }
-slicer-core = { workspace = true }
-usvg = { version = "0.47.0", default-features = false, features = ["text"] }
-svgtypes = "0.16.1"
 base64 = "0.22"
 sha2 = "0.11"
 
-
+[dev-dependencies]
+gcode-core = { workspace = true }
+slicer-core = { workspace = true }

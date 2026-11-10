@@ -121,7 +121,7 @@ fn main() {
         1000000,
     )
     .unwrap();
-    let (step, _, _) = brep_core::export_step_v5(&out.model).unwrap();
+    let (step, _, _) = cad_step::export_step_v5(&out.model).unwrap();
     std::fs::write(directory.join("candidate.step"), step).unwrap();
     let report = value_codec::json!({"model":out.model,"originalFace":face,"tileFace":out.tile_face,"rectangle":rectangle,
         "tilePoles":counts,"liftedPole":out.lifted_pole,"displacement":[delta,delta,delta],"sharedEdges":out.shared_edges,

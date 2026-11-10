@@ -335,7 +335,7 @@ mod tests {
         let mut model = crate::cuboid([0.; 3], [4., 3., 2.]).unwrap();
         for &face in noisy_faces {
             model.faces[face].surface =
-                crate::nurbs_step_shared::as_uniform_bicubic(&model.faces[face].surface).unwrap();
+                crate::freeform_cuboid::as_uniform_bicubic(&model.faces[face].surface).unwrap();
             for (i, row) in model.faces[face]
                 .surface
                 .control_points

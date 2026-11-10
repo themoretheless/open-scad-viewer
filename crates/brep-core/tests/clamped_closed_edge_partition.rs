@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    feature_ops::edge_partition::{self, Limits},
-};
+use brep_core::{Model, feature_ops::edge_partition::{self, Limits}};
 #[path = "common/closed_periodic_source.rs"]
 mod fixture;
 fn source() -> Model {

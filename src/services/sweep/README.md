@@ -10,7 +10,7 @@ and validation of claims displayed in the viewport.
   certificate composition, native stream snapshots and bounded refinement,
   private corrected sections, opaque owner capabilities, placement and smoothing.
 - `crates/geometry-bridge/src/sweep_viewport.rs`: validation of display evidence.
-- `crates/modelgraph-runtime/src/profiles.rs`: canonical convex graph loft geometry.
+- `crates/rush-runtime/src/profiles.rs`: canonical convex graph loft geometry.
   Unreferenced TypeScript copies were removed.
 
 The TypeScript files in this directory carry types and adapt native calls.

@@ -191,7 +191,7 @@ mod tests {
             })
             .unwrap();
         if axis == 1 {
-            surface = crate::surface_edit::transpose(&surface).unwrap();
+            surface = crate::core::surface_transpose::transpose(&surface).unwrap();
         }
         let position = pcurve.control_points[0][axis];
         let end = position == surface.knots_u[surface.control_points.len()];

@@ -3,8 +3,8 @@
 
 use super::{Result, Value, field, input};
 use brep_core::Model;
-use brep_core::step_interchange_v3::step_xde::StepValidationKind;
-use brep_core::step_interchange_v3::{
+use cad_step::step_interchange_v3::step_xde::StepValidationKind;
+use cad_step::step_interchange_v3::{
     StepColour, StepPresentationStyle, StepProductMetadata, import_step_v9_with_metadata,
 };
 use value_codec::json;
@@ -248,8 +248,8 @@ pub(crate) fn import(v: Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use brep_core::step_interchange_v3::step_xde::StepValidationProperties;
-    use brep_core::step_interchange_v3::{
+    use cad_step::step_interchange_v3::step_xde::StepValidationProperties;
+    use cad_step::step_interchange_v3::{
         StepProductMetadata, StepSemanticMetadata, export_step_v9_with_metadata,
     };
 

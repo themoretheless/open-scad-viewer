@@ -15,10 +15,8 @@
 //!   `foundation/fitting.rs` is a fixed small diagonal bias local to the
 //!   fitting normal equations and exposes no adaptive radius / stopping
 //!   diagnostics, so nothing is duplicated.
-//! - [`trust_region_point_inversion_curve`] /
-//!   [`trust_region_point_inversion_surface`]: robust parameter inversion
-//!   `min_u ‖C(u) − P‖` and `min_(u,v) ‖S(u,v) − P‖` built on the crate's
-//!   analytic `evaluate` derivatives.
+//! - point inversion on curves and surfaces (`min_u ‖C(u) − P‖`, `min_(u,v) ‖S(u,v) − P‖`) lives in
+//!   `foundation::point_inversion_solver`, because it needs curve and surface types;
 //! - [`constraint_rank_report`]: SVD rank diagnostics of a constraint
 //!   Jacobian: singular values, numerical rank and indices of conflicting
 //!   (linearly dependent) rows.
@@ -28,12 +26,10 @@
 
 use crate::{Result, check};
 
-mod inversion;
 mod lm;
 mod rank;
 mod rrqr;
 mod trust_region;
-pub use inversion::{trust_region_point_inversion_curve, trust_region_point_inversion_surface};
 pub use lm::levenberg_marquardt_solve;
 pub use rank::{ConstraintRankReport, constraint_rank_report};
 pub use rrqr::{RankDiagnostics, Rrqr, rrqr};

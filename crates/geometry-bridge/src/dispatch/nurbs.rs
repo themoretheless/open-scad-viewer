@@ -137,11 +137,11 @@ fn handle(v: Value) -> Result<Value> {
             field(&v, "offset")?,
         )?),
         "brep_nurbs_box" => encode(brep_core::cuboid(field(&v, "min")?, field(&v, "max")?)?),
-        "brep_nurbs_freeform_cuboid" => encode(brep_core::freeform_cuboid_solid(
+        "brep_nurbs_freeform_cuboid" => encode(cad_step::freeform_cuboid_solid(
             field(&v, "min")?,
             field(&v, "max")?,
         )?),
-        "brep_nurbs_freeform_cuboid_bump" => encode(brep_core::freeform_cuboid_with_bump_face(
+        "brep_nurbs_freeform_cuboid_bump" => encode(cad_step::freeform_cuboid_with_bump_face(
             field(&v, "min")?,
             field(&v, "max")?,
         )?),

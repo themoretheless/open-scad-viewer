@@ -23,7 +23,7 @@
 //! maps are ordered (`BTreeMap`), and the output index buffers depend only
 //! on the inputs — identical inputs produce a byte-identical mesh.
 
-use crate::foundation::guards::{Budget, require_finite_point};
+use crate::numerics::guards::{Budget, require_finite_point};
 use crate::{Result, check, numeric, resource};
 use math_core::{cross, dot, norm, solve};
 use std::collections::BTreeMap;

@@ -45,6 +45,8 @@ jobs:
             ~/.cargo/registry
             crates/target
           key: rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+      - name: Block new clippy warnings (per-crate pins in architecture-baseline.json)
+        run: node scripts/audit-clippy.mjs
       - name: Check typed geometry without wire codecs
         run: cargo check --locked --manifest-path crates/Cargo.toml -p brep-core -p nurbs-intersect -p brep-intersect --no-default-features
       - name: Verify complete native test partition

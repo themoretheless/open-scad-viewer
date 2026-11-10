@@ -67,15 +67,10 @@ pub mod face_replacement;
 pub mod face_window;
 pub mod fillet_contact;
 pub mod fillet_radius;
-pub mod iges_interchange_v2;
 pub mod imprint_pipeline;
 pub mod intersections;
 pub mod nurbs_ss_g6;
 pub mod nurbs_ss_general;
-pub mod nurbs_step_interchange;
-mod nurbs_step_shared;
-pub mod nurbs_step_solid;
-pub mod nurbs_step_trimmed;
 mod operation_tolerance;
 pub mod operations;
 pub mod radius_transition_body;
@@ -103,6 +98,11 @@ pub mod healing;
 pub mod healing_report;
 #[cfg(feature = "codec")]
 pub mod import_policy;
+pub mod freeform_cuboid;
+pub mod source_exchange_plan;
+#[cfg(all(test, feature = "codec"))]
+mod exchange_fixtures;
+pub use freeform_cuboid::{freeform_cuboid_solid, freeform_cuboid_with_bump_face};
 pub mod material_chord;
 pub mod material_segment;
 pub mod material_wall;
@@ -134,11 +134,6 @@ pub mod solid_audit;
 pub mod solid_distance;
 pub mod source_implicit_body;
 mod sphere_boolean;
-pub mod step_interchange;
-pub mod step_interchange_v3;
-mod step_part21;
-pub mod step_pmi;
-mod step_v3_export;
 mod stepped_prism;
 pub mod sweep_affine_boundary;
 pub mod sweep_cap_contacts;
@@ -195,13 +190,7 @@ pub use close_topology::{
     ComplexInterchangeCertificate, ComplexPart, CorrespondenceKind, EdgeRadialRing, EdgeUseRef,
     ExactParameterPartition, FaceRef, LocalCorrespondence, MixedDimensionalBrep, SharedFace,
     TOLERANT_COMPLEX_HEAL_CAPABILITY, TopologyComplexCertificate, VertexFan, VertexUseRef,
-    certify_complex_heal, complex_relation_id, export_complex_iges, export_complex_step,
-    import_complex_iges, import_complex_step,
-};
-pub use iges_interchange_v2::{
-    IGES_INTERCHANGE_V2_CAPABILITY, IgesLengthUnit, IgesV2DiscardReport, IgesV2ImportOptions,
-    IgesV2Report, IgesV2UnitReport, export_iges_v2, import_iges_v2, import_iges_v2_with_options,
-};
+    certify_complex_heal, complex_relation_id, };
 pub use nurbs_ss_g6::{
     BranchCompletenessCertificate, BranchComponent, BranchGraph, BranchOrientation,
     CertifiedBranchFragment, ContainedGraphBooleanCertificate, CurvedGraphBooleanCertificate,
@@ -225,35 +214,9 @@ pub use nurbs_ss_general::{
 };
 #[cfg(feature = "codec")]
 pub use nurbs_ss_general::{branch_graph_from_ss_report, rational_traces_from_ss_report};
-pub use nurbs_step_interchange::{
-    NURBS_STEP_BICUBIC_FACE_CAPABILITY, bicubic_open_face, export_nurbs_step, import_nurbs_step,
-};
-pub use nurbs_step_solid::{
-    NURBS_STEP_SOLID_CAPABILITY, NURBS_STEP_SOLID_V2_CAPABILITY, export_nurbs_step_solid,
-    export_nurbs_step_solid_v2, freeform_cuboid_solid, freeform_cuboid_with_bump_face,
-    import_nurbs_step_solid, import_nurbs_step_solid_v2,
-};
-pub use nurbs_step_trimmed::{
-    NURBS_STEP_TRIMMED_BICUBIC_CAPABILITY, bicubic_trimmed_face, export_nurbs_step_trimmed,
-    import_nurbs_step_trimmed,
-};
 pub use operations::{
     boolean, chamfer, chamfer_edges, extrude_polygon, extrude_polygon_with_holes, faceted_cylinder,
     faceted_loft, faceted_revolve, faceted_sphere, faceted_sweep, fillet, fillet_edges,
-};
-pub use step_interchange::{
-    STEP_INTERCHANGE_V2_CAPABILITY, StepIdentityReport, export_step, export_step_v2, import_step,
-    import_step_v2,
-};
-pub use step_interchange_v3::{
-    STEP_INTERCHANGE_V3_CAPABILITY, STEP_INTERCHANGE_V4_CAPABILITY, STEP_INTERCHANGE_V5_CAPABILITY,
-    STEP_INTERCHANGE_V6_CAPABILITY, STEP_INTERCHANGE_V7_CAPABILITY, STEP_INTERCHANGE_V8_CAPABILITY,
-    STEP_INTERCHANGE_V9_CAPABILITY, STEP_INTERCHANGE_V10_CAPABILITY, StepRegularityEvidence,
-    StepV3Report, StepV8Certificate, StepV10Document, compose_step_v7_occurrences,
-    compose_step_v8_occurrences, compose_step_v9_occurrences, export_step_v3, export_step_v4,
-    export_step_v5, export_step_v6, export_step_v7, export_step_v8, export_step_v9,
-    export_step_v10, import_step_v3, import_step_v4, import_step_v5, import_step_v6,
-    import_step_v7, import_step_v8, import_step_v9, import_step_v10,
 };
 
 pub use brep_topology::{
@@ -502,7 +465,6 @@ pub mod source_exchange_endpoints;
 
 pub mod source_exchange_trims;
 
-pub mod source_exchange_step;
 
 pub mod source_support_shell;
 

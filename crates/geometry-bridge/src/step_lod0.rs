@@ -6,7 +6,7 @@
 //! exact-B-rep tessellation.  Exact entity IDs remain authoritative geometry.
 
 use crate::{Result, Value, field, input};
-use brep_core::step_interchange::{
+use cad_step::step_interchange::{
     StepDiagnosticSeverity, StepDriftAssessment, StepDriftNotAssessedReason, StepSchemaDiagnostic,
     StepSchemaDiagnosticCode, StepTessellatedDiagnostic, StepTessellatedDiagnosticCode,
     StepTessellatedLod0, StepTessellatedSeverity, import_ap242_tessellated_lod0,

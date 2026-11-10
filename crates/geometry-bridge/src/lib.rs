@@ -182,6 +182,8 @@ fn dispatch_local(mut v: Value) -> Result<Value> {
 pub use request_codec::execute;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod progressive_annular_tests;
 
 mod cad_mesh_buffer;
 pub use cad_mesh_buffer::{CadMeshBuffer, import_cad_mesh};

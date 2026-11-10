@@ -406,8 +406,8 @@ pub fn distance(
         crate::distance::subdivision::run(&mut search, &mut queue, cells, max_cells, tolerance_mm)?;
     let best = search.best.unwrap();
     // Result control points must be finite before leaving the module (1093).
-    crate::foundation::guards::require_finite_point(&best.points[0], "surface distance point a")?;
-    crate::foundation::guards::require_finite_point(&best.points[1], "surface distance point b")?;
+    crate::numerics::guards::require_finite_point(&best.points[0], "surface distance point a")?;
+    crate::numerics::guards::require_finite_point(&best.points[1], "surface distance point b")?;
     Ok(SurfaceDistance {
         distance_interval_mm: [outcome.lower, best.upper],
         parameters: best.parameters,
@@ -427,8 +427,8 @@ pub fn distance(
 /// This is also the enclosure primitive needed by trimmed-face domain traversal.
 pub fn rectangle_bounds(s: &Surface, domain: [[f64; 2]; 2]) -> Result<Vec<[f64; 2]>> {
     s.validate()?;
-    crate::foundation::guards::require_finite_point(&domain[0], "rectangle u")?;
-    crate::foundation::guards::require_finite_point(&domain[1], "rectangle v")?;
+    crate::numerics::guards::require_finite_point(&domain[0], "rectangle u")?;
+    crate::numerics::guards::require_finite_point(&domain[1], "rectangle v")?;
     let natural = [
         [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
         [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
@@ -731,7 +731,7 @@ pub fn nearest_point(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<NearestPoint> {
-    crate::foundation::guards::require_finite_point(&point, "point")?;
+    crate::numerics::guards::require_finite_point(&point, "point")?;
     let constant = Surface {
         degree_u: 1,
         degree_v: 1,

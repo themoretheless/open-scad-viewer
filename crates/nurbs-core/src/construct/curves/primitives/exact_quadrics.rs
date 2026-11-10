@@ -4,7 +4,6 @@ use crate::{
     core::bounded_rational::{Error, Work},
     surface::Surface,
 };
-use num_rational::BigRational as Q;
 mod proof;
 #[cfg(test)]
 mod tests;

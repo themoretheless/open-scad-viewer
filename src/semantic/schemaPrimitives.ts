@@ -1,3 +1,0 @@
-// Public entry point; implementations retain their original contracts.
-export { SemanticProgramValidationError, fail, isRecord, exactKeys, wellFormedUnicode, stringValue, finiteNumber, integer, positive, booleanValue, arrayValue, tupleNumbers, nullablePositive, assertSchemaVersion, utf8Compare, validateSortedStrings, validateIdentityValue, validateStructuralPath, samePath, structuralPathKey, validateOperations, validateValueType, representationEvidenceEqual } from './schemaPrimitives/SemanticProgramValidationError'
-export { sameValueType, expectedValueType, assertValueType, nodeReference, validateAnalyticLanguage, validateNodes, identityValueKey, sameDynamicSlots, sameDynamicBindings, validateDiagnosticTemplates } from './schemaPrimitives/sameValueType'

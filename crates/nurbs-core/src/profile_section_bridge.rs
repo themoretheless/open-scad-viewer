@@ -92,11 +92,11 @@ mod tests;
 #[path="profile_section_bridge_second.rs"]
 mod second_free_jet;
 
-#[path="profile_section_bridge/methods_ProfileSectionBridge_a_b_c_d__new.rs"]
-mod methods_profile_section_bridge_a_b_c_d_new;
-#[path="profile_section_bridge/methods_ProfileSectionBridge_a_b_c_d__inspect_injectivity.rs"]
-mod methods_profile_section_bridge_a_b_c_d_inspect_injectivity;
-#[path="profile_section_bridge/methods_RailConstrainedBridge____________section.rs"]
-mod methods_rail_constrained_bridge______section;
-#[path="profile_section_bridge/methods_RailConstrainedBridge____________inspect_transverse_corrected_injectivity_policy.rs"]
-mod methods_rail_constrained_bridge______inspect_transverse_corrected_injectivity_policy;
+#[path="profile_section_bridge/new.rs"]
+mod new;
+#[path="profile_section_bridge/inspect_injectivity.rs"]
+mod inspect_injectivity;
+#[path="profile_section_bridge/section.rs"]
+mod section;
+#[path="profile_section_bridge/inspect_transverse_corrected_injectivity_policy.rs"]
+mod inspect_transverse_corrected_injectivity_policy;

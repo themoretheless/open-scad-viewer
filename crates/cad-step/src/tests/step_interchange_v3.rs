@@ -1,6 +1,9 @@
-
 use super::*;
 use crate::nurbs_step_solid::freeform_cuboid_solid;
+use crate::step_part21::{MAX_BYTES, MAX_INSTANCES, MAX_PARSE_DEPTH, lex, render_entity_value};
+use crate::step_v3_export::{
+    emit_curve_v5, enforce_output_limit, periodic_patch_grid_compatible, periodicized_step_v6,
+};
 
 fn append(target: &mut Model, source: Model) {
     let Model(source, _) = source;
@@ -79,14 +82,14 @@ fn partial_holed_revolution_is_not_mistaken_for_a_periodic_band() {
 
 fn identity_relationship_fixture() -> String {
     include_str!("../../../../tests/fixtures/step-v9/self-authored-ap242-cylinder.step")
-            .replace(
-                "#298=SHAPE_DEFINITION_REPRESENTATION(#297,#290);",
-                "#298=SHAPE_DEFINITION_REPRESENTATION(#297,#299);",
-            )
-            .replace(
-                "ENDSEC;\nEND-ISO",
-                "#299=SHAPE_REPRESENTATION('',(),#289);\n#300=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#290);\n#301=SHAPE_REPRESENTATION('PMI',(),#289);\n#302=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#301);\nENDSEC;\nEND-ISO",
-            )
+        .replace(
+            "#298=SHAPE_DEFINITION_REPRESENTATION(#297,#290);",
+            "#298=SHAPE_DEFINITION_REPRESENTATION(#297,#299);",
+        )
+        .replace(
+            "ENDSEC;\nEND-ISO",
+            "#299=SHAPE_REPRESENTATION('',(),#289);\n#300=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#290);\n#301=SHAPE_REPRESENTATION('PMI',(),#289);\n#302=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#301);\nENDSEC;\nEND-ISO",
+        )
 }
 
 #[test]
@@ -102,9 +105,9 @@ fn identity_relationship_selects_one_exact_root_and_retains_pmi_metadata() {
     );
 
     let multiple_children = text.replace(
-            "ENDSEC;\nEND-ISO",
-            "#303=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#286),#289);\n#304=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#303);\nENDSEC;\nEND-ISO",
-        );
+        "ENDSEC;\nEND-ISO",
+        "#303=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#286),#289);\n#304=SHAPE_REPRESENTATION_RELATIONSHIP('','',#299,#303);\nENDSEC;\nEND-ISO",
+    );
     assert!(
         import_step_v10(&multiple_children)
             .unwrap_err()
@@ -145,9 +148,9 @@ fn identity_relationship_selects_one_exact_root_and_retains_pmi_metadata() {
     }
     let independent = String::from_utf8(independent).unwrap();
     let multiple_roots = text.replace(
-            "ENDSEC;\nEND-ISO",
-            &format!("{independent}#303=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#1286),#289);\n#304=SHAPE_DEFINITION_REPRESENTATION(#297,#303);\nENDSEC;\nEND-ISO"),
-        );
+        "ENDSEC;\nEND-ISO",
+        &format!("{independent}#303=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#1286),#289);\n#304=SHAPE_DEFINITION_REPRESENTATION(#297,#303);\nENDSEC;\nEND-ISO"),
+    );
     let error = import_step_v10(&multiple_roots).unwrap_err();
     assert!(
         error.message.contains("Ambiguous multiple exact"),
@@ -155,9 +158,9 @@ fn identity_relationship_selects_one_exact_root_and_retains_pmi_metadata() {
     );
 
     let cycle = text.replace(
-            "ENDSEC;\nEND-ISO",
-            "#303=SHAPE_REPRESENTATION('PMI cycle',(),#289);\n#304=SHAPE_REPRESENTATION_RELATIONSHIP('','',#301,#303);\n#305=SHAPE_REPRESENTATION_RELATIONSHIP('','',#303,#301);\nENDSEC;\nEND-ISO",
-        );
+        "ENDSEC;\nEND-ISO",
+        "#303=SHAPE_REPRESENTATION('PMI cycle',(),#289);\n#304=SHAPE_REPRESENTATION_RELATIONSHIP('','',#301,#303);\n#305=SHAPE_REPRESENTATION_RELATIONSHIP('','',#303,#301);\nENDSEC;\nEND-ISO",
+    );
     assert!(
         import_step_v10(&cycle)
             .unwrap_err()
@@ -169,9 +172,9 @@ fn identity_relationship_selects_one_exact_root_and_retains_pmi_metadata() {
 #[test]
 fn presentation_pmi_metadata_is_ignored_without_becoming_exact_geometry() {
     let text = identity_relationship_fixture().replace(
-            "ENDSEC;\nEND-ISO",
-            "#303=SURFACE_STYLE_PARAMETER_LINE(#301,(U_DIRECTION_COUNT(2),V_DIRECTION_COUNT(2)));\n#304=SURFACE_STYLE_TRANSPARENT(0.5);\n#305=TESSELLATED_SHAPE_REPRESENTATION('auxiliary',(),#289);\n#306=CONCENTRICITY_TOLERANCE('','',#301,#301,(#301));\n#307=PRODUCT_DEFINITION_CONTEXT_ROLE('additional context','');\n#308=SYMMETRY_TOLERANCE('','',#301,#301,(#301));\n#309=ROUNDNESS_TOLERANCE('','',#301,#301,(#301));\n#310=CYLINDRICITY_TOLERANCE('','',#301,#301,(#301));\n#311=APPLIED_DOCUMENT_REFERENCE(#301,'');\n#312=TOTAL_RUNOUT_TOLERANCE('','',#301,#301,(#301));\n#313=OBJECT_ROLE('PMI');\n#314=LIMITS_AND_FITS('','',#301,#301);\n#315=DOCUMENT_PRODUCT_EQUIVALENCE('','',#301,#301);\n#316=ROLE_ASSOCIATION(#313,#301);\nENDSEC;\nEND-ISO",
-        );
+        "ENDSEC;\nEND-ISO",
+        "#303=SURFACE_STYLE_PARAMETER_LINE(#301,(U_DIRECTION_COUNT(2),V_DIRECTION_COUNT(2)));\n#304=SURFACE_STYLE_TRANSPARENT(0.5);\n#305=TESSELLATED_SHAPE_REPRESENTATION('auxiliary',(),#289);\n#306=CONCENTRICITY_TOLERANCE('','',#301,#301,(#301));\n#307=PRODUCT_DEFINITION_CONTEXT_ROLE('additional context','');\n#308=SYMMETRY_TOLERANCE('','',#301,#301,(#301));\n#309=ROUNDNESS_TOLERANCE('','',#301,#301,(#301));\n#310=CYLINDRICITY_TOLERANCE('','',#301,#301,(#301));\n#311=APPLIED_DOCUMENT_REFERENCE(#301,'');\n#312=TOTAL_RUNOUT_TOLERANCE('','',#301,#301,(#301));\n#313=OBJECT_ROLE('PMI');\n#314=LIMITS_AND_FITS('','',#301,#301);\n#315=DOCUMENT_PRODUCT_EQUIVALENCE('','',#301,#301);\n#316=ROLE_ASSOCIATION(#313,#301);\nENDSEC;\nEND-ISO",
+    );
     let (model, _, report) =
         import_step_direct(&text, true, true, true, STEP_INTERCHANGE_V10_CAPABILITY).unwrap();
     assert_eq!(model.bodies.len(), 1);
@@ -810,6 +813,139 @@ fn v5_emits_selected_ap242_context_and_roundtrips() {
 }
 
 #[test]
+fn uncertainty_roundtrip_preserves_model_tolerance() {
+    let mut model = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    model.tolerance_mm = 2.5e-4;
+    let (text, _, _) = export_step_v6(&model).unwrap();
+    let measure = format!(
+        "LENGTH_MEASURE({})",
+        format!("{:.17e}", model.tolerance_mm).replace('e', "E")
+    );
+    assert!(text.contains(&measure));
+    let (back, _, _) = import_step_v6(&text).unwrap();
+    assert_eq!(back.tolerance_mm, model.tolerance_mm);
+    let (reexported, _, _) = export_step_v6(&back).unwrap();
+    assert!(reexported.contains(&measure));
+}
+
+#[test]
+fn uncertainty_uses_its_explicit_inch_unit() {
+    let model = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let (text, _, _) = export_step_v6(&model).unwrap();
+    let parsed = parse(&text).unwrap();
+    let unit = parsed
+        .iter()
+        .find_map(|(id, entity)| match &entity.value {
+            Value::List(parts)
+                if parts
+                    .iter()
+                    .any(|part| matches!(part,Value::Call(name,_)if name=="SI_UNIT")) =>
+            {
+                Some(*id)
+            }
+            _ => None,
+        })
+        .unwrap();
+    let measure = format!(
+        "LENGTH_MEASURE({})",
+        format!("{:.17e}", model.tolerance_mm).replace('e', "E")
+    );
+    let inch_rows = "\
+#60000=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT($,.METRE.));
+#60001=LENGTH_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.0254),#60000);
+#60002=(CONVERSION_BASED_UNIT('INCH',#60001)LENGTH_UNIT()NAMED_UNIT(*));
+";
+    let inch = text
+        .replace(
+            &format!("GLOBAL_UNIT_ASSIGNED_CONTEXT((#{unit}))"),
+            "GLOBAL_UNIT_ASSIGNED_CONTEXT((#60002))",
+        )
+        .replace(
+            &format!(",#{unit},'distance_accuracy_value'"),
+            ",#60002,'distance_accuracy_value'",
+        )
+        .replace(&measure, "LENGTH_MEASURE(0.0001)")
+        .replacen(
+            "ENDSEC;\nEND-ISO",
+            &format!("{inch_rows}ENDSEC;\nEND-ISO"),
+            1,
+        );
+    let (inch_model, _, _) = import_step_v6(&inch).unwrap();
+    assert!((inch_model.tolerance_mm - 0.00254).abs() < 1e-15);
+}
+
+#[test]
+fn missing_uncertainty_uses_the_default_tolerance() {
+    let mut model = freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
+    model.tolerance_mm = 2.5e-4;
+    let (text, _, _) = export_step_v6(&model).unwrap();
+    let parsed = parse(&text).unwrap();
+    let uncertainty = parsed
+        .iter()
+        .find_map(|(id, entity)| match &entity.value {
+            Value::Call(name, _) if name == "UNCERTAINTY_MEASURE_WITH_UNIT" => Some(*id),
+            _ => None,
+        })
+        .unwrap();
+    let without = text
+        .lines()
+        .filter(|line| !line.starts_with(&format!("#{uncertainty}=")))
+        .collect::<Vec<_>>()
+        .join("\n")
+        .replace(
+            &format!("GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#{uncertainty}))"),
+            "",
+        );
+    assert!(!without.contains("UNCERTAINTY_MEASURE_WITH_UNIT"));
+    let (back, _, _) = import_step_v6(&without).unwrap();
+    assert_eq!(back.tolerance_mm, DEFAULT_STEP_TOLERANCE_MM);
+}
+
+#[test]
+fn multiple_uncertainties_select_the_tightest_value() {
+    let mut model = freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
+    model.tolerance_mm = 1e-4;
+    let (text, _, _) = export_step_v6(&model).unwrap();
+    let parsed = parse(&text).unwrap();
+    let (uncertainty, unit) = parsed
+        .iter()
+        .find_map(|(id, entity)| match &entity.value {
+            Value::Call(name, args) if name == "UNCERTAINTY_MEASURE_WITH_UNIT" => {
+                Some((*id, one_ref(&args[1], "test uncertainty unit").unwrap()))
+            }
+            _ => None,
+        })
+        .unwrap();
+    let multiple = text
+            .replace(
+                &format!("GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#{uncertainty}))"),
+                &format!("GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#{uncertainty},#60000))"),
+            )
+            .replacen(
+                "ENDSEC;\nEND-ISO",
+                &format!("#60000=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.00005),#{unit},'distance_accuracy_value','');\nENDSEC;\nEND-ISO"),
+                1,
+            );
+    let (back, _, _) = import_step_v6(&multiple).unwrap();
+    assert_eq!(back.tolerance_mm, 0.00005);
+}
+
+#[test]
+fn invalid_uncertainties_have_typed_refusals() {
+    let model = freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
+    let (text, _, _) = export_step_v6(&model).unwrap();
+    let measure = format!(
+        "LENGTH_MEASURE({})",
+        format!("{:.17e}", model.tolerance_mm).replace('e', "E")
+    );
+    for invalid in ["-1.E-7", "0.0", "1.0", "1.E9999", "NaN"] {
+        let bad = text.replace(&measure, &format!("LENGTH_MEASURE({invalid})"));
+        let error = import_step_v6(&bad).unwrap_err();
+        assert_eq!(error.code, "BREP_STEP_V3_REFUSED", "value: {invalid}");
+    }
+}
+
+#[test]
 fn v5_uses_rational_complexes_and_oriented_void_shells() {
     let rational = Curve {
         degree: 2,
@@ -960,6 +1096,120 @@ fn v5_roundtrips_rational_analytic_bodies_and_sense_combinations() {
         .join("\n");
     assert!(text.contains("ORIENTED_EDGE('',*,*,#") && text.contains(",.F.);"));
     assert!(text.contains("ADVANCED_FACE('',("));
+}
+
+fn authored_reversed_cuboid() -> Model {
+    brep_core::transform::affine(
+        &freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap(),
+        [
+            [-1., 0., 0., 0.],
+            [0., 1., 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ],
+    )
+    .unwrap()
+}
+
+fn assert_exact_chart_model(actual: &Model, expected: &Model) {
+    assert_eq!(actual.0, expected.0, "exact geometry and topology");
+    assert_eq!(actual.1.vertices, expected.1.vertices);
+    assert_eq!(actual.1.edges, expected.1.edges);
+    assert_eq!(actual.1.loops, expected.1.loops);
+    assert_eq!(actual.1.faces, expected.1.faces);
+    assert_eq!(actual.1.shells, expected.1.shells);
+    assert_eq!(actual.1.bodies, expected.1.bodies);
+    assert_eq!(actual.1.lineage, expected.1.lineage);
+    assert_eq!(actual.1.local_tolerances_mm, expected.1.local_tolerances_mm);
+    assert_eq!(actual.1.sewed_edges, expected.1.sewed_edges);
+}
+
+#[test]
+fn v6_versioned_authored_chart_roundtrips_exact_poles_pcurves_and_topology() {
+    let model = authored_reversed_cuboid();
+    assert!(model.shells[0].faces.iter().any(|usage| usage.reversed));
+    let (text, _, _) = export_step_v6(&model).unwrap();
+    let entities = parse(&text).unwrap();
+    let faces = entities
+        .values()
+        .filter_map(|entity| match &entity.value {
+            Value::Call(ty, args) if ty == "ADVANCED_FACE" => Some(args),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(faces.len(), model.faces.len());
+    for args in faces {
+        let payload = name(args).unwrap().strip_prefix("OSCAD_TOPO/3|").unwrap();
+        let fields = payload.split('|').collect::<Vec<_>>();
+        assert_eq!(fields.len(), 4);
+        assert_eq!(fields[0], "face");
+        assert_eq!(fields[3], STEP_V6_AUTHORED_CHART_MARKER);
+    }
+    let (back, _, report) = import_step_v6(&text).unwrap();
+    assert!(report.identity.preserved);
+    back.validate().unwrap();
+    assert_exact_chart_model(&back, &model);
+}
+
+#[test]
+fn v6_unmarked_legacy_transitional_chart_restores_exact_original_model() {
+    let model = authored_reversed_cuboid();
+    let mut transitional = canonical_face_senses(&model).unwrap();
+    assert!(
+        transitional.shells[0]
+            .faces
+            .iter()
+            .all(|usage| !usage.reversed)
+    );
+    for (target, source) in transitional.shells.iter_mut().zip(&model.shells) {
+        for (target, source) in target.faces.iter_mut().zip(&source.faces) {
+            target.reversed = source.reversed;
+        }
+    }
+    let (legacy, _, _) = export_step_v6(&transitional).unwrap();
+    let legacy = legacy.replace(&format!("|{STEP_V6_AUTHORED_CHART_MARKER}"), "");
+    assert!(!legacy.contains(STEP_V6_AUTHORED_CHART_MARKER));
+    let entities = parse(&legacy).unwrap();
+    assert!(entities.values().any(|entity| match &entity.value {
+        Value::Call(ty, args) if ty == "ADVANCED_FACE" => {
+            name(args).unwrap().starts_with("OSCAD_TOPO/3|")
+                && !boolean(&args[3], "same_sense").unwrap()
+        }
+        _ => false,
+    }));
+    let (back, _, report) = import_step_v6(&legacy).unwrap();
+    assert!(report.identity.preserved);
+    back.validate().unwrap();
+    assert_exact_chart_model(&back, &model);
+}
+
+#[test]
+fn v6_authored_chart_marker_does_not_change_v5_v9_or_external_ap242() {
+    let model = authored_reversed_cuboid();
+    let canonical = canonical_face_senses(&model).unwrap();
+
+    let (v5, _, _) = export_step_v5(&model).unwrap();
+    assert!(!v5.contains(STEP_V6_AUTHORED_CHART_MARKER));
+    let (v5_back, _, _) = import_step_v5(&v5).unwrap();
+    assert_exact_chart_model(&v5_back, &canonical);
+
+    let (v9, _, _) = export_step_v9(&model).unwrap();
+    assert!(!v9.contains(STEP_V6_AUTHORED_CHART_MARKER));
+    let (v9_back, _, _) = import_step_v9(&v9).unwrap();
+    assert_exact_chart_model(&v9_back, &canonical);
+
+    let (authored, _, _) = export_step_v6(&canonical).unwrap();
+    let external = authored.replace("OSCAD_TOPO/3|", "EXTERNAL_STEP|");
+    let (external_back, _, report) = import_step_v6(&external).unwrap();
+    assert!(!report.identity.preserved);
+    external_back.validate().unwrap();
+    let external_unmarked = external.replace(&format!("|{STEP_V6_AUTHORED_CHART_MARKER}"), "");
+    let (external_unmarked_back, _, _) = import_step_v6(&external_unmarked).unwrap();
+    assert_exact_chart_model(&external_back, &external_unmarked_back);
+    assert_eq!(
+        external_back.0, canonical.0,
+        "external AP242 canonical chart"
+    );
 }
 
 #[test]
@@ -1852,6 +2102,401 @@ fn v10_retains_affine_occurrence_graph_and_detects_mutation() {
     assert!(export_step_v10(&mutation).is_err());
 }
 
+#[test]
+fn v9_preserves_single_occurrence_topology_metadata() {
+    let model = freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let (text, _, _) = export_step_v9(&model).unwrap();
+    let (back, _, report) = import_step_v9(&text).unwrap();
+    assert!(report.identity.preserved);
+    assert_eq!(report.identity.created_count, 0);
+    assert_eq!(report.identity.lost_count, 0);
+    let source = value_codec::to_value(&model).unwrap();
+    let restored = value_codec::to_value(&back).unwrap();
+    for kind in ["vertices", "edges", "loops", "faces", "shells", "bodies"] {
+        let mut original_ids = source["topologyIds"][kind]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .collect::<Vec<_>>();
+        let mut restored_ids = restored["topologyIds"][kind]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .collect::<Vec<_>>();
+        original_ids.sort();
+        restored_ids.sort();
+        assert_eq!(original_ids, restored_ids);
+    }
+    for (i, id) in source["topologyIds"]["vertices"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+    {
+        let j = restored["topologyIds"]["vertices"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .position(|v| v == id)
+            .unwrap();
+        assert_eq!(
+            source["vertices"][i]["point"],
+            restored["vertices"][j]["point"]
+        );
+    }
+}
+
+#[test]
+fn actual_ui_step_roundtrip_classifies_oriented_identity_bindings() {
+    fn identity_bindings(model: &Model) -> BTreeMap<String, value_codec::Value> {
+        let canonical = canonical_face_senses(model).unwrap();
+        let value = value_codec::to_value(&canonical).unwrap();
+        let mut result = BTreeMap::new();
+        for kind in ["vertices", "edges", "loops", "faces", "shells", "bodies"] {
+            let ids = value["topologyIds"][kind].as_array().unwrap().clone();
+            let mut entities = value[kind].as_array().unwrap().clone();
+            let resolve = |kind: &str, index: &value_codec::Value| {
+                let i: usize = value_codec::from_value(index.clone()).unwrap();
+                value["topologyIds"][kind][i].clone()
+            };
+            for entity in &mut entities {
+                match kind {
+                    "edges" => {
+                        for index in entity["vertices"].as_array_mut().unwrap() {
+                            *index = resolve("vertices", index);
+                        }
+                    }
+                    "loops" => {
+                        for usage in entity["coedges"].as_array_mut().unwrap() {
+                            usage["edge"] = resolve("edges", &usage["edge"]);
+                        }
+                    }
+                    "faces" => {
+                        entity["outer"] = resolve("loops", &entity["outer"]);
+                        for index in entity["holes"].as_array_mut().unwrap() {
+                            *index = resolve("loops", index);
+                        }
+                    }
+                    "shells" => {
+                        for usage in entity["faces"].as_array_mut().unwrap() {
+                            usage["face"] = resolve("faces", &usage["face"]);
+                        }
+                    }
+                    "bodies" => {
+                        entity["outerShell"] = resolve("shells", &entity["outerShell"]);
+                        for index in entity["innerShells"].as_array_mut().unwrap() {
+                            *index = resolve("shells", index);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            assert_eq!(ids.len(), entities.len());
+            for (id, entity) in ids.iter().zip(entities) {
+                assert!(
+                    result
+                        .insert(id.as_str().unwrap().to_string(), entity)
+                        .is_none()
+                );
+            }
+        }
+        result
+    }
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../docs/qualification/cad-mixed-ui-step-roundtrip-2026-10-10");
+    for name in ["bracket", "flange", "enclosure"] {
+        let text =
+            std::fs::read_to_string(root.join(format!("{name}-step-roundtrip.json"))).unwrap();
+        let doc: value_codec::Value = value_codec::from_str(&text).unwrap();
+        let bodies = doc["bodies"].as_array().unwrap();
+        let source: Model = value_codec::from_value(
+            bodies
+                .iter()
+                .find(|b| b["id"].as_str() == Some(name))
+                .unwrap()["brep"]
+                .clone(),
+        )
+        .unwrap();
+        let imported: Model = value_codec::from_value(
+            bodies
+                .iter()
+                .find(|b| b["name"].as_str() == Some("Retained AP242 STEP"))
+                .unwrap()["brep"]
+                .clone(),
+        )
+        .unwrap();
+        let a = identity_bindings(&source);
+        let b = identity_bindings(&imported);
+        assert_eq!(
+            a.keys().collect::<Vec<_>>(),
+            b.keys().collect::<Vec<_>>(),
+            "{name}: identity sets"
+        );
+        let mismatches = a
+            .iter()
+            .filter(|(id, entity)| **entity != b[*id])
+            .map(|(id, _)| id.clone())
+            .collect::<Vec<_>>();
+        let exact = mismatches.is_empty();
+        eprintln!("oriented identity bindings {name}: exact={exact} unsupported={mismatches:?}");
+        let source_canonical = canonical_face_senses(&source).unwrap();
+        let imported_canonical = canonical_face_senses(&imported).unwrap();
+        let mut planar_faces = BTreeSet::new();
+        for (id, entity) in &a {
+            if entity == &b[id] || !id.starts_with("f:") {
+                continue;
+            }
+            let surface_a: Surface = value_codec::from_value(entity["surface"].clone()).unwrap();
+            let surface_b: Surface = value_codec::from_value(b[id]["surface"].clone()).unwrap();
+            let (pa, _) = brep_core::material_wall_coverage::plane(&surface_a, 100000);
+            let (pb, _) = brep_core::material_wall_coverage::plane(&surface_b, 100000);
+            assert!(
+                pa.zip(pb)
+                    .is_some_and(|(pa, pb)| brep_core::material_wall_coverage::same_plane(pa, pb)),
+                "{name}: unmatched nonplanar support {id}"
+            );
+            assert_eq!(entity["outer"], b[id]["outer"]);
+            assert_eq!(entity["holes"], b[id]["holes"]);
+            planar_faces.insert(id.clone());
+        }
+        fn cycle(value: &value_codec::Value) -> Vec<(String, bool)> {
+            let mut edges = value["coedges"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|c| {
+                    (
+                        c["edge"].as_str().unwrap().to_string(),
+                        c["reversed"].as_bool().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            let best = (0..edges.len())
+                .min_by_key(|&i| {
+                    (0..edges.len())
+                        .map(|j| edges[(i + j) % edges.len()].clone())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap();
+            edges.rotate_left(best);
+            edges
+        }
+        for id in &mismatches {
+            if id.starts_with("l:") {
+                assert!(
+                    planar_faces
+                        .iter()
+                        .any(|face| a[face]["outer"].as_str() == Some(id.as_str())
+                            || a[face]["holes"]
+                                .as_array()
+                                .unwrap()
+                                .iter()
+                                .any(|hole| hole.as_str() == Some(id.as_str()))),
+                    "loop mismatch outside qualified plane"
+                );
+                assert_eq!(
+                    cycle(&a[id]),
+                    cycle(&b[id]),
+                    "{name}: oriented edge cycle {id}"
+                );
+            } else {
+                assert!(planar_faces.contains(id), "unqualified binding {id}");
+            }
+        }
+        // Both trim graphs must independently bind their entire pcurves
+        // to the same exact 3D edges before planar winding can identify the
+        // retained region. This is not a sampled UV comparison.
+        certify_step_v8_topology(&source_canonical).unwrap();
+        certify_step_v8_topology(&imported_canonical).unwrap();
+        if name == "flange" {
+            let face_id = planar_faces.iter().next().unwrap();
+            let face_index = imported_canonical
+                .1
+                .faces
+                .iter()
+                .position(|id| id.to_string() == *face_id)
+                .unwrap();
+            let surface = &imported_canonical.faces[face_index].surface;
+            let mut warped = surface.clone();
+            warped.control_points[0][0][2] += 0.25;
+            assert!(
+                brep_core::material_wall_coverage::plane(&warped, 100000)
+                    .0
+                    .is_none(),
+                "warped support must not inherit a plane proof"
+            );
+            let mut shifted = surface.clone();
+            for row in &mut shifted.control_points {
+                for point in row {
+                    point[2] += 0.25;
+                }
+            }
+            let (pa, _) = brep_core::material_wall_coverage::plane(surface, 100000);
+            let (pb, _) = brep_core::material_wall_coverage::plane(&shifted, 100000);
+            assert!(
+                !brep_core::material_wall_coverage::same_plane(pa.unwrap(), pb.unwrap()),
+                "different planes must refuse"
+            );
+            let loop_id = a[face_id]["outer"].as_str().unwrap();
+            let mut wrong_cycle = b[loop_id].clone();
+            let old = wrong_cycle["coedges"][0]["reversed"].as_bool().unwrap();
+            wrong_cycle["coedges"][0]["reversed"] = value_codec::json!(!old);
+            assert_ne!(
+                cycle(&a[loop_id]),
+                cycle(&wrong_cycle),
+                "same edges with altered winding must refuse"
+            );
+            let mut wrong_trim = imported_canonical.clone();
+            let outer = wrong_trim.faces[face_index].outer;
+            wrong_trim.0.loops[outer].coedges[0].pcurve.control_points[0][0] += 0.125;
+            assert!(
+                certify_step_v8_topology(&wrong_trim).is_err(),
+                "altered pcurve must not inherit whole boundary coupling"
+            );
+        }
+        if let Ok(path) = std::env::var("CAD_ORIENTED_IDENTITY_REPORT") {
+            let file = std::path::Path::new(&path).join(format!("{name}.json"));
+            let report = value_codec::json!({"part":name,"identitySetsPreserved":true,"exactCanonicalBindings":exact,"representationChanges":mismatches,"planarFacesQualified":planar_faces.into_iter().collect::<Vec<_>>(),"orientedBindingsQualified":true,"negativeControls":if name=="flange" {4} else {0},"scope":"exact canonical bindings or exact coplanar supports with identical oriented 3D edge cycles and independently qualified whole pcurve-edge coupling"});
+            std::fs::write(file, value_codec::to_string(&report).unwrap()).unwrap();
+        }
+    }
+}
+
+#[test]
+fn bspline_surface_five_forms_roundtrip_and_validate() {
+    let points = "#2=CARTESIAN_POINT('',(0.,0.,0.));#3=CARTESIAN_POINT('',(0.,1.,0.));#4=CARTESIAN_POINT('',(1.,0.,0.));#5=CARTESIAN_POINT('',(1.,1.,0.));#6=CARTESIAN_POINT('',(2.,0.,1.));#7=CARTESIAN_POINT('',(2.,1.,1.));";
+    let net = "((#2,#3),(#4,#5),(#6,#7))";
+    let weights = "((1.,2.),(3.,4.),(5.,6.))";
+    let explicit = format!(
+        "#1=(BOUNDED_SURFACE()B_SPLINE_SURFACE(2,1,{net},.UNSPECIFIED.,.F.,.F.,.F.)B_SPLINE_SURFACE_WITH_KNOTS((3,3),(2,2),(0.,1.),(0.,1.),.UNSPECIFIED.)RATIONAL_B_SPLINE_SURFACE({weights})SURFACE());{points}"
+    );
+    let implicit = ["UNIFORM_SURFACE", "QUASI_UNIFORM_SURFACE", "BEZIER_SURFACE"].map(|form| {
+        format!(
+            "#1=(BOUNDED_SURFACE()B_SPLINE_SURFACE(2,1,{net},.UNSPECIFIED.,.F.,.F.,.F.){form}()RATIONAL_B_SPLINE_SURFACE({weights})SURFACE());{points}"
+        )
+    });
+    for (index, text) in std::iter::once(explicit).chain(implicit).enumerate() {
+        let entities = parse(&text).unwrap();
+        let surface = surface_v5(&entities, 1, 1.).unwrap();
+        assert_eq!(
+            surface.weights,
+            vec![vec![1., 2.], vec![3., 4.], vec![5., 6.]]
+        );
+        let expected_u: &[f64] = match index {
+            0 | 2 | 3 => &[0., 0., 0., 1., 1., 1.],
+            1 => &[0., 1., 2., 3., 4., 5.],
+            _ => unreachable!(),
+        };
+        assert_eq!(surface.knots_u, expected_u);
+        let expected_v: &[f64] = if index == 1 {
+            &[0., 1., 2., 3.]
+        } else {
+            &[0., 0., 1., 1.]
+        };
+        assert_eq!(surface.knots_v, expected_v);
+
+        let mut writer = Writer::new();
+        let id = emit_surface_source(&mut writer, &surface);
+        let canonical = writer
+            .rows
+            .iter()
+            .map(|(entity, body)| format!("#{entity}={body};"))
+            .collect::<String>();
+        let entities = parse(&canonical).unwrap();
+        let roundtrip = surface_v5(&entities, id, 1.).unwrap();
+        assert_eq!(roundtrip, surface, "surface form index {index}");
+    }
+}
+
+#[test]
+fn bspline_surface_refuses_bad_bezier_and_knot_budget() {
+    let bad_bezier = "#1=(B_SPLINE_SURFACE(1,1,((#2,#3),(#4,#5),(#6,#7)),.UNSPECIFIED.,.F.,.F.,.F.)BEZIER_SURFACE()SURFACE());#2=CARTESIAN_POINT('',(0.,0.,0.));#3=CARTESIAN_POINT('',(0.,1.,0.));#4=CARTESIAN_POINT('',(1.,0.,0.));#5=CARTESIAN_POINT('',(1.,1.,0.));#6=CARTESIAN_POINT('',(2.,0.,0.));#7=CARTESIAN_POINT('',(2.,1.,0.));";
+    assert!(
+        surface_v5(&parse(bad_bezier).unwrap(), 1, 1.)
+            .unwrap_err()
+            .message
+            .contains("degree+1")
+    );
+    let oversized = "#1=B_SPLINE_SURFACE_WITH_KNOTS('',1,1,((#2,#3),(#4,#5)),.UNSPECIFIED.,.F.,.F.,.F.,(4097),(2),(0.),(0.,1.),.UNSPECIFIED.);#2=CARTESIAN_POINT('',(0.,0.,0.));#3=CARTESIAN_POINT('',(0.,1.,0.));#4=CARTESIAN_POINT('',(1.,0.,0.));#5=CARTESIAN_POINT('',(1.,1.,0.));";
+    assert!(
+        surface_v5(&parse(oversized).unwrap(), 1, 1.)
+            .unwrap_err()
+            .message
+            .contains("4096-entry budget")
+    );
+}
+
+#[test]
+fn curve_bounded_surface_requires_face_boundary_agreement() {
+    let model = freeform_cuboid_solid([0., 0., 0.], [1., 2., 3.]).unwrap();
+    let (text, _, _) = export_step_v5(&model).unwrap();
+    let entities = parse(data_payload(&text).unwrap()).unwrap();
+    let (face_id, face_args) = entities
+        .iter()
+        .find_map(|(id, entity)| match &entity.value {
+            Value::Call(name, args) if name == "ADVANCED_FACE" => Some((*id, args)),
+            _ => None,
+        })
+        .unwrap();
+    let surface_id = one_ref(&face_args[2], "test surface").unwrap();
+    let mut boundaries = BTreeSet::new();
+    for bound in list(&face_args[1], "test bounds").unwrap() {
+        let (_, bound_args) = call(&entities, one_ref(bound, "test bound").unwrap()).unwrap();
+        let (_, loop_args) =
+            call(&entities, one_ref(&bound_args[1], "test loop").unwrap()).unwrap();
+        for oriented in list(&loop_args[1], "test oriented edges").unwrap() {
+            let (_, oriented_args) =
+                call(&entities, one_ref(oriented, "test oriented").unwrap()).unwrap();
+            let (_, edge_args) =
+                call(&entities, one_ref(&oriented_args[3], "test edge").unwrap()).unwrap();
+            let (_, geometry_args) =
+                call(&entities, one_ref(&edge_args[3], "test geometry").unwrap()).unwrap();
+            boundaries.insert(one_ref(&geometry_args[1], "test 3D curve").unwrap());
+        }
+    }
+    assert_eq!(boundaries.len(), 4);
+    let wrapper_id = entities.keys().max().unwrap() + 1;
+    let boundary_refs = boundaries
+        .iter()
+        .map(|id| format!("#{id}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let wrapper =
+        format!("#{wrapper_id}=CURVE_BOUNDED_SURFACE('',#{surface_id},({boundary_refs}),.T.);\n");
+    let wrapped = text
+        .lines()
+        .map(|line| {
+            if line.starts_with(&format!("#{face_id}=ADVANCED_FACE(")) {
+                line.replacen(&format!(",#{surface_id},"), &format!(",#{wrapper_id},"), 1)
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+        .replace("OSCAD_TOPO/3|", "EXTERNAL_STEP|")
+        .replace("ENDSEC;\nEND-ISO", &format!("{wrapper}ENDSEC;\nEND-ISO"));
+    let (back, _, _) = import_step_v5(&wrapped).unwrap();
+    assert_eq!(back.faces.len(), model.faces.len());
+    assert_eq!(back.loops.len(), model.loops.len());
+
+    let reduced_refs = boundaries
+        .iter()
+        .take(boundaries.len() - 1)
+        .map(|id| format!("#{id}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let mismatched = wrapped.replace(&format!("({boundary_refs})"), &format!("({reduced_refs})"));
+    assert!(
+        import_step_v5(&mismatched)
+            .unwrap_err()
+            .message
+            .contains("boundaries disagree")
+    );
+}
+
 fn ap242_direct_line_circle_fixture(model: &Model) -> String {
     let (text, _, _) = export_step_v5(model).unwrap();
     let payload = data_payload(&text).unwrap();
@@ -1993,5 +2638,42 @@ fn ap242_direct_edges_refuse_off_curve_vertices_and_non_ap242_route() {
             .unwrap_err()
             .message
             .contains("not uniquely on LINE")
+    );
+}
+
+#[test]
+fn v10_ap242_direct_line_pullback_moves_closed_seam_seed() {
+    let entities = parse("#1=CARTESIAN_POINT('',(-160,45,0));#2=DIRECTION('',(0,0,-1));#3=DIRECTION('',(0.877582561890371,-0.479425538604207,0));#4=AXIS2_PLACEMENT_3D('',#1,#2,#3);#5=CYLINDRICAL_SURFACE('',#4,12.4999999999999);#6=CARTESIAN_POINT('',(-149.03021797637,39.0071807674475,-50));#7=CARTESIAN_POINT('',(-149.03021797637,39.0071807674475,0));#10=DIRECTION('',(0,0,1));#8=VECTOR('',#10,50);#9=LINE('',#6,#8);").unwrap();
+    let surface = analytic_surface(
+        &entities,
+        "CYLINDRICAL_SURFACE",
+        &match &entities[&5].value {
+            Value::Call(_, a) => a.clone(),
+            _ => unreachable!(),
+        },
+        1.,
+    )
+    .unwrap();
+    let c3 = direct_bounded_curve(
+        &entities,
+        9,
+        &point(&entities, 6, 3, 1.).unwrap(),
+        &point(&entities, 7, 3, 1.).unwrap(),
+        false,
+        true,
+        1.,
+    )
+    .unwrap();
+    let pcurve = direct_edge_pcurve(&c3, &surface, false).unwrap();
+    let midpoint = c3.evaluate(0.5).unwrap().point;
+    let uv = pcurve.evaluate(0.5).unwrap().point;
+    let lifted = surface.evaluate(uv[0], uv[1]).unwrap().point;
+    assert!(
+        midpoint
+            .iter()
+            .zip(lifted)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0., f64::max)
+            < 1e-7
     );
 }

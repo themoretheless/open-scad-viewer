@@ -1,17 +1,17 @@
 # Худшие функции (Rust, продакшен-код)
 
-Источник: `tools/refactor-audit`. Всего измерено функций: 37217, из них продакшен: 21718.
+Источник: `tools/refactor-audit`. Всего измерено функций: 36724, из них продакшен: 21581.
 
 ## Топ-120 по когнитивной сложности
 
 | # | Функция | Файл:строка | LOC | cog | cyclo | nest | params | alloc в цикле |
 |---:|---|---|---:|---:|---:|---:|---:|---:|
-| 1 | `Compiler::operation` | `crates/rush-frontend/src/lower/compiler_impl_3.rs:4` | 528 | 451 | 229 | 6 | 4 | 24 |
+| 1 | `Compiler::operation` | `crates/rush-frontend/src/lower/operation.rs:4` | 528 | 451 | 229 | 6 | 4 | 24 |
 | 2 | `original_frame_arc_length_section_interpolation_with_rmf_steps` | `crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/arc_frame_owned.rs:4` | 409 | 310 | 189 | 8 | 9 | 3 |
 | 3 | `normalize` | `crates/brep-core/src/bezier_profile_normalize.rs:36` | 516 | 308 | 108 | 7 | 2 | 14 |
 | 4 | `guided_section_interpolation_mode_with_pose` | `crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/guided_interpolation_owned.rs:4` | 373 | 267 | 164 | 6 | 5 | 4 |
 | 5 | `certify` | `crates/brep-core/src/boundary_hull_contact/extended_support.rs:160` | 444 | 266 | 79 | 9 | 2 | 19 |
-| 6 | `EmbeddedExpressionGeometry::inspect_trimmed_minimum_aligned_chords` | `crates/brep-core/src/source_profile_shell_wall/methods_inspect_trimmed_minimum_aligned_chords.rs:5` | 630 | 245 | 103 | 6 | 8 | 0 |
+| 6 | `EmbeddedExpressionGeometry::inspect_trimmed_minimum_aligned_chords` | `crates/brep-core/src/source_profile_shell_wall/inspect_trimmed_minimum_aligned_chords.rs:5` | 630 | 245 | 103 | 6 | 8 | 0 |
 | 7 | `certify_axis` | `crates/brep-core/src/boundary_hull_contact/algorithm_certify_axis.rs:3` | 369 | 239 | 66 | 9 | 2 | 15 |
 | 8 | `construct` | `crates/brep-core/src/analytic/rational_loft/smooth_stations/generic.rs:70` | 278 | 238 | 85 | 8 | 6 | 9 |
 | 9 | `preflight_inner` | `crates/bridge-svg/src/svg/preflight_inner.rs:3` | 573 | 229 | 108 | 6 | 3 | 10 |
@@ -31,15 +31,15 @@
 | 23 | `propose` | `crates/brep-core/src/region_replacement/central_loft/joint_seam_search.rs:58` | 234 | 186 | 44 | 8 | 5 | 17 |
 | 24 | `Replay::evaluate` | `crates/geometry-bridge/src/brep_production/mod.rs:317` | 535 | 180 | 87 | 5 | 2 | 7 |
 | 25 | `qualify_with_mixed_pair_pass` | `crates/brep-core/src/source_wall_coverage.rs:267` | 382 | 178 | 101 | 6 | 10 | 0 |
-| 26 | `Evaluator::eval_node_cases_1` | `crates/openscad-core/src/eval/eval_node_cases_1.rs:3` | 479 | 176 | 89 | 5 | 3 | 2 |
+| 26 | `Evaluator::eval_primitive_node` | `crates/openscad-core/src/eval/primitive_nodes.rs:3` | 479 | 176 | 89 | 5 | 3 | 2 |
 | 27 | `dispatch` | `crates/geometry-bridge/src/mesh.rs:138` | 427 | 174 | 99 | 6 | 1 | 3 |
 | 28 | `curve_segment` | `crates/brep-core/src/intersections.rs:2384` | 345 | 173 | 61 | 7 | 4 | 10 |
 | 29 | `curve_segment` | `crates/nurbs-intersect/src/queries/curve_segment.rs:20` | 345 | 173 | 61 | 7 | 4 | 10 |
 | 30 | `find_pockets` | `crates/brep-core/src/aag_features/pockets.rs:118` | 408 | 172 | 80 | 6 | 3 | 11 |
-| 31 | `Evaluator::eval_node_cases_2` | `crates/openscad-core/src/eval/eval_node_cases_2.rs:3` | 423 | 172 | 75 | 6 | 3 | 2 |
+| 31 | `Evaluator::eval_transform_node` | `crates/openscad-core/src/eval/transform_nodes.rs:3` | 423 | 172 | 75 | 6 | 3 | 2 |
 | 32 | `certify_original_rmf_transport_impl` | `crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport/bishop_integration.rs:4` | 518 | 170 | 77 | 5 | 8 | 0 |
 | 33 | `inspect_impl` | `crates/brep-core/src/source_face_contacts.rs:186` | 435 | 169 | 56 | 6 | 4 | 0 |
-| 34 | `Evaluator::eval_node_cases_3` | `crates/openscad-core/src/eval/eval_node_cases_3.rs:3` | 454 | 168 | 75 | 5 | 3 | 4 |
+| 34 | `Evaluator::eval_extrusion_or_control_node` | `crates/openscad-core/src/eval/extrusion_and_control_nodes.rs:3` | 454 | 168 | 75 | 5 | 3 | 4 |
 | 35 | `ruled_coincidence` | `crates/brep-core/src/intersections.rs:4102` | 371 | 166 | 64 | 6 | 8 | 0 |
 | 36 | `ruled_coincidence` | `crates/nurbs-intersect/src/queries/ruled_coincidence.rs:99` | 371 | 166 | 64 | 6 | 8 | 0 |
 | 37 | `original_affine_patch_contacts` | `crates/nurbs-core/src/intersection/certified_curve_surface/original_patch_contacts.rs:48` | 341 | 165 | 71 | 8 | 5 | 5 |
@@ -48,7 +48,7 @@
 | 40 | `Sweep::sections_with_frame_identity` | `crates/nurbs-core/src/sweeps/progressive_sweep/section_frames.rs:6` | 361 | 158 | 91 | 6 | 2 | 5 |
 | 41 | `ExpressionShell::qualify_transition_plane_contact` | `crates/brep-core/src/source_profile_shell_transition_contact.rs:179` | 376 | 157 | 70 | 7 | 6 | 0 |
 | 42 | `simplify_with_progress` | `crates/photogrammetry-core/src/dense/simplify.rs:13` | 314 | 157 | 71 | 7 | 4 | 9 |
-| 43 | `Compiler::eval` | `crates/rush-frontend/src/lower/compiler_impl_1.rs:79` | 421 | 156 | 113 | 4 | 4 | 6 |
+| 43 | `Compiler::eval` | `crates/rush-frontend/src/lower/nodes.rs:79` | 421 | 156 | 113 | 4 | 4 | 6 |
 | 44 | `polygonize_tile` | `crates/sdf-core/src/lib.rs:218` | 208 | 155 | 47 | 7 | 3 | 0 |
 | 45 | `analyze_firmware` | `crates/gcode-core/src/firmware.rs:35` | 246 | 152 | 66 | 4 | 2 | 2 |
 | 46 | `qualify_with_prepared` | `crates/brep-core/src/source_wall_pair.rs:95` | 352 | 151 | 72 | 7 | 7 | 1 |
@@ -57,7 +57,7 @@
 | 49 | `grow` | `crates/photogrammetry-core/src/pipeline/grow.rs:3` | 267 | 149 | 44 | 9 | 7 | 10 |
 | 50 | `replace_face` | `crates/brep-core/src/direct_edit/replace.rs:403` | 376 | 148 | 52 | 7 | 4 | 33 |
 | 51 | `verify_exact_impl` | `crates/nurbs-core/src/analysis/curve_surface_agreement.rs:340` | 123 | 147 | 74 | 5 | 6 | 11 |
-| 52 | `Parser::expr` | `crates/rush-frontend/src/parser/parser_impl_2.rs:286` | 242 | 147 | 76 | 7 | 2 | 3 |
+| 52 | `Parser::expr` | `crates/rush-frontend/src/parser/grammar.rs:286` | 242 | 147 | 76 | 7 | 2 | 3 |
 | 53 | `certify_motion_impl` | `crates/nurbs-core/src/analysis/affine_volume.rs:365` | 267 | 145 | 73 | 7 | 12 | 0 |
 | 54 | `centered_graph` | `crates/polygon-core/src/lattice_tools.rs:194` | 161 | 145 | 47 | 7 | 4 | 0 |
 | 55 | `derive` | `crates/brep-core/src/profile_certificate/span_intersections/event_nodes/overlap_components/periodic_pieces.rs:115` | 325 | 144 | 56 | 8 | 1 | 14 |
@@ -65,14 +65,14 @@
 | 57 | `offset_cylinder` | `crates/brep-core/src/direct_edit/offset.rs:149` | 434 | 143 | 69 | 5 | 6 | 24 |
 | 58 | `verify_on_direct` | `crates/nurbs-core/src/analysis/curve_surface_agreement.rs:147` | 170 | 142 | 66 | 7 | 7 | 0 |
 | 59 | `inspect` | `crates/nurbs-core/src/intersection/self_curve.rs:25` | 244 | 141 | 65 | 6 | 4 | 4 |
-| 60 | `Emitter::emit_cases_1` | `crates/rush-runtime/src/emit/emit_cases_1.rs:3` | 491 | 138 | 80 | 5 | 2 | 19 |
+| 60 | `Emitter::emit_mechanism_or_control_node` | `crates/rush-runtime/src/emit/mechanism_and_control_nodes.rs:3` | 491 | 138 | 80 | 5 | 2 | 19 |
 | 61 | `certify_joined_charts` | `crates/brep-core/src/boundary_hull_contact.rs:217` | 150 | 136 | 30 | 9 | 2 | 5 |
 | 62 | `inspect_shell_with_projective_fibers` | `crates/brep-core/src/source_face_contacts/projective.rs:18` | 268 | 136 | 55 | 6 | 7 | 0 |
 | 63 | `binary_op` | `crates/planar-geometry/src/curve_boolean/binary_op_2.rs:4` | 357 | 136 | 73 | 5 | 6 | 7 |
 | 64 | `parse` | `crates/brep-core/src/step_xde.rs:367` | 211 | 135 | 66 | 7 | 2 | 7 |
-| 65 | `Evaluator::resolve` | `crates/rush-runtime/src/eval/evaluator_impl_2.rs:4` | 574 | 135 | 88 | 6 | 5 | 21 |
+| 65 | `Evaluator::resolve` | `crates/rush-runtime/src/eval/resolve.rs:4` | 574 | 135 | 88 | 6 | 5 | 21 |
 | 66 | `refine_joint` | `crates/photogrammetry-core/src/camera/camera.rs:409` | 184 | 134 | 42 | 8 | 3 | 3 |
-| 67 | `qualify_impl` | `crates/nurbs-core/src/surface_self_chord_coverage.rs:263` | 301 | 133 | 56 | 5 | 6 | 1 |
+| 67 | `qualify_impl` | `crates/nurbs-core/src/surface_self_chord_coverage.rs:264` | 301 | 133 | 56 | 5 | 6 | 1 |
 | 68 | `original_arc_length_section_interpolation_with_chord` | `crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/arc_position_owned.rs:132` | 201 | 132 | 72 | 5 | 5 | 3 |
 | 69 | `progressive_profile_body_internal` | `crates/brep-core/src/analytic/rational_loft/owned_progressive_body.rs:4` | 423 | 130 | 72 | 4 | 13 | 8 |
 | 70 | `Evaluator::eval_expression` | `crates/openscad-core/src/eval/expressions.rs:4` | 342 | 130 | 84 | 3 | 4 | 1 |
@@ -94,8 +94,8 @@
 | 86 | `inspect` | `crates/brep-core/src/fillet_contact/convex_branch.rs:130` | 294 | 122 | 58 | 4 | 9 | 9 |
 | 87 | `sew_g2_patch_set_impl` | `crates/brep-core/src/region_replacement/patch_set.rs:159` | 468 | 122 | 94 | 4 | 9 | 15 |
 | 88 | `projective_strip_impl` | `crates/cad-predicates/src/projective_strip_jets.rs:28` | 222 | 122 | 44 | 6 | 6 | 0 |
-| 89 | `Emitter::emit_cases_2` | `crates/rush-runtime/src/emit/emit_cases_2.rs:3` | 451 | 122 | 75 | 3 | 2 | 9 |
-| 90 | `section_loft` | `crates/brep-core/src/analytic/rational_loft_legacy.rs:241` | 241 | 121 | 60 | 5 | 5 | 20 |
+| 89 | `Emitter::emit_geometry_node` | `crates/rush-runtime/src/emit/geometry_nodes.rs:3` | 451 | 122 | 75 | 3 | 2 | 9 |
+| 90 | `section_loft` | `crates/brep-core/src/analytic/rational_loft_legacy.rs:203` | 241 | 121 | 60 | 5 | 5 | 20 |
 | 91 | `prove` | `crates/brep-core/src/shared_boundary/opposite_rows/restricted.rs:56` | 206 | 121 | 56 | 5 | 4 | 2 |
 | 92 | `compile_text` | `crates/rush-runtime/src/nurbs/compile_text.rs:3` | 370 | 121 | 54 | 6 | 3 | 15 |
 | 93 | `recognize_cone` | `crates/brep-core/src/intersections/plane_cone.rs:247` | 279 | 120 | 66 | 4 | 1 | 0 |
@@ -133,29 +133,29 @@
 |---:|---|---|---:|---:|---:|---:|---:|---:|
 | 1 | `import_step_direct` | `crates/cad-step/src/step_interchange_v3/import_step_v3.rs:3` | 689 | 207 | 124 | 8 | 5 | 15 |
 | 2 | `handle` | `crates/geometry-bridge/src/dispatch/nurbs.rs:76` | 634 | 55 | 96 | 4 | 1 | 0 |
-| 3 | `EmbeddedExpressionGeometry::inspect_trimmed_minimum_aligned_chords` | `crates/brep-core/src/source_profile_shell_wall/methods_inspect_trimmed_minimum_aligned_chords.rs:5` | 630 | 245 | 103 | 6 | 8 | 0 |
+| 3 | `EmbeddedExpressionGeometry::inspect_trimmed_minimum_aligned_chords` | `crates/brep-core/src/source_profile_shell_wall/inspect_trimmed_minimum_aligned_chords.rs:5` | 630 | 245 | 103 | 6 | 8 | 0 |
 | 4 | `dispatch_other` | `crates/nurbs-core/src/transport/dispatch_other.rs:3` | 613 | 212 | 222 | 3 | 2 | 0 |
-| 5 | `Evaluator::resolve` | `crates/rush-runtime/src/eval/evaluator_impl_2.rs:4` | 574 | 135 | 88 | 6 | 5 | 21 |
+| 5 | `Evaluator::resolve` | `crates/rush-runtime/src/eval/resolve.rs:4` | 574 | 135 | 88 | 6 | 5 | 21 |
 | 6 | `preflight_inner` | `crates/bridge-svg/src/svg/preflight_inner.rs:3` | 573 | 229 | 108 | 6 | 3 | 10 |
 | 7 | `intersect_curve_surface_report` | `crates/nurbs-core/src/intersection/intersect_curve_surface_report.rs:4` | 543 | 222 | 84 | 6 | 3 | 11 |
-| 8 | `Field::from_value` | `crates/sdf-core/src/serialization/methods_Field_from_value.rs:4` | 543 | 8 | 34 | 2 | 1 | 0 |
+| 8 | `Field::from_value` | `crates/sdf-core/src/serialization/from_value.rs:4` | 543 | 8 | 34 | 2 | 1 | 0 |
 | 9 | `Replay::evaluate` | `crates/geometry-bridge/src/brep_production/mod.rs:317` | 535 | 180 | 87 | 5 | 2 | 7 |
-| 10 | `Compiler::operation` | `crates/rush-frontend/src/lower/compiler_impl_3.rs:4` | 528 | 451 | 229 | 6 | 4 | 24 |
+| 10 | `Compiler::operation` | `crates/rush-frontend/src/lower/operation.rs:4` | 528 | 451 | 229 | 6 | 4 | 24 |
 | 11 | `certify_original_rmf_transport_impl` | `crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport/bishop_integration.rs:4` | 518 | 170 | 77 | 5 | 8 | 0 |
 | 12 | `normalize` | `crates/brep-core/src/bezier_profile_normalize.rs:36` | 516 | 308 | 108 | 7 | 2 | 14 |
-| 13 | `Emitter::emit_cases_1` | `crates/rush-runtime/src/emit/emit_cases_1.rs:3` | 491 | 138 | 80 | 5 | 2 | 19 |
+| 13 | `Emitter::emit_mechanism_or_control_node` | `crates/rush-runtime/src/emit/mechanism_and_control_nodes.rs:3` | 491 | 138 | 80 | 5 | 2 | 19 |
 | 14 | `intersect_plane_cone` | `crates/brep-core/src/intersections/plane_cone.rs:957` | 488 | 115 | 62 | 5 | 3 | 10 |
 | 15 | `intersect_plane_cone` | `crates/brep-intersect/src/plane_cone/intersect_plane_cone.rs:9` | 488 | 115 | 62 | 5 | 3 | 10 |
-| 16 | `Evaluator::eval_node_cases_1` | `crates/openscad-core/src/eval/eval_node_cases_1.rs:3` | 479 | 176 | 89 | 5 | 3 | 2 |
+| 16 | `Evaluator::eval_primitive_node` | `crates/openscad-core/src/eval/primitive_nodes.rs:3` | 479 | 176 | 89 | 5 | 3 | 2 |
 | 17 | `propose_graph_constraints` | `crates/brep-core/src/region_replacement/central_graph.rs:235` | 477 | 187 | 102 | 6 | 8 | 16 |
 | 18 | `Constraint::from_value` | `crates/sketch-core/src/serialization.rs:40` | 474 | 2 | 25 | 2 | 1 | 0 |
 | 19 | `valence3_cuboid_max_corner` | `crates/brep-core/src/imprint_pipeline/valence3_cuboid_max_corner.rs:6` | 472 | 14 | 10 | 2 | 4 | 6 |
 | 20 | `sew_g2_patch_set_impl` | `crates/brep-core/src/region_replacement/patch_set.rs:159` | 468 | 122 | 94 | 4 | 9 | 15 |
 | 21 | `rational_closed_impl` | `crates/brep-core/src/sweep_boundary_owned/closed/rational.rs:145` | 461 | 150 | 101 | 6 | 8 | 15 |
 | 22 | `CentralLoftCandidate::sew_network_candidate` | `crates/brep-core/src/region_replacement/central_loft/sewing/network_body.rs:89` | 459 | 73 | 45 | 4 | 3 | 26 |
-| 23 | `Evaluator::eval_node_cases_3` | `crates/openscad-core/src/eval/eval_node_cases_3.rs:3` | 454 | 168 | 75 | 5 | 3 | 4 |
+| 23 | `Evaluator::eval_extrusion_or_control_node` | `crates/openscad-core/src/eval/extrusion_and_control_nodes.rs:3` | 454 | 168 | 75 | 5 | 3 | 4 |
 | 24 | `handle` | `crates/geometry-bridge/src/dispatch/interchange.rs:50` | 451 | 1 | 37 | 2 | 1 | 0 |
-| 25 | `Emitter::emit_cases_2` | `crates/rush-runtime/src/emit/emit_cases_2.rs:3` | 451 | 122 | 75 | 3 | 2 | 9 |
+| 25 | `Emitter::emit_geometry_node` | `crates/rush-runtime/src/emit/geometry_nodes.rs:3` | 451 | 122 | 75 | 3 | 2 | 9 |
 | 26 | `author_general_nurbs_boolean` | `crates/brep-core/src/nurbs_ss_g6/author_general_nurbs_boolean.rs:7` | 450 | 94 | 76 | 4 | 3 | 3 |
 | 27 | `certify` | `crates/brep-core/src/boundary_hull_contact/extended_support.rs:160` | 444 | 266 | 79 | 9 | 2 | 19 |
 | 28 | `restore_using` | `crates/geometry-bridge/src/cad_source_body.rs:99` | 439 | 150 | 89 | 4 | 2 | 7 |
@@ -163,8 +163,8 @@
 | 30 | `offset_cylinder` | `crates/brep-core/src/direct_edit/offset.rs:149` | 434 | 143 | 69 | 5 | 6 | 24 |
 | 31 | `dispatch` | `crates/geometry-bridge/src/mesh.rs:138` | 427 | 174 | 99 | 6 | 1 | 3 |
 | 32 | `progressive_profile_body_internal` | `crates/brep-core/src/analytic/rational_loft/owned_progressive_body.rs:4` | 423 | 130 | 72 | 4 | 13 | 8 |
-| 33 | `Evaluator::eval_node_cases_2` | `crates/openscad-core/src/eval/eval_node_cases_2.rs:3` | 423 | 172 | 75 | 6 | 3 | 2 |
-| 34 | `Compiler::eval` | `crates/rush-frontend/src/lower/compiler_impl_1.rs:79` | 421 | 156 | 113 | 4 | 4 | 6 |
+| 33 | `Evaluator::eval_transform_node` | `crates/openscad-core/src/eval/transform_nodes.rs:3` | 423 | 172 | 75 | 6 | 3 | 2 |
+| 34 | `Compiler::eval` | `crates/rush-frontend/src/lower/nodes.rs:79` | 421 | 156 | 113 | 4 | 4 | 6 |
 | 35 | `export_step_direct_impl` | `crates/brep-core/src/step_v3_export.rs:264` | 419 | 84 | 46 | 5 | 5 | 25 |
 | 36 | `construct_attempt` | `crates/brep-core/src/sweep_miter_owned/owned_attempt.rs:4` | 412 | 91 | 62 | 3 | 6 | 0 |
 | 37 | `original_frame_arc_length_section_interpolation_with_rmf_steps` | `crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/arc_frame_owned.rs:4` | 409 | 310 | 189 | 8 | 9 | 3 |
@@ -177,7 +177,7 @@
 | 44 | `qualify_with_mixed_pair_pass` | `crates/brep-core/src/source_wall_coverage.rs:267` | 382 | 178 | 101 | 6 | 10 | 0 |
 | 45 | `replace_face` | `crates/brep-core/src/direct_edit/replace.rs:403` | 376 | 148 | 52 | 7 | 4 | 33 |
 | 46 | `ExpressionShell::qualify_transition_plane_contact` | `crates/brep-core/src/source_profile_shell_transition_contact.rs:179` | 376 | 157 | 70 | 7 | 6 | 0 |
-| 47 | `OuterEdgeAssembly::assemble_shell` | `crates/brep-core/src/source_profile_shell/methods_assemble_shell.rs:4` | 375 | 95 | 55 | 4 | 2 | 6 |
+| 47 | `OuterEdgeAssembly::assemble_shell` | `crates/brep-core/src/source_profile_shell/assemble_shell.rs:4` | 375 | 95 | 55 | 4 | 2 | 6 |
 | 48 | `build_strips` | `crates/brep-core/src/region_replacement/trihedral_skins.rs:249` | 374 | 97 | 53 | 5 | 8 | 14 |
 | 49 | `guided_section_interpolation_mode_with_pose` | `crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/guided_interpolation_owned.rs:4` | 373 | 267 | 164 | 6 | 5 | 4 |
 | 50 | `dispatch` | `crates/nurbs-core/src/transport/sweep_requests.rs:3` | 373 | 191 | 110 | 4 | 2 | 0 |
@@ -200,20 +200,20 @@
 | 2 | `qualify_linear_region` | `crates/brep-core/src/source_contour_proposal/qualify_linear_region.rs:6` | 293 | 90 | 47 | 5 | 17 | 1 |
 | 3 | `qualify_curved_region` | `crates/brep-core/src/source_contour_proposal/qualify_linear_region.rs:315` | 127 | 11 | 9 | 2 | 17 | 1 |
 | 4 | `qualify_interior_contact` | `crates/brep-core/src/source_contour_proposal/proposal.rs:157` | 108 | 12 | 11 | 2 | 16 | 2 |
-| 5 | `certify_with_tangency` | `crates/nurbs-core/src/offset_contact_trims.rs:271` | 100 | 11 | 9 | 2 | 15 | 3 |
-| 6 | `certify` | `crates/nurbs-core/src/offset_source_boundary.rs:56` | 165 | 53 | 23 | 5 | 14 | 0 |
+| 5 | `certify_with_tangency` | `crates/nurbs-core/src/offset/contact_trims.rs:271` | 100 | 11 | 9 | 2 | 15 | 3 |
+| 6 | `certify` | `crates/nurbs-core/src/offset/source_boundary.rs:56` | 165 | 53 | 23 | 5 | 14 | 0 |
 | 7 | `CudaLattice::run` | `crates/polygon-core/src/lattice_cuda.rs:83` | 89 | 5 | 6 | 2 | 14 | 0 |
 | 8 | `GpuLattice::run` | `crates/polygon-core/src/lattice_gpu.rs:167` | 78 | 10 | 10 | 2 | 14 | 0 |
 | 9 | `qualify_clipped_end` | `crates/brep-core/src/offset_end_boundary.rs:113` | 68 | 7 | 6 | 2 | 14 | 0 |
 | 10 | `qualify_replaced_face` | `crates/brep-core/src/offset_end_boundary.rs:189` | 66 | 3 | 3 | 1 | 14 | 0 |
 | 11 | `finish_model` | `crates/brep-core/src/shell_thickness/contact_pair/cap/regions.rs:430` | 60 | 0 | 1 | 1 | 14 | 0 |
 | 12 | `progressive_profile_body_internal` | `crates/brep-core/src/analytic/rational_loft/owned_progressive_body.rs:4` | 423 | 130 | 72 | 4 | 13 | 8 |
-| 13 | `certify` | `crates/nurbs-core/src/offset_contact_trims.rs:73` | 161 | 30 | 19 | 3 | 13 | 0 |
-| 14 | `certify_refined` | `crates/nurbs-core/src/offset_contact_pcurve.rs:183` | 135 | 67 | 28 | 6 | 13 | 0 |
+| 13 | `certify` | `crates/nurbs-core/src/offset/contact_trims.rs:73` | 161 | 30 | 19 | 3 | 13 | 0 |
+| 14 | `certify_refined` | `crates/nurbs-core/src/offset/contact_pcurve.rs:183` | 135 | 67 | 28 | 6 | 13 | 0 |
 | 15 | `propose` | `crates/brep-core/src/source_contour_proposal/proposal.rs:14` | 129 | 11 | 12 | 3 | 13 | 1 |
 | 16 | `abi_manifold_boolean` | `crates/geometry-bridge/src/abi/manifold.rs:170` | 68 | 6 | 9 | 2 | 13 | 0 |
 | 17 | `attach_radius_tangent_qualified` | `crates/brep-core/src/contact_graft/qualified_radius.rs:57` | 62 | 4 | 5 | 1 | 13 | 0 |
-| 18 | `abi_manifold_boolean` | `crates/geometry-wasm/src/lib.rs:291` | 22 | 0 | 1 | 0 | 13 | 0 |
+| 18 | `abi_manifold_boolean` | `crates/geometry-wasm/src/lib.rs:282` | 22 | 0 | 1 | 0 | 13 | 0 |
 | 19 | `certify_motion_impl` | `crates/nurbs-core/src/analysis/affine_volume.rs:365` | 267 | 145 | 73 | 7 | 12 | 0 |
 | 20 | `estimate` | `crates/photogrammetry-core/src/dense/plane.rs:367` | 215 | 92 | 39 | 6 | 12 | 0 |
 | 21 | `identity` | `crates/nurbs-core/src/join/continuity/bspline_strip.rs:30` | 191 | 27 | 17 | 4 | 12 | 3 |
@@ -226,7 +226,7 @@
 | 28 | `try_gpu` | `crates/polygon-core/src/lattice_gpu.rs:259` | 55 | 18 | 5 | 7 | 12 | 0 |
 | 29 | `progressive_profile_body_with_annular_caps` | `crates/brep-core/src/analytic/rational_loft.rs:694` | 31 | 0 | 1 | 0 | 12 | 0 |
 | 30 | `progressive_profile_body_with_automatic_caps` | `crates/brep-core/src/analytic/rational_loft.rs:728` | 31 | 0 | 1 | 0 | 12 | 0 |
-| 31 | `certify` | `crates/nurbs-core/src/offset_contact_pcurve.rs:148` | 30 | 0 | 1 | 0 | 12 | 0 |
+| 31 | `certify` | `crates/nurbs-core/src/offset/contact_pcurve.rs:148` | 30 | 0 | 1 | 0 | 12 | 0 |
 | 32 | `certify_contact_relative_values` | `crates/nurbs-core/src/sweeps/progressive_miter/authored_frame_certificate/guided_path_values.rs:149` | 15 | 1 | 2 | 1 | 12 | 0 |
 | 33 | `partition_fiber_prebound` | `crates/brep-core/src/face_cut/automatic_fiber/prebound_partition.rs:6` | 291 | 53 | 30 | 3 | 11 | 18 |
 | 34 | `append` | `crates/brep-core/src/minkowski3d/curved/trimmed.rs:216` | 200 | 66 | 23 | 6 | 11 | 17 |
@@ -254,7 +254,7 @@
 | 11 | `prepare` | `crates/brep-core/src/feature_ops/region_pattern/closure.rs:27` | 235 | 98 | 39 | 5 | 7 | 24 |
 | 12 | `model_from_trimmed_polygons` | `crates/brep-core/src/operations/planar_model.rs:155` | 323 | 77 | 37 | 5 | 2 | 24 |
 | 13 | `build` | `crates/brep-core/src/profile_certificate/original_restriction/wire/prism.rs:64` | 181 | 29 | 20 | 3 | 3 | 24 |
-| 14 | `Compiler::operation` | `crates/rush-frontend/src/lower/compiler_impl_3.rs:4` | 528 | 451 | 229 | 6 | 4 | 24 |
+| 14 | `Compiler::operation` | `crates/rush-frontend/src/lower/operation.rs:4` | 528 | 451 | 229 | 6 | 4 | 24 |
 | 15 | `export_step_direct` | `crates/cad-step/src/step_interchange_v3/export_step_v3.rs:3` | 353 | 75 | 42 | 5 | 4 | 23 |
 | 16 | `build` | `crates/brep-core/src/radius_transition_body.rs:86` | 172 | 19 | 16 | 3 | 1 | 22 |
 | 17 | `export_iges_v2` | `crates/brep-core/src/iges_interchange_v2.rs:2516` | 169 | 17 | 14 | 2 | 1 | 21 |
@@ -263,15 +263,15 @@
 | 20 | `assemble` | `crates/brep-core/src/region_replacement/central_loft/sewing/raw_build.rs:6` | 309 | 51 | 31 | 4 | 2 | 21 |
 | 21 | `export_iges_v2` | `crates/cad-step/src/iges_interchange_v2/export_iges_v2.rs:78` | 167 | 17 | 14 | 2 | 1 | 21 |
 | 22 | `prove` | `crates/nurbs-core/src/intersection/certified_curve_surface/quadric_graph/joint/bspline.rs:18` | 129 | 31 | 19 | 4 | 7 | 21 |
-| 23 | `Evaluator::resolve` | `crates/rush-runtime/src/eval/evaluator_impl_2.rs:4` | 574 | 135 | 88 | 6 | 5 | 21 |
-| 24 | `section_loft` | `crates/brep-core/src/analytic/rational_loft_legacy.rs:241` | 241 | 121 | 60 | 5 | 5 | 20 |
+| 23 | `Evaluator::resolve` | `crates/rush-runtime/src/eval/resolve.rs:4` | 574 | 135 | 88 | 6 | 5 | 21 |
+| 24 | `section_loft` | `crates/brep-core/src/analytic/rational_loft_legacy.rs:203` | 241 | 121 | 60 | 5 | 5 | 20 |
 | 25 | `arrange` | `crates/brep-core/src/profile_certificate/offset_regions/arrangement.rs:213` | 137 | 52 | 31 | 3 | 3 | 20 |
 | 26 | `certify` | `crates/brep-core/src/boundary_hull_contact/extended_support.rs:160` | 444 | 266 | 79 | 9 | 2 | 19 |
 | 27 | `build` | `crates/brep-core/src/minkowski3d/curved/retained_boolean/assemble.rs:73` | 191 | 73 | 28 | 6 | 4 | 19 |
 | 28 | `finish` | `crates/brep-core/src/profile_certificate/branches.rs:351` | 184 | 95 | 37 | 5 | 7 | 19 |
 | 29 | `propose_trihedral_graft` | `crates/brep-core/src/region_replacement/trihedral_graft.rs:215` | 355 | 94 | 64 | 3 | 5 | 19 |
 | 30 | `spatial_spots` | `crates/geometry-bridge/src/cad_lattice/weak_spots.rs:162` | 89 | 42 | 23 | 5 | 3 | 19 |
-| 31 | `Emitter::emit_cases_1` | `crates/rush-runtime/src/emit/emit_cases_1.rs:3` | 491 | 138 | 80 | 5 | 2 | 19 |
+| 31 | `Emitter::emit_mechanism_or_control_node` | `crates/rush-runtime/src/emit/mechanism_and_control_nodes.rs:3` | 491 | 138 | 80 | 5 | 2 | 19 |
 | 32 | `ruled_loft` | `crates/brep-core/src/analytic/loft.rs:269` | 130 | 23 | 13 | 4 | 1 | 18 |
 | 33 | `partition_fiber_prebound` | `crates/brep-core/src/face_cut/automatic_fiber/prebound_partition.rs:6` | 291 | 53 | 30 | 3 | 11 | 18 |
 | 34 | `certify` | `crates/brep-core/src/minkowski3d/curved/atlas/trim/region.rs:263` | 65 | 22 | 13 | 3 | 6 | 18 |

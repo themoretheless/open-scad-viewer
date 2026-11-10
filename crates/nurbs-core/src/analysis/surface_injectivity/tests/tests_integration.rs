@@ -253,4 +253,20 @@
         assert!(certify_polar_p_matrix(&s,wrong,4,16).unwrap().is_none());
     }
 
-
+#[test]
+fn affine_corners_never_admit_an_interior_fold_or_hide_proposal_work() {
+    // All four corners project to a perfect affine rectangle, while
+    // x(u)=6u-15u²+10u³ reverses direction twice in its interior.
+    let s=Surface {degree_u:3,degree_v:2,
+        knots_u:vec![0.,0.,0.,0.,1.,1.,1.,1.],knots_v:vec![0.,0.,0.,1.,1.,1.],
+        control_points:[0.,2.,-1.,1.].into_iter().map(|x|vec![vec![x,0.,0.],vec![x,0.5,1.],vec![x,1.,0.]]).collect(),
+        weights:vec![vec![1.;3];4],periodic_u:false,periodic_v:false};
+    assert!(affine_corner_projective_hint(&s).is_some());
+    let before=format!("{s:?}");
+    for budget in [1,2,4,16,100] {
+        let r=certify(&s,budget).unwrap();
+        assert!(!r.proven,"corner proposal admitted a folded surface");
+        assert!(r.spans<=budget);
+    }
+    assert_eq!(format!("{s:?}"),before);
+}

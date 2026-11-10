@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    feature_ops::edge_partition::{self, Limits},
-};
+use brep_core::{Model, feature_ops::edge_partition::{self, Limits}};
 fn source() -> Model {
     let mut m = brep_core::cuboid([0.; 3], [2., 3., 4.]).unwrap();
     m.edges[0].curve.weights = vec![1., 3.];

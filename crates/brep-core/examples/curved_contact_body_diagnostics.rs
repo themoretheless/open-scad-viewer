@@ -127,7 +127,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         use sha2::{Digest, Sha256};
         let directory = std::path::PathBuf::from(&args[1]);
         std::fs::create_dir_all(&directory)?;
-        let (step, _, _) = brep_core::export_step_v5(&graft.model)?;
+        let (step, _, _) = cad_step::export_step_v5(&graft.model)?;
         let model = value_codec::to_string(&graft.model)?;
         let saved = fixture::inspect_saved(
             &f,

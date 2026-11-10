@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             jets.total_exact_work
         );
         assert!(jets.profile.g2_certified && jets.station.g2_certified && volume.proven);
-        let (step, _, _) = brep_core::export_step_v5(&sewn.model)?;
+        let (step, _, _) = cad_step::export_step_v5(&sewn.model)?;
         let file = format!("{name}.step");
         std::fs::write(output.join(&file), &step)?;
         std::fs::write(

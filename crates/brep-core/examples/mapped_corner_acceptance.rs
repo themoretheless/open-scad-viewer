@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if closure.closure.status != brep_core::watertight::Closure::WithinTolerance {
         return Err("Reload closure unproven".into());
     }
-    let (step, _, _) = brep_core::export_step_v5(&restored)?;
+    let (step, _, _) = cad_step::export_step_v5(&restored)?;
     let manifest = value_codec::json!({"admitted":result.corner.admitted,"directOriginalAdmitted":result.corner.direct_admitted,
         "directOriginalUpper":result.corner.direct_upper,"cells":result.cells,"exactWork":result.exact_work,"coefficientWork":result.corner.coefficient_work,"originalSupportUpper":result.corner.upper,"bodies":restored.bodies.len(),"faces":restored.faces.len(),"edges":restored.edges.len(),"vertices":restored.vertices.len(),"nativeReloadClosed":true,"radiusClaim":false,"globalEmbeddingClaim":false,"independentStepMeasurement":false});
     std::fs::create_dir_all(&directory)?;

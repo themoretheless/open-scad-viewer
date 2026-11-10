@@ -3,7 +3,7 @@ use super::{
     ContactClass, ContinuationSample, MAX_CONTINUATION, Result, Surface, TRANSVERSE_SINE,
     coedge_trim, cross3, distance, dot3, enclosure_of, norm3, refine_seed, surface_domain,
 };
-use crate::foundation::guards::{Budget, require_finite_point};
+use crate::numerics::guards::{Budget, require_finite_point};
 
 pub enum EndpointLocation {
     Boundary,

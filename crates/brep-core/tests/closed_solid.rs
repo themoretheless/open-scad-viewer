@@ -1,7 +1,4 @@
-use brep_core::{
-    closed_solid as solid,
-    healing_report::{AutoRepairOperation, HealingStatus},
-};
+use brep_core::{closed_solid as solid, healing_report::{AutoRepairOperation, HealingStatus}};
 fn policy() -> solid::AdmissionPolicy {
     solid::AdmissionPolicy {
         tolerance_uv: 1e-8,

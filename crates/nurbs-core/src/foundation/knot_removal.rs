@@ -6,7 +6,7 @@
 //! edit is committed. It pairs with
 //! `approximate_edits::remove_curve_knot_report`, which performs the actual
 //! certified removal given a tolerance budget.
-use crate::foundation::guards::{Budget, require_finite_f64};
+use crate::numerics::guards::{Budget, require_finite_f64};
 use crate::{Result, check, curve::Curve};
 
 /// Pre-check result for removing one interior knot.

@@ -27,7 +27,6 @@ pub use atlas::pullback::{
     certify_algebraic_triangle_pullback, verify_algebraic_surface_pullback,
     verify_algebraic_triangle_pullback,
 };
-mod atlas_legacy;
 mod prismatic;
 pub use atlas::Certificate as SourceAtlasCertificate;
 /// Independent source atlas certificate, without requiring a Minkowski sum.
@@ -708,7 +707,6 @@ pub use same_carrier::{
     verify_bounded_same_carrier_merge, verify_same_carrier_merge,
 };
 #[allow(unused_imports)]
-pub(crate) use same_carrier::same_carrier_component;
 
 pub(crate) use same_carrier::seam_model_id;
 

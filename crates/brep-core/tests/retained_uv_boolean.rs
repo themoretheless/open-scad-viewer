@@ -1,15 +1,8 @@
-use brep_core::{
-    analysis::mass_properties,
-    boolean_robustness::{classify_boolean_operand, BooleanOperandKind},
-    cuboid,
-    retained_uv_boolean::{
+use brep_core::{analysis::mass_properties, boolean_robustness::{classify_boolean_operand, BooleanOperandKind}, cuboid, retained_uv_boolean::{
         boolean_same_surface_uv_retained, boolean_same_surface_uv_retained_with_limits,
         merge_same_surface_uv_faces, replace_face_with_uv_regions,
         verify_same_surface_uv_retained,
-    },
-    same_surface_uv_boolean::{SameSurfaceUvLimits, UvBooleanOperation, UvRegion},
-    Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex,
-};
+    }, same_surface_uv_boolean::{SameSurfaceUvLimits, UvBooleanOperation, UvRegion}, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
 use nurbs_core::{curve::line, surface::Surface};
 
 fn surface() -> Surface {

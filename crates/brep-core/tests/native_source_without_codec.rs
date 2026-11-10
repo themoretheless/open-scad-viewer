@@ -1,7 +1,5 @@
 //! Public native geometry/replay/exchange path, runnable without `codec`.
-use brep_core::{
-    source_contour_proposal as region, source_shell_incidence as incidence, trimmed_face_recipe,
-};
+use brep_core::{source_contour_proposal as region, source_shell_incidence as incidence, trimmed_face_recipe};
 use nurbs_core::{curve::Curve, surface::Surface};
 fn limits() -> trimmed_face_recipe::Limits {
     trimmed_face_recipe::Limits {

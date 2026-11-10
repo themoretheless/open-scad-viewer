@@ -23,8 +23,8 @@ pub use number::*;
 use emitter::*;
 pub use compile::*;
 
-mod emitter_impl_1;
-mod emitter_impl_2;
+mod values;
+mod dispatch;
 
 #[derive(Clone, Copy)]
 struct NativeEmitCtx<'a, 'c> {
@@ -34,5 +34,5 @@ struct NativeEmitCtx<'a, 'c> {
     allow_assembly: bool, source_start: usize,
 }
 
-mod emit_cases_1;
-mod emit_cases_2;
+mod mechanism_and_control_nodes;
+mod geometry_nodes;

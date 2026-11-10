@@ -50,7 +50,7 @@ pub(crate) fn route(v: Value) -> Routed {
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "brep_nurbs_export_step" => {
-            let (text, cert) = brep_core::export_step(&field(&v, "model")?)?;
+            let (text, cert) = cad_step::export_step(&field(&v, "model")?)?;
             encode(json!({
                 "text": text,
                 "certificate": {
@@ -61,7 +61,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step" => {
-            let (model, cert) = brep_core::import_step(&field::<String>(&v, "text")?)?;
+            let (model, cert) = cad_step::import_step(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model": model,
                 "certificate": {
@@ -72,7 +72,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v2" => {
-            let (text, cert, identity) = brep_core::export_step_v2(&field(&v, "model")?)?;
+            let (text, cert, identity) = cad_step::export_step_v2(&field(&v, "model")?)?;
             encode(json!({
                 "text": text,
                 "certificate": {
@@ -90,7 +90,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v2" => {
-            let (model, cert, identity) = brep_core::import_step_v2(&field::<String>(&v, "text")?)?;
+            let (model, cert, identity) = cad_step::import_step_v2(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model": model,
                 "certificate": {
@@ -108,7 +108,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v3" => {
-            let (text, cert, report) = brep_core::export_step_v3(&field(&v, "model")?)?;
+            let (text, cert, report) = cad_step::export_step_v3(&field(&v, "model")?)?;
             encode(json!({
                 "text": text,
                 "certificate": {
@@ -129,7 +129,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v3" => {
-            let (model, cert, report) = brep_core::import_step_v3(&field::<String>(&v, "text")?)?;
+            let (model, cert, report) = cad_step::import_step_v3(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model": model,
                 "certificate": {
@@ -150,7 +150,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v4" => {
-            let (text, cert, report) = brep_core::export_step_v4(&field(&v, "model")?)?;
+            let (text, cert, report) = cad_step::export_step_v4(&field(&v, "model")?)?;
             encode(json!({
                 "text":text,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -159,7 +159,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v4" => {
-            let (model, cert, report) = brep_core::import_step_v4(&field::<String>(&v, "text")?)?;
+            let (model, cert, report) = cad_step::import_step_v4(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model":model,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -168,7 +168,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v5" => {
-            let (text, cert, report) = brep_core::export_step_v5(&field(&v, "model")?)?;
+            let (text, cert, report) = cad_step::export_step_v5(&field(&v, "model")?)?;
             encode(json!({
                 "text":text,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -178,7 +178,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v5" => {
-            let (model, cert, report) = brep_core::import_step_v5(&field::<String>(&v, "text")?)?;
+            let (model, cert, report) = cad_step::import_step_v5(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model":model,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -188,7 +188,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v6" => {
-            let (text, cert, report) = brep_core::export_step_v6(&field(&v, "model")?)?;
+            let (text, cert, report) = cad_step::export_step_v6(&field(&v, "model")?)?;
             encode(json!({
                 "text":text,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -200,7 +200,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v6" => {
-            let (model, cert, report) = brep_core::import_step_v6(&field::<String>(&v, "text")?)?;
+            let (model, cert, report) = cad_step::import_step_v6(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model":model,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -212,7 +212,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v7" => {
-            let (text, cert, report) = brep_core::export_step_v7(&field(&v, "model")?)?;
+            let (text, cert, report) = cad_step::export_step_v7(&field(&v, "model")?)?;
             encode(json!({
                 "text":text,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -224,7 +224,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v7" => {
-            let (model, cert, report) = brep_core::import_step_v7(&field::<String>(&v, "text")?)?;
+            let (model, cert, report) = cad_step::import_step_v7(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model":model,"certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
                 "identity":{"preserved":report.identity.preserved,"source":report.identity.source,
@@ -236,7 +236,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v8" => {
-            let (text, cert, report) = brep_core::export_step_v8(&field(&v, "model")?)?;
+            let (text, cert, report) = cad_step::export_step_v8(&field(&v, "model")?)?;
             let regularity=cert.regularity.iter().map(|row|json!({
                 "carrier":row.carrier,"parameterU":row.parameter_u,"parameterV":row.parameter_v,
                 "liftedPeriods":row.lifted_periods,"denominatorLowerBound":row.denominator_lower_bound,
@@ -256,7 +256,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_v8" => {
-            let (model, cert, report) = brep_core::import_step_v8(&field::<String>(&v, "text")?)?;
+            let (model, cert, report) = cad_step::import_step_v8(&field::<String>(&v, "text")?)?;
             let regularity=cert.regularity.iter().map(|row|json!({
                 "carrier":row.carrier,"parameterU":row.parameter_u,"parameterV":row.parameter_v,
                 "liftedPeriods":row.lifted_periods,"denominatorLowerBound":row.denominator_lower_bound,
@@ -320,7 +320,7 @@ fn handle(v: Value) -> Result<Value> {
         "brep_nurbs_step_lod0_hausdorff_estimate" => crate::step_lod0::hausdorff_estimate(v),
         "brep_nurbs_import_step_v10" => {
             let (model, cert, document) =
-                brep_core::import_step_v10(&field::<String>(&v, "text")?)?;
+                cad_step::import_step_v10(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model":model,
                 "certificate":{"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
@@ -335,7 +335,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_v10" => {
-            let document = brep_core::StepV10Document {
+            let document = cad_step::StepV10Document {
                 source: field(&v, "source")?,
                 graph_identity: field(&v, "graphIdentity")?,
                 definition_identities: Vec::new(),
@@ -344,24 +344,24 @@ fn handle(v: Value) -> Result<Value> {
                 operator_identities: Vec::new(),
                 metadata_loss: Vec::new(),
             };
-            encode(json!({"text":brep_core::export_step_v10(&document)?,
+            encode(json!({"text":cad_step::export_step_v10(&document)?,
                 "certificate":{"capability":"step-interchange/10","complete":true,
                     "notes":["retained_affine_occurrence_graph","exact_graph_isomorphism_identity"]}}))
         }
         "brep_nurbs_compose_step_v7" => {
             let models = field::<Vec<brep_core::Model>>(&v, "models")?;
-            encode(brep_core::compose_step_v7_occurrences(&models)?)
+            encode(cad_step::compose_step_v7_occurrences(&models)?)
         }
         "brep_nurbs_compose_step_v8" => {
             let models = field::<Vec<brep_core::Model>>(&v, "models")?;
-            encode(brep_core::compose_step_v8_occurrences(&models)?)
+            encode(cad_step::compose_step_v8_occurrences(&models)?)
         }
         "brep_nurbs_compose_step_v9" => {
             let models = field::<Vec<brep_core::Model>>(&v, "models")?;
-            encode(brep_core::compose_step_v9_occurrences(&models)?)
+            encode(cad_step::compose_step_v9_occurrences(&models)?)
         }
         "brep_nurbs_export_iges_v2" => {
-            let (text, cert, report) = brep_core::export_iges_v2(&field(&v, "model")?)?;
+            let (text, cert, report) = cad_step::export_iges_v2(&field(&v, "model")?)?;
             encode(json!({
                 "text": text,
                 "certificate": {"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
@@ -376,7 +376,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_iges_v2" => {
-            let (model, cert, report) = brep_core::import_iges_v2(&field::<String>(&v, "text")?)?;
+            let (model, cert, report) = cad_step::import_iges_v2(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model":model,
                 "certificate": {"capability":cert.capability,"complete":cert.complete,"notes":cert.notes},
@@ -391,7 +391,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_freeform" => {
-            let (text, cert) = brep_core::export_nurbs_step(&field(&v, "model")?)?;
+            let (text, cert) = cad_step::export_nurbs_step(&field(&v, "model")?)?;
             encode(json!({
                 "text": text,
                 "certificate": {
@@ -402,7 +402,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_freeform" => {
-            let (model, cert) = brep_core::import_nurbs_step(&field::<String>(&v, "text")?)?;
+            let (model, cert) = cad_step::import_nurbs_step(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model": model,
                 "certificate": {
@@ -413,7 +413,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_trimmed" => {
-            let (text, cert) = brep_core::export_nurbs_step_trimmed(&field(&v, "model")?)?;
+            let (text, cert) = cad_step::export_nurbs_step_trimmed(&field(&v, "model")?)?;
             encode(json!({
                 "text": text,
                 "certificate": {
@@ -425,7 +425,7 @@ fn handle(v: Value) -> Result<Value> {
         }
         "brep_nurbs_import_step_trimmed" => {
             let (model, cert) =
-                brep_core::import_nurbs_step_trimmed(&field::<String>(&v, "text")?)?;
+                cad_step::import_nurbs_step_trimmed(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model": model,
                 "certificate": {
@@ -436,7 +436,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_export_step_solid" => {
-            let (text, cert) = brep_core::export_nurbs_step_solid(&field(&v, "model")?)?;
+            let (text, cert) = cad_step::export_nurbs_step_solid(&field(&v, "model")?)?;
             encode(json!({
                 "text": text,
                 "certificate": {
@@ -447,7 +447,7 @@ fn handle(v: Value) -> Result<Value> {
             }))
         }
         "brep_nurbs_import_step_solid" => {
-            let (model, cert) = brep_core::import_nurbs_step_solid(&field::<String>(&v, "text")?)?;
+            let (model, cert) = cad_step::import_nurbs_step_solid(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model": model,
                 "certificate": {
@@ -459,7 +459,7 @@ fn handle(v: Value) -> Result<Value> {
         }
         "brep_nurbs_export_step_solid_v2" => {
             let (text, cert, identity) =
-                brep_core::export_nurbs_step_solid_v2(&field(&v, "model")?)?;
+                cad_step::export_nurbs_step_solid_v2(&field(&v, "model")?)?;
             encode(json!({
                 "text": text,
                 "certificate": {
@@ -478,7 +478,7 @@ fn handle(v: Value) -> Result<Value> {
         }
         "brep_nurbs_import_step_solid_v2" => {
             let (model, cert, identity) =
-                brep_core::import_nurbs_step_solid_v2(&field::<String>(&v, "text")?)?;
+                cad_step::import_nurbs_step_solid_v2(&field::<String>(&v, "text")?)?;
             encode(json!({
                 "model": model,
                 "certificate": {

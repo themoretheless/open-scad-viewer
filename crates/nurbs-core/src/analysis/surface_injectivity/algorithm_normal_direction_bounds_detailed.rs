@@ -13,7 +13,7 @@ pub fn normal_direction_bounds_detailed(s: &Surface, domain: [[f64;2];2], direct
     }
     let mut spans = 0;
     let mut bounds = [f64::INFINITY,f64::NEG_INFINITY];
-    for u in crate::certificates::audit::nonempty_spans(knots[0],degrees[0],counts[0]) { for v in crate::certificates::audit::nonempty_spans(knots[1],degrees[1],counts[1]) {
+    for u in crate::core::span_domains::nonempty_spans(knots[0],degrees[0],counts[0]) { for v in crate::core::span_domains::nonempty_spans(knots[1],degrees[1],counts[1]) {
         let indices=[u,v];
         let mut section=[[0.;2];2];
         let mut outside=false;

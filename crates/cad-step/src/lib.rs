@@ -11,8 +11,12 @@ mod nurbs_step_shared;
 pub mod nurbs_step_solid;
 pub mod nurbs_step_trimmed;
 pub mod source_exchange_step;
+mod step_v3_export;
+pub mod step_pmi;
+mod step_part21;
 pub mod step_interchange;
 pub mod step_interchange_v3;
+pub mod import_policy;
 
 pub use close_topology_interchange::{
     CLOSE_TOPOLOGY_IGES_CAPABILITY, CLOSE_TOPOLOGY_STEP_CAPABILITY, export_complex_iges,
@@ -49,3 +53,16 @@ pub use step_interchange_v3::{
     import_step_v7, import_step_v8, import_step_v9, import_step_v10,
 };
 pub(crate) use nurbs_core::curve::line;
+
+/// Prism recognition and scaled lofts checked through a STEP round trip.
+#[cfg(test)]
+#[path = "tests/prism_imported_caps.rs"]
+mod prism_imported_caps;
+
+#[cfg(test)]
+#[path = "tests/kernel_exchange.rs"]
+mod kernel_exchange;
+
+#[cfg(test)]
+#[path = "tests/kernel_fixtures.rs"]
+mod kernel_fixtures;

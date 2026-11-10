@@ -1,9 +1,6 @@
 #[path = "../examples/support/corner_close_fixture.rs"]
 mod fixture;
-use brep_core::{
-    corner_close,
-    wall_clearance::{self, Decision},
-};
+use brep_core::{corner_close, wall_clearance::{self, Decision}};
 fn setup() -> (brep_core::Model, usize, Vec<usize>) {
     let (source, uses, options) = fixture::fixture_extended();
     let out = corner_close::close(

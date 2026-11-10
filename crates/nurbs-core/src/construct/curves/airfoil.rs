@@ -9,7 +9,7 @@
 //! surface -> trailing edge. Sampling in x is clustered at the nose with
 //! spacing proportional to sqrt(x/c) (x_i = (i/N)^2).
 use crate::curve::basis;
-use crate::foundation::guards::{
+use crate::numerics::guards::{
     Budget, assert_finite_slice_debug, require_finite_f64, require_finite_slice,
 };
 use crate::{Result, check, curve::Curve, numeric_err};

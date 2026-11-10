@@ -179,8 +179,9 @@ fn replay(value: Value, l: &Limits, remaining: usize) -> Result<SourceRegion> {
     }
 }
 
-#[cfg(test)]
-pub(crate) fn test_limits() -> Limits {
+/// Generous budgets used by qualification tests here and in `cad-step`.
+#[doc(hidden)]
+pub fn test_limits() -> Limits {
     Limits {
         region: crate::trimmed_face_recipe::Limits {
             pairs: 100000,

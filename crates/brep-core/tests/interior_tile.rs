@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    region_replacement::{self as r, InteriorTileLimits},
-};
+use brep_core::{Model, region_replacement::{self as r, InteriorTileLimits}};
 use nurbs_core::surface::Axis;
 fn limits() -> InteriorTileLimits {
     InteriorTileLimits {

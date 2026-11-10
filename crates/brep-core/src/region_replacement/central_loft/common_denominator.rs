@@ -19,6 +19,7 @@ fn product(a: &[f64], b: &[f64]) -> Vec<f64> {
         .collect()
 }
 
+#[cfg(test)]
 /// Construct only from saturated, continuous original source cells. No knot
 /// insertion, sampling, or fitted source surrogate enters this proposal.
 fn propose(source: &Surface, operations: usize) -> Result<Vec<Surface>> {

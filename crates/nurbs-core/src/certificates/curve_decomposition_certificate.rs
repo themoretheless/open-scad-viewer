@@ -299,6 +299,32 @@ mod tests {
         }
         assert_eq!(c, before);
     }
+
+    #[test]
+    fn last_span_exhaustion_discards_previous_bound_and_preserves_sources() {
+        let c = Curve { degree: 1, knots: vec![0.,0.,1.,1.], control_points: vec![vec![0.,0.,0.],vec![1.,0.,0.]], weights: vec![1.,2.], periodic: false };
+        let mut shifted=c.clone();
+        for p in &mut shifted.control_points { p[2]=0.125; }
+        let before=shifted.clone();
+        let pairs=[(&c,1,&c),(&c,1,&shifted)];
+        let complete=inspect_batch(&pairs,8).unwrap();
+        assert!(complete.error_upper.unwrap() >= 0.125);
+        assert_eq!((complete.products,complete.pairs_inspected),(8,2));
+        let refused=inspect_batch(&pairs,7).unwrap();
+        assert_eq!(refused.error_upper,None);
+        assert_eq!(refused.reason,Some("work-limit"));
+        assert_eq!((refused.products,refused.pairs_inspected),(4,2));
+        assert_eq!(shifted,before);
+        assert_eq!(inspect_batch(&[],8).unwrap().reason,Some("work-limit"));
+        #[cfg(feature="transport")]
+        {
+            let request=value_codec::json!({"op":"curve_decomposition_batch_audit","pairs":[{"curve":c,"span":1,"retained":c},{"curve":c,"span":1,"retained":shifted}],"maxProducts":7});
+            let result=crate::transport::dispatch(request).unwrap();
+            assert!(result["errorUpper"].is_null());
+            assert_eq!(result["pairsInspected"],2);
+            assert_eq!(result["continuousBound"],false);
+        }
+    }
 }
 
 pub struct BatchReport {

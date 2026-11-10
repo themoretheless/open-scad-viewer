@@ -23,6 +23,8 @@ num-rational = "0.4.2"
 num-traits = "0.2.19"
 
 [dev-dependencies]
+# Integration tests and examples round-trip models through STEP; unit tests cannot (two `Model` types).
+cad-step = { workspace = true }
 rbench = { workspace = true }
 
 [[example]]

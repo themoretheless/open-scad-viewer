@@ -787,8 +787,8 @@ pub(crate) fn auto_repair_tolerant(
 #[path = "healing_report/tests/mod.rs"]
 mod tests;
 
-#[path="healing_report/methods_validate.rs"]
-mod methods_validate;
+#[path="healing_report/validate.rs"]
+mod validate;
 #[path="healing_report/algorithm_auto_repair_impl.rs"]
 mod algorithm_auto_repair_impl;
 use algorithm_auto_repair_impl::auto_repair_impl;

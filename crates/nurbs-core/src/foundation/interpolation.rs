@@ -11,7 +11,7 @@
 use super::approximate_edits::remove_curve_knot_report;
 use super::{Curve, Result, check, distance, next_up, numeric, resource, solve};
 use crate::curve::basis;
-use crate::foundation::guards::{Budget, require_finite_at};
+use crate::numerics::guards::{Budget, require_finite_at};
 
 /// Site parameterization strategy for interpolation and fitting.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

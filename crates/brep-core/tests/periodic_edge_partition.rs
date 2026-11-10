@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    feature_ops::edge_partition::{self, Limits},
-};
+use brep_core::{Model, feature_ops::edge_partition::{self, Limits}};
 use brep_topology::CoedgeTrim;
 fn cylinder() -> (Model, usize) {
     let mut s = brep_core::cylinder(2., 3.).unwrap();

@@ -28,6 +28,6 @@ pub use value::*;
 use evaluator::*;
 use array::*;
 
-mod evaluator_impl_1;
-mod evaluator_impl_2;
-mod evaluator_impl_3;
+mod evaluation;
+mod resolve;
+mod checks;

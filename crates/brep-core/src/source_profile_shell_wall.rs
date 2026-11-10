@@ -217,7 +217,7 @@ impl value_codec::Serialize for ExpressionWallReport {
 }
 
 
-#[path="source_profile_shell_wall/methods_inspect_minimum_aligned_chords.rs"]
-mod methods_inspect_minimum_aligned_chords;
-#[path="source_profile_shell_wall/methods_inspect_trimmed_minimum_aligned_chords.rs"]
-mod methods_inspect_trimmed_minimum_aligned_chords;
+#[path="source_profile_shell_wall/inspect_minimum_aligned_chords.rs"]
+mod inspect_minimum_aligned_chords;
+#[path="source_profile_shell_wall/inspect_trimmed_minimum_aligned_chords.rs"]
+mod inspect_trimmed_minimum_aligned_chords;

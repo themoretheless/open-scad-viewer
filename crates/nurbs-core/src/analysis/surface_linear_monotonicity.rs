@@ -149,9 +149,9 @@ fn inspect_metric_impl(s:&Surface,projection:[[i8;3];2],row_weights:[f64;2],rate
     let working = projected_surface.as_ref().unwrap_or(s);
     let station_split = exact_station_split(working).map(|(r,p)|(r,p,1))
         .or_else(|| {
-            let transposed=crate::surface_edit::transpose(working).ok()?;
+            let transposed=crate::core::surface_transpose::transpose(working).ok()?;
             let (r,p)=exact_station_split(&transposed)?;
-            Some((crate::surface_edit::transpose(&r).ok()?,crate::surface_edit::transpose(&p).ok()?,0))
+            Some((crate::core::surface_transpose::transpose(&r).ok()?,crate::core::surface_transpose::transpose(&p).ok()?,0))
         });
     let mut working_span=jets::FirstStableSpanCache::new(working);
     let mut split_spans=station_split.as_ref().map(|(relative,position,_)|

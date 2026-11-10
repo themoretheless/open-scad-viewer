@@ -1,4 +1,4 @@
-use brep_core::{Model,ss_trimmed_face as trim};
+use brep_core::{Model, ss_trimmed_face as trim};
 use nurbs_core::{ss_intersection as ss,curve::Curve};
 use std::sync::Arc;
 #[path="../../nurbs-core/tests/support/ss_root_circle.rs"] mod circle;

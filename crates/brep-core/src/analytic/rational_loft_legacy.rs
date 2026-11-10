@@ -167,35 +167,8 @@ fn cap(loops: &[Vec<Curve>]) -> Result<Cap> {
     Ok(result)
 }
 
-/// Sections contain one outer loop followed by clockwise holes in a common
-/// authored correspondence. Curves are decomposed exactly into Bezier spans;
-/// corresponding spans retain degree; weights may differ by section. Planar end caps must pass
-/// interval trim-region audit. Side regularity/global self-intersections remain
-/// unproven and are reported by the model's separate solid audit.
-pub fn rational_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
-    section_loft(sections, None, None, false, None)
-}
 
-/// Cubic section interpolation with audited planar caps and shared side edges.
-/// Requires authored span correspondence; global embedding is audited separately.
-pub fn natural_section_loft(sections: &[Vec<Vec<Curve>>], parameters: &[f64]) -> Result<Model> {
-    if !(2..=86).contains(&sections.len()) || parameters.len() != sections.len() {
-        return Err(err(
-            "Natural capped loft needs 2..86 sections and matching stations",
-        ));
-    }
-    section_loft(sections, Some(parameters), None, false, None)
-}
 
-/// Caps complete authored side patches. Every patch corresponds to one Bezier
-/// span of the endpoint loops; shared isocurves are checked by BRep validation.
-pub fn capped_loft_surfaces(
-    start: &[Vec<Curve>],
-    end: &[Vec<Curve>],
-    sides: &[Vec<Surface>],
-) -> Result<Model> {
-    section_loft(&[start.to_vec(), end.to_vec()], None, Some(sides), false, None)
-}
 
 /// Caps supplied loft patches with authored rational carriers, including
 /// nonplanar caps. The whole edge/lift agreement must be exact, independently
@@ -226,17 +199,6 @@ pub fn capped_loft_with_caps_checked(start: &[Vec<Curve>], end: &[Vec<Curve>],
     Ok(model)
 }
 
-/// Uncapped periodic topology: final section must be an exact repeat of the
-/// first. Each authored contour owns a connected shell; holes become inner
-/// shells of one body. Embedding and global shell containment remain unproven.
-pub fn periodic_section_loft(sections: &[Vec<Vec<Curve>>]) -> Result<Model> {
-    if sections.len() < 4 {
-        return Err(err(
-            "Periodic loft needs at least four sections including repeated seam",
-        ));
-    }
-    section_loft(sections, None, None, true, None)
-}
 
 fn section_loft(
     sections: &[Vec<Vec<Curve>>],

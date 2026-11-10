@@ -22,6 +22,21 @@ pub mod profile_corner;
 /// G2 and hold-line fillets built on offset-surface intersection marching.
 pub mod fillet_surfaces;
 
+/// Offset contact, envelope and trim modules (formerly the flat `offset_*` modules;
+/// `lib.rs` keeps the old paths as re-exports).
+pub mod source_boundary;
+pub mod contact_tangent;
+pub mod envelope;
+pub mod envelope_fit;
+pub mod contact_pcurve;
+pub mod contact_trims;
+pub mod face_loops;
+pub mod patch_boundary;
+pub mod contact_predictor;
+pub mod contact_path;
+pub mod path_trims;
+pub mod path_pcurves;
+
 /// Shared 2D interval cross product (reorg DRY #3): replaces the identical
 /// private copies that lived in `chord_intersection.rs` and
 /// `curve_offset_join.rs` before the grouping.
@@ -31,3 +46,5 @@ pub(crate) fn cross2d(a: [Interval; 2], b: [Interval; 2]) -> Result<Interval> {
 
 /// Clearance-qualified outside contour machining paths.
 pub mod machining;
+/// Formerly the flat `crate::trimmed_offset_contact` module; `lib.rs` keeps that path as a re-export.
+pub mod trimmed_contact;

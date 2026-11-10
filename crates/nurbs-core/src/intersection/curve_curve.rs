@@ -1,7 +1,7 @@
 //! Curve/curve intersection core: coincidence admission, Krawczyk isolation,
 //! contact classification, and the subdivision driver (split from the hub).
 use super::*;
-use crate::foundation::guards::{Budget, require_finite_point};
+use crate::numerics::guards::{Budget, require_finite_point};
 
 fn tangent_sine(first: &Curve, second: &Curve, t: f64, u: f64) -> Result<f64> {
     let mut best: f64 = 0.;

@@ -1,7 +1,4 @@
-use brep_core::{
-    fillet_contact::{self, branch},
-    region_replacement::{EdgeRadius, plan_radius_network},
-};
+use brep_core::{fillet_contact::{self, branch}, region_replacement::{EdgeRadius, plan_radius_network}};
 use nurbs_core::{curve::Curve, surface::Surface};
 fn fixture() -> (
     brep_core::Model,

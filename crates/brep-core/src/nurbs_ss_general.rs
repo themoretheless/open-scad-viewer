@@ -283,5 +283,3 @@ fn rational_traces_from_branches(
     }
     out
 }
-#[cfg(test)]
-mod tests;

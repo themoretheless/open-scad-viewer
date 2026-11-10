@@ -200,8 +200,8 @@ fn bent_path_preserves_rational_hollow_section_and_nonparallel_caps() {
     .unwrap();
     assert!(approx.levels.last().unwrap().accepted);
     assert_eq!(body.validate().unwrap().boundary_edge_count, 0);
-    let (text, _, _) = brep_core::export_step_v5(&body).unwrap();
-    let (restored, _, _) = brep_core::import_step_v5(&text).unwrap();
+    let (text, _, _) = cad_step::export_step_v5(&body).unwrap();
+    let (restored, _, _) = cad_step::import_step_v5(&text).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
     assert_eq!(restored.faces.len(), body.faces.len());
     let caps = &body.faces[body.faces.len() - 2..];
@@ -460,9 +460,9 @@ fn closed_progressive_hollow_body_owns_periodic_seam_and_inner_shell() {
             2
         );
     }
-    let (text, _, _) = brep_core::export_step_v5(&body).unwrap();
+    let (text, _, _) = cad_step::export_step_v5(&body).unwrap();
     assert!(text.contains("BREP_WITH_VOIDS"));
-    let (restored, _, _) = brep_core::import_step_v5(&text).unwrap();
+    let (restored, _, _) = cad_step::import_step_v5(&text).unwrap();
     assert_eq!(restored.bodies[0].inner_shells.len(), 1);
     assert_eq!(restored.validate().unwrap().boundary_edge_count, 0);
 }
@@ -568,8 +568,8 @@ fn common_contact_anchor_retains_rational_outer_and_hole_body() {
     assert_eq!(model.validate().unwrap().boundary_edge_count,0);
     assert_eq!(model.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
     assert!(model.shells[0].closed);
-    let (step,_,_)=brep_core::export_step_v5(&model).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
+    let (step,_,_)=cad_step::export_step_v5(&model).unwrap();
+    let (restored,_,_)=cad_step::import_step_v5(&step).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
     assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
     assert_eq!(restored.faces.len(),model.faces.len());
@@ -605,8 +605,8 @@ fn fixed_original_transport_bound_reaches_hollow_brep_and_step_without_global_pr
     assert!(report.error_certificate_cells<=10000);
     assert_eq!(body.validate().unwrap().boundary_edge_count,0);
     assert_eq!(body.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    let (step,_,_)=brep_core::export_step_v5(&body).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
+    let (step,_,_)=cad_step::export_step_v5(&body).unwrap();
+    let (restored,_,_)=cad_step::import_step_v5(&step).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
     assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
     assert!(brep_core::progressive_profile_body(&circles(0.,1.),&path,&scale,&twist,
@@ -628,8 +628,8 @@ fn fixed_normal_original_transport_bound_reaches_hollow_brep_and_step_without_gl
     assert!(report.error_certificate_cells<=10000);
     assert_eq!(body.validate().unwrap().boundary_edge_count,0);
     assert_eq!(body.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    let (step,_,_)=brep_core::export_step_v5(&body).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
+    let (step,_,_)=cad_step::export_step_v5(&body).unwrap();
+    let (restored,_,_)=cad_step::import_step_v5(&step).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
     assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
     assert!(brep_core::progressive_profile_body(&circles(0.,1.),&path,&scale,&twist,
@@ -655,8 +655,8 @@ fn frenet_curved_hollow_body_retains_original_error_and_native_step_topology(){
     assert!(report.error_certificate_cells<=10000);
     assert_eq!(body.validate().unwrap().boundary_edge_count,0);
     assert_eq!(body.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    let (step,_,_)=brep_core::export_step_v5(&body).unwrap();
-    let (restored,_,_)=brep_core::import_step_v5(&step).unwrap();
+    let (step,_,_)=cad_step::export_step_v5(&body).unwrap();
+    let (restored,_,_)=cad_step::import_step_v5(&step).unwrap();
     assert_eq!(restored.validate().unwrap().boundary_edge_count,0);
     assert_eq!(restored.faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
     assert!(brep_core::progressive_profile_body(&profiles,&path,&scale,&twist,

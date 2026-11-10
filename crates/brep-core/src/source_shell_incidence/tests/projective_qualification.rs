@@ -787,9 +787,11 @@
         assert_eq!(transferred.bodies.len(), 1);
         assert!(transferred.shells[0].closed);
         assert_eq!(transferred.edges.len(), 6);
-        let (step, _, _) = crate::export_step_v6(&transferred).unwrap();
-        let (imported, _, _) = crate::import_step_v6(&step).unwrap();
-        crate::source_body_model::assert_step_identity(&transferred, &imported);
+        #[cfg(feature = "codec")]
+        crate::exchange_fixtures::assert_matches(
+            "projective_tetrahedron",
+            value_codec::json!({"model": value_codec::to_value(&transferred).unwrap()}),
+        );
 
         #[cfg(feature="codec")]
         {
@@ -1174,15 +1176,16 @@
             .unwrap()
             .unwrap();
         assert_eq!(trims.edges().len(), 7);
-        let candidate = crate::source_exchange_step::prepare(&body, 1e-7, limits(), 1000000)
+        let candidate = crate::source_exchange_plan::prepare(&body, 1e-7, limits(), 1000000)
             .unwrap()
             .unwrap();
         assert_eq!(
             (candidate.vertices, candidate.edges, candidate.faces),
             (5, 7, 4)
         );
+        // The cad-step writer emits one TRIMMED_CURVE per planned edge trim.
+        assert_eq!(candidate.trims.edges().len(), candidate.edges);
         assert!(candidate.endpoint_error_upper <= 1e-7);
-        assert!(candidate.text.contains("TRIMMED_CURVE"));
         #[cfg(feature="codec")]
         assert_eq!(body.definition().unwrap(), original);
         let mut exhausted = limits();
@@ -1198,9 +1201,6 @@
                 .unwrap()
                 .is_none()
         );
-        if let Some(path) = std::env::var_os("CAD_PROJECTIVE_ROOT_STEP_OUTPUT") {
-            std::fs::write(path, &candidate.text).unwrap();
-        }
     }
     fn root_partition_control(irrational: bool, curved: bool, mapped: bool) {
         use crate::source_boundary_fragment::Role;
@@ -1940,7 +1940,7 @@
                     .unwrap()
                     .is_none()
             );
-            let step = crate::source_exchange_step::prepare(
+            let step = crate::source_exchange_plan::prepare(
                 &body,
                 1e-7,
                 crate::source_exchange_endpoints::Limits {
@@ -1958,9 +1958,6 @@
             .expect("source STEP candidate");
             assert_eq!((step.vertices, step.edges, step.faces), (5, 7, 4));
             assert!(step.endpoint_error_upper <= 1e-7);
-            if let Ok(path) = std::env::var("CAD_SOURCE_CURVED_STEP_OUTPUT") {
-                std::fs::write(path, step.text).unwrap();
-            }
             #[cfg(feature="codec")]
             {
             let definition = body.definition().unwrap();

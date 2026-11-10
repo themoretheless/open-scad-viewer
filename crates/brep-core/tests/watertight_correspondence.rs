@@ -1,7 +1,4 @@
-use brep_core::{
-    Model,
-    watertight::{self, BoundaryAddress},
-};
+use brep_core::{Model, watertight::{self, BoundaryAddress}};
 use nurbs_core::{curve::Curve, surface::Surface};
 fn patch(x: f64) -> Model {
     let points = [

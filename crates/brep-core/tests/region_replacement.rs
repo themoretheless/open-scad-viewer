@@ -206,10 +206,7 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
 }
 #[test]
 fn root_partitioned_rim_chains_keep_all_shared_edges_during_g2_replacement() {
-    use brep_core::{
-        corner_close::BoundaryUse,
-        edge_partition::{self, PcurveCut},
-    };
+    use brep_core::{corner_close::BoundaryUse, edge_partition::{self, PcurveCut}};
     let (open, supports, options) = corner_fixture::fixture_extended();
     let closed = brep_core::corner_close::close(
         &open,

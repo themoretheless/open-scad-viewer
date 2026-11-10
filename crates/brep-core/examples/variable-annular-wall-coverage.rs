@@ -1,8 +1,5 @@
 //! Full original face-pair wall audit; unresolved coverage forbids safety claims.
-use brep_core::{
-    boundary_embedding, face_contacts, material_segment, material_wall, material_wall_coverage,
-    volume_validity,
-};
+use brep_core::{boundary_embedding, face_contacts, material_segment, material_wall, material_wall_coverage, volume_validity};
 fn main() {
     let output = std::env::args().nth(1).expect("output JSON path");
     let mut cases = Vec::new();

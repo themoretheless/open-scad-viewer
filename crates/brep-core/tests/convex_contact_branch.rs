@@ -1,8 +1,4 @@
-use brep_core::{
-    Model,
-    fillet_contact::{self, Contact, convex_branch as b},
-    region_replacement::{self as r, EdgeRadius},
-};
+use brep_core::{Model, fillet_contact::{self, Contact, convex_branch as b}, region_replacement::{self as r, EdgeRadius}};
 use nurbs_core::{curve::Curve, surface::Surface};
 fn fixture() -> (Model, EdgeRadius, Surface, [Contact; 2]) {
     fixture_spans([[0.25, 0.5, 0.75]; 2])

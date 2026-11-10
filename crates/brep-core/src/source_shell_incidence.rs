@@ -711,8 +711,8 @@ mod projective_qualification;
 #[path = "source_shell_incidence/replay.rs"]
 mod replay;
 
-#[path="source_shell_incidence/methods_inspect_face_charts.rs"]
-mod methods_inspect_face_charts;
+#[path="source_shell_incidence/inspect_face_charts.rs"]
+mod inspect_face_charts;
 #[path="source_shell_incidence/algorithm_assemble_with_pole_inputs.rs"]
 mod algorithm_assemble_with_pole_inputs;
 pub use algorithm_assemble_with_pole_inputs::assemble_with_pole_inputs;

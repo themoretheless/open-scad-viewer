@@ -133,7 +133,7 @@ jobs:
         env:
           CAD_PROJECTIVE_CAPPED_STEP_OUTPUT: ${{ github.workspace }}/output/qualification/independent-step/projective/projective-capped-v6.step
           CAD_PROJECTIVE_CAPPED_SOURCE_STEP_OUTPUT: ${{ github.workspace }}/output/qualification/independent-step/projective/projective-capped-source-v6.step
-        run: cargo test --locked --manifest-path crates/Cargo.toml -p brep-core --lib source_support_shell::tests::projective_qualification::projective_generated_end_caps_keep_exact_poles_and_replay -- --exact
+        run: cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --lib kernel_fixtures::projective_capped_end_caps_export_step_v6_and_source_step -- --exact
 
       - name: Verify projective converted and source fixtures with OCCT
         run: |

@@ -228,7 +228,8 @@ fn rational(m: &Model, a: [f64; 2], mid: [f64; 2], b: [f64; 2]) -> BridgePath {
     }
 }
 #[test]
-fn edited_rational_bridge_body_round_trips_step_with_both_original_clocks() {
+#[cfg(feature = "codec")]
+fn edited_rational_bridge_body_matches_the_exchange_fixture() {
     let (m, _) = fixture(false);
     let p = [
         rational(&m, [0., 0.], [0.125, 0.0625], [0.25, 0.25]),
@@ -236,27 +237,5 @@ fn edited_rational_bridge_body_round_trips_step_with_both_original_clocks() {
     ];
     let r = partition_bridges(&m, 0, &p, 1e-8, Default::default()).unwrap();
     check(&m, &p, &r);
-    let (text, export, _) = crate::export_step_v9(&r.model).unwrap();
-    assert!(export.complete);
-    let (restored, import, _) = crate::import_step_v9(&text).unwrap();
-    assert!(import.complete);
-    assert_eq!(restored.faces.len(), r.model.faces.len());
-    assert_eq!(restored.edges.len(), r.model.edges.len());
-    for path in &p {
-        let world = &path.segments[0].curve;
-        let edge = restored
-            .edges
-            .iter()
-            .position(|e| e.curve == *world || e.curve == world.reverse().unwrap())
-            .expect("Actual edited bridge must survive STEP");
-        let uses: Vec<_> = restored
-            .loops
-            .iter()
-            .flat_map(|l| &l.coedges)
-            .filter(|c| c.edge == edge)
-            .collect();
-        assert_eq!(uses.len(), 2);
-        assert!(uses.iter().all(|c| c.pcurve.domain() == [-3., 5.]));
-    }
-    watertight(&restored);
+    crate::exchange_fixtures::assert_matches("face_cut_bridge", value_codec::json!({"model": value_codec::to_value(&r.model).unwrap(), "curves": value_codec::to_value(p.iter().map(|path| path.segments[0].curve.clone()).collect::<Vec<_>>()).unwrap()}));
 }

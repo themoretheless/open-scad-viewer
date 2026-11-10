@@ -14,7 +14,7 @@ pub(crate) struct FaceIdentityRegion {
 
 
 
-#[path="model_identity/methods_hash.rs"]
-mod methods_hash;
-#[path="model_identity/methods_prepare_face_identity.rs"]
-mod methods_prepare_face_identity;
+#[path="model_identity/hash.rs"]
+mod hash;
+#[path="model_identity/prepare_face_identity.rs"]
+mod prepare_face_identity;

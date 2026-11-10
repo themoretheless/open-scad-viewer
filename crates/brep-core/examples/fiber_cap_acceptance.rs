@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("Reload changed the body".into());
     }
     let closure = brep_core::watertight::inspect(&restored, 100000)?;
-    let (step, _, _) = brep_core::export_step_v5(&restored)?;
+    let (step, _, _) = cad_step::export_step_v5(&restored)?;
     let digest = |b: &[u8]| {
         Sha256::digest(b)
             .iter()

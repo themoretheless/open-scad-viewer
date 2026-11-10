@@ -292,7 +292,7 @@ fn original_side_chart(s: &Surface, side: usize, reverse_along: bool) -> Option<
         return None;
     }
     let mut out = if side < 2 {
-        crate::surface_edit::transpose(s).ok()?
+        crate::core::surface_transpose::transpose(s).ok()?
     } else {
         s.clone()
     };

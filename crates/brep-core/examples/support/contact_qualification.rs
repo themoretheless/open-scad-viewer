@@ -108,7 +108,7 @@ pub fn qualify(
         value_codec::to_string_pretty(&report)?,
     )?;
     if admitted {
-        let (text, _, _) = brep_core::export_step_v5(model)?;
+        let (text, _, _) = cad_step::export_step_v5(model)?;
         std::fs::write(dir.join("candidate.step"), text)?;
     }
     eprintln!("qualifiedForDeclaredGates={admitted}");

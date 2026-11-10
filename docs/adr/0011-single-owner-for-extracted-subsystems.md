@@ -1,6 +1,7 @@
 # ADR 0011: One owner for each extracted subsystem
 
-- Status: proposed
+- Status: accepted
+- Decision: the `brep-core` implementation is the owner and moves into `cad-step`; the diverged `cad-step` copy is deleted (repository owner, 2026-11-10).
 - Date: 2026-11-10
 - Evidence: `docs/refactor/inventory/duplicates.md`, `docs/refactor/ARCHITECTURE.md` section 3
 

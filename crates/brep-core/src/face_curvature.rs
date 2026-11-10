@@ -39,16 +39,6 @@ fn check(ok: bool, message: &str) -> Result<()> {
         Err(Error::new("BREP_FACE_CURVATURE_INPUT", message))
     }
 }
-fn abs_lower(x: I) -> f64 {
-    if x.lo <= 0. && x.hi >= 0. {
-        0.
-    } else {
-        x.lo.abs().min(x.hi.abs())
-    }
-}
-fn abs_upper(x: I) -> f64 {
-    x.lo.abs().max(x.hi.abs())
-}
 fn spectral_bounds(t: [[[f64; 2]; 3]; 3]) -> Result<Option<[f64; 2]>> {
     surface_shape_operator::absolute_spectral_bounds(t)
 }

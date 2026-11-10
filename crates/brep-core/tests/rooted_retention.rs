@@ -1,7 +1,4 @@
-use brep_core::{
-    face_cut::{self, RootEnd, RootedCut, RootedFace},
-    watertight,
-};
+use brep_core::{face_cut::{self, RootEnd, RootedCut, RootedFace}, watertight};
 
 #[test]
 fn cutter_roots_bind_face_cut_ends_to_shared_edge_vertices() {

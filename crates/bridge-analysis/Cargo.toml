@@ -7,7 +7,6 @@ publish.workspace = true
 
 [dependencies]
 bridge-codec = { workspace = true }
-value-codec = { workspace = true }
 mechanics-core = { workspace = true }
 planar-geometry = { workspace = true }
 polygon-core = { workspace = true, features = ["codec"] }

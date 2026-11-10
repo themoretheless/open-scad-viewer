@@ -31,7 +31,8 @@ pub struct Report {
     pub domain_cells: usize,
 }
 pub(crate) type Plane = [[f64; 3]; 3];
-pub(crate) fn plane(surface: &Surface, remaining: usize) -> (Option<Plane>, usize) {
+#[doc(hidden)]
+pub fn plane(surface: &Surface, remaining: usize) -> (Option<Plane>, usize) {
     let count = surface.control_points.iter().map(Vec::len).sum::<usize>();
     if count > remaining {
         return (None, 0);
@@ -64,7 +65,8 @@ pub(crate) fn plane(surface: &Surface, remaining: usize) -> (Option<Plane>, usiz
         count,
     )
 }
-pub(crate) fn same_plane(a: Plane, b: Plane) -> bool {
+#[doc(hidden)]
+pub fn same_plane(a: Plane, b: Plane) -> bool {
     b.iter().all(|p| {
         crate::shared_boundary::orient(&[&a[0], &a[1], &a[2], p], None) == Some(Sign::Zero)
     })

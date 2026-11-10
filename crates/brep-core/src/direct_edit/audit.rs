@@ -367,32 +367,6 @@ fn with_full_fallback_if_needed(
     Ok(report)
 }
 
-pub(super) fn validate_staged(
-    source: &Model,
-    staged: &Model,
-    seeds: &[usize],
-    budget: &Budget,
-) -> Result<DirectEditValidationReport> {
-    let report =
-        with_full_fallback_if_needed(staged, validate_direct_edit(source, staged, seeds, budget)?)?;
-    if !report.publishable() {
-        return Err(error(
-            DIRECT_EDIT_AUDIT_REFUSED,
-            format!(
-                "Local direct-edit audit failed: {} non-manifold edges, {} Euler mismatches, {} interior contacts; seam_complete={}, self_intersection_proven={}, seam_error={:?}, self_intersection_error={:?}, local_geometry_error={:?}",
-                report.non_manifold_edges.len(),
-                report.euler.iter().filter(|check| !check.ok()).count(),
-                report.interior_contacts.len(),
-                report.seam_complete(),
-                report.self_intersection_proven,
-                report.seam_error,
-                report.self_intersection_error,
-                report.local_geometry_error,
-            ),
-        ));
-    }
-    Ok(report)
-}
 
 #[derive(Clone, Debug)]
 pub struct IncrementalRebuildReport {

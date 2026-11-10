@@ -1,8 +1,4 @@
-use brep_core::{
-    Model,
-    feature_ops::profile_blend::{self, Limits},
-    watertight,
-};
+use brep_core::{Model, feature_ops::profile_blend::{self, Limits}, watertight};
 use nurbs_core::{curve::Curve, surface_join::Decision};
 fn source(curved: bool) -> Model {
     let bottom = Curve {

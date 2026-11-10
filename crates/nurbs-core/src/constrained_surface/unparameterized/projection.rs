@@ -38,7 +38,7 @@ fn inverse(
     let mut count = 0;
     for seed in seeds {
         count += 1;
-        if let Ok((u, v, _)) = robust_solvers::trust_region_point_inversion_surface(
+        if let Ok((u, v, _)) = crate::foundation::point_inversion_solver::trust_region_point_inversion_surface(
             s,
             point,
             seed[0],

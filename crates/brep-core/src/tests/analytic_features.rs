@@ -1052,20 +1052,6 @@ fn solid_loft_section_match() {
     assert!(!out.faces.is_empty());
 }
 
-#[test]
-fn step_roundtrip_not_faceted() {
-    let model = cuboid([0., 0., 0.], [3., 2., 1.]).unwrap();
-    let (text, cert) = crate::export_step(&model).unwrap();
-    assert!(cert.complete);
-    assert!(text.contains("ADVANCED_FACE"));
-    assert!(text.contains("PLANE"));
-    assert!(text.contains("VERTEX_POINT"));
-    assert!(text.contains("EDGE_CURVE"));
-    assert!(text.contains("AP242"));
-    assert!(!text.contains("FACETED_BREP"));
-    let (back, _) = crate::import_step(&text).unwrap();
-    back.validate().unwrap();
-}
 
 #[test]
 fn analytic_chamfer_af01_cuboid_edge() {

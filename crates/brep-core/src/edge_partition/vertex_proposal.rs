@@ -1,21 +1,4 @@
 use super::*;
-/// Split a nonperiodic 3D edge and all one or two incident face-local pcurves.
-/// Independent natural pcurve cut parameters must be supplied for every use.
-/// Children share one authored vertex, including both adjacent faces. Their
-/// endpoints are assigned from one evaluation of the original 3D curve; every
-/// resulting child is independently checked against the complete original
-/// representation and each original support surface. No endpoint-only proof,
-/// snapping authorization, exact-identity claim or solid certificate is implied.
-/// Returns no model if any continuous proof or structural check fails.
-pub fn partition(
-    source: &Model,
-    edge_id: usize,
-    parameter: f64,
-    cuts: &[PcurveCut],
-    max_cells: usize,
-) -> Result<Partition> {
-    partition_impl(source, edge_id, parameter, cuts, None, max_cells)
-}
 
 /// A shared target vertex is a proposal, never snapping evidence. Both complete
 /// children must still agree with the original curve and every original support.

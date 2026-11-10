@@ -591,8 +591,8 @@ pub fn certify_on_refined(
         )?;
     }
     let us =
-        crate::certificates::audit::nonempty_spans(&s.knots_u, s.degree_u, s.control_points.len());
-    let vs = crate::certificates::audit::nonempty_spans(
+        crate::core::span_domains::nonempty_spans(&s.knots_u, s.degree_u, s.control_points.len());
+    let vs = crate::core::span_domains::nonempty_spans(
         &s.knots_v,
         s.degree_v,
         s.control_points[0].len(),

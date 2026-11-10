@@ -1,5 +1,5 @@
 //! Untrimmed multi-start helical thread profile patches; no solid/cap claim.
-use crate::foundation::guards::{Budget, require_finite_f64};
+use crate::numerics::guards::{Budget, require_finite_f64};
 use crate::{Result, check, curve::Curve, helical_sweep, surface::Surface};
 mod patches;
 pub use patches::{Hand, Kind, Patch, Patches, Spec, patches};

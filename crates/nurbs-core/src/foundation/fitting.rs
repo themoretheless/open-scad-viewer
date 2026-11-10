@@ -4,7 +4,7 @@ use super::{
     Curve, Result, Surface, ToleranceContext, binomial, check, context, distance, interval,
     next_up, numeric, solve,
 };
-use crate::foundation::guards::{Budget, require_finite_at};
+use crate::numerics::guards::{Budget, require_finite_at};
 #[cfg(feature = "codec")]
 pub mod serialization;
 

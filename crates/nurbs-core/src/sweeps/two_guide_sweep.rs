@@ -1,6 +1,6 @@
 //! Affine rational sweep between two authored guide curves.
 use crate::{Result,check,curve::Curve,surface::Surface};
-use crate::foundation::guards::{Budget, require_finite_f64, require_finite_point};
+use crate::numerics::guards::{Budget, require_finite_f64, require_finite_point};
 use crate::scaled_sweep::{normalized,binomial};
 
 /// Profile coordinates are local [x,y,z]; width is the local x rail separation.

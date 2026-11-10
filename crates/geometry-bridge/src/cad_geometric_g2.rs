@@ -1,7 +1,7 @@
 //! Native geometric G2 ownership inspection and serialization. Reports never
 //! authorize a solid or replace exact strip-identity results.
 use super::{Value,Result,field};
-use brep_core::{Model,sweep_smoothness::geometric::{self,Tolerances}};
+use brep_core::{Model, sweep_smoothness::geometric::{self,Tolerances}};
 use value_codec::json;
 pub(crate) fn inspect(model:&Model,edges:&[usize],t:Tolerances,max_cells:usize)->Result<Value> {
     let report=geometric::inspect_edges(model,edges,t,max_cells)?;
@@ -32,7 +32,7 @@ pub(crate) fn cap_value(model:&Model,r:&brep_core::sweep_smoothness::AxisReport,
 /// Rebuild from dimensions, then qualify the actual body. Caller-supplied
 /// geometry or certificates are not used to construct or authorize this result.
 pub fn create_annular_cylinder(v:Value)->Result<Value> {
-    use brep_core::{analytic::g2_annular,boundary_embedding,face_contacts,volume_validity,sweep_cap_contacts,sweep_smoothness};
+    use brep_core::{analytic::g2_annular, boundary_embedding, face_contacts, volume_validity, sweep_cap_contacts, sweep_smoothness};
     let outer=field(&v,"outerRadius")?;let inner=field(&v,"innerRadius")?;let height=field(&v,"height")?;
     let extents=if v["transitionSizes"].is_null(){[field(&v,"transitionSize")?;4]}else{field::<[f64;4]>(&v,"transitionSizes")?};
     let mut built=g2_annular::cylinder_with_transitions(outer,inner,height,extents,1e-8)?;

@@ -22,7 +22,7 @@ pub mod higher_derivative_map;
 pub mod implicit_quadric;
 pub mod point_inversion;
 pub mod primitive_fit;
-pub mod radial_bounds;
+pub use crate::distance::radial_bounds;
 pub mod ransac_primitives;
 pub mod ray_surface;
 pub mod reference_deviation;
@@ -48,3 +48,5 @@ pub mod surface_occlusion;
 /// Exact affine support of nominal NURBS control geometry.
 pub mod affine_support;
 pub mod bezier_curvature_bound;
+/// Normal cones and silhouettes of surfaces (formerly `numerics::normal_cone`).
+pub mod normal_cone;

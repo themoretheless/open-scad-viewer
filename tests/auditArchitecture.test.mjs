@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
-import {auditArchitecture, layerViolations, nextBaseline, measureSizes} from '../scripts/audit-architecture.mjs'
+import {auditArchitecture, layerViolations, nextBaseline, measureSizes, mechanicalNames} from '../scripts/audit-architecture.mjs'
+import {scanModules, unreachableRustFiles} from '../scripts/rustModuleTree.mjs'
 
 test('new oversized file fails, pinned file may shrink but not grow', () => {
   const baseline = {sizes: {'a.rs': 900}, layers: []}
@@ -19,7 +20,7 @@ test('upward crate dependency is a layering violation', () => {
 test('update only lowers pins and drops fixed violations', () => {
   const baseline = {sizes: {'a.rs': 900, 'b.rs': 1000}, layers: ['x -> y', 'p -> q']}
   assert.deepEqual(nextBaseline({sizes: {'a.rs': 850, 'c.rs': 999}, layers: ['x -> y']}, baseline),
-    {sizes: {'a.rs': 850, 'c.rs': 999}, layers: ['x -> y']})
+    {sizes: {'a.rs': 850, 'c.rs': 999}, layers: ['x -> y'], unreachable: [], mechanical: [], functions: {}, moduleLayers: []})
 })
 
 
@@ -36,4 +37,84 @@ test('historical executor exemption requires exact archived bytes, including sho
     writeFileSync(resolve(root,path),'// shortened forged archive\n')
     assert.throws(()=>measureSizes(root,[path]),/archive hash changed/)
   } finally {rmSync(root,{recursive:true,force:true})}
+})
+
+test('module scanner follows path attributes, inline modules and visibility, and skips comments', () => {
+  const {mods, includes} = scanModules([
+    '// mod commented;', '/* mod blocked; */', 'const S: &str = "mod quoted;";',
+    '#[cfg(test)]', '#[path = "x/y.rs"]', 'pub(in crate::a) mod tests;',
+    'mod outer {', '    mod nested;', '}', 'pub(crate) mod plain;', 'include!("gen.rs");',
+  ].join('\n'))
+  assert.deepEqual(mods, [
+    {name: 'tests', path: 'x/y.rs', inline: []},
+    {name: 'nested', path: null, inline: ['outer']},
+    {name: 'plain', path: null, inline: []},
+  ])
+  assert.deepEqual(includes, ['gen.rs'])
+})
+
+test('a Rust file outside every module tree is reported', async () => {
+  const {mkdtempSync, mkdirSync, writeFileSync, rmSync} = await import('node:fs')
+  const {tmpdir} = await import('node:os')
+  const {resolve} = await import('node:path')
+  const root = mkdtempSync(resolve(tmpdir(), 'architecture-tree-'))
+  try {
+    const write = (path, text) => { mkdirSync(resolve(root, path, '..'), {recursive: true}); writeFileSync(resolve(root, path), text) }
+    write('crates/k/Cargo.toml', '[package]\nname = "k"\n')
+    write('crates/k/src/lib.rs', 'mod a;\n#[path = "deep/b.rs"]\nmod b;\n')
+    write('crates/k/src/a.rs', 'mod c;\n')
+    write('crates/k/src/a/c.rs', '')
+    write('crates/k/src/deep/b.rs', '')
+    write('crates/k/src/stale.rs', '')
+    write('crates/k/tests/it.rs', '')
+    const files = ['lib.rs', 'a.rs', 'a/c.rs', 'deep/b.rs', 'stale.rs'].map(f => 'crates/k/src/' + f).concat('crates/k/tests/it.rs')
+    assert.deepEqual(unreachableRustFiles(root, files), ['crates/k/src/stale.rs'])
+  } finally { rmSync(root, {recursive: true, force: true}) }
+})
+
+test('uncompiled files and mechanical names are pinned lists that may only shrink', () => {
+  const baseline = {sizes: {}, layers: [], unreachable: ['crates/k/src/old.rs'], mechanical: ['crates/k/src/methods_a.rs']}
+  assert.deepEqual(auditArchitecture({sizes: {}, layers: [], unreachable: ['crates/k/src/old.rs'], mechanical: ['crates/k/src/methods_a.rs']}, baseline), [])
+  assert.match(auditArchitecture({sizes: {}, layers: [], unreachable: ['crates/k/src/old.rs', 'crates/k/src/new.rs'], mechanical: ['crates/k/src/methods_a.rs']}, baseline)[0], /new\.rs: not compiled/)
+  assert.match(auditArchitecture({sizes: {}, layers: [], unreachable: [], mechanical: ['crates/k/src/methods_a.rs']}, baseline)[0], /old\.rs: no longer/)
+  assert.deepEqual(mechanicalNames(['crates/k/src/methods_Foo_bar.rs', 'crates/k/src/eval_cases_2.rs', 'crates/k/src/compiler_impl_3.rs', 'crates/k/src/methods.rs', 'src/methods_x.rs']),
+    ['crates/k/src/compiler_impl_3.rs', 'crates/k/src/eval_cases_2.rs', 'crates/k/src/methods_Foo_bar.rs'])
+})
+
+test('long functions are pinned and may only shrink', async () => {
+  const {rustFunctions} = await import('../scripts/functionSizes.mjs')
+  assert.deepEqual(rustFunctions('fn a() {\n  let s = "}";\n}\ntrait T { fn d(); fn e() {} }\n'),
+    [{name: 'a', line: 1, lines: 3}, {name: 'e', line: 4, lines: 1}])
+  const baseline = {sizes: {}, layers: [], functions: {'k.rs::f@1': 300}}
+  assert.deepEqual(auditArchitecture({sizes: {}, layers: [], functions: {'k.rs::f@1': 280}}, baseline), [])
+  assert.match(auditArchitecture({sizes: {}, layers: [], functions: {'k.rs::f@1': 301}}, baseline)[0], /grew/)
+  assert.match(auditArchitecture({sizes: {}, layers: [], functions: {'k.rs::f@1': 280, 'k.rs::g@1': 151}}, baseline)[0], /g@1: function has 151 lines/)
+  assert.match(auditArchitecture({sizes: {}, layers: [], functions: {}}, baseline)[0], /within limits or gone/)
+  assert.deepEqual(nextBaseline({sizes: {}, layers: [], functions: {'k.rs::f@1': 280, 'k.rs::g@1': 200}}, baseline).functions, {'k.rs::f@1': 280})
+})
+
+test('clippy warnings are counted once per location and may only go down', async () => {
+  const {countClippy, auditClippy} = await import('../scripts/audit-clippy.mjs')
+  const warning = (file, line, code = 'clippy::x') => JSON.stringify({reason: 'compiler-message', message: {level: 'warning', code: {code},
+    message: 'm', spans: [{is_primary: true, file_name: file, line_start: line, column_start: 1}]}})
+  const out = [warning('k/src/a.rs', 1), warning('k/src/a.rs', 1), warning('k/src/a.rs', 2), warning('/rustlib/x.rs', 3), warning('j/src/b.rs', 4)].join('\n')
+  assert.deepEqual(countClippy(out), {j: 1, k: 2})
+  assert.deepEqual(auditClippy({j: 1, k: 2}, {j: 1, k: 2}), [])
+  assert.match(auditClippy({k: 3}, {k: 2})[0], /k: 3 clippy warnings/)
+  assert.match(auditClippy({k: 1}, {k: 2})[0], /below the pin/)
+})
+
+test('upward module references inside a layered crate are pinned', async () => {
+  const {rootAliases, braceHeads} = await import('../scripts/moduleLayers.mjs')
+  const text = 'use crate::{Result, curve::{Curve, find_span}, foundation::guards::Budget,\n surface::Surface};'
+  assert.deepEqual(braceHeads(text, text.indexOf('{') + 1), ['curve', 'foundation', 'surface'])
+  assert.deepEqual(rootAliases('pub use crate::core::curve;\npub use analysis::point_inversion as inversion;\n// pub use x::y;'), {curve: 'core', inversion: 'analysis'})
+  const baseline = {sizes: {}, layers: [], moduleLayers: ['k: numerics -> core']}
+  assert.deepEqual(auditArchitecture({sizes: {}, layers: [], moduleLayers: ['k: numerics -> core']}, baseline), [])
+  assert.match(auditArchitecture({sizes: {}, layers: [], moduleLayers: ['k: numerics -> core', 'k: core -> sweeps']}, baseline)[0], /core -> sweeps: upward module dependency/)
+})
+
+test('baseline update keeps keys owned by other audits', () => {
+  const baseline = {sizes: {}, layers: [], clippy: {k: 3}}
+  assert.deepEqual(nextBaseline({sizes: {}, layers: []}, baseline).clippy, {k: 3})
 })

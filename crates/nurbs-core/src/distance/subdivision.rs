@@ -2,7 +2,7 @@
 //! by a proven lower bound, a best-witness upper bound, and a bisection loop
 //! with tolerance, work-limit, and precision stops. Cell enclosures, split
 //! geometry, and witness sampling stay in the per-dimension modules.
-use crate::foundation::guards::Budget;
+use crate::numerics::guards::Budget;
 use crate::{DistanceStopReason, Result};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;

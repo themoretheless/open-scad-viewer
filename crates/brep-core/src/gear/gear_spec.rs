@@ -783,4 +783,3 @@ pub(super) fn cap_pcurve(c: &Curve, map: [f64; 4]) -> Curve {
 }
 
 pub(super) fn unit_line(a: [f64; 2], b: [f64; 2]) -> Curve { line2(a, b) }
-pub(super) fn outline(spec: &GearSpec) -> Result<(Vec<Vec<Curve>>, GearGeometry)> { profile_with_report(spec) }

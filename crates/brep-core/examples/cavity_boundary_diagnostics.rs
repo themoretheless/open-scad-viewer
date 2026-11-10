@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         let root = std::path::PathBuf::from(path);
         std::fs::create_dir_all(&root)?;
-        let (step, _, _) = brep_core::export_step_v5(&model)?;
+        let (step, _, _) = cad_step::export_step_v5(&model)?;
         std::fs::write(root.join("cavity.step"), step)?;
         std::fs::write(root.join("model.json"), value_codec::to_string(&model)?)?;
         let receipt = value_codec::json!({"boundaryProven":r.proven,"exactAgreement":r.agreement.all_equal,"exactJoins":r.agreement.all_joins_exact,"trimRegionsValid":r.trim.all_valid,"facesInjective":r.intersections.faces.all_faces_injective,"allPairsClassified":r.intersections.pairs.all_pairs_classified,"totalPairs":r.intersections.pairs.total_pairs,"nextPair":r.intersections.pairs.next_pair,"hullContacts":r.hull_contacts.len(),"contactCells":r.intersections.pairs.cells,"contactDomainCells":r.intersections.pairs.domain_cells,"nativeVolumeRoles":audit.ok,"faces":model.faces.len(),"wholeWallThicknessClaim":false});

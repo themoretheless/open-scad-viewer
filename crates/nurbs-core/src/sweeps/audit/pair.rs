@@ -30,7 +30,7 @@ pub(crate) fn matching_boundaries(a: &Surface, b: &Surface) -> Vec<[(usize, usiz
             (s.degree_v, &s.knots_v, s.control_points[0].len(), s.periodic_v)
         };
         if periodic { return None; }
-        let domain = crate::certificates::audit::natural_domain(knots, degree, count);
+        let domain = crate::core::span_domains::natural_domain(knots, degree, count);
         let repeated = if end == 0 { &knots[..=degree] } else { &knots[count..] };
         if repeated.len() != degree + 1 || repeated.iter().any(|k| *k != domain[end]) {
             return None;

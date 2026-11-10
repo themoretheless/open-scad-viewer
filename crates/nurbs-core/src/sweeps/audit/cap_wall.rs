@@ -74,7 +74,7 @@ pub fn covers_boundary(s: &Surface, p: &crate::curve::Curve, boundary: Boundary)
     {
         return Ok(false);
     }
-    let domains = crate::certificates::audit::surface_domains(s);
+    let domains = crate::core::span_domains::surface_domains(s);
     let value = domains[axis][usize::from(matches!(boundary, Boundary::UMax | Boundary::VMax))];
     let other = 1 - axis;
     let [lo, hi] = domains[other];

@@ -110,7 +110,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !accepted {
         return Err("Six-edge body remains unqualified".into());
     }
-    let (step, _, _) = brep_core::export_step_v5(&corner.model)?;
+    let (step, _, _) = cad_step::export_step_v5(&corner.model)?;
     std::fs::write(dir.join("candidate.step"), step)?;
     println!("{}", value_codec::to_string_pretty(&report)?);
     Ok(())

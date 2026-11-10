@@ -1,9 +1,6 @@
 //! Fresh native source-owned smooth bodies, material audits and STEP fixtures.
 //! Debug timings are not WASM/Rush/UI timeout qualification.
-use brep_core::{
-    analytic::progressive_profile_body_with_annular_caps, boundary_embedding, face_contacts,
-    retained_annular_cap::reference_filling, sweep_cap_contacts, volume_validity,
-};
+use brep_core::{analytic::progressive_profile_body_with_annular_caps, boundary_embedding, face_contacts, retained_annular_cap::reference_filling, sweep_cap_contacts, volume_validity};
 use nurbs_core::{
     curve::Curve,
     primitives::{circle, line},
@@ -147,7 +144,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .expect("Complete source-owned boundary required");
         let caps = body.caps().unwrap();
         let model = body.model();
-        let (step, certificate, _) = brep_core::export_step_v5(model)?;
+        let (step, certificate, _) = cad_step::export_step_v5(model)?;
         assert!(certificate.complete);
         let file = format!("step/{name}.step");
         std::fs::write(directory.join(&file), &step)?;

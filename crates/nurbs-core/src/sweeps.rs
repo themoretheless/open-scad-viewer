@@ -38,3 +38,7 @@ mod scalar;
 pub use scalar::scaled_sweep;
 #[cfg(feature = "codec")]
 pub use scalar::{checked_profile_sweep, checked_profile_sweep_with_cells};
+/// Formerly the flat `crate::sweep_seam_set` module; `lib.rs` keeps that path as a re-export.
+pub mod seam_set;
+/// Formerly the flat `crate::sweep_section_correction` module; `lib.rs` keeps that path as a re-export.
+pub mod section_correction;

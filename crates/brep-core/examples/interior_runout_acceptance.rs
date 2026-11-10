@@ -5,7 +5,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = std::env::args().nth(1).ok_or("Need an output directory")?;
     let directory = std::path::Path::new(&path);
     let (_, out) = fixture::build();
-    let (step, _, _) = brep_core::export_step_v5(&out.model)?;
+    let (step, _, _) = cad_step::export_step_v5(&out.model)?;
     std::fs::create_dir_all(directory)?;
     std::fs::write(directory.join("runout.step"), step)?;
     std::fs::write(

@@ -118,7 +118,7 @@ pub fn validate_basis(p: usize, k: &[f64], n: usize) -> Result<[f64; 2]> {
     )?;
     let mut multiplicity = 0;
     for i in 0..k.len() {
-        crate::foundation::guards::require_finite_at(k[i], "knots", i)?;
+        crate::numerics::guards::require_finite_at(k[i], "knots", i)?;
         check(k[i].abs() <= 1e9, "Knots must be finite and bounded by 1e9")?;
         check(i == 0 || k[i] >= k[i - 1], "Knots must be nondecreasing")?;
         multiplicity = if i > 0 && k[i] == k[i - 1] {

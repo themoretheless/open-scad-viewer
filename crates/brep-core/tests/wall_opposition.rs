@@ -1,9 +1,6 @@
 #[path = "../examples/support/corner_close_fixture.rs"]
 mod fixture;
-use brep_core::{
-    corner_close,
-    wall_opposition::{self, Decision},
-};
+use brep_core::{corner_close, wall_opposition::{self, Decision}};
 #[test]
 fn shell_orientation_and_trimmed_normals_identify_the_complete_floor_set() {
     let (source, uses, options) = fixture::fixture_extended();

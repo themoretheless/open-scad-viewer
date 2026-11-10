@@ -1,12 +1,7 @@
-use brep_core::{
-    analysis::mass_properties,
-    boolean,
-    boolean_robustness::{
+use brep_core::{analysis::mass_properties, boolean, boolean_robustness::{
         boolean_with_sheet_semantics, classify_boolean_operand, preclassify_coincident_faces,
         BooleanOperandKind, CoincidentFaceClass, SheetBooleanSemantics,
-    },
-    cuboid, Model,
-};
+    }, cuboid, Model};
 
 fn volume(model: &Model) -> f64 {
     if model.is_empty() {

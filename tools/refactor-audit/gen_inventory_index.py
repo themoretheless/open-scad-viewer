@@ -60,13 +60,13 @@ notes = {
  'nurbs-intersect': '90% строк это копия `brep-core`',
  'brep-intersect': '66% строк это копия `brep-core::intersections`',
  'cad-predicates': '204 предупреждения clippy; много функций с 6+ параметрами',
- 'rush-runtime': 'копия осиротевшего `modelgraph-runtime`; `evaluator_impl_N` механические части',
+ 'rush-runtime': '`evaluator_impl_N` механические части',
  'rush-frontend': '`Compiler::operation` cog 451; файлы `compiler_impl_N`, `include!`-части',
  'openscad-core': '`eval_node_cases_N`, `evaluator_2_impl_N` механические части',
  'bridge-svg': '`preflight_inner` 573 строки',
  'sdf-core': '`lib.rs` 1439 строк; `methods_Field_from_value.rs`',
  'sketch-core': 'механические `methods_*`',
- 'languages-bridge': '`clippy::uninit_vec` (UB) в `abi.rs:13`',
+ 
  'photogrammetry-core': 'цикл из 7 модулей; функции с 19 параметрами',
  'polygon-core': 'хаб: зависит от 13 внутренних крейтов',
  'planar-geometry': 'цикл path/rings/stroke/tessellation',
@@ -84,15 +84,12 @@ o += f"| **Итого** | | {t['prod_loc']} | {t['test_loc']} | {t['prod_files']
 o += """
 ## Каталоги вне рабочего пространства Cargo
 
-| Каталог | Файлов | LOC | Состояние |
-|---|---:|---:|---|
-| `crates/modelgraph-runtime` | 32 | 6206 | `Cargo.toml` удалён 2026-10-08, исходники вернулись при слиянии; 3545 строк совпадают с `rush-runtime` |
-| `crates/math-core` | 6 | 901 | крейт переехал в `forma` (`osv-math`), исходники вернулись при слиянии 2026-11-02 |
-| `crates/tensor-core` | 3 | 1189 | то же |
-| `crates/raster-core` | 1 | 154 | то же; на него ссылаются `npm run shaders:export` и `shaders:check`, которые поэтому не работают |
-| `crates/modelgraph-text` | 1 | 49 | то же |
-| `crates/compute-core/shaders` | 9 | 0 | не Rust: WGSL, которые импортирует `src/services/gpu*.ts`; живые |
-| `crates/independent-modeling` | 19 | 4936 | отдельное рабочее пространство по ADR-0010; не трогать |
+| Каталог | Состояние |
+|---|---|
+| `crates/compute-core/shaders` | не Rust: WGSL, которые импортирует `src/services/gpu*.ts`; живые |
+| `crates/independent-modeling` | отдельное рабочее пространство по ADR-0010; не трогать |
+
+Каталоги `modelgraph-runtime`, `math-core`, `tensor-core`, `raster-core`, `modelgraph-text` без `Cargo.toml` удалены 2026-11-10 (план, M4).
 
 Статусы: `todo` означает, что модуль измерен и ждёт разбора по чеклисту; изменения этой итерации перечислены в `PLAN.md` и `BASELINE.md`.
 """

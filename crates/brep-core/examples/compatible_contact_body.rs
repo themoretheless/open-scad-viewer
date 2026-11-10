@@ -4,7 +4,7 @@ use brep_core::{face_cut, region_replacement as r};
 fn main() {
     let (source, request, skin, contacts) = fixture::fixture();
     if let Ok(path) = std::env::var("CONTACT_SOURCE_STEP") {
-        let (step, _, _) = brep_core::export_step_v9(&source).unwrap();
+        let (step, _, _) = cad_step::export_step_v9(&source).unwrap();
         std::fs::write(path, step).unwrap();
     }
     let retention = face_cut::plan_contact_retention(
@@ -60,7 +60,7 @@ fn main() {
             .reduce(f64::max)
     );
     if let Ok(path) = std::env::var("CONTACT_CANDIDATE_STEP") {
-        let (step, _, _) = brep_core::export_step_v9(local.model()).unwrap();
+        let (step, _, _) = cad_step::export_step_v9(local.model()).unwrap();
         std::fs::write(path, step).unwrap();
     }
     let limits = r::EmbeddedPatchLimits {
@@ -87,7 +87,7 @@ fn main() {
         Ok(body) => {
             assert_eq!(body.model().0, local.model().0);
             if let Ok(path) = std::env::var("CONTACT_BODY_STEP") {
-                let (step, _, _) = brep_core::export_step_v9(body.model()).unwrap();
+                let (step, _, _) = cad_step::export_step_v9(body.model()).unwrap();
                 std::fs::write(path, step).unwrap();
             }
             let networks = body

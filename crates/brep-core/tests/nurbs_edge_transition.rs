@@ -1,7 +1,4 @@
-use brep_core::{
-    Coedge, Edge, Face, FaceUse, Loop, Model, Shell, Vertex, face_curvature as c,
-    region_replacement as r,
-};
+use brep_core::{Coedge, Edge, Face, FaceUse, Loop, Model, Shell, Vertex, face_curvature as c, region_replacement as r};
 use nurbs_core::{
     curve::Curve,
     surface::{Axis, Surface},

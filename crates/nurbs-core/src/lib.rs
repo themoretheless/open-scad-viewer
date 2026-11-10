@@ -62,10 +62,10 @@ pub use crate::analysis::geodesic;
 pub use crate::analysis::unrolling;
 pub use crate::construct::curves::biarc;
 pub use crate::construct::curves::curve_extension;
-pub use numerics::interval_eval;
+pub use distance::interval_eval;
 pub use crate::distance::curve_distance;
 pub use crate::certificates::curve_decomposition_certificate;
-use numerics::exact_curve_segments;
+use crate::core::exact_curve_segments;
 pub use crate::analysis::curve_deviation;
 pub use crate::analysis::curve_plane;
 pub use crate::tessellation::curve_tessellation;
@@ -143,7 +143,7 @@ pub use crate::analysis::surface_collar;
 pub(crate) use crate::analysis::curve_surface_composition;
 pub mod intersection;
 use numerics::periodic_chart;
-pub use crate::analysis::radial_bounds;
+pub use crate::distance::radial_bounds;
 pub use crate::analysis::skin_radius;
 pub use crate::analysis::ray_surface;
 pub use crate::intersection::ss_intersection;
@@ -221,13 +221,13 @@ pub use crate::analysis::surface_parameter_bounds;
 
 pub use crate::construct::curves::curve_chain;
 pub use numerics::compensated;
-pub use numerics::dual;
+pub use foundation::dual;
 pub use numerics::robust_solvers;
-pub use numerics::interval_newton;
+pub use distance::interval_newton;
 pub use numerics::sturm;
-pub use numerics::convex_distance;
-pub use numerics::obb_tree;
-pub use numerics::normal_cone;
+pub use distance::convex_distance;
+pub use distance::obb_tree;
+pub use analysis::normal_cone;
 pub use numerics::bezier_extraction;
 
 pub mod uv_curve_crossings;
@@ -249,27 +249,27 @@ mod sweep_support;
 
 pub mod retained_wall_domain;
 
-pub mod sweep_seam_set;
+pub use sweeps::seam_set as sweep_seam_set;
 
-pub mod sweep_section_correction;
+pub use sweeps::section_correction as sweep_section_correction;
 
-pub mod trimmed_offset_contact;
+pub use offset::trimmed_contact as trimmed_offset_contact;
 
-pub mod offset_source_boundary;
+pub use offset::source_boundary as offset_source_boundary;
 
-pub mod offset_contact_tangent;
+pub use offset::contact_tangent as offset_contact_tangent;
 
-pub mod offset_envelope;
+pub use offset::envelope as offset_envelope;
 
-pub mod offset_envelope_fit;
+pub use offset::envelope_fit as offset_envelope_fit;
 
-pub mod offset_contact_pcurve;
+pub use offset::contact_pcurve as offset_contact_pcurve;
 
-pub mod offset_contact_trims;
+pub use offset::contact_trims as offset_contact_trims;
 
-pub mod offset_face_loops;
+pub use offset::face_loops as offset_face_loops;
 
-pub mod offset_patch_boundary;
+pub use offset::patch_boundary as offset_patch_boundary;
 
 pub mod curve_partition_agreement;
 
@@ -277,15 +277,15 @@ pub mod boundary_partition;
 
 pub mod contact_normal_agreement;
 
-pub mod offset_contact_predictor;
+pub use offset::contact_predictor as offset_contact_predictor;
 
-pub mod offset_contact_path;
+pub use offset::contact_path as offset_contact_path;
 
 pub mod curve_axis_driver;
 
-pub mod offset_path_trims;
+pub use offset::path_trims as offset_path_trims;
 
-pub mod offset_path_pcurves;
+pub use offset::path_pcurves as offset_path_pcurves;
 
 pub mod curve_surface_lift;
 
@@ -317,7 +317,7 @@ pub mod profile_expression_radius;
 
 pub mod profile_expression_bernstein;
 
-pub mod bernstein_interpolation;
+pub use numerics::bernstein_interpolation as bernstein_interpolation;
 
 pub mod rational_pole_differential;
 

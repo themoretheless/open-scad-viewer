@@ -1,10 +1,10 @@
 //! Shared assertions for the STEP identity tests.
 #![allow(dead_code)]
-use brep_core::face_senses::canonical_face_senses;
 use std::collections::BTreeMap;
 
+/// STEP v6 writes the authored chart and face senses unchanged, so the import must match the
+/// original exactly (no canonical face-sense mirroring).
 pub fn assert_step_identity(original: &brep_core::Model, imported: &brep_core::Model) {
-    let original = canonical_face_senses(original).unwrap();
     let table = |ids: &[brep_core::TopoId]| {
         ids.iter()
             .copied()

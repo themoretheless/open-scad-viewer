@@ -21,3 +21,7 @@ mod scalar_dispatch_regression;
 pub use dispatch::*;
 use dispatch_other::*;
 pub use execute::*;
+
+#[cfg(test)]
+#[path = "../surface_offset_transport_tests.rs"]
+mod surface_offset_transport_tests;

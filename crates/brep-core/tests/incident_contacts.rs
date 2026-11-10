@@ -1,7 +1,4 @@
-use brep_core::{
-    cuboid,
-    face_contacts::{self, Limits},
-};
+use brep_core::{cuboid, face_contacts::{self, Limits}};
 #[path = "../examples/support/corner_close_fixture.rs"]
 mod fixture;
 #[test]

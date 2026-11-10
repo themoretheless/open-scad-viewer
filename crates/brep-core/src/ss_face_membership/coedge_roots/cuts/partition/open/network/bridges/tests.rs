@@ -170,7 +170,8 @@ fn shared_model_keeps_both_bridge_and_mixed_operand_edits() {
 }
 
 #[test]
-fn step_exports_the_actual_mixed_ss_result_with_its_new_curves_and_native_clocks() {
+#[cfg(feature = "codec")]
+fn mixed_ss_result_matches_the_exchange_fixture() {
     let c = curves(0.0625);
     let m = fixture(&c, true);
     let roots = qualify_coedge_roots(
@@ -185,40 +186,7 @@ fn step_exports_the_actual_mixed_ss_result_with_its_new_curves_and_native_clocks
     let top = qualify_open_ss_path(&input, request(&input, true), Default::default()).unwrap();
     let bottom = qualify_open_ss_path(&input, request(&input, false), Default::default()).unwrap();
     let r = partition_open_ss_network(&[&top, &bottom], Default::default()).unwrap();
-    for side in 0..2 {
-        let actual = &r.models()[side];
-        let (text, export, _) = crate::export_step_v9(actual).unwrap();
-        assert!(export.complete);
-        let (imported, certificate, _) = crate::import_step_v9(&text).unwrap();
-        assert!(certificate.complete);
-        assert_eq!(imported.faces.len(), actual.faces.len());
-        assert_eq!(imported.edges.len(), actual.edges.len());
-        assert!(imported.faces.len() > m[side].faces.len());
-        for cut in r.cuts() {
-            for &edge in &cut.sides[side].edges {
-                let curve = &actual.edges[edge].curve;
-                let reversed = curve.reverse().unwrap();
-                let restored = imported
-                    .edges
-                    .iter()
-                    .position(|e| e.curve == *curve || e.curve == reversed)
-                    .expect("Edited original SS bridge curve must survive export/import");
-                let clocks = |m: &Model, e: usize| {
-                    let mut c: Vec<_> = m
-                        .faces
-                        .iter()
-                        .flat_map(|f| std::iter::once(f.outer).chain(f.holes.iter().copied()))
-                        .flat_map(|w| &m.loops[w].coedges)
-                        .filter(|c| c.edge == e)
-                        .map(|c| c.pcurve.domain())
-                        .collect();
-                    c.sort_by(|a, b| a[0].total_cmp(&b[0]).then_with(|| a[1].total_cmp(&b[1])));
-                    c
-                };
-                assert_eq!(clocks(&imported, restored), clocks(actual, edge));
-            }
-        }
-    }
+    crate::exchange_fixtures::assert_matches("ss_open_network_bridges", value_codec::json!({"models": value_codec::to_value(r.models()).unwrap(), "source_faces": [m[0].faces.len(), m[1].faces.len()], "cut_edges": value_codec::to_value((0..2).map(|side| r.cuts().iter().flat_map(|cut| cut.sides[side].edges.clone()).collect::<Vec<_>>()).collect::<Vec<_>>()).unwrap()}));
 }
 
 #[test]

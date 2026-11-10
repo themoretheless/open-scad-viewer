@@ -554,14 +554,16 @@
             transferred.edges.iter().filter(|e| e.degenerate).count(),
             body.geometry().shell().poles().len()
         );
-        let (step, _, _) = crate::export_step_v6(&transferred).unwrap();
-        if let Some(path) = std::env::var_os("CAD_PROJECTIVE_CAPPED_STEP_OUTPUT") {
-            std::fs::write(path, &step).unwrap();
-        }
-        let (imported, _, _) = crate::import_step_v6(&step).unwrap();
-        crate::source_body_model::assert_step_identity(&transferred, &imported);
         let body_definition = body.definition().unwrap();
-        let exchange = crate::source_exchange_step::prepare(
+        // STEP export of `transferred` and of the source body: cad-step `tests/kernel_fixtures.rs`.
+        crate::exchange_fixtures::assert_matches(
+            "projective_capped_end_caps",
+            value_codec::json!({
+                "model": value_codec::to_value(&transferred).unwrap(),
+                "body": value_codec::to_value(&body_definition).unwrap(),
+            }),
+        );
+        let exchange = crate::source_exchange_plan::prepare(
             &body,
             1e-7,
             crate::source_exchange_endpoints::Limits {
@@ -584,9 +586,6 @@
             body.geometry().shell().edges().len() + body.geometry().shell().poles().len()
         );
         assert_eq!(body.definition().unwrap(), body_definition);
-        if let Some(path) = std::env::var_os("CAD_PROJECTIVE_CAPPED_SOURCE_STEP_OUTPUT") {
-            std::fs::write(path, &exchange.text).unwrap();
-        }
         let body_bytes = value_codec::encode_binary(&body_definition).unwrap();
         let restored_body = crate::source_projective_body_restore::restore(
             value_codec::decode_binary(&body_bytes).unwrap(),

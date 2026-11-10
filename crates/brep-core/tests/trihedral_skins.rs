@@ -158,7 +158,7 @@ fn independent_radii_create_root_trimmed_g2_strip_faces() {
             std::fs::write(d.join(format!("skin-{i}.json")),value_codec::to_string(&value_codec::json!({"source":m,"model":s.patch.model,"sourceEdge":s.source_edge,"supports":s.support_faces,"radiusMm":s.radius_mm,"lawDomain":s.original_law_domain,"targetStartMm":out.plan.edges[i].distance_mm,"spanMm":2.,"sides":s.sides,"contactEdges":[s.patch.edges[3],s.patch.edges[1]],"endOrder":s.end_order,"g2Proven":true,"rollingCenterRadiusProven":true,"circularSectionRadiusProven":false,"closedBody":false})).unwrap()).unwrap();
             std::fs::write(
                 d.join(format!("skin-{i}.step")),
-                brep_core::export_step_v9(&s.patch.model).unwrap().0,
+                cad_step::export_step_v9(&s.patch.model).unwrap().0,
             )
             .unwrap();
         }

@@ -6,7 +6,7 @@
 //! Owned branch/trim graph authority remains a separate unproved obligation.
 //! Uniform original-source Krawczyk fibers qualify local parameter graphs;
 //! they do not themselves authorize complete surface/surface coverage.
-use crate::foundation::guards::{Budget, require_finite_point};
+use crate::numerics::guards::{Budget, require_finite_point};
 use crate::intersection::{
     ContactClass, MAX_BOXES, MAX_SPANS, UnresolvedReason, admit_surface, coedge_trim, context,
     cross3, distance, dot3, enclosure_of, homogeneous_grid, hull_diagonal, next_down, next_up,
@@ -704,7 +704,7 @@ pub fn intersect_surface_surface_report(
 #[cfg(test)]
 mod guard_tests {
     use super::*;
-    use crate::foundation::guards::Budget;
+    use crate::numerics::guards::Budget;
 
     fn plane(z: f64) -> Surface {
         Surface {

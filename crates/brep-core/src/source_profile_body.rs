@@ -658,26 +658,26 @@ pub use serialization::{
     restore_section_bridge, with_restored_transition_boundary,
 };
 
-#[path="source_profile_body/methods_restricted.rs"]
-mod methods_restricted;
-#[path="source_profile_body/methods_definition.rs"]
-mod methods_definition;
-#[path="source_profile_body/methods_qualify_join.rs"]
-mod methods_qualify_join;
-#[path="source_profile_body/methods_qualify_face.rs"]
-mod methods_qualify_face;
-#[path="source_profile_body/methods_qualify_support_tangency.rs"]
-mod methods_qualify_support_tangency;
-#[path="source_profile_body/methods_face.rs"]
-mod methods_face;
-#[path="source_profile_body/methods_qualify_transported_neighbor.rs"]
-mod methods_qualify_transported_neighbor;
-#[path="source_profile_body/methods_split_source_use.rs"]
-mod methods_split_source_use;
-#[path="source_profile_body/methods_cut_endpoint.rs"]
-mod methods_cut_endpoint;
-#[path="source_profile_body/methods_inspect_curved_edge_interval_policy.rs"]
-mod methods_inspect_curved_edge_interval_policy;
+#[path="source_profile_body/restricted.rs"]
+mod restricted;
+#[path="source_profile_body/definition.rs"]
+mod definition;
+#[path="source_profile_body/qualify_join.rs"]
+mod qualify_join;
+#[path="source_profile_body/qualify_face.rs"]
+mod qualify_face;
+#[path="source_profile_body/qualify_support_tangency.rs"]
+mod qualify_support_tangency;
+#[path="source_profile_body/face.rs"]
+mod face;
+#[path="source_profile_body/qualify_transported_neighbor.rs"]
+mod qualify_transported_neighbor;
+#[path="source_profile_body/split_source_use.rs"]
+mod split_source_use;
+#[path="source_profile_body/cut_endpoint.rs"]
+mod cut_endpoint;
+#[path="source_profile_body/inspect_curved_edge_interval_policy.rs"]
+mod inspect_curved_edge_interval_policy;
 #[path="source_profile_body/algorithm_propose_cut_contours.rs"]
 mod algorithm_propose_cut_contours;
 pub use algorithm_propose_cut_contours::propose_cut_contours;

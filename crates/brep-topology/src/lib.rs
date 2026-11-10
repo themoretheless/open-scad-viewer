@@ -646,11 +646,11 @@ impl<T: RevisionState> RevisionCheckout<T> {
 #[path = "tests/tests_integration.rs"]
 mod tests;
 
-#[path = "lib/methods_euler_characteristic.rs"]
-mod methods_euler_characteristic;
-#[path = "lib/methods_full.rs"]
-mod methods_full;
-#[path = "lib/methods_new.rs"]
-mod methods_new;
+#[path = "lib/euler_characteristic.rs"]
+mod euler_characteristic;
+#[path = "lib/full.rs"]
+mod full;
+#[path = "lib/new.rs"]
+mod new;
 #[cfg(test)]
 mod periodic_vertex_links;

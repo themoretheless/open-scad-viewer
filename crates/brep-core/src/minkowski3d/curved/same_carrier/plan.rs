@@ -39,36 +39,6 @@ pub(super) fn owner(m: &Model, face: usize) -> Result<(usize, bool)> {
     }
     Ok(uses[0])
 }
-pub(crate) fn component(m: &Model, seed: usize) -> Result<Vec<usize>> {
-    let f = m
-        .faces
-        .get(seed)
-        .ok_or_else(|| fail("missing same-carrier seed"))?;
-    let owned = owner(m, seed)?;
-    let candidates = (0..m.faces.len())
-        .filter(|&i| m.faces[i].surface == f.surface && owner(m, i).ok() == Some(owned))
-        .collect::<Vec<_>>();
-    let edges = |i: usize| {
-        std::iter::once(m.faces[i].outer)
-            .chain(m.faces[i].holes.iter().copied())
-            .flat_map(|w| m.loops[w].coedges.iter().map(|c| c.edge))
-            .collect::<BTreeSet<_>>()
-    };
-    let mut seen = BTreeSet::new();
-    let mut pending = vec![seed];
-    while let Some(i) = pending.pop() {
-        if seen.insert(i) {
-            let own = edges(i);
-            pending.extend(
-                candidates
-                    .iter()
-                    .copied()
-                    .filter(|&j| !seen.contains(&j) && !own.is_disjoint(&edges(j))),
-            );
-        }
-    }
-    Ok(seen.into_iter().collect())
-}
 pub(super) fn boundary(
     m: &Model,
     selected: &[usize],

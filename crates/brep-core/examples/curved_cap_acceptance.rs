@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let saved = value_codec::to_string(&cap.replacement.model)?;
     let restored: brep_core::Model = value_codec::from_str(&saved)?;
     let closure = watertight::inspect(&restored, 100000)?;
-    let (step, _, _) = brep_core::export_step_v5(&restored)?;
+    let (step, _, _) = cad_step::export_step_v5(&restored)?;
     let digest = |b: &[u8]| {
         Sha256::digest(b)
             .iter()

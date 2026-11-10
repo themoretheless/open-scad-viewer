@@ -382,40 +382,13 @@ fn rational_path(m: &Model) -> Segment {
 }
 
 #[test]
-fn step_round_trip_exports_the_edited_hole_cap_and_original_rational_clocks() {
+#[cfg(feature = "codec")]
+fn edited_hole_cap_matches_the_exchange_fixture() {
     let (m, ends, _) = fixture();
     let segment = rational_path(&m);
     let world = segment.curve.clone();
     let edited = partition_same_hole(&m, 0, ends, &[segment], 1e-8, Default::default())
         .unwrap()
         .model;
-    let (step, export_certificate, _) = crate::export_step_v9(&edited).unwrap();
-    assert!(export_certificate.complete);
-    let (restored, import_certificate, _) = crate::import_step_v9(&step).unwrap();
-    assert!(import_certificate.complete);
-    assert_eq!(restored.faces.len(), edited.faces.len());
-    assert_eq!(restored.edges.len(), edited.edges.len());
-    assert_eq!(restored.faces.len(), m.faces.len() + 1);
-    assert_eq!(restored.edges.len(), m.edges.len() + 1);
-    let imported = restored
-        .edges
-        .iter()
-        .enumerate()
-        .find(|(_, e)| e.curve == world || e.curve == world.reverse().unwrap())
-        .map(|(i, _)| i)
-        .expect("Edited rational world curve must survive export/import");
-    let uses: Vec<_> = restored
-        .loops
-        .iter()
-        .flat_map(|l| &l.coedges)
-        .filter(|c| c.edge == imported)
-        .collect();
-    assert_eq!(uses.len(), 2);
-    assert!(uses.iter().all(|c| c.pcurve.domain() == [-3., 5.]));
-    assert_eq!(
-        crate::watertight::inspect(&restored, 100000)
-            .unwrap()
-            .status,
-        crate::watertight::Closure::WithinTolerance
-    );
+    crate::exchange_fixtures::assert_matches("face_cut_hole", value_codec::json!({"model": value_codec::to_value(&edited).unwrap(), "curve": value_codec::to_value(&world).unwrap(), "source_faces": m.faces.len(), "source_edges": m.edges.len()}));
 }

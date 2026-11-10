@@ -250,9 +250,9 @@ impl<'r,'a,'b,'c,'d> RailConstrainedBridge<'r,'a,'b,'c,'d> {
 #[path = "profile_expression_radius/tests/mod.rs"]
 mod tests;
 
-#[path="profile_expression_radius/methods_crate_surface_weight_profile_WeightProfile____inspect_self_chord_pair.rs"]
-mod methods_crate_surface_weight_profile_weight_profile__inspect_self_chord_pair;
-#[path="profile_expression_radius/methods_RailConstrainedBridge____________self_chord_continuous.rs"]
-mod methods_rail_constrained_bridge______self_chord_continuous;
-#[path="profile_expression_radius/methods_RailConstrainedBridge____________inspect_radius_on_domains.rs"]
-mod methods_rail_constrained_bridge______inspect_radius_on_domains;
+#[path="profile_expression_radius/inspect_self_chord_pair.rs"]
+mod inspect_self_chord_pair;
+#[path="profile_expression_radius/self_chord_continuous.rs"]
+mod self_chord_continuous;
+#[path="profile_expression_radius/inspect_radius_on_domains.rs"]
+mod inspect_radius_on_domains;

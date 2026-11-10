@@ -1,6 +1,4 @@
-use brep_core::{
-    Coedge, Edge, Face, FaceUse, Loop, Model, Shell, Vertex, corner_close::BoundaryUse,
-};
+use brep_core::{Coedge, Edge, Face, FaceUse, Loop, Model, Shell, Vertex, corner_close::BoundaryUse};
 use nurbs_core::{
     corner_blend::Options,
     surface::{Axis, Surface},

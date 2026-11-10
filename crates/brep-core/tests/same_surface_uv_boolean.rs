@@ -1,14 +1,9 @@
-use brep_core::{
-    boolean_robustness::{
+use brep_core::{boolean_robustness::{
         certify_nurbs_uv_equivalence, preclassify_coincident_faces, CoincidentFaceClass,
-    },
-    cuboid,
-    same_surface_uv_boolean::{
+    }, cuboid, same_surface_uv_boolean::{
         boolean_same_surface_uv, boolean_same_surface_uv_with_limits,
         verify_same_surface_uv_boolean, SameSurfaceUvLimits, UvBooleanOperation,
-    },
-    Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex,
-};
+    }, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
 use nurbs_core::{curve::line, surface::Surface};
 
 fn surface() -> Surface {

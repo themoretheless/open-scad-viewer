@@ -7,7 +7,7 @@
 //! proof. Samples alone never authorize a merge.
 use super::*;
 use crate::Error;
-use crate::foundation::guards::Budget;
+use crate::numerics::guards::Budget;
 use std::collections::VecDeque;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

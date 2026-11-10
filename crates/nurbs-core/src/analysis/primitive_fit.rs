@@ -9,7 +9,7 @@
 //! Бюджет: ≤ 65536 точек на вызов. Вырождения (компланарность, недостаток
 //! данных, неконечные значения) — ошибки `Result`, без паник и `unsafe`.
 
-use crate::foundation::guards::{Budget, require_finite_f64, require_finite_point};
+use crate::numerics::guards::{Budget, require_finite_f64, require_finite_point};
 use crate::numerics::robust_solvers::{
     ClosureProblem, SolverOptions, levenberg_marquardt_solve, trust_region_solve,
 };
@@ -154,7 +154,7 @@ fn report_from_residuals(residuals: &[f64], iterations: usize, converged: bool) 
 /// Единый бюджетный guard (пункт 1065) вокруг одного нелинейного solve:
 /// лимит итераций солвера задаёт итерационную размерность бюджета, тик —
 /// один solve-раунд, `check()` — страховка по wall-clock.
-fn solver_guard(stage: &'static str, options: &SolverOptions) -> Result<crate::foundation::guards::BudgetGuard> {
+fn solver_guard(stage: &'static str, options: &SolverOptions) -> Result<crate::numerics::guards::BudgetGuard> {
     Ok(Budget::with_iterations(options.max_iterations.max(1))?.guard(stage))
 }
 

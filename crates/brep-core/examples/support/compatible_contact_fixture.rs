@@ -1,9 +1,6 @@
 //! Nonplanar polynomial crease with zero 2-jets at two interior end stations.
 //! Constructive qualification input, not a general constant-radius fillet.
-use brep_core::{
-    Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, Vertex, face_cut,
-    fillet_contact::Contact, region_replacement as r,
-};
+use brep_core::{Body, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, Vertex, face_cut, fillet_contact::Contact, region_replacement as r};
 use num_rational::BigRational as Q;
 use num_traits::{FromPrimitive, ToPrimitive};
 use nurbs_core::{

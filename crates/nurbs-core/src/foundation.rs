@@ -46,7 +46,8 @@ pub mod exact_edits;
 pub use exact_edits::serialization::{certify_exact_edit, reparameterize_curve};
 pub use exact_edits::{ExactEditOperation, certify_exact_edit_report, reparameterize_curve_report};
 pub mod fitting;
-pub mod guards;
+/// Moved to `numerics` (ADR 0012); the old path stays as a re-export.
+pub use crate::numerics::guards;
 pub mod min_zone_fit;
 pub mod interpolation;
 pub mod bracketed;
@@ -270,3 +271,7 @@ pub use reparameterization_retention::{certify_reparameterized_curve_retention,c
 mod reparameterization_materialization;
 #[cfg(feature="codec")]
 pub use reparameterization_materialization::{materialize_reparameterized_curve_bounded};
+/// Formerly `numerics::dual`; moved above `core` by ADR 0012.
+pub mod dual;
+/// Trust-region point inversion on curves and surfaces (formerly `numerics::robust_solvers`).
+pub mod point_inversion_solver;

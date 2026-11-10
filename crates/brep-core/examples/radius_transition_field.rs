@@ -2,7 +2,7 @@
 //! The authored patch is an OPEN sheet; it is never represented as a solid.
 #[path = "support/compatible_contact_fixture.rs"]
 mod fixture;
-use brep_core::{fillet_contact,region_replacement};
+use brep_core::{fillet_contact, region_replacement};
 use nurbs_core::{curve::Curve,offset::fillet_surfaces::FilletOptions};
 #[path = "support/natural_patch_sheet.rs"]
 mod natural_sheet;

@@ -737,7 +737,7 @@ mod tests {
 
     #[test]
     fn cg_options_feed_the_unified_budget() {
-        use crate::foundation::guards::IterationBudget;
+        use crate::numerics::guards::IterationBudget;
         let cg = CgOptions::new(7, 1e-9).unwrap();
         let budget = Budget::from(&cg);
         assert_eq!(budget.max_iterations, cg.max_iterations());

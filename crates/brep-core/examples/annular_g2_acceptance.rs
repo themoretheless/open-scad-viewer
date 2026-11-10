@@ -1,8 +1,5 @@
 //! Fresh full-boundary G2 and material audit for the native rounded annulus.
-use brep_core::{
-    analytic::g2_annular, boundary_embedding, face_contacts, sweep_cap_contacts, sweep_smoothness,
-    volume_validity,
-};
+use brep_core::{analytic::g2_annular, boundary_embedding, face_contacts, sweep_cap_contacts, sweep_smoothness, volume_validity};
 use sha2::{Digest, Sha256};
 use value_codec::json;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -95,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .map(|p| p.faces)
                 .collect::<Vec<_>>()
         );
-        let (step, _, _) = brep_core::export_step_v5(&built.model)?;
+        let (step, _, _) = cad_step::export_step_v5(&built.model)?;
         let file = format!("{name}.step");
         std::fs::write(output.join(&file), &step)?;
         let sha = Sha256::digest(step.as_bytes())

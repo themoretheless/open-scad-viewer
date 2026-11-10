@@ -1,7 +1,7 @@
 //! Existence certificates for isolated roots of a surface/surface section.
 //! One parameter of the first surface is fixed. A certificate proves a contact
 //! point, not completeness of a 4D intersection curve or B-rep trim membership.
-use crate::foundation::guards::{require_finite_f64, require_finite_point};
+use crate::numerics::guards::{require_finite_f64, require_finite_point};
 use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
 #[derive(Clone, Debug)]
 pub struct Witness {

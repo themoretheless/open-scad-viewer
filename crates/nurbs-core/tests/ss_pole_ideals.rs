@@ -1,5 +1,5 @@
 use num_rational::BigRational as Q;
-use nurbs_core::{ss_intersection as ss, surface::Surface};
+use nurbs_core::ss_intersection as ss;
 #[allow(dead_code)]
 #[path = "support/ss_original_ideal.rs"]
 mod fixture;
