@@ -180,5 +180,8 @@ opt-level = 2
 [profile.release.package.geometry-bridge]
 opt-level = "z"
 
+# Native kernel evaluation: measured 2x faster `Model::validate` (gear 12/32/60 teeth:
+# 32.8/87.6/116.5 -> 17.0/44.9/61.1 ms) than "z". The browser kernel keeps "z" through
+# scripts/build-geometry-kernels.mjs, so the shipped WASM bytes do not change.
 [profile.release.package.nurbs-core]
-opt-level = "z"
+opt-level = 3
