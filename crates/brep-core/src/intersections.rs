@@ -45,79 +45,9 @@ pub use plane_torus::recognize_torus;
 pub use sphere_cylinder::{CanonicalCylinder, recognize_cylinder};
 pub use sphere_sphere::recognize as recognize_sphere;
 
-mod query_options;
-pub use query_options::{Options, Plane};
+/// Shared query vocabulary; `nurbs-intersect` owns these types (ADR 0011).
+pub use nurbs_intersect::{Contact, Coverage, CurvePoint, Options, Plane, Report, Unresolved, UnresolvedReason};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Coverage {
-    /// Domain partition certified for the frozen analytic/affine matrix only.
-    Complete,
-    /// All parameter regions were handled numerically. NOT certified complete.
-    NumericallyResolved,
-    Incomplete,
-}
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum UnresolvedReason {
-    BudgetExceeded,
-    TangencyOrMultipleRoot,
-    NearCoincidence,
-    BoundaryCrossing,
-    UnsupportedSurface,
-    CoincidentTrim,
-}
-#[derive(Clone, Debug)]
-pub struct Unresolved {
-    /// Curve: [t0,t1]. Surface: [u0,u1,v0,v1]. Surface pairs concatenate both boxes.
-    pub parameter_box: Vec<f64>,
-    pub reason: UnresolvedReason,
-}
-#[derive(Clone, Debug)]
-pub struct Report<T> {
-    pub components: Vec<T>,
-    pub unresolved: Vec<Unresolved>,
-    pub boxes_visited: usize,
-    pub bernstein_excluded: usize,
-    pub coverage: Coverage,
-}
-impl<T> Default for Report<T> {
-    fn default() -> Self {
-        Self {
-            components: Vec::new(),
-            unresolved: Vec::new(),
-            boxes_visited: 0,
-            bernstein_excluded: 0,
-            coverage: Coverage::NumericallyResolved,
-        }
-    }
-}
-impl<T> Report<T> {
-    /// Always false until independent coverage and correspondence certificates
-    /// exist. Keeping this query beside coverage prevents accidental promotion.
-    pub fn permits_topology_change(&self) -> bool {
-        false
-    }
-    pub(crate) fn unresolved(&mut self, domain: impl Into<Vec<f64>>, reason: UnresolvedReason) {
-        self.coverage = Coverage::Incomplete;
-        self.unresolved.push(Unresolved {
-            parameter_box: domain.into(),
-            reason,
-        });
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Contact {
-    Transverse,
-    Boundary,
-}
-#[derive(Clone, Debug)]
-pub struct CurvePoint {
-    pub parameter: f64,
-    pub parameter_interval: [f64; 2],
-    pub point: [f64; 3],
-    pub plane_residual: f64,
-    pub contact: Contact,
-}
 #[derive(Clone, Debug)]
 pub enum CurvePlaneComponent {
     Point(CurvePoint),

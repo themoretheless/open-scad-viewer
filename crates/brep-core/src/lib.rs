@@ -111,7 +111,7 @@ pub mod minkowski3d;
 pub mod mixed_root_model;
 pub mod pcurve_repair;
 pub mod planar_trim;
-pub mod predicate_evidence;
+pub use nurbs_intersect::predicate_evidence;
 pub mod prism;
 pub mod prism_frame;
 pub mod profile_certificate;

@@ -1,92 +1,19 @@
 //! Wire encoding for native intersections reports.
 use super::*;
 
-impl value_codec::Serialize for Plane {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"normal":self.normal,"offset":self.offset})
-    }
-}
 
-impl<'de> value_codec::Deserialize<'de> for Plane {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        Ok(Self {
-            normal: value_codec::from_value(value["normal"].clone())?,
-            offset: value_codec::from_value(value["offset"].clone())?,
-        })
-    }
-}
 
-impl value_codec::Serialize for Options {
-    fn to_value(&self) -> value_codec::Value {
-        value_codec::json!({"distanceTolerance":self.distance_tolerance,"parameterTolerance":self.parameter_tolerance,
-            "maxDepth":self.max_depth,"maxBoxes":self.max_boxes})
-    }
-}
 
-impl<'de> value_codec::Deserialize<'de> for Options {
-    fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
-        if !value.is_object() {
-            return Err(value_codec::error("Intersection options must be an object"));
-        }
-        let mut options = Self::default();
-        if let Some(v) = value.get("distanceTolerance") {
-            options.distance_tolerance = value_codec::from_value(v.clone())?;
-        }
-        if let Some(v) = value.get("parameterTolerance") {
-            options.parameter_tolerance = value_codec::from_value(v.clone())?;
-        }
-        if let Some(v) = value.get("maxDepth") {
-            options.max_depth = value_codec::from_value(v.clone())?;
-        }
-        if let Some(v) = value.get("maxBoxes") {
-            options.max_boxes = value_codec::from_value(v.clone())?;
-        }
-        Ok(options)
-    }
-}
 
-impl value_codec::Serialize for Unresolved {
-    fn to_value(&self) -> value_codec::Value {
-        let reason = match self.reason {
-            UnresolvedReason::BudgetExceeded => "budget_exceeded",
-            UnresolvedReason::TangencyOrMultipleRoot => "tangency_or_multiple_root",
-            UnresolvedReason::NearCoincidence => "near_coincidence",
-            UnresolvedReason::BoundaryCrossing => "boundary_crossing",
-            UnresolvedReason::UnsupportedSurface => "unsupported_surface",
-            UnresolvedReason::CoincidentTrim => "coincident_trim",
-        };
-        value_codec::json!({"parameterBox":self.parameter_box,"reason":reason})
-    }
-}
 
-impl<T: value_codec::Serialize> value_codec::Serialize for Report<T> {
-    fn to_value(&self) -> value_codec::Value {
-        let coverage = match self.coverage {
-            Coverage::Complete => "complete",
-            Coverage::NumericallyResolved => "numerically_resolved",
-            Coverage::Incomplete => "incomplete",
-        };
-        let evidence = match self.coverage {
-            Coverage::Complete => "analytic_coverage_certified",
-            Coverage::NumericallyResolved => "numerical_uncertified",
-            Coverage::Incomplete => "incomplete",
-        };
-        value_codec::json!({"components":self.components,"unresolved":self.unresolved,"boxesVisited":self.boxes_visited,
-            "bernsteinExcluded":self.bernstein_excluded,"coverage":coverage,"permitsTopologyChange":false,
-            "evidence":evidence})
-    }
-}
 
-impl value_codec::Serialize for CurvePoint {
-    fn to_value(&self) -> value_codec::Value {
-        let contact = match self.contact {
-            Contact::Transverse => "transverse",
-            Contact::Boundary => "boundary",
-        };
-        value_codec::json!({"parameter":self.parameter,"parameterInterval":self.parameter_interval,"point":self.point,
-            "planeResidual":self.plane_residual,"contact":contact})
-    }
-}
+
+
+
+
+
+
+
 
 impl value_codec::Serialize for CurvePlaneComponent {
     fn to_value(&self) -> value_codec::Value {
