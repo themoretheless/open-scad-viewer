@@ -94,10 +94,13 @@ impl Registry {
             ) {
                 return Err(input("Unknown native graph handle"));
             }
-            let slot = self.slots.remove(&id).unwrap();
+            let slot = self
+                .slots
+                .remove(&id)
+                .ok_or_else(|| input("Unknown native graph handle"))?;
             self.reserved -= slot.reserved;
             let State::Graph(graph) = slot.state else {
-                unreachable!()
+                return Err(input("Unknown native graph handle"));
             };
             return Ok(match graph.finish() {
                 Ok(report) => report,
@@ -187,7 +190,7 @@ impl Registry {
                     })();
                 match result {
                     Ok(lease) => {
-                        let key = result_id.unwrap();
+                        let key = result_id.ok_or_else(|| input("Missing result handle"))?;
                         active.leases.insert(key.clone(), lease);
                         Ok(json!({"lease":key}))
                     }

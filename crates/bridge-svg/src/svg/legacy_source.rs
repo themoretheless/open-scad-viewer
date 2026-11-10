@@ -384,7 +384,9 @@ pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Resul
             } else {
                 let size = imagesize::blob_size(&data)
                     .map_err(|_| invalid("SVG embedded image is invalid"))?;
-                let mut pixels = decoded_pixel_budget.lock().unwrap();
+                let mut pixels = decoded_pixel_budget
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
                 *pixels = pixels.saturating_add(size.width.saturating_mul(size.height));
                 if *pixels > 64 * 1024 * 1024 {
                     return Err(limit("SVG image decoding exceeds 64 million total pixels"));
@@ -396,14 +398,20 @@ pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Resul
         match result {
             Ok(image) => Some(image),
             Err(e) => {
-                *pending_error.lock().unwrap() = Some(e);
+                *pending_error
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(e);
                 None
             }
         }
     });
     let mut tree =
         usvg::Tree::from_str(source, &options).map_err(|e| invalid(format!("Invalid SVG: {e}")))?;
-    if let Some(error) = resolver_error.lock().unwrap().take() {
+    if let Some(error) = resolver_error
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .take()
+    {
         return Err(error);
     }
     tree.resolve_non_scaling_contexts(MAX_POINTS)

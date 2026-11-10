@@ -75,7 +75,10 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
     let controls = graph["customizer"].take();
     let result = try {
         let nodes = graph["nodes"].take();
-        let own = nodes.as_array().unwrap().iter().any(|n| {
+        let node_list = nodes.as_array().ok_or_else(|| {
+            rush_runtime::Error::new("invalid_document", "/nodes", "Expected nodes.")
+        })?;
+        let own = node_list.iter().any(|n| {
             [
                 "polygon_profile",
                 "polygon_loft",
@@ -113,9 +116,13 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
             .contains(&n["op"].as_str().unwrap_or(""))
         });
         let mut compiled = if own {
-            if !graph["constraints"].as_array().unwrap().is_empty()
-                || !graph["checks"].as_array().unwrap().is_empty()
-            {
+            let has_constraints = graph["constraints"]
+                .as_array()
+                .is_some_and(|items| !items.is_empty());
+            let has_checks = graph["checks"]
+                .as_array()
+                .is_some_and(|items| !items.is_empty());
+            if has_constraints || has_checks {
                 do yeet rush_runtime::Error::new(
                     "text_error",
                     "",
@@ -130,12 +137,18 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
                 );
             }
             let Value::Array(nodes) = nodes else {
-                unreachable!()
+                do yeet rush_runtime::Error::new("invalid_document", "/nodes", "Expected nodes.");
             };
+            let parameters = graph["parameters"].as_array().ok_or_else(|| {
+                rush_runtime::Error::new("invalid_document", "/parameters", "Expected parameters.")
+            })?;
+            let root = graph["root"].as_str().ok_or_else(|| {
+                rush_runtime::Error::new("invalid_document", "/root", "Expected root.")
+            })?;
             let mut compiled = rush_runtime::nurbs::compile_text(
                 nodes,
-                graph["parameters"].as_array().unwrap(),
-                graph["root"].as_str().unwrap().into(),
+                parameters,
+                root.into(),
             )?;
             compiled["source"] = json!("");
             for key in [
@@ -165,7 +178,7 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
                 ("constraints", "constraints"),
                 ("checks", "geometry_assertions"),
             ] {
-                if !graph[source].as_array().unwrap().is_empty() {
+                if graph[source].as_array().is_some_and(|items| !items.is_empty()) {
                     document.insert(target.into(), graph[source].take());
                 }
             }
