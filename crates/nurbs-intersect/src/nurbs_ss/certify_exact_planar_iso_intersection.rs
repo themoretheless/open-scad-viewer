@@ -343,7 +343,8 @@ impl RationalBezierDecomposition {
     }
 }
 
-pub(super) fn active_breaks(knots: &[f64], degree: usize, controls: usize) -> Result<Vec<f64>> {
+#[doc(hidden)]
+pub fn active_breaks(knots: &[f64], degree: usize, controls: usize) -> Result<Vec<f64>> {
     let domain = [knots[degree], knots[controls]];
     let mut breaks = knots
         .iter()
@@ -485,7 +486,8 @@ pub struct BranchComponent {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) struct FragmentAuthority {
+#[doc(hidden)]
+pub struct FragmentAuthority {
     source_faces: [usize; 2],
     source_spans: [TensorSpanId; 2],
     parameter_interval_bits: [u64; 2],
@@ -500,7 +502,8 @@ pub(super) struct FragmentAuthority {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) struct BranchGraphAuthority {
+#[doc(hidden)]
+pub struct BranchGraphAuthority {
     pub(super) context: ToleranceSpecIdentity,
     pub(super) fragment_definitions: Vec<FragmentAuthority>,
     pub(super) component_ranges: Vec<[usize; 2]>,
@@ -532,7 +535,8 @@ pub struct BranchGraph {
     pub(super) authority: BranchGraphAuthority,
 }
 
-pub(super) fn fragment_authority(fragment: &CertifiedBranchFragment) -> Result<FragmentAuthority> {
+#[doc(hidden)]
+pub fn fragment_authority(fragment: &CertifiedBranchFragment) -> Result<FragmentAuthority> {
     Ok(FragmentAuthority {
         source_faces: fragment.source_faces,
         source_spans: fragment.source_spans,

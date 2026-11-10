@@ -1,6 +1,5 @@
 {
   "sizes": {
-    "crates/brep-core/src/analytic_ss.rs": 933,
     "crates/brep-core/src/intersections/cone_cone.rs": 839,
     "crates/brep-core/src/intersections/cone_torus.rs": 1184,
     "crates/brep-core/src/intersections/cylinder_cylinder.rs": 865,
@@ -176,7 +175,6 @@
     "crates/brep-core/src/minkowski3d/curved/trimmed.rs::append@1": 200,
     "crates/brep-core/src/model_validation.rs::validate_impl@1": 253,
     "crates/brep-core/src/nurbs_ss_g6/author_general_nurbs_boolean.rs::author_general_nurbs_boolean@1": 450,
-    "crates/brep-core/src/nurbs_ss_g6/certify_exact_planar_iso_intersection.rs::certify_exact_planar_iso_intersection_cell@1": 225,
     "crates/brep-core/src/nurbs_ss_g6/nurbs_boolean_graph_patch_v3.rs::nurbs_boolean_graph_patch_transverse@1": 210,
     "crates/brep-core/src/operations/boolean.rs::boolean_impl@1": 159,
     "crates/brep-core/src/operations/edge_features.rs::edge_operation@1": 155,

@@ -13,7 +13,8 @@ fn curve_endpoint_bits(curve: &Curve, end: usize) -> Result<Vec<u64>> {
         .collect())
 }
 
-pub(super) fn joined_endpoint_key(
+#[doc(hidden)]
+pub fn joined_endpoint_key(
     fragment: &CertifiedBranchFragment,
     end: usize,
 ) -> Result<(Vec<u64>, Vec<u64>, Vec<u64>)> {

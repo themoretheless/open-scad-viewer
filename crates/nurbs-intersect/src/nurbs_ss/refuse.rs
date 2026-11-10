@@ -37,7 +37,8 @@ pub struct IsoEndpointOwnership {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) struct ExactIsoAuthority {
+#[doc(hidden)]
+pub struct ExactIsoAuthority {
     pub(super) curve: RationalCurveDefinition,
     pub(super) traces: [RationalCurveDefinition; 2],
     pub(super) axis: ExactIsoAxis,
@@ -120,7 +121,8 @@ pub enum G6Component {
     },
 }
 
-pub(super) fn is_uniform_bicubic_positive(surface: &Surface) -> bool {
+#[doc(hidden)]
+pub fn is_uniform_bicubic_positive(surface: &Surface) -> bool {
     surface.degree_u == 3 && surface.degree_v == 3 && is_bezier_le3_positive(surface)
 }
 
@@ -233,7 +235,8 @@ pub fn positive_multispan_graph(surface: &Surface) -> bool {
         .is_ok_and(|breaks| breaks.first() == Some(&0.) && breaks.last() == Some(&1.))
 }
 
-pub(super) fn rational_weights_constant_on_fixed_axis(surface: &Surface, fixed_u: bool) -> bool {
+#[doc(hidden)]
+pub fn rational_weights_constant_on_fixed_axis(surface: &Surface, fixed_u: bool) -> bool {
     if fixed_u {
         (0..=surface.degree_v).all(|j| {
             (1..=surface.degree_u)
@@ -247,7 +250,8 @@ pub(super) fn rational_weights_constant_on_fixed_axis(surface: &Surface, fixed_u
     }
 }
 
-pub(super) fn bbox(s: &Surface) -> ([f64; 3], [f64; 3]) {
+#[doc(hidden)]
+pub fn bbox(s: &Surface) -> ([f64; 3], [f64; 3]) {
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];
     for p in s.control_points.iter().flatten() {
@@ -303,7 +307,8 @@ pub fn planar_support(surface: &Surface, tol: f64) -> Option<([f64; 3], [f64; 3]
     Some((o, n))
 }
 
-pub(super) fn complete_empty() -> Report<G6Component> {
+#[doc(hidden)]
+pub fn complete_empty() -> Report<G6Component> {
     Report {
         components: vec![G6Component::Empty],
         boxes_visited: 1,
@@ -312,7 +317,8 @@ pub(super) fn complete_empty() -> Report<G6Component> {
     }
 }
 
-pub(super) fn complete_line(start: [f64; 3], end: [f64; 3]) -> Report<G6Component> {
+#[doc(hidden)]
+pub fn complete_line(start: [f64; 3], end: [f64; 3]) -> Report<G6Component> {
     Report {
         components: vec![G6Component::Line { start, end }],
         boxes_visited: 1,
@@ -321,7 +327,8 @@ pub(super) fn complete_line(start: [f64; 3], end: [f64; 3]) -> Report<G6Componen
     }
 }
 
-pub(super) fn complete_curve(certificate: ExactIsoIntersectionCertificate) -> Report<G6Component> {
+#[doc(hidden)]
+pub fn complete_curve(certificate: ExactIsoIntersectionCertificate) -> Report<G6Component> {
     let boxes_visited = certificate.diagnostic_samples.len().max(1);
     let samples = certificate
         .diagnostic_samples
@@ -339,7 +346,8 @@ pub(super) fn complete_curve(certificate: ExactIsoIntersectionCertificate) -> Re
     }
 }
 
-pub(super) fn affine_plane_uv(surface: &Surface, p: [f64; 3], tol: f64) -> Result<Option<[f64; 2]>> {
+#[doc(hidden)]
+pub fn affine_plane_uv(surface: &Surface, p: [f64; 3], tol: f64) -> Result<Option<[f64; 2]>> {
     let point3 = |u: f64, v: f64| -> Result<[f64; 3]> {
         let q = surface.evaluate(u, v)?.point;
         Ok([q[0], q[1], q[2]])
@@ -370,7 +378,8 @@ pub(super) fn affine_plane_uv(surface: &Surface, p: [f64; 3], tol: f64) -> Resul
     Ok(Some(uvp))
 }
 
-pub(super) fn uv_location(uv: [f64; 2], tol: f64) -> Result<IsoEndpointLocation> {
+#[doc(hidden)]
+pub fn uv_location(uv: [f64; 2], tol: f64) -> Result<IsoEndpointLocation> {
     let on = [
         (uv[0].abs() <= tol, IsoEndpointLocation::UMin),
         ((uv[0] - 1.).abs() <= tol, IsoEndpointLocation::UMax),
@@ -389,7 +398,8 @@ pub(super) fn uv_location(uv: [f64; 2], tol: f64) -> Result<IsoEndpointLocation>
         .unwrap_or(IsoEndpointLocation::Interior))
 }
 
-pub(super) fn affine_graph_projection(surface: &Surface, tol: f64) -> bool {
+#[doc(hidden)]
+pub fn affine_graph_projection(surface: &Surface, tol: f64) -> bool {
     for a in 0..3 {
         for b in (a + 1)..3 {
             let p00 = &surface.control_points[0][0];
@@ -423,7 +433,8 @@ pub(super) fn affine_graph_projection(surface: &Surface, tol: f64) -> bool {
     false
 }
 
-pub(super) fn affine_uv_trace(surface: &Surface, curve: &Curve, tol: f64) -> Result<Option<Curve>> {
+#[doc(hidden)]
+pub fn affine_uv_trace(surface: &Surface, curve: &Curve, tol: f64) -> Result<Option<Curve>> {
     let o = surface.evaluate(0., 0.)?.point;
     let u = sub(surface.evaluate(1., 0.)?.point, o);
     let v = sub(surface.evaluate(0., 1.)?.point, o);

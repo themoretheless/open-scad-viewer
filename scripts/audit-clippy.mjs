@@ -42,7 +42,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'))
   if (process.argv.includes('--update')) {
     const pinned = baseline.clippy ?? observed
-    baseline.clippy = Object.fromEntries(Object.entries(observed).map(([crate, count]) => [crate, Math.min(count, pinned[crate] ?? count)]).sort())
+    baseline.clippy = Object.fromEntries(Object.entries(observed).map(([crate, count]) => [crate, Math.min(count, pinned[crate] ?? (baseline.clippy ? 0 : count))]).sort())
     writeFileSync(baselinePath, JSON.stringify(baseline, null, 2) + '\n')
   } else {
     const errors = auditClippy(observed, baseline.clippy)

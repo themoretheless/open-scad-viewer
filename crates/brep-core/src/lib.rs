@@ -15,7 +15,7 @@ pub mod analysis;
 pub mod analytic;
 pub mod analytic_boolean;
 pub mod analytic_features;
-pub mod analytic_ss;
+pub use nurbs_intersect::analytic_ss;
 /// Section-authored geometric blades.
 pub mod blade;
 pub mod boolean_robustness;
@@ -53,7 +53,12 @@ pub mod contact_end;
 pub mod contact_graft;
 pub mod contact_trim;
 pub mod corner_close;
-pub mod coverage_verifier;
+/// `nurbs-intersect` owns coverage verification; the lifted arrangement check lives in
+/// `uv_coverage` because it needs kernel arrangements.
+pub mod coverage_verifier {
+    pub use crate::uv_coverage::verify_lifted_uv_arrangement_coverage;
+    pub use nurbs_intersect::coverage_verifier::*;
+}
 mod cylinder_sphere_boolean;
 pub mod edge_partition;
 pub mod face_contact;

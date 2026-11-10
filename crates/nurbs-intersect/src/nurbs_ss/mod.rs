@@ -29,4 +29,5 @@ mod tests;
 pub use refuse::*;
 pub use certify_exact_planar_iso_intersection::*;
 pub use join_certified_multispan_fragments::*;
-use as_uniform_bicubic::*;
+#[doc(hidden)]
+pub use as_uniform_bicubic::*;
