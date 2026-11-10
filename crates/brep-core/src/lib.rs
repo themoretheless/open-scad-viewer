@@ -77,6 +77,7 @@ pub mod coverage_verifier {
 }
 use crate::boolean::cone_sphere_boolean;
 use crate::boolean::cylinder_sphere_boolean;
+use crate::boolean::torus_sphere_boolean;
 pub use crate::features::edge_partition;
 pub use crate::contact::face_contact;
 pub use crate::contact::face_contacts;

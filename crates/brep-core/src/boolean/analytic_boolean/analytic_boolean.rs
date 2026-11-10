@@ -86,6 +86,24 @@ pub fn analytic_boolean(
         };
     }
 
+    // Torus × sphere: exact parallels for an axial sphere, sampled
+    // containment for a provable miss, through the sphere-mate engine.
+    if matches!(
+        (class_a, class_b),
+        (AnalyticClass::Torus, AnalyticClass::Sphere) | (AnalyticClass::Sphere, AnalyticClass::Torus)
+    ) && operation != "xor"
+        && let Some(result) = torus_sphere_boolean::boolean(a, b, operation)?
+    {
+        result.validate()?;
+        let classification = classify_chart_events(
+            ChartKind::AnalyticCircle,
+            vec![],
+            &[(0.5, CellLabel::Outside)],
+        )?;
+        let cert = certificate_for(operation, vec![Coverage::Complete], classification, true, &result)?;
+        return Ok((result, cert));
+    }
+
     // Cones and tori: provably disjoint operands (separated control-net
     // boxes) take the empty algebra; any possible contact is refused.
     if matches!(class_a, AnalyticClass::Cone | AnalyticClass::Torus)

@@ -6,6 +6,7 @@ pub mod close_topology;
 pub mod corner_close;
 pub(crate) mod cone_sphere_boolean;
 pub(crate) mod cylinder_sphere_boolean;
+pub(crate) mod torus_sphere_boolean;
 pub mod face_cut;
 pub(crate) mod imprint_assembly;
 pub mod imprint_pipeline;
