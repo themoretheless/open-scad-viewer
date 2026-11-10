@@ -7,7 +7,7 @@ import {localMeshBevel} from './generalMeshTools'
 import {extendedShell,extendedBevel} from './mainSolidExtensions'
 import {unit3} from './directSketchGeometry'
 import {booleanPolygonMeshes} from './geometry/polygon'
-import {importedStlToMeshData} from './stlImport'
+import {importedStlToMeshData} from '../exchange/stlImport'
 export type MainOperation='push'|'fillet'|'chamfer'|'shell'|'split'|'move'|'rotate'|'scale'|'duplicate'|'delete'|'profile'
 export interface MainParameters {amount:number;x:number;y:number;z:number;axis:'x'|'y'|'z';edge:number;shape:'rectangle'|'circle';width:number;height:number;cut:boolean; normal?:[number,number,number]; openings?:number[]; selection?:number[];step?:number;adaptive?:boolean;snap?:boolean;edges?:number[];endRadius?:number}
 export function primitiveSource(kind:string,size:number):string {

@@ -19,7 +19,7 @@ import {
   type MeshExportFormat,
   type MeshImportFormat,
 } from './meshFormats'
-import { importMeshFile, type MeshImportOptions } from './meshImport'
+import { importMeshFile, type MeshImportOptions } from '../exchange/meshImport'
 
 export { isMeshExportFormat, MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_FORMATS, MESH_PRINTING_FORMATS }
 export type { MeshExportFormat, MeshImportFormat }

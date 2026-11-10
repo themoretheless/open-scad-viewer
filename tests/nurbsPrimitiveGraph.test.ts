@@ -4,7 +4,7 @@ import { compileRushFrontend } from '../src/services/rushFrontend'
 import { parseOpenSCAD } from '../src/services/openscadParser'
 import { buildOwnNurbs } from '../src/services/rushGraphNurbsKernel'
 import { compileRushGraphNurbs } from '../src/services/rushGraphNurbsCompiler'
-import { importMeshFile } from '../src/services/meshImport'
+import { importMeshFile } from '../src/exchange/meshImport'
 
 it('validates dimensions and lowers primitive parameters through the language WASM', () => {
   const source = readFileSync('examples/rush/elliptic-cylinder.r', 'utf8')

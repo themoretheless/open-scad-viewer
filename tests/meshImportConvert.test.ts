@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { convertMeshFile, MESH_EXPORT_FORMATS } from '../src/services/meshConvert'
 import { exportMeshFormat } from '../src/services/meshExportFormats'
-import { formatMeshImportNotice } from '../src/services/meshImportReport'
+import { formatMeshImportNotice } from '../src/exchange/meshImportReport'
 import {
   detectMeshImportFormat,
   importMeshFile,
@@ -9,7 +9,7 @@ import {
   MESH_IMPORT_FORMATS,
   MeshImportError,
   stripMeshExtension,
-} from '../src/services/meshImport'
+} from '../src/exchange/meshImport'
 import { buildOwnNurbs } from '../src/services/rushGraphNurbsKernel'
 import { RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/rushGraphNurbs'
 

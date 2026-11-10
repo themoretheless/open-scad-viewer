@@ -15,7 +15,7 @@ import {
 import type {
   OpenScad2021LegacyImportFormat,
   OpenScadImportForcedAsset,
-} from '../services/openScadImport'
+} from '../exchange/openScadImport'
 import type { OpenScadProject } from '../services/openScadProject'
 import { formatOpenScadValue, isOpenScadRange } from '../services/openScadValueSemantics'
 import type { EvalContext } from './types'

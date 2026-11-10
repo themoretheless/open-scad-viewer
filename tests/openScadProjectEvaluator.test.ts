@@ -6,7 +6,7 @@ import {
 } from '../src/core/openScad2021Contract'
 import { OpenScadProject } from '../src/services/openScadProject'
 import { parseOpenSCAD, parseOpenScadProject } from '../src/services/openscadParser'
-import { OpenScadImportPositionedError } from '../src/services/openScadImport'
+import { OpenScadImportPositionedError } from '../src/exchange/openScadImport'
 import { OpenScadSurfaceError } from '../src/services/openScadSurface'
 import { OpenScadTextPositionedError } from '../src/services/openScadText'
 

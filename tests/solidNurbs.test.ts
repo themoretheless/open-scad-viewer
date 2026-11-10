@@ -2,7 +2,7 @@ import {constructSolidSurface,buildSolidSurface} from '../src/services/solidSurf
 import { describe, expect, it } from 'vitest'
 import { emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
 import { solidDocumentToMeshDocument } from '../src/services/solidBridge'
-import { importRushGraphNurbs } from '../src/services/solidNurbsImport'
+import { importRushGraphNurbs } from '../src/exchange/solidNurbsImport'
 import {
   createSolidNurbsCurve,
   createSolidNurbsSurface,

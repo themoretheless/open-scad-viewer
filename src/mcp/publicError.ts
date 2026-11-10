@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { AbortedError, OpenSCADParseError } from '../services/openscadErrors'
-import { OpenScadImportPositionedError } from '../services/openScadImport'
+import { OpenScadImportPositionedError } from '../exchange/openScadImport'
 import { OpenScadProjectError } from '../services/openScadProject'
 import { OpenScadProjectCompileError } from '../services/openScadProjectCompiler'
 import { OpenScadSurfaceError } from '../services/openScadSurface'

@@ -21,7 +21,7 @@ import {
   queryPreparedOpenScadDxfDimension,
   type OpenScadImportGeometry2D,
   type OpenScadImportGeometry3D,
-} from '../src/services/openScadImport'
+} from '../src/exchange/openScadImport'
 
 const UTF8 = new TextEncoder()
 const LEGACY_DIMENSIONED_DXF = readFileSync(

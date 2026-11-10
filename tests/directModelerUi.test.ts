@@ -71,7 +71,7 @@ vi.mock('../src/services/solidPreviewWorker',async()=>{
  const {measureNurbsCurveDistance}=await import('../src/services/nurbsCurve')
  const {measureSolidVertices,measureSolidEdgeCurvature}=await import('../src/services/solidMeasurements')
  const {addSolidPrimitive}=await import('../src/services/solidPrimitive')
- const {importSolidRushGraph}=await import('../src/services/solidRushGraphImport')
+ const {importSolidRushGraph}=await import('../src/exchange/solidRushGraphImport')
  const {prepareSolidDisplay}=await import('../src/services/solidDisplayPreparation')
  const {parseDirectDocument}=await import('../src/services/directModeling')
  const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
@@ -187,7 +187,7 @@ it('edits physical material parameters without losing color or history, then res
 })
 
 it('imports a mesh through the Solid worker with Full manifold repair',async()=>{
- const {importMeshFile}=await import('../src/services/meshImport')
+ const {importMeshFile}=await import('../src/exchange/meshImport')
  previewWorkerRun.mockImplementation((job,options)=>job.kind==='meshImport'
   ?importMeshFile(job.fileName,job.input,job.options,options.onProgress):undefined)
  const ui=await mount(),before=ui.doc()
@@ -2933,7 +2933,7 @@ it('does not replace newer local edits with a delayed shared draft or expose its
 })
 
 it('imports RushGraph through a cancellable worker and preserves the prior scene in Undo',async()=>{
- const {importSolidRushGraph}=await import('../src/services/solidRushGraphImport')
+ const {importSolidRushGraph}=await import('../src/exchange/solidRushGraphImport')
  const ui=await mount(),before=ui.doc(),text=readFileSync('tests/fixtures/solid-rush-import.json','utf8')
  const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.json,application/json')!
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
@@ -2953,7 +2953,7 @@ it('imports RushGraph through a cancellable worker and preserves the prior scene
 })
 
 it.each([false,true])('cancels RushGraph import on group change; late failure=%s',async failure=>{
- const {importSolidRushGraph}=await import('../src/services/solidRushGraphImport')
+ const {importSolidRushGraph}=await import('../src/exchange/solidRushGraphImport')
  const ui=await mount({seedDocument:{version:1,sketches:[],bodies:[],groups:[{name:'Destination',source:''}]}})
  const before=ui.doc(),text=readFileSync('tests/fixtures/solid-rush-import.json','utf8')
  const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.json,application/json')!

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { contoursExtrusion, contoursSvg, svgContours, svgPreview, SVG_MAX_BYTES } from '../src/services/svgGeometry'
-import { parseOpenScadSvg, loadOpenScadImport, OpenScadImportDataError } from '../src/services/openScadImport'
+import { parseOpenScadSvg, loadOpenScadImport, OpenScadImportDataError } from '../src/exchange/openScadImport'
 import { OpenScadProject } from '../src/services/openScadProject'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 

@@ -21,7 +21,7 @@ import {
   OpenScadImportPositionedError,
   type OpenScad2021LegacyImportFormat,
   type OpenScadImportErrorCode,
-} from '../../services/openScadImport'
+} from '../../exchange/openScadImport'
 
 import {
   loadOpenScadSurfaceHeightMap,

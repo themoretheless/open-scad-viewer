@@ -94,14 +94,14 @@ it('moves manifold Boolean output without detaching either operand',async()=>{
 })
 
 it('moves imported mesh and manifold diagnostics without detaching source bytes',async()=>{
- const {importMeshFile}=await import('../src/services/meshImport')
+ const {importMeshFile}=await import('../src/exchange/meshImport')
  const source=['v 0 0 0','v 1 0 0','v 0 1 0','v 0 0 1','f 1 3 2','f 1 2 4','f 2 3 4'].join('\n')
  const input=new TextEncoder().encode(source),result=await importMeshFile('open.obj',input,{repair:'full'})
  const prepared=prepareMainSolidTransfer({version:1,id:6,kind:'meshImport',ok:true,result})
  expect(prepared.transfer).toEqual(expect.arrayContaining([result.positions.buffer,result.indices.buffer,result.manifold.before.boundaryEdges.buffer]))
  const received=structuredClone(prepared.response,{transfer:prepared.transfer})
  if(!received.ok)throw Error('Unexpected failure')
- const moved=received.result as import('../src/services/meshImport').ImportedMesh
+ const moved=received.result as import('../src/exchange/meshImport').ImportedMesh
  expect(moved.triangleCount).toBe(4);expect(moved.manifold.after.isManifold).toBe(true)
  expect(result.positions.byteLength).toBe(0);expect(input.byteLength).toBeGreaterThan(0)
 })

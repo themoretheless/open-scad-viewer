@@ -1,6 +1,6 @@
 import { CRC_TABLE, IDENTITY_4, OPENSCAD_IMPORT_MAX_TRIANGLES, OPENSCAD_IMPORT_MAX_VERTICES, OPENSCAD_IMPORT_MAX_XML_DEPTH, OPENSCAD_IMPORT_MAX_XML_ELEMENTS, OPENSCAD_IMPORT_MAX_ZIP_EXPANDED_BYTES, OpenScadImportDataError } from '../openScadImport'
 import type { AmfNode, Matrix4, OpenScadImportGeometry3D, OpenScadImportPreparationBudget, Zip64EntryValues, ZipDirectoryInfo } from '../openScadImport'
-import type { OpenScadProjectFile } from '../openScadProject'
+import type { OpenScadProjectFile } from '../../services/openScadProject'
 import { appendRawMesh, attribute, childElement, childElements, multiply4, numericText, parseXml, requiredAttribute, rotation4, unitScale } from './parseXml'
 import { boundedCount, dataError, geometry3D } from './parseOpenScadStl'
 import { decodeOpenScadAmfText } from './unzip3mf'

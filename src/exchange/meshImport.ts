@@ -1,11 +1,11 @@
-import {decodeMeshBytesInKernel} from './geometry/meshImportKernel'
-import {callGeometryRust, GeometryKernelError, warmGeometryKernel} from './geometry/kernel'
+import {decodeMeshBytesInKernel} from '../services/geometry/meshImportKernel'
+import {callGeometryRust, GeometryKernelError, warmGeometryKernel} from '../services/geometry/kernel'
 import {
   checkManifoldInKernel,
   repairManifoldInKernel,
   type KernelManifoldRepair,
   type KernelManifoldReport,
-} from './geometry/manifoldAnalysis'
+} from '../services/geometry/manifoldAnalysis'
 /**
  * Unified mesh file import. Decodes STL (ASCII/binary), OBJ, PLY (ASCII/binary),
  * OFF, AMF and 3MF into one welded, indexed triangle mesh that the mesh
@@ -25,11 +25,11 @@ import {
   parseOpenScadAmf,
   type OpenScadImportGeometry3D,
 } from './openScadImport'
-import type { OpenScadProjectBlobFile } from './openScadProject'
-import type { PolygonMesh } from './geometry/polygon'
-import { detectMeshImportFormat, MESH_IMPORT_FORMATS, MESH_IMPORT_MAX_BYTES, type MeshImportFormat } from './meshFormats'
+import type { OpenScadProjectBlobFile } from '../services/openScadProject'
+import type { PolygonMesh } from '../services/geometry/polygon'
+import { detectMeshImportFormat, MESH_IMPORT_FORMATS, MESH_IMPORT_MAX_BYTES, type MeshImportFormat } from '../services/meshFormats'
 
-export { detectMeshImportFormat, MESH_IMPORT_ACCEPT, MESH_IMPORT_FORMATS, MESH_IMPORT_MAX_BYTES, stripMeshExtension, type MeshImportFormat } from './meshFormats'
+export { detectMeshImportFormat, MESH_IMPORT_ACCEPT, MESH_IMPORT_FORMATS, MESH_IMPORT_MAX_BYTES, stripMeshExtension, type MeshImportFormat } from '../services/meshFormats'
 
 export const MESH_IMPORT_MAX_TRIANGLES = OPENSCAD_IMPORT_MAX_TRIANGLES
 export const MESH_IMPORT_MAX_VERTICES = OPENSCAD_IMPORT_MAX_VERTICES

@@ -6,7 +6,7 @@ import type { MainSolidJob, MainSolidResponse, MainSolidResults } from './mainSo
 import type { StructuralSections } from './structuralSections'
 import type { DirectDocument } from './directModeling'
 import type { MeshBooleanResult, MeshRepairResult } from './meshEditing'
-import type { ImportedMesh } from './meshImport'
+import type { ImportedMesh } from '../exchange/meshImport'
 
 /**
  * Wire packing for restored documents and the structural-sections source mesh

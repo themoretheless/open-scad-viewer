@@ -5,7 +5,7 @@ import {evaluateNurbsSurface} from '../src/services/nurbsSurface'
 import {compileRushFrontend} from '../src/services/rushFrontend'
 import {buildOwnNurbs} from '../src/services/rushGraphNurbsKernel'
 import {compileRushGraphNurbs} from '../src/services/rushGraphNurbsCompiler'
-import {importMeshFile} from '../src/services/meshImport'
+import {importMeshFile} from '../src/exchange/meshImport'
 
 it('lowers guide references and checks tangent units through Rush',()=>{
  const source=readFileSync('examples/rush/guided-loft-surface.r','utf8')

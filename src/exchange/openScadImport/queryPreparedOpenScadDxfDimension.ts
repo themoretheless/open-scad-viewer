@@ -1,6 +1,6 @@
 import { DXF_QUERY_GRID_RESOLUTION } from '../openScadImport'
 import type { DxfQueryPathLine, OpenScadDxfDimensionQueryOptions, OpenScadDxfLineSegmentMetadata, OpenScadDxfQueryOptions, OpenScadDxfQueryResult, OpenScadImportForcedAsset, OpenScadImportGeometry, OpenScadImportLoadOptions, OpenScadImportPoint2, PreparedOpenScadImportAssets } from '../openScadImport'
-import { OpenScadProject, resolveOpenScadProjectPath } from '../openScadProject'
+import { OpenScadProject, resolveOpenScadProjectPath } from '../../services/openScadProject'
 import { dxfQueryDiagnostic, dxfQueryResult, loadPreparedOpenScadImport, prepareOpenScadImportAssets, resolveDxfQueryTransform, resolvePreparedDxfQueryMetadata, transformDxfDimensionCoordinates } from './prepareOpenScadImportAssets'
 
 /** Evaluate OpenSCAD 2021.01 dxf_dim() against a prepared, bounded project asset. */

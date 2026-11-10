@@ -106,7 +106,7 @@ it('imports and Fully repairs a mesh in the worker with staged progress',async()
  if(messages[0].ok){
   const expectation=mainSolidExpectation(job)
   expect(mainSolidResult(expectation,messages[0].result)).toBe(true)
-  const malformed=structuredClone(messages[0].result) as import('../src/services/meshImport').ImportedMesh
+  const malformed=structuredClone(messages[0].result) as import('../src/exchange/meshImport').ImportedMesh
   expect(mainSolidResult(expectation,{...malformed,triangleCount:3})).toBe(false)
  }
  expect(input).toEqual(before);expect(input.byteLength).toBeGreaterThan(0)

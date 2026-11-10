@@ -1,10 +1,10 @@
-import {decodeMeshBytesInKernel,renderTriangleSoupInKernel} from './geometry/meshImportKernel'
-import {GeometryKernelError} from './geometry/kernel'
+import {decodeMeshBytesInKernel,renderTriangleSoupInKernel} from '../services/geometry/meshImportKernel'
+import {GeometryKernelError} from '../services/geometry/kernel'
 import type { MeshData, SceneEntityId } from '../core/mesh'
 import { geometryAssetId } from '../core/scene'
-import { buildMeshBvh } from './meshBvh'
-import { extractSemanticEdges } from './meshTopology'
-import { identity } from './math3d'
+import { buildMeshBvh } from '../services/meshBvh'
+import { extractSemanticEdges } from '../services/meshTopology'
+import { identity } from '../services/math3d'
 
 /** Conservative first-release cap: final artifacts plus topology scratch stay bounded. */
 export const MAX_STL_IMPORT_TRIANGLES = 250_000

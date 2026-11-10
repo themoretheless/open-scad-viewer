@@ -3,7 +3,7 @@ import { exportMeshFormat, MESH_EXPORT_FORMATS } from '../src/services/meshExpor
 import { buildOwnNurbs } from '../src/services/rushGraphNurbsKernel';
 import { RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/services/rushGraphNurbs';
 import { OpenScadProject } from '../src/services/openScadProject';
-import { parseOpenScad3mf, parseOpenScadAmf, parseOpenScadStl, parseOpenScadOff } from '../src/services/openScadImport';
+import { parseOpenScad3mf, parseOpenScadAmf, parseOpenScadStl, parseOpenScadOff } from '../src/exchange/openScadImport';
 const built = buildOwnNurbs(RUSH_GRAPH_NURBS_SURFACE_EXAMPLE, { action: 'build' });
 if (!('mesh' in built) || !built.mesh)
     throw new Error('Missing mesh');

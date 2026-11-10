@@ -1,5 +1,5 @@
 import {ref} from 'svet'
-import type {MeshImportRepairMode} from './meshImport'
+import type {MeshImportRepairMode} from '../exchange/meshImport'
 import {storageGet, storageSet} from './safeStorage'
 
 export const MANIFOLD_PREFERENCES_STORAGE_KEY = 'scad-manifold-preferences-v1'

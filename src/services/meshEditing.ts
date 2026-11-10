@@ -3,7 +3,7 @@ import type { SculptBrush } from './geometryEditing'
 import { brushPolygonMesh, sculptPolygonMesh, deformPolygonMesh, extrudePolygonProfile, exportPolygonStl, inspectPolygonMesh, normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
 import { booleanManifoldInKernel, checkManifoldInKernel, repairManifoldInKernel, MANIFOLD_BOOLEAN_DEFAULT_OPTIONS, type KernelManifoldRepair, type KernelManifoldReport, type ManifoldBooleanOp, type ManifoldBooleanOptions } from './geometry/manifoldAnalysis'
 import { stringifyMeshJson } from './meshJson'
-import { parseBinaryStl } from './stlImport'
+import { parseBinaryStl } from '../exchange/stlImport'
 
 export type MeshSelectMode = 'object' | 'vertex' | 'edge' | 'face'
 export type MeshEditTool = 'select' | 'grab' | 'rotate' | 'scale' | 'extrude' | 'inset' | 'knife'

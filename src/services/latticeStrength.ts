@@ -3,7 +3,7 @@ import type {MeshData, SceneEntityId} from '../core/mesh'
 import type {LighteningOptions, LighteningPattern} from './solidLightening'
 import type {LatticeGraphMesh} from './latticeGraphProtocol'
 import {flattenGroupGeometry} from './meshFlatten'
-import {importedStlToMeshData} from './stlImport'
+import {importedStlToMeshData} from '../exchange/stlImport'
 import type {Bilingual} from './latticePrintReport'
 
 export type LatticeMaterialId = 'pla' | 'petg' | 'abs' | 'nylon' | 'al6061' | 'steel'

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {solidImportErrorMessage} from '../src/services/solidImportErrorMessage'
+import {solidImportErrorMessage} from '../src/exchange/solidImportErrorMessage'
 it('localizes invalid mesh imports with concrete recovery guidance',()=>{
  expect(solidImportErrorMessage(new Error('Invalid body mesh.'),'ru')).toContain('индексы треугольников')
  expect(solidImportErrorMessage('Error: Invalid body mesh.','ru')).not.toContain('Invalid body mesh')

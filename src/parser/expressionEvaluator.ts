@@ -41,7 +41,7 @@ import {
 import {
   queryPreparedOpenScadDxfCross,
   queryPreparedOpenScadDxfDimension,
-} from '../services/openScadImport'
+} from '../exchange/openScadImport'
 import type { RGBA } from '../services/openscadColors'
 import {
   StableBuiltinValueError,

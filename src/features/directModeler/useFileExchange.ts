@@ -13,7 +13,7 @@ import { downloadBytes } from '../../services/downloadArtifact'
 import { type MeshExportFormat } from '../../services/meshConvert'
 import { stripMeshExtension } from '../../services/meshFormats'
 import { manifoldPreferenceSnapshot } from '../../services/manifoldPreferences'
-import { formatMeshImportNotice } from '../../services/meshImportReport'
+import { formatMeshImportNotice } from '../../exchange/meshImportReport'
 import { stringifyMeshJson } from '../../services/meshJson'
 import type { createSolidPreviewWorker } from '../../services/solidPreviewWorker'
 import { download, type Pane } from './helpers'
@@ -229,7 +229,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
       const menu = input.closest?.('details') as HTMLDetailsElement | null
       if (menu) menu.open = false
     } catch (e) {
-      const { solidImportErrorMessage } = await import('../../services/solidImportErrorMessage')
+      const { solidImportErrorMessage } = await import('../../exchange/solidImportErrorMessage')
       if (generation === getHistoryGeneration()) error.value = solidImportErrorMessage(e, ru.value ? 'ru' : 'en')
     } finally {
       if (generation === getHistoryGeneration()) historyPending.value = false

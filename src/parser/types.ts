@@ -11,7 +11,7 @@ import type {
 } from '../services/openscadCompiler'
 import { AbortedError } from '../services/openscadErrors'
 import type { RGBA } from '../services/openscadColors'
-import type { PreparedOpenScadImportAssets } from '../services/openScadImport'
+import type { PreparedOpenScadImportAssets } from '../exchange/openScadImport'
 import type { OpenScadProject } from '../services/openScadProject'
 import type { OpenScadStableScope } from '../services/openScadStableScope'
 import type { PreparedOpenScadSurfaceAssets } from '../services/openScadSurface'

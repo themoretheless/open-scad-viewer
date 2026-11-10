@@ -1,7 +1,7 @@
 import {callGeometryRust} from './geometry/kernel'
 import type {MeshData} from '../core/mesh'
 import type {TrussInput, TrussResponse} from './trussAnalysis'
-import {importedStlToMeshData} from './stlImport'
+import {importedStlToMeshData} from '../exchange/stlImport'
 
 export const TRUSS_FORCE_COLORS = {
   compression: [0.15, 0.55, 0.95, 1],

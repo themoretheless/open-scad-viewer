@@ -1,6 +1,6 @@
 import { FORMAT_SET, NUMBER, OPENSCAD_IMPORT_MAX_TRIANGLES, OPENSCAD_IMPORT_MAX_VERTICES, OpenScadImportDataError, UTF8, UTF8_FATAL } from '../openScadImport'
 import type { OpenScadImportFormat, OpenScadImportGeometry, OpenScadImportGeometry3D } from '../openScadImport'
-import type { OpenScadProjectFile } from '../openScadProject'
+import type { OpenScadProjectFile } from '../../services/openScadProject'
 
 export function dataError(
   code: OpenScadImportDataError['code'],

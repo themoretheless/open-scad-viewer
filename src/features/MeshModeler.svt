@@ -61,13 +61,13 @@ import { isGeometryKernelReady, warmGeometryKernel } from '../services/geometry/
 
 import { storageGet, storageSet } from '../services/safeStorage'
 
-import { MESH_IMPORT_ACCEPT, stripMeshExtension } from '../services/meshImport'
+import { MESH_IMPORT_ACCEPT, stripMeshExtension } from '../exchange/meshImport'
 
 import { manifoldPreferenceSnapshot } from '../services/manifoldPreferences'
 
 import ManifoldSettings from '../components/ManifoldSettings.svt'
 
-import { formatMeshImportNotice } from '../services/meshImportReport'
+import { formatMeshImportNotice } from '../exchange/meshImportReport'
 
 import { formatMeshBooleanNotice } from '../services/meshBooleanReport'
 

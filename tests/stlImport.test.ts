@@ -7,7 +7,7 @@ import {
   MAX_STL_IMPORT_TRIANGLES,
   parseBinaryStl,
   StlImportError,
-} from '../src/services/stlImport'
+} from '../src/exchange/stlImport'
 
 type Triangle = readonly [
   number, number, number,

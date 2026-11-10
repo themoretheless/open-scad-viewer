@@ -9,7 +9,7 @@ import {
 import type { PolygonMesh } from '../../geometry/polygon'
 import type { KernelManifoldMetrics } from '../../geometry/manifoldAnalysis'
 import type { MeshBooleanResult, MeshRepairResult } from '../../meshEditing'
-import type { ImportedMesh } from '../../meshImport'
+import type { ImportedMesh } from '../../../exchange/meshImport'
 import type { MeshConvertResult, MeshExportArtifact } from '../../meshConvert'
 import { convertedMeshFileName, MESH_IMPORT_FORMATS } from '../../meshFormats'
 import type { SurfaceBoundaryReport } from '../../solidSurfaceDiagnostics'

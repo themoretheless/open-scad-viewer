@@ -57,7 +57,7 @@ import {
 import { compileOpenScadProject } from './openScadProjectCompiler'
 import {
   prepareOpenScadImportAssets,
-} from './openScadImport'
+} from '../exchange/openScadImport'
 import {
   prepareOpenScadSurfaceAssets,
 } from './openScadSurface'

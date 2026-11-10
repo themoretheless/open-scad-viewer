@@ -5,10 +5,10 @@ import {
   normalizeOpenScadProjectPath,
   resolveOpenScadProjectPath,
   type OpenScadProjectFile,
-} from './openScadProject'
-import type { CallNode } from './openscadCompiler'
-import { OpenSCADParseError } from './openscadErrors'
-import { readSvgDocument, type SvgOptions } from './svgDocument'
+} from '../services/openScadProject'
+import type { CallNode } from '../services/openscadCompiler'
+import { OpenSCADParseError } from '../services/openscadErrors'
+import { readSvgDocument, type SvgOptions } from '../services/svgDocument'
 export { parseOpenScadStl, parseOpenScadOff } from './openScadImport/parseOpenScadStl'
 export { parseOpenScadAmf } from './openScadImport/parseOpenScadAmf'
 export { parseOpenScad3mf, parseOpenScadSvg } from './openScadImport/parseOpenScad3mf'

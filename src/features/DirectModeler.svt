@@ -50,7 +50,7 @@ import { validateSimpleSketch, slotSketch, sampleCurve, bakeSketch, trimSketch, 
 import { storageGet, storageSet } from '../services/safeStorage'
 import type {SolidBooleanOptions} from '../services/solidBoolean'
 import { defaultDirectCamera, directExtrusionTool, projectDirectPoint, unprojectDirectXY, unprojectDirectPlane } from '../services/directModelingTools'
-import { MESH_IMPORT_ACCEPT } from '../services/meshImport'
+import { MESH_IMPORT_ACCEPT } from '../exchange/meshImport'
 import ManifoldSettings from '../components/ManifoldSettings.svt'
 import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS } from '../services/meshConvert'
 import { solidDocumentToMeshDocument } from '../services/solidBridge'
