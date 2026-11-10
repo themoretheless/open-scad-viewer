@@ -689,7 +689,15 @@ fn convex_profile_extrusion_and_connected_edge_chains_are_manifold() {
         })
         .unwrap();
     let chamfered = chamfer_edges(&model, &[0, connected], 1.).unwrap();
-    let filleted = fillet_edges(&model, &[0, connected], 1., 4).unwrap();
+    // Four segments of radius 1 deviate 1/cos(pi/16) - 1 = 0.0196 mm from
+    // the arc, above the 0.01 mm ceiling of a B-rep tolerance: the tolerance
+    // contract refuses instead of publishing a looser model. Eight segments
+    // deviate 0.0048 mm.
+    assert_eq!(
+        fillet_edges(&model, &[0, connected], 1., 4).unwrap_err().code,
+        "BREP_TOLERANCE_CONTRACT_REFUSED"
+    );
+    let filleted = fillet_edges(&model, &[0, connected], 1., 8).unwrap();
     assert!(chamfered.faces.len() > 7);
     assert!(filleted.faces.len() > chamfered.faces.len());
     chamfered.validate().unwrap();
