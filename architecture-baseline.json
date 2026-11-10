@@ -596,7 +596,6 @@
     "src/services/gpuSubdivision.ts::runGpuSubdivisionRefine@1": 202,
     "src/services/gpuSubdivisionReference.ts::referenceRefineSubdivision@1": 182,
     "src/services/gpuTrussSolver.ts::referenceSolveTrussPcg@1": 173,
-    "src/services/mainSolidProtocol/mainSolidResult.ts::mainSolidResult@1": 421,
     "src/services/manifoldPlanQualificationWorkerLane.ts::(anonymous)@3": 166,
     "src/services/manifoldPlanQualificationWorkerLane.ts::evaluate@1": 218,
     "src/services/openScadImport/parseOpenScadDxfQueryMetadata.ts::parseOpenScadDxfIntermediate@1": 154,
