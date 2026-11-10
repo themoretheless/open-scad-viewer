@@ -648,5 +648,16 @@
     "slicer-core": 2,
     "subdivision-core": 7,
     "vr-core": 7
-  }
+  },
+  "srcLayers": [
+    "exchange -> services",
+    "fabrication -> services",
+    "fabrication -> workers",
+    "kernel -> services",
+    "kernel -> workers",
+    "language -> services",
+    "parser -> services",
+    "render -> services",
+    "services -> workers"
+  ]
 }

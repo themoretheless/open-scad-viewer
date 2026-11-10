@@ -11,6 +11,7 @@ import {fileURLToPath} from 'node:url'
 import {unreachableRustFiles} from './rustModuleTree.mjs'
 import {FUNCTION_LINE_LIMIT, measureFunctions} from './functionSizes.mjs'
 import {MODULE_LAYERS, upwardModuleEdges} from './moduleLayers.mjs'
+import {upwardSrcEdges} from './srcDomains.mjs'
 
 export const SIZE_LIMITS = {'.rs': 800, '.ts': 500, '.mts': 500, '.mjs': 500, '.svt': 400}
 const SIZE_EXCLUDE = [/^crates\/vendor\//, /\/generated\//, /\.golden\.ts$/, /\.d\.ts$/, /(^|\/)tests?\//, /\.test\.[cm]?ts$/]
@@ -90,7 +91,7 @@ export function layerViolations(edges) {
   return [...violations].sort()
 }
 
-export function auditArchitecture({sizes, layers, unreachable, mechanical, functions, moduleLayers}, baseline) {
+export function auditArchitecture({sizes, layers, unreachable, mechanical, functions, moduleLayers, srcLayers}, baseline) {
   const errors = []
   for (const [path, lines] of Object.entries(sizes)) {
     const pinned = baseline.sizes[path]
@@ -113,12 +114,13 @@ export function auditArchitecture({sizes, layers, unreachable, mechanical, funct
       if (functions[key] === undefined) errors.push(`${key}: function is now within limits or gone; remove it from the baseline (--update)`)
   }
   if (moduleLayers) errors.push(...auditPinnedList(moduleLayers, baseline.moduleLayers, 'upward module dependency (ADR 0012)', 'move the code down a layer or the dependency up'))
+  if (srcLayers) errors.push(...auditPinnedList(srcLayers, baseline.srcLayers, 'upward src domain import (plan M10)', 'move the code down a domain or the import up'))
   if (unreachable) errors.push(...auditPinnedList(unreachable, baseline.unreachable, 'not compiled by any Cargo target', 'declare it with `mod` or delete it'))
   if (mechanical) errors.push(...auditPinnedList(mechanical, baseline.mechanical, 'mechanically split file name', 'name the module after its responsibility'))
   return errors
 }
 
-export function nextBaseline({sizes, layers, unreachable = [], mechanical = [], functions = {}, moduleLayers = []}, baseline) {
+export function nextBaseline({sizes, layers, unreachable = [], mechanical = [], functions = {}, moduleLayers = [], srcLayers = []}, baseline) {
   const pinned = {}
   for (const [path, lines] of Object.entries(sizes).sort(([a], [b]) => a.localeCompare(b)))
     pinned[path] = Math.min(lines, baseline.sizes[path] ?? lines)
@@ -127,6 +129,7 @@ export function nextBaseline({sizes, layers, unreachable = [], mechanical = [], 
   return {...baseline, sizes: pinned, layers: layers.filter(v => baseline.layers.includes(v)),
     unreachable: keep(unreachable, baseline.unreachable), mechanical: keep(mechanical, baseline.mechanical),
     moduleLayers: keep(moduleLayers, baseline.moduleLayers),
+    srcLayers: keep(srcLayers, baseline.srcLayers),
     functions: Object.fromEntries(Object.entries(functions).filter(([key]) => baseline.functions?.[key] !== undefined)
       .map(([key, lines]) => [key, Math.min(lines, baseline.functions[key])]).sort(([a], [b]) => a.localeCompare(b)))}
 }
@@ -139,7 +142,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const observed = {sizes: measureSizes(root, files), layers: layerViolations(crateEdges(root)),
     unreachable: unreachableRustFiles(root, present), mechanical: mechanicalNames(present),
     functions: measureFunctions(root, present, FROZEN_ARCHIVES),
-    moduleLayers: Object.keys(MODULE_LAYERS).flatMap(crate => upwardModuleEdges(root, crate, present))}
+    moduleLayers: Object.keys(MODULE_LAYERS).flatMap(crate => upwardModuleEdges(root, crate, present)),
+    srcLayers: upwardSrcEdges(root, present)}
   const baseline = existsSync(baselinePath)
     ? JSON.parse(readFileSync(baselinePath, 'utf8'))
     : {sizes: {}, layers: []}
@@ -155,6 +159,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     if (errors.length) process.exit(1)
     console.log(`architecture ok: ${Object.keys(baseline.sizes).length} pinned oversized files, ${baseline.layers.length} pinned layer violations, `
       + `${(baseline.unreachable ?? []).length} pinned uncompiled Rust files, ${(baseline.mechanical ?? []).length} pinned mechanical file names, `
-      + `${Object.keys(baseline.functions ?? {}).length} pinned long functions, ${(baseline.moduleLayers ?? []).length} pinned upward module edges`)
+      + `${Object.keys(baseline.functions ?? {}).length} pinned long functions, ${(baseline.moduleLayers ?? []).length} pinned upward module edges, ${(baseline.srcLayers ?? []).length} pinned upward src domain imports`)
   }
 }

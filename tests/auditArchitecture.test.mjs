@@ -20,7 +20,7 @@ test('upward crate dependency is a layering violation', () => {
 test('update only lowers pins and drops fixed violations', () => {
   const baseline = {sizes: {'a.rs': 900, 'b.rs': 1000}, layers: ['x -> y', 'p -> q']}
   assert.deepEqual(nextBaseline({sizes: {'a.rs': 850, 'c.rs': 999}, layers: ['x -> y']}, baseline),
-    {sizes: {'a.rs': 850, 'c.rs': 999}, layers: ['x -> y'], unreachable: [], mechanical: [], functions: {}, moduleLayers: []})
+    {sizes: {'a.rs': 850, 'c.rs': 999}, layers: ['x -> y'], unreachable: [], mechanical: [], functions: {}, moduleLayers: [], srcLayers: []})
 })
 
 
@@ -124,4 +124,12 @@ test('clippy warnings in a file shared through #[path] count once, for the ownin
   const warning = file => JSON.stringify({reason: 'compiler-message', message: {level: 'warning', message: 'unused', code: {code: 'dead_code'},
     spans: [{is_primary: true, file_name: file, line_start: 3, column_start: 1}]}})
   assert.deepEqual(countClippy([warning('k/examples/../../j/examples/support/a.rs'), warning('j/examples/support/a.rs')].join('\n')), {j: 1})
+})
+
+test('upward imports between src domains are pinned', async () => {
+  const {SRC_LAYERS} = await import('../scripts/srcDomains.mjs')
+  assert.ok(SRC_LAYERS.core < SRC_LAYERS.kernel && SRC_LAYERS.kernel < SRC_LAYERS.services && SRC_LAYERS.services < SRC_LAYERS.features)
+  const baseline = {sizes: {}, layers: [], srcLayers: ['kernel -> services']}
+  assert.deepEqual(auditArchitecture({sizes: {}, layers: [], srcLayers: ['kernel -> services']}, baseline), [])
+  assert.match(auditArchitecture({sizes: {}, layers: [], srcLayers: ['kernel -> services', 'core -> kernel']}, baseline)[0], /core -> kernel: upward src domain import/)
 })
