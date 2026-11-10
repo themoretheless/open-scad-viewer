@@ -18,6 +18,13 @@ use serialization::tolerance_evidence;
 #[cfg(feature = "codec")]
 pub use serialization::{project_curve, project_surface};
 
+pub mod closed_spline;
+#[doc(hidden)]
+pub mod conics;
+pub mod grid_spline;
+pub mod hermite;
+pub mod natural_loft;
+pub mod natural_spline;
 pub mod surface_deviation;
 pub mod sections;
 pub mod bezier_extraction;

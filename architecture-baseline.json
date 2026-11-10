@@ -78,8 +78,7 @@
   ],
   "mechanical": [],
   "moduleLayers": [
-    "nurbs-core: analysis -> sweeps",
-    "nurbs-core: offset -> construct"
+    "nurbs-core: analysis -> sweeps"
   ],
   "functions": {
     "crates/brep-core/src/aag_features.rs::find_holes@1": 243,

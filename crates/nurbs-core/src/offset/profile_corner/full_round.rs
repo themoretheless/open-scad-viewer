@@ -200,7 +200,7 @@ pub fn propose(a: &Curve, middle: &Curve, b: &Curve, tolerance: f64) -> Result<P
     let crown = std::array::from_fn::<_, 2, _>(|i| center[i] + radius * outward[i]);
     let mut bridges = [(start, split), (start + split, sweep - split)]
         .map(|(a, d)| {
-            crate::primitives::circle_arc(
+            crate::foundation::conics::circle_arc(
                 [center[0], center[1], 0.],
                 [0., 0., 1.],
                 radius,

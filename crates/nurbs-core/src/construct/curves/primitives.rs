@@ -10,7 +10,7 @@ use crate::{
     surface::Surface,
 };
 
-mod conics;
+use crate::foundation::conics;
 mod exact_circle;
 pub mod exact_conics;
 mod exact_frame;
