@@ -13,7 +13,8 @@
 //! snaps to the axis, an offset inside the recognition-scale band reports a
 //! `NearCoincidence` region, and a clearly off-axis pair is
 //! `UnsupportedSurface` (the general sphere/torus pair is a quartic, out of
-//! scope). Classification uses outward binary64 bands widened by both
+//! scope) unless it provably misses: an off-axis sphere entirely outside the
+//! tube, entirely inside it, or enclosing the whole torus resolves empty. Classification uses outward binary64 bands widened by both
 //! recognition deviations.
 //!
 //! Both surfaces are surfaces of revolution about the shared axis, so the
@@ -161,6 +162,19 @@ pub fn intersect_sphere_torus(
     // larger is the unsupported general (quartic) configuration.
     let snap = 64. * f64::EPSILON * terms;
     if d_perp > snap {
+        // Off the axis the section is a quartic, but a miss is still
+        // provable. The torus is the level set dist(p, core circle) = r_t
+        // and that distance is 1-Lipschitz, so every torus point lies at a
+        // distance from the sphere center between |dmin - r_t| and
+        // dmax + r_t, with dmin and dmax the nearest and farthest distances
+        // from the center to the core circle.
+        let dmin = (d_perp - torus.major).hypot(h);
+        let dmax = (d_perp + torus.major).hypot(h);
+        let reach = band + 16. * f64::EPSILON * (d_perp + terms);
+        let nearest = (dmin - torus.minor).abs();
+        if sphere.radius + reach < nearest || sphere.radius > dmax + torus.minor + reach {
+            return Ok(report);
+        }
         let near = RECOGNITION * (sphere.radius + torus.major + torus.minor);
         let reason = if d_perp <= near {
             UnresolvedReason::NearCoincidence
@@ -614,6 +628,44 @@ mod tests {
             report.unresolved[0].parameter_box,
             vec![0., 1., 0., 1., 0., 1., 0., 1.]
         );
+    }
+
+    #[test]
+    fn off_axis_misses_resolve_empty_and_contacts_stay_unsupported() {
+        let torus = brep_core::analytic::torus(3., 1.).unwrap();
+        let empty = |radius: f64, at: [f64; 3]| {
+            let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
+            intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap()
+        };
+        for (radius, at) in [
+            // Inside the tube, off the axis: dmin = 0.1 < r_t, gap 0.6.
+            (0.3, [3.1, 0., 0.]),
+            // Beside the torus, clear of the tube.
+            (1., [6., 1., 0.5]),
+            // Above the hole, off the axis.
+            (0.5, [1., 0.5, 2.]),
+            // Swallowing the whole torus from off the axis: dmax + r_t < 9.
+            (9., [0.7, -0.4, 1.]),
+        ] {
+            let report = empty(radius, at);
+            assert!(
+                report.components.is_empty() && report.unresolved.is_empty(),
+                "{radius} at {at:?}: {report:?}"
+            );
+            assert_eq!(report.coverage, Coverage::NumericallyResolved);
+        }
+        // A miss by 1e-6, beyond the rounding band, resolves empty.
+        assert!(empty(0.9 - 1e-6, [3.1, 0., 0.]).unresolved.is_empty());
+        // A genuine off-axis contact and an exact internal tangency both stay
+        // unresolved: the band never turns a contact into a miss.
+        for (radius, at) in [(1., [4.5, 0., 0.]), (0.9, [3.1, 0., 0.])] {
+            let report = empty(radius, at);
+            assert_eq!(report.coverage, Coverage::Incomplete, "{radius} at {at:?}");
+            assert_eq!(
+                report.unresolved[0].reason,
+                UnresolvedReason::UnsupportedSurface
+            );
+        }
     }
 
     #[test]
