@@ -1,5 +1,5 @@
 //! Actual rolling-ball saved B-rep radius acceptance. No G2 join claim.
-#[path = "support/contact_graft_fixture.rs"]
+#[path = "../../brep-core/examples/support/contact_graft_fixture.rs"]
 mod fixture;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = std::path::PathBuf::from(std::env::args().nth(1).ok_or("Need output directory")?);

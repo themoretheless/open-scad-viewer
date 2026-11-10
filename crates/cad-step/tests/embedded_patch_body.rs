@@ -1,4 +1,4 @@
-#[path = "../examples/support/retained_patch_fixture.rs"]
+#[path = "../../brep-core/examples/support/retained_patch_fixture.rs"]
 mod fixture;
 use brep_core::{boundary_embedding as e, face_cut, region_replacement as r};
 fn limits() -> r::EmbeddedPatchLimits {

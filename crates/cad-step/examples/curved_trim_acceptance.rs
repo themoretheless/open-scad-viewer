@@ -1,5 +1,5 @@
 //! Generated nonlinear cut on a closed analytic control; no material removal.
-#[path = "support/curved_trim_fixture.rs"]
+#[path = "../../brep-core/examples/support/curved_trim_fixture.rs"]
 mod fixture;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     use brep_core::{face_cut, watertight};

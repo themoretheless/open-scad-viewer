@@ -1,5 +1,5 @@
 //! Reproduce the remaining retained-region membership gate on a curved body.
-#[path = "support/curved_contact_body_fixture.rs"]
+#[path = "../../brep-core/examples/support/curved_contact_body_fixture.rs"]
 mod fixture;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let f = fixture::build()?;

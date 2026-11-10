@@ -1,5 +1,5 @@
 //! Closed retained-source G2 transition with independent polynomial volume target.
-#[path = "support/contact_graft_fixture.rs"]
+#[path = "../../brep-core/examples/support/contact_graft_fixture.rs"]
 mod fixture;
 use sha2::{Digest, Sha256};
 fn choose(n: usize, k: usize) -> f64 {

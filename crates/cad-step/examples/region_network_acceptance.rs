@@ -1,5 +1,5 @@
 //! Prepared curved corner-sector assembly; no prescribed-radius corner claim.
-#[path = "support/region_network_fixture.rs"]
+#[path = "../../brep-core/examples/support/region_network_fixture.rs"]
 mod fixture;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     use sha2::{Digest, Sha256};

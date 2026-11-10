@@ -1,5 +1,5 @@
 //! Independent STEP target: integral of 3 + x²/4 + y²/8 on [-1,2]².
-#[path = "support/corner_close_fixture.rs"]
+#[path = "../../brep-core/examples/support/corner_close_fixture.rs"]
 mod fixture;
 use sha2::{Digest, Sha256};
 fn main() -> Result<(), Box<dyn std::error::Error>> {

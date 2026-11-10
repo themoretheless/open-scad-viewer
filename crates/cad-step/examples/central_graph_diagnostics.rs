@@ -1,4 +1,4 @@
-#[path = "../tests/fixtures/trihedral_candidate.rs"]
+#[path = "../../brep-core/tests/fixtures/trihedral_candidate.rs"]
 mod saved;
 use brep_core::region_replacement as r;
 fn main() {

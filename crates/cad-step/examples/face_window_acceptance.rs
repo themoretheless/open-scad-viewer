@@ -1,5 +1,5 @@
 //! A real retained face plus sewn nonplanar replacement, not a closure-only test.
-#[path = "support/face_window_fixture.rs"]
+#[path = "../../brep-core/examples/support/face_window_fixture.rs"]
 mod fixture;
 use sha2::{Digest, Sha256};
 fn main() -> Result<(), Box<dyn std::error::Error>> {

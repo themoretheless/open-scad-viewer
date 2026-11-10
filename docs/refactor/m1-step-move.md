@@ -13,7 +13,7 @@
 | 3 | `m1_policy.py` | переносит фасады `import_step_with_policy`, `import_iges_v2_with_policy` в `cad-step/src/import_policy.rs`; `apply_import_policy` в ядре становится `pub` |
 | 4 | `m1_complex.py` | удаляет из ядра обёртки `export/import_complex_step/iges`, посимвольно совпадающие с уже существующими в `cad-step` |
 | 5 | `m1_uselists.py` | разбирает импорты вида `use crate::{...}` на свои модули и `brep_core` |
-| 6 | `m1_consumers.py` | переключает `geometry-bridge`, интеграционные тесты и примеры `brep-core`, тесты `cad-step` на `cad_step::` (80 имён); `brep-core` получает dev-зависимость на `cad-step` |
+| 6 | `m1_consumers.py` | переключает `geometry-bridge`, интеграционные тесты и примеры `brep-core`, тесты `cad-step` на `cad_step::` (80 имён); `brep-core` получал dev-зависимость на `cad-step` (позже снята: примеры и интеграционные тесты со STEP перенесены в `cad-step`, см. O3) |
 | 7 | `m1_cuboid.py` | конструкторы `freeform_cuboid_solid`, `freeform_cuboid_with_bump_face` и помощники `as_uniform_bicubic`, `is_uniform_bicubic_positive` к STEP не относятся и остаются в ядре (`brep_core::freeform_cuboid`); старые пути работают |
 
 Ручные правки после сценариев: старый тестовый файл копии `cad-step` удалён (все 35 его тестов по именам есть среди 60 тестов `brep-core`); тест `prism` разделён на часть со STEP (в `cad-step`) и без него (в ядре); `material_wall_coverage::{plane, same_plane}` открыты как `#[doc(hidden)] pub` для теста STEP.

@@ -1,4 +1,4 @@
-#[path = "support/compatible_contact_fixture.rs"]
+#[path = "../../brep-core/examples/support/compatible_contact_fixture.rs"]
 mod fixture;
 use brep_core::{face_cut, region_replacement as r};
 fn main() {

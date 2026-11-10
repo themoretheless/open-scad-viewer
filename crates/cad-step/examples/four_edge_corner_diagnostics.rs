@@ -1,4 +1,4 @@
-#[path = "support/pyramid_material.rs"]
+#[path = "../../brep-core/examples/support/pyramid_material.rs"]
 mod material;
 #[path = "support/contact_qualification.rs"]
 mod qualification;

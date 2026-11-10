@@ -1,5 +1,5 @@
 //! Export the original-support, 0.1 mm setback control after fresh admission.
-#[path = "support/interior_runout_fixture.rs"]
+#[path = "../../brep-core/examples/support/interior_runout_fixture.rs"]
 mod fixture;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = std::env::args().nth(1).ok_or("Need an output directory")?;

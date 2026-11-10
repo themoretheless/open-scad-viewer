@@ -1,5 +1,5 @@
 //! Saved mapped-corner B-rep control; not a prescribed-radius fillet fixture.
-#[path = "support/corner_close_fixture.rs"]
+#[path = "../../brep-core/examples/support/corner_close_fixture.rs"]
 mod fixture;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let directory =

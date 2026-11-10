@@ -1,4 +1,4 @@
-#[path = "support/nurbs_contact_stock.rs"]
+#[path = "../../brep-core/examples/support/nurbs_contact_stock.rs"]
 mod fixture;
 #[path = "support/contact_qualification.rs"]
 mod qualification;

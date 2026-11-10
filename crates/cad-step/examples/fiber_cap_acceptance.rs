@@ -1,4 +1,4 @@
-#[path = "support/fiber_cap_fixture.rs"]
+#[path = "../../brep-core/examples/support/fiber_cap_fixture.rs"]
 mod fixture;
 use sha2::{Digest, Sha256};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
