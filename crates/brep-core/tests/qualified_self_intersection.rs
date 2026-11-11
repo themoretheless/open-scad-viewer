@@ -78,21 +78,7 @@ mod fixture;
 fn all_variable_body_pairs_are_covered_without_promoting_metric_locality() {
     let f = fixture::build_variable_rolling_automatic();
     let field = f.radius_field;
-    let q = brep_core::contact_graft::attach_radius_tangent_qualified(
-        &f.source,
-        &f.patch,
-        &f.mapping,
-        &f.targets,
-        &[1, 3],
-        [field, [0., 1., 0., 0.], field],
-        field,
-        1e-8,
-        1e-7,
-        1e-5,
-        100000,
-        1000000,
-        2000000,
-    )
+    let q = brep_core::contact_graft::attach_radius_tangent_qualified(&f.source, &f.patch, brep_core::contact_graft::GraftTopology { vertices: &f.mapping, targets: &f.targets, patch_contacts: &[1, 3] }, brep_core::contact_graft::RadiusLaw { center: [field, [0., 1., 0., 0.], field], radius: field }, brep_core::contact_graft::RadiusTolerance { uv: 1e-8, radius_mm: 1e-7, normal: 1e-5 }, brep_core::contact_graft::GraftWork { max_cells: 100000, max_exact: 1000000, max_coefficients: 2000000 })
     .unwrap();
     let r = self_intersection::inspect_qualified(
         &q.qualified.graft.model,

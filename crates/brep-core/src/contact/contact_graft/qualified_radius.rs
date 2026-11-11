@@ -51,24 +51,48 @@ pub struct RadiusTangentGraft {
     pub cells: usize,
     pub exact_work: u64,
 }
+/// Which patch vertices and edges are grafted onto which source targets.
+#[derive(Clone, Copy)]
+pub struct GraftTopology<'a> {
+    pub vertices: &'a [usize],
+    pub targets: &'a [Target],
+    pub patch_contacts: &'a [usize],
+}
+/// The rolling-ball law: cubic center and radius coefficients.
+#[derive(Clone, Copy, Debug)]
+pub struct RadiusLaw {
+    pub center: [[f64; 4]; 3],
+    pub radius: [f64; 4],
+}
+/// UV, radius (mm) and normal tolerances of the radius and G1 gate.
+#[derive(Clone, Copy, Debug)]
+pub struct RadiusTolerance {
+    pub uv: f64,
+    pub radius_mm: f64,
+    pub normal: f64,
+}
+/// Cell, exact-work and coefficient limits shared by assembly and contact checks.
+#[derive(Clone, Copy, Debug)]
+pub struct GraftWork {
+    pub max_cells: usize,
+    pub max_exact: u64,
+    pub max_coefficients: usize,
+}
 /// Radius and G1 gate over explicit PATCH edge indices, mapped to the actual
 /// saved graft edges. Other edges (including sharp caps) are outside this scope.
 /// All assembly/contact cells and exact work share the original caller limits.
 pub fn attach_radius_tangent_qualified(
     source: &Model,
     patch: &Model,
-    vertices: &[usize],
-    targets: &[Target],
-    patch_contacts: &[usize],
-    center: [[f64; 4]; 3],
-    radius: [f64; 4],
-    tolerance_uv: f64,
-    radius_tolerance_mm: f64,
-    normal_tolerance: f64,
-    max_cells: usize,
-    max_exact: u64,
-    max_coefficients: usize,
+    topology: GraftTopology<'_>,
+    law: RadiusLaw,
+    tolerance: RadiusTolerance,
+    work: GraftWork,
 ) -> Result<RadiusTangentGraft> {
+    let GraftTopology { vertices, targets, patch_contacts } = topology;
+    let RadiusLaw { center, radius } = law;
+    let RadiusTolerance { uv: tolerance_uv, radius_mm: radius_tolerance_mm, normal: normal_tolerance } = tolerance;
+    let GraftWork { max_cells, max_exact, max_coefficients } = work;
     let unique: std::collections::BTreeSet<_> = patch_contacts.iter().copied().collect();
     if patch_contacts.is_empty()
         || unique.len() != patch_contacts.len()

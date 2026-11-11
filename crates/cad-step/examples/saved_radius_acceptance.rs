@@ -11,21 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let field = f.radius_field;
     let center = [field, [0., 1., 0., 0.], field];
-    let combined = brep_core::contact_graft::attach_radius_tangent_qualified(
-        &f.source,
-        &f.patch,
-        &f.mapping,
-        &f.targets,
-        &[1, 3],
-        center,
-        field,
-        1e-8,
-        1e-7,
-        1e-5,
-        100000,
-        1000000,
-        2000000,
-    )?;
+    let combined = brep_core::contact_graft::attach_radius_tangent_qualified(&f.source, &f.patch, brep_core::contact_graft::GraftTopology { vertices: &f.mapping, targets: &f.targets, patch_contacts: &[1, 3] }, brep_core::contact_graft::RadiusLaw { center, radius: field }, brep_core::contact_graft::RadiusTolerance { uv: 1e-8, radius_mm: 1e-7, normal: 1e-5 }, brep_core::contact_graft::GraftWork { max_cells: 100000, max_exact: 1000000, max_coefficients: 2000000 })?;
     let result = combined.qualified;
     let json = value_codec::to_string(&result.graft.model)?;
     let restored: brep_core::Model = value_codec::from_str(&json)?;

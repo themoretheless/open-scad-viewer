@@ -4,21 +4,7 @@ mod fixture;
 fn actual_variable_saved_skin_has_g1_contacts_but_sharp_caps_remain_scoped() {
     let f = fixture::build_variable_rolling_automatic();
     let field = f.radius_field;
-    let combined = brep_core::contact_graft::attach_radius_tangent_qualified(
-        &f.source,
-        &f.patch,
-        &f.mapping,
-        &f.targets,
-        &[1, 3],
-        [field, [0., 1., 0., 0.], field],
-        field,
-        1e-8,
-        1e-7,
-        1e-5,
-        100000,
-        1000000,
-        2000000,
-    )
+    let combined = brep_core::contact_graft::attach_radius_tangent_qualified(&f.source, &f.patch, brep_core::contact_graft::GraftTopology { vertices: &f.mapping, targets: &f.targets, patch_contacts: &[1, 3] }, brep_core::contact_graft::RadiusLaw { center: [field, [0., 1., 0., 0.], field], radius: field }, brep_core::contact_graft::RadiusTolerance { uv: 1e-8, radius_mm: 1e-7, normal: 1e-5 }, brep_core::contact_graft::GraftWork { max_cells: 100000, max_exact: 1000000, max_coefficients: 2000000 })
     .unwrap();
     assert!(combined.tangency.within_tolerance);
     assert!(combined.cells <= 100000 && combined.exact_work <= 1000000);
@@ -50,21 +36,7 @@ fn actual_variable_saved_skin_has_g1_contacts_but_sharp_caps_remain_scoped() {
             .within_tolerance
     );
     assert!(
-        brep_core::contact_graft::attach_radius_tangent_qualified(
-            &f.source,
-            &f.patch,
-            &f.mapping,
-            &f.targets,
-            &[0, 2],
-            [field, [0., 1., 0., 0.], field],
-            field,
-            1e-8,
-            1e-7,
-            1e-5,
-            100000,
-            1000000,
-            2000000
-        )
+        brep_core::contact_graft::attach_radius_tangent_qualified(&f.source, &f.patch, brep_core::contact_graft::GraftTopology { vertices: &f.mapping, targets: &f.targets, patch_contacts: &[0, 2] }, brep_core::contact_graft::RadiusLaw { center: [field, [0., 1., 0., 0.], field], radius: field }, brep_core::contact_graft::RadiusTolerance { uv: 1e-8, radius_mm: 1e-7, normal: 1e-5 }, brep_core::contact_graft::GraftWork { max_cells: 100000, max_exact: 1000000, max_coefficients: 2000000 })
         .is_err()
     );
 }
