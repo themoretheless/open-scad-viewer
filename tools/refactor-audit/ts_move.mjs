@@ -7,6 +7,7 @@
 // (resolved through index.ts) stays a directory import.
 import {readFileSync, writeFileSync, existsSync, statSync, readdirSync} from 'node:fs'
 import {execFileSync} from 'node:child_process'
+import {FROZEN_ARCHIVES} from '../../scripts/qualificationFrozenArchives.mjs'
 import {dirname, join, relative, resolve, normalize, posix} from 'node:path'
 
 const root = resolve(dirname(new URL(import.meta.url).pathname), '../..')
@@ -18,6 +19,8 @@ const SCAN = ['src', 'tests', 'scripts', 'e2e'].filter(d => existsSync(join(root
 
 const listed = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', ...SCAN], {cwd: root, encoding: 'utf8', maxBuffer: 1 << 28})
   .split('\n').filter(f => f && EXTS.some(e => f.endsWith(e)) && existsSync(join(root, f)))
+// Immutable qualification archives keep their bytes (audit-architecture checks their hashes).
+const frozen = new Set(Object.keys(FROZEN_ARCHIVES))
 const fileSet = new Set(listed)
 
 // old path -> new path for every moved file
@@ -57,6 +60,7 @@ const SPEC = /(\bnew\s+URL\s*\(\s*|\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\bexpo
 let rewrites = 0
 const edits = new Map()
 for (const f of listed) {
+  if (frozen.has(f)) continue
   const text = readFileSync(join(root, f), 'utf8')
   const newF = moved(f)
   let changed = false

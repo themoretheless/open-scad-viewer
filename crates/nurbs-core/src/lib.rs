@@ -282,7 +282,7 @@ pub use crate::analysis::curve_surface_lift;
 
 pub use crate::core::curve_point_identity;
 
-pub use crate::distance::surface_flux;
+pub use crate::intersection::surface_flux;
 
 pub use crate::analysis::moving_radius;
 

@@ -46,6 +46,24 @@ export function braceHeads(text, start) {
   return heads.map(h => h.trim().split(/::|\s|\{/)[0]).filter(h => /^[a-z_]\w*$/.test(h))
 }
 
+/** Text with every inline `#[cfg(test)]` or `#[cfg(all(test, ...))]` module block removed (brace-matched). */
+export function withoutTestModules(text) {
+  const opener = /#\[cfg\((?:test|all\(\s*test\b[^\]]*\))\)\]\s*(?:#\[[^\]]*\]\s*)*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{/g
+  let out = '', from = 0, m
+  while ((m = opener.exec(text))) {
+    let depth = 1, i = m.index + m[0].length
+    while (i < text.length && depth > 0) {
+      if (text[i] === '{') depth++
+      else if (text[i] === '}') depth--
+      i++
+    }
+    out += text.slice(from, m.index)
+    from = i
+    opener.lastIndex = i
+  }
+  return out + text.slice(from)
+}
+
 /** Sorted `from -> to` strings for upward references in one crate. */
 export function upwardModuleEdges(root, crate, files) {
   const layers = MODULE_LAYERS[crate]
@@ -58,8 +76,8 @@ export function upwardModuleEdges(root, crate, files) {
     if (!path.startsWith(src) || !path.endsWith('.rs') || /(^|\/)tests?(\/|\.rs$)|_tests?\.rs$/.test(path)) continue
     const from = path.slice(src.length).split('/')[0].replace(/\.rs$/, '')
     if (layers[from] === undefined) continue
-    // Inline `#[cfg(test)] mod tests { ... }` blocks are test code; drop everything from the first one.
-    const text = stripCommentsAndStrings(readFileSync(resolve(root, path), 'utf8')).split(/#\[cfg\(test\)\]\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{/)[0]
+    // Inline `#[cfg(test)] mod tests { ... }` blocks are test code; production code may follow them.
+    const text = withoutTestModules(stripCommentsAndStrings(readFileSync(resolve(root, path), 'utf8')))
     const heads = [...text.matchAll(/\bcrate::([a-z_][\w]*)/g)].map(m => m[1])
     for (const m of text.matchAll(/\bcrate::\{/g)) heads.push(...braceHeads(text, m.index + m[0].length))
     for (const head of heads) {

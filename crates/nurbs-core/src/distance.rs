@@ -3,7 +3,6 @@ pub(crate) mod curve_jets;
 pub mod polar_surface_differential;
 pub mod rational_pole_differential;
 pub mod curve_axis_driver;
-pub mod surface_flux;
 pub mod synchronized_boundary_normals;
 pub mod uv_curve_crossings;
 pub mod curve_deviation;

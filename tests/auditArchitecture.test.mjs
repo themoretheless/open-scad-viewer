@@ -133,3 +133,11 @@ test('upward imports between src domains are pinned', async () => {
   assert.deepEqual(auditArchitecture({sizes: {}, layers: [], srcLayers: ['kernel -> services']}, baseline), [])
   assert.match(auditArchitecture({sizes: {}, layers: [], srcLayers: ['kernel -> services', 'core -> kernel']}, baseline)[0], /core -> kernel: upward src domain import/)
 })
+
+test('module layer scan drops only inline test modules, including cfg(all(test, ...))', async () => {
+  const {withoutTestModules} = await import('../scripts/moduleLayers.mjs')
+  const text = 'a crate::x\n#[cfg(test)]\nmod tests { crate::y { } }\nb crate::z\n#[cfg(all(test, feature = "t"))]\nmod t2 { crate::w }\nc'
+  const kept = withoutTestModules(text)
+  assert.ok(kept.includes('crate::x') && kept.includes('crate::z') && kept.includes('c'))
+  assert.ok(!kept.includes('crate::y') && !kept.includes('crate::w'))
+})

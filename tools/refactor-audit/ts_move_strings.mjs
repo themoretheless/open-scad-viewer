@@ -5,6 +5,7 @@
 // Every moves file is a list of [old, new] pairs that has already been applied with ts_move.mjs.
 import {readFileSync, writeFileSync, existsSync} from 'node:fs'
 import {execFileSync} from 'node:child_process'
+import {FROZEN_ARCHIVES} from '../../scripts/qualificationFrozenArchives.mjs'
 import {dirname, join, resolve, posix} from 'node:path'
 
 const root = resolve(dirname(new URL(import.meta.url).pathname), '../..')
@@ -16,6 +17,8 @@ const EXTS = ['.ts', '.tsx', '.mts', '.js', '.mjs', '.svt', '.vue']
 const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', ...SCAN], {cwd: root, encoding: 'utf8', maxBuffer: 1 << 28})
   .split('\n').filter(f => f && EXTS.some(e => f.endsWith(e)) && existsSync(join(root, f)))
 
+// Immutable qualification archives keep their bytes (audit-architecture checks their hashes).
+const frozen = new Set(Object.keys(FROZEN_ARCHIVES))
 // old -> new for a path (file or anything under a moved directory)
 const forward = p => {
   for (const [a, b] of pairs) {
@@ -41,6 +44,7 @@ const SRCREL = /(['"`])((?:services|semantic|renderer)\/[^'"`\n$]*?\.(?:ts|svt))
 const LIT = /(['"`])((?:\.{1,2}\/|src\/)[^'"`\n$]*?\.(?:ts|tsx|svt|mjs|js|json|wgsl))\1/g
 let n = 0
 for (const f of files) {
+  if (frozen.has(f)) continue
   const text = readFileSync(join(root, f), 'utf8')
   const oldF = backward(f)
   const out = text.replace(LIT, (m, q, lit) => {

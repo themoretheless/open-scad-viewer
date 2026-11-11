@@ -28,6 +28,7 @@ pub use curve_curve::*;
 #[path = "../intersection/bezier_clip.rs"]
 pub(crate) mod bezier_clip;
 /// Curve self-intersection audit (formerly `crate::curve_self_intersection`).
+pub mod surface_flux;
 pub mod self_curve;
 /// Surface self-intersection audit (formerly `crate::surface_self_intersection`).
 pub mod self_surface;

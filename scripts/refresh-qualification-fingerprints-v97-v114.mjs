@@ -12,10 +12,10 @@ export const REFRESH_SCRIPT = 'scripts/refresh-qualification-fingerprints.mjs'
 export const REFRESH_REVIEW = 'docs/qualification/g0-v97-g1-v114-refreeze-review.md'
 export const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v83.json'
 const MODULE_DELIVERY_PATHS = [
-  'src/kernel/geometry/kernel.ts',
-  'src/kernel/geometry/kernelCompilation.ts',
-  'src/kernel/geometry/kernelCompilationRequired.ts',
-  'src/kernel/wasmArtifact.ts',
+  'src/services/geometry/kernel.ts',
+  'src/services/geometry/kernelCompilation.ts',
+  'src/services/geometry/kernelCompilationRequired.ts',
+  'src/services/wasmArtifact.ts',
   'vite.qualification.config.ts',
 ]
 export const REFRESH_EXECUTORS = Object.freeze([
