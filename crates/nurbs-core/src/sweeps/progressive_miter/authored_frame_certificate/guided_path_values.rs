@@ -184,11 +184,10 @@ pub(crate) fn certify_contact_relative_values(
     max_cells: usize,
 )->Result<ControlValuesReport>{
     let ContactLaws { path, guide, scale, twist, affine } = laws;
-    let ContactTraversal { anchor, path: path_traversal, guide: guide_traversal, law: law_traversal, same_parameter } = traversal;
+    let ContactTraversal { path: path_traversal, law: law_traversal, .. } = traversal;
     twist.validate()?;
     check(twist.control_points.iter().all(|p|p[0]==0.),"Contact control requires zero twist")?;
-    let (fit,_,offset)=super::contact_fit_value::contact_fit_value_at_prepared(path,guide,scale,affine,anchor,
-        path_traversal,guide_traversal,law_traversal,same_parameter,max_cells)?;
+    let (fit,_,offset)=super::contact_fit_value::contact_fit_value_at_prepared(path, guide, scale, affine, traversal, max_cells)?;
     if fit.status!=Status::Certified{return Ok(ControlValuesReport {status:Status::Unresolved,cells:fit.cells,values:None,reason:Some("contact-fit-value-unresolved")});}
     let mut frame=prepared_offset_frame_values(path,twist,path_traversal,law_traversal,offset.unwrap(),max_cells-fit.cells)?;
     frame.cells+=fit.cells;

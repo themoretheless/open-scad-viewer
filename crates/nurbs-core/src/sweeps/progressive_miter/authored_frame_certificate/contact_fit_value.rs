@@ -27,7 +27,7 @@ pub fn certify_contact_control_values(
         twist.control_points.iter().all(|p| p[0] == 0.),
         "Contact control requires zero twist",
     )?;
-    let (fit,source_path,offset) = contact_fit_value_at_prepared(path,guide,scale,affine,anchor,traversal,traversal,traversal,true,max_cells)?;
+    let (fit,source_path,offset) = contact_fit_value_at_prepared(path, guide, scale, affine, super::ContactTraversal { anchor, path: traversal, guide: traversal, law: traversal, same_parameter: true }, max_cells)?;
     if fit.status != Status::Certified {
         return Ok(ControlValuesReport {
             status: Status::Unresolved,
@@ -73,21 +73,30 @@ fn certify_contact_fit_value_with_path(
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<(ContactFitValueReport,Option<[[f64;2];3]>)> {
-    contact_fit_value_at(path,guide,scale,affine,anchor,traversal,traversal,traversal,true,max_cells)
+    contact_fit_value_at(path, guide, scale, affine, super::ContactTraversal { anchor, path: traversal, guide: traversal, law: traversal, same_parameter: true }, max_cells)
 }
 /// Source path, source rail and authored laws can have independent parameters.
 /// Width follows the constructor's norm(G-P), not its projected normal.
 pub(super) fn contact_fit_value_at(
-    path:&Curve,guide:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,anchor:[f64;2],
-    path_traversal:[f64;2],guide_traversal:[f64;2],law_traversal:[f64;2],same_parameter:bool,max_cells:usize,
+    path: &Curve,
+    guide: &Curve,
+    scale: &Curve,
+    affine: Option<(&Curve, &Curve)>,
+    traversal: super::ContactTraversal,
+    max_cells: usize,
 )->Result<(ContactFitValueReport,Option<[[f64;2];3]>)>{
-    let (fit,position,_)=contact_fit_value_at_prepared(path,guide,scale,affine,anchor,path_traversal,guide_traversal,law_traversal,same_parameter,max_cells)?;
+    let (fit,position,_)=contact_fit_value_at_prepared(path,guide,scale,affine,traversal,max_cells)?;
     Ok((fit,position))
 }
 pub(super) fn contact_fit_value_at_prepared(
-    path:&Curve,guide:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,anchor:[f64;2],
-    path_traversal:[f64;2],guide_traversal:[f64;2],law_traversal:[f64;2],same_parameter:bool,max_cells:usize,
+    path: &Curve,
+    guide: &Curve,
+    scale: &Curve,
+    affine: Option<(&Curve, &Curve)>,
+    traversal: super::ContactTraversal,
+    max_cells: usize,
 )->Result<(ContactFitValueReport,Option<[[f64;2];3]>,Option<[[f64;2];3]>)>{
+    let super::ContactTraversal { anchor, path: path_traversal, guide: guide_traversal, law: law_traversal, same_parameter } = traversal;
     let anchor = I::new(anchor[0], anchor[1])?;
     check(anchor.lo > 0., "Contact anchor width must be positive")?;
     super::super::validate_law(scale, true)?;
@@ -334,8 +343,8 @@ fn equal_interval_boxes_do_not_imply_shared_contact_parameter() {
     let guide=crate::primitives::line([1.,0.,0.],[1.,0.,10.]).unwrap();
     let scale=crate::sweeps::progressive_sweep::constant_vector_law([1.,0.,0.]).unwrap();
     let range=[0.25,0.5];
-    let independent=contact_fit_value_at(&path,&guide,&scale,None,[1.,1.],range,range,range,false,1000).unwrap().0;
-    let shared=contact_fit_value_at(&path,&guide,&scale,None,[1.,1.],range,range,range,true,1000).unwrap().0;
+    let independent=contact_fit_value_at(&path, &guide, &scale, None, super::ContactTraversal { anchor: [1.,1.], path: range, guide: range, law: range, same_parameter: false }, 1000).unwrap().0;
+    let shared=contact_fit_value_at(&path, &guide, &scale, None, super::ContactTraversal { anchor: [1.,1.], path: range, guide: range, law: range, same_parameter: true }, 1000).unwrap().0;
     assert_eq!(independent.status,Status::Certified);
     assert_eq!(shared.status,Status::Certified);
     let independently_reachable=2.5_f64.hypot(1.);
