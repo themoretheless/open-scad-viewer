@@ -36,7 +36,19 @@ fn whole_selected_opposite_set_has_a_bounded_global_minimum_and_witness() {
     assert_eq!(floor.len(), 9);
     let before = model.clone();
     let r =
-        wall_clearance::inspect(&model, face, &floor, 2.9, 1e-7, 1e-8, 100000, 1000000).unwrap();
+        wall_clearance::inspect(
+            &model,
+            face,
+            &floor,
+            wall_clearance::ClearanceLimits {
+                required_mm: 2.9,
+                tolerance_mm: 1e-7,
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_domain_cells: 1000000,
+            },
+        )
+        .unwrap();
     assert!(r.coverage_complete && r.pending_faces.is_empty());
     assert!(r.converged);
     assert_eq!(r.pairs.len(), 9);
@@ -48,7 +60,19 @@ fn whole_selected_opposite_set_has_a_bounded_global_minimum_and_witness() {
     assert!(witness.distance.parameters.is_some() && witness.distance.point_enclosures.is_some());
     assert!(r.cells <= 100000 && r.domain_cells <= 1000000);
     assert_eq!(model, before);
-    let thin = wall_clearance::inspect(&model, face, &[8], 3.1, 1e-7, 1e-8, 10000, 100000).unwrap();
+    let thin = wall_clearance::inspect(
+        &model,
+        face,
+        &[8],
+        wall_clearance::ClearanceLimits {
+            required_mm: 3.1,
+            tolerance_mm: 1e-7,
+            tolerance_uv: 1e-8,
+            max_cells: 10000,
+            max_domain_cells: 100000,
+        },
+    )
+    .unwrap();
     assert_eq!(thin.decision, Decision::BelowRequiredClearance);
 }
 #[test]
@@ -77,7 +101,19 @@ fn thin_closed_control_is_found_with_an_original_face_witness() {
     model.validate().unwrap();
     let before = model.clone();
     let r =
-        wall_clearance::inspect(&model, face, &floor, 0.1, 1e-7, 1e-8, 100000, 1000000).unwrap();
+        wall_clearance::inspect(
+            &model,
+            face,
+            &floor,
+            wall_clearance::ClearanceLimits {
+                required_mm: 0.1,
+                tolerance_mm: 1e-7,
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_domain_cells: 1000000,
+            },
+        )
+        .unwrap();
     assert_eq!(r.decision, Decision::BelowRequiredClearance);
     assert!(r.lower_bound_mm <= 0.05 && r.upper_bound_mm.unwrap() >= 0.05);
     assert!(r.converged && r.coverage_complete);
@@ -87,19 +123,66 @@ fn thin_closed_control_is_found_with_an_original_face_witness() {
 #[test]
 fn missing_coverage_and_exact_threshold_never_fabricate_a_pass() {
     let (model, face, floor) = setup();
-    let zero = wall_clearance::inspect(&model, face, &floor, 2.9, 1e-7, 1e-8, 0, 0).unwrap();
+    let zero = wall_clearance::inspect(
+        &model,
+        face,
+        &floor,
+        wall_clearance::ClearanceLimits {
+            required_mm: 2.9,
+            tolerance_mm: 1e-7,
+            tolerance_uv: 1e-8,
+            max_cells: 0,
+            max_domain_cells: 0,
+        },
+    )
+    .unwrap();
     assert_eq!(zero.decision, Decision::Unresolved);
     assert_eq!(zero.lower_bound_mm, 0.);
     assert_eq!(zero.pending_faces, floor);
     assert!(zero.upper_bound_mm.is_none());
-    let limited = wall_clearance::inspect(&model, face, &floor, 2.9, 1e-7, 1e-8, 1, 10).unwrap();
+    let limited = wall_clearance::inspect(
+        &model,
+        face,
+        &floor,
+        wall_clearance::ClearanceLimits {
+            required_mm: 2.9,
+            tolerance_mm: 1e-7,
+            tolerance_uv: 1e-8,
+            max_cells: 1,
+            max_domain_cells: 10,
+        },
+    )
+    .unwrap();
     assert!(!limited.coverage_complete);
     assert_eq!(limited.lower_bound_mm, 0.);
     assert_eq!(limited.decision, Decision::Unresolved);
     let at_limit =
-        wall_clearance::inspect(&model, face, &[8], 3., 1e-7, 1e-8, 10000, 100000).unwrap();
+        wall_clearance::inspect(
+            &model,
+            face,
+            &[8],
+            wall_clearance::ClearanceLimits {
+                required_mm: 3.,
+                tolerance_mm: 1e-7,
+                tolerance_uv: 1e-8,
+                max_cells: 10000,
+                max_domain_cells: 100000,
+            },
+        )
+        .unwrap();
     assert_eq!(at_limit.decision, Decision::Unresolved);
     assert!(
-        wall_clearance::inspect(&model, face, &[8, 8], 2.9, 1e-7, 1e-8, 10000, 100000).is_err()
+        wall_clearance::inspect(
+            &model,
+            face,
+            &[8, 8],
+            wall_clearance::ClearanceLimits {
+                required_mm: 2.9,
+                tolerance_mm: 1e-7,
+                tolerance_uv: 1e-8,
+                max_cells: 10000,
+                max_domain_cells: 100000,
+            },
+        ).is_err()
     );
 }

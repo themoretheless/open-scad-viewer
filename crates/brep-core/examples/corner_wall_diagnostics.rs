@@ -18,11 +18,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         0,
         out.face,
         -0.5,
-        2.9,
-        1e-7,
-        1e-8,
-        100000 - out.cells,
-        1000000 - out.cells,
+        brep_core::wall_clearance::ClearanceLimits {
+            required_mm: 2.9,
+            tolerance_mm: 1e-7,
+            tolerance_uv: 1e-8,
+            max_cells: 100000 - out.cells,
+            max_domain_cells: 1000000 - out.cells,
+        },
     )?;
     let targets = &automatic.selection.candidate_faces;
     let report = automatic

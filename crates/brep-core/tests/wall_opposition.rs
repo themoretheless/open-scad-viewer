@@ -64,7 +64,17 @@ fn shell_orientation_and_trimmed_normals_identify_the_complete_floor_set() {
     assert!(rotation.selection_complete);
     assert_eq!(rotation.candidate_faces, floor);
     let automatic = brep_core::wall_clearance::inspect_shell(
-        &out.model, 0, out.face, -0.5, 2.9, 1e-7, 1e-8, 100000, 1000000,
+        &out.model,
+        0,
+        out.face,
+        -0.5,
+        brep_core::wall_clearance::ClearanceLimits {
+            required_mm: 2.9,
+            tolerance_mm: 1e-7,
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_domain_cells: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(automatic.selection.candidate_faces, floor);
@@ -85,7 +95,20 @@ fn unresolved_normals_stay_candidates_and_never_disappear_with_zero_work() {
     assert_eq!(r.candidate_faces.len(), 5);
     assert_eq!(r.cells, 0);
     let automatic =
-        brep_core::wall_clearance::inspect_shell(&m, 0, 0, -0.5, 1., 1e-7, 1e-8, 0, 0).unwrap();
+        brep_core::wall_clearance::inspect_shell(
+            &m,
+            0,
+            0,
+            -0.5,
+            brep_core::wall_clearance::ClearanceLimits {
+                required_mm: 1.,
+                tolerance_mm: 1e-7,
+                tolerance_uv: 1e-8,
+                max_cells: 0,
+                max_domain_cells: 0,
+            },
+        )
+        .unwrap();
     assert!(!automatic.selection.selection_complete && automatic.candidate_clearance.is_none());
     assert!(
         r.faces
@@ -128,11 +151,13 @@ fn multispan_skin_normals_exclude_joined_faces_and_caps_without_claiming_wall_pa
         model,
         source,
         &selection.candidate_faces,
-        1.,
-        1e-7,
-        1e-8,
-        2000,
-        20000,
+        brep_core::wall_clearance::ClearanceLimits {
+            required_mm: 1.,
+            tolerance_mm: 1e-7,
+            tolerance_uv: 1e-8,
+            max_cells: 2000,
+            max_domain_cells: 20000,
+        },
     )
     .unwrap();
     assert!(clearance.coverage_complete);
