@@ -315,28 +315,22 @@ pub fn plane_cylinder_transition(
     })
 }
 
+/// A three-span rim blend on a plane/cylinder edge: the cylinder of radius
+/// `outer_radius` and height `height`, blend radius `radius`, starting at
+/// angle `start` with entry, middle and exit sweeps.
+#[derive(Clone, Copy, Debug)]
+pub struct CircularStrip {
+    pub outer_radius: f64,
+    pub height: f64,
+    pub radius: f64,
+    pub start: f64,
+    pub sweeps: [f64; 3],
+}
 /// Assemble a start transition, constant span and end transition into an open
 /// shell. Shared seams must match complete curve definitions exactly; this is
 /// authored shared topology, not tolerance welding or a closed-solid claim.
-pub fn circular_blend_strip(
-    outer_radius: f64,
-    height: f64,
-    radius: f64,
-    start: f64,
-    entry_sweep: f64,
-    middle_sweep: f64,
-    exit_sweep: f64,
-    tolerance_mm: f64,
-) -> Result<crate::Model> {
-    let [entry, middle, exit] = circular_strip_spans(
-        outer_radius,
-        height,
-        radius,
-        start,
-        entry_sweep,
-        middle_sweep,
-        exit_sweep,
-    )?;
+pub fn circular_blend_strip(strip: CircularStrip, tolerance_mm: f64) -> Result<crate::Model> {
+    let [entry, middle, exit] = circular_strip_spans(strip)?;
     assemble_support_sheets(vec![
         (entry.to_open_sheet(tolerance_mm)?, false),
         (middle.to_open_sheet(tolerance_mm)?, false),
@@ -348,25 +342,11 @@ pub fn circular_blend_strip(
 /// Its inner, bottom and two angular boundaries still need the remainder of
 /// the original body. Shared curves are definition-exact, not mesh-welded.
 pub fn circular_blend_retained_strip(
-    outer_radius: f64,
+    strip: CircularStrip,
     inner_radius: f64,
-    height: f64,
-    radius: f64,
-    start: f64,
-    entry_sweep: f64,
-    middle_sweep: f64,
-    exit_sweep: f64,
     tolerance_mm: f64,
 ) -> Result<crate::Model> {
-    let spans = circular_strip_spans(
-        outer_radius,
-        height,
-        radius,
-        start,
-        entry_sweep,
-        middle_sweep,
-        exit_sweep,
-    )?;
+    let spans = circular_strip_spans(strip)?;
     let mut sheets = Vec::new();
     for span in spans {
         let p = &span.cylinder_contact.control_points;
@@ -381,25 +361,11 @@ pub fn circular_blend_retained_strip(
 /// Five retained side surfaces per span, joined through both end transitions.
 /// The two angular section loops remain open; no body is issued here.
 pub fn circular_blend_annular_strip(
-    outer_radius: f64,
+    strip: CircularStrip,
     inner_radius: f64,
-    height: f64,
-    radius: f64,
-    start: f64,
-    entry_sweep: f64,
-    middle_sweep: f64,
-    exit_sweep: f64,
     tolerance_mm: f64,
 ) -> Result<crate::Model> {
-    let spans = circular_strip_spans(
-        outer_radius,
-        height,
-        radius,
-        start,
-        entry_sweep,
-        middle_sweep,
-        exit_sweep,
-    )?;
+    let spans = circular_strip_spans(strip)?;
     let mut sheets = Vec::new();
     for span in spans {
         sheets.extend(span.annular_sheets(inner_radius, tolerance_mm)?);
@@ -448,7 +414,13 @@ pub fn partial_annular_arc(
         ));
     }
     let q = sweep;
-    let spans = circular_strip_spans(outer_radius, height, radius, 0., q / 4., q / 2., q / 4.)?;
+    let spans = circular_strip_spans(CircularStrip {
+        outer_radius,
+        height,
+        radius,
+        start: 0.,
+        sweeps: [q / 4., q / 2., q / 4.],
+    })?;
     close_annular_spans(outer_radius, inner_radius, height, q, spans, tolerance_mm)
 }
 
@@ -591,16 +563,15 @@ fn close_annular_spans(
     Ok(model)
 }
 
-fn circular_strip_spans(
-    outer_radius: f64,
-    height: f64,
-    radius: f64,
-    start: f64,
-    entry_sweep: f64,
-    middle_sweep: f64,
-    exit_sweep: f64,
-) -> Result<[CircularBlendSpan; 3]> {
-    let sweeps = [entry_sweep, middle_sweep, exit_sweep];
+fn circular_strip_spans(strip: CircularStrip) -> Result<[CircularBlendSpan; 3]> {
+    let CircularStrip {
+        outer_radius,
+        height,
+        radius,
+        start,
+        sweeps,
+    } = strip;
+    let [entry_sweep, middle_sweep, exit_sweep] = sweeps;
     if sweeps.iter().any(|s| {
         !s.is_finite()
             || s.abs() < 1e-12

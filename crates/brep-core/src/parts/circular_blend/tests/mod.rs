@@ -393,13 +393,13 @@ fn transition_open_sheet_validates_pole_incidence_and_uv_agreement() {
 fn three_span_strip_shares_two_seams_and_keeps_two_poles() {
     for direction in [-1., 1.] {
         let strip = circular_blend_strip(
-            20.,
-            6.,
-            1.25,
-            5.9,
-            direction * 0.3,
-            direction * 0.7,
-            direction * 0.4,
+            CircularStrip {
+                outer_radius: 20.,
+                height: 6.,
+                radius: 1.25,
+                start: 5.9,
+                sweeps: [direction * 0.3, direction * 0.7, direction * 0.4],
+            },
             1e-7,
         )
         .unwrap();
@@ -545,14 +545,14 @@ fn neighbor_regions_share_plane_and_cylinder_contact_edges() {
 fn retained_strip_shares_all_internal_seams_and_keeps_only_outer_boundary() {
     for direction in [-1., 1.] {
         let region = circular_blend_retained_strip(
-            20.,
+            CircularStrip {
+                outer_radius: 20.,
+                height: 6.,
+                radius: 1.25,
+                start: 5.9,
+                sweeps: [direction * 0.3, direction * 0.7, direction * 0.4],
+            },
             5.,
-            6.,
-            1.25,
-            5.9,
-            direction * 0.3,
-            direction * 0.7,
-            direction * 0.4,
             1e-7,
         )
         .unwrap();
@@ -630,14 +630,14 @@ fn annular_sector_has_complete_walls_and_only_two_angular_cuts() {
 fn annular_strip_keeps_only_the_two_unrounded_end_sections() {
     for direction in [-1., 1.] {
         let strip = circular_blend_annular_strip(
-            20.,
+            CircularStrip {
+                outer_radius: 20.,
+                height: 6.,
+                radius: 1.25,
+                start: 5.9,
+                sweeps: [direction * 0.3, direction * 0.7, direction * 0.4],
+            },
             5.,
-            6.,
-            1.25,
-            5.9,
-            direction * 0.3,
-            direction * 0.7,
-            direction * 0.4,
             1e-7,
         )
         .unwrap();
