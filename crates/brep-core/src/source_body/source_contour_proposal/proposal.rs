@@ -8,13 +8,8 @@ pub struct Proposal {
     pub source_joins_proven: bool,
     pub reason: &'static str,
 }
-/// Work limits of an unqualified contour proposal.
-#[derive(Clone, Copy, Debug)]
-pub struct ProposalBudget {
-    pub cells: usize,
-    pub point_checks: usize,
-    pub mapping_cells: usize,
-}
+/// Work limits of an unqualified contour proposal (the same limits as the contact point search).
+pub type ProposalBudget = trimmed_face_recipe::SearchBudget;
 /// Find both contact parameters from original boundaries, without supplied cuts.
 /// Endpoint edges select the cyclic removed arc; each must have one mapped root.
 /// The result is a contour candidate, never a qualified replacement face.
@@ -28,7 +23,6 @@ pub fn propose(
 ) -> Result<Proposal> {
     let RegionSource { surface, wires, contact, address } = source;
     let RegionAddress { loop_index, start_edge, end_edge } = address;
-    let ProposalBudget { cells: max_cells, point_checks: max_point_checks, mapping_cells: max_mapping_cells } = budget;
     if loop_index >= wires.len()
         || start_edge == end_edge
         || start_edge >= wires[loop_index].len()
@@ -41,15 +35,12 @@ pub fn propose(
     }
     let search = trimmed_face_recipe::locate_source_contact_points(
         context,
-        surface,
-        wires,
+        trimmed_face_recipe::FaceBoundary { surface, wires },
         contact,
         tolerance_uv,
         limits,
-        max_cells,
         target_width,
-        max_point_checks,
-        max_mapping_cells,
+        budget,
     )?;
     let mut out = Proposal {
         search,

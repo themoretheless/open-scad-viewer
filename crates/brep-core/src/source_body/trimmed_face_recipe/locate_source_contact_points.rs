@@ -1,19 +1,25 @@
 use super::*;
 
+/// Work limits of a contact point search: search cells, point checks and mapping cells.
+#[derive(Clone, Copy, Debug)]
+pub struct SearchBudget {
+    pub cells: usize,
+    pub point_checks: usize,
+    pub mapping_cells: usize,
+}
 /// Build immutable source-point expressions for freshly found face crossings.
 /// Independent phase budgets bound search, point requalification and mapping.
 pub fn locate_source_contact_points(
     context: &ToleranceContext,
-    surface: &Surface,
-    wires: &[Vec<Boundary>],
+    face: FaceBoundary<'_>,
     contact: &Curve,
     tolerance_uv: f64,
     limits: Limits,
-    max_cells: usize,
     target_width: [f64; 2],
-    max_point_checks: usize,
-    max_mapping_cells: usize,
+    budget: SearchBudget,
 ) -> Result<SourcePointSearch> {
+    let FaceBoundary { surface, wires } = face;
+    let SearchBudget { cells: max_cells, point_checks: max_point_checks, mapping_cells: max_mapping_cells } = budget;
     if !(1..=100000).contains(&max_point_checks) || !(1..=100000).contains(&max_mapping_cells) {
         return Err(Error::new(
             "BREP_SOURCE_POINT_WORK",

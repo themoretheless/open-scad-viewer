@@ -388,15 +388,12 @@ fn source_face_crossing_search_retains_original_addresses_and_shared_budget() {
     assert_eq!(roots.len(), 2);
     let mapped = locate_source_contact_points(
         &ToleranceContext::default_valid(),
-        &surface,
-        &wires,
+        FaceBoundary { surface: &surface, wires: &wires },
         &contact,
         1e-8,
         limits(),
-        10000,
         [1e-7, 1e-7],
-        16,
-        16,
+        SearchBudget { cells: 10000, point_checks: 16, mapping_cells: 16 },
     )
     .unwrap();
     assert!(mapped.complete);
@@ -409,15 +406,12 @@ fn source_face_crossing_search_retains_original_addresses_and_shared_budget() {
         .all(|p| p.report.as_ref().unwrap().point.is_some()));
     let stopped = locate_source_contact_points(
         &ToleranceContext::default_valid(),
-        &surface,
-        &wires,
+        FaceBoundary { surface: &surface, wires: &wires },
         &contact,
         1e-8,
         limits(),
-        10000,
         [1e-7, 1e-7],
-        16,
-        1,
+        SearchBudget { cells: 10000, point_checks: 16, mapping_cells: 1 },
     )
     .unwrap();
     assert!(!stopped.complete);
