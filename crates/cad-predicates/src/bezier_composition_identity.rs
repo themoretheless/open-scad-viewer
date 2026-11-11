@@ -289,9 +289,14 @@ pub fn rational_bspline_composition_affine_identity(
 }
 /// Exact piecewise affine composition across all intersected canonical spans.
 pub fn rational_bspline_composition_piecewise_identity(
-    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],knots:&[LeafRef],degree:usize,
-    pcurve:&[[LeafRef;3]],surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
+    ctx: &mut PredicateContext<'_>,
+    curve: SplineLeafRefs<'_, 4>,
+    pcurve: &[[LeafRef; 3]],
+    surface: &[Vec<[LeafRef; 4]>],
+    domain: [[LeafRef; 2]; 2],
+    range: [[LeafRef; 2]; 2],
 )->Result<BezierIdentityDecision,InputError>{
+    let SplineLeafRefs { controls: curve, knots, degree } = curve;
     if !(1..=32).contains(&degree) || curve.len()<=degree || knots.len()!=curve.len()+degree+1 {
         return Err(InputError::InvalidInput("Invalid piecewise spline layout"));
     }
@@ -708,13 +713,25 @@ fn inverse_fraction(q:&[Expansion;2],a:&[Expansion;2],b:&[Expansion;2],ctx:&mut 
     if d.sign()==Sign::Negative {n=Expansion::scalar(0.).sub(&n,ctx)?;d=Expansion::scalar(0.).sub(&d,ctx)?;}
     Ok([n,d])
 }
+/// A B-spline given by source leaves: `N`-coordinate homogeneous controls, knots and degree.
+#[derive(Clone, Copy)]
+pub struct SplineLeafRefs<'a, const N: usize> {
+    pub controls: &'a [[LeafRef; N]],
+    pub knots: &'a [LeafRef],
+    pub degree: usize,
+}
 /// Exact composition of an affine canonical restriction and a piecewise UV
 /// B-spline. Every intersected span pair must agree under one work budget.
 pub fn rational_bspline_pair_composition_piecewise_identity(
-    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],knots:&[LeafRef],degree:usize,
-    pcurve:&[[LeafRef;3]],pknots:&[LeafRef],pdegree:usize,
-    surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
+    ctx: &mut PredicateContext<'_>,
+    curve: SplineLeafRefs<'_, 4>,
+    pcurve: SplineLeafRefs<'_, 3>,
+    surface: &[Vec<[LeafRef; 4]>],
+    domain: [[LeafRef; 2]; 2],
+    range: [[LeafRef; 2]; 2],
 )->Result<BezierIdentityDecision,InputError> {
+    let SplineLeafRefs { controls: curve, knots, degree } = curve;
+    let SplineLeafRefs { controls: pcurve, knots: pknots, degree: pdegree } = pcurve;
     if !(1..=32).contains(&degree) || !(1..=8).contains(&pdegree)
         || curve.len()<=degree || curve.len()>4096 || knots.len()!=curve.len()+degree+1
         || pcurve.len()<=pdegree || pcurve.len()>4096 || pknots.len()!=pcurve.len()+pdegree+1
