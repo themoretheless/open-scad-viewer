@@ -223,10 +223,11 @@ pub fn qualify_open_ss_path<'i, 'p, 'r, 'a>(
             &curve,
             &pc,
             p,
-            world,
-            uv,
-            &mut cells,
-            limits.cells,
+            PortTolerance { world, uv },
+            WorkLedger {
+                used: &mut cells,
+                max: limits.cells,
+            },
         )?;
         if let Some(previous) = segments.last() {
             let previous: &OpenSSSegment = previous;
@@ -256,10 +257,11 @@ pub fn qualify_open_ss_path<'i, 'p, 'r, 'a>(
             &parts[0],
             &segments[0],
             0,
-            world,
-            uv,
-            &mut operations,
-            limits.operations,
+            PortTolerance { world, uv },
+            WorkLedger {
+                used: &mut operations,
+                max: limits.operations,
+            },
         )?,
         guard(
             input,
@@ -267,10 +269,11 @@ pub fn qualify_open_ss_path<'i, 'p, 'r, 'a>(
             parts.last().unwrap(),
             segments.last().unwrap(),
             1,
-            world,
-            uv,
-            &mut operations,
-            limits.operations,
+            PortTolerance { world, uv },
+            WorkLedger {
+                used: &mut operations,
+                max: limits.operations,
+            },
         )?,
     ];
     let endpoints = [

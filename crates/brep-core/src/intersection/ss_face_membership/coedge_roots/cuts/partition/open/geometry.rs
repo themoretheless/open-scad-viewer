@@ -21,17 +21,28 @@ fn available(tolerance: f64, source_error: f64) -> Result<f64> {
     }
     Ok(remaining)
 }
+/// World-space and UV tolerances of one open SS port proof.
+#[derive(Clone, Copy)]
+pub(super) struct PortTolerance {
+    pub world: f64,
+    pub uv: f64,
+}
+/// A work counter and its limit; proofs charge `used` and refuse past `max`.
+pub(super) struct WorkLedger<'a> {
+    pub used: &'a mut usize,
+    pub max: usize,
+}
 pub(super) fn prove(
     input: &QualifiedCutPartitions<'_, '_, '_>,
     source: &ss::GraphEdgeCurves,
     world: &Curve,
     uv: &[Curve; 2],
     p: &Part,
-    world_tol: f64,
-    uv_tol: f64,
-    cells: &mut usize,
-    max: usize,
+    tolerance: PortTolerance,
+    ledger: WorkLedger<'_>,
 ) -> Result<()> {
+    let PortTolerance { world: world_tol, uv: uv_tol } = tolerance;
+    let WorkLedger { used: cells, max } = ledger;
     let clock = if p.step.reversed {
         [p.clock[1], p.clock[0]]
     } else {
@@ -138,11 +149,11 @@ pub(super) fn guard(
     p: &Part,
     segment: &OpenSSSegment,
     endpoint: usize,
-    world: f64,
-    uv: f64,
-    used: &mut usize,
-    max: usize,
+    tolerance: PortTolerance,
+    ledger: WorkLedger<'_>,
 ) -> Result<OpenSSRootGuard> {
+    let PortTolerance { world, uv } = tolerance;
+    let WorkLedger { used, max } = ledger;
     let bounds = range(input, p.step.original_edge, end.band, used, max)?;
     spend(used, max, 24)?;
     let world_error_upper = distance(&end.position, &bounds.world)?;
