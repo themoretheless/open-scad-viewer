@@ -121,9 +121,23 @@ pub fn verify_algebraic(
         None,
     );
     let r = if p_piecewise {
-        cad_predicates::rational_bspline_pair_composition_piecewise_identity(&mut ctx,&cc,&knots,c.degree,&pp,&pknots,p.degree,&ss,domain,range)
+        cad_predicates::rational_bspline_pair_composition_piecewise_identity(
+            &mut ctx,
+            cad_predicates::SplineLeafRefs { controls: &cc, knots: &knots, degree: c.degree },
+            cad_predicates::SplineLeafRefs { controls: &pp, knots: &pknots, degree: p.degree },
+            &ss,
+            domain,
+            range,
+        )
     }else if piecewise {
-        cad_predicates::rational_bspline_composition_piecewise_identity(&mut ctx,&cc,&knots,c.degree,&pp,&ss,domain,range)
+        cad_predicates::rational_bspline_composition_piecewise_identity(
+            &mut ctx,
+            cad_predicates::SplineLeafRefs { controls: &cc, knots: &knots, degree: c.degree },
+            &pp,
+            &ss,
+            domain,
+            range,
+        )
     }else{cad_predicates::rational_bezier_composition_affine_identity(
         &mut ctx, &cc, &pp, &ss, domain, range,
     )}
