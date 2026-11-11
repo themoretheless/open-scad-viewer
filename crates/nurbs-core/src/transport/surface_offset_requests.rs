@@ -118,13 +118,8 @@ fn try_dispatch_envelopes_and_contact_bands(v: &Value, op: &str) -> Option<Resul
                 .transpose()?;
             crate::offset_envelope_fit::deliver(
                 candidate.as_ref(),
-                [&a, &b],
-                field(v, "distances")?,
-                field(v, "fixedAxis")?,
-                field(v, "fixedInterval")?,
-                field(v, "firstOther")?,
-                field(v, "secondDomain")?,
-                field(v, "maxSpans")?,
+                crate::offset_envelope_fit::OffsetFaces { surfaces: [&a, &b], distances: field(v, "distances")? },
+                crate::offset_envelope_fit::ContactParameters { axis: field(v, "fixedAxis")?, drive: field(v, "fixedInterval")?, free: field(v, "firstOther")?, second: field(v, "secondDomain")?, spans: field(v, "maxSpans")? },
                 field(v, "toleranceMm")?,
                 field(v, "maxCells")?,
             )

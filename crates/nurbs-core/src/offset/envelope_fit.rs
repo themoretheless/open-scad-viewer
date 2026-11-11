@@ -5,6 +5,7 @@ use crate::{
     Result, check, distance_bounds::Interval as I, offset_contact_tangent, offset_envelope,
     surface::Surface, surface_contact::Verdict, surface_offset,
 };
+pub use crate::offset::contact_pcurve::{ContactParameters, OffsetFaces};
 #[derive(Debug)]
 pub struct Cell {
     pub domain: [[f64; 2]; 2],
@@ -65,16 +66,13 @@ impl Report {
 #[cfg(feature = "codec")]
 pub fn deliver(
     candidate: Option<&Surface>,
-    surfaces: [&Surface; 2],
-    distances: [f64; 2],
-    axis: usize,
-    drive: [f64; 2],
-    free: [f64; 2],
-    second: [[f64; 2]; 2],
-    spans: usize,
+    faces: OffsetFaces<'_>,
+    parameters: ContactParameters,
     tolerance: f64,
     max_cells: usize,
 ) -> Result<value_codec::Value> {
+    let OffsetFaces { surfaces, distances } = faces;
+    let ContactParameters { axis, drive, free, second, spans } = parameters;
     use value_codec::json;
     validate(surfaces, distances, axis, drive, free, second, spans)?;
     check(
@@ -98,9 +96,7 @@ pub fn deliver(
         proposed.as_ref()
     };
     let qualification = if let Some(c) = candidate {
-        Some(certify(
-            c, surfaces, distances, axis, drive, free, second, spans, tolerance, max_cells,
-        )?)
+        Some(certify(c, faces, parameters, tolerance, max_cells)?)
     } else {
         None
     };
@@ -164,16 +160,13 @@ fn validate(
 /// G1 tolerance, embedding or final B-rep topology certificate.
 pub fn certify(
     candidate: &Surface,
-    surfaces: [&Surface; 2],
-    distances: [f64; 2],
-    axis: usize,
-    drive: [f64; 2],
-    free: [f64; 2],
-    second: [[f64; 2]; 2],
-    spans: usize,
+    faces: OffsetFaces<'_>,
+    parameters: ContactParameters,
     tolerance: f64,
     max_cells: usize,
 ) -> Result<Report> {
+    let OffsetFaces { surfaces, distances } = faces;
+    let ContactParameters { axis, drive, free, second, spans } = parameters;
     validate(surfaces, distances, axis, drive, free, second, spans)?;
     check(
         tolerance.is_finite() && tolerance > 0.,
@@ -420,13 +413,8 @@ mod tests {
     ) -> Report {
         certify(
             candidate,
-            [a, b],
-            [0.2, 0.2],
-            0,
-            [0.35, 0.39],
-            [0.25, 0.35],
-            [[0.30, 0.44], [0.15, 0.25]],
-            2,
+            OffsetFaces { surfaces: [a, b], distances: [0.2, 0.2] },
+            ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 },
             tolerance,
             cells,
         )
@@ -516,13 +504,8 @@ mod tests {
                 .unwrap();
             let r = certify(
                 &c,
-                [&aa, &bb],
-                [0.2, 0.2],
-                1,
-                drive,
-                free,
-                second,
-                2,
+                OffsetFaces { surfaces: [&aa, &bb], distances: [0.2, 0.2] },
+                ContactParameters { axis: 1, drive, free, second, spans: 2 },
                 1e-3,
                 2047,
             )
@@ -585,15 +568,10 @@ mod tests {
         assert!(
             certify(
                 &c,
-                [&a, &b],
-                [0.2, 0.2],
-                0,
-                [0.35, 0.39],
-                [0.25, 0.35],
-                [[0.30, 0.44], [0.15, 0.25]],
-                2,
+                OffsetFaces { surfaces: [&a, &b], distances: [0.2, 0.2] },
+                ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 },
                 1e-4,
-                3
+                3,
             )
             .is_err()
         );
