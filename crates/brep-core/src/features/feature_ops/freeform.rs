@@ -123,13 +123,8 @@ pub fn replace_constrained(
                 return Err(refused("Trim G2 proof budget exhausted"));
             }
             let report = surface_g2_pcurves::inspect(
-                &source.edges[c.edge].curve,
-                [&c.pcurve, &c.pcurve],
-                [&f.surface, solved.surface()],
-                [c.reversed, c.reversed],
-                tolerances[0],
-                tolerances[1],
-                tolerances[2],
+                surface_g2_pcurves::PcurveSeam { curve: &source.edges[c.edge].curve, pcurves: [&c.pcurve, &c.pcurve], surfaces: [&f.surface, solved.surface()], reversed: [c.reversed, c.reversed] },
+                surface_g2_pcurves::G2PcurveTolerance { position: tolerances[0], normal: tolerances[1], curvature: tolerances[2] },
                 remaining / count,
                 exact_remaining,
             )?;

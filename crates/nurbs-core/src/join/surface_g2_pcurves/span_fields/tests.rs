@@ -36,13 +36,8 @@ fn all_original_one_sided_fields_cover_a_whole_c0_trace_without_changing_strict_
     let b = plane(true, 0.);
     let saved = b.clone();
     let old = super::super::inspect(
-        &c,
-        [&p, &p],
-        [&a, &b],
-        [false; 2],
-        1e-7,
-        1e-5,
-        1e-4,
+        super::super::PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&a, &b], reversed: [false; 2] },
+        super::super::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         128,
         100000,
     )

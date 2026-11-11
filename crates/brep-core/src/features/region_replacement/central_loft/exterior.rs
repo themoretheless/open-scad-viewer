@@ -138,13 +138,8 @@ impl CentralLoftCandidate<'_, '_, '_> {
                 .trim(parameter[0], parameter[1])?;
             let target_pc = self.pcurves[boundary].trim(parameter[0], parameter[1])?;
             let report = nurbs_core::surface_g2_pcurves::inspect(
-                &c,
-                [&source_pc, &target_pc],
-                [&self.originals[boundary].0, &patches[patch]],
-                [false, false],
-                self.options.tolerances[0],
-                self.options.tolerances[1],
-                self.options.tolerances[2],
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &c, pcurves: [&source_pc, &target_pc], surfaces: [&self.originals[boundary].0, &patches[patch]], reversed: [false, false] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: self.options.tolerances[0], normal: self.options.tolerances[1], curvature: self.options.tolerances[2] },
                 max_cells / count,
                 max_exact / count as u64,
             )?;

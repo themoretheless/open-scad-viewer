@@ -57,20 +57,10 @@ pub fn qualify(
             }
         }
         assert_eq!(uses.len(), 2);
-        let r = nurbs_core::surface_g2_pcurves::inspect_owned(
-            &model.edges[edge].curve,
-            [&uses[0].1, &uses[1].1],
-            [
+        let r = nurbs_core::surface_g2_pcurves::inspect_owned(nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &model.edges[edge].curve, pcurves: [&uses[0].1, &uses[1].1], surfaces: [
                 &model.faces[uses[0].0].surface,
                 &model.faces[uses[1].0].surface,
-            ],
-            [false; 2],
-            1e-7,
-            1e-5,
-            1e-4,
-            100_000,
-            1_000_000,
-        )?;
+            ], reversed: [false; 2] }, nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 }, 100_000, 1_000_000)?;
         admitted &= r.report.positions.proven
             && r.report.geometric.decision == nurbs_core::surface_join::Decision::WithinTolerance;
         seams.push(value_codec::json!({"edge":edge,"faces":[uses[0].0,uses[1].0],"positions":r.report.positions.proven,"g2":format!("{:?}",r.report.geometric.decision),"cells":r.report.geometric.cells,"branches":r.report.geometric.branches.iter().map(|r|value_codec::json!({"normalUpper":r.normal_upper,"tensorUpper":r.tensor_upper})).collect::<Vec<_>>()}));

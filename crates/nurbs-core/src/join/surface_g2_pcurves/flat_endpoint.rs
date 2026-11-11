@@ -171,13 +171,8 @@ mod tests {
             Some(Orientation::Opposite)
         );
         let r = inspect(
-            &c,
-            [&pa, &pb],
-            [&plane, &skin],
-            [false; 2],
-            1e-7,
-            1e-5,
-            1e-4,
+            PcurveSeam { curve: &c, pcurves: [&pa, &pb], surfaces: [&plane, &skin], reversed: [false; 2] },
+            G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
             1000,
             100000,
         )

@@ -142,13 +142,8 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
         .find(|c| c.edge == edge.edge && c.reversed != edge.reversed)
         .unwrap();
     let invalid = nurbs_core::surface_g2_pcurves::inspect(
-        &source.edges[edge.edge].curve,
-        [&support.pcurve, &edge.pcurve],
-        [&chart, &kink],
-        [support.reversed, edge.reversed],
-        1e-7,
-        1e-5,
-        1e-4,
+        nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &source.edges[edge.edge].curve, pcurves: [&support.pcurve, &edge.pcurve], surfaces: [&chart, &kink], reversed: [support.reversed, edge.reversed] },
+        nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         100000,
         1000000,
     )

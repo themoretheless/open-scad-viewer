@@ -60,13 +60,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let skin = report.fillet.surface.as_ref().unwrap();
         for (side, contact) in contacts.iter().enumerate() {
             let proof = nurbs_core::surface_g2_pcurves::inspect(
-                &contact.curve,
-                [&contact.support_pcurve, &contact.fillet_pcurve],
-                [if side == 0 { &a } else { &b }, skin],
-                [false, false],
-                1e-6,
-                1e-5,
-                1e-4,
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &contact.curve, pcurves: [&contact.support_pcurve, &contact.fillet_pcurve], surfaces: [if side == 0 { &a } else { &b }, skin], reversed: [false, false] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-6, normal: 1e-5, curvature: 1e-4 },
                 100000,
                 1000000,
             )?;

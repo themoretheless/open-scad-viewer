@@ -142,20 +142,10 @@ fn recomputed_contact_roots_bind_to_shared_body_vertices_on_both_incident_faces(
                 .count();
             assert_eq!(incident, 2);
         }
-        let proof = nurbs_core::surface_g2_pcurves::inspect(
-            &bound.restriction.contact.curve,
-            [
+        let proof = nurbs_core::surface_g2_pcurves::inspect(nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &bound.restriction.contact.curve, pcurves: [
                 &bound.restriction.contact.support_pcurve,
                 &bound.restriction.contact.fillet_pcurve,
-            ],
-            [if side == 0 { &a } else { &b }, skin],
-            [false, false],
-            1e-6,
-            1e-5,
-            1e-4,
-            100000,
-            1000000,
-        )
+            ], surfaces: [if side == 0 { &a } else { &b }, skin], reversed: [false, false] }, nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-6, normal: 1e-5, curvature: 1e-4 }, 100000, 1000000)
         .unwrap();
         assert_eq!(
             proof.geometric.decision,

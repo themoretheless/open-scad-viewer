@@ -166,13 +166,8 @@ pub fn prepare_trihedral_collars(
             inspected.owned
         } else {
             nurbs_core::surface_g2_pcurves::inspect_owned(
-                boundary,
-                [&p, &collar_pcurve],
-                [&s, &built.surface],
-                [false, false],
-                tolerances[0],
-                tolerances[1],
-                tolerances[2],
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: boundary, pcurves: [&p, &collar_pcurve], surfaces: [&s, &built.surface], reversed: [false, false] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: tolerances[0], normal: tolerances[1], curvature: tolerances[2] },
                 max_cells - out.cells,
                 max_exact.saturating_sub(out.exact_work).min(20000),
             )?

@@ -324,22 +324,34 @@ fn cell(
     }
     Ok(Cell { t, upper, lower })
 }
+/// A seam curve with its pcurve on each of the two surfaces and whether each pcurve runs reversed.
+#[derive(Clone, Copy)]
+pub struct PcurveSeam<'a> {
+    pub curve: &'a Curve,
+    pub pcurves: [&'a Curve; 2],
+    pub surfaces: [&'a Surface; 2],
+    pub reversed: [bool; 2],
+}
+/// Position, normal and curvature tolerances of a G2 pcurve seam check.
+#[derive(Clone, Copy, Debug)]
+pub struct G2PcurveTolerance {
+    pub position: f64,
+    pub normal: f64,
+    pub curvature: f64,
+}
 /// Position agreement is checked against the actual common curve, not a supplied
 /// claim. Shape boxes evaluate original rational jets over complete pcurve image
 /// enclosures. Only whole-interval upper bounds grant G2; point boxes can prove
 /// violations. One coherent sign applies to normal AND signed curvature tensor
 /// over the entire seam. No exact strip, corner, thickness or solid claim follows.
 pub fn inspect(
-    c: &Curve,
-    p: [&Curve; 2],
-    s: [&Surface; 2],
-    reverse: [bool; 2],
-    position: f64,
-    normal: f64,
-    curvature: f64,
+    seam: PcurveSeam<'_>,
+    tolerance: G2PcurveTolerance,
     max_cells: usize,
     max_exact: u64,
 ) -> Result<Report> {
+    let PcurveSeam { curve: c, pcurves: p, surfaces: s, reversed: reverse } = seam;
+    let G2PcurveTolerance { position, normal, curvature } = tolerance;
     check(
         normal.is_finite()
             && (0. ..=2.).contains(&normal)
@@ -578,13 +590,8 @@ mod trace_identity_tests {
             ..pc.clone()
         };
         let proof = inspect(
-            &curve,
-            [&pc, &back],
-            [&s, &s],
-            [false, true],
-            1e-7,
-            1e-5,
-            1e-4,
+            PcurveSeam { curve: &curve, pcurves: [&pc, &back], surfaces: [&s, &s], reversed: [false, true] },
+            G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
             100000,
             1000000,
         )
@@ -593,13 +600,8 @@ mod trace_identity_tests {
         let mut wrong = curve.clone();
         wrong.control_points[1][2] = 0.01;
         let proof = inspect(
-            &wrong,
-            [&pc, &back],
-            [&s, &s],
-            [false, true],
-            1e-7,
-            1e-5,
-            1e-4,
+            PcurveSeam { curve: &wrong, pcurves: [&pc, &back], surfaces: [&s, &s], reversed: [false, true] },
+            G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
             100000,
             1000000,
         )
@@ -657,10 +659,19 @@ pub struct OwnedInspection {
 /// after fresh full-curve admission. The G2 report is computed by inspect with
 /// the same caller limits, without trusting a stored report or Boolean flag.
 pub fn inspect_owned(
-    c:&Curve,p:[&Curve;2],s:[&Surface;2],reversed:[bool;2],position:f64,normal:f64,curvature:f64,
-    max_cells:usize,max_exact:u64,
+    seam: PcurveSeam<'_>,
+    tolerance: G2PcurveTolerance,
+    max_cells: usize,
+    max_exact: u64,
 )->Result<OwnedInspection> {
-    let report=inspect(c,p,s,reversed,position,normal,curvature,max_cells,max_exact)?;
+    let PcurveSeam { curve: c, pcurves: p, surfaces: s, reversed } = seam;
+    let G2PcurveTolerance { position, normal, curvature } = tolerance;
+    let report=inspect(
+        PcurveSeam { curve: c, pcurves: p, surfaces: s, reversed },
+        G2PcurveTolerance { position, normal, curvature },
+        max_cells,
+        max_exact,
+    )?;
     let positions=report.positions.proven.then(||OwnedPositions {
         curve:c.clone(),pcurves:p.map(Clone::clone),surfaces:s.map(Clone::clone),reversed,tolerance:position,
     });

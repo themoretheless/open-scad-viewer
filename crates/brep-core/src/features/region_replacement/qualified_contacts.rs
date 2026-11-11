@@ -118,20 +118,10 @@ pub fn trim_and_replace_contacts_g2(
                 "Saved G2 contact must have two distinct support uses",
             ));
         }
-        let report = nurbs_core::surface_g2_pcurves::inspect(
-            &model.edges[edge].curve,
-            [&uses[0].1, &uses[1].1],
-            [
+        let report = nurbs_core::surface_g2_pcurves::inspect(nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &model.edges[edge].curve, pcurves: [&uses[0].1, &uses[1].1], surfaces: [
                 &model.faces[uses[0].0].surface,
                 &model.faces[uses[1].0].surface,
-            ],
-            [false; 2],
-            source.tolerance_mm,
-            1e-5,
-            1e-4,
-            limits.cells - cells,
-            limits.exact_work - exact_work,
-        )?;
+            ], reversed: [false; 2] }, nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: source.tolerance_mm, normal: 1e-5, curvature: 1e-4 }, limits.cells - cells, limits.exact_work - exact_work)?;
         cells += report.geometric.cells;
         exact_work += report.positions.exact_work;
         if !report.positions.proven

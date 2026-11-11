@@ -89,13 +89,8 @@ pub(super) fn verify(
                 .as_ref()
                 .ok_or_else(|| error("Missing original curvature support"))?;
             let report = crate::surface_g2_pcurves::inspect(
-                &g.spatial,
-                [&g.parameters, &t.parameters],
-                [s, &t.surface],
-                [g.reverse, t.reverse],
-                options.fitting.position_tolerance,
-                options.normal_chord_tolerance,
-                curvature_tolerance.ok_or_else(|| error("Missing G2 tolerance"))?,
+                crate::surface_g2_pcurves::PcurveSeam { curve: &g.spatial, pcurves: [&g.parameters, &t.parameters], surfaces: [s, &t.surface], reversed: [g.reverse, t.reverse] },
+                crate::surface_g2_pcurves::G2PcurveTolerance { position: options.fitting.position_tolerance, normal: options.normal_chord_tolerance, curvature: curvature_tolerance.ok_or_else(|| error("Missing G2 tolerance"))? },
                 cells,
                 exact,
             )?;

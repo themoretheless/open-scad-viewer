@@ -259,13 +259,8 @@ fn inspect_manifold_seam(
         if p.geometric.decision == Decision::Unresolved && out.cells + p.geometric.cells < max_cells
         {
             let mut fallback = surface_g2_pcurves::inspect(
-                &model.edges[edge].curve,
-                pcurves,
-                surfaces,
-                reversed,
-                t.position,
-                t.normal,
-                t.curvature,
+                surface_g2_pcurves::PcurveSeam { curve: &model.edges[edge].curve, pcurves, surfaces, reversed },
+                surface_g2_pcurves::G2PcurveTolerance { position: t.position, normal: t.normal, curvature: t.curvature },
                 max_cells - out.cells - p.geometric.cells,
                 max_exact - out.exact_work - p.positions.exact_work,
             )?;
@@ -277,13 +272,8 @@ fn inspect_manifold_seam(
         p
     } else {
         surface_g2_pcurves::inspect(
-            &model.edges[edge].curve,
-            pcurves,
-            surfaces,
-            reversed,
-            t.position,
-            t.normal,
-            t.curvature,
+            surface_g2_pcurves::PcurveSeam { curve: &model.edges[edge].curve, pcurves, surfaces, reversed },
+            surface_g2_pcurves::G2PcurveTolerance { position: t.position, normal: t.normal, curvature: t.curvature },
             max_cells - out.cells,
             max_exact - out.exact_work,
         )?

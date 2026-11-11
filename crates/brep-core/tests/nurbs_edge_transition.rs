@@ -99,13 +99,8 @@ fn qualify_extents(source: Curve, directions: [[f64; 3]; 2], extents: Vec<f64>) 
         let a = Curve::from_polyline(vec![vec![u, 0.], vec![u, 1.]]).unwrap();
         let b = Curve::from_polyline(vec![vec![v, 0.], vec![v, 1.]]).unwrap();
         let p = nurbs_core::surface_g2_pcurves::inspect_owned(
-            &edge,
-            [&a, &b],
-            [&t.blend, &t.supports[i]],
-            [false; 2],
-            1e-7,
-            1e-5,
-            1e-4,
+            nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &edge, pcurves: [&a, &b], surfaces: [&t.blend, &t.supports[i]], reversed: [false; 2] },
+            nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
             100000,
             1000000,
         )

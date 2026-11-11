@@ -34,10 +34,12 @@ fn automatic_r1_contacts_on_original_curved_nurbs_stay_on_selected_branch() {
     let mut seam_exact=0;
     for side in 0..2 {
         let c=&contacts[side];
-        let seam=nurbs_core::surface_g2_pcurves::inspect(&c.curve,
-            [&c.support_pcurve,&c.fillet_pcurve],
-            [supports[side],built.fillet.surface.as_ref().unwrap()], [false;2],
-            1e-7,1e-5,1e-4,100000-seam_cells,1000000-seam_exact).unwrap();
+        let seam=nurbs_core::surface_g2_pcurves::inspect(
+            nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &c.curve, pcurves: [&c.support_pcurve,&c.fillet_pcurve], surfaces: [supports[side],built.fillet.surface.as_ref().unwrap()], reversed: [false;2] },
+            nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
+            100000-seam_cells,
+            1000000-seam_exact,
+        ).unwrap();
         assert!(seam.positions.proven);
         assert_eq!(seam.geometric.decision,nurbs_core::surface_join::Decision::WithinTolerance);
         seam_cells+=seam.geometric.cells;

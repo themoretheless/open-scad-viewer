@@ -196,13 +196,8 @@ fn variable_nominal_radii_build_c2_skins_with_whole_interval_plane_contacts_and_
         let mut exact = report.exact_work;
         for (side, contact) in report.contacts.as_ref().unwrap().iter().enumerate() {
             let proof = nurbs_core::surface_g2_pcurves::inspect(
-                &contact.curve,
-                [&contact.support_pcurve, &contact.fillet_pcurve],
-                [if side == 0 { &a } else { &b }, skin],
-                [false, false],
-                1e-6,
-                1e-5,
-                1e-4,
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &contact.curve, pcurves: [&contact.support_pcurve, &contact.fillet_pcurve], surfaces: [if side == 0 { &a } else { &b }, skin], reversed: [false, false] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-6, normal: 1e-5, curvature: 1e-4 },
                 (100000 - cells) / (2 - side),
                 1000000 - exact,
             )
@@ -499,9 +494,10 @@ fn variable_g2_cylinder_proposal_qualifies_original_contacts_and_prescribed_ball
     let mut exact = r.exact_work;
     for (side, contact) in contacts.iter().enumerate() {
         let proof = nurbs_core::surface_g2_pcurves::inspect(
-            &contact.curve, [&contact.support_pcurve, &contact.fillet_pcurve],
-            [if side == 0 { &a } else { &b }, r.fillet.surface.as_ref().unwrap()],
-            [false, false], 1e-6, 1e-5, 1e-4, 100000-cells, 1000000-exact,
+            nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &contact.curve, pcurves: [&contact.support_pcurve, &contact.fillet_pcurve], surfaces: [if side == 0 { &a } else { &b }, r.fillet.surface.as_ref().unwrap()], reversed: [false, false] },
+            nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-6, normal: 1e-5, curvature: 1e-4 },
+            100000-cells,
+            1000000-exact,
         ).unwrap();
         cells += proof.geometric.cells;
         exact += proof.positions.exact_work;
@@ -558,13 +554,8 @@ fn curved_rational_support_contacts_are_continuously_qualified_for_both_builders
             let skin = r.fillet.surface.as_ref().unwrap();
             for (side, contact) in contacts.iter().enumerate() {
                 let proof = nurbs_core::surface_g2_pcurves::inspect(
-                    &contact.curve,
-                    [&contact.support_pcurve, &contact.fillet_pcurve],
-                    [if side == 0 { &a } else { &c }, skin],
-                    [false, false],
-                    1e-6,
-                    1e-5,
-                    1e-4,
+                    nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &contact.curve, pcurves: [&contact.support_pcurve, &contact.fillet_pcurve], surfaces: [if side == 0 { &a } else { &c }, skin], reversed: [false, false] },
+                    nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-6, normal: 1e-5, curvature: 1e-4 },
                     100000,
                     1000000,
                 )

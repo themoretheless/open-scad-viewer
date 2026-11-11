@@ -107,13 +107,8 @@ impl CentralLoftCandidate<'_, '_, '_> {
         let mut reports = Vec::new();
         for i in 0..6 {
             let proof = nurbs_core::surface_g2_pcurves::inspect_owned(
-                &self.curves[i],
-                [&self.originals[i].1, &self.pcurves[i]],
-                [&self.originals[i].0, &self.surface],
-                [false, false],
-                self.options.tolerances[0],
-                self.options.tolerances[1],
-                self.options.tolerances[2],
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &self.curves[i], pcurves: [&self.originals[i].1, &self.pcurves[i]], surfaces: [&self.originals[i].0, &self.surface], reversed: [false, false] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: self.options.tolerances[0], normal: self.options.tolerances[1], curvature: self.options.tolerances[2] },
                 (max_cells - used) / (6 - i),
                 (max_exact - exact) / (6 - i) as u64,
             )?;

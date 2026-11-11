@@ -463,13 +463,8 @@ fn build_strips(
                 .find(|c| c.edge == e)
                 .ok_or_else(|| refused("Missing saved contact use"))?;
             let proof = surface_g2_pcurves::inspect_owned(
-                curve,
-                [&restricted[k].contact.support_pcurve, &coedge.pcurve],
-                [surfaces[k], saved],
-                [false, coedge.reversed],
-                limits.tolerances[0],
-                limits.tolerances[1],
-                limits.tolerances[2],
+                surface_g2_pcurves::PcurveSeam { curve, pcurves: [&restricted[k].contact.support_pcurve, &coedge.pcurve], surfaces: [surfaces[k], saved], reversed: [false, coedge.reversed] },
+                surface_g2_pcurves::G2PcurveTolerance { position: limits.tolerances[0], normal: limits.tolerances[1], curvature: limits.tolerances[2] },
                 work.cells()?,
                 work.exact()?,
             )?;

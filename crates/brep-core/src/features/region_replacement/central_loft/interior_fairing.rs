@@ -178,13 +178,8 @@ mod tests {
             let c = Curve::from_polyline(vec![vec![0., v, z], vec![1., v, z]]).unwrap();
             let p = Curve::from_polyline(vec![vec![0., v], vec![1., v]]).unwrap();
             let r = nurbs_core::surface_g2_pcurves::inspect(
-                &c,
-                [&p, &p],
-                [&s, q],
-                [false, false],
-                1e-7,
-                1e-5,
-                1e-4,
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&s, q], reversed: [false, false] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
                 1000,
                 100000,
             )

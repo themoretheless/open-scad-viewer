@@ -44,13 +44,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let edge = collar.surface.iso(Axis::V, 0.)?;
         let own = Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]])?;
         let proof = surface_g2_pcurves::inspect(
-            &edge,
-            [&pc, &own],
-            [&source, &collar.surface],
-            [false; 2],
-            1e-7,
-            1e-5,
-            1e-4,
+            surface_g2_pcurves::PcurveSeam { curve: &edge, pcurves: [&pc, &own], surfaces: [&source, &collar.surface], reversed: [false; 2] },
+            surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
             100000,
             1000000,
         )?;

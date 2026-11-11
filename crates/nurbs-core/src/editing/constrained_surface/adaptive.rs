@@ -233,13 +233,8 @@ fn verify_boundaries(
             let curve = reference.iso(axis, value)?;
             let pc = Curve::from_polyline(ends.into_iter().map(|p| p.to_vec()).collect())?;
             let r = crate::surface_g2_pcurves::inspect(
-                &curve,
-                [&pc, &pc],
-                [s, reference],
-                [false, false],
-                o.tolerances[0],
-                o.tolerances[1],
-                o.tolerances[2],
+                crate::surface_g2_pcurves::PcurveSeam { curve: &curve, pcurves: [&pc, &pc], surfaces: [s, reference], reversed: [false, false] },
+                crate::surface_g2_pcurves::G2PcurveTolerance { position: o.tolerances[0], normal: o.tolerances[1], curvature: o.tolerances[2] },
                 remaining / (o.sides.len() - i),
                 exact / (o.sides.len() - i) as u64,
             )?;

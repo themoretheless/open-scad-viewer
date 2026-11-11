@@ -20,13 +20,8 @@ fn public_report_mutation_cannot_change_owned_input_snapshots() {
     let c = Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.]]).unwrap();
     let p = Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]]).unwrap();
     let mut result = surface_g2_pcurves::inspect_owned(
-        &c,
-        [&p, &p],
-        [&s, &s],
-        [false, false],
-        1e-7,
-        1e-5,
-        1e-4,
+        surface_g2_pcurves::PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&s, &s], reversed: [false, false] },
+        surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         10000,
         50000,
     )
@@ -54,13 +49,8 @@ fn mismatching_curve_does_not_receive_positional_ownership() {
     let c = Curve::from_polyline(vec![vec![0., 0., 0.01], vec![1., 0., 0.01]]).unwrap();
     let p = Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]]).unwrap();
     let result = surface_g2_pcurves::inspect_owned(
-        &c,
-        [&p, &p],
-        [&s, &s],
-        [false, false],
-        1e-7,
-        1e-5,
-        1e-4,
+        surface_g2_pcurves::PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&s, &s], reversed: [false, false] },
+        surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         10000,
         50000,
     )

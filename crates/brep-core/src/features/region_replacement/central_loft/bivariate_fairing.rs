@@ -319,13 +319,8 @@ mod tests {
             let mut uv = Curve::from_polyline(vec![vec![-1., v], vec![2., v]]).unwrap();
             uv.knots = vec![-1., -1., 2., 2.];
             let r = nurbs_core::surface_g2_pcurves::inspect(
-                &c,
-                [&uv, &uv],
-                [&s, p],
-                [false, false],
-                1e-7,
-                1e-5,
-                1e-4,
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &c, pcurves: [&uv, &uv], surfaces: [&s, p], reversed: [false, false] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
                 2000,
                 100000,
             )

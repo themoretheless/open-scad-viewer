@@ -253,7 +253,12 @@ fn main() -> Result<()> {
                         };
                         let u = pair[0].knots_u[pair[0].control_points.len()];
                         let pcurve = nurbs_core::curve::Curve::from_polyline(vec![vec![u,0.],vec![u,1.]])?;
-                        let proof = nurbs_core::surface_g2_pcurves::inspect(&seam,[&pcurve,&pcurve],[&pair[0],&pair[1]],[false,false],1e-7,1e-5,1e-4,6000,100000)?;
+                        let proof = nurbs_core::surface_g2_pcurves::inspect(
+                            nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &seam, pcurves: [&pcurve,&pcurve], surfaces: [&pair[0],&pair[1]], reversed: [false,false] },
+                            nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
+                            6000,
+                            100000,
+                        )?;
                         println!("candidate handle_mm={handle} stage=network_join seam={i} literal_roots={} positions={} shape={:?}",left==right,proof.positions.proven,proof.geometric);
                         let paired = nurbs_core::surface_g2_pcurves::inspect_original_patch_pair(&pair[0],&pair[1],1e-5,1e-4,6000)?;
                         println!("candidate handle_mm={handle} stage=network_paired seam={i} decision={:?} normal={:?} tensor={:?} regular={} cells={} pending={}",paired.decision,paired.normal,paired.tensor,paired.regularity_proven,paired.cells,paired.pending);

@@ -606,9 +606,11 @@ fn closed_straight_end_caps_do_not_inherit_g2_admission_from_contact_roots() {
     let support_co = plan.model.loops[retained.outer].coedges.iter()
         .find(|co| co.edge == cap_co.edge).unwrap();
     let seam = nurbs_core::surface_g2_pcurves::inspect(
-        &plan.model.edges[cap_co.edge].curve, [&support_co.pcurve, &cap_co.pcurve],
-        [&retained.surface, &cap.surface], [support_co.reversed, cap_co.reversed],
-        source.tolerance_mm, 1e-5, 1e-4, 100_000, 1_000_000).unwrap();
+        nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &plan.model.edges[cap_co.edge].curve, pcurves: [&support_co.pcurve, &cap_co.pcurve], surfaces: [&retained.surface, &cap.surface], reversed: [support_co.reversed, cap_co.reversed] },
+        nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: source.tolerance_mm, normal: 1e-5, curvature: 1e-4 },
+        100_000,
+        1_000_000,
+    ).unwrap();
     assert!(seam.positions.proven);
     assert_eq!(seam.geometric.decision, nurbs_core::surface_join::Decision::CorrespondenceExceedsTolerance);
     eprintln!("stop_cap_g2 edge={} normal_lower={:?} position_upper={:?}", cap_co.edge,

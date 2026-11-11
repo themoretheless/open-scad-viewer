@@ -92,20 +92,10 @@ fn main() {
             }
         }
         assert_eq!(uses.len(), 2);
-        let p = nurbs_core::surface_g2_pcurves::inspect_owned(
-            &body.model.edges[e].curve,
-            [&uses[0].1, &uses[1].1],
-            [
+        let p = nurbs_core::surface_g2_pcurves::inspect_owned(nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &body.model.edges[e].curve, pcurves: [&uses[0].1, &uses[1].1], surfaces: [
                 &body.model.faces[uses[0].0].surface,
                 &body.model.faces[uses[1].0].surface,
-            ],
-            [false; 2],
-            1e-7,
-            1e-5,
-            1e-4,
-            100000,
-            1000000,
-        )
+            ], reversed: [false; 2] }, nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 }, 100000, 1000000)
         .unwrap();
         all &= p.report.positions.proven
             && p.report.geometric.decision == nurbs_core::surface_join::Decision::WithinTolerance;

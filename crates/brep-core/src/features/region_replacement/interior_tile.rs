@@ -288,13 +288,8 @@ fn build_tile(
             proof.owned.report
         } else {
             nurbs_core::surface_g2_pcurves::inspect(
-                &curves[i],
-                [&pcs[i], &pcs[i]],
-                [s, &tile],
-                [false, false],
-                tolerances[0],
-                tolerances[1],
-                tolerances[2],
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &curves[i], pcurves: [&pcs[i], &pcs[i]], surfaces: [s, &tile], reversed: [false, false] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: tolerances[0], normal: tolerances[1], curvature: tolerances[2] },
                 limits.seam_cells.saturating_sub(cells),
                 limits.exact_work.saturating_sub(exact),
             )?

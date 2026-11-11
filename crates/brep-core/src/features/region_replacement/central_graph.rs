@@ -871,13 +871,8 @@ fn inspect_graph(
             proof.owned.report
         } else {
             nurbs_core::surface_g2_pcurves::inspect(
-                &c.curve,
-                [&c.original_pcurve, &candidate.pcurves[i]],
-                [&c.original_surface, &candidate.surface],
-                [false; 2],
-                tolerances[0],
-                tolerances[1],
-                tolerances[2],
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &c.curve, pcurves: [&c.original_pcurve, &candidate.pcurves[i]], surfaces: [&c.original_surface, &candidate.surface], reversed: [false; 2] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: tolerances[0], normal: tolerances[1], curvature: tolerances[2] },
                 ((max_cells - cells) / (collars.boundaries.len() - i)).min(100000),
                 max_exact.saturating_sub(exact_work) / (collars.boundaries.len() - i) as u64,
             )?

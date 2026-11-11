@@ -148,13 +148,8 @@ pub fn replace_g2_candidate(
         }
         let budget = ((max_cells - cells) / (count - seams.len() + 1)).max(1);
         let proof = nurbs_core::surface_g2_pcurves::inspect(
-            &source.edges[pc.edge].curve,
-            [&old.pcurve, &pc.pcurve],
-            [&source.faces[f].surface, surface],
-            [old.reversed, pc.reversed],
-            tolerances[0],
-            tolerances[1],
-            tolerances[2],
+            nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &source.edges[pc.edge].curve, pcurves: [&old.pcurve, &pc.pcurve], surfaces: [&source.faces[f].surface, surface], reversed: [old.reversed, pc.reversed] },
+            nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: tolerances[0], normal: tolerances[1], curvature: tolerances[2] },
             budget,
             max_exact - exact_work,
         )?;

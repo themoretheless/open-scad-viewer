@@ -82,13 +82,8 @@ fn original_root_bands_bound_both_contact_ends_and_all_restricted_lifts() {
             nurbs_core::curve_surface_agreement::Status::WithinTolerance
         );
         let g2 = nurbs_core::surface_g2_pcurves::inspect(
-            &out.contact.curve,
-            [&out.contact.support_pcurve, &out.contact.fillet_pcurve],
-            supports,
-            [false, false],
-            1e-6,
-            1e-5,
-            1e-4,
+            nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &out.contact.curve, pcurves: [&out.contact.support_pcurve, &out.contact.fillet_pcurve], surfaces: supports, reversed: [false, false] },
+            nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-6, normal: 1e-5, curvature: 1e-4 },
             100000,
             1000000,
         )
@@ -269,13 +264,8 @@ fn rational_cylinder_contact_restriction_preserves_whole_interval_g2() {
         assert!((out.endpoints[k][1] - ys[k]).abs() <= 1e-6);
     }
     let proof = nurbs_core::surface_g2_pcurves::inspect(
-        &out.contact.curve,
-        [&out.contact.support_pcurve, &out.contact.fillet_pcurve],
-        supports,
-        [false, false],
-        1e-6,
-        1e-5,
-        1e-4,
+        nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &out.contact.curve, pcurves: [&out.contact.support_pcurve, &out.contact.fillet_pcurve], surfaces: supports, reversed: [false, false] },
+        nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-6, normal: 1e-5, curvature: 1e-4 },
         100000,
         1000000,
     )

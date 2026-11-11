@@ -234,13 +234,8 @@ pub fn inspect_saved(
             })
             .ok_or("Missing original support edge use")?;
         let proof = nurbs_core::surface_g2_pcurves::inspect(
-            &out.model.edges[edge].curve,
-            [&support_use.pcurve, &skin_use.pcurve],
-            [&support.surface, &skin.surface],
-            [support_use.reversed, skin_use.reversed],
-            1e-7,
-            1e-5,
-            1e-4,
+            nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &out.model.edges[edge].curve, pcurves: [&support_use.pcurve, &skin_use.pcurve], surfaces: [&support.surface, &skin.surface], reversed: [support_use.reversed, skin_use.reversed] },
+            nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
             100000 - cells,
             1000000 - exact,
         )?;
