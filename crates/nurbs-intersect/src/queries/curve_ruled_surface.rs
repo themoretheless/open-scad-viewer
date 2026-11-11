@@ -328,11 +328,18 @@ fn resolve_cs_box(
     Ok(())
 }
 
+struct CanonicalRuledSurface {
+    surface: Surface,
+    swapped: bool,
+    vd: [f64; 2],
+    seam_u: Option<[f64; 2]>,
+}
+
 fn canonical_ruled_surface(
     curve: &Curve,
     surface: &Surface,
     report: &mut Report<CurveRuledSurfaceComponent>,
-) -> Option<(Surface, bool, [f64; 2], Option<[f64; 2]>)> {
+) -> Option<CanonicalRuledSurface> {
     // Canonical orientation is ruled in V: linear V with exactly two rows.
     let swapped =
         if surface.degree_v == 1 && surface.control_points[0].len() == 2 && !surface.periodic_v {
@@ -370,7 +377,12 @@ fn canonical_ruled_surface(
             );
         }
     }
-    Some((canonical, swapped, vd, seam_u))
+    Some(CanonicalRuledSurface {
+        surface: canonical,
+        swapped,
+        vd,
+        seam_u,
+    })
 }
 
 fn finalize_cs_report(
@@ -445,7 +457,12 @@ pub fn curve_ruled_surface(
     surface.validate()?;
     let options = options.validate()?;
     let mut report = Report::default();
-    let Some((canonical, swapped, vd, seam_u)) = canonical_ruled_surface(curve, surface, &mut report)
+    let Some(CanonicalRuledSurface {
+        surface: canonical,
+        swapped,
+        vd,
+        seam_u,
+    }) = canonical_ruled_surface(curve, surface, &mut report)
     else {
         return Ok(report);
     };

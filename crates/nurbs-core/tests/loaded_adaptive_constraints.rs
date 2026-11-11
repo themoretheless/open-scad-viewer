@@ -82,17 +82,19 @@ fn independent_original_metric_retains_affine_membrane_energy_and_load_work() {
     for p in trial.control_points.iter_mut().flatten() {
         p[0] *= 2.;
     }
-    let mut m = Model::default();
-    m.material = Material {
-        membrane: 3.,
-        bending: 0.,
-        poisson: 0.25,
+    let m = Model {
+        material: Material {
+            membrane: 3.,
+            bending: 0.,
+            poisson: 0.25,
+        },
+        traction: [0.2, 0., 0.],
+        points: vec![PointLoad {
+            uv: [0.25, 0.5],
+            force: [1., 0., 0.],
+        }],
+        ..Model::default()
     };
-    m.traction = [0.2, 0., 0.];
-    m.points = vec![PointLoad {
-        uv: [0.25, 0.5],
-        force: [1., 0., 0.],
-    }];
     let q = variational::solve_with_reference(
         &trial,
         &reference,
@@ -122,13 +124,15 @@ fn independent_original_curvature_retains_bending_and_dead_pressure_offsets() {
             p[2] = if i == 2 { height } else { 0. };
         }
     }
-    let mut m = Model::default();
-    m.material = Material {
-        membrane: 0.,
-        bending: 2.,
-        poisson: 0.2,
+    let m = Model {
+        material: Material {
+            membrane: 0.,
+            bending: 2.,
+            poisson: 0.2,
+        },
+        pressure: 3.,
+        ..Model::default()
     };
-    m.pressure = 3.;
     let q = variational::solve_with_reference(
         &trial,
         &reference,
@@ -172,8 +176,10 @@ fn original_and_trial_knot_partitions_both_participate_without_chart_inference()
         )
         .is_err()
     );
-    let mut o = variational::Options::default();
-    o.max_sites = 63;
+    let o = variational::Options {
+        max_sites: 63,
+        ..variational::Options::default()
+    };
     assert!(
         variational::solve_with_reference(&trial, &reference, &[], &Model::default(), o).is_err()
     );
@@ -184,10 +190,14 @@ fn loaded_hidden_quartic_grows_the_basis_but_keeps_original_physical_rest() {
     let c = quartic();
     let p = pc();
     let before = (seed.clone(), c.clone(), p.clone());
-    let mut m = Model::default();
-    m.pressure = 0.05;
-    let mut no = loading::Options::default();
-    no.max_refinements = 0;
+    let m = Model {
+        pressure: 0.05,
+        ..Model::default()
+    };
+    let no = loading::Options {
+        max_refinements: 0,
+        ..loading::Options::default()
+    };
     assert!(loading::solve(&seed, &[guide(&c, &p)], &[], &[], None, &m, no).is_err());
     let q = loading::solve(
         &seed,
@@ -231,8 +241,10 @@ fn physical_basis_insertion_keeps_the_original_metric_and_full_source_curve() {
         periodic: false,
     };
     let p = pc();
-    let mut m = Model::default();
-    m.pressure = 0.02;
+    let m = Model {
+        pressure: 0.02,
+        ..Model::default()
+    };
     let q = loading::solve(
         &seed,
         &[guide(&c, &p)],
@@ -279,8 +291,10 @@ fn loaded_degree_growth_keeps_original_four_boundary_g2_and_reference_weights() 
         boundaries: &sides,
         tolerances: [1e-8, 1e-6, 1e-6],
     };
-    let mut m = Model::default();
-    m.pressure = 0.01;
+    let m = Model {
+        pressure: 0.01,
+        ..Model::default()
+    };
     let q = loading::solve(
         &seed,
         &[guide(&c, &p)],
@@ -308,10 +322,12 @@ fn adaptive_physical_limits_and_original_control_indices_do_not_publish_reinterp
     let c = quartic();
     let p = pc();
     let m = Model::default();
-    let mut o = loading::Options::default();
-    o.max_controls = 4;
+    let o = loading::Options {
+        max_controls: 4,
+        ..loading::Options::default()
+    };
     assert!(loading::solve(&seed, &[guide(&c, &p)], &[], &[], None, &m, o).is_err());
-    o = loading::Options::default();
+    let mut o = loading::Options::default();
     o.network.max_total_assembly_terms = 1;
     assert!(loading::solve(&seed, &[guide(&c, &p)], &[], &[], None, &m, o).is_err());
     let hard = [Constraint::ControlPoint {

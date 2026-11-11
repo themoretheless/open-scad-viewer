@@ -373,18 +373,17 @@ fn chain(mut pieces: Vec<Span>, band: f64) -> Result<Vec<Vec<Span>>> {
     let mut loops = Vec::new();
     while let Some(first) = pieces.pop() {
         let start = first.at(0.);
+        let mut end = first.at(1.);
         let mut current = vec![first];
-        loop {
-            let end = current.last().unwrap().at(1.);
-            if close(end, start) {
-                break;
-            }
+        while !close(end, start) {
             let Some(index) = pieces.iter().position(|p| close(p.at(0.), end)) else {
                 return Err(unsupported(
                     "Revolution section Boolean: boundary pieces do not close into loops",
                 ));
             };
-            current.push(pieces.swap_remove(index));
+            let next = pieces.swap_remove(index);
+            end = next.at(1.);
+            current.push(next);
         }
         loops.push(current);
     }

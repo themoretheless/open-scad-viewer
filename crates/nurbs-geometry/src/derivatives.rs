@@ -49,7 +49,7 @@ pub fn basis_derivatives(
         "Derivative order must not exceed 16",
     )?;
     check(
-        span >= p && span + p + 1 <= knots.len() && span + 1 < knots.len(),
+        span >= p && span + p + 1 <= knots.len(),
         "Span is outside the valid knot range",
     )?;
     check(
@@ -118,8 +118,8 @@ pub fn basis_derivatives(
         }
     }
     let mut factor = p as f64;
-    for k in 1..=top {
-        for value in &mut ders[k] {
+    for (k, row) in ders.iter_mut().enumerate().take(top + 1).skip(1) {
+        for value in row {
             *value *= factor;
         }
         factor *= (p - k) as f64;
@@ -483,17 +483,17 @@ mod tests {
             let d = surface.derivatives(u, v, order).unwrap();
             let mut series = [0.; 3];
             let mut term_u = 1.;
-            for k in 0..=order {
+            for (k, row) in d.iter().enumerate().take(order + 1) {
                 if k > 0 {
                     term_u *= hu / k as f64;
                 }
                 let mut term = term_u;
-                for l in 0..=order - k {
+                for (l, cell) in row.iter().enumerate().take(order - k + 1) {
                     if l > 0 {
                         term *= hv / l as f64;
                     }
                     for axis in 0..3 {
-                        series[axis] += term * d[k][l][axis];
+                        series[axis] += term * cell[axis];
                     }
                 }
             }

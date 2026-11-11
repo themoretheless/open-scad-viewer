@@ -485,14 +485,6 @@ pub fn recommended_for_lattice(
     }
 }
 
-/// `lattice` with an optional GPU field sampler: the implicit field (BVH signed
-/// distance plus capsule graph) is evaluated on the GPU in f32; snap, boundary
-/// validation, marching-tetrahedra and the final mesh audit stay on the CPU.
-/// Anything ineligible or unavailable falls back to the CPU reference.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "public accelerated lattice API preserves the geometry bridge contract"
-)]
 /// How the lattice is enclosed: outer skin thickness, organic blending, an open top with its wall
 /// depth, and whether the solid core is kept.
 #[derive(Clone, Copy, Debug)]
@@ -503,6 +495,11 @@ pub struct ShellStyle {
     pub wall_depth: f64,
     pub keep_core: bool,
 }
+
+/// `lattice` with an optional GPU field sampler: the implicit field (BVH signed
+/// distance plus capsule graph) is evaluated on the GPU in f32; snap, boundary
+/// validation, marching-tetrahedra and the final mesh audit stay on the CPU.
+/// Anything ineligible or unavailable falls back to the CPU reference.
 pub fn lattice_accelerated(
     mesh: &Mesh,
     nodes: Vec<P>,
