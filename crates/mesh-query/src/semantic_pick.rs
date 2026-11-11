@@ -19,6 +19,13 @@ pub struct SemanticHit {
     pub point: [f64; 3],
     pub triangle: u32,
 }
+/// A pick ray: hits are reported for depths in `[0, max_depth]`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PickRay {
+    pub origin: [f64; 3],
+    pub direction: [f64; 3],
+    pub max_depth: f64,
+}
 /// Return all hits up to `max_hits`, ordered by ray depth then stable IDs.
 /// UV are the first two barycentric coordinates, not an invented surface UV.
 pub fn semantic_ray_pick(
@@ -26,12 +33,15 @@ pub fn semantic_ray_pick(
     vertices: &[f32],
     indices: &[u32],
     stride: usize,
-    origin: [f64; 3],
-    direction: [f64; 3],
-    max_depth: f64,
+    ray: PickRay,
     semantics: &[TriangleSemantics],
     max_hits: usize,
 ) -> Result<Vec<SemanticHit>> {
+    let PickRay {
+        origin,
+        direction,
+        max_depth,
+    } = ray;
     if origin.iter().chain(&direction).any(|v| !v.is_finite())
         || direction == [0.; 3]
         || !max_depth.is_finite()
@@ -120,9 +130,11 @@ mod tests {
             &p,
             &i,
             3,
-            [0.1, 0.1, 0.],
-            [0., 0., 1.],
-            10.,
+            PickRay {
+                origin: [0.1, 0.1, 0.],
+                direction: [0., 0., 1.],
+                max_depth: 10.,
+            },
             &semantics,
             8,
         )
