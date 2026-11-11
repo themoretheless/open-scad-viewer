@@ -104,25 +104,17 @@ fn try_dispatch_affine_pipes_and_helicoids(v: &Value, op: &str) -> Option<Result
         })(),
         "curve_toroidal_spiral" => (|| {
             encode(toroidal_spiral::approximate(
-                field(v, "center")?,
-                field(v, "major_radius")?,
-                field(v, "minor_radius")?,
-                field(v, "major_turns")?,
-                field(v, "minor_turns")?,
-                field(v, "major_phase_degrees")?,
-                field(v, "minor_phase_degrees")?,
+                toroidal_spiral::Torus { center: field(v, "center")?, major_radius: field(v, "major_radius")?, minor_radius: field(v, "minor_radius")? },
+                toroidal_spiral::TorusWinding { major_turns: field(v, "major_turns")?, minor_turns: field(v, "minor_turns")?, major_phase_degrees: field(v, "major_phase_degrees")?, minor_phase_degrees: field(v, "minor_phase_degrees")? },
                 field(v, "max_deviation")?,
             )?)
         })(),
         "curve_torus_knot" => (|| {
             encode(toroidal_spiral::approximate_knot(
-                field(v, "center")?,
-                field(v, "major_radius")?,
-                field(v, "minor_radius")?,
+                toroidal_spiral::Torus { center: field(v, "center")?, major_radius: field(v, "major_radius")?, minor_radius: field(v, "minor_radius")? },
                 field(v, "p")?,
                 field(v, "q")?,
-                field(v, "major_phase_degrees")?,
-                field(v, "minor_phase_degrees")?,
+                [field(v, "major_phase_degrees")?, field(v, "minor_phase_degrees")?],
                 field(v, "max_deviation")?,
             )?)
         })(),

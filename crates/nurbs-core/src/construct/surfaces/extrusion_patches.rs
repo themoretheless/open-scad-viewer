@@ -34,7 +34,13 @@ mod tests {
     use super::*;
     #[test]
     fn dense_full_knot_retains_tight_fit_and_original_parameter_domains() {
-        let a = crate::toroidal_spiral::approximate_knot([3., 4., 5.], 3., 1., 2, 3, 0., 0., 1e-4)
+        let a = crate::toroidal_spiral::approximate_knot(
+            crate::toroidal_spiral::Torus { center: [3., 4., 5.], major_radius: 3., minor_radius: 1. },
+            2,
+            3,
+            [0., 0.],
+            1e-4,
+        )
             .unwrap();
         assert!(a.curve.control_points.len() > 32);
         let full = crate::surface::extrude(&a.curve, [0., 0., 1.]).unwrap();
