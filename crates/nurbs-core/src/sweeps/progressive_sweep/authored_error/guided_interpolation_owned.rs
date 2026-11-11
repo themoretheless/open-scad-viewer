@@ -180,7 +180,13 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
         } else if frenet {
             authored_frame_certificate::certify_frenet_control_values(sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if let Some(anchor)=anchor {
-            authored_frame_certificate::certify_contact_control_values(sweep.path,guide.unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,qs,anchor,interval,budget)
+            authored_frame_certificate::certify_contact_control_values(
+                authored_frame_certificate::ContactLaws { path: sweep.path, guide: guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
+                qs,
+                anchor,
+                interval,
+                budget,
+            )
         } else {
             authored_frame_certificate::certify_path_guide_control_values(reference_path,reference_guide.unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         }
@@ -209,7 +215,13 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
         } else if frenet {
             authored_frame_certificate::certify_frenet_control_trajectories(sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if let Some(anchor)=anchor {
-            authored_frame_certificate::certify_contact_control_trajectories(sweep.path,guide.unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,qs,anchor,interval,budget)
+            authored_frame_certificate::certify_contact_control_trajectories(
+                authored_frame_certificate::ContactLaws { path: sweep.path, guide: guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
+                qs,
+                anchor,
+                interval,
+                budget,
+            )
         } else {
             authored_frame_certificate::certify_path_guide_control_trajectories(reference_path,reference_guide.unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         }

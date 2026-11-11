@@ -621,7 +621,8 @@ mod tests;
 pub(crate) use frenet_path_values::certify_frenet_relative_values;
 pub(crate) use frenet_path_values::certify_frenet_relative_values_with_binormal_identity;
 
-pub(crate) use guided_path_values::{ContactLaws, ContactTraversal, PathGuideTraversal, certify_path_guide_relative_values, certify_contact_relative_values};
+pub use guided_path_values::ContactLaws;
+pub(crate) use guided_path_values::{ContactTraversal, PathGuideTraversal, certify_path_guide_relative_values, certify_contact_relative_values};
 
 pub(crate) use guided_path_values::certify_independent_guided_cover;
 

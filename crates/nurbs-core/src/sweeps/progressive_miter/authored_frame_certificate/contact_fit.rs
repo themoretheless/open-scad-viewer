@@ -5,17 +5,24 @@ use super::*;
 /// Original contact control jets with explicit q/anchor premises. Continuous
 /// normal-plane compatibility, retained stations and caps remain separate.
 pub fn certify_contact_control_trajectory(
-    path:&Curve,guide:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    q:[[f64;2];3],anchor:[f64;2],traversal:[f64;2],max_cells:usize,
-)->Result<TrajectoryReport>{
-    let batch=certify_contact_control_trajectories(path,guide,scale,twist,affine,&[q],anchor,traversal,max_cells)?;
+    laws: super::ContactLaws<'_>,
+    q: [[f64; 2]; 3],
+    anchor: [f64; 2],
+    traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<TrajectoryReport> {
+    let batch=certify_contact_control_trajectories(laws, &[q], anchor, traversal, max_cells)?;
     Ok(TrajectoryReport {traversal,status:batch.status,cells:batch.cells,jet:batch.jets.map(|mut v|v.remove(0)),single_span:batch.single_span,reason:batch.reason})
 }
 /// Original fitted-control jets, sharing every source restriction once.
 pub fn certify_contact_control_trajectories(
-    path:&Curve,guide:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],anchor:[f64;2],traversal:[f64;2],max_cells:usize,
-)->Result<TrajectoriesReport>{
+    laws: super::ContactLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
+    anchor: [f64; 2],
+    traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<TrajectoriesReport> {
+    let super::ContactLaws { path, guide, scale, twist, affine } = laws;
     twist.validate()?;
     check(
         twist.control_points.iter().all(|p| p[0] == 0.),
@@ -229,11 +236,7 @@ mod tests {
         twist.control_points = vec![vec![0.; 3]; 2];
         let q = [[1., 1.], [3., 3.], [4., 4.]];
         let report = certify_contact_control_trajectory(
-            &path,
-            &guide,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
+            ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: Some((&axes, &center)) },
             q,
             [2., 2.],
             [0.25, 0.5],
@@ -268,11 +271,7 @@ mod tests {
             }
         }
         let short = certify_contact_control_trajectory(
-            &path,
-            &guide,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
+            ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: Some((&axes, &center)) },
             q,
             [2., 2.],
             [0.25, 0.5],
@@ -293,12 +292,24 @@ fn shared_control_jets_preserve_original_analytic_transport_and_whole_batch_refu
     let twist=Curve {degree:1,knots:vec![0.,0.,1.,1.],control_points:vec![vec![0.;3];2],weights:vec![1.;2],periodic:false};
     let qs=[[[1.,1.],[0.,0.],[0.,0.]],[[2.,2.],[3.,3.],[4.,4.]]];
     for contact in [false,true] {
-        let batch=if contact {certify_contact_control_trajectories(&path,&guide,&scale,&twist,None,&qs,[2.,2.],[0.25,0.5],1000)} else {certify_path_guide_control_trajectories(&path,&guide,&scale,&twist,None,&qs,[0.25,0.5],1000)}.unwrap();
+        let batch=if contact {certify_contact_control_trajectories(
+            ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: None },
+            &qs,
+            [2.,2.],
+            [0.25,0.5],
+            1000,
+        )} else {certify_path_guide_control_trajectories(&path,&guide,&scale,&twist,None,&qs,[0.25,0.5],1000)}.unwrap();
         assert_eq!(batch.status,Status::Certified);
         let jets=batch.jets.as_ref().unwrap();
         let mut separate_cells=0;
         for (i,&q) in qs.iter().enumerate() {
-            let single=if contact {certify_contact_control_trajectory(&path,&guide,&scale,&twist,None,q,[2.,2.],[0.25,0.5],1000)} else {certify_path_guide_control_trajectory(&path,&guide,&scale,&twist,None,q,[0.25,0.5],1000)}.unwrap();
+            let single=if contact {certify_contact_control_trajectory(
+                ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: None },
+                q,
+                [2.,2.],
+                [0.25,0.5],
+                1000,
+            )} else {certify_path_guide_control_trajectory(&path,&guide,&scale,&twist,None,q,[0.25,0.5],1000)}.unwrap();
             let jet=single.jet.unwrap();
             assert_eq!(jets[i].value,jet.value);
             assert_eq!(jets[i].first,jet.first);
@@ -314,7 +325,13 @@ fn shared_control_jets_preserve_original_analytic_transport_and_whole_batch_refu
             }
         }
         assert!(batch.cells<separate_cells);
-        let short=if contact {certify_contact_control_trajectories(&path,&guide,&scale,&twist,None,&qs,[2.,2.],[0.25,0.5],batch.cells-1)} else {certify_path_guide_control_trajectories(&path,&guide,&scale,&twist,None,&qs,[0.25,0.5],batch.cells-1)}.unwrap();
+        let short=if contact {certify_contact_control_trajectories(
+            ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: None },
+            &qs,
+            [2.,2.],
+            [0.25,0.5],
+            batch.cells-1,
+        )} else {certify_path_guide_control_trajectories(&path,&guide,&scale,&twist,None,&qs,[0.25,0.5],batch.cells-1)}.unwrap();
         assert_eq!(short.status,Status::Unresolved);
         assert!(short.jets.is_none());
     }

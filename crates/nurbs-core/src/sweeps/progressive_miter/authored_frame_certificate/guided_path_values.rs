@@ -156,7 +156,7 @@ pub(crate) fn certify_path_guide_relative_values(
 
 /// Path, guide, scale and twist laws of a guided contact sweep, with optional affine laws.
 #[derive(Clone, Copy)]
-pub(crate) struct ContactLaws<'a> {
+pub struct ContactLaws<'a> {
     pub path: &'a Curve,
     pub guide: &'a Curve,
     pub scale: &'a Curve,
