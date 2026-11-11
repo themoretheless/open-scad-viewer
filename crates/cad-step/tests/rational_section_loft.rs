@@ -523,8 +523,7 @@ fn authored_frames_keep_hollow_body_manifold_caps() {
     let normal=constant_vector_law([1.,0.,0.]).unwrap();
     let axes=constant_vector_law([1.;3]).unwrap();
     let center=constant_vector_law([0.;3]).unwrap();
-    let (model,evidence)=brep_core::progressive_authored_profile_body(&circles(0.,1.),
-        &path,&scale,&twist,&axis,&normal,&axes,&center,Options {
+    let (model,evidence)=brep_core::progressive_authored_profile_body(&circles(0.,1.), nurbs_core::progressive_sweep::AuthoredSweepLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, axis_scale: &axes, center: &center }, Options {
         normal:[1.,0.,0.],orientation:Orientation::RotationMinimizing,
         spacing:Spacing::Parameter,initial_sections:3,max_sections:129,max_deviation:0.005,
     }).unwrap();
@@ -565,8 +564,7 @@ fn common_contact_anchor_retains_rational_outer_and_hole_body() {
     let axes=constant_vector_law([1.;3]).unwrap();
     let center=constant_vector_law([0.;3]).unwrap();
     let loops=vec![vec![profiles[0].clone()],vec![profiles[1].clone()]];
-    let (public,evidence)=brep_core::progressive_guided_profile_body(&loops,&path,&scale,&twist,
-        &rail,Some((0,0.)),&axes,&center,Options {
+    let (public,evidence)=brep_core::progressive_guided_profile_body(&loops, nurbs_core::progressive_sweep::ContactSweepLaws { path: &path, scale: &scale, twist: &twist, guide: &rail, axis_scale: &axes, center: &center }, Some((0,0.)), Options {
         normal:[1.,0.,0.],orientation:Orientation::RotationMinimizing,
         spacing:Spacing::Parameter,initial_sections:3,max_sections:129,max_deviation:0.001,
     }).unwrap();

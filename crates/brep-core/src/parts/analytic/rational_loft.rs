@@ -414,15 +414,11 @@ pub fn progressive_affine_profile_body(
 /// does not prove globally embedded walls or continuous frame regularity.
 pub fn progressive_authored_profile_body(
     loops: &[Vec<Curve>],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    longitudinal: &Curve,
-    transverse: &Curve,
-    axis_scale: &Curve,
-    center: &Curve,
+    laws: nurbs_core::progressive_sweep::AuthoredSweepLaws<'_>,
     mut options: nurbs_core::progressive_sweep::Options,
 ) -> Result<(Model, nurbs_core::progressive_sweep::MultiApproximation)> {
+    let nurbs_core::progressive_sweep::AuthoredSweepLaws { path, scale, twist, longitudinal, transverse, axis_scale, center } =
+        laws;
     options.orientation = nurbs_core::progressive_sweep::Orientation::Fixed;
     progressive_body_laws(
         ProgressiveLaws { loops, path, scale, twist, affine: Some((axis_scale, center)), frames: Some((longitudinal, transverse)), guidance: None },
@@ -434,15 +430,11 @@ pub fn progressive_authored_profile_body(
 /// authored profile index, parameter in that profile domain). Contact is sampled.
 pub fn progressive_guided_profile_body(
     loops: &[Vec<Curve>],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    guide: &Curve,
+    laws: nurbs_core::progressive_sweep::ContactSweepLaws<'_>,
     anchor: Option<(usize, f64)>,
-    axis_scale: &Curve,
-    center: &Curve,
     options: nurbs_core::progressive_sweep::Options,
 ) -> Result<(Model, nurbs_core::progressive_sweep::MultiApproximation)> {
+    let nurbs_core::progressive_sweep::ContactSweepLaws { path, scale, twist, guide, axis_scale, center } = laws;
     progressive_body_laws(
         ProgressiveLaws { loops, path, scale, twist, affine: Some((axis_scale, center)), frames: None, guidance: Some((guide, anchor)) },
         options,
