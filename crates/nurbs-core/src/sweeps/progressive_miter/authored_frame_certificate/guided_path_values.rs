@@ -143,13 +143,36 @@ pub(crate) fn certify_path_guide_relative_values(
     super::trajectory::control_values_with_fit(&zero,scale,affine,qs,law_traversal,max_cells,frame,None)
 }
 
+/// Path, guide, scale and twist laws of a guided contact sweep, with optional affine laws.
+#[derive(Clone, Copy)]
+pub(crate) struct ContactLaws<'a> {
+    pub path: &'a Curve,
+    pub guide: &'a Curve,
+    pub scale: &'a Curve,
+    pub twist: &'a Curve,
+    pub affine: Option<(&'a Curve, &'a Curve)>,
+}
+/// Contact anchor and the traversals of path, guide and laws; `same_parameter` when path and
+/// guide share one parameter.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ContactTraversal {
+    pub anchor: [f64; 2],
+    pub path: [f64; 2],
+    pub guide: [f64; 2],
+    pub law: [f64; 2],
+    pub same_parameter: bool,
+}
 /// Relative contact image with separate original inverse-length restrictions.
 /// Anchor ownership and contact identity remain separate premises. Only values
 /// are enclosed; no inverse derivatives or smoothness is inferred.
 pub(crate) fn certify_contact_relative_values(
-    path:&Curve,guide:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],anchor:[f64;2],path_traversal:[f64;2],guide_traversal:[f64;2],law_traversal:[f64;2],same_parameter:bool,max_cells:usize,
+    laws: ContactLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
+    traversal: ContactTraversal,
+    max_cells: usize,
 )->Result<ControlValuesReport>{
+    let ContactLaws { path, guide, scale, twist, affine } = laws;
+    let ContactTraversal { anchor, path: path_traversal, guide: guide_traversal, law: law_traversal, same_parameter } = traversal;
     twist.validate()?;
     check(twist.control_points.iter().all(|p|p[0]==0.),"Contact control requires zero twist")?;
     let (fit,_,offset)=super::contact_fit_value::contact_fit_value_at_prepared(path,guide,scale,affine,anchor,
@@ -180,7 +203,7 @@ fn contact_relative_values_keep_three_independent_parameters_and_positive_fit(){
     let center=crate::primitives::line([0.;3],[0.1,0.2,0.3]).unwrap();
     let qs=[[[0.5,0.5],[0.3,0.3],[0.2,0.2]]];
     let (u,v,s)=(0.25_f64,0.5_f64,0.75_f64);
-    let report=certify_contact_relative_values(&path,&guide,&scale,&twist,Some((&axes,&center)),&qs,[1.,1.],[u,u],[v,v],[s,s],false,1000).unwrap();
+    let report=certify_contact_relative_values(ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: Some((&axes,&center)) }, &qs, ContactTraversal { anchor: [1.,1.], path: [u,u], guide: [v,v], law: [s,s], same_parameter: false }, 1000).unwrap();
     assert_eq!(report.status,Status::Certified);
     let cross=|a:[f64;3],b:[f64;3]|[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
     let norm=|a:[f64;3]|a.iter().map(|x|x*x).sum::<f64>().sqrt();
@@ -191,10 +214,10 @@ fn contact_relative_values_keep_three_independent_parameters_and_positive_fit(){
     let expected:[f64;3]=std::array::from_fn(|k|fit*((1.+s).powi(2)*0.5+0.1*s)*normal[k]+((1.+s)*0.3+0.2*s)*binormal[k]+((1.+s)*0.2+0.3*s)*tangent[k]);
     let actual=report.values.unwrap()[0];
     for k in 0..3{assert!(actual[k][0]<=expected[k]&&expected[k]<=actual[k][1]);assert!(actual[k][1]-actual[k][0]<1e-9);}
-    let short=certify_contact_relative_values(&path,&guide,&scale,&twist,Some((&axes,&center)),&qs,[1.,1.],[u,u],[v,v],[s,s],false,report.cells-1).unwrap();
+    let short=certify_contact_relative_values(ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: Some((&axes,&center)) }, &qs, ContactTraversal { anchor: [1.,1.], path: [u,u], guide: [v,v], law: [s,s], same_parameter: false }, report.cells-1).unwrap();
     assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
     let negative=crate::sweeps::progressive_sweep::constant_vector_law([-10.,0.,0.]).unwrap();
-    let refused=certify_contact_relative_values(&path,&guide,&scale,&twist,Some((&axes,&negative)),&qs,[1.,1.],[u,u],[v,v],[s,s],false,1000).unwrap();
+    let refused=certify_contact_relative_values(ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: Some((&axes,&negative)) }, &qs, ContactTraversal { anchor: [1.,1.], path: [u,u], guide: [v,v], law: [s,s], same_parameter: false }, 1000).unwrap();
     assert_eq!(refused.status,Status::Unresolved);assert!(refused.values.is_none());
 }
 

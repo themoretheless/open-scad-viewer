@@ -227,8 +227,7 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
                 sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::Guided=>authored_frame_certificate::certify_path_guide_relative_values(sweep.path,sweep.orientation_guide.unwrap(),sweep.scale,
                 sweep.twist,sweep.affine_laws,&qs,path_interval,[guide_source[i][0],guide_source[i+1][1]],station,same_phase,max_cells-out.cells)?,
-            OriginalTransport::Contact=>authored_frame_certificate::certify_contact_relative_values(sweep.path,sweep.orientation_guide.unwrap(),sweep.scale,
-                sweep.twist,sweep.affine_laws,&qs,anchor.unwrap(),path_interval,[guide_source[i][0],guide_source[i+1][1]],station,same_phase,max_cells-out.cells)?,
+            OriginalTransport::Contact=>authored_frame_certificate::certify_contact_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::ContactTraversal { anchor: anchor.unwrap(), path: path_interval, guide: [guide_source[i][0],guide_source[i+1][1]], law: station, same_parameter: same_phase }, max_cells-out.cells)?,
             _=>return Ok(out),
         };
         out.cells+=values.cells;
@@ -387,8 +386,7 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
             // to the entire contour. No interior inverse is reused here.
             let station=[endpoint as f64;2];
             let values=if mode==OriginalTransport::Contact {
-                authored_frame_certificate::certify_contact_relative_values(sweep.path,sweep.orientation_guide.unwrap(),sweep.scale,
-                    sweep.twist,sweep.affine_laws,&qs,anchor.unwrap(),source[index],guide_source[index],station,same_phase,max_cells-out.cells)?
+                authored_frame_certificate::certify_contact_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::ContactTraversal { anchor: anchor.unwrap(), path: source[index], guide: guide_source[index], law: station, same_parameter: same_phase }, max_cells-out.cells)?
             }else{
                 authored_frame_certificate::certify_path_guide_relative_values(sweep.path,sweep.orientation_guide.unwrap(),sweep.scale,
                     sweep.twist,sweep.affine_laws,&qs,source[index],guide_source[index],station,same_phase,max_cells-out.cells)?
