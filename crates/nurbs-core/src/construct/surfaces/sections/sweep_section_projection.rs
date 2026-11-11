@@ -3,6 +3,13 @@
 //! section family. Source interpolation and filled regions remain separate.
 use super::section_projection;
 use crate::{Error, Result, curve::Curve};
+/// Rounding quantum, displacement tolerance and optional work cap of one section correction.
+#[derive(Clone, Copy)]
+pub struct Budget {
+    pub quantum: f64,
+    pub tolerance: f64,
+    pub max_work: Option<f64>,
+}
 
 pub enum Target {
     Plane {
@@ -37,18 +44,25 @@ pub fn project_miter_caps(
     closed: bool,
     authored: bool,
     axis: Option<&Curve>,
-    quantum: f64,
-    tolerance: f64,
-    max_work: Option<f64>,
+    budget: Budget,
 ) -> Result<Report> {
-    project_miter_caps_selected(sections, points, closed, authored, axis, quantum, tolerance, max_work, [true; 2])
+    project_miter_caps_selected(sections, points, closed, authored, axis, budget, [true; 2])
 }
 /// Explicit endpoint subset, retaining every unselected source section.
 pub fn project_miter_caps_selected(
-    sections: &[Vec<Curve>], points: &[[f64; 3]], closed: bool, authored: bool,
-    axis: Option<&Curve>, quantum: f64, tolerance: f64, max_work: Option<f64>,
+    sections: &[Vec<Curve>],
+    points: &[[f64; 3]],
+    closed: bool,
+    authored: bool,
+    axis: Option<&Curve>,
+    budget: Budget,
     endpoints: [bool; 2],
 ) -> Result<Report> {
+    let Budget {
+        quantum,
+        tolerance,
+        max_work,
+    } = budget;
     let invalid = |message| Error::new("NURBS_INVALID_INPUT", message);
     if !endpoints.iter().any(|&selected| selected) {
         return Err(invalid("Cap correction requires a selected endpoint"));
@@ -379,9 +393,11 @@ mod tests {
             false,
             false,
             None,
-            2_f64.powi(-40),
-            0.02,
-            Some(1000000.),
+            Budget {
+                quantum: 2_f64.powi(-40),
+                tolerance: 0.02,
+                max_work: Some(1000000.),
+            },
         )
         .unwrap();
         assert_eq!(r.exact_planar_sections, vec![0, 1]);
@@ -399,9 +415,11 @@ mod tests {
                 true,
                 false,
                 None,
-                1.,
-                1.,
-                Some(1000000.)
+                Budget {
+                    quantum: 1.,
+                    tolerance: 1.,
+                    max_work: Some(1000000.),
+                },
             )
             .is_err()
         );
@@ -412,9 +430,11 @@ mod tests {
                 false,
                 true,
                 None,
-                1.,
-                1.,
-                Some(1000000.)
+                Budget {
+                    quantum: 1.,
+                    tolerance: 1.,
+                    max_work: Some(1000000.),
+                },
             )
             .is_err()
         );
@@ -425,9 +445,11 @@ mod tests {
                 false,
                 false,
                 None,
-                1.,
-                1.,
-                Some(1000000.)
+                Budget {
+                    quantum: 1.,
+                    tolerance: 1.,
+                    max_work: Some(1000000.),
+                },
             )
             .is_err()
         );
@@ -440,9 +462,11 @@ mod tests {
             false,
             false,
             None,
-            2_f64.powi(-40),
-            0.02,
-            Some(first_work as f64),
+            Budget {
+                quantum: 2_f64.powi(-40),
+                tolerance: 0.02,
+                max_work: Some(first_work as f64),
+            },
         )
         .unwrap();
         assert_eq!(short.reason, "work-limit");

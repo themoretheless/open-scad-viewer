@@ -340,9 +340,18 @@ if op=="sweep_correct_miter_sections" {
     }
 if op=="sweep_project_miter_caps" {
         let axis=optional_field::<curve::Curve>(&v,"frameAxis")?;
-        let r=crate::sweep_section_projection::project_miter_caps(&field::<Vec<Vec<curve::Curve>>>(&v,"sections")?,
-            &field::<Vec<[f64;3]>>(&v,"points")?,field(&v,"closed")?,field(&v,"authoredFrame")?,axis.as_ref(),
-            field(&v,"quantum")?,field(&v,"tolerance")?,v.get("maxWork").and_then(Value::as_f64))?;
+        let r=crate::sweep_section_projection::project_miter_caps(
+            &field::<Vec<Vec<curve::Curve>>>(&v,"sections")?,
+            &field::<Vec<[f64;3]>>(&v,"points")?,
+            field(&v,"closed")?,
+            field(&v,"authoredFrame")?,
+            axis.as_ref(),
+            crate::sweep_section_projection::Budget {
+                quantum: field(&v,"quantum")?,
+                tolerance: field(&v,"tolerance")?,
+                max_work: v.get("maxWork").and_then(Value::as_f64),
+            },
+        )?;
         return Ok(json!({"sections":r.sections,"wallDisplacementUpper":r.wall_displacement_upper,
             "exactPlanarSections":r.exact_planar_sections,"work":r.work,"reason":r.reason}));
     }
