@@ -2703,23 +2703,36 @@ fn representation_occurrences(
     for edges in outgoing.values_mut() {
         edges.sort_by_key(|edge| edge.0)
     }
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "recursive STEP graph walk keeps traversal state explicit"
-    )]
-    fn walk(
-        rep: usize,
-        matrix: [[f64; 4]; 4],
-        entities: &BTreeMap<usize, Entity>,
-        outgoing: &BTreeMap<usize, Vec<(usize, usize, usize, bool)>>,
-        active: &mut BTreeSet<usize>,
-        depth: usize,
+    /// The product graph being walked: entities and the outgoing occurrence edges of each one.
+    #[derive(Clone, Copy)]
+    struct AssemblyGraph<'a> {
+        entities: &'a BTreeMap<usize, Entity>,
+        outgoing: &'a BTreeMap<usize, Vec<(usize, usize, usize, bool)>>,
+    }
+    /// Which placements and shells the walk admits.
+    #[derive(Clone, Copy)]
+    struct WalkPolicy {
         allow_affine: bool,
         general_affine: bool,
         allow_open_shells: bool,
-        path: &[usize],
+    }
+    /// One visited representation: its id, accumulated placement, depth and occurrence path.
+    struct WalkNode<'p> {
+        rep: usize,
+        matrix: [[f64; 4]; 4],
+        depth: usize,
+        path: &'p [usize],
+    }
+    fn walk(
+        graph: AssemblyGraph<'_>,
+        policy: WalkPolicy,
+        node: WalkNode<'_>,
+        active: &mut BTreeSet<usize>,
         out: &mut Vec<RepresentationOccurrence>,
     ) -> Result<()> {
+        let AssemblyGraph { entities, outgoing } = graph;
+        let WalkPolicy { allow_affine, general_affine, allow_open_shells } = policy;
+        let WalkNode { rep, matrix, depth, path } = node;
         if depth > 32 {
             return Err(refuse(
                 "Representation relationship placement depth exceeds 32",
@@ -2864,16 +2877,15 @@ fn representation_occurrences(
                 let mut child_path = path.to_vec();
                 child_path.extend([*relationship, *child]);
                 walk(
-                    *child,
-                    mul(matrix, edge_matrix),
-                    entities,
-                    outgoing,
+                    graph,
+                    policy,
+                    WalkNode {
+                        rep: *child,
+                        matrix: mul(matrix, edge_matrix),
+                        depth: depth + 1,
+                        path: &child_path,
+                    },
                     active,
-                    depth + 1,
-                    allow_affine,
-                    general_affine,
-                    allow_open_shells,
-                    &child_path,
                     out,
                 )?;
             }
@@ -2945,16 +2957,10 @@ fn representation_occurrences(
     let mut out = Vec::new();
     for rep in &roots {
         walk(
-            *rep,
-            identity,
-            entities,
-            &outgoing,
+            AssemblyGraph { entities, outgoing: &outgoing },
+            WalkPolicy { allow_affine, general_affine, allow_open_shells },
+            WalkNode { rep: *rep, matrix: identity, depth: 0, path: &[*rep] },
             &mut BTreeSet::new(),
-            0,
-            allow_affine,
-            general_affine,
-            allow_open_shells,
-            &[*rep],
             &mut out,
         )?
     }
