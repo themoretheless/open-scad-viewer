@@ -252,6 +252,35 @@ pub fn rational_bspline_mapped_strip_jet_identity(
         }), &mut false)
 }
 
+fn validate_strip_pair(
+    pair: &StripPairRefs<'_>,
+    order: usize,
+    has_along: bool,
+) -> Result<(), InputError> {
+    let StripPairRefs { strips, knots, degrees, locations } = *pair;
+    let [a, b] = strips;
+    if !matches!(order, 1 | 2)
+        || !(2..=33).contains(&a.len())
+        || !(2..=33).contains(&b.len())
+        || (!has_along && a.len() != b.len())
+    {
+        return Err(InputError::InvalidInput("Invalid B-spline projective strip"));
+    }
+    for side in 0..2 {
+        let (n, p, l) = (strips[side][0].len(), degrees[side], locations[side]);
+        if !(1..=32).contains(&p)
+            || !(p + 1..=33).contains(&n)
+            || strips[side].iter().any(|r| r.len() != n)
+            || knots[side].len() != n + p + 1
+            || l.span < p
+            || l.span >= n
+        {
+            return Err(InputError::InvalidInput("Invalid B-spline strip basis or span"));
+        }
+    }
+    Ok(())
+}
+
 fn strip_identity(
     ctx: &mut PredicateContext<'_>,
     pair: StripPairRefs<'_>,
@@ -261,33 +290,9 @@ fn strip_identity(
     along: Option<AlongProof<'_>>,
     position: &mut bool,
 ) -> Result<BezierIdentityDecision, InputError> {
+    validate_strip_pair(&pair, order, along.is_some())?;
     let StripPairRefs { strips, knots, degrees, locations } = pair;
     let [a, b] = strips;
-    if !matches!(order, 1 | 2)
-        || !(2..=33).contains(&a.len())
-        || !(2..=33).contains(&b.len())
-        || (along.is_none() && a.len() != b.len())
-    {
-        return Err(InputError::InvalidInput(
-            "Invalid B-spline projective strip",
-        ));
-    }
-    for side in 0..2 {
-        let n = strips[side][0].len();
-        let p = degrees[side];
-        let l = locations[side];
-        if !(1..=32).contains(&p)
-            || !(p + 1..=33).contains(&n)
-            || strips[side].iter().any(|r| r.len() != n)
-            || knots[side].len() != n + p + 1
-            || l.span < p
-            || l.span >= n
-        {
-            return Err(InputError::InvalidInput(
-                "Invalid B-spline strip basis or span",
-            ));
-        }
-    }
     let mut leaves = Vec::new();
     let mut starts = [0; 2];
     let mut ks = [0; 2];
