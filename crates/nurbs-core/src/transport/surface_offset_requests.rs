@@ -337,18 +337,15 @@ fn handle_contact_qualification(v: &Value) -> Result<Value> {
     let first_loops: Vec<Vec<crate::curve::Curve>> = field(v, "firstLoops")?;
     let second_loops: Vec<Vec<crate::curve::Curve>> = field(v, "secondLoops")?;
     let report = crate::offset_contact_trims::certify_with_tangency(
-        &candidate,
-        [&pcurves[0], &pcurves[1]],
-        [&a, &b],
-        [&first_loops, &second_loops],
-        field(v, "distances")?,
-        field(v, "fixedAxis")?,
-        field(v, "fixedInterval")?,
-        field(v, "firstOther")?,
-        field(v, "secondDomain")?,
-        field(v, "maxSpans")?,
-        field(v, "toleranceMm")?,
-        field(v, "toleranceUv")?,
+        crate::offset_contact_trims::ContactPair { candidate: &candidate, pcurves: [&pcurves[0], &pcurves[1]], surfaces: [&a, &b], loops: [&first_loops, &second_loops], distances: field(v, "distances")? },
+        crate::offset_contact_trims::ContactParameters {
+            axis: field(v, "fixedAxis")?,
+            drive: field(v, "fixedInterval")?,
+            free: field(v, "firstOther")?,
+            second: field(v, "secondDomain")?,
+            spans: field(v, "maxSpans")?,
+        },
+        crate::offset_contact_trims::ContactTolerance { mm: field(v, "toleranceMm")?, uv: field(v, "toleranceUv")? },
         crate::offset_contact_trims::Limits {
             fit_cells: field(v, "maxFitCells")?,
             uv_cells: field(v, "maxUvCells")?,

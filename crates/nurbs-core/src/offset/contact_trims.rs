@@ -68,23 +68,43 @@ fn boundaries(candidate: &Surface) -> Result<Option<[Curve; 2]>> {
         boundary.coedges[2].curve.clone(),
     ]))
 }
+/// The candidate blend patch and the two source faces it must touch along its pcurves.
+#[derive(Clone, Copy)]
+pub struct ContactPair<'a> {
+    pub candidate: &'a Surface,
+    pub pcurves: [&'a Curve; 2],
+    pub surfaces: [&'a Surface; 2],
+    pub loops: [&'a [Vec<Curve>]; 2],
+    pub distances: [f64; 2],
+}
+/// Parameterisation of the contact: fixed axis, its drive interval, the free interval on the
+/// first face, the domain on the second face and the span limit.
+#[derive(Clone, Copy, Debug)]
+pub struct ContactParameters {
+    pub axis: usize,
+    pub drive: [f64; 2],
+    pub free: [f64; 2],
+    pub second: [[f64; 2]; 2],
+    pub spans: usize,
+}
+/// Model-space and parameter-space tolerances.
+#[derive(Clone, Copy, Debug)]
+pub struct ContactTolerance {
+    pub mm: f64,
+    pub uv: f64,
+}
+
 /// Fits and contact curves all refer to the same original driving parameter.
 /// Reports retain incomplete/mismatching sides; no partial success is promoted.
 pub fn certify(
-    candidate: &Surface,
-    pcurves: [&Curve; 2],
-    surfaces: [&Surface; 2],
-    loops: [&[Vec<Curve>]; 2],
-    distances: [f64; 2],
-    axis: usize,
-    drive: [f64; 2],
-    free: [f64; 2],
-    second: [[f64; 2]; 2],
-    spans: usize,
-    tolerance_mm: f64,
-    tolerance_uv: f64,
+    pair: ContactPair<'_>,
+    parameters: ContactParameters,
+    tolerance: ContactTolerance,
     limits: Limits,
 ) -> Result<Report> {
+    let ContactPair { candidate, pcurves, surfaces, loops, distances } = pair;
+    let ContactParameters { axis, drive, free, second, spans } = parameters;
+    let ContactTolerance { mm: tolerance_mm, uv: tolerance_uv } = tolerance;
     check(
         limits.uv_cells > 0
             && limits.uv_cells <= 100000
@@ -269,22 +289,16 @@ impl TangentReport {
 /// Fresh fit, original UV branch/trim and contact-angle checks on one snapshot.
 /// This admits contact geometry only, never a replacement face or fillet solid.
 pub fn certify_with_tangency(
-    candidate: &Surface,
-    pcurves: [&Curve; 2],
-    surfaces: [&Surface; 2],
-    loops: [&[Vec<Curve>]; 2],
-    distances: [f64; 2],
-    axis: usize,
-    drive: [f64; 2],
-    free: [f64; 2],
-    second: [[f64; 2]; 2],
-    spans: usize,
-    tolerance_mm: f64,
-    tolerance_uv: f64,
+    pair: ContactPair<'_>,
+    parameters: ContactParameters,
+    tolerance: ContactTolerance,
     limits: Limits,
     max_sine_squared: f64,
     tangent_limits: TangentLimits,
 ) -> Result<TangentReport> {
+    let ContactPair { candidate, pcurves, surfaces, loops, distances } = pair;
+    let ContactParameters { axis, drive, free, second, spans } = parameters;
+    let ContactTolerance { mm: tolerance_mm, uv: tolerance_uv } = tolerance;
     check(
         max_sine_squared.is_finite()
             && (0. ..1.).contains(&max_sine_squared)
@@ -306,18 +320,9 @@ pub fn certify_with_tangency(
         )?;
     }
     let contacts = certify(
-        candidate,
-        pcurves,
-        surfaces,
-        loops,
-        distances,
-        axis,
-        drive,
-        free,
-        second,
-        spans,
-        tolerance_mm,
-        tolerance_uv,
+        ContactPair { candidate: candidate, pcurves: pcurves, surfaces: surfaces, loops: loops, distances: distances },
+        ContactParameters { axis: axis, drive: drive, free: free, second: second, spans: spans },
+        ContactTolerance { mm: tolerance_mm, uv: tolerance_uv },
         limits,
     )?;
     let mut out = TangentReport {
@@ -431,18 +436,9 @@ mod tests {
         limits: Limits,
     ) -> Report {
         certify(
-            candidate,
-            pc,
-            s,
-            loops,
-            [0.2, 0.2],
-            0,
-            [0.35, 0.39],
-            [0.25, 0.35],
-            [[0.30, 0.44], [0.15, 0.25]],
-            2,
-            1e-3,
-            1e-6,
+            ContactPair { candidate: candidate, pcurves: pc, surfaces: s, loops: loops, distances: [0.2, 0.2] },
+            ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 },
+            ContactTolerance { mm: 1e-3, uv: 1e-6 },
             limits,
         )
         .unwrap()
@@ -479,18 +475,9 @@ mod tests {
         assert!(r.patch_boundary_identity);
         let tangent = |normal_spans| {
             certify_with_tangency(
-                &c,
-                [&pc[0], &pc[1]],
-                [&a, &b],
-                [&loops, &loops],
-                [0.2, 0.2],
-                0,
-                [0.35, 0.39],
-                [0.25, 0.35],
-                [[0.30, 0.44], [0.15, 0.25]],
-                2,
-                1e-3,
-                1e-6,
+                ContactPair { candidate: &c, pcurves: [&pc[0], &pc[1]], surfaces: [&a, &b], loops: [&loops, &loops], distances: [0.2, 0.2] },
+                ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 },
+                ContactTolerance { mm: 1e-3, uv: 1e-6 },
                 limits(),
                 1e-10,
                 TangentLimits {
@@ -604,18 +591,9 @@ mod tests {
                 .unwrap()
                 .unwrap();
             let r = certify(
-                &c,
-                [&pc[0], &pc[1]],
-                [&aa, &bb],
-                [&loops, &loops],
-                [0.2, 0.2],
-                1,
-                drive,
-                free,
-                second,
-                2,
-                1e-3,
-                1e-6,
+                ContactPair { candidate: &c, pcurves: [&pc[0], &pc[1]], surfaces: [&aa, &bb], loops: [&loops, &loops], distances: [0.2, 0.2] },
+                ContactParameters { axis: 1, drive: drive, free: free, second: second, spans: 2 },
+                ContactTolerance { mm: 1e-3, uv: 1e-6 },
                 limits(),
             )
             .unwrap();
@@ -677,19 +655,10 @@ mod tests {
         work.fit_cells = 1;
         assert!(
             certify(
-                &c,
-                [&pc[0], &pc[1]],
-                [&a, &b],
-                [&loops, &loops],
-                [0.2, 0.2],
-                0,
-                [0.35, 0.39],
-                [0.25, 0.35],
-                [[0.30, 0.44], [0.15, 0.25]],
-                2,
-                1e-3,
-                1e-6,
-                work
+                ContactPair { candidate: &c, pcurves: [&pc[0], &pc[1]], surfaces: [&a, &b], loops: [&loops, &loops], distances: [0.2, 0.2] },
+                ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 },
+                ContactTolerance { mm: 1e-3, uv: 1e-6 },
+                work,
             )
             .is_err()
         );
