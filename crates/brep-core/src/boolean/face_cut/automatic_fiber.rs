@@ -172,17 +172,12 @@ fn partition_fiber_impl(
         )?,
     };
     let mut out = partition_fiber_prebound(
-        &model,
-        face,
-        cutter,
-        cutter_face,
+        FiberFaces { source: &model, face, cutter, cutter_face },
         &roots,
         parameter_box,
         axis,
         tolerance_uv,
-        max_cells - cells,
-        max_exact,
-        4096,
+        FiberWork { max_cells: max_cells - cells, max_exact, max_evaluations: 4096 },
     )?;
     out.cells += cells;
     out.boundary_coverage = boundary_coverage;
@@ -545,4 +540,4 @@ fn qualify_fiber_cover(
 
 #[path = "automatic_fiber/prebound_partition.rs"]
 mod prebound_partition;
-pub(super) use prebound_partition::partition_fiber_prebound;
+pub(super) use prebound_partition::{FiberFaces, FiberWork, partition_fiber_prebound};
