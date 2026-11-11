@@ -213,19 +213,25 @@ fn planar(points: &[P]) -> bool {
     }
     true
 }
+/// Where tessellated faces accumulate: shared vertices, triangles, seams, tube bounds and the
+/// largest error seen so far.
+pub(super) struct TessellationOutput<'a> {
+    pub vertices: &'a mut BTreeMap<P, u32>,
+    pub triangles: &'a mut Vec<u32>,
+    pub seams: &'a mut Seams,
+    pub tubes: &'a mut Vec<Poly>,
+    pub maximum: &'a mut Q,
+}
 pub(super) fn append(
     m: &Model,
     use_: &crate::FaceUse,
     stations: &[Q],
     depth: u8,
-    vertices: &mut BTreeMap<P, u32>,
-    triangles: &mut Vec<u32>,
-    seams: &mut Seams,
-    tubes: &mut Vec<Poly>,
-    maximum: &mut Q,
+    output: TessellationOutput<'_>,
     limit: &Q,
     work: &mut Work,
 ) -> Result<()> {
+    let TessellationOutput { vertices, triangles, seams, tubes, maximum } = output;
     let face = &m.faces[use_.face];
     let s = &face.surface;
     let lo = [s.knots_u[s.degree_u], s.knots_v[s.degree_v]];
