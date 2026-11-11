@@ -43,45 +43,36 @@ fn uv_box(p: &Curve, t: [f64; 2], reversed: bool, hull: [[f64; 2]; 2]) -> Result
         [bounds[i].lo.max(hull[i][0]), bounds[i].hi.min(hull[i][1])]
     }))
 }
-pub fn certify(
-    world: &Curve,
-    surfaces: [&Surface; 2],
-    pcurves: [&Curve; 2],
-    reversed: [bool; 2],
-    tolerance_mm: f64,
-    max_sine_squared: f64,
-    agreement_cells: usize,
-    normal_cells: usize,
-    normal_spans: usize,
-) -> Result<Report> {
-    certify_interval(
-        world,
-        surfaces,
-        pcurves,
-        reversed,
-        [0., 1.],
-        tolerance_mm,
-        max_sine_squared,
-        agreement_cells,
-        normal_cells,
-        normal_spans,
-    )
+/// A contact edge: its world curve, the two surfaces, their pcurves and orientations.
+#[derive(Clone, Copy)]
+pub struct ContactEdge<'a> {
+    pub world: &'a Curve,
+    pub surfaces: [&'a Surface; 2],
+    pub pcurves: [&'a Curve; 2],
+    pub reversed: [bool; 2],
+}
+/// Agreement cells, normal cells and normal spans allowed for one check.
+#[derive(Clone, Copy, Debug)]
+pub struct NormalWork {
+    pub agreement_cells: usize,
+    pub normal_cells: usize,
+    pub normal_spans: usize,
+}
+pub fn certify(edge: ContactEdge<'_>, tolerance_mm: f64, max_sine_squared: f64, work: NormalWork) -> Result<Report> {
+    certify_interval(edge, [0., 1.], tolerance_mm, max_sine_squared, work)
 }
 
 /// Inspect an explicit closed subinterval without fitting or replacing any
 /// original curve/surface. A subinterval proof does not qualify excluded ends.
 pub fn certify_interval(
-    world: &Curve,
-    surfaces: [&Surface; 2],
-    pcurves: [&Curve; 2],
-    reversed: [bool; 2],
+    edge: ContactEdge<'_>,
     normal_interval: [f64; 2],
     tolerance_mm: f64,
     max_sine_squared: f64,
-    agreement_cells: usize,
-    normal_cells: usize,
-    normal_spans: usize,
+    work: NormalWork,
 ) -> Result<Report> {
+    let ContactEdge { world, surfaces, pcurves, reversed } = edge;
+    let NormalWork { agreement_cells, normal_cells, normal_spans } = work;
     world.validate()?;
     check(
         normal_interval.iter().all(|v| v.is_finite())
@@ -250,15 +241,10 @@ mod tests {
         let world = line(vec![vec![0., 0., 0.], vec![1., 0., 0.]], [2., 8.]);
         let uv = line(vec![vec![0., 0.], vec![1., 0.]], [10., 14.]);
         let r = certify(
-            &world,
-            [&collapsed, &regular],
-            [&uv, &uv],
-            [false, false],
+            ContactEdge { world: &world, surfaces: [&collapsed, &regular], pcurves: [&uv, &uv], reversed: [false, false] },
             1e-7,
             1e-4,
-            100,
-            64,
-            128,
+            NormalWork { agreement_cells: 100, normal_cells: 64, normal_spans: 128 },
         )
         .unwrap();
         assert!(r.positions_proven);
@@ -293,16 +279,11 @@ mod tests {
         let uv = line(vec![vec![0., 0.], vec![1., 0.]], [10., 14.]);
         let reverse = uv.reverse().unwrap();
         let r = certify_interval(
-            &world,
-            [&surface, &surface],
-            [&uv, &reverse],
-            [false, true],
+            ContactEdge { world: &world, surfaces: [&surface, &surface], pcurves: [&uv, &reverse], reversed: [false, true] },
             [0.2, 0.8],
             1e-7,
             1e-6,
-            100,
-            100,
-            100,
+            NormalWork { agreement_cells: 100, normal_cells: 100, normal_spans: 100 },
         )
         .unwrap();
         assert!(r.positions_proven && r.tangent_planes_proven);
@@ -319,16 +300,11 @@ mod tests {
         ] {
             assert!(
                 certify_interval(
-                    &world,
-                    [&surface, &surface],
-                    [&uv, &reverse],
-                    [false, true],
+                    ContactEdge { world: &world, surfaces: [&surface, &surface], pcurves: [&uv, &reverse], reversed: [false, true] },
                     interval,
                     1e-7,
                     1e-6,
-                    100,
-                    100,
-                    100
+                    NormalWork { agreement_cells: 100, normal_cells: 100, normal_spans: 100 },
                 )
                 .is_err()
             );
@@ -372,29 +348,19 @@ mod tests {
             let pc = line(vec![vec![2., side as f64], vec![8., side as f64]], [2., 8.]);
             let uv = line(vec![vec![0., 0.], vec![1., 0.]], [10., 14.]);
             let r = certify(
-                &world,
-                [&patch, &source],
-                [&pc, &uv],
-                [false, false],
+                ContactEdge { world: &world, surfaces: [&patch, &source], pcurves: [&pc, &uv], reversed: [false, false] },
                 1e-7,
                 1e-10,
-                10000,
-                1000,
-                10000,
+                NormalWork { agreement_cells: 10000, normal_cells: 1000, normal_spans: 10000 },
             )
             .unwrap();
             assert!(r.positions_proven && r.tangent_planes_proven);
             assert!(r.whole_edge_agreement_proven());
             let stop = certify(
-                &world,
-                [&patch, &source],
-                [&pc, &uv],
-                [false, false],
+                ContactEdge { world: &world, surfaces: [&patch, &source], pcurves: [&pc, &uv], reversed: [false, false] },
                 1e-7,
                 1e-10,
-                10000,
-                1000,
-                1,
+                NormalWork { agreement_cells: 10000, normal_cells: 1000, normal_spans: 1 },
             )
             .unwrap();
             assert!(stop.positions_proven && !stop.tangent_planes_proven);
@@ -417,15 +383,10 @@ mod tests {
         let w = line(vec![vec![0., 0., 0.], vec![1., 0., 0.]], [2., 8.]);
         let p = line(vec![vec![0., 0.], vec![1., 0.]], [10., 14.]);
         let r = certify(
-            &w,
-            [&a, &b],
-            [&p, &p],
-            [false, false],
+            ContactEdge { world: &w, surfaces: [&a, &b], pcurves: [&p, &p], reversed: [false, false] },
             1e-7,
             1e-6,
-            10000,
-            1000,
-            10000,
+            NormalWork { agreement_cells: 10000, normal_cells: 1000, normal_spans: 10000 },
         )
         .unwrap();
         assert!(r.positions_proven);
@@ -444,21 +405,21 @@ mod tests {
         let mut q = p.clone();
         q.control_points.reverse();
         let r = certify(
-            &w,
-            [&a, &a],
-            [&p, &q],
-            [false, true],
+            ContactEdge { world: &w, surfaces: [&a, &a], pcurves: [&p, &q], reversed: [false, true] },
             1e-7,
             1e-12,
-            10000,
-            1000,
-            10000,
+            NormalWork { agreement_cells: 10000, normal_cells: 1000, normal_spans: 10000 },
         )
         .unwrap();
         assert!(r.positions_proven && r.tangent_planes_proven);
         assert_eq!(r.cells.first().unwrap().interval[0], 0.);
         assert_eq!(r.cells.last().unwrap().interval[1], 1.);
-        let r = certify(&w, [&a, &a], [&p, &q], [false, true], 1e-7, 1e-12, 1, 1, 1).unwrap();
+        let r = certify(
+            ContactEdge { world: &w, surfaces: [&a, &a], pcurves: [&p, &q], reversed: [false, true] },
+            1e-7,
+            1e-12,
+            NormalWork { agreement_cells: 1, normal_cells: 1, normal_spans: 1 },
+        ).unwrap();
         assert!(!r.positions_proven && !r.tangent_planes_proven);
         assert!(r.cells[0].normals.is_none());
     }

@@ -296,7 +296,7 @@ pub fn certify_with_tangency(
         )?;
     }
     let contacts = certify(
-        ContactPair { candidate: candidate, pcurves: pcurves, surfaces, loops, distances },
+        ContactPair { candidate: candidate, pcurves, surfaces, loops, distances },
         ContactParameters { axis: axis, drive: drive, free: free, second, spans: spans },
         ContactTolerance { mm: tolerance_mm, uv: tolerance_uv },
         limits,
@@ -326,15 +326,10 @@ pub fn certify_with_tangency(
             periodic: false,
         };
         let r = crate::contact_normal_agreement::certify(
-            &edge.curve,
-            [surfaces[side], candidate],
-            [pcurves[side], &patch_pcurve],
-            [false, false],
+            crate::contact_normal_agreement::ContactEdge { world: &edge.curve, surfaces: [surfaces[side], candidate], pcurves: [pcurves[side], &patch_pcurve], reversed: [false, false] },
             tolerance_mm,
             max_sine_squared,
-            tangent_limits.position_cells,
-            tangent_limits.normal_cells,
-            tangent_limits.normal_spans,
+            crate::contact_normal_agreement::NormalWork { agreement_cells: tangent_limits.position_cells, normal_cells: tangent_limits.normal_cells, normal_spans: tangent_limits.normal_spans },
         )?;
         out.tangent_planes.push(r);
     }
