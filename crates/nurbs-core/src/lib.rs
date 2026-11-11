@@ -2,6 +2,9 @@
 //! Own binary64 rational B-spline kernel. No C/C++ or geometry dependency.
 //! No polygon-core, WASM, browser or application dependency.
 //! CAD B-rep over these curves/surfaces lives in `brep-core`.
+// `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
+// and may only go down; prefer typed errors.
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 
 /// Task-oriented API views; existing flat module paths remain supported.
 pub mod domains;

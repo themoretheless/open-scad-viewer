@@ -1,6 +1,9 @@
 //! Numeric kernels of the NURBS stack: compensated arithmetic, interval methods, robust
 //! solvers, bounding structures and exact predicates. Split out of `nurbs-core` (refactor
 //! plan O3); `nurbs_core::numerics` re-exports every module.
+// `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
+// and may only go down; prefer typed errors.
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 pub use math_core::{Error, Result};
 
 #[doc(hidden)]

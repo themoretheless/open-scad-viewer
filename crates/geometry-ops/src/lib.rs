@@ -1,5 +1,8 @@
 //! Representation-independent point mappings and brush falloffs. Geometry
 //! ownership, topology updates and validity checks belong to each consuming kernel.
+// `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
+// and may only go down; prefer typed errors.
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 #[cfg(feature = "codec")]
 mod serialization;
 pub use math_core::{Error, Result, V3, finite};

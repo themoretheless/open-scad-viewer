@@ -3,6 +3,9 @@
 //! the model and reported through the `nurbs-intersect` report schema. The
 //! sphere–sphere pair still lives in `brep-core` beside the analytic
 //! Booleans that consume it directly and is re-exported here.
+// `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
+// and may only go down; prefer typed errors.
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 use nurbs_core::{Result, curve::Curve};
 use nurbs_intersect::*;
 use nurbs_intersect::vec3::norm;

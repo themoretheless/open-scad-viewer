@@ -1,5 +1,8 @@
 //! Indexed boundary topology over exact rational curve/surface definitions.
 //! Validation certifies combinatorial incidence, not geometric solid validity.
+// `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
+// and may only go down; prefer typed errors.
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 // Module families (ADR 0012, refactor plan M8); old paths below are re-exports.
 pub mod body_analysis;
 pub mod boolean;

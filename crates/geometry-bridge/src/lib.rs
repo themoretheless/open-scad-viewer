@@ -6,7 +6,7 @@
 //! typed geometry and has no language frontend dependency.
 #![feature(try_blocks)]
 // Adapters should turn bad input into typed errors (refactor plan L6). The remaining calls rely on
-// internal invariants; the clippy pin for this crate counts them and may only go down.
+// internal invariants; the crate's `clippyUnwrap` pin counts them and may only go down.
 #![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 pub mod brep;
 mod miter_smoothness;

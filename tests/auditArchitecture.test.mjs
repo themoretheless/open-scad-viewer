@@ -167,3 +167,14 @@ test('an inline facade module in the crate root resolves to the module it re-exp
   assert.equal(aliases.curve, 'core')
   assert.equal(aliases.facade, 'analysis')
 })
+
+test('unwrap and expect warnings have their own clippy pins', async () => {
+  const {countClippy, auditClippy, UNWRAP_LINTS, lowerPins} = await import('../scripts/audit-clippy.mjs')
+  const warning = (line, code) => JSON.stringify({reason: 'compiler-message', message: {level: 'warning', code: {code},
+    message: 'm', spans: [{is_primary: true, file_name: 'k/src/a.rs', line_start: line, column_start: 1}]}})
+  const out = [warning(1, 'clippy::unwrap_used'), warning(2, 'clippy::expect_used'), warning(3, 'clippy::x')].join('\n')
+  assert.deepEqual(countClippy(out, code => !UNWRAP_LINTS.has(code)), {k: 1})
+  assert.deepEqual(countClippy(out, code => UNWRAP_LINTS.has(code)), {k: 2})
+  assert.match(auditClippy({k: 3}, {k: 2}, 'unwrap/expect warnings')[0], /k: 3 unwrap\/expect warnings/)
+  assert.deepEqual(lowerPins({k: 1, j: 4}, {k: 2}), {j: 0, k: 1})
+})

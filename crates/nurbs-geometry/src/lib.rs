@@ -1,6 +1,9 @@
 //! Core NURBS types and point semantics: curves, surfaces, bounds, affine frames and their
 //! identities. Split out of `nurbs-core` (refactor plan O3); `nurbs_core::core` and the
 //! crate-root aliases re-export every module.
+// `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
+// and may only go down; prefer typed errors.
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 pub use math_core::{Error, Result};
 #[doc(hidden)]
 pub use nurbs_numerics::{INVALID_INPUT, NUMERIC_ERROR, RESOURCE_LIMIT, check, input, numeric, numeric_err, resource};

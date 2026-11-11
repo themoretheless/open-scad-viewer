@@ -1,6 +1,9 @@
 //! Layer 2 of the NURBS stack: foundation edits and fitting, distance bounds and certificates.
 //! Split out of `nurbs-core` (refactor plan O3); `nurbs_core::{foundation, distance,
 //! certificates}` and the crate-root aliases re-export every module.
+// `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
+// and may only go down; prefer typed errors.
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 pub use math_core::{Error, Result};
 #[doc(hidden)]
 pub use nurbs_numerics::{INVALID_INPUT, NUMERIC_ERROR, RESOURCE_LIMIT, check, input, numeric, numeric_err, resource};

@@ -4,6 +4,9 @@
 //! Authored admission is a trusted boundary: callers must not relabel rounded
 //! construction results as authored input. Opaque references prevent accidental
 //! cross-source reuse; they do not authenticate arbitrary caller assertions.
+// `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
+// and may only go down; prefer typed errors.
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 mod arithmetic;
 mod fibered_affine;
 pub use fibered_affine::*;

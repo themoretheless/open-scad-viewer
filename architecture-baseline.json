@@ -594,15 +594,15 @@
     "src/workers/geometry.worker.ts::runBuild@1": 170
   },
   "clippy": {
-    "brep-core": 1098,
-    "brep-intersect": 4,
+    "brep-core": 1073,
+    "brep-intersect": 2,
     "brep-topology": 1,
     "bridge-analysis": 4,
     "bridge-svg": 3,
     "cad-predicates": 204,
-    "cad-step": 30,
+    "cad-step": 28,
     "gcode-core": 1,
-    "geometry-bridge": 132,
+    "geometry-bridge": 75,
     "geometry-ops": 3,
     "manifold-core": 2,
     "manifold-ops": 1,
@@ -618,8 +618,8 @@
     "photogrammetry-core": 6,
     "planar-geometry": 1,
     "polygon-core": 9,
-    "rush-frontend": 10,
-    "rush-runtime": 77,
+    "rush-frontend": 3,
+    "rush-runtime": 38,
     "slicer-core": 2,
     "subdivision-core": 7,
     "vr-core": 7
@@ -634,5 +634,18 @@
     "language -> app",
     "parser -> app",
     "render -> app"
-  ]
+  ],
+  "clippyUnwrap": {
+    "brep-core": 1503,
+    "brep-intersect": 2,
+    "brep-topology": 19,
+    "cad-predicates": 120,
+    "geometry-bridge": 57,
+    "geometry-ops": 2,
+    "nurbs-core": 1076,
+    "nurbs-foundation": 75,
+    "nurbs-geometry": 19,
+    "nurbs-intersect": 36,
+    "nurbs-numerics": 3
+  }
 }

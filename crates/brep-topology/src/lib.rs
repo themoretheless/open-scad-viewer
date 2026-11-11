@@ -1,5 +1,8 @@
 //! Geometry-independent indexed B-rep incidence shared by both kernels.
 //! C, S and P are application-owned edge, face and parameter-curve geometry.
+// `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
+// and may only go down; prefer typed errors.
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
 pub use math_core::{Error, Result};
 #[cfg(feature = "codec")]
 #[path = "serialization.rs"]
