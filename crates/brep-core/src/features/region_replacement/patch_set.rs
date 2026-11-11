@@ -101,6 +101,16 @@ fn connected(chosen: &BTreeSet<usize>, adj: &BTreeMap<usize, Vec<usize>>) -> boo
     }
     &seen == chosen
 }
+/// The source faces to replace and the new vertices, edges and patches that
+/// replace them. New edge vertices index `source.vertices` followed by
+/// `new_vertices`.
+#[derive(Clone, Copy)]
+pub struct PatchReplacement<'a, 'p> {
+    pub selected: &'a [usize],
+    pub new_vertices: &'a [Vertex],
+    pub new_edges: &'a [Edge],
+    pub patches: &'a [SewPatch<'p>],
+}
 /// One atomic connected source-region replacement. Original boundary edge
 /// identities and vertices are reused, never matched by spatial proximity.
 /// New edge vertices index source.vertices followed by new_vertices. Every
@@ -108,20 +118,14 @@ fn connected(chosen: &BTreeSet<usize>, adj: &BTreeMap<usize, Vec<usize>>) -> boo
 /// All rim interfaces are G2: a sharp omitted cap cannot authorize admission.
 pub fn sew_g2_patch_set(
     source: &Model,
-    selected: &[usize],
-    new_vertices: &[Vertex],
-    new_edges: &[Edge],
-    patches: &[SewPatch<'_>],
+    replacement: PatchReplacement<'_, '_>,
     key: &str,
     tolerance_uv: f64,
     limits: ContactQualificationLimits,
 ) -> Result<SewnPatchSet> {
     sew_g2_patch_set_impl(
         source,
-        selected,
-        new_vertices,
-        new_edges,
-        patches,
+        replacement,
         key,
         tolerance_uv,
         limits,
@@ -132,10 +136,7 @@ pub fn sew_g2_patch_set(
 /// No proposal reports are accepted; every graph proof inspects saved coedges.
 pub fn sew_g2_patch_set_with_graph_work(
     source: &Model,
-    selected: &[usize],
-    new_vertices: &[Vertex],
-    new_edges: &[Edge],
-    patches: &[SewPatch<'_>],
+    replacement: PatchReplacement<'_, '_>,
     key: &str,
     tolerance_uv: f64,
     limits: ContactQualificationLimits,
@@ -146,10 +147,7 @@ pub fn sew_g2_patch_set_with_graph_work(
     }
     sew_g2_patch_set_impl(
         source,
-        selected,
-        new_vertices,
-        new_edges,
-        patches,
+        replacement,
         key,
         tolerance_uv,
         limits,
@@ -158,15 +156,18 @@ pub fn sew_g2_patch_set_with_graph_work(
 }
 fn sew_g2_patch_set_impl(
     source: &Model,
-    selected: &[usize],
-    new_vertices: &[Vertex],
-    new_edges: &[Edge],
-    patches: &[SewPatch<'_>],
+    replacement: PatchReplacement<'_, '_>,
     key: &str,
     tolerance_uv: f64,
     limits: ContactQualificationLimits,
     graph_work: Option<usize>,
 ) -> Result<SewnPatchSet> {
+    let PatchReplacement {
+        selected,
+        new_vertices,
+        new_edges,
+        patches,
+    } = replacement;
     source.validate()?;
     let chosen: BTreeSet<_> = selected.iter().copied().collect();
     if chosen.len() != selected.len()

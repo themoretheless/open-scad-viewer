@@ -640,7 +640,9 @@ pub use qualified_contacts::{ContactQualificationLimits, QualifiedContactBody, t
 mod end_runout;
 pub use end_runout::{QualifiedEndRunout, build_g2_end_runout};
 mod patch_set;
-pub use patch_set::{SewPatch, SewnPatchSet, sew_g2_patch_set, sew_g2_patch_set_with_graph_work};
+pub use patch_set::{
+    PatchReplacement, SewPatch, SewnPatchSet, sew_g2_patch_set, sew_g2_patch_set_with_graph_work,
+};
 pub use end_runout::{RunoutPanelField, RunoutPanelFields, inspect_runout_panels};
 
 mod retained_patch_set;

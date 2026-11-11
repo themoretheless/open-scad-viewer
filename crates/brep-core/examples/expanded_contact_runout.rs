@@ -350,10 +350,12 @@ fn main() {
     let local = if saved_graph {
         r::sew_g2_patch_set_with_graph_work(
             &retention.plan().model,
-            &selected,
-            &authored.vertices,
-            &authored.edges,
-            &patches,
+            r::PatchReplacement {
+                selected: &selected,
+                new_vertices: &authored.vertices,
+                new_edges: &authored.edges,
+                patches: &patches,
+            },
             "expanded-runout-local",
             1e-8,
             Default::default(),
@@ -362,10 +364,12 @@ fn main() {
     } else {
         r::sew_g2_patch_set(
             &retention.plan().model,
-            &selected,
-            &authored.vertices,
-            &authored.edges,
-            &patches,
+            r::PatchReplacement {
+                selected: &selected,
+                new_vertices: &authored.vertices,
+                new_edges: &authored.edges,
+                patches: &patches,
+            },
             "expanded-runout-local",
             1e-8,
             Default::default(),

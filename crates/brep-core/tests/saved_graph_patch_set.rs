@@ -36,10 +36,12 @@ fn saved_patch_graph_proofs_bind_actual_closed_model_and_preserve_source_support
         .collect::<Vec<_>>();
     let body = r::sew_g2_patch_set_with_graph_work(
         &partition,
-        &selected,
-        &authored.vertices,
-        &authored.edges,
-        &patches,
+        r::PatchReplacement {
+            selected: &selected,
+            new_vertices: &authored.vertices,
+            new_edges: &authored.edges,
+            patches: &patches,
+        },
         "saved-graph-qualified",
         1e-8,
         Default::default(),

@@ -123,10 +123,12 @@ where
         .collect::<Vec<_>>();
     let mut assembly = super::sew_g2_patch_set(
         &plan.model,
-        &selected,
-        &authored.vertices,
-        &authored.edges,
-        &patches,
+        super::PatchReplacement {
+            selected: &selected,
+            new_vertices: &authored.vertices,
+            new_edges: &authored.edges,
+            patches: &patches,
+        },
         key,
         tolerance_uv,
         ContactQualificationLimits {

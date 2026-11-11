@@ -620,8 +620,18 @@ fn closed_straight_end_caps_do_not_inherit_g2_admission_from_contact_roots() {
     let patches = authored.patches.iter().map(|p| r::SewPatch {
         surface: &p.surface, loops: &p.loops, reversed: p.reversed,
     }).collect::<Vec<_>>();
-    match r::sew_g2_patch_set(&plan.model, &selected, &authored.vertices, &authored.edges,
-        &patches, "closed-c0-not-g2", 1e-8, limits.construction) {
+    match r::sew_g2_patch_set(
+        &plan.model,
+        r::PatchReplacement {
+            selected: &selected,
+            new_vertices: &authored.vertices,
+            new_edges: &authored.edges,
+            patches: &patches,
+        },
+        "closed-c0-not-g2",
+        1e-8,
+        limits.construction,
+    ) {
         Err(e) => {
             assert!(e.message.contains("G2 interfaces"), "{e:?}");
             assert!(e.message.contains("edge=") && e.message.contains("cells="),"{e:?}");

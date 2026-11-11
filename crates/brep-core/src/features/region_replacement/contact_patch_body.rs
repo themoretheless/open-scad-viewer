@@ -68,9 +68,18 @@ where F: FnOnce(&ContactRetention) -> Result<OwnedPatchSet> {
     let patches = authored.patches.iter().map(|p| SewPatch {
         surface: &p.surface, loops: &p.loops, reversed: p.reversed,
     }).collect::<Vec<_>>();
-    let mut assembly = super::sew_g2_patch_set(&plan.model, &selected,
-        &authored.vertices, &authored.edges, &patches, key, tolerance_uv,
-        limits.construction).map_err(ContactPatchFailure::Construction)?;
+    let mut assembly = super::sew_g2_patch_set(
+        &plan.model,
+        super::PatchReplacement {
+            selected: &selected,
+            new_vertices: &authored.vertices,
+            new_edges: &authored.edges,
+            patches: &patches,
+        },
+        key,
+        tolerance_uv,
+        limits.construction,
+    ).map_err(ContactPatchFailure::Construction)?;
     // Map every retained descendant through the actual replacement, never a
     // count or caller identity claim. Check literal source coefficients again.
     for region in &plan.regions {

@@ -75,10 +75,12 @@ fn simultaneous_patches_create_a_new_shared_interface_in_a_closed_g2_body() {
     let limits = r::ContactQualificationLimits::default();
     let out = r::sew_g2_patch_set(
         &f.source,
-        &selected,
-        &[],
-        &edges,
-        &patches,
+        r::PatchReplacement {
+            selected: &selected,
+            new_vertices: &[],
+            new_edges: &edges,
+            patches: &patches,
+        },
         "new-g2-diagonal",
         1e-8,
         limits,
@@ -182,7 +184,16 @@ fn missing_or_reversed_interfaces_and_unused_roles_refuse_atomically() {
             reversed: f.reversed[i],
         });
         r::sew_g2_patch_set(
-            &f.source, &selected, vertices, edges, &p, "refusal", 1e-8, limit,
+            &f.source,
+            r::PatchReplacement {
+                selected: &selected,
+                new_vertices: vertices,
+                new_edges: edges,
+                patches: &p,
+            },
+            "refusal",
+            1e-8,
+            limit,
         )
         .is_err()
     };
@@ -302,10 +313,12 @@ fn six_patch_node_introduces_one_shared_vertex_and_six_new_g2_interfaces() {
         .collect::<Vec<_>>();
     let out = r::sew_g2_patch_set(
         source,
-        &selected,
-        &vertices,
-        &edges,
-        &patches,
+        r::PatchReplacement {
+            selected: &selected,
+            new_vertices: &vertices,
+            new_edges: &edges,
+            patches: &patches,
+        },
         "six-valent-g2-node",
         1e-8,
         Default::default(),
@@ -403,10 +416,12 @@ fn closed_positionally_matching_network_with_a_new_g2_crease_is_refused() {
     ];
     let err = match r::sew_g2_patch_set(
         &f.source,
-        &selected,
-        &[],
-        &edges,
-        &patches,
+        r::PatchReplacement {
+            selected: &selected,
+            new_vertices: &[],
+            new_edges: &edges,
+            patches: &patches,
+        },
         "crease-refusal",
         1e-8,
         Default::default(),
