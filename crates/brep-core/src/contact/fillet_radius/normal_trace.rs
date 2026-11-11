@@ -64,17 +64,20 @@ fn difference_curve(
     )))
 }
 fn taylor(
-    supports: [&Surface; 2],
-    contacts: [ContactUse<'_>; 2],
-    r: [f64; 2],
-    domain: [f64; 2],
-    sides: [f64; 2],
+    trace: NormalTrace<'_>,
     q: [f64; 2],
     difference: Option<&(nurbs_core::curve::Curve, f64)>,
-    position_error: f64,
     cells: &mut usize,
     max: usize,
 ) -> Result<Option<Bounds>> {
+    let NormalTrace {
+        supports,
+        contacts,
+        radii: r,
+        law_domain: domain,
+        sides,
+        position_error,
+    } = trace;
     let mut positions = Vec::new();
     let mut normals = Vec::new();
     let mut error = I::point(position_error);
@@ -180,16 +183,19 @@ fn taylor(
     }))
 }
 fn coarse(
-    supports: [&Surface; 2],
-    contacts: [ContactUse<'_>; 2],
-    r: [f64; 2],
-    domain: [f64; 2],
-    sides: [f64; 2],
+    trace: NormalTrace<'_>,
     q: [f64; 2],
-    position_error: f64,
     cells: &mut usize,
     max: usize,
 ) -> Result<Option<Bounds>> {
+    let NormalTrace {
+        supports,
+        contacts,
+        radii: r,
+        law_domain: domain,
+        sides,
+        position_error,
+    } = trace;
     let mut positions = Vec::new();
     let mut normals = Vec::new();
     for side in 0..2 {
@@ -243,19 +249,14 @@ fn coarse(
     }))
 }
 pub(super) fn inspect(
-    supports: [&Surface; 2],
-    contacts: [ContactUse<'_>; 2],
-    r: [f64; 2],
-    domain: [f64; 2],
-    sides: [f64; 2],
-    position_error: f64,
+    trace: NormalTrace<'_>,
     mut out: Report,
     tolerance: f64,
     max: usize,
 ) -> Result<Report> {
     out.maximum_center_gap_mm = None;
     out.reason = "work-limit";
-    let difference = difference_curve(contacts, &mut out.cells, max)?;
+    let difference = difference_curve(trace.contacts, &mut out.cells, max)?;
     let mut pending = vec![[0., 1.]];
     let mut upper = 0_f64;
     let mut lower = 0_f64;
@@ -264,30 +265,9 @@ pub(super) fn inspect(
             return Ok(out);
         }
         out.cells += 1;
-        let bound = match taylor(
-            supports,
-            contacts,
-            r,
-            domain,
-            sides,
-            q,
-            difference.as_ref(),
-            position_error,
-            &mut out.cells,
-            max,
-        )? {
+        let bound = match taylor(trace, q, difference.as_ref(), &mut out.cells, max)? {
             Some(b) => Some(b),
-            None => coarse(
-                supports,
-                contacts,
-                r,
-                domain,
-                sides,
-                q,
-                position_error,
-                &mut out.cells,
-                max,
-            )?,
+            None => coarse(trace, q, &mut out.cells, max)?,
         };
         if let Some(b) = bound {
             if b.lower > tolerance {

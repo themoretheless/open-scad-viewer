@@ -74,6 +74,16 @@ pub fn inspect_contacts_in_domain(
         max_exact,
     )
 }
+/// The two contact sides traced against each other by the adaptive normal-trace bound.
+#[derive(Clone, Copy)]
+struct NormalTrace<'a> {
+    supports: [&'a Surface; 2],
+    contacts: [ContactUse<'a>; 2],
+    radii: [f64; 2],
+    law_domain: [f64; 2],
+    sides: [f64; 2],
+    position_error: f64,
+}
 #[derive(Clone, Copy)]
 struct ContactUse<'a> {
     curve: &'a nurbs_core::curve::Curve,
@@ -336,12 +346,14 @@ fn inspect_uses(
         let Some(normal) = bound.shape.normal else {
             out.reason = "support-normal-unproven";
             return adaptive_bound(
-                supports,
-                contacts,
-                radii,
-                law_domain,
-                sides,
-                position_error,
+                NormalTrace {
+                    supports,
+                    contacts,
+                    radii,
+                    law_domain,
+                    sides,
+                    position_error,
+                },
                 out,
                 tolerance_mm,
                 max_cells,
@@ -371,12 +383,14 @@ fn inspect_uses(
             return Ok(bounded);
         }
         return adaptive_bound(
-            supports,
-            contacts,
-            radii,
-            law_domain,
-            sides,
-            position_error,
+            NormalTrace {
+                supports,
+                contacts,
+                radii,
+                law_domain,
+                sides,
+                position_error,
+            },
             bounded,
             tolerance_mm,
             max_cells,
@@ -436,12 +450,14 @@ fn inspect_uses(
     };
     if out.decision == Decision::Unresolved {
         return adaptive_bound(
-            supports,
-            contacts,
-            radii,
-            law_domain,
-            sides,
-            position_error,
+            NormalTrace {
+                supports,
+                contacts,
+                radii,
+                law_domain,
+                sides,
+                position_error,
+            },
             out,
             tolerance_mm,
             max_cells,
