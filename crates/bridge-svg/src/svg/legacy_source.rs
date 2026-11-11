@@ -52,7 +52,8 @@ pub(super) fn legacy_source(source: &str, doc: &usvg::roxmltree::Document<'_>, d
                     }
                 output.push_str(&value[start..i]);
             } else {
-                let c = value[i..].chars().next().unwrap();
+                // `i < value.len()` and sits on a char boundary, so a char follows.
+                let Some(c) = value[i..].chars().next() else { break };
                 output.push(c);
                 i += c.len_utf8();
             }
@@ -202,7 +203,7 @@ pub(super) fn normalize_raster_image(mime: &str, data: std::sync::Arc<Vec<u8>>) 
             let mut options = gif::DecodeOptions::new();
             options.set_color_output(gif::ColorOutput::RGBA);
             options.set_memory_limit(gif::MemoryLimit::Bytes(
-                (64 * 1024 * 1024).try_into().unwrap(),
+                std::num::NonZeroU64::MIN.saturating_add(64 * 1024 * 1024 - 1),
             ));
             let mut decoder = options
                 .read_info(data.as_slice())
@@ -375,7 +376,8 @@ pub(crate) fn parse_tree(source: &str, dpi: f64, fonts: Option<&Value>) -> Resul
     let mut options = usvg::Options {
         dpi: dpi as f32,
         font_family: "Noto Sans".to_owned(),
-        default_size: usvg::Size::from_wh(300., 150.).unwrap(),
+        default_size: usvg::Size::from_wh(300., 150.)
+            .ok_or_else(|| invalid("Invalid default SVG size"))?,
         ..Default::default()
     };
     options

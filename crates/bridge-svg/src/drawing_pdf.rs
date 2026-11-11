@@ -59,7 +59,7 @@ impl Writer<'_> {
                     .entry(glyph.id.0)
                     .or_insert((glyph.text.clone(), advance));
                 let t = glyph.outline_transform();
-                writeln!(self.content, "q {} {} {} rg /Span << /ActualText <FEFF{}> >> BDC BT /F0 {} Tf {} {} {} {} {} {} Tm <{:04X}> Tj ET EMC Q", c[0],c[1],c[2],unicode_hex(&glyph.text), self.font.units_per_em(), t.sx,t.ky,t.kx,t.sy,t.tx,t.ty,glyph.id.0).unwrap();
+                let _ = writeln!(self.content, "q {} {} {} rg /Span << /ActualText <FEFF{}> >> BDC BT /F0 {} Tf {} {} {} {} {} {} Tm <{:04X}> Tj ET EMC Q", c[0],c[1],c[2],unicode_hex(&glyph.text), self.font.units_per_em(), t.sx,t.ky,t.kx,t.sy,t.tx,t.ty,glyph.id.0);
             }
             for decoration in [&span.underline, &span.overline, &span.line_through]
                 .into_iter()
@@ -84,12 +84,11 @@ impl Writer<'_> {
             ));
         }
         let t = g.transform();
-        writeln!(
+        let _ = writeln!(
             self.content,
             "q {} {} {} {} {} {} cm",
             t.sx, t.ky, t.kx, t.sy, t.tx, t.ty
-        )
-        .unwrap();
+        );
         for node in g.children() {
             self.nodes += 1;
             match node {
@@ -117,7 +116,7 @@ impl Writer<'_> {
         self.content.push_str("q\n");
         if let Some(fill) = p.fill() {
             let c = color(fill.paint())?;
-            writeln!(self.content, "{} {} {} rg", c[0], c[1], c[2]).unwrap();
+            let _ = writeln!(self.content, "{} {} {} rg", c[0], c[1], c[2]);
         }
         if let Some(stroke) = p.stroke() {
             let c = color(stroke.paint())?;
@@ -134,7 +133,7 @@ impl Writer<'_> {
                     return Err(invalid("Miter-clip stroke is unsupported"));
                 }
             };
-            writeln!(
+            let _ = writeln!(
                 self.content,
                 "{} {} {} RG {} w {} J {} j {} M",
                 c[0],
@@ -144,8 +143,7 @@ impl Writer<'_> {
                 cap,
                 join,
                 stroke.miterlimit().get()
-            )
-            .unwrap();
+            );
             let dash = stroke
                 .dasharray()
                 .unwrap_or(&[])
@@ -153,7 +151,7 @@ impl Writer<'_> {
                 .map(ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(" ");
-            writeln!(self.content, "[{dash}] {} d", stroke.dashoffset()).unwrap();
+            let _ = writeln!(self.content, "[{dash}] {} d", stroke.dashoffset());
         }
         let mut data = String::new();
         let mut current = [0., 0.];
@@ -167,11 +165,11 @@ impl Writer<'_> {
                 PathSegment::MoveTo(p) => {
                     current = [p.x, p.y];
                     start = current;
-                    writeln!(data, "{} {} m", p.x, p.y).unwrap();
+                    let _ = writeln!(data, "{} {} m", p.x, p.y);
                 }
                 PathSegment::LineTo(p) => {
                     current = [p.x, p.y];
-                    writeln!(data, "{} {} l", p.x, p.y).unwrap();
+                    let _ = writeln!(data, "{} {} l", p.x, p.y);
                 }
                 PathSegment::QuadTo(q, p) => {
                     let c1 = [
@@ -179,16 +177,15 @@ impl Writer<'_> {
                         current[1] + (q.y - current[1]) * 2. / 3.,
                     ];
                     let c2 = [p.x + (q.x - p.x) * 2. / 3., p.y + (q.y - p.y) * 2. / 3.];
-                    writeln!(
+                    let _ = writeln!(
                         data,
                         "{} {} {} {} {} {} c",
                         c1[0], c1[1], c2[0], c2[1], p.x, p.y
-                    )
-                    .unwrap();
+                    );
                     current = [p.x, p.y];
                 }
                 PathSegment::CubicTo(a, b, p) => {
-                    writeln!(data, "{} {} {} {} {} {} c", a.x, a.y, b.x, b.y, p.x, p.y).unwrap();
+                    let _ = writeln!(data, "{} {} {} {} {} {} c", a.x, a.y, b.x, b.y, p.x, p.y);
                     current = [p.x, p.y];
                 }
                 PathSegment::Close => {
@@ -232,7 +229,7 @@ pub(crate) fn generate(sources: &[String]) -> Result<String> {
     let mut offsets = vec![0];
     fn object(pdf: &mut String, offsets: &mut Vec<usize>, body: String) {
         offsets.push(pdf.len());
-        writeln!(pdf, "{} 0 obj\n{body}\nendobj", offsets.len() - 1).unwrap();
+        let _ = writeln!(pdf, "{} 0 obj\n{body}\nendobj", offsets.len() - 1);
     }
     object(
         &mut pdf,
@@ -346,9 +343,9 @@ pub(crate) fn generate(sources: &[String]) -> Result<String> {
     );
     let entries = glyphs.iter().collect::<Vec<_>>();
     for chunk in entries.chunks(100) {
-        writeln!(cmap, "{} beginbfchar", chunk.len()).unwrap();
+        let _ = writeln!(cmap, "{} beginbfchar", chunk.len());
         for (id, (text, _)) in chunk {
-            writeln!(cmap, "<{id:04X}> <{}>", unicode_hex(text)).unwrap();
+            let _ = writeln!(cmap, "<{id:04X}> <{}>", unicode_hex(text));
         }
         cmap.push_str("endbfchar\n");
     }
@@ -362,16 +359,15 @@ pub(crate) fn generate(sources: &[String]) -> Result<String> {
         return Err(invalid("Drawing PDF exceeds 32 MiB"));
     }
     let start = pdf.len();
-    writeln!(pdf, "xref\n0 {}\n0000000000 65535 f ", offsets.len()).unwrap();
+    let _ = writeln!(pdf, "xref\n0 {}\n0000000000 65535 f ", offsets.len());
     for offset in offsets.iter().skip(1) {
-        writeln!(pdf, "{offset:010} 00000 n ").unwrap();
+        let _ = writeln!(pdf, "{offset:010} 00000 n ");
     }
-    writeln!(
+    let _ = writeln!(
         pdf,
         "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{start}\n%%EOF",
         offsets.len()
-    )
-    .unwrap();
+    );
     Ok(pdf)
 }
 #[cfg(test)]

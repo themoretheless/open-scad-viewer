@@ -24,6 +24,7 @@ pub unsafe fn abi_free(ptr: usize, len: usize) {
     drop(unsafe { Vec::from_raw_parts(ptr as *mut u8, len, len) });
 }
 
+#[allow(clippy::unwrap_used, reason = "the fallback is a fixed small envelope that always encodes")]
 fn packed(value: Value) -> u64 {
     let bytes = value_codec::encode_binary(&value).unwrap_or_else(|_| {
         value_codec::encode_binary(

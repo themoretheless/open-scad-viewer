@@ -2,6 +2,8 @@
 //!
 //! Split out of `geometry-bridge` so the geometry kernel ships without a language frontend: this crate
 //! only parses and compiles source into documents, and the host runs the geometry operations they name.
+// Adapters turn bad input into typed errors instead of panicking (refactor plan L6).
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 #![feature(try_blocks, yeet_expr)]
 pub mod abi;
 mod openscad;

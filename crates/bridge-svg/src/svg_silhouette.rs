@@ -628,7 +628,8 @@ pub(crate) fn color_contours(
     let labels: Vec<Option<usize>> = pixels
         .iter()
         .map(|p| {
-            p.map(|c| {
+            // An opaque pixel implies a non-empty palette, so every opaque pixel gets a label.
+            p.and_then(|c| {
                 palette
                     .iter()
                     .enumerate()
@@ -640,8 +641,7 @@ pub(crate) fn color_contours(
                             *i,
                         )
                     })
-                    .unwrap()
-                    .0
+                    .map(|(i, _)| i)
             })
         })
         .collect();

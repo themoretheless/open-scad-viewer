@@ -2,6 +2,8 @@
 //!
 //! Routed by `geometry-bridge`: [`dispatch`] hands back operations this
 //! domain does not own.
+// Adapters turn bad input into typed errors instead of panicking (refactor plan L6).
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 
 pub(crate) use bridge_codec::{Error, Result, Routed, Value, field, input, require_exact_fields};
 pub(crate) use polygon_core::Mesh;
