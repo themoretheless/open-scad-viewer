@@ -277,18 +277,29 @@ fn prepare(s: &Sheet, edge: usize, t: f64, p: [f64; 3], l: partition::Limits) ->
     let (m, b, r) = partition::apply(&s.cap, &s.model, &mut roots, edge, t, Some(p), l)?;
     Ok((m, b, r, roots))
 }
-fn imprint(
-    sheets: &mut [Sheet],
-    piece_roots: &mut [Vec<usize>],
-    sources: &[Source],
-    pair: &Pair,
+/// The sewing state an imprint updates: the sheets, the roots of each piece and the split count.
+struct SewingState<'a> {
+    sheets: &'a mut [Sheet],
+    piece_roots: &'a mut [Vec<usize>],
+    splits: &'a mut usize,
+}
+/// One proposed crossing: its pair index, origin, the two curve parameters and the 3D proposal.
+#[derive(Clone, Copy)]
+struct Crossing {
     pair_index: usize,
     origin: Origin,
     parameters: [f64; 2],
     proposal: [f64; 3],
+}
+fn imprint(
+    state: SewingState<'_>,
+    sources: &[Source],
+    pair: &Pair,
+    crossing: Crossing,
     l: Limits,
-    splits: &mut usize,
 ) -> Result<Event> {
+    let SewingState { sheets, piece_roots, splits } = state;
+    let Crossing { pair_index, origin, parameters, proposal } = crossing;
     let owners = pair.sources.map(|s| sources[s].sheet);
     let places = [
         locate(
@@ -542,18 +553,9 @@ pub fn build(mut sheets: Vec<Sheet>, l: Limits) -> Result<Imprinted> {
                     "Interior crossing candidate allowance exhausted",
                 )?;
                 attempted += 1;
-                match imprint(
-                    &mut sheets,
-                    &mut piece_roots,
-                    &sources,
-                    &pair,
-                    pairs.len(),
-                    origin,
-                    t,
-                    p,
-                    l,
-                    &mut splits,
-                ) {
+                let state = SewingState { sheets: &mut sheets, piece_roots: &mut piece_roots, splits: &mut splits };
+                let crossing = Crossing { pair_index: pairs.len(), origin, parameters: t, proposal: p };
+                match imprint(state, &sources, &pair, crossing, l) {
                     Ok(e) => events.push(e),
                     Err(e) => refusals.push(Refusal {
                         pair: pairs.len(),
