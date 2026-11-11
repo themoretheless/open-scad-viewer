@@ -12,7 +12,8 @@ mod boundary_census;
 mod qualified_radius;
 pub use qualified_radius::{
     RadiusQualifiedGraft, RadiusTangentGraft, attach_radius_qualified,
-    GraftTopology, GraftWork, RadiusLaw, RadiusTolerance, attach_radius_tangent_qualified,
+    GraftMapping, GraftTopology, GraftWork, RadiusBounds, RadiusLaw, RadiusTolerance,
+    attach_radius_tangent_qualified,
 };
 mod fit_boundaries;
 pub use fit_boundaries::{

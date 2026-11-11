@@ -6,19 +6,7 @@ fn circular_saved_skin_keeps_radius_after_graft_and_reload() {
     let fixture = fixture::build_rolling_automatic();
     let center = [[0., 0., 0., 1.5], [0., 1., 0., 0.], [0., 0., 0., 1.5]];
     let radius = [0., 0., 0., 1.5];
-    let qualified = contact_graft::attach_radius_qualified(
-        &fixture.source,
-        &fixture.patch,
-        &fixture.mapping,
-        &fixture.targets,
-        center,
-        radius,
-        1e-8,
-        1e-7,
-        100000,
-        1000000,
-        2000000,
-    )
+    let qualified = contact_graft::attach_radius_qualified(&fixture.source, &fixture.patch, contact_graft::GraftMapping { vertices: &fixture.mapping, targets: &fixture.targets }, contact_graft::RadiusLaw { center, radius }, contact_graft::RadiusBounds { uv: 1e-8, radius_mm: 1e-7 }, contact_graft::GraftWork { max_cells: 100000, max_exact: 1000000, max_coefficients: 2000000 })
     .unwrap();
     assert!(qualified.radius.within_tolerance);
     let graft = qualified.graft;
@@ -86,19 +74,7 @@ fn nominal_g2_setback_is_not_mistaken_for_circular_skin_radius() {
     .unwrap();
     assert!(!proof.within_tolerance);
     assert!(
-        contact_graft::attach_radius_qualified(
-            &f.source,
-            &f.patch,
-            &f.mapping,
-            &f.targets,
-            [[0., 0., 0., 1.5], [0., 1., 0., 0.], [0., 0., 0., 1.5]],
-            [0., 0., 0., 1.5],
-            1e-8,
-            1e-7,
-            100000,
-            1000000,
-            2000000
-        )
+        contact_graft::attach_radius_qualified(&f.source, &f.patch, contact_graft::GraftMapping { vertices: &f.mapping, targets: &f.targets }, contact_graft::RadiusLaw { center: [[0., 0., 0., 1.5], [0., 1., 0., 0.], [0., 0., 0., 1.5]], radius: [0., 0., 0., 1.5] }, contact_graft::RadiusBounds { uv: 1e-8, radius_mm: 1e-7 }, contact_graft::GraftWork { max_cells: 100000, max_exact: 1000000, max_coefficients: 2000000 })
         .is_err()
     );
 }
@@ -108,10 +84,7 @@ fn variable_rolling_skin_keeps_complete_prescribed_radius_after_owned_graft() {
     let f = fixture::build_variable_rolling_automatic();
     let field = f.radius_field;
     let center = [field, [0., 1., 0., 0.], field];
-    let qualified = contact_graft::attach_radius_qualified(
-        &f.source, &f.patch, &f.mapping, &f.targets, center, field, 1e-8, 1e-7, 100000, 1000000,
-        2000000,
-    )
+    let qualified = contact_graft::attach_radius_qualified(&f.source, &f.patch, contact_graft::GraftMapping { vertices: &f.mapping, targets: &f.targets }, contact_graft::RadiusLaw { center, radius: field }, contact_graft::RadiusBounds { uv: 1e-8, radius_mm: 1e-7 }, contact_graft::GraftWork { max_cells: 100000, max_exact: 1000000, max_coefficients: 2000000 })
     .unwrap();
     assert!(qualified.radius.within_tolerance);
     let encoded = value_codec::to_string(&qualified.graft.model).unwrap();

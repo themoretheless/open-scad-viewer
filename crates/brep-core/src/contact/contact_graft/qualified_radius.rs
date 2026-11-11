@@ -4,22 +4,33 @@ pub struct RadiusQualifiedGraft {
     pub graft: Graft,
     pub radius: nurbs_core::skin_radius::Report,
 }
+/// Which patch vertices are grafted onto which source targets.
+#[derive(Clone, Copy)]
+pub struct GraftMapping<'a> {
+    pub vertices: &'a [usize],
+    pub targets: &'a [Target],
+}
+/// UV and radius (mm) tolerances of the radius gate.
+#[derive(Clone, Copy, Debug)]
+pub struct RadiusBounds {
+    pub uv: f64,
+    pub radius_mm: f64,
+}
 /// Assemble privately, then inspect the actual saved skin against explicit
 /// affine world fields. Returns no intermediate model on failed radius proof.
 /// Contact/G2/global embedding remain distinct from whole-skin radial error.
 pub fn attach_radius_qualified(
     source: &Model,
     patch: &Model,
-    vertices: &[usize],
-    targets: &[Target],
-    center: [[f64; 4]; 3],
-    radius: [f64; 4],
-    tolerance_uv: f64,
-    radius_tolerance_mm: f64,
-    max_cells: usize,
-    max_exact: u64,
-    max_coefficients: usize,
+    mapping: GraftMapping<'_>,
+    law: RadiusLaw,
+    bounds: RadiusBounds,
+    work: GraftWork,
 ) -> Result<RadiusQualifiedGraft> {
+    let GraftMapping { vertices, targets } = mapping;
+    let RadiusLaw { center, radius } = law;
+    let RadiusBounds { uv: tolerance_uv, radius_mm: radius_tolerance_mm } = bounds;
+    let GraftWork { max_cells, max_exact, max_coefficients } = work;
     let graft = attach(
         source,
         patch,
@@ -102,19 +113,7 @@ pub fn attach_radius_tangent_qualified(
             "Radius/G1 gate needs a distinct explicit patch contact scope",
         ));
     }
-    let qualified = attach_radius_qualified(
-        source,
-        patch,
-        vertices,
-        targets,
-        center,
-        radius,
-        tolerance_uv,
-        radius_tolerance_mm,
-        max_cells,
-        max_exact,
-        max_coefficients,
-    )?;
+    let qualified = attach_radius_qualified(source, patch, GraftMapping { vertices, targets }, RadiusLaw { center, radius }, RadiusBounds { uv: tolerance_uv, radius_mm: radius_tolerance_mm }, GraftWork { max_cells, max_exact, max_coefficients })?;
     let edges = patch_contacts
         .iter()
         .map(|&i| qualified.graft.patch_edges[i])
