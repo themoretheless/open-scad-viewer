@@ -6,6 +6,16 @@ pub(in super::super) enum FrameSource<'a> {
     AuthoredGuide(&'a crate::curve::Curve,&'a crate::curve::Curve),
     Guide(&'a crate::curve::Curve),
 }
+/// Authored frame laws applied at a station: longitudinal and transverse frame laws, scale, twist
+/// and optional affine laws.
+#[derive(Clone, Copy)]
+pub struct FrameLaws<'a> {
+    pub longitudinal: &'a crate::curve::Curve,
+    pub transverse: &'a crate::curve::Curve,
+    pub scale: &'a crate::curve::Curve,
+    pub twist: &'a crate::curve::Curve,
+    pub affine: Option<(&'a crate::curve::Curve, &'a crate::curve::Curve)>,
+}
 #[derive(Clone, Debug)]
 pub struct Report {
     pub status: Status,
@@ -254,9 +264,10 @@ impl Report {
     /// twist and scale laws share one cell budget. Miter projection continues
     /// to use the path tangent and its endpoint planes, not the frame axis.
     pub fn station_local_authored_frame(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,longitudinal:&crate::curve::Curve,transverse:&crate::curve::Curve,scale:&crate::curve::Curve,twist:&crate::curve::Curve,max_cells:usize)->Result<Option<VectorEnclosure>> {
-        self.station_local_authored_frame_affine(edge,fraction,local,longitudinal,transverse,scale,twist,None,max_cells)
+        self.station_local_authored_frame_affine(edge,fraction,local,FrameLaws { longitudinal, transverse, scale, twist, affine: None },max_cells)
     }
-    pub fn station_local_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,longitudinal:&crate::curve::Curve,transverse:&crate::curve::Curve,scale:&crate::curve::Curve,twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize)->Result<Option<VectorEnclosure>> {
+    pub fn station_local_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,laws:FrameLaws<'_>,max_cells:usize)->Result<Option<VectorEnclosure>> {
+        let FrameLaws { longitudinal, transverse, scale, twist, affine } = laws;
         self.station_frame_affine(edge,fraction,local,FrameSource::Authored(longitudinal,transverse),scale,twist,affine,max_cells)
     }
     pub(in super::super) fn station_frame_affine(
@@ -301,9 +312,10 @@ impl Report {
     /// Includes moving frame, twist, scale and the full path-miter field.
     /// Derivative rates map normalized traversal to the local interval.
     pub fn interpolation_upper_authored_frame(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,longitudinal:&crate::curve::Curve,transverse:&crate::curve::Curve,scale:&crate::curve::Curve,twist:&crate::curve::Curve,max_cells:usize)->Result<Option<f64>> {
-        self.interpolation_upper_authored_frame_affine(edge,fraction,local,longitudinal,transverse,scale,twist,None,max_cells)
+        self.interpolation_upper_authored_frame_affine(edge,fraction,local,FrameLaws { longitudinal, transverse, scale, twist, affine: None },max_cells)
     }
-    pub fn interpolation_upper_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,longitudinal:&crate::curve::Curve,transverse:&crate::curve::Curve,scale:&crate::curve::Curve,twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize)->Result<Option<f64>> {
+    pub fn interpolation_upper_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,laws:FrameLaws<'_>,max_cells:usize)->Result<Option<f64>> {
+        let FrameLaws { longitudinal, transverse, scale, twist, affine } = laws;
         self.interpolation_upper_frame_affine(edge,fraction,local,FrameSource::Authored(longitudinal,transverse),scale,twist,affine,max_cells)
     }
     pub(in super::super) fn interpolation_upper_frame_affine(
