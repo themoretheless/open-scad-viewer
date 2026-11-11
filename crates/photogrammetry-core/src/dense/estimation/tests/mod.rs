@@ -441,13 +441,8 @@ fn cuda_and_wgpu_sweep_selections_agree() {
         0,
         &reference,
         &sources,
-        40,
-        40,
-        2.,
-        &hypotheses[..options.depth_hypotheses],
-        None,
-        near,
-        1. / near - 1. / far,
+        DepthGrid { width: 40, height: 40, step: 2. },
+        InverseDepthBins { hypotheses: &hypotheses[..options.depth_hypotheses], ranges: None, near, inverse_span: 1. / near - 1. / far },
         &options,
     );
     let rasters: Vec<Option<(&[f32], usize, usize)>> = vec![
@@ -470,13 +465,8 @@ fn cuda_and_wgpu_sweep_selections_agree() {
         0,
         &reference,
         &sources,
-        40,
-        40,
-        2.,
-        &hypotheses[..options.depth_hypotheses],
-        None,
-        near,
-        1. / near - 1. / far,
+        DepthGrid { width: 40, height: 40, step: 2. },
+        InverseDepthBins { hypotheses: &hypotheses[..options.depth_hypotheses], ranges: None, near, inverse_span: 1. / near - 1. / far },
         &wide,
     );
     assert!(

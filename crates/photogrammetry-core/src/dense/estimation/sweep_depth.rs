@@ -28,17 +28,23 @@ pub(super) fn sweep_depth(
     #[cfg(feature = "gpu")]
     if options.acceleration.is_gpu() {
         if let Some(maps) = gpu_sweep_single(
-            gray,
-            reference,
+            ReferenceView {
+                gray,
+                camera: reference,
+            },
             sources,
-            width,
-            height,
-            step,
-            &hypotheses[..options.depth_hypotheses],
-            ranges,
-            near,
+            DepthGrid {
+                width,
+                height,
+                step,
+            },
+            InverseDepthBins {
+                hypotheses: &hypotheses[..options.depth_hypotheses],
+                ranges,
+                near,
+                inverse_span,
+            },
             far,
-            inverse_span,
             options,
         ) {
             count_gpu_work(diagnostics, width, height, sources.len(), options);

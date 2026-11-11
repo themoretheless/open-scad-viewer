@@ -83,13 +83,17 @@ pub(in super::super) fn estimate_prepared(
                 index,
                 reference,
                 &sources,
-                preamble.width,
-                preamble.height,
-                preamble.step,
-                &hypotheses[..options.depth_hypotheses],
-                ranges.as_ref(),
-                preamble.near,
-                1. / preamble.near - 1. / preamble.far,
+                DepthGrid {
+                    width: preamble.width,
+                    height: preamble.height,
+                    step: preamble.step,
+                },
+                InverseDepthBins {
+                    hypotheses: &hypotheses[..options.depth_hypotheses],
+                    ranges: ranges.as_ref(),
+                    near: preamble.near,
+                    inverse_span: 1. / preamble.near - 1. / preamble.far,
+                },
                 options,
             ));
             gpu_pending.push((index, preamble, sources.len()));

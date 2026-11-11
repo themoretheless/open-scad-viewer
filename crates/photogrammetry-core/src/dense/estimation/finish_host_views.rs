@@ -1,4 +1,5 @@
 use super::*;
+use crate::dense::plane::{DepthGrid, ReferenceView};
 
 /// Builds depth maps from host-computed score rows (indexed by image, aligned
 /// with `prepare_host_views` output). Scores are f32 from the GPU shader and
@@ -101,6 +102,15 @@ pub fn finish_host_views(
 /// Per-pixel sweep range as `(near, far)` map arrays; zeroed entries mean the
 /// pixel keeps the global range.
 pub(super) type SweepRanges = (Vec<f64>, Vec<f64>);
+/// Inverse-depth hypotheses of a sweep with their optional per-pixel ranges, the near depth and
+/// the inverse-depth span `1/near - 1/far` that maps a depth to its bin.
+#[derive(Clone, Copy)]
+pub(super) struct InverseDepthBins<'a> {
+    pub hypotheses: &'a [f64],
+    pub ranges: Option<&'a SweepRanges>,
+    pub near: f64,
+    pub inverse_span: f64,
+}
 
 /// Window radius in map pixels for sparse-anchor aggregation; six covers the
 /// typical sparse grid spacing without blending distant surfaces.
@@ -357,20 +367,16 @@ fn ceil_f32(x: f64) -> f32 {
 /// Packs one view for the GPU sweep-and-select shader. Per-pixel hypothesis
 /// bins come from the same `bin_range` the CPU selection uses.
 #[cfg(feature = "gpu")]
-#[allow(clippy::too_many_arguments)]
 pub(super) fn gpu_job(
     ref_index: usize,
     reference: &Camera,
     sources: &[Source],
-    width: usize,
-    height: usize,
-    step: f64,
-    hypotheses: &[f64],
-    ranges: Option<&SweepRanges>,
-    near: f64,
-    inverse_span: f64,
+    grid: DepthGrid,
+    bins: InverseDepthBins<'_>,
     options: &DenseOptions,
 ) -> crate::gpu::sweep::SweepJob {
+    let DepthGrid { width, height, step } = grid;
+    let InverseDepthBins { hypotheses, ranges, near, inverse_span } = bins;
     let mut bins = Vec::with_capacity(width * height * 2);
     for pixel in 0..width * height {
         let (lo, hi) = bin_range(ranges, pixel, near, inverse_span, options);
@@ -448,21 +454,17 @@ pub(super) fn count_gpu_work(
 /// Single-view GPU sweep (coarse-to-fine passes, which depend on each other,
 /// cannot join the per-pass batch). Uploads only the rasters this view needs.
 #[cfg(feature = "gpu")]
-#[allow(clippy::too_many_arguments)]
 pub(super) fn gpu_sweep_single(
-    gray: &GrayImage,
-    reference: &Camera,
+    view: ReferenceView<'_>,
     sources: &[Source],
-    width: usize,
-    height: usize,
-    step: f64,
-    hypotheses: &[f64],
-    ranges: Option<&SweepRanges>,
-    near: f64,
+    grid: DepthGrid,
+    bins: InverseDepthBins<'_>,
     far: f64,
-    inverse_span: f64,
     options: &DenseOptions,
 ) -> Option<(Vec<f64>, Vec<f32>)> {
+    let ReferenceView { gray, camera: reference } = view;
+    let DepthGrid { width, height, step } = grid;
+    let InverseDepthBins { hypotheses, ranges, near, inverse_span } = bins;
     // Backend choice first: without any device the payload is never built.
     #[cfg(feature = "cuda")]
     let cuda_sweep = (options.acceleration == crate::Acceleration::Cuda)
@@ -499,13 +501,8 @@ pub(super) fn gpu_sweep_single(
         0,
         reference,
         &renumbered,
-        width,
-        height,
-        step,
-        hypotheses,
-        ranges,
-        near,
-        inverse_span,
+        DepthGrid { width, height, step },
+        InverseDepthBins { hypotheses, ranges, near, inverse_span },
         options,
     );
     // Native CUDA first for Acceleration::Cuda, then the wgpu sweep; both
