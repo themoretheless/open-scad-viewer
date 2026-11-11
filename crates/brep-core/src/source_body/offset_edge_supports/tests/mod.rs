@@ -186,15 +186,9 @@ fn rational_edge_keeps_original_curved_and_planar_supports() {
     );
     let world = propose_world_contacts(
         &prepared,
-        section.fixed_axis,
-        [0.2, 0.8],
-        distances,
-        63,
-        1e-4,
-        pcurve_limits(),
-        1e-5,
-        1e-3,
-        lift_limits(),
+        EdgeDrive { axis: section.fixed_axis, interval: [0.2, 0.8], distances, driver_cells: 63 },
+        PcurveStage { tolerance_uv: 1e-4, limits: pcurve_limits() },
+        LiftStage { tolerance_mm: 1e-5, contact_tolerance_mm: 1e-3, limits: lift_limits() },
     )
     .unwrap();
     assert!(
@@ -208,15 +202,9 @@ fn rational_edge_keeps_original_curved_and_planar_supports() {
         .all(|r| r.source_lift_proven && r.shared_endpoints_proven));
     let tight = propose_world_contacts(
         &prepared,
-        section.fixed_axis,
-        [0.2, 0.8],
-        distances,
-        63,
-        1e-4,
-        pcurve_limits(),
-        1e-5,
-        1e-10,
-        lift_limits(),
+        EdgeDrive { axis: section.fixed_axis, interval: [0.2, 0.8], distances, driver_cells: 63 },
+        PcurveStage { tolerance_uv: 1e-4, limits: pcurve_limits() },
+        LiftStage { tolerance_mm: 1e-5, contact_tolerance_mm: 1e-10, limits: lift_limits() },
     )
     .unwrap();
     assert!(!tight.world_contacts_proven);
@@ -226,15 +214,9 @@ fn rational_edge_keeps_original_curved_and_planar_supports() {
     work.proposal_cells = 1;
     let stopped = propose_world_contacts(
         &prepared,
-        section.fixed_axis,
-        [0.2, 0.8],
-        distances,
-        63,
-        1e-4,
-        pcurve_limits(),
-        1e-5,
-        1e-3,
-        work,
+        EdgeDrive { axis: section.fixed_axis, interval: [0.2, 0.8], distances, driver_cells: 63 },
+        PcurveStage { tolerance_uv: 1e-4, limits: pcurve_limits() },
+        LiftStage { tolerance_mm: 1e-5, contact_tolerance_mm: 1e-3, limits: work },
     )
     .unwrap();
     assert!(
@@ -304,15 +286,9 @@ fn automatic_box_edge_stations_find_certified_centers_after_rotation() {
         assert!(path.driver.monotonic_proven);
         let world = propose_world_contacts(
             &prepared,
-            section.fixed_axis,
-            [0.2, 0.8],
-            distances,
-            16,
-            1e-5,
-            pcurve_limits(),
-            1e-7,
-            1e-5,
-            lift_limits(),
+            EdgeDrive { axis: section.fixed_axis, interval: [0.2, 0.8], distances, driver_cells: 16 },
+            PcurveStage { tolerance_uv: 1e-5, limits: pcurve_limits() },
+            LiftStage { tolerance_mm: 1e-7, contact_tolerance_mm: 1e-5, limits: lift_limits() },
         )
         .unwrap();
         assert!(

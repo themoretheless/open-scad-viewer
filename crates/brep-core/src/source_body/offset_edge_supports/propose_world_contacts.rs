@@ -1,20 +1,39 @@
 use super::*;
 
+/// How the offset edge is driven: the fixed axis, its drive interval, the two offset distances and
+/// the driver cell limit.
+#[derive(Clone, Copy, Debug)]
+pub struct EdgeDrive {
+    pub axis: usize,
+    pub interval: [f64; 2],
+    pub distances: [f64; 2],
+    pub driver_cells: usize,
+}
+/// UV tolerance and limits of the offset path pcurve stage.
+#[derive(Clone, Copy)]
+pub struct PcurveStage {
+    pub tolerance_uv: f64,
+    pub limits: nurbs_core::offset_path_pcurves::Limits,
+}
+/// Lift and contact tolerances (mm) and limits of the world lift stage.
+#[derive(Clone, Copy)]
+pub struct LiftStage {
+    pub tolerance_mm: f64,
+    pub contact_tolerance_mm: f64,
+    pub limits: nurbs_core::curve_surface_lift::Limits,
+}
 /// Fresh source UV generation and 3D lifts with pointwise millimeter contact
 /// bounds. A whole-chart point-map derivative bound propagates UV error.
 /// Positional qualification does not admit exact coedges, normals or a solid.
 pub fn propose_world_contacts(
     prepared: &PreparedEdge,
-    axis: usize,
-    drive: [f64; 2],
-    distances: [f64; 2],
-    driver_cells: usize,
-    tolerance_uv: f64,
-    pcurve_limits: nurbs_core::offset_path_pcurves::Limits,
-    lift_tolerance_mm: f64,
-    contact_tolerance_mm: f64,
-    lift_limits: nurbs_core::curve_surface_lift::Limits,
+    drive: EdgeDrive,
+    pcurve: PcurveStage,
+    lift: LiftStage,
 ) -> Result<WorldContactReport> {
+    let EdgeDrive { axis, interval: drive, distances, driver_cells } = drive;
+    let PcurveStage { tolerance_uv, limits: pcurve_limits } = pcurve;
+    let LiftStage { tolerance_mm: lift_tolerance_mm, contact_tolerance_mm, limits: lift_limits } = lift;
     if !lift_tolerance_mm.is_finite()
         || lift_tolerance_mm <= 0.
         || !contact_tolerance_mm.is_finite()
