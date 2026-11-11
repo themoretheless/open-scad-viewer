@@ -446,7 +446,14 @@ fn restore_using<E:EditorCarrier>(v:Value, restore_body:impl FnOnce(Value,brep_c
                 "allSelfPairsQualified":report.all_self_pairs_qualified()});
             (report.into_certificates(),diagnostics)
         }else{(Vec::new(),Value::Null)};
-        let r=brep_core::source_wall_coverage::qualify_with_mixed_pair_pass(body,minimum,work,facts,products,factors,Vec::new(),retained,Vec::new(),mixed)?;
+        let r=brep_core::source_wall_coverage::qualify_with_mixed_pair_pass(
+            body,
+            minimum,
+            brep_core::source_wall_coverage::WallLimits { limits: work, products, factors },
+            facts,
+            brep_core::source_wall_coverage::RetainedGapPass { certificates: Vec::new(), limits: retained },
+            brep_core::source_wall_coverage::MixedPairPass { certificates: Vec::new(), limits: mixed },
+        )?;
         let retained_report=r.retained_gap.as_ref().map(|d|json!({"cells":d.cells,"spans":d.spans,"domainCells":d.domain_cells,"domainQueries":d.domain_queries,"endpointQueries":d.endpoint_queries,
             "pairs":d.pairs.iter().map(|p|json!({"faces":p.faces,"qualified":p.qualified,"reason":p.reason,"cells":p.cells,"spans":p.spans,"domainCells":p.domain_cells,"domainQueries":p.domain_queries,"endpointQueries":p.endpoint_queries,"outsideProducts":p.outside_products,"unresolvedProducts":p.unresolved_products})).collect::<Vec<_>>()}));
         let mixed_report=r.mixed.as_ref().map(|d|json!({"cells":d.cells,"spans":d.spans,"domainCells":d.domain_cells,"normalSpans":d.normal_spans,

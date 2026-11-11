@@ -186,96 +186,75 @@ pub fn qualify_with_self_facts_and_factored_normals<
     qualify_with_retained_gap_facts(
         body,
         minimum_mm,
-        limits,
+        WallLimits { limits, products, factors },
         facts,
-        products,
-        factors,
         Vec::new(),
     )
+}
+/// The limits every wall coverage pass uses: coverage, normal products and factored normals.
+pub struct WallLimits {
+    pub limits: Limits,
+    pub products: NormalProductLimits,
+    pub factors: FactoredNormalLimits,
+}
+/// Retained-gap certificates bound to the body, and the limits of an extra retained-gap pass
+/// (`None` reuses the certificates only).
+pub struct RetainedGapPass<'a, E> {
+    pub certificates: Vec<crate::source_retained_face_gap::Certificate<'a, E>>,
+    pub limits: Option<RetainedGapLimits>,
+}
+/// Mixed wall-pair certificates bound to the body, and the limits of an extra mixed-pair pass
+/// (`None` reuses the certificates only).
+pub struct MixedPairPass<'a, E> {
+    pub certificates: Vec<crate::source_wall_pair::Certificate<'a, E>>,
+    pub limits: Option<MixedPairLimits>,
 }
 /// Add private original retained-domain certificates without replacing earlier proofs.
 pub fn qualify_with_retained_gap_facts<'a, E: crate::source_shared_chord_map::ChordCarrier>(
     body: &'a Body<E>,
     minimum_mm: f64,
-    limits: Limits,
+    limits: WallLimits,
     facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a, E>>,
-    products: NormalProductLimits,
-    factors: FactoredNormalLimits,
     retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a, E>>,
 ) -> Result<Report<'a, E>> {
-    qualify_with_retained_gap_pass(
-        body,
-        minimum_mm,
-        limits,
-        facts,
-        products,
-        factors,
-        retained_gaps,
-        None,
-    )
+    let retained = RetainedGapPass { certificates: retained_gaps, limits: None };
+    qualify_with_retained_gap_pass(body, minimum_mm, limits, facts, retained)
 }
 /// Additional fair bounded pass over unresolved original distinct-face products.
 pub fn qualify_with_retained_gap_pass<'a, E: crate::source_shared_chord_map::ChordCarrier>(
     body: &'a Body<E>,
     minimum_mm: f64,
-    limits: Limits,
+    limits: WallLimits,
     facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a, E>>,
-    products: NormalProductLimits,
-    factors: FactoredNormalLimits,
-    retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a, E>>,
-    retained: Option<RetainedGapLimits>,
+    retained: RetainedGapPass<'a, E>,
 ) -> Result<Report<'a, E>> {
-    qualify_with_mixed_pair_facts(
-        body,
-        minimum_mm,
-        limits,
-        facts,
-        products,
-        factors,
-        retained_gaps,
-        retained,
-        Vec::new(),
-    )
+    qualify_with_mixed_pair_facts(body, minimum_mm, limits, facts, retained, Vec::new())
 }
 /// Reuse complete retained product proofs bound to this original immutable body.
 /// Certificates cover the requested threshold and normal-angle criterion.
 pub fn qualify_with_mixed_pair_facts<'a, E: crate::source_shared_chord_map::ChordCarrier>(
     body: &'a Body<E>,
     minimum_mm: f64,
-    limits: Limits,
+    limits: WallLimits,
     facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a, E>>,
-    products: NormalProductLimits,
-    factors: FactoredNormalLimits,
-    retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a, E>>,
-    retained: Option<RetainedGapLimits>,
+    retained: RetainedGapPass<'a, E>,
     mixed_pairs: Vec<crate::source_wall_pair::Certificate<'a, E>>,
 ) -> Result<Report<'a, E>> {
-    qualify_with_mixed_pair_pass(
-        body,
-        minimum_mm,
-        limits,
-        facts,
-        products,
-        factors,
-        retained_gaps,
-        retained,
-        mixed_pairs,
-        None,
-    )
+    let mixed = MixedPairPass { certificates: mixed_pairs, limits: None };
+    qualify_with_mixed_pair_pass(body, minimum_mm, limits, facts, retained, mixed)
 }
 /// Additional bounded mixed criterion over the remaining original products.
 pub fn qualify_with_mixed_pair_pass<'a, E: crate::source_shared_chord_map::ChordCarrier>(
     body: &'a Body<E>,
     minimum_mm: f64,
-    limits: Limits,
+    limits: WallLimits,
     facts: Vec<crate::source_wall_self_coverage::FaceCertificate<'a, E>>,
-    products: NormalProductLimits,
-    factors: FactoredNormalLimits,
-    mut retained_gaps: Vec<crate::source_retained_face_gap::Certificate<'a, E>>,
-    retained: Option<RetainedGapLimits>,
-    mut mixed_pairs: Vec<crate::source_wall_pair::Certificate<'a, E>>,
-    mixed: Option<MixedPairLimits>,
+    retained: RetainedGapPass<'a, E>,
+    mixed: MixedPairPass<'a, E>,
 ) -> Result<Report<'a, E>> {
+    let WallLimits { limits, products, factors } = limits;
+    let RetainedGapPass { certificates: mut retained_gaps, limits: retained } = retained;
+    let MixedPairPass { certificates: mut mixed_pairs, limits: mixed } = mixed;
     if let Some(m) = mixed {
         let r = m.domains;
         if [

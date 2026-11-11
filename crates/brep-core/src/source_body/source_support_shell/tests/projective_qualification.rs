@@ -1111,10 +1111,8 @@
         let rejected = crate::source_wall_coverage::qualify_with_retained_gap_facts(
             &body,
             30.01,
-            coverage_options(),
+            crate::source_wall_coverage::WallLimits { limits: coverage_options(), products: no_products(), factors: no_factors() },
             Vec::new(),
-            no_products(),
-            no_factors(),
             vec![c],
         );
         assert!(rejected.is_err());
@@ -1130,11 +1128,9 @@
             crate::source_wall_coverage::qualify_with_retained_gap_facts(
                 &body,
                 9.99,
-                coverage_options(),
+                crate::source_wall_coverage::WallLimits { limits: coverage_options(), products: no_products(), factors: no_factors() },
                 Vec::new(),
-                no_products(),
-                no_factors(),
-                vec![c1, c2]
+                vec![c1, c2],
             )
             .is_err()
         );
@@ -1145,10 +1141,8 @@
         let coverage = crate::source_wall_coverage::qualify_with_retained_gap_facts(
             &body,
             9.99,
-            coverage_options(),
+            crate::source_wall_coverage::WallLimits { limits: coverage_options(), products: no_products(), factors: no_factors() },
             Vec::new(),
-            no_products(),
-            no_factors(),
             vec![owned],
         )
         .unwrap();
@@ -1182,12 +1176,9 @@
                 crate::source_wall_coverage::qualify_with_mixed_pair_facts(
                     $target,
                     $minimum,
-                    l,
+                    crate::source_wall_coverage::WallLimits { limits: l, products: no_products(), factors: no_factors() },
                     Vec::new(),
-                    no_products(),
-                    no_factors(),
-                    Vec::new(),
-                    None,
+                    crate::source_wall_coverage::RetainedGapPass { certificates: Vec::new(), limits: None },
                     $proofs,
                 )
             }};
@@ -1233,11 +1224,9 @@
             crate::source_wall_coverage::qualify_with_retained_gap_facts(
                 &body,
                 9.99,
-                coverage_options(),
+                crate::source_wall_coverage::WallLimits { limits: coverage_options(), products: no_products(), factors: no_factors() },
                 Vec::new(),
-                no_products(),
-                no_factors(),
-                vec![foreign]
+                vec![foreign],
             )
             .is_err()
         );
@@ -1254,12 +1243,9 @@
         let bounded = crate::source_wall_coverage::qualify_with_retained_gap_pass(
             &body,
             30.01,
-            coverage_options(),
+            crate::source_wall_coverage::WallLimits { limits: coverage_options(), products: no_products(), factors: no_factors() },
             Vec::new(),
-            no_products(),
-            no_factors(),
-            Vec::new(),
-            Some(pass),
+            crate::source_wall_coverage::RetainedGapPass { certificates: Vec::new(), limits: Some(pass) },
         )
         .unwrap();
         assert!(bounded.certificate.is_none());
@@ -1278,14 +1264,10 @@
         let limited = crate::source_wall_coverage::qualify_with_mixed_pair_pass(
             &body,
             30.01,
-            coverage_options(),
+            crate::source_wall_coverage::WallLimits { limits: coverage_options(), products: no_products(), factors: no_factors() },
             Vec::new(),
-            no_products(),
-            no_factors(),
-            Vec::new(),
-            None,
-            Vec::new(),
-            Some(mixed_pass),
+            crate::source_wall_coverage::RetainedGapPass { certificates: Vec::new(), limits: None },
+            crate::source_wall_coverage::MixedPairPass { certificates: Vec::new(), limits: Some(mixed_pass) },
         )
         .unwrap();
         assert!(limited.certificate.is_none());
@@ -1313,14 +1295,10 @@
             crate::source_wall_coverage::qualify_with_mixed_pair_pass(
                 &body,
                 9.99,
-                coverage_options(),
+                crate::source_wall_coverage::WallLimits { limits: coverage_options(), products: no_products(), factors: no_factors() },
                 Vec::new(),
-                no_products(),
-                no_factors(),
-                Vec::new(),
-                None,
-                Vec::new(),
-                Some(invalid_mixed)
+                crate::source_wall_coverage::RetainedGapPass { certificates: Vec::new(), limits: None },
+                crate::source_wall_coverage::MixedPairPass { certificates: Vec::new(), limits: Some(invalid_mixed) },
             )
             .is_err()
         );
@@ -1330,12 +1308,9 @@
             crate::source_wall_coverage::qualify_with_retained_gap_pass(
                 &body,
                 9.99,
-                coverage_options(),
+                crate::source_wall_coverage::WallLimits { limits: coverage_options(), products: no_products(), factors: no_factors() },
                 Vec::new(),
-                no_products(),
-                no_factors(),
-                Vec::new(),
-                Some(invalid)
+                crate::source_wall_coverage::RetainedGapPass { certificates: Vec::new(), limits: Some(invalid) },
             )
             .is_err()
         );
@@ -7923,10 +7898,7 @@
         assert!(combined.unresolved_products.is_empty());
         let mixed = combined.certificate.unwrap();
         assert!(std::ptr::eq(mixed.body(), &body));
-        let aggregate = crate::source_wall_coverage::qualify_with_mixed_pair_facts(
-            &body,
-            5.99,
-            crate::source_wall_coverage::Limits {
+        let aggregate = crate::source_wall_coverage::qualify_with_mixed_pair_facts(&body, 5.99, crate::source_wall_coverage::WallLimits { limits: crate::source_wall_coverage::Limits {
                 pairs: 378,
                 plane_controls: 10000,
                 normal_spans: 1000,
@@ -7935,22 +7907,15 @@
                     spans: 2000,
                 },
                 max_sine_squared: 1e-6,
-            },
-            Vec::new(),
-            crate::source_wall_coverage::NormalProductLimits {
+            }, products: crate::source_wall_coverage::NormalProductLimits {
                 cells: 0,
                 cells_per_pair: 0,
-            },
-            crate::source_wall_coverage::FactoredNormalLimits {
+            }, factors: crate::source_wall_coverage::FactoredNormalLimits {
                 exact_work: 0,
                 queries: 0,
                 cells: 0,
                 cells_per_pair: 0,
-            },
-            Vec::new(),
-            None,
-            vec![mixed],
-        )
+            } }, Vec::new(), crate::source_wall_coverage::RetainedGapPass { certificates: Vec::new(), limits: None }, vec![mixed])
         .unwrap();
         let pair = aggregate.pairs.iter().find(|p| p.faces == [4, 5]).unwrap();
         assert!(pair.proven);
