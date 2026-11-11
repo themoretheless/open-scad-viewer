@@ -6,10 +6,24 @@ pub struct OwnedCollarInspection {
 }
 /// Compare actual stored controls to the ORIGINAL support composition. The
 /// rounded construction proposal and previously issued reports grant no proof.
+/// The collar seam on the source side: seam curve, its pcurve on the source surface, the source
+/// surface and the UV direction into the collar.
+#[derive(Clone, Copy)]
+pub struct CollarSource<'a> {
+    pub curve: &'a Curve,
+    pub pcurve: &'a Curve,
+    pub source: &'a Surface,
+    pub direction: [f64; 2],
+}
 pub fn inspect_owned_collar(
-    curve:&Curve, pcurve:&Curve, source:&Surface, direction:[f64;2], candidate:&Surface,
-    tolerances:[f64;3],max_cells:usize,max_exact:u64,max_coefficients:usize,
+    collar: CollarSource<'_>,
+    candidate: &Surface,
+    tolerances: [f64; 3],
+    max_cells: usize,
+    max_exact: u64,
+    max_coefficients: usize,
 )->Result<OwnedCollarInspection>{
+    let CollarSource { curve, pcurve, source, direction } = collar;
     check(tolerances[1].is_finite()&&(0. ..=2.).contains(&tolerances[1])
         &&tolerances[2].is_finite()&&tolerances[2]>=0.
         &&(1..=2000000).contains(&max_coefficients),"Owned collar geometry limits are invalid")?;

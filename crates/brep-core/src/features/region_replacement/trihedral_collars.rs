@@ -152,10 +152,7 @@ pub fn prepare_trihedral_collars(
             && p.degree.saturating_mul(s.degree_u + s.degree_v) <= 16;
         let proof = if composed {
             let inspected = nurbs_core::surface_g2_pcurves::inspect_owned_collar(
-                boundary,
-                &p,
-                &s,
-                direction,
+                nurbs_core::surface_g2_pcurves::CollarSource { curve: boundary, pcurve: &p, source: &s, direction },
                 &built.surface,
                 tolerances,
                 max_cells - out.cells,

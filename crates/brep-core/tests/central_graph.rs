@@ -64,10 +64,7 @@ fn fixture_at<const N: usize>(curved: bool, vertices: [[f64; 2]; N]) -> CornerCo
             .point
             .to_vec();
         let g2 = nurbs_core::surface_g2_pcurves::inspect_owned_collar(
-            &curve,
-            &pc,
-            &s,
-            direction,
+            nurbs_core::surface_g2_pcurves::CollarSource { curve: &curve, pcurve: &pc, source: &s, direction },
             &built.surface,
             [1e-7, 1e-5, 1e-4],
             10000,

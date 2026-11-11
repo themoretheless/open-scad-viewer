@@ -680,7 +680,7 @@ pub fn inspect_owned(
 
 #[path="surface_g2_pcurves/collar_owned.rs"]
 mod collar_owned;
-pub use collar_owned::{OwnedCollarInspection,inspect_owned_collar};
+pub use collar_owned::{CollarSource,OwnedCollarInspection,inspect_owned_collar};
 
 #[path = "surface_g2_pcurves/span_fields.rs"]
 mod span_fields;
