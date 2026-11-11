@@ -276,9 +276,14 @@ mod tests {
         let mut unique = HashMap::new();
         for (i, &id) in indices.iter().enumerate() {
             let face = normals[i / 3];
+            let face_is_axial_cap = face[0] == 0. && face[1] == 0. && face[2].abs() >= 1. - 1e-9;
             let mut normal = [0.; 3];
             for &t in &adjacent[id as usize] {
                 let n = normals[t];
+                let n_is_axial_cap = n[0] == 0. && n[1] == 0. && n[2].abs() >= 1. - 1e-9;
+                if cosine > -0.5 && cosine < 1. && face_is_axial_cap != n_is_axial_cap {
+                    continue;
+                }
                 if n[0] * face[0] + n[1] * face[1] + n[2] * face[2] >= cosine - 1e-10 {
                     for k in 0..3 {
                         normal[k] += n[k];
