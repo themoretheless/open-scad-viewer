@@ -360,10 +360,11 @@ pub fn inspect(
         "Owned seam shape tolerances are invalid",
     )?;
     let positions = verify_positions(c, p, s, reverse, position, max_cells, max_exact)?;
+    let pos_upper = positions.upper.unwrap_or(f64::INFINITY);
     let mut work = positions.cells;
     let make = |decision, work, upper: Option<[[f64; 2]; 2]>, lower: [[f64; 2]; 2], orientation| {
         surface_g2::Report {
-            position_bounds: [0., positions.upper.unwrap_or(f64::INFINITY)],
+            position_bounds: [0., pos_upper],
             branches: std::array::from_fn(|k| BranchBounds {
                 normal_lower: lower[k][0],
                 tensor_lower: lower[k][1],
@@ -389,16 +390,7 @@ pub fn inspect(
         let geometric=make(Decision::WithinTolerance,work,Some(bounds),bounds,Some(orientation));
         return Ok(Report{positions,geometric});
     }
-    let mut cells = vec![cell(
-        p,
-        s,
-        reverse,
-        [0., 1.],
-        normal,
-        curvature,
-        &mut work,
-        max_cells,
-    )?];
+    let mut cells = vec![cell(p, s, reverse, [0., 1.], normal, curvature, &mut work, max_cells)?];
     // A midpoint counterexample remains valid for the original whole seam
     // after its containing cell is refined or restored on work exhaustion.
     let mut witnesses=[[0_f64;2];2];
@@ -423,13 +415,7 @@ pub fn inspect(
         witnesses=lower;
         let orientation = upper
             .and_then(|u| (0..2).find(|&k| u[k][0] <= normal && u[k][1] <= curvature))
-            .map(|k| {
-                if k == 0 {
-                    Orientation::Same
-                } else {
-                    Orientation::Opposite
-                }
-            });
+            .map(|k| if k == 0 { Orientation::Same } else { Orientation::Opposite });
         let failed = lower.map(|b| b[0] > normal || b[1] > curvature);
         let decision = if failed[0] && failed[1] {
             Some(Decision::CorrespondenceExceedsTolerance)
@@ -441,82 +427,59 @@ pub fn inspect(
             None
         };
         if let Some(d) = decision {
-            let geometric = make(
-                d,
-                work,
-                upper,
-                lower,
-                if d == Decision::WithinTolerance {
-                    orientation
-                } else {
-                    None
-                },
-            );
-            return Ok(Report {
-                positions,
-                geometric,
-            });
+            let kept = if d == Decision::WithinTolerance { orientation } else { None };
+            return Ok(Report { positions, geometric: make(d, work, upper, lower, kept) });
         }
-        // Spend work on cells that still prevent a coherent orientation from
-        // qualifying. Previously the longest already-qualified cells were
-        // subdivided again while a short difficult interval remained unresolved.
-        // This changes scheduling only: the final all-cell maximum and original
-        // position/regularity evidence above remain the admission conditions.
-        let ratio = |bound: f64, tolerance: f64| {
-            if bound == 0. { 0. } else if tolerance == 0. { f64::INFINITY } else { bound / tolerance }
-        };
-        let target = upper.and_then(|u| (0..2).filter(|&k| !failed[k]).min_by(|&a, &b| {
-            let score = |k: usize| ratio(u[k][0], normal).max(ratio(u[k][1], curvature));
-            score(a).total_cmp(&score(b))
-        }));
-        let at = cells
-            .iter()
-            .enumerate()
-            .filter(|(_, c)| match (c.upper, target) {
-                (None, _) => true,
-                (Some(u), Some(k)) => u[k][0] > normal || u[k][1] > curvature,
-                (Some(_), None) => false,
-            })
-            .max_by(|(_, a), (_, b)| (a.t[1] - a.t[0]).total_cmp(&(b.t[1] - b.t[0])))
-            .unwrap()
-            .0;
+        let at = next_unresolved_cell(&cells, upper, failed, normal, curvature);
         let old = cells.swap_remove(at);
         let mid = old.t[0] * 0.5 + old.t[1] * 0.5;
         if !(old.t[0] < mid && mid < old.t[1]) {
-            let geometric = make(Decision::Unresolved, work, upper, lower, None);
-            return Ok(Report {
-                positions,
-                geometric,
-            });
+            return Ok(Report { positions, geometric: make(Decision::Unresolved, work, upper, lower, None) });
         }
-        let left=cell(
-            p,
-            s,
-            reverse,
-            [old.t[0], mid],
-            normal,
-            curvature,
-            &mut work,
-            max_cells,
-        )?;
+        let left = cell(p, s, reverse, [old.t[0], mid], normal, curvature, &mut work, max_cells)?;
         for k in 0..2 {for j in 0..2 {witnesses[k][j]=witnesses[k][j].max(left.lower[k][j]);}}
         if work==max_cells && left.upper.is_none() {cells.push(old);continue;}
-        let right=cell(
-            p,
-            s,
-            reverse,
-            [mid, old.t[1]],
-            normal,
-            curvature,
-            &mut work,
-            max_cells,
-        )?;
+        let right = cell(p, s, reverse, [mid, old.t[1]], normal, curvature, &mut work, max_cells)?;
         for k in 0..2 {for j in 0..2 {witnesses[k][j]=witnesses[k][j].max(right.lower[k][j]);}}
         // Do not erase a valid whole-parent enclosure with an uninspected
         // child merely because the final query consumed the remaining work.
         if work==max_cells && right.upper.is_none() {cells.push(old);continue;}
         cells.push(left);cells.push(right);
     }
+}
+
+fn next_unresolved_cell(
+    cells: &[Cell],
+    upper: Option<[[f64; 2]; 2]>,
+    failed: [bool; 2],
+    normal: f64,
+    curvature: f64,
+) -> usize {
+    // Spend work on cells that still prevent a coherent orientation from
+    // qualifying. Previously the longest already-qualified cells were
+    // subdivided again while a short difficult interval remained unresolved.
+    // This changes scheduling only: the final all-cell maximum and original
+    // position/regularity evidence above remain the admission conditions.
+    let ratio = |bound: f64, tolerance: f64| {
+        if bound == 0. { 0. } else if tolerance == 0. { f64::INFINITY } else { bound / tolerance }
+    };
+    let target = upper.and_then(|u| {
+        (0..2).filter(|&k| !failed[k]).min_by(|&a, &b| {
+            let score = |k: usize| ratio(u[k][0], normal).max(ratio(u[k][1], curvature));
+            score(a).total_cmp(&score(b))
+        })
+    });
+    cells
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| match (c.upper, target) {
+            (None, _) => true,
+            (Some(u), Some(k)) => u[k][0] > normal || u[k][1] > curvature,
+            (Some(_), None) => false,
+        })
+        .max_by(|(_, a), (_, b)| (a.t[1] - a.t[0]).total_cmp(&(b.t[1] - b.t[0])))
+        .unwrap()
+        .0
 }
 
 #[cfg(test)]

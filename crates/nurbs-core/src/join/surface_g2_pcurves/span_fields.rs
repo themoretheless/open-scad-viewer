@@ -172,55 +172,18 @@ pub fn inspect_span_fields(
         if let Some(decision) = decision {
             return Ok(result(decision));
         }
-        let index = cells
-            .iter()
-            .enumerate()
-            .filter(|(_, c)| {
-                c.upper.is_none_or(|u| {
-                    !(0..2).any(|k| !failed[k] && u[k][0] <= normal && u[k][1] <= curvature)
-                })
-            })
-            .max_by(|(_, a), (_, b)| (a.t[1] - a.t[0]).total_cmp(&(b.t[1] - b.t[0])))
-            .map(|(i, _)| i);
-        // Cells may each admit a different orientation. Then refine the
-        // longest cell until one coherent whole-trace sign is bounded.
-        let index = index.unwrap_or_else(|| {
-            cells
-                .iter()
-                .enumerate()
-                .max_by(|(_, a), (_, b)| (a.t[1] - a.t[0]).total_cmp(&(b.t[1] - b.t[0])))
-                .unwrap()
-                .0
-        });
+        let index = select_split_cell(&cells, failed, normal, curvature);
         let old = &cells[index];
         let mid = old.t[0] * 0.5 + old.t[1] * 0.5;
         if !(old.t[0] < mid && mid < old.t[1]) {
             return Ok(result(FieldDecision::Unresolved));
         }
         let range = old.t;
-        let left = cell(
-            p,
-            s,
-            reverse,
-            [range[0], mid],
-            [normal, curvature],
-            &mut witnesses,
-            &mut work,
-            max_cells,
-        )?;
+        let left = cell(p, s, reverse, [range[0], mid], [normal, curvature], &mut witnesses, &mut work, max_cells)?;
         if work == max_cells && left.upper.is_none() {
             continue;
         }
-        let right = cell(
-            p,
-            s,
-            reverse,
-            [mid, range[1]],
-            [normal, curvature],
-            &mut witnesses,
-            &mut work,
-            max_cells,
-        )?;
+        let right = cell(p, s, reverse, [mid, range[1]], [normal, curvature], &mut witnesses, &mut work, max_cells)?;
         if work == max_cells && right.upper.is_none() {
             continue;
         }
@@ -228,6 +191,29 @@ pub fn inspect_span_fields(
         cells.push(left);
         cells.push(right);
     }
+}
+
+fn select_split_cell(cells: &[Cell], failed: [bool; 2], normal: f64, curvature: f64) -> usize {
+    let unresolved = cells
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| {
+            c.upper.is_none_or(|u| {
+                !(0..2).any(|k| !failed[k] && u[k][0] <= normal && u[k][1] <= curvature)
+            })
+        })
+        .max_by(|(_, a), (_, b)| (a.t[1] - a.t[0]).total_cmp(&(b.t[1] - b.t[0])))
+        .map(|(i, _)| i);
+    // Cells may each admit a different orientation. Then refine the
+    // longest cell until one coherent whole-trace sign is bounded.
+    unresolved.unwrap_or_else(|| {
+        cells
+            .iter()
+            .enumerate()
+            .max_by(|(_, a), (_, b)| (a.t[1] - a.t[0]).total_cmp(&(b.t[1] - b.t[0])))
+            .unwrap()
+            .0
+    })
 }
 #[cfg(test)]
 #[path = "span_fields/tests.rs"]

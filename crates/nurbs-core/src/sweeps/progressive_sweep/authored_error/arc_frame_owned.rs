@@ -215,46 +215,27 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         source.push([u.lo.max(0.),u.hi.min(1.)]);
     }
     if same_phase {guide_source=source.clone();}
+    let profile_laws = authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws };
     let mut error=0_f64;let mut endpoint_upper=0_f64;
     let mut position_curvature:Option<Option<f64>>=None;
     let mut original_refinement_error=0_f64;
     for i in 0..count-1{
         let station=[i as f64/(count-1) as f64,(i+1) as f64/(count-1) as f64];
         let path_interval=[source[i][0],source[i+1][1]];
+        let rem=max_cells-out.cells;
         let values=match mode {
-            OriginalTransport::RmfSpatial if shared_pose.is_some()=>shared_pose.as_deref_mut().unwrap().rmf_values(spatial_transport.as_ref().unwrap(),sweep,&qs,path_interval,station,max_cells-out.cells)?,
-            OriginalTransport::RmfSpatial=>super::super::rmf_transport::relative_values(spatial_transport.as_ref().unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
-            OriginalTransport::CorrectedPlanar if principal_phase.is_some()=>authored_frame_certificate::certify_planar_principal_relative_values(
-                authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-                authored_frame_certificate::PrincipalPlane { normal: sweep.options.normal, sign: principal_phase.unwrap() },
-                &qs,
-                path_interval,
-                station,
-                max_cells-out.cells,
-            )?,
-            OriginalTransport::RmfPlanar|OriginalTransport::CorrectedPlanar=>authored_frame_certificate::certify_proved_planar_relative_values(
-                authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-                sweep.options.normal,
-                &qs,
-                path_interval,
-                station,
-                max_cells-out.cells,
-            )?,
-            OriginalTransport::FixedNormal=>authored_frame_certificate::certify_fixed_normal_relative_values(
-                authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-                sweep.options.normal,
-                &qs,
-                path_interval,
-                station,
-                max_cells-out.cells,
-            )?,
-            OriginalTransport::CorrectedRegular if shared_pose.is_some()=>shared_pose.as_deref_mut().unwrap().values(sweep,&qs,path_interval,station,max_cells-out.cells)?,
+            OriginalTransport::RmfSpatial if shared_pose.is_some()=>shared_pose.as_deref_mut().unwrap().rmf_values(spatial_transport.as_ref().unwrap(),sweep,&qs,path_interval,station,rem)?,
+            OriginalTransport::RmfSpatial=>super::super::rmf_transport::relative_values(spatial_transport.as_ref().unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,&qs,path_interval,station,rem)?,
+            OriginalTransport::CorrectedPlanar if principal_phase.is_some()=>authored_frame_certificate::certify_planar_principal_relative_values(profile_laws, authored_frame_certificate::PrincipalPlane { normal: sweep.options.normal, sign: principal_phase.unwrap() }, &qs, path_interval, station, rem)?,
+            OriginalTransport::RmfPlanar|OriginalTransport::CorrectedPlanar=>authored_frame_certificate::certify_proved_planar_relative_values(profile_laws, sweep.options.normal, &qs, path_interval, station, rem)?,
+            OriginalTransport::FixedNormal=>authored_frame_certificate::certify_fixed_normal_relative_values(profile_laws, sweep.options.normal, &qs, path_interval, station, rem)?,
+            OriginalTransport::CorrectedRegular if shared_pose.is_some()=>shared_pose.as_deref_mut().unwrap().values(sweep,&qs,path_interval,station,rem)?,
             OriginalTransport::Frenet if closed_frenet=>authored_frame_certificate::certify_frenet_relative_values_with_binormal_identity(sweep.path,sweep.scale,
-                sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
+                sweep.twist,sweep.affine_laws,&qs,path_interval,station,rem)?,
             OriginalTransport::Frenet|OriginalTransport::CorrectedRegular=>authored_frame_certificate::certify_frenet_relative_values(sweep.path,sweep.scale,
-                sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
-            OriginalTransport::Guided=>authored_frame_certificate::certify_path_guide_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::PathGuideTraversal { path: path_interval, guide: [guide_source[i][0],guide_source[i+1][1]], law: station, same_parameter: same_phase }, max_cells-out.cells)?,
-            OriginalTransport::Contact=>authored_frame_certificate::certify_contact_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::ContactTraversal { anchor: anchor.unwrap(), path: path_interval, guide: [guide_source[i][0],guide_source[i+1][1]], law: station, same_parameter: same_phase }, max_cells-out.cells)?,
+                sweep.twist,sweep.affine_laws,&qs,path_interval,station,rem)?,
+            OriginalTransport::Guided=>authored_frame_certificate::certify_path_guide_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::PathGuideTraversal { path: path_interval, guide: [guide_source[i][0],guide_source[i+1][1]], law: station, same_parameter: same_phase }, rem)?,
+            OriginalTransport::Contact=>authored_frame_certificate::certify_contact_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::ContactTraversal { anchor: anchor.unwrap(), path: path_interval, guide: [guide_source[i][0],guide_source[i+1][1]], law: station, same_parameter: same_phase }, rem)?,
             _=>return Ok(out),
         };
         out.cells+=values.cells;
@@ -332,12 +313,8 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         if mode==OriginalTransport::CorrectedRegular&&needs_second&&out.cells<max_cells {
             let speed=inverse_speed.unwrap();
             let relative=if let Some(pose)=shared_pose.as_deref_mut(){pose.arc_jets(sweep,&qs,path_interval,station,division.total.bounds,speed,max_cells-out.cells)?}
-                else{authored_frame_certificate::certify_c4_frenet_arc_relative_trajectories(
-                    authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-                    &qs,
-                    authored_frame_certificate::ArcTraversal { source: path_interval, station, length: division.total.bounds, speed_lower: speed },
-                    max_cells-out.cells,
-                )?};
+                else{let trav = authored_frame_certificate::ArcTraversal { source: path_interval, station, length: division.total.bounds, speed_lower: speed };
+                    authored_frame_certificate::certify_c4_frenet_arc_relative_trajectories(profile_laws, &qs, trav, max_cells-out.cells)?};
             out.cells+=relative.cells;
             if relative.status==Status::Certified&&relative.single_span {
                 let (cells,curvature)=if let Some(pose)=shared_pose.as_deref_mut(){pose.curvature(sweep.path,path_interval,speed,max_cells-out.cells)?}

@@ -2016,25 +2016,10 @@ impl<'a> DirectBuilder<'a> {
         let pc = if direct {
             direct_edge_pcurve(&c3, surface, reversed)
         } else {
-            self.select_pcurve(
-                (id, surface_id),
-                gty,
-                matching,
-                pcurve_binding::EdgeUse {
-                    world: &c3,
-                    surface,
-                    reversed,
-                    degenerate,
-                },
-                require_exact,
-            )
+            let edge_use = pcurve_binding::EdgeUse { world: &c3, surface, reversed, degenerate };
+            self.select_pcurve((id, surface_id), gty, matching, edge_use, require_exact)
         }
-            .map_err(|e| {
-                refuse(format!(
-                    "EDGE_CURVE #{id} on surface #{surface_id}: {}",
-                    e.message
-                ))
-            })?;
+            .map_err(|e| refuse(format!("EDGE_CURVE #{id} on surface #{surface_id}: {}", e.message)))?;
         if degenerate && !self.allow_degenerate {
             return Err(refuse(
                 "Pole/degenerate edges are typed-refused before STEP /6",

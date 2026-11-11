@@ -328,47 +328,8 @@ if op == "sweep_authored_frame_regularity" {
             "method": "original-law-adaptive-authored-frame-regularity"
         }));
     }
-if op=="sweep_correct_miter_sections" {
-        use crate::miter_section_correction::{self,Budget,CapCorrection};
-        let budget=|b:&Value|->Result<Budget> {Ok(Budget {quantum:field(b,"quantum")?,tolerance:field(b,"tolerance")?,max_work:b.get("maxWork").and_then(Value::as_f64)})};
-        let circle=optional_field::<Value>(&v,"circleCorrection")?.as_ref().map(budget).transpose()?;
-        let cap=optional_field::<Value>(&v,"capCorrection")?.as_ref().map(|b|->Result<_> {Ok(CapCorrection {budget:budget(b)?,authored_frame:optional_field::<bool>(b,"authoredFrame")?.unwrap_or(false)})}).transpose()?;
-        let axis=optional_field::<curve::Curve>(&v,"frameAxis")?;
-        let r=miter_section_correction::correct(&field::<Vec<Vec<curve::Curve>>>(&v,"sections")?,&field::<Vec<[f64;3]>>(&v,"points")?,field(&v,"closed")?,circle,cap,axis.as_ref())?;
-        return Ok(r.map_or(Value::Null,|r|json!({"sections":r.sections,"wallDisplacementUpper":r.wall_displacement_upper,
-            "exactPlanarSections":r.exact_planar_sections,"work":r.work,"reason":r.reason})));
-    }
-if op=="sweep_project_miter_caps" {
-        let axis=optional_field::<curve::Curve>(&v,"frameAxis")?;
-        let r=crate::sweep_section_projection::project_miter_caps(
-            &field::<Vec<Vec<curve::Curve>>>(&v,"sections")?,
-            &field::<Vec<[f64;3]>>(&v,"points")?,
-            field(&v,"closed")?,
-            field(&v,"authoredFrame")?,
-            axis.as_ref(),
-            crate::sweep_section_projection::Budget {
-                quantum: field(&v,"quantum")?,
-                tolerance: field(&v,"tolerance")?,
-                max_work: v.get("maxWork").and_then(Value::as_f64),
-            },
-        )?;
-        return Ok(json!({"sections":r.sections,"wallDisplacementUpper":r.wall_displacement_upper,
-            "exactPlanarSections":r.exact_planar_sections,"work":r.work,"reason":r.reason}));
-    }
-if op=="sweep_project_sections" {
-        use crate::sweep_section_projection::{self,Correction,Target};
-        let sections=field::<Vec<Vec<curve::Curve>>>(&v,"sections")?;
-        let corrections=field::<Vec<Value>>(&v,"corrections")?.iter().map(|c| {
-            let target=if let Some(p)=c.get("plane").filter(|v|!v.is_null()) {
-                Target::Plane {axis:field(p,"axis")?,coefficients:field(p,"coefficients")?,offset:field(p,"offset")?}
-            } else {
-                Target::AuthoredAxis {axis:field(c,"frameAxis")?,traversal:field(c,"traversal")?}
-            };
-            Ok(Correction {section:field(c,"section")?,quantum:field(c,"quantum")?,tolerance:field(c,"tolerance")?,target})
-        }).collect::<Result<Vec<_>>>()?;
-        let r=sweep_section_projection::project(&sections,&corrections,v.get("maxWork").and_then(Value::as_f64))?;
-        return Ok(json!({"sections":r.sections,"wallDisplacementUpper":r.wall_displacement_upper,
-            "exactPlanarSections":r.exact_planar_sections,"work":r.work,"reason":r.reason}));
+if let Some(res) = dispatch_miter_ops(&op, &v)? {
+        return Ok(res);
     }
 if op=="curve_miter_sections" {return encode((if optional_field::<bool>(&v,"closed")?.unwrap_or(false) {paths::closed_miter_sections} else {paths::miter_sections})(&field::<Vec<curve::Curve>>(&v,"profiles")?,&field::<Vec<[f64;3]>>(&v,"points")?,field(&v,"normal")?,field(&v,"miter_limit")?)?)}
 if op == "surface_scaled_sweep" {
@@ -390,4 +351,45 @@ if op == "surface_sweep" {
         return encode(surface::sweep(&field(&v, "profile")?, &field(&v, "path")?)?);
     }
 Err(input("Unknown NURBS operation"))
+}
+
+fn dispatch_miter_ops(op: &str, v: &Value) -> Result<Option<Value>> {
+    if op == "sweep_correct_miter_sections" {
+        use crate::miter_section_correction::{self, Budget, CapCorrection};
+        let budget = |b: &Value| -> Result<Budget> {
+            Ok(Budget { quantum: field(b, "quantum")?, tolerance: field(b, "tolerance")?, max_work: b.get("maxWork").and_then(Value::as_f64) })
+        };
+        let circle = optional_field::<Value>(v, "circleCorrection")?.as_ref().map(budget).transpose()?;
+        let cap = optional_field::<Value>(v, "capCorrection")?.as_ref().map(|b| -> Result<_> {
+            Ok(CapCorrection { budget: budget(b)?, authored_frame: optional_field::<bool>(b, "authoredFrame")?.unwrap_or(false) })
+        }).transpose()?;
+        let axis = optional_field::<curve::Curve>(v, "frameAxis")?;
+        let r = miter_section_correction::correct(&field::<Vec<Vec<curve::Curve>>>(v, "sections")?, &field::<Vec<[f64; 3]>>(v, "points")?, field(v, "closed")?, circle, cap, axis.as_ref())?;
+        return Ok(Some(r.map_or(Value::Null, |r| json!({"sections":r.sections,"wallDisplacementUpper":r.wall_displacement_upper,"exactPlanarSections":r.exact_planar_sections,"work":r.work,"reason":r.reason}))));
+    }
+    if op == "sweep_project_miter_caps" {
+        let axis = optional_field::<curve::Curve>(v, "frameAxis")?;
+        let budget = crate::sweep_section_projection::Budget {
+            quantum: field(v, "quantum")?,
+            tolerance: field(v, "tolerance")?,
+            max_work: v.get("maxWork").and_then(Value::as_f64),
+        };
+        let r = crate::sweep_section_projection::project_miter_caps(&field::<Vec<Vec<curve::Curve>>>(v, "sections")?, &field::<Vec<[f64; 3]>>(v, "points")?, field(v, "closed")?, field(v, "authoredFrame")?, axis.as_ref(), budget)?;
+        return Ok(Some(json!({"sections":r.sections,"wallDisplacementUpper":r.wall_displacement_upper,"exactPlanarSections":r.exact_planar_sections,"work":r.work,"reason":r.reason})));
+    }
+    if op == "sweep_project_sections" {
+        use crate::sweep_section_projection::{self, Correction, Target};
+        let sections = field::<Vec<Vec<curve::Curve>>>(v, "sections")?;
+        let corrections = field::<Vec<Value>>(v, "corrections")?.iter().map(|c| {
+            let target = if let Some(p) = c.get("plane").filter(|v| !v.is_null()) {
+                Target::Plane { axis: field(p, "axis")?, coefficients: field(p, "coefficients")?, offset: field(p, "offset")? }
+            } else {
+                Target::AuthoredAxis { axis: field(c, "frameAxis")?, traversal: field(c, "traversal")? }
+            };
+            Ok(Correction { section: field(c, "section")?, quantum: field(c, "quantum")?, tolerance: field(c, "tolerance")?, target })
+        }).collect::<Result<Vec<_>>>()?;
+        let r = sweep_section_projection::project(&sections, &corrections, v.get("maxWork").and_then(Value::as_f64))?;
+        return Ok(Some(json!({"sections":r.sections,"wallDisplacementUpper":r.wall_displacement_upper,"exactPlanarSections":r.exact_planar_sections,"work":r.work,"reason":r.reason})));
+    }
+    Ok(None)
 }

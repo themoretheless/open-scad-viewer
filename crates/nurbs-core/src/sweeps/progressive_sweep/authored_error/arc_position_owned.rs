@@ -200,6 +200,9 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
     }
     let zero=constant_vector_law([0.;3])?;
     let frame_laws=sweep.frame_laws;
+    let zero_laws=frame_laws.map(|(axis,normal)|authored_frame_certificate::AuthoredFrameLaws {
+        path:&zero, scale:sweep.scale, twist:sweep.twist, longitudinal:axis, transverse:normal, affine:sweep.affine_laws,
+    });
     // Original equal rational poles prove a constant relative Fixed pose.
     // Own that proof once per invocation; endpoint positions and inverse-
     // length residuals remain independent, fully charged source queries.
@@ -225,13 +228,8 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
         let t=station as f64/(count-1) as f64;
         let point=&division.points[station];
         let batch=if let Some(values)=&constant_values {Some(values.clone())}
-        else if let Some((axis,normal))=frame_laws {
-            let batch=authored_frame_certificate::certify_control_values(
-                authored_frame_certificate::AuthoredFrameLaws { path: &zero, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
-                &coordinates,
-                [t,t],
-                max_cells-out.cells,
-            )?;
+        else if let Some(laws)=zero_laws {
+            let batch=authored_frame_certificate::certify_control_values(laws,&coordinates,[t,t],max_cells-out.cells)?;
             out.cells+=batch.cells;
             if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
             let Some(values)=batch.values else {return Ok(out);};Some(values)
@@ -291,13 +289,8 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
             Some(authored_frame_certificate::TrajectoriesReport {traversal:interval,status:Status::Certified,cells:0,
                 jets:Some(values.iter().copied().map(|value|authored_frame_certificate::FrameJet {
                     value,first:[[0.,0.];3],second:[[0.,0.];3]}).collect()),single_span:true,reason:None})
-        }else if let Some((axis,normal))=frame_laws {
-            let batch=authored_frame_certificate::certify_control_trajectories(
-                authored_frame_certificate::AuthoredFrameLaws { path: &zero, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
-                &coordinates,
-                interval,
-                max_cells-out.cells,
-            )?;
+        }else if let Some(laws)=zero_laws {
+            let batch=authored_frame_certificate::certify_control_trajectories(laws,&coordinates,interval,max_cells-out.cells)?;
             out.cells+=batch.cells;
             if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
             Some(batch)
@@ -308,13 +301,8 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
             Some(batch)
         };
         let values=if batch.as_ref().is_some_and(|batch|!batch.single_span) {
-            let values=if let Some((axis,normal))=frame_laws {
-                authored_frame_certificate::certify_control_values(
-                    authored_frame_certificate::AuthoredFrameLaws { path: &zero, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
-                    &coordinates,
-                    interval,
-                    max_cells-out.cells,
-                )?
+            let values=if let Some(laws)=zero_laws {
+                authored_frame_certificate::certify_control_values(laws,&coordinates,interval,max_cells-out.cells)?
             }else {
                 authored_frame_certificate::certify_fixed_relative_values(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?
             };

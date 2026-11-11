@@ -338,15 +338,12 @@ fn inspect_strip_jets_scalar(pair:StripPair<'_>,request:StripJetRequest,projecti
     // The predicate compares every homogeneous cross jet coefficient. The
     // along-seam basis need not be Bernstein, provided it is exactly shared.
     // Cross directions remain Bezier so their normalized jet factors stay exact.
+    let bpair = super::bspline_strip::BoundaryPair { a, b, ab: r, bb: e };
     if !bezier_direction(r.cross(a)) || !bezier_direction(e.cross(b))
         || !(common_bezier || common_multispan || common_linear || common_chain) {
         if projective {
-            return super::bspline_strip::inspect(
-                super::bspline_strip::BoundaryPair { a, b, ab: r, bb: e },
-                super::exact_strip::StripJetRequest { order, scale, max_work },
-                scalar,
-                nonlinear,
-            );
+            let req = super::exact_strip::StripJetRequest { order, scale, max_work };
+            return super::bspline_strip::inspect(bpair, req, scalar, nonlinear);
         }
         return Ok(out);
     }
@@ -380,32 +377,13 @@ fn inspect_strip_jets_scalar(pair:StripPair<'_>,request:StripJetRequest,projecti
     if common_linear {values.extend_from_slice(aa.2);}
     let mut authored = values.into_iter().map(|v| AuthoredScalar::Binary64Bits(v.to_bits())).collect::<Vec<_>>();
     if let Some(scalar)=scalar.clone() {authored[scale_index]=scalar;}
-    let source = SourceArena::authored(
-        if projective {"surface-projective-strip-jets"}else{"surface-exact-strip-jets"},
-        1,
-        authored,
-    )
-    .map_err(|e| crate::input(e.to_string()))?;
+    let kind = if projective { "surface-projective-strip-jets" } else { "surface-exact-strip-jets" };
+    let source = SourceArena::authored(kind, 1, authored).map_err(|e| crate::input(e.to_string()))?;
     let refs = |strip: &Vec<Vec<usize>>| {
-        strip
-            .iter()
-            .map(|row| {
-                row.iter()
-                    .map(|start| std::array::from_fn(|k| source.leaf(start + k).unwrap()))
-                    .collect()
-            })
-            .collect::<Vec<_>>()
+        strip.iter().map(|row| row.iter().map(|start| std::array::from_fn(|k| source.leaf(start + k).unwrap())).collect()).collect::<Vec<_>>()
     };
     let tolerance = ToleranceContext::default_valid();
-    let mut ctx = PredicateContext::new(
-        &source,
-        &tolerance,
-        Limits {
-            max_work:max_work-out.work,
-            ..Limits::default()
-        },
-        None,
-    );
+    let mut ctx = PredicateContext::new(&source, &tolerance, Limits { max_work: max_work - out.work, ..Limits::default() }, None);
     if common_linear {
         let knots=(0..aa.2.len()).map(|i|source.leaf(knots_start+i).unwrap()).collect::<Vec<_>>();
         let mut needs_geometric_chain=false;

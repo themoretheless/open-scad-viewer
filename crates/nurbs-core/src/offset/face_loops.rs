@@ -260,21 +260,14 @@ fn splice_impl(
     limits: Limits,
     boundary_contact: bool,
 ) -> Result<Report> {
-    let LoopArc {
-        loop_index,
-        start: arc_start,
-        count: arc_count,
-    } = arc;
+    let LoopArc { loop_index, start: arc_start, count: arc_count } = arc;
     check(
-        loop_index < loops.len()
-            && arc_start < loops[loop_index].len()
-            && arc_count > 0
-            && arc_count < loops[loop_index].len(),
+        loop_index < loops.len() && arc_start < loops[loop_index].len()
+            && arc_count > 0 && arc_count < loops[loop_index].len(),
         "Choose a nonempty source arc with at least one retained boundary curve",
     )?;
     check(
-        (1..=100000).contains(&limits.pairs)
-            && (1..=100000).contains(&limits.cells)
+        (1..=100000).contains(&limits.pairs) && (1..=100000).contains(&limits.cells)
             && (1..=1000000).contains(&limits.domain_cells),
         "Source face loop replacement needs bounded positive work",
     )?;
@@ -537,17 +530,8 @@ mod tests {
         let loops = vec![square()];
         let before = loops.clone();
         let p = contact();
-        let r = splice(
-            &loops,
-            LoopArc {
-                loop_index: 0,
-                start: 0,
-                count: 1,
-            },
-            &p,
-            1e-8,
-            limits(),
-        ).unwrap();
+        let arc01 = LoopArc { loop_index: 0, start: 0, count: 1 };
+        let r = splice(&loops, arc01, &p, 1e-8, limits()).unwrap();
         assert!(r.region_subset_proven, "{}", r.reason);
         assert!(r.exact_retained_geometry);
         let new = &r.loops.as_ref().unwrap()[0];
@@ -563,21 +547,12 @@ mod tests {
     #[test]
     fn holes_wrong_contact_and_work_stop_do_not_gain_replacement_regions() {
         let loops = vec![square()];
+        let arc01 = LoopArc { loop_index: 0, start: 0, count: 1 };
         let mut p = contact();
         for q in &mut p.control_points {
             q[1] += 1.;
         }
-        let r = splice(
-            &loops,
-            LoopArc {
-                loop_index: 0,
-                start: 0,
-                count: 1,
-            },
-            &p,
-            1e-8,
-            limits(),
-        ).unwrap();
+        let r = splice(&loops, arc01, &p, 1e-8, limits()).unwrap();
         assert!(!r.region_subset_proven);
         assert_eq!(r.reason, "contact-not-inside-original-region");
         let mut hole = square();
@@ -593,34 +568,10 @@ mod tests {
             .map(|c| c.reverse().unwrap())
             .collect();
         let loops = vec![square(), hole];
-        let r = splice(
-            &loops,
-            LoopArc {
-                loop_index: 0,
-                start: 0,
-                count: 1,
-            },
-            &contact(),
-            1e-8,
-            limits(),
-        ).unwrap();
+        let r = splice(&loops, arc01, &contact(), 1e-8, limits()).unwrap();
         assert!(!r.region_subset_proven);
-        let work = Limits {
-            pairs: 1,
-            cells: 1,
-            domain_cells: 1,
-        };
-        let r = splice(
-            &[square()],
-            LoopArc {
-                loop_index: 0,
-                start: 0,
-                count: 1,
-            },
-            &contact(),
-            1e-8,
-            work,
-        ).unwrap();
+        let work = Limits { pairs: 1, cells: 1, domain_cells: 1 };
+        let r = splice(&[square()], arc01, &contact(), 1e-8, work).unwrap();
         assert!(!r.region_subset_proven);
     }
     #[test]

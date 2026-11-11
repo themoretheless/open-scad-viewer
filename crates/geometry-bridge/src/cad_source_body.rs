@@ -475,19 +475,10 @@ fn restore_using<E:EditorCarrier>(v:Value, restore_body:impl FnOnce(Value,brep_c
     } else {
         let option = &v["stepExchange"];
         let tolerance: f64 = field(option, "toleranceMm")?;
-        let work = &option["limits"];
         let candidate = cad_step::source_exchange_step::prepare(
             body,
             tolerance,
-            brep_core::source_exchange_endpoints::Limits {
-                root_checks: field(work, "rootChecks")?,
-                mapping_cells: field(work, "mappingCells")?,
-                replay_mapping_per_use: field(work, "replayMappingPerUse")?,
-                exact_work: field(work, "exactWork")?,
-                driver_cells: field(work, "driverCells")?,
-                spans: field(work, "spans")?,
-                endpoints: field(work, "endpoints")?,
-            },
+            parse_step_exchange_limits(&option["limits"])?,
             field(option, "trimWork")?,
         )?;
         match candidate {
@@ -541,6 +532,18 @@ fn restore_using<E:EditorCarrier>(v:Value, restore_body:impl FnOnce(Value,brep_c
         "volume":body.volume(),"reverseOrientation":body.reverse_orientation(),
         "faceCount":shell.faces().len(),"poleCount":shell.poles().len(),"displayFaces":display_faces,"diagnostics":diagnostics}),
     )
+}
+
+fn parse_step_exchange_limits(work: &Value) -> Result<brep_core::source_exchange_endpoints::Limits> {
+    Ok(brep_core::source_exchange_endpoints::Limits {
+        root_checks: field(work, "rootChecks")?,
+        mapping_cells: field(work, "mappingCells")?,
+        replay_mapping_per_use: field(work, "replayMappingPerUse")?,
+        exact_work: field(work, "exactWork")?,
+        driver_cells: field(work, "driverCells")?,
+        spans: field(work, "spans")?,
+        endpoints: field(work, "endpoints")?,
+    })
 }
 #[cfg(test)]
 #[path = "cad_source_body/tests/mod.rs"]

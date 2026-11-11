@@ -57,22 +57,9 @@ fn moving_tilted_frame_and_large_nonplanar_caps_bind_the_complete_original_body(
         cells: 100000,
         exact_work: 1000000,
     };
-    let attempt = construct_with_ideal_atlas(
-        SweepSource {
-            sweep: &sweep,
-            loop_sizes: &[4],
-            sections: 5,
-            source_caps: [&source, &source],
-        },
-        [&retained[0], &retained[1]],
-        SweepAccuracy {
-            tolerance_uv: 1e-8,
-            error_budget: 0.05,
-        },
-        limits(),
-        ideal,
-    )
-    .unwrap();
+    let accuracy = SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 };
+    let same_source = SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source, &source] };
+    let attempt = construct_with_ideal_atlas(same_source, [&retained[0], &retained[1]], accuracy, limits(), ideal).unwrap();
     let body = match attempt {
         Attempt::Certified(body) => body,
         Attempt::Refused(r) => panic!(

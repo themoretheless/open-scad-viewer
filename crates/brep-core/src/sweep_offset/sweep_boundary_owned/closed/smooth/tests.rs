@@ -306,29 +306,16 @@ fn qualified_mode(mode: usize, count: usize, hole: bool, reverse: bool) {
     if mode > 0 {
         sweep = sweep.with_affine_laws(&axes, &center).unwrap();
     }
+    let source = ClosedSweepSource { sweep: &sweep, loop_sizes: &sizes, sections: count, material: &material };
+    let accuracy = SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 };
+    let smooth_limits = nurbs_core::progressive_sweep::OriginalBoundarySmoothnessLimits {
+        order: 2, cells: 100000, exact_work: 1000000, products: 1000000,
+    };
     let b = match construct_smooth_closed_with_ideal_atlas(
-        ClosedSweepSource {
-            sweep: &sweep,
-            loop_sizes: &sizes,
-            sections: count,
-            material: &material,
-        },
-        SweepAccuracy {
-            tolerance_uv: 1e-8,
-            error_budget: 0.05,
-        },
+        source,
+        accuracy,
         &[],
-        SmoothClosedLimits {
-            original_smoothness: Some(
-                nurbs_core::progressive_sweep::OriginalBoundarySmoothnessLimits {
-                    order: 2,
-                    cells: 100000,
-                    exact_work: 1000000,
-                    products: 1000000,
-                },
-            ),
-            ..limits()
-        },
+        SmoothClosedLimits { original_smoothness: Some(smooth_limits), ..limits() },
     )
     .unwrap()
     {

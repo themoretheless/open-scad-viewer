@@ -149,18 +149,14 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
     let shared_pose=std::cell::RefCell::new(shared_pose);
     let pose_cache=std::cell::RefCell::new(None::<Vec<[[f64;2];3]>>);
     let zero_path=constant_vector_law([0.;3])?;
+    let profile_laws = |path| authored_frame_certificate::ProfileLaws { path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws };
+    let contact_laws = || authored_frame_certificate::ContactLaws { path: sweep.path, guide: guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws };
+    let principal_plane = |sign| authored_frame_certificate::PrincipalPlane { normal: sweep.options.normal, sign };
     let certify_values=|qs:&[[[f64;2];3]], interval, budget| {
         if constant_pose {
             let mut charge=0;
             if pose_cache.borrow().is_none() {
-                let pose=authored_frame_certificate::certify_fixed_path_control_values_with_frame_path(
-                    authored_frame_certificate::ProfileLaws { path: &zero_path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-                    frame_reference_path,
-                    sweep.options.normal,
-                    qs,
-                    [0.,1.],
-                    budget,
-                )?;
+                let pose=authored_frame_certificate::certify_fixed_path_control_values_with_frame_path(profile_laws(&zero_path), frame_reference_path, sweep.options.normal, qs, [0.,1.], budget)?;
                 if pose.status!=Status::Certified {return Ok(pose);}
                 charge=pose.cells;*pose_cache.borrow_mut()=pose.values;
             }
@@ -171,22 +167,9 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
             values.cells+=charge;return Ok(values);
         }
         if fixed {
-            authored_frame_certificate::certify_fixed_path_control_values_with_frame_path(
-                authored_frame_certificate::ProfileLaws { path: reference_path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-                frame_reference_path,
-                sweep.options.normal,
-                qs,
-                interval,
-                budget,
-            )
+            authored_frame_certificate::certify_fixed_path_control_values_with_frame_path(profile_laws(reference_path), frame_reference_path, sweep.options.normal, qs, interval, budget)
         } else if let Some(phase)=principal_phase {
-            authored_frame_certificate::certify_planar_principal_control_values(
-                authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-                authored_frame_certificate::PrincipalPlane { normal: sweep.options.normal, sign: phase },
-                qs,
-                interval,
-                budget,
-            )
+            authored_frame_certificate::certify_planar_principal_control_values(profile_laws(sweep.path), principal_plane(phase), qs, interval, budget)
         } else if rmf_planar {
             authored_frame_certificate::certify_proved_planar_control_values(sweep.path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if fixed_normal {
@@ -194,13 +177,7 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
         } else if frenet {
             authored_frame_certificate::certify_frenet_control_values(sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if let Some(anchor)=anchor {
-            authored_frame_certificate::certify_contact_control_values(
-                authored_frame_certificate::ContactLaws { path: sweep.path, guide: guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-                qs,
-                anchor,
-                interval,
-                budget,
-            )
+            authored_frame_certificate::certify_contact_control_values(contact_laws(), qs, anchor, interval, budget)
         } else {
             authored_frame_certificate::certify_path_guide_control_values(reference_path,reference_guide.unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         }
@@ -215,34 +192,15 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
             }
         }
         if fixed {
-            authored_frame_certificate::certify_fixed_path_control_trajectories_with_frame_path(
-                authored_frame_certificate::ProfileLaws { path: reference_path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-                frame_reference_path,
-                sweep.options.normal,
-                qs,
-                interval,
-                budget,
-            )
+            authored_frame_certificate::certify_fixed_path_control_trajectories_with_frame_path(profile_laws(reference_path), frame_reference_path, sweep.options.normal, qs, interval, budget)
         } else if let Some(phase)=principal_phase {
-            authored_frame_certificate::certify_planar_principal_control_trajectories(
-                authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-                authored_frame_certificate::PrincipalPlane { normal: sweep.options.normal, sign: phase },
-                qs,
-                interval,
-                budget,
-            )
+            authored_frame_certificate::certify_planar_principal_control_trajectories(profile_laws(sweep.path), principal_plane(phase), qs, interval, budget)
         } else if fixed_normal {
             authored_frame_certificate::certify_fixed_normal_control_trajectories(sweep.path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if frenet {
             authored_frame_certificate::certify_frenet_control_trajectories(sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if let Some(anchor)=anchor {
-            authored_frame_certificate::certify_contact_control_trajectories(
-                authored_frame_certificate::ContactLaws { path: sweep.path, guide: guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
-                qs,
-                anchor,
-                interval,
-                budget,
-            )
+            authored_frame_certificate::certify_contact_control_trajectories(contact_laws(), qs, anchor, interval, budget)
         } else {
             authored_frame_certificate::certify_path_guide_control_trajectories(reference_path,reference_guide.unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         }
@@ -341,27 +299,25 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
                 jet:batch.jets.as_ref().map(|v|v[control].clone()),single_span:batch.single_span,reason:batch.reason};
             let a = &sections[station].control_points[control];
             let b = &sections[station + 1].control_points[control];
-            let image = jet.retained_segment_displacement_upper([
-                [a[0],a[1],a[2]], [b[0],b[1],b[2]],
-            ])?;
+            let seg = [[a[0], a[1], a[2]], [b[0], b[1], b[2]]];
+            let ends = [endpoint_errors[station][control], endpoint_errors[station + 1][control]];
+            let image = jet.retained_segment_displacement_upper(seg)?;
             let mut remainder = if fixed && !arc_line && batch.status==Status::Certified && fixed_affine_interval(sweep,count,interval) {
-                Some(endpoint_errors[station][control].max(endpoint_errors[station+1][control]))
-            } else {jet.linear_error_upper([
-                endpoint_errors[station][control],
-                endpoint_errors[station + 1][control],
-            ])?};
+                Some(ends[0].max(ends[1]))
+            } else {
+                jet.linear_error_upper(ends)?
+            };
             if open_span {
                 // All original time laws are rational-polynomial on the
                 // open interval; certified regular frame jets enclose Q''.
                 // Original endpoint values already enclose both one-sided
                 // limits, including any retained copied seam displacement.
-                if let Some(second)=jet.linear_second_error_upper_on_open_span(
-                    [endpoint_errors[station][control],endpoint_errors[station+1][control]],
-                )? {remainder=Some(remainder.map_or(second,|old|old.min(second)));}
-                if let Some(first)=jet.linear_first_error_upper_on_continuous_span(
-                    [[a[0],a[1],a[2]],[b[0],b[1],b[2]]],
-                    [endpoint_errors[station][control],endpoint_errors[station+1][control]],
-                )? {remainder=Some(remainder.map_or(first,|second|second.min(first)));}
+                if let Some(second)=jet.linear_second_error_upper_on_open_span(ends)? {
+                    remainder=Some(remainder.map_or(second,|old|old.min(second)));
+                }
+                if let Some(first)=jet.linear_first_error_upper_on_continuous_span(seg, ends)? {
+                    remainder=Some(remainder.map_or(first,|second|second.min(first)));
+                }
             }
             if rmf_planar || contact&&closed {
                 let jet_upper=match (image,remainder) {
@@ -383,28 +339,19 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
                 if let Some(values)=fallback.as_ref() {
                     let value=authored_frame_certificate::ControlValueReport {status:values.status,cells:0,
                         value:values.values.as_ref().map(|v|v[control]),reason:values.reason};
-                    if let Some(bound)=value.retained_segment_displacement_upper([[a[0],a[1],a[2]],[b[0],b[1],b[2]]])? {
+                    if let Some(bound)=value.retained_segment_displacement_upper(seg)? {
                         remainder=Some(remainder.map_or(bound,|old|old.min(bound)));
                     }
                 }
             }
             // Both bounds enclose the same original/retained pointwise error;
             // their minimum is valid, with no extra certificate work.
-            let upper = if let Some(upper) = match (image,remainder) {
-                (Some(a),Some(b)) => Some(a.min(b)),
-                (a,b) => a.or(b),
-            } {
+            let upper = if let Some(upper) = match (image,remainder) { (Some(a),Some(b)) => Some(a.min(b)), (a,b) => a.or(b) } {
                 upper
             } else {
                 let value=authored_frame_certificate::ControlValueReport {status:fallback.as_ref().map_or(Status::Unresolved,|r|r.status),cells:0,
                     value:fallback.as_ref().and_then(|r|r.values.as_ref()).map(|v|v[control]),reason:fallback.as_ref().and_then(|r|r.reason).or(batch.reason)};
-                let a = &sections[station].control_points[control];
-                let b = &sections[station + 1].control_points[control];
-                let Some(upper) = value.retained_segment_displacement_upper([
-                    [a[0], a[1], a[2]],
-                    [b[0], b[1], b[2]],
-                ])?
-                else {
+                let Some(upper) = value.retained_segment_displacement_upper(seg)? else {
                     out.reason = value.reason;
                     return Ok(out);
                 };

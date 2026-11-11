@@ -292,7 +292,6 @@ fn strip_identity(
 ) -> Result<BezierIdentityDecision, InputError> {
     validate_strip_pair(&pair, order, along.is_some())?;
     let StripPairRefs { strips, knots, degrees, locations } = pair;
-    let [a, b] = strips;
     let mut leaves = Vec::new();
     let mut starts = [0; 2];
     let mut ks = [0; 2];

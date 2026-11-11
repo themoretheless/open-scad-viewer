@@ -332,46 +332,18 @@ fn run_profiles(
             "image ownership must not grant the legacy normalized-clock proof"
         );
     }
+    let src = |sections| ClosedSweepSource { sweep: &sweep, loop_sizes: &sizes, sections, material: &material };
+    let acc = SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 };
     if mode == 2 {
         let ClassifiedClosedAttempt::Refused(coarse) =
-            construct_classified_closed_with_original_material(
-                ClosedSweepSource {
-                    sweep: &sweep,
-                    loop_sizes: &sizes,
-                    sections: 33,
-                    material: &material,
-                },
-                &classes,
-                SweepAccuracy {
-                    tolerance_uv: 1e-8,
-                    error_budget: 0.05,
-                },
-                &sharp,
-                limits(),
-            )
-            .unwrap()
+            construct_classified_closed_with_original_material(src(33), &classes, acc, &sharp, limits()).unwrap()
         else {
             panic!("coarse guide level violated the unchanged error budget")
         };
         assert_eq!(coarse.reason, "boundary-error-budget-exceeded");
         assert!(coarse.binding.is_none());
     }
-    let r = construct_classified_closed_with_original_material(
-        ClosedSweepSource {
-            sweep: &sweep,
-            loop_sizes: &sizes,
-            sections: count,
-            material: &material,
-        },
-        &classes,
-        SweepAccuracy {
-            tolerance_uv: 1e-8,
-            error_budget: 0.05,
-        },
-        &sharp,
-        limits(),
-    )
-    .unwrap();
+    let r = construct_classified_closed_with_original_material(src(count), &classes, acc, &sharp, limits()).unwrap();
     let body = match r {
         ClassifiedClosedAttempt::Certified(b) => b,
         ClassifiedClosedAttempt::Refused(r) => panic!(
@@ -476,42 +448,12 @@ fn run_profiles(
     let mut joint = limits();
     joint.incidence_steps = r.incidence_steps;
     assert!(matches!(
-        construct_classified_closed_with_original_material(
-            ClosedSweepSource {
-                sweep: &sweep,
-                loop_sizes: &sizes,
-                sections: count,
-                material: &material,
-            },
-            &classes,
-            SweepAccuracy {
-                tolerance_uv: 1e-8,
-                error_budget: 0.05,
-            },
-            &sharp,
-            joint,
-        )
-        .unwrap(),
+        construct_classified_closed_with_original_material(src(count), &classes, acc, &sharp, joint).unwrap(),
         ClassifiedClosedAttempt::Certified(_)
     ));
     joint.incidence_steps -= 1;
     let ClassifiedClosedAttempt::Refused(short) =
-        construct_classified_closed_with_original_material(
-            ClosedSweepSource {
-                sweep: &sweep,
-                loop_sizes: &sizes,
-                sections: count,
-                material: &material,
-            },
-            &classes,
-            SweepAccuracy {
-                tolerance_uv: 1e-8,
-                error_budget: 0.05,
-            },
-            &sharp,
-            joint,
-        )
-        .unwrap()
+        construct_classified_closed_with_original_material(src(count), &classes, acc, &sharp, joint).unwrap()
     else {
         panic!("incomplete joint role/census budget admitted")
     };
