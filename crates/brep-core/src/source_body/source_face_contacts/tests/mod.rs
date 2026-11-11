@@ -1,6 +1,8 @@
 use super::*;
 use crate::{
-    source_contour_proposal::{qualify_linear_region, qualify_original_region},
+    source_contour_proposal::{
+        RegionAddress, RegionBudget, RegionSource, RegionTarget, qualify_linear_region, qualify_original_region,
+    },
     trimmed_face_recipe::{Boundary, Limits},
 };
 use nurbs_core::{curve::Curve, surface::Surface};
@@ -73,21 +75,11 @@ fn original_interior_contact_is_removed_only_after_root_valued_region_clipping()
     let contact = Curve::from_polyline(vec![vec![0.75, 1.2], vec![0.75, -0.2]]).unwrap();
     let clipped = qualify_linear_region(
         &context,
-        &a,
-        &[wa],
-        &contact,
-        0,
-        2,
-        0,
+        RegionSource { surface: &a, wires: &[wa], contact: &contact, address: RegionAddress { loop_index: 0, start_edge: 2, end_edge: 0 } },
         1e-8,
         limits,
-        10000,
-        [1e-8; 2],
-        32,
-        10000,
-        1,
-        10000,
-        10000,
+        RegionTarget { width: [1e-8; 2], driver_axis: 1 },
+        RegionBudget { cells: 10000, point_checks: 32, mapping_cells: 10000, driver_cells: 10000, membership_cells: 10000 },
         10000,
     )
     .unwrap();

@@ -1,27 +1,58 @@
 use super::*;
 
+/// The original face region and the contact that cuts it between two boundary edges.
+#[derive(Clone, Copy)]
+pub struct RegionSource<'a> {
+    pub surface: &'a Surface,
+    pub wires: &'a [Vec<Boundary>],
+    pub contact: &'a Curve,
+    pub address: RegionAddress,
+}
+/// Where the contact replaces the boundary: loop and the first and last replaced edges.
+#[derive(Clone, Copy, Debug)]
+pub struct RegionAddress {
+    pub loop_index: usize,
+    pub start_edge: usize,
+    pub end_edge: usize,
+}
+/// Requested UV resolution and the parameter axis that drives the contact.
+#[derive(Clone, Copy, Debug)]
+pub struct RegionTarget {
+    pub width: [f64; 2],
+    pub driver_axis: usize,
+}
+/// Work limits shared by linear and curved region qualification.
+#[derive(Clone, Copy, Debug)]
+pub struct RegionBudget {
+    pub cells: usize,
+    pub point_checks: usize,
+    pub mapping_cells: usize,
+    pub driver_cells: usize,
+    pub membership_cells: usize,
+}
+
 /// Qualify a straight source contact as an exact half-plane intersection of
 /// the original material region. All retained/removed arcs and holes must have
 /// whole-source side proofs. This does not approximate a curved contact by a line.
 pub fn qualify_linear_region(
     context: &ToleranceContext,
-    surface: &Surface,
-    wires: &[Vec<Boundary>],
-    contact: &Curve,
-    loop_index: usize,
-    start_edge: usize,
-    end_edge: usize,
+    source: RegionSource<'_>,
     tolerance_uv: f64,
     limits: Limits,
-    max_cells: usize,
-    target_width: [f64; 2],
-    max_point_checks: usize,
-    max_mapping_cells: usize,
-    driver_axis: usize,
-    max_driver_cells: usize,
-    max_membership_cells: usize,
+    target: RegionTarget,
+    budget: RegionBudget,
     max_controls: usize,
 ) -> Result<LinearRegion> {
+    let RegionSource { surface, wires, contact, address } = source;
+    let RegionAddress { loop_index, start_edge, end_edge } = address;
+    let RegionTarget { width: target_width, driver_axis } = target;
+    let RegionBudget {
+        cells: max_cells,
+        point_checks: max_point_checks,
+        mapping_cells: max_mapping_cells,
+        driver_cells: max_driver_cells,
+        membership_cells: max_membership_cells,
+    } = budget;
     use nurbs_core::interval_eval::{self, Interval as I};
     if !(1..=100000).contains(&max_controls) {
         return Err(Error::new(
@@ -314,23 +345,23 @@ pub struct CurvedRegion {
 /// Complete simplicity/inside/no-extra-crossing proofs precede hole queries.
 pub fn qualify_curved_region(
     context: &ToleranceContext,
-    surface: &Surface,
-    wires: &[Vec<Boundary>],
-    contact: &Curve,
-    loop_index: usize,
-    start_edge: usize,
-    end_edge: usize,
+    source: RegionSource<'_>,
     tolerance_uv: f64,
     limits: Limits,
-    max_cells: usize,
-    target_width: [f64; 2],
-    max_point_checks: usize,
-    max_mapping_cells: usize,
-    driver_axis: usize,
-    max_driver_cells: usize,
-    max_membership_cells: usize,
+    target: RegionTarget,
+    budget: RegionBudget,
     max_winding_cells: usize,
 ) -> Result<CurvedRegion> {
+    let RegionSource { surface, wires, contact, address } = source;
+    let RegionAddress { loop_index, start_edge, end_edge } = address;
+    let RegionTarget { width: target_width, driver_axis } = target;
+    let RegionBudget {
+        cells: max_cells,
+        point_checks: max_point_checks,
+        mapping_cells: max_mapping_cells,
+        driver_cells: max_driver_cells,
+        membership_cells: max_membership_cells,
+    } = budget;
     use nurbs_core::{
         interval_eval::{self, Interval as I},
         trim_domain::Location,

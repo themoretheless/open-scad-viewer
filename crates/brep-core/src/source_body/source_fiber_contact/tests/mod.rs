@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    source_contour_proposal::qualify_original_region,
+    source_contour_proposal::{RegionAddress, RegionBudget, RegionSource, RegionTarget, qualify_original_region},
     source_shell_incidence::{self, Pair},
     trimmed_face_recipe::{Boundary, Limits},
 };
@@ -998,21 +998,11 @@ fn root_clipped_curved_wedge_closes_with_new_planar_cap() {
         let (start, end, driver) = cut_edges[face];
         let r = crate::source_contour_proposal::qualify_linear_region(
             &context,
-            original[face].loops()[0][0].surface(),
-            &[wires[face].clone()],
-            &contacts[face],
-            0,
-            start,
-            end,
+            RegionSource { surface: original[face].loops()[0][0].surface(), wires: &[wires[face].clone()], contact: &contacts[face], address: RegionAddress { loop_index: 0, start_edge: start, end_edge: end } },
             1e-8,
             limits,
-            10000,
-            [1e-8; 2],
-            32,
-            10000,
-            driver,
-            10000,
-            10000,
+            RegionTarget { width: [1e-8; 2], driver_axis: driver },
+            RegionBudget { cells: 10000, point_checks: 32, mapping_cells: 10000, driver_cells: 10000, membership_cells: 10000 },
             10000,
         )
         .unwrap();

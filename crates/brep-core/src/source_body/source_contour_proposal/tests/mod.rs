@@ -166,21 +166,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
 
     let region = qualify_linear_region(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone()],
-        &contact,
-        0,
-        0,
-        2,
+        RegionSource { surface: &s, wires: &[wire.clone()], contact: &contact, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
         1000,
     )
     .unwrap();
@@ -208,21 +198,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
     };
     let kept = qualify_linear_region(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone(), make_hole(0.05, 0.15)],
-        &contact,
-        0,
-        0,
-        2,
+        RegionSource { surface: &s, wires: &[wire.clone(), make_hole(0.05, 0.15)], contact: &contact, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
         1000,
     )
     .unwrap();
@@ -231,21 +211,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
     assert_eq!(kept.region.unwrap().loops().len(), 2);
     let removed_hole = qualify_linear_region(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone(), make_hole(0.5, 0.7)],
-        &contact,
-        0,
-        0,
-        2,
+        RegionSource { surface: &s, wires: &[wire.clone(), make_hole(0.5, 0.7)], contact: &contact, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
         1000,
     )
     .unwrap();
@@ -277,21 +247,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
     );
     let mixed = qualify_linear_region(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone(), make_hole(0.5, 0.7), make_hole(0.05, 0.15)],
-        &contact,
-        0,
-        0,
-        2,
+        RegionSource { surface: &s, wires: &[wire.clone(), make_hole(0.5, 0.7), make_hole(0.05, 0.15)], contact: &contact, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
         1000,
     )
     .unwrap();
@@ -302,21 +262,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
 
     let limited = qualify_linear_region(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone()],
-        &contact,
-        0,
-        0,
-        2,
+        RegionSource { surface: &s, wires: &[wire.clone()], contact: &contact, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
         1,
     )
     .unwrap();
@@ -331,21 +281,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
     }
     let clockwise = qualify_linear_region(
         &ToleranceContext::default_valid(),
-        &s,
-        &[clockwise],
-        &contact,
-        0,
-        1,
-        3,
+        RegionSource { surface: &s, wires: &[clockwise], contact: &contact, address: RegionAddress { loop_index: 0, start_edge: 1, end_edge: 3 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
         1000,
     )
     .unwrap();
@@ -357,21 +297,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
     let vertical = Curve::from_polyline(vec![vec![0.3, -0.2], vec![0.3, 1.2]]).unwrap();
     let vertical = qualify_linear_region(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone()],
-        &vertical,
-        0,
-        3,
-        1,
+        RegionSource { surface: &s, wires: &[wire.clone()], contact: &vertical, address: RegionAddress { loop_index: 0, start_edge: 3, end_edge: 1 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        1,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 1 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
         1000,
     )
     .unwrap();
@@ -386,21 +316,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
     };
     let curved_region = qualify_curved_region(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone(), make_hole(0.05, 0.15), make_hole(0.7, 0.85)],
-        &curved,
-        0,
-        0,
-        2,
+        RegionSource { surface: &s, wires: &[wire.clone(), make_hole(0.05, 0.15), make_hole(0.7, 0.85)], contact: &curved, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
         10000,
     )
     .unwrap();
@@ -425,21 +345,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
     rational.weights[1] = 0.7;
     let rational_region = qualify_curved_region(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone(), make_hole(0.05, 0.15), make_hole(0.7, 0.85)],
-        &rational,
-        0,
-        0,
-        2,
+        RegionSource { surface: &s, wires: &[wire.clone(), make_hole(0.05, 0.15), make_hole(0.7, 0.85)], contact: &rational, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
         10000,
     )
     .unwrap();
@@ -469,21 +379,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
     );
     let stopped_curved = qualify_curved_region(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone(), make_hole(0.05, 0.15), make_hole(0.7, 0.85)],
-        &curved,
-        0,
-        0,
-        2,
+        RegionSource { surface: &s, wires: &[wire.clone(), make_hole(0.05, 0.15), make_hole(0.7, 0.85)], contact: &curved, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
         1,
     )
     .unwrap();

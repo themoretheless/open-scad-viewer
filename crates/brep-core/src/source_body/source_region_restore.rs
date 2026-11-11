@@ -2,7 +2,7 @@
 pub use crate::source_contour_proposal::ReplayLimits as Limits;
 #[cfg(feature = "codec")]
 use crate::{
-    source_contour_proposal::{self, SourceRegion},
+    source_contour_proposal::{self, RegionAddress, RegionBudget, RegionSource, RegionTarget, SourceRegion},
     trimmed_face_recipe::{Boundary, Limits as RegionLimits},
 };
 #[cfg(feature = "codec")]
@@ -134,21 +134,11 @@ fn replay(value: Value, l: &Limits, remaining: usize) -> Result<SourceRegion> {
         "linear" => {
             let report = source_contour_proposal::qualify_linear_region(
                 &context,
-                &surface,
-                &wires,
-                &contact,
-                wire,
-                start,
-                end,
+                RegionSource { surface: &surface, wires: &wires, contact: &contact, address: RegionAddress { loop_index: wire, start_edge: start, end_edge: end } },
                 tolerance,
                 region_limits(l),
-                l.search_cells,
-                width,
-                l.point_checks,
-                l.mapping_cells,
-                axis,
-                l.driver_cells,
-                l.membership_cells,
+                RegionTarget { width, driver_axis: axis },
+                RegionBudget { cells: l.search_cells, point_checks: l.point_checks, mapping_cells: l.mapping_cells, driver_cells: l.driver_cells, membership_cells: l.membership_cells },
                 l.controls,
             )?;
             report.region.ok_or_else(|| error(report.reason))
@@ -156,21 +146,11 @@ fn replay(value: Value, l: &Limits, remaining: usize) -> Result<SourceRegion> {
         "curved" => {
             let report = source_contour_proposal::qualify_curved_region(
                 &context,
-                &surface,
-                &wires,
-                &contact,
-                wire,
-                start,
-                end,
+                RegionSource { surface: &surface, wires: &wires, contact: &contact, address: RegionAddress { loop_index: wire, start_edge: start, end_edge: end } },
                 tolerance,
                 region_limits(l),
-                l.search_cells,
-                width,
-                l.point_checks,
-                l.mapping_cells,
-                axis,
-                l.driver_cells,
-                l.membership_cells,
+                RegionTarget { width, driver_axis: axis },
+                RegionBudget { cells: l.search_cells, point_checks: l.point_checks, mapping_cells: l.mapping_cells, driver_cells: l.driver_cells, membership_cells: l.membership_cells },
                 l.winding_cells,
             )?;
             report.region.ok_or_else(|| error(report.reason))

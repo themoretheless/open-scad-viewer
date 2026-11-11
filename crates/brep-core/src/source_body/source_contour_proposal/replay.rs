@@ -84,21 +84,11 @@ fn replay(recipe: &Recipe, l: &ReplayLimits, remaining: usize) -> Result<SourceR
             CutKind::Linear => {
                 let r = qualify_linear_region(
                     &context,
-                    &o.surface,
-                    &o.wires,
-                    contact,
-                    *wire,
-                    *start,
-                    *end,
+                    RegionSource { surface: &o.surface, wires: &o.wires, contact, address: RegionAddress { loop_index: *wire, start_edge: *start, end_edge: *end } },
                     o.tolerance,
                     l.region,
-                    l.search_cells,
-                    *target_width,
-                    l.point_checks,
-                    l.mapping_cells,
-                    *axis,
-                    l.driver_cells,
-                    l.membership_cells,
+                    RegionTarget { width: *target_width, driver_axis: *axis },
+                    RegionBudget { cells: l.search_cells, point_checks: l.point_checks, mapping_cells: l.mapping_cells, driver_cells: l.driver_cells, membership_cells: l.membership_cells },
                     l.controls,
                 )?;
                 r.region.ok_or_else(|| error(r.reason))
@@ -106,21 +96,11 @@ fn replay(recipe: &Recipe, l: &ReplayLimits, remaining: usize) -> Result<SourceR
             CutKind::Curved => {
                 let r = qualify_curved_region(
                     &context,
-                    &o.surface,
-                    &o.wires,
-                    contact,
-                    *wire,
-                    *start,
-                    *end,
+                    RegionSource { surface: &o.surface, wires: &o.wires, contact, address: RegionAddress { loop_index: *wire, start_edge: *start, end_edge: *end } },
                     o.tolerance,
                     l.region,
-                    l.search_cells,
-                    *target_width,
-                    l.point_checks,
-                    l.mapping_cells,
-                    *axis,
-                    l.driver_cells,
-                    l.membership_cells,
+                    RegionTarget { width: *target_width, driver_axis: *axis },
+                    RegionBudget { cells: l.search_cells, point_checks: l.point_checks, mapping_cells: l.mapping_cells, driver_cells: l.driver_cells, membership_cells: l.membership_cells },
                     l.winding_cells,
                 )?;
                 r.region.ok_or_else(|| error(r.reason))
