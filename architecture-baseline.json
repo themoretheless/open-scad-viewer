@@ -617,7 +617,7 @@
     "cad-predicates": 204,
     "cad-step": 30,
     "gcode-core": 1,
-    "geometry-bridge": 87,
+    "geometry-bridge": 132,
     "geometry-ops": 3,
     "manifold-core": 2,
     "manifold-ops": 1,

@@ -1,5 +1,6 @@
 //! Strict transport adapter; structural validation belongs to mechanics-core.
 use crate::{Result, Value, field, input, json, optional_field, require_exact_fields};
+use bridge_codec::array_field;
 use mechanics_core::combos::{Combination, MAX_COMBINATIONS, MAX_LOAD_CASES, MinMax};
 use mechanics_core::frame::{
     LoadSet, MAX_MEMBER_LOADS, MAX_MEMBERS, MAX_NODES, MAX_SUPPORTS, Member, MemberLoad, Model,
@@ -196,15 +197,11 @@ pub(crate) fn solve(mut v: Value) -> Result<Value> {
             return Err(input(format!("{key} exceeds frame limit {max}")));
         }
     }
-    let members = v["members"]
-        .as_array()
-        .unwrap()
+    let members = array_field(&v, "members")?
         .iter()
         .map(member)
         .collect::<Result<Vec<_>>>()?;
-    let loads = v["loads"]
-        .as_array()
-        .unwrap()
+    let loads = array_field(&v, "loads")?
         .iter()
         .map(member_load)
         .collect::<Result<Vec<_>>>()?;
@@ -264,9 +261,7 @@ pub(crate) fn diagnose(mut v: Value) -> Result<Value> {
             return Err(input(format!("{key} exceeds frame limit {max}")));
         }
     }
-    let members = v["members"]
-        .as_array()
-        .unwrap()
+    let members = array_field(&v, "members")?
         .iter()
         .map(member)
         .collect::<Result<Vec<_>>>()?;
@@ -306,9 +301,7 @@ pub(crate) fn buckling(mut v: Value) -> Result<Value> {
             return Err(input(format!("{key} exceeds frame limit {max}")));
         }
     }
-    let members = v["members"]
-        .as_array()
-        .unwrap()
+    let members = array_field(&v, "members")?
         .iter()
         .map(member)
         .collect::<Result<Vec<_>>>()?;
@@ -363,9 +356,7 @@ pub(crate) fn modal(mut v: Value) -> Result<Value> {
             return Err(input(format!("{key} exceeds frame limit {max}")));
         }
     }
-    let members = v["members"]
-        .as_array()
-        .unwrap()
+    let members = array_field(&v, "members")?
         .iter()
         .map(member)
         .collect::<Result<Vec<_>>>()?;
@@ -420,16 +411,12 @@ pub(crate) fn collapse(mut v: Value) -> Result<Value> {
             return Err(input(format!("{key} exceeds frame limit {max}")));
         }
     }
-    let members = v["members"]
-        .as_array()
-        .unwrap()
+    let members = array_field(&v, "members")?
         .iter()
         .map(member)
         .collect::<Result<Vec<_>>>()?;
     let reference = load_case(&v["reference"])?;
-    let plastic_moments: Vec<Option<f64>> = v["plasticMomentsNMm"]
-        .as_array()
-        .unwrap()
+    let plastic_moments: Vec<Option<f64>> = array_field(&v, "plasticMomentsNMm")?
         .iter()
         .map(|e| {
             if e.is_null() {
@@ -495,15 +482,11 @@ pub(crate) fn influence(mut v: Value) -> Result<Value> {
             return Err(input(format!("{key} exceeds frame limit {max}")));
         }
     }
-    let members = v["members"]
-        .as_array()
-        .unwrap()
+    let members = array_field(&v, "members")?
         .iter()
         .map(member)
         .collect::<Result<Vec<_>>>()?;
-    let positions: Vec<(usize, f64)> = v["positions"]
-        .as_array()
-        .unwrap()
+    let positions: Vec<(usize, f64)> = array_field(&v, "positions")?
         .iter()
         .map(|p| {
             require_exact_fields(p, &["member", "atMm"], "influence position")?;
@@ -649,21 +632,15 @@ pub(crate) fn envelope(mut v: Value) -> Result<Value> {
             return Err(input(format!("{key} exceeds frame limit {max}")));
         }
     }
-    let members: Vec<Member> = v["members"]
-        .as_array()
-        .unwrap()
+    let members: Vec<Member> = array_field(&v, "members")?
         .iter()
         .map(member)
         .collect::<Result<Vec<_>>>()?;
-    let cases: Vec<LoadSet> = v["cases"]
-        .as_array()
-        .unwrap()
+    let cases: Vec<LoadSet> = array_field(&v, "cases")?
         .iter()
         .map(load_case)
         .collect::<Result<Vec<_>>>()?;
-    let combinations: Vec<Combination> = v["combinations"]
-        .as_array()
-        .unwrap()
+    let combinations: Vec<Combination> = array_field(&v, "combinations")?
         .iter()
         .map(combination)
         .collect::<Result<Vec<_>>>()?;

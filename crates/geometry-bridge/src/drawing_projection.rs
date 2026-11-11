@@ -18,20 +18,19 @@ fn curve_path(c: &Curve) -> Result<String> {
     let a = &p[0];
     let b = p.last().unwrap();
     let mut d = String::with_capacity(64);
-    write!(d, "M{} {} ", a[0], a[1]).unwrap();
+    let _ = write!(d, "M{} {} ", a[0], a[1]);
     if c.degree == 1 {
-        write!(d, "L{} {}", b[0], b[1]).unwrap();
+        let _ = write!(d, "L{} {}", b[0], b[1]);
     } else if c.degree == 3 && c.weights.iter().all(|w| *w == c.weights[0]) {
-        write!(
+        let _ = write!(
             d,
             "C{} {} {} {} {} {}",
             p[1][0], p[1][1], p[2][0], p[2][1], b[0], b[1]
-        )
-        .unwrap();
+        );
     } else if c.degree == 2 && p.len() == 3 {
         let w = c.weights[1] / (c.weights[0] * c.weights[2]).sqrt();
         if w == 1. {
-            write!(d, "Q{} {} {} {}", p[1][0], p[1][1], b[0], b[1]).unwrap();
+            let _ = write!(d, "Q{} {} {} {}", p[1][0], p[1][1], b[0], b[1]);
         } else if w > 0. && w < 1. {
             let w2 = w * w;
             let one_minus_w2 = 1. - w2;
@@ -55,15 +54,14 @@ fn curve_path(c: &Curve) -> Result<String> {
             let ry = if rx > 0. { det.abs() / rx } else { 0. };
             if ry > 1e-10 * rx.max(1.) {
                 let angle = 0.5 * (2. * m[1]).atan2(m[0] - m[2]);
-                write!(
+                let _ = write!(
                     d,
                     "A{rx} {ry} {} 0 {} {} {}",
                     angle.to_degrees(),
                     if det > 0. { 1 } else { 0 },
                     b[0],
                     b[1]
-                )
-                .unwrap();
+                );
             } else {
                 let axis = if u[0].abs() + v[0].abs() > u[1].abs() + v[1].abs() {
                     0
@@ -84,13 +82,12 @@ fn curve_path(c: &Curve) -> Result<String> {
                 angles[..len].sort_unstable_by(f64::total_cmp);
                 for &t in &angles[1..len] {
                     let (sin_t, cos_t) = t.sin_cos();
-                    write!(
+                    let _ = write!(
                         d,
                         "L{} {} ",
                         center[0] + u[0] * cos_t + v[0] * sin_t,
                         center[1] + u[1] * cos_t + v[1] * sin_t
-                    )
-                    .unwrap();
+                    );
                 }
             }
         } else {
@@ -757,12 +754,11 @@ pub fn frame(v: &Value) -> Result<Value> {
     faces.sort_by(|a, b| b.1.total_cmp(&a.1));
     let mut paths = String::new();
     for (p, _, color) in faces {
-        writeln!(
+        let _ = writeln!(
             paths,
             "<path d=\"M{} {} L{} {} L{} {} Z\" fill=\"{color}\"/>",
             p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1]
-        )
-        .unwrap();
+        );
     }
     Ok(json!({"paths":paths,"bounds":bounds}))
 }
