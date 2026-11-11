@@ -74,16 +74,13 @@ fn cell(
 /// `Enclosed` means field coverage within tolerances and fresh positions.
 /// It deliberately does NOT certify chart joins, pole regularity or a solid.
 pub fn inspect_span_fields(
-    c: &Curve,
-    p: [&Curve; 2],
-    s: [&Surface; 2],
-    reverse: [bool; 2],
-    position: f64,
-    normal: f64,
-    curvature: f64,
+    seam: super::PcurveSeam<'_>,
+    tolerance: super::G2PcurveTolerance,
     max_cells: usize,
     max_exact: u64,
 ) -> Result<FieldCoverage> {
+    let super::PcurveSeam { curve: c, pcurves: p, surfaces: s, reversed: reverse } = seam;
+    let super::G2PcurveTolerance { position, normal, curvature } = tolerance;
     check(
         normal.is_finite()
             && (0. ..=2.).contains(&normal)

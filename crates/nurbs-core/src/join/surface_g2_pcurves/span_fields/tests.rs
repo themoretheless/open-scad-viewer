@@ -44,13 +44,8 @@ fn all_original_one_sided_fields_cover_a_whole_c0_trace_without_changing_strict_
     .unwrap();
     assert_eq!(old.geometric.decision, Decision::Unresolved);
     let r = inspect_span_fields(
-        &c,
-        [&p, &p],
-        [&a, &b],
-        [false; 2],
-        1e-7,
-        1e-5,
-        1e-4,
+        PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&a, &b], reversed: [false; 2] },
+        G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         128,
         100000,
     )
@@ -62,26 +57,16 @@ fn all_original_one_sided_fields_cover_a_whole_c0_trace_without_changing_strict_
     assert!(r.cells <= 128);
     assert_eq!(b, saved);
     let exact = inspect_span_fields(
-        &c,
-        [&p, &p],
-        [&a, &b],
-        [false; 2],
-        1e-7,
-        1e-5,
-        1e-4,
+        PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&a, &b], reversed: [false; 2] },
+        G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         r.cells,
         100000,
     )
     .unwrap();
     assert_eq!(exact.decision, FieldDecision::Enclosed);
     let limited = inspect_span_fields(
-        &c,
-        [&p, &p],
-        [&a, &b],
-        [false; 2],
-        1e-7,
-        1e-5,
-        1e-4,
+        PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&a, &b], reversed: [false; 2] },
+        G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         r.cells - 1,
         100000,
     )
@@ -95,13 +80,8 @@ fn every_actual_one_sided_kink_branch_remains_a_valid_negative_witness() {
     let a = plane(false, 0.);
     let b = plane(true, 0.25);
     let r = inspect_span_fields(
-        &c,
-        [&p, &p],
-        [&a, &b],
-        [false; 2],
-        1e-7,
-        1e-5,
-        1e-4,
+        PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&a, &b], reversed: [false; 2] },
+        G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         128,
         100000,
     )
@@ -137,13 +117,8 @@ fn a_good_midpoint_does_not_hide_shape_error_elsewhere_on_the_original_curve() {
         .unwrap();
     assert!(mid.0[0][0] < 1e-5 && mid.0[0][1] < 1e-4);
     let r = inspect_span_fields(
-        &c,
-        [&p, &p],
-        [&a, &b],
-        [false; 2],
-        1e-7,
-        1e-5,
-        1e-4,
+        PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&a, &b], reversed: [false; 2] },
+        G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         10000,
         100000,
     )
@@ -157,19 +132,19 @@ fn missing_positions_or_work_never_produce_complete_field_coverage() {
     let a = plane(false, 0.);
     let b = plane(true, 0.);
     let r =
-        inspect_span_fields(&c, [&p, &p], [&a, &b], [false; 2], 1e-7, 1e-5, 1e-4, 0, 0).unwrap();
+        inspect_span_fields(
+            PcurveSeam { curve: &c, pcurves: [&p, &p], surfaces: [&a, &b], reversed: [false; 2] },
+            G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
+            0,
+            0,
+        ).unwrap();
     assert_eq!(r.decision, FieldDecision::Unresolved);
     assert!(!r.one_sided_regular && r.cells == 0);
     let mut wrong = c.clone();
     wrong.control_points[1][2] = 0.01;
     let r = inspect_span_fields(
-        &wrong,
-        [&p, &p],
-        [&a, &b],
-        [false; 2],
-        1e-7,
-        1e-5,
-        1e-4,
+        PcurveSeam { curve: &wrong, pcurves: [&p, &p], surfaces: [&a, &b], reversed: [false; 2] },
+        G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
         128,
         100000,
     )

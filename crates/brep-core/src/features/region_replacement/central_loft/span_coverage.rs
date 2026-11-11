@@ -17,13 +17,8 @@ impl CentralLoftCandidate<'_, '_, '_> {
         let mut reports = Vec::new();
         for i in 0..6 {
             let report = nurbs_core::surface_g2_pcurves::inspect_span_fields(
-                &self.curves[i],
-                [&self.originals[i].1, &self.pcurves[i]],
-                [&self.originals[i].0, &self.surface],
-                [false; 2],
-                self.options.tolerances[0],
-                self.options.tolerances[1],
-                self.options.tolerances[2],
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &self.curves[i], pcurves: [&self.originals[i].1, &self.pcurves[i]], surfaces: [&self.originals[i].0, &self.surface], reversed: [false; 2] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: self.options.tolerances[0], normal: self.options.tolerances[1], curvature: self.options.tolerances[2] },
                 (max_cells - used) / (6 - i),
                 (max_exact - exact) / (6 - i) as u64,
             )?;
@@ -87,13 +82,8 @@ impl CentralLoftCandidate<'_, '_, '_> {
             let pc = Curve::from_polyline(vec![vec![knot, v[0]], vec![knot, v[1]]])?;
             let remaining = columns.len() - i;
             let fields = nurbs_core::surface_g2_pcurves::inspect_span_fields(
-                &c,
-                [&pc, &pc],
-                [s, s],
-                [false; 2],
-                self.options.tolerances[0],
-                self.options.tolerances[1],
-                self.options.tolerances[2],
+                nurbs_core::surface_g2_pcurves::PcurveSeam { curve: &c, pcurves: [&pc, &pc], surfaces: [s, s], reversed: [false; 2] },
+                nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: self.options.tolerances[0], normal: self.options.tolerances[1], curvature: self.options.tolerances[2] },
                 (max_cells - used) / remaining,
                 (max_exact - exact) / remaining as u64,
             )?;
