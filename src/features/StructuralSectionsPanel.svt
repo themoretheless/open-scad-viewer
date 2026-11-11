@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {computed,onUnmounted,ref,shallowRef,watch} from 'svet'
 import type {MeshData} from '../core/mesh'
-import type {StructuralSections} from '../services/structuralSections'
-import {computeStructuralSections} from '../services/mainSolidWorker'
+import type {StructuralSections} from '../kernel/structuralSections'
+import {computeStructuralSections} from '../kernel/mainSolidWorker'
 const props=defineProps<{meshes:MeshData[];selection:number[];source:string;ready:boolean;locale:string}>()
 const label=(ru:string,en:string)=>props.locale==='ru'?ru:en
 const axis=ref<'x'|'y'|'z'>('z'),positions=ref('5'),busy=ref(false),error=ref(''),url=ref('')

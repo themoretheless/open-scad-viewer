@@ -1,6 +1,6 @@
-import {validPolarProofEvidence,sameFrame,type PolarProofEvidence} from '../services/polarProofProtocol'
+import {validPolarProofEvidence,sameFrame,type PolarProofEvidence} from './polarProofProtocol'
 import type {NurbsBrep} from './geometry/brep'
-import type {NurbsProfileParameterization} from '../services/sweep/certificates/nurbsSweepAudit'
+import type {NurbsProfileParameterization} from './sweep/certificates/nurbsSweepAudit'
 import {callGeometryRust} from './geometry/kernel'
 type Interval=[number,number]
 type UV=[Interval,Interval]

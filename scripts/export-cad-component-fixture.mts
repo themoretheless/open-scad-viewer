@@ -5,7 +5,7 @@ import {emptyDirectDocument} from '../src/services/directModeling'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {exportSolidStepAssembly} from '../src/kernel/solidStepAssembly'
 import {prepareSolidStepImport} from '../src/kernel/solidStepExchange'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 const directory=resolve(process.argv[2]??'/tmp/cad-component-fixture');mkdirSync(directory,{recursive:true})
 const document=emptyDirectDocument()
 for(let i=0;i<3;i++){

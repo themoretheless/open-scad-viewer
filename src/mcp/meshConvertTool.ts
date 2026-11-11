@@ -1,8 +1,8 @@
 import { z } from 'zod/v4'
 import type { McpServer } from '@modelcontextprotocol/server'
-import { convertMeshFile, MESH_EXPORT_FORMATS, MESH_IMPORT_FORMATS } from '../services/meshConvert'
+import { convertMeshFile, MESH_EXPORT_FORMATS, MESH_IMPORT_FORMATS } from '../exchange/meshConvert'
 import { MESH_IMPORT_MAX_BYTES, MeshImportError } from '../exchange/meshImport'
-import { meshExportBase64 } from '../services/meshExportFormats'
+import { meshExportBase64 } from '../exchange/meshExportFormats'
 
 /** Base64 of the 20 MB import cap, rounded up to whole quads. */
 const MAX_BASE64_LENGTH = Math.ceil(MESH_IMPORT_MAX_BYTES / 3) * 4

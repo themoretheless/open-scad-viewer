@@ -4,7 +4,7 @@ import {expect,it} from 'vitest'
 import {createBrepBox,createBrepSphere,createBrepTorus,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import type {PolygonMesh} from '../src/kernel/geometry/polygon'
 import {prepareSolidDisplay} from '../src/kernel/solidDisplayPreparation'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
 // Independent JS reference for picking correspondence and crease-aware normal averaging.
 function stats(mesh:PolygonMesh){
  const centers:number[][]=[],normals:number[][]=[]

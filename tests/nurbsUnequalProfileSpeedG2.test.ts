@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {bezierNurbsCurve} from '../src/kernel/nurbsConstructors'
 import {createRationalBrepSectionLoft} from '../src/kernel/geometry/brep'
-import {inspectMiterProfileSmoothness} from '../src/services/miterProfileSmoothness'
+import {inspectMiterProfileSmoothness} from '../src/kernel/miterProfileSmoothness'
 import {inspectSweepProjectiveSeams} from '../src/kernel/nurbsSweepAudit'
 
 it.each([[1,2],[27,28]])('owns unequal retained profile speeds %j without smoothing sharp corners',(a,b)=>{

@@ -1,4 +1,4 @@
-import type {OriginalQuadricCarrierQuery} from '../../src/services/originalQuadricCarrierProtocol'
+import type {OriginalQuadricCarrierQuery} from '../../src/kernel/originalQuadricCarrierProtocol'
 export function quadricQuery():OriginalQuadricCarrierQuery{return{
  curve:{degree:1,knots:[-2,-2,5,5],controlPoints:[[-2,0,0],[2,0,0]],weights:[1,1],periodic:false},
  quadric:[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,-1]],constantProducts:[],tolerance:1e-9,maxSpans:10,maxExactWork:100000,

@@ -4,7 +4,7 @@ import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {transformNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {selfIntersectionExpectation,validSelfIntersection,inspectSelfIntersection} from '../src/kernel/solidSelfIntersection'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
 
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})
 const fixture=JSON.parse(readFileSync(resolve('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/polar-injectivity/native.json'),'utf8'))

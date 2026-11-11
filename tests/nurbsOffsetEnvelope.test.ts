@@ -1,7 +1,7 @@
 import {beforeAll,expect,it} from 'vitest'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {certifyNurbsOffsetEnvelope} from '../src/kernel/nurbsSurfaceOffset'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
 import {planeEnvelopeFixture} from './fixtures/offset-envelope'
 import {curvedTangentFixture} from './fixtures/offset-contact-tangent'
 beforeAll(async()=>{await warmGeometryKernel()})

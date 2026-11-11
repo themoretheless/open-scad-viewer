@@ -582,6 +582,8 @@
     "src/forma/svet-component.ts::mountComponent@1": 195,
     "src/forma/svet-renderer.ts::createRenderer@1": 430,
     "src/kernel/cadKernelOps.ts::createCadKernelOps@1": 275,
+    "src/kernel/manifoldPlanQualificationWorkerLane.ts::(anonymous)@3": 166,
+    "src/kernel/manifoldPlanQualificationWorkerLane.ts::evaluate@1": 218,
     "src/kernel/solid/brepRecorder.ts::createBrepRecordingKernelOps@1": 197,
     "src/language/openScadProjectCompiler.ts::compileOpenScadProject@1": 283,
     "src/language/openScadStableExpressionEval/createStableExpressionEvaluators.ts::createStableExpressionEvaluators@1": 376,
@@ -616,8 +618,6 @@
     "src/services/boxGenerator.ts::generateBox@1": 446,
     "src/services/bushingGenerator.ts::generateBushing@1": 390,
     "src/services/directModeling.ts::directDocumentValidation@1": 180,
-    "src/services/manifoldPlanQualificationWorkerLane.ts::(anonymous)@3": 166,
-    "src/services/manifoldPlanQualificationWorkerLane.ts::evaluate@1": 218,
     "src/workers/geometry.worker.ts::runBuild@1": 170
   },
   "clippy": {
@@ -651,13 +651,13 @@
   },
   "srcLayers": [
     "exchange -> services",
+    "exchange -> workers",
     "fabrication -> services",
     "fabrication -> workers",
     "kernel -> services",
     "kernel -> workers",
     "language -> services",
     "parser -> services",
-    "render -> services",
-    "services -> workers"
+    "render -> services"
   ]
 }

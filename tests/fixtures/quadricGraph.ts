@@ -1,4 +1,4 @@
-import type {OriginalQuadricGraphQuery} from '../../src/services/originalQuadricGraphProtocol'
+import type {OriginalQuadricGraphQuery} from '../../src/kernel/originalQuadricGraphProtocol'
 import {quadricQuery,quadricReport} from './quadricCarrier'
 export function graphQuery():OriginalQuadricGraphQuery{return{...quadricQuery(),curve:{degree:1,knots:[2,2,6,6],controlPoints:[[0,0,-.25],[1,1,.75]],weights:[1,1],periodic:false},patch:{degreeU:1,degreeV:1,knotsU:[-2,-2,2,2],knotsV:[10,10,14,14],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,1]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false},quadric:[[0,.5,0,0],[.5,0,0,0],[0,0,0,-.5],[0,0,-.5,0]],maxExactWork:1000000}}
 /** Synthetic structure/transport fixture, not native geometry qualification. */

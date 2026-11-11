@@ -1,4 +1,4 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {it,expect} from 'vitest'
 import {circleNurbsCurve,progressiveMiterNurbsProfiles,type NurbsVectorLaw} from '../src/kernel/nurbsConstructors'
 import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
@@ -32,13 +32,13 @@ it('preserves closed combined mode through Rush and actual Solid admission',asyn
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const graph=compileRushFrontend(readFileSync('examples/rush/closed-miter-frame-guide-affine-hollow.r','utf8'))
  const node=graph.document.nodes.find(node=>node.op==='brep_progressive_miter_sweep')!
  const built=await buildOwnNurbsAsync(graph.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(built.report.construction?.[node.id]).toMatchObject({closedPath:true,seamContinuity:'C0',continuousBound:true,volume:{solidGeometryCertified:true}})
  const model=readNativeGeometryData(built.nativeGeometry!).geometry
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)).toMatchObject({solidGeometryCertified:true})
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({solidGeometryCertified:true,continuousBound:true,boundaryErrorWithinBudget:true})
 })

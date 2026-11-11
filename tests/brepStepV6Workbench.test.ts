@@ -1,4 +1,4 @@
-import { stringifyMeshJson } from '../src/services/meshJson'
+import { stringifyMeshJson } from '../src/exchange/meshJson'
 import {readFileSync} from 'node:fs'
 import {IDBFactory} from 'fake-indexeddb'
 import {describe,expect,it} from 'vitest'

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {cpus} from 'node:os'
-import {buildFaceOverlayGeometry, buildFaceTriangleIndex} from '../src/services/meshSelectionOverlay'
+import {buildFaceOverlayGeometry, buildFaceTriangleIndex} from '../src/render/meshSelectionOverlay'
 import {identity} from '../src/services/math3d'
 
 const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)]
@@ -62,7 +62,7 @@ for (const triangleCount of [2_000, 100_000, 500_000]) {
     scanMs, indexedMs, scanMedianMs:median(scanMs), indexedMedianMs:median(indexedMs)})
 }
 console.log(JSON.stringify({node:process.version, cpu:cpus()[0]?.model,
-  sourceSha256:createHash('sha256').update(readFileSync(new URL('../src/services/meshSelectionOverlay.ts', import.meta.url))).digest('hex'),
+  sourceSha256:createHash('sha256').update(readFileSync(new URL('../src/render/meshSelectionOverlay.ts', import.meta.url))).digest('hex'),
   benchmarkSha256:createHash('sha256').update(readFileSync(new URL(import.meta.url))).digest('hex'),
   method:'Synthetic two-triangle faces with sparse uint32 IDs; 100 varying face queries per sample; 3 warmups, 9 alternating scan/indexed samples; exact overlay parity outside timing. Build cost includes allocation and GC; excludes rendering. Map storage is not included in typedIndexBytes.',
   samples}, null, 2))

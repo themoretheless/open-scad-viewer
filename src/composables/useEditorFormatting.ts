@@ -1,6 +1,6 @@
 import { nextTick, type Ref } from 'svet'
-import { formatCode } from '../services/codeFormat'
-import { indentSelection } from '../services/editorBlocks'
+import { formatCode } from '../language/codeFormat'
+import { indentSelection } from '../language/editorBlocks'
 interface Options {
   code: Ref<string>
   editorRef: Ref<HTMLTextAreaElement | null>

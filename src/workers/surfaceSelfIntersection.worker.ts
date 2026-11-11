@@ -1,9 +1,9 @@
-import {isOriginalQuadricGraphReport,type OriginalQuadricGraphRequest} from '../services/originalQuadricGraphProtocol'
-import {isOriginalQuadricCarrierReport,type OriginalQuadricCarrierRequest} from '../services/originalQuadricCarrierProtocol'
-import {isOriginalPatchContactsReport,type OriginalPatchContactsRequest} from '../services/originalPatchContactsProtocol'
-import {isSurfaceIsoTargetReport,type SurfaceIsoTargetRequest} from '../services/surfaceIsoTargetProtocol'
+import {isOriginalQuadricGraphReport,type OriginalQuadricGraphRequest} from '../kernel/originalQuadricGraphProtocol'
+import {isOriginalQuadricCarrierReport,type OriginalQuadricCarrierRequest} from '../kernel/originalQuadricCarrierProtocol'
+import {isOriginalPatchContactsReport,type OriginalPatchContactsRequest} from '../kernel/originalPatchContactsProtocol'
+import {isSurfaceIsoTargetReport,type SurfaceIsoTargetRequest} from '../kernel/surfaceIsoTargetProtocol'
 import {encodeBinary,decodeBinary} from '../services/valueBinaryCodec'
-import {isSurfaceAuditReport,type SurfaceAuditRequest} from '../services/surfaceSelfIntersectionProtocol'
+import {isSurfaceAuditReport,type SurfaceAuditRequest} from '../kernel/surfaceSelfIntersectionProtocol'
 let admitted=false
 self.addEventListener('message',async(event:MessageEvent<SurfaceAuditRequest|SurfaceIsoTargetRequest|OriginalPatchContactsRequest|OriginalQuadricCarrierRequest|OriginalQuadricGraphRequest>)=>{
  if(admitted)return

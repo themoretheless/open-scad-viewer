@@ -3,8 +3,8 @@ import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {gunzipSync} from 'node:zlib'
 import {afterEach,expect,it} from 'vitest'
-import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
-import type {MainSolidRequest,MainSolidJob} from '../src/services/mainSolidProtocol'
+import {MainSolidWorkerClient,type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
+import type {MainSolidRequest,MainSolidJob} from '../src/kernel/mainSolidProtocol'
 import identity from '../src/generated/geometry-kernels/identity'
 const bytes=readFileSync('public/wasm/geometry-kernel.wasm')
 const expectedArtifact={sha256:createHash('sha256').update(bytes).digest('hex'),byteLength:bytes.length}

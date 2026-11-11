@@ -1,5 +1,5 @@
 import type {DirectBody} from '../services/directModeling'
-import {stringifyMeshJson} from '../services/meshJson'
+import {stringifyMeshJson} from '../exchange/meshJson'
 type Geometry=Pick<DirectBody,'mesh'|'brep'>
 /** Worker-local exact batch results. Encoded JSON owns no caller objects; each hit is a fresh tree. */
 export class SolidInstanceBatchCache {

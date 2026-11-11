@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest'
-import {MeshHistory, type MeshWorkspaceDocument} from '../src/services/meshEditing'
+import {MeshHistory, type MeshWorkspaceDocument} from '../src/kernel/meshEditing'
 
 function document(name: string): MeshWorkspaceDocument {
   return {version: 1, objects: [{id: 'mesh', name, visible: true,

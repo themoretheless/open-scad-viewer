@@ -1,4 +1,4 @@
-import { ManifoldPlanQualificationWorkerLane } from '../../src/services/manifoldPlanQualificationWorkerLane'
+import { ManifoldPlanQualificationWorkerLane } from '../../src/kernel/manifoldPlanQualificationWorkerLane'
 
 interface BrowserMemoryJobResult {
   readonly workerEpoch: number

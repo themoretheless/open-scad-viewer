@@ -1,5 +1,5 @@
 import { buildOwnNurbs, type OwnNurbsRequest } from '../language/rushGraphNurbsKernel';
-import { stringifyMeshJson } from '../services/meshJson';
+import { stringifyMeshJson } from '../exchange/meshJson';
 let input = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (chunk: string) => { input += chunk; if (Buffer.byteLength(input) > 262144)

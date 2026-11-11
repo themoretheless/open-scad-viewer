@@ -27,9 +27,9 @@ import {
 } from './openScadImport'
 import type { OpenScadProjectBlobFile } from '../language/openScadProject'
 import type { PolygonMesh } from '../kernel/geometry/polygon'
-import { detectMeshImportFormat, MESH_IMPORT_FORMATS, MESH_IMPORT_MAX_BYTES, type MeshImportFormat } from '../services/meshFormats'
+import { detectMeshImportFormat, MESH_IMPORT_FORMATS, MESH_IMPORT_MAX_BYTES, type MeshImportFormat } from './meshFormats'
 
-export { detectMeshImportFormat, MESH_IMPORT_ACCEPT, MESH_IMPORT_FORMATS, MESH_IMPORT_MAX_BYTES, stripMeshExtension, type MeshImportFormat } from '../services/meshFormats'
+export { detectMeshImportFormat, MESH_IMPORT_ACCEPT, MESH_IMPORT_FORMATS, MESH_IMPORT_MAX_BYTES, stripMeshExtension, type MeshImportFormat } from './meshFormats'
 
 export const MESH_IMPORT_MAX_TRIANGLES = OPENSCAD_IMPORT_MAX_TRIANGLES
 export const MESH_IMPORT_MAX_VERTICES = OPENSCAD_IMPORT_MAX_VERTICES

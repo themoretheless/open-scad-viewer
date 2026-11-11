@@ -1,8 +1,8 @@
 import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {afterEach, expect, it, vi} from 'vitest'
-import {assertVerifiedWasmModule, compileWasmArtifact, compileWasmArtifactSync} from '../src/services/wasmArtifact'
-import {compileOptionalWasm, setOptionalWasmCompiler} from '../src/services/wasmCompilation'
+import {assertVerifiedWasmModule, compileWasmArtifact, compileWasmArtifactSync} from '../src/kernel/wasmArtifact'
+import {compileOptionalWasm, setOptionalWasmCompiler} from '../src/kernel/wasmCompilation'
 import {sha256Hex} from '../src/core/sha256'
 
 const bytes = new Uint8Array([0,97,115,109,1,0,0,0])
@@ -81,7 +81,7 @@ it('binds generated geometry and language identities to packaged bytes', async (
 
 it('keeps the real geometry kernel uninitialized on an unverified hook and can recover', async () => {
   vi.resetModules()
-  const host = await import('../src/services/wasmCompilation')
+  const host = await import('../src/kernel/wasmCompilation')
   const kernel = await import('../src/kernel/geometry/kernel')
   host.setOptionalWasmCompiler(async () => new WebAssembly.Module(bytes))
   try {

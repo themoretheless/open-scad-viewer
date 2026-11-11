@@ -1,8 +1,8 @@
 import {normalizeRefinedNativeEvidence} from './helpers/refinedNativeEvidence'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
-import {MainSolidWorkerClient} from '../src/services/mainSolidWorkerClient'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
+import {MainSolidWorkerClient} from '../src/kernel/mainSolidWorkerClient'
 const fixtures=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/surface-contact-native/face-contact-api-fixtures.json',import.meta.url),'utf8')).cases
 function job(q:any){const {model,toleranceUv,op,...limits}=q;return {kind:'faceContacts' as const,model,toleranceUv,limits}}
 it('accepts native full and partial reports without turning visited into disjoint',()=>{
@@ -49,7 +49,7 @@ it('matches native fixtures through the production WASM operation',async()=>{
  }
 })
 it('worker recovers after a rejected budget using the real WASM command',async()=>{
- const {createMainSolidWorkerHandler}=await import('../src/services/mainSolidWorkerRuntime')
+ const {createMainSolidWorkerHandler}=await import('../src/kernel/mainSolidWorkerRuntime')
  const messages:any[]=[],handle=createMainSolidWorkerHandler(m=>messages.push(m)),j=job(fixtures[1].request)
  await handle({version:1,id:1,job:{...j,limits:{...j.limits,maxCells:0}}})
  await handle({version:1,id:2,job:j})

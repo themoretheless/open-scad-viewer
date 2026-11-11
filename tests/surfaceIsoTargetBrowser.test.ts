@@ -1,6 +1,6 @@
 import {afterEach,beforeEach,describe,it,expect,vi} from 'vitest'
-import {SurfaceSelfIntersectionBrowser} from '../src/services/surfaceSelfIntersectionBrowser'
-import type {SurfaceIsoTargetQuery} from '../src/services/surfaceIsoTargetProtocol'
+import {SurfaceSelfIntersectionBrowser} from '../src/kernel/surfaceSelfIntersectionBrowser'
+import type {SurfaceIsoTargetQuery} from '../src/kernel/surfaceIsoTargetProtocol'
 class FakeWorker {
  static all:FakeWorker[]=[]
  onmessage:any;onerror:any;onmessageerror:any;sent:any;terminated=0

@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {describe,it,expect} from 'vitest'
-import {expressionInspectionExpectation,validExpressionInspection,type ExpressionInspectionOptions} from '../src/services/expressionShellInspection'
-import {mainSolidExpectation,mainSolidResult,MAIN_SOLID_JOB_KINDS} from '../src/services/mainSolidProtocol'
+import {expressionInspectionExpectation,validExpressionInspection,type ExpressionInspectionOptions} from '../src/kernel/expressionShellInspection'
+import {mainSolidExpectation,mainSolidResult,MAIN_SOLID_JOB_KINDS} from '../src/kernel/mainSolidProtocol'
 const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-inspection-native-2026-10-09.json',import.meta.url),'utf8'))
 const {op:_,...options}=fixture.request as ExpressionInspectionOptions&{op:string}
 describe('native expression inspection transport',()=>{

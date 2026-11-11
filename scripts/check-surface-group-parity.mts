@@ -2,7 +2,7 @@ import {spawnSync} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import assert from 'node:assert/strict'
-import {inferSurfaceIds} from '../src/services/meshSurfaceGroups'
+import {inferSurfaceIds} from '../src/kernel/meshSurfaceGroups'
 
 const executable = process.argv[2]
 if (!executable) throw new Error('Pass the built surface_group_parity executable path')
@@ -69,6 +69,6 @@ console.log(JSON.stringify({
   cases: fixtures.length, parity: 'exact IDs', node: process.version,
   fixtureSha256: hash(input), executableSha256: hash(readFileSync(executable)),
   rustSourceSha256: hash(readFileSync('crates/geometry-bridge/src/mesh_surface_groups.rs')),
-  hostSourceSha256: hash(readFileSync('src/services/meshSurfaceGroups.ts')),
+  hostSourceSha256: hash(readFileSync('src/kernel/meshSurfaceGroups.ts')),
   scope: 'native algorithm conformance only; no WASM or publication timing',
 }, null, 2))

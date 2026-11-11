@@ -23,7 +23,7 @@ const MODULE_DELIVERY_PATHS = [
   'src/kernel/geometry/kernel.ts',
   'src/kernel/geometry/kernelCompilation.ts',
   'src/kernel/geometry/kernelCompilationRequired.ts',
-  'src/services/wasmArtifact.ts',
+  'src/kernel/wasmArtifact.ts',
   'vite.qualification.config.ts',
 ]
 export const REFRESH_EXECUTORS = Object.freeze([

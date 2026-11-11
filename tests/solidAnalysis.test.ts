@@ -3,8 +3,8 @@ import { CadGeometryKernel } from '../src/kernel/cadGeometryKernel'
 import { loadCadKernelOps } from '../src/kernel/cadKernelOps'
 import { analyzeSolidCooperativelyInKernel, analyzeSolidInKernel } from '../src/kernel/geometry/meshAnalysis'
 import { decodeNurbsResult, kernelRuntime } from '../src/kernel/geometry/kernel'
-import { buildMeshBvh } from '../src/services/meshBvh'
-import { extractSemanticEdges } from '../src/services/meshTopology'
+import { buildMeshBvh } from '../src/kernel/meshBvh'
+import { extractSemanticEdges } from '../src/kernel/meshTopology'
 
 function expectSameBytes(actual: ArrayBufferView, expected: ArrayBufferView) {
   expect(Buffer.compare(

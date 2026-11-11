@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'svet'
 import { batch, signal, type Signal } from '../forma/svet'
-import type { CustomizerParameter, CustomizerValue } from '../services/scadCustomizer'
+import type { CustomizerParameter, CustomizerValue } from '../language/scadCustomizer'
 import { computeBushingParameterSuggestions } from '../services/bushingGenerator'
 import { computeSpinnerParameterSuggestions, type SpinnerParameterSuggestion } from '../services/spinnerGenerator'
 

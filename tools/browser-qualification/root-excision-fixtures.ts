@@ -1,4 +1,4 @@
-import type {SurfaceIsoTargetQuery,SurfaceIsoTargetReport} from '../../src/services/surfaceIsoTargetProtocol'
+import type {SurfaceIsoTargetQuery,SurfaceIsoTargetReport} from '../../src/kernel/surfaceIsoTargetProtocol'
 function require(x:unknown,m:string):asserts x{if(!x)throw Error(m)}
 function query(axis:0|1,sameWorld=false,rational=false,tangent=false):SurfaceIsoTargetQuery{
  const a=7/16,b=tangent?a:13/16,ab=a*b,sum=a+b,z=[ab,ab-sum/2,ab-sum+1]

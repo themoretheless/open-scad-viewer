@@ -8,7 +8,7 @@ import {DEFAULT_SWEEP_VOLUME_BUDGETS} from './nurbsSweepEmbedding'
 import type {SweepSectionCorrection} from './nurbsSectionProjection'
 import type {SweepRetainedChartEvidence} from './nurbsSweepRetainedCharts'
 import type {NurbsBrep} from './geometry/brep'
-import type {SweepBoundaryCertificate} from '../services/sweepBoundaryCertificate'
+import type {SweepBoundaryCertificate} from './sweepBoundaryCertificate'
 export interface MiterOwnedSourceRequest {
  loops:NurbsCurve[][]
  points:[number,number,number][]
@@ -75,12 +75,12 @@ export interface AnnularMiterOwnedBoundaryReport extends MiterOwnedBoundaryRepor
  /** Separate selection for the optional exact planar-cap optimization. */
  planarCapFaces:number[]
  retainedSmoothness:{
-  walls:import('../services/miterProfileSmoothness').MiterProfileSmoothness
+  walls:import('./miterProfileSmoothness').MiterProfileSmoothness
   maxWork:number;totalExactWork:number
   auditOrder?:'caps-first'
   geometricMaxCells?:number;geometricCells?:number
   capInternalSeams:{method:'retained-annular-cap-internal-jets';edgeIds:number[];extractionComplete:boolean;
-   unclassifiedFaces:number[];unpairedEdges:number[];g1Certified:boolean;g2Certified:boolean;exactWork:number;maxWork:number;geometricG2?:import('../services/geometricG2').GeometricG2Report}[]
+   unclassifiedFaces:number[];unpairedEdges:number[];g1Certified:boolean;g2Certified:boolean;exactWork:number;maxWork:number;geometricG2?:import('./geometricG2').GeometricG2Report}[]
   capWallContinuity:'C0';fullBoundarySmoothnessCertified:false
  }|null
  retainedAnnularFilling:{

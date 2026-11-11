@@ -1,5 +1,5 @@
 import type {DirectSketch} from '../services/directModeling'
-import type {MainSolidJob} from '../services/mainSolidProtocol'
+import type {MainSolidJob} from './mainSolidProtocol'
 import type {SnapGeometry} from '../services/modelingSnaps'
 import {SolidGeometryDisplayQueue} from './solidGeometryDisplayQueue'
 const geometryWeight=(g:SnapGeometry)=>{

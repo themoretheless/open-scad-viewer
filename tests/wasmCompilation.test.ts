@@ -1,5 +1,5 @@
 import {afterEach, expect, it, vi} from 'vitest'
-import {compileOptionalWasm, setOptionalWasmCompiler} from '../src/services/wasmCompilation'
+import {compileOptionalWasm, setOptionalWasmCompiler} from '../src/kernel/wasmCompilation'
 
 afterEach(() => {
   setOptionalWasmCompiler(undefined)

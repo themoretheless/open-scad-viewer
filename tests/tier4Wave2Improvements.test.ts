@@ -4,19 +4,19 @@ import {
   estimateSolidMassGrams,
   solidMaterialRgb,
 } from '../src/kernel/solidMaterial'
-import { inspectMeshManifoldDiagnostics } from '../src/services/meshInspection'
+import { inspectMeshManifoldDiagnostics } from '../src/kernel/meshInspection'
 import { computeGcodeLayerSummary } from '../src/fabrication/gcodePreviewGeometry'
 import {
   exportCustomizerPresetsJson,
   importCustomizerPresetsJson,
   applyCustomizerPresetToSource,
-} from '../src/services/scadCustomizer'
+} from '../src/language/scadCustomizer'
 import {
   DRAWING_SHEET_FORMATS,
   formatDrawingDimensionWithTolerance,
 } from '../src/services/drawingSheets'
 import { computeAdaptiveGridStepMm } from '../src/services/modelingGrid'
-import { computeSteppedOrbitAngles } from '../src/services/viewportModel'
+import { computeSteppedOrbitAngles } from '../src/render/viewportModel'
 import { formatInterferenceMarkdownReport } from '../src/mcp/rushGraphInterference'
 
 const IDENTITY_TRANSFORM = new Float32Array([

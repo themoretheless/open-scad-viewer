@@ -7,8 +7,8 @@ import { resolveTheme, THEME_SELECTIONS, type ThemeSelection } from './services/
 import { IndexedDbWorkspaceRepository } from './services/workspaceIndexedDb'
 import { BrowserWorkspacePersistence } from './services/workspacePersistence'
 import { readWorkspaceShareHash } from './services/workspaceShare'
-import { setOptionalWasmCompiler } from './services/wasmCompilation'
-import { compileStreamingWasm } from './services/wasmStreaming'
+import { setOptionalWasmCompiler } from './kernel/wasmCompilation'
+import { compileStreamingWasm } from './kernel/wasmStreaming'
 
 if (import.meta.env.DEV && new URLSearchParams(location.search).get('xrEmulator') === '1') {
   const { installVrEmulator } = await import('./dev/vrEmulator')

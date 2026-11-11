@@ -6,7 +6,7 @@ import {
   matchMeshesByProvenance,
   resolveProvenance,
   summarizeMeasurement,
-} from '../src/services/meshInspection'
+} from '../src/kernel/meshInspection'
 import { identity, scale, translate, type Mat4 } from '../src/services/math3d'
 import type {
   MeshData,

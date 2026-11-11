@@ -1,12 +1,12 @@
 import type { ArtifactFormat } from '../modelStore'
-import { extractCustomizerParameters } from '../../services/scadCustomizer'
-import type { CustomizerParameter, CustomizerValue } from '../../services/scadCustomizer'
+import { extractCustomizerParameters } from '../../language/scadCustomizer'
+import type { CustomizerParameter, CustomizerValue } from '../../language/scadCustomizer'
 import { CustomizerValueError, InvalidGeometryError, MAX_ANALYSIS_OBJECTS, MAX_ANALYSIS_OPTIONS, MAX_ANALYSIS_PARAMETERS, MAX_ANALYSIS_SOURCES_PER_OBJECT, MAX_ANALYSIS_TEXT_LENGTH, MAX_ANALYSIS_WARNINGS, MAX_ANALYSIS_WARNING_LENGTH, MAX_ARTIFACT_BYTES } from '../geometryService'
 import type { CustomizerParameterSummary, GeometryAnalysis, ObjectAnalysis, SourceSummary } from '../geometryService'
 import type { GeometryBuildResult } from '../../kernel/geometryBuildEngine'
 import type { GeometryExecutionDescriptor } from '../../core/geometryExecution'
 import type { MeshData, MeshSourceReference } from '../../core/mesh'
-import { inspectMesh } from '../../services/meshInspection'
+import { inspectMesh } from '../../kernel/meshInspection'
 
 export function boundedText(value: string, maxLength = MAX_ANALYSIS_TEXT_LENGTH): string {
   if (value.length <= maxLength) return value

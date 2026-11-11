@@ -15,7 +15,7 @@ vi.mock('../src/kernel/geometry/polygon', () => ({
   GCODE_PREVIEW_DIALECT: 'open-scad-viewer/print-preview 2',
   GCODE_FLAVORS: ['marlin', 'klipper', 'reprapfirmware'],
 }))
-vi.mock('../src/services/meshFlatten', () => ({
+vi.mock('../src/kernel/meshFlatten', () => ({
   flattenGroupGeometry: (...args: unknown[]) => geometry.flatten(...args),
 }))
 vi.mock('../src/fabrication/printReadiness', async importOriginal => ({

@@ -2,7 +2,7 @@ import type {MeshData} from '../core/mesh'
 import {compileOpenSCAD} from '../language/openscadCompiler'
 import {directBodiesScad} from './directBodiesScad'
 import type {DirectDocument} from './directModeling'
-import {sceneBody} from './meshFlatten'
+import {sceneBody} from '../kernel/meshFlatten'
 const sameNumbers=(a:ArrayLike<number>,b:ArrayLike<number>)=>a.length===b.length&&Array.from(a).every((value,index)=>Object.is(value,b[index]))
 const sameMesh=(a:{positions:ArrayLike<number>;indices:ArrayLike<number>},b:{positions:ArrayLike<number>;indices:ArrayLike<number>}|undefined)=>
  !!b&&sameNumbers(a.positions,b.positions)&&sameNumbers(a.indices,b.indices)

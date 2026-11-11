@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
-import {isOriginalQuadricGraphReport as valid} from '../src/services/originalQuadricGraphProtocol'
-import {isOriginalQuadricCarrierReport} from '../src/services/originalQuadricCarrierProtocol'
+import {isOriginalQuadricGraphReport as valid} from '../src/kernel/originalQuadricGraphProtocol'
+import {isOriginalQuadricCarrierReport} from '../src/kernel/originalQuadricCarrierProtocol'
 import {graphReport,graphBoundaryReport,graphUnprovedReport} from './fixtures/quadricGraph'
 describe('finite quadric graph evidence',()=>{
  it('accepts finite contact only with original target and carrier provenance',()=>expect(valid(graphReport())).toBe(true))

@@ -1,5 +1,5 @@
 import type { MeshData } from '../core/mesh'
-import { flattenExportMeshes } from '../services/meshExportAdapter'
+import { flattenExportMeshes } from '../exchange/meshExportAdapter'
 
 export interface GeometryCheck {
   id: string

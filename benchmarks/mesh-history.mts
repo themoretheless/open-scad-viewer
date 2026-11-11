@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {pathToFileURL} from 'node:url'
 import {resolve} from 'node:path'
-import {MeshHistory, type MeshWorkspaceDocument} from '../src/services/meshEditing'
+import {MeshHistory, type MeshWorkspaceDocument} from '../src/kernel/meshEditing'
 
 assert.ok(process.argv[2], 'Pass the baseline meshEditing.ts path')
 const baselineUrl = pathToFileURL(resolve(process.argv[2]))
@@ -49,5 +49,5 @@ for (const triangles of [1_000, 10_000]) for (const initialCommits of [0, 80]) {
     historySha256:hash(Buffer.from(JSON.stringify(historyNames)))})
 }
 console.log(JSON.stringify({node:process.version,arch:process.arch,
-  baselineSha256:hash(readFileSync(baselineUrl)),candidateSha256:hash(readFileSync(new URL('../src/services/meshEditing.ts',import.meta.url))),
+  baselineSha256:hash(readFileSync(baselineUrl)),candidateSha256:hash(readFileSync(new URL('../src/kernel/meshEditing.ts',import.meta.url))),
   method:'Nine alternating commits after 0 or 80 setup commits; each changes only the name on an otherwise unchanged mesh. Initial empty histories grow during sampling; filled histories may evict by character/count limits. Validation, snapshot allocation and GC included; fixture setup and full document/undo/redo parity checks excluded.',samples},null,2))

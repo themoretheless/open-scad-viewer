@@ -6,7 +6,7 @@ import {
   preflightStepInput,
   preflightStlInput,
 } from '../src/language/parserInputBudgets'
-import { buildStepRawArtifact } from '../src/services/stepRawArtifact'
+import { buildStepRawArtifact } from '../src/exchange/stepRawArtifact'
 
 const budgets = { ...DEFAULT_PARSER_INPUT_BUDGETS, entities: 2, depth: 2, faces: 1, controlPoints: 2 }
 const thrown = (run: () => unknown): unknown => { try { run() } catch (error) { return error } throw new Error('Expected parser refusal') }

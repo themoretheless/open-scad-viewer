@@ -16,7 +16,7 @@ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{
 
 const {importStepForWorkbench}=await import('../src/kernel/cadStepRouting')
 const {estimateDirectStepLod0Hausdorff}=await import('../src/kernel/cadNurbsStep')
-const {stepLod0Cache,MAX_LOD0_MEMORY_BYTES,MAX_LOD0_DURABLE_BYTES,MAX_LOD0_SOURCE_INDEX_BYTES,MAX_LOD0_ENTRIES}=await import('../src/services/stepLod0Cache')
+const {stepLod0Cache,MAX_LOD0_MEMORY_BYTES,MAX_LOD0_DURABLE_BYTES,MAX_LOD0_SOURCE_INDEX_BYTES,MAX_LOD0_ENTRIES}=await import('../src/exchange/stepLod0Cache')
 const fixture=createStepLod0BenchmarkFixture()
 const sha256=(value:string|Uint8Array)=>createHash('sha256').update(value).digest('hex')
 const summarize=(samplesMs:number[])=>{

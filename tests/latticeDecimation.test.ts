@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {decimateLattice} from '../src/services/latticeDecimation'
+import {decimateLattice} from '../src/fabrication/latticeDecimation'
 import {inspectPolygonMesh,type PolygonMesh} from '../src/kernel/geometry/polygon'
 /** Closed oriented box with subdivided top/bottom grids and quad strip walls. */
 function gridBox(n:number,size=10,height=4):PolygonMesh{

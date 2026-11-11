@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {evaluateThermalStrength,screenTrussMembers,type ThermalStrengthRequest} from '../src/services/trussScreening'
-import {solveTruss,type TrussModel} from '../src/services/trussAnalysis'
+import {evaluateThermalStrength,screenTrussMembers,type ThermalStrengthRequest} from '../src/kernel/trussScreening'
+import {solveTruss,type TrussModel} from '../src/kernel/trussAnalysis'
 import {callGeometryRust} from '../src/kernel/geometry/kernel'
 
 const profile={material:'PETG',grade:'Synthetic specimen',propertySource:'Regression only',nozzleMm:0.4,lineWidthMm:0.45,layerHeightMm:0.2,nozzleTempC:240,bedTempC:80}

@@ -1,6 +1,6 @@
 import { IDBFactory } from 'fake-indexeddb'
 import { describe, expect, it } from 'vitest'
-import { SvgDraftStore, validSvgDraft, type SvgDraft } from '../src/services/svgDraftStore'
+import { SvgDraftStore, validSvgDraft, type SvgDraft } from '../src/exchange/svgDraftStore'
 const draft = (text = '<svg/>'): SvgDraft => ({ version: 1, text, filename: 'Знак.svg', height: 5, axis: 'z', dpi: 96, tolerance: 0.05, geometryMode: 'vector', rasterSize: 512, alphaThreshold: 0.5, fonts: [{ name: 'local.ttf', bytes: new Uint8Array([1, 2, 3]) }], opened: true })
 describe('SVG draft persistence', () => {
   it('restores source, physical settings, disclosure state and exact font bytes through a new repository', async () => {

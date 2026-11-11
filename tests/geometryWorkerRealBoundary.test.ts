@@ -5,7 +5,7 @@ import { sha256Hex } from '../src/core/sha256'
 import {
   ManifoldPlanQualificationWorkerLane,
   type ManifoldPlanQualificationWorkerLike,
-} from '../src/services/manifoldPlanQualificationWorkerLane'
+} from '../src/kernel/manifoldPlanQualificationWorkerLane'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
   isGeometryWorkerEvent,
@@ -18,7 +18,7 @@ import {
   isMcpManifoldPlanQualificationTerminal,
   type McpManifoldPlanQualificationRequest,
   type McpManifoldPlanQualificationTerminal,
-} from '../src/services/manifoldPlanQualificationProtocol'
+} from '../src/kernel/manifoldPlanQualificationProtocol'
 
 const liveWorkers = new Set<Worker>()
 const harnessUrl = new URL('./fixtures/web-worker-node-harness.mjs', import.meta.url)

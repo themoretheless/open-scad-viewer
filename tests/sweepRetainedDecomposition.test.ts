@@ -1,9 +1,9 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 import {expect,it} from 'vitest'
 import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 import {createRationalBrepSectionLoft,createProgressiveMiterBrepProfileBody} from '../src/kernel/geometry/brep'
-import {inspectSweepRetainedCorrespondence,inspectSweepRetainedDecomposition,inspectSweepRetainedCapDecomposition} from '../src/services/sweepRetainedCorrespondence'
+import {inspectSweepRetainedCorrespondence,inspectSweepRetainedDecomposition,inspectSweepRetainedCapDecomposition} from '../src/kernel/sweepRetainedCorrespondence'
 it('binds periodic hollow profiles with joint authored frame, guide and affine laws through Rush',async()=>{
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
@@ -46,7 +46,7 @@ it('covers exactly closed periodic hollow profiles through the complete boundary
  expect(body.boundaryCertificate).toMatchObject({continuousBound:true,withinBudget:true,reason:null})
  expect(body.profileSmoothness).toMatchObject({extractionComplete:true,profileG1Certified:true,profile:{exactG1G2Certified:true,certifiedOrder:2}})
  expect(body.profileSmoothness.profile.seams).toHaveLength(8)
- const {inspectMiterProfileSmoothness}=await import('../src/services/miterProfileSmoothness')
+ const {inspectMiterProfileSmoothness}=await import('../src/kernel/miterProfileSmoothness')
  const exhausted=inspectMiterProfileSmoothness(body.model,[body.model.faces.length-2,body.model.faces.length-1],body.profileSmoothness.totalExactWork-1)
  expect(exhausted.profile.exactG1G2Certified).toBe(false)
  expect(loops).toEqual(before)
@@ -211,7 +211,7 @@ it('certifies filled caps and admits the original moving-axis periodic Rush fixt
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const graph=compileRushFrontend(readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow.r','utf8')).document
  const before=structuredClone(graph)
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -238,7 +238,7 @@ it('certifies the moving-axis periodic Rush body with explicit authored-plane ca
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow-authored-caps.r','utf8')
  const graph=compileRushFrontend(source).document,before=structuredClone(graph)
  const node=graph.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!

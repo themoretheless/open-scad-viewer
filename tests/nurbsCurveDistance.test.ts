@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {measureNurbsCurveDistance,evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
-import {mainSolidExpectation,mainSolidResult,type MainSolidJob} from '../src/services/mainSolidProtocol'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
+import {mainSolidExpectation,mainSolidResult,type MainSolidJob} from '../src/kernel/mainSolidProtocol'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
 const line=(points:number[][]):NurbsCurve=>({degree:1,knots:[0,0,1,1],controlPoints:points,weights:[1,1]})
 const arc:NurbsCurve={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[10,0,0],[10,10,0],[0,10,0]],weights:[1,Math.SQRT1_2,1]}
 it('measures rational curves in WASM, preserving original parameters and the document',()=>{

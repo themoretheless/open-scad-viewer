@@ -1,19 +1,19 @@
 import type { MeshData } from '../core/mesh'
 import {isNativeGeometryArtifact} from '../core/nativeGeometry'
-import {inspectProgressiveSweepSolidAdmission} from '../services/sweepSolidAdmission'
+import {inspectProgressiveSweepSolidAdmission} from './sweepSolidAdmission'
 import type { DirectBody, DirectDocument } from '../services/directModeling'
 import { emptyDirectDocument, parseDirectDocument } from '../services/directModeling'
 import {inspectNurbsBrep, transformNurbsBrep, type NurbsBrep} from './geometry/brep'
 import type { PolygonMesh } from './geometry/polygon'
-import type { MeshObject, MeshWorkspaceDocument } from '../services/meshEditing'
-import { emptyMeshDocument } from '../services/meshEditing'
+import type { MeshObject, MeshWorkspaceDocument } from './meshEditing'
+import { emptyMeshDocument } from './meshEditing'
 import { tessellateSolidNurbsSurface } from './solidNurbs'
 import {placeSolidMeshInKernel} from './geometry/meshAnalysis'
-import {flattenGroupGeometry} from '../services/meshFlatten'
+import {flattenGroupGeometry} from './meshFlatten'
 import { createSelectionTransferService } from './geometry/selectionTransfer'
 import { isTopoId, type TopoId } from '../core/topologyLineage'
 
-import { stringifyMeshJson } from '../services/meshJson'
+import { stringifyMeshJson } from '../exchange/meshJson'
 /** N1: transfer a Solid selection across a rebuild using durable lineage only. */
 export function transferSolidSelection(selection: string, lineageJson?: string): string | null {
   if (!isTopoId(selection)) return null

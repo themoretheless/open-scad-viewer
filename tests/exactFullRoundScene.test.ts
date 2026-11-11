@@ -19,7 +19,7 @@ vi.mock('../src/kernel/geometry/kernelCompilation', async importOriginal => {
 import * as nativeExecutor from '../src/kernel/brepNativeExecutor'
 import { buildBrepSemanticScene } from '../src/kernel/brepSemanticScene'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer'
-import { restoreExactFullRoundSnapshot } from '../src/services/exactFullRoundSnapshot'
+import { restoreExactFullRoundSnapshot } from '../src/kernel/exactFullRoundSnapshot'
 import { isGeometryEvaluationResultPayload } from '../src/kernel/geometryWorkerProtocol'
 import { geometrySceneFromMeshes, meshesFromGeometryScene } from '../src/core/scene'
 import { remapNativeFaceSelection } from '../src/services/nativeFaceSelection'

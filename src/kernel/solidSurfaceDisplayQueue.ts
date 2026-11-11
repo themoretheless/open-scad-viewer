@@ -1,6 +1,6 @@
 import type {SolidNurbsSurface} from './solidNurbs'
 import type {PolygonMesh} from './geometry/polygon'
-import type {MainSolidJob} from '../services/mainSolidProtocol'
+import type {MainSolidJob} from './mainSolidProtocol'
 import {SolidGeometryDisplayQueue} from './solidGeometryDisplayQueue'
 export type {GeometryDisplayResult as SurfaceDisplayResult} from './solidGeometryDisplayQueue'
 type Job=Extract<MainSolidJob,{kind:'surfaceMesh'}>

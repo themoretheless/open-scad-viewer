@@ -1,8 +1,8 @@
 import type {MeshData} from '../../core/mesh'
 import type {PhotoReconstruction, PhotoSurface} from './kernel'
 import {fillVertexNormalsInKernel} from '../../kernel/geometry/meshAnalysis'
-import {buildMeshBvh} from '../meshBvh'
-import {extractSemanticEdges} from '../meshTopology'
+import {buildMeshBvh} from '../../kernel/meshBvh'
+import {extractSemanticEdges} from '../../kernel/meshTopology'
 
 type RecoveredCamera = PhotoReconstruction['cameras'][number]
 type Vector3 = [number, number, number]

@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
-import {expressionShellExpectation,validExpressionShell} from '../src/services/expressionShell'
+import {expressionShellExpectation,validExpressionShell} from '../src/kernel/expressionShell'
 import {describe,it,expect} from 'vitest'
-import {validNeighborTangencyRequest,validNeighborTangencyReport} from '../src/services/expressionNeighborTangency'
+import {validNeighborTangencyRequest,validNeighborTangencyReport} from '../src/kernel/expressionNeighborTangency'
 describe('actual shell neighbor tangency transport',()=>{
  const request={controls:1000,cells:10000,spans:100000,maxSineSquared:1e-6}
  const pending={version:1,qualified:false,basis:'owned-full-Hermite-actual-shell-neighbors',upperSineSquared:null,cells:0,spans:0,reason:'budget-exhausted',solidQualified:false}

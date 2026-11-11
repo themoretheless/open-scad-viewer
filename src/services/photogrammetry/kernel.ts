@@ -1,6 +1,6 @@
 import type {PhotoCalibrationGroup, PhotoMeasuredInput} from './calibration'
 import {encodeBinary, type BinaryTripleHints} from '../valueBinaryCodec'
-import {decodePacked, writeLinear} from '../wasmHost'
+import {decodePacked, writeLinear} from '../../kernel/wasmHost'
 import type {WgslVariant} from '../../render/webgpuFeatures'
 
 /** Geometry fields written by the Rust adapter as numeric triples decode into flat typed arrays. */

@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {isSurfaceIsoAuditReport} from '../src/services/surfaceIsoSelfIntersectionProtocol'
+import {isSurfaceIsoAuditReport} from '../src/kernel/surfaceIsoSelfIntersectionProtocol'
 function report():any{return{schema:'nurbs-surface-iso-self-intersection/1',status:'present',axis:0,parameter:.25,maxSpans:100,cells:4,presenceProven:true,isoAbsenceProven:false,surfaceAbsenceProven:false,isoCoverageComplete:false,allContactBranchesEnumerated:false,witnessCoordinates:'normalized-original-active-domain',crossings:[{method:'original-planar-krawczyk',parameterBoxes:[[[.2,.3],[.25,.25]],[[.7,.8],[.25,.25]]],positionBounds:[[0,0],[0,0],[1,1]]}],unresolvedCurveParameters:[[[0,1],[0,1]]]}}
 describe('selected surface iso evidence',()=>{
  it('accepts an isolated contact and unresolved remaining curve domains',()=>expect(isSurfaceIsoAuditReport(report())).toBe(true))

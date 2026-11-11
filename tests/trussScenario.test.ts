@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest'
-import {resolveTrussScenario, type TrussScenario} from '../src/services/trussScenario'
-import {solveTruss} from '../src/services/trussAnalysis'
+import {resolveTrussScenario, type TrussScenario} from '../src/kernel/trussScenario'
+import {solveTruss} from '../src/kernel/trussAnalysis'
 
 function scenario(): TrussScenario {
   return {nodesMm: [[0,0,0],[10,0,0]], members: [{nodes: [0,1], youngMpa: 2000, areaMm2: 2}],

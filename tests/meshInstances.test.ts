@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { MeshInstances, type InstanceMesh } from '../src/services/meshInstances'
+import { MeshInstances, type InstanceMesh } from '../src/kernel/meshInstances'
 import { identity } from '../src/services/math3d'
 
 function harness() {

@@ -1,2 +1,2 @@
 /** Compatibility entry point. */
-export * from '../services/sweep/certificates/nurbsFilledCapError'
+export * from './sweep/certificates/nurbsFilledCapError'

@@ -4,11 +4,11 @@ import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {emptyDirectDocument} from '../src/services/directModeling'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 import {wholeWallSearchCandidates} from '../src/kernel/solidWallSearch'
 import {inspectWholeWall,wholeWallExpectation,validWholeWall} from '../src/kernel/solidWholeWall'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})
 const fixtures=JSON.parse(readFileSync('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/whole-wall/contract.json','utf8')).cases
 const cases=[]

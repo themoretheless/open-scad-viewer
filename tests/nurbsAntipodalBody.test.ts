@@ -1,10 +1,10 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {readSweepBodyBoundaryViewportEvidence} from '../src/kernel/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 
 it('owns antipodal holonomy error and independently audits retained hollow Solid',async()=>{

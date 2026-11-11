@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed} from 'svet'
-import {sourceBodyDisplayMessage,sourceBodyDisplayLocation} from '../services/sourceBodyDisplay'
+import {sourceBodyDisplayMessage,sourceBodyDisplayLocation} from '../kernel/sourceBodyDisplay'
 const props=defineProps<{name:string;id:string;error:Error;locale:string;pending?:boolean}>()
 defineEmits<{retry:[]}>()
 const message=computed(()=>sourceBodyDisplayMessage(props.error,props.locale))

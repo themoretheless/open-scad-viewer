@@ -1,4 +1,4 @@
-import type {BondedSolidModel} from '../services/bondedSolidProtocol'
+import type {BondedSolidModel} from '../kernel/bondedSolidProtocol'
 /** Synthetic two-tetrahedron verification fixture, never a calibrated plastic. */
 export const bondedSolidExample:BondedSolidModel={
   nodesMm:[[0,0,0],[1,0,0],[0,1,0],[0,0,-1],[0,0,0],[1,0,0],[0,1,0],[0,0,1]],

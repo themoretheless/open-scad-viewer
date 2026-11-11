@@ -1,4 +1,4 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {bezierNurbsCurve,circleNurbsCurve,progressiveMiterNurbsProfiles,previewProgressiveMiterNurbsProfiles,streamProgressiveMiterNurbsProfiles,inspectProgressiveMiterCapProjection,inspectProgressiveMiterIdealCapDomains,miterNurbsProfileSections,type NurbsScaleLaw,type NurbsVectorLaw} from '../src/kernel/nurbsConstructors'
 import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
@@ -154,7 +154,7 @@ it('preserves authored miter frames from Rush into actual Solid admission',async
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-authored-frame-hollow.r','utf8')
  const compiled=compileRushFrontend(source)
  const node=compiled.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -170,7 +170,7 @@ it.each(['miter-combined-frame-guide-affine-hollow.r','miter-combined-frame-guid
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const source=readFileSync('examples/rush/'+file,'utf8')
  const compiled=compileRushFrontend(source)
  const node=compiled.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -184,7 +184,7 @@ it('admits combined authored frame affine Rush bodies into Solid',async()=>{
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-combined-frame-affine-hollow.r','utf8')
  const compiled=compileRushFrontend(source)
  const node=compiled.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -200,7 +200,7 @@ it('admits guide affine Rush bodies into Solid',async()=>{
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-guide-affine-hollow.r','utf8')
  const compiled=compileRushFrontend(source)
  const node=compiled.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -225,7 +225,7 @@ it('certifies closed hollow affine shells and admits the actual body into Solid'
  expect(body.model.faces.every(face=>face.holes.length===0)).toBe(true)
  expect(body.volume,JSON.stringify(body.volume)).toMatchObject({solidGeometryCertified:true,nesting:{rolesConsistent:true,parents:[null,0]},orientations:[{shell:0,outward:true,expectedOutward:true},{shell:1,outward:false,expectedOutward:false}]})
  const {createNativeGeometryArtifact}=await import('../src/core/nativeGeometry')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const artifact=createNativeGeometryArtifact('closed-affine','brep',{geometry:body.model},{nodes:[{id:'closed-affine',op:'brep_progressive_miter_sweep',closed:true}],root:'closed-affine'})
  expect(inspectProgressiveSweepSolidAdmission(artifact,body.model)).toMatchObject({solidGeometryCertified:true})
  const inward=structuredClone(body.model)
@@ -238,7 +238,7 @@ it('preserves affine miter dimensions and certificates from Rush into the native
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-affine-hollow.r','utf8')
  const compiled=compileRushFrontend(source)
  const node=compiled.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -356,7 +356,7 @@ it('transfers certified retained scale/twist hollow Rush geometry to Solid',asyn
  const {readFileSync}=await import('node:fs')
  const {parseOpenSCAD}=await import('../src/language/openscadParser')
  const {sceneMeshesToSolidDocument}=await import('../src/kernel/solidBridge')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const source=readFileSync('examples/rush/progressive-miter-certified-hollow.r','utf8')
  const scene=await parseOpenSCAD(source)
  expect(scene.meshes.length).toBeGreaterThan(0)

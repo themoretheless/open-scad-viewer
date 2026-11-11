@@ -1,7 +1,7 @@
 import {describe,it,expect,vi} from 'vitest'
 import {deflateRawSync,constants} from 'node:zlib'
 import {encodeBinary,decodeBinary} from '../src/services/valueBinaryCodec'
-import {unpackWasm} from '../src/services/wasmPacking'
+import {unpackWasm} from '../src/kernel/wasmPacking'
 import {callGeometryRust,createRustSurfaceEvaluator} from '../src/kernel/geometry/kernel'
 import {prepareGraphRust} from '../src/language/languages/kernel'
 

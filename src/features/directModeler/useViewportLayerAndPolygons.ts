@@ -22,8 +22,8 @@ import { solidMaterialRgb } from '../../kernel/solidMaterial'
 import type { SolidNurbsSurface } from '../../kernel/solidNurbs'
 import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import type { SolidSurfaceDisplayQueue } from '../../kernel/solidSurfaceDisplayQueue'
-import { TransparentBsp } from '../../services/transparentBsp'
-import { prepareVrPolygons } from '../../services/vrScene'
+import { TransparentBsp } from '../../render/transparentBsp'
+import { prepareVrPolygons } from '../../render/vrScene'
 import { COARSE_DISPLAY, type Pane } from './helpers'
 
 export interface UseViewportLayerAndPolygonsOptions {

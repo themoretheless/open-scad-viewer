@@ -11,14 +11,14 @@ import {
   GeometryBuildEngine,
   type GeometryBuildResult,
 } from '../kernel/geometryBuildEngine'
-import { buildBinaryStl, buildObj } from '../services/meshExport'
-import { inspectMesh } from '../services/meshInspection'
+import { buildBinaryStl, buildObj } from '../exchange/meshExport'
+import { inspectMesh } from '../kernel/meshInspection'
 import {
   extractCustomizerParameters,
   replaceCustomizerValue,
   type CustomizerParameter,
   type CustomizerValue,
-} from '../services/scadCustomizer'
+} from '../language/scadCustomizer'
 import {
   MAX_STORED_ARTIFACT_BYTES,
   validateModelSource,

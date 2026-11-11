@@ -2,7 +2,7 @@ import {it,expect} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
-import {readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {readSweepViewportEvidence} from '../src/kernel/sweepViewportEvidence'
 it('combines a rational curved guide with reparameterized authored frame and affine laws',()=>{
  const source=readFileSync('examples/rush/miter-rational-curved-guide-frame-affine-hollow.r','utf8')
  const graph=compileRushFrontend(source)

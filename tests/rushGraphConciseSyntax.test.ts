@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { formatCode } from '../src/services/codeFormat'
+import { formatCode } from '../src/language/codeFormat'
 import { compileRushGraph } from '../src/language/rushGraph'
 import { compileRushFrontend } from '../src/language/rushFrontend'
 import { parseOpenSCAD } from '../src/language/openscadParser'

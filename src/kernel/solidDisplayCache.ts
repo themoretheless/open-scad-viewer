@@ -1,5 +1,5 @@
 import {adaptiveCacheBytes} from '../services/adaptiveMemoryBudget'
-import {stringifyMeshJson} from '../services/meshJson'
+import {stringifyMeshJson} from '../exchange/meshJson'
 import type {PolygonMesh} from './geometry/polygon'
 export interface DisplayMesh {closed?:boolean[]|null;workClosed?:boolean[]|null;mesh:PolygonMesh;map:number[]|null;normals:number[][];flat?:{positions:Float32Array;normals:Float32Array}}
 /** Bounded accounting estimate, not a measurement of JavaScript heap usage. */

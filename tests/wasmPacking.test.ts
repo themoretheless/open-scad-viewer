@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest'
 import {deflateRawSync} from 'node:zlib'
-import {unpackWasm,unpackWasmBase64} from '../src/services/wasmPacking'
+import {unpackWasm,unpackWasmBase64} from '../src/kernel/wasmPacking'
 import {encodeSeptBase118} from '../scripts/wasm-base91.mjs'
 
 const lengthBase = [3, 4, 5, 6, 7, 8, 9, 10]

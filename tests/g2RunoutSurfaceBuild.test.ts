@@ -43,7 +43,7 @@ it('keeps unvisited panel fields diagnostic instead of committing their surfaces
 })
 
 it('validates rejected worker receipts before the interface reads diagnostic fields',async()=>{
- const {mainSolidResult}=await import('../src/services/mainSolidProtocol/mainSolidResult')
+ const {mainSolidResult}=await import('../src/kernel/mainSolidProtocol/mainSolidResult')
  const r=receipt();r.report.withinTolerance=false;r.report.fields[0].curvatureDecision='exceeds';r.report.fields[0].absoluteCurvatureUpper=12
  const result={document:null,error:'RUNOUT_CURVATURE_LIMIT',report:null,runoutReport:r.report}
  expect(mainSolidResult({kind:'surfaceBuild',runoutId:'result'},result)).toBe(true)

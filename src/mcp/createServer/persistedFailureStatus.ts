@@ -6,7 +6,7 @@ import { ModelNotFoundError, buildDiagnostic, isAbortError, publicToolError } fr
 import type { ModelStore, StoredBuild } from '../modelStore'
 import { OfficialOpenScadRemoteError } from '../officialOpenScadRuntimeService'
 import type { SelectedModel } from '../createServer'
-import { buildObj } from '../../services/meshExport'
+import { buildObj } from '../../exchange/meshExport'
 import { buildUri, executionToWire, sha256 } from './officialToolInputSchema'
 import { truncateWellFormed } from '../../core/unicode'
 

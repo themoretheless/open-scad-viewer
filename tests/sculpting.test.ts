@@ -5,7 +5,7 @@ import {evaluateSdf,sculptSdf,sculptSdfSphere,tessellateSdf,type SdfField,type S
 import {brushNurbsCurve,brushNurbsSurface,sculptNurbsCurve,sculptNurbsSurface,extrudeNurbsCurve} from '../src/kernel/nurbsConstructors'
 import {evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
 import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
-import {brushDisplace,meshCentroid,sculptMesh} from '../src/services/meshEditing'
+import {brushDisplace,meshCentroid,sculptMesh} from '../src/kernel/meshEditing'
 import {SCULPT_FALLOFFS,SCULPT_KINDS,buildSculptBrush,isFractionalSculptKind,validateSculptBrush,type GeometryBrush,type SculptBrush} from '../src/kernel/geometryEditing'
 
 const square=[[-1,-1],[1,-1],[1,1],[-1,1]]

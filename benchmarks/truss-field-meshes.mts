@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
-import {trussFieldMeshes} from '../src/services/trussFieldMeshes'
-import type {TrussModel,TrussResponse} from '../src/services/trussAnalysis'
+import {trussFieldMeshes} from '../src/kernel/trussFieldMeshes'
+import type {TrussModel,TrussResponse} from '../src/kernel/trussAnalysis'
 import type {MeshData} from '../src/core/mesh'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
-import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
-import {compileWasmArtifact} from '../src/services/wasmArtifact'
+import {setOptionalWasmCompiler} from '../src/kernel/wasmCompilation'
+import {compileWasmArtifact} from '../src/kernel/wasmArtifact'
 
 const artifact=readFileSync('public/wasm/geometry-kernel.wasm')
 setOptionalWasmCompiler(async(_,identity)=>{assert.ok(identity);return compileWasmArtifact(artifact,identity)})

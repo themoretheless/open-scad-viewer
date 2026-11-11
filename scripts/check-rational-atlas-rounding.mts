@@ -3,7 +3,7 @@ import {join} from 'node:path'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
-import {writeLinear,decodePacked} from '../src/services/wasmHost'
+import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 import {box3d} from '../tests/fixtures/minkowski3d-cases'
 const [wasmPath,fixtures,output]=process.argv.slice(2)
 const bytes=readFileSync(wasmPath),w=new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports as any

@@ -1,8 +1,8 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {measureShellDistance,type ShellDistanceOptions} from '../src/kernel/solidMeasurements'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
 const read=(name:string)=>JSON.parse(readFileSync(new URL(`./fixtures/${name}-distance.json`,import.meta.url),'utf8'))
 const options=(f:any):ShellDistanceOptions=>({a:structuredClone(f.document.bodies[0].brep),b:structuredClone(f.document.bodies[1].brep),toleranceMm:.001,toleranceUv:1e-7,maxCells:1000000,maxDomainCells:8000000})
 it('finds the global shell minimum over trimmed faces and rational spheres in WASM',()=>{

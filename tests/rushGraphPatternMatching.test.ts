@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { compileRushFrontend } from '../src/language/rushFrontend'
 import { parseOpenSCAD } from '../src/language/openscadParser'
-import { formatCode } from '../src/services/codeFormat'
+import { formatCode } from '../src/language/codeFormat'
 
 const header = '// @rush/1\n'
 const compile = (source: string) => compileRushFrontend(header + source)

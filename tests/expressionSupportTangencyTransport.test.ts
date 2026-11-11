@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {expressionShellExpectation,validExpressionShell} from '../src/services/expressionShell'
+import {expressionShellExpectation,validExpressionShell} from '../src/kernel/expressionShell'
 const fixtures=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/expression-support-tangency-dispatch-2026-10-09.json',import.meta.url),'utf8'))
 it('accepts actual native support joins and bound-free exhausted work',()=>{
  for(const value of Object.values(fixtures) as any[]) {

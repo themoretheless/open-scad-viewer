@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs'
 import {cpus} from 'node:os'
 import {pathToFileURL} from 'node:url'
 import {resolve} from 'node:path'
-import * as candidate from '../src/services/meshSelectionOverlay'
+import * as candidate from '../src/render/meshSelectionOverlay'
 import {identity} from '../src/services/math3d'
 
 assert.ok(process.argv[2], 'Pass the baseline meshSelectionOverlay.ts path')
@@ -46,5 +46,5 @@ for (const side of [1, 32, 100]) {
     trianglesSha256:hash(new Uint8Array(expected.triangles.buffer)),boundarySha256:hash(new Uint8Array(expected.boundaryLines.buffer))})
 }
 console.log(JSON.stringify({node:process.version,cpu:cpus()[0]?.model,
-  baselineSha256:hash(readFileSync(baselineUrl)),candidateSha256:hash(readFileSync(new URL('../src/services/meshSelectionOverlay.ts',import.meta.url))),
+  baselineSha256:hash(readFileSync(baselineUrl)),candidateSha256:hash(readFileSync(new URL('../src/render/meshSelectionOverlay.ts',import.meta.url))),
   method:'Coplanar grids, one selected face; cached CSR index; 5 warmups and 15 alternating baseline/candidate samples. Exact output parity outside timing. Allocation and GC included; no GPU/rendering or index construction.',samples},null,2))

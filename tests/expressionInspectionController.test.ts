@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs'
 import {effectScope,shallowRef,ref} from 'svet'
 import {it,expect,vi} from 'vitest'
 import {useExpressionInspection} from '../src/services/useExpressionInspection'
-import type {ExpressionInspectionOptions,ExpressionInspectionResult} from '../src/services/expressionShellInspection'
+import type {ExpressionInspectionOptions,ExpressionInspectionResult} from '../src/kernel/expressionShellInspection'
 const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-inspection-native-2026-10-09.json',import.meta.url),'utf8'))
 const {op:_,...options}=fixture.request as ExpressionInspectionOptions&{op:string}
 it('clears mesh preview on cancellation and refuses a late response with stale mesh limits',async()=>{

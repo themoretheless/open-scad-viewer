@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
-import { readSvgDocument, readSvgDocumentAsync } from '../src/services/svgDocument'
+import { readSvgDocument, readSvgDocumentAsync } from '../src/exchange/svgDocument'
 import identity from '../src/generated/geometry-kernels/identity'
 
 const mode = process.argv[2]

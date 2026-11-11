@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {onUnmounted,ref,shallowRef,watch} from 'svet'
-import {computeBondedSolid} from '../services/mainSolidWorker'
-import type {BondedSolidResult} from '../services/bondedSolidProtocol'
+import {computeBondedSolid} from '../kernel/mainSolidWorker'
+import type {BondedSolidResult} from '../kernel/bondedSolidProtocol'
 import {bondedSolidExample} from './bondedSolidExample'
 const props=defineProps<{locale:string}>()
 const label=(ru:string,en:string)=>props.locale==='ru'?ru:en

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ViewFrustum } from '../src/services/viewFrustum'
+import { ViewFrustum } from '../src/render/viewFrustum'
 import { invert, lookAt, multiply, orthographic, perspective, transformPoint } from '../src/services/math3d'
 
 describe('WebGPU view frustum', () => {

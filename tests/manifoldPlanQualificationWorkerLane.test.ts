@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   ManifoldPlanQualificationWorkerLane,
   type ManifoldPlanQualificationWorkerLike,
-} from '../src/services/manifoldPlanQualificationWorkerLane'
-import type { McpManifoldPlanQualificationRequest } from '../src/services/manifoldPlanQualificationProtocol'
+} from '../src/kernel/manifoldPlanQualificationWorkerLane'
+import type { McpManifoldPlanQualificationRequest } from '../src/kernel/manifoldPlanQualificationProtocol'
 
 class ScriptedWorker implements ManifoldPlanQualificationWorkerLike {
   readonly messages: unknown[] = []

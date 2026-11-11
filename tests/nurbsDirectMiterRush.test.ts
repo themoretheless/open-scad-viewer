@@ -1,10 +1,10 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {readSweepViewportEvidence} from '../src/kernel/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 
 it('owns original direct circle correction through Rush, viewport and fresh Solid admission',async()=>{
  const source=readFileSync('examples/rush/direct-miter-circle-owned-boundary.r','utf8')

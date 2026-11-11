@@ -3,10 +3,10 @@ import {createRationalBrepSectionLoft,createPeriodicBrepSectionLoft,createProgre
 import {circleNurbsCurve,miterNurbsProfileSections} from '../src/kernel/nurbsConstructors'
 import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
 import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 import {inspectSweepEmbedding,inspectSweepVolume,type SweepEmbeddingBudgets} from '../src/kernel/nurbsSweepEmbedding'
-import {inspectSweepRetainedCorrespondence,inspectSweepRetainedCaps} from '../src/services/sweepRetainedCorrespondence'
+import {inspectSweepRetainedCorrespondence,inspectSweepRetainedCaps} from '../src/kernel/sweepRetainedCorrespondence'
 import {inspectNativeSweepCapContacts} from '../src/kernel/nurbsSweepCapContacts'
 const budgets:SweepEmbeddingBudgets={toleranceUv:1e-8,maxExactWork:1000000,
  maxTrimPairs:1000,maxTrimCells:10000,maxTrimDomainCells:100000,maxSpans:100,maxLinearCells:10000,

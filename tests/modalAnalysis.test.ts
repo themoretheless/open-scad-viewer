@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest'
 import {GeometryKernelError} from '../src/kernel/geometry/kernel'
-import {solveFrameModal, type FrameModalModel} from '../src/services/frameAnalysis'
-import {solveTrussModal} from '../src/services/trussAnalysis'
+import {solveFrameModal, type FrameModalModel} from '../src/kernel/frameAnalysis'
+import {solveTrussModal} from '../src/kernel/trussAnalysis'
 
 const frameCantilever = (): Omit<FrameModalModel, 'densitiesTMm3' | 'massModel' | 'modes'> => ({
   nodesMm: [0,250,500,750,1000].map(x => [x,0,0]),

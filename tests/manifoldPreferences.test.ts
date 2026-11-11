@@ -2,7 +2,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 
 async function loadModule() {
   vi.resetModules()
-  return import('../src/services/manifoldPreferences')
+  return import('../src/kernel/manifoldPreferences')
 }
 
 function storage() {

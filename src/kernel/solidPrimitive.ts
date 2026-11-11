@@ -1,6 +1,6 @@
-import {createG2AnnularTube} from '../services/geometricG2'
+import {createG2AnnularTube} from './geometricG2'
 import {parseDirectDocument,type DirectDocument} from '../services/directModeling'
-import {stringifyMeshJson} from '../services/meshJson'
+import {stringifyMeshJson} from '../exchange/meshJson'
 import {createBrepBox,createBrepCylinder,createBrepFrustum,createBrepSphere,createBrepTorus,createBrepTube,createFacetedBrepCylinder,createFacetedBrepSphere,extrudeBrepPolygon,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep'
 import {revolvePolygonProfile} from './geometry/polygon'
 export type SolidPrimitiveKind='box'|'wedge'|'cylinder'|'frustum'|'tube'|'cone'|'sphere'|'torus'

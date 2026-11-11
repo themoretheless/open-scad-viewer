@@ -8,8 +8,8 @@ import type {
 } from '../components/cadPanels.types'
 import type { MeshData } from '../core/mesh'
 import type { Language } from '../i18n/appStrings'
-import type { CameraState } from '../services/cameraHistory'
-import { inspectMesh } from '../services/meshInspection'
+import type { CameraState } from '../render/cameraHistory'
+import { inspectMesh } from '../kernel/meshInspection'
 import { useModelingGrid } from '../services/modelingGrid'
 import type {
   DisplayMode,
@@ -22,7 +22,7 @@ import type {
 } from '../render/rendererContracts'
 import { DEFAULT_ENV, DEFAULT_MATCAP, getMaterialPreset } from '../render/rendererContracts'
 import type { SceneController, SceneState } from '../services/sceneController'
-import type { ViewportController, ViewportState } from '../services/viewportController'
+import type { ViewportController, ViewportState } from '../render/viewportController'
 import type { WebGPURenderer } from '../render/webgpuRenderer'
 
 export interface UseViewportDisplayControlsOptions {

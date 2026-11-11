@@ -2,10 +2,10 @@
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'svet'
 import type { MeshData } from '../core/mesh'
 import type { PickHit } from '../render/rendererContracts'
-import { SVG_MAX_BYTES, SVG_MAX_FONTS, SVG_MAX_FONT_BYTES, SVG_MAX_TOTAL_FONT_BYTES } from '../services/svgLimits'
-import { createSvgWorkerClient } from '../services/svgWorkerClient'
-import type { SvgGeometryResult } from '../services/svgWorkerProtocol'
-import { svgDraftStore, type SvgDraft } from '../services/svgDraftStore'
+import { SVG_MAX_BYTES, SVG_MAX_FONTS, SVG_MAX_FONT_BYTES, SVG_MAX_TOTAL_FONT_BYTES } from '../exchange/svgLimits'
+import { createSvgWorkerClient } from '../exchange/svgWorkerClient'
+import type { SvgGeometryResult } from '../exchange/svgWorkerProtocol'
+import { svgDraftStore, type SvgDraft } from '../exchange/svgDraftStore'
 import { MAX_WORKSPACE_SOURCE_LENGTH } from '../services/workspaceDocument'
 
 const props = withDefaults(defineProps<{ meshes: MeshData[]; hit: PickHit | null; available: boolean; locale: string; canAppend?: boolean; remainingSource?: number; appendRevision?: string | number }>(), { canAppend: true, remainingSource: MAX_WORKSPACE_SOURCE_LENGTH })

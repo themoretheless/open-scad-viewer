@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {readFile,writeFile} from 'node:fs/promises'
 import {resolve,dirname} from 'node:path'
 import {createHash} from 'node:crypto'
-import {svgContours,contoursSvg,contoursExtrusion,meshSvgContours} from '../src/services/svgGeometry'
+import {svgContours,contoursSvg,contoursExtrusion,meshSvgContours} from '../src/exchange/svgGeometry'
 import {HeadlessGeometryService} from '../src/mcp/geometryService'
 const file=resolve(process.argv[2]??'/tmp/solid-svg-qualification/browser-edited.svg')
 const source=await readFile(file,'utf8'),geometry=new HeadlessGeometryService()

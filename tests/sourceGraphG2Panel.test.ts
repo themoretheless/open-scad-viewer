@@ -34,7 +34,7 @@ it('opens preview, cancels stale work, retries and clears diagnostics on source 
 })
 
 it('discards a captured late worker reply after cancellation and accepts Retry',async()=>{
- const {MainSolidWorkerClient}=await import('../src/services/mainSolidWorkerClient')
+ const {MainSolidWorkerClient}=await import('../src/kernel/mainSolidWorkerClient')
  const ports:any[]=[]
  const client=new MainSolidWorkerClient(()=>{const p:any={onmessage:null,onerror:null,onmessageerror:null,terminate:vi.fn(),postMessage:vi.fn()};ports.push(p);return p})
  const job:any={kind:'sourceGraphG2Preview',sources:[actual.patch,actual.patch],width:{degree:1,knots:[0,0,1,1],controlPoints:[[.25,0,0],[.25,0,0]],weights:[1,1]},options:{radiusMm:1,radiusToleranceMm:.001}}

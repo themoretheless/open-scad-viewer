@@ -1,7 +1,7 @@
 import {expect, it} from 'vitest'
 import {GeometryKernelError} from '../src/kernel/geometry/kernel'
-import {solveFrameBuckling, type FrameBucklingModel} from '../src/services/frameAnalysis'
-import {solveTrussBuckling, type TrussModel} from '../src/services/trussAnalysis'
+import {solveFrameBuckling, type FrameBucklingModel} from '../src/kernel/frameAnalysis'
+import {solveTrussBuckling, type TrussModel} from '../src/kernel/trussAnalysis'
 
 const column = (tipForce: number): FrameBucklingModel => ({
   nodesMm: [0,250,500,750,1000].map(x => [x,0,0]),

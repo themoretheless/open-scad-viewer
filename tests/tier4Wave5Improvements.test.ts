@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { inspectIgesHeaderMetadata } from '../src/kernel/cadIges'
-import { computeSurfaceGroupAreaSummary } from '../src/services/meshSurfaceGroups'
+import { computeSurfaceGroupAreaSummary } from '../src/kernel/meshSurfaceGroups'
 import {
   isOpenScadBuiltinFunction,
   findClosestOpenScadBuiltinFunction,

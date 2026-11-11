@@ -1,4 +1,4 @@
-import {TransparentBsp, type TransparentFragment} from '../services/transparentBsp'
+import {TransparentBsp, type TransparentFragment} from '../render/transparentBsp'
 import {smoothTriangleListInKernel} from './geometry/meshAnalysis'
 /**
  * Smooth GPU display for the Solid workspace.

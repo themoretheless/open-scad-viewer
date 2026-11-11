@@ -1,5 +1,5 @@
 import {lightenSolid,type LighteningOptions} from './solidLightening'
-import {textureSurface,type SurfaceTextureOptions} from '../services/surfaceTexture'
+import {textureSurface,type SurfaceTextureOptions} from '../render/surfaceTexture'
 import type {DirectDocument,DirectBody,DirectSketch} from '../services/directModeling'
 import {normalizePolygonMesh,type PolygonMesh} from './geometry/polygon'
 import type {Vec3} from '../services/directSketchGeometry'

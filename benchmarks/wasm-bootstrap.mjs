@@ -19,7 +19,7 @@ if (isMainThread) {
   assert.ok(paths.length <= 4, 'at most four decoder variants')
   const inputs = []
   for (const path of paths) inputs.push({ path, sha256: hash(await readFile(path)) })
-  const hostPaths = ['benchmarks/wasm-bootstrap.mjs', 'src/services/wasmPacking.ts', 'src/generated/geometry-kernels/bytes.ts', 'src/generated/geometry-kernels/kernel_bg.wasm']
+  const hostPaths = ['benchmarks/wasm-bootstrap.mjs', 'src/kernel/wasmPacking.ts', 'src/generated/geometry-kernels/bytes.ts', 'src/generated/geometry-kernels/kernel_bg.wasm']
   const hostInputs = []
   for (const path of hostPaths) hostInputs.push({ path, sha256: hash(await readFile(path)) })
   const samples = []
@@ -71,7 +71,7 @@ if (isMainThread) {
 } else {
   register()
   const { default: packedGeometry } = await import('../src/generated/geometry-kernels/bytes.ts')
-  const { unpackWasmBase64 } = await import('../src/services/wasmPacking.ts')
+  const { unpackWasmBase64 } = await import('../src/kernel/wasmPacking.ts')
   assert.ok(packedGeometry.startsWith('b85:'), 'benchmark expects generated base85 geometry')
   const wasm = await readFile(workerData.path)
   const header = Buffer.alloc(4)

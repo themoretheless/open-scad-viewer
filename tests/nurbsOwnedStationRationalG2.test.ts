@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
 import {createRationalBrepSectionLoft} from '../src/kernel/geometry/brep'
-import {inspectMiterProfileSmoothness} from '../src/services/miterProfileSmoothness'
+import {inspectMiterProfileSmoothness} from '../src/kernel/miterProfileSmoothness'
 
 it('transports exact rational station G2 through topology-owned BRep audit with one budget',()=>{
  const sections=[0,3,10,21,34].map(z=>[[circleNurbsCurve([0,0,z],[0,0,1],.5)]])
@@ -25,7 +25,7 @@ it('preserves exact nominal profile G2 on the corrected spatial Rush fixture',as
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const graph=compileRushFrontend(readFileSync('examples/rush/progressive-miter-spatial-circle-corrected-hollow.r','utf8'))
  const built=await buildOwnNurbsAsync(graph.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({profileG2Certified:true,solidGeometryCertified:true,continuousBound:true,boundaryErrorWithinBudget:true})
@@ -35,8 +35,8 @@ it('preserves nonbinary retained station G2 through Rush, viewport evidence and 
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const graph=compileRushFrontend(readFileSync('examples/rush/nonuniform-station-g2-hollow-miter.r','utf8'))
  const node=graph.document.nodes.find(node=>node.op==='brep_progressive_miter_sweep')!
  expect(node).toBeDefined()

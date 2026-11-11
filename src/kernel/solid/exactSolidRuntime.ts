@@ -1,6 +1,6 @@
 import {sceneMeshesToSolidDocument} from '../solidBridge'
 import { evaluateExactSolids } from '../geometryBuildEngine'
-import { stringifyMeshJson } from '../../services/meshJson'
+import { stringifyMeshJson } from '../../exchange/meshJson'
 import { buildExactSolidBodies } from './brepBuild'
 import { meshDataToPolygonBody } from '../solidBridge'
 import { EXACT_SOLID_MAX_DOCUMENT_CHARACTERS, isExactSolidRequest, type ExactSolidResponse } from './exactSolidProtocol'

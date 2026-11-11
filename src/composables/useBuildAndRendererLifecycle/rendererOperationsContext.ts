@@ -9,9 +9,9 @@ import {
 } from '../../services/buildCoordinator'
 import { BuildPerformanceHistory, type BuildPerformanceSample } from '../../services/buildPerformance'
 import { planGeometryPublication } from '../../services/buildPromotionPolicy'
-import type { CameraState } from '../../services/cameraHistory'
-import { diagnosticFromBuildError, type EditorDiagnostic } from '../../services/editorDiagnostics'
-import { withSelectionSurfaces } from '../../services/meshSurfaceGroups'
+import type { CameraState } from '../../render/cameraHistory'
+import { diagnosticFromBuildError, type EditorDiagnostic } from '../../language/editorDiagnostics'
+import { withSelectionSurfaces } from '../../kernel/meshSurfaceGroups'
 import type {
   DisplayMode,
   PickHit,
@@ -22,7 +22,7 @@ import type {
 import { RendererRecoveryGate } from '../../render/rendererRecoveryGate'
 import type { SceneController } from '../../services/sceneController'
 import { planScenePublication } from '../../services/scenePublication'
-import type { ViewportController } from '../../services/viewportController'
+import type { ViewportController } from '../../render/viewportController'
 import { WebGPURenderer } from '../../render/webgpuRenderer'
 import { buildSources } from '../../appHelpers'
 import type { Language } from '../../i18n/appStrings'

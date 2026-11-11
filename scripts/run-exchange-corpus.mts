@@ -7,7 +7,7 @@ import {
   type ExchangeCorpusFormat,
   type ExchangeCorpusOrigin,
   type ExchangeCorpusSourceReport,
-} from '../src/services/exchangeCorpus'
+} from '../src/exchange/exchangeCorpus'
 
 interface SourceManifest {
   id: string

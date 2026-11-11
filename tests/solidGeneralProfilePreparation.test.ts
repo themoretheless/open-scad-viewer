@@ -3,7 +3,7 @@ import {prepareSolidProfile} from '../src/kernel/solidProfilePreparation'
 import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
 import {evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
 import {worldPoint} from '../src/services/directSketchGeometry'
-import {mainSolidExpectation,mainSolidResult,type MainSolidJob} from '../src/services/mainSolidProtocol'
+import {mainSolidExpectation,mainSolidResult,type MainSolidJob} from '../src/kernel/mainSolidProtocol'
 
 function curves():NurbsCurve[]{
  const p=[[0,0],[2,0],[2,2],[0,2]]
@@ -66,7 +66,7 @@ it('localizes both rational crossings of a refused contour and keeps the documen
  const before=structuredClone(document),result=prepareSolidProfile(document,['arch','lines'],0)
  expect(result.report).toMatchObject({accepted:false,reason:'invalid-contour'})
  expect(result.report.diagnosticLoops?.[0][0]).toEqual({...document.curves[0].curve,periodic:false})
- const {profileIntersectionDiagnostics}=await import('../src/services/profileIntersectionDiagnostics')
+ const {profileIntersectionDiagnostics}=await import('../src/kernel/profileIntersectionDiagnostics')
  const events=profileIntersectionDiagnostics(result.report.diagnosticLoops!,result.report.intersections!)
  expect(events.points).toHaveLength(2)
  expect(events.points.every(p=>p.first.curve===0&&p.second.curve===2)).toBe(true)

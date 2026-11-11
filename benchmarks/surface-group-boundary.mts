@@ -4,9 +4,9 @@ import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
 import {CadGeometryKernel} from '../src/kernel/cadGeometryKernel'
 import {surfaceGroupsInKernel} from '../src/kernel/geometry/meshAnalysis'
-import {inferSurfaceIds} from '../src/services/meshSurfaceGroups'
-import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
-import {compileWasmArtifact} from '../src/services/wasmArtifact'
+import {inferSurfaceIds} from '../src/kernel/meshSurfaceGroups'
+import {setOptionalWasmCompiler} from '../src/kernel/wasmCompilation'
+import {compileWasmArtifact} from '../src/kernel/wasmArtifact'
 
 const artifactPath = process.argv[2] ?? 'public/wasm/geometry-kernel.wasm'
 const artifact = readFileSync(artifactPath)
@@ -59,7 +59,7 @@ try {
   }
 } finally { session.dispose() }
 const hashes = Object.fromEntries([
-  'src/services/meshSurfaceGroups.ts',
+  'src/kernel/meshSurfaceGroups.ts',
   'crates/geometry-bridge/src/mesh_surface_groups.rs', 'benchmarks/surface-group-boundary.mts',
 ].map(path => [path, createHash('sha256').update(readFileSync(path)).digest('hex')]))
 console.log(JSON.stringify({node: process.version, arch: process.arch, platform: process.platform,

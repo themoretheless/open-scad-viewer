@@ -8,7 +8,7 @@ import type {
   SceneUploadMetrics,
   ShadingModel,
 } from './rendererContracts'
-import { buildSceneAabbIndex, type SceneAabbIndex } from '../services/sceneAabbIndex'
+import { buildSceneAabbIndex, type SceneAabbIndex } from './sceneAabbIndex'
 import { effectiveDisplayAlpha } from '../services/backendQuality'
 import { OBJECT_UNIFORM_LAYOUT } from './shaders'
 import { fillObjectUniform } from '../services/uniformFill'

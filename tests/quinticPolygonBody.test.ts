@@ -3,7 +3,7 @@ import {expect,it} from 'vitest'
 import {callGeometryRust} from '../src/kernel/geometry/kernel'
 import type {NurbsBrep} from '../src/kernel/geometry/brep'
 import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 
 // Authored inputs exported by the Rust fixture executable; no geometry or
 // proof decisions are implemented in this transport test.

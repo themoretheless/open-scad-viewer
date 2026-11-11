@@ -1,4 +1,4 @@
-import { stringifyMeshJson } from '../src/services/meshJson'
+import { stringifyMeshJson } from '../src/exchange/meshJson'
 import {expect,it} from 'vitest'
 import {createBrepCylinder,createBrepFrustum,createBrepTube,createBrepTorus,inspectNurbsBrep,analyzeNurbsBrep,tessellateNurbsBrep,booleanNurbsBrep,createBrepBox,extrudeBrepPolygon} from '../src/kernel/geometry/brep'
 import {transformSelection} from '../src/services/directSolidTools'

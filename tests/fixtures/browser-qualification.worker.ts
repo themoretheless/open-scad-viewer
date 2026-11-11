@@ -13,7 +13,7 @@ import {
   isMcpManifoldPlanQualificationTerminal,
   type McpManifoldPlanQualificationRequest,
   type McpManifoldPlanQualificationTerminal,
-} from '../../src/services/manifoldPlanQualificationProtocol'
+} from '../../src/kernel/manifoldPlanQualificationProtocol'
 
 function envelope(request: McpManifoldPlanQualificationRequest) {
   return {

@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {isOriginalQuadricCarrierReport as valid} from '../src/services/originalQuadricCarrierProtocol'
+import {isOriginalQuadricCarrierReport as valid} from '../src/kernel/originalQuadricCarrierProtocol'
 import {quadricReport} from './fixtures/quadricCarrier'
 describe('original quadric carrier evidence',()=>{
  it('accepts complete carrier roots without finite surface admission',()=>expect(valid(quadricReport())).toBe(true))

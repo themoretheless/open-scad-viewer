@@ -1,4 +1,4 @@
-import type {OriginalPatchContactsQuery,OriginalPatchContactsReport} from '../../src/services/originalPatchContactsProtocol'
+import type {OriginalPatchContactsQuery,OriginalPatchContactsReport} from '../../src/kernel/originalPatchContactsProtocol'
 import {originalPatchAlgebraicBoundaryFixture} from './original-patch-fixtures.ts'
 type Case={name:string;query:OriginalPatchContactsQuery;check:(r:OriginalPatchContactsReport)=>void}
 function require(x:unknown,message:string):asserts x{if(!x)throw new Error(message)}

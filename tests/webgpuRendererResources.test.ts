@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
 import { geometryAssetId } from '../src/core/scene'
 import { WebGPURenderer } from '../src/render/webgpuRenderer'
-import * as sceneBounds from '../src/services/sceneAabbIndex'
+import * as sceneBounds from '../src/render/sceneAabbIndex'
 import * as meshAnalysis from '../src/kernel/geometry/meshAnalysis'
 import {callGeometryRust} from '../src/kernel/geometry/kernel'
 

@@ -18,7 +18,7 @@ import {
   MESH_IMPORT_FORMATS,
   type MeshExportFormat,
   type MeshImportFormat,
-} from '../src/services/meshConvert'
+} from '../src/exchange/meshConvert'
 import { MeshImportError } from '../src/exchange/meshImport'
 
 interface Options {

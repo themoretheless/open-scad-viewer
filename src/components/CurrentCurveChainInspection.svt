@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {toRaw,computed,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'svet'
 import type {SolidNurbsCurve} from '../kernel/solidNurbs'
-import type {CurveOffsetDiagnostics} from '../services/curveOffsetDiagnostics'
+import type {CurveOffsetDiagnostics} from '../kernel/curveOffsetDiagnostics'
 import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
 const emit=defineEmits<{result:[{curves:SolidNurbsCurve[];diagnostics:CurveOffsetDiagnostics}|null]}>()
 const props=defineProps<{curves:SolidNurbsCurve[];ids:string[];locale:string}>()

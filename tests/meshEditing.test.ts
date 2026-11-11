@@ -1,4 +1,4 @@
-import { stringifyMeshJson } from '../src/services/meshJson'
+import { stringifyMeshJson } from '../src/exchange/meshJson'
 import { describe, expect, it } from 'vitest'
 import {
   MeshHistory,
@@ -17,7 +17,7 @@ import {
   subdivideFaces,
   symmetrizeMesh,
   transformMesh,
-} from '../src/services/meshEditing'
+} from '../src/kernel/meshEditing'
 import { isWorkspaceMode, WORKSPACE_MODES } from '../src/services/workspaceModes'
 import { meshDocumentToSolidDocument, solidDocumentToMeshDocument } from '../src/kernel/solidBridge'
 import { emptyDirectDocument } from '../src/services/directModeling'

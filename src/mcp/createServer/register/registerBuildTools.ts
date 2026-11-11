@@ -1,7 +1,7 @@
 import { DEFAULT_MAX_ARTIFACT_BYTES, GeometryBusyError, MAX_ARTIFACT_BYTES } from '../../geometryService'
 import type { GeometryAnalysis } from '../../geometryService'
 import { analysisSchema, buildSchema, comparisonErrorResultSchema, comparisonSuccessSchema, idSchema, modelMetadataSchema, qualitySchema, scalarSchema, sha256Schema, sourceReferenceSchema } from '../../createServer'
-import type { CustomizerValue } from '../../../services/scadCustomizer'
+import type { CustomizerValue } from '../../../language/scadCustomizer'
 import type { GeometryExecutionDescriptor } from '../../../core/geometryExecution'
 import { ModelRevisionConflictError, isWellFormedUnicode } from '../../modelStore'
 import type { StoredBuild } from '../../modelStore'

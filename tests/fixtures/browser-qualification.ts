@@ -2,7 +2,7 @@ import {
   ManifoldPlanQualificationWorkerLane,
   ManifoldPlanQualificationWorkerLaneError,
   ManifoldPlanQualificationWorkerRemoteError,
-} from '../../src/services/manifoldPlanQualificationWorkerLane'
+} from '../../src/kernel/manifoldPlanQualificationWorkerLane'
 
 interface Check {
   readonly name: string

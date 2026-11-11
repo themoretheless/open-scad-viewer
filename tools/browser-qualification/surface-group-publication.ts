@@ -1,4 +1,4 @@
-import {withSelectionSurfaces} from '../../src/services/meshSurfaceGroups'
+import {withSelectionSurfaces} from '../../src/kernel/meshSurfaceGroups'
 import {GEOMETRY_WORKER_PROTOCOL_VERSION, isGeometryWorkerEvent, type GeometryBuildSuccess} from '../../src/kernel/geometryWorkerProtocol'
 import {sha256Hex} from '../../src/core/sha256'
 

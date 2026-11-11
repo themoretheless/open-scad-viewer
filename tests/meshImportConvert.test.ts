@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { convertMeshFile, MESH_EXPORT_FORMATS } from '../src/services/meshConvert'
-import { exportMeshFormat } from '../src/services/meshExportFormats'
+import { convertMeshFile, MESH_EXPORT_FORMATS } from '../src/exchange/meshConvert'
+import { exportMeshFormat } from '../src/exchange/meshExportFormats'
 import { formatMeshImportNotice } from '../src/exchange/meshImportReport'
 import {
   detectMeshImportFormat,

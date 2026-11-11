@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { exportMeshFormat, MESH_EXPORT_FORMATS } from '../src/services/meshExportFormats';
+import { exportMeshFormat, MESH_EXPORT_FORMATS } from '../src/exchange/meshExportFormats';
 import { buildOwnNurbs } from '../src/language/rushGraphNurbsKernel';
 import { RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../src/language/rushGraphNurbs';
 import { OpenScadProject } from '../src/language/openScadProject';
@@ -40,7 +40,7 @@ it('rejects an open printing mesh but exports it as OBJ', () => {
 });
 it('preserves mirrored world transforms when exporting the existing scene', async () => {
     const { HeadlessGeometryService } = await import('../src/mcp/geometryService');
-    const { flattenExportMeshes } = await import('../src/services/meshExportAdapter');
+    const { flattenExportMeshes } = await import('../src/exchange/meshExportAdapter');
     const result = await new HeadlessGeometryService().compile('translate([10,20,30])mirror([1,0,0])cube([2,3,4]);', 'full');
     const flat = flattenExportMeshes(result.meshes);
     expect(flat.report.signedVolumeMm3).toBeCloseTo(24);
@@ -49,8 +49,8 @@ it('preserves mirrored world transforms when exporting the existing scene', asyn
 });
 it('preserves separate 3MF objects and world placement through lossless compressed export', async () => {
     const { HeadlessGeometryService } = await import('../src/mcp/geometryService');
-    const { flattenExportMeshes } = await import('../src/services/meshExportAdapter');
-    const { exportMeshFormatCompressed } = await import('../src/services/meshExportFormats');
+    const { flattenExportMeshes } = await import('../src/exchange/meshExportAdapter');
+    const { exportMeshFormatCompressed } = await import('../src/exchange/meshExportFormats');
     const result = await new HeadlessGeometryService().compile('cube(2);translate([10,20,30])mirror([1,0,0])cube([2,3,4]);', 'full');
     const flat = flattenExportMeshes(result.meshes);
     expect(flat.parts).toHaveLength(2);
@@ -70,7 +70,7 @@ it('preserves separate 3MF objects and world placement through lossless compress
 });
 it('keeps touching scene parts independent instead of rejecting a welded aggregate', async () => {
     const { HeadlessGeometryService } = await import('../src/mcp/geometryService');
-    const { flattenExportMeshes } = await import('../src/services/meshExportAdapter');
+    const { flattenExportMeshes } = await import('../src/exchange/meshExportAdapter');
     const result = await new HeadlessGeometryService().compile('cube(2);translate([2,0,0])cube(2);', 'full');
     const flat = flattenExportMeshes(result.meshes);
     expect(flat.parts).toHaveLength(2);
@@ -78,7 +78,7 @@ it('keeps touching scene parts independent instead of rejecting a welded aggrega
 });
 
 it('admits compressible 3MF documents larger than the final artifact limit', async () => {
-    const { exportMeshFormatCompressed } = await import('../src/services/meshExportFormats');
+    const { exportMeshFormatCompressed } = await import('../src/exchange/meshExportFormats');
     const { export3mfModelInKernel } = await import('../src/kernel/geometry/meshArtifactExport');
     const large = { ...mesh, positions: [...mesh.positions, ...new Array<number>(270000).fill(Math.PI)] };
     expect(export3mfModelInKernel(large).length).toBeGreaterThan(4 * 1024 * 1024);

@@ -1,8 +1,8 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {inspectBoundaryAgreement} from '../src/kernel/solidBoundaryAgreement'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
 const fixtures=JSON.parse(readFileSync(new URL('./fixtures/boundary-agreement.json',import.meta.url),'utf8')).cases
 it('finds the unsampled boundary defect in WASM and retains model identities',()=>{
  for(const f of fixtures){
@@ -35,7 +35,7 @@ it('recovers in the worker after a bad budget',async()=>{
  expect(messages[1]).toMatchObject({ok:true,id:2,result:{complete:true,allWithinTolerance:false,mismatchCount:2}})
 })
 it('cancels boundary work and refuses its captured late response after restart',async()=>{
- const {MainSolidWorkerClient}=await import('../src/services/mainSolidWorkerClient')
+ const {MainSolidWorkerClient}=await import('../src/kernel/mainSolidWorkerClient')
  const ports:any[]=[]
  const client=new MainSolidWorkerClient(()=>{const p:any={onmessage:null,onerror:null,onmessageerror:null,terminated:false,postMessage(m:any){this.request=m},terminate(){this.terminated=true}};ports.push(p);return p})
  const model=fixtures[0].model,job={kind:'boundaryAgreement' as const,model,maxCells:10000},result=inspectBoundaryAgreement(model,10000)

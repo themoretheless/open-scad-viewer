@@ -4,8 +4,8 @@ import {
   UntrustedParserWorkerClient,
   type UntrustedParserPort,
   type UntrustedParserRequest,
-} from '../src/services/untrustedParserWorker'
-import { executeUntrustedParserJob } from '../src/services/untrustedParserWorkerRuntime'
+} from '../src/language/untrustedParserWorker'
+import { executeUntrustedParserJob } from '../src/language/untrustedParserWorkerRuntime'
 
 class FakePort implements UntrustedParserPort {
   onmessage: UntrustedParserPort['onmessage'] = null

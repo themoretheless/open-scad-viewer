@@ -1,6 +1,6 @@
 import {beforeAll,expect,it} from 'vitest'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
-import {assembleClosedNurbsPatches,createG2AnnularTube} from '../src/services/geometricG2'
+import {assembleClosedNurbsPatches,createG2AnnularTube} from '../src/kernel/geometricG2'
 import {createBrepBox} from '../src/kernel/geometry/brep'
 import type {NurbsBrep} from '../src/kernel/geometry/brep'
 beforeAll(async()=>{await warmGeometryKernel()})

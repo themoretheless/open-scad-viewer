@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import {mkdir,writeFile} from 'node:fs/promises'
-import {TransparentBsp,type TransparentFragment} from '../src/services/transparentBsp'
+import {TransparentBsp,type TransparentFragment} from '../src/render/transparentBsp'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 const directory=process.argv[2]??'/tmp/cpu-transparency'
 await mkdir(directory,{recursive:true})

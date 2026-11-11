@@ -3,7 +3,7 @@ import {createApp,h,ref} from 'svet'
 import DirectModeler from '../../src/features/DirectModeler.svt'
 import {warmGeometryKernel} from '../../src/kernel/geometry/kernel'
 import {createBrepBox,tessellateNurbsBrep} from '../../src/kernel/geometry/brep'
-import type {MainSolidRequest} from '../../src/services/mainSolidProtocol'
+import type {MainSolidRequest} from '../../src/kernel/mainSolidProtocol'
 const NativeWorker=window.Worker,requests=ref(0),injected=ref(false)
 window.Worker=class extends NativeWorker {
  override postMessage(message:MainSolidRequest,transfer?:Transferable[]){

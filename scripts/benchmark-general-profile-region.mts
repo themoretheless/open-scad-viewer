@@ -9,7 +9,7 @@ import {validateBrepProfile} from '../src/kernel/geometry/brepProfile'
 import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 import identity from '../src/generated/geometry-kernels/identity'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
-import {decodePacked,writeLinear} from '../src/services/wasmHost'
+import {decodePacked,writeLinear} from '../src/kernel/wasmHost'
 import type {BrepProfile} from '../src/kernel/geometry/brepProfile'
 function loop(x:number,y:number,size:number):NurbsCurve[]{
  const p=[[x,y],[x+size,y],[x+size,y+size],[x,y+size]]

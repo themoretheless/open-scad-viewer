@@ -2,11 +2,11 @@ import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
-import {resolveTrussScenario, type TrussScenario} from '../src/services/trussScenario'
-import {solveTruss, type TrussVector} from '../src/services/trussAnalysis'
+import {resolveTrussScenario, type TrussScenario} from '../src/kernel/trussScenario'
+import {solveTruss, type TrussVector} from '../src/kernel/trussAnalysis'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
-import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
-import {compileWasmArtifact} from '../src/services/wasmArtifact'
+import {setOptionalWasmCompiler} from '../src/kernel/wasmCompilation'
+import {compileWasmArtifact} from '../src/kernel/wasmArtifact'
 
 const artifact=readFileSync('public/wasm/geometry-kernel.wasm')
 setOptionalWasmCompiler(async (_,identity)=>{assert.ok(identity);return compileWasmArtifact(artifact,identity)})

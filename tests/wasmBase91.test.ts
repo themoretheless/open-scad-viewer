@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {encodeBase91,encodeVariableBase91,encodeVariableBase92,encodeVariableBase93,encodeVariableBase94,encodeVariableBase95,encodeVariableBase108,encodeVariableBase118,alphabet,alphabet92,decodeBase91 as decodeBuildBase91} from '../scripts/wasm-base91.mjs'
-import {decodeBase91} from '../src/services/wasmBase91'
+import {decodeBase91} from '../src/kernel/wasmBase91'
 it.each([encodeVariableBase91,encodeVariableBase92,encodeVariableBase93,encodeVariableBase94,encodeVariableBase95,encodeVariableBase108,encodeVariableBase118])('variable pairs preserve all word values, alignments, zeros and quoted literals (%#)',encode=>{
  const corpus=Uint8Array.from({length:65536*2},(_,i)=>i%2?Math.floor(i/2)>>8:Math.floor(i/2)&255)
  for(const bytes of [corpus,...Array.from({length:258},(_,n)=>new Uint8Array(n)),...Array.from({length:258},(_,n)=>Uint8Array.from({length:n},(_,i)=>(i*137+(i>>3))&255))]){

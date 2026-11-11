@@ -1,6 +1,6 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 const [fixture,output]=process.argv.slice(2)
 if(!fixture||!output)throw Error('Usage: fixture.json report.json')
 const document=JSON.parse(readFileSync(fixture,'utf8'))

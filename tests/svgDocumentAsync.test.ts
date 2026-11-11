@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { readSvgDocument, readSvgDocumentAsync, type SvgOptions } from '../src/services/svgDocument'
+import { readSvgDocument, readSvgDocumentAsync, type SvgOptions } from '../src/exchange/svgDocument'
 import { callGeometryRust, warmGeometryKernel } from '../src/kernel/geometry/kernel'
 
 vi.mock('../src/kernel/geometry/kernel', () => ({

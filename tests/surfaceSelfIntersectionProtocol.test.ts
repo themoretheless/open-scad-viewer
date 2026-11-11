@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {isSurfaceAuditReport} from '../src/services/surfaceSelfIntersectionProtocol'
+import {isSurfaceAuditReport} from '../src/kernel/surfaceSelfIntersectionProtocol'
 function present():any{return{schema:'nurbs-surface-self-intersection/1',status:'present',presenceProven:true,absenceProven:false,allContactBranchesEnumerated:false,witness:null,exactWitness:[[{numerator:'1',denominator:'12'},{numerator:'1',denominator:'2'}],[{numerator:'1',denominator:'4'},{numerator:'1',denominator:'2'}]],witnessCoordinates:'normalized-original-active-domain',reflectedAxis:0,injectivity:{proven:false,spans:100,reason:'work-limit'},maxSpans:100}}
 describe('surface audit Worker boundary',()=>{
  it('keeps non-dyadic witnesses as exact strings',()=>{const r=present();expect(isSurfaceAuditReport(r)).toBe(true);expect(r.exactWitness[0][0].numerator).toBe('1')})

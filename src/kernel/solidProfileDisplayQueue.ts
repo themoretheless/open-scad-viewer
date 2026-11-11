@@ -1,6 +1,6 @@
 import type {BrepProfile} from './geometry/brepProfile'
 interface ProfileItem {id:string;profile:BrepProfile}
-import type {MainSolidJob} from '../services/mainSolidProtocol'
+import type {MainSolidJob} from './mainSolidProtocol'
 import {SolidGeometryDisplayQueue} from './solidGeometryDisplayQueue'
 export type {GeometryDisplayResult as ProfileDisplayResult} from './solidGeometryDisplayQueue'
 type Job=Extract<MainSolidJob,{kind:'profileDisplay'}>

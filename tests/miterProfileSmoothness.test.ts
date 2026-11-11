@@ -1,9 +1,9 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {circleNurbsCurve,type NurbsScaleLaw} from '../src/kernel/nurbsConstructors'
 import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
 import {createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody} from '../src/kernel/geometry/brep'
-import {inspectMiterProfileSmoothness} from '../src/services/miterProfileSmoothness'
+import {inspectMiterProfileSmoothness} from '../src/kernel/miterProfileSmoothness'
 const law=(value:number):NurbsScaleLaw=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})
 const loops=[[circleNurbsCurve([0,0,0],[0,0,1],.5)],[reverseNurbsCurve(circleNurbsCurve([0,0,0],[0,0,1],.2))]]
 const points:[number,number,number][]=[[0,0,0],[0,0,10]]
@@ -47,8 +47,8 @@ it('carries independent G1 and unproved G2 through joint-mode Rush, viewport evi
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const graph=compileRushFrontend(readFileSync('examples/rush/miter-g1-profile-frame-guide-affine.r','utf8'))
  const built=buildOwnNurbs(graph.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  const node=graph.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -62,7 +62,7 @@ it('certifies every closed joint-mode profile seam within the declared aggregate
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const graph=compileRushFrontend(readFileSync('examples/rush/closed-miter-frame-guide-affine-hollow.r','utf8'))
  const built=buildOwnNurbs(graph.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  const node=graph.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!

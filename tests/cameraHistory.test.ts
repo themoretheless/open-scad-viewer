@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CameraHistory, cameraStatesEqual, type CameraState } from '../src/services/cameraHistory'
+import { CameraHistory, cameraStatesEqual, type CameraState } from '../src/render/cameraHistory'
 
 function state(distance: number, projection: CameraState['projection'] = 'perspective'): CameraState {
   return { yaw: distance / 10, pitch: 0.2, distance, target: [1, 2, 3], projection }

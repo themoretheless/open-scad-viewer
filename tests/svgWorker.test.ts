@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SvgWorkerClient, type SvgWorkerPort } from '../src/services/svgWorkerClient'
-import type { SvgJob, SvgWorkerRequest } from '../src/services/svgWorkerProtocol'
+import { SvgWorkerClient, type SvgWorkerPort } from '../src/exchange/svgWorkerClient'
+import type { SvgJob, SvgWorkerRequest } from '../src/exchange/svgWorkerProtocol'
 
 class Port implements SvgWorkerPort {
   listeners = new Map<string, Set<EventListener>>()

@@ -1,8 +1,8 @@
-import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/services/sourceBodyArchive'
+import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/kernel/sourceBodyArchive'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {gunzipSync} from 'node:zlib'
-import {sourceBodyExpectation,validSeamEndpointLimits,type SourceBodyOptions,type SourceSeamResult} from '../src/services/sourceBody'
+import {sourceBodyExpectation,validSeamEndpointLimits,type SourceBodyOptions,type SourceSeamResult} from '../src/kernel/sourceBody'
 const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-body-request.json.gz',import.meta.url))).toString())
 const options=():SourceBodyOptions=>{const {op:_op,...value}=structuredClone(request);return value}
 it('binds transport identity to the native projective discriminator',()=>{

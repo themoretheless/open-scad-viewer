@@ -1,5 +1,5 @@
-import {streamNativeSweep} from '../services/sweep/transport/streamNative'
-import type {ProgressiveOriginalFrameSmoothness,ProgressiveClosedPathFrameSmoothness,ProgressiveClosedAuthoredFrameSmoothness,ProgressiveClosedGuidedFrameSmoothness,ProgressiveRetainedDecompositionJoins,ProgressiveRetainedDecompositionSmoothness} from '../services/sweep/certificates/progressiveSweepApi'
+import {streamNativeSweep} from './sweep/transport/streamNative'
+import type {ProgressiveOriginalFrameSmoothness,ProgressiveClosedPathFrameSmoothness,ProgressiveClosedAuthoredFrameSmoothness,ProgressiveClosedGuidedFrameSmoothness,ProgressiveRetainedDecompositionJoins,ProgressiveRetainedDecompositionSmoothness} from './sweep/certificates/progressiveSweepApi'
 import type { RationalReparameterization } from './nurbsFoundation'
 /** Surface construction is implemented by the own Rust kernel. */
 import { type NurbsCurve } from './nurbsCurve'
@@ -459,6 +459,6 @@ export interface NurbsRectangleSection {center:[number,number,number];axisU:[num
 export const circleRectangleTransitionNurbsPatches=(circle:NurbsCircleSection,rectangle:NurbsRectangleSection):NurbsSurface[]=>
  callNurbsRust("surface_circle_rectangle_transition",{circle_center:circle.center,circle_normal:circle.normal,circle_seam:circle.seam,circle_radius:circle.radius,rectangle_center:rectangle.center,rectangle_axis_u:rectangle.axisU,rectangle_axis_v:rectangle.axisV})
 
-export * from '../services/loft/transport/construction'
+export * from './loft/transport/construction'
 
-export * from '../services/sweep/certificates/progressiveSweepApi'
+export * from './sweep/certificates/progressiveSweepApi'

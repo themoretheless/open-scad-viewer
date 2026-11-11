@@ -1,2 +1,2 @@
 /** Compatibility entry point. */
-export * from '../services/sweep/construction/nurbsCircleSectionRepair'
+export * from './sweep/construction/nurbsCircleSectionRepair'

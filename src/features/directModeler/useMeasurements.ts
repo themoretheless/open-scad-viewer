@@ -6,7 +6,7 @@ import { solidVertexCount, type PointMeasurement, type CurveMeasurement, type Fa
 import { type NurbsCurveDistance } from '../../kernel/nurbsCurve'
 import { type DirectDocument, type DirectBody } from '../../services/directModeling'
 import type { KernelManifoldMetrics } from '../../kernel/geometry/manifoldAnalysis'
-import { serializeManifoldMetricsReport, type ManifoldMetricsExportFormat, type ManifoldMetricsReportRow } from '../../services/manifoldMetricsReport'
+import { serializeManifoldMetricsReport, type ManifoldMetricsExportFormat, type ManifoldMetricsReportRow } from '../../kernel/manifoldMetricsReport'
 import { computed, ref, shallowRef, watchEffect, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 import { download } from './helpers'
 

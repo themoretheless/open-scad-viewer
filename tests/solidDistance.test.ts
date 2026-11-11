@@ -48,7 +48,7 @@ it('rejects inconsistent proof, budgets, shell ownership and contact coordinates
  expect(validSolidDistance(ie,{...invalid.result,converged:true})).toBe(false)
 })
 it('terminates an obsolete solid-distance request and rejects incomplete proof in replies',async()=>{
- const {MainSolidWorkerClient}=await import('../src/services/mainSolidWorkerClient')
+ const {MainSolidWorkerClient}=await import('../src/kernel/mainSolidWorkerClient')
  const ports:any[]=[]
  const client=new MainSolidWorkerClient(()=>{const p:any={onmessage:null,onerror:null,onmessageerror:null,terminated:false,postMessage(m:any){this.request=m},terminate(){this.terminated=true}};ports.push(p);return p})
  const job={kind:'solidDistance' as const,options:cases[0].request}

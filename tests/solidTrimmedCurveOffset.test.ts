@@ -23,7 +23,7 @@ it('refuses broken closure, excessive error and duplicate identities before muta
  expect(()=>offsetTrimmedSolidCurve(existing,options)).toThrow('identities')
  expect(existing.curves).toHaveLength(2)
 })
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
 it('worker admission checks the requested rule, bounds and loop identities',()=>{
  native.mockReturnValue({loops:[[curve]],report})
  const value=offsetTrimmedSolidCurve(source,options)
@@ -48,7 +48,7 @@ it('empty filled region gives an actionable result before changing the document'
  expect(source.curves).toHaveLength(1)
 })
 
-import {validCurveOffsetRegion} from '../src/services/curveOffsetRegion'
+import {validCurveOffsetRegion} from '../src/kernel/curveOffsetRegion'
 it('saved loop metadata rejects invalid part indices and false certification',()=>{
  const value={version:1,scope:'at-construction',sourceId:'source',loopId:'loop',part:0,parts:2,fillRule:'evenodd',originalOffsetTopologyCertified:false}
  expect(validCurveOffsetRegion(value)).toBe(true)

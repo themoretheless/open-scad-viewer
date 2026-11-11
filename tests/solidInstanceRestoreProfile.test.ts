@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto'
 import {expect,it} from 'vitest'
 import {parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
 import {resolveSolidInstances} from '../src/kernel/solidInstances'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 import {SolidInstanceBatchCache} from '../src/kernel/solidInstanceBatchCache'
 
 it.runIf(!!process.env.CAD_INSTANCE_PROFILE_INPUT)('profiles bounded instance restoration without changing serialized geometry',()=>{

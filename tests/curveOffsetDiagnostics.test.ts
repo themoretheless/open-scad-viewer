@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {validCurveOffsetDiagnostics} from '../src/services/curveOffsetDiagnostics'
+import {validCurveOffsetDiagnostics} from '../src/kernel/curveOffsetDiagnostics'
 const base=()=>({scope:'represented-offset-chain',method:'outward-line-pair-interval/1',originalOffsetTopologyCertified:false,crossings:[[0,2]],contacts:[],uncertain:[],degenerate:[],checks:3,totalPairs:3,enumerationComplete:true,predicatesComplete:true,complete:true,simple:false})
 it('accepts a completed crossing report and a bounded partial enumeration',()=>{
  expect(validCurveOffsetDiagnostics(base(),3)).toBe(true)

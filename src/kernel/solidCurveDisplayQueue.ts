@@ -1,6 +1,6 @@
 import type {NurbsCurve} from './nurbsCurve'
 interface CurveItem {id:string;curve:NurbsCurve}
-import type {MainSolidJob} from '../services/mainSolidProtocol'
+import type {MainSolidJob} from './mainSolidProtocol'
 import {SolidGeometryDisplayQueue} from './solidGeometryDisplayQueue'
 export type {GeometryDisplayResult as CurveDisplayResult} from './solidGeometryDisplayQueue'
 type Job=Extract<MainSolidJob,{kind:'curveDisplay'}>

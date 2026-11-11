@@ -24,12 +24,12 @@ import VrControls from './components/VrControls.svt'
 import ModelingGridControls from './components/ModelingGridControls.svt'
 import MaterialControls from './features/MaterialControls.svt'
 import { clamp } from './services/math3d'
-import { stringifyMeshJson } from './services/meshJson'
+import { stringifyMeshJson } from './exchange/meshJson'
 import { isRushFrontend, SOURCE_FILE_ACCEPT, SOURCE_FILE_EXTENSION, sourceFileExtension } from './language/rushFrontendDetect'
-import {readSweepViewportEvidence,readSweepPatchViewportEvidence,readSweepBodyBoundaryViewportEvidence} from './services/sweepViewportEvidence'
-import { highlightCode } from './services/codeHighlight'
+import {readSweepViewportEvidence,readSweepPatchViewportEvidence,readSweepBodyBoundaryViewportEvidence} from './kernel/sweepViewportEvidence'
+import { highlightCode } from './language/codeHighlight'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, watchEffect } from 'svet'
-import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_ACCEPT } from './services/meshFormats'
+import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, MESH_IMPORT_ACCEPT } from './exchange/meshFormats'
 import CommandPalette from './components/CommandPalette.svt'
 import CustomizerPanel from './components/CustomizerPanel.svt'
 const ExampleGallery = defineAsyncComponent(() => import('./components/ExampleGallery.svt'))
@@ -45,7 +45,7 @@ import { useEditorFind } from './composables/useEditorFind'
 import { emptyDirectDocument } from './services/directModeling'
 import { type WorkspaceMode, WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './services/workspaceModes'
 import { sceneMeshesToSolidDocument, meshDocumentToSolidDocument, meshDataToPolygon, meshDataToEditablePolygon, polygonToMeshObject } from './kernel/solidBridge'
-import { emptyMeshDocument, type MeshWorkspaceDocument } from './services/meshEditing'
+import { emptyMeshDocument, type MeshWorkspaceDocument } from './kernel/meshEditing'
 const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.svt'))
 const MeshModeler = defineAsyncComponent(() => import('./features/MeshModeler.svt'))
 const MainModelingTools = defineAsyncComponent(() => import('./features/MainModelingTools.svt'))
@@ -68,10 +68,10 @@ import { backendQuality } from './services/backendQuality'
 import { clampEditorWidth, editorWidthBounds } from './services/layoutSizing'
 import { nextRovingIndex } from './services/rovingFocus'
 import { SceneController } from './services/sceneController'
-import { ViewportController } from './services/viewportController'
-import { revealDiagnostic, type EditorDiagnostic } from './services/editorDiagnostics'
+import { ViewportController } from './render/viewportController'
+import { revealDiagnostic, type EditorDiagnostic } from './language/editorDiagnostics'
 import { setStorageFailureHandler, storageGet, storageSet, storageSetJSON } from './services/safeStorage'
-import { extractCustomizerParameters } from './services/scadCustomizer'
+import { extractCustomizerParameters } from './language/scadCustomizer'
 import { geometryExportEligibility } from './services/buildPromotionPolicy'
 import { MAX_WORKSPACE_SOURCE_LENGTH, updateWorkspaceDocument, type WorkspaceDocumentSnapshot } from './services/workspaceDocument'
 import type { BrowserWorkspacePersistence } from './services/workspacePersistence'
@@ -612,7 +612,7 @@ async function runGeometryAnalysis() {
 
 // The rush compiler pulls the geometry kernel chunk; load it only when a
 // rush-frontend document is actually open.
-const compactControls = ref<{parameters: import('./services/scadCustomizer').CustomizerParameter[]; errors: string[]}>({parameters: [], errors: []})
+const compactControls = ref<{parameters: import('./language/scadCustomizer').CustomizerParameter[]; errors: string[]}>({parameters: [], errors: []})
 watchEffect(async () => {
   const source = code.value
   if (!isRushFrontend(source)) {

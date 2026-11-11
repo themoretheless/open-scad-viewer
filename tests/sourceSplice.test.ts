@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applySourceSplice } from '../src/services/sourceSplice'
+import { applySourceSplice } from '../src/kernel/sourceSplice'
 
 describe('source splice transactions', () => {
   it('applies and reverses Unicode-safe replacements byte-exactly', () => {

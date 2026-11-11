@@ -5,7 +5,7 @@ import {parseDirectDocument} from '../services/directModeling'
 import {computed,defineAsyncComponent,ref,shallowRef,toRaw,watch,onUnmounted} from 'svet'
 import {sceneSnapPoints} from '../services/mainSnapping'
 import {patchMainSource} from '../services/mainSourceEditing'
-import {computeMainSolid,computeCadOperation,cancelMainSolid} from '../services/mainSolidWorker'
+import {computeMainSolid,computeCadOperation,cancelMainSolid} from '../kernel/mainSolidWorker'
 import CadDimensionsOverlay from './CadDimensionsOverlay.svt'
 import type {CadOptions} from '../kernel/cadWorkbench'
 const CadWorkbenchPanel=defineAsyncComponent(()=>import('./CadWorkbenchPanel.svt'))

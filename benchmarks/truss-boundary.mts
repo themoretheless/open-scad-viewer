@@ -3,9 +3,9 @@ import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
-import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
-import {compileWasmArtifact} from '../src/services/wasmArtifact'
-import {solveTruss, type TrussModel, type TrussResponse, type TrussWrenchModel, type TrussVector} from '../src/services/trussAnalysis'
+import {setOptionalWasmCompiler} from '../src/kernel/wasmCompilation'
+import {compileWasmArtifact} from '../src/kernel/wasmArtifact'
+import {solveTruss, type TrussModel, type TrussResponse, type TrussWrenchModel, type TrussVector} from '../src/kernel/trussAnalysis'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
 
 // Same supported-tripod workloads as mechanics-core/examples/bench_truss.rs.

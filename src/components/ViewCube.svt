@@ -1,10 +1,10 @@
 <script lang="ts">
-import { computeSteppedOrbitAngles, type ViewOrbitDirection } from '../services/viewportModel'
+import { computeSteppedOrbitAngles, type ViewOrbitDirection } from '../render/viewportModel'
 export { computeSteppedOrbitAngles, type ViewOrbitDirection }
 </script>
 <script setup lang="ts">
 import { computed } from 'svet'
-import { projectAxesToScreen, type StandardView } from '../services/viewportModel'
+import { projectAxesToScreen, type StandardView } from '../render/viewportModel'
 
 const props = withDefaults(defineProps<{
   activeView: StandardView | 'custom'

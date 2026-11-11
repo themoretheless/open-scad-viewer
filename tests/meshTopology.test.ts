@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractSemanticEdges } from '../src/services/meshTopology'
+import { extractSemanticEdges } from '../src/kernel/meshTopology'
 
 function vertices(positions: number[][]) {
   return Float32Array.from(positions.flatMap(([x, y, z]) => [x, y, z, 0, 0, 1]))

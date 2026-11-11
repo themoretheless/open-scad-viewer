@@ -4,8 +4,8 @@ import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {wallSearchCandidates} from '../src/kernel/solidWallSearch'
 import {inspectMaterialWall,materialWallExpectation,validMaterialWall} from '../src/kernel/solidMaterialWall'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})
 const fixtures=JSON.parse(readFileSync('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/material-wall/contract.json','utf8')).cases
 const cases=[]

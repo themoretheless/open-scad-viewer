@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest'
-import {profileIntersectionDiagnostics} from '../src/services/profileIntersectionDiagnostics'
+import {profileIntersectionDiagnostics} from '../src/kernel/profileIntersectionDiagnostics'
 import type {ProfileIntersectionReport} from '../src/kernel/geometry/profileIntersections'
 import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 const line=(a:number[],b:number[]):NurbsCurve=>({degree:1,knots:[0,0,1,1],controlPoints:[a,b],weights:[1,1]})

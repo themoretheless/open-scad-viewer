@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest'
-import {createBoxMesh, repairMeshObject} from '../src/services/meshEditing'
-import {formatMeshRepairNotice} from '../src/services/meshRepairReport'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {createBoxMesh, repairMeshObject} from '../src/kernel/meshEditing'
+import {formatMeshRepairNotice} from '../src/kernel/meshRepairReport'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 
 const openTetra = () => ({
   positions: Float64Array.from([0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 2]),

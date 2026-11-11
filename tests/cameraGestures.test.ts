@@ -5,7 +5,7 @@ import {
   computeWheelDistance,
   computePinchUpdate,
   clampGestureDistance,
-} from '../src/services/cameraGestures'
+} from '../src/render/cameraGestures'
 import reference from './fixtures/camera-gestures-reference-v1.json'
 
 const initial = { yaw: 0, pitch: 0, dist: 10, tx: 0, ty: 0, tz: 0 }

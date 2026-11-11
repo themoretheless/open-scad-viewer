@@ -3,7 +3,7 @@ import { progressiveMiterPayload } from '../nurbsConstructors'
 import type { NurbsScaleLaw, ProgressiveGuidedSurfaceSweepOptions, ProgressiveMiterCapParallelism, ProgressiveMiterCapProjection, ProgressiveMiterIdealCapDomains, ProgressiveMiterOptions, ProgressiveMiterPreview, ProgressiveMiterResult, ProgressiveMultiSweepResult, ProgressiveSweepPreview, ProgressiveSweepStreamOptions } from '../nurbsConstructors'
 import type { NurbsSurface } from '../nurbsSurface'
 import { callNurbsRust } from '../geometry/nurbs'
-import { streamNativeSweep } from '../../services/sweep/transport/streamNative'
+import { streamNativeSweep } from '../sweep/transport/streamNative'
 
 export function loftNurbsCurves(curves: NurbsCurve[]): NurbsSurface { return callNurbsRust('loft', { curves }) }
 

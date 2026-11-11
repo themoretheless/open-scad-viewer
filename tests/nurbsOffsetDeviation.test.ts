@@ -6,8 +6,8 @@ import identity from '../src/generated/geometry-kernels/identity'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import type {NurbsSurface} from '../src/kernel/nurbsSurface'
 import {inspectNurbsOffsetDeviation,validOffsetDeviation,type OffsetDeviationOptions} from '../src/kernel/nurbsOffsetDeviation'
-import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
-import {mainSolidExpectation,mainSolidResult,type MainSolidRequest} from '../src/services/mainSolidProtocol'
+import {MainSolidWorkerClient,type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
+import {mainSolidExpectation,mainSolidResult,type MainSolidRequest} from '../src/kernel/mainSolidProtocol'
 
 const plane=():NurbsSurface=>({degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],
  controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false})

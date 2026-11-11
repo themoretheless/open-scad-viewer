@@ -7,7 +7,7 @@
 import { lookAt, orthographic, type Mat4, type Vec3 } from './math3d'
 import { OBJECT_UNIFORM_LAYOUT, SCENE_UNIFORM_LAYOUT } from '../render/shaders'
 import type { MaterialDef, RenderTheme } from '../render/rendererContracts'
-import { SHADOW_MAP_SIZE } from './textureResources'
+import { SHADOW_MAP_SIZE } from '../render/textureResources'
 
 /**
  * Row-major mat4 product (a · b), pure JS: the shadow light VP is rebuilt per

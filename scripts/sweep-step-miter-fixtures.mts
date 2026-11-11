@@ -10,13 +10,13 @@ import {reverseNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
 import {createMiterBrepProfileBody,createProgressiveMiterBrepProfileBody,createRationalBrepSectionLoft,transformNurbsBrep} from '../src/kernel/geometry/brep'
 
 import {projectSweepSections} from '../src/kernel/nurbsSectionProjection'
-import {inspectSweepRetainedCorrespondence,inspectSweepRetainedCaps} from '../src/services/sweepRetainedCorrespondence'
+import {inspectSweepRetainedCorrespondence,inspectSweepRetainedCaps} from '../src/kernel/sweepRetainedCorrespondence'
 
 import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
-import {readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {readSweepViewportEvidence} from '../src/kernel/sweepViewportEvidence'
 import {miterLawMatrixSource,miterLawMatrixName,type MiterLawMatrixMode} from './miter-law-matrix-sources'
 import type {NurbsBrep} from '../src/kernel/geometry/brep'
 

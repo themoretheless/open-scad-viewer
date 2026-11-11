@@ -1,8 +1,8 @@
 import {h} from 'svet'
 import type {SolidNurbsCurve} from '../kernel/solidNurbs'
 import type {CurveOffsetReport} from '../kernel/solidCurveOffset'
-import {offsetPreviewSegments} from '../services/curveOffsetPreview'
-interface Props {curves:SolidNurbsCurve[];id?:string;report?:CurveOffsetReport|null;ids?:string[];diagnostics?:import('../services/curveOffsetDiagnostics').CurveOffsetDiagnostics;project:(point:[number,number,number])=>number[];sample?:(curve:SolidNurbsCurve['curve'])=>number[][]}
+import {offsetPreviewSegments} from '../kernel/curveOffsetPreview'
+interface Props {curves:SolidNurbsCurve[];id?:string;report?:CurveOffsetReport|null;ids?:string[];diagnostics?:import('../kernel/curveOffsetDiagnostics').CurveOffsetDiagnostics;project:(point:[number,number,number])=>number[];sample?:(curve:SolidNurbsCurve['curve'])=>number[][]}
 export default function CurveOffsetPreview(p:Props){
  const curves=p.diagnostics?p.curves:p.ids?p.ids.map(id=>p.curves.find(c=>c.id===id)!).filter(Boolean):p.curves.filter(c=>c.id===p.id||c.id.startsWith(p.id+':'))
  const xy=(q:number[])=>p.project([q[0]!,q[1]!,q[2]??0]).join(',')

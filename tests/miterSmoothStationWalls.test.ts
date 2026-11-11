@@ -4,7 +4,7 @@ import {reconstructCertifiedMiterStations} from '../src/kernel/geometry/brep'
 import {it,expect} from 'vitest'
 import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 import {createBrepSectionLoftSurfaces,createRationalBrepSectionLoft,inspectNurbsBrep,proposeSmoothStationWalls,createProgressiveMiterBrepProfileBody,smoothCertifiedMiterBody} from '../src/kernel/geometry/brep'
-import {inspectMiterStationSmoothness} from '../src/services/miterStationSmoothness'
+import {inspectMiterStationSmoothness} from '../src/kernel/miterStationSmoothness'
 import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
 import {inspectSweepRetainedWallCharts} from '../src/kernel/nurbsSweepRetainedCharts'
 import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
@@ -172,7 +172,7 @@ it('carries nonuniform rational station certificates through the Rush geometry g
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const source=readFileSync('examples/rush/progressive-miter-reconstructed-rational-profile.r','utf8')
  const built=buildOwnNurbs(compileRushFrontend(source).document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  const construction=built.report.construction![built.nativeGeometry!.nodeId] as {
@@ -187,7 +187,7 @@ it('carries nonuniform rational station certificates through the Rush geometry g
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({
   profileG1Certified:true,stationG2Certified:true,solidGeometryCertified:true,continuousBound:true,capContinuity:'C0',
  })
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const {kind,...model}=built.report.definitions[built.nativeGeometry!.nodeId] as unknown as import('../src/kernel/geometry/brep').NurbsBrep & {kind:string}
  expect(kind).toBe('brep')
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,model)?.solidGeometryCertified).toBe(true)
@@ -201,8 +201,8 @@ it('admits the closed rational hollow frame/guide/affine case through native Rus
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const source=readFileSync('examples/rush/closed-rational-frame-guide-affine-hollow-placed.r','utf8')
  const built=buildOwnNurbs(compileRushFrontend(source).document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({profileG1Certified:true,solidGeometryCertified:true,continuousBound:true})

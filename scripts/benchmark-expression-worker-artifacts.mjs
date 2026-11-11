@@ -22,7 +22,7 @@ for(const [name,directory] of [['baseline',baselinePath],['candidate',candidateP
  const wasm=readFileSync(resolve(root,'public/wasm/geometry-kernel.wasm'))
  const {default:identity}=await import(pathToFileURL(resolve(root,'src/generated/geometry-kernels/identity.ts')).href)
  assert.equal(hash(wasm),identity.sha256);assert.equal(wasm.length,identity.byteLength)
- const {MainSolidWorkerClient}=await import(pathToFileURL(resolve(root,'src/services/mainSolidWorkerClient.ts')).href)
+ const {MainSolidWorkerClient}=await import(pathToFileURL(resolve(root,'src/kernel/mainSolidWorkerClient.ts')).href)
  stages.push({name,root,identity,manifest,manifestSha256:hash(manifestBytes),Client:MainSolidWorkerClient})
 }
 // Pin the entire service graph and worker entry, not just the wrapper API.

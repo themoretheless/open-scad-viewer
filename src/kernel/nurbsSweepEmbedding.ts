@@ -1,2 +1,2 @@
 /** Compatibility entry point. */
-export * from '../services/sweep/certificates/nurbsSweepEmbedding'
+export * from './sweep/certificates/nurbsSweepEmbedding'

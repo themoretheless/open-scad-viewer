@@ -2,7 +2,7 @@ import {expect, it} from 'vitest'
 import {CadGeometryKernel} from '../src/kernel/cadGeometryKernel'
 import {surfaceGroupsInKernel} from '../src/kernel/geometry/meshAnalysis'
 import {kernelRuntime} from '../src/kernel/geometry/kernel'
-import {inferSurfaceIds} from '../src/services/meshSurfaceGroups'
+import {inferSurfaceIds} from '../src/kernel/meshSurfaceGroups'
 
 it('matches host groups for real display meshes and owns detached result buffers', async () => {
   const session = await new CadGeometryKernel().openSession()

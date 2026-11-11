@@ -1,5 +1,5 @@
-import {editExactFullRoundSceneMesh} from '../services/exactFullRoundHistoryScene'
-import {isHistoryRequest,isHistoryMesh} from '../services/exactFullRoundHistoryWorkerProtocol'
+import {editExactFullRoundSceneMesh} from '../kernel/exactFullRoundHistoryScene'
+import {isHistoryRequest,isHistoryMesh} from '../kernel/exactFullRoundHistoryWorkerProtocol'
 import {meshTransferables} from '../core/mesh'
 let admitted=false
 self.addEventListener('message',(event:MessageEvent<unknown>)=>{

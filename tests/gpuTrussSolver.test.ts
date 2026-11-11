@@ -5,7 +5,7 @@ import {
   assembleTrussCsr,
   TRUSS_PCG_WGSL,
 } from '../src/render/gpuTrussSolver'
-import type { TrussModel } from '../src/services/trussAnalysis'
+import type { TrussModel } from '../src/kernel/trussAnalysis'
 
 describe('WebGPU Compute Truss / Space-Frame Jacobi-PCG Solver', () => {
   it('solves a 1D axial bar and matches analytical elongation F*L/(E*A)', () => {

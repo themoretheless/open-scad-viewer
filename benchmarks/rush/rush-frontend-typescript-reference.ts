@@ -1,6 +1,6 @@
 import { compileTextNurbs } from './rushFrontendNurbs-runtime-reference'
 import { compileRushGraph, RushGraphError, type Expression } from './rushGraph-runtime-reference'
-import type { CustomizerParameter } from '../../src/services/scadCustomizer'
+import type { CustomizerParameter } from '../../src/language/scadCustomizer'
 
 type TypeRef = { name: string; args: TypeRef[] }
 type Field = { name: string; type: TypeRef }

@@ -1,5 +1,5 @@
 import {workerData} from 'node:worker_threads'
-import {setOptionalWasmCompiler} from '../../src/services/wasmCompilation'
+import {setOptionalWasmCompiler} from '../../src/kernel/wasmCompilation'
 
 const state = new Int32Array(workerData.warmState)
 setOptionalWasmCompiler(async () => {

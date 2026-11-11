@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {inferSurfaceIds,withSelectionSurfaces} from '../src/services/meshSurfaceGroups'
+import {inferSurfaceIds,withSelectionSurfaces} from '../src/kernel/meshSurfaceGroups'
 import {parseOpenSCAD} from '../src/language/openscadParser'
-import {buildFaceOverlayGeometry,buildFaceTriangleIndex} from '../src/services/meshSelectionOverlay'
+import {buildFaceOverlayGeometry,buildFaceTriangleIndex} from '../src/render/meshSelectionOverlay'
 import {identity} from '../src/services/math3d'
 it('selects a complete cylinder wall but keeps the two caps separate',async()=>{
  const {meshes}=await parseOpenSCAD('cylinder(r=10,h=5,$fn=48);')

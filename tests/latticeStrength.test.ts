@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
-import {analyzeLatticePrintability,optimizeLatticeForPrint,formatLatticePrintReport,latticeSlicerHintsJson} from '../src/services/latticePrintReport'
-import {analyzeLatticeStrength,formatLatticeStrengthReport,latticeMaterials,latticeStructureHint,weakSpotMarkerMeshes} from '../src/services/latticeStrength'
+import {analyzeLatticePrintability,optimizeLatticeForPrint,formatLatticePrintReport,latticeSlicerHintsJson} from '../src/fabrication/latticePrintReport'
+import {analyzeLatticeStrength,formatLatticeStrengthReport,latticeMaterials,latticeStructureHint,weakSpotMarkerMeshes} from '../src/fabrication/latticeStrength'
 import type {LighteningOptions} from '../src/kernel/solidLightening'
 
 const channel:LighteningOptions={pattern:'grid',axis:'x',cell:20,rib:1.35,rim:2,bottom:.6,top:0,seed:42,jitter:0,lineWidth:.45,perimeters:3}

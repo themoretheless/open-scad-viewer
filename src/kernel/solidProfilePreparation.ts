@@ -1,5 +1,5 @@
 import {sampleSolidNurbsCurve} from './solidNurbs'
-import {profileIntersectionDiagnostics} from '../services/profileIntersectionDiagnostics'
+import {profileIntersectionDiagnostics} from './profileIntersectionDiagnostics'
 import {inspectProfileIntersections,type ProfileIntersectionReport} from './geometry/profileIntersections'
 import type {DirectDocument,DirectSketch,Point2} from '../services/directModeling'
 import {callGeometryRust} from './geometry/kernel'

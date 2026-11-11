@@ -1,10 +1,10 @@
 import {afterEach, expect, it, vi} from 'vitest'
 import {compileGeometryKernelArtifact} from '../src/kernel/geometry/kernelCompilation'
-import {assertVerifiedWasmModule} from '../src/services/wasmArtifact'
+import {assertVerifiedWasmModule} from '../src/kernel/wasmArtifact'
 import identity from '../src/generated/geometry-kernels/identity'
 import {installGeometryKernelFromTrustedHost} from '../src/kernel/geometry/kernel'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
-import {decodePacked} from '../src/services/wasmHost'
+import {decodePacked} from '../src/kernel/wasmHost'
 
 let artifact: Promise<WebAssembly.Module> | undefined
 const module = () => artifact ??= compileGeometryKernelArtifact()

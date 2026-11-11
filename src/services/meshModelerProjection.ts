@@ -1,4 +1,4 @@
-import {meshObjectStats,buildEdgeList} from './meshEditing'
+import {meshObjectStats,buildEdgeList} from '../kernel/meshEditing'
 import {callGeometryRust} from '../kernel/geometry/kernel'
 import {projectDirectPoint, type OrbitCamera } from './directModelingTools'
 import { inspectPolygonMesh, type PolygonMesh } from '../kernel/geometry/polygon'

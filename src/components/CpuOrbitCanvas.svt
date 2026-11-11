@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {ref,watch,onMounted} from 'svet'
-import {paintCpuOrbit,type CpuPaintTriangle} from '../services/cpuOrbitPaint'
+import {paintCpuOrbit,type CpuPaintTriangle} from '../render/cpuOrbitPaint'
 const props=defineProps<{active:boolean;triangles:readonly CpuPaintTriangle[];size:number;left:number;top:number}>()
 const emit=defineEmits<{ready:[value:boolean]}>(),canvas=ref<HTMLCanvasElement|null>(null)
 function draw(){

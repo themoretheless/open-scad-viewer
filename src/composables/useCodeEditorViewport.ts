@@ -1,7 +1,7 @@
 import { computed, nextTick, ref, type ComputedRef, type Ref } from 'svet'
 import { GUTTER_CONTENT_PADDING_PX, GUTTER_OVERSCAN_ROWS, gutterRowPx } from '../appHelpers'
-import { highlightCode } from '../services/codeHighlight'
-import { editorBlocks, guideFitsIndent, type EditorBlock } from '../services/editorBlocks'
+import { highlightCode } from '../language/codeHighlight'
+import { editorBlocks, guideFitsIndent, type EditorBlock } from '../language/editorBlocks'
 
 export interface UseCodeEditorViewportOptions {
   code: Ref<string>

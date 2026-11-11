@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest'
 import {GeometryKernelError} from '../src/kernel/geometry/kernel'
-import {thinWalledOpenSection, type TorsionStrip} from '../src/services/structuralSections'
+import {thinWalledOpenSection, type TorsionStrip} from '../src/kernel/structuralSections'
 
 const strip = (a:[number,number],b:[number,number],thicknessMm:number):TorsionStrip =>
   ({a,b,thicknessMm})

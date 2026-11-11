@@ -1,10 +1,10 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {miterLawMatrixModes,miterLawMatrixSource} from '../scripts/miter-law-matrix-sources'
 import {expect,it} from 'vitest'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {readSweepViewportEvidence} from '../src/kernel/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 
 it.each(miterLawMatrixModes)('owns all miter law combinations through Rush/viewport/Solid: %j',async mode=>{
  const source=miterLawMatrixSource(mode)

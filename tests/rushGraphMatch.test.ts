@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {parseOpenSCAD} from '../src/language/openscadParser'
-import {formatCode} from '../src/services/codeFormat'
+import {formatCode} from '../src/language/codeFormat'
 const compile=(s:string)=>compileRushFrontend('// @rush/1\n'+s)
 it.each([0,1,2])('matches geometry part %s',async part=>{
  const source=`param part = ${part} range 0..2

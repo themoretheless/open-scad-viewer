@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {Worker} from 'node:worker_threads'
-import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
+import {MainSolidWorkerClient,type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
 import {wholeWallExpectation,validWholeWall} from '../src/kernel/solidWholeWall'
 
 assert.ok(process.argv[2],'Provide a qualification output directory')

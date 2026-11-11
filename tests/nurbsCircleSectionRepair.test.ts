@@ -31,7 +31,7 @@ it('carries explicit circle correction through Rush units, viewport evidence and
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const source=readFileSync('examples/rush/progressive-miter-circle-corrected-hollow.r','utf8')
  const graph=compileRushFrontend(source)
  const node=graph.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
@@ -62,7 +62,7 @@ it('composes circle repair before spatial cap projection and revalidates the fin
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const graph=compileRushFrontend(readFileSync('examples/rush/progressive-miter-spatial-circle-corrected-hollow.r','utf8'))
  const built=buildOwnNurbs(graph.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
  expect(readSweepViewportEvidence(built.nativeGeometry)).toMatchObject({profileG1Certified:true,profileG2Certified:true,continuousBound:true,solidGeometryCertified:true})
@@ -71,7 +71,7 @@ it('revalidates authored affine laws after circle correction through Rush',async
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const graph=compileRushFrontend(readFileSync('examples/rush/progressive-miter-affine-circle-corrected-hollow.r','utf8'))
  const node=graph.document.nodes.find(n=>n.op==='brep_progressive_miter_sweep')!
  const built=buildOwnNurbs(graph.document,{action:'build',display:{segments:4,subdivisionLevels:0}})

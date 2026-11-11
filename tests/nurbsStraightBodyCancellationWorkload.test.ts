@@ -1,10 +1,10 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {readSweepBodyBoundaryViewportEvidence} from '../src/kernel/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 
 it.each([{file:'progressive-hollow-boundary.r',faces:514},{file:'progressive-unsegmented-hollow-boundary.r',faces:578}])(
  'qualifies a valid larger native cancellation body for $file',async({file,faces})=>{

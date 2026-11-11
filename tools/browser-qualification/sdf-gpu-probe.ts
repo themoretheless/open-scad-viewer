@@ -1,6 +1,6 @@
 // Isolated browser probe for runSdfSweep: a unit-sphere field sampled on a
 // coarse grid; center must be deeply negative, far corner positive.
-import { runSdfSweep, type SdfGpuPayload } from '../../src/services/sdfGpu'
+import { runSdfSweep, type SdfGpuPayload } from '../../src/render/sdfGpu'
 
 export async function probe(): Promise<string> {
   const wgsl = await (await fetch('/sdf.wgsl')).text()

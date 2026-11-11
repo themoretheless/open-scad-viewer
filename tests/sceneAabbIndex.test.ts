@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { buildSceneAabbIndex as buildNativeIndex, disposeSceneAabbIndex, querySceneAabbIndex } from '../src/services/sceneAabbIndex'
+import { buildSceneAabbIndex as buildNativeIndex, disposeSceneAabbIndex, querySceneAabbIndex } from '../src/render/sceneAabbIndex'
 import { rayAabbDistance } from '../src/services/math3d'
 
 const indexes: ReturnType<typeof buildNativeIndex>[] = []

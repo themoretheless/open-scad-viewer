@@ -4,11 +4,11 @@ import type {ProgressiveSweepPreview} from '../kernel/nurbsConstructors'
 /** Publish an own-kernel mesh directly to the viewer, without a SCAD/Manifold pass. */
 import { buildOwnNurbsAsync, collectSdfJobs, type OwnNurbsBuildControl } from './rushGraphNurbsKernel'
 import { prepareSdfGpuBatch, primeSdfGpuBatch } from '../kernel/geometry/sdf'
-import { runSdfSweepBatch } from '../services/sdfGpu'
+import { runSdfSweepBatch } from '../render/sdfGpu'
 import type { GeometryEvaluationResult, GeometryQuality } from '../core/build'
 import { geometryAssetId } from '../core/scene'
-import { buildMeshBvh } from '../services/meshBvh'
-import { extractSemanticEdges } from '../services/meshTopology'
+import { buildMeshBvh } from '../kernel/meshBvh'
+import { extractSemanticEdges } from '../kernel/meshTopology'
 import { expandFlatTrianglesInKernel } from '../kernel/geometry/meshAnalysis'
 export async function buildTextNurbsScene(document: unknown, quality: GeometryQuality = 'full', control:OwnNurbsBuildControl={}): Promise<GeometryEvaluationResult> {
   const start=performance.now()

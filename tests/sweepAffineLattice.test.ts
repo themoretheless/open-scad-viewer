@@ -2,7 +2,7 @@ import {expect,it} from 'vitest'
 import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
 import {reverseNurbsCurve} from '../src/kernel/nurbsCurve'
 import {createProgressiveMiterBrepProfileBody,reconstructCertifiedMiterStations,transformCertifiedMiterBody} from '../src/kernel/geometry/brep'
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {isNativeGeometryArtifact} from '../src/core/nativeGeometry'
 const law=(value:number)=>({degree:1,knots:[0,0,1,1],values:[value,value],weights:[1,1]})
 const shear=[[1,0,0,0],[0,1,0,0],[1,1,1,0],[0,0,0,1]]
@@ -61,7 +61,7 @@ it('keeps transformed-bound evidence through actual Rush and repeated placements
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs,buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const text=readFileSync('examples/rush/progressive-miter-oblique-circle-corrected-hollow.r','utf8')
  const compiled=compileRushFrontend(text)
  const built=buildOwnNurbs(compiled.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
@@ -107,7 +107,7 @@ it.each(['miter-periodic-moving-axis-guide-affine-hollow.r','miter-periodic-movi
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const text=readFileSync(`examples/rush/${fixture}`,'utf8')
  const transformed=text.replace('.brep_tessellate(4)',
   '.transform(matrix: [[1,0,0,0],[0,1,0,0],[1,1,1,0],[0,0,0,1]]).transform(matrix: [[-1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]).brep_tessellate(4)')
@@ -147,7 +147,7 @@ it('admits reflected automatic periodic caps with exact off-lattice native arith
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const source=readFileSync('examples/rush/miter-periodic-moving-axis-guide-affine-hollow.r','utf8')
  const reflected=source.replace('.brep_tessellate(4)', '.transform(matrix: [[-1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]).brep_tessellate(4)')
  const graph=compileRushFrontend(reflected).document,before=structuredClone(graph)

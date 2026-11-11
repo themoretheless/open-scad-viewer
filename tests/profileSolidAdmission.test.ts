@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
 import {createProgressiveBrepProfileBody} from '../src/kernel/geometry/brep'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 
 const line=(a:number[],b:number[]):NurbsCurve=>({degree:1,knots:[0,0,1,1],controlPoints:[a,b],weights:[1,1],periodic:false})

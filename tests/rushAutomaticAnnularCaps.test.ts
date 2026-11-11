@@ -1,9 +1,9 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 
 // Exercise the ordinary authored Rush command against the real WASM kernel.
 // There is no annular option or caller-supplied certificate in the source.

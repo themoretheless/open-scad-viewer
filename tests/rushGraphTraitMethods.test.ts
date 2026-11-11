@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { compileRushFrontend } from '../src/language/rushFrontend'
 import { compileRushGraph } from '../src/language/rushGraph'
 import { parseOpenSCAD } from '../src/language/openscadParser'
-import { formatCode } from '../src/services/codeFormat'
+import { formatCode } from '../src/language/codeFormat'
 const header = '// @rush/1\n'
 const compile = (s: string) => compileRushFrontend(header+s)
 const same = (s: string, expected: string) => expect(compile(s).source).toBe(compile(expected).source)

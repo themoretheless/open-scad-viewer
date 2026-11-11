@@ -1,4 +1,4 @@
-import type {MainSolidJob} from '../services/mainSolidProtocol'
+import type {MainSolidJob} from './mainSolidProtocol'
 import type {DirectBody} from '../services/directModeling'
 import {SolidDisplayCache,solidDisplayKey,type DisplayMesh} from './solidDisplayCache'
 type DisplayJob=Extract<MainSolidJob,{kind:'displayMesh'}>

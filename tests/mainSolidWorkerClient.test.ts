@@ -1,7 +1,7 @@
 import {afterEach, expect, it, vi} from 'vitest'
-import {MainSolidWorkerClient, type MainSolidPort} from '../src/services/mainSolidWorkerClient'
-import type {MainSolidJob,MainSolidRequest} from '../src/services/mainSolidProtocol'
-import type {TrussModel, TrussResponse} from '../src/services/trussAnalysis'
+import {MainSolidWorkerClient, type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
+import type {MainSolidJob,MainSolidRequest} from '../src/kernel/mainSolidProtocol'
+import type {TrussModel, TrussResponse} from '../src/kernel/trussAnalysis'
 
 class Port implements MainSolidPort {
   onmessage:MainSolidPort['onmessage']=null
@@ -228,7 +228,7 @@ it('terminates a curve-distance request and ignores its late reply after restart
 })
 
 it('observes stage timings only for the accepted response without changing settlement',async()=>{
-  const {client,ports}=setup(),onTiming=vi.fn((_timing:import('../src/services/mainSolidWorkerClient').MainSolidTiming)=>{throw new Error('observer failure')})
+  const {client,ports}=setup(),onTiming=vi.fn((_timing:import('../src/kernel/mainSolidWorkerClient').MainSolidTiming)=>{throw new Error('observer failure')})
   const task=client.run({kind:'inspect',bodies:[]},{onTiming})
   expect(ports[0].postMessage.mock.lastCall![0].traceTiming).toBe(true)
   ports[0].reply({id:0,ok:true,result:[],timing:{warmupMs:1,executeMs:2,prepareMs:3}})
@@ -301,7 +301,7 @@ it('accepts one complete catalogue and rejects duplicates or non-finite properti
 })
 
 it('accepts complete field meshes and rejects duplicate force groups',async()=>{
- const {trussFieldMeshes}=await import('../src/services/trussFieldMeshes')
+ const {trussFieldMeshes}=await import('../src/kernel/trussFieldMeshes')
  const {client,ports}=setup(),job={kind:'trussField' as const,model:model(),result:response(),markerMm:1}
  const meshes=trussFieldMeshes(job.model,job.result,job.markerMm)
  const valid=client.run(job);ports[0].reply({ok:true,result:meshes});await expect(valid).resolves.toEqual(meshes)

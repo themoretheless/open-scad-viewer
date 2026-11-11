@@ -1,9 +1,9 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {miterLawMatrixModes,miterLawMatrixSource} from '../scripts/miter-law-matrix-sources'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 import {DEFAULT_SWEEP_VOLUME_BUDGETS,inspectSweepVolume} from '../src/kernel/nurbsSweepEmbedding'
 
 it.each(miterLawMatrixModes)('refuses exhausted or changed actual miter bodies in %j',async mode=>{

@@ -1,4 +1,4 @@
-import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/services/sourceBodyArchive'
+import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/kernel/sourceBodyArchive'
 import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {afterEach,expect,it} from 'vitest'
@@ -10,9 +10,9 @@ const wasmSha256=createHash('sha256').update(readFileSync(new URL('../public/was
 expect(artifactIdentity.sha256).toBe(wasmSha256)
 if(process.env.CAD_EXPECTED_WASM_SHA256)expect(wasmSha256).toBe(process.env.CAD_EXPECTED_WASM_SHA256)
 import {Worker} from 'node:worker_threads'
-import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
-import type {MainSolidRequest} from '../src/services/mainSolidProtocol'
-import {sourceBodyExpectation,validSourceBody,restoreSourceBody,type SourceBodyOptions,type SourceBodyResult} from '../src/services/sourceBody'
+import {MainSolidWorkerClient,type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
+import type {MainSolidRequest} from '../src/kernel/mainSolidProtocol'
+import {sourceBodyExpectation,validSourceBody,restoreSourceBody,type SourceBodyOptions,type SourceBodyResult} from '../src/kernel/sourceBody'
 const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-body-request.json.gz',import.meta.url))).toString())
 const options=():SourceBodyOptions=>{const {op:_op,...value}=structuredClone(request);return value}
 class Port implements MainSolidPort {

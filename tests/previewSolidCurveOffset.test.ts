@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest'
-import {previewSolidCurveOffset} from '../src/services/previewSolidCurveOffset'
-import {MainSolidWorkerError,type MainSolidWorkerClient} from '../src/services/mainSolidWorkerClient'
+import {previewSolidCurveOffset} from '../src/kernel/previewSolidCurveOffset'
+import {MainSolidWorkerError,type MainSolidWorkerClient} from '../src/kernel/mainSolidWorkerClient'
 const document={version:1 as const,bodies:[],sketches:[],curves:[{id:'source',name:'Контур корпуса',curve:{degree:1,knots:[0,0,1,1],weights:[1,1],controlPoints:[[0,0],[1,1]]}}]}
 const options={id:'source',createdId:'offset',offsetJoin:'trim-evenodd',distance:1,maxError:.01,locale:'ru'}
 it('localizes a native refusal with the source curve and preserves the failed input',async()=>{

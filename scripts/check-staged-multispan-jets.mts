@@ -3,7 +3,7 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {dirname,join} from 'node:path'
 import {createHash} from 'node:crypto'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
-import {writeLinear,decodePacked} from '../src/services/wasmHost'
+import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 
 // Qualification transport only. Original tensor surfaces, exact strip jets,
 // regularity and every work-limit decision are evaluated by the Rust ABI.

@@ -1,5 +1,5 @@
 import { rayAabbDistance, type Aabb3, type Vec3 } from '../services/math3d'
-import type { MeshBvhHit } from '../services/meshBvh'
+import type { MeshBvhHit } from '../kernel/meshBvh'
 import type { NativePickingCache } from '../services/nativePickingCache'
 import { selectedCornerInKernel } from '../kernel/geometry/viewport'
 import type { MeshProvenanceRun } from '../core/mesh'
@@ -11,7 +11,7 @@ import {
 import {
   querySceneAabbIndex,
   type SceneAabbIndex,
-} from '../services/sceneAabbIndex'
+} from './sceneAabbIndex'
 import {
   MAX_DEPTH_CANDIDATES,
   MAX_DEPTH_CONTINUATIONS,

@@ -1,7 +1,7 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest'
 import type {DirectStepLod0Import,DirectStepSceneImport} from '../src/kernel/cadNurbsStep'
 import {parseDirectDocument} from '../src/services/directModeling'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 
 const {bridge,tessellate}=vi.hoisted(()=>({
   bridge:vi.fn<(op:string,args:{text:string})=>unknown>(),
@@ -12,7 +12,7 @@ vi.mock('../src/kernel/geometry/brep',async importOriginal=>({...await importOri
 
 import {importDirectStepLod0,importDirectStepScene} from '../src/kernel/cadNurbsStep'
 import {importStepForWorkbench,inspectStepRoute} from '../src/kernel/cadStepRouting'
-import {stepLod0Cache} from '../src/services/stepLod0Cache'
+import {stepLod0Cache} from '../src/exchange/stepLod0Cache'
 
 const model={bodies:[{outerShell:0,innerShells:[]}],vertices:[],edges:[],loops:[],faces:[],shells:[],topologyIds:{bodies:['body-1']}}
 const document={source:'original',graphIdentity:'graph',definitionIdentities:['definition'],occurrenceIdentities:['occurrence'],productHierarchy:[],operatorIdentities:[],metadataLoss:['v10-loss']}

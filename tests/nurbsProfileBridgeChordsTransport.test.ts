@@ -1,8 +1,8 @@
 import {readFileSync} from 'node:fs'
 import {expect,it,vi} from 'vitest'
 import {profileBridgeChordExpectation,validProfileBridgeChordReport,type ProfileBridgeChordOptions} from '../src/kernel/nurbsProfileBridgeChords'
-import {mainSolidExpectation,mainSolidResult,MAIN_SOLID_JOB_KINDS,type MainSolidRequest} from '../src/services/mainSolidProtocol'
-import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
+import {mainSolidExpectation,mainSolidResult,MAIN_SOLID_JOB_KINDS,type MainSolidRequest} from '../src/kernel/mainSolidProtocol'
+import {MainSolidWorkerClient,type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
 const fixture=JSON.parse(readFileSync('docs/qualification/mapped-retained-carrier-2026-10-08/profile-bridge-native-transport-2026-10-10.json','utf8'))
 const {op:_,...options}=fixture.request as ProfileBridgeChordOptions&{op:string}
 it('binds the actual native report to both profiles, parameters and work limits',()=>{

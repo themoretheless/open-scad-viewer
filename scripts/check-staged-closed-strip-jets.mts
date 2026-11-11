@@ -3,7 +3,7 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {dirname,join} from 'node:path'
 import {createHash} from 'node:crypto'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
-import {writeLinear,decodePacked} from '../src/services/wasmHost'
+import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 
 // Authored tensor fixtures and ABI transport only. Rust proves every full
 // seam, regularity and the shared exact-work ledger, including the closing seam.

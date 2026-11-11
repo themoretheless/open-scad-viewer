@@ -1,6 +1,6 @@
 import type {DirectDocument} from './directModeling'
 import {callNurbsRust} from '../kernel/geometry/nurbs'
-import {validCurveOffsetDiagnostics,type CurveOffsetDiagnostics} from './curveOffsetDiagnostics'
+import {validCurveOffsetDiagnostics,type CurveOffsetDiagnostics} from '../kernel/curveOffsetDiagnostics'
 /** Inspect current ordered retained chords; historical offset summaries are ignored. */
 export function inspectCurrentCurveChain(document:DirectDocument,ids:string[],maxPairs=1000000):CurveOffsetDiagnostics {
  if(!ids.length||ids.length>128||new Set(ids).size!==ids.length)throw Error('Select an ordered chord chain without repeated objects.')

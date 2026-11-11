@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest'
-import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
-import type {MainSolidJob,MainSolidRequest} from '../src/services/mainSolidProtocol'
+import {MainSolidWorkerClient,type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
+import type {MainSolidJob,MainSolidRequest} from '../src/kernel/mainSolidProtocol'
 class Port implements MainSolidPort {
  onmessage:MainSolidPort['onmessage']=null;onerror:MainSolidPort['onerror']=null;onmessageerror:MainSolidPort['onmessageerror']=null
  terminate=vi.fn();postMessage=vi.fn<(message:MainSolidRequest)=>void>()

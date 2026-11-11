@@ -4,8 +4,8 @@ import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {measureFaceDistance} from '../src/kernel/solidMeasurements'
 import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})
 const native=JSON.parse(readFileSync('docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/opposing-clearance/native.json','utf8'))
 const model=native.sourceModel,before=JSON.stringify(model),cases=[]

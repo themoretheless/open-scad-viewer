@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { compileRushFrontend } from '../src/language/rushFrontend'
 import { parseOpenSCAD } from '../src/language/openscadParser'
-import { formatCode } from '../src/services/codeFormat'
+import { formatCode } from '../src/language/codeFormat'
 
 function check(expression: string, expected: number) {
   return compileRushFrontend(`// @rush/1\nresult = ${expression}\nvalidate result.equalTo(${expected})\nshow box([1,1,1])`)

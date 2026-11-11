@@ -3,10 +3,10 @@ import {expect,it} from 'vitest'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
 import {tessellateNurbsBrep} from '../src/kernel/geometry/brep'
-import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {readSweepBodyBoundaryViewportEvidence} from '../src/kernel/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 
 const sources=[
  'arc-length-periodic-corrected-frenet-nonplanar-body-boundary.r','periodic-corrected-frenet-nonplanar-body-boundary.r',

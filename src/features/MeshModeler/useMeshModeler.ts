@@ -1,16 +1,16 @@
 import {createMeshInteraction} from './useMeshModeler/meshInteraction'
 import {createMeshCommands} from './useMeshModeler/meshCommands'
 import VrControls from '../../components/VrControls.svt'
-import { prepareVrPolygons } from '../../services/vrScene'
+import { prepareVrPolygons } from '../../render/vrScene'
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'svet'
-import { stringifyMeshJson } from '../../services/meshJson'
+import { stringifyMeshJson } from '../../exchange/meshJson'
 import ModelingFloorGrid from '../../components/ModelingFloorGrid.svt'
 import ModelingGridControls from '../../components/ModelingGridControls.svt'
 import WorkspaceActionBar from '../../components/WorkspaceActionBar.svt'
 import CommandPalette from '../../components/CommandPalette.svt'
 import type { PaletteCommand } from '../../services/commandSearch'
 import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../../kernel/geometryEditing'
-import { meshCentroid, sculptMesh } from '../../services/meshEditing'
+import { meshCentroid, sculptMesh } from '../../kernel/meshEditing'
 import {
   MeshHistory,
   buildEdgeList,
@@ -37,7 +37,7 @@ import {
   twistMesh,
   type MeshSelectMode,
   type MeshWorkspaceDocument,
-} from '../../services/meshEditing'
+} from '../../kernel/meshEditing'
 import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import { useMainSolidTask } from '.././useMainSolidTask'
 import { defaultDirectCamera, projectDirectPoint } from '../../services/directModelingTools'
@@ -45,14 +45,14 @@ import { projectMeshModelerObject,cachedMeshModelerStats } from '../../services/
 import { isGeometryKernelReady, warmGeometryKernel } from '../../kernel/geometry/kernel'
 import { storageGet, storageSet } from '../../services/safeStorage'
 import { MESH_IMPORT_ACCEPT, stripMeshExtension } from '../../exchange/meshImport'
-import { manifoldPreferenceSnapshot } from '../../services/manifoldPreferences'
+import { manifoldPreferenceSnapshot } from '../../kernel/manifoldPreferences'
 import ManifoldSettings from '../../components/ManifoldSettings.svt'
 import { formatMeshImportNotice } from '../../exchange/meshImportReport'
-import { formatMeshBooleanNotice } from '../../services/meshBooleanReport'
-import { formatMeshRepairNotice } from '../../services/meshRepairReport'
-import { meshManifoldDefectLabels } from '../../services/meshManifoldDefects'
-import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../../services/meshConvert'
-import { downloadBytes } from '../../services/downloadArtifact'
+import { formatMeshBooleanNotice } from '../../kernel/meshBooleanReport'
+import { formatMeshRepairNotice } from '../../kernel/meshRepairReport'
+import { meshManifoldDefectLabels } from '../../kernel/meshManifoldDefects'
+import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../../exchange/meshConvert'
+import { downloadBytes } from '../../exchange/downloadArtifact'
 import type { PolygonMesh } from '../../kernel/geometry/polygon'
 import type { KernelManifoldReport } from '../../kernel/geometry/manifoldAnalysis'
 export interface MeshModelerProps { open: boolean; locale: string; seedDocument?: MeshWorkspaceDocument | null; paletteRequest?: number }

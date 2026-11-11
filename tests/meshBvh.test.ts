@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   buildMeshBvh,
   meshBvhTransferables,
-} from '../src/services/meshBvh'
+} from '../src/kernel/meshBvh'
 
-import type { BvhRay, MeshBvh, MeshBvhHit, RaycastMeshBvhOptions } from '../src/services/meshBvh'
+import type { BvhRay, MeshBvh, MeshBvhHit, RaycastMeshBvhOptions } from '../src/kernel/meshBvh'
 import { createPickingSnapshotInKernel } from '../src/kernel/geometry/meshAnalysis'
 import { callGeometryRust } from '../src/kernel/geometry/kernel'
 

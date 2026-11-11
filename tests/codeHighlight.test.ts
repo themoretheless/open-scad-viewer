@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { highlightCode } from '../src/services/codeHighlight';
+import { highlightCode } from '../src/language/codeHighlight';
 it('escapes hostile source and keeps comments and strings opaque', () => {
  const html = highlightCode('// cube(1)\n"<img src=x onerror=alert(1)>"; /* function */');
  expect(html).not.toContain('<img');

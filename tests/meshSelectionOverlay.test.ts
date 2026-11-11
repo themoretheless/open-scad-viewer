@@ -7,7 +7,7 @@ import {
   buildSourceOverlayGeometry,
   MAX_SOURCE_OVERLAY_TRIANGLES,
   pointOverlayPosition,
-} from '../src/services/meshSelectionOverlay'
+} from '../src/render/meshSelectionOverlay'
 
 const vertices = new Float32Array([
   0, 0, 0, 0, 0, 1,

@@ -1,8 +1,8 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {measureFaceDistance,type FaceDistanceOptions} from '../src/kernel/solidMeasurements'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/face-distance.json',import.meta.url),'utf8'))
 const options=():FaceDistanceOptions=>({a:structuredClone(fixture.document.bodies[0].brep),b:structuredClone(fixture.document.bodies[1].brep),faceA:fixture.faceA,faceB:fixture.faceB,toleranceMm:.001,toleranceUv:1e-7,maxCells:100000,maxDomainCells:1000000})
 it('measures the trimmed face rather than the missing material inside its hole',()=>{

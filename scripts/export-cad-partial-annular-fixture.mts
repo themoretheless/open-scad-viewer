@@ -1,7 +1,7 @@
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createBrepTube,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 const directory=resolve(process.argv[2]);mkdirSync(directory,{recursive:true})
 const brep=createBrepTube(20,5,6)
 const body={id:'annular-preview',name:'Annular preview',brep,mesh:tessellateNurbsBrep(brep,2)}

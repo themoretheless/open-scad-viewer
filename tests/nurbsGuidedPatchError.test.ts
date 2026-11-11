@@ -1,4 +1,4 @@
-import {readSweepPatchViewportEvidence,readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {readSweepPatchViewportEvidence,readSweepViewportEvidence} from '../src/kernel/sweepViewportEvidence'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {circleNurbsCurve,bezierNurbsCurve,previewProgressiveNurbsProfiles,progressiveSweepNurbsProfiles,type GuidedProgressiveSweepOptions} from '../src/kernel/nurbsConstructors'

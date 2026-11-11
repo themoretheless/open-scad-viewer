@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import {computed,toRef,watch,ref,nextTick,onMounted,onUnmounted,useId} from 'svet'
-import type {ExpressionInspectionOptions} from '../services/expressionShellInspection'
-import type {ExpressionDisplayReport} from '../services/expressionDisplay'
-import type {BoundaryMeshReport} from '../services/expressionBoundaryMesh'
-import type {ExpressionMeshReport} from '../services/expressionMesh'
+import type {ExpressionInspectionOptions} from '../kernel/expressionShellInspection'
+import type {ExpressionDisplayReport} from '../kernel/expressionDisplay'
+import type {BoundaryMeshReport} from '../kernel/expressionBoundaryMesh'
+import type {ExpressionMeshReport} from '../kernel/expressionMesh'
 import {useExpressionInspection} from '../services/useExpressionInspection'
-import {alignedChordParameterErrors} from '../services/expressionAlignedChords'
+import {alignedChordParameterErrors} from '../kernel/expressionAlignedChords'
 const props=defineProps<{options?:ExpressionInspectionOptions;active:boolean;ru:boolean}>()
 const emit=defineEmits<{radiusFaces:[faces:number[]];boundaryMesh:[mesh:BoundaryMeshReport|null];faces:[faces:number[]];display:[display:ExpressionDisplayReport|null];mesh:[mesh:ExpressionMeshReport|null];meshRegion:[region:ExpressionMeshReport['pending'][number]|null]}>()
 const requestBoundaryMesh=ref(false),showBoundaryMesh=ref(false),requestRefinement=ref(false)

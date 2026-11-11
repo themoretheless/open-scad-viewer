@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
-import { prepareVrScene, prepareVrPolygons } from '../src/services/vrScene'
+import { prepareVrScene, prepareVrPolygons } from '../src/render/vrScene'
 
 function mesh(offset = 0): MeshData {
   return {

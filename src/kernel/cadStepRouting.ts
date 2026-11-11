@@ -9,7 +9,7 @@ import {tessellateNurbsBrep,type NurbsBrep} from './geometry/brep'
 import {inspectNurbsBrep} from './geometry/brep'
 import type {DirectBody} from '../services/directModeling'
 import {storageGet,storageRemove,storageSet} from '../services/safeStorage'
-import {stepLod0Cache,type CachedStepLod0Import} from '../services/stepLod0Cache'
+import {stepLod0Cache,type CachedStepLod0Import} from '../exchange/stepLod0Cache'
 
 export type StepRoute='retained-ap242-brep'|'faceted-brep'|'tessellated-shape'|'semantic-csg'|'unsupported-product'
 export interface StepCapabilityReport {

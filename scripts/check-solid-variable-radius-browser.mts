@@ -4,7 +4,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {loadQualificationPlaywrightPackage} from './qualificationPlaywrightPackage.mjs'
 import {createBrepBox,transformNurbsBrep,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 const directory=path.resolve(process.argv[2]??'/tmp/variable-radius-browser'),root=path.resolve('dist'),keyboard=process.argv.includes('--keyboard')
 await mkdir(directory,{recursive:true})
 const source=createBrepBox([-7,3,-2],[3,11,4]),a=.37,b=-.61

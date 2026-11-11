@@ -4,7 +4,7 @@ import { cross3, xyPlane, type SketchPlane } from './directSketchGeometry'
 import { booleanNurbsBrep, extrudeBrepCurves, tessellateNurbsBrep, transformNurbsBrep, type NurbsBrep } from '../kernel/geometry/brep'
 import { authorBrepProfile, transformBrepProfile, validateBrepProfile } from '../kernel/geometry/brepProfile'
 import { booleanPolygonMeshes } from '../kernel/geometry/polygon'
-import { stringifyMeshJson } from './meshJson'
+import { stringifyMeshJson } from '../exchange/meshJson'
 
 export function sameSketchPlane(a: SketchPlane = xyPlane(), b: SketchPlane = xyPlane()) {
   const ao = a.origin, au = a.u, av = a.v

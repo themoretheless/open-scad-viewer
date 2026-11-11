@@ -84,10 +84,10 @@ export function useSvgExchange(options: SvgExchangeOptions) {
       generation = getSaveGeneration()
     svgBusy.value = true
     error.value = ''
-    let worker: import('../../services/svgWorkerClient').SvgWorkerClient | undefined
+    let worker: import('../../exchange/svgWorkerClient').SvgWorkerClient | undefined
     try {
       if (file.size > 4 * 1024 * 1024) throw Error('SVG exceeds 4 MiB.')
-      const { createSvgWorkerClient } = await import('../../services/svgWorkerClient')
+      const { createSvgWorkerClient } = await import('../../exchange/svgWorkerClient')
       const text = await file.text()
       if (controller.signal.aborted) return
       worker = createSvgWorkerClient()
@@ -152,9 +152,9 @@ export function useSvgExchange(options: SvgExchangeOptions) {
     svgController = controller
     const mesh = structuredClone(body.mesh)
     error.value = ''
-    let worker: import('../../services/svgWorkerClient').SvgWorkerClient | undefined
+    let worker: import('../../exchange/svgWorkerClient').SvgWorkerClient | undefined
     try {
-      const { createSvgWorkerClient } = await import('../../services/svgWorkerClient')
+      const { createSvgWorkerClient } = await import('../../exchange/svgWorkerClient')
       if (controller.signal.aborted) return
       worker = createSvgWorkerClient()
       const vertices = new Float32Array(mesh.positions.length * 2)

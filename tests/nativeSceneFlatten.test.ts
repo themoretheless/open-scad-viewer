@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { flattenGroupGeometry } from '../src/services/meshFlatten'
+import { flattenGroupGeometry } from '../src/kernel/meshFlatten'
 
 function mesh() {
  return {vertices:new Float32Array([0,0,0,0,0,1,1,0,0,0,0,1,0,1,0,0,0,1]),indices:new Uint32Array([0,1,2]),

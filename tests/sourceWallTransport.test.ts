@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {wallExpectation,validWall,type SourceWallOptions,type SourceWallResult} from '../src/services/sourceWallTransport'
+import {wallExpectation,validWall,type SourceWallOptions,type SourceWallResult} from '../src/kernel/sourceWallTransport'
 const option=():SourceWallOptions=>({groups:[[0],[1]],minimumMm:5.9,toleranceMm:0.2,toleranceUv:1e-7,grid:3,maxAttempts:9,
  limits:{gapCells:1000,gapSpans:2000,cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}})
 const reply=(o:SourceWallOptions):SourceWallResult=>({request:structuredClone(o),qualified:true,converged:true,intervalMm:[5.99,6.01],

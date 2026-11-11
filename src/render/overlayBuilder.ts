@@ -5,7 +5,7 @@ import {
   buildSourceOverlayGeometry,
   MAX_SOURCE_OVERLAY_TRIANGLES,
   pointOverlayPosition,
-} from '../services/meshSelectionOverlay'
+} from './meshSelectionOverlay'
 import type { PickHit, SelectionMode } from './rendererContracts'
 import { MAX_OVERLAY_BUFFER_BYTES, type GMesh, type OverlaySlot } from './types'
 

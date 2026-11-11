@@ -1,4 +1,4 @@
-import type {OriginalQuadricGraphQuery,OriginalQuadricGraphReport} from '../../src/services/originalQuadricGraphProtocol'
+import type {OriginalQuadricGraphQuery,OriginalQuadricGraphReport} from '../../src/kernel/originalQuadricGraphProtocol'
 type Case={name:string;query:OriginalQuadricGraphQuery;check:(r:OriginalQuadricGraphReport)=>void}
 function require(x:unknown,message:string):asserts x{if(!x)throw new Error(message)}
 export function graphQuery():OriginalQuadricGraphQuery{return{curve:{degree:1,knots:[2,2,6,6],controlPoints:[[0,0,-.25],[1,1,.75]],weights:[1,1],periodic:false},patch:{degreeU:1,degreeV:1,knotsU:[-2,-2,2,2],knotsV:[10,10,14,14],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,1]]],weights:[[1,1],[1,1]],periodicU:false,periodicV:false},quadric:[[0,.5,0,0],[.5,0,0,0],[0,0,0,-.5],[0,0,-.5,0]],constantProducts:[],tolerance:1e-9,maxSpans:10,maxExactWork:1000000}}

@@ -1,8 +1,8 @@
 import { Worker } from 'node:worker_threads'
 import { afterEach, expect, it } from 'vitest'
-import { SvgWorkerClient, type SvgWorkerPort } from '../src/services/svgWorkerClient'
+import { SvgWorkerClient, type SvgWorkerPort } from '../src/exchange/svgWorkerClient'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
-import type { SvgWorkerRequest } from '../src/services/svgWorkerProtocol'
+import type { SvgWorkerRequest } from '../src/exchange/svgWorkerProtocol'
 
 const workers: Worker[] = [], clients: SvgWorkerClient[] = []
 class NodePort implements SvgWorkerPort {

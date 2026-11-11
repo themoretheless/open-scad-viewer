@@ -20,8 +20,8 @@ import {expect, it} from 'vitest'
 import {
   solveFrame, solveFrameBuckling, solveFrameCollapse,
   type FrameCollapseModel, type FrameModel,
-} from '../src/services/frameAnalysis'
-import {solveTruss, solveTrussModal} from '../src/services/trussAnalysis'
+} from '../src/kernel/frameAnalysis'
+import {solveTruss, solveTrussModal} from '../src/kernel/trussAnalysis'
 
 const E = 200_000, I = 1e6, L = 1000
 

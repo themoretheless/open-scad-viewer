@@ -13,10 +13,10 @@ import { booleanPolygonMeshes, extrudePolygonProfile, inspectPolygonMesh, loftPo
 import { certifyNurbsCurveFoundation, certifyNurbsSurfaceFoundation, createAutoCartesianGuidedLoft, createAutoControlTangentCartesianGuidedLoft, createCartesianGuidedLoft, createControlTangentCartesianGuidedLoft, createMappedNaturalLoft } from '../../kernel/nurbsFoundation'
 import { compileRushGraphNurbs } from '../rushGraphNurbsCompiler'
 import { createNativeGeometryArtifact } from '../../core/nativeGeometry'
-import { exportMeshFormat, meshExportBase64 } from '../../services/meshExportFormats'
+import { exportMeshFormat, meshExportBase64 } from '../../exchange/meshExportFormats'
 import { exportNurbsStl, tessellateNurbsSurface, thickenNurbsMesh } from '../../kernel/geometry/tessellation'
 import { meshToNurbs, meshToNurbsBrep, meshToSdf, meshToSubdivision, tessellateNurbsPatches } from '../../kernel/geometry/reconstruction'
-import { stringifyMeshJson } from '../../services/meshJson'
+import { stringifyMeshJson } from '../../exchange/meshJson'
 import { tessellateSubdivision } from '../../kernel/geometry/subdivision'
 
 type NativeNode = ReturnType<typeof compileRushGraphNurbs>['resolved_document']['nodes'][number]

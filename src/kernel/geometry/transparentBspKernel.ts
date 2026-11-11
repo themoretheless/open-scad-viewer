@@ -1,6 +1,6 @@
 /** Detached BSP buffers. Copies survive WASM memory growth; the native lease is always released. */
 import {decodeNurbsResult,kernelRuntime} from './kernel'
-import type {TransparentTriangle} from '../../services/transparentTriangleSplit'
+import type {TransparentTriangle} from '../../render/transparentTriangleSplit'
 export interface PackedTransparentBsp {
   planes:Float64Array;links:Uint32Array;owners:Uint32Array;vertices:Float64Array
   root:number;width:number;count:number;operations:number

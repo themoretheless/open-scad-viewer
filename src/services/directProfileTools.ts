@@ -3,7 +3,7 @@ import {requirePolylineSketch} from './retainedSketchProfile'
 import { bakeSketch } from './directSketchGeometry'
 import { normalizePolygonMesh, type PolygonMesh, booleanPolygonMeshes } from '../kernel/geometry/polygon'
 import { parseDirectDocument, type DirectSketch, type DirectBody, type DirectDocument, type Point2 } from './directModeling'
-import { stringifyMeshJson } from './meshJson'
+import { stringifyMeshJson } from '../exchange/meshJson'
 
 /** Bake a single corner to a sampled arc; never mutate the source sketch. */
 export function directCornerTool(sketch: DirectSketch, vertex: number, radius: number, kind: 'fillet'|'dogear'): DirectSketch {

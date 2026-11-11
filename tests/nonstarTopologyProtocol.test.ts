@@ -2,7 +2,7 @@ import {beforeAll,it,expect} from 'vitest'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {applySolidMinkowski,type SolidMinkowskiResult} from '../src/kernel/solidMinkowski'
 import type {NurbsMinkowskiProof} from '../src/kernel/geometry/minkowski3d'
-import {mainSolidResult,mainSolidExpectation} from '../src/services/mainSolidProtocol'
+import {mainSolidResult,mainSolidExpectation} from '../src/kernel/mainSolidProtocol'
 const bodies=[createBrepBox([0,0,0],[2,2,2]),createBrepBox([0,0,0],[1,1,1])].map((brep,i)=>({id:i?'b':'a',name:'body',brep,mesh:tessellateNurbsBrep(brep,1)}))
 const document={version:1 as const,sketches:[],bodies},options={ids:['a','b'] as [string,string],createdId:'sum',ru:true},expected=mainSolidExpectation({kind:'minkowski3d',document,options})
 let base:SolidMinkowskiResult

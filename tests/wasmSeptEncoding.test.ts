@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {encodeSeptBase118,decodeBase91 as reference,alphabet92} from '../scripts/wasm-base91.mjs'
-import {decodeBase91} from '../src/services/wasmBase91'
+import {decodeBase91} from '../src/kernel/wasmBase91'
 const digits=String.fromCharCode(1,2,3,4,5,6,14,15,16,17,18,19,20,21)+'\t '+alphabet92+String.fromCharCode(22,23,24,25,26,28,29,30,31,127)
 function word(value:bigint){let out='';for(let i=0;i<7;i++){out+=digits[Number(value%118n)];value/=118n}return out}
 it('matches independent BigInt reference across lengths, carries and all byte values',()=>{

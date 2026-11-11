@@ -3,14 +3,14 @@ import {afterEach,beforeEach,expect,it,vi} from 'vitest'
 import ThermalStrengthEditor from '../src/features/ThermalStrengthEditor.svt'
 import NominalTrussPanel from '../src/features/NominalTrussPanel.svt'
 import type {MeshData} from '../src/core/mesh'
-import type {PrintStrengthProfile,ThermalEditorState,ThermalStrengthResult,ValidatedPrintProfile} from '../src/services/trussScreening'
-import type {NominalLatticeGraph} from '../src/services/latticeGraphProtocol'
-import type {TrussResponse} from '../src/services/trussAnalysis'
+import type {PrintStrengthProfile,ThermalEditorState,ThermalStrengthResult,ValidatedPrintProfile} from '../src/kernel/trussScreening'
+import type {NominalLatticeGraph} from '../src/fabrication/latticeGraphProtocol'
+import type {TrussResponse} from '../src/kernel/trussAnalysis'
 
 const worker=vi.hoisted(()=>({
   thermal:vi.fn(),graph:vi.fn(),print:vi.fn(),catalog:vi.fn(),field:vi.fn(),scenario:vi.fn(),screening:vi.fn(),topology:vi.fn(),
 }))
-vi.mock('../src/services/mainSolidWorker',()=>({
+vi.mock('../src/kernel/mainSolidWorker',()=>({
   computeThermalStrength:worker.thermal,
   computeNominalLatticeGraph:worker.graph,
   computePrintStrengthProfile:worker.print,

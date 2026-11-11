@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {isSurfaceIsoTargetReport} from '../src/services/surfaceIsoTargetProtocol'
+import {isSurfaceIsoTargetReport} from '../src/kernel/surfaceIsoTargetProtocol'
 function report():any{return{schema:'nurbs-surface-iso-target-window/1',status:'present',axis:0,parameter:.5,sourceIsoParameterCoordinates:'normalized-original-transverse-domain',parameterCoordinates:['source-natural-t','target-natural-u','target-natural-v'],window:[[0,1],[-2,2],[10,14]],maxCells:100,cells:10,roots:[{method:'original-curve-surface-krawczyk',spans:[3,1,1],existenceDomain:[[.1,.4],[-1,1],[11,13]],parameterBox:[[.24,.26],[-.01,.01],[12,12.1]],positionBounds:[[-.01,.01],[-.01,.01],[1,1.1]],crossingSign:1}],presenceProven:true,windowAbsenceProven:false,windowCoverageComplete:true,unresolved:[],allSurfaceBranchesEnumerated:false,trimAdmission:false,bodyAdmission:false}}
 describe('original iso target window protocol',()=>{
  it('accepts natural source and independent target domains',()=>expect(isSurfaceIsoTargetReport(report())).toBe(true))

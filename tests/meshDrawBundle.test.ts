@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { MeshDrawBundle, type BundleMesh } from '../src/services/meshDrawBundle'
+import { MeshDrawBundle, type BundleMesh } from '../src/render/meshDrawBundle'
 
 function harness() {
   const commands: unknown[][] = []

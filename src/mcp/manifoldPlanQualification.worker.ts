@@ -1,6 +1,6 @@
 import { parentPort } from 'node:worker_threads'
-import { isMcpManifoldPlanQualificationNodeTerminal } from '../services/manifoldPlanQualificationProtocol'
-import { manifoldPlanQualificationWorkerRuntime } from '../services/manifoldPlanQualificationWorkerRuntime'
+import { isMcpManifoldPlanQualificationNodeTerminal } from '../kernel/manifoldPlanQualificationProtocol'
+import { manifoldPlanQualificationWorkerRuntime } from '../kernel/manifoldPlanQualificationWorkerRuntime'
 
 if (parentPort === null) throw new Error('Manifold qualification worker requires a parent port')
 

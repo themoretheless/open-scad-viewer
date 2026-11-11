@@ -1,8 +1,8 @@
 import {readFileSync} from 'node:fs'
 import {describe,it,expect} from 'vitest'
-import {validExpressionMesh,type ExpressionMeshReport} from '../src/services/expressionMesh'
-import {expressionShellExpectation,validExpressionShell,type ExpressionShellOptions} from '../src/services/expressionShell'
-import {expressionInspectionExpectation,validExpressionInspection} from '../src/services/expressionShellInspection'
+import {validExpressionMesh,type ExpressionMeshReport} from '../src/kernel/expressionMesh'
+import {expressionShellExpectation,validExpressionShell,type ExpressionShellOptions} from '../src/kernel/expressionShell'
+import {expressionInspectionExpectation,validExpressionInspection} from '../src/kernel/expressionShellInspection'
 const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/expression-mesh-native-2026-10-09.json',import.meta.url),'utf8'))
 const {op:_,...options}=fixture.request as ExpressionShellOptions&{op:string}
 const limits=options.meshLimits!,faces=fixture.result.shell.faceCount

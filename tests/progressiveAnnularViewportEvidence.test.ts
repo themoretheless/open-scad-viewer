@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
-import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {readSweepBodyBoundaryViewportEvidence} from '../src/kernel/sweepViewportEvidence'
 // Presentation fixture only. These flags never authorize a Solid.
 const report={globalEmbeddingCertified:false,boundaryErrorScope:'constructor-owned-retained-wall-and-cap-union',
  closedPath:false,budget:.01,boundaryErrorUpper:.002,boundaryContinuousBound:true,boundaryErrorWithinBudget:true,

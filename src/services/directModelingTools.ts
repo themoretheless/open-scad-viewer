@@ -1,7 +1,7 @@
 import { cross3, xyPlane, transformSketch, type SketchPlane } from './directSketchGeometry'
 import { booleanPolygonMeshes, type PolygonMesh } from '../kernel/geometry/polygon'
 import { extrudeDirectSketch, parseDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from './directModeling'
-import { stringifyMeshJson } from './meshJson'
+import { stringifyMeshJson } from '../exchange/meshJson'
 
 export interface OrbitCamera { yaw: number; pitch: number }
 export const defaultDirectCamera = (): OrbitCamera => ({ yaw: Math.PI / 4, pitch: Math.atan(1 / Math.sqrt(2)) })

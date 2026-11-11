@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs'
 import {bezierNurbsCurve,progressiveSweepNurbsPatches} from '../src/kernel/nurbsConstructors'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepPatchViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {readSweepPatchViewportEvidence} from '../src/kernel/sweepViewportEvidence'
 import {createProgressiveBrepProfileBody} from '../src/kernel/geometry/brep'
 const profile=bezierNurbsCurve([[0,-1,1],[0,-1,2]])
 const path=bezierNurbsCurve([[0,0,0],[.5,0,0],[1,1,0]])

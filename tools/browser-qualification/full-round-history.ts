@@ -1,7 +1,7 @@
-import {ExactFullRoundHistoryBrowser} from '../../src/services/exactFullRoundHistoryBrowser'
+import {ExactFullRoundHistoryBrowser} from '../../src/kernel/exactFullRoundHistoryBrowser'
 import {buildBrepSemanticScene} from '../../src/kernel/brepSemanticScene'
 import {lowerOpenSCADToSemanticProgram} from '../../src/language/semantic/semanticProgramLowerer'
-import {restoreExactFullRoundSnapshot} from '../../src/services/exactFullRoundSnapshot'
+import {restoreExactFullRoundSnapshot} from '../../src/kernel/exactFullRoundSnapshot'
 import {callGeometryRust,warmGeometryKernel} from '../../src/kernel/geometry/kernel'
 async function qualification(){
  await warmGeometryKernel()

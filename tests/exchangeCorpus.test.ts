@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { describe, expect, it } from 'vitest'
-import { analyzeExchangeCorpusFile, createExchangeCorpusReport } from '../src/services/exchangeCorpus'
+import { analyzeExchangeCorpusFile, createExchangeCorpusReport } from '../src/exchange/exchangeCorpus'
 
 describe('repeatable exchange corpus report', () => {
   it('separates parser admission from geometric conformance and source availability', () => {

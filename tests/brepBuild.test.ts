@@ -1,4 +1,4 @@
-import { stringifyMeshJson } from '../src/services/meshJson'
+import { stringifyMeshJson } from '../src/exchange/meshJson'
 import { describe, expect, it } from 'vitest'
 import {
   createBrepGraphBuilder,

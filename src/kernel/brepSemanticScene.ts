@@ -1,5 +1,5 @@
 import { prepareExactFullRoundDisplay } from './geometry/brepExactDisplay'
-import { createExactFullRoundSnapshot } from '../services/exactFullRoundSnapshot'
+import { createExactFullRoundSnapshot } from './exactFullRoundSnapshot'
 /** Internal SemanticProgram → native B-rep → display adapter.
  * This executable seam does not register a qualified production engine.
  */
@@ -11,8 +11,8 @@ import {type SemanticOccurrenceId, type SemanticOperationId} from '../core/seman
 import {executeBrepNativeProgram} from './brepNativeExecutor'
 import {prepareBrepDisplay} from './geometry/brep'
 import {callGeometryRust} from './geometry/kernel'
-import {buildMeshBvh} from '../services/meshBvh'
-import {extractSemanticEdges} from '../services/meshTopology'
+import {buildMeshBvh} from './meshBvh'
+import {extractSemanticEdges} from './meshTopology'
 import {SemanticProgramExecutionError, type SemanticExecutionControl} from '../language/semantic/semanticProgramExecutor'
 import {requireTrustedSemanticLowering, type SemanticLoweringSuccess} from '../language/semantic/semanticProgramLowerer'
 import type {SemanticProgramAttestation} from '../language/semantic/semanticProgramCodec'

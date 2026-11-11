@@ -1,10 +1,10 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {readSweepBodyBoundaryViewportEvidence} from '../src/kernel/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 
 it.each([17,65])('carries a nonbinary13/12 original guide phase through Rush, viewport evidence and fresh Solid (%i initial sections)',async count=>{
  const source=readFileSync('examples/rush/closed-arc-length-rational-phase-contact-hollow-body-boundary.r','utf8').replace('initial_sections: 17',`initial_sections: ${count}`)

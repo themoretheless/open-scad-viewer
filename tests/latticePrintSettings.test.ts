@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {fitLatticeToPrint,printBridgeWarning} from '../src/services/latticePrintSettings'
+import {fitLatticeToPrint,printBridgeWarning} from '../src/fabrication/latticePrintSettings'
 import type {LighteningOptions} from '../src/kernel/solidLightening'
 const o:LighteningOptions={pattern:'web',axis:'x',cell:8,rib:1.35,rim:2,bottom:.1,top:.7,seed:42,jitter:.7,lineWidth:.45,perimeters:3}
 const p={nozzle:.6,layer:.25,lines:4,skinLayers:4,maxBridge:5,openTop:true}

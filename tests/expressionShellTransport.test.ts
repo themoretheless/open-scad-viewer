@@ -1,8 +1,8 @@
-import {MainSolidWorkerClient,type MainSolidPort} from '../src/services/mainSolidWorkerClient'
+import {MainSolidWorkerClient,type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
 import {readFileSync} from 'node:fs'
 import {describe,it,expect} from 'vitest'
-import {expressionShellExpectation,validExpressionShell,type ExpressionShellOptions} from '../src/services/expressionShell'
-import {mainSolidExpectation,mainSolidResult,MAIN_SOLID_JOB_KINDS} from '../src/services/mainSolidProtocol'
+import {expressionShellExpectation,validExpressionShell,type ExpressionShellOptions} from '../src/kernel/expressionShell'
+import {mainSolidExpectation,mainSolidResult,MAIN_SOLID_JOB_KINDS} from '../src/kernel/mainSolidProtocol'
 const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-replay-request-2026-10-09.json',import.meta.url),'utf8'))
 const {op:_,...options}=fixture as ExpressionShellOptions&{op:string}
 const refusal=()=>({version:1,method:'exact-expression-shell-replay',request:structuredClone(options),proposalDefinition:options.proposalDefinition,boundaryDefinition:options.boundaryDefinition,incidenceQualified:false,embeddingQualified:false,materialQualified:false,reason:'profile-work-limit',shell:null})
@@ -56,7 +56,7 @@ describe('expression shell transport identity',()=>{
 })
 
 it('cancels expression replay and ignores a late reply during Retry',async()=>{
- const ports:(MainSolidPort&{request?:import('../src/services/mainSolidProtocol').MainSolidRequest;terminated:boolean})[]=[]
+ const ports:(MainSolidPort&{request?:import('../src/kernel/mainSolidProtocol').MainSolidRequest;terminated:boolean})[]=[]
  const client=new MainSolidWorkerClient(()=>{
   const port:typeof ports[number]={onmessage:null,onerror:null,onmessageerror:null,terminated:false,
    postMessage(request){this.request=request},terminate(){this.terminated=true}}

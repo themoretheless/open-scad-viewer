@@ -2,7 +2,7 @@ import { IDENTITY_2, OPENSCAD_IMPORT_MAX_DXF_QUERY_RECORDS, OPENSCAD_IMPORT_MAX_
 import type { DxfBlock, DxfEntity, DxfSegment, Matrix2, OpenScad2021LegacyImportFormat, OpenScadDxfDimensionMetadata, OpenScadDxfIntermediate, OpenScadDxfLineSegmentMetadata, OpenScadDxfQueryMetadata, OpenScadImportFormat, OpenScadImportGeometry, OpenScadImportGeometry2D, OpenScadImportPoint2, OpenScadImportPreparationBudget, OpenScadImportRegion2D, PreparedImportDecode } from '../openScadImport'
 import { OpenScadProject } from '../../language/openScadProject'
 import type { OpenScadProjectFile } from '../../language/openScadProject'
-import type { SvgOptions } from '../../services/svgDocument'
+import type { SvgOptions } from '../svgDocument'
 import { arcPoints, dxfInteger, dxfNumber, dxfPairs, dxfPolyline, dxfSections, dxfValue, geometry2D, multiply2, parseOpenScad3mfWithBudget, parseOpenScadSvg, stitchDxfSegments, transform2 } from './parseOpenScad3mf'
 import { boundedCount, dataError, finiteNumber, parseOpenScadOff, parseOpenScadStl, textOf } from './parseOpenScadStl'
 import { parseOpenScadAmfWithBudget } from './parseOpenScadAmf'

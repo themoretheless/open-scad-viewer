@@ -1,8 +1,8 @@
 import {it,expect,vi} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {SourceBodyDisplay,SourceBodyDisplayError,sourceBodyDisplayMessage,sourceBodyDisplayLocation} from '../src/services/sourceBodyDisplay'
-import {createSourceBodyRecord} from '../src/services/sourceBodyArchive'
-import type {SourceBodyResult} from '../src/services/sourceBody'
+import {SourceBodyDisplay,SourceBodyDisplayError,sourceBodyDisplayMessage,sourceBodyDisplayLocation} from '../src/kernel/sourceBodyDisplay'
+import {createSourceBodyRecord} from '../src/kernel/sourceBodyArchive'
+import type {SourceBodyResult} from '../src/kernel/sourceBody'
 const {op:_,...options}=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-request-2026-10-10.json',import.meta.url),'utf8'))
 const denied=(uncertainPair:unknown):SourceBodyResult=>({admitted:false,sourceBody:null,edges:[],diagnostics:{reason:'mapped-source-endpoints-unproven',incidence:{uncertainPair},embedding:null,volume:null}})
 it('locates a native refusal in the bound original recipe and preserves both locales',async()=>{

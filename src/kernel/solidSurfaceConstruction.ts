@@ -2,7 +2,7 @@ import {reverseNurbsCurve} from './nurbsCurve'
 import type {DirectDocument} from '../services/directModeling'
 import type {SolidNurbsSurface} from './solidNurbs'
 import {loftAlignedNurbsCurves,sweepNurbsCurve,coonsNurbsPatch,framedSweepNurbsCurve,type FramedSweepResult,prepareCoonsBoundaryWeights,type CoonsBoundaryPreparation} from './nurbsConstructors'
-import {createG2WorldRunout,type G2RunoutReport} from '../services/geometricG2'
+import {createG2WorldRunout,type G2RunoutReport} from './geometricG2'
 
 export type SolidSurfaceConstruction = 'nurbs-loft'|'nurbs-sweep'|'nurbs-patch'|'nurbs-runout'
 export interface SweepOptions {mode:'translation'|'framed';normal:[number,number,number];sections:number;maxDeviation:number}

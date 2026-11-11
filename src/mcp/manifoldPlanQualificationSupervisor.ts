@@ -11,7 +11,7 @@ import {
   type McpManifoldPlanQualificationError,
   type McpManifoldPlanQualificationRequest,
   type McpManifoldPlanQualificationTerminal,
-} from '../services/manifoldPlanQualificationProtocol'
+} from '../kernel/manifoldPlanQualificationProtocol'
 
 export type McpManifoldPlanSupervisorErrorCode =
   | 'E_MCP_MANIFOLD_PLAN_BUSY'

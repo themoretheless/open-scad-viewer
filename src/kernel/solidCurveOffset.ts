@@ -1,4 +1,4 @@
-import {validCurveOffsetDiagnostics,type CurveOffsetDiagnostics} from '../services/curveOffsetDiagnostics'
+import {validCurveOffsetDiagnostics,type CurveOffsetDiagnostics} from './curveOffsetDiagnostics'
 import type {DirectDocument} from '../services/directModeling'
 import type {NurbsCurve} from './nurbsCurve'
 import {callNurbsRust} from './geometry/nurbs'

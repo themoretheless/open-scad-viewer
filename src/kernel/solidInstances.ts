@@ -3,7 +3,7 @@ import type {SolidInstanceBatchCache} from './solidInstanceBatchCache'
 import type {DirectDocument,DirectBody} from '../services/directModeling'
 import {normalizePolygonMesh} from './geometry/polygon'
 import {callGeometryRust} from './geometry/kernel'
-import {stringifyMeshJson} from '../services/meshJson'
+import {stringifyMeshJson} from '../exchange/meshJson'
 export interface SolidInstanceLink {sourceId:string;matrix:number[][];pattern?:boolean}
 /** Relative world-space edit about the current mesh bounds center. */
 export function transformSolidInstance(document:DirectDocument,id:string,delta:number[],axis:number[],angle:number,scale:number,cache?:SolidInstanceBatchCache):DirectDocument {

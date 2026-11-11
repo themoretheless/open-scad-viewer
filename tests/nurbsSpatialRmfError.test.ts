@@ -1,4 +1,4 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {callNurbsRust} from '../src/kernel/geometry/nurbs'
 import {bezierNurbsCurve} from '../src/kernel/nurbsConstructors'
@@ -85,7 +85,7 @@ it('carries antipodal closed RMF correction through Rush and viewport with stric
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepPatchViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepPatchViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const source=readFileSync('examples/rush/closed-antipodal-spatial-rmf-progressive-sweep.r','utf8')
  const document=compileRushFrontend(source).document
  const built=await buildOwnNurbsAsync(document,{action:'build',display:{segments:4,subdivisionLevels:0}})
@@ -100,7 +100,7 @@ it('carries closed spatial RMF through Rush to viewport with strict refusal',asy
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepPatchViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepPatchViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const source=readFileSync('examples/rush/closed-spatial-rmf-affine-progressive-sweep.r','utf8')
  const document=compileRushFrontend(source).document
  const built=await buildOwnNurbsAsync(document,{action:'build',display:{segments:4,subdivisionLevels:0}})
@@ -115,7 +115,7 @@ it('uses explicit RMF precision options in ordinary Rush construction',async()=>
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepPatchViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepPatchViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const source=readFileSync('examples/rush/closed-spatial-rmf-affine-progressive-sweep.r','utf8')
   .replace('initial_sections: 5,max_sections: 17','initial_sections: 129,max_sections: 129')
   .replace('length_tolerance: 0.01mm','length_tolerance: 0.0001mm')
@@ -136,8 +136,8 @@ it.each(['closed-rational-nonuniform-spatial-rmf-affine-hollow-body.r','closed-s
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepBodyBoundaryViewportEvidence}=await import('../src/services/sweepViewportEvidence')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {readSweepBodyBoundaryViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const source=readFileSync(`examples/rush/${file}`,'utf8')
  const document=compileRushFrontend(source).document
  const before=JSON.stringify(document)
@@ -171,8 +171,8 @@ it.each(['closed-spatial-rmf-affine-hollow-body-certified.r','closed-spatial-rmf
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepBodyBoundaryViewportEvidence}=await import('../src/services/sweepViewportEvidence')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {readSweepBodyBoundaryViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS}=await import('../src/kernel/nurbsSweepEmbedding')
  const source=readFileSync(`examples/rush/${file}`,'utf8')
  const built=await buildOwnNurbsAsync(compileRushFrontend(source).document,{action:'build',display:{segments:2,subdivisionLevels:0}})

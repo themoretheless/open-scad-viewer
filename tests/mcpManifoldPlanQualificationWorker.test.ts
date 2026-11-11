@@ -4,7 +4,7 @@ import {
   MCP_MANIFOLD_PLAN_QUALIFICATION_IDENTITY,
   MCP_MANIFOLD_PLAN_QUALIFICATION_PROTOCOL_VERSION,
   type McpManifoldPlanQualificationRequest,
-} from '../src/services/manifoldPlanQualificationProtocol'
+} from '../src/kernel/manifoldPlanQualificationProtocol'
 
 const evaluateMock = vi.hoisted(() => vi.fn())
 const port = vi.hoisted(() => {
@@ -42,7 +42,7 @@ const port = vi.hoisted(() => {
 })
 
 vi.mock('node:worker_threads', () => ({ parentPort: port.parentPort }))
-vi.mock('../src/services/manifoldPlanEvaluator', () => ({
+vi.mock('../src/kernel/manifoldPlanEvaluator', () => ({
   evaluateOpenSCADViaManifoldPlanForQualification: evaluateMock,
 }))
 

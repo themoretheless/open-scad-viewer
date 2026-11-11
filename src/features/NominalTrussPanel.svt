@@ -2,14 +2,14 @@
 import {computed,onUnmounted,ref,shallowRef,watch} from 'svet'
 import type {MeshData} from '../core/mesh'
 import type {LighteningOptions} from '../kernel/solidLightening'
-import type {NominalLatticeGraph} from '../services/latticeGraphProtocol'
-import type {TrussLoadCase,TrussScenario} from '../services/trussScenario'
-import {computeNominalLatticeGraph,computePrintStrengthProfile,computeStructuralProfileCatalog,computeTrussField,computeTrussScenario,computeTrussScreening,computeTrussTopology} from '../services/mainSolidWorker'
-import type {AxialScreeningRow,ValidatedPrintProfile,ThermalEditorState,ThermalEvaluation} from '../services/trussScreening'
-import type {StructuralProfileProperties} from '../services/structuralProfiles'
-import type {TrussTopologyResponse} from '../services/trussAnalysis'
+import type {NominalLatticeGraph} from '../fabrication/latticeGraphProtocol'
+import type {TrussLoadCase,TrussScenario} from '../kernel/trussScenario'
+import {computeNominalLatticeGraph,computePrintStrengthProfile,computeStructuralProfileCatalog,computeTrussField,computeTrussScenario,computeTrussScreening,computeTrussTopology} from '../kernel/mainSolidWorker'
+import type {AxialScreeningRow,ValidatedPrintProfile,ThermalEditorState,ThermalEvaluation} from '../kernel/trussScreening'
+import type {StructuralProfileProperties} from '../kernel/structuralProfiles'
+import type {TrussTopologyResponse} from '../kernel/trussAnalysis'
 import ThermalStrengthEditor from './ThermalStrengthEditor.svt'
-import type {LatticePrintSettings} from '../services/latticePrintSettings'
+import type {LatticePrintSettings} from '../fabrication/latticePrintSettings'
 
 const props=defineProps<{meshes:MeshData[];selection:number[];source:string;ready:boolean;locale:string;options:LighteningOptions;printSettings:LatticePrintSettings;previewEpoch?:number}>()
 const emit=defineEmits<{preview:[meshes:MeshData[]|null]}>()

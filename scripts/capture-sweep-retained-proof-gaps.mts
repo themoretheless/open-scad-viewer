@@ -5,7 +5,7 @@ import {readFileSync,writeFileSync,existsSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {checkRetainedAxisAudit} from './retained-axis-audit-contract.mjs'
 
 const [gatePath,output]=process.argv.slice(2)

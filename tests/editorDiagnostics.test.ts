@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { diagnosticFromBuildError, offsetForLineColumn, revealDiagnostic } from '../src/services/editorDiagnostics'
+import { diagnosticFromBuildError, offsetForLineColumn, revealDiagnostic } from '../src/language/editorDiagnostics'
 
 describe('editor diagnostics', () => {
   it('maps worker line/column coordinates to a bounded source token range', () => {

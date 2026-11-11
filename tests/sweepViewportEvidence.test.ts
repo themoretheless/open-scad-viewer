@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
-import {readSweepViewportEvidence,readSweepPatchViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {readSweepViewportEvidence,readSweepPatchViewportEvidence} from '../src/kernel/sweepViewportEvidence'
 it('keeps solid geometry independent of incomplete authored sweep guarantees',()=>{
  const artifact=createNativeGeometryArtifact('sweep','brep',{geometry:{},sweepEvidence:{
   volume:{solidGeometryCertified:true},continuousBound:false,

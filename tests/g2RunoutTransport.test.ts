@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest'
 const native=vi.hoisted(()=>vi.fn())
 vi.mock('../src/kernel/geometry/nurbs',()=>({callNurbsRust:native}))
-import {createG2RunoutSurface} from '../src/services/geometricG2'
+import {createG2RunoutSurface} from '../src/kernel/geometricG2'
 import type {NurbsSurface} from '../src/kernel/nurbsSurface'
 const surface:NurbsSurface={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]]}
 const pc={degree:1,knots:[0,0,1,1],controlPoints:[[0,.1],[1,.1]],weights:[1,1]}

@@ -5,7 +5,7 @@ vi.mock('../src/kernel/geometry/kernel', () => ({ callGeometryRust: calls.rust }
 vi.mock('../src/render/webgpuCompute', () => ({ runGpuCompute: calls.gpu }))
 
 import { prepareSdfGpuBatch, primeSdfGpuBatch, tessellateSdfGpuAware, type SdfField, type SdfGrid } from '../src/kernel/geometry/sdf'
-import { runSdfSweepBatch, type SdfGpuBatchPayload } from '../src/services/sdfGpu'
+import { runSdfSweepBatch, type SdfGpuBatchPayload } from '../src/render/sdfGpu'
 
 const field: SdfField = { kind: 'sphere', center: [0, 0, 0], radius: 10 }
 const grid: SdfGrid = { min: [-12, -12, -12], max: [12, 12, 12], cells: [8, 8, 8] }

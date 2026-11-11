@@ -49,8 +49,8 @@ async function phase<T>(name:string,run:()=>T|Promise<T>):Promise<T>{const start
 try{
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbsAsync}=await import('../src/language/rushGraphNurbsKernel')
- const {readNativeGeometryData}=await import('../src/services/nativeGeometrySnapshot')
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {readNativeGeometryData}=await import('../src/kernel/nativeGeometrySnapshot')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  const document=compileRushFrontend(source).document,before=JSON.stringify(document)
  const built=await phase('build',()=>buildOwnNurbsAsync(document,{action:'build',display:{segments,subdivisionLevels:0}}))
  assert.ok(built.nativeGeometry)

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { extractSharpFeatureEdges } from '../src/services/meshTopology'
+import { extractSharpFeatureEdges } from '../src/kernel/meshTopology'
 import {
   computePinchZoomFactor,
   stepInertialOrbitCamera,
   type OrbitCameraState,
-} from '../src/services/cameraGestures'
+} from '../src/render/cameraGestures'
 import { inspectStepHeaderMetadata } from '../src/kernel/cadStepConformance'
 import { extractOpenScadDependencies } from '../src/language/openScadProject'
 import {

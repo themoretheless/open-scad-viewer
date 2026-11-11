@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {splitTransparentTriangle, type TransparentTriangle} from '../src/services/transparentTriangleSplit'
+import {splitTransparentTriangle, type TransparentTriangle} from '../src/render/transparentTriangleSplit'
 const triangle:TransparentTriangle=[[-1,-1,-.6,0],[1,-1,.6,1],[0,1,0,.5]]
 function area(t:readonly (readonly number[])[]){const a=t[1].map((v,i)=>v-t[0][i]),b=t[2].map((v,i)=>v-t[0][i]);return Math.hypot(a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0])/2}
 it('preserves surface area and interpolates attributes at the crossing',()=>{

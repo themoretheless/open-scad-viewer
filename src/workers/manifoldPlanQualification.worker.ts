@@ -1,6 +1,6 @@
 import { installGeometryKernelFromTrustedHost } from '../kernel/geometry/kernel'
-import { isMcpManifoldPlanQualificationTerminal } from '../services/manifoldPlanQualificationProtocol'
-import { manifoldPlanQualificationWorkerRuntime } from '../services/manifoldPlanQualificationWorkerRuntime'
+import { isMcpManifoldPlanQualificationTerminal } from '../kernel/manifoldPlanQualificationProtocol'
+import { manifoldPlanQualificationWorkerRuntime } from '../kernel/manifoldPlanQualificationWorkerRuntime'
 
 const receive = manifoldPlanQualificationWorkerRuntime({
   post: (message, transfer) => self.postMessage(message, { transfer }),

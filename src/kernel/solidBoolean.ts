@@ -1,7 +1,7 @@
 import type {DirectBody,DirectDocument} from '../services/directModeling'
 import {booleanNurbsBrep,tessellateNurbsBrep,type BrepBooleanOperation} from './geometry/brep'
 import {booleanPolygonMeshes} from './geometry/polygon'
-import {mergeByDistance} from '../services/meshEditing'
+import {mergeByDistance} from './meshEditing'
 
 export interface SolidBooleanOptions {
  operation:BrepBooleanOperation

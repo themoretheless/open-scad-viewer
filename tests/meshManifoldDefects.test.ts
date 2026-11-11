@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {cachedMeshManifoldReport, meshManifoldDefectLabels} from '../src/services/meshManifoldDefects'
+import {cachedMeshManifoldReport, meshManifoldDefectLabels} from '../src/kernel/meshManifoldDefects'
 import type {KernelManifoldReport} from '../src/kernel/geometry/manifoldAnalysis'
 
 const openTetra = {

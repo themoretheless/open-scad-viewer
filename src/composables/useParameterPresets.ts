@@ -5,8 +5,8 @@ import {
   parameterTemplateHash,
   type ParameterPreset,
 } from '../services/parameterPresets'
-import { type CustomizerParameter, type CustomizerValue, encodeCustomizerValue } from '../services/scadCustomizer'
-import { applySourceSplice } from '../services/sourceSplice'
+import { type CustomizerParameter, type CustomizerValue, encodeCustomizerValue } from '../language/scadCustomizer'
+import { applySourceSplice } from '../kernel/sourceSplice'
 import {
   MAX_WORKSPACE_SOURCE_LENGTH,
   updateWorkspaceDocument,

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {readAnnularG2Evidence} from '../src/services/annularG2Evidence'
+import {readAnnularG2Evidence} from '../src/kernel/annularG2Evidence'
 // Receipt/presentation fixture only; this never supplies geometry admission.
 function receipt(){return {geometricMaxCells:128,geometricCells:40,capInternalSeams:[0,1].map(cap=>{
  const edgeIds=[0,1,2,3].map(i=>cap*4+i)

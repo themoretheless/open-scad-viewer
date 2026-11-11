@@ -5,12 +5,12 @@ import {resolve} from 'node:path'
 import * as module from 'node:module'
 import {load} from '../tests/fixtures/raw-import-loader.mjs'
 import artifact from '../src/generated/geometry-kernels/identity'
-import type {MainSolidJob} from '../src/services/mainSolidProtocol'
+import type {MainSolidJob} from '../src/kernel/mainSolidProtocol'
 if(typeof(module as any).registerHooks==='function')(module as any).registerHooks({load})
 else module.register(new URL('../tests/fixtures/raw-import-loader.mjs',import.meta.url),import.meta.url)
-const {createSourceGraphG2Preview}=await import('../src/services/sourceGraphG2Preview')
-const {createMainSolidWorkerHandler}=await import('../src/services/mainSolidWorkerRuntime')
-const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+const {createSourceGraphG2Preview}=await import('../src/kernel/sourceGraphG2Preview')
+const {createMainSolidWorkerHandler}=await import('../src/kernel/mainSolidWorkerRuntime')
+const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
 const bytes=readFileSync('public/wasm/geometry-kernel.wasm'),sha256=createHash('sha256').update(bytes).digest('hex')
 assert.equal(sha256,artifact.sha256);assert.equal(bytes.length,artifact.byteLength)
 const sources:[any,any]=[0,1].map(side=>({degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[0,1].map(x=>[[x,0,0],[x,side===0?-1:1,-1/1024]]),weights:[[1,1],[1,1]]})) as [any,any]

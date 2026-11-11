@@ -36,9 +36,9 @@ describe('retained profile intersection Rust/WASM boundary',()=>{
 })
 
 it('runs profile pair diagnostics through the worker and validates its source snapshot',async()=>{
-  const {createMainSolidWorkerHandler}=await import('../src/services/mainSolidWorkerRuntime')
-  const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
-  const messages:import('../src/services/mainSolidProtocol').MainSolidResponse[]=[]
+  const {createMainSolidWorkerHandler}=await import('../src/kernel/mainSolidWorkerRuntime')
+  const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
+  const messages:import('../src/kernel/mainSolidProtocol').MainSolidResponse[]=[]
   const handle=createMainSolidWorkerHandler(message=>messages.push(message))
   const job={kind:'profileIntersections' as const,loops:[[line([0,0],[2,2])],[line([0,2],[2,0])]],options:{toleranceMm:1e-7,maxPairs:128,maxBoxes:32768}}
   const before=JSON.stringify(job),expected=mainSolidExpectation(job)

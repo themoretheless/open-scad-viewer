@@ -1,6 +1,6 @@
 /** Synchronous host boundary for the own Rust geometry libraries; no geometry fallback. */
 import {encodeBinary} from '../../services/valueBinaryCodec'
-import {decodePacked, writeLinear} from '../../services/wasmHost'
+import {decodePacked, writeLinear} from '../wasmHost'
 import {compileGeometryKernelArtifact, compileGeometryKernelArtifactSync} from './kernelCompilation'
 import artifactIdentity from '../../generated/geometry-kernels/identity'
 import {

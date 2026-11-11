@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {validExpressionDisplay,type ExpressionDisplayLimits,type ExpressionDisplayReport} from '../src/services/expressionDisplay'
+import {validExpressionDisplay,type ExpressionDisplayLimits,type ExpressionDisplayReport} from '../src/kernel/expressionDisplay'
 const limits:ExpressionDisplayLimits={divisions:2,cells:8,controlsPerEnclosure:1000,spans:1000,toleranceUv:1e-8,domainCells:512,domainCellsPerCell:32}
 // Structural transport fixtures; they do not qualify any actual geometry.
 const report=():ExpressionDisplayReport=>({trimQualified:false,enclosed:1,pending:1,spans:1,domainCells:16,inside:1,outside:0,unresolvedTrim:1,cells:[

@@ -10,7 +10,7 @@ import {
   MANIFOLD_PLAN_CARRIERS,
   ManifoldPlanBackend,
   type ManifoldPlanPayloadFamily,
-} from '../src/services/manifoldPlanBackend'
+} from '../src/kernel/manifoldPlanBackend'
 import type {
   CadKernelHandle,
   CadKernelOps,
@@ -20,7 +20,7 @@ import {
   evaluateOpenSCADViaInjectedManifoldPlan,
   evaluateOpenSCADViaManifoldPlanForQualification,
   ManifoldPlanQualificationLane,
-} from '../src/services/manifoldPlanEvaluator'
+} from '../src/kernel/manifoldPlanEvaluator'
 import {
   referenceCaptureLegacyOutcome,
   referenceCompareLegacyOutcomes,
@@ -299,10 +299,10 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
     expect(scanned).toContain('language/openscadCompiler.ts')
     const importsManifold = /(?:from\s*|import\s*\()['"]manifold-3d\//
     for (const file of files) expect(readFileSync(file, 'utf8')).not.toMatch(importsManifold)
-    expect(readFileSync(new URL('../src/services/manifoldPlanBackend.ts', import.meta.url), 'utf8'))
+    expect(readFileSync(new URL('../src/kernel/manifoldPlanBackend.ts', import.meta.url), 'utf8'))
       .not.toContain('manifold-3d')
     const forbiddenPlanImports = /from\s*['"]\.\/(?:openscadCompiler|openscadParser|geometryWorkerProtocol)['"]/
-    expect(readFileSync(new URL('../src/services/manifoldPlanBackend.ts', import.meta.url), 'utf8'))
+    expect(readFileSync(new URL('../src/kernel/manifoldPlanBackend.ts', import.meta.url), 'utf8'))
       .not.toMatch(forbiddenPlanImports)
     expect(readFileSync(new URL('../src/services/legacyV5Assembler.ts', import.meta.url), 'utf8'))
       .not.toMatch(forbiddenPlanImports)

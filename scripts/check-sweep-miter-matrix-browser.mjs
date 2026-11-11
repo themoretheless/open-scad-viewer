@@ -87,13 +87,13 @@ report.gpuBackendRequested=gpuBackend
 report.selection={startAt:startAt??null,fullInventory,plannedCaseKeys}
 if(evidenceOnly)report.scope+=' Evidence-only run excludes viewport rendering qualification.'
 report.sourceHashes = Object.fromEntries(await Promise.all([
- 'src/App.vue', 'src/services/sweepRetainedCorrespondence.ts', 'src/kernel/geometry/brep.ts',
+ 'src/App.vue', 'src/kernel/sweepRetainedCorrespondence.ts', 'src/kernel/geometry/brep.ts',
  'src/kernel/nurbsMiterOwnedBoundary.ts','crates/brep-core/src/sweep_miter_owned.rs','crates/geometry-bridge/src/cad_miter_owned.rs',
  'crates/nurbs-core/src/sweeps/progressive_sweep/mod.rs','crates/nurbs-core/src/sweeps/progressive_sweep/authored_error.rs',
  'crates/nurbs-core/src/sweeps/progressive_sweep/authored_error/spatial_parameter.rs',
  'crates/nurbs-core/src/sweeps/progressive_sweep/rmf_transport.rs',
  'src/kernel/nurbsSectionProjection.ts','src/kernel/nurbsCircleSectionRepair.ts',
- 'src/services/miterBodyLayout.ts','src/services/sweepBoundaryCertificate.ts',
+ 'src/kernel/miterBodyLayout.ts','src/kernel/sweepBoundaryCertificate.ts',
  'src/features/DirectModeler.vue', 'src/generated/geometry-kernels/bytes.ts',
  'scripts/check-sweep-miter-matrix-browser.mjs','scripts/sweep-native-cancel-probe.mjs',
 ].map(async file => [file, sha(await readFile(file))])))

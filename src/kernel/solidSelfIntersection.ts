@@ -1,5 +1,5 @@
 import {brepSourceSnapshot} from './geometry/brep/sourceSnapshot'
-import {axisPolarFrames,sameFrame,validPolarProofEvidence,type PolarProofEvidence} from '../services/polarProofProtocol'
+import {axisPolarFrames,sameFrame,validPolarProofEvidence,type PolarProofEvidence} from './polarProofProtocol'
 import type {NurbsBrep} from './geometry/brep'
 import {callGeometryRust} from './geometry/kernel'
 import {faceContactExpectation,validFaceContacts,type FaceContacts,type FaceContactLimits} from './solidFaceContacts'

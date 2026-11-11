@@ -1,5 +1,5 @@
 import {beforeEach,afterEach,describe,it,expect,vi} from 'vitest'
-import {SurfaceSelfIntersectionBrowser} from '../src/services/surfaceSelfIntersectionBrowser'
+import {SurfaceSelfIntersectionBrowser} from '../src/kernel/surfaceSelfIntersectionBrowser'
 import {graphQuery,graphReport,graphUnprovedReport} from './fixtures/quadricGraph'
 class FakeWorker {
  static all:FakeWorker[]=[]

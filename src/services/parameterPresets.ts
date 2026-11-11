@@ -1,5 +1,5 @@
 import { sha256Hex } from '../core/sha256'
-import { encodeCustomizerValue, extractCustomizerParameters, type CustomizerValue } from './scadCustomizer'
+import { encodeCustomizerValue, extractCustomizerParameters, type CustomizerValue } from '../language/scadCustomizer'
 
 export const MAX_PARAMETER_PRESETS = 20
 const MAX_PARAMETERS = 128

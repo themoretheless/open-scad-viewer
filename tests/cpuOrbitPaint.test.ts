@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {paintCpuOrbit} from '../src/services/cpuOrbitPaint'
+import {paintCpuOrbit} from '../src/render/cpuOrbitPaint'
 describe('CPU orbit painter',()=>{
  it('clears the previous camera frame and preserves ordered alpha polygons and opaque strokes',()=>{
   const events:unknown[][]=[]

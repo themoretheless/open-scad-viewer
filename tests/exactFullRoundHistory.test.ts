@@ -11,7 +11,7 @@ vi.mock('../src/kernel/geometry/kernelCompilation', async original => {
   const module=new WebAssembly.Module(bytes)
   return {compileGeometryKernelArtifactSync:()=>module,compileGeometryKernelArtifact:async()=>module}
 })
-import {restoreExactFullRoundHistory,editExactFullRoundHistory,currentExactFullRoundArtifact} from '../src/services/exactFullRoundHistory'
+import {restoreExactFullRoundHistory,editExactFullRoundHistory,currentExactFullRoundArtifact} from '../src/kernel/exactFullRoundHistory'
 const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/full-round-history-bridge-wasm-2026-11-02/native-fixture.json',import.meta.url),'utf8'))
 describe('native exact history transport',()=>{
   it('restores persisted history, freezes ownership and selects the document cursor',()=>{

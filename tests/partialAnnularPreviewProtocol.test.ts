@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {mainSolidExpectation,mainSolidResult,type MainSolidJob} from '../src/services/mainSolidProtocol'
-import {MainSolidWorkerClient} from '../src/services/mainSolidWorkerClient'
+import {mainSolidExpectation,mainSolidResult,type MainSolidJob} from '../src/kernel/mainSolidProtocol'
+import {MainSolidWorkerClient} from '../src/kernel/mainSolidWorkerClient'
 
 const body={id:'source',brep:{topologyIds:{bodies:['b:source']}},mesh:{positions:[0,0,0,1,0,0,0,1,0],indices:[0,1,2]}}
 const job={kind:'partialAnnularPreview',body,edge:2,radius:1.25} as unknown as MainSolidJob
@@ -45,7 +45,7 @@ it('drops a partial-annular preview delivered after cancellation and replacement
 
 it('accepts and executes the partial-annular request through the complete worker handler',async()=>{
  const {createBrepTube,tessellateNurbsBrep,partialAnnularPreview}=await import('../src/kernel/geometry/brep')
- const {createMainSolidWorkerHandler}=await import('../src/services/mainSolidWorkerRuntime')
+ const {createMainSolidWorkerHandler}=await import('../src/kernel/mainSolidWorkerRuntime')
  const brep=createBrepTube(20,5,6)
  const source={id:'annular',name:'Annular',brep,mesh:tessellateNurbsBrep(brep,2)}
  const actualJob={kind:'partialAnnularPreview' as const,body:source,edge:2,radius:1.25}

@@ -4,7 +4,7 @@ import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {scaledSweepNurbsCurve,checkedProfileSweepNurbsSurface,bezierNurbsCurve} from '../src/kernel/nurbsConstructors'
 import {evaluateNurbsSurface,isoNurbsCurve} from '../src/kernel/nurbsSurface'
-import {createCappedBrepLoftSurfaces} from '../src/services/sweep/construction/brep'
+import {createCappedBrepLoftSurfaces} from '../src/kernel/sweep/construction/brep'
 import {exportDirectStepV5,importDirectStepV5} from '../src/kernel/cadNurbsStep'
 import {sweepStepArtifactProvenance} from './sweep-step-provenance.mjs'
 const root=resolve(process.argv[2]??'/tmp/scalar-sweep-step');mkdirSync(root,{recursive:true})

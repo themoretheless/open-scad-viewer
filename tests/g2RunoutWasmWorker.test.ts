@@ -15,8 +15,8 @@ vi.mock('../src/generated/geometry-kernels/identity',async()=>{
  const {sha256,byteLength}=JSON.parse(readFileSync('output/qualification/runout-wasm-2026-10-16/runout-abi.json','utf8'))
  return {default:{sha256,byteLength}}
 })
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
-import {mainSolidExpectation,mainSolidResult,type MainSolidJob,type MainSolidResponse} from '../src/services/mainSolidProtocol'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
+import {mainSolidExpectation,mainSolidResult,type MainSolidJob,type MainSolidResponse} from '../src/kernel/mainSolidProtocol'
 it.skipIf(!existsSync('output/qualification/runout-wasm-2026-10-16/runout-abi.json'))('runs the real runout worker handler against staged WASM and recovers after refusal',async()=>{
  const source={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]]}
  const plane={...source,controlPoints:source.controlPoints.map(row=>row.map(p=>[p[0],1,p[1]]))}

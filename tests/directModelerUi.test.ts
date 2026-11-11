@@ -41,12 +41,12 @@ import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/s
 import {solidTopology} from '../src/services/directSolidTools'
 import {sampleCurve} from '../src/services/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 import {createBrepBox,createBrepTube,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 vi.mock('../src/kernel/solidDraftHeadStore',()=>({readSolidDraftHead:async()=>null,writeSolidDraftHead:async(key:string,_expected:string|null,text:string)=>({key,revision:crypto.randomUUID(),text})}))
 const previewWorkerRun=vi.hoisted(()=>vi.fn())
 const downloadArtifactBytes=vi.hoisted(()=>vi.fn())
-vi.mock('../src/services/downloadArtifact',()=>({downloadBytes:downloadArtifactBytes}))
+vi.mock('../src/exchange/downloadArtifact',()=>({downloadBytes:downloadArtifactBytes}))
 const displayWorkerRun=vi.hoisted(()=>vi.fn())
 const primitiveWorkerRun=vi.hoisted(()=>vi.fn())
 const measurementWorkerRun=vi.hoisted(()=>vi.fn())
@@ -94,7 +94,7 @@ vi.mock('../src/kernel/solidPreviewWorker',async()=>{
 })
 afterEach(()=>{previewWorkerRun.mockReset();downloadArtifactBytes.mockReset();displayWorkerRun.mockReset();primitiveWorkerRun.mockReset();measurementWorkerRun.mockReset();boundaryWorkerRun.mockReset();surfaceDisplayWorkerRun.mockReset();topologyWorkerRun.mockReset();bodyEdgesWorkerRun.mockReset();faceSketchWorkerRun.mockReset();bodySnapsWorkerRun.mockReset();sketchSnapsWorkerRun.mockReset()})
 const svgWorkerRun=vi.hoisted(()=>vi.fn())
-vi.mock('../src/services/svgWorkerClient',()=>({createSvgWorkerClient:()=>({run:svgWorkerRun,dispose:()=>{}})}))
+vi.mock('../src/exchange/svgWorkerClient',()=>({createSvgWorkerClient:()=>({run:svgWorkerRun,dispose:()=>{}})}))
 afterEach(()=>svgWorkerRun.mockReset())
 const contactWorkerRun=vi.hoisted(()=>vi.fn())
 const clearanceWorkerRun=vi.hoisted(()=>vi.fn())
@@ -3941,7 +3941,7 @@ it('maps CPU split fragments back to their original selectable face',async()=>{
 
 
 it('reports approximate CPU transparency and clears the status after reducing the scene',async()=>{
- const {TransparentBsp}=await import('../src/services/transparentBsp')
+ const {TransparentBsp}=await import('../src/render/transparentBsp')
  const ui=await mount();await ui.click('Box');await ui.click('Properties')
  const fail=vi.spyOn(TransparentBsp.prototype,'ordered').mockImplementation(()=>{throw Error('Transparency operation limit exceeded')})
  try{

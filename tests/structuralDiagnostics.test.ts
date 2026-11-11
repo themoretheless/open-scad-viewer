@@ -1,8 +1,8 @@
 import {expect, it} from 'vitest'
 import {GeometryKernelError} from '../src/kernel/geometry/kernel'
-import {solveTruss, type TrussModel} from '../src/services/trussAnalysis'
-import {solveFrame, type FrameModel} from '../src/services/frameAnalysis'
-import {diagnoseFrame, diagnoseTruss} from '../src/services/structuralDiagnostics'
+import {solveTruss, type TrussModel} from '../src/kernel/trussAnalysis'
+import {solveFrame, type FrameModel} from '../src/kernel/frameAnalysis'
+import {diagnoseFrame, diagnoseTruss} from '../src/kernel/structuralDiagnostics'
 
 const trussBar = (): TrussModel => ({
   nodesMm: [[0,0,0],[10,0,0]],

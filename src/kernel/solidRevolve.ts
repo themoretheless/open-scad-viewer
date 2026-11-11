@@ -3,7 +3,7 @@ import {applyDirectRevolve,type DirectRevolveOptions} from '../services/directPr
 import {parseDirectDocument,type DirectDocument,type DirectSketch,type DirectBody} from '../services/directModeling'
 import {xyPlane,cross3,type Vec3} from '../services/directSketchGeometry'
 import {booleanNurbsBrep,revolveBrepProfile,createFacetedBrepRevolve,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep'
-import {stringifyMeshJson} from '../services/meshJson'
+import {stringifyMeshJson} from '../exchange/meshJson'
 import {callGeometryRust} from './geometry/kernel'
 import {transformBrepProfile} from './geometry/brepProfile'
 export interface SolidRevolveOptions extends DirectRevolveOptions {

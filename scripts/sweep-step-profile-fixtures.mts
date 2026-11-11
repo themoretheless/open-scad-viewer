@@ -12,7 +12,7 @@ import type {ProgressiveGuidedSurfaceSweepOptions as ProgressiveBrepSweepOptions
 
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
-import {readSweepBodyBoundaryViewportEvidence,readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {readSweepBodyBoundaryViewportEvidence,readSweepViewportEvidence} from '../src/kernel/sweepViewportEvidence'
 
 import type {NurbsBrep} from '../src/kernel/geometry/brep'
 

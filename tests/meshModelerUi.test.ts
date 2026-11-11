@@ -1,17 +1,17 @@
 import {createRenderer, nextTick} from 'svet'
 import {afterEach, expect, it, vi} from 'vitest'
 import MeshModeler from '../src/features/MeshModeler.svt'
-import {createBoxMesh, transformMesh} from '../src/services/meshEditing'
+import {createBoxMesh, transformMesh} from '../src/kernel/meshEditing'
 
 const downloadBytes=vi.hoisted(()=>vi.fn())
-vi.mock('../src/services/downloadArtifact',()=>({downloadBytes}))
+vi.mock('../src/exchange/downloadArtifact',()=>({downloadBytes}))
 const repairControl=vi.hoisted(()=>({defer:false,events:[] as {phase:string;completed:number;total:number}[],resolve:(value?:unknown)=>{},reject:(reason?:unknown)=>{},cancel:vi.fn(),dispose:vi.fn()}))
 const manifoldControl=vi.hoisted(()=>({defer:false,events:[] as {phase:string;completed:number;total:number}[],resolve:(value?:unknown)=>{},reject:(reason?:unknown)=>{},cancel:vi.fn(),dispose:vi.fn()}))
 vi.mock('../src/kernel/solidPreviewWorker',async()=>{
- const {booleanMeshObjectsDetailed,repairMeshObject}=await import('../src/services/meshEditing')
+ const {booleanMeshObjectsDetailed,repairMeshObject}=await import('../src/kernel/meshEditing')
  const {importMeshFile}=await import('../src/exchange/meshImport')
- const {exportPolygonMesh}=await import('../src/services/meshConvert')
- const {inspectMeshManifoldObjects}=await import('../src/services/meshManifoldDefects')
+ const {exportPolygonMesh}=await import('../src/exchange/meshConvert')
+ const {inspectMeshManifoldObjects}=await import('../src/kernel/meshManifoldDefects')
  return {createSolidPreviewWorker:()=>{
   let activeKind=''
   const control=()=>activeKind==='meshManifold'?manifoldControl:repairControl

@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {describe,it,expect} from 'vitest'
-import {validExpressionRadiusRequest,validExpressionRadiusReport} from '../src/services/expressionRadiusCheck'
-import {expressionShellExpectation,validExpressionShell} from '../src/services/expressionShell'
+import {validExpressionRadiusRequest,validExpressionRadiusReport} from '../src/kernel/expressionRadiusCheck'
+import {expressionShellExpectation,validExpressionShell} from '../src/kernel/expressionShell'
 const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/expression-radius-dispatch-2026-10-09.json',import.meta.url),'utf8'))
 describe('native expression radius transport',()=>{
  for(const state of ['admitted','violation','unproven'])it(`accepts actual native ${state} response`,()=>{

@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
 import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
 import {createRationalBrepSectionLoft,createMiterBrepProfileBody} from '../src/kernel/geometry/brep'
-import {inspectMiterStationSmoothness} from '../src/services/miterStationSmoothness'
+import {inspectMiterStationSmoothness} from '../src/kernel/miterStationSmoothness'
 const straight=()=>createRationalBrepSectionLoft([0,5,10].map(z=>[[circleNurbsCurve([0,0,z],[0,0,1],.5)]]))
 it('certifies all straight station joins independently of caps and refuses budget exhaustion',()=>{
  const model=straight(),caps=[model.faces.length-2,model.faces.length-1]
@@ -38,7 +38,7 @@ it('carries applicable station G2 through Rush while retaining cap C0 and Solid'
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const graph=compileRushFrontend(readFileSync('examples/rush/progressive-miter-station-g2-hollow.r','utf8'))
  const built=buildOwnNurbs(graph.document,{action:'build',display:{segments:4,subdivisionLevels:0}})
 
@@ -59,7 +59,7 @@ it('certifies reconstructed moving frames and hollow Solid while retaining expli
  const {readFileSync}=await import('node:fs')
  const {compileRushFrontend}=await import('../src/language/rushFrontend')
  const {buildOwnNurbs}=await import('../src/language/rushGraphNurbsKernel')
- const {readSweepViewportEvidence}=await import('../src/services/sweepViewportEvidence')
+ const {readSweepViewportEvidence}=await import('../src/kernel/sweepViewportEvidence')
  const source=readFileSync('examples/rush/miter-moving-frame-guide-affine-hollow-corrected.r','utf8')
   .replace('cap_correction_tolerance:','circle_correction_tolerance:1e-9mm,circle_correction_max_work:100000,cap_correction_tolerance:')
   .replace(/\.brep_tessellate\(\d+\)/,'.brep_smooth_miter_stations(wall_tolerance:1mm,quantum:0.0000000000004547473508864641mm,max_work:1000000,max_deviation:2mm).brep_tessellate(4)')
@@ -70,7 +70,7 @@ it('certifies reconstructed moving frames and hollow Solid while retaining expli
  expect(report.profileSmoothness.totalExactWork).toBeLessThanOrEqual(report.profileSmoothness.maxWork)
  const {kind,...model}=built.report.definitions[node.id] as any
  expect(kind).toBe('brep')
- const {inspectMiterProfileSmoothness}=await import('../src/services/miterProfileSmoothness')
+ const {inspectMiterProfileSmoothness}=await import('../src/kernel/miterProfileSmoothness')
  const budget=report.profileSmoothness.totalExactWork-1
  const limited=inspectMiterProfileSmoothness(model,[model.faces.length-2,model.faces.length-1],budget)
  expect(limited.station.stationG2Certified).toBe(false)

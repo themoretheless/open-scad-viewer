@@ -2,9 +2,9 @@ import {beforeAll,expect,it} from 'vitest'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {fitNurbsOffsetEnvelope} from '../src/kernel/nurbsOffsetEnvelopeFit'
 import {contactQualificationExpectation,qualifyNurbsOffsetContacts,validContactQualification,type OffsetContactQualificationOptions} from '../src/kernel/nurbsOffsetContactQualification'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
-import type {MainSolidResponse} from '../src/services/mainSolidProtocol'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
+import type {MainSolidResponse} from '../src/kernel/mainSolidProtocol'
 import {planeEnvelopeFixture} from './fixtures/offset-envelope'
 beforeAll(async()=>{await warmGeometryKernel()})
 function options():OffsetContactQualificationOptions {

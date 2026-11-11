@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs'
-import {createSourceBodyRecord,withSourceBodyInspection} from '../src/services/sourceBodyArchive'
-import type {ExpressionInspectionOptions} from '../src/services/expressionShellInspection'
-import type {SourceBodyOptions} from '../src/services/sourceBody'
+import {createSourceBodyRecord,withSourceBodyInspection} from '../src/kernel/sourceBodyArchive'
+import type {ExpressionInspectionOptions} from '../src/kernel/expressionShellInspection'
+import type {SourceBodyOptions} from '../src/kernel/sourceBody'
 const fixture=JSON.parse(readFileSync('docs/qualification/mapped-retained-carrier-2026-10-08/expression-shell-inspection-native-2026-10-09.json','utf8'))
 const {op:_,...options}=fixture.request as ExpressionInspectionOptions&{op:string}
 if(process.argv.includes('--aligned-chords'))options.alignedChordCheck={

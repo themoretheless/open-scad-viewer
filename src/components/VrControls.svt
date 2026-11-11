@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'svet'
 import type { MeshData } from '../core/mesh'
-import { prepareVrScene, type VrMesh } from '../services/vrScene'
-import { VrPresentation, vrSystem } from '../services/vrSession'
+import { prepareVrScene, type VrMesh } from '../render/vrScene'
+import { VrPresentation, vrSystem } from '../render/vrSession'
 
 const props = withDefaults(defineProps<{ meshes?: readonly MeshData[]; visibility?: readonly boolean[]; isolated?: boolean; selectedIndex?: number | null; getScene?: () => VrMesh[]; available?: boolean; locale: string }>(), { available: undefined })
 const ru = computed(() => props.locale === 'ru')

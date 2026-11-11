@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
-import type {MainSolidResponse} from '../src/services/mainSolidProtocol'
-import type {TrussModel} from '../src/services/trussAnalysis'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
+import type {MainSolidResponse} from '../src/kernel/mainSolidProtocol'
+import type {TrussModel} from '../src/kernel/trussAnalysis'
 
 it('rejects overlapping requests during initialization and recovers after typed errors',async()=>{
   const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
@@ -31,9 +31,9 @@ it('runs contact inspection through the worker handler and warmed WASM',async()=
 })
 
 it('checks a mesh batch with per-object progress and strict report validation',async()=>{
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
- const {createBoxMesh}=await import('../src/services/meshEditing')
- const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
+ const {createBoxMesh}=await import('../src/kernel/meshEditing')
+ const messages:MainSolidResponse[]=[],progress:import('../src/kernel/mainSolidProtocol').MainSolidProgressMessage[]=[]
  const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
  const open={positions:new Float64Array([0,0,0,2,0,0,0,2,0,0,0,2]),indices:new Uint32Array([0,2,1,0,1,3,1,2,3])}
  const box=createBoxMesh([2,2,2]),before=structuredClone({open,box})
@@ -47,7 +47,7 @@ it('checks a mesh batch with per-object progress and strict report validation',a
  if(messages[0].ok){
   const expectation=mainSolidExpectation(job)
   expect(mainSolidResult(expectation,messages[0].result)).toBe(true)
-  const malformed=structuredClone(messages[0].result) as import('../src/services/meshManifoldDefects').MeshManifoldEntry[]
+  const malformed=structuredClone(messages[0].result) as import('../src/kernel/meshManifoldDefects').MeshManifoldEntry[]
   malformed[0].id='stale'
   expect(mainSolidResult(expectation,malformed)).toBe(false)
  }
@@ -56,8 +56,8 @@ it('checks a mesh batch with per-object progress and strict report validation',a
 })
 
 it('runs staged Full mesh repair with protocol validation and immutable input',async()=>{
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
- const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
+ const messages:MainSolidResponse[]=[],progress:import('../src/kernel/mainSolidProtocol').MainSolidProgressMessage[]=[]
  const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
  const mesh={positions:new Float64Array([0,0,0,2,0,0,0,2,0,0,0,2]),indices:new Uint32Array([0,2,1,0,1,3,1,2,3])}
  const before=structuredClone(mesh),job={kind:'meshRepair' as const,mesh}
@@ -71,9 +71,9 @@ it('runs staged Full mesh repair with protocol validation and immutable input',a
 })
 
 it('runs manifold mesh Boolean with honest progress and strict result validation',async()=>{
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
- const {createBoxMesh,transformMesh}=await import('../src/services/meshEditing')
- const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
+ const {createBoxMesh,transformMesh}=await import('../src/kernel/meshEditing')
+ const messages:MainSolidResponse[]=[],progress:import('../src/kernel/mainSolidProtocol').MainSolidProgressMessage[]=[]
  const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
  const a=createBoxMesh([2,2,2]),b=transformMesh(createBoxMesh([2,2,2]),[1,0,0],0,1)
  const beforeA=structuredClone(a),beforeB=structuredClone(b),job={kind:'meshBoolean' as const,a,b,operation:'union' as const,options:{weldEpsilonMm:1e-4,relativeTolerance:1e-7}}
@@ -83,7 +83,7 @@ it('runs manifold mesh Boolean with honest progress and strict result validation
  if(messages[0].ok){
   const expectation=mainSolidExpectation(job)
   expect(mainSolidResult(expectation,messages[0].result)).toBe(true)
-  const malformed=structuredClone(messages[0].result) as import('../src/services/meshEditing').MeshBooleanResult
+  const malformed=structuredClone(messages[0].result) as import('../src/kernel/meshEditing').MeshBooleanResult
   malformed.report.outputTriangles++
   expect(mainSolidResult(expectation,malformed)).toBe(false)
  }
@@ -92,8 +92,8 @@ it('runs manifold mesh Boolean with honest progress and strict result validation
 })
 
 it('imports and Fully repairs a mesh in the worker with staged progress',async()=>{
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
- const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
+ const messages:MainSolidResponse[]=[],progress:import('../src/kernel/mainSolidProtocol').MainSolidProgressMessage[]=[]
  const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
  const source=['v 0 0 0','v 1 0 0','v 0 1 0','v 0 0 1','f 1 3 2','f 1 2 4','f 2 3 4'].join('\n')
  const input=new TextEncoder().encode(source),before=input.slice(),job={kind:'meshImport' as const,fileName:'open.obj',input,options:{weld:1e-4,repair:'full' as const}}
@@ -113,8 +113,8 @@ it('imports and Fully repairs a mesh in the worker with staged progress',async()
 })
 
 it('converts a complete mesh in the worker with seven-stage progress and strict output validation',async()=>{
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
- const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
+ const messages:MainSolidResponse[]=[],progress:import('../src/kernel/mainSolidProtocol').MainSolidProgressMessage[]=[]
  const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
  const source=['v 0 0 0','v 1 0 0','v 0 1 0','v 0 0 1','f 1 3 2','f 1 2 4','f 2 3 4'].join('\n')
  const input=new TextEncoder().encode(source),before=input.slice()
@@ -128,7 +128,7 @@ it('converts a complete mesh in the worker with seven-stage progress and strict 
  expect(messages).toHaveLength(1)
  expect(messages[0]).toMatchObject({ok:true,kind:'meshConvert',result:{fileName:'open.ply',format:'ply',source:{fileName:'open.obj',format:'obj',byteLength:input.byteLength,triangleCount:4}}})
  if(messages[0].ok){
-  const expectation=mainSolidExpectation(job),result=messages[0].result as import('../src/services/meshConvert').MeshConvertResult
+  const expectation=mainSolidExpectation(job),result=messages[0].result as import('../src/exchange/meshConvert').MeshConvertResult
   expect(mainSolidResult(expectation,result)).toBe(true)
   expect(mainSolidResult(expectation,{...result,fileName:'stale.ply'})).toBe(false)
   expect(mainSolidResult(expectation,{...result,source:{...result.source,byteLength:0}})).toBe(false)
@@ -138,9 +138,9 @@ it('converts a complete mesh in the worker with seven-stage progress and strict 
 })
 
 it('exports an existing mesh in the worker with staged progress and strict validation',async()=>{
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
- const {createBoxMesh}=await import('../src/services/meshEditing')
- const messages:MainSolidResponse[]=[],progress:import('../src/services/mainSolidProtocol').MainSolidProgressMessage[]=[]
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
+ const {createBoxMesh}=await import('../src/kernel/meshEditing')
+ const messages:MainSolidResponse[]=[],progress:import('../src/kernel/mainSolidProtocol').MainSolidProgressMessage[]=[]
  const handle=createMainSolidWorkerHandler(message=>messages.push(message),message=>progress.push(message))
  const mesh=createBoxMesh([2,2,2]),before=structuredClone(mesh)
  const job={kind:'meshExport' as const,mesh,target:'ply' as const,options:{}}
@@ -150,7 +150,7 @@ it('exports an existing mesh in the worker with staged progress and strict valid
  ])
  expect(messages).toHaveLength(1);expect(messages[0]).toMatchObject({ok:true,kind:'meshExport',result:{extension:'ply',mimeType:'application/octet-stream'}})
  if(messages[0].ok){
-  const expectation=mainSolidExpectation(job),result=messages[0].result as import('../src/services/meshConvert').MeshExportArtifact
+  const expectation=mainSolidExpectation(job),result=messages[0].result as import('../src/exchange/meshConvert').MeshExportArtifact
   expect(mainSolidResult(expectation,result)).toBe(true)
   expect(mainSolidResult(expectation,{...result,extension:'obj'})).toBe(false)
   expect(mainSolidResult(expectation,{...result,data:new Uint8Array()})).toBe(false)
@@ -159,7 +159,7 @@ it('exports an existing mesh in the worker with staged progress and strict valid
 })
 
 it('exports a complete scene through the same mesh job without detaching source buffers',async()=>{
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const scene={
   vertices:new Float32Array([0,0,0,0,0,1,1,0,0,0,0,1,0,1,0,0,0,1]),
   indices:new Uint32Array([0,1,2]),
@@ -236,7 +236,7 @@ it('computes profile difference and retained offset in the worker with holes and
 })
 
 it('returns profile gap diagnostics and the accepted contour through the worker protocol',async()=>{
- const {mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const document={version:1 as const,sketches:[{id:'a',name:'A',closed:false,points:[[0,0],[10,0],[10,10]]},{id:'b',name:'B',closed:false,points:[[10,10],[0,10],[0,.005]]}],bodies:[]}
  const before=JSON.stringify(document),messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
  for(const [i,tolerance] of [.001,.01].entries())await handle({version:1,id:i+1,job:{kind:'profilePrepare',document,ids:['a','b'],tolerance}})
@@ -248,7 +248,7 @@ it('returns profile gap diagnostics and the accepted contour through the worker 
 
 it('returns validated NURBS refit certificates for curve and surface edits',async()=>{
  const {createSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
- const {mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const curve=createSolidNurbsCurve('curve');curve.curve.controlPoints=[[0,0,0],[1,0,0],[2,0,0],[3,0,0]]
  const surface={id:'surface',name:'Plane',segmentsU:4,segmentsV:4,surface:{degreeU:2,degreeV:2,knotsU:[0,0,0,1,1,1],knotsV:[0,0,0,1,1,1],controlPoints:Array.from({length:3},(_,i)=>Array.from({length:3},(_,j)=>[i,j,0])),weights:Array.from({length:3},()=>[1,1,1])}}
  const document={version:1 as const,sketches:[],bodies:[],curves:[curve],surfaces:[surface]},before=JSON.stringify(document)
@@ -263,7 +263,7 @@ it('returns validated NURBS refit certificates for curve and surface edits',asyn
 })
 
 it('preserves the sweep refinement report on worker refusal and success',async()=>{
- const {mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const curves=[{id:'p',name:'Profile',curve:{degree:1,controlPoints:[[1,0,0],[1.2,0,0]],weights:[1,1],knots:[0,0,1,1]}},{id:'q',name:'Path',curve:{degree:2,controlPoints:[[1,0,0],[1,1,0],[0,1,0]],weights:[1,Math.SQRT1_2,1],knots:[0,0,0,1,1,1]}}]
  const document={version:1,sketches:[],bodies:[],curves},before=JSON.stringify(document)
  const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
@@ -279,7 +279,7 @@ it('preserves the sweep refinement report on worker refusal and success',async()
 
 it('carries curve, surface and seam proof reports through the actual worker protocol',async()=>{
  const {createSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
- const {mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');b.curve.controlPoints.forEach(p=>p[0]+=50)
  const surface={degreeU:3,degreeV:3,knotsU:[0,0,0,0,1,1,1,1],knotsV:[0,0,0,0,1,1,1,1],controlPoints:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>[i,j,.15*i*i+.1*i*j+.2*j*j])),weights:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>1+.03*i+.02*j+.01*i*j))}
  const sa={id:'sa',name:'A',surface,segmentsU:4,segmentsV:4},sb=structuredClone(sa);sb.id='sb';sb.surface.controlPoints.forEach(row=>row.forEach(p=>p[0]+=5))
@@ -325,7 +325,7 @@ it('builds a ruled solid loft in the worker with its requested identity',async()
 
 it('runs exact Boolean groups in a worker with one anchor ID, empty results and immutable inputs',async()=>{
  const {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
- const {mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const body=(id:string,min:number,max:number)=>{const brep=createBrepBox([min,0,0],[max,10,10]),mesh=tessellateNurbsBrep(brep,4);return {id,name:id,brep,mesh:{positions:mesh.positions,indices:mesh.indices}}}
  const document={version:1 as const,sketches:[],bodies:[body('A',0,10),body('B',5,15),body('C',15,20)]}
  const before=JSON.stringify(document),messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
@@ -450,7 +450,7 @@ it('creates a dependent bridge and runs B-rep properties/detail in the worker',a
  const {createSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
  const {evaluateNurbsCurve}=await import('../src/kernel/nurbsCurve')
  const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
- const {mainSolidResult,mainSolidExpectation}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidResult,mainSolidExpectation}=await import('../src/kernel/mainSolidProtocol')
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');b.curve.controlPoints.forEach(p=>p[0]+=60)
  const brep=createBrepBox([0,0,0],[10,20,30]),mesh=tessellateNurbsBrep(brep,2)
  const source={version:1 as const,curves:[a,b],sketches:[],bodies:[{id:'box',name:'Box',brep,mesh:{positions:mesh.positions,indices:mesh.indices}}]}
@@ -483,7 +483,7 @@ it('restores compact linked geometry through the authoritative document parser',
  const {emptyDirectDocument,serializeDirectDocument,parseDirectDocument}=await import('../src/services/directModeling')
  const {createSolidInstance}=await import('../src/kernel/solidInstances')
  const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
- const {stringifyMeshJson}=await import('../src/services/meshJson')
+ const {stringifyMeshJson}=await import('../src/exchange/meshJson')
  const source=emptyDirectDocument(),brep=createBrepBox([0,0,0],[2,3,4])
  source.bodies.push({id:'source',name:'Source',brep,mesh:tessellateNurbsBrep(brep,1)})
  const doc=createSolidInstance(source,'source','linked',[[1,0,0,10],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
@@ -509,7 +509,7 @@ it('prepares transferable display buffers without detaching request geometry',as
 it('imports RushGraph definitions into a validated document without mutating or detaching its source',async()=>{
  const {readFileSync}=await import('node:fs')
  const {emptyDirectDocument,extrudeDirectSketch}=await import('../src/services/directModeling')
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const document=emptyDirectDocument(),text=readFileSync('tests/fixtures/solid-rush-import.json','utf8')
  document.bodies.push(extrudeDirectSketch({id:'profile',name:'Profile',closed:true,points:[[0,0],[2,0],[2,3],[0,3]]},4,'existing'))
  const snapshot=JSON.stringify(document),messages:MainSolidResponse[]=[]
@@ -529,7 +529,7 @@ it('imports RushGraph definitions into a validated document without mutating or 
 
 it('measures vertices and curvature in the worker and validates numeric response shapes',async()=>{
  const {createBrepCylinder,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const brep=createBrepCylinder(3,5),body={id:'c',name:'Cylinder',brep,mesh:tessellateNurbsBrep(brep,2)}
  const edge=brep.edges.findIndex(e=>e.curve.degree===2),messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(m=>messages.push(m))
  const vertexJob={kind:'measureVertices' as const,a:body,indexA:0,b:body,indexB:0},edgeJob={kind:'measureEdge' as const,body,edge,parameter:.25}
@@ -547,7 +547,7 @@ it('measures vertices and curvature in the worker and validates numeric response
 })
 
 it('returns validated manifold metrics through the worker protocol',async()=>{
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const mesh={positions:new Float64Array([0,0,0,1,0,0,0,1,0,0,0,1]),indices:new Uint32Array([0,2,1,0,1,3,1,2,3,2,0,3])}
  const job={kind:'manifoldMetrics' as const,mesh},messages:MainSolidResponse[]=[]
  await createMainSolidWorkerHandler(message=>messages.push(message))({version:1,id:1,job})
@@ -564,7 +564,7 @@ it('returns validated manifold metrics through the worker protocol',async()=>{
 
 it('reports sampled surface boundaries through the worker with bounded result validation',async()=>{
  const {readFileSync}=await import('node:fs')
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const fixture=JSON.parse(readFileSync('tests/fixtures/solid-surface-boundary.json','utf8'))
  const job={kind:'surfaceBoundary' as const,a:fixture.surfaces[0].surface,b:fixture.surfaces[1].surface,options:{boundaryA:'uMax' as const,boundaryB:'uMin' as const,reverse:false,samples:65,toleranceMm:.01,angleToleranceDeg:1}}
  const before=JSON.stringify(job),messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(m=>messages.push(m))
@@ -584,7 +584,7 @@ it('reports sampled surface boundaries through the worker with bounded result va
 
 it('tessellates surface display into owned transferable buffers and rejects malformed meshes',async()=>{
  const {createSolidNurbsSurface,tessellateSolidNurbsSurface}=await import('../src/kernel/solidNurbs')
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const item=createSolidNurbsSurface('surface'),before=JSON.stringify(item),messages:MainSolidResponse[]=[]
  let transferred=0
  const handle=createMainSolidWorkerHandler((message,buffers=[])=>{transferred=buffers.length;messages.push(structuredClone(message,{transfer:buffers}))})
@@ -602,7 +602,7 @@ it('tessellates surface display into owned transferable buffers and rejects malf
 it('samples retained profile loops in the worker without changing rational geometry',async()=>{
  const {authorBrepProfile}=await import('../src/kernel/geometry/brepProfile')
  const {retainedProfileDisplay}=await import('../src/services/retainedSketchProfile')
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const {SolidProfileDisplayQueue}=await import('../src/kernel/solidProfileDisplayQueue')
  const profile=authorBrepProfile({kind:'circle',radius:7}),before=JSON.stringify(profile)
  const job={kind:'profileDisplay' as const,profile},messages:MainSolidResponse[]=[]
@@ -631,7 +631,7 @@ it('samples retained profile loops in the worker without changing rational geome
 
 it('samples rational curve display in a cancellable queue with exact input keys',async()=>{
  const {createSolidNurbsCurve,sampleSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const {SolidCurveDisplayQueue}=await import('../src/kernel/solidCurveDisplayQueue')
  const item=createSolidNurbsCurve('curve'),before=JSON.stringify(item)
  const job={kind:'curveDisplay' as const,curve:item.curve},messages:MainSolidResponse[]=[]
@@ -662,7 +662,7 @@ it('samples rational curve display in a cancellable queue with exact input keys'
 
 it('prepares mesh topology in the worker and rejects invalid picking indices',async()=>{
  const {solidTopology}=await import('../src/services/directSolidTools')
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const mesh=tessellateNurbsBrep(createBrepBox([0,0,0],[10,12,14]),2),before=structuredClone(mesh)
  const job={kind:'topology' as const,mesh},messages:MainSolidResponse[]=[]
@@ -688,7 +688,7 @@ it('prepares mesh topology in the worker and rejects invalid picking indices',as
 it('prepares authored edges in a worker with bounded vertex references',async()=>{
  const {createBrepCylinder,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const {solidBodyEdges}=await import('../src/kernel/solidBodyEdges')
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const brep=createBrepCylinder(3,5),body={id:'edges',name:'Edges',brep,mesh:tessellateNurbsBrep(brep,2)}
  const job={kind:'bodyEdges' as const,body},before=structuredClone(body),messages:MainSolidResponse[]=[]
  await createMainSolidWorkerHandler(m=>messages.push(m))({version:1,id:1,job})
@@ -707,14 +707,14 @@ it('prepares authored edges in a worker with bounded vertex references',async()=
 it('prepares a planar face workplane and rejects a stale face index',async()=>{
  const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const {solidTopology}=await import('../src/services/directSolidTools')
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const brep=createBrepBox([0,0,0],[10,12,14]),body={id:'workplane',name:'Workplane',brep,mesh:tessellateNurbsBrep(brep,2)}
  const face=solidTopology(body.mesh).faces.findIndex(f=>f.normal[2]>.99),before=structuredClone(body)
  const job={kind:'faceSketch' as const,body,face},messages:MainSolidResponse[]=[],handler=createMainSolidWorkerHandler(m=>messages.push(m))
  await handler({version:1,id:1,job})
  expect(messages[0]).toMatchObject({ok:true,kind:'faceSketch'})
  if(!messages[0].ok)throw Error('Plane failed')
- const result=messages[0].result as import('../src/services/mainSolidProtocol').MainSolidResults['faceSketch']
+ const result=messages[0].result as import('../src/kernel/mainSolidProtocol').MainSolidResults['faceSketch']
  expect(result.plane.origin[2]).toBeCloseTo(14);expect(result.normal).toEqual([0,0,1]);expect(result.outline).toHaveLength(1)
  expect(mainSolidResult(mainSolidExpectation(job),result)).toBe(true)
  expect(mainSolidResult(mainSolidExpectation(job),{...result,outline:[]})).toBe(false)
@@ -726,7 +726,7 @@ it('prepares cloneable exact snap geometry in a worker and validates curve inter
  const {createBrepCylinder,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const {bodySnapGeometry}=await import('../src/kernel/solidSnapGeometry')
  const {resolveModelingSnap}=await import('../src/services/modelingSnaps')
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const brep=createBrepCylinder(5,10),body={id:'snap-body',name:'Snaps',brep,mesh:tessellateNurbsBrep(brep,2)},before=structuredClone(body)
  const job={kind:'bodySnaps' as const,body},messages:MainSolidResponse[]=[]
  await createMainSolidWorkerHandler(m=>messages.push(structuredClone(m)))({version:1,id:1,job})
@@ -746,7 +746,7 @@ it('prepares cloneable exact snap geometry in a worker and validates curve inter
 })
 
 it('prepares planar sketch snap targets in the worker and rejects malformed results',async()=>{
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const {sketchSnapGeometry,resolveModelingSnap}=await import('../src/services/modelingSnaps')
  const sketches:import('../src/services/directModeling').DirectSketch[]=[
   {id:'polygon',name:'Polygon',closed:true,points:[[0,0],[20,0],[20,10],[0,10]]},
@@ -829,7 +829,7 @@ it('runs SIMP and returns the full structural profile catalogue through the work
  await handle({version:1,id:1,job:{kind:'structuralProfiles'}})
  expect(messages[0]).toMatchObject({id:1,kind:'structuralProfiles',ok:true})
  if(!messages[0].ok)throw Error('Catalogue failed')
- const profiles=messages[0].result as import('../src/services/structuralProfiles').StructuralProfileProperties[]
+ const profiles=messages[0].result as import('../src/kernel/structuralProfiles').StructuralProfileProperties[]
  expect(profiles).toHaveLength(58)
  expect(new Set(profiles.map(profile=>profile.designation)).size).toBe(profiles.length)
  expect(profiles.find(profile=>profile.designation==='IPE 200')).toMatchObject({family:'ipe',areaMm2:expect.any(Number),iStrongMm4:expect.any(Number)})
@@ -839,7 +839,7 @@ it('runs SIMP and returns the full structural profile catalogue through the work
  },cases:[{weight:1,loads:[{nodes:[1],originMm:[1000,0,0],forceN:[1000,0,0],momentNmm:[0,0,0]}]}],options:{volumeFraction:.4,penalty:1}}})
  expect(messages[1]).toMatchObject({id:2,kind:'trussTopology',ok:true})
  if(!messages[1].ok)throw Error('Topology optimization failed')
- const result=messages[1].result as import('../src/services/trussAnalysis').TrussTopologyResponse
+ const result=messages[1].result as import('../src/kernel/trussAnalysis').TrussTopologyResponse
  expect(result.densities[0]).toBeCloseTo(.4,3)
  expect(result.axialForcesN[0][0]).toBeCloseTo(1000,9)
 })
@@ -850,7 +850,7 @@ it('generates force markers and axial screening through the worker handler',asyn
   restrained:[[true,true,true],[false,true,true]],forcesN:[[0,0,0],[100,0,0]]}
  await handle({version:1,id:1,job:{kind:'truss',model}})
  if(!messages[0].ok)throw Error('Truss solve failed')
- const solved=messages[0].result as import('../src/services/trussAnalysis').TrussResponse
+ const solved=messages[0].result as import('../src/kernel/trussAnalysis').TrussResponse
  await handle({version:1,id:2,job:{kind:'trussField',model,result:solved,markerMm:1}})
  expect(messages[1]).toMatchObject({kind:'trussField',ok:true})
  if(!messages[1].ok)throw Error('Marker generation failed')

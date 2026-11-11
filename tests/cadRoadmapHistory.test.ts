@@ -6,7 +6,7 @@ import {expect,it} from 'vitest'
 import {DirectHistory,parseDirectDocument,type DirectBody} from '../src/services/directModeling'
 import {createBrepBox,tessellateNurbsBrep,booleanNurbsBrep,inspectNurbsBrep,type NurbsBrep} from '../src/kernel/geometry/brep'
 import {transformSelection,pushPullFace,solidTopology,splitSolid} from '../src/services/directSolidTools'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 // Evidence comes from the final body of each exercised history, not a reconstructed fixture.
 async function exportMixedHistoryEvidence(body:DirectBody,volume:number,bounds:number[][]){
  const directory=process.env.CAD_MIXED20_STEP_OUTPUT

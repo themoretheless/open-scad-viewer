@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {isOriginalPatchContactsReport} from '../src/services/originalPatchContactsProtocol'
+import {isOriginalPatchContactsReport} from '../src/kernel/originalPatchContactsProtocol'
 function report():any{return{schema:'nurbs-original-affine-patch-contacts/1',status:'present',presenceProven:true,patchAbsenceProven:false,curvePatchCoverageComplete:true,parameterCoordinates:['curve-natural-t','patch-natural-u','patch-natural-v'],contacts:[{method:'original-patch-plane-polynomial',parameterBox:[[.49,.51],[-.01,.01],[11.99,12.01]],positionBounds:[[.59,.61],[.49,.51],[.049,.051]],sourceSpans:[2],multiplicities:[2]}],scalarProofs:[{span:2,status:'roots',normalizedOriginalSpanRoots:[{interval:[.5,.5],multiplicity:2}],reason:null,workUsed:30}],proofContextSerialized:false,unresolvedSpans:[],ambiguousParameters:[],spans:1,maxSpans:10,exactWork:30,maxExactWork:100000,allSurfaceBranchesEnumerated:false,trimAdmission:false,bodyAdmission:false}}
 describe('original patch contacts protocol',()=>{
  it('accepts an isolated even contact without claiming a crossing sign',()=>expect(isOriginalPatchContactsReport(report())).toBe(true))

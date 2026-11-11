@@ -1,6 +1,6 @@
 import { ref, shallowRef } from 'svet'
-import type { MainSolidJob, MainSolidProgress, MainSolidResults } from '../services/mainSolidProtocol'
-import type { MainSolidWorkerClient } from '../services/mainSolidWorkerClient'
+import type { MainSolidJob, MainSolidProgress, MainSolidResults } from '../kernel/mainSolidProtocol'
+import type { MainSolidWorkerClient } from '../kernel/mainSolidWorkerClient'
 
 /** Shared UI lifecycle for cancellable CAD jobs. Only the current generation may
  * publish progress, commit a result, or report an error. */

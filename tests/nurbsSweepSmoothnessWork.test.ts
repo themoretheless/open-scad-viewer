@@ -1,13 +1,13 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {bezierNurbsCurve} from '../src/kernel/nurbsConstructors'
 import {createRationalBrepSectionLoft} from '../src/kernel/geometry/brep'
-import {inspectMiterProfileSmoothness} from '../src/services/miterProfileSmoothness'
+import {inspectMiterProfileSmoothness} from '../src/kernel/miterProfileSmoothness'
 import {readFileSync} from 'node:fs'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {readSweepViewportEvidence} from '../src/kernel/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 
 it('retains nonuniform station G2 when sharp rational profile joins refuse',()=>{
  const corners=[[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]]

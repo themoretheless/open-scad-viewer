@@ -2,9 +2,9 @@ import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
-import {readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
+import {readSweepViewportEvidence} from '../src/kernel/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 
 // Actual frozen WASM; original curves/laws and0.01mm source budget.
 // G2 is required at retained station joins. Cap-wall joints retain C0.

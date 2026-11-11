@@ -3,7 +3,7 @@ import {join} from 'node:path'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
-import {writeLinear,decodePacked} from '../src/services/wasmHost'
+import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 import {box3d} from '../tests/fixtures/minkowski3d-cases'
 const bytes=readFileSync(process.argv[2]),w=new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports as any
 const report:any={wasmSha256:createHash('sha256').update(bytes).digest('hex'),proofs:[],refusals:[],calls:[]}

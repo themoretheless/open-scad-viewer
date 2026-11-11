@@ -1,7 +1,7 @@
 /** Immutable compiled artifact delivery; mutable native state belongs to its instance. */
-import {unpackBrotliWasmBase64} from '../../services/wasmBrotliPacking'
-import {compileOptionalWasm} from '../../services/wasmCompilation'
-import {compileWasmArtifact, compileWasmArtifactSync} from '../../services/wasmArtifact'
+import {unpackBrotliWasmBase64} from '../wasmBrotliPacking'
+import {compileOptionalWasm} from '../wasmCompilation'
+import {compileWasmArtifact, compileWasmArtifactSync} from '../wasmArtifact'
 import artifactIdentity from '../../generated/geometry-kernels/identity'
 import wasmBase64 from '../../generated/geometry-kernels/bytes'
 

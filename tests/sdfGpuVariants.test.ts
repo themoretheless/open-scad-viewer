@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sdfWgslVariants } from '../src/services/sdfGpu'
+import { sdfWgslVariants } from '../src/render/sdfGpu'
 
 describe('SDF WebGPU WGSL variants', () => {
   it('builds a linear_indexing shader variant for the 1D SDF sweep', () => {

@@ -11,13 +11,13 @@ import type {
 
 import { resolveMeshShaderId } from '../rendererContracts'
 
-import type { TransparentSortBuffer } from '../../services/transparentOrdering'
+import type { TransparentSortBuffer } from '../transparentOrdering'
 
-import type { MeshDrawBundle } from '../../services/meshDrawBundle'
+import type { MeshDrawBundle } from '../meshDrawBundle'
 
-import type { ViewFrustum } from '../../services/viewFrustum'
+import type { ViewFrustum } from '../viewFrustum'
 
-import type { MeshInstances } from '../../services/meshInstances'
+import type { MeshInstances } from '../../kernel/meshInstances'
 
 import { isTransparentAlpha } from '../../services/backendQuality'
 
@@ -33,7 +33,7 @@ import {
   type PipelineFlavor,
 } from '../../services/pipelineFactory'
 
-import type { TextureResources } from '../../services/textureResources'
+import type { TextureResources } from '../textureResources'
 
 import { fillSceneUniforms } from '../../services/uniformFill'
 

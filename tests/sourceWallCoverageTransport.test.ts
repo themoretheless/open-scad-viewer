@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {coverageExpectation,validCoverage,type SourceWallCoverageOptions,type SourceWallCoverageResult} from '../src/services/sourceWallCoverageTransport'
+import {coverageExpectation,validCoverage,type SourceWallCoverageOptions,type SourceWallCoverageResult} from '../src/kernel/sourceWallCoverageTransport'
 const key=JSON.stringify
 const request:SourceWallCoverageOptions={minimumMm:9.99,limits:{pairs:21,planeControls:100,normalSpans:100,gapCells:100,gapSpans:100,maxSineSquared:1e-6}}
 function result():SourceWallCoverageResult {
@@ -261,7 +261,7 @@ it('binds mixed product proofs and preserves an earlier gap refusal',()=>{
 
 it('validates the complete native annular mixed report without promoting its remaining pairs',async()=>{
  const {readFileSync}=await import('node:fs'),{gunzipSync}=await import('node:zlib')
- const {sourceBodyExpectation,validSourceBody}=await import('../src/services/sourceBody')
+ const {sourceBodyExpectation,validSourceBody}=await import('../src/kernel/sourceBody')
  const {op:_op,...options}=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-request.json.gz',import.meta.url))).toString())
  const report=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/mapped-retained-carrier-2026-10-08/mixed-wall-bridge-native.json.gz',import.meta.url))).toString())
  expect(validSourceBody(sourceBodyExpectation(options),report.result)).toBe(true)

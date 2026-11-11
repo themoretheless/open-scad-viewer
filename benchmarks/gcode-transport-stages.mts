@@ -5,9 +5,9 @@ import {performance} from 'node:perf_hooks'
 import {warmGeometryKernel, kernelRuntime, decodeNurbsResult} from '../src/kernel/geometry/kernel'
 import {parseGcodePreview, type GcodePreviewResult} from '../src/kernel/geometry/polygon'
 import {encodeBinary, decodeBinary} from '../src/services/valueBinaryCodec'
-import {writeLinear, packedSize} from '../src/services/wasmHost'
-import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
-import {compileWasmArtifact} from '../src/services/wasmArtifact'
+import {writeLinear, packedSize} from '../src/kernel/wasmHost'
+import {setOptionalWasmCompiler} from '../src/kernel/wasmCompilation'
+import {compileWasmArtifact} from '../src/kernel/wasmArtifact'
 import {unpackGcodePreview,type PackedGcodePreview} from '../src/fabrication/gcodePreviewTransport'
 
 const artifact=readFileSync('public/wasm/geometry-kernel.wasm')

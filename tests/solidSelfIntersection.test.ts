@@ -1,7 +1,7 @@
 import {normalizeRefinedNativeEvidence} from './helpers/refinedNativeEvidence'
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {MainSolidWorkerClient} from '../src/services/mainSolidWorkerClient'
+import {MainSolidWorkerClient} from '../src/kernel/mainSolidWorkerClient'
 import {selfIntersectionExpectation,validSelfIntersection} from '../src/kernel/solidSelfIntersection'
 const fixture=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/surface-contact-native/face-contact-api-fixtures.json',import.meta.url),'utf8')).cases[0]
 const {model,toleranceUv,op,...limits}=fixture.request
@@ -76,7 +76,7 @@ it('keeps unvisited faces explicit and rejects a proof over an exhausted budget'
 })
 
 it('terminates obsolete work and validates the current worker reply',async()=>{
- const {MainSolidWorkerClient}=await import('../src/services/mainSolidWorkerClient')
+ const {MainSolidWorkerClient}=await import('../src/kernel/mainSolidWorkerClient')
  const ports:any[]=[]
  const client=new MainSolidWorkerClient(()=>{const p:any={onmessage:null,onerror:null,onmessageerror:null,terminated:false,postMessage(m:any){this.request=m},terminate(){this.terminated=true}};ports.push(p);return p})
  const job={kind:'selfIntersection' as const,model,toleranceUv,limits,maxSpans:6}
@@ -108,7 +108,7 @@ it('validates actual WASM reports for full coverage and each exhausted budget',a
 })
 
 it('runs real combined diagnostics through the worker after a rejected span budget',async()=>{
- const {createMainSolidWorkerHandler}=await import('../src/services/mainSolidWorkerRuntime')
+ const {createMainSolidWorkerHandler}=await import('../src/kernel/mainSolidWorkerRuntime')
  const messages:any[]=[],handle=createMainSolidWorkerHandler(m=>messages.push(m))
  const job={kind:'selfIntersection' as const,model,toleranceUv,limits,maxSpans:6}
  await handle({version:1,id:1,job:{...job,maxSpans:0}})

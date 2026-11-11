@@ -1,8 +1,8 @@
 // Qualification page: the production notice rendered with a saved real-worker denial.
 import {createApp,h,ref} from 'svet'
 import SourceBodyFailureNotice from '../../src/components/SourceBodyFailureNotice.svt'
-import {SourceBodyDisplayError} from '../../src/services/sourceBodyDisplay'
-import type {SourceBodyDefinition,SourceBodyResult} from '../../src/services/sourceBody'
+import {SourceBodyDisplayError} from '../../src/kernel/sourceBodyDisplay'
+import type {SourceBodyDefinition,SourceBodyResult} from '../../src/kernel/sourceBody'
 import request from '../../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-body-step-request-2026-10-10.json'
 import report from '../../docs/qualification/mapped-retained-carrier-2026-10-08/multispan-root-worker-2026-10-10.json'
 const error=new SourceBodyDisplayError(report.refused.diagnostics as SourceBodyResult['diagnostics'],request.definition as SourceBodyDefinition,'knot-root-chain')

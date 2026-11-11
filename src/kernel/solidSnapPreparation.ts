@@ -1,7 +1,7 @@
 import type {DirectBody} from '../services/directModeling'
 import type {SnapGeometry} from '../services/modelingSnaps'
-import type {MainSolidJob} from '../services/mainSolidProtocol'
-import {stringifyMeshJson} from '../services/meshJson'
+import type {MainSolidJob} from './mainSolidProtocol'
+import {stringifyMeshJson} from '../exchange/meshJson'
 type Job=Extract<MainSolidJob,{kind:'bodySnaps'}>
 interface Port {run(job:Job):Promise<SnapGeometry>;cancel():void}
 const key=(body:DirectBody)=>stringifyMeshJson({mesh:body.mesh,brep:body.brep})

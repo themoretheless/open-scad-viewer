@@ -43,10 +43,10 @@ export interface SdfGpuJob {field:SdfField;grid:SdfGrid}
 const gpuPending=new Map<string,{id:number,values:Float32Array}>()
 const sdfKey=(field:SdfField,grid:SdfGrid)=>JSON.stringify([field,grid])
 /** Prepares a GPU sweep for an eligible field; null when the kernel declines. */
-export function prepareSdfGpu(field:SdfField,grid:SdfGrid):{id:number,payload:import('../../services/sdfGpu').SdfGpuPayload}|null{
+export function prepareSdfGpu(field:SdfField,grid:SdfGrid):{id:number,payload:import('../../render/sdfGpu').SdfGpuPayload}|null{
  const value=callGeometryRust<Record<string,unknown>|null>('sdf_prepare',{field,grid})
  if(value===null)return null
- return{id:value.id as number,payload:value as unknown as import('../../services/sdfGpu').SdfGpuPayload}
+ return{id:value.id as number,payload:value as unknown as import('../../render/sdfGpu').SdfGpuPayload}
 }
 /** Registers host-computed scores for the later synchronous tessellation. */
 export function primeSdfGpu(job:SdfGpuJob,id:number,values:Float32Array):void{
@@ -55,13 +55,13 @@ export function primeSdfGpu(job:SdfGpuJob,id:number,values:Float32Array):void{
 
 /** Batch variant of prepareSdfGpu: one kernel call registers every eligible
  * job; ids mirror the input order with nulls for declined slots. */
-export function prepareSdfGpuBatch(jobs:SdfGpuJob[]):{ids:(number|null)[],payload:import('../../services/sdfGpu').SdfGpuBatchPayload}|null{
+export function prepareSdfGpuBatch(jobs:SdfGpuJob[]):{ids:(number|null)[],payload:import('../../render/sdfGpu').SdfGpuBatchPayload}|null{
  if(!jobs.length)return null
  const value=callGeometryRust<{jobs:(Record<string,unknown>|null)[],wgsl:string,wgslVariants?:unknown[]}|null>('sdf_prepare_batch',{jobs})
  if(value===null)return null
  const ids=value.jobs.map(job=>job?(job.id as number):null)
- const payload:import('../../services/sdfGpu').SdfGpuBatchPayload={
-  jobs:value.jobs.map((job,index)=>job?{...job as Record<string,unknown>,id:ids[index]!} as unknown as import('../../services/sdfGpu').SdfGpuJobPayload:null),
+ const payload:import('../../render/sdfGpu').SdfGpuBatchPayload={
+  jobs:value.jobs.map((job,index)=>job?{...job as Record<string,unknown>,id:ids[index]!} as unknown as import('../../render/sdfGpu').SdfGpuJobPayload:null),
   wgsl:value.wgsl,
   ...(value.wgslVariants?{wgslVariants:value.wgslVariants as import('../../render/webgpuFeatures').WgslVariant[]}:{}),
  }

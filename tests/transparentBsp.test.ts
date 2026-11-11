@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {TransparentBsp, type TransparentFragment} from '../src/services/transparentBsp'
+import {TransparentBsp, type TransparentFragment} from '../src/render/transparentBsp'
 const red:TransparentFragment={owner:'red',triangle:[[-1,-1,-.6],[1,-1,.6],[0,1,0]]}
 const blue:TransparentFragment={owner:'blue',triangle:[[-1,-1,.6],[1,-1,-.6],[0,1,0]]}
 function hits(tree:TransparentBsp,x:number,direction:1|-1){return tree.ordered([0,0,direction]).filter(f=>{

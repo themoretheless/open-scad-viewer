@@ -2,8 +2,8 @@ import {decodeMeshBytesInKernel,renderTriangleSoupInKernel} from '../kernel/geom
 import {GeometryKernelError} from '../kernel/geometry/kernel'
 import type { MeshData, SceneEntityId } from '../core/mesh'
 import { geometryAssetId } from '../core/scene'
-import { buildMeshBvh } from '../services/meshBvh'
-import { extractSemanticEdges } from '../services/meshTopology'
+import { buildMeshBvh } from '../kernel/meshBvh'
+import { extractSemanticEdges } from '../kernel/meshTopology'
 import { identity } from '../services/math3d'
 
 /** Conservative first-release cap: final artifacts plus topology scratch stay bounded. */

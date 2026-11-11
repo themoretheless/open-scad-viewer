@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest'
 import {GeometryKernelError} from '../src/kernel/geometry/kernel'
-import {solveFrameCollapse, type FrameCollapseModel} from '../src/services/frameAnalysis'
+import {solveFrameCollapse, type FrameCollapseModel} from '../src/kernel/frameAnalysis'
 
 // Propped cantilever, L = 1000 mm, two elements, unit force at mid-span.
 // Planar model: out-of-plane and torsion DOFs restrained at the free nodes.

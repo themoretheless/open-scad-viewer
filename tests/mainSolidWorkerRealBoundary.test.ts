@@ -5,10 +5,10 @@ import {readFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import identity from '../src/generated/geometry-kernels/identity'
 import {afterEach, expect, it, vi} from 'vitest'
-import {MainSolidWorkerClient, type MainSolidPort} from '../src/services/mainSolidWorkerClient'
-import type {MainSolidRequest} from '../src/services/mainSolidProtocol'
-import type {TrussModel} from '../src/services/trussAnalysis'
-import {resolveTrussScenario} from '../src/services/trussScenario'
+import {MainSolidWorkerClient, type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
+import type {MainSolidRequest} from '../src/kernel/mainSolidProtocol'
+import type {TrussModel} from '../src/kernel/trussAnalysis'
+import {resolveTrussScenario} from '../src/kernel/trussScenario'
 import {DirectHistory,parseDirectDocument,serializeDirectDocument,extrudeDirectSketch} from '../src/services/directModeling'
 import {previewMeshes} from '../src/services/mainModeling'
 import type {LighteningOptions} from '../src/kernel/solidLightening'
@@ -205,7 +205,7 @@ it('runs every manifold wrapper on the packaged WASM in one real worker',async()
   expect(repaired.after.isManifold).toBe(true)
   expect(repairProgress).toEqual([{phase:'check',completed:0,total:3},{phase:'repair',completed:1,total:3},{phase:'verify',completed:2,total:3}])
 
-  const {createBoxMesh,transformMesh}=await import('../src/services/meshEditing')
+  const {createBoxMesh,transformMesh}=await import('../src/kernel/meshEditing')
   const a=createBoxMesh([2,2,2]),b=transformMesh(a,[1,0,0],0,1),booleanProgress:unknown[]=[]
   const united=await client.run({kind:'meshBoolean',a,b,operation:'union'},{onProgress:progress=>booleanProgress.push(progress)})
   expect(united.report).toMatchObject({operation:'union',operandRepaired:[false,false],isManifold:true})
@@ -216,7 +216,7 @@ it('runs every manifold wrapper on the packaged WASM in one real worker',async()
 
 it('runs the public scenario API in the shared real worker and returns the exact input snapshot',async()=>{
   vi.stubGlobal('Worker',class {constructor(){return realWorker()}})
-  const {computeTrussScenario}=await import('../src/services/mainSolidWorker')
+  const {computeTrussScenario}=await import('../src/kernel/mainSolidWorker')
   const {forcesN:_,...structure}=bar()
   const input={nodesMm:structure.nodesMm,members:structure.members,cases:[{id:'pull',restrained:structure.restrained,
     loads:[{nodes:[1],originMm:[10,0,0] as [number,number,number],forceN:[100,0,0] as [number,number,number],momentNmm:[0,0,0] as [number,number,number]}]}],

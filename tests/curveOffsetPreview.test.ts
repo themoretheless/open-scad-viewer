@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {offsetPreviewSegments} from '../src/services/curveOffsetPreview'
-import type {CurveOffsetDiagnostics} from '../src/services/curveOffsetDiagnostics'
+import {offsetPreviewSegments} from '../src/kernel/curveOffsetPreview'
+import type {CurveOffsetDiagnostics} from '../src/kernel/curveOffsetDiagnostics'
 const line=(points:number[][])=>({degree:1,knots:[],weights:points.map(()=>1),controlPoints:points})
 it('maps diagnostics across retained curve chunks without inventing a seam segment',()=>{
  const curves=[line([[0,0],[1,1],[2,0]]),line([[2,0],[3,1],[4,0]])]

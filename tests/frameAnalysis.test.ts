@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest'
 import {GeometryKernelError, callGeometryRust} from '../src/kernel/geometry/kernel'
-import {solveFrame, solveFrameEnvelope, type FrameEnvelopeModel, type FrameModel} from '../src/services/frameAnalysis'
+import {solveFrame, solveFrameEnvelope, type FrameEnvelopeModel, type FrameModel} from '../src/kernel/frameAnalysis'
 
 const L = 1000, E = 200000, I = 1e6
 const cantilever = (): FrameModel => ({

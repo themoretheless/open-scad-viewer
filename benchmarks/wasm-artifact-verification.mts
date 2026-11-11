@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
 import {fileURLToPath} from 'node:url'
-import {compileWasmArtifact, compileWasmArtifactSync} from '../src/services/wasmArtifact'
+import {compileWasmArtifact, compileWasmArtifactSync} from '../src/kernel/wasmArtifact'
 
 const modes = ['raw-async', 'verified-async', 'raw-sync', 'verified-sync'] as const
 const artifact = readFileSync(new URL('../public/wasm/geometry-kernel.wasm', import.meta.url))

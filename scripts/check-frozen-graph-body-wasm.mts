@@ -6,16 +6,16 @@ import {resolve} from 'node:path'
 import * as module from 'node:module'
 import {load} from '../tests/fixtures/raw-import-loader.mjs'
 import identity from '../src/generated/geometry-kernels/identity'
-import type {MainSolidJob} from '../src/services/mainSolidProtocol'
+import type {MainSolidJob} from '../src/kernel/mainSolidProtocol'
 if(typeof(module as any).registerHooks==='function')(module as any).registerHooks({load})
 else module.register(new URL('../tests/fixtures/raw-import-loader.mjs',import.meta.url),import.meta.url)
-const {restoreFrozenGraphBody,displayFrozenGraphBody}=await import('../src/services/frozenGraphBody')
-const {createMainSolidWorkerHandler}=await import('../src/services/mainSolidWorkerRuntime')
-const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+const {restoreFrozenGraphBody,displayFrozenGraphBody}=await import('../src/kernel/frozenGraphBody')
+const {createMainSolidWorkerHandler}=await import('../src/kernel/mainSolidWorkerRuntime')
+const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
 const bytes=readFileSync('public/wasm/geometry-kernel.wasm'),sha256=createHash('sha256').update(bytes).digest('hex')
 assert.equal(sha256,identity.sha256);assert.equal(bytes.length,identity.byteLength)
 const packed=(await import('../src/generated/geometry-kernels/bytes')).default
-const {unpackBrotliWasmBase64}=await import('../src/services/wasmBrotliPacking')
+const {unpackBrotliWasmBase64}=await import('../src/kernel/wasmBrotliPacking')
 const embedded=unpackBrotliWasmBase64(packed)
 assert.equal(embedded.length,bytes.length)
 assert.equal(createHash('sha256').update(embedded).digest('hex'),sha256)

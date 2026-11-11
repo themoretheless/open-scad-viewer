@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed,onUnmounted,ref,shallowRef,watch} from 'svet'
 import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
-import type {FrozenGraphDisplay} from '../services/frozenGraphBody'
+import type {FrozenGraphDisplay} from '../kernel/frozenGraphBody'
 const props=defineProps<{active:boolean;ru:boolean}>()
 const emit=defineEmits<{display:[FrozenGraphDisplay|null];fit:[]}>()
 const selectedEdge=defineModel<number|null>('selectedEdge',{default:null})

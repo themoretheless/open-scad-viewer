@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {scanExpectation,validScan,type SourceWallScanOptions,type SourceWallScanResult} from '../src/services/sourceWallScanTransport'
+import {scanExpectation,validScan,type SourceWallScanOptions,type SourceWallScanResult} from '../src/kernel/sourceWallScanTransport'
 const o:SourceWallScanOptions={minimumMm:7,toleranceUv:1e-7,grid:1,maxAttempts:2,limits:{cells:100,domainCells:100,normalSpans:100,maxSineSquared:1e-6}}
 const key=(v:unknown)=>JSON.stringify(v)
 function reply():SourceWallScanResult{return {request:structuredClone(o),thinFound:true,witness:{line:[[0,0,-1],[0,0,8]],lengthMm:[5.99,6.01],endpoints:[

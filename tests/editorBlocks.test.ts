@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { editorBlocks, indentSelection, guideFitsIndent } from '../src/services/editorBlocks'
+import { editorBlocks, indentSelection, guideFitsIndent } from '../src/language/editorBlocks'
 it('finds nested indentation and ignores delimiters inside strings/comments',()=>{
  const blocks=editorBlocks('fn f x: int\n    ret hull(\n        sphere(x), // }\n        sphere(2)\n    )\nshow sphere(1)')
  expect(blocks.find(b=>b.start===0)).toMatchObject({end:4,depth:0})

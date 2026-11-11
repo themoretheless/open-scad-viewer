@@ -2,9 +2,9 @@ import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
-import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
+import {readSweepBodyBoundaryViewportEvidence} from '../src/kernel/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 import type {NurbsBrep} from '../src/kernel/geometry/brep'
 // Runs only in the frozen stage with its matching Auto-cap WASM. No mocks,
 // authored plane correction, substituted laws, or widened limits.

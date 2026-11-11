@@ -1,7 +1,7 @@
 import type {Ref} from 'svet'
 import type {OffsetDeviationOptions} from '../kernel/nurbsOffsetDeviation'
 import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
-import type {MainSolidWorkerClient} from './mainSolidWorkerClient'
+import type {MainSolidWorkerClient} from '../kernel/mainSolidWorkerClient'
 import {useBoundNativeInspection} from './useBoundNativeInspection'
 export function useOffsetDeviationInspection(options:Ref<OffsetDeviationOptions|undefined>,active:Ref<boolean>,
  worker:Pick<MainSolidWorkerClient,'run'|'cancel'|'dispose'>=createSolidPreviewWorker()) {

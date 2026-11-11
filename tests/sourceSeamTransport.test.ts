@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {gunzipSync} from 'node:zlib'
-import {sourceBodyExpectation,validSeamEndpointLimits,type SourceSeamResult,type SourceBodyOptions} from '../src/services/sourceBody'
+import {sourceBodyExpectation,validSeamEndpointLimits,type SourceSeamResult,type SourceBodyOptions} from '../src/kernel/sourceBody'
 const request=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/rolling-ball-offset-foundation-2026-10-05/source-body-request.json.gz',import.meta.url))).toString())
 const options=():SourceBodyOptions=>{const {op:_op,...value}=structuredClone(request);return value}
 it('snapshots source seam limits before the request object changes',()=>{

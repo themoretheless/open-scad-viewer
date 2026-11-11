@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {validAlignedChordRequest,validAlignedChordReport,alignedChordParameterErrors} from '../src/services/expressionAlignedChords'
+import {validAlignedChordRequest,validAlignedChordReport,alignedChordParameterErrors} from '../src/kernel/expressionAlignedChords'
 describe('aligned chord coverage transport',()=>{
  const request={minimumMm:1,maxSineSquared:1e-4,toleranceUv:0.05,controls:100,cells:10,spans:100,domainCells:100}
  const pending={version:1,qualified:false,wholeThicknessQualified:false,solidQualified:false,report:{

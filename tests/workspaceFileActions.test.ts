@@ -90,7 +90,7 @@ function mount() {
 }
 
 beforeEach(async () => {
-  const { convertMeshFile, exportMesh } = await import('../src/services/meshConvert')
+  const { convertMeshFile, exportMesh } = await import('../src/exchange/meshConvert')
   control.defer = false
   control.jobs = []
   control.events = []

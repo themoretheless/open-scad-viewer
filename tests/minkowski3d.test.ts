@@ -2,9 +2,9 @@ import {it,expect} from 'vitest'
 import {certifyMinkowski3d,verifyMinkowski3d} from '../src/kernel/geometry/minkowski3d'
 import {normalizePolygonMesh,inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 import {applySolidMinkowski} from '../src/kernel/solidMinkowski'
-import {createMainSolidWorkerHandler} from '../src/services/mainSolidWorkerRuntime'
-import type {MainSolidResponse} from '../src/services/mainSolidProtocol'
-import {mainSolidResult,mainSolidExpectation} from '../src/services/mainSolidProtocol'
+import {createMainSolidWorkerHandler} from '../src/kernel/mainSolidWorkerRuntime'
+import type {MainSolidResponse} from '../src/kernel/mainSolidProtocol'
+import {mainSolidResult,mainSolidExpectation} from '../src/kernel/mainSolidProtocol'
 import {box3d,lPrism3d,cavity3d,join3d,tetra3d} from './fixtures/minkowski3d-cases'
 it('certifies nonconvex material and a cavity without taking the convex hull',()=>{
  const b=box3d([-1,-1,-1],[1,1,1])

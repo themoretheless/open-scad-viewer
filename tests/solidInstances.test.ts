@@ -4,7 +4,7 @@ import {it,expect} from 'vitest'
 import {createSolidInstance,detachSolidInstances,resolveSolidInstances,transformSolidInstance} from '../src/kernel/solidInstances'
 import {emptyDirectDocument,DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
 import {createBrepBox,tessellateNurbsBrep,transformNurbsBrep} from '../src/kernel/geometry/brep'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 import {transformSelection,transformBodies,pushPullFace,splitSolid} from '../src/services/directSolidTools'
 const placement=[[1,0,0,10],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
 const box=(size:number)=>{const brep=createBrepBox([0,0,0],[size,2,3]);return {id:'source',name:'Source',brep,mesh:tessellateNurbsBrep(brep,1)}}

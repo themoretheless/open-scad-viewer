@@ -13,7 +13,7 @@ import {lineNurbsCurve,polylineNurbsCurve,circleNurbsCurve,circleNurbsArc} from 
 import {bezierNurbsCurve,composeNurbsCurves,roundPolylineNurbsCurve,transitionPolylineNurbsCurve} from '../kernel/nurbsConstructors';
 import {planeNurbsPatch,bilinearNurbsPatch,bezierNurbsSurface,hermiteNurbsPatch,gridSplineNurbsSurface} from '../kernel/nurbsConstructors';
 import {createNativeGeometryArtifact} from '../core/nativeGeometry';
-import { stringifyMeshJson } from '../services/meshJson'
+import { stringifyMeshJson } from '../exchange/meshJson'
 import {extrudePolygonProfile,revolvePolygonProfile,loftPolygonSections,sweepPolygonProfile,type PolygonProfile} from '../kernel/geometry/polygon';
 import {meshToNurbsBrep,meshToSdf,meshToSubdivision,meshToNurbs,tessellateNurbsPatches,type NurbsSurfaceSet} from '../kernel/geometry/reconstruction';
 import type {SubdivisionCage} from '../kernel/geometry/subdivision';
@@ -21,7 +21,7 @@ import {tessellateSubdivision} from '../kernel/geometry/subdivision';
 import {tessellateSdfGpuAware as tessellateSdf,evaluateSdf,type SdfField} from '../kernel/geometry/sdf';
 import {reconstructCertifiedMiterStations,transformCertifiedMiterBody,type CertifiedMiterBoundaryOwner,createProgressiveMiterBrepProfileBody,streamProgressiveMiterBrepProfileBody,type ProgressiveMiterBrepBody,createMiterBrepProfileBody,type MiterBrepBody,streamProgressiveBrepProfileBody,createNaturalBrepSectionLoft,createCappedBrepLoftWithCaps,createCappedBrepLoftSurfaces,createProgressiveBrepProfileBody,transformNurbsBrep,createBrepSphere,createBrepGear,createBrepTorus,createBrepBox,revolveBrepProfile,createBrepCylinder,createBrepFrustum,createBrepTube,extrudeBrepCurves,extrudeBrepPolygon,booleanNurbsBrep,chamferNurbsBrepEdges,filletNurbsBrepEdges,tessellateNurbsBrep,type NurbsBrep} from '../kernel/geometry/brep';
 import { inspectPolygonMesh,booleanPolygonMeshes } from '../kernel/geometry/polygon';
-import { exportMeshFormat, meshExportBase64, type MeshExportFormat } from '../services/meshExportFormats';
+import { exportMeshFormat, meshExportBase64, type MeshExportFormat } from '../exchange/meshExportFormats';
 import { compileRushGraphNurbs } from './rushGraphNurbsCompiler';
 import { validateNurbsCurve, evaluateNurbsCurve, insertNurbsKnot, elevateNurbsCurve, trimNurbsCurve, reverseNurbsCurve, nurbsCurveBounds, type NurbsCurve } from '../kernel/nurbsCurve';
 import { validateNurbsSurface, evaluateNurbsSurface, insertNurbsSurfaceKnot, elevateNurbsSurface, trimNurbsSurface, reverseNurbsSurface, isoNurbsCurve, nurbsSurfaceBounds, type NurbsSurface } from '../kernel/nurbsSurface';

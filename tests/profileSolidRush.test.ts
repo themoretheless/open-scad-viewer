@@ -2,8 +2,8 @@ import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepViewportEvidence,readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
+import {readSweepViewportEvidence,readSweepBodyBoundaryViewportEvidence} from '../src/kernel/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 const request={action:'build' as const,display:{segments:4,subdivisionLevels:0}}
 it.each(['closed-profile-planar-10.r','closed-profile-spatial-6.r'])('forwards native retained-body proof through Rush, async build, viewport and Solid: %s',async file=>{
  const source=readFileSync(`examples/rush/${file}`,'utf8')

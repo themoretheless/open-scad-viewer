@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {wholeWallExpectation,validWholeWall} from '../src/kernel/solidWholeWall'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
 const cases=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-03/whole-wall/contract.json',import.meta.url),'utf8')).cases
 it('accepts native full wall bounds and explicit refusal or wide intervals',()=>{
  for(const c of cases){
@@ -12,7 +12,7 @@ it('accepts native full wall bounds and explicit refusal or wide intervals',()=>
  expect(cases[0].result.coverage.totalPairs).toBe(21)
 })
 it('cancels obsolete bodies, ignores late replies and retries after a forged source',async()=>{
- const {MainSolidWorkerClient}=await import('../src/services/mainSolidWorkerClient')
+ const {MainSolidWorkerClient}=await import('../src/kernel/mainSolidWorkerClient')
  const ports:any[]=[]
  const client=new MainSolidWorkerClient(()=>{const p:any={onmessage:null,onerror:null,onmessageerror:null,terminated:false,postMessage(m:any){this.request=m},terminate(){this.terminated=true}};ports.push(p);return p})
  try{

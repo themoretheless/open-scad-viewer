@@ -3,8 +3,8 @@ import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/server';
 import type { McpGeometryService } from './geometryService';
 import { compileRushGraph, rushGraphSchema } from '../language/rushGraph';
-import { exportMeshFormatCompressed, MESH_EXPORT_FORMATS, meshExportBase64 } from '../services/meshExportFormats';
-import { flattenExportMeshes } from '../services/meshExportAdapter';
+import { exportMeshFormatCompressed, MESH_EXPORT_FORMATS, meshExportBase64 } from '../exchange/meshExportFormats';
+import { flattenExportMeshes } from '../exchange/meshExportAdapter';
 export function registerRushGraphMeshExport(server: McpServer, geometry: McpGeometryService) {
     server.registerTool('rush_export', { description: 'Export RushGraph mesh as STL (ASCII or binary), 3MF, OBJ, PLY, OFF or AMF. Printing formats require closed consistently oriented geometry; maximum 4 MiB. 3MF preserves scene meshes as separate objects in world coordinates and uses lossless ZIP compression. Exports geometry, without slicer settings, textures or assembly identities.', inputSchema: z.object({ document: rushGraphSchema, format: z.enum(MESH_EXPORT_FORMATS) }), annotations: { readOnlyHint: true, openWorldHint: false } }, async (input, context) => {
         try {

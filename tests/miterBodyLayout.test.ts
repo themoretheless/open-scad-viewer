@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {circleNurbsCurve} from '../src/kernel/nurbsConstructors'
-import {planMiterBody,partitionMiterSections,ownedMiterSharpStations,previewMiterWalls} from '../src/services/miterBodyLayout'
+import {planMiterBody,partitionMiterSections,ownedMiterSharpStations,previewMiterWalls} from '../src/kernel/miterBodyLayout'
 
 const ring=(z:number,r:number)=>circleNurbsCurve([0,0,z],[0,0,1],r)
 it('preserves the real face budget, cap reservation and refinements beyond 64',()=>{

@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs'
 import { describe, it, expect } from 'vitest'
-import { svgContours, contoursSvg, contoursExtrusion, meshSvgContours, SVG_MAX_BYTES } from '../src/services/svgGeometry'
+import { svgContours, contoursSvg, contoursExtrusion, meshSvgContours, SVG_MAX_BYTES } from '../src/exchange/svgGeometry'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
 const geometry = new HeadlessGeometryService()
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20mm" height="20mm" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M0 0H20V20H0Z M5 5H15V15H5Z"/></svg>'

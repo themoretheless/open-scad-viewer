@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
-import { buildBinaryStl, buildObj } from '../src/services/meshExport'
+import { buildBinaryStl, buildObj } from '../src/exchange/meshExport'
 import { identity, scale, translate } from '../src/services/math3d'
-import { buildMeshBvh } from '../src/services/meshBvh'
+import { buildMeshBvh } from '../src/kernel/meshBvh'
 
 function triangleMesh(): MeshData {
   const vertices = new Float32Array([0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1])

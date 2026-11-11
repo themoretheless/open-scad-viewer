@@ -57,8 +57,8 @@ it('rejects unequal zip lengths and implicit topology changes of collections',()
 })
 
 it('exports separate generated scene objects to 3MF',async()=>{
- const {flattenExportMeshes}=await import('../src/services/meshExportAdapter')
- const {exportMeshFormat}=await import('../src/services/meshExportFormats')
+ const {flattenExportMeshes}=await import('../src/exchange/meshExportAdapter')
+ const {exportMeshFormat}=await import('../src/exchange/meshExportFormats')
  const built=await parseOpenSCAD(header+'parts=[for i in 0..<3 => box([1mm,1mm,1mm]).translate(x: i*1mm)]\nshow parts')
  const xml=new TextDecoder().decode(exportMeshFormat(flattenExportMeshes(built.meshes),'3mf').data)
  expect(xml.match(/<object id=/g)).toHaveLength(3)

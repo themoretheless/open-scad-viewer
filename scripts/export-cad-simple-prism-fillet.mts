@@ -6,7 +6,7 @@ import {extrudeSketchProfile} from '../src/services/directExtrusion'
 import {exactSimplePrismFillet,tessellateNurbsBrep,transformNurbsBrep} from '../src/kernel/geometry/brep'
 import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 import {DirectHistory,parseDirectDocument} from '../src/services/directModeling'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 import {importDirectStepV9} from '../src/kernel/cadNurbsStep'
 const directory=resolve(process.argv[2]??'output/qualification/simple-prism-fillet')
 mkdirSync(directory,{recursive:true})

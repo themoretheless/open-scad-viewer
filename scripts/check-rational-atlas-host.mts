@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import {applySolidMinkowski} from '../src/kernel/solidMinkowski'
 import {verifyMinkowskiProof} from '../src/kernel/geometry/minkowski3d'
 import {normalizePolygonMesh} from '../src/kernel/geometry/polygon'
-import {mainSolidResult,mainSolidExpectation} from '../src/services/mainSolidProtocol'
+import {mainSolidResult,mainSolidExpectation} from '../src/kernel/mainSolidProtocol'
 import artifactIdentity from '../src/generated/geometry-kernels/identity'
 import {box3d} from '../tests/fixtures/minkowski3d-cases'
 const results=[]

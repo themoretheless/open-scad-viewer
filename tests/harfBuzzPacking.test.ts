@@ -1,9 +1,9 @@
 import {readFileSync} from 'node:fs'
 import {brotliCompressSync, deflateRawSync} from 'node:zlib'
 import {describe, expect, it} from 'vitest'
-import {decodeBase91} from '../src/services/wasmBase91'
+import {decodeBase91} from '../src/kernel/wasmBase91'
 import packedHarfBuzz from '../src/generated/harfbuzz/bytes'
-import {unpackBrotliWasmBase64} from '../src/services/wasmBrotliPacking'
+import {unpackBrotliWasmBase64} from '../src/kernel/wasmBrotliPacking'
 import {verifyPackedWasmChunk} from '../scripts/verify-packed-wasm.mjs'
 
 const original = readFileSync(new URL('../node_modules/harfbuzzjs/hb.wasm', import.meta.url))

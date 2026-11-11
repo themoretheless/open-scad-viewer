@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {extrudePolygonProfile} from '../src/kernel/geometry/polygon'
-import {inspectStructuralSections,sectionTorsion} from '../src/services/structuralSections'
-import {mainSolidResult,isBoundaryConnectivity} from '../src/services/mainSolidProtocol'
+import {inspectStructuralSections,sectionTorsion} from '../src/kernel/structuralSections'
+import {mainSolidResult,isBoundaryConnectivity} from '../src/kernel/mainSolidProtocol'
 
 const outer=[[0,0],[10,0],[10,10],[0,10]]
 const build=(holes:number[][][]=[])=>extrudePolygonProfile({outer,holes},[0,0,10])

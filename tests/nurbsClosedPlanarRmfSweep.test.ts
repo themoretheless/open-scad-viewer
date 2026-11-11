@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs'
 import {bezierNurbsCurve,circleNurbsCurve,progressiveSweepNurbsPatches} from '../src/kernel/nurbsConstructors'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepPatchViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {readSweepPatchViewportEvidence} from '../src/kernel/sweepViewportEvidence'
 import {createProgressiveBrepProfileBody} from '../src/kernel/geometry/brep'
 import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 

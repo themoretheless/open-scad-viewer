@@ -4,8 +4,8 @@ import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {parseGcodePreview, type GcodePreviewResult} from '../src/kernel/geometry/polygon'
-import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
-import {compileWasmArtifact} from '../src/services/wasmArtifact'
+import {setOptionalWasmCompiler} from '../src/kernel/wasmCompilation'
+import {compileWasmArtifact} from '../src/kernel/wasmArtifact'
 
 const artifact = readFileSync(process.env.GCODE_WASM_PATH ?? 'public/wasm/geometry-kernel.wasm')
 let loaded = false

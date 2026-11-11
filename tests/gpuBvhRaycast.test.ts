@@ -12,7 +12,7 @@ import {
   querySceneAabbIndex,
   disposeSceneAabbIndex,
   type SceneAabbItem,
-} from '../src/services/sceneAabbIndex'
+} from '../src/render/sceneAabbIndex'
 
 describe('WebGPU Compute Batched BVH Raycaster', () => {
   it('builds a flat linear BVH and matches single-ray CPU BVH results across a 3D grid', () => {

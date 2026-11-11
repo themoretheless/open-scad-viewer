@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {solveBondedSolid} from '../src/services/bondedSolid'
-import {parseBondedSolidInput,isBondedSolidResult} from '../src/services/bondedSolidProtocol'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
+import {solveBondedSolid} from '../src/kernel/bondedSolid'
+import {parseBondedSolidInput,isBondedSolidResult} from '../src/kernel/bondedSolidProtocol'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
 import {bondedSolidExample} from '../src/features/bondedSolidExample'
 const input=()=>structuredClone(bondedSolidExample)
 it('solves explicit Tet4 bonds through WASM with area-derived traction and balanced reactions',()=>{

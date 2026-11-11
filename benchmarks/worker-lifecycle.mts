@@ -18,8 +18,8 @@ const inputs = [
   'src/language/openscadParser.ts', 'src/kernel/cadKernelOps.ts',
   'src/kernel/geometry/meshAnalysis.ts', 'src/kernel/geometry/kernel.ts',
   'src/generated/geometry-kernels/bytes.ts', 'src/generated/language-kernel/bytes.ts',
-  'src/generated/wasm-brotli/bytes.ts', 'src/services/wasmBrotliPacking.ts',
-  'src/services/wasmPacking.ts', 'crates/Cargo.toml', 'scripts/build-wasm-brotli.mjs',
+  'src/generated/wasm-brotli/bytes.ts', 'src/kernel/wasmBrotliPacking.ts',
+  'src/kernel/wasmPacking.ts', 'crates/Cargo.toml', 'scripts/build-wasm-brotli.mjs',
 ]
 async function fingerprints() {
   return Promise.all(inputs.map(async path => ({ path, sha256: hash(await readFile(new URL(path, new URL('../', import.meta.url)))) })))

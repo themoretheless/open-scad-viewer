@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
-import {compileStreamingWasm} from '../src/services/wasmStreaming'
+import {compileStreamingWasm} from '../src/kernel/wasmStreaming'
 import {createHash} from 'node:crypto'
-import {assertVerifiedWasmModule} from '../src/services/wasmArtifact'
+import {assertVerifiedWasmModule} from '../src/kernel/wasmArtifact'
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -77,7 +77,7 @@ it('does not start a network request outside the browser', async () => {
 
 it('warms the real embedded language kernel after the streaming deadline', async () => {
   vi.resetModules()
-  const {setOptionalWasmCompiler} = await import('../src/services/wasmCompilation')
+  const {setOptionalWasmCompiler} = await import('../src/kernel/wasmCompilation')
   setOptionalWasmCompiler(compileStreamingWasm)
   const {warmLanguageKernel, isLanguageKernelReady, scadCompileRust} = await import('../src/language/languages/kernel')
   vi.stubGlobal('fetch', vi.fn().mockImplementation(() => new Promise(() => {})))

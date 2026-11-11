@@ -1,4 +1,4 @@
-import type {OriginalQuadricCarrierQuery,OriginalQuadricCarrierReport} from '../../src/services/originalQuadricCarrierProtocol'
+import type {OriginalQuadricCarrierQuery,OriginalQuadricCarrierReport} from '../../src/kernel/originalQuadricCarrierProtocol'
 type Case={name:string;query:OriginalQuadricCarrierQuery;check:(r:OriginalQuadricCarrierReport)=>void}
 function require(x:unknown,message:string):asserts x{if(!x)throw new Error(message)}
 function base():OriginalQuadricCarrierQuery{return{curve:{degree:1,knots:[-2,-2,5,5],controlPoints:[[-2,0,0],[2,0,0]],weights:[1,1],periodic:false},quadric:[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,-1]],constantProducts:[],tolerance:1e-9,maxSpans:10,maxExactWork:100000}}

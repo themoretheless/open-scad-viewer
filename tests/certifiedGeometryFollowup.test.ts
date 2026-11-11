@@ -3,7 +3,7 @@ import {createBrepBox,createBrepCylinder,tessellateNurbsBrep} from '../src/kerne
 import {certifyNurbsMinkowski,verifyMinkowskiProof,certifyMinkowski3d,type NurbsMinkowskiProof} from '../src/kernel/geometry/minkowski3d'
 import {certifyBrepSpanIntersections,verifyBrepSpanIntersections} from '../src/kernel/geometry/brepProfile'
 import {applySolidMinkowski} from '../src/kernel/solidMinkowski'
-import {mainSolidResult,mainSolidExpectation} from '../src/services/mainSolidProtocol'
+import {mainSolidResult,mainSolidExpectation} from '../src/kernel/mainSolidProtocol'
 import {normalizePolygonMesh} from '../src/kernel/geometry/polygon'
 import {box3d} from './fixtures/minkowski3d-cases'
 import {rationalRoof,constantHalf,squareParameter,retracedParameter,planarCurve,constantMultispan} from './fixtures/certified-followup-cases'

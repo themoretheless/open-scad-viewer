@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest'
-import {trussFieldMeshes, TRUSS_FORCE_COLORS} from '../src/services/trussFieldMeshes'
-import type {TrussModel, TrussResponse} from '../src/services/trussAnalysis'
+import {trussFieldMeshes, TRUSS_FORCE_COLORS} from '../src/kernel/trussFieldMeshes'
+import type {TrussModel, TrussResponse} from '../src/kernel/trussAnalysis'
 
 const model: TrussModel={nodesMm:[[0,0,0],[10,0,0],[10,10,0]],members:[
   {nodes:[0,1],youngMpa:1,areaMm2:1},{nodes:[1,2],youngMpa:1,areaMm2:1},{nodes:[2,0],youngMpa:1,areaMm2:1}],

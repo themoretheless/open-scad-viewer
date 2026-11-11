@@ -1,6 +1,6 @@
 import {beforeAll,it,expect} from 'vitest'
 import {GeometryBuildEngine} from '../src/kernel/geometryBuildEngine'
-import {extractSemanticEdges} from '../src/services/meshTopology'
+import {extractSemanticEdges} from '../src/kernel/meshTopology'
 import type {GeometryEvaluationResult} from '../src/core/build'
 import {BOX_DEFAULTS,generateBox} from '../src/services/boxGenerator'
 const engine=new GeometryBuildEngine(),request={quality:'full',purpose:'analysis'} as const

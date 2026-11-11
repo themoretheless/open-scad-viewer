@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sortTransparentBackToFront } from '../src/services/transparentOrdering'
+import { sortTransparentBackToFront } from '../src/render/transparentOrdering'
 
 describe('transparent object ordering', () => {
   it('sorts by camera depth rather than source order or radial distance', () => {
@@ -26,7 +26,7 @@ describe('transparent object ordering', () => {
 
 describe('reusable transparency ordering', () => {
   it('matches reference sorting across camera, visibility, and center changes', async () => {
-    const { TransparentSortBuffer } = await import('../src/services/transparentOrdering')
+    const { TransparentSortBuffer } = await import('../src/render/transparentOrdering')
     const buffer = new TransparentSortBuffer()
     const objects = Array.from({ length: 200 }, (_, index) => ({ index, center: [Math.sin(index) * 10, Math.cos(index) * 10, index % 7] as [number, number, number] }))
     for (let frame = 0; frame < 20; frame++) {
@@ -42,7 +42,7 @@ describe('reusable transparency ordering', () => {
   })
 
   it('reuses records while preserving deterministic ties and fallback direction', async () => {
-    const { TransparentSortBuffer } = await import('../src/services/transparentOrdering')
+    const { TransparentSortBuffer } = await import('../src/render/transparentOrdering')
     const buffer = new TransparentSortBuffer()
     const center = [0, 0, -5] as const
     buffer.add(9, center); buffer.add(2, center)

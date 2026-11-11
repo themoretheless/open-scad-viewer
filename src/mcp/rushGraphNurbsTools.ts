@@ -1,4 +1,4 @@
-import { MESH_EXPORT_FORMATS } from '../services/meshExportFormats';
+import { MESH_EXPORT_FORMATS } from '../exchange/meshExportFormats';
 import { z } from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/server';
 import { rushGraphNurbsSchema, compileRushGraphNurbs, RUSH_GRAPH_NURBS_GUIDE, RUSH_GRAPH_NURBS_EXAMPLE, RUSH_GRAPH_NURBS_SURFACE_EXAMPLE } from '../language/rushGraphNurbs';

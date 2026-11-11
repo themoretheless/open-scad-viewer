@@ -6,10 +6,10 @@
  * mirrors `services/geometry/kernel`: the host owns request buffers and frees every response.
  */
 import {encodeBinary} from '../../services/valueBinaryCodec'
-import {decodePacked, writeLinear} from '../../services/wasmHost'
-import {unpackBrotliWasmBase64} from '../../services/wasmBrotliPacking'
-import {compileOptionalWasm} from '../../services/wasmCompilation'
-import {compileWasmArtifact, compileWasmArtifactSync} from '../../services/wasmArtifact'
+import {decodePacked, writeLinear} from '../../kernel/wasmHost'
+import {unpackBrotliWasmBase64} from '../../kernel/wasmBrotliPacking'
+import {compileOptionalWasm} from '../../kernel/wasmCompilation'
+import {compileWasmArtifact, compileWasmArtifactSync} from '../../kernel/wasmArtifact'
 import artifactIdentity from '../../generated/language-kernel/identity'
 import wasmBase64 from '../../generated/language-kernel/bytes'
 

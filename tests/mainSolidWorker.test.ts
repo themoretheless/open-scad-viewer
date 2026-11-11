@@ -1,9 +1,9 @@
 import {it,expect,vi,afterEach,beforeEach} from 'vitest'
 import type {MainParameters} from '../src/services/mainModeling'
 // The warm worker is module state; reset modules so each test starts fresh.
-let computeMainSolid:typeof import('../src/services/mainSolidWorker').computeMainSolid
-let cancelMainSolid:typeof import('../src/services/mainSolidWorker').cancelMainSolid
-beforeEach(async()=>{vi.resetModules();({computeMainSolid,cancelMainSolid}=await import('../src/services/mainSolidWorker'))})
+let computeMainSolid:typeof import('../src/kernel/mainSolidWorker').computeMainSolid
+let cancelMainSolid:typeof import('../src/kernel/mainSolidWorker').cancelMainSolid
+beforeEach(async()=>{vi.resetModules();({computeMainSolid,cancelMainSolid}=await import('../src/kernel/mainSolidWorker'))})
 class FakeWorker {
  static instances:FakeWorker[]=[];onmessage:any;onerror:any;onmessageerror:any;terminate=vi.fn();postMessage=vi.fn()
  constructor(){FakeWorker.instances.push(this)}

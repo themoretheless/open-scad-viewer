@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest'
 import {GeometryKernelError} from '../src/kernel/geometry/kernel'
-import {solveFrameInfluence, type FrameInfluenceModel} from '../src/services/frameAnalysis'
+import {solveFrameInfluence, type FrameInfluenceModel} from '../src/kernel/frameAnalysis'
 
 // Simply supported beam, L = 1000 mm, two elements, planar restraints.
 const beam = (): Omit<FrameInfluenceModel, 'target'> => ({

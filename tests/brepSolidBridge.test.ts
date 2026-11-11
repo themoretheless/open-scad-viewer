@@ -1,4 +1,4 @@
-import { stringifyMeshJson } from '../src/services/meshJson'
+import { stringifyMeshJson } from '../src/exchange/meshJson'
 import {expect,it} from 'vitest'
 import {EXAMPLES} from '../src/data/examples'
 import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'

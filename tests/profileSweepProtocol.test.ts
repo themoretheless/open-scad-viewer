@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {mainSolidResult} from '../src/services/mainSolidProtocol'
+import {mainSolidResult} from '../src/kernel/mainSolidProtocol'
 
 const refused=()=>({document:null,error:'Native continuous certificate exhausted',report:{
  accepted:false,sampledControlDeviation:0,budget:.001,stations:17,sections:5,

@@ -4,8 +4,8 @@ import SvgPanel from '../src/features/SvgPanel.svt'
 
 const geometry = vi.hoisted(() => ({ preview: vi.fn(), contours: vi.fn(), exportContours: vi.fn(), extrude: vi.fn(), project: vi.fn(), run: vi.fn(), cancel: vi.fn(), dispose: vi.fn() }))
 const storage = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }))
-vi.mock('../src/services/svgDraftStore', () => ({ svgDraftStore: () => storage }))
-vi.mock('../src/services/svgWorkerClient', () => ({ createSvgWorkerClient: () => ({
+vi.mock('../src/exchange/svgDraftStore', () => ({ svgDraftStore: () => storage }))
+vi.mock('../src/exchange/svgWorkerClient', () => ({ createSvgWorkerClient: () => ({
   cancel: geometry.cancel, dispose: geometry.dispose,
   run: async (job: any, control: any) => {
     geometry.run(job, control)

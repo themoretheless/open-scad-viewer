@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { stringifyMeshJson } from '../services/meshJson'
+import { stringifyMeshJson } from '../exchange/meshJson'
 import { fileURLToPath } from 'node:url';
 import { compileRushGraphNurbs } from '../language/rushGraphNurbs';
 import type { OwnNurbsRequest, buildOwnNurbs } from '../language/rushGraphNurbsKernel';

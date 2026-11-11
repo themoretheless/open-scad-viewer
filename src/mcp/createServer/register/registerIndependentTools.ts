@@ -3,7 +3,7 @@ import { independentArtifactSchema, independentCheckInputSchema, independentChec
 import { INDEPENDENT_OPENSCAD_ENGINE_ATTESTATION, executeIndependentOpenScad, independentOpenScadMetrics } from '../../independentOpenScadExecution'
 import { independentArtifactMimeType } from '../../independentArtifactCache'
 import { independentArtifactToWire, sha256, toolOutputSchema } from '../officialToolInputSchema'
-import { buildBinaryStl, buildObj } from '../../../services/meshExport'
+import { buildBinaryStl, buildObj } from '../../../exchange/meshExport'
 import { errorResult, estimatedIndependentExportBytes, safeFileName, textResult, throwIfIndependentExportAborted } from '../persistedFailureStatus'
 import { z } from 'zod/v4'
 import type { McpServerContext } from './context'

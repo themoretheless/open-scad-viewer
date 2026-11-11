@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {gunzipSync} from 'node:zlib'
 import {expect,it} from 'vitest'
-import {sameFrame,validPolarProofEvidence} from '../src/services/polarProofProtocol'
+import {sameFrame,validPolarProofEvidence} from '../src/kernel/polarProofProtocol'
 const cases=JSON.parse(gunzipSync(readFileSync(new URL('../docs/qualification/variable-annular-self-2026-10-07/final.json.gz',import.meta.url))).toString()).cases
 it('accepts original native interval evidence in both directions and radius orders',()=>{
  for(const c of cases)expect(validPolarProofEvidence(c.middlePMatrix)).toBe(true)

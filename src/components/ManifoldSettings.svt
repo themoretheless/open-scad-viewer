@@ -9,7 +9,7 @@ import {
   updateManifoldPreferences,
   useManifoldPreferences,
   type ManifoldPreferences,
-} from '../services/manifoldPreferences'
+} from '../kernel/manifoldPreferences'
 
 type Draft = {-readonly [Key in keyof ManifoldPreferences]: ManifoldPreferences[Key]}
 const props = defineProps<{locale: string}>()

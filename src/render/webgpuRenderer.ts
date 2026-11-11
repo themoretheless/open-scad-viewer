@@ -10,7 +10,7 @@ import {
   cameraStatesEqual,
   type CameraHistorySnapshot,
   type CameraState,
-} from '../services/cameraHistory'
+} from './cameraHistory'
 import { NativePickingCache } from '../services/nativePickingCache'
 import { warmGeometryKernel } from '../kernel/geometry/kernel'
 import { clientRayInKernel, projectPointInKernel } from '../kernel/geometry/viewport'
@@ -21,9 +21,9 @@ import {
   standardViewOrientation,
   type ProjectionMode,
   type StandardView,
-} from '../services/viewportModel'
-export { projectAxesToScreen } from '../services/viewportModel'
-export type { ProjectionMode, StandardView } from '../services/viewportModel'
+} from './viewportModel'
+export { projectAxesToScreen } from './viewportModel'
+export type { ProjectionMode, StandardView } from './viewportModel'
 import type {
   CameraChangeHandler,
   CameraHistoryChangeHandler,
@@ -55,9 +55,9 @@ import {
   computePanUpdate,
   computePinchUpdate,
   computeWheelDistance,
-} from '../services/cameraGestures'
-export { computePinchUpdate } from '../services/cameraGestures'
-export type { PinchCameraState, PinchPoint } from '../services/cameraGestures'
+} from './cameraGestures'
+export { computePinchUpdate } from './cameraGestures'
+export type { PinchCameraState, PinchPoint } from './cameraGestures'
 import {
   chooseDepthCandidate,
   type DepthCandidate,
@@ -67,12 +67,12 @@ import {
   buildSceneAabbIndex,
   disposeSceneAabbIndex,
   type SceneAabbIndex,
-} from '../services/sceneAabbIndex'
-import { TransparentSortBuffer } from '../services/transparentOrdering'
-import { MeshDrawBundle } from '../services/meshDrawBundle'
-import { ViewFrustum } from '../services/viewFrustum'
-import { MeshInstances } from '../services/meshInstances'
-import { computeOrbitCameraFrame } from '../services/orbitCameraProjection'
+} from './sceneAabbIndex'
+import { TransparentSortBuffer } from './transparentOrdering'
+import { MeshDrawBundle } from './meshDrawBundle'
+import { ViewFrustum } from './viewFrustum'
+import { MeshInstances } from '../kernel/meshInstances'
+import { computeOrbitCameraFrame } from './orbitCameraProjection'
 import {
   OBJECT_UNIFORM_LAYOUT,
   SCENE_UNIFORM_LAYOUT,
@@ -80,7 +80,7 @@ import {
 import {
   PipelineFactory,
 } from '../services/pipelineFactory'
-import { TextureResources } from '../services/textureResources'
+import { TextureResources } from './textureResources'
 import { GpuCsgRenderer, type GpuCsgTree } from './gpuCsgPreview'
 export type { GpuCsgTree } from './gpuCsgPreview'
 import { GpuPicker } from './gpuPicker'

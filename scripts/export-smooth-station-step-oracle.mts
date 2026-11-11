@@ -7,7 +7,7 @@ import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbs} from '../src/language/rushGraphNurbsKernel'
 import type {NurbsBrep} from '../src/kernel/geometry/brep'
 import {exportDirectStepV5} from '../src/kernel/cadNurbsStep'
-import {inspectMiterProfileSmoothness} from '../src/services/miterProfileSmoothness'
+import {inspectMiterProfileSmoothness} from '../src/kernel/miterProfileSmoothness'
 import {evaluateNurbsCurve} from '../src/kernel/nurbsCurve'
 import {evaluateNurbsSurface} from '../src/kernel/nurbsSurface'
 const root=resolve(process.argv[2]??'/tmp/sweep-smooth-station-step')

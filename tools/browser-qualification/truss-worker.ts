@@ -1,6 +1,6 @@
-import {MainSolidWorkerClient} from '../../src/services/mainSolidWorkerClient'
-import type {TrussModel, TrussResponse} from '../../src/services/trussAnalysis'
-import {resolveTrussScenario, type TrussScenario} from '../../src/services/trussScenario'
+import {MainSolidWorkerClient} from '../../src/kernel/mainSolidWorkerClient'
+import type {TrussModel, TrussResponse} from '../../src/kernel/trussAnalysis'
+import {resolveTrussScenario, type TrussScenario} from '../../src/kernel/trussScenario'
 
 function fixture(freeNodes:number):TrussModel {
   const model:TrussModel={nodesMm:[[10,0,0],[0,10,0],[0,0,0]],members:[],

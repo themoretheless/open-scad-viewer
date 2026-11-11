@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {materialExpectation,validMaterial} from '../src/kernel/solidMaterialVolume'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
 const cases=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/material-segment/contract.json',import.meta.url),'utf8')).cases
 const mode=(c:any)=>c.request.op==='cad_material_chord'?'chord' as const:'segment' as const
 it('accepts original native material segments, chords and explicit refusals',()=>{
@@ -41,7 +41,7 @@ it('rejects source, budget, volume, seed and endpoint proof mutations',()=>{
  expect(validMaterial(se,r)).toBe(false)
 })
 it.each([0,1])('cancels obsolete material job %i and rejects stale or forged replies',async(index)=>{
- const {MainSolidWorkerClient}=await import('../src/services/mainSolidWorkerClient')
+ const {MainSolidWorkerClient}=await import('../src/kernel/mainSolidWorkerClient')
  const ports:any[]=[]
  const client=new MainSolidWorkerClient(()=>{const p:any={onmessage:null,onerror:null,onmessageerror:null,terminated:false,postMessage(m:any){this.request=m},terminate(){this.terminated=true}};ports.push(p);return p})
  const c=cases[index],job={kind:index===1?'materialChord' as const:'materialSegment' as const,options:c.request}
@@ -98,7 +98,7 @@ it('rejects normal evidence with inconsistent classification, bounds or coverage
 })
 it('cancels a normal audit when its budget changes and rejects the old configuration',async()=>{
  const normal=JSON.parse(readFileSync(new URL('../docs/qualification/cad-roadmap-2026-09-28/p1-development-2026-10-02/material-normals/contract.json',import.meta.url),'utf8')).cases
- const {MainSolidWorkerClient}=await import('../src/services/mainSolidWorkerClient')
+ const {MainSolidWorkerClient}=await import('../src/kernel/mainSolidWorkerClient')
  const ports:any[]=[]
  const client=new MainSolidWorkerClient(()=>{const p:any={onmessage:null,onerror:null,onmessageerror:null,terminated:false,postMessage(m:any){this.request=m},terminate(){this.terminated=true}};ports.push(p);return p})
  try{

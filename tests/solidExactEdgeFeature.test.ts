@@ -3,7 +3,7 @@ import {solidExactEdgeFeature} from '../src/kernel/solidExactEdgeFeature'
 import {solidTopology} from '../src/services/directSolidTools'
 import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep,transformNurbsBrep} from '../src/kernel/geometry/brep'
 import {DirectHistory,parseDirectDocument} from '../src/services/directModeling'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 
 function fixture(){
  const brep=createBrepBox([0,0,0],[10,8,6]),mesh=tessellateNurbsBrep(brep)

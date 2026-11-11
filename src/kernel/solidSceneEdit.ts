@@ -4,7 +4,7 @@ import {parseDirectDocument,type DirectDocument} from '../services/directModelin
 import {transformSelection} from '../services/directSolidTools'
 import {createSolidInstance,transformSolidInstance,resolveSolidInstances,detachSolidInstances} from './solidInstances'
 import {createRuledSketchLoft} from './geometry/brep'
-import {stringifyMeshJson} from '../services/meshJson'
+import {stringifyMeshJson} from '../exchange/meshJson'
 export type SolidSceneEditOperation='duplicate'|'sketch-transform'|'transform'|'instance-create'|'instance-transform'|'instance-place'|'instance-detach'|'group-create'|'group-move'|'loft'
 export interface SolidSceneEditOptions {operation:SolidSceneEditOperation;id:string;ids:string[];createdId:string;x:number;y:number;z:number;axis:'x'|'y'|'z';angle:number;scale:number;group?:string;copyIds?:string[]}
 export function isSolidSceneEdit(operation:unknown):operation is SolidSceneEditOperation{return ['duplicate','sketch-transform','transform','instance-create','instance-transform','instance-place','instance-detach','group-create','group-move','loft'].includes(String(operation))}

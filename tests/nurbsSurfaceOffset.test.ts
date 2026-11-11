@@ -1,5 +1,5 @@
 import {curvedTangentFixture} from './fixtures/offset-contact-tangent'
-import {mainSolidExpectation,mainSolidResult} from '../src/services/mainSolidProtocol'
+import {mainSolidExpectation,mainSolidResult} from '../src/kernel/mainSolidProtocol'
 import {beforeAll,expect,it} from 'vitest'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import type {NurbsSurface} from '../src/kernel/nurbsSurface'

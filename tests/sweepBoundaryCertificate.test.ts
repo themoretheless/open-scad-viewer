@@ -1,6 +1,6 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
-import {composeSweepBoundaryCertificate} from '../src/services/sweepBoundaryCertificate'
+import {composeSweepBoundaryCertificate} from '../src/kernel/sweepBoundaryCertificate'
 
 it('distinguishes complete boundary bounds from acceptance and incomplete cap proofs',()=>{
  expect(composeSweepBoundaryCertificate(.1,[.2,.3],false,.4)).toMatchObject({continuousBound:true,withinBudget:true,errorUpper:.3,scope:'boundary-set-hausdorff',reason:null})
@@ -94,7 +94,7 @@ it('carries the nonparallel cap budget and explicit chart work through Rush and 
  const payload=readNativeGeometryData(built.nativeGeometry!)
  expect(payload.sweepEvidence.boundaryCertificate.continuousBound).toBe(true)
  expect(payload.sweepEvidence.volume).toMatchObject({solidGeometryCertified:true,boundaryEmbeddingCertified:true,allFacesInjective:true,allPairsClassified:true,nextPair:null,nesting:{rolesConsistent:true},orientations:[{outward:true,expectedOutward:true}]})
- const {inspectProgressiveSweepSolidAdmission}=await import('../src/services/sweepSolidAdmission')
+ const {inspectProgressiveSweepSolidAdmission}=await import('../src/kernel/sweepSolidAdmission')
  expect(inspectProgressiveSweepSolidAdmission(built.nativeGeometry!,payload.geometry)?.solidGeometryCertified).toBe(true)
  const broken=structuredClone(payload.geometry)
  broken.faces[0].surface.controlPoints[1][1][2]+=1e-12

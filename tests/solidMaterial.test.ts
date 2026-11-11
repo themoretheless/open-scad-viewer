@@ -1,4 +1,4 @@
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 import {expect,it} from 'vitest'
 import {assignSolidMaterial} from '../src/kernel/solidMaterial'
 import {DirectHistory,parseDirectDocument} from '../src/services/directModeling'

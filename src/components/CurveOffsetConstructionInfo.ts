@@ -1,8 +1,8 @@
 import CurrentCurveChainInspection from './CurrentCurveChainInspection.svt'
 import type {SolidNurbsCurve} from '../kernel/solidNurbs'
 import {h,type FunctionalComponent} from 'svet'
-import type {CurveOffsetConstruction} from '../services/curveOffsetConstruction'
-const CurveOffsetConstructionInfo:FunctionalComponent<{value?:CurveOffsetConstruction;locale:string;curves:SolidNurbsCurve[];ids:string[];onResult?:(value:{curves:SolidNurbsCurve[];diagnostics:import('../services/curveOffsetDiagnostics').CurveOffsetDiagnostics}|null)=>void}>=({value:v,locale,curves,ids,onResult})=>{
+import type {CurveOffsetConstruction} from '../kernel/curveOffsetConstruction'
+const CurveOffsetConstructionInfo:FunctionalComponent<{value?:CurveOffsetConstruction;locale:string;curves:SolidNurbsCurve[];ids:string[];onResult?:(value:{curves:SolidNurbsCurve[];diagnostics:import('../kernel/curveOffsetDiagnostics').CurveOffsetDiagnostics}|null)=>void}>=({value:v,locale,curves,ids,onResult})=>{
  const ru=locale==='ru',text=(a:string,b:string)=>ru?a:b
  const heading=h('strong',curves.some(c=>c.id===ids[0])?text('NURBS-кривая · CV','NURBS curve · CV'):text('NURBS-поверхность · CV','NURBS surface · CV'))
  const instructions=h('small',{style:{display:'block',marginTop:'6px'}},text('Тяните жёлтые CV прямо в 3D-виде. Перетаскивание идёт в плоскости экрана; точные XYZ и вес — ниже.','Drag yellow CVs directly in the 3D view. Dragging follows the screen plane; exact XYZ and weight are below.'))

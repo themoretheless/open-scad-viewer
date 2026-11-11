@@ -1,4 +1,4 @@
-import {transferNativeCapSelection} from '../../../services/sweep/construction/nativeCapSelections'
+import {transferNativeCapSelection} from '../../sweep/construction/nativeCapSelections'
 import type {DirectSketch} from '../../../services/directModeling'
 import {callGeometryRust} from '../kernel'
 import type {NurbsCurve} from '../../nurbsCurve'

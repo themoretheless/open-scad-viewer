@@ -2,7 +2,7 @@ import { expect, it } from 'vitest'
 import { compileRushFrontend } from '../src/language/rushFrontend'
 import { isRushFrontend, isRush } from '../src/language/rushFrontendDetect'
 import { compileRushGraph } from '../src/language/rushGraphCompiler'
-import { highlightCode } from '../src/services/codeHighlight'
+import { highlightCode } from '../src/language/codeHighlight'
 
 it('executes Rush through the rebuilt language WASM and existing CAD backend', () => {
   const body = '\nparam radius: 2mm range 1mm..8mm\nfn make x: length -> length\n  return x\nshow circle(make(radius)).extrude(4mm)'

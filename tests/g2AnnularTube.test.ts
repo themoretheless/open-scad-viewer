@@ -1,9 +1,9 @@
 import {beforeAll,expect,it} from 'vitest'
-import {createG2AnnularTube} from '../src/services/geometricG2'
+import {createG2AnnularTube} from '../src/kernel/geometricG2'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {emptyDirectDocument,parseDirectDocument} from '../src/services/directModeling'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 // Actual Rust/WASM qualification. Requires the matching rebuilt geometry kernel.
 beforeAll(async()=>{await warmGeometryKernel()})
 it.each([[8,4,16,.5],[10,7,20,.5],[5.15,2.3,10.3,.25],[10,7,20,.1]])('qualifies all G2 seams and material for annulus %s/%s/%s/%s and preserves its saved geometry',(outer,inner,height,extent)=>{

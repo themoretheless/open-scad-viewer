@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest'
 import {GeometryKernelError, callGeometryRust} from '../src/kernel/geometry/kernel'
-import {solveTruss, type TrussModel, type TrussWrenchModel} from '../src/services/trussAnalysis'
+import {solveTruss, type TrussModel, type TrussWrenchModel} from '../src/kernel/trussAnalysis'
 
 const bar = (): TrussModel => ({
   nodesMm: [[0,0,0],[10,0,0]],

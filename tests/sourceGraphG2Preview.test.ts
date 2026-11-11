@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest'
 const native=vi.hoisted(()=>vi.fn())
 vi.mock('../src/kernel/geometry/nurbs',()=>({callNurbsRust:native}))
-import {createSourceGraphG2Preview} from '../src/services/sourceGraphG2Preview'
+import {createSourceGraphG2Preview} from '../src/kernel/sourceGraphG2Preview'
 const surface={degreeU:1,degreeV:6,knotsU:[0,0,1,1],knotsV:[...Array(7).fill(0),...Array(7).fill(1)],controlPoints:[0,1].map(x=>Array.from({length:7},(_,y)=>[x,y/6,0])),weights:[Array(7).fill(1),Array(7).fill(1)]}
 const width={degree:1,knots:[0,0,1,1],controlPoints:[[.1,0,0],[.1,0,0]],weights:[1,1]}
 const options={radiusMm:1,radiusToleranceMm:.001}
@@ -23,7 +23,7 @@ it('checks cancellation before native work and before exposing its reply',()=>{
 })
 
 it('binds worker reply validation to the requested radius and work budget',async()=>{
- const {mainSolidExpectation,mainSolidResult}=await import('../src/services/mainSolidProtocol')
+ const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const job={kind:'sourceGraphG2Preview' as const,sources:[surface,surface] as [typeof surface,typeof surface],width,options}
  const expected=mainSolidExpectation(job)
  expect(mainSolidResult(expected,receipt())).toBe(true)

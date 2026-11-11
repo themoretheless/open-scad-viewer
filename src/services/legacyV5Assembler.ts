@@ -21,7 +21,7 @@ import {
   inspectManifoldPlanPayload,
   type ManifoldPlanPayload,
   type ManifoldPlanPayloadFamily,
-} from './manifoldPlanBackend'
+} from '../kernel/manifoldPlanBackend'
 import type { SemanticExecutionResult } from '../language/semantic/semanticProgramExecutor'
 
 const MAX_TRIANGLES = 750_000

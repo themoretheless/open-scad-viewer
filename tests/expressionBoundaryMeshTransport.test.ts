@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {validBoundaryMesh,validBoundaryMeshLimits,type BoundaryMeshReport} from '../src/services/expressionBoundaryMesh'
+import {validBoundaryMesh,validBoundaryMeshLimits,type BoundaryMeshReport} from '../src/kernel/expressionBoundaryMesh'
 const limits={maxDeviationMm:0.05,cells:100,spans:1000,maxDepth:12}
 const fresh=():BoundaryMeshReport=>({version:1,materialQualified:false,surfaceToleranceQualified:false,closedOrientedIncidence:false,
  openEdges:3,nonmanifoldEdges:0,orientationConflicts:0,invalidVertexLinks:3,

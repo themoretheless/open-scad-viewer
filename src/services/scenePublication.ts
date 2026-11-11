@@ -1,5 +1,5 @@
 import type { MeshData } from '../core/mesh'
-import { matchMeshesByProvenance } from './meshInspection'
+import { matchMeshesByProvenance } from '../kernel/meshInspection'
 
 export interface ScenePublicationInput {
   previousMeshes: readonly MeshData[]

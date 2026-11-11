@@ -1,6 +1,6 @@
 import {expect, it} from 'vitest'
 import {GeometryKernelError} from '../src/kernel/geometry/kernel'
-import {solveTrussNonlinear, type TrussModel} from '../src/services/trussAnalysis'
+import {solveTrussNonlinear, type TrussModel} from '../src/kernel/trussAnalysis'
 
 // von Mises toggle: supports at (±1000, 0), apex at (0, 30) pressed down.
 const toggle = (apexLoad:number): TrussModel => ({

@@ -1,5 +1,5 @@
 import type {DirectDocument} from '../../services/directModeling'
-import {stringifyMeshJson} from '../../services/meshJson'
+import {stringifyMeshJson} from '../../exchange/meshJson'
 const documentObjects=(d:DirectDocument)=>[...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[]]
 export function prepareDocumentCommit(next:DirectDocument,previous:DirectDocument|undefined,fallbackIds:Iterable<string>,lockedIds:string[],activeGroup:string,origin:'edit'|'file',label:(ru:string,en:string)=>string) {
   const existing=new Set(previous?documentObjects(previous).map(b=>b.id):fallbackIds)

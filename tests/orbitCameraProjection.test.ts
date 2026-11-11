@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { computePanUpdate } from '../src/services/cameraGestures'
-import { computeOrbitCameraFrame } from '../src/services/orbitCameraProjection'
+import { computePanUpdate } from '../src/render/cameraGestures'
+import { computeOrbitCameraFrame } from '../src/render/orbitCameraProjection'
 import {
   invert, lookAt, multiply, perspective, transformPoint, unprojectRay,
   type Aabb3, type Vec3,
 } from '../src/services/math3d'
-import type { ProjectionMode } from '../src/services/viewportModel'
+import type { ProjectionMode } from '../src/render/viewportModel'
 import reference from './fixtures/orbit-camera-reference-v1.json'
 
 const spinner: Aabb3 = { min: [-34, -34, 0], max: [34, 34, 10] }

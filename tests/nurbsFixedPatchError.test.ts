@@ -3,7 +3,7 @@ import {expect,it} from 'vitest'
 import {bezierNurbsCurve,previewProgressiveNurbsProfiles} from '../src/kernel/nurbsConstructors'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepPatchViewportEvidence,readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {readSweepPatchViewportEvidence,readSweepViewportEvidence} from '../src/kernel/sweepViewportEvidence'
 
 it.each(['oblique-rmf-progressive-sweep.r','progressive-sweep.r','affine-progressive-sweep.r','fixed-progressive-sweep.r','closed-fixed-progressive-sweep.r','fixed-normal-progressive-sweep.r','closed-fixed-normal-progressive-sweep.r','frenet-progressive-sweep.r','spatial-frenet-progressive-sweep.r','spatial-frenet-affine-progressive-sweep.r','closed-frenet-progressive-sweep.r'])('propagates original transport retained bounds and strict refusal through Rush: %s',async file=>{
  const source=readFileSync(new URL(`../examples/rush/${file}`,import.meta.url),'utf8')

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contoursExtrusion, contoursSvg, meshSvgContours, svgContours, type SvgContours, type SvgProjectionMesh } from '../src/services/svgGeometry'
+import { contoursExtrusion, contoursSvg, meshSvgContours, svgContours, type SvgContours, type SvgProjectionMesh } from '../src/exchange/svgGeometry'
 import { identity } from '../src/services/math3d'
 
 function triangle(): SvgProjectionMesh {

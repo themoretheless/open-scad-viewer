@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
 import {createSelectionSurfacePublisher} from '../src/services/selectionSurfacePublisher'
-import {withSelectionSurfaces} from '../src/services/meshSurfaceGroups'
+import {withSelectionSurfaces} from '../src/kernel/meshSurfaceGroups'
 import {
   assertGeometryScene,
   geometrySceneFromMeshes,

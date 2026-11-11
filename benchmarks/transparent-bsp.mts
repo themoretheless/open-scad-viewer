@@ -2,13 +2,13 @@ import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
-import {TransparentBsp,type TransparentFragment} from '../src/services/transparentBsp'
+import {TransparentBsp,type TransparentFragment} from '../src/render/transparentBsp'
 import {ReferenceTransparentBsp} from './rush/transparentBsp-reference'
 import {warmGeometryKernel,kernelRuntime,decodeNurbsResult} from '../src/kernel/geometry/kernel'
 import {encodeBinary} from '../src/services/valueBinaryCodec'
-import {writeLinear,packedSize} from '../src/services/wasmHost'
-import {setOptionalWasmCompiler} from '../src/services/wasmCompilation'
-import {compileWasmArtifact} from '../src/services/wasmArtifact'
+import {writeLinear,packedSize} from '../src/kernel/wasmHost'
+import {setOptionalWasmCompiler} from '../src/kernel/wasmCompilation'
+import {compileWasmArtifact} from '../src/kernel/wasmArtifact'
 const artifact=readFileSync('public/wasm/geometry-kernel.wasm')
 setOptionalWasmCompiler(async(_,identity)=>compileWasmArtifact(artifact,identity!))
 await warmGeometryKernel()

@@ -1,12 +1,12 @@
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 import {expect,it} from 'vitest'
 import {bezierNurbsCurve,type ProgressiveGuidedSurfaceSweepOptions} from '../src/kernel/nurbsConstructors'
 import {createProgressiveBrepProfileBody} from '../src/kernel/geometry/brep'
 import {readFileSync} from 'node:fs'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
-import {readSweepBodyBoundaryViewportEvidence,readSweepViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
+import {readSweepBodyBoundaryViewportEvidence,readSweepViewportEvidence} from '../src/kernel/sweepViewportEvidence'
 const points=[[0,0,0],[2,0,0],[2,2,0],[0,2,0]]
 const loops=[points.map((point,i)=>bezierNurbsCurve([point,points[(i+1)%4]!]))]
 const path=bezierNurbsCurve([[0,0,0],[0,0,10]])

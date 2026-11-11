@@ -3,10 +3,10 @@ import {expect,it} from 'vitest'
 import {spatialRmfProfileG2BodySources} from '../scripts/spatial-rmf-profile-g2-sources.mjs'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepBodyBoundaryViewportEvidence} from '../src/services/sweepViewportEvidence'
-import {inspectProgressiveSweepSolidAdmission} from '../src/services/sweepSolidAdmission'
-import {inspectMiterProfileSmoothness} from '../src/services/miterProfileSmoothness'
-import {readNativeGeometryData} from '../src/services/nativeGeometrySnapshot'
+import {readSweepBodyBoundaryViewportEvidence} from '../src/kernel/sweepViewportEvidence'
+import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
+import {inspectMiterProfileSmoothness} from '../src/kernel/miterProfileSmoothness'
+import {readNativeGeometryData} from '../src/kernel/nativeGeometrySnapshot'
 
 // This integration case performs construction and fresh full-model proofs.
 // Its runner deadline is separate from unchanged native proof/work budgets.

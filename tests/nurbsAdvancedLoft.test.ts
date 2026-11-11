@@ -39,7 +39,7 @@ it.each(['auto-guided-loft.r','natural-loft-solid.r','g2-loft-surface.r'])('buil
 it('preserves the new capped loft as authoritative BRep through the editor Solid bridge',async()=>{
  const {parseOpenSCAD}=await import('../src/language/openscadParser')
  const {sceneMeshesToSolidDocument,meshDataToEditablePolygon}=await import('../src/kernel/solidBridge')
- const {meshObjectStats}=await import('../src/services/meshEditing')
+ const {meshObjectStats}=await import('../src/kernel/meshEditing')
  const scene=await parseOpenSCAD(readFileSync('examples/rush/natural-loft-solid.r','utf8'))
  const solid=sceneMeshesToSolidDocument(scene.meshes)
  expect(inspectNurbsBrep(solid.bodies[0]!.brep!)).toMatchObject({topologyValid:true,boundaryEdgeCount:0})

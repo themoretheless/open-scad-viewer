@@ -5,7 +5,7 @@ import {circleNurbsCurve,bezierNurbsCurve,streamProgressiveNurbsProfiles,preview
 import {evaluateNurbsSurface,type NurbsSurface} from '../src/kernel/nurbsSurface'
 import {compileRushFrontend} from '../src/language/rushFrontend'
 import {buildOwnNurbs,buildOwnNurbsAsync} from '../src/language/rushGraphNurbsKernel'
-import {readSweepPatchViewportEvidence} from '../src/services/sweepViewportEvidence'
+import {readSweepPatchViewportEvidence} from '../src/kernel/sweepViewportEvidence'
 const law=(a:number,b:number):NurbsScaleLaw=>({degree:1,knots:[2,2,6,6],values:[a,b],weights:[1,1]})
 const profile=()=>bezierNurbsCurve([[1,0,0],[2,0,1]],[1,2])
 const path=()=>bezierNurbsCurve([[0,0,0],[0,0,10]])

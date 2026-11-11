@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { VrPresentation, type VrFrame, type VrSession, type VrSystem } from '../src/services/vrSession'
+import { VrPresentation, type VrFrame, type VrSession, type VrSystem } from '../src/render/vrSession'
 
 const identity = () => new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1])
 function setup() {

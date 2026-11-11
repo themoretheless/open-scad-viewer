@@ -6,7 +6,7 @@ import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
 import {exactLayeredPrismFillet,transformNurbsBrep} from '../src/kernel/geometry/brep'
 import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 import {importDirectStepV9} from '../src/kernel/cadNurbsStep'
-import {stringifyMeshJson} from '../src/services/meshJson'
+import {stringifyMeshJson} from '../src/exchange/meshJson'
 const directory=resolve(process.argv[2]??'output/qualification/enclosure-fillet');mkdirSync(directory,{recursive:true})
 const body=cadRoadmapParts().find(p=>p.body.id==='enclosure')!.body,source=body.brep!
 const edges=source.edges.flatMap((e,i)=>e.vertices.every(v=>{const p=source.vertices[v].point;return p[0]===0&&p[1]===0})?[i]:[])

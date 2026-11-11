@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {onUnmounted,ref,shallowRef,watch} from 'svet'
-import {computeThermalStrength} from '../services/mainSolidWorker'
-import type {PrintStrengthProfile,ThermalSample,ThermalEditorState} from '../services/trussScreening'
+import {computeThermalStrength} from '../kernel/mainSolidWorker'
+import type {PrintStrengthProfile,ThermalSample,ThermalEditorState} from '../kernel/trussScreening'
 
 const props=defineProps<{profile:PrintStrengthProfile;locale:string}>()
 const emit=defineEmits<{change:[state:ThermalEditorState]}>()
