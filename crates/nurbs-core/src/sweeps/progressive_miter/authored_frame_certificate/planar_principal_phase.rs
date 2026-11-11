@@ -210,16 +210,14 @@ pub(crate) fn certify_planar_principal_values(
     )
 }
 pub(crate) fn certify_planar_principal_control_values(
-    path: &Curve,
-    normal: [f64; 3],
-    sign: f64,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
+    laws: super::ProfileLaws<'_>,
+    plane: PrincipalPlane,
     qs: &[[[f64; 2]; 3]],
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<ControlValuesReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
+    let PrincipalPlane { normal, sign } = plane;
     let frame = certify_planar_principal_values(
         path, normal, sign, twist, traversal, traversal, max_cells,
     )?;
@@ -265,16 +263,14 @@ pub(crate) fn certify_planar_principal_relative_values(
     )
 }
 pub(crate) fn certify_planar_principal_control_trajectories(
-    path: &Curve,
-    normal: [f64; 3],
-    sign: f64,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
+    laws: super::ProfileLaws<'_>,
+    plane: PrincipalPlane,
     qs: &[[[f64; 2]; 3]],
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<TrajectoriesReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
+    let PrincipalPlane { normal, sign } = plane;
     check(sign == 1. || sign == -1., "Invalid planar principal phase")?;
     let mut frame = certify_fixed_normal_path(path, normal, twist, traversal, max_cells)?;
     if frame.status == Status::Certified {

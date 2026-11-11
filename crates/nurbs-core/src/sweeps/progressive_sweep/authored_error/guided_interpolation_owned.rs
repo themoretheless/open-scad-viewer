@@ -166,7 +166,13 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
         if fixed {
             authored_frame_certificate::certify_fixed_path_control_values_with_frame_path(reference_path,frame_reference_path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if let Some(phase)=principal_phase {
-            authored_frame_certificate::certify_planar_principal_control_values(sweep.path,sweep.options.normal,phase,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
+            authored_frame_certificate::certify_planar_principal_control_values(
+                authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
+                authored_frame_certificate::PrincipalPlane { normal: sweep.options.normal, sign: phase },
+                qs,
+                interval,
+                budget,
+            )
         } else if rmf_planar {
             authored_frame_certificate::certify_proved_planar_control_values(sweep.path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if fixed_normal {
@@ -191,7 +197,13 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
         if fixed {
             authored_frame_certificate::certify_fixed_path_control_trajectories_with_frame_path(reference_path,frame_reference_path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if let Some(phase)=principal_phase {
-            authored_frame_certificate::certify_planar_principal_control_trajectories(sweep.path,sweep.options.normal,phase,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
+            authored_frame_certificate::certify_planar_principal_control_trajectories(
+                authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
+                authored_frame_certificate::PrincipalPlane { normal: sweep.options.normal, sign: phase },
+                qs,
+                interval,
+                budget,
+            )
         } else if fixed_normal {
             authored_frame_certificate::certify_fixed_normal_control_trajectories(sweep.path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if frenet {
