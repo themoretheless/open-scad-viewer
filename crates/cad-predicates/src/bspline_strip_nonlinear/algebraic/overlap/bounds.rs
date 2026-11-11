@@ -108,6 +108,23 @@ fn tensor(p: &B, a: [&Q; 2], b: [&Q; 2], ctx: &mut PredicateContext<'_>) -> Resu
     }
     Ok(out)
 }
+/// Address of one refinement box: the span pair, the cofactor axis, the subdivision level and the
+/// box indices along each parameter at that level.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct BoxKey {
+    pub a: usize,
+    pub b: usize,
+    pub axis: usize,
+    pub level: usize,
+    pub pa: usize,
+    pub pb: usize,
+}
+/// Non-empty knot spans and knot vectors of both strip parameters.
+#[derive(Clone, Copy)]
+pub(super) struct StripKnots<'a> {
+    pub spans: &'a [Vec<(usize, Vec<H>)>],
+    pub u: &'a [Vec<Q>],
+}
 impl Bounds {
     fn slope_coefficients(
         &mut self,
@@ -214,17 +231,13 @@ impl Bounds {
     }
     fn box_coefficients(
         &mut self,
-        a: usize,
-        b: usize,
-        axis: usize,
-        level: usize,
-        pa: usize,
-        pb: usize,
+        at: BoxKey,
         p: &B,
-        spans: &[Vec<(usize, Vec<H>)>],
-        u: &[Vec<Q>],
+        knots: StripKnots<'_>,
         ctx: &mut PredicateContext<'_>,
     ) -> Result<Vec<P>, Reason> {
+        let BoxKey { a, b, axis, level, pa, pb } = at;
+        let StripKnots { spans, u } = knots;
         let key = (a, b, axis, level, pa, pb);
         if let Some(p) = self.boxes.get(&key) {
             return Ok(p.clone());
@@ -240,7 +253,12 @@ impl Bounds {
             )?
         } else {
             let parent =
-                self.box_coefficients(a, b, axis, level - 1, pa / 2, pb / 2, p, spans, u, ctx)?;
+                self.box_coefficients(
+                    BoxKey { level: level - 1, pa: pa / 2, pb: pb / 2, ..at },
+                    p,
+                    knots,
+                    ctx,
+                )?;
             if parent.is_empty() {
                 return Ok(parent);
             }
@@ -270,21 +288,16 @@ impl Bounds {
     // source regularity remains mandatory at the public admission boundary.
     pub(super) fn cofactor(
         &mut self,
-        a: usize,
-        b: usize,
-        axis: usize,
-        level: usize,
-        pa: usize,
-        pb: usize,
+        at: BoxKey,
         p: &B,
-        spans: &[Vec<(usize, Vec<H>)>],
-        u: &[Vec<Q>],
+        knots: StripKnots<'_>,
         ctx: &mut PredicateContext<'_>,
     ) -> Result<bool, Reason> {
+        let BoxKey { a, b, axis, .. } = at;
         if p.is_empty() {
             return Ok(false);
         }
-        let coeff = self.box_coefficients(a, b, axis, level, pa, pb, p, spans, u, ctx)?;
+        let coeff = self.box_coefficients(at, p, knots, ctx)?;
         if one_sign(coeff.iter().flatten().map(|q| q.n.sign()), None, ctx)? {
             return Ok(true);
         }

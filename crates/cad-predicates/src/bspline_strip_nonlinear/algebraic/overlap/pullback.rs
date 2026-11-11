@@ -94,7 +94,12 @@ mod tests {
                 let knots = vec![vec![lo.clone(), one()], vec![lo, one()]];
                 let mut bounds = Bounds::default();
                 let mut owner = PredicateContext::new(&arena, &tol, Limits::default(), None);
-                let admitted = bounds.cofactor(0,0,0,0,0,0,&p,&spans,&knots,&mut owner);
+                let admitted = bounds.cofactor(
+                    super::bounds::BoxKey { a: 0, b: 0, axis: 0, level: 0, pa: 0, pb: 0 },
+                    &p,
+                    super::bounds::StripKnots { spans: &spans, u: &knots },
+                    &mut owner,
+                );
                 assert!(matches!(admitted, Ok(true)), "swap={swap} negative={negative} result={admitted:?} work={}", owner.work_used());
                 let mut short = PredicateContext::new(
                     &arena,
