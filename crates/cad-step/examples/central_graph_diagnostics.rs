@@ -64,7 +64,7 @@ fn main() {
             "curve":c.curve,"originalSurface":c.original_surface,"originalPcurve":c.original_pcurve,"candidatePcurve":p
         })).collect::<Vec<_>>();
         let data = value_codec::json!({"surface":candidate.surface,"boundaries":boundaries,
-            "source":"offline-rounded-boundary-only-fixture","closedBody":false,"admitted":false});
+            "source":"recipe-proposed-boundary-only-candidate","closedBody":false,"admitted":false});
         std::fs::write(path, value_codec::to_string(&data).unwrap()).unwrap();
         println!("exported diagnostic fixture; no G2 or material receipt inherited");
         return;
