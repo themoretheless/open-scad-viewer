@@ -4,6 +4,15 @@ use crate::{
     Result, check, curve::Curve, curve_surface_agreement as agreement, surface::Surface,
     trimmed_offset_contact as trimmed,
 };
+pub use crate::offset::contact_trims::{ContactParameters, ContactTolerance};
+/// The two original faces with their trim loops, spatial coedges and offset distances.
+#[derive(Clone, Copy)]
+pub struct SourceFaces<'a> {
+    pub surfaces: [&'a Surface; 2],
+    pub loops: [&'a [Vec<Curve>]; 2],
+    pub coedges: [&'a [Vec<Coedge>]; 2],
+    pub distances: [f64; 2],
+}
 pub struct Coedge {
     pub world: Curve,
     pub reversed: bool,
@@ -54,21 +63,17 @@ impl Report {
     }
 }
 pub fn certify(
-    surfaces: [&Surface; 2],
-    loops: [&[Vec<Curve>]; 2],
-    coedges: [&[Vec<Coedge>]; 2],
-    distances: [f64; 2],
-    fixed_axis: usize,
-    fixed_interval: [f64; 2],
-    first_other: [f64; 2],
-    second: [[f64; 2]; 2],
-    max_spans: usize,
-    tolerance_uv: f64,
+    faces: SourceFaces<'_>,
+    parameters: ContactParameters,
+    tolerance: ContactTolerance,
     trim_limits: trimmed::Limits,
-    tolerance_mm: f64,
     max_exact_work: u64,
     max_agreement_cells: usize,
 ) -> Result<Report> {
+    let SourceFaces { surfaces, loops, coedges, distances } = faces;
+    let ContactParameters { axis: fixed_axis, drive: fixed_interval, free: first_other, second, spans: max_spans } =
+        parameters;
+    let ContactTolerance { mm: tolerance_mm, uv: tolerance_uv } = tolerance;
     check(
         tolerance_mm.is_finite()
             && tolerance_mm > 0.
@@ -312,22 +317,14 @@ mod tests {
         let cb = world(&second, 1);
         ca[0][0].world.control_points[0][2] += damage;
         certify(
-            [&a, &b],
-            [&first, &second],
-            [&ca, &cb],
-            [0.2, 0.2],
-            0,
-            [0.35, 0.39],
-            [0.25, 0.35],
-            [[0.30, 0.44], [0.15, 0.25]],
-            2,
-            1e-7,
+            SourceFaces { surfaces: [&a, &b], loops: [&first, &second], coedges: [&ca, &cb], distances: [0.2, 0.2] },
+            ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 },
+            ContactTolerance { mm: 1e-5, uv: 1e-7 },
             trimmed::Limits {
                 max_pairs: 10000,
                 max_cells: 10000,
                 max_domain_cells: 100000,
             },
-            1e-5,
             exact_work,
             cells,
         )

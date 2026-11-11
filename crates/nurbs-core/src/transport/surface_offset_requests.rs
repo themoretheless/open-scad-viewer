@@ -380,22 +380,14 @@ fn handle_offset_source_boundary(v: &Value) -> Result<Value> {
     let first_world: Vec<Vec<crate::offset_source_boundary::Coedge>> = field(v, "firstCoedges")?;
     let second_world: Vec<Vec<crate::offset_source_boundary::Coedge>> = field(v, "secondCoedges")?;
     Ok(crate::offset_source_boundary::certify(
-        [&a, &b],
-        [&first_loops, &second_loops],
-        [&first_world, &second_world],
-        field(v, "distances")?,
-        field(v, "fixedAxis")?,
-        field(v, "fixedInterval")?,
-        field(v, "firstOther")?,
-        field(v, "secondDomain")?,
-        field(v, "maxSpans")?,
-        field(v, "toleranceUv")?,
+        crate::offset_source_boundary::SourceFaces { surfaces: [&a, &b], loops: [&first_loops, &second_loops], coedges: [&first_world, &second_world], distances: field(v, "distances")? },
+        crate::offset_source_boundary::ContactParameters { axis: field(v, "fixedAxis")?, drive: field(v, "fixedInterval")?, free: field(v, "firstOther")?, second: field(v, "secondDomain")?, spans: field(v, "maxSpans")? },
+        crate::offset_source_boundary::ContactTolerance { mm: field(v, "toleranceMm")?, uv: field(v, "toleranceUv")? },
         crate::trimmed_offset_contact::Limits {
             max_pairs: field(v, "maxPairs")?,
             max_cells: field(v, "maxCells")?,
             max_domain_cells: field(v, "maxDomainCells")?,
         },
-        field(v, "toleranceMm")?,
         field(v, "maxExactWork")?,
         field(v, "maxAgreementCells")?,
     )?
