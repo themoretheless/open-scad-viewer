@@ -115,11 +115,13 @@ fn derive(
     let cell = &source_cells[c.source][c.cell];
     let local = (&parameter - &cell.domain[0]) / (&cell.domain[1] - &cell.domain[0]);
     let mut queries = arithmetic::carrier_sides::probes_with_centers(
-        &nets,
-        offsets[c.source] + c.cell,
-        &local,
-        &decode_ratio(radius)?,
-        limits.max_refinements,
+        arithmetic::carrier_sides::TransverseSegment {
+            nets: &nets,
+            selected: offsets[c.source] + c.cell,
+            t: &local,
+            radius: &decode_ratio(radius)?,
+            refinements: limits.max_refinements,
+        },
         &centers,
         limits.max_resultant_size,
     )?;

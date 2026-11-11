@@ -2,14 +2,21 @@
 use super::*;
 use event_coordinates::{sign_at, zero_at};
 pub(in crate::profile::profile_certificate) mod radius;
+/// A transverse normal segment through the selected original cell of `nets`:
+/// centred at parameter `t`, of half-length `radius`, compared with up to
+/// `refinements` interval refinements.
+#[derive(Clone, Copy)]
+pub(in crate::profile::profile_certificate) struct TransverseSegment<'a> {
+    pub nets: &'a [Vec<[Q; 3]>],
+    pub selected: usize,
+    pub t: &'a Q,
+    pub radius: &'a Q,
+    pub refinements: usize,
+}
 pub(in crate::profile::profile_certificate) fn probes(
-    nets: &[Vec<[Q; 3]>],
-    selected: usize,
-    t: &Q,
-    radius: &Q,
-    refinements: usize,
+    segment: TransverseSegment<'_>,
 ) -> Result<[[Q; 2]; 2]> {
-    probes_impl(nets, selected, t, radius, refinements, None, 64, None, None)
+    probes_impl(segment, None, 64, None, None)
 }
 #[derive(Clone)]
 pub(in crate::profile::profile_certificate) struct CenterInterval {
@@ -18,14 +25,11 @@ pub(in crate::profile::profile_certificate) struct CenterInterval {
     pub bounds: [branch_neighbourhood::ParameterValue; 2],
 }
 pub(in crate::profile::profile_certificate) fn probes_with_centers(
-    nets: &[Vec<[Q; 3]>],
-    selected: usize,
-    t: &Q,
-    radius: &Q,
-    refinements: usize,
+    segment: TransverseSegment<'_>,
     centers: &[CenterInterval],
     matrix: usize,
 ) -> Result<[[Q; 2]; 2]> {
+    let nets = segment.nets;
     if centers.is_empty()
         || centers.len() > 4096
         || !(1..=128).contains(&matrix)
@@ -34,11 +38,7 @@ pub(in crate::profile::profile_certificate) fn probes_with_centers(
         return Err(refused("Invalid original common center interval census"));
     }
     probes_impl(
-        nets,
-        selected,
-        t,
-        radius,
-        refinements,
+        segment,
         Some(centers),
         matrix,
         None,
@@ -49,21 +49,13 @@ pub(in crate::profile::profile_certificate) fn probes_with_centers(
 /// interval. Native-cell continuations outside these bounds are not geometry.
 #[cfg(test)]
 pub(in crate::profile::profile_certificate) fn probes_with_owned_intervals(
-    nets: &[Vec<[Q; 3]>],
-    selected: usize,
-    t: &Q,
-    radius: &Q,
-    refinements: usize,
+    segment: TransverseSegment<'_>,
     centers: &[CenterInterval],
     matrix: usize,
     intervals: &[[branch_neighbourhood::ParameterValue; 2]],
 ) -> Result<[[Q; 2]; 2]> {
     owned_groups(
-        nets,
-        selected,
-        t,
-        radius,
-        refinements,
+        segment,
         centers,
         matrix,
         intervals,
@@ -73,11 +65,7 @@ pub(in crate::profile::profile_certificate) fn probes_with_owned_intervals(
 /// Each source carrier has several translated chart candidates. Exactly ONE
 /// actual center root must be owned across all candidates of EACH group.
 pub(in crate::profile::profile_certificate) fn probes_with_owned_center_groups(
-    nets: &[Vec<[Q; 3]>],
-    selected: usize,
-    t: &Q,
-    radius: &Q,
-    refinements: usize,
+    segment: TransverseSegment<'_>,
     centers: &[CenterInterval],
     matrix: usize,
     intervals: &[[branch_neighbourhood::ParameterValue; 2]],
@@ -97,11 +85,7 @@ pub(in crate::profile::profile_certificate) fn probes_with_owned_center_groups(
         ));
     }
     owned_groups(
-        nets,
-        selected,
-        t,
-        radius,
-        refinements,
+        segment,
         centers,
         matrix,
         intervals,
@@ -109,16 +93,13 @@ pub(in crate::profile::profile_certificate) fn probes_with_owned_center_groups(
     )
 }
 fn owned_groups(
-    nets: &[Vec<[Q; 3]>],
-    selected: usize,
-    t: &Q,
-    radius: &Q,
-    refinements: usize,
+    segment: TransverseSegment<'_>,
     centers: &[CenterInterval],
     matrix: usize,
     intervals: &[[branch_neighbourhood::ParameterValue; 2]],
     groups: Option<&[usize]>,
 ) -> Result<[[Q; 2]; 2]> {
+    let TransverseSegment { nets, refinements, .. } = segment;
     if intervals.len() != nets.len()
         || centers.is_empty()
         || centers.len() > if groups.is_some() { 36864 } else { 4096 }
@@ -158,11 +139,7 @@ fn owned_groups(
         }
     }
     probes_impl(
-        nets,
-        selected,
-        t,
-        radius,
-        refinements,
+        segment,
         Some(centers),
         matrix,
         Some(intervals),
@@ -170,16 +147,19 @@ fn owned_groups(
     )
 }
 fn probes_impl(
-    nets: &[Vec<[Q; 3]>],
-    selected: usize,
-    t: &Q,
-    radius: &Q,
-    refinements: usize,
+    segment: TransverseSegment<'_>,
     centers: Option<&[CenterInterval]>,
     matrix: usize,
     intervals: Option<&[[branch_neighbourhood::ParameterValue; 2]]>,
     groups: Option<&[usize]>,
 ) -> Result<[[Q; 2]; 2]> {
+    let TransverseSegment {
+        nets,
+        selected,
+        t,
+        radius,
+        refinements,
+    } = segment;
     if selected >= nets.len()
         || t <= &Q::zero()
         || t >= &Q::one()
@@ -419,20 +399,33 @@ mod tests {
         let half = Q::new(1.into(), 2.into());
         let radius = Q::new(1.into(), 8.into());
         assert!(
-            probes_with_owned_intervals(&nets, 0, &half, &radius, 192, &centers, 64, &intervals)
+            probes_with_owned_intervals(
+                TransverseSegment {
+                    nets: &nets,
+                    selected: 0,
+                    t: &half,
+                    radius: &radius,
+                    refinements: 192,
+                },
+                &centers,
+                64,
+                &intervals,
+            )
                 .is_err()
         );
         assert_eq!(
             probes_with_owned_center_groups(
-                &nets,
-                0,
-                &half,
-                &radius,
-                192,
+                TransverseSegment {
+                    nets: &nets,
+                    selected: 0,
+                    t: &half,
+                    radius: &radius,
+                    refinements: 192,
+                },
                 &centers,
                 64,
                 &intervals,
-                &[0, 0, 0]
+                &[0, 0, 0],
             )
             .unwrap(),
             [
@@ -442,29 +435,33 @@ mod tests {
         );
         assert!(
             probes_with_owned_center_groups(
-                &nets,
-                0,
-                &half,
-                &radius,
-                192,
+                TransverseSegment {
+                    nets: &nets,
+                    selected: 0,
+                    t: &half,
+                    radius: &radius,
+                    refinements: 192,
+                },
                 &centers,
                 64,
                 &intervals,
-                &[0, 2, 2]
+                &[0, 2, 2],
             )
             .is_err()
         );
         assert!(
             probes_with_owned_center_groups(
-                &nets,
-                0,
-                &half,
-                &radius,
-                192,
+                TransverseSegment {
+                    nets: &nets,
+                    selected: 0,
+                    t: &half,
+                    radius: &radius,
+                    refinements: 192,
+                },
                 &centers,
                 64,
                 &intervals,
-                &[usize::MAX; 3]
+                &[usize::MAX; 3],
             )
             .is_err()
         );
@@ -472,15 +469,17 @@ mod tests {
         let bounds = [intervals[0].clone(), intervals[0].clone()];
         assert!(
             probes_with_owned_center_groups(
-                &duplicate,
-                0,
-                &half,
-                &radius,
-                192,
+                TransverseSegment {
+                    nets: &duplicate,
+                    selected: 0,
+                    t: &half,
+                    radius: &radius,
+                    refinements: 192,
+                },
                 &centers[..2],
                 64,
                 &bounds,
-                &[0, 0]
+                &[0, 0],
             )
             .is_err()
         );
@@ -503,28 +502,51 @@ mod tests {
         }];
         let t = Q::new(1.into(), 2.into());
         let radius = Q::new(1.into(), 16.into());
-        assert!(probes_with_centers(&nets, 0, &t, &radius, 192, &centers, 64).is_err());
+        assert!(probes_with_centers(
+            TransverseSegment {
+                nets: &nets,
+                selected: 0,
+                t: &t,
+                radius: &radius,
+                refinements: 192,
+            },
+            &centers,
+            64,
+        ).is_err());
         let root = branch_neighbourhood::ParameterValue {
             primitive: vec![-t.clone(), q(0), q(1)],
             value: vec![q(0), q(1)],
             interval: [Q::new(7.into(), 10.into()), Q::new(4.into(), 5.into())],
         };
         let intervals = [[value(q(0)), value(q(1))], [root, value(q(1))]];
-        let p = probes_with_owned_intervals(&nets, 0, &t, &radius, 192, &centers, 64, &intervals)
+        let p = probes_with_owned_intervals(
+            TransverseSegment {
+                nets: &nets,
+                selected: 0,
+                t: &t,
+                radius: &radius,
+                refinements: 192,
+            },
+            &centers,
+            64,
+            &intervals,
+        )
             .unwrap();
         assert_eq!(p, [[t.clone(), radius.clone()], [t, -radius]]);
         let mut invalid = intervals.clone();
         invalid[1][1] = value(q(2));
         assert!(
             probes_with_owned_intervals(
-                &nets,
-                0,
-                &Q::new(1.into(), 2.into()),
-                &Q::one(),
-                192,
+                TransverseSegment {
+                    nets: &nets,
+                    selected: 0,
+                    t: &Q::new(1.into(), 2.into()),
+                    radius: &Q::one(),
+                    refinements: 192,
+                },
                 &centers,
                 64,
-                &invalid
+                &invalid,
             )
             .is_err()
         );
@@ -585,11 +607,51 @@ mod common_center_tests {
             })
             .collect::<Vec<_>>();
         let nets = vec![net.clone(), net, other];
-        assert!(probes_with_centers(&nets, 0, &q(1, 2), &q(1, 8), 192, &centers, 64).is_ok());
-        assert!(probes_with_centers(&nets, 0, &q(1, 2), &q(1, 1), 192, &centers, 64).is_err());
-        assert!(probes_with_centers(&nets, 0, &q(1, 2), &q(1, 8), 192, &centers[..1], 64).is_err());
+        assert!(probes_with_centers(
+            TransverseSegment {
+                nets: &nets,
+                selected: 0,
+                t: &q(1, 2),
+                radius: &q(1, 8),
+                refinements: 192,
+            },
+            &centers,
+            64,
+        ).is_ok());
+        assert!(probes_with_centers(
+            TransverseSegment {
+                nets: &nets,
+                selected: 0,
+                t: &q(1, 2),
+                radius: &q(1, 1),
+                refinements: 192,
+            },
+            &centers,
+            64,
+        ).is_err());
+        assert!(probes_with_centers(
+            TransverseSegment {
+                nets: &nets,
+                selected: 0,
+                t: &q(1, 2),
+                radius: &q(1, 8),
+                refinements: 192,
+            },
+            &centers[..1],
+            64,
+        ).is_err());
         let mut wrong = centers.clone();
         wrong[1].bounds[1] = parameter(q(1, 4));
-        assert!(probes_with_centers(&nets, 0, &q(1, 2), &q(1, 8), 192, &wrong, 64).is_err());
+        assert!(probes_with_centers(
+            TransverseSegment {
+                nets: &nets,
+                selected: 0,
+                t: &q(1, 2),
+                radius: &q(1, 8),
+                refinements: 192,
+            },
+            &wrong,
+            64,
+        ).is_err());
     }
 }

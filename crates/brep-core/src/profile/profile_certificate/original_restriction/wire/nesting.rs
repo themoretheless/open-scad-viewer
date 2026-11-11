@@ -45,7 +45,15 @@ fn orientation(nets: &[Vec<[Q; 3]>], work: &mut usize, limits: Limits) -> Result
     let mut radius = carrier_sides::radius::suggest(nets, 0, &t, 192).unwrap_or_else(|_| Q::one());
     let mut probes = None;
     for step in 0..=32 {
-        if let Ok(p) = carrier_sides::probes(nets, 0, &t, &radius, 192) {
+        if let Ok(p) = carrier_sides::probes(
+            carrier_sides::TransverseSegment {
+                nets,
+                selected: 0,
+                t: &t,
+                radius: &radius,
+                refinements: 192,
+            },
+        ) {
             probes = Some(p);
             break;
         }

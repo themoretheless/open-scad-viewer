@@ -87,11 +87,13 @@ fn derive(
         refused("Side witness needs a regular interior original knot cell parameter")
     })?;
     let queries = arithmetic::carrier_sides::probes(
-        &nets,
-        selected,
-        &local,
-        &decode_ratio(radius)?,
-        refinements,
+        arithmetic::carrier_sides::TransverseSegment {
+            nets: &nets,
+            selected,
+            t: &local,
+            radius: &decode_ratio(radius)?,
+            refinements,
+        },
     )?;
     Ok([
         certify_rational_point_winding(loops, queries[0].clone().map(|q| ratio(&q)))?,

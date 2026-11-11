@@ -190,11 +190,13 @@ pub(in super::super) fn source_probe_data(
         }
     }
     let mut lifted = arithmetic::carrier_sides::probes_with_owned_center_groups(
-        &nets,
-        c.piece,
-        &local,
-        &decode_ratio(&o.radius)?,
-        o.limits.max_refinements,
+        arithmetic::carrier_sides::TransverseSegment {
+            nets: &nets,
+            selected: c.piece,
+            t: &local,
+            radius: &decode_ratio(&o.radius)?,
+            refinements: o.limits.max_refinements,
+        },
         &centers,
         o.limits.max_resultant_size,
         &intervals,

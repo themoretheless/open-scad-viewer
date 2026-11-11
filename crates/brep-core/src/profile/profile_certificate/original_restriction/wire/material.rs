@@ -116,11 +116,13 @@ fn probes(nets: &[Vec<[Q; 3]>], selected: usize, t: &Q, limits: Limits) -> Resul
         .unwrap_or_else(|_| Q::one());
     for step in 0..=limits.radius_halvings {
         if let Ok(probes) = carrier_sides::probes_with_centers(
-            nets,
-            selected,
-            t,
-            &radius,
-            limits.refinements,
+            carrier_sides::TransverseSegment {
+                nets,
+                selected,
+                t,
+                radius: &radius,
+                refinements: limits.refinements,
+            },
             &centers,
             64,
         ) {
