@@ -63,21 +63,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
     assert_eq!(loops[0][3].curve(), &wire[0].pcurve);
     let interior = qualify_interior_contact(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone()],
-        &contact,
-        0,
-        0,
-        2,
+        RegionSource { surface: &s, wires: &[wire.clone()], contact: &contact, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
     )
     .unwrap();
     assert!(
@@ -112,21 +102,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
         .collect::<Vec<_>>();
     let bad = qualify_interior_contact(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone(), hole.clone()],
-        &contact,
-        0,
-        0,
-        2,
+        RegionSource { surface: &s, wires: &[wire.clone(), hole.clone()], contact: &contact, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
     )
     .unwrap();
     assert!(bad.proposal.search.complete);
@@ -134,21 +114,11 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
     let across_hole = Curve::from_polyline(vec![vec![0.3, 0.3], vec![0.7, 0.3]]).unwrap();
     let void = qualify_interior_contact(
         &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone(), hole],
-        &across_hole,
-        1,
-        0,
-        2,
+        RegionSource { surface: &s, wires: &[wire.clone(), hole], contact: &across_hole, address: RegionAddress { loop_index: 1, start_edge: 0, end_edge: 2 } },
         1e-8,
         limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-        0,
-        1000,
-        10000,
+        RegionTarget { width: [1e-7, 1e-7], driver_axis: 0 },
+        RegionBudget { cells: 10000, point_checks: 16, mapping_cells: 16, driver_cells: 1000, membership_cells: 10000 },
     )
     .unwrap();
     assert!(void.only_owned_crossings_proven && void.contact_simple_proven);

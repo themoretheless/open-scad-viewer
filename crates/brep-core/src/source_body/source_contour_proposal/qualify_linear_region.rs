@@ -60,24 +60,7 @@ pub fn qualify_linear_region(
             "Bound half-plane source control work",
         ));
     }
-    let interior = qualify_interior_contact(
-        context,
-        surface,
-        wires,
-        contact,
-        loop_index,
-        start_edge,
-        end_edge,
-        tolerance_uv,
-        limits,
-        max_cells,
-        target_width,
-        max_point_checks,
-        max_mapping_cells,
-        driver_axis,
-        max_driver_cells,
-        max_membership_cells,
-    )?;
+    let interior = qualify_interior_contact(context, source, tolerance_uv, limits, target, budget)?;
     let mut out = LinearRegion {
         interior,
         controls: 0,
@@ -372,24 +355,7 @@ pub fn qualify_curved_region(
             "Bound source contour winding work",
         ));
     }
-    let interior = qualify_interior_contact(
-        context,
-        surface,
-        wires,
-        contact,
-        loop_index,
-        start_edge,
-        end_edge,
-        tolerance_uv,
-        limits,
-        max_cells,
-        target_width,
-        max_point_checks,
-        max_mapping_cells,
-        driver_axis,
-        max_driver_cells,
-        max_membership_cells,
-    )?;
+    let interior = qualify_interior_contact(context, source, tolerance_uv, limits, target, budget)?;
     let mut out = CurvedRegion {
         interior,
         holes: vec![],

@@ -156,22 +156,22 @@ pub struct InteriorContact {
 /// This does not certify replacement winding or placement of retained holes.
 pub fn qualify_interior_contact(
     context: &ToleranceContext,
-    surface: &Surface,
-    wires: &[Vec<Boundary>],
-    contact: &Curve,
-    loop_index: usize,
-    start_edge: usize,
-    end_edge: usize,
+    source: RegionSource<'_>,
     tolerance_uv: f64,
     limits: Limits,
-    max_cells: usize,
-    target_width: [f64; 2],
-    max_point_checks: usize,
-    max_mapping_cells: usize,
-    driver_axis: usize,
-    max_driver_cells: usize,
-    max_membership_cells: usize,
+    target: RegionTarget,
+    budget: RegionBudget,
 ) -> Result<InteriorContact> {
+    let RegionSource { surface, wires, contact, address } = source;
+    let RegionAddress { loop_index, start_edge, end_edge } = address;
+    let RegionTarget { width: target_width, driver_axis } = target;
+    let RegionBudget {
+        cells: max_cells,
+        point_checks: max_point_checks,
+        mapping_cells: max_mapping_cells,
+        driver_cells: max_driver_cells,
+        membership_cells: max_membership_cells,
+    } = budget;
     if driver_axis >= 2
         || !(1..=100000).contains(&max_driver_cells)
         || !(1..=100000).contains(&max_membership_cells)
