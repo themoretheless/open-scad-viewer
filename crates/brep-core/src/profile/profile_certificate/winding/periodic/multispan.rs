@@ -117,9 +117,7 @@ impl MultispanPeriodicRegions {
 /// uses its separate exact cell/depth limits and at most64 requested pairs.
 /// Complete general inter-wire contact arrangement and 3D faces are separate.
 pub fn regularize_multispan_periodic_winding(
-    sources: &[Curve],
-    partitions: &[Report],
-    windings: &[[i32; 2]],
+    inputs: WindingSources<'_>,
     chart: [[f64; 2]; 2],
     anchor: [f64; 2],
     limits: ChartAssemblyLimits,
@@ -127,6 +125,11 @@ pub fn regularize_multispan_periodic_winding(
     tolerance: f64,
     max_work: u64,
 ) -> Result<MultispanPeriodicRegions> {
+    let WindingSources {
+        sources,
+        partitions,
+        windings,
+    } = inputs;
     if requests.len() > 64 {
         return Err(refused("Too many original multispan image requests"));
     }
@@ -384,9 +387,11 @@ mod tests {
         let b = mapped();
         let parts = vec![parts(&a, 0.25), parts(&b, 0.5)];
         let owner = regularize_multispan_periodic_winding(
-            &[a, b],
-            &parts,
-            &[[0; 2]; 2],
+            WindingSources {
+                sources: &[a, b],
+                partitions: &parts,
+                windings: &[[0; 2]; 2],
+            },
             [[0., 8.]; 2],
             [1., 1.],
             limits(),

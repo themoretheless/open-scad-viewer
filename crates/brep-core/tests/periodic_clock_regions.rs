@@ -1,4 +1,4 @@
-use brep_core::profile_certificate::regularize_clock_mapped_periodic_winding;
+use brep_core::profile_certificate::{WindingSources, regularize_clock_mapped_periodic_winding};
 use nurbs_core::{
     curve::Curve,
     periodic_trim::{self as p, Piece, Report},
@@ -70,9 +70,11 @@ fn actual_nonlinear_clock_aliases_reach_owned_original_nonzero_regions() {
         tolerance_uv: 1e-8,
     };
     let owned = regularize_clock_mapped_periodic_winding(
-        &sources,
-        &partitions,
-        &[[0, 0]; 2],
+        WindingSources {
+            sources: &sources,
+            partitions: &partitions,
+            windings: &[[0, 0]; 2],
+        },
         [[0., 8.]; 2],
         [1., 1.],
         limits,
@@ -207,15 +209,17 @@ fn actual_nonlinear_clock_aliases_reach_owned_original_nonzero_regions() {
         damaged[1].pieces[0].curve.control_points[2][0].next_up();
     assert!(
         regularize_clock_mapped_periodic_winding(
-            &sources,
-            &damaged,
-            &[[0, 0]; 2],
+            WindingSources {
+                sources: &sources,
+                partitions: &damaged,
+                windings: &[[0, 0]; 2],
+            },
             [[0., 8.]; 2],
             [1., 1.],
             limits,
             &specs,
             1e-7,
-            1_000_000
+            1_000_000,
         )
         .is_err()
     );
@@ -236,9 +240,11 @@ fn clock_proof_kind_sews_only_original_opposite_seam_connectors() {
     let partition =
         p::split_candidates(&curve, chart, &[0.5, 2.5], &[[0, 0], [1, 0], [0, 0]], 16).unwrap();
     let regions = pc::regularize_clock_mapped_periodic_winding(
-        &[curve.clone(), curve],
-        &[partition.clone(), partition],
-        &[[0; 2]; 2],
+        pc::WindingSources {
+            sources: &[curve.clone(), curve],
+            partitions: &[partition.clone(), partition],
+            windings: &[[0; 2]; 2],
+        },
         chart,
         [3.75, 0.5],
         p::ChartAssemblyLimits {

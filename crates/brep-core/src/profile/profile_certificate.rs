@@ -188,7 +188,7 @@ pub use winding::{
     regularize_multispan_periodic_winding, ClockMappedPeriodicRegions, ClockMappedSurfaceRegions,
     ExactPeriodicContactRegions, LinearPeriodicContactRegions, MultispanChartAlias,
     MultispanPeriodicRegions, MultispanSurfaceRegions, OwnedClockMappedFaces,
-    OwnedMultispanPeriodicFaces, OwnedPeriodicFaces, PeriodicFaceLimits,
+    OwnedMultispanPeriodicFaces, OwnedPeriodicFaces, PeriodicFaceLimits, WindingSources,
 };
 pub use winding::{
     bind_periodic_regions_to_surface, regularize_approximated_periodic_winding,

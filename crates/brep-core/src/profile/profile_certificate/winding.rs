@@ -15,7 +15,7 @@ pub use periodic::{
     assemble_multispan_periodic_surface_faces, assemble_periodic_surface_faces,
     bind_clock_mapped_regions_to_surface, bind_multispan_regions_to_surface,
     regularize_clock_mapped_periodic_winding, regularize_exact_periodic_contacts,
-    regularize_linear_periodic_contacts, regularize_multispan_periodic_winding,
+    regularize_linear_periodic_contacts, regularize_multispan_periodic_winding, WindingSources,
 };
 
 #[derive(Clone, Debug)]

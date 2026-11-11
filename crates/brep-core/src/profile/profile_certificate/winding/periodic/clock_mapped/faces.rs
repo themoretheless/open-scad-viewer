@@ -106,9 +106,11 @@ mod tests {
             candidate_hulls_contained: false,
         };
         let regions = regularize_clock_mapped_periodic_winding(
-            &[c],
-            &[part],
-            &[[0; 2]],
+            WindingSources {
+                sources: &[c],
+                partitions: &[part],
+                windings: &[[0; 2]],
+            },
             [[0., 8.]; 2],
             [1.5; 2],
             ChartAssemblyLimits {

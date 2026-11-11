@@ -52,9 +52,7 @@ impl ClockMappedPeriodicRegions {
 /// contacts and actual supporting-surface face ownership remain separate; no
 /// strict-source isotopy receipt is fabricated for coincident original images.
 pub fn regularize_clock_mapped_periodic_winding(
-    sources: &[Curve],
-    partitions: &[Report],
-    windings: &[[i32; 2]],
+    inputs: WindingSources<'_>,
     chart: [[f64; 2]; 2],
     anchor: [f64; 2],
     limits: ChartAssemblyLimits,
@@ -62,6 +60,11 @@ pub fn regularize_clock_mapped_periodic_winding(
     tolerance: f64,
     max_work: u64,
 ) -> Result<ClockMappedPeriodicRegions> {
+    let WindingSources {
+        sources,
+        partitions,
+        windings,
+    } = inputs;
     if !tolerance.is_finite() || tolerance <= 0. {
         return Err(refused(
             "Clock mapped regions need positive finite tolerance",
@@ -189,9 +192,11 @@ mod tests {
             candidate_hulls_contained: false,
         };
         let regions = regularize_clock_mapped_periodic_winding(
-            &[curve],
-            &[part],
-            &[[0; 2]],
+            WindingSources {
+                sources: &[curve],
+                partitions: &[part],
+                windings: &[[0; 2]],
+            },
             [[0., 8.]; 2],
             [1.5; 2],
             ChartAssemblyLimits {

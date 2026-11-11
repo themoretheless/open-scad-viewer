@@ -6,6 +6,14 @@ pub use multispan::{
     OwnedMultispanPeriodicFaces, assemble_multispan_periodic_surface_faces,
     bind_multispan_regions_to_surface, regularize_multispan_periodic_winding,
 };
+/// Original source curves with their partitions and the per-loop winding
+/// contributions of each source.
+#[derive(Clone, Copy)]
+pub struct WindingSources<'a> {
+    pub sources: &'a [Curve],
+    pub partitions: &'a [Report],
+    pub windings: &'a [[i32; 2]],
+}
 mod linear_contacts;
 pub use linear_contacts::{LinearPeriodicContactRegions, regularize_linear_periodic_contacts};
 mod clock_mapped;
