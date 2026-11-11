@@ -1,4 +1,5 @@
 use super::*;
+use crate::dense::plane::{DepthGrid, DepthRange, ReferenceView};
 
 #[test]
 fn host_sweep_linear_indexing_variant_rewrites_entry_dispatch_shape() {
@@ -84,15 +85,10 @@ fn gpu_sweep_matches_cpu_on_shifted_plane() {
         let mut sources = build(2.);
         let mut diagnostics = DenseDiagnostics::default();
         sweep_depth(
-            &ref_gray,
-            &reference,
+            ReferenceView { gray: &ref_gray, camera: &reference },
             &mut sources,
-            40,
-            40,
-            2.,
-            2.,
-            8.,
-            None,
+            DepthGrid { width: 40, height: 40, step: 2. },
+            DepthRange { near: 2., far: 8., ranges: None },
             &options(acceleration),
             &mut diagnostics,
             &mut |_| Ok(()),
@@ -282,15 +278,10 @@ fn host_sweep_split_matches_cpu_sweep() {
     }];
     let mut diagnostics = DenseDiagnostics::default();
     let (cpu_depth, _) = sweep_depth(
-        gray[0].as_ref().unwrap(),
-        &reference,
+        ReferenceView { gray: gray[0].as_ref().unwrap(), camera: &reference },
         &mut sources,
-        64,
-        64,
-        1.25,
-        3.5 * 0.85,
-        4.05 * 1.15,
-        None,
+        DepthGrid { width: 64, height: 64, step: 1.25 },
+        DepthRange { near: 3.5 * 0.85, far: 4.05 * 1.15, ranges: None },
         &options,
         &mut diagnostics,
         &mut |_| Ok(()),
@@ -395,15 +386,10 @@ fn cuda_sweep_matches_cpu_on_shifted_plane() {
         let mut sources = shifted_plane_source(&src_gray, &source_camera, 2.);
         let mut diagnostics = DenseDiagnostics::default();
         sweep_depth(
-            &ref_gray,
-            &reference,
+            ReferenceView { gray: &ref_gray, camera: &reference },
             &mut sources,
-            40,
-            40,
-            2.,
-            2.,
-            8.,
-            None,
+            DepthGrid { width: 40, height: 40, step: 2. },
+            DepthRange { near: 2., far: 8., ranges: None },
             &options(acceleration),
             &mut diagnostics,
             &mut |_| Ok(()),

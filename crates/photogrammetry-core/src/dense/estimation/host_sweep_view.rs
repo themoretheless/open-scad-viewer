@@ -1,4 +1,5 @@
 use super::*;
+use crate::dense::plane::{DepthGrid, DepthRange, ReferenceView};
 
 pub(in super::super) fn estimate_prepared(
     images: &[Image],
@@ -114,15 +115,21 @@ pub(in super::super) fn estimate_prepared(
         let mut sources = build_sources(step);
         if options.estimator == DenseEstimator::SlantedPlane {
             let (depth, confidence) = super::super::plane::estimate(
-                gray,
-                reference,
+                ReferenceView {
+                    gray,
+                    camera: reference,
+                },
                 &mut sources,
-                width,
-                height,
-                step,
-                near,
-                far,
-                None,
+                DepthGrid {
+                    width,
+                    height,
+                    step,
+                },
+                DepthRange {
+                    near,
+                    far,
+                    ranges: None,
+                },
                 options,
                 &mut diagnostics,
                 &mut |_, row, _| {
@@ -167,15 +174,21 @@ pub(in super::super) fn estimate_prepared(
             };
             let mut coarse_sources = build_sources(coarse_step);
             let (coarse_depth, _) = sweep_depth(
-                gray,
-                reference,
+                ReferenceView {
+                    gray,
+                    camera: reference,
+                },
                 &mut coarse_sources,
-                coarse_width,
-                coarse_height,
-                coarse_step,
-                near,
-                far,
-                coarse_prior.as_ref(),
+                DepthGrid {
+                    width: coarse_width,
+                    height: coarse_height,
+                    step: coarse_step,
+                },
+                DepthRange {
+                    near,
+                    far,
+                    ranges: coarse_prior.as_ref(),
+                },
                 options,
                 &mut diagnostics,
                 &mut |row| {
@@ -215,15 +228,21 @@ pub(in super::super) fn estimate_prepared(
             }
         }
         let (depth, confidence) = sweep_depth(
-            gray,
-            reference,
+            ReferenceView {
+                gray,
+                camera: reference,
+            },
             &mut sources,
-            width,
-            height,
-            step,
-            near,
-            far,
-            ranges.as_ref(),
+            DepthGrid {
+                width,
+                height,
+                step,
+            },
+            DepthRange {
+                near,
+                far,
+                ranges: ranges.as_ref(),
+            },
             options,
             &mut diagnostics,
             &mut |row| {
@@ -327,15 +346,21 @@ pub(in super::super) fn estimate_prepared(
                         None
                     };
                     let (depth, confidence) = sweep_depth(
-                        gray,
-                        preamble.reference,
+                        ReferenceView {
+                            gray,
+                            camera: preamble.reference,
+                        },
                         &mut sources,
-                        preamble.width,
-                        preamble.height,
-                        preamble.step,
-                        preamble.near,
-                        preamble.far,
-                        ranges.as_ref(),
+                        DepthGrid {
+                            width: preamble.width,
+                            height: preamble.height,
+                            step: preamble.step,
+                        },
+                        DepthRange {
+                            near: preamble.near,
+                            far: preamble.far,
+                            ranges: ranges.as_ref(),
+                        },
                         &cpu_options,
                         &mut diagnostics,
                         &mut |row| {

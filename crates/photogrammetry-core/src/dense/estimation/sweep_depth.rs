@@ -1,20 +1,25 @@
 use super::*;
+use crate::dense::plane::{DepthGrid, DepthRange, ReferenceView};
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn sweep_depth(
-    gray: &GrayImage,
-    reference: &Camera,
+    view: ReferenceView<'_>,
     sources: &mut [Source],
-    width: usize,
-    height: usize,
-    step: f64,
-    near: f64,
-    far: f64,
-    ranges: Option<&SweepRanges>,
+    grid: DepthGrid,
+    range: DepthRange<'_>,
     options: &DenseOptions,
     diagnostics: &mut DenseDiagnostics,
     row_progress: &mut impl FnMut(usize) -> Result<()>,
 ) -> Result<(Vec<f64>, Vec<f32>)> {
+    let ReferenceView {
+        gray,
+        camera: reference,
+    } = view;
+    let DepthGrid {
+        width,
+        height,
+        step,
+    } = grid;
+    let DepthRange { near, far, ranges } = range;
     let hypotheses = hypothesis_grid(near, far, options.depth_hypotheses);
     let inverse_span = 1. / near - 1. / far;
     let patch_side = options.patch_radius * 2 + 1;

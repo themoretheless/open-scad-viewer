@@ -376,20 +376,38 @@ fn refine_pixel(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Reference image and its camera.
+#[derive(Clone, Copy)]
+pub(crate) struct ReferenceView<'a> {
+    pub gray: &'a GrayImage,
+    pub camera: &'a Camera,
+}
+/// Depth-map raster: size and pixel step in reference-image pixels.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct DepthGrid {
+    pub width: usize,
+    pub height: usize,
+    pub step: f64,
+}
+/// Depth search range, optionally narrowed per pixel by (low, high) inverse-depth bounds.
+#[derive(Clone, Copy)]
+pub(crate) struct DepthRange<'a> {
+    pub near: f64,
+    pub far: f64,
+    pub ranges: Option<&'a (Vec<f64>, Vec<f64>)>,
+}
 pub(super) fn estimate(
-    gray: &GrayImage,
-    reference: &Camera,
+    view: ReferenceView<'_>,
     sources: &mut [Source<'_>],
-    width: usize,
-    height: usize,
-    step: f64,
-    near: f64,
-    far: f64,
-    ranges: Option<&(Vec<f64>, Vec<f64>)>,
+    grid: DepthGrid,
+    range: DepthRange<'_>,
     options: &DenseOptions,
     diagnostics: &mut DenseDiagnostics,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<(Vec<f64>, Vec<f32>)> {
+    let ReferenceView { gray, camera: reference } = view;
+    let DepthGrid { width, height, step } = grid;
+    let DepthRange { near, far, ranges } = range;
     let count = width * height;
     let mut planes = vec![Hypothesis::default(); count];
     // Precompute centered reference patches once per pixel instead of
@@ -609,15 +627,10 @@ mod tests {
                 rays: [[0.; 3]; 25],
             }];
             estimate(
-                &gray,
-                &camera,
+                ReferenceView { gray: &gray, camera: &camera },
                 &mut sources,
-                16,
-                16,
-                1.,
-                2.,
-                8.,
-                None,
+                DepthGrid { width: 16, height: 16, step: 1. },
+                DepthRange { near: 2., far: 8., ranges: None },
                 options,
                 &mut DenseDiagnostics::default(),
                 &mut |_, _, _| true,
