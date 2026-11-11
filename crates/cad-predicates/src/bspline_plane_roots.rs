@@ -259,4 +259,4 @@ mod quadric;
 pub use quadric::{OriginalQuadricRoot, OriginalQuadricRootsOutcome, OriginalQuadricRootsDecision, rational_bspline_quadric_roots};
 #[path = "bspline_plane_roots/quadric_edge.rs"]
 mod quadric_edge;
-pub use quadric_edge::{OriginalQuadricRootSignDecision,rational_bspline_quadric_projected_edge_sign};
+pub use quadric_edge::{OriginalQuadricRootSignDecision,QuadricRefs,RationalSpanRefs,rational_bspline_quadric_projected_edge_sign};

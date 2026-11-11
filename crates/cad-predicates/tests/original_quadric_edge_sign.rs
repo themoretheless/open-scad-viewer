@@ -52,14 +52,8 @@ fn query(
     );
     let r = rational_bspline_quadric_projected_edge_sign(
         &mut ctx,
-        &controls,
-        &knots,
-        1,
-        1,
-        matrix,
-        &[],
-        frame,
-        axes,
+        cad_predicates::RationalSpanRefs { controls: &controls, knots: &knots, degree: 1, span: 1 },
+        cad_predicates::QuadricRefs { matrix, products: &[], frame, axes },
         edge,
         interval,
     )?;
