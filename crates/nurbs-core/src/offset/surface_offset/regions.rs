@@ -177,12 +177,8 @@ impl Pair {
     }
     pub fn reverify(&self) -> Result<()> {
         let fresh = fit_pair(
-            self.sources.each_ref(),
-            self.distances,
-            self.axis,
-            self.drive,
-            self.free,
-            self.second,
+            crate::offset::contact_pcurve::OffsetFaces { surfaces: self.sources.each_ref(), distances: self.distances },
+            super::contact_curve::ContactDomain { axis: self.axis, drive: self.drive, free: self.free, second: self.second },
             self.far_sides,
             self.tolerance_uv,
             self.limits,
@@ -204,16 +200,14 @@ impl Pair {
 /// independent downstream obligations.
 #[allow(clippy::too_many_arguments)]
 pub fn fit_pair(
-    sources: [&Surface; 2],
-    distances: [f64; 2],
-    axis: usize,
-    drive: [f64; 2],
-    free: [f64; 2],
-    second: [[f64; 2]; 2],
+    faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
+    domain: super::contact_curve::ContactDomain,
     far_sides: [usize; 2],
     tolerance_uv: f64,
     limits: fit::FitLimits,
 ) -> Result<Pair> {
+    let crate::offset::contact_pcurve::OffsetFaces { surfaces: sources, distances } = faces;
+    let super::contact_curve::ContactDomain { axis, drive, free, second } = domain;
     check(
         far_sides.iter().all(|s| *s < 4),
         "Choose literal natural source boundaries",

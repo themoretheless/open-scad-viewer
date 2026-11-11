@@ -217,12 +217,8 @@ pub fn thicken(
         ..f
     };
     let regions = regions::fit_pair(
-        sources.each_ref(),
-        distances,
-        band.axis,
-        band.drive,
-        band.first_other,
-        band.second,
+        nurbs_core::offset_contact_pcurve::OffsetFaces { surfaces: sources.each_ref(), distances },
+        nurbs_core::surface_offset::contact_curve::ContactDomain { axis: band.axis, drive: band.drive, free: band.first_other, second: band.second },
         seam.map(|s| (s + 2) % 4),
         uv_tolerance,
         uv_work,

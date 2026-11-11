@@ -113,12 +113,8 @@ fn nonlinear_contact_pair_builds_both_closed_regions_with_source_axis_sides() {
     let s = curved();
     let saved = s.clone();
     let r = regions::fit_pair(
-        s.each_ref(),
-        [0.1; 2],
-        1,
-        [0.35, 0.55],
-        [0.88, 0.96],
-        [[0.07, 0.22], [0.3, 0.6]],
+        nurbs_core::offset_contact_pcurve::OffsetFaces { surfaces: s.each_ref(), distances: [0.1; 2] },
+        nurbs_core::surface_offset::contact_curve::ContactDomain { axis: 1, drive: [0.35, 0.55], free: [0.88, 0.96], second: [[0.07, 0.22], [0.3, 0.6]] },
         [3, 1],
         1e-7,
         FitLimits::default(),
@@ -157,12 +153,8 @@ fn independent_nonunit_original_uv_charts_retain_the_common_contact_clock() {
         p[0] = 3. * p[0] - 1.;
     }
     let r = regions::fit_pair(
-        [&a, &b],
-        [0.2, -0.2],
-        0,
-        [3., 6.],
-        [0.1, 0.3],
-        [[-0.6, 1.6], [0.1, 0.3]],
+        nurbs_core::offset_contact_pcurve::OffsetFaces { surfaces: [&a, &b], distances: [0.2, -0.2] },
+        nurbs_core::surface_offset::contact_curve::ContactDomain { axis: 0, drive: [3., 6.], free: [0.1, 0.3], second: [[-0.6, 1.6], [0.1, 0.3]] },
         [0, 0],
         1e-8,
         FitLimits::default(),
@@ -180,20 +172,10 @@ fn unproved_contact_or_insufficient_fit_work_publishes_no_partial_region_pair() 
     let s = curved();
     let saved = s.clone();
     assert!(
-        regions::fit_pair(
-            s.each_ref(),
-            [0.1; 2],
-            1,
-            [0.35, 0.55],
-            [0.88, 0.96],
-            [[0.07, 0.22], [0.3, 0.6]],
-            [3, 1],
-            1e-7,
-            FitLimits {
+        regions::fit_pair(nurbs_core::offset_contact_pcurve::OffsetFaces { surfaces: s.each_ref(), distances: [0.1; 2] }, nurbs_core::surface_offset::contact_curve::ContactDomain { axis: 1, drive: [0.35, 0.55], free: [0.88, 0.96], second: [[0.07, 0.22], [0.3, 0.6]] }, [3, 1], 1e-7, FitLimits {
                 proof_cells: 1,
                 ..FitLimits::default()
-            }
-        )
+            })
         .is_err()
     );
     let mut b = plane();
@@ -202,15 +184,11 @@ fn unproved_contact_or_insufficient_fit_work_publishes_no_partial_region_pair() 
     }
     assert!(
         regions::fit_pair(
-            [&plane(), &b],
-            [0.1; 2],
-            0,
-            [0.2, 0.8],
-            [0.1, 0.9],
-            [[0.1, 0.9]; 2],
+            nurbs_core::offset_contact_pcurve::OffsetFaces { surfaces: [&plane(), &b], distances: [0.1; 2] },
+            nurbs_core::surface_offset::contact_curve::ContactDomain { axis: 0, drive: [0.2, 0.8], free: [0.1, 0.9], second: [[0.1, 0.9]; 2] },
             [0, 0],
             1e-7,
-            FitLimits::default()
+            FitLimits::default(),
         )
         .is_err()
     );
