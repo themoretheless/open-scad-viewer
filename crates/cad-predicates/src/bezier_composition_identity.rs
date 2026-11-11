@@ -162,9 +162,28 @@ fn spline_homogeneous<const N:usize>(points:&[[Expansion;N]],knots:&[Expansion],
 fn fraction_cmp(a:&[Expansion;2],b:&[Expansion;2],ctx:&mut PredicateContext<'_>)->Result<Sign,Reason>{
     Ok(a[0].mul(&b[1],ctx)?.sub(&b[0].mul(&a[1],ctx)?,ctx)?.sign())
 }
-fn piecewise_composition(c:&[[Expansion;4]],knots:&[Expansion],degree:usize,mapping:&[Expansion],
-    p:&[[Expansion;3]],s:&[[Expansion;4]],d:&[Expansion],nu:usize,nv:usize,constant_axes:[bool;3],
+/// The spline side of a composition: homogeneous controls, knots, degree and the parameter map.
+#[derive(Clone, Copy)]
+struct SplineSide<'a> {
+    controls: &'a [[Expansion; 4]],
+    knots: &'a [Expansion],
+    degree: usize,
+    mapping: &'a [Expansion],
+}
+/// The composed side: pcurve controls `p`, surface controls `s` with denominators `d`, and the
+/// surface pole grid size `nu` x `nv`.
+#[derive(Clone, Copy)]
+struct ComposedSide<'a> {
+    p: &'a [[Expansion; 3]],
+    s: &'a [[Expansion; 4]],
+    d: &'a [Expansion],
+    nu: usize,
+    nv: usize,
+}
+fn piecewise_composition(spline:SplineSide<'_>,composed:ComposedSide<'_>,constant_axes:[bool;3],
     ctx:&mut PredicateContext<'_>)->Result<BezierIdentity,Reason>{
+    let SplineSide{controls:c,knots,degree,mapping}=spline;
+    let ComposedSide{p,s,d,nu,nv}=composed;
     let a=[mapping[0].clone(),mapping[1].clone()];let b=[mapping[2].clone(),mapping[3].clone()];
     for endpoint in [&a,&b] {
         if endpoint[1].sign()!=Sign::Positive || endpoint[0].sign()==Sign::Negative
@@ -418,7 +437,7 @@ fn composition_identity_impl(
             }
             let mapping=mapping.unwrap();
             if span.is_none() {
-                return piecewise_composition(&c,knots,degree,mapping,&p,&s,d,nu,nv,constant_axes,ctx);
+                return piecewise_composition(SplineSide{controls:&c,knots,degree,mapping},ComposedSide{p:&p,s:&s,d,nu,nv},constant_axes,ctx);
             }
             match spline_homogeneous(&c,knots,degree,span.unwrap(),mapping,ctx)? {
                 Some(c)=>c,None=>return Ok(BezierIdentity::Indeterminate(Reason::MissingProof)),
