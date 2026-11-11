@@ -227,18 +227,22 @@ pub(crate) fn certify_planar_principal_control_values(
         path, scale, affine, qs, traversal, max_cells, frame, None,
     )
 }
+/// The fixed plane of a planar principal frame: its normal and the chosen orientation sign.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct PrincipalPlane {
+    pub normal: [f64; 3],
+    pub sign: f64,
+}
 pub(crate) fn certify_planar_principal_relative_values(
-    path: &Curve,
-    normal: [f64; 3],
-    sign: f64,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
+    laws: super::ProfileLaws<'_>,
+    plane: PrincipalPlane,
     qs: &[[[f64; 2]; 3]],
     path_traversal: [f64; 2],
     law_traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<ControlValuesReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
+    let PrincipalPlane { normal, sign } = plane;
     let frame = certify_planar_principal_values(
         path,
         normal,

@@ -215,7 +215,14 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         let values=match mode {
             OriginalTransport::RmfSpatial if shared_pose.is_some()=>shared_pose.as_deref_mut().unwrap().rmf_values(spatial_transport.as_ref().unwrap(),sweep,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::RmfSpatial=>super::super::rmf_transport::relative_values(spatial_transport.as_ref().unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
-            OriginalTransport::CorrectedPlanar if principal_phase.is_some()=>authored_frame_certificate::certify_planar_principal_relative_values(sweep.path,sweep.options.normal,principal_phase.unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
+            OriginalTransport::CorrectedPlanar if principal_phase.is_some()=>authored_frame_certificate::certify_planar_principal_relative_values(
+                authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
+                authored_frame_certificate::PrincipalPlane { normal: sweep.options.normal, sign: principal_phase.unwrap() },
+                &qs,
+                path_interval,
+                station,
+                max_cells-out.cells,
+            )?,
             OriginalTransport::RmfPlanar|OriginalTransport::CorrectedPlanar=>authored_frame_certificate::certify_proved_planar_relative_values(sweep.path,sweep.options.normal,sweep.scale,
                 sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::FixedNormal=>authored_frame_certificate::certify_fixed_normal_relative_values(sweep.path,sweep.options.normal,sweep.scale,
@@ -305,8 +312,11 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
             let speed=inverse_speed.unwrap();
             let relative=if let Some(pose)=shared_pose.as_deref_mut(){pose.arc_jets(sweep,&qs,path_interval,station,division.total.bounds,speed,max_cells-out.cells)?}
                 else{authored_frame_certificate::certify_c4_frenet_arc_relative_trajectories(
-                sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,&qs,path_interval,station,
-                division.total.bounds,speed,max_cells-out.cells)?};
+                    authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
+                    &qs,
+                    authored_frame_certificate::ArcTraversal { source: path_interval, station, length: division.total.bounds, speed_lower: speed },
+                    max_cells-out.cells,
+                )?};
             out.cells+=relative.cells;
             if relative.status==Status::Certified&&relative.single_span {
                 let (cells,curvature)=if let Some(pose)=shared_pose.as_deref_mut(){pose.curvature(sweep.path,path_interval,speed,max_cells-out.cells)?}

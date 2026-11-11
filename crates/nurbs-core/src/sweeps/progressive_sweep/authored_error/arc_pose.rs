@@ -107,7 +107,12 @@ impl SharedArcPose {
         let mut cells=0;
         if !self.jet_entries.contains_key(&key){
             let mut basis=[[[0.;2];3];4];for j in 0..3{basis[j+1][j]=[1.;2];}
-            let report=authored_frame_certificate::certify_c4_frenet_arc_relative_trajectories(sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,&basis,source,law,length,speed,budget)?;
+            let report=authored_frame_certificate::certify_c4_frenet_arc_relative_trajectories(
+                authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
+                &basis,
+                authored_frame_certificate::ArcTraversal { source, station: law, length, speed_lower: speed },
+                budget,
+            )?;
             cells=report.cells;
             if report.status!=Status::Certified{return Ok(report);}
             if !report.single_span{return Ok(authored_frame_certificate::TrajectoriesReport{traversal:law,status:Status::Unresolved,cells,jets:None,single_span:false,reason:Some("arc-station-law-second-remainder-unproved")});}
