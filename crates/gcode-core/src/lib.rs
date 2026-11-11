@@ -388,16 +388,19 @@ fn emit_body<L: LayerAccess>(
 ) -> Result<()> {
     machine.validate()?;
     require_layers(layers)?;
-    let ratio = machine.bead_area_mm2() / machine.filament_area_mm2();
-    let print_f = machine.print_feedrate_mm_s * 60.0;
-    let travel_f = machine.travel_feedrate_mm_s * 60.0;
+    let mut extruder = Extruder {
+        ratio: machine.bead_area_mm2() / machine.filament_area_mm2(),
+        print_f: machine.print_feedrate_mm_s * 60.0,
+        travel_f: machine.travel_feedrate_mm_s * 60.0,
+        e: 0.0,
+        written_units: 0,
+        ebuf: String::with_capacity(24),
+    };
+    let travel_f = extruder.travel_f;
     writeln!(out, "; {DIALECT}\n; Preview only: model coordinates, no printer startup or shutdown\n;FILAMENT_DIAMETER_MM:{}", machine.filament_diameter_mm).map_err(output_limit)?;
     for command in PROLOGUE {
         writeln!(out, "{command}").map_err(output_limit)?;
     }
-    let mut e = 0.0;
-    let mut written_units = 0i64;
-    let mut ebuf = String::with_capacity(24);
     for (index, layer) in layers.iter().enumerate() {
         let z = rounded_coordinate(layer.z_mm());
         writeln!(out, ";LAYER:{index}\n;Z:{z:.5}\nG1 Z{z:.5} F{travel_f:.3}")
@@ -407,82 +410,91 @@ fn emit_body<L: LayerAccess>(
             if result.is_err() {
                 return;
             }
-            result = emit_path(
-                out,
-                points,
-                closed,
-                ratio,
-                print_f,
-                travel_f,
-                &mut e,
-                &mut written_units,
-                &mut ebuf,
-            );
+            result = extruder.emit_path(out, points, closed);
         });
         result?;
     }
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
-fn emit_path(
-    out: &mut impl Write,
-    points: &[[f64; 2]],
-    closed: bool,
+/// Feedrates, extrusion ratio and the running extrusion total of one G-code program.
+struct Extruder {
+    /// Filament length per millimetre of bead.
     ratio: f64,
     print_f: f64,
     travel_f: f64,
-    e: &mut f64,
-    written_units: &mut i64,
-    ebuf: &mut String,
-) -> Result<()> {
-    let Some(first) = points.first() else {
-        return Ok(());
-    };
-    let start = first.map(rounded_coordinate);
-    writeln!(out, "G0 X{:.5} Y{:.5} F{travel_f:.3}", start[0], start[1])
-        .map_err(output_limit)?;
-    let mut previous = start;
-    let total_steps = points.len() - 1 + usize::from(closed);
-    for step_idx in 0..total_steps {
-        let point = if step_idx + 1 < points.len() {
-            &points[step_idx + 1]
-        } else {
-            first
+    /// Absolute extrusion written so far.
+    e: f64,
+    /// `e` in the 0.0000001 mm units actually written.
+    written_units: i64,
+    /// Reused formatting buffer for the E word.
+    ebuf: String,
+}
+
+impl Extruder {
+    fn emit_path(
+        &mut self,
+        out: &mut impl Write,
+        points: &[[f64; 2]],
+        closed: bool,
+    ) -> Result<()> {
+        let Self {
+            ratio,
+            print_f,
+            travel_f,
+            e,
+            written_units,
+            ebuf,
+        } = self;
+        let (ratio, print_f, travel_f) = (*ratio, *print_f, *travel_f);
+        let Some(first) = points.first() else {
+            return Ok(());
         };
-        let next = point.map(rounded_coordinate);
-        let dx = next[0] - previous[0];
-        let dy = next[1] - previous[1];
-        let length = (dx * dx + dy * dy).sqrt();
-        if length == 0.0 {
-            continue;
+        let start = first.map(rounded_coordinate);
+        writeln!(out, "G0 X{:.5} Y{:.5} F{travel_f:.3}", start[0], start[1])
+            .map_err(output_limit)?;
+        let mut previous = start;
+        let total_steps = points.len() - 1 + usize::from(closed);
+        for step_idx in 0..total_steps {
+            let point = if step_idx + 1 < points.len() {
+                &points[step_idx + 1]
+            } else {
+                first
+            };
+            let next = point.map(rounded_coordinate);
+            let dx = next[0] - previous[0];
+            let dy = next[1] - previous[1];
+            let length = (dx * dx + dy * dy).sqrt();
+            if length == 0.0 {
+                continue;
+            }
+            let next_e = *e + length * ratio;
+            if !next_e.is_finite() || next_e <= *e {
+                return Err(invalid(
+                    "GCODE_NUMERIC",
+                    "Extrusion accumulation exceeds numeric precision",
+                ));
+            }
+            ebuf.clear();
+            let next_units = fixed7::push_fixed7(ebuf, next_e)?;
+            if next_units <= *written_units {
+                return Err(invalid(
+                    "GCODE_NUMERIC",
+                    "A segment's extrusion cannot be represented at 0.0000001 mm precision",
+                ));
+            }
+            *e = next_e;
+            *written_units = next_units;
+            writeln!(
+                out,
+                "G1 X{:.5} Y{:.5} E{ebuf} F{print_f:.3}",
+                next[0], next[1]
+            )
+            .map_err(output_limit)?;
+            previous = next;
         }
-        let next_e = *e + length * ratio;
-        if !next_e.is_finite() || next_e <= *e {
-            return Err(invalid(
-                "GCODE_NUMERIC",
-                "Extrusion accumulation exceeds numeric precision",
-            ));
-        }
-        ebuf.clear();
-        let next_units = fixed7::push_fixed7(ebuf, next_e)?;
-        if next_units <= *written_units {
-            return Err(invalid(
-                "GCODE_NUMERIC",
-                "A segment's extrusion cannot be represented at 0.0000001 mm precision",
-            ));
-        }
-        *e = next_e;
-        *written_units = next_units;
-        writeln!(
-            out,
-            "G1 X{:.5} Y{:.5} E{ebuf} F{print_f:.3}",
-            next[0], next[1]
-        )
-        .map_err(output_limit)?;
-        previous = next;
+        Ok(())
     }
-    Ok(())
 }
 
 #[derive(Default)]
