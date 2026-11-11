@@ -14,7 +14,7 @@ mod gap;
 pub use gap::{ExpressionFaceClearance, ExpressionGapReport};
 #[path = "source_profile_shell_segment.rs"]
 mod segment;
-pub use segment::{ExpressionSegmentCandidate, ExpressionSegmentReport};
+pub use segment::{ExpressionSegmentCandidate, ExpressionSegmentReport, LineRootLimits};
 #[path = "source_profile_shell_volume.rs"]
 mod volume;
 pub use volume::{

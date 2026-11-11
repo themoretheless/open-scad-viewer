@@ -251,6 +251,16 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
     }
 }
 
+/// UV tolerance, control-polygon allowance and work limits of one line-root query.
+#[derive(Clone, Copy, Debug)]
+pub struct LineRootLimits {
+    pub tolerance_uv: f64,
+    pub controls: usize,
+    pub cells: usize,
+    pub spans: usize,
+    pub work: usize,
+    pub domain_cells: usize,
+}
 pub struct ExpressionTrimmedLineReport {
     pub roots: Vec<(usize, nurbs_core::ray_surface::Root)>,
     pub pending: Vec<(usize, [[f64; 2]; 2])>,
@@ -305,13 +315,16 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         &self,
         origin: [f64; 3],
         direction: [f64; 3],
-        tolerance_uv: f64,
-        controls: usize,
-        max_cells: usize,
-        max_spans: usize,
-        max_work: usize,
-        max_domain_cells: usize,
+        limits: LineRootLimits,
     ) -> Result<ExpressionTrimmedLineReport> {
+        let LineRootLimits {
+            tolerance_uv,
+            controls,
+            cells: max_cells,
+            spans: max_spans,
+            work: max_work,
+            domain_cells: max_domain_cells,
+        } = limits;
         if max_domain_cells > 1000000 {
             return Err(Error::new(
                 "BREP_EXPRESSION_LINE",
@@ -496,23 +509,16 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
         &self,
         origin: [f64; 3],
         direction: [f64; 3],
-        tolerance_uv: f64,
-        controls: usize,
-        cells: usize,
-        spans: usize,
-        work: usize,
-        domain_cells: usize,
+        limits: LineRootLimits,
     ) -> Result<ExpressionMaterialLineReport> {
+        let LineRootLimits {
+            controls, spans, ..
+        } = limits;
         let shell = self.shell();
         let boundary = shell.inspect_trimmed_line_roots(
             origin,
             direction,
-            tolerance_uv,
-            controls,
-            cells,
-            spans,
-            work,
-            domain_cells,
+            limits,
         )?;
         let mut out = ExpressionMaterialLineReport {
             boundary,
@@ -614,22 +620,12 @@ impl<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>
         &'v self,
         origin: [f64; 3],
         direction: [f64; 3],
-        tolerance_uv: f64,
-        controls: usize,
-        cells: usize,
-        spans: usize,
-        work: usize,
-        domain_cells: usize,
+        limits: LineRootLimits,
     ) -> Result<ExpressionMaterialLineQualification<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>> {
         let report = self.inspect_material_line(
             origin,
             direction,
-            tolerance_uv,
-            controls,
-            cells,
-            spans,
-            work,
-            domain_cells,
+            limits,
         )?;
         let certificate = report
             .intervals

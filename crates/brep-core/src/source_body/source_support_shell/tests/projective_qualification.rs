@@ -4043,12 +4043,14 @@
             .inspect_trimmed_line_roots(
                 [0., 0., 3.],
                 [30., 0., 0.],
-                1e-5,
-                1000,
-                10000,
-                100000,
-                100000000,
-                100000,
+                crate::source_profile_body::LineRootLimits {
+                    tolerance_uv: 1e-5,
+                    controls: 1000,
+                    cells: 10000,
+                    spans: 100000,
+                    work: 100000000,
+                    domain_cells: 100000,
+                },
             )
             .unwrap();
         assert!(!trimmed_line.roots.is_empty() || !trimmed_line.pending.is_empty());
@@ -6551,12 +6553,14 @@
                 .qualify_material_line(
                     [-30., 2., 3.],
                     [60., 0., 0.],
-                    1e-5,
-                    1000,
-                    10000,
-                    200000,
-                    100000000,
-                    100000,
+                    crate::source_profile_body::LineRootLimits {
+                        tolerance_uv: 1e-5,
+                        controls: 1000,
+                        cells: 10000,
+                        spans: 200000,
+                        work: 100000000,
+                        domain_cells: 100000,
+                    },
                 )
                 .unwrap();
             let material = material_qualification.report;
@@ -6663,12 +6667,14 @@
                 .inspect_material_line(
                     [-30., 2., 3.],
                     [60., 0., 0.],
-                    1e-5,
-                    1000,
-                    0,
-                    200000,
-                    100000000,
-                    100000,
+                    crate::source_profile_body::LineRootLimits {
+                        tolerance_uv: 1e-5,
+                        controls: 1000,
+                        cells: 0,
+                        spans: 200000,
+                        work: 100000000,
+                        domain_cells: 100000,
+                    },
                 )
                 .unwrap();
             assert!(refused_line.intervals.is_none());
@@ -6676,12 +6682,14 @@
                 .qualify_material_line(
                     [-30., -6., 3.],
                     [60., 12., 0.],
-                    1e-5,
-                    1000,
-                    10000,
-                    200000,
-                    100000000,
-                    100000,
+                    crate::source_profile_body::LineRootLimits {
+                        tolerance_uv: 1e-5,
+                        controls: 1000,
+                        cells: 10000,
+                        spans: 200000,
+                        work: 100000000,
+                        domain_cells: 100000,
+                    },
                 )
                 .unwrap();
             let radial = radial
