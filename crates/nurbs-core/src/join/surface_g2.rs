@@ -193,8 +193,6 @@ pub fn inspect_with_correspondence(
     tolerance: G2Tolerance,
     max_cells: usize,
 ) -> Result<Report> {
-    let G2Seam { a, ea, b, eb, reverse } = seam;
-    let G2Tolerance { position: position_tolerance, normal: normal_tolerance, tensor: tensor_tolerance } = tolerance;
     check(nodes.first()==Some(&[0.,0.])&&nodes.last()==Some(&[1.,1.]),
         "Full G2 correspondence must cover both complete boundaries")?;
     inspect_boundary_ranges(seam, nodes, tolerance, max_cells)
