@@ -489,5 +489,9 @@ pub fn inspect_surface_mapped_projective_strip_jets(
     check(a.control_points.iter().chain(&b.control_points).flatten().all(|p|p.len()==3)
         && map.control_points.iter().all(|p|p.len()==2&&p[1]==0.)&&!map.periodic,"Mapped jets require XYZ surfaces and a nonperiodic scalar map stored as [value,0]")?;
     check(matches!(order,1|2)&&scale.is_finite()&&scale>0.&&max_work<=1000000,"Invalid mapped seam options")?;
-    super::continuity::bspline_strip::inspect_mapped(a,b,Boundary::parse(ab)?,Boundary::parse(bb)?,order,scale,max_work,map)
+    super::continuity::bspline_strip::inspect_mapped(
+        super::continuity::bspline_strip::BoundaryPair { a, b, ab: Boundary::parse(ab)?, bb: Boundary::parse(bb)? },
+        super::continuity::exact_strip::StripJetRequest { order, scale, max_work },
+        map,
+    )
 }

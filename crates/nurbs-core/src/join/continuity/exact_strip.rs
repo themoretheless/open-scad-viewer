@@ -341,7 +341,12 @@ fn inspect_strip_jets_scalar(pair:StripPair<'_>,request:StripJetRequest,projecti
     if !bezier_direction(r.cross(a)) || !bezier_direction(e.cross(b))
         || !(common_bezier || common_multispan || common_linear || common_chain) {
         if projective {
-            return super::bspline_strip::inspect(a,b,r,e,order,scale,max_work,scalar,nonlinear);
+            return super::bspline_strip::inspect(
+                super::bspline_strip::BoundaryPair { a, b, ab: r, bb: e },
+                super::exact_strip::StripJetRequest { order, scale, max_work },
+                scalar,
+                nonlinear,
+            );
         }
         return Ok(out);
     }
@@ -456,7 +461,12 @@ fn inspect_strip_jets_scalar(pair:StripPair<'_>,request:StripJetRequest,projecti
     }
     if projective && nonlinear && !out.affine_parameter_identity && !out.exact_identity && out.work < max_work
         && !super::identical_boundary_rows(a,b,r,e) {
-        let mut nonlinear=super::bspline_strip::inspect(a,b,r,e,order,scale,max_work-out.work,scalar,true)?;
+        let mut nonlinear=super::bspline_strip::inspect(
+            super::bspline_strip::BoundaryPair { a, b, ab: r, bb: e },
+            super::exact_strip::StripJetRequest { order, scale, max_work: max_work-out.work },
+            scalar,
+            true,
+        )?;
         nonlinear.work+=out.work;
         if nonlinear.certified {return Ok(nonlinear);}
         // Failed proposals spend the same remaining ledger and keep the prior

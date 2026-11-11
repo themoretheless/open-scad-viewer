@@ -27,20 +27,33 @@ fn ends(s: &Surface, b: Boundary) -> Location {
     }
 }
 
-fn identity(
-    a: &Surface,
-    b: &Surface,
-    ab: Boundary,
-    bb: Boundary,
-    locations: [Location; 2],
-    order: usize,
-    scalar: AuthoredScalar,
+/// Two surfaces meeting along a strip, with the boundary of each.
+#[derive(Clone, Copy)]
+pub(super) struct BoundaryPair<'a> {
+    pub a: &'a Surface,
+    pub b: &'a Surface,
+    pub ab: Boundary,
+    pub bb: Boundary,
+}
+/// How a strip identity is sought: whether to propose an exact scale, use independent bases, and
+/// allow a nonlinear parameter map.
+#[derive(Clone, Copy, Debug)]
+struct IdentityMode {
     propose_exact_scale: bool,
     independent_basis: bool,
     allow_nonlinear: bool,
+}
+fn identity(
+    pair: BoundaryPair<'_>,
+    locations: [Location; 2],
+    order: usize,
+    scalar: AuthoredScalar,
+    mode: IdentityMode,
     max_work: u64,
     map: Option<&crate::curve::Curve>,
 ) -> Result<(BezierIdentity, u64, bool)> {
+    let BoundaryPair { a, b, ab, bb } = pair;
+    let IdentityMode { propose_exact_scale, independent_basis, allow_nonlinear } = mode;
     let mut values = Vec::new();
     let mut offsets = [0; 2];
     let mut ks = [0; 2];
@@ -353,16 +366,11 @@ fn source_joins(
         }
         for pair in pairs {
             let (proof, used, _) = identity(
-                s,
-                s,
-                b,
-                b,
+                BoundaryPair { a: s, b: s, ab: b, bb: b },
                 pair,
                 order,
                 AuthoredScalar::Binary64Bits(1f64.to_bits()),
-                true,
-                false,
-                false,
+                IdentityMode { propose_exact_scale: true, independent_basis: false, allow_nonlinear: false },
                 max_work - *work,
                 None,
             )?;
@@ -379,53 +387,29 @@ fn source_joins(
 }
 
 pub(super) fn inspect(
-    a: &Surface,
-    b: &Surface,
-    ab: Boundary,
-    bb: Boundary,
-    order: usize,
-    scale: f64,
-    max_work: u64,
+    pair: BoundaryPair<'_>,
+    request: super::exact_strip::StripJetRequest,
     scalar: Option<AuthoredScalar>,
     allow_nonlinear: bool,
 ) -> Result<ExactStripJetReport> {
-    inspect_impl(
-        a,
-        b,
-        ab,
-        bb,
-        order,
-        scale,
-        max_work,
-        scalar,
-        allow_nonlinear,
-        None,
-    )
+    inspect_impl(pair, request, scalar, allow_nonlinear, None)
 }
 pub(super) fn inspect_mapped(
-    a: &Surface,
-    b: &Surface,
-    ab: Boundary,
-    bb: Boundary,
-    order: usize,
-    scale: f64,
-    max_work: u64,
+    pair: BoundaryPair<'_>,
+    request: super::exact_strip::StripJetRequest,
     map: &crate::curve::Curve,
 ) -> Result<ExactStripJetReport> {
-    inspect_impl(a, b, ab, bb, order, scale, max_work, None, true, Some(map))
+    inspect_impl(pair, request, None, true, Some(map))
 }
 fn inspect_impl(
-    a: &Surface,
-    b: &Surface,
-    ab: Boundary,
-    bb: Boundary,
-    order: usize,
-    scale: f64,
-    max_work: u64,
+    pair: BoundaryPair<'_>,
+    request: super::exact_strip::StripJetRequest,
     scalar: Option<AuthoredScalar>,
     allow_nonlinear: bool,
     map: Option<&crate::curve::Curve>,
 ) -> Result<ExactStripJetReport> {
+    let BoundaryPair { a, b, ab, bb } = pair;
+    let super::exact_strip::StripJetRequest { order, scale, max_work } = request;
     let mut out = ExactStripJetReport {
         certified: false,
         exact_identity: false,
@@ -466,20 +450,7 @@ fn inspect_impl(
         }
     }
     let locations = [ends(a, ab), ends(b, bb)];
-    let (proof, used, position) = identity(
-        a,
-        b,
-        ab,
-        bb,
-        locations,
-        order,
-        scalar.unwrap_or(AuthoredScalar::Binary64Bits(scale.to_bits())),
-        false,
-        !common,
-        allow_nonlinear,
-        max_work - out.work,
-        map,
-    )?;
+    let (proof, used, position) = identity(pair, locations, order, scalar.unwrap_or(AuthoredScalar::Binary64Bits(scale.to_bits())), IdentityMode { propose_exact_scale: false, independent_basis: !common, allow_nonlinear }, max_work - out.work, map)?;
     out.affine_parameter_identity = position;
     out.work += used;
     out.exact_identity = proof == BezierIdentity::Equal;
