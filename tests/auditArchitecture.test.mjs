@@ -141,3 +141,22 @@ test('module layer scan drops only inline test modules, including cfg(all(test, 
   assert.ok(kept.includes('crate::x') && kept.includes('crate::z') && kept.includes('c'))
   assert.ok(!kept.includes('crate::y') && !kept.includes('crate::w'))
 })
+
+test('a crate-root file declared with #[path] from a layer module belongs to that layer', async () => {
+  const {mkdtempSync, mkdirSync, writeFileSync} = await import('node:fs')
+  const {join} = await import('node:path')
+  const {tmpdir} = await import('node:os')
+  const {moduleOwners} = await import('../scripts/moduleLayers.mjs')
+  const root = mkdtempSync(join(tmpdir(), 'owners-'))
+  const src = 'crates/k/src/'
+  mkdirSync(join(root, src, 'low'), {recursive: true})
+  writeFileSync(join(root, src, 'low.rs'), 'mod inner;\n#[path = "helper.rs"]\nmod helper;\n#[cfg(test)]\n#[path = "probe.rs"]\nmod probe;\n')
+  writeFileSync(join(root, src, 'low/inner.rs'), '')
+  writeFileSync(join(root, src, 'helper.rs'), '')
+  writeFileSync(join(root, src, 'probe.rs'), '')
+  const files = ['low.rs', 'low/inner.rs', 'helper.rs', 'probe.rs'].map(f => src + f)
+  const owner = moduleOwners(root, src, {low: 0, high: 1}, files)
+  assert.equal(owner.get(src + 'helper.rs'), 'low')
+  assert.equal(owner.get(src + 'low/inner.rs'), 'low')
+  assert.equal(owner.get(src + 'probe.rs'), undefined)
+})

@@ -152,6 +152,33 @@ pub(crate) fn restricted_controls_axis(
     Ok(controls)
 }
 
+/// Componentwise hull of the curve over `t`, the union of the span enclosures it meets.
+pub(crate) fn curve_bounds(c: &Curve, t: Interval) -> Result<Vec<Interval>> {
+    let mut bounds = vec![[f64::INFINITY, f64::NEG_INFINITY]; c.control_points[0].len()];
+    for span in c.degree..c.control_points.len() {
+        if c.knots[span] >= c.knots[span + 1] {
+            continue;
+        }
+        let lo = t.lo.max(c.knots[span]);
+        let hi = t.hi.min(c.knots[span + 1]);
+        if lo > hi {
+            continue;
+        }
+        for (out, b) in bounds.iter_mut().zip(enclosure(
+            c,
+            span,
+            Interval::new(lo, hi)?,
+        )?) {
+            out[0] = out[0].min(b.lo);
+            out[1] = out[1].max(b.hi);
+        }
+    }
+    bounds
+        .into_iter()
+        .map(|[lo, hi]| Interval::new(lo, hi))
+        .collect()
+}
+
 pub(crate) fn enclosure(curve: &Curve, span: usize, t: Interval) -> Result<Vec<Interval>> {
     let dimension = curve.control_points[0].len();
     let origin = &curve.control_points[span - curve.degree];

@@ -2,7 +2,7 @@
 // layer to a higher one is an upward edge. Lexical: counts `crate::<module>` paths outside
 // comments and strings, resolving `pub use` aliases declared in the crate root.
 import {readFileSync, existsSync} from 'node:fs'
-import {resolve} from 'node:path'
+import {resolve, posix} from 'node:path'
 
 export const MODULE_LAYERS = {
   // Module families of brep-core (refactor plan M8), ordered to minimise references
@@ -64,6 +64,47 @@ export function withoutTestModules(text) {
   return out + text.slice(from)
 }
 
+/**
+ * Layer of every source file: the top-level directory for files inside a layer, and the layer of
+ * the declaring module for files that a layer module pulls in from elsewhere (for example a
+ * crate-root file declared with `#[path]`). Declarations under `cfg(test)` are not followed.
+ */
+export function moduleOwners(root, src, layers, files) {
+  const present = new Set(files.filter(f => f.startsWith(src) && f.endsWith('.rs')))
+  const owner = new Map()
+  for (const f of present) {
+    const top = f.slice(src.length).split('/')[0].replace(/\.rs$/, '')
+    if (layers[top] !== undefined) owner.set(f, top)
+  }
+  const decl = /((?:#\[[^\]]*\]\s*)*)(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;/g
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const [f, layer] of [...owner]) {
+      const text = withoutTestModules(stripCommentsAndStrings(readFileSync(resolve(root, f), 'utf8')))
+      const raw = readFileSync(resolve(root, f), 'utf8')
+      const dir = posix.dirname(f)
+      const stem = posix.basename(f, '.rs')
+      const own = ['mod.rs', 'lib.rs', 'main.rs'].includes(posix.basename(f)) ? dir : posix.join(dir, stem)
+      for (const m of text.matchAll(decl)) {
+        if (/cfg\((?:test|all\(\s*test)/.test(m[1])) continue
+        // Recover the original attribute text (strings were blanked) to read #[path] values.
+        const at = raw.indexOf(`mod ${m[2]}`)
+        const attrs = at < 0 ? '' : raw.slice(Math.max(0, at - 300), at)
+        const pathAttr = [...attrs.matchAll(/#\[path\s*=\s*"([^"]+)"\]/g)].at(-1)
+        const lastNewlines = attrs.slice(attrs.lastIndexOf(';') + 1)
+        const explicit = pathAttr && lastNewlines.includes(pathAttr[0]) ? pathAttr[1] : null
+        const candidates = explicit ? [posix.normalize(posix.join(dir, explicit))]
+          : [posix.join(own, `${m[2]}.rs`), posix.join(own, m[2], 'mod.rs')]
+        for (const c of candidates) {
+          if (present.has(c) && !owner.has(c)) { owner.set(c, layer); changed = true }
+        }
+      }
+    }
+  }
+  return owner
+}
+
 /** Sorted `from -> to` strings for upward references in one crate. */
 export function upwardModuleEdges(root, crate, files) {
   const layers = MODULE_LAYERS[crate]
@@ -72,10 +113,11 @@ export function upwardModuleEdges(root, crate, files) {
   if (!layers || !existsSync(lib)) return []
   const aliases = rootAliases(readFileSync(lib, 'utf8'))
   const edges = new Set()
+  const owner = moduleOwners(root, src, layers, files)
   for (const path of files) {
     if (!path.startsWith(src) || !path.endsWith('.rs') || /(^|\/)tests?(\/|\.rs$)|_tests?\.rs$/.test(path)) continue
-    const from = path.slice(src.length).split('/')[0].replace(/\.rs$/, '')
-    if (layers[from] === undefined) continue
+    const from = owner.get(path)
+    if (from === undefined) continue
     // Inline `#[cfg(test)] mod tests { ... }` blocks are test code; production code may follow them.
     const text = withoutTestModules(stripCommentsAndStrings(readFileSync(resolve(root, path), 'utf8')))
     const heads = [...text.matchAll(/\bcrate::([a-z_][\w]*)/g)].map(m => m[1])

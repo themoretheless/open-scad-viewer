@@ -187,12 +187,12 @@ fn certify(
             let center_source = if let Some(rows) = source_rows.as_ref() {
                 super::reparameterization_residual::field_bounds(source, rows, mapped_center)?
             } else {
-                crate::curve_surface_agreement::curve_bounds(source, mapped_center)?
+                crate::curve_distance::curve_bounds(source, mapped_center)?
             };
             let center_result = if let Some(rows) = target_rows {
                 super::reparameterization_residual::field_bounds(result, rows, I::point(mid))?
             } else {
-                crate::curve_surface_agreement::curve_bounds(result, I::point(mid))?
+                crate::curve_distance::curve_bounds(result, I::point(mid))?
             };
             let (center_lower, _) = box_distance(&center_source, &center_result)?;
             match super::reparameterization_residual::bound(
