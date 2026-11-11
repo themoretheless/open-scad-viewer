@@ -2,7 +2,7 @@
 //! ownership, topology updates and validity checks belong to each consuming kernel.
 // `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
 // and may only go down; prefer typed errors.
-#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 #[cfg(feature = "codec")]
 mod serialization;
 pub use math_core::{Error, Result, V3, finite};
@@ -362,7 +362,7 @@ pub fn sweep_sections(profile: &[[f64; 2]], path: &[Point], up: Point) -> Result
         let tangent = if i == 0 {
             tangents[0]
         } else if i == path.len() - 1 {
-            *tangents.last().unwrap()
+            tangents[tangents.len() - 1]
         } else {
             vunit(std::array::from_fn(|k| tangents[i - 1][k] + tangents[i][k]))?
         };

@@ -445,7 +445,7 @@ impl From<&Curve> for Homogeneous {
 impl Homogeneous {
     pub(super) fn to_curve(&self) -> Result<Curve> {
         budget(self.controls.len())?;
-        let weights: Vec<f64> = self.controls.iter().map(|p| *p.last().unwrap()).collect();
+        let weights: Vec<f64> = self.controls.iter().map(|p| p[p.len() - 1]).collect();
         let c = Curve {
             degree: self.degree,
             knots: self.knots.clone(),

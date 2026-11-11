@@ -36,7 +36,7 @@ pub fn curve_segment(
     let direction = delta.map(|x| x / length);
     let axis = (0..3)
         .min_by(|a, b| direction[*a].abs().total_cmp(&direction[*b].abs()))
-        .unwrap();
+        .unwrap_or(0);
     let mut basis = [0.; 3];
     basis[axis] = 1.;
     let n = cross(direction, basis);

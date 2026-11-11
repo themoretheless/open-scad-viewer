@@ -295,16 +295,11 @@ fn refine_curve_root(
 /// disjoint pieces; ambiguous residual bands stay unresolved; transverse
 /// midpoint candidates must refine to a certified in-box root. Tangent or
 /// multiple-root regions are never collapsed to a guessed point.
-#[allow(clippy::too_many_arguments)]
 fn resolve_curve_box(
-    first: &Curve,
-    second: &Curve,
-    ta: [f64; 2],
-    tb: [f64; 2],
-    tm: f64,
-    um: f64,
-    ha: &[[f64; 4]],
-    hb: &[[f64; 4]],
+    (first, ha): (&Curve, &[[f64; 4]]),
+    (second, hb): (&Curve, &[[f64; 4]]),
+    [ta, tb]: [[f64; 2]; 2],
+    [tm, um]: [f64; 2],
     options: Options,
     report: &mut Report<CurveCurveComponent>,
 ) -> Result<()> {
@@ -555,14 +550,10 @@ pub fn curve_curve(
             || (!can_a && !can_b)
         {
             resolve_curve_box(
-                first,
-                second,
-                ta,
-                tb,
-                tm,
-                um,
-                &ha,
-                &hb,
+                (first, &ha),
+                (second, &hb),
+                [ta, tb],
+                [tm, um],
                 options,
                 &mut report,
             )?;

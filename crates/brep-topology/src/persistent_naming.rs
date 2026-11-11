@@ -169,7 +169,9 @@ impl fmt::Display for TopoId {
             buf[plen + 1 + 2 * i] = HEX[(byte >> 4) as usize];
             buf[plen + 1 + 2 * i + 1] = HEX[(byte & 0x0f) as usize];
         }
-        let s = std::str::from_utf8(&buf[..plen + 33]).unwrap();
+        let Ok(s) = std::str::from_utf8(&buf[..plen + 33]) else {
+            return Err(fmt::Error);
+        };
         formatter.write_str(s)
     }
 }

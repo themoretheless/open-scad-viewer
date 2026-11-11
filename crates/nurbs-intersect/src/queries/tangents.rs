@@ -12,18 +12,22 @@ pub(crate) fn homogeneous4(curve: &Curve) -> Vec<[f64; 4]> {
         .collect()
 }
 pub(crate) fn split_homogeneous(h: &[[f64; 4]]) -> (Vec<[f64; 4]>, Vec<[f64; 4]>) {
+    let n = h.len();
     let mut row = h.to_vec();
-    let mut left = vec![row[0]];
-    let mut right = vec![*row.last().unwrap()];
-    while row.len() > 1 {
-        row = row
-            .windows(2)
-            .map(|p| std::array::from_fn(|i| (p[0][i] + p[1][i]) * 0.5))
-            .collect();
+    let mut left = Vec::with_capacity(n);
+    let mut right = Vec::with_capacity(n);
+    if n > 0 {
         left.push(row[0]);
-        right.push(*row.last().unwrap());
+        right.push(row[n - 1]);
+        for len in (1..n).rev() {
+            for i in 0..len {
+                row[i] = std::array::from_fn(|k| (row[i][k] + row[i + 1][k]) * 0.5);
+            }
+            left.push(row[0]);
+            right.push(row[len - 1]);
+        }
+        right.reverse();
     }
-    right.reverse();
     (left, right)
 }
 /// Outward-rounded Cartesian control ranges of a positive-weight homogeneous

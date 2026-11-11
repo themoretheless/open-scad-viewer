@@ -283,7 +283,7 @@ impl<C, S, P, V> Model<C, S, P, V> {
                     "Non-manifold vertex link",
                 )?;
                 let mut seen = FxHashSet::default();
-                let mut q = vec![*graph.keys().next().unwrap()];
+                let mut q: Vec<_> = graph.keys().next().copied().into_iter().collect();
                 while let Some(e) = q.pop() {
                     if seen.insert(e) {
                         q.extend(&graph[&e]);

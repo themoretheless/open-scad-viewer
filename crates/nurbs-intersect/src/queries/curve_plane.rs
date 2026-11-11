@@ -37,7 +37,7 @@ fn split(coefficients: &[Coefficient]) -> (Vec<Coefficient>, Vec<Coefficient>) {
     let mut left = Vec::with_capacity(n);
     let mut right = Vec::with_capacity(n);
     left.push(row[0]);
-    right.push(*row.last().unwrap());
+    right.push(row[n - 1]);
     for len in (1..n).rev() {
         for i in 0..len {
             row[i] = Coefficient {
@@ -118,7 +118,7 @@ pub fn curve_plane(
         // zeros are merged, never distinct roots merely closer than a tol.
         for (parameter, coefficient) in [
             (interval[0], values[0]),
-            (interval[1], *values.last().unwrap()),
+            (interval[1], values[values.len() - 1]),
         ] {
             if coefficient.value == 0. {
                 let jet = curve.evaluate(parameter)?;
@@ -165,7 +165,7 @@ pub fn curve_plane(
             let mut handled = false;
             for (face, coefficient) in [
                 (interval[0], values[0]),
-                (interval[1], *values.last().unwrap()),
+                (interval[1], values[values.len() - 1]),
             ] {
                 if coefficient.bound.sign() != 0 {
                     continue;

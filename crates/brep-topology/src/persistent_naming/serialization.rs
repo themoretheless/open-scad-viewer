@@ -64,6 +64,16 @@ fn parse_object(
     Ok(object)
 }
 
+fn take_field<T: for<'de> value_codec::Deserialize<'de>>(
+    object: &mut value_codec::Map<String, value_codec::Value>,
+    key: &str,
+) -> value_codec::Result<T> {
+    let raw = object
+        .remove(key)
+        .ok_or_else(|| error("Object fields do not match persistent naming schema"))?;
+    value_codec::Deserialize::from_value(raw)
+}
+
 impl value_codec::Serialize for ChangeProvenance {
     fn to_value(&self) -> value_codec::Value {
         let mut object = value_codec::Map::new();
@@ -78,9 +88,9 @@ impl<'de> value_codec::Deserialize<'de> for ChangeProvenance {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
         let mut object = parse_object(value, &["operation", "operand", "occurrence"])?;
         Ok(Self {
-            operation: value_codec::Deserialize::from_value(object.remove("operation").unwrap())?,
-            operand: value_codec::Deserialize::from_value(object.remove("operand").unwrap())?,
-            occurrence: value_codec::Deserialize::from_value(object.remove("occurrence").unwrap())?,
+            operation: take_field(&mut object, "operation")?,
+            operand: take_field(&mut object, "operand")?,
+            occurrence: take_field(&mut object, "occurrence")?,
         })
     }
 }
@@ -114,13 +124,13 @@ impl<'de> value_codec::Deserialize<'de> for TopologyChange {
             ],
         )?;
         Ok(Self {
-            kind: value_codec::Deserialize::from_value(object.remove("kind").unwrap())?,
-            topo_kind: value_codec::Deserialize::from_value(object.remove("topoKind").unwrap())?,
-            parents: value_codec::Deserialize::from_value(object.remove("parents").unwrap())?,
-            children: value_codec::Deserialize::from_value(object.remove("children").unwrap())?,
-            provenance: value_codec::Deserialize::from_value(object.remove("provenance").unwrap())?,
-            role: value_codec::Deserialize::from_value(object.remove("role").unwrap())?,
-            anchor: value_codec::Deserialize::from_value(object.remove("anchor").unwrap())?,
+            kind: take_field(&mut object, "kind")?,
+            topo_kind: take_field(&mut object, "topoKind")?,
+            parents: take_field(&mut object, "parents")?,
+            children: take_field(&mut object, "children")?,
+            provenance: take_field(&mut object, "provenance")?,
+            role: take_field(&mut object, "role")?,
+            anchor: take_field(&mut object, "anchor")?,
         })
     }
 }
@@ -148,25 +158,23 @@ impl value_codec::Serialize for ChangeSet {
 impl<'de> value_codec::Deserialize<'de> for ChangeSet {
     fn from_value(value: value_codec::Value) -> value_codec::Result<Self> {
         let mut object = parse_object(value, &["schema", "nodes", "changes"])?;
-        let schema: u64 = value_codec::Deserialize::from_value(object.remove("schema").unwrap())?;
+        let schema: u64 = take_field(&mut object, "schema")?;
         if schema != 1 {
             return Err(error("Unsupported persistent naming schema"));
         }
-        let raw_nodes: Vec<value_codec::Value> =
-            value_codec::Deserialize::from_value(object.remove("nodes").unwrap())?;
+        let raw_nodes: Vec<value_codec::Value> = take_field(&mut object, "nodes")?;
         let mut nodes = BTreeMap::new();
         for node in raw_nodes {
             let mut node = parse_object(node, &["id", "kind"])?;
-            let id: TopoId = value_codec::Deserialize::from_value(node.remove("id").unwrap())?;
-            let kind: TopoKind =
-                value_codec::Deserialize::from_value(node.remove("kind").unwrap())?;
+            let id: TopoId = take_field(&mut node, "id")?;
+            let kind: TopoKind = take_field(&mut node, "kind")?;
             if nodes.insert(id, kind).is_some() {
                 return Err(error("Duplicate topology node ID"));
             }
         }
         let result = Self {
             nodes,
-            changes: value_codec::Deserialize::from_value(object.remove("changes").unwrap())?,
+            changes: take_field(&mut object, "changes")?,
         };
         result
             .validate()

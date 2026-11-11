@@ -56,26 +56,29 @@ pub fn verify(
     for c in curves {
         poles.push(
             (0..c.control_points.len())
-                .map(|_| {
-                    std::array::from_fn(|_| {
-                        let r = source.leaf(cursor).unwrap();
-                        cursor += 1;
-                        r
-                    })
-                })
-                .collect::<Vec<_>>(),
+                .map(|_| crate::next_leaves(&source, &mut cursor))
+                .collect::<Result<Vec<_>>>()?,
         );
     }
-    let parameters = std::array::from_fn(|_| {
-        std::array::from_fn(|_| {
-            let r = source.leaf(cursor).unwrap();
-            cursor += 1;
-            r
-        })
-    });
-    let knots:Vec<Vec<_>>=if piecewise {curves.iter().map(|c|(0..c.knots.len()).map(|_|{
-        let r=source.leaf(cursor).unwrap();cursor+=1;r
-    }).collect()).collect()}else{Vec::new()};
+    let parameters = [
+        crate::next_leaves(&source, &mut cursor)?,
+        crate::next_leaves(&source, &mut cursor)?,
+    ];
+    let knots: Vec<Vec<_>> = if piecewise {
+        curves
+            .iter()
+            .map(|c| {
+                (0..c.knots.len())
+                    .map(|_| {
+                        let [r] = crate::next_leaves(&source, &mut cursor)?;
+                        Ok(r)
+                    })
+                    .collect::<Result<Vec<_>>>()
+            })
+            .collect::<Result<Vec<_>>>()?
+    } else {
+        Vec::new()
+    };
     let tolerance = ToleranceContext::default_valid();
     let mut ctx = PredicateContext::new(
         &source,
@@ -118,9 +121,19 @@ pub fn verify_fraction(curves:[&Curve;2],parameters:[[f64;2];2],max_work:u64)
     for i in 0..2 {let d=curves[i].domain();raw.extend([parameters[i][0],parameters[i][1],d[0],d[1]]);}
     let arena=SourceArena::authored("original-uv-fraction-point-equality",1,raw.into_iter().map(|v|AuthoredScalar::Binary64Bits(v.to_bits())).collect())
         .map_err(|_|Error::new("NURBS_INVALID_INPUT","Invalid rational original source"))?;
-    let mut cursor=0;
-    let poles:Vec<Vec<_>>=curves.iter().map(|c|(0..c.control_points.len()).map(|_|std::array::from_fn(|_|{let r=arena.leaf(cursor).unwrap();cursor+=1;r})).collect()).collect();
-    let parameters=std::array::from_fn(|_|std::array::from_fn(|_|{let r=arena.leaf(cursor).unwrap();cursor+=1;r}));
+    let mut cursor = 0;
+    let poles: Vec<Vec<_>> = curves
+        .iter()
+        .map(|c| {
+            (0..c.control_points.len())
+                .map(|_| crate::next_leaves(&arena, &mut cursor))
+                .collect::<Result<Vec<_>>>()
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let parameters = [
+        crate::next_leaves(&arena, &mut cursor)?,
+        crate::next_leaves(&arena, &mut cursor)?,
+    ];
     let tolerance=ToleranceContext::default_valid();
     let mut ctx=PredicateContext::new(&arena,&tolerance,Limits{max_work,..Limits::default()},None);
     cad_predicates::rational_bezier_uv_point_fraction_identity(&mut ctx,[&poles[0],&poles[1]],parameters)

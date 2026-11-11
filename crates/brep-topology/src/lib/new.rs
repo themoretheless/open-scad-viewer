@@ -65,7 +65,9 @@ pub(super) fn restore_history(&mut self, redo: bool) -> Result<bool> {
         let next = self.revision.checked_add(1).ok_or_else(|| {
             Error::new("BREP_REVISION_EXHAUSTED", "Topology revision cannot wrap")
         })?;
-        let restored = source.pop().expect("History was checked nonempty");
+        let Some(restored) = source.pop() else {
+            return Ok(false);
+        };
         target.push(std::mem::replace(&mut self.current, restored));
         self.revision = next;
         Ok(true)

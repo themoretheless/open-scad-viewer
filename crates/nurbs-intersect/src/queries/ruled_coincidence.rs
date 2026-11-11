@@ -55,12 +55,33 @@ pub(crate) enum RuledSeam {
     Closed,
     Uncertain,
 }
+#[derive(Clone, Copy)]
+pub(crate) struct CsParameterBox {
+    pub t: [f64; 2],
+    pub u: [f64; 2],
+    pub v: [f64; 2],
+}
+impl CsParameterBox {
+    pub fn mid(self) -> [f64; 3] {
+        [
+            self.t[0] + (self.t[1] - self.t[0]) * 0.5,
+            self.u[0] + (self.u[1] - self.u[0]) * 0.5,
+            self.v[0] + (self.v[1] - self.v[0]) * 0.5,
+        ]
+    }
+    pub fn to_vec(self) -> Vec<f64> {
+        vec![
+            self.t[0], self.t[1], self.u[0], self.u[1], self.v[0], self.v[1],
+        ]
+    }
+}
+
 pub(crate) fn ruled_seam_state(surface: &Surface) -> RuledSeam {
     let grid = homogeneous_grid(surface);
     let (first, last) = (&grid[0], &grid[grid.len() - 1]);
     let anchor = (0..4)
         .max_by(|&a, &b| first[0][a].abs().total_cmp(&first[0][b].abs()))
-        .unwrap();
+        .unwrap_or(0);
     if !first[0][anchor].is_finite() || first[0][anchor].abs() <= 0. {
         return RuledSeam::Open;
     }
@@ -95,22 +116,24 @@ pub(crate) fn ruled_seam_state(surface: &Surface) -> RuledSeam {
 /// V endpoints), or its homogeneous polygon is a proportional blend of the two
 /// boundary polygons (constant V). Anything ambiguous is an explicit
 /// unresolved region; non-coincident pairs return false for point isolation.
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn ruled_coincidence(
     piece: &Curve,
     patch: &Surface,
-    ta: [f64; 2],
-    ua: [f64; 2],
-    vd: [f64; 2],
+    params: CsParameterBox,
     seam_u: Option<[f64; 2]>,
     options: Options,
     report: &mut Report<CurveRuledSurfaceComponent>,
 ) -> Result<bool> {
-    let box6 = || vec![ta[0], ta[1], ua[0], ua[1], vd[0], vd[1]];
+    let CsParameterBox {
+        t: ta,
+        u: ua,
+        v: vd,
+    } = params;
+    let box6 = || params.to_vec();
     let b0 = patch.iso(nurbs_core::surface::Axis::V, vd[0])?;
     let b1 = patch.iso(nurbs_core::surface::Axis::V, vd[1])?;
-    let a0 = point3(piece.control_points.first().unwrap());
-    let a1 = point3(piece.control_points.last().unwrap());
+    let a0 = point3(&piece.control_points[0]);
+    let a1 = point3(&piece.control_points[piece.control_points.len() - 1]);
     let chord = sub(a1, a0);
     let length = chord[0].hypot(chord[1]).hypot(chord[2]);
     let mut boundary_on_line = false;
@@ -134,7 +157,7 @@ pub(crate) fn ruled_coincidence(
             // else keeps the coincidence ambiguous instead of guessed.
             let axis = (0..3)
                 .min_by(|a, b| dir[*a].abs().total_cmp(&dir[*b].abs()))
-                .unwrap();
+                .unwrap_or(0);
             let mut basis = [0.; 3];
             basis[axis] = 1.;
             let n = cross(dir, basis);
@@ -322,7 +345,7 @@ pub(crate) fn ruled_coincidence(
                 }
                 let clamp = |v: f64| v.max(vd[0]).min(vd[1]);
                 let uv_start = [u, clamp(lifts[0])];
-                let uv_end = [u, clamp(*lifts.last().unwrap())];
+                let uv_end = [u, clamp(lifts[lifts.len() - 1])];
                 let mut max_residual = control_residual;
                 for (t, uv) in [(ta[0], uv_start), (ta[1], uv_end)] {
                     let pc = point3(&piece.evaluate(t)?.point);
@@ -383,8 +406,7 @@ pub(crate) fn ruled_coincidence(
             .iter()
             .enumerate()
             .max_by(|a, b| a.1[3].abs().total_cmp(&b.1[3].abs()))
-            .map(|(i, _)| i)
-            .unwrap();
+            .map_or(0, |(i, _)| i);
         let (a, b, c) = (at(&e0, i0), at(&e1, i0), ec[i0]);
         let d = std::array::from_fn::<_, 4, _>(|k| b[k] - a[k]);
         // α·H0 + β·(H1-H0) = Hc is linear in (α, β); solve from the dominant

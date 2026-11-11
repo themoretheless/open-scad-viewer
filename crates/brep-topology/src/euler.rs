@@ -142,7 +142,9 @@ impl<C: Clone, S: Clone, P: Clone> Model<C, S, P> {
             incident.len() == 2 && incident.contains(&edge),
             "KEV requires a vertex of degree two",
         )?;
-        let survivor_edge = *incident.iter().find(|&&index| index != edge).unwrap();
+        let Some(&survivor_edge) = incident.iter().find(|&&index| index != edge) else {
+            return Err(euler_invalid("KEV requires a vertex of degree two"));
+        };
         let survivor_vertex = self.edges[survivor_edge].vertices
             [usize::from(self.edges[survivor_edge].vertices[0] == vertex)];
         let removed_other = removed.vertices[usize::from(removed.vertices[0] == vertex)];

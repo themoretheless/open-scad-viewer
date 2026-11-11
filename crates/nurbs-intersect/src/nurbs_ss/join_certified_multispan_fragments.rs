@@ -28,7 +28,7 @@ pub fn joined_endpoint_key(
 /// Deterministically join exact per-cell fragments. A join exists only when
 /// the 3D endpoint and both oriented UV endpoints are bit-identical.
 pub fn join_certified_multispan_fragments(
-    mut fragments: Vec<CertifiedBranchFragment>,
+    fragments: Vec<CertifiedBranchFragment>,
     context: &ToleranceContext,
     source_span_count: [usize; 2],
     candidate_span_pairs: usize,
@@ -41,13 +41,16 @@ pub fn join_certified_multispan_fragments(
             "Branch fragment budget is empty or exceeded",
         ));
     }
-    fragments.sort_by(|a, b| {
-        joined_endpoint_key(a, 0)
-            .unwrap()
-            .cmp(&joined_endpoint_key(b, 0).unwrap())
+    let mut keyed: Vec<_> = fragments
+        .into_iter()
+        .map(|f| Ok((joined_endpoint_key(&f, 0)?, f)))
+        .collect::<Result<_>>()?;
+    keyed.sort_by(|(ka, a), (kb, b)| {
+        ka.cmp(kb)
             .then_with(|| a.source_spans.cmp(&b.source_spans))
             .then_with(|| a.parameter_interval[0].total_cmp(&b.parameter_interval[0]))
     });
+    let fragments: Vec<_> = keyed.into_iter().map(|(_, f)| f).collect();
     let mut endpoints = BTreeMap::<(Vec<u64>, Vec<u64>, Vec<u64>), Vec<(usize, usize)>>::new();
     for (id, fragment) in fragments.iter().enumerate() {
         for end in 0..2 {
@@ -122,11 +125,12 @@ pub fn join_certified_multispan_fragments(
             closed,
         });
     }
-    components.sort_by(|a, b| {
-        joined_endpoint_key(&a.fragments[0], 0)
-            .unwrap()
-            .cmp(&joined_endpoint_key(&b.fragments[0], 0).unwrap())
-    });
+    let mut keyed_components: Vec<_> = components
+        .into_iter()
+        .map(|c| Ok((joined_endpoint_key(&c.fragments[0], 0)?, c)))
+        .collect::<Result<_>>()?;
+    keyed_components.sort_by(|(ka, _), (kb, _)| ka.cmp(kb));
+    let mut components: Vec<_> = keyed_components.into_iter().map(|(_, c)| c).collect();
     for (id, component) in components.iter_mut().enumerate() {
         component.component_id = id;
     }
@@ -196,8 +200,8 @@ fn affine_plane_uv_domain(
         surface.degree_v,
         surface.control_points[0].len(),
     )?;
-    let [umin, umax] = [u[0], *u.last().unwrap()];
-    let [vmin, vmax] = [v[0], *v.last().unwrap()];
+    let [umin, umax] = [u[0], u[u.len() - 1]];
+    let [vmin, vmax] = [v[0], v[v.len() - 1]];
     let origin = surface.evaluate(umin, vmin)?.point;
     let pu = surface.evaluate(umax, vmin)?.point;
     let pv = surface.evaluate(umin, vmax)?.point;

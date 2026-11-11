@@ -62,8 +62,8 @@ pub(crate) fn curve_coincidence(
     report: &mut Report<CurveCurveComponent>,
 ) -> Result<bool> {
     let box4 = || vec![ta[0], ta[1], tb[0], tb[1]];
-    let a0 = point3(piece_a.control_points.first().unwrap());
-    let a1 = point3(piece_a.control_points.last().unwrap());
+    let a0 = point3(&piece_a.control_points[0]);
+    let a1 = point3(&piece_a.control_points[piece_a.control_points.len() - 1]);
     let d = sub(a1, a0);
     let length = d[0].hypot(d[1]).hypot(d[2]);
     if !length.is_finite() || length <= 0. {
@@ -104,8 +104,8 @@ pub(crate) fn curve_coincidence(
             report.unresolved(box4(), UnresolvedReason::CoincidentTrim);
             return Ok(true);
         }
-        let (sa0, sa1) = (*sa.first().unwrap(), *sa.last().unwrap());
-        let (sb0, sb1) = (*sb.first().unwrap(), *sb.last().unwrap());
+        let (sa0, sa1) = (sa[0], sa[sa.len() - 1]);
+        let (sb0, sb1) = (sb[0], sb[sb.len() - 1]);
         let lo = sa0.max(sb0.min(sb1));
         let hi = sa1.min(sb0.max(sb1));
         if hi < lo {
@@ -170,8 +170,7 @@ pub(crate) fn curve_coincidence(
                 .iter()
                 .enumerate()
                 .max_by(|a, b| a.1.total_cmp(b.1))
-                .map(|(i, _)| i)
-                .unwrap();
+                .map_or(0, |(i, _)| i);
             let j = if reversed { degree - index } else { index };
             eb.weights[j] / ea.weights[index]
         };

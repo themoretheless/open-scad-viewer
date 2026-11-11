@@ -23,11 +23,21 @@ pub fn compare_definitions(source:&Curve,candidate:&Curve,knot:f64,max_work:u64,
     let arena=SourceArena::authored("literal-curve-definitions",1,values.into_iter().map(|x|AuthoredScalar::Binary64Bits(x.to_bits())).collect()).map_err(|e|crate::input(e.to_string()))?;
     let tolerance=ToleranceContext::default_valid();
     let mut ctx=PredicateContext::new(&arena,&tolerance,Limits{max_work,..Limits::default()},None);
-    let controls=|offset:usize,count:usize|(0..count).map(|i|std::array::from_fn(|axis|arena.leaf(offset+4*i+axis).unwrap())).collect::<Vec<_>>();
-    let knots=|offset:usize,count:usize|(0..count).map(|i|arena.leaf(offset+i).unwrap()).collect::<Vec<_>>();
-    let a=controls(offsets[0].0,n);let ak=knots(offsets[0].1,source.knots.len());
-    let b=controls(offsets[1].0,candidate.control_points.len());let bk=knots(offsets[1].1,candidate.knots.len());
-    let t=std::array::from_fn(|axis|arena.leaf(translation+axis).unwrap());
+    let controls = |offset: usize, count: usize| {
+        (0..count)
+            .map(|i| crate::leaves_at(&arena, offset + 4 * i))
+            .collect::<crate::Result<Vec<_>>>()
+    };
+    let knots = |offset: usize, count: usize| {
+        (0..count)
+            .map(|i| arena.leaf(offset + i).map_err(|e| crate::input(e.to_string())))
+            .collect::<crate::Result<Vec<_>>>()
+    };
+    let a = controls(offsets[0].0, n)?;
+    let ak = knots(offsets[0].1, source.knots.len())?;
+    let b = controls(offsets[1].0, candidate.control_points.len())?;
+    let bk = knots(offsets[1].1, candidate.knots.len())?;
+    let t = crate::leaves_at(&arena, translation)?;
     let decision=cad_predicates::rational_bspline_restriction_identity(&mut ctx,p,&a,&ak,candidate.degree,&b,&bk,t).map_err(|e|crate::input(e.to_string()))?;
     Ok(decision)
 }

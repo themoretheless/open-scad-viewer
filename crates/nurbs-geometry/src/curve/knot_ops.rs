@@ -145,7 +145,7 @@ impl Curve {
                             .collect(),
                     );
                 }
-                next.push(points.last().unwrap().clone());
+                next.push(points[points.len() - 1].clone());
                 points = next;
             }
             controls.extend_from_slice(&points[usize::from(index != 0)..]);

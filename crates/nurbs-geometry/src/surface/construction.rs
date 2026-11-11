@@ -197,7 +197,7 @@ pub fn loft_aligned(curves: &[Curve]) -> Result<Surface> {
         c.validate()?;
         check(c.control_points[0].len() == 3, "Loft requires 3D sections")?;
     }
-    let degree = curves.iter().map(|c| c.degree).max().unwrap();
+    let degree = curves.iter().map(|c| c.degree).max().unwrap_or(0);
     let mut sections = Vec::new();
     for c in curves {
         let [a, b] = c.domain();
@@ -220,7 +220,7 @@ pub fn loft_aligned(curves: &[Curve]) -> Result<Surface> {
             .iter()
             .map(|c| c.knots.iter().filter(|&&v| v == k).count())
             .max()
-            .unwrap();
+            .unwrap_or(0);
         for c in &mut sections {
             let existing = c.knots.iter().filter(|&&v| v == k).count();
             if existing < count {

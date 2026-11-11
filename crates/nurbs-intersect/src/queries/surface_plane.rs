@@ -73,7 +73,7 @@ pub(crate) fn admit_ruled_parameter_bounds(bounds: Vec<[Interval; 2]>) -> Result
         }
         // Endpoint Bernstein coefficients enclose actual endpoint residuals.
         // Equal strict signs mean that the plane lies outside that ruling.
-        for r in [row.first().unwrap(), row.last().unwrap()] {
+        for r in [&row[0], &row[row.len() - 1]] {
             if r[0].sign() != 0 && r[0].sign() == r[1].sign() {
                 return Err(invalid("Ruled trace leaves the source parameter domain"));
             }
@@ -84,18 +84,20 @@ pub(crate) fn admit_ruled_parameter_bounds(bounds: Vec<[Interval; 2]>) -> Result
                 "Ruled parameter range remains unresolved at the subdivision limit",
             ));
         }
+        let n = row.len();
         let mut work = row;
-        let mut left = vec![work[0]];
-        let mut right = vec![*work.last().unwrap()];
-        while work.len() > 1 {
-            work = work
-                .windows(2)
-                .map(|r| {
-                    std::array::from_fn(|axis| r[0][axis].add(r[1][axis]).mul(Interval::exact(0.5)))
-                })
-                .collect();
+        let mut left = Vec::with_capacity(n);
+        let mut right = Vec::with_capacity(n);
+        left.push(work[0]);
+        right.push(work[n - 1]);
+        for len in (1..n).rev() {
+            for i in 0..len {
+                work[i] = std::array::from_fn(|axis| {
+                    work[i][axis].add(work[i + 1][axis]).mul(Interval::exact(0.5))
+                });
+            }
             left.push(work[0]);
-            right.push(*work.last().unwrap());
+            right.push(work[len - 1]);
         }
         right.reverse();
         pending.push((right, depth + 1));
@@ -207,8 +209,9 @@ pub(crate) fn diagonal_segments(
             };
             breaks.push((t, uv, [false; 2]));
         }
-        if let Some((axis, knot)) = crossing {
-            let b = breaks.last_mut().unwrap();
+        if let Some((axis, knot)) = crossing
+            && let Some(b) = breaks.last_mut()
+        {
             if b.2[axis] && b.1[axis] != knot {
                 return Err(invalid("Distinct UV knots collapse to one trace parameter"));
             }
@@ -257,6 +260,30 @@ pub(crate) fn diagonal_segments(
     }
     Ok(result)
 }
+/// Join a degree-matched Bezier span onto a multispan curve without tolerance
+/// welding: only identical Cartesian endpoint values can share a control point.
+pub(crate) fn append_elevated_span(
+    joined: &mut Curve,
+    segment: &Curve,
+    degree: usize,
+) -> Result<()> {
+    if joined.control_points.last() != segment.control_points.first() {
+        return Err(invalid(
+            "Converted span endpoints do not coincide numerically",
+        ));
+    }
+    let factor = joined.weights[joined.weights.len() - 1] / segment.weights[0];
+    joined.knots.pop();
+    joined.knots.extend_from_slice(&segment.knots[degree + 1..]);
+    joined
+        .control_points
+        .extend_from_slice(&segment.control_points[1..]);
+    joined
+        .weights
+        .extend(segment.weights[1..].iter().map(|w| w * factor));
+    Ok(())
+}
+
 pub(crate) fn diagonal_multispan(
     surface: &Surface,
     plane: Plane,
@@ -267,20 +294,7 @@ pub(crate) fn diagonal_multispan(
     let mut result: Option<Curve> = None;
     for segment in diagonal_segments(surface, plane, start, end)? {
         if let Some(joined) = &mut result {
-            if joined.control_points.last() != segment.control_points.first() {
-                return Err(invalid(
-                    "Converted span endpoints do not coincide numerically",
-                ));
-            }
-            let factor = joined.weights.last().unwrap() / segment.weights[0];
-            joined.knots.pop();
-            joined.knots.extend_from_slice(&segment.knots[degree + 1..]);
-            joined
-                .control_points
-                .extend_from_slice(&segment.control_points[1..]);
-            joined
-                .weights
-                .extend(segment.weights[1..].iter().map(|w| w * factor));
+            append_elevated_span(joined, &segment, degree)?;
         } else {
             result = Some(segment);
         }

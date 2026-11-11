@@ -87,10 +87,11 @@ pub fn insert<const N: usize>(
 pub fn choose(n: usize, k: usize) -> I {
     let mut x = I::point(1.);
     for i in 0..k.min(n - k) {
-        x = x
-            .mul(I::point((n - i) as f64))
-            .div_positive(I::point((i + 1) as f64))
-            .unwrap();
+        let d = (i + 1) as f64;
+        x = x.mul(I::point((n - i) as f64)).mul(I {
+            lo: next_down(1. / d),
+            hi: next_up(1. / d),
+        });
     }
     x
 }

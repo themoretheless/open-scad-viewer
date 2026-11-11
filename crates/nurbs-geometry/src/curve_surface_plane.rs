@@ -64,27 +64,29 @@ pub fn verify_algebraic(
     )
     .map_err(|_| Error::new("NURBS_INVALID_INPUT", "Invalid plane source"))?;
     let mut index = 0;
-    let mut leaf = || {
-        let r = source.leaf(index).unwrap();
-        index += 1;
-        r
-    };
     let pp: Vec<_> = p
         .control_points
         .iter()
-        .map(|_| std::array::from_fn(|_| leaf()))
-        .collect();
+        .map(|_| crate::next_leaves(&source, &mut index))
+        .collect::<Result<Vec<_>>>()?;
     let ss: Vec<Vec<_>> = s
         .control_points
         .iter()
         .map(|row| {
             row.iter()
-                .map(|_| std::array::from_fn(|_| leaf()))
-                .collect()
+                .map(|_| crate::next_leaves(&source, &mut index))
+                .collect::<Result<Vec<_>>>()
         })
-        .collect();
-    let domain = std::array::from_fn(|_| std::array::from_fn(|_| leaf()));
-    let plane = std::array::from_fn(|_| std::array::from_fn(|_| leaf()));
+        .collect::<Result<Vec<_>>>()?;
+    let domain = [
+        crate::next_leaves(&source, &mut index)?,
+        crate::next_leaves(&source, &mut index)?,
+    ];
+    let plane = [
+        crate::next_leaves(&source, &mut index)?,
+        crate::next_leaves(&source, &mut index)?,
+        crate::next_leaves(&source, &mut index)?,
+    ];
     let tolerance = ToleranceContext::default_valid();
     let mut ctx = PredicateContext::new(
         &source,
@@ -267,19 +269,25 @@ fn verify_point_impl(
         )
     })?;
     let mut index = 0;
-    let mut leaf = || {
-        let r = source.leaf(index).unwrap();
-        index += 1;
-        r
-    };
     let cc: Vec<_> = curve
         .control_points
         .iter()
-        .map(|_| std::array::from_fn(|_| leaf()))
-        .collect();
-    let plane = std::array::from_fn(|_| std::array::from_fn(|_| leaf()));
-    let parameter = std::array::from_fn(|_| leaf());
-    let range = range.map(|_| std::array::from_fn(|_| std::array::from_fn(|_| leaf())));
+        .map(|_| crate::next_leaves(&source, &mut index))
+        .collect::<Result<Vec<_>>>()?;
+    let plane = [
+        crate::next_leaves(&source, &mut index)?,
+        crate::next_leaves(&source, &mut index)?,
+        crate::next_leaves(&source, &mut index)?,
+    ];
+    let parameter = crate::next_leaves(&source, &mut index)?;
+    let range = if range.is_some() {
+        Some([
+            crate::next_leaves(&source, &mut index)?,
+            crate::next_leaves(&source, &mut index)?,
+        ])
+    } else {
+        None
+    };
     let tolerance = ToleranceContext::default_valid();
     let mut ctx = PredicateContext::new(
         &source,

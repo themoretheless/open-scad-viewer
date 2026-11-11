@@ -3,10 +3,35 @@
 //! crate-root aliases re-export every module.
 // `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
 // and may only go down; prefer typed errors.
-#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 pub use math_core::{Error, Result};
 #[doc(hidden)]
 pub use nurbs_numerics::{INVALID_INPUT, NUMERIC_ERROR, RESOURCE_LIMIT, check, input, numeric, numeric_err, resource};
+
+pub(crate) fn leaves_at<const N: usize>(
+    arena: &cad_predicates::SourceArena,
+    offset: usize,
+) -> Result<[cad_predicates::LeafRef; N]> {
+    let first = arena
+        .leaf(offset)
+        .map_err(|_| input("Source arena leaf out of bounds"))?;
+    let mut out = [first; N];
+    for (i, slot) in out.iter_mut().enumerate().skip(1) {
+        *slot = arena
+            .leaf(offset + i)
+            .map_err(|_| input("Source arena leaf out of bounds"))?;
+    }
+    Ok(out)
+}
+
+pub(crate) fn next_leaves<const N: usize>(
+    arena: &cad_predicates::SourceArena,
+    cursor: &mut usize,
+) -> Result<[cad_predicates::LeafRef; N]> {
+    let out = leaves_at(arena, *cursor)?;
+    *cursor += N;
+    Ok(out)
+}
 /// Numeric kernels, kept reachable under the paths these modules used inside `nurbs-core`.
 #[doc(hidden)]
 pub mod numerics {

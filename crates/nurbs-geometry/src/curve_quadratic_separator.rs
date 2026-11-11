@@ -98,11 +98,14 @@ pub fn certify(
             .collect(),
     )
     .map_err(|_| numeric_err("Separator source admission failed"))?;
-    let leaves = std::array::from_fn::<_, 2, _>(|s| {
-        (0..curves[s].control_points.len())
-            .map(|i| std::array::from_fn(|a| arena.leaf(offsets[s] + 3 * i + a).unwrap()))
-            .collect::<Vec<_>>()
-    });
+    let leaves = [
+        (0..curves[0].control_points.len())
+            .map(|i| crate::leaves_at(&arena, offsets[0] + 3 * i))
+            .collect::<Result<Vec<_>>>()?,
+        (0..curves[1].control_points.len())
+            .map(|i| crate::leaves_at(&arena, offsets[1] + 3 * i))
+            .collect::<Result<Vec<_>>>()?,
+    ];
     let frame = [
         std::array::from_fn(|a| leaves[0][indices[0]][a]),
         std::array::from_fn(|a| leaves[0][frame_index][a]),
@@ -117,11 +120,14 @@ pub fn certify(
         },
         None,
     );
+    let beta_leaf = arena
+        .leaf(beta_index)
+        .map_err(|_| numeric_err("Separator source admission failed"))?;
     let d = cad_predicates::quadratic_curve_separator(
         &mut ctx,
         [&leaves[0], &leaves[1]],
         frame,
-        arena.leaf(beta_index).unwrap(),
+        beta_leaf,
     )
     .map_err(|_| numeric_err("Separator predicate admission failed"))?;
     let sides = d.coefficients.as_ref().and_then(|c| {

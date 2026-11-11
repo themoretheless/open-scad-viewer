@@ -93,12 +93,10 @@ pub fn certify(surface: &Surface, axes: [usize; 2], max_work: u64) -> Result<Rep
         .map(|(u, row)| {
             row.iter()
                 .enumerate()
-                .map(|(v, _)| {
-                    std::array::from_fn(|a| arena.leaf((u * row.len() + v) * 4 + a).unwrap())
-                })
-                .collect()
+                .map(|(v, _)| crate::leaves_at(&arena, (u * row.len() + v) * 4))
+                .collect::<Result<Vec<_>>>()
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>>>()?;
     let tolerance = ToleranceContext::default_valid();
     let mut signs = Vec::new();
     let mut work = 0u64;

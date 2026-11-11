@@ -62,7 +62,7 @@ pub fn rrqr(matrix: &[Vec<f64>], tolerance: Option<f64>) -> Result<Rrqr> {
                 let nq: f64 = (k..m).map(|i| a[i][q] * a[i][q]).sum();
                 np.total_cmp(&nq)
             })
-            .unwrap();
+            .unwrap_or(k);
         if pivot != k {
             for row in a.iter_mut() {
                 row.swap(k, pivot);

@@ -5,8 +5,13 @@
 //! Booleans that consume it directly and is re-exported here.
 // `unwrap`/`expect` in production code are counted per crate (`clippyUnwrap` pins, plan L6)
 // and may only go down; prefer typed errors.
-#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
-use nurbs_core::{Result, curve::Curve};
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
+use nurbs_core::{Error, Result, curve::Curve};
+
+#[inline]
+pub(crate) fn invalid(message: impl Into<String>) -> Error {
+    Error::new("BREP_INTERSECTION_INVALID_INPUT", message)
+}
 use nurbs_intersect::*;
 use nurbs_intersect::vec3::norm;
 use std::f64::consts::{FRAC_PI_2 as QUARTER, TAU};

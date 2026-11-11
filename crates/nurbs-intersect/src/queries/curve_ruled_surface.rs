@@ -134,18 +134,18 @@ enum CsRefinement {
 }
 /// Newton refinement of C(t)-S(u,v)=0 inside [ta]x[ua]x[vd]. Only iterates
 /// that stay inside the isolating box are reported by that box.
-#[allow(clippy::too_many_arguments)]
 fn refine_cs_root(
     curve: &Curve,
     surface: &Surface,
-    ta: [f64; 2],
-    ua: [f64; 2],
-    vd: [f64; 2],
-    tm: f64,
-    um: f64,
-    vm: f64,
+    params: CsParameterBox,
+    [tm, um, vm]: [f64; 3],
     options: Options,
 ) -> Result<CsRefinement> {
+    let CsParameterBox {
+        t: ta,
+        u: ua,
+        v: vd,
+    } = params;
     let (mut t, mut u, mut v) = (tm, um, vm);
     let (wt, wu, wv) = (ta[1] - ta[0], ua[1] - ua[0], vd[1] - vd[0]);
     let inside = |t: f64, u: f64, v: f64| {
@@ -236,19 +236,21 @@ fn refine_cs_root(
 /// Terminal curve/ruled-surface box resolution, mirroring the curve/curve
 /// rule: provable separation by hull diagonals, ambiguous bands stay
 /// unresolved, tangencies are never collapsed to guessed points.
-#[allow(clippy::too_many_arguments)]
 fn resolve_cs_box(
     curve: &Curve,
     surface: &Surface,
-    ta: [f64; 2],
-    ua: [f64; 2],
-    vd: [f64; 2],
+    params: CsParameterBox,
     hc: &[[f64; 4]],
     hs: &HomogeneousGrid,
     options: Options,
     report: &mut Report<CurveRuledSurfaceComponent>,
 ) -> Result<()> {
-    let box6 = || vec![ta[0], ta[1], ua[0], ua[1], vd[0], vd[1]];
+    let CsParameterBox {
+        t: ta,
+        u: ua,
+        v: vd,
+    } = params;
+    let box6 = || params.to_vec();
     let diagonal = |ranges: [[f64; 2]; 3]| {
         ranges
             .iter()
@@ -260,9 +262,7 @@ fn resolve_cs_box(
             .sqrt()
     };
     let diag = diagonal(hull_ranges(hc)) + diagonal(grid_ranges(hs));
-    let tm = ta[0] + (ta[1] - ta[0]) * 0.5;
-    let um = ua[0] + (ua[1] - ua[0]) * 0.5;
-    let vm = vd[0] + (vd[1] - vd[0]) * 0.5;
+    let [tm, um, vm] = params.mid();
     let pc = point3(&curve.evaluate(tm)?.point);
     let ps = surface.evaluate(um, vm)?.point;
     let residual = distance(pc, ps);
@@ -281,7 +281,7 @@ fn resolve_cs_box(
         return Ok(());
     }
     let near_midpoint = residual <= options.distance_tolerance;
-    match refine_cs_root(curve, surface, ta, ua, vd, tm, um, vm, options)? {
+    match refine_cs_root(curve, surface, params, [tm, um, vm], options)? {
         CsRefinement::Root(t, uv, point, residual) => {
             let td = curve.domain();
             let sd = surface_domain(surface);
@@ -328,39 +328,11 @@ fn resolve_cs_box(
     Ok(())
 }
 
-/// Intersect a retained positive-weight 3D NURBS curve with a ruled NURBS
-/// surface: rational in one direction (any degree, multiple knot spans) and
-/// linear with positive, possibly unequal endpoint weights in the other.
-/// Curve spans and surface U-spans decompose into homogeneous rational Bezier
-/// pieces traversed by one FIFO queue; outward-rounded control hulls exclude
-/// separated boxes. Terminal boxes confirm C(t)=S(u,v) by 3x3 Newton with the
-/// root required inside its own box; exact parameter corners own boundary
-/// contacts (dedup by exact (t,u,v) only). Ruling and iso-V coincidences lift
-/// to explicit UV path endpoints with sampled per-parameter correspondence
-/// (Möbius in V along a ruling, affine in U along an iso-V); exactly closed
-/// U seams unify seam-side contacts and wrap overlaps canonically at u_min,
-/// while near-closed seams stay duplicate behind explicit near_coincidence
-/// bands; tangencies, near-surface bands, partial ruling trims and exhausted
-/// budgets stay unresolved. Reports never authorize topology changes.
-pub fn curve_ruled_surface(
+fn canonical_ruled_surface(
     curve: &Curve,
     surface: &Surface,
-    options: Options,
-) -> Result<Report<CurveRuledSurfaceComponent>> {
-    curve.validate()?;
-    if curve.control_points[0].len() != 3 {
-        return Err(invalid("Curve/ruled-surface requires a 3D curve"));
-    }
-    surface.validate()?;
-    let options = options.validate()?;
-    let mut report = Report::default();
-    let unsupported = |report: &mut Report<CurveRuledSurfaceComponent>| {
-        let d = surface_domain(surface);
-        report.unresolved(
-            vec![curve.domain()[0], curve.domain()[1], d[0], d[1], d[2], d[3]],
-            UnresolvedReason::UnsupportedSurface,
-        );
-    };
+    report: &mut Report<CurveRuledSurfaceComponent>,
+) -> Option<(Surface, bool, [f64; 2], Option<[f64; 2]>)> {
     // Canonical orientation is ruled in V: linear V with exactly two rows.
     let swapped =
         if surface.degree_v == 1 && surface.control_points[0].len() == 2 && !surface.periodic_v {
@@ -369,8 +341,12 @@ pub fn curve_ruled_surface(
         {
             true
         } else {
-            unsupported(&mut report);
-            return Ok(report);
+            let d = surface_domain(surface);
+            report.unresolved(
+                vec![curve.domain()[0], curve.domain()[1], d[0], d[1], d[2], d[3]],
+                UnresolvedReason::UnsupportedSurface,
+            );
+            return None;
         };
     let canonical = if swapped {
         transpose_surface(surface)
@@ -394,106 +370,17 @@ pub fn curve_ruled_surface(
             );
         }
     }
-    type CurveSurfacePending = (
-        [f64; 2],
-        [f64; 2],
-        Option<Vec<[f64; 4]>>,
-        Option<HomogeneousGrid>,
-        usize,
-    );
-    let mut pending: std::collections::VecDeque<CurveSurfacePending> =
-        spans(&curve.knots, curve.degree, curve.control_points.len())
-            .into_iter()
-            .flat_map(|ta| {
-                spans(
-                    &canonical.knots_u,
-                    canonical.degree_u,
-                    canonical.control_points.len(),
-                )
-                .into_iter()
-                .map(move |ua| (ta, ua, None, None, 0))
-            })
-            .collect();
-    while let Some((ta, ua, hc, hs, depth)) = pending.pop_front() {
-        if report.boxes_visited >= options.max_boxes {
-            report.unresolved(
-                vec![ta[0], ta[1], ua[0], ua[1], vd[0], vd[1]],
-                UnresolvedReason::BudgetExceeded,
-            );
-            continue;
-        }
-        report.boxes_visited += 1;
-        let (pieces, hc, hs) = match (hc, hs) {
-            (Some(hc), Some(hs)) => (None, hc, hs),
-            _ => {
-                let pc = curve.trim(ta[0], ta[1])?;
-                let ps = canonical.trim([ua[0], ua[1], vd[0], vd[1]])?;
-                let (hc, hs) = (homogeneous4(&pc), homogeneous_grid(&ps));
-                (Some((pc, ps)), hc, hs)
-            }
-        };
-        if let Some((pc, ps)) = &pieces {
-            for &t in &ta {
-                for &u in &ua {
-                    for &v in &vd {
-                        admit_cs_corner(curve, &canonical, t, u, v, options, &mut report)?;
-                    }
-                }
-            }
-            if !grids_excluded(&hc, &hs)
-                && ruled_coincidence(pc, ps, ta, ua, vd, seam_u, options, &mut report)?
-            {
-                continue;
-            }
-        }
-        if grids_excluded(&hc, &hs) {
-            report.bernstein_excluded += 1;
-            continue;
-        }
-        let width_t = ta[1] - ta[0];
-        let width_u = ua[1] - ua[0];
-        let tm = ta[0] + width_t * 0.5;
-        let um = ua[0] + width_u * 0.5;
-        let can_t = tm > ta[0] && tm < ta[1];
-        let can_u = um > ua[0] && um < ua[1];
-        if (width_t <= options.parameter_tolerance && width_u <= options.parameter_tolerance)
-            || depth == options.max_depth
-            || (!can_t && !can_u)
-        {
-            resolve_cs_box(
-                curve,
-                &canonical,
-                ta,
-                ua,
-                vd,
-                &hc,
-                &hs,
-                options,
-                &mut report,
-            )?;
-            continue;
-        }
-        let c_side: Vec<([f64; 2], Vec<[f64; 4]>)> = if can_t {
-            let (l, r) = split_homogeneous(&hc);
-            vec![([ta[0], tm], l), ([tm, ta[1]], r)]
-        } else {
-            vec![(ta, hc.clone())]
-        };
-        let s_side: Vec<([f64; 2], HomogeneousGrid)> = if can_u {
-            let (l, r) = split_grid_u(&hs);
-            vec![([ua[0], um], l), ([um, ua[1]], r)]
-        } else {
-            vec![(ua, hs.clone())]
-        };
-        for (ta2, h) in &c_side {
-            for (ua2, g) in &s_side {
-                pending.push_back((*ta2, *ua2, Some(h.clone()), Some(g.clone()), depth + 1));
-            }
-        }
-    }
-    merge_cs_points(&mut report);
+    Some((canonical, swapped, vd, seam_u))
+}
+
+fn finalize_cs_report(
+    report: &mut Report<CurveRuledSurfaceComponent>,
+    seam_u: Option<[f64; 2]>,
+    swapped: bool,
+) {
+    merge_cs_points(report);
     if let Some(su) = seam_u {
-        unify_cs_seam(&mut report, su);
+        unify_cs_seam(report, su);
     }
     report.components.sort_by(|a, b| {
         let key = |c: &CurveRuledSurfaceComponent| match c {
@@ -530,5 +417,123 @@ pub fn curve_ruled_surface(
             }
         }
     }
+}
+
+/// Intersect a retained positive-weight 3D NURBS curve with a ruled NURBS
+/// surface: rational in one direction (any degree, multiple knot spans) and
+/// linear with positive, possibly unequal endpoint weights in the other.
+/// Curve spans and surface U-spans decompose into homogeneous rational Bezier
+/// pieces traversed by one FIFO queue; outward-rounded control hulls exclude
+/// separated boxes. Terminal boxes confirm C(t)=S(u,v) by 3x3 Newton with the
+/// root required inside its own box; exact parameter corners own boundary
+/// contacts (dedup by exact (t,u,v) only). Ruling and iso-V coincidences lift
+/// to explicit UV path endpoints with sampled per-parameter correspondence
+/// (Möbius in V along a ruling, affine in U along an iso-V); exactly closed
+/// U seams unify seam-side contacts and wrap overlaps canonically at u_min,
+/// while near-closed seams stay duplicate behind explicit near_coincidence
+/// bands; tangencies, near-surface bands, partial ruling trims and exhausted
+/// budgets stay unresolved. Reports never authorize topology changes.
+pub fn curve_ruled_surface(
+    curve: &Curve,
+    surface: &Surface,
+    options: Options,
+) -> Result<Report<CurveRuledSurfaceComponent>> {
+    curve.validate()?;
+    if curve.control_points[0].len() != 3 {
+        return Err(invalid("Curve/ruled-surface requires a 3D curve"));
+    }
+    surface.validate()?;
+    let options = options.validate()?;
+    let mut report = Report::default();
+    let Some((canonical, swapped, vd, seam_u)) = canonical_ruled_surface(curve, surface, &mut report)
+    else {
+        return Ok(report);
+    };
+    type CurveSurfacePending = (
+        [f64; 2],
+        [f64; 2],
+        Option<Vec<[f64; 4]>>,
+        Option<HomogeneousGrid>,
+        usize,
+    );
+    let mut pending: std::collections::VecDeque<CurveSurfacePending> =
+        spans(&curve.knots, curve.degree, curve.control_points.len())
+            .into_iter()
+            .flat_map(|ta| {
+                spans(
+                    &canonical.knots_u,
+                    canonical.degree_u,
+                    canonical.control_points.len(),
+                )
+                .into_iter()
+                .map(move |ua| (ta, ua, None, None, 0))
+            })
+            .collect();
+    while let Some((ta, ua, hc, hs, depth)) = pending.pop_front() {
+        let params = CsParameterBox { t: ta, u: ua, v: vd };
+        if report.boxes_visited >= options.max_boxes {
+            report.unresolved(params.to_vec(), UnresolvedReason::BudgetExceeded);
+            continue;
+        }
+        report.boxes_visited += 1;
+        let (pieces, hc, hs) = match (hc, hs) {
+            (Some(hc), Some(hs)) => (None, hc, hs),
+            _ => {
+                let pc = curve.trim(ta[0], ta[1])?;
+                let ps = canonical.trim([ua[0], ua[1], vd[0], vd[1]])?;
+                let (hc, hs) = (homogeneous4(&pc), homogeneous_grid(&ps));
+                (Some((pc, ps)), hc, hs)
+            }
+        };
+        if let Some((pc, ps)) = &pieces {
+            for &t in &ta {
+                for &u in &ua {
+                    for &v in &vd {
+                        admit_cs_corner(curve, &canonical, [t, u, v], options, &mut report)?;
+                    }
+                }
+            }
+            if !grids_excluded(&hc, &hs)
+                && ruled_coincidence(pc, ps, params, seam_u, options, &mut report)?
+            {
+                continue;
+            }
+        }
+        if grids_excluded(&hc, &hs) {
+            report.bernstein_excluded += 1;
+            continue;
+        }
+        let width_t = ta[1] - ta[0];
+        let width_u = ua[1] - ua[0];
+        let tm = ta[0] + width_t * 0.5;
+        let um = ua[0] + width_u * 0.5;
+        let can_t = tm > ta[0] && tm < ta[1];
+        let can_u = um > ua[0] && um < ua[1];
+        if (width_t <= options.parameter_tolerance && width_u <= options.parameter_tolerance)
+            || depth == options.max_depth
+            || (!can_t && !can_u)
+        {
+            resolve_cs_box(curve, &canonical, params, &hc, &hs, options, &mut report)?;
+            continue;
+        }
+        let c_side: Vec<([f64; 2], Vec<[f64; 4]>)> = if can_t {
+            let (l, r) = split_homogeneous(&hc);
+            vec![([ta[0], tm], l), ([tm, ta[1]], r)]
+        } else {
+            vec![(ta, hc.clone())]
+        };
+        let s_side: Vec<([f64; 2], HomogeneousGrid)> = if can_u {
+            let (l, r) = split_grid_u(&hs);
+            vec![([ua[0], um], l), ([um, ua[1]], r)]
+        } else {
+            vec![(ua, hs.clone())]
+        };
+        for (ta2, h) in &c_side {
+            for (ua2, g) in &s_side {
+                pending.push_back((*ta2, *ua2, Some(h.clone()), Some(g.clone()), depth + 1));
+            }
+        }
+    }
+    finalize_cs_report(&mut report, seam_u, swapped);
     Ok(report)
 }

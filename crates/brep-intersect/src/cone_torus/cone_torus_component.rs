@@ -66,7 +66,7 @@ pub(super) fn circle_component(
             )
         }
         CircleSite::Cap(slot, rho) => {
-            let face = cone.caps[slot].expect("cap circle needs a cap face");
+            let face = cone.caps[slot].ok_or_else(|| invalid("cap circle needs a cap face"))?;
             let ring_r = if slot == 0 { cone.r_bottom } else { cone.r_top };
             // Cap UV maps the plane as [1/2 + x/(2R), 1/2 + y/(2R)] at that
             // ring's radius: an exact UV circle of radius rho/(2R).

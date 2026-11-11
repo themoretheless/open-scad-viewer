@@ -211,14 +211,15 @@ pub fn inspect_with_cuts(c: &Curve, cuts: &[f64]) -> Option<Vec<Curve>> {
         let homogeneous = &controls[i - p..=i];
         let weights = homogeneous
             .iter()
-            .map(|h| *h.last().unwrap())
+            .map(|h| h[h.len() - 1])
             .collect::<Vec<_>>();
         let points = homogeneous
             .iter()
             .map(|h| {
+                let w = h[h.len() - 1];
                 h[..h.len() - 1]
                     .iter()
-                    .map(|v| exact_div(*v, *h.last().unwrap()))
+                    .map(|v| exact_div(*v, w))
                     .collect::<Option<Vec<_>>>()
             })
             .collect::<Option<Vec<_>>>()?;

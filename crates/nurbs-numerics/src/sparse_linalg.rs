@@ -186,12 +186,12 @@ impl CsrBuilder {
         let mut row_offsets = vec![0usize; self.nrows + 1];
         let mut cursor = 0usize;
         for (row, column, value) in self.triplets {
-            if let Some(&last) = columns.last() {
-                if cursor == row && last == column {
-                    let merged = values.last_mut().expect("columns and values are parallel");
-                    *merged += value;
-                    continue;
-                }
+            if let (Some(&last), Some(merged)) = (columns.last(), values.last_mut())
+                && cursor == row
+                && last == column
+            {
+                *merged += value;
+                continue;
             }
             while cursor < row {
                 cursor += 1;
