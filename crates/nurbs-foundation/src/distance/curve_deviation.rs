@@ -20,7 +20,7 @@ struct Cell {
 /// Corresponding-parameter difference of original rational span functions.
 /// Restricted homogeneous controls remain outward intervals; no rounded
 /// trimmed reference, sampled residual or cached fit report is substituted.
-pub(crate) fn translated_cell_upper(
+pub fn translated_cell_upper(
     a: &Curve,
     aspan: usize,
     b: &Curve,

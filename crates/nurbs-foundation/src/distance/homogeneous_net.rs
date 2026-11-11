@@ -5,22 +5,22 @@
 use crate::{check, distance_bounds::Interval, surface::Surface, Result};
 use Interval as I;
 
-pub(crate) type Net = Vec<Vec<[I; 4]>>;
+pub type Net = Vec<Vec<[I; 4]>>;
 
 #[path = "homogeneous_net/exact.rs"]
 mod exact;
-pub(crate) use exact::ExactIdentities;
+pub use exact::ExactIdentities;
 #[path = "homogeneous_net/restrict_net.rs"]
 mod restrict_net;
-pub(crate) use restrict_net::restrict_net;
+pub use restrict_net::restrict_net;
 #[path = "homogeneous_net/restrict_hull.rs"]
 mod restrict_hull;
-pub(crate) use restrict_hull::restrict_hull;
+pub use restrict_hull::restrict_hull;
 #[path = "homogeneous_net/restrict_unit_net.rs"]
 mod restrict_unit_net;
-pub(crate) use restrict_unit_net::restrict_unit_net;
+pub use restrict_unit_net::restrict_unit_net;
 
-pub(crate) fn surface_net(s: &Surface, span: [usize; 2]) -> Result<Vec<Vec<[Interval; 4]>>> {
+pub fn surface_net(s: &Surface, span: [usize; 2]) -> Result<Vec<Vec<[Interval; 4]>>> {
     surface_net_on(
         s,
         span,
@@ -62,7 +62,7 @@ fn surface_homogeneous_controls_weighted(s: &Surface, span: [usize;2], origin:Op
 /// Exact Bernstein restriction identity with outward interval arithmetic.
 /// Only complete original Bernstein spans qualify; general B-splines keep
 /// the original blossom routine. No surface poles or knots are modified.
-pub(crate) fn surface_net_on_bernstein(s: &Surface, span: [usize;2], domain: [[f64;2];2]) -> Result<Option<Vec<Vec<[Interval;4]>>>> {
+pub fn surface_net_on_bernstein(s: &Surface, span: [usize;2], domain: [[f64;2];2]) -> Result<Option<Vec<Vec<[Interval;4]>>>> {
     surface_net_on_bernstein_with_origin(s,span,domain,None)
 }
 fn surface_net_on_bernstein_with_origin(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:Option<[f64;3]>)->Result<Option<Vec<Vec<[Interval;4]>>>> {
@@ -88,7 +88,7 @@ fn surface_net_on_bernstein_with_origin(s:&Surface,span:[usize;2],domain:[[f64;2
     }
     Ok(Some(out))
 }
-pub(crate) fn surface_net_on(
+pub fn surface_net_on(
     s: &Surface,
     span: [usize; 2],
     domain: [[f64; 2]; 2],
@@ -97,7 +97,7 @@ pub(crate) fn surface_net_on(
 }
 /// Translate the original homogeneous poles before interval restriction.
 /// Subtraction and multiplication are outward; original surfaces stay intact.
-pub(crate) fn surface_net_on_centered(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:[f64;3])->Result<Vec<Vec<[Interval;4]>>> {
+pub fn surface_net_on_centered(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:[f64;3])->Result<Vec<Vec<[Interval;4]>>> {
     let mut net=match surface_net_on_bernstein_with_origin(s,span,domain,Some(origin))? {
         Some(net)=>net,None=>surface_net_on_with_origin(s,span,domain,Some(origin))?,
     };
@@ -127,7 +127,7 @@ fn surface_net_on_with_origin(s:&Surface,span:[usize;2],domain:[[f64;2];2],origi
 }
 /// Extract from an original chart with an explicitly supplied homogeneous
 /// weight expression. Callers own validation and weight/source correspondence.
-pub(crate) fn surface_net_on_with_weights(
+pub fn surface_net_on_with_weights(
     s:&Surface,span:[usize;2],domain:[[f64;2];2],
     weight:impl Fn(usize,usize)->Result<Interval>,
 )->Result<Vec<Vec<[Interval;4]>>> {
@@ -135,7 +135,7 @@ pub(crate) fn surface_net_on_with_weights(
 }
 /// Center original positions before homogeneous multiplication and extraction.
 /// The interval subtraction encloses the exact translated control coordinates.
-pub(crate) fn surface_net_on_with_weights_centered(
+pub fn surface_net_on_with_weights_centered(
     s:&Surface,span:[usize;2],domain:[[f64;2];2],
     weight:impl Fn(usize,usize)->Result<Interval>,origin:[f64;3],
 )->Result<Vec<Vec<[Interval;4]>>> {
@@ -167,7 +167,7 @@ fn surface_net_on_weighted(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:O
 
 /// Positive denominator Bernstein coefficients make a rational polynomial a
 /// convex combination of coefficient quotients, including after restriction.
-pub(crate) fn rational_quotient_hull(net: &Net, domain: [[f64; 2]; 2]) -> Result<[I; 3]> {
+pub fn rational_quotient_hull(net: &Net, domain: [[f64; 2]; 2]) -> Result<[I; 3]> {
     let restricted = restrict_unit_net(net, domain)?;
     let mut out = [I {
         lo: f64::INFINITY,
@@ -184,7 +184,7 @@ pub(crate) fn rational_quotient_hull(net: &Net, domain: [[f64; 2]; 2]) -> Result
 }
 /// Signed denominators are allowed only when all restricted coefficients have
 /// the same separated sign, so their rational convex weights remain positive.
-pub(crate) fn signed_rational_quotient_hull(
+pub fn signed_rational_quotient_hull(
     net: &Net,
     domain: [[f64; 2]; 2],
 ) -> Result<Option<[I; 3]>> {
@@ -207,7 +207,7 @@ pub(crate) fn signed_rational_quotient_hull(
     }
     Ok(Some(out))
 }
-pub(crate) fn jacobian_on(
+pub fn jacobian_on(
     s: &Surface,
     indices: [usize; 2],
     domain: [[f64; 2]; 2],
@@ -231,7 +231,7 @@ pub(crate) fn jacobian_on(
 }
 /// Any finite translation cancels from the quotient derivative. The supplied
 /// homogeneous coefficients must describe the actual surface being qualified.
-pub(crate) fn jacobian_net_on(mut net: Net, [p,q]: [usize;2],
+pub fn jacobian_net_on(mut net: Net, [p,q]: [usize;2],
     span:[[f64;2];2], domain:[[f64;2];2], origin:&[f64]) -> Result<[[I;2];3]> {
     for row in &mut net {
         for h in row {
@@ -264,7 +264,7 @@ pub(crate) fn jacobian_net_on(mut net: Net, [p,q]: [usize;2],
     }
     Ok(result)
 }
-pub(crate) fn differentiate_net(
+pub fn differentiate_net(
     net: &Net,
     degrees: [usize; 2],
     axis: usize,

@@ -257,30 +257,6 @@ mod tests {
             }
         }
     }
-    #[cfg(feature = "transport")]
-    #[test]
-    fn json_control_tangent_loft_keeps_variable_boundary_derivative() {
-        let curves = [section(0., 1.), section(7., 1.)];
-        let t = [[0., 0., 1.], [0., 0., 3.], [0., 0., -2.]];
-        let result = crate::transport::dispatch(value_codec::json!({
-            "op":"surface_control_tangent_loft", "curves":curves,
-            "parameters":[2.,7.], "start_tangents":t,"end_tangents":t
-        }))
-        .unwrap();
-        let s: Surface = value_codec::from_value(result).unwrap();
-        for (u, z) in [(0., 5.), (1., -10.)] {
-            let (_, dv) = s.evaluate(u, 0.).unwrap().first_derivatives().unwrap();
-            assert!((dv[2] - z).abs() < 1e-9);
-        }
-        assert!(
-            crate::transport::dispatch(value_codec::json!({
-                "op":"surface_control_tangent_loft", "curves":curves,
-                "parameters":[2.,7.], "start_tangents":[],"end_tangents":t
-            }))
-            .is_err()
-        );
-    }
-
     #[test]
     fn varying_tangent_field_matches_independent_rational_hermite() {
         let a = section(0., 1.);
@@ -455,48 +431,5 @@ mod tests {
                 }
             }
         }
-    }
-    #[cfg(feature = "transport")]
-    #[test]
-    fn json_boundary_retains_the_constructor_contract() {
-        let sections = vec![section(0., 1.), section(2., 1.)];
-        let v = crate::transport::dispatch(value_codec::json!({
-            "op":"surface_natural_loft", "curves":sections, "parameters":[2.,5.]
-        }))
-        .unwrap();
-        let s: Surface = value_codec::from_value(v).unwrap();
-        assert!((s.evaluate(0.5, 0.3).unwrap().point[2] - 0.6).abs() < 1e-11);
-    }
-    #[cfg(feature = "transport")]
-    #[test]
-    fn json_clamped_boundary_uses_authored_parameter_derivatives() {
-        let v = crate::transport::dispatch(value_codec::json!({
-            "op":"surface_clamped_loft", "curves":[section(0.,1.),section(2.,1.2)],
-            "parameters":[2.,5.], "start_tangent":[0.,0.,4.], "end_tangent":[0.,0.,-1.]
-        }))
-        .unwrap();
-        let s: Surface = value_codec::from_value(v).unwrap();
-        for u in [0., 0.37, 1.] {
-            assert!(
-                (s.evaluate(u, 0.).unwrap().first_derivatives().unwrap().1[2] - 12.).abs() < 1e-10
-            );
-            assert!(
-                (s.evaluate(u, 1.).unwrap().first_derivatives().unwrap().1[2] + 3.).abs() < 1e-10
-            );
-        }
-    }
-    #[cfg(feature = "transport")]
-    #[test]
-    fn json_closed_loft_preserves_the_cycle_without_periodic_encoding() {
-        let v = crate::transport::dispatch(value_codec::json!({
-            "op":"surface_closed_loft", "curves":cyclic_sections(),
-            "parameters":[0.,1.,2.,3.,4.]
-        }))
-        .unwrap();
-        let s: Surface = value_codec::from_value(v).unwrap();
-        assert!(!s.periodic_v);
-        let a = s.evaluate(0.37, 0.).unwrap().point;
-        let b = s.evaluate(0.37, 1.).unwrap().point;
-        assert_eq!(a, b);
     }
 }

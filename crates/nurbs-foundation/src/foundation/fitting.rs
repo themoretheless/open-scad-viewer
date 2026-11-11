@@ -490,7 +490,7 @@ fn robust_solve(
 
 /// Dense square solver re-exported for crate-internal consumers outside the
 /// foundation module tree (e.g. `fairing`). Wraps `super::solve`.
-pub(crate) fn dense_solve(
+pub fn dense_solve(
     matrix: Vec<Vec<f64>>,
     values: Vec<Vec<f64>>,
 ) -> Result<Vec<Vec<f64>>> {

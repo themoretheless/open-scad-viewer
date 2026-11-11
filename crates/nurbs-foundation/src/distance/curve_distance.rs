@@ -8,7 +8,7 @@ mod serialization;
 
 /// Homogeneous de Boor, with outward rounding of every arithmetic operation.
 /// A span parameter stays inside all interpolation knot ranges, so alpha ∈ [0,1].
-pub(crate) fn restricted_controls(
+pub fn restricted_controls(
     curve: &Curve,
     span: usize,
     t: Interval,
@@ -17,7 +17,7 @@ pub(crate) fn restricted_controls(
 }
 /// Outward blossom restriction at independently enclosed endpoint parameters.
 /// The caller proves both exact endpoints belong to this original span.
-pub(crate) fn restricted_controls_between(
+pub fn restricted_controls_between(
     curve: &Curve,
     span: usize,
     endpoints: [Interval; 2],
@@ -93,7 +93,7 @@ pub(crate) fn restricted_controls_between(
     Ok(controls)
 }
 
-pub(crate) fn restricted_controls_axis(
+pub fn restricted_controls_axis(
     curve: &Curve,
     axis: usize,
     span: usize,
@@ -153,7 +153,7 @@ pub(crate) fn restricted_controls_axis(
 }
 
 /// Componentwise hull of the curve over `t`, the union of the span enclosures it meets.
-pub(crate) fn curve_bounds(c: &Curve, t: Interval) -> Result<Vec<Interval>> {
+pub fn curve_bounds(c: &Curve, t: Interval) -> Result<Vec<Interval>> {
     let mut bounds = vec![[f64::INFINITY, f64::NEG_INFINITY]; c.control_points[0].len()];
     for span in c.degree..c.control_points.len() {
         if c.knots[span] >= c.knots[span + 1] {
@@ -179,7 +179,7 @@ pub(crate) fn curve_bounds(c: &Curve, t: Interval) -> Result<Vec<Interval>> {
         .collect()
 }
 
-pub(crate) fn enclosure(curve: &Curve, span: usize, t: Interval) -> Result<Vec<Interval>> {
+pub fn enclosure(curve: &Curve, span: usize, t: Interval) -> Result<Vec<Interval>> {
     let dimension = curve.control_points[0].len();
     let origin = &curve.control_points[span - curve.degree];
     let mut bounds = vec![[f64::INFINITY, f64::NEG_INFINITY]; dimension];

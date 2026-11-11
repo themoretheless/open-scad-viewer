@@ -331,17 +331,6 @@ mod tests {
             assert!(distance <= upper, "{u}: {distance} > {upper}");
         }
     }
-    #[cfg(feature = "transport")]
-    #[test]
-    fn json_materialization_reports_numerical_retention_and_refuses_depleted_work() {
-        let request = json!({"op":"curve_materialize_reparameterization_bounded","curve":source(),"mapping":mapping(),
-            "errorBudget":1e-5,"maxCells":50000,"maxMapEvaluations":200000});
-        let mapped = crate::dispatch(request.clone()).unwrap();
-        assert_eq!(mapped["certificate"]["retention"]["accepted"], true);
-        let mut depleted = request;
-        depleted["maxCells"] = json!(1);
-        assert!(crate::dispatch(depleted).is_err());
-    }
     #[test]
     fn scalar_parameters_do_not_inherit_geometric_coordinate_limits() {
         let mut original = source();

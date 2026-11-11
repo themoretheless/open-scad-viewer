@@ -9,10 +9,10 @@ mod serialization;
 mod bezier_restriction;
 #[cfg(test)]
 mod shared_patch_tests;
-pub(crate) fn complete_bernstein_span(degree: usize, knots: &[f64], span: usize) -> bool {
+pub fn complete_bernstein_span(degree: usize, knots: &[f64], span: usize) -> bool {
     bezier_restriction::is_complete_span(degree, knots, span)
 }
-pub(crate) fn restrict_bernstein_controls(controls: &[[Interval;4]], span: [f64;2], domain: [f64;2], weights: [f64;2]) -> Result<Vec<[Interval;4]>> {
+pub fn restrict_bernstein_controls(controls: &[[Interval;4]], span: [f64;2], domain: [f64;2], weights: [f64;2]) -> Result<Vec<[Interval;4]>> {
     bezier_restriction::restrict(controls, span, domain, weights)
 }
 
@@ -27,7 +27,7 @@ fn spans(degree: usize, knots: &[f64], count: usize) -> Vec<usize> {
 }
 /// de Boor in homogeneous interval coordinates, without rounding a new patch's
 /// controls first. Inputs stay inside one original knot span.
-pub(crate) fn interpolate(
+pub fn interpolate(
     mut d: Vec<[Interval; 4]>,
     degree: usize,
     knots: &[f64],
@@ -61,7 +61,7 @@ pub(crate) fn interpolate(
 // One immutable knot/parameter sequence gives identical de Boor coefficients
 // for every homogeneous row. Reuse only these coefficients; preserve every
 // original control arithmetic operation, intersection and traversal order.
-pub(crate) fn interpolation_plan(degree: usize, knots: &[f64], span: usize, parameters: &[f64])
+pub fn interpolation_plan(degree: usize, knots: &[f64], span: usize, parameters: &[f64])
     -> Result<Vec<(usize, Interval, Interval)>> {
     let mut plan = Vec::with_capacity(degree * (degree + 1) / 2);
     for r in 1..=degree {
@@ -89,7 +89,7 @@ fn mul_blend_factor(a: Interval, b: Interval) -> Result<Interval> {
     }
     a.mul(b)
 }
-pub(crate) fn interpolate_planned(d: &[[Interval; 4]], degree: usize,
+pub fn interpolate_planned(d: &[[Interval; 4]], degree: usize,
     plan: &[(usize, Interval, Interval)], weights: [f64; 2]) -> Result<[Interval; 4]> {
     let mut buf = [[Interval::point(0.); 4]; 33];
     buf[..=degree].copy_from_slice(&d[..=degree]);
@@ -119,7 +119,7 @@ fn control_bounds(controls: &[Vec<Interval>]) -> Vec<Interval> {
         })
         .collect()
 }
-pub(crate) fn enclosure(
+pub fn enclosure(
     s: &Surface,
     span: [usize; 2],
     domain: [[f64; 2]; 2],
@@ -128,10 +128,10 @@ pub(crate) fn enclosure(
 }
 
 #[derive(Clone)]
-pub(crate) struct Patch {
-    pub(crate) span: [usize; 2],
-    pub(crate) domain: [[f64; 2]; 2],
-    pub(crate) bounds: Vec<Interval>,
+pub struct Patch {
+    pub span: [usize; 2],
+    pub domain: [[f64; 2]; 2],
+    pub bounds: Vec<Interval>,
     controls: Vec<Vec<Interval>>,
     // Relative span length ensures alternating subdivision even with very
     // different U/V knot scales. Exact constant directions need no splitting.
@@ -139,7 +139,7 @@ pub(crate) struct Patch {
     active: [bool; 2],
 }
 impl Patch {
-    pub(crate) fn new(s: &Surface, span: [usize; 2], domain: [[f64; 2]; 2]) -> Result<Self> {
+    pub fn new(s: &Surface, span: [usize; 2], domain: [[f64; 2]; 2]) -> Result<Self> {
         let [i, j] = span;
         let same = |a: usize, b: usize, c: usize, d: usize| {
             s.control_points[a][b] == s.control_points[c][d] && s.weights[a][b] == s.weights[c][d]
@@ -161,16 +161,16 @@ impl Patch {
             active,
         })
     }
-    pub(crate) fn spatial_size(&self) -> f64 {
+    pub fn spatial_size(&self) -> f64 {
         self.bounds.iter().map(|b| b.hi - b.lo).fold(0., f64::max)
     }
-    pub(crate) fn score(&self, axis: usize) -> f64 {
+    pub fn score(&self, axis: usize) -> f64 {
         if !self.active[axis] {
             return -1.;
         }
         self.parameter_score(axis)
     }
-    pub(crate) fn parameter_score(&self, axis: usize) -> f64 {
+    pub fn parameter_score(&self, axis: usize) -> f64 {
         let [lo, hi] = self.domain[axis];
         let middle = midpoint(lo, hi);
         if middle <= lo || middle >= hi {
@@ -182,7 +182,7 @@ impl Patch {
 /// A support direction separates convex rational control hulls more tightly
 /// than axis boxes near a curved closest point. Any fixed binary64 direction is
 /// valid; outward projection arithmetic and an upper norm bound keep it safe.
-pub(crate) fn patch_lower(a: &Patch, b: &Patch) -> Result<f64> {
+pub fn patch_lower(a: &Patch, b: &Patch) -> Result<f64> {
     let axis_lower = box_distance(&a.bounds, &b.bounds)?.0;
     let origin = [
         midpoint(a.bounds[0].lo, a.bounds[0].hi),
@@ -242,13 +242,13 @@ pub struct SurfaceDistance {
     pub tolerance_mm: f64,
 }
 
-pub(crate) struct Witness {
-    pub(crate) parameters: [[f64; 2]; 2],
-    pub(crate) points: [[f64; 3]; 2],
-    pub(crate) bounds: [Vec<Interval>; 2],
-    pub(crate) upper: f64,
+pub struct Witness {
+    pub parameters: [[f64; 2]; 2],
+    pub points: [[f64; 3]; 2],
+    pub bounds: [Vec<Interval>; 2],
+    pub upper: f64,
 }
-pub(crate) fn at(s: &Surface, mut uv: [f64; 2]) -> Result<([f64; 2], [f64; 3], Vec<Interval>)> {
+pub fn at(s: &Surface, mut uv: [f64; 2]) -> Result<([f64; 2], [f64; 3], Vec<Interval>)> {
     let counts = [s.control_points.len(), s.control_points[0].len()];
     let knots = [&s.knots_u, &s.knots_v];
     let degree = [s.degree_u, s.degree_v];
@@ -269,7 +269,7 @@ pub(crate) fn at(s: &Surface, mut uv: [f64; 2]) -> Result<([f64; 2], [f64; 3], V
         enclosure(s, span, [[uv[0]; 2], [uv[1]; 2]])?,
     ))
 }
-pub(crate) fn consider(
+pub fn consider(
     a: &Surface,
     b: &Surface,
     parameters: [[f64; 2]; 2],
@@ -288,7 +288,7 @@ pub(crate) fn consider(
     }
     Ok(())
 }
-pub(crate) fn patches(s: &Surface) -> Result<Vec<Patch>> {
+pub fn patches(s: &Surface) -> Result<Vec<Patch>> {
     let mut result = Vec::new();
     for u in spans(s.degree_u, &s.knots_u, s.control_points.len()) {
         for v in spans(s.degree_v, &s.knots_v, s.control_points[0].len()) {
@@ -470,7 +470,7 @@ pub fn rectangle_bounds(s: &Surface, domain: [[f64; 2]; 2]) -> Result<Vec<[f64; 
 
 /// Whole-cell oblique gap from outward rational control enclosures. A single
 /// original knot cell per rectangle bounds work; other cases remain unproved.
-pub(crate) fn rectangle_control_gap(a: &Surface, b: &Surface, domains: [[[f64; 2]; 2]; 2]) -> Result<Option<f64>> {
+pub fn rectangle_control_gap(a: &Surface, b: &Surface, domains: [[[f64; 2]; 2]; 2]) -> Result<Option<f64>> {
     Ok(rectangle_control_query(a, b, domains)?.map(|(gap, _)| gap))
 }
 /// Validate actual source surfaces and parameter rectangles before requesting
@@ -536,7 +536,7 @@ fn integer_projection(p: &Patch, n: [i32;3]) -> Result<Interval> {
     }
     Interval::new(lo,hi)
 }
-pub(crate) fn rectangle_control_query(
+pub fn rectangle_control_query(
     a: &Surface,
     b: &Surface,
     domains: [[[f64; 2]; 2]; 2],
@@ -588,20 +588,20 @@ pub(crate) fn rectangle_control_query(
 
 /// Search-local cache tied to one immutable surface. Work charges are unchanged.
 /// Both entry count and retained control count are bounded.
-pub(crate) struct PreparedControlSurface<'a> {
+pub struct PreparedControlSurface<'a> {
     source: &'a Surface,
     entries: std::collections::VecDeque<([u64; 4], Patch)>,
     controls: usize,
 }
 impl<'a> PreparedControlSurface<'a> {
-    pub(crate) fn new(source: &'a Surface) -> Self {
+    pub fn new(source: &'a Surface) -> Self {
         Self { source, entries: Default::default(), controls: 0 }
     }
     /// Reuse the exact original enclosure used by an oblique control query.
     /// A single complete clamped span makes this identical to rectangle_bounds:
     /// same restriction arithmetic, control order and extrema. Other charts
     /// retain the general multi-span union, including boundary knot behavior.
-    pub(crate) fn single_span_bounds(&mut self, domain: [[f64; 2]; 2]) -> Result<Option<Vec<Interval>>> {
+    pub fn single_span_bounds(&mut self, domain: [[f64; 2]; 2]) -> Result<Option<Vec<Interval>>> {
         let s = self.source;
         let span = [s.degree_u, s.degree_v];
         if s.control_points.len() != s.degree_u + 1
@@ -640,7 +640,7 @@ impl<'a> PreparedControlSurface<'a> {
 }
 
 #[cfg(test)]
-pub(crate) fn rectangle_control_query_prepared(
+pub fn rectangle_control_query_prepared(
     cached_a: &mut PreparedControlSurface<'_>,
     cached_b: &mut PreparedControlSurface<'_>,
     domains: [[[f64; 2]; 2]; 2],

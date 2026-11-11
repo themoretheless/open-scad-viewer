@@ -9,14 +9,14 @@ pub mod numerics;
 pub use crate::editing::constrained_surface;
 pub use crate::editing::polyhedral_spline;
 pub mod core;
-pub mod distance;
+pub use nurbs_foundation::distance;
 pub mod construct;
 pub mod analysis;
 pub mod editing;
 pub mod join;
 pub mod trim;
 pub mod tessellation;
-pub mod certificates;
+pub use nurbs_foundation::certificates;
 pub use crate::core::affine;
 pub use crate::sweeps::affine_volume;
 pub use crate::sweeps::fibered_volume;
@@ -75,7 +75,7 @@ pub use crate::distance::curve_surface_distance;
 use numerics::distance_bounds;
 pub use crate::editing::edit;
 pub use crate::construct::curves::formula;
-pub mod foundation;
+pub use nurbs_foundation::foundation;
 pub mod sweeps;
 pub use crate::sweeps::framed_sweep;
 pub use crate::sweeps::profile_sweep;
@@ -351,3 +351,6 @@ pub use crate::distance::synchronized_boundary_normals;
 pub use crate::analysis::curve_coordinate_clock;
 
 pub use crate::construct::surfaces::original_graph_transition;
+
+#[cfg(test)]
+mod layer2_integration_tests;

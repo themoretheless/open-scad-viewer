@@ -18,7 +18,7 @@ pub fn interpolate(
 // Solved tangents can contain cancellation roundoff near a mathematical zero.
 // Materializing their controls may round that noise away. This is not permitted
 // for authored constraints, and it does not certify the inferred continuity.
-pub(crate) fn interpolate_inferred(
+pub fn interpolate_inferred(
     points: &[[f64; 3]],
     tangents: &[[f64; 3]],
     parameters: &[f64],
@@ -155,16 +155,6 @@ mod tests {
         }
         assert!(interpolate(&[[1e9, 0., 0.]; 2], &[[1e-9, 0., 0.]; 2], &[0., 1.]).is_err());
         assert!(interpolate(&p, &[[1., 0., 0.]; 2], &[0., f64::from_bits(1)]).is_err());
-    }
-    #[cfg(feature = "transport")]
-    #[test]
-    fn json_dispatch_preserves_the_same_authored_constraints() {
-        let points = [[0., 0., 0.], [3., 2., 1.]];
-        let tangents = [[1., 0., 0.], [0., 1., 0.]];
-        let parameters = [-1., 2.];
-        let direct = interpolate(&points, &tangents, &parameters).unwrap();
-        let value=crate::dispatch(value_codec::json!({"op":"curve_hermite","points":points,"tangents":tangents,"parameters":parameters})).unwrap();
-        assert_eq!(value_codec::to_value(direct).unwrap(), value);
     }
     #[test]
     fn refuses_bad_parameters_counts_and_unrepresentable_controls() {

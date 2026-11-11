@@ -2,7 +2,7 @@
 //! Public Interval outward-rounding and frozen binary contracts stay unchanged.
 use super::Interval as I;
 use crate::Result;
-pub(crate) trait ExactIdentities {
+pub trait ExactIdentities {
     fn exact_add(self, b: Self) -> Result<Self>
     where
         Self: Sized;

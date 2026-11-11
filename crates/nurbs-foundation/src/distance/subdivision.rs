@@ -10,7 +10,7 @@ use std::collections::BinaryHeap;
 /// Queue policy for subdivision cells. Every queue keeps cells keyed by a
 /// proven lower distance bound and drops cells that can no longer improve the
 /// best upper bound.
-pub(crate) trait Queue<C> {
+pub trait Queue<C> {
     fn push(&mut self, cell: C, lower: f64);
     /// Smallest lower bound currently queued.
     fn min_lower(&self) -> Option<f64>;
@@ -23,7 +23,7 @@ pub(crate) trait Queue<C> {
 }
 
 /// Priority queue: smallest lower bound first, earliest insertion among ties.
-pub(crate) struct HeapQueue<C> {
+pub struct HeapQueue<C> {
     heap: BinaryHeap<Entry<C>>,
     next: usize,
 }
@@ -85,7 +85,7 @@ impl<C> Queue<C> for HeapQueue<C> {
 
 /// Insertion-order queue with a linear minimum scan. Among equal minima the
 /// last entry is removed first, and removal swaps with the last entry.
-pub(crate) struct ScanQueue<C> {
+pub struct ScanQueue<C> {
     cells: Vec<(f64, C)>,
 }
 impl<C> Default for ScanQueue<C> {
@@ -94,7 +94,7 @@ impl<C> Default for ScanQueue<C> {
     }
 }
 impl<C> ScanQueue<C> {
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.cells.len()
     }
 }
@@ -127,7 +127,7 @@ impl<C> Queue<C> for ScanQueue<C> {
 }
 
 /// Result of splitting one queued cell.
-pub(crate) enum Split<C> {
+pub enum Split<C> {
     /// The cell cannot be subdivided further; the search stops at the
     /// precision limit and the cell is requeued so its lower bound still
     /// bounds the answer.
@@ -139,7 +139,7 @@ pub(crate) enum Split<C> {
 }
 
 /// Per-dimension hooks of the subdivision distance search.
-pub(crate) trait Search {
+pub trait Search {
     type Cell;
     /// Proven upper distance bound from the best witness, if one exists.
     fn upper(&self) -> Option<f64>;
@@ -159,7 +159,7 @@ pub(crate) trait Search {
 
 /// How the loop stopped, how many cells were created, and the final global
 /// lower bound.
-pub(crate) struct Outcome {
+pub struct Outcome {
     pub reason: DistanceStopReason,
     pub cells: usize,
     pub lower: f64,
@@ -168,7 +168,7 @@ pub(crate) struct Outcome {
 /// Run the subdivision loop over the queued initial cells. `cells` is the
 /// number of cells already created during initialization; every split half
 /// adds one more, and the loop stops before creation would exceed `max_cells`.
-pub(crate) fn run<S: Search>(
+pub fn run<S: Search>(
     search: &mut S,
     queue: &mut impl Queue<S::Cell>,
     mut cells: usize,

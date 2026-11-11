@@ -451,7 +451,7 @@ impl<'a> Certificate<'a> {
     pub fn surface(&self) -> &'a Surface {
         self.surface
     }
-    pub(crate) fn end(&self) -> bool {
+    pub fn end(&self) -> bool {
         self.end
     }
     pub fn anchor(&self) -> usize {
@@ -564,14 +564,14 @@ impl<'a> Certificate<'a> {
     }
     /// Every margin is independently confined; a smaller chart is never
     /// accepted merely because its endpoint derivatives are regular.
-    pub(crate) fn local_coordinate_path_bounds_with_margin(
+    pub fn local_coordinate_path_bounds_with_margin(
         &self, domain: [[f64; 2]; 2], factor: f64,
     ) -> Result<Option<[[I; 2]; 3]>> {
         Ok(self.local_coordinate_path_report(domain, factor)?.0)
     }
     /// Counts every executed original net restriction, including refusals.
     /// Callers reserve six before entry, so even a successful path stays bounded.
-    pub(crate) fn local_coordinate_path_report(
+    pub fn local_coordinate_path_report(
         &self, domain: [[f64; 2]; 2], factor: f64,
     ) -> Result<(Option<[[I; 2]; 3]>, usize)> {
         check(factor.is_finite() && factor > 0., "Positive inverse path margin")?;
@@ -647,7 +647,7 @@ impl<'a> Certificate<'a> {
     pub fn bounds(&self, domain: [[f64; 2]; 2]) -> Result<Option<[[I; 2]; 3]>> {
         Ok(self.bounds_report(domain)?.0)
     }
-    pub(crate) fn bounds_report(&self, domain: [[f64; 2]; 2])
+    pub fn bounds_report(&self, domain: [[f64; 2]; 2])
         -> Result<(Option<[[I; 2]; 3]>, usize)> {
         let d = self.normalized_domain(domain)?;
         let hull = |net: &Net| {

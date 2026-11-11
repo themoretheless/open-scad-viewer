@@ -290,13 +290,4 @@ mod tests {
             .is_err()
         );
     }
-    #[cfg(feature = "transport")]
-    #[test]
-    fn json_dispatch_matches_native_interpolation() {
-        let points = [[0., 0., 0.], [1., 2., 0.], [3., 0., 1.]];
-        let parameters = [0., 1., 3.];
-        let direct = interpolate(&points, &parameters).unwrap();
-        let value=crate::dispatch(value_codec::json!({"op":"curve_natural_spline","points":points,"parameters":parameters})).unwrap();
-        assert_eq!(value_codec::to_value(direct).unwrap(), value);
-    }
 }

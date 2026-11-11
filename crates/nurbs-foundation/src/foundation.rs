@@ -97,7 +97,7 @@ pub use surface_projection::{
 };
 
 mod common;
-pub(crate) use common::*;
+pub use common::*;
 mod curve_projection;
 pub use curve_projection::{
     CandidateClassification, CurveProjection, ProjectionCandidate, ProjectionStatus,

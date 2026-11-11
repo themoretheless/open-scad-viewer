@@ -5,11 +5,11 @@ use crate::{
     Result, check, curve::Curve, curve_distance::restricted_controls, distance_bounds::Interval,
 };
 
-pub(crate) fn enclose(curve: &Curve, span: usize, domain: [f64; 2]) -> Result<Vec<Vec<Interval>>> {
+pub fn enclose(curve: &Curve, span: usize, domain: [f64; 2]) -> Result<Vec<Vec<Interval>>> {
     calculate(curve, span, domain, None)
 }
 
-pub(crate) fn endpoint(
+pub fn endpoint(
     curve: &Curve,
     span: usize,
     domain: [f64; 2],

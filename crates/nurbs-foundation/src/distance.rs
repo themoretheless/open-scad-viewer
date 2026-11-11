@@ -1,5 +1,5 @@
 //! Distance computations: curve-curve, surface-surface, curve-surface, and trimmed-surface distance.
-pub(crate) mod curve_jets;
+pub mod curve_jets;
 pub mod polar_surface_differential;
 pub mod rational_pole_differential;
 pub mod curve_axis_driver;
@@ -8,9 +8,9 @@ pub mod uv_curve_crossings;
 pub mod curve_deviation;
 pub mod curve_distance;
 pub mod curve_surface_distance;
-pub(crate) mod subdivision;
+pub mod subdivision;
 pub mod surface_distance;
-pub(crate) mod homogeneous_net;
+pub mod homogeneous_net;
 /// Interval enclosures of curve and surface evaluation (formerly `numerics::interval_eval`).
 pub mod interval_eval;
 /// Interval Newton root isolation (formerly `numerics::interval_newton`).

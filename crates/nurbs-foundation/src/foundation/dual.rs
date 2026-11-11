@@ -340,7 +340,7 @@ impl Mul<f64> for HyperDual {
 pub type Dual3 = [Dual; 3];
 
 /// Scalar algebra shared by the lifted basis recurrence.
-pub(crate) trait Scalar:
+pub trait Scalar:
     Clone + Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> + Div<Output = Self>
 {
     fn constant(x: f64) -> Self;
@@ -408,7 +408,7 @@ fn basis_funs<S: Scalar>(degree: usize, knots: &[f64], span: usize, u: &S) -> Ve
 
 /// Horner evaluation of `Σ coefficients[i]·x^i` in any scalar algebra.
 #[allow(dead_code)]
-pub(crate) fn horner<S: Scalar>(coefficients: &[f64], x: &S) -> S {
+pub fn horner<S: Scalar>(coefficients: &[f64], x: &S) -> S {
     let mut acc = S::constant(*coefficients.last().unwrap_or(&0.));
     for c in coefficients.iter().rev().skip(1) {
         acc = acc * x.clone() + S::constant(*c);

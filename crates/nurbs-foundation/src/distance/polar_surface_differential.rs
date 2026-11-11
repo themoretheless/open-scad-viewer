@@ -3,7 +3,7 @@
 //! with independent averaged columns enclosed here, including t=0 limits.
 use crate::{interval_eval::Interval as I, surface::Surface, Result};
 use crate::distance::homogeneous_net;
-pub(crate) fn bounds(s: &Surface, end: bool, domain: [[f64; 2]; 2]) -> Result<Option<[[I; 2]; 3]>> {
+pub fn bounds(s: &Surface, end: bool, domain: [[f64; 2]; 2]) -> Result<Option<[[I; 2]; 3]>> {
     let p = s.degree_u;
     let q = s.degree_v;
     if p < 2
@@ -135,46 +135,6 @@ mod tests {
                 }
             }
         }
-    }
-    #[test]
-    fn original_polar_chord_bound_covers_collapsed_diagonal_and_refuses_missing_work() {
-        for end in [false, true] {
-            let mut source = s();
-            if end {
-                source.control_points.reverse();
-            }
-            let d = [if end { [0.999, 1.] } else { [0., 0.001] }, [0., 1.]];
-            assert!(
-                crate::surface_self_chord::qualify_rectangle(&source, d, 1e-6, 3)
-                    .unwrap()
-                    .certificate
-                    .is_none()
-            );
-            let r = crate::surface_self_chord::qualify_polar_rectangle(&source, d, end, 1e-6, 3)
-                .unwrap();
-            let c = r.certificate.unwrap();
-            assert!(std::ptr::eq(c.surface(), &source));
-            assert_eq!(c.domain(), d);
-            assert_eq!(r.spans, 3);
-            assert!(
-                crate::surface_self_chord::qualify_polar_rectangle(&source, d, end, 1e-6, 2)
-                    .unwrap()
-                    .certificate
-                    .is_none()
-            );
-        }
-        let mut source = s();
-        source.weights[0][1] = 0.5;
-        assert!(crate::surface_self_chord::qualify_polar_rectangle(
-            &source,
-            [[0., 1.], [0., 1.]],
-            false,
-            1e-6,
-            3
-        )
-        .unwrap()
-        .certificate
-        .is_none());
     }
     #[test]
     fn absent_exact_factor_refuses() {

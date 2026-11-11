@@ -5,7 +5,7 @@ pub(in crate::foundation) fn periodic_active_knots(curve: &Curve) -> Vec<f64> {
     curve.knots[curve.degree..=curve.control_points.len()].to_vec()
 }
 
-pub(crate) fn periodic_knots(active: &[f64], degree: usize) -> Vec<f64> {
+pub fn periodic_knots(active: &[f64], degree: usize) -> Vec<f64> {
     let period = active[active.len() - 1] - active[0];
     let mut knots = active[active.len() - 1 - degree..active.len() - 1]
         .iter()
@@ -16,7 +16,7 @@ pub(crate) fn periodic_knots(active: &[f64], degree: usize) -> Vec<f64> {
     knots
 }
 
-pub(crate) fn refit_periodic(source: &Curve, degree: usize, active: Vec<f64>) -> Result<Curve> {
+pub fn refit_periodic(source: &Curve, degree: usize, active: Vec<f64>) -> Result<Curve> {
     let unique = active.len() - 1;
     check(
         unique > degree && unique + degree <= 256,

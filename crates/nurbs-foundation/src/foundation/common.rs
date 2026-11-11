@@ -456,7 +456,7 @@ pub(super) fn solve(mut matrix: Vec<Vec<f64>>, mut values: Vec<Vec<f64>>) -> Res
     Ok(values)
 }
 
-pub(crate) fn refit_curve(source: &Curve, degree: usize, knots: Vec<f64>) -> Result<Curve> {
+pub fn refit_curve(source: &Curve, degree: usize, knots: Vec<f64>) -> Result<Curve> {
     let count = knots.len() - degree - 1;
     check(
         count > degree && count <= 256,
@@ -584,7 +584,7 @@ pub(super) fn rebuild_candidate(source: &Curve, degree: usize, control_count: us
 }
 
 mod periodic;
-pub(crate) use periodic::{periodic_knots, refit_periodic};
+pub use periodic::{periodic_knots, refit_periodic};
 pub(super) use periodic::{periodic_active_knots, periodic_error};
 
 pub(super) fn interval_mul(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
