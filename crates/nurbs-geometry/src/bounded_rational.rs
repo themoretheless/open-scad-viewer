@@ -3,12 +3,12 @@ use num_bigint::BigInt;
 use num_rational::BigRational as Q;
 use num_traits::ToPrimitive;
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum Error {
+pub enum Error {
     ResourceLimit,
     NotRepresentable,
 }
 type PResult<T> = std::result::Result<T, Error>;
-pub(crate) struct Work {
+pub struct Work {
     pub used: u64,
     pub limit: u64,
 }

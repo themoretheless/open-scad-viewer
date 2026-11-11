@@ -1,26 +1,26 @@
-//! Core types and point semantics: curves, surfaces, bounds, affine frames.
-pub(crate) mod sweep_support;
-pub mod curve_point_identity;
-pub mod curve_quadratic_separator;
-pub mod curve_surface_plane;
-pub mod retained_wall_coefficients;
-pub mod surface_projection_jacobian;
-pub mod conditioning;
-pub mod affine;
-pub mod bounds;
-pub mod coordinate_frame;
-pub mod geometry;
-pub mod curve;
-pub mod surface;
-/// U/V exchange of a surface (formerly `editing::surface_edit::transpose`).
-pub mod surface_transpose;
-pub(crate) mod vec3_ext;
-/// Non-empty knot spans and natural parameter domains (formerly `certificates::audit`).
-pub(crate) mod span_domains;
-pub(crate) mod curve_identity;
+//! Core types live in the `nurbs-geometry` crate (refactor plan O3); this module keeps the
+//! `nurbs_core::core::*` paths.
+pub use nurbs_geometry::sweep_support;
+pub use nurbs_geometry::curve_point_identity;
+pub use nurbs_geometry::curve_quadratic_separator;
+pub use nurbs_geometry::curve_surface_plane;
+pub use nurbs_geometry::retained_wall_coefficients;
+pub use nurbs_geometry::surface_projection_jacobian;
+pub use nurbs_geometry::conditioning;
+pub use nurbs_geometry::affine;
+pub use nurbs_geometry::bounds;
+pub use nurbs_geometry::coordinate_frame;
+pub use nurbs_geometry::geometry;
+pub use nurbs_geometry::curve;
+pub use nurbs_geometry::surface;
+pub use nurbs_geometry::surface_transpose;
+pub use nurbs_geometry::vec3_ext;
+pub use nurbs_geometry::span_domains;
+pub use nurbs_geometry::curve_identity;
+pub use nurbs_geometry::bounded_rational;
+pub use nurbs_geometry::simd_kernels;
+pub use nurbs_geometry::exact_curve_segments;
 
-pub(crate) mod bounded_rational;
-/// Formerly `numerics::simd_kernels`; moved above `core` by ADR 0012.
-pub mod simd_kernels;
-/// Formerly `numerics::exact_curve_segments`; moved above `core` by ADR 0012.
-pub(crate) mod exact_curve_segments;
+#[cfg(test)]
+#[path = "core/integration_tests.rs"]
+mod integration_tests;

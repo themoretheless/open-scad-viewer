@@ -8,11 +8,12 @@ publish.workspace = true
 [features]
 default = ["transport"]
 transport = ["codec"]
-codec = ["dep:value-codec", "nurbs-numerics/codec", "geometry-ops/codec", "brep-topology/codec", "cad-predicates/codec"]
+codec = ["dep:value-codec", "nurbs-numerics/codec", "nurbs-geometry/codec", "geometry-ops/codec", "brep-topology/codec", "cad-predicates/codec"]
 
 [dependencies]
 math-core = { workspace = true }
 nurbs-numerics = { workspace = true }
+nurbs-geometry = { workspace = true }
 value-codec = { workspace = true, optional = true }
 geometry-ops = { workspace = true }
 brep-topology = { workspace = true }

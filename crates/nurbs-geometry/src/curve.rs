@@ -6,7 +6,7 @@ mod knot_ops;
 #[cfg(feature = "codec")]
 mod serialization;
 use crate::{Result, check, numeric, numeric_err, resource};
-pub(crate) use basis::{continuity_meta, stack_basis_validated};
+pub use basis::{continuity_meta, stack_basis_validated};
 pub use basis::{Basis, LocalBasis, basis, basis_funs_ders, find_span, find_span_hinted};
 pub use decompose::Segment;
 pub use evaluator::{CurveEvaluator, CurveSampler};
@@ -24,8 +24,8 @@ pub use knot_ops::{clamped, merge_near_knots, multiplicity_eps, normalize_knots}
 /// costs without improving the general kernel path. SIMD basis batching is a
 /// separate numerics concern and does not change this storage contract.
 ///
-/// Native fixed-size [`Point3`](crate::core::geometry::Point3) and
-/// [`Vector3`](crate::core::geometry::Vector3) adapters make affine semantics
+/// Native fixed-size [`Point3`](crate::geometry::Point3) and
+/// [`Vector3`](crate::geometry::Vector3) adapters make affine semantics
 /// explicit without breaking these established public fields. Rational control
 /// point `i` represents `(weights[i]·control_points[i], weights[i])` in
 /// homogeneous space, never an unweighted Cartesian point with an unrelated
@@ -62,20 +62,20 @@ pub struct Evaluation {
 /// control-point sums. `value()` is identical to naive summation whenever
 /// every partial sum is exact and is never less accurate; the classic error
 /// bound is `2·u·Σ|terms|` with `u = f64::EPSILON`.
-pub(crate) struct CompensatedSum {
+pub struct CompensatedSum {
     sum: f64,
     compensation: f64,
     magnitude: f64,
 }
 impl CompensatedSum {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             sum: 0.,
             compensation: 0.,
             magnitude: 0.,
         }
     }
-    pub(crate) fn add(&mut self, term: f64) {
+    pub fn add(&mut self, term: f64) {
         let t = self.sum + term;
         self.compensation += if self.sum.abs() >= term.abs() {
             (self.sum - t) + term
@@ -85,14 +85,14 @@ impl CompensatedSum {
         self.sum = t;
         self.magnitude += term.abs();
     }
-    pub(crate) fn value(&self) -> f64 {
+    pub fn value(&self) -> f64 {
         self.sum + self.compensation
     }
 }
 /// Accuracy evidence shared by both evaluation paths: `c·u·Σ|terms|` with
 /// `c = 2` (Neumaier) on the largest post-division coordinate magnitude, plus
 /// one `u` on the quotient itself, outward-rounded twice.
-pub(crate) fn rounding_bound(axes: &[CompensatedSum], weight: f64) -> f64 {
+pub fn rounding_bound(axes: &[CompensatedSum], weight: f64) -> f64 {
     let magnitude = axes.iter().map(|a| a.magnitude / weight).fold(0., f64::max);
     (2. * f64::EPSILON * magnitude + f64::EPSILON * magnitude)
         .next_up()
@@ -278,11 +278,11 @@ impl Curve {
             .collect()
     }
     /// Evaluation without re-validation; callers must have validated `self`.
-    pub(crate) fn evaluate_validated(&self, u: f64) -> Result<Evaluation> {
+    pub fn evaluate_validated(&self, u: f64) -> Result<Evaluation> {
         let scale = self.weights.iter().copied().fold(0., f64::max);
         self.evaluate_validated_with(self.domain(), scale, u)
     }
-    pub(crate) fn evaluate_validated_with(
+    pub fn evaluate_validated_with(
         &self,
         domain: [f64; 2],
         scale: f64,
@@ -395,7 +395,7 @@ pub(super) struct StackCurveEval {
     pub(super) rounding_bound: f64,
 }
 
-pub(crate) fn validate_periodic_knots(
+pub fn validate_periodic_knots(
     knots: &[f64],
     period_controls: usize,
     domain: [f64; 2],
@@ -564,8 +564,8 @@ impl Curve {
     /// The curve must be one nonperiodic clamped 3D Bézier span. General
     /// B-spline curves should use `evaluate` or `evaluate_de_boor`; callers can
     /// obtain a Bézier span with `decompose` first.
-    pub fn evaluate_bezier_de_casteljau(&self, u: f64) -> Result<crate::core::geometry::Point3> {
-        use crate::core::geometry::{HomogeneousPoint3, de_casteljau_homogeneous};
+    pub fn evaluate_bezier_de_casteljau(&self, u: f64) -> Result<crate::geometry::Point3> {
+        use crate::geometry::{HomogeneousPoint3, de_casteljau_homogeneous};
         self.validate()?;
         check(
             self.control_points[0].len() == 3
@@ -591,7 +591,7 @@ impl Curve {
             .zip(&self.weights)
             .map(|(point, &weight)| {
                 HomogeneousPoint3::from_weighted(
-                    crate::core::geometry::Point3::try_from_slice(point)?,
+                    crate::geometry::Point3::try_from_slice(point)?,
                     weight,
                 )
             })

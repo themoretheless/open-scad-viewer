@@ -204,7 +204,7 @@ impl Surface {
         self.validate()?;
         self.evaluate_validated(u, v)
     }
-    pub(crate) fn evaluate_validated(&self, u: f64, v: f64) -> Result<Evaluation> {
+    pub fn evaluate_validated(&self, u: f64, v: f64) -> Result<Evaluation> {
         let domain_u = [
             self.knots_u[self.degree_u],
             self.knots_u[self.control_points.len()],
@@ -216,7 +216,7 @@ impl Surface {
         let scale = self.weights.iter().flatten().copied().fold(0., f64::max);
         self.evaluate_validated_with(domain_u, domain_v, scale, u, v)
     }
-    pub(crate) fn evaluate_point_validated_with(
+    pub fn evaluate_point_validated_with(
         &self,
         domain_u: [f64; 2],
         domain_v: [f64; 2],
@@ -228,7 +228,7 @@ impl Surface {
             .evaluate_jet_validated_with(domain_u, domain_v, scale, u, v)?
             .point)
     }
-    pub(crate) fn evaluate_validated_with(
+    pub fn evaluate_validated_with(
         &self,
         domain_u: [f64; 2],
         domain_v: [f64; 2],

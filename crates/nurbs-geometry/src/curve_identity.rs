@@ -3,7 +3,7 @@ use crate::{Result,curve::Curve};
 use cad_predicates::{AuthoredScalar,Limits,PredicateContext,SourceArena,ToleranceContext};
 /// Compare complete parameter laws, or the literal scalar denominator laws
 /// encoded as [stored_weight,0,0,1]. No rounded homogeneous products are used.
-pub(crate) fn compare_definitions(source:&Curve,candidate:&Curve,knot:f64,max_work:u64,denominators:bool)->Result<cad_predicates::BezierIdentityDecision> {
+pub fn compare_definitions(source:&Curve,candidate:&Curve,knot:f64,max_work:u64,denominators:bool)->Result<cad_predicates::BezierIdentityDecision> {
     crate::check(source.domain()==candidate.domain() && source.control_points[0].len()==candidate.control_points[0].len(),"Literal curve identity requires equal domains and dimensions")?;
     let p=source.degree;let n=source.control_points.len();
     let mut values=Vec::new();

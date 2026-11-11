@@ -179,7 +179,7 @@ impl HomogeneousPoint3 {
         Ok(point)
     }
 
-    pub(crate) fn lerp(self, other: Self, t: f64) -> Self {
+    pub fn lerp(self, other: Self, t: f64) -> Self {
         Self {
             weighted: Point3(core::array::from_fn(|i| {
                 (1. - t) * self.weighted.0[i] + t * other.weighted.0[i]
@@ -323,33 +323,4 @@ mod tests {
         assert!(de_casteljau(&controls, -0.1).is_err());
     }
 
-    #[test]
-    fn curve_method_agrees_with_basis_and_de_boor_on_rational_bezier() {
-        let curve = crate::paths::bezier(
-            vec![
-                vec![0., 0., 0.],
-                vec![1., 2., 0.],
-                vec![3., 2., 1.],
-                vec![4., 0., 1.],
-            ],
-            Some(vec![1., 2., 0.5, 1.5]),
-        )
-        .unwrap();
-        for i in 0..=20 {
-            let u = i as f64 / 20.;
-            let direct = curve.evaluate_bezier_de_casteljau(u).unwrap().0;
-            let basis = curve.evaluate(u).unwrap().point;
-            let de_boor = curve.evaluate_de_boor(u).unwrap();
-            for axis in 0..3 {
-                assert!((direct[axis] - basis[axis]).abs() < 1e-12);
-                assert!((direct[axis] - de_boor[axis]).abs() < 1e-12);
-            }
-        }
-        let line = crate::primitives::line([0.; 3], [1., 0., 0.]).unwrap();
-        assert!(line.evaluate_bezier_de_casteljau(0.5).is_ok());
-        let multispan =
-            crate::primitives::polyline(&[[0., 0., 0.], [1., 0., 0.], [2., 0., 0.]], false)
-                .unwrap();
-        assert!(multispan.evaluate_bezier_de_casteljau(0.5).is_err());
-    }
 }

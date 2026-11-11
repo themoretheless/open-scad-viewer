@@ -1318,6 +1318,20 @@ dependencies = [
  "num-bigint",
  "num-rational",
  "num-traits",
+ "nurbs-geometry",
+ "nurbs-numerics",
+ "osv-math",
+ "value-codec",
+]
+
+[[package]]
+name = "nurbs-geometry"
+version = "0.1.0"
+dependencies = [
+ "cad-predicates",
+ "num-bigint",
+ "num-rational",
+ "num-traits",
  "nurbs-numerics",
  "osv-math",
  "value-codec",

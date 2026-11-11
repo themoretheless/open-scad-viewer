@@ -15,19 +15,19 @@ pub struct Basis {
 /// Zero-allocation active-window Cox–de Boor basis (`base .. base + len`).
 /// Produces IEEE-754 bit-identical values and derivatives to [`basis`] on the
 /// non-zero support while avoiding all `3 + 3·p` full-width `Vec` allocations.
-pub(crate) struct StackBasis {
-    pub(crate) base: usize,
-    pub(crate) len: usize,
-    pub(crate) basis: [f64; 27],
-    pub(crate) d1: [f64; 27],
-    pub(crate) d2: [f64; 27],
-    pub(crate) domain: [f64; 2],
-    pub(crate) continuity: Option<i32>,
-    pub(crate) derivative_status: &'static str,
-    pub(crate) derivative_side: &'static str,
+pub struct StackBasis {
+    pub base: usize,
+    pub len: usize,
+    pub basis: [f64; 27],
+    pub d1: [f64; 27],
+    pub d2: [f64; 27],
+    pub domain: [f64; 2],
+    pub continuity: Option<i32>,
+    pub derivative_status: &'static str,
+    pub derivative_side: &'static str,
 }
 
-pub(crate) fn stack_basis_validated(
+pub fn stack_basis_validated(
     p: usize,
     k: &[f64],
     n: usize,
@@ -122,7 +122,7 @@ pub fn basis(p: usize, k: &[f64], n: usize, u: f64, periodic: bool) -> Result<Ba
 
 /// Shared continuity/derivative metadata for `basis`, `LocalBasis::scatter`
 /// and `CurveEvaluator` so all evaluation paths report identical status.
-pub(crate) fn continuity_meta(
+pub fn continuity_meta(
     p: usize,
     k: &[f64],
     domain: [f64; 2],

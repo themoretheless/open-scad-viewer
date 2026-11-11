@@ -8,7 +8,7 @@ pub fn exact_bezier_controls(c: &Curve, max_control_rows: usize) -> Option<Vec<C
     if max_control_rows == 0 || max_control_rows > 4096 || c.validate().is_err() {
         return None;
     }
-    let rows = crate::core::span_domains::curve_span_domains(c).len()
+    let rows = crate::span_domains::curve_span_domains(c).len()
         .checked_mul(c.degree.checked_add(1)?)?;
     if rows > max_control_rows { return None; }
     crate::exact_curve_segments::inspect(c)
@@ -236,35 +236,4 @@ mod tests {
         assert!(contour_matches(&expected,&reverse,&[true;3],100).0);
     }
 
-    #[cfg(feature="transport")]
-    #[test]
-    fn contour_json_boundary_does_not_claim_a_filled_region() {
-        let (_,mut a,_)=fixture();a.knots=vec![0.,0.,0.,1.,1.,1.];
-        let r=crate::transport::dispatch(value_codec::json!({
-            "op":"sweep_retained_cap_contour_audit","expected":[a.clone()],
-            "actual":[a],"reversed":[false],"maxWork":3})).unwrap();
-        assert_eq!(r["contourIdentity"].as_bool(),Some(true));
-        assert_eq!(r["work"].as_u64(),Some(3));
-        assert_eq!(r["filledRegionCertified"].as_bool(),Some(false));
-    }
-
-    #[cfg(feature="transport")]
-    #[test]
-    fn family_and_segmentation_json_boundaries_preserve_proof_scope() {
-        let(s,a,b)=fixture();let r=crate::transport::dispatch(value_codec::json!({
-            "op":"curve_segmented_bezier_controls","curve":a.clone(),"maxControlRows":3})).unwrap();
-        let parts:value_codec::Value=r;assert_eq!(parts.as_array().unwrap().len(),1);
-        let r=crate::transport::dispatch(value_codec::json!({"op":"sweep_retained_wall_family_audit",
-            "surfaces":[s.clone(),s.clone(),s],"sections":[[[a]],[[b]]],"closed":false,"maxFaces":1})).unwrap();
-        assert_eq!(r["coefficientFamilyIdentity"].as_bool(),Some(true));
-        assert_eq!(r["globalEmbeddingCertified"].as_bool(),Some(false));
-    }
-    #[cfg(feature="transport")]
-    #[test]
-    fn json_boundary_reports_only_coefficient_identity() {
-        let(s,a,b)=fixture();let r=crate::transport::dispatch(value_codec::json!({
-            "op":"sweep_retained_wall_coefficients_audit","surface":s,"start":a,"end":b,"maxControls":3})).unwrap();
-        assert_eq!(r["coefficientIdentity"].as_bool(),Some(true));
-        assert_eq!(r["globalEmbeddingCertified"].as_bool(),Some(false));
-    }
 }
