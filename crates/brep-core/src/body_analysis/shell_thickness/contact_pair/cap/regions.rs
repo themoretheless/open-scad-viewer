@@ -414,27 +414,28 @@ fn finish(
         source,
         face,
         endpoints,
-        uv,
-        world,
-        fitting,
+        CapCurves { uv, world, fitting },
         limits,
-        result.model,
-        result.source_identity,
-        result.faces.to_vec(),
-        result.face_identities.to_vec(),
-        result.edges,
-        result.cells,
-        result.exact_work,
+        CutPartition {
+            model: result.model,
+            parent: result.source_identity,
+            faces: result.faces.to_vec(),
+            identities: result.face_identities.to_vec(),
+            edges: result.edges,
+            cells: result.cells,
+            exact_work: result.exact_work,
+        },
     )
 }
-fn finish_model(
-    source: &Sheet,
-    face: usize,
-    endpoints: [usize; 2],
+/// Cap boundary curves in UV and, when lifted, in world space, with their fitting reports.
+struct CapCurves {
     uv: Vec<Curve>,
     world: Option<Vec<Curve>>,
     fitting: Vec<lift::FitReport>,
-    limits: Limits,
+}
+/// A cut cap face: the resulting model, its source identity, the new faces with identities,
+/// the cut edges and the work spent.
+struct CutPartition {
     model: Model,
     parent: TopoId,
     faces: Vec<usize>,
@@ -442,7 +443,17 @@ fn finish_model(
     edges: Vec<usize>,
     cells: usize,
     exact_work: u64,
+}
+fn finish_model(
+    source: &Sheet,
+    face: usize,
+    endpoints: [usize; 2],
+    curves: CapCurves,
+    limits: Limits,
+    partition: CutPartition,
 ) -> Result<(Model, Record)> {
+    let CapCurves { uv, world, fitting } = curves;
+    let CutPartition { model, parent, faces, identities, edges, cells, exact_work } = partition;
     let boundary = crate::boundary_agreement::verify(&model, limits.boundary_cells)?;
     require(
         boundary.complete,

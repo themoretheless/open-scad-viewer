@@ -342,17 +342,17 @@ fn apply_branches(
         source,
         input.face,
         endpoints,
-        vec![],
-        None,
-        vec![],
+        super::CapCurves { uv: vec![], world: None, fitting: vec![] },
         post,
-        r.model,
-        original,
-        r.faces,
-        identities,
-        edges,
-        r.charged_cells,
-        r.charged_exact_work,
+        super::CutPartition {
+            model: r.model,
+            parent: original,
+            faces: r.faces,
+            identities,
+            edges,
+            cells: r.charged_cells,
+            exact_work: r.charged_exact_work,
+        },
     )?;
     record.intersection = Some(evidence);
     Ok((model, record))
