@@ -2017,14 +2017,15 @@ impl<'a> DirectBuilder<'a> {
             direct_edge_pcurve(&c3, surface, reversed)
         } else {
             self.select_pcurve(
-                id,
-                surface_id,
+                (id, surface_id),
                 gty,
                 matching,
-                &c3,
-                surface,
-                reversed,
-                degenerate,
+                pcurve_binding::EdgeUse {
+                    world: &c3,
+                    surface,
+                    reversed,
+                    degenerate,
+                },
                 require_exact,
             )
         }

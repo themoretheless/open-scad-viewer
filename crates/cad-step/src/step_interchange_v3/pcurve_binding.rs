@@ -1,5 +1,14 @@
 //! Bind ordinary shared-support pcurves by continuous correspondence, not order.
 use super::*;
+/// One oriented use of an edge on a face support.
+#[derive(Clone, Copy)]
+pub(super) struct EdgeUse<'a> {
+    pub world: &'a Curve,
+    pub surface: &'a Surface,
+    pub reversed: bool,
+    /// The edge is a pole: its world curve is a single point.
+    pub degenerate: bool,
+}
 impl DirectBuilder<'_> {
     pub(super) fn matching_pcurves(
         &self,
@@ -50,16 +59,18 @@ impl DirectBuilder<'_> {
     }
     pub(super) fn select_pcurve(
         &mut self,
-        id: usize,
-        surface_id: usize,
+        (id, surface_id): (usize, usize),
         kind: &str,
         matching: Vec<Curve>,
-        world: &Curve,
-        surface: &Surface,
-        reversed: bool,
-        degenerate: bool,
+        edge: EdgeUse<'_>,
         require_exact: bool,
     ) -> Result<Curve> {
+        let EdgeUse {
+            world,
+            surface,
+            reversed,
+            degenerate,
+        } = edge;
         // Periodic shore and pole association retains the existing ordered
         // contract. World correspondence alone cannot choose a lifted UV shore.
         if matching.len() == 1 && kind != "SEAM_CURVE" {
@@ -328,28 +339,30 @@ mod tests {
         let world = crate::line(vec![0., 0.25, 0.], vec![1., 0.25, 0.]);
         let pc = crate::line(vec![0., 0.25], vec![1., 0.25]);
         b.select_pcurve(
-            1,
-            2,
+            (1, 2),
             "SEAM_CURVE",
             vec![pc.clone()],
-            &world,
-            &s,
-            false,
-            false,
+            EdgeUse {
+                world: &world,
+                surface: &s,
+                reversed: false,
+                degenerate: false,
+            },
             false,
         )
         .unwrap();
         assert!(
             b.select_pcurve(
-                1,
-                2,
+                (1, 2),
                 "SEAM_CURVE",
                 vec![pc],
-                &world,
-                &s,
+                EdgeUse {
+                    world: &world,
+                    surface: &s,
+                    reversed: false,
+                    degenerate: false,
+                },
                 false,
-                false,
-                false
             )
             .is_err()
         );
