@@ -60,12 +60,7 @@ pub(super) fn certify(
         }
         *spent += 1;
         let value = authored_frame_certificate::certify_control_values(
-            path,
-            sweep.scale,
-            sweep.twist,
-            axis,
-            normal,
-            sweep.affine_laws,
+            authored_frame_certificate::AuthoredFrameLaws { path, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
             coordinates,
             leaf,
             max - *spent,
@@ -86,12 +81,7 @@ pub(super) fn certify(
             }
             *spent += 1;
             let point = authored_frame_certificate::certify_control_values(
-                path,
-                sweep.scale,
-                sweep.twist,
-                axis,
-                normal,
-                sweep.affine_laws,
+                authored_frame_certificate::AuthoredFrameLaws { path, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
                 coordinates,
                 [middle, middle],
                 max - *spent,

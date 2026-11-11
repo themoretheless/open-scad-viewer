@@ -19,6 +19,17 @@ pub(crate) use trajectory::{translated_constant_values_with_source,translated_co
 pub(crate) use trajectory::{control_trajectories_with_fit,control_trajectories_with_phase};
 pub(crate) use fixed_normal_path::{certify_fixed_normal_relative_values,certify_proved_planar_relative_values,certify_proved_planar_control_values};
 mod guided_axis;
+/// Laws of an authored-frame sweep: path, scale, twist, the longitudinal and transverse frame laws,
+/// and optional affine laws.
+#[derive(Clone, Copy)]
+pub struct AuthoredFrameLaws<'a> {
+    pub path: &'a Curve,
+    pub scale: &'a Curve,
+    pub twist: &'a Curve,
+    pub longitudinal: &'a Curve,
+    pub transverse: &'a Curve,
+    pub affine: Option<(&'a Curve, &'a Curve)>,
+}
 /// Path, scale and twist laws of a sweep, with optional affine laws.
 #[derive(Clone, Copy)]
 pub(crate) struct ProfileLaws<'a> {

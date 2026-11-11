@@ -208,12 +208,7 @@ pub(crate) fn control_trajectory(
     }
     let (axis, normal) = sweep.frame_laws.unwrap();
     let mut report = authored_frame_certificate::certify_control_trajectory(
-        reference_path,
-        sweep.scale,
-        sweep.twist,
-        axis,
-        normal,
-        sweep.affine_laws,
+        authored_frame_certificate::AuthoredFrameLaws { path: reference_path, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
         initial.coordinates.unwrap()[profile_control],
         traversal,
         max_cells - initial.cells,

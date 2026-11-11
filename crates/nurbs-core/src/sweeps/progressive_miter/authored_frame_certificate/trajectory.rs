@@ -182,31 +182,33 @@ impl ControlValueReport {
 /// derivative division on subnormal-width point restrictions. No jets are
 /// inferred from these value enclosures.
 pub fn certify_control_value(
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    longitudinal: &Curve,
-    transverse: &Curve,
-    affine: Option<(&Curve, &Curve)>,
+    laws: super::AuthoredFrameLaws<'_>,
     q: [[f64; 2]; 3],
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<ControlValueReport> {
+    let super::AuthoredFrameLaws { path, scale, twist, longitudinal, transverse, affine } = laws;
     let frame = certify_twisted_values(longitudinal, transverse, twist, traversal, max_cells)?;
     control_value_from_frame(path, scale, affine, q, traversal, max_cells, frame)
 }
 /// Original authored source premises are shared once across all controls.
 pub fn certify_control_values(
-    path:&Curve,scale:&Curve,twist:&Curve,longitudinal:&Curve,transverse:&Curve,
-    affine:Option<(&Curve,&Curve)>,qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
-)->Result<ControlValuesReport>{
+    laws: super::AuthoredFrameLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
+    traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<ControlValuesReport> {
+    let super::AuthoredFrameLaws { path, scale, twist, longitudinal, transverse, affine } = laws;
     let frame=certify_twisted_values(longitudinal,transverse,twist,traversal,max_cells)?;
     control_values_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
 }
 pub fn certify_control_trajectories(
-    path:&Curve,scale:&Curve,twist:&Curve,longitudinal:&Curve,transverse:&Curve,
-    affine:Option<(&Curve,&Curve)>,qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
-)->Result<TrajectoriesReport>{
+    laws: super::AuthoredFrameLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
+    traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<TrajectoriesReport> {
+    let super::AuthoredFrameLaws { path, scale, twist, longitudinal, transverse, affine } = laws;
     let frame=certify_twisted(longitudinal,transverse,twist,traversal,max_cells)?;
     control_trajectories_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
 }
@@ -359,16 +361,12 @@ pub(super) fn product(a: ScalarJet, b: ScalarJet) -> Result<ScalarJet> {
 /// `q` must enclose the ideal initial-profile coordinates. Work is shared by
 /// every original-law restriction; unresolved work publishes no partial jet.
 pub fn certify_control_trajectory(
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    longitudinal: &Curve,
-    transverse: &Curve,
-    affine: Option<(&Curve, &Curve)>,
+    laws: super::AuthoredFrameLaws<'_>,
     q: [[f64; 2]; 3],
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<TrajectoryReport> {
+    let super::AuthoredFrameLaws { path, scale, twist, longitudinal, transverse, affine } = laws;
     let frame = certify_twisted(longitudinal, transverse, twist, traversal, max_cells)?;
     control_trajectory_from_frame(path, scale, affine, q, traversal, max_cells, frame)
 }
@@ -583,13 +581,33 @@ mod authored_batch_equivalence_tests {
         let center=constant([0.01,0.02,0.03]);
         let qs=[[[0.1,0.1],[0.2,0.2],[0.,0.]], [[-0.1,-0.09],[0.,0.01],[0.02,0.03]]];
         let interval=[0.01,0.02];let affine=Some((&axes,&center));
-        let values=certify_control_values(&path,&scale,&twist,&axis,&normal,affine,&qs,interval,100000).unwrap();
-        let jets=certify_control_trajectories(&path,&scale,&twist,&axis,&normal,affine,&qs,interval,100000).unwrap();
+        let values=certify_control_values(
+            AuthoredFrameLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, affine },
+            &qs,
+            interval,
+            100000,
+        ).unwrap();
+        let jets=certify_control_trajectories(
+            AuthoredFrameLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, affine },
+            &qs,
+            interval,
+            100000,
+        ).unwrap();
         assert_eq!(values.status,Status::Certified);assert_eq!(jets.status,Status::Certified);
         let mut single_value_cells=0;let mut single_jet_cells=0;
         for (i,&q) in qs.iter().enumerate() {
-            let value=certify_control_value(&path,&scale,&twist,&axis,&normal,affine,q,interval,100000).unwrap();
-            let jet=certify_control_trajectory(&path,&scale,&twist,&axis,&normal,affine,q,interval,100000).unwrap();
+            let value=certify_control_value(
+                AuthoredFrameLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, affine },
+                q,
+                interval,
+                100000,
+            ).unwrap();
+            let jet=certify_control_trajectory(
+                AuthoredFrameLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, affine },
+                q,
+                interval,
+                100000,
+            ).unwrap();
             assert_eq!(value.status,Status::Certified);assert_eq!(jet.status,Status::Certified);
             assert_eq!(value.value.unwrap(),values.values.as_ref().unwrap()[i]);
             let single=jet.jet.unwrap();let batch=&jets.jets.as_ref().unwrap()[i];
@@ -598,7 +616,17 @@ mod authored_batch_equivalence_tests {
             single_value_cells+=value.cells;single_jet_cells+=jet.cells;
         }
         assert!(values.cells<single_value_cells);assert!(jets.cells<single_jet_cells);
-        assert_eq!(certify_control_values(&path,&scale,&twist,&axis,&normal,affine,&qs,interval,values.cells-1).unwrap().status,Status::Unresolved);
-        assert_eq!(certify_control_trajectories(&path,&scale,&twist,&axis,&normal,affine,&qs,interval,jets.cells-1).unwrap().status,Status::Unresolved);
+        assert_eq!(certify_control_values(
+            AuthoredFrameLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, affine },
+            &qs,
+            interval,
+            values.cells-1,
+        ).unwrap().status,Status::Unresolved);
+        assert_eq!(certify_control_trajectories(
+            AuthoredFrameLaws { path: &path, scale: &scale, twist: &twist, longitudinal: &axis, transverse: &normal, affine },
+            &qs,
+            interval,
+            jets.cells-1,
+        ).unwrap().status,Status::Unresolved);
     }
 }

@@ -65,8 +65,12 @@ pub(super) fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max
     let mut endpoint_upper = 0_f64;
     for (station, section) in sections.iter().enumerate() {
         let t=station as f64/(count-1) as f64;
-        let batch=authored_frame_certificate::certify_control_values(reference_path,sweep.scale,sweep.twist,
-            axis,normal,sweep.affine_laws,&coordinates,[t,t],max_cells-out.cells)?;
+        let batch=authored_frame_certificate::certify_control_values(
+            authored_frame_certificate::AuthoredFrameLaws { path: reference_path, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
+            &coordinates,
+            [t,t],
+            max_cells-out.cells,
+        )?;
         out.cells+=batch.cells;
         if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
         let Some(values)=batch.values else {out.reason=Some("authored-control-values-unresolved");return Ok(out);};
@@ -83,8 +87,12 @@ pub(super) fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max
     let mut error = 0_f64;
     for station in 0..count-1 {
         let interval=[station as f64/(count-1) as f64,(station+1) as f64/(count-1) as f64];
-        let batch=authored_frame_certificate::certify_control_trajectories(reference_path,sweep.scale,sweep.twist,
-            axis,normal,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?;
+        let batch=authored_frame_certificate::certify_control_trajectories(
+            authored_frame_certificate::AuthoredFrameLaws { path: reference_path, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
+            &coordinates,
+            interval,
+            max_cells-out.cells,
+        )?;
         out.cells+=batch.cells;
         if batch.status!=Status::Certified {
             let frame=authored_chord_cover::ChordFrame { path: reference_path, axis, normal };
@@ -96,8 +104,12 @@ pub(super) fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max
         let single_span=batch.single_span;
         let Some(jets)=batch.jets else {out.reason=Some("authored-control-jets-unresolved");return Ok(out);};
         let values=if !single_span {
-            let values=authored_frame_certificate::certify_control_values(reference_path,sweep.scale,sweep.twist,
-                axis,normal,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?;
+            let values=authored_frame_certificate::certify_control_values(
+                authored_frame_certificate::AuthoredFrameLaws { path: reference_path, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
+                &coordinates,
+                interval,
+                max_cells-out.cells,
+            )?;
             out.cells+=values.cells;
             if values.status!=Status::Certified {out.reason=values.reason;return Ok(out);}
             let Some(values)=values.values else {out.reason=Some("section-knot-value-bound-unproved");return Ok(out);};
@@ -214,8 +226,12 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
         let point=&division.points[station];
         let batch=if let Some(values)=&constant_values {Some(values.clone())}
         else if let Some((axis,normal))=frame_laws {
-            let batch=authored_frame_certificate::certify_control_values(&zero,sweep.scale,sweep.twist,
-                axis,normal,sweep.affine_laws,&coordinates,[t,t],max_cells-out.cells)?;
+            let batch=authored_frame_certificate::certify_control_values(
+                authored_frame_certificate::AuthoredFrameLaws { path: &zero, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
+                &coordinates,
+                [t,t],
+                max_cells-out.cells,
+            )?;
             out.cells+=batch.cells;
             if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
             let Some(values)=batch.values else {return Ok(out);};Some(values)
@@ -276,8 +292,12 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
                 jets:Some(values.iter().copied().map(|value|authored_frame_certificate::FrameJet {
                     value,first:[[0.,0.];3],second:[[0.,0.];3]}).collect()),single_span:true,reason:None})
         }else if let Some((axis,normal))=frame_laws {
-            let batch=authored_frame_certificate::certify_control_trajectories(&zero,sweep.scale,sweep.twist,
-                axis,normal,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?;
+            let batch=authored_frame_certificate::certify_control_trajectories(
+                authored_frame_certificate::AuthoredFrameLaws { path: &zero, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
+                &coordinates,
+                interval,
+                max_cells-out.cells,
+            )?;
             out.cells+=batch.cells;
             if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
             Some(batch)
@@ -289,8 +309,12 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
         };
         let values=if batch.as_ref().is_some_and(|batch|!batch.single_span) {
             let values=if let Some((axis,normal))=frame_laws {
-                authored_frame_certificate::certify_control_values(&zero,sweep.scale,sweep.twist,
-                    axis,normal,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?
+                authored_frame_certificate::certify_control_values(
+                    authored_frame_certificate::AuthoredFrameLaws { path: &zero, scale: sweep.scale, twist: sweep.twist, longitudinal: axis, transverse: normal, affine: sweep.affine_laws },
+                    &coordinates,
+                    interval,
+                    max_cells-out.cells,
+                )?
             }else {
                 authored_frame_certificate::certify_fixed_relative_values(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?
             };
