@@ -148,53 +148,43 @@ pub fn propose(
 pub fn certify(
     p: &Curve,
     side: usize,
-    s: [&Surface; 2],
-    d: [f64; 2],
-    axis: usize,
-    drive: [f64; 2],
-    free: [f64; 2],
-    second: [[f64; 2]; 2],
-    spans: usize,
+    faces: OffsetFaces<'_>,
+    parameters: ContactParameters,
     tolerance_uv: f64,
     max_cells: usize,
     refinements: usize,
 ) -> Result<Report> {
-    certify_refined(
-        p,
-        side,
-        s,
-        d,
-        axis,
-        drive,
-        free,
-        second,
-        spans,
-        tolerance_uv,
-        max_cells,
-        refinements,
-        0,
-    )
+    certify_refined(p, side, faces, parameters, tolerance_uv, PcurveWork { max_cells, refinements, band_refinements: 0 })
 }
+/// The two offset source faces and their signed offset distances.
+#[derive(Clone, Copy)]
+pub struct OffsetFaces<'a> {
+    pub surfaces: [&'a Surface; 2],
+    pub distances: [f64; 2],
+}
+/// Work limits of one pcurve certification: cells, tube refinements and tangent-band contractions.
+#[derive(Clone, Copy, Debug)]
+pub struct PcurveWork {
+    pub max_cells: usize,
+    pub refinements: usize,
+    pub band_refinements: usize,
+}
+pub use crate::offset::contact_trims::ContactParameters;
 /// Same original-tube authority as `certify`, with bounded uniform-tube
 /// contractions before implicit tangent enclosures. Only proved nested tubes
 /// are used; a failed contraction retains the last reproducibly proved input.
 /// `band_queries` includes every contraction and final tangent-band query.
-#[allow(clippy::too_many_arguments)]
 pub fn certify_refined(
     p: &Curve,
     side: usize,
-    s: [&Surface; 2],
-    d: [f64; 2],
-    axis: usize,
-    drive: [f64; 2],
-    free: [f64; 2],
-    second: [[f64; 2]; 2],
-    spans: usize,
+    faces: OffsetFaces<'_>,
+    parameters: ContactParameters,
     tolerance_uv: f64,
-    max_cells: usize,
-    refinements: usize,
-    band_refinements: usize,
+    work: PcurveWork,
 ) -> Result<Report> {
+    let OffsetFaces { surfaces: s, distances: d } = faces;
+    let ContactParameters { axis, drive, free, second, spans } = parameters;
+    let PcurveWork { max_cells, refinements, band_refinements } = work;
     check(
         side < 2 && axis < 2 && drive[0] < drive[1],
         "Choose valid contact side, axis and driving interval",
@@ -358,20 +348,7 @@ mod tests {
         .unwrap()
         .unwrap();
         for side in 0..2 {
-            let r = certify(
-                &curves[side],
-                side,
-                [&a, &b],
-                [0.2, 0.2],
-                0,
-                [0.35, 0.39],
-                [0.25, 0.35],
-                [[0.30, 0.44], [0.15, 0.25]],
-                2,
-                1e-8,
-                31,
-                3,
-            )
+            let r = certify(&curves[side], side, OffsetFaces { surfaces: [&a, &b], distances: [0.2, 0.2] }, ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 }, 1e-8, 31, 3)
             .unwrap();
             assert!(r.correspondence_proven, "{}", r.reason);
             assert!(r.band_queries == r.visited);
@@ -409,20 +386,7 @@ mod tests {
                 assert!((p[k] - q[k]).abs() < 1e-14);
             }
         }
-        let r = certify(
-            &wrong,
-            1,
-            [&a, &b],
-            [0.2, 0.2],
-            0,
-            [0.35, 0.39],
-            [0.25, 0.35],
-            [[0.30, 0.44], [0.15, 0.25]],
-            2,
-            1e-6,
-            31,
-            3,
-        )
+        let r = certify(&wrong, 1, OffsetFaces { surfaces: [&a, &b], distances: [0.2, 0.2] }, ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 }, 1e-6, 31, 3)
         .unwrap();
         assert!(!r.correspondence_proven);
         assert_eq!(r.reason, "pcurve-contact-mismatch");

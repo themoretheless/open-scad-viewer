@@ -255,21 +255,8 @@ pub fn propose(
                 if out.correspondence_cells == limits.correspondence_cells {
                     break;
                 }
-                let r = correspondence::certify(
-                    &curves[side],
-                    side,
-                    surfaces,
-                    distances,
-                    axis,
-                    interval,
-                    tube.first_other,
-                    tube.second,
-                    limits.trims.path.spans,
-                    tolerance_uv,
-                    (limits.correspondence_cells - out.correspondence_cells)
-                        .min(limits.cells_per_side),
-                    limits.station_refinements,
-                )?;
+                let r = correspondence::certify(&curves[side], side, correspondence::OffsetFaces { surfaces: surfaces, distances: distances }, correspondence::ContactParameters { axis: axis, drive: interval, free: tube.first_other, second: tube.second, spans: limits.trims.path.spans }, tolerance_uv, (limits.correspondence_cells - out.correspondence_cells)
+                        .min(limits.cells_per_side), limits.station_refinements)?;
                 out.correspondence_cells += r.visited;
                 out.correspondence_band_queries += r.band_queries;
                 out.correspondence_section_queries += r.section_queries;

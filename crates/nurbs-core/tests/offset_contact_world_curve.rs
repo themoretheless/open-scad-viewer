@@ -262,20 +262,7 @@ fn whole_world_coincidence_does_not_authorize_the_wrong_original_uv_sheet() {
         world_agreement.status,
         nurbs_core::curve_surface_agreement::Status::WithinTolerance
     );
-    let parameter = uv::certify(
-        &wrong,
-        1,
-        [&a, &b],
-        [0.2; 2],
-        0,
-        [0.35, 0.39],
-        [0.25, 0.35],
-        [[0.30, 0.44], [0.15, 0.25]],
-        128,
-        1e-8,
-        100000,
-        8,
-    )
+    let parameter = uv::certify(&wrong, 1, uv::OffsetFaces { surfaces: [&a, &b], distances: [0.2; 2] }, uv::ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 128 }, 1e-8, 100000, 8)
     .unwrap();
     assert!(!parameter.correspondence_proven);
 }

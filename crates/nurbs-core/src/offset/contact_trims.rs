@@ -181,20 +181,7 @@ pub fn certify(
             out.reason = "pcurve-work-limit";
             return Ok(out);
         }
-        let r = uv::certify(
-            pcurves[side],
-            side,
-            surfaces,
-            distances,
-            axis,
-            drive,
-            free,
-            second,
-            spans,
-            tolerance_uv,
-            limits.uv_cells - out.uv_cells,
-            limits.root_refinements,
-        )?;
+        let r = uv::certify(pcurves[side], side, uv::OffsetFaces { surfaces: surfaces, distances: distances }, uv::ContactParameters { axis: axis, drive: drive, free: free, second: second, spans: spans }, tolerance_uv, limits.uv_cells - out.uv_cells, limits.root_refinements)?;
         out.uv_cells += r.visited;
         let valid = r.correspondence_proven;
         out.uv_reports.push(r);

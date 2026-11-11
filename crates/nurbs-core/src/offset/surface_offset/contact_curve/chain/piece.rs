@@ -83,21 +83,7 @@ pub(super) fn qualify(
         } else {
             1 - original
         };
-        let mut proof = uv::certify_refined(
-            &piece.curves[original],
-            side,
-            s,
-            d,
-            span.axis,
-            span.drive,
-            span.free,
-            span.other,
-            l.spans,
-            tol_uv,
-            l.final_cells_per_curve,
-            l.refinements,
-            l.refinements,
-        )?;
+        let mut proof = uv::certify_refined(&piece.curves[original], side, uv::OffsetFaces { surfaces: s, distances: d }, uv::ContactParameters { axis: span.axis, drive: span.drive, free: span.free, second: span.other, spans: l.spans }, tol_uv, uv::PcurveWork { max_cells: l.final_cells_per_curve, refinements: l.refinements, band_refinements: l.refinements })?;
         check(
             proof.correspondence_proven,
             "Bound actual chain UV curve lacks full original-root authority",

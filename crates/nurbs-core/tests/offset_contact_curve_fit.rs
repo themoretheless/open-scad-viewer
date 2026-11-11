@@ -101,21 +101,7 @@ fn nonlinear_original_offset_contact_refines_curves_without_world_point_authorit
     let curves = r.curves.as_ref().unwrap();
     assert!(curves[0].degree > 1);
     for side in 0..2 {
-        let proof = uv::certify_refined(
-            &curves[side],
-            side,
-            s.each_ref(),
-            [0.1; 2],
-            1,
-            [0.35, 0.55],
-            [0.88, 0.96],
-            [[0.07, 0.22], [0.3, 0.6]],
-            128,
-            1e-7,
-            100000,
-            8,
-            8,
-        )
+        let proof = uv::certify_refined(&curves[side], side, uv::OffsetFaces { surfaces: s.each_ref(), distances: [0.1; 2] }, uv::ContactParameters { axis: 1, drive: [0.35, 0.55], free: [0.88, 0.96], second: [[0.07, 0.22], [0.3, 0.6]], spans: 128 }, 1e-7, uv::PcurveWork { max_cells: 100000, refinements: 8, band_refinements: 8 })
         .unwrap();
         assert!(proof.correspondence_proven, "{}", proof.reason);
         assert!(proof.band_queries > proof.visited);
@@ -222,20 +208,7 @@ fn the_wrong_uv_sheet_refuses_even_when_its_world_points_coincide() {
             .point;
         assert!(p.iter().zip(q).all(|(a, b)| (*a - b).abs() < 1e-13));
     }
-    let proof = uv::certify(
-        &wrong,
-        1,
-        [&a, &b],
-        [0.2; 2],
-        0,
-        [0.35, 0.39],
-        [0.25, 0.35],
-        [[0.30, 0.44], [0.15, 0.25]],
-        128,
-        1e-8,
-        100000,
-        8,
-    )
+    let proof = uv::certify(&wrong, 1, uv::OffsetFaces { surfaces: [&a, &b], distances: [0.2; 2] }, uv::ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 128 }, 1e-8, 100000, 8)
     .unwrap();
     assert!(!proof.correspondence_proven);
     assert_eq!(proof.band_queries, proof.visited);
