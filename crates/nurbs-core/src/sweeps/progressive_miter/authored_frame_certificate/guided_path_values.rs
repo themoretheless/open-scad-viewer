@@ -135,9 +135,13 @@ pub fn certify_path_guide_control_value(
 
 /// All original profile controls share the same frame and source-law values.
 pub(crate) fn certify_path_guide_relative_values(
-    path:&Curve,guide:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],path_traversal:[f64;2],guide_traversal:[f64;2],law_traversal:[f64;2],same_parameter:bool,max_cells:usize,
+    laws: ContactLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
+    traversal: PathGuideTraversal,
+    max_cells: usize,
 )->Result<ControlValuesReport>{
+    let ContactLaws { path, guide, scale, twist, affine } = laws;
+    let PathGuideTraversal { path: path_traversal, guide: guide_traversal, law: law_traversal, same_parameter } = traversal;
     let frame=path_guide_values_at(path,guide,twist,path_traversal,guide_traversal,law_traversal,same_parameter,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     super::trajectory::control_values_with_fit(&zero,scale,affine,qs,law_traversal,max_cells,frame,None)
@@ -151,6 +155,14 @@ pub(crate) struct ContactLaws<'a> {
     pub scale: &'a Curve,
     pub twist: &'a Curve,
     pub affine: Option<(&'a Curve, &'a Curve)>,
+}
+/// Traversals of path, guide and laws; `same_parameter` when path and guide share one parameter.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct PathGuideTraversal {
+    pub path: [f64; 2],
+    pub guide: [f64; 2],
+    pub law: [f64; 2],
+    pub same_parameter: bool,
 }
 /// Contact anchor and the traversals of path, guide and laws; `same_parameter` when path and
 /// guide share one parameter.
@@ -574,7 +586,7 @@ fn guided_relative_values_separate_path_rail_and_station_intervals(){
     let guide=Curve {degree:2,knots:vec![-3.,-3.,-3.,7.,7.,7.],control_points:vec![vec![1.,0.,0.],vec![1.,0.,0.5],vec![1.,1.,1.]],weights:vec![1.;3],periodic:false};
     let scale=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
     let twist=crate::primitives::line([0.;3],[0.25,0.,0.]).unwrap();let qs=[[[1.,1.],[0.,0.],[0.,0.]]];
-    let r=certify_path_guide_relative_values(&path,&guide,&scale,&twist,None,&qs,[0.2,0.3],[0.4,0.5],[0.6,0.7],false,1000).unwrap();
+    let r=certify_path_guide_relative_values(ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: None }, &qs, PathGuideTraversal { path: [0.2,0.3], guide: [0.4,0.5], law: [0.6,0.7], same_parameter: false }, 1000).unwrap();
     assert_eq!(r.status,Status::Certified);let bounds=r.values.as_ref().unwrap()[0];
     let cross=|a:[f64;3],b:[f64;3]|[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
     for u in [0.2_f64,0.25,0.3]{for v in [0.4_f64,0.45,0.5]{for s in [0.6_f64,0.65,0.7]{
@@ -583,7 +595,7 @@ fn guided_relative_values_separate_path_rail_and_station_intervals(){
         for k in 0..3{let expected=(1.+s)*(n[k]*(0.25*s).cos()+b[k]*(0.25*s).sin());
             assert!(bounds[k][0]<=expected&&expected<=bounds[k][1],"{bounds:?} vs {expected}");}
     }}}
-    let short=certify_path_guide_relative_values(&path,&guide,&scale,&twist,None,&qs,[0.2,0.3],[0.4,0.5],[0.6,0.7],false,r.cells-1).unwrap();
+    let short=certify_path_guide_relative_values(ContactLaws { path: &path, guide: &guide, scale: &scale, twist: &twist, affine: None }, &qs, PathGuideTraversal { path: [0.2,0.3], guide: [0.4,0.5], law: [0.6,0.7], same_parameter: false }, r.cells-1).unwrap();
     assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
 }
 

@@ -225,8 +225,7 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
                 sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::Frenet|OriginalTransport::CorrectedRegular=>authored_frame_certificate::certify_frenet_relative_values(sweep.path,sweep.scale,
                 sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
-            OriginalTransport::Guided=>authored_frame_certificate::certify_path_guide_relative_values(sweep.path,sweep.orientation_guide.unwrap(),sweep.scale,
-                sweep.twist,sweep.affine_laws,&qs,path_interval,[guide_source[i][0],guide_source[i+1][1]],station,same_phase,max_cells-out.cells)?,
+            OriginalTransport::Guided=>authored_frame_certificate::certify_path_guide_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::PathGuideTraversal { path: path_interval, guide: [guide_source[i][0],guide_source[i+1][1]], law: station, same_parameter: same_phase }, max_cells-out.cells)?,
             OriginalTransport::Contact=>authored_frame_certificate::certify_contact_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::ContactTraversal { anchor: anchor.unwrap(), path: path_interval, guide: [guide_source[i][0],guide_source[i+1][1]], law: station, same_parameter: same_phase }, max_cells-out.cells)?,
             _=>return Ok(out),
         };
@@ -388,8 +387,7 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
             let values=if mode==OriginalTransport::Contact {
                 authored_frame_certificate::certify_contact_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::ContactTraversal { anchor: anchor.unwrap(), path: source[index], guide: guide_source[index], law: station, same_parameter: same_phase }, max_cells-out.cells)?
             }else{
-                authored_frame_certificate::certify_path_guide_relative_values(sweep.path,sweep.orientation_guide.unwrap(),sweep.scale,
-                    sweep.twist,sweep.affine_laws,&qs,source[index],guide_source[index],station,same_phase,max_cells-out.cells)?
+                authored_frame_certificate::certify_path_guide_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::PathGuideTraversal { path: source[index], guide: guide_source[index], law: station, same_parameter: same_phase }, max_cells-out.cells)?
             };
             out.cells+=values.cells;
             let Some(values)=values.values.filter(|_|values.status==Status::Certified)else{out.reason=values.reason.or(Some("contact-endpoint-contour-unproved"));return Ok(out);};
