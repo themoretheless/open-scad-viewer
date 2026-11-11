@@ -87,8 +87,9 @@ pub(super) fn section_interpolation_with_length(sweep:&Sweep<'_>,count:usize,max
             axis,normal,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?;
         out.cells+=batch.cells;
         if batch.status!=Status::Certified {
-            let bound=authored_chord_cover::certify(sweep,reference_path,axis,normal,&coordinates,interval,
-                &sections[station],&sections[station+1],&mut out.cells,max_cells)?;
+            let frame=authored_chord_cover::ChordFrame { path: reference_path, axis, normal };
+            let chords=[&sections[station],&sections[station+1]];
+            let bound=authored_chord_cover::certify(sweep,frame,&coordinates,interval,chords,&mut out.cells,max_cells)?;
             let Some(bound)=bound else {out.reason=Some("authored-original-chord-cover-unproved");return Ok(out);};
             error=error.max(bound);continue;
         }

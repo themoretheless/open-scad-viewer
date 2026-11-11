@@ -35,18 +35,23 @@ fn bounds(
     }
     Ok((lower, upper))
 }
+/// The path with its authored axis and normal frame laws.
+#[derive(Clone, Copy)]
+pub(super) struct ChordFrame<'a> {
+    pub path: &'a Curve,
+    pub axis: &'a Curve,
+    pub normal: &'a Curve,
+}
 pub(super) fn certify(
     sweep: &Sweep<'_>,
-    path: &Curve,
-    axis: &Curve,
-    normal: &Curve,
+    frame: ChordFrame<'_>,
     coordinates: &[[[f64; 2]; 3]],
     interval: [f64; 2],
-    a: &Curve,
-    b: &Curve,
+    [a, b]: [&Curve; 2],
     spent: &mut usize,
     max: usize,
 ) -> Result<Option<f64>> {
+    let ChordFrame { path, axis, normal } = frame;
     let mut pending = vec![interval];
     let mut upper: f64 = 0.;
     while let Some(leaf) = pending.pop() {
