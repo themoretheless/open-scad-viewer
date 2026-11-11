@@ -98,10 +98,7 @@ pub fn rational_bspline_projective_strip_jet_identity(
 ) -> Result<BezierIdentityDecision, InputError> {
     strip_identity(
         ctx,
-        strips,
-        knots,
-        degrees,
-        locations,
+        StripPairRefs { strips, knots, degrees, locations },
         scale,
         order,
         propose_exact_scale,
@@ -124,10 +121,7 @@ pub fn rational_bspline_projective_strip_jet_identity_with_position(
     let mut position = false;
     let proof = strip_identity(
         ctx,
-        strips,
-        knots,
-        degrees,
-        locations,
+        StripPairRefs { strips, knots, degrees, locations },
         scale,
         order,
         propose,
@@ -163,23 +157,12 @@ pub fn rational_bspline_independent_strip_jet_identity(
             ));
         }
     }
-    strip_identity(
-        ctx,
-        strips,
-        knots,
-        degrees,
-        locations,
-        scale,
-        order,
-        false,
-        Some(AlongProof {
+    strip_identity(ctx, StripPairRefs { strips, knots, degrees, locations }, scale, order, false, Some(AlongProof {
             knots: along_knots,
             degrees: along_degrees,
             map: None,
             nonlinear_only: false,
-        }),
-        &mut false,
-    )
+        }), &mut false)
 }
 
 /// Nonlinear chart search in the same work context after an owner's common-
@@ -207,39 +190,41 @@ pub fn rational_bspline_nonlinear_strip_jet_identity(
             ));
         }
     }
-    strip_identity(
-        ctx,
-        strips,
-        knots,
-        degrees,
-        locations,
-        scale,
-        order,
-        false,
-        Some(AlongProof {
+    strip_identity(ctx, StripPairRefs { strips, knots, degrees, locations }, scale, order, false, Some(AlongProof {
             knots: along_knots,
             degrees: along_degrees,
             map: None,
             nonlinear_only: true,
-        }),
-        &mut false,
-    )
+        }), &mut false)
 }
 
+/// Two B-spline strips given by source leaves: control rows, cross knots, cross degrees and where
+/// each strip sits on its surface.
+#[derive(Clone, Copy)]
+pub struct StripPairRefs<'a> {
+    pub strips: [&'a [Vec<[LeafRef; 4]>]; 2],
+    pub knots: [&'a [LeafRef]; 2],
+    pub degrees: [usize; 2],
+    pub locations: [BsplineStripLocation; 2],
+}
+/// Knots and degrees of both strips along the shared boundary.
+#[derive(Clone, Copy)]
+pub struct AlongRefs<'a> {
+    pub knots: [&'a [LeafRef]; 2],
+    pub degrees: [usize; 2],
+}
 /// Exact whole-span geometric jets under a caller's AUTHORED map. This avoids
 /// inverse-chart inference, but never trusts a proposed map, samples or flags.
 pub fn rational_bspline_mapped_strip_jet_identity(
     ctx: &mut PredicateContext<'_>,
-    strips: [&[Vec<[LeafRef; 4]>]; 2],
-    knots: [&[LeafRef]; 2],
-    degrees: [usize; 2],
-    locations: [BsplineStripLocation; 2],
+    pair: StripPairRefs<'_>,
     scale: LeafRef,
     order: usize,
-    along_knots: [&[LeafRef]; 2],
-    along_degrees: [usize; 2],
+    along: AlongRefs<'_>,
     map: BsplineParameterMap<'_>,
 ) -> Result<BezierIdentityDecision, InputError> {
+    let StripPairRefs { strips, knots, degrees, locations } = pair;
+    let AlongRefs { knots: along_knots, degrees: along_degrees } = along;
     for side in 0..2 {
         if !(1..=32).contains(&along_degrees[side])
             || strips[side].len() <= along_degrees[side]
@@ -259,37 +244,24 @@ pub fn rational_bspline_mapped_strip_jet_identity(
     for leaf in map.controls.iter().flatten().chain(map.knots) {
         ctx.resolve(*leaf)?;
     }
-    strip_identity(
-        ctx,
-        strips,
-        knots,
-        degrees,
-        locations,
-        scale,
-        order,
-        false,
-        Some(AlongProof {
+    strip_identity(ctx, StripPairRefs { strips, knots, degrees, locations }, scale, order, false, Some(AlongProof {
             knots: along_knots,
             degrees: along_degrees,
             map: Some(map),
             nonlinear_only: false,
-        }),
-        &mut false,
-    )
+        }), &mut false)
 }
 
 fn strip_identity(
     ctx: &mut PredicateContext<'_>,
-    strips: [&[Vec<[LeafRef; 4]>]; 2],
-    knots: [&[LeafRef]; 2],
-    degrees: [usize; 2],
-    locations: [BsplineStripLocation; 2],
+    pair: StripPairRefs<'_>,
     scale: LeafRef,
     order: usize,
     propose_exact_scale: bool,
     along: Option<AlongProof<'_>>,
     position: &mut bool,
 ) -> Result<BezierIdentityDecision, InputError> {
+    let StripPairRefs { strips, knots, degrees, locations } = pair;
     let [a, b] = strips;
     if !matches!(order, 1 | 2)
         || !(2..=33).contains(&a.len())

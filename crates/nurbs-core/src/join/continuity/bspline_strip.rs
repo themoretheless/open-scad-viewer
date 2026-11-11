@@ -140,22 +140,11 @@ fn identity(
             let knots = (0..m.knots.len())
                 .map(|i| source.leaf(ki + i).unwrap())
                 .collect::<Vec<_>>();
-            cad_predicates::rational_bspline_mapped_strip_jet_identity(
-                &mut ctx,
-                [&a_refs, &b_refs],
-                [&ak, &bk],
-                [ab.cross(a).0, bb.cross(b).0],
-                ls,
-                source.leaf(si).unwrap(),
-                order,
-                [&along_refs[0], &along_refs[1]],
-                [ab.along(a).0, bb.along(b).0],
-                cad_predicates::BsplineParameterMap {
+            cad_predicates::rational_bspline_mapped_strip_jet_identity(&mut ctx, cad_predicates::StripPairRefs { strips: [&a_refs, &b_refs], knots: [&ak, &bk], degrees: [ab.cross(a).0, bb.cross(b).0], locations: ls }, source.leaf(si).unwrap(), order, cad_predicates::AlongRefs { knots: [&along_refs[0], &along_refs[1]], degrees: [ab.along(a).0, bb.along(b).0] }, cad_predicates::BsplineParameterMap {
                     controls: &controls,
                     knots: &knots,
                     degree: m.degree,
-                },
-            )
+                })
         } else {
             cad_predicates::rational_bspline_independent_strip_jet_identity(
                 &mut ctx,
