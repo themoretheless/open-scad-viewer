@@ -149,17 +149,9 @@ fn cell(
 /// Normal chord tolerance is dimensionless; tensor tolerance is a Frobenius
 /// bound in inverse-length units. One orientation must pass the ENTIRE seam.
 /// No inferred or nonaffine seam correspondence is claimed by this API.
-pub fn inspect(
-    a: &Surface,
-    ea: Boundary,
-    b: &Surface,
-    eb: Boundary,
-    reverse: bool,
-    position_tolerance: f64,
-    normal_tolerance: f64,
-    tensor_tolerance: f64,
-    max_cells: usize,
-) -> Result<Report> {
+pub fn inspect(seam: G2Seam<'_>, tolerance: G2Tolerance, max_cells: usize) -> Result<Report> {
+    let G2Seam { a, ea, b, eb, reverse } = seam;
+    let G2Tolerance { position: position_tolerance, normal: normal_tolerance, tensor: tensor_tolerance } = tolerance;
     inspect_with_correspondence(
         G2Seam { a, ea, b, eb, reverse },
         &[[0., 0.], [1., 1.]],

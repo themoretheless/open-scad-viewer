@@ -167,8 +167,11 @@ pub fn g2_qualified(a:&Surface,b:&Surface,o:Options,tolerances:[f64;3],max_cells
         }
         if i>0 {
             if result.cells==max_cells {result.complete=false;result.within_tolerance=false;continue;}
-            let r=surface_g2::inspect(&result.construction.patches[i-1],Edge::UMax,patch,Edge::UMin,false,
-                tolerances[0],tolerances[1],tolerances[2],max_cells-result.cells)?;
+            let r=surface_g2::inspect(
+                surface_g2::G2Seam { a: &result.construction.patches[i-1], ea: Edge::UMax, b: patch, eb: Edge::UMin, reverse: false },
+                surface_g2::G2Tolerance { position: tolerances[0], normal: tolerances[1], tensor: tolerances[2] },
+                max_cells-result.cells,
+            )?;
             result.cells+=r.cells;result.complete&=r.decision!=Decision::Unresolved;result.within_tolerance&=r.decision==Decision::WithinTolerance;
             result.internal_seams.push((i-1,i,r));
         }

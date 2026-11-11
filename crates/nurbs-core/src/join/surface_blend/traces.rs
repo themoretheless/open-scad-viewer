@@ -197,14 +197,8 @@ pub(super) fn qualify(
                 continue;
             }
             let proof = crate::surface_g2::inspect(
-                &r.construction.patches[i - 1],
-                crate::surface_join::Boundary::UMax,
-                patch,
-                crate::surface_join::Boundary::UMin,
-                false,
-                tolerances[0],
-                tolerances[1],
-                tolerances[2],
+                crate::surface_g2::G2Seam { a: &r.construction.patches[i - 1], ea: crate::surface_join::Boundary::UMax, b: patch, eb: crate::surface_join::Boundary::UMin, reverse: false },
+                crate::surface_g2::G2Tolerance { position: tolerances[0], normal: tolerances[1], tensor: tolerances[2] },
                 max_cells - r.cells,
             )?;
             r.cells += proof.cells;

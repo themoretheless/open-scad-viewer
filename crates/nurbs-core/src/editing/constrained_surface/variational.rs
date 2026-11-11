@@ -464,14 +464,8 @@ fn seams(
     let mut output = Vec::new();
     for (i, &side) in sides.iter().enumerate() {
         let r = crate::surface_g2::inspect(
-            s,
-            side,
-            reference,
-            side,
-            false,
-            t[0],
-            t[1],
-            t[2],
+            crate::surface_g2::G2Seam { a: s, ea: side, b: reference, eb: side, reverse: false },
+            crate::surface_g2::G2Tolerance { position: t[0], normal: t[1], tensor: t[2] },
             remaining / (sides.len() - i),
         )?;
         remaining = remaining.saturating_sub(r.cells);

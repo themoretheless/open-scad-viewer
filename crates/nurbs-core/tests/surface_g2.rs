@@ -34,14 +34,8 @@ fn geometric_g2_allows_speed_shear_and_nonlinear_parameter_freedom() {
     let b = patch(false, 1., true);
     let before = b.clone();
     let r = surface_g2::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
-        0.05,
-        0.02,
-        0.1,
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+        surface_g2::G2Tolerance { position: 0.05, normal: 0.02, tensor: 0.1 },
         1000,
     )
     .unwrap();
@@ -58,14 +52,8 @@ fn geometric_g2_accepts_different_boundary_degrees_and_knot_layouts() {
     let b = surface_edit::insert(&elevated, Axis::V, 0.37, 1).unwrap();
     let before = (a.clone(), b.clone());
     let r = surface_g2::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
-        0.05,
-        0.02,
-        0.1,
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+        surface_g2::G2Tolerance { position: 0.05, normal: 0.02, tensor: 0.1 },
         5000,
     )
     .unwrap();
@@ -80,14 +68,8 @@ fn opposite_normals_require_the_same_tensor_sign_branch() {
     let a = patch(true, 1., false);
     let b = surface_edit::reverse(&patch(false, 1., true), Axis::V).unwrap();
     let r = surface_g2::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        true,
-        0.05,
-        0.02,
-        0.1,
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: true },
+        surface_g2::G2Tolerance { position: 0.05, normal: 0.02, tensor: 0.1 },
         1000,
     )
     .unwrap();
@@ -101,14 +83,8 @@ fn g1_matching_planes_do_not_hide_a_curvature_gap() {
     let a = patch(true, 1., false);
     let b = patch(false, 2., false);
     let r = surface_g2::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
-        0.05,
-        0.02,
-        0.1,
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+        surface_g2::G2Tolerance { position: 0.05, normal: 0.02, tensor: 0.1 },
         1000,
     )
     .unwrap();
@@ -122,14 +98,8 @@ fn unavailable_smoothness_regularity_and_budget_never_report_g2() {
     let a = patch(true, 1., false);
     let b = surface_edit::insert(&patch(false, 1., false), Axis::V, 0.5, 1).unwrap();
     let r = surface_g2::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
-        0.05,
-        0.02,
-        0.1,
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+        surface_g2::G2Tolerance { position: 0.05, normal: 0.02, tensor: 0.1 },
         31,
     )
     .unwrap();
@@ -147,43 +117,25 @@ fn unavailable_smoothness_regularity_and_budget_never_report_g2() {
     let a=varying(true);
     let b=varying(false);
     let r = surface_g2::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
-        1e-12,
-        0.02,
-        0.1,
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+        surface_g2::G2Tolerance { position: 1e-12, normal: 0.02, tensor: 0.1 },
         1,
     )
     .unwrap();
     assert_eq!(r.decision, Decision::Unresolved);
     assert!(
         surface_g2::inspect(
-            &a,
-            Boundary::UMax,
-            &b,
-            Boundary::UMin,
-            false,
-            0.1,
-            0.02,
-            -1.,
-            100
+            surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+            surface_g2::G2Tolerance { position: 0.1, normal: 0.02, tensor: -1. },
+            100,
         )
         .is_err()
     );
     assert!(
         surface_g2::inspect(
-            &a,
-            Boundary::UMax,
-            &b,
-            Boundary::UMin,
-            false,
-            0.1,
-            0.02,
-            0.1,
-            0
+            surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+            surface_g2::G2Tolerance { position: 0.1, normal: 0.02, tensor: 0.1 },
+            0,
         )
         .is_err()
     );
@@ -197,14 +149,8 @@ fn unavailable_smoothness_regularity_and_budget_never_report_g2() {
         }
     }
     let r = surface_g2::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
-        0.05,
-        0.02,
-        0.1,
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+        surface_g2::G2Tolerance { position: 0.05, normal: 0.02, tensor: 0.1 },
         11,
     )
     .unwrap();
@@ -226,14 +172,8 @@ fn nonaffine_boundary_relation_is_checked_on_original_surfaces() {
     let b = polynomial::parametric_surface([0., 1., 0., 1.], &cb).unwrap();
     let before = (a.clone(), b.clone());
     let affine = surface_g2::inspect(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
-        0.03,
-        0.05,
-        0.1,
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+        surface_g2::G2Tolerance { position: 0.03, normal: 0.05, tensor: 0.1 },
         1000,
     )
     .unwrap();
@@ -336,16 +276,28 @@ fn inferred_rational_cylinder_seam_and_reverse_preserve_orientation() {
 fn identical_owned_boundary_keeps_zero_position_tolerance_without_hiding_curvature() {
     let a=patch(true,1.,false);
     let b=patch(false,1.,true);
-    let report=surface_g2::inspect(&a,Boundary::UMax,&b,Boundary::UMin,false,0.,0.02,0.1,1000).unwrap();
+    let report=surface_g2::inspect(
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+        surface_g2::G2Tolerance { position: 0., normal: 0.02, tensor: 0.1 },
+        1000,
+    ).unwrap();
     assert_eq!(report.position_bounds,[0.,0.]);
     assert_eq!(report.decision,Decision::WithinTolerance,"{report:?}");
     let wrong=patch(false,2.,false);
-    let report=surface_g2::inspect(&a,Boundary::UMax,&wrong,Boundary::UMin,false,0.,0.02,0.1,1000).unwrap();
+    let report=surface_g2::inspect(
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &wrong, eb: Boundary::UMin, reverse: false },
+        surface_g2::G2Tolerance { position: 0., normal: 0.02, tensor: 0.1 },
+        1000,
+    ).unwrap();
     assert_eq!(report.position_bounds,[0.,0.]);
     assert_eq!(report.decision,Decision::CorrespondenceExceedsTolerance,"{report:?}");
     let mut moved=b;
     for p in &mut moved.control_points[0] {p[0]+=1e-8;}
-    let report=surface_g2::inspect(&a,Boundary::UMax,&moved,Boundary::UMin,false,0.,0.02,0.1,1000).unwrap();
+    let report=surface_g2::inspect(
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &moved, eb: Boundary::UMin, reverse: false },
+        surface_g2::G2Tolerance { position: 0., normal: 0.02, tensor: 0.1 },
+        1000,
+    ).unwrap();
     assert_ne!(report.decision,Decision::WithinTolerance,"A moved boundary must not inherit the identity shortcut");
 }
 

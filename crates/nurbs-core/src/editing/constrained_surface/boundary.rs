@@ -304,14 +304,8 @@ pub(super) fn admit_solution(
     for (index, &side) in boundaries.iter().enumerate() {
         let budget = remaining / (boundaries.len() - index);
         let report = surface_g2::inspect(
-            &solution.surface,
-            side,
-            reference,
-            side,
-            false,
-            tolerances[0],
-            tolerances[1],
-            tolerances[2],
+            surface_g2::G2Seam { a: &solution.surface, ea: side, b: reference, eb: side, reverse: false },
+            surface_g2::G2Tolerance { position: tolerances[0], normal: tolerances[1], tensor: tolerances[2] },
             budget,
         )?;
         remaining = remaining.saturating_sub(report.cells);
