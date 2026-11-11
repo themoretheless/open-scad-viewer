@@ -523,19 +523,22 @@ fn inspect_candidate_bounded(
             report.within_tolerance = false;
             continue;
         }
-        let proof = proof::inspect(
-            &report.surface,
-            [
+        let blend_side = proof::BlendSide {
+            a: &report.surface,
+            ab: [
                 Boundary::UStart,
                 Boundary::UEnd,
                 Boundary::VStart,
                 Boundary::VEnd,
             ][side],
-            supports[side],
-            o.boundaries[side],
-            traces[side],
-            o.reverse_along[side],
-            o.gains[side],
+            b: supports[side],
+            bb: o.boundaries[side],
+            trace: traces[side],
+            reverse: o.reverse_along[side],
+            gain: o.gains[side],
+        };
+        let proof = proof::inspect(
+            blend_side,
             tolerances,
             &mut work,
         )?;

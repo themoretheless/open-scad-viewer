@@ -452,17 +452,8 @@ fn residual(a: &Rational, b: &Rational, w: &mut Work) -> Result<f64> {
     }
     Ok(norm(out)?.1)
 }
-fn cell(
-    a: &Surface,
-    ab: Boundary,
-    b: &Surface,
-    bb: Boundary,
-    trace: super::Trace,
-    reverse: bool,
-    gain: f64,
-    range: [f64; 2],
-    w: &mut Work,
-) -> Result<Option<[f64; 3]>> {
+fn cell(side: BlendSide<'_>, range: [f64; 2], w: &mut Work) -> Result<Option<[f64; 3]>> {
+    let BlendSide { a, ab, b, bb, trace, reverse, gain } = side;
     let a = rational(
         &fields(
             a,
@@ -539,17 +530,20 @@ fn cell(
     tensor = tensor.add(p(2.).mul(dq.mul(ca)?.mul(cb)?.add(q.mul(cross_error)?)?)?)?;
     Ok(Some([error[0], normal, tensor.hi]))
 }
-pub(super) fn inspect(
-    a: &Surface,
-    ab: Boundary,
-    b: &Surface,
-    bb: Boundary,
-    trace: super::Trace,
-    reverse: bool,
-    gain: f64,
-    tol: [f64; 3],
-    w: &mut Work,
-) -> Result<crate::surface_g2::Report> {
+/// One side of a corner blend: the blend patch and support surface with their boundaries, the
+/// trace that binds them, whether the support runs reversed, and the cross-boundary gain.
+#[derive(Clone, Copy)]
+pub(super) struct BlendSide<'a> {
+    pub a: &'a Surface,
+    pub ab: Boundary,
+    pub b: &'a Surface,
+    pub bb: Boundary,
+    pub trace: super::Trace,
+    pub reverse: bool,
+    pub gain: f64,
+}
+pub(super) fn inspect(side: BlendSide<'_>, tol: [f64; 3], w: &mut Work) -> Result<crate::surface_g2::Report> {
+    let BlendSide { a, ab, b, bb, trace, reverse, .. } = side;
     use crate::surface_g2::{BranchBounds, Orientation, Report};
     use crate::surface_join::Decision;
     let mut nodes = vec![0., 1.];
@@ -616,7 +610,7 @@ pub(super) fn inspect(
             break;
         }
         w.cells += 1;
-        let bound = match cell(a, ab, b, bb, trace, reverse, gain, range, w) {
+        let bound = match cell(side, range, w) {
             Ok(x) => x,
             Err(e) if e.code == "CORNER_JET_WORK" => {
                 complete = false;
