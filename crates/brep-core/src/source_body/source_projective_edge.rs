@@ -209,6 +209,28 @@ fn finish(
     report.reason = "projective-shared-edge-qualified";
     Ok(report)
 }
+/// The edge being qualified: its world curve, the two face fragments, their parameter ranges and
+/// weights, and optional root planes.
+#[derive(Clone, Copy)]
+pub struct EdgeSource<'a> {
+    pub world: &'a Curve,
+    pub fragments: [&'a Fragment; 2],
+    pub ranges: [[[f64; 2]; 2]; 2],
+    pub weights: [[f64; 2]; 2],
+    pub planes: [Option<Plane>; 2],
+}
+/// Exact-work and driver limits of one edge qualification.
+#[derive(Clone, Copy, Debug)]
+pub struct EdgeWork {
+    pub max_work: u64,
+    pub max_driver: usize,
+}
+/// Limits of rational fraction discovery: largest denominator and candidates per axis.
+#[derive(Clone, Copy, Debug)]
+pub struct FractionDiscovery {
+    pub max_denominator: usize,
+    pub max_candidates_per_axis: usize,
+}
 /// Both original source compositions and both retained endpoint identities
 /// share one exact-work budget. Root driving shares one cell budget.
 pub fn qualify(
@@ -222,47 +244,32 @@ pub fn qualify(
     max_driver: usize,
 ) -> Result<Report> {
     qualify_impl(
-        world, fragments, ranges, weights, planes, candidates, None, max_work, max_driver,
+        EdgeSource { world, fragments, ranges, weights, planes },
+        candidates,
+        None,
+        EdgeWork { max_work, max_driver },
     )
 }
 /// Rational parameter proposals are freshly checked against original roots.
 pub fn qualify_with_fraction_candidates(
-    world: &Curve,
-    fragments: [&Fragment; 2],
-    ranges: [[[f64; 2]; 2]; 2],
-    weights: [[f64; 2]; 2],
-    planes: [Option<Plane>; 2],
+    edge: EdgeSource<'_>,
     candidates: Candidates,
     fraction_candidates: FractionCandidates,
-    max_work: u64,
-    max_driver: usize,
+    work: EdgeWork,
 ) -> Result<Report> {
-    qualify_impl(
-        world,
-        fragments,
-        ranges,
-        weights,
-        planes,
-        candidates,
-        Some(fraction_candidates),
-        max_work,
-        max_driver,
-    )
+    qualify_impl(edge, candidates, Some(fraction_candidates), work)
 }
 /// Discover bounded rational endpoint proposals, then freshly qualify both
 /// original compositions and canonical endpoint identities with the remainder.
 pub fn qualify_with_discovered_fraction_candidates(
-    world: &Curve,
-    fragments: [&Fragment; 2],
-    ranges: [[[f64; 2]; 2]; 2],
-    weights: [[f64; 2]; 2],
-    planes: [Option<Plane>; 2],
+    edge: EdgeSource<'_>,
     candidates: Candidates,
-    max_denominator: usize,
-    max_candidates_per_axis: usize,
-    max_work: u64,
-    max_driver: usize,
+    discovery: FractionDiscovery,
+    work: EdgeWork,
 ) -> Result<Report> {
+    let EdgeSource { fragments, .. } = edge;
+    let EdgeWork { max_work, max_driver } = work;
+    let FractionDiscovery { max_denominator, max_candidates_per_axis } = discovery;
     use crate::source_boundary_fragment::Endpoint;
     let mut spent = initial(max_work, max_driver)?;
     if !(1..=4096).contains(&max_denominator) || !(1..=64).contains(&max_candidates_per_axis) {
@@ -298,31 +305,23 @@ pub fn qualify_with_discovered_fraction_candidates(
         .any(Option::is_some)
         .then_some(fractions);
     let mut report = qualify_impl(
-        world,
-        fragments,
-        ranges,
-        weights,
-        planes,
+        edge,
         candidates,
         fractions,
-        max_work - spent.exact_work,
-        max_driver,
+        EdgeWork { max_work: max_work - spent.exact_work, max_driver },
     )?;
     report.exact_work += spent.exact_work;
     report.root_checks += spent.root_checks;
     Ok(report)
 }
 fn qualify_impl(
-    world: &Curve,
-    fragments: [&Fragment; 2],
-    ranges: [[[f64; 2]; 2]; 2],
-    weights: [[f64; 2]; 2],
-    planes: [Option<Plane>; 2],
+    edge: EdgeSource<'_>,
     candidates: Candidates,
     fraction_candidates: Option<FractionCandidates>,
-    max_work: u64,
-    max_driver: usize,
+    work: EdgeWork,
 ) -> Result<Report> {
+    let EdgeSource { world, fragments, ranges, weights, planes } = edge;
+    let EdgeWork { max_work, max_driver } = work;
     let mut report = initial(max_work, max_driver)?;
     let mut uses = Vec::new();
     for i in 0..2 {
@@ -504,35 +503,14 @@ mod fraction_tests {
             [None, Some([[1., 3.], [1., 9.]])],
             [Some([[1., 5.], [1., 9.]]), None],
         ];
-        let report = qualify_with_fraction_candidates(
-            &world,
-            [&fa, &fb],
-            ranges,
-            weights,
-            [None; 2],
-            [[None; 2]; 2],
-            candidates,
-            100000000,
-            10000,
-        )
+        let report = qualify_with_fraction_candidates(EdgeSource { world: &world, fragments: [&fa, &fb], ranges: ranges, weights: weights, planes: [None; 2] }, [[None; 2]; 2], candidates, EdgeWork { max_work: 100000000, max_driver: 10000 })
         .unwrap();
         let exact_work = report.exact_work;
         assert_eq!(report.driver_cells, 0);
         assert_eq!(report.root_checks, 2);
         let edge = report.edge.expect(report.reason);
         let definition = edge.definition();
-        let discovered = qualify_with_discovered_fraction_candidates(
-            &world,
-            [&fa, &fb],
-            ranges,
-            weights,
-            [None; 2],
-            [[None; 2]; 2],
-            128,
-            16,
-            100000000,
-            10000,
-        )
+        let discovered = qualify_with_discovered_fraction_candidates(EdgeSource { world: &world, fragments: [&fa, &fb], ranges: ranges, weights: weights, planes: [None; 2] }, [[None; 2]; 2], FractionDiscovery { max_denominator: 128, max_candidates_per_axis: 16 }, EdgeWork { max_work: 100000000, max_driver: 10000 })
         .unwrap();
         let discovery_work = discovered.exact_work;
         assert!(discovery_work > exact_work && discovery_work <= 100000000);
@@ -541,18 +519,7 @@ mod fraction_tests {
             definition
         );
         assert!(
-            qualify_with_discovered_fraction_candidates(
-                &world,
-                [&fa, &fb],
-                ranges,
-                weights,
-                [None; 2],
-                [[None; 2]; 2],
-                128,
-                16,
-                discovery_work - 1,
-                10000
-            )
+            qualify_with_discovered_fraction_candidates(EdgeSource { world: &world, fragments: [&fa, &fb], ranges: ranges, weights: weights, planes: [None; 2] }, [[None; 2]; 2], FractionDiscovery { max_denominator: 128, max_candidates_per_axis: 16 }, EdgeWork { max_work: discovery_work - 1, max_driver: 10000 })
             .unwrap()
             .edge
             .is_none()
@@ -631,17 +598,7 @@ mod fraction_tests {
             restriction.display_segments(16).unwrap()
         );
         assert!(
-            qualify_with_fraction_candidates(
-                &world,
-                [&fa, &fb],
-                ranges,
-                weights,
-                [None; 2],
-                [[None; 2]; 2],
-                candidates,
-                exact_work - 1,
-                10000
-            )
+            qualify_with_fraction_candidates(EdgeSource { world: &world, fragments: [&fa, &fb], ranges: ranges, weights: weights, planes: [None; 2] }, [[None; 2]; 2], candidates, EdgeWork { max_work: exact_work - 1, max_driver: 10000 })
             .unwrap()
             .edge
             .is_none()

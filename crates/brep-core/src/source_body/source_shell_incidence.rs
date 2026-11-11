@@ -370,12 +370,7 @@ pub struct ProjectiveInputs<'a> {
     pub candidates: &'a [RootCandidates],
     pub poles: &'a [Pole],
 }
-/// Limits of rational fraction discovery: largest denominator and candidates per axis.
-#[derive(Clone, Copy, Debug)]
-pub struct FractionDiscovery {
-    pub max_denominator: usize,
-    pub max_candidates_per_axis: usize,
-}
+pub use crate::source_projective_edge::FractionDiscovery;
 /// Exact-work and driver-cell limits of one projective assembly.
 #[derive(Clone, Copy, Debug)]
 pub struct ProjectiveWork {
