@@ -378,23 +378,36 @@ pub struct PartitionedReplacement {
     pub splits: Vec<SplitBoundary>,
     pub replacement: Option<ReplaceBoundary>,
 }
+/// An original face surface with its boundary wires.
+#[derive(Clone, Copy)]
+pub struct FaceBoundary<'a> {
+    pub surface: &'a Surface,
+    pub wires: &'a [Vec<Boundary>],
+}
+/// Where the replaced arc starts and ends: two distinct edges of one loop and forward pcurve
+/// fractions on them.
+#[derive(Clone, Copy, Debug)]
+pub struct PathCuts {
+    pub loop_index: usize,
+    pub start_edge: usize,
+    pub start_fraction: f64,
+    pub end_edge: usize,
+    pub end_fraction: f64,
+}
 /// Split two distinct original edges at forward pcurve fractions, then replace
 /// the cyclic arc between those cuts. Parameters are supplied, not solved here.
 /// Limits apply separately to source audit, each partition and replacement.
 pub fn partition_and_replace_path(
     context: &ToleranceContext,
-    surface: &Surface,
-    wires: &[Vec<Boundary>],
-    loop_index: usize,
-    start_edge: usize,
-    start_fraction: f64,
-    end_edge: usize,
-    end_fraction: f64,
+    face: FaceBoundary<'_>,
+    cuts: PathCuts,
     contacts: &[Boundary],
     tolerance_uv: f64,
     partition_cells: usize,
     limits: Limits,
 ) -> Result<PartitionedReplacement> {
+    let FaceBoundary { surface, wires } = face;
+    let PathCuts { loop_index, start_edge, start_fraction, end_edge, end_fraction } = cuts;
     if loop_index >= wires.len()
         || start_edge == end_edge
         || start_edge >= wires[loop_index].len()

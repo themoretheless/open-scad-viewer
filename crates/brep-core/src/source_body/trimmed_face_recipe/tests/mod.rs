@@ -316,13 +316,8 @@ fn source_endpoint_partitions_feed_face_replacement_with_reversed_world_edge() {
     let contact = make(vec![vec![1., 0.5], vec![0.5, 1.]]);
     let r = partition_and_replace_path(
         &ToleranceContext::default_valid(),
-        &surface,
-        &wires,
-        0,
-        0,
-        0.5,
-        1,
-        0.5,
+        FaceBoundary { surface: &surface, wires: &wires },
+        PathCuts { loop_index: 0, start_edge: 0, start_fraction: 0.5, end_edge: 1, end_fraction: 0.5 },
         &[contact.clone()],
         1e-8,
         100000,
@@ -338,13 +333,8 @@ fn source_endpoint_partitions_feed_face_replacement_with_reversed_world_edge() {
     let wrapped = make(vec![vec![0.5, 0.], vec![1., 0.5]]);
     let r = partition_and_replace_path(
         &ToleranceContext::default_valid(),
-        &surface,
-        &wires,
-        0,
-        3,
-        0.5,
-        0,
-        0.5,
+        FaceBoundary { surface: &surface, wires: &wires },
+        PathCuts { loop_index: 0, start_edge: 3, start_fraction: 0.5, end_edge: 0, end_fraction: 0.5 },
         &[wrapped.clone()],
         1e-8,
         100000,
@@ -358,13 +348,8 @@ fn source_endpoint_partitions_feed_face_replacement_with_reversed_world_edge() {
     wrong.curve.control_points[0][0] -= 1e-9;
     let r = partition_and_replace_path(
         &ToleranceContext::default_valid(),
-        &surface,
-        &wires,
-        0,
-        0,
-        0.5,
-        1,
-        0.5,
+        FaceBoundary { surface: &surface, wires: &wires },
+        PathCuts { loop_index: 0, start_edge: 0, start_fraction: 0.5, end_edge: 1, end_fraction: 0.5 },
         &[wrong],
         1e-8,
         100000,
