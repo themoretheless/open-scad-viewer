@@ -40,10 +40,12 @@ fn main() {
         .collect::<Vec<_>>();
     let local = r::sew_g2_patch_set(
         &plan.model,
-        &selected,
-        &authored.vertices,
-        &authored.edges,
-        &patches,
+        r::PatchReplacement {
+            selected: &selected,
+            new_vertices: &authored.vertices,
+            new_edges: &authored.edges,
+            patches: &patches,
+        },
         "compatible-nurbs-local",
         1e-8,
         Default::default(),

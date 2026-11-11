@@ -111,12 +111,14 @@ fn independent_radii_create_root_trimmed_g2_strip_faces() {
             s.support_faces.map(|f| &m.faces[f].surface),
             &s.patch.model.faces[0].surface,
             [&s.contacts[0], &s.contacts[1]],
-            &nurbs_core::offset::fillet_surfaces::RadiusLaw::Constant(r.radius_mm * 1.1),
             s.original_law_domain,
-            s.sides,
-            1e-7,
-            100000,
-            20000,
+            brep_core::fillet_radius::RadiusCheck {
+                law: &nurbs_core::offset::fillet_surfaces::RadiusLaw::Constant(r.radius_mm * 1.1),
+                sides: s.sides,
+                tolerance_mm: 1e-7,
+                max_cells: 100000,
+                max_exact: 20000,
+            },
         )
         .unwrap();
         assert_eq!(
