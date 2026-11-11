@@ -98,8 +98,6 @@ pub fn certify(
     max_agreement_cells: usize,
 ) -> Result<Report> {
     let SourceFaces { surfaces, loops, coedges, distances } = faces;
-    let ContactParameters { axis: fixed_axis, drive: fixed_interval, free: first_other, second, spans: max_spans } =
-        parameters;
     let ContactTolerance { mm: tolerance_mm, uv: tolerance_uv } = tolerance;
     check(
         tolerance_mm.is_finite()
@@ -110,14 +108,8 @@ pub fn certify(
     )?;
     let total = validate_source_faces(&faces)?;
     let trim = trimmed::certify(
-        surfaces,
-        loops,
-        distances,
-        fixed_axis,
-        fixed_interval,
-        first_other,
-        second,
-        max_spans,
+        trimmed::TrimmedFaces { surfaces, loops, distances },
+        parameters,
         tolerance_uv,
         trim_limits,
     )?;

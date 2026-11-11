@@ -131,14 +131,8 @@ pub fn certify(
         limits.fit_cells,
     )?;
     let trim = trimmed::certify(
-        surfaces,
-        loops,
-        distances,
-        axis,
-        drive,
-        free,
-        second,
-        spans,
+        trimmed::TrimmedFaces { surfaces, loops, distances },
+        parameters,
         tolerance_uv,
         limits.trim,
     )?;
@@ -176,7 +170,7 @@ pub fn certify(
             out.reason = "pcurve-work-limit";
             return Ok(out);
         }
-        let r = uv::certify(pcurves[side], side, uv::OffsetFaces { surfaces: surfaces, distances: distances }, uv::ContactParameters { axis: axis, drive: drive, free: free, second: second, spans: spans }, tolerance_uv, limits.uv_cells - out.uv_cells, limits.root_refinements)?;
+        let r = uv::certify(pcurves[side], side, uv::OffsetFaces { surfaces, distances }, uv::ContactParameters { axis: axis, drive: drive, free: free, second, spans: spans }, tolerance_uv, limits.uv_cells - out.uv_cells, limits.root_refinements)?;
         out.uv_cells += r.visited;
         let valid = r.correspondence_proven;
         out.uv_reports.push(r);
@@ -302,8 +296,8 @@ pub fn certify_with_tangency(
         )?;
     }
     let contacts = certify(
-        ContactPair { candidate: candidate, pcurves: pcurves, surfaces: surfaces, loops: loops, distances: distances },
-        ContactParameters { axis: axis, drive: drive, free: free, second: second, spans: spans },
+        ContactPair { candidate: candidate, pcurves: pcurves, surfaces, loops, distances },
+        ContactParameters { axis: axis, drive: drive, free: free, second, spans: spans },
         ContactTolerance { mm: tolerance_mm, uv: tolerance_uv },
         limits,
     )?;
@@ -418,7 +412,7 @@ mod tests {
         limits: Limits,
     ) -> Report {
         certify(
-            ContactPair { candidate: candidate, pcurves: pc, surfaces: s, loops: loops, distances: [0.2, 0.2] },
+            ContactPair { candidate: candidate, pcurves: pc, surfaces: s, loops, distances: [0.2, 0.2] },
             ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 },
             ContactTolerance { mm: 1e-3, uv: 1e-6 },
             limits,
@@ -574,7 +568,7 @@ mod tests {
                 .unwrap();
             let r = certify(
                 ContactPair { candidate: &c, pcurves: [&pc[0], &pc[1]], surfaces: [&aa, &bb], loops: [&loops, &loops], distances: [0.2, 0.2] },
-                ContactParameters { axis: 1, drive: drive, free: free, second: second, spans: 2 },
+                ContactParameters { axis: 1, drive: drive, free: free, second, spans: 2 },
                 ContactTolerance { mm: 1e-3, uv: 1e-6 },
                 limits(),
             )

@@ -46,20 +46,25 @@ impl Report {
             "classifications":self.classifications.iter().map(Classification::to_value).collect::<Vec<_>>()})
     }
 }
+/// The two offset source faces with their trim loops and offset distances.
+#[derive(Clone, Copy)]
+pub struct TrimmedFaces<'a> {
+    pub surfaces: [&'a Surface; 2],
+    pub loops: [&'a [Vec<Curve>]; 2],
+    pub distances: [f64; 2],
+}
+pub use crate::offset::contact_trims::ContactParameters;
 /// The complete certified source-parameter enclosures must be inside both
 /// audited regions. Every audit/classification shares the declared budgets.
 pub fn certify(
-    surfaces: [&Surface; 2],
-    loops: [&[Vec<Curve>]; 2],
-    distances: [f64; 2],
-    fixed_axis: usize,
-    fixed_interval: [f64; 2],
-    first_other: [f64; 2],
-    second: [[f64; 2]; 2],
-    max_spans: usize,
+    faces: TrimmedFaces<'_>,
+    parameters: ContactParameters,
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<Report> {
+    let TrimmedFaces { surfaces, loops, distances } = faces;
+    let ContactParameters { axis: fixed_axis, drive: fixed_interval, free: first_other, second, spans: max_spans } =
+        parameters;
     check(
         (1..=100000).contains(&limits.max_pairs)
             && (1..=100000).contains(&limits.max_cells)
@@ -200,14 +205,8 @@ mod tests {
         }
         let second = vec![rectangle([0., 0.], [1., 1.], false)];
         certify(
-            [&a, &b],
-            [&first, &second],
-            [0.2, 0.2],
-            0,
-            [0.35, 0.39],
-            [0.25, 0.35],
-            [[0.30, 0.44], [0.15, 0.25]],
-            2,
+            TrimmedFaces { surfaces: [&a, &b], loops: [&first, &second], distances: [0.2, 0.2] },
+            ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 },
             1e-7,
             limits,
         )
