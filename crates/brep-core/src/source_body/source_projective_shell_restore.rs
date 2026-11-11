@@ -143,13 +143,17 @@ pub fn restore(value: Value, limits: &Limits) -> Result<source_shell_incidence::
     }
     source_shell_incidence::assemble_regions_projective_with_fraction_candidates(
         &regions,
-        &pairs,
-        &planes,
-        &maps,
-        &candidates,
+        source_shell_incidence::ProjectiveInputs {
+            pairs: &pairs,
+            planes: &planes,
+            maps: &maps,
+            candidates: &candidates,
+            poles: &poles,
+        },
         &fractions,
-        &poles,
-        limits.exact_work,
-        limits.driver_cells,
+        source_shell_incidence::ProjectiveWork {
+            max_work: limits.exact_work,
+            max_driver_cells: limits.driver_cells,
+        },
     )
 }

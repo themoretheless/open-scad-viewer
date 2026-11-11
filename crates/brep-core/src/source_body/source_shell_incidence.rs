@@ -309,56 +309,25 @@ pub fn assemble_projective(
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
     assemble_projective_with_poles(
         faces,
-        pairs,
-        planes,
-        maps,
-        candidates,
-        &[],
-        max_work,
-        max_driver_cells,
+        ProjectiveInputs { pairs, planes, maps, candidates, poles: &[] },
+        ProjectiveWork { max_work, max_driver_cells },
     )
 }
 pub fn assemble_projective_with_poles(
     faces: &[Vec<Wire>],
-    pairs: &[Pair],
-    planes: &[RootPlanes],
-    maps: &[ProjectiveMaps],
-    candidates: &[RootCandidates],
-    poles: &[Pole],
-    max_work: u64,
-    max_driver_cells: usize,
+    inputs: ProjectiveInputs<'_>,
+    work: ProjectiveWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
-    assemble_projective_with_fraction_candidates(
-        faces,
-        pairs,
-        planes,
-        maps,
-        candidates,
-        &[],
-        poles,
-        max_work,
-        max_driver_cells,
-    )
+    assemble_projective_with_fraction_candidates(faces, inputs, &[], work)
 }
 /// Candidate proposals have no authority until each original root is rechecked.
 pub fn assemble_projective_with_fraction_candidates(
     faces: &[Vec<Wire>],
-    pairs: &[Pair],
-    planes: &[RootPlanes],
-    maps: &[ProjectiveMaps],
-    candidates: &[RootCandidates],
+    inputs: ProjectiveInputs<'_>,
     fraction_candidates: &[RootFractionCandidates],
-    poles: &[Pole],
-    max_work: u64,
-    max_driver_cells: usize,
+    work: ProjectiveWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
-    assemble_projective_fraction_impl(
-        faces,
-        ProjectiveInputs { pairs, planes, maps, candidates, poles },
-        fraction_candidates,
-        None,
-        ProjectiveWork { max_work, max_driver_cells },
-    )
+    assemble_projective_fraction_impl(faces, inputs, fraction_candidates, None, work)
 }
 /// Root data shared by projective shell assembly: face pairs, root planes, projective maps,
 /// root candidates and poles.
@@ -409,48 +378,23 @@ pub fn assemble_regions_projective(
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
     assemble_regions_projective_with_poles(
         regions,
-        pairs,
-        planes,
-        maps,
-        candidates,
-        &[],
-        max_work,
-        max_driver_cells,
+        ProjectiveInputs { pairs, planes, maps, candidates, poles: &[] },
+        ProjectiveWork { max_work, max_driver_cells },
     )
 }
 pub fn assemble_regions_projective_with_poles(
     regions: &[crate::source_contour_proposal::SourceRegion],
-    pairs: &[Pair],
-    planes: &[RootPlanes],
-    maps: &[ProjectiveMaps],
-    candidates: &[RootCandidates],
-    poles: &[Pole],
-    max_work: u64,
-    max_driver_cells: usize,
+    inputs: ProjectiveInputs<'_>,
+    work: ProjectiveWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
-    assemble_regions_projective_with_fraction_candidates(
-        regions,
-        pairs,
-        planes,
-        maps,
-        candidates,
-        &[],
-        poles,
-        max_work,
-        max_driver_cells,
-    )
+    assemble_regions_projective_with_fraction_candidates(regions, inputs, &[], work)
 }
 /// Preserve material regions while transporting exact rational root proposals.
 pub fn assemble_regions_projective_with_fraction_candidates(
     regions: &[crate::source_contour_proposal::SourceRegion],
-    pairs: &[Pair],
-    planes: &[RootPlanes],
-    maps: &[ProjectiveMaps],
-    candidates: &[RootCandidates],
+    inputs: ProjectiveInputs<'_>,
     fraction_candidates: &[RootFractionCandidates],
-    poles: &[Pole],
-    max_work: u64,
-    max_driver_cells: usize,
+    work: ProjectiveWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
     if !(2..=4096).contains(&regions.len()) {
         return Err(error("Choose bounded qualified source regions"));
@@ -459,17 +403,8 @@ pub fn assemble_regions_projective_with_fraction_candidates(
         .iter()
         .map(|r| r.world_wires())
         .collect::<Result<Vec<_>>>()?;
-    let mut report = assemble_projective_with_fraction_candidates(
-        &faces,
-        pairs,
-        planes,
-        maps,
-        candidates,
-        fraction_candidates,
-        poles,
-        max_work,
-        max_driver_cells,
-    )?;
+    let mut report =
+        assemble_projective_with_fraction_candidates(&faces, inputs, fraction_candidates, work)?;
     if let Some(shell) = report.shell.as_mut() {
         shell.regions = Some(regions.to_vec());
     }

@@ -167,14 +167,18 @@ impl Shell<crate::source_projective_edge::Edge> {
         }
         assemble_regions_projective_with_fraction_candidates(
             &regions,
-            &pairs,
-            &planes,
-            &maps,
-            &candidates,
+            ProjectiveInputs {
+                pairs: &pairs,
+                planes: &planes,
+                maps: &maps,
+                candidates: &candidates,
+                poles: &poles(self),
+            },
             &fractions,
-            &poles(self),
-            limits.exact_work,
-            limits.driver_cells,
+            ProjectiveWork {
+                max_work: limits.exact_work,
+                max_driver_cells: limits.driver_cells,
+            },
         )
     }
 }

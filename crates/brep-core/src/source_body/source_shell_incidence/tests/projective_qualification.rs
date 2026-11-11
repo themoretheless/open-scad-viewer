@@ -1003,7 +1003,21 @@
         let fractions=vec![RootFractionCandidates{pair:0,candidates:[[None,Some(ca)],[Some(cb),None]]},
             RootFractionCandidates{pair:1,candidates:[[Some(ca),None],[None,Some(cb)]]}];
         assert!(assemble_regions_projective(&regions,&pairs,&[],&maps,&[],100000000,10000).unwrap().shell.is_none());
-        let report=assemble_regions_projective_with_fraction_candidates(&regions,&pairs,&[],&maps,&[],&fractions,&[],100000000,10000).unwrap();
+        let report=assemble_regions_projective_with_fraction_candidates(
+            &regions,
+            ProjectiveInputs {
+                pairs: &pairs,
+                planes: &[],
+                maps: &maps,
+                candidates: &[],
+                poles: &[],
+            },
+            &fractions,
+            ProjectiveWork {
+                max_work: 100000000,
+                max_driver_cells: 10000,
+            },
+        ).unwrap();
         let shell=report.shell.expect(report.reason);assert_eq!(shell.edges().len(),4);assert_eq!(shell.vertices().len(),2);
         let links=crate::source_vertex_links::inspect(&shell,10000).unwrap();assert!(links.all_manifold);assert_eq!(links.genus,Some(0));assert_eq!(links.links.len(),4);
         // This is a coincident two-face incidence control, not an embedded solid.
@@ -1047,7 +1061,21 @@
         assert!(crate::source_projective_shell_restore::restore(wrong,&limits).unwrap().shell.is_none());
         }
         let duplicate=vec![RootFractionCandidates{pair:0,candidates:fractions[0].candidates},RootFractionCandidates{pair:0,candidates:fractions[0].candidates}];
-        assert!(assemble_regions_projective_with_fraction_candidates(&regions,&pairs,&[],&maps,&[],&duplicate,&[],100000000,10000).is_err());
+        assert!(assemble_regions_projective_with_fraction_candidates(
+            &regions,
+            ProjectiveInputs {
+                pairs: &pairs,
+                planes: &[],
+                maps: &maps,
+                candidates: &[],
+                poles: &[],
+            },
+            &duplicate,
+            ProjectiveWork {
+                max_work: 100000000,
+                max_driver_cells: 10000,
+            },
+        ).is_err());
     }
     #[test]
     fn root_partition_of_shared_edge_preserves_closed_shell_and_original_definitions() {
