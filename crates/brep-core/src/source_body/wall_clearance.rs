@@ -36,6 +36,15 @@ pub struct AutomaticReport {
     pub cells: usize,
     pub domain_cells: usize,
 }
+/// Required clearance, distance and UV tolerances, and shared work budgets.
+#[derive(Clone, Copy, Debug)]
+pub struct ClearanceLimits {
+    pub required_mm: f64,
+    pub tolerance_mm: f64,
+    pub tolerance_uv: f64,
+    pub max_cells: usize,
+    pub max_domain_cells: usize,
+}
 /// Automatic angular discovery followed by the original trimmed-face distance
 /// proof. Both stages share work. The selected shell/angle scope does not
 /// establish material chords, cavity pairing or whole-solid wall thickness.
@@ -44,12 +53,15 @@ pub fn inspect_shell(
     shell: usize,
     source_face: usize,
     cutoff: f64,
-    required_mm: f64,
-    tolerance_mm: f64,
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_domain_cells: usize,
+    limits: ClearanceLimits,
 ) -> Result<AutomaticReport> {
+    let ClearanceLimits {
+        required_mm,
+        tolerance_mm,
+        tolerance_uv,
+        max_cells,
+        max_domain_cells,
+    } = limits;
     if !required_mm.is_finite()
         || required_mm <= 0.
         || !tolerance_mm.is_finite()
@@ -85,11 +97,10 @@ pub fn inspect_shell(
                 model,
                 source_face,
                 &selection.candidate_faces,
-                required_mm,
-                tolerance_mm,
-                tolerance_uv,
-                max_cells - cells,
-                max_domain_cells,
+                ClearanceLimits {
+                    max_cells: max_cells - cells,
+                    ..limits
+                },
             )?;
             cells += r.cells;
             domains += r.domain_cells;
@@ -109,12 +120,15 @@ pub fn inspect(
     model: &Model,
     source_face: usize,
     targets: &[usize],
-    required_mm: f64,
-    tolerance_mm: f64,
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_domain_cells: usize,
+    limits: ClearanceLimits,
 ) -> Result<Report> {
+    let ClearanceLimits {
+        required_mm,
+        tolerance_mm,
+        tolerance_uv,
+        max_cells,
+        max_domain_cells,
+    } = limits;
     model.validate()?;
     let unique = targets
         .iter()
