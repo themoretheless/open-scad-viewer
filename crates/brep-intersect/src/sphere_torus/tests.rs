@@ -31,7 +31,10 @@ fn circle_of(
         sphere_uv,
         torus_uv,
         max_sample_residual,
-    } = component;
+    } = component
+    else {
+        panic!("expected an exact circle, got {component:?}");
+    };
     (
         curve,
         *center,
@@ -128,8 +131,7 @@ fn equator_symmetric_pair_matches_the_circle_circle_oracle() {
     let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
     let report = only_circles(&report, 2);
     for (component, z) in report.components.iter().zip([-0.6, 0.6]) {
-        let (curve, center, radius, normal, sphere_uv, torus_uv, sampled) =
-            circle_of(component);
+        let (curve, center, radius, normal, sphere_uv, torus_uv, sampled) = circle_of(component);
         assert!((radius - 2.2).abs() <= 1e-12, "{radius}");
         assert!(
             sub(center, [0., 0., z]).iter().all(|x| x.abs() <= 1e-12),
@@ -312,7 +314,10 @@ fn outer_equator_internal_tangency_stays_a_tangency_region() {
     only_circles(&report, 2);
     // Off-center external tangency: r_s = hypot(R, h) - r_t at h = 0.5.
     let tangent = 3_f64.hypot(0.5) - 1.;
-    let sphere = translated(&brep_core::analytic::sphere(tangent).unwrap(), [0., 0., 0.5]);
+    let sphere = translated(
+        &brep_core::analytic::sphere(tangent).unwrap(),
+        [0., 0., 0.5],
+    );
     let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
     assert!(report.components.is_empty(), "{report:?}");
     assert_eq!(
@@ -357,28 +362,52 @@ fn near_axial_offset_within_the_band_stays_unresolved() {
 }
 
 #[test]
-fn clearly_off_axis_pairs_are_unsupported_regions() {
+fn clearly_off_axis_contacts_are_traced_and_certified() {
     let torus = brep_core::analytic::torus(3., 1.).unwrap();
-    let sphere = translated(
-        &brep_core::analytic::sphere(5.2_f64.sqrt()).unwrap(),
-        [0.5, 0., 0.],
-    );
-    let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
-    assert!(report.components.is_empty(), "{report:?}");
-    assert_eq!(report.coverage, Coverage::Incomplete);
-    assert_eq!(report.unresolved.len(), 1);
-    assert_eq!(
-        report.unresolved[0].reason,
-        UnresolvedReason::UnsupportedSurface
-    );
-    assert_eq!(
-        report.unresolved[0].parameter_box,
-        vec![0., 1., 0., 1., 0., 1., 0., 1.]
-    );
+    for (radius, at) in [
+        (5.2_f64.sqrt(), [0.5, 0., 0.]),
+        (1., [4.5, 0., 0.]),
+        (1., [3.5, 0.4, 0.3]),
+    ] {
+        let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
+        let report = intersect_sphere_torus(&sphere, &torus, Options::default()).unwrap();
+        assert!(
+            report.unresolved.is_empty(),
+            "{radius} at {at:?}: {:?}",
+            report.unresolved
+        );
+        assert_eq!(report.coverage, Coverage::NumericallyResolved);
+        assert!(!report.permits_topology_change());
+        assert!(!report.components.is_empty());
+        for component in &report.components {
+            let SphereTorusComponent::Traced {
+                pieces,
+                distance_bound,
+                spans,
+            } = component
+            else {
+                panic!("expected a traced component off the axis");
+            };
+            assert!(*distance_bound <= TRACE_TOLERANCE && *spans > 0);
+            // Independent dense samples against the canonical surfaces.
+            for piece in pieces {
+                for k in 0..=40 {
+                    let p = piece.evaluate(k as f64 / 40.).unwrap().point;
+                    let d = sub([p[0], p[1], p[2]], at);
+                    let on_sphere = (d[0].hypot(d[1]).hypot(d[2]) - radius).abs();
+                    let on_torus = ((p[0].hypot(p[1]) - 3.).hypot(p[2]) - 1.).abs();
+                    assert!(on_sphere <= TRACE_TOLERANCE && on_torus <= TRACE_TOLERANCE);
+                }
+            }
+            for w in pieces.windows(2) {
+                assert_eq!(w[0].control_points.last(), w[1].control_points.first());
+            }
+        }
+    }
 }
 
 #[test]
-fn off_axis_misses_resolve_empty_and_contacts_stay_unsupported() {
+fn off_axis_misses_resolve_empty_and_tangencies_stay_unresolved() {
     let torus = brep_core::analytic::torus(3., 1.).unwrap();
     let empty = |radius: f64, at: [f64; 3]| {
         let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
@@ -403,15 +432,17 @@ fn off_axis_misses_resolve_empty_and_contacts_stay_unsupported() {
     }
     // A miss by 1e-6, beyond the rounding band, resolves empty.
     assert!(empty(0.9 - 1e-6, [3.1, 0., 0.]).unresolved.is_empty());
-    // A genuine off-axis contact and an exact internal tangency both stay
-    // unresolved: the band never turns a contact into a miss.
-    for (radius, at) in [(1., [4.5, 0., 0.]), (0.9, [3.1, 0., 0.])] {
+    // An exact internal tangency stays unresolved: the band never turns a
+    // contact into a miss, and the tracer refuses to guess a touching point.
+    {
+        let (radius, at) = (0.9, [3.1, 0., 0.]);
         let report = empty(radius, at);
         assert_eq!(report.coverage, Coverage::Incomplete, "{radius} at {at:?}");
-        assert_eq!(
+        assert!(report.components.is_empty());
+        assert!(matches!(
             report.unresolved[0].reason,
-            UnresolvedReason::UnsupportedSurface
-        );
+            UnresolvedReason::TangencyOrMultipleRoot | UnresolvedReason::UnsupportedSurface
+        ));
     }
 }
 
@@ -498,8 +529,7 @@ fn rotated_translated_placement_keeps_the_exact_circles() {
     let sphere_center = placed([0., 0., -4.]);
     let axis = sub(placed([0., 0., 1.]), placed([0., 0., 0.]));
     for (component, (rho, z)) in report.components.iter().zip([(3.8, -0.6), (2.2, 0.6)]) {
-        let (curve, center, radius, normal, sphere_uv, torus_uv, sampled) =
-            circle_of(component);
+        let (curve, center, radius, normal, sphere_uv, torus_uv, sampled) = circle_of(component);
         let expected = placed([0., 0., z]);
         assert!((radius - rho).abs() <= 1e-12, "{radius}");
         assert!(

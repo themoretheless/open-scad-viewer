@@ -31,6 +31,7 @@ mod plane_torus;
 mod sphere_cone;
 mod sphere_cylinder;
 mod sphere_torus;
+mod implicit_trace;
 mod torus_torus;
 pub use cone_cone::{ConeConeComponent, intersect_cone_cone};
 pub use cone_torus::{ConeTorusComponent, intersect_cone_torus};
