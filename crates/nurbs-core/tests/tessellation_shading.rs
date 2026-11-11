@@ -165,11 +165,15 @@ fn fully_collapsed_surface_cannot_fake_a_fallback_normal() {
 fn collapsed_cone_row_uses_analytic_limit_without_winding_flip() {
     let cone = Surface {
         degree_u: 1,
-        degree_v: 1,
+        degree_v: 2,
         knots_u: vec![0., 0., 1., 1.],
-        knots_v: vec![0., 0., 1., 1.],
+        // One smooth quadratic span in v: the only singular boundary is the
+        // collapsed apex row, which is what this test exercises.
+        knots_v: vec![0., 0., 0., 1., 1., 1.],
         control_points: vec![
-            vec![vec![1., 0., 0.], vec![0., 1., 0.], vec![-1., 0., 0.]],
+            // Clockwise base seen from the apex side, so the natural normal
+            // S_u x S_v points outward (upward) on this cone.
+            vec![vec![-1., 0., 0.], vec![0., 1., 0.], vec![1., 0., 0.]],
             vec![vec![0., 0., 1.]; 3],
         ],
         weights: vec![vec![1.; 3]; 2],

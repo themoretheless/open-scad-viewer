@@ -3,7 +3,6 @@
 //! Natural winding follows `S_u × S_v`; reversing a face swaps both its
 //! triangle winding and its analytic normals. Mesh normals are used only as an
 //! explicitly marked fallback, never presented as analytic CAD normals.
-use crate::curve::Curve;
 use crate::{
     Error, Result, check,
     surface::Surface,
@@ -11,18 +10,20 @@ use crate::{
 };
 use math_core::{cross, norm};
 
-/// One-sided analytic normal at a collapsed domain-boundary row. If row zero
-/// is one point, the adjacent U-curve derivative is the regular factor of the
-/// vanishing cross product; its cross with the nonzero V tangent is exactly the
-/// limiting normal. No finite-difference probe is used.
+/// One-sided analytic normal at a collapsed domain-boundary row or column.
+/// There the tangent along the collapsed boundary vanishes linearly, and the
+/// mixed derivative S_uv takes its place in the cross product, which gives
+/// the exact limiting normal. No finite-difference probe is used.
 fn analytic_normal(surface: &Surface, u: f64, v: f64) -> Result<Option<[f64; 3]>> {
     let evaluation = surface.evaluate(u, v)?;
     if let Some(n) = evaluation.unit_normal() {
         return Ok(Some(n));
     }
-    let Some((du, dv)) = evaluation.first_derivatives() else {
-        return Ok(None);
-    };
+    // Exact derivatives exist even where the evaluator withholds them at a
+    // singular point; the collapsed-boundary limit below needs S_uv too.
+    let d = surface.derivatives(u, v, 2)?;
+    let (du, dv, duv) = (d[1][0], d[0][1], d[1][1]);
+
     let domains = [
         surface.knots_u[surface.degree_u],
         surface.knots_u[surface.knots_u.len() - surface.degree_u - 1],
@@ -60,84 +61,14 @@ fn analytic_normal(surface: &Surface, u: f64, v: f64) -> Result<Option<[f64; 3]>
         if !collapsed {
             continue;
         }
-        let tangent = if axis == 0 {
-            let basis = crate::curve::basis(
-                surface.degree_v,
-                &surface.knots_v,
-                surface.control_points[0].len(),
-                v,
-                surface.periodic_v,
-            )?
-            .basis;
-            let curve = Curve {
-                degree: surface.degree_u,
-                knots: surface.knots_u.clone(),
-                control_points: surface
-                    .control_points
-                    .iter()
-                    .map(|r| {
-                        (0..3)
-                            .map(|k| r.iter().zip(&basis).map(|(p, b)| p[k] * b).sum())
-                            .collect()
-                    })
-                    .collect(),
-                weights: surface
-                    .weights
-                    .iter()
-                    .map(|r| r.iter().zip(&basis).map(|(w, b)| w * b).sum())
-                    .collect(),
-                periodic: surface.periodic_u,
-            };
-            curve.evaluate(u)?.d1.and_then(|v| v.try_into().ok())
-        } else {
-            let basis = crate::curve::basis(
-                surface.degree_u,
-                &surface.knots_u,
-                surface.control_points.len(),
-                u,
-                surface.periodic_u,
-            )?
-            .basis;
-            let curve = Curve {
-                degree: surface.degree_v,
-                knots: surface.knots_v.clone(),
-                control_points: (0..surface.control_points[0].len())
-                    .map(|j| {
-                        (0..3)
-                            .map(|k| {
-                                surface
-                                    .control_points
-                                    .iter()
-                                    .zip(&basis)
-                                    .map(|(r, b)| r[j][k] * b)
-                                    .sum()
-                            })
-                            .collect()
-                    })
-                    .collect(),
-                weights: (0..surface.weights[0].len())
-                    .map(|j| {
-                        surface
-                            .weights
-                            .iter()
-                            .zip(&basis)
-                            .map(|(r, b)| r[j] * b)
-                            .sum()
-                    })
-                    .collect(),
-                periodic: surface.periodic_v,
-            };
-            curve.evaluate(v)?.d1.and_then(|v| v.try_into().ok())
-        };
-        let cross_product = if let Some(t) = tangent {
-            normalize(if axis == 0 {
-                cross(t, dv)
-            } else {
-                cross(du, t)
-            })
-        } else {
-            None
-        };
+        // Near a collapsed u-row the v tangent vanishes linearly:
+        // S_v ~ (u - u0) S_uv, so the normal S_u x S_v tends to
+        // sign(u - u0) S_u x S_uv; a collapsed v-column likewise gives
+        // sign(v - v0) S_uv x S_v. The sign is fixed by which domain end the
+        // collapsed boundary lies on.
+        let side = if at_start { 1. } else { -1. };
+        let limit = if axis == 0 { cross(du, duv) } else { cross(duv, dv) };
+        let cross_product = normalize(limit.map(|x| x * side));
         if cross_product.is_some() {
             return Ok(cross_product);
         }
