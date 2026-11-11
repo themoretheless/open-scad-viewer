@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {effectScope,ref,shallowRef,toRaw} from 'svet'
 import {expect,it,vi} from 'vitest'
-import {useProfileBridgeInspection} from '../src/services/useProfileBridgeInspection'
+import {useProfileBridgeInspection} from '../src/app/useProfileBridgeInspection'
 import type {ProfileBridgeChordOptions,ProfileBridgeChordReport} from '../src/kernel/nurbsProfileBridgeChords'
 const fixture=JSON.parse(readFileSync('docs/qualification/mapped-retained-carrier-2026-10-08/profile-bridge-native-transport-2026-10-10.json','utf8')).wholeCoverage
 const {op:_,...options}=fixture.request as ProfileBridgeChordOptions&{op:string}

@@ -1,8 +1,8 @@
 import {lightenSolid,type LighteningOptions} from './solidLightening'
 import {textureSurface,type SurfaceTextureOptions} from '../render/surfaceTexture'
-import type {DirectDocument,DirectBody,DirectSketch} from '../services/directModeling'
+import type {DirectDocument,DirectBody,DirectSketch} from '../app/directModeling'
 import {normalizePolygonMesh,type PolygonMesh} from './geometry/polygon'
-import type {Vec3} from '../services/directSketchGeometry'
+import type {Vec3} from '../app/directSketchGeometry'
 import {callGeometryRust} from './geometry/kernel'
 export type CadAction='lighten'|'texture'|'union'|'difference'|'intersection'|'loft'|'sweep'|'mirror'|'pattern'|'align'|'distribute'|'draft'|'hole'|'thread'|'joint'|'resize'
 export interface CadOptions {action:CadAction;ids:string[];sketches:DirectSketch[];axis:Vec3;origin:Vec3;amount:number;count:number;width:number;height:number;depth:number;pitch:number;secondary:number;mode:string;pathId:string;profileIds:string[];texture?:SurfaceTextureOptions;lightening?:LighteningOptions}

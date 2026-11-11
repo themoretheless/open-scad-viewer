@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
-import {encodeBinary} from '../src/services/valueBinaryCodec'
+import {encodeBinary} from '../src/app/valueBinaryCodec'
 import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 import {box3d,lPrism3d,cavity3d,join3d,tetra3d} from '../tests/fixtures/minkowski3d-cases'
 const bytes=readFileSync(process.argv[2]??'public/wasm/geometry-kernel.wasm'),w=new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports as any

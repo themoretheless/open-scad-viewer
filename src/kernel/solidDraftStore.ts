@@ -1,4 +1,4 @@
-import {MAX_DOCUMENT_CHARACTERS} from '../services/directDocumentLimits'
+import {MAX_DOCUMENT_CHARACTERS} from '../app/directDocumentLimits'
 const databaseName='scad-solid-draft-snapshots-v1',storeName='snapshots'
 interface Snapshot {id:string;text:string;createdAt?:number}
 const request=<T>(r:IDBRequest<T>)=>new Promise<T>((resolve,reject)=>{r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error??Error('Draft storage request failed.'))})

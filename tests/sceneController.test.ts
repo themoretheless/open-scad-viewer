@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { MeshData } from '../src/core/mesh'
-import { SceneController } from '../src/services/sceneController'
+import { SceneController } from '../src/app/sceneController'
 
 const mesh = (entityId: string): MeshData => ({ entityId } as MeshData)
 

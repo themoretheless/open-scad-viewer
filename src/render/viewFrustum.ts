@@ -1,4 +1,4 @@
-import type { Mat4 } from '../services/math3d'
+import type { Mat4 } from '../app/math3d'
 
 /** Conservative world-space sphere culling for WebGPU's -w..w XY, 0..w Z. */
 export class ViewFrustum {

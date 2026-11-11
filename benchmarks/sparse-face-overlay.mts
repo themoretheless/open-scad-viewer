@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto'
 import {readFileSync} from 'node:fs'
 import {cpus} from 'node:os'
 import {buildFaceOverlayGeometry, buildFaceTriangleIndex} from '../src/render/meshSelectionOverlay'
-import {identity} from '../src/services/math3d'
+import {identity} from '../src/app/math3d'
 
 const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)]
 const vertices = new Float32Array([0,0,0,0,0,1, 1,0,0,0,0,1, 0,1,0,0,0,1, 1,1,0,0,0,1])

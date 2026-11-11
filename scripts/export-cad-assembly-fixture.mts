@@ -1,7 +1,7 @@
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
-import {serializeDirectDocument} from '../src/services/directModeling'
+import {serializeDirectDocument} from '../src/app/directModeling'
 import {exportSolidStepAssembly} from '../src/kernel/solidStepAssembly'
 const directory=resolve(process.argv[2]??'output/qualification/cad-roadmap-assembly')
 mkdirSync(directory,{recursive:true})

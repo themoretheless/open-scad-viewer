@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest'
-import {emptyDirectDocument} from '../src/services/directModeling'
+import {emptyDirectDocument} from '../src/app/directModeling'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {createSolidInstance} from '../src/kernel/solidInstances'
 import {exportSolidBlenderSnapshot} from '../src/kernel/solidBlenderExchange'
@@ -21,7 +21,7 @@ it('refuses partial curve/sketch export and missing project identity',()=>{
 })
 
 it('keeps export identity across existing undo/redo, edits and reload without adding an undo step',async()=>{
- const {DirectHistory,serializeDirectDocument,parseDirectDocument}=await import('../src/services/directModeling')
+ const {DirectHistory,serializeDirectDocument,parseDirectDocument}=await import('../src/app/directModeling')
  const history=new DirectHistory()
  const changed=history.document;changed.groups=[{name:'Group',source:''}];history.commit(changed)
  history.undo()

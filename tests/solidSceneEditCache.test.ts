@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
-import {parseDirectDocument,serializeDirectDocument,type DirectDocument} from '../src/services/directModeling'
+import {parseDirectDocument,serializeDirectDocument,type DirectDocument} from '../src/app/directModeling'
 import {applySolidSceneEdit} from '../src/kernel/solidSceneEdit'
 import {SolidInstanceBatchCache} from '../src/kernel/solidInstanceBatchCache'
 it('reuses transformed instance batches during authoritative result validation',async()=>{

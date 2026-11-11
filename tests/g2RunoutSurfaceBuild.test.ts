@@ -2,7 +2,7 @@ import {expect,it,vi} from 'vitest'
 const native=vi.hoisted(()=>vi.fn())
 vi.mock('../src/kernel/geometry/nurbs',()=>({callNurbsRust:native}))
 import {buildSolidSurface,type SolidSurfaceBuildOptions} from '../src/kernel/solidSurfaceConstruction'
-import type {DirectDocument} from '../src/services/directModeling'
+import type {DirectDocument} from '../src/app/directModeling'
 const surface={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]]}
 function document():DirectDocument{return {version:1,bodies:[],sketches:[],surfaces:['a','b'].map(id=>({id,name:id,surface:structuredClone(surface),segmentsU:4,segmentsV:4})),curves:[{id:'c',name:'Boundary',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,1,.1],[1,1,.1]],weights:[1,1]}}]}}
 const options:SolidSurfaceBuildOptions={kind:'nurbs-runout',ids:['a','b','c'],id:'result',group:'group-a',reversed:[],sweep:{mode:'translation',normal:[0,0,1],sections:4,maxDeviation:.01},

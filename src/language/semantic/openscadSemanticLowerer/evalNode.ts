@@ -8,7 +8,7 @@ import { MAX_EVAL_DEPTH, MAX_EVAL_OPS, compactDiagnosticText, evaluationError, i
 import type { SemanticDynamicSlot, SemanticValueType } from '../../../core/semanticProgram'
 import { arg, bindAssertArguments, callExpressionArguments, evalExpression, evalNodes, semanticProjectAssetRequired, stableCompatibilityDeprecation, viewportRootActivates, viewportSemanticSlots } from './evalExpression'
 import { axisAngleMatrix, axisAngleMatrixUnchecked, combineShapes, eulerMatrix, evalPreparedNodes, frameChildren, frameContext, invoke, matrixValue, mirrorMatrix, nodeValueType, parseColor, primitiveColor, scaleMatrix, semanticSegments, semanticSlot, transformShapes, translationMatrix, unionReduceInternal } from './evalPreparedNodes'
-import { clamp01 } from '../../../services/math3d'
+import { clamp01 } from '../../../app/math3d'
 import { evalDxfLinearExtrude, evalDxfRotateExtrude, evalPassedCallChildren, makeCylinder, makePolygon, makePolyhedron } from './makeCylinder'
 import { evalUserModule } from './evalUserModule'
 import { finiteNumber, semanticValueType, stableWarning, truthy, valueToString, vectorValue } from './semanticValueType'

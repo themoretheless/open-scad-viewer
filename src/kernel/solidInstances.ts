@@ -1,6 +1,6 @@
-import {expandLiveBodyPatterns} from '../services/liveBodyPattern'
+import {expandLiveBodyPatterns} from '../app/liveBodyPattern'
 import type {SolidInstanceBatchCache} from './solidInstanceBatchCache'
-import type {DirectDocument,DirectBody} from '../services/directModeling'
+import type {DirectDocument,DirectBody} from '../app/directModeling'
 import {normalizePolygonMesh} from './geometry/polygon'
 import {callGeometryRust} from './geometry/kernel'
 import {stringifyMeshJson} from '../exchange/meshJson'

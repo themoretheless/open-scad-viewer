@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createSelectionSurfacePublisher } from '../src/services/selectionSurfacePublisher'
+import { createSelectionSurfacePublisher } from '../src/app/selectionSurfacePublisher'
 import type { MeshData } from '../src/core/mesh'
 
 function mesh(): MeshData {

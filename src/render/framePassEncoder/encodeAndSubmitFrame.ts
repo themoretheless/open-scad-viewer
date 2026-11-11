@@ -1,5 +1,5 @@
 // framePassEncoder: encodeAndSubmitFrame.
-import { invert, type Mat4, type Vec3 } from '../../services/math3d'
+import { invert, type Mat4, type Vec3 } from '../../app/math3d'
 
 import type {
   DisplayMode,
@@ -19,7 +19,7 @@ import type { ViewFrustum } from '../viewFrustum'
 
 import type { MeshInstances } from '../../kernel/meshInstances'
 
-import { isTransparentAlpha } from '../../services/backendQuality'
+import { isTransparentAlpha } from '../../app/backendQuality'
 
 import {
   OBJECT_UNIFORM_LAYOUT,
@@ -31,11 +31,11 @@ import {
   type PipelineFactory,
   TRANSPARENT_DEPTH,
   type PipelineFlavor,
-} from '../../services/pipelineFactory'
+} from '../../app/pipelineFactory'
 
 import type { TextureResources } from '../textureResources'
 
-import { fillSceneUniforms } from '../../services/uniformFill'
+import { fillSceneUniforms } from '../../app/uniformFill'
 
 import { GpuCsgRenderer, type GpuCsgTree } from '../gpuCsgPreview'
 

@@ -1,4 +1,4 @@
-import type { DirectDocument } from '../../../services/directModeling'
+import type { DirectDocument } from '../../../app/directModeling'
 import { finite } from '../../mainSolidProtocol'
 import { isSourceBodyRecordPayload } from '../../sourceBodyArchive'
 import { arrayOf } from '../mainSolidExpectation'

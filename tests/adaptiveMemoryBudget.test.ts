@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {adaptiveCacheBytes} from '../src/services/adaptiveMemoryBudget'
+import {adaptiveCacheBytes} from '../src/app/adaptiveMemoryBudget'
 import {SolidDisplayCache,type DisplayMesh} from '../src/kernel/solidDisplayCache'
 it('scales capacity with bounded growth and a conservative fallback',()=>{
  expect(adaptiveCacheBytes(64_000_000,{})).toBe(64_000_000)

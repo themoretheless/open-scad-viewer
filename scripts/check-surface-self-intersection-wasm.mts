@@ -15,7 +15,7 @@ import {isSurfaceIsoTargetReport} from '../src/kernel/surfaceIsoTargetProtocol.t
 import {isSurfaceIsoAuditReport} from '../src/kernel/surfaceIsoSelfIntersectionProtocol.ts'
 import {isSurfaceAuditReport} from '../src/kernel/surfaceSelfIntersectionProtocol.ts'
 import {nonlinearSurfaceCases,spatialSurfaceCases,isoTargetFixture,offCenterSpatialSurface} from '../tools/browser-qualification/surface-self-fixtures.ts'
-import { encodeBinary, decodeBinary } from '../src/services/valueBinaryCodec.ts'
+import { encodeBinary, decodeBinary } from '../src/app/valueBinaryCodec.ts'
 const [wasmPath, directory, sourceCommit] = process.argv.slice(2)
 assert(wasmPath && directory && /^[a-f0-9]{40}$/.test(sourceCommit ?? ''))
 mkdirSync(directory, { recursive: true })

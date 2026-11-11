@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
-import {evaluateAssemblyEasing,findPoseBoundingBoxOverlaps,sampleAssemblyAnimation,validateAssemblyAnimation,type AssemblyAnimation} from '../src/services/assemblyAnimation'
-import {emptyDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
+import {evaluateAssemblyEasing,findPoseBoundingBoxOverlaps,sampleAssemblyAnimation,validateAssemblyAnimation,type AssemblyAnimation} from '../src/app/assemblyAnimation'
+import {emptyDirectDocument,serializeDirectDocument} from '../src/app/directModeling'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 function seed(){const d=emptyDirectDocument(),brep=createBrepBox([0,0,0],[2,2,2]);d.bodies.push({id:'part',name:'Part',brep,mesh:tessellateNurbsBrep(brep,1)});return d}

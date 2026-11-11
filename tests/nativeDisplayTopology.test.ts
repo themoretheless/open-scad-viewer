@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest'
-import {solidTopology} from '../src/services/directSolidTools'
+import {solidTopology} from '../src/app/directSolidTools'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 it('groups a box into six oriented supports and twelve physical edges with stable triangle membership',()=>{
  const mesh=tessellateNurbsBrep(createBrepBox([0,0,0],[2,3,4]),3)
@@ -51,7 +51,7 @@ it('preserves legacy seam grouping at exact decimal half ties',()=>{
  expect(solidTopology(mesh).edges).toHaveLength(1)
 })
 it('builds oriented orthonormal workplanes on tilted faces',async()=>{
- const {facePlane,transformBodies}=await import('../src/services/directSolidTools')
+ const {facePlane,transformBodies}=await import('../src/app/directSolidTools')
  const brep=createBrepBox([0,0,0],[2,3,4]),mesh=tessellateNurbsBrep(brep,1)
  const body=transformBodies([{id:'b',name:'Box',brep,mesh}],[7,-3,5],[1,2,3],37,1)[0]
  for(const face of solidTopology(body.mesh).faces){
@@ -63,7 +63,7 @@ it('builds oriented orthonormal workplanes on tilted faces',async()=>{
  }
 })
 it('refuses malformed or inconsistent workplane selections',async()=>{
- const {facePlane}=await import('../src/services/directSolidTools')
+ const {facePlane}=await import('../src/app/directSolidTools')
  const mesh={positions:[0,0,0,1,0,0,0,1,0],indices:[0,1,2]},body={id:'b',name:'Triangle',mesh},face=solidTopology(mesh).faces[0]
  expect(()=>facePlane(body,{...face,vertices:[]})).toThrow('vertices')
  expect(()=>facePlane(body,{...face,vertices:[0,3]})).toThrow('vertices')

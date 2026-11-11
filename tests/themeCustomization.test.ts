@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { customizeTokens, normalizeHex } from '../src/services/themeCustomization'
-import { contrastRatio, THEME_CATALOG } from '../src/services/themePreferences'
+import { customizeTokens, normalizeHex } from '../src/app/themeCustomization'
+import { contrastRatio, THEME_CATALOG } from '../src/app/themePreferences'
 
 describe('theme customization', () => {
   it('accepts only 6-digit hex colors', () => {

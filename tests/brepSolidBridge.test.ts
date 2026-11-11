@@ -4,9 +4,9 @@ import {EXAMPLES} from '../src/data/examples'
 import {createNativeGeometryArtifact} from '../src/core/nativeGeometry'
 import {parseOpenSCAD} from '../src/language/openscadParser'
 import {sceneMeshesToSolidDocument} from '../src/kernel/solidBridge'
-import {parseDirectDocument} from '../src/services/directModeling'
+import {parseDirectDocument} from '../src/app/directModeling'
 import {analyzeNurbsBrep, booleanNurbsBrep, tessellateNurbsBrep, type NurbsBrep} from '../src/kernel/geometry/brep'
-import {identity,rotateY,scale,translate} from '../src/services/math3d'
+import {identity,rotateY,scale,translate} from '../src/app/math3d'
 
 async function cylinder() {
   return (await parseOpenSCAD('// @rush/1\nshow brep_cylinder(3mm,4mm).brep_tessellate(6)')).meshes[0]

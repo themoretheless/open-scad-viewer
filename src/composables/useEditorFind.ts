@@ -4,7 +4,7 @@ import {
   replaceAllLiteral,
   replaceExpectedMatch,
   wrappedMatchIndex,
-} from '../services/textSearch'
+} from '../app/textSearch'
 
 export interface EditorFindOptions {
   /** The edited source; replacements write back to it. */

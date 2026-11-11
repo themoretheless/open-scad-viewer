@@ -1,7 +1,7 @@
 import type { MeshData } from '../core/mesh'
 import type { SvgOptions } from './svgDocument'
 import { SVG_MAX_BYTES } from './svgLimits'
-import { MAX_WORKSPACE_SOURCE_LENGTH } from '../services/workspaceDocument'
+import { MAX_WORKSPACE_SOURCE_LENGTH } from '../app/workspaceDocument'
 
 export type SvgPreviewResult = { svg: string; widthMm: number; heightMm: number; warnings: string[] }
 export type SvgGeometryResult = SvgPreviewResult & { source?: string; contours?: [number,number][][] }

@@ -1,14 +1,14 @@
 import { computed, nextTick, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef, type WritableComputedRef } from 'svet'
 import type { GeometryQuality } from '../../core/build'
 import { meshTransferables, type MeshData } from '../../core/mesh'
-import { AutoBuildScheduler } from '../../services/autoBuildScheduler'
+import { AutoBuildScheduler } from '../../app/autoBuildScheduler'
 import {
   BuildCoordinator,
   type BuildCoordinatorState,
   type PublishedGeometryBuild,
-} from '../../services/buildCoordinator'
-import { BuildPerformanceHistory, type BuildPerformanceSample } from '../../services/buildPerformance'
-import { planGeometryPublication } from '../../services/buildPromotionPolicy'
+} from '../../app/buildCoordinator'
+import { BuildPerformanceHistory, type BuildPerformanceSample } from '../../app/buildPerformance'
+import { planGeometryPublication } from '../../app/buildPromotionPolicy'
 import type { CameraState } from '../../render/cameraHistory'
 import { diagnosticFromBuildError, type EditorDiagnostic } from '../../language/editorDiagnostics'
 import { withSelectionSurfaces } from '../../kernel/meshSurfaceGroups'
@@ -20,8 +20,8 @@ import type {
   ShadingModel,
 } from '../../render/rendererContracts'
 import { RendererRecoveryGate } from '../../render/rendererRecoveryGate'
-import type { SceneController } from '../../services/sceneController'
-import { planScenePublication } from '../../services/scenePublication'
+import type { SceneController } from '../../app/sceneController'
+import { planScenePublication } from '../../app/scenePublication'
 import type { ViewportController } from '../../render/viewportController'
 import { WebGPURenderer } from '../../render/webgpuRenderer'
 import { buildSources } from '../../appHelpers'

@@ -1,7 +1,7 @@
 import {beforeAll,it,expect} from 'vitest'
 import {GeometryBuildEngine} from '../src/kernel/geometryBuildEngine'
 import {extractSemanticEdges} from '../src/kernel/meshTopology'
-import {BOX_DEFAULTS,generateBox} from '../src/services/boxGenerator'
+import {BOX_DEFAULTS,generateBox} from '../src/app/boxGenerator'
 const engine=new GeometryBuildEngine()
 beforeAll(()=>engine.initializeSource('cube(1);',{quality:'full',purpose:'analysis'}))
 it.each([{porous:false,hooks:false,front_angle:0},{porous:false,hooks:false,front_angle:15},{porous:true,hooks:false,front_angle:0},{porous:true,hooks:false,front_angle:15},{porous:true,hooks:true,front_angle:0},{porous:true,hooks:false,front_angle:-15},{porous:true,hooks:true,front_angle:15,dividers:1,drain:true,hole_pitch:24}])('builds rounded walls with configuration %j',async patch=>{

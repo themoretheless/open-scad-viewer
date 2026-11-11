@@ -11,7 +11,7 @@ import {
 import { AbortedError, OpenSCADParseError } from '../language/openscadParser'
 import { isExactSolidRequest } from '../kernel/solid/exactSolidProtocol'
 import { meshTransferables } from '../core/mesh'
-import {createSelectionSurfacePublisher} from '../services/selectionSurfacePublisher'
+import {createSelectionSurfacePublisher} from '../app/selectionSurfacePublisher'
 import {surfaceGroupsInKernel} from '../kernel/geometry/meshAnalysis'
 import {warmGeometryKernel} from '../kernel/geometry/kernel'
 import type { GeometryExecutionDescriptor } from '../core/geometryExecution'

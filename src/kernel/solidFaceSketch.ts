@@ -1,5 +1,5 @@
-import {bodyPoints,type DirectBody,type Point2} from '../services/directModeling'
-import {facePlane,solidTopology} from '../services/directSolidTools'
+import {bodyPoints,type DirectBody,type Point2} from '../app/directModeling'
+import {facePlane,solidTopology} from '../app/directSolidTools'
 import {polygonBoundaryLoops} from './geometry/polygon'
 /** Prepare the supporting plane and every boundary before publishing a workplane. */
 export function prepareSolidFaceSketch(body:DirectBody,index:number){

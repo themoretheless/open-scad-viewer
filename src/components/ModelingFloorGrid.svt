@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, useId } from 'svet'
-import { projectDirectPoint, type OrbitCamera } from '../services/directModelingTools'
-import { useModelingGrid } from '../services/modelingGrid'
+import { projectDirectPoint, type OrbitCamera } from '../app/directModelingTools'
+import { useModelingGrid } from '../app/modelingGrid'
 
 const props = defineProps<{ camera: OrbitCamera; size: number; center: readonly number[]; flipY?: boolean }>()
 const id = useId()

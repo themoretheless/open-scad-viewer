@@ -7,7 +7,7 @@ import ts from 'typescript'
 import {CadGeometryKernel} from '../src/kernel/cadGeometryKernel'
 import {setOptionalWasmCompiler} from '../src/kernel/wasmCompilation'
 import {compileWasmArtifact} from '../src/kernel/wasmArtifact'
-import {extrudeDirectSketch, type DirectBody} from '../src/services/directModeling'
+import {extrudeDirectSketch, type DirectBody} from '../src/app/directModeling'
 import {spatialGraph, lighteningCells, type LighteningOptions} from '../src/kernel/solidLightening'
 
 // Pin the pre-port implementation. Only its pure graph/cell exports are called;

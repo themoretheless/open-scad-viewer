@@ -14,8 +14,8 @@ import {
 import {
   DRAWING_SHEET_FORMATS,
   formatDrawingDimensionWithTolerance,
-} from '../src/services/drawingSheets'
-import { computeAdaptiveGridStepMm } from '../src/services/modelingGrid'
+} from '../src/app/drawingSheets'
+import { computeAdaptiveGridStepMm } from '../src/app/modelingGrid'
 import { computeSteppedOrbitAngles } from '../src/render/viewportModel'
 import { formatInterferenceMarkdownReport } from '../src/mcp/rushGraphInterference'
 

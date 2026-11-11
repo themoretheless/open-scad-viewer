@@ -12,7 +12,7 @@ import {
   updateWorkspaceDocument,
   workspaceDocumentsEqual,
   type WorkspaceDocumentSnapshot,
-} from '../src/services/workspaceDocument'
+} from '../src/app/workspaceDocument'
 import {
   IndexedDbWorkspaceRepository,
   WORKSPACE_DATABASE_NAME,
@@ -20,11 +20,11 @@ import {
   WorkspaceIndexedDbConflictError,
   type WorkspaceRepositoryLoadResult,
   type WorkspaceSnapshotRepository,
-} from '../src/services/workspaceIndexedDb'
+} from '../src/app/workspaceIndexedDb'
 import {
   BrowserWorkspacePersistence,
   type RemovableWorkspaceStorage,
-} from '../src/services/workspacePersistence'
+} from '../src/app/workspacePersistence'
 
 class MemoryStorage implements RemovableWorkspaceStorage {
   readonly values = new Map<string, string>()

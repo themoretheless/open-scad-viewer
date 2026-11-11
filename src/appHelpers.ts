@@ -1,9 +1,9 @@
 // Pure helpers of App.svt: no component state, extracted by scripts/vue-extract-pure.mjs.
 import { type ComponentPublicInstance } from 'svet'
-import { type RovingFocusKey } from './services/rovingFocus'
-import { encodeWorkspaceShare } from './services/workspaceShare'
-import { clamp } from './services/math3d'
-import { storageGetJSON } from './services/safeStorage'
+import { type RovingFocusKey } from './app/rovingFocus'
+import { encodeWorkspaceShare } from './app/workspaceShare'
+import { clamp } from './app/math3d'
+import { storageGetJSON } from './app/safeStorage'
 
 export const blockColors = ['#7999e8', '#c792ea', '#d7a457', '#55bba4', '#d87d9d']
 

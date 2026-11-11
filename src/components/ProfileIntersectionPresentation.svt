@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import {worldPoint,type SketchPlane} from '../services/directSketchGeometry'
-import type {Point2} from '../services/directModeling'
+import {worldPoint,type SketchPlane} from '../app/directSketchGeometry'
+import type {Point2} from '../app/directModeling'
 import type {ProfilePreparationReport} from '../kernel/solidProfilePreparation'
 import {computed} from 'svet'
 import {profileIntersectionDiagnostics} from '../kernel/profileIntersectionDiagnostics'

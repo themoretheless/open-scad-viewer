@@ -2,7 +2,7 @@ import {restoreFrozenGraphBody,displayFrozenGraphBody} from './frozenGraphBody'
 import {inspectNurbsOffsetDeviation} from './nurbsOffsetDeviation'
 import {createSourceGraphG2Preview} from './sourceGraphG2Preview'
 import {createG2RunoutSurface} from './geometricG2'
-import {executeDirectTransaction} from '../services/directTransactions'
+import {executeDirectTransaction} from '../app/directTransactions'
 import {inspectProfileBridgeChords} from './nurbsProfileBridgeChords'
 import {inspectExpressionShell} from './expressionShellInspection'
 import {restoreExpressionShell} from './expressionShell'
@@ -21,12 +21,12 @@ import {inspectFaceContacts} from './solidFaceContacts'
 import {inspectBoundaryAgreement} from './solidBoundaryAgreement'
 import {measureNurbsSurfaceDistance} from './nurbsSurface'
 import {measureNurbsCurveDistance} from './nurbsCurve'
-import {sketchSnapGeometry} from '../services/modelingSnaps'
+import {sketchSnapGeometry} from '../app/modelingSnaps'
 import {bodySnapGeometry} from './solidSnapGeometry'
 import {prepareSolidFaceSketch} from './solidFaceSketch'
 import {solidBodyEdges} from './solidBodyEdges'
-import {solidTopology} from '../services/directSolidTools'
-import {retainedProfileDisplay} from '../services/retainedSketchProfile'
+import {solidTopology} from '../app/directSolidTools'
+import {retainedProfileDisplay} from '../app/retainedSketchProfile'
 import {tessellateSolidNurbsSurface,sampleSolidNurbsCurve} from './solidNurbs'
 import {measureSurfaceBoundaries} from './solidSurfaceDiagnostics'
 import {measureSolidVertices,measureSolidManifoldMetrics,measureSolidEdgeCurvature,measureFaceDistance,measureShellDistance} from './solidMeasurements'
@@ -35,7 +35,7 @@ import {inspectMeshManifoldObjects} from './meshManifoldDefects'
 import {addSolidPrimitive} from './solidPrimitive'
 import {prepareSolidDisplay} from './solidDisplayPreparation'
 import {SolidInstanceBatchCache} from './solidInstanceBatchCache'
-import {parseDirectDocument,serializeDirectDocument} from '../services/directModeling'
+import {parseDirectDocument,serializeDirectDocument} from '../app/directModeling'
 import {applySolidBrepTool} from './solidBrepTool'
 import {applySolidPointEdit} from './solidPointEdit'
 import {applySolidSketchEdit} from './solidSketchEdit'
@@ -49,13 +49,13 @@ import {prepareSolidProfile} from './solidProfilePreparation'
 import {applySolidProfileEdit} from './solidProfileEdit'
 import {applySolidBodyEdit} from './solidBodyEdit'
 import {applySolidRevolve} from './solidRevolve'
-import {applyDirectExtrusionProfile} from '../services/directExtrusion'
+import {applyDirectExtrusionProfile} from '../app/directExtrusion'
 import {inspectSolidIntersections} from './solidDiagnostics'
 import {solveBondedSolid} from './bondedSolid'
 import {inspectStructuralSections} from './structuralSections'
 import {inspectCadPairs} from './cadInspection'
 import {cadOperation} from './cadWorkbench'
-import {mainOperation} from '../services/mainModeling'
+import {mainOperation} from '../app/mainModeling'
 import {optimizeTrussTopology,solveTruss} from './trussAnalysis'
 import {trussFieldMeshes} from './trussFieldMeshes'
 import {evaluateThermalStrength,screenTrussMembers,validatePrintStrengthProfile} from './trussScreening'
@@ -65,7 +65,7 @@ import {flattenGroupGeometry} from './meshFlatten'
 import {checkLatticeGraphInput, checkLatticeGraphMeshInput, isNominalLatticeGraph} from '../fabrication/latticeGraphProtocol'
 import {warmGeometryKernel} from './geometry/kernel'
 import {prepareMainSolidTransfer} from './mainSolidWorkerTransport'
-import {createWorkerHandler} from '../services/workerHandlerRuntime'
+import {createWorkerHandler} from '../app/workerHandlerRuntime'
 import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidProgress,type MainSolidProgressMessage,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
 
 async function execute(job:MainSolidJob,onProgress?:(progress:MainSolidProgress)=>void):Promise<MainSolidResults[keyof MainSolidResults]> {
@@ -76,9 +76,9 @@ case 'sourceGraphG2Preview':return createSourceGraphG2Preview(job.sources,job.wi
 case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)
 case 'minkowski3d':return (await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options)
 case 'animationFrames':return (await import('../exchange/assemblyFrameExport')).exportAssemblyFrames(job.document,job.animation,job.fps)
-case 'animationSample':return (await import('../services/assemblyAnimation')).sampleAssemblyAnimation(job.document,job.animation,job.time)
-case 'drawingPdf':return (await import('../services/drawingSheets')).vectorDrawingPdf(job.sheets)
-case 'drawingSheets':return (await import('../services/drawingSheets')).createDrawingSheets(job.bodies,job.options)
+case 'animationSample':return (await import('../app/assemblyAnimation')).sampleAssemblyAnimation(job.document,job.animation,job.time)
+case 'drawingPdf':return (await import('../app/drawingSheets')).vectorDrawingPdf(job.sheets)
+case 'drawingSheets':return (await import('../app/drawingSheets')).createDrawingSheets(job.bodies,job.options)
 case 'transaction':return executeDirectTransaction(job.document,job.script)
 
     case 'profileBridgeChords':return inspectProfileBridgeChords(job.options)
@@ -128,7 +128,7 @@ case 'transaction':return executeDirectTransaction(job.document,job.script)
     case 'restoreDocument':return parseDirectDocument(job.text,instanceCache)
     case 'rushGraphImport':return (await import('../exchange/solidRushGraphImport')).importSolidRushGraph(job.document,job.text,job.group)
     case 'brepTool':return applySolidBrepTool(job.document,job.options)
-    case 'curveChainInspection':return (await import('../services/inspectCurrentCurveChain')).inspectCurrentCurveChain(job.document,job.ids,job.maxPairs)
+    case 'curveChainInspection':return (await import('../app/inspectCurrentCurveChain')).inspectCurrentCurveChain(job.document,job.ids,job.maxPairs)
     case 'trimmedCurveOffset':return (await import('./solidTrimmedCurveOffset')).offsetTrimmedSolidCurve(job.document,job.options)
     case 'curveOffset':return (await import('./solidCurveOffset')).offsetSolidCurve(job.document,job.options)
     case 'nurbsEdit':return (await import('./solidNurbsEdit')).applySolidNurbsEdit(job.document,job.options)

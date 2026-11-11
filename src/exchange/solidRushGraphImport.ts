@@ -1,4 +1,4 @@
-import {parseDirectDocument,type DirectDocument} from '../services/directModeling'
+import {parseDirectDocument,type DirectDocument} from '../app/directModeling'
 import {stringifyMeshJson} from './meshJson'
 import {importRushGraphNurbs} from './solidNurbsImport'
 import {warmLanguageKernel} from '../language/languages/kernel'

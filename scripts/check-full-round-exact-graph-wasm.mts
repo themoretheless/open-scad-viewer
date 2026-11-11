@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
-import {encodeBinary,decodeBinary} from '../src/services/valueBinaryCodec.ts'
+import {encodeBinary,decodeBinary} from '../src/app/valueBinaryCodec.ts'
 const [path,directory]=process.argv.slice(2);assert(path&&directory)
 mkdirSync(directory,{recursive:true})
 const bytes=readFileSync(path),module=await WebAssembly.compile(bytes)

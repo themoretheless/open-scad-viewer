@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {readFileSync,writeFileSync} from 'node:fs'
 import {performance} from 'node:perf_hooks'
-import {DirectHistory,parseDirectDocument} from '../src/services/directModeling'
+import {DirectHistory,parseDirectDocument} from '../src/app/directModeling'
 import {pathToFileURL} from 'node:url'
 import {resolve} from 'node:path'
 const [fixture,output,baselinePath]=process.argv.slice(2)

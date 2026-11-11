@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   geometryExportEligibility,
   planGeometryPublication,
-} from '../src/services/buildPromotionPolicy'
+} from '../src/app/buildPromotionPolicy'
 
 const current = { buildGeneration: 4, source: 'sphere(5);' }
 

@@ -2,7 +2,7 @@ import {expect,it} from 'vitest'
 import {booleanNurbsBrep,chamferNurbsBrep,chamferNurbsBrepEdges,createBrepBox,createFacetedBrepCylinder,createFacetedBrepLoft,createFacetedBrepRevolve,createFacetedBrepSphere,createFacetedBrepSweep,extrudeBrepPolygon,filletNurbsBrep,filletNurbsBrepEdges,inspectNurbsBrep,tessellateNurbsBrep,nurbsBrepToPolygon,inspectPolygonBrep,tessellatePolygonBrep} from '../src/kernel/geometry/brep'
 import {parseOpenSCAD} from '../src/language/openscadParser'
 import {withSelectionSurfaces} from '../src/kernel/meshSurfaceGroups'
-import {transformSelection} from '../src/services/directSolidTools'
+import {transformSelection} from '../src/app/directSolidTools'
 it('shares topology across own NURBS and polygon kernels with stable face groups',()=>{
  const model=createBrepBox([0,0,0],[2,3,4]);expect([model.vertices.length,model.edges.length,model.faces.length,model.bodies.length]).toEqual([8,12,6,1])
  expect(model.topologyIds?.vertices).toHaveLength(8);expect(new Set(model.topologyIds?.faces).size).toBe(6)

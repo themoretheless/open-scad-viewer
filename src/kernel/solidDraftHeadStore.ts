@@ -1,4 +1,4 @@
-import {MAX_DOCUMENT_CHARACTERS} from '../services/directDocumentLimits'
+import {MAX_DOCUMENT_CHARACTERS} from '../app/directDocumentLimits'
 export interface SolidDraftHead {key:string;revision:string;text:string}
 const databaseName='scad-solid-draft-heads-v1',store='heads'
 async function database():Promise<IDBDatabase>{

@@ -1,4 +1,4 @@
-import {parseDirectDocument,serializeDirectDocument,type DirectDocument} from '../services/directModeling'
+import {parseDirectDocument,serializeDirectDocument,type DirectDocument} from '../app/directModeling'
 /** Explicit project identity keeps repeated exports independent of filenames. */
 export function exportSolidBlenderSnapshot(document:DirectDocument,projectId:string):string {
  if(!projectId.trim()||projectId.length>100)throw Error('A stable project ID is required for Blender updates.')

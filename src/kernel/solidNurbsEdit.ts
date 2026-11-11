@@ -1,5 +1,5 @@
-import {bridgeNurbsCurves} from '../services/directDimensions'
-import type {DirectDocument} from '../services/directModeling'
+import {bridgeNurbsCurves} from '../app/directDimensions'
+import type {DirectDocument} from '../app/directModeling'
 import {insertNurbsKnot,elevateNurbsCurve,trimNurbsCurveAtPoint,trimNurbsCurveAtScreenPoint,type NurbsScreenProjection} from './nurbsCurve'
 import {insertNurbsSurfaceKnot,elevateNurbsSurface,isoNurbsCurve,trimNurbsSurface} from './nurbsSurface'
 import {extrudeNurbsCurve} from './nurbsConstructors'

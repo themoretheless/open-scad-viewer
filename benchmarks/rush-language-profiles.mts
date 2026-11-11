@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { compileWasmArtifact } from '../src/kernel/wasmArtifact'
-import { encodeBinary } from '../src/services/valueBinaryCodec'
+import { encodeBinary } from '../src/app/valueBinaryCodec'
 import { decodePacked, writeLinear } from '../src/kernel/wasmHost'
 import { prepareGraphRust, warmLanguageKernel } from '../src/language/languages/kernel'
 

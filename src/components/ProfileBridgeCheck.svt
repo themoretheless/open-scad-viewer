@@ -2,7 +2,7 @@
 import {computed,ref,toRaw,watch,nextTick} from 'svet'
 import type {NurbsSurface} from '../kernel/nurbsSurface'
 import type {ProfileBridgeChordOptions} from '../kernel/nurbsProfileBridgeChords'
-import {useProfileBridgeInspection} from '../services/useProfileBridgeInspection'
+import {useProfileBridgeInspection} from '../app/useProfileBridgeInspection'
 const props=defineProps<{surfaces:[NurbsSurface,NurbsSurface];active:boolean;ru:boolean}>()
 const label=(ru:string,en:string)=>props.ru?ru:en
 const opened=ref(false),axes=ref<[0|1,0|1]>([0,0]),parameters=ref<[number,number]>([0,1]),scales=ref<[number,number]>([1,1])

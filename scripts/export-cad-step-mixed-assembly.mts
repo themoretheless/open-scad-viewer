@@ -3,11 +3,11 @@ import assert from 'node:assert/strict'
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
-import {emptyDirectDocument} from '../src/services/directModeling'
+import {emptyDirectDocument} from '../src/app/directModeling'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {exportSolidStepAssembly} from '../src/kernel/solidStepAssembly'
 import {prepareSolidStepImport,exportSolidStepCurrent,exportSolidStepOriginal} from '../src/kernel/solidStepExchange'
-import {pushPullFace,solidTopology} from '../src/services/directSolidTools'
+import {pushPullFace,solidTopology} from '../src/app/directSolidTools'
 const directory=resolve(process.argv[2]??'/tmp/cad-mixed-assembly');mkdirSync(directory,{recursive:true})
 const document=emptyDirectDocument()
 for(const [id,min,max] of [['mm',[0,0,0],[2,3,4]],['inch',[10,0,0],[12,3,4]]] as const){const brep=createBrepBox([...min],[...max]);document.bodies.push({id,name:id,brep,mesh:tessellateNurbsBrep(brep,1)})}

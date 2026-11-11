@@ -2,10 +2,10 @@ import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {createBrepBox,booleanNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
-import {pushPullFace,solidTopology} from '../src/services/directSolidTools'
+import {pushPullFace,solidTopology} from '../src/app/directSolidTools'
 import {solidExactEdgeFeature} from '../src/kernel/solidExactEdgeFeature'
 import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
-import type {DirectBody} from '../src/services/directModeling'
+import type {DirectBody} from '../src/app/directModeling'
 
 // Export the actual public command chain for independent OpenCascade checks.
 const directory=resolve(process.argv[2]??'output/qualification/cad-feature-chain')

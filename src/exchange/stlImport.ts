@@ -4,7 +4,7 @@ import type { MeshData, SceneEntityId } from '../core/mesh'
 import { geometryAssetId } from '../core/scene'
 import { buildMeshBvh } from '../kernel/meshBvh'
 import { extractSemanticEdges } from '../kernel/meshTopology'
-import { identity } from '../services/math3d'
+import { identity } from '../app/math3d'
 
 /** Conservative first-release cap: final artifacts plus topology scratch stay bounded. */
 export const MAX_STL_IMPORT_TRIANGLES = 250_000

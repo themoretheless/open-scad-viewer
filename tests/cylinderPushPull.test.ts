@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { createBrepCylinder, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
-import { pushPullFace, solidTopology } from '../src/services/directSolidTools'
+import { pushPullFace, solidTopology } from '../src/app/directSolidTools'
 import { inspectPolygonMesh } from '../src/kernel/geometry/polygon'
 
 it('pushes a displayed cylinder cap through the retained B-rep editor', () => {

@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {parseSweepPayload} from '../src/services/photogrammetry/gpuSweep'
+import {parseSweepPayload} from '../src/app/photogrammetry/gpuSweep'
 
 /** Builds a minimal SWP1 blob matching the kernel's pack_sweep_payload layout. */
 function payload(): Uint8Array {

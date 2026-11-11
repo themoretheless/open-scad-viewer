@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
-import {encodeBinary} from '../src/services/valueBinaryCodec'
+import {encodeBinary} from '../src/app/valueBinaryCodec'
 import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 assert(process.argv[2]&&process.argv[3],'Provide WASM input path and output report path')
 const bytes=readFileSync(process.argv[2])

@@ -1,6 +1,6 @@
 import {parentPort,workerData} from 'node:worker_threads'
-import {parseDirectDocument,serializeDirectDocument} from '../services/directModeling'
-import {executeDirectTransaction} from '../services/directTransactions'
+import {parseDirectDocument,serializeDirectDocument} from '../app/directModeling'
+import {executeDirectTransaction} from '../app/directTransactions'
 import {warmGeometryKernel} from '../kernel/geometry/kernel'
 try{
  await warmGeometryKernel()

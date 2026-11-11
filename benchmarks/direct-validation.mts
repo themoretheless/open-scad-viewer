@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import os from 'node:os'
-import { parseDirectDocument, type DirectDocument } from '../src/services/directModeling'
+import { parseDirectDocument, type DirectDocument } from '../src/app/directModeling'
 import { runExactSolidRequest } from '../src/kernel/solid/exactSolidRuntime'
 
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex')
@@ -32,7 +32,7 @@ const report = {
   uniqueBrepCharacters: [...keys].reduce((sum, key) => sum + key.length, 0),
   firstValidationMs, warmups: 3, samplesMs, p50Ms: [...samplesMs].sort((a, b) => a - b)[4],
   scope: 'In-process synchronous document validation, including JSON parsing, normalization and owned result creation; fixture build and equality checks excluded from samples. First-validation timing additionally includes reference serialization. No browser paint or heap measurement.',
-  files: ['src/services/directModeling.ts', 'src/kernel/brepInspectionCache.ts', 'src/generated/geometry-kernels/kernel_bg.wasm'].map(path => ({ path, sha256: existsSync(path) ? hash(readFileSync(path)) : null })),
+  files: ['src/app/directModeling.ts', 'src/kernel/brepInspectionCache.ts', 'src/generated/geometry-kernels/kernel_bg.wasm'].map(path => ({ path, sha256: existsSync(path) ? hash(readFileSync(path)) : null })),
 }
 const out = resolve(process.argv[2] ?? 'tmp/performance/direct-validation.json')
 mkdirSync(dirname(out), { recursive: true })

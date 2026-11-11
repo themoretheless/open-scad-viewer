@@ -1,9 +1,9 @@
 import { computed, ref } from 'svet'
 import { resolveFormaTokens } from '../forma/tokens'
 import type { Language } from '../i18n/appStrings'
-import { storageGet, storageGetEnum, storageSet } from '../services/safeStorage'
-import { customizeTokens, normalizeHex } from '../services/themeCustomization'
-import { resolveTheme, themeCanvasColor, THEME_SELECTIONS, type ThemeSelection } from '../services/themePreferences'
+import { storageGet, storageGetEnum, storageSet } from '../app/safeStorage'
+import { customizeTokens, normalizeHex } from '../app/themeCustomization'
+import { resolveTheme, themeCanvasColor, THEME_SELECTIONS, type ThemeSelection } from '../app/themePreferences'
 
 export interface AppearanceOptions {
   /** Called after every application of the preferences with the effective canvas colour. */

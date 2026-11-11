@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { BOX_DEFAULTS, generateBox } from '../src/services/boxGenerator'
+import { BOX_DEFAULTS, generateBox } from '../src/app/boxGenerator'
 import { extractSemanticEdges } from '../src/kernel/meshTopology'
 import { GeometryBuildEngine } from '../src/kernel/geometryBuildEngine'
 const engine = new GeometryBuildEngine()

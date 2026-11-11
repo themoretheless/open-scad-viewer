@@ -15,7 +15,7 @@ import {inspectSweepRetainedCorrespondence,inspectSweepRetainedDecomposition,ins
 
 import {inspectSweepEmbedding,DEFAULT_SWEEP_EMBEDDING_BUDGETS,type SweepEmbeddingAudit,inspectSweepVolume,inspectSweepVolumeAndCharts,inspectSweepVolumeAndChartsAsync,DEFAULT_SWEEP_VOLUME_BUDGETS,type SweepVolumeAudit} from '../../nurbsSweepEmbedding'
 
-import type {DirectSketch} from '../../../services/directModeling'
+import type {DirectSketch} from '../../../app/directModeling'
 
 import {callGeometryRust} from '../../geometry/kernel'
 

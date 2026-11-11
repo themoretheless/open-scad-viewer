@@ -1,4 +1,4 @@
-import type {DirectBody} from '../services/directModeling'
+import type {DirectBody} from '../app/directModeling'
 import type {CadOptions} from './cadWorkbench'
 export interface CadJoint {parent:number;child:number;kind:string;axis:number[];origin:number[];position:number;min:number;max:number;parentShape:string;childShape:string}
 // Elementwise compare is identical to JSON.stringify for finite-number vectors

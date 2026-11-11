@@ -1,5 +1,5 @@
 import {writeFileSync} from 'node:fs'
-import {emptyDirectDocument} from '../src/services/directModeling'
+import {emptyDirectDocument} from '../src/app/directModeling'
 import {insertNurbsKnot} from '../src/kernel/nurbsCurve'
 import {prepareCoonsBoundaryWeights,coonsNurbsPatch} from '../src/kernel/nurbsConstructors'
 import {constructSolidSurface} from '../src/kernel/solidSurfaceConstruction'

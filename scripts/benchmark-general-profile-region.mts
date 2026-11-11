@@ -8,7 +8,7 @@ import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {validateBrepProfile} from '../src/kernel/geometry/brepProfile'
 import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 import identity from '../src/generated/geometry-kernels/identity'
-import {encodeBinary} from '../src/services/valueBinaryCodec'
+import {encodeBinary} from '../src/app/valueBinaryCodec'
 import {decodePacked,writeLinear} from '../src/kernel/wasmHost'
 import type {BrepProfile} from '../src/kernel/geometry/brepProfile'
 function loop(x:number,y:number,size:number):NurbsCurve[]{

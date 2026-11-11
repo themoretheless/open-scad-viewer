@@ -1,6 +1,6 @@
 import type { MeshData, MeshProvenanceRun } from '../core/mesh'
 import type { GeometryAssetId } from '../core/scene'
-import type { Aabb3, Mat4 } from '../services/math3d'
+import type { Aabb3, Mat4 } from '../app/math3d'
 import type { MeshBvh } from '../kernel/meshBvh'
 import type { FaceTriangleIndex } from './meshSelectionOverlay'
 import type { MaterialDef, ShadingModel } from './rendererContracts'

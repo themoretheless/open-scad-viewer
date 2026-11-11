@@ -4,14 +4,14 @@ import {
   captureParameterPreset,
   parameterTemplateHash,
   type ParameterPreset,
-} from '../services/parameterPresets'
+} from '../app/parameterPresets'
 import { type CustomizerParameter, type CustomizerValue, encodeCustomizerValue } from '../language/scadCustomizer'
 import { applySourceSplice } from '../kernel/sourceSplice'
 import {
   MAX_WORKSPACE_SOURCE_LENGTH,
   updateWorkspaceDocument,
   type WorkspaceDocumentSnapshot,
-} from '../services/workspaceDocument'
+} from '../app/workspaceDocument'
 import type { Language } from '../i18n/appStrings'
 
 export interface UseParameterPresetsOptions {

@@ -1,6 +1,6 @@
-import {extrudeSketchProfile} from '../src/services/directExtrusion'
+import {extrudeSketchProfile} from '../src/app/directExtrusion'
 import {createBrepBox,booleanNurbsBrep,transformNurbsBrep,tessellateNurbsBrep,type NurbsBrep} from '../src/kernel/geometry/brep'
-import type {DirectBody,DirectSketch} from '../src/services/directModeling'
+import type {DirectBody,DirectSketch} from '../src/app/directModeling'
 const profile=(points:[number,number][]):DirectSketch=>({id:'profile',name:'Profile',closed:true,points})
 const circle=(id:string,radius:number):DirectSketch=>({id,name:id,closed:true,points:[],analytic:{kind:'circle',center:[0,0],radius,start:0,sweep:360}})
 export function cadRoadmapParts():Array<{body:DirectBody;volume:number;bounds:number[][]}> {

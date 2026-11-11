@@ -11,9 +11,9 @@ import {
   type Ref,
   type ShallowRef,
 } from 'svet'
-import type { DirectBody, DirectDocument, Point2 } from '../../services/directModeling'
-import { createDirectProjector, directExtrusionTool, directFaceShade, projectDirectPoint } from '../../services/directModelingTools'
-import type { Vec3 } from '../../services/directSketchGeometry'
+import type { DirectBody, DirectDocument, Point2 } from '../../app/directModeling'
+import { createDirectProjector, directExtrusionTool, directFaceShade, projectDirectPoint } from '../../app/directModelingTools'
+import type { Vec3 } from '../../app/directSketchGeometry'
 import type { PolygonMesh } from '../../kernel/geometry/polygon'
 import { SolidDisplayCache, type DisplayMesh } from '../../kernel/solidDisplayCache'
 import { SolidDisplayQueue } from '../../kernel/solidDisplayQueue'

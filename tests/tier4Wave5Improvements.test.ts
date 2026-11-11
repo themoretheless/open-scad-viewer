@@ -5,7 +5,7 @@ import {
   isOpenScadBuiltinFunction,
   findClosestOpenScadBuiltinFunction,
 } from '../src/language/openScadBuiltinFunctions'
-import { generateDrawingTitleBlockSvg } from '../src/services/drawingSheets'
+import { generateDrawingTitleBlockSvg } from '../src/app/drawingSheets'
 import { describePublicErrorCode, PUBLIC_ERROR_CODES } from '../src/mcp/errorContract'
 import { describePublicErrorCode as describePublicErrorCodeFromPublicError } from '../src/mcp/publicError'
 import {

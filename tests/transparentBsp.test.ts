@@ -133,7 +133,7 @@ it('does not subdivide a coplanar tessellation at spatial partition planes',()=>
 })
 
 it('preserves per-ray painter order when a world tree is projected through changing cameras',async()=>{
- const {createDirectProjector}=await import('../src/services/directModelingTools')
+ const {createDirectProjector}=await import('../src/app/directModelingTools')
  const scene=[red,blue,{owner:'green',triangle:[[-1,-1,-1],[1,-1,-1],[0,1,1]]} as TransparentFragment],world=new TransparentBsp(scene)
  const owners=(fragments:TransparentFragment[],x:number,y:number)=>fragments.filter(({triangle:[a,b,c]})=>{
   const det=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);if(Math.abs(det)<1e-12)return false

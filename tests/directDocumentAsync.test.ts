@@ -1,6 +1,6 @@
 import { stringifyMeshJson } from '../src/exchange/meshJson'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { emptyDirectDocument, parseDirectDocument, parseDirectDocumentAsync } from '../src/services/directModeling'
+import { emptyDirectDocument, parseDirectDocument, parseDirectDocumentAsync } from '../src/app/directModeling'
 import { createBrepBox, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
 
 afterEach(() => vi.restoreAllMocks())

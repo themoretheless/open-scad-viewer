@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest'
-import {DirectSolidCapabilityError,pushPullFace,shellSolid,solidTopology} from '../src/services/directSolidTools'
+import {DirectSolidCapabilityError,pushPullFace,shellSolid,solidTopology} from '../src/app/directSolidTools'
 import {createBrepBox,createBrepSphere,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 const stock=()=>{const brep=createBrepBox([0,0,0],[10,10,10]);return {id:'b',name:'Stock',brep,mesh:tessellateNurbsBrep(brep,1)}}
@@ -36,7 +36,7 @@ it('refuses invalid and curved edits without falling back to mesh geometry',()=>
  expect(()=>shellSolid(sphere,[0],1)).toThrow()
 })
 it('refuses retained chamfer and fillet faceting with typed errors',async()=>{
- const {bevelSolidEdge}=await import('../src/services/directSolidTools')
+ const {bevelSolidEdge}=await import('../src/app/directSolidTools')
  const input=stock(),before=JSON.stringify(input)
  for(const [kind,code] of [['chamfer','BREP_ANALYTIC_CHAMFER_REFUSED'],['fillet','BREP_ANALYTIC_FILLET_REFUSED']] as const){
   let refusal:unknown
@@ -48,7 +48,7 @@ it('refuses retained chamfer and fillet faceting with typed errors',async()=>{
  expect(JSON.stringify(input)).toBe(before)
 })
 it('refuses retained edge chains atomically without faceted fallback',async()=>{
- const {bevelBrepBody}=await import('../src/services/directSolidTools')
+ const {bevelBrepBody}=await import('../src/app/directSolidTools')
  const input=stock(),edges=solidTopology(input.mesh).edges,first=edges[0]
  const connected=edges.findIndex((e,i)=>i>0&&[e.a,e.b].some(v=>v===first.a||v===first.b))
  expect(connected).toBeGreaterThan(0)

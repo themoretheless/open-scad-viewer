@@ -1,6 +1,6 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest'
 import type {DirectStepLod0Import,DirectStepSceneImport} from '../src/kernel/cadNurbsStep'
-import {parseDirectDocument} from '../src/services/directModeling'
+import {parseDirectDocument} from '../src/app/directModeling'
 import {stringifyMeshJson} from '../src/exchange/meshJson'
 
 const {bridge,tessellate}=vi.hoisted(()=>({

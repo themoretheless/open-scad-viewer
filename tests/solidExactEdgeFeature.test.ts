@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
 import {solidExactEdgeFeature} from '../src/kernel/solidExactEdgeFeature'
-import {solidTopology} from '../src/services/directSolidTools'
+import {solidTopology} from '../src/app/directSolidTools'
 import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep,inspectNurbsBrep,transformNurbsBrep} from '../src/kernel/geometry/brep'
-import {DirectHistory,parseDirectDocument} from '../src/services/directModeling'
+import {DirectHistory,parseDirectDocument} from '../src/app/directModeling'
 import {stringifyMeshJson} from '../src/exchange/meshJson'
 
 function fixture(){
@@ -86,7 +86,7 @@ it('authors a linear radius law and a three-edge spherical corner',()=>{
 })
 
 it('exposes audited concave-prism convex-edge rounds through the WASM bridge without widening the old capability',async()=>{
- const {extrudeSketchProfile}=await import('../src/services/directExtrusion')
+ const {extrudeSketchProfile}=await import('../src/app/directExtrusion')
  const {exactSimplePrismFillet,exactConvexPrismFillet,transformNurbsBrep}=await import('../src/kernel/geometry/brep')
  const brep=extrudeSketchProfile([{id:'profile',name:'Bracket',closed:true,points:[[0,0],[40,0],[40,5],[5,5],[5,30],[0,30]]}],20)
  const before=stringifyMeshJson(brep)
@@ -120,7 +120,7 @@ it('exposes audited concave-prism convex-edge rounds through the WASM bridge wit
 },30000)
 
 it('rounds a C-profile outer corner without crossing its notch',async()=>{
- const {extrudeSketchProfile}=await import('../src/services/directExtrusion')
+ const {extrudeSketchProfile}=await import('../src/app/directExtrusion')
  const {exactSimplePrismFillet}=await import('../src/kernel/geometry/brep')
  const brep=extrudeSketchProfile([{id:'c',name:'C profile',closed:true,points:[[0,0],[10,0],[10,2],[2,2],[2,8],[10,8],[10,10],[0,10]]}],5)
  const before=stringifyMeshJson(brep)
@@ -133,7 +133,7 @@ it('rounds a C-profile outer corner without crossing its notch',async()=>{
 })
 
 it('refuses holed and disconnected prisms atomically',async()=>{
- const {extrudeSketchProfile}=await import('../src/services/directExtrusion')
+ const {extrudeSketchProfile}=await import('../src/app/directExtrusion')
  const {exactSimplePrismFillet,booleanNurbsBrep}=await import('../src/kernel/geometry/brep')
  const holed=extrudeSketchProfile([
   {id:'outer',name:'Outer',closed:true,points:[[0,0],[20,0],[20,20],[0,20]]},

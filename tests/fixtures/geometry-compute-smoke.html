@@ -7,7 +7,7 @@
 <button id="run">Run compute checks</button>
 <pre id="result">Ready</pre>
 <script type="module">
-import { analyzeSurfaceArea } from '../../src/services/geometryCompute.ts'
+import { analyzeSurfaceArea } from '../../src/kernel/geometryCompute.ts'
 const identity = () => new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])
 const triangle = () => ({ vertices: new Float32Array([0,0,0,0,0,1,2,0,0,0,0,1,0,3,0,0,0,1]), indices: new Uint32Array([0,1,2]), transform: identity() })
 document.querySelector('#run').onclick = async () => {

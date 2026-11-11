@@ -49,7 +49,7 @@ describe('profile intersection ownership and work contract',()=>{
 
 it('validates diagnostics attached to refused profile preparation without allowing an accepted contour',async()=>{
   const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
-  const {emptyDirectDocument}=await import('../src/services/directModeling')
+  const {emptyDirectDocument}=await import('../src/app/directModeling')
   const document=emptyDirectDocument()
   document.curves=[{id:'a',name:'A',curve},{id:'b',name:'B',curve}]
   const expected=mainSolidExpectation({kind:'profilePrepare',document,ids:['a','b'],tolerance:0})

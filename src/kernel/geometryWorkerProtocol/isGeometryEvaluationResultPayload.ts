@@ -4,7 +4,7 @@ import type { GeometryEvaluationResult } from '../../core/build'
 import { MAX_GEOMETRY_SOURCE_CHARACTERS } from '../../core/geometryExecution'
 import { MAX_NATIVE_GEOMETRY_CHARACTERS } from '../../core/nativeGeometry'
 import { hasBoundedDataProperties, hasExactKeys, isBuildError, isCancelReason, isDenseExactArray, isExecutionDescriptor, isFloat32Payload, isMeshData, isPhase, isPhaseTimings, isQuality, isRecord, isUint32Payload, optionalKey } from './isRecord'
-import { isNonNegativeFiniteNumber, isNonNegativeSafeInteger, isWellFormedUnicode } from '../../services/workerPayloadPrimitives'
+import { isNonNegativeFiniteNumber, isNonNegativeSafeInteger, isWellFormedUnicode } from '../../app/workerPayloadPrimitives'
 import { sha256Hex } from '../../core/sha256'
 
 /**

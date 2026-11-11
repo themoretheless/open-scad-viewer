@@ -1,5 +1,5 @@
 import { computed, onUnmounted, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from 'svet'
-import type { DirectBody, DirectDocument, DirectSketch, Point2 } from '../../services/directModeling'
+import type { DirectBody, DirectDocument, DirectSketch, Point2 } from '../../app/directModeling'
 import type { MainSolidResults } from '../../kernel/mainSolidProtocol'
 import type { NurbsCurve } from '../../kernel/nurbsCurve'
 import { SolidCurveDisplayQueue } from '../../kernel/solidCurveDisplayQueue'

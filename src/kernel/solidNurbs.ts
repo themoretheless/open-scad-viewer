@@ -1,6 +1,6 @@
 import {matchSolidCurve} from './solidCurveMatching'
 import {matchSolidSurface} from './solidSurfaceMatching'
-import type { DirectDocument, DirectSketch, Point2 } from '../services/directModeling'
+import type { DirectDocument, DirectSketch, Point2 } from '../app/directModeling'
 import type { NurbsCurve } from './nurbsCurve'
 import { sampleNurbsCurve, validateNurbsCurve } from './nurbsCurve'
 import type { NurbsSurface } from './nurbsSurface'

@@ -5,7 +5,7 @@ import { runExactSolidRequest } from '../src/kernel/solid/exactSolidRuntime'
 import { evaluateExactSolids } from '../src/kernel/geometryBuildEngine'
 import { buildExactSolidBodies } from '../src/kernel/solid/brepBuild'
 import { EXACT_SOLID_TIMEOUT_MS, isExactSolidRequest, isExactSolidResponse, type ExactSolidRequest } from '../src/kernel/solid/exactSolidProtocol'
-import * as directDocument from '../src/services/directModeling'
+import * as directDocument from '../src/app/directModeling'
 
 class FakeWorker extends EventTarget implements ExactSolidWorkerPort {
   terminate = vi.fn()

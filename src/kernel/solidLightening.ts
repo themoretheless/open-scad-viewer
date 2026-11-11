@@ -1,5 +1,5 @@
 import {callGeometryRust} from './geometry/kernel'
-import type {DirectBody} from '../services/directModeling'
+import type {DirectBody} from '../app/directModeling'
 export type LighteningPattern='bone'|'spatial'|'bcc'|'octet'|'isogrid'|'grid'|'triangles'|'honeycomb'|'web'
 export function isSpatialPattern(pattern:LighteningPattern|undefined):boolean{
  return pattern==='bone'||pattern==='spatial'||pattern==='bcc'||pattern==='octet'

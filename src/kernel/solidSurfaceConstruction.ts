@@ -1,5 +1,5 @@
 import {reverseNurbsCurve} from './nurbsCurve'
-import type {DirectDocument} from '../services/directModeling'
+import type {DirectDocument} from '../app/directModeling'
 import type {SolidNurbsSurface} from './solidNurbs'
 import {loftAlignedNurbsCurves,sweepNurbsCurve,coonsNurbsPatch,framedSweepNurbsCurve,type FramedSweepResult,prepareCoonsBoundaryWeights,type CoonsBoundaryPreparation} from './nurbsConstructors'
 import {createG2WorldRunout,type G2RunoutReport} from './geometricG2'

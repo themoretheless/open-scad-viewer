@@ -1,5 +1,5 @@
-import type {DirectBody} from '../services/directModeling'
-import {solidTopology} from '../services/directSolidTools'
+import type {DirectBody} from '../app/directModeling'
+import {solidTopology} from '../app/directSolidTools'
 import {sampleSolidNurbsCurve} from './solidNurbs'
 
 /** Exact bodies expose their authored topology, never tessellation diagonals. */

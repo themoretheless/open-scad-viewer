@@ -1,4 +1,4 @@
-import {isWellFormedUnicode,isNonNegativeSafeInteger,isNonNegativeFiniteNumber} from '../services/workerPayloadPrimitives'
+import {isWellFormedUnicode,isNonNegativeSafeInteger,isNonNegativeFiniteNumber} from '../app/workerPayloadPrimitives'
 import {isNativeGeometryArtifact,MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
 import type { GeometryEvaluationResult, GeometryPhaseTimings, GeometryQuality } from '../core/build'
 import {

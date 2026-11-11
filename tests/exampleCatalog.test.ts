@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EXAMPLE_CATALOG, EXAMPLES } from '../src/data/examples'
-import { assertExampleCatalog, filterExampleCatalog } from '../src/services/exampleCatalog'
+import { assertExampleCatalog, filterExampleCatalog } from '../src/app/exampleCatalog'
 
 describe('example catalog', () => {
   it('is complete, localized and points at canonical MCP example sources', () => {

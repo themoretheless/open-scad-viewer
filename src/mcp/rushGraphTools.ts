@@ -3,7 +3,7 @@ import { compileRushFrontend, RUSH_FRONTEND_GUIDE } from '../language/rushFronte
 import { RUSH_GRAPH_INSTRUCTIONS } from './rushGraphInstructions'
 import { registerRushGraphSvgTools } from './rushGraphSvgTools'
 import { registerRushGraphGenerate } from './rushGraphGenerate'
-import { MECHANICAL_GENERATOR_EXAMPLES } from '../services/mechanicalGeneratorContract'
+import { MECHANICAL_GENERATOR_EXAMPLES } from '../app/mechanicalGeneratorContract'
 import { registerRushGraphModify } from './rushGraphModify'
 import { registerRushGraphMeshExport } from './rushGraphMeshExport'
 import { registerMeshConvertTool } from './meshConvertTool'

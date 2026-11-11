@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest'
-import { SurfaceGroupContentCache } from '../src/services/surfaceGroupContentCache'
+import { SurfaceGroupContentCache } from '../src/app/surfaceGroupContentCache'
 
 it('reuses IDs and evicts least recently used entries at the count limit', () => {
   const cache = new SurfaceGroupContentCache({ maxEntries: 2, maxBytes: 100 })

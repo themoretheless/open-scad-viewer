@@ -33,7 +33,7 @@ import {
   type SemanticTessellationIntent,
   type SemanticValueType,
 } from '../../core/semanticProgram'
-import { clamp01 } from '../../services/math3d'
+import { clamp01 } from '../../app/math3d'
 import { parseGeometrySourceRoutingHeader } from '../../core/geometryRouting'
 import { sha256Hex } from '../../core/sha256'
 import {

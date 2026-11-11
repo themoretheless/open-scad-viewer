@@ -1,5 +1,5 @@
-import {sampleAssemblyAnimation,validateAssemblyAnimation,type AssemblyAnimation} from '../services/assemblyAnimation'
-import type {DirectDocument} from '../services/directModeling'
+import {sampleAssemblyAnimation,validateAssemblyAnimation,type AssemblyAnimation} from '../app/assemblyAnimation'
+import type {DirectDocument} from '../app/directModeling'
 import {callGeometryRust} from '../kernel/geometry/kernel'
 export interface AssemblyFrameExport {frames:{time:number;svg:string}[];fps:number;width:number;height:number}
 /** Fixed time sampling and native opaque mesh projection; no wall-clock capture. */

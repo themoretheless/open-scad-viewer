@@ -2,7 +2,7 @@ import {beforeAll,expect,it} from 'vitest'
 import {createG2AnnularTube} from '../src/kernel/geometricG2'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {tessellateNurbsBrep} from '../src/kernel/geometry/brep'
-import {emptyDirectDocument,parseDirectDocument} from '../src/services/directModeling'
+import {emptyDirectDocument,parseDirectDocument} from '../src/app/directModeling'
 import {stringifyMeshJson} from '../src/exchange/meshJson'
 // Actual Rust/WASM qualification. Requires the matching rebuilt geometry kernel.
 beforeAll(async()=>{await warmGeometryKernel()})

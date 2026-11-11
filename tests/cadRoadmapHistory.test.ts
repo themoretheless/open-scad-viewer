@@ -3,9 +3,9 @@ import {readFileSync,mkdirSync,writeFileSync,existsSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {expect,it} from 'vitest'
-import {DirectHistory,parseDirectDocument,type DirectBody} from '../src/services/directModeling'
+import {DirectHistory,parseDirectDocument,type DirectBody} from '../src/app/directModeling'
 import {createBrepBox,tessellateNurbsBrep,booleanNurbsBrep,inspectNurbsBrep,type NurbsBrep} from '../src/kernel/geometry/brep'
-import {transformSelection,pushPullFace,solidTopology,splitSolid} from '../src/services/directSolidTools'
+import {transformSelection,pushPullFace,solidTopology,splitSolid} from '../src/app/directSolidTools'
 import {stringifyMeshJson} from '../src/exchange/meshJson'
 // Evidence comes from the final body of each exercised history, not a reconstructed fixture.
 async function exportMixedHistoryEvidence(body:DirectBody,volume:number,bounds:number[][]){
@@ -118,7 +118,7 @@ it('preserves bracket, rational flange and hollow enclosure through 20 affine ed
 },60000)
 
 async function controlParts(){
- const {extrudeSketchProfile}=await import('../src/services/directExtrusion')
+ const {extrudeSketchProfile}=await import('../src/app/directExtrusion')
  const bracket=extrudeSketchProfile([{id:'bracket-profile',name:'Bracket',closed:true,points:[[0,0],[40,0],[40,5],[5,5],[5,30],[0,30]]}],20)
  const circle=(id:string,radius:number)=>({id,name:id,closed:true,points:[] as [number,number][],analytic:{kind:'circle' as const,center:[0,0] as [number,number],radius,start:0,sweep:360}})
  const flange=extrudeSketchProfile([circle('outer',20),circle('hole',5)],6)

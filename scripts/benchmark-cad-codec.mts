@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {pathToFileURL} from 'node:url'
 import {resolve} from 'node:path'
-import {encodeBinary as after} from '../src/services/valueBinaryCodec'
+import {encodeBinary as after} from '../src/app/valueBinaryCodec'
 import assert from 'node:assert/strict'
 const [fixture,baseline,output]=process.argv.slice(2)
 if(!fixture||!baseline||!output)throw Error('Usage: node --import tsx scripts/benchmark-cad-codec.mts fixture.json baseline-codec.ts report.json')

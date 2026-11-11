@@ -1,5 +1,5 @@
 import type {MainSolidJob} from './mainSolidProtocol'
-import type {DirectBody} from '../services/directModeling'
+import type {DirectBody} from '../app/directModeling'
 import {SolidDisplayCache,solidDisplayKey,type DisplayMesh} from './solidDisplayCache'
 type DisplayJob=Extract<MainSolidJob,{kind:'displayMesh'}>
 interface DisplayPort {run(job:DisplayJob):Promise<DisplayMesh>;cancel():void}

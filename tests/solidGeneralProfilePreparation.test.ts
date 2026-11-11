@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest'
 import {prepareSolidProfile} from '../src/kernel/solidProfilePreparation'
-import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
+import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/app/directModeling'
 import {evaluateNurbsCurve,type NurbsCurve} from '../src/kernel/nurbsCurve'
-import {worldPoint} from '../src/services/directSketchGeometry'
+import {worldPoint} from '../src/app/directSketchGeometry'
 import {mainSolidExpectation,mainSolidResult,type MainSolidJob} from '../src/kernel/mainSolidProtocol'
 
 function curves():NurbsCurve[]{

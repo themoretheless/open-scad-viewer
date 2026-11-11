@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {prepareMainSolidTransfer} from '../src/kernel/mainSolidWorkerTransport'
 import type {MainSolidResponse} from '../src/kernel/mainSolidProtocol'
-import type {DirectDocument} from '../src/services/directModeling'
+import type {DirectDocument} from '../src/app/directModeling'
 it.each(['restoreDocument','sceneEdit'] as const)('moves %s mesh buffers exactly once while preserving views, UVs and aliases',(kind)=>{
  const positions=new Float64Array([0,0,0,1,0,0,0,1,0]),indices=new Uint32Array([0,1,2]),uv=new Float64Array([0,0,1,0,0,1])
  const document:DirectDocument={version:1,sketches:[],bodies:[{id:'a',name:'A',mesh:{positions,indices,uv}},{id:'b',name:'B',mesh:{positions:positions.subarray(0),indices}}]}

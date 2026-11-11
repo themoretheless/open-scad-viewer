@@ -1,7 +1,7 @@
-import type {DirectBody} from '../services/directModeling'
+import type {DirectBody} from '../app/directModeling'
 import {constantFilletFamily,exactConvexChamfer,exactAnnularFillet,exactLayeredPrismFillet,exactSimplePrismFillet,exactVariableRadiusFillet,exactValence3CornerBlend,tessellateNurbsBrep} from './geometry/brep'
 import {assertBrepCapabilityAllowsTopology} from './geometry/brepCapability'
-import {selectedBrepStraightEdge,solidTopology} from '../services/directSolidTools'
+import {selectedBrepStraightEdge,solidTopology} from '../app/directSolidTools'
 
 /** Display edge indices are resolved uniquely to authored edges by the native kernel. */
 export function solidExactEdgeFeature(body:DirectBody,displayEdges:number[],size:number,kind:'fillet'|'chamfer',source:'display'|'brep'='display',fillet:{mode:'constant'|'variable'|'corner';endRadius:number}={mode:'constant',endRadius:size}) {

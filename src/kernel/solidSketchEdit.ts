@@ -1,6 +1,6 @@
-import type {DirectDocument} from '../services/directModeling'
-import {directCornerTool} from '../services/directProfileTools'
-import {circularDirectCopies} from '../services/directModelingTools'
+import type {DirectDocument} from '../app/directModeling'
+import {directCornerTool} from '../app/directProfileTools'
+import {circularDirectCopies} from '../app/directModelingTools'
 
 export interface SolidSketchEditOptions {
  operation:'fillet'|'dogear'|'array'

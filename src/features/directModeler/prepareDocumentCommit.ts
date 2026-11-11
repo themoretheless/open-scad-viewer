@@ -1,4 +1,4 @@
-import type {DirectDocument} from '../../services/directModeling'
+import type {DirectDocument} from '../../app/directModeling'
 import {stringifyMeshJson} from '../../exchange/meshJson'
 const documentObjects=(d:DirectDocument)=>[...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[]]
 export function prepareDocumentCommit(next:DirectDocument,previous:DirectDocument|undefined,fallbackIds:Iterable<string>,lockedIds:string[],activeGroup:string,origin:'edit'|'file',label:(ru:string,en:string)=>string) {

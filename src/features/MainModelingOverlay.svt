@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import {sceneSnapPoints} from '../services/mainSnapping'
+import {sceneSnapPoints} from '../app/mainSnapping'
 import {computed,ref} from 'svet'
 import type {MeshData} from '../core/mesh'
 import type {PickHit} from '../render/rendererContracts'
-import {sceneBody,sceneFace,type MainOperation,type MainParameters} from '../services/mainModeling'
-import {cross3,unit3,type Vec3} from '../services/directSketchGeometry'
+import {sceneBody,sceneFace,type MainOperation,type MainParameters} from '../app/mainModeling'
+import {cross3,unit3,type Vec3} from '../app/directSketchGeometry'
 const props=defineProps<{meshes:MeshData[];selected:number|null;selection:number[];hit:PickHit|null;operation:MainOperation|null;parameters:MainParameters;project:(p:readonly number[])=>[number,number]|null;revision:number;box:boolean}>()
 const emit=defineEmits<{parameters:[p:MainParameters];preview:[];apply:[];cancel:[];select:[indices:number[]];boxDone:[]}>()
 const snapCandidates=computed(()=>props.operation==='move'?sceneSnapPoints(props.meshes,props.selection):[])

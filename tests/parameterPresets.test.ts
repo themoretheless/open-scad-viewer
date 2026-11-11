@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { IDBFactory } from 'fake-indexeddb'
-import { IndexedDbWorkspaceRepository, WorkspaceIndexedDbConflictError } from '../src/services/workspaceIndexedDb'
-import { applyParameterPreset, captureParameterPreset, parameterTemplateHash, parseParameterPresets } from '../src/services/parameterPresets'
-import { createWorkspaceDocument, parseWorkspaceDocumentValue, updateWorkspaceDocument, workspaceDocumentsEqual } from '../src/services/workspaceDocument'
+import { IndexedDbWorkspaceRepository, WorkspaceIndexedDbConflictError } from '../src/app/workspaceIndexedDb'
+import { applyParameterPreset, captureParameterPreset, parameterTemplateHash, parseParameterPresets } from '../src/app/parameterPresets'
+import { createWorkspaceDocument, parseWorkspaceDocumentValue, updateWorkspaceDocument, workspaceDocumentsEqual } from '../src/app/workspaceDocument'
 
 const source = 'width = 10; // [1:1:40]\nlabel = "small";\nenabled = true;\ncube(width);'
 

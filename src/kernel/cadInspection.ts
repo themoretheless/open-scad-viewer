@@ -1,4 +1,4 @@
-import type {DirectBody} from '../services/directModeling'
+import type {DirectBody} from '../app/directModeling'
 import {callGeometryRust} from './geometry/kernel'
 export interface CadPairReport {a:string;b:string;overlapMm3:number;gapMm:number;closestPoints?:[number[],number[]]|null;displayMeshOnly?:boolean}
 /** Native bounded display-mesh clearance, not certified analytic B-rep distance. */

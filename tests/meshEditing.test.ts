@@ -18,9 +18,9 @@ import {
   symmetrizeMesh,
   transformMesh,
 } from '../src/kernel/meshEditing'
-import { isWorkspaceMode, WORKSPACE_MODES } from '../src/services/workspaceModes'
+import { isWorkspaceMode, WORKSPACE_MODES } from '../src/app/workspaceModes'
 import { meshDocumentToSolidDocument, solidDocumentToMeshDocument } from '../src/kernel/solidBridge'
-import { emptyDirectDocument } from '../src/services/directModeling'
+import { emptyDirectDocument } from '../src/app/directModeling'
 import { inspectPolygonMesh } from '../src/kernel/geometry/polygon'
 
 describe('workspace modes', () => {

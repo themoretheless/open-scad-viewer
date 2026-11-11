@@ -24,7 +24,7 @@ try{
  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message))
  await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/carrier-probe`)
  await page.evaluate(()=>{void(async()=>{try{
-  const {callGeometryRust,warmGeometryKernel}=await import('/src/services/geometry/kernel.ts')
+  const {callGeometryRust,warmGeometryKernel}=await import('/src/kernel/geometry/kernel.ts')
   await warmGeometryKernel();const input=await(await fetch('/carrier-input')).json()
   const before=JSON.stringify(input)
   const call=({op,...args})=>callGeometryRust(op,args)

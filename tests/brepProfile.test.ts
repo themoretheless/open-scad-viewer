@@ -77,8 +77,8 @@ describe('retained 2D B-rep profiles',()=>{
 })
 
 it('retains a general NURBS profile through validation, document reload, affine placement and extrusion',async()=>{
-  const {emptyDirectDocument,serializeDirectDocument,parseDirectDocument}=await import('../src/services/directModeling')
-  const {withRetainedProfile}=await import('../src/services/retainedSketchProfile')
+  const {emptyDirectDocument,serializeDirectDocument,parseDirectDocument}=await import('../src/app/directModeling')
+  const {withRetainedProfile}=await import('../src/app/retainedSketchProfile')
   const {extrudeBrepCurves,analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
   const loop=rectangle(0,0,2,2)
   loop[0]={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0],[1,-1],[2,0]],weights:[1,1,1]}

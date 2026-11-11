@@ -1,4 +1,4 @@
-import type {SnapGeometry} from '../services/modelingSnaps'
+import type {SnapGeometry} from '../app/modelingSnaps'
 import type {NurbsCurve} from './nurbsCurve'
 const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n)
 const vector=(v:unknown)=>Array.isArray(v)&&v.length===3&&v.every(finite)

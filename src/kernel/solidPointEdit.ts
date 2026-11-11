@@ -1,8 +1,8 @@
-import {sampleCurve} from '../services/directSketchGeometry'
-import {requirePolylineSketch} from '../services/retainedSketchProfile'
-import type {DirectDocument} from '../services/directModeling'
+import {sampleCurve} from '../app/directSketchGeometry'
+import {requirePolylineSketch} from '../app/retainedSketchProfile'
+import type {DirectDocument} from '../app/directModeling'
 import {updateSolidNurbsControlPoint} from './solidNurbs'
-import {bridgeNurbsCurves} from '../services/directDimensions'
+import {bridgeNurbsCurves} from '../app/directDimensions'
 export type SolidPointEditOptions=
  | {kind:'cv';id:string;u:number;v:number;point:[number,number,number];weight?:number}
  | {kind:'sketch-vertex';id:string;index:number;point:[number,number]}

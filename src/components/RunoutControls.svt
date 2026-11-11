@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed} from 'svet'
 import CadQuantityInput from './CadQuantityInput.svt'
-import type {DirectDocument} from '../services/directModeling'
+import type {DirectDocument} from '../app/directModeling'
 import type {G2RunoutReport} from '../kernel/geometricG2'
 import type {SurfaceJetBoundary} from '../kernel/nurbsConstructors'
 const props=defineProps<{label:(ru:string,en:string)=>string;locale:string;surfaces:NonNullable<DirectDocument['surfaces']>;curves:NonNullable<DirectDocument['curves']>;curveInvalid:boolean;planeInvalid:boolean;report?:G2RunoutReport}>()

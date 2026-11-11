@@ -1,6 +1,6 @@
 import {ref} from 'svet'
 import type {MeshImportRepairMode} from '../exchange/meshImport'
-import {storageGet, storageSet} from '../services/safeStorage'
+import {storageGet, storageSet} from '../app/safeStorage'
 
 export const MANIFOLD_PREFERENCES_STORAGE_KEY = 'scad-manifold-preferences-v1'
 export const MANIFOLD_WELD_EPSILON_RANGE = Object.freeze({min: 0, max: 1})

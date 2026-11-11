@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest'
 import {SolidSketchSnapPreparation} from '../src/kernel/solidSketchSnapPreparation'
-import {sketchSnapGeometry,type SnapGeometry} from '../src/services/modelingSnaps'
-import type {DirectSketch} from '../src/services/directModeling'
+import {sketchSnapGeometry,type SnapGeometry} from '../src/app/modelingSnaps'
+import type {DirectSketch} from '../src/app/directModeling'
 const sketch=(id:string):DirectSketch=>({id,name:id,closed:false,points:[[0,0],[10,0]]})
 it('reuses local targets across placement changes but invalidates edited geometry',async()=>{
  const a=sketch('a'),run=vi.fn(async(job:{sketch:DirectSketch})=>sketchSnapGeometry([job.sketch]))

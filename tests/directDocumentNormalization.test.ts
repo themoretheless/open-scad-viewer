@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest'
 import { deepStrictEqual } from 'node:assert'
-import { parseDirectDocument, parseDirectDocumentAsync } from '../src/services/directModeling'
-import { sampleCurve } from '../src/services/directSketchGeometry'
-import { MAX_BODY_MESH_COMPONENTS } from '../src/services/directDocumentLimits'
+import { parseDirectDocument, parseDirectDocumentAsync } from '../src/app/directModeling'
+import { sampleCurve } from '../src/app/directSketchGeometry'
+import { MAX_BODY_MESH_COMPONENTS } from '../src/app/directDocumentLimits'
 
 it.each(['positions', 'indices'] as const)('rejects a body exceeding the bounded %s display cache in both parsers', async field => {
   const mesh = { positions: [0, 0, 0, 1, 0, 0, 0, 1, 0], indices: [0, 1, 2] }

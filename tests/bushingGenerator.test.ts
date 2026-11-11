@@ -3,7 +3,7 @@ import {
   BUSHING_DEFAULTS,
   computeBushingParameterSuggestions,
   generateBushing,
-} from '../src/services/bushingGenerator'
+} from '../src/app/bushingGenerator'
 import { extractCustomizerParameters } from '../src/language/scadCustomizer'
 import { extractSemanticEdges } from '../src/kernel/meshTopology'
 import { GeometryBuildEngine } from '../src/kernel/geometryBuildEngine'

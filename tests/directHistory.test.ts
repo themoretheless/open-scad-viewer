@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest'
-import { DirectHistory, emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
+import { DirectHistory, emptyDirectDocument, parseDirectDocument } from '../src/app/directModeling'
 
 const document = (name: string) => ({ ...emptyDirectDocument(), groups: [{ name, source: 'cube(1);' }] })
 

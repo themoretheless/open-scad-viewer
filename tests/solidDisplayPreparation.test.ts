@@ -1,5 +1,5 @@
 import {readFileSync} from 'node:fs'
-import {parseDirectDocument} from '../src/services/directModeling'
+import {parseDirectDocument} from '../src/app/directModeling'
 import {expect,it} from 'vitest'
 import {createBrepBox,createBrepSphere,createBrepTorus,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import type {PolygonMesh} from '../src/kernel/geometry/polygon'

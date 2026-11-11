@@ -5,8 +5,8 @@ import {
   updateWorkspaceDocument,
   workspaceDocumentsEqual,
   type WorkspaceDocumentSnapshot,
-} from '../services/workspaceDocument'
-import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from '../services/workspacePersistence'
+} from '../app/workspaceDocument'
+import type { BrowserWorkspacePersistence, WorkspaceRetryResult } from '../app/workspacePersistence'
 import type { WebGPURenderer } from '../render/webgpuRenderer'
 
 export interface UseWorkspacePersistenceLifecycleOptions {

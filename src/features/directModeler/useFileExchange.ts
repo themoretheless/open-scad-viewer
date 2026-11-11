@@ -7,8 +7,8 @@ import {
   type DirectDocument,
   type DirectHistory,
   type Point2,
-} from '../../services/directModeling'
-import type { SketchPlane } from '../../services/directSketchGeometry'
+} from '../../app/directModeling'
+import type { SketchPlane } from '../../app/directSketchGeometry'
 import { downloadBytes } from '../../exchange/downloadArtifact'
 import { type MeshExportFormat } from '../../exchange/meshConvert'
 import { stripMeshExtension } from '../../exchange/meshFormats'

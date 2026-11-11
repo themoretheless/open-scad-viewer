@@ -1,4 +1,4 @@
-import type {DirectDocument} from '../services/directModeling'
+import type {DirectDocument} from '../app/directModeling'
 import type {MainSolidWorkerClient} from './mainSolidWorkerClient'
 export async function previewSolidCurveOffset(client:MainSolidWorkerClient,document:DirectDocument,p:{id:string;createdId:string;offsetJoin:string;distance:number;maxError:number;locale?:string}){
  try {

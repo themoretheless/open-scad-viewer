@@ -8,7 +8,7 @@ import {
   assembleLegacyV5Result,
   LegacyV5AssemblyError,
   type LegacyV5AssemblyOptions,
-} from '../services/legacyV5Assembler'
+} from '../app/legacyV5Assembler'
 import {
   loadManifoldPlanBackend,
   type ManifoldPlanBackend,

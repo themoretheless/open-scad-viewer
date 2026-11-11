@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs'
 import {afterEach,expect,it} from 'vitest'
 import {MainSolidWorkerClient,type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
 import type {MainSolidRequest,MainSolidJob} from '../src/kernel/mainSolidProtocol'
-import type {DirectDocument} from '../src/services/directModeling'
+import type {DirectDocument} from '../src/app/directModeling'
 import identity from '../src/generated/geometry-kernels/identity'
 const bytes=readFileSync('public/wasm/geometry-kernel.wasm')
 const expectedArtifact={sha256:createHash('sha256').update(bytes).digest('hex'),byteLength:bytes.length}

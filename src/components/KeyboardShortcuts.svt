@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, useId, watch } from 'svet'
-import type { ShortcutHelpGroup, ShortcutPlatform } from '../services/commandRegistry'
+import type { ShortcutHelpGroup, ShortcutPlatform } from '../app/commandRegistry'
 
 const props = withDefaults(defineProps<{
   open: boolean

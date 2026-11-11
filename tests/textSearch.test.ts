@@ -4,7 +4,7 @@ import {
   replaceAllLiteral,
   replaceExpectedMatch,
   wrappedMatchIndex,
-} from '../src/services/textSearch'
+} from '../src/app/textSearch'
 
 describe('bounded literal text search', () => {
   it('uses exact UTF-16 textarea offsets and treats regex characters literally', () => {

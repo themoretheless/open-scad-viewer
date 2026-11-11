@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from 'vitest'
-import {parseMatchingPayload, runGpuMatching} from '../src/services/photogrammetry/gpuMatching'
+import {parseMatchingPayload, runGpuMatching} from '../src/app/photogrammetry/gpuMatching'
 import type {GpuComputeJob} from '../src/render/webgpuCompute'
 
 vi.mock('../src/render/webgpuCompute', () => ({

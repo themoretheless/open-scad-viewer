@@ -1,10 +1,10 @@
 import { computed, nextTick, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import type { SectionAxis } from '../components/cadPanels.types'
 import type { MeshData } from '../core/mesh'
-import { clamp } from '../services/math3d'
+import { clamp } from '../app/math3d'
 import { inspectMesh } from '../kernel/meshInspection'
 import type { PickHit } from '../render/rendererContracts'
-import type { SceneController, SceneState } from '../services/sceneController'
+import type { SceneController, SceneState } from '../app/sceneController'
 import type { WebGPURenderer } from '../render/webgpuRenderer'
 
 export interface UseSectionPlaneControlsOptions {

@@ -7,7 +7,7 @@ import {
   resolveProvenance,
   summarizeMeasurement,
 } from '../src/kernel/meshInspection'
-import { identity, scale, translate, type Mat4 } from '../src/services/math3d'
+import { identity, scale, translate, type Mat4 } from '../src/app/math3d'
 import type {
   MeshData,
   MeshSourceReference,

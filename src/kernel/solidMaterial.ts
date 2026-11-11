@@ -1,4 +1,4 @@
-import type {DirectDocument,DirectMaterial} from '../services/directModeling'
+import type {DirectDocument,DirectMaterial} from '../app/directModeling'
 
 export interface EngineeringMaterialSpec {
   id: string

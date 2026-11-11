@@ -1,5 +1,5 @@
-import {parseDirectDocument,type DirectDocument} from '../services/directModeling'
-import {pushPullFace,bevelBrepBody,shellSolid,splitSolid} from '../services/directSolidTools'
+import {parseDirectDocument,type DirectDocument} from '../app/directModeling'
+import {pushPullFace,bevelBrepBody,shellSolid,splitSolid} from '../app/directSolidTools'
 import {solidExactEdgeFeature} from './solidExactEdgeFeature'
 import {stringifyMeshJson} from '../exchange/meshJson'
 export type SolidBodyEditOperation='push'|'chamfer'|'edge-fillet'|'shell'|'split'

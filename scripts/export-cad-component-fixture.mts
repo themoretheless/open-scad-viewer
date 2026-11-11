@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {emptyDirectDocument} from '../src/services/directModeling'
+import {emptyDirectDocument} from '../src/app/directModeling'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {exportSolidStepAssembly} from '../src/kernel/solidStepAssembly'
 import {prepareSolidStepImport} from '../src/kernel/solidStepExchange'

@@ -4,7 +4,7 @@ import {
   VirtualFileSystem,
   normalizeVirtualPath,
   resolveVirtualPath,
-} from '../src/services/virtualFileSystem'
+} from '../src/app/virtualFileSystem'
 
 describe('virtual project filesystem', () => {
   it('resolves deterministic project-relative dependencies without host access', () => {

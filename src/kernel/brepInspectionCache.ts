@@ -1,4 +1,4 @@
-import { MAX_DOCUMENT_CHARACTERS } from '../services/directDocumentLimits'
+import { MAX_DOCUMENT_CHARACTERS } from '../app/directDocumentLimits'
 import { inspectNurbsBrep, type NurbsBrep } from './geometry/brep'
 
 /** Exact-content memoization: cloned bodies hit, mutated geometry must be inspected again. */

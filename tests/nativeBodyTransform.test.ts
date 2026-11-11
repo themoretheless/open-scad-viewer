@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest'
-import {transformBodies} from '../src/services/directSolidTools'
+import {transformBodies} from '../src/app/directSolidTools'
 import {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 const bodies=()=>[0,8].map((x,i)=>{const brep=createBrepBox([x,0,0],[x+2,4,6]);return {id:String(i),name:`Part ${i}`,brep,mesh:tessellateNurbsBrep(brep,1)}})
@@ -31,7 +31,7 @@ it('normalizes extreme axes and rejects invalid batches without changing the sou
 })
 
 it('transforms mixed selections about one pivot and preserves analytic sketches',async()=>{
- const {transformSelection}=await import('../src/services/directSolidTools')
+ const {transformSelection}=await import('../src/app/directSolidTools')
  const body=bodies()[0]
  const sketch={id:'s',name:'Arc',closed:false,points:[[8,0],[10,2]] as [number,number][],analytic:{kind:'arc' as const,center:[8,2] as [number,number],radius:2,start:-90,sweep:90}}
  const input={version:1 as const,bodies:[body],sketches:[sketch]},before=JSON.stringify(input)
@@ -40,13 +40,13 @@ it('transforms mixed selections about one pivot and preserves analytic sketches'
  const moved=result.sketches[0]
  expect(moved.points).toEqual([[16,0],[20,4]])
  expect(moved.analytic).toEqual({...sketch.analytic,center:[16,4],radius:4})
- const {worldPoint}=await import('../src/services/directSketchGeometry')
+ const {worldPoint}=await import('../src/app/directSketchGeometry')
  moved.points.forEach((p,i)=>{const expected=[2*sketch.points[i][0]-4,10,2*sketch.points[i][1]+2];worldPoint(p,moved.plane).forEach((x,k)=>expect(x).toBeCloseTo(expected[k],10))})
  result.bodies[0].brep!.vertices.forEach((v,i)=>{const p=body.brep.vertices[i].point;[2*p[0]-4,10-2*p[2],2*p[1]+2].forEach((x,k)=>expect(v.point[k]).toBeCloseTo(x,10))})
  expect(JSON.stringify(input)).toBe(before)
 })
 it('keeps coplanar analytic edits in local coordinates and refuses malformed late sketches',async()=>{
- const {transformSelection}=await import('../src/services/directSolidTools')
+ const {transformSelection}=await import('../src/app/directSolidTools')
  const sketch={id:'s',name:'Arc',closed:false,points:[[0,0],[2,2]] as [number,number][],analytic:{kind:'arc' as const,center:[1,1] as [number,number],radius:1,start:0,sweep:90}}
  const input={version:1 as const,bodies:[],sketches:[sketch]}
  const moved=transformSelection(input,['s'],[3,4,0],[0,0,1],90,2).sketches[0]
@@ -57,7 +57,7 @@ it('keeps coplanar analytic edits in local coordinates and refuses malformed lat
  expect(JSON.stringify(invalid)).toBe(before)
 })
 it('rejects analytic overflow instead of returning null geometry',async()=>{
- const {transformSelection}=await import('../src/services/directSolidTools')
+ const {transformSelection}=await import('../src/app/directSolidTools')
  const sketch={id:'s',name:'Overflow',closed:false,points:[[0,0],[1,1]] as [number,number][],analytic:{kind:'arc' as const,center:[0,0] as [number,number],radius:Number.MAX_VALUE,start:0,sweep:90}}
  const input={version:1 as const,bodies:[],sketches:[sketch]},before=JSON.stringify(input)
  expect(()=>transformSelection(input,['s'],[0,0,0],[0,0,1],0,2)).toThrow(/finite numeric range/)

@@ -1,8 +1,8 @@
 import {readFileSync} from 'node:fs'
 import {afterEach,expect,it,vi} from 'vitest'
 import {IDBFactory} from 'fake-indexeddb'
-import {DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
-import {transformSelection} from '../src/services/directSolidTools'
+import {DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/app/directModeling'
+import {transformSelection} from '../src/app/directSolidTools'
 import {readSolidDraftHead,writeSolidDraftHead} from '../src/kernel/solidDraftHeadStore'
 
 afterEach(()=>vi.unstubAllGlobals())

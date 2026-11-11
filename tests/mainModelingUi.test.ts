@@ -3,9 +3,9 @@ import {it,expect,vi,afterEach} from 'vitest'
 import MainModelingOverlay from '../src/features/MainModelingOverlay.svt'
 import MainSketchTools from '../src/features/MainSketchTools.svt'
 import CadWorkbenchPanel from '../src/features/CadWorkbenchPanel.svt'
-import {previewMeshes} from '../src/services/mainModeling'
-import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
-import {sampleCurve} from '../src/services/directSketchGeometry'
+import {previewMeshes} from '../src/app/mainModeling'
+import {extrudeDirectSketch,type DirectDocument} from '../src/app/directModeling'
+import {sampleCurve} from '../src/app/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 class Node {
  parent:Node|null=null;children:Node[]=[];props:Record<string,any>={};style:Record<string,any>={};text='';value:any='';selected=false

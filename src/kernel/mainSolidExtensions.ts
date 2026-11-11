@@ -1,4 +1,4 @@
-import type { DirectBody } from '../services/directModeling'
+import type { DirectBody } from '../app/directModeling'
 import { callGeometryRust } from './geometry/kernel'
 import { normalizePolygonMesh, type PolygonMesh } from './geometry/polygon'
 

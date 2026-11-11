@@ -1,7 +1,7 @@
 // geometryEvaluator: EvalNodesFn.
 import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
-import { clamp01 } from '../../services/math3d'
+import { clamp01 } from '../../app/math3d'
 
 import { resolveLegacyOpenScadSegments } from '../../language/openScadLegacySegments'
 

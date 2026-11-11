@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
-import {encodeBinary} from '../src/services/valueBinaryCodec.ts'
+import {encodeBinary} from '../src/app/valueBinaryCodec.ts'
 import {decodePacked,writeLinear} from '../src/kernel/wasmHost.ts'
 
 const path=process.argv[2]

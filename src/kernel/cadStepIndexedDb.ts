@@ -2,7 +2,7 @@ import {inspectNurbsBrep,type NurbsBrep} from './geometry/brep'
 import type {StepCapabilityReport} from './cadStepRouting'
 import type {DirectStepV10Document} from './cadNurbsStep'
 import {MAX_RETAINED_STEP_STORE_BYTES,retainedStepStoreAcceptsEncodedBytes} from './cadStepRouting'
-import {WORKSPACE_DATABASE_NAME,WORKSPACE_DATABASE_VERSION,WORKSPACE_OBJECT_STORE,WORKSPACE_STEP_MODEL_STORE} from '../services/workspaceIndexedDb'
+import {WORKSPACE_DATABASE_NAME,WORKSPACE_DATABASE_VERSION,WORKSPACE_OBJECT_STORE,WORKSPACE_STEP_MODEL_STORE} from '../app/workspaceIndexedDb'
 
 interface StepModelRow {slot:'active';version:1|2;model:NurbsBrep;document?:DirectStepV10Document;report:StepCapabilityReport}
 

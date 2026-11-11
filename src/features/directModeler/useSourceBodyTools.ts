@@ -5,7 +5,7 @@ import { type SourceWallResult } from '../../kernel/sourceWallTransport'
 import { type SourceWallCoverageResult } from '../../kernel/sourceWallCoverageTransport'
 import { type SourceWallScanResult } from '../../kernel/sourceWallScanTransport'
 import { download, type Pane } from './helpers'
-import { type DirectDocument, type Point2, type DirectBody } from '../../services/directModeling'
+import { type DirectDocument, type Point2, type DirectBody } from '../../app/directModeling'
 import { computed, ref, shallowRef, watch, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 
 export interface SourceBodyToolsOptions {

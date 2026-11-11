@@ -5,7 +5,7 @@ import {describe,expect,it} from 'vitest'
 import {importDirectStepV6,exportDirectStepV6} from '../src/kernel/cadNurbsStep'
 import {MAX_RETAINED_STEP_STORE_BYTES,importStepForWorkbench,retainedStepSession,retainedStepStoreAcceptsEncodedBytes} from '../src/kernel/cadStepRouting'
 import {cadOperation} from '../src/kernel/cadWorkbench'
-import {parseDirectDocument} from '../src/services/directModeling'
+import {parseDirectDocument} from '../src/app/directModeling'
 import {loadProjectStepModel,saveProjectStepModel} from '../src/kernel/cadStepIndexedDb'
 
 const values=new Map<string,string>()

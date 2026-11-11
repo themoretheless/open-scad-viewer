@@ -4,7 +4,7 @@ import { type FaceContacts } from '../../kernel/solidFaceContacts'
 import { type SelfIntersection } from '../../kernel/solidSelfIntersection'
 import { type inspectSolidDisplay, inspectSolidIntersections } from '../../kernel/solidDiagnostics'
 import { createSolidClearanceWorker } from '../../kernel/solidClearanceWorker'
-import { type DirectDocument, type DirectBody } from '../../services/directModeling'
+import { type DirectDocument, type DirectBody } from '../../app/directModeling'
 import { computed, ref, shallowRef, watchEffect, onUnmounted, type ShallowRef, type ComputedRef } from 'svet'
 
 export interface DiagnosticsOptions {

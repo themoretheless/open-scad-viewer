@@ -1,4 +1,4 @@
-import type {DirectDocument} from '../services/directModeling'
+import type {DirectDocument} from '../app/directModeling'
 import {reduceNurbsCurveDegreeCertified} from './nurbsFoundation'
 /** Keep the kernel's refusal certificate available; the caller must not commit a rollback. */
 export function reduceSolidCurve(document:DirectDocument,id:string,degree:number,maxError:number) {

@@ -1,5 +1,5 @@
 import {createSourceBodyRecord,sourceBodyRecordOptions} from '../src/kernel/sourceBodyArchive'
-import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
+import {DirectHistory,emptyDirectDocument,parseDirectDocument,serializeDirectDocument} from '../src/app/directModeling'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {afterEach,expect,it} from 'vitest'
 import {readFileSync,writeFileSync,appendFileSync} from 'node:fs'

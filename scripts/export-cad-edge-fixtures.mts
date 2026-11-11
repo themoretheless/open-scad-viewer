@@ -2,7 +2,7 @@ import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
-import {solidTopology} from '../src/services/directSolidTools'
+import {solidTopology} from '../src/app/directSolidTools'
 import {solidExactEdgeFeature} from '../src/kernel/solidExactEdgeFeature'
 import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 const directory=resolve('output/qualification/cad-roadmap-edges')

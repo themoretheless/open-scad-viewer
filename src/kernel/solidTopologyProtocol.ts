@@ -1,4 +1,4 @@
-import type {SolidFace,SolidEdge} from '../services/directSolidTools'
+import type {SolidFace,SolidEdge} from '../app/directSolidTools'
 /** Validate mesh-index ownership before topology can drive picking or editing. */
 export function validSolidTopology(value:unknown,vertices:number,triangles:number):boolean {
  if(!Number.isSafeInteger(vertices)||vertices<0||!Number.isSafeInteger(triangles)||triangles<0||!value||typeof value!=='object')return false

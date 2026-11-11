@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { backendQuality, isTransparentAlpha, usesTransparentPass } from '../src/services/backendQuality'
+import { backendQuality, isTransparentAlpha, usesTransparentPass } from '../src/app/backendQuality'
 
 describe('rendering backend quality tiers', () => {
   it('reports the exact headless fallback without claiming a viewport', () => {

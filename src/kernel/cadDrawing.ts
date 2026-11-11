@@ -1,6 +1,6 @@
-import {bodyPoints,type DirectBody} from '../services/directModeling'
+import {bodyPoints,type DirectBody} from '../app/directModeling'
 import {bounds} from './cadWorkbench'
-import {solidTopology} from '../services/directSolidTools'
+import {solidTopology} from '../app/directSolidTools'
 type Line=[number,number,number,number]
 export function cadDrawing(bodies:DirectBody[],sectionZ?:number){
  const bb=bounds(bodies),sizes=bb.max.map((v,k)=>v-bb.min[k]),scale=Math.min(110/Math.max(sizes[0],sizes[2],1),75/Math.max(...sizes,1)),lines:Line[]=[],texts:{x:number;y:number;text:string}[]=[]

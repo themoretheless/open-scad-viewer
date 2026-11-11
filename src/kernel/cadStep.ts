@@ -1,6 +1,6 @@
-import {bodyPoints,type DirectBody} from '../services/directModeling'
+import {bodyPoints,type DirectBody} from '../app/directModeling'
 import {inspectPolygonMesh} from './geometry/polygon'
-import {cross3,unit3,dot3} from '../services/directSketchGeometry'
+import {cross3,unit3,dot3} from '../app/directSketchGeometry'
 const UTF8_ENCODER=new TextEncoder()
 /** ISO 10303-21/AP214 faceted BREP in millimetres. No analytic surface reconstruction. */
 export function exportFacetedStep(bodies:DirectBody[]):string{

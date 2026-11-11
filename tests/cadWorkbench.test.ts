@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
 import {cadOperation,bounds,type CadOptions} from '../src/kernel/cadWorkbench'
-import {extrudeDirectSketch,type DirectDocument} from '../src/services/directModeling'
+import {extrudeDirectSketch,type DirectDocument} from '../src/app/directModeling'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 import {inspectCadPairs} from '../src/kernel/cadInspection'
 import {cadDrawing} from '../src/kernel/cadDrawing'
@@ -106,7 +106,7 @@ describe('CAD workbench geometry',()=>{
 it('round-trips faceted STEP as closed solids and rejects analytic files',async()=>{const {exportFacetedStep,importFacetedStep}=await import('../src/kernel/cadStep');const text=exportFacetedStep([box(),box('1',20)]),b=importFacetedStep(text);expect(b).toHaveLength(2);expect(volume(doc(...b))).toBeCloseTo(2000);expect(()=>importFacetedStep(text.replace('FACE_SURFACE','ADVANCED_FACE'))).toThrow('supports planar')})
 it('lofts sections and sweeps an open path',()=>{const sketches=[{id:'a',name:'a',closed:true,points:[[0,0],[4,0],[4,4],[0,4]] as [number,number][]},{id:'b',name:'b',closed:true,points:[[0,0],[2,0],[2,2],[0,2]] as [number,number][],plane:{origin:[0,0,10] as [number,number,number],u:[1,0,0] as [number,number,number],v:[0,1,0] as [number,number,number]}},{id:'path',name:'path',closed:false,points:[[0,0],[0,10],[10,10]] as [number,number][]}];expect(volume(cadOperation(doc(),{...options,action:'loft',profileIds:['a','b'],sketches}))).toBeGreaterThan(0);expect(volume(cadOperation(doc(),{...options,action:'sweep',profileIds:['a'],pathId:'path',sketches}))).toBeGreaterThan(0)})
 it('persists bounded joint positions and applies absolute slider travel after source rebuild',async()=>{
- const {jointOptions,saveCadJoint}=await import('../src/kernel/cadJoints'),{patchMainSource}=await import('../src/services/mainSourceEditing'),{parseOpenSCAD}=await import('../src/language/openscadParser'),{sceneBody}=await import('../src/services/mainModeling')
+ const {jointOptions,saveCadJoint}=await import('../src/kernel/cadJoints'),{patchMainSource}=await import('../src/app/mainSourceEditing'),{parseOpenSCAD}=await import('../src/language/openscadParser'),{sceneBody}=await import('../src/app/mainModeling')
  const source='cube(10);translate([20,0,0]) cube(10);',meshes=(await parseOpenSCAD(source)).meshes,before=doc(...meshes.map(sceneBody)),o={...options,action:'joint' as const,ids:['0','1'],mode:'slider',amount:5},d=cadOperation(before,jointOptions(source,before.bodies,o,-10,10)),saved=saveCadJoint(patchMainSource(source,meshes,d),d.bodies,o,-10,10),rebuilt=(await parseOpenSCAD(saved)).meshes.map(sceneBody),next=jointOptions(saved,rebuilt,{...o,amount:8},-10,10)
  expect(next.amount).toBe(3);expect(()=>jointOptions(saved,rebuilt,{...o,amount:11},-10,10)).toThrow('limits');expect(bounds(cadOperation(doc(...rebuilt),next).bodies).max[2]).toBe(18)
 })

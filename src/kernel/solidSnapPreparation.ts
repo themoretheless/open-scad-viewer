@@ -1,5 +1,5 @@
-import type {DirectBody} from '../services/directModeling'
-import type {SnapGeometry} from '../services/modelingSnaps'
+import type {DirectBody} from '../app/directModeling'
+import type {SnapGeometry} from '../app/modelingSnaps'
 import type {MainSolidJob} from './mainSolidProtocol'
 import {stringifyMeshJson} from '../exchange/meshJson'
 type Job=Extract<MainSolidJob,{kind:'bodySnaps'}>

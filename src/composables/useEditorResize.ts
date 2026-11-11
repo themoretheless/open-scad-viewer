@@ -1,6 +1,6 @@
 import type { Ref } from 'svet'
-import { storageSet } from '../services/safeStorage'
-import { clampEditorWidth, editorWidthBounds } from '../services/layoutSizing'
+import { storageSet } from '../app/safeStorage'
+import { clampEditorWidth, editorWidthBounds } from '../app/layoutSizing'
 interface Options {
   mainRef: Ref<HTMLElement | null>
   editorWidth: Ref<number>

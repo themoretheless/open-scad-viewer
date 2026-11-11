@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {cpus} from 'node:os'
 import {pathToFileURL} from 'node:url'
 import {resolve} from 'node:path'
-import {identity, type Mat4} from '../src/services/math3d'
+import {identity, type Mat4} from '../src/app/math3d'
 
 // A/B benchmark for the GPU-driven vertex morph (candidate) vs the CPU
 // interpolation + full vertex-buffer rewrite (baseline).

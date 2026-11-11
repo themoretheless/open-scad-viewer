@@ -206,7 +206,7 @@ it('uses the same exact revolve result for new, union and complete subtraction',
 })
 
 it('splits a body in the worker, retaining its identity and source snapshot',async()=>{
- const {extrudeDirectSketch}=await import('../src/services/directModeling')
+ const {extrudeDirectSketch}=await import('../src/app/directModeling')
  const {inspectPolygonMesh}=await import('../src/kernel/geometry/polygon')
  const sketch={id:'s',name:'Square',closed:true,points:[[0,0],[10,0],[10,10],[0,10]] as [number,number][]}
  const document={version:1 as const,sketches:[sketch],bodies:[extrudeDirectSketch(sketch,10,'stock')]}
@@ -218,7 +218,7 @@ it('splits a body in the worker, retaining its identity and source snapshot',asy
 })
 
 it('computes profile difference and retained offset in the worker with holes and stable IDs',async()=>{
- const {sampleCurve}=await import('../src/services/directSketchGeometry')
+ const {sampleCurve}=await import('../src/app/directSketchGeometry')
  const circle={kind:'circle' as const,center:[4,3] as [number,number],radius:1,start:0,sweep:360}
  const document={version:1 as const,sketches:[{id:'plate',name:'Plate',closed:true,points:[[0,0],[8,0],[8,6],[0,6]]},{id:'hole',name:'Hole',closed:true,analytic:circle,points:sampleCurve(circle)}],bodies:[]}
  const options={operation:'profile-difference',id:'plate',inputs:['plate','hole'],distance:.5,end:'end',cx:0,cy:0,radius:1,start:0,sweep:360}
@@ -296,7 +296,7 @@ it('carries curve, surface and seam proof reports through the actual worker prot
 })
 
 it('updates linked geometry in the scene worker preview without changing its source snapshot',async()=>{
- const {extrudeDirectSketch}=await import('../src/services/directModeling')
+ const {extrudeDirectSketch}=await import('../src/app/directModeling')
  const sketch={id:'s',name:'Square',closed:true,points:[[0,0],[10,0],[10,10],[0,10]] as [number,number][]}
  const document={version:1 as const,sketches:[sketch],bodies:[extrudeDirectSketch(sketch,10,'source')]},before=JSON.stringify(document)
  const options={operation:'instance-create',id:'source',ids:['source'],createdId:'linked',x:20,y:0,z:0,axis:'z',angle:0,scale:1}
@@ -378,7 +378,7 @@ it('keeps numeric sketch transforms in the support plane in the worker',async()=
 
 it('edits a CV and its dependent bridge, and moves mesh vertices without changing the source',async()=>{
  const {createSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
- const {bridgeNurbsCurves}=await import('../src/services/directDimensions')
+ const {bridgeNurbsCurves}=await import('../src/app/directDimensions')
  const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b')
  b.curve.controlPoints=b.curve.controlPoints.map(p=>[p[0]+50,p[1],p[2]])
  const bridge={id:'bridge',name:'Bridge',bridge:{sourceA:'a',sourceB:'b',endA:'end' as const,endB:'start' as const,tension:1},curve:bridgeNurbsCurves(a.curve,b.curve,'end','start',1)}
@@ -397,7 +397,7 @@ it('edits a CV and its dependent bridge, and moves mesh vertices without changin
 })
 
 it('edits analytic circle/arc handles and sketch vertices in isolated worker snapshots',async()=>{
- const {sampleCurve}=await import('../src/services/directSketchGeometry')
+ const {sampleCurve}=await import('../src/app/directSketchGeometry')
  const analytic={kind:'arc' as const,center:[2,3] as [number,number],radius:4,start:0,sweep:180}
  const document={version:1 as const,sketches:[{id:'arc',name:'Arc',closed:false,analytic,points:sampleCurve(analytic)},{id:'poly',name:'Polyline',closed:false,points:[[0,0],[10,0]]}],bodies:[]}
  const before=JSON.stringify(document),messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
@@ -480,7 +480,7 @@ it('creates a dependent bridge and runs B-rep properties/detail in the worker',a
 })
 
 it('restores compact linked geometry through the authoritative document parser',async()=>{
- const {emptyDirectDocument,serializeDirectDocument,parseDirectDocument}=await import('../src/services/directModeling')
+ const {emptyDirectDocument,serializeDirectDocument,parseDirectDocument}=await import('../src/app/directModeling')
  const {createSolidInstance}=await import('../src/kernel/solidInstances')
  const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const {stringifyMeshJson}=await import('../src/exchange/meshJson')
@@ -508,7 +508,7 @@ it('prepares transferable display buffers without detaching request geometry',as
 
 it('imports RushGraph definitions into a validated document without mutating or detaching its source',async()=>{
  const {readFileSync}=await import('node:fs')
- const {emptyDirectDocument,extrudeDirectSketch}=await import('../src/services/directModeling')
+ const {emptyDirectDocument,extrudeDirectSketch}=await import('../src/app/directModeling')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const document=emptyDirectDocument(),text=readFileSync('tests/fixtures/solid-rush-import.json','utf8')
  document.bodies.push(extrudeDirectSketch({id:'profile',name:'Profile',closed:true,points:[[0,0],[2,0],[2,3],[0,3]]},4,'existing'))
@@ -601,7 +601,7 @@ it('tessellates surface display into owned transferable buffers and rejects malf
 
 it('samples retained profile loops in the worker without changing rational geometry',async()=>{
  const {authorBrepProfile}=await import('../src/kernel/geometry/brepProfile')
- const {retainedProfileDisplay}=await import('../src/services/retainedSketchProfile')
+ const {retainedProfileDisplay}=await import('../src/app/retainedSketchProfile')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const {SolidProfileDisplayQueue}=await import('../src/kernel/solidProfileDisplayQueue')
  const profile=authorBrepProfile({kind:'circle',radius:7}),before=JSON.stringify(profile)
@@ -661,7 +661,7 @@ it('samples rational curve display in a cancellable queue with exact input keys'
 })
 
 it('prepares mesh topology in the worker and rejects invalid picking indices',async()=>{
- const {solidTopology}=await import('../src/services/directSolidTools')
+ const {solidTopology}=await import('../src/app/directSolidTools')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const mesh=tessellateNurbsBrep(createBrepBox([0,0,0],[10,12,14]),2),before=structuredClone(mesh)
@@ -706,7 +706,7 @@ it('prepares authored edges in a worker with bounded vertex references',async()=
 
 it('prepares a planar face workplane and rejects a stale face index',async()=>{
  const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
- const {solidTopology}=await import('../src/services/directSolidTools')
+ const {solidTopology}=await import('../src/app/directSolidTools')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const brep=createBrepBox([0,0,0],[10,12,14]),body={id:'workplane',name:'Workplane',brep,mesh:tessellateNurbsBrep(brep,2)}
  const face=solidTopology(body.mesh).faces.findIndex(f=>f.normal[2]>.99),before=structuredClone(body)
@@ -725,14 +725,14 @@ it('prepares a planar face workplane and rejects a stale face index',async()=>{
 it('prepares cloneable exact snap geometry in a worker and validates curve intervals',async()=>{
  const {createBrepCylinder,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
  const {bodySnapGeometry}=await import('../src/kernel/solidSnapGeometry')
- const {resolveModelingSnap}=await import('../src/services/modelingSnaps')
+ const {resolveModelingSnap}=await import('../src/app/modelingSnaps')
  const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
  const brep=createBrepCylinder(5,10),body={id:'snap-body',name:'Snaps',brep,mesh:tessellateNurbsBrep(brep,2)},before=structuredClone(body)
  const job={kind:'bodySnaps' as const,body},messages:MainSolidResponse[]=[]
  await createMainSolidWorkerHandler(m=>messages.push(structuredClone(m)))({version:1,id:1,job})
  expect(messages[0]).toMatchObject({ok:true,kind:'bodySnaps'})
  if(!messages[0].ok)throw Error('Snap preparation failed')
- const result=messages[0].result as import('../src/services/modelingSnaps').SnapGeometry,expectation=mainSolidExpectation(job)
+ const result=messages[0].result as import('../src/app/modelingSnaps').SnapGeometry,expectation=mainSolidExpectation(job)
  expect(result).toEqual(bodySnapGeometry(body));expect(body).toEqual(before)
  expect(mainSolidResult(expectation,result)).toBe(true)
  const segment=result.segments.find(s=>s.nurbs)!,point=segment.a.map((v,i)=>(v+segment.b[i])/2) as [number,number,number]
@@ -747,8 +747,8 @@ it('prepares cloneable exact snap geometry in a worker and validates curve inter
 
 it('prepares planar sketch snap targets in the worker and rejects malformed results',async()=>{
  const {mainSolidExpectation,mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
- const {sketchSnapGeometry,resolveModelingSnap}=await import('../src/services/modelingSnaps')
- const sketches:import('../src/services/directModeling').DirectSketch[]=[
+ const {sketchSnapGeometry,resolveModelingSnap}=await import('../src/app/modelingSnaps')
+ const sketches:import('../src/app/directModeling').DirectSketch[]=[
   {id:'polygon',name:'Polygon',closed:true,points:[[0,0],[20,0],[20,10],[0,10]]},
   {id:'rational',name:'Rational',closed:false,points:[],retainedProfile:{loops:[[{degree:2,knots:[0,0,0,1,1,1],weights:[1,Math.SQRT1_2,1],controlPoints:[[10,0],[10,10],[0,10]]}]]}},
   {id:'circle',name:'Circle',closed:true,points:[],analytic:{kind:'circle',center:[2,3],radius:5,start:0,sweep:360}},
@@ -760,7 +760,7 @@ it('prepares planar sketch snap targets in the worker and rejects malformed resu
   await handler({version:1,id:messages.length+1,job})
   const response=messages.at(-1)!;expect(response).toMatchObject({ok:true,kind:'sketchSnaps'})
   if(!response.ok)throw Error('Sketch snaps failed')
-  const result=response.result as import('../src/services/modelingSnaps').SnapGeometry,expected=mainSolidExpectation(job)
+  const result=response.result as import('../src/app/modelingSnaps').SnapGeometry,expected=mainSolidExpectation(job)
   expect(result).toEqual(sketchSnapGeometry([sketch]));expect(sketch).toEqual(before)
   if(sketch.id==='rational'){const bad=structuredClone(result);bad.segments[0].nurbs!.curve.controlPoints[1][2]=1;expect(mainSolidResult(expected,bad)).toBe(false)}
   expect(mainSolidResult(expected,result)).toBe(true)
@@ -781,7 +781,7 @@ it('trims an open rational curve at a picked point in the worker without changin
  const before=structuredClone(document),messages:MainSolidResponse[]=[],handler=createMainSolidWorkerHandler(m=>messages.push(structuredClone(m)))
  await handler({version:1,id:1,job:{kind:'nurbsEdit',document,options:{kind:'trim-point',id:'trim-target',point:[8,6,0],keep:'end',maxDistance:.01}}})
  expect(messages[0]).toMatchObject({ok:true,kind:'nurbsEdit'});if(!messages[0].ok)throw Error('Trim failed')
- const result=messages[0].result as import('../src/services/directModeling').DirectDocument,curve=result.curves![0].curve
+ const result=messages[0].result as import('../src/app/directModeling').DirectDocument,curve=result.curves![0].curve
  expect(result.curves![0].id).toBe('trim-target');expect(result.curves![0].name).toBe('Trim target')
  const p=evaluateNurbsCurve(curve,curve.knots[curve.degree]).point
  expect(p[0]).toBeCloseTo(8,7);expect(p[1]).toBeCloseTo(6,7);expect(document).toEqual(before)
@@ -794,7 +794,7 @@ it('trims a screen-picked curve in model coordinates and preserves depth',async(
  const before=structuredClone(document),messages:MainSolidResponse[]=[],handler=createMainSolidWorkerHandler(m=>messages.push(structuredClone(m)))
  await handler({version:1,id:1,job:{kind:'nurbsEdit',document,options:{kind:'trim-screen-point',id:'line',point:[108,201],matrix:[[2,0,0,100],[0,3,0,200]],keep:'end',radius:2}}})
  expect(messages[0]).toMatchObject({ok:true,kind:'nurbsEdit'});if(!messages[0].ok)throw Error('Screen trim failed')
- const result=messages[0].result as import('../src/services/directModeling').DirectDocument
+ const result=messages[0].result as import('../src/app/directModeling').DirectDocument
  const p=result.curves![0].curve.controlPoints[0]
  expect(p[0]).toBeCloseTo(4,7);expect(p[1]).toBe(0);expect(p[2]).toBeCloseTo(14,7)
  expect(result.curves![0].id).toBe('line');expect(document).toEqual(before)
@@ -808,7 +808,7 @@ it('keeps the midpoint projection of a tilted rational arc through the worker',a
  const messages:MainSolidResponse[]=[],handler=createMainSolidWorkerHandler(m=>messages.push(structuredClone(m)))
  await handler({version:1,id:1,job:{kind:'nurbsEdit',document,options:{kind:'trim-point',id:'tilted',point:p,keep:'start',maxDistance:.01}}})
  expect(messages[0]).toMatchObject({ok:true});if(!messages[0].ok)throw Error('Tilted trim failed')
- const result=messages[0].result as import('../src/services/directModeling').DirectDocument
+ const result=messages[0].result as import('../src/app/directModeling').DirectDocument
  result.curves![0].curve.controlPoints.at(-1)!.forEach((v,i)=>expect(v).toBeCloseTo(p[i],8))
  expect(document.curves[0].curve.controlPoints).toEqual([[10,0,10],[10,10,15],[0,10,15]])
 })

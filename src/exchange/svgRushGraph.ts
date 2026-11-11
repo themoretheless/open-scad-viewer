@@ -2,7 +2,7 @@ import { defaultGeometryKernel } from '../kernel/cadGeometryKernel'
 import { compileRushGraph } from '../language/rushGraphCompiler'
 import type { RushGraph, RushGraphCompilation } from '../language/rushGraph'
 import { contoursExtrusion, type SvgContours } from './svgGeometry'
-import { MAX_WORKSPACE_SOURCE_LENGTH } from '../services/workspaceDocument'
+import { MAX_WORKSPACE_SOURCE_LENGTH } from '../app/workspaceDocument'
 
 const MAX_POLYGON_POINTS = 256
 const MAX_GRAPH_NODES = 128

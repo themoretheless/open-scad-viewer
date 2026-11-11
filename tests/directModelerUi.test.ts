@@ -8,7 +8,7 @@ import {IDBFactory} from 'fake-indexeddb'
 import * as stepStore from '../src/kernel/cadStepIndexedDb'
 import * as geometryKernel from '../src/kernel/geometry/kernel'
 import * as transparencyKernel from '../src/kernel/geometry/transparentBspKernel'
-import { useModelingGrid } from '../src/services/modelingGrid'
+import { useModelingGrid } from '../src/app/modelingGrid'
 import DirectModeler from '../src/features/DirectModeler.svt'
 beforeAll(async()=>{await import('../src/components/CurvePointTrimControls.svt');await import('../src/components/ProfileIntersectionPresentation.svt')})
 
@@ -36,10 +36,10 @@ beforeAll(async()=>{
  await import('../src/features/GcodePanel.svt')
  await import('../src/features/LaserCamPanel.svt')
 })
-import {extrudeDirectSketch,parseDirectDocument,type DirectDocument} from '../src/services/directModeling'
-import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/services/directModelingTools'
-import {solidTopology} from '../src/services/directSolidTools'
-import {sampleCurve} from '../src/services/directSketchGeometry'
+import {extrudeDirectSketch,parseDirectDocument,type DirectDocument} from '../src/app/directModeling'
+import {projectDirectPoint,unprojectDirectXY,defaultDirectCamera} from '../src/app/directModelingTools'
+import {solidTopology} from '../src/app/directSolidTools'
+import {sampleCurve} from '../src/app/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 import {stringifyMeshJson} from '../src/exchange/meshJson'
 import {createBrepBox,createBrepTube,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
@@ -59,11 +59,11 @@ const bodySnapsWorkerRun=vi.hoisted(()=>vi.fn())
 const sketchSnapsWorkerRun=vi.hoisted(()=>vi.fn())
 vi.mock('../src/kernel/solidPreviewWorker',async()=>{
  const {bodySnapGeometry}=await import('../src/kernel/solidSnapGeometry')
- const {sketchSnapGeometry}=await import('../src/services/modelingSnaps')
+ const {sketchSnapGeometry}=await import('../src/app/modelingSnaps')
  const {prepareSolidFaceSketch}=await import('../src/kernel/solidFaceSketch')
  const {solidBodyEdges}=await import('../src/kernel/solidBodyEdges')
- const {solidTopology}=await import('../src/services/directSolidTools')
- const {retainedProfileDisplay}=await import('../src/services/retainedSketchProfile')
+ const {solidTopology}=await import('../src/app/directSolidTools')
+ const {retainedProfileDisplay}=await import('../src/app/retainedSketchProfile')
  const {tessellateSolidNurbsSurface,sampleSolidNurbsCurve}=await import('../src/kernel/solidNurbs')
  const {measureSurfaceBoundaries}=await import('../src/kernel/solidSurfaceDiagnostics')
  const {measureFaceDistance,measureShellDistance}=await import('../src/kernel/solidMeasurements')
@@ -73,8 +73,8 @@ vi.mock('../src/kernel/solidPreviewWorker',async()=>{
  const {addSolidPrimitive}=await import('../src/kernel/solidPrimitive')
  const {importSolidRushGraph}=await import('../src/exchange/solidRushGraphImport')
  const {prepareSolidDisplay}=await import('../src/kernel/solidDisplayPreparation')
- const {parseDirectDocument}=await import('../src/services/directModeling')
- const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
+ const {parseDirectDocument}=await import('../src/app/directModeling')
+ const {applyDirectExtrusionProfile}=await import('../src/app/directExtrusion')
  const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
  const {applySolidBodyEdit}=await import('../src/kernel/solidBodyEdit')
  const {applySolidProfileEdit}=await import('../src/kernel/solidProfileEdit')
@@ -2060,7 +2060,7 @@ it('keeps the explicitly chosen subtraction target and restores its operand orde
 
 it('previews every retained offset loop and supports units, refusal, cancel and undo',async()=>{
  await geometryKernel.warmGeometryKernel()
- const {combineSketchProfiles}=await import('../src/services/retainedSketchProfile')
+ const {combineSketchProfiles}=await import('../src/app/retainedSketchProfile')
  const profile=combineSketchProfiles([{id:'plate',name:'Offset plate',closed:true,points:[[0,0],[8,0],[8,6],[0,6]]},{id:'hole',name:'Offset hole',closed:true,points:[],analytic:{kind:'circle',center:[4,3],radius:1,start:0,sweep:360}}],'difference')
  const ui=await mount({},JSON.stringify({version:1,sketches:[profile],bodies:[]}))
  const normalized=()=>parseDirectDocument(JSON.stringify(ui.doc()))
@@ -2078,7 +2078,7 @@ it('previews every retained offset loop and supports units, refusal, cancel and 
 })
 
 it('ignores late extrusion success and failure after edits, cancellation and panel close',async()=>{
- const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
+ const {applyDirectExtrusionProfile}=await import('../src/app/directExtrusion')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?undefined:new Promise((resolve,reject)=>requests.push({job,resolve,reject})))
  const ui=await mount();await ui.click('Profile');const before=ui.doc()
@@ -2387,7 +2387,7 @@ it('applies one circular-copy candidate and exposes invalid array parameters',as
 })
 
 it.each(['move','rotate','scale'])('does not publish a stationary %s gizmo click',async(kind)=>{
- const {DirectHistory}=await import('../src/services/directModeling')
+ const {DirectHistory}=await import('../src/app/directModeling')
  const ui=await mount(),baseline=ui.doc();await ui.click('Box');await ui.click('Gizmo: '+kind)
  const before=ui.doc(),svg=ui.svg(),commit=vi.spyOn(DirectHistory.prototype,'commitAsync')
  try{
@@ -2399,7 +2399,7 @@ it.each(['move','rotate','scale'])('does not publish a stationary %s gizmo click
 })
 
 it('supersedes a pending gizmo history publication with the next gesture',async()=>{
- const {DirectHistory}=await import('../src/services/directModeling')
+ const {DirectHistory}=await import('../src/app/directModeling')
  const ui=await mount();await ui.click('Cube');const before=ui.doc(),svg=ui.svg()
  const original=DirectHistory.prototype.commitAsync
  let release!:()=>void,calls=0
@@ -2422,7 +2422,7 @@ it('supersedes a pending gizmo history publication with the next gesture',async(
 })
 
 it('cancels gizmo history publication after the final worker response',async()=>{
- const {DirectHistory}=await import('../src/services/directModeling')
+ const {DirectHistory}=await import('../src/app/directModeling')
  const ui=await mount(),baseline=ui.doc();await ui.click('Box');const before=ui.doc(),svg=ui.svg()
  const original=DirectHistory.prototype.commitAsync
  let release!:()=>void,loaded=false
@@ -2457,7 +2457,7 @@ it('waits for the released translation, discards a canceled result and commits t
 })
 
 it.each(['Escape','invalid-input','selection-change'])('cancels numeric history publication after worker completion: %s',async(action)=>{
- const {DirectHistory}=await import('../src/services/directModeling')
+ const {DirectHistory}=await import('../src/app/directModeling')
  const ui=await mount(),baseline=ui.doc();await ui.click('Box');await ui.click('Profile');const before=ui.doc();await ui.click('Properties')
  const input=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='ΔX')!
  input().props['onUpdate:modelValue']('5 mm');await flushClearance()
@@ -2478,7 +2478,7 @@ it.each(['Escape','invalid-input','selection-change'])('cancels numeric history 
 })
 
 it('publishes the validated transform response without another history geometry clone',async()=>{
- const {DirectHistory}=await import('../src/services/directModeling')
+ const {DirectHistory}=await import('../src/app/directModeling')
  const {applySolidSceneEdit}=await import('../src/kernel/solidSceneEdit')
  let request!:{job:any;resolve:(value:any)=>void}
  previewWorkerRun.mockImplementation(job=>job.kind==='sceneEdit'?new Promise(resolve=>{request={job,resolve}}):undefined)
@@ -2795,7 +2795,7 @@ it('keeps history intact on cancelled or failed worker restore and ignores late 
 })
 
 it('uses the restored worker response for display without another history document clone',async()=>{
- const {DirectHistory}=await import('../src/services/directModeling')
+ const {DirectHistory}=await import('../src/app/directModeling')
  const ui=await mount();await ui.click('Box');const before=ui.doc()
  const read=vi.spyOn(DirectHistory.prototype,'document','get')
  try{
@@ -2807,7 +2807,7 @@ it('uses the restored worker response for display without another history docume
 })
 
 it.each([false,true])('pans without copying geometry or creating history (cancel=%s)',async cancel=>{
- const {DirectHistory}=await import('../src/services/directModeling')
+ const {DirectHistory}=await import('../src/app/directModeling')
  const ui=await mount(),svg=ui.svg(),before=ui.doc(),view=svg.props.viewBox
  const read=vi.spyOn(DirectHistory.prototype,'document','get')
  try{
@@ -2822,7 +2822,7 @@ it.each([false,true])('pans without copying geometry or creating history (cancel
 })
 
 it('imports compact instances through history while preserving cache validation and locks',async()=>{
- const {serializeDirectDocument}=await import('../src/services/directModeling')
+ const {serializeDirectDocument}=await import('../src/app/directModeling')
  const ui=await mount();await ui.click('Cube');await ui.click('Create linked instance');await commandKey(ui,'Enter')
  const before=ui.doc(),input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.json,application/json')!
  async function load(doc:unknown){const text=JSON.stringify(doc);await input.props.onChange({target:{files:[{size:text.length,text:async()=>text}],value:'project.json'}});await flushClearance()}
@@ -3279,7 +3279,7 @@ it('rebuilds snap targets after deletion and undo without accepting the previous
 
 it('blocks drawing with incomplete sketch snaps, discards cancelled replies and retries',async()=>{
  await geometryKernel.warmGeometryKernel()
- const {sketchSnapGeometry}=await import('../src/services/modelingSnaps')
+ const {sketchSnapGeometry}=await import('../src/app/modelingSnaps')
  const requests:{job:any;resolve:(value:any)=>void}[]=[]
  sketchSnapsWorkerRun.mockImplementation(job=>new Promise(resolve=>requests.push({job,resolve})))
  const fixture={version:1,bodies:[],sketches:[{id:'target',name:'Target',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}]}
@@ -3367,7 +3367,7 @@ it('invalidates screen trim requests on another click, numeric mode and Escape',
 })
 
 it('updates section diagnostics without materializing a history geometry copy',async()=>{
- const {DirectHistory}=await import('../src/services/directModeling')
+ const {DirectHistory}=await import('../src/app/directModeling')
  const ui=await mount();await ui.click('Cube');const before=ui.doc()
  const read=vi.spyOn(DirectHistory.prototype,'document','get')
  try{
@@ -3596,7 +3596,7 @@ it.each([
  ['Fillet','Radius, mm','sketchEdit','2'],
 ] as const)('discards %s preview on invalid quantity and resumes at the same value',async(command,field,kind,value)=>{
  const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
- const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
+ const {applyDirectExtrusionProfile}=await import('../src/app/directExtrusion')
  const {applySolidSketchEdit}=await import('../src/kernel/solidSketchEdit')
  const requests:Array<{job:any;resolve:(value:any)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>job.kind===kind?new Promise(resolve=>requests.push({job,resolve})):undefined)
@@ -3703,7 +3703,7 @@ it.each([
 
 
 it('opens guided subtraction without cloning the history for every selected body',async()=>{
- const {DirectHistory}=await import('../src/services/directModeling')
+ const {DirectHistory}=await import('../src/app/directModeling')
  const first=await mount(),cube=first.doc().bodies[0]
  const bodies=['A','B','C'].map(id=>({...structuredClone(cube),id,name:id}))
  const ui=await mount({},stringifyMeshJson({version:1,sketches:[],bodies}))
@@ -3739,7 +3739,7 @@ it.each(['CAD_CRASH','CAD_TIMEOUT','CAD_TRANSPORT','CAD_PROTOCOL'])('recovers Bo
 })
 
 it.each(['Extrude · E','Revolve'])('retries %s preview after a worker crash and commits only the successful result',async command=>{
- const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
+ const {applyDirectExtrusionProfile}=await import('../src/app/directExtrusion')
  const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>['extrusion','revolve'].includes(job.kind)?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
@@ -3765,7 +3765,7 @@ it.each(['Extrude · E','Revolve'])('retries %s preview after a worker crash and
 it.each([
  ['Extrude · E',false],['Extrude · E',true],['Revolve',false],['Revolve',true],
 ] as const)('ignores cancelled retry for %s with late failure=%s after reopening',async(command,lateFailure)=>{
- const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
+ const {applyDirectExtrusionProfile}=await import('../src/app/directExtrusion')
  const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>['extrusion','revolve'].includes(job.kind)?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
@@ -3793,7 +3793,7 @@ it.each([
 it.each([
  ['Extrude · E',false],['Extrude · E',true],['Revolve',false],['Revolve',true],
 ] as const)('refreshes %s after destination group change with late failure=%s',async(command,lateFailure)=>{
- const {applyDirectExtrusionProfile}=await import('../src/services/directExtrusion')
+ const {applyDirectExtrusionProfile}=await import('../src/app/directExtrusion')
  const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
  const requests:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
  previewWorkerRun.mockImplementation(job=>['extrusion','revolve'].includes(job.kind)?new Promise((resolve,reject)=>requests.push({job,resolve,reject})):undefined)
@@ -4018,7 +4018,7 @@ it('invalidates transparent world fragments for changed Push Pull preview and cl
 })
 
 it('keeps working cylinder fragment lighting equal to the original face shade across orbit cameras',async()=>{
- const {directFaceShade}=await import('../src/services/directModelingTools')
+ const {directFaceShade}=await import('../src/app/directModelingTools')
  const seed=cylinderSeed();seed.bodies[0].material={name:'Glass',color:'#2288dd',opacity:.35}
  const ui=await mount({seedDocument:seed});await ui.click('Smooth B-rep display');await ui.click('Imported cylinder')
  const before=ui.doc(),svg=ui.svg(),initial=defaultDirectCamera()
@@ -4127,7 +4127,7 @@ it.each(['en','ru'])('recovers Coons roles and directions with local error marke
 
 
 it('refuses a drag with pending snaps without materializing or cloning history geometry',async()=>{
- const {DirectHistory}=await import('../src/services/directModeling')
+ const {DirectHistory}=await import('../src/app/directModeling')
  bodySnapsWorkerRun.mockImplementation(()=>new Promise(()=>{}))
  const ui=await mount();await ui.click('Cube');const before=ui.doc(),svg=ui.svg()
  const gizmo=ui.all(svg).find(n=>n.tag==='g'&&n.props.onPointerdown&&n.children.some(c=>c.tag==='line'))!
@@ -4142,7 +4142,7 @@ it('refuses a drag with pending snaps without materializing or cloning history g
 it('revolves a retained holed profile in exact mode and preserves it through cancel and Undo',async()=>{
  await geometryKernel.warmGeometryKernel()
  const {authorBrepProfile}=await import('../src/kernel/geometry/brepProfile')
- const {withRetainedProfile}=await import('../src/services/retainedSketchProfile')
+ const {withRetainedProfile}=await import('../src/app/retainedSketchProfile')
  const profile=authorBrepProfile({kind:'polygon',rings:[[[3,0],[6,0],[6,4],[3,4]],[[4,1],[4,3],[5,3],[5,1]]]})
  const sketch=withRetainedProfile({id:'retained',name:'Retained holes',closed:true,points:[]},profile)
  const ui=await mount({},JSON.stringify({version:1,bodies:[],sketches:[sketch]}))
@@ -4661,7 +4661,7 @@ for(const locale of ['en','ru'])it('rejects a shared version replaced during dec
  it('reports a failed draft reference publication and allows the next edit to save',async()=>{
  const ui=await mount();await ui.click('Cube')
  const prior=ui.serialized()
- const safe=await import('../src/services/safeStorage')
+ const safe=await import('../src/app/safeStorage')
  const original=safe.storageSet
  const spy=vi.spyOn(safe,'storageSet').mockImplementation((key,value)=>key==='scad-solid-modeler-v1'?false:original(key,value))
  try{
@@ -4680,7 +4680,7 @@ it('restores the committed durable geometry after reference publication fails an
  const actual=await vi.importActual<typeof import('../src/kernel/solidDraftHeadStore')>('../src/kernel/solidDraftHeadStore')
  const read=vi.spyOn(heads,'readSolidDraftHead').mockImplementation(actual.readSolidDraftHead)
  const write=vi.spyOn(heads,'writeSolidDraftHead').mockImplementation(actual.writeSolidDraftHead)
- const safe=await import('../src/services/safeStorage'),original=safe.storageSet
+ const safe=await import('../src/app/safeStorage'),original=safe.storageSet
  let publication:ReturnType<typeof vi.spyOn>|undefined
  try{
   const ui=await mount()

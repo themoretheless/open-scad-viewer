@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, projectDirectPoint, snapDirectPoint, unprojectDirectXY } from '../src/services/directModelingTools'
-import { DirectHistory, emptyDirectDocument, type DirectSketch } from '../src/services/directModeling'
+import { applyDirectExtrusion, circularDirectCopies, defaultDirectCamera, directExtrusionTool, projectDirectPoint, snapDirectPoint, unprojectDirectXY } from '../src/app/directModelingTools'
+import { DirectHistory, emptyDirectDocument, type DirectSketch } from '../src/app/directModeling'
 import { inspectPolygonMesh } from '../src/kernel/geometry/polygon'
 const box = (id:string,x:number,y:number,w:number):DirectSketch => ({id,name:id,closed:true,points:[[x,y],[x+w,y],[x+w,y+w],[x,y+w]]})
 describe('direct modeling canvas tools', () => {

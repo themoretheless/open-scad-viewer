@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
 import {runDirectTransaction} from '../src/mcp/directTransaction'
-import {emptyDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
+import {emptyDirectDocument,serializeDirectDocument} from '../src/app/directModeling'
 describe('disposable MCP action transaction',()=>{
  it('executes outline and native extrusion together through the MCP boundary',async()=>{
   const doc=emptyDirectDocument();doc.sketches.push({id:'profile',name:'Profile',points:[[0,0],[20,0],[20,20],[0,20]],closed:true})

@@ -5,7 +5,7 @@
  * a synchronous WASM round trip on hover and projection hot paths.
  */
 import { invertMatrixF64 } from './matrixInverse'
-import type { Mat4, Ray3, Vec3 } from '../../services/math3d'
+import type { Mat4, Ray3, Vec3 } from '../../app/math3d'
 
 const SCRATCH_INV = new Float64Array(16)
 

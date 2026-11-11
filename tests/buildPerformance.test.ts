@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BuildPerformanceHistory } from '../src/services/buildPerformance'
+import { BuildPerformanceHistory } from '../src/app/buildPerformance'
 
 const sample = () => ({
   revision: 1, quality: 'preview' as const,

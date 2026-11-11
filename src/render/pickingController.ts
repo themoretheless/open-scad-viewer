@@ -1,13 +1,13 @@
-import { rayAabbDistance, type Aabb3, type Vec3 } from '../services/math3d'
+import { rayAabbDistance, type Aabb3, type Vec3 } from '../app/math3d'
 import type { MeshBvhHit } from '../kernel/meshBvh'
-import type { NativePickingCache } from '../services/nativePickingCache'
+import type { NativePickingCache } from '../app/nativePickingCache'
 import { selectedCornerInKernel } from '../kernel/geometry/viewport'
 import type { MeshProvenanceRun } from '../core/mesh'
 import type { PickHit, SelectionMode } from './rendererContracts'
 import {
   normalizeDepthCandidates,
   type DepthCandidate,
-} from '../services/selectionCycling'
+} from '../app/selectionCycling'
 import {
   querySceneAabbIndex,
   type SceneAabbIndex,

@@ -4,7 +4,7 @@ import {
   MAX_NORMALIZED_DEPTH_CANDIDATES,
   normalizeDepthCandidates,
   type DepthCandidate,
-} from '../src/services/selectionCycling'
+} from '../src/app/selectionCycling'
 
 function candidate(key: string, distance: number): DepthCandidate<string> {
   return { key, distance, value: key }

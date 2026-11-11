@@ -8,7 +8,7 @@ import {
   storageRemove,
   storageSet,
   storageSetJSON,
-} from '../src/services/safeStorage'
+} from '../src/app/safeStorage'
 
 function stubStorage(overrides: Partial<Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>> = {}) {
   const backing = new Map<string, string>()

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateIso286HoleBasisFit } from '../src/services/drawingSheets'
+import { evaluateIso286HoleBasisFit } from '../src/app/drawingSheets'
 import { computeMeshTriangleQualitySummary } from '../src/kernel/meshInspection'
 import { auditGcodePrintability } from '../src/fabrication/gcodePreviewGeometry'
 import { evaluateMechanismMobility3d } from '../src/kernel/cadJoints'

@@ -2,10 +2,10 @@ import {SolidInstanceBatchCache} from '../src/kernel/solidInstanceBatchCache'
 import {transformPolygonMesh} from '../src/kernel/geometry/polygon'
 import {it,expect} from 'vitest'
 import {createSolidInstance,detachSolidInstances,resolveSolidInstances,transformSolidInstance} from '../src/kernel/solidInstances'
-import {emptyDirectDocument,DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
+import {emptyDirectDocument,DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/app/directModeling'
 import {createBrepBox,tessellateNurbsBrep,transformNurbsBrep} from '../src/kernel/geometry/brep'
 import {stringifyMeshJson} from '../src/exchange/meshJson'
-import {transformSelection,transformBodies,pushPullFace,splitSolid} from '../src/services/directSolidTools'
+import {transformSelection,transformBodies,pushPullFace,splitSolid} from '../src/app/directSolidTools'
 const placement=[[1,0,0,10],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
 const box=(size:number)=>{const brep=createBrepBox([0,0,0],[size,2,3]);return {id:'source',name:'Source',brep,mesh:tessellateNurbsBrep(brep,1)}}
 const maxX=(positions:ArrayLike<number>)=>Math.max(...Array.from(positions).filter((_,i)=>i%3===0))

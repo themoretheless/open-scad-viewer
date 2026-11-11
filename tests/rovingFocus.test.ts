@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nextRovingIndex } from '../src/services/rovingFocus'
+import { nextRovingIndex } from '../src/app/rovingFocus'
 
 describe('nextRovingIndex', () => {
   it('wraps horizontal arrow navigation', () => {

@@ -1,8 +1,8 @@
 import { describe,expect,it } from 'vitest'
-import { applyDirectExtrusionProfile, extrudeSketchProfile, buildDirectExtrusion } from '../src/services/directExtrusion'
+import { applyDirectExtrusionProfile, extrudeSketchProfile, buildDirectExtrusion } from '../src/app/directExtrusion'
 import { analyzeNurbsBrep, createBrepBox, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
-import { type DirectDocument, type DirectSketch } from '../src/services/directModeling'
-import { facePlane, solidTopology } from '../src/services/directSolidTools'
+import { type DirectDocument, type DirectSketch } from '../src/app/directModeling'
+import { facePlane, solidTopology } from '../src/app/directSolidTools'
 const polygon=(id:string,points:[number,number][]):DirectSketch=>({id,name:id,closed:true,points})
 const rectangle=(id:string,x:number,y:number,w:number,h=w)=>polygon(id,[[x,y],[x+w,y],[x+w,y+h],[x,y+h]])
 const volume=(b:ReturnType<typeof extrudeSketchProfile>)=>{expect(tessellateNurbsBrep(b,4).report.closed).toBe(true);return analyzeNurbsBrep(b).signedVolumeMm3}
@@ -53,10 +53,10 @@ it('adds and cuts an annular face profile with an exact circular hole',()=>{
  }
 })
 
-import {combineSketchProfiles,unionSketchProfiles,withRetainedProfile,sketchProfile} from '../src/services/retainedSketchProfile'
-import {parseDirectDocument,extrudeSketchBrep,DirectHistory} from '../src/services/directModeling'
-import {transformSketch} from '../src/services/directSketchGeometry'
-import {transformSelection} from '../src/services/directSolidTools'
+import {combineSketchProfiles,unionSketchProfiles,withRetainedProfile,sketchProfile} from '../src/app/retainedSketchProfile'
+import {parseDirectDocument,extrudeSketchBrep,DirectHistory} from '../src/app/directModeling'
+import {transformSketch} from '../src/app/directSketchGeometry'
+import {transformSelection} from '../src/app/directSolidTools'
 import {booleanBrepProfiles} from '../src/kernel/geometry/brepProfile'
 describe('retained compound sketch profiles',()=>{
  const inputs=():DirectSketch[]=>[rectangle('rect',-4,-3,7,6),{id:'circle',name:'circle',closed:true,points:[],analytic:{kind:'circle',center:[3,0],radius:2,start:0,sweep:360}}]
@@ -89,8 +89,8 @@ describe('retained compound sketch profiles',()=>{
  })
 })
 
-import {sketchSnapGeometry,resolveModelingSnap} from '../src/services/modelingSnaps'
-import {offsetSketch,bakeSketch} from '../src/services/directSketchGeometry'
+import {sketchSnapGeometry,resolveModelingSnap} from '../src/app/modelingSnaps'
+import {offsetSketch,bakeSketch} from '../src/app/directSketchGeometry'
 it('does not expose sampled arc chords as exact snap edges or silently bake unsupported edits',()=>{
  const sketch=unionSketchProfiles([rectangle('r',-4,-3,7,6),{id:'c',name:'Circle',closed:true,points:[],analytic:{kind:'circle',center:[3,0],radius:2,start:0,sweep:360}}])
  const snaps=sketchSnapGeometry([sketch])

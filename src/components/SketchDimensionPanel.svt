@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'svet'
 import CadQuantityInput from './CadQuantityInput.svt'
-import type { DirectSketch } from '../services/directModeling'
-import { sketchDimensions, sketchDimensionStatus, editSketchDimension, type SketchDimension } from '../services/directDimensions'
+import type { DirectSketch } from '../app/directModeling'
+import { sketchDimensions, sketchDimensionStatus, editSketchDimension, type SketchDimension } from '../app/directDimensions'
 const props=defineProps<{sketch:DirectSketch;locale:string}>()
 const emit=defineEmits<{change:[sketch:DirectSketch]}>()
 const kind=ref<'length'|'angle'|'horizontal'|'vertical'|'radius'|'diameter'>('length'),a=ref(0),b=ref(1),c=ref(2),error=ref('')

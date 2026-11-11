@@ -9,7 +9,7 @@ import {
   normalizeKeyboardEvent,
   resolveKeyboardCommand,
   type CommandId,
-} from '../src/services/commandRegistry'
+} from '../src/app/commandRegistry'
 
 function key(
   value: string,

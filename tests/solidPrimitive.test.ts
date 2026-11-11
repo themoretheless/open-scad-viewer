@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {addSolidPrimitive,type SolidPrimitiveKind,type SolidPrimitiveOptions} from '../src/kernel/solidPrimitive'
-import {emptyDirectDocument} from '../src/services/directModeling'
+import {emptyDirectDocument} from '../src/app/directModeling'
 import {analyzeNurbsBrep} from '../src/kernel/geometry/brep'
 const options=(kind:SolidPrimitiveKind):SolidPrimitiveOptions=>({kind,id:kind,name:kind,size:20,topRadius:5,innerRadius:7,round:'exact',segments:4,group:'Parts'})
 it.each([

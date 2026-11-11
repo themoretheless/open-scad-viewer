@@ -1,9 +1,9 @@
-import {primitiveCreationError} from '../../services/primitiveCreationError'
+import {primitiveCreationError} from '../../app/primitiveCreationError'
 import { primitiveKinds, type Pane } from './helpers'
 import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
-import { type DirectSketch, type DirectDocument, type DirectHistory } from '../../services/directModeling'
-import { validateSimpleSketch } from '../../services/directSketchGeometry'
-import { sketchDimensions } from '../../services/directDimensions'
+import { type DirectSketch, type DirectDocument, type DirectHistory } from '../../app/directModeling'
+import { validateSimpleSketch } from '../../app/directSketchGeometry'
+import { sketchDimensions } from '../../app/directDimensions'
 import { createSolidNurbsCurve, createSolidNurbsSurface } from '../../kernel/solidNurbs'
 import { type SolidNurbsEditOptions } from '../../kernel/solidNurbsEdit'
 import { computed, ref, watch, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'svet'
@@ -103,7 +103,7 @@ function addBridgeCurve(){
  const pair=selectedCurvePair.value;if(!pair)return
  void runNativeNurbs({kind:'bridge',id:pair[0],otherId:pair[1],endA:bridgeEndA.value,endB:bridgeEndB.value,tension:bridgeTension.value,createdId:crypto.randomUUID()})
 }
-function updateDimensionSketch(sketch:import('../../services/directModeling').DirectSketch){run(()=>{
+function updateDimensionSketch(sketch:import('../../app/directModeling').DirectSketch){run(()=>{
   const d=history.document,index=d.sketches.findIndex(s=>s.id===sketch.id)
   if(index>=0){validateSimpleSketch(sketch.points,sketch.closed);d.sketches[index]=sketch;commit(d)}
 })}

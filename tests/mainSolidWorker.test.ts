@@ -1,5 +1,5 @@
 import {it,expect,vi,afterEach,beforeEach} from 'vitest'
-import type {MainParameters} from '../src/services/mainModeling'
+import type {MainParameters} from '../src/app/mainModeling'
 // The warm worker is module state; reset modules so each test starts fresh.
 let computeMainSolid:typeof import('../src/kernel/mainSolidWorker').computeMainSolid
 let cancelMainSolid:typeof import('../src/kernel/mainSolidWorker').cancelMainSolid

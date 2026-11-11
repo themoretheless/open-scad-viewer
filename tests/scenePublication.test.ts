@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshData, SceneEntityId } from '../src/core/mesh'
-import { planScenePublication } from '../src/services/scenePublication'
+import { planScenePublication } from '../src/app/scenePublication'
 
 const IDENTITY = Float32Array.from([
   1, 0, 0, 0,

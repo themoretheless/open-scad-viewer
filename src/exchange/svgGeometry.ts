@@ -1,7 +1,7 @@
 import { readSvgDocumentAsync, type SvgOptions } from './svgDocument'
 import type { MeshData } from '../core/mesh'
 import { callGeometryRust, warmGeometryKernel } from '../kernel/geometry/kernel'
-import { MAX_WORKSPACE_SOURCE_LENGTH } from '../services/workspaceDocument'
+import { MAX_WORKSPACE_SOURCE_LENGTH } from '../app/workspaceDocument'
 
 export type SvgContours = [number, number][][]
 export { SVG_MAX_BYTES, SVG_MAX_FONT_BYTES, SVG_MAX_TOTAL_FONT_BYTES, SVG_MAX_FONTS } from './svgDocument'

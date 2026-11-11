@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_WORKSPACE_SOURCE_LENGTH } from '../src/services/workspaceDocument'
-import { encodeWorkspaceShare, readWorkspaceShareHash } from '../src/services/workspaceShare'
+import { MAX_WORKSPACE_SOURCE_LENGTH } from '../src/app/workspaceDocument'
+import { encodeWorkspaceShare, readWorkspaceShareHash } from '../src/app/workspaceShare'
 
 describe('workspace share hash', () => {
   it('round-trips Unicode OpenSCAD source through URL-safe base64', () => {

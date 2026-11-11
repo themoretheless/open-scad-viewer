@@ -1,6 +1,6 @@
-import {parseDirectDocument,type DirectDocument} from '../services/directModeling'
-import {combineSketchProfiles} from '../services/retainedSketchProfile'
-import {offsetSketch,extendSketch,sampleCurve,xyPlane} from '../services/directSketchGeometry'
+import {parseDirectDocument,type DirectDocument} from '../app/directModeling'
+import {combineSketchProfiles} from '../app/retainedSketchProfile'
+import {offsetSketch,extendSketch,sampleCurve,xyPlane} from '../app/directSketchGeometry'
 import {stringifyMeshJson} from '../exchange/meshJson'
 export type SolidProfileEditOperation='profile-union'|'profile-difference'|'profile-intersection'|'offset'|'extend'|'curve'
 export interface SolidProfileEditOptions {

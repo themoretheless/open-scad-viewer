@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest'
-import {PhotogrammetryKernel} from '../src/services/photogrammetry/kernel'
-import {compilePhotogrammetryKernel} from '../src/services/photogrammetry/module'
-import {photoFocalHint,photoMesh,photoPly,photoCameraFrame,photoCanAppend} from '../src/services/photogrammetry/reconstruction'
+import {PhotogrammetryKernel} from '../src/app/photogrammetry/kernel'
+import {compilePhotogrammetryKernel} from '../src/app/photogrammetry/module'
+import {photoFocalHint,photoMesh,photoPly,photoCameraFrame,photoCanAppend} from '../src/app/photogrammetry/reconstruction'
 describe('own photogrammetry transport and exports',()=>{
  it('blocks open scan patches from the solid CAD path',()=>{
   const positions=new Float64Array([0,0,0,1,0,0,0,1,0,0,0,1]),colors=new Uint8Array(12);

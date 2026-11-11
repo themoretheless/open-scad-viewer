@@ -1,8 +1,8 @@
 import {describe,it,expect} from 'vitest'
-import {extrudeDirectSketch,parseDirectDocument,emptyDirectDocument,DirectHistory,type DirectSketch} from '../src/services/directModeling'
-import {solidTopology,pushPullFace,bevelSolidEdge,shellSolid,splitSolid,facePlane,transformSelection} from '../src/services/directSolidTools'
-import {sampleCurve,offsetSketch,trimSketch,extendSketch,transformSketch,worldPoint} from '../src/services/directSketchGeometry'
-import {directExtrusionTool} from '../src/services/directModelingTools'
+import {extrudeDirectSketch,parseDirectDocument,emptyDirectDocument,DirectHistory,type DirectSketch} from '../src/app/directModeling'
+import {solidTopology,pushPullFace,bevelSolidEdge,shellSolid,splitSolid,facePlane,transformSelection} from '../src/app/directSolidTools'
+import {sampleCurve,offsetSketch,trimSketch,extendSketch,transformSketch,worldPoint} from '../src/app/directSketchGeometry'
+import {directExtrusionTool} from '../src/app/directModelingTools'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 const s:DirectSketch={id:'s',name:'s',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}
 const box=()=>extrudeDirectSketch(s,10,'b')

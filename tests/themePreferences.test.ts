@@ -6,7 +6,7 @@ import {
   THEME_CATALOG,
   THEME_SELECTIONS,
   themeCanvasColor,
-} from '../src/services/themePreferences'
+} from '../src/app/themePreferences'
 
 describe('theme preferences', () => {
   it('ships a unique localized and contrast-checked token catalog', () => {

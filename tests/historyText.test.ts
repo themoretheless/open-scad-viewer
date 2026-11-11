@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {packHistoryText,unpackHistoryText,sweepHistoryTextPool} from '../src/services/historyText'
+import {packHistoryText,unpackHistoryText,sweepHistoryTextPool} from '../src/app/historyText'
 describe('history text retention',()=>{
  it('roundtrips escaped JSON and shares unchanged geometry without losing snapshots',()=>{
   const pool=new Map<string,string>(),states=[]

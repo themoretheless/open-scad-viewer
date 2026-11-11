@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
 import {analyzeCertifiedFreeformNurbsBrep,analyzeCertifiedNurbsBrep,analyzeNurbsBrep,auditedMultiEdgeFillet,auditedParallelFrameSweep,createBrepBox,createBrepCylinder,createBrepFrustum,createBrepSphere,createBrepTorus,createBrepTube,createFreeformBrepCuboid,createFreeformBrepCuboidBump,tessellateCertifiedFreeformNurbsBrep,tessellateCertifiedNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
-import {transformSelection} from '../src/services/directSolidTools'
+import {transformSelection} from '../src/app/directSolidTools'
 
 it('integrates rational surfaces and trims independently of the display mesh',()=>{
  for(const [body,volume,area] of [

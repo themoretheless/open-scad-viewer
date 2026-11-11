@@ -1,6 +1,6 @@
-import type {DirectSketch} from '../services/directModeling'
+import type {DirectSketch} from '../app/directModeling'
 import type {MainSolidJob} from './mainSolidProtocol'
-import type {SnapGeometry} from '../services/modelingSnaps'
+import type {SnapGeometry} from '../app/modelingSnaps'
 import {SolidGeometryDisplayQueue} from './solidGeometryDisplayQueue'
 const geometryWeight=(g:SnapGeometry)=>{
  const curves=new Set(g.segments.flatMap(s=>s.nurbs?[s.nurbs.curve]:[]))

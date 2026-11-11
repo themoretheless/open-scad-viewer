@@ -1,4 +1,4 @@
-import { identity, type Mat4 } from '../services/math3d'
+import { identity, type Mat4 } from '../app/math3d'
 
 type Parts = { position: number[]; scale: number[]; rotation: number[] }
 function decompose(m: Mat4): Parts | null {

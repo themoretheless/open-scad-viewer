@@ -1,10 +1,10 @@
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
-import {combineSketchProfiles} from '../src/services/retainedSketchProfile'
-import {buildDirectExtrusion} from '../src/services/directExtrusion'
+import {combineSketchProfiles} from '../src/app/retainedSketchProfile'
+import {buildDirectExtrusion} from '../src/app/directExtrusion'
 import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
-import type {DirectSketch} from '../src/services/directModeling'
+import type {DirectSketch} from '../src/app/directModeling'
 const directory=resolve(process.argv[2]??'/tmp/profile-regions-step');mkdirSync(directory,{recursive:true})
 const plate=():DirectSketch=>({id:'plate',name:'Plate',closed:true,points:[[-4,-3],[4,-3],[4,3],[-4,3]]})
 const circle=(id='circle',x=0,radius=2):DirectSketch=>({id,name:id,closed:true,points:[],analytic:{kind:'circle',center:[x,0],radius,start:0,sweep:360}})

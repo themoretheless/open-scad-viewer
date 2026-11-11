@@ -1,5 +1,5 @@
 import {inspectSolidDisplay} from './solidDiagnostics'
-import type {DirectDocument} from '../services/directModeling'
+import type {DirectDocument} from '../app/directModeling'
 import {analyzeNurbsBrep,tessellateNurbsBrep,type BrepMassProperties} from './geometry/brep'
 export type SolidBrepToolOptions={id:string;kind:'mass'}|{id:string;kind:'mesh';segments:number}|{id:string;kind:'display';offset:number;normal:number[]}
 export type SolidBrepToolResult={kind:'display';id:string;diagnostics:ReturnType<typeof inspectSolidDisplay>}|{kind:'mass';id:string;mass:BrepMassProperties}|{kind:'mesh';id:string;document:DirectDocument}

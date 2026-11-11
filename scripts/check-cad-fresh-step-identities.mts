@@ -7,7 +7,7 @@ import identity from '../src/generated/geometry-kernels/identity'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {importDirectStepV9} from '../src/kernel/cadNurbsStep'
 import {tessellateNurbsBrep} from '../src/kernel/geometry/brep'
-import {parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
+import {parseDirectDocument,serializeDirectDocument} from '../src/app/directModeling'
 assert(process.argv[2],'Provide the fresh part qualification directory')
 const root=resolve(process.argv[2]),hash=(bytes:string|Uint8Array)=>createHash('sha256').update(bytes).digest('hex')
 const manifest=JSON.parse(await readFile(resolve(root,'manifest.json'),'utf8'))

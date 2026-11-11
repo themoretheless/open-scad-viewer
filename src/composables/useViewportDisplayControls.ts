@@ -10,7 +10,7 @@ import type { MeshData } from '../core/mesh'
 import type { Language } from '../i18n/appStrings'
 import type { CameraState } from '../render/cameraHistory'
 import { inspectMesh } from '../kernel/meshInspection'
-import { useModelingGrid } from '../services/modelingGrid'
+import { useModelingGrid } from '../app/modelingGrid'
 import type {
   DisplayMode,
   DistanceMeasurement,
@@ -21,7 +21,7 @@ import type {
   StandardView,
 } from '../render/rendererContracts'
 import { DEFAULT_ENV, DEFAULT_MATCAP, getMaterialPreset } from '../render/rendererContracts'
-import type { SceneController, SceneState } from '../services/sceneController'
+import type { SceneController, SceneState } from '../app/sceneController'
 import type { ViewportController, ViewportState } from '../render/viewportController'
 import type { WebGPURenderer } from '../render/webgpuRenderer'
 

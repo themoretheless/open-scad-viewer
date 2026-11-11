@@ -1,5 +1,5 @@
 import { RUSH_FRONTEND_GUIDE } from '../src/language/rushFrontend.ts'
-import { MECHANICAL_GENERATOR_EXAMPLES } from '../src/services/mechanicalGeneratorContract.ts'
+import { MECHANICAL_GENERATOR_EXAMPLES } from '../src/app/mechanicalGeneratorContract.ts'
 // Run: node --import tsx scripts/export-rush-language.mjs
 import { writeFileSync } from 'node:fs'
 import { z } from 'zod/v4'

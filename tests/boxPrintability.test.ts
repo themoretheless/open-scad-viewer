@@ -1,6 +1,6 @@
 import {beforeAll,it,expect} from 'vitest'
 import {GeometryBuildEngine} from '../src/kernel/geometryBuildEngine'
-import {BOX_DEFAULTS,generateBox} from '../src/services/boxGenerator'
+import {BOX_DEFAULTS,generateBox} from '../src/app/boxGenerator'
 const engine=new GeometryBuildEngine(), request={quality:'full',purpose:'analysis'} as const
 beforeAll(()=>engine.initializeSource('cube(1);',request),120000)
 // Independent mesh-face audit in the declared print orientation (+Z).

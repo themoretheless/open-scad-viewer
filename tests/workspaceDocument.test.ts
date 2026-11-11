@@ -15,7 +15,7 @@ import {
   saveWorkspaceRecovery,
   updateWorkspaceDocument,
   type WorkspaceStorage,
-} from '../src/services/workspaceDocument'
+} from '../src/app/workspaceDocument'
 
 class MemoryStorage implements WorkspaceStorage {
   readonly values = new Map<string, string>()

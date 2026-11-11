@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
-import {emptyDirectDocument} from '../src/services/directModeling'
+import {emptyDirectDocument} from '../src/app/directModeling'
 import {prepareSolidStepImport,exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
-import {pushPullFace,solidTopology} from '../src/services/directSolidTools'
+import {pushPullFace,solidTopology} from '../src/app/directSolidTools'
 const source=resolve('docs/qualification/cad-roadmap-2026-09-28/cap-step-exchange')
 const directory=resolve(process.argv[2]??'/tmp/cad-step-unit-cycles');mkdirSync(directory,{recursive:true})
 const original=JSON.parse(readFileSync(resolve(source,'manifest.json'),'utf8'))

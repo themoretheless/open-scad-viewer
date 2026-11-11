@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
-import {createSpecificationSheets,drawingSpecificationRows,exportDrawingSpecificationCsv,exportDrawingSpecificationMarkdown,parseDrawingParts} from '../src/services/drawingSpecification'
-import type {DirectBody} from '../src/services/directModeling'
+import {createSpecificationSheets,drawingSpecificationRows,exportDrawingSpecificationCsv,exportDrawingSpecificationMarkdown,parseDrawingParts} from '../src/app/drawingSpecification'
+import type {DirectBody} from '../src/app/directModeling'
 const body=(id:string,name='Деталь '+id):DirectBody=>({id,name,mesh:{positions:new Float64Array(),indices:new Uint32Array()}})
 const options={template:'A4' as const,scale:1,title:'Сборка & детали',author:'Конструктор',perBody:false,specification:true}
 describe('engineering specifications',()=>{

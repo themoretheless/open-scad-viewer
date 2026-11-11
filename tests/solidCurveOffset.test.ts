@@ -1,5 +1,5 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest'
-import type {DirectDocument} from '../src/services/directModeling'
+import type {DirectDocument} from '../src/app/directModeling'
 const {native}=vi.hoisted(()=>({native:vi.fn()}))
 vi.mock('../src/kernel/geometry/nurbs',()=>({callNurbsRust:native}))
 import {offsetSolidCurve} from '../src/kernel/solidCurveOffset'

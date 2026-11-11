@@ -1,6 +1,6 @@
 import { onUnmounted, ref, watch } from 'svet'
-import { parseDirectDocument, serializeDirectDocument } from '../../services/directModeling'
-import { xyPlane } from '../../services/directSketchGeometry'
+import { parseDirectDocument, serializeDirectDocument } from '../../app/directModeling'
+import { xyPlane } from '../../app/directSketchGeometry'
 import { download } from './helpers'
 import type { UseFileExchangeOptions } from './useFileExchange'
 

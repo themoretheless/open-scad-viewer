@@ -1,5 +1,5 @@
 import { svgPreview, svgProfile, contoursSvg, contoursExtrusion, meshSvgContours } from './svgGeometry'
-import { createWorkerHandler } from '../services/workerHandlerRuntime'
+import { createWorkerHandler } from '../app/workerHandlerRuntime'
 import type { SvgGeometryResult, SvgJob, SvgWorkerRequest, SvgWorkerResponse } from './svgWorkerProtocol'
 
 /** Shared operation composition for browser workers and Node callers. Core SVG semantics stay in svgGeometry. */

@@ -1,12 +1,12 @@
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
-import {combineSketchProfiles,withRetainedProfile,sketchProfile} from '../src/services/retainedSketchProfile'
-import {offsetSketch} from '../src/services/directSketchGeometry'
+import {combineSketchProfiles,withRetainedProfile,sketchProfile} from '../src/app/retainedSketchProfile'
+import {offsetSketch} from '../src/app/directSketchGeometry'
 import {prepareSolidProfile} from '../src/kernel/solidProfilePreparation'
-import {buildDirectExtrusion} from '../src/services/directExtrusion'
+import {buildDirectExtrusion} from '../src/app/directExtrusion'
 import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
-import type {DirectSketch} from '../src/services/directModeling'
+import type {DirectSketch} from '../src/app/directModeling'
 const directory=resolve(process.argv[2]??'/tmp/profile-offset-step');mkdirSync(directory,{recursive:true})
 const disk:DirectSketch={id:'disk',name:'Disk',closed:true,points:[],analytic:{kind:'circle',center:[0,0],radius:2,start:0,sweep:360}}
 const retainedDisk=withRetainedProfile(disk,sketchProfile(disk))

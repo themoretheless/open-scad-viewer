@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest'
 import {lightenSolid,spatialGraph,latticeComponents,isSpatialPattern,type LighteningOptions} from '../src/kernel/solidLightening'
-import {extrudeDirectSketch,directBodiesScad} from '../src/services/directModeling'
+import {extrudeDirectSketch,directBodiesScad} from '../src/app/directModeling'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 const box=()=>extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[16,0],[16,12],[0,12]]},10,'0')
 const o:LighteningOptions={pattern:'spatial',axis:'z',cell:10,rib:3.2,rim:0,bottom:0,top:0,seed:42,jitter:.5,lineWidth:.45,perimeters:3,skin:0,step:1.2,diagonals:true}

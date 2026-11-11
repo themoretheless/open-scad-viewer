@@ -8,7 +8,7 @@ import { OpenSCADParseError } from '../../openscadErrors'
 import type { SemanticDimension, SemanticDynamicSlot, SemanticMatrix4, SemanticValueType } from '../../../core/semanticProgram'
 import { arg, evalExpression, evalNodes, viewportSemanticSlots } from './evalExpression'
 import { canonicalNumber, finiteNumber, identityValue, poll, vectorValue } from './semanticValueType'
-import { clamp01 } from '../../../services/math3d'
+import { clamp01 } from '../../../app/math3d'
 import { evalNode } from './evalNode'
 
 export function evalPreparedNodes(nodes: readonly Statement[], ctx: EvalContext): SemanticShape[] {

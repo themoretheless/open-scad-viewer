@@ -21,6 +21,7 @@
     "scripts/run-browser-qualification.mjs": 1374,
     "scripts/run-manifold-g1-memory-qualification.mjs": 1046,
     "src/App.svt": 1773,
+    "src/app/buildCoordinator.ts": 911,
     "src/features/DirectModeler.svt": 3112,
     "src/kernel/geometryBuildEngine.ts": 657,
     "src/language/openscadCompiler.ts": 911,
@@ -31,8 +32,7 @@
     "src/mcp/directGeometrySupervisor.ts": 740,
     "src/mcp/duckdbModelStore.ts": 1286,
     "src/mcp/officialOpenScadRuntimeService.ts": 624,
-    "src/render/webgpuRenderer.ts": 2276,
-    "src/services/buildCoordinator.ts": 911
+    "src/render/webgpuRenderer.ts": 2276
   },
   "layers": [],
   "unreachable": [
@@ -558,6 +558,9 @@
     "crates/slicer-core/src/infill_planning.rs::generate_infill@1": 182,
     "crates/slicer-core/src/infill_planning.rs::plan_layers_with_skins_and_supports@1": 172,
     "crates/subdivision-core/src/lib.rs::subdivide_with_creases@1": 162,
+    "src/app/boxGenerator.ts::generateBox@1": 446,
+    "src/app/bushingGenerator.ts::generateBushing@1": 390,
+    "src/app/directModeling.ts::directDocumentValidation@1": 180,
     "src/composables/useBuildAndRendererLifecycle.ts::useBuildAndRendererLifecycle@1": 304,
     "src/composables/useBuildAndRendererLifecycle/rendererOperations.ts::createRendererOperations@1": 309,
     "src/composables/useParameterPresets.ts::useParameterPresets@1": 176,
@@ -615,9 +618,6 @@
     "src/render/gpuSubdivisionReference.ts::referenceRefineSubdivision@1": 182,
     "src/render/gpuTrussSolver.ts::referenceSolveTrussPcg@1": 173,
     "src/render/meshBufferManager.ts::stageSceneMeshes@1": 152,
-    "src/services/boxGenerator.ts::generateBox@1": 446,
-    "src/services/bushingGenerator.ts::generateBushing@1": 390,
-    "src/services/directModeling.ts::directDocumentValidation@1": 180,
     "src/workers/geometry.worker.ts::runBuild@1": 170
   },
   "clippy": {
@@ -650,14 +650,14 @@
     "vr-core": 7
   },
   "srcLayers": [
-    "exchange -> services",
+    "exchange -> app",
     "exchange -> workers",
-    "fabrication -> services",
+    "fabrication -> app",
     "fabrication -> workers",
-    "kernel -> services",
+    "kernel -> app",
     "kernel -> workers",
-    "language -> services",
-    "parser -> services",
-    "render -> services"
+    "language -> app",
+    "parser -> app",
+    "render -> app"
   ]
 }

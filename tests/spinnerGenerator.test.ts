@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, computeSpinnerParameterSuggestions, generateSpinner, generateSpinnerSafe } from '../src/services/spinnerGenerator'
+import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, computeSpinnerParameterSuggestions, generateSpinner, generateSpinnerSafe } from '../src/app/spinnerGenerator'
 import { compileRushFrontend } from '../src/language/rushFrontend'
 import { parseOpenSCAD } from '../src/language/openscadParser'
 import { exportMesh } from '../src/exchange/meshConvert'

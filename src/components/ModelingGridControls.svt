@@ -1,10 +1,10 @@
 <script lang="ts">
-import { computeAdaptiveGridStepMm, type AdaptiveGridStep } from '../services/modelingGrid'
+import { computeAdaptiveGridStepMm, type AdaptiveGridStep } from '../app/modelingGrid'
 export { computeAdaptiveGridStepMm, type AdaptiveGridStep }
 </script>
 <script setup lang="ts">
 import { ref, watch } from 'svet'
-import { GRID_UNITS, useModelingGrid, type GridUnit } from '../services/modelingGrid'
+import { GRID_UNITS, useModelingGrid, type GridUnit } from '../app/modelingGrid'
 const props = defineProps<{ locale: string; snapping?: boolean }>()
 const settings = useModelingGrid()
 const { unit, size, enabled, grid, geometry, guides, keypoints, relations, radius } = settings

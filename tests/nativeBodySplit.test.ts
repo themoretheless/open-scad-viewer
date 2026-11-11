@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest'
-import {splitSolid} from '../src/services/directSolidTools'
+import {splitSolid} from '../src/app/directSolidTools'
 import {createBrepBox,createBrepSphere,tessellateNurbsBrep,analyzeNurbsBrep} from '../src/kernel/geometry/brep'
 import {bounds} from '../src/kernel/cadWorkbench'
 import {extrudePolygonProfile,inspectPolygonMesh} from '../src/kernel/geometry/polygon'

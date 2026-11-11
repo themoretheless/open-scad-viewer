@@ -1,4 +1,4 @@
-import type {DirectDocument} from '../services/directModeling'
+import type {DirectDocument} from '../app/directModeling'
 import {matchNurbsCurveG1} from './nurbsConstructors'
 
 /** A refused native candidate never changes document geometry or identities. */

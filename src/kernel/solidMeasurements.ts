@@ -1,4 +1,4 @@
-import type {DirectBody} from '../services/directModeling'
+import type {DirectBody} from '../app/directModeling'
 import {analyzeNurbsBrep} from './geometry/brep'
 import {callGeometryRust} from './geometry/kernel'
 import {metricsManifoldInKernel, type KernelManifoldMetrics} from './geometry/manifoldAnalysis'

@@ -5,7 +5,7 @@ import {
   type CoordinatorTimers,
   type PublishedGeometryBuild,
   type WorkerLike,
-} from '../src/services/buildCoordinator'
+} from '../src/app/buildCoordinator'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
   type GeometrySweepPreview,

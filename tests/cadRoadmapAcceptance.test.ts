@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
-import {extrudeSketchProfile} from '../src/services/directExtrusion'
+import {extrudeSketchProfile} from '../src/app/directExtrusion'
 import {analyzeNurbsBrep,createBrepBox,booleanNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
-import type {DirectSketch} from '../src/services/directModeling'
+import type {DirectSketch} from '../src/app/directModeling'
 import {inspectSolidDisplay} from '../src/kernel/solidDiagnostics'
 const profile=(points:[number,number][]):DirectSketch=>({id:'profile',name:'Profile',closed:true,points})
 it('qualifies bracket, flange and enclosure against independent dimensions and volumes',()=>{

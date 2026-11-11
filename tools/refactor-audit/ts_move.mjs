@@ -77,5 +77,12 @@ if (dry) process.exit(0)
 for (const [f, out] of edits) writeFileSync(join(root, f), out)
 for (const [from, to] of moves) {
   execFileSync('mkdir', ['-p', dirname(join(root, to))])
-  execFileSync('git', ['mv', from, to], {cwd: root})
+  // Other tools may hold the index lock briefly; retry instead of leaving a half-applied move.
+  for (let attempt = 0; ; attempt++) {
+    try { execFileSync('git', ['mv', from, to], {cwd: root, stdio: 'pipe'}); break }
+    catch (error) {
+      if (attempt > 60 || !String(error.stderr).includes('index.lock')) throw error
+      execFileSync('sleep', ['2'])
+    }
+  }
 }

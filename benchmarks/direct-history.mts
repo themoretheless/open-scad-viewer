@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import os from 'node:os'
-import { DirectHistory, emptyDirectDocument } from '../src/services/directModeling'
+import { DirectHistory, emptyDirectDocument } from '../src/app/directModeling'
 import { createBrepGear, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
 
 const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex')
@@ -39,7 +39,7 @@ for (const teeth of [12, 32]) {
 }
 const report = { node: process.version, platform: process.platform, arch: process.arch, cpu: os.cpus()[0]?.model,
   warmups: 3, samples: 9, scope: 'DirectHistory undo/redo including returned defensive clone; construction, commit and correctness checks outside timing.',
-  files: ['src/services/directModeling.ts', 'src/generated/geometry-kernels/kernel_bg.wasm'].map(path => ({ path, sha256: hash(readFileSync(path)) })), results,
+  files: ['src/app/directModeling.ts', 'src/generated/geometry-kernels/kernel_bg.wasm'].map(path => ({ path, sha256: hash(readFileSync(path)) })), results,
 }
 const out = resolve(process.argv[2] ?? 'tmp/performance/direct-history.json')
 mkdirSync(dirname(out), { recursive: true })

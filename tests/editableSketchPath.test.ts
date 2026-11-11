@@ -1,9 +1,9 @@
 import {describe, expect, it} from 'vitest'
-import {withEditableSketchPath, editablePathAnchors} from '../src/services/editableSketchPath'
-import {emptyDirectDocument, parseDirectDocument, DirectHistory, extrudeDirectSketch} from '../src/services/directModeling'
+import {withEditableSketchPath, editablePathAnchors} from '../src/app/editableSketchPath'
+import {emptyDirectDocument, parseDirectDocument, DirectHistory, extrudeDirectSketch} from '../src/app/directModeling'
 import {pathFromPolygon, smoothPath, setPathAnchorPosition, setAnchorHandle, dragAlignGuides} from '../src/kernel/geometry/path2d'
-import {outlineSketchStroke,simplifySketchPath} from '../src/services/editableSketchOperations'
-import {transformSketch} from '../src/services/directSketchGeometry'
+import {outlineSketchStroke,simplifySketchPath} from '../src/app/editableSketchOperations'
+import {transformSketch} from '../src/app/directSketchGeometry'
 
 const sketch = {id:'profile', name:'Bézier', closed:true, points:[]}
 const create = () => withEditableSketchPath(sketch, smoothPath(pathFromPolygon([[0,0],[20,0],[20,20],[0,20]],true)))

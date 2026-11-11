@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest'
-import {fitsClonedBufferBudget} from '../src/services/clonedBufferBudget'
+import {fitsClonedBufferBudget} from '../src/app/clonedBufferBudget'
 
 it('counts the buffers actually cloned, deduplicating aliased views', () => {
   const buffer = new ArrayBuffer(1024 * 1024)

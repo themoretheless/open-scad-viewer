@@ -1,9 +1,9 @@
 import {stringifyMeshJson} from '../src/exchange/meshJson'
 import {expect,it} from 'vitest'
 import {assignSolidMaterial} from '../src/kernel/solidMaterial'
-import {DirectHistory,parseDirectDocument} from '../src/services/directModeling'
+import {DirectHistory,parseDirectDocument} from '../src/app/directModeling'
 import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
-import {transformSelection,splitSolid} from '../src/services/directSolidTools'
+import {transformSelection,splitSolid} from '../src/app/directSolidTools'
 it('preserves material through history, reload and geometric editing',()=>{
  const body=cadRoadmapParts()[3].body
  const history=new DirectHistory({version:1,sketches:[],bodies:[body]})

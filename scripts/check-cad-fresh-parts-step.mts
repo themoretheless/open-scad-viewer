@@ -9,7 +9,7 @@ import {cadRoadmapParts} from '../benchmarks/cad-roadmap-fixtures'
 import {transformNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {solidExactEdgeFeature} from '../src/kernel/solidExactEdgeFeature'
 import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
-import {DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
+import {DirectHistory,parseDirectDocument,serializeDirectDocument} from '../src/app/directModeling'
 
 assert(process.argv[2],'Provide a new qualification output directory')
 const output=resolve(process.argv[2]);await mkdir(output)

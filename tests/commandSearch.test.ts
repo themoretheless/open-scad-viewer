@@ -8,7 +8,7 @@ import {
   swapKeyboardLayout,
   transliterateCommandText,
   type PaletteCommand,
-} from '../src/services/commandSearch'
+} from '../src/app/commandSearch'
 
 function command(id: string, label: string, options: Partial<PaletteCommand> = {}): PaletteCommand {
   return { id, label, ...options }

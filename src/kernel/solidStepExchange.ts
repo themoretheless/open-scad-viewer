@@ -1,7 +1,7 @@
 import {importStepForWorkbench, exportRetainedStepForWorkbench} from './cadStepRouting'
 import { stringifyMeshJson } from '../exchange/meshJson'
 import {loadProjectStepModel, saveProjectStepModel} from './cadStepIndexedDb'
-import {parseDirectDocument, type DirectBody, type DirectDocument} from '../services/directModeling'
+import {parseDirectDocument, type DirectBody, type DirectDocument} from '../app/directModeling'
 import {warmGeometryKernel} from './geometry/kernel'
 
 /** Validate the complete addition before replacing the independently retained original. */

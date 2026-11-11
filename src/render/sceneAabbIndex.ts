@@ -1,4 +1,4 @@
-import type { Aabb3, Ray3 } from '../services/math3d'
+import type { Aabb3, Ray3 } from '../app/math3d'
 import { GeometryKernelError } from '../kernel/geometry/kernel'
 
 export interface SceneAabbItem {

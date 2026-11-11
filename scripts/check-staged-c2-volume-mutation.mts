@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {join,dirname} from 'node:path'
 import {createHash} from 'node:crypto'
-import {encodeBinary} from '../src/services/valueBinaryCodec'
+import {encodeBinary} from '../src/app/valueBinaryCodec'
 import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 import {DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 

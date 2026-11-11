@@ -8,7 +8,7 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
-import { forEachChunkedAsync, type CooperativeAsyncOptions } from '../services/cooperativeAsync'
+import { forEachChunkedAsync, type CooperativeAsyncOptions } from '../app/cooperativeAsync'
 
 export interface GpuImageContourOptions extends CooperativeAsyncOptions {
   widthPx: number

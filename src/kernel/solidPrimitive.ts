@@ -1,5 +1,5 @@
 import {createG2AnnularTube} from './geometricG2'
-import {parseDirectDocument,type DirectDocument} from '../services/directModeling'
+import {parseDirectDocument,type DirectDocument} from '../app/directModeling'
 import {stringifyMeshJson} from '../exchange/meshJson'
 import {createBrepBox,createBrepCylinder,createBrepFrustum,createBrepSphere,createBrepTorus,createBrepTube,createFacetedBrepCylinder,createFacetedBrepSphere,extrudeBrepPolygon,tessellateNurbsBrep,type NurbsBrep} from './geometry/brep'
 import {revolvePolygonProfile} from './geometry/polygon'

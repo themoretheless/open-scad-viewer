@@ -1,8 +1,8 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
-import {DirectHistory,parseDirectDocument} from '../src/services/directModeling'
-import {transformSelection} from '../src/services/directSolidTools'
-import {serializeDirectDocument} from '../src/services/directModeling'
+import {DirectHistory,parseDirectDocument} from '../src/app/directModeling'
+import {transformSelection} from '../src/app/directSolidTools'
+import {serializeDirectDocument} from '../src/app/directModeling'
 it('retains all twenty translations of the actual enclosure that exhausted full-text history',()=>{
  const d=parseDirectDocument(readFileSync('docs/qualification/cad-ui-history-2026-10-09/enclosure.json','utf8'))
  const h=new DirectHistory(d),states=[serializeDirectDocument(h.document)]

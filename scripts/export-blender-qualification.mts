@@ -1,6 +1,6 @@
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {emptyDirectDocument,serializeDirectDocument} from '../src/services/directModeling'
+import {emptyDirectDocument,serializeDirectDocument} from '../src/app/directModeling'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {createSolidInstance} from '../src/kernel/solidInstances'
 import {exportSolidBlenderSnapshot} from '../src/kernel/solidBlenderExchange'

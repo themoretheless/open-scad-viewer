@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ENV_MAP_FORMAT, SHADOW_MAP_SIZE, TextureResources } from '../src/render/textureResources'
-import { fillObjectUniform } from '../src/services/uniformFill'
+import { fillObjectUniform } from '../src/app/uniformFill'
 import { WebGPURenderer } from '../src/render/webgpuRenderer'
 
 /**

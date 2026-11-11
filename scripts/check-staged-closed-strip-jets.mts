@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {dirname,join} from 'node:path'
 import {createHash} from 'node:crypto'
-import {encodeBinary} from '../src/services/valueBinaryCodec'
+import {encodeBinary} from '../src/app/valueBinaryCodec'
 import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 
 // Authored tensor fixtures and ABI transport only. Rust proves every full

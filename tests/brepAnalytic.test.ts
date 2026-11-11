@@ -1,7 +1,7 @@
 import { stringifyMeshJson } from '../src/exchange/meshJson'
 import {expect,it} from 'vitest'
 import {createBrepCylinder,createBrepFrustum,createBrepTube,createBrepTorus,inspectNurbsBrep,analyzeNurbsBrep,tessellateNurbsBrep,booleanNurbsBrep,createBrepBox,extrudeBrepPolygon} from '../src/kernel/geometry/brep'
-import {transformSelection} from '../src/services/directSolidTools'
+import {transformSelection} from '../src/app/directSolidTools'
 
 it('tessellates exact curved solids without open seams across display resolutions',()=>{
  for(const [model,volume] of [
@@ -73,8 +73,8 @@ it('revolves a concave turning section into exact rational patches',async()=>{
 })
 
 it('authors circle and concave sketch extrusions on arbitrary workplanes',async()=>{
- const {extrudeSketchBrep,parseDirectDocument}=await import('../src/services/directModeling')
- const {sampleCurve}=await import('../src/services/directSketchGeometry')
+ const {extrudeSketchBrep,parseDirectDocument}=await import('../src/app/directModeling')
+ const {sampleCurve}=await import('../src/app/directSketchGeometry')
  const analytic={kind:'circle' as const,center:[4,6] as [number,number],radius:2,start:0,sweep:360}
  const model=extrudeSketchBrep({id:'s',name:'Circle',closed:true,points:sampleCurve(analytic),analytic,plane:{origin:[10,20,30],u:[0,1,0],v:[0,0,1]}},-3,1)
  const mesh=tessellateNurbsBrep(model,8)
@@ -133,7 +133,7 @@ it('makes watertight exact partial revolutions with planar end caps',async()=>{
 })
 
 it('authors clockwise sketch extrusion and validates inputs in the Rust entry point',async()=>{
- const {extrudeSketchBrep}=await import('../src/services/directModeling')
+ const {extrudeSketchBrep}=await import('../src/app/directModeling')
  const sketch={id:'cw',name:'Clockwise',closed:true,points:[[0,0],[0,2],[3,2],[3,0]] as [number,number][]}
  const before=JSON.stringify(sketch)
  const model=extrudeSketchBrep(sketch,-4,1)

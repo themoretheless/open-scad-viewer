@@ -7,7 +7,7 @@ import {smoothTriangleListInKernel} from './geometry/meshAnalysis'
  * `viewBox`. This layer draws the same bodies with WebGPU underneath that SVG using an identical mapping, so the
  * SVG keeps picking, gizmos and previews while the surfaces get dense tessellation and per-pixel shading.
  */
-import type { OrbitCamera } from '../services/directModelingTools'
+import type { OrbitCamera } from '../app/directModelingTools'
 
 export interface SolidGpuBody {
   /** Identifies this body so a drag can move it without re-uploading the scene. */

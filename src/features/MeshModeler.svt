@@ -15,7 +15,7 @@ import WorkspaceActionBar from '../components/WorkspaceActionBar.svt'
 
 import CommandPalette from '../components/CommandPalette.svt'
 
-import type { PaletteCommand } from '../services/commandSearch'
+import type { PaletteCommand } from '../app/commandSearch'
 
 import { SCULPT_FALLOFFS, SCULPT_KINDS, buildSculptBrush, isFractionalSculptKind, type SculptFalloff, type SculptKind } from '../kernel/geometryEditing'
 
@@ -53,13 +53,13 @@ import { createSolidPreviewWorker } from '../kernel/solidPreviewWorker'
 
 import { useMainSolidTask } from './useMainSolidTask'
 
-import { defaultDirectCamera, projectDirectPoint } from '../services/directModelingTools'
+import { defaultDirectCamera, projectDirectPoint } from '../app/directModelingTools'
 
-import { projectMeshModelerObject,cachedMeshModelerStats } from '../services/meshModelerProjection'
+import { projectMeshModelerObject,cachedMeshModelerStats } from '../app/meshModelerProjection'
 
 import { isGeometryKernelReady, warmGeometryKernel } from '../kernel/geometry/kernel'
 
-import { storageGet, storageSet } from '../services/safeStorage'
+import { storageGet, storageSet } from '../app/safeStorage'
 
 import { MESH_IMPORT_ACCEPT, stripMeshExtension } from '../exchange/meshImport'
 

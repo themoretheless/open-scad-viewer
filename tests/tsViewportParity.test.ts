@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { callGeometryRust } from '../src/kernel/geometry/kernel'
 import { invertMatrixF64 } from '../src/kernel/geometry/matrixInverse'
-import { invert, identity, multiply, perspective, orthographic, lookAt, translate, type Mat4, type Vec3, type Aabb3 } from '../src/services/math3d'
+import { invert, identity, multiply, perspective, orthographic, lookAt, translate, type Mat4, type Vec3, type Aabb3 } from '../src/app/math3d'
 import { computeOrbitCameraFrame } from '../src/render/orbitCameraProjection'
 import { clientRayInKernel, projectPointInKernel } from '../src/kernel/geometry/viewport'
 

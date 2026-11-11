@@ -1,17 +1,17 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
-import type {PhotoDiagnostics, PhotoReconstruction, PhotoSurface} from '../src/services/photogrammetry/kernel'
-import type {PhotoWorkerEvent, PhotoWorkerRequest} from '../src/services/photogrammetry/workerProtocol'
+import type {PhotoDiagnostics, PhotoReconstruction, PhotoSurface} from '../src/app/photogrammetry/kernel'
+import type {PhotoWorkerEvent, PhotoWorkerRequest} from '../src/app/photogrammetry/workerProtocol'
 
 const factory = vi.hoisted(() => vi.fn())
-vi.mock('../src/services/photogrammetry/kernel', () => ({
+vi.mock('../src/app/photogrammetry/kernel', () => ({
   PhotogrammetryKernel: class {
     constructor() { return factory() }
   },
 }))
 const gpuSweep = vi.hoisted(() => vi.fn())
-vi.mock('../src/services/photogrammetry/gpuSweep', () => ({runGpuSweep: gpuSweep}))
+vi.mock('../src/app/photogrammetry/gpuSweep', () => ({runGpuSweep: gpuSweep}))
 const gpuMatching = vi.hoisted(() => vi.fn())
-vi.mock('../src/services/photogrammetry/gpuMatching', () => ({runGpuMatching: gpuMatching}))
+vi.mock('../src/app/photogrammetry/gpuMatching', () => ({runGpuMatching: gpuMatching}))
 
 const sparse: PhotoReconstruction = {
   positions: new Float64Array([0, 0, 1]), colors: new Uint8Array([10, 20, 30]), triangles: new Uint32Array(),

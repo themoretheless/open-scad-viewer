@@ -1,4 +1,4 @@
-import type {DirectBody,DirectDocument} from '../services/directModeling'
+import type {DirectBody,DirectDocument} from '../app/directModeling'
 import {booleanNurbsBrep,tessellateNurbsBrep,type BrepBooleanOperation} from './geometry/brep'
 import {booleanPolygonMeshes} from './geometry/polygon'
 import {mergeByDistance} from './meshEditing'

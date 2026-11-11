@@ -4,7 +4,7 @@ import { type matchSolidSurface, type prepareSolidSurfaceSeams } from '../../ker
 import { type prepareSolidProfile } from '../../kernel/solidProfilePreparation'
 import { evaluateNurbsSurface } from '../../kernel/nurbsSurface'
 import { type FramedSweepResult, type SurfaceJetBoundary } from '../../kernel/nurbsConstructors'
-import { type DirectDocument, parseDirectDocument, type DirectHistory, type Point2, type DirectBody } from '../../services/directModeling'
+import { type DirectDocument, parseDirectDocument, type DirectHistory, type Point2, type DirectBody } from '../../app/directModeling'
 import { stringifyMeshJson } from '../../exchange/meshJson'
 import { profileBooleanOperation, type Pane } from './helpers'
 import { type NurbsScreenProjection } from '../../kernel/nurbsCurve'

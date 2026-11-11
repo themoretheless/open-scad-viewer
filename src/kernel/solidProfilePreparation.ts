@@ -1,11 +1,11 @@
 import {sampleSolidNurbsCurve} from './solidNurbs'
 import {profileIntersectionDiagnostics} from './profileIntersectionDiagnostics'
 import {inspectProfileIntersections,type ProfileIntersectionReport} from './geometry/profileIntersections'
-import type {DirectDocument,DirectSketch,Point2} from '../services/directModeling'
+import type {DirectDocument,DirectSketch,Point2} from '../app/directModeling'
 import {callGeometryRust} from './geometry/kernel'
-import {withRetainedProfile,retainedProfileDisplay} from '../services/retainedSketchProfile'
+import {withRetainedProfile,retainedProfileDisplay} from '../app/retainedSketchProfile'
 import type {BrepProfile} from './geometry/brepProfile'
-import {xyPlane,type SketchPlane} from '../services/directSketchGeometry'
+import {xyPlane,type SketchPlane} from '../app/directSketchGeometry'
 import {validateNurbsCurve,type NurbsCurve} from './nurbsCurve'
 export interface ProfilePreparationReport {
  /** Original assembled XY definitions for read-only diagnostics of a refused contour. */

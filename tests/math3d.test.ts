@@ -12,7 +12,7 @@ import {
   rayTriangleDistance,
   translate,
   unprojectRay,
-} from '../src/services/math3d'
+} from '../src/app/math3d'
 
 describe('native matrix operations', () => {
   it('inverts in place and with overlapping views without corrupting source reads', () => {

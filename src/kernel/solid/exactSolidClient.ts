@@ -1,4 +1,4 @@
-import { parseDirectDocumentAsync, type DirectBody } from '../../services/directModeling'
+import { parseDirectDocumentAsync, type DirectBody } from '../../app/directModeling'
 import { warmGeometryKernel } from '../geometry/kernel'
 import { EXACT_SOLID_TIMEOUT_MS, isExactSolidRequest, isExactSolidResponse, type ExactSolidRequest } from './exactSolidProtocol'
 

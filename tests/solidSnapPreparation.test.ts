@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest'
 import {SolidSnapPreparation} from '../src/kernel/solidSnapPreparation'
-import type {DirectBody} from '../src/services/directModeling'
-import type {SnapGeometry} from '../src/services/modelingSnaps'
+import type {DirectBody} from '../src/app/directModeling'
+import type {SnapGeometry} from '../src/app/modelingSnaps'
 const body=(id:string):DirectBody=>({id,name:id,mesh:{positions:new Float64Array([0,0,0,1,0,0,0,1,0]),indices:new Uint32Array([0,1,2])}})
 const geometry:SnapGeometry={points:[{point:[0,0,0],kind:'vertex'}],segments:[]}
 it('serializes preparation, reuses immutable bodies and releases departed scene entries',async()=>{

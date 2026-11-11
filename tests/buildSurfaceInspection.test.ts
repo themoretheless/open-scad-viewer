@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest'
-import {inspectBuildSurfaces} from '../src/services/buildSurfaceInspection'
-import {extrudeDirectSketch} from '../src/services/directModeling'
+import {inspectBuildSurfaces} from '../src/app/buildSurfaceInspection'
+import {extrudeDirectSketch} from '../src/app/directModeling'
 
 const body=()=>extrudeDirectSketch({id:'s',name:'Box',closed:true,points:[[0,0],[2,0],[2,3],[0,3]]},4,'0')
 const options={buildDirection:[0,0,1] as [number,number,number],coneDegrees:45,planeOffsetMm:0,planeToleranceMm:0}

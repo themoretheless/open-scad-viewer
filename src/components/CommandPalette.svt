@@ -6,7 +6,7 @@ import {
   nextPaletteCommandIndex,
   rankPaletteCommands,
   type PaletteCommand,
-} from '../services/commandSearch'
+} from '../app/commandSearch'
 
 const props = withDefaults(defineProps<{
   open: boolean

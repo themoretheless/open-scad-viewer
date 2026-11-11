@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useId, watch } from 'svet'
 import type { ExampleCatalogEntry } from '../data/examples'
-import { filterExampleCatalog, MAX_EXAMPLE_QUERY_LENGTH } from '../services/exampleCatalog'
+import { filterExampleCatalog, MAX_EXAMPLE_QUERY_LENGTH } from '../app/exampleCatalog'
 
 const props = defineProps<{
   open: boolean

@@ -1,8 +1,8 @@
 import {createApp,h,ref} from 'svet'
 import {createSolidPreviewWorker} from '../../src/kernel/solidPreviewWorker'
 import {warmGeometryKernel} from '../../src/kernel/geometry/kernel'
-import {DirectHistory,parseDirectDocument,serializeDirectDocument} from '../../src/services/directModeling'
-import {transformSelection} from '../../src/services/directSolidTools'
+import {DirectHistory,parseDirectDocument,serializeDirectDocument} from '../../src/app/directModeling'
+import {transformSelection} from '../../src/app/directSolidTools'
 import {readSolidDraftHead,writeSolidDraftHead,type SolidDraftHead} from '../../src/kernel/solidDraftHeadStore'
 import baseline from '../../docs/qualification/cad-ui-history-2026-10-09/enclosure.json?raw'
 // Isolated qualification key; never reads or replaces the user's active draft.

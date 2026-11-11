@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createBoxMesh, deleteFaces, flipFaces } from '../src/kernel/meshEditing'
-import { projectMeshModelerFaces, projectMeshModelerObject } from '../src/services/meshModelerProjection'
-import { defaultDirectCamera, projectDirectPoint } from '../src/services/directModelingTools'
+import { projectMeshModelerFaces, projectMeshModelerObject } from '../src/app/meshModelerProjection'
+import { defaultDirectCamera, projectDirectPoint } from '../src/app/directModelingTools'
 import { cachedMeshManifoldReport } from '../src/kernel/meshManifoldDefects'
 
 describe('Mesh viewport closed-shell visibility', () => {

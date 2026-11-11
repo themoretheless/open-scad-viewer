@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampEditorWidth, editorWidthBounds } from '../src/services/layoutSizing'
+import { clampEditorWidth, editorWidthBounds } from '../src/app/layoutSizing'
 
 describe('editor layout sizing', () => {
   it('reserves at least 320px for the viewport on narrow desktop layouts', () => {

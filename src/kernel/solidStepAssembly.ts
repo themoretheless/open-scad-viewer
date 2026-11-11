@@ -1,4 +1,4 @@
-import type {DirectDocument} from '../services/directModeling'
+import type {DirectDocument} from '../app/directModeling'
 import {warmGeometryKernel} from './geometry/kernel'
 import {solidMaterialRgb} from './solidMaterial'
 

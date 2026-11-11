@@ -6,7 +6,7 @@ import artifact from '../src/generated/geometry-kernels/identity'
 import * as module from 'node:module'
 import {load} from '../tests/fixtures/raw-import-loader.mjs'
 import type {MainSolidJob} from '../src/kernel/mainSolidProtocol'
-import type {DirectDocument} from '../src/services/directModeling'
+import type {DirectDocument} from '../src/app/directModeling'
 import type {SolidSurfaceBuildOptions} from '../src/kernel/solidSurfaceConstruction'
 if(typeof(module as any).registerHooks==='function')(module as any).registerHooks({load})
 else module.register(new URL('../tests/fixtures/raw-import-loader.mjs',import.meta.url),import.meta.url)

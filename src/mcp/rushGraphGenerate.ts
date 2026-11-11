@@ -2,7 +2,7 @@ import { z } from 'zod/v4'
 import type { McpServer } from '@modelcontextprotocol/server'
 import type { McpGeometryService } from './geometryService'
 import { compileRushGraph, RushGraphError } from '../language/rushGraph'
-import { mechanicalGeneratorSchema, createMechanicalDocument, MECHANICAL_GENERATOR_EXAMPLES, MECHANICAL_GENERATOR_GUIDE } from '../services/mechanicalGeneratorContract'
+import { mechanicalGeneratorSchema, createMechanicalDocument, MECHANICAL_GENERATOR_EXAMPLES, MECHANICAL_GENERATOR_GUIDE } from '../app/mechanicalGeneratorContract'
 import { RUSH_GRAPH_PREVIEW_TRIANGLE_LIMIT, renderRushGraphPreviews } from './rushGraphPreview'
 export function registerRushGraphGenerate(server:McpServer,geometry:McpGeometryService) {
   server.registerResource('rush-mechanical-generators','openscad://language/rush-mechanical',{

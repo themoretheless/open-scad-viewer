@@ -6,9 +6,9 @@ import {
   serializeDirectDocument,
   type DirectDocument,
   type DirectHistory,
-} from '../../services/directModeling'
+} from '../../app/directModeling'
 import { isGeometryKernelReady, warmGeometryKernel } from '../../kernel/geometry/kernel'
-import { storageGet, storageSet } from '../../services/safeStorage'
+import { storageGet, storageSet } from '../../app/safeStorage'
 import { readSolidDraftHead, writeSolidDraftHead } from '../../kernel/solidDraftHeadStore'
 import {
   collectSolidDraftSnapshots,

@@ -3,7 +3,7 @@ import {createSSRApp,shallowRef,ref} from 'svet'
 import {renderToString} from 'svet'
 import {it,expect,vi} from 'vitest'
 const state=vi.hoisted(()=>({result:undefined as any,error:'',errorCode:''}))
-vi.mock('../src/services/useExpressionInspection',()=>({useExpressionInspection:()=>({
+vi.mock('../src/app/useExpressionInspection',()=>({useExpressionInspection:()=>({
  result:shallowRef(state.result),pending:ref(false),error:ref(state.error),errorCode:ref(state.errorCode),run:vi.fn(),retry:vi.fn(),cancel:vi.fn(),
 })}))
 import ExpressionShellCheck from '../src/components/ExpressionShellCheck.svt'

@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest'
-import {NativePickingCache} from '../src/services/nativePickingCache'
+import {NativePickingCache} from '../src/app/nativePickingCache'
 import * as meshAnalysis from '../src/kernel/geometry/meshAnalysis'
 import {callGeometryRust} from '../src/kernel/geometry/kernel'
 

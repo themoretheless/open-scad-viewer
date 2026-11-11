@@ -1,4 +1,4 @@
-import type { Vec3 } from '../services/math3d'
+import type { Vec3 } from '../app/math3d'
 import {
   buildFaceOverlayGeometry,
   buildFaceTriangleIndex,

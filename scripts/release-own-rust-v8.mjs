@@ -7,7 +7,7 @@ const previousPath='docs/qualification/own-rust-cad-v7.json',previous=JSON.parse
 const paths=[...new Set([...previous.sourceBundle.paths,
  'crates/brep-core/src/iges_interchange_v2.rs','crates/brep-core/src/step_interchange_v3.rs',
  'crates/brep-core/src/lib.rs','crates/geometry-bridge/src/lib.rs','crates/geometry-bridge/src/tests.rs',
- 'src/kernel/cadIges.ts','src/kernel/cadNurbsStep.ts','src/kernel/geometry/brepCapability.ts',
+ 'src/services/cadIges.ts','src/services/cadNurbsStep.ts','src/services/geometry/brepCapability.ts',
  'tests/brepInterchangeV11.test.ts','tests/brepQualificationV11.test.ts',
 ])].sort()
 const wasmPath='src/generated/geometry-kernels/kernel_bg.wasm',wasm=bytes(wasmPath),wasmSha256=sha(wasm)

@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest'
-import {executeDirectTransaction,appendDirectCheckpoint,appendDirectDocumentEdit} from '../src/services/directTransactions'
-import {emptyDirectDocument,DirectHistory,serializeDirectDocument} from '../src/services/directModeling'
+import {executeDirectTransaction,appendDirectCheckpoint,appendDirectDocumentEdit} from '../src/app/directTransactions'
+import {emptyDirectDocument,DirectHistory,serializeDirectDocument} from '../src/app/directModeling'
 const box={kind:'primitive',options:{kind:'box',id:'seed',name:'Seed',size:2,topRadius:1,innerRadius:.5,round:'exact',segments:1}}
 const move={kind:'sceneEdit',options:{operation:'transform',ids:['seed'],id:'seed',createdId:'',x:10,y:0,z:0,axis:'z',angle:0,scale:1}}
 const batch=(actions:unknown[])=>JSON.stringify({version:1,actions})

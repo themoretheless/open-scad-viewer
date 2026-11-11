@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs'
 import {createRenderer,nextTick,ref,shallowRef,h} from 'svet'
 import {it,expect,vi} from 'vitest'
 const state=vi.hoisted(()=>({result:null as any,pending:null as any,error:null as any,run:vi.fn(),cancel:vi.fn()}))
-vi.mock('../src/services/useExpressionInspection',()=>({useExpressionInspection:()=>{
+vi.mock('../src/app/useExpressionInspection',()=>({useExpressionInspection:()=>{
  state.pending=ref(false)
  state.result=shallowRef(null)
  state.cancel=vi.fn(()=>{state.pending.value=false})

@@ -88,7 +88,7 @@ function isParserModule(specifier: string): boolean {
   return /(?:^|\/)openscadParser(?:\.[cm]?[jt]sx?)?$/.test(withoutQuery)
 }
 
-const SERVICE_DOMAINS = new Set(['services', 'kernel', 'language', 'exchange', 'render', 'fabrication'])
+const SERVICE_DOMAINS = new Set(['services', 'app', 'kernel', 'language', 'exchange', 'render', 'fabrication'])
 
 function isServiceModule(specifier: string): boolean {
   const withoutQuery = specifier.replace(/[?#].*$/, '')

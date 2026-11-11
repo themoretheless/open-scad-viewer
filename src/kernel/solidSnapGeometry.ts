@@ -1,6 +1,6 @@
-import type { DirectBody } from '../services/directModeling'
+import type { DirectBody } from '../app/directModeling'
 import { callGeometryRust } from './geometry/kernel'
-import type { SnapGeometry, SnapSegment } from '../services/modelingSnaps'
+import type { SnapGeometry, SnapSegment } from '../app/modelingSnaps'
 
 const cache = new WeakMap<DirectBody, SnapGeometry>()
 type NativeSegment = Pick<SnapSegment, 'a' | 'b'> & {

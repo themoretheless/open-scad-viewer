@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { identity, translate } from '../src/services/math3d'
+import { identity, translate } from '../src/app/math3d'
 import { WebGPURenderer } from '../src/render/webgpuRenderer'
 
 interface MeasuredBounds {

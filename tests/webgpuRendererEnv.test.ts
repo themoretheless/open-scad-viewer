@@ -1,4 +1,4 @@
-import type {PipelineFactory} from '../src/services/pipelineFactory'
+import type {PipelineFactory} from '../src/app/pipelineFactory'
 import { describe, expect, it, vi } from 'vitest'
 import { WebGPURenderer } from '../src/render/webgpuRenderer'
 import {

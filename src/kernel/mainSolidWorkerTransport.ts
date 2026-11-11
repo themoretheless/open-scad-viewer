@@ -4,7 +4,7 @@ import type {KernelManifoldReport} from './geometry/manifoldAnalysis'
 import type {DisplayMesh} from './solidDisplayCache'
 import type { MainSolidJob, MainSolidResponse, MainSolidResults } from './mainSolidProtocol'
 import type { StructuralSections } from './structuralSections'
-import type { DirectDocument } from '../services/directModeling'
+import type { DirectDocument } from '../app/directModeling'
 import type { MeshBooleanResult, MeshRepairResult } from './meshEditing'
 import type { ImportedMesh } from '../exchange/meshImport'
 

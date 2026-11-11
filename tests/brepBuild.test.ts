@@ -7,7 +7,7 @@ import {
   type BrepValue,
 } from '../src/kernel/solid/brepGraph'
 import { buildExactSolidBodies, InexactSolidError } from '../src/kernel/solid/brepBuild'
-import { emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
+import { emptyDirectDocument, parseDirectDocument } from '../src/app/directModeling'
 
 const nodeId = (value: BrepValue): string => {
   if (value.kind !== 'node') throw new Error(`Expected an exact node, got ${value.operation}`)

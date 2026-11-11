@@ -10,9 +10,9 @@ import { extractOpenScadDependencies } from '../src/language/openScadProject'
 import {
   computeLinearPatternOffsets,
   computeCircularPatternTransforms,
-} from '../src/services/directModelingTools'
-import {expandLiveBodyPatterns} from '../src/services/liveBodyPattern'
-import type {DirectDocument} from '../src/services/directModeling'
+} from '../src/app/directModelingTools'
+import {expandLiveBodyPatterns} from '../src/app/liveBodyPattern'
+import type {DirectDocument} from '../src/app/directModeling'
 import { formatEngineeringSummaryMarkdown } from '../src/mcp/rushGraphReport'
 
 describe('Tier IV Wave 3 Improvements', () => {

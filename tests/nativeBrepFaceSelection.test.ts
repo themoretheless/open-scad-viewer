@@ -1,9 +1,9 @@
 import {it,expect} from 'vitest'
-import {selectedBrepSupport,solidTopology} from '../src/services/directSolidTools'
+import {selectedBrepSupport,solidTopology} from '../src/app/directSolidTools'
 import {createBrepBox,tessellateNurbsBrep,createBrepSphere} from '../src/kernel/geometry/brep'
 import {exportDirectStepV9,importDirectStepV9} from '../src/kernel/cadNurbsStep'
 it('keeps authored selection identities attached to geometry after STEP reorders topology',async()=>{
- const {selectedBrepStraightEdge}=await import('../src/services/directSolidTools')
+ const {selectedBrepStraightEdge}=await import('../src/app/directSolidTools')
  const source=createBrepBox([2,3,4],[7,11,13])
  const imported=importDirectStepV9(exportDirectStepV9(source).text)
  expect(imported.identity.preserved).toBe(true)
@@ -66,7 +66,7 @@ it('refuses multiple authored supports on one plane rather than guessing a face'
  expect(()=>selectedBrepSupport({id:'pair',name:'Pair',brep,mesh},face.triangles)).toThrow('one authored')
 })
 it('resolves straight box edges in either direction and refuses diagonals and nonedges',async()=>{
- const {selectedBrepStraightEdge}=await import('../src/services/directSolidTools')
+ const {selectedBrepStraightEdge}=await import('../src/app/directSolidTools')
  const brep=createBrepBox([0,0,0],[10,10,10]),mesh=tessellateNurbsBrep(brep,1),body={id:'b',name:'Box',brep,mesh}
  const edges=solidTopology(mesh).edges,found=new Set<number>()
  for(const e of edges){const id=selectedBrepStraightEdge(body,[e.a,e.b]);found.add(id);expect(selectedBrepStraightEdge(body,[e.b,e.a])).toBe(id)}
@@ -78,7 +78,7 @@ it('resolves straight box edges in either direction and refuses diagonals and no
  expect(()=>selectedBrepStraightEdge(body,[0,mesh.positions.length/3])).toThrow('vertices')
 })
 it('refuses a tessellated chord even when its endpoints match a curved authored edge',async()=>{
- const {selectedBrepStraightEdge}=await import('../src/services/directSolidTools')
+ const {selectedBrepStraightEdge}=await import('../src/app/directSolidTools')
  const {createBrepCylinder}=await import('../src/kernel/geometry/brep')
  const brep=createBrepCylinder(3,5),mesh=tessellateNurbsBrep(brep,1),body={id:'c',name:'Cylinder',brep,mesh}
  const curved=brep.edges.find(e=>e.curve.controlPoints.length>2)!

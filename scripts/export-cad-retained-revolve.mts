@@ -4,7 +4,7 @@ import {resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {authorBrepProfile,transformBrepProfile} from '../src/kernel/geometry/brepProfile'
-import {withRetainedProfile} from '../src/services/retainedSketchProfile'
+import {withRetainedProfile} from '../src/app/retainedSketchProfile'
 import {applySolidRevolve,type SolidRevolveOptions} from '../src/kernel/solidRevolve'
 import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 await warmGeometryKernel()

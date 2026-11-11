@@ -1,4 +1,4 @@
-import type {DirectBody} from '../services/directModeling'
+import type {DirectBody} from '../app/directModeling'
 import {partialAnnularPreview,tessellateNurbsBrep} from './geometry/brep'
 
 /** Construct display geometry and carry its unresolved qualification explicitly. */

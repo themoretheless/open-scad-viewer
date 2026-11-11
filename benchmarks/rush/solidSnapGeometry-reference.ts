@@ -1,9 +1,9 @@
 // Frozen comparison oracle for native keypoint extraction.
-import { bodyPoints, type DirectBody } from '../../src/services/directModeling'
-import { cross3, type Vec3 } from '../../src/services/directSketchGeometry'
-import { solidTopology } from '../../src/services/directSolidTools'
+import { bodyPoints, type DirectBody } from '../../src/app/directModeling'
+import { cross3, type Vec3 } from '../../src/app/directSketchGeometry'
+import { solidTopology } from '../../src/app/directSolidTools'
 import { evaluateNurbsCurve } from '../../src/kernel/nurbsCurve'
-import type { SnapGeometry } from '../../src/services/modelingSnaps'
+import type { SnapGeometry } from '../../src/app/modelingSnaps'
 
 const cache=new WeakMap<DirectBody,SnapGeometry>()
 /** Stable topological points, independent of the density of the display triangles. */

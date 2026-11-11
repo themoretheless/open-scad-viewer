@@ -3,12 +3,12 @@ import { useMainSolidTask } from '../features/useMainSolidTask'
 import { createSolidPreviewWorker } from '../kernel/solidPreviewWorker'
 import { downloadBlob, sanitizeFileName } from '../appHelpers'
 import type { MeshData } from '../core/mesh'
-import type { BuildPerformanceSample } from '../services/buildPerformance'
+import type { BuildPerformanceSample } from '../app/buildPerformance'
 import { detectMeshImportFormat, type MeshExportFormat } from '../exchange/meshFormats'
 import type { ExportMeshQualityPreset } from '../exchange/meshConvert'
 import { SOURCE_FILE_EXTENSION, withSourceExtension } from '../language/rushFrontendDetect'
-import { MAX_WORKSPACE_FILE_NAME_LENGTH, MAX_WORKSPACE_SOURCE_LENGTH } from '../services/workspaceDocument'
-import { encodeWorkspaceShare } from '../services/workspaceShare'
+import { MAX_WORKSPACE_FILE_NAME_LENGTH, MAX_WORKSPACE_SOURCE_LENGTH } from '../app/workspaceDocument'
+import { encodeWorkspaceShare } from '../app/workspaceShare'
 
 export interface UseWorkspaceFileActionsOptions {
   code: Ref<string>

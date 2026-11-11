@@ -1,7 +1,7 @@
 import {afterEach, describe, expect, it, vi} from 'vitest'
-import {measuredPhotoInput, parsePhotoCalibration, photoCalibrationExampleJson} from '../src/services/photogrammetry/calibration'
-import {decodePhoto, PhotoCollection} from '../src/services/photogrammetry/input'
-import {photoReportJson} from '../src/services/photogrammetry/report'
+import {measuredPhotoInput, parsePhotoCalibration, photoCalibrationExampleJson} from '../src/app/photogrammetry/calibration'
+import {decodePhoto, PhotoCollection} from '../src/app/photogrammetry/input'
+import {photoReportJson} from '../src/app/photogrammetry/report'
 
 const example = () => parsePhotoCalibration(photoCalibrationExampleJson())
 afterEach(() => vi.unstubAllGlobals())

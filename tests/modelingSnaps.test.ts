@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { resolveModelingSnap, sketchSnapGeometry, type SnapGeometry } from '../src/services/modelingSnaps'
-import { convertGridSize, validGridStep } from '../src/services/modelingGrid'
-import type { Vec3 } from '../src/services/directSketchGeometry'
+import { resolveModelingSnap, sketchSnapGeometry, type SnapGeometry } from '../src/app/modelingSnaps'
+import { convertGridSize, validGridStep } from '../src/app/modelingGrid'
+import type { Vec3 } from '../src/app/directSketchGeometry'
 const empty: SnapGeometry = {points:[],segments:[]}
 const options = {project: (p: Vec3): [number,number] => [p[0]*10,p[1]*10], grid:0, geometry:true}
 describe('modeling snap targets',()=>{

@@ -1,5 +1,5 @@
 import {ref,shallowRef,watch,onUnmounted,type Ref} from 'svet'
-import type {DirectDocument} from '../../services/directModeling'
+import type {DirectDocument} from '../../app/directModeling'
 import type {SolidBooleanOptions} from '../../kernel/solidBoolean'
 import type {BrepBooleanOperation} from '../../kernel/geometry/brep'
 import {createSolidPreviewWorker} from '../../kernel/solidPreviewWorker'

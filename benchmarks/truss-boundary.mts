@@ -6,7 +6,7 @@ import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {setOptionalWasmCompiler} from '../src/kernel/wasmCompilation'
 import {compileWasmArtifact} from '../src/kernel/wasmArtifact'
 import {solveTruss, type TrussModel, type TrussResponse, type TrussWrenchModel, type TrussVector} from '../src/kernel/trussAnalysis'
-import {encodeBinary} from '../src/services/valueBinaryCodec'
+import {encodeBinary} from '../src/app/valueBinaryCodec'
 
 // Same supported-tripod workloads as mechanics-core/examples/bench_truss.rs.
 function fixture(freeNodes: number): TrussModel {

@@ -1,11 +1,11 @@
 import {readFileSync} from 'node:fs'
 import {IDBFactory} from 'fake-indexeddb'
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
-import {emptyDirectDocument} from '../src/services/directModeling'
+import {emptyDirectDocument} from '../src/app/directModeling'
 import {prepareSolidStepImport, exportSolidStepOriginal, exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 import * as store from '../src/kernel/cadStepIndexedDb'
 import * as kernel from '../src/kernel/geometry/kernel'
-import {pushPullFace,solidTopology} from '../src/services/directSolidTools'
+import {pushPullFace,solidTopology} from '../src/app/directSolidTools'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
 import {exportSolidStepAssembly} from '../src/kernel/solidStepAssembly'
 
@@ -143,7 +143,7 @@ it('exports current edited B-rep geometry rather than its retained STEP source',
 it.each([
  ['bracket',7150,22],['enclosure',7680,22],['flange',3000*Math.PI,8],
 ] as const)('imports, edits and re-exports the current %s STEP',async(name,volume,height)=>{
- const {pushPullFace,solidTopology}=await import('../src/services/directSolidTools')
+ const {pushPullFace,solidTopology}=await import('../src/app/directSolidTools')
  const {analyzeNurbsBrep,inspectNurbsBrep}=await import('../src/kernel/geometry/brep')
  const text=readFileSync(new URL(`../docs/qualification/cad-roadmap-2026-09-28/cap-step-exchange/${name}.step`,import.meta.url),'utf8')
  const initial=emptyDirectDocument(),before=structuredClone(initial)

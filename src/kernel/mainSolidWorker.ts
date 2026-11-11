@@ -2,8 +2,8 @@ import {parseBondedSolidInput} from './bondedSolidProtocol'
 import type {CadOptions} from './cadWorkbench'
 import type {MeshData} from '../core/mesh'
 import type {PickHit} from '../render/rendererContracts'
-import type {DirectDocument} from '../services/directModeling'
-import type {MainOperation,MainParameters} from '../services/mainModeling'
+import type {DirectDocument} from '../app/directModeling'
+import type {MainOperation,MainParameters} from '../app/mainModeling'
 import type {TrussInput,TrussModel,TrussResponse,TrussTopologyLoadCase,TrussTopologyOptions} from './trussAnalysis'
 import type {AxialLimits,PrintStrengthProfile,ThermalStrengthRequest} from './trussScreening'
 import {resolveTrussScenario, type TrussScenario} from './trussScenario'
@@ -26,7 +26,7 @@ export function computeCadOperation(document:DirectDocument,options:CadOptions):
  return shared.run({kind:'cad',document,options})
 }
 
-export function computeCadInspection(bodies:import('../services/directModeling').DirectBody[]):Promise<import('./cadInspection').CadPairReport[]>{
+export function computeCadInspection(bodies:import('../app/directModeling').DirectBody[]):Promise<import('./cadInspection').CadPairReport[]>{
  return shared.run({kind:'inspect',bodies})
 }
 

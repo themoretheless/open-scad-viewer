@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest'
-import {sampleCurve,transformSketch,type AnalyticCurve} from '../src/services/directSketchGeometry'
-import type {DirectSketch} from '../src/services/directModeling'
+import {sampleCurve,transformSketch,type AnalyticCurve} from '../src/app/directSketchGeometry'
+import type {DirectSketch} from '../src/app/directModeling'
 it('samples signed arcs including endpoints and circles without duplicate closure',()=>{
  const curve:AnalyticCurve={kind:'arc',center:[2,3],radius:5,start:90,sweep:-90}
  const arc=sampleCurve(curve)
@@ -35,7 +35,7 @@ it('rejects invalid sampling and transformation before returning corrupt geometr
  expect(JSON.stringify(sketch)).toBe(before)
 })
 it('offsets polygon contours consistently in either winding and refuses collapsed insets',async()=>{
- const {offsetSketch}=await import('../src/services/directSketchGeometry')
+ const {offsetSketch}=await import('../src/app/directSketchGeometry')
  const sketch:DirectSketch={id:'box',name:'Box',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},before=JSON.stringify(sketch)
  for(const points of [sketch.points,[...sketch.points].reverse()]){
   const outward=offsetSketch({...sketch,points},1),inward=offsetSketch({...sketch,points},-1)
@@ -46,14 +46,14 @@ it('offsets polygon contours consistently in either winding and refuses collapse
  expect(JSON.stringify(sketch)).toBe(before)
 })
 it('offsets analytic arcs by radius without losing their parameters',async()=>{
- const {offsetSketch}=await import('../src/services/directSketchGeometry')
+ const {offsetSketch}=await import('../src/app/directSketchGeometry')
  const analytic:AnalyticCurve={kind:'arc',center:[2,3],radius:4,start:10,sweep:-120},sketch:DirectSketch={id:'a',name:'Arc',closed:false,analytic,points:sampleCurve(analytic)}
  const moved=offsetSketch(sketch,2)
  expect(moved.analytic).toEqual({...analytic,radius:6});expect(moved.points).toEqual(sampleCurve(moved.analytic!))
  expect(()=>offsetSketch(sketch,-4)).toThrow()
 })
 it('validates open and closed contours natively and rejects invalid offset requests',async()=>{
- const {offsetSketch,validateSimpleSketch}=await import('../src/services/directSketchGeometry')
+ const {offsetSketch,validateSimpleSketch}=await import('../src/app/directSketchGeometry')
  expect(()=>validateSimpleSketch([[0,0],[2,2],[0,2],[2,0]],true)).toThrow('self-intersect')
  expect(()=>validateSimpleSketch([[0,0],[2,0],[2,2]],false)).not.toThrow()
  expect(()=>validateSimpleSketch([[0,0]],false)).toThrow()
@@ -63,7 +63,7 @@ it('validates open and closed contours natively and rejects invalid offset reque
  expect(()=>offsetSketch(open,0)).toThrow('nonzero')
 })
 it('trims an open segment into ordered chains and opens a closed contour',async()=>{
- const {trimSketch}=await import('../src/services/directSketchGeometry')
+ const {trimSketch}=await import('../src/app/directSketchGeometry')
  const line:DirectSketch={id:'line',name:'Line',closed:false,points:[[0,0],[10,0]]}
  const boundaries=[3,7].map((x,i):DirectSketch=>({id:`cut${i}`,name:'Cut',closed:false,points:[[x,-1],[x,1]]}))
  const before=JSON.stringify(line),parts=trimSketch(line,0,.5,boundaries)
@@ -76,7 +76,7 @@ it('trims an open segment into ordered chains and opens a closed contour',async(
  expect(trimSketch(line,0,.5,[])).toEqual([])
 })
 it('extends either endpoint to the nearest forward boundary and preserves metadata',async()=>{
- const {extendSketch}=await import('../src/services/directSketchGeometry')
+ const {extendSketch}=await import('../src/app/directSketchGeometry')
  const line:DirectSketch={id:'line',name:'Line',closed:false,points:[[0,0],[2,0]]}
  const boundaries=[-3,5,8].map((x,i):DirectSketch=>({id:`b${i}`,name:'Boundary',closed:false,points:[[x,-1],[x,1]]}))
  expect(extendSketch(line,'end',boundaries).points).toEqual([[0,0],[5,0]])
@@ -85,7 +85,7 @@ it('extends either endpoint to the nearest forward boundary and preserves metada
  expect(()=>extendSketch(line,'end',[{...boundaries[0],id:'line'}])).toThrow('No boundary')
 })
 it('rejects malformed trim or extension without changing source geometry',async()=>{
- const {trimSketch,extendSketch}=await import('../src/services/directSketchGeometry')
+ const {trimSketch,extendSketch}=await import('../src/app/directSketchGeometry')
  const line:DirectSketch={id:'s',name:'S',closed:false,points:[[0,0],[2,0]]},before=JSON.stringify(line)
  expect(()=>trimSketch(line,1,.5,[])).toThrow()
  expect(()=>trimSketch(line,0,NaN,[])).toThrow()
@@ -96,7 +96,7 @@ it('rejects malformed trim or extension without changing source geometry',async(
 })
 
 it('refuses a trim result above the document point limit and recovers for a valid request',async()=>{
- const {trimSketch}=await import('../src/services/directSketchGeometry')
+ const {trimSketch}=await import('../src/app/directSketchGeometry')
  const points:[number,number][]=[[0,0],[10,0],...Array.from({length:510},(_,i):[number,number]=>[10-i/51,1])]
  const sketch:DirectSketch={id:'limit',name:'Limit',closed:true,points},before=JSON.stringify(sketch)
  const boundaries=[3,7].map((x,i):DirectSketch=>({id:`cut${i}`,name:'Cut',closed:false,points:[[x,-1],[x,1]]}))
@@ -105,7 +105,7 @@ it('refuses a trim result above the document point limit and recovers for a vali
  expect(trimSketch({...sketch,closed:false,points:[[0,0],[10,0]]},0,.5,boundaries)).toHaveLength(2)
 })
 it('refuses an extension that would cross the original contour',async()=>{
- const {extendSketch}=await import('../src/services/directSketchGeometry')
+ const {extendSketch}=await import('../src/app/directSketchGeometry')
  const sketch:DirectSketch={id:'s',name:'S',closed:false,points:[[0,0],[4,0],[4,4],[2,4],[2,2]]}
  const boundary:DirectSketch={id:'b',name:'Boundary',closed:false,points:[[0,-2],[4,-2]]}
  const before=JSON.stringify(sketch)
@@ -113,7 +113,7 @@ it('refuses an extension that would cross the original contour',async()=>{
  expect(JSON.stringify(sketch)).toBe(before)
 })
 it('places batches of 2D and 3D points in a scaled oblique basis natively',async()=>{
- const {worldPoints,worldPoint}=await import('../src/services/directSketchGeometry')
+ const {worldPoints,worldPoint}=await import('../src/app/directSketchGeometry')
  const plane={origin:[10,20,30] as [number,number,number],u:[2,0,0] as [number,number,number],v:[1,3,0] as [number,number,number]}
  const points=[[1,2],[1,2,4]],before=JSON.stringify(points)
  expect(worldPoints(points,plane)).toEqual([[14,26,30],[14,26,54]])
@@ -122,14 +122,14 @@ it('places batches of 2D and 3D points in a scaled oblique basis natively',async
  expect(worldPoints([])).toEqual([]);expect(JSON.stringify(points)).toBe(before)
 })
 it('refuses invalid or overflowing placement before returning a partial point batch',async()=>{
- const {worldPoints}=await import('../src/services/directSketchGeometry')
+ const {worldPoints}=await import('../src/app/directSketchGeometry')
  for(const points of [[[0,0],[1]],[[0,0],[Infinity,0]],[[0,0],[1,2,3,4]]])expect(()=>worldPoints(points)).toThrow()
  expect(()=>worldPoints([[2,0]],{origin:[0,0,0],u:[1e308,0,0],v:[0,1,0]})).toThrow('finite')
  expect(worldPoints([[2,3]])).toEqual([[2,3,0]])
 })
 
 it('builds a closed slot with bounded semicircular caps and rejects degenerate inputs',async()=>{
- const {slotSketch,validateSimpleSketch}=await import('../src/services/directSketchGeometry')
+ const {slotSketch,validateSimpleSketch}=await import('../src/app/directSketchGeometry')
  const points=slotSketch([0,0],[10,0],4)
  expect(points).toHaveLength(66)
  expect(Math.min(...points.map(p=>p[0]))).toBeCloseTo(-2)

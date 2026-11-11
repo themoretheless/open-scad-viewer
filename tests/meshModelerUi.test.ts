@@ -47,9 +47,9 @@ vi.mock('../src/components/VrControls.svt',()=>({default:{render:()=>null}}))
 vi.mock('../src/components/CommandPalette.svt',()=>({default:{render:()=>null}}))
 vi.mock('../src/components/ModelingGridControls.svt',()=>({default:{render:()=>null}}))
 vi.mock('../src/components/ModelingFloorGrid.svt',()=>({default:{render:()=>null}}))
-vi.mock('../src/services/safeStorage',()=>({storageGet:()=>null,storageSet:()=>{}}))
-vi.mock('../src/services/meshModelerProjection',async importOriginal=>{
-  const actual=await importOriginal<typeof import('../src/services/meshModelerProjection')>()
+vi.mock('../src/app/safeStorage',()=>({storageGet:()=>null,storageSet:()=>{}}))
+vi.mock('../src/app/meshModelerProjection',async importOriginal=>{
+  const actual=await importOriginal<typeof import('../src/app/meshModelerProjection')>()
   return {...actual,projectMeshModelerObject:(...args:Parameters<typeof actual.projectMeshModelerObject>)=>{
     if(!gate.ready)throw new Error('Projection requested before browser WASM readiness')
     return actual.projectMeshModelerObject(...args)

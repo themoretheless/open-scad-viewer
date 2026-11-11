@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {sceneListWindow,sceneRowOffsets} from '../src/services/sceneListWindow'
+import {sceneListWindow,sceneRowOffsets} from '../src/app/sceneListWindow'
 it('bounds rendered rows throughout a thousand-object list and preserves its pixel extent',()=>{
  const offsets=sceneRowOffsets([44,...Array(1000).fill(32)])
  for(let top=0;top<offsets.at(-1)!;top+=137){

@@ -1,4 +1,4 @@
-import { resolveModelingSnap, type SnapGeometry } from '../src/services/modelingSnaps'
+import { resolveModelingSnap, type SnapGeometry } from '../src/app/modelingSnaps'
 
 type Case = { segments: number; runs: number }
 

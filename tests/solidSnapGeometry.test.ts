@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest'
 import {bodySnapGeometry} from '../src/kernel/solidSnapGeometry'
 import {createBrepBox,createBrepCylinder,createBrepSphere,tessellateNurbsBrep,type NurbsBrep} from '../src/kernel/geometry/brep'
-import {facePlane,solidTopology} from '../src/services/directSolidTools'
-import {unprojectDirectPlane,projectDirectPoint,defaultDirectCamera} from '../src/services/directModelingTools'
-import {worldPoint} from '../src/services/directSketchGeometry'
+import {facePlane,solidTopology} from '../src/app/directSolidTools'
+import {unprojectDirectPlane,projectDirectPoint,defaultDirectCamera} from '../src/app/directModelingTools'
+import {worldPoint} from '../src/app/directSketchGeometry'
 const body=(brep:NurbsBrep,segments=4)=>{const mesh=tessellateNurbsBrep(brep,segments);return{id:'b',name:'b',brep,mesh:{positions:mesh.positions,indices:mesh.indices}}}
 it('uses topological vertices, edge midpoints, face centers and the body bounding center',()=>{
  const g=bodySnapGeometry(body(createBrepBox([0,0,0],[10,20,30])))
@@ -32,7 +32,7 @@ it('maps viewport pointer positions onto rotated and vertical sketch planes',()=
 })
 
 it('roundtrips rational snap targets through structured cloning without snapping to chords',async()=>{
- const {resolveModelingSnap}=await import('../src/services/modelingSnaps')
+ const {resolveModelingSnap}=await import('../src/app/modelingSnaps')
  const geometry=bodySnapGeometry(body(createBrepCylinder(5,10)))
  const copied=structuredClone(geometry)
  expect(copied).toEqual(geometry)

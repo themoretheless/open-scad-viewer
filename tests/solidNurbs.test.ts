@@ -1,6 +1,6 @@
 import {constructSolidSurface,buildSolidSurface} from '../src/kernel/solidSurfaceConstruction'
 import { describe, expect, it } from 'vitest'
-import { emptyDirectDocument, parseDirectDocument } from '../src/services/directModeling'
+import { emptyDirectDocument, parseDirectDocument } from '../src/app/directModeling'
 import { solidDocumentToMeshDocument } from '../src/kernel/solidBridge'
 import { importRushGraphNurbs } from '../src/exchange/solidNurbsImport'
 import {
@@ -267,7 +267,7 @@ it.each(['u','v'] as const)('rebuilds a rational surface in %s while preserving 
 })
 
 it('preserves a rational cylindrical patch through Solid history and serialization',async()=>{
- const {DirectHistory,serializeDirectDocument}=await import('../src/services/directModeling')
+ const {DirectHistory,serializeDirectDocument}=await import('../src/app/directModeling')
  const d=emptyDirectDocument()
  const controls=[[[1,0,0],[1,1,0],[0,1,0]],[[1,0,2],[1,1,2],[0,1,2]],[[1,0,0],[1,0,2]],[[0,1,0],[0,1,2]]]
  d.curves=controls.map((controlPoints,i)=>({id:`rational-${i}`,name:`Boundary ${i}`,curve:{degree:controlPoints.length-1,controlPoints,knots:[...Array(controlPoints.length).fill(0),...Array(controlPoints.length).fill(1)],weights:i<2?[1,Math.SQRT1_2,1]:[1,1]}}))

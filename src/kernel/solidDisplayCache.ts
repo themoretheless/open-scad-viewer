@@ -1,4 +1,4 @@
-import {adaptiveCacheBytes} from '../services/adaptiveMemoryBudget'
+import {adaptiveCacheBytes} from '../app/adaptiveMemoryBudget'
 import {stringifyMeshJson} from '../exchange/meshJson'
 import type {PolygonMesh} from './geometry/polygon'
 export interface DisplayMesh {closed?:boolean[]|null;workClosed?:boolean[]|null;mesh:PolygonMesh;map:number[]|null;normals:number[][];flat?:{positions:Float32Array;normals:Float32Array}}

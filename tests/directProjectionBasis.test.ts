@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest'
-import {createDirectProjector,projectDirectPoint,directFaceShade} from '../src/services/directModelingTools'
+import {createDirectProjector,projectDirectPoint,directFaceShade} from '../src/app/directModelingTools'
 it('matches point and normal projection exactly across camera directions and coordinate scales',()=>{
  for(const yaw of [-3.14,-1,0,1,3.14])for(const pitch of [-1.5,-.1,0,.1,1.5]){
   const camera={yaw,pitch},project=createDirectProjector(camera)

@@ -301,14 +301,16 @@ describe('SemanticProgram to Manifold qualification adapter', () => {
     for (const file of files) expect(readFileSync(file, 'utf8')).not.toMatch(importsManifold)
     expect(readFileSync(new URL('../src/kernel/manifoldPlanBackend.ts', import.meta.url), 'utf8'))
       .not.toContain('manifold-3d')
-    const forbiddenPlanImports = /from\s*['"]\.\/(?:openscadCompiler|openscadParser|geometryWorkerProtocol)['"]/
+    // Any relative path: since plan M10 these modules live in different domain directories.
+    const forbiddenPlanImports = /from\s*['"](?:\.\.?\/)+(?:[\w-]+\/)*(?:openscadCompiler|openscadParser|geometryWorkerProtocol)['"]/
     expect(readFileSync(new URL('../src/kernel/manifoldPlanBackend.ts', import.meta.url), 'utf8'))
       .not.toMatch(forbiddenPlanImports)
-    expect(readFileSync(new URL('../src/services/legacyV5Assembler.ts', import.meta.url), 'utf8'))
+    expect(readFileSync(new URL('../src/app/legacyV5Assembler.ts', import.meta.url), 'utf8'))
       .not.toMatch(forbiddenPlanImports)
     expect(readFileSync(new URL('../src/kernel/cadKernelOps.ts', import.meta.url), 'utf8'))
       .not.toMatch(importsManifold)
-    visit(new URL('services/', root))
+    // src/services was split into these domain directories (refactor plan M10).
+    for (const domain of ['app/', 'kernel/', 'language/', 'exchange/', 'render/', 'fabrication/']) visit(new URL(domain, root))
     for (const file of files) expect(readFileSync(file, 'utf8')).not.toMatch(importsManifold)
     const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
     expect(packageJson.dependencies?.['manifold-3d']).toBeUndefined()

@@ -9,8 +9,8 @@ import {MainSolidWorkerClient, type MainSolidPort} from '../src/kernel/mainSolid
 import type {MainSolidRequest} from '../src/kernel/mainSolidProtocol'
 import type {TrussModel} from '../src/kernel/trussAnalysis'
 import {resolveTrussScenario} from '../src/kernel/trussScenario'
-import {DirectHistory,parseDirectDocument,serializeDirectDocument,extrudeDirectSketch} from '../src/services/directModeling'
-import {previewMeshes} from '../src/services/mainModeling'
+import {DirectHistory,parseDirectDocument,serializeDirectDocument,extrudeDirectSketch} from '../src/app/directModeling'
+import {previewMeshes} from '../src/app/mainModeling'
 import type {LighteningOptions} from '../src/kernel/solidLightening'
 
 const artifactBytes=readFileSync('public/wasm/geometry-kernel.wasm')
@@ -450,7 +450,7 @@ it('accepts compact scene snapshots with exact parity and rejects invalid geomet
 it('revolves retained holed profiles through postMessage and preserves source controls and identities',async()=>{
  const {warmGeometryKernel}=await import('../src/kernel/geometry/kernel')
  const {authorBrepProfile}=await import('../src/kernel/geometry/brepProfile')
- const {withRetainedProfile}=await import('../src/services/retainedSketchProfile')
+ const {withRetainedProfile}=await import('../src/app/retainedSketchProfile')
  const {applySolidRevolve}=await import('../src/kernel/solidRevolve')
  await warmGeometryKernel()
  const profile=authorBrepProfile({kind:'polygon',rings:[[[3,0],[6,0],[6,4],[3,4]],[[4,1],[4,3],[5,3],[5,1]]]})
@@ -519,7 +519,7 @@ it('retains multispan trim proofs and incomplete budgets across real postMessage
 })
 
 it('prepares original general NURBS through the real worker boundary',async()=>{
- const {emptyDirectDocument}=await import('../src/services/directModeling')
+ const {emptyDirectDocument}=await import('../src/app/directModeling')
  const {prepareSolidProfile}=await import('../src/kernel/solidProfilePreparation')
  const {warmGeometryKernel}=await import('../src/kernel/geometry/kernel');await warmGeometryKernel()
  const document=emptyDirectDocument()
@@ -777,7 +777,7 @@ it('discards a genuine late duplicate reply after cancellation and commits only 
 it('keeps replacement profile coverage after a genuine cancelled worker reply arrives late',async()=>{
  const {readFileSync}=await import('node:fs')
  const {effectScope,ref,shallowRef}=await import('vue')
- const {useProfileBridgeInspection}=await import('../src/services/useProfileBridgeInspection')
+ const {useProfileBridgeInspection}=await import('../src/app/useProfileBridgeInspection')
  const fixture=JSON.parse(readFileSync('docs/qualification/mapped-retained-carrier-2026-10-08/profile-bridge-native-transport-2026-10-10.json','utf8')).wholeCoverage
  const {op:_,...input}=fixture.request
  const options=shallowRef<import('../src/kernel/nurbsProfileBridgeChords').ProfileBridgeChordOptions|undefined>(structuredClone(input))

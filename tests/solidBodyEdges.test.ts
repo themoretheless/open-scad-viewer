@@ -2,7 +2,7 @@ import {expect,it} from 'vitest'
 import {solidBodyEdges} from '../src/kernel/solidBodyEdges'
 import {solidExactEdgeFeature} from '../src/kernel/solidExactEdgeFeature'
 import {createBrepBox,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
-import {solidTopology} from '../src/services/directSolidTools'
+import {solidTopology} from '../src/app/directSolidTools'
 it('keeps exact edge identities and samples independent of display tessellation',()=>{
  const brep=createBrepBox([0,0,0],[10,8,6])
  const body={id:'b',name:'B',brep,mesh:tessellateNurbsBrep(brep)}

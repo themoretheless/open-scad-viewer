@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest'
 import {SolidDisplayQueue} from '../src/kernel/solidDisplayQueue'
 import {SolidDisplayCache,solidDisplayKey} from '../src/kernel/solidDisplayCache'
-import type {DirectBody} from '../src/services/directModeling'
+import type {DirectBody} from '../src/app/directModeling'
 const body=(id:string)=>({id,name:id,mesh:{positions:new Float64Array([0,0,0,1,0,0,0,1,0]),indices:new Uint32Array([0,1,2])},brep:{tag:id}} as unknown as DirectBody)
 const display=(b:DirectBody)=>({mesh:b.mesh,map:[0],normals:[[0,0,1]]})
 it('runs one request at a time, reuses exact cached results and continues after failure',async()=>{

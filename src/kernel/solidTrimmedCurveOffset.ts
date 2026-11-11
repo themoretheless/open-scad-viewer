@@ -1,4 +1,4 @@
-import type {DirectDocument} from '../services/directModeling'
+import type {DirectDocument} from '../app/directModeling'
 import type {NurbsCurve} from './nurbsCurve'
 import {callNurbsRust} from './geometry/nurbs'
 import type {SolidCurveOffsetOptions} from './solidCurveOffset'

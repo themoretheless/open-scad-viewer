@@ -1,4 +1,4 @@
-import type {DirectDocument} from '../services/directModeling'
+import type {DirectDocument} from '../app/directModeling'
 import {certifyMinkowski3d,certifyNurbsMinkowski,verifyMinkowskiProof,minkowskiSource,type MinkowskiProof,type MinkowskiAuthoredSource,type ApproximationTopology} from './geometry/minkowski3d'
 export interface SolidMinkowskiOptions {ids:[string,string];createdId:string;ru:boolean;maximumSourceDeviationMm?:number}
 export interface SolidMinkowskiResult {document:DirectDocument;resultId:string|null;proof:MinkowskiProof;volumeMm3:number;maximumCoordinateRoundingMm:number;sourceHadBrep:boolean;curvedSourceErrorCertified:boolean;maximumSetDeviationMm:number|null;roundingTopologyCertified:true;approximationTopology:ApproximationTopology|null;sourceApproximationTopology:[boolean,boolean]}

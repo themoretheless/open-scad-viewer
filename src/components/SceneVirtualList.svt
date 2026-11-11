@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T extends {key:string;height:number}">
 import {batch,computed,nextTick,onMounted,onBeforeUnmount,ref,watch} from 'svet'
-import {sceneListWindow,sceneRowOffsets} from '../services/sceneListWindow'
+import {sceneListWindow,sceneRowOffsets} from '../app/sceneListWindow'
 const props=defineProps<{items:readonly T[]}>()
 defineSlots<{default(props:{item:T;position:number;total:number;style:{height:string;marginBottom:string;flexShrink:number;boxSizing:'border-box'}}):unknown}>()
 const list=ref<HTMLUListElement|null>(null),top=ref(0),viewport=ref(600),focused=ref<string|null>(null)

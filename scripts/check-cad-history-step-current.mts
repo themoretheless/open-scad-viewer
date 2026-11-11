@@ -8,7 +8,7 @@ import identity from '../src/generated/geometry-kernels/identity'
 import {warmGeometryKernel} from '../src/kernel/geometry/kernel'
 import {exportSolidStepCurrent} from '../src/kernel/solidStepExchange'
 import {importDirectStepV9} from '../src/kernel/cadNurbsStep'
-import {DirectHistory,parseDirectDocument,serializeDirectDocument,type DirectDocument} from '../src/services/directModeling'
+import {DirectHistory,parseDirectDocument,serializeDirectDocument,type DirectDocument} from '../src/app/directModeling'
 
 const replayHistory=process.argv.includes('--replay-history')
 const [sourceArg,outputArg]=process.argv.slice(2).filter(v=>v!=='--replay-history')

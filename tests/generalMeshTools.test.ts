@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest'
-import {extrudeDirectSketch} from '../src/services/directModeling'
-import {sampledShell,localMeshBevel} from '../src/services/generalMeshTools'
-import {solidTopology} from '../src/services/directSolidTools'
+import {extrudeDirectSketch} from '../src/app/directModeling'
+import {sampledShell,localMeshBevel} from '../src/app/generalMeshTools'
+import {solidTopology} from '../src/app/directSolidTools'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 const tapered=()=>{
  const b=extrudeDirectSketch({id:'l',name:'Tapered L',closed:true,points:[[0,0],[20,0],[20,10],[10,10],[10,20],[0,20]]},10,'l')

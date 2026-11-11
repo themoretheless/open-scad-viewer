@@ -10,7 +10,7 @@
 import { buildOwnNurbs } from '../../language/rushGraphNurbsKernel'
 import { brepGearFaceCount, type NurbsBrep } from '../geometry/brep'
 import { normalizePolygonMesh } from '../geometry/polygon'
-import type { DirectBody } from '../../services/directModeling'
+import type { DirectBody } from '../../app/directModeling'
 import type { BrepNode } from './brepGraph'
 
 /** Display tessellation only; the stored body keeps its exact topology. */

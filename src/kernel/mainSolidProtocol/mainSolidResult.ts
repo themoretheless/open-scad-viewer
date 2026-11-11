@@ -12,7 +12,7 @@ import {
   isTrussFieldMeshes,
   isTrussTopologyResponse,
   isValidatedPrintProfile,
-} from '../../services/mechanicsProtocol'
+} from '../../app/mechanicsProtocol'
 import { validContactQualification } from '../nurbsOffsetContactQualification'
 import { validOffsetDeviation } from '../nurbsOffsetDeviation'
 import { validEnvelopeFit } from '../nurbsOffsetEnvelopeFit'

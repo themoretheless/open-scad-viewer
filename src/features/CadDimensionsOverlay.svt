@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed} from 'svet'
 import type {MeshData} from '../core/mesh'
-import {sceneBody} from '../services/mainModeling'
+import {sceneBody} from '../app/mainModeling'
 import {bounds} from '../kernel/cadWorkbench'
 const props=defineProps<{meshes:MeshData[];selection:number[];project:(p:number[])=>number[]|null;revision:number}>()
 const emit=defineEmits<{resize:[dimensions:number[]]}>()

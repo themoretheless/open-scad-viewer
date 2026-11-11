@@ -1,7 +1,7 @@
 import type {MeshData} from '../core/mesh'
 import type {LighteningOptions} from '../kernel/solidLightening'
 import type {TrussVector} from '../kernel/trussAnalysis'
-import {fitsClonedBufferBudget} from '../services/clonedBufferBudget'
+import {fitsClonedBufferBudget} from '../app/clonedBufferBudget'
 
 export type LatticeGraphMesh = Pick<MeshData, 'vertices' | 'indices' | 'transform'>
 export interface NominalLatticeGraph {
