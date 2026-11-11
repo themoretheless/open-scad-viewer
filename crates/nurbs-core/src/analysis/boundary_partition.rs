@@ -18,6 +18,16 @@ pub struct Report {
     pub lift_cells: usize,
     pub qualified: bool,
 }
+/// Agreement tolerances and work budgets of one boundary split.
+#[derive(Clone, Copy, Debug)]
+pub struct SplitLimits {
+    pub tolerance_world: f64,
+    pub tolerance_uv: f64,
+    /// Work bound of each source partition (world and UV separately).
+    pub partition_cells: usize,
+    /// Work bound shared by all candidate lifts.
+    pub lift_cells: usize,
+}
 /// Cuts are fractions of the forward pcurve traversal, strictly inside (0,1).
 /// Budgets independently bound each source partition and all candidate lifts.
 pub fn split(
@@ -26,11 +36,14 @@ pub fn split(
     surface: &Surface,
     reversed: bool,
     cuts: &[f64],
-    tolerance_world: f64,
-    tolerance_uv: f64,
-    partition_cells: usize,
-    lift_cells: usize,
+    limits: SplitLimits,
 ) -> Result<Report> {
+    let SplitLimits {
+        tolerance_world,
+        tolerance_uv,
+        partition_cells,
+        lift_cells,
+    } = limits;
     world.validate()?;
     pcurve.validate()?;
     surface.validate()?;
@@ -146,10 +159,12 @@ mod tests {
                 &plane(),
                 reversed,
                 &[0.25, 0.75],
-                1e-7,
-                1e-7,
-                10000,
-                10000,
+                SplitLimits {
+                    tolerance_world: 1e-7,
+                    tolerance_uv: 1e-7,
+                    partition_cells: 10000,
+                    lift_cells: 10000,
+                },
             )
             .unwrap();
             assert!(r.qualified);
@@ -172,10 +187,12 @@ mod tests {
             &plane(),
             false,
             &[0.25, 0.75],
-            1e-7,
-            1e-7,
-            10000,
-            1,
+            SplitLimits {
+                tolerance_world: 1e-7,
+                tolerance_uv: 1e-7,
+                partition_cells: 10000,
+                lift_cells: 1,
+            },
         )
         .unwrap();
         assert!(!r.qualified);

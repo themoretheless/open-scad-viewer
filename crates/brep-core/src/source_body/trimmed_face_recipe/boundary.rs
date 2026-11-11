@@ -28,10 +28,12 @@ pub fn split_boundary(
         surface,
         boundary.reversed,
         cuts,
-        context.spatial_bounds().on_mm,
-        tolerance_uv,
-        partition_cells,
-        agreement_cells,
+        nurbs_core::boundary_partition::SplitLimits {
+            tolerance_world: context.spatial_bounds().on_mm,
+            tolerance_uv,
+            partition_cells,
+            lift_cells: agreement_cells,
+        },
     )?;
     let candidates = report
         .pieces
