@@ -259,7 +259,11 @@ if op == "surface_progressive_sweep_spatial_rmf_error" || op == "surface_progres
             let axes=axes.unwrap_or(progressive_sweep::constant_vector_law([1.;3])?);
             let center=center.unwrap_or(progressive_sweep::constant_vector_law([0.;3])?);
             let profiles=if op=="surface_progressive_sweep_profiles" {field::<Vec<curve::Curve>>(&v,"profiles")?} else {vec![field::<curve::Curve>(&v,"profile")?]};
-            return encode(progressive_sweep::approximate_authored_profiles(&profiles,&field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"scale")?,&field::<curve::Curve>(&v,"twist")?,&field::<curve::Curve>(&v,"frame_axis")?,&field::<curve::Curve>(&v,"frame_normal")?,&axes,&center,options)?);
+            return encode(progressive_sweep::approximate_authored_profiles(
+                &profiles,
+                progressive_sweep::AuthoredSweepLaws { path: &field::<curve::Curve>(&v,"path")?, scale: &field::<curve::Curve>(&v,"scale")?, twist: &field::<curve::Curve>(&v,"twist")?, longitudinal: &field::<curve::Curve>(&v,"frame_axis")?, transverse: &field::<curve::Curve>(&v,"frame_normal")?, axis_scale: &axes, center: &center },
+                options,
+            )?);
         }
         if axes.is_some() || center.is_some() {
             let axes=axes.unwrap_or(progressive_sweep::constant_vector_law([1.;3])?);

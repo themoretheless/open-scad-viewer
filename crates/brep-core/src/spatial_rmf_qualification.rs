@@ -238,14 +238,9 @@ fn qualify_closed_spatial_rmf_source(
     .unwrap_or_else(|error| {
         let diagnostic = nurbs_core::progressive_sweep::approximate_spatial_rmf_profiles(
             &profiles,
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
+            nurbs_core::progressive_sweep::SweepLaws { path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)) },
             options,
-            4096,
-            100000,
-            1000000,
+            nurbs_core::progressive_sweep::RmfTransport { steps: 4096, max_cells: 100000, max_products: 1000000 },
         )
         .unwrap();
         panic!(

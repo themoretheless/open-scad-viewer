@@ -31,13 +31,7 @@ pub struct AuthoredFrameLaws<'a> {
     pub affine: Option<(&'a Curve, &'a Curve)>,
 }
 /// Path, scale and twist laws of a sweep, with optional affine laws.
-#[derive(Clone, Copy)]
-pub(crate) struct ProfileLaws<'a> {
-    pub path: &'a Curve,
-    pub scale: &'a Curve,
-    pub twist: &'a Curve,
-    pub affine: Option<(&'a Curve, &'a Curve)>,
-}
+pub(crate) use crate::sweeps::progressive_sweep::SweepLaws as ProfileLaws;
 mod guided_path_values;
 pub(crate) use guided_path_values::certify_path_guide_from_offset;
 mod paired_path_values;

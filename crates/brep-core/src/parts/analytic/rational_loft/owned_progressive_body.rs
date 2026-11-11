@@ -43,7 +43,10 @@ pub(super) fn progressive_profile_body_internal(
     };
     let approximation = if let Some((steps,cells,products)) = rmf_policy {
         nurbs_core::progressive_sweep::approximate_spatial_rmf_profiles(
-            &profiles,path,scale,twist,affine,options,steps,cells,products,
+            &profiles,
+            nurbs_core::progressive_sweep::SweepLaws { path, scale, twist, affine },
+            options,
+            nurbs_core::progressive_sweep::RmfTransport { steps, max_cells: cells, max_products: products },
         )?
     } else if let Some((guide, anchor)) = guidance {
         let (axes, center) = affine.unwrap();
@@ -63,13 +66,7 @@ pub(super) fn progressive_profile_body_internal(
         let (axes, center) = affine.unwrap();
         nurbs_core::progressive_sweep::approximate_authored_profiles(
             &profiles,
-            path,
-            scale,
-            twist,
-            longitudinal,
-            transverse,
-            axes,
-            center,
+            nurbs_core::progressive_sweep::AuthoredSweepLaws { path, scale, twist, longitudinal, transverse, axis_scale: axes, center },
             options,
         )?
     } else if let Some((axes, center)) = affine {

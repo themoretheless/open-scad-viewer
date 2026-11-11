@@ -360,11 +360,29 @@ pub fn approximate_affine_profiles(
 }
 
 /// Original closed spatial RMF error policy, shared across all profiles.
+/// Path, scale and twist laws of a sweep, with optional affine laws.
+#[derive(Clone, Copy)]
+pub struct SweepLaws<'a> {
+    pub path: &'a Curve,
+    pub scale: &'a Curve,
+    pub twist: &'a Curve,
+    pub affine: Option<(&'a Curve, &'a Curve)>,
+}
+/// Transport steps, cells and products allowed for a spatial rotation-minimizing frame.
+#[derive(Clone, Copy, Debug)]
+pub struct RmfTransport {
+    pub steps: usize,
+    pub max_cells: usize,
+    pub max_products: usize,
+}
 pub fn approximate_spatial_rmf_profiles(
-    profiles: &[Curve], path: &Curve, scale: &Curve, twist: &Curve,
-    affine: Option<(&Curve, &Curve)>, options: Options,
-    transport_steps: usize, max_cells: usize, max_products: usize,
+    profiles: &[Curve],
+    laws: SweepLaws<'_>,
+    options: Options,
+    transport: RmfTransport,
 ) -> Result<MultiApproximation> {
+    let SweepLaws { path, scale, twist, affine } = laws;
+    let RmfTransport { steps: transport_steps, max_cells, max_products } = transport;
     let sweep = MultiSweep::new(profiles, path, scale, twist, options)?;
     let sweep = if let Some((axes, center)) = affine {
         sweep.with_affine_laws(axes, center)?
@@ -373,17 +391,24 @@ pub fn approximate_spatial_rmf_profiles(
 }
 
 /// Complete authored frames, simultaneous affine laws and aggregate admission.
+/// Laws of an authored-frame sweep with required affine laws: path, scale, twist, the
+/// longitudinal and transverse frame laws, and the affine axis scale and center.
+#[derive(Clone, Copy)]
+pub struct AuthoredSweepLaws<'a> {
+    pub path: &'a Curve,
+    pub scale: &'a Curve,
+    pub twist: &'a Curve,
+    pub longitudinal: &'a Curve,
+    pub transverse: &'a Curve,
+    pub axis_scale: &'a Curve,
+    pub center: &'a Curve,
+}
 pub fn approximate_authored_profiles(
     profiles: &[Curve],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    longitudinal: &Curve,
-    transverse: &Curve,
-    axis_scale: &Curve,
-    center: &Curve,
+    laws: AuthoredSweepLaws<'_>,
     mut options: Options,
 ) -> Result<MultiApproximation> {
+    let AuthoredSweepLaws { path, scale, twist, longitudinal, transverse, axis_scale, center } = laws;
     options.orientation = Orientation::Fixed;
     collect_profiles(
         MultiSweep::new(profiles, path, scale, twist, options)?
