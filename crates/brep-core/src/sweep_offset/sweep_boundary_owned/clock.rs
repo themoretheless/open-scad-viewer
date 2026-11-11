@@ -301,19 +301,29 @@ fn prove(
     report.reason = None;
     Ok(report)
 }
+/// Reference and target rational pose pieces and the clock map between them.
+#[derive(Clone, Copy)]
+pub struct ClockTransfer<'a> {
+    pub reference: &'a [RationalPiece],
+    pub target: &'a [RationalPiece],
+    pub map: &'a Curve,
+}
 /// Recompute reference global/material proofs, then transfer only through an
 /// exact positive C2 periodic-safe clock. Every source column is checked.
 pub fn construct(
     profiles: &[Vec<Curve>],
     material: &LoftCap,
     origin: [f64; 3],
-    reference: &[RationalPiece],
-    target: &[RationalPiece],
-    map: &Curve,
+    transfer: ClockTransfer<'_>,
     cap_profiles: &[[usize; 2]],
     tolerance_uv: f64,
     mut limits: RationalClosedLimits,
 ) -> Result<Attempt> {
+    let ClockTransfer {
+        reference,
+        target,
+        map,
+    } = transfer;
     let proof = prove(reference, target, map, limits.source_exact_work)?;
     if !proof.certified {
         return Ok(Attempt::Refused(Box::new(Refused {

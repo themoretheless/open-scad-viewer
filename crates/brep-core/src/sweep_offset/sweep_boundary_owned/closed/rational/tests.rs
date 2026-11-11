@@ -605,9 +605,11 @@ fn clock_conjugacy_transfers_original_global_volume_without_borrowing_retained_p
         &profiles,
         &material,
         [0.; 3],
-        &reference,
-        &target,
-        &map,
+        crate::sweep_boundary_owned::clock::ClockTransfer {
+            reference: &reference,
+            target: &target,
+            map: &map,
+        },
         &[],
         1e-8,
         l,
@@ -639,9 +641,11 @@ fn clock_conjugacy_transfers_original_global_volume_without_borrowing_retained_p
         &profiles,
         &material,
         [0.; 3],
-        &reference,
-        &altered,
-        &map,
+        crate::sweep_boundary_owned::clock::ClockTransfer {
+            reference: &reference,
+            target: &altered,
+            map: &map,
+        },
         &[],
         1e-8,
         l,
@@ -658,12 +662,14 @@ fn clock_conjugacy_transfers_original_global_volume_without_borrowing_retained_p
             &profiles,
             &material,
             [0.; 3],
-            &reference,
-            &translated,
-            &map,
+            crate::sweep_boundary_owned::clock::ClockTransfer {
+                reference: &reference,
+                target: &translated,
+                map: &map,
+            },
             &[],
             1e-8,
-            l
+            l,
         )
         .unwrap(),
         crate::sweep_boundary_owned::clock::Attempt::Refused(_)
@@ -675,12 +681,14 @@ fn clock_conjugacy_transfers_original_global_volume_without_borrowing_retained_p
             &profiles,
             &material,
             [0.; 3],
-            &reference,
-            &target,
-            &map,
+            crate::sweep_boundary_owned::clock::ClockTransfer {
+                reference: &reference,
+                target: &target,
+                map: &map,
+            },
             &[],
             1e-8,
-            short
+            short,
         )
         .unwrap(),
         crate::sweep_boundary_owned::clock::Attempt::Refused(_)
@@ -691,9 +699,11 @@ fn clock_conjugacy_transfers_original_global_volume_without_borrowing_retained_p
         &profiles,
         &material,
         [0.; 3],
-        &reference,
-        &target,
-        &map,
+        crate::sweep_boundary_owned::clock::ClockTransfer {
+            reference: &reference,
+            target: &target,
+            map: &map,
+        },
         &[],
         1e-8,
         global,
