@@ -170,17 +170,29 @@ fn report(original: ClosedReport) -> SmoothClosedReport {
     }
 }
 pub(super) use crate::exact_affine_source::{exact_mul,image};
+/// One source profile curve swept through exact affine poses with per-pose
+/// time weights, measured from `origin`.
+#[derive(Clone, Copy)]
+struct SweptProfile<'a> {
+    source: &'a Curve,
+    pose: &'a [AffinePose],
+    time_weights: &'a [f64],
+    origin: [f64; 3],
+}
 fn matches_gauge(
     model: &Model,
     index: usize,
-    source: &Curve,
-    pose: &[AffinePose],
-    time_weights: &[f64],
-    origin: [f64; 3],
+    swept: SweptProfile<'_>,
     out: &mut BindingReport,
     max: u64,
     gauge: u8,
 ) -> Result<bool> {
+    let SweptProfile {
+        source,
+        pose,
+        time_weights,
+        origin,
+    } = swept;
     let swap = gauge & 4 != 0;
     let flip_u = gauge & 1 != 0;
     let flip_v = gauge & 2 != 0;
@@ -260,10 +272,7 @@ fn matches_gauge(
 fn matches_face(
     model: &Model,
     index: usize,
-    source: &Curve,
-    pose: &[AffinePose],
-    time_weights: &[f64],
-    origin: [f64; 3],
+    swept: SweptProfile<'_>,
     out: &mut BindingReport,
     max: u64,
 ) -> Result<Option<u8>> {
@@ -271,10 +280,7 @@ fn matches_face(
         if matches_gauge(
             model,
             index,
-            source,
-            pose,
-            time_weights,
-            origin,
+            swept,
             out,
             max,
             gauge,
@@ -366,10 +372,12 @@ fn binding_impl(
                     if let Some(gauge) = matches_face(
                         model,
                         actual,
-                        source,
-                        pose,
-                        time_weights[layer],
-                        origin,
+                        SweptProfile {
+                            source,
+                            pose,
+                            time_weights: time_weights[layer],
+                            origin,
+                        },
                         &mut out,
                         max,
                     )? {
