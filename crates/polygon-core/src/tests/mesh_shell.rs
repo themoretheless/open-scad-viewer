@@ -23,12 +23,14 @@ fn lattice_auto_matches_cpu_on_small_grid() {
         nodes.clone(),
         edges.clone(),
         4.,
-        0.,
         3.,
-        false,
-        false,
-        0.,
-        false,
+        ShellStyle {
+            skin: 0.,
+            organic: false,
+            open_top: false,
+            wall_depth: 0.,
+            keep_core: false,
+        },
     )
     .unwrap();
     let automatic = lattice_accelerated(
@@ -58,12 +60,14 @@ fn gpu_lattice_matches_cpu_reference() {
         nodes.clone(),
         edges.clone(),
         2.,
-        0.,
         1.,
-        false,
-        false,
-        0.,
-        false,
+        ShellStyle {
+            skin: 0.,
+            organic: false,
+            open_top: false,
+            wall_depth: 0.,
+            keep_core: false,
+        },
     )
     .unwrap();
     let accelerated = lattice_accelerated(

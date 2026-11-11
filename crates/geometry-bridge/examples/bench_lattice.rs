@@ -69,12 +69,14 @@ fn main() {
             nodes.clone(),
             edges.clone(),
             3.5,
-            3.5,
             1.5,
-            organic,
-            false,
-            0.,
-            false,
+            mesh_shell::ShellStyle {
+                skin: 3.5,
+                organic: organic,
+                open_top: false,
+                wall_depth: 0.,
+                keep_core: false,
+            },
         )
         .unwrap();
         let mut summary = Vec::new();

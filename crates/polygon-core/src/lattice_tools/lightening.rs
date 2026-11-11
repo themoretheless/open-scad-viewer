@@ -319,12 +319,14 @@ pub fn lighten(source_mesh: Mesh, options: LighteningOptions) -> Result<Mesh> {
             nodes,
             edges,
             rib / 2.,
-            skin,
             step,
-            pattern == "bone",
-            open_top,
-            wall_depth,
-            keep_core,
+            crate::mesh_shell::ShellStyle {
+                skin: skin,
+                organic: pattern == "bone",
+                open_top: open_top,
+                wall_depth: wall_depth,
+                keep_core: keep_core,
+            },
         )?
         .mesh;
         reduced_mesh = decimate(reduced_mesh, step * 1.5, 2600.)?;

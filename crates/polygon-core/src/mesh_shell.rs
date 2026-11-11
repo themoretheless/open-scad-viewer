@@ -438,31 +438,15 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 "##;
 /// A bounded spatial graph of rounded struts, optionally blended into a skin.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "public lattice API preserves the geometry bridge contract"
-)]
 pub fn lattice(
     mesh: &Mesh,
     nodes: Vec<P>,
     edges: Vec<[usize; 2]>,
     radius: f64,
-    skin: f64,
     step: f64,
-    organic: bool,
-    open_top: bool,
-    wall_depth: f64,
-    keep_core: bool,
+    style: ShellStyle,
 ) -> Result<BuiltMesh> {
-    lattice_accelerated(
-        mesh,
-        nodes,
-        edges,
-        radius,
-        step,
-        ShellStyle { skin, organic, open_top, wall_depth, keep_core },
-        Acceleration::Cpu,
-    )
+    lattice_accelerated(mesh, nodes, edges, radius, step, style, Acceleration::Cpu)
 }
 
 /// Size-based placement recommendation for the spatial lattice field sampler.
