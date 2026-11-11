@@ -527,13 +527,9 @@ fn run_profiles(
         if mode == 0 && !arc && !image {
             let transformed = gauged_and_permuted(body.model());
             let q = verify_classified_closed_with_original_material(
-                &sweep,
-                &sizes,
-                count,
-                &material,
+                ClosedSweepSource { sweep: &sweep, loop_sizes: &sizes, sections: count, material: &material },
                 &classes,
-                1e-8,
-                0.05,
+                SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
                 &sharp,
                 limits(),
                 &transformed,
@@ -558,13 +554,9 @@ fn run_profiles(
             let mut broken = body.model().clone();
             broken.faces[0].surface.control_points[1][1][0] += 2f64.powi(-40);
             let q = verify_classified_closed_with_original_material(
-                &sweep,
-                &sizes,
-                count,
-                &material,
+                ClosedSweepSource { sweep: &sweep, loop_sizes: &sizes, sections: count, material: &material },
                 &classes,
-                1e-8,
-                0.05,
+                SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
                 &sharp,
                 limits(),
                 &broken,

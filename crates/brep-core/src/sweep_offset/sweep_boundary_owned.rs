@@ -81,7 +81,17 @@ pub fn construct(
     error_budget: f64,
     limits: Limits,
 ) -> Result<Attempt> {
-    construct_impl(sweep,loop_sizes,sections,source_caps,retained_caps,tolerance_uv,error_budget,limits,None)
+    construct_impl(
+        sweep,
+        loop_sizes,
+        sections,
+        source_caps,
+        retained_caps,
+        tolerance_uv,
+        error_budget,
+        limits,
+        None,
+    )
 }
 fn construct_impl(sweep:&MultiSweep<'_>,loop_sizes:&[usize],sections:usize,
     source_caps:[&LoftCap;2],retained_caps:[&LoftCap;2],tolerance_uv:f64,error_budget:f64,
@@ -347,13 +357,9 @@ pub fn construct_with_ideal(
     ideal: IdealLimits,
 ) -> Result<Attempt> {
     construct_with_ideal_impl(
-        sweep,
-        loop_sizes,
-        sections,
-        source_caps,
+        SweepSource { sweep, loop_sizes, sections, source_caps },
         retained_caps,
-        tolerance_uv,
-        error_budget,
+        SweepAccuracy { tolerance_uv, error_budget },
         limits,
         ideal,
         false,
@@ -373,30 +379,24 @@ pub fn construct_with_ideal_atlas(
     ideal: IdealLimits,
 ) -> Result<Attempt> {
     construct_with_ideal_impl(
-        sweep,
-        loop_sizes,
-        sections,
-        source_caps,
+        SweepSource { sweep, loop_sizes, sections, source_caps },
         retained_caps,
-        tolerance_uv,
-        error_budget,
+        SweepAccuracy { tolerance_uv, error_budget },
         limits,
         ideal,
         true,
     )
 }
 fn construct_with_ideal_impl(
-    sweep: &MultiSweep<'_>,
-    loop_sizes: &[usize],
-    sections: usize,
-    source_caps: [&LoftCap; 2],
+    source: SweepSource<'_, '_, '_>,
     retained_caps: [&LoftCap; 2],
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: SweepAccuracy,
     limits: Limits,
     ideal: IdealLimits,
     atlas: bool,
 ) -> Result<Attempt> {
+    let SweepSource { sweep, loop_sizes, sections, source_caps } = source;
+    let SweepAccuracy { tolerance_uv, error_budget } = accuracy;
     // Validate stronger limits even when an earlier geometric stage refuses.
     if ideal.cells > if atlas { 1000000 } else { 100000 }
         || ideal.exact_work > 1000000
@@ -485,6 +485,14 @@ pub struct SweepSource<'s, 'a, 'l> {
     pub loop_sizes: &'l [usize],
     pub sections: usize,
     pub source_caps: [&'s LoftCap; 2],
+}
+/// A closed progressive sweep with its loop layout, section count and the original material cap.
+#[derive(Clone, Copy)]
+pub struct ClosedSweepSource<'s, 'a, 'l> {
+    pub sweep: &'s nurbs_core::progressive_sweep::MultiSweep<'a>,
+    pub loop_sizes: &'l [usize],
+    pub sections: usize,
+    pub material: &'s LoftCap,
 }
 /// UV tolerance and model-space error budget of a sweep body construction.
 #[derive(Clone, Copy, Debug)]

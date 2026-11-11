@@ -80,13 +80,9 @@ pub fn construct_classified_closed_with_original_material<'s, 'a>(
     limits: ClassifiedClosedLimits,
 ) -> Result<ClassifiedClosedAttempt<'s, 'a>> {
     construct_impl(
-        sweep,
-        loop_sizes,
-        sections,
-        material,
+        ClosedSweepSource { sweep, loop_sizes, sections, material },
         classes,
-        tolerance_uv,
-        error_budget,
+        SweepAccuracy { tolerance_uv, error_budget },
         sharp_stations,
         limits,
         None,
@@ -95,43 +91,26 @@ pub fn construct_classified_closed_with_original_material<'s, 'a>(
 /// Supplied geometry is freshly rebound, classified and globally requalified.
 /// No source/actual success reports or caller-proposed edge class list is used.
 pub fn verify_classified_closed_with_original_material<'s, 'a>(
-    sweep: &'s MultiSweep<'a>,
-    loop_sizes: &[usize],
-    sections: usize,
-    material: &'s LoftCap,
+    source: ClosedSweepSource<'s, 'a, '_>,
     classes: &[OriginalProfileClass],
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: SweepAccuracy,
     sharp_stations: &[usize],
     limits: ClassifiedClosedLimits,
     model: &Model,
 ) -> Result<ClassifiedClosedAttempt<'s, 'a>> {
     model.validate()?;
-    construct_impl(
-        sweep,
-        loop_sizes,
-        sections,
-        material,
-        classes,
-        tolerance_uv,
-        error_budget,
-        sharp_stations,
-        limits,
-        Some(model),
-    )
+    construct_impl(source, classes, accuracy, sharp_stations, limits, Some(model))
 }
 fn construct_impl<'s, 'a>(
-    sweep: &'s MultiSweep<'a>,
-    loop_sizes: &[usize],
-    sections: usize,
-    material: &'s LoftCap,
+    source: ClosedSweepSource<'s, 'a, '_>,
     classes: &[OriginalProfileClass],
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: SweepAccuracy,
     sharp: &[usize],
     limits: ClassifiedClosedLimits,
     supplied: Option<&Model>,
 ) -> Result<ClassifiedClosedAttempt<'s, 'a>> {
+    let ClosedSweepSource { sweep, loop_sizes, sections, material } = source;
+    let SweepAccuracy { tolerance_uv, error_budget } = accuracy;
     let l = limits.retained;
     if limits.incidence_steps > 1000000
         || l.binding_work > 1000000
