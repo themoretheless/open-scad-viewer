@@ -15,7 +15,8 @@
     "sturm",
     "core",
     "numerics",
-    "bernstein_interpolation"
+    "bernstein_interpolation",
+    "geometry"
   ],
   "curves": [
     "primitives",
@@ -188,7 +189,8 @@
     "polar_surface_differential",
     "rational_pole_differential",
     "surface_boundary_secant",
-    "surface_weight_profile"
+    "surface_weight_profile",
+    "point_inversion"
   ],
   "parameterization": [
     "curve_pullback",

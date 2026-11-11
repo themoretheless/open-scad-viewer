@@ -4,6 +4,7 @@
 /// Existing modules for geometry.
 pub mod geometry {
     pub use crate::bernstein_interpolation;
+    pub use crate::geometry;
 
     pub use crate::core;
     pub use crate::numerics;
@@ -170,6 +171,7 @@ pub mod offsets {
 
 /// Existing modules for queries.
 pub mod queries {
+    pub use crate::point_inversion;
     pub use crate::polar_surface_differential;
     pub use crate::rational_pole_differential;
     pub use crate::surface_boundary_secant;
