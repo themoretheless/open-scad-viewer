@@ -144,11 +144,8 @@ fn g2_traces_bounded(
         traces,
         o,
         tolerances,
-        max_cells,
-        max_exact,
-        max_coefficients,
-        5,
-        o.compatibility_tolerance,
+        CornerWork { max_cells, max_exact, max_coefficients },
+        ProposalFit { minimum_degree: 5, compatibility: o.compatibility_tolerance },
     )?;
     inspect_candidate_bounded(
         &surface,
@@ -174,7 +171,12 @@ pub fn g2_traces_compact(
     max_exact: u64,
 ) -> Result<Report> {
     let surface = propose_traces(
-        supports, traces, o, tolerances, max_cells, max_exact, 2_000_000, 2, 0.,
+        supports,
+        traces,
+        o,
+        tolerances,
+        CornerWork { max_cells, max_exact, max_coefficients: 2_000_000 },
+        ProposalFit { minimum_degree: 2, compatibility: 0. },
     )
     .or_else(|_| {
         propose_traces(
@@ -182,28 +184,37 @@ pub fn g2_traces_compact(
             traces,
             o,
             tolerances,
-            max_cells,
-            max_exact,
-            2_000_000,
-            5,
-            o.compatibility_tolerance,
+            CornerWork { max_cells, max_exact, max_coefficients: 2_000_000 },
+            ProposalFit { minimum_degree: 5, compatibility: o.compatibility_tolerance },
         )
     })?;
     inspect_candidate_bounded(
         &surface, supports, traces, o, tolerances, max_cells, max_exact, 2_000_000,
     )
 }
+/// Cell, exact-work and coefficient limits of one corner patch proposal.
+#[derive(Clone, Copy, Debug)]
+struct CornerWork {
+    max_cells: usize,
+    max_exact: u64,
+    max_coefficients: usize,
+}
+/// Lowest patch degree to try and the trace compatibility tolerance it must meet.
+#[derive(Clone, Copy, Debug)]
+struct ProposalFit {
+    minimum_degree: usize,
+    compatibility: f64,
+}
 fn propose_traces(
     supports: [&Surface; 4],
     traces: [Trace; 4],
     o: Options,
     tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
-    max_coefficients: usize,
-    minimum_degree: usize,
-    compatibility: f64,
+    work: CornerWork,
+    fit: ProposalFit,
 ) -> Result<Surface> {
+    let CornerWork { max_cells, max_exact, max_coefficients } = work;
+    let ProposalFit { minimum_degree, compatibility } = fit;
     check(
         max_coefficients <= 2000000,
         "Corner coefficient budget exceeds limit",
