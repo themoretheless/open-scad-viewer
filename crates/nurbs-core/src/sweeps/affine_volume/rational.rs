@@ -241,20 +241,7 @@ pub fn certify_rational_preconditioned(
 ) -> Result<PreconditionedReport> {
     let mut coordinates = None;
     let mut source_shear = None;
-    let volume = certify_motion_impl(
-        carrier,
-        origin,
-        Motion::Rational(pieces),
-        closed,
-        projection,
-        max_cells,
-        max_exact_work,
-        true,
-        &mut coordinates,
-        &mut source_shear,
-        [[0., 1.]; 2],
-        None,
-    )?;
+    let volume = certify_motion_impl(MotionSource { carrier, origin, pieces: Motion::Rational(pieces), closed, projection, uv_window: [[0., 1.]; 2], second: None }, MotionWork { max_cells, max_exact_work }, true, ProofOutputs { coordinates: &mut coordinates, source_shear: &mut source_shear })?;
     Ok(PreconditionedReport {
         volume,
         coordinates,
@@ -290,20 +277,7 @@ pub fn certify_rational_preconditioned_window(
 ) -> Result<PreconditionedReport> {
     let mut coordinates = None;
     let mut source_shear = None;
-    let volume = certify_motion_impl(
-        carrier,
-        origin,
-        Motion::Rational(pieces),
-        closed,
-        projection,
-        max_cells,
-        max_exact_work,
-        true,
-        &mut coordinates,
-        &mut source_shear,
-        uv_window,
-        None,
-    )?;
+    let volume = certify_motion_impl(MotionSource { carrier, origin, pieces: Motion::Rational(pieces), closed, projection, uv_window, second: None }, MotionWork { max_cells, max_exact_work }, true, ProofOutputs { coordinates: &mut coordinates, source_shear: &mut source_shear })?;
     Ok(PreconditionedReport {
         volume,
         coordinates,

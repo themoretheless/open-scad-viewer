@@ -319,18 +319,10 @@ pub fn certify_preconditioned(
     let mut coordinates = None;
     let mut source_shear = None;
     let volume = certify_motion_impl(
-        carrier,
-        origin,
-        Motion::Quintic(pieces),
-        closed,
-        projection,
-        max_cells,
-        max_exact_work,
+        MotionSource { carrier, origin, pieces: Motion::Quintic(pieces), closed, projection, uv_window: [[0., 1.]; 2], second: None },
+        MotionWork { max_cells, max_exact_work },
         true,
-        &mut coordinates,
-        &mut source_shear,
-        [[0., 1.]; 2],
-        None,
+        ProofOutputs { coordinates: &mut coordinates, source_shear: &mut source_shear },
     )?;
     Ok(PreconditionedReport {
         volume,
@@ -348,34 +340,43 @@ fn certify_motion(
     max_exact_work: u64,
 ) -> Result<IdealVolumeReport> {
     certify_motion_impl(
-        carrier,
-        origin,
-        pieces,
-        closed,
-        projection,
-        max_cells,
-        max_exact_work,
+        MotionSource { carrier, origin, pieces, closed, projection, uv_window: [[0., 1.]; 2], second: None },
+        MotionWork { max_cells, max_exact_work },
         false,
-        &mut None,
-        &mut None,
-        [[0., 1.]; 2],
-        None,
+        ProofOutputs { coordinates: &mut None, source_shear: &mut None },
     )
 }
-fn certify_motion_impl(
-    carrier: &Surface,
+/// The swept carrier and its motion: origin, pieces, closure, projection, the UV window that
+/// holds the material and an optional second (end) surface.
+struct MotionSource<'a> {
+    carrier: &'a Surface,
     origin: [f64; 3],
-    pieces: Motion<'_>,
+    pieces: Motion<'a>,
     closed: bool,
     projection: [[f64; 3]; 3],
+    uv_window: [[f64; 2]; 2],
+    second: Option<&'a Surface>,
+}
+/// Cell and exact-work limits of one motion certification.
+#[derive(Clone, Copy)]
+struct MotionWork {
     max_cells: usize,
     max_exact_work: u64,
+}
+/// Optional proof artifacts the certification fills in.
+struct ProofOutputs<'a> {
+    coordinates: &'a mut Option<ProofCoordinates>,
+    source_shear: &'a mut Option<SourceShearReport>,
+}
+fn certify_motion_impl(
+    source: MotionSource<'_>,
+    work: MotionWork,
     precondition: bool,
-    coordinates: &mut Option<ProofCoordinates>,
-    source_shear_report: &mut Option<SourceShearReport>,
-    uv_window: [[f64; 2]; 2],
-    second: Option<&Surface>,
+    outputs: ProofOutputs<'_>,
 ) -> Result<IdealVolumeReport> {
+    let MotionSource { carrier, origin, pieces, closed, projection, uv_window, second } = source;
+    let MotionWork { max_cells, max_exact_work } = work;
+    let ProofOutputs { coordinates, source_shear: source_shear_report } = outputs;
     carrier.validate()?;
     if let Some(end) = second {
         end.validate()?;
@@ -664,7 +665,12 @@ fn orientation_motion_with_caps(
     // Reuse complete raw-input validation; a zero-budget certificate performs
     // no geometry queries and supplies no atlas/closure credit to this helper.
     let projection = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]];
-    let mut work = certify_motion_impl(carrier, origin, pieces, false, projection, 0, 0, false, &mut None, &mut None, [[0.,1.];2], second)?;
+    let mut work = certify_motion_impl(
+        MotionSource { carrier, origin, pieces, closed: false, projection, uv_window: [[0.,1.];2], second },
+        MotionWork { max_cells: 0, max_exact_work: 0 },
+        false,
+        ProofOutputs { coordinates: &mut None, source_shear: &mut None },
+    )?;
     check(
         max_cells <= 100000
             && point

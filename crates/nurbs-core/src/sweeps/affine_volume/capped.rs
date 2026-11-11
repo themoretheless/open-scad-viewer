@@ -15,20 +15,7 @@ pub fn certify_rational_caps(
     max_cells: usize,
     max_exact_work: u64,
 ) -> Result<IdealVolumeReport> {
-    certify_motion_impl(
-        caps[0],
-        origin,
-        Motion::Rational(pieces),
-        false,
-        projection,
-        max_cells,
-        max_exact_work,
-        true,
-        &mut None,
-        &mut None,
-        [[0.,1.];2],
-        Some(caps[1]),
-    )
+    certify_motion_impl(MotionSource { carrier: caps[0], origin, pieces: Motion::Rational(pieces), closed: false, projection, uv_window: [[0.,1.];2], second: Some(caps[1]) }, MotionWork { max_cells, max_exact_work }, true, ProofOutputs { coordinates: &mut None, source_shear: &mut None })
 }
 /// Conditional WORLD orientation of the same two-carrier source. Its global
 /// interpretation requires independent successful whole-volume admission.
