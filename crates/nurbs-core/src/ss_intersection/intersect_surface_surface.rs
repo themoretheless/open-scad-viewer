@@ -32,8 +32,6 @@ pub fn intersect_surface_surface(
             krawczyk_isolated,
             complete,
             &tolerance,
-            first,
-            second,
         ));
     }
     // Exact iso reduction for a freeform chart against an affine plane carrier.
@@ -48,8 +46,6 @@ pub fn intersect_surface_surface(
             krawczyk_isolated,
             true,
             &tolerance,
-            first,
-            second,
         ));
     }
     if let Some((n, o, _, _)) = affine_plane(first)?
@@ -81,8 +77,6 @@ pub fn intersect_surface_surface(
             krawczyk_isolated,
             true,
             &tolerance,
-            first,
-            second,
         ));
     }
 
@@ -291,8 +285,6 @@ pub fn intersect_surface_surface(
         krawczyk_isolated,
         complete,
         &tolerance,
-        first,
-        second,
     ))
 }
 
@@ -418,10 +410,6 @@ fn build_uv_arrangements(
     })
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "report serialization keeps source surfaces explicit for evidence fields"
-)]
 fn encode_ss_report(
     components: Vec<Value>,
     unresolved: Vec<Value>,
@@ -430,8 +418,6 @@ fn encode_ss_report(
     krawczyk_isolated: usize,
     complete: bool,
     tolerance: &ToleranceContext,
-    _first: &Surface,
-    _second: &Surface,
 ) -> Value {
     let branch_graph = build_branch_graph(&components, complete, tolerance);
     let uv = build_uv_arrangements(&components, complete, tolerance);
