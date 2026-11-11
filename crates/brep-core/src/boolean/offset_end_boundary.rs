@@ -126,6 +126,15 @@ pub struct EndArc {
     pub arc_count: usize,
     pub start: bool,
 }
+impl EndArc {
+    fn loop_arc(self) -> nurbs_core::offset_face_loops::LoopArc {
+        nurbs_core::offset_face_loops::LoopArc {
+            loop_index: self.loop_index,
+            start: self.arc_start,
+            count: self.arc_count,
+        }
+    }
+}
 /// Shell and boundary uses that own the end.
 pub struct EndOwners {
     pub shell: usize,
@@ -142,7 +151,7 @@ pub fn qualify_clipped_end(
     limits: nurbs_core::offset_face_loops::Limits,
 ) -> Result<ClippedEndReport> {
     let EndContact { patch, adjacent, adjacent_pcurve, loop_contact } = contact;
-    let EndArc { loop_index, arc_start, arc_count, start } = arc;
+    let start = arc.start;
     let EndOwners { shell, owners } = ownership;
     if owners[1].cyclic_index != 0 {
         return Err(Error::new(
@@ -174,9 +183,7 @@ pub fn qualify_clipped_end(
     )?;
     let contours = nurbs_core::offset_face_loops::replace_boundary_arc(
         original_loops,
-        loop_index,
-        arc_start,
-        arc_count,
+        arc.loop_arc(),
         loop_contact,
         tolerance_uv,
         limits,
@@ -214,7 +221,7 @@ pub fn qualify_replaced_face(
     limits: crate::trimmed_face_recipe::Limits,
 ) -> Result<ReplacedEndFace> {
     let EndContact { patch, adjacent, adjacent_pcurve, loop_contact } = contact;
-    let EndArc { loop_index, arc_start, arc_count, start } = arc;
+    let start = arc.start;
     let EndOwners { shell, owners } = ownership;
     if owners[1].cyclic_index != 0 {
         return Err(Error::new(
@@ -253,9 +260,7 @@ pub fn qualify_replaced_face(
         context,
         adjacent,
         original_wires,
-        loop_index,
-        arc_start,
-        arc_count,
+        arc.loop_arc(),
         &contact,
         tolerance_uv,
         limits,

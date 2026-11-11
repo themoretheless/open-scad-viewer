@@ -179,24 +179,28 @@ fn connector(a: Vec<f64>, b: Vec<f64>) -> Curve {
         periodic: false,
     }
 }
+/// A run of `count` consecutive source boundary curves of loop `loop_index`,
+/// starting at curve `start` (wrapping around the loop).
+#[derive(Clone, Copy, Debug)]
+pub struct LoopArc {
+    pub loop_index: usize,
+    pub start: usize,
+    pub count: usize,
+}
 /// Contact traversal is supplied explicitly; this function never reverses,
 /// trims, resamples or snaps a previously qualified contact curve.
 /// The removed arc consists of whole, prequalified source boundary curves.
 /// Partial-edge partitioning and world transition curves remain separate.
 pub fn splice(
     loops: &[Vec<Curve>],
-    loop_index: usize,
-    arc_start: usize,
-    arc_count: usize,
+    arc: LoopArc,
     contact: &Curve,
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<Report> {
     splice_impl(
         loops,
-        loop_index,
-        arc_start,
-        arc_count,
+        arc,
         std::slice::from_ref(contact),
         tolerance_uv,
         limits,
@@ -208,22 +212,18 @@ pub fn splice(
 /// No connector, partial-edge trim or world face is manufactured here.
 pub fn replace_boundary_arc(
     loops: &[Vec<Curve>],
-    loop_index: usize,
-    arc_start: usize,
-    arc_count: usize,
+    arc: LoopArc,
     contact: &Curve,
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<Report> {
     check(
-        arc_count >= 2,
+        arc.count >= 2,
         "Boundary contact replacement needs two distinct endpoint curves",
     )?;
     splice_impl(
         loops,
-        loop_index,
-        arc_start,
-        arc_count,
+        arc,
         std::slice::from_ref(contact),
         tolerance_uv,
         limits,
@@ -234,22 +234,18 @@ pub fn replace_boundary_arc(
 /// Every shared contact endpoint must be identical in the source chart.
 pub fn replace_boundary_path(
     loops: &[Vec<Curve>],
-    loop_index: usize,
-    arc_start: usize,
-    arc_count: usize,
+    arc: LoopArc,
     contacts: &[Curve],
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<Report> {
     check(
-        arc_count >= 2,
+        arc.count >= 2,
         "Boundary contact replacement needs two distinct endpoint curves",
     )?;
     splice_impl(
         loops,
-        loop_index,
-        arc_start,
-        arc_count,
+        arc,
         contacts,
         tolerance_uv,
         limits,
@@ -258,14 +254,17 @@ pub fn replace_boundary_path(
 }
 fn splice_impl(
     loops: &[Vec<Curve>],
-    loop_index: usize,
-    arc_start: usize,
-    arc_count: usize,
+    arc: LoopArc,
     contacts: &[Curve],
     tolerance_uv: f64,
     limits: Limits,
     boundary_contact: bool,
 ) -> Result<Report> {
+    let LoopArc {
+        loop_index,
+        start: arc_start,
+        count: arc_count,
+    } = arc;
     check(
         loop_index < loops.len()
             && arc_start < loops[loop_index].len()
@@ -538,7 +537,17 @@ mod tests {
         let loops = vec![square()];
         let before = loops.clone();
         let p = contact();
-        let r = splice(&loops, 0, 0, 1, &p, 1e-8, limits()).unwrap();
+        let r = splice(
+            &loops,
+            LoopArc {
+                loop_index: 0,
+                start: 0,
+                count: 1,
+            },
+            &p,
+            1e-8,
+            limits(),
+        ).unwrap();
         assert!(r.region_subset_proven, "{}", r.reason);
         assert!(r.exact_retained_geometry);
         let new = &r.loops.as_ref().unwrap()[0];
@@ -558,7 +567,17 @@ mod tests {
         for q in &mut p.control_points {
             q[1] += 1.;
         }
-        let r = splice(&loops, 0, 0, 1, &p, 1e-8, limits()).unwrap();
+        let r = splice(
+            &loops,
+            LoopArc {
+                loop_index: 0,
+                start: 0,
+                count: 1,
+            },
+            &p,
+            1e-8,
+            limits(),
+        ).unwrap();
         assert!(!r.region_subset_proven);
         assert_eq!(r.reason, "contact-not-inside-original-region");
         let mut hole = square();
@@ -574,14 +593,34 @@ mod tests {
             .map(|c| c.reverse().unwrap())
             .collect();
         let loops = vec![square(), hole];
-        let r = splice(&loops, 0, 0, 1, &contact(), 1e-8, limits()).unwrap();
+        let r = splice(
+            &loops,
+            LoopArc {
+                loop_index: 0,
+                start: 0,
+                count: 1,
+            },
+            &contact(),
+            1e-8,
+            limits(),
+        ).unwrap();
         assert!(!r.region_subset_proven);
         let work = Limits {
             pairs: 1,
             cells: 1,
             domain_cells: 1,
         };
-        let r = splice(&[square()], 0, 0, 1, &contact(), 1e-8, work).unwrap();
+        let r = splice(
+            &[square()],
+            LoopArc {
+                loop_index: 0,
+                start: 0,
+                count: 1,
+            },
+            &contact(),
+            1e-8,
+            work,
+        ).unwrap();
         assert!(!r.region_subset_proven);
     }
     #[test]
@@ -602,7 +641,17 @@ mod tests {
             .map(|c| c.reverse().unwrap())
             .collect();
         let loops = vec![outer, hole];
-        let r = splice(&loops, 0, 0, 2, &contact(), 1e-8, limits()).unwrap();
+        let r = splice(
+            &loops,
+            LoopArc {
+                loop_index: 0,
+                start: 0,
+                count: 2,
+            },
+            &contact(),
+            1e-8,
+            limits(),
+        ).unwrap();
         assert!(r.region_subset_proven, "{}", r.reason);
         assert_eq!(r.loops.as_ref().unwrap()[1], loops[1]);
         assert_eq!(r.removed_pair_checks, 6);
@@ -628,7 +677,17 @@ mod tests {
                 q[1] = x + y;
             }
         }
-        let r = splice(&[outer.clone()], 0, 4, 2, &p, 1e-8, limits()).unwrap();
+        let r = splice(
+            &[outer.clone()],
+            LoopArc {
+                loop_index: 0,
+                start: 4,
+                count: 2,
+            },
+            &p,
+            1e-8,
+            limits(),
+        ).unwrap();
         assert!(r.region_subset_proven, "{}", r.reason);
         let new = &r.loops.as_ref().unwrap()[0];
         assert_eq!(new[1], p);
@@ -649,19 +708,11 @@ mod tests {
     fn malformed_contact_is_not_hidden_by_exhausted_audit_budget() {
         let mut p = contact();
         p.weights[1] = -1.;
-        assert!(splice(
-            &[square()],
-            0,
-            0,
-            1,
-            &p,
-            1e-8,
-            Limits {
+        assert!(splice(&[square()], LoopArc { loop_index: 0, start: 0, count: 1 }, &p, 1e-8, Limits {
                 pairs: 1,
                 cells: 1,
                 domain_cells: 1
-            }
-        )
+            })
         .is_err());
     }
     #[test]
@@ -677,7 +728,17 @@ mod tests {
             weights: vec![1., 0.5f64.sqrt(), 1.],
             periodic: false,
         };
-        let r = replace_boundary_arc(&[outer.clone()], 0, 0, 2, &p, 1e-8, limits()).unwrap();
+        let r = replace_boundary_arc(
+            &[outer.clone()],
+            LoopArc {
+                loop_index: 0,
+                start: 0,
+                count: 2,
+            },
+            &p,
+            1e-8,
+            limits(),
+        ).unwrap();
         assert!(r.region_subset_proven, "{}", r.reason);
         assert_eq!(r.origins[0], Origin::Contact);
         let new = &r.loops.as_ref().unwrap()[0];
@@ -686,7 +747,17 @@ mod tests {
         let mut wrong = p;
         wrong.control_points[0][0] = 0.9;
         assert!(
-            !replace_boundary_arc(&[outer], 0, 0, 2, &wrong, 1e-8, limits())
+            !replace_boundary_arc(
+                &[outer],
+                LoopArc {
+                    loop_index: 0,
+                    start: 0,
+                    count: 2,
+                },
+                &wrong,
+                1e-8,
+                limits(),
+            )
                 .unwrap()
                 .region_subset_proven
         );
@@ -701,7 +772,17 @@ mod tests {
             connector(points[0].clone(), vec![0.5, 0.5]),
             connector(vec![0.5, 0.5], points[2].clone()),
         ];
-        let r = replace_boundary_path(&[outer.clone()], 0, 0, 2, &path, 1e-8, limits()).unwrap();
+        let r = replace_boundary_path(
+            &[outer.clone()],
+            LoopArc {
+                loop_index: 0,
+                start: 0,
+                count: 2,
+            },
+            &path,
+            1e-8,
+            limits(),
+        ).unwrap();
         assert!(r.region_subset_proven, "{}", r.reason);
         assert_eq!(
             r.origins[..2],
@@ -721,6 +802,16 @@ mod tests {
         );
         let mut broken = path;
         broken[1].control_points[0][0] = 0.5000000000000001;
-        assert!(replace_boundary_path(&[outer], 0, 0, 2, &broken, 1e-8, limits()).is_err());
+        assert!(replace_boundary_path(
+            &[outer],
+            LoopArc {
+                loop_index: 0,
+                start: 0,
+                count: 2,
+            },
+            &broken,
+            1e-8,
+            limits(),
+        ).is_err());
     }
 }

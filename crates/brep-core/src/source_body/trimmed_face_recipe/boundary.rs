@@ -1,4 +1,5 @@
 use super::*;
+use nurbs_core::offset_face_loops::LoopArc;
 
 #[derive(Clone)]
 pub struct Boundary {
@@ -248,9 +249,7 @@ pub fn replace_boundary_arc(
     context: &ToleranceContext,
     surface: &Surface,
     wires: &[Vec<Boundary>],
-    loop_index: usize,
-    arc_start: usize,
-    arc_count: usize,
+    arc: LoopArc,
     contact: &Boundary,
     tolerance_uv: f64,
     limits: Limits,
@@ -259,9 +258,7 @@ pub fn replace_boundary_arc(
         context,
         surface,
         wires,
-        loop_index,
-        arc_start,
-        arc_count,
+        arc,
         std::slice::from_ref(contact),
         tolerance_uv,
         limits,
@@ -273,9 +270,7 @@ pub fn replace_boundary_path(
     context: &ToleranceContext,
     surface: &Surface,
     wires: &[Vec<Boundary>],
-    loop_index: usize,
-    arc_start: usize,
-    arc_count: usize,
+    arc: LoopArc,
     contacts: &[Boundary],
     tolerance_uv: f64,
     limits: Limits,
@@ -313,9 +308,7 @@ pub fn replace_boundary_path(
         .collect::<Vec<Vec<Curve>>>();
     let contour = nurbs_core::offset_face_loops::replace_boundary_path(
         &uv,
-        loop_index,
-        arc_start,
-        arc_count,
+        arc,
         &contacts
             .iter()
             .map(|c| c.pcurve.clone())
@@ -343,7 +336,7 @@ pub fn replace_boundary_path(
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
-    replacement[loop_index] = contour
+    replacement[arc.loop_index] = contour
         .origins
         .iter()
         .map(|origin| {
@@ -483,9 +476,11 @@ pub fn partition_and_replace_path(
         context,
         surface,
         &expanded,
-        loop_index,
-        begin,
-        count,
+        LoopArc {
+            loop_index,
+            start: begin,
+            count,
+        },
         contacts,
         tolerance_uv,
         limits,

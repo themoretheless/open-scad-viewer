@@ -691,9 +691,11 @@ mod tests {
                 &context,
                 &face.surface,
                 &original,
-                0,
-                0,
-                2,
+                nurbs_core::offset_face_loops::LoopArc {
+                    loop_index: 0,
+                    start: 0,
+                    count: 2,
+                },
                 &contact,
                 1e-8,
                 Limits {
