@@ -173,150 +173,8 @@ pub(crate) fn restricted_ends(c: &Curve, ends: [Interval; 2]) -> Result<Option<V
     }
     Ok(Some(out))
 }
-pub(crate) fn surface_net(s: &Surface, span: [usize; 2]) -> Result<Vec<Vec<[Interval; 4]>>> {
-    surface_net_on(
-        s,
-        span,
-        [
-            [s.knots_u[span[0]], s.knots_u[span[0] + 1]],
-            [s.knots_v[span[1]], s.knots_v[span[1] + 1]],
-        ],
-    )
-}
-fn surface_homogeneous_controls_with_origin(s: &Surface, span: [usize;2], origin:Option<[f64;3]>) -> Result<(Vec<Vec<[Interval;4]>>, [f64;2])> {
-    surface_homogeneous_controls_weighted(s,span,origin,|i,j|Ok(Interval::point(s.weights[i][j])))
-}
-/// Extract from an original chart with an explicitly supplied homogeneous
-/// weight expression. Callers own validation and weight/source correspondence.
-fn surface_homogeneous_controls_weighted(s: &Surface, span: [usize;2], origin:Option<[f64;3]>, weight:impl Fn(usize,usize)->Result<Interval>) -> Result<(Vec<Vec<[Interval;4]>>, [f64;2])> {
-    let [iu, iv] = span; let (p,q) = (s.degree_u,s.degree_v);
-    let mut controls = Vec::new();
-    let mut weights = [f64::INFINITY, 0_f64];
-    for i in iu - p..=iu {
-        let mut row = Vec::new();
-        for j in iv - q..=iv {
-            let w = weight(i,j)?;
-            weights[0] = weights[0].min(w.lo);
-            weights[1] = weights[1].max(w.hi);
-            let cp = &s.control_points[i][j];
-            let mut centered=[Interval::point(cp[0]),Interval::point(cp[1]),Interval::point(cp[2])];
-            if let Some(origin)=origin {for k in 0..3 {centered[k]=centered[k].exact_sub(Interval::point(origin[k]))?;}}
-            row.push([
-                centered[0].exact_mul(w)?,
-                centered[1].exact_mul(w)?,
-                centered[2].exact_mul(w)?,
-                w,
-            ]);
-        }
-        controls.push(row);
-    }
-    Ok((controls, weights))
-}
-/// Exact Bernstein restriction identity with outward interval arithmetic.
-/// Only complete original Bernstein spans qualify; general B-splines keep
-/// the original blossom routine. No surface poles or knots are modified.
-pub(crate) fn surface_net_on_bernstein(s: &Surface, span: [usize;2], domain: [[f64;2];2]) -> Result<Option<Vec<Vec<[Interval;4]>>>> {
-    surface_net_on_bernstein_with_origin(s,span,domain,None)
-}
-fn surface_net_on_bernstein_with_origin(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:Option<[f64;3]>)->Result<Option<Vec<Vec<[Interval;4]>>>> {
-    let [iu,iv]=span; let (p,q)=(s.degree_u,s.degree_v);
-    if !crate::surface_distance::complete_bernstein_span(p,&s.knots_u,iu)
-        || !crate::surface_distance::complete_bernstein_span(q,&s.knots_v,iv) { return Ok(None); }
-    let spans=[[s.knots_u[iu],s.knots_u[iu+1]],[s.knots_v[iv],s.knots_v[iv+1]]];
-    if (0..2).any(|axis| domain[axis].iter().any(|x|!x.is_finite())
-        ||domain[axis][0]<spans[axis][0]||domain[axis][1]>spans[axis][1]||domain[axis][0]>domain[axis][1]) { return Ok(None); }
-    let (controls,weights)=surface_homogeneous_controls_with_origin(s,span,origin)?;
-    let mut rows=Vec::with_capacity(p+1);
-    for row in controls {
-        let mut restricted=crate::surface_distance::restrict_bernstein_controls(&row,spans[1],domain[1],weights)?;
-        if restricted.len()==1 { restricted.resize(q+1,restricted[0]); }
-        rows.push(restricted);
-    }
-    let mut out=vec![vec![[Interval::point(0.);4];q+1];p+1];
-    for j in 0..=q {
-        let column=rows.iter().map(|row|row[j]).collect::<Vec<_>>();
-        let mut restricted=crate::surface_distance::restrict_bernstein_controls(&column,spans[0],domain[0],weights)?;
-        if restricted.len()==1 { restricted.resize(p+1,restricted[0]); }
-        for (i,h) in restricted.into_iter().enumerate() { out[i][j]=h; }
-    }
-    Ok(Some(out))
-}
-pub(crate) fn surface_net_on(
-    s: &Surface,
-    span: [usize; 2],
-    domain: [[f64; 2]; 2],
-) -> Result<Vec<Vec<[Interval; 4]>>> {
-    surface_net_on_with_origin(s,span,domain,None)
-}
-/// Translate the original homogeneous poles before interval restriction.
-/// Subtraction and multiplication are outward; original surfaces stay intact.
-pub(crate) fn surface_net_on_centered(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:[f64;3])->Result<Vec<Vec<[Interval;4]>>> {
-    let mut net=match surface_net_on_bernstein_with_origin(s,span,domain,Some(origin))? {
-        Some(net)=>net,None=>surface_net_on_with_origin(s,span,domain,Some(origin))?,
-    };
-    // Linear extraction preserves a literal zero coefficient row. Recognize
-    // that identity on original controls before outward arithmetic can create
-    // subnormal intervals around zero. No small nonzero value is discarded.
-    for axis in 0..2 {
-        let (degree,knots)=if axis==0 {(s.degree_u,&s.knots_u)}else{(s.degree_v,&s.knots_v)};
-        if !crate::surface_distance::complete_bernstein_span(degree,knots,span[axis])
-            || domain[axis]!=[knots[span[axis]],knots[span[axis]+1]] {continue;}
-        for i in 0..=degree {for k in 0..3 {
-            let fixed=span[axis]-degree+i;
-            let other_degree=if axis==0 {s.degree_v}else{s.degree_u};
-            let zero=(span[1-axis]-other_degree..=span[1-axis]).all(|j|{
-                let (u,v)=if axis==0 {(fixed,j)}else{(j,fixed)};
-                s.control_points[u][v][k]==origin[k]
-            });
-            if zero {for j in 0..=other_degree {
-                let (u,v)=if axis==0 {(i,j)}else{(j,i)};net[u][v][k]=Interval::point(0.);
-            }}
-        }}
-    }
-    Ok(net)
-}
-fn surface_net_on_with_origin(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:Option<[f64;3]>)->Result<Vec<Vec<[Interval;4]>>> {
-    surface_net_on_weighted(s,span,domain,origin,|i,j|Ok(Interval::point(s.weights[i][j])))
-}
-/// Extract from an original chart with an explicitly supplied homogeneous
-/// weight expression. Callers own validation and weight/source correspondence.
-pub(crate) fn surface_net_on_with_weights(
-    s:&Surface,span:[usize;2],domain:[[f64;2];2],
-    weight:impl Fn(usize,usize)->Result<Interval>,
-)->Result<Vec<Vec<[Interval;4]>>> {
-    surface_net_on_weighted(s,span,domain,None,weight)
-}
-/// Center original positions before homogeneous multiplication and extraction.
-/// The interval subtraction encloses the exact translated control coordinates.
-pub(crate) fn surface_net_on_with_weights_centered(
-    s:&Surface,span:[usize;2],domain:[[f64;2];2],
-    weight:impl Fn(usize,usize)->Result<Interval>,origin:[f64;3],
-)->Result<Vec<Vec<[Interval;4]>>> {
-    surface_net_on_weighted(s,span,domain,Some(origin),weight)
-}
-fn surface_net_on_weighted(s:&Surface,span:[usize;2],domain:[[f64;2];2],origin:Option<[f64;3]>,weight:impl Fn(usize,usize)->Result<Interval>)->Result<Vec<Vec<[Interval;4]>>> {
-    let [iu, iv] = span;
-    let (p, q) = (s.degree_u, s.degree_v);
-    let (controls, weights) = surface_homogeneous_controls_weighted(s, span, origin, weight)?;
-    let mut out = vec![vec![[Interval::point(0.); 4]; q + 1]; p + 1];
-    let u_plans = (0..=p).map(|u| {
-        let us = (0..p).map(|k| domain[0][usize::from(k >= p - u)]).collect::<Vec<_>>();
-        crate::surface_distance::interpolation_plan(p, &s.knots_u, iu, &us)
-    }).collect::<Result<Vec<_>>>()?;
-    let mut rows = Vec::with_capacity(controls.len());
-    for v in 0..=q {
-        let vs = (0..q).map(|k| domain[1][usize::from(k >= q - v)]).collect::<Vec<_>>();
-        let v_plan = crate::surface_distance::interpolation_plan(q, &s.knots_v, iv, &vs)?;
-        rows.clear();
-        for r in &controls {
-            rows.push(crate::surface_distance::interpolate_planned(r, q, &v_plan, weights)?);
-        }
-        for (u, plan) in u_plans.iter().enumerate() {
-            out[u][v] = crate::surface_distance::interpolate_planned(&rows, p, plan, weights)?;
-        }
-    }
-    Ok(out)
-}
+pub(crate) use crate::distance::homogeneous_net::{surface_net, surface_net_on, surface_net_on_bernstein,
+    surface_net_on_centered, surface_net_on_with_weights, surface_net_on_with_weights_centered};
 /// Optional bound on one normalized interval. Every intersected surface chart
 /// contributes an extension bound; unsupported cases retain general coverage.
 pub(crate) fn upper_cell(
@@ -704,6 +562,7 @@ pub(crate) fn upper_cell_on(c:&Curve,p:&Curve,s:&Surface,reversed:bool,t:[f64;2]
         [mapped_range(source_interval,Interval::point(t[0]),false)?,mapped_range(source_interval,Interval::point(t[1]),false)?])
 }
 
-#[path = "curve_surface_composition/exact.rs"]
-mod exact;
-use exact::ExactIdentities;
+use crate::distance::homogeneous_net::ExactIdentities;
+#[cfg(test)]
+#[path = "curve_surface_composition/exact_tests.rs"]
+mod exact_tests;

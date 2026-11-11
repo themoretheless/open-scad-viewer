@@ -1,5 +1,6 @@
 //! Source-owned exact rational pole decomposition and weighted chord columns.
-use crate::{check, interval_eval::Interval as I, normal_alignment, surface::Surface, Result};
+use crate::{check, interval_eval::Interval as I, surface::Surface, Result};
+use crate::distance::homogeneous_net;
 use cad_predicates::{
     AuthoredScalar, LeafRef, Limits, PredicateContext, Sign, SourceArena, ToleranceContext,
 };
@@ -504,7 +505,7 @@ impl<'a> Certificate<'a> {
         let mut extended = d;
         extended[0] = [0., I::point(d[0][1]).mul(I::point(4.))?.hi.min(1.)];
         let mut used = 1;
-        let weight = normal_alignment::restrict_hull(
+        let weight = homogeneous_net::restrict_hull(
             &self.weight,
             [self.weight.len() - 1, self.weight[0].len() - 1],
             [[0., 1.], [0., 1.]],
@@ -518,9 +519,9 @@ impl<'a> Certificate<'a> {
         let mut prefix = d;
         prefix[0][0] = 0.;
         used += 1;
-        let endpoint = normal_alignment::rational_quotient_hull(&self.lambda, prefix)?[0];
+        let endpoint = homogeneous_net::rational_quotient_hull(&self.lambda, prefix)?[0];
         used += 1;
-        let lambda = normal_alignment::rational_quotient_hull(&self.lambda, extended)?[0];
+        let lambda = homogeneous_net::rational_quotient_hull(&self.lambda, extended)?[0];
         if lambda.lo <= 0. && lambda.hi >= 0. {
             return Ok((None, used));
         }
@@ -536,13 +537,13 @@ impl<'a> Certificate<'a> {
         }
         used += 1;
         let Some(ratio) =
-            normal_alignment::signed_rational_quotient_hull(&self.e_over_lambda, extended)?
+            homogeneous_net::signed_rational_quotient_hull(&self.e_over_lambda, extended)?
         else {
             return Ok((None, used));
         };
         used += 1;
         let Some(second) =
-            normal_alignment::signed_rational_quotient_hull(&self.fixed_x, extended)?
+            homogeneous_net::signed_rational_quotient_hull(&self.fixed_x, extended)?
         else {
             return Ok((None, used));
         };
@@ -585,7 +586,7 @@ impl<'a> Certificate<'a> {
             d[1],
         ];
         let mut used = 1;
-        let lambda = normal_alignment::rational_quotient_hull(&self.lambda, extended)?[0];
+        let lambda = homogeneous_net::rational_quotient_hull(&self.lambda, extended)?[0];
         if lambda.lo <= 0. && lambda.hi >= 0. {
             return Ok((None, used));
         }
@@ -598,17 +599,17 @@ impl<'a> Certificate<'a> {
         };
         used += 1;
         let mut endpoint =
-            orient(normal_alignment::rational_quotient_hull(&self.anchor_position, d)?[0])?;
+            orient(homogeneous_net::rational_quotient_hull(&self.anchor_position, d)?[0])?;
         used += 1;
         let mut left = orient(
-            normal_alignment::rational_quotient_hull(
+            homogeneous_net::rational_quotient_hull(
                 &self.anchor_position,
                 [[extended[0][0]; 2], d[1]],
             )?[0],
         )?;
         used += 1;
         let right = orient(
-            normal_alignment::rational_quotient_hull(
+            homogeneous_net::rational_quotient_hull(
                 &self.anchor_position,
                 [[extended[0][1]; 2], d[1]],
             )?[0],
@@ -624,13 +625,13 @@ impl<'a> Certificate<'a> {
         }
         used += 1;
         let Some(ratio) =
-            normal_alignment::signed_rational_quotient_hull(&self.e_over_lambda, extended)?
+            homogeneous_net::signed_rational_quotient_hull(&self.e_over_lambda, extended)?
         else {
             return Ok((None, used));
         };
         used += 1;
         let Some(second) =
-            normal_alignment::signed_rational_quotient_hull(&self.fixed_x, extended)?
+            homogeneous_net::signed_rational_quotient_hull(&self.fixed_x, extended)?
         else {
             return Ok((None, used));
         };
@@ -650,7 +651,7 @@ impl<'a> Certificate<'a> {
         -> Result<(Option<[[I; 2]; 3]>, usize)> {
         let d = self.normalized_domain(domain)?;
         let hull = |net: &Net| {
-            normal_alignment::restrict_hull(
+            homogeneous_net::restrict_hull(
                 net,
                 [net.len() - 1, net[0].len() - 1],
                 [[0., 1.], [0., 1.]],
@@ -660,7 +661,7 @@ impl<'a> Certificate<'a> {
         let mut used = 1;
         let w = hull(&self.weight)?[0];
         check(w.lo > 0., "Positive original rational pole denominator")?;
-        let quotient = |net: &Net| normal_alignment::rational_quotient_hull(net, d);
+        let quotient = |net: &Net| homogeneous_net::rational_quotient_hull(net, d);
         used += 1;
         let lambda = quotient(&self.lambda)?[0];
         if lambda.lo <= 0. && lambda.hi >= 0. {

@@ -1,4 +1,4 @@
-//! normal alignment algorithm: restrict_hull.
+//! Homogeneous net helper: restrict_hull.
 use super::*;
 pub fn restrict_hull(
     net: &Net,

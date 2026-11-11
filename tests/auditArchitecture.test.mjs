@@ -160,3 +160,10 @@ test('a crate-root file declared with #[path] from a layer module belongs to tha
   assert.equal(owner.get(src + 'low/inner.rs'), 'low')
   assert.equal(owner.get(src + 'probe.rs'), undefined)
 })
+
+test('an inline facade module in the crate root resolves to the module it re-exports', async () => {
+  const {rootAliases} = await import('../scripts/moduleLayers.mjs')
+  const aliases = rootAliases('pub use crate::core::curve;\npub mod facade {\n    pub use crate::analysis::facade::*;\n    pub use crate::trim::X;\n}\n')
+  assert.equal(aliases.curve, 'core')
+  assert.equal(aliases.facade, 'analysis')
+})

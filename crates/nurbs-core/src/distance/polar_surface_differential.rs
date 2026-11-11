@@ -1,7 +1,8 @@
 //! Original mean-differential columns for a verified quadratic collapsed rail.
 //! S_v=t² B: a chord is A delta_u + B_mean delta_v integral(t²),
 //! with independent averaged columns enclosed here, including t=0 limits.
-use crate::{interval_eval::Interval as I, normal_alignment, surface::Surface, Result};
+use crate::{interval_eval::Interval as I, surface::Surface, Result};
+use crate::distance::homogeneous_net;
 pub(crate) fn bounds(s: &Surface, end: bool, domain: [[f64; 2]; 2]) -> Result<Option<[[I; 2]; 3]>> {
     let p = s.degree_u;
     let q = s.degree_v;
@@ -60,9 +61,9 @@ pub(crate) fn bounds(s: &Surface, end: bool, domain: [[f64; 2]; 2]) -> Result<Op
             }
         }
     }
-    let values = normal_alignment::restrict_hull(&net, [p, q], span, d)?;
+    let values = homogeneous_net::restrict_hull(&net, [p, q], span, d)?;
     let denominator = values[3].mul(values[3])?;
-    let mut dv = normal_alignment::differentiate_net(&net, [p, q], 1, span)?;
+    let mut dv = homogeneous_net::differentiate_net(&net, [p, q], 1, span)?;
     for row in &mut dv[..2] {
         for h in row {
             *h = [I::point(0.); 4];
@@ -81,8 +82,8 @@ pub(crate) fn bounds(s: &Surface, end: bool, domain: [[f64; 2]; 2]) -> Result<Op
         }
         factored.push(row);
     }
-    let scaled = normal_alignment::restrict_hull(&factored, [p - 2, q - 1], span, d)?;
-    let mut j = normal_alignment::jacobian_on(&source, [p, q], d)?;
+    let scaled = homogeneous_net::restrict_hull(&factored, [p - 2, q - 1], span, d)?;
+    let mut j = homogeneous_net::jacobian_on(&source, [p, q], d)?;
     for k in 0..3 {
         j[k][1] = scaled[k]
             .mul(values[3])?

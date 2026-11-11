@@ -29,6 +29,10 @@ export function rootAliases(libText) {
     const segments = (m[1] + m[2]).split('::')
     aliases[m[3] ?? segments.at(-1)] = segments[0]
   }
+  // Inline facade modules, `pub mod x { pub use crate::a::b::*; ... }`, resolve to their first re-export.
+  for (const m of stripCommentsAndStrings(libText).matchAll(/\bmod\s+([a-z_]\w*)\s*\{\s*(?:#\[[^\]]*\]\s*)*pub(?:\([^)]*\))?\s+use\s+(?:crate::)?([a-z_]\w*)/g)) {
+    aliases[m[1]] ??= m[2]
+  }
   return aliases
 }
 

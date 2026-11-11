@@ -1,4 +1,4 @@
-//! normal alignment algorithm: restrict_net.
+//! Homogeneous net helper: restrict_net.
 use super::*;
 pub fn restrict_net(
     net: &Net,

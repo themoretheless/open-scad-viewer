@@ -1,4 +1,4 @@
-//! normal alignment algorithm: restrict_unit_net.
+//! Homogeneous net helper: restrict_unit_net.
 use super::*;
 /// Restrict all coefficients together by two de Casteljau splits per axis.
 /// This keeps closed endpoints and avoids a separate blossom for every cell.

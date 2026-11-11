@@ -113,138 +113,15 @@ pub(crate) fn chord_cone_projection_proposal(generators:&[[[f64;2];3]])->Option<
 #[cfg(test)]
 #[path="normal_alignment/tests/positive_chord_cone_tests.rs"]
 mod positive_chord_cone_tests;
-type Net = Vec<Vec<[I; 4]>>;
+pub(crate) use crate::distance::homogeneous_net::Net;
 
 
 
-/// Positive denominator Bernstein coefficients make a rational polynomial a
-/// convex combination of coefficient quotients, including after restriction.
-pub(crate) fn rational_quotient_hull(net: &Net, domain: [[f64; 2]; 2]) -> Result<[I; 3]> {
-    let restricted = restrict_unit_net(net, domain)?;
-    let mut out = [I {
-        lo: f64::INFINITY,
-        hi: f64::NEG_INFINITY,
-    }; 3];
-    for h in restricted.iter().flatten() {
-        for k in 0..3 {
-            let value = h[k].div(h[3])?;
-            out[k].lo = out[k].lo.min(value.lo);
-            out[k].hi = out[k].hi.max(value.hi);
-        }
-    }
-    Ok(out)
-}
-/// Signed denominators are allowed only when all restricted coefficients have
-/// the same separated sign, so their rational convex weights remain positive.
-pub(crate) fn signed_rational_quotient_hull(
-    net: &Net,
-    domain: [[f64; 2]; 2],
-) -> Result<Option<[I; 3]>> {
-    let r = restrict_unit_net(net, domain)?;
-    let positive = r.iter().flatten().all(|h| h[3].lo > 0.);
-    let negative = r.iter().flatten().all(|h| h[3].hi < 0.);
-    if !positive && !negative {
-        return Ok(None);
-    }
-    let mut out = [I {
-        lo: f64::INFINITY,
-        hi: f64::NEG_INFINITY,
-    }; 3];
-    for h in r.iter().flatten() {
-        for k in 0..3 {
-            let x = h[k].div_signed(h[3])?;
-            out[k].lo = out[k].lo.min(x.lo);
-            out[k].hi = out[k].hi.max(x.hi);
-        }
-    }
-    Ok(Some(out))
-}
-pub(crate) fn jacobian_on(
-    s: &Surface,
-    indices: [usize; 2],
-    domain: [[f64; 2]; 2],
-) -> Result<[[I; 2]; 3]> {
-    let [u, v] = indices;
-    let (p, q) = (s.degree_u, s.degree_v);
-    let span = [
-        [s.knots_u[u], s.knots_u[u + 1]],
-        [s.knots_v[v], s.knots_v[v + 1]],
-    ];
-    let origin = s.evaluate_validated(domain[0][0]*0.5+domain[0][1]*0.5,
-        domain[1][0]*0.5+domain[1][1]*0.5)?.point;
-    // Translate original controls before homogeneous multiplication/extraction.
-    // The finite origin is only a numerical reference; interval subtraction
-    // encloses the exact translated expression and its unchanged derivatives.
-    let net = crate::curve_surface_composition::surface_net_on_with_weights_centered(
-        s,indices,span,|i,j|Ok(I::point(s.weights[i][j])),
-        std::array::from_fn(|k|origin[k]),
-    )?;
-    jacobian_net_on(net, [p,q], span, domain, &[0.;3])
-}
-/// Any finite translation cancels from the quotient derivative. The supplied
-/// homogeneous coefficients must describe the actual surface being qualified.
-pub(crate) fn jacobian_net_on(mut net: Net, [p,q]: [usize;2],
-    span:[[f64;2];2], domain:[[f64;2];2], origin:&[f64]) -> Result<[[I;2];3]> {
-    for row in &mut net {
-        for h in row {
-            for k in 0..3 {
-                h[k] = h[k].sub(I::point(origin[k]).mul(h[3])?)?;
-            }
-        }
-    }
-    let values = restrict_hull(&net, [p, q], span, domain)?;
-    let denominator = values[3].mul(values[3])?;
-    let mut result = [[I::point(0.); 2]; 3];
-    for axis in 0..2 {
-        let degree = [p, q][axis];
-        if degree == 0 {
-            continue;
-        }
-        let derivatives = differentiate_net(&net, [p, q], axis, span)?;
-        let d = restrict_hull(
-            &derivatives,
-            [p - usize::from(axis == 0), q - usize::from(axis == 1)],
-            span,
-            domain,
-        )?;
-        for k in 0..3 {
-            result[k][axis] = d[k]
-                .mul(values[3])?
-                .sub(values[k].mul(d[3])?)?
-                .div(denominator)?;
-        }
-    }
-    Ok(result)
-}
 #[derive(Clone, Copy)]
 pub(crate) struct JetBounds {
     pub point: [I; 3],
     pub first: [[I; 3]; 2],
     pub second: [[I; 3]; 3],
-}
-pub(crate) fn differentiate_net(
-    net: &Net,
-    degrees: [usize; 2],
-    axis: usize,
-    span: [[f64; 2]; 2],
-) -> Result<Net> {
-    let degree = degrees[axis];
-    let mut out = vec![
-        vec![[I::point(0.); 4]; degrees[1] + 1 - usize::from(axis == 1)];
-        degrees[0] + 1 - usize::from(axis == 0)
-    ];
-    let width = I::point(span[axis][1]).sub(I::point(span[axis][0]))?;
-    for i in 0..out.len() {
-        for j in 0..out[0].len() {
-            for k in 0..4 {
-                out[i][j][k] = net[i + usize::from(axis == 0)][j + usize::from(axis == 1)][k]
-                    .sub(net[i][j][k])?
-                    .mul(I::point(degree as f64))?
-                    .div(width)?;
-            }
-        }
-    }
-    Ok(out)
 }
 pub(crate) fn homogeneous_jet_hull(
     net: &Net,
@@ -695,15 +572,12 @@ pub fn endpoint_chord_excluded(
 #[path = "normal_alignment/tests/mod.rs"]
 mod tests;
 
-#[path="normal_alignment/algorithm_restrict_net.rs"]
-mod algorithm_restrict_net;
-use algorithm_restrict_net::restrict_net;
-#[path="normal_alignment/algorithm_restrict_hull.rs"]
-mod algorithm_restrict_hull;
-pub(crate) use algorithm_restrict_hull::restrict_hull;
-#[path="normal_alignment/algorithm_restrict_unit_net.rs"]
-mod algorithm_restrict_unit_net;
-use algorithm_restrict_unit_net::restrict_unit_net;
+// Net restriction and hull helpers live in `distance::homogeneous_net` (ADR 0012).
+#[allow(unused_imports)]
+pub(crate) use crate::distance::homogeneous_net::{differentiate_net, jacobian_net_on, jacobian_on,
+    rational_quotient_hull, restrict_hull, signed_rational_quotient_hull};
+#[allow(unused_imports)]
+use crate::distance::homogeneous_net::{restrict_net, restrict_unit_net};
 #[path="normal_alignment/algorithm_jet_net_on.rs"]
 mod algorithm_jet_net_on;
 pub(crate) use algorithm_jet_net_on::jet_net_on;
