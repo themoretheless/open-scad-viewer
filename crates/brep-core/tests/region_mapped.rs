@@ -23,14 +23,11 @@ fn mapped_corner_replaces_owned_sector_and_preserves_saved_rim_identities() {
     let result = region_replacement::replace_g2_mapped(
         source,
         &[closed.face],
-        uses,
-        [[-0.25, 0.], [0.25, 0.], [0., -0.25], [0., 0.25]],
+        region_replacement::MappedCorner { uses, directions: [[-0.25, 0.], [0.25, 0.], [0., -0.25], [0., 0.25]] },
         mapped_options,
         1e-8,
         [1e-7, 1e-5, 1e-4],
-        100000,
-        2000000,
-        1000000,
+        brep_core::contact_graft::GraftWork { max_cells: 100000, max_coefficients: 2000000, max_exact: 1000000 },
     )
     .unwrap();
     assert!(result.corner.admitted);
@@ -72,14 +69,11 @@ fn mapped_corner_replaces_owned_sector_and_preserves_saved_rim_identities() {
         region_replacement::replace_g2_mapped(
             source,
             &[closed.face],
-            repeated,
-            [[-0.25, 0.], [0.25, 0.], [0., -0.25], [0., 0.25]],
+            region_replacement::MappedCorner { uses: repeated, directions: [[-0.25, 0.], [0.25, 0.], [0., -0.25], [0., 0.25]] },
             mapped_options,
             1e-8,
             [1e-7, 1e-5, 1e-4],
-            100000,
-            2000000,
-            1000000
+            brep_core::contact_graft::GraftWork { max_cells: 100000, max_coefficients: 2000000, max_exact: 1000000 },
         )
         .is_err()
     );

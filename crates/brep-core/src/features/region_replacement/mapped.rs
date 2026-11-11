@@ -16,18 +16,22 @@ pub struct MappedReplacement {
 /// saved face-local pcurve, not an inferred isoparametric coordinate.
 /// Saved 3D edges and root vertices remain authoritative. No fitting/welding
 /// or radius law is supplied by this operation.
+/// The four boundary uses of the replaced corner region and the UV direction along each.
+pub struct MappedCorner {
+    pub uses: [BoundaryUse; 4],
+    pub directions: [[f64; 2]; 4],
+}
 pub fn replace_g2_mapped(
     source: &Model,
     selected: &[usize],
-    uses: [BoundaryUse; 4],
-    directions: [[f64; 2]; 4],
+    corner: MappedCorner,
     options: corner_blend::Options,
     tolerance_uv: f64,
     tolerances: [f64; 3],
-    max_cells: usize,
-    max_coefficients: usize,
-    max_exact: u64,
+    work: crate::contact_graft::GraftWork,
 ) -> Result<MappedReplacement> {
+    let MappedCorner { uses, directions } = corner;
+    let crate::contact_graft::GraftWork { max_cells, max_exact, max_coefficients } = work;
     source.validate()?;
     let chosen: BTreeSet<_> = selected.iter().copied().collect();
     if chosen.len() != selected.len()

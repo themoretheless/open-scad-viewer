@@ -21,14 +21,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let result = brep_core::region_replacement::replace_g2_mapped(
         &closed.model,
         &[closed.face],
-        uses,
-        [[-0.25, 0.], [0.25, 0.], [0., -0.25], [0., 0.25]],
+        brep_core::region_replacement::MappedCorner { uses, directions: [[-0.25, 0.], [0.25, 0.], [0., -0.25], [0., 0.25]] },
         options,
         1e-8,
         [1e-7, 1e-5, 1e-4],
-        100000,
-        2000000,
-        1000000,
+        brep_core::contact_graft::GraftWork { max_cells: 100000, max_coefficients: 2000000, max_exact: 1000000 },
     )?;
     let json = value_codec::to_string(&result.replacement.model)?;
     let restored: brep_core::Model = value_codec::from_str(&json)?;

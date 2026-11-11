@@ -5,7 +5,7 @@ use nurbs_core::{Error, Result, surface::Surface};
 use std::collections::{BTreeMap, BTreeSet};
 #[path = "region_replacement/mapped.rs"]
 mod mapped;
-pub use mapped::{MappedReplacement, replace_g2_mapped};
+pub use mapped::{MappedCorner, MappedReplacement, replace_g2_mapped};
 #[path = "region_replacement/network.rs"]
 mod network;
 pub use network::{NetworkReplacement, RegionPatch, replace_g2_network};
