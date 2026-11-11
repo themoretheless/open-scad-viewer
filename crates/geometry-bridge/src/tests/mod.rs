@@ -347,6 +347,22 @@ fn direct_step_v6_bridge_roundtrips_poles_and_reports_identities() {
 }
 
 #[test]
+fn direct_step_v6_export_imports_through_step_v9() {
+    let model = cad_step::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap();
+    let exported =
+        dispatch(json!({"op":"brep_nurbs_export_step_v6","model":encode(model).unwrap()})).unwrap();
+    assert!(exported["text"]
+        .as_str()
+        .unwrap()
+        .contains("|authored-chart-v1'"));
+
+    let imported =
+        dispatch(json!({"op":"brep_nurbs_import_step_v9","text":exported["text"]})).unwrap();
+    assert_eq!(imported["identity"]["preserved"], true);
+    assert_eq!(imported["model"]["bodies"].as_array().unwrap().len(), 1);
+}
+
+#[test]
 fn direct_step_v7_bridge_composes_occurrence_topology() {
     let model = cad_step::freeform_cuboid_solid([0., 0., 0.], [1., 1., 1.]).unwrap();
     let exported =
