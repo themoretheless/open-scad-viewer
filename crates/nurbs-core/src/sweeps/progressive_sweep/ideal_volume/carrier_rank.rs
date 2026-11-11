@@ -8,7 +8,12 @@ use num_rational::BigRational as Q;
 use num_traits::{Signed,Zero};
 mod tensor;
 #[derive(Debug)]
-pub(super) struct Witness {pub normalized_parameters:[Q;3],pub partials:[[Q;3];2]}
+pub(super) struct Witness {
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub normalized_parameters: [Q; 3],
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub partials: [[Q; 3]; 2],
+}
 fn candidate(caps:[&Surface;2],t:f64)->bool {
     // This floating filter only proposes an exact query. Neither a rounded
     // zero nor declining the query supplies any rank/embedding authority.

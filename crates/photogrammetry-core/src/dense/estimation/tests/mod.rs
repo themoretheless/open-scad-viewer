@@ -1,4 +1,5 @@
 use super::*;
+#[cfg(feature = "gpu")]
 use crate::dense::plane::{DepthGrid, DepthRange, ReferenceView};
 
 #[test]

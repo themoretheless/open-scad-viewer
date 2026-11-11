@@ -1,5 +1,4 @@
 
-use brep_core::Model;
 use brep_core::prism::*;
 use nurbs_core::curve::Curve;
     #[test]

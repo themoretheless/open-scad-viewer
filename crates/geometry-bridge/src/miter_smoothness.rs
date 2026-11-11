@@ -1,5 +1,5 @@
 //! Serialization of native retained-seam qualification.
-use brep_core::miter_seams::{ProfileReport, Smoothness};
+use brep_core::miter_seams::Smoothness;
 use value_codec::{Value, json};
 fn seam_set(r: &nurbs_core::sweep_seam_set::Report, order: usize) -> Value {
     let seams: Vec<_> = r.seams.iter().map(|s| json!({"certified":s.certified,"exactIdentity":s.exact_identity,
@@ -14,15 +14,4 @@ pub fn station(r: &Smoothness, max_work: u64) -> Value {
         "unclassifiedFaces":r.extraction.unclassified_faces,"unpairedEdges":r.extraction.unpaired_edges,
         "capEdges":r.extraction.cap_edges,"edgeIds":r.extraction.edge_ids,"g2":seam_set(&r.g2,2),
         "g1Audit":r.g1.as_ref().map(|r| seam_set(r,1)),"stationG1Certified":r.g1_certified,"stationG2Certified":r.g2.certified})
-}
-pub fn profile(r: &ProfileReport, max_work: u64, has_caps: bool) -> Value {
-    let p = &r.profile;
-    json!({"method":"retained-miter-profile-joins","scope":"wall-profile-seams","maxWork":max_work,
-        "exactWork":p.work,"extractionComplete":p.extraction.complete(),
-        "unclassifiedFaces":p.extraction.unclassified_faces,"unpairedEdges":p.extraction.unpaired_edges,
-        "edgeIds":p.extraction.edge_ids,"profile":seam_set(&p.g2,2),"g1Audit":p.g1.as_ref().map(|r| seam_set(r,1)),
-        "profileG1Certified":p.g1_certified,"g1Method":if !p.g1_certified {"unproved"} else if p.g2.certified {"implied-by-G2"} else {"exact-projective-audit"},
-        "station":station(&r.station,max_work-p.work),"totalExactWork":r.total_work,
-        "stationContinuity":if r.station.g2.certified {"G2"} else if r.station.g1_certified {"G1"} else {"C0"},
-        "capContinuity":if has_caps {"C0"} else {"absent"},"fullBoundarySmoothnessCertified":false})
 }

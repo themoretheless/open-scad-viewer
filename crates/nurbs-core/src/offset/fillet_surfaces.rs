@@ -454,13 +454,6 @@ impl<'a> Marcher<'a> {
 mod marching;
 use marching::*;
 
-
-mod sections;
-
-
-
-
-
 /// Re-polish each raw point with the radius of the final law at its measured
 /// normalized arc position (variable-radius second pass).
 fn polish_with_law(

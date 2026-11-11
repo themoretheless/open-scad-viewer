@@ -270,132 +270,181 @@ pub(in super::super) fn estimate_prepared(
     }
     #[cfg(feature = "gpu")]
     if gpu_batch {
-        let rasters: Vec<Option<(&[f32], usize, usize)>> = grayscale
-            .iter()
-            .map(|g| g.as_ref().map(|g| (g.values.as_slice(), g.width, g.height)))
-            .collect();
-        cancelled(progress, "depth", 0, active.len() * options.max_side)?;
-        #[cfg(feature = "cuda")]
-        let selections = cuda_sweep.and_then(|sweep| {
-            let atlas = sweep.upload_grays(&rasters)?;
-            sweep.run_batch(&atlas, &gpu_jobs)
-        });
-        #[cfg(not(feature = "cuda"))]
-        let selections: Option<Vec<Vec<Option<crate::gpu::sweep::Selection>>>> = None;
-        let selections = selections.or_else(|| {
-            wgpu_sweep.and_then(|sweep| {
-                let atlas = sweep.upload_grays(&rasters);
-                let mut batch = sweep.batch(&atlas);
-                for job in &gpu_jobs {
-                    batch.push(job);
-                }
-                batch.try_finish().ok()
-            })
-        });
-        match selections {
-            Some(selections) => {
-                if selections.len() != gpu_pending.len() {
-                    return Err(crate::error("GPU sweep returned an unexpected view count"));
-                }
-                for ((index, preamble, source_count), selection) in
-                    gpu_pending.into_iter().zip(selections)
-                {
-                    count_gpu_work(
-                        &mut diagnostics,
-                        preamble.width,
-                        preamble.height,
-                        source_count,
-                        options,
-                    );
-                    let (depth, confidence) =
-                        maps_from_selection(&selection, preamble.near, preamble.far, options);
-                    maps.push(DepthMap {
-                        image: index,
-                        width: preamble.width,
-                        height: preamble.height,
-                        step: preamble.step,
-                        depth,
-                        confidence,
-                        neighbors: preamble.neighbors,
-                    });
-                }
-            }
-            // Available GPU backends failed; finish pending views on the CPU.
-            None => {
-                let cpu_options = DenseOptions {
-                    acceleration: crate::Acceleration::Cpu,
-                    ..options.clone()
-                };
-                for (view_number, (index, preamble, _)) in gpu_pending.into_iter().enumerate() {
-                    let gray = grayscale[index].as_ref().unwrap();
-                    let mut sources = build_view_sources(
-                        sparse,
-                        grayscale,
-                        &preamble,
-                        options.patch_radius,
-                        preamble.step,
-                    );
-                    let ranges = if options.sparse_depth_prior {
-                        sparse_intervals(
-                            sparse,
-                            index,
-                            preamble.reference,
-                            preamble.width,
-                            preamble.height,
-                            preamble.step,
-                            preamble.near,
-                            preamble.far,
-                        )
-                    } else {
-                        None
-                    };
-                    let (depth, confidence) = sweep_depth(
-                        ReferenceView {
-                            gray,
-                            camera: preamble.reference,
-                        },
-                        &mut sources,
-                        DepthGrid {
-                            width: preamble.width,
-                            height: preamble.height,
-                            step: preamble.step,
-                        },
-                        DepthRange {
-                            near: preamble.near,
-                            far: preamble.far,
-                            ranges: ranges.as_ref(),
-                        },
-                        &cpu_options,
-                        &mut diagnostics,
-                        &mut |row| {
-                            cancelled(
-                                progress,
-                                "depth",
-                                view_number * options.max_side + row,
-                                active.len() * options.max_side,
-                            )
-                        },
-                    )?;
-                    maps.push(DepthMap {
-                        image: index,
-                        width: preamble.width,
-                        height: preamble.height,
-                        step: preamble.step,
-                        depth,
-                        confidence,
-                        neighbors: preamble.neighbors,
-                    });
-                }
-            }
-        }
-        cancelled(
+        finish_gpu_batch(
+            GpuBatchContext {
+                sparse,
+                options,
+                grayscale,
+                active_len: active.len(),
+                gpu_jobs,
+                gpu_pending,
+                wgpu_sweep,
+                #[cfg(feature = "cuda")]
+                cuda_sweep,
+            },
+            &mut maps,
+            &mut diagnostics,
             progress,
-            "depth",
-            active.len() * options.max_side,
-            active.len() * options.max_side,
         )?;
     }
     Ok((maps, diagnostics))
+}
+
+#[cfg(feature = "gpu")]
+struct GpuBatchContext<'a> {
+    sparse: &'a Reconstruction,
+    options: &'a DenseOptions,
+    grayscale: &'a [Option<GrayImage>],
+    active_len: usize,
+    gpu_jobs: Vec<crate::gpu::sweep::SweepJob>,
+    gpu_pending: Vec<(usize, ViewPreamble<'a>, usize)>,
+    wgpu_sweep: Option<&'static crate::gpu::sweep::GpuSweep>,
+    #[cfg(feature = "cuda")]
+    cuda_sweep: Option<&'static crate::gpu::sweep::cuda::CudaSweep>,
+}
+
+#[cfg(feature = "gpu")]
+fn finish_gpu_batch(
+    ctx: GpuBatchContext<'_>,
+    maps: &mut Vec<DepthMap>,
+    diagnostics: &mut DenseDiagnostics,
+    progress: &mut impl FnMut(&str, usize, usize) -> bool,
+) -> Result<()> {
+    let GpuBatchContext {
+        sparse,
+        options,
+        grayscale,
+        active_len,
+        gpu_jobs,
+        gpu_pending,
+        wgpu_sweep,
+        #[cfg(feature = "cuda")]
+        cuda_sweep,
+    } = ctx;
+    let rasters: Vec<Option<(&[f32], usize, usize)>> = grayscale
+        .iter()
+        .map(|g| g.as_ref().map(|g| (g.values.as_slice(), g.width, g.height)))
+        .collect();
+    cancelled(progress, "depth", 0, active_len * options.max_side)?;
+    #[cfg(feature = "cuda")]
+    let selections = cuda_sweep.and_then(|sweep| {
+        let atlas = sweep.upload_grays(&rasters)?;
+        sweep.run_batch(&atlas, &gpu_jobs)
+    });
+    #[cfg(not(feature = "cuda"))]
+    let selections: Option<Vec<Vec<Option<crate::gpu::sweep::Selection>>>> = None;
+    let selections = selections.or_else(|| {
+        wgpu_sweep.and_then(|sweep| {
+            let atlas = sweep.upload_grays(&rasters);
+            let mut batch = sweep.batch(&atlas);
+            for job in &gpu_jobs {
+                batch.push(job);
+            }
+            batch.try_finish().ok()
+        })
+    });
+    match selections {
+        Some(selections) => {
+            if selections.len() != gpu_pending.len() {
+                return Err(crate::error("GPU sweep returned an unexpected view count"));
+            }
+            for ((index, preamble, source_count), selection) in
+                gpu_pending.into_iter().zip(selections)
+            {
+                count_gpu_work(
+                    diagnostics,
+                    preamble.width,
+                    preamble.height,
+                    source_count,
+                    options,
+                );
+                let (depth, confidence) =
+                    maps_from_selection(&selection, preamble.near, preamble.far, options);
+                maps.push(DepthMap {
+                    image: index,
+                    width: preamble.width,
+                    height: preamble.height,
+                    step: preamble.step,
+                    depth,
+                    confidence,
+                    neighbors: preamble.neighbors,
+                });
+            }
+        }
+        // Available GPU backends failed; finish pending views on the CPU.
+        None => {
+            let cpu_options = DenseOptions {
+                acceleration: crate::Acceleration::Cpu,
+                ..options.clone()
+            };
+            for (view_number, (index, preamble, _)) in gpu_pending.into_iter().enumerate() {
+                let gray = grayscale[index].as_ref().unwrap();
+                let mut sources = build_view_sources(
+                    sparse,
+                    grayscale,
+                    &preamble,
+                    options.patch_radius,
+                    preamble.step,
+                );
+                let ranges = if options.sparse_depth_prior {
+                    sparse_intervals(
+                        sparse,
+                        index,
+                        preamble.reference,
+                        preamble.width,
+                        preamble.height,
+                        preamble.step,
+                        preamble.near,
+                        preamble.far,
+                    )
+                } else {
+                    None
+                };
+                let (depth, confidence) = sweep_depth(
+                    ReferenceView {
+                        gray,
+                        camera: preamble.reference,
+                    },
+                    &mut sources,
+                    DepthGrid {
+                        width: preamble.width,
+                        height: preamble.height,
+                        step: preamble.step,
+                    },
+                    DepthRange {
+                        near: preamble.near,
+                        far: preamble.far,
+                        ranges: ranges.as_ref(),
+                    },
+                    &cpu_options,
+                    diagnostics,
+                    &mut |row| {
+                        cancelled(
+                            progress,
+                            "depth",
+                            view_number * options.max_side + row,
+                            active_len * options.max_side,
+                        )
+                    },
+                )?;
+                maps.push(DepthMap {
+                    image: index,
+                    width: preamble.width,
+                    height: preamble.height,
+                    step: preamble.step,
+                    depth,
+                    confidence,
+                    neighbors: preamble.neighbors,
+                });
+            }
+        }
+    }
+    cancelled(
+        progress,
+        "depth",
+        active_len * options.max_side,
+        active_len * options.max_side,
+    )
 }
 
 /// Plain-data sweep payload of one view for host execution (browser WebGPU).

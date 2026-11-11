@@ -137,6 +137,7 @@ fn few_teeth_planet_and_refusals() {
         herringbone: true,
         ..GearSpec::default()
     });
+    assert!(helical_planet.is_ok(), "{:?}", helical_planet.err());
     let small_helical_planet = gear(&GearSpec {
         module: 0.6830357142857143,
         teeth: 4,

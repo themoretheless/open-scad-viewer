@@ -119,50 +119,7 @@ pub fn plan_rooted_retention(
             request
                 .cuts
                 .iter()
-                .map(|cut| {
-                    let mut endpoints = [0; 2];
-                    for (i, end) in cut.endpoints.iter().enumerate() {
-                        endpoints[i] = match *end {
-                            RootEnd::Vertex(v) => v,
-                            RootEnd::Crossing { edge, root } => root_vertices
-                                .iter()
-                                .find(|&&(e, r, _)| e == edge && r == root)
-                                .map(|&(_, _, v)| v)
-                                .ok_or_else(|| {
-                                    invalid("Requested retained cutter root is missing")
-                                })?,
-                        };
-                    }
-                    // A generated cut reaches a cutter root only within
-                    // rounding: the root vertex comes from the edge split.
-                    // Within the model tolerance, the cut end is that vertex.
-                    let mut curves = cut.curves.clone();
-                    for (i, end) in cut.endpoints.iter().enumerate() {
-                        if !matches!(end, RootEnd::Crossing { .. }) {
-                            continue;
-                        }
-                        let vertex = model.vertices[endpoints[i]].point;
-                        let curve = if i == 0 { curves.first_mut() } else { curves.last_mut() };
-                        let Some(curve) = curve else { continue };
-                        let point = if i == 0 {
-                            curve.control_points.first_mut()
-                        } else {
-                            curve.control_points.last_mut()
-                        };
-                        if let Some(point) = point
-                            && point.len() == 3
-                        {
-                            let gap = (0..3).map(|k| (point[k] - vertex[k]).powi(2)).sum::<f64>().sqrt();
-                            if gap > model.tolerance_mm {
-                                return Err(invalid(
-                                    "Cut end lies farther than the model tolerance from its cutter root",
-                                ));
-                            }
-                            point.copy_from_slice(&vertex);
-                        }
-                    }
-                    Ok(OwnedCut { endpoints, curves })
-                })
+                .map(|cut| bind_cut_endpoints(cut, &model, &root_vertices))
                 .collect::<Result<Vec<_>>>()
         })
         .collect::<Result<Vec<_>>>()?;
@@ -194,4 +151,58 @@ pub fn plan_rooted_retention(
         root_vertices,
         cells,
     })
+}
+
+fn bind_cut_endpoints(
+    cut: &RootedCut,
+    model: &Model,
+    root_vertices: &[(usize, usize, usize)],
+) -> Result<OwnedCut> {
+    let mut endpoints = [0; 2];
+    for (i, end) in cut.endpoints.iter().enumerate() {
+        endpoints[i] = match *end {
+            RootEnd::Vertex(v) => v,
+            RootEnd::Crossing { edge, root } => root_vertices
+                .iter()
+                .find(|&&(e, r, _)| e == edge && r == root)
+                .map(|&(_, _, v)| v)
+                .ok_or_else(|| invalid("Requested retained cutter root is missing"))?,
+        };
+    }
+    // A generated cut reaches a cutter root only within rounding: the root
+    // vertex comes from the edge split. Within the model tolerance, the cut
+    // end is that vertex.
+    let mut curves = cut.curves.clone();
+    for (i, end) in cut.endpoints.iter().enumerate() {
+        if !matches!(end, RootEnd::Crossing { .. }) {
+            continue;
+        }
+        let vertex = model.vertices[endpoints[i]].point;
+        let curve = if i == 0 {
+            curves.first_mut()
+        } else {
+            curves.last_mut()
+        };
+        let Some(curve) = curve else { continue };
+        let point = if i == 0 {
+            curve.control_points.first_mut()
+        } else {
+            curve.control_points.last_mut()
+        };
+        if let Some(point) = point
+            && point.len() == 3
+        {
+            let gap = (0..3)
+                .map(|k| (point[k] - vertex[k]).powi(2))
+                .sum::<f64>()
+                .sqrt();
+            if gap > model.tolerance_mm {
+                return Err(invalid(
+                    "Cut end lies farther than the model tolerance from its cutter root",
+                ));
+            }
+            point.copy_from_slice(&vertex);
+        }
+    }
+    Ok(OwnedCut { endpoints, curves })
 }

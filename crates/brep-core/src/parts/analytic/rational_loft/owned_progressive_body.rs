@@ -28,15 +28,8 @@ pub(super) fn progressive_profile_body_internal(
         ));
     }
     let profiles = loops.iter().flatten().cloned().collect::<Vec<_>>();
-    let spans = profiles
-        .iter()
-        .map(|c| c.decompose().map(|s| s.len()))
-        .collect::<nurbs_core::Result<Vec<_>>>()?
-        .into_iter()
-        .sum::<usize>();
-    if spans == 0 || spans > 64 {
-        return Err(err("Progressive body exceeds64 section spans"));
-    }
+    let spans = profiles.iter().map(|c| c.decompose().map(|s| s.len())).collect::<nurbs_core::Result<Vec<_>>>()?.into_iter().sum::<usize>();
+    if spans == 0 || spans > 64 { return Err(err("Progressive body exceeds64 section spans")); }
     let closed=nurbs_core::progressive_sweep::path_is_closed(path)?;
     if annular.is_some() && !automatic_caps && !closed && loops.len()!=2 {
         return Err(err("Annular progressive caps require one outer ring and one hole"));

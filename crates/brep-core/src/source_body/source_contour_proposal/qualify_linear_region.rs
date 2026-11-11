@@ -31,6 +31,148 @@ pub struct RegionBudget {
     pub membership_cells: usize,
 }
 
+fn single_line(c: &Curve) -> bool {
+    let d = c.domain();
+    c.degree == 1
+        && c.control_points.len() == 2
+        && c.knots[..=1].iter().all(|&k| k == d[0])
+        && c.knots[2..].iter().all(|&k| k == d[1])
+}
+
+struct HalfplaneProver<'a> {
+    contact: &'a Curve,
+    origin: [f64; 2],
+    direction: [nurbs_core::interval_eval::Interval; 2],
+    winding: i32,
+    reversed: bool,
+    max_controls: usize,
+    max_driver_cells: usize,
+    controls: usize,
+    driver_cells: usize,
+    work_stopped: bool,
+}
+
+impl HalfplaneProver<'_> {
+    fn side(
+        &self,
+        p: [nurbs_core::interval_eval::Interval; 2],
+    ) -> Result<nurbs_core::interval_eval::Interval> {
+        use nurbs_core::interval_eval::Interval as I;
+        self.direction[0]
+            .mul(p[1].sub(I::point(self.origin[1]))?)?
+            .sub(self.direction[1].mul(p[0].sub(I::point(self.origin[0]))?)?)?
+            .mul(I::point(self.winding as f64))
+    }
+
+    fn prove(&mut self, fragment: &Fragment, kept: bool) -> Result<bool> {
+        use nurbs_core::interval_eval::{self, Interval as I};
+        let accept = |s: I| if kept { s.lo >= 0. } else { s.hi <= 0. };
+        let c = fragment.curve();
+        let d = c.domain();
+        let ends = fragment.endpoints();
+        let full = matches!(ends[0], Endpoint::Parameter(t) if t == d[0])
+            && matches!(ends[1], Endpoint::Parameter(t) if t == d[1]);
+        if full {
+            for p in &c.control_points {
+                if self.controls == self.max_controls {
+                    self.work_stopped = true;
+                    return Ok(false);
+                }
+                self.controls += 1;
+                if !accept(self.side([I::point(p[0]), I::point(p[1])])?) {
+                    return Ok(false);
+                }
+            }
+            return Ok(true);
+        }
+        if single_line(c) {
+            for end in ends {
+                match end {
+                    Endpoint::Crossing { point, .. } if point.contact() == self.contact => continue,
+                    Endpoint::Parameter(t) if *t == d[0] || *t == d[1] => {
+                        if self.controls == self.max_controls {
+                            self.work_stopped = true;
+                            return Ok(false);
+                        }
+                        self.controls += 1;
+                        let p = &c.control_points[usize::from(*t == d[1])];
+                        if !accept(self.side([I::point(p[0]), I::point(p[1])])?) {
+                            return Ok(false);
+                        }
+                    }
+                    _ => return Ok(false),
+                }
+            }
+            return Ok(true);
+        }
+        let cost = c.control_points.len();
+        if cost > self.max_controls - self.controls {
+            self.work_stopped = true;
+            return Ok(false);
+        }
+        self.controls += cost;
+        if self.driver_cells < self.max_driver_cells {
+            // A source-owned root lies exactly on this original line. Strict
+            // monotonicity decides its entire retained/removed side even when
+            // an outward root enclosure straddles the line.
+            // Orientation is expressed by winding, preserving source ownership.
+            let r = crate::source_halfplane_side::prove(
+                fragment,
+                self.contact,
+                if self.reversed { -self.winding } else { self.winding },
+                kept,
+                self.max_driver_cells - self.driver_cells,
+            )?;
+            self.driver_cells += r.driver_cells;
+            if r.proven {
+                return Ok(true);
+            }
+        } else {
+            self.work_stopped = true;
+        }
+        let bounds = fragment.parameter_bounds();
+        let domain = I::new(
+            bounds[0][0].min(bounds[1][0]),
+            bounds[0][1].max(bounds[1][1]),
+        )?;
+        let image = interval_eval::evaluate_interval(c, domain)?;
+        Ok(accept(self.side([image[0], image[1]])?))
+    }
+
+    fn classify_holes(&mut self, loops: &[Vec<Fragment>]) -> Result<(bool, Vec<usize>, Vec<usize>)> {
+        let mut holes = true;
+        let mut retained = vec![0];
+        let mut removed_holes = vec![];
+        for (index, hole) in loops.iter().enumerate().skip(1) {
+            let mut on_kept_side = true;
+            for fragment in hole {
+                on_kept_side &= self.prove(fragment, true)?;
+                if !on_kept_side {
+                    break;
+                }
+            }
+            if on_kept_side {
+                retained.push(index);
+                continue;
+            }
+            let mut on_removed_side = true;
+            for fragment in hole {
+                on_removed_side &= self.prove(fragment, false)?;
+                if !on_removed_side {
+                    break;
+                }
+            }
+            if on_removed_side {
+                removed_holes.push(index);
+            } else {
+                holes = false;
+                break;
+            }
+        }
+        Ok((holes, retained, removed_holes))
+    }
+}
+
 /// Qualify a straight source contact as an exact half-plane intersection of
 /// the original material region. All retained/removed arcs and holes must have
 /// whole-source side proofs. This does not approximate a curved contact by a line.
@@ -46,14 +188,8 @@ pub fn qualify_linear_region(
     let RegionSource { surface, wires, contact, address } = source;
     let RegionAddress { loop_index, start_edge, end_edge } = address;
     let RegionTarget { width: target_width, driver_axis } = target;
-    let RegionBudget {
-        cells: max_cells,
-        point_checks: max_point_checks,
-        mapping_cells: max_mapping_cells,
-        driver_cells: max_driver_cells,
-        membership_cells: max_membership_cells,
-    } = budget;
-    use nurbs_core::interval_eval::{self, Interval as I};
+    let max_driver_cells = budget.driver_cells;
+    use nurbs_core::interval_eval::Interval as I;
     if !(1..=100000).contains(&max_controls) {
         return Err(Error::new(
             "BREP_SOURCE_REGION_WORK",
@@ -81,13 +217,6 @@ pub fn qualify_linear_region(
         out.reason = "source-hole-boundary-clipping-unqualified";
         return Ok(out);
     }
-    let single_line = |c: &Curve| {
-        let d = c.domain();
-        c.degree == 1
-            && c.control_points.len() == 2
-            && c.knots[..=1].iter().all(|&k| k == d[0])
-            && c.knots[2..].iter().all(|&k| k == d[1])
-    };
     if !single_line(contact) {
         out.reason = "source-contact-is-not-an-admitted-line";
         return Ok(out);
@@ -101,95 +230,24 @@ pub fn qualify_linear_region(
         out.reason = "source-region-winding-unproven";
         return Ok(out);
     };
-    let direction = [
-        I::point(b[0]).sub(I::point(a[0]))?,
-        I::point(b[1]).sub(I::point(a[1]))?,
-    ];
-    let side = |p: [I; 2]| -> Result<I> {
-        direction[0]
-            .mul(p[1].sub(I::point(a[1]))?)?
-            .sub(direction[1].mul(p[0].sub(I::point(a[0]))?)?)?
-            .mul(I::point(winding as f64))
-    };
-    let mut controls = 0;
-    let mut driver_cells = out.interior.driver.as_ref().map_or(0, |r| r.visited);
-    let mut work_stopped = false;
-    let mut prove = |fragment: &Fragment, kept: bool| -> Result<bool> {
-        let accept = |s: I| if kept { s.lo >= 0. } else { s.hi <= 0. };
-        let c = fragment.curve();
-        let d = c.domain();
-        let ends = fragment.endpoints();
-        let full = matches!(ends[0],Endpoint::Parameter(t) if t==d[0])
-            && matches!(ends[1],Endpoint::Parameter(t) if t==d[1]);
-        if full {
-            for p in &c.control_points {
-                if controls == max_controls {
-                    work_stopped = true;
-                    return Ok(false);
-                }
-                controls += 1;
-                if !accept(side([I::point(p[0]), I::point(p[1])])?) {
-                    return Ok(false);
-                }
-            }
-            return Ok(true);
-        }
-        if single_line(c) {
-            for end in ends {
-                match end {
-                    Endpoint::Crossing { point, .. } if point.contact() == contact => continue,
-                    Endpoint::Parameter(t) if *t == d[0] || *t == d[1] => {
-                        if controls == max_controls {
-                            work_stopped = true;
-                            return Ok(false);
-                        }
-                        controls += 1;
-                        let p = &c.control_points[usize::from(*t == d[1])];
-                        if !accept(side([I::point(p[0]), I::point(p[1])])?) {
-                            return Ok(false);
-                        }
-                    }
-                    _ => return Ok(false),
-                }
-            }
-            return Ok(true);
-        }
-        let cost = c.control_points.len();
-        if cost > max_controls - controls {
-            work_stopped = true;
-            return Ok(false);
-        }
-        controls += cost;
-        if driver_cells < max_driver_cells {
-            // A source-owned root lies exactly on this original line. Strict
-            // monotonicity decides its entire retained/removed side even when
-            // an outward root enclosure straddles the line.
-            // Orientation is expressed by winding, preserving source ownership.
-            let r = crate::source_halfplane_side::prove(
-                fragment,
-                contact,
-                if reversed { -winding } else { winding },
-                kept,
-                max_driver_cells - driver_cells,
-            )?;
-            driver_cells += r.driver_cells;
-            if r.proven {
-                return Ok(true);
-            }
-        } else {
-            work_stopped = true;
-        }
-        let bounds = fragment.parameter_bounds();
-        let domain = I::new(
-            bounds[0][0].min(bounds[1][0]),
-            bounds[0][1].max(bounds[1][1]),
-        )?;
-        let image = interval_eval::evaluate_interval(c, domain)?;
-        Ok(accept(side([image[0], image[1]])?))
+    let mut prover = HalfplaneProver {
+        contact,
+        origin: [a[0], a[1]],
+        direction: [
+            I::point(b[0]).sub(I::point(a[0]))?,
+            I::point(b[1]).sub(I::point(a[1]))?,
+        ],
+        winding,
+        reversed,
+        max_controls,
+        max_driver_cells,
+        controls: 0,
+        driver_cells: out.interior.driver.as_ref().map_or(0, |r| r.visited),
+        work_stopped: false,
     };
     let mut kept = true;
     for fragment in &loops[0][1..] {
-        kept &= prove(fragment, true)?;
+        kept &= prover.prove(fragment, true)?;
         if !kept {
             break;
         }
@@ -209,76 +267,34 @@ pub fn qualify_linear_region(
     let removed0 = Fragment::new(
         surface,
         head,
-        Endpoint::Crossing {
-            point: p0,
-            role: Role::Boundary,
-        },
+        Endpoint::Crossing { point: p0, role: Role::Boundary },
         Endpoint::Parameter(head.domain()[1]),
     )?;
     let removed1 = Fragment::new(
         surface,
         tail,
         Endpoint::Parameter(tail.domain()[0]),
-        Endpoint::Crossing {
-            point: p1,
-            role: Role::Boundary,
-        },
+        Endpoint::Crossing { point: p1, role: Role::Boundary },
     )?;
-    let mut removed = prove(&removed0, false)? && prove(&removed1, false)?;
+    let mut removed = prover.prove(&removed0, false)? && prover.prove(&removed1, false)?;
     let mut i = (start_edge + 1) % original.len();
     while i != end_edge && removed {
         let c = &original[i].pcurve;
-        let full = Fragment::new(
-            surface,
-            c,
-            Endpoint::Parameter(c.domain()[0]),
-            Endpoint::Parameter(c.domain()[1]),
-        )?;
-        removed &= prove(&full, false)?;
+        let full = Fragment::new(surface, c, Endpoint::Parameter(c.domain()[0]), Endpoint::Parameter(c.domain()[1]))?;
+        removed &= prover.prove(&full, false)?;
         i = (i + 1) % original.len();
     }
     out.removed_side_proven = removed;
-    let mut holes = true;
-    let mut retained = vec![0];
-    let mut removed_holes = vec![];
-    for (index, hole) in loops.iter().enumerate().skip(1) {
-        let mut on_kept_side = true;
-        for fragment in hole {
-            on_kept_side &= prove(fragment, true)?;
-            if !on_kept_side {
-                break;
-            }
-        }
-        if on_kept_side {
-            retained.push(index);
-            continue;
-        }
-        let mut on_removed_side = true;
-        for fragment in hole {
-            on_removed_side &= prove(fragment, false)?;
-            if !on_removed_side {
-                break;
-            }
-        }
-        if on_removed_side {
-            removed_holes.push(index);
-        } else {
-            holes = false;
-            break;
-        }
-    }
+    let (holes, retained, removed_holes) = prover.classify_holes(loops)?;
     out.holes_kept_proven = holes && removed_holes.is_empty();
     out.hole_placement_proven = holes;
     out.removed_holes = removed_holes;
-    out.controls = controls;
-    out.driver_cells = driver_cells;
-    out.work_stopped = work_stopped;
+    out.controls = prover.controls;
+    out.driver_cells = prover.driver_cells;
+    out.work_stopped = prover.work_stopped;
     if kept && removed && holes {
         out.interior.region_subset_proven = true;
-        let qualified = retained
-            .iter()
-            .map(|&i| loops[i].clone())
-            .collect::<Vec<_>>();
+        let qualified = retained.iter().map(|&i| loops[i].clone()).collect::<Vec<_>>();
         out.region = Some(SourceRegion {
             recipe: Recipe::Cut {
                 original: Original::new(context, surface, wires, tolerance_uv),
@@ -298,16 +314,12 @@ pub fn qualify_linear_region(
         out.interior.proposal.reason = "source-contour-half-plane-region-qualified";
         out.reason = "source-half-plane-material-region-qualified";
     } else {
-        out.reason = if work_stopped {
+        out.reason = if prover.work_stopped {
             "source-half-plane-work-limit"
         } else {
             "source-half-plane-side-unproven"
         };
     }
-    // Whole original outer arcs occupy opposite sides, meeting the line only at
-    // the two owned transverse roots. The closed candidate bounds the retained
-    // half-plane intersection. Holes proven on the kept side retain their
-    // definitions; whole holes on the removed side disappear from that region.
     Ok(out)
 }
 
@@ -338,13 +350,6 @@ pub fn qualify_curved_region(
     let RegionSource { surface, wires, contact, address } = source;
     let RegionAddress { loop_index, start_edge, end_edge } = address;
     let RegionTarget { width: target_width, driver_axis } = target;
-    let RegionBudget {
-        cells: max_cells,
-        point_checks: max_point_checks,
-        mapping_cells: max_mapping_cells,
-        driver_cells: max_driver_cells,
-        membership_cells: max_membership_cells,
-    } = budget;
     use nurbs_core::{
         interval_eval::{self, Interval as I},
         trim_domain::Location,

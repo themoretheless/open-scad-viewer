@@ -217,7 +217,7 @@ pub(crate) enum Op {
 fn crossings(a: &Span, b: &Span, band: f64) -> (Vec<f64>, Vec<f64>) {
     let mut ta = Vec::new();
     let mut tb = Vec::new();
-    let mut add = |p: P, ta: &mut Vec<f64>, tb: &mut Vec<f64>| {
+    let add = |p: P, ta: &mut Vec<f64>, tb: &mut Vec<f64>| {
         let (u, v) = (a.parameter_of(p), b.parameter_of(p));
         let (ea, eb) = (band / span_length(a), band / span_length(b));
         if (-ea..=1. + ea).contains(&u)

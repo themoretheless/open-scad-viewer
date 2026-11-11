@@ -62,6 +62,33 @@ impl Report {
    "audits":self.audits.iter().map(|a|json!({"side":a.side,"loop":a.loop_index,"curve":a.curve_index,"exactStatus":a.exact_status,"agreementStatus":a.agreement_status,"exactWork":a.exact_work,"cells":a.cells,"witnessParameter":a.witness,"witnessDistanceMm":a.witness_distance})).collect::<Vec<_>>()})
     }
 }
+fn validate_source_faces(faces: &SourceFaces<'_>) -> Result<usize> {
+    let mut total = 0;
+    for side in 0..2 {
+        faces.surfaces[side].validate()?;
+        check(
+            faces.loops[side].len() == faces.coedges[side].len(),
+            "Each original trim loop needs its spatial coedges",
+        )?;
+        for (uv, world) in faces.loops[side].iter().zip(faces.coedges[side]) {
+            check(
+                uv.len() == world.len(),
+                "Each original trim curve needs one spatial coedge",
+            )?;
+            for (p, c) in uv.iter().zip(world) {
+                p.validate()?;
+                c.world.validate()?;
+                check(
+                    p.control_points[0].len() == 2 && c.world.control_points[0].len() == 3,
+                    "Source boundaries need 2D pcurves and 3D world curves",
+                )?;
+                total += 1;
+            }
+        }
+    }
+    Ok(total)
+}
+
 pub fn certify(
     faces: SourceFaces<'_>,
     parameters: ContactParameters,
@@ -81,29 +108,7 @@ pub fn certify(
             && (1..=100000).contains(&max_agreement_cells),
         "Source boundary needs a positive tolerance and bounded work",
     )?;
-    let mut total = 0;
-    for side in 0..2 {
-        surfaces[side].validate()?;
-        check(
-            loops[side].len() == coedges[side].len(),
-            "Each original trim loop needs its spatial coedges",
-        )?;
-        for (uv, world) in loops[side].iter().zip(coedges[side]) {
-            check(
-                uv.len() == world.len(),
-                "Each original trim curve needs one spatial coedge",
-            )?;
-            for (p, c) in uv.iter().zip(world) {
-                p.validate()?;
-                c.world.validate()?;
-                check(
-                    p.control_points[0].len() == 2 && c.world.control_points[0].len() == 3,
-                    "Source boundaries need 2D pcurves and 3D world curves",
-                )?;
-                total += 1;
-            }
-        }
-    }
+    let total = validate_source_faces(&faces)?;
     let trim = trimmed::certify(
         surfaces,
         loops,

@@ -8,8 +8,10 @@ pub(super) struct Source<'a> {
     uv: [I; 2],
     velocity: [I; 2],
     transverse: usize,
+    #[cfg_attr(not(test), allow(dead_code))]
     pub trace: Homogeneous,
     pub range: [f64; 2],
+    #[cfg_attr(not(test), allow(dead_code))]
     pub origin: [f64; 3],
     spans: [usize; 2],
     path: [[f64; 2]; 2],
