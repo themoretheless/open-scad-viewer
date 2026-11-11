@@ -117,7 +117,13 @@ OBB-дерево проверено: подключить его как broadpha
 - **Freeform×freeform булевы.** Зависят от расширения `nurbs-intersect/nurbs_ss`
   на касательные и почти вырожденные случаи.
 - **Лечение положительных зазоров** в `brep-core/healing`.
-- **Сборки и внешние ссылки STEP** в `cad-step`.
+- **Сборки STEP: уточнение.** Продуктовые сборки с размещениями уже
+  импортируются (`compose_step_v7..v9_occurrences`, `import_step_v10`).
+  Отклоняются сборки и внешние ссылки без полной идентичности
+  (`brep-completion-status.md`, строка «Exchange and persistence»): это
+  осознанное правило, а внешняя ссылка требует загрузчика внешних файлов,
+  которого в API нет. Отдельной недоделки здесь нет; расширение возможно
+  только вместе с решением о загрузке внешних файлов.
 - **Пункты «Partial»** из `docs/design/brep-completion-status.md`: NURBS
   foundation, canonical primitives, extrusion/revolution, routing,
   SemanticProgram, legacy adapter, воспроизводимость workspace.
