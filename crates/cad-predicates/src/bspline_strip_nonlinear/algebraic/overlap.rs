@@ -303,7 +303,7 @@ fn continue_cover(
                     continue;
                 }
                 if !bounds.cofactor(
-                    bounds::BoxKey { a: x.span, b: y.span, axis: axis, level: level, pa: x.part, pb: y.part },
+                    bounds::BoxKey { a: x.span, b: y.span, axis, level, pa: x.part, pb: y.part },
                     &proof.cofactors[axis],
                     bounds::StripKnots { spans, u },
                     ctx,
