@@ -36,12 +36,8 @@ fn lattice_auto_matches_cpu_on_small_grid() {
         nodes,
         edges,
         4.,
-        0.,
         3.,
-        false,
-        false,
-        0.,
-        false,
+        ShellStyle { skin: 0., organic: false, open_top: false, wall_depth: 0., keep_core: false },
         Acceleration::Auto,
     )
     .unwrap();
@@ -75,12 +71,8 @@ fn gpu_lattice_matches_cpu_reference() {
         nodes,
         edges,
         2.,
-        0.,
         1.,
-        false,
-        false,
-        0.,
-        false,
+        ShellStyle { skin: 0., organic: false, open_top: false, wall_depth: 0., keep_core: false },
         Acceleration::Gpu,
     )
     .unwrap();
@@ -124,12 +116,8 @@ fn cuda_lattice_matches_cpu_reference() {
         nodes,
         edges,
         2.,
-        0.,
         1.,
-        false,
-        false,
-        0.,
-        false,
+        ShellStyle { skin: 0., organic: false, open_top: false, wall_depth: 0., keep_core: false },
         Acceleration::Cuda,
     )
     .unwrap();

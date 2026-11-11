@@ -459,12 +459,8 @@ pub fn lattice(
         nodes,
         edges,
         radius,
-        skin,
         step,
-        organic,
-        open_top,
-        wall_depth,
-        keep_core,
+        ShellStyle { skin, organic, open_top, wall_depth, keep_core },
         Acceleration::Cpu,
     )
 }
@@ -497,19 +493,26 @@ pub fn recommended_for_lattice(
     clippy::too_many_arguments,
     reason = "public accelerated lattice API preserves the geometry bridge contract"
 )]
+/// How the lattice is enclosed: outer skin thickness, organic blending, an open top with its wall
+/// depth, and whether the solid core is kept.
+#[derive(Clone, Copy, Debug)]
+pub struct ShellStyle {
+    pub skin: f64,
+    pub organic: bool,
+    pub open_top: bool,
+    pub wall_depth: f64,
+    pub keep_core: bool,
+}
 pub fn lattice_accelerated(
     mesh: &Mesh,
     nodes: Vec<P>,
     edges: Vec<[usize; 2]>,
     radius: f64,
-    skin: f64,
     step: f64,
-    organic: bool,
-    open_top: bool,
-    wall_depth: f64,
-    keep_core: bool,
+    style: ShellStyle,
     acceleration: Acceleration,
 ) -> Result<BuiltMesh> {
+    let ShellStyle { skin, organic, open_top, wall_depth, keep_core } = style;
     let report = mesh.inspect()?;
     if !report.closed || report.signed_volume_mm3 <= 0. || mesh.indices.len() / 3 > 30000 {
         return Err(fail(
@@ -631,15 +634,23 @@ pub fn lattice_accelerated(
     #[cfg(feature = "cuda")]
     if acceleration == Acceleration::Cuda {
         output = crate::lattice_cuda::try_cuda(
-            &all, &segments, min, max, cells, skin, organic, open_top, wall_depth, keep_core,
-            blend, &field,
+            &all,
+            &segments,
+            &sdf_core::Grid { min, max, cells },
+            style,
+            blend,
+            &field,
         )?;
     }
     #[cfg(feature = "gpu")]
     if output.is_none() && acceleration.is_gpu() {
         output = crate::lattice_gpu::try_gpu(
-            &all, &segments, min, max, cells, skin, organic, open_top, wall_depth, keep_core,
-            blend, &field,
+            &all,
+            &segments,
+            &sdf_core::Grid { min, max, cells },
+            style,
+            blend,
+            &field,
         )?;
     }
     let output = match output {

@@ -84,19 +84,7 @@ fn main() {
             let mut volume_delta = 0.;
             for _ in 0..3 {
                 let start = Instant::now();
-                let out = mesh_shell::lattice_accelerated(
-                    &mesh,
-                    nodes.clone(),
-                    edges.clone(),
-                    3.5,
-                    3.5,
-                    1.5,
-                    organic,
-                    false,
-                    0.,
-                    false,
-                    mode.acceleration,
-                )
+                let out = mesh_shell::lattice_accelerated(&mesh, nodes.clone(), edges.clone(), 3.5, 1.5, mesh_shell::ShellStyle { skin: 3.5, organic: organic, open_top: false, wall_depth: 0., keep_core: false }, mode.acceleration)
                 .unwrap();
                 times.push(start.elapsed().as_secs_f64() * 1000.);
                 triangles = out.mesh.indices.len() / 3;
