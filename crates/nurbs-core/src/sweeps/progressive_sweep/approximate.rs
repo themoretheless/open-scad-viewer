@@ -411,18 +411,31 @@ pub fn approximate_guided_profiles(
 }
 
 /// Contact fit shared by every profile using one authored reference anchor.
+/// Laws of a guided contact sweep: path, scale, twist, the contact guide, and the affine axis scale
+/// and center laws.
+#[derive(Clone, Copy)]
+pub struct ContactSweepLaws<'a> {
+    pub path: &'a Curve,
+    pub scale: &'a Curve,
+    pub twist: &'a Curve,
+    pub guide: &'a Curve,
+    pub axis_scale: &'a Curve,
+    pub center: &'a Curve,
+}
+/// The profile and its curve parameter that touch the guide.
+#[derive(Clone, Copy, Debug)]
+pub struct ContactAnchor {
+    pub profile_index: usize,
+    pub parameter: f64,
+}
 pub fn approximate_contact_profiles(
     profiles: &[Curve],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    guide: &Curve,
-    profile_index: usize,
-    parameter: f64,
-    axis_scale: &Curve,
-    center: &Curve,
+    laws: ContactSweepLaws<'_>,
+    anchor: ContactAnchor,
     options: Options,
 ) -> Result<MultiApproximation> {
+    let ContactSweepLaws { path, scale, twist, guide, axis_scale, center } = laws;
+    let ContactAnchor { profile_index, parameter } = anchor;
     collect_profiles(
         MultiSweep::new(profiles, path, scale, twist, options)?
             .with_contact_guide(guide, profile_index, parameter)?
