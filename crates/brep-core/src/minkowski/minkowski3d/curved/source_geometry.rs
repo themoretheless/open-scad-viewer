@@ -85,32 +85,19 @@ pub(super) fn geometry(
     for use_ in uses {
         if rectangle(m, use_.face).is_err() {
             has_trimmed = true;
-            trimmed::append(
-                m,
-                &use_,
-                &stations,
-                depth,
-                trimmed::TessellationOutput {
-                    vertices: &mut vertices,
-                    triangles: &mut triangles,
-                    seams: &mut seams,
-                    tubes: &mut tubes,
-                    maximum: &mut maximum,
-                },
-                limit,
-                work,
-            )?;
+            let out = trimmed::TessellationOutput {
+                vertices: &mut vertices,
+                triangles: &mut triangles,
+                seams: &mut seams,
+                tubes: &mut tubes,
+                maximum: &mut maximum,
+            };
+            trimmed::append(m, &use_, &stations, depth, out, limit, work)?;
             continue;
         }
         let s = &m.faces[use_.face].surface;
-        let da = [
-            Q::from_float(s.knots_u[s.degree_u]).unwrap(),
-            Q::from_float(s.knots_u[s.control_points.len()]).unwrap(),
-        ];
-        let db = [
-            Q::from_float(s.knots_v[s.degree_v]).unwrap(),
-            Q::from_float(s.knots_v[s.control_points[0].len()]).unwrap(),
-        ];
+        let da = [Q::from_float(s.knots_u[s.degree_u]).unwrap(), Q::from_float(s.knots_u[s.control_points.len()]).unwrap()];
+        let db = [Q::from_float(s.knots_v[s.degree_v]).unwrap(), Q::from_float(s.knots_v[s.control_points[0].len()]).unwrap()];
         for u in stations.windows(2) {
             for v in stations.windows(2) {
                 work.charge(1)?;

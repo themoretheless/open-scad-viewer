@@ -298,21 +298,10 @@ pub(crate) fn inspect_station_projective_strip_jets(pair:StripPair<'_>,request:S
     inspect_strip_jets_scalar(pair,request,true,Some(scalar),false)
 }
 fn inspect_strip_jets_scalar(pair:StripPair<'_>,request:StripJetRequest,projective:bool,scalar:Option<AuthoredScalar>,nonlinear:bool)->Result<ExactStripJetReport>{
-    let StripPair { a, b, ab, bb } = pair;
-    let StripJetRequest { order, scale, max_work } = request;
-
-    a.validate()?;
-    b.validate()?;
-    check(
-        [a, b]
-            .iter()
-            .all(|s| s.control_points.iter().flatten().all(|p| p.len() == 3)),
-        "Exact strip jets require XYZ surfaces",
-    )?;
-    check(
-        matches!(order, 1 | 2) && scale.is_finite() && scale > 0. && max_work <= 1000000,
-        "Invalid exact strip jet options",
-    )?;
+    let (StripPair { a, b, ab, bb }, StripJetRequest { order, scale, max_work }) = (pair, request);
+    a.validate()?; b.validate()?;
+    check([a, b].iter().all(|s| s.control_points.iter().flatten().all(|p| p.len() == 3)), "Exact strip jets require XYZ surfaces")?;
+    check(matches!(order, 1 | 2) && scale.is_finite() && scale > 0. && max_work <= 1000000, "Invalid exact strip jet options")?;
     let r = Boundary::parse(ab)?;
     let e = Boundary::parse(bb)?;
     let mut out = ExactStripJetReport {

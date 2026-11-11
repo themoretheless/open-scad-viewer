@@ -202,6 +202,7 @@ pub fn certify(
     };
     let mut pending = vec![(natural, 0)];
     let mut mismatch = false;
+    let target = FitTarget { candidate, faces, parameters, tolerance };
     while let Some((domain, node)) = pending.pop() {
         out.visited += 1;
         let mut cell = Cell {
@@ -217,70 +218,15 @@ pub fn certify(
             surfaces, distances, axis, domain[0], free, second, spans, domain[1], 1,
         )?;
         out.envelope_queries += 1;
-        if smooth {
-            if let Some(e) = envelope.cells.first() {
-                cell.envelope_regular = e.regular;
-                let jets = surface_offset::jacobian_bounds(candidate, domain, 0., spans)?;
-                if let Some(jets) = jets.derivatives {
-                    let cu = intervals(jets[0])?;
-                    let cv = intervals(jets[1])?;
-                    cell.candidate_regular = offset_contact_tangent::speed(cross(cu, cv)?)?.lo > 0.;
-                    let eu = intervals(e.center_derivative)?;
-                    let ev = intervals(e.arc_derivative)?;
-                    let mut du = [I::point(0.); 3];
-                    let mut dv = du;
-                    for k in 0..3 {
-                        du[k] = cu[k].sub(eu[k])?;
-                        dv[k] = cv[k].sub(ev[k])?;
-                    }
-                    scores = [
-                        offset_contact_tangent::speed(du)?.hi * scores[0],
-                        offset_contact_tangent::speed(dv)?.hi * scores[1],
-                    ];
-                    let mut tm = domain[0][0] + (domain[0][1] - domain[0][0]) * 0.5;
-                    // A one-ULP positive band encloses the exact anchor root.
-                    // The anchor is its lower endpoint, not a floating solver sample.
-                    if tm.next_up() > domain[0][1] {
-                        tm = domain[0][0];
-                    }
-                    let sm = domain[1][0] + (domain[1][1] - domain[1][0]) * 0.5;
-                    let anchor = offset_envelope::certify_arc(
-                        surfaces,
-                        distances,
-                        axis,
-                        [tm, tm.next_up()],
-                        free,
-                        second,
-                        spans,
-                        [sm, sm],
-                        1,
-                    )?;
-                    out.envelope_queries += 1;
-                    if let Some(a) = anchor.cells.first() {
-                        let cb = crate::surface_distance::rectangle_bounds(
-                            candidate,
-                            [[tm, tm], [sm, sm]],
-                        )?;
-                        let ab = intervals(a.image)?;
-                        let mut residual = [I::point(0.); 3];
-                        for k in 0..3 {
-                            residual[k] = I::new(cb[k][0], cb[k][1])?.sub(ab[k])?;
-                        }
-                        let error = offset_contact_tangent::speed(residual)?;
-                        cell.anchor_error_mm = Some([error.lo, error.hi]);
-                        mismatch |= error.lo > tolerance;
-                        let dt = I::new(domain[0][0], domain[0][1])?.sub(I::point(tm))?;
-                        let ds = I::new(domain[1][0], domain[1][1])?.sub(I::point(sm))?;
-                        for k in 0..3 {
-                            residual[k] = residual[k].add(du[k].mul(dt)?)?.add(dv[k].mul(ds)?)?;
-                        }
-                        let upper = offset_contact_tangent::speed(residual)?.hi;
-                        cell.error_upper_mm = Some(upper);
-                        cell.admitted =
-                            upper <= tolerance && cell.envelope_regular && cell.candidate_regular;
-                    }
-                }
-            }
+        if smooth && let Some(e) = envelope.cells.first() {
+            evaluate_smooth_cell(
+                &target,
+                e,
+                &mut cell,
+                &mut scores,
+                &mut out.envelope_queries,
+                &mut mismatch,
+            )?;
         }
         let split_axis = if scores[0] >= scores[1] { 0 } else { 1 };
         let mid = domain[split_axis][0] + (domain[split_axis][1] - domain[split_axis][0]) * 0.5;
@@ -319,6 +265,84 @@ pub fn certify(
         "fit-work-limit"
     };
     Ok(out)
+}
+struct FitTarget<'a> {
+    candidate: &'a Surface,
+    faces: OffsetFaces<'a>,
+    parameters: ContactParameters,
+    tolerance: f64,
+}
+fn evaluate_smooth_cell(
+    target: &FitTarget<'_>,
+    e: &offset_envelope::Cell,
+    cell: &mut Cell,
+    scores: &mut [f64; 2],
+    envelope_queries: &mut usize,
+    mismatch: &mut bool,
+) -> Result<()> {
+    let FitTarget { candidate, faces, parameters, tolerance } = *target;
+    let OffsetFaces { surfaces, distances } = faces;
+    let ContactParameters { axis, free, second, spans, .. } = parameters;
+    let domain = cell.domain;
+    cell.envelope_regular = e.regular;
+    let jets = surface_offset::jacobian_bounds(candidate, domain, 0., spans)?;
+    let Some(jets) = jets.derivatives else {
+        return Ok(());
+    };
+    let cu = intervals(jets[0])?;
+    let cv = intervals(jets[1])?;
+    cell.candidate_regular = offset_contact_tangent::speed(cross(cu, cv)?)?.lo > 0.;
+    let eu = intervals(e.center_derivative)?;
+    let ev = intervals(e.arc_derivative)?;
+    let mut du = [I::point(0.); 3];
+    let mut dv = du;
+    for k in 0..3 {
+        du[k] = cu[k].sub(eu[k])?;
+        dv[k] = cv[k].sub(ev[k])?;
+    }
+    *scores = [
+        offset_contact_tangent::speed(du)?.hi * scores[0],
+        offset_contact_tangent::speed(dv)?.hi * scores[1],
+    ];
+    let mut tm = domain[0][0] + (domain[0][1] - domain[0][0]) * 0.5;
+    // A one-ULP positive band encloses the exact anchor root.
+    // The anchor is its lower endpoint, not a floating solver sample.
+    if tm.next_up() > domain[0][1] {
+        tm = domain[0][0];
+    }
+    let sm = domain[1][0] + (domain[1][1] - domain[1][0]) * 0.5;
+    let anchor = offset_envelope::certify_arc(
+        surfaces,
+        distances,
+        axis,
+        [tm, tm.next_up()],
+        free,
+        second,
+        spans,
+        [sm, sm],
+        1,
+    )?;
+    *envelope_queries += 1;
+    if let Some(a) = anchor.cells.first() {
+        let cb = crate::surface_distance::rectangle_bounds(candidate, [[tm, tm], [sm, sm]])?;
+        let ab = intervals(a.image)?;
+        let mut residual = [I::point(0.); 3];
+        for k in 0..3 {
+            residual[k] = I::new(cb[k][0], cb[k][1])?.sub(ab[k])?;
+        }
+        let error = offset_contact_tangent::speed(residual)?;
+        cell.anchor_error_mm = Some([error.lo, error.hi]);
+        *mismatch |= error.lo > tolerance;
+        let dt = I::new(domain[0][0], domain[0][1])?.sub(I::point(tm))?;
+        let ds = I::new(domain[1][0], domain[1][1])?.sub(I::point(sm))?;
+        for k in 0..3 {
+            residual[k] = residual[k].add(du[k].mul(dt)?)?.add(dv[k].mul(ds)?)?;
+        }
+        let upper = offset_contact_tangent::speed(residual)?.hi;
+        cell.error_upper_mm = Some(upper);
+        cell.admitted = upper <= tolerance && cell.envelope_regular && cell.candidate_regular;
+    }
+    Ok(())
 }
 /// Two enclosed contact sections propose a finite degree-(1,2) rational patch.
 /// Midpoints and floating normals are proposal data only; `certify` must admit
