@@ -230,10 +230,12 @@ impl Context<'_, '_> {
                 b[2],
                 phase,
                 guide_phase,
-                self.offset.as_ref(),
-                self.transport.as_ref(),
-                self.shared_guide,
-                zero,
+                arc_frames::ArcFrameSources {
+                    offset: self.offset.as_ref(),
+                    transport: self.transport.as_ref(),
+                    shared_guide: self.shared_guide,
+                    zero,
+                },
                 max_cells - out.cells,
             )?
         } else {

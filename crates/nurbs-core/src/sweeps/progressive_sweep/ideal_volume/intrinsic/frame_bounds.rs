@@ -60,10 +60,12 @@ pub(super) fn jets(
         station,
         phase,
         guide,
-        c.offset.as_ref(),
-        c.transport.as_ref(),
-        c.shared_guide,
-        &c.zero,
+        arc_frames::ArcFrameSources {
+            offset: c.offset.as_ref(),
+            transport: c.transport.as_ref(),
+            shared_guide: c.shared_guide,
+            zero: &c.zero,
+        },
         stage - out.cells,
     )?;
     let Some(result) = result else {

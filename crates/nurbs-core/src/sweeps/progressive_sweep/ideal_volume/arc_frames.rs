@@ -1,17 +1,29 @@
 //! Original frame jets in the station coordinate, with independently proved
 //! normalized source-parameter maps. No inverse derivative is guessed.
 use super::*;
+/// Prepared inputs an arc-station frame proof may draw on besides the sweep itself.
+#[derive(Clone, Copy)]
+pub(in crate::sweeps::progressive_sweep) struct ArcFrameSources<'a> {
+    /// Guide offset curve, used when the guide is shared with the path.
+    pub offset: Option<&'a Curve>,
+    pub transport: Option<&'a OriginalRmfTransportReport>,
+    pub shared_guide: bool,
+    pub zero: &'a Curve,
+}
 pub(in crate::sweeps::progressive_sweep) fn arc_frame(
     s: &Sweep<'_>,
     station: [f64; 2],
     p: frame::PathPhase,
     g: Option<frame::PathPhase>,
-    offset: Option<&Curve>,
-    transport: Option<&OriginalRmfTransportReport>,
-    shared_guide: bool,
-    zero: &Curve,
+    sources: ArcFrameSources<'_>,
     max: usize,
 ) -> Result<Option<frame::Report>> {
+    let ArcFrameSources {
+        offset,
+        transport,
+        shared_guide,
+        zero,
+    } = sources;
     if let Some((a, n)) = s.frame_laws {
         return frame::certify_twisted(a, n, s.twist, station, max).map(Some);
     }
