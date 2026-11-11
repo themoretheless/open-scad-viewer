@@ -44,7 +44,14 @@ pub fn certify_frenet_control_trajectories(
         return certify_frenet_planar_control_trajectories(path,scale,twist,affine,qs,traversal,max_cells);
     }
     let frame=certify_frenet_path(path,twist,traversal,max_cells)?;
-    super::trajectory::control_trajectories_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 pub fn certify_frenet_path_values(
@@ -136,7 +143,15 @@ pub(crate) fn certify_frenet_relative_values(
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     // Relative translation is the constructor-owned literal zero curve.
     // Its exact value is known; no original-source query is needed here.
-    super::trajectory::control_values_with_prepared_path(&zero,scale,affine,qs,law_traversal,max_cells,frame,None,Some([[0.;2];3]))
+    super::trajectory::control_values_with_prepared_path(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        law_traversal,
+        max_cells,
+        frame,
+        None,
+        Some([[0.;2];3]),
+    )
 }
 
 /// Tighter original Frenet image using its proved orthonormal binormal
@@ -147,7 +162,15 @@ pub(crate) fn certify_frenet_relative_values_with_binormal_identity(
 )->Result<ControlValuesReport>{
     let frame=frenet_values_at_with_binormal_identity(path,twist,path_traversal,law_traversal,max_cells,true)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
-    super::trajectory::control_values_with_prepared_path(&zero,scale,affine,qs,law_traversal,max_cells,frame,None,Some([[0.;2];3]))
+    super::trajectory::control_values_with_prepared_path(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        law_traversal,
+        max_cells,
+        frame,
+        None,
+        Some([[0.;2];3]),
+    )
 }
 
 /// Relative second jets in normalized arc station. Caller must own a complete
@@ -194,7 +217,14 @@ pub(crate) fn certify_c4_frenet_arc_relative_trajectories(
     // still retain their independent single-span/C2 requirements below.
     frame.single_span=true;
     frame=apply_twist(frame,twist,station,max_cells)?;
-    super::trajectory::control_trajectories_with_fit(&zero,scale,affine,qs,station,max_cells,frame,None)
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        station,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 pub fn certify_frenet_control_values(
@@ -202,7 +232,14 @@ pub fn certify_frenet_control_values(
     qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
 )->Result<ControlValuesReport>{
     let frame=certify_frenet_path_values(path,twist,traversal,max_cells)?;
-    super::trajectory::control_values_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 /// On an original coordinate-plane path, Frenet binormal is constant wherever
@@ -237,7 +274,14 @@ pub fn certify_frenet_planar_control_trajectories(
         }
     }
     let frame=if frame.status==Status::Certified {apply_twist(frame,twist,traversal,max_cells)?} else {frame};
-    super::trajectory::control_trajectories_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 #[test]

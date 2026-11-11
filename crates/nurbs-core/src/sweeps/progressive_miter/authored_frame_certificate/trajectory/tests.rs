@@ -10,8 +10,14 @@ fn orthonormal_pose_norm_keeps_affine_center_fit_and_translation_separate() {
     let frame=ValuesReport {status:Status::Certified,cells:7,
         longitudinal:Some([[-100.,100.];3]),transverse:Some([[-100.,100.];3]),
         binormal:Some([[-100.,100.];3])};
-    let report=control_values_with_fit(&path,&scale,Some((&axes,&center)),&q,
-        [0.,1.],100,frame.clone(),Some(I::point(1.5))).unwrap();
+    let report=control_values_with_fit(
+        ControlLaws { path: &path, scale: &scale, affine: Some((&axes,&center)) },
+        &q,
+        [0.,1.],
+        100,
+        frame.clone(),
+        Some(I::point(1.5)),
+    ).unwrap();
     assert_eq!(report.status,Status::Certified);
     let value=report.values.unwrap()[0];let radius=172_f64.sqrt();
     // Original coefficients after axis/center/fit are exactly [6,6,10].
@@ -24,13 +30,26 @@ fn orthonormal_pose_norm_keeps_affine_center_fit_and_translation_separate() {
         }
     }
     for max in [7,report.cells-1] {
-        let short=control_values_with_fit(&path,&scale,Some((&axes,&center)),&q,
-            [0.,1.],max,frame.clone(),Some(I::point(1.5))).unwrap();
+        let short=control_values_with_fit(
+            ControlLaws { path: &path, scale: &scale, affine: Some((&axes,&center)) },
+            &q,
+            [0.,1.],
+            max,
+            frame.clone(),
+            Some(I::point(1.5)),
+        ).unwrap();
         assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
         assert!(short.cells<=max);
     }
     let unresolved=ValuesReport {status:Status::Unresolved,..frame};
-    let short=control_values_with_fit(&path,&scale,None,&q,[0.,1.],100,unresolved,None).unwrap();
+    let short=control_values_with_fit(
+        ControlLaws { path: &path, scale: &scale, affine: None },
+        &q,
+        [0.,1.],
+        100,
+        unresolved,
+        None,
+    ).unwrap();
     assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
 }
 fn line(a: [f64; 3], b: [f64; 3], domain: [f64; 2]) -> Curve {

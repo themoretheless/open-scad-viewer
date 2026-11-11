@@ -144,7 +144,14 @@ pub(crate) fn certify_path_guide_relative_values(
     let PathGuideTraversal { path: path_traversal, guide: guide_traversal, law: law_traversal, same_parameter } = traversal;
     let frame=path_guide_values_at(path,guide,twist,path_traversal,guide_traversal,law_traversal,same_parameter,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
-    super::trajectory::control_values_with_fit(&zero,scale,affine,qs,law_traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        law_traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 /// Path, guide, scale and twist laws of a guided contact sweep, with optional affine laws.
@@ -193,7 +200,14 @@ pub(crate) fn certify_contact_relative_values(
     frame.cells+=fit.cells;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     let fit=fit.value.unwrap();
-    super::trajectory::control_values_with_fit(&zero,scale,affine,qs,law_traversal,max_cells,frame,Some(I::new(fit[0],fit[1])?))
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        law_traversal,
+        max_cells,
+        frame,
+        Some(I::new(fit[0],fit[1])?),
+    )
 }
 
 pub fn certify_path_guide_control_values(
@@ -201,7 +215,14 @@ pub fn certify_path_guide_control_values(
     qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
 )->Result<ControlValuesReport>{
     let frame=certify_path_guide_values(path,guide,twist,traversal,max_cells)?;
-    super::trajectory::control_values_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 #[test]
@@ -521,7 +542,14 @@ pub fn certify_path_guide_control_trajectories(
     qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
 )->Result<TrajectoriesReport>{
     let frame=certify_path_guide(path,guide,twist,traversal,max_cells)?;
-    super::trajectory::control_trajectories_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 #[test]

@@ -258,9 +258,7 @@ impl Context<'_, '_> {
         f.cells = 0;
         if let Some(cache) = &self.poses {
             let origin = frame::control_trajectories_with_phase(
-                s.path,
-                s.scale,
-                s.affine_laws,
+                frame::ControlLaws { path: s.path, scale: s.scale, affine: s.affine_laws },
                 &[[[0., 0.]; 3]],
                 b[2],
                 max_cells - out.cells,
@@ -279,9 +277,7 @@ impl Context<'_, '_> {
                 })
             });
             let linear = frame::control_trajectories_with_fit(
-                zero,
-                s.scale,
-                s.affine_laws.map(|(a, _)| (a, zero)),
+                frame::ControlLaws { path: zero, scale: s.scale, affine: s.affine_laws.map(|(a, _)| (a, zero)) },
                 &axes,
                 b[2],
                 max_cells - out.cells,
@@ -306,9 +302,7 @@ impl Context<'_, '_> {
             return Ok(Enclosed::Value(e));
         }
         let actual = frame::control_trajectories_with_phase(
-            s.path,
-            s.scale,
-            s.affine_laws,
+            frame::ControlLaws { path: s.path, scale: s.scale, affine: s.affine_laws },
             &[encode(q[0])],
             b[2],
             max_cells - out.cells,
@@ -326,9 +320,7 @@ impl Context<'_, '_> {
         f.cells = 0;
         let affine = s.affine_laws.map(|(a, _)| (a, zero));
         let linear = frame::control_trajectories_with_fit(
-            zero,
-            s.scale,
-            affine,
+            frame::ControlLaws { path: zero, scale: s.scale, affine },
             &[encode(q[1]), encode(q[2]), encode(qt)],
             b[2],
             max_cells - out.cells,

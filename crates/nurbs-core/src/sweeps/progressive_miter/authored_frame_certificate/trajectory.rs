@@ -200,7 +200,7 @@ pub fn certify_control_values(
 ) -> Result<ControlValuesReport> {
     let super::AuthoredFrameLaws { path, scale, twist, longitudinal, transverse, affine } = laws;
     let frame=certify_twisted_values(longitudinal,transverse,twist,traversal,max_cells)?;
-    control_values_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    control_values_with_fit(ControlLaws { path, scale, affine }, qs, traversal, max_cells, frame, None)
 }
 pub fn certify_control_trajectories(
     laws: super::AuthoredFrameLaws<'_>,
@@ -210,7 +210,14 @@ pub fn certify_control_trajectories(
 ) -> Result<TrajectoriesReport> {
     let super::AuthoredFrameLaws { path, scale, twist, longitudinal, transverse, affine } = laws;
     let frame=certify_twisted(longitudinal,transverse,twist,traversal,max_cells)?;
-    control_trajectories_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    control_trajectories_with_fit(
+        ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 /// Shared original-law composition; frame evidence is produced by native owners.
 pub(super) fn control_value_from_frame(
@@ -236,22 +243,32 @@ pub(super) fn control_value_with_fit(
     path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,q:[[f64;2];3],
     traversal:[f64;2],max_cells:usize,frame:ValuesReport,transverse_fit:Option<I>,
 )->Result<ControlValueReport>{
-    let batch=control_values_with_fit(path,scale,affine,&[q],traversal,max_cells,frame,transverse_fit)?;
+    let batch=control_values_with_fit(
+        ControlLaws { path, scale, affine },
+        &[q],
+        traversal,
+        max_cells,
+        frame,
+        transverse_fit,
+    )?;
     Ok(ControlValueReport {status:batch.status,cells:batch.cells,value:batch.values.map(|v|v[0]),reason:batch.reason})
 }
 pub(crate) fn control_values_with_fit(
-    path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,qs:&[[[f64;2];3]],
+    laws: super::ControlLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
     traversal:[f64;2],max_cells:usize,frame:ValuesReport,transverse_fit:Option<I>,
 )->Result<ControlValuesReport>{
-    control_values_with_prepared_path(path,scale,affine,qs,traversal,max_cells,frame,transverse_fit,None)
+    control_values_with_prepared_path(laws,qs,traversal,max_cells,frame,transverse_fit,None)
 }
 /// Cached position must belong to this same original path and traversal; its
 /// source work is already included in frame.cells by the owning fit caller.
 pub(super) fn control_values_with_prepared_path(
-    path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,qs:&[[[f64;2];3]],
+    laws: super::ControlLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
     traversal:[f64;2],max_cells:usize,frame:ValuesReport,transverse_fit:Option<I>,
     prepared_path:Option<[[f64;2];3]>,
 )->Result<ControlValuesReport>{
+    let super::ControlLaws { path, scale, affine } = laws;
     check(
         max_cells <= 100000 && frame.cells <= max_cells,
         "Control value work exceeds budget",
@@ -395,19 +412,37 @@ pub(super) fn control_trajectory_with_fit(
     path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,q:[[f64;2];3],
     traversal:[f64;2],max_cells:usize,frame:Report,transverse_fit:Option<[I;3]>,
 )->Result<TrajectoryReport>{
-    let batch=control_trajectories_with_fit(path,scale,affine,&[q],traversal,max_cells,frame,transverse_fit)?;
+    let batch=control_trajectories_with_fit(
+        ControlLaws { path, scale, affine },
+        &[q],
+        traversal,
+        max_cells,
+        frame,
+        transverse_fit,
+    )?;
     Ok(TrajectoryReport {traversal,status:batch.status,cells:batch.cells,jet:batch.jets.map(|mut v|v.remove(0)),single_span:batch.single_span,reason:batch.reason})
 }
 pub(crate) fn control_trajectories_with_fit(
-    path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,qs:&[[[f64;2];3]],
+    laws: super::ControlLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
     traversal:[f64;2],max_cells:usize,frame:Report,transverse_fit:Option<[I;3]>,
 )->Result<TrajectoriesReport>{
-    control_trajectories_with_phase(path,scale,affine,qs,traversal,max_cells,frame,transverse_fit,PathPhase::identity(traversal))
+    control_trajectories_with_phase(
+        laws,
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        transverse_fit,
+        PathPhase::identity(traversal),
+    )
 }
 pub(crate) fn control_trajectories_with_phase(
-    path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,qs:&[[[f64;2];3]],
+    laws: super::ControlLaws<'_>,
+    qs: &[[[f64; 2]; 3]],
     traversal:[f64;2],max_cells:usize,frame:Report,transverse_fit:Option<[I;3]>,path_phase:PathPhase,
 )->Result<TrajectoriesReport>{
+    let super::ControlLaws { path, scale, affine } = laws;
     check(
         max_cells <= 100000 && frame.cells <= max_cells,
         "Control trajectory work exceeds budget",

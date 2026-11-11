@@ -120,7 +120,14 @@ pub(crate) fn certify_fixed_normal_relative_values(
 )->Result<ControlValuesReport>{
     let frame=fixed_normal_values_at(path,normal,twist,path_traversal,law_traversal,max_cells,false)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
-    super::trajectory::control_values_with_fit(&zero,scale,affine,qs,law_traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        law_traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 /// Requires a charged exact original-coefficient plane proof in the caller.
@@ -131,7 +138,14 @@ pub(crate) fn certify_proved_planar_relative_values(
 )->Result<ControlValuesReport>{
     let frame=fixed_normal_values_at(path,normal,twist,path_traversal,law_traversal,max_cells,true)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
-    super::trajectory::control_values_with_fit(&zero,scale,affine,qs,law_traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        law_traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 /// Full original position/pose field; the caller must own the exact plane
@@ -141,7 +155,14 @@ pub(crate) fn certify_proved_planar_control_values(
     qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
 )->Result<ControlValuesReport>{
     let frame=fixed_normal_values_at(path,normal,twist,traversal,traversal,max_cells,true)?;
-    super::trajectory::control_values_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 pub fn certify_fixed_normal_control_values(
@@ -149,7 +170,14 @@ pub fn certify_fixed_normal_control_values(
     qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
 )->Result<ControlValuesReport>{
     let frame=certify_fixed_normal_path_values(path,normal,twist,traversal,max_cells)?;
-    super::trajectory::control_values_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 pub fn certify_fixed_normal_control_trajectories(
@@ -157,7 +185,14 @@ pub fn certify_fixed_normal_control_trajectories(
     qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
 )->Result<TrajectoriesReport>{
     let frame=certify_fixed_normal_path(path,normal,twist,traversal,max_cells)?;
-    super::trajectory::control_trajectories_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 pub fn certify_fixed_normal_path(

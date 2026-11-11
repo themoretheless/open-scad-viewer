@@ -14,7 +14,14 @@
         let zero = crate::sweeps::progressive_sweep::constant_vector_law([0.;3]).unwrap();
         for affine in [None, Some((&axes,&center))] {
             let fresh = relative_control_values_from_frame(&scale,affine,&qs,[0.2,0.8],100,frame()).unwrap();
-            let reference = trajectory::control_values_with_fit(&zero,&scale,affine,&qs,[0.2,0.8],100,frame(),None).unwrap();
+            let reference = trajectory::control_values_with_fit(
+                ControlLaws { path: &zero, scale: &scale, affine },
+                &qs,
+                [0.2,0.8],
+                100,
+                frame(),
+                None,
+            ).unwrap();
             assert_eq!(fresh.status,Status::Certified);
             assert_eq!(reference.status,Status::Certified);
             assert!(fresh.cells > 0 && fresh.cells < reference.cells);

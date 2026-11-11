@@ -46,7 +46,14 @@ pub(crate) fn certify_fixed_path_control_values_with_frame_path(
     qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
 )->Result<ControlValuesReport>{
     let frame=certify_fixed_path_values(frame_path,normal,twist,traversal,max_cells)?;
-    super::trajectory::control_values_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 /// Relative pose in the original initial-tangent frame. Translation is owned
@@ -57,7 +64,14 @@ pub(crate) fn certify_fixed_relative_values(
 )->Result<ControlValuesReport>{
     let frame=certify_fixed_path_values(path,normal,twist,traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
-    super::trajectory::control_values_with_fit(&zero,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_values_with_fit(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 pub(crate) fn certify_fixed_relative_value(
     path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
@@ -65,7 +79,14 @@ pub(crate) fn certify_fixed_relative_value(
 )->Result<ControlValueReport>{
     let frame=certify_fixed_path_values(path,normal,twist,traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
-    let batch=super::trajectory::control_values_with_fit(&zero,scale,affine,&[q],traversal,max_cells,frame,None)?;
+    let batch=super::trajectory::control_values_with_fit(
+        super::ControlLaws { path: &zero, scale, affine },
+        &[q],
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )?;
     Ok(ControlValueReport {status:batch.status,cells:batch.cells,value:batch.values.map(|mut v|v.remove(0)),reason:batch.reason})
 }
 pub(crate) fn certify_fixed_relative_trajectory(
@@ -83,7 +104,14 @@ pub(crate) fn certify_fixed_relative_trajectories(
 )->Result<TrajectoriesReport>{
     let frame=certify_fixed_path(path,normal,twist,traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
-    super::trajectory::control_trajectories_with_fit(&zero,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path: &zero, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 /// Original fixed basis is constant in traversal. Its uncertainty comes from
@@ -115,7 +143,14 @@ pub(crate) fn certify_fixed_path_control_trajectories_with_frame_path(
     qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
 )->Result<TrajectoriesReport>{
     let frame=certify_fixed_path(frame_path,normal,twist,traversal,max_cells)?;
-    super::trajectory::control_trajectories_with_fit(path,scale,affine,qs,traversal,max_cells,frame,None)
+    super::trajectory::control_trajectories_with_fit(
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 #[test]

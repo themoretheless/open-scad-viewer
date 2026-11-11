@@ -41,9 +41,7 @@ pub fn certify_contact_control_values(
     frame.cells += fit.cells;
     let fit = fit.value.unwrap();
     super::trajectory::control_values_with_prepared_path(
-        path,
-        scale,
-        affine,
+        super::ControlLaws { path, scale, affine },
         qs,
         traversal,
         max_cells,
@@ -322,7 +320,14 @@ fn cached_contact_path_matches_uncached_affine_transport() {
             let mut frame=certify_path_guide_values(&path,&guide,&twist,traversal,1000-fit.cells).unwrap();
             frame.cells+=fit.cells;
             let fit_value=fit.value.unwrap();
-            let uncached=super::trajectory::control_values_with_fit(&path,&scale,affine,&qs,traversal,1000,frame,Some(I::new(fit_value[0],fit_value[1]).unwrap())).unwrap();
+            let uncached=super::trajectory::control_values_with_fit(
+                super::ControlLaws { path: &path, scale: &scale, affine },
+                &qs,
+                traversal,
+                1000,
+                frame,
+                Some(I::new(fit_value[0],fit_value[1]).unwrap()),
+            ).unwrap();
             let cached=certify_contact_control_values(&path,&guide,&scale,&twist,affine,&qs,[2.,2.],traversal,1000).unwrap();
             assert_eq!(cached.status,Status::Certified);
             assert_eq!(cached.values,uncached.values);

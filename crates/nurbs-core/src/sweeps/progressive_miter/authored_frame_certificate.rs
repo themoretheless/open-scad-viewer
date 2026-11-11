@@ -30,6 +30,13 @@ pub struct AuthoredFrameLaws<'a> {
     pub transverse: &'a Curve,
     pub affine: Option<(&'a Curve, &'a Curve)>,
 }
+/// The path and scale laws, with optional affine laws, that place control coordinates on a frame.
+#[derive(Clone, Copy)]
+pub(crate) struct ControlLaws<'a> {
+    pub path: &'a Curve,
+    pub scale: &'a Curve,
+    pub affine: Option<(&'a Curve, &'a Curve)>,
+}
 /// Path, scale and twist laws of a sweep, with optional affine laws.
 pub(crate) use crate::sweeps::progressive_sweep::SweepLaws as ProfileLaws;
 mod guided_path_values;
@@ -627,7 +634,15 @@ pub(crate) fn relative_control_values_from_frame(
  // This freshly constructed source is identically zero. Its exact value is
  // available by construction; do not reprove three scalar zero restrictions
  // on every relative-frame query.
- trajectory::control_values_with_prepared_path(&zero,scale,affine,qs,station,max_cells,frame,None,Some([[0.;2];3]))
+ trajectory::control_values_with_prepared_path(
+     ControlLaws { path: &zero, scale, affine },
+     qs,
+     station,
+     max_cells,
+     frame,
+     None,
+     Some([[0.;2];3]),
+ )
 }
 
 pub(crate) use frenet_path_values::{ArcTraversal, certify_c4_frenet_arc_relative_trajectories};
@@ -640,6 +655,12 @@ pub(crate) fn control_values_from_owned_frame(
     frame: ValuesReport, transverse_fit: Option<crate::distance_bounds::Interval>,
 ) -> Result<ControlValuesReport> {
     trajectory::control_values_with_prepared_path(
-        path, scale, affine, coordinates, fraction, max_cells, frame, transverse_fit, None,
+        ControlLaws { path, scale, affine },
+        coordinates,
+        fraction,
+        max_cells,
+        frame,
+        transverse_fit,
+        None,
     )
 }

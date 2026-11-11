@@ -222,7 +222,12 @@ pub(crate) fn certify_planar_principal_control_values(
         path, normal, sign, twist, traversal, traversal, max_cells,
     )?;
     super::trajectory::control_values_with_fit(
-        path, scale, affine, qs, traversal, max_cells, frame, None,
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
     )
 }
 /// The fixed plane of a planar principal frame: its normal and the chosen orientation sign.
@@ -252,9 +257,7 @@ pub(crate) fn certify_planar_principal_relative_values(
     )?;
     let zero = crate::sweeps::progressive_sweep::constant_vector_law([0.; 3])?;
     super::trajectory::control_values_with_fit(
-        &zero,
-        scale,
-        affine,
+        super::ControlLaws { path: &zero, scale, affine },
         qs,
         law_traversal,
         max_cells,
@@ -286,6 +289,11 @@ pub(crate) fn certify_planar_principal_control_trajectories(
         frame.binormal = Some(signed_jet(n, -sign));
     }
     super::trajectory::control_trajectories_with_fit(
-        path, scale, affine, qs, traversal, max_cells, frame, None,
+        super::ControlLaws { path, scale, affine },
+        qs,
+        traversal,
+        max_cells,
+        frame,
+        None,
     )
 }

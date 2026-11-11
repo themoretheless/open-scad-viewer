@@ -36,20 +36,11 @@ pub fn certify_contact_control_trajectories(
     frame.cells += fit.cells;
     frame.single_span &= fit.single_span;
     let decode = |v: [f64; 2]| I::new(v[0], v[1]);
-    super::trajectory::control_trajectories_with_fit(
-        path,
-        scale,
-        affine,
-        qs,
-        traversal,
-        max_cells,
-        frame,
-        Some([
+    super::trajectory::control_trajectories_with_fit(super::ControlLaws { path, scale, affine }, qs, traversal, max_cells, frame, Some([
             decode(fit.value.unwrap())?,
             decode(fit.first.unwrap())?,
             decode(fit.second.unwrap())?,
-        ]),
-    )
+        ]))
 }
 
 pub fn certify_contact_fit(
