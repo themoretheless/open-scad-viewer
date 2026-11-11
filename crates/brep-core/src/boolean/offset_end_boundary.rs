@@ -110,22 +110,40 @@ pub struct ClippedEndReport {
     pub contours: nurbs_core::offset_face_loops::Report,
     pub contour_support: CurvePcurveCorrespondence,
 }
+/// The offset patch, the adjacent original face with its pcurve, and the loop contact between them.
+#[derive(Clone, Copy)]
+pub struct EndContact<'a> {
+    pub patch: &'a Surface,
+    pub adjacent: &'a Surface,
+    pub adjacent_pcurve: &'a Curve,
+    pub loop_contact: &'a Curve,
+}
+/// The replaced arc run of one original loop, and whether this is the start end.
+#[derive(Clone, Copy, Debug)]
+pub struct EndArc {
+    pub loop_index: usize,
+    pub arc_start: usize,
+    pub arc_count: usize,
+    pub start: bool,
+}
+/// Shell and boundary uses that own the end.
+pub struct EndOwners {
+    pub shell: usize,
+    pub owners: [BoundaryUse; 2],
+}
+
 pub fn qualify_clipped_end(
     context: &ToleranceContext,
-    patch: &Surface,
-    adjacent: &Surface,
-    adjacent_pcurve: &Curve,
-    loop_contact: &Curve,
+    contact: EndContact<'_>,
     original_loops: &[Vec<Curve>],
-    loop_index: usize,
-    arc_start: usize,
-    arc_count: usize,
-    start: bool,
-    shell: usize,
-    owners: [BoundaryUse; 2],
+    arc: EndArc,
+    ownership: EndOwners,
     tolerance_uv: f64,
     limits: nurbs_core::offset_face_loops::Limits,
 ) -> Result<ClippedEndReport> {
+    let EndContact { patch, adjacent, adjacent_pcurve, loop_contact } = contact;
+    let EndArc { loop_index, arc_start, arc_count, start } = arc;
+    let EndOwners { shell, owners } = ownership;
     if owners[1].cyclic_index != 0 {
         return Err(Error::new(
             "BREP_OFFSET_END_OWNERSHIP",
@@ -188,20 +206,16 @@ pub struct ReplacedEndFace {
 }
 pub fn qualify_replaced_face(
     context: &ToleranceContext,
-    patch: &Surface,
-    adjacent: &Surface,
-    adjacent_pcurve: &Curve,
-    loop_contact: &Curve,
+    contact: EndContact<'_>,
     original_wires: &[Vec<crate::trimmed_face_recipe::Boundary>],
-    loop_index: usize,
-    arc_start: usize,
-    arc_count: usize,
-    start: bool,
-    shell: usize,
-    owners: [BoundaryUse; 2],
+    arc: EndArc,
+    ownership: EndOwners,
     tolerance_uv: f64,
     limits: crate::trimmed_face_recipe::Limits,
 ) -> Result<ReplacedEndFace> {
+    let EndContact { patch, adjacent, adjacent_pcurve, loop_contact } = contact;
+    let EndArc { loop_index, arc_start, arc_count, start } = arc;
+    let EndOwners { shell, owners } = ownership;
     if owners[1].cyclic_index != 0 {
         return Err(Error::new(
             "BREP_OFFSET_END_OWNERSHIP",
@@ -357,17 +371,10 @@ mod tests {
             ];
             let result = qualify_replaced_face(
                 &ToleranceContext::default_valid(),
-                &patch,
-                &plane,
-                &uv,
-                &loop_contact,
+                EndContact { patch: &patch, adjacent: &plane, adjacent_pcurve: &uv, loop_contact: &loop_contact },
                 &wires,
-                0,
-                0,
-                2,
-                start,
-                7,
-                owners(start),
+                EndArc { loop_index: 0, arc_start: 0, arc_count: 2, start },
+                EndOwners { shell: 7, owners: owners(start) },
                 1e-8,
                 crate::trimmed_face_recipe::Limits {
                     pairs: 10000,
@@ -450,40 +457,26 @@ mod tests {
         assert!(
             qualify_clipped_end(
                 &context,
-                &patch,
-                &plane,
-                &uv,
-                &uv,
+                EndContact { patch: &patch, adjacent: &plane, adjacent_pcurve: &uv, loop_contact: &uv },
                 &[outer.clone()],
-                0,
-                0,
-                2,
-                false,
-                7,
-                owners(false),
+                EndArc { loop_index: 0, arc_start: 0, arc_count: 2, start: false },
+                EndOwners { shell: 7, owners: owners(false) },
                 1e-8,
                 nurbs_core::offset_face_loops::Limits {
                     pairs: 10000,
                     cells: 100000,
                     domain_cells: 100000
-                }
+                },
             )
             .is_err()
         );
 
         let r = qualify_clipped_end(
             &context,
-            &patch,
-            &plane,
-            &uv,
-            &loop_contact,
+            EndContact { patch: &patch, adjacent: &plane, adjacent_pcurve: &uv, loop_contact: &loop_contact },
             &[outer.clone()],
-            0,
-            0,
-            2,
-            false,
-            7,
-            owners(false),
+            EndArc { loop_index: 0, arc_start: 0, arc_count: 2, start: false },
+            EndOwners { shell: 7, owners: owners(false) },
             1e-8,
             nurbs_core::offset_face_loops::Limits {
                 pairs: 10000,
