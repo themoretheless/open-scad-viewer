@@ -19,23 +19,14 @@ fn closed_planar_rmf_full_turn_body_composes_owned_periodic_walls_without_caps()
     let path = circle([0.; 3], [0., 0., 1.], 5.).unwrap();
     let scale = nurbs_core::progressive_sweep::constant_vector_law([1., 0., 0.]).unwrap();
     let twist = line([0.; 3], [std::f64::consts::TAU, 0., 0.]).unwrap();
-    let result = progressive_profile_body_with_evidence(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        None,
-        None,
-        None,
-        Options {
+    let result = progressive_profile_body_with_evidence(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, Options {
             normal: [0., 0., 1.],
             orientation: Orientation::RotationMinimizing,
             spacing: Spacing::Parameter,
             initial_sections: 5,
             max_sections: 129,
             max_deviation: 0.01,
-        },
-    )
+        })
     .unwrap();
     let report = result.approximation.levels.last().unwrap();
     assert!(report.closed_path);

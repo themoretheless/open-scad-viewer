@@ -116,20 +116,9 @@ pub(super) fn build(v: Value) -> Result<Value> {
             ));
         }
     };
-    let result = brep_core::analytic::progressive_profile_body_with_rmf_policy(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        affine,
-        frame_axis.as_ref().zip(frame_normal.as_ref()),
-        guide
+    let result = brep_core::analytic::progressive_profile_body_with_rmf_policy(brep_core::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine, frames: frame_axis.as_ref().zip(frame_normal.as_ref()), guidance: guide
             .as_ref()
-            .map(|g| (g, contact.map(|p| (contact_profile.unwrap_or(0), p)))),
-        options,
-        correction,
-        rmf_policy,
-    )?;
+            .map(|g| (g, contact.map(|p| (contact_profile.unwrap_or(0), p)))) }, options, correction, rmf_policy)?;
     let retained_caps=result.retained_caps.as_ref().map(|r|json!({"exact":r.exact,
         "capErrorUpper":if r.exact {Some(0.)}else{None},"exactWork":r.exact_work,"inspectedEdges":r.inspected_edges,"reason":r.reason,
         "scope":"constructor-owned-retained-endpoint-regions","continuousBound":false,"globalEmbeddingCertified":false}));

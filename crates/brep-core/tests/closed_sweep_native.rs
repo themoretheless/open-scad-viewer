@@ -70,13 +70,7 @@ fn nonplanar_closed_sweep_keeps_circle_metric_and_owns_every_seam_edge() {
     let source = path();
     let original = source.clone();
     let evidence = brep_core::analytic::progressive_profile_body_with_rmf_policy(
-        &[vec![profile]],
-        &source,
-        &law(1., 1.),
-        &law(0., 0.),
-        None,
-        None,
-        None,
+        brep_core::analytic::ProgressiveLaws { loops: &[vec![profile]], path: &source, scale: &law(1., 1.), twist: &law(0., 0.), affine: None, frames: None, guidance: None },
         options(),
         None,
         Some((4096, 100000, 1000000)),

@@ -59,15 +59,7 @@ fn rational_line_arc_length_body_composes_actual_walls_and_filled_caps() {
     let scale = nurbs_core::progressive_sweep::constant_vector_law([1., 0., 0.]).unwrap();
     let twist = nurbs_core::progressive_sweep::constant_vector_law([0.; 3]).unwrap();
     for orientation in [Orientation::Fixed, Orientation::RotationMinimizing] {
-        let result = progressive_profile_body_with_evidence(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            None,
-            None,
-            None,
-            Options {
+        let result = progressive_profile_body_with_evidence(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, Options {
                 normal: [1., 0., 0.],
                 orientation,
                 spacing: Spacing::ArcLength {
@@ -77,8 +69,7 @@ fn rational_line_arc_length_body_composes_actual_walls_and_filled_caps() {
                 initial_sections: 3,
                 max_sections: 3,
                 max_deviation: 0.01,
-            },
-        )
+            })
         .unwrap();
         assert!(result.approximation.levels.last().unwrap().continuous_bound);
         assert!(result.retained_walls.certified);
@@ -131,19 +122,11 @@ fn curved_arc_length_frame_modes_hollow_body_composes_walls_caps_and_source_doma
         } else {
             0.2
         };
-        let result = progressive_profile_body_with_evidence_and_correction(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            if authored {
+        let result = progressive_profile_body_with_evidence_and_correction(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: if authored {
                 Some((&axis, &normal))
             } else {
                 None
-            },
-            None,
-            Options {
+            }, guidance: None }, Options {
                 normal: [1., 0., 0.],
                 orientation,
                 spacing: Spacing::ArcLength {
@@ -157,8 +140,7 @@ fn curved_arc_length_frame_modes_hollow_body_composes_walls_caps_and_source_doma
                     9
                 },
                 max_deviation: budget,
-            },
-            if orientation == Orientation::FixedNormal {
+            }, if orientation == Orientation::FixedNormal {
                 Some(EndpointCapCorrection {
                     quantum: 2_f64.powi(-40),
                     tolerance: 1e-9,
@@ -166,8 +148,7 @@ fn curved_arc_length_frame_modes_hollow_body_composes_walls_caps_and_source_doma
                 })
             } else {
                 None
-            },
-        )
+            })
         .unwrap();
         assert!(
             result.approximation.levels.last().unwrap().continuous_bound,
@@ -233,19 +214,11 @@ fn small_fixed_normal_arc_length_hollow_body_requires_actual_native_volume_admis
         } else {
             0.2
         };
-        let result = progressive_profile_body_with_evidence_and_correction(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            if authored {
+        let result = progressive_profile_body_with_evidence_and_correction(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: if authored {
                 Some((&axis, &normal))
             } else {
                 None
-            },
-            None,
-            Options {
+            }, guidance: None }, Options {
                 normal: [1., 0., 0.],
                 orientation,
                 spacing: Spacing::ArcLength {
@@ -259,8 +232,7 @@ fn small_fixed_normal_arc_length_hollow_body_requires_actual_native_volume_admis
                     9
                 },
                 max_deviation: budget,
-            },
-            if orientation == Orientation::FixedNormal {
+            }, if orientation == Orientation::FixedNormal {
                 Some(EndpointCapCorrection {
                     quantum: 2_f64.powi(-40),
                     tolerance: 1e-9,
@@ -268,8 +240,7 @@ fn small_fixed_normal_arc_length_hollow_body_requires_actual_native_volume_admis
                 })
             } else {
                 None
-            },
-        )
+            })
         .unwrap();
         assert!(
             result.approximation.levels.last().unwrap().continuous_bound,
@@ -386,19 +357,11 @@ fn small_planar_rmf_arc_length_hollow_body_requires_actual_native_volume_admissi
         } else {
             0.2
         };
-        let result = progressive_profile_body_with_evidence_and_correction(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            if authored {
+        let result = progressive_profile_body_with_evidence_and_correction(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: if authored {
                 Some((&axis, &normal))
             } else {
                 None
-            },
-            None,
-            Options {
+            }, guidance: None }, Options {
                 normal: [1., 0., 0.],
                 orientation,
                 spacing: Spacing::ArcLength {
@@ -412,8 +375,7 @@ fn small_planar_rmf_arc_length_hollow_body_requires_actual_native_volume_admissi
                     9
                 },
                 max_deviation: budget,
-            },
-            if orientation == Orientation::RotationMinimizing {
+            }, if orientation == Orientation::RotationMinimizing {
                 Some(EndpointCapCorrection {
                     quantum: 2_f64.powi(-40),
                     tolerance: 1e-9,
@@ -421,8 +383,7 @@ fn small_planar_rmf_arc_length_hollow_body_requires_actual_native_volume_admissi
                 })
             } else {
                 None
-            },
-        )
+            })
         .unwrap();
         assert!(
             result.approximation.levels.last().unwrap().continuous_bound,
@@ -546,19 +507,11 @@ fn small_nonaxial_planar_rmf_arc_length_hollow_body_requires_native_volume_admis
         } else {
             0.2
         };
-        let result = progressive_profile_body_with_evidence_and_correction(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            if authored {
+        let result = progressive_profile_body_with_evidence_and_correction(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: if authored {
                 Some((&axis, &normal))
             } else {
                 None
-            },
-            None,
-            Options {
+            }, guidance: None }, Options {
                 normal: [1., 1., 0.],
                 orientation,
                 spacing: Spacing::ArcLength {
@@ -572,8 +525,7 @@ fn small_nonaxial_planar_rmf_arc_length_hollow_body_requires_native_volume_admis
                     9
                 },
                 max_deviation: budget,
-            },
-            if orientation == Orientation::RotationMinimizing {
+            }, if orientation == Orientation::RotationMinimizing {
                 Some(EndpointCapCorrection {
                     quantum: 2_f64.powi(-40),
                     tolerance: 1e-9,
@@ -581,8 +533,7 @@ fn small_nonaxial_planar_rmf_arc_length_hollow_body_requires_native_volume_admis
                 })
             } else {
                 None
-            },
-        )
+            })
         .unwrap();
         assert!(
             result.approximation.levels.last().unwrap().continuous_bound,
@@ -712,19 +663,11 @@ fn small_guided_curved_arc_length_hollow_body_requires_actual_native_volume_admi
         } else {
             0.2
         };
-        let result = progressive_profile_body_with_evidence_and_correction(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            if authored {
+        let result = progressive_profile_body_with_evidence_and_correction(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: if authored {
                 Some((&axis, &normal))
             } else {
                 None
-            },
-            Some((&guide, None)),
-            Options {
+            }, guidance: Some((&guide, None)) }, Options {
                 normal: [1., 0., 0.],
                 orientation,
                 spacing: Spacing::ArcLength {
@@ -738,8 +681,7 @@ fn small_guided_curved_arc_length_hollow_body_requires_actual_native_volume_admi
                     9
                 },
                 max_deviation: budget,
-            },
-            if orientation == Orientation::RotationMinimizing {
+            }, if orientation == Orientation::RotationMinimizing {
                 Some(EndpointCapCorrection {
                     quantum: 2_f64.powi(-40),
                     tolerance: 1e-9,
@@ -747,8 +689,7 @@ fn small_guided_curved_arc_length_hollow_body_requires_actual_native_volume_admi
                 })
             } else {
                 None
-            },
-        )
+            })
         .unwrap();
         assert!(
             result.approximation.levels.last().unwrap().continuous_bound,
@@ -872,19 +813,11 @@ fn small_contact_curved_arc_length_hollow_body_requires_actual_native_volume_adm
         } else {
             0.2
         };
-        let result = progressive_profile_body_with_evidence_and_correction(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            if authored {
+        let result = progressive_profile_body_with_evidence_and_correction(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: if authored {
                 Some((&axis, &normal))
             } else {
                 None
-            },
-            Some((&guide, Some((0, 0.)))),
-            Options {
+            }, guidance: Some((&guide, Some((0, 0.)))) }, Options {
                 normal: [1., 0., 0.],
                 orientation,
                 spacing: Spacing::ArcLength {
@@ -898,8 +831,7 @@ fn small_contact_curved_arc_length_hollow_body_requires_actual_native_volume_adm
                     9
                 },
                 max_deviation: budget,
-            },
-            if orientation == Orientation::RotationMinimizing {
+            }, if orientation == Orientation::RotationMinimizing {
                 Some(EndpointCapCorrection {
                     quantum: 2_f64.powi(-40),
                     tolerance: 1e-9,
@@ -907,8 +839,7 @@ fn small_contact_curved_arc_length_hollow_body_requires_actual_native_volume_adm
                 })
             } else {
                 None
-            },
-        )
+            })
         .unwrap();
         assert!(
             result.approximation.levels.last().unwrap().continuous_bound,
@@ -1020,24 +951,14 @@ fn closed_concentric_contact_hollow_body_requires_original_complete_boundary() {
             max_cells: 100000,
         },
     ] {
-        let result = progressive_profile_body_with_evidence_and_correction(
-            &[vec![outer.clone()], vec![hole.clone()]],
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            None,
-            Some((&guide, Some((0, 0.)))),
-            Options {
+        let result = progressive_profile_body_with_evidence_and_correction(ProgressiveLaws { loops: &[vec![outer.clone()], vec![hole.clone()]], path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: None, guidance: Some((&guide, Some((0, 0.)))) }, Options {
                 normal: [0., 0., 1.],
                 orientation: Orientation::RotationMinimizing,
                 spacing,
                 initial_sections: 17,
                 max_sections: 65,
                 max_deviation: 2.,
-            },
-            None,
-        )
+            }, None)
         .unwrap();
         assert!(
             result.approximation.levels.last().unwrap().continuous_bound,
@@ -1151,19 +1072,11 @@ fn small_frenet_arc_length_hollow_body_requires_actual_native_volume_admission()
         } else {
             0.2
         };
-        let result = progressive_profile_body_with_evidence_and_correction(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            if authored {
+        let result = progressive_profile_body_with_evidence_and_correction(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: if authored {
                 Some((&axis, &normal))
             } else {
                 None
-            },
-            None,
-            Options {
+            }, guidance: None }, Options {
                 normal: [1., 0., 0.],
                 orientation,
                 spacing: Spacing::ArcLength {
@@ -1177,8 +1090,7 @@ fn small_frenet_arc_length_hollow_body_requires_actual_native_volume_admission()
                     9
                 },
                 max_deviation: budget,
-            },
-            if orientation == Orientation::Frenet {
+            }, if orientation == Orientation::Frenet {
                 Some(EndpointCapCorrection {
                     quantum: 2_f64.powi(-40),
                     tolerance: 1e-9,
@@ -1186,8 +1098,7 @@ fn small_frenet_arc_length_hollow_body_requires_actual_native_volume_admission()
                 })
             } else {
                 None
-            },
-        )
+            })
         .unwrap();
         assert!(
             result.approximation.levels.last().unwrap().continuous_bound,
@@ -1306,19 +1217,11 @@ fn fixed_normal_cap_correction_refuses_exhausted_work_and_excess_displacement() 
         } else {
             0.2
         };
-        let outcome = progressive_profile_body_with_evidence_and_correction(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            if authored {
+        let outcome = progressive_profile_body_with_evidence_and_correction(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: if authored {
                 Some((&axis, &normal))
             } else {
                 None
-            },
-            None,
-            Options {
+            }, guidance: None }, Options {
                 normal: [1., 0., 0.],
                 orientation,
                 spacing: Spacing::ArcLength {
@@ -1332,8 +1235,7 @@ fn fixed_normal_cap_correction_refuses_exhausted_work_and_excess_displacement() 
                     9
                 },
                 max_deviation: budget,
-            },
-            if orientation == Orientation::FixedNormal {
+            }, if orientation == Orientation::FixedNormal {
                 Some(EndpointCapCorrection {
                     quantum,
                     tolerance: 1e-9,
@@ -1341,8 +1243,7 @@ fn fixed_normal_cap_correction_refuses_exhausted_work_and_excess_displacement() 
                 })
             } else {
                 None
-            },
-        );
+            });
         let message = match outcome {
             Ok(_) => panic!("Unproved correction was published"),
             Err(e) => e.to_string(),
@@ -1371,23 +1272,14 @@ fn progressive_body_binds_small_unsegmented_profile_to_actual_walls_and_caps() {
     scale.control_points = vec![vec![1., 0., 0.]; 2];
     let mut twist = path.clone();
     twist.control_points = vec![vec![0.; 3]; 2];
-    let result = progressive_profile_body_with_evidence(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        None,
-        None,
-        None,
-        Options {
+    let result = progressive_profile_body_with_evidence(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, Options {
             normal: [1., 0., 0.],
             orientation: Orientation::RotationMinimizing,
             spacing: Spacing::Parameter,
             initial_sections: 3,
             max_sections: 3,
             max_deviation: 0.01,
-        },
-    )
+        })
     .unwrap();
     assert_eq!(result.body_decomposition_products, 54);
     assert!(result.body_decomposition_error_upper.unwrap() > 0.);

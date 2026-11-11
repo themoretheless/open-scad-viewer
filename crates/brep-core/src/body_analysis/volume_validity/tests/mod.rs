@@ -104,15 +104,7 @@ fn corrected_inflection_hollow_arc_covers_every_pair_in_original_limits() {
     };
     let scale = constant_vector_law([1., 0., 0.]).unwrap();
     let twist = constant_vector_law([0.; 3]).unwrap();
-    let body = crate::analytic::progressive_profile_body_with_evidence_and_correction(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        None,
-        None,
-        None,
-        Options {
+    let body = crate::analytic::progressive_profile_body_with_evidence_and_correction(crate::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, Options {
             normal: [0., 0., 1.],
             orientation: Orientation::CorrectedFrenet,
             spacing: Spacing::ArcLength {
@@ -122,13 +114,11 @@ fn corrected_inflection_hollow_arc_covers_every_pair_in_original_limits() {
             initial_sections: 3,
             max_sections: 65,
             max_deviation: 0.1,
-        },
-        Some(crate::analytic::EndpointCapCorrection {
+        }, Some(crate::analytic::EndpointCapCorrection {
             quantum: 2_f64.powi(-40),
             tolerance: 1e-9,
             max_work: 1000000,
-        }),
-    )
+        }))
     .unwrap();
     assert_eq!(body.boundary_error_within_budget, Some(true));
     assert!(body.boundary_error_upper.unwrap() <= 0.1);
@@ -222,28 +212,18 @@ fn corrected_affine_inflection_hollow_parameter_and_arc_preserve_original_limits
             max_cells: 100000,
         },
     ] {
-        let body = crate::analytic::progressive_profile_body_with_evidence_and_correction(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            None,
-            None,
-            Options {
+        let body = crate::analytic::progressive_profile_body_with_evidence_and_correction(crate::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: None, guidance: None }, Options {
                 normal: [0., 0., 1.],
                 orientation: Orientation::CorrectedFrenet,
                 spacing,
                 initial_sections: 3,
                 max_sections: 65,
                 max_deviation: 0.1,
-            },
-            Some(crate::analytic::EndpointCapCorrection {
+            }, Some(crate::analytic::EndpointCapCorrection {
                 quantum: 2_f64.powi(-40),
                 tolerance: 1e-9,
                 max_work: 1000000,
-            }),
-        )
+            }))
         .unwrap();
         assert_eq!(body.boundary_error_within_budget, Some(true));
         assert!(body.boundary_error_upper.unwrap() <= 0.1);
@@ -340,28 +320,18 @@ fn corrected_affine_zero_initial_curvature_hollow_parameter_and_arc_preserve_lim
             max_cells: 100000,
         },
     ] {
-        let body = crate::analytic::progressive_profile_body_with_evidence_and_correction(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            None,
-            None,
-            Options {
+        let body = crate::analytic::progressive_profile_body_with_evidence_and_correction(crate::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: None, guidance: None }, Options {
                 normal: [0., 0., 1.],
                 orientation: Orientation::CorrectedFrenet,
                 spacing,
                 initial_sections: 3,
                 max_sections: 65,
                 max_deviation: 0.1,
-            },
-            Some(crate::analytic::EndpointCapCorrection {
+            }, Some(crate::analytic::EndpointCapCorrection {
                 quantum: 2_f64.powi(-40),
                 tolerance: 1e-9,
                 max_work: 1000000,
-            }),
-        )
+            }))
         .unwrap();
         assert_eq!(body.boundary_error_within_budget, Some(true));
         assert!(body.boundary_error_upper.unwrap() <= 0.1);

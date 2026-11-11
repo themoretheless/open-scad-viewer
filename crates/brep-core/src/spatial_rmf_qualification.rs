@@ -224,13 +224,7 @@ fn qualify_closed_spatial_rmf_source(
         max_deviation: if antipodal {1.} else if rational {0.4}else{0.25},
     };
     let body = crate::analytic::progressive_profile_body_with_rmf_policy(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        Some((&axes, &center)),
-        None,
-        None,
+        crate::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: None, guidance: None },
         options,
         None,
         Some((4096, 100000, 1000000)),
@@ -277,13 +271,7 @@ fn qualify_closed_spatial_rmf_source(
         damaged.knots[1] = 1_f64.next_up();
         damaged.validate().unwrap();
         let refused = crate::analytic::progressive_profile_body_with_rmf_policy(
-            &loops,
-            &damaged,
-            &scale,
-            &twist,
-            Some((&axes, &center)),
-            None,
-            None,
+            crate::analytic::ProgressiveLaws { loops: &loops, path: &damaged, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: None, guidance: None },
             options,
             None,
             Some((4096, 100000, 1000000)),
@@ -453,13 +441,7 @@ fn qualify_open_spatial_rmf_with_spacing(hollow: bool, parameter: bool) {
         max_work: 1000000,
     };
     let body = crate::analytic::progressive_profile_body_with_rmf_policy(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        Some((&axes, &center)),
-        None,
-        None,
+        crate::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: Some((&axes, &center)), frames: None, guidance: None },
         options,
         Some(correction),
         Some((4096, 100000, 1000000)),

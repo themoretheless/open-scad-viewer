@@ -187,20 +187,9 @@ fn handle_progressive_profile_body(v: &Value) -> Result<Value> {
     };
     let correction = parse_cap_correction(v)?;
     let rmf_policy = parse_rmf_policy(v, &orientation_raw)?;
-    let result = brep_core::analytic::progressive_profile_body_with_rmf_policy(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        affine,
-        frame_axis.as_ref().zip(frame_normal.as_ref()),
-        guide
+    let result = brep_core::analytic::progressive_profile_body_with_rmf_policy(brep_core::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine, frames: frame_axis.as_ref().zip(frame_normal.as_ref()), guidance: guide
             .as_ref()
-            .map(|g| (g, contact.map(|p| (contact_profile.unwrap_or(0), p)))),
-        options,
-        correction,
-        rmf_policy,
-    )?;
+            .map(|g| (g, contact.map(|p| (contact_profile.unwrap_or(0), p)))) }, options, correction, rmf_policy)?;
     encode_progressive_profile_body(result, rmf_policy)
 }
 

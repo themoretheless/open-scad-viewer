@@ -388,7 +388,10 @@ pub fn progressive_profile_body(
     twist: &Curve,
     options: nurbs_core::progressive_sweep::Options,
 ) -> Result<(Model, nurbs_core::progressive_sweep::MultiApproximation)> {
-    progressive_body_laws(loops, path, scale, twist, None, None, None, options)
+    progressive_body_laws(
+        ProgressiveLaws { loops, path, scale, twist, affine: None, frames: None, guidance: None },
+        options,
+    )
 }
 
 pub fn progressive_affine_profile_body(
@@ -401,13 +404,7 @@ pub fn progressive_affine_profile_body(
     options: nurbs_core::progressive_sweep::Options,
 ) -> Result<(Model, nurbs_core::progressive_sweep::MultiApproximation)> {
     progressive_body_laws(
-        loops,
-        path,
-        scale,
-        twist,
-        Some((axis_scale, center)),
-        None,
-        None,
+        ProgressiveLaws { loops, path, scale, twist, affine: Some((axis_scale, center)), frames: None, guidance: None },
         options,
     )
 }
@@ -428,13 +425,7 @@ pub fn progressive_authored_profile_body(
 ) -> Result<(Model, nurbs_core::progressive_sweep::MultiApproximation)> {
     options.orientation = nurbs_core::progressive_sweep::Orientation::Fixed;
     progressive_body_laws(
-        loops,
-        path,
-        scale,
-        twist,
-        Some((axis_scale, center)),
-        Some((longitudinal, transverse)),
-        None,
+        ProgressiveLaws { loops, path, scale, twist, affine: Some((axis_scale, center)), frames: Some((longitudinal, transverse)), guidance: None },
         options,
     )
 }
@@ -453,28 +444,16 @@ pub fn progressive_guided_profile_body(
     options: nurbs_core::progressive_sweep::Options,
 ) -> Result<(Model, nurbs_core::progressive_sweep::MultiApproximation)> {
     progressive_body_laws(
-        loops,
-        path,
-        scale,
-        twist,
-        Some((axis_scale, center)),
-        None,
-        Some((guide, anchor)),
+        ProgressiveLaws { loops, path, scale, twist, affine: Some((axis_scale, center)), frames: None, guidance: Some((guide, anchor)) },
         options,
     )
 }
 
 fn progressive_body_laws(
-    loops: &[Vec<Curve>],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
-    frames: Option<(&Curve, &Curve)>,
-    guidance: Option<(&Curve, Option<(usize, f64)>)>,
+    laws: ProgressiveLaws<'_>,
     options: nurbs_core::progressive_sweep::Options,
 ) -> Result<(Model, nurbs_core::progressive_sweep::MultiApproximation)> {
-    let result=progressive_profile_body_with_evidence(loops,path,scale,twist,affine,frames,guidance,options)?;
+    let result=progressive_profile_body_with_evidence(laws,options)?;
     Ok((result.model,result.approximation))
 }
 
@@ -608,49 +587,28 @@ pub(crate) fn retained_section_partition(sections:&[Vec<Vec<Curve>>],max_product
 mod body_partition_tests;
 
 pub fn progressive_profile_body_with_evidence(
-    loops: &[Vec<Curve>],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
-    frames: Option<(&Curve, &Curve)>,
-    guidance: Option<(&Curve, Option<(usize, f64)>)>,
+    laws: ProgressiveLaws<'_>,
     options: nurbs_core::progressive_sweep::Options,
 ) -> Result<ProgressiveBodyEvidence> {
-    progressive_profile_body_with_evidence_and_correction(
-        loops, path, scale, twist, affine, frames, guidance, options, None,
-    )
+    progressive_profile_body_with_evidence_and_correction(laws, options, None)
 }
 pub fn progressive_profile_body_with_evidence_and_correction(
-    loops: &[Vec<Curve>],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
-    frames: Option<(&Curve, &Curve)>,
-    guidance: Option<(&Curve, Option<(usize, f64)>)>,
+    laws: ProgressiveLaws<'_>,
     options: nurbs_core::progressive_sweep::Options,
     correction: Option<EndpointCapCorrection>,
 ) -> Result<ProgressiveBodyEvidence> {
-    progressive_profile_body_with_rmf_policy(
-        loops, path, scale, twist, affine, frames, guidance, options, correction, None,
-    )
+    progressive_profile_body_with_rmf_policy(laws, options, correction, None)
 }
 
 /// Optional bounded original spatial RMF proof; existing callers retain their policy.
 pub fn progressive_profile_body_with_rmf_policy(
-    loops: &[Vec<Curve>],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    affine: Option<(&Curve, &Curve)>,
-    frames: Option<(&Curve, &Curve)>,
-    guidance: Option<(&Curve, Option<(usize, f64)>)>,
+    laws: ProgressiveLaws<'_>,
     options: nurbs_core::progressive_sweep::Options,
     correction: Option<EndpointCapCorrection>,
     rmf_policy: Option<(usize, usize, usize)>,
 ) -> Result<ProgressiveBodyEvidence> {
-    progressive_profile_body_with_rmf_policy_and_corrections(ProgressiveLaws { loops, path, scale, twist, affine, frames, guidance }, options, ProgressiveBodyPolicy { correction, profile_correction: None, rmf_policy })
+    let policy = ProgressiveBodyPolicy { correction, profile_correction: None, rmf_policy };
+    progressive_profile_body_with_rmf_policy_and_corrections(laws, options, policy)
 }
 
 /// Profile loops and the laws of a progressive sweep: path, scale and twist, optional affine
