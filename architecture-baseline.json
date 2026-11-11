@@ -585,11 +585,11 @@
     "src/workers/geometry.worker.ts::runBuild@1": 170
   },
   "clippy": {
-    "brep-core": 1026,
+    "brep-core": 1018,
     "brep-topology": 1,
     "bridge-analysis": 4,
     "bridge-svg": 3,
-    "cad-predicates": 196,
+    "cad-predicates": 190,
     "cad-step": 25,
     "gcode-core": 1,
     "geometry-bridge": 73,
@@ -599,7 +599,7 @@
     "mechanics-core": 17,
     "mesh-section": 1,
     "mesh-topology": 1,
-    "nurbs-core": 1015,
+    "nurbs-core": 1014,
     "nurbs-foundation": 57,
     "nurbs-geometry": 12,
     "nurbs-numerics": 23,
