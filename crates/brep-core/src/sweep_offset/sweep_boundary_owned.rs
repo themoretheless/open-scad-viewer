@@ -365,8 +365,7 @@ fn construct_with_ideal_impl(
     ideal: IdealLimits,
     atlas: bool,
 ) -> Result<Attempt> {
-    let SweepSource { sweep, loop_sizes, sections, source_caps } = source;
-    let SweepAccuracy { tolerance_uv, error_budget } = accuracy;
+    let SweepSource { sweep, source_caps, .. } = source;
     // Validate stronger limits even when an earlier geometric stage refuses.
     if ideal.cells > if atlas { 1000000 } else { 100000 }
         || ideal.exact_work > 1000000
