@@ -7,17 +7,24 @@ use crate::{Result, check, curve::Curve, surface::Surface};
 /// final boundary is requalified on the original plane, not on that proxy.
 /// `options.boundaries[1]` must be VStart and its gain uses the supplied UV
 /// transverse vector. This constructs a surface, not a closed B-rep corner.
+/// The planar target of a G2 runout: the plane surface, the target curve on it and the transverse
+/// parameter interval.
+#[derive(Clone, Copy)]
+pub struct PlaneTarget<'a> {
+    pub plane: &'a Surface,
+    pub target: &'a Curve,
+    pub transverse: [f64; 2],
+}
 pub fn g2_to_plane_trace(
     source: &Surface,
     trace: Trace,
-    plane: &Surface,
-    target: &Curve,
-    transverse: [f64; 2],
+    target: PlaneTarget<'_>,
     options: Options,
     tolerances: [f64; 3],
     max_cells: usize,
     max_exact: u64,
 ) -> Result<TraceReport> {
+    let PlaneTarget { plane, target, transverse } = target;
     plane.validate()?;
     target.validate()?;
     check(

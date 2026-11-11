@@ -7,7 +7,7 @@ mod traces;
 pub use traces::{Trace,TraceReport,g2_traces};
 #[path="surface_blend/plane_trace.rs"]
 mod plane_trace;
-pub use plane_trace::g2_to_plane_trace;
+pub use plane_trace::{PlaneTarget, g2_to_plane_trace};
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum Boundary { UStart, UEnd, VStart, VEnd }
 impl Boundary {

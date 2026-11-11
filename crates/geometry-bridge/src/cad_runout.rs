@@ -25,22 +25,12 @@ pub fn create(v: Value) -> Result<Value> {
     let max_exact = field::<u64>(&v, "maxExactWork")?;
     let tolerances = field::<[f64; 3]>(&v, "tolerances")?;
     let prepared = inputs::prepare(&v, boundary, tolerances, max_cells)?;
-    let mut r = surface_blend::g2_to_plane_trace(
-        &prepared.source,
-        prepared.trace,
-        &prepared.plane,
-        &prepared.target,
-        prepared.transverse,
-        Options {
+    let mut r = surface_blend::g2_to_plane_trace(&prepared.source, prepared.trace, surface_blend::PlaneTarget { plane: &prepared.plane, target: &prepared.target, transverse: prepared.transverse }, Options {
             boundaries: [boundary, Boundary::VStart],
             gains: prepared.gains,
             reverse_u: field(&v, "reverseU")?,
             max_patches: field(&v, "maxPatches")?,
-        },
-        tolerances,
-        max_cells - prepared.cells,
-        max_exact,
-    )?;
+        }, tolerances, max_cells - prepared.cells, max_exact)?;
     r.cells += prepared.cells;
     let fields = brep_core::region_replacement::inspect_runout_panels(
         &r.construction.patches,
