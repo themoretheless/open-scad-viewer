@@ -8,24 +8,27 @@ pub struct Proposal {
     pub source_joins_proven: bool,
     pub reason: &'static str,
 }
+/// Work limits of an unqualified contour proposal.
+#[derive(Clone, Copy, Debug)]
+pub struct ProposalBudget {
+    pub cells: usize,
+    pub point_checks: usize,
+    pub mapping_cells: usize,
+}
 /// Find both contact parameters from original boundaries, without supplied cuts.
 /// Endpoint edges select the cyclic removed arc; each must have one mapped root.
 /// The result is a contour candidate, never a qualified replacement face.
 pub fn propose(
     context: &ToleranceContext,
-    surface: &Surface,
-    wires: &[Vec<Boundary>],
-    contact: &Curve,
-    loop_index: usize,
-    start_edge: usize,
-    end_edge: usize,
+    source: RegionSource<'_>,
     tolerance_uv: f64,
     limits: Limits,
-    max_cells: usize,
     target_width: [f64; 2],
-    max_point_checks: usize,
-    max_mapping_cells: usize,
+    budget: ProposalBudget,
 ) -> Result<Proposal> {
+    let RegionSource { surface, wires, contact, address } = source;
+    let RegionAddress { loop_index, start_edge, end_edge } = address;
+    let ProposalBudget { cells: max_cells, point_checks: max_point_checks, mapping_cells: max_mapping_cells } = budget;
     if loop_index >= wires.len()
         || start_edge == end_edge
         || start_edge >= wires[loop_index].len()
@@ -181,21 +184,7 @@ pub fn qualify_interior_contact(
             "Choose a UV driver axis and bounded proof work",
         ));
     }
-    let proposal = propose(
-        context,
-        surface,
-        wires,
-        contact,
-        loop_index,
-        start_edge,
-        end_edge,
-        tolerance_uv,
-        limits,
-        max_cells,
-        target_width,
-        max_point_checks,
-        max_mapping_cells,
-    )?;
+    let proposal = propose(context, RegionSource { surface, wires, contact, address: RegionAddress { loop_index, start_edge, end_edge } }, tolerance_uv, limits, target_width, ProposalBudget { cells: max_cells, point_checks: max_point_checks, mapping_cells: max_mapping_cells })?;
     let mut out = InteriorContact {
         proposal,
         driver: None,

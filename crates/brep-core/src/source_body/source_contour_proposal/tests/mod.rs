@@ -37,21 +37,7 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
         domain_cells: 100000,
         agreement_cells: 100000,
     };
-    let out = propose(
-        &ToleranceContext::default_valid(),
-        &s,
-        &[wire.clone()],
-        &contact,
-        0,
-        0,
-        2,
-        1e-8,
-        limits,
-        10000,
-        [1e-7, 1e-7],
-        16,
-        16,
-    )
+    let out = propose(&ToleranceContext::default_valid(), RegionSource { surface: &s, wires: &[wire.clone()], contact: &contact, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } }, 1e-8, limits, [1e-7, 1e-7], ProposalBudget { cells: 10000, point_checks: 16, mapping_cells: 16 })
     .unwrap();
     assert!(out.source_joins_proven);
     let loops = out.candidate_loops.unwrap();
@@ -358,21 +344,7 @@ fn automatic_crossings_clip_source_expressions_without_rounded_curve_trims() {
     )
     .unwrap();
     assert!(stopped_curved.region.is_none() && !stopped_curved.interior.region_subset_proven);
-    let stopped = propose(
-        &ToleranceContext::default_valid(),
-        &s,
-        &[wire],
-        &contact,
-        0,
-        0,
-        2,
-        1e-8,
-        limits,
-        1,
-        [1e-7, 1e-7],
-        16,
-        16,
-    )
+    let stopped = propose(&ToleranceContext::default_valid(), RegionSource { surface: &s, wires: &[wire], contact: &contact, address: RegionAddress { loop_index: 0, start_edge: 0, end_edge: 2 } }, 1e-8, limits, [1e-7, 1e-7], ProposalBudget { cells: 1, point_checks: 16, mapping_cells: 16 })
     .unwrap();
     assert!(!stopped.source_joins_proven && stopped.candidate_loops.is_none());
 }
