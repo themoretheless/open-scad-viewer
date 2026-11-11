@@ -120,28 +120,10 @@ fn original_moving_authored_frame_and_saddle_caps_receive_a_joint_native_certifi
             .collect()),
     ];
     assert!(
-        construct(
-            &sweep,
-            &[usize::MAX, 1],
-            5,
-            [&source, &source],
-            [&retained[0], &retained[1]],
-            1e-8,
-            0.01,
-            limits()
-        )
+        construct(SweepSource { sweep: &sweep, loop_sizes: &[usize::MAX, 1], sections: 5, source_caps: [&source, &source] }, [&retained[0], &retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits())
         .is_err()
     );
-    let attempt = construct(
-        &sweep,
-        &[4],
-        5,
-        [&source, &source],
-        [&retained[0], &retained[1]],
-        1e-8,
-        0.01,
-        limits(),
-    )
+    let attempt = construct(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source, &source] }, [&retained[0], &retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits())
     .unwrap();
     let body = match attempt {
         Attempt::Certified(body) => body,
@@ -171,12 +153,12 @@ fn original_moving_authored_frame_and_saddle_caps_receive_a_joint_native_certifi
     assert!(body.report().boundary_error_upper.unwrap() <= 0.01);
     assert_eq!(body.report().caps.len(), 2);
     let ideal_limits=IdealLimits {projection:[[1.,0.,0.],[0.,1.,0.],[0.,0.,1./64.]],cells:100000,exact_work:1000000};
-    let stronger=construct_with_ideal(&sweep,&[4],5,[&source,&source],[&retained[0],&retained[1]],1e-8,0.01,limits(),ideal_limits).unwrap();
+    let stronger=construct_with_ideal(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source,&source] }, [&retained[0],&retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits(), ideal_limits).unwrap();
     let Attempt::Certified(stronger)=stronger else {panic!("Original body embedding was not certified");};
     let proof=stronger.report().ideal_volume.as_ref().unwrap();
     assert!(proof.embedding_certified&&proof.regularity_certified&&proof.parameter_topology_preserved);
     assert_eq!(stronger.model(),body.model());
-    let short=construct_with_ideal(&sweep,&[4],5,[&source,&source],[&retained[0],&retained[1]],1e-8,0.01,limits(),IdealLimits {cells:proof.cells-1,..ideal_limits}).unwrap();
+    let short=construct_with_ideal(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source,&source] }, [&retained[0],&retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits(), IdealLimits {cells:proof.cells-1,..ideal_limits}).unwrap();
     assert!(matches!(short,Attempt::Refused(_)));
 
     #[cfg(feature = "codec")]
@@ -214,16 +196,7 @@ fn original_moving_authored_frame_and_saddle_caps_receive_a_joint_native_certifi
     );
     let mut changed = source.clone();
     changed.surface.control_points[1][1][2] = changed.surface.control_points[1][1][2].next_up();
-    let altered = construct(
-        &sweep,
-        &[4],
-        5,
-        [&changed, &source],
-        [&retained[0], &retained[1]],
-        1e-8,
-        0.01,
-        limits(),
-    )
+    let altered = construct(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&changed, &source] }, [&retained[0], &retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits())
     .unwrap();
     assert!(matches!(altered, Attempt::Refused(_)));
     assert_eq!(
@@ -253,35 +226,17 @@ fn original_moving_authored_frame_and_saddle_caps_receive_a_joint_native_certifi
     };
     let source_nonunit = nonunit(source.clone());
     let retained_nonunit = [nonunit(retained[0].clone()), nonunit(retained[1].clone())];
-    let rebuilt = construct(
-        &sweep,
-        &[4],
-        5,
-        [&source_nonunit, &source_nonunit],
-        [&retained_nonunit[0], &retained_nonunit[1]],
-        1e-8,
-        0.01,
-        limits(),
-    )
+    let rebuilt = construct(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source_nonunit, &source_nonunit] }, [&retained_nonunit[0], &retained_nonunit[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits())
     .unwrap();
     assert!(
         matches!(rebuilt, Attempt::Certified(_)),
         "Exact nonunit cap domains must be supported"
     );
     for cells in [0, 1, body.report().source_cells - 1] {
-        let limited = construct(
-            &sweep,
-            &[4],
-            5,
-            [&source, &source],
-            [&retained[0], &retained[1]],
-            1e-8,
-            0.01,
-            Limits {
+        let limited = construct(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source, &source] }, [&retained[0], &retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, Limits {
                 source_cells: cells,
                 ..limits()
-            },
-        )
+            })
         .unwrap();
         let Attempt::Refused(r) = limited else {
             panic!("short source allowance accepted")
@@ -407,16 +362,7 @@ fn moving_frame_guide_affine_weights_and_station_policy_matrix() {
                     for c in &mut retained {
                         c.surface.weights = source.surface.weights.clone();
                     }
-                    let attempt = construct(
-                        &sweep,
-                        &[4],
-                        5,
-                        [&source, &source],
-                        [&retained[0], &retained[1]],
-                        1e-8,
-                        0.01,
-                        limits(),
-                    )
+                    let attempt = construct(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source, &source] }, [&retained[0], &retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits())
                     .unwrap();
                     match attempt {
                         Attempt::Certified(body) => {
@@ -516,16 +462,7 @@ fn quadratic_filled_caps_glue_to_ruled_walls_without_degree_elevation() {
             c
         })
         .collect::<Vec<_>>();
-    let attempt = construct(
-        &sweep,
-        &[4],
-        5,
-        [&source, &source],
-        [&caps[0], &caps[1]],
-        1e-8,
-        0.01,
-        limits(),
-    )
+    let attempt = construct(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source, &source] }, [&caps[0], &caps[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits())
     .unwrap();
     let body = match attempt {
         Attempt::Certified(body) => body,
@@ -552,16 +489,7 @@ fn quadratic_filled_caps_glue_to_ruled_walls_without_degree_elevation() {
     );
     let mut changed = source.clone();
     changed.surface.control_points[1][1][2] += 0.25;
-    let rejected = construct(
-        &sweep,
-        &[4],
-        5,
-        [&changed, &source],
-        [&caps[0], &caps[1]],
-        1e-8,
-        0.01,
-        limits(),
-    )
+    let rejected = construct(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&changed, &source] }, [&caps[0], &caps[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits())
     .unwrap();
     let Attempt::Refused(r) = rejected else {
         panic!("Unchanged cap contour hid an interior displacement");
@@ -629,16 +557,7 @@ fn spatial_bishop_transport_and_saddle_caps_work_at_six_nondyadic_stations() {
             .map(|r| r[5].control_points[0].clone())
             .collect()),
     ];
-    let attempt = construct(
-        &sweep,
-        &[4],
-        6,
-        [&source, &source],
-        [&retained[0], &retained[1]],
-        1e-8,
-        0.01,
-        limits(),
-    )
+    let attempt = construct(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 6, source_caps: [&source, &source] }, [&retained[0], &retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits())
     .unwrap();
     let body = match attempt {
         Attempt::Certified(b) => b,
@@ -660,7 +579,7 @@ fn spatial_bishop_transport_and_saddle_caps_work_at_six_nondyadic_stations() {
     };
     assert!(body.report().continuous_bound && body.report().within_budget);
     let ideal=IdealLimits{projection:[[1.,0.,0.],[0.,1.,0.],[0.,0.,1./64.]],cells:100000,exact_work:1000000};
-    let stronger=construct_with_ideal(&sweep,&[4],6,[&source,&source],[&retained[0],&retained[1]],1e-8,0.01,limits(),ideal).unwrap();
+    let stronger=construct_with_ideal(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 6, source_caps: [&source,&source] }, [&retained[0],&retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits(), ideal).unwrap();
     let Attempt::Certified(stronger)=stronger else {panic!("Original spatial Bishop volume refused");};
     assert!(stronger.report().ideal_volume.as_ref().unwrap().embedding_certified);assert_eq!(stronger.model(),body.model());
 
@@ -689,7 +608,7 @@ fn original_volume_preserves_a_hole_only_after_complete_native_trim_binding() {
         spacing:Spacing::Parameter,initial_sections:5,max_sections:5,max_deviation:0.01}).unwrap();
     let mut end=source.clone();for p in end.surface.control_points.iter_mut().flatten() {p[2]+=64.;}
     let ideal=IdealLimits{projection:[[1.,0.,0.],[0.,1.,0.],[0.,0.,1./64.]],cells:100000,exact_work:1000000};
-    let attempt=construct_with_ideal(&sweep,&[4,4],5,[&source,&source],[&source,&end],1e-8,0.01,limits(),ideal).unwrap();
+    let attempt=construct_with_ideal(SweepSource { sweep: &sweep, loop_sizes: &[4,4], sections: 5, source_caps: [&source,&source] }, [&source,&end], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits(), ideal).unwrap();
     let body=match attempt {Attempt::Certified(body)=>body,Attempt::Refused(r)=>panic!("Hollow source: {:?}",r.reason)};
     assert!(body.report().ideal_volume.as_ref().unwrap().parameter_topology_preserved);
     assert_eq!(body.model().bodies.len(),1);assert_eq!(body.model().faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
@@ -719,7 +638,7 @@ fn original_volume_preserves_a_hole_only_after_complete_native_trim_binding() {
     assert_eq!(missing.profiles.unwrap().uncertain_join,Some([1,0]));
 
     let mut omitted=source.clone();omitted.trims.pop();
-    assert!(matches!(construct_with_ideal(&sweep,&[4,4],5,[&omitted,&source],[&source,&end],1e-8,0.01,limits(),ideal).unwrap(),Attempt::Refused(_)));
+    assert!(matches!(construct_with_ideal(SweepSource { sweep: &sweep, loop_sizes: &[4,4], sections: 5, source_caps: [&omitted,&source] }, [&source,&end], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits(), ideal).unwrap(),Attempt::Refused(_)));
     assert!(matches!(construct_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[4,4], sections: 5, source_caps: [&omitted,&source] }, [&source,&end], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits(), ideal.projection, nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
             order:2,cells:100000,exact_work:1000000,products:1000000,
         }).unwrap(),OriginalSmoothBodyAttempt::Refused(_)));

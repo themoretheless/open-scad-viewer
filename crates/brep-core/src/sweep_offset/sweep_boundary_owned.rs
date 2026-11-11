@@ -72,30 +72,22 @@ fn fail(message: &'static str) -> Error {
 /// Source-law approximation and retained-solid validity remain distinct fields;
 /// this does not prove ideal-body embedding or G1/G2 at seams.
 pub fn construct(
-    sweep: &MultiSweep<'_>,
-    loop_sizes: &[usize],
-    sections: usize,
-    source_caps: [&LoftCap; 2],
+    source: SweepSource<'_, '_, '_>,
     retained_caps: [&LoftCap; 2],
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: SweepAccuracy,
     limits: Limits,
 ) -> Result<Attempt> {
-    construct_impl(
-        sweep,
-        loop_sizes,
-        sections,
-        source_caps,
-        retained_caps,
-        tolerance_uv,
-        error_budget,
-        limits,
-        None,
-    )
+    construct_impl(source, retained_caps, accuracy, limits, None)
 }
-fn construct_impl(sweep:&MultiSweep<'_>,loop_sizes:&[usize],sections:usize,
-    source_caps:[&LoftCap;2],retained_caps:[&LoftCap;2],tolerance_uv:f64,error_budget:f64,
-    limits:Limits,affine:Option<(crate::AffineStationLimits,[[f64;3];3])>)->Result<Attempt> {
+fn construct_impl(
+    source: SweepSource<'_, '_, '_>,
+    retained_caps: [&LoftCap; 2],
+    accuracy: SweepAccuracy,
+    limits: Limits,
+    affine: Option<(crate::AffineStationLimits, [[f64; 3]; 3])>,
+) -> Result<Attempt> {
+    let SweepSource { sweep, loop_sizes, sections, source_caps } = source;
+    let SweepAccuracy { tolerance_uv, error_budget } = accuracy;
     if !error_budget.is_finite()
         || error_budget <= 0.
         || !tolerance_uv.is_finite()
@@ -346,46 +338,24 @@ pub struct IdealLimits {
 /// the same native cap/contour/trim and retained-volume proof as `construct`;
 /// a caller cannot attach an unrelated source proof to an existing model.
 pub fn construct_with_ideal(
-    sweep: &MultiSweep<'_>,
-    loop_sizes: &[usize],
-    sections: usize,
-    source_caps: [&LoftCap; 2],
+    source: SweepSource<'_, '_, '_>,
     retained_caps: [&LoftCap; 2],
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: SweepAccuracy,
     limits: Limits,
     ideal: IdealLimits,
 ) -> Result<Attempt> {
-    construct_with_ideal_impl(
-        SweepSource { sweep, loop_sizes, sections, source_caps },
-        retained_caps,
-        SweepAccuracy { tolerance_uv, error_budget },
-        limits,
-        ideal,
-        false,
-    )
+    construct_with_ideal_impl(source, retained_caps, accuracy, limits, ideal, false)
 }
 /// Same constructor-owned admission, using the exhaustive ORIGINAL parameter
 /// pair cover instead of the sufficient global strong-monotonicity metric.
 pub fn construct_with_ideal_atlas(
-    sweep: &MultiSweep<'_>,
-    loop_sizes: &[usize],
-    sections: usize,
-    source_caps: [&LoftCap; 2],
+    source: SweepSource<'_, '_, '_>,
     retained_caps: [&LoftCap; 2],
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: SweepAccuracy,
     limits: Limits,
     ideal: IdealLimits,
 ) -> Result<Attempt> {
-    construct_with_ideal_impl(
-        SweepSource { sweep, loop_sizes, sections, source_caps },
-        retained_caps,
-        SweepAccuracy { tolerance_uv, error_budget },
-        limits,
-        ideal,
-        true,
-    )
+    construct_with_ideal_impl(source, retained_caps, accuracy, limits, ideal, true)
 }
 fn construct_with_ideal_impl(
     source: SweepSource<'_, '_, '_>,
@@ -404,16 +374,7 @@ fn construct_with_ideal_impl(
     {
         return Err(fail("Invalid original ideal-body proof limits"));
     }
-    let attempt = construct(
-        sweep,
-        loop_sizes,
-        sections,
-        source_caps,
-        retained_caps,
-        tolerance_uv,
-        error_budget,
-        limits,
-    )?;
+    let attempt = construct(source, retained_caps, accuracy, limits)?;
     let Attempt::Certified(mut body) = attempt else {
         return Ok(attempt);
     };

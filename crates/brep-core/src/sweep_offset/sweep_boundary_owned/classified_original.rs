@@ -71,13 +71,17 @@ pub fn construct_with_original_classified_material<'s, 'a>(
         original_limits,
         || {
             construct(
-                sweep,
-                loop_sizes,
-                sections,
-                source_caps,
+                SweepSource {
+                    sweep,
+                    loop_sizes,
+                    sections,
+                    source_caps,
+                },
                 retained_caps,
-                tolerance_uv,
-                error_budget,
+                SweepAccuracy {
+                    tolerance_uv,
+                    error_budget,
+                },
                 limits,
             )
         },
@@ -118,13 +122,17 @@ pub fn construct_affine_with_original_classified_material<'s, 'a>(
         original_limits,
         || {
             super::construct_impl(
-                sweep,
-                loop_sizes,
-                sections,
+                super::SweepSource {
+                    sweep,
+                    loop_sizes,
+                    sections,
+                    source_caps,
+                },
                 source_caps,
-                source_caps,
-                tolerance_uv,
-                error_budget,
+                super::SweepAccuracy {
+                    tolerance_uv,
+                    error_budget,
+                },
                 limits,
                 Some((affine, projection)),
             )

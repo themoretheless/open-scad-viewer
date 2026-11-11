@@ -58,13 +58,17 @@ fn moving_tilted_frame_and_large_nonplanar_caps_bind_the_complete_original_body(
         exact_work: 1000000,
     };
     let attempt = construct_with_ideal_atlas(
-        &sweep,
-        &[4],
-        5,
-        [&source, &source],
+        SweepSource {
+            sweep: &sweep,
+            loop_sizes: &[4],
+            sections: 5,
+            source_caps: [&source, &source],
+        },
         [&retained[0], &retained[1]],
-        1e-8,
-        0.05,
+        SweepAccuracy {
+            tolerance_uv: 1e-8,
+            error_budget: 0.05,
+        },
         limits(),
         ideal,
     )
@@ -161,13 +165,17 @@ fn moving_tilted_frame_and_large_nonplanar_caps_bind_the_complete_original_body(
     );
     let run = |other: &LoftCap, budget| {
         construct_with_ideal_atlas(
-            &sweep,
-            &[4],
-            5,
-            [&source, other],
+            SweepSource {
+                sweep: &sweep,
+                loop_sizes: &[4],
+                sections: 5,
+                source_caps: [&source, other],
+            },
             [&retained[0], &equivalent_retained],
-            1e-8,
-            0.05,
+            SweepAccuracy {
+                tolerance_uv: 1e-8,
+                error_budget: 0.05,
+            },
             limits(),
             budget,
         )
@@ -223,13 +231,17 @@ fn moving_tilted_frame_and_large_nonplanar_caps_bind_the_complete_original_body(
         normalized_ideal.cells, normalized_ideal.exact_work, normalized_report.boundary_error_upper
     );
     let short = construct_with_ideal_atlas(
-        &sweep,
-        &[4],
-        5,
-        [&source, &source],
+        SweepSource {
+            sweep: &sweep,
+            loop_sizes: &[4],
+            sections: 5,
+            source_caps: [&source, &source],
+        },
         [&retained[0], &retained[1]],
-        1e-8,
-        0.05,
+        SweepAccuracy {
+            tolerance_uv: 1e-8,
+            error_budget: 0.05,
+        },
         limits(),
         IdealLimits { cells: 0, ..ideal },
     )

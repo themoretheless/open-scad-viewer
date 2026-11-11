@@ -89,13 +89,17 @@ fn different_original_cap_degrees_and_gauges_bind_the_complete_owned_saddle_body
     };
     let run = |source: &LoftCap, ideal| {
         construct_with_ideal_atlas(
-            &sweep,
-            &[4],
-            5,
-            [&start, source],
+            SweepSource {
+                sweep: &sweep,
+                loop_sizes: &[4],
+                sections: 5,
+                source_caps: [&start, source],
+            },
             [&start, &retained],
-            1e-8,
-            0.05,
+            SweepAccuracy {
+                tolerance_uv: 1e-8,
+                error_budget: 0.05,
+            },
             limits(),
             ideal,
         )
