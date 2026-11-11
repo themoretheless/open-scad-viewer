@@ -187,11 +187,13 @@ fn trace_identity(
                 .collect::<Vec<_>>();
             return super::bspline_strip_spans::compare(
                 ctx,
-                &jets,
+                crate::bspline_internal_jets::StripJets {
+                    jets: &jets,
+                    degrees: along_degrees,
+                    scale: &Q::scalar(Expansion::scalar(1.)),
+                    order: 0,
+                },
                 along_knots,
-                along_degrees,
-                Q::scalar(Expansion::scalar(1.)),
-                0,
                 false,
             );
         }

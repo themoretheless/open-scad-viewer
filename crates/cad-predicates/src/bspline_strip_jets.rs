@@ -387,22 +387,26 @@ fn strip_identity(
             if let Some(map) = along.map {
                 return super::bspline_strip_map::compare(
                     ctx,
-                    &jets,
+                    crate::bspline_internal_jets::StripJets {
+                        jets: &jets,
+                        degrees: along.degrees,
+                        scale: &scale,
+                        order,
+                    },
                     along.knots,
-                    along.degrees,
                     map,
-                    &scale,
-                    order,
                     false,
                 );
             }
             return super::bspline_strip_spans::compare_search(
                 ctx,
-                &jets,
+                crate::bspline_internal_jets::StripJets {
+                    jets: &jets,
+                    degrees: along.degrees,
+                    scale: &scale,
+                    order,
+                },
                 along.knots,
-                along.degrees,
-                scale,
-                order,
                 propose_exact_scale,
                 along.nonlinear_only,
             );
