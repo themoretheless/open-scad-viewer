@@ -1009,7 +1009,12 @@
         // This is a coincident two-face incidence control, not an embedded solid.
         #[cfg(feature="codec")]
         let definition=shell.definition().unwrap();
-        let automatic=assemble_regions_projective_with_discovered_fraction_candidates(&regions,&pairs,&[],&maps,&[],&[],128,16,100000000,10000).unwrap();
+        let automatic=assemble_regions_projective_with_discovered_fraction_candidates(
+            &regions,
+            ProjectiveInputs { pairs: &pairs, planes: &[], maps: &maps, candidates: &[], poles: &[] },
+            FractionDiscovery { max_denominator: 128, max_candidates_per_axis: 16 },
+            ProjectiveWork { max_work: 100000000, max_driver_cells: 10000 },
+        ).unwrap();
         let automatic_work=automatic.work_used;
         let automatic=automatic.shell.expect(automatic.reason);
         assert_eq!(automatic.uses(),shell.uses());
@@ -1019,7 +1024,12 @@
         #[cfg(feature="codec")]
         assert_eq!(automatic.definition().unwrap(),definition);
         assert_eq!(automatic.vertices(),shell.vertices());
-        assert!(assemble_regions_projective_with_discovered_fraction_candidates(&regions,&pairs,&[],&maps,&[],&[],128,16,automatic_work-1,10000).unwrap().shell.is_none());
+        assert!(assemble_regions_projective_with_discovered_fraction_candidates(
+            &regions,
+            ProjectiveInputs { pairs: &pairs, planes: &[], maps: &maps, candidates: &[], poles: &[] },
+            FractionDiscovery { max_denominator: 128, max_candidates_per_axis: 16 },
+            ProjectiveWork { max_work: automatic_work-1, max_driver_cells: 10000 },
+        ).unwrap().shell.is_none());
         let limits=crate::source_projective_shell_restore::Limits{regions:crate::source_region_restore::test_limits(),exact_work:100000000,driver_cells:10000};
         let native=shell.requalify(&limits).unwrap();
         let counts=(native.work_used,native.root_checks,native.driver_cells,native.reason);
@@ -1076,15 +1086,9 @@
             .collect::<Vec<_>>();
         let r = assemble_regions_projective_with_discovered_fraction_candidates(
             regions,
-            pairs,
-            &[],
-            &maps,
-            &[],
-            &[],
-            128,
-            16,
-            100000000,
-            10000,
+            ProjectiveInputs { pairs, planes: &[], maps: &maps, candidates: &[], poles: &[] },
+            FractionDiscovery { max_denominator: 128, max_candidates_per_axis: 16 },
+            ProjectiveWork { max_work: 100000000, max_driver_cells: 10000 },
         )
         .unwrap();
         let shell = r.shell.expect(r.reason);

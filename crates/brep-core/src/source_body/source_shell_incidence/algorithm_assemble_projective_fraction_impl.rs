@@ -2,16 +2,13 @@
 use super::*;
 pub fn assemble_projective_fraction_impl(
     faces: &[Vec<Wire>],
-    pairs: &[Pair],
-    planes: &[RootPlanes],
-    maps: &[ProjectiveMaps],
-    candidates: &[RootCandidates],
+    inputs: ProjectiveInputs<'_>,
     fraction_candidates: &[RootFractionCandidates],
-    poles: &[Pole],
     discovery: Option<[usize; 2]>,
-    max_work: u64,
-    max_driver_cells: usize,
+    work: ProjectiveWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
+    let ProjectiveInputs { pairs, planes, maps, candidates, poles } = inputs;
+    let ProjectiveWork { max_work, max_driver_cells } = work;
     let mut fractions = BTreeMap::new();
     for proposal in fraction_candidates {
         if proposal.pair >= pairs.len()

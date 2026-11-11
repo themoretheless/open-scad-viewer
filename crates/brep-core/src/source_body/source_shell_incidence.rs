@@ -354,44 +354,51 @@ pub fn assemble_projective_with_fraction_candidates(
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
     assemble_projective_fraction_impl(
         faces,
-        pairs,
-        planes,
-        maps,
-        candidates,
+        ProjectiveInputs { pairs, planes, maps, candidates, poles },
         fraction_candidates,
-        poles,
         None,
-        max_work,
-        max_driver_cells,
+        ProjectiveWork { max_work, max_driver_cells },
     )
+}
+/// Root data shared by projective shell assembly: face pairs, root planes, projective maps,
+/// root candidates and poles.
+#[derive(Clone, Copy)]
+pub struct ProjectiveInputs<'a> {
+    pub pairs: &'a [Pair],
+    pub planes: &'a [RootPlanes],
+    pub maps: &'a [ProjectiveMaps],
+    pub candidates: &'a [RootCandidates],
+    pub poles: &'a [Pole],
+}
+/// Limits of rational fraction discovery: largest denominator and candidates per axis.
+#[derive(Clone, Copy, Debug)]
+pub struct FractionDiscovery {
+    pub max_denominator: usize,
+    pub max_candidates_per_axis: usize,
+}
+/// Exact-work and driver-cell limits of one projective assembly.
+#[derive(Clone, Copy, Debug)]
+pub struct ProjectiveWork {
+    pub max_work: u64,
+    pub max_driver_cells: usize,
 }
 /// Discover rational original-root parameters under the same shell work limit.
 pub fn assemble_projective_with_discovered_fraction_candidates(
     faces: &[Vec<Wire>],
-    pairs: &[Pair],
-    planes: &[RootPlanes],
-    maps: &[ProjectiveMaps],
-    candidates: &[RootCandidates],
-    poles: &[Pole],
-    max_denominator: usize,
-    max_candidates_per_axis: usize,
-    max_work: u64,
-    max_driver_cells: usize,
+    inputs: ProjectiveInputs<'_>,
+    discovery: FractionDiscovery,
+    work: ProjectiveWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
+    let FractionDiscovery { max_denominator, max_candidates_per_axis } = discovery;
     if !(1..=4096).contains(&max_denominator) || !(1..=64).contains(&max_candidates_per_axis) {
         return Err(error("Bounded rational discovery required"));
     }
     assemble_projective_fraction_impl(
         faces,
-        pairs,
-        planes,
-        maps,
-        candidates,
+        inputs,
         &[],
-        poles,
         Some([max_denominator, max_candidates_per_axis]),
-        max_work,
-        max_driver_cells,
+        work,
     )
 }
 
