@@ -209,17 +209,41 @@ fn exact_jets(h: &H, w: &mut Work) -> Option<ExactJets> {
         second_weights,
     })
 }
+/// An original product profile: `profile` extruded along `axis` over the
+/// path interval `path`, measured from `origin`.
+#[derive(Clone, Copy)]
+pub(in super::super) struct ProductSource<'a> {
+    pub profile: &'a Curve,
+    pub path: [f64; 2],
+    pub axis: usize,
+    pub origin: [f64; 3],
+}
+/// One candidate surface span and control row, with the `u` interval `clock`
+/// that maps onto the source path interval.
+#[derive(Clone, Copy)]
+pub(in super::super) struct SurfaceCell<'a> {
+    pub surface: &'a Surface,
+    pub span: usize,
+    pub row: usize,
+    pub clock: [f64; 2],
+}
 pub(in super::super) fn prepare(
-    profile: &Curve,
-    path: [f64; 2],
-    s: &Surface,
-    span: usize,
-    row: usize,
-    axis: usize,
-    clock: [f64; 2],
-    origin: [f64; 3],
+    source: ProductSource<'_>,
+    cell: SurfaceCell<'_>,
     w: &mut Work,
 ) -> Option<Pair> {
+    let ProductSource {
+        profile,
+        path,
+        axis,
+        origin,
+    } = source;
+    let SurfaceCell {
+        surface: s,
+        span,
+        row,
+        clock,
+    } = cell;
     let p = profile.degree;
     let q = s.degree_u;
     if p > 16
@@ -333,14 +357,18 @@ mod tests {
             periodic_v: false,
         };
         let p = prepare(
-            &c,
-            [0., 1.],
-            &s,
-            2,
-            0,
-            2,
-            [0., 1.],
-            [0.; 3],
+            ProductSource {
+                profile: &c,
+                path: [0., 1.],
+                axis: 2,
+                origin: [0.; 3],
+            },
+            SurfaceCell {
+                surface: &s,
+                span: 2,
+                row: 0,
+                clock: [0., 1.],
+            },
             &mut Work::new(1000),
         )
         .unwrap();
@@ -359,28 +387,36 @@ mod tests {
         assert!(b[0][1] <= 1e-10 && b[1][1] <= 1e-10, "{b:?}");
         assert!(
             prepare(
-                &c,
-                [0., 1.],
-                &s,
-                2,
-                0,
-                2,
-                [0., 1.],
-                [0.; 3],
-                &mut Work { left: 0 }
+                ProductSource {
+                    profile: &c,
+                    path: [0., 1.],
+                    axis: 2,
+                    origin: [0.; 3],
+                },
+                SurfaceCell {
+                    surface: &s,
+                    span: 2,
+                    row: 0,
+                    clock: [0., 1.],
+                },
+                &mut Work { left: 0 },
             )
             .is_none()
         );
         s.control_points[1][0][1] = 1e-4;
         let p = prepare(
-            &c,
-            [0., 1.],
-            &s,
-            2,
-            0,
-            2,
-            [0., 1.],
-            [0.; 3],
+            ProductSource {
+                profile: &c,
+                path: [0., 1.],
+                axis: 2,
+                origin: [0.; 3],
+            },
+            SurfaceCell {
+                surface: &s,
+                span: 2,
+                row: 0,
+                clock: [0., 1.],
+            },
             &mut Work::new(1000),
         )
         .unwrap();

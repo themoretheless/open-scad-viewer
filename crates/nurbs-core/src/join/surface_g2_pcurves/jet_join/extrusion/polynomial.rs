@@ -3,7 +3,9 @@ use super::*;
 mod conditioned;
 #[path = "polynomial/exact_product.rs"]
 mod exact_product;
-pub(super) use exact_product::{Work as ExactProductWork, prepare as prepare_exact_product};
+pub(super) use exact_product::{
+    ProductSource, SurfaceCell, Work as ExactProductWork, prepare as prepare_exact_product,
+};
 pub(super) type Poly = Vec<I>;
 pub(super) type Homogeneous = [Poly; 4];
 pub(super) fn diff(a: &[I]) -> Result<Poly> {

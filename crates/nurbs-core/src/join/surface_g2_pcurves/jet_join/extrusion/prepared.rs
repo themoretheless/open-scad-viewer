@@ -251,14 +251,18 @@ impl<'a> Prepared<'a> {
                     .original_product_profile(axis)
                     .and_then(|(profile, path)| {
                         polynomial::prepare_exact_product(
-                            &profile,
-                            path,
-                            candidate_surface,
-                            span,
-                            row,
-                            axis,
-                            [u0, u1],
-                            origin,
+                            polynomial::ProductSource {
+                                profile: &profile,
+                                path,
+                                axis,
+                                origin,
+                            },
+                            polynomial::SurfaceCell {
+                                surface: candidate_surface,
+                                span,
+                                row,
+                                clock: [u0, u1],
+                            },
                             &mut exact_work,
                         )
                     });
