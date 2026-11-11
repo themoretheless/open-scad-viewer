@@ -1,6 +1,6 @@
 //! Whole retained-body regression for shared-generator endpoint projection.
 //! Source error, saved profile jets, and material admission are independent.
-use brep_core::{analytic::{EndpointCapCorrection, progressive_profile_body_with_automatic_caps}, boundary_embedding, face_contacts, retained_annular_cap::reference_filling, sweep_cap_contacts, volume_validity};
+use brep_core::{analytic::{EndpointCapCorrection, ProgressiveBodyPolicy, ProgressiveLaws, progressive_profile_body_with_automatic_caps}, boundary_embedding, face_contacts, retained_annular_cap::reference_filling, sweep_cap_contacts, volume_validity};
 use nurbs_core::{
     curve::Curve,
     primitives::circle,
@@ -58,20 +58,7 @@ fn qualify(spacing: Spacing) {
         tolerance: 1e-9,
         max_work: 1_000_000,
     };
-    let body = progressive_profile_body_with_automatic_caps(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        None,
-        None,
-        None,
-        options,
-        Some(correction),
-        Some(correction),
-        None,
-        policy,
-    )
+    let body = progressive_profile_body_with_automatic_caps(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, options, ProgressiveBodyPolicy { correction: Some(correction), profile_correction: Some(correction), rmf_policy: None }, policy)
     .unwrap();
     let boundary = body
         .complete_boundary()
@@ -183,23 +170,10 @@ fn qualify(spacing: Spacing) {
             .is_ok_and(|v| v.proven)
     );
     assert!(
-        progressive_profile_body_with_automatic_caps(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            None,
-            None,
-            None,
-            options,
-            Some(EndpointCapCorrection {
+        progressive_profile_body_with_automatic_caps(ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, options, ProgressiveBodyPolicy { correction: Some(EndpointCapCorrection {
                 max_work: 1,
                 ..correction
-            }),
-            Some(correction),
-            None,
-            policy,
-        )
+            }), profile_correction: Some(correction), rmf_policy: None }, policy)
         .is_err()
     );
     assert_eq!((path, loops, scale, twist), before);

@@ -137,10 +137,7 @@ pub(super) fn build(v: Value) -> Result<Value> {
             let guidance=guide.as_ref().map(|g|(g,contact.map(|p|(contact_profile.unwrap_or(0),p))));
             let owned=if annular_mode {
                 let construct=if automatic_mode {brep_core::analytic::progressive_profile_body_with_automatic_caps}else{brep_core::analytic::progressive_profile_body_with_annular_caps};
-                Some(construct(
-                    &loops,&path,&scale,&twist,affine,frame_axis.as_ref().zip(frame_normal.as_ref()),
-                    guidance,options,correction,profile_correction,rmf_policy,
-                    brep_core::retained_annular_cap::reference_filling::Limits {
+                Some(construct(brep_core::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine, frames: frame_axis.as_ref().zip(frame_normal.as_ref()), guidance }, options, brep_core::analytic::ProgressiveBodyPolicy { correction, profile_correction, rmf_policy }, brep_core::retained_annular_cap::reference_filling::Limits {
                         exact_work:optional_field(&v,"annular_cap_max_work")?.unwrap_or(1000000),
                         products:optional_field(&v,"annular_cap_max_products")?.unwrap_or(100000),
                         trim_pairs:optional_field(&v,"annular_cap_max_pairs")?.unwrap_or(10000),
@@ -148,14 +145,10 @@ pub(super) fn build(v: Value) -> Result<Value> {
                         trim_domain_cells:1000000,spans:1024,linear_cells:100000,
                         contacts:brep_core::face_contacts::Limits {pairs:10000,cells:100000,domain_cells:1000000,
                             cells_per_pair:1000,domain_cells_per_pair:10000},
-                    },
-                )?)
+                    })?)
             }else{None};
             let legacy=if annular_mode {None}else{
-                Some(brep_core::analytic::progressive_profile_body_with_rmf_policy_and_corrections(
-                    &loops,&path,&scale,&twist,affine,frame_axis.as_ref().zip(frame_normal.as_ref()),
-                    guidance,options,correction,profile_correction,rmf_policy,
-                )?)
+                Some(brep_core::analytic::progressive_profile_body_with_rmf_policy_and_corrections(brep_core::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine, frames: frame_axis.as_ref().zip(frame_normal.as_ref()), guidance }, options, brep_core::analytic::ProgressiveBodyPolicy { correction, profile_correction, rmf_policy })?)
             };
             let result=owned.as_ref().map(|body|body.evidence()).or(legacy.as_ref()).unwrap();
             // Replay the complete original constructor, never caller-authored sections,

@@ -2,12 +2,14 @@
 use super::*;
 
 pub(super) fn progressive_profile_body_internal(
-    loops:&[Vec<Curve>],path:&Curve,scale:&Curve,twist:&Curve,
-    affine:Option<(&Curve,&Curve)>,frames:Option<(&Curve,&Curve)>,
-    guidance:Option<(&Curve,Option<(usize,f64)>)>,options:nurbs_core::progressive_sweep::Options,
-    correction:Option<EndpointCapCorrection>,profile_correction:Option<EndpointCapCorrection>,
-    rmf_policy:Option<(usize,usize,usize)>,annular:Option<crate::retained_annular_cap::reference_filling::Limits>,automatic_caps:bool,
+    laws: ProgressiveLaws<'_>,
+    options: nurbs_core::progressive_sweep::Options,
+    policy: ProgressiveBodyPolicy,
+    annular: Option<crate::retained_annular_cap::reference_filling::Limits>,
+    automatic_caps: bool,
 )->Result<ProgressiveBodyEvidence>{
+    let ProgressiveLaws { loops, path, scale, twist, affine, frames, guidance } = laws;
+    let ProgressiveBodyPolicy { correction, profile_correction, rmf_policy } = policy;
     use nurbs_core::progressive_sweep::{Sweep, approximate_profiles};
     if let Some(limits)=annular {annular_caps::validate_limits(limits)?;}
     if rmf_policy.is_some() && (frames.is_some() || guidance.is_some()) {

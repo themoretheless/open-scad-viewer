@@ -15,6 +15,7 @@ mod tests;
 mod rational_loft;
 
 pub use rational_loft::section_loft_source_matches;
+pub use rational_loft::{ProgressiveBodyPolicy, ProgressiveLaws};
 pub use rational_loft::{
     PolygonStationWalls, SmoothStationWalls, section_loft_surfaces, smooth_polygon_station_walls,
     smooth_station_walls,

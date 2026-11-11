@@ -124,20 +124,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::fs::write(directory.join(format!("{name}-source.json")),&request_text)?;
         let started = Instant::now();
         let construct=if automatic {brep_core::analytic::progressive_profile_body_with_automatic_caps}else{progressive_profile_body_with_annular_caps};
-        let body = construct(
-            &loops,
-            &path,
-            &scale,
-            &twist,
-            None,
-            None,
-            None,
-            options,
-            None,
-            None,
-            None,
-            cap_limits(),
-        )?;
+        let body = construct(brep_core::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, options, brep_core::analytic::ProgressiveBodyPolicy { correction: None, profile_correction: None, rmf_policy: None }, cap_limits())?;
         let construct_ms = started.elapsed().as_secs_f64() * 1000.;
         let bound = body
             .complete_boundary()

@@ -71,20 +71,7 @@ fn make_with_policy(kind:usize,automatic:bool)->Boundary {
         Orientation::RotationMinimizing
     };
     let construct=if automatic {super::super::progressive_profile_body_with_automatic_caps}else{super::super::progressive_profile_body_with_annular_caps};
-    let body = construct(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        None,
-        None,
-        None,
-        options(orientation, if kind == 0 { 2 } else { 3 }, 129),
-        None,
-        None,
-        None,
-        limits(),
-    )
+    let body = construct(super::super::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, options(orientation, if kind == 0 { 2 } else { 3 }, 129), super::super::ProgressiveBodyPolicy { correction: None, profile_correction: None, rmf_policy: None }, limits())
     .unwrap();
     let boundary = body
         .complete_boundary()
@@ -186,20 +173,7 @@ fn annular_station_reconstruction_preserves_all_caps_and_actual_g2() {
     let twist = constant_vector_law([0.; 3]).unwrap();
     let mut opt = options(Orientation::Fixed, 3, 3);
     opt.normal = [1., 0., 0.];
-    let mut body = super::super::progressive_profile_body_with_annular_caps(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        None,
-        None,
-        None,
-        opt,
-        None,
-        None,
-        None,
-        limits(),
-    )
+    let mut body = super::super::progressive_profile_body_with_annular_caps(super::super::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, opt, super::super::ProgressiveBodyPolicy { correction: None, profile_correction: None, rmf_policy: None }, limits())
     .unwrap();
     assert!(body.complete_boundary().is_some());
     let full = body.reconstruct_stations(0.125, 1e-9, 1_000_000).unwrap();
@@ -264,24 +238,9 @@ fn automatic_caps_preserve_exact_legacy_geometry_and_shared_refusal() {
         normal: [1., 0., 0.],
         ..options(Orientation::Fixed, 3, 3)
     };
-    let before = super::super::progressive_profile_body_with_rmf_policy_and_corrections(
-        &loops, &path, &scale, &twist, None, None, None, opts, None, None, None,
-    )
+    let before = super::super::progressive_profile_body_with_rmf_policy_and_corrections(super::super::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, opts, super::super::ProgressiveBodyPolicy { correction: None, profile_correction: None, rmf_policy: None })
     .unwrap();
-    let body = super::super::progressive_profile_body_with_automatic_caps(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        None,
-        None,
-        None,
-        opts,
-        None,
-        None,
-        None,
-        limits(),
-    )
+    let body = super::super::progressive_profile_body_with_automatic_caps(super::super::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, opts, super::super::ProgressiveBodyPolicy { correction: None, profile_correction: None, rmf_policy: None }, limits())
     .unwrap();
     assert!(body.caps().is_none());
     assert_eq!(*body.model(), before.model);
@@ -296,9 +255,7 @@ fn automatic_caps_preserve_exact_legacy_geometry_and_shared_refusal() {
         ..limits()
     };
     assert!(
-        super::super::progressive_profile_body_with_automatic_caps(
-            &loops, &path, &scale, &twist, None, None, None, opts, None, None, None, empty
-        )
+        super::super::progressive_profile_body_with_automatic_caps(super::super::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, opts, super::super::ProgressiveBodyPolicy { correction: None, profile_correction: None, rmf_policy: None }, empty)
         .is_err()
     );
 }
@@ -326,24 +283,9 @@ fn automatic_caps_keep_full_legacy_face_capacity_and_refuse_annular_overflow() {
         normal: [1., 0., 0.],
         ..options(Orientation::Fixed, 147, 147)
     };
-    let body = super::super::progressive_profile_body_with_automatic_caps(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        None,
-        None,
-        None,
-        opts,
-        None,
-        None,
-        None,
-        limits(),
-    )
+    let body = super::super::progressive_profile_body_with_automatic_caps(super::super::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, opts, super::super::ProgressiveBodyPolicy { correction: None, profile_correction: None, rmf_policy: None }, limits())
     .unwrap();
-    let legacy = super::super::progressive_profile_body_with_rmf_policy_and_corrections(
-        &loops, &path, &scale, &twist, None, None, None, opts, None, None, None,
-    )
+    let legacy = super::super::progressive_profile_body_with_rmf_policy_and_corrections(super::super::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, opts, super::super::ProgressiveBodyPolicy { correction: None, profile_correction: None, rmf_policy: None })
     .unwrap();
     assert_eq!(body.model().faces.len(), crate::MAX_FACES);
     assert_eq!(*body.model(), legacy.model);
@@ -363,20 +305,7 @@ fn automatic_caps_keep_full_legacy_face_capacity_and_refuse_annular_overflow() {
     let loops = vec![polygon(points), polygon(inner)];
     let path = line([0.; 3], [3., 4., 0.]).unwrap();
     let opts = options(Orientation::RotationMinimizing, 86, 86);
-    let result = super::super::progressive_profile_body_with_automatic_caps(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        None,
-        None,
-        None,
-        opts,
-        None,
-        None,
-        None,
-        limits(),
-    );
+    let result = super::super::progressive_profile_body_with_automatic_caps(super::super::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, opts, super::super::ProgressiveBodyPolicy { correction: None, profile_correction: None, rmf_policy: None }, limits());
     match result {
         Err(error) => assert!(
             error.to_string().contains("shared body face budget"),
@@ -406,20 +335,7 @@ fn automatic_oblique_station_reconstruction_retries_degree_and_preserves_all_cap
         periodic: false,
     };
     let twist = constant_vector_law([0.; 3]).unwrap();
-    let body = super::super::progressive_profile_body_with_automatic_caps(
-        &loops,
-        &path,
-        &scale,
-        &twist,
-        None,
-        None,
-        None,
-        options(Orientation::RotationMinimizing, 3, 3),
-        None,
-        None,
-        None,
-        limits(),
-    )
+    let body = super::super::progressive_profile_body_with_automatic_caps(super::super::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine: None, frames: None, guidance: None }, options(Orientation::RotationMinimizing, 3, 3), super::super::ProgressiveBodyPolicy { correction: None, profile_correction: None, rmf_policy: None }, limits())
     .unwrap();
     assert!(body.caps().is_some());
     let caps = body.cap_faces();
