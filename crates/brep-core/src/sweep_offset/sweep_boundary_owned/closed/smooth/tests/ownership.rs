@@ -18,12 +18,16 @@ fn every_zero_or_one_short_owner_stage_returns_no_partial_solid() {
     .unwrap();
     let full = body(
         construct_smooth_closed_with_ideal_atlas(
-            &sweep,
-            &[4],
-            33,
-            &material,
-            1e-8,
-            0.05,
+            ClosedSweepSource {
+                sweep: &sweep,
+                loop_sizes: &[4],
+                sections: 33,
+                material: &material,
+            },
+            SweepAccuracy {
+                tolerance_uv: 1e-8,
+                error_budget: 0.05,
+            },
             &[],
             limits(),
         )
@@ -135,12 +139,16 @@ fn every_zero_or_one_short_owner_stage_returns_no_partial_solid() {
     });
     for (i, l) in cases.iter().copied().enumerate() {
         let attempt = construct_smooth_closed_with_ideal_atlas(
-            &sweep,
-            &[4],
-            33,
-            &material,
-            1e-8,
-            0.05,
+            ClosedSweepSource {
+                sweep: &sweep,
+                loop_sizes: &[4],
+                sections: 33,
+                material: &material,
+            },
+            SweepAccuracy {
+                tolerance_uv: 1e-8,
+                error_budget: 0.05,
+            },
             &[],
             l,
         )
@@ -176,14 +184,18 @@ fn every_zero_or_one_short_owner_stage_returns_no_partial_solid() {
         };
         assert!(matches!(
             construct_smooth_closed_with_ideal_atlas(
-                &sweep,
-                &[4],
-                33,
-                &material,
-                1e-8,
-                error_budget,
+                ClosedSweepSource {
+                    sweep: &sweep,
+                    loop_sizes: &[4],
+                    sections: 33,
+                    material: &material,
+                },
+                SweepAccuracy {
+                    tolerance_uv: 1e-8,
+                    error_budget,
+                },
                 &[],
-                l
+                l,
             )
             .unwrap(),
             SmoothClosedAttempt::Refused(_)
@@ -212,14 +224,40 @@ fn geometric_g1_is_preserved_without_claiming_g2_at_a_curvature_jump() {
     let mut l = limits();
     l.smoothness.order = 1;
     let b = body(
-        construct_smooth_closed_with_ideal_atlas(&sweep, &[4], 33, &material, 1e-8, 0.05, &[], l)
+        construct_smooth_closed_with_ideal_atlas(
+            ClosedSweepSource {
+                sweep: &sweep,
+                loop_sizes: &[4],
+                sections: 33,
+                material: &material,
+            },
+            SweepAccuracy {
+                tolerance_uv: 1e-8,
+                error_budget: 0.05,
+            },
+            &[],
+            l,
+        )
             .unwrap(),
     );
     assert!(b.report().certified && b.report().smoothness.as_ref().unwrap().g1_certified);
     assert!(!b.report().smoothness.as_ref().unwrap().g2_certified);
     l.smoothness.order = 2;
     let SmoothClosedAttempt::Refused(r) =
-        construct_smooth_closed_with_ideal_atlas(&sweep, &[4], 33, &material, 1e-8, 0.05, &[], l)
+        construct_smooth_closed_with_ideal_atlas(
+            ClosedSweepSource {
+                sweep: &sweep,
+                loop_sizes: &[4],
+                sections: 33,
+                material: &material,
+            },
+            SweepAccuracy {
+                tolerance_uv: 1e-8,
+                error_budget: 0.05,
+            },
+            &[],
+            l,
+        )
             .unwrap()
     else {
         panic!("a genuine original curvature jump received G2 Solid credit");
@@ -419,12 +457,16 @@ fn reversed_carrier_chart_uses_world_jacobian_and_uv_winding_for_orientation() {
     .unwrap();
     let b = body(
         construct_smooth_closed_with_ideal_atlas(
-            &sweep,
-            &[4],
-            33,
-            &material,
-            1e-8,
-            0.05,
+            ClosedSweepSource {
+                sweep: &sweep,
+                loop_sizes: &[4],
+                sections: 33,
+                material: &material,
+            },
+            SweepAccuracy {
+                tolerance_uv: 1e-8,
+                error_budget: 0.05,
+            },
             &[],
             limits(),
         )
@@ -528,12 +570,16 @@ fn nonplanar_filled_carrier_and_nonplanar_original_boundary_have_owned_global_g2
     .unwrap();
     let b = body(
         construct_smooth_closed_with_ideal_atlas(
-            &sweep,
-            &[4],
-            65,
-            &material,
-            1e-8,
-            0.05,
+            ClosedSweepSource {
+                sweep: &sweep,
+                loop_sizes: &[4],
+                sections: 65,
+                material: &material,
+            },
+            SweepAccuracy {
+                tolerance_uv: 1e-8,
+                error_budget: 0.05,
+            },
             &[],
             limits(),
         )

@@ -69,24 +69,13 @@ fn refuse<'s, 'a>(
 /// source roles and freshly proved at that order. Explicit C0 survives even
 /// when stronger geometry happens to hold. Unknown stages expose no model.
 pub fn construct_classified_closed_with_original_material<'s, 'a>(
-    sweep: &'s MultiSweep<'a>,
-    loop_sizes: &[usize],
-    sections: usize,
-    material: &'s LoftCap,
+    source: ClosedSweepSource<'s, 'a, '_>,
     classes: &[OriginalProfileClass],
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: SweepAccuracy,
     sharp_stations: &[usize],
     limits: ClassifiedClosedLimits,
 ) -> Result<ClassifiedClosedAttempt<'s, 'a>> {
-    construct_impl(
-        ClosedSweepSource { sweep, loop_sizes, sections, material },
-        classes,
-        SweepAccuracy { tolerance_uv, error_budget },
-        sharp_stations,
-        limits,
-        None,
-    )
+    construct_impl(source, classes, accuracy, sharp_stations, limits, None)
 }
 /// Supplied geometry is freshly rebound, classified and globally requalified.
 /// No source/actual success reports or caller-proposed edge class list is used.

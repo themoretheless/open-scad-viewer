@@ -335,13 +335,17 @@ fn run_profiles(
     if mode == 2 {
         let ClassifiedClosedAttempt::Refused(coarse) =
             construct_classified_closed_with_original_material(
-                &sweep,
-                &sizes,
-                33,
-                &material,
+                ClosedSweepSource {
+                    sweep: &sweep,
+                    loop_sizes: &sizes,
+                    sections: 33,
+                    material: &material,
+                },
                 &classes,
-                1e-8,
-                0.05,
+                SweepAccuracy {
+                    tolerance_uv: 1e-8,
+                    error_budget: 0.05,
+                },
                 &sharp,
                 limits(),
             )
@@ -353,13 +357,17 @@ fn run_profiles(
         assert!(coarse.binding.is_none());
     }
     let r = construct_classified_closed_with_original_material(
-        &sweep,
-        &sizes,
-        count,
-        &material,
+        ClosedSweepSource {
+            sweep: &sweep,
+            loop_sizes: &sizes,
+            sections: count,
+            material: &material,
+        },
         &classes,
-        1e-8,
-        0.05,
+        SweepAccuracy {
+            tolerance_uv: 1e-8,
+            error_budget: 0.05,
+        },
         &sharp,
         limits(),
     )
@@ -469,7 +477,19 @@ fn run_profiles(
     joint.incidence_steps = r.incidence_steps;
     assert!(matches!(
         construct_classified_closed_with_original_material(
-            &sweep, &sizes, count, &material, &classes, 1e-8, 0.05, &sharp, joint
+            ClosedSweepSource {
+                sweep: &sweep,
+                loop_sizes: &sizes,
+                sections: count,
+                material: &material,
+            },
+            &classes,
+            SweepAccuracy {
+                tolerance_uv: 1e-8,
+                error_budget: 0.05,
+            },
+            &sharp,
+            joint,
         )
         .unwrap(),
         ClassifiedClosedAttempt::Certified(_)
@@ -477,7 +497,19 @@ fn run_profiles(
     joint.incidence_steps -= 1;
     let ClassifiedClosedAttempt::Refused(short) =
         construct_classified_closed_with_original_material(
-            &sweep, &sizes, count, &material, &classes, 1e-8, 0.05, &sharp, joint,
+            ClosedSweepSource {
+                sweep: &sweep,
+                loop_sizes: &sizes,
+                sections: count,
+                material: &material,
+            },
+            &classes,
+            SweepAccuracy {
+                tolerance_uv: 1e-8,
+                error_budget: 0.05,
+            },
+            &sharp,
+            joint,
         )
         .unwrap()
     else {
@@ -509,13 +541,17 @@ fn run_profiles(
         upgraded[0] = OriginalProfileClass::G2;
         let ClassifiedClosedAttempt::Refused(q) =
             construct_classified_closed_with_original_material(
-                &sweep,
-                &sizes,
-                count,
-                &material,
+                ClosedSweepSource {
+                    sweep: &sweep,
+                    loop_sizes: &sizes,
+                    sections: count,
+                    material: &material,
+                },
                 &upgraded,
-                1e-8,
-                0.05,
+                SweepAccuracy {
+                    tolerance_uv: 1e-8,
+                    error_budget: 0.05,
+                },
                 &sharp,
                 limits(),
             )

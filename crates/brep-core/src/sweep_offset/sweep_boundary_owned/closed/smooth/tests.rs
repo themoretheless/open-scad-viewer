@@ -108,12 +108,16 @@ fn original_spatial_material_and_actual_g2_solid_have_independent_global_certifi
     .with_spatial_rmf_error_limits(1024, 100000, 1000000)
     .unwrap();
     let body = match construct_smooth_closed_with_ideal_atlas(
-        &sweep,
-        &[4],
-        33,
-        &material,
-        1e-8,
-        0.05,
+        ClosedSweepSource {
+            sweep: &sweep,
+            loop_sizes: &[4],
+            sections: 33,
+            material: &material,
+        },
+        SweepAccuracy {
+            tolerance_uv: 1e-8,
+            error_budget: 0.05,
+        },
         &[],
         limits(),
     )
@@ -303,12 +307,16 @@ fn qualified_mode(mode: usize, count: usize, hole: bool, reverse: bool) {
         sweep = sweep.with_affine_laws(&axes, &center).unwrap();
     }
     let b = match construct_smooth_closed_with_ideal_atlas(
-        &sweep,
-        &sizes,
-        count,
-        &material,
-        1e-8,
-        0.05,
+        ClosedSweepSource {
+            sweep: &sweep,
+            loop_sizes: &sizes,
+            sections: count,
+            material: &material,
+        },
+        SweepAccuracy {
+            tolerance_uv: 1e-8,
+            error_budget: 0.05,
+        },
         &[],
         SmoothClosedLimits {
             original_smoothness: Some(

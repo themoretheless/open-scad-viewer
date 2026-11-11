@@ -15,7 +15,20 @@ fn geometric_arc_source_clock_has_complete_original_and_actual_g2_solid_with_glo
     let mut l=limits();
     l.source.ideal.cells=1000000;
     l.original_smoothness=Some(nurbs_core::progressive_sweep::OriginalBoundarySmoothnessLimits{order:2,cells:100000,exact_work:1000000,products:1000000});
-    let attempt=construct_smooth_closed_with_ideal_atlas(&sweep,&[4],65,&material,1e-8,0.05,&[],l).unwrap();
+    let attempt=construct_smooth_closed_with_ideal_atlas(
+        ClosedSweepSource {
+            sweep: &sweep,
+            loop_sizes: &[4],
+            sections: 65,
+            material: &material,
+        },
+        SweepAccuracy {
+            tolerance_uv: 1e-8,
+            error_budget: 0.05,
+        },
+        &[],
+        l,
+    ).unwrap();
     if let SmoothClosedAttempt::Refused(r)=&attempt {eprintln!("original diagnostic {:?}, cells={} work={} smooth={:?}",r.original.volume,r.original.cells,r.original.exact_work,r.original.smoothness); eprintln!("wall diagnostic {:?}",r.original.wall.as_ref().map(|w|(w.error_certificate_reason,w.error_certificate_cells,w.continuous_error_upper)));}
     let b=body(attempt);
     let r=b.report();assert!(r.certified && r.original.certified && r.topology_preserved && r.shell_roles_certified && r.continuous_bound);
@@ -34,7 +47,20 @@ fn tilted_authored_geometric_clock_has_complete_original_and_actual_g2_solid(){
     let sweep=MultiSweep::new(&profiles,&path,&scale,&twist,options).unwrap().with_frame_laws(&a,&n).unwrap();
     let mut l=limits();l.source.ideal.cells=1000000;
     l.original_smoothness=Some(nurbs_core::progressive_sweep::OriginalBoundarySmoothnessLimits{order:2,cells:100000,exact_work:1000000,products:1000000});
-    let attempt=construct_smooth_closed_with_ideal_atlas(&sweep,&[4],65,&material,1e-8,0.05,&[],l).unwrap();
+    let attempt=construct_smooth_closed_with_ideal_atlas(
+        ClosedSweepSource {
+            sweep: &sweep,
+            loop_sizes: &[4],
+            sections: 65,
+            material: &material,
+        },
+        SweepAccuracy {
+            tolerance_uv: 1e-8,
+            error_budget: 0.05,
+        },
+        &[],
+        l,
+    ).unwrap();
     if let SmoothClosedAttempt::Refused(r)=&attempt {eprintln!("tilted source={:?} wall={:?} volume={:?} smooth={:?}",r.original.reason,r.original.wall,r.original.volume,r.original.smoothness);}
     let b=body(attempt);let r=b.report();
     assert!(r.certified && r.original.g2_certified() && r.topology_preserved && r.shell_roles_certified && r.continuous_bound);
@@ -55,7 +81,20 @@ fn guided_geometric_clock_has_complete_original_and_actual_g2_solid() {
     let mut l=limits();l.source.ideal.cells=1000000;
     l.original_smoothness=Some(nurbs_core::progressive_sweep::OriginalBoundarySmoothnessLimits{
         order:2,cells:100000,exact_work:1000000,products:1000000});
-    let attempt=construct_smooth_closed_with_ideal_atlas(&sweep,&[4],65,&material,1e-8,0.05,&[],l).unwrap();
+    let attempt=construct_smooth_closed_with_ideal_atlas(
+        ClosedSweepSource {
+            sweep: &sweep,
+            loop_sizes: &[4],
+            sections: 65,
+            material: &material,
+        },
+        SweepAccuracy {
+            tolerance_uv: 1e-8,
+            error_budget: 0.05,
+        },
+        &[],
+        l,
+    ).unwrap();
     if let SmoothClosedAttempt::Refused(r)=&attempt {eprintln!("guided source={:?} wall={:?} volume={:?} smooth={:?}",r.original.reason,r.original.wall,r.original.volume,r.original.smoothness);}
     let b=body(attempt);let r=b.report();
     assert!(r.certified && r.original.g2_certified() && r.topology_preserved && r.shell_roles_certified && r.continuous_bound);

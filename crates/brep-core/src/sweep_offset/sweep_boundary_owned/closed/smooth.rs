@@ -405,64 +405,34 @@ fn binding_impl(
 /// proof for the new model. Unknown stages return no model. Physical caps are
 /// absent; material is the original filled reference cross-section.
 pub fn construct_smooth_closed_with_ideal_atlas(
-    sweep: &MultiSweep<'_>,
-    loop_sizes: &[usize],
-    sections: usize,
-    material: &LoftCap,
-    tolerance_uv: f64,
-    error_budget: f64,
+    source: ClosedSweepSource<'_, '_, '_>,
+    accuracy: SweepAccuracy,
     sharp: &[usize],
     limits: SmoothClosedLimits,
 ) -> Result<SmoothClosedAttempt> {
-    construct_impl(
-        sweep,
-        loop_sizes,
-        sections,
-        material,
-        tolerance_uv,
-        error_budget,
-        sharp,
-        limits,
-        None,
-    )
+    construct_impl(source, accuracy, sharp, limits, None)
 }
 /// Recompute source, coefficients, complete smoothness, global volume and
 /// orientation for a supplied model. No certificate/report from it is trusted.
 pub fn verify_smooth_closed_with_ideal_atlas(
-    sweep: &MultiSweep<'_>,
-    loop_sizes: &[usize],
-    sections: usize,
-    material: &LoftCap,
-    tolerance_uv: f64,
-    error_budget: f64,
+    source: ClosedSweepSource<'_, '_, '_>,
+    accuracy: SweepAccuracy,
     sharp: &[usize],
     limits: SmoothClosedLimits,
     model: &Model,
 ) -> Result<SmoothClosedAttempt> {
     model.validate()?;
-    construct_impl(
-        sweep,
-        loop_sizes,
-        sections,
-        material,
-        tolerance_uv,
-        error_budget,
-        sharp,
-        limits,
-        Some(model),
-    )
+    construct_impl(source, accuracy, sharp, limits, Some(model))
 }
 fn construct_impl(
-    sweep: &MultiSweep<'_>,
-    loop_sizes: &[usize],
-    sections: usize,
-    material: &LoftCap,
-    tolerance_uv: f64,
-    error_budget: f64,
+    source: ClosedSweepSource<'_, '_, '_>,
+    accuracy: SweepAccuracy,
     sharp: &[usize],
     limits: SmoothClosedLimits,
     supplied: Option<&Model>,
 ) -> Result<SmoothClosedAttempt> {
+    let ClosedSweepSource { sweep, loop_sizes, sections, material } = source;
+    let SweepAccuracy { tolerance_uv, error_budget } = accuracy;
     if limits.binding_work > 1000000
         || limits.orientation_cells > 100000
         || limits.atlas.cells > 1000000
