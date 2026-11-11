@@ -36,15 +36,27 @@ pub fn certify_fixed_path_control_values(
     path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
     qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
 )->Result<ControlValuesReport>{
-    certify_fixed_path_control_values_with_frame_path(path,path,normal,scale,twist,affine,qs,traversal,max_cells)
+    certify_fixed_path_control_values_with_frame_path(
+        super::ProfileLaws { path, scale, twist, affine },
+        path,
+        normal,
+        qs,
+        traversal,
+        max_cells,
+    )
 }
 
 /// Caller must prove that frame_path has the original initial tangent direction.
 /// Translation remains evaluated on path, including its original rational basis.
 pub(crate) fn certify_fixed_path_control_values_with_frame_path(
-    path:&Curve,frame_path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
-)->Result<ControlValuesReport>{
+    laws: super::ProfileLaws<'_>,
+    frame_path: &Curve,
+    normal: [f64; 3],
+    qs: &[[[f64; 2]; 3]],
+    traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<ControlValuesReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_fixed_path_values(frame_path,normal,twist,traversal,max_cells)?;
     super::trajectory::control_values_with_fit(
         super::ControlLaws { path, scale, affine },
@@ -135,13 +147,25 @@ pub fn certify_fixed_path_control_trajectories(
     path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
     qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
 )->Result<TrajectoriesReport>{
-    certify_fixed_path_control_trajectories_with_frame_path(path,path,normal,scale,twist,affine,qs,traversal,max_cells)
+    certify_fixed_path_control_trajectories_with_frame_path(
+        super::ProfileLaws { path, scale, twist, affine },
+        path,
+        normal,
+        qs,
+        traversal,
+        max_cells,
+    )
 }
 
 pub(crate) fn certify_fixed_path_control_trajectories_with_frame_path(
-    path:&Curve,frame_path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
-)->Result<TrajectoriesReport>{
+    laws: super::ProfileLaws<'_>,
+    frame_path: &Curve,
+    normal: [f64; 3],
+    qs: &[[[f64; 2]; 3]],
+    traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<TrajectoriesReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_fixed_path(frame_path,normal,twist,traversal,max_cells)?;
     super::trajectory::control_trajectories_with_fit(
         super::ControlLaws { path, scale, affine },

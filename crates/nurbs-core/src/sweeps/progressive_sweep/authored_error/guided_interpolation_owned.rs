@@ -153,7 +153,14 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
         if constant_pose {
             let mut charge=0;
             if pose_cache.borrow().is_none() {
-                let pose=authored_frame_certificate::certify_fixed_path_control_values_with_frame_path(&zero_path,frame_reference_path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,[0.,1.],budget)?;
+                let pose=authored_frame_certificate::certify_fixed_path_control_values_with_frame_path(
+                    authored_frame_certificate::ProfileLaws { path: &zero_path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
+                    frame_reference_path,
+                    sweep.options.normal,
+                    qs,
+                    [0.,1.],
+                    budget,
+                )?;
                 if pose.status!=Status::Certified {return Ok(pose);}
                 charge=pose.cells;*pose_cache.borrow_mut()=pose.values;
             }
@@ -164,7 +171,14 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
             values.cells+=charge;return Ok(values);
         }
         if fixed {
-            authored_frame_certificate::certify_fixed_path_control_values_with_frame_path(reference_path,frame_reference_path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
+            authored_frame_certificate::certify_fixed_path_control_values_with_frame_path(
+                authored_frame_certificate::ProfileLaws { path: reference_path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
+                frame_reference_path,
+                sweep.options.normal,
+                qs,
+                interval,
+                budget,
+            )
         } else if let Some(phase)=principal_phase {
             authored_frame_certificate::certify_planar_principal_control_values(
                 authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
@@ -201,7 +215,14 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
             }
         }
         if fixed {
-            authored_frame_certificate::certify_fixed_path_control_trajectories_with_frame_path(reference_path,frame_reference_path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
+            authored_frame_certificate::certify_fixed_path_control_trajectories_with_frame_path(
+                authored_frame_certificate::ProfileLaws { path: reference_path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
+                frame_reference_path,
+                sweep.options.normal,
+                qs,
+                interval,
+                budget,
+            )
         } else if let Some(phase)=principal_phase {
             authored_frame_certificate::certify_planar_principal_control_trajectories(
                 authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },

@@ -115,9 +115,14 @@ fn fixed_normal_values_cell(
 /// after length inversion. Only relative pose is returned; translation belongs
 /// to the original source length certificate.
 pub(crate) fn certify_fixed_normal_relative_values(
-    path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],path_traversal:[f64;2],law_traversal:[f64;2],max_cells:usize,
-)->Result<ControlValuesReport>{
+    laws: super::ProfileLaws<'_>,
+    normal: [f64; 3],
+    qs: &[[[f64; 2]; 3]],
+    path_traversal: [f64; 2],
+    law_traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<ControlValuesReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=fixed_normal_values_at(path,normal,twist,path_traversal,law_traversal,max_cells,false)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     super::trajectory::control_values_with_fit(
@@ -133,9 +138,14 @@ pub(crate) fn certify_fixed_normal_relative_values(
 /// Requires a charged exact original-coefficient plane proof in the caller.
 /// Only the planar RMF source theorem may use this correlated value field.
 pub(crate) fn certify_proved_planar_relative_values(
-    path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],path_traversal:[f64;2],law_traversal:[f64;2],max_cells:usize,
-)->Result<ControlValuesReport>{
+    laws: super::ProfileLaws<'_>,
+    normal: [f64; 3],
+    qs: &[[[f64; 2]; 3]],
+    path_traversal: [f64; 2],
+    law_traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<ControlValuesReport> {
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=fixed_normal_values_at(path,normal,twist,path_traversal,law_traversal,max_cells,true)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     super::trajectory::control_values_with_fit(
@@ -409,14 +419,28 @@ mod tests {
         let scale=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
         let twist=crate::primitives::line([0.;3],[0.25,0.,0.]).unwrap();
         let qs=[[[1.,1.],[0.,0.],[0.,0.]]];
-        let r=certify_fixed_normal_relative_values(&path,[1.,0.,0.],&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],1000).unwrap();
+        let r=certify_fixed_normal_relative_values(
+            ProfileLaws { path: &path, scale: &scale, twist: &twist, affine: None },
+            [1.,0.,0.],
+            &qs,
+            [0.2,0.3],
+            [0.6,0.7],
+            1000,
+        ).unwrap();
         assert_eq!(r.status,Status::Certified);let bounds=r.values.as_ref().unwrap()[0];
         for u in [0.2_f64,0.25,0.3]{for s in [0.6_f64,0.65,0.7]{
             let a=0.25*s;let d=(1.+4.*u*u).sqrt();
             let expected=[(1.+s)*a.cos(),(1.+s)*a.sin()/d,-2.*u*(1.+s)*a.sin()/d];
             for k in 0..3{assert!(bounds[k][0]<=expected[k]&&expected[k]<=bounds[k][1],"{bounds:?} vs {expected:?}");}
         }}
-        let short=certify_fixed_normal_relative_values(&path,[1.,0.,0.],&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],r.cells-1).unwrap();
+        let short=certify_fixed_normal_relative_values(
+            ProfileLaws { path: &path, scale: &scale, twist: &twist, affine: None },
+            [1.,0.,0.],
+            &qs,
+            [0.2,0.3],
+            [0.6,0.7],
+            r.cells-1,
+        ).unwrap();
         assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
     }
     #[test]
@@ -426,7 +450,14 @@ mod tests {
         let qs=[[[1.,1.],[0.,0.],[0.,0.]]];
         for x in [0_f64,0.25]{for sign in [-1_f64,1.]{
             let path=Curve {degree:2,knots:vec![0.,0.,0.,1.,1.,1.],control_points:vec![vec![0.;3],vec![0.,0.,0.5],vec![x,1.,1.]],weights:vec![1.;3],periodic:false};
-            let r=certify_fixed_normal_relative_values(&path,[sign,0.,0.],&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],1000).unwrap();
+            let r=certify_fixed_normal_relative_values(
+                ProfileLaws { path: &path, scale: &scale, twist: &twist, affine: None },
+                [sign,0.,0.],
+                &qs,
+                [0.2,0.3],
+                [0.6,0.7],
+                1000,
+            ).unwrap();
             assert_eq!(r.status,Status::Certified);let bounds=r.values.unwrap()[0];
             for u in [0.2_f64,0.25,0.3]{for s in [0.6_f64,0.65,0.7]{
                 let d=(4.*x*x*u*u+4.*u*u+1.).sqrt();let t=[2.*x*u/d,2.*u/d,1./d];
