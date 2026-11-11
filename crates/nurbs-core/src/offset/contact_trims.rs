@@ -123,18 +123,7 @@ pub fn certify(
         )?;
         TrimDomain::new(loops[side], tolerance_uv)?;
     }
-    let fit = fit::certify(
-        candidate,
-        surfaces,
-        distances,
-        axis,
-        drive,
-        free,
-        second,
-        spans,
-        tolerance_mm,
-        limits.fit_cells,
-    )?;
+    let fit = fit::certify(candidate, fit::OffsetFaces { surfaces: surfaces, distances: distances }, fit::ContactParameters { axis: axis, drive: drive, free: free, second: second, spans: spans }, tolerance_mm, limits.fit_cells)?;
     let trim = trimmed::certify(
         surfaces,
         loops,
