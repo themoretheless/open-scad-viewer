@@ -160,20 +160,20 @@ impl RationalClosedBody {
     pub fn joint_certificate(&self, order: usize) -> Result<Certificate<'_>, Refusal> {
         let r = self.report();
         let exact = r.certified
-            && r.source_boundary_exact
+            && r.source.boundary_exact
             && r.topology_preserved
             && r.binding.as_ref().is_some_and(|p| p.certified)
             && global(r.volume.as_ref());
         admit(
             self.model(),
             Premises {
-                bound: r.source_boundary_exact,
+                bound: r.source.boundary_exact,
                 within: r.certified,
-                error: r.boundary_error_upper,
+                error: r.source.boundary_error_upper,
                 retained: exact,
                 original: exact,
-                source_g1: r.source_g1,
-                source_g2: r.source_g2,
+                source_g1: r.source.g1,
+                source_g2: r.source.g2,
                 g1: r.smoothness.as_ref().is_some_and(|p| p.g1_certified),
                 g2: r.smoothness.as_ref().is_some_and(|p| p.g2_certified),
             },

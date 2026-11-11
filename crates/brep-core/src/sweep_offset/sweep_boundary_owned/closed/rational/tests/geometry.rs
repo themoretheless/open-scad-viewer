@@ -19,7 +19,7 @@ fn original_correlated_center_motion_owns_caps_and_global_g2_without_reference()
         .unwrap(),
     );
     assert_eq!(b.report().caps.len(), 2);
-    assert!(b.report().source_g2);
+    assert!(b.report().source.g2);
     assert_eq!(
         b.report()
             .proof_coordinates
@@ -133,7 +133,7 @@ fn sheared_uv_window_singularity_outside_material_uses_exact_original_plane_char
         assert!(chart.bounds[0][0] > 0.875 && chart.bounds[0][1] >= 5.);
         assert_eq!(b.joint_certificate(2).unwrap().boundary_error_upper(), 0.);
         let mut short = limits();
-        short.source_exact_work = b.report().source_exact_work - 1;
+        short.source_exact_work = b.report().work.source_exact_work - 1;
         assert!(matches!(
             construct_rational_closed_material(
                 &profiles,

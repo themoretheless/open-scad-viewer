@@ -18,13 +18,12 @@ fn diagnostic_wire_preserves_domains_reasons_and_support_scope() {
         pending:vec![ExpressionWallCell {faces:[2,3],domains:[[[0.,0.5],[0.2,0.4]];2],
             pending_reason:Some(ExpressionWallPendingReason::Budget)}],
         cells:0,spans:122,span_stages:ExpressionWallSpanStages {position:2,normal:3,shared_corner:5,original_pair:7,retained_pair:11,corrected_pair:13},distance_excluded:0,angle_excluded:0,planar_excluded:0,
-        profile_transition_checked:2,profile_transition_excluded:1,profile_transition_spans:64,
-        profile_transition_inconclusive:1,profile_transition_unresolved:0,
-        intrinsic_checked:3,intrinsic_spans:17,intrinsic_unresolved:2,
-        intrinsic_excluded:0,plane_controls:0,cache_hits:0,total_pairs:1,
+        plane_controls:0,cache_hits:0,total_pairs:1,
         initial_pairs_checked:0,symmetry_reused:0,trim_excluded:0,domain_cells:0,
-        budget_pending:1,enclosure_pending:0,resolution_pending:0,
-    };
+            profile_transition: ExpressionWallTransitions { checked: 2, excluded: 1, inconclusive: 1, unresolved: 0, spans: 64 },
+            intrinsic: ExpressionWallIntrinsic { checked: 3, excluded: 0, unresolved: 2, spans: 17 },
+            pending_causes: ExpressionWallPendingCauses { budget: 1, enclosure: 0, resolution: 0 },
+        };
     let value=value_codec::Serialize::to_value(&report);
     let encoded=value_codec::to_string(&report).unwrap();
     let decoded:value_codec::Value=value_codec::from_str(&encoded).unwrap();

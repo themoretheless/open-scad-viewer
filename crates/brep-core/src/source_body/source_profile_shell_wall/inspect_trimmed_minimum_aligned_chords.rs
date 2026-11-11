@@ -54,11 +54,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             span_stages: ExpressionWallSpanStages::default(),
             distance_excluded: 0,
             angle_excluded: 0,
-            profile_transition_checked:0,profile_transition_excluded:0,profile_transition_spans:0,
-            profile_transition_inconclusive:0,profile_transition_unresolved:0,
             planar_excluded: 0,
-            intrinsic_excluded: 0,
-            intrinsic_checked: 0, intrinsic_spans: 0, intrinsic_unresolved: 0,
             plane_controls: 0,
             cache_hits: 0,
             total_pairs,
@@ -66,9 +62,9 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             symmetry_reused: 0,
             trim_excluded: 0,
             domain_cells: 0,
-            budget_pending: 0,
-            enclosure_pending: 0,
-            resolution_pending: 0,
+            profile_transition: ExpressionWallTransitions::default(),
+            intrinsic: ExpressionWallIntrinsic::default(),
+            pending_causes: ExpressionWallPendingCauses::default(),
         };
         let root = shell.assembly.patch.rails.face.boundary.rooted[0];
         let source = root.restricted.proposal.body.geometry().shell();
@@ -127,7 +123,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 continue;
             }
             if out.cells == max_cells || out.spans == max_spans {
-                out.budget_pending += 1 + stack.len();
+                out.pending_causes.budget += 1 + stack.len();
                 cell.pending_reason=Some(ExpressionWallPendingReason::Budget);
                 out.pending.push(cell);
                 out.pending.extend(stack.into_iter().map(|mut c| {
@@ -233,7 +229,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                     out.cache_hits += 1;
                     None
                 } else {
-                    out.intrinsic_checked += 1;
+                    out.intrinsic.checked += 1;
                     let (decision, spent) = match shell.faces[cell.faces[0]].kind {
                         ShellFaceKind::Original(index) => {
                             let surface = source.faces()[index][0].edges()[0].surface();
@@ -298,9 +294,9 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                         },
                     };
                     out.spans += spent;
-                    out.intrinsic_spans += spent;
+                    out.intrinsic.spans += spent;
                     if decision.is_none() {
-                        out.intrinsic_unresolved += 1;
+                        out.intrinsic.unresolved += 1;
                         intrinsic_attempts.insert(union_key, budget);
                     }
                     // Cache only complete calculations. False means this
@@ -316,7 +312,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                     decision
                 };
                 if decision == Some(true) {
-                    out.intrinsic_excluded += 1;
+                    out.intrinsic.excluded += 1;
                     continue;
                 }
             }
@@ -362,10 +358,10 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             }
             let [Some(a), Some(b)] = points else {
                 if out.spans==max_spans {
-                    out.budget_pending+=1;
+                    out.pending_causes.budget+=1;
                     cell.pending_reason=Some(ExpressionWallPendingReason::Budget);
                 } else {
-                    out.enclosure_pending += 1;
+                    out.pending_causes.enclosure += 1;
                     cell.pending_reason=Some(ExpressionWallPendingReason::Enclosure);
                 }
                 out.pending.push(cell);
@@ -563,7 +559,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 if let (Some((profile_side, transition_side, end)), Some(workspace)) =
                     (sides, &mut profile_chord_workspace)
                 {
-                    out.profile_transition_checked += 1;
+                    out.profile_transition.checked += 1;
                     let hits = workspace.cache_hits();
                     let (excluded, spent) = workspace.inspect(
                         cell.domains[profile_side],
@@ -573,16 +569,16 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                         (max_spans - out.spans).min(256),
                     )?;
                     out.spans += spent;
-                    out.profile_transition_spans += spent;
+                    out.profile_transition.spans += spent;
                     out.cache_hits += workspace.cache_hits() - hits;
                     match excluded {
                         Some(true) => {
                             out.angle_excluded += 1;
-                            out.profile_transition_excluded += 1;
+                            out.profile_transition.excluded += 1;
                             continue;
                         }
-                        Some(false) => out.profile_transition_inconclusive += 1,
-                        None => out.profile_transition_unresolved += 1,
+                        Some(false) => out.profile_transition.inconclusive += 1,
+                        None => out.profile_transition.unresolved += 1,
                     }
                 }
             }
@@ -599,7 +595,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 }
             }
             if largest <= tolerance_uv {
-                out.resolution_pending += 1;
+                out.pending_causes.resolution += 1;
                 cell.pending_reason=Some(ExpressionWallPendingReason::Resolution);
                 out.pending.push(cell);
                 continue;
@@ -609,7 +605,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             let range = cell.domains[side][axis];
             let midpoint = range[0] * 0.5 + range[1] * 0.5;
             if midpoint <= range[0] || midpoint >= range[1] {
-                out.resolution_pending += 1;
+                out.pending_causes.resolution += 1;
                 cell.pending_reason=Some(ExpressionWallPendingReason::Resolution);
                 out.pending.push(cell);
                 continue;

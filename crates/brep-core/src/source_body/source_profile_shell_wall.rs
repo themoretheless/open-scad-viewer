@@ -146,6 +146,34 @@ pub struct ExpressionWallSpanStages {
     pub retained_pair: usize,
     pub corrected_pair: usize,
 }
+/// Profile-transition products: checked by the transition test, excluded, inconclusive, unresolved,
+/// and the spans the test visited.
+#[derive(Default)]
+pub struct ExpressionWallTransitions {
+    pub checked: usize,
+    pub excluded: usize,
+    pub inconclusive: usize,
+    pub unresolved: usize,
+    pub spans: usize,
+}
+/// Products settled or left open by the intrinsic (same-surface) test, and the spans it visited.
+#[derive(Default)]
+pub struct ExpressionWallIntrinsic {
+    pub checked: usize,
+    pub excluded: usize,
+    pub unresolved: usize,
+    pub spans: usize,
+}
+/// Why pending products stayed pending.
+#[derive(Default)]
+pub struct ExpressionWallPendingCauses {
+    /// Left by global cell/span exhaustion.
+    pub budget: usize,
+    /// Without complete position enclosures.
+    pub enclosure: usize,
+    /// At the requested or representable UV resolution.
+    pub resolution: usize,
+}
 pub struct ExpressionWallReport {
     pub minimum_mm: f64,
     pub max_sine_squared: f64,
@@ -157,16 +185,7 @@ pub struct ExpressionWallReport {
     pub span_stages: ExpressionWallSpanStages,
     pub distance_excluded: usize,
     pub angle_excluded: usize,
-    pub profile_transition_checked: usize,
-    pub profile_transition_excluded: usize,
-    pub profile_transition_inconclusive: usize,
-    pub profile_transition_unresolved: usize,
-    pub profile_transition_spans: usize,
     pub planar_excluded: usize,
-    pub intrinsic_excluded: usize,
-    pub intrinsic_checked: usize,
-    pub intrinsic_spans: usize,
-    pub intrinsic_unresolved: usize,
     pub plane_controls: usize,
     pub cache_hits: usize,
     pub total_pairs: usize,
@@ -174,12 +193,9 @@ pub struct ExpressionWallReport {
     pub symmetry_reused: usize,
     pub trim_excluded: usize,
     pub domain_cells: usize,
-    /// Pending products left by global cell/span exhaustion.
-    pub budget_pending: usize,
-    /// Pending products without complete position enclosures.
-    pub enclosure_pending: usize,
-    /// Pending products at the requested or representable UV resolution.
-    pub resolution_pending: usize,
+    pub profile_transition: ExpressionWallTransitions,
+    pub intrinsic: ExpressionWallIntrinsic,
+    pub pending_causes: ExpressionWallPendingCauses,
 }
 /// Diagnostic transport only. The geometry-owned qualification certificate
 /// deliberately has no wire decoder or serialization-based admission path.
@@ -199,19 +215,19 @@ impl value_codec::Serialize for ExpressionWallReport {
                 "retained_pair":self.span_stages.retained_pair,"corrected_pair":self.span_stages.corrected_pair,
             },
             "distance_excluded":self.distance_excluded,"angle_excluded":self.angle_excluded,
-            "planar_excluded":self.planar_excluded,"intrinsic_excluded":self.intrinsic_excluded,
-            "intrinsic_checked":self.intrinsic_checked,"intrinsic_spans":self.intrinsic_spans,
-            "intrinsic_unresolved":self.intrinsic_unresolved,
-            "profile_transition_checked":self.profile_transition_checked,
-            "profile_transition_excluded":self.profile_transition_excluded,
-            "profile_transition_inconclusive":self.profile_transition_inconclusive,
-            "profile_transition_unresolved":self.profile_transition_unresolved,
-            "profile_transition_spans":self.profile_transition_spans,
+            "planar_excluded":self.planar_excluded,"intrinsic_excluded":self.intrinsic.excluded,
+            "intrinsic_checked":self.intrinsic.checked,"intrinsic_spans":self.intrinsic.spans,
+            "intrinsic_unresolved":self.intrinsic.unresolved,
+            "profile_transition_checked":self.profile_transition.checked,
+            "profile_transition_excluded":self.profile_transition.excluded,
+            "profile_transition_inconclusive":self.profile_transition.inconclusive,
+            "profile_transition_unresolved":self.profile_transition.unresolved,
+            "profile_transition_spans":self.profile_transition.spans,
             "plane_controls":self.plane_controls,"cache_hits":self.cache_hits,
             "total_pairs":self.total_pairs,"initial_pairs_checked":self.initial_pairs_checked,
             "symmetry_reused":self.symmetry_reused,"trim_excluded":self.trim_excluded,
-            "domain_cells":self.domain_cells,"budget_pending":self.budget_pending,
-            "enclosure_pending":self.enclosure_pending,"resolution_pending":self.resolution_pending
+            "domain_cells":self.domain_cells,"budget_pending":self.pending_causes.budget,
+            "enclosure_pending":self.pending_causes.enclosure,"resolution_pending":self.pending_causes.resolution
         })
     }
 }

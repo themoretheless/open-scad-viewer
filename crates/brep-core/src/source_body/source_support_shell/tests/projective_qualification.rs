@@ -6414,11 +6414,11 @@
             let wall = wall.report;
             assert_eq!(
                 wall.pending.len(),
-                wall.budget_pending + wall.enclosure_pending + wall.resolution_pending
+                wall.pending_causes.budget + wall.pending_causes.enclosure + wall.pending_causes.resolution
             );
             eprintln!(
                 "expression wall pending reasons budget={} enclosure={} resolution={}",
-                wall.budget_pending, wall.enclosure_pending, wall.resolution_pending
+                wall.pending_causes.budget, wall.pending_causes.enclosure, wall.pending_causes.resolution
             );
             assert!(!wall.complete && wall.cells == 0 && wall.spans == 0);
             assert_eq!(
@@ -6465,8 +6465,8 @@
             let wall = wall.report;
             assert_eq!(
                 wall.spans,
-                wall.intrinsic_spans
-                    + wall.profile_transition_spans
+                wall.intrinsic.spans
+                    + wall.profile_transition.spans
                     + wall.span_stages.position
                     + wall.span_stages.normal
                     + wall.span_stages.shared_corner
@@ -6485,26 +6485,26 @@
                 wall.distance_excluded,
                 wall.angle_excluded,
                 wall.planar_excluded,
-                wall.intrinsic_excluded,
+                wall.intrinsic.excluded,
                 wall.cache_hits
             );
             assert_eq!(
                 wall.pending.len(),
-                wall.budget_pending + wall.enclosure_pending + wall.resolution_pending,
+                wall.pending_causes.budget + wall.pending_causes.enclosure + wall.pending_causes.resolution,
                 "every unresolved product needs one pending reason"
             );
             for (reason, count) in [
                 (
                     crate::source_profile_body::ExpressionWallPendingReason::Budget,
-                    wall.budget_pending,
+                    wall.pending_causes.budget,
                 ),
                 (
                     crate::source_profile_body::ExpressionWallPendingReason::Enclosure,
-                    wall.enclosure_pending,
+                    wall.pending_causes.enclosure,
                 ),
                 (
                     crate::source_profile_body::ExpressionWallPendingReason::Resolution,
-                    wall.resolution_pending,
+                    wall.pending_causes.resolution,
                 ),
             ] {
                 assert_eq!(
@@ -6517,7 +6517,7 @@
             }
             eprintln!(
                 "expression refined wall pending reasons budget={} enclosure={} resolution={}",
-                wall.budget_pending, wall.enclosure_pending, wall.resolution_pending
+                wall.pending_causes.budget, wall.pending_causes.enclosure, wall.pending_causes.resolution
             );
             if let Ok(path) = std::env::var("BREP_EXPRESSION_WALL_REPORT_PATH") {
                 assert!(wall.pending.iter().all(|p| p.pending_reason.is_some()));
@@ -6542,10 +6542,10 @@
                 .unwrap();
                 std::fs::write(path, value_codec::to_string(&report).unwrap()).unwrap();
             }
-            assert!(wall.profile_transition_checked <= wall.cells);
-            assert!(wall.profile_transition_excluded <= wall.profile_transition_checked);
-            assert!(wall.profile_transition_excluded <= wall.angle_excluded);
-            assert!(wall.profile_transition_spans <= wall.spans);
+            assert!(wall.profile_transition.checked <= wall.cells);
+            assert!(wall.profile_transition.excluded <= wall.profile_transition.checked);
+            assert!(wall.profile_transition.excluded <= wall.angle_excluded);
+            assert!(wall.profile_transition.spans <= wall.spans);
             assert_eq!(
                 wall.initial_pairs_checked, wall.total_pairs,
                 "visit every original pair before refinement"

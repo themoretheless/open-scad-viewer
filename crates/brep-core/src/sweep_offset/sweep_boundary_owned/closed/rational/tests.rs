@@ -171,7 +171,7 @@ fn body(a: RationalClosedAttempt) -> Box<RationalClosedBody> {
         RationalClosedAttempt::Refused(r) => panic!(
             "refused {:?}, source work={} caps={} binding={:?} volume={:?} Gk={:?}",
             r.reason,
-            r.source_exact_work,
+            r.work.source_exact_work,
             r.caps.len(),
             r.binding.as_ref().map(|p| (p.certified, p.faces, p.reason)),
             r.volume,
@@ -200,7 +200,7 @@ fn original_and_actual_rational_body_own_full_filled_planar_and_nonplanar_cap_g2
             .unwrap(),
         );
         let r = b.report();
-        assert!(r.certified && r.source_boundary_exact && r.source_g2 && r.topology_preserved);
+        assert!(r.certified && r.source.boundary_exact && r.source.g2 && r.topology_preserved);
         let joint = b.joint_certificate(2).unwrap();
         assert!(std::ptr::eq(joint.model(), b.model()));
         assert_eq!(joint.boundary_error_upper(), 0.);
@@ -256,7 +256,7 @@ fn curvature_jump_preserves_explicit_g1_and_refuses_strict_cap_g2() {
         )
         .unwrap(),
     );
-    assert!(b.report().source_g1 && !b.report().source_g2);
+    assert!(b.report().source.g1 && !b.report().source.g2);
     assert!(b.joint_certificate(1).is_ok());
     assert!(matches!(
         b.joint_certificate(2),
@@ -295,8 +295,8 @@ fn filled_cap_charts_survive_moving_affine_axes_translation_and_weight_gauges() 
         )
         .unwrap(),
     );
-    assert!(b.report().source_g2 && b.report().topology_preserved);
-    assert_eq!(b.report().boundary_error_upper, Some(0.));
+    assert!(b.report().source.g2 && b.report().topology_preserved);
+    assert_eq!(b.report().source.boundary_error_upper, Some(0.));
     assert_eq!(b.report().caps.len(), 2);
 }
 
@@ -330,10 +330,10 @@ fn sharp_cap_join_is_explicit_c0_and_cannot_be_hidden_by_an_empty_cap_selection(
         )
         .unwrap(),
     );
-    assert!(b.report().certified && !b.report().source_g1 && !b.report().source_g2);
+    assert!(b.report().certified && !b.report().source.g1 && !b.report().source.g2);
     assert!(b.joint_certificate(0).is_ok());
     assert!(b.joint_certificate(1).is_err());
-    assert_eq!(b.report().seam_continuity, "C0");
+    assert_eq!(b.report().source.seam_continuity, "C0");
     assert!(b.report().c0_regularity.as_ref().unwrap().all_faces_regular);
     assert!(b.report().c0_agreement.as_ref().unwrap().all_equal);
 }
@@ -355,19 +355,19 @@ fn all_original_caps_volume_construction_and_boundary_owner_budgets_refuse_parti
     );
     let r = full.report();
     let mut cases = Vec::new();
-    for budget in [0, r.source_cells - 1] {
+    for budget in [0, r.work.source_cells - 1] {
         cases.push(RationalClosedLimits {
             source_cells: budget,
             ..limits()
         });
     }
-    for budget in [0, r.source_exact_work - 1] {
+    for budget in [0, r.work.source_exact_work - 1] {
         cases.push(RationalClosedLimits {
             source_exact_work: budget,
             ..limits()
         });
     }
-    for budget in [0, r.construction_rows - 1] {
+    for budget in [0, r.work.construction_rows - 1] {
         cases.push(RationalClosedLimits {
             construction_rows: budget,
             ..limits()
@@ -379,13 +379,13 @@ fn all_original_caps_volume_construction_and_boundary_owner_budgets_refuse_parti
             ..limits()
         });
     }
-    for budget in [0, r.cap_cells - 1] {
+    for budget in [0, r.work.cap_cells - 1] {
         cases.push(RationalClosedLimits {
             cap_cells: budget,
             ..limits()
         });
     }
-    for budget in [0, r.orientation_cells - 1] {
+    for budget in [0, r.work.orientation_cells - 1] {
         cases.push(RationalClosedLimits {
             orientation_cells: budget,
             ..limits()
@@ -448,13 +448,13 @@ fn all_original_caps_volume_construction_and_boundary_owner_budgets_refuse_parti
         .unwrap() else {
             panic!("short stage {i} returned Solid");
         };
-        assert!(!r.certified && !r.topology_preserved && !r.source_g2);
+        assert!(!r.certified && !r.topology_preserved && !r.source.g2);
         assert!(
-            r.source_cells <= l.source_cells
-                && r.source_exact_work <= l.source_exact_work
-                && r.construction_rows <= l.construction_rows
-                && r.cap_cells <= l.cap_cells
-                && r.orientation_cells <= l.orientation_cells
+            r.work.source_cells <= l.source_cells
+                && r.work.source_exact_work <= l.source_exact_work
+                && r.work.construction_rows <= l.construction_rows
+                && r.work.cap_cells <= l.cap_cells
+                && r.work.orientation_cells <= l.orientation_cells
         );
     }
     let mut malformed = motion;
@@ -520,9 +520,9 @@ fn supplied_rational_cap_body_is_reproved_without_reconstruction_or_reorientatio
     assert_eq!(model, saved);
     assert_eq!(audited.model(), &saved);
     let r = audited.report();
-    assert!(r.certified && r.source_boundary_exact && r.source_g2 && r.topology_preserved);
-    assert_eq!(r.construction_rows, 0);
-    assert_eq!(r.boundary_error_upper, Some(0.));
+    assert!(r.certified && r.source.boundary_exact && r.source.g2 && r.topology_preserved);
+    assert_eq!(r.work.construction_rows, 0);
+    assert_eq!(r.source.boundary_error_upper, Some(0.));
     assert_eq!(r.caps[0].faces.len(), motion.len());
     for i in 0..8 {
         let mut changed = saved.clone();
@@ -567,7 +567,7 @@ fn supplied_rational_cap_body_is_reproved_without_reconstruction_or_reorientatio
         match stage {
             0 => short.binding_work = 0,
             1 => short.binding_work = r.binding.as_ref().unwrap().exact_work - 1,
-            2 => short.orientation_cells = r.orientation_cells - 1,
+            2 => short.orientation_cells = r.work.orientation_cells - 1,
             3 => short.volume.cells = r.volume.as_ref().unwrap().cells - 1,
             4 => short.smoothness.exact_work = r.smoothness.as_ref().unwrap().exact_work - 1,
             5 => short.smoothness.agreement_work = 0,
@@ -622,7 +622,7 @@ fn clock_conjugacy_transfers_original_global_volume_without_borrowing_retained_p
             r.proof.columns,
             r.reference.as_ref().map(|r| (
                 r.reason,
-                r.source_exact_work,
+                r.work.source_exact_work,
                 r.volume.as_ref().map(|v| v.reason)
             ))
         ),

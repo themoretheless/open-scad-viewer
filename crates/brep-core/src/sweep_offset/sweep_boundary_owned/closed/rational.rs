@@ -27,19 +27,30 @@ pub struct FilledGraphCapReport {
     pub source_v_bounds: [f64; 2],
     pub parameter_monotonicity: nurbs_core::curve_regularity::Report,
 }
-pub struct RationalClosedReport {
-    pub certified: bool,
-    pub source_boundary_exact: bool,
+/// Exactness and continuity of the swept source boundary.
+pub struct RationalClosedSource {
+    pub boundary_exact: bool,
     pub boundary_error_upper: Option<f64>,
     pub seam_continuity: &'static str,
-    pub source_g1: bool,
-    pub source_g2: bool,
-    pub topology_preserved: bool,
+    pub g1: bool,
+    pub g2: bool,
+}
+/// Work counters of one rational closed attempt.
+#[derive(Default)]
+pub struct RationalClosedWork {
     pub source_cells: usize,
     pub source_exact_work: u64,
     pub construction_rows: usize,
     pub cap_cells: usize,
     pub orientation_cells: usize,
+}
+pub struct RationalClosedReport {
+    pub certified: bool,
+    /// What is proven about the swept source boundary.
+    pub source: RationalClosedSource,
+    pub topology_preserved: bool,
+    /// Work spent, each counter bounded by its limit in `RationalClosedLimits`.
+    pub work: RationalClosedWork,
     pub material: Option<nurbs_core::trim_region_audit::Report>,
     pub volume: Option<nurbs_core::progressive_sweep::IdealVolumeReport>,
     pub proof_coordinates: Option<affine_volume::ProofCoordinates>,
@@ -219,17 +230,15 @@ fn rational_closed_impl(
     }
     let mut r = RationalClosedReport {
         certified: false,
-        source_boundary_exact: false,
-        boundary_error_upper: None,
-        seam_continuity: "C0",
-        source_g1: false,
-        source_g2: false,
+        source: RationalClosedSource {
+            boundary_exact: false,
+            boundary_error_upper: None,
+            seam_continuity: "C0",
+            g1: false,
+            g2: false,
+        },
         topology_preserved: false,
-        source_cells: 0,
-        source_exact_work: 0,
-        construction_rows: 0,
-        cap_cells: 0,
-        orientation_cells: 0,
+        work: RationalClosedWork::default(),
         material: None,
         volume: None,
         proof_coordinates: None,
@@ -269,8 +278,8 @@ fn rational_closed_impl(
     for (wire, uv) in profiles.iter().zip(&material.trims) {
         for (world, uv) in wire.iter().zip(uv) {
             let regular =
-                nurbs_core::curve_regularity::inspect(world, l.source_cells - r.source_cells)?;
-            r.source_cells += regular.cells;
+                nurbs_core::curve_regularity::inspect(world, l.source_cells - r.work.source_cells)?;
+            r.work.source_cells += regular.cells;
             if !regular.spanwise_regular {
                 return Ok(refuse(r, "rational-source-profile-regularity-unproved"));
             }
@@ -279,12 +288,12 @@ fn rational_closed_impl(
                 uv,
                 &material.surface,
                 false,
-                l.source_exact_work - r.source_exact_work,
+                l.source_exact_work - r.work.source_exact_work,
             )?
             else {
                 return Ok(refuse(r, "rational-source-carrier-binding-unproved"));
             };
-            r.source_exact_work += proof.work_used;
+            r.work.source_exact_work += proof.work_used;
             if proof.outcome != cad_predicates::BezierIdentity::Equal {
                 return Ok(refuse(r, "rational-source-carrier-binding-unproved"));
             }
@@ -308,8 +317,8 @@ fn rational_closed_impl(
             .iter()
             .map(|p| vec![p[0], 0., 0.])
             .collect();
-        let proof = nurbs_core::curve_regularity::inspect(&radial, l.cap_cells - r.cap_cells)?;
-        r.cap_cells += proof.cells;
+        let proof = nurbs_core::curve_regularity::inspect(&radial, l.cap_cells - r.work.cap_cells)?;
+        r.work.cap_cells += proof.cells;
         if !proof.spanwise_regular {
             return Ok(refuse(r, "rational-annular-cap-radial-graph-unproved"));
         }
@@ -343,19 +352,19 @@ fn rational_closed_impl(
     for curve in material.trims.iter().flatten() {
         for point in &curve.control_points {
             for k in 0..2 {
-                if l.source_exact_work - r.source_exact_work < 2 {
+                if l.source_exact_work - r.work.source_exact_work < 2 {
                     return Ok(refuse(r, "rational-material-window-work-limit"));
                 }
-                r.source_exact_work += 2;
+                r.work.source_exact_work += 2;
                 bounds[k][0] = bounds[k][0].min(point[k]);
                 bounds[k][1] = bounds[k][1].max(point[k]);
             }
         }
     }
-    if l.source_exact_work - r.source_exact_work < 16 {
+    if l.source_exact_work - r.work.source_exact_work < 16 {
         return Ok(refuse(r, "rational-material-window-work-limit"));
     }
-    r.source_exact_work += 16;
+    r.work.source_exact_work += 16;
     if let Some(window) = affine_volume::normalize_uv_window(&material.surface, bounds)? {
         r.material_uv_bounds = Some(bounds);
         r.proof_uv_window = window;
@@ -364,9 +373,9 @@ fn rational_closed_impl(
         &material.surface,
         profiles,
         &material.trims[0][0],
-        l.source_exact_work - r.source_exact_work,
+        l.source_exact_work - r.work.source_exact_work,
     )?;
-    r.source_exact_work += chart.work;
+    r.work.source_exact_work += chart.work;
     if chart.exhausted {
         return Ok(refuse(r, "rational-material-plane-chart-work-limit"));
     }
@@ -454,7 +463,7 @@ fn rational_closed_impl(
                             };
                             row.push(q.to_vec());
                             wr.push(w);
-                            r.construction_rows += 1;
+                            r.work.construction_rows += 1;
                         }
                         cp.push(row);
                         weights.push(wr);
@@ -477,12 +486,12 @@ fn rational_closed_impl(
                 section.push(ring);
             }
             sections.push(section);
-            r.construction_rows += rows;
+            r.work.construction_rows += rows;
         }
         // Closure was independently proved on ORIGINAL full poses. The final row
         // is now the literal common station, not a near-closure approximation.
         sections.push(sections[0].clone());
-        r.construction_rows += rows;
+        r.work.construction_rows += rows;
         let model = match crate::analytic::periodic_material_loft_surfaces(&sections, &sides) {
             Ok(m) => m,
             Err(e) if e.code == "BREP_RATIONAL_SWEEP_REFUSED" => {
@@ -501,8 +510,8 @@ fn rational_closed_impl(
             "rational-actual-coefficient-domain-binding-unproved",
         ));
     }
-    r.source_boundary_exact = true;
-    r.boundary_error_upper = Some(0.);
+    r.source.boundary_exact = true;
+    r.source.boundary_error_upper = Some(0.);
     let sign = affine_volume::jacobian_orientation_rational(
         &material.surface,
         origin,
@@ -510,7 +519,7 @@ fn rational_closed_impl(
         orientation_point,
         l.orientation_cells,
     )?;
-    r.orientation_cells = sign.cells;
+    r.work.orientation_cells = sign.cells;
     let Some(sign) = sign.sign else {
         return Ok(refuse(r, "rational-source-world-orientation-unproved"));
     };
@@ -522,10 +531,10 @@ fn rational_closed_impl(
     let reversed = i32::from(sign) * winding < 0;
     for shell in &mut model.shells {
         for u in &mut shell.faces {
-            if r.orientation_cells == l.orientation_cells {
+            if r.work.orientation_cells == l.orientation_cells {
                 return Ok(refuse(r, "rational-face-orientation-work-limit"));
             }
-            r.orientation_cells += 1;
+            r.work.orientation_cells += 1;
             let Some(parity) = r.binding.as_ref().unwrap().orientation_reversed(u.face) else {
                 return Ok(refuse(r, "rational-face-chart-orientation-unproved"));
             };
@@ -589,11 +598,11 @@ fn rational_closed_impl(
         }
     }
     r.topology_preserved = true;
-    r.source_g1 = l.smoothness.order >= 1;
-    r.source_g2 = l.smoothness.order == 2;
-    r.seam_continuity = if r.source_g2 {
+    r.source.g1 = l.smoothness.order >= 1;
+    r.source.g2 = l.smoothness.order == 2;
+    r.source.seam_continuity = if r.source.g2 {
         "G2"
-    } else if r.source_g1 {
+    } else if r.source.g1 {
         "G1"
     } else {
         "C0"

@@ -51,7 +51,7 @@ impl Body {
         &self.proof
     }
     pub fn source_exact_work(&self) -> u64 {
-        self.proof.exact_work + self.reference.report().source_exact_work
+        self.proof.exact_work + self.reference.report().work.source_exact_work
     }
     /// Both original and actual image/global/differential evidence belongs to this
     /// immutable owner. C2 positive one-cover clock changes preserve its grades.
