@@ -144,13 +144,9 @@ fn different_original_cap_degrees_and_gauges_bind_the_complete_owned_saddle_body
     };
     let strong_run = |limits| {
         construct_with_original_smooth_volume(
-            &sweep,
-            &[4],
-            5,
-            [&start, &source],
+            SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&start, &source] },
             [&start, &retained],
-            1e-8,
-            0.05,
+            SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
             super::limits(),
             ideal.projection,
             limits,
@@ -241,13 +237,9 @@ fn different_original_cap_degrees_and_gauges_bind_the_complete_owned_saddle_body
     gap.trims[0][0].control_points[1][0] -= 0.125;
     assert!(matches!(run(&gap, ideal), Attempt::Refused(_)));
     let OriginalSmoothBodyAttempt::Refused(bad_trim) = construct_with_original_smooth_volume(
-        &sweep,
-        &[4],
-        5,
-        [&start, &gap],
+        SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&start, &gap] },
         [&start, &retained],
-        1e-8,
-        0.05,
+        SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
         limits(),
         ideal.projection,
         strong_limits,
@@ -257,21 +249,10 @@ fn different_original_cap_degrees_and_gauges_bind_the_complete_owned_saddle_body
     };
     assert!(!bad_trim.certified && bad_trim.original.is_none());
     assert!(
-        construct_with_original_smooth_volume(
-            &sweep,
-            &[4],
-            5,
-            [&start, &gap],
-            [&start, &retained],
-            1e-8,
-            0.05,
-            limits(),
-            ideal.projection,
-            nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
+        construct_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&start, &gap] }, [&start, &retained], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 }, limits(), ideal.projection, nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
                 order: 3,
                 ..strong_limits
-            },
-        )
+            })
         .is_err()
     );
 

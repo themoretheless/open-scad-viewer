@@ -78,17 +78,15 @@ fn refused<'s, 'a>(
 /// Original and retained smoothness remain distinct, cap-wall class stays C0.
 /// A refused stage returns no model and accepts no caller-supplied reports.
 pub fn construct_with_original_smooth_volume<'s, 'a>(
-    sweep: &'s MultiSweep<'a>,
-    loop_sizes: &[usize],
-    sections: usize,
-    source_caps: [&'s LoftCap; 2],
+    source: SweepSource<'s, 'a, '_>,
     retained_caps: [&LoftCap; 2],
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: SweepAccuracy,
     limits: Limits,
     projection: [[f64; 3]; 3],
     original_limits: OriginalSmoothVolumeLimits,
 ) -> Result<OriginalSmoothBodyAttempt<'s, 'a>> {
+    let SweepSource { sweep, loop_sizes, sections, source_caps } = source;
+    let SweepAccuracy { tolerance_uv, error_budget } = accuracy;
     validate(sweep, loop_sizes, projection, original_limits)?;
     let attempt = construct(
         sweep,
@@ -221,17 +219,15 @@ fn finish<'s, 'a>(
 /// orientation visits. `affine.work` includes candidate preparation and fresh
 /// source/actual identities; no successful report from another model is used.
 pub fn construct_affine_with_original_smooth_volume<'s, 'a>(
-    sweep: &'s MultiSweep<'a>,
-    loop_sizes: &[usize],
-    sections: usize,
-    source_caps: [&'s LoftCap; 2],
-    tolerance_uv: f64,
-    error_budget: f64,
+    source: SweepSource<'s, 'a, '_>,
+    accuracy: SweepAccuracy,
     limits: Limits,
     projection: [[f64; 3]; 3],
     original_limits: OriginalSmoothVolumeLimits,
     affine: crate::AffineStationLimits,
 ) -> Result<OriginalSmoothBodyAttempt<'s, 'a>> {
+    let SweepSource { sweep, loop_sizes, sections, source_caps } = source;
+    let SweepAccuracy { tolerance_uv, error_budget } = accuracy;
     validate(sweep, loop_sizes, projection, original_limits)?;
     if affine.work > 1000000
         || affine.matrix_cells > 100000

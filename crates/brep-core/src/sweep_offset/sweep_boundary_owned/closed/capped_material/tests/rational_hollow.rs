@@ -248,14 +248,10 @@ fn rounded_rational_hollow_cap_refuses_when_translation_breaks_exact_trim_trace(
     };
     assert!(original.volume().report().charts.volume.embedding_certified);
     let out = construct_with_original_classified_material(
-        &sweep,
-        &[5, 4],
-        5,
-        [&caps[0], &caps[1]],
+        SweepSource { sweep: &sweep, loop_sizes: &[5, 4], sections: 5, source_caps: [&caps[0], &caps[1]] },
         [&caps[0], &end],
         &classes,
-        1e-8,
-        0.05,
+        SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
         crate::sweep_boundary_owned_tests::limits(),
         [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
         limits(),
@@ -412,24 +408,12 @@ fn run_corrected_affine_cap(mode: usize) {
     };
     let mut classes = vec![OriginalProfileClass::C0; 9];
     classes[0] = OriginalProfileClass::G2;
-    let body = crate::sweep_boundary_owned::construct_affine_with_original_classified_material(
-        &sweep,
-        &[5, 4],
-        count,
-        [&caps[0], &caps[1]],
-        &classes,
-        1e-8,
-        0.05,
-        crate::sweep_boundary_owned_tests::limits(),
-        [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
-        limits(),
-        crate::AffineStationLimits {
+    let body = crate::sweep_boundary_owned::construct_affine_with_original_classified_material(crate::sweep_boundary_owned::SweepSource { sweep: &sweep, loop_sizes: &[5, 4], sections: count, source_caps: [&caps[0], &caps[1]] }, &classes, crate::sweep_boundary_owned::SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 }, crate::sweep_boundary_owned_tests::limits(), [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]], limits(), crate::AffineStationLimits {
             quantum: 2f64.powi(-20),
             tolerance: 0.001,
             work: 1000000,
             matrix_cells: 100000,
-        },
-    )
+        })
     .unwrap();
     let crate::sweep_boundary_owned::OriginalClassifiedBodyAttempt::Certified(body) = body else {
         let crate::sweep_boundary_owned::OriginalClassifiedBodyAttempt::Refused(r) = body else {
@@ -469,24 +453,12 @@ fn run_corrected_affine_cap(mode: usize) {
             > 0.
     );
     let run = |work, cells, tolerance| {
-        crate::sweep_boundary_owned::construct_affine_with_original_classified_material(
-            &sweep,
-            &[5, 4],
-            count,
-            [&caps[0], &caps[1]],
-            &classes,
-            1e-8,
-            0.05,
-            crate::sweep_boundary_owned_tests::limits(),
-            [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
-            limits(),
-            crate::AffineStationLimits {
+        crate::sweep_boundary_owned::construct_affine_with_original_classified_material(crate::sweep_boundary_owned::SweepSource { sweep: &sweep, loop_sizes: &[5, 4], sections: count, source_caps: [&caps[0], &caps[1]] }, &classes, crate::sweep_boundary_owned::SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 }, crate::sweep_boundary_owned_tests::limits(), [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]], limits(), crate::AffineStationLimits {
                 quantum: 2f64.powi(-20),
                 tolerance,
                 work,
                 matrix_cells: cells,
-            },
-        )
+            })
         .unwrap()
     };
     for (w, c) in [(actual.work, 100000), (1000000, actual.cells)] {

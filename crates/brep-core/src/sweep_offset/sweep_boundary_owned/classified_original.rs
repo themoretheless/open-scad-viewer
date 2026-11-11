@@ -51,18 +51,16 @@ pub enum OriginalClassifiedBodyAttempt<'s, 'a> {
 /// retained body owns its separate geometry/topology proof and error bound.
 /// Sharp authored joins and open cap/wall corners remain explicitly C0.
 pub fn construct_with_original_classified_material<'s, 'a>(
-    sweep: &'s MultiSweep<'a>,
-    loop_sizes: &[usize],
-    sections: usize,
-    source_caps: [&'s LoftCap; 2],
+    source: SweepSource<'s, 'a, '_>,
     retained_caps: [&LoftCap; 2],
     classes: &[OriginalProfileClass],
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: SweepAccuracy,
     limits: Limits,
     projection: [[f64; 3]; 3],
     original_limits: OriginalClassifiedCappedMaterialLimits,
 ) -> Result<OriginalClassifiedBodyAttempt<'s, 'a>> {
+    let SweepSource { sweep, loop_sizes, sections, source_caps } = source;
+    let SweepAccuracy { tolerance_uv, error_budget } = accuracy;
     finish(
         sweep,
         loop_sizes,
@@ -90,18 +88,16 @@ pub fn construct_with_original_classified_material<'s, 'a>(
 /// retain their existing aggregate limits. Source classes are never inferred
 /// from the corrected retained coefficients or from a successful report.
 pub fn construct_affine_with_original_classified_material<'s, 'a>(
-    sweep: &'s MultiSweep<'a>,
-    loop_sizes: &[usize],
-    sections: usize,
-    source_caps: [&'s LoftCap; 2],
+    source: SweepSource<'s, 'a, '_>,
     classes: &[OriginalProfileClass],
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: SweepAccuracy,
     limits: Limits,
     projection: [[f64; 3]; 3],
     original_limits: OriginalClassifiedCappedMaterialLimits,
     affine: crate::AffineStationLimits,
 ) -> Result<OriginalClassifiedBodyAttempt<'s, 'a>> {
+    let SweepSource { sweep, loop_sizes, sections, source_caps } = source;
+    let SweepAccuracy { tolerance_uv, error_budget } = accuracy;
     if affine.work > 1000000
         || affine.matrix_cells > 100000
         || !affine.quantum.is_normal()

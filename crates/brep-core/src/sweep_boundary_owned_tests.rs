@@ -693,9 +693,7 @@ fn original_volume_preserves_a_hole_only_after_complete_native_trim_binding() {
     let body=match attempt {Attempt::Certified(body)=>body,Attempt::Refused(r)=>panic!("Hollow source: {:?}",r.reason)};
     assert!(body.report().ideal_volume.as_ref().unwrap().parameter_topology_preserved);
     assert_eq!(body.model().bodies.len(),1);assert_eq!(body.model().faces.iter().filter(|f|!f.holes.is_empty()).count(),2);
-    let strong=construct_with_original_smooth_volume(&sweep,&[4,4],5,[&source,&source],
-        [&source,&end],1e-8,0.01,limits(),ideal.projection,
-        nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
+    let strong=construct_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[4,4], sections: 5, source_caps: [&source,&source] }, [&source,&end], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits(), ideal.projection, nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
             order:2,cells:100000,exact_work:1000000,products:1000000,
         }).unwrap();
     let strong=match strong {
@@ -722,9 +720,7 @@ fn original_volume_preserves_a_hole_only_after_complete_native_trim_binding() {
 
     let mut omitted=source.clone();omitted.trims.pop();
     assert!(matches!(construct_with_ideal(&sweep,&[4,4],5,[&omitted,&source],[&source,&end],1e-8,0.01,limits(),ideal).unwrap(),Attempt::Refused(_)));
-    assert!(matches!(construct_with_original_smooth_volume(&sweep,&[4,4],5,[&omitted,&source],
-        [&source,&end],1e-8,0.01,limits(),ideal.projection,
-        nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
+    assert!(matches!(construct_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[4,4], sections: 5, source_caps: [&omitted,&source] }, [&source,&end], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.01 }, limits(), ideal.projection, nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
             order:2,cells:100000,exact_work:1000000,products:1000000,
         }).unwrap(),OriginalSmoothBodyAttempt::Refused(_)));
 }

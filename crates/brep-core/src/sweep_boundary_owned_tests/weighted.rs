@@ -90,23 +90,12 @@ fn moving_tilted_frame_and_large_nonplanar_caps_bind_the_complete_original_body(
     assert!(r.regularity.as_ref().unwrap().all_faces_regular && r.volume.as_ref().unwrap().proven);
     assert_eq!(body.model().bodies.len(), 1);
     assert!(r.boundary_error_upper.unwrap() <= 0.05);
-    let strong = construct_with_original_smooth_volume(
-        &sweep,
-        &[4],
-        5,
-        [&source, &source],
-        [&retained[0], &retained[1]],
-        1e-8,
-        0.05,
-        limits(),
-        ideal.projection,
-        nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
+    let strong = construct_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&source, &source] }, [&retained[0], &retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 }, limits(), ideal.projection, nurbs_core::progressive_sweep::OriginalSmoothVolumeLimits {
             order: 2,
             cells: 100000,
             exact_work: 1000000,
             products: 1000000,
-        },
-    )
+        })
     .unwrap();
     let strong = match strong {
         OriginalSmoothBodyAttempt::Certified(body) => body,

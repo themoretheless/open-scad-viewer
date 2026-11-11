@@ -110,23 +110,12 @@ fn run(alternate: bool) {
         result.trims = c.trims.clone();
         result
     });
-    let strict = construct_with_original_smooth_volume(
-        &sweep,
-        &[4],
-        5,
-        [&c, &c],
-        [&retained[0], &retained[1]],
-        1e-8,
-        0.05,
-        limits(),
-        [[1. / 16., 0., 0.], [0., 1. / 16., 0.], [0., 0., 1. / 64.]],
-        OriginalSmoothVolumeLimits {
+    let strict = construct_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&c, &c] }, [&retained[0], &retained[1]], SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 }, limits(), [[1. / 16., 0., 0.], [0., 1. / 16., 0.], [0., 0., 1. / 64.]], OriginalSmoothVolumeLimits {
             order: 2,
             cells: 1000000,
             exact_work: 1000000,
             products: 1000000,
-        },
-    )
+        })
     .err()
     .expect("independently rounded retained cap must not get exact admission");
     assert_eq!(strict.code, "BREP_RATIONAL_SWEEP_REFUSED");
@@ -160,28 +149,17 @@ fn run(alternate: bool) {
             p[1] = -7. + 20. * p[1];
         }
     }
-    let result = construct_affine_with_original_smooth_volume(
-        &sweep,
-        &[4],
-        5,
-        [&c, &other],
-        1e-8,
-        0.05,
-        limits(),
-        [[1. / 16., 0., 0.], [0., 1. / 16., 0.], [0., 0., 1. / 64.]],
-        OriginalSmoothVolumeLimits {
+    let result = construct_affine_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&c, &other] }, SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 }, limits(), [[1. / 16., 0., 0.], [0., 1. / 16., 0.], [0., 0., 1. / 64.]], OriginalSmoothVolumeLimits {
             order: 2,
             cells: 1000000,
             exact_work: 1000000,
             products: 1000000,
-        },
-        crate::AffineStationLimits {
+        }, crate::AffineStationLimits {
             quantum: 1. / 1048576.,
             tolerance: 0.001,
             work: 1000000,
             matrix_cells: 10000,
-        },
-    )
+        })
     .unwrap();
     let body = match result {
         OriginalSmoothBodyAttempt::Certified(b) => b,
@@ -329,28 +307,17 @@ fn run(alternate: bool) {
         (actual.cells.saturating_sub(1), 1000000),
         (10000, actual.work - 1),
     ] {
-        let short = construct_affine_with_original_smooth_volume(
-            &sweep,
-            &[4],
-            5,
-            [&c, &other],
-            1e-8,
-            0.05,
-            limits(),
-            [[1. / 16., 0., 0.], [0., 1. / 16., 0.], [0., 0., 1. / 64.]],
-            OriginalSmoothVolumeLimits {
+        let short = construct_affine_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&c, &other] }, SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 }, limits(), [[1. / 16., 0., 0.], [0., 1. / 16., 0.], [0., 0., 1. / 64.]], OriginalSmoothVolumeLimits {
                 order: 2,
                 cells: 1000000,
                 exact_work: 1000000,
                 products: 1000000,
-            },
-            crate::AffineStationLimits {
+            }, crate::AffineStationLimits {
                 quantum: 1. / 1048576.,
                 tolerance: 0.001,
                 work,
                 matrix_cells: cells,
-            },
-        )
+            })
         .unwrap();
         match short {
             OriginalSmoothBodyAttempt::Refused(short) => {
@@ -377,28 +344,17 @@ fn run(alternate: bool) {
             }
         }
     }
-    let zero = construct_affine_with_original_smooth_volume(
-        &sweep,
-        &[4],
-        5,
-        [&c, &other],
-        1e-8,
-        0.05,
-        limits(),
-        [[1. / 16., 0., 0.], [0., 1. / 16., 0.], [0., 0., 1. / 64.]],
-        OriginalSmoothVolumeLimits {
+    let zero = construct_affine_with_original_smooth_volume(SweepSource { sweep: &sweep, loop_sizes: &[4], sections: 5, source_caps: [&c, &other] }, SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 }, limits(), [[1. / 16., 0., 0.], [0., 1. / 16., 0.], [0., 0., 1. / 64.]], OriginalSmoothVolumeLimits {
             order: 2,
             cells: 1000000,
             exact_work: 1000000,
             products: 1000000,
-        },
-        crate::AffineStationLimits {
+        }, crate::AffineStationLimits {
             quantum: 1. / 1048576.,
             tolerance: 0.001,
             work: 0,
             matrix_cells: 10000,
-        },
-    )
+        })
     .unwrap();
     let OriginalSmoothBodyAttempt::Refused(zero) = zero else {
         panic!("zero exact affine work admitted a body")

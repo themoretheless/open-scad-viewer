@@ -478,6 +478,20 @@ pub use closed::{
 };
 
 mod common_trim_region;
+/// A progressive sweep with its loop layout, section count and the two original end caps.
+#[derive(Clone, Copy)]
+pub struct SweepSource<'s, 'a, 'l> {
+    pub sweep: &'s nurbs_core::progressive_sweep::MultiSweep<'a>,
+    pub loop_sizes: &'l [usize],
+    pub sections: usize,
+    pub source_caps: [&'s LoftCap; 2],
+}
+/// UV tolerance and model-space error budget of a sweep body construction.
+#[derive(Clone, Copy, Debug)]
+pub struct SweepAccuracy {
+    pub tolerance_uv: f64,
+    pub error_budget: f64,
+}
 mod smooth_original;
 pub use smooth_original::{construct_affine_with_original_smooth_volume,construct_with_original_smooth_volume,OriginalSmoothBody,OriginalSmoothBodyAttempt,OriginalSmoothBodyRefusal,OriginalSmoothBodyWork};
 

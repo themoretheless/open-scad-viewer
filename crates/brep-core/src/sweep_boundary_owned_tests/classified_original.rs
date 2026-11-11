@@ -177,13 +177,9 @@ fn run(mode: usize, affine: bool, unequal: bool, g1: bool) {
     let run = |l| {
         if affine {
             construct_affine_with_original_classified_material(
-                &sweep,
-                &[5, 4],
-                5,
-                [&source, &source_end],
+                SweepSource { sweep: &sweep, loop_sizes: &[5, 4], sections: 5, source_caps: [&source, &source_end] },
                 &classes,
-                1e-8,
-                0.05,
+                SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
                 limits(),
                 projection,
                 l,
@@ -192,14 +188,10 @@ fn run(mode: usize, affine: bool, unequal: bool, g1: bool) {
             .unwrap()
         } else {
             construct_with_original_classified_material(
-                &sweep,
-                &[5, 4],
-                5,
-                [&source, &source_end],
+                SweepSource { sweep: &sweep, loop_sizes: &[5, 4], sections: 5, source_caps: [&source, &source_end] },
                 [&source, &end],
                 &classes,
-                1e-8,
-                0.05,
+                SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
                 limits(),
                 projection,
                 l,
@@ -334,14 +326,10 @@ fn run(mode: usize, affine: bool, unequal: bool, g1: bool) {
         let mut upgraded = classes;
         upgraded[0] = OriginalProfileClass::G2;
         let r = construct_with_original_classified_material(
-            &sweep,
-            &[5, 4],
-            5,
-            [&source, &source_end],
+            SweepSource { sweep: &sweep, loop_sizes: &[5, 4], sections: 5, source_caps: [&source, &source_end] },
             [&source, &end],
             &upgraded,
-            1e-8,
-            0.05,
+            SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
             limits(),
             projection,
             original_limits(),
@@ -355,14 +343,10 @@ fn run(mode: usize, affine: bool, unequal: bool, g1: bool) {
     let mut short = limits();
     short.source_cells = 0;
     let r = construct_with_original_classified_material(
-        &sweep,
-        &[5, 4],
-        5,
-        [&source, &source_end],
+        SweepSource { sweep: &sweep, loop_sizes: &[5, 4], sections: 5, source_caps: [&source, &source_end] },
         [&source, &end],
         &classes,
-        1e-8,
-        0.05,
+        SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
         short,
         projection,
         original_limits(),
@@ -374,14 +358,10 @@ fn run(mode: usize, affine: bool, unequal: bool, g1: bool) {
     assert!(r.original.is_none() && r.retained.is_some());
     assert!(r.original_work.exact_work > 0);
     let r = construct_with_original_classified_material(
-        &sweep,
-        &[5, 4],
-        5,
-        [&source, &source_end],
+        SweepSource { sweep: &sweep, loop_sizes: &[5, 4], sections: 5, source_caps: [&source, &source_end] },
         [&source, &end],
         &vec![OriginalProfileClass::G2; 9],
-        1e-8,
-        0.05,
+        SweepAccuracy { tolerance_uv: 1e-8, error_budget: 0.05 },
         limits(),
         projection,
         original_limits(),
