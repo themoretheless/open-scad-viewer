@@ -233,20 +233,30 @@ fn paired_boxes(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn retrace_branch_pair(
-    first: &Surface,
-    second: &Surface,
-    a_left: &ContinuationSample,
-    a_right: &ContinuationSample,
-    b_left: &ContinuationSample,
-    b_right: &ContinuationSample,
-    parameter: f64,
-    t: f64,
+/// The two intersected surfaces with the parameter domains being searched.
+#[derive(Clone, Copy)]
+struct SurfacePair<'a> {
+    first: &'a Surface,
+    second: &'a Surface,
     first_domain: [[f64; 2]; 2],
     second_domain: [[f64; 2]; 2],
-    geometric_tolerance_mm: f64,
-    parameter_tolerance: f64,
+}
+/// Model-space and parameter-space tolerances of a retrace.
+#[derive(Clone, Copy)]
+struct RetraceTolerance {
+    geometric_mm: f64,
+    parameter: f64,
+}
+fn retrace_branch_pair(
+    surfaces: SurfacePair<'_>,
+    [a_left, a_right]: [&ContinuationSample; 2],
+    [b_left, b_right]: [&ContinuationSample; 2],
+    parameter: f64,
+    t: f64,
+    tolerance: RetraceTolerance,
 ) -> Result<RetracedPair> {
+    let SurfacePair { first, second, first_domain, second_domain } = surfaces;
+    let RetraceTolerance { geometric_mm: geometric_tolerance_mm, parameter: parameter_tolerance } = tolerance;
     if a_left.seam_wrap != a_right.seam_wrap
         || b_left.seam_wrap != b_right.seam_wrap
         || a_left.seam_wrap != b_left.seam_wrap
@@ -383,18 +393,12 @@ pub fn arbitrate_near_degenerate_branches_with_limits(
             return Err(unresolved(line!()));
         }
         nodes.push(retrace_branch_pair(
-            first,
-            second,
-            left,
-            left,
-            right,
-            right,
+            SurfacePair { first, second, first_domain, second_domain },
+            [left, left],
+            [right, right],
             left.parameter,
             0.,
-            first_domain,
-            second_domain,
-            geometric_tolerance_mm,
-            parameter_tolerance,
+            RetraceTolerance { geometric_mm: geometric_tolerance_mm, parameter: parameter_tolerance },
         )?);
     }
 
@@ -434,18 +438,12 @@ pub fn arbitrate_near_degenerate_branches_with_limits(
             let t = (mid_parameter - original[0].parameter)
                 / (original[1].parameter - original[0].parameter);
             let mid = retrace_branch_pair(
-                first,
-                second,
-                original[0],
-                original[1],
-                original_b[0],
-                original_b[1],
+                SurfacePair { first, second, first_domain, second_domain },
+                [original[0], original[1]],
+                [original_b[0], original_b[1]],
                 mid_parameter,
                 t,
-                first_domain,
-                second_domain,
-                geometric_tolerance_mm,
-                parameter_tolerance,
+                RetraceTolerance { geometric_mm: geometric_tolerance_mm, parameter: parameter_tolerance },
             )?;
             let (a_uv, a_st) =
                 paired_boxes(lo.a, hi.a, first_domain, second_domain, parameter_tolerance);
