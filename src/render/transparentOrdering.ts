@@ -1,4 +1,4 @@
-import type { Vec3 } from '../app/math3d'
+import type { Vec3 } from '../kernel/geometry/math3d'
 
 export interface TransparentObject {
   readonly index: number

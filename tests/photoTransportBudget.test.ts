@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {decodeBinary} from '../src/app/valueBinaryCodec'
+import {decodeBinary} from '../src/core/valueBinaryCodec'
 
 /** Counterpart of the Rust photo adapter's byte-small/item-oversized regression. */
 describe('photo transport uses the existing MGV1 decoder limits', () => {

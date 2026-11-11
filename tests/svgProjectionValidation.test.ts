@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { contoursExtrusion, contoursSvg, meshSvgContours, svgContours, type SvgContours, type SvgProjectionMesh } from '../src/exchange/svgGeometry'
-import { identity } from '../src/app/math3d'
+import { identity } from '../src/kernel/geometry/math3d'
 
 function triangle(): SvgProjectionMesh {
   return { vertices: new Float32Array([0, 0, 0, 0, 0, 1, 10, 0, 0, 0, 0, 1, 0, 10, 0, 0, 0, 1]),

@@ -4,7 +4,7 @@ import type {
   MeshProvenanceRun,
   MeshTopologyDiagnostics,
 } from '../core/mesh'
-import { type Aabb3, type Vec3 } from '../app/math3d'
+import { type Aabb3, type Vec3 } from './geometry/math3d'
 
 const VERTEX_STRIDE = 6
 

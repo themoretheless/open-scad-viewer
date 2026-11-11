@@ -4661,7 +4661,7 @@ for(const locale of ['en','ru'])it('rejects a shared version replaced during dec
  it('reports a failed draft reference publication and allows the next edit to save',async()=>{
  const ui=await mount();await ui.click('Cube')
  const prior=ui.serialized()
- const safe=await import('../src/app/safeStorage')
+ const safe=await import('../src/core/safeStorage')
  const original=safe.storageSet
  const spy=vi.spyOn(safe,'storageSet').mockImplementation((key,value)=>key==='scad-solid-modeler-v1'?false:original(key,value))
  try{
@@ -4680,7 +4680,7 @@ it('restores the committed durable geometry after reference publication fails an
  const actual=await vi.importActual<typeof import('../src/kernel/solidDraftHeadStore')>('../src/kernel/solidDraftHeadStore')
  const read=vi.spyOn(heads,'readSolidDraftHead').mockImplementation(actual.readSolidDraftHead)
  const write=vi.spyOn(heads,'writeSolidDraftHead').mockImplementation(actual.writeSolidDraftHead)
- const safe=await import('../src/app/safeStorage'),original=safe.storageSet
+ const safe=await import('../src/core/safeStorage'),original=safe.storageSet
  let publication:ReturnType<typeof vi.spyOn>|undefined
  try{
   const ui=await mount()

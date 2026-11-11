@@ -8,7 +8,7 @@ import {
   type DirectHistory,
 } from '../../app/directModeling'
 import { isGeometryKernelReady, warmGeometryKernel } from '../../kernel/geometry/kernel'
-import { storageGet, storageSet } from '../../app/safeStorage'
+import { storageGet, storageSet } from '../../core/safeStorage'
 import { readSolidDraftHead, writeSolidDraftHead } from '../../kernel/solidDraftHeadStore'
 import {
   collectSolidDraftSnapshots,

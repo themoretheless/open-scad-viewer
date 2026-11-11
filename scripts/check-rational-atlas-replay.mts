@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
-import {encodeBinary} from '../src/app/valueBinaryCodec'
+import {encodeBinary} from '../src/core/valueBinaryCodec'
 import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 const [wasmPath,sourcePath,bindingPath,legacyPath,output]=process.argv.slice(2)
 const input=JSON.parse(readFileSync(sourcePath,'utf8')),bindings=JSON.parse(readFileSync(bindingPath,'utf8')),legacy=JSON.parse(readFileSync(legacyPath,'utf8'))

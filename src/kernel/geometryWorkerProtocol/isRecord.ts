@@ -5,7 +5,7 @@ import type { GeometryExecutionDescriptor } from '../../core/geometryExecution'
 import type { GeometryPhaseTimings, GeometryQuality } from '../../core/build'
 import type { MeshData } from '../../core/mesh'
 import { isNativeGeometryArtifact } from '../../core/nativeGeometry'
-import { isNonNegativeFiniteNumber, isNonNegativeSafeInteger } from '../../app/workerPayloadPrimitives'
+import { isNonNegativeFiniteNumber, isNonNegativeSafeInteger } from '../../core/workerPayloadPrimitives'
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   if (value === null || Array.isArray(value) || typeof value !== 'object') return false

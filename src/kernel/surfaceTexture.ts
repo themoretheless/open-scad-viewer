@@ -1,6 +1,6 @@
 import type {DirectBody} from '../app/directModeling'
 import type {Vec3} from '../app/directSketchGeometry'
-import {callGeometryRust} from '../kernel/geometry/kernel'
+import {callGeometryRust} from './geometry/kernel'
 export type SurfacePattern='ribs'|'grooves'|'knurl'|'fuzzy'|'dimples'|'waves'
 export interface SurfaceTextureOptions {pattern:SurfacePattern;pitch:number;height:number;angle:number;seed:number;detail:number;invert:boolean;triangles?:number[];origin:Vec3;u:Vec3;v:Vec3}
 export function textureHeight(p:number[],o:SurfaceTextureOptions):number {

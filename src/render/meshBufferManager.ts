@@ -1,6 +1,6 @@
 import { geometryTransformTransition } from '../kernel/geometryTransformTransition'
-import { invert, type Aabb3, type Mat4 } from '../app/math3d'
-import type { NativePickingCache } from '../app/nativePickingCache'
+import { invert, type Aabb3, type Mat4 } from '../kernel/geometry/math3d'
+import type { NativePickingCache } from './nativePickingCache'
 import type { MeshData } from '../core/mesh'
 import type { GeometryAssetId } from '../core/scene'
 import type {
@@ -9,9 +9,9 @@ import type {
   ShadingModel,
 } from './rendererContracts'
 import { buildSceneAabbIndex, type SceneAabbIndex } from './sceneAabbIndex'
-import { effectiveDisplayAlpha } from '../app/backendQuality'
+import { effectiveDisplayAlpha } from './backendQuality'
 import { OBJECT_UNIFORM_LAYOUT } from './shaders'
-import { fillObjectUniform } from '../app/uniformFill'
+import { fillObjectUniform } from './uniformFill'
 import {
   MAX_EDGE_BUFFER_BYTES,
   type Bounds,

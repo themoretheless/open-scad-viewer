@@ -5,7 +5,7 @@ import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, computeSpinnerParameterSuggest
 import { computed, nextTick, ref, watch } from 'svet'
 import { stringifyMeshJson } from '../exchange/meshJson'
 import { compileRushGraph } from '../language/rushGraphCompiler'
-import { createMechanicalDocument, GEAR_DEFAULTS, PLANETARY_DEFAULTS, THREAD_DEFAULTS } from '../app/mechanicalGeneratorContract'
+import { createMechanicalDocument, GEAR_DEFAULTS, PLANETARY_DEFAULTS, THREAD_DEFAULTS } from '../core/mechanicalGeneratorContract'
 const props=defineProps<{open:boolean;locale:'ru'|'en'}>()
 const emit=defineEmits<{close:[];generate:[source:string,name:string];downloadCurrent:[]}>()
 const dialog=ref<HTMLDialogElement|null>(null)

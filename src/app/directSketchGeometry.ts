@@ -1,7 +1,7 @@
 import {transformRetainedSketch,offsetRetainedSketch,requirePolylineSketch} from './retainedSketchProfile'
 import {callGeometryRust} from '../kernel/geometry/kernel'
 import type { DirectSketch, Point2 } from './directModeling'
-import { dot3, cross3, unit3, type Vec3 } from './math3d'
+import { dot3, cross3, unit3, type Vec3 } from '../kernel/geometry/math3d'
 export { dot3, cross3, unit3, type Vec3 }
 export interface SketchPlane { origin:Vec3; u:Vec3; v:Vec3 }
 export interface AnalyticCurve { kind:'circle'|'arc'; center:Point2; radius:number; start:number; sweep:number }

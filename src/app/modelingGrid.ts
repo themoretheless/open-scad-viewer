@@ -1,5 +1,5 @@
 import { computed, ref } from 'svet'
-import { storageGet, storageSet } from './safeStorage'
+import { storageGet, storageSet } from '../core/safeStorage'
 
 export const GRID_UNITS = { mm: 1, cm: 10, m: 1000, in: 25.4 } as const
 export type GridUnit = keyof typeof GRID_UNITS

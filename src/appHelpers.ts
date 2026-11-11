@@ -2,8 +2,8 @@
 import { type ComponentPublicInstance } from 'svet'
 import { type RovingFocusKey } from './app/rovingFocus'
 import { encodeWorkspaceShare } from './app/workspaceShare'
-import { clamp } from './app/math3d'
-import { storageGetJSON } from './app/safeStorage'
+import { clamp } from './kernel/geometry/math3d'
+import { storageGetJSON } from './core/safeStorage'
 
 export const blockColors = ['#7999e8', '#c792ea', '#d7a457', '#55bba4', '#d87d9d']
 

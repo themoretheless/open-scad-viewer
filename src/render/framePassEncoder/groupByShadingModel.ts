@@ -1,5 +1,5 @@
 // framePassEncoder: groupByShadingModel.
-import { invert, type Mat4, type Vec3 } from '../../app/math3d'
+import { invert, type Mat4, type Vec3 } from '../../kernel/geometry/math3d'
 
 import type {
   DisplayMode,
@@ -19,7 +19,7 @@ import type { ViewFrustum } from '../viewFrustum'
 
 import type { MeshInstances } from '../../kernel/meshInstances'
 
-import { isTransparentAlpha } from '../../app/backendQuality'
+import { isTransparentAlpha } from '../backendQuality'
 
 import {
   OBJECT_UNIFORM_LAYOUT,
@@ -31,11 +31,11 @@ import {
   type PipelineFactory,
   TRANSPARENT_DEPTH,
   type PipelineFlavor,
-} from '../../app/pipelineFactory'
+} from '../pipelineFactory'
 
 import type { TextureResources } from '../textureResources'
 
-import { fillSceneUniforms } from '../../app/uniformFill'
+import { fillSceneUniforms } from '../uniformFill'
 
 import { GpuCsgRenderer, type GpuCsgTree } from '../gpuCsgPreview'
 

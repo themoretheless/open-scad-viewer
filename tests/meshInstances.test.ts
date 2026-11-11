@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { MeshInstances, type InstanceMesh } from '../src/kernel/meshInstances'
-import { identity } from '../src/app/math3d'
+import { identity } from '../src/kernel/geometry/math3d'
 
 function harness() {
   vi.stubGlobal('GPUBufferUsage', { STORAGE: 1, COPY_DST: 2, VERTEX: 4 })

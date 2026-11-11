@@ -22,7 +22,7 @@ import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanti
 import { restoreExactFullRoundSnapshot } from '../src/kernel/exactFullRoundSnapshot'
 import { isGeometryEvaluationResultPayload } from '../src/kernel/geometryWorkerProtocol'
 import { geometrySceneFromMeshes, meshesFromGeometryScene } from '../src/core/scene'
-import { remapNativeFaceSelection } from '../src/app/nativeFaceSelection'
+import { remapNativeFaceSelection } from '../src/render/nativeFaceSelection'
 import type { PickHit } from '../src/render/rendererContracts'
 import { nativeFaceReference, assertNativeReferenceCurrent } from '../src/core/nativeGeometry'
 const source = (height=6) => '// @language openscad-viewer/brep-1\nfull_round_exact([5,4,3]) cube([4,8,'+height+']);'

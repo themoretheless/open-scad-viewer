@@ -8,7 +8,7 @@
 
 import { runGpuCompute } from './webgpuCompute'
 import { GCODE_MOVE_ROW_WIDTH } from '../fabrication/gcodePreviewTransport'
-import { forEachChunkedAsync, type CooperativeAsyncOptions } from '../app/cooperativeAsync'
+import { forEachChunkedAsync, type CooperativeAsyncOptions } from '../core/cooperativeAsync'
 
 export interface GcodeFilterOptions extends CooperativeAsyncOptions {
   minLayer?: number

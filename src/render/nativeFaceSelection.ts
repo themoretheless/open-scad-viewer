@@ -1,6 +1,6 @@
 import type {MeshData} from '../core/mesh'
-import type {PickHit} from '../render/rendererContracts'
-import {transformPoint,type Vec3} from './math3d'
+import type {PickHit} from './rendererContracts'
+import {transformPoint,type Vec3} from '../kernel/geometry/math3d'
 type FaceMesh=Pick<MeshData,'nativeGeometry'|'faceIdsAuthoritative'|'faceIds'|'vertices'|'indices'|'transform'|'provenance'>
 /** Re-anchor the selected native face on a new display tessellation.
  * Never reuse the old triangle index/barycentrics. Changed geometry is rejected

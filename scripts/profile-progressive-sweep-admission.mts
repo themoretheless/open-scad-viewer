@@ -7,7 +7,7 @@ import {readSweepBodyBoundaryViewportEvidence} from '../src/kernel/sweepViewport
 import {inspectProgressiveSweepSolidAdmission} from '../src/kernel/sweepSolidAdmission'
 import {inspectSweepVolume,DEFAULT_SWEEP_VOLUME_BUDGETS} from '../src/kernel/nurbsSweepEmbedding'
 import {sweepStepArtifactProvenance} from './sweep-step-provenance.mjs'
-import {encodeBinary} from '../src/app/valueBinaryCodec'
+import {encodeBinary} from '../src/core/valueBinaryCodec'
 import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 
 const sourceFile=process.argv[2]??'examples/rush/closed-periodic-spatial-rmf-multiple-holes-body.r'

@@ -1,6 +1,6 @@
 import type { MeshSourceReference } from '../core/mesh'
 import type { CameraState } from './cameraHistory'
-import type { Vec3 } from '../app/math3d'
+import type { Vec3 } from '../kernel/geometry/math3d'
 export type { ProjectionMode, StandardView } from './viewportModel'
 
 export type DisplayMode = 'shaded' | 'edges' | 'xray'

@@ -2,7 +2,7 @@ import {isOriginalQuadricGraphReport,type OriginalQuadricGraphRequest} from '../
 import {isOriginalQuadricCarrierReport,type OriginalQuadricCarrierRequest} from '../kernel/originalQuadricCarrierProtocol'
 import {isOriginalPatchContactsReport,type OriginalPatchContactsRequest} from '../kernel/originalPatchContactsProtocol'
 import {isSurfaceIsoTargetReport,type SurfaceIsoTargetRequest} from '../kernel/surfaceIsoTargetProtocol'
-import {encodeBinary,decodeBinary} from '../app/valueBinaryCodec'
+import {encodeBinary,decodeBinary} from '../core/valueBinaryCodec'
 import {isSurfaceAuditReport,type SurfaceAuditRequest} from '../kernel/surfaceSelfIntersectionProtocol'
 let admitted=false
 self.addEventListener('message',async(event:MessageEvent<SurfaceAuditRequest|SurfaceIsoTargetRequest|OriginalPatchContactsRequest|OriginalQuadricCarrierRequest|OriginalQuadricGraphRequest>)=>{

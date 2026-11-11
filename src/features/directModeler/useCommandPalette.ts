@@ -1,4 +1,4 @@
-import { storageGet, storageSet } from '../../app/safeStorage'
+import { storageGet, storageSet } from '../../core/safeStorage'
 import { type PaletteCommand } from '../../app/commandSearch'
 import { primitiveKinds, download, isProfileCommand, profileBooleanOperation, type Pane } from './helpers'
 import { isProfilePreparationInput } from '../../kernel/solidProfilePreparation'

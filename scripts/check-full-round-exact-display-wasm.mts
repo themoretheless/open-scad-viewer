@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { encodeBinary, decodeBinary } from '../src/app/valueBinaryCodec.ts'
+import { encodeBinary, decodeBinary } from '../src/core/valueBinaryCodec.ts'
 import { lowerOpenSCADToSemanticProgram } from '../src/language/semantic/semanticProgramLowerer.ts'
 
 const [wasmPath, directory, nativePath] = process.argv.slice(2)

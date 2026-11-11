@@ -1,4 +1,4 @@
-import type { DisplayMode } from '../render/rendererContracts'
+import type { DisplayMode } from './rendererContracts'
 
 export type RenderingBackendTier = 'webgpu-interactive' | 'headless-geometry'
 export type TransparencyTier = 'opaque-depth' | 'object-sorted-alpha' | 'unavailable'

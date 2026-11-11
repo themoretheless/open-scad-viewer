@@ -1,6 +1,6 @@
 /** Exact CPU Catmull-Clark refinement (WebGPU fallback). */
 import type { SubdivisionCage, SubdivisionRefined } from '../kernel/geometry/subdivision'
-import { packUndirectedEdgeKey } from '../app/math3d'
+import { packUndirectedEdgeKey } from '../kernel/geometry/math3d'
 
 const edgeKey = packUndirectedEdgeKey
 

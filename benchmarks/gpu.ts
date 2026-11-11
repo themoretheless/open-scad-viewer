@@ -1,5 +1,5 @@
 import type { MeshData } from '../src/core/mesh'
-import { identity } from '../src/app/math3d'
+import { identity } from '../src/kernel/geometry/math3d'
 import { buildMeshBvh } from '../src/kernel/meshBvh'
 import { WebGPURenderer } from '../src/render/webgpuRenderer'
 

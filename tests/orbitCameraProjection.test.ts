@@ -4,7 +4,7 @@ import { computeOrbitCameraFrame } from '../src/render/orbitCameraProjection'
 import {
   invert, lookAt, multiply, perspective, transformPoint, unprojectRay,
   type Aabb3, type Vec3,
-} from '../src/app/math3d'
+} from '../src/kernel/geometry/math3d'
 import type { ProjectionMode } from '../src/render/viewportModel'
 import reference from './fixtures/orbit-camera-reference-v1.json'
 

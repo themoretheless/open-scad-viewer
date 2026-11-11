@@ -1,7 +1,7 @@
 import type { ComputedRef, Ref } from 'svet'
 import type { MeshData } from '../core/mesh'
 import type { SourceProvenanceRow } from '../components/cadPanels.types'
-import { clamp } from '../app/math3d'
+import { clamp } from '../kernel/geometry/math3d'
 import type { WebGPURenderer } from '../render/webgpuRenderer'
 
 export interface ProvenanceSpan {

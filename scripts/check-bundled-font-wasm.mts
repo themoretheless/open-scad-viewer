@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
-import { encodeBinary, decodeBinary } from '../src/app/valueBinaryCodec.ts'
+import { encodeBinary, decodeBinary } from '../src/core/valueBinaryCodec.ts'
 const [before, after, directory] = process.argv.slice(2)
 assert(before && after && directory)
 const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='297mm' height='210mm' viewBox='0 0 297 210'><path d='M10 10 L20 20' fill='none' stroke='black'/><text x='10' y='30'>Latin 123 Деталь</text></svg>"

@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
-import {encodeBinary} from '../src/app/valueBinaryCodec'
+import {encodeBinary} from '../src/core/valueBinaryCodec'
 import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 const [wasmPath,input,hostPath,output]=process.argv.slice(2),bytes=readFileSync(wasmPath)
 const w=new WebAssembly.Instance(new WebAssembly.Module(bytes)).exports as any

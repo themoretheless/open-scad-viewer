@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MeshProvenanceRun, MeshSourceReference } from '../src/core/mesh'
-import { identity, translate } from '../src/app/math3d'
+import { identity, translate } from '../src/kernel/geometry/math3d'
 import {
   buildFaceOverlayGeometry,
   buildFaceTriangleIndex,

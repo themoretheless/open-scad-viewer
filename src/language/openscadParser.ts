@@ -16,7 +16,7 @@ import type {
   MeshProvenanceRun,
   MeshSourceReference,
 } from '../core/mesh'
-import { clamp01, identity } from '../app/math3d'
+import { clamp01, identity } from '../kernel/geometry/math3d'
 import { AbortedError, OpenSCADParseError } from './openscadErrors'
 import { createBrepRecordingKernelOps } from '../kernel/solid/brepRecorder'
 import { bindOpenScad, prepareOpenScadFrontEnd } from './openscadBinder'

@@ -8,7 +8,7 @@ import {uncheckedStepConformance,type StepSemanticConformance} from './cadStepCo
 import {tessellateNurbsBrep,type NurbsBrep} from './geometry/brep'
 import {inspectNurbsBrep} from './geometry/brep'
 import type {DirectBody} from '../app/directModeling'
-import {storageGet,storageRemove,storageSet} from '../app/safeStorage'
+import {storageGet,storageRemove,storageSet} from '../core/safeStorage'
 import {stepLod0Cache,type CachedStepLod0Import} from '../exchange/stepLod0Cache'
 
 export type StepRoute='retained-ap242-brep'|'faceted-brep'|'tessellated-shape'|'semantic-csg'|'unsupported-product'

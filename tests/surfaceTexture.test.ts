@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest'
-import {textureSurface,textureHeight,type SurfaceTextureOptions} from '../src/render/surfaceTexture'
+import {textureSurface,textureHeight,type SurfaceTextureOptions} from '../src/kernel/surfaceTexture'
 import {extrudeDirectSketch} from '../src/app/directModeling'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 import {solidTopology,facePlane} from '../src/app/directSolidTools'

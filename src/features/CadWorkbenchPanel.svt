@@ -17,7 +17,7 @@ import type {PickHit} from '../render/rendererContracts'
 import {sceneBody,previewMeshes} from '../app/mainModeling'
 import {patchMainSource} from '../app/mainSourceEditing'
 import {computeCadOperation,computeCadInspection,cancelMainSolid} from '../kernel/mainSolidWorker'
-import {storageKeys,storageGet,storageSet} from '../app/safeStorage'
+import {storageKeys,storageGet,storageSet} from '../core/safeStorage'
 import {parseDirectDocument,type DirectSketch,type DirectDocument} from '../app/directModeling'
 import type {CadOptions,CadAction} from '../kernel/cadWorkbench'
 const LaserCamPanel=defineAsyncComponent(()=>import('./LaserCamPanel.svt'))

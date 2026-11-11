@@ -4,10 +4,10 @@
  * in SCENE_UNIFORM_LAYOUT / OBJECT_UNIFORM_LAYOUT. No GPU objects here — the
  * caller uploads the scratch to its uniform buffer.
  */
-import { lookAt, orthographic, type Mat4, type Vec3 } from './math3d'
-import { OBJECT_UNIFORM_LAYOUT, SCENE_UNIFORM_LAYOUT } from '../render/shaders'
-import type { MaterialDef, RenderTheme } from '../render/rendererContracts'
-import { SHADOW_MAP_SIZE } from '../render/textureResources'
+import { lookAt, orthographic, type Mat4, type Vec3 } from '../kernel/geometry/math3d'
+import { OBJECT_UNIFORM_LAYOUT, SCENE_UNIFORM_LAYOUT } from './shaders'
+import type { MaterialDef, RenderTheme } from './rendererContracts'
+import { SHADOW_MAP_SIZE } from './textureResources'
 
 /**
  * Row-major mat4 product (a · b), pure JS: the shadow light VP is rebuilt per

@@ -1,17 +1,17 @@
-import { remapNativeFaceSelection } from '../app/nativeFaceSelection'
+import { remapNativeFaceSelection } from './nativeFaceSelection'
 /**
  * WebGPU 3D renderer — Phong shading, orbit camera, grid floor, axis gizmo.
  */
 import {
   type Aabb3, type Mat4, type Vec3,
-} from '../app/math3d'
+} from '../kernel/geometry/math3d'
 import {
   CameraHistory,
   cameraStatesEqual,
   type CameraHistorySnapshot,
   type CameraState,
 } from './cameraHistory'
-import { NativePickingCache } from '../app/nativePickingCache'
+import { NativePickingCache } from './nativePickingCache'
 import { warmGeometryKernel } from '../kernel/geometry/kernel'
 import { clientRayInKernel, projectPointInKernel } from '../kernel/geometry/viewport'
 import type { MeshData } from '../core/mesh'
@@ -62,7 +62,7 @@ import {
   chooseDepthCandidate,
   type DepthCandidate,
   type DepthCycleState,
-} from '../app/selectionCycling'
+} from './selectionCycling'
 import {
   buildSceneAabbIndex,
   disposeSceneAabbIndex,
@@ -79,7 +79,7 @@ import {
 } from './shaders'
 import {
   PipelineFactory,
-} from '../app/pipelineFactory'
+} from './pipelineFactory'
 import { TextureResources } from './textureResources'
 import { GpuCsgRenderer, type GpuCsgTree } from './gpuCsgPreview'
 export type { GpuCsgTree } from './gpuCsgPreview'

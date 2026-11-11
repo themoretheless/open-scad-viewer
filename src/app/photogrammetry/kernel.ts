@@ -1,5 +1,5 @@
 import type {PhotoCalibrationGroup, PhotoMeasuredInput} from './calibration'
-import {encodeBinary, type BinaryTripleHints} from '../valueBinaryCodec'
+import {encodeBinary, type BinaryTripleHints} from '../../core/valueBinaryCodec'
 import {decodePacked, writeLinear} from '../../kernel/wasmHost'
 import type {WgslVariant} from '../../render/webgpuFeatures'
 

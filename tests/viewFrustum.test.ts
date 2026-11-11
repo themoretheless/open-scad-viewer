@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ViewFrustum } from '../src/render/viewFrustum'
-import { invert, lookAt, multiply, orthographic, perspective, transformPoint } from '../src/app/math3d'
+import { invert, lookAt, multiply, orthographic, perspective, transformPoint } from '../src/kernel/geometry/math3d'
 
 describe('WebGPU view frustum', () => {
   it('uses zero-to-one depth and keeps spheres touching every clip boundary', () => {

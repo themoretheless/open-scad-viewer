@@ -65,7 +65,7 @@ import {flattenGroupGeometry} from './meshFlatten'
 import {checkLatticeGraphInput, checkLatticeGraphMeshInput, isNominalLatticeGraph} from '../fabrication/latticeGraphProtocol'
 import {warmGeometryKernel} from './geometry/kernel'
 import {prepareMainSolidTransfer} from './mainSolidWorkerTransport'
-import {createWorkerHandler} from '../app/workerHandlerRuntime'
+import {createWorkerHandler} from '../core/workerHandlerRuntime'
 import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidProgress,type MainSolidProgressMessage,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
 
 async function execute(job:MainSolidJob,onProgress?:(progress:MainSolidProgress)=>void):Promise<MainSolidResults[keyof MainSolidResults]> {

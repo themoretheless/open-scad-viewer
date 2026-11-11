@@ -1,4 +1,4 @@
-import type { Aabb3, Vec3 } from '../app/math3d'
+import type { Aabb3, Vec3 } from '../kernel/geometry/math3d'
 import type { ProjectionMode } from './viewportModel'
 
 interface OrbitProjectionOptions {

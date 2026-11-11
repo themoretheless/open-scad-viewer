@@ -1,6 +1,6 @@
 import {expressionInspectionExpectation,type ExpressionInspectionOptions} from './expressionShellInspection'
 import {expressionRecipeIdentity} from './expressionShell'
-import {encodeBinary,decodeBinary} from '../app/valueBinaryCodec'
+import {encodeBinary,decodeBinary} from '../core/valueBinaryCodec'
 import {sourceBodyExpectation,restoreSourceBody,validSourceBody,type SourceBodyOptions} from './sourceBody'
 /** Persist original native inputs. No saved admission or display cache is authority. */
 export interface SourceBodyRecord {id:string;name:string;group?:string;source:{encoding:'MGV1/base64';data:string};expressionInspection?:{encoding:'MGV1/base64';data:string}}

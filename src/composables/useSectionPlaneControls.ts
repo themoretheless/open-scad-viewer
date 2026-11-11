@@ -1,7 +1,7 @@
 import { computed, nextTick, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import type { SectionAxis } from '../components/cadPanels.types'
 import type { MeshData } from '../core/mesh'
-import { clamp } from '../app/math3d'
+import { clamp } from '../kernel/geometry/math3d'
 import { inspectMesh } from '../kernel/meshInspection'
 import type { PickHit } from '../render/rendererContracts'
 import type { SceneController, SceneState } from '../app/sceneController'

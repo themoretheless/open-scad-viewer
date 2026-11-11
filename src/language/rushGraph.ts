@@ -1,7 +1,7 @@
 import { compileRushGraph, RushGraphError } from './rushGraphCompiler'
 export { compileRushGraph, RushGraphError, hashRushGraphDocument } from './rushGraphCompiler'
 import type { RushGraphNumericType, Dimension, Unit } from './rushGraphNumericContracts'
-import { MECHANICAL_GENERATOR_GUIDE } from '../app/mechanicalGeneratorContract'
+import { MECHANICAL_GENERATOR_GUIDE } from '../core/mechanicalGeneratorContract'
 import type { PlacedAssemblyComponent } from './rushGraphAssembly'
 import type { solveRushGraphSketch } from './rushGraphSketch'
 import { z } from 'zod/v4'

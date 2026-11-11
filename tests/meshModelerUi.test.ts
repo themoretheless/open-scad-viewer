@@ -47,7 +47,7 @@ vi.mock('../src/components/VrControls.svt',()=>({default:{render:()=>null}}))
 vi.mock('../src/components/CommandPalette.svt',()=>({default:{render:()=>null}}))
 vi.mock('../src/components/ModelingGridControls.svt',()=>({default:{render:()=>null}}))
 vi.mock('../src/components/ModelingFloorGrid.svt',()=>({default:{render:()=>null}}))
-vi.mock('../src/app/safeStorage',()=>({storageGet:()=>null,storageSet:()=>{}}))
+vi.mock('../src/core/safeStorage',()=>({storageGet:()=>null,storageSet:()=>{}}))
 vi.mock('../src/app/meshModelerProjection',async importOriginal=>{
   const actual=await importOriginal<typeof import('../src/app/meshModelerProjection')>()
   return {...actual,projectMeshModelerObject:(...args:Parameters<typeof actual.projectMeshModelerObject>)=>{

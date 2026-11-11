@@ -1,4 +1,4 @@
-import { MAX_DOCUMENT_CHARACTERS } from '../../app/directDocumentLimits'
+import { MAX_DOCUMENT_CHARACTERS } from '../../core/directDocumentLimits'
 
 export const EXACT_SOLID_MAX_SOURCE_CHARACTERS = 100_000
 export const EXACT_SOLID_MAX_DOCUMENT_CHARACTERS = MAX_DOCUMENT_CHARACTERS

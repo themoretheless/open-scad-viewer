@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { computePinchUpdate, projectAxesToScreen, WebGPURenderer } from '../src/render/webgpuRenderer'
-import { transformPoint, type Mat4, type Vec3 } from '../src/app/math3d'
+import { transformPoint, type Mat4, type Vec3 } from '../src/kernel/geometry/math3d'
 
 describe('WebGPURenderer close zoom', () => {
   it.each(['orthographic', 'perspective'] as const)('uses protected %s depth after restoring a close camera', projection => {

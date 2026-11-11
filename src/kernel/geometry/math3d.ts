@@ -1,5 +1,5 @@
 /** Row-major matrix transport and remaining vector helpers. */
-import { invertMatrixF64 } from '../kernel/geometry/matrixInverse'
+import { invertMatrixF64 } from './matrixInverse'
 
 export type Mat4 = Float32Array
 export type Vec3 = [number, number, number]
@@ -253,7 +253,7 @@ export function transformVector(m: Mat4, vector: Vec3): Vec3 {
  * Build a world-space ray from WebGPU NDC coordinates. The supplied matrix is
  * the inverse of projection * view; WebGPU's near/far depth values are 0/1.
  */
-export { unprojectRayInKernel as unprojectRay } from '../kernel/geometry/viewport'
+export { unprojectRayInKernel as unprojectRay } from './viewport'
 
 /** Return the first non-negative ray distance to an AABB, or null on a miss. */
 export function rayAabbDistance(ray: Ray3, bounds: Aabb3, maxDistance = Infinity): number | null {

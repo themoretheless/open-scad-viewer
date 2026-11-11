@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'node:fs'
-import { encodeBinary } from '../src/app/valueBinaryCodec'
+import { encodeBinary } from '../src/core/valueBinaryCodec'
 import { decodePacked, writeLinear } from '../src/kernel/wasmHost'
 
 interface Exports extends WebAssembly.Exports {

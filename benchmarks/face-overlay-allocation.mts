@@ -5,7 +5,7 @@ import {cpus} from 'node:os'
 import {pathToFileURL} from 'node:url'
 import {resolve} from 'node:path'
 import * as candidate from '../src/render/meshSelectionOverlay'
-import {identity} from '../src/app/math3d'
+import {identity} from '../src/kernel/geometry/math3d'
 
 assert.ok(process.argv[2], 'Pass the baseline meshSelectionOverlay.ts path')
 const baselineUrl = pathToFileURL(resolve(process.argv[2]))

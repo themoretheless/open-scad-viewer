@@ -4,7 +4,7 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {dirname,resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import * as module from 'node:module'
-import {decodeBinary} from '../src/app/valueBinaryCodec'
+import {decodeBinary} from '../src/core/valueBinaryCodec'
 import {load} from '../tests/fixtures/raw-import-loader.mjs'
 
 const [sourcePath,outputPath,segmentText]=process.argv.slice(2)

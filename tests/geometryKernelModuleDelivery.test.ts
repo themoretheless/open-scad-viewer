@@ -3,7 +3,7 @@ import {compileGeometryKernelArtifact} from '../src/kernel/geometry/kernelCompil
 import {assertVerifiedWasmModule} from '../src/kernel/wasmArtifact'
 import identity from '../src/generated/geometry-kernels/identity'
 import {installGeometryKernelFromTrustedHost} from '../src/kernel/geometry/kernel'
-import {encodeBinary} from '../src/app/valueBinaryCodec'
+import {encodeBinary} from '../src/core/valueBinaryCodec'
 import {decodePacked} from '../src/kernel/wasmHost'
 
 let artifact: Promise<WebAssembly.Module> | undefined

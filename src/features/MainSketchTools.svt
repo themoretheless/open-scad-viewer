@@ -4,8 +4,8 @@ import {outlineSketchStroke,simplifySketchPath} from '../app/editableSketchOpera
 import {buildDirectExtrusion} from '../app/directExtrusion'
 import {withEditableSketchPath,editablePathAnchors,SKETCH_PATH_TOLERANCE_MM} from '../app/editableSketchPath'
 import {pathFromPolygon,smoothPath,smoothPathAnchor,cornerPathAnchor,deletePathAnchor,insertPathAnchor,setPathAnchorPosition,pathAnchorHandles,setAnchorHandle,applyHandleLink,dragAlignGuides} from '../kernel/geometry/path2d'
-import {storageGet,storageSet} from '../app/safeStorage'
-import type {Ray3} from '../app/math3d'
+import {storageGet,storageSet} from '../core/safeStorage'
+import type {Ray3} from '../kernel/geometry/math3d'
 import {DirectHistory,emptyDirectDocument,parseDirectDocument,extrudeDirectSketch,type Point2,type DirectSketch} from '../app/directModeling'
 import {sampleCurve,worldPoint,worldPoints,xyPlane,cross3,dot3,offsetSketch,trimSketch,extendSketch,type SketchPlane} from '../app/directSketchGeometry'
 const props=defineProps<{plane:SketchPlane|null;project:(p:readonly number[])=>[number,number]|null;ray:(x:number,y:number)=>Ray3|null;revision:number;locale:string;sessionKey?:string;snapPoints?:number[][]}>()

@@ -1,4 +1,4 @@
-import { transformPoint, type Mat4, type Vec3 } from '../app/math3d'
+import { transformPoint, type Mat4, type Vec3 } from '../kernel/geometry/math3d'
 import type { MeshProvenanceRun } from '../core/mesh'
 
 export interface FaceOverlayGeometry {

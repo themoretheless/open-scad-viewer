@@ -5,7 +5,7 @@
  * them and the geometry kernel stays small enough to instantiate on the main thread. The transport
  * mirrors `services/geometry/kernel`: the host owns request buffers and frees every response.
  */
-import {encodeBinary} from '../../app/valueBinaryCodec'
+import {encodeBinary} from '../../core/valueBinaryCodec'
 import {decodePacked, writeLinear} from '../../kernel/wasmHost'
 import {unpackBrotliWasmBase64} from '../../kernel/wasmBrotliPacking'
 import {compileOptionalWasm} from '../../kernel/wasmCompilation'

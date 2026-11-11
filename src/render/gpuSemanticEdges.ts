@@ -8,7 +8,7 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
-import { forEachChunkedAsync, type CooperativeAsyncOptions } from '../app/cooperativeAsync'
+import { forEachChunkedAsync, type CooperativeAsyncOptions } from '../core/cooperativeAsync'
 
 export interface SemanticEdgesOptions extends CooperativeAsyncOptions {
   creaseAngleDegrees?: number
@@ -25,7 +25,7 @@ export interface SemanticEdgesResult {
 }
 
 import SEMANTIC_EDGES_WGSL from '../../crates/compute-core/shaders/semantic_edges.wgsl?raw'
-import { packUndirectedEdgeKey } from '../app/math3d'
+import { packUndirectedEdgeKey } from '../kernel/geometry/math3d'
 export { SEMANTIC_EDGES_WGSL }
 
 /**

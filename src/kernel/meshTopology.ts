@@ -12,7 +12,7 @@
  */
 
 import type { MeshTopologyDiagnostics } from '../core/mesh'
-import { clamp } from '../app/math3d'
+import { clamp } from './geometry/math3d'
 import { extractSemanticEdgesInKernel } from './geometry/meshAnalysis'
 
 export type { MeshTopologyDiagnostics } from '../core/mesh'

@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import assert from 'node:assert/strict'
-import {encodeBinary} from '../src/app/valueBinaryCodec'
+import {encodeBinary} from '../src/core/valueBinaryCodec'
 import {writeLinear,decodePacked} from '../src/kernel/wasmHost'
 import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 const bytes=readFileSync(process.argv[2]??'public/wasm/geometry-kernel.wasm')

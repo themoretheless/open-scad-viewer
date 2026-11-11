@@ -1,5 +1,5 @@
 import type { MeshData } from '../core/mesh'
-import { fitsClonedBufferBudget } from '../app/clonedBufferBudget'
+import { fitsClonedBufferBudget } from '../core/clonedBufferBudget'
 import { GCODE_FLAVORS, type GcodePreviewResult, type JobSettingsInput, type ToolpathSettingsInput } from '../kernel/geometry/polygon'
 import type { PrintReadinessErrorCode, PrintReadinessErrorDetails } from './printReadiness'
 

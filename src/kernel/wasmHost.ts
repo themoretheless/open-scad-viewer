@@ -3,7 +3,7 @@
  * (geometry-wasm, photogrammetry-wasm): responses are packed u64
  * (len << 32 | ptr), requests are copied into fresh allocations.
  */
-import {decodeBinary, type BinaryTripleHints} from '../app/valueBinaryCodec'
+import {decodeBinary, type BinaryTripleHints} from '../core/valueBinaryCodec'
 
 export function packedPointer(packed: bigint): number { return Number(packed & 0xffffffffn) }
 export function packedSize(packed: bigint): number { return Number(packed >> 32n) }

@@ -15,7 +15,7 @@ import {
   type SemanticStaticOperation,
 } from '../core/semanticProgram'
 import { geometryAssetId } from '../core/scene'
-import { identity } from './math3d'
+import { identity } from '../kernel/geometry/math3d'
 import {
   analyzeManifoldPlanSolid,
   inspectManifoldPlanPayload,

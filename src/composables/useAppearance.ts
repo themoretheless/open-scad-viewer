@@ -1,7 +1,7 @@
 import { computed, ref } from 'svet'
 import { resolveFormaTokens } from '../forma/tokens'
 import type { Language } from '../i18n/appStrings'
-import { storageGet, storageGetEnum, storageSet } from '../app/safeStorage'
+import { storageGet, storageGetEnum, storageSet } from '../core/safeStorage'
 import { customizeTokens, normalizeHex } from '../app/themeCustomization'
 import { resolveTheme, themeCanvasColor, THEME_SELECTIONS, type ThemeSelection } from '../app/themePreferences'
 

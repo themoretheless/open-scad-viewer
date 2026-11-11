@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs'
 import {createHash} from 'node:crypto'
 import {pathToFileURL} from 'node:url'
 import {resolve} from 'node:path'
-import {encodeBinary,decodeBinary} from '../src/app/valueBinaryCodec'
+import {encodeBinary,decodeBinary} from '../src/core/valueBinaryCodec'
 
 if (!process.argv[2]) throw new Error('Pass the baseline valueBinaryCodec.ts path')
 const baselineUrl=pathToFileURL(resolve(process.argv[2]))
@@ -23,4 +23,4 @@ for(const count of [1000,100000]){
  rows.push({count,bytes:bytes.length,...Object.fromEntries(Object.entries(times).map(([key,values])=>[key,{medianMs:[...values].sort((a,b)=>a-b)[10],samplesMs:values}]))})
 }
 const sha=(url:URL)=>createHash('sha256').update(readFileSync(url)).digest('hex')
-console.log(JSON.stringify({node:process.version,arch:process.arch,method:'5 warmups; 21 alternating pairs; signed and unsigned safe integers spanning both words; parity outside timing; allocation/GC included',baselineSha256:sha(baselineUrl),candidateSha256:sha(new URL('../src/app/valueBinaryCodec.ts',import.meta.url)),rows},null,2))
+console.log(JSON.stringify({node:process.version,arch:process.arch,method:'5 warmups; 21 alternating pairs; signed and unsigned safe integers spanning both words; parity outside timing; allocation/GC included',baselineSha256:sha(baselineUrl),candidateSha256:sha(new URL('../src/core/valueBinaryCodec.ts',import.meta.url)),rows},null,2))

@@ -1,7 +1,7 @@
 // geometryEvaluator: differenceChildren.
 import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
-import { clamp01 } from '../../app/math3d'
+import { clamp01 } from '../../kernel/geometry/math3d'
 
 import { resolveLegacyOpenScadSegments } from '../../language/openScadLegacySegments'
 
