@@ -307,22 +307,12 @@ pub fn thicken(
     if remaining_world_cells == 0 {
         return Err(refused("Final actual world-curve proof work exhausted"));
     }
-    let world_proof = contact_curve::certify(
-        &curve,
-        sources.each_ref(),
-        distances,
-        band.axis,
-        band.drive,
-        band.first_other,
-        band.second,
-        sewing_tolerance,
-        contact_curve::Limits {
+    let world_proof = contact_curve::certify(&curve, nurbs_core::offset::contact_pcurve::OffsetFaces { surfaces: sources.each_ref(), distances }, contact_curve::ContactDomain { axis: band.axis, drive: band.drive, free: band.first_other, second: band.second }, sewing_tolerance, contact_curve::Limits {
             cells: remaining_world_cells,
             spans: f.spans,
             section_refinements: f.root_refinements,
             band_refinements: f.root_refinements,
-        },
-    )?;
+        })?;
     root_queries += world_proof.section_queries;
     branch_cells += world_proof.visited;
     if !world_proof.world_correspondence_proven {

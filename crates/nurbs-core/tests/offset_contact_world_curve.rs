@@ -60,12 +60,8 @@ fn nonunit_contact_clock_has_an_independent_complete_world_error_bound() {
     );
     let fresh = world::certify(
         c,
-        [&a, &b],
-        [0.2, -0.2],
-        0,
-        [3., 6.],
-        [0.1, 0.3],
-        [[-0.6, 1.6], [0.1, 0.3]],
+        nurbs_core::offset::contact_pcurve::OffsetFaces { surfaces: [&a, &b], distances: [0.2, -0.2] },
+        world::ContactDomain { axis: 0, drive: [3., 6.], free: [0.1, 0.3], second: [[-0.6, 1.6], [0.1, 0.3]] },
         1e-8,
         proof(),
     )
@@ -109,12 +105,8 @@ fn nonlinear_world_contact_refines_degree_and_covers_the_literal_rounded_curve()
     assert!(c.degree > 1);
     let fresh = world::certify(
         c,
-        s.each_ref(),
-        [0.1; 2],
-        1,
-        [0.35, 0.55],
-        [0.88, 0.96],
-        [[0.07, 0.22], [0.3, 0.6]],
+        nurbs_core::offset::contact_pcurve::OffsetFaces { surfaces: s.each_ref(), distances: [0.1; 2] },
+        world::ContactDomain { axis: 1, drive: [0.35, 0.55], free: [0.88, 0.96], second: [[0.07, 0.22], [0.3, 0.6]] },
         1e-7,
         proof(),
     )
@@ -139,12 +131,8 @@ fn matching_endpoints_cannot_admit_a_world_curve_with_interior_drift() {
     };
     let r = world::certify(
         &c,
-        [&a, &b],
-        [0.2, -0.2],
-        0,
-        [0., 1.],
-        [0.1, 0.3],
-        [[0.2, 0.8], [0.1, 0.3]],
+        nurbs_core::offset::contact_pcurve::OffsetFaces { surfaces: [&a, &b], distances: [0.2, -0.2] },
+        world::ContactDomain { axis: 0, drive: [0., 1.], free: [0.1, 0.3], second: [[0.2, 0.8], [0.1, 0.3]] },
         1e-7,
         proof(),
     )
@@ -262,7 +250,15 @@ fn whole_world_coincidence_does_not_authorize_the_wrong_original_uv_sheet() {
         world_agreement.status,
         nurbs_core::curve_surface_agreement::Status::WithinTolerance
     );
-    let parameter = uv::certify(&wrong, 1, uv::OffsetFaces { surfaces: [&a, &b], distances: [0.2; 2] }, uv::ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 128 }, 1e-8, 100000, 8)
+    let parameter = uv::certify(
+        &wrong,
+        1,
+        uv::OffsetFaces { surfaces: [&a, &b], distances: [0.2; 2] },
+        uv::ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 128 },
+        1e-8,
+        100000,
+        8,
+    )
     .unwrap();
     assert!(!parameter.correspondence_proven);
 }
@@ -309,14 +305,10 @@ fn absent_nonisolated_and_wrong_clock_inputs_never_provide_world_authority() {
     assert!(
         world::certify(
             &c,
-            [&a, &b],
-            [0.1; 2],
-            0,
-            [0.2, 0.8],
-            [0.1, 0.9],
-            [[0.1, 0.9]; 2],
+            nurbs_core::offset::contact_pcurve::OffsetFaces { surfaces: [&a, &b], distances: [0.1; 2] },
+            world::ContactDomain { axis: 0, drive: [0.2, 0.8], free: [0.1, 0.9], second: [[0.1, 0.9]; 2] },
             1e-7,
-            proof()
+            proof(),
         )
         .is_err()
     );

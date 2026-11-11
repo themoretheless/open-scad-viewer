@@ -180,22 +180,12 @@ pub fn fit(
             out.stop = FitStop::QueryLimit;
             break;
         }
-        let report = super::certify(
-            &curve,
-            surfaces,
-            distances,
-            axis,
-            drive,
-            free,
-            second,
-            tolerance_mm,
-            Limits {
+        let report = super::certify(&curve, crate::offset::contact_pcurve::OffsetFaces { surfaces, distances }, super::ContactDomain { axis, drive, free, second }, tolerance_mm, Limits {
                 cells,
                 spans: limits.spans,
                 section_refinements: limits.root_refinements,
                 band_refinements: limits.root_refinements,
-            },
-        )?;
+            })?;
         out.proof_cells += report.visited;
         out.root_queries += report.section_queries;
         let accepted = report.world_correspondence_proven;

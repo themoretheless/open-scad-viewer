@@ -61,17 +61,24 @@ fn lift(c: &Curve) -> Result<Surface> {
 /// This proves world coincidence/error only. UV-sheet identity, material trim
 /// membership, source/curve regularity, embedding and BRep sewing are separate.
 #[allow(clippy::too_many_arguments)]
+/// The contact parameter domain: fixed axis, its drive interval, the free interval on the first
+/// face and the domain on the second face.
+#[derive(Clone, Copy, Debug)]
+pub struct ContactDomain {
+    pub axis: usize,
+    pub drive: [f64; 2],
+    pub free: [f64; 2],
+    pub second: [[f64; 2]; 2],
+}
 pub fn certify(
     candidate: &Curve,
-    surfaces: [&Surface; 2],
-    distances: [f64; 2],
-    axis: usize,
-    drive: [f64; 2],
-    free: [f64; 2],
-    second: [[f64; 2]; 2],
+    faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
+    domain: ContactDomain,
     tolerance_mm: f64,
     limits: Limits,
 ) -> Result<Report> {
+    let crate::offset::contact_pcurve::OffsetFaces { surfaces, distances } = faces;
+    let ContactDomain { axis, drive, free, second } = domain;
     check(
         axis < 2
             && drive.iter().all(|x| x.is_finite())

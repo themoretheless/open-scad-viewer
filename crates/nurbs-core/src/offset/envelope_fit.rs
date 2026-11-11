@@ -215,7 +215,10 @@ pub fn certify(
         };
         let mut scores = [domain[0][1] - domain[0][0], domain[1][1] - domain[1][0]];
         let envelope = offset_envelope::certify_arc(
-            surfaces, distances, axis, domain[0], free, second, spans, domain[1], 1,
+            crate::offset::contact_pcurve::OffsetFaces { surfaces, distances },
+            crate::offset::contact_trims::ContactParameters { axis, drive: domain[0], free, second, spans },
+            domain[1],
+            1,
         )?;
         out.envelope_queries += 1;
         if smooth && let Some(e) = envelope.cells.first() {
@@ -312,13 +315,8 @@ fn evaluate_smooth_cell(
     }
     let sm = domain[1][0] + (domain[1][1] - domain[1][0]) * 0.5;
     let anchor = offset_envelope::certify_arc(
-        surfaces,
-        distances,
-        axis,
-        [tm, tm.next_up()],
-        free,
-        second,
-        spans,
+        crate::offset::contact_pcurve::OffsetFaces { surfaces, distances },
+        crate::offset::contact_trims::ContactParameters { axis, drive: [tm, tm.next_up()], free, second, spans },
         [sm, sm],
         1,
     )?;

@@ -150,13 +150,8 @@ pub fn certify(
     max_cells: usize,
 ) -> Result<Report> {
     certify_arc(
-        surfaces,
-        distances,
-        fixed_axis,
-        fixed_interval,
-        first_other,
-        second,
-        max_spans,
+        crate::offset::contact_pcurve::OffsetFaces { surfaces, distances },
+        crate::offset::contact_trims::ContactParameters { axis: fixed_axis, drive: fixed_interval, free: first_other, second, spans: max_spans },
         [0., 1.],
         max_cells,
     )
@@ -164,16 +159,19 @@ pub fn certify(
 /// Internal rectangle oracle for fitting; a point arc parameter is permitted.
 /// Returned cells cover only `arc_range`, never an implied whole arc.
 pub(crate) fn certify_arc(
-    surfaces: [&Surface; 2],
-    distances: [f64; 2],
-    fixed_axis: usize,
-    fixed_interval: [f64; 2],
-    first_other: [f64; 2],
-    second: [[f64; 2]; 2],
-    max_spans: usize,
+    faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
+    parameters: crate::offset::contact_trims::ContactParameters,
     arc_range: [f64; 2],
     max_cells: usize,
 ) -> Result<Report> {
+    let crate::offset::contact_pcurve::OffsetFaces { surfaces, distances } = faces;
+    let crate::offset::contact_trims::ContactParameters {
+        axis: fixed_axis,
+        drive: fixed_interval,
+        free: first_other,
+        second,
+        spans: max_spans,
+    } = parameters;
     check(
         arc_range.iter().all(|x| x.is_finite())
             && arc_range[0] >= 0.
