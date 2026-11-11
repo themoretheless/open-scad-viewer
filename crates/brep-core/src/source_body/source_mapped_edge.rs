@@ -123,18 +123,30 @@ fn linear_identity(
     out.work_used += r.work_used;
     Ok(r.outcome == ParameterIdentity::Equal)
 }
-fn mixed_identity(
-    world: &Curve,
-    point: &SourcePoint,
+/// A retained end proven by an original crossing on one use and an authored
+/// parameter on the other (`fixed`) use.
+#[derive(Clone, Copy)]
+struct MixedEnd<'a> {
+    point: &'a SourcePoint,
     role: Role,
     parameter: f64,
-    fixed: &MappedUse,
+    fixed: &'a MappedUse,
+}
+fn mixed_identity(
+    world: &Curve,
+    end: MixedEnd<'_>,
     domain: [f64; 2],
     plane: [[f64; 3]; 3],
     out: &mut Report,
     max_work: u64,
     max_driver: usize,
 ) -> Result<bool> {
+    let MixedEnd {
+        point,
+        role,
+        parameter,
+        fixed,
+    } = end;
     out.root_checks += 1;
     if !source_shared_edge::source_point_cut_plane(point, role, plane, out, max_work)?
         || out.work_used == max_work
@@ -248,6 +260,13 @@ pub fn qualify_with_candidates(
     }
     out.reason = "mapped-source-endpoints-unproven";
     for i in 0..2 {
+        // Both original root enclosures are mapped outward into the same
+        // canonical parameter domain; uniqueness is required on their union.
+        let shared_domain = || -> Result<[f64; 2]> {
+            let aa = uses[0].parameter_bounds()?[i];
+            let bb = uses[1].parameter_bounds()?[1 - i];
+            Ok([aa[0].min(bb[0]), aa[1].max(bb[1])])
+        };
         let mut authored = [None; 2];
         for use_index in 0..2 {
             let endpoint_index = if use_index == 0 { i } else { 1 - i };
@@ -320,17 +339,11 @@ pub fn qualify_with_candidates(
                     if linear_identity([(a, *ar), (b, *br)], ranges, &mut out, max_work)? {
                         true
                     } else if let Some(plane) = planes[i] {
-                        // Both original root enclosures are mapped outward
-                        // into the same canonical parameter domain. Uniqueness
-                        // is required on their entire contiguous union.
-                        let aa = uses[0].parameter_bounds()?[i];
-                        let bb = uses[1].parameter_bounds()?[1 - i];
-                        let domain = [aa[0].min(bb[0]), aa[1].max(bb[1])];
                         source_shared_edge::common_plane_root_in_domain(
                             world,
                             plane,
                             [(a, *ar), (b, *br)],
-                            domain,
+                            shared_domain()?,
                             &mut out,
                             max_work,
                             max_driver,
@@ -343,15 +356,13 @@ pub fn qualify_with_candidates(
                     if let Some(plane) = planes[i] {
                         mixed_identity(
                             world,
-                            point,
-                            *role,
-                            *t,
-                            &uses[1],
-                            {
-                                let aa = uses[0].parameter_bounds()?[i];
-                                let bb = uses[1].parameter_bounds()?[1 - i];
-                                [aa[0].min(bb[0]), aa[1].max(bb[1])]
+                            MixedEnd {
+                                point,
+                                role: *role,
+                                parameter: *t,
+                                fixed: &uses[1],
                             },
+                            shared_domain()?,
                             plane,
                             &mut out,
                             max_work,
@@ -365,15 +376,13 @@ pub fn qualify_with_candidates(
                     if let Some(plane) = planes[i] {
                         mixed_identity(
                             world,
-                            point,
-                            *role,
-                            *t,
-                            &uses[0],
-                            {
-                                let aa = uses[0].parameter_bounds()?[i];
-                                let bb = uses[1].parameter_bounds()?[1 - i];
-                                [aa[0].min(bb[0]), aa[1].max(bb[1])]
+                            MixedEnd {
+                                point,
+                                role: *role,
+                                parameter: *t,
+                                fixed: &uses[0],
                             },
+                            shared_domain()?,
                             plane,
                             &mut out,
                             max_work,
