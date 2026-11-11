@@ -161,18 +161,24 @@ pub(super) fn propose(
     }
     Ok((owner.solution().clone(), boundary, owner))
 }
+/// The curve network fit being reloaded: owned guides with their sites, the constraints, optional
+/// boundary locks and the fit options.
+pub(super) struct NetworkFit<'a> {
+    pub owned: &'a [OwnedGuide],
+    pub sites: &'a [Vec<f64>],
+    pub constraints: &'a [Constraint],
+    pub locks: Option<BoundaryLocks<'a>>,
+    pub fitting: FitOptions,
+}
 pub(super) fn admit_current(
     seed: &Surface,
     actual: &Surface,
-    owned: &[OwnedGuide],
-    sites: &[Vec<f64>],
-    constraints: &[Constraint],
-    locks: Option<BoundaryLocks<'_>>,
-    fitting: FitOptions,
+    fit: NetworkFit<'_>,
     settings: &Settings<'_>,
     used: &mut u64,
     cost: u64,
 ) -> Result<std::result::Result<variational::Qualified, String>> {
+    let NetworkFit { owned, sites, constraints, locks, fitting } = fit;
     let mut all = constraints.to_vec();
     for (g, t) in owned.iter().zip(sites) {
         super::sites::constraints(g, t, Some(actual), &mut all)?;

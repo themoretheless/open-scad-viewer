@@ -466,14 +466,11 @@ fn solve_impl(
         let mut relinearize_loading = false;
         if verified.admitted {
             if let (Some(settings), Some(current)) = (loading, physical.as_ref()) {
+                let fit = loading::NetworkFit { owned: &owned, sites: &sites, constraints, locks, fitting };
                 match loading::admit_current(
                     seed,
                     &solution.surface,
-                    &owned,
-                    &sites,
-                    constraints,
-                    locks,
-                    fitting,
+                    fit,
                     settings,
                     &mut loading_work,
                     current.diagnostics().assembly_terms,
