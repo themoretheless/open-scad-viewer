@@ -40,23 +40,22 @@ pub fn inspect(
     supports: [&Surface; 2],
     skin: &Surface,
     contacts: [&Contact; 2],
-    law: &RadiusLaw,
-    sides: [f64; 2],
-    tolerance_mm: f64,
-    max_cells: usize,
-    max_exact: u64,
+    check: RadiusCheck<'_>,
 ) -> Result<Report> {
     contacts[0].curve.validate()?;
     let domain = contacts[0].curve.domain();
-    inspect_contacts_in_domain(supports,skin,contacts,law,domain,sides,tolerance_mm,max_cells,max_exact)
+    inspect_contacts_in_domain(supports, skin, contacts, domain, check)
 }
 /// Recheck independently trimmed contacts on their original radius-law domain.
 /// Original coefficients, lifts and normals are inspected afresh. A trim does
 /// not renormalize the original endpoint radii to its retained interval.
 pub fn inspect_contacts_in_domain(
-    supports:[&Surface;2],skin:&Surface,contacts:[&Contact;2],law:&RadiusLaw,
-    original_law_domain:[f64;2],sides:[f64;2],tolerance_mm:f64,max_cells:usize,max_exact:u64,
-)->Result<Report>{
+    supports: [&Surface; 2],
+    skin: &Surface,
+    contacts: [&Contact; 2],
+    original_law_domain: [f64; 2],
+    check: RadiusCheck<'_>,
+) -> Result<Report> {
     inspect_uses(
         supports,
         [skin; 2],
@@ -66,13 +65,19 @@ pub fn inspect_contacts_in_domain(
             fillet_pcurve: &c.fillet_pcurve,
             reversed: [false; 2],
         }),
-        law,
         original_law_domain,
-        sides,
-        tolerance_mm,
-        max_cells,
-        max_exact,
+        check,
     )
+}
+/// The prescribed radius law, the contact sides relative to each support
+/// normal, the center-gap tolerance and the work budgets of one inspection.
+#[derive(Clone, Copy)]
+pub struct RadiusCheck<'a> {
+    pub law: &'a RadiusLaw,
+    pub sides: [f64; 2],
+    pub tolerance_mm: f64,
+    pub max_cells: usize,
+    pub max_exact: u64,
 }
 /// The two contact sides traced against each other by the adaptive normal-trace bound.
 #[derive(Clone, Copy)]
@@ -100,15 +105,10 @@ pub fn inspect_model(
     model: &crate::Model,
     skin_face: usize,
     edges: [usize; 2],
-    law: &RadiusLaw,
     law_domain: [f64; 2],
-    sides: [f64; 2],
-    tolerance_mm: f64,
-    max_cells: usize,
-    max_exact: u64,
+    check: RadiusCheck<'_>,
 ) -> Result<Report> {
-    inspect_model_skins(model, [skin_face; 2], edges, law, law_domain, sides,
-        tolerance_mm, max_cells, max_exact)
+    inspect_model_skins(model, [skin_face; 2], edges, law_domain, check)
 }
 /// Inspect two contact interfaces that may belong to different transition
 /// faces. Each curve and both pcurves are read from actual saved coedges.
@@ -117,12 +117,8 @@ pub fn inspect_model_skins(
     model: &crate::Model,
     skin_faces: [usize; 2],
     edges: [usize; 2],
-    law: &RadiusLaw,
     law_domain: [f64; 2],
-    sides: [f64; 2],
-    tolerance_mm: f64,
-    max_cells: usize,
-    max_exact: u64,
+    check: RadiusCheck<'_>,
 ) -> Result<Report> {
     model.validate()?;
     if skin_faces.iter().any(|&f| f >= model.faces.len())
@@ -177,25 +173,18 @@ pub fn inspect_model_skins(
         ],
         skin_faces.map(|f| &model.faces[f].surface),
         [uses[0], uses[1]],
-        law,
         law_domain,
-        sides,
-        tolerance_mm,
-        max_cells,
-        max_exact,
+        check,
     )
 }
 fn inspect_uses(
     supports: [&Surface; 2],
     skins: [&Surface; 2],
     contacts: [ContactUse<'_>; 2],
-    law: &RadiusLaw,
     law_domain: [f64; 2],
-    sides: [f64; 2],
-    tolerance_mm: f64,
-    max_cells: usize,
-    max_exact: u64,
+    check: RadiusCheck<'_>,
 ) -> Result<Report> {
+    let RadiusCheck { law, sides, tolerance_mm, max_cells, max_exact } = check;
     for s in supports {
         s.validate()?;
     }

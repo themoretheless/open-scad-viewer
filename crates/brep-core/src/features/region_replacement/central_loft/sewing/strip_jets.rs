@@ -118,12 +118,14 @@ pub(super) fn inspect(
             m,
             faces[j],
             edges[j],
-            &nurbs_core::offset::fillet_surfaces::RadiusLaw::Constant(strip.radius_mm),
             [0., 1.],
-            strip.sides,
-            c.options.tolerances[0],
-            (limits.cells - *cells).min(10000),
-            (limits.exact_work - *exact).min(100000),
+            crate::fillet_radius::RadiusCheck {
+                law: &nurbs_core::offset::fillet_surfaces::RadiusLaw::Constant(strip.radius_mm),
+                sides: strip.sides,
+                tolerance_mm: c.options.tolerances[0],
+                max_cells: (limits.cells - *cells).min(10000),
+                max_exact: (limits.exact_work - *exact).min(100000),
+            },
         )?;
         *cells += r.cells;
         *exact += r.exact_work;

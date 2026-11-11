@@ -109,20 +109,10 @@ fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body
     .unwrap();
     assert!(g2.complete && g2.within_tolerance);
     assert!(out.cells + g2.cells <= 100000);
-    let radius = brep_core::fillet_radius::inspect_model(
-        &out.model,
-        out.patch_face,
-        [out.patch_edges[3], out.patch_edges[1]],
-        &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
+    let radius = brep_core::fillet_radius::inspect_model(&out.model, out.patch_face, [out.patch_edges[3], out.patch_edges[1]], f.law_domain, brep_core::fillet_radius::RadiusCheck { law: &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
             start: 0.5,
             end: 1.5,
-        },
-        f.law_domain,
-        [-1., -1.],
-        1e-6,
-        100000 - out.cells - g2.cells,
-        1000000,
-    )
+        }, sides: [-1., -1.], tolerance_mm: 1e-6, max_cells: 100000 - out.cells - g2.cells, max_exact: 1000000 })
     .unwrap();
     assert_eq!(
         radius.decision,
@@ -142,20 +132,10 @@ fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body
     assert!(radius.maximum_center_gap_mm.unwrap()[1] <= 1e-6);
     assert!(radius.parameter_drift_upper_mm.unwrap() > 0.);
     assert!(radius.parameter_drift_upper_mm.unwrap() < 1e-10);
-    let renormalized = brep_core::fillet_radius::inspect_model(
-        &out.model,
-        out.patch_face,
-        [out.patch_edges[3], out.patch_edges[1]],
-        &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
+    let renormalized = brep_core::fillet_radius::inspect_model(&out.model, out.patch_face, [out.patch_edges[3], out.patch_edges[1]], out.model.edges[out.patch_edges[3]].curve.domain(), brep_core::fillet_radius::RadiusCheck { law: &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
             start: 0.5,
             end: 1.5,
-        },
-        out.model.edges[out.patch_edges[3]].curve.domain(),
-        [-1., -1.],
-        1e-6,
-        100000,
-        1000000,
-    )
+        }, sides: [-1., -1.], tolerance_mm: 1e-6, max_cells: 100000, max_exact: 1000000 })
     .unwrap();
     assert_eq!(
         renormalized.decision,
@@ -165,20 +145,10 @@ fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body
     let restored: brep_core::Model = value_codec::from_str(&saved).unwrap();
     restored.validate().unwrap();
     assert_eq!(restored, out.model);
-    let rechecked = brep_core::fillet_radius::inspect_model(
-        &restored,
-        out.patch_face,
-        [out.patch_edges[3], out.patch_edges[1]],
-        &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
+    let rechecked = brep_core::fillet_radius::inspect_model(&restored, out.patch_face, [out.patch_edges[3], out.patch_edges[1]], f.law_domain, brep_core::fillet_radius::RadiusCheck { law: &nurbs_core::offset::fillet_surfaces::RadiusLaw::Linear {
             start: 0.5,
             end: 1.5,
-        },
-        f.law_domain,
-        [-1., -1.],
-        1e-6,
-        100000,
-        1000000,
-    )
+        }, sides: [-1., -1.], tolerance_mm: 1e-6, max_cells: 100000, max_exact: 1000000 })
     .unwrap();
     assert_eq!(
         rechecked.decision,

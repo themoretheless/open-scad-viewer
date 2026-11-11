@@ -109,11 +109,13 @@ fn curved_rational_contacts_certify_ball_centers_with_rotating_original_normals(
         [&a, &b],
         &skin,
         [&contacts[0], &contacts[1]],
-        &RadiusLaw::Constant(1.),
-        [-1., 1.],
-        1e-6,
-        100000,
-        1000000,
+        brep_core::fillet_radius::RadiusCheck {
+            law: &RadiusLaw::Constant(1.),
+            sides: [-1., 1.],
+            tolerance_mm: 1e-6,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(
@@ -137,11 +139,13 @@ fn curved_rational_contacts_certify_ball_centers_with_rotating_original_normals(
         [&a, &b],
         &skin,
         [&contacts[0], &contacts[1]],
-        &RadiusLaw::Constant(2.),
-        [-1., 1.],
-        1e-6,
-        100000,
-        1000000,
+        brep_core::fillet_radius::RadiusCheck {
+            law: &RadiusLaw::Constant(2.),
+            sides: [-1., 1.],
+            tolerance_mm: 1e-6,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(
@@ -153,11 +157,13 @@ fn curved_rational_contacts_certify_ball_centers_with_rotating_original_normals(
         [&a, &b],
         &skin,
         [&contacts[0], &contacts[1]],
-        &RadiusLaw::Constant(1.),
-        [-1., 1.],
-        1e-6,
-        200,
-        1000000,
+        brep_core::fillet_radius::RadiusCheck {
+            law: &RadiusLaw::Constant(1.),
+            sides: [-1., 1.],
+            tolerance_mm: 1e-6,
+            max_cells: 200,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(
@@ -217,11 +223,13 @@ fn variable_nominal_radii_build_c2_skins_with_whole_interval_plane_contacts_and_
             [&a, &b],
             skin,
             [&contacts[0], &contacts[1]],
-            &RadiusLaw::Linear { start, end },
-            [options.side_a, options.side_b],
-            1e-6,
-            100000 - cells,
-            1000000 - exact,
+            brep_core::fillet_radius::RadiusCheck {
+                law: &RadiusLaw::Linear { start, end },
+                sides: [options.side_a, options.side_b],
+                tolerance_mm: 1e-6,
+                max_cells: 100000 - cells,
+                max_exact: 1000000 - exact,
+            },
         )
         .unwrap();
         cells += certified.cells;
@@ -244,11 +252,13 @@ fn variable_nominal_radii_build_c2_skins_with_whole_interval_plane_contacts_and_
             [&a, &b],
             skin,
             [&contacts[0], &contacts[1]],
-            &RadiusLaw::Constant(2.),
-            [options.side_a, options.side_b],
-            1e-6,
-            100000,
-            1000000,
+            brep_core::fillet_radius::RadiusCheck {
+                law: &RadiusLaw::Constant(2.),
+                sides: [options.side_a, options.side_b],
+                tolerance_mm: 1e-6,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .unwrap();
         assert_eq!(
@@ -260,11 +270,13 @@ fn variable_nominal_radii_build_c2_skins_with_whole_interval_plane_contacts_and_
             [&a, &b],
             skin,
             [&contacts[0], &contacts[1]],
-            &RadiusLaw::Linear { start, end },
-            [options.side_a, options.side_b],
-            1e-6,
-            0,
-            0,
+            brep_core::fillet_radius::RadiusCheck {
+                law: &RadiusLaw::Linear { start, end },
+                sides: [options.side_a, options.side_b],
+                tolerance_mm: 1e-6,
+                max_cells: 0,
+                max_exact: 0,
+            },
         )
         .unwrap();
         assert_eq!(
@@ -276,11 +288,13 @@ fn variable_nominal_radii_build_c2_skins_with_whole_interval_plane_contacts_and_
             [&a, &b],
             skin,
             [&contacts[0], &contacts[1]],
-            &RadiusLaw::Spline(vec![(0., start), (1., end)]),
-            [options.side_a, options.side_b],
-            1e-6,
-            100000,
-            1000000,
+            brep_core::fillet_radius::RadiusCheck {
+                law: &RadiusLaw::Spline(vec![(0., start), (1., end)]),
+                sides: [options.side_a, options.side_b],
+                tolerance_mm: 1e-6,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .unwrap();
         assert_eq!(
@@ -296,11 +310,13 @@ fn variable_nominal_radii_build_c2_skins_with_whole_interval_plane_contacts_and_
             [&a, &b],
             &changed,
             [&contacts[0], &contacts[1]],
-            &RadiusLaw::Linear { start, end },
-            [options.side_a, options.side_b],
-            1e-6,
-            100000,
-            1000000,
+            brep_core::fillet_radius::RadiusCheck {
+                law: &RadiusLaw::Linear { start, end },
+                sides: [options.side_a, options.side_b],
+                tolerance_mm: 1e-6,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .unwrap();
         assert_eq!(
@@ -445,7 +461,8 @@ fn refused_variable_cylinder_contact_keeps_original_support_mismatch_witness() {
     let r = fillet_contact::build(
         [&a, &b], RadiusLaw::Linear { start: 1., end: 1.5 },
         &options, 1e-6, 100000, 1000000,
-    ).unwrap();
+    )
+    .unwrap();
     // Regression of refusal evidence, not a qualified variable-radius fixture.
     assert_eq!(r.status, Status::UnresolvedContacts);
     assert!(r.contacts.is_none());
@@ -498,16 +515,26 @@ fn variable_g2_cylinder_proposal_qualifies_original_contacts_and_prescribed_ball
             nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-6, normal: 1e-5, curvature: 1e-4 },
             100000-cells,
             1000000-exact,
-        ).unwrap();
+        )
+        .unwrap();
         cells += proof.geometric.cells;
         exact += proof.positions.exact_work;
         assert!(proof.positions.proven);
         assert_eq!(proof.geometric.decision, nurbs_core::surface_join::Decision::WithinTolerance, "{:?}", proof.geometric);
     }
     let radius = brep_core::fillet_radius::inspect(
-        [&a, &b], r.fillet.surface.as_ref().unwrap(), [&contacts[0], &contacts[1]],
-        &law, [1., sign], 1e-6, 100000-cells, 1000000-exact,
-    ).unwrap();
+        [&a, &b],
+        r.fillet.surface.as_ref().unwrap(),
+        [&contacts[0], &contacts[1]],
+        brep_core::fillet_radius::RadiusCheck {
+            law: &law,
+            sides: [1., sign],
+            tolerance_mm: 1e-6,
+            max_cells: 100000-cells,
+            max_exact: 1000000-exact,
+        },
+    )
+    .unwrap();
     assert_eq!(radius.decision, brep_core::fillet_radius::Decision::WithinTolerance, "{}", radius.reason);
     assert!(radius.maximum_center_gap_mm.unwrap()[1] <= 1e-6);
     assert!(cells + radius.cells <= 100000);
@@ -571,11 +598,13 @@ fn curved_rational_support_contacts_are_continuously_qualified_for_both_builders
                 [&a, &c],
                 skin,
                 [&contacts[0], &contacts[1]],
-                &RadiusLaw::Constant(1.),
-                [options.side_a, options.side_b],
-                1e-6,
-                100000,
-                1000000,
+                brep_core::fillet_radius::RadiusCheck {
+                    law: &RadiusLaw::Constant(1.),
+                    sides: [options.side_a, options.side_b],
+                    tolerance_mm: 1e-6,
+                    max_cells: 100000,
+                    max_exact: 1000000,
+                },
             )
             .unwrap();
             assert_eq!(

@@ -57,10 +57,19 @@ fn curved_nurbs_contact_body_is_g2_curvature_bounded_and_globally_embedded() {
     }
     // A valid closed G2 smoothing is not automatically a prescribed R1 fillet.
     let radius = brep_core::fillet_radius::inspect_model_skins(
-        body.model(), [body.patch_faces()[0]; 2], saved_contacts,
-        &nurbs_core::offset::fillet_surfaces::RadiusLaw::Constant(1.),
-        contacts[0].curve.domain(), [1., -1.], 1e-7, 100000, 1000000,
-    ).unwrap();
+        body.model(),
+        [body.patch_faces()[0]; 2],
+        saved_contacts,
+        contacts[0].curve.domain(),
+        brep_core::fillet_radius::RadiusCheck {
+            law: &nurbs_core::offset::fillet_surfaces::RadiusLaw::Constant(1.),
+            sides: [1., -1.],
+            tolerance_mm: 1e-7,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
+    )
+    .unwrap();
     eprintln!("saved_contact_radius decision={:?} reason={} witness={:?}",
         radius.decision, radius.reason, radius.violation_witness);
     assert_eq!(radius.decision, brep_core::fillet_radius::Decision::ExceedsTolerance);

@@ -191,12 +191,14 @@ fn main() {
         supports,
         skin,
         [&middle[0], &middle[1]],
-        &RadiusLaw::Constant(1.),
         [0.5, 1.5],
-        [1., -1.],
-        1e-7,
-        100000,
-        1000000,
+        fillet_radius::RadiusCheck {
+            law: &RadiusLaw::Constant(1.),
+            sides: [1., -1.],
+            tolerance_mm: 1e-7,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     println!(

@@ -25,9 +25,19 @@ fn automatic_r1_contacts_on_original_curved_nurbs_stay_on_selected_branch() {
         assert!(contact.support_pcurve.control_points.iter()
             .all(|p| (0.5..=1.5).contains(&p[0])));
     }
-    let radius=fillet_radius::inspect(supports,built.fillet.surface.as_ref().unwrap(),
-        [&contacts[0],&contacts[1]],&RadiusLaw::Constant(request.radius_mm),
-        [1.,-1.],1e-7,100000,1000000).unwrap();
+    let radius=fillet_radius::inspect(
+        supports,
+        built.fillet.surface.as_ref().unwrap(),
+        [&contacts[0],&contacts[1]],
+        fillet_radius::RadiusCheck {
+            law: &RadiusLaw::Constant(request.radius_mm),
+            sides: [1.,-1.],
+            tolerance_mm: 1e-7,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
+    )
+    .unwrap();
     assert_eq!(radius.decision,fillet_radius::Decision::WithinTolerance,"{}",radius.reason);
     assert!(radius.maximum_center_gap_mm.unwrap()[1]<=1e-7);
     let mut seam_cells=0;
@@ -39,7 +49,8 @@ fn automatic_r1_contacts_on_original_curved_nurbs_stay_on_selected_branch() {
             nurbs_core::surface_g2_pcurves::G2PcurveTolerance { position: 1e-7, normal: 1e-5, curvature: 1e-4 },
             100000-seam_cells,
             1000000-seam_exact,
-        ).unwrap();
+        )
+        .unwrap();
         assert!(seam.positions.proven);
         assert_eq!(seam.geometric.decision,nurbs_core::surface_join::Decision::WithinTolerance);
         seam_cells+=seam.geometric.cells;

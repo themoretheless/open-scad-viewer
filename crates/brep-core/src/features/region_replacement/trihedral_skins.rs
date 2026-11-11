@@ -512,12 +512,14 @@ fn build_strips(
             surfaces,
             saved,
             [&actual[0], &actual[1]],
-            &RadiusLaw::Constant(edge.radius_mm),
             contacts[0].curve.domain(),
-            sides,
-            limits.tolerances[0],
-            work.cells()?,
-            work.exact()?,
+            fillet_radius::RadiusCheck {
+                law: &RadiusLaw::Constant(edge.radius_mm),
+                sides,
+                tolerance_mm: limits.tolerances[0],
+                max_cells: work.cells()?,
+                max_exact: work.exact()?,
+            },
         )?;
         work.charge(radius.cells, radius.exact_work)?;
         if radius.decision != fillet_radius::Decision::WithinTolerance {

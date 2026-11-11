@@ -28,12 +28,14 @@ fn expanded_runout_keeps_central_radius_and_removes_endpoint_obstruction() {
         supports,
         &proposal.skin,
         [&center[0], &center[1]],
-        &RadiusLaw::Constant(1.),
         [0.5, 1.5],
-        [1., -1.],
-        1e-7,
-        100000,
-        1000000,
+        fillet_radius::RadiusCheck {
+            law: &RadiusLaw::Constant(1.),
+            sides: [1., -1.],
+            tolerance_mm: 1e-7,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(

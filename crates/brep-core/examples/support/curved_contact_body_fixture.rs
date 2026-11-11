@@ -243,20 +243,10 @@ pub fn inspect_saved(
         exact += proof.positions.exact_work;
         seams.push(proof);
     }
-    let radius = brep_core::fillet_radius::inspect_model(
-        &out.model,
-        out.patch_face,
-        [out.patch_edges[3], out.patch_edges[1]],
-        &RadiusLaw::Linear {
+    let radius = brep_core::fillet_radius::inspect_model(&out.model, out.patch_face, [out.patch_edges[3], out.patch_edges[1]], f.law_domain, brep_core::fillet_radius::RadiusCheck { law: &RadiusLaw::Linear {
             start: 1.,
             end: 1.5,
-        },
-        f.law_domain,
-        f.sides,
-        1e-6,
-        100000 - cells,
-        1000000 - exact,
-    )?;
+        }, sides: f.sides, tolerance_mm: 1e-6, max_cells: 100000 - cells, max_exact: 1000000 - exact })?;
     cells += radius.cells;
     exact += radius.exact_work;
     Ok(SavedChecks {
