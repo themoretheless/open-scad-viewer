@@ -217,7 +217,7 @@ pub(crate) enum Op {
 fn crossings(a: &Span, b: &Span, band: f64) -> (Vec<f64>, Vec<f64>) {
     let mut ta = Vec::new();
     let mut tb = Vec::new();
-    let mut add = |p: P, ta: &mut Vec<f64>, tb: &mut Vec<f64>| {
+    let add = |p: P, ta: &mut Vec<f64>, tb: &mut Vec<f64>| {
         let (u, v) = (a.parameter_of(p), b.parameter_of(p));
         let (ea, eb) = (band / span_length(a), band / span_length(b));
         if (-ea..=1. + ea).contains(&u)
@@ -373,18 +373,17 @@ fn chain(mut pieces: Vec<Span>, band: f64) -> Result<Vec<Vec<Span>>> {
     let mut loops = Vec::new();
     while let Some(first) = pieces.pop() {
         let start = first.at(0.);
+        let mut end = first.at(1.);
         let mut current = vec![first];
-        loop {
-            let end = current.last().unwrap().at(1.);
-            if close(end, start) {
-                break;
-            }
+        while !close(end, start) {
             let Some(index) = pieces.iter().position(|p| close(p.at(0.), end)) else {
                 return Err(unsupported(
                     "Revolution section Boolean: boundary pieces do not close into loops",
                 ));
             };
-            current.push(pieces.swap_remove(index));
+            let next = pieces.swap_remove(index);
+            end = next.at(1.);
+            current.push(next);
         }
         loops.push(current);
     }

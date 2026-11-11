@@ -1,4 +1,5 @@
 use super::*;
+#[cfg(feature = "gpu")]
 use crate::dense::plane::{DepthGrid, ReferenceView};
 
 /// Builds depth maps from host-computed score rows (indexed by image, aligned
@@ -104,6 +105,7 @@ pub fn finish_host_views(
 pub(super) type SweepRanges = (Vec<f64>, Vec<f64>);
 /// Inverse-depth hypotheses of a sweep with their optional per-pixel ranges, the near depth and
 /// the inverse-depth span `1/near - 1/far` that maps a depth to its bin.
+#[cfg(feature = "gpu")]
 #[derive(Clone, Copy)]
 pub(super) struct InverseDepthBins<'a> {
     pub hypotheses: &'a [f64],

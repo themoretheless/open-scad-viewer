@@ -368,6 +368,182 @@ struct ProofOutputs<'a> {
     coordinates: &'a mut Option<ProofCoordinates>,
     source_shear: &'a mut Option<SourceShearReport>,
 }
+fn propose_proof_coordinates(
+    context: &mut Context<'_>,
+    out: &mut IdealVolumeReport,
+    work: MotionWork,
+    coordinates: &mut Option<ProofCoordinates>,
+) -> Result<bool> {
+    let proposal_time = if context.second.is_some() { 0.5 } else { 0.125 };
+    let Enclosed::Value(e) = context.enclose(
+        [[0.5; 2], [0.5; 2], [proposal_time; 2]],
+        out,
+        work.max_cells,
+    )?
+    else {
+        return Ok(true);
+    };
+    if out.cells >= work.max_cells {
+        return Ok(true);
+    }
+    out.cells += 1;
+    // Literal coefficient directions retain the global radial and carrier axes
+    // better than an arbitrary rotated point basis. This average is ONLY an
+    // inverse proposal; the atlas still evaluates every original coefficient
+    // with outward rounding.
+    let proposal = match context.pieces {
+        Motion::Rational(p) => {
+            let a = p[0].controls[0];
+            let b = p[p.len() / 2].controls[0];
+            let d = p[0].controls[1];
+            [
+                a[0],
+                std::array::from_fn(|k| a[1][k] * 0.5 + b[1][k] * 0.5),
+                std::array::from_fn(|k| d[0][k] - a[0][k]),
+            ]
+        }
+        _ => [[0.; 3]; 3],
+    };
+    let Some(p) = atlas::inverse_proposal(proposal.map(|v| v.map(I::point))).or_else(|| {
+        if context.second.is_some() {
+            atlas::normalized_inverse_proposal(e.columns)
+        } else {
+            atlas::inverse_proposal(e.columns)
+        }
+    }) else {
+        return Ok(true);
+    };
+    let determinant = iv::dot_tight(
+        p[0].map(I::point),
+        iv::cross(p[1].map(I::point), p[2].map(I::point))?,
+    )?;
+    if determinant.lo > 0. || determinant.hi < 0. {
+        let factor = match context.pieces {
+            Motion::Rational(p) => match rational::prove_factor(p, &mut out.exact_work, work.max_exact_work) {
+                Ok(f) => f,
+                Err(()) => {
+                    out.reason = Some("affine-volume-column-factor-work-limit");
+                    return Ok(false);
+                }
+            },
+            _ => None,
+        };
+        let c = ProofCoordinates {
+            rows: p,
+            offset: context.pieces.endpoints(0).0[3],
+            determinant: [determinant.lo, determinant.hi],
+            column_factor: factor,
+        };
+        context.poses.clear();
+        context.coordinates = Some(c.clone());
+        *coordinates = Some(c);
+    }
+    Ok(true)
+}
+
+fn certify_open_paired_carriers(
+    context: &mut Context<'_>,
+    end: &Surface,
+    projection: [[f64; 3]; 3],
+    work: MotionWork,
+    out: &mut IdealVolumeReport,
+) -> Result<()> {
+    let cost = 1
+        + (context.carrier.knots_u.len()
+            + context.carrier.knots_v.len()
+            + end.knots_u.len()
+            + end.knots_v.len()) as u64;
+    if cost > work.max_exact_work - out.exact_work {
+        out.exact_work = work.max_exact_work;
+        out.reason = Some("affine-volume-c1-premise-work-limit");
+        return Ok(());
+    }
+    out.exact_work += cost;
+    if charts::surface_c1(context.carrier) && charts::surface_c1(end) {
+        let Some(c1) = motion_c1::inspect(context.pieces, &mut out.exact_work, work.max_exact_work) else {
+            out.reason = Some("affine-volume-c1-motion-work-limit");
+            return Ok(());
+        };
+        if c1
+            && atlas::certify_c1_rectangular_map(
+                |b, out, max| context.enclose(b, out, max),
+                projection,
+                out,
+                work.max_cells,
+            )?
+        {
+            out.embedding_certified = true;
+            out.regularity_certified = true;
+            out.parameter_topology_preserved = true;
+            out.reason = None;
+            return Ok(());
+        }
+        if out.cells == work.max_cells {
+            return Ok(());
+        }
+    }
+    let smooth = |s: &Surface| {
+        !s.periodic_u
+            && !s.periodic_v
+            && s.control_points.len() == s.degree_u + 1
+            && s.control_points[0].len() == s.degree_v + 1
+            && s.knots_u[..=s.degree_u].iter().all(|x| *x == s.knots_u[s.degree_u])
+            && s.knots_u[s.control_points.len()..]
+                .iter()
+                .all(|x| *x == s.knots_u[s.control_points.len()])
+            && s.knots_v[..=s.degree_v].iter().all(|x| *x == s.knots_v[s.degree_v])
+            && s.knots_v[s.control_points[0].len()..]
+                .iter()
+                .all(|x| *x == s.knots_v[s.control_points[0].len()])
+    };
+    if context.pieces.len() == 1 && smooth(context.carrier) && smooth(end) {
+        let trial_max = work.max_cells.min(out.cells.saturating_add(8192));
+        if out.cells < trial_max
+            && let Ok(Enclosed::Value(seed)) = context.enclose([[0.5; 2]; 3], out, trial_max)
+            && let Some(rows) = atlas::inverse_proposal(seed.columns)
+            && let Ok(d) = iv::cross(rows[1].map(I::point), rows[2].map(I::point))
+                .and_then(|cross| iv::dot_tight(rows[0].map(I::point), cross))
+            && (d.lo > 0. || d.hi < 0.)
+        {
+            context.coordinates = Some(ProofCoordinates {
+                rows,
+                offset: [0.; 3],
+                determinant: [d.lo, d.hi],
+                column_factor: None,
+            });
+            context.poses.clear();
+        }
+        let accepted = atlas::certify_smooth_p_matrix(
+            |b, out, max| context.enclose(b, out, max),
+            projection,
+            out,
+            trial_max,
+        )
+        .unwrap_or(false);
+        #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
+        if std::env::var_os("OSV_TRACE_AFFINE_VOLUME").is_some() {
+            eprintln!(
+                "smooth-p-matrix: accepted={accepted} cells={} trial={trial_max} conditioned={}",
+                out.cells,
+                context.coordinates.is_some()
+            );
+        }
+        if accepted {
+            return Ok(());
+        }
+        context.coordinates = None;
+        context.poses.clear();
+    }
+    atlas::certify_map_global_first(
+        |b, out, max| context.enclose(b, out, max),
+        projection,
+        out,
+        work.max_cells,
+        false,
+    )?;
+    Ok(())
+}
+
 fn certify_motion_impl(
     source: MotionSource<'_>,
     work: MotionWork,
@@ -487,138 +663,16 @@ fn certify_motion_impl(
         coordinates: None,
         separable: separated,
     };
-    if precondition && out.cells < max_cells {
-        // A single native proposal from ORIGINAL point jets. Its invertibility
-        // is independently proved; no point regularity supplies atlas credit.
-        let proposal_time = if second.is_some() { 0.5 } else { 0.125 };
-        if let Enclosed::Value(e) =
-            context.enclose([[0.5; 2], [0.5; 2], [proposal_time; 2]], &mut out, max_cells)?
-        {
-            if out.cells < max_cells {
-                out.cells += 1;
-                // Literal coefficient directions retain the global radial and
-                // carrier axes better than an arbitrary rotated point basis.
-                // This average is ONLY an inverse proposal; the atlas still
-                // evaluates every original coefficient with outward rounding.
-                let proposal = match pieces {
-                    Motion::Rational(p) => {
-                        let a = p[0].controls[0];
-                        let b = p[p.len() / 2].controls[0];
-                        let d = p[0].controls[1];
-                        [
-                            a[0],
-                            std::array::from_fn(|k| a[1][k] * 0.5 + b[1][k] * 0.5),
-                            std::array::from_fn(|k| d[0][k] - a[0][k]),
-                        ]
-                    }
-                    _ => [[0.; 3]; 3],
-                };
-                if let Some(p) = atlas::inverse_proposal(proposal.map(|v| v.map(I::point)))
-                    .or_else(|| if second.is_some() {
-                        atlas::normalized_inverse_proposal(e.columns)
-                    } else {
-                        atlas::inverse_proposal(e.columns)
-                    })
-                {
-                    let determinant = iv::dot_tight(
-                        p[0].map(I::point),
-                        iv::cross(p[1].map(I::point), p[2].map(I::point))?,
-                    )?;
-                    if determinant.lo > 0. || determinant.hi < 0. {
-                        let factor = match pieces {
-                            Motion::Rational(p) => {
-                                match rational::prove_factor(p, &mut out.exact_work, max_exact_work)
-                                {
-                                    Ok(f) => f,
-                                    Err(()) => {
-                                        out.reason = Some("affine-volume-column-factor-work-limit");
-                                        return Ok(out);
-                                    }
-                                }
-                            }
-                            _ => None,
-                        };
-                        let c = ProofCoordinates {
-                            rows: p,
-                            offset: pieces.endpoints(0).0[3],
-                            determinant: [determinant.lo, determinant.hi],
-                            column_factor: factor,
-                        };
-                        context.poses.clear();
-                        context.coordinates = Some(c.clone());
-                        *coordinates = Some(c);
-                    }
-                }
-            }
-        }
+    if precondition
+        && out.cells < max_cells
+        && !propose_proof_coordinates(&mut context, &mut out, work, coordinates)?
+    {
+        return Ok(out);
     }
-    // Smooth original poses with exact C1 time joins and literal C1 carrier
-    // knots permit the separate Gale-Nikaido rectangular-domain theorem.
-    // No arbitrary C0 station join or closed quotient borrows that premise.
-    if second.is_some() && !closed {
-        let end=second.unwrap();
-        let cost=1+(carrier.knots_u.len()+carrier.knots_v.len()+end.knots_u.len()+end.knots_v.len()) as u64;
-        if cost>max_exact_work-out.exact_work {
-            out.exact_work=max_exact_work;out.reason=Some("affine-volume-c1-premise-work-limit");return Ok(out);
-        }
-        out.exact_work+=cost;
-        if charts::surface_c1(carrier) && charts::surface_c1(end) {
-            let c1=match motion_c1::inspect(pieces,&mut out.exact_work,max_exact_work) {
-                Some(c1)=>c1,
-                None=>{out.reason=Some("affine-volume-c1-motion-work-limit");return Ok(out);}
-            };
-            if c1 && atlas::certify_c1_rectangular_map(|b,out,max|context.enclose(b,out,max),projection,&mut out,max_cells)? {
-                out.embedding_certified=true;out.regularity_certified=true;
-                out.parameter_topology_preserved=true;out.reason=None;return Ok(out);
-            }
-            if out.cells==max_cells {return Ok(out);}
-        }
-    }
-    // The whole-field metric theorem has no constant-frame premise. For
-    // open paired carriers, attempt the SAME bounded global proof before
-    // pair refinement; source points still supply no admission credit.
-    if second.is_some() && !closed {
-        // A single positive-weight clamped rational chart is smooth on a
-        // neighborhood of its complete normalized rectangle. No caller flag,
-        // C0 seam, periodic quotient or piecewise frame enters this theorem.
-        let smooth = |s:&Surface| !s.periodic_u && !s.periodic_v
-            && s.control_points.len()==s.degree_u+1
-            && s.control_points[0].len()==s.degree_v+1
-            && s.knots_u[..=s.degree_u].iter().all(|x|*x==s.knots_u[s.degree_u])
-            && s.knots_u[s.control_points.len()..].iter().all(|x|*x==s.knots_u[s.control_points.len()])
-            && s.knots_v[..=s.degree_v].iter().all(|x|*x==s.knots_v[s.degree_v])
-            && s.knots_v[s.control_points[0].len()..].iter().all(|x|*x==s.knots_v[s.control_points[0].len()]);
-        if pieces.len()==1 && smooth(carrier) && second.is_some_and(smooth) {
-            // Reserve part of the SAME ledger for this sufficient proposal.
-            // Unsuccessful work is retained before the existing atlas runs.
-            let trial_max=max_cells.min(out.cells.saturating_add(8192));
-            // Transform ORIGINAL pose coefficients before interval evaluation.
-            // Applying the same matrix only to final world boxes loses exact
-            // cancellation between the rotating columns of a quarter turn.
-            if out.cells<trial_max {
-                if let Ok(Enclosed::Value(seed))=context.enclose([[0.5;2];3],&mut out,trial_max) {
-                    if let Some(rows)=atlas::inverse_proposal(seed.columns) {
-                        let determinant=iv::cross(rows[1].map(I::point),rows[2].map(I::point))
-                            .and_then(|cross|iv::dot_tight(rows[0].map(I::point),cross));
-                        if let Some(d)=determinant.ok().filter(|d|d.lo>0. || d.hi<0.) {
-                            context.coordinates=Some(ProofCoordinates{rows,offset:[0.;3],determinant:[d.lo,d.hi],column_factor:None});
-                            context.poses.clear();
-                        }
-                    }
-                }
-            }
-            let accepted=atlas::certify_smooth_p_matrix(|b,out,max|context.enclose(b,out,max),projection,&mut out,trial_max).unwrap_or(false);
-            #[cfg(all(debug_assertions, not(target_arch="wasm32")))]
-            if std::env::var_os("OSV_TRACE_AFFINE_VOLUME").is_some(){
-                eprintln!("smooth-p-matrix: accepted={accepted} cells={} trial={trial_max} conditioned={}",out.cells,context.coordinates.is_some());
-            }
-            if accepted {
-                return Ok(out);
-            }
-            context.coordinates=None;
-            context.poses.clear();
-        }
-        atlas::certify_map_global_first(|b,out,max|context.enclose(b,out,max),projection,&mut out,max_cells,closed)?;
+    if let Some(end) = second
+        && !closed
+    {
+        certify_open_paired_carriers(&mut context, end, projection, work, &mut out)?;
         return Ok(out);
     }
     atlas::certify_map(

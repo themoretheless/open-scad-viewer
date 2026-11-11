@@ -45,18 +45,22 @@ fn admitted_weight_merit_search_matches_an_independent_point_force_objective() {
     let s = plane(2);
     let c = Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.]]).unwrap();
     let p = pc(0.);
-    let mut m = Model::default();
-    m.material = Material {
-        membrane: 0.,
-        bending: 0.,
-        poisson: 0.3,
+    let m = Model {
+        material: Material {
+            membrane: 0.,
+            bending: 0.,
+            poisson: 0.3,
+        },
+        points: vec![PointLoad {
+            uv: [0.5, 0.5],
+            force: [0., 0., 1.],
+        }],
+        ..Model::default()
     };
-    m.points = vec![PointLoad {
-        uv: [0.5, 0.5],
-        force: [0., 0., 1.],
-    }];
-    let mut o = loading::Options::default();
-    o.variable_weights = vec![[1, 1]];
+    let mut o = loading::Options {
+        variable_weights: vec![[1, 1]],
+        ..loading::Options::default()
+    };
     o.geometry.weight_bounds = [0.5, 2.];
     o.geometry.network.network.fitting.anchor_weight = 0.2;
     let q = loading::solve(&s, &[guide(&c, &p)], &[], &[], None, &m, o).unwrap();
@@ -103,12 +107,16 @@ fn original_circle_unavailable_to_fixed_weights_receives_original_rest_physics()
     let b = target.iso(Axis::V, 1.).unwrap();
     let pa = pc(0.);
     let pb = pc(1.);
-    let mut o = loading::Options::default();
+    let mut o = loading::Options {
+        variable_weights: vec![[1, 0], [1, 1]],
+        max_weight_trials: 0,
+        ..loading::Options::default()
+    };
     o.geometry.weight_bounds = [0.7, 1.];
-    o.variable_weights = vec![[1, 0], [1, 1]];
-    o.max_weight_trials = 0;
-    let mut m = Model::default();
-    m.pressure = 0.01;
+    let m = Model {
+        pressure: 0.01,
+        ..Model::default()
+    };
     let q = loading::solve(&s, &[guide(&a, &pa), guide(&b, &pb)], &[], &[], None, &m, o).unwrap();
     check(&q);
     assert!(q.fitting().iterations() > 0);
@@ -145,11 +153,15 @@ fn variable_weights_combine_original_g2_support_clock_and_loaded_equilibrium() {
             reverse: false,
         },
     };
-    let mut o = loading::Options::default();
+    let mut o = loading::Options {
+        max_weight_trials: 0,
+        ..loading::Options::default()
+    };
     o.geometry.weight_bounds = [0.4, 1.5];
-    o.max_weight_trials = 0;
-    let mut m = Model::default();
-    m.pressure = 0.01;
+    let m = Model {
+        pressure: 0.01,
+        ..Model::default()
+    };
     let q = loading::solve(&s, &[], &[g], &[], None, &m, o).unwrap();
     check(&q);
     assert!(
@@ -182,12 +194,16 @@ fn free_interior_weights_retain_original_four_boundary_layers_and_g2() {
         boundaries: &sides,
         tolerances: [1e-8, 1e-6, 1e-6],
     };
-    let mut o = loading::Options::default();
-    o.variable_weights = vec![[3, 3]];
+    let mut o = loading::Options {
+        variable_weights: vec![[3, 3]],
+        max_weight_trials: 0,
+        ..loading::Options::default()
+    };
     o.geometry.weight_bounds = [0.5, 1.5];
-    o.max_weight_trials = 0;
-    let mut m = Model::default();
-    m.pressure = 0.01;
+    let m = Model {
+        pressure: 0.01,
+        ..Model::default()
+    };
     let q = loading::solve(&s, &[guide(&c, &p)], &[], &[], Some(locks), &m, o).unwrap();
     check(&q);
     assert!((q.surface().weights[3][3] - 0.75).abs() < 1e-6);
@@ -209,12 +225,16 @@ fn weight_masks_gauge_boxes_and_exhausted_work_refuse_without_changing_inputs() 
     let p = pc(0.);
     let m = Model::default();
     for mask in [vec![[0, 0]], vec![[99, 0]], vec![[1, 1], [1, 1]]] {
-        let mut o = loading::Options::default();
-        o.variable_weights = mask;
+        let o = loading::Options {
+            variable_weights: mask,
+            ..loading::Options::default()
+        };
         assert!(loading::solve(&s, &[guide(&c, &p)], &[], &[], None, &m, o).is_err());
     }
-    let mut o = loading::Options::default();
-    o.max_total_assembly_terms = 1;
+    let o = loading::Options {
+        max_total_assembly_terms: 1,
+        ..loading::Options::default()
+    };
     assert!(loading::solve(&s, &[guide(&c, &p)], &[], &[], None, &m, o).is_err());
     let mut o = loading::Options::default();
     o.geometry.weight_bounds = [1.1, 2.];
@@ -228,20 +248,24 @@ fn interrupted_merit_search_returns_qualified_geometry_with_explicit_unfinished_
     let original = s.clone();
     let mut c = Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.]]).unwrap();
     let p = pc(0.);
-    let mut m = Model::default();
-    m.material = Material {
-        membrane: 0.,
-        bending: 0.,
-        poisson: 0.3,
+    let mut m = Model {
+        material: Material {
+            membrane: 0.,
+            bending: 0.,
+            poisson: 0.3,
+        },
+        points: vec![PointLoad {
+            uv: [0.5, 0.5],
+            force: [0., 0., 1.],
+        }],
+        ..Model::default()
     };
-    m.points = vec![PointLoad {
-        uv: [0.5, 0.5],
-        force: [0., 0., 1.],
-    }];
-    let mut o = loading::Options::default();
-    o.variable_weights = vec![[1, 1]];
+    let mut o = loading::Options {
+        variable_weights: vec![[1, 1]],
+        max_weight_trials: 1,
+        ..loading::Options::default()
+    };
     o.geometry.weight_bounds = [0.5, 2.];
-    o.max_weight_trials = 1;
     let q = loading::solve(&s, &[guide(&c, &p)], &[], &[], None, &m, o).unwrap();
     assert_eq!(q.report().attempted, 1);
     assert!(q.report().trial_budget_exhausted && !q.report().joint_weight_stationarity_proven);

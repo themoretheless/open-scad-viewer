@@ -91,18 +91,25 @@ fn choose(n: usize, k: usize) -> usize {
 }
 /// Source cell saturation and original affine clock eligibility are checked by
 /// the caller. All restrictions below use exact ratios of the source floats.
+/// One boundary row and knot span of the surface, the curve parameter interval `[a, b]` and the
+/// surface parameter range `[lo, hi]` it is compared over.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct ResidualWindow {
+    pub row: usize,
+    pub span: usize,
+    pub a: f64,
+    pub b: f64,
+    pub lo: f64,
+    pub hi: f64,
+}
 pub(super) fn within(
     c: &Curve,
     s: &Surface,
-    row: usize,
-    span: usize,
-    a: f64,
-    b: f64,
-    lo: f64,
-    hi: f64,
+    window: ResidualWindow,
     tolerance: f64,
     w: &mut Work,
 ) -> Option<bool> {
+    let ResidualWindow { row, span, a, b, lo, hi } = window;
     let p = c.degree;
     let q = s.degree_u;
     if p > 16 || q > 16 || c.control_points.len() != p + 1 {
@@ -472,7 +479,13 @@ mod tests {
             periodic_v: false,
         };
         assert_eq!(
-            within(&c, &s, 0, 2, 0., 1., 0., 1., 0., &mut Work::new(1)),
+            within(
+                &c,
+                &s,
+                ResidualWindow { row: 0, span: 2, a: 0., b: 1., lo: 0., hi: 1. },
+                0.,
+                &mut Work::new(1),
+            ),
             Some(true)
         );
         let p = Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]]).unwrap();
@@ -484,12 +497,24 @@ mod tests {
             Status::WithinTolerance
         );
         assert_eq!(
-            within(&c, &s, 0, 2, 0., 1., 0., 1., 1e-12, &mut Work { left: 0 }),
+            within(
+                &c,
+                &s,
+                ResidualWindow { row: 0, span: 2, a: 0., b: 1., lo: 0., hi: 1. },
+                1e-12,
+                &mut Work { left: 0 },
+            ),
             None
         );
         s.control_points[1][0][2] = 0.01;
         assert_eq!(
-            within(&c, &s, 0, 2, 0., 1., 0., 1., 1e-12, &mut Work::new(1)),
+            within(
+                &c,
+                &s,
+                ResidualWindow { row: 0, span: 2, a: 0., b: 1., lo: 0., hi: 1. },
+                1e-12,
+                &mut Work::new(1),
+            ),
             Some(false)
         );
         assert_ne!(

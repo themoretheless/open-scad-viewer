@@ -253,12 +253,7 @@ pub(super) fn inspect(
             && rational_boundary_residual::within(
                 c,
                 s,
-                row,
-                i,
-                a,
-                b,
-                s.knots_u[i].max(ends[0]),
-                s.knots_u[i + 1].min(ends[1]),
+                rational_boundary_residual::ResidualWindow { row, span: i, a, b, lo: s.knots_u[i].max(ends[0]), hi: s.knots_u[i + 1].min(ends[1]) },
                 tolerance,
                 &mut rational_work,
             ) != Some(true)

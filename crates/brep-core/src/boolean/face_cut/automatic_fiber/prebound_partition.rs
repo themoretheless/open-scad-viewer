@@ -3,19 +3,31 @@ use super::*;
 #[path = "endpoint.rs"]
 mod endpoint;
 
+/// The face being cut and the cutter face, each in its own model.
+#[derive(Clone, Copy)]
+pub(crate) struct FiberFaces<'a> {
+    pub source: &'a Model,
+    pub face: usize,
+    pub cutter: &'a Model,
+    pub cutter_face: usize,
+}
+/// Cell, exact-work and evaluation limits of one prebound fiber partition.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct FiberWork {
+    pub max_cells: usize,
+    pub max_exact: u64,
+    pub max_evaluations: usize,
+}
 pub(crate) fn partition_fiber_prebound(
-    source: &Model,
-    face: usize,
-    cutter: &Model,
-    cutter_face: usize,
+    faces: FiberFaces<'_>,
     roots: &[(usize, [[f64; 2]; 3])],
     parameter_box: [[f64; 2]; 4],
     axis: ss::FiberAxis,
     tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
-    max_evaluations: usize,
+    work: FiberWork,
 ) -> Result<AutomaticFiberPartition> {
+    let FiberFaces { source, face, cutter, cutter_face } = faces;
+    let FiberWork { max_cells, max_exact, max_evaluations } = work;
     let free = match axis {
         ss::FiberAxis::FirstU => 0,
         ss::FiberAxis::FirstV => 1,

@@ -59,21 +59,10 @@ pub fn inspect_interval(
         ));
     }
     let faces = [uses[0].0, uses[1].0];
-    let contact = contact_normal_agreement::certify_interval(
-        &original.curve,
-        [
+    let contact = contact_normal_agreement::certify_interval(contact_normal_agreement::ContactEdge { world: &original.curve, surfaces: [
             &model.faces[faces[0]].surface,
             &model.faces[faces[1]].surface,
-        ],
-        [&uses[0].1.pcurve, &uses[1].1.pcurve],
-        [uses[0].1.reversed, uses[1].1.reversed],
-        interval,
-        limits.tolerance_mm,
-        limits.max_sine_squared,
-        limits.agreement_cells,
-        limits.normal_cells,
-        limits.normal_spans,
-    )?;
+        ], pcurves: [&uses[0].1.pcurve, &uses[1].1.pcurve], reversed: [uses[0].1.reversed, uses[1].1.reversed] }, interval, limits.tolerance_mm, limits.max_sine_squared, contact_normal_agreement::NormalWork { agreement_cells: limits.agreement_cells, normal_cells: limits.normal_cells, normal_spans: limits.normal_spans })?;
     Ok(Report {
         edge,
         faces,

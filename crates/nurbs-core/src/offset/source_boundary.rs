@@ -62,33 +62,15 @@ impl Report {
    "audits":self.audits.iter().map(|a|json!({"side":a.side,"loop":a.loop_index,"curve":a.curve_index,"exactStatus":a.exact_status,"agreementStatus":a.agreement_status,"exactWork":a.exact_work,"cells":a.cells,"witnessParameter":a.witness,"witnessDistanceMm":a.witness_distance})).collect::<Vec<_>>()})
     }
 }
-pub fn certify(
-    faces: SourceFaces<'_>,
-    parameters: ContactParameters,
-    tolerance: ContactTolerance,
-    trim_limits: trimmed::Limits,
-    max_exact_work: u64,
-    max_agreement_cells: usize,
-) -> Result<Report> {
-    let SourceFaces { surfaces, loops, coedges, distances } = faces;
-    let ContactParameters { axis: fixed_axis, drive: fixed_interval, free: first_other, second, spans: max_spans } =
-        parameters;
-    let ContactTolerance { mm: tolerance_mm, uv: tolerance_uv } = tolerance;
-    check(
-        tolerance_mm.is_finite()
-            && tolerance_mm > 0.
-            && max_exact_work <= 10000000
-            && (1..=100000).contains(&max_agreement_cells),
-        "Source boundary needs a positive tolerance and bounded work",
-    )?;
+fn validate_source_faces(faces: &SourceFaces<'_>) -> Result<usize> {
     let mut total = 0;
     for side in 0..2 {
-        surfaces[side].validate()?;
+        faces.surfaces[side].validate()?;
         check(
-            loops[side].len() == coedges[side].len(),
+            faces.loops[side].len() == faces.coedges[side].len(),
             "Each original trim loop needs its spatial coedges",
         )?;
-        for (uv, world) in loops[side].iter().zip(coedges[side]) {
+        for (uv, world) in faces.loops[side].iter().zip(faces.coedges[side]) {
             check(
                 uv.len() == world.len(),
                 "Each original trim curve needs one spatial coedge",
@@ -104,15 +86,30 @@ pub fn certify(
             }
         }
     }
+    Ok(total)
+}
+
+pub fn certify(
+    faces: SourceFaces<'_>,
+    parameters: ContactParameters,
+    tolerance: ContactTolerance,
+    trim_limits: trimmed::Limits,
+    max_exact_work: u64,
+    max_agreement_cells: usize,
+) -> Result<Report> {
+    let SourceFaces { surfaces, loops, coedges, distances } = faces;
+    let ContactTolerance { mm: tolerance_mm, uv: tolerance_uv } = tolerance;
+    check(
+        tolerance_mm.is_finite()
+            && tolerance_mm > 0.
+            && max_exact_work <= 10000000
+            && (1..=100000).contains(&max_agreement_cells),
+        "Source boundary needs a positive tolerance and bounded work",
+    )?;
+    let total = validate_source_faces(&faces)?;
     let trim = trimmed::certify(
-        surfaces,
-        loops,
-        distances,
-        fixed_axis,
-        fixed_interval,
-        first_other,
-        second,
-        max_spans,
+        trimmed::TrimmedFaces { surfaces, loops, distances },
+        parameters,
         tolerance_uv,
         trim_limits,
     )?;

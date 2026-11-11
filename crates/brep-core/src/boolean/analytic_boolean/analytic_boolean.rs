@@ -47,148 +47,8 @@ pub fn analytic_boolean(
     if class_a == AnalyticClass::FiniteCylinder && class_b == AnalyticClass::FiniteCylinder {
         return cylinder_pair_boolean(a, b, operation);
     }
-
-    // Axial cone or frustum × sphere: exact circles through the sphere-mate
-    // engine. Anything the cell does not recognize falls through to the
-    // separation checks and refusals below.
-    if matches!(
-        (class_a, class_b),
-        (AnalyticClass::Cone | AnalyticClass::Frustum, AnalyticClass::Sphere)
-            | (AnalyticClass::Sphere, AnalyticClass::Cone | AnalyticClass::Frustum)
-    ) && operation != "xor"
-        && let Some(result) = cone_sphere_boolean::boolean(a, b, operation)?
-    {
-        result.validate()?;
-        let classification = classify_chart_events(
-            ChartKind::AnalyticCircle,
-            vec![],
-            &[(0.5, CellLabel::Outside)],
-        )?;
-        let cert = certificate_for(operation, vec![Coverage::Complete], classification, true, &result)?;
-        return Ok((result, cert));
-    }
-
-    // Coaxial cylinders, frusta and cones: the planar Boolean of their
-    // meridian sections, revolved.
-    let revolved = |class| {
-        matches!(
-            class,
-            AnalyticClass::FiniteCylinder
-                | AnalyticClass::Frustum
-                | AnalyticClass::Cone
-                | AnalyticClass::Torus
-                | AnalyticClass::Sphere
-        )
-    };
-    // Sphere pairs and the axial cylinder/sphere cell keep their own routes.
-    let own_route = matches!(
-        (class_a, class_b),
-        (AnalyticClass::Sphere, AnalyticClass::Sphere)
-            | (AnalyticClass::FiniteCylinder, AnalyticClass::Sphere)
-            | (AnalyticClass::Sphere, AnalyticClass::FiniteCylinder)
-    );
-    if revolved(class_a) && revolved(class_b) && !own_route && operation != "xor" {
-        match coaxial_revolution_boolean::boolean(a, b, operation)? {
-            Some(coaxial_revolution_boolean::Outcome::Solid(result)) => {
-                let classification = classify_chart_events(
-                    ChartKind::AnalyticCircle,
-                    vec![],
-                    &[(0.5, CellLabel::Outside)],
-                )?;
-                let cert = certificate_for(
-                    operation,
-                    vec![Coverage::Complete],
-                    classification,
-                    true,
-                    &result,
-                )?;
-                return Ok((result, cert));
-            }
-            Some(coaxial_revolution_boolean::Outcome::Empty) => {
-                let relation = if operation == "intersection" {
-                    SpatialRelation::Disjoint
-                } else {
-                    SpatialRelation::BContainsA
-                };
-                return empty_algebra_pair(a, b, operation, relation, vec![Coverage::Complete]);
-            }
-            None => {}
-        }
-    }
-
-    if matches!(class_a, AnalyticClass::Tube | AnalyticClass::Frustum)
-        || matches!(class_b, AnalyticClass::Tube | AnalyticClass::Frustum)
-    {
-        return if control_boxes_separated(a, b) {
-            empty_algebra_pair(
-                a,
-                b,
-                operation,
-                SpatialRelation::Disjoint,
-                vec![Coverage::Complete],
-            )
-        } else {
-            Err(refuse(
-                "Tube/frustum non-empty Boolean contact is outside the frozen matrix",
-            ))
-        };
-    }
-
-    // Torus × sphere: exact parallels for an axial sphere, sampled
-    // containment for a provable miss, through the sphere-mate engine.
-    if matches!(
-        (class_a, class_b),
-        (AnalyticClass::Torus, AnalyticClass::Sphere) | (AnalyticClass::Sphere, AnalyticClass::Torus)
-    ) && operation != "xor"
-        && let Some(result) = torus_sphere_boolean::boolean(a, b, operation)?
-    {
-        result.validate()?;
-        let classification = classify_chart_events(
-            ChartKind::AnalyticCircle,
-            vec![],
-            &[(0.5, CellLabel::Outside)],
-        )?;
-        let cert = certificate_for(operation, vec![Coverage::Complete], classification, true, &result)?;
-        return Ok((result, cert));
-    }
-
-    // Cones and tori: provably disjoint operands (separated control-net
-    // boxes) take the empty algebra; any possible contact is refused.
-    if matches!(class_a, AnalyticClass::Cone | AnalyticClass::Torus)
-        || matches!(class_b, AnalyticClass::Cone | AnalyticClass::Torus)
-    {
-        return if control_boxes_separated(a, b) {
-            empty_algebra_pair(
-                a,
-                b,
-                operation,
-                SpatialRelation::Disjoint,
-                vec![Coverage::Complete],
-            )
-        } else {
-            Err(refuse(
-                "Cone/torus Boolean contact is query-only and outside the frozen matrix",
-            ))
-        };
-    }
-
-    // Axial cylinder × sphere: exact rings through the sphere-mate engine.
-    if matches!(
-        (class_a, class_b),
-        (AnalyticClass::FiniteCylinder, AnalyticClass::Sphere)
-            | (AnalyticClass::Sphere, AnalyticClass::FiniteCylinder)
-    ) && operation != "xor"
-        && let Some(result) = cylinder_sphere_boolean::boolean(a, b, operation)?
-    {
-        result.validate()?;
-        let classification = classify_chart_events(
-            ChartKind::AnalyticCircle,
-            vec![],
-            &[(0.5, CellLabel::Outside)],
-        )?;
-        let coverages = vec![Coverage::Complete];
-        let cert = certificate_for(operation, coverages, classification, true, &result)?;
-        return Ok((result, cert));
+    if let Some(outcome) = try_dedicated_curved_pair(a, b, class_a, class_b, operation)? {
+        return Ok(outcome);
     }
 
     // Mixed cylinder/sphere: Complete empty → empty algebra; else frozen refuse.
@@ -196,66 +56,36 @@ pub fn analytic_boolean(
     let report = match (class_a, class_b) {
         (AnalyticClass::FiniteCylinder, AnalyticClass::Sphere)
         | (AnalyticClass::Sphere, AnalyticClass::FiniteCylinder) => {
-            let (cyl, sph) = if class_a == AnalyticClass::FiniteCylinder {
-                (a, b)
-            } else {
-                (b, a)
-            };
+            let (cyl, sph) = if class_a == AnalyticClass::FiniteCylinder { (a, b) } else { (b, a) };
             let (co, cd, cr, ch) = cylinder_envelope(cyl)?;
             let (sc, sr) = sphere_envelope(sph)?;
             cylinder_sphere(co, cd, cr, ch, sc, sr, options)?
         }
         (AnalyticClass::Sphere, AnalyticClass::Sphere) => unreachable!(),
         (AnalyticClass::Cone, AnalyticClass::Cone) => {
-            let (aa, ad, ar, ah) = cone_envelope(a)?;
-            let (ba, bd, br, bh) = cone_envelope(b)?;
+            let ((aa, ad, ar, ah), (ba, bd, br, bh)) = (cone_envelope(a)?, cone_envelope(b)?);
             cone_cone(
-                FiniteCone {
-                    apex: aa,
-                    axis: ad,
-                    radius: ar,
-                    height: ah,
-                },
-                FiniteCone {
-                    apex: ba,
-                    axis: bd,
-                    radius: br,
-                    height: bh,
-                },
+                FiniteCone { apex: aa, axis: ad, radius: ar, height: ah },
+                FiniteCone { apex: ba, axis: bd, radius: br, height: bh },
                 options,
             )?
         }
         (AnalyticClass::Torus, AnalyticClass::Torus) => {
-            let (ac, amaj, amin) = torus_envelope(a)?;
-            let (bc, bmaj, bmin) = torus_envelope(b)?;
+            let ((ac, amaj, amin), (bc, bmaj, bmin)) = (torus_envelope(a)?, torus_envelope(b)?);
             torus_torus(ac, amaj, amin, bc, bmaj, bmin, options)?
         }
         (AnalyticClass::Cone, _)
         | (_, AnalyticClass::Cone)
         | (AnalyticClass::Torus, _)
         | (_, AnalyticClass::Torus) => {
-            let (amin, amax) = model_bounds(a);
-            let (bmin, bmax) = model_bounds(b);
-            let separated = (0..3).any(|i| amax[i] < bmin[i] - 1e-9 || bmax[i] < amin[i] - 1e-9);
-            return if separated {
-                empty_algebra_pair(
-                    a,
-                    b,
-                    operation,
-                    SpatialRelation::Disjoint,
-                    vec![Coverage::Complete],
-                )
+            let ((amin, amax), (bmin, bmax)) = (model_bounds(a), model_bounds(b));
+            return if (0..3).any(|i| amax[i] < bmin[i] - 1e-9 || bmax[i] < amin[i] - 1e-9) {
+                empty_algebra_pair(a, b, operation, SpatialRelation::Disjoint, vec![Coverage::Complete])
             } else {
-                Err(refuse(
-                    "Mixed cone/torus Boolean contact is schema-frozen refuse until dedicated imprint",
-                ))
+                Err(refuse("Mixed cone/torus Boolean contact is schema-frozen refuse until dedicated imprint"))
             };
         }
-        _ => {
-            return Err(unsupported(
-                "Analytic Boolean pair is outside the full matrix walking slice",
-            ));
-        }
+        _ => return Err(unsupported("Analytic Boolean pair is outside the full matrix walking slice")),
     };
 
     if report.coverage != Coverage::Complete {
@@ -297,6 +127,152 @@ pub fn analytic_boolean(
     Err(refuse(
         "Complete non-empty analytic section without certified imprint for this pair",
     ))
+}
+
+fn certified_circle_boolean(
+    operation: &str,
+    result: Model,
+    validate_model: bool,
+) -> Result<(Model, BooleanCertificate)> {
+    if validate_model {
+        result.validate()?;
+    }
+    let classification = classify_chart_events(
+        ChartKind::AnalyticCircle,
+        vec![],
+        &[(0.5, CellLabel::Outside)],
+    )?;
+    let cert = certificate_for(
+        operation,
+        vec![Coverage::Complete],
+        classification,
+        true,
+        &result,
+    )?;
+    Ok((result, cert))
+}
+
+fn try_dedicated_curved_pair(
+    a: &Model,
+    b: &Model,
+    class_a: AnalyticClass,
+    class_b: AnalyticClass,
+    operation: &str,
+) -> Result<Option<(Model, BooleanCertificate)>> {
+    // Axial cone or frustum × sphere: exact circles through the sphere-mate
+    // engine. Anything the cell does not recognize falls through to the
+    // separation checks and refusals below.
+    if matches!(
+        (class_a, class_b),
+        (AnalyticClass::Cone | AnalyticClass::Frustum, AnalyticClass::Sphere)
+            | (AnalyticClass::Sphere, AnalyticClass::Cone | AnalyticClass::Frustum)
+    ) && operation != "xor"
+        && let Some(result) = cone_sphere_boolean::boolean(a, b, operation)?
+    {
+        return certified_circle_boolean(operation, result, true).map(Some);
+    }
+
+    // Coaxial cylinders, frusta and cones: the planar Boolean of their
+    // meridian sections, revolved.
+    let revolved = |class| {
+        matches!(
+            class,
+            AnalyticClass::FiniteCylinder
+                | AnalyticClass::Frustum
+                | AnalyticClass::Cone
+                | AnalyticClass::Torus
+                | AnalyticClass::Sphere
+        )
+    };
+    // Sphere pairs and the axial cylinder/sphere cell keep their own routes.
+    let own_route = matches!(
+        (class_a, class_b),
+        (AnalyticClass::Sphere, AnalyticClass::Sphere)
+            | (AnalyticClass::FiniteCylinder, AnalyticClass::Sphere)
+            | (AnalyticClass::Sphere, AnalyticClass::FiniteCylinder)
+    );
+    if revolved(class_a) && revolved(class_b) && !own_route && operation != "xor" {
+        match coaxial_revolution_boolean::boolean(a, b, operation)? {
+            Some(coaxial_revolution_boolean::Outcome::Solid(result)) => {
+                return certified_circle_boolean(operation, result, false).map(Some);
+            }
+            Some(coaxial_revolution_boolean::Outcome::Empty) => {
+                let relation = if operation == "intersection" {
+                    SpatialRelation::Disjoint
+                } else {
+                    SpatialRelation::BContainsA
+                };
+                return empty_algebra_pair(a, b, operation, relation, vec![Coverage::Complete])
+                    .map(Some);
+            }
+            None => {}
+        }
+    }
+
+    if matches!(class_a, AnalyticClass::Tube | AnalyticClass::Frustum)
+        || matches!(class_b, AnalyticClass::Tube | AnalyticClass::Frustum)
+    {
+        return if control_boxes_separated(a, b) {
+            empty_algebra_pair(
+                a,
+                b,
+                operation,
+                SpatialRelation::Disjoint,
+                vec![Coverage::Complete],
+            )
+            .map(Some)
+        } else {
+            Err(refuse(
+                "Tube/frustum non-empty Boolean contact is outside the frozen matrix",
+            ))
+        };
+    }
+
+    // Torus × sphere: exact parallels for an axial sphere, sampled
+    // containment for a provable miss, through the sphere-mate engine.
+    if matches!(
+        (class_a, class_b),
+        (AnalyticClass::Torus, AnalyticClass::Sphere)
+            | (AnalyticClass::Sphere, AnalyticClass::Torus)
+    ) && operation != "xor"
+        && let Some(result) = torus_sphere_boolean::boolean(a, b, operation)?
+    {
+        return certified_circle_boolean(operation, result, true).map(Some);
+    }
+
+    // Cones and tori: provably disjoint operands (separated control-net
+    // boxes) take the empty algebra; any possible contact is refused.
+    if matches!(class_a, AnalyticClass::Cone | AnalyticClass::Torus)
+        || matches!(class_b, AnalyticClass::Cone | AnalyticClass::Torus)
+    {
+        return if control_boxes_separated(a, b) {
+            empty_algebra_pair(
+                a,
+                b,
+                operation,
+                SpatialRelation::Disjoint,
+                vec![Coverage::Complete],
+            )
+            .map(Some)
+        } else {
+            Err(refuse(
+                "Cone/torus Boolean contact is query-only and outside the frozen matrix",
+            ))
+        };
+    }
+
+    // Axial cylinder × sphere: exact rings through the sphere-mate engine.
+    if matches!(
+        (class_a, class_b),
+        (AnalyticClass::FiniteCylinder, AnalyticClass::Sphere)
+            | (AnalyticClass::Sphere, AnalyticClass::FiniteCylinder)
+    ) && operation != "xor"
+        && let Some(result) = cylinder_sphere_boolean::boolean(a, b, operation)?
+    {
+        return certified_circle_boolean(operation, result, true).map(Some);
+    }
+
+    Ok(None)
 }
 
 /// Typestate-returning production entry point. The compatibility API above

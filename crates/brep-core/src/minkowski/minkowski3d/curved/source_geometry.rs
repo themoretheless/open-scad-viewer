@@ -90,11 +90,13 @@ pub(super) fn geometry(
                 &use_,
                 &stations,
                 depth,
-                &mut vertices,
-                &mut triangles,
-                &mut seams,
-                &mut tubes,
-                &mut maximum,
+                trimmed::TessellationOutput {
+                    vertices: &mut vertices,
+                    triangles: &mut triangles,
+                    seams: &mut seams,
+                    tubes: &mut tubes,
+                    maximum: &mut maximum,
+                },
                 limit,
                 work,
             )?;

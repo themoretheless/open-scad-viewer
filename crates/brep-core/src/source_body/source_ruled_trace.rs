@@ -2,8 +2,11 @@
 //! This reduction alone does not prove contact ownership or exclusion.
 use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
 pub(crate) struct Certificate<'a> {
+    #[cfg_attr(not(test), allow(dead_code))]
     source: &'a Surface,
+    #[cfg_attr(not(test), allow(dead_code))]
     axes: [usize; 2],
+    #[cfg_attr(not(test), allow(dead_code))]
     linear: usize,
     curve: Curve,
 }
@@ -112,11 +115,13 @@ pub(crate) fn certify(
 /// A positive-weight rational Bezier curve with strictly ordered scalar
 /// controls is strictly monotone on its complete original parameter domain.
 /// This certifies a simple trace, not ownership of any transition contact.
+#[cfg(test)]
 pub(crate) struct MonotoneCoordinate<'t, 's> {
     trace: &'t Certificate<'s>,
     coordinate: usize,
     increasing: bool,
 }
+#[cfg(test)]
 impl<'t, 's> MonotoneCoordinate<'t, 's> {
     #[cfg(test)]
     pub(crate) fn trace(&self) -> &'t Certificate<'s> {
@@ -185,12 +190,14 @@ impl<'t, 's> MonotoneCoordinate<'t, 's> {
 }
 /// Conservative parameter cover of all points whose certified coordinate
 /// can enter a target interval. Empty cover is a strict exclusion witness.
+#[cfg(test)]
 pub(crate) struct CoordinatePreimage<'p, 't, 's> {
     owner: &'p MonotoneCoordinate<'t, 's>,
     target: [f64; 2],
     pub(crate) domains: Vec<[f64; 2]>,
     pub(crate) cells: usize,
 }
+#[cfg(test)]
 impl<'p, 't, 's> CoordinatePreimage<'p, 't, 's> {
     #[cfg(test)]
     pub(crate) fn owner(&self) -> &'p MonotoneCoordinate<'t, 's> {
@@ -229,8 +236,8 @@ impl<'p, 't, 's> CoordinatePreimage<'p, 't, 's> {
         Ok(out)
     }
 }
+#[cfg(test)]
 impl<'t, 's> MonotoneCoordinate<'t, 's> {
-    #[cfg(test)]
     pub(crate) fn coordinate_preimage<'p>(
         &'p self,
         target: [f64; 2],

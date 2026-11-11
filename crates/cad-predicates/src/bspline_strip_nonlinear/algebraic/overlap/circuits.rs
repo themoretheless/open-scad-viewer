@@ -285,7 +285,12 @@ mod continuation_tests {
         let mut bounds = Bounds::default();
         assert!(
             bounds
-                .cofactor(0, 0, 0, 0, 0, 0, &cofactor, &spans, &knots, &mut build)
+                .cofactor(
+                    super::bounds::BoxKey { a: 0, b: 0, axis: 0, level: 0, pa: 0, pb: 0 },
+                    &cofactor,
+                    super::bounds::StripKnots { spans: &spans, u: &knots },
+                    &mut build,
+                )
                 .unwrap()
         );
         let scale = Q::zero().sub(&one(), &mut build).unwrap();

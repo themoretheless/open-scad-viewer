@@ -157,19 +157,28 @@ pub struct CurveEventNodes {
     census: SpanIntersectionCertificate,
     nodes: Vec<AlgebraicEventNode>,
 }
-fn make(
-    a: &Cell,
-    b: &Cell,
-    f: &Vec<Q>,
-    t: &Vec<Q>,
+/// The isolated root of one event polynomial: the polynomial, the parameter transform, the shear
+/// it was found under and its rational isolating interval.
+#[derive(Clone, Copy)]
+struct EventRoot<'a> {
+    f: &'a Vec<Q>,
+    t: &'a Vec<Q>,
     k: u8,
-    interval: &[Q; 2],
+    interval: &'a [Q; 2],
+}
+/// Where the event comes from: span pair, the two source cells, the factor and root indices, and
+/// whether the root is stationary.
+#[derive(Clone, Copy, Debug)]
+struct EventOrigin {
     pair: usize,
     source_cells: [usize; 2],
     factor: Option<usize>,
     root: usize,
     stationary: bool,
-) -> Result<AlgebraicEventNode> {
+}
+fn make(a: &Cell, b: &Cell, event: EventRoot<'_>, origin: EventOrigin) -> Result<AlgebraicEventNode> {
+    let EventRoot { f, t, k, interval } = event;
+    let EventOrigin { pair, source_cells, factor, root, stationary } = origin;
     let (parameters, position) = coordinates::coordinates(
         &a.net,
         &b.net,
@@ -265,15 +274,8 @@ pub(super) fn assemble_cells(
                     nodes.push(make(
                         a,
                         b,
-                        &f.polynomial,
-                        t,
-                        p.shear,
-                        &r.interval,
-                        pair,
-                        [p.first, p.second],
-                        Some(fi),
-                        ri,
-                        stationary,
+                        EventRoot { f: &f.polynomial, t, k: p.shear, interval: &r.interval },
+                        EventOrigin { pair, source_cells: [p.first, p.second], factor: Some(fi), root: ri, stationary },
                     )?);
                 }
             }
@@ -308,15 +310,8 @@ pub(super) fn assemble_cells(
                 nodes.push(make(
                     &aa,
                     &bb,
-                    &vec![Q::zero(), Q::one()],
-                    &vec![Q::zero()],
-                    0,
-                    &[Q::zero(), Q::zero()],
-                    pair,
-                    [p.first, p.second],
-                    None,
-                    ri,
-                    false,
+                    EventRoot { f: &vec![Q::zero(), Q::one()], t: &vec![Q::zero()], k: 0, interval: &[Q::zero(), Q::zero()] },
+                    EventOrigin { pair, source_cells: [p.first, p.second], factor: None, root: ri, stationary: false },
                 )?);
             }
         }
@@ -453,15 +448,8 @@ pub(super) fn overlap_endpoints_cells(
                         selected.push(make(
                             a,
                             b,
-                            &f.polynomial,
-                            t,
-                            shear,
-                            &r.interval,
-                            pair,
-                            [receipt.first, receipt.second],
-                            Some(factor),
-                            root,
-                            false,
+                            EventRoot { f: &f.polynomial, t, k: shear, interval: &r.interval },
+                            EventOrigin { pair, source_cells: [receipt.first, receipt.second], factor: Some(factor), root, stationary: false },
                         )?);
                     }
                 }

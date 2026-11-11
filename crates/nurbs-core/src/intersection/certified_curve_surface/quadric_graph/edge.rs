@@ -99,7 +99,10 @@ pub(super) fn prove(
         }
         let before = ctx.work_used();
         let decision = rational_bspline_quadric_projected_edge_sign(
-            &mut ctx, &controls, &knots, c.degree, span, matrix, &factors, frame, chart.axes, edge,
+            &mut ctx,
+            cad_predicates::RationalSpanRefs { controls: &controls, knots: &knots, degree: c.degree, span },
+            cad_predicates::QuadricRefs { matrix, products: &factors, frame, axes: chart.axes },
+            edge,
             normalized,
         )
         .map_err(|_| crate::input("Invalid original quadric edge-sign query"))?;

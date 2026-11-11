@@ -211,12 +211,12 @@ pub fn inspect_surface_exact_strip_jets(
     scale: f64,
     max_work: u64,
 ) -> Result<ExactStripJetReport> {
-    inspect_strip_jets(a,b,ab,bb,order,scale,max_work,false)
+    inspect_strip_jets(StripPair { a, b, ab, bb }, StripJetRequest { order, scale, max_work }, false)
 }
 /// Sufficient exact geometric G1/G2 with constant transverse reparameterization.
 /// Unlike homogeneous C1/C2, this admits projective weight jet differences.
 pub fn inspect_surface_projective_strip_jets(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,max_work:u64)->Result<ExactStripJetReport>{
-    inspect_strip_jets(a,b,ab,bb,order,scale,max_work,true)
+    inspect_strip_jets(StripPair { a, b, ab, bb }, StripJetRequest { order, scale, max_work }, true)
 }
 // Full-multiplicity interior knots already encode literal Bezier pieces.
 // Copying their poles/weights introduces no rounded extraction or refit.
@@ -255,26 +255,52 @@ fn certify_along_chain(s:&Surface,b:Boundary,order:usize,max_work:u64)->Result<(
 }
 pub(crate) fn inspect_proposed_station_projective_strip_jets(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,max_work:u64)->Result<ExactStripJetReport>{
     let proposal=super::station_scale::propose_station_scale_scalar(scale);
-    let mut proof=inspect_station_projective_strip_jets(a,b,ab,bb,order,scale,proposal,max_work)?;
+    let mut proof=inspect_station_projective_strip_jets(
+        StripPair { a, b, ab, bb },
+        StripJetRequest { order, scale, max_work },
+        proposal,
+    )?;
     if !proof.certified && !proof.exact_identity && proof.work<max_work {
         if let Some(scalar)=super::station_scale::propose_boundary_binary_ratio_scalar(a,b,ab,bb)? {
             let prior=proof.work;
-            proof=inspect_station_projective_strip_jets(a,b,ab,bb,order,scale,scalar,max_work-prior)?;
+            proof=inspect_station_projective_strip_jets(
+                StripPair { a, b, ab, bb },
+                StripJetRequest { order, scale, max_work: max_work-prior },
+                scalar,
+            )?;
             proof.work+=prior;
         }
     }
     check(proof.work<=max_work,"Invalid native along-chain work accounting")?;
     Ok(proof)
 }
-fn inspect_strip_jets(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,max_work:u64,projective:bool)->Result<ExactStripJetReport>{
-    inspect_strip_jets_scalar(a,b,ab,bb,order,scale,max_work,projective,None,projective)
+/// Two surfaces meeting along a strip, with the boundary label of each.
+#[derive(Clone, Copy)]
+pub(crate) struct StripPair<'a> {
+    pub a: &'a Surface,
+    pub b: &'a Surface,
+    pub ab: &'a str,
+    pub bb: &'a str,
+}
+/// Jet order, normal scale and exact-work limit of one strip jet check.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct StripJetRequest {
+    pub order: usize,
+    pub scale: f64,
+    pub max_work: u64,
+}
+fn inspect_strip_jets(pair:StripPair<'_>,request:StripJetRequest,projective:bool)->Result<ExactStripJetReport>{
+    inspect_strip_jets_scalar(pair,request,projective,None,projective)
 }
 /// An exact rational proposal still requires independent whole-strip identity
 /// and regularity. The approximate value is used only for option validation.
-pub(crate) fn inspect_station_projective_strip_jets(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,scalar:AuthoredScalar,max_work:u64)->Result<ExactStripJetReport>{
-    inspect_strip_jets_scalar(a,b,ab,bb,order,scale,max_work,true,Some(scalar),false)
+pub(crate) fn inspect_station_projective_strip_jets(pair:StripPair<'_>,request:StripJetRequest,scalar:AuthoredScalar)->Result<ExactStripJetReport>{
+    inspect_strip_jets_scalar(pair,request,true,Some(scalar),false)
 }
-fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,max_work:u64,projective:bool,scalar:Option<AuthoredScalar>,nonlinear:bool)->Result<ExactStripJetReport>{
+fn inspect_strip_jets_scalar(pair:StripPair<'_>,request:StripJetRequest,projective:bool,scalar:Option<AuthoredScalar>,nonlinear:bool)->Result<ExactStripJetReport>{
+    let StripPair { a, b, ab, bb } = pair;
+    let StripJetRequest { order, scale, max_work } = request;
+
     a.validate()?;
     b.validate()?;
     check(
@@ -452,6 +478,6 @@ fn inspect_strip_jets_scalar(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,s
 }
 
 /// Last-stage parameter-map search, after all cheaper exact normal-scale proposals.
-pub(crate) fn inspect_nonlinear_station_jets(a:&Surface,b:&Surface,ab:&str,bb:&str,order:usize,scale:f64,scalar:AuthoredScalar,max_work:u64)->Result<ExactStripJetReport>{
-    inspect_strip_jets_scalar(a,b,ab,bb,order,scale,max_work,true,Some(scalar),true)
+pub(crate) fn inspect_nonlinear_station_jets(pair:StripPair<'_>,request:StripJetRequest,scalar:AuthoredScalar)->Result<ExactStripJetReport>{
+    inspect_strip_jets_scalar(pair,request,true,Some(scalar),true)
 }

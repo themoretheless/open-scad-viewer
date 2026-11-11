@@ -142,17 +142,12 @@ pub fn partition_fiber_branches_at_face(
                 )?;
                 construction_started = true;
                 let mut out = automatic_fiber::partition_fiber_prebound(
-                    &model,
-                    owners[0],
-                    cutter,
-                    cutter_face,
+                    automatic_fiber::FiberFaces { source: &model, face: owners[0], cutter, cutter_face },
                     &owned,
                     box4,
                     axis,
                     tolerance_uv,
-                    offered_cells - used,
-                    offered_exact,
-                    offered_evaluations,
+                    automatic_fiber::FiberWork { max_cells: offered_cells - used, max_exact: offered_exact, max_evaluations: offered_evaluations },
                 )?;
                 out.cells += used;
                 Ok::<_, nurbs_core::Error>(out)

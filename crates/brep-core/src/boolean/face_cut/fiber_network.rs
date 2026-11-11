@@ -394,17 +394,12 @@ fn partition_fiber_network_impl(
             request.axis
         };
         let out = super::automatic_fiber::partition_fiber_prebound(
-            &model,
-            request.face,
-            cutter,
-            cutter_face,
+            super::automatic_fiber::FiberFaces { source: &model, face: request.face, cutter, cutter_face },
             &owned,
             parameter_box,
             axis,
             tolerance_uv,
-            max_cells - cells,
-            (max_exact - exact_work) / (requests.len() - index) as u64,
-            4096 - evaluations,
+            super::automatic_fiber::FiberWork { max_cells: max_cells - cells, max_exact: (max_exact - exact_work) / (requests.len() - index) as u64, max_evaluations: 4096 - evaluations },
         )
         .map_err(|error| {
             nurbs_core::Error::new(error.code, format!(

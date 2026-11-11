@@ -414,9 +414,9 @@ pub fn basis_funs_ders(
         }
     }
     let mut factor = p as f64;
-    for kk in 1..=nn {
-        for j in 0..=p {
-            ders[kk][j] *= factor;
+    for (kk, row) in ders.iter_mut().enumerate().take(nn + 1).skip(1) {
+        for value in &mut row[..=p] {
+            *value *= factor;
         }
         factor *= (p - kk) as f64;
     }

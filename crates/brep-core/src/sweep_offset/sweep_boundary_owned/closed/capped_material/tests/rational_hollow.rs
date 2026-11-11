@@ -197,9 +197,7 @@ fn guided_unequal_rational_hollow_caps_clock_and_affine_matrix() {
 // admission independently, with unchanged native transport proof allowances.
 #[test]
 fn rounded_rational_hollow_cap_refuses_when_translation_breaks_exact_trim_trace() {
-    use crate::sweep_boundary_owned::{
-        OriginalClassifiedBodyAttempt, construct_with_original_classified_material,
-    };
+    use crate::sweep_boundary_owned::construct_with_original_classified_material;
     let (profiles, caps) = source();
     let path = nurbs_core::primitives::line([0.; 3], [0., 0., 2.]).unwrap();
     let scale = constant_vector_law([1., 0., 0.]).unwrap();

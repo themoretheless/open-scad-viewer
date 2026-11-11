@@ -247,30 +247,18 @@ fn nonaffine_boundary_relation_is_checked_on_original_surfaces() {
         })
         .collect();
     let r = surface_g2::inspect_with_correspondence(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
         &nodes,
-        0.03,
-        0.05,
-        0.1,
+        surface_g2::G2Tolerance { position: 0.03, normal: 0.05, tensor: 0.1 },
         2000,
     )
     .unwrap();
     assert_eq!(r.decision, Decision::WithinTolerance, "{r:?}");
     assert!(r.position_bounds[1] <= 0.03);
     let inferred = surface_g2::inspect_inferred(
-        &a,
-        Boundary::UMax,
-        &b,
-        Boundary::UMin,
-        false,
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
         32,
-        0.03,
-        0.05,
-        0.1,
+        surface_g2::G2Tolerance { position: 0.03, normal: 0.05, tensor: 0.1 },
         2000,
     )
     .unwrap();
@@ -282,16 +270,10 @@ fn nonaffine_boundary_relation_is_checked_on_original_surfaces() {
     assert_eq!((a.clone(), b.clone()), before);
     assert!(
         surface_g2::inspect_with_correspondence(
-            &a,
-            Boundary::UMax,
-            &b,
-            Boundary::UMin,
-            false,
+            surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
             &[[0., 0.], [0.5, 0.7], [0.4, 0.8], [1., 1.]],
-            0.03,
-            0.05,
-            0.1,
-            2000
+            surface_g2::G2Tolerance { position: 0.03, normal: 0.05, tensor: 0.1 },
+            2000,
         )
         .is_err()
     );
@@ -330,15 +312,9 @@ fn inferred_rational_cylinder_seam_and_reverse_preserve_orientation() {
             b.clone()
         };
         let r = surface_g2::inspect_inferred(
-            &a,
-            Boundary::UMax,
-            &source,
-            Boundary::UMin,
-            reverse,
+            surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &source, eb: Boundary::UMin, reverse },
             32,
-            0.04,
-            0.08,
-            0.15,
+            surface_g2::G2Tolerance { position: 0.04, normal: 0.08, tensor: 0.15 },
             6000,
         )
         .unwrap();
@@ -377,11 +353,26 @@ fn identical_owned_boundary_keeps_zero_position_tolerance_without_hiding_curvatu
 fn subrange_audit_uses_original_surfaces_and_never_claims_the_full_boundary() {
     let a=patch(true,1.,false);let b=patch(false,1.,true);let before=(a.clone(),b.clone());
     let nodes=[[0.2,0.2],[0.6,0.6]];
-    let r=surface_g2::inspect_boundary_ranges(&a,Boundary::UMax,&b,Boundary::UMin,false,&nodes,0.05,0.02,0.1,1000).unwrap();
+    let r=surface_g2::inspect_boundary_ranges(
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+        &nodes,
+        surface_g2::G2Tolerance { position: 0.05, normal: 0.02, tensor: 0.1 },
+        1000,
+    ).unwrap();
     assert_eq!(r.decision,Decision::WithinTolerance);
-    assert!(surface_g2::inspect_with_correspondence(&a,Boundary::UMax,&b,Boundary::UMin,false,&nodes,0.05,0.02,0.1,1000).is_err());
+    assert!(surface_g2::inspect_with_correspondence(
+        surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+        &nodes,
+        surface_g2::G2Tolerance { position: 0.05, normal: 0.02, tensor: 0.1 },
+        1000,
+    ).is_err());
     for nodes in [[[0.6,0.2],[0.2,0.6]],[[-0.1,0.],[0.5,0.5]],[[0.,0.],[0.5,1.1]]] {
-        assert!(surface_g2::inspect_boundary_ranges(&a,Boundary::UMax,&b,Boundary::UMin,false,&nodes,0.05,0.02,0.1,1000).is_err());
+        assert!(surface_g2::inspect_boundary_ranges(
+            surface_g2::G2Seam { a: &a, ea: Boundary::UMax, b: &b, eb: Boundary::UMin, reverse: false },
+            &nodes,
+            surface_g2::G2Tolerance { position: 0.05, normal: 0.02, tensor: 0.1 },
+            1000,
+        ).is_err());
     }
     assert_eq!((a,b),before);
 }

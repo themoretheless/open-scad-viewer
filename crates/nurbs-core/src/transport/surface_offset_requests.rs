@@ -118,13 +118,8 @@ fn try_dispatch_envelopes_and_contact_bands(v: &Value, op: &str) -> Option<Resul
                 .transpose()?;
             crate::offset_envelope_fit::deliver(
                 candidate.as_ref(),
-                [&a, &b],
-                field(v, "distances")?,
-                field(v, "fixedAxis")?,
-                field(v, "fixedInterval")?,
-                field(v, "firstOther")?,
-                field(v, "secondDomain")?,
-                field(v, "maxSpans")?,
+                crate::offset_envelope_fit::OffsetFaces { surfaces: [&a, &b], distances: field(v, "distances")? },
+                crate::offset_envelope_fit::ContactParameters { axis: field(v, "fixedAxis")?, drive: field(v, "fixedInterval")?, free: field(v, "firstOther")?, second: field(v, "secondDomain")?, spans: field(v, "maxSpans")? },
                 field(v, "toleranceMm")?,
                 field(v, "maxCells")?,
             )
@@ -164,22 +159,11 @@ fn try_dispatch_envelopes_and_contact_bands(v: &Value, op: &str) -> Option<Resul
             let b: Surface = field(v, "b")?;
             let first_loops: Vec<Vec<crate::curve::Curve>> = field(v, "firstLoops")?;
             let second_loops: Vec<Vec<crate::curve::Curve>> = field(v, "secondLoops")?;
-            Ok(crate::trimmed_offset_contact::certify(
-                [&a, &b],
-                [&first_loops, &second_loops],
-                field(v, "distances")?,
-                field(v, "fixedAxis")?,
-                field(v, "fixedInterval")?,
-                field(v, "firstOther")?,
-                field(v, "secondDomain")?,
-                field(v, "maxSpans")?,
-                field(v, "toleranceUv")?,
-                crate::trimmed_offset_contact::Limits {
+            Ok(crate::trimmed_offset_contact::certify(crate::trimmed_offset_contact::TrimmedFaces { surfaces: [&a, &b], loops: [&first_loops, &second_loops], distances: field(v, "distances")? }, crate::trimmed_offset_contact::ContactParameters { axis: field(v, "fixedAxis")?, drive: field(v, "fixedInterval")?, free: field(v, "firstOther")?, second: field(v, "secondDomain")?, spans: field(v, "maxSpans")? }, field(v, "toleranceUv")?, crate::trimmed_offset_contact::Limits {
                     max_pairs: field(v, "maxPairs")?,
                     max_cells: field(v, "maxCells")?,
                     max_domain_cells: field(v, "maxDomainCells")?,
-                },
-            )?
+                })?
             .to_value())
         })(),
         "surface_offset_contact_band" => handle_offset_contact_band(v),

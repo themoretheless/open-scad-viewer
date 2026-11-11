@@ -183,6 +183,7 @@ pub fn diagnose_decomposition(v: Value) -> Result<Value> {
     )
 }
 
+#[cfg(test)]
 pub fn diagnose_cap_decomposition(v: Value) -> Result<Value> {
     let model: brep_core::Model = field(&v, "model")?;
     let endpoints = field::<[Vec<Vec<nurbs_core::curve::Curve>>; 2]>(&v, "endpoints")?;

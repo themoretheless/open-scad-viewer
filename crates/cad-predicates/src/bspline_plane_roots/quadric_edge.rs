@@ -6,6 +6,24 @@ pub struct OriginalQuadricRootSignDecision {
     pub work_used: u64,
     pub context: ContextIdentity,
 }
+/// One span of a rational B-spline curve given by source leaves: homogeneous controls, knots,
+/// degree and span index.
+#[derive(Clone, Copy)]
+pub struct RationalSpanRefs<'a> {
+    pub controls: &'a [[LeafRef; 4]],
+    pub knots: &'a [LeafRef],
+    pub degree: usize,
+    pub span: usize,
+}
+/// A quadric given by source leaves: its homogeneous matrix, the authored products it uses,
+/// the projection frame and the two projected axes.
+#[derive(Clone, Copy)]
+pub struct QuadricRefs<'a> {
+    pub matrix: [[LeafRef; 4]; 4],
+    pub products: &'a [[LeafRef; 2]],
+    pub frame: [[LeafRef; 3]; 3],
+    pub axes: [usize; 2],
+}
 /// Sign of normalized projected affine coordinate minus side (edges 0/1 for
 /// the first coordinate, 2/3 for the second) at the unique original quadric
 /// root in the supplied closed span box. Frame points [origin,u-end,v-end]
@@ -13,17 +31,13 @@ pub struct OriginalQuadricRootSignDecision {
 /// This proves no target surface membership, chart coverage or Body claim.
 pub fn rational_bspline_quadric_projected_edge_sign(
     ctx: &mut PredicateContext<'_>,
-    controls: &[[LeafRef; 4]],
-    knots: &[LeafRef],
-    degree: usize,
-    span: usize,
-    matrix: [[LeafRef; 4]; 4],
-    products: &[[LeafRef; 2]],
-    frame: [[LeafRef; 3]; 3],
-    axes: [usize; 2],
+    curve: RationalSpanRefs<'_>,
+    quadric: QuadricRefs<'_>,
     edge: usize,
     interval: [f64; 2],
 ) -> Result<OriginalQuadricRootSignDecision, InputError> {
+    let RationalSpanRefs { controls, knots, degree, span } = curve;
+    let QuadricRefs { matrix, products, frame, axes } = quadric;
     if edge > 3
         || axes[0] > 2
         || axes[1] > 2

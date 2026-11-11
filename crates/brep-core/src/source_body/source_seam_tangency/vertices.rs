@@ -48,13 +48,9 @@ impl<'b, 's, E: Carrier, P: PoleEvidence<'b, 's, E>> FaceEvidence<E>
     }
 }
 trait EdgeEvidence<E: Carrier> {
-    fn body(&self) -> &Body<E>;
     fn classes(&self) -> &[Class];
 }
 impl<E: Carrier> EdgeEvidence<E> for OrientedCollection<'_, '_, '_, E> {
-    fn body(&self) -> &Body<E> {
-        self.exact().original().body()
-    }
     fn classes(&self) -> &[Class] {
         self.exact().original().classes()
     }
