@@ -58,22 +58,26 @@ pub(super) fn run(v: Value, audit: bool) -> Result<Value> {
     };
     let attempt = if let Some(model) = supplied.as_ref() {
         owned::verify_rational_closed_material(
-            &profiles,
-            &material,
-            origin,
-            &motion,
-            &caps,
+            owned::RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin,
+                motion: &motion,
+                cap_profiles: &caps,
+            },
             tolerance_uv,
             limits,
             model,
         )?
     } else {
         owned::construct_rational_closed_material(
-            &profiles,
-            &material,
-            origin,
-            &motion,
-            &caps,
+            owned::RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin,
+                motion: &motion,
+                cap_profiles: &caps,
+            },
             tolerance_uv,
             limits,
         )?

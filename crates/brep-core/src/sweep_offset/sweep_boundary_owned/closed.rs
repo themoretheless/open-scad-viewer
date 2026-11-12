@@ -716,7 +716,8 @@ mod rational;
 mod smooth;
 pub use rational::{
     FilledGraphCapReport, RationalClosedAttempt, RationalClosedBody, RationalClosedLimits,
-    RationalClosedReport, construct_rational_closed_material, verify_rational_closed_material,
+    RationalClosedReport, RationalClosedSweep, construct_rational_closed_material,
+    verify_rational_closed_material,
 };
 pub use smooth::{
     BindingReport as AffineWallBindingReport, OriginalReport as OriginalClosedReport,

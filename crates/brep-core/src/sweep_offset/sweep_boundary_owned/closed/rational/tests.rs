@@ -189,11 +189,13 @@ fn original_and_actual_rational_body_own_full_filled_planar_and_nonplanar_cap_g2
         let (profiles, material, motion) = fixture(nonplanar);
         let b = body(
             construct_rational_closed_material(
-                &profiles,
-                &material,
-                [0.; 3],
-                &motion,
-                &[[0, 2], [0, 6]],
+                RationalClosedSweep {
+                    profiles: &profiles,
+                    material: &material,
+                    origin: [0.; 3],
+                    motion: &motion,
+                    cap_profiles: &[[0, 2], [0, 6]],
+                },
                 1e-8,
                 limits(),
             )
@@ -232,11 +234,13 @@ fn curvature_jump_preserves_explicit_g1_and_refuses_strict_cap_g2() {
     profiles[0][2].control_points[2][1] = 2_f64.next_up();
     material.trims[0][2].control_points[2][1] = 2_f64.next_up();
     let strict = construct_rational_closed_material(
-        &profiles,
-        &material,
-        [0.; 3],
-        &motion,
-        &[[0, 2], [0, 6]],
+        RationalClosedSweep {
+            profiles: &profiles,
+            material: &material,
+            origin: [0.; 3],
+            motion: &motion,
+            cap_profiles: &[[0, 2], [0, 6]],
+        },
         1e-8,
         limits(),
     )
@@ -246,11 +250,13 @@ fn curvature_jump_preserves_explicit_g1_and_refuses_strict_cap_g2() {
     l.smoothness.order = 1;
     let b = body(
         construct_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &motion,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &motion,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
             l,
         )
@@ -285,11 +291,13 @@ fn filled_cap_charts_survive_moving_affine_axes_translation_and_weight_gauges() 
     }
     let b = body(
         construct_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &motion,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &motion,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
             limits(),
         )
@@ -310,7 +318,15 @@ fn sharp_cap_join_is_explicit_c0_and_cannot_be_hidden_by_an_empty_cap_selection(
         l.smoothness.order = 1;
         assert!(matches!(
             construct_rational_closed_material(
-                &profiles, &material, [0.; 3], &motion, &caps, 1e-8, l
+                RationalClosedSweep {
+                    profiles: &profiles,
+                    material: &material,
+                    origin: [0.; 3],
+                    motion: &motion,
+                    cap_profiles: &caps,
+                },
+                1e-8,
+                l,
             )
             .unwrap(),
             RationalClosedAttempt::Refused(_)
@@ -320,11 +336,13 @@ fn sharp_cap_join_is_explicit_c0_and_cannot_be_hidden_by_an_empty_cap_selection(
     l.smoothness.order = 0;
     let b = body(
         construct_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &motion,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &motion,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
             l,
         )
@@ -343,11 +361,13 @@ fn all_original_caps_volume_construction_and_boundary_owner_budgets_refuse_parti
     let (profiles, material, motion) = fixture(false);
     let full = body(
         construct_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &motion,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &motion,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
             limits(),
         )
@@ -437,11 +457,13 @@ fn all_original_caps_volume_construction_and_boundary_owner_budgets_refuse_parti
     cases.push(l);
     for (i, l) in cases.into_iter().enumerate() {
         let RationalClosedAttempt::Refused(r) = construct_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &motion,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &motion,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
             l,
         )
@@ -463,13 +485,15 @@ fn all_original_caps_volume_construction_and_boundary_owner_budgets_refuse_parti
     l.cap_cells = 0;
     assert!(
         construct_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &malformed,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &malformed,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
-            l
+            l,
         )
         .is_err()
     );
@@ -480,11 +504,13 @@ fn supplied_rational_cap_body_is_reproved_without_reconstruction_or_reorientatio
     let (profiles, material, motion) = fixture(true);
     let built = body(
         construct_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &motion,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &motion,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
             limits(),
         )
@@ -506,11 +532,13 @@ fn supplied_rational_cap_body_is_reproved_without_reconstruction_or_reorientatio
     l.construction_rows = 0;
     let audited = body(
         verify_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &motion,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &motion,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
             l,
             &model,
@@ -547,11 +575,13 @@ fn supplied_rational_cap_body_is_reproved_without_reconstruction_or_reorientatio
         }
         let before = changed.clone();
         let result = verify_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &motion,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &motion,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
             l,
             &changed,
@@ -576,14 +606,16 @@ fn supplied_rational_cap_body_is_reproved_without_reconstruction_or_reorientatio
         assert!(
             matches!(
                 verify_rational_closed_material(
-                    &profiles,
-                    &material,
-                    [0.; 3],
-                    &motion,
-                    &[[0, 2], [0, 6]],
+                    RationalClosedSweep {
+                        profiles: &profiles,
+                        material: &material,
+                        origin: [0.; 3],
+                        motion: &motion,
+                        cap_profiles: &[[0, 2], [0, 6]],
+                    },
                     1e-8,
                     short,
-                    &saved
+                    &saved,
                 )
                 .unwrap(),
                 RationalClosedAttempt::Refused(_)

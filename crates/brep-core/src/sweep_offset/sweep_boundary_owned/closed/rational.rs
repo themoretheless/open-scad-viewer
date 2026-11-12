@@ -97,6 +97,17 @@ fn bezier(c: &Curve) -> bool {
         && c.control_points.len() == c.degree + 1
         && c.knots == [vec![0.; c.degree + 1], vec![1.; c.degree + 1]].concat()
 }
+/// The original closed rational sweep: profile loops, the material cap with
+/// its trims, the motion origin and pieces, and the complete annular graph caps
+/// as (ring, span) pairs.
+#[derive(Clone, Copy)]
+pub struct RationalClosedSweep<'a> {
+    pub profiles: &'a [Vec<Curve>],
+    pub material: &'a LoftCap,
+    pub origin: [f64; 3],
+    pub motion: &'a [RationalPiece],
+    pub cap_profiles: &'a [[usize; 2]],
+}
 /// Every returned face is an exact tensor coefficient image of the ORIGINAL
 /// source. Consequently the global source volume and complete actual-boundary
 /// Gk also certify the ideal boundary: no approximation or sampled error term.
@@ -107,20 +118,12 @@ fn bezier(c: &Curve) -> bool {
 /// Every wall/cap edge is still inspected. Unsupported cap laws
 /// or exhausted stages return no Solid. Pole caps are not admitted here.
 pub fn construct_rational_closed_material(
-    profiles: &[Vec<Curve>],
-    material: &LoftCap,
-    origin: [f64; 3],
-    motion: &[RationalPiece],
-    cap_profiles: &[[usize; 2]],
+    source: RationalClosedSweep<'_>,
     tolerance_uv: f64,
     l: RationalClosedLimits,
 ) -> Result<RationalClosedAttempt> {
     rational_closed_impl(
-        profiles,
-        material,
-        origin,
-        motion,
-        cap_profiles,
+        source,
         tolerance_uv,
         l,
         None,
@@ -131,22 +134,14 @@ pub fn construct_rational_closed_material(
 /// boundary obligation for supplied geometry. The input model is never repaired
 /// or reoriented. No constructor, source report or caller proof supplies credit.
 pub fn verify_rational_closed_material(
-    profiles: &[Vec<Curve>],
-    material: &LoftCap,
-    origin: [f64; 3],
-    motion: &[RationalPiece],
-    cap_profiles: &[[usize; 2]],
+    source: RationalClosedSweep<'_>,
     tolerance_uv: f64,
     l: RationalClosedLimits,
     model: &Model,
 ) -> Result<RationalClosedAttempt> {
     model.validate()?;
     rational_closed_impl(
-        profiles,
-        material,
-        origin,
-        motion,
-        cap_profiles,
+        source,
         tolerance_uv,
         l,
         Some(model),
@@ -154,15 +149,18 @@ pub fn verify_rational_closed_material(
 }
 
 fn rational_closed_impl(
-    profiles: &[Vec<Curve>],
-    material: &LoftCap,
-    origin: [f64; 3],
-    motion: &[RationalPiece],
-    cap_profiles: &[[usize; 2]],
+    source: RationalClosedSweep<'_>,
     tolerance_uv: f64,
     l: RationalClosedLimits,
     supplied: Option<&Model>,
 ) -> Result<RationalClosedAttempt> {
+    let RationalClosedSweep {
+        profiles,
+        material,
+        origin,
+        motion,
+        cap_profiles,
+    } = source;
     material.surface.validate()?;
     for c in profiles
         .iter()

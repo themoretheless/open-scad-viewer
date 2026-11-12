@@ -334,11 +334,13 @@ pub fn construct(
     }
     limits.source_exact_work -= proof.exact_work;
     match super::construct_rational_closed_material(
-        profiles,
-        material,
-        origin,
-        reference,
-        cap_profiles,
+        super::RationalClosedSweep {
+            profiles,
+            material,
+            origin,
+            motion: reference,
+            cap_profiles,
+        },
         tolerance_uv,
         limits,
     )? {

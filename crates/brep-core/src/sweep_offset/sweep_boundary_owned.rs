@@ -430,7 +430,8 @@ pub use closed::{
 };
 pub use closed::{
     FilledGraphCapReport, RationalClosedAttempt, RationalClosedBody, RationalClosedLimits,
-    RationalClosedReport, construct_rational_closed_material, verify_rational_closed_material,
+    RationalClosedReport, RationalClosedSweep, construct_rational_closed_material,
+    verify_rational_closed_material,
 };
 pub use closed::{
     SmoothClosedAttempt, SmoothClosedBody, SmoothClosedLimits, SmoothClosedReport,

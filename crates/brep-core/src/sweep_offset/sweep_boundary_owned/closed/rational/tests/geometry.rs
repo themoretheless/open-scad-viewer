@@ -8,11 +8,13 @@ fn original_correlated_center_motion_owns_caps_and_global_g2_without_reference()
     }
     let b = body(
         construct_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &motion,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &motion,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
             limits(),
         )
@@ -36,13 +38,15 @@ fn original_correlated_center_motion_owns_caps_and_global_g2_without_reference()
     no_global.volume.cells = 0;
     assert!(matches!(
         construct_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &motion,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &motion,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
-            no_global
+            no_global,
         )
         .unwrap(),
         RationalClosedAttempt::Refused(_)
@@ -57,11 +61,13 @@ fn carrier_axis_outside_material_owns_original_global_g2() {
     }
     let b = body(
         construct_rational_closed_material(
-            &profiles,
-            &material,
-            [0.; 3],
-            &motion,
-            &[[0, 2], [0, 6]],
+            RationalClosedSweep {
+                profiles: &profiles,
+                material: &material,
+                origin: [0.; 3],
+                motion: &motion,
+                cap_profiles: &[[0, 2], [0, 6]],
+            },
             1e-8,
             limits(),
         )
@@ -111,11 +117,13 @@ fn sheared_uv_window_singularity_outside_material_uses_exact_original_plane_char
         }
         let b = body(
             construct_rational_closed_material(
-                &profiles,
-                &material,
-                [0.; 3],
-                &motion,
-                &[[0, 2], [0, 6]],
+                RationalClosedSweep {
+                    profiles: &profiles,
+                    material: &material,
+                    origin: [0.; 3],
+                    motion: &motion,
+                    cap_profiles: &[[0, 2], [0, 6]],
+                },
                 1e-8,
                 limits(),
             )
@@ -136,13 +144,15 @@ fn sheared_uv_window_singularity_outside_material_uses_exact_original_plane_char
         short.source_exact_work = b.report().work.source_exact_work - 1;
         assert!(matches!(
             construct_rational_closed_material(
-                &profiles,
-                &material,
-                [0.; 3],
-                &motion,
-                &[[0, 2], [0, 6]],
+                RationalClosedSweep {
+                    profiles: &profiles,
+                    material: &material,
+                    origin: [0.; 3],
+                    motion: &motion,
+                    cap_profiles: &[[0, 2], [0, 6]],
+                },
                 1e-8,
-                short
+                short,
             )
             .unwrap(),
             RationalClosedAttempt::Refused(_)
