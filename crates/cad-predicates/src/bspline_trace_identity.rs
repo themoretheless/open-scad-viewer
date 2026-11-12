@@ -6,25 +6,22 @@ use crate::{
     Expansion, InputError, LeafRef, PredicateContext, Reason, Sign, exact_inputs,
 };
 
+/// One B-spline strip given by source leaves: control rows, cross knots, cross
+/// degree and where the traced boundary sits on it.
+#[derive(Clone, Copy)]
+pub struct TraceStrip<'a> {
+    pub strip: &'a [Vec<[LeafRef; 4]>],
+    pub knots: &'a [LeafRef],
+    pub degree: usize,
+    pub location: BsplineStripLocation,
+}
 pub fn rational_bspline_isoparametric_trace_identity(
     ctx: &mut PredicateContext<'_>,
     curve: &[[LeafRef; 4]],
-    strip: &[Vec<[LeafRef; 4]>],
-    knots: &[LeafRef],
-    degree: usize,
-    location: BsplineStripLocation,
+    trace: TraceStrip<'_>,
     periodic_cross: bool,
 ) -> Result<BezierIdentityDecision, InputError> {
-    trace_identity(
-        ctx,
-        curve,
-        strip,
-        knots,
-        degree,
-        location,
-        periodic_cross,
-        None,
-    )
+    trace_identity(ctx, curve, trace, periodic_cross, None)
 }
 
 /// Exact original curve/trace binding with independently represented along bases.
@@ -33,14 +30,12 @@ pub fn rational_bspline_isoparametric_trace_identity(
 pub fn rational_bspline_independent_trace_identity(
     ctx: &mut PredicateContext<'_>,
     curve: &[[LeafRef; 4]],
-    strip: &[Vec<[LeafRef; 4]>],
-    knots: &[LeafRef],
-    degree: usize,
-    location: BsplineStripLocation,
+    trace: TraceStrip<'_>,
     periodic_cross: bool,
     along_knots: [&[LeafRef]; 2],
     along_degrees: [usize; 2],
 ) -> Result<BezierIdentityDecision, InputError> {
+    let strip = trace.strip;
     for side in 0..2 {
         let n = if side == 0 { curve.len() } else { strip.len() };
         if !(1..=32).contains(&along_degrees[side])
@@ -50,27 +45,16 @@ pub fn rational_bspline_independent_trace_identity(
             return Err(InputError::InvalidInput("Invalid independent trace basis"));
         }
     }
-    trace_identity(
-        ctx,
-        curve,
-        strip,
-        knots,
-        degree,
-        location,
-        periodic_cross,
-        Some((along_knots, along_degrees)),
-    )
+    trace_identity(ctx, curve, trace, periodic_cross, Some((along_knots, along_degrees)))
 }
 fn trace_identity(
     ctx: &mut PredicateContext<'_>,
     curve: &[[LeafRef; 4]],
-    strip: &[Vec<[LeafRef; 4]>],
-    knots: &[LeafRef],
-    degree: usize,
-    location: BsplineStripLocation,
+    trace: TraceStrip<'_>,
     periodic_cross: bool,
     along: Option<([&[LeafRef]; 2], [usize; 2])>,
 ) -> Result<BezierIdentityDecision, InputError> {
+    let TraceStrip { strip, knots, degree, location } = trace;
     if !(2..=33).contains(&curve.len())
         || !(2..=33).contains(&strip.len())
         || (along.is_none() && curve.len() != strip.len())

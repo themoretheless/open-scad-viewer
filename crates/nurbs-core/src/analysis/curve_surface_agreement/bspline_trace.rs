@@ -187,20 +187,24 @@ pub(super) fn verify(
             cad_predicates::rational_bspline_isoparametric_trace_identity(
                 &mut ctx,
                 &curve,
-                &strip,
-                &k,
-                degrees[fixed],
-                location,
+                cad_predicates::TraceStrip {
+                    strip: &strip,
+                    knots: &k,
+                    degree: degrees[fixed],
+                    location,
+                },
                 periodic[fixed],
             )
         } else {
             cad_predicates::rational_bspline_independent_trace_identity(
                 &mut ctx,
                 &curve,
-                &strip,
-                &k,
-                degrees[fixed],
-                location,
+                cad_predicates::TraceStrip {
+                    strip: &strip,
+                    knots: &k,
+                    degree: degrees[fixed],
+                    location,
+                },
                 periodic[fixed],
                 [&ck, &ak],
                 [c.degree, degrees[free]],
