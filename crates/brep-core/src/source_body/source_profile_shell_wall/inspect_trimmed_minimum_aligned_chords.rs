@@ -6,12 +6,15 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
         &self,
         minimum_mm: f64,
         max_sine_squared: f64,
-        tolerance_uv: f64,
-        controls: usize,
-        max_cells: usize,
-        max_spans: usize,
-        max_domain_cells: usize,
+        limits: WallScanLimits,
     ) -> Result<ExpressionWallReport> {
+        let WallScanLimits {
+            tolerance_uv,
+            controls,
+            max_cells,
+            max_spans,
+            max_domain_cells,
+        } = limits;
         if !minimum_mm.is_finite()
             || minimum_mm <= 0.
             || !max_sine_squared.is_finite()

@@ -3,6 +3,16 @@
 use super::*;
 /// Owner-bound lower bound for endpoint-normal-aligned chords only.
 /// This is not an unconstrained minimum thickness or an attained witness.
+/// UV tolerance, rail control allowance and the cell, span and trim-domain
+/// budgets of one aligned-chord wall scan.
+#[derive(Clone, Copy, Debug)]
+pub struct WallScanLimits {
+    pub tolerance_uv: f64,
+    pub controls: usize,
+    pub max_cells: usize,
+    pub max_spans: usize,
+    pub max_domain_cells: usize,
+}
 pub struct ExpressionAlignedChordMinimum<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> {
     geometry: &'v EmbeddedExpressionGeometry<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>,
     minimum_mm: f64,
@@ -39,11 +49,13 @@ impl<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>
         self.qualify_trimmed_minimum_aligned_chords(
             minimum_mm,
             max_sine_squared,
-            tolerance_uv,
-            controls,
-            max_cells,
-            max_spans,
-            0,
+            WallScanLimits {
+                tolerance_uv,
+                controls,
+                max_cells,
+                max_spans,
+                max_domain_cells: 0,
+            },
         )
     }
     /// Fresh whole-face coverage including proven outside-trim exclusions.
@@ -51,20 +63,12 @@ impl<'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>
         &'v self,
         minimum_mm: f64,
         max_sine_squared: f64,
-        tolerance_uv: f64,
-        controls: usize,
-        max_cells: usize,
-        max_spans: usize,
-        max_domain_cells: usize,
+        limits: WallScanLimits,
     ) -> Result<ExpressionWallQualification<'v, 'g, 'x, 'o, 'i, 'f, 'a, 's, 'p, 'b>> {
         let report = self.inspect_trimmed_minimum_aligned_chords(
             minimum_mm,
             max_sine_squared,
-            tolerance_uv,
-            controls,
-            max_cells,
-            max_spans,
-            max_domain_cells,
+            limits,
         )?;
         let certificate = if report.complete && report.pending.is_empty() {
             Some(ExpressionAlignedChordMinimum {

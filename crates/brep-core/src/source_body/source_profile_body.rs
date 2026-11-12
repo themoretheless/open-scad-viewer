@@ -586,7 +586,7 @@ pub use assembled_shell::{
 };
 pub use assembled_shell::{
     ExpressionAlignedChordMinimum, ExpressionWallCell, ExpressionWallPendingReason,
-    ExpressionWallQualification, ExpressionWallReport,
+    ExpressionWallQualification, ExpressionWallReport, WallScanLimits,
 };
 
 #[path = "source_profile_projected_region.rs"]

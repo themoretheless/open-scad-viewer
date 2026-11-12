@@ -6518,7 +6518,15 @@
             assert!((100000..=1000000).contains(&wall_spans));
             let wall = geometry
                 .qualify_trimmed_minimum_aligned_chords(
-                    1., 1e-4, 0.05, 1000, wall_cells, wall_spans, trim_cells,
+                    1.,
+                    1e-4,
+                    crate::source_profile_body::WallScanLimits {
+                        tolerance_uv: 0.05,
+                        controls: 1000,
+                        max_cells: wall_cells,
+                        max_spans: wall_spans,
+                        max_domain_cells: trim_cells,
+                    },
                 )
                 .unwrap();
             assert!(wall.report.spans <= wall_spans && wall.report.cells <= wall_cells);

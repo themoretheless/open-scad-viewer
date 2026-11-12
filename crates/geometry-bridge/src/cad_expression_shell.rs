@@ -280,9 +280,16 @@ fn restore_inner(v: Value, inspect: bool) -> Result<Value> {
                         if !v["alignedChordCheck"].is_null() {
                             let limits=&v["alignedChordCheck"];
                             let checked=geometry.qualify_trimmed_minimum_aligned_chords(
-                                field(limits,"minimumMm")?,field(limits,"maxSineSquared")?,
-                                field(limits,"toleranceUv")?,field(limits,"controls")?,
-                                field(limits,"cells")?,field(limits,"spans")?,field(limits,"domainCells")?)?;
+                                field(limits,"minimumMm")?,
+                                field(limits,"maxSineSquared")?,
+                                brep_core::source_profile_body::WallScanLimits {
+                                    tolerance_uv: field(limits,"toleranceUv")?,
+                                    controls: field(limits,"controls")?,
+                                    max_cells: field(limits,"cells")?,
+                                    max_spans: field(limits,"spans")?,
+                                    max_domain_cells: field(limits,"domainCells")?,
+                                },
+                            )?;
                             result["alignedChordCheck"]=json!({"version":1,
                                 "qualified":checked.certificate.is_some(),"report":checked.report,
                                 "wholeThicknessQualified":false,"solidQualified":false});

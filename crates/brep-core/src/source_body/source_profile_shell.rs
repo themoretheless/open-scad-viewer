@@ -29,7 +29,7 @@ use crate::source_shell_incidence::Address;
 use std::collections::{BTreeMap, BTreeSet};
 pub use wall::{
     ExpressionAlignedChordMinimum, ExpressionWallCell, ExpressionWallPendingReason,
-    ExpressionWallQualification, ExpressionWallReport,
+    ExpressionWallQualification, ExpressionWallReport, WallScanLimits,
 };
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ShellFaceKind {

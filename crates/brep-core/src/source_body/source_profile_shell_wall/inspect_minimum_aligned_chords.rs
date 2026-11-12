@@ -17,11 +17,13 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
         self.inspect_trimmed_minimum_aligned_chords(
             minimum_mm,
             max_sine_squared,
-            tolerance_uv,
-            controls,
-            max_cells,
-            max_spans,
-            0,
+            WallScanLimits {
+                tolerance_uv,
+                controls,
+                max_cells,
+                max_spans,
+                max_domain_cells: 0,
+            },
         )
     }
 }
