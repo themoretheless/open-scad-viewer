@@ -1,5 +1,5 @@
 //! Unseeded original-root discovery feeding actual, freshly qualified BRep caps.
-use super::{Band, Limits, Thickness, refused, thicken};
+use super::{Band, Limits, Thickness, Tolerances, refused, thicken};
 use crate::Result;
 use nurbs_core::{
     offset_contact_path,
@@ -188,9 +188,11 @@ impl AutomaticReport {
             &self.sources,
             self.reversed,
             self.distance,
-            self.uv_tolerance,
-            self.normal_tolerance,
-            self.sewing_tolerance,
+            Tolerances {
+                uv: self.uv_tolerance,
+                normal: self.normal_tolerance,
+                sewing: self.sewing_tolerance,
+            },
             self.limits,
         )?;
         if fresh.complete_contact_coverage() != self.complete_contact_coverage()
@@ -275,16 +277,18 @@ fn band(request: &coverage::PathRequest, path: &offset_contact_path::Report) -> 
 /// pending natural-domain region even when a useful LOCAL skin was built.
 /// Each attempt has its own explicit work allowance, with a bounded attempt
 /// count; failed work is never silently refunded into a shared budget.
-#[allow(clippy::too_many_arguments)]
 pub fn discover(
     sources: &[Surface; 2],
     reversed: [bool; 2],
     distance: f64,
-    uv_tolerance: f64,
-    normal_tolerance: f64,
-    sewing_tolerance: f64,
+    tolerances: Tolerances,
     limits: DiscoveryLimits,
 ) -> Result<AutomaticReport> {
+    let Tolerances {
+        uv: uv_tolerance,
+        normal: normal_tolerance,
+        sewing: sewing_tolerance,
+    } = tolerances;
     super::validate(limits.construction)?;
     if !(1..=32).contains(&limits.max_constructions)
         || !uv_tolerance.is_finite()
@@ -325,16 +329,7 @@ pub fn discover(
         };
         // Enclosing several successful tubes is a proposal, never an inherited
         // uniform branch proof. thicken must prove the entire enclosing band.
-        let built = thicken(
-            sources,
-            reversed,
-            distance,
-            b,
-            uv_tolerance,
-            normal_tolerance,
-            sewing_tolerance,
-            limits.construction,
-        );
+        let built = thicken(sources, reversed, distance, b, tolerances, limits.construction);
         let (skin, reason) = match built {
             Ok(s) => (Some(s), "qualified-local-skin".into()),
             Err(e) => (None, e.to_string()),

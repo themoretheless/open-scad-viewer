@@ -44,10 +44,12 @@ pub(super) fn construct(
             reversed,
             limits.exact_work,
             &mut exact,
-            &source_boundaries,
-            limits.proof.max_cells,
-            cells,
-            tolerance,
+            topology::PreparedLift {
+                prepared: &source_boundaries,
+                max_cells: limits.proof.max_cells,
+                cells,
+                tolerance,
+            },
         )?
     } else {
         topology::boundaries(sources, reversed, limits.exact_work, &mut exact)?

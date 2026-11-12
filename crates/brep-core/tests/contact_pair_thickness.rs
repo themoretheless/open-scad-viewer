@@ -1,4 +1,4 @@
-use brep_core::shell_thickness::contact_pair::{Band, Limits, thicken};
+use brep_core::shell_thickness::contact_pair::{Band, Limits, Tolerances, thicken};
 use nurbs_core::{surface::Surface, surface_edit};
 
 fn plane() -> Surface {
@@ -52,7 +52,18 @@ fn curved_band() -> Band {
 fn check(s: [Surface; 2], reverse: [bool; 2], band: Band, normal: f64, seam: [usize; 2]) {
     let saved = s.clone();
     let l = Limits::default();
-    let r = thicken(&s, reverse, 0.1, band, 1e-7, normal, 1e-7, l).unwrap();
+    let r = thicken(
+        &s,
+        reverse,
+        0.1,
+        band,
+        Tolerances {
+            uv: 1e-7,
+            normal,
+            sewing: 1e-7,
+        },
+        l,
+    ).unwrap();
     assert_eq!(r.source_seam(), seam);
     assert_eq!(r.model().faces.len(), 10);
     assert_eq!(r.constructed().exposed_boundaries().len(), 6);
@@ -145,7 +156,18 @@ fn exhausted_shared_work_never_publishes_a_partial_body_or_mutates_sources() {
             6 => l.sewing.exact_work = 1,
             _ => l.sewing.proof.max_cells = 1,
         }
-        assert!(thicken(&s, [false; 2], 0.1, b, 1e-7, 1e-5, 1e-7, l).is_err());
+        assert!(thicken(
+            &s,
+            [false; 2],
+            0.1,
+            b,
+            Tolerances {
+                uv: 1e-7,
+                normal: 1e-5,
+                sewing: 1e-7,
+            },
+            l,
+        ).is_err());
     }
     assert_eq!(s, saved);
 }
@@ -169,10 +191,12 @@ fn missing_original_seam_and_wrong_contact_band_are_refused() {
             [false; 2],
             0.1,
             good,
-            1e-7,
-            1e-5,
-            1e-7,
-            Limits::default()
+            Tolerances {
+                uv: 1e-7,
+                normal: 1e-5,
+                sewing: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -186,10 +210,12 @@ fn missing_original_seam_and_wrong_contact_band_are_refused() {
             [false; 2],
             0.1,
             wrong,
-            1e-7,
-            1e-5,
-            1e-7,
-            Limits::default()
+            Tolerances {
+                uv: 1e-7,
+                normal: 1e-5,
+                sewing: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -203,7 +229,17 @@ fn unseeded_discovery_constructs_local_skin_and_retains_boundary_pending() {
     let saved = s.clone();
     let mut limits = DiscoveryLimits::default();
     limits.max_constructions = 1;
-    let r = discover(&s, [false; 2], 0.1, 1e-7, 1e-5, 1e-7, limits).unwrap();
+    let r = discover(
+        &s,
+        [false; 2],
+        0.1,
+        Tolerances {
+            uv: 1e-7,
+            normal: 1e-5,
+            sewing: 1e-7,
+        },
+        limits,
+    ).unwrap();
     assert!(!r.attempts().is_empty(), "no qualified discovered path");
     let a = &r.attempts()[0];
     assert!(a.local_skin().is_some(), "{}", a.reason());
@@ -235,9 +271,11 @@ fn automatic_absence_and_exhaustion_never_become_a_complete_skin() {
         &s,
         [false; 2],
         0.1,
-        1e-7,
-        1e-5,
-        1e-7,
+        Tolerances {
+            uv: 1e-7,
+            normal: 1e-5,
+            sewing: 1e-7,
+        },
         DiscoveryLimits::default(),
     )
     .unwrap();
@@ -248,11 +286,31 @@ fn automatic_absence_and_exhaustion_never_become_a_complete_skin() {
     l.search.qualification.boxes = 1;
     l.search.qualification.path_cells = 16;
     l.search.path.cells = 1;
-    let r = discover(&planes(), [false; 2], 0.1, 1e-7, 1e-5, 1e-7, l).unwrap();
+    let r = discover(
+        &planes(),
+        [false; 2],
+        0.1,
+        Tolerances {
+            uv: 1e-7,
+            normal: 1e-5,
+            sewing: 1e-7,
+        },
+        l,
+    ).unwrap();
     assert!(!r.complete_contact_coverage());
     assert!(!r.discovery().coverage.pending.is_empty());
     l.max_constructions = 0;
-    assert!(discover(&s, [false; 2], 0.1, 1e-7, 1e-5, 1e-7, l).is_err());
+    assert!(discover(
+        &s,
+        [false; 2],
+        0.1,
+        Tolerances {
+            uv: 1e-7,
+            normal: 1e-5,
+            sewing: 1e-7,
+        },
+        l,
+    ).is_err());
 }
 
 #[test]
@@ -262,7 +320,17 @@ fn unseeded_nonlinear_pair_builds_from_discovered_original_paths() {
     let saved = s.clone();
     let mut l = DiscoveryLimits::default();
     l.max_constructions = 4;
-    let r = discover(&s, [false; 2], 0.1, 1e-7, 0.005, 1e-7, l).unwrap();
+    let r = discover(
+        &s,
+        [false; 2],
+        0.1,
+        Tolerances {
+            uv: 1e-7,
+            normal: 0.005,
+            sewing: 1e-7,
+        },
+        l,
+    ).unwrap();
     assert!(
         r.attempts().iter().any(|a| a.local_skin().is_some()),
         "paths={} reasons={:?} predictors={} path_attempts={} proposal_cells={} numerical_errors={:?}",

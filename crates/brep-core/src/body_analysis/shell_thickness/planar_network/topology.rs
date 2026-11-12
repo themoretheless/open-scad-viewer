@@ -23,40 +23,42 @@ pub(in crate::body_analysis::shell_thickness) fn boundaries(
     max: u64,
     work: &mut u64,
 ) -> Result<Vec<Boundary>> {
-    discover(sources, reversed, max, work, None, 0, &mut 0, 0.)
+    discover(sources, reversed, max, work, None)
+}
+/// Prepared source boundaries with the cell budget and tolerance their
+/// pcurve lifts consume.
+pub(in crate::body_analysis::shell_thickness) struct PreparedLift<'a> {
+    pub prepared: &'a prepare::Prepared,
+    pub max_cells: usize,
+    pub cells: &'a mut usize,
+    pub tolerance: f64,
 }
 pub(in crate::body_analysis::shell_thickness) fn boundaries_prepared(
     sources: &[Surface],
     reversed: &[bool],
     max: u64,
     work: &mut u64,
-    prepared: &prepare::Prepared,
-    max_cells: usize,
-    cells: &mut usize,
-    tolerance: f64,
+    lift: PreparedLift<'_>,
 ) -> Result<Vec<Boundary>> {
-    discover(
-        sources,
-        reversed,
-        max,
-        work,
-        Some(prepared),
-        max_cells,
-        cells,
-        tolerance,
-    )
+    discover(sources, reversed, max, work, Some(lift))
 }
-#[allow(clippy::too_many_arguments)]
 fn discover(
     sources: &[Surface],
     reversed: &[bool],
     max: u64,
     work: &mut u64,
-    prepared: Option<&prepare::Prepared>,
-    max_cells: usize,
-    cells: &mut usize,
-    tolerance: f64,
+    lift: Option<PreparedLift<'_>>,
 ) -> Result<Vec<Boundary>> {
+    let mut unused_cells = 0;
+    let (prepared, max_cells, cells, tolerance) = match lift {
+        Some(PreparedLift {
+            prepared,
+            max_cells,
+            cells,
+            tolerance,
+        }) => (Some(prepared), max_cells, cells, tolerance),
+        None => (None, 0, &mut unused_cells, 0.),
+    };
     let mut edges = Vec::<Edge>::new();
     let mut buckets = BTreeMap::<[[u64; 3]; 2], Vec<usize>>::new();
     for (patch, s) in sources.iter().enumerate() {

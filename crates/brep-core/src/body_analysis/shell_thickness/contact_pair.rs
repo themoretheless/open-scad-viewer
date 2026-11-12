@@ -7,6 +7,14 @@ use nurbs_core::{
     surface::Surface,
     surface_offset::{self, ProposalLimits, ProposalReport, contact_curve, regions},
 };
+/// UV proposal, normal-displacement and boundary sewing tolerances of one
+/// contact-pair skin.
+#[derive(Clone, Copy, Debug)]
+pub struct Tolerances {
+    pub uv: f64,
+    pub normal: f64,
+    pub sewing: f64,
+}
 pub mod cap;
 mod automatic;
 mod binding;
@@ -116,9 +124,11 @@ impl Thickness {
             self.reversed,
             self.distance,
             self.band,
-            self.uv_tolerance,
-            self.normal_tolerance,
-            self.sewing_tolerance,
+            Tolerances {
+                uv: self.uv_tolerance,
+                normal: self.normal_tolerance,
+                sewing: self.sewing_tolerance,
+            },
             self.limits,
         )?;
         if fresh.model() != self.model() || fresh.curve != self.curve || fresh.seam != self.seam {
@@ -173,17 +183,19 @@ fn validate(l: Limits) -> Result<()> {
 /// original-seam work is deducted from final sewing allowances. This does not
 /// discover the band, extend supports, cover omitted original cap parameters or
 /// prove full-root coverage/global ideal-offset embedding or arbitrary solids.
-#[allow(clippy::too_many_arguments)]
 pub fn thicken(
     sources: &[Surface; 2],
     reversed: [bool; 2],
     signed_thickness: f64,
     band: Band,
-    uv_tolerance: f64,
-    normal_tolerance: f64,
-    sewing_tolerance: f64,
+    tolerances: Tolerances,
     limits: Limits,
 ) -> Result<Thickness> {
+    let Tolerances {
+        uv: uv_tolerance,
+        normal: normal_tolerance,
+        sewing: sewing_tolerance,
+    } = tolerances;
     validate(limits)?;
     super::freeform_network::validate(
         sources,
