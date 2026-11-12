@@ -105,44 +105,46 @@ impl DirectBuilder<'_> {
         choose_regular(
             world,
             surface,
-            reversed,
-            self.whole_domain_proofs,
-            require_exact,
+            PcurveFlags {
+                reversed,
+                whole: self.whole_domain_proofs,
+                require_exact,
+            },
             &matching,
             self.pcurve_use.entry((id, surface_id)).or_default(),
         )
     }
 }
-fn choose_regular(
-    world: &Curve,
-    surface: &Surface,
+/// Orientation, whole-domain proof and exact-agreement requirements of one
+/// pcurve selection.
+#[derive(Clone, Copy, Debug)]
+struct PcurveFlags {
     reversed: bool,
     whole: bool,
     require_exact: bool,
+}
+fn choose_regular(
+    world: &Curve,
+    surface: &Surface,
+    flags: PcurveFlags,
     matching: &[Curve],
     used: &mut BTreeSet<usize>,
 ) -> Result<Curve> {
-    choose_regular_with_budget(
-        world,
-        surface,
-        reversed,
-        whole,
-        require_exact,
-        matching,
-        used,
-        100000,
-    )
+    choose_regular_with_budget(world, surface, flags, matching, used, 100000)
 }
 fn choose_regular_with_budget(
     world: &Curve,
     surface: &Surface,
-    reversed: bool,
-    whole: bool,
-    require_exact: bool,
+    flags: PcurveFlags,
     matching: &[Curve],
     used: &mut BTreeSet<usize>,
     max_cells: usize,
 ) -> Result<Curve> {
+    let PcurveFlags {
+        reversed,
+        whole,
+        require_exact,
+    } = flags;
     use nurbs_core::curve_surface_agreement::{self, Status};
     let mut candidates = Vec::new();
     let mut cells = 0;
@@ -192,6 +194,15 @@ fn choose_regular_with_budget(
 #[cfg(test)]
 mod tests {
     use super::*;
+    const WHOLE: PcurveFlags = PcurveFlags {
+        reversed: false,
+        whole: true,
+        require_exact: false,
+    };
+    const WHOLE_REVERSED: PcurveFlags = PcurveFlags {
+        reversed: true,
+        ..WHOLE
+    };
     fn surface() -> Surface {
         Surface {
             degree_u: 1,
@@ -219,13 +230,13 @@ mod tests {
         ] {
             let mut used = BTreeSet::new();
             assert_eq!(
-                choose_regular(&world, &s, false, true, false, &pcs, &mut used).unwrap(),
+                choose_regular(&world, &s, WHOLE, &pcs, &mut used).unwrap(),
                 forward
             );
-            assert!(choose_regular(&world, &s, false, true, false, &pcs, &mut used).is_err());
+            assert!(choose_regular(&world, &s, WHOLE, &pcs, &mut used).is_err());
             assert_eq!(used.len(), 1);
             assert_eq!(
-                choose_regular(&world, &s, true, true, false, &pcs, &mut used).unwrap(),
+                choose_regular(&world, &s, WHOLE_REVERSED, &pcs, &mut used).unwrap(),
                 back
             );
             assert_eq!(used.len(), 2);
@@ -241,41 +252,17 @@ mod tests {
             p[1] += 1e-10;
         }
         assert!(
-            choose_regular(
-                &world,
-                &s,
-                false,
-                true,
-                false,
-                &[pc.clone(), other],
-                &mut BTreeSet::new()
-            )
+            choose_regular(&world, &s, WHOLE, &[pc.clone(), other], &mut BTreeSet::new())
             .is_err()
         );
         let mut clock = pc.clone();
         clock.knots = vec![10., 10., 14., 14.];
         assert!(
-            choose_regular(
-                &world,
-                &s,
-                false,
-                true,
-                false,
-                &[pc.clone(), clock],
-                &mut BTreeSet::new()
-            )
+            choose_regular(&world, &s, WHOLE, &[pc.clone(), clock], &mut BTreeSet::new())
             .is_err()
         );
         assert_eq!(
-            choose_regular(
-                &world,
-                &s,
-                false,
-                true,
-                false,
-                &[pc.clone(), pc.clone()],
-                &mut BTreeSet::new()
-            )
+            choose_regular(&world, &s, WHOLE, &[pc.clone(), pc.clone()], &mut BTreeSet::new())
             .unwrap(),
             pc
         );
@@ -300,7 +287,7 @@ mod tests {
         );
         let mut used = BTreeSet::new();
         assert!(
-            choose_regular_with_budget(&world, &s, false, true, false, &[pc, hard], &mut used, 2)
+            choose_regular_with_budget(&world, &s, WHOLE, &[pc, hard], &mut used, 2)
                 .is_err()
         );
         assert!(used.is_empty());

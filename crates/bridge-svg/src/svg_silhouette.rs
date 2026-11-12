@@ -562,16 +562,28 @@ mod tests {
     }
 }
 
+/// Palette size, white-background handling and minimum region area of one
+/// color trace.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ColorTraceOptions {
+    pub colors: usize,
+    pub ignore_white: bool,
+    pub min_area: f64,
+}
+
 pub(crate) fn color_contours(
     tree: &usvg::Tree,
     width_mm: f64,
     height_mm: f64,
     raster_size: u32,
     alpha: f64,
-    colors: usize,
-    ignore_white: bool,
-    min_area: f64,
+    options: ColorTraceOptions,
 ) -> Result<value_codec::Value> {
+    let ColorTraceOptions {
+        colors,
+        ignore_white,
+        min_area,
+    } = options;
     if !width_mm.is_finite()
         || !height_mm.is_finite()
         || width_mm <= 0.
