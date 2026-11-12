@@ -408,7 +408,18 @@ fn restore_using<E:EditorCarrier>(v:Value, restore_body:impl FnOnce(Value,brep_c
         })
         .transpose()?;
     let wall_qualification=wall_request.map(|(groups,minimum,tolerance,uv,grid,attempts,work)|->Result<Value>{
-        let r=brep_core::source_material_wall::search_and_qualify(body,[&groups[0],&groups[1]],minimum,tolerance,uv,grid,attempts,work)?;
+        let r=brep_core::source_material_wall::search_and_qualify(
+            body,
+            [&groups[0],&groups[1]],
+            brep_core::source_material_wall::WallRequirement {
+                minimum_mm: minimum,
+                tolerance_mm: tolerance,
+            },
+            uv,
+            grid,
+            attempts,
+            work,
+        )?;
         let witness=r.certificate.as_ref().map(|c| {
             let chord=c.chord();
             let endpoints=chord.endpoints().map(|e|json!({"face":e.face,"parameter":e.parameter,"uv":e.uv,"worldMm":e.world_mm}));

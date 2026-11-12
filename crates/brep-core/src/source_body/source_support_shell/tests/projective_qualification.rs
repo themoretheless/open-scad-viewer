@@ -141,43 +141,25 @@
         let opposing = proof.faces();
         let first = [opposing[0]];
         let second = [opposing[1]];
-        let bounded = crate::source_material_wall::qualify(
-            &body,
-            [&first, &second],
-            9.99,
-            0.02,
-            [-1., 7., 11.],
-            [12., 0., 0.],
-            1e-8,
-            crate::source_material_wall::Limits {
+        let bounded = crate::source_material_wall::qualify(&body, [&first, &second], crate::source_material_wall::WallRequirement { minimum_mm: 9.99, tolerance_mm: 0.02 }, [-1., 7., 11.], [12., 0., 0.], 1e-8, crate::source_material_wall::Limits {
                 gap: crate::source_face_gap::Limits {
                     cells: 10000,
                     spans: 20000,
                 },
                 chord: chord_limits(),
-            },
-        )
+            })
         .unwrap();
         assert!(bounded.converged);
         let interval = bounded.certificate.unwrap();
         assert!(std::ptr::eq(interval.body(), &body));
         assert!(interval.interval_mm()[0] <= 10. && interval.interval_mm()[1] >= 10.);
-        let refined = crate::source_material_wall::search_and_refine(
-            &body,
-            [&first, &second],
-            9.,
-            1e-4,
-            1e-8,
-            1,
-            1,
-            crate::source_material_wall::Limits {
+        let refined = crate::source_material_wall::search_and_refine(&body, [&first, &second], crate::source_material_wall::WallRequirement { minimum_mm: 9., tolerance_mm: 1e-4 }, 1e-8, 1, 1, crate::source_material_wall::Limits {
                 gap: crate::source_face_gap::Limits {
                     cells: 10000,
                     spans: 20000,
                 },
                 chord: chord_limits(),
-            },
-        )
+            })
         .unwrap();
         assert!(refined.result.converged);
         let refined = refined.result.certificate.unwrap();
@@ -8667,15 +8649,7 @@
                 false,
             ),
         ] {
-            let wall = crate::source_material_wall::qualify(
-                &body,
-                groups,
-                minimum,
-                tolerance,
-                [10., 2., -1.],
-                [0., 0., 8.],
-                1e-7,
-                crate::source_material_wall::Limits {
+            let wall = crate::source_material_wall::qualify(&body, groups, crate::source_material_wall::WallRequirement { minimum_mm: minimum, tolerance_mm: tolerance }, [10., 2., -1.], [0., 0., 8.], 1e-7, crate::source_material_wall::Limits {
                     gap: crate::source_face_gap::Limits {
                         cells: 10000,
                         spans: 20000,
@@ -8686,8 +8660,7 @@
                         normal_spans: 1000,
                         max_sine_squared: 1e-6,
                     },
-                },
-            )
+                })
             .unwrap();
             eprintln!(
                 "source wall {} interval={:?} converged={}",
@@ -8765,15 +8738,7 @@
             .is_err()
         );
         for (cells, expected) in [(1000, true), (1, false)] {
-            let automatic = crate::source_material_wall::search_and_qualify(
-                &body,
-                [&bottom, &top],
-                5.99,
-                0.02,
-                1e-7,
-                3,
-                54,
-                crate::source_material_wall::Limits {
+            let automatic = crate::source_material_wall::search_and_qualify(&body, [&bottom, &top], crate::source_material_wall::WallRequirement { minimum_mm: 5.99, tolerance_mm: 0.02 }, 1e-7, 3, 54, crate::source_material_wall::Limits {
                     gap: crate::source_face_gap::Limits { cells, spans: 2000 },
                     chord: crate::source_material_chord::Limits {
                         cells: 10000,
@@ -8781,8 +8746,7 @@
                         normal_spans: 1000,
                         max_sine_squared: 1e-6,
                     },
-                },
-            )
+                })
             .unwrap();
             eprintln!(
                 "source automatic wall {} converged={} interval={:?}",
@@ -9183,15 +9147,7 @@
         .unwrap();
         assert!(cavity.certificate.is_none());
         assert_eq!(cavity.reason, "material-pair-outside-groups");
-        let automatic_radial = crate::source_material_wall::search_and_qualify(
-            &body,
-            [&[2, 7, 12, 16, 20, 24], &[3, 8, 13, 17, 21, 25]],
-            14.5,
-            0.6,
-            1e-7,
-            3,
-            54,
-            crate::source_material_wall::Limits {
+        let automatic_radial = crate::source_material_wall::search_and_qualify(&body, [&[2, 7, 12, 16, 20, 24], &[3, 8, 13, 17, 21, 25]], crate::source_material_wall::WallRequirement { minimum_mm: 14.5, tolerance_mm: 0.6 }, 1e-7, 3, 54, crate::source_material_wall::Limits {
                 gap: crate::source_face_gap::Limits {
                     cells: 10000,
                     spans: 20000,
@@ -9202,8 +9158,7 @@
                     normal_spans: 1000,
                     max_sine_squared: 1e-6,
                 },
-            },
-        )
+            })
         .unwrap();
         eprintln!(
             "source automatic radial wall {} attempts={} refused={} interval={:?}",
@@ -9223,15 +9178,7 @@
         for (cells, spans, tolerance, expected) in
             [(50000, 100000, 0.02, true), (10000, 20000, 1e-16, false)]
         {
-            let refined = crate::source_material_wall::search_and_refine(
-                &body,
-                [&[2, 7, 12, 16, 20, 24], &[3, 8, 13, 17, 21, 25]],
-                14.5,
-                tolerance,
-                1e-7,
-                3,
-                54,
-                crate::source_material_wall::Limits {
+            let refined = crate::source_material_wall::search_and_refine(&body, [&[2, 7, 12, 16, 20, 24], &[3, 8, 13, 17, 21, 25]], crate::source_material_wall::WallRequirement { minimum_mm: 14.5, tolerance_mm: tolerance }, 1e-7, 3, 54, crate::source_material_wall::Limits {
                     gap: crate::source_face_gap::Limits { cells, spans },
                     chord: crate::source_material_chord::Limits {
                         cells: 10000,
@@ -9239,8 +9186,7 @@
                         normal_spans: 1000,
                         max_sine_squared: 1e-6,
                     },
-                },
-            )
+                })
             .unwrap();
             eprintln!(
                 "source refined radial wall converged={} cells={} spans={} interval={:?} refinement={:?}",
