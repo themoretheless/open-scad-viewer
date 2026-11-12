@@ -8,9 +8,14 @@ pub(super) fn certify_original_cover_with_projection(
     max_spans: usize,
     max_depth: usize,
     success_reason: &'static str,
-    allow_oblique: bool,
-    column_scale: [f64; 2],
+    oblique: Option<[f64; 2]>,
 ) -> Result<(Report, Option<[[f64; 3]; 2]>, [f64; 2])> {
+    // `Some(column_scale)` admits oblique projections starting from that
+    // column scale; `None` keeps the axis-aligned unit-scale projection.
+    let (allow_oblique, column_scale) = match oblique {
+        Some(scale) => (true, scale),
+        None => (false, [1., 1.]),
+    };
     let mut projection_matrix = None;
     let mut proven_scale = column_scale;
     for depth in 0..=max_depth {

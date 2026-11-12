@@ -633,8 +633,7 @@ fn certify_original_cover(
         max_spans,
         max_depth,
         success_reason,
-        false,
-        [1., 1.],
+        None,
     )?
     .0)
 }

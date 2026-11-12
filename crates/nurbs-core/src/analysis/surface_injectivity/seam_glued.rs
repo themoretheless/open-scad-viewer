@@ -130,8 +130,7 @@ pub fn certify_seam_glued_rectangle(
         max_spans,
         max_depth,
         "seam-glued-original-common-contraction",
-        true,
-        scale,
+        Some(scale),
     )?;
     Ok(output(report, projection, scale))
 }
