@@ -179,10 +179,7 @@ fn identity(
     } else {
         cad_predicates::rational_bspline_projective_strip_jet_identity_with_position(
             &mut ctx,
-            [&a_refs, &b_refs],
-            [&ak, &bk],
-            [ab.cross(a).0, bb.cross(b).0],
-            ls,
+            strip_refs,
             source.leaf(si).unwrap(),
             order,
             propose_exact_scale,

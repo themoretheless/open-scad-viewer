@@ -88,17 +88,14 @@ pub fn affine_bspline_knot_basis_identity(
 /// Transverse coordinates are normalized to each original active domain.
 pub fn rational_bspline_projective_strip_jet_identity(
     ctx: &mut PredicateContext<'_>,
-    strips: [&[Vec<[LeafRef; 4]>]; 2],
-    knots: [&[LeafRef]; 2],
-    degrees: [usize; 2],
-    locations: [BsplineStripLocation; 2],
+    pair: StripPairRefs<'_>,
     scale: LeafRef,
     order: usize,
     propose_exact_scale: bool,
 ) -> Result<BezierIdentityDecision, InputError> {
     strip_identity(
         ctx,
-        StripPairRefs { strips, knots, degrees, locations },
+        pair,
         scale,
         order,
         propose_exact_scale,
@@ -110,10 +107,7 @@ pub fn rational_bspline_projective_strip_jet_identity(
 /// Common-basis zeroth-jet fact, without a second evaluation or work refund.
 pub fn rational_bspline_projective_strip_jet_identity_with_position(
     ctx: &mut PredicateContext<'_>,
-    strips: [&[Vec<[LeafRef; 4]>]; 2],
-    knots: [&[LeafRef]; 2],
-    degrees: [usize; 2],
-    locations: [BsplineStripLocation; 2],
+    pair: StripPairRefs<'_>,
     scale: LeafRef,
     order: usize,
     propose: bool,
@@ -121,7 +115,7 @@ pub fn rational_bspline_projective_strip_jet_identity_with_position(
     let mut position = false;
     let proof = strip_identity(
         ctx,
-        StripPairRefs { strips, knots, degrees, locations },
+        pair,
         scale,
         order,
         propose,
@@ -648,12 +642,7 @@ mod tests {
                     },
                     None,
                 );
-                rational_bspline_projective_strip_jet_identity(
-                    &mut ctx,
-                    [&a, &b],
-                    [&knots, &knots],
-                    [2, 2],
-                    [
+                rational_bspline_projective_strip_jet_identity(&mut ctx, StripPairRefs { strips: [&a, &b], knots: [&knots, &knots], degrees: [2, 2], locations: [
                         BsplineStripLocation {
                             span: 2,
                             parameter: knots[3],
@@ -664,11 +653,7 @@ mod tests {
                             parameter: knots[2],
                             inward_positive: true,
                         },
-                    ],
-                    source.leaf(si).unwrap(),
-                    2,
-                    false,
-                )
+                    ] }, source.leaf(si).unwrap(), 2, false)
                 .unwrap()
             };
             let new = run(1000000);
