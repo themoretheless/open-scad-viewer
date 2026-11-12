@@ -29,26 +29,6 @@ pub(crate) fn original_definition(
     json!({"version":1,"kind":"original","context":context.to_value(),"surface":surface.to_value(),"wires":wires,"toleranceUV":tolerance})
 }
 #[cfg(feature = "codec")]
-pub(crate) fn cut_definition(
-    context: &cad_predicates::ToleranceContext,
-    kind: &str,
-    surface: &Surface,
-    wires: &[Vec<Boundary>],
-    contact: &Curve,
-    address: [usize; 3],
-    tolerance: f64,
-    target_width: [f64; 2],
-    axis: usize,
-) -> Value {
-    let mut value = original_definition(context, surface, wires, tolerance);
-    value["kind"] = json!(kind);
-    value["contact"] = contact.to_value();
-    value["address"] = json!(address);
-    value["targetWidth"] = json!(target_width);
-    value["driverAxis"] = json!(axis);
-    value
-}
-#[cfg(feature = "codec")]
 fn region_limits(l: &Limits) -> RegionLimits {
     RegionLimits {
         pairs: l.region.pairs,

@@ -53,7 +53,7 @@ pub(super) enum Recipe {
 impl Recipe {
     #[cfg(feature = "codec")]
     pub fn definition(&self) -> value_codec::Value {
-        use value_codec::json;
+        use value_codec::{Serialize, json};
         match self {
             Self::Original(o) => {
                 let context = ToleranceContext::new(o.context.clone())
@@ -75,20 +75,21 @@ impl Recipe {
             } => {
                 let context = ToleranceContext::new(o.context.clone())
                     .expect("Stored valid original tolerance");
-                crate::source_region_restore::cut_definition(
+                let mut value = crate::source_region_restore::original_definition(
                     &context,
-                    match kind {
-                        CutKind::Linear => "linear",
-                        CutKind::Curved => "curved",
-                    },
                     &o.surface,
                     &o.wires,
-                    contact,
-                    *address,
                     o.tolerance,
-                    *target_width,
-                    *axis,
-                )
+                );
+                value["kind"] = json!(match kind {
+                    CutKind::Linear => "linear",
+                    CutKind::Curved => "curved",
+                });
+                value["contact"] = contact.to_value();
+                value["address"] = json!(address);
+                value["targetWidth"] = json!(target_width);
+                value["driverAxis"] = json!(axis);
+                value
             }
             Self::SplitRoot {
                 parent,
