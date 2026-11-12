@@ -143,8 +143,16 @@ fn restore_inner(v: Value, inspect: bool) -> Result<Value> {
                 let radius:nurbs_core::curve::Curve=field(r,"radius")?;
                 let tolerance:f64=field(r,"toleranceMm")?;
                 let checked=shell.assembly().patch().rails().face().qualify_radius_coefficients(
-                    &centers,&radius,field(r,"lawDomains")?,tolerance,
-                    field(r,"controls")?,field(r,"spans")?,field(r,"coefficientWork")?)?;
+                    brep_core::source_profile_body::RadiusLawRefs {
+                        centers: &centers,
+                        radius: &radius,
+                        law_domains: field(r,"lawDomains")?,
+                    },
+                    tolerance,
+                    field(r,"controls")?,
+                    field(r,"spans")?,
+                    field(r,"coefficientWork")?,
+                )?;
                 let bound=checked.bound.as_ref();
                 result["radiusCheck"]=json!({"version":1,"qualified":checked.certificate.is_some(),
                     "violationQualified":bound.and_then(|b|b.error_lower).is_some_and(|e|e>tolerance),

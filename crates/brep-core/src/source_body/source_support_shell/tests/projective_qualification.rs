@@ -3677,13 +3677,15 @@
             assert!(
                 xy_face
                     .qualify_radius_coefficients(
-                        &centers,
-                        &law,
-                        law_domains,
+                        crate::source_profile_body::RadiusLawRefs {
+                            centers: &centers,
+                            radius: &law,
+                            law_domains,
+                        },
                         1e-4,
                         controls,
                         spans,
-                        work
+                        work,
                     )
                     .unwrap()
                     .certificate
@@ -3691,7 +3693,17 @@
             );
         }
         let owned_radius = xy_face
-            .qualify_radius_coefficients(&centers, &law, law_domains, 1e-4, 1000, 100000, 100000000)
+            .qualify_radius_coefficients(
+                crate::source_profile_body::RadiusLawRefs {
+                    centers: &centers,
+                    radius: &law,
+                    law_domains,
+                },
+                1e-4,
+                1000,
+                100000,
+                100000000,
+            )
             .unwrap();
         let radius_proof = owned_radius.certificate.expect(owned_radius.reason);
         assert!(std::ptr::eq(radius_proof.face(), &xy_face));
@@ -3713,7 +3725,17 @@
                 "reason":owned_radius.reason}).to_string()).unwrap();
         }
         let radius = xy_face
-            .qualify_radius_on_domains(&centers, &law, law_domains, 1e-4, 1000, 1000, 100000)
+            .qualify_radius_on_domains(
+                crate::source_profile_body::RadiusLawRefs {
+                    centers: &centers,
+                    radius: &law,
+                    law_domains,
+                },
+                1e-4,
+                1000,
+                1000,
+                100000,
+            )
             .unwrap();
         let coverage = radius.coverage.unwrap();
         eprintln!(

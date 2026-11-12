@@ -669,6 +669,14 @@ mod qualify_join;
 mod qualify_face;
 #[path="source_profile_body/qualify_support_tangency.rs"]
 mod qualify_support_tangency;
+/// A prescribed radius law: the rolling-center curve, the radius curve and
+/// the original law domain of each.
+#[derive(Clone, Copy)]
+pub struct RadiusLawRefs<'a> {
+    pub centers: &'a nurbs_core::curve::Curve,
+    pub radius: &'a nurbs_core::curve::Curve,
+    pub law_domains: [[f64; 2]; 2],
+}
 #[path="source_profile_body/face.rs"]
 mod face;
 #[path="source_profile_body/qualify_transported_neighbor.rs"]
