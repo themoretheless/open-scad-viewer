@@ -52,7 +52,16 @@ pub fn rational_bspline_quadric_projected_edge_sign(
         ));
     }
     let validation = super::quadric::rational_bspline_quadric_roots(
-        ctx, controls, knots, degree, span, matrix, products, 0.25,
+        ctx,
+        crate::SplineLeafRefs {
+            controls,
+            knots,
+            degree,
+        },
+        span,
+        matrix,
+        products,
+        0.25,
     )?;
     let computed = (|| {
         match validation.outcome {

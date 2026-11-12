@@ -24,14 +24,17 @@ pub struct OriginalQuadricRootsDecision {
 /// not a crossing sign. No finite surface-parameter, trim or Body admission.
 pub fn rational_bspline_quadric_roots(
     ctx: &mut PredicateContext<'_>,
-    controls: &[[LeafRef; 4]],
-    knots: &[LeafRef],
-    degree: usize,
+    spline: crate::SplineLeafRefs<'_, 4>,
     span: usize,
     matrix: [[LeafRef; 4]; 4],
     products: &[[LeafRef; 2]],
     tolerance: f64,
 ) -> Result<OriginalQuadricRootsDecision, InputError> {
+    let crate::SplineLeafRefs {
+        controls,
+        knots,
+        degree,
+    } = spline;
     let n = controls.len();
     if !(1..=25).contains(&degree)
         || n <= degree

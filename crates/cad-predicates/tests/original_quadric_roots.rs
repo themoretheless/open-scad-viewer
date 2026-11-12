@@ -52,9 +52,19 @@ fn query(
         },
         None,
     );
-    let r =
-        rational_bspline_quadric_roots(&mut ctx, &controls, &ks, p, span, matrix, &factors, 1e-10)
-            .unwrap();
+    let r = rational_bspline_quadric_roots(
+        &mut ctx,
+        cad_predicates::SplineLeafRefs {
+            controls: &controls,
+            knots: &ks,
+            degree: p,
+        },
+        span,
+        matrix,
+        &factors,
+        1e-10,
+    )
+    .unwrap();
     assert!(r.work_used <= budget);
     r
 }

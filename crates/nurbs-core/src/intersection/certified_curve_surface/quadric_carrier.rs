@@ -132,7 +132,16 @@ pub fn original_quadric_carrier_roots(
             None,
         );
         let decision = rational_bspline_quadric_roots(
-            &mut ctx, &controls, &knots, c.degree, span, matrix, &factors, normalized,
+            &mut ctx,
+            cad_predicates::SplineLeafRefs {
+                controls: &controls,
+                knots: &knots,
+                degree: c.degree,
+            },
+            span,
+            matrix,
+            &factors,
+            normalized,
         )
         .map_err(|_| crate::input("Invalid original quadric root query"))?;
         out.spans += 1;
