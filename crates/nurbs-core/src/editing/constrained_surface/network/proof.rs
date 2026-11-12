@@ -105,10 +105,12 @@ pub(super) fn verify(
             Evidence::Curvature(report)
         } else if let Some(t) = &g.tangent {
             let report = crate::surface_g1_pcurves::inspect(
-                &g.spatial,
-                [&g.parameters, &t.parameters],
-                [s, &t.surface],
-                [g.reverse, t.reverse],
+                crate::surface_g1_pcurves::PcurveSeam {
+                    curve: &g.spatial,
+                    pcurves: [&g.parameters, &t.parameters],
+                    surfaces: [s, &t.surface],
+                    reversed: [g.reverse, t.reverse],
+                },
                 options.fitting.position_tolerance,
                 options.normal_chord_tolerance,
                 cells,

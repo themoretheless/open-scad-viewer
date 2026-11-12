@@ -260,7 +260,7 @@ impl Qualified {
         if let (Some(boundary), Some(tolerance)) = (&self.boundary, self.boundary_tolerances) {
             for (i, (side, _)) in boundary.seams().iter().enumerate() {
                 let report = crate::surface_g2::inspect(
-                    crate::surface_g2::G2Seam { a: self.surface(), ea: *side, b: boundary.reference(), eb: *side, reverse: false },
+                    crate::surface_g2::SurfaceSeam { a: self.surface(), ea: *side, b: boundary.reference(), eb: *side, reverse: false },
                     crate::surface_g2::G2Tolerance { position: tolerance[0], normal: tolerance[1], tensor: tolerance[2] },
                     remaining / (boundary.seams().len() - i + 1),
                 )?;

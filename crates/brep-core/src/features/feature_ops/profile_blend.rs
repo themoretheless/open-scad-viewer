@@ -247,10 +247,12 @@ fn assemble(
             let ca = &model.loops[wa].coedges[ia];
             let cb = &model.loops[wb].coedges[ib];
             let proof = surface_g1_pcurves::inspect(
-                &model.edges[joins[i]].curve,
-                [&ca.pcurve, &cb.pcurve],
-                [&model.faces[fa].surface, &model.faces[fb].surface],
-                [ca.reversed, cb.reversed],
+                surface_g1_pcurves::PcurveSeam {
+                    curve: &model.edges[joins[i]].curve,
+                    pcurves: [&ca.pcurve, &cb.pcurve],
+                    surfaces: [&model.faces[fa].surface, &model.faces[fb].surface],
+                    reversed: [ca.reversed, cb.reversed],
+                },
                 source.tolerance_mm,
                 limits.normal_tolerance,
                 (limits.max_cells - cells) / (3 - i),

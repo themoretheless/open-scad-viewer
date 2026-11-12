@@ -23,19 +23,10 @@ pub(super) fn radius(
                     "Transition contact lacks exactly two actual saved uses",
                 ));
             }
-            let report = surface_g1_pcurves::inspect(
-                &model.edges[actual].curve,
-                [&uses[0].1.pcurve, &uses[1].1.pcurve],
-                [
+            let report = surface_g1_pcurves::inspect(surface_g1_pcurves::PcurveSeam { curve: &model.edges[actual].curve, pcurves: [&uses[0].1.pcurve, &uses[1].1.pcurve], surfaces: [
                     &model.faces[uses[0].0].surface,
                     &model.faces[uses[1].0].surface,
-                ],
-                [uses[0].1.reversed, uses[1].1.reversed],
-                model.tolerance_mm,
-                topology.work.limits.normal_tolerance,
-                topology.work.allowance(4)?,
-                topology.work.exact_remaining() / 4,
-            )?;
+                ], reversed: [uses[0].1.reversed, uses[1].1.reversed] }, model.tolerance_mm, topology.work.limits.normal_tolerance, topology.work.allowance(4)?, topology.work.exact_remaining() / 4)?;
             topology.work.charge(report.cells, report.work())?;
             if !report.positions.proven
                 || !report.regularity_proven

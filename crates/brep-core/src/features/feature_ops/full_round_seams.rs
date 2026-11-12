@@ -198,10 +198,12 @@ pub(super) fn qualify_chain(
             return Err(super::error("Full Round seam proof allowance exhausted"));
         }
         let report = surface_g1_pcurves::inspect(
-            &model.edges[edge].curve,
-            [&owners[0].1.pcurve, &owners[1].1.pcurve],
-            [&owners[0].0.surface, &owners[1].0.surface],
-            [owners[0].1.reversed, owners[1].1.reversed],
+            surface_g1_pcurves::PcurveSeam {
+                curve: &model.edges[edge].curve,
+                pcurves: [&owners[0].1.pcurve, &owners[1].1.pcurve],
+                surfaces: [&owners[0].0.surface, &owners[1].0.surface],
+                reversed: [owners[0].1.reversed, owners[1].1.reversed],
+            },
             model.tolerance_mm,
             1e-5,
             (MAX_CELLS - cells) / (edges.len() + 1 - i),

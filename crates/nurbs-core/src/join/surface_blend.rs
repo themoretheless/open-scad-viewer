@@ -157,7 +157,7 @@ pub fn g2_qualified(a:&Surface,b:&Surface,o:Options,tolerances:[f64;3],max_cells
         for side in 0..2 {
             if result.cells==max_cells {result.complete=false;result.within_tolerance=false;continue;}
             let r=surface_g2::inspect_boundary_ranges(
-                surface_g2::G2Seam { a: patch, ea: if side==0{Edge::VMin}else{Edge::VMax}, b: &sources[side], eb: if o.boundaries[side].end(){Edge::VMax}else{Edge::VMin}, reverse: o.reverse_u[side] },
+                surface_g2::SurfaceSeam { a: patch, ea: if side==0{Edge::VMin}else{Edge::VMax}, b: &sources[side], eb: if o.boundaries[side].end(){Edge::VMax}else{Edge::VMin}, reverse: o.reverse_u[side] },
                 &[[0.,range[0]],[1.,range[1]]],
                 surface_g2::G2Tolerance { position: tolerances[0], normal: tolerances[1], tensor: tolerances[2] },
                 max_cells-result.cells,
@@ -168,7 +168,7 @@ pub fn g2_qualified(a:&Surface,b:&Surface,o:Options,tolerances:[f64;3],max_cells
         if i>0 {
             if result.cells==max_cells {result.complete=false;result.within_tolerance=false;continue;}
             let r=surface_g2::inspect(
-                surface_g2::G2Seam { a: &result.construction.patches[i-1], ea: Edge::UMax, b: patch, eb: Edge::UMin, reverse: false },
+                surface_g2::SurfaceSeam { a: &result.construction.patches[i-1], ea: Edge::UMax, b: patch, eb: Edge::UMin, reverse: false },
                 surface_g2::G2Tolerance { position: tolerances[0], normal: tolerances[1], tensor: tolerances[2] },
                 max_cells-result.cells,
             )?;

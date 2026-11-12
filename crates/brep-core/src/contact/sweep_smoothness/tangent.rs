@@ -75,10 +75,12 @@ pub fn inspect_edges(
             ));
         }
         let proof = surface_g1_pcurves::inspect(
-            &model.edges[edge].curve,
-            [&ca.pcurve, &cb.pcurve],
-            [&model.faces[*a].surface, &model.faces[*b].surface],
-            [ca.reversed, cb.reversed],
+            surface_g1_pcurves::PcurveSeam {
+                curve: &model.edges[edge].curve,
+                pcurves: [&ca.pcurve, &cb.pcurve],
+                surfaces: [&model.faces[*a].surface, &model.faces[*b].surface],
+                reversed: [ca.reversed, cb.reversed],
+            },
             model.tolerance_mm,
             normal_tolerance,
             max_cells - out.cells,

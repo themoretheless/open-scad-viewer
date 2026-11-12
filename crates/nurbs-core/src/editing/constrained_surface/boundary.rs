@@ -304,7 +304,7 @@ pub(super) fn admit_solution(
     for (index, &side) in boundaries.iter().enumerate() {
         let budget = remaining / (boundaries.len() - index);
         let report = surface_g2::inspect(
-            surface_g2::G2Seam { a: &solution.surface, ea: side, b: reference, eb: side, reverse: false },
+            surface_g2::SurfaceSeam { a: &solution.surface, ea: side, b: reference, eb: side, reverse: false },
             surface_g2::G2Tolerance { position: tolerances[0], normal: tolerances[1], tensor: tolerances[2] },
             budget,
         )?;

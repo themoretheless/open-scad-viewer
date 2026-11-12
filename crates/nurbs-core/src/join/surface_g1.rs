@@ -109,16 +109,14 @@ fn cell(
 /// chord distance is min(|n_a-n_b|,|n_a+n_b|), so orientation is ignored.
 /// This does not certify manifold adjacency, equal parameter derivatives, or
 /// continuity across a periodic storage seam. C1 free-axis basis is required.
+pub use super::surface_g2::SurfaceSeam;
 pub fn inspect(
-    a: &Surface,
-    ea: Boundary,
-    b: &Surface,
-    eb: Boundary,
-    reverse: bool,
+    seam: SurfaceSeam<'_>,
     position_tolerance: f64,
     normal_chord_tolerance: f64,
     max_cells: usize,
 ) -> Result<Report> {
+    let SurfaceSeam { a, ea, b, eb, reverse } = seam;
     a.validate()?;
     b.validate()?;
     check(

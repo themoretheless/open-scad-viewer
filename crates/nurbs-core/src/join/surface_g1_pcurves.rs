@@ -251,16 +251,20 @@ fn distance_lower(a: V, b: V, opposite: bool) -> Result<f64> {
 /// intersected original knot cell supply fresh normals. One coherent sign is
 /// required over the whole seam. All one-sided knot limits are included, without
 /// claiming exact C1 storage continuity. No curvature/G2 certificate is issued.
+pub use super::surface_g2_pcurves::PcurveSeam;
 pub fn inspect(
-    c: &Curve,
-    p: [&Curve; 2],
-    s: [&Surface; 2],
-    reverse: [bool; 2],
+    seam: PcurveSeam<'_>,
     position: f64,
     normal: f64,
     max_cells: usize,
     max_exact: u64,
 ) -> Result<Report> {
+    let PcurveSeam {
+        curve: c,
+        pcurves: p,
+        surfaces: s,
+        reversed: reverse,
+    } = seam;
     check(
         normal.is_finite()
             && (0. ..=2.).contains(&normal)

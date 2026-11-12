@@ -20,10 +20,12 @@ fn whole_pcurve_normals_admit_regular_planes_and_refuse_hidden_interior_tilt() {
     let c = Curve::from_polyline(vec![vec![0., 0., 0.], vec![1., 0., 0.]]).unwrap();
     let pc = Curve::from_polyline(vec![vec![0., 0.], vec![1., 0.]]).unwrap();
     let good = surface_g1_pcurves::inspect(
-        &c,
-        [&pc, &pc],
-        [&a, &a],
-        [false; 2],
+        surface_g1_pcurves::PcurveSeam {
+            curve: &c,
+            pcurves: [&pc, &pc],
+            surfaces: [&a, &a],
+            reversed: [false; 2],
+        },
         1e-7,
         1e-5,
         10000,
@@ -34,10 +36,12 @@ fn whole_pcurve_normals_admit_regular_planes_and_refuse_hidden_interior_tilt() {
     let reversed = nurbs_core::surface_edit::reverse(&a, nurbs_core::surface::Axis::V).unwrap();
     let opposite_pc = Curve::from_polyline(vec![vec![0., 1.], vec![1., 1.]]).unwrap();
     let opposite = surface_g1_pcurves::inspect(
-        &c,
-        [&pc, &opposite_pc],
-        [&a, &reversed],
-        [false; 2],
+        surface_g1_pcurves::PcurveSeam {
+            curve: &c,
+            pcurves: [&pc, &opposite_pc],
+            surfaces: [&a, &reversed],
+            reversed: [false; 2],
+        },
         1e-7,
         1e-5,
         10000,
@@ -68,10 +72,12 @@ fn whole_pcurve_normals_admit_regular_planes_and_refuse_hidden_interior_tilt() {
     let n = b.evaluate(0.5, 0.).unwrap().unit_normal().unwrap();
     assert!(n[1].abs() > 1e-4);
     let bad = surface_g1_pcurves::inspect(
-        &c,
-        [&pc, &pc],
-        [&a, &b],
-        [false; 2],
+        surface_g1_pcurves::PcurveSeam {
+            curve: &c,
+            pcurves: [&pc, &pc],
+            surfaces: [&a, &b],
+            reversed: [false; 2],
+        },
         1e-7,
         1e-5,
         256,
@@ -83,10 +89,12 @@ fn whole_pcurve_normals_admit_regular_planes_and_refuse_hidden_interior_tilt() {
     assert!(bad.violation_parameter.is_some());
     assert!(bad.normal_chord_upper.is_none());
     let scarce = surface_g1_pcurves::inspect(
-        &c,
-        [&pc, &pc],
-        [&a, &a],
-        [false; 2],
+        surface_g1_pcurves::PcurveSeam {
+            curve: &c,
+            pcurves: [&pc, &pc],
+            surfaces: [&a, &a],
+            reversed: [false; 2],
+        },
         1e-7,
         1e-5,
         good.cells - 1,
@@ -249,10 +257,12 @@ fn curved_shared_clock_normal_polynomials_require_fresh_work_and_coherent_orient
                 q.clone()
             };
             let out = surface_g1_pcurves::inspect(
-                &c,
-                [&p, &q],
-                [&torus, &other],
-                [reversed; 2],
+                surface_g1_pcurves::PcurveSeam {
+                    curve: &c,
+                    pcurves: [&p, &q],
+                    surfaces: [&torus, &other],
+                    reversed: [reversed; 2],
+                },
                 1e-7,
                 1e-5,
                 256,
@@ -271,10 +281,12 @@ fn curved_shared_clock_normal_polynomials_require_fresh_work_and_coherent_orient
                 })
             );
             let scarce = surface_g1_pcurves::inspect(
-                &c,
-                [&p, &q],
-                [&torus, &other],
-                [reversed; 2],
+                surface_g1_pcurves::PcurveSeam {
+                    curve: &c,
+                    pcurves: [&p, &q],
+                    surfaces: [&torus, &other],
+                    reversed: [reversed; 2],
+                },
                 1e-7,
                 1e-5,
                 256,
