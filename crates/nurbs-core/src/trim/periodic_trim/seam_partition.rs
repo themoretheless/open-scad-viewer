@@ -1,6 +1,17 @@
 //! Seam partition: preserves the original arithmetic and proof budgets.
 use super::*;
 
+/// Parameter and UV tolerances, piece and seam caps, and the search and
+/// admission work budgets of one periodic seam split.
+#[derive(Clone, Copy, Debug)]
+pub struct SeamSplitLimits {
+    pub parameter_tolerance: f64,
+    pub uv_tolerance: f64,
+    pub max_pieces: usize,
+    pub max_seams: usize,
+    pub search_work: usize,
+    pub admission_work: usize,
+}
 /// End-to-end conservative split for exact isolated seam events. Non-point
 /// intervals are retained unless an exact original linear residual proves a
 /// binary64 parameter; sampled near-zero residuals never qualify a root.
@@ -10,13 +21,16 @@ use super::*;
 pub fn split_verified(
     source: &Curve,
     chart: [[f64; 2]; 2],
-    parameter_tolerance: f64,
-    uv_tolerance: f64,
-    max_pieces: usize,
-    max_seams: usize,
-    search_work: usize,
-    admission_work: usize,
+    limits: SeamSplitLimits,
 ) -> Result<SplitReport> {
+    let SeamSplitLimits {
+        parameter_tolerance,
+        uv_tolerance,
+        max_pieces,
+        max_seams,
+        search_work,
+        admission_work,
+    } = limits;
     check(
         uv_tolerance.is_finite()
             && uv_tolerance > 0.
@@ -188,23 +202,15 @@ pub fn split_verified(
 pub fn split_approximated(
     source: &Curve,
     chart: [[f64; 2]; 2],
-    parameter_tolerance: f64,
-    uv_tolerance: f64,
-    max_pieces: usize,
-    max_seams: usize,
-    search_work: usize,
-    admission_work: usize,
+    limits: SeamSplitLimits,
 ) -> Result<SplitReport> {
-    let mut result = split_verified(
-        source,
-        chart,
-        parameter_tolerance,
+    let SeamSplitLimits {
         uv_tolerance,
         max_pieces,
-        max_seams,
-        search_work,
         admission_work,
-    )?;
+        ..
+    } = limits;
+    let mut result = split_verified(source, chart, limits)?;
     if result.status != SplitStatus::IntervalRootNeedsConstruction {
         return Ok(result);
     }

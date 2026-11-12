@@ -27,8 +27,19 @@ fn regions() -> CoherentPeriodicWindingRegions {
         vec![3.5, 0.25],
     ])
     .unwrap();
-    let split =
-        p::split_approximated(&c, [[0., 4.], [0., 1.]], 1e-8, 1e-4, 16, 32, 10000, 100000).unwrap();
+    let split = p::split_approximated(
+        &c,
+        [[0., 4.], [0., 1.]],
+        p::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 1e-4,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 10000,
+            admission_work: 100000,
+        },
+    )
+    .unwrap();
     let part = split
         .partition
         .clone()
@@ -323,7 +334,19 @@ fn two_wrapped_axes_own_one_four_face_corner_fan_on_the_original_torus() {
         vec![-0.05, -0.05],
     ])
     .unwrap();
-    let split = p::split_approximated(&c, chart, 1e-8, 1e-5, 32, 64, 10000, 100000).unwrap();
+    let split = p::split_approximated(
+        &c,
+        chart,
+        p::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 1e-5,
+            max_pieces: 32,
+            max_seams: 64,
+            search_work: 10000,
+            admission_work: 100000,
+        },
+    )
+    .unwrap();
     let part = split.partition.unwrap();
     let l = p::ApproximateChartLimits {
         isotopy: p::IsotopyLimits {

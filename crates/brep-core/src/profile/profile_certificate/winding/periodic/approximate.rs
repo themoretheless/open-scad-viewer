@@ -134,7 +134,18 @@ mod tests {
             vec![0.75, 0.25],
         ])
         .unwrap();
-        let p = periodic::split_approximated(&c, [[0., 1.]; 2], 1e-8, 0.01, 16, 32, 10000, 30000)
+        let p = periodic::split_approximated(
+            &c,
+            [[0., 1.]; 2],
+            periodic::SeamSplitLimits {
+                parameter_tolerance: 1e-8,
+                uv_tolerance: 0.01,
+                max_pieces: 16,
+                max_seams: 32,
+                search_work: 10000,
+                admission_work: 30000,
+            },
+        )
             .unwrap()
             .partition
             .unwrap();

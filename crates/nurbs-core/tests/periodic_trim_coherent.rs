@@ -29,7 +29,18 @@ fn rectangle(b: [f64; 4], reverse: bool) -> Curve {
     if reverse { c.reverse().unwrap() } else { c }
 }
 fn split(c: &Curve) -> p::Report {
-    p::split_approximated(c, [[0., 4.], [0., 1.]], 1e-8, 0.01, 16, 32, 10000, 30000)
+    p::split_approximated(
+        c,
+        [[0., 4.], [0., 1.]],
+        p::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 10000,
+            admission_work: 30000,
+        },
+    )
         .unwrap()
         .partition
         .unwrap()

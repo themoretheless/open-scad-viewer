@@ -212,9 +212,19 @@ fn approximate_periodic_regions_keep_source_topology_and_exact_candidate_profile
     ])
     .unwrap();
     for source in [c.clone(), c.reverse().unwrap()] {
-        let split =
-            periodic::split_approximated(&source, [[0., 1.]; 2], 1e-8, 0.01, 16, 32, 10000, 30000)
-                .unwrap();
+        let split = periodic::split_approximated(
+            &source,
+            [[0., 1.]; 2],
+            periodic::SeamSplitLimits {
+                parameter_tolerance: 1e-8,
+                uv_tolerance: 0.01,
+                max_pieces: 16,
+                max_seams: 32,
+                search_work: 10000,
+                admission_work: 30000,
+            },
+        )
+        .unwrap();
         assert!(!split.approximated_events.is_empty());
         let partition = split.partition.unwrap();
         let result = regularize_approximated_periodic_winding(
@@ -260,7 +270,18 @@ fn approximate_periodic_regions_refuse_stale_source_and_incomplete_isotopy() {
         vec![0.75, 0.25],
     ])
     .unwrap();
-    let p = periodic::split_approximated(&source, [[0., 1.]; 2], 1e-8, 0.01, 16, 32, 10000, 30000)
+    let p = periodic::split_approximated(
+        &source,
+        [[0., 1.]; 2],
+        periodic::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 10000,
+            admission_work: 30000,
+        },
+    )
         .unwrap()
         .partition
         .unwrap();
@@ -303,7 +324,18 @@ fn coherent_copies_reach_owned_candidate_profiles_without_duplicate_geometry() {
         vec![0.75, 0.25],
     ])
     .unwrap();
-    let p = periodic::split_approximated(&c, [[0., 1.]; 2], 1e-8, 0.01, 16, 32, 10000, 30000)
+    let p = periodic::split_approximated(
+        &c,
+        [[0., 1.]; 2],
+        periodic::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 10000,
+            admission_work: 30000,
+        },
+    )
         .unwrap()
         .partition
         .unwrap();
@@ -402,7 +434,18 @@ fn reverse_coherent_seam_paths_produce_an_empty_owned_uv_region() {
         vec![0.75, 0.25],
     ])
     .unwrap();
-    let p = periodic::split_approximated(&c, [[0., 1.]; 2], 1e-8, 0.01, 16, 32, 10000, 30000)
+    let p = periodic::split_approximated(
+        &c,
+        [[0., 1.]; 2],
+        periodic::SeamSplitLimits {
+            parameter_tolerance: 1e-8,
+            uv_tolerance: 0.01,
+            max_pieces: 16,
+            max_seams: 32,
+            search_work: 10000,
+            admission_work: 30000,
+        },
+    )
         .unwrap()
         .partition
         .unwrap();
