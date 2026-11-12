@@ -11,6 +11,13 @@ fn request(m: &brep_core::Model) -> Vec<EdgeRadius> {
         })
         .collect()
 }
+fn collar_work() -> region::CollarWork {
+    region::CollarWork {
+        max_cells: 100000,
+        max_coefficients: 20000000,
+        max_exact: 1000000,
+    }
+}
 fn limits() -> StripLimits {
     StripLimits {
         tolerances: [1e-7, 1e-5, 1e-4],
@@ -40,7 +47,7 @@ fn independent_radii_create_root_trimmed_g2_strip_faces() {
     assert_eq!(m, before);
     assert_eq!(out.strips.len(), 3);
     let rim = region::build_trihedral_rim(&out, limits().tolerances).unwrap();
-    let collars=region::prepare_trihedral_collars(&m,&out,limits().tolerances,1e-8,0.001,100000,20000000,1000000).unwrap();
+    let collars=region::prepare_trihedral_collars(&m,&out,limits().tolerances,1e-8,0.001,collar_work()).unwrap();
     assert_eq!(collars.boundaries.len(),6);
     // Construction must retain the original support coefficients, not a
     // separately rounded knot-extracted proposal with different provenance.
@@ -226,5 +233,5 @@ fn modified_original_surface_cannot_reuse_corner_boundary_proofs() {
     for p in strips.strips[0].patch.model.faces[0].surface.control_points.iter_mut().flatten() {
         p[2]+=0.01;
     }
-    assert!(region::prepare_trihedral_collars(&m,&strips,limits().tolerances,1e-8,0.001,100000,20000000,1000000).is_err());
+    assert!(region::prepare_trihedral_collars(&m,&strips,limits().tolerances,1e-8,0.001,collar_work()).is_err());
 }

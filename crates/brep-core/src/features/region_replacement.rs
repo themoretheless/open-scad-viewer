@@ -588,7 +588,7 @@ pub use spatial_rim::{SpatialRimReport, inspect_spatial_rim};
 
 #[path = "region_replacement/trihedral_collars.rs"]
 mod trihedral_collars;
-pub use trihedral_collars::{CornerCollar, CornerCollars, prepare_trihedral_collars};
+pub use trihedral_collars::{CollarWork, CornerCollar, CornerCollars, prepare_trihedral_collars};
 
 #[path = "region_replacement/central_loft.rs"]
 mod central_loft;

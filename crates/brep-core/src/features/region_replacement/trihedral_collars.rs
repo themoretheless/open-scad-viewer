@@ -51,6 +51,13 @@ fn direction(s: &Surface, p: &Curve, width: f64) -> Result<[f64; 2]> {
         "No proposed transverse collar stays in original natural chart",
     ))
 }
+/// Cell, coefficient and exact-work budgets of one trihedral collar preparation.
+#[derive(Clone, Copy, Debug)]
+pub struct CollarWork {
+    pub max_cells: usize,
+    pub max_coefficients: usize,
+    pub max_exact: u64,
+}
 /// All six boundary curves, support membership and original-support G2 are
 /// freshly inspected. No supplied certificate or mutable admission flag is used.
 /// Width is a fraction of the smaller original natural chart span.
@@ -60,10 +67,13 @@ pub fn prepare_trihedral_collars(
     tolerances: [f64; 3],
     tolerance_uv: f64,
     width: f64,
-    max_cells: usize,
-    max_coefficients: usize,
-    max_exact: u64,
+    work: CollarWork,
 ) -> Result<CornerCollars> {
+    let CollarWork {
+        max_cells,
+        max_coefficients,
+        max_exact,
+    } = work;
     if !(width.is_finite() && width > 0. && width <= 0.1)
         || !(100..=100000).contains(&max_cells)
         || max_exact > 1000000

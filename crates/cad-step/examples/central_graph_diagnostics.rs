@@ -65,9 +65,11 @@ fn main() {
         [1e-7, 1e-5, 1e-4],
         1e-8,
         0.001,
-        100000,
-        20000000,
-        1000000,
+        r::CollarWork {
+            max_cells: 100000,
+            max_coefficients: 20000000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     if let Some(path) = std::env::var_os("OSV_CENTRAL_GRAPH_FIXTURE_EXPORT") {
