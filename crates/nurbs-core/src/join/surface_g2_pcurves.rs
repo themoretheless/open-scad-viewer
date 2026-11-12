@@ -279,16 +279,22 @@ struct Cell {
     upper: Option<[[f64; 2]; 2]>,
     lower: [[f64; 2]; 2],
 }
-fn cell(
-    p: [&Curve; 2],
-    s: [&Surface; 2],
+/// The two pcurves of a seam, their surfaces and whether each runs reversed.
+#[derive(Clone, Copy)]
+struct SeamCharts<'a> {
+    p: [&'a Curve; 2],
+    s: [&'a Surface; 2],
     reverse: [bool; 2],
+}
+fn cell(
+    charts: SeamCharts<'_>,
     t: [f64; 2],
     normal: f64,
     curvature: f64,
     work: &mut usize,
     max: usize,
 ) -> Result<Cell> {
+    let SeamCharts { p, s, reverse } = charts;
     if let Some(bound)=common_basis::upper(p,s,reverse,t,work,max)? {
         if bound[0]<=normal && bound[1]<=curvature {
             return Ok(Cell {t,upper:Some([bound,[2.,f64::INFINITY]]),lower:[[0.;2];2]});
@@ -390,7 +396,7 @@ pub fn inspect(
         let geometric=make(Decision::WithinTolerance,work,Some(bounds),bounds,Some(orientation));
         return Ok(Report{positions,geometric});
     }
-    let mut cells = vec![cell(p, s, reverse, [0., 1.], normal, curvature, &mut work, max_cells)?];
+    let mut cells = vec![cell(SeamCharts { p, s, reverse }, [0., 1.], normal, curvature, &mut work, max_cells)?];
     // A midpoint counterexample remains valid for the original whole seam
     // after its containing cell is refined or restored on work exhaustion.
     let mut witnesses=[[0_f64;2];2];
@@ -436,10 +442,10 @@ pub fn inspect(
         if !(old.t[0] < mid && mid < old.t[1]) {
             return Ok(Report { positions, geometric: make(Decision::Unresolved, work, upper, lower, None) });
         }
-        let left = cell(p, s, reverse, [old.t[0], mid], normal, curvature, &mut work, max_cells)?;
+        let left = cell(SeamCharts { p, s, reverse }, [old.t[0], mid], normal, curvature, &mut work, max_cells)?;
         for k in 0..2 {for j in 0..2 {witnesses[k][j]=witnesses[k][j].max(left.lower[k][j]);}}
         if work==max_cells && left.upper.is_none() {cells.push(old);continue;}
-        let right = cell(p, s, reverse, [mid, old.t[1]], normal, curvature, &mut work, max_cells)?;
+        let right = cell(SeamCharts { p, s, reverse }, [mid, old.t[1]], normal, curvature, &mut work, max_cells)?;
         for k in 0..2 {for j in 0..2 {witnesses[k][j]=witnesses[k][j].max(right.lower[k][j]);}}
         // Do not erase a valid whole-parent enclosure with an uninspected
         // child merely because the final query consumed the remaining work.

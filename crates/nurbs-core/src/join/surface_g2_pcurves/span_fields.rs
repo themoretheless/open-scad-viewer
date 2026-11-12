@@ -28,15 +28,14 @@ struct Cell {
     upper: Option<[[f64; 2]; 2]>,
 }
 fn cell(
-    p: [&Curve; 2],
-    s: [&Surface; 2],
-    reverse: [bool; 2],
+    charts: super::SeamCharts<'_>,
     t: [f64; 2],
     tolerances: [f64; 2],
     witnesses: &mut [[f64; 2]; 2],
     work: &mut usize,
     max: usize,
 ) -> Result<Cell> {
+    let super::SeamCharts { p, s, reverse } = charts;
     if t[1] - t[0] <= 1. / 16. && *work < max {
         if let Some((upper, lower)) = mean_value::bounds(p, s, reverse, t, work, max)? {
             for k in 0..2 {
@@ -101,9 +100,7 @@ pub fn inspect_span_fields(
         && !p.iter().any(|p| p.periodic)
     {
         cells[0] = cell(
-            p,
-            s,
-            reverse,
+            super::SeamCharts { p, s, reverse },
             [0., 1.],
             [normal, curvature],
             &mut witnesses,
@@ -179,11 +176,11 @@ pub fn inspect_span_fields(
             return Ok(result(FieldDecision::Unresolved));
         }
         let range = old.t;
-        let left = cell(p, s, reverse, [range[0], mid], [normal, curvature], &mut witnesses, &mut work, max_cells)?;
+        let left = cell(super::SeamCharts { p, s, reverse }, [range[0], mid], [normal, curvature], &mut witnesses, &mut work, max_cells)?;
         if work == max_cells && left.upper.is_none() {
             continue;
         }
-        let right = cell(p, s, reverse, [mid, range[1]], [normal, curvature], &mut witnesses, &mut work, max_cells)?;
+        let right = cell(super::SeamCharts { p, s, reverse }, [mid, range[1]], [normal, curvature], &mut witnesses, &mut work, max_cells)?;
         if work == max_cells && right.upper.is_none() {
             continue;
         }

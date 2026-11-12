@@ -94,15 +94,12 @@ fn mapped(nodes: &[[f64; 2]], t: [f64; 2]) -> Result<[f64; 2]> {
     Ok([y.lo, y.hi])
 }
 fn cell(
-    a: &Surface,
-    ea: Boundary,
-    b: &Surface,
-    eb: Boundary,
-    reverse: bool,
+    seam: G2Seam<'_>,
     t: [f64; 2],
     nodes: &[[f64; 2]],
     position_exact: bool,
 ) -> Result<Cell> {
+    let G2Seam { a, ea, b, eb, reverse } = seam;
     let upper = match (
         shape(a, ea, t, false)?,
         shape(b, eb, mapped(nodes, t)?, reverse)?,
@@ -233,7 +230,7 @@ pub fn inspect_boundary_ranges(
         && crate::surface_join::identical_boundary(a,ea,b,eb);
     let mut cells = nodes
         .windows(2)
-        .map(|w| cell(a, ea, b, eb, reverse, [w[0][0], w[1][0]], nodes,position_exact))
+        .map(|w| cell(G2Seam { a, ea, b, eb, reverse }, [w[0][0], w[1][0]], nodes, position_exact))
         .collect::<Result<Vec<_>>>()?;
     let mut work = cells.len();
     let mut lower = [[0_f64; 2]; 2];
@@ -330,7 +327,7 @@ pub fn inspect_boundary_ranges(
         }
         cells.swap_remove(index);
         for t in [[t[0], mid], [mid, t[1]]] {
-            let c = cell(a, ea, b, eb, reverse, t, nodes,position_exact)?;
+            let c = cell(G2Seam { a, ea, b, eb, reverse }, t, nodes, position_exact)?;
             position_lower = position_lower.max(c.position[0]);
             for s in 0..2 {
                 for k in 0..2 {
