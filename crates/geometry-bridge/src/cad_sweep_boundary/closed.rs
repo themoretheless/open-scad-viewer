@@ -4,12 +4,15 @@ pub(super) fn construct(
     sweep: &MultiSweep<'_>,
     loop_sizes: &[usize],
     sections: usize,
-    tolerance_uv: f64,
-    error_budget: f64,
+    accuracy: owned::SweepAccuracy,
     boundary: owned::Limits,
     ideal: owned::IdealLimits,
     v: &Value,
 ) -> Result<Value> {
+    let owned::SweepAccuracy {
+        tolerance_uv,
+        error_budget,
+    } = accuracy;
     let material = LoftCap {
         surface: field(&v["material"], "surface")?,
         trims: field(&v["material"], "trims")?,

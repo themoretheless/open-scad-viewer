@@ -162,6 +162,10 @@ fn construct_impl(v: Value, kind: Kind) -> Result<Value> {
     let sections = field(&v, "sections")?;
     let tolerance_uv = field(&v, "toleranceUv")?;
     let error_budget = field(&v, "maxDeviation")?;
+    let accuracy = owned::SweepAccuracy {
+        tolerance_uv,
+        error_budget,
+    };
     if matches!(kind, Kind::SmoothClosed | Kind::SmoothClosedAudit) {
         if ideal_method != "atlas" {
             return Err(input(
@@ -172,8 +176,7 @@ fn construct_impl(v: Value, kind: Kind) -> Result<Value> {
             &sweep,
             &loop_sizes,
             sections,
-            tolerance_uv,
-            error_budget,
+            accuracy,
             ideal_limits.ok_or_else(|| input("Smooth closed ideal-body limits required"))?,
             &v,
             kind == Kind::SmoothClosedAudit,
@@ -197,8 +200,7 @@ fn construct_impl(v: Value, kind: Kind) -> Result<Value> {
             &sweep,
             &loop_sizes,
             sections,
-            tolerance_uv,
-            error_budget,
+            accuracy,
             limits,
             ideal_limits.ok_or_else(|| input("Closed original ideal-body limits required"))?,
             &v,
@@ -213,10 +215,6 @@ fn construct_impl(v: Value, kind: Kind) -> Result<Value> {
         loop_sizes: &loop_sizes,
         sections,
         source_caps,
-    };
-    let accuracy = owned::SweepAccuracy {
-        tolerance_uv,
-        error_budget,
     };
     let attempt = if let Some(ideal) = ideal_limits {
         let construct = if ideal_method == "atlas" {
