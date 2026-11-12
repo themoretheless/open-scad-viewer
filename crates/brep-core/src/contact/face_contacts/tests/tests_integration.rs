@@ -29,10 +29,31 @@
                         // earlier hull proof; its reference is one uninterrupted
                         // traversal, so resumptions must preserve its EXACT ledger.
                         let expected = if !joint {
-                            frozen_inspect_impl(&model,1e-8,budget,&[],&[],sweep,false,None).unwrap()
+                            frozen_inspect_impl(
+                                &model,
+                                1e-8,
+                                budget,
+                                &[],
+                                &[],
+                                crate::face_contacts::ContactModes {
+                                    sweep_hulls: sweep,
+                                    joint_exact_domain: false,
+                                    prepared: None,
+                                },
+                            ).unwrap()
                         } else {
-                            let mut full=Inspector::new(std::sync::Arc::new(model.clone()),
-                                1e-8,budget,vec![],vec![],sweep,true,None).unwrap();
+                            let mut full=Inspector::new(
+                                std::sync::Arc::new(model.clone()),
+                                1e-8,
+                                budget,
+                                vec![],
+                                vec![],
+                                crate::face_contacts::ContactModes {
+                                    sweep_hulls: sweep,
+                                    joint_exact_domain: true,
+                                    prepared: None,
+                                },
+                            ).unwrap();
                             while !full.finished() {full.advance(100000).unwrap();}
                             full.finish().unwrap()
                         };
@@ -49,7 +70,18 @@
                             p.result.as_ref().map_or(0,|r|r.cells)).sum::<usize>());
                         for batch in [1, 2, 64] {
                             let owned = std::sync::Arc::new(model.clone());
-                            let mut work = Inspector::new(owned.clone(), 1e-8, budget, vec![], vec![], sweep, joint, None).unwrap();
+                            let mut work = Inspector::new(
+                                owned.clone(),
+                                1e-8,
+                                budget,
+                                vec![],
+                                vec![],
+                                crate::face_contacts::ContactModes {
+                                    sweep_hulls: sweep,
+                                    joint_exact_domain: joint,
+                                    prepared: None,
+                                },
+                            ).unwrap();
                             let mut calls = 0;
                             while !work.finished() {
                                 assert!(work.advance(batch).unwrap() <= batch);
@@ -71,7 +103,18 @@
     #[test]
     fn resumable_contacts_refuse_pending_reports_and_invalid_steps() {
         let model = std::sync::Arc::new(crate::cuboid([0.; 3], [1.; 3]).unwrap());
-        let mut work = Inspector::new(model, 1e-8, limits(), vec![], vec![], true, false, None).unwrap();
+        let mut work = Inspector::new(
+            model,
+            1e-8,
+            limits(),
+            vec![],
+            vec![],
+            crate::face_contacts::ContactModes {
+                sweep_hulls: true,
+                joint_exact_domain: false,
+                prepared: None,
+            },
+        ).unwrap();
         assert!(work.advance(0).is_err());
         assert!(work.advance(100001).is_err());
         assert_eq!(work.cursor, 0);

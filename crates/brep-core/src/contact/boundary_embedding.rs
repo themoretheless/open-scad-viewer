@@ -443,17 +443,8 @@ impl Inspector {
             }
         }
         if self.contact_work.is_none() {
-            self.contact_work = Some(face_contacts::Inspector::new(
-                self.model.clone(),
-                self.tolerance_uv,
-                self.limits.contacts,
-                self.hull_contacts.clone(),
-                std::mem::take(&mut self.allowed_caps),
-                self.sweep_hulls,
-                self.exact_domain,
-                self.sweep_hulls
-                    .then(|| (self.cover.take(), self.cover_cells)),
-            )?);
+            self.contact_work = Some(face_contacts::Inspector::new(self.model.clone(), self.tolerance_uv, self.limits.contacts, self.hull_contacts.clone(), std::mem::take(&mut self.allowed_caps), crate::face_contacts::ContactModes { sweep_hulls: self.sweep_hulls, joint_exact_domain: self.exact_domain, prepared: self.sweep_hulls
+                    .then(|| (self.cover.take(), self.cover_cells)) })?);
             return Ok(1);
         }
         let work = self.contact_work.as_mut().unwrap();

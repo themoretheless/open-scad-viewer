@@ -111,9 +111,11 @@ pub fn inspect_incident(
         limits,
         vec![],
         vec![],
-        false,
-        false,
-        None,
+        crate::face_contacts::ContactModes {
+            sweep_hulls: false,
+            joint_exact_domain: false,
+            prepared: None,
+        },
     )?;
     inspector.incident = Some(face);
     inspector.report.total_pairs = model.faces.len() - 1;
@@ -213,9 +215,11 @@ pub(crate) fn inspect_with_certificates(
         limits,
         hulls,
         caps,
-        !caps.is_empty(),
-        joint_exact_domain,
-        None,
+        crate::face_contacts::ContactModes {
+            sweep_hulls: !caps.is_empty(),
+            joint_exact_domain,
+            prepared: None,
+        },
     )
 }
 /// Sweep-only exact hull separation, also for closed bodies without caps.
@@ -235,9 +239,11 @@ pub(crate) fn inspect_with_sweep_certificates(
         limits,
         hulls,
         caps,
-        true,
-        joint_exact_domain,
-        None,
+        crate::face_contacts::ContactModes {
+            sweep_hulls: true,
+            joint_exact_domain,
+            prepared: None,
+        },
     )
 }
 /// Prepared only by the same immutable-model boundary audit. The charged
@@ -258,23 +264,34 @@ pub(crate) fn inspect_with_prepared_sweep_certificates(
         limits,
         hulls,
         caps,
-        true,
-        joint_exact_domain,
-        Some(prepared),
+        crate::face_contacts::ContactModes {
+            sweep_hulls: true,
+            joint_exact_domain,
+            prepared: Some(prepared),
+        },
     )
 }
-fn inspect_impl(
-    model: &Model,
-    tolerance_uv: f64,
-    limits: Limits,
-    hulls: &[crate::boundary_hull_contact::Certificate],
-    caps: &[[usize; 3]],
-    sweep_hulls: bool,
-    joint_exact_domain: bool,
-    prepared: Option<(Option<crate::face_contact_groups::Cover>, usize)>,
-) -> Result<Report> {
-    let mut inspector = Inspector::new(std::sync::Arc::new(model.clone()), tolerance_uv,
-        limits, hulls.to_vec(), caps.to_vec(), sweep_hulls, joint_exact_domain, prepared)?;
+/// Inspection modes: whether sweep hulls and the joint exact domain are used,
+/// and an optional precomputed face-group cover with its work.
+pub(crate) struct ContactModes {
+    pub sweep_hulls: bool,
+    pub joint_exact_domain: bool,
+    pub prepared: Option<(Option<crate::face_contact_groups::Cover>, usize)>,
+}
+fn inspect_impl(model: &Model, tolerance_uv: f64, limits: Limits, hulls: &[crate::boundary_hull_contact::Certificate], caps: &[[usize; 3]], modes: ContactModes) -> Result<Report> {
+        let ContactModes { sweep_hulls, joint_exact_domain, prepared } = modes;
+    let mut inspector = Inspector::new(
+        std::sync::Arc::new(model.clone()),
+        tolerance_uv,
+        limits,
+        hulls.to_vec(),
+        caps.to_vec(),
+        crate::face_contacts::ContactModes {
+            sweep_hulls,
+            joint_exact_domain,
+            prepared,
+        },
+    )?;
     while !inspector.finished() { inspector.advance(64)?; }
     inspector.finish()
 }
@@ -299,16 +316,8 @@ pub(crate) struct Inspector {
     incident: Option<usize>,
 }
 impl Inspector {
-    pub(crate) fn new(
-        model: std::sync::Arc<Model>,
-        tolerance_uv: f64,
-        limits: Limits,
-        hulls: Vec<crate::boundary_hull_contact::Certificate>,
-        caps: Vec<[usize; 3]>,
-        sweep_hulls: bool,
-        joint_exact_domain: bool,
-        prepared: Option<(Option<crate::face_contact_groups::Cover>, usize)>,
-    ) -> Result<Self> {
+    pub(crate) fn new(model: std::sync::Arc<Model>, tolerance_uv: f64, limits: Limits, hulls: Vec<crate::boundary_hull_contact::Certificate>, caps: Vec<[usize; 3]>, modes: ContactModes) -> Result<Self> {
+        let ContactModes { sweep_hulls, joint_exact_domain, prepared } = modes;
         model.validate_boundary_diagnostic_inputs()?;
         if !(1..=100_000).contains(&limits.pairs)
             || !(1..=1_000_000).contains(&limits.cells)

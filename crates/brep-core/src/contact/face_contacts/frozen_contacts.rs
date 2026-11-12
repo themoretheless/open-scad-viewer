@@ -3,16 +3,8 @@
 use super::*;
 
 #[cfg(test)]
-pub(super) fn frozen_inspect_impl(
-    model: &Model,
-    tolerance_uv: f64,
-    limits: Limits,
-    hulls: &[crate::boundary_hull_contact::Certificate],
-    caps: &[[usize; 3]],
-    sweep_hulls: bool,
-    joint_exact_domain: bool,
-    prepared: Option<(Option<crate::face_contact_groups::Cover>, usize)>,
-) -> Result<Report> {
+pub(super) fn frozen_inspect_impl(model: &Model, tolerance_uv: f64, limits: Limits, hulls: &[crate::boundary_hull_contact::Certificate], caps: &[[usize; 3]], modes: super::ContactModes) -> Result<Report> {
+        let super::ContactModes { sweep_hulls, joint_exact_domain, prepared } = modes;
     model.validate_boundary_diagnostic_inputs()?;
     if !(1..=100_000).contains(&limits.pairs)
         || !(1..=1_000_000).contains(&limits.cells)
