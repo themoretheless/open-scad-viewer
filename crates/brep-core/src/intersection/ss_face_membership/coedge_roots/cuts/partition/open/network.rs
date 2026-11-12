@@ -182,10 +182,12 @@ pub fn partition_open_ss_network<'s, 'i, 'p, 'r, 'a>(
                 }
                 let r = apply::construct_range(
                     path,
-                    side,
-                    candidates[0],
-                    &models[slot],
-                    endpoints,
+                    apply::FaceTarget {
+                        side,
+                        face: candidates[0],
+                        source: &models[slot],
+                        endpoints,
+                    },
                     start..end,
                     limits,
                     &mut cells,

@@ -98,10 +98,12 @@ pub fn partition_open_ss_path<'s, 'i, 'p, 'r, 'a>(
     let source = &path.input.models[slot];
     let result = construct(
         path,
-        path.request.side,
-        path.input.source.roots.faces[path.request.side].1,
-        source,
-        endpoints,
+        FaceTarget {
+            side: path.request.side,
+            face: path.input.source.roots.faces[path.request.side].1,
+            source,
+            endpoints,
+        },
         limits,
         &mut cells,
         &mut pairs,
@@ -123,6 +125,15 @@ pub fn partition_open_ss_path<'s, 'i, 'p, 'r, 'a>(
     })
 }
 
+/// The face of `source` that receives the cut: its SS path side, face index
+/// and the two saved endpoint vertices.
+#[derive(Clone, Copy)]
+pub(super) struct FaceTarget<'a> {
+    pub side: usize,
+    pub face: usize,
+    pub source: &'a Model,
+    pub endpoints: [usize; 2],
+}
 pub(super) struct Construction {
     pub model: Model,
     pub faces: [usize; 2],
@@ -131,10 +142,7 @@ pub(super) struct Construction {
 }
 pub(super) fn construct(
     path: &QualifiedOpenSSPath<'_, '_, '_, '_>,
-    side: usize,
-    face: usize,
-    source: &Model,
-    endpoints: [usize; 2],
+    target: FaceTarget<'_>,
     limits: OpenSSFaceLimits,
     cells: &mut usize,
     pairs: &mut usize,
@@ -142,10 +150,7 @@ pub(super) fn construct(
 ) -> Result<Construction> {
     construct_range(
         path,
-        side,
-        face,
-        source,
-        endpoints,
+        target,
         0..path.segments.len(),
         limits,
         cells,
@@ -155,16 +160,19 @@ pub(super) fn construct(
 }
 pub(super) fn construct_range(
     path: &QualifiedOpenSSPath<'_, '_, '_, '_>,
-    side: usize,
-    face: usize,
-    source: &Model,
-    endpoints: [usize; 2],
+    target: FaceTarget<'_>,
     range: std::ops::Range<usize>,
     limits: OpenSSFaceLimits,
     cells: &mut usize,
     pairs: &mut usize,
     operations: &mut usize,
 ) -> Result<Construction> {
+    let FaceTarget {
+        side,
+        face,
+        source,
+        endpoints,
+    } = target;
     let saved = path
         .segments
         .get(range)

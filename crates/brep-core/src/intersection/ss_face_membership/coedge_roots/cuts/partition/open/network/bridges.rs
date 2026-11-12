@@ -153,10 +153,12 @@ pub(super) fn try_pair<'s, 'i, 'p, 'r, 'a>(
                 }
                 let result = apply::construct(
                     path,
-                    side,
-                    candidates[0],
-                    &models[slot],
-                    endpoints,
+                    apply::FaceTarget {
+                        side,
+                        face: candidates[0],
+                        source: &models[slot],
+                        endpoints,
+                    },
                     limits,
                     &mut cells,
                     &mut pairs,
