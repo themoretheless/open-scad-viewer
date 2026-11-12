@@ -18,6 +18,15 @@ pub struct EndCurve {
     pub exact_work: u64,
     pub projection_evaluations: usize,
 }
+/// Distance and UV tolerances and the shared cell and exact-work budgets of an
+/// end construction.
+#[derive(Clone, Copy, Debug)]
+pub struct EndLimits {
+    pub tolerance_mm: f64,
+    pub tolerance_uv: f64,
+    pub max_cells: usize,
+    pub max_exact: u64,
+}
 fn invalid(s: &str) -> Error {
     Error::new("BREP_CONTACT_END_INPUT", s)
 }
@@ -34,11 +43,14 @@ pub fn connect(
     skin: &Surface,
     end_model: &Model,
     face_id: usize,
-    tolerance_mm: f64,
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
+    limits: EndLimits,
 ) -> Result<EndCurve> {
+    let EndLimits {
+        tolerance_mm,
+        tolerance_uv,
+        max_cells,
+        max_exact,
+    } = limits;
     end_model.validate()?;
     skin.validate()?;
     if end > 1
@@ -279,11 +291,14 @@ pub fn patch(
     contacts: [&Restriction; 2],
     skin: &Surface,
     ends: [(&Model, usize); 2],
-    tolerance_mm: f64,
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
+    limits: EndLimits,
 ) -> Result<Patch> {
+    let EndLimits {
+        tolerance_mm,
+        tolerance_uv,
+        max_cells,
+        max_exact,
+    } = limits;
     if !(1..=100000).contains(&max_cells) || max_exact > 1000000 {
         return Err(invalid("Patch admission requires bounded shared work"));
     }
@@ -293,10 +308,7 @@ pub fn patch(
         skin,
         ends[0].0,
         ends[0].1,
-        tolerance_mm,
-        tolerance_uv,
-        max_cells,
-        max_exact,
+        limits,
     )?;
     let mut cells = first.cells;
     let mut exact_work = first.exact_work;
@@ -309,10 +321,11 @@ pub fn patch(
         skin,
         ends[1].0,
         ends[1].1,
-        tolerance_mm,
-        tolerance_uv,
-        max_cells - cells,
-        max_exact - exact_work,
+        EndLimits {
+            max_cells: max_cells - cells,
+            max_exact: max_exact - exact_work,
+            ..limits
+        },
     )?;
     cells += last.cells;
     exact_work += last.exact_work;

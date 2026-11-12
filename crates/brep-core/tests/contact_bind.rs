@@ -163,10 +163,12 @@ fn recomputed_contact_roots_bind_to_shared_body_vertices_on_both_incident_faces(
         [&bound0.restriction, &bound1.restriction],
         skin,
         [(&first, f), (&last, l)],
-        1e-6,
-        1e-8,
-        100000,
-        1000000,
+        contact_end::EndLimits {
+            tolerance_mm: 1e-6,
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     for (local, source) in [

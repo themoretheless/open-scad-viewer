@@ -97,10 +97,12 @@ pub fn build() -> (brep_core::Model, contact_graft::Graft) {
         [&a.restriction, &b.restriction],
         skin,
         [(&first.0, first.1), (&last.0, last.1)],
-        1e-7,
-        1e-8,
-        100000,
-        1000000,
+        contact_end::EndLimits {
+            tolerance_mm: 1e-7,
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let mapping = [a.vertices[0], b.vertices[0], b.vertices[1], a.vertices[1]];

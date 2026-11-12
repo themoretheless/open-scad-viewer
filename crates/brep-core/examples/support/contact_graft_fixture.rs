@@ -198,10 +198,12 @@ fn build_with_binding(automatic: bool, variable: bool, circular: bool) -> Fixtur
         [&b0.restriction, &b1.restriction],
         skin,
         [(&first, f), (&last, l)],
-        b1.source.tolerance_mm,
-        1e-8,
-        100000,
-        1000000,
+        contact_end::EndLimits {
+            tolerance_mm: b1.source.tolerance_mm,
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let source = &b1.source;

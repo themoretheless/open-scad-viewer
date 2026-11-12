@@ -442,10 +442,12 @@ fn build_strips(
             [&restricted[0], &restricted[1]],
             skin,
             order.map(|k| (&ends[k], end_faces[k])),
-            limits.tolerances[0],
-            limits.tolerance_uv,
-            work.cells()?,
-            work.exact()?,
+            contact_end::EndLimits {
+                tolerance_mm: limits.tolerances[0],
+                tolerance_uv: limits.tolerance_uv,
+                max_cells: work.cells()?,
+                max_exact: work.exact()?,
+            },
         )?;
         work.charge(patch.cells, patch.exact_work)?;
         let saved = &patch.model.faces[0].surface;

@@ -152,10 +152,12 @@ pub fn build() -> Result<Fixture, Box<dyn std::error::Error>> {
         [&first.restriction, &last.restriction],
         skin,
         [(&first_cut, f), (&last_cut, l)],
-        last.source.tolerance_mm,
-        1e-8,
-        100000,
-        1000000,
+        contact_end::EndLimits {
+            tolerance_mm: last.source.tolerance_mm,
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )?;
 
     let mapping = [
