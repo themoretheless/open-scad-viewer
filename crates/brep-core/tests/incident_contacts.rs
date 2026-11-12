@@ -10,9 +10,11 @@ fn only_fresh_exact_vertex_proofs_promote_incident_pair_status() {
         uses,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        brep_core::corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let r = face_contacts::inspect_incident_with_vertices(

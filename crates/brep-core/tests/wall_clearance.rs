@@ -9,9 +9,11 @@ fn setup() -> (brep_core::Model, usize, Vec<usize>) {
         uses,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let floor = out

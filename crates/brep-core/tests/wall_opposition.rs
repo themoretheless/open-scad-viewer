@@ -10,9 +10,11 @@ fn shell_orientation_and_trimmed_normals_identify_the_complete_floor_set() {
         uses,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let floor = out

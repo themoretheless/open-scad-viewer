@@ -11,9 +11,11 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
         supports,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        brep_core::corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let chart = closed.model.faces[closed.face].surface.clone();
@@ -217,9 +219,11 @@ fn root_partitioned_rim_chains_keep_all_shared_edges_during_g2_replacement() {
         supports,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        brep_core::corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let selected = closed.face;
@@ -365,9 +369,11 @@ fn g2_region_is_built_from_original_retained_supports_and_replaces_the_old_chart
         supports,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        brep_core::corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let selected = closed.face;

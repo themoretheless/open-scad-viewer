@@ -9,9 +9,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         uses,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        brep_core::corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )?;
     let automatic = brep_core::wall_clearance::inspect_shell(
         &out.model,

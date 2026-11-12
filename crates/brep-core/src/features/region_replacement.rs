@@ -254,7 +254,16 @@ pub fn replace_g2_sides(
         return Err(refused("Replacement sectors need one shell owner"));
     }
     let prepared = crate::corner_close::prepare_sides(
-        source, owners[0], supports, options, tolerances, max_cells, max_exact, 2,
+        source,
+        owners[0],
+        supports,
+        options,
+        crate::corner_close::CornerBudget {
+            tolerances,
+            max_cells,
+            max_exact,
+        },
+        2,
     )?;
     if max_cells - prepared.cells < 3 {
         return Err(refused("No shared work remains for corner region assembly"));

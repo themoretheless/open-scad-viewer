@@ -10,9 +10,11 @@ fn all_four_vertex_neighbors_are_bounded_to_owned_corners() {
         uses,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let before = out.model.clone();

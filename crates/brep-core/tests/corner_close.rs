@@ -12,9 +12,11 @@ fn interior_trim_rim_closes_without_replacing_original_supports() {
         uses,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(
@@ -52,9 +54,11 @@ fn g2_corner_closes_owned_hole_without_replacing_source_edges() {
         uses,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(source, before);
@@ -82,9 +86,11 @@ fn g2_corner_closes_owned_hole_without_replacing_source_edges() {
             wrong,
             options,
             1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            corner_close::CornerBudget {
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -95,9 +101,11 @@ fn g2_corner_closes_owned_hole_without_replacing_source_edges() {
             uses,
             options,
             1e-8,
-            [1e-7, 1e-5, 1e-4],
-            1,
-            1000000
+            corner_close::CornerBudget {
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 1,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -120,9 +128,11 @@ fn g2_corner_closes_owned_hole_without_replacing_source_edges() {
             uses,
             options,
             1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            corner_close::CornerBudget {
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -139,9 +149,11 @@ fn compact_corner_keeps_exact_original_rim_lifts_without_quintic_roundoff() {
         uses,
         options,
         1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100_000,
-        1_000_000,
+        corner_close::CornerBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100_000,
+            max_exact: 1_000_000,
+        },
     )
     .unwrap();
     let s = &out.model.faces[out.face].surface;

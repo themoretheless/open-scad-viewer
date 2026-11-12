@@ -19,20 +19,20 @@ pub struct Closed {
 fn refused(s: &str) -> Error {
     Error::new("BREP_CORNER_CLOSE_UNPROVEN", s)
 }
+/// Position, normal and curvature seam tolerances and the shared cell and
+/// exact-work budgets of one corner closure.
+#[derive(Clone, Copy, Debug)]
+pub struct CornerBudget {
+    pub tolerances: [f64; 3],
+    pub max_cells: usize,
+    pub max_exact: u64,
+}
 /// Source endpoints and edges survive unchanged. The four boundary uses must
 /// lie in one open shell and form its sole remaining opening. A newly authored
 /// face uses those actual owned 3D curves. Full saved-use verification and
 /// shell closure are mandatory after construction; source is never mutated.
-pub fn close(
-    source: &Model,
-    shell: usize,
-    uses: [BoundaryUse; 4],
-    options: corner_blend::Options,
-    tolerance_uv: f64,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
-) -> Result<Closed> {
+pub fn close(source: &Model, shell: usize, uses: [BoundaryUse; 4], options: corner_blend::Options, tolerance_uv: f64, budget: CornerBudget) -> Result<Closed> {
+        let CornerBudget { tolerances, max_cells, max_exact } = budget;
     source.validate()?;
     if !source.persistent_naming_complete()
         || shell >= source.shells.len()
@@ -58,7 +58,16 @@ pub fn close(
         mut cells,
         mut exact_work,
     } = prepare(
-        source, shell, uses, options, tolerances, max_cells, max_exact, 1,
+        source,
+        shell,
+        uses,
+        options,
+        crate::corner_close::CornerBudget {
+            tolerances,
+            max_cells,
+            max_exact,
+        },
+        1,
     )?;
     let mut model = source.clone();
     let wire = model.loops.len();
@@ -137,37 +146,23 @@ pub(crate) struct Prepared {
 }
 /// Fresh original-support construction shared by open-rim closure and closed
 /// region replacement. Both callers must independently admit final topology.
-pub(crate) fn prepare(
-    source: &Model,
-    shell: usize,
-    uses: [BoundaryUse; 4],
-    options: corner_blend::Options,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
-    expected_uses: usize,
-) -> Result<Prepared> {
+pub(crate) fn prepare(source: &Model, shell: usize, uses: [BoundaryUse; 4], options: corner_blend::Options, budget: CornerBudget, expected_uses: usize) -> Result<Prepared> {
+        let CornerBudget { tolerances, max_cells, max_exact } = budget;
     prepare_sides(
         source,
         shell,
         uses.map(|u| vec![u]),
         options,
-        tolerances,
-        max_cells,
-        max_exact,
+        crate::corner_close::CornerBudget {
+            tolerances,
+            max_cells,
+            max_exact,
+        },
         expected_uses,
     )
 }
-pub(crate) fn prepare_sides(
-    source: &Model,
-    shell: usize,
-    sides: [Vec<BoundaryUse>; 4],
-    options: corner_blend::Options,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
-    expected_uses: usize,
-) -> Result<Prepared> {
+pub(crate) fn prepare_sides(source: &Model, shell: usize, sides: [Vec<BoundaryUse>; 4], options: corner_blend::Options, budget: CornerBudget, expected_uses: usize) -> Result<Prepared> {
+        let CornerBudget { tolerances, max_cells, max_exact } = budget;
     source.validate()?;
     if !source.persistent_naming_complete()
         || shell >= source.shells.len()
