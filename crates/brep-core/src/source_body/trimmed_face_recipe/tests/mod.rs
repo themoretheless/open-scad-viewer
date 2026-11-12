@@ -372,8 +372,10 @@ fn source_face_crossing_search_retains_original_addresses_and_shared_budget() {
     let contact = Curve::from_polyline(vec![vec![-0.2, 0.3], vec![1.2, 0.3]]).unwrap();
     let r = locate_contact_boundaries(
         &ToleranceContext::default_valid(),
-        &surface,
-        &wires,
+        FaceBoundary {
+            surface: &surface,
+            wires: &wires,
+        },
         &contact,
         1e-8,
         limits(),
@@ -431,8 +433,10 @@ fn source_face_crossing_search_retains_original_addresses_and_shared_budget() {
     assert!(roots.iter().any(|x| x.0 == 1));
     let r = locate_contact_boundaries(
         &ToleranceContext::default_valid(),
-        &surface,
-        &wires,
+        FaceBoundary {
+            surface: &surface,
+            wires: &wires,
+        },
         &contact,
         1e-8,
         limits(),

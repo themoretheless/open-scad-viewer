@@ -506,8 +506,7 @@ pub struct FaceCrossings {
 /// This returns source-addressed enclosures; it does not choose rounded cuts.
 pub fn locate_contact_boundaries(
     context: &ToleranceContext,
-    surface: &Surface,
-    wires: &[Vec<Boundary>],
+    face: FaceBoundary<'_>,
     contact: &Curve,
     tolerance_uv: f64,
     limits: Limits,
@@ -515,6 +514,7 @@ pub fn locate_contact_boundaries(
     target_width: [f64; 2],
 ) -> Result<FaceCrossings> {
     use nurbs_core::uv_curve_crossings as crossings;
+    let FaceBoundary { surface, wires } = face;
     contact.validate()?;
     if contact.control_points[0].len() != 2
         || contact.periodic

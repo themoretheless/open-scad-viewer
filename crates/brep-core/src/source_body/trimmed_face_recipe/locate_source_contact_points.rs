@@ -28,8 +28,7 @@ pub fn locate_source_contact_points(
     }
     let search = locate_contact_boundaries(
         context,
-        surface,
-        wires,
+        face,
         contact,
         tolerance_uv,
         limits,
