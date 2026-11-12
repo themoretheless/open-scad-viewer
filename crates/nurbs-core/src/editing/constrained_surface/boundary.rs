@@ -178,16 +178,12 @@ pub fn solve_preserving_g2(
         max_cells,
     )?;
     let result = solve(seed, &all, options)?;
-    admit_solution(
-        seed,
+    let locks = super::network::BoundaryLocks {
         reference,
         boundaries,
-        constraints,
-        result,
-        options,
         tolerances,
-        max_cells,
-    )
+    };
+    admit_solution(seed, locks, constraints, result, options, max_cells)
 }
 
 /// Share original lock construction across numerical objectives.
@@ -259,14 +255,17 @@ pub(super) fn locked_constraints(
 /// Admit a saved solution without solving again or moving any coefficient.
 pub(super) fn admit_solution(
     seed: &Surface,
-    reference: &Surface,
-    boundaries: &[Boundary],
+    locks: super::network::BoundaryLocks<'_>,
     constraints: &[Constraint],
     result: Report,
     options: Options,
-    tolerances: [f64; 3],
     max_cells: usize,
 ) -> Result<Qualified> {
+    let super::network::BoundaryLocks {
+        reference,
+        boundaries,
+        tolerances,
+    } = locks;
     let (all, pins) = locked_constraints(
         seed,
         reference,

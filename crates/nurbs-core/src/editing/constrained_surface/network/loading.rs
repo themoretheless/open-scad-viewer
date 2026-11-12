@@ -68,10 +68,9 @@ pub fn solve_with_reference(
     options: Options,
 ) -> Result<Qualified> {
     let super::ConstraintSet {
-        guides,
         curvatures,
         hard: constraints,
-        locks,
+        ..
     } = set;
     if !(1..=500000000).contains(&options.max_total_assembly_terms)
         || !options.curves.curvature_tolerance.is_finite()
@@ -97,10 +96,7 @@ pub fn solve_with_reference(
     variational::validate_reference(seed, reference, constraints, model, settings.physical)?;
     super::solve_impl(
         seed,
-        guides,
-        curvatures,
-        constraints,
-        locks,
+        set,
         options.curves.network,
         (!curvatures.is_empty()).then_some(options.curves.curvature_tolerance),
         Some(&settings),
@@ -145,12 +141,10 @@ pub(super) fn propose(
     let boundary = if let Some(b) = locks {
         Some(boundary::admit_solution(
             seed,
-            b.reference,
-            b.boundaries,
+            b,
             all,
             owner.solution().clone(),
             fitting,
-            b.tolerances,
             cells,
         )?)
     } else {

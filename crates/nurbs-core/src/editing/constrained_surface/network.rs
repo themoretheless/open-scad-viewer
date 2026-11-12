@@ -308,7 +308,13 @@ pub fn solve(
     constraints: &[Constraint],
     options: Options,
 ) -> Result<Qualified> {
-    solve_impl(seed, guides, &[], constraints, None, options, None, None)
+    let set = ConstraintSet {
+        guides,
+        curvatures: &[],
+        hard: constraints,
+        locks: None,
+    };
+    solve_impl(seed, set, options, None, None)
 }
 /// Combine whole interior curve constraints with preserved complete original
 /// boundary 0/1/2-jets. Each actual solve must freshly qualify the locked seams;
@@ -320,27 +326,27 @@ pub fn solve_preserving_g2(
     locks: BoundaryLocks<'_>,
     options: Options,
 ) -> Result<Qualified> {
-    solve_impl(
-        seed,
+    let set = ConstraintSet {
         guides,
-        &[],
-        constraints,
-        Some(locks),
-        options,
-        None,
-        None,
-    )
+        curvatures: &[],
+        hard: constraints,
+        locks: Some(locks),
+    };
+    solve_impl(seed, set, options, None, None)
 }
 fn solve_impl(
     seed: &Surface,
-    guides: &[CurveConstraint<'_>],
-    curvatures: &[CurvatureConstraint<'_>],
-    constraints: &[Constraint],
-    locks: Option<BoundaryLocks<'_>>,
+    set: ConstraintSet<'_>,
     options: Options,
     curvature_tolerance: Option<f64>,
     loading: Option<&loading::Settings<'_>>,
 ) -> Result<Qualified> {
+    let ConstraintSet {
+        guides,
+        curvatures,
+        hard: constraints,
+        locks,
+    } = set;
     seed.validate()?;
     proof::budget(options)?;
     if guides.len() + curvatures.len() == 0

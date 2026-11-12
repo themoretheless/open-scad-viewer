@@ -42,12 +42,15 @@ pub fn solve_with_curvature(
             "Whole interior G2 needs a finite positive curvature tolerance",
         ));
     }
-    solve_impl(
-        seed,
+    let set = ConstraintSet {
         guides,
         curvatures,
-        constraints,
+        hard: constraints,
         locks,
+    };
+    solve_impl(
+        seed,
+        set,
         options.network,
         Some(options.curvature_tolerance),
         None,
