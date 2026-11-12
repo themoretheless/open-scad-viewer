@@ -1,0 +1,144 @@
+# Сводный план работ
+
+Составлен 2026-11-13 по актуализированным планам. Это индекс и приоритизация: подробности, критерии приёмки и история остаются в документах-источниках, ссылки на них даны в каждой строке. Активный рефакторинг ведётся отдельно в [refactor/PLAN.md](refactor/PLAN.md) и здесь не дублируется; пересечения с ним отмечены.
+
+Обозначения:
+- **P0**: блокирует другие пакеты, корректность или ежедневное использование.
+- **P1**: следующая очередь.
+- **P2**: полезно, но ничего не блокирует.
+- Размер: **S** (дни), **M** (1–2 недели), **L** (больше).
+- **∥**: пакет можно вести параллельно с другими, не трогая общие модули.
+
+## Ближайшие задачи
+
+| # | Задача | Пакет | Готово, когда |
+|---|---|---|---|
+| 1 | Храповик ESLint/Prettier для TS | P2 | `npm run lint` в CI сравнивает с сохранённой базовой линией и падает на новых нарушениях |
+| 2 | Уборка `nurbs-core` и устаревших release-скриптов | N21 | неподключённые корневые файлы и скрипты v28–v32 удалены, `cargo check --workspace --all-targets` зелёный |
+| 3 | Аудит синхронных путей редактора | C1 | таблица p50/p95 по каждому оставшемуся синхронному пути; пути вне целей перенесены в worker или оформлены задачами |
+| 4 | Стенд матрицы команд и контрольные модели | C2, C3 | браузерный стенд прогоняет все команды палитры, отчёт со списком дефектов |
+| 5 | Сертифицированное касание в пересечениях кривая/плоскость и поверхность/поверхность | N1 | касательные случаи в `nurbs-intersect/src/queries/curve_plane.rs` возвращают точку или кривую с кратностью, есть тесты на касание и почти касание |
+| 6 | Вывести в редактор готовые нативные результаты | N4 | история Full Round, closed graph Boolean и непрерывный offset доступны командами редактора с отменой, Undo и экспортом в STEP |
+| 7 | Корпус дифференциальных Boolean-тестов Manifold до 100 пар | S4 | `tools/manifold-bench/differential-corpus.json` содержит не меньше 100 случаев, включая вырожденные, и проходит в CI |
+| 8 | LOD тесселяции во вьюере | N20 | `lod::select` вызывается через bridge, вьюер переключает уровни по экранному размеру |
+| 9 | Сверка квалификационных доказательств | P1 | четыре набора доказательств и `audit:qualification-drift` зелёные; делать в момент низкой активности в ядре |
+
+## Параллельные потоки
+
+В репозитории одновременно работают несколько исполнителей, поэтому пакеты сгруппированы по модулям, которые они трогают. Внутри потока пакеты идут последовательно, а сами потоки между собой не конфликтуют.
+
+| Поток | Модули | Очерёдность | Пересечение с рефакторингом |
+|---|---|---|---|
+| А. Пересечения и Boolean | `nurbs-intersect`, `brep-core/src/{intersection,boolean,model}` | N1 → N3 → N2 → N6 → N7, N11, N12 | L2, L8 в brep-core: стартовать от свежего `main`, обходить модули с незакоммиченными правками L2 |
+| Б. Доставка в продукт | `geometry-bridge`, `geometry-wasm`, `src/kernel` | N4 → C15, N14 → N20 | новые операции добавлять в стиле таблиц обработчиков L1 |
+| В. Оболочка UI | `App.svt`, `DirectModeler.svt`, `src/components` | P3 → C5 → C6 → C7 → C9; затем P4, P7 | границы `src/` из M9/M10 |
+| Г. Отзывчивость и масштаб | workers, `directTransactions`, `sceneController`; `geometry-bridge/src/{abi,mesh}.rs` | C1 → C8 → C14; S2 отдельным исполнителем | S2 пересекается с L1/L2 |
+| Д. Тесты, CI, квалификация | `tests/`, `tools/`, `.github/` | P2 → C2, C3 → P5 → N17 → N18; P1 последним | S4 (медленные тесты), C1 (LFS) |
+| Е. Manifold | `manifold-core`, `manifold-ops`, `tools/manifold-bench` | S4 → S6 → S5 → S7, S8, S9 → S1 | O2, O4 (размер WASM, горячие пути) |
+| Ж. Обмен | `cad-step` | N8 → N9 → N10, C13 | M1: весь STEP/IGES в `cad-step` |
+| З. Независимые | каждый в своём крейте | S10, S11, S15, S16, P8, P11, N25, N26, C12, C22, S14 | — |
+
+## 1. NURBS и B-rep
+
+| Пакет | P | Размер | ∥ | Зависит от | Источники |
+|---|---|---|---|---|---|
+| **N1. Сертифицированное касание и почти вырожденный SSI.** Касания классифицируются с кратностью вместо `TangencyOrMultipleRoot`, вырожденные ветви трассируются под сертификатом, `nurbs_ss` покрывает касательные случаи | P0 | L | нет | — | [rust-migration-forward-plan](design/rust-migration-forward-plan.md) B1; [brep-completion-status](design/brep-completion-status.md) 8a, R1; [nurbs-priorities](../nurbs-priorities.md) 1063; [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 1 (полный поиск ветвей SS и автоматический trim) |
+| **N2. Совпадающие грани и чистка после Boolean.** Поиск почти совпадающих граней до marching, 2D CSG на общем носителе, слияние копланарных и цилиндрических граней, удаление лишних рёбер и швов | P0 | L | нет | N5 | [nurbs-priorities](../nurbs-priorities.md) 1009, 1010, 1013, 1014 |
+| **N3. Jordan-петли mixed-root, перепись компонент, материал.** Объединение окрестностей узлов, швов и полюсов, несколько компонент, сшивка точных смешанных границ, сквозные отверстия и вложенные полости | P0 | L | да | — | [ss-root-jordan-next](design/ss-root-jordan-next-2026-11-04.md); [ss-paired-root-volume-next](design/ss-paired-root-volume-next-2026-11-04.md) |
+| **N4. Доставка нативных контрактов в продукт.** Для каждого контракта замкнуть JSON/WASM, TS, Rush, worker, UI, отмену, Undo/Redo, восстановление и экспорт в STEP с повторным импортом. Сейчас недоступны пользователю graph Boolean, непрерывный offset, история direct-edit и Full Round, сшитые углы, аудит самопересечений поверхностей | P0 | L | нет | — | [nurbs-next-five](design/nurbs-next-five-priorities-2026-10-22.md) §5; [nurbs-complete-program](design/nurbs-complete-program-2026-10-01.md) этап 1; [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) «интеграция приложения», п. 10 |
+| **N5. Модель допусков, единицы и контракты операций.** Иерархия допусков, масштабируемая по сцене; модель единиц документа; контракты входа и выхода для Fillet и Sewing (сейчас есть только у Boolean) | P1 | M | нет | — | [nurbs-priorities](../nurbs-priorities.md) 185, 244, 925, 926, 1064 |
+| **N6. Freeform × freeform Boolean и листовые тела.** Обобщить `assemble_closed_graph_boolean` за пределы класса прямоугольных graph-column, заменить отказ `freeform-x-freeform-boolean`, семантика sheet∩solid | P1 | L | нет | N1, N2, N3 | [nurbs-next-five](design/nurbs-next-five-priorities-2026-10-22.md) §1; [rust-migration-forward-plan](design/rust-migration-forward-plan.md) B4; [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 2; [rush-cad-roadmap](design/rush-cad-roadmap.md) этап 5 |
+| **N7. Внеосевые квартичные аналитические контакты.** sphere/cylinder, непараллельные cylinder/cylinder, cone/cone, plane/torus (окружности Вилларсо), sphere/torus | P1 | L | да | N1 (касательные случаи) | [rust-migration-forward-plan](design/rust-migration-forward-plan.md) B2; [brep-completion-status](design/brep-completion-status.md) 8a, 9c |
+| **N8. Лечение моделей.** Расширить положительный зазор дальше привязки концов (сейчас есть `authorized-heal-gap-le1/2`), разбиение рёбер, сшивка свободных рёбер, продление поверхностей | P1 | M | да | N5 | [rust-migration-forward-plan](design/rust-migration-forward-plan.md) C1; [brep-completion-status](design/brep-completion-status.md) 10 |
+| **N9. Ремонт швов, полюсов и pcurve при импорте STEP/IGES.** Подключить существующие автономные модули `pcurve_repair` к импорту | P1 | M | нет | N8 | [nurbs-priorities](../nurbs-priorities.md) 1016–1021 |
+| **N10. Покрытие форматов обмена и корпуса.** IGES 141/143/144 и DE-формы, STEP curve-bounded и AP242, PMI, прогон NIST и CAX-IF со статистикой отказов, импорт в песочнице | P1 | L | нет | — | [nurbs-priorities](../nurbs-priorities.md) 167, 168, 795–802, 984, 1072 |
+| **N11. Offset и shell.** Из `surface_offset` (ExactIdentity или SampledDeviation) получить офсеты с разрешённой топологией: складки, самопересечения, замкнутое толстое тело | P1 | L | да | N1 | [nurbs-next-five](design/nurbs-next-five-priorities-2026-10-22.md) §3; [nurbs-complete-program](design/nurbs-complete-program-2026-10-01.md) этап 10; [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 3 |
+| **N12. Общие угловые скругления и переполнение филлетов.** Трёхсторонние и общие углы, каскадное переполнение, сети переменного радиуса | P1 | L | да | N1 | [nurbs-next-five](design/nurbs-next-five-priorities-2026-10-22.md) §2; [nurbs-priorities](../nurbs-priorities.md) 862; [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 4 |
+| **N13. Сертифицированная тесселяция и масса.** Перевести переменные веса, лофты и изогнутые свипы из ExplicitRefuse в сертифицированные | P1 | M | да | N16 | [rust-migration-forward-plan](design/rust-migration-forward-plan.md) C2; [brep-completion-status](design/brep-completion-status.md) 11 |
+| **N14. Direct modeling и история в редакторе.** Перемещение граней на кривых поверхностях, offset на конусах и торах, Эйлер на обрезанных гранях; вывести в редактор уже нативные defeature, reorder, journal, history | P1 | M–L | частично | N4 | [nurbs-priorities](../nurbs-priorities.md) 157, 870–884, 1037–1039 |
+| **N15. Остатки миграции на Rust, маршрутизация, provenance, MCP.** `lighten` в native, удалить остатки разбора в `directModeling.ts`, матрица SemanticProgram, паритет браузер/MCP | P1 | M–L | да | — | [rust-migration-forward-plan](design/rust-migration-forward-plan.md) E1–E3; [brep-completion-status](design/brep-completion-status.md) 1, 2 |
+| **N16. Сертификация основы и примитивов.** Матрица степеней, весов и доменов с независимым оракулом; периодические и сингулярные контракты; ковариантность примитивов; заменить 9-точечный `validate` | P1 | L | нет | — | [brep-completion-status](design/brep-completion-status.md) 5, 6, 9a, 9b, шаг 1; [master-plan](design/brep-nurbs-14-stage-master-plan.md) карточки 5, 6, 9 |
+| **N17. Инфраструктура надёжности.** criterion-бенчи, cargo-fuzz, генераторы B-rep с оракулами, cargo-mutants, классификация `.unwrap()` | P1 | M–L | нет (Cargo.lock) | — | [nurbs-priorities](../nurbs-priorities.md) 224, 226, 232, 652, 840, 841, 1090 |
+| **N18. Квалификация и релизные гейты.** Закрыть G0.14 (чистый прогон 4740 единиц на трёх ОС), воспроизводимость, SBOM, дифференциальная матрица против OCCT/geomdl/curvo | P1 | L | да | N17 | [master-plan](design/brep-nurbs-14-stage-master-plan.md) G0.14, карточки 4, 14; [rust-migration-forward-plan](design/rust-migration-forward-plan.md) D3, D4 |
+| **N19. Прогресс и отмена.** Контракт `Progress` и кооперативный `CancellationToken` в циклах пересечений, тесселяции и аппроксимации; поведение при OOM | P1 | M | нет | — | [nurbs-priorities](../nurbs-priorities.md) 920, 921; [brep-completion-status](design/brep-completion-status.md) 12 |
+| **N20. LOD тесселяции во вьюере.** Вывести `tessellation::lod::select` через geometry-bridge и WASM, переключать по экранному размеру | P1 | S–M | да | — | [nurbs-priorities](../nurbs-priorities.md) 149 |
+| **N21. Гигиена репозитория.** Удалить неподключённые корневые копии в `nurbs-core/src`, подключить или удалить осиротевший тест свипа, убрать устаревшие release-скрипты v28–v32 | P1 | S | да | — | [nurbs-core-reorg-plan](nurbs-core-reorg-plan.md) §1; [roadmap-status](design/nurbs-brep-bvh-roadmap-status.md) «Уборка» |
+| **N22. Упрощение и распознавание аналитики.** Удаление узлов, понижение степени, распознавание примитивов по коэффициентам, `detect_cylinder`/`detect_cone` в лечении | P2 | M | частично | — | [nurbs-next-five](design/nurbs-next-five-priorities-2026-10-22.md) §4; [nurbs-priorities](../nurbs-priorities.md) 814, 874, 876, 1041 |
+| **N23. DRY и финализация API `nurbs-core`.** Общие `unit`, `Unresolved`, интервальный de Boor; разбить `convex_distance.rs`; перевести brep-core с плоских путей (169 импортов) | P2 | M | нет | N21 | [nurbs-core-reorg-plan](nurbs-core-reorg-plan.md) §2–4 |
+| **N24. Параллелизм, память, детерминизм.** rayon в тесселяции и Boolean, кэши базиса, арены, SoA-буферы в GPU | P2 | L | нет | N17 | [nurbs-priorities](../nurbs-priorities.md) 183, 184, 817–826, 1068–1070 |
+| **N25. BVH: SAH, общее ядро узлов, запросы в bridge.** | P2 | M | да | — | [roadmap-status](design/nurbs-brep-bvh-roadmap-status.md) «BVH» |
+| **N26. Мелкие пробелы NURBS и анализа.** Локальная бикубическая интерполяция, сертифицированная погрешность длины, площади и объёма, FFD с сохранением объёма, заметка о T-сплайнах | P2 | M | да | — | [roadmap-status](design/nurbs-brep-bvh-roadmap-status.md); [nurbs-priorities](../nurbs-priorities.md) 847, 859, 1001, 1031 |
+| **N27. Квалификация каталога NURBS.** Довести первые 100 фигур до `qualified` (сейчас 0 из 253), затем расширять каталог | P2 | L | нет | N4 | [nurbs-complete-program](design/nurbs-complete-program-2026-10-01.md) |
+| **N28. Платформа: DSL, CLI, привязки.** CLI `cad`, C API, pyo3 | P2 | L | да | N18 | [nurbs-priorities](../nurbs-priorities.md) 174, 175, 181, 915–919 |
+
+## 2. CAD-редактор и паритет с Plasticity
+
+Библиотечная часть паритета (полный SS, Boolean пересекающихся NURBS, freeform offset, общие скругления, доставка нативных результатов в редактор) уже входит в пакеты N1, N3, N6, N11, N12 и N4. Здесь перечислено то, что относится к редактору и пользовательским сценариям.
+
+| Пакет | P | Размер | ∥ | Зависит от | Источники |
+|---|---|---|---|---|---|
+| **C1. Аудит оставшихся синхронных путей.** Копирование и сериализация документа, коммит истории, разрешение ссылок, прямой Boolean, массивы, манипуляторы, проекция на экран: увести из главного потока или доказать, что не нужно. Опубликовать p50/p95 по каждому пути против целей (визуал ≤50 мс, preview ≤150 мс, Cancel ≤100 мс) | P0 | M | нет | — | [cad-remaining](design/cad-remaining-2026-09-29.md) P0 п. 1, 4; [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) «Остаток асинхронного preview» |
+| **C2. Матрица взаимодействия команд палитры.** Мышь и клавиатура для всех зарегистрированных команд: точный ввод, preview, Apply, Esc, Undo/Redo, повтор, смена выбора, ошибка worker; меньше переходов Tab | P0 | L | да | — | [cad-remaining](design/cad-remaining-2026-09-29.md) P0 п. 2; [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) этапы 0, 1 |
+| **C3. Контрольные модели и сквозные сценарии.** 12 контрольных моделей с негативными случаями; «20 правок → Undo/Redo → перезагрузка → экспорт → независимое открытие с размерами»; цикл прототипа (грань → выдавливание → размер → скругление → неверный радиус → исправление) | P0 | M | да | C2 (общий стенд) | [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) этапы 0, 1, задачи дизайна |
+| **C4. Локализация ошибок и объяснение недоступных команд.** Каждая ошибка указывает вход или место в сцене, объясняет на языке интерфейса и предлагает шаг; preview сохраняет последнюю валидную модель. Основа `disabledReason` уже есть | P0 | L | нет | — | [cad-remaining](design/cad-remaining-2026-09-29.md) P0 п. 3; [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) группы 2, 4 |
+| **C5. Раскладка и состояния выбора.** Дерево, вьюпорт, инспектор, панель команды при 1440×900; таблица состояний hover/selected/operand/preview/invalid/locked, различимых не только цветом в обеих темах; одна панель команды с Apply/Cancel | P0 | M | нет (App.svt) | P3 | [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) задачи дизайна P0 |
+| **C6. Расширения контракта ввода.** Выбор среди перекрывающихся объектов, выражения в панели CV и полях сетки, сохранённый pivot, системы координат Local/CPlane/World, вложенная изоляция, копирование с опорной точкой между документами | P1 | M | нет (DirectModeler.svt) | C5 | [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) «Изменения приоритетов» п. 1, 5 |
+| **C7. Привязки, постоянные ограничения эскиза, инструменты эскиза.** Привязки к пересечениям и касательным; ограничения в редакторе (решатель `sketch-core` их уже умеет, UI нет); эллипс, касательные дуги, аналитический Slot | P1 | L | нет | C6 | [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) группа 3, этап 2 |
+| **C8. Связанные экземпляры, массивы, переиспользование деталей.** Модель «определение → экземпляр → независимая копия», 100 экземпляров обновляются от исходника, Undo и переоткрытие сохраняют связи; массивы по шагу, по габариту, по кривой | P1 | L | нет | C1 | [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) группа 5; [cad-remaining](design/cad-remaining-2026-09-29.md) P2 |
+| **C9. Цепочка создания тела с Boolean внутри команды.** new/union/subtract в одной команде, Boolean в Sweep/Revolve, многооперандный Boolean, Boolean Region; отдельная квалификация касаний и совпадений; никогда не подменять B-rep мешем молча | P1 | L | нет | C4 | [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) группа 4, этапы 2, 3 |
+| **C10. Скругления в редакторе.** Выбор цепочек, радиус мышью и числом, сохранение выбора; расширять классы только после геометрической матрицы. Библиотечная часть в N12 | P1 | L | частично | N12 | [cad-remaining](design/cad-remaining-2026-09-29.md) P1; [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) этап 3 |
+| **C11. Точная диагностика B-rep.** Расстояние тело-тело с точками на поверхностях, включение и пересечение заполненных объёмов, самопересечения, толщина криволинейных стенок; вывести аудит самопересечений поверхностей в редактор (сейчас есть только `shellDistance`) | P1 | L | да | N1 | [cad-remaining](design/cad-remaining-2026-09-29.md) P1 диагностика; [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 2 |
+| **C12. Восстановление после сбоя и автосохранение в нескольких вкладках.** Восстановление на каждой стадии записи, согласованность вкладок, поведение без Web Locks | P1 | M | да | — | [cad-remaining](design/cad-remaining-2026-09-29.md) P1 п. 3 |
+| **C13. Точность обмена STEP/IGES.** Импорт → правка → экспорт → проверка OpenCascade на широком корпусе; настройки качества и единиц mesh-экспорта отдельно от CAD; прозрачность и текстуры в STEP. Код только в `cad-step` | P1 | L | нет (с N9, N10) | C3 | [cad-remaining](design/cad-remaining-2026-09-29.md) P1 п. 4; [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 9 |
+| **C14. Большие сцены (1000 экземпляров).** История, правка и восстановление; стабильные p50/p95, FPS при вращении, пиковая память. Последний замер: Redo около 1,7 с | P1 | L | нет | C1, C8 | [cad-remaining](design/cad-remaining-2026-09-29.md) P0 п. 4, P2 |
+| **C15. Lineage паттернов и общая параметрическая история.** Lineage через Boolean и паттерны, правка ранних параметров, граф зависимостей, перенос изменённых ID, ModelGraph, миграции схемы; стабильные идентичности выбора при Undo/Redo | P1 | L | да | N6 | [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 7, 8; [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) этап 1 |
+| **C16. Чертежи SVG со скрытыми линиями, сечения, проверки печати.** | P2 | M | да | — | [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) этап 4 |
+| **C17. Пересечения и offset общих NURBS-профилей.** Самопересечения кривой, точная раскладка, точный рациональный offset вместо номинального полигона | P2 | L | да | — | [cad-retained-profile-next](design/cad-retained-profile-next.md) п. 1, 2 |
+| **C18. Операции над общими NURBS-профилями.** Размеры, скругления профиля, revolve и loft составных контуров с отверстиями, проверка через STEP и историю | P2 | M | частично | C17 | [cad-retained-profile-next](design/cad-retained-profile-next.md) п. 3, 4 |
+| **C19. Замкнутые и закрученные свипы.** Шов замкнутого свипа с допуском на всём интервале, закрутка профиля в Solid, диагностика направляющих | P2 | M | да | — | [cad-remaining](design/cad-remaining-2026-09-29.md) P2 п. 3, 4 |
+| **C20. Периодическая перестройка и рациональные G1/G2-патчи.** | P2 | L | да | — | [cad-remaining](design/cad-remaining-2026-09-29.md) P2 п. 5, 6 |
+| **C21. Живой анализ поверхности при правке CV.** Зебра, гребни кривизны, измеренные отклонения G0/G1/G2; Slide, Align, перестройка степени | P2 | M | нет | C20 | [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) группа 7, этап 5 |
+| **C22. Рендер Solid: текстуры, освещение окружения, прозрачность.** CPU-путь для больших прозрачных сцен (сейчас около 8,8 FPS) | P2 | M | да | — | [cad-remaining](design/cad-remaining-2026-09-29.md) P2 п. 3 |
+| **C23. Quad-патчи и глобальный решатель G2/формы.** | P2 | L | да | — | [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 5, 6 |
+| **C24. Sub-D и меш в NURBS, восстановление геометрии.** | P2 | L | да | C23 | [cad-remaining](design/cad-remaining-2026-09-29.md) P3 п. 3, 4 |
+| **C25. Автосинхронизация с Blender и обмен с Cinema 4D.** | P2 | L | да | C13 | [cad-remaining](design/cad-remaining-2026-09-29.md) P3 п. 1, 2 |
+| **C26. Пробелы CAD в языке Rush.** Дуги, окружности и касания в эскизе (решатель уже есть, нужна проводка), запросы рёбер и граней, проверки сборок; кривые Boolean, STEP и offset после пакетов ядра | P2 | M | да | N6 (кривые Boolean) | [rush-cad-roadmap](design/rush-cad-roadmap.md) |
+
+## 3. Подсистемы
+
+| Пакет | P | Размер | ∥ | Зависит от | Источники |
+|---|---|---|---|---|---|
+| **S1. Масштабирование нативного CSG.** Надёжная триангуляция многоугольников с отверстиями (monotone sweep), ADR «arrangement Boolean или manifold-rust», бенчи `medium-csg` и `dense-sphere` | P0 | L | нет | S4 | [recommendation](recommendation.md) Native P0 |
+| **S2. Кооперативный конвейер компиляции.** Boolean и подготовка рендера уступают управление внутри WASM, отмена без пересоздания Worker; `face_ids` считается один раз (сейчас дважды в `geometry-bridge/src/mesh.rs`); единый протокол start/step/cancel | P0 | L | нет (refactor L1/L2) | — | [recommendation](recommendation.md) R1, R3; [product-priorities](design/product-architecture-priorities-2026-09-20.md) шаг 3 |
+| **S3. Происхождение топологии для Boolean и выбор рёбер.** `TopoId` на продуктах split/merge, выбор рёбер и контрольных точек в рендере | P1 | M | да | — | [recommendation](recommendation.md) Native P0 |
+| **S4. Расширения Boolean Manifold и регрессионный корпус.** Бюджет работы через ABI, n-арные операции, XOR; корпус от 100 пар (сейчас 8) и реальные дефектные меши | P1 | L | да | — | [manifold-plan](manifold-development-plan-100.md) 32–40, 84 |
+| **S5. Диагностика Manifold.** Самопересечения в `manifold-core`, толщина стенок, зазоры, масса с плотностью | P1 | L | да | S6 | [manifold-plan](manifold-development-plan-100.md) 9, 21–27, 30, 49 |
+| **S6. Контракты отчётов и версия ABI Manifold.** Схема отчёта, проверка версии ABI при старте worker, тесты f32/f64 на краях | P2 | M | да | — | [manifold-plan](manifold-development-plan-100.md) 2–10, 29, 66, 68 |
+| **S7. Режимы ремонта Manifold.** Бюджеты, сварка по пространственному хешу, сшивка непростых петель, ограниченное заполнение отверстий | P2 | L | да | S6, S4 | [manifold-plan](manifold-development-plan-100.md) 12–20, 59 |
+| **S8. Операции над мешами Manifold.** quickhull, QEM, срез плоскостью, offset; сначала проверить переиспользование `mesh-section`, `subdivision-core` | P2 | L | да | S6 | [manifold-plan](manifold-development-plan-100.md) 41–48, 50 |
+| **S9. Производительность и транспорт Manifold.** Базовая линия на нескольких платформах с порогом 15%, профилирование 1M+ треугольников, потоковая передача | P2 | L | да | P5 | [manifold-plan](manifold-development-plan-100.md) 28, 51–64, 69 |
+| **S10. Прочность печати: модель готового тела и материал.** Элементы на итоговой геометрии, автоматическая тет-сетка, сходимость, анизотропия слоёв | P1 | L | да | S5 | [print-strength](design/print-strength-roadmap-2026-09-21.md) этапы 1, 2 |
+| **S11. Прочность печати: карта слабых мест, облегчение, заполнение, проверка.** | P2 | L | да | S10 | [print-strength](design/print-strength-roadmap-2026-09-21.md) этапы 3–7 |
+| **S12. Адаптивный планировщик отображения и прогрессивный LOD.** Подключить `selectDisplayRepresentation` (сейчас без вызовов), уровни по камере, кэш | P1 | L | да | S13 | [competitor-gaps](design/competitor-capability-gaps-2026-09-21.md); [second-pass](research/second-pass-recommendations.md) #14 |
+| **S13. Владение сценой, удержание GPU, декомпозиция рендера.** Рендер на дельтах состояния, `GeometryScene` в протоколе, LRU-кэш GPU, квалифицированный WBOIT | P1 | L | нет (App.svt) | — | [recommendation](recommendation.md) R4–R7, R12 |
+| **S14. G-code под конкретные станки.** Квалифицированные профили, оболочки, поддержки, переменная ширина линии | P2 | M | да | — | [recommendation](recommendation.md) Print P2 |
+| **S15. Фотограмметрия: модель камеры и проверка поз.** Калибровка по шахматке, внутренние параметры в BA, многовидовая проверка | P2 | M | да | — | [photogrammetry-improvements](photogrammetry-improvements.md) 1, 2 |
+| **S16. Фотограмметрия: поверхность и физическая проверка.** TSDF, атлас, водонепроницаемая поверхность, точность в мм | P2 | L | да | S15 | [photogrammetry-improvements](photogrammetry-improvements.md) 3, 4 |
+| **S17. Storytold: контакты кривых профилей.** Частичные совпадения, касания кубик, порядок сингулярных самопересечений | P2 | L | нет | — | [storytold-feature-status](storytold-feature-status.md) |
+| **S18. Снятие границ SVG.** Нужен выбор продукта: проекция со скрытыми телами, развёртка, цвет в высоту; затем перезапись доказательств | P2 | M | да | P1 | [svg-production-status](design/svg-production-status.md) |
+
+## 4. Продукт и гигиена
+
+| Пакет | P | Размер | ∥ | Зависит от | Источники |
+|---|---|---|---|---|---|
+| **P1. Сверка квалификационных доказательств.** Сделать зелёными 4 падающих набора (`engineManifest`, `g0ToolchainFingerprints`, `g1GithubActionsQualification`, `qualificationPlanArtifact`) и `audit:qualification-drift` через ревьюируемое обновление, без переписывания истории | P0 | M | нет (после правок ядра) | — | [optimization-status](design/optimization-status-2026-09-19.md); [product-priorities](design/product-architecture-priorities-2026-09-20.md) шаг 1 |
+| **P2. TS lint, format, строгий tsconfig.** ESLint и Prettier с храповиком по образцу clippy (refactor F3), `packageManager`, флаги `noUnused*` и прочие постепенно | P0 | S–M | да | — | [RECOMMENDATIONS](RECOMMENDATIONS.md) 3.5; [ISSUES](ISSUES.md) E1–E9 |
+| **P3. Декомпозиция оболочки и общие диалоги.** Общие `Modal` и `SidePanel` с focus trap и `aria-modal`, `App.svt` меньше 1000 строк (сейчас 1773) | P1 | M | нет (App.svt) | — | [RECOMMENDATIONS](RECOMMENDATIONS.md) 1.4; [recommendation](recommendation.md) R4 |
+| **P4. Интеграция редактора кода.** Адаптер редактора, затем CodeMirror или Monaco; сохранить undo, IME, навигацию к сцене; замеры задержки ввода и бандла | P1 | L | нет (App.svt) | P3 | [product-priorities](design/product-architecture-priorities-2026-09-20.md) шаг 2; [recommendation](recommendation.md) R9 |
+| **P5. Браузерные и performance-гейты в CI.** Playwright со швом рендера без GPU, визуальные фикстуры, счётчики операций | P1 | L | да | P2 | [recommendation](recommendation.md) R11 |
+| **P6. Единый семантический фронтенд на Rust.** Один интерфейс для обоих профилей языка, удалить дублирующий TS-путь (`scadCompileRust` без вызовов) | P1 | L | нет (refactor L1) | S2 | [product-priorities](design/product-architecture-priorities-2026-09-20.md) шаг 4 |
+| **P7. Доступность.** `aria-modal` в `ScanPlanePanel` и DirectModeler, нецветовые признаки, клавиатурная орбита, честный ViewCube, axe | P1 | M | да | P3 | [RECOMMENDATIONS](RECOMMENDATIONS.md) 4.4, 4.5; [recommendation](recommendation.md) R10 |
+| **P8. Укрепление PWA и безопасности.** CSP без inline-скрипта, ограниченный кэш service worker, производный `CACHE_VERSION`, иконки | P1 | M | да | — | [ISSUES](ISSUES.md) E10–E20 |
+| **P9. Многофайловое рабочее пространство и вывод донора из эксплуатации.** VFS для `include`/`use`, ревью конфликтов, типизированные миграции хранилища | P2 | L | да | P4 | [recommendation](recommendation.md) R9, R13 |
+| **P10. Завершение панели Inspect и экспорта.** Семантическое дерево CSG, силуэты, точные контуры сечений, привязки, ViewCube, GLB | P2 | L | да | S3 | [second-pass](research/second-pass-recommendations.md) |
+| **P11. i18n.** Интерполяция и множественное число в `t()`, тест паритета ключей RU/EN | P2 | S | да | — | [RECOMMENDATIONS](RECOMMENDATIONS.md) 1.1; [ISSUES](ISSUES.md) E21, E22 |
