@@ -4,6 +4,13 @@
 2026-08-01. Это design evidence, а не формальная qualification или legal
 approval.
 
+Актуализировано 2026-11-13: удалены 13 завершённых пунктов G0 backlog
+(G0.1–G0.13 имеют статус `done` в `g0-contract-pack-status-v1.json`);
+исправлены устаревшие утверждения о развёртывании B-rep runtime, Rust workspace
+и владельцах G0. Открыт G0.14, а карточки 1–14 остаются нормативными
+требованиями; фактический статус по ним ведётся в
+[`brep-completion-status.md`](./brep-completion-status.md).
+
 Этот документ переводит пользовательский список из 14 пунктов в исполнимый
 порядок. Он не заменяет подробную спецификацию
 `rust-brep-nurbs-kernel.md`, а фиксирует решения, gates, независимые проверки
@@ -14,12 +21,16 @@ approval.
 **GO только для G0 Contract Pack. NO-GO для G1+, регистрации исполнимого
 B-rep provider и изменения product behavior, пока G0 не закрыт.**
 
-Текущий безопасный статус сохраняется:
+Фактическое состояние на 2026-11-13 разошлось с этим вердиктом: G0 по-прежнему
+не закрыт (G0.14 `partial`), но Rust workspace и исполнимый B-rep provider уже
+существуют, а B-rep manifest публикуется как `available`
+(`src/kernel/geometryBuildEngine.ts`, `BREP_MANIFEST`).
+
+Сохраняемые инварианты:
 
 - `legacy/current` навсегда маршрутизируется в постоянный Manifold backend;
 - `openscad-viewer/brep-1` навсегда маршрутизируется в постоянный Rust B-rep
   backend;
-- B-rep runtime сейчас отсутствует и честно публикуется как `not-deployed`;
 - ошибка, timeout, cancel или revocation одного backend никогда не запускают
   другой backend;
 - Manifold mesh не получает вымышленные B-rep topology identities;
@@ -743,8 +754,10 @@ unbounded refinement or preview changing B-rep topology.
 bounded resumable `JobMachine`; checked leased/chunked ABI; worker epochs;
 protocol v6 and `GeometrySceneV2`; export lease and restart/rebuild contract.
 
-Current protocol is v5. The only planned incompatible successor in this plan
-is v6.
+На момент плана protocol был v5 с единственным запланированным преемником v6.
+На 2026-11-13 `GEOMETRY_WORKER_PROTOCOL_VERSION` равен 12
+(`src/kernel/geometryWorkerProtocol.ts`), а `GeometrySceneV2` в `src/` не найден;
+соответствие нумерации v6 из этого плана текущим версиям не проверено.
 
 **Entry:** qualified native slices and end-to-end memory budget.
 **Exit:** native/WASM canonical topology/status/certificate parity, ABI and
@@ -794,25 +807,17 @@ qualification reset or unverifiable resource cost.
 
 Живой статус pack: [`docs/qualification/g0-contract-pack.md`](../qualification/g0-contract-pack.md)
 и [`docs/qualification/g0-contract-pack-status-v1.json`](../qualification/g0-contract-pack-status-v1.json).
-G0 **не закрыт**, пока status JSON имеет `"closed": false` и owners остаются
-`unassigned`.
+G0 **не закрыт**, пока status JSON имеет `"closed": false`. Владельцы назначены
+(solo dual-role owner/reviewer, без организационной независимости).
 
 | ID | Deliverable | Exit evidence |
 | --- | --- | --- |
-| G0.1 | Freeze review charter and ADR dependency graph | approved list of blocking ADR and owners |
-| G0.2 | Freeze current toolchain/dependency fingerprints | `g0-toolchain-fingerprints-v1.json` (+ later full SBOM) |
-| G0.3 | Engine/language/error-precedence ADR | full routing and refusal matrix |
-| G0.4 | `SemanticProgram` discriminated IDL | ADR 0005 schema, examples, independent validator |
-| G0.5 | Source/program/topology/policy/mesh hash ADR | canonical preimages and collision rules |
-| G0.6 | Topology/ownership/typestate/lineage IDL | ADR 0007 + `topology-idl/` fixtures and mutations |
-| G0.7 | Tolerance/predicates/constructions/evidence ADR | ADR 0006 + `g2a-predicate-inventory-v1.json` |
-| G0.8 | Protocol v6/`GeometrySceneV2` IDL | checked-in wire fixtures and v5 migration matrix |
-| G0.9 | Versioned legacy golden corpus manifest | source, output, error, cancel, MCP and provenance artifacts |
-| G0.10 | Field-by-field differential comparator | mutation tests proving comparator sensitivity |
-| G0.11 | `QualificationPlan` schema | immutable matrix/seeds/budgets/reset policy example |
-| G0.12 | Resource/security/supervisor ADR | end-to-end memory, hard-kill and queue policy |
-| G0.13 | Independent-reimplementation policy | allowlisted sources, rights inventory, contributor provenance |
 | G0.14 | G1 qualification plan | exact pass/fail scope before G1 code starts |
+
+G0.14 частично выполнен: план G1 v18 и его артефакты есть, но не хватает
+чистого post-freeze прогона всех 4740 work units (u07), полного
+`cleanRunDefinition` на замороженных Ubuntu/macOS/Windows jobs, чистых браузерных
+фрагментов Chromium/WebKit и выставления `qualificationApproval`.
 
 ## G0 Definition of Done
 
@@ -828,4 +833,5 @@ G0 закрыт только если одновременно:
 - G1 `QualificationPlan` заморожен до реализации G1;
 - нет unresolved P0/P1 в G0 scope.
 
-До этого Rust workspace, B-rep provider и product-visible B-rep UI не создаются.
+Rust workspace, B-rep provider и product-visible B-rep UI фактически созданы до
+закрытия G0; это не снимает требование закрыть G0.14.

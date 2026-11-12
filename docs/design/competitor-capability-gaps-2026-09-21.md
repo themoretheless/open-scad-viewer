@@ -1,5 +1,10 @@
 # Competitor Capability Gaps: 2026-09-21
 
+Updated 2026-11-13: removed 0 resolved items. A pure, unwired level selector
+(`selectDisplayRepresentation` in `src/kernel/geometry/displayPolicy.ts`, with
+`tests/displayPolicy.test.ts`) covers part of the memory-admission rule, but no
+camera-aware scheduler, per-solid levels or display cache keys exist yet.
+
 This is a capability comparison, not a claim that the products use the same
 geometry kernels or data contracts.
 
@@ -46,7 +51,7 @@ The highest-value missing feature is an adaptive display scheduler:
 - cache keys containing solid identity, transform, tolerance, and display mode;
 - deterministic fallback to the last admitted level when a budget is exhausted.
 
-This should sit above `geometry-analysis` and below the viewport, while the
+This should sit above the kernel analysis layer (`src/kernel/geometry/meshAnalysis.ts`) and below the viewport, while the
 Rust kernel remains responsible for tessellation validity and budgets. It can
 reuse the existing `RenderMesh`, BVH, face ids, and artifact identity rather
 than introducing a second mesh representation.

@@ -1,5 +1,9 @@
 # Engineering debt register
 
+Updated 2026-11-13: removed 2 resolved items; links now point at the
+`src/app`, `src/kernel`, `src/language`, `src/render` and `src/exchange`
+locations that replaced `src/services`.
+
 This is the living, prioritized debt register for OpenSCAD Viewer. It replaces
 the historical hundreds-of-items wishlist, which mixed completed work, product
 ideas and obsolete prototype findings. Architecture and invariants live in
@@ -23,22 +27,22 @@ Reopen these only for a demonstrated regression.
 
 | Status | Capability | Evidence |
 | --- | --- | --- |
-| Done | Real CSG and geometry metrics | Handle-only kernel evaluator and geometry tests in [`openscadParser.ts`](../src/services/openscadParser.ts) and [`openscadParser.test.ts`](tests/openscadParser.test.ts). |
+| Done | Real CSG and geometry metrics | Handle-only kernel evaluator and geometry tests in [`openscadParser.ts`](../src/language/openscadParser.ts) and [`openscadParser.test.ts`](../tests/openscadParser.test.ts). |
 | Done | Panel-review geometry correctness fixes | Polyhedron winding/merge, EvenOdd polygon fill, positive/positioned extrusion and positioned revolution failures have regressions. |
 | Done | Input/resource hardening | Source/AST/depth/shape/triangle limits plus evaluation-step, evaluated-value, `concat`/`str`, extrusion-slice and pre-decode share-hash caps. |
 | Done | Customizer and STL boundary fixes | Structural literal offsets prevent source corruption; binary STL headers truncate encoded UTF-8 to 80 bytes. |
 | Done | Statement assertion foundation | `assert(condition, message)` uses OpenSCAD truthiness, strict argument binding, transparent child evaluation and positioned fail-fast diagnostics across the Worker boundary; expression-form assert remains unsupported. |
-| Done | Protocol-v3-only geometry builds | Runtime-validated messages and transfer payloads, required preview-reduction metadata, warm same-revision preview→full, latest-only publication, explicit stale/cancel states and tested hard preemption in [`buildCoordinator.ts`](../src/services/buildCoordinator.ts). |
-| Done | Stable document/build identity | Versioned snapshots in [`workspaceDocument.ts`](../src/services/workspaceDocument.ts) and revision/job envelopes. |
+| Done | Protocol-v3-only geometry builds | Runtime-validated messages and transfer payloads, required preview-reduction metadata, warm same-revision preview→full, latest-only publication, explicit stale/cancel states and tested hard preemption in [`buildCoordinator.ts`](../src/app/buildCoordinator.ts). |
+| Done | Stable document/build identity | Versioned snapshots in [`workspaceDocument.ts`](../src/app/workspaceDocument.ts) and revision/job envelopes. |
 | Done | Stable operation/evaluated-entity identity | Structural `SourceOperationId`, dynamic `SceneEntityId`, exact spans and ambiguity-safe replacement matching. |
 | Done | Neutral mesh/build contract seam | [`src/core/mesh.ts`](../src/core/mesh.ts) and [`src/core/build.ts`](../src/core/build.ts) own contracts and deduplicated transfer discovery; a test keeps parser value imports Worker-only. |
-| Done | Tested replacement-scene continuity | [`scenePublication.ts`](../src/services/scenePublication.ts) fail-closes ambiguity and preserves visibility/selection/isolation only when identity is safe. |
+| Done | Tested replacement-scene continuity | [`scenePublication.ts`](../src/app/scenePublication.ts) fail-closes ambiguity and preserves visibility/selection/isolation only when identity is safe. |
 | Done | Two-level accelerated picking | Scene AABB hierarchy plus lazy exact traversal of per-mesh triangle BVHs. |
 | Done | Renderer lifecycle foundation | Typed lifecycle events, one bounded frame retry, coalesced device loss with one follow-up, false-ready prevention, and App-driven scene/camera/history rehydration with focused tests. |
-| Done | One declarative command inventory | [`commandRegistry.ts`](../src/services/commandRegistry.ts) drives palette metadata and scope-aware shortcuts. |
+| Done | One declarative command inventory | [`commandRegistry.ts`](../src/app/commandRegistry.ts) drives palette metadata and scope-aware shortcuts. |
 | Done | Repeatable quality gate | Typecheck, Vitest and production build run through `npm run check` in CI. |
 | Done | One-build preview promotion | Auto builds run preview first and request full only when the versioned reduction policy reports a real quality change; a pure policy and byte-level equivalence corpus cover promotion and stale targets. A process-local monotonic build generation prevents restored documents from aliasing persistence revisions. |
-| Done | Versioned independent language decision | `openscad-viewer-subset@1`, compatibility/contributor policy and third-party notices explicitly exclude bundled official OpenSCAD runtime code. The project VFS is host/network-isolated, Unicode-canonical, traversal-safe and globally budgeted; `include`/`use` remain coded unsupported features until a future contract version defines semantics. |
+| Done | Versioned independent language decision | `openscad-viewer-subset@1`, compatibility/contributor policy and third-party notices explicitly exclude bundled official OpenSCAD runtime code. The project VFS is host/network-isolated, Unicode-canonical, traversal-safe and globally budgeted; `include`/`use` remain coded unsupported features of that subset profile; the separate `openscad/stable-2021.01` profile ([ADR 0004](adr/0004-independent-openscad-2021-engine.md)) resolves them through the project VFS. |
 
 ## Active register
 
@@ -79,18 +83,18 @@ Reopen these only for a demonstrated regression.
 - **Priority/status:** P0 / In progress
 - **Evidence:** lexer/parser, scope evaluation, tessellation, provenance,
   topology and BVH construction previously shared one module and called
-  WASM types directly. The pure [`openscadCompiler.ts`](../src/services/openscadCompiler.ts)
+  WASM types directly. The pure [`openscadCompiler.ts`](../src/language/openscadCompiler.ts)
   now owns tokenization, parsing and stable operation identity and returns a
   deeply frozen, structured-clone-safe operation IR without importing
-  the official kernel. [`openscadBinder.ts`](../src/services/openscadBinder.ts) binds that
+  the official kernel. [`openscadBinder.ts`](../src/language/openscadBinder.ts) binds that
   IR to builtin/user modules and functions, records positioned unresolved-name
   diagnostics and content-addresses compile+bind by source digest plus
-  language profile. [`geometryKernel.ts`](../src/services/geometryKernel.ts)
+  language profile. [`geometryKernel.ts`](../src/kernel/geometryKernel.ts)
   defines the lifecycle port and opaque solid/section handles;
-  [`cadGeometryKernel.ts`](../src/services/cadGeometryKernel.ts)
+  [`cadGeometryKernel.ts`](../src/kernel/cadGeometryKernel.ts)
   exclusively owns WASM bootstrap, retry, handle-table and GC-session
-  disposal. [`openscadParser.ts`](../src/services/openscadParser.ts) and
-  [`svgGeometry.ts`](../src/services/svgGeometry.ts) evaluate through opaque
+  disposal. [`openscadParser.ts`](../src/language/openscadParser.ts) and
+  [`svgGeometry.ts`](../src/exchange/svgGeometry.ts) evaluate through opaque
   handle-only kernel ops; tessellation uses `analyzeSolid`. Boolean/hull
   and primitive constructors normalize kernel failures to source positions.
   Compiler phase timings report `bindMs` separately from `parseMs` on the
@@ -107,10 +111,10 @@ Reopen these only for a demonstrated regression.
 - **Evidence:** App owns the CPU scene and mirrors renderer-owned selection,
   isolation, visibility, projection and camera-related state. The canonical
   CPU-side meshes/visibility/selection/isolation/hover/measurement/section
-  snapshot now lives in [`sceneController.ts`](../src/services/sceneController.ts);
-  [`viewportController.ts`](../src/services/viewportController.ts) owns camera,
+  snapshot now lives in [`sceneController.ts`](../src/app/sceneController.ts);
+  [`viewportController.ts`](../src/render/viewportController.ts) owns camera,
   face-preset projection, history availability and recovery-revision fencing.
-  Vue exposes computed projections and renderer callbacks are typed intents
+  The UI layer (Svet runtime) exposes computed projections and renderer callbacks are typed intents
   into those owners. Replacement-scene publication commits atomically through
   the scene controller, hidden selections and hovers fail closed, and camera
   face presets apply orientation plus projection as one history action.
@@ -161,17 +165,17 @@ Reopen these only for a demonstrated regression.
 ### R7 — Decompose the renderer without changing interaction behavior
 
 - **Priority/status:** P1 / In progress
-- **Evidence:** [`cameraHistory.ts`](../src/services/cameraHistory.ts) and
-  [`rendererRecoveryGate.ts`](../src/services/rendererRecoveryGate.ts) now provide
+- **Evidence:** [`cameraHistory.ts`](../src/render/cameraHistory.ts) and
+  [`rendererRecoveryGate.ts`](../src/render/rendererRecoveryGate.ts) now provide
   adapter-free tested contracts for navigation history and bounded recovery.
   Neutral public types now live in
-  [`rendererContracts.ts`](../src/services/rendererContracts.ts), canonical view
-  orientation/projection in [`viewportModel.ts`](../src/services/viewportModel.ts),
+  [`rendererContracts.ts`](../src/render/rendererContracts.ts), canonical view
+  orientation/projection in [`viewportModel.ts`](../src/render/viewportModel.ts),
   and orbit/pan/pinch/wheel math in
-  [`cameraGestures.ts`](../src/services/cameraGestures.ts). App and ViewCube no
+  [`cameraGestures.ts`](../src/render/cameraGestures.ts). App and ViewCube no
   longer depend on the WebGPU monolith for model/types, while compatibility
   re-exports preserve callers. The main lifecycle workflow remains in App, while
-  [`webgpuRenderer.ts`](../src/services/webgpuRenderer.ts) still owns device
+  [`webgpuRenderer.ts`](../src/render/webgpuRenderer.ts) still owns device
   lifecycle, pipelines/resources, camera/input, picking, visibility, selection,
   measurements, sections and overlays.
 - **Risk:** recovery, interaction and draw changes share broad mutable state and
@@ -184,7 +188,7 @@ Reopen these only for a demonstrated regression.
 
 ### R9 — Build reliable storage and a structured editor/workspace
 
-- **Priority/status:** P1 / In progress; multi-file portion blocked on R8
+- **Priority/status:** P1 / In progress; multi-file portion blocked on multi-file VFS semantics in the editor
 - **Evidence:** persistence validates/version-tags one localStorage snapshot,
   migrates `scad-code`, journals causal per-tab recovery and commits CAS-guarded
   IndexedDB snapshots. Conflict UI can export the open draft before choosing a
@@ -197,7 +201,8 @@ Reopen these only for a demonstrated regression.
   caret-based.
 - **Acceptance remaining:** full conflict review/diff and bounded losing-copy
   backups; typed sequential migration outcomes including unsupported-newer;
-  syntax highlighting/completion and multi-file tabs after VFS semantics ship;
+  completion and multi-file tabs after VFS semantics ship (syntax
+  highlighting ships through `src/language/codeHighlight`);
   multi-diagnostic decorations and bounded explicit undo/redo history.
 
 ### R10 — Close verified interaction and accessibility gaps
@@ -252,14 +257,14 @@ Reopen these only for a demonstrated regression.
   hydrates the latest CPU scene. The active backend tier is visible in the UI.
 - **Risk:** overlapping x-ray geometry can be visually wrong and unsupported
   browsers cannot display the model.
+  A weighted blended OIT pass ([`gpuWboit.ts`](../src/render/gpuWboit.ts))
+  now exists behind `setTransparencyMode('wboit')`; the default mode and the
+  UI tier in `backendQuality.ts` remain `object-sorted-alpha`.
 - **Acceptance remaining:** extract a pure frame plan and pipeline descriptor
-  tests; add pixel-budgeted weighted blended OIT with transactional attachments
-  and sorted-alpha downgrade; browser visual fixtures for self-overlap,
-  intersections, opaque occlusion and overlays; keep a WebGL/CPU raster backend
-  as a separate product decision.
-- **Acceptance:** document a WebGPU-only support tier or add a tested fallback;
-  expose the transparency limitation; if correctness is required, implement and
-  visually test weighted OIT, depth peeling or another explicit strategy.
+  tests; qualify the WBOIT pass with a pixel budget, transactional attachments
+  and sorted-alpha downgrade before making it the default; browser visual
+  fixtures for self-overlap, intersections, opaque occlusion and overlays; keep
+  a WebGL/CPU raster backend as a separate product decision.
 
 ### R13 — Converge feature work without merging competing architecture
 
@@ -321,7 +326,7 @@ Reopen these only for a demonstrated regression.
 
 - **Priority/status:** P0 / In progress
 - **Evidence:** [`topologyLineage.ts`](../src/core/topologyLineage.ts) and
-  [`polygon-core` lineage](../crates/polygon-core/src/lineage.rs) record
+  [`polygon-core` lineage](../crates/polygon-core/src/solid/lineage.rs) record
   persist/split/merge of opaque `TopoId`s, transfer or explicitly lose
   selection, and emit a schema-1 durable snapshot. Native edge and
   control-point references are revision-fenced like faces.

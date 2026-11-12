@@ -9,127 +9,73 @@ authoritative per-slice evidence trail and the requirements table. Nothing in
 this plan is completion evidence; completion claims live only in the status
 document and its linked qualification records.
 
-## Where we are (2026-09-15, evidence-backed)
+Updated 2026-11-13: removed 10 completed items (A1–A4, B3, C3, C4, D1, D5,
+D6) and the "Where we are" list of done work; B2, B4, C1, C2 and D2 were
+narrowed to their open parts. Evidence for removed items: native
+sphere/sphere Boolean (`crates/brep-core/src/boolean/sphere_boolean.rs`), shared
+imprint pipeline and UV arrangements (`crates/brep-core/src/boolean/{imprint_pipeline,uv_arrangement}`),
+global solid audit (`crates/brep-core/src/body_analysis/solid_audit.rs`), and the
+Closed rows 8b, 9c, 13, 14, N1, R1/G6, later features and exchange in
+[brep-completion-status.md](brep-completion-status.md). Freeform×freeform
+Boolean and off-axis quartic contacts are also tracked in
+[nurbs-brep-bvh-roadmap-status.md](nurbs-brep-bvh-roadmap-status.md).
 
-Done and evidenced (scoped, none of it a full-completion certificate):
-
-- **Native SemanticProgram admission chain** (requirement row 2): envelope
-  object, source descriptor + attestation (sha256, UTF-8/UTF-16 lengths,
-  surrogate-safe spans), core literals, capability closure (exact Rust port of
-  `deriveSemanticCapabilityClosure`), identity digests
-  (`opv1:`/`ambv1:`/`occv1:`/`entity:v2:` with byte-exact canonical JSON and
-  ECMAScript number formatting), provenance/tessellationIntents/diagnostics/
-  diagnosticTemplates, occurrence-production replay for the brep-1 path, and
-  the execution plan. All admission runs natively before any graph node
-  executes; the legacy per-node TS executor (`brepSemanticBackend.ts`) is
-  deleted; the application scene runs on the native graph executor.
-- **Host-geometry migration slices** (top of the status document): scene
-  flatten, body transforms/arrangement/patterns, joints, mirror, selection
-  transforms, editor split, mesh planes (push/pull, chamfer, fillet, shell),
-  surface texture, lattice preparation + decimation + lightening + print
-  settings, display-buffer preparation — all in Rust behind transport-only
-  TS adapters.
-- **Intersection matrix (row 8a, numerical foundation)**: curve/plane,
-  curve/finite-segment, general curve/curve, curve/ruled-surface (incl. seam
-  unification and overlap parameter correspondence), affine surface/surface,
-  ruled sections with trace conversion. Newton terminal confirmation with
-  one-sided C0-knot jets and half-open boundary ownership.
-- **Analytic SS family COMPLETE for canonical primitives**: all 15 pairs of
-  {plane, sphere, cylinder, cone, torus}² in axial/resolvable configurations,
-  with exact rational curves (circles/lines/conics) and two-sided UV lifts.
-  Strict structural recognizers; non-canonical or quartic configurations
-  refuse honestly; tangency is always an explicit unresolved band; no
-  numerical fallback anywhere in the family.
-
-## Forward plan, in dependency order
-
-### A. Curved Booleans (row 9c) — the main line
-
-A1. **First curved Boolean: sphere OP sphere** (union/intersect/subtract).
-    Consume `intersect_sphere_sphere`; split both spheres' faces along the
-    exact UV lift circles; one shared section edge with oriented coedges and
-    per-face pcurves; outward-interval material classification; spherical-cap
-    volume/area oracles; honest refusal for tangency/unresolved; empty-algebra
-    and containment cases per existing conventions (cavity policy decided and
-    documented). Route through the native semantic boolean admission so a real
-    lowered OpenSCAD program executes it end-to-end.
-A2. **Generalize the imprint/split pipeline** extracted from A1: surface
-    imprint of an exact UV curve loop on a canonical patch, face splitting,
-    trimmed-face assembly. Each new pair family (sphere/cylinder, plane/*
-    sections, cylinder/cylinder lines, cone sections) joins the Boolean
-    matrix only through this shared pipeline — no per-pair assembly shortcuts.
-A3. **UV arrangements (row 8b)**: multiple section curves per face, DCEL/
-    arrangement in the UV domain, holes, periodic lifts, pole rules, robust
-    cell/material classification with independent coverage and non-overlap
-    evidence (including missed-branch mutations).
-A4. **Global solid audit**: connected material components, orientation audit,
-    watertightness at shared edges, empty/multiple-output regularization —
-    required before any "general curved Boolean" claim.
+## Remaining work, in dependency order
 
 ### B. Intersection completeness (rows 8a/8b/R1)
 
-B1. **Tangency certification**: today every tangent contact is an unresolved
-    band. Add a certified tangent-contact analysis (resultant/GRöbner-free
-    discriminant classification on the exact rational representations) so
-    provable tangencies resolve to points/curves with explicit multiplicity
-    evidence instead of bands.
+B1. **Tangency certification**: tangent contacts are still reported as
+    unresolved (`UnresolvedReason::TangencyOrMultipleRoot` in
+    `crates/nurbs-intersect/src/queries/curve_plane.rs`). Add a certified
+    tangent-contact analysis (resultant/GRöbner-free discriminant
+    classification on the exact rational representations) so provable
+    tangencies resolve to points/curves with explicit multiplicity evidence
+    instead of bands.
 B2. **Non-axial quartic configurations** (sphere/cylinder off-axis,
     cylinder/cylinder non-parallel, cone/cone non-coaxial, oblique plane/torus
-    incl. Villarceau circles): each is a bounded analytic extension of the
-    existing recognizers; implement per pair with exact quartic-root
+    incl. Villarceau circles, sphere/torus off-axis contact): coaxial pairs and
+    provable misses are done; true off-axis contact still refuses with
+    `UnsupportedSurface`. Implement per pair with exact quartic-root
     classification or honest continued refusal.
-B3. **General CS** (curve vs arbitrary supported NURBS surface): lift the
-    (t,u,v) system from curve/ruled-surface to tensor patches.
-B4. **General NURBS SS** (R1/G6): research spike only after B1–B3; a fitted
-    NURBS intersection curve may become a topology boundary only with
-    two-sided Hausdorff + parameter-correspondence + tubular/isotopy
-    certificates (kernel design §9.1).
+B4. **Freeform×freeform Boolean**: general NURBS SS is qualified only for the
+    finite `nurbs-ss/1` and `nurbs-boolean/1` (graph × affine cutter) cells;
+    freeform×freeform Boolean remains ExplicitRefuse
+    (`freeform-x-freeform-boolean`).
 
 ### C. Foundations and operations above the Boolean line
 
-C1. **Canonicalization, exact sewing, explicit healing (row 10)**: boundary
-    correspondence, orientation repair plans, gap/duplicate handling,
-    displacement/error ledger, idempotence, cancellation rollback. Post-hoc
-    mesh welding never counts.
-C2. **Certified shell-aware tessellation (row 11)**: lifted UV constraints and
-    separate certified coverage/incidence/deviation evidence for all
-    supported surfaces (the shared-edge sample registry is the substrate).
-C3. **Later features**: analytic fillet/chamfer chains and corners, general
-    shell/offset with deviation evidence, loft/sweep SectionMatch/FrameLaw,
-    transactional direct face edits and surface replacement.
-C4. **Persistent naming (N1)**: roles/anchors, parameter rebuilds,
-    generated/deleted lineage, symmetric ambiguity, selection transfer without
-    nearest-face guesses.
+C1. **Explicit healing (row 10)**: boundary correspondence, exact sew and
+    global solid audit are qualified; `authorized-heal-gap-le1/1` remains
+    Unavailable. Positive-gap bridging with displacement/error ledger,
+    idempotence and cancellation rollback is still missing. Post-hoc mesh
+    welding never counts.
+C2. **Certified tessellation beyond the closed cells (row 11)**: analytic and
+    equal-weight Bezier ≤3 freeform tessellation are certified; varying-weight,
+    loft and bent-sweep surfaces remain ExplicitRefuse.
 
-### D. Production surface and qualification (rows 1, 3, 4, 12, 13, 14)
+### D. Production surface and qualification (rows 3, 4, 12)
 
-D1. **Browser/MCP activation (row 13)**: permanent B-rep provider with
-    admission/queue/quotas/watchdog/restart, immutable executable manifest,
-    same-program build/export parity; crash/hang/OOM/spoof/rollback drills.
-D2. **Execution hardening (row 12)**: checked leases/chunks/epochs, full
-    fault/OOM/cancel behavior, GeometrySceneV2 migration, snapshot/export
-    leases, native/WASM topology/status/evidence parity.
+D2. **Execution hardening (row 12)**: the closed-matrix provider and
+    lease/cancel/LKG drills are closed; broader OOM/chunk behavior and
+    GeometrySceneV2 migration remain operational hardening.
 D3. **Reproducibility (row 4)**: artifact reproducibility, production
     dependency/provenance evidence, bounded ABI allocation, architecture
     tests.
-D4. **G0 closure (row 3)**: the declared clean-run matrix on the frozen
-    corpus; no rewriting frozen oracle hashes to make results pass.
-D5. **Full qualification and release (row 14)**: freeze and run the actual
-    supported matrix with independent oracles/certificate mutations, exact
-    toolchain/corpus/artifact hashes, resource/performance/security budgets,
-    expected refusals, reproducible release/rollback evidence.
-D6. **Exchange (row Exchange)**: canonical versioned snapshots,
-    corruption/forward-version/limit handling, then STEP/IGES B-rep exchange
-    with roundtrip geometry/topology evidence.
+D4. **G0 closure (row 3)**: G0.14 is still `partial` in
+    `docs/qualification/g0-contract-pack-status-v1.json`; the declared
+    clean-run matrix on the frozen corpus is missing. No rewriting frozen
+    oracle hashes to make results pass.
 
 ### E. Remaining host-side TypeScript (migration completeness)
 
-E1. Per-body `lighten` orchestration loop in `cadWorkbench.ts` and the panel
-    volume-reduction percentage (presentation; decide if in scope).
-E2. `directModeling.ts` document parsing/history remnants; periodic
+E1. Per-body `lighten` orchestration loop in `src/kernel/cadWorkbench.ts`
+    (still a host loop over `lightenSolid`) and the panel volume-reduction
+    percentage (presentation; decide if in scope).
+E2. `src/app/directModeling.ts` document parsing/history remnants; periodic
     re-inventory of `src/` against the objective (every audit round lists what
     remains, with file paths).
-E3. Manifold backend (`executeSemanticProgram` generic path) — decide
+E3. Manifold backend (`executeSemanticProgram` generic path in
+    `src/language/semantic/semanticProgramExecutor/`) — decide
     keep-vs-retire explicitly.
 
 ## Working agreements (unchanged)

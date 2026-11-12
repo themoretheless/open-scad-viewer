@@ -1,5 +1,9 @@
 # Product and architecture priorities
 
+Updated 2026-11-13: removed 0 resolved items; none of the four implementation
+steps is complete. File names below follow the current `src/App.svt` and
+`src/components/*.svt` layout.
+
 Source review: main f68ce0a6, 2026-09-20. This is a scoped comparison, not a
 competitive benchmark, feature certification or completed implementation plan.
 
@@ -11,10 +15,10 @@ PWA behavior. Its README also lists remaining preview and mobile-editor work;
 do not infer production completeness from the feature list.
 [Primary source](https://github.com/openscad/openscad-playground)
 
-Our `App.vue` still owns textarea inputs. `editorDiagnostics.ts` already maps
+Our `App.svt` still owns textarea inputs. `editorDiagnostics.ts` already maps
 build failures to source ranges and reveals them through selection. The gap is
 an integrated editing experience, not an absence of diagnostics. Customizer
-controls and named parameter presets already exist in `CustomizerPanel.vue`,
+controls and named parameter presets already exist in `CustomizerPanel.svt`,
 `scadCustomizer.ts` and `parameterPresets.ts`.
 
 CadQuery documents selectors over geometric objects, including composable
@@ -49,7 +53,8 @@ performance numbers cannot substitute for a shared workload and machine.
    Acceptance: interaction tests, desktop/mobile screenshots, accessibility,
    large-source typing latency and before/after bundle/startup measurements.
 3. Integrate measured Rust grouping work with one producer-owned computation.
-   PR #20 currently groups in both `export_buffers` and `render_buffers`.
+   `crates/geometry-bridge/src/mesh.rs` still calls `face_ids` from both
+   `export_buffers` and `render_buffers`.
    Acceptance: complete publication benchmark, sparse/dense fixtures, cache
    reuse and exact selection IDs; kernel-only timing is insufficient.
 4. Unify semantic execution behind a backend interface before broadening CAD

@@ -1,5 +1,7 @@
 # Optimization completion audit
 
+Updated 2026-11-13: removed 3 completed items (surface grouping moved to the native kernel, disposable-worker cold start separated from the 250 ms readiness probe, the matching Next Decisions entry) and corrected stale source paths. Test counts and CI runs below remain the 2026-09-19/20 snapshot.
+
 Subsequent local progress: [MCP cold-start phase](mcp-cold-start-phase-2026-09-19.md)
 reproduces and fixes the disposable-worker readiness failure without changing
 the global 250 ms limit. The full-suite snapshot below predates that change;
@@ -111,10 +113,8 @@ subset. There is no green overall-CI or deployment claim.
 
 | User objective | Current evidence | Still required |
 | --- | --- | --- |
-| Move useful hot work into Rust | `abi_render_mesh` and `abi_analyze_solid` exist in geometry-wasm and are used by meshAnalysis; measured base85 optimization retained | `inferSurfaceIds` still runs in TS; profile its complete publication cost before another ABI port |
 | Benchmarks and measured wins | Alternating baseline/candidate bootstrap runs, exact output checks, cold-readiness controls and full artifact accounting | CI contention report has not run with the new workflow; no universal speedup claim |
 | SOLID, DRY, modularity | Browser-only compiler composition root; pure shared kernel compiler interface; bounded surface-group cache | Two TS OpenSCAD semantic paths remain; scene ownership and broad frontend decomposition are not complete |
-| System design | Host I/O isolation, streaming fallback deadline, raw/packed identity gates, disposable-worker lifecycle checks | Cold startup versus 250 ms provider-readiness policy remains unresolved |
 | Competitor comparison | Initial audit records a comparison and possible product gaps | No current competitive performance parity proof; historical comparison is not a release acceptance test |
 | Greenfield design | Initial audit proposes one semantic frontend, typed/handle transport and consolidated solid analysis | Only parts are implemented; replacement of the semantic frontend needs differential conformance evidence |
 | Bottleneck/problem search | Duplicate 2.79 MB literals removed; decoder phases measured; transitive I/O regression fixed | Frozen-evidence drift and CI readiness failures remain open |
@@ -122,35 +122,32 @@ subset. There is no green overall-CI or deployment claim.
 
 ## Source Revalidation
 
-- `src/services/meshSurfaceGroups.ts` still calls `inferSurfaceIds`; its content
-  cache now uses `SurfaceGroupContentCache`, so the old unbounded-cache finding
-  is resolved but the CPU placement finding is not.
-- `src/services/geometry/meshAnalysis.ts` calls `abi_analyze_solid` and
+- `src/kernel/meshSurfaceGroups.ts`: `inferSurfaceIds` now delegates to the
+  native `surfaceGroupsInKernel`; only oversized-input packing stays in TS.
+- `src/kernel/geometry/meshAnalysis.ts` calls `abi_analyze_solid` and
   `abi_render_mesh`; the broad recommendation to introduce them is no longer
   an untouched task.
 - Both `src/workers/geometry.worker.ts` and
-  `src/services/buildCoordinator.ts` invoke `isGeometryWorkerEvent`.
+  `src/app/buildCoordinator.ts` invoke `isGeometryWorkerEvent`.
   Removing a validation pass requires preserving boundary trust and measuring
   its cost, not merely deleting one call.
 - Production source search finds `scadCompileRust` / `scadEvalRust` definitions
   but no product call sites. The Rust frontend is not yet the shared semantic
   execution path.
-- `.github/workflows/ci.yml` runs Clippy for `osv-math` with warnings denied;
-  the initial audit's blanket statement that CI does not run Clippy is stale.
-  This is not a workspace-wide clean-Clippy claim.
-- `src/App.vue` still uses textarea-based source inputs. An editor replacement
+- `.github/workflows/ci.yml` blocks new Clippy warnings through
+  `scripts/audit-clippy.mjs` with per-crate pins; the initial audit's blanket
+  statement that CI does not run Clippy is stale. This is not a workspace-wide
+  clean-Clippy claim.
+- `src/App.svt` still uses textarea-based source inputs. An editor replacement
   remains separate product work, not a completed optimization.
 
 ## Next Decisions
 
-1. Separate disposable-worker cold initialization from request readiness only
-   after a controlled reproduction and explicit lifecycle/deadline tests. Do
-   not globally raise the 250 ms limit merely to turn CI green.
-2. Reconcile live manifest/evidence versions through the existing qualification
+1. Reconcile live manifest/evidence versions through the existing qualification
    process. Keep historical artifacts immutable and preserve no-claim status
    until full qualification is actually complete.
-3. Profile publication/grouping and retain only end-to-end improvements with
+2. Profile publication/grouping and retain only end-to-end improvements with
    selection/provenance parity. Avoid removing consumer-side validation of
    transferred worker data.
-4. Treat a unified Rust semantic frontend and larger product gaps as separately
+3. Treat a unified Rust semantic frontend and larger product gaps as separately
    verified implementation work. The broad optimization goal remains active.

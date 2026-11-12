@@ -1,5 +1,7 @@
 # Storytold features — implementation status
 
+Updated 2026-11-13: removed 4 completed open-goal items (curved chart coverage with sphere/UV-hole charts, packaged checks of durable dimension bindings, specification PDF/browser verification, final integration checks; see the 2026-10-14 and 2026-10-15 sections). The size-gate failures noted on 2026-10-14 were resolved by the green 2026-10-15 distribution verification.
+
 The current compact interface is retained. Geometry runs in Rust; TypeScript handles document identities, worker transport, controls and export layout.
 
 ## Available
@@ -54,12 +56,8 @@ Full-multiplicity chart boundaries have a separate one-dimensional uniform root 
 
 Verified native continuation: 4 surface-kernel tests, 7 drawing-projection tests and 5 face-domain/intersection tests passed. The real cylinder case checks all four vertical edges of a separate body behind the retained wall, rather than merely finding any hidden cylinder edge. The projection suite completed in 0.47 s. Vue type checking and scoped whitespace validation passed. The final WASM/browser/PDF and broader goal completion are not yet established.
 
-The original goal remains open:
-- Broaden real-body coverage of general curved charts (including sphere/trimmed charts) and verify the packaged WASM/browser path.
-- Finish internal/higher-order Bézier contacts, unresolved complex self-intersections and retained coincidence handling.
-- Verify the implemented durable topology bindings in the packaged browser/WASM path, including ambiguity handling.
-- Verify the implemented engineering specification/parts-list pages through native PDF and browser rendering.
-- Run final integration/type/build checks and visually inspect browser drawing/PDF results.
+Remaining open item of the original goal:
+- Finish internal/higher-order Bézier contacts, unresolved complex self-intersections and retained coincidence handling. The 2026-10-14 and 2026-10-15 sections below admit bounded cases (third-order contacts, curved partial coincidence, proper cubic singularities); general curved partial-coincidence identities, arbitrary two-parameter cubic tangencies and singular self-intersection ordering are still refused rather than solved.
 
 ## Durable dimensions and specification sheets (2026-10-13)
 

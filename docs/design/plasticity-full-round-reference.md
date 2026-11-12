@@ -82,7 +82,7 @@ Independent Rust implementation and static investigation can continue.
    Own tests and matching operation names cannot prove this comparison.
 
 The broader fillet/chamfer, Boolean, offset/replace, quad, constraints, history
-and exchange requirements remain in `plasticity-library-gap-plan.md`.
+and exchange requirements remain in `plasticity-remaining-2026-11-02.md`.
 This finding neither completes that plan nor narrows it to Full Round.
 
 ## Independent implementation follow-up

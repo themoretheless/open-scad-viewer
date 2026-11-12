@@ -5,7 +5,7 @@ or proprietary geometry runtime is copied or linked. The clean comparison
 library remains frozen (11 files checked by `verify_clean.py`).
 
 Further native topology work and the active parity ledger are recorded in
-[the library gap plan](plasticity-library-gap-plan.md). It adds automatic
+[the remaining Plasticity work list](plasticity-remaining-2026-11-02.md). It adds automatic
 boundary-moving region replacement, closed curved-profile prism blends and
 topological quad cycle/strip edits; these do not imply general solid parity.
 

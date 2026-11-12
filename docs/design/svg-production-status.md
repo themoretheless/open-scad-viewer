@@ -1,5 +1,7 @@
 # SVG production status
 
+Updated 2026-11-13: no planned items were completed or removed. The described static SVG cycle remains implemented (`crates/bridge-svg`, `src/features/SvgPanel.svt`, `scripts/record-svg-evidence.mjs`); the remaining boundaries below are still current. Size and test figures describe the recorded 2026-09-13 snapshot, not the current distribution budgets.
+
 The requested workflow is viewing artwork, importing it into a 3D model, and
 exporting SVG that can be imported again. The implementation supports that
 cycle for bounded static SVG. This document does not declare universal SVG 2

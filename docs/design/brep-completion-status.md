@@ -1,5 +1,13 @@
 # B-rep completion audit
 
+Updated 2026-11-13: removed 7 completed items (requirement rows 8b, 13, 14 and
+N1, dependency step "connect a real B-rep backend to browser/MCP", and three
+fixed correctness findings); remaining Closed rows now list only their open
+residue; source paths in the requirements table were corrected after the
+`src/services` and crate module moves; the `brep-1` route is no longer
+described as not deployed. The chronological evidence log below is kept as the
+audit trail and was not re-verified entry by entry.
+
 Lattice decimation, lightening cell construction and FDM print-settings fitting now execute in Rust. The native edge-collapse decimator reproduces legacy ordering — midpoint contraction, cumulative-radius tolerance guard, 0.2 normal-dot fold rejection, 1e6 coordinate compaction, one-million attempt cap — and now refuses negative or non-finite tolerance at admission instead of silently returning the input. Lightening cells, the 125-node spatial graph and the clip/inset/cutter/Boolean lightening pipeline sit behind typed transport-only adapters; nozzle/layer quantization (1e-8 epsilon, 112.5% line width, 1e6 compaction) and the bridge warning moved to cad_lattice_print_fit / cad_lattice_bridge_warning with the legacy user-facing refusal message. [Scoped evidence](../qualification/brep-native-lattice-decimation-v1.json): 56 tests in five files, both typechecks and 68 verified artifacts (4,637,132 bytes). Determinism, target-bound reduction preserving closed oriented meshes, malformed-input and admission refusal, legacy print-fit values and spatial/lightening/workbench regressions pass. The per-body lighten orchestration loop in cadWorkbench.ts and the panel volume-reduction percentage remain host/presentation TS; this is scoped evidence, not full B-rep completion.
 
 Spatial lattice graph preparation and indexed component checks now execute in Rust. Node/edge order and unsigned seeded jitter match captured legacy fixtures; component volumes use local origins and compensated summation for remote pieces. [Scoped evidence](../qualification/brep-native-lattice-preparation-v1.json): 70 tests in four files, both typechecks and 68 verified artifacts (4,629,160 bytes). The 125-node limit, malformed inputs, negative-volume components, 1e12 placement and spatial/bone/source-roundtrip regressions pass. Lattice decimation, planar lightening construction and host operation orchestration still contain TS computation. Indexed numerical component checks do not close B-rep topology or the full requirements.
@@ -561,9 +569,10 @@ and bounded geometry intersection queries. Their documented
 envelope is [brep-core/README.md](../../crates/brep-core/README.md).
 
 These are distinct from the permanent `openscad-viewer/brep-1` engine route.
-`src/services/geometryBuildEngine.ts` and `src/mcp/createServer.ts` still expose
-that route as unavailable/not deployed. The existence of `brep_*` nodes under
-`rush/nurbs-1` does not establish a deployed B-rep source contract.
+As of 2026-11-13 `src/kernel/geometryBuildEngine.ts` publishes the B-rep manifest
+as `available` and `src/mcp/createServer.ts` exposes the `brep-1` route; the
+existence of `brep_*` nodes under `rush/nurbs-1` is still not by itself evidence
+for that source contract.
 
 `Model::validate` explicitly reports `geometryAgreement =
 sampled_with_tolerance` and `solidGeometryStatus = not_certified`. Retain these
@@ -577,43 +586,35 @@ In-flight changes must be re-read and their tests inspected before updating a ro
 
 | Plan requirement | Current authoritative evidence | Status and missing completion evidence |
 | --- | --- | --- |
-| 1. Permanent routing, provenance, same-engine failure/retry, immutable manifests | `src/services/geometryBuildEngine.ts`, `src/mcp/engineManifest.ts`, routing/refusal tests | Partial. Contracts and registry exist; complete with an authentic executable B-rep provider, immutable executable manifest, persisted/exported provenance, refusal, revocation and rollback drills. |
-| 2. Versioned executable SemanticProgram, typed DAG, canonical encoding, distinct identities | `src/core/semanticProgram.ts`, `src/services/semanticProgram{Codec,Validator,Executor}.ts`, `brepSemanticBackend.ts`, `brepSemanticScene.ts`, `brepDiagnosticExecutor.ts` | Partial. A real Rust/WASM B-rep backend executes analytic primitives, admitted profiles/Boolean/extrusion and affine transforms, with typed empties, immutable snapshots, per-session leases and an aggregate retained-geometry budget. Scene identities remain distinct. Disposable browser and Node diagnostics provide hard cancellation and checked correlated transport; observed profile fixtures agree between hosts. Complete the supported semantic matrix, production isolation, native Rust SemanticProgram and MCP parity, provenance transport and qualified provider integration. |
-| 3. Shared legacy adapter and compatibility seam | `src/services/openscadSemanticLowerer.ts`, qualification supervisors, `docs/qualification/g0-contract-pack-status-v1.json` | Partial. G0 status remains `closed: false`; G0.14 records missing clean evidence across the frozen matrix. Local discovery tests cannot substitute for the declared clean-run matrix. Do not rewrite frozen oracle hashes merely to make current results pass. |
+| 1. Permanent routing, provenance, same-engine failure/retry, immutable manifests | `src/kernel/geometryBuildEngine.ts`, `src/mcp/engineManifest.ts`, routing/refusal tests | Partial. Contracts, registry and an `available` B-rep manifest exist; complete persisted/exported provenance, refusal, revocation and rollback drills. |
+| 2. Versioned executable SemanticProgram, typed DAG, canonical encoding, distinct identities | `src/core/semanticProgram.ts`, `src/language/semantic/semanticProgram{Codec,Validator,Executor}.ts`, `src/kernel/brepSemanticScene.ts`, `src/kernel/brepDiagnosticExecutor.ts` | Partial. A real Rust/WASM B-rep backend executes analytic primitives, admitted profiles/Boolean/extrusion and affine transforms, with typed empties, immutable snapshots, per-session leases and an aggregate retained-geometry budget. Scene identities remain distinct. Disposable browser and Node diagnostics provide hard cancellation and checked correlated transport; observed profile fixtures agree between hosts. Complete the supported semantic matrix, production isolation, MCP parity and provenance transport. |
+| 3. Shared legacy adapter and compatibility seam | `src/language/semantic/openscadSemanticLowerer.ts`, qualification supervisors, `docs/qualification/g0-contract-pack-status-v1.json` | Partial. G0 status remains `closed: false`; G0.1–G0.13 are `done`, G0.14 records missing clean evidence across the frozen matrix. Local discovery tests cannot substitute for the declared clean-run matrix. Do not rewrite frozen oracle hashes merely to make current results pass. |
 | 4. Reproducible Rust workspace, dependency boundaries and allocation budgets | `crates/Cargo.toml`, `crates/Cargo.lock`, `rust-toolchain.toml`, build scripts | Partial. Native/WASM implementation and locked builds exist. Complete artifact reproducibility, production dependency/provenance evidence, bounded ABI allocation and architecture tests for the actual implementation. |
-| 5. Numeric context, certified predicates/constructions, typed ambiguity | `crates/cad-predicates`, `predicate_evidence.rs`, ADR 0006 | **Qualified finite v2 cell** (`numeric-evidence-curved-brep/1`): context-bound positional, root, tangent/normal, correspondence and topology-preservation evidence, including gray-band/context/resource refusals. Generic exact arithmetic and unbounded-degree isolation remain excluded. |
-| 6. Bounded NURBS foundation | `crates/nurbs-core/src/{curve,surface,edit}.rs`, `tests/nurbs{Curve,Surface}.test.ts` | Partial. Evaluation/derivatives, refinement, split/reverse, iso-curves, bounds and surface construction exist. Prove the accepted degree/weight/domain matrix, denominator conditioning, conservative numerical bounds and independent rational/Bernstein checks; periodicity/singularities need explicit contracts. |
-| 7. Ownership, oriented topology, immutable snapshots and transactions | `crates/brep-topology/src/{lib,persistent_naming}.rs`, `crates/brep-core/src/{lib,transactions}.rs`, topology identity/lineage tests | **Qualified finite v2 naming cell** (`persistent-naming/1`) for opaque 128-bit IDs and validated acyclic ChangeSets. General store/UI integration remains partial; legacy IDs require explicit migration. |
-| 8a. Complete CC/CS/analytic SS intersections | `crates/brep-core/src/{intersections,analytic_ss,coverage_verifier,predicate_evidence}.rs` | Advanced. Affine surface/surface pairs and the frozen analytic plane↔cylinder/sphere/cone (+ coaxial cylinder miss) matrix may publish `Coverage::Complete` with an independent coverage verifier; transverse line/plane Complete requires cad-predicates orient3d opposite-halfspace evidence. `permits_topology_change()` on individual reports remains hard-false. General NURBS SS and out-of-matrix contacts stay Incomplete/Unsupported. |
-| 8b. Lifted UV trimming and material classification | `crates/brep-core/src/{trim_sew,uv_arrangement,solid_audit,coverage_verifier}.rs` | **Closed** for full-matrix admitted charts: monotone nesting, holes, periodic/pole, freeform touches, missed-branch, A4 audit. |
-| 9a. Canonical primitives | `crates/brep-core/src/{lib,analytic,operations}.rs`, `tests/brepAnalytic.test.ts` | Partial. Exact box/wedge, cylinder/frustum/tube, sphere and ring torus now exist. Native tests cover rational sphere/torus equations, genus, pole incidence, orientation and roundtrip behavior; cones and axis-touching profiles have explicit poles. Complete independent geometric certification, full scale/transform covariance and the supported-parameter boundary matrix. A faceted sphere does not satisfy an analytic sphere requirement. |
-| 9b. Extrusion and revolution of ProfileSet | `extrude_polygon_with_holes`, `revolve`, direct modeling and RushGraph tests | Partial. Concave polygon extrusion with holes, full-turn straight-segment profiles, supported axis contacts and signed partial revolutions with exact caps are implemented. Native tests cover their oriented volumes and pole topology. Complete arbitrary supported profile curves, revolution profile holes, general workplanes and consistent New/Add/Cut behavior, with the complete analytic/topological matrix. |
-| 9c. Regularized curved Boolean / SolidSet | `crates/brep-core/src/{imprint_pipeline,profile_imprint,analytic_boolean,sphere_boolean,solid_audit,analytic_ss}.rs` | **Closed** for the frozen matrix: exact rational-arc cylinder/profile imprint, sphere under `BooleanCertificate`, disjoint admitted mixed empty algebra, and typed refuse for non-empty mixed/cone/torus cells; no `prismatic_boolean`, mesh, or Manifold authorship. |
-| 10. Canonicalization, exact sewing, explicit healing | `trim_sew.rs`, `solid_audit.rs` | **Qualified finite v2 cells** for boundary correspondence, exact proof-bound sew and global solid audit. `authorized-heal-gap-le1/1` remains **Unavailable**: only zero-displacement transaction/refusal tests exist; no positive-gap bridge/product evidence exists, and silent heal remains forbidden. |
-| 11. Certified shell-aware tessellation | `geometry-bridge/src/brep.rs` TessellationCertificate | **Closed** for analytic `/2` plus append-only `certified-generic-rational-freeform-tessellation/1` (equal-weight clamped Bezier ≤3, Bernstein second-difference bound). Varying-weight / loft / bent-sweep remain ExplicitRefuse. |
-| 12. Native/WASM execution, cancellation, ABI, scene v6 | `kernelLeases`, native graph executor | **Closed** for deployed closed-matrix provider + lease/cancel/LKG drills. Broader OOM/chunk scene-v6 remains operational hardening. |
-| 13. Browser/MCP B-rep activation | `geometryBuildEngine` + MCP capabilities | **Closed**: brep provider `available`; honest matrix; no Manifold cross-route. |
-| 14. Full qualification and release | `brep-full-closed-matrix-v19.json`, `plans/g8-full-matrix-index-v19.json`, `brep-capability-registry-release-full-v19.json` | **Closed for the release-qualified v19 matrix** under g8-full: 52 Qualified ≡ admittedOps ≡ registry; `pendingQualification: []`; ExplicitRefuse covers superseded stubs and agreed OOS (freeform×freeform Boolean, bump/varying-weight freeform mass, Parasolid, mesh/Manifold). |
-| N1. Persistent naming across rebuilds | `selectionTransfer.ts` roles/anchors + N1 corpus | **Closed** for roles/anchors + rebuild/ambiguity corpus helpers (no nearest-face). |
-| R1/G6. General NURBS surface intersection | `docs/design/r1-nurbs-ss-spike-adr.md`, `nurbs_ss_g6.rs` | **Closed** via Qualified `nurbs-foundation/1..5`, `nurbs-cc-cs/1`, `nurbs-ss/1`, and `nurbs-boolean/1` (graph × affine cutter). Freeform×freeform Boolean is ExplicitRefuse (`freeform-x-freeform-boolean`). |
-| Later features: analytic fillet/chamfer, shell/offset, loft/sweep, direct face edits | `analytic_features.rs`, `geometry/brep.ts` | **Closed** for Qualified finite successors including multi-edge fillet, exact convex fillet/chamfer, valence-3 corner blend, variable-radius fillet, analytic shell/loft `/2`, parallel-frame sweep `/2`. General transition networks beyond those cells remain ExplicitRefuse. |
-| Mesh-independent analysis | `crates/brep-core/src/analysis.rs`, `tests/brepMassProperties.test.ts`, `tests/brepQualificationV10.test.ts` | **Closed** for analytic `/2` plus append-only `certified-generic-rational-freeform-mass-quadrature/1` (planar equal-weight Bezier AA cuboids). Bump and varying-weight freeform mass remain ExplicitRefuse. |
-| Exchange and persistence | `iges_interchange_v2.rs`, `step_interchange_v3.rs`, `cadIges.ts`, `cadNurbsStep.ts` | **Closed** for Qualified IGES `/2`, STEP `/2`–`/4`/`/6`/`/8`–`/10`, and freeform STEP `nurbs-step-* /1` cells. Assemblies/external refs without complete identity and mesh fallback remain ExplicitRefuse. |
+| 5. Numeric context, certified predicates/constructions, typed ambiguity | `crates/cad-predicates`, `crates/nurbs-intersect/src/predicate_evidence.rs`, ADR 0006 | **Qualified finite v2 cell** (`numeric-evidence-curved-brep/1`). Open: generic exact arithmetic and unbounded-degree isolation remain excluded. |
+| 6. Bounded NURBS foundation | `crates/nurbs-geometry/src/{curve,surface}.rs`, `crates/nurbs-core/src/editing/edit.rs`, `tests/nurbs{Curve,Surface}.test.ts` | Partial. Evaluation/derivatives, refinement, split/reverse, iso-curves, bounds and surface construction exist. Prove the accepted degree/weight/domain matrix, denominator conditioning, conservative numerical bounds and independent rational/Bernstein checks; periodicity/singularities need explicit contracts. |
+| 7. Ownership, oriented topology, immutable snapshots and transactions | `crates/brep-topology/src/{lib,persistent_naming}.rs`, `crates/brep-core/src/{lib,features/transactions}.rs`, topology identity/lineage tests | **Qualified finite v2 naming cell** (`persistent-naming/1`). Open: general store/UI integration remains partial; legacy IDs require explicit migration. |
+| 8a. Complete CC/CS/analytic SS intersections | `crates/brep-core/src/intersection/intersections.rs`, `crates/nurbs-intersect/src/{analytic_ss,coverage_verifier,predicate_evidence}.rs` | Advanced. Affine and frozen analytic pairs may publish `Coverage::Complete` with an independent coverage verifier; `permits_topology_change()` on individual reports remains hard-false. Open: tangent contacts (still `TangencyOrMultipleRoot` bands), off-axis quartic contacts, general NURBS SS and out-of-matrix contacts stay Incomplete/Unsupported. |
+| 9a. Canonical primitives | `crates/brep-core/src/{lib,parts/analytic,boolean/operations}`, `tests/brepAnalytic.test.ts` | Partial. Exact box/wedge, cylinder/frustum/tube, sphere and ring torus exist with native rational-equation, genus, pole, orientation and roundtrip tests. Complete independent geometric certification, full scale/transform covariance and the supported-parameter boundary matrix. A faceted sphere does not satisfy an analytic sphere requirement. |
+| 9b. Extrusion and revolution of ProfileSet | `extrude_polygon_with_holes`, `revolve`, direct modeling and RushGraph tests | Partial. Concave polygon extrusion with holes, full-turn and signed partial revolutions of line/circular Bezier regions with holes and nested islands are implemented. Complete arbitrary supported profile curves, general workplanes and consistent New/Add/Cut behavior, with the complete analytic/topological matrix. |
+| 9c. Regularized curved Boolean / SolidSet | `crates/brep-core/src/boolean/{imprint_pipeline,profile_imprint,analytic_boolean,sphere_boolean,coaxial_revolution_boolean}`, `body_analysis/solid_audit.rs` | Closed for the frozen matrix and all coaxial revolution pairs. Open: off-axis (quartic) contacts and multi-body results with overlapping bounds rejected by the audit; see `nurbs-brep-bvh-roadmap-status.md`. |
+| 10. Canonicalization, exact sewing, explicit healing | `crates/brep-core/src/boolean/trim_sew`, `crates/brep-core/src/body_analysis/solid_audit.rs` | **Qualified finite v2 cells** for boundary correspondence, exact proof-bound sew and global solid audit. Open: `authorized-heal-gap-le1/1` remains **Unavailable** (only zero-displacement transaction/refusal tests; no positive-gap bridge/product evidence); silent heal remains forbidden. |
+| 11. Certified shell-aware tessellation | `crates/geometry-bridge/src/brep/tessellation.rs` TessellationCertificate | Closed for analytic `/2` plus `certified-generic-rational-freeform-tessellation/1`. Open: varying-weight, loft and bent-sweep surfaces remain ExplicitRefuse. |
+| 12. Native/WASM execution, cancellation, ABI, scene v6 | `src/kernel/geometry/kernelLeases.ts`, native graph executor | Closed for the deployed closed-matrix provider and lease/cancel/LKG drills. Open: broader OOM/chunk and scene-v6 operational hardening. |
+| R1/G6. General NURBS surface intersection | `docs/design/r1-nurbs-ss-spike-adr.md`, `crates/brep-core/src/intersection/nurbs_ss_g6` | Closed via Qualified `nurbs-foundation/1..5`, `nurbs-cc-cs/1`, `nurbs-ss/1`, `nurbs-boolean/1` (graph × affine cutter). Open: freeform×freeform Boolean is ExplicitRefuse (`freeform-x-freeform-boolean`). |
+| Later features: analytic fillet/chamfer, shell/offset, loft/sweep, direct face edits | `crates/brep-core/src/features/analytic_features`, `geometry/brep.ts` | Closed for the Qualified finite cells. Open: general transition networks beyond those cells remain ExplicitRefuse. |
+| Mesh-independent analysis | `crates/brep-core/src/body_analysis/analysis`, `tests/brepMassProperties.test.ts`, `tests/brepQualificationV10.test.ts` | Closed for analytic `/2` plus `certified-generic-rational-freeform-mass-quadrature/1`. Open: bump and varying-weight freeform mass remain ExplicitRefuse. |
+| Exchange and persistence | `crates/cad-step/src/{iges_interchange_v2,step_interchange_v3}.rs`, `cadIges.ts`, `cadNurbsStep.ts` | Closed for the Qualified IGES/STEP cells. Open: assemblies/external refs without complete identity remain ExplicitRefuse (an external reference needs an external-file loader that the API lacks). |
 
 ## Dependency order for the remaining work
 
-1. Make constructor topology, validation, identity and shared-edge tessellation
-   trustworthy; close concrete correctness defects before building operations on
-   their results. Expand canonical primitive/pole/profile coverage in parallel.
+1. Expand canonical primitive/pole/profile coverage and replace sampled
+   validation with certified evidence before building further operations on it.
 2. Implement the numeric evidence foundation and immutable query reports, then
    complete CC/CS/analytic SS pairs and their independent coverage verifier.
 3. Build general UV arrangements, classification, exact sewing and global solid
    audit on that foundation. Use them for curved Boolean, including degeneracies
    and empty/multiple outputs.
-4. Connect a real B-rep program backend to browser/MCP using the same evaluator
-   and source contract, with isolation/cancellation, snapshot and provenance
-   semantics. Keep capability maturity honest while collecting the full matrix.
-5. Extend common intersection/trim infrastructure into analytic blends,
+4. Extend common intersection/trim infrastructure into analytic blends,
    shell/offset, curved profile features, loft/sweep and interchange. Execute
    the qualification/release matrix against the final implementations.
 
@@ -622,35 +623,10 @@ is complete merely because it has a corresponding module name or schema.
 
 ## Concrete correctness findings at audit start
 
-- Fixed: endpoint-only edge identities, outer-vertex-only face matching and
-  centroid-based planar lineage. Complete rational definitions and all oriented
-  loops now contribute to identity; support surfaces cannot be inferred from a
-  shared boundary. Actual triangulated planar material regions exclude holes
-  and handle concavity/collinear vertices. Evidence:
-  `crates/brep-core/tests/topology_identity.rs` (7/7 native regressions), plus
-  existing operation identity/roundtrip tests. Unsupported rotated/curved
-  correspondence returns no inferred relation; this is not full N1 qualification.
 - `validate` samples each edge/pcurve/surface correspondence at nine parameter
-  values. This is explicitly sampled evidence and cannot exclude defects
-  between samples or certify global embedding/material validity.
-- Fixed for the NURBS B-rep path: display positions now belong to authored
-  vertices and shared edge samples; face interiors receive their own indices.
-  Every face's generated boundary must match its oriented coedge sample chains.
-  The separate polygon display path retains its existing proximity weld.
-  Seven native registry regressions exercise sub-tolerance separated shells,
-  sphere/cone poles/tube holes/partial turns over multiple detail levels,
-  touching curved-prism XOR components, curved trims with holes and duplicated
-  triangulation bridge endpoints, ambiguous shared UV refusal, and canonical
-  empty meshes with `closed = false`, and periodic torus seams with genus and
-  triangle-budget checks. This proves these boundary ownership and
-  incidence cases, not certified surface deviation or general UV coverage.
-- Fixed: a Direct document could retain an empty authoritative B-rep with
-  stale nonempty display triangles and later export those phantom triangles.
-  The document loader now rejects that inconsistent body entry while allowing
-  nonempty open sheets. Six WASM consumer regressions in
-  `tests/brepEmptyConsumers.test.ts` also verify empty text display, scene and
-  Solid conversion, null bounds, immutable native snapshots, JSON rebuild,
-  zero-element OBJ/PLY/OFF export and explicit printing-format refusal.
+  values (`crates/brep-core/src/body_analysis/model_validation.rs` still reports
+  `sampled_with_tolerance`). This is explicitly sampled evidence and cannot
+  exclude defects between samples or certify global embedding/material validity.
 
 ## Production bundle budget
 
