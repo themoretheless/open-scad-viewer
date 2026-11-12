@@ -1,14 +1,27 @@
 //! Original-span polynomial from exact homogeneous derivatives; no fitted data.
 use super::*;
+/// One active span of an exact rational B-spline: homogeneous control
+/// coordinates `x` (4 per control), knots `uv`, control count `n`, degree and span.
+#[derive(Clone, Copy)]
+pub(super) struct ExactSpan<'a> {
+    pub x: &'a [Expansion],
+    pub uv: &'a [f64],
+    pub n: usize,
+    pub degree: usize,
+    pub span: usize,
+}
 pub(super) fn original_polynomial(
     ctx: &mut PredicateContext<'_>,
-    x: &[Expansion],
-    uv: &[f64],
-    n: usize,
-    degree: usize,
-    span: usize,
+    spline: ExactSpan<'_>,
     plane: &[Expansion; 4],
 ) -> Result<Vec<Expansion>, Reason> {
+    let ExactSpan {
+        x,
+        uv,
+        n,
+        degree,
+        span,
+    } = spline;
     if uv[span - degree + 1] == uv[span] && uv[span + degree] == uv[span + 1] {
         let mut residuals = Vec::new();
         for i in span - degree..=span {

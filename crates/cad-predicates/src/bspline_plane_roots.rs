@@ -85,11 +85,13 @@ pub fn rational_bspline_plane_roots(
         let x: Vec<_> = values.iter().map(|v| Expansion::scalar(*v)).collect();
         solve::solve(
             ctx,
-            &x[..tail],
-            uv,
-            n,
-            degree,
-            span,
+            ExactSpan {
+                x: &x[..tail],
+                uv,
+                n,
+                degree,
+                span,
+            },
             &std::array::from_fn(|i| x[tail + i].clone()),
             tolerance,
         )
@@ -245,6 +247,7 @@ mod solve;
 pub use patch::rational_bspline_affine_patch_roots;
 #[path = "bspline_plane_roots/polynomial.rs"]
 mod polynomial;
+use polynomial::ExactSpan;
 #[path = "bspline_plane_roots/common.rs"]
 mod common;
 pub use common::{OriginalPlaneCommonRootDecision, OriginalPlaneCommonRootOutcome, rational_bspline_plane_common_root};

@@ -2,14 +2,17 @@
 use super::*;
 pub(super) fn solve(
     ctx: &mut PredicateContext<'_>,
-    x: &[Expansion],
-    uv: &[f64],
-    n: usize,
-    degree: usize,
-    span: usize,
+    spline: ExactSpan<'_>,
     plane: &[Expansion; 4],
     tolerance: f64,
 ) -> Result<OriginalPlaneRootsOutcome, Reason> {
+    let ExactSpan {
+        x,
+        uv,
+        degree,
+        span,
+        ..
+    } = spline;
     let bezier = uv[span - degree + 1] == uv[span] && uv[span + degree] == uv[span + 1];
     let polynomial = if bezier {
         let mut residuals = Vec::new();
@@ -52,7 +55,7 @@ pub(super) fn solve(
         }
         power(&residuals, ctx)?
     } else {
-        super::polynomial::original_polynomial(ctx, x, uv, n, degree, span, plane)?
+        super::polynomial::original_polynomial(ctx, spline, plane)?
     };
     if polynomial.iter().all(|v| v.sign() == Sign::Zero) {
         return Ok(OriginalPlaneRootsOutcome::Coincident);

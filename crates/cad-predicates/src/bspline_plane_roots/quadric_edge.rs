@@ -124,11 +124,13 @@ pub fn rational_bspline_quadric_projected_edge_sign(
         }
         let second = super::polynomial::original_polynomial(
             ctx,
-            &x[..tail],
-            &values[n * 4..tail],
-            n,
-            degree,
-            span,
+            ExactSpan {
+                x: &x[..tail],
+                uv: &values[n * 4..tail],
+                n,
+                degree,
+                span,
+            },
             &plane,
         )?;
         let mut sign =

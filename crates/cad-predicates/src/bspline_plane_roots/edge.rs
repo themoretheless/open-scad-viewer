@@ -128,17 +128,15 @@ fn query(
         }
         let coordinate = coordinate.ok_or(Reason::MissingProof)?;
         let uv = &values[n * 4..tail];
-        let first =
-            super::polynomial::original_polynomial(ctx, &x[..tail], uv, n, degree, span, &plane)?;
-        let second = super::polynomial::original_polynomial(
-            ctx,
-            &x[..tail],
+        let spline = ExactSpan {
+            x: &x[..tail],
             uv,
             n,
             degree,
             span,
-            &coordinate,
-        )?;
+        };
+        let first = super::polynomial::original_polynomial(ctx, spline, &plane)?;
+        let second = super::polynomial::original_polynomial(ctx, spline, &coordinate)?;
         let sign = if signed {
             let sign =
                 crate::planar_bezier_roots::unique_root_sign(&first, &second, interval, ctx)?;

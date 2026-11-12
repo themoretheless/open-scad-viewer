@@ -119,11 +119,13 @@ pub(super) fn polynomials(
         let plane = std::array::from_fn(|j| x[tail + i * 4 + j].clone());
         polys.push(super::polynomial::original_polynomial(
             ctx,
-            &x[..tail],
-            uv,
-            n,
-            degree,
-            span,
+            ExactSpan {
+                x: &x[..tail],
+                uv,
+                n,
+                degree,
+                span,
+            },
             &plane,
         )?);
     }
