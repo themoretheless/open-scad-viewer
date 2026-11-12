@@ -556,10 +556,12 @@ fn rational_cylinder_radius_covers_whole_corrected_expression() {
             &centers,
             &jump,
             [[0., 1.]; 2],
-            [[0., 1.]; 2],
-            [[0.; 2]; 3],
-            &[I::point(0.); 3],
-            I::point(1.),
+            CellEnclosure {
+                rect: [[0., 1.]; 2],
+                position: [[0.; 2]; 3],
+                center: &[I::point(0.); 3],
+                radius: I::point(1.),
+            },
             1000,
         )
         .unwrap();

@@ -83,10 +83,12 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
                     centers,
                     radius,
                     domains,
-                    rect,
-                    position,
-                    &c,
-                    r[0],
+                    CellEnclosure {
+                        rect,
+                        position,
+                        center: &c,
+                        radius: r[0],
+                    },
                     max_spans - out.spans,
                 )?;
                 out.spans += spent;

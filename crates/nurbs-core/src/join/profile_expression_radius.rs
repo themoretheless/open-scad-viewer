@@ -246,6 +246,15 @@ impl<'r,'a,'b,'c,'d> RailConstrainedBridge<'r,'a,'b,'c,'d> {
     }
 }
 
+/// Interval enclosures already computed on one radius-check cell.
+#[derive(Clone, Copy)]
+struct CellEnclosure<'a> {
+    rect: [[f64; 2]; 2],
+    position: [[f64; 2]; 3],
+    center: &'a [I],
+    radius: I,
+}
+
 #[cfg(test)]
 #[path = "profile_expression_radius/tests/mod.rs"]
 mod tests;

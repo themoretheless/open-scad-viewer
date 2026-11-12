@@ -289,12 +289,10 @@ pub(super) fn mean_radius_residual(
         centers: &Curve,
         radius: &Curve,
         domains: [[f64; 2]; 2],
-        rect: [[f64; 2]; 2],
-        position: [[f64; 2]; 3],
-        c: &[I],
-        r: I,
+        cell: CellEnclosure<'_>,
         budget: usize,
     ) -> Result<(Option<([f64; 2], [f64; 2])>, usize)> {
+        let CellEnclosure { rect, position, center: c, radius: r } = cell;
         for (curve, domain) in [centers, radius].into_iter().zip(domains) {
             if !continuous_knots(
                 &curve.knots,

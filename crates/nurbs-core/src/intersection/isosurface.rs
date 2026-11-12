@@ -342,34 +342,30 @@ pub fn polygonize_sdf(
         (max[2] - min[2]) / n as f64,
     ];
     let gv = n + 1;
-    let grid_index = |i: usize, j: usize, k: usize| (k * gv + j) * gv + i;
-    let grid_point = |i: usize, j: usize, k: usize| {
-        [
-            min[0] + i as f64 * step[0],
-            min[1] + j as f64 * step[1],
-            min[2] + k as f64 * step[2],
-        ]
+    let mut grid = SampledGrid {
+        min,
+        step,
+        n,
+        values: vec![0.; gv * gv * gv],
     };
-    let mut values = vec![0.; gv * gv * gv];
     let mut grid_guard = Budget::with_iterations(config.max_cells.max(gv * gv * gv))?
         .guard("isosurface_grid_evaluation");
     for k in 0..gv {
         for j in 0..gv {
             for i in 0..gv {
                 grid_guard.tick()?;
-                values[grid_index(i, j, k)] = eval.value(grid_point(i, j, k))?;
+                let index = grid.index(i, j, k);
+                grid.values[index] = eval.value(grid.point(i, j, k))?;
             }
         }
     }
 
     let mut mesh = IsoMesh::default();
     match config.extraction {
-        Extraction::DualContouring => extract_dual(
-            &mut eval, &values, n, gv, step, grid_point, config, &mut mesh, &mut report,
-        )?,
-        Extraction::MarchingCubes => {
-            extract_marching(&mut eval, &values, n, gv, grid_point, config, &mut mesh)?
+        Extraction::DualContouring => {
+            extract_dual(&mut eval, &grid, config, &mut mesh, &mut report)?
         }
+        Extraction::MarchingCubes => extract_marching(&mut eval, &grid, config, &mut mesh)?,
     }
     numeric(
         mesh.points.iter().flatten().all(|v| v.is_finite()),
@@ -468,20 +464,47 @@ fn cell_vertex(
     }
 }
 
+/// Field values sampled on the uniform extraction grid: `n` cells per axis,
+/// `n + 1` vertices per axis, vertex `(i, j, k)` at `min + (i, j, k) * step`.
+struct SampledGrid {
+    min: [f64; 3],
+    step: [f64; 3],
+    n: usize,
+    values: Vec<f64>,
+}
+
+impl SampledGrid {
+    fn index(&self, i: usize, j: usize, k: usize) -> usize {
+        let gv = self.n + 1;
+        (k * gv + j) * gv + i
+    }
+
+    fn point(&self, i: usize, j: usize, k: usize) -> [f64; 3] {
+        [
+            self.min[0] + i as f64 * self.step[0],
+            self.min[1] + j as f64 * self.step[1],
+            self.min[2] + k as f64 * self.step[2],
+        ]
+    }
+}
+
 /// Dual contouring on the uniform grid at the extraction depth.
-#[allow(clippy::too_many_arguments)]
 fn extract_dual(
     eval: &mut Evaluator,
-    values: &[f64],
-    n: usize,
-    gv: usize,
-    step: [f64; 3],
-    grid_point: impl Fn(usize, usize, usize) -> [f64; 3],
+    grid: &SampledGrid,
     config: &IsosurfaceConfig,
     mesh: &mut IsoMesh,
     report: &mut IsosurfaceReport,
 ) -> Result<()> {
-    let grid_index = |i: usize, j: usize, k: usize| (k * gv + j) * gv + i;
+    let &SampledGrid {
+        step,
+        n,
+        ref values,
+        ..
+    } = grid;
+    let gv = n + 1;
+    let grid_index = |i: usize, j: usize, k: usize| grid.index(i, j, k);
+    let grid_point = |i: usize, j: usize, k: usize| grid.point(i, j, k);
     let mut guard =
         Budget::with_iterations(config.max_cells.max(n.saturating_pow(3)))?
             .guard("isosurface_dual_contouring");
@@ -583,14 +606,13 @@ fn extract_dual(
 /// Marching cubes via canonical tetrahedral decomposition on the uniform grid.
 fn extract_marching(
     eval: &mut Evaluator,
-    values: &[f64],
-    n: usize,
-    gv: usize,
-    grid_point: impl Fn(usize, usize, usize) -> [f64; 3],
+    grid: &SampledGrid,
     config: &IsosurfaceConfig,
     mesh: &mut IsoMesh,
 ) -> Result<()> {
-    let grid_index = |i: usize, j: usize, k: usize| (k * gv + j) * gv + i;
+    let &SampledGrid { n, ref values, .. } = grid;
+    let grid_index = |i: usize, j: usize, k: usize| grid.index(i, j, k);
+    let grid_point = |i: usize, j: usize, k: usize| grid.point(i, j, k);
     let mut guard = Budget::with_iterations(config.max_cells.max(n.saturating_pow(3)))?
         .guard("isosurface_marching_cubes");
     // Vertices on grid edges, keyed canonically (axis, min-corner coordinates).

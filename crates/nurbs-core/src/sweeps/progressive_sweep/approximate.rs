@@ -275,7 +275,13 @@ impl MultiSweep<'_> {
         }else{None};
         let mut products=0;
         for sweep in &self.sweeps {
-            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,shared_length.as_ref(),shared_guide.as_ref(),shared_rmf.as_ref(),shared_pose.as_mut(),shared_chord.as_ref())?;
+            let level = sweep.level_with_error_budget_and_length(count,cell_limit-cells,product_limit-products,authored_error::SharedProofs{
+                length:shared_length.as_ref(),
+                guide:shared_guide.as_ref(),
+                rmf:shared_rmf.as_ref(),
+                pose:shared_pose.as_mut(),
+                chord:shared_chord.as_ref(),
+            })?;
             cells+=level.report.error_certificate_cells;
             products+=level.report.decomposition_products;
             check(

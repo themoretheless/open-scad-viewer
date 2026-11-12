@@ -156,11 +156,12 @@ fn kink_defects(
     defects
 }
 
+/// Parameter-domain inset of the isoline sampling grid.
+const ISO_INSET: f64 = 0.02;
+
 fn iso_lines(
     surface: &Surface,
-    nu: usize,
-    nv: usize,
-    inset: f64,
+    [nu, nv]: [usize; 2],
     level: f64,
     kink_angle: f64,
     kind: DefectKind,
@@ -170,7 +171,7 @@ fn iso_lines(
     require_finite_f64(level, "isoline level")?;
     require_finite_f64(kink_angle, "kink angle threshold")?;
     check(kink_angle > 0., "Kink angle threshold must be positive")?;
-    let field = Field::sample(surface, nu, nv, inset, f, limits)?;
+    let field = Field::sample(surface, nu, nv, ISO_INSET, f, limits)?;
     let range = [
         field.domain_u[1] - field.domain_u[0],
         field.domain_v[1] - field.domain_v[0],
@@ -213,9 +214,7 @@ pub fn highlight_lines(
         let light = direction(l)?;
         reports.push(iso_lines(
             surface,
-            grid[0],
-            grid[1],
-            0.02,
+            grid,
             level,
             kink_angle,
             DefectKind::HighlightKink,
@@ -247,9 +246,7 @@ pub fn reflection_lines(
     let view = direction(view)?;
     let report = iso_lines(
         surface,
-        grid[0],
-        grid[1],
-        0.02,
+        grid,
         level,
         0.35,
         DefectKind::ReflectionJump,
@@ -329,9 +326,7 @@ pub fn isophote_analysis(
     for &c in cos_levels {
         levels.push(iso_lines(
             surface,
-            grid[0],
-            grid[1],
-            0.02,
+            grid,
             c,
             0.35,
             DefectKind::IsophoteUneven,

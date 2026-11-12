@@ -566,7 +566,7 @@ pub(super) fn rmf_spatial_patch_error_with_transport(sweep:&Sweep<'_>,count:usiz
             spatial_parameter::section_interpolation(sweep,count,steps,max_cells,shared_rmf,shared_pose)?);
     }
     patch_error_from_section(sweep,count,max_products,
-        original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,max_cells,OriginalTransport::RmfSpatial,steps,SharedProofs{length:shared_length,guide:None,rmf:shared_rmf,pose:shared_pose})?)
+        original_frame_arc_length_section_interpolation_with_rmf_steps(sweep,count,max_cells,OriginalTransport::RmfSpatial,steps,SharedProofs{length:shared_length,guide:None,rmf:shared_rmf,pose:shared_pose,chord:None})?)
 }
 
 
@@ -656,7 +656,8 @@ use guided_interpolation_owned::guided_section_interpolation_mode_with_pose;
 
 #[path = "authored_error/arc_frame_owned.rs"]
 mod arc_frame_owned;
-use arc_frame_owned::{original_frame_arc_length_section_interpolation_with_rmf_steps,SharedProofs};
+use arc_frame_owned::original_frame_arc_length_section_interpolation_with_rmf_steps;
+pub(super) use arc_frame_owned::SharedProofs;
 use arc_frame_owned::fixed_normal_arc_length_section_interpolation;
 
 #[path = "authored_error/arc_position_owned.rs"]

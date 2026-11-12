@@ -3,14 +3,15 @@ use super::*;
 
 /// Proofs already computed by the caller; each `None` is recomputed here.
 #[derive(Default)]
-pub(super) struct SharedProofs<'a,'p> {
+pub(in crate::sweeps::progressive_sweep) struct SharedProofs<'a,'p> {
     pub length:Option<&'a crate::curve_measure::DivisionReport>,
     pub guide:Option<&'a crate::curve_measure::DivisionReport>,
     pub rmf:Option<&'a super::super::rmf_transport::OriginalRmfTransportReport>,
     pub pose:Option<&'p mut SharedArcPose>,
+    pub chord:Option<&'a GlobalChord>,
 }
 pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(sweep:&Sweep<'_>,count:usize,max_cells:usize,mode:OriginalTransport,rmf_steps:usize,shared:SharedProofs<'_,'_>)->Result<SectionInterpolationReport>{
-    let SharedProofs{length:shared_length,guide:shared_guide,rmf:shared_rmf,pose:mut shared_pose}=shared;
+    let SharedProofs{length:shared_length,guide:shared_guide,rmf:shared_rmf,pose:mut shared_pose,..}=shared;
     let mut out=SectionInterpolationReport {status:Status::Unresolved,cells:0,error_upper:None,refinement_error_upper:None,
         endpoint_displacement_upper:None,cap_endpoint_displacement_upper:None,reason:Some("arc-length-correspondence-unproved")};
     let phase=if matches!(mode,OriginalTransport::Contact|OriginalTransport::Guided) {
