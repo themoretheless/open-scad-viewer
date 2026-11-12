@@ -61,9 +61,11 @@ impl CentralLoftCandidate<'_, '_, '_> {
                     [&originals.0, s],
                     axes[0],
                     certificates,
-                    self.options.tolerances,
-                    (max_cells - used) / (6 - i),
-                    (max_exact - exact) / (6 - i) as u64,
+                    nurbs_core::surface_g2_pcurves::G2Budget {
+                        tolerances: self.options.tolerances,
+                        max_cells: (max_cells - used) / (6 - i),
+                        max_exact: (max_exact - exact) / (6 - i) as u64,
+                    },
                 )?
             } else {
                 let source = &originals.0;
@@ -86,9 +88,11 @@ impl CentralLoftCandidate<'_, '_, '_> {
                     [source, s],
                     axes[0],
                     certificates,
-                    self.options.tolerances,
-                    (max_cells - used) / (6 - i),
-                    (max_exact - exact) / (6 - i) as u64,
+                    nurbs_core::surface_g2_pcurves::G2Budget {
+                        tolerances: self.options.tolerances,
+                        max_cells: (max_cells - used) / (6 - i),
+                        max_exact: (max_exact - exact) / (6 - i) as u64,
+                    },
                 )?
             };
             used += report.cells;
@@ -337,9 +341,11 @@ impl CentralLoftCandidate<'_, '_, '_> {
                 [source, s],
                 axes[0],
                 receipts,
-                self.options.tolerances,
-                allowance - used,
-                max_exact,
+                nurbs_core::surface_g2_pcurves::G2Budget {
+                    tolerances: self.options.tolerances,
+                    max_cells: allowance - used,
+                    max_exact,
+                },
             )
         } else {
             let axes = (0..3)
@@ -361,9 +367,11 @@ impl CentralLoftCandidate<'_, '_, '_> {
                 [source, s],
                 axes[0],
                 receipts,
-                self.options.tolerances,
-                allowance - used,
-                max_exact,
+                nurbs_core::surface_g2_pcurves::G2Budget {
+                    tolerances: self.options.tolerances,
+                    max_cells: allowance - used,
+                    max_exact,
+                },
             )
         }?;
         report.cells += used;

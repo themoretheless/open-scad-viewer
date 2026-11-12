@@ -338,6 +338,14 @@ pub struct PcurveSeam<'a> {
     pub surfaces: [&'a Surface; 2],
     pub reversed: [bool; 2],
 }
+/// Position, normal and curvature tolerances with the shared cell and
+/// exact-work budgets of one G2 boundary inspection.
+#[derive(Clone, Copy, Debug)]
+pub struct G2Budget {
+    pub tolerances: [f64; 3],
+    pub max_cells: usize,
+    pub max_exact: u64,
+}
 /// Position, normal and curvature tolerances of a G2 pcurve seam check.
 #[derive(Clone, Copy, Debug)]
 pub struct G2PcurveTolerance {

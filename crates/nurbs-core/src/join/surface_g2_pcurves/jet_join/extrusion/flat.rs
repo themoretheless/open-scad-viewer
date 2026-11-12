@@ -18,16 +18,8 @@ fn axis_sign(j: &jets::Jets, axis: usize) -> Result<Option<i8>> {
 /// Literal constant heights in the actual first three rows prove zero second
 /// fundamental form. Original Jacobians must retain one sign over all seam
 /// interiors; owned native pole neighborhoods cover collapsed endpoints.
-pub fn inspect_planar_boundary(
-    curve: &Curve,
-    pc: [&Curve; 2],
-    s: [&Surface; 2],
-    height: usize,
-    poles: [Option<&FlatPoleCertificate<'_>>; 2],
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
-) -> Result<ExtrusionBoundaryReport> {
+pub fn inspect_planar_boundary(curve: &Curve, pc: [&Curve; 2], s: [&Surface; 2], height: usize, poles: [Option<&FlatPoleCertificate<'_>>; 2], budget: crate::surface_g2_pcurves::G2Budget) -> Result<ExtrusionBoundaryReport> {
+        let crate::surface_g2_pcurves::G2Budget { tolerances, max_cells, max_exact } = budget;
     check(
         height < 3
             && tolerances.iter().all(|x| x.is_finite() && *x >= 0.)

@@ -233,9 +233,11 @@ fn inspect_manifold_seam(
             order.map(|i| pcurves[i]),
             order.map(|i| surfaces[i]),
             order.map(|i| reversed[i]),
-            [t.position, t.normal, t.curvature],
-            (max_cells - out.cells) / 2,
-            (max_exact - out.exact_work) / 2,
+            nurbs_core::surface_g2_pcurves::G2Budget {
+                tolerances: [t.position, t.normal, t.curvature],
+                max_cells: (max_cells - out.cells) / 2,
+                max_exact: (max_exact - out.exact_work) / 2,
+            },
             remaining,
         )
         .map_err(|e| Error::new("BREP_G2_GRAPH", &format!("edge={edge} faces=[{a},{b}]: {e}")))?;

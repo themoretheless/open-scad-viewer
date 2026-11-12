@@ -40,16 +40,8 @@ struct Cell {
 /// Multispan sources retain every intersected original cell and its limiting
 /// jets. This does not grant internal continuity to a piecewise source or
 /// candidate merely because their corresponding one-sided fields agree.
-pub fn inspect_extrusion_boundary(
-    curve: &Curve,
-    pc: [&Curve; 2],
-    surface: [&Surface; 2],
-    axis: usize,
-    poles: [Option<&FlatPoleCertificate<'_>>; 2],
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
-) -> Result<ExtrusionBoundaryReport> {
+pub fn inspect_extrusion_boundary(curve: &Curve, pc: [&Curve; 2], surface: [&Surface; 2], axis: usize, poles: [Option<&FlatPoleCertificate<'_>>; 2], budget: crate::surface_g2_pcurves::G2Budget) -> Result<ExtrusionBoundaryReport> {
+        let crate::surface_g2_pcurves::G2Budget { tolerances, max_cells, max_exact } = budget;
     check(
         tolerances.iter().all(|x| x.is_finite() && *x >= 0.)
             && tolerances[1] <= 2.

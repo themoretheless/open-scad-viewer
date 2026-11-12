@@ -138,9 +138,11 @@ fn run(
             references,
             traces,
             options,
-            half,
-            legacy_cells,
-            max_exact,
+            crate::surface_g2_pcurves::G2Budget {
+                tolerances: half,
+                max_cells: legacy_cells,
+                max_exact,
+            },
             legacy_coefficients,
         )?
     } else {

@@ -52,7 +52,18 @@ fn all_original_source_cells_cover_different_candidate_knots() {
     let cover = prepared::Prepared::new([&a, &b], [&p, &p], 1, [None, None],10000).unwrap();
     assert_eq!(cover.sources.len(), 2);
     assert_eq!(cover.segments.len(), 4);
-    let r = inspect_extrusion_boundary(&c, [&p, &p], [&a, &b], 1, [None, None], T, 10000, 1000000)
+    let r = inspect_extrusion_boundary(
+        &c,
+        [&p, &p],
+        [&a, &b],
+        1,
+        [None, None],
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances: T,
+            max_cells: 10000,
+            max_exact: 1000000,
+        },
+    )
         .unwrap();
     assert_eq!(
         r.decision,
@@ -69,9 +80,11 @@ fn all_original_source_cells_cover_different_candidate_knots() {
         [&a, &b],
         1,
         [None, None],
-        T,
-        r.cells - 1,
-        1000000,
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances: T,
+            max_cells: r.cells - 1,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_ne!(short.decision, Decision::WithinTolerance);
@@ -85,7 +98,18 @@ fn nondyadic_source_knots_and_reversed_clocks_keep_complete_coverage() {
     let (_, b) = multispan_sources();
     let c = boundary(&a).reverse().unwrap();
     let p = pc().reverse().unwrap();
-    let r = inspect_extrusion_boundary(&c, [&p, &p], [&a, &b], 1, [None, None], T, 10000, 1000000)
+    let r = inspect_extrusion_boundary(
+        &c,
+        [&p, &p],
+        [&a, &b],
+        1,
+        [None, None],
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances: T,
+            max_cells: 10000,
+            max_exact: 1000000,
+        },
+    )
         .unwrap();
     assert_eq!(
         r.decision,
@@ -103,7 +127,18 @@ fn shared_knot_endpoint_bands_keep_original_nonzero_derivatives() {
     let b = surface_edit::insert(&b, Axis::U, 0.5, 2).unwrap();
     let c = boundary(&a);
     let p = pc();
-    let r = inspect_extrusion_boundary(&c, [&p, &p], [&a, &b], 1, [None, None], T, 10000, 1000000)
+    let r = inspect_extrusion_boundary(
+        &c,
+        [&p, &p],
+        [&a, &b],
+        1,
+        [None, None],
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances: T,
+            max_cells: 10000,
+            max_exact: 1000000,
+        },
+    )
         .unwrap();
     assert_eq!(
         r.decision,
@@ -140,12 +175,34 @@ fn a_hidden_second_jet_in_a_later_original_cell_is_not_skipped() {
     let p = pc();
     let last = a.control_points.len() - 1;
     a.control_points[last][2][2] += 0.1;
-    let r = inspect_extrusion_boundary(&c, [&p, &p], [&a, &b], 1, [None, None], T, 10000, 1000000)
+    let r = inspect_extrusion_boundary(
+        &c,
+        [&p, &p],
+        [&a, &b],
+        1,
+        [None, None],
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances: T,
+            max_cells: 10000,
+            max_exact: 1000000,
+        },
+    )
         .unwrap();
     assert!(r.positions.proven);
     assert_ne!(r.decision, Decision::WithinTolerance);
     let empty =
-        inspect_extrusion_boundary(&c, [&p, &p], [&a, &b], 1, [None, None], T, 0, 0).unwrap();
+        inspect_extrusion_boundary(
+            &c,
+            [&p, &p],
+            [&a, &b],
+            1,
+            [None, None],
+            crate::surface_g2_pcurves::G2Budget {
+                tolerances: T,
+                max_cells: 0,
+                max_exact: 0,
+            },
+        ).unwrap();
     assert_ne!(empty.decision, Decision::WithinTolerance);
     assert!(!empty.regularity_proven);
 }
@@ -164,9 +221,11 @@ fn correlated_original_rational_profiles_and_common_weight_gauges() {
             [&a, &b],
             1,
             [None, None],
-            T,
-            3000,
-            100000,
+            crate::surface_g2_pcurves::G2Budget {
+                tolerances: T,
+                max_cells: 3000,
+                max_exact: 100000,
+            },
         )
         .unwrap();
         assert_eq!(
@@ -197,9 +256,11 @@ fn real_source_second_jet_defect_is_not_replaced_by_an_ideal_cylinder() {
         [&a, &b],
         1,
         [None, None],
-        T,
-        1000,
-        100000,
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances: T,
+            max_cells: 1000,
+            max_exact: 100000,
+        },
     )
     .unwrap();
     assert!(r.positions.proven);
@@ -220,9 +281,11 @@ fn literal_candidate_two_jet_recognition_refuses_even_subnormal_drift() {
             [&a, &b],
             1,
             [None, None],
-            T,
-            1000,
-            100000
+            crate::surface_g2_pcurves::G2Budget {
+                tolerances: T,
+                max_cells: 1000,
+                max_exact: 100000,
+            },
         )
         .is_err()
     );
@@ -248,9 +311,11 @@ fn collapsed_endpoint_requires_the_same_original_pole_certificate() {
         [&a, &b],
         1,
         [Some(cert), None],
-        T,
-        3000,
-        100000,
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances: T,
+            max_cells: 3000,
+            max_exact: 100000,
+        },
     )
     .unwrap();
     assert_eq!(r.decision, Decision::WithinTolerance);
@@ -261,9 +326,11 @@ fn collapsed_endpoint_requires_the_same_original_pole_certificate() {
             [&a, &b],
             1,
             [None, None],
-            T,
-            1000,
-            100000
+            crate::surface_g2_pcurves::G2Budget {
+                tolerances: T,
+                max_cells: 1000,
+                max_exact: 100000,
+            },
         )
         .is_err()
     );
@@ -275,9 +342,11 @@ fn collapsed_endpoint_requires_the_same_original_pole_certificate() {
             [&a, &other],
             1,
             [Some(cert), None],
-            T,
-            1000,
-            100000
+            crate::surface_g2_pcurves::G2Budget {
+                tolerances: T,
+                max_cells: 1000,
+                max_exact: 100000,
+            },
         )
         .is_err()
     );
@@ -304,9 +373,11 @@ fn planar_collars_prove_zero_tensor_and_refuse_a_hidden_second_jet() {
         [&a, &b],
         2,
         [None, None],
-        T,
-        1000,
-        100000,
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances: T,
+            max_cells: 1000,
+            max_exact: 100000,
+        },
     )
     .unwrap();
     assert_eq!(r.decision, Decision::WithinTolerance);
@@ -319,9 +390,11 @@ fn planar_collars_prove_zero_tensor_and_refuse_a_hidden_second_jet() {
             [&a, &b],
             2,
             [None, None],
-            T,
-            1000,
-            100000
+            crate::surface_g2_pcurves::G2Budget {
+                tolerances: T,
+                max_cells: 1000,
+                max_exact: 100000,
+            },
         )
         .is_err()
     );
@@ -333,12 +406,34 @@ fn no_query_budget_does_not_grant_exterior_g2() {
     let curve = boundary(&a);
     let pc = pc();
     let r =
-        inspect_extrusion_boundary(&curve, [&pc, &pc], [&a, &b], 1, [None, None], T, 0, 0).unwrap();
+        inspect_extrusion_boundary(
+            &curve,
+            [&pc, &pc],
+            [&a, &b],
+            1,
+            [None, None],
+            crate::surface_g2_pcurves::G2Budget {
+                tolerances: T,
+                max_cells: 0,
+                max_exact: 0,
+            },
+        ).unwrap();
     assert_eq!(r.decision, Decision::Unresolved);
     assert_eq!(r.cells, 0);
     assert!(r.pending > 0);
     assert!(
-        inspect_extrusion_boundary(&curve, [&pc, &pc], [&a, &b], 1, [None, None], T, 100001, 0)
+        inspect_extrusion_boundary(
+            &curve,
+            [&pc, &pc],
+            [&a, &b],
+            1,
+            [None, None],
+            crate::surface_g2_pcurves::G2Budget {
+                tolerances: T,
+                max_cells: 100001,
+                max_exact: 0,
+            },
+        )
             .is_err()
     );
 }
@@ -355,9 +450,11 @@ fn reversed_original_clocks_keep_the_same_oriented_surface_fields() {
         [&a, &b],
         1,
         [None, None],
-        T,
-        3000,
-        100000,
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances: T,
+            max_cells: 3000,
+            max_exact: 100000,
+        },
     )
     .unwrap();
     assert_eq!(r.decision, Decision::WithinTolerance);

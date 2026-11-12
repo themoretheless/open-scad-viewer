@@ -98,9 +98,11 @@ pub fn g2_to_plane_trace(
         [source, plane],
         traces,
         options,
-        tolerances,
-        max_cells,
-        max_exact,
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances,
+            max_cells,
+            max_exact,
+        },
         Some(target),
     )
 }

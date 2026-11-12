@@ -152,9 +152,11 @@ fn g2_traces_bounded(
         supports,
         traces,
         o,
-        tolerances,
-        max_cells,
-        max_exact,
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances,
+            max_cells,
+            max_exact,
+        },
         max_coefficients,
     )
 }
@@ -189,7 +191,16 @@ pub fn g2_traces_compact(
         )
     })?;
     inspect_candidate_bounded(
-        &surface, supports, traces, o, tolerances, max_cells, max_exact, 2_000_000,
+        &surface,
+        supports,
+        traces,
+        o,
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances,
+            max_cells,
+            max_exact,
+        },
+        2_000_000,
     )
 }
 /// Cell, exact-work and coefficient limits of one corner patch proposal.
@@ -444,19 +455,20 @@ pub fn inspect_candidate(
     max_exact: u64,
 ) -> Result<Report> {
     inspect_candidate_bounded(
-        surface, supports, traces, o, tolerances, max_cells, max_exact, 2000000,
+        surface,
+        supports,
+        traces,
+        o,
+        crate::surface_g2_pcurves::G2Budget {
+            tolerances,
+            max_cells,
+            max_exact,
+        },
+        2000000,
     )
 }
-fn inspect_candidate_bounded(
-    surface: &Surface,
-    supports: [&Surface; 4],
-    traces: [Trace; 4],
-    o: Options,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
-    max_coefficients: usize,
-) -> Result<Report> {
+fn inspect_candidate_bounded(surface: &Surface, supports: [&Surface; 4], traces: [Trace; 4], o: Options, budget: crate::surface_g2_pcurves::G2Budget, max_coefficients: usize) -> Result<Report> {
+        let crate::surface_g2_pcurves::G2Budget { tolerances, max_cells, max_exact } = budget;
     surface.validate()?;
     check(
         max_cells <= 100000

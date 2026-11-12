@@ -96,9 +96,11 @@ pub(super) fn inspect(
                 [support, &view],
                 height,
                 [None, None],
-                c.options.tolerances,
-                (limits.cells - *cells).min(6000),
-                (limits.exact_work - *exact).min(100000),
+                nurbs_core::surface_g2_pcurves::G2Budget {
+                    tolerances: c.options.tolerances,
+                    max_cells: (limits.cells - *cells).min(6000),
+                    max_exact: (limits.exact_work - *exact).min(100000),
+                },
             )?;
             *cells += r.cells;
             *exact += r.positions.exact_work;
