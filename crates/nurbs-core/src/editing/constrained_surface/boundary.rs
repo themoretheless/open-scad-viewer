@@ -41,12 +41,12 @@ impl MappedQualified {
             direction: self.originals[i].2,
         })
     }
-    pub fn reverify(
-        &self,
-        max_cells: usize,
-        max_coefficients: usize,
-        max_exact: u64,
-    ) -> Result<crate::corner_blend::mapped::Report> {
+    pub fn reverify(&self, work: MappedWork) -> Result<crate::corner_blend::mapped::Report> {
+        let MappedWork {
+            max_cells,
+            max_coefficients,
+            max_exact,
+        } = work;
         crate::corner_blend::mapped::inspect_candidate(
             self.surface(),
             self.original_supports(),
@@ -59,6 +59,14 @@ impl MappedQualified {
     }
 }
 
+/// Cell, coefficient and exact-work budgets shared by one mapped-support G2
+/// construction or replay.
+#[derive(Clone, Copy, Debug)]
+pub struct MappedWork {
+    pub max_cells: usize,
+    pub max_coefficients: usize,
+    pub max_exact: u64,
+}
 /// Construct complete G2 fields from four arbitrary original rational support
 /// pcurves, solve interior point/jet constraints, and freshly admit the ACTUAL
 /// result on the ORIGINAL supports. No sampled/collar receipt is accepted as
@@ -70,10 +78,13 @@ pub fn solve_from_mapped_supports(
     constraints: &[Constraint],
     options: Options,
     tolerances: [f64; 3],
-    max_cells: usize,
-    max_coefficients: usize,
-    max_exact: u64,
+    work: MappedWork,
 ) -> Result<MappedQualified> {
+    let MappedWork {
+        max_cells,
+        max_coefficients,
+        max_exact,
+    } = work;
     if !(100..=100000).contains(&max_cells)
         || !(100..=2000000).contains(&max_coefficients)
         || max_exact > 1000000
