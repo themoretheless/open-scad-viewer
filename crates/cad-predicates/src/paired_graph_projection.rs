@@ -199,4 +199,4 @@ pub fn binary_paired_graph_projection(
 mod tests;
 
 mod curve;
-pub use curve::{CurveGraphProjectionDecision, binary_curve_graph_projection};
+pub use curve::{CurveGraphProjectionDecision, ProjectionSource, binary_curve_graph_projection};

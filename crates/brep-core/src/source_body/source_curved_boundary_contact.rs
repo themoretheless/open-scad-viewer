@@ -314,9 +314,18 @@ pub fn certify<E: Carrier>(
                 for axes in [[0, 1], [0, 2], [1, 0], [1, 2], [2, 0], [2, 1]] {
                     let r = cad_predicates::binary_curve_graph_projection(
                         &mut ctx,
-                        [&refs[0], &refs[1]],
-                        [curve_side.0, graph_side.0],
-                        [curve_side.1, graph_side.1],
+                        [
+                            cad_predicates::ProjectionSource {
+                                net: &refs[0],
+                                transverse: curve_side.0,
+                                upper: curve_side.1,
+                            },
+                            cad_predicates::ProjectionSource {
+                                net: &refs[1],
+                                transverse: graph_side.0,
+                                upper: graph_side.1,
+                            },
+                        ],
                         reverse,
                         axes,
                         [arena.leaf(offset).unwrap(), arena.leaf(offset + 1).unwrap()],
