@@ -47,9 +47,11 @@ pub fn trim_fiber_and_cap(
         remove_uncut,
         cutter,
         cutter_face,
-        tolerance_uv,
-        max_cells,
-        max_exact,
+        CapLimits {
+            tolerance_uv,
+            max_cells,
+            max_exact,
+        },
         false,
     )
 }
@@ -95,24 +97,36 @@ pub fn trim_fiber_and_cap_automatic(
         remove_uncut,
         cutter,
         cutter_face,
-        tolerance_uv,
-        max_cells,
-        max_exact,
+        CapLimits {
+            tolerance_uv,
+            max_cells,
+            max_exact,
+        },
         true,
     )
 }
 
+/// UV tolerance and the shared cell and exact-work budgets of one fiber cap.
+#[derive(Clone, Copy)]
+struct CapLimits {
+    tolerance_uv: f64,
+    max_cells: usize,
+    max_exact: u64,
+}
 fn trim_fiber_and_cap_impl(
     source: &Model,
     requests: &[FiberCapRequest],
     remove_uncut: &[usize],
     cutter: &Model,
     cutter_face: usize,
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
+    limits: CapLimits,
     automatic: bool,
 ) -> Result<FiberCap> {
+    let CapLimits {
+        tolerance_uv,
+        max_cells,
+        max_exact,
+    } = limits;
     source.validate()?;
     let mut seen = BTreeSet::new();
     if requests.len() + remove_uncut.len() > 256
