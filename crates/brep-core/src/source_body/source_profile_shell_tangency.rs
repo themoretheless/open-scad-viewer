@@ -104,13 +104,15 @@ impl<'x, 'o, 'i, 'f, 'a, 's, 'p, 'b> ExpressionShell<'x, 'o, 'i, 'f, 'a, 's, 'p,
                 return Ok(out);
             }
             let angles = seam.proposal().inspect_original_neighbor_interval(
-                root.face,
-                neighbor,
-                seam.edge(),
+                crate::source_profile_body::EdgeInterval {
+                    face: root.face,
+                    neighbor,
+                    index: seam.edge(),
+                    canonical: seam.canonical_interval(),
+                },
                 threshold,
                 remaining_cells,
                 remaining_spans,
-                seam.canonical_interval(),
             )?;
             out.cells += angles.cells;
             out.spans += angles.spans;

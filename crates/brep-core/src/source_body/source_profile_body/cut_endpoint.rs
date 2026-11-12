@@ -448,7 +448,15 @@ pub(super) fn qualify_selected_seam<'p>(
             ));
         }
         let angular = self.inspect_curved_edge_interval(
-            faces[0], faces[1], edge, threshold, cells, spans, canonical,
+            crate::source_profile_body::EdgeInterval {
+                face: faces[0],
+                neighbor: faces[1],
+                index: edge,
+                canonical,
+            },
+            threshold,
+            cells,
+            spans,
         )?;
         let seam = if angular.aligned == Some(true) {
             Some(RestrictedSeam {
@@ -476,32 +484,26 @@ pub(super) fn qualify_selected_seam<'p>(
         max_spans: usize,
     ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
         self.inspect_curved_edge_interval(
-            face,
-            neighbor,
-            index,
+            crate::source_profile_body::EdgeInterval {
+                face,
+                neighbor,
+                index,
+                canonical: [0., 1.],
+            },
             threshold,
             max_cells,
             max_spans,
-            [0., 1.],
         )
     }
 pub(super) fn inspect_curved_edge_interval(
         &self,
-        face: usize,
-        neighbor: usize,
-        index: usize,
+        edge: EdgeInterval,
         threshold: f64,
         max_cells: usize,
         max_spans: usize,
-        canonical: [f64; 2],
     ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
         self.inspect_curved_edge_interval_policy(
-            EdgeInterval {
-                face,
-                neighbor,
-                index,
-                canonical,
-            },
+            edge,
             threshold,
             max_cells,
             max_spans,
@@ -511,14 +513,17 @@ pub(super) fn inspect_curved_edge_interval(
     }
 pub(crate) fn inspect_original_neighbor_interval(
         &self,
-        face: usize,
-        neighbor: usize,
-        index: usize,
+        edge: EdgeInterval,
         threshold: f64,
         cells: usize,
         spans: usize,
-        canonical: [f64; 2],
     ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        let EdgeInterval {
+            face,
+            neighbor,
+            index,
+            ..
+        } = edge;
         let uses = self
             .body
             .geometry()
@@ -536,12 +541,7 @@ pub(crate) fn inspect_original_neighbor_interval(
             ));
         }
         self.inspect_curved_edge_interval_policy(
-            EdgeInterval {
-                face,
-                neighbor,
-                index,
-                canonical,
-            },
+            edge,
             threshold,
             cells,
             spans,

@@ -7841,10 +7841,30 @@
             .unwrap();
         assert!(single.profile(5).is_none() && both.profile(5).is_some());
         let baseline = single
-            .inspect_original_neighbor_interval(0, 5, 5, 1e-6, 50000, 100000, [0., 1.])
+            .inspect_original_neighbor_interval(
+                crate::source_profile_body::EdgeInterval {
+                    face: 0,
+                    neighbor: 5,
+                    index: 5,
+                    canonical: [0., 1.],
+                },
+                1e-6,
+                50000,
+                100000,
+            )
             .unwrap();
         let actual = both
-            .inspect_original_neighbor_interval(0, 5, 5, 1e-6, 50000, 100000, [0., 1.])
+            .inspect_original_neighbor_interval(
+                crate::source_profile_body::EdgeInterval {
+                    face: 0,
+                    neighbor: 5,
+                    index: 5,
+                    canonical: [0., 1.],
+                },
+                1e-6,
+                50000,
+                100000,
+            )
             .unwrap();
         assert_eq!(baseline.aligned, Some(true));
         assert_eq!(actual.aligned, baseline.aligned);
@@ -7853,11 +7873,31 @@
         assert_eq!(actual.spans, baseline.spans);
         assert!(actual.pending.is_empty() && baseline.pending.is_empty());
         assert!(
-            both.inspect_original_neighbor_interval(0, 0, 5, 1e-6, 50000, 100000, [0., 1.])
+            both.inspect_original_neighbor_interval(
+                crate::source_profile_body::EdgeInterval {
+                    face: 0,
+                    neighbor: 0,
+                    index: 5,
+                    canonical: [0., 1.],
+                },
+                1e-6,
+                50000,
+                100000,
+            )
                 .is_err()
         );
         assert!(
-            both.inspect_original_neighbor_interval(0, 1, 5, 1e-6, 50000, 100000, [0., 1.])
+            both.inspect_original_neighbor_interval(
+                crate::source_profile_body::EdgeInterval {
+                    face: 0,
+                    neighbor: 1,
+                    index: 5,
+                    canonical: [0., 1.],
+                },
+                1e-6,
+                50000,
+                100000,
+            )
                 .is_err()
         );
     }

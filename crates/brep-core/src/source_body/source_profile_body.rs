@@ -682,11 +682,11 @@ mod inspect_curved_edge_interval_policy;
 /// One owned edge between `face` and `neighbor`, inspected over its
 /// `canonical` parameter interval.
 #[derive(Clone, Copy)]
-struct EdgeInterval {
-    face: usize,
-    neighbor: usize,
-    index: usize,
-    canonical: [f64; 2],
+pub(crate) struct EdgeInterval {
+    pub face: usize,
+    pub neighbor: usize,
+    pub index: usize,
+    pub canonical: [f64; 2],
 }
 #[path="source_profile_body/algorithm_propose_cut_contours.rs"]
 mod algorithm_propose_cut_contours;
