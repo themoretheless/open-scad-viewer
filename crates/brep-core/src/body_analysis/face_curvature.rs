@@ -113,17 +113,32 @@ fn shape_bound(
         Err(_) => Ok(None),
     }
 }
-fn probe(
-    model: &Model,
+/// What every curvature probe of one face shares: the face and its trimmed
+/// domain, the admitted curvature maximum, work limits and the optional
+/// continuity certificate.
+#[derive(Clone, Copy)]
+struct FaceProbe<'a> {
+    model: &'a Model,
     face: usize,
-    domain: &FaceDomain,
-    uv: [f64; 2],
+    domain: &'a FaceDomain,
     maximum: f64,
     limits: Limits,
+    continuity: Option<&'a nurbs_core::analysis::surface_continuity::Certificate<'a>>,
+}
+fn probe(
+    at: FaceProbe<'_>,
+    uv: [f64; 2],
     out: &mut Report,
-    continuity: Option<&nurbs_core::analysis::surface_continuity::Certificate<'_>>,
     span: Option<[usize; 2]>,
 ) -> Result<bool> {
+    let FaceProbe {
+        model,
+        face,
+        domain,
+        maximum,
+        limits,
+        continuity,
+    } = at;
     let budget = limits
         .domain_cells
         .saturating_sub(out.domain_cells)
@@ -325,9 +340,20 @@ fn inspect_mode(
         witness_curvature: None,
         reason: "work_limit",
     };
+    let at = FaceProbe {
+        model,
+        face,
+        domain: &domain,
+        maximum,
+        limits,
+        continuity,
+    };
     for &uv in hints {
         if probe(
-            model, face, &domain, uv, maximum, limits, &mut out, continuity, None,
+            at,
+            uv,
+            &mut out,
+            None,
         )? {
             return Ok(out);
         }
@@ -418,7 +444,10 @@ fn inspect_mode(
         }
         let middle = r.map(|d| d[0] * 0.5 + d[1] * 0.5);
         if probe(
-            model, face, &domain, middle, maximum, limits, &mut out, continuity, span,
+            at,
+            middle,
+            &mut out,
+            span,
         )? {
             return Ok(out);
         }
