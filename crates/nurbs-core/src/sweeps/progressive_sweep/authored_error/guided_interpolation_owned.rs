@@ -171,15 +171,48 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
         } else if let Some(phase)=principal_phase {
             authored_frame_certificate::certify_planar_principal_control_values(profile_laws(sweep.path), principal_plane(phase), qs, interval, budget)
         } else if rmf_planar {
-            authored_frame_certificate::certify_proved_planar_control_values(sweep.path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
+            authored_frame_certificate::certify_proved_planar_control_values(
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path: sweep.path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
+                sweep.options.normal,
+                qs,
+                interval,
+                budget,
+            )
         } else if fixed_normal {
-            authored_frame_certificate::certify_fixed_normal_control_values(sweep.path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
+            authored_frame_certificate::certify_fixed_normal_control_values(
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path: sweep.path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
+                sweep.options.normal,
+                qs,
+                interval,
+                budget,
+            )
         } else if frenet {
             authored_frame_certificate::certify_frenet_control_values(sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if let Some(anchor)=anchor {
             authored_frame_certificate::certify_contact_control_values(contact_laws(), qs, anchor, interval, budget)
         } else {
-            authored_frame_certificate::certify_path_guide_control_values(reference_path,reference_guide.unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
+            authored_frame_certificate::certify_path_guide_control_values(
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path: reference_path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
+                reference_guide.unwrap(),
+                qs,
+                interval,
+                budget,
+            )
         }
     };
     let certify_jets=|qs:&[[[f64;2];3]], interval, budget| {
@@ -196,13 +229,35 @@ pub(super) fn guided_section_interpolation_mode_with_pose(
         } else if let Some(phase)=principal_phase {
             authored_frame_certificate::certify_planar_principal_control_trajectories(profile_laws(sweep.path), principal_plane(phase), qs, interval, budget)
         } else if fixed_normal {
-            authored_frame_certificate::certify_fixed_normal_control_trajectories(sweep.path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
+            authored_frame_certificate::certify_fixed_normal_control_trajectories(
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path: sweep.path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
+                sweep.options.normal,
+                qs,
+                interval,
+                budget,
+            )
         } else if frenet {
             authored_frame_certificate::certify_frenet_control_trajectories(sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
         } else if let Some(anchor)=anchor {
             authored_frame_certificate::certify_contact_control_trajectories(contact_laws(), qs, anchor, interval, budget)
         } else {
-            authored_frame_certificate::certify_path_guide_control_trajectories(reference_path,reference_guide.unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,qs,interval,budget)
+            authored_frame_certificate::certify_path_guide_control_trajectories(
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path: reference_path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
+                reference_guide.unwrap(),
+                qs,
+                interval,
+                budget,
+            )
         }
     };
     let initial = if let Some(phase)=principal_phase {principal_initial_coordinates(sweep,phase,max_cells-out.cells)?} else if corrected {seed_initial_coordinates_as(sweep,max_cells-out.cells,Orientation::RotationMinimizing,Orientation::CorrectedFrenet)?} else if rmf_straight||rmf_planar {seed_initial_coordinates(sweep,max_cells-out.cells,Orientation::RotationMinimizing)?} else if fixed {fixed_initial_coordinates(sweep,max_cells-out.cells)?} else if fixed_normal {fixed_normal_initial_coordinates(sweep,max_cells-out.cells)?} else if regular_corrected {seed_initial_coordinates_as(sweep,max_cells-out.cells,Orientation::Frenet,Orientation::CorrectedFrenet)?} else if frenet {seed_initial_coordinates(sweep,max_cells-out.cells,Orientation::Frenet)?} else {guided_initial_coordinates(sweep, max_cells-out.cells)?};

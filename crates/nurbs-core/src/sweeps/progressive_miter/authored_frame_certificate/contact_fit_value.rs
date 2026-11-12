@@ -285,7 +285,18 @@ fn shared_control_values_preserve_each_original_enclosure_and_charge_sources_onc
             [2.,2.],
             [0.25,0.5],
             1000,
-        )} else {certify_path_guide_control_values(&path,&guide,&scale,&twist,None,&qs,[0.25,0.5],1000)}.unwrap();
+        )} else {certify_path_guide_control_values(
+            super::ProfileLaws {
+                path: &path,
+                scale: &scale,
+                twist: &twist,
+                affine: None,
+            },
+            &guide,
+            &qs,
+            [0.25,0.5],
+            1000,
+        )}.unwrap();
         assert_eq!(batch.status,Status::Certified);
         let values=batch.values.as_ref().unwrap();
         let mut separate_cells=0;
@@ -296,7 +307,18 @@ fn shared_control_values_preserve_each_original_enclosure_and_charge_sources_onc
                 [2.,2.],
                 [0.25,0.5],
                 1000,
-            )} else {certify_path_guide_control_value(&path,&guide,&scale,&twist,None,q,[0.25,0.5],1000)}.unwrap();
+            )} else {certify_path_guide_control_value(
+                super::ProfileLaws {
+                    path: &path,
+                    scale: &scale,
+                    twist: &twist,
+                    affine: None,
+                },
+                &guide,
+                q,
+                [0.25,0.5],
+                1000,
+            )}.unwrap();
             assert_eq!(values[i],single.value.unwrap());
             assert_eq!(batch.cells,single.cells);
             separate_cells+=single.cells;
@@ -312,7 +334,18 @@ fn shared_control_values_preserve_each_original_enclosure_and_charge_sources_onc
             [2.,2.],
             [0.25,0.5],
             batch.cells-1,
-        )} else {certify_path_guide_control_values(&path,&guide,&scale,&twist,None,&qs,[0.25,0.5],batch.cells-1)}.unwrap();
+        )} else {certify_path_guide_control_values(
+            super::ProfileLaws {
+                path: &path,
+                scale: &scale,
+                twist: &twist,
+                affine: None,
+            },
+            &guide,
+            &qs,
+            [0.25,0.5],
+            batch.cells-1,
+        )}.unwrap();
         assert_eq!(short.status,Status::Unresolved);
         assert!(short.values.is_none());
     }

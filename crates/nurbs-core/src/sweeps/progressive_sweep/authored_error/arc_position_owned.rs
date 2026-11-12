@@ -217,7 +217,18 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
         }}
     }
     let constant_values=if constant_relative {
-        let batch=authored_frame_certificate::certify_fixed_relative_values(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,&coordinates,[0.,1.],max_cells-out.cells)?;
+        let batch=authored_frame_certificate::certify_fixed_relative_values(
+            crate::sweeps::progressive_sweep::SweepLaws {
+                path,
+                scale: sweep.scale,
+                twist: sweep.twist,
+                affine: sweep.affine_laws,
+            },
+            sweep.options.normal,
+            &coordinates,
+            [0.,1.],
+            max_cells-out.cells,
+        )?;
         out.cells+=batch.cells;
         if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
         batch.values
@@ -234,7 +245,18 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
             if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
             let Some(values)=batch.values else {return Ok(out);};Some(values)
         }else {
-            let batch=authored_frame_certificate::certify_fixed_relative_values(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,&coordinates,[t,t],max_cells-out.cells)?;
+            let batch=authored_frame_certificate::certify_fixed_relative_values(
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
+                sweep.options.normal,
+                &coordinates,
+                [t,t],
+                max_cells-out.cells,
+            )?;
             out.cells+=batch.cells;
             if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
             let Some(values)=batch.values else {return Ok(out);};Some(values)
@@ -242,7 +264,18 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
         for (control,&q) in coordinates.iter().enumerate(){
             let value=if let Some(values)=&batch {
                 authored_frame_certificate::ControlValueReport {status:Status::Certified,cells:0,value:Some(values[control]),reason:None}
-            }else{authored_frame_certificate::certify_fixed_relative_value(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,q,[t,t],max_cells-out.cells)?};
+            }else{authored_frame_certificate::certify_fixed_relative_value(
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
+                sweep.options.normal,
+                q,
+                [t,t],
+                max_cells-out.cells,
+            )?};
             out.cells+=value.cells;
             let Some(relative)=value.value.filter(|_|value.status==Status::Certified) else {out.reason=value.reason;return Ok(out);};
             let mut delta=[I::point(0.);3];
@@ -295,7 +328,18 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
             if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
             Some(batch)
         }else {
-            let batch=authored_frame_certificate::certify_fixed_relative_trajectories(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?;
+            let batch=authored_frame_certificate::certify_fixed_relative_trajectories(
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
+                sweep.options.normal,
+                &coordinates,
+                interval,
+                max_cells-out.cells,
+            )?;
             out.cells+=batch.cells;
             if batch.status!=Status::Certified {out.reason=batch.reason;return Ok(out);}
             Some(batch)
@@ -304,7 +348,18 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
             let values=if let Some(laws)=zero_laws {
                 authored_frame_certificate::certify_control_values(laws,&coordinates,interval,max_cells-out.cells)?
             }else {
-                authored_frame_certificate::certify_fixed_relative_values(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,&coordinates,interval,max_cells-out.cells)?
+                authored_frame_certificate::certify_fixed_relative_values(
+                    crate::sweeps::progressive_sweep::SweepLaws {
+                        path,
+                        scale: sweep.scale,
+                        twist: sweep.twist,
+                        affine: sweep.affine_laws,
+                    },
+                    sweep.options.normal,
+                    &coordinates,
+                    interval,
+                    max_cells-out.cells,
+                )?
             };
             out.cells+=values.cells;
             if values.status!=Status::Certified {out.reason=values.reason;return Ok(out);}
@@ -315,7 +370,18 @@ pub(super) fn original_arc_length_section_interpolation_with_chord(sweep:&Sweep<
                 let Some(jets)=&batch.jets else {return Ok(out);};
                 authored_frame_certificate::TrajectoryReport {traversal:interval,status:Status::Certified,cells:0,
                     jet:Some(jets[control].clone()),single_span:batch.single_span,reason:None}
-            }else{authored_frame_certificate::certify_fixed_relative_trajectory(path,sweep.options.normal,sweep.scale,sweep.twist,sweep.affine_laws,q,interval,max_cells-out.cells)?};
+            }else{authored_frame_certificate::certify_fixed_relative_trajectory(
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
+                sweep.options.normal,
+                q,
+                interval,
+                max_cells-out.cells,
+            )?};
             out.cells+=jet.cells;
             let relative=if let Some(relative)=jet.linear_error_upper([endpoints[station][control],endpoints[station+1][control]])? {relative}
             else if let Some(values)=&values {

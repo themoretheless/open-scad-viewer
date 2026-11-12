@@ -1558,7 +1558,17 @@ fn closed_fixed_normal_full_turn_first_defect_refines_without_endpoint_smoothnes
     for station in [0,1,63,64,65,127,128,191,192,254,255] {
         let interval=[station as f64/256.,(station+1) as f64/256.];
         let jets=authored_frame_certificate::certify_fixed_normal_control_trajectories(
-            &path,[0.,0.,1.],&scale,&twist,None,&qs,interval,10000).unwrap();
+            crate::sweeps::progressive_sweep::SweepLaws {
+                path: &path,
+                scale: &scale,
+                twist: &twist,
+                affine: None,
+            },
+            [0.,0.,1.],
+            &qs,
+            interval,
+            10000,
+        ).unwrap();
         assert_eq!(jets.status,Status::Certified);
         let jet=authored_frame_certificate::TrajectoryReport {
             traversal:interval,status:jets.status,cells:jets.cells,
@@ -1568,7 +1578,17 @@ fn closed_fixed_normal_full_turn_first_defect_refines_without_endpoint_smoothnes
             sections[station+i].control_points[0][k]));
         let errors=std::array::from_fn(|i|{
             let value=authored_frame_certificate::certify_fixed_normal_control_values(
-                &path,[0.,0.,1.],&scale,&twist,None,&qs,[interval[i];2],10000).unwrap();
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path: &path,
+                    scale: &scale,
+                    twist: &twist,
+                    affine: None,
+                },
+                [0.,0.,1.],
+                &qs,
+                [interval[i];2],
+                10000,
+            ).unwrap();
             authored_frame_certificate::ControlValueReport {status:value.status,cells:value.cells,
                 value:value.values.map(|v|v[0]),reason:value.reason}
                 .retained_displacement_upper(endpoints[i]).unwrap().unwrap()

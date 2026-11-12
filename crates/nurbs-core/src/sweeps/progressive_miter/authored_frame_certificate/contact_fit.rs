@@ -298,7 +298,18 @@ fn shared_control_jets_preserve_original_analytic_transport_and_whole_batch_refu
             [2.,2.],
             [0.25,0.5],
             1000,
-        )} else {certify_path_guide_control_trajectories(&path,&guide,&scale,&twist,None,&qs,[0.25,0.5],1000)}.unwrap();
+        )} else {certify_path_guide_control_trajectories(
+            super::ProfileLaws {
+                path: &path,
+                scale: &scale,
+                twist: &twist,
+                affine: None,
+            },
+            &guide,
+            &qs,
+            [0.25,0.5],
+            1000,
+        )}.unwrap();
         assert_eq!(batch.status,Status::Certified);
         let jets=batch.jets.as_ref().unwrap();
         let mut separate_cells=0;
@@ -309,7 +320,18 @@ fn shared_control_jets_preserve_original_analytic_transport_and_whole_batch_refu
                 [2.,2.],
                 [0.25,0.5],
                 1000,
-            )} else {certify_path_guide_control_trajectory(&path,&guide,&scale,&twist,None,q,[0.25,0.5],1000)}.unwrap();
+            )} else {certify_path_guide_control_trajectory(
+                super::ProfileLaws {
+                    path: &path,
+                    scale: &scale,
+                    twist: &twist,
+                    affine: None,
+                },
+                &guide,
+                q,
+                [0.25,0.5],
+                1000,
+            )}.unwrap();
             let jet=single.jet.unwrap();
             assert_eq!(jets[i].value,jet.value);
             assert_eq!(jets[i].first,jet.first);
@@ -331,7 +353,18 @@ fn shared_control_jets_preserve_original_analytic_transport_and_whole_batch_refu
             [2.,2.],
             [0.25,0.5],
             batch.cells-1,
-        )} else {certify_path_guide_control_trajectories(&path,&guide,&scale,&twist,None,&qs,[0.25,0.5],batch.cells-1)}.unwrap();
+        )} else {certify_path_guide_control_trajectories(
+            super::ProfileLaws {
+                path: &path,
+                scale: &scale,
+                twist: &twist,
+                affine: None,
+            },
+            &guide,
+            &qs,
+            [0.25,0.5],
+            batch.cells-1,
+        )}.unwrap();
         assert_eq!(short.status,Status::Unresolved);
         assert!(short.jets.is_none());
     }

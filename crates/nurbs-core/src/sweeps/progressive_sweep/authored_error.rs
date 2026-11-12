@@ -327,11 +327,13 @@ pub(super) fn guided_control_value(
         return Ok(unresolved(initial.cells, initial.reason.unwrap()));
     }
     let mut report = authored_frame_certificate::certify_path_guide_control_value(
-        sweep.path,
+        crate::sweeps::progressive_sweep::SweepLaws {
+            path: sweep.path,
+            scale: sweep.scale,
+            twist: sweep.twist,
+            affine: sweep.affine_laws,
+        },
         guide,
-        sweep.scale,
-        sweep.twist,
-        sweep.affine_laws,
         initial.coordinates.unwrap()[profile_control],
         traversal,
         max_cells - initial.cells,

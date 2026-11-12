@@ -160,10 +160,8 @@ pub(crate) fn certify_proved_planar_relative_values(
 
 /// Full original position/pose field; the caller must own the exact plane
 /// premise and its work, just as for the independent-length relative field.
-pub(crate) fn certify_proved_planar_control_values(
-    path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
-)->Result<ControlValuesReport>{
+pub(crate) fn certify_proved_planar_control_values(laws: super::ProfileLaws<'_>, normal:[f64;3], qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<ControlValuesReport>{
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=fixed_normal_values_at(path,normal,twist,traversal,traversal,max_cells,true)?;
     super::trajectory::control_values_with_fit(
         super::ControlLaws { path, scale, affine },
@@ -175,10 +173,8 @@ pub(crate) fn certify_proved_planar_control_values(
     )
 }
 
-pub fn certify_fixed_normal_control_values(
-    path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
-)->Result<ControlValuesReport>{
+pub fn certify_fixed_normal_control_values(laws: super::ProfileLaws<'_>, normal:[f64;3], qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<ControlValuesReport>{
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_fixed_normal_path_values(path,normal,twist,traversal,max_cells)?;
     super::trajectory::control_values_with_fit(
         super::ControlLaws { path, scale, affine },
@@ -190,10 +186,8 @@ pub fn certify_fixed_normal_control_values(
     )
 }
 
-pub fn certify_fixed_normal_control_trajectories(
-    path:&Curve,normal:[f64;3],scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],traversal:[f64;2],max_cells:usize,
-)->Result<TrajectoriesReport>{
+pub fn certify_fixed_normal_control_trajectories(laws: super::ProfileLaws<'_>, normal:[f64;3], qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<TrajectoriesReport>{
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_fixed_normal_path(path,normal,twist,traversal,max_cells)?;
     super::trajectory::control_trajectories_with_fit(
         super::ControlLaws { path, scale, affine },
@@ -295,9 +289,31 @@ mod tests {
         }
         let scale=crate::sweeps::progressive_sweep::constant_vector_law([1.,0.,0.]).unwrap();
         let qs=[[[1.,1.],[0.,0.],[0.,0.]],[[2.,2.],[0.,0.],[0.,0.]]];
-        let batch=certify_fixed_normal_control_values(&path,[0.,0.,1.],&scale,&twist,None,&qs,[0.25,0.5],1000).unwrap();
+        let batch=certify_fixed_normal_control_values(
+            super::ProfileLaws {
+                path: &path,
+                scale: &scale,
+                twist: &twist,
+                affine: None,
+            },
+            [0.,0.,1.],
+            &qs,
+            [0.25,0.5],
+            1000,
+        ).unwrap();
         assert_eq!(batch.status,Status::Certified);
-        let short=certify_fixed_normal_control_values(&path,[0.,0.,1.],&scale,&twist,None,&qs,[0.25,0.5],batch.cells-1).unwrap();
+        let short=certify_fixed_normal_control_values(
+            super::ProfileLaws {
+                path: &path,
+                scale: &scale,
+                twist: &twist,
+                affine: None,
+            },
+            [0.,0.,1.],
+            &qs,
+            [0.25,0.5],
+            batch.cells-1,
+        ).unwrap();
         assert_eq!(short.status,Status::Unresolved);
         for t in [0.25_f64,0.375,0.5] {
             let h=1.+4.*t*t;
