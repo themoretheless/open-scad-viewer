@@ -1,15 +1,29 @@
 //! First nonzero ORIGINAL rational derivative germ at an algebraic parameter.
 use super::*;
 use event_coordinates as exact;
+/// Original source cell, its algebraic parameter `parameter mod f` isolated in
+/// `root`, and the side of the root the branch leaves towards.
+#[derive(Clone, Copy)]
+pub(in crate::profile::profile_certificate) struct BranchGerm<'a> {
+    pub net: &'a [[Q; 3]],
+    pub domain: &'a [Q; 2],
+    pub parameter: &'a Poly,
+    pub f: &'a Poly,
+    pub root: &'a [Q; 2],
+    pub direction: i8,
+}
 pub(in crate::profile::profile_certificate) fn leading(
-    net: &[[Q; 3]],
-    domain: &[Q; 2],
-    parameter: &Poly,
-    f: &Poly,
-    root: &[Q; 2],
-    direction: i8,
+    germ: BranchGerm<'_>,
     max_refinements: usize,
 ) -> Result<(usize, [Poly; 2], [i8; 2])> {
+    let BranchGerm {
+        net,
+        domain,
+        parameter,
+        f,
+        root,
+        direction,
+    } = germ;
     if domain[0] >= domain[1]
         || net.iter().any(|h| h[2] <= Q::zero())
         || !matches!(direction, -1 | 1)
@@ -65,15 +79,18 @@ pub(in crate::profile::profile_certificate) fn leading(
 /// First nonzero coordinate displacement sign, including terms beyond the
 /// leading vector. Zero means the actual coordinate is locally constant.
 pub(in crate::profile::profile_certificate) fn component_sign(
-    net: &[[Q; 3]],
-    domain: &[Q; 2],
-    parameter: &Poly,
-    f: &Poly,
-    root: &[Q; 2],
-    direction: i8,
+    germ: BranchGerm<'_>,
     axis: usize,
     max_refinements: usize,
 ) -> Result<i8> {
+    let BranchGerm {
+        net,
+        domain,
+        parameter,
+        f,
+        root,
+        direction,
+    } = germ;
     if axis > 1 {
         return Err(refused("Invalid original germ component"));
     }

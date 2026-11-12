@@ -68,15 +68,15 @@ fn derive(
         }
         i += 1;
     }
-    let (order, numerator, signs) = branch_germ::leading(
-        &source[i].net,
-        &source[i].domain,
-        &parameter,
-        &f,
-        &root,
+    let germ = branch_germ::BranchGerm {
+        net: &source[i].net,
+        domain: &source[i].domain,
+        parameter: &parameter,
+        f: &f,
+        root: &root,
         direction,
-        max_refinements,
-    )?;
+    };
+    let (order, numerator, signs) = branch_germ::leading(germ, max_refinements)?;
     Ok(Some((
         i,
         LeadingBranchRay {

@@ -76,17 +76,16 @@ pub(super) fn transverse_sign(port: &OriginalContactPort, max_refinements: usize
     let node = &branch.owner().nodes()[r.node].exact;
     let actual = cells(&branch.owner().sources()[r.source])?;
     let cell = &actual[branch.source_cell()];
-    arithmetic::branch_germ::component_sign(
-        &cell.net,
-        &cell.domain,
-        &decode_polynomial(&node.parameters[r.source])?,
-        &decode_polynomial(&node.primitive)?,
-        &[
+    let germ = arithmetic::branch_germ::BranchGerm {
+        net: &cell.net,
+        domain: &cell.domain,
+        parameter: &decode_polynomial(&node.parameters[r.source])?,
+        f: &decode_polynomial(&node.primitive)?,
+        root: &[
             decode_ratio(&node.isolating_interval[0])?,
             decode_ratio(&node.isolating_interval[1])?,
         ],
-        branch.direction(),
-        1,
-        max_refinements,
-    )
+        direction: branch.direction(),
+    };
+    arithmetic::branch_germ::component_sign(germ, 1, max_refinements)
 }

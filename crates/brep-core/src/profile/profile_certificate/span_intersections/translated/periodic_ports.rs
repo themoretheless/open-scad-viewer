@@ -80,36 +80,19 @@ fn derive(o: &OwnedPeriodicPorts) -> Result<(Vec<OriginalPeriodicPort>, Vec<Vec<
             let direction = if source_end == 0 { 1 } else { -1 };
             // Constant chart translations cancel in every rational displacement
             // derivative D^k(X+cW)W-(X+cW)D^kW. Use unchanged ORIGINAL cells.
-            let (order, numerator, signs) = arithmetic::branch_germ::leading(
-                &cell.net,
-                &cell.domain,
-                &parameter,
-                &f,
-                &root,
+            let germ = arithmetic::branch_germ::BranchGerm {
+                net: &cell.net,
+                domain: &cell.domain,
+                parameter: &parameter,
+                f: &f,
+                root: &root,
                 direction,
-                o.max_refinements,
-            )?;
+            };
+            let (order, numerator, signs) =
+                arithmetic::branch_germ::leading(germ, o.max_refinements)?;
             let component_signs = [
-                arithmetic::branch_germ::component_sign(
-                    &cell.net,
-                    &cell.domain,
-                    &parameter,
-                    &f,
-                    &root,
-                    direction,
-                    0,
-                    o.max_refinements,
-                )?,
-                arithmetic::branch_germ::component_sign(
-                    &cell.net,
-                    &cell.domain,
-                    &parameter,
-                    &f,
-                    &root,
-                    direction,
-                    1,
-                    o.max_refinements,
-                )?,
+                arithmetic::branch_germ::component_sign(germ, 0, o.max_refinements)?,
+                arithmetic::branch_germ::component_sign(germ, 1, o.max_refinements)?,
             ];
             vertices[vertex].push(ports.len());
             ports.push(OriginalPeriodicPort {

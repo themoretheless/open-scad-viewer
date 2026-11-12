@@ -144,8 +144,7 @@ pub(super) fn transfer(
                 prove_binding(
                     edge,
                     &cap.surface,
-                    c,
-                    origin,
+                    [c, origin],
                     nominal,
                     source.tolerance_mm,
                     limits,
@@ -168,8 +167,7 @@ pub(super) fn transfer(
 fn prove_binding(
     edge: &nurbs_core::curve::Curve,
     surface: &nurbs_core::surface::Surface,
-    c: &crate::Coedge,
-    origin: &crate::Coedge,
+    [c, origin]: [&crate::Coedge; 2],
     nominal: CoedgeTrim,
     tolerance: f64,
     limits: Limits,
@@ -256,8 +254,7 @@ pub(super) fn verify_occurrence(
                 prove_binding(
                     &moved.edges[c.edge].curve,
                     &f.surface,
-                    c,
-                    origin,
+                    [c, origin],
                     nominal,
                     moved.tolerance_mm,
                     limits,

@@ -57,36 +57,19 @@ fn derive(
                 decode_ratio(&value.interval[1])?,
             ];
             let cell = &source_cells[c.source][c.cell];
-            let (order, numerator, signs) = arithmetic::branch_germ::leading(
-                &cell.net,
-                &cell.domain,
-                &parameter,
-                &f,
-                &root,
+            let germ = arithmetic::branch_germ::BranchGerm {
+                net: &cell.net,
+                domain: &cell.domain,
+                parameter: &parameter,
+                f: &f,
+                root: &root,
                 direction,
-                max_refinements,
-            )?;
+            };
+            let (order, numerator, signs) =
+                arithmetic::branch_germ::leading(germ, max_refinements)?;
             let component_signs = [
-                arithmetic::branch_germ::component_sign(
-                    &cell.net,
-                    &cell.domain,
-                    &parameter,
-                    &f,
-                    &root,
-                    direction,
-                    0,
-                    max_refinements,
-                )?,
-                arithmetic::branch_germ::component_sign(
-                    &cell.net,
-                    &cell.domain,
-                    &parameter,
-                    &f,
-                    &root,
-                    direction,
-                    1,
-                    max_refinements,
-                )?,
+                arithmetic::branch_germ::component_sign(germ, 0, max_refinements)?,
+                arithmetic::branch_germ::component_sign(germ, 1, max_refinements)?,
             ];
             let port = OriginalUnifiedPort {
                 edge,
