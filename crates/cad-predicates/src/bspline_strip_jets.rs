@@ -138,31 +138,12 @@ pub fn rational_bspline_projective_strip_jet_identity_with_position(
 /// checked; fitting, sampled equality and rounded conversion grant no credit.
 pub fn rational_bspline_independent_strip_jet_identity(
     ctx: &mut PredicateContext<'_>,
-    strips: [&[Vec<[LeafRef; 4]>]; 2],
-    knots: [&[LeafRef]; 2],
-    degrees: [usize; 2],
-    locations: [BsplineStripLocation; 2],
+    pair: StripPairRefs<'_>,
     scale: LeafRef,
     order: usize,
-    along_knots: [&[LeafRef]; 2],
-    along_degrees: [usize; 2],
+    along: AlongRefs<'_>,
 ) -> Result<BezierIdentityDecision, InputError> {
-    for side in 0..2 {
-        if !(1..=32).contains(&along_degrees[side])
-            || strips[side].len() <= along_degrees[side]
-            || along_knots[side].len() != strips[side].len() + along_degrees[side] + 1
-        {
-            return Err(InputError::InvalidInput(
-                "Invalid independent along B-spline basis",
-            ));
-        }
-    }
-    strip_identity(ctx, StripPairRefs { strips, knots, degrees, locations }, scale, order, false, Some(AlongProof {
-            knots: along_knots,
-            degrees: along_degrees,
-            map: None,
-            nonlinear_only: false,
-        }), &mut false)
+    independent_along(ctx, pair, scale, order, along, false)
 }
 
 /// Nonlinear chart search in the same work context after an owner's common-
@@ -171,31 +152,51 @@ pub fn rational_bspline_independent_strip_jet_identity(
 /// proposal. This is sufficient evidence and never certifies an authored pcurve.
 pub fn rational_bspline_nonlinear_strip_jet_identity(
     ctx: &mut PredicateContext<'_>,
-    strips: [&[Vec<[LeafRef; 4]>]; 2],
-    knots: [&[LeafRef]; 2],
-    degrees: [usize; 2],
-    locations: [BsplineStripLocation; 2],
+    pair: StripPairRefs<'_>,
     scale: LeafRef,
     order: usize,
-    along_knots: [&[LeafRef]; 2],
-    along_degrees: [usize; 2],
+    along: AlongRefs<'_>,
 ) -> Result<BezierIdentityDecision, InputError> {
+    independent_along(ctx, pair, scale, order, along, true)
+}
+/// Shared check of both independent along bases, then the strip identity with
+/// the affine search included or skipped (`nonlinear_only`).
+fn independent_along(
+    ctx: &mut PredicateContext<'_>,
+    pair: StripPairRefs<'_>,
+    scale: LeafRef,
+    order: usize,
+    along: AlongRefs<'_>,
+    nonlinear_only: bool,
+) -> Result<BezierIdentityDecision, InputError> {
+    let AlongRefs {
+        knots: along_knots,
+        degrees: along_degrees,
+    } = along;
     for side in 0..2 {
         if !(1..=32).contains(&along_degrees[side])
-            || strips[side].len() <= along_degrees[side]
-            || along_knots[side].len() != strips[side].len() + along_degrees[side] + 1
+            || pair.strips[side].len() <= along_degrees[side]
+            || along_knots[side].len() != pair.strips[side].len() + along_degrees[side] + 1
         {
             return Err(InputError::InvalidInput(
                 "Invalid independent along B-spline basis",
             ));
         }
     }
-    strip_identity(ctx, StripPairRefs { strips, knots, degrees, locations }, scale, order, false, Some(AlongProof {
+    strip_identity(
+        ctx,
+        pair,
+        scale,
+        order,
+        false,
+        Some(AlongProof {
             knots: along_knots,
             degrees: along_degrees,
             map: None,
-            nonlinear_only: true,
-        }), &mut false)
+            nonlinear_only,
+        }),
+        &mut false,
+    )
 }
 
 /// Two B-spline strips given by source leaves: control rows, cross knots, cross degrees and where

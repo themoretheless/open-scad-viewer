@@ -124,6 +124,12 @@ fn identity(
         parameter: source.leaf(ks[i] + locations[i].knot).unwrap(),
         inward_positive: locations[i].inward,
     });
+    let strip_refs = cad_predicates::StripPairRefs {
+        strips: [&a_refs, &b_refs],
+        knots: [&ak, &bk],
+        degrees: [ab.cross(a).0, bb.cross(b).0],
+        locations: ls,
+    };
     let tolerance = ToleranceContext::default_valid();
     let mut ctx = PredicateContext::new(
         &source,
@@ -153,7 +159,7 @@ fn identity(
             let knots = (0..m.knots.len())
                 .map(|i| source.leaf(ki + i).unwrap())
                 .collect::<Vec<_>>();
-            cad_predicates::rational_bspline_mapped_strip_jet_identity(&mut ctx, cad_predicates::StripPairRefs { strips: [&a_refs, &b_refs], knots: [&ak, &bk], degrees: [ab.cross(a).0, bb.cross(b).0], locations: ls }, source.leaf(si).unwrap(), order, cad_predicates::AlongRefs { knots: [&along_refs[0], &along_refs[1]], degrees: [ab.along(a).0, bb.along(b).0] }, cad_predicates::BsplineParameterMap {
+            cad_predicates::rational_bspline_mapped_strip_jet_identity(&mut ctx, strip_refs, source.leaf(si).unwrap(), order, cad_predicates::AlongRefs { knots: [&along_refs[0], &along_refs[1]], degrees: [ab.along(a).0, bb.along(b).0] }, cad_predicates::BsplineParameterMap {
                     controls: &controls,
                     knots: &knots,
                     degree: m.degree,
@@ -161,14 +167,13 @@ fn identity(
         } else {
             cad_predicates::rational_bspline_independent_strip_jet_identity(
                 &mut ctx,
-                [&a_refs, &b_refs],
-                [&ak, &bk],
-                [ab.cross(a).0, bb.cross(b).0],
-                ls,
+                strip_refs,
                 source.leaf(si).unwrap(),
                 order,
-                [&along_refs[0], &along_refs[1]],
-                [ab.along(a).0, bb.along(b).0],
+                cad_predicates::AlongRefs {
+                    knots: [&along_refs[0], &along_refs[1]],
+                    degrees: [ab.along(a).0, bb.along(b).0],
+                },
             )
         }
     } else {
@@ -207,14 +212,13 @@ fn identity(
             .collect::<Vec<_>>();
         proof = cad_predicates::rational_bspline_nonlinear_strip_jet_identity(
             &mut ctx,
-            [&a_refs, &b_refs],
-            [&ak, &bk],
-            [ab.cross(a).0, bb.cross(b).0],
-            ls,
+            strip_refs,
             source.leaf(si).unwrap(),
             order,
-            [&along_refs[0], &along_refs[1]],
-            [ab.along(a).0, bb.along(b).0],
+            cad_predicates::AlongRefs {
+                knots: [&along_refs[0], &along_refs[1]],
+                degrees: [ab.along(a).0, bb.along(b).0],
+            },
         )
         .map_err(|e| crate::input(e.to_string()))?;
     }
