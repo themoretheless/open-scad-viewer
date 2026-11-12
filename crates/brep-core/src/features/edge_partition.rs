@@ -161,10 +161,12 @@ pub fn partition_at_plane(
     partition_at_proved_root(
         source,
         edge_id,
-        root.curve_parameter,
-        root.position_bounds,
-        root.uv_bounds,
-        None,
+        ProvedRoot {
+            parameter: root.curve_parameter,
+            position_bounds: root.position_bounds,
+            support_uv_bounds: root.uv_bounds,
+            crossing_sign: None,
+        },
         roots.cells,
         max_cells,
     )
@@ -210,10 +212,12 @@ pub fn partition_at_surface(
     partition_at_proved_root(
         source,
         edge_id,
-        root.parameter_box[0],
-        root.position_bounds,
-        [root.parameter_box[1], root.parameter_box[2]],
-        Some(root.crossing_sign),
+        ProvedRoot {
+            parameter: root.parameter_box[0],
+            position_bounds: root.position_bounds,
+            support_uv_bounds: [root.parameter_box[1], root.parameter_box[2]],
+            crossing_sign: Some(root.crossing_sign),
+        },
         roots.cells,
         max_cells,
     )
@@ -252,10 +256,12 @@ pub fn partition_at_face(
     let mut result = partition_at_proved_root(
         source,
         edge_id,
-        root.root.parameter_box[0],
-        root.root.position_bounds,
-        [root.root.parameter_box[1], root.root.parameter_box[2]],
-        Some(root.face_crossing_sign),
+        ProvedRoot {
+            parameter: root.root.parameter_box[0],
+            position_bounds: root.root.position_bounds,
+            support_uv_bounds: [root.root.parameter_box[1], root.root.parameter_box[2]],
+            crossing_sign: Some(root.face_crossing_sign),
+        },
         coverage.cells,
         max_cells,
     )?;
@@ -263,16 +269,28 @@ pub fn partition_at_face(
     Ok(FacePartition { result, coverage })
 }
 
-fn partition_at_proved_root(
-    source: &Model,
-    edge_id: usize,
-    root_parameter: [f64; 2],
+/// A proved edge root: its curve-parameter interval, world position box,
+/// support UV box and, when known, the face crossing sign.
+#[derive(Clone, Copy)]
+struct ProvedRoot {
+    parameter: [f64; 2],
     position_bounds: [[f64; 2]; 3],
     support_uv_bounds: [[f64; 2]; 2],
     crossing_sign: Option<i8>,
+}
+fn partition_at_proved_root(
+    source: &Model,
+    edge_id: usize,
+    root: ProvedRoot,
     root_cells: usize,
     max_cells: usize,
 ) -> Result<RootPartition> {
+    let ProvedRoot {
+        parameter: root_parameter,
+        position_bounds,
+        support_uv_bounds,
+        crossing_sign,
+    } = root;
     use nurbs_core::interval_eval::Interval as I;
     if root_cells >= max_cells {
         return Err(unresolved("Root query exhausted the shared work budget"));
@@ -501,10 +519,12 @@ pub fn partition_all_at_face(
         let split = partition_at_proved_root(
             &model,
             edge_id,
-            root.root.parameter_box[0],
-            root.root.position_bounds,
-            [root.root.parameter_box[1], root.root.parameter_box[2]],
-            Some(root.face_crossing_sign),
+            ProvedRoot {
+                parameter: root.root.parameter_box[0],
+                position_bounds: root.root.position_bounds,
+                support_uv_bounds: [root.root.parameter_box[1], root.root.parameter_box[2]],
+                crossing_sign: Some(root.face_crossing_sign),
+            },
             0,
             max_cells - cells,
         )?;
