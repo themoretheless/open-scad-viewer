@@ -164,8 +164,10 @@ fn construct_impl<'s, 'a>(
         loop_sizes,
         sections,
         material,
-        tolerance_uv,
-        error_budget,
+        SweepAccuracy {
+            tolerance_uv,
+            error_budget,
+        },
         l.source,
         MaterialBinding::OrientedImages,
     )? {
