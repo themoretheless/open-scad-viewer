@@ -186,8 +186,9 @@ pub use crate::source_body::wall_clearance;
 pub use crate::source_body::wall_opposition;
 pub use analytic::{
     AffinePose, AffineStationLimits, AffineStationWalls, FiberedBody, FiberedBodyAttempt,
-    FiberedBodyLimits, FiberedBodyReport, LoftCap, SmoothStationWalls, affine_station_walls,
-    capped_loft_surfaces, capped_loft_with_caps, capped_loft_with_caps_checked,
+    FiberedBodyLimits, FiberedBodyReport, FiberedSource, LoftCap, SmoothStationWalls,
+    affine_station_walls, capped_loft_surfaces,
+    capped_loft_with_caps, capped_loft_with_caps_checked,
     construct_fibered_body, cylinder, frustum, natural_section_loft, periodic_section_loft,
     progressive_affine_profile_body, progressive_authored_profile_body,
     progressive_guided_profile_body, progressive_profile_body, rational_section_loft, revolve,

@@ -45,10 +45,12 @@ pub fn run(v: Value, audit: bool) -> Result<Value> {
     let tolerance = field::<f64>(&v, "toleranceUV")?;
     let attempt = if audit {
         brep_core::verify_fibered_body(
-            &profiles,
-            &material,
-            origin,
-            &motion,
+            brep_core::FiberedSource {
+                profiles: &profiles,
+                material: &material,
+                origin,
+                motion: &motion,
+            },
             proposal,
             tolerance,
             limits,
@@ -56,7 +58,15 @@ pub fn run(v: Value, audit: bool) -> Result<Value> {
         )?
     } else {
         brep_core::construct_fibered_body(
-            &profiles, &material, origin, &motion, proposal, tolerance, limits,
+            brep_core::FiberedSource {
+                profiles: &profiles,
+                material: &material,
+                origin,
+                motion: &motion,
+            },
+            proposal,
+            tolerance,
+            limits,
         )?
     };
     let (model, r) = match &attempt {

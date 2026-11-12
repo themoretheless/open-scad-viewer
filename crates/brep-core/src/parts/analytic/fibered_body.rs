@@ -404,23 +404,26 @@ fn motion_join(
     .map_err(|e| Error::new("BREP_FIBER_INVALID", e.to_string()))?;
     Ok((p.outcome == BezierIdentity::Equal, p.work_used))
 }
+/// The original fibered sweep: profile loops, the material cap with its trims,
+/// and the motion origin and pieces.
+#[derive(Clone, Copy)]
+pub struct FiberedSource<'a> {
+    pub profiles: &'a [Vec<Curve>],
+    pub material: &'a LoftCap,
+    pub origin: [f64; 3],
+    pub motion: &'a [RationalPiece],
+}
 /// Construct from ORIGINAL rational affine coefficients. The global ideal
 /// volume, complete actual-source coefficient binding, filled material, every
 /// boundary edge and regularity are mandatory. Sharp joins stay explicit C0.
 pub fn construct_fibered_body(
-    profiles: &[Vec<Curve>],
-    material: &LoftCap,
-    origin: [f64; 3],
-    motion: &[RationalPiece],
+    source: FiberedSource<'_>,
     proposal: fibered_volume::Proposal,
     tolerance_uv: f64,
     l: FiberedBodyLimits,
 ) -> Result<FiberedBodyAttempt> {
     inspect(
-        profiles,
-        material,
-        origin,
-        motion,
+        source,
         proposal,
         tolerance_uv,
         l,
@@ -430,20 +433,14 @@ pub fn construct_fibered_body(
 /// Supplied geometry is never repaired or replaced. Verification reproduces
 /// expected original coefficient/incidence rows under its explicit row budget.
 pub fn verify_fibered_body(
-    profiles: &[Vec<Curve>],
-    material: &LoftCap,
-    origin: [f64; 3],
-    motion: &[RationalPiece],
+    source: FiberedSource<'_>,
     proposal: fibered_volume::Proposal,
     tolerance_uv: f64,
     l: FiberedBodyLimits,
     model: &Model,
 ) -> Result<FiberedBodyAttempt> {
     inspect(
-        profiles,
-        material,
-        origin,
-        motion,
+        source,
         proposal,
         tolerance_uv,
         l,
@@ -451,15 +448,18 @@ pub fn verify_fibered_body(
     )
 }
 fn inspect(
-    profiles: &[Vec<Curve>],
-    material: &LoftCap,
-    origin: [f64; 3],
-    motion: &[RationalPiece],
+    source: FiberedSource<'_>,
     proposal: fibered_volume::Proposal,
     tolerance_uv: f64,
     l: FiberedBodyLimits,
     supplied: Option<&Model>,
 ) -> Result<FiberedBodyAttempt> {
+    let FiberedSource {
+        profiles,
+        material,
+        origin,
+        motion,
+    } = source;
     if let Some(m) = supplied {
         m.validate()?;
     }

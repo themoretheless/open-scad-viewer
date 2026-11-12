@@ -118,7 +118,17 @@ fn original_filled_flat_end_caps_and_walls_have_global_source_ownership_and_comp
     let (p, m) = material(false);
     let motion = motion();
     let b =
-        body(construct_fibered_body(&p, &m, [0.; 3], &motion, proposal(), 1e-8, limits()).unwrap());
+        body(construct_fibered_body(
+            FiberedSource {
+                profiles: &p,
+                material: &m,
+                origin: [0.; 3],
+                motion: &motion,
+            },
+            proposal(),
+            1e-8,
+            limits(),
+        ).unwrap());
     let r = b.report();
     assert!(
         r.certified
@@ -139,10 +149,12 @@ fn original_filled_flat_end_caps_and_walls_have_global_source_ownership_and_comp
     let before = b.model().clone();
     let a = body(
         verify_fibered_body(
-            &p,
-            &m,
-            [0.; 3],
-            &motion,
+            FiberedSource {
+                profiles: &p,
+                material: &m,
+                origin: [0.; 3],
+                motion: &motion,
+            },
             proposal(),
             1e-8,
             limits(),
@@ -167,13 +179,33 @@ fn an_inner_wall_tangent_cusp_is_c0_and_cannot_be_promoted_to_g1_or_g2() {
     let motion = motion();
     let mut l = limits();
     l.order = 0;
-    let b = body(construct_fibered_body(&p, &m, [0.; 3], &motion, proposal(), 1e-8, l).unwrap());
+    let b = body(construct_fibered_body(
+        FiberedSource {
+            profiles: &p,
+            material: &m,
+            origin: [0.; 3],
+            motion: &motion,
+        },
+        proposal(),
+        1e-8,
+        l,
+    ).unwrap());
     assert!(b.report().topology_preserved);
     assert!(!b.report().source_g1 && !b.report().source_g2);
     assert_eq!(b.report().seam_continuity, "C0");
     for order in [1, 2] {
         l.order = order;
-        let x = construct_fibered_body(&p, &m, [0.; 3], &motion, proposal(), 1e-8, l).unwrap();
+        let x = construct_fibered_body(
+            FiberedSource {
+                profiles: &p,
+                material: &m,
+                origin: [0.; 3],
+                motion: &motion,
+            },
+            proposal(),
+            1e-8,
+            l,
+        ).unwrap();
         let FiberedBodyAttempt::Refused(r) = x else {
             panic!("cusp got G{order} Solid")
         };
@@ -189,7 +221,17 @@ fn source_binding_budget_failures_mutations_and_invalid_tail_inputs_never_return
     let (p, m) = material(false);
     let motion = motion();
     let b =
-        body(construct_fibered_body(&p, &m, [0.; 3], &motion, proposal(), 1e-8, limits()).unwrap());
+        body(construct_fibered_body(
+            FiberedSource {
+                profiles: &p,
+                material: &m,
+                origin: [0.; 3],
+                motion: &motion,
+            },
+            proposal(),
+            1e-8,
+            limits(),
+        ).unwrap());
     for stage in 0..7 {
         let mut l = limits();
         match stage {
@@ -203,7 +245,17 @@ fn source_binding_budget_failures_mutations_and_invalid_tail_inputs_never_return
             _ => unreachable!(),
         }
         let FiberedBodyAttempt::Refused(r) =
-            construct_fibered_body(&p, &m, [0.; 3], &motion, proposal(), 1e-8, l).unwrap()
+            construct_fibered_body(
+                FiberedSource {
+                    profiles: &p,
+                    material: &m,
+                    origin: [0.; 3],
+                    motion: &motion,
+                },
+                proposal(),
+                1e-8,
+                l,
+            ).unwrap()
         else {
             panic!("short stage {stage} returned Solid")
         };
@@ -215,14 +267,16 @@ fn source_binding_budget_failures_mutations_and_invalid_tail_inputs_never_return
     let before = changed.clone();
     assert!(matches!(
         verify_fibered_body(
-            &p,
-            &m,
-            [0.; 3],
-            &motion,
+            FiberedSource {
+                profiles: &p,
+                material: &m,
+                origin: [0.; 3],
+                motion: &motion,
+            },
             proposal(),
             1e-8,
             limits(),
-            &changed
+            &changed,
         )
         .unwrap(),
         FiberedBodyAttempt::Refused(_)
@@ -231,7 +285,17 @@ fn source_binding_budget_failures_mutations_and_invalid_tail_inputs_never_return
     let mut l = limits();
     l.volume.cells = 100001;
     l.material_pairs = 0;
-    assert!(construct_fibered_body(&p, &m, [0.; 3], &motion, proposal(), 1e-8, l).is_err());
+    assert!(construct_fibered_body(
+        FiberedSource {
+            profiles: &p,
+            material: &m,
+            origin: [0.; 3],
+            motion: &motion,
+        },
+        proposal(),
+        1e-8,
+        l,
+    ).is_err());
 }
 
 #[test]
@@ -257,14 +321,35 @@ fn rational_weights_oblique_world_planes_and_descending_fibers_keep_original_and
             source_normal: [0., 0., 0.7],
             world_rows: [[1., 0., 0.], [0., 1., 0.], [-0.3, 0., 0.3]],
         };
-        let b = body(construct_fibered_body(&p, &m, [0.; 3], &motion, q, 1e-8, limits()).unwrap());
+        let b = body(construct_fibered_body(
+            FiberedSource {
+                profiles: &p,
+                material: &m,
+                origin: [0.; 3],
+                motion: &motion,
+            },
+            q,
+            1e-8,
+            limits(),
+        ).unwrap());
         assert!(b.report().source_g2);
         assert_eq!(
             b.report().volume.as_ref().unwrap().height_direction,
             Some(if descending { -1 } else { 1 })
         );
         let a = body(
-            verify_fibered_body(&p, &m, [0.; 3], &motion, q, 1e-8, limits(), b.model()).unwrap(),
+            verify_fibered_body(
+                FiberedSource {
+                    profiles: &p,
+                    material: &m,
+                    origin: [0.; 3],
+                    motion: &motion,
+                },
+                q,
+                1e-8,
+                limits(),
+                b.model(),
+            ).unwrap(),
         );
         assert_eq!(a.model(), b.model());
         eprintln!(
@@ -302,12 +387,32 @@ fn sharp_profile_corners_remain_explicit_c0_despite_flat_end_cap_jets() {
     let mut l = limits();
     l.order = 0;
     let b =
-        body(construct_fibered_body(&profiles, &m, [0.; 3], &motion, proposal(), 1e-8, l).unwrap());
+        body(construct_fibered_body(
+            FiberedSource {
+                profiles: &profiles,
+                material: &m,
+                origin: [0.; 3],
+                motion: &motion,
+            },
+            proposal(),
+            1e-8,
+            l,
+        ).unwrap());
     assert!(b.report().certified && !b.report().source_g1 && !b.report().source_g2);
     for order in [1, 2] {
         l.order = order;
         let FiberedBodyAttempt::Refused(r) =
-            construct_fibered_body(&profiles, &m, [0.; 3], &motion, proposal(), 1e-8, l).unwrap()
+            construct_fibered_body(
+                FiberedSource {
+                    profiles: &profiles,
+                    material: &m,
+                    origin: [0.; 3],
+                    motion: &motion,
+                },
+                proposal(),
+                1e-8,
+                l,
+            ).unwrap()
         else {
             panic!("sharp corners got G{order}")
         };
@@ -344,16 +449,28 @@ fn all_original_pose_seams_are_owned_even_at_nonbinary_global_station_parameters
     let (p, m) = material(false);
     let motion = three_pieces();
     let b =
-        body(construct_fibered_body(&p, &m, [0.; 3], &motion, proposal(), 1e-8, limits()).unwrap());
+        body(construct_fibered_body(
+            FiberedSource {
+                profiles: &p,
+                material: &m,
+                origin: [0.; 3],
+                motion: &motion,
+            },
+            proposal(),
+            1e-8,
+            limits(),
+        ).unwrap());
     assert!(b.report().source_g2);
     assert_eq!(b.report().inspected_motion_joins, 2);
     assert_eq!(b.model().faces.len(), 14);
     let a = body(
         verify_fibered_body(
-            &p,
-            &m,
-            [0.; 3],
-            &motion,
+            FiberedSource {
+                profiles: &p,
+                material: &m,
+                origin: [0.; 3],
+                motion: &motion,
+            },
             proposal(),
             1e-8,
             limits(),
@@ -365,13 +482,33 @@ fn all_original_pose_seams_are_owned_even_at_nonbinary_global_station_parameters
     let mut g1 = motion;
     g1[1].controls[2][0][0] = 1.625;
     let FiberedBodyAttempt::Refused(r) =
-        construct_fibered_body(&p, &m, [0.; 3], &g1, proposal(), 1e-8, limits()).unwrap()
+        construct_fibered_body(
+            FiberedSource {
+                profiles: &p,
+                material: &m,
+                origin: [0.; 3],
+                motion: &g1,
+            },
+            proposal(),
+            1e-8,
+            limits(),
+        ).unwrap()
     else {
         panic!("C1-only original pose seam got G2")
     };
     assert_eq!(r.reason, Some("original-multipiece-motion-jets-unproved"));
     let mut l = limits();
     l.order = 1;
-    let b = body(construct_fibered_body(&p, &m, [0.; 3], &g1, proposal(), 1e-8, l).unwrap());
+    let b = body(construct_fibered_body(
+        FiberedSource {
+            profiles: &p,
+            material: &m,
+            origin: [0.; 3],
+            motion: &g1,
+        },
+        proposal(),
+        1e-8,
+        l,
+    ).unwrap());
     assert!(b.report().source_g1 && !b.report().source_g2);
 }

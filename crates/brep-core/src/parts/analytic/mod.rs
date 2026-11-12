@@ -35,8 +35,8 @@ mod sphere_poles;
 mod sphere_regular;
 pub use cylinder::*;
 pub use fibered_body::{
-    FiberedBody, FiberedBodyAttempt, FiberedBodyLimits, FiberedBodyReport, construct_fibered_body,
-    verify_fibered_body,
+    FiberedBody, FiberedBodyAttempt, FiberedBodyLimits, FiberedBodyReport, FiberedSource,
+    construct_fibered_body, verify_fibered_body,
 };
 pub use rational_loft::{
     AffinePose, AffineStationLimits, AffineStationWalls, affine_station_walls,
