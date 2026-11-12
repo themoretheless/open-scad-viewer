@@ -2,7 +2,9 @@
 //! No endpoint cap, retained-region correspondence, error or embedding claim.
 use super::*;
 use crate::sweeps::progressive_miter::{authored_frame_certificate as frame,
-    profile_domain_certificate::{Report, certify_original_profile_projection_domain},
+    profile_domain_certificate::{
+        ProfileDomainLimits, Report, certify_original_profile_projection_domain,
+    },
     scalar_certificate::Status};
 
 pub(super) fn original_frame(sweep:&Sweep<'_>,twist:&Curve,t:[f64;2],budget:usize,initial:bool)->Result<Option<frame::ValuesReport>>{
@@ -106,8 +108,8 @@ impl MultiSweep<'_> {
         let cells = original.as_ref().map_or(0, |r|r.cells);
         let axis = original.filter(|r|r.status == Status::Certified).and_then(|r|r.longitudinal);
         let profiles = self.sweeps.iter().map(|s|s.profile.clone()).collect::<Vec<_>>();
-        certify_original_profile_projection_domain(&profiles,loop_sizes,axis,cells,
-            tolerance,max_pairs,max_cells,max_exact_work)
+        let limits=ProfileDomainLimits{tolerance,max_pairs,max_cells,max_exact_work};
+        certify_original_profile_projection_domain(&profiles,loop_sizes,axis,cells,limits)
     }
 }
 
