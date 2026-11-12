@@ -333,7 +333,7 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         let needs_second=coarse_errors.iter().any(|upper|*upper>sweep.options.max_deviation);
         if mode==OriginalTransport::CorrectedRegular&&needs_second&&out.cells<max_cells {
             let speed=inverse_speed.unwrap();
-            let relative=if let Some(pose)=shared_pose.as_deref_mut(){pose.arc_jets(sweep,&qs,path_interval,station,division.total.bounds,speed,max_cells-out.cells)?}
+            let relative=if let Some(pose)=shared_pose.as_deref_mut(){pose.arc_jets(sweep,&qs,authored_frame_certificate::ArcTraversal{source:path_interval,station:station,length:division.total.bounds,speed_lower:speed},max_cells-out.cells)?}
                 else{let trav = authored_frame_certificate::ArcTraversal { source: path_interval, station, length: division.total.bounds, speed_lower: speed };
                     authored_frame_certificate::certify_c4_frenet_arc_relative_trajectories(profile_laws, &qs, trav, max_cells-out.cells)?};
             out.cells+=relative.cells;

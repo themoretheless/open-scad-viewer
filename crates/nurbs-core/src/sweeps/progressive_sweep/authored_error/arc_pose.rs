@@ -102,7 +102,9 @@ impl SharedArcPose {
         let upper=crate::numerics::interval_vec3::norm(a)?.div(I::point(speed).mul(I::point(speed))?)?.hi;
         self.curvatures.insert(key,upper);Ok((report.cells,Some(upper)))
     }
-    pub(super) fn arc_jets(&mut self,sweep:&Sweep<'_>,qs:&[[[f64;2];3]],source:[f64;2],law:[f64;2],length:[f64;2],speed:f64,budget:usize)->Result<authored_frame_certificate::TrajectoriesReport>{
+    pub(super) fn arc_jets(&mut self,sweep:&Sweep<'_>,qs:&[[[f64;2];3]],
+        traversal:authored_frame_certificate::ArcTraversal,budget:usize)->Result<authored_frame_certificate::TrajectoriesReport>{
+        let authored_frame_certificate::ArcTraversal{source,station:law,length,speed_lower:speed}=traversal;
         let key=[source[0].to_bits(),source[1].to_bits(),law[0].to_bits(),law[1].to_bits(),length[0].to_bits(),length[1].to_bits(),speed.to_bits()];
         let mut cells=0;
         if !self.jet_entries.contains_key(&key){
@@ -110,7 +112,7 @@ impl SharedArcPose {
             let report=authored_frame_certificate::certify_c4_frenet_arc_relative_trajectories(
                 authored_frame_certificate::ProfileLaws { path: sweep.path, scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws },
                 &basis,
-                authored_frame_certificate::ArcTraversal { source, station: law, length, speed_lower: speed },
+                traversal,
                 budget,
             )?;
             cells=report.cells;
@@ -352,12 +354,13 @@ mod arc_jet_cache_tests {
   let sweep=Sweep::new(&profile,&path,&scale,&twist,Options{orientation:Orientation::CorrectedFrenet,normal:[0.,1.,0.],spacing:Spacing::ArcLength{tolerance:1e-6,max_cells:10000},initial_sections:3,max_sections:17,max_deviation:0.2}).unwrap();
   let length=5f64.sqrt()/2.+2f64.asinh()/4.;let bounds=[length.next_down(),length.next_up()];let qs=[[[1.;2],[0.;2],[0.;2]]];
   let mut cache=SharedArcPose::default();assert!(cache.regular(&path,10000).unwrap().certified);
-  let refused=cache.arc_jets(&sweep,&qs,[0.2,0.3],[0.1,0.4],bounds,1.,0).unwrap();assert_eq!(refused.status,Status::Unresolved);assert!(cache.jet_entries.is_empty());
-  let fresh=cache.arc_jets(&sweep,&qs,[0.2,0.3],[0.1,0.4],bounds,1.,10000).unwrap();assert_eq!(fresh.status,Status::Certified);assert!(fresh.cells>0);
-  let warm=cache.arc_jets(&sweep,&qs,[0.2,0.3],[0.1,0.4],bounds,1.,0).unwrap();assert_eq!(warm.status,Status::Certified);assert_eq!(warm.cells,0);
+  let arc=|length:[f64;2],speed:f64|authored_frame_certificate::ArcTraversal{source:[0.2,0.3],station:[0.1,0.4],length,speed_lower:speed};
+  let refused=cache.arc_jets(&sweep,&qs,arc(bounds,1.),0).unwrap();assert_eq!(refused.status,Status::Unresolved);assert!(cache.jet_entries.is_empty());
+  let fresh=cache.arc_jets(&sweep,&qs,arc(bounds,1.),10000).unwrap();assert_eq!(fresh.status,Status::Certified);assert!(fresh.cells>0);
+  let warm=cache.arc_jets(&sweep,&qs,arc(bounds,1.),0).unwrap();assert_eq!(warm.status,Status::Certified);assert_eq!(warm.cells,0);
   let jet=&warm.jets.as_ref().unwrap()[0];
   for u in [0.2_f64,0.25,0.3]{let g=(1.+4.*u*u).sqrt();let expected=[32.*u*length*length/g.powi(7),(-4.+48.*u*u)*length*length/g.powi(7),0.];for k in 0..3{assert!(jet.second[k][0]<=expected[k]&&expected[k]<=jet.second[k][1]);}}
-  let changed=cache.arc_jets(&sweep,&qs,[0.2,0.3],[0.1,0.4],[bounds[0],bounds[1].next_up()],1.,0).unwrap();assert_eq!(changed.status,Status::Unresolved);assert_eq!(cache.jet_entries.len(),1);
-  let changed=cache.arc_jets(&sweep,&qs,[0.2,0.3],[0.1,0.4],bounds,1f64.next_down(),0).unwrap();assert_eq!(changed.status,Status::Unresolved);assert_eq!(cache.jet_entries.len(),1);
+  let changed=cache.arc_jets(&sweep,&qs,arc([bounds[0],bounds[1].next_up()],1.),0).unwrap();assert_eq!(changed.status,Status::Unresolved);assert_eq!(cache.jet_entries.len(),1);
+  let changed=cache.arc_jets(&sweep,&qs,arc(bounds,1f64.next_down()),0).unwrap();assert_eq!(changed.status,Status::Unresolved);assert_eq!(cache.jet_entries.len(),1);
  }
 }
