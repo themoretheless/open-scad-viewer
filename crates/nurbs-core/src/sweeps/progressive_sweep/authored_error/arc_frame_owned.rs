@@ -226,7 +226,7 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         let rem=max_cells-out.cells;
         let values=match mode {
             OriginalTransport::RmfSpatial if shared_pose.is_some()=>shared_pose.as_deref_mut().unwrap().rmf_values(spatial_transport.as_ref().unwrap(),sweep,&qs,path_interval,station,rem)?,
-            OriginalTransport::RmfSpatial=>super::super::rmf_transport::relative_values(spatial_transport.as_ref().unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,&qs,path_interval,station,rem)?,
+            OriginalTransport::RmfSpatial=>super::super::rmf_transport::relative_values(spatial_transport.as_ref().unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,&qs,[path_interval, station],rem)?,
             OriginalTransport::CorrectedPlanar if principal_phase.is_some()=>authored_frame_certificate::certify_planar_principal_relative_values(profile_laws, authored_frame_certificate::PrincipalPlane { normal: sweep.options.normal, sign: principal_phase.unwrap() }, &qs, path_interval, station, rem)?,
             OriginalTransport::RmfPlanar|OriginalTransport::CorrectedPlanar=>authored_frame_certificate::certify_proved_planar_relative_values(profile_laws, sweep.options.normal, &qs, path_interval, station, rem)?,
             OriginalTransport::FixedNormal=>authored_frame_certificate::certify_fixed_normal_relative_values(profile_laws, sweep.options.normal, &qs, path_interval, station, rem)?,

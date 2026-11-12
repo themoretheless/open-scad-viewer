@@ -213,7 +213,7 @@ mod tests {
         let mut cache=SharedArcPose::default();
         let refused=cache.rmf_values(&transport,&sweep,&qs,interval,interval,0).unwrap();
         assert_eq!(refused.status,Status::Unresolved);assert!(cache.rmf_frames.is_empty());
-        let direct=super::super::super::rmf_transport::relative_values(&transport,&scale,&twist,None,&qs,interval,interval,10000).unwrap();
+        let direct=super::super::super::rmf_transport::relative_values(&transport,&scale,&twist,None,&qs,[interval, interval],10000).unwrap();
         let first=cache.rmf_values(&transport,&sweep,&qs,interval,interval,10000).unwrap();
         assert_eq!(first.status,Status::Certified);assert_eq!(first.values,direct.values);assert_eq!(first.cells,direct.cells);
         let second=cache.rmf_values(&transport,&sweep,&qs,interval,interval,10000).unwrap();

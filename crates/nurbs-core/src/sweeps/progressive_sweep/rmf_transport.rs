@@ -675,8 +675,7 @@ pub(super) fn relative_values(
     twist: &Curve,
     affine: Option<(&Curve, &Curve)>,
     qs: &[[[f64; 2]; 3]],
-    traversal: [f64; 2],
-    station: [f64; 2],
+    [traversal, station]: [[f64; 2]; 2],
     max_cells: usize,
 ) -> Result<super::super::progressive_miter::authored_frame_certificate::ControlValuesReport> {
     use super::super::progressive_miter::authored_frame_certificate as frame;
