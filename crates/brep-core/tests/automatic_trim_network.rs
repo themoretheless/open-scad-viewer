@@ -201,7 +201,18 @@ fn automatic_cap_is_atomic_and_seeds_cannot_authorize_ambiguous_removal() {
         CapSelection { face: 5, remove_uv: [0.25, 0.95] },
     ];
     let run = |seeds: &[CapSelection], uncut: &[usize], budget| {
-        trim_ruled_and_cap(&source, seeds, uncut, &cutter, 0, 1e-8, budget, 1000000)
+        trim_ruled_and_cap(
+            &source,
+            seeds,
+            uncut,
+            &cutter,
+            0,
+            face_cut::CutLimits {
+                tolerance_uv: 1e-8,
+                max_cells: budget,
+                max_exact: 1000000,
+            },
+        )
     };
     let out = run(&requests, &[], 100000).unwrap();
     assert_eq!(out.cap.replacement.model.faces.len(), 7);
@@ -240,8 +251,18 @@ fn transposed_original_charts_share_roots_and_close_the_same_material_cut() {
         CapSelection { face: 4, remove_uv: [0.9, 0.5] },
         CapSelection { face: 5, remove_uv: [0.95, 0.25] },
     ];
-    let out = trim_ruled_and_cap(&source, &requests, &[], &cutter, 0,
-        1e-8, 100000, 1000000).unwrap();
+    let out = trim_ruled_and_cap(
+        &source,
+        &requests,
+        &[],
+        &cutter,
+        0,
+        face_cut::CutLimits {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
+    ).unwrap();
     assert_eq!(out.cap.replacement.model.faces.len(), 7);
     assert!(out.cap.replacement.trims.all_valid);
     assert_eq!(out.cap.replacement.closure.closure.status, watertight::Closure::WithinTolerance);

@@ -17,7 +17,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     if transpose { for request in &mut selections { request.remove_uv.swap(0, 1); } }
     let result = face_cut::trim_ruled_and_cap(
-        &source, &selections, &[], &cutter, 0, 1e-8, 100000, 1000000,
+        &source,
+        &selections,
+        &[],
+        &cutter,
+        0,
+        brep_core::face_cut::CutLimits {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )?;
     let cells = result.cells;
     let exact_work = result.exact_work;

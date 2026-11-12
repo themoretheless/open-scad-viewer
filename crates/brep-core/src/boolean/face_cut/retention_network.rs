@@ -78,9 +78,11 @@ pub fn plan_retention_network(
             request.face,
             request.cuts,
             request.keep_uv,
-            tolerance_uv,
-            max_cells - out.cells,
-            max_exact - out.exact_work,
+            crate::face_cut::CutLimits {
+                tolerance_uv,
+                max_cells: max_cells - out.cells,
+                max_exact: max_exact - out.exact_work,
+            },
             max_domain_cells - out.domain_cells,
         )?;
         out.cells += plan.network.cells;

@@ -12,6 +12,13 @@ pub(crate) use legacy_closed::closed_with_budget;
 
 #[path = "face_cut/retention_network.rs"]
 mod retention_network;
+/// UV tolerance and the shared cell and exact-work budgets of one face cut.
+#[derive(Clone, Copy, Debug)]
+pub struct CutLimits {
+    pub tolerance_uv: f64,
+    pub max_cells: usize,
+    pub max_exact: u64,
+}
 pub use retention_network::{
     FaceRetention, RetentionNetwork, RetentionRegion, plan_retention_network,
 };
@@ -237,16 +244,8 @@ pub struct Retention {
 /// outside every other descendant. Boundary bands and incomplete winding proofs
 /// refuse; no nearest-face choice or caller-supplied classification is trusted.
 /// This is a material plan, not permission to export an open body as a solid.
-pub fn plan_projected_retention(
-    source: &Model,
-    face: usize,
-    cuts: &[OwnedCut],
-    keep_uv: &[[f64; 2]],
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
-    max_domain_cells: usize,
-) -> Result<Retention> {
+pub fn plan_projected_retention(source: &Model, face: usize, cuts: &[OwnedCut], keep_uv: &[[f64; 2]], limits: CutLimits, max_domain_cells: usize) -> Result<Retention> {
+        let CutLimits { tolerance_uv, max_cells, max_exact } = limits;
     if !(1..=256).contains(&keep_uv.len())
         || keep_uv.iter().flatten().any(|x| !x.is_finite())
         || !(1..=1000000).contains(&max_domain_cells)
@@ -440,22 +439,16 @@ pub(crate) fn partition_with_budget(
         face_id,
         endpoints,
         path,
-        tolerance_uv,
-        max_cells,
-        max_exact,
+        CutLimits {
+            tolerance_uv,
+            max_cells,
+            max_exact,
+        },
         10000,
     )
 }
-pub(crate) fn partition_with_shared_limits(
-    source: &Model,
-    face_id: usize,
-    endpoints: [usize; 2],
-    path: &[Segment],
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
-    max_pairs: usize,
-) -> Result<Partition> {
+pub(crate) fn partition_with_shared_limits(source: &Model, face_id: usize, endpoints: [usize; 2], path: &[Segment], limits: CutLimits, max_pairs: usize) -> Result<Partition> {
+        let CutLimits { tolerance_uv, max_cells, max_exact } = limits;
     source.validate()?;
     if !source.persistent_naming_complete()
         || !(1..=256).contains(&path.len())

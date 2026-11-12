@@ -109,9 +109,11 @@ pub fn partition_ruled_network(
             cutter,
             cutter_face,
             &owned,
-            tolerance_uv,
-            max_cells - cells,
-            max_exact - exact_work,
+            crate::face_cut::CutLimits {
+                tolerance_uv,
+                max_cells: max_cells - cells,
+                max_exact: max_exact - exact_work,
+            },
         )?;
         cells += stage_cells;
         exact_work += cut.exact_work;

@@ -99,9 +99,11 @@ pub fn partition_ruled_at_face(
         cutter,
         cutter_face,
         &roots,
-        tolerance_uv,
-        max_cells - cells,
-        max_exact,
+        crate::face_cut::CutLimits {
+            tolerance_uv,
+            max_cells: max_cells - cells,
+            max_exact,
+        },
     )?;
     cells += stage_cells;
     partition.model.refresh_change_set(&[source]);
@@ -114,16 +116,8 @@ pub fn partition_ruled_at_face(
     })
 }
 
-pub(super) fn partition_prebound(
-    source: &Model,
-    face: usize,
-    cutter: &Model,
-    cutter_face: usize,
-    roots: &[(usize, [[f64; 2]; 3])],
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
-) -> Result<(Partition, [usize; 2], usize)> {
+pub(super) fn partition_prebound(source: &Model, face: usize, cutter: &Model, cutter_face: usize, roots: &[(usize, [[f64; 2]; 3])], limits: super::CutLimits) -> Result<(Partition, [usize; 2], usize)> {
+        let super::CutLimits { tolerance_uv, max_cells, max_exact } = limits;
     if roots.len() != 2 || max_cells < 8 {
         return Err(unproven("Need two bound roots and remaining section work"));
     }

@@ -235,9 +235,11 @@ fn existing_partition_projection_network_and_retention_routes_accept_same_hole()
         0,
         &owned,
         &[[0.5, 0.1875]],
-        1e-8,
-        100000,
-        1000000,
+        crate::face_cut::CutLimits {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
         100000,
     )
     .unwrap();
@@ -281,9 +283,11 @@ fn two_projected_hole_cuts_keep_unique_current_sector_ownership_and_both_caps() 
         0,
         &cuts,
         &[[0.5, 0.1875], [0.5, 0.8125]],
-        1e-8,
-        100000,
-        1000000,
+        crate::face_cut::CutLimits {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
         100000,
     )
     .unwrap();

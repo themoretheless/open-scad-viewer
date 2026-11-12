@@ -21,16 +21,8 @@ pub struct AutomaticCap {
 /// intersection solver. Seeds choose material intent, never certify a sector.
 /// Uncut faces belonging to the region must be supplied explicitly.
 /// No radius, smoothness, or global embedding certificate is implied.
-pub fn trim_ruled_and_cap(
-    source: &Model,
-    selections: &[CapSelection],
-    remove_uncut: &[usize],
-    cutter: &Model,
-    cutter_face: usize,
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
-) -> Result<AutomaticCap> {
+pub fn trim_ruled_and_cap(source: &Model, selections: &[CapSelection], remove_uncut: &[usize], cutter: &Model, cutter_face: usize, limits: super::CutLimits) -> Result<AutomaticCap> {
+        let super::CutLimits { tolerance_uv, max_cells, max_exact } = limits;
     source.validate()?;
     let faces = selections.iter().map(|s| s.face).collect::<Vec<_>>();
     let mut seen = std::collections::BTreeSet::new();

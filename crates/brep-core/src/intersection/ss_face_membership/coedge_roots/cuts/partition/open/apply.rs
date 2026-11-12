@@ -196,9 +196,11 @@ pub(super) fn construct_range(
         face,
         endpoints,
         &segments,
-        path.uv_tolerance,
-        limits.cells - *cells,
-        (limits.operations - *operations) as u64,
+        crate::face_cut::CutLimits {
+            tolerance_uv: path.uv_tolerance,
+            max_cells: limits.cells - *cells,
+            max_exact: (limits.operations - *operations) as u64,
+        },
         (limits.pairs - *pairs).min(10000),
     )?;
     spend(

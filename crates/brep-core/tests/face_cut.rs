@@ -108,9 +108,11 @@ fn projected_network_infers_descendants_and_refuses_ambiguous_repeated_cut() {
         face,
         &cuts,
         &[[0.2, 0.8], [0.8, 0.2]],
-        1e-8,
-        100000,
-        1000000,
+        face_cut::CutLimits {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
         1000000,
     )
     .unwrap();
@@ -126,9 +128,11 @@ fn projected_network_infers_descendants_and_refuses_ambiguous_repeated_cut() {
                 face,
                 &cuts,
                 &[point],
-                1e-8,
-                100000,
-                1000000,
+                face_cut::CutLimits {
+                    tolerance_uv: 1e-8,
+                    max_cells: 100000,
+                    max_exact: 1000000,
+                },
                 1000000,
             )
             .is_err()
@@ -140,9 +144,11 @@ fn projected_network_infers_descendants_and_refuses_ambiguous_repeated_cut() {
             face,
             &cuts,
             &[[0.2, 0.8]],
-            1e-8,
-            100000,
-            1000000,
+            face_cut::CutLimits {
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
             1,
         )
         .is_err()

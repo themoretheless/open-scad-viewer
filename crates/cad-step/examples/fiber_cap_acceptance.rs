@@ -19,9 +19,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &[1],
             &cutter,
             0,
-            1e-8,
-            100000,
-            1000000,
+            brep_core::face_cut::CutLimits {
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )?
     } else {
         brep_core::face_cut::trim_fiber_and_cap(
@@ -30,9 +32,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &[1],
             &cutter,
             0,
-            1e-8,
-            100000,
-            1000000,
+            brep_core::face_cut::CutLimits {
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )?
     };
     let saved = value_codec::to_string(&out.cap.replacement.model)?;

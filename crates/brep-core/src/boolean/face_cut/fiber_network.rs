@@ -31,43 +31,21 @@ pub struct FiberCap {
 /// sections and explicit material-side intent to an owned closed cap. No
 /// partially cut model escapes on refusal. The actual cap/retained-face seam
 /// can be sharp; no prescribed-radius or G2 corner claim is made.
-pub fn trim_fiber_and_cap(
-    source: &Model,
-    requests: &[FiberCapRequest],
-    remove_uncut: &[usize],
-    cutter: &Model,
-    cutter_face: usize,
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
-) -> Result<FiberCap> {
+pub fn trim_fiber_and_cap(source: &Model, requests: &[FiberCapRequest], remove_uncut: &[usize], cutter: &Model, cutter_face: usize, limits: super::CutLimits) -> Result<FiberCap> {
     trim_fiber_and_cap_impl(
         source,
         requests,
         remove_uncut,
         cutter,
         cutter_face,
-        CapLimits {
-            tolerance_uv,
-            max_cells,
-            max_exact,
-        },
+        limits,
         false,
     )
 }
 
 /// Infer every section chart from shared original roots, then select material
 /// by the caller's original-face seeds and close atomically with the cutter.
-pub fn trim_fiber_and_cap_automatic(
-    source: &Model,
-    requests: &[AutomaticFiberCapRequest],
-    remove_uncut: &[usize],
-    cutter: &Model,
-    cutter_face: usize,
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
-) -> Result<FiberCap> {
+pub fn trim_fiber_and_cap_automatic(source: &Model, requests: &[AutomaticFiberCapRequest], remove_uncut: &[usize], cutter: &Model, cutter_face: usize, limits: super::CutLimits) -> Result<FiberCap> {
     source.validate()?;
     cutter.validate()?;
     if !(1..=256).contains(&requests.len()) {
@@ -97,32 +75,21 @@ pub fn trim_fiber_and_cap_automatic(
         remove_uncut,
         cutter,
         cutter_face,
-        CapLimits {
-            tolerance_uv,
-            max_cells,
-            max_exact,
-        },
+        limits,
         true,
     )
 }
 
-/// UV tolerance and the shared cell and exact-work budgets of one fiber cap.
-#[derive(Clone, Copy)]
-struct CapLimits {
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
-}
 fn trim_fiber_and_cap_impl(
     source: &Model,
     requests: &[FiberCapRequest],
     remove_uncut: &[usize],
     cutter: &Model,
     cutter_face: usize,
-    limits: CapLimits,
+    limits: super::CutLimits,
     automatic: bool,
 ) -> Result<FiberCap> {
-    let CapLimits {
+    let super::CutLimits {
         tolerance_uv,
         max_cells,
         max_exact,
@@ -147,9 +114,7 @@ fn trim_fiber_and_cap_impl(
         &sections,
         cutter,
         cutter_face,
-        tolerance_uv,
-        max_cells,
-        max_exact,
+        limits,
         automatic,
     )?;
     let mut cells = network.cells;
@@ -240,9 +205,11 @@ pub fn partition_fiber_network(
         requests,
         cutter,
         cutter_face,
-        tolerance_uv,
-        max_cells,
-        max_exact,
+        crate::face_cut::CutLimits {
+            tolerance_uv,
+            max_cells,
+            max_exact,
+        },
         false,
     )
 }
@@ -283,23 +250,17 @@ pub fn partition_fiber_network_automatic(
         &requests,
         cutter,
         cutter_face,
-        tolerance_uv,
-        max_cells,
-        max_exact,
+        crate::face_cut::CutLimits {
+            tolerance_uv,
+            max_cells,
+            max_exact,
+        },
         true,
     )
 }
 
-fn partition_fiber_network_impl(
-    source: &Model,
-    requests: &[FiberFaceRequest],
-    cutter: &Model,
-    cutter_face: usize,
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
-    automatic: bool,
-) -> Result<FiberNetwork> {
+fn partition_fiber_network_impl(source: &Model, requests: &[FiberFaceRequest], cutter: &Model, cutter_face: usize, limits: super::CutLimits, automatic: bool) -> Result<FiberNetwork> {
+        let super::CutLimits { tolerance_uv, max_cells, max_exact } = limits;
     source.validate()?;
     cutter.validate()?;
     if !(1..=256).contains(&requests.len())
