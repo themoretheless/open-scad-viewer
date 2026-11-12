@@ -17,23 +17,30 @@ fn fixed_profile_weights(s: &Surface) -> bool {
     s.weights.iter().all(|r| r == &s.weights[0])
         || s.weights.iter().all(|r| r.iter().all(|w| *w == r[0]))
 }
-fn verify(
-    c: &Curve,
-    p: &Curve,
-    s: &Surface,
-    reverse: bool,
-    range: [f64; 2],
+/// Agreement tolerance and the shared cell budget of one strip's deviation proofs.
+struct DeviationWork {
     delta: f64,
-    cells: &mut usize,
+    cells: usize,
     max: usize,
-) -> Result<()> {
-    require(*cells < max, "Strip deviation work exhausted")?;
-    let r = agreement::verify_on(c, p, s, reverse, range, delta, (max - *cells).min(10000))?;
-    *cells += r.cells;
-    require(
-        r.status == agreement::Status::WithinTolerance,
-        "Whole original strip deviation remains unproven",
-    )
+}
+impl DeviationWork {
+    fn verify(
+        &mut self,
+        c: &Curve,
+        p: &Curve,
+        s: &Surface,
+        reverse: bool,
+        range: [f64; 2],
+    ) -> Result<()> {
+        require(self.cells < self.max, "Strip deviation work exhausted")?;
+        let budget = (self.max - self.cells).min(10000);
+        let r = agreement::verify_on(c, p, s, reverse, range, self.delta, budget)?;
+        self.cells += r.cells;
+        require(
+            r.status == agreement::Status::WithinTolerance,
+            "Whole original strip deviation remains unproven",
+        )
+    }
 }
 pub(super) fn inspect(
     c: &CentralLoftCandidate<'_, '_, '_>,
@@ -41,8 +48,7 @@ pub(super) fn inspect(
     index: usize,
     j: usize,
     axis: usize,
-    near_plane: f64,
-    far_plane: f64,
+    [near_plane, far_plane]: [f64; 2],
     max: usize,
 ) -> Result<StripFitReport> {
     let strip = &c.strips.strips[j];
@@ -83,7 +89,11 @@ pub(super) fn inspect(
         "Original axial station is not strictly monotone",
     )?;
     let delta = c.options.tolerances[0] / 64.;
-    let mut cells = 0;
+    let mut work = DeviationWork {
+        delta,
+        cells: 0,
+        max,
+    };
     let central_pc = &c.pcurves[index];
     let a = central_pc.control_points[0][0];
     let b = central_pc.control_points[1][0];
@@ -131,15 +141,12 @@ pub(super) fn inspect(
         )?;
         let x = parameter(clocks.old_breaks[span]);
         let y = parameter(clocks.old_breaks[span + 1]);
-        verify(
+        work.verify(
             &curve,
             pc,
             original,
             x > y,
             [x.min(y), x.max(y)],
-            delta,
-            &mut cells,
-            max,
         )?;
     }
     let far_index = usize::from(strip.end_order[1] != 0);
@@ -174,15 +181,12 @@ pub(super) fn inspect(
             "Original strip end sections cross",
         )?;
     }
-    verify(
+    work.verify(
         &far.curve,
         &far.skin_pcurve,
         original,
         false,
         far.skin_pcurve.domain(),
-        delta,
-        &mut cells,
-        max,
     )?;
     let cutter = &strip.cutters[1].faces[strip.cutter_faces[1]].surface;
     require(
@@ -193,15 +197,12 @@ pub(super) fn inspect(
             .all(|p| p[axis] == far_plane),
         "Far support is not the actual exact cutter",
     )?;
-    verify(
+    work.verify(
         &far.curve,
         &far.end_face_pcurve,
         cutter,
         false,
         far.end_face_pcurve.domain(),
-        delta,
-        &mut cells,
-        max,
     )?;
     let mut squared = I::point(0.);
     for k in (0..3).filter(|&k| k != axis) {
@@ -230,7 +231,7 @@ pub(super) fn inspect(
     )?;
     Ok(StripFitReport {
         displacement_upper_mm: upper,
-        cells,
+        cells: work.cells,
     })
 }
 #[cfg(test)]

@@ -142,8 +142,7 @@ pub(super) fn assemble(
             matches[0],
             j,
             axis,
-            original_near_cut.control_points[0][0][axis],
-            fixed,
+            [original_near_cut.control_points[0][0][axis], fixed],
             limits.cells - cells,
         )?;
         cells += proof.cells;
