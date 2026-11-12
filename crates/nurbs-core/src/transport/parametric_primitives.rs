@@ -248,8 +248,7 @@ fn try_dispatch_spirals_and_helices(v: &Value, op: &str) -> Option<Result<Value>
                 field(v, "radius")?,
                 field(v, "height")?,
                 field(v, "turns")?,
-                field(v, "start_pitch")?,
-                field(v, "end_pitch")?,
+                [field(v, "start_pitch")?, field(v, "end_pitch")?],
                 field(v, "phase_degrees")?,
                 field(v, "max_deviation")?,
             )?)

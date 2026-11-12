@@ -171,16 +171,12 @@ impl GregoryPatch {
     }
 
     /// Interior control point and its partials at corner `c` for local
-    /// coordinates (s, t) with ds/du, ds/dv, dt/du, dt/dv signs.
+    /// coordinates (s, t) with the Jacobian signs [[ds/du, ds/dv], [dt/du, dt/dv]].
     fn interior_point(
         &self,
         c: usize,
-        s: f64,
-        t: f64,
-        ds_du: f64,
-        ds_dv: f64,
-        dt_du: f64,
-        dt_dv: f64,
+        [s, t]: [f64; 2],
+        [[ds_du, ds_dv], [dt_du, dt_dv]]: [[f64; 2]; 2],
     ) -> ([f64; 3], [f64; 3], [f64; 3]) {
         let (cs, ct) = self.interior[c];
         let sum = s + t;
@@ -203,10 +199,10 @@ impl GregoryPatch {
     /// Interior net point (i, j) ∈ {1, 2}² with partials at (u, v).
     fn net_interior(&self, i: usize, j: usize, u: f64, v: f64) -> ([f64; 3], [f64; 3], [f64; 3]) {
         match (i, j) {
-            (1, 1) => self.interior_point(0, u, v, 1., 0., 0., 1.),
-            (2, 1) => self.interior_point(1, v, 1. - u, 0., 1., -1., 0.),
-            (2, 2) => self.interior_point(2, 1. - v, 1. - u, 0., -1., -1., 0.),
-            (1, 2) => self.interior_point(3, u, 1. - v, 1., 0., 0., -1.),
+            (1, 1) => self.interior_point(0, [u, v], [[1., 0.], [0., 1.]]),
+            (2, 1) => self.interior_point(1, [v, 1. - u], [[0., 1.], [-1., 0.]]),
+            (2, 2) => self.interior_point(2, [1. - v, 1. - u], [[0., -1.], [-1., 0.]]),
+            (1, 2) => self.interior_point(3, [u, 1. - v], [[1., 0.], [0., -1.]]),
             _ => unreachable!("interior indices are 1..=2"),
         }
     }
