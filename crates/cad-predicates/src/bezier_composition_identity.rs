@@ -220,14 +220,19 @@ fn piecewise_composition(spline:SplineSide<'_>,composed:ComposedSide<'_>,constan
         let pullback=ends.into_iter().flatten().collect::<Vec<_>>();
         let Some(curve)=spline_homogeneous(c,knots,degree,span,&pullback,ctx)? else {return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));};
         let Some(pcurve)=affine_homogeneous(p,&local,ctx)? else {return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));};
-        match compare_composition(&curve,&pcurve,s,d,nu,nv,constant_axes,ctx)? {
+        match compare_composition(&curve,&pcurve,SurfacePatch{s,d,nu,nv},constant_axes,ctx)? {
             BezierIdentity::Equal=>{},other=>return Ok(other),
         }
     }
     Ok(if covered {BezierIdentity::Equal}else{BezierIdentity::Indeterminate(Reason::MissingProof)})
 }
-fn composition_polynomials(p:&[Poly],s:&[[Expansion;4]],d:&[Expansion],nu:usize,nv:usize,
+/// Bézier surface patch on its domain: homogeneous controls, domain bounds
+/// `[u0, u1, v0, v1]` and the control counts in u and v.
+#[derive(Clone,Copy)]
+struct SurfacePatch<'a> {s:&'a [[Expansion;4]],d:&'a [Expansion],nu:usize,nv:usize}
+fn composition_polynomials(p:&[Poly],patch:SurfacePatch<'_>,
     constant_axes:[bool;3],ctx:&mut PredicateContext<'_>)->Result<Vec<Poly>,Reason> {
+        let SurfacePatch{s,d,nu,nv}=patch;
         let mut basis=Vec::new();
         for axis in 0..2 {
             let mut low=p[axis].clone();add_scaled(&mut low,&p[2],&Expansion::scalar(0.).sub(&d[2*axis],ctx)?,ctx)?;
@@ -271,9 +276,9 @@ fn compare_polynomial_rows(c:&[Poly],composed:&[Poly],constant_axes:[bool;3],
         }
         Ok(BezierIdentity::Equal)
 }
-fn compare_composition(c:&[Poly],p:&[Poly],s:&[[Expansion;4]],d:&[Expansion],nu:usize,nv:usize,
+fn compare_composition(c:&[Poly],p:&[Poly],patch:SurfacePatch<'_>,
     constant_axes:[bool;3],ctx:&mut PredicateContext<'_>)->Result<BezierIdentity,Reason> {
-    let composed=composition_polynomials(p,s,d,nu,nv,constant_axes,ctx)?;
+    let composed=composition_polynomials(p,patch,constant_axes,ctx)?;
     compare_polynomial_rows(c,&composed,constant_axes,ctx)
 }
 
@@ -360,7 +365,7 @@ pub fn rational_bezier_composition_projective_identity(
             return Ok(BezierIdentity::Indeterminate(Reason::MissingProof));
         };
         let p=homogeneous(&p,ctx)?;
-        compare_composition(&c,&p,&s,d,nu,nv,[false;3],ctx)
+        compare_composition(&c,&p,SurfacePatch{s:&s,d,nu,nv},[false;3],ctx)
     })().and_then(|v|ctx.charge(0).map(|_|v));
     Ok(BezierIdentityDecision{outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
 }
@@ -460,7 +465,7 @@ fn composition_identity_impl(
             }
         } else {homogeneous(&c,ctx)?};
         let p=homogeneous(&p,ctx)?;
-        compare_composition(&c,&p,&s,d,nu,nv,constant_axes,ctx)
+        compare_composition(&c,&p,SurfacePatch{s:&s,d,nu,nv},constant_axes,ctx)
     })().and_then(|v|ctx.charge(0).map(|_|v));
     Ok(BezierIdentityDecision{outcome:result.unwrap_or_else(BezierIdentity::Indeterminate),work_used:ctx.work_used(),context:ctx.identity()})
 }

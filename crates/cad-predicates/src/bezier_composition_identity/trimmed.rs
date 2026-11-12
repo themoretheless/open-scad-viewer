@@ -138,7 +138,7 @@ pub fn rational_bezier_trimmed_composition_identity(
         let pp = (0..3)
             .map(|k| polynomial(&p.iter().map(|p| p[k].clone()).collect::<Vec<_>>(), ctx))
             .collect::<Result<Vec<_>, _>>()?;
-        compare_composition(&cp, &pp, &s, d, nu, nv, [false; 3], ctx)
+        compare_composition(&cp, &pp, SurfacePatch { s: &s, d, nu, nv }, [false; 3], ctx)
     })()
     .and_then(|v| ctx.charge(0).map(|_| v));
     Ok(BezierIdentityDecision {

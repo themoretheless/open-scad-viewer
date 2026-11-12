@@ -178,7 +178,8 @@ pub fn rational_bspline_pair_composition_piecewise_identity(
                 let Some(pp) = spline_homogeneous(&p, pk, pdegree, ps, &pr, ctx)? else {
                     return Ok(missing);
                 };
-                match compare_composition(&cc, &pp, &s, d, nu, nv, [false; 3], ctx)? {
+                let patch = SurfacePatch { s: &s, d, nu, nv };
+                match compare_composition(&cc, &pp, patch, [false; 3], ctx)? {
                     BezierIdentity::Equal => {}
                     other => return Ok(other),
                 }
