@@ -182,15 +182,19 @@ impl OwnedPeriodicSupportTraces {
         let mut order = Vec::new();
         for cut in &p.parameters {
             order.push(arithmetic::parameter_order::compare(
-                &vec![Q::zero(), Q::one()],
-                &vec![t.clone()],
-                &[Q::zero(), Q::zero()],
-                &decode_polynomial(&cut.primitive)?,
-                &decode_polynomial(&cut.parameter)?,
-                &[
-                    decode_ratio(&cut.interval[0])?,
-                    decode_ratio(&cut.interval[1])?,
-                ],
+                arithmetic::parameter_order::ParameterRef::new(
+                    &vec![Q::zero(), Q::one()],
+                    &vec![t.clone()],
+                    &[Q::zero(), Q::zero()],
+                ),
+                arithmetic::parameter_order::ParameterRef::new(
+                    &decode_polynomial(&cut.primitive)?,
+                    &decode_polynomial(&cut.parameter)?,
+                    &[
+                        decode_ratio(&cut.interval[0])?,
+                        decode_ratio(&cut.interval[1])?,
+                    ],
+                ),
                 self.limits.max_refinements,
                 self.limits.max_resultant_size,
             )?);

@@ -245,18 +245,22 @@ fn parameter_cmp(
     let x = &a.exact;
     let y = &b.exact;
     arithmetic::parameter_order::compare(
-        &decode_polynomial(&x.primitive)?,
-        &decode_polynomial(&x.parameters[side_a])?,
-        &[
-            decode_ratio(&x.isolating_interval[0])?,
-            decode_ratio(&x.isolating_interval[1])?,
-        ],
-        &decode_polynomial(&y.primitive)?,
-        &decode_polynomial(&y.parameters[side_b])?,
-        &[
-            decode_ratio(&y.isolating_interval[0])?,
-            decode_ratio(&y.isolating_interval[1])?,
-        ],
+        arithmetic::parameter_order::ParameterRef::new(
+            &decode_polynomial(&x.primitive)?,
+            &decode_polynomial(&x.parameters[side_a])?,
+            &[
+                decode_ratio(&x.isolating_interval[0])?,
+                decode_ratio(&x.isolating_interval[1])?,
+            ],
+        ),
+        arithmetic::parameter_order::ParameterRef::new(
+            &decode_polynomial(&y.primitive)?,
+            &decode_polynomial(&y.parameters[side_b])?,
+            &[
+                decode_ratio(&y.isolating_interval[0])?,
+                decode_ratio(&y.isolating_interval[1])?,
+            ],
+        ),
         l.max_refinements,
         l.max_resultant_size,
     )

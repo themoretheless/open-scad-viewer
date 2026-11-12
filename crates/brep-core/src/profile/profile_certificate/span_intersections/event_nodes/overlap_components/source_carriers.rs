@@ -77,12 +77,16 @@ pub(super) fn compare(
     l: ParameterOrderLimits,
 ) -> Result<Ordering> {
     arithmetic::parameter_order::compare(
-        &decode_polynomial(&a.primitive)?,
-        &decode_polynomial(&a.parameter)?,
-        &[decode_ratio(&a.interval[0])?, decode_ratio(&a.interval[1])?],
-        &decode_polynomial(&b.primitive)?,
-        &decode_polynomial(&b.parameter)?,
-        &[decode_ratio(&b.interval[0])?, decode_ratio(&b.interval[1])?],
+        arithmetic::parameter_order::ParameterRef::new(
+            &decode_polynomial(&a.primitive)?,
+            &decode_polynomial(&a.parameter)?,
+            &[decode_ratio(&a.interval[0])?, decode_ratio(&a.interval[1])?],
+        ),
+        arithmetic::parameter_order::ParameterRef::new(
+            &decode_polynomial(&b.primitive)?,
+            &decode_polynomial(&b.parameter)?,
+            &[decode_ratio(&b.interval[0])?, decode_ratio(&b.interval[1])?],
+        ),
         l.max_refinements,
         l.max_resultant_size,
     )

@@ -68,12 +68,8 @@ pub(super) fn partition(
             let mut insertion = roots.len();
             for (j, (other, interval)) in roots.iter().enumerate() {
                 let order = a::parameter_order::compare(
-                    p,
-                    &identity,
-                    &root,
-                    &factors[*other],
-                    &identity,
-                    interval,
+                    a::parameter_order::ParameterRef::new(p, &identity, &root),
+                    a::parameter_order::ParameterRef::new(&factors[*other], &identity, interval),
                     limits.refinements,
                     64,
                 )?;

@@ -113,12 +113,8 @@ fn owned_groups(
     let compare = |a: &branch_neighbourhood::ParameterValue,
                    b: &branch_neighbourhood::ParameterValue| {
         parameter_order::compare(
-            &a.primitive,
-            &a.value,
-            &a.interval,
-            &b.primitive,
-            &b.value,
-            &b.interval,
+            parameter_order::ParameterRef::new(&a.primitive, &a.value, &a.interval),
+            parameter_order::ParameterRef::new(&b.primitive, &b.value, &b.interval),
             refinements,
             matrix,
         )
@@ -245,12 +241,8 @@ fn probes_impl(
             if let Some(intervals) = intervals {
                 let compare = |b: &branch_neighbourhood::ParameterValue| {
                     parameter_order::compare(
-                        &f,
-                        &vec![Q::zero(), Q::one()],
-                        &root,
-                        &b.primitive,
-                        &b.value,
-                        &b.interval,
+                        parameter_order::ParameterRef::new(&f, &vec![Q::zero(), Q::one()], &root),
+                        parameter_order::ParameterRef::new(&b.primitive, &b.value, &b.interval),
                         refinements,
                         matrix,
                     )
@@ -268,12 +260,16 @@ fn probes_impl(
                     for (alias, c) in centers.iter().enumerate().filter(|(_, c)| c.cell == cell) {
                         let compare = |bound: &branch_neighbourhood::ParameterValue| {
                             parameter_order::compare(
-                                &f,
-                                &vec![Q::zero(), Q::one()],
-                                &root,
-                                &bound.primitive,
-                                &bound.value,
-                                &bound.interval,
+                                parameter_order::ParameterRef::new(
+                                    &f,
+                                    &vec![Q::zero(), Q::one()],
+                                    &root,
+                                ),
+                                parameter_order::ParameterRef::new(
+                                    &bound.primitive,
+                                    &bound.value,
+                                    &bound.interval,
+                                ),
                                 refinements,
                                 matrix,
                             )

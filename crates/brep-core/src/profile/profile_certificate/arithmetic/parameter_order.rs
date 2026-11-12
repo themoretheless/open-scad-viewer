@@ -85,16 +85,43 @@ pub(super) fn closed_roots(f: &Poly, i: &[Q; 2]) -> Result<usize> {
         + usize::from(at(f, &i[0]).is_zero())
         + usize::from(at(f, &i[1]).is_zero()))
 }
+/// A borrowed algebraic parameter value: the root of `primitive` isolated by
+/// `interval`, mapped through the parameter polynomial `value`.
+#[derive(Clone, Copy)]
+pub(in crate::profile::profile_certificate) struct ParameterRef<'a> {
+    pub primitive: &'a Poly,
+    pub value: &'a Poly,
+    pub interval: &'a [Q; 2],
+}
+impl<'a> ParameterRef<'a> {
+    pub(in crate::profile::profile_certificate) fn new(
+        primitive: &'a Poly,
+        value: &'a Poly,
+        interval: &'a [Q; 2],
+    ) -> Self {
+        Self {
+            primitive,
+            value,
+            interval,
+        }
+    }
+}
 pub(in crate::profile::profile_certificate) fn compare(
-    f: &Poly,
-    p: &Poly,
-    a: &[Q; 2],
-    g: &Poly,
-    q: &Poly,
-    b: &[Q; 2],
+    first: ParameterRef<'_>,
+    second: ParameterRef<'_>,
     max_refinements: usize,
     max_matrix: usize,
 ) -> Result<Ordering> {
+    let ParameterRef {
+        primitive: f,
+        value: p,
+        interval: a,
+    } = first;
+    let ParameterRef {
+        primitive: g,
+        value: q,
+        interval: b,
+    } = second;
     bound(f)?;
     bound(g)?;
     let p = reduced(p, f)?;

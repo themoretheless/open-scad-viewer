@@ -49,12 +49,12 @@ fn derive(
     for end in 0..2 {
         let b = bound(&owner.cuts()[c.source][c.cuts[end]].value)?;
         let cmp = arithmetic::parameter_order::compare(
-            &b.primitive,
-            &b.value,
-            &b.interval,
-            &vec![Q::zero(), Q::one()],
-            &vec![parameter.clone()],
-            &[Q::zero(), Q::zero()],
+            arithmetic::parameter_order::ParameterRef::new(&b.primitive, &b.value, &b.interval),
+            arithmetic::parameter_order::ParameterRef::new(
+                &vec![Q::zero(), Q::one()],
+                &vec![parameter.clone()],
+                &[Q::zero(), Q::zero()],
+            ),
             limits.max_refinements,
             limits.max_resultant_size,
         )?;

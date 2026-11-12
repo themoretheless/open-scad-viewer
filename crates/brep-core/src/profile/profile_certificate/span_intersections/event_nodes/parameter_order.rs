@@ -58,12 +58,16 @@ fn decide(
         Ok([decode_ratio(&i[0])?, decode_ratio(&i[1])?])
     };
     arithmetic::parameter_order::compare(
-        &decode_polynomial(&a.primitive)?,
-        &decode_polynomial(&a.parameters[r[0].source])?,
-        &interval(&a.isolating_interval)?,
-        &decode_polynomial(&b.primitive)?,
-        &decode_polynomial(&b.parameters[r[1].source])?,
-        &interval(&b.isolating_interval)?,
+        arithmetic::parameter_order::ParameterRef::new(
+            &decode_polynomial(&a.primitive)?,
+            &decode_polynomial(&a.parameters[r[0].source])?,
+            &interval(&a.isolating_interval)?,
+        ),
+        arithmetic::parameter_order::ParameterRef::new(
+            &decode_polynomial(&b.primitive)?,
+            &decode_polynomial(&b.parameters[r[1].source])?,
+            &interval(&b.isolating_interval)?,
+        ),
         l.max_refinements,
         l.max_resultant_size,
     )

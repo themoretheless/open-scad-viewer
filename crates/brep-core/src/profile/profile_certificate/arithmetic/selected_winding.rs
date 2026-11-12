@@ -11,12 +11,12 @@ pub(in crate::profile::profile_certificate) fn compare(
     matrix: usize,
 ) -> Result<Ordering> {
     parameter_order::compare(
-        f,
-        &vec![domain[0].clone(), &domain[1] - &domain[0]],
-        root,
-        &bound.primitive,
-        &bound.value,
-        &bound.interval,
+        parameter_order::ParameterRef::new(
+            f,
+            &vec![domain[0].clone(), &domain[1] - &domain[0]],
+            root,
+        ),
+        parameter_order::ParameterRef::new(&bound.primitive, &bound.value, &bound.interval),
         refinements,
         matrix,
     )
@@ -68,12 +68,8 @@ pub(in crate::profile::profile_certificate) fn contribution_status(
     }
     let order = |a: &ParameterValue, b: &ParameterValue| {
         parameter_order::compare(
-            &a.primitive,
-            &a.value,
-            &a.interval,
-            &b.primitive,
-            &b.value,
-            &b.interval,
+            parameter_order::ParameterRef::new(&a.primitive, &a.value, &a.interval),
+            parameter_order::ParameterRef::new(&b.primitive, &b.value, &b.interval),
             refinements,
             matrix,
         )
