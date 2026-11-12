@@ -169,18 +169,29 @@ fn motion_upper(old: f64, new: f64, spent: f64) -> Result<f64> {
 }
 // A neighbouring P1 float can avoid a large compensating P2 displacement.
 // This is a finite NEW-proposal search, never a first-jet/G2 certificate.
-fn choose_endpoint(
+/// The clamped endpoint chart: root parameter, degree and the first two
+/// reciprocal knot spans.
+#[derive(Clone, Copy)]
+struct EndpointChart {
     root: D,
     degree: D,
     r1: D,
     r2: D,
-    first: D,
-    second: D,
+}
+fn choose_endpoint(
+    chart: EndpointChart,
+    [first, second]: [D; 2],
     old: [f64; 2],
     spent: [f64; 2],
     budget: Option<f64>,
     work: &mut Work,
 ) -> Result<([f64; 2], [f64; 2])> {
+    let EndpointChart {
+        root,
+        degree,
+        r1,
+        r2,
+    } = chart;
     let nearest = root.add(first.div(degree.mul(r1))).value();
     let trial = |p1: f64| -> Result<Option<([f64; 2], [f64; 2], f64)>> {
         let actual = degree.mul(r1).mul(D::new(p1).sub(root));
@@ -339,21 +350,10 @@ pub(super) fn reconcile(
                     let r2 = D::new(s.weights[ids[2]][row]).div(D::new(s.weights[ids[0]][row]));
                     let target_first = first.mul(h).mul(D::new(sign));
                     let boundary_row = row < 3 || row + 3 >= s.control_points[0].len();
-                    let (values, updated) = choose_endpoint(
-                        root,
-                        degree,
-                        r1,
-                        r2,
-                        target_first,
-                        second.mul(h.mul(h)),
-                        [
+                    let (values, updated) = choose_endpoint(EndpointChart { root: root, degree: degree, r1: r1, r2: r2 }, [target_first, second.mul(h.mul(h))], [
                             s.control_points[ids[1]][row][axis],
                             s.control_points[ids[2]][row][axis],
-                        ],
-                        motion[side],
-                        boundary_row.then_some(maximum_change),
-                        work,
-                    )?;
+                        ], motion[side], boundary_row.then_some(maximum_change), work)?;
                     motion[side] = updated;
                     s.control_points[ids[1]][row][axis] = values[0];
                     s.control_points[ids[2]][row][axis] = values[1];
@@ -595,12 +595,13 @@ mod float_choice_tests {
         let intended = old_second + 2.77e-8;
         let target = jets(10, [root, p1, intended], [1., 1e9, 1e9]);
         let (p, m) = choose_endpoint(
-            D::new(root),
-            D::new(10.),
-            D::new(1e9),
-            D::new(1e9),
-            target[0],
-            target[1],
+            EndpointChart {
+                root: D::new(root),
+                degree: D::new(10.),
+                r1: D::new(1e9),
+                r2: D::new(1e9),
+            },
+            [target[0], target[1]],
             [p1, old_second],
             [0.; 2],
             Some(2.5e-8),
@@ -614,16 +615,17 @@ mod float_choice_tests {
         assert!(actual[0].sub(target[0]).value().abs() < 2e-7);
         assert!(
             choose_endpoint(
-                D::new(root),
-                D::new(10.),
-                D::new(1e9),
-                D::new(1e9),
-                target[0],
-                target[1],
+                EndpointChart {
+                    root: D::new(root),
+                    degree: D::new(10.),
+                    r1: D::new(1e9),
+                    r2: D::new(1e9),
+                },
+                [target[0], target[1]],
                 [p1, old_second],
                 [0.; 2],
                 Some(2.5e-8),
-                &mut Work { used: 0, max: 0 }
+                &mut Work { used: 0, max: 0 },
             )
             .is_err()
         );
@@ -733,21 +735,10 @@ pub(super) fn move_free_seam_control(
         let degree = D::new(s.degree_u as f64);
         let r1 = D::new(s.weights[ids[1]][row]).div(D::new(s.weights[ids[0]][row]));
         let r2 = D::new(s.weights[ids[2]][row]).div(D::new(s.weights[ids[0]][row]));
-        let (p, _) = choose_endpoint(
-            root,
-            degree,
-            r1,
-            r2,
-            first.mul(h).mul(D::new(sign)),
-            second.mul(h.mul(h)),
-            [
+        let (p, _) = choose_endpoint(EndpointChart { root: root, degree: degree, r1: r1, r2: r2 }, [first.mul(h).mul(D::new(sign)), second.mul(h.mul(h))], [
                 s.control_points[ids[1]][row][axis],
                 s.control_points[ids[2]][row][axis],
-            ],
-            [0.; 2],
-            None,
-            work,
-        )?;
+            ], [0.; 2], None, work)?;
         s.control_points[ids[0]][row][axis] = new_root;
         s.control_points[ids[1]][row][axis] = p[0];
         s.control_points[ids[2]][row][axis] = p[1];
