@@ -251,21 +251,11 @@ pub fn propose_bound_edge(
         (&candidate.fillet.surface, &candidate.contacts, &branch)
     {
         if first.decision == super::branch::Decision::Unresolved {
-            Some(super::convex_branch::inspect(
-                source,
-                shell,
-                request,
-                skin,
-                [&contacts[0], &contacts[1]],
-                max_visits,
-                max_cells
+            Some(super::convex_branch::inspect(source, shell, request, skin, [&contacts[0], &contacts[1]], super::convex_branch::BranchBudget { max_visits: max_visits, max_cells: max_cells
                     .saturating_sub(candidate.cells)
-                    .saturating_sub(first.cells),
-                max_exact
+                    .saturating_sub(first.cells), max_exact: max_exact
                     .saturating_sub(candidate.exact_work)
-                    .saturating_sub(first.exact_work),
-                max_visits.min(1000000),
-            )?)
+                    .saturating_sub(first.exact_work), max_uv_work: max_visits.min(1000000) })?)
         } else {
             None
         }

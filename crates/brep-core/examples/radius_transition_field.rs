@@ -17,8 +17,19 @@ fn main(){
         1e-7,100000,1000000).unwrap();
     assert_eq!(built.status,fillet_contact::Status::VerifiedContacts);
     let skin=built.fillet.surface.as_ref().unwrap();let contacts=built.contacts.as_ref().unwrap();
-    let branch=fillet_contact::convex_branch::inspect(&source,0,request,skin,
-        [&contacts[0],&contacts[1]],100000,100000,1000000,100000).unwrap();
+    let branch=fillet_contact::convex_branch::inspect(
+        &source,
+        0,
+        request,
+        skin,
+        [&contacts[0],&contacts[1]],
+        fillet_contact::convex_branch::BranchBudget {
+            max_visits: 100000,
+            max_cells: 100000,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
+    ).unwrap();
     println!("branch={:?} reason={} roots={:?} cells={} exact={} uv={}",
         branch.decision,branch.reason,branch.common_source_clock,branch.cells,branch.exact_work,branch.uv_work);
     let roots=brep_core::edge_partition::contact_interval::between_contacts(

@@ -78,9 +78,19 @@ pub fn between_contacts(
         || !tolerance_uv.is_finite() || tolerance_uv <= 0. {
         return Err(refuse("Need bounded shared work and a positive UV tolerance"));
     }
-    let branch = branch::inspect(source, shell, request, skin, contacts,
-        limits.topology_visits, limits.refinement.max_cells,
-        limits.branch_exact_work, limits.branch_uv_work)?;
+    let branch = branch::inspect(
+        source,
+        shell,
+        request,
+        skin,
+        contacts,
+        branch::BranchBudget {
+            max_visits: limits.topology_visits,
+            max_cells: limits.refinement.max_cells,
+            max_exact: limits.branch_exact_work,
+            max_uv_work: limits.branch_uv_work,
+        },
+    )?;
     if branch.decision == branch::Decision::Unresolved {
         return Err(refuse("Fresh contact branch ownership remains unresolved"));
     }

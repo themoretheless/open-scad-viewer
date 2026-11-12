@@ -119,6 +119,14 @@ fn enclosure(q: &Q) -> Result<[f64; 2]> {
         "Exact parameter enclosure remained unresolved",
     ))
 }
+/// Network-visit, cell, exact-work and UV-work budgets of one convex branch inspection.
+#[derive(Clone, Copy, Debug)]
+pub struct BranchBudget {
+    pub max_visits: usize,
+    pub max_cells: usize,
+    pub max_exact: u64,
+    pub max_uv_work: usize,
+}
 /// A contact must be strictly nearer to the selected boundary carrier than
 /// every other carrier throughout its positive rational control hull. This
 /// conservative UV Voronoi gate prevents a far/opposite branch inheriting the
@@ -133,11 +141,14 @@ pub fn inspect(
     request: EdgeRadius,
     skin: &Surface,
     contacts: [&Contact; 2],
-    max_visits: usize,
-    max_cells: usize,
-    max_exact: u64,
-    max_uv_work: usize,
+    budget: BranchBudget,
 ) -> Result<Report> {
+    let BranchBudget {
+        max_visits,
+        max_cells,
+        max_exact,
+        max_uv_work,
+    } = budget;
     let plan = plan_radius_network(source, shell, &[request], max_visits)?;
     skin.validate()?;
     let e = &plan.edges[0];

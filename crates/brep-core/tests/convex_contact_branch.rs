@@ -137,10 +137,12 @@ fn partial_curved_branch_binds_to_oblique_edge_on_two_original_triangular_faces(
         r,
         &skin,
         [&c[0], &c[1]],
-        10000,
-        10000,
-        1000000,
-        100000,
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
     )
     .unwrap();
     assert_eq!(
@@ -166,10 +168,12 @@ fn opposite_carrier_stale_geometry_and_work_exhaustion_refuse_partial_ownership(
         r,
         &skin,
         [&c[0], &c[1]],
-        10000,
-        10000,
-        1000000,
-        0,
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 0,
+        },
     )
     .unwrap();
     assert_eq!(exhausted.decision, b::Decision::Unresolved);
@@ -186,10 +190,12 @@ fn opposite_carrier_stale_geometry_and_work_exhaustion_refuse_partial_ownership(
             r,
             &changed,
             [&c[0], &c[1]],
-            10000,
-            10000,
-            1000000,
-            100000
+            b::BranchBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+                max_uv_work: 100000,
+            },
         )
         .unwrap()
         .decision,
@@ -216,10 +222,12 @@ fn opposite_carrier_stale_geometry_and_work_exhaustion_refuse_partial_ownership(
         r,
         &skin,
         [&c[0], &c[1]],
-        10000,
-        10000,
-        1000000,
-        100000,
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
     )
     .unwrap();
     assert_eq!(proof.decision, b::Decision::Unresolved);
@@ -238,8 +246,19 @@ fn elevated_multispan_affine_source_trim_keeps_exact_owned_clock() {
         }
     }
     source.rebuild_topology_ids();
-    let report = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-        10000, 10000, 1000000, 100000).unwrap();
+    let report = b::inspect(
+        &source,
+        0,
+        request,
+        &skin,
+        [&contacts[0], &contacts[1]],
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
+    ).unwrap();
     assert_eq!(report.decision, b::Decision::BoundPartial, "{}", report.reason);
     assert_eq!(report.common_source_clock, Some([[0.25, 0.25], [0.75, 0.75]]));
 }
@@ -305,8 +324,19 @@ fn nonlinear_source_clocks_return_inverse_brackets_not_affine_guesses() {
             source.rebuild_topology_ids();
         }
         let before = source.clone();
-        let report = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-            10000, 10000, 1000000, 100000).unwrap();
+        let report = b::inspect(
+            &source,
+            0,
+            request,
+            &skin,
+            [&contacts[0], &contacts[1]],
+            b::BranchBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+                max_uv_work: 100000,
+            },
+        ).unwrap();
         assert_eq!(report.decision, b::Decision::BoundPartial, "{}", report.reason);
         assert!(report.contacts.iter().all(|c| c.source_clock.as_ref().is_some_and(|r| r.proven)));
         let inverse = report.common_source_clock.unwrap();
@@ -330,8 +360,19 @@ fn nonlinear_source_clocks_return_inverse_brackets_not_affine_guesses() {
             assert!(guessed < bounds[0] || guessed > bounds[1]);
         }
         assert_eq!(source, before);
-        let exhausted = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-            10000, 10000, 1000000, report.uv_work - 1).unwrap();
+        let exhausted = b::inspect(
+            &source,
+            0,
+            request,
+            &skin,
+            [&contacts[0], &contacts[1]],
+            b::BranchBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+                max_uv_work: report.uv_work - 1,
+            },
+        ).unwrap();
         assert_eq!(exhausted.decision, b::Decision::Unresolved);
         assert!(exhausted.common_source_clock.is_none());
     }
@@ -352,8 +393,19 @@ fn stationary_source_clock_never_inherits_inverse_admission() {
     source.rebuild_topology_ids();
     assert!(fillet_contact::topology::inspect_source_edge(&source, 0, request,
         10000, 10000, 1000000).unwrap().proven);
-    let report = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-        10000, 64, 1000000, 100000).unwrap();
+    let report = b::inspect(
+        &source,
+        0,
+        request,
+        &skin,
+        [&contacts[0], &contacts[1]],
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 64,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
+    ).unwrap();
     assert_eq!(report.decision, b::Decision::Unresolved);
     assert!(report.common_source_clock.is_none());
     assert!(report.cells <= 64 && report.uv_work <= 100000);
@@ -375,8 +427,19 @@ fn source_parameter_rounding_cannot_publish_overlapping_endpoint_brackets() {
         }
     }
     source.rebuild_topology_ids();
-    let report = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-        10000, 10000, 1000000, 100000).unwrap();
+    let report = b::inspect(
+        &source,
+        0,
+        request,
+        &skin,
+        [&contacts[0], &contacts[1]],
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
+    ).unwrap();
     assert_eq!(report.decision, b::Decision::Unresolved);
     assert!(report.common_source_clock.is_none());
 }
@@ -387,8 +450,19 @@ fn unequal_neighbor_contact_extents_intersect_in_original_nonlinear_edge_clock()
     use num_traits::FromPrimitive;
     let (source, request, skin, contacts) = nonlinear_from_parts(1.,
         fixture_spans([[0.25, 0.5, 0.75], [0.375, 0.5, 0.625]]));
-    let report = b::inspect(&source, 0, request, &skin, [&contacts[0], &contacts[1]],
-        10000, 10000, 1000000, 100000).unwrap();
+    let report = b::inspect(
+        &source,
+        0,
+        request,
+        &skin,
+        [&contacts[0], &contacts[1]],
+        b::BranchBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+            max_uv_work: 100000,
+        },
+    ).unwrap();
     assert_eq!(report.decision, b::Decision::BoundPartial, "{}", report.reason);
     let common = report.common_source_clock.unwrap();
     let q = |x| Q::from_f64(x).unwrap();
