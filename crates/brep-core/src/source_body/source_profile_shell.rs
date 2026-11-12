@@ -365,7 +365,7 @@ impl TriangleRefinementReport {
 
 #[path = "source_profile_shell_bisect_edges.rs"]
 mod bisect_edges;
-pub use bisect_edges::{AdaptiveInteriorLimits, InteriorBisectionReport};
+pub use bisect_edges::{AdaptiveInteriorLimits, BisectionWork, InteriorBisectionReport};
 
 #[path="source_profile_shell/enclose_support_flux.rs"]
 mod enclose_support_flux;

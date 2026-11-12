@@ -2,6 +2,13 @@
 use super::*;
 use nurbs_core::trim_domain::Location;
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap};
+/// Split, control and span budgets of one interior bisection pass.
+#[derive(Clone, Copy, Debug)]
+pub struct BisectionWork {
+    pub max_splits: usize,
+    pub controls: usize,
+    pub max_spans: usize,
+}
 pub struct AdaptiveInteriorLimits {
     pub max_splits: usize,
     pub controls: usize,
@@ -76,20 +83,19 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         max_spans: usize,
     ) -> Result<InteriorBisectionReport> {
         self.bisect_interior(
-            graph, candidates, max_splits, controls, max_spans, None, None,
+            graph,
+            candidates,
+            BisectionWork {
+                max_splits,
+                controls,
+                max_spans,
+            },
+            None,
+            None,
         )
     }
     /// Numerical approximation gate only; material trim remains independent.
-    pub fn bisect_candidate_deviation_edges(
-        &self,
-        graph: &mut BoundaryGraphReport,
-        candidates: FaceCandidateReport,
-        max_splits: usize,
-        controls: usize,
-        max_spans: usize,
-        target_mm: f64,
-        spans_per_query: usize,
-    ) -> Result<InteriorBisectionReport> {
+    pub fn bisect_candidate_deviation_edges(&self, graph: &mut BoundaryGraphReport, candidates: FaceCandidateReport, work: BisectionWork, target_mm: f64, spans_per_query: usize) -> Result<InteriorBisectionReport> {
         if !target_mm.is_finite() || target_mm <= 0. || spans_per_query > 100000 {
             return Err(Error::new(
                 "BREP_INTERIOR_BISECTION",
@@ -99,9 +105,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         self.bisect_interior(
             graph,
             candidates,
-            max_splits,
-            controls,
-            max_spans,
+            work,
             Some((target_mm, spans_per_query)),
             None,
         )
@@ -130,9 +134,11 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         self.bisect_interior(
             graph,
             candidates,
-            limits.max_splits,
-            limits.controls,
-            limits.spans,
+            BisectionWork {
+                max_splits: limits.max_splits,
+                controls: limits.controls,
+                max_spans: limits.spans,
+            },
             Some((limits.target_mm, limits.spans_per_query)),
             Some((
                 limits.trim_cells,
@@ -141,16 +147,8 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             )),
         )
     }
-    fn bisect_interior(
-        &self,
-        graph: &mut BoundaryGraphReport,
-        mut candidates: FaceCandidateReport,
-        max_splits: usize,
-        controls: usize,
-        max_spans: usize,
-        deviation_gate: Option<(f64, usize)>,
-        trim_gate: Option<(usize, usize, f64)>,
-    ) -> Result<InteriorBisectionReport> {
+    fn bisect_interior(&self, graph: &mut BoundaryGraphReport, mut candidates: FaceCandidateReport, work: BisectionWork, deviation_gate: Option<(f64, usize)>, trim_gate: Option<(usize, usize, f64)>) -> Result<InteriorBisectionReport> {
+        let BisectionWork { max_splits, controls, max_spans } = work;
         if max_splits > 100000 || controls > 1000000 || max_spans > 100000 {
             return Err(Error::new(
                 "BREP_INTERIOR_BISECTION",

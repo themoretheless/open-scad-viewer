@@ -2491,7 +2491,17 @@
                 let before_disabled=refinement_graph.vertices.len();
                 let disabled_candidates=shell.propose_boundary_face_triangles(&refinement_graph);
                 let disabled_count=disabled_candidates.triangles.len();
-                let disabled=shell.bisect_candidate_deviation_edges(&mut refinement_graph,disabled_candidates,100,1000,10000,0.05,0)?;
+                let disabled=shell.bisect_candidate_deviation_edges(
+                    &mut refinement_graph,
+                    disabled_candidates,
+                    crate::source_profile_body::BisectionWork {
+                        max_splits: 100,
+                        controls: 1000,
+                        max_spans: 10000,
+                    },
+                    0.05,
+                    0,
+                )?;
                 assert_eq!((disabled.splits,disabled.spans,disabled.deviation_queries),(0,0,0));
                 assert_eq!(disabled.candidates.triangles.len(),disabled_count);
                 assert_eq!(refinement_graph.vertices.len(),before_disabled);
@@ -2508,7 +2518,17 @@
                 let adaptive=trim_adaptive || std::env::var("CAD_BOUNDARY_ADAPTIVE").is_ok();
                 let bisection=if trim_adaptive {shell.bisect_candidate_trimmed_edges(&mut refinement_graph,candidates,crate::source_profile_body::AdaptiveInteriorLimits {
                     max_splits:interior_splits,controls:1000,spans:100000,spans_per_query:64,target_mm:0.05,
-                    trim_cells:100000,trim_cells_per_query:64,tolerance_uv:1e-8})?} else if adaptive {shell.bisect_candidate_deviation_edges(&mut refinement_graph,candidates,interior_splits,1000,100000,0.05,64)?}
+                    trim_cells:100000,trim_cells_per_query:64,tolerance_uv:1e-8})?} else if adaptive {shell.bisect_candidate_deviation_edges(
+                        &mut refinement_graph,
+                        candidates,
+                        crate::source_profile_body::BisectionWork {
+                            max_splits: interior_splits,
+                            controls: 1000,
+                            max_spans: 100000,
+                        },
+                        0.05,
+                        64,
+                    )?}
                     else {shell.bisect_candidate_interior_edges(&mut refinement_graph,candidates,interior_splits,1000,10000)?};
                 if adaptive {assert!(bisection.splits<=interior_splits);}else{assert_eq!(bisection.splits,interior_splits);}
                 assert!(bisection.spans<=if adaptive {100000}else{10000});

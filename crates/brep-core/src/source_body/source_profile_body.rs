@@ -575,7 +575,7 @@ pub struct RootSeamReplayLimits {
 #[path = "source_profile_shell.rs"]
 mod assembled_shell;
 pub use assembled_shell::{
-    FluxLimits, LineRootLimits, ShellScanLimits,
+    BisectionWork, FluxLimits, LineRootLimits, ShellScanLimits,
     AuditedContactPair, ContactAuditLimits, ExpressionShell, OriginalAdditionalContact,
     OriginalAdditionalProof, OriginalAdditionalReport, OriginalContactReport, OriginalFiberContact,
     OriginalFiberProof, OriginalFiberReport, OriginalPlanarContact, PairContactProof,
