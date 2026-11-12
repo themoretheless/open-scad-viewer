@@ -11,11 +11,17 @@ pub fn certify_path_guide_values(
     traversal: [f64; 2],
     max_cells: usize,
 ) -> Result<ValuesReport> {
-    path_guide_values_at(path,guide,twist,traversal,traversal,traversal,true,max_cells)
+    let traversal=PathGuideTraversal{
+        path:traversal,guide:traversal,law:traversal,same_parameter:true,
+    };
+    path_guide_values_at(path,guide,twist,traversal,max_cells)
 }
 fn path_guide_values_at(
-    path:&Curve,guide:&Curve,twist:&Curve,traversal:[f64;2],guide_traversal:[f64;2],law_traversal:[f64;2],same_parameter:bool,max_cells:usize,
+    path:&Curve,guide:&Curve,twist:&Curve,traversals:PathGuideTraversal,max_cells:usize,
 )->Result<ValuesReport>{
+    let PathGuideTraversal{
+        path:traversal,guide:guide_traversal,law:law_traversal,same_parameter,
+    }=traversals;
     let frame_values=|tangent,position,budget|->Result<ValuesReport>{
         if same_parameter && traversal==guide_traversal && traversal[0]!=traversal[1] {
             if let Some(paired)=super::paired_path_values::same_parameter_offset_values(path,guide,traversal,budget)? {
@@ -139,8 +145,8 @@ pub(crate) fn certify_path_guide_relative_values(
     max_cells: usize,
 )->Result<ControlValuesReport>{
     let ContactLaws { path, guide, scale, twist, affine } = laws;
-    let PathGuideTraversal { path: path_traversal, guide: guide_traversal, law: law_traversal, same_parameter } = traversal;
-    let frame=path_guide_values_at(path,guide,twist,path_traversal,guide_traversal,law_traversal,same_parameter,max_cells)?;
+    let law_traversal = traversal.law;
+    let frame=path_guide_values_at(path,guide,twist,traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     super::trajectory::control_values_with_fit(
         super::ControlLaws { path: &zero, scale, affine },
@@ -650,7 +656,10 @@ pub(crate) fn certify_independent_guided_cover(
     let mut pending=vec![[[0.,1.];3]];
     while let Some(cell)=pending.pop(){
         if work==max_cells{return Ok((Status::Unresolved,work));}
-        let report=path_guide_values_at(path,guide,twist,cell[0],cell[1],cell[2],false,max_cells-work)?;
+        let traversal=PathGuideTraversal{
+            path:cell[0],guide:cell[1],law:cell[2],same_parameter:false,
+        };
+        let report=path_guide_values_at(path,guide,twist,traversal,max_cells-work)?;
         work+=report.cells;
         if report.status==Status::Certified{continue;}
         if report.cells==0||work==max_cells{return Ok((Status::Unresolved,work));}
