@@ -212,7 +212,14 @@ pub fn propose_central_graph_constrained(
     extra: [&[(f64, usize)]; 2],
     anchors: &[[f64; 3]],
 ) -> Result<CentralGraph> {
-    propose_graph_constraints(collars, o, guides, fairness, extra, anchors, false, &[])
+    propose_graph_constraints(
+        collars,
+        o,
+        guides,
+        fairness,
+        extra,
+        GraphPins::Points(anchors),
+    )
 }
 /// A proposal-only second-derivative constraint at an owned boundary parameter.
 #[derive(Clone, Copy)]
@@ -230,7 +237,21 @@ pub fn propose_central_graph_junction_constrained(
     extra: [&[(f64, usize)]; 2],
     hessians: &[GraphHessianAnchor],
 ) -> Result<CentralGraph> {
-    propose_graph_constraints(collars, o, guides, fairness, extra, &[], true, hessians)
+    propose_graph_constraints(
+        collars,
+        o,
+        guides,
+        fairness,
+        extra,
+        GraphPins::Junctions(hessians),
+    )
+}
+/// Hard constraints of one graph solve: either world-point anchors, or full
+/// junction two-jets plus selected boundary Hessians.
+#[derive(Clone, Copy)]
+enum GraphPins<'a> {
+    Points(&'a [[f64; 3]]),
+    Junctions(&'a [GraphHessianAnchor]),
 }
 fn propose_graph_constraints(
     collars: &CornerCollars,
@@ -238,10 +259,12 @@ fn propose_graph_constraints(
     guides: &[GraphGuide],
     fairness: f64,
     extra: [&[(f64, usize)]; 2],
-    anchors: &[[f64; 3]],
-    junctions: bool,
-    hessians: &[GraphHessianAnchor],
+    pins: GraphPins<'_>,
 ) -> Result<CentralGraph> {
+    let (anchors, junctions, hessians): (&[[f64; 3]], bool, &[GraphHessianAnchor]) = match pins {
+        GraphPins::Points(anchors) => (anchors, false, &[]),
+        GraphPins::Junctions(hessians) => (&[], true, hessians),
+    };
     if hessians.len() > 8
         || hessians.iter().any(|a| {
             a.boundary >= collars.boundaries.len()

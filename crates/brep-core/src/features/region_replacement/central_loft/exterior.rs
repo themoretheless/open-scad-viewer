@@ -235,8 +235,7 @@ impl CentralLoftCandidate<'_, '_, '_> {
                     s,
                     boundary,
                     &c,
-                    &source_pc,
-                    &target_pc,
+                    [&source_pc, &target_pc],
                     allowance,
                     max_exact / count as u64,
                 )
@@ -256,8 +255,7 @@ impl CentralLoftCandidate<'_, '_, '_> {
         s: &Surface,
         boundary: usize,
         c: &Curve,
-        source_pc: &Curve,
-        target_pc: &Curve,
+        [source_pc, target_pc]: [&Curve; 2],
         allowance: usize,
         max_exact: u64,
     ) -> Result<nurbs_core::surface_g2_pcurves::ExtrusionBoundaryReport> {

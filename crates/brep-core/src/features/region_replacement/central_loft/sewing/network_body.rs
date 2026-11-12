@@ -503,8 +503,7 @@ impl CentralLoftCandidate<'_, '_, '_> {
                 &m.faces[target].surface,
                 binding.boundary,
                 &m.edges[edge].curve,
-                &source_pc,
-                &target_pc,
+                [&source_pc, &target_pc],
                 (limits.cells - cells) / (bindings.len() - i),
                 0,
             )?;
