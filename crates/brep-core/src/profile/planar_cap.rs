@@ -253,23 +253,26 @@ pub struct GeneralCap {
     /// True when all input loops were reversed after a proven clockwise winding.
     pub orientation_reversed: bool,
 }
+/// Trim-audit pair, cell and domain-cell budgets and the agreement cell budget
+/// of one general planar cap.
+#[derive(Clone, Copy, Debug)]
+pub struct GeneralCapLimits {
+    pub max_trim_pairs: usize,
+    pub max_trim_cells: usize,
+    pub max_domain_cells: usize,
+    pub max_agreement_cells: usize,
+}
 pub fn build_general(
     loops: &[Vec<Curve>],
     z_plane: f64,
     tolerance: f64,
-    max_trim_pairs: usize,
-    max_trim_cells: usize,
-    max_domain_cells: usize,
-    max_agreement_cells: usize,
+    limits: GeneralCapLimits,
 ) -> Result<GeneralCap> {
     build_general_impl(
         loops,
         z_plane,
         tolerance,
-        max_trim_pairs,
-        max_trim_cells,
-        max_domain_cells,
-        max_agreement_cells,
+        limits,
         false,
     )
 }
@@ -277,12 +280,15 @@ fn build_general_impl(
     loops: &[Vec<Curve>],
     z_plane: f64,
     tolerance: f64,
-    max_trim_pairs: usize,
-    max_trim_cells: usize,
-    max_domain_cells: usize,
-    max_agreement_cells: usize,
+    limits: GeneralCapLimits,
     auto_orientation: bool,
 ) -> Result<GeneralCap> {
+    let GeneralCapLimits {
+        max_trim_pairs,
+        max_trim_cells,
+        max_domain_cells,
+        max_agreement_cells,
+    } = limits;
     if !z_plane.is_finite()
         || !tolerance.is_finite()
         || tolerance <= 0.
@@ -365,19 +371,13 @@ pub fn build_sheet_general(
     loops: &[Vec<Curve>],
     z_plane: f64,
     tolerance: f64,
-    max_trim_pairs: usize,
-    max_trim_cells: usize,
-    max_domain_cells: usize,
-    max_agreement_cells: usize,
+    limits: GeneralCapLimits,
 ) -> Result<GeneralSheet> {
     build_sheet_general_impl(
         loops,
         z_plane,
         tolerance,
-        max_trim_pairs,
-        max_trim_cells,
-        max_domain_cells,
-        max_agreement_cells,
+        limits,
         false,
     )
 }
@@ -387,19 +387,13 @@ pub fn build_sheet_general_oriented(
     loops: &[Vec<Curve>],
     z_plane: f64,
     tolerance: f64,
-    max_trim_pairs: usize,
-    max_trim_cells: usize,
-    max_domain_cells: usize,
-    max_agreement_cells: usize,
+    limits: GeneralCapLimits,
 ) -> Result<GeneralSheet> {
     build_sheet_general_impl(
         loops,
         z_plane,
         tolerance,
-        max_trim_pairs,
-        max_trim_cells,
-        max_domain_cells,
-        max_agreement_cells,
+        limits,
         true,
     )
 }
@@ -407,10 +401,7 @@ fn build_sheet_general_impl(
     loops: &[Vec<Curve>],
     z_plane: f64,
     tolerance: f64,
-    max_trim_pairs: usize,
-    max_trim_cells: usize,
-    max_domain_cells: usize,
-    max_agreement_cells: usize,
+    limits: GeneralCapLimits,
     auto_orientation: bool,
 ) -> Result<GeneralSheet> {
     if !(1e-10..=1e-2).contains(&tolerance) {
@@ -423,10 +414,7 @@ fn build_sheet_general_impl(
         loops,
         z_plane,
         tolerance,
-        max_trim_pairs,
-        max_trim_cells,
-        max_domain_cells,
-        max_agreement_cells,
+        limits,
         auto_orientation,
     )?;
     let model = match report.cap {

@@ -80,10 +80,12 @@ pub(super) fn cap_patch_network_impl(
             &[side_wire],
             z_plane,
             source.tolerance_mm,
-            pairs,
-            cells,
-            domain,
-            max_verification_cells,
+            crate::planar_cap::GeneralCapLimits {
+                max_trim_pairs: pairs,
+                max_trim_cells: cells,
+                max_domain_cells: domain,
+                max_agreement_cells: max_verification_cells,
+            },
         )?;
         let cap = report.model.ok_or_else(|| {
             Error::new(

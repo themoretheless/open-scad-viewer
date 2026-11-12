@@ -139,10 +139,12 @@ pub fn wheel_caps(
             std::slice::from_ref(contour),
             plane,
             tolerance,
-            limits.trim_pairs,
-            limits.trim_cells,
-            limits.domain_cells,
-            limits.agreement_cells,
+            planar_cap::GeneralCapLimits {
+                max_trim_pairs: limits.trim_pairs,
+                max_trim_cells: limits.trim_cells,
+                max_domain_cells: limits.domain_cells,
+                max_agreement_cells: limits.agreement_cells,
+            },
         )?;
         let cap = report.cap.ok_or_else(|| {
             let unresolved = report
