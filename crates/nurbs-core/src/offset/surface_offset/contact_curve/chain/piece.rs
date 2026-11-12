@@ -10,8 +10,10 @@ pub(super) fn fit(
 ) -> Result<Piece> {
     let (s, d) = ordered(sources, distances, span);
     let uv_fit = uv::fit_branch(
-        s,
-        d,
+        uv::OffsetFaces {
+            surfaces: s,
+            distances: d,
+        },
         span.axis,
         span.drive,
         span.free,
@@ -42,8 +44,10 @@ pub(super) fn fit(
         curves.swap(0, 1);
     }
     let world_fit = super::super::fit(
-        s,
-        d,
+        uv::OffsetFaces {
+            surfaces: s,
+            distances: d,
+        },
         span.axis,
         span.drive,
         span.free,

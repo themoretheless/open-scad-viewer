@@ -247,8 +247,10 @@ pub fn thicken(
         ..f
     };
     let world_fit = contact_curve::fit(
-        sources.each_ref(),
-        distances,
+        nurbs_core::offset::contact_pcurve::OffsetFaces {
+            surfaces: sources.each_ref(),
+            distances,
+        },
         band.axis,
         band.drive,
         band.first_other,

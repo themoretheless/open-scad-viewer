@@ -412,12 +412,14 @@ pub fn propose_trimmed_path(
     };
     let loops = original_loops(prepared);
     let contact = nurbs_core::offset_path_trims::certify(
-        [
+        nurbs_core::offset::contact_pcurve::OffsetFaces {
+            surfaces: [
             &prepared.supports[0].face.face().surface,
             &prepared.supports[1].face.face().surface,
         ],
+            distances,
+        },
         [&loops[0], &loops[1]],
-        distances,
         axis,
         drive,
         seeds,
@@ -469,12 +471,14 @@ pub fn propose_source_pcurves(
     };
     let loops = original_loops(prepared);
     let pcurves = nurbs_core::offset_path_pcurves::propose(
-        [
+        nurbs_core::offset::contact_pcurve::OffsetFaces {
+            surfaces: [
             &prepared.supports[0].face.face().surface,
             &prepared.supports[1].face.face().surface,
         ],
+            distances,
+        },
         [&loops[0], &loops[1]],
-        distances,
         axis,
         drive,
         seeds,

@@ -30,8 +30,10 @@ fn independent_nonunit_source_parameters_get_both_fresh_whole_interval_proofs() 
     let saved = (a.clone(), b.clone());
     let work = L::default();
     let r = uv::fit_branch(
-        [&a, &b],
-        [0.2, -0.2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2, -0.2],
+        },
         0,
         [3., 6.],
         [0.1, 0.3],
@@ -87,8 +89,10 @@ fn curved() -> [Surface; 2] {
 fn nonlinear_original_offset_contact_refines_curves_without_world_point_authority() {
     let s = curved();
     let r = uv::fit_branch(
-        s.each_ref(),
-        [0.1; 2],
+        uv::OffsetFaces {
+            surfaces: s.each_ref(),
+            distances: [0.1; 2],
+        },
         1,
         [0.35, 0.55],
         [0.88, 0.96],
@@ -142,8 +146,10 @@ fn budget_and_degree_stops_never_publish_one_successful_curve() {
         ),
     ] {
         let r = uv::fit_branch(
-            s.each_ref(),
-            [0.1; 2],
+            uv::OffsetFaces {
+                surfaces: s.each_ref(),
+                distances: [0.1; 2],
+            },
             1,
             [0.35, 0.55],
             [0.88, 0.96],
@@ -176,8 +182,10 @@ fn the_wrong_uv_sheet_refuses_even_when_its_world_points_coincide() {
     b.weights.push(vec![1.; 2]);
     b.knots_u = vec![0., 0., 1., 2., 3., 3.];
     let r = uv::fit_branch(
-        [&a, &b],
-        [0.2; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2; 2],
+        },
         0,
         [0.35, 0.39],
         [0.25, 0.35],
@@ -221,8 +229,10 @@ fn excluded_and_unresolved_bands_and_invalid_work_never_authorize_curves() {
         p[2] = 3.;
     }
     let absent = uv::fit_branch(
-        [&a, &b],
-        [0.2; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2; 2],
+        },
         0,
         [0.2, 0.8],
         [0.1, 0.9],
@@ -235,8 +245,10 @@ fn excluded_and_unresolved_bands_and_invalid_work_never_authorize_curves() {
     assert!(absent.curves.is_none());
     assert_eq!(absent.root_queries, 0);
     let same = uv::fit_branch(
-        [&a, &a],
-        [0.2; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &a],
+            distances: [0.2; 2],
+        },
         0,
         [0.2, 0.8],
         [0.1, 0.9],
@@ -249,8 +261,10 @@ fn excluded_and_unresolved_bands_and_invalid_work_never_authorize_curves() {
     assert!(same.curves.is_none());
     assert!(
         uv::fit_branch(
-            [&a, &b],
-            [0.2; 2],
+            uv::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2; 2],
+            },
             0,
             [0.2, 0.8],
             [0.1, 0.9],
@@ -259,7 +273,7 @@ fn excluded_and_unresolved_bands_and_invalid_work_never_authorize_curves() {
             L {
                 max_degree: 0,
                 ..L::default()
-            }
+            },
         )
         .is_err()
     );

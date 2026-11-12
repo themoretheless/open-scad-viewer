@@ -3,7 +3,6 @@ use crate::{
     Result, bernstein_interpolation as interpolation, check,
     curve::Curve,
     distance_bounds::Interval as I,
-    surface::Surface,
     surface_offset::{self, ContactBand},
 };
 
@@ -84,8 +83,7 @@ fn nodes(domain: [f64; 2], degree: usize) -> Result<Vec<f64>> {
 /// completeness. Work/degree exhaustion never publishes one successful side.
 #[allow(clippy::too_many_arguments)]
 pub fn fit_branch(
-    surfaces: [&Surface; 2],
-    distances: [f64; 2],
+    faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
     axis: usize,
     drive: [f64; 2],
     free: [f64; 2],
@@ -93,6 +91,10 @@ pub fn fit_branch(
     tolerance_uv: f64,
     limits: FitLimits,
 ) -> Result<FitReport> {
+    let crate::offset::contact_pcurve::OffsetFaces {
+        surfaces,
+        distances,
+    } = faces;
     check(
         tolerance_uv.is_finite()
             && tolerance_uv > 0.

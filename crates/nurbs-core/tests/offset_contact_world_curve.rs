@@ -40,8 +40,10 @@ fn nonunit_contact_clock_has_an_independent_complete_world_error_bound() {
     let saved = (a.clone(), b.clone());
     let limits = L::default();
     let r = world::fit(
-        [&a, &b],
-        [0.2, -0.2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2, -0.2],
+        },
         0,
         [3., 6.],
         [0.1, 0.3],
@@ -90,8 +92,10 @@ fn curved() -> [Surface; 2] {
 fn nonlinear_world_contact_refines_degree_and_covers_the_literal_rounded_curve() {
     let s = curved();
     let r = world::fit(
-        s.each_ref(),
-        [0.1; 2],
+        uv::OffsetFaces {
+            surfaces: s.each_ref(),
+            distances: [0.1; 2],
+        },
         1,
         [0.35, 0.55],
         [0.88, 0.96],
@@ -174,8 +178,10 @@ fn each_work_limit_and_insufficient_degree_publish_no_world_curve() {
         ),
     ] {
         let r = world::fit(
-            s.each_ref(),
-            [0.1; 2],
+            uv::OffsetFaces {
+                surfaces: s.each_ref(),
+                distances: [0.1; 2],
+            },
             1,
             [0.35, 0.55],
             [0.88, 0.96],
@@ -207,8 +213,10 @@ fn whole_world_coincidence_does_not_authorize_the_wrong_original_uv_sheet() {
     b.weights.extend([vec![1.; 2], vec![1.; 2]]);
     b.knots_u = vec![0., 0., 1., 2., 3., 3.];
     let r = world::fit(
-        [&a, &b],
-        [0.2; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2; 2],
+        },
         0,
         [0.35, 0.39],
         [0.25, 0.35],
@@ -219,8 +227,10 @@ fn whole_world_coincidence_does_not_authorize_the_wrong_original_uv_sheet() {
     .unwrap();
     assert_eq!(r.stop, Stop::Certified);
     let pair = uv::fit_branch(
-        [&a, &b],
-        [0.2; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.2; 2],
+        },
         0,
         [0.35, 0.39],
         [0.25, 0.35],
@@ -270,8 +280,10 @@ fn absent_nonisolated_and_wrong_clock_inputs_never_provide_world_authority() {
         p[2] = 3.;
     }
     let absent = world::fit(
-        [&a, &b],
-        [0.1; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &b],
+            distances: [0.1; 2],
+        },
         0,
         [0.2, 0.8],
         [0.1, 0.9],
@@ -283,8 +295,10 @@ fn absent_nonisolated_and_wrong_clock_inputs_never_provide_world_authority() {
     assert_eq!(absent.stop, Stop::NoContact);
     assert!(absent.curve.is_none());
     let same = world::fit(
-        [&a, &a],
-        [0.1; 2],
+        uv::OffsetFaces {
+            surfaces: [&a, &a],
+            distances: [0.1; 2],
+        },
         0,
         [0.2, 0.8],
         [0.1, 0.9],

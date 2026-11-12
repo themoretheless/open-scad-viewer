@@ -133,15 +133,18 @@ fn station(
     Ok(i)
 }
 pub fn propose(
-    surfaces: [&Surface; 2],
+    faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
     loops: [&[Vec<Curve>]; 2],
-    distances: [f64; 2],
     axis: usize,
     drive: [f64; 2],
     seeds: [[[f64; 2]; 2]; 2],
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<Report> {
+    let crate::offset::contact_pcurve::OffsetFaces {
+        surfaces,
+        distances,
+    } = faces;
     check(
         (1..=100000).contains(&limits.proposal_cells)
             && (1..=100000).contains(&limits.correspondence_cells)
@@ -156,9 +159,8 @@ pub fn propose(
         TrimDomain::new(loops[1], tolerance_uv)?,
     ];
     let contact = trims::certify(
-        surfaces,
+        faces,
         loops,
-        distances,
         axis,
         drive,
         seeds,
@@ -416,9 +418,11 @@ mod tests {
         }
         let loops = loops();
         propose(
-            [&a, &b],
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2, -0.2],
+            },
             [&loops, &loops],
-            [0.2, -0.2],
             0,
             [0.1, 0.9],
             [[[0.1, 0.], [0.1, 0.]], [[0.9, 0.], [0.9, 0.]]],
@@ -458,9 +462,11 @@ mod tests {
             [[u, 0.], [p[0] / 3., p[1] / 3.]]
         });
         let r = propose(
-            [&a, &b],
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [-0.2, 0.2],
+            },
             [&loops, &loops],
-            [-0.2, 0.2],
             0,
             [0.2, 0.8],
             seeds,

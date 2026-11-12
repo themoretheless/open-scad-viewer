@@ -5,7 +5,6 @@ use crate::{
     curve::Curve,
     distance_bounds::Interval as I,
     offset_contact_pcurve as uv,
-    surface::Surface,
     surface_offset::{self, ContactBand},
 };
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,8 +36,7 @@ pub struct FitReport {
 /// shared-edge receipt or positive certificate is accepted from the caller.
 #[allow(clippy::too_many_arguments)]
 pub fn fit(
-    surfaces: [&Surface; 2],
-    distances: [f64; 2],
+    faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
     axis: usize,
     drive: [f64; 2],
     free: [f64; 2],
@@ -46,6 +44,10 @@ pub fn fit(
     tolerance_mm: f64,
     limits: FitLimits,
 ) -> Result<FitReport> {
+    let crate::offset::contact_pcurve::OffsetFaces {
+        surfaces,
+        distances,
+    } = faces;
     check(
         tolerance_mm.is_finite()
             && tolerance_mm > 0.

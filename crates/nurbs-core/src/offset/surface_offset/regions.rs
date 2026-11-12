@@ -213,8 +213,10 @@ pub fn fit_pair(
         "Choose literal natural source boundaries",
     )?;
     let fitting = fit::fit_branch(
-        sources,
-        distances,
+        fit::OffsetFaces {
+            surfaces: sources,
+            distances,
+        },
         axis,
         drive,
         free,

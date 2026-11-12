@@ -5,7 +5,6 @@ use crate::{
     check,
     curve::Curve,
     offset_contact_path as path,
-    surface::Surface,
     surface_contact::Witness,
     surface_offset::{self, ContactBand},
     trim_domain::{Classification, Location, TrimDomain},
@@ -39,15 +38,18 @@ pub struct Report {
     pub reason: &'static str,
 }
 pub fn certify(
-    surfaces: [&Surface; 2],
+    faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
     loops: [&[Vec<Curve>]; 2],
-    distances: [f64; 2],
     axis: usize,
     drive: [f64; 2],
     seeds: [[[f64; 2]; 2]; 2],
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<Report> {
+    let crate::offset::contact_pcurve::OffsetFaces {
+        surfaces,
+        distances,
+    } = faces;
     check(
         (1..=100000).contains(&limits.membership_cells)
             && (1..=100000).contains(&limits.region_pairs)
@@ -228,6 +230,7 @@ pub fn certify(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::surface::Surface;
     fn plane() -> Surface {
         Surface {
             degree_u: 1,
@@ -274,9 +277,11 @@ mod tests {
             p.swap(1, 2);
         }
         certify(
-            [&a, &b],
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2, -0.2],
+            },
             [&loops[0], &loops[1]],
-            [0.2, -0.2],
             0,
             [0.1, 0.9],
             [[[0.1, 0.], [0.1, 0.]], [[0.9, 0.], [0.9, 0.]]],
