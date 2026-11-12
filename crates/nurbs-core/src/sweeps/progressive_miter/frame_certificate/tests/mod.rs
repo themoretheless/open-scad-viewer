@@ -10,24 +10,24 @@ fn authored_remainder_covers_rotation_and_axial_miter_scale_product() {
     let scale=constant([1.,0.,0.]);let longitudinal=constant([0.,0.,1.]);let transverse=constant([1.,0.,0.]);
     let twist=crate::paths::bezier(vec![vec![0.,0.,0.],vec![1.,0.,0.]],None).unwrap();
     let straight=certify(&[[0.,0.,0.],[0.,0.,10.]],[1.,0.,0.],false,2.,10).unwrap();
-    let bound=straight.interpolation_upper_authored_frame(0,[0.,1.],[[1.,1.],[0.,0.],[0.,0.]],&longitudinal,&transverse,&scale,&twist,8).unwrap().unwrap();
+    let bound=straight.interpolation_upper_authored_frame_affine(0,[0.,1.],[[1.,1.],[0.,0.],[0.,0.]],super::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &twist, affine: None },8).unwrap().unwrap();
     let actual=((0.5_f64.cos()-(1.+1_f64.cos())/2.).powi(2)+(0.5_f64.sin()-1_f64.sin()/2.).powi(2)).sqrt();
     assert!(bound>=actual && bound<0.18);
-    let refined=straight.interpolation_upper_authored_frame(0,[0.,0.5],[[1.,1.],[0.,0.],[0.,0.]],&longitudinal,&transverse,&scale,&twist,8).unwrap().unwrap();
+    let refined=straight.interpolation_upper_authored_frame_affine(0,[0.,0.5],[[1.,1.],[0.,0.],[0.,0.]],super::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &twist, affine: None },8).unwrap().unwrap();
     assert!(refined<bound*0.3);
     let kinked=crate::curve::Curve {degree:1,knots:vec![0.,0.,0.5,1.,1.],control_points:vec![vec![0.,0.,0.],vec![1.,0.,0.],vec![0.,0.,0.]],weights:vec![1.;3],periodic:false};
     let frame=super::super::authored_frame_certificate::certify_twisted(&longitudinal,&transverse,&kinked,[0.,1.],8).unwrap();
     assert!(!frame.single_span);
-    let kink_bound=straight.interpolation_upper_authored_frame(0,[0.,1.],[[1.,1.],[0.,0.],[0.,0.]],&longitudinal,&transverse,&scale,&kinked,9).unwrap().unwrap();
+    let kink_bound=straight.interpolation_upper_authored_frame_affine(0,[0.,1.],[[1.,1.],[0.,0.],[0.,0.]],super::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &kinked, affine: None },9).unwrap().unwrap();
     // The midpoint has angle1 while both endpoints have angle0; crossing
     // the derivative jump requires the first-derivative remainder.
     assert!(kink_bound>=2.*0.5_f64.sin());
     let corner=certify(&[[0.,0.,0.],[0.,0.,10.],[10.,0.,10.]],[1.,0.,0.],false,2.,10).unwrap();
     let longitudinal=constant([1.,0.,0.]);let transverse=constant([0.,0.,1.]);let twist=constant([0.,0.,0.]);
     let scale=crate::paths::bezier(vec![vec![1.,0.,0.],vec![2.,0.,0.]],None).unwrap();
-    let bound=corner.interpolation_upper_authored_frame(0,[0.,1.],[[1.,1.],[0.,0.],[0.,0.]],&longitudinal,&transverse,&scale,&twist,8).unwrap().unwrap();
+    let bound=corner.interpolation_upper_authored_frame_affine(0,[0.,1.],[[1.,1.],[0.,0.],[0.,0.]],super::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &twist, affine: None },8).unwrap().unwrap();
     assert!(bound>=0.125 && bound<(2_f64.sqrt()/8.+1e-10),"{bound}");
-    assert!(corner.interpolation_upper_authored_frame(0,[0.,1.],[[1.,1.],[0.,0.],[0.,0.]],&longitudinal,&transverse,&scale,&twist,7).unwrap().is_none());
+    assert!(corner.interpolation_upper_authored_frame_affine(0,[0.,1.],[[1.,1.],[0.,0.],[0.,0.]],super::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &twist, affine: None },7).unwrap().is_none());
 }
 #[test]
 fn authored_station_keeps_path_projection_and_one_law_budget() {
@@ -36,12 +36,12 @@ fn authored_station_keeps_path_projection_and_one_law_budget() {
     let longitudinal=constant([1.,0.,0.]);
     let transverse=constant([0.,0.,1.]);
     let scale=constant([1.,0.,0.]);let twist=constant([0.,0.,0.]);
-    let p=r.station_local_authored_frame(0,[0.5,0.5],[[1.,1.],[0.,0.],[0.,0.]],&longitudinal,&transverse,&scale,&twist,8).unwrap().unwrap();
+    let p=r.station_local_authored_frame_affine(0,[0.5,0.5],[[1.,1.],[0.,0.],[0.,0.]],super::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &twist, affine: None },8).unwrap().unwrap();
     // q is axial to the path but transverse to the authored frame.
     // At the halfway station the end-plane miter subtracts half of q.
     contains(p,[0.,0.,5.5]);
-    assert!(r.station_local_authored_frame(0,[0.5,0.5],[[1.,1.],[0.,0.],[0.,0.]],&longitudinal,&transverse,&scale,&twist,7).unwrap().is_none());
-    assert!(r.station_local_authored_frame(0,[0.5,0.5],[[1.,1.],[0.,0.],[0.1,0.1]],&longitudinal,&transverse,&scale,&twist,8).is_err());
+    assert!(r.station_local_authored_frame_affine(0,[0.5,0.5],[[1.,1.],[0.,0.],[0.,0.]],super::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &twist, affine: None },7).unwrap().is_none());
+    assert!(r.station_local_authored_frame_affine(0,[0.5,0.5],[[1.,1.],[0.,0.],[0.1,0.1]],super::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &twist, affine: None },8).is_err());
 }
 #[test]
 fn independent_right_angle_minimum_rotation() {

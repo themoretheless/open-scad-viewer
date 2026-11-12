@@ -278,9 +278,6 @@ impl Report {
     /// expressed in the initial profile frame; local Z must be zero. Frame,
     /// twist and scale laws share one cell budget. Miter projection continues
     /// to use the path tangent and its endpoint planes, not the frame axis.
-    pub fn station_local_authored_frame(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,longitudinal:&crate::curve::Curve,transverse:&crate::curve::Curve,scale:&crate::curve::Curve,twist:&crate::curve::Curve,max_cells:usize)->Result<Option<VectorEnclosure>> {
-        self.station_local_authored_frame_affine(edge,fraction,local,FrameLaws { longitudinal, transverse, scale, twist, affine: None },max_cells)
-    }
     pub fn station_local_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,laws:FrameLaws<'_>,max_cells:usize)->Result<Option<VectorEnclosure>> {
         let FrameLaws { longitudinal, transverse, scale, twist, affine } = laws;
         self.station_frame_affine(
@@ -334,9 +331,6 @@ impl Report {
     /// Authored-frame interpolation remainder over an entire edge subinterval.
     /// Includes moving frame, twist, scale and the full path-miter field.
     /// Derivative rates map normalized traversal to the local interval.
-    pub fn interpolation_upper_authored_frame(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,longitudinal:&crate::curve::Curve,transverse:&crate::curve::Curve,scale:&crate::curve::Curve,twist:&crate::curve::Curve,max_cells:usize)->Result<Option<f64>> {
-        self.interpolation_upper_authored_frame_affine(edge,fraction,local,FrameLaws { longitudinal, transverse, scale, twist, affine: None },max_cells)
-    }
     pub fn interpolation_upper_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,laws:FrameLaws<'_>,max_cells:usize)->Result<Option<f64>> {
         let FrameLaws { longitudinal, transverse, scale, twist, affine } = laws;
         self.interpolation_upper_frame_affine(

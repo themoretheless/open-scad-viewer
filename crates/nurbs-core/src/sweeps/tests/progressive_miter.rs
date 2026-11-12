@@ -133,8 +133,8 @@ fn authored_frame_generation_refines_and_certifies_original_profile_interpolatio
     let sweep=Sweep::new(&profiles,&points,&scale,&twist,options).unwrap().with_frame_laws(&longitudinal,&transverse).unwrap();
     assert!(!sweep.preview_at(1).unwrap().report.accepted);
     let local=sweep.transport_certificate.profile_local_enclosure([0.1,0.,0.]).unwrap().unwrap();
-    sweep.transport_certificate.interpolation_upper_authored_frame(0,[0.,1./16.],local,&longitudinal,&transverse,&scale,&twist,64).unwrap().unwrap();
-    sweep.transport_certificate.station_local_authored_frame(0,[0.,0.],local,&longitudinal,&transverse,&scale,&twist,64).unwrap().unwrap();
+    sweep.transport_certificate.interpolation_upper_authored_frame_affine(0,[0.,1./16.],local,crate::sweeps::progressive_miter::frame_certificate::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &twist, affine: None },64).unwrap().unwrap();
+    sweep.transport_certificate.station_local_authored_frame_affine(0,[0.,0.],local,crate::sweeps::progressive_miter::frame_certificate::FrameLaws { longitudinal: &longitudinal, transverse: &transverse, scale: &scale, twist: &twist, affine: None },64).unwrap().unwrap();
     let level=sweep.preview_at(16).unwrap();
     assert!(level.report.accepted && level.report.authored_frames_applied,"{:?}",level.report);
     assert!(level.report.wall_regularity_certified.unwrap());
