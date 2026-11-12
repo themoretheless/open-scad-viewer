@@ -615,23 +615,23 @@ fn unwrap_periodic_regions(
 }
 
 /// Execute an atomic UV Boolean with default resource limits.
+/// One operand of a same-surface UV Boolean: the face `face` of `model` and
+/// the surface that face must carry.
+#[derive(Clone, Copy)]
+pub struct UvOperand<'a> {
+    pub surface: &'a Surface,
+    pub model: &'a crate::Model,
+    pub face: usize,
+}
 pub fn boolean_same_surface_uv(
-    first: &Surface,
-    a: &crate::Model,
-    face_a: usize,
-    second: &Surface,
-    b: &crate::Model,
-    face_b: usize,
+    first: UvOperand<'_>,
+    second: UvOperand<'_>,
     equivalence: Option<UvEquivalence>,
     operation: UvBooleanOperation,
 ) -> Result<SameSurfaceUvBoolean> {
     boolean_same_surface_uv_with_limits(
         first,
-        a,
-        face_a,
         second,
-        b,
-        face_b,
         equivalence,
         operation,
         SameSurfaceUvLimits::default(),
@@ -641,16 +641,22 @@ pub fn boolean_same_surface_uv(
 /// The result is a certified UV-region arrangement, not an authored 3D solid.
 /// Every limit used by a successful run is replayed from its certificate.
 pub fn boolean_same_surface_uv_with_limits(
-    first: &Surface,
-    a: &crate::Model,
-    face_a: usize,
-    second: &Surface,
-    b: &crate::Model,
-    face_b: usize,
+    first: UvOperand<'_>,
+    second: UvOperand<'_>,
     equivalence: Option<UvEquivalence>,
     operation: UvBooleanOperation,
     limits: SameSurfaceUvLimits,
 ) -> Result<SameSurfaceUvBoolean> {
+    let UvOperand {
+        surface: first,
+        model: a,
+        face: face_a,
+    } = first;
+    let UvOperand {
+        surface: second,
+        model: b,
+        face: face_b,
+    } = second;
     first.validate()?;
     second.validate()?;
     if !limits.tolerance_uv.is_finite()
@@ -713,29 +719,16 @@ pub fn boolean_same_surface_uv_with_limits(
 }
 
 pub fn verify_same_surface_uv_boolean(
-    first: &Surface,
-    a: &crate::Model,
-    face_a: usize,
-    second: &Surface,
-    b: &crate::Model,
-    face_b: usize,
+    first: UvOperand<'_>,
+    second: UvOperand<'_>,
     result: &SameSurfaceUvBoolean,
 ) -> Result<()> {
     let c = &result.certificate;
     if c.version != 1 {
         return Err(refused("UV Boolean certificate version mismatch"));
     }
-    let fresh = boolean_same_surface_uv_with_limits(
-        first,
-        a,
-        face_a,
-        second,
-        b,
-        face_b,
-        c.equivalence,
-        c.operation,
-        c.limits,
-    )?;
+    let fresh =
+        boolean_same_surface_uv_with_limits(first, second, c.equivalence, c.operation, c.limits)?;
     if fresh != *result {
         return Err(refused(
             "UV Boolean source, mapping, operation, limits or result changed",

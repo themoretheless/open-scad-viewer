@@ -7,7 +7,7 @@
 use crate::boolean_robustness::{classify_boolean_operand, surface_uv_domains, BooleanOperandKind};
 use crate::same_surface_uv_boolean::{
     boolean_same_surface_uv_with_limits,
-    SameSurfaceUvBooleanCertificate, SameSurfaceUvLimits, UvBooleanOperation, UvRegion,
+    SameSurfaceUvBooleanCertificate, SameSurfaceUvLimits, UvBooleanOperation, UvOperand, UvRegion,
 };
 use crate::{Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopoId, TopologyIds, TopologyLineageRecord, Vertex};
 use nurbs_core::{curve::Curve, surface::Surface, Error, Result};
@@ -376,8 +376,19 @@ pub fn boolean_same_surface_uv_retained_with_limits(
         return Err(refused("Sheet Boolean needs a common certified material side"));
     }
     let uv = boolean_same_surface_uv_with_limits(
-        &a.faces[face_a].surface, a, face_a, &b.faces[face_b].surface, b, face_b,
-        equivalence, operation, limits,
+        UvOperand {
+            surface: &a.faces[face_a].surface,
+            model: a,
+            face: face_a,
+        },
+        UvOperand {
+            surface: &b.faces[face_b].surface,
+            model: b,
+            face: face_b,
+        },
+        equivalence,
+        operation,
+        limits,
     )?;
     let mut model = build_uv_region_sheet(&a.faces[face_a].surface, uv.regions(), ua.reversed, a.tolerance_mm.max(b.tolerance_mm), limits)?;
     model.inherit_topology_ids(&[a, b]);
@@ -540,14 +551,36 @@ pub fn merge_same_surface_uv_faces_with_limits(source: &Model, selected: &[usize
         return Err(refused("Merge requires identical carriers and same-sense uses in one shell"));
     }
     let mut current = boolean_same_surface_uv_with_limits(
-        &source.faces[first].surface, source, first, &source.faces[first].surface, source, selected[1],
-        None, UvBooleanOperation::Union, limits,
+        UvOperand {
+            surface: &source.faces[first].surface,
+            model: source,
+            face: first,
+        },
+        UvOperand {
+            surface: &source.faces[first].surface,
+            model: source,
+            face: selected[1],
+        },
+        None,
+        UvBooleanOperation::Union,
+        limits,
     )?;
     for &next in &selected[2..] {
         let staged = build_uv_region_sheet(&source.faces[first].surface, current.regions(), reversed, source.tolerance_mm, limits)?;
         current = boolean_same_surface_uv_with_limits(
-            &source.faces[first].surface, &staged, 0, &source.faces[next].surface, source, next,
-            None, UvBooleanOperation::Union, limits,
+            UvOperand {
+                surface: &source.faces[first].surface,
+                model: &staged,
+                face: 0,
+            },
+            UvOperand {
+                surface: &source.faces[next].surface,
+                model: source,
+                face: next,
+            },
+            None,
+            UvBooleanOperation::Union,
+            limits,
         )?;
     }
     let sheet = build_uv_region_sheet(&source.faces[first].surface, current.regions(), reversed, source.tolerance_mm, limits)?;

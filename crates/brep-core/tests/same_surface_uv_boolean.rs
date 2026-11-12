@@ -2,7 +2,7 @@ use brep_core::{boolean_robustness::{
         certify_nurbs_uv_equivalence, preclassify_coincident_faces, CoincidentFaceClass,
     }, cuboid, same_surface_uv_boolean::{
         boolean_same_surface_uv, boolean_same_surface_uv_with_limits,
-        verify_same_surface_uv_boolean, SameSurfaceUvLimits, UvBooleanOperation,
+        verify_same_surface_uv_boolean, SameSurfaceUvLimits, UvBooleanOperation, UvOperand,
     }, Coedge, Edge, Face, FaceUse, Loop, Model, Shell, TopologyIds, Vertex};
 use nurbs_core::{curve::line, surface::Surface};
 
@@ -105,12 +105,16 @@ fn run(
     operation: UvBooleanOperation,
 ) -> brep_core::same_surface_uv_boolean::SameSurfaceUvBoolean {
     boolean_same_surface_uv(
-        &a.faces[0].surface,
-        a,
-        0,
-        &b.faces[0].surface,
-        b,
-        0,
+        UvOperand {
+            surface: &a.faces[0].surface,
+            model: a,
+            face: 0,
+        },
+        UvOperand {
+            surface: &b.faces[0].surface,
+            model: b,
+            face: 0,
+        },
         None,
         operation,
     )
@@ -134,12 +138,16 @@ fn overlapping_regions_support_all_operations_and_replay() {
             result.regions()
         );
         verify_same_surface_uv_boolean(
-            &a.faces[0].surface,
-            &a,
-            0,
-            &b.faces[0].surface,
-            &b,
-            0,
+            UvOperand {
+                surface: &a.faces[0].surface,
+                model: &a,
+                face: 0,
+            },
+            UvOperand {
+                surface: &b.faces[0].surface,
+                model: &b,
+                face: 0,
+            },
             &result,
         )
         .unwrap();
@@ -212,12 +220,16 @@ fn periodic_domain_stays_in_one_certified_unwrapped_chart() {
     let mut b = face_model(&[vec![rectangle(0.5, 0., 1.5, 1.)]]);
     b.faces[0].surface = a.faces[0].surface.clone();
     let result = boolean_same_surface_uv(
-        &a.faces[0].surface,
-        &a,
-        0,
-        &a.faces[0].surface,
-        &b,
-        0,
+        UvOperand {
+            surface: &a.faces[0].surface,
+            model: &a,
+            face: 0,
+        },
+        UvOperand {
+            surface: &a.faces[0].surface,
+            model: &b,
+            face: 0,
+        },
         None,
         UvBooleanOperation::Union,
     )
@@ -249,12 +261,16 @@ fn run_or_err(
     b: &Model,
 ) -> nurbs_core::Result<brep_core::same_surface_uv_boolean::SameSurfaceUvBoolean> {
     boolean_same_surface_uv(
-        &a.faces[0].surface,
-        a,
-        0,
-        &b.faces[0].surface,
-        b,
-        0,
+        UvOperand {
+            surface: &a.faces[0].surface,
+            model: a,
+            face: 0,
+        },
+        UvOperand {
+            surface: &b.faces[0].surface,
+            model: b,
+            face: 0,
+        },
         None,
         UvBooleanOperation::Union,
     )
@@ -309,21 +325,11 @@ fn resource_limits_are_replayed_and_work_is_actual() {
     let a = face_model(&[vec![rectangle(0., 0., 2., 2.)]]);
     let b = face_model(&[vec![rectangle(1., 1., 3., 3.)]]);
     let before = (a.clone(), b.clone());
-    let limited = boolean_same_surface_uv_with_limits(
-        &a.faces[0].surface,
-        &a,
-        0,
-        &b.faces[0].surface,
-        &b,
-        0,
-        None,
-        UvBooleanOperation::Union,
-        SameSurfaceUvLimits {
+    let limited = boolean_same_surface_uv_with_limits(UvOperand { surface: &a.faces[0].surface, model: &a, face: 0 }, UvOperand { surface: &b.faces[0].surface, model: &b, face: 0 }, None, UvBooleanOperation::Union, SameSurfaceUvLimits {
             tolerance_uv: 1e-9,
             max_segments: 2048,
             max_work: 1,
-        },
-    )
+        })
     .unwrap_err();
     assert_eq!(limited.code, "BREP_RESOURCE_LIMIT");
     assert_eq!((a, b), before);
@@ -341,13 +347,17 @@ fn resource_limits_are_replayed_and_work_is_actual() {
         forged,
     );
     assert!(verify_same_surface_uv_boolean(
-        &a.faces[0].surface,
-        &a,
-        0,
-        &b.faces[0].surface,
-        &b,
-        0,
-        &forged
+        UvOperand {
+            surface: &a.faces[0].surface,
+            model: &a,
+            face: 0,
+        },
+        UvOperand {
+            surface: &b.faces[0].surface,
+            model: &b,
+            face: 0,
+        },
+        &forged,
     )
     .is_err());
 }
