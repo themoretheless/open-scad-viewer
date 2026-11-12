@@ -206,11 +206,13 @@ fn main() {
         radius.decision, radius.reason, radius.maximum_center_gap_mm
     );
     let retention = face_cut::plan_contact_retention(
-        &source,
-        0,
-        request,
-        skin,
-        [&contacts[0], &contacts[1]],
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin,
+            contacts: [&contacts[0], &contacts[1]],
+        },
         "expanded-runout",
         1e-8,
         Default::default(),

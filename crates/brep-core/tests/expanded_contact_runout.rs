@@ -46,11 +46,13 @@ fn expanded_runout_keeps_central_radius_and_removes_endpoint_obstruction() {
     );
     assert!(radius.maximum_center_gap_mm.unwrap()[1] <= 1e-7);
     let retention = face_cut::plan_contact_retention(
-        &source,
-        0,
-        request,
-        &proposal.skin,
-        [&contacts[0], &contacts[1]],
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin: &proposal.skin,
+            contacts: [&contacts[0], &contacts[1]],
+        },
         "qualified-expanded-runout",
         1e-8,
         Default::default(),

@@ -13,11 +13,13 @@ fn curved_nurbs_contact_body_is_g2_curvature_bounded_and_globally_embedded() {
         "Selected source edge must really be curved"
     );
     let retention = face_cut::plan_contact_retention(
-        &source,
-        0,
-        request,
-        &skin,
-        [&contacts[0], &contacts[1]],
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin: &skin,
+            contacts: [&contacts[0], &contacts[1]],
+        },
         "qualified-compatible-nurbs-contact",
         1e-8,
         Default::default(),

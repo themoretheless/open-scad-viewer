@@ -33,15 +33,23 @@ fn main(){
     println!("branch={:?} reason={} roots={:?} cells={} exact={} uv={}",
         branch.decision,branch.reason,branch.common_source_clock,branch.cells,branch.exact_work,branch.uv_work);
     let roots=brep_core::edge_partition::contact_interval::between_contacts(
-        &source,0,request,skin,[&contacts[0],&contacts[1]],
-        "automatic-r1-original-roots",1e-8,Default::default());
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin,
+            contacts: [&contacts[0],&contacts[1]],
+        },
+        "automatic-r1-original-roots",
+        1e-8,
+        Default::default(),
+    );
     let roots_proven=match &roots {
         Ok(r)=>{println!("shared_roots={:?} errors={:?} cells={} reversed={:?}",r.root_parameters(),
             r.root_error_upper(),r.cells(),r.branch().contacts.iter().map(|c|c.contact_reversed).collect::<Vec<_>>());true},
         Err(e)=>{println!("shared_roots_unproven={e}");false},
     };
-    let material=brep_core::face_cut::plan_contact_retention(&source,0,request,skin,
-        [&contacts[0],&contacts[1]],"automatic-r1-material",1e-8,Default::default(),|roots| {
+    let material=brep_core::face_cut::plan_contact_retention(brep_core::edge_partition::contact_interval::EdgeContacts { source: &source, shell: 0, request: request, skin: skin, contacts: [&contacts[0],&contacts[1]] }, "automatic-r1-material", 1e-8, Default::default(), |roots| {
             Ok(plan.edges[0].supports.iter().enumerate().map(|(side,&face)| {
                 let mut ends=roots.endpoints().map(|v|roots.model().vertices[v].point.to_vec());
                 if roots.branch().contacts[side].contact_reversed {ends.reverse();}

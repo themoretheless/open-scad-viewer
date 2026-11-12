@@ -1,8 +1,7 @@
 //! Atomic contact-root refinement followed by two original-support material cuts.
 use super::{FaceRetention, OwnedCut, RetentionNetwork};
-use crate::{Model, edge_partition::contact_interval, fillet_contact::Contact,
-    region_replacement::EdgeRadius};
-use nurbs_core::{Error, Result, curve::Curve, surface::Surface};
+use crate::{Model, edge_partition::contact_interval};
+use nurbs_core::{Error, Result, curve::Curve};
 
 pub struct ContactFaceCut {
     pub face: usize,
@@ -118,23 +117,24 @@ fn plan_cuts(
 /// source projection and partition admission. Both outside source-edge pieces
 /// must remain on retained sectors. No contact is restricted or refitted.
 pub fn plan_contact_retention<F>(
-    source: &Model, shell: usize, request: EdgeRadius, skin: &Surface,
-    contacts: [&Contact; 2], key: &str, tolerance_uv: f64,
-    limits: ContactRetentionLimits, construct: F,
+    edge: contact_interval::EdgeContacts<'_>,
+    key: &str,
+    tolerance_uv: f64,
+    limits: ContactRetentionLimits,
+    construct: F,
 ) -> Result<ContactRetention>
 where F: FnOnce(&contact_interval::ContactInterval) -> Result<Vec<ContactFaceCut>> {
     if limits.cut_exact_work > 1_000_000 || !(1..=100_000).contains(&limits.domain_cells) {
         return Err(refuse("Need bounded contact material planning work"));
     }
-    let roots = contact_interval::between_contacts(source, shell, request, skin,
-        contacts, key, tolerance_uv, limits.roots)?;
+    let roots = contact_interval::between_contacts(edge, key, tolerance_uv, limits.roots)?;
     let cuts = construct(&roots)?;
     for (side, ownership) in roots.branch().contacts.iter().enumerate() {
         let Some(cut) = cuts.iter().find(|c|
             roots.model().1.faces.get(c.face) == Some(&ownership.face)) else {
             return Err(refuse("A root-owned support contact is missing from the proposed cuts"));
         };
-        if !cut.curves.iter().any(|c| c == &contacts[side].curve) {
+        if !cut.curves.iter().any(|c| c == &edge.contacts[side].curve) {
             return Err(refuse("Actual complete contact curve is missing or was refitted"));
         }
     }

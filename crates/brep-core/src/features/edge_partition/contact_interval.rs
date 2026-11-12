@@ -17,6 +17,16 @@ impl Default for Limits {
             branch_exact_work: 1_000_000, branch_uv_work: 100_000 }
     }
 }
+/// One source edge with its radius request, the authored fillet skin and the
+/// two contacts that bound it on the adjacent faces of `shell`.
+#[derive(Clone, Copy)]
+pub struct EdgeContacts<'a> {
+    pub source: &'a Model,
+    pub shell: usize,
+    pub request: EdgeRadius,
+    pub skin: &'a Surface,
+    pub contacts: [&'a Contact; 2],
+}
 fn refuse(s: &str) -> Error { Error::new("BREP_CONTACT_INTERVAL_UNPROVEN", s) }
 
 /// Immutable ownership of the actual refinement and freshly reconstructed roots.
@@ -53,9 +63,18 @@ impl ContactInterval {
     pub fn cells(&self) -> usize { self.cells }
     /// Stored mutable reports and rounded root midpoints are never authorities.
     pub fn reverify(&self) -> Result<()> {
-        let actual = between_contacts(self.split.source(), self.shell, self.request,
-            &self.skin, [&self.contacts[0], &self.contacts[1]], &self.key,
-            self.tolerance_uv, self.limits)?;
+        let actual = between_contacts(
+            EdgeContacts {
+                source: self.split.source(),
+                shell: self.shell,
+                request: self.request,
+                skin: &self.skin,
+                contacts: [&self.contacts[0], &self.contacts[1]],
+            },
+            &self.key,
+            self.tolerance_uv,
+            self.limits,
+        )?;
         if actual.model() != self.model() || actual.bands != self.bands
             || actual.bounds != self.bounds || actual.errors != self.errors
             || actual.endpoints() != self.endpoints() {
@@ -71,9 +90,18 @@ impl ContactInterval {
 /// Currently requires two disjoint interior roots; full-edge/end-touching
 /// intervals need their own endpoint-role transaction. This is not solid trimming.
 pub fn between_contacts(
-    source: &Model, shell: usize, request: EdgeRadius, skin: &Surface,
-    contacts: [&Contact; 2], key: &str, tolerance_uv: f64, limits: Limits,
+    edge: EdgeContacts<'_>,
+    key: &str,
+    tolerance_uv: f64,
+    limits: Limits,
 ) -> Result<ContactInterval> {
+    let EdgeContacts {
+        source,
+        shell,
+        request,
+        skin,
+        contacts,
+    } = edge;
     if !(1..=100_000).contains(&limits.refinement.max_cells)
         || !tolerance_uv.is_finite() || tolerance_uv <= 0. {
         return Err(refuse("Need bounded shared work and a positive UV tolerance"));

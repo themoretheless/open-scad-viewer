@@ -66,16 +66,35 @@ fn automatic_r1_contacts_on_original_curved_nurbs_stay_on_selected_branch() {
     assert_eq!(field.decision,brep_core::face_curvature::Decision::Within,"{}",field.reason);
     assert!(field.absolute_curvature_upper.is_some_and(|k| k<=10.));
     let roots=brep_core::edge_partition::contact_interval::between_contacts(
-        &source,0,request,skin,[&contacts[0],&contacts[1]],"qualified-fair-r1-roots",
-        1e-8,Default::default()).unwrap();
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin,
+            contacts: [&contacts[0],&contacts[1]],
+        },
+        "qualified-fair-r1-roots",
+        1e-8,
+        Default::default(),
+    ).unwrap();
     assert!(roots.branch().contacts.iter().all(|c|c.contact_reversed));
     assert!(roots.root_error_upper().iter().all(|&e|e<=source.tolerance_mm));
     roots.reverify().unwrap();
     eprintln!("automatic_curved_r1 curvature={:?} roots={:?} root_errors={:?}",
         field.absolute_curvature_upper,roots.root_parameters(),roots.root_error_upper());
-    let retained=brep_core::face_cut::plan_contact_retention(&source,0,request,skin,
-        [&contacts[0],&contacts[1]],"qualified-fair-r1-material",1e-8,Default::default(),
-        |r|Ok(fixture::paths(&source,request,contacts,r))).unwrap();
+    let retained=brep_core::face_cut::plan_contact_retention(
+        brep_core::edge_partition::contact_interval::EdgeContacts {
+            source: &source,
+            shell: 0,
+            request,
+            skin,
+            contacts: [&contacts[0],&contacts[1]],
+        },
+        "qualified-fair-r1-material",
+        1e-8,
+        Default::default(),
+        |r|Ok(fixture::paths(&source,request,contacts,r)),
+    ).unwrap();
     assert_eq!(retained.plan().regions.len(),2);
     assert_eq!(retained.plan().model.faces.len(),source.faces.len()+2);
     for region in &retained.plan().regions {
