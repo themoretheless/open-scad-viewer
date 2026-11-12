@@ -144,9 +144,11 @@ fn finish(
     let remaining = limits.cap_regions.max_exact_work - construction_work;
     let proof = source_filling::inspect(
         sweep,
-        &last.model,
-        &groups,
-        ring_sizes,
+        source_filling::RetainedCaps {
+            model: &last.model,
+            cap_faces: &groups,
+            loop_sizes: ring_sizes,
+        },
         source.budget(),
         limits.domain_tolerance,
         limits.projection_cells,

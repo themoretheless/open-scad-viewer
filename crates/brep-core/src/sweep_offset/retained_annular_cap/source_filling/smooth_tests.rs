@@ -121,8 +121,18 @@ fn smooth_hollow_filled_caps_cover_oblique_rmf_and_curved_frames() {
                 last.model.faces[mapped].surface.weights
             );
         }
-        let proof =
-            inspect_smooth(&source, &last.model, &groups, &[1, 1], 1e-8, 1e-8, limits()).unwrap();
+        let proof = inspect_smooth(
+            &source,
+            RetainedCaps {
+                model: &last.model,
+                cap_faces: &groups,
+                loop_sizes: &[1, 1],
+            },
+            1e-8,
+            1e-8,
+            limits(),
+        )
+        .unwrap();
         assert!(
             proof.source_filling_covered && proof.within_budget,
             "{kind}: {} {:?}",
@@ -145,8 +155,18 @@ fn smooth_hollow_filled_caps_cover_oblique_rmf_and_curved_frames() {
         // to the original path, nor an embedding/volume admission certificate.
         let mut short = limits();
         short.products = proof.products - 1;
-        let denied =
-            inspect_smooth(&source, &last.model, &groups, &[1, 1], 1e-8, 1e-8, short).unwrap();
+        let denied = inspect_smooth(
+            &source,
+            RetainedCaps {
+                model: &last.model,
+                cap_faces: &groups,
+                loop_sizes: &[1, 1],
+            },
+            1e-8,
+            1e-8,
+            short,
+        )
+        .unwrap();
         assert!(denied.filled_cap_error_upper.is_none() && !denied.within_budget);
         assert!(denied.products <= short.products);
         let mut omitted = groups.clone();
@@ -154,20 +174,32 @@ fn smooth_hollow_filled_caps_cover_oblique_rmf_and_curved_frames() {
         assert!(
             inspect_smooth(
                 &source,
-                &last.model,
-                &omitted,
-                &[1, 1],
+                RetainedCaps {
+                    model: &last.model,
+                    cap_faces: &omitted,
+                    loop_sizes: &[1, 1],
+                },
                 1e-8,
                 1e-8,
-                limits()
+                limits(),
             )
             .is_err()
         );
         let mut changed = last.model.clone();
         let pole = &mut changed.faces[groups[1][0]].surface.control_points[0][0][0];
         *pole = pole.next_up();
-        let denied =
-            inspect_smooth(&source, &changed, &groups, &[1, 1], 1e-8, 1e-8, limits()).unwrap();
+        let denied = inspect_smooth(
+            &source,
+            RetainedCaps {
+                model: &changed,
+                cap_faces: &groups,
+                loop_sizes: &[1, 1],
+            },
+            1e-8,
+            1e-8,
+            limits(),
+        )
+        .unwrap();
         assert!(denied.filled_cap_error_upper.is_none());
     }
 }

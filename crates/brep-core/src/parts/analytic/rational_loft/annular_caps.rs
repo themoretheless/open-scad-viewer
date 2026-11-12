@@ -176,9 +176,11 @@ pub(super) fn assemble(
     let pair = replace_pair(model, available)?;
     let filling = source_filling::inspect_smooth(
         source,
-        &pair.model,
-        &pair.groups,
-        sizes,
+        source_filling::RetainedCaps {
+            model: &pair.model,
+            cap_faces: &pair.groups,
+            loop_sizes: sizes,
+        },
         tolerance,
         tolerance_uv,
         Limits {

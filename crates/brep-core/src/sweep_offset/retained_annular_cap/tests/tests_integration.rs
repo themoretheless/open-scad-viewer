@@ -390,9 +390,11 @@ fn original_spatial_hollow_both_filled_caps_are_bounded_against_authored_source(
     ];
     let proof = source_filling::inspect(
         &sweep,
-        &last.model,
-        &groups,
-        &[1, 1],
+        source_filling::RetainedCaps {
+            model: &last.model,
+            cap_faces: &groups,
+            loop_sizes: &[1, 1],
+        },
         1e-10,
         1e-8,
         1000,
@@ -418,9 +420,11 @@ fn original_spatial_hollow_both_filled_caps_are_bounded_against_authored_source(
     denied.products = proof.products - 1;
     let short = source_filling::inspect(
         &sweep,
-        &last.model,
-        &groups,
-        &[1, 1],
+        source_filling::RetainedCaps {
+            model: &last.model,
+            cap_faces: &groups,
+            loop_sizes: &[1, 1],
+        },
         1e-10,
         1e-8,
         1000,
@@ -434,13 +438,15 @@ fn original_spatial_hollow_both_filled_caps_are_bounded_against_authored_source(
     assert!(
         source_filling::inspect(
             &sweep,
-            &last.model,
-            &omitted,
-            &[1, 1],
+            source_filling::RetainedCaps {
+                model: &last.model,
+                cap_faces: &omitted,
+                loop_sizes: &[1, 1],
+            },
             1e-10,
             1e-8,
             1000,
-            filling_limits()
+            filling_limits(),
         )
         .is_err()
     );
@@ -449,9 +455,11 @@ fn original_spatial_hollow_both_filled_caps_are_bounded_against_authored_source(
     *x = x.next_up();
     let mutated = source_filling::inspect(
         &sweep,
-        &changed,
-        &groups,
-        &[1, 1],
+        source_filling::RetainedCaps {
+            model: &changed,
+            cap_faces: &groups,
+            loop_sizes: &[1, 1],
+        },
         1e-10,
         1e-8,
         1000,

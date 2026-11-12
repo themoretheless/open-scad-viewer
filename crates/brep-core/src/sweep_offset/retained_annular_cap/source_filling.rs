@@ -233,11 +233,18 @@ fn patch_error_intervals(
     )))
 }
 
+/// The retained model, the face indices of its two annular caps and the
+/// profile counts of the two original rings.
+#[derive(Clone, Copy)]
+pub struct RetainedCaps<'a> {
+    pub model: &'a Model,
+    pub cap_faces: &'a [Vec<usize>; 2],
+    pub loop_sizes: &'a [usize],
+}
+
 pub fn inspect(
     sweep: &Sweep<'_>,
-    model: &Model,
-    cap_faces: &[Vec<usize>; 2],
-    loop_sizes: &[usize],
+    caps: RetainedCaps<'_>,
     tolerance: f64,
     tolerance_uv: f64,
     law_cells: usize,
@@ -245,9 +252,7 @@ pub fn inspect(
 ) -> Result<Report> {
     inspect_source(
         Source::Miter(sweep),
-        model,
-        cap_faces,
-        loop_sizes,
+        caps,
         tolerance,
         tolerance_uv,
         law_cells,
@@ -259,18 +264,14 @@ pub fn inspect(
 /// endpoint fillings. This does not admit the enclosing Solid or wall error.
 pub fn inspect_smooth(
     sweep: &MultiSweep<'_>,
-    model: &Model,
-    cap_faces: &[Vec<usize>; 2],
-    loop_sizes: &[usize],
+    caps: RetainedCaps<'_>,
     tolerance: f64,
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<Report> {
     inspect_source(
         Source::Smooth(sweep),
-        model,
-        cap_faces,
-        loop_sizes,
+        caps,
         tolerance,
         tolerance_uv,
         0,
@@ -280,14 +281,17 @@ pub fn inspect_smooth(
 
 fn inspect_source(
     sweep: Source<'_, '_>,
-    model: &Model,
-    cap_faces: &[Vec<usize>; 2],
-    loop_sizes: &[usize],
+    caps: RetainedCaps<'_>,
     tolerance: f64,
     tolerance_uv: f64,
     law_cells: usize,
     limits: Limits,
 ) -> Result<Report> {
+    let RetainedCaps {
+        model,
+        cap_faces,
+        loop_sizes,
+    } = caps;
     model.validate()?;
     if loop_sizes.len() != 2
         || loop_sizes.iter().any(|&v| v == 0)
