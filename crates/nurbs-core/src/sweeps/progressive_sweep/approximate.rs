@@ -426,14 +426,17 @@ pub fn approximate_authored_profiles(
 /// Shared guide-normal correspondence with simultaneous affine laws.
 pub fn approximate_guided_profiles(
     profiles: &[Curve],
-    path: &Curve,
-    scale: &Curve,
-    twist: &Curve,
-    guide: &Curve,
-    axis_scale: &Curve,
-    center: &Curve,
+    laws: ContactSweepLaws<'_>,
     options: Options,
 ) -> Result<MultiApproximation> {
+    let ContactSweepLaws {
+        path,
+        scale,
+        twist,
+        guide,
+        axis_scale,
+        center,
+    } = laws;
     collect_profiles(
         MultiSweep::new(profiles, path, scale, twist, options)?
             .with_orientation_guide(guide)?

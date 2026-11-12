@@ -50,17 +50,23 @@ pub(super) fn progressive_profile_body_internal(
         )?
     } else if let Some((guide, anchor)) = guidance {
         let (axes, center) = affine.unwrap();
+        let laws = nurbs_core::progressive_sweep::ContactSweepLaws {
+            path,
+            scale,
+            twist,
+            guide,
+            axis_scale: axes,
+            center,
+        };
         if let Some((index, parameter)) = anchor {
             nurbs_core::progressive_sweep::approximate_contact_profiles(
                 &profiles,
-                nurbs_core::progressive_sweep::ContactSweepLaws { path, scale, twist, guide, axis_scale: axes, center },
+                laws,
                 nurbs_core::progressive_sweep::ContactAnchor { profile_index: index, parameter },
                 options,
             )?
         } else {
-            nurbs_core::progressive_sweep::approximate_guided_profiles(
-                &profiles, path, scale, twist, guide, axes, center, options,
-            )?
+            nurbs_core::progressive_sweep::approximate_guided_profiles(&profiles, laws, options)?
         }
     } else if let Some((longitudinal, transverse)) = frames {
         let (axes, center) = affine.unwrap();

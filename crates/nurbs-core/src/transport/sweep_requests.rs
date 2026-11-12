@@ -245,15 +245,20 @@ if op == "surface_progressive_sweep_spatial_rmf_error" || op == "surface_progres
             let axes=axes.unwrap_or(progressive_sweep::constant_vector_law([1.;3])?);
             let center=center.unwrap_or(progressive_sweep::constant_vector_law([0.;3])?);
             let profiles=if op=="surface_progressive_sweep_profiles" {field::<Vec<curve::Curve>>(&v,"profiles")?} else {vec![field::<curve::Curve>(&v,"profile")?]};
+            let (path,scale,twist)=(field::<curve::Curve>(&v,"path")?,field::<curve::Curve>(&v,"scale")?,
+                field::<curve::Curve>(&v,"twist")?);
+            let laws=progressive_sweep::ContactSweepLaws {
+                path: &path, scale: &scale, twist: &twist, guide: &guide, axis_scale: &axes, center: &center,
+            };
             if let Some(parameter)=contact {
                 return encode(progressive_sweep::approximate_contact_profiles(
                     &profiles,
-                    progressive_sweep::ContactSweepLaws { path: &field::<curve::Curve>(&v,"path")?, scale: &field::<curve::Curve>(&v,"scale")?, twist: &field::<curve::Curve>(&v,"twist")?, guide: &guide, axis_scale: &axes, center: &center },
+                    laws,
                     progressive_sweep::ContactAnchor { profile_index: contact_profile.unwrap_or(0), parameter },
                     options,
                 )?);
             }
-            return encode(progressive_sweep::approximate_guided_profiles(&profiles,&field::<curve::Curve>(&v,"path")?,&field::<curve::Curve>(&v,"scale")?,&field::<curve::Curve>(&v,"twist")?,&guide,&axes,&center,options)?);
+            return encode(progressive_sweep::approximate_guided_profiles(&profiles,laws,options)?);
         }
         if field::<String>(&v,"orientation")? == "authored" {
             let axes=axes.unwrap_or(progressive_sweep::constant_vector_law([1.;3])?);
