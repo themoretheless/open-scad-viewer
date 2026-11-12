@@ -238,8 +238,28 @@ fn affine_station_projects_the_same_axis_scale_and_center_into_corner_plane(){
     let vector=|value:[f64;3]|crate::curve::Curve {degree:1,knots:vec![2.,2.,5.,5.],control_points:vec![value.to_vec();2],weights:vec![1.;2],periodic:false};
     let scalar=|value:f64|vector([value,0.,0.]);
     let axes=vector([2.,3.,1.]);let center=vector([0.5,-1.,2.]);
-    contains(r.station_with_affine_laws(0,[1.,1.],[1.,2.,0.],&scalar(2.),&scalar(0.),Some((&axes,&center)),6).unwrap().unwrap(),[4.5,11.,5.5]);
-    assert!(r.station_with_affine_laws(0,[1.,1.],[1.,2.,0.],&scalar(2.),&scalar(0.),Some((&axes,&center)),5).unwrap().is_none());
+    contains(r.station_with_affine_laws(
+        0,
+        [1.,1.],
+        [1.,2.,0.],
+        super::StationLaws {
+            scale: &scalar(2.),
+            twist: &scalar(0.),
+            affine: Some((&axes,&center)),
+        },
+        6,
+    ).unwrap().unwrap(),[4.5,11.,5.5]);
+    assert!(r.station_with_affine_laws(
+        0,
+        [1.,1.],
+        [1.,2.,0.],
+        super::StationLaws {
+            scale: &scalar(2.),
+            twist: &scalar(0.),
+            affine: Some((&axes,&center)),
+        },
+        5,
+    ).unwrap().is_none());
 }
 #[test]
 fn ordinary_affine_endpoint_uses_values_without_zero_width_jets() {
@@ -248,8 +268,28 @@ fn ordinary_affine_endpoint_uses_values_without_zero_width_jets() {
     let center=crate::curve::Curve{control_points:vec![vec![0.125,0.,0.],vec![0.5,0.25,0.125]],..scalar(0.)};
     let frame=certify(&[[0.,0.,0.],[0.,0.,10.]],[1.,0.,0.],false,2.,10).unwrap();
     for (t,expected) in [(0.,[2.125,2.,0.]),(1.,[3.5,4.25,10.125])] {
-        contains(frame.station_with_affine_laws(0,[t,t],[1.,2.,0.],&scalar(1.),&scalar(0.),Some((&axes,&center)),6).unwrap().unwrap(),expected);
-        assert!(frame.station_with_affine_laws(0,[t,t],[1.,2.,0.],&scalar(1.),&scalar(0.),Some((&axes,&center)),5).unwrap().is_none());
+        contains(frame.station_with_affine_laws(
+            0,
+            [t,t],
+            [1.,2.,0.],
+            super::StationLaws {
+                scale: &scalar(1.),
+                twist: &scalar(0.),
+                affine: Some((&axes,&center)),
+            },
+            6,
+        ).unwrap().unwrap(),expected);
+        assert!(frame.station_with_affine_laws(
+            0,
+            [t,t],
+            [1.,2.,0.],
+            super::StationLaws {
+                scale: &scalar(1.),
+                twist: &scalar(0.),
+                affine: Some((&axes,&center)),
+            },
+            5,
+        ).unwrap().is_none());
     }
 }
 #[test]
@@ -258,15 +298,45 @@ fn affine_remainder_covers_center_curvature_and_axial_projection_derivative(){
     let axes=crate::curve::Curve {control_points:vec![vec![1.,1.,1.];2],..scalar(1.)};
     let center=crate::curve::Curve {degree:2,knots:vec![2.,2.,2.,5.,5.,5.],control_points:vec![vec![0.,0.,0.],vec![0.,0.,0.],vec![0.,0.,2.]],weights:vec![1.;3],periodic:false};
     let r=certify(&[[0.,0.,0.],[0.,0.,10.]],[1.,0.,0.],false,2.,10).unwrap();
-    let bound=r.interpolation_upper_affine(0,[0.,1.],[1.,0.,0.],&scalar(1.),&scalar(0.),Some((&axes,&center)),6).unwrap().unwrap();
+    let bound=r.interpolation_upper_affine(
+        0,
+        [0.,1.],
+        [1.,0.,0.],
+        super::StationLaws {
+            scale: &scalar(1.),
+            twist: &scalar(0.),
+            affine: Some((&axes,&center)),
+        },
+        6,
+    ).unwrap().unwrap();
     assert!(bound>=0.5 && bound<0.50000000001);
     for i in 0..=100 {let f=i as f64/100.;assert!((2.*f*f-2.*f).abs()<=bound);}
-    assert!(r.interpolation_upper_affine(0,[0.,1.],[1.,0.,0.],&scalar(1.),&scalar(0.),Some((&axes,&center)),5).unwrap().is_none());
+    assert!(r.interpolation_upper_affine(
+        0,
+        [0.,1.],
+        [1.,0.,0.],
+        super::StationLaws {
+            scale: &scalar(1.),
+            twist: &scalar(0.),
+            affine: Some((&axes,&center)),
+        },
+        5,
+    ).unwrap().is_none());
     // Collinear interior station still has a normal miter plane. A varying
     // axial center is projected away there but remains at the open site.
     let r=certify(&[[0.,0.,0.],[0.,0.,10.],[0.,0.,20.]],[1.,0.,0.],false,2.,10).unwrap();
     let center=crate::curve::Curve {control_points:vec![vec![0.,0.,0.],vec![0.,0.,4.]],..scalar(0.)};
-    let bound=r.interpolation_upper_affine(0,[0.,1.],[1.,0.,0.],&scalar(1.),&scalar(0.),Some((&axes,&center)),6).unwrap().unwrap();
+    let bound=r.interpolation_upper_affine(
+        0,
+        [0.,1.],
+        [1.,0.,0.],
+        super::StationLaws {
+            scale: &scalar(1.),
+            twist: &scalar(0.),
+            affine: Some((&axes,&center)),
+        },
+        6,
+    ).unwrap().unwrap();
     assert!(bound>=0.5 && bound<0.50000000001);
     for i in 0..=100 {let f=i as f64/100.;assert!((2.*f*(1.-f)).abs()<=bound);}
 }

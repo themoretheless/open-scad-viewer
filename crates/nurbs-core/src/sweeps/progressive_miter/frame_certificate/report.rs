@@ -16,6 +16,13 @@ pub struct FrameLaws<'a> {
     pub twist: &'a crate::curve::Curve,
     pub affine: Option<(&'a crate::curve::Curve, &'a crate::curve::Curve)>,
 }
+/// Scale and twist laws of a station frame, with optional affine laws.
+#[derive(Clone, Copy)]
+pub struct StationLaws<'a> {
+    pub scale: &'a crate::curve::Curve,
+    pub twist: &'a crate::curve::Curve,
+    pub affine: Option<(&'a crate::curve::Curve, &'a crate::curve::Curve)>,
+}
 #[derive(Clone, Debug)]
 pub struct Report {
     pub status: Status,
@@ -211,14 +218,22 @@ impl Report {
         twist: &crate::curve::Curve,
         max_cells: usize,
     ) -> Result<Option<VectorEnclosure>> {
-        self.station_with_affine_laws(edge,fraction,authored,scale,twist,None,max_cells)
+        self.station_with_affine_laws(
+            edge,
+            fraction,
+            authored,
+            StationLaws {
+                scale,
+                twist,
+                affine: None,
+            },
+            max_cells,
+        )
     }
     /// Optional XYZ axis/center laws use their own authored domains and share
     /// one component-cell budget. Scalar scale/twist budgets remain separate.
-    pub fn station_with_affine_laws(
-        &self,edge:usize,fraction:[f64;2],authored:[f64;3],scale:&crate::curve::Curve,
-        twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize,
-    )->Result<Option<VectorEnclosure>> {
+    pub fn station_with_affine_laws(&self, edge:usize, fraction:[f64;2], authored:[f64;3], laws: StationLaws<'_>, max_cells:usize)->Result<Option<VectorEnclosure>> {
+        let StationLaws { scale, twist, affine } = laws;
         let Some(traversal) = self.traversal(edge, fraction)? else {
             return Ok(None);
         };
@@ -268,13 +283,21 @@ impl Report {
     }
     pub fn station_local_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,laws:FrameLaws<'_>,max_cells:usize)->Result<Option<VectorEnclosure>> {
         let FrameLaws { longitudinal, transverse, scale, twist, affine } = laws;
-        self.station_frame_affine(edge,fraction,local,FrameSource::Authored(longitudinal,transverse),scale,twist,affine,max_cells)
+        self.station_frame_affine(
+            edge,
+            fraction,
+            local,
+            FrameSource::Authored(longitudinal,transverse),
+            StationLaws {
+                scale,
+                twist,
+                affine,
+            },
+            max_cells,
+        )
     }
-    pub(in super::super) fn station_frame_affine(
-        &self, edge:usize, fraction:[f64;2], local:VectorEnclosure,
-        source:FrameSource<'_>,
-        scale:&crate::curve::Curve, twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize,
-    )->Result<Option<VectorEnclosure>> {
+    pub(in super::super) fn station_frame_affine(&self, edge:usize, fraction:[f64;2], local:VectorEnclosure, source:FrameSource<'_>, laws: StationLaws<'_>, max_cells:usize)->Result<Option<VectorEnclosure>> {
+        let StationLaws { scale, twist, affine } = laws;
         check(local.iter().flatten().all(|x|x.is_finite()) && local[2]==[0.,0.],"Authored miter local profile must be finite and planar")?;
         let Some(traversal)=self.traversal(edge,fraction)? else {return Ok(None);};
         let frame=match source {
@@ -316,13 +339,21 @@ impl Report {
     }
     pub fn interpolation_upper_authored_frame_affine(&self,edge:usize,fraction:[f64;2],local:VectorEnclosure,laws:FrameLaws<'_>,max_cells:usize)->Result<Option<f64>> {
         let FrameLaws { longitudinal, transverse, scale, twist, affine } = laws;
-        self.interpolation_upper_frame_affine(edge,fraction,local,FrameSource::Authored(longitudinal,transverse),scale,twist,affine,max_cells)
+        self.interpolation_upper_frame_affine(
+            edge,
+            fraction,
+            local,
+            FrameSource::Authored(longitudinal,transverse),
+            StationLaws {
+                scale,
+                twist,
+                affine,
+            },
+            max_cells,
+        )
     }
-    pub(in super::super) fn interpolation_upper_frame_affine(
-        &self,edge:usize,fraction:[f64;2],local:VectorEnclosure,
-        source:FrameSource<'_>,
-        scale:&crate::curve::Curve,twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize,
-    )->Result<Option<f64>> {
+    pub(in super::super) fn interpolation_upper_frame_affine(&self, edge:usize, fraction:[f64;2], local:VectorEnclosure, source:FrameSource<'_>, laws: StationLaws<'_>, max_cells:usize)->Result<Option<f64>> {
+        let StationLaws { scale, twist, affine } = laws;
         check(local.iter().flatten().all(|x|x.is_finite()) && local[2]==[0.,0.],"Authored miter local profile must be finite and planar")?;
         let Some(traversal)=self.traversal(edge,fraction)? else {return Ok(None);};
         let frame=match source {
@@ -402,13 +433,21 @@ impl Report {
         twist: &crate::curve::Curve,
         max_cells: usize,
     ) -> Result<Option<f64>> {
-        self.interpolation_upper_affine(edge,fraction,authored,scale,twist,None,max_cells)
+        self.interpolation_upper_affine(
+            edge,
+            fraction,
+            authored,
+            StationLaws {
+                scale,
+                twist,
+                affine: None,
+            },
+            max_cells,
+        )
     }
     /// Outward derivative remainder including XYZ axis scale and local center.
-    pub fn interpolation_upper_affine(
-        &self,edge:usize,fraction:[f64;2],authored:[f64;3],scale:&crate::curve::Curve,
-        twist:&crate::curve::Curve,affine:Option<(&crate::curve::Curve,&crate::curve::Curve)>,max_cells:usize,
-    )->Result<Option<f64>> {
+    pub fn interpolation_upper_affine(&self, edge:usize, fraction:[f64;2], authored:[f64;3], laws: StationLaws<'_>, max_cells:usize)->Result<Option<f64>> {
+        let StationLaws { scale, twist, affine } = laws;
         check(
             authored.iter().all(|x| x.is_finite()),
             "Profile point must be finite",
