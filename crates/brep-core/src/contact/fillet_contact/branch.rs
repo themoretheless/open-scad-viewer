@@ -54,6 +54,13 @@ fn line(c: &Curve) -> Option<[[f64; 2]; 2]> {
         [c.control_points[1][0], c.control_points[1][1]],
     ])
 }
+/// Topology visits, refinement cells and exact work of one ribbon binding.
+#[derive(Clone, Copy, Debug)]
+pub struct RibbonBudget {
+    pub max_visits: usize,
+    pub max_cells: usize,
+    pub max_exact: u64,
+}
 /// Bind both contacts to an existing edge via literal interior rectangular
 /// ribbons of varying width on injective original supports. Contacts are in plan support order.
 /// The selected edge can be a subdivision of a rectangular face side.
@@ -69,10 +76,13 @@ pub fn inspect(
     request: EdgeRadius,
     skin: &Surface,
     contacts: [&Contact; 2],
-    max_visits: usize,
-    max_cells: usize,
-    max_exact: u64,
+    budget: RibbonBudget,
 ) -> Result<Report> {
+    let RibbonBudget {
+        max_visits,
+        max_cells,
+        max_exact,
+    } = budget;
     let plan = plan_radius_network(source, shell, &[request], max_visits)?;
     skin.validate()?;
     let selected = &plan.edges[0];

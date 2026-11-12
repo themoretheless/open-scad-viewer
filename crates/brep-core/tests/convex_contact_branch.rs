@@ -123,9 +123,11 @@ fn partial_curved_branch_binds_to_oblique_edge_on_two_original_triangular_faces(
             r,
             &skin,
             [&c[0], &c[1]],
-            10000,
-            10000,
-            1000000
+            fillet_contact::branch::RibbonBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+            },
         )
         .unwrap()
         .decision,

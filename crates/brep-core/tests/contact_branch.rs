@@ -86,7 +86,18 @@ fn fixture() -> (
 fn actual_contact_collars_bind_to_original_selected_edge() {
     let (m, r, skin, c) = fixture();
     let before = m.clone();
-    let report = branch::inspect(&m, 0, r, &skin, [&c[0], &c[1]], 10000, 10000, 1000000).unwrap();
+    let report = branch::inspect(
+        &m,
+        0,
+        r,
+        &skin,
+        [&c[0], &c[1]],
+        branch::RibbonBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+        },
+    ).unwrap();
     assert_eq!(
         report.decision,
         branch::Decision::Bound,
@@ -98,7 +109,18 @@ fn actual_contact_collars_bind_to_original_selected_edge() {
     assert_eq!(report.positions.len(), 3);
     assert!(report.positions.iter().all(|p| p.proven));
     assert_eq!(m, before);
-    let exhausted = branch::inspect(&m, 0, r, &skin, [&c[0], &c[1]], 10000, 0, 0).unwrap();
+    let exhausted = branch::inspect(
+        &m,
+        0,
+        r,
+        &skin,
+        [&c[0], &c[1]],
+        branch::RibbonBudget {
+            max_visits: 10000,
+            max_cells: 0,
+            max_exact: 0,
+        },
+    ).unwrap();
     assert_eq!(exhausted.decision, branch::Decision::Unresolved);
 }
 #[test]
@@ -107,7 +129,18 @@ fn another_edge_opposite_side_and_forged_contact_proof_cannot_inherit_binding() 
     let mut other = r;
     other.edge = (r.edge + 1) % m.edges.len();
     assert_eq!(
-        branch::inspect(&m, 0, other, &skin, [&c[0], &c[1]], 10000, 10000, 1000000)
+        branch::inspect(
+            &m,
+            0,
+            other,
+            &skin,
+            [&c[0], &c[1]],
+            branch::RibbonBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+            },
+        )
             .unwrap()
             .decision,
         branch::Decision::Unresolved
@@ -121,7 +154,18 @@ fn another_edge_opposite_side_and_forged_contact_proof_cannot_inherit_binding() 
     }
     assert!(c[0].positions.proven);
     assert_eq!(
-        branch::inspect(&m, 0, r, &changed, [&c[0], &c[1]], 10000, 10000, 1000000)
+        branch::inspect(
+            &m,
+            0,
+            r,
+            &changed,
+            [&c[0], &c[1]],
+            branch::RibbonBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+            },
+        )
             .unwrap()
             .decision,
         branch::Decision::Unresolved
@@ -145,7 +189,18 @@ fn another_edge_opposite_side_and_forged_contact_proof_cannot_inherit_binding() 
         p[axis] = far;
     }
     assert_eq!(
-        branch::inspect(&m, 0, r, &skin, [&c[0], &c[1]], 10000, 10000, 1000000)
+        branch::inspect(
+            &m,
+            0,
+            r,
+            &skin,
+            [&c[0], &c[1]],
+            branch::RibbonBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+            },
+        )
             .unwrap()
             .decision,
         branch::Decision::Unresolved
@@ -174,7 +229,18 @@ fn nonlinear_rational_contact_clock_keeps_original_edge_ownership() {
     skin.knots_v = vec![0., 0., 0., 1., 1., 1.];
     skin.control_points = c.iter().map(|c| c.curve.control_points.clone()).collect();
     skin.weights = vec![vec![1., 0.875, 1.]; 2];
-    let report = branch::inspect(&m, 0, r, &skin, [&c[0], &c[1]], 10000, 10000, 1000000).unwrap();
+    let report = branch::inspect(
+        &m,
+        0,
+        r,
+        &skin,
+        [&c[0], &c[1]],
+        branch::RibbonBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+        },
+    ).unwrap();
     assert_eq!(
         report.decision,
         branch::Decision::Bound,
@@ -185,7 +251,18 @@ fn nonlinear_rational_contact_clock_keeps_original_edge_ownership() {
     let free = 1 - report.collars[0].cross_axis;
     c[0].support_pcurve.control_points[1][free] = c[0].support_pcurve.control_points[2][free] + 10.;
     assert_eq!(
-        branch::inspect(&m, 0, r, &skin, [&c[0], &c[1]], 10000, 10000, 1000000)
+        branch::inspect(
+            &m,
+            0,
+            r,
+            &skin,
+            [&c[0], &c[1]],
+            branch::RibbonBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+            },
+        )
             .unwrap()
             .decision,
         branch::Decision::Unresolved
@@ -244,9 +321,11 @@ fn original_rational_stock_contacts_bind_without_rebuilding_supports() {
         request,
         &f.blend,
         [&contacts[0], &contacts[1]],
-        10000,
-        10000,
-        1000000,
+        branch::RibbonBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(
@@ -308,9 +387,11 @@ fn nonparallel_rational_multispan_contacts_have_owned_variable_width_ribbons() {
         r,
         &skin,
         [&contacts[0], &contacts[1]],
-        10000,
-        10000,
-        1000000,
+        branch::RibbonBudget {
+            max_visits: 10000,
+            max_cells: 10000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(proof.decision, branch::Decision::Bound, "{}", proof.reason);
@@ -330,9 +411,11 @@ fn nonparallel_rational_multispan_contacts_have_owned_variable_width_ribbons() {
             r,
             &skin,
             [&contacts[0], &contacts[1]],
-            10000,
-            10000,
-            1000000
+            branch::RibbonBudget {
+                max_visits: 10000,
+                max_cells: 10000,
+                max_exact: 1000000,
+            },
         )
         .unwrap()
         .decision,

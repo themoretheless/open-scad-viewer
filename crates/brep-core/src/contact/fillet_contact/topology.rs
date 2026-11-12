@@ -240,9 +240,11 @@ pub fn propose_bound_edge(
                 request,
                 skin,
                 [&contacts[0], &contacts[1]],
-                max_visits,
-                max_cells.saturating_sub(candidate.cells),
-                max_exact.saturating_sub(candidate.exact_work),
+                super::branch::RibbonBudget {
+                    max_visits,
+                    max_cells: max_cells.saturating_sub(candidate.cells),
+                    max_exact: max_exact.saturating_sub(candidate.exact_work),
+                },
             )?)
         } else {
             None
