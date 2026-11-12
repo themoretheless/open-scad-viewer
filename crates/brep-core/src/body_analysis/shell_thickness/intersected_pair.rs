@@ -2,7 +2,7 @@
 //! full patches. Certified section roots propose rectangular cap windows;
 //! only complete mapped-cap and actual closed-model gates admit the skin.
 use super::mapped_network;
-pub use super::planar_network::Limits;
+pub use super::planar_network::{Limits, OffsetSettings};
 use crate::feature_ops::region_pattern::Verification;
 use crate::{Error, Model, Result, rounded_patch_network as sewing};
 use nurbs_core::{
@@ -76,10 +76,12 @@ impl Thickness {
         let fresh = thicken(
             &sources,
             self.reversed,
-            self.distance,
-            self.normal_tolerance,
-            self.normal_cells,
-            self.sewing_tolerance,
+            OffsetSettings {
+                signed_thickness: self.distance,
+                normal_tolerance: self.normal_tolerance,
+                normal_cells: self.normal_cells,
+                sewing_tolerance: self.sewing_tolerance,
+            },
             self.limits,
             self.search,
         )?;
@@ -123,16 +125,8 @@ fn fixed(side: usize) -> (usize, bool) {
 /// edges, global branch discovery/completeness and nonrectangular cap trimming
 /// require different constructors. Numerical search may refuse an existing root.
 #[allow(clippy::too_many_arguments)]
-pub fn thicken(
-    sources: &[Surface; 2],
-    reversed: [bool; 2],
-    signed_thickness: f64,
-    normal_tolerance: f64,
-    normal_cells: usize,
-    sewing_tolerance: f64,
-    limits: Limits,
-    search: Search,
-) -> Result<Thickness> {
+pub fn thicken(sources: &[Surface; 2], reversed: [bool; 2], offset: crate::shell_thickness::planar_network::OffsetSettings, limits: Limits, search: Search) -> Result<Thickness> {
+        let crate::shell_thickness::planar_network::OffsetSettings { signed_thickness, normal_tolerance, normal_cells, sewing_tolerance } = offset;
     super::freeform_network::validate(
         sources,
         sources,
@@ -218,10 +212,12 @@ pub fn thicken(
         sources,
         &windows,
         &reversed,
-        signed_thickness,
-        normal_tolerance,
-        normal_cells,
-        sewing_tolerance,
+        mapped_network::OffsetSettings {
+            signed_thickness,
+            normal_tolerance,
+            normal_cells,
+            sewing_tolerance,
+        },
         remaining,
     )?;
     Ok(Thickness {

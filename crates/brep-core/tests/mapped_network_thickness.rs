@@ -210,10 +210,12 @@ fn native_caps_from_contact_windows_receive_fresh_full_geometry_admission() {
         &sources,
         &maps,
         &[false; 2],
-        0.1,
-        0.01,
-        100000,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 0.01,
+            normal_cells: 100000,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
     )
     .unwrap();
@@ -227,11 +229,13 @@ fn native_caps_from_contact_windows_receive_fresh_full_geometry_admission() {
             &sources,
             &wrong,
             &[false; 2],
-            0.1,
-            0.01,
-            100000,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.01,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );

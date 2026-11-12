@@ -1,4 +1,4 @@
-use brep_core::shell_thickness::intersected_pair::{Limits, Search, thicken};
+use brep_core::shell_thickness::intersected_pair::{Limits, OffsetSettings, Search, thicken};
 use nurbs_core::{surface::Surface, surface_contact::Verdict};
 fn cylinder() -> Surface {
     Surface {
@@ -42,10 +42,12 @@ fn cylinder_plane_contact_is_found_without_authored_caps_roots_or_windows() {
     let r = thicken(
         &sources,
         [false; 2],
-        0.1,
-        0.01,
-        100000,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 0.01,
+            normal_cells: 100000,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
         Search::default(),
     )
@@ -80,10 +82,12 @@ fn nonunit_source_clocks_and_reversed_chart_orientation_are_retained() {
     let r = thicken(
         &sources,
         [false, true],
-        0.1,
-        0.01,
-        100000,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 0.01,
+            normal_cells: 100000,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
         Search::default(),
     )
@@ -105,12 +109,14 @@ fn missing_or_ambiguous_original_seams_and_incomplete_search_refuse() {
         thicken(
             &detached,
             [false; 2],
-            0.1,
-            0.01,
-            100000,
-            1e-7,
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.01,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
             Limits::default(),
-            Search::default()
+            Search::default(),
         )
         .is_err()
     );
@@ -119,12 +125,14 @@ fn missing_or_ambiguous_original_seams_and_incomplete_search_refuse() {
         thicken(
             &duplicates,
             [false, true],
-            0.1,
-            0.01,
-            100000,
-            1e-7,
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.01,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
             Limits::default(),
-            Search::default()
+            Search::default(),
         )
         .is_err()
     );
@@ -136,12 +144,14 @@ fn missing_or_ambiguous_original_seams_and_incomplete_search_refuse() {
         thicken(
             &sources,
             [false; 2],
-            0.1,
-            0.01,
-            100000,
-            1e-7,
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.01,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
             Limits::default(),
-            search
+            search,
         )
         .is_err()
     );
@@ -149,12 +159,14 @@ fn missing_or_ambiguous_original_seams_and_incomplete_search_refuse() {
         thicken(
             &sources,
             [false; 2],
-            0.1,
-            0.01,
-            1,
-            1e-7,
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.01,
+                normal_cells: 1,
+                sewing_tolerance: 1e-7,
+            },
             Limits::default(),
-            Search::default()
+            Search::default(),
         )
         .is_err()
     );
@@ -166,12 +178,14 @@ fn extension_outside_original_supports_is_not_silently_extrapolated() {
         thicken(
             &sources,
             [false; 2],
-            -0.1,
-            0.01,
-            100000,
-            1e-7,
+            OffsetSettings {
+                signed_thickness: -0.1,
+                normal_tolerance: 0.01,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
             Limits::default(),
-            Search::default()
+            Search::default(),
         )
         .is_err()
     );
@@ -183,12 +197,14 @@ fn extension_outside_original_supports_is_not_silently_extrapolated() {
         thicken(
             &sources,
             [false; 2],
-            0.1,
-            0.01,
-            100000,
-            1e-7,
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.01,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
             Limits::default(),
-            search
+            search,
         )
         .is_err()
     );
@@ -213,10 +229,12 @@ fn gauges_and_projective_source_clocks_have_complete_seam_proofs() {
         let r = thicken(
             &sources,
             [false; 2],
-            0.1,
-            0.01,
-            100000,
-            1e-7,
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.01,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
             limits,
             Search::default(),
         )
@@ -259,10 +277,12 @@ fn transposed_first_surface_drives_the_other_parameter_axis() {
     let r = thicken(
         &sources,
         [true, false],
-        0.1,
-        0.01,
-        100000,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 0.01,
+            normal_cells: 100000,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
         Search::default(),
     )
@@ -296,10 +316,12 @@ fn a_section_root_cannot_admit_a_varying_nonrectangular_intersection() {
     let error = match thicken(
         &sources,
         [false; 2],
-        0.1,
-        0.01,
-        100000,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 0.01,
+            normal_cells: 100000,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
         Search::default(),
     ) {
@@ -318,10 +340,12 @@ fn coincident_endpoints_do_not_establish_a_shared_source_curve() {
     let err = match thicken(
         &sources,
         [false; 2],
-        0.1,
-        0.01,
-        100000,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 0.01,
+            normal_cells: 100000,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
         Search::default(),
     ) {

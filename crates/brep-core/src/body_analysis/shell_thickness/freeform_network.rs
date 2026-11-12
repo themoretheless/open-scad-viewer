@@ -65,10 +65,12 @@ impl Thickness {
             &self.sources,
             &self.caps,
             &self.reversed,
-            self.distance,
-            self.normal_tolerance,
-            self.normal_limit,
-            self.sewing_tolerance,
+            OffsetSettings {
+                signed_thickness: self.distance,
+                normal_tolerance: self.normal_tolerance,
+                normal_cells: self.normal_limit,
+                sewing_tolerance: self.sewing_tolerance,
+            },
             self.limits,
         )?;
         if fresh.built.model != self.built.model
@@ -90,16 +92,8 @@ impl Thickness {
 /// Only exposed source pieces receive walls; original interior seams remain.
 /// Supplied caps must already meet across seams: this does not intersect offset
 /// supports or heal gaps, and tolerance never substitutes for a proof.
-pub fn thicken_with_caps(
-    sources: &[Surface],
-    caps: &[Surface],
-    reversed: &[bool],
-    signed_thickness: f64,
-    normal_tolerance: f64,
-    normal_cells: usize,
-    sewing_tolerance: f64,
-    limits: Limits,
-) -> Result<Thickness> {
+pub fn thicken_with_caps(sources: &[Surface], caps: &[Surface], reversed: &[bool], offset: crate::shell_thickness::planar_network::OffsetSettings, limits: Limits) -> Result<Thickness> {
+        let crate::shell_thickness::planar_network::OffsetSettings { signed_thickness, normal_tolerance, normal_cells, sewing_tolerance } = offset;
     validate(
         sources,
         caps,
@@ -276,10 +270,12 @@ pub fn thicken(
         sources,
         &caps,
         reversed,
-        signed_thickness,
-        normal_tolerance,
-        normal_cells,
-        sewing_tolerance,
+        OffsetSettings {
+            signed_thickness,
+            normal_tolerance,
+            normal_cells,
+            sewing_tolerance,
+        },
         limits,
     )
 }
