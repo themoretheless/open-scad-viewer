@@ -16,11 +16,30 @@ fn unknown_material_mask(flux: &nurbs_core::surface_flux::Bound, domain: [[f64; 
     }
     I::new(flux.density[0].min(0.), flux.density[1].max(0.))?.mul(area)
 }
+/// UV tolerance, control-polygon allowance and span and domain-cell budgets
+/// of one material flux enclosure.
+#[derive(Clone, Copy, Debug)]
+pub struct FluxLimits {
+    pub tolerance_uv: f64,
+    pub controls: usize,
+    pub spans: usize,
+    pub domain_cells: usize,
+}
 impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
     pub fn enclose_material_flux(
-        &self, face: usize, domain: [[f64; 2]; 2], axis: usize, origin: f64,
-        tolerance_uv: f64, controls: usize, spans: usize, domain_cells: usize,
+        &self,
+        face: usize,
+        domain: [[f64; 2]; 2],
+        axis: usize,
+        origin: f64,
+        limits: FluxLimits,
     ) -> Result<MaterialFluxReport> {
+        let FluxLimits {
+            tolerance_uv,
+            controls,
+            spans,
+            domain_cells,
+        } = limits;
         if !tolerance_uv.is_finite() || tolerance_uv <= 0. || domain_cells > 100000
             || controls > 1000000 || spans > 100000 || axis >= 3 || !origin.is_finite()
         {

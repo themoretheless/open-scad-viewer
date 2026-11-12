@@ -4331,14 +4331,36 @@
             assert_eq!(flux.integral, direct_flux.integral);
             assert_eq!(flux_spans, position_spans + spent);
             let masked = expression
-                .enclose_material_flux(id, derivative_domain, 2, 0., 1e-8, 1000, 10000, 0)
+                .enclose_material_flux(
+                    id,
+                    derivative_domain,
+                    2,
+                    0.,
+                    crate::source_profile_body::FluxLimits {
+                        tolerance_uv: 1e-8,
+                        controls: 1000,
+                        spans: 10000,
+                        domain_cells: 0,
+                    },
+                )
                 .unwrap();
             let masked_bounds = masked.bound.unwrap();
             assert!(masked_bounds[0] <= 0. && masked_bounds[1] >= 0.);
             assert_eq!(masked.domain_cells, 0);
             assert_eq!(masked.spans, flux_spans);
             let classified = expression
-                .enclose_material_flux(id, derivative_domain, 2, 0., 1e-8, 1000, 10000, 1000)
+                .enclose_material_flux(
+                    id,
+                    derivative_domain,
+                    2,
+                    0.,
+                    crate::source_profile_body::FluxLimits {
+                        tolerance_uv: 1e-8,
+                        controls: 1000,
+                        spans: 10000,
+                        domain_cells: 1000,
+                    },
+                )
                 .unwrap();
             let classified_bounds = classified.bound.unwrap();
             assert!(
@@ -4406,10 +4428,12 @@
                 original_domain,
                 2,
                 0.,
-                1e-8,
-                1000,
-                10000,
-                0,
+                crate::source_profile_body::FluxLimits {
+                    tolerance_uv: 1e-8,
+                    controls: 1000,
+                    spans: 10000,
+                    domain_cells: 0,
+                },
             )
             .unwrap();
         let direct_original_integral = direct_original_flux.bound.unwrap().integral;

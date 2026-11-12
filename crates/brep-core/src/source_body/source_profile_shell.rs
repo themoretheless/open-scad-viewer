@@ -8,7 +8,7 @@ mod geometry;
 pub use geometry::EmbeddedExpressionGeometry;
 #[path = "source_profile_shell_flux.rs"]
 mod flux;
-pub use flux::MaterialFluxReport;
+pub use flux::{FluxLimits, MaterialFluxReport};
 #[path = "source_profile_shell_gap.rs"]
 mod gap;
 pub use gap::{ExpressionFaceClearance, ExpressionGapReport};

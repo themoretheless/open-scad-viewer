@@ -141,9 +141,18 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             out.uncertain_face = Some(face); out.uncertain_domain = Some(domain);
             if out.cells == limits.cells || out.spans == limits.spans { return Ok(None); }
             out.cells += 1;
-            let report = shell.enclose_material_flux(face, domain, limits.axis, limits.origin,
-                limits.tolerance_uv, limits.controls_per_enclosure,
-                (limits.spans - out.spans).min(100000), (limits.domain_cells - out.domain_cells).min(limits.domain_cells_per_rectangle))?;
+            let report = shell.enclose_material_flux(
+                face,
+                domain,
+                limits.axis,
+                limits.origin,
+                FluxLimits {
+                    tolerance_uv: limits.tolerance_uv,
+                    controls: limits.controls_per_enclosure,
+                    spans: (limits.spans - out.spans).min(100000),
+                    domain_cells: (limits.domain_cells - out.domain_cells).min(limits.domain_cells_per_rectangle),
+                },
+            )?;
             out.spans += report.spans; out.domain_cells += report.domain_cells;
             report.bound.map(|b| I::new(b[0], b[1])).transpose()
         };
