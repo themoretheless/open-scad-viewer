@@ -108,8 +108,10 @@ fn derive(
         contact,
         neighbour,
         direction,
-        axis,
-        axis_sign,
+        math::MonotoneAxis {
+            axis,
+            sign: axis_sign,
+        },
         l.max_steps,
     )?;
     let record = BranchNeighbourhoodRecord {

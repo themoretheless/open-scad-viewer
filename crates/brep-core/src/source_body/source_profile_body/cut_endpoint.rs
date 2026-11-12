@@ -136,7 +136,7 @@ impl<'a> Proposal<'a> {
         cells: usize,
         spans: usize,
     ) -> Result<SeamReport<'p, 'a>> {
-        self.qualify_selected_seam(face, neighbor, None, max_edges, threshold, cells, spans)
+        self.qualify_selected_seam([face, neighbor], None, max_edges, threshold, cells, spans)
     }
 /// Qualify a single owned edge; never reuse another edge between its faces.
     pub fn qualify_edge<'p>(
@@ -159,8 +159,7 @@ impl<'a> Proposal<'a> {
             faces.reverse();
         }
         self.qualify_selected_seam(
-            faces[0],
-            faces[1],
+            faces,
             Some(edge),
             max_edges,
             threshold,
@@ -170,8 +169,7 @@ impl<'a> Proposal<'a> {
     }
 pub(super) fn qualify_selected_seam<'p>(
         &'p self,
-        face: usize,
-        neighbor: usize,
+        [face, neighbor]: [usize; 2],
         edge: Option<usize>,
         max_edges: usize,
         threshold: f64,

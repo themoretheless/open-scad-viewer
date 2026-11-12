@@ -17,6 +17,12 @@ pub(in crate::profile::profile_certificate) struct Neighbourhood {
     pub contact_critical: bool,
     pub steps: usize,
 }
+/// Source coordinate (0 = x, 1 = y) and the sign it must keep along the branch.
+#[derive(Clone, Copy, Debug)]
+pub(in crate::profile::profile_certificate) struct MonotoneAxis {
+    pub axis: usize,
+    pub sign: i8,
+}
 pub(super) fn local(p: &Poly, domain: &[Q; 2]) -> Poly {
     sub(p, &[domain[0].clone()])
         .iter()
@@ -39,10 +45,13 @@ pub(in crate::profile::profile_certificate) fn prove(
     contact: ParameterValue,
     mut neighbour: Option<ParameterValue>,
     direction: i8,
-    axis: usize,
-    axis_sign: i8,
+    monotone: MonotoneAxis,
     max_steps: usize,
 ) -> Result<Neighbourhood> {
+    let MonotoneAxis {
+        axis,
+        sign: axis_sign,
+    } = monotone;
     if axis > 1
         || !matches!(direction, -1 | 1)
         || !matches!(axis_sign, -1 | 1)

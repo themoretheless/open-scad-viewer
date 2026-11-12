@@ -44,8 +44,7 @@ fn slice(
         contact.clone(),
         Some(neighbour),
         p.direction,
-        axis,
-        sign,
+        arithmetic::branch_neighbourhood::MonotoneAxis { axis, sign },
         l.max_neighbourhood_steps,
     )?;
     Ok(SliceBranch {

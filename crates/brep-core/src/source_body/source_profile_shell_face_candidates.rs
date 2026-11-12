@@ -239,7 +239,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         controls: usize,
         spans: usize,
     ) -> Result<(Option<f64>, usize)> {
-        self.bound_candidate_triangle_impl(candidate, graph, controls, spans, false, 0, None)
+        self.bound_candidate_triangle_impl(candidate, graph, [controls, spans], false, 0, None)
     }
     /// Diagnostic correspondence deviation at a specified native support point.
     /// The caller must separately prove membership in the material triangle;
@@ -302,7 +302,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         controls: usize,
         spans: usize,
     ) -> Result<(Option<f64>, usize)> {
-        self.bound_candidate_triangle_impl(candidate, graph, controls, spans, true, 0, None)
+        self.bound_candidate_triangle_impl(candidate, graph, [controls, spans], true, 0, None)
     }
     /// Diagnostic triangle coverage by rectangle partitions; retains the original mesh plane.
     pub fn bound_candidate_triangle_partitioned(
@@ -312,7 +312,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         controls: usize,
         spans: usize,
     ) -> Result<(Option<f64>, usize)> {
-        self.bound_candidate_triangle_impl(candidate, graph, controls, spans, true, 1, None)
+        self.bound_candidate_triangle_impl(candidate, graph, [controls, spans], true, 1, None)
     }
     /// Bounded diagnostic rectangle refinement; every cell retains the original
     /// affine plane. Shared split coordinates tile the UV box; only cells proved
@@ -325,7 +325,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         spans: usize,
         depth: usize,
     ) -> Result<(Option<f64>, usize)> {
-        self.bound_candidate_triangle_impl(candidate, graph, controls, spans, true, depth, None)
+        self.bound_candidate_triangle_impl(candidate, graph, [controls, spans], true, depth, None)
     }
     /// Complete upper bound only when the requested tolerance is met. A region
     /// whose upper bound exceeds the target ends this attempt as unproven;
@@ -348,8 +348,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         self.bound_candidate_triangle_impl(
             candidate,
             graph,
-            controls,
-            spans,
+            [controls, spans],
             true,
             depth,
             Some(target_mm),
@@ -359,8 +358,7 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         &self,
         candidate: &FaceTriangleCandidate,
         graph: &BoundaryGraphReport,
-        controls: usize,
-        spans: usize,
+        [controls, spans]: [usize; 2],
         rectangle_center: bool,
         partition_depth: usize,
         target_mm: Option<f64>,

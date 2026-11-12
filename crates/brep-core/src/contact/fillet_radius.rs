@@ -358,10 +358,13 @@ fn inspect_uses(
         })
         .collect::<Result<Vec<_>>>()?;
     if !shared_basis {
-        let bounded = affine_hull_bound(
-            [a, b],
+        let center = CenterLaw {
+            curves: [a, b],
             radii,
             law_domain,
+        };
+        let bounded = affine_hull_bound(
+            center,
             &direction,
             position_error,
             out,
@@ -509,16 +512,26 @@ fn chord_error(c: &nurbs_core::curve::Curve, cells: &mut usize, max: usize) -> R
 /// Independent affine hulls provide a conservative fallback for different
 /// trimmed knot bases. Curved contacts can remain unresolved; their entire
 /// deviations are included, so endpoint agreement alone never grants admission.
-fn affine_hull_bound(
-    curves: [&nurbs_core::curve::Curve; 2],
+/// Two contact curves with the linear radius law prescribed over `law_domain`.
+#[derive(Clone, Copy)]
+struct CenterLaw<'a> {
+    curves: [&'a nurbs_core::curve::Curve; 2],
     radii: [f64; 2],
     law_domain: [f64; 2],
+}
+fn affine_hull_bound(
+    center: CenterLaw<'_>,
     direction: &[I],
     position_error: f64,
     mut out: Report,
     tolerance: f64,
     max: usize,
 ) -> Result<Report> {
+    let CenterLaw {
+        curves,
+        radii,
+        law_domain,
+    } = center;
     let mut deviation = I::point(0.);
     // Pairing normalized current intervals preserves each original law map.
     // Their independently isolated root domains need not be bit-identical.
@@ -669,9 +682,11 @@ mod tests {
         };
         let direction = [I::point(-1.), I::point(0.), I::point(1.)];
         let valid = affine_hull_bound(
-            [&a, &b],
-            [0.5, 1.5],
-            [0., 1.],
+            CenterLaw {
+                curves: [&a, &b],
+                radii: [0.5, 1.5],
+                law_domain: [0., 1.],
+            },
             &direction,
             0.,
             report(),
@@ -682,9 +697,11 @@ mod tests {
         assert_eq!(valid.decision, Decision::WithinTolerance);
         b.control_points[1][2] += 0.2;
         let defect = affine_hull_bound(
-            [&a, &b],
-            [0.5, 1.5],
-            [0., 1.],
+            CenterLaw {
+                curves: [&a, &b],
+                radii: [0.5, 1.5],
+                law_domain: [0., 1.],
+            },
             &direction,
             0.,
             report(),
