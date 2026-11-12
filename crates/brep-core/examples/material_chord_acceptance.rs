@@ -7,9 +7,11 @@ fn report(
 ) -> Result<value_codec::Value, Box<dyn std::error::Error>> {
     let r = material_chord::inspect_finite_interval(
         model,
-        origin,
-        [1., 0., 0.],
-        interval,
+        material_chord::ChordLine {
+            origin,
+            direction: [1., 0., 0.],
+            interval,
+        },
         &[[1., 0.07, 0.03], [-1., 0.09, 0.02]],
         1e-8,
         100000,

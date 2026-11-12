@@ -28,15 +28,26 @@ pub struct IntervalReport {
 /// The exact represented line is origin+direction*t. Its CLOSED finite interval
 /// must contain zero, so parity can anchor at the original authored origin,
 /// without substituting a rounded computed midpoint. Endpoint root bands refuse.
+/// The represented line `origin + direction * t` over the closed parameter
+/// interval `interval`, which must contain zero.
+#[derive(Clone, Copy, Debug)]
+pub struct ChordLine {
+    pub origin: [f64; 3],
+    pub direction: [f64; 3],
+    pub interval: [f64; 2],
+}
 pub fn inspect_interval(
     model: &Model,
-    origin: [f64; 3],
-    direction: [f64; 3],
-    interval: [f64; 2],
+    line: ChordLine,
     tolerance_uv: f64,
     max_cells: usize,
     max_domains: usize,
 ) -> Result<IntervalReport> {
+    let ChordLine {
+        origin,
+        direction,
+        interval,
+    } = line;
     model.validate()?;
     if model.faces.is_empty()
         || !origin
@@ -197,15 +208,14 @@ pub struct Report {
 /// authorizes material qualification. Budgets are shared between numeric stages.
 pub fn inspect(
     model: &Model,
-    origin: [f64; 3],
-    direction: [f64; 3],
-    interval: [f64; 2],
+    line: ChordLine,
     parity_directions: &[[f64; 3]],
     tolerance_uv: f64,
     max_cells: usize,
     max_domains: usize,
     max_exact: u64,
 ) -> Result<Report> {
+    let origin = line.origin;
     if max_cells < 4
         || max_cells > 100000
         || max_domains < 4
@@ -230,9 +240,7 @@ pub fn inspect(
     }
     let chord = inspect_interval(
         model,
-        origin,
-        direction,
-        interval,
+        line,
         tolerance_uv,
         max_cells / 4,
         max_domains / 4,

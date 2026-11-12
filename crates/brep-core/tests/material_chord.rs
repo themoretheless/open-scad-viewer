@@ -6,9 +6,11 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     let saved = model.clone();
     let r = material_chord::inspect_finite_interval(
         &model,
-        [1.; 3],
-        [1., 0., 0.],
-        [-0.99, 0.99],
+        material_chord::ChordLine {
+            origin: [1.; 3],
+            direction: [1., 0., 0.],
+            interval: [-0.99, 0.99],
+        },
         &RAYS,
         1e-8,
         10000,
@@ -29,9 +31,11 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     assert_eq!(model, saved);
     let outside = material_chord::inspect_finite_interval(
         &model,
-        [3.; 3],
-        [1., 0., 0.],
-        [-0.99, 0.99],
+        material_chord::ChordLine {
+            origin: [3.; 3],
+            direction: [1., 0., 0.],
+            interval: [-0.99, 0.99],
+        },
         &RAYS,
         1e-8,
         10000,
@@ -43,9 +47,11 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     assert!(!outside.material_interval_qualified);
     let limited_uv = material_chord::inspect_finite_interval(
         &model,
-        [3.; 3],
-        [1., 0., 0.],
-        [-0.99, 0.99],
+        material_chord::ChordLine {
+            origin: [3.; 3],
+            direction: [1., 0., 0.],
+            interval: [-0.99, 0.99],
+        },
         &RAYS,
         1e-8,
         10000,
@@ -57,9 +63,11 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     assert!(limited_uv.domain_cells <= 49);
     let scaled = material_chord::inspect_finite_interval(
         &model,
-        [1.; 3],
-        [2., 0., 0.],
-        [-0.49, 0.49],
+        material_chord::ChordLine {
+            origin: [1.; 3],
+            direction: [2., 0., 0.],
+            interval: [-0.49, 0.49],
+        },
         &RAYS,
         1e-8,
         10000,
@@ -71,9 +79,11 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     assert!(scaled.interval.length_mm[0] <= 1.96 && scaled.interval.length_mm[1] >= 1.96);
     let boundary_anchor = material_chord::inspect_finite_interval(
         &model,
-        [0., 1., 1.],
-        [1., 0., 0.],
-        [-0.99, 0.99],
+        material_chord::ChordLine {
+            origin: [0., 1., 1.],
+            direction: [1., 0., 0.],
+            interval: [-0.99, 0.99],
+        },
         &RAYS,
         1e-8,
         10000,
@@ -118,9 +128,11 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     folded.validate().unwrap();
     let denied = material_chord::inspect_finite_interval(
         &folded,
-        [1.; 3],
-        [1., 0., 0.],
-        [-0.99, 0.99],
+        material_chord::ChordLine {
+            origin: [1.; 3],
+            direction: [1., 0., 0.],
+            interval: [-0.99, 0.99],
+        },
         &RAYS,
         1e-8,
         10000,
@@ -131,9 +143,11 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     assert!(!denied.material_interval_qualified);
     let small = material_chord::inspect_finite_interval(
         &model,
-        [1.; 3],
-        [1., 0., 0.],
-        [-0.99, 0.99],
+        material_chord::ChordLine {
+            origin: [1.; 3],
+            direction: [1., 0., 0.],
+            interval: [-0.99, 0.99],
+        },
         &RAYS,
         1e-8,
         4,
@@ -144,9 +158,11 @@ fn complete_interior_interval_needs_fresh_boundary_and_material_evidence() {
     assert!(!small.material_interval_qualified);
     let ends = material_chord::inspect_interval(
         &model,
-        [1.; 3],
-        [1., 0., 0.],
-        [-1., 1.],
+        material_chord::ChordLine {
+            origin: [1.; 3],
+            direction: [1., 0., 0.],
+            interval: [-1., 1.],
+        },
         1e-8,
         1000,
         10000,
@@ -168,9 +184,11 @@ fn an_inside_anchor_does_not_certify_a_chord_crossing_a_cavity() {
     );
     let across = material_chord::inspect_finite_interval(
         &model,
-        point,
-        [1., 0., 0.],
-        [-0.99, 8.99],
+        material_chord::ChordLine {
+            origin: point,
+            direction: [1., 0., 0.],
+            interval: [-0.99, 8.99],
+        },
         &RAYS,
         1e-8,
         10000,
@@ -185,9 +203,11 @@ fn an_inside_anchor_does_not_certify_a_chord_crossing_a_cavity() {
     assert!(across.cells < 1000);
     let wall = material_chord::inspect_finite_interval(
         &model,
-        point,
-        [1., 0., 0.],
-        [-0.99, 0.99],
+        material_chord::ChordLine {
+            origin: point,
+            direction: [1., 0., 0.],
+            interval: [-0.99, 0.99],
+        },
         &RAYS,
         1e-8,
         100000,
@@ -233,9 +253,11 @@ fn an_inside_anchor_does_not_certify_a_chord_crossing_a_cavity() {
     );
     let void = material_chord::inspect_finite_interval(
         &model,
-        [5., 4., 5.],
-        [1., 0., 0.],
-        [-0.99, 0.99],
+        material_chord::ChordLine {
+            origin: [5., 4., 5.],
+            direction: [1., 0., 0.],
+            interval: [-0.99, 0.99],
+        },
         &RAYS,
         1e-8,
         10000,
