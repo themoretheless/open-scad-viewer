@@ -16,7 +16,16 @@ fn main() {
     ] {
         let started = std::time::Instant::now();
         let r = brep_core::face_domain::distance_between_faces(
-            &model, faces[0], &model, faces[1], 1e-5, 1e-8, 4096, 100000,
+            &model,
+            faces[0],
+            &model,
+            faces[1],
+            brep_core::face_domain::DistanceLimits {
+                tolerance_mm: 1e-5,
+                tolerance_uv: 1e-8,
+                max_cells: 4096,
+                max_domain_cells: 100000,
+            },
         )
         .unwrap();
         cases.push(json!({"name":name,"faces":faces,"expectedMm":expected,"result":r.to_value(),"elapsedMs":started.elapsed().as_secs_f64()*1000.}));

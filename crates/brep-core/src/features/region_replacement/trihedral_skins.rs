@@ -624,12 +624,14 @@ fn build_strips(
                 0,
                 &strips[b].patch.model,
                 0,
-                limits.tolerances[0],
-                limits.tolerance_uv,
-                pair_budget-hull_cells,
-                // Initial broad trim queries must leave work for the actual
-                // subdivision cover; this remains inside the shared caller limit.
-                (remaining - remaining / 2).min(65536),
+                crate::face_domain::DistanceLimits {
+                    tolerance_mm: limits.tolerances[0],
+                    tolerance_uv: limits.tolerance_uv,
+                    max_cells: pair_budget-hull_cells,
+                    // Initial broad trim queries must leave work for the actual
+                    // subdivision cover; this remains inside the shared caller limit.
+                    max_domain_cells: (remaining - remaining / 2).min(65536),
+                },
             )?;
             if let Some((lower,cells))=hull {
                 distance.lower_bound_mm=distance.lower_bound_mm.max(lower);

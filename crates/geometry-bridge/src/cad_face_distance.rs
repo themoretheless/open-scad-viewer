@@ -8,10 +8,12 @@ pub fn measure(v: Value) -> Result<Value> {
         field(&v, "faceA")?,
         &b,
         field(&v, "faceB")?,
-        field(&v, "toleranceMm")?,
-        tolerance_uv,
-        field(&v, "maxCells")?,
-        field(&v, "maxDomainCells")?,
+        brep_core::face_domain::DistanceLimits {
+            tolerance_mm: field(&v, "toleranceMm")?,
+            tolerance_uv,
+            max_cells: field(&v, "maxCells")?,
+            max_domain_cells: field(&v, "maxDomainCells")?,
+        },
     )?
     .to_value();
     if let Value::Object(ref mut object) = result {

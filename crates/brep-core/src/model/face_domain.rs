@@ -130,17 +130,28 @@ impl FaceDomain {
     }
 }
 
+/// Tolerances and shared cell budgets of one face or face-set distance query.
+#[derive(Clone, Copy, Debug)]
+pub struct DistanceLimits {
+    pub tolerance_mm: f64,
+    pub tolerance_uv: f64,
+    pub max_cells: usize,
+    pub max_domain_cells: usize,
+}
 /// Distance between two selected trimmed faces, not between filled body volumes.
 pub fn distance_between_faces(
     a: &Model,
     face_a: usize,
     b: &Model,
     face_b: usize,
-    tolerance_mm: f64,
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_domain_cells: usize,
+    limits: DistanceLimits,
 ) -> Result<nurbs_core::trimmed_surface_distance::TrimmedDistance> {
+    let DistanceLimits {
+        tolerance_mm,
+        tolerance_uv,
+        max_cells,
+        max_domain_cells,
+    } = limits;
     a.validate()?;
     b.validate()?;
     let da = FaceDomain::new(a, face_a, tolerance_uv)?;

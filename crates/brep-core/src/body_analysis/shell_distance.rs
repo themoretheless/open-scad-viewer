@@ -23,14 +23,7 @@ struct Pair {
     faces: [usize; 2],
     lower: f64,
 }
-/// Tolerances and shared cell budgets of one face-set distance query.
-#[derive(Clone, Copy, Debug)]
-pub struct DistanceLimits {
-    pub tolerance_mm: f64,
-    pub tolerance_uv: f64,
-    pub max_cells: usize,
-    pub max_domain_cells: usize,
-}
+pub use crate::face_domain::DistanceLimits;
 /// Every face pair contributes a lower bound, even when the shared budget ends.
 /// The upper bound always comes from admitted points on two authored faces.
 pub fn distance(
