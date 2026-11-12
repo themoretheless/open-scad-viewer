@@ -2,16 +2,24 @@ use cad_predicates::{
     AuthoredScalar, Limits, OriginalPlaneCommonRootOutcome as Outcome, PredicateContext,
     SourceArena, ToleranceContext, rational_bspline_plane_common_root,
 };
-fn query(
-    x: &[f64],
-    y: &[f64],
-    weights: &[f64],
-    knots: &[f64],
+/// Planar rational B-spline curve given as separate coordinate arrays.
+struct Curve<'a> {
+    x: &'a [f64],
+    y: &'a [f64],
+    weights: &'a [f64],
+    knots: &'a [f64],
     degree: usize,
     span: usize,
-    interval: [f64; 2],
-    budget: u64,
-) -> Outcome {
+}
+fn query(curve: Curve<'_>, interval: [f64; 2], budget: u64) -> Outcome {
+    let Curve {
+        x,
+        y,
+        weights,
+        knots,
+        degree,
+        span,
+    } = curve;
     let mut v = Vec::new();
     for i in 0..x.len() {
         v.extend([x[i], y[i], 0., weights[i]]);
@@ -57,12 +65,14 @@ fn query(
 fn different_orders_have_the_same_nonbinary_root() {
     assert!(matches!(
         query(
-            &[1., -1., 0., 4.],
-            &[1., 0., -1., -2.],
-            &[1.; 4],
-            &[0., 0., 0., 0., 1., 1., 1., 1.],
-            3,
-            3,
+            Curve {
+                x: &[1., -1., 0., 4.],
+                y: &[1., 0., -1., -2.],
+                weights: &[1.; 4],
+                knots: &[0., 0., 0., 0., 1., 1., 1., 1.],
+                degree: 3,
+                span: 3
+            },
             [0.333, 0.334],
             1_000_000
         ),
@@ -74,12 +84,14 @@ fn shared_irrational_root_is_not_matched_by_interval_overlap() {
     let knots = [0., 0., 0., 0., 0., 1., 1., 1., 1., 1.];
     assert!(matches!(
         query(
-            &[3., 3., 1., -3., 3.],
-            &[-3., -3., -2., 0., 3.],
-            &[1.; 5],
-            &knots,
-            4,
-            4,
+            Curve {
+                x: &[3., 3., 1., -3., 3.],
+                y: &[-3., -3., -2., 0., 3.],
+                weights: &[1.; 5],
+                knots: &knots,
+                degree: 4,
+                span: 4
+            },
             [0.707, 0.708],
             1_000_000
         ),
@@ -88,18 +100,20 @@ fn shared_irrational_root_is_not_matched_by_interval_overlap() {
     // A nearby but distinct quadratic root occupies the SAME broad box.
     assert!(matches!(
         query(
-            &[3., 3., 1., -3., 3.],
-            &[
-                -3.0009765625,
-                -3.0009765625,
-                -2.0009765625,
-                -0.0009765625,
-                2.9990234375
-            ],
-            &[1.; 5],
-            &knots,
-            4,
-            4,
+            Curve {
+                x: &[3., 3., 1., -3., 3.],
+                y: &[
+                    -3.0009765625,
+                    -3.0009765625,
+                    -2.0009765625,
+                    -0.0009765625,
+                    2.9990234375
+                ],
+                weights: &[1.; 5],
+                knots: &knots,
+                degree: 4,
+                span: 4
+            },
             [0.707, 0.708],
             1_000_000
         ),
@@ -110,12 +124,14 @@ fn shared_irrational_root_is_not_matched_by_interval_overlap() {
 fn original_positive_rational_weights_preserve_shared_root_proof() {
     assert!(matches!(
         query(
-            &[1., -1., 0., 4.],
-            &[1., 0., -1., -2.],
-            &[1., 2., 4., 8.],
-            &[0., 0., 0., 0., 1., 1., 1., 1.],
-            3,
-            3,
+            Curve {
+                x: &[1., -1., 0., 4.],
+                y: &[1., 0., -1., -2.],
+                weights: &[1., 2., 4., 8.],
+                knots: &[0., 0., 0., 0., 1., 1., 1., 1.],
+                degree: 3,
+                span: 3
+            },
             [0.19, 0.21],
             1_000_000
         ),
@@ -126,12 +142,14 @@ fn original_positive_rational_weights_preserve_shared_root_proof() {
 fn unclamped_original_span_proves_nonproportional_common_root() {
     assert!(matches!(
         query(
-            &[8., 0., -2., 56.],
-            &[-4., -1., 2., 5.],
-            &[1.; 4],
-            &[-3., -2., -1., 0., 1., 2., 3., 4.],
-            3,
-            3,
+            Curve {
+                x: &[8., 0., -2., 56.],
+                y: &[-4., -1., 2., 5.],
+                weights: &[1.; 4],
+                knots: &[-3., -2., -1., 0., 1., 2., 3., 4.],
+                degree: 3,
+                span: 3
+            },
             [0.333, 0.334],
             1_000_000
         ),
@@ -143,12 +161,14 @@ fn closed_interval_endpoints_and_singletons_are_counted_exactly() {
     for interval in [[0., 0.], [0., 0.1]] {
         assert!(matches!(
             query(
-                &[0., 0.5, 1.],
-                &[0., 0., 1.],
-                &[1.; 3],
-                &[0., 0., 0., 1., 1., 1.],
-                2,
-                2,
+                Curve {
+                    x: &[0., 0.5, 1.],
+                    y: &[0., 0., 1.],
+                    weights: &[1.; 3],
+                    knots: &[0., 0., 0., 1., 1., 1.],
+                    degree: 2,
+                    span: 2
+                },
                 interval,
                 100000
             ),
@@ -158,12 +178,14 @@ fn closed_interval_endpoints_and_singletons_are_counted_exactly() {
     for interval in [[1., 1.], [0.9, 1.]] {
         assert!(matches!(
             query(
-                &[-1., -0.5, 0.],
-                &[1., 0., 0.],
-                &[1.; 3],
-                &[0., 0., 0., 1., 1., 1.],
-                2,
-                2,
+                Curve {
+                    x: &[-1., -0.5, 0.],
+                    y: &[1., 0., 0.],
+                    weights: &[1.; 3],
+                    knots: &[0., 0., 0., 1., 1., 1.],
+                    degree: 2,
+                    span: 2
+                },
                 interval,
                 100000
             ),
@@ -177,12 +199,14 @@ fn nonunique_or_absent_first_root_and_exhaustion_never_admit() {
     for interval in [[0., 1.], [0.4, 0.6]] {
         assert!(matches!(
             query(
-                &[1., -2., 1.],
-                &[0., 0., 0.],
-                &[1.; 3],
-                &k,
-                2,
-                2,
+                Curve {
+                    x: &[1., -2., 1.],
+                    y: &[0., 0., 0.],
+                    weights: &[1.; 3],
+                    knots: &k,
+                    degree: 2,
+                    span: 2
+                },
                 interval,
                 100000
             ),
@@ -191,12 +215,14 @@ fn nonunique_or_absent_first_root_and_exhaustion_never_admit() {
     }
     assert!(matches!(
         query(
-            &[1., -1., 1.],
-            &[0., 0., 0.],
-            &[1.; 3],
-            &k,
-            2,
-            2,
+            Curve {
+                x: &[1., -1., 1.],
+                y: &[0., 0., 0.],
+                weights: &[1.; 3],
+                knots: &k,
+                degree: 2,
+                span: 2
+            },
             [0.49, 0.51],
             0
         ),
@@ -204,12 +230,14 @@ fn nonunique_or_absent_first_root_and_exhaustion_never_admit() {
     ));
     assert!(matches!(
         query(
-            &[0., 0., 0.],
-            &[1., -1., 1.],
-            &[1.; 3],
-            &k,
-            2,
-            2,
+            Curve {
+                x: &[0., 0., 0.],
+                y: &[1., -1., 1.],
+                weights: &[1.; 3],
+                knots: &k,
+                degree: 2,
+                span: 2
+            },
             [0.49, 0.51],
             100000
         ),
@@ -220,12 +248,14 @@ fn nonunique_or_absent_first_root_and_exhaustion_never_admit() {
 fn identically_zero_second_plane_is_common_only_at_unique_first_root() {
     assert!(matches!(
         query(
-            &[1., -1., 1.],
-            &[0., 0., 0.],
-            &[1.; 3],
-            &[0., 0., 0., 1., 1., 1.],
-            2,
-            2,
+            Curve {
+                x: &[1., -1., 1.],
+                y: &[0., 0., 0.],
+                weights: &[1.; 3],
+                knots: &[0., 0., 0., 1., 1., 1.],
+                degree: 2,
+                span: 2
+            },
             [0.49, 0.51],
             100000
         ),
@@ -236,12 +266,14 @@ fn identically_zero_second_plane_is_common_only_at_unique_first_root() {
 #[test]
 fn rounded_nearby_coefficients_never_create_a_false_common_root() {
     let r = query(
-        &[3., 3., 1., -3., 3.],
-        &[-3.0001, -3.0001, -2.0001, -0.0001, 2.9999],
-        &[1.; 5],
-        &[0., 0., 0., 0., 0., 1., 1., 1., 1., 1.],
-        4,
-        4,
+        Curve {
+            x: &[3., 3., 1., -3., 3.],
+            y: &[-3.0001, -3.0001, -2.0001, -0.0001, 2.9999],
+            weights: &[1.; 5],
+            knots: &[0., 0., 0., 0., 0., 1., 1., 1., 1., 1.],
+            degree: 4,
+            span: 4,
+        },
         [0.707, 0.708],
         1_000_000,
     );

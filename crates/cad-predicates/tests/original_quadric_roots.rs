@@ -2,16 +2,27 @@ use cad_predicates::{
     AuthoredScalar, Limits, OriginalQuadricRootsDecision, OriginalQuadricRootsOutcome as Outcome,
     PredicateContext, SourceArena, ToleranceContext, rational_bspline_quadric_roots,
 };
-fn query(
-    points: &[[f64; 3]],
-    weights: &[f64],
-    knots: &[f64],
-    p: usize,
+/// Rational B-spline space curve under test.
+struct Curve<'a> {
+    points: &'a [[f64; 3]],
+    weights: &'a [f64],
+    knots: &'a [f64],
+    degree: usize,
     span: usize,
+}
+fn query(
+    curve: Curve<'_>,
     q: [[f64; 4]; 4],
     products: &[[f64; 2]],
     budget: u64,
 ) -> OriginalQuadricRootsDecision {
+    let Curve {
+        points,
+        weights,
+        knots,
+        degree: p,
+        span,
+    } = curve;
     let mut v = Vec::new();
     for (point, w) in points.iter().zip(weights) {
         v.extend(point);
@@ -90,11 +101,13 @@ fn roots(r: OriginalQuadricRootsDecision, expected: &[(f64, usize)]) {
 fn sphere_transverse_tangent_exterior_and_endpoint_contacts() {
     roots(
         query(
-            &[[-2., 0., 0.], [2., 0., 0.]],
-            &[1., 1.],
-            &[0., 0., 1., 1.],
-            1,
-            1,
+            Curve {
+                points: &[[-2., 0., 0.], [2., 0., 0.]],
+                weights: &[1., 1.],
+                knots: &[0., 0., 1., 1.],
+                degree: 1,
+                span: 1,
+            },
             sphere(1.),
             &[],
             100000,
@@ -103,11 +116,13 @@ fn sphere_transverse_tangent_exterior_and_endpoint_contacts() {
     );
     roots(
         query(
-            &[[-1., 1., 0.], [1., 1., 0.]],
-            &[1., 1.],
-            &[0., 0., 1., 1.],
-            1,
-            1,
+            Curve {
+                points: &[[-1., 1., 0.], [1., 1., 0.]],
+                weights: &[1., 1.],
+                knots: &[0., 0., 1., 1.],
+                degree: 1,
+                span: 1,
+            },
             sphere(1.),
             &[],
             100000,
@@ -116,11 +131,13 @@ fn sphere_transverse_tangent_exterior_and_endpoint_contacts() {
     );
     roots(
         query(
-            &[[-1., 2., 0.], [1., 2., 0.]],
-            &[1., 1.],
-            &[0., 0., 1., 1.],
-            1,
-            1,
+            Curve {
+                points: &[[-1., 2., 0.], [1., 2., 0.]],
+                weights: &[1., 1.],
+                knots: &[0., 0., 1., 1.],
+                degree: 1,
+                span: 1,
+            },
             sphere(1.),
             &[],
             100000,
@@ -129,11 +146,13 @@ fn sphere_transverse_tangent_exterior_and_endpoint_contacts() {
     );
     roots(
         query(
-            &[[-1., 0., 0.], [1., 0., 0.]],
-            &[1., 1.],
-            &[0., 0., 1., 1.],
-            1,
-            1,
+            Curve {
+                points: &[[-1., 0., 0.], [1., 0., 0.]],
+                weights: &[1., 1.],
+                knots: &[0., 0., 1., 1.],
+                degree: 1,
+                span: 1,
+            },
             sphere(1.),
             &[],
             100000,
@@ -145,11 +164,13 @@ fn sphere_transverse_tangent_exterior_and_endpoint_contacts() {
 fn original_rational_weights_have_nonbinary_quadric_roots() {
     roots(
         query(
-            &[[-2., 0., 0.], [2., 0., 0.]],
-            &[1., 3.],
-            &[-2., -2., 5., 5.],
-            1,
-            1,
+            Curve {
+                points: &[[-2., 0., 0.], [2., 0., 0.]],
+                weights: &[1., 3.],
+                knots: &[-2., -2., 5., 5.],
+                degree: 1,
+                span: 1,
+            },
             sphere(1.),
             &[],
             100000,
@@ -161,11 +182,13 @@ fn original_rational_weights_have_nonbinary_quadric_roots() {
 fn unclamped_original_spline_span_has_complete_quadric_roots() {
     roots(
         query(
-            &[[-3., 0., 0.], [-1., 0., 0.], [1., 0., 0.], [3., 0., 0.]],
-            &[1.; 4],
-            &[-3., -2., -1., 0., 1., 2., 3., 4.],
-            3,
-            3,
+            Curve {
+                points: &[[-3., 0., 0.], [-1., 0., 0.], [1., 0., 0.], [3., 0., 0.]],
+                weights: &[1.; 4],
+                knots: &[-3., -2., -1., 0., 1., 2., 3., 4.],
+                degree: 3,
+                span: 3,
+            },
             sphere(0.25),
             &[],
             1_000_000,
@@ -176,11 +199,13 @@ fn unclamped_original_spline_span_has_complete_quadric_roots() {
 #[test]
 fn exact_rational_circle_is_coincident_without_fitting_or_rounded_extraction() {
     let r = query(
-        &[[75., 0., 0.], [75., 100., 0.], [-21., 72., 0.]],
-        &[5., 3., 5.],
-        &[0., 0., 0., 1., 1., 1.],
-        2,
-        2,
+        Curve {
+            points: &[[75., 0., 0.], [75., 100., 0.], [-21., 72., 0.]],
+            weights: &[5., 3., 5.],
+            knots: &[0., 0., 0., 1., 1., 1.],
+            degree: 2,
+            span: 2,
+        },
         sphere(5625.),
         &[],
         100000,
@@ -192,11 +217,13 @@ fn original_radius_products_are_distinct_from_rounded_squared_radius() {
     let r = 1.1;
     let p = [[r, 0., 0.], [r, 0., 0.]];
     let exact = query(
-        &p,
-        &[1., 1.],
-        &[0., 0., 1., 1.],
-        1,
-        1,
+        Curve {
+            points: &p,
+            weights: &[1., 1.],
+            knots: &[0., 0., 1., 1.],
+            degree: 1,
+            span: 1,
+        },
         sphere(0.),
         &[[r, -r]],
         100000,
@@ -204,11 +231,13 @@ fn original_radius_products_are_distinct_from_rounded_squared_radius() {
     assert!(matches!(exact.outcome, Outcome::Coincident), "{exact:?}");
     roots(
         query(
-            &p,
-            &[1., 1.],
-            &[0., 0., 1., 1.],
-            1,
-            1,
+            Curve {
+                points: &p,
+                weights: &[1., 1.],
+                knots: &[0., 0., 1., 1.],
+                degree: 1,
+                span: 1,
+            },
             sphere(r * r),
             &[],
             100000,
@@ -225,7 +254,18 @@ fn degree_25_source_keeps_degree_50_endpoint_root_order() {
     let mut q = [[0.; 4]; 4];
     q[0][0] = 1.;
     roots(
-        query(&points, &[1.; 26], &knots, 25, 25, q, &[], 1_000_000),
+        query(
+            Curve {
+                points: &points,
+                weights: &[1.; 26],
+                knots: &knots,
+                degree: 25,
+                span: 25,
+            },
+            q,
+            &[],
+            1_000_000,
+        ),
         &[(0., 50)],
     );
 }
@@ -240,11 +280,13 @@ fn asymmetric_quadric_matrix_cross_terms_and_cylinder_are_not_ignored() {
     ];
     roots(
         query(
-            &[[-2., 0.5, 100.], [2., 0.5, -100.]],
-            &[1., 1.],
-            &[0., 0., 1., 1.],
-            1,
-            1,
+            Curve {
+                points: &[[-2., 0.5, 100.], [2., 0.5, -100.]],
+                weights: &[1., 1.],
+                knots: &[0., 0., 1., 1.],
+                degree: 1,
+                span: 1,
+            },
             q,
             &[],
             100000,
@@ -255,11 +297,13 @@ fn asymmetric_quadric_matrix_cross_terms_and_cylinder_are_not_ignored() {
     cylinder[2][2] = 0.;
     roots(
         query(
-            &[[-2., 0., 100.], [2., 0., -100.]],
-            &[1., 1.],
-            &[0., 0., 1., 1.],
-            1,
-            1,
+            Curve {
+                points: &[[-2., 0., 100.], [2., 0., -100.]],
+                weights: &[1., 1.],
+                knots: &[0., 0., 1., 1.],
+                degree: 1,
+                span: 1,
+            },
             cylinder,
             &[],
             100000,
@@ -271,11 +315,13 @@ fn asymmetric_quadric_matrix_cross_terms_and_cylinder_are_not_ignored() {
 fn exhausted_work_never_admits_roots_or_coincidence() {
     for points in [[[-2., 0., 0.], [2., 0., 0.]], [[1., 0., 0.], [1., 0., 0.]]] {
         let r = query(
-            &points,
-            &[1., 1.],
-            &[0., 0., 1., 1.],
-            1,
-            1,
+            Curve {
+                points: &points,
+                weights: &[1., 1.],
+                knots: &[0., 0., 1., 1.],
+                degree: 1,
+                span: 1,
+            },
             sphere(1.),
             &[],
             0,

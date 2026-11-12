@@ -2,16 +2,24 @@ use cad_predicates::{
     AuthoredScalar, Limits, PredicateContext, Reason, Sign, SourceArena, ToleranceContext,
     rational_bspline_plane_root_sign,
 };
-fn query(
-    x: &[f64],
-    y: &[f64],
-    weights: &[f64],
-    knots: &[f64],
+/// Planar rational B-spline curve given as separate coordinate arrays.
+struct Curve<'a> {
+    x: &'a [f64],
+    y: &'a [f64],
+    weights: &'a [f64],
+    knots: &'a [f64],
     degree: usize,
     span: usize,
-    interval: [f64; 2],
-    budget: u64,
-) -> Result<Sign, Reason> {
+}
+fn query(curve: Curve<'_>, interval: [f64; 2], budget: u64) -> Result<Sign, Reason> {
+    let Curve {
+        x,
+        y,
+        weights,
+        knots,
+        degree,
+        span,
+    } = curve;
     let mut v = Vec::new();
     for i in 0..x.len() {
         v.extend([x[i], y[i], 0., weights[i]]);
@@ -59,12 +67,14 @@ fn nonbinary_root_sign_resolves_nearby_distinct_edge_roots() {
         let y = [1., 0., -1., -2.].map(|v| v + delta);
         assert_eq!(
             query(
-                &[1., -1., 0., 4.],
-                &y,
-                &[1.; 4],
-                &[0., 0., 0., 0., 1., 1., 1., 1.],
-                3,
-                3,
+                Curve {
+                    x: &[1., -1., 0., 4.],
+                    y: &y,
+                    weights: &[1.; 4],
+                    knots: &[0., 0., 0., 0., 1., 1., 1., 1.],
+                    degree: 3,
+                    span: 3
+                },
                 [0.333, 0.334],
                 1_000_000
             )
@@ -84,12 +94,14 @@ fn irrational_root_sign_has_no_numeric_root_separation_requirement() {
         let y = [-3., -3., -2., 0., 3.].map(|v| v + delta);
         assert_eq!(
             query(
-                &[3., 3., 1., -3., 3.],
-                &y,
-                &[1.; 5],
-                &k,
-                4,
-                4,
+                Curve {
+                    x: &[3., 3., 1., -3., 3.],
+                    y: &y,
+                    weights: &[1.; 5],
+                    knots: &k,
+                    degree: 4,
+                    span: 4
+                },
                 [0.707, 0.708],
                 1_000_000
             )
@@ -110,12 +122,14 @@ fn repeated_first_root_and_higher_degree_query_keep_signed_tarski_result() {
     for y in [[0., 0., 0., 1.], [0., 0., 0., -1.]] {
         assert_eq!(
             query(
-                &[1., -1., 0., 4.],
-                &y,
-                &[1.; 4],
-                &[0., 0., 0., 0., 1., 1., 1., 1.],
-                3,
-                3,
+                Curve {
+                    x: &[1., -1., 0., 4.],
+                    y: &y,
+                    weights: &[1.; 4],
+                    knots: &[0., 0., 0., 0., 1., 1., 1., 1.],
+                    degree: 3,
+                    span: 3
+                },
                 [0.3, 0.4],
                 1_000_000
             )
@@ -132,12 +146,14 @@ fn repeated_first_root_and_higher_degree_query_keep_signed_tarski_result() {
 fn original_rational_weights_and_unclamped_knots_preserve_sign() {
     assert_eq!(
         query(
-            &[1., -1., 0., 4.],
-            &[1., 1., 1., 1.],
-            &[1., 2., 4., 8.],
-            &[0., 0., 0., 0., 1., 1., 1., 1.],
-            3,
-            3,
+            Curve {
+                x: &[1., -1., 0., 4.],
+                y: &[1., 1., 1., 1.],
+                weights: &[1., 2., 4., 8.],
+                knots: &[0., 0., 0., 0., 1., 1., 1., 1.],
+                degree: 3,
+                span: 3
+            },
             [0.19, 0.21],
             1_000_000
         )
@@ -146,12 +162,14 @@ fn original_rational_weights_and_unclamped_knots_preserve_sign() {
     );
     assert_eq!(
         query(
-            &[8., 0., -2., 56.],
-            &[-3., 0., 3., 6.],
-            &[1.; 4],
-            &[-3., -2., -1., 0., 1., 2., 3., 4.],
-            3,
-            3,
+            Curve {
+                x: &[8., 0., -2., 56.],
+                y: &[-3., 0., 3., 6.],
+                weights: &[1.; 4],
+                knots: &[-3., -2., -1., 0., 1., 2., 3., 4.],
+                degree: 3,
+                span: 3
+            },
             [0.333, 0.334],
             1_000_000
         )
@@ -164,12 +182,14 @@ fn endpoints_and_singleton_boxes_use_exact_source_sign() {
     for interval in [[0., 0.], [0., 0.5]] {
         assert_eq!(
             query(
-                &[0., 0.5, 1.],
-                &[-1., 0., 1.],
-                &[1.; 3],
-                &[0., 0., 0., 1., 1., 1.],
-                2,
-                2,
+                Curve {
+                    x: &[0., 0.5, 1.],
+                    y: &[-1., 0., 1.],
+                    weights: &[1.; 3],
+                    knots: &[0., 0., 0., 1., 1., 1.],
+                    degree: 2,
+                    span: 2
+                },
                 interval,
                 100000
             )
@@ -180,12 +200,14 @@ fn endpoints_and_singleton_boxes_use_exact_source_sign() {
     for interval in [[1., 1.], [0.5, 1.]] {
         assert_eq!(
             query(
-                &[-1., -0.5, 0.],
-                &[-1., 0., 1.],
-                &[1.; 3],
-                &[0., 0., 0., 1., 1., 1.],
-                2,
-                2,
+                Curve {
+                    x: &[-1., -0.5, 0.],
+                    y: &[-1., 0., 1.],
+                    weights: &[1.; 3],
+                    knots: &[0., 0., 0., 1., 1., 1.],
+                    degree: 2,
+                    span: 2
+                },
                 interval,
                 100000
             )
@@ -199,12 +221,14 @@ fn zero_query_and_budget_nonunique_or_absent_root_fail_closed() {
     let k = [0., 0., 0., 1., 1., 1.];
     assert_eq!(
         query(
-            &[1., -1., 1.],
-            &[0.; 3],
-            &[1.; 3],
-            &k,
-            2,
-            2,
+            Curve {
+                x: &[1., -1., 1.],
+                y: &[0.; 3],
+                weights: &[1.; 3],
+                knots: &k,
+                degree: 2,
+                span: 2
+            },
             [0.49, 0.51],
             100000
         )
@@ -213,12 +237,14 @@ fn zero_query_and_budget_nonunique_or_absent_root_fail_closed() {
     );
     assert!(matches!(
         query(
-            &[1., -1., 1.],
-            &[1.; 3],
-            &[1.; 3],
-            &k,
-            2,
-            2,
+            Curve {
+                x: &[1., -1., 1.],
+                y: &[1.; 3],
+                weights: &[1.; 3],
+                knots: &k,
+                degree: 2,
+                span: 2
+            },
             [0.49, 0.51],
             0
         ),
@@ -227,12 +253,14 @@ fn zero_query_and_budget_nonunique_or_absent_root_fail_closed() {
     for interval in [[0., 1.], [0.4, 0.6]] {
         assert!(
             query(
-                &[1., -2., 1.],
-                &[1.; 3],
-                &[1.; 3],
-                &k,
-                2,
-                2,
+                Curve {
+                    x: &[1., -2., 1.],
+                    y: &[1.; 3],
+                    weights: &[1.; 3],
+                    knots: &k,
+                    degree: 2,
+                    span: 2
+                },
                 interval,
                 100000
             )
@@ -246,12 +274,14 @@ fn subnormal_query_has_exact_sign_below_binary64_evaluation_quantum() {
     for tiny in [-f64::from_bits(1), f64::from_bits(1)] {
         assert_eq!(
             query(
-                &[1., -1., 0., 4.],
-                &[tiny, 0., 0., 0.],
-                &[1.; 4],
-                &[0., 0., 0., 0., 1., 1., 1., 1.],
-                3,
-                3,
+                Curve {
+                    x: &[1., -1., 0., 4.],
+                    y: &[tiny, 0., 0., 0.],
+                    weights: &[1.; 4],
+                    knots: &[0., 0., 0., 0., 1., 1., 1., 1.],
+                    degree: 3,
+                    span: 3
+                },
                 [0.333, 0.334],
                 1_000_000
             )
@@ -286,12 +316,14 @@ fn tarski_sign_matches_independent_integer_evaluation_at_one_third() {
             let x = [1., -1., 0., 4.].map(|v| v * scale);
             assert_eq!(
                 query(
-                    &x,
-                    &y.map(f64::from),
-                    &[1.; 4],
-                    &[0., 0., 0., 0., 1., 1., 1., 1.],
-                    3,
-                    3,
+                    Curve {
+                        x: &x,
+                        y: &y.map(f64::from),
+                        weights: &[1.; 4],
+                        knots: &[0., 0., 0., 0., 1., 1., 1., 1.],
+                        degree: 3,
+                        span: 3
+                    },
                     [0.3, 0.4],
                     1_000_000
                 )
