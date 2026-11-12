@@ -345,10 +345,16 @@ fn qualify_impl(
                         common_plane_fixed_root(
                             world,
                             plane,
-                            point,
-                            *role,
-                            [*t, uses[1].curve().domain()[0], uses[1].curve().domain()[1]],
-                            world_reversed[1],
+                            FixedRootEnd {
+                                point,
+                                role: *role,
+                                parameter: [
+                                    *t,
+                                    uses[1].curve().domain()[0],
+                                    uses[1].curve().domain()[1],
+                                ],
+                                reversed: world_reversed[1],
+                            },
                             &mut out,
                             max_work,
                             max_driver_cells,
@@ -362,10 +368,16 @@ fn qualify_impl(
                         common_plane_fixed_root(
                             world,
                             plane,
-                            point,
-                            *role,
-                            [*t, uses[0].curve().domain()[0], uses[0].curve().domain()[1]],
-                            world_reversed[0],
+                            FixedRootEnd {
+                                point,
+                                role: *role,
+                                parameter: [
+                                    *t,
+                                    uses[0].curve().domain()[0],
+                                    uses[0].curve().domain()[1],
+                                ],
+                                reversed: world_reversed[0],
+                            },
                             &mut out,
                             max_work,
                             max_driver_cells,
@@ -488,17 +500,30 @@ pub(crate) fn source_point_cut_plane(
     out.work_used += r.work_used;
     Ok(r.outcome == BezierIdentity::Equal)
 }
-fn common_plane_fixed_root(
-    world: &Curve,
-    plane: [[f64; 3]; 3],
-    point: &crate::source_contact_point::SourcePoint,
+/// A shared end given by an original crossing `point` with `role` on one use
+/// and by the fixed `parameter` (value and domain) on the other, possibly
+/// reversed, use.
+#[derive(Clone, Copy)]
+struct FixedRootEnd<'a> {
+    point: &'a crate::source_contact_point::SourcePoint,
     role: Role,
     parameter: [f64; 3],
     reversed: bool,
+}
+fn common_plane_fixed_root(
+    world: &Curve,
+    plane: [[f64; 3]; 3],
+    end: FixedRootEnd<'_>,
     out: &mut Report,
     max_work: u64,
     max_driver_cells: usize,
 ) -> Result<bool> {
+    let FixedRootEnd {
+        point,
+        role,
+        parameter,
+        reversed,
+    } = end;
     out.root_checks += 1;
     if !source_point_cut_plane(point, role, plane, out, max_work)? || out.work_used == max_work {
         return Ok(false);
