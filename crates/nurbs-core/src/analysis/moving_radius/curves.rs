@@ -238,9 +238,11 @@ pub fn qualify(
                 let law = vec![vec![I::point(requested), I::point(0.), I::point(1.)]];
                 let mut reason = "curve-distance-polynomial-unresolved";
                 let Some((r, e)) = super::bound_coefficient_nets(
-                    &a,
-                    &b,
-                    &law,
+                    super::CoefficientNets {
+                        net: &a,
+                        centers: &b,
+                        radius: &law,
+                    },
                     0,
                     requested,
                     &mut out.work,

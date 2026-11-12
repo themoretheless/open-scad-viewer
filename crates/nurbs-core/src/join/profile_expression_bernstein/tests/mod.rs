@@ -276,9 +276,11 @@ fn corrected_cylinder_coefficients_cover_independent_rational_positions() {
     let mut radius_work = 0;
     let mut reason = "unverified";
     let residual = crate::moving_radius::bound_coefficient_nets(
-        &net,
-        &centers,
-        &radius,
+        crate::moving_radius::CoefficientNets {
+            net: &net,
+            centers: &centers,
+            radius: &radius,
+        },
         1,
         1.,
         &mut radius_work,
@@ -291,9 +293,11 @@ fn corrected_cylinder_coefficients_cover_independent_rational_positions() {
     assert!(residual.1 < 1e-6, "coefficient radius error {}", residual.1);
     let wrong = vec![vec![I::point(2.), I::point(0.), I::point(1.)]];
     let mismatch = crate::moving_radius::bound_coefficient_nets(
-        &net,
-        &centers,
-        &wrong,
+        crate::moving_radius::CoefficientNets {
+            net: &net,
+            centers: &centers,
+            radius: &wrong,
+        },
         1,
         2.,
         &mut radius_work,
@@ -305,14 +309,16 @@ fn corrected_cylinder_coefficients_cover_independent_rational_positions() {
     assert!(mismatch.0[0] <= -3. && mismatch.0[1] >= -3. && mismatch.0[1] < 0.);
     assert!(
         crate::moving_radius::bound_coefficient_nets(
-            &net,
-            &centers,
-            &radius,
+            crate::moving_radius::CoefficientNets {
+                net: &net,
+                centers: &centers,
+                radius: &radius,
+            },
             1,
             1.,
             &mut 0,
             0,
-            &mut reason
+            &mut reason,
         )
         .unwrap()
         .is_none()

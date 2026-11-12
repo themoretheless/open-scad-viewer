@@ -226,20 +226,42 @@ fn cell(
         .iter()
         .map(|p| p[0])
         .fold(f64::INFINITY, f64::min);
-    bound_coefficient_nets(&net, &centers, &radius, 0, rlo, work, max, reason)
+    bound_coefficient_nets(
+        CoefficientNets {
+            net: &net,
+            centers: &centers,
+            radius: &radius,
+        },
+        0,
+        rlo,
+        work,
+        max,
+        reason,
+    )
+}
+/// Homogeneous point coefficients with the center and radius law nets of one
+/// moving-radius expression.
+#[derive(Clone, Copy)]
+pub(crate) struct CoefficientNets<'a> {
+    pub net: &'a [Vec<[I; 4]>],
+    pub centers: &'a [Vec<I>],
+    pub radius: &'a [Vec<I>],
 }
 /// Correlated homogeneous polynomial residual. Caller-owned interval nets
 /// carry no geometry admission. Both law nets vary along the selected axis.
 pub(crate) fn bound_coefficient_nets(
-    net: &[Vec<[I; 4]>],
-    centers: &[Vec<I>],
-    radius: &[Vec<I>],
+    nets: CoefficientNets<'_>,
     axis: usize,
     rlo: f64,
     work: &mut u64,
     max: u64,
     reason: &mut &'static str,
 ) -> Result<Option<([f64; 2], f64)>> {
+    let CoefficientNets {
+        net,
+        centers,
+        radius,
+    } = nets;
     check(
         axis < 2
             && !net.is_empty()

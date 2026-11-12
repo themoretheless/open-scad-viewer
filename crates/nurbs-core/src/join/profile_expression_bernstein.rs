@@ -241,9 +241,11 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         };
         let mut used = out.coefficient_work as u64;
         let bound = crate::moving_radius::bound_coefficient_nets(
-            &net,
-            &centers,
-            &radius,
+            crate::moving_radius::CoefficientNets {
+                net: &net,
+                centers: &centers,
+                radius: &radius,
+            },
             1,
             rlo,
             &mut used,
