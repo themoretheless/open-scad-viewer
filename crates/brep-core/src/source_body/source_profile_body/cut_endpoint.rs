@@ -496,7 +496,17 @@ pub(super) fn inspect_curved_edge_interval(
         canonical: [f64; 2],
     ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
         self.inspect_curved_edge_interval_policy(
-            face, neighbor, index, threshold, max_cells, max_spans, canonical, None, false,
+            EdgeInterval {
+                face,
+                neighbor,
+                index,
+                canonical,
+            },
+            threshold,
+            max_cells,
+            max_spans,
+            None,
+            false,
         )
     }
 pub(crate) fn inspect_original_neighbor_interval(
@@ -526,7 +536,17 @@ pub(crate) fn inspect_original_neighbor_interval(
             ));
         }
         self.inspect_curved_edge_interval_policy(
-            face, neighbor, index, threshold, cells, spans, canonical, None, true,
+            EdgeInterval {
+                face,
+                neighbor,
+                index,
+                canonical,
+            },
+            threshold,
+            cells,
+            spans,
+            None,
+            true,
         )
     }
 /// Diagnostic full-edge limit angles on the owned nonlinear pcurve map.
@@ -558,13 +578,15 @@ pub(crate) fn inspect_original_neighbor_interval(
             ));
         }
         self.inspect_curved_edge_interval_policy(
-            face,
-            uses[1 - side].face,
-            index,
+            EdgeInterval {
+                face,
+                neighbor: uses[1 - side].face,
+                index,
+                canonical: [0., 1.],
+            },
             threshold,
             cells,
             spans,
-            [0., 1.],
             Some(high),
             false,
         )

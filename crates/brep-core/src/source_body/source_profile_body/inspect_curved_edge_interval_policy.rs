@@ -3,16 +3,19 @@ use super::*;
 impl<'a> Proposal<'a> {
 pub(super) fn inspect_curved_edge_interval_policy(
         &self,
-        face: usize,
-        neighbor: usize,
-        index: usize,
+        edge: EdgeInterval,
         threshold: f64,
         max_cells: usize,
         max_spans: usize,
-        canonical: [f64; 2],
         pole: Option<bool>,
         original_neighbor: bool,
     ) -> Result<nurbs_core::normal_alignment::ProfilePathReport> {
+        let EdgeInterval {
+            face,
+            neighbor,
+            index,
+            canonical,
+        } = edge;
         use nurbs_core::{interval_eval::Interval as I, normal_alignment::ProfilePathReport};
         if !canonical.iter().all(|x| x.is_finite())
             || canonical[0] < 0.

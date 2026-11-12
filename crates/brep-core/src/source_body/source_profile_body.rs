@@ -679,6 +679,15 @@ mod split_source_use;
 mod cut_endpoint;
 #[path="source_profile_body/inspect_curved_edge_interval_policy.rs"]
 mod inspect_curved_edge_interval_policy;
+/// One owned edge between `face` and `neighbor`, inspected over its
+/// `canonical` parameter interval.
+#[derive(Clone, Copy)]
+struct EdgeInterval {
+    face: usize,
+    neighbor: usize,
+    index: usize,
+    canonical: [f64; 2],
+}
 #[path="source_profile_body/algorithm_propose_cut_contours.rs"]
 mod algorithm_propose_cut_contours;
 pub use algorithm_propose_cut_contours::propose_cut_contours;
