@@ -270,13 +270,15 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             ));
         }
         let supports = self.inspect_shell_trimmed(
-            limits.cells,
-            limits.cells_per_pair,
-            limits.controls_per_enclosure,
-            limits.spans,
+            crate::source_profile_body::ShellScanLimits {
+                max_cells: limits.cells,
+                cells_per_pair: limits.cells_per_pair,
+                max_controls_per_enclosure: limits.controls_per_enclosure,
+                max_spans: limits.spans,
+                max_domain_cells: limits.domain_cells,
+                domain_cells_per_pair: limits.domain_cells_per_pair,
+            },
             limits.tolerance_uv,
-            limits.domain_cells,
-            limits.domain_cells_per_pair,
         )?;
         let mut out = ShellContactAudit {
             owners: &self.faces,

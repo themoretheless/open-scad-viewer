@@ -240,7 +240,7 @@ mod tests;
 
 #[path = "source_profile_shell_contacts.rs"]
 mod contacts;
-pub use contacts::{ShellSupportPair, ShellSupportReport, SupportPairReport, SupportProduct};
+pub use contacts::{ShellScanLimits, ShellSupportPair, ShellSupportReport, SupportPairReport, SupportProduct};
 #[path = "source_profile_shell_original_contact.rs"]
 mod original_contact;
 pub use original_contact::{

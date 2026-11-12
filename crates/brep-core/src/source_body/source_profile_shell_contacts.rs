@@ -10,6 +10,17 @@ pub struct SupportPairReport {
     pub cells: usize,
     pub spans: usize,
 }
+/// Work limits of one whole-shell support scan: total and per-pair cells,
+/// control allowance per enclosure, spans, and total and per-pair domain cells.
+#[derive(Clone, Copy, Debug)]
+pub struct ShellScanLimits {
+    pub max_cells: usize,
+    pub cells_per_pair: usize,
+    pub max_controls_per_enclosure: usize,
+    pub max_spans: usize,
+    pub max_domain_cells: usize,
+    pub domain_cells_per_pair: usize,
+}
 impl SupportPairReport {
     pub fn complete_excluded(&self) -> bool {
         self.pending.is_empty()
@@ -208,24 +219,21 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         max_spans: usize,
     ) -> Result<ShellSupportReport> {
         self.inspect_shell_regions(
-            max_cells,
-            cells_per_pair,
-            max_controls_per_enclosure,
-            max_spans,
+            ShellScanLimits {
+                max_cells,
+                cells_per_pair,
+                max_controls_per_enclosure,
+                max_spans,
+                max_domain_cells: 0,
+                domain_cells_per_pair: 0,
+            },
             None,
-            0,
-            0,
         )
     }
     pub fn inspect_shell_trimmed(
         &self,
-        max_cells: usize,
-        cells_per_pair: usize,
-        max_controls_per_enclosure: usize,
-        max_spans: usize,
+        limits: ShellScanLimits,
         tolerance_uv: f64,
-        max_domain_cells: usize,
-        domain_cells_per_pair: usize,
     ) -> Result<ShellSupportReport> {
         if !tolerance_uv.is_finite() || tolerance_uv <= 0. {
             return Err(Error::new(
@@ -233,26 +241,21 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                 "Require positive finite UV tolerance",
             ));
         }
-        self.inspect_shell_regions(
+        self.inspect_shell_regions(limits, Some(tolerance_uv))
+    }
+    fn inspect_shell_regions(
+        &self,
+        limits: ShellScanLimits,
+        tolerance_uv: Option<f64>,
+    ) -> Result<ShellSupportReport> {
+        let ShellScanLimits {
             max_cells,
             cells_per_pair,
             max_controls_per_enclosure,
             max_spans,
-            Some(tolerance_uv),
             max_domain_cells,
             domain_cells_per_pair,
-        )
-    }
-    fn inspect_shell_regions(
-        &self,
-        max_cells: usize,
-        cells_per_pair: usize,
-        max_controls_per_enclosure: usize,
-        max_spans: usize,
-        tolerance_uv: Option<f64>,
-        max_domain_cells: usize,
-        domain_cells_per_pair: usize,
-    ) -> Result<ShellSupportReport> {
+        } = limits;
         if max_cells > 100000
             || cells_per_pair > 100000
             || max_domain_cells > 100000

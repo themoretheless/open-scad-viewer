@@ -4522,7 +4522,17 @@
             support_matched.spans
         );
         let trimmed_shell = expression
-            .inspect_shell_trimmed(4096, 8, 1000, 20000, 1e-8, 100000, 256)
+            .inspect_shell_trimmed(
+                crate::source_profile_body::ShellScanLimits {
+                    max_cells: 4096,
+                    cells_per_pair: 8,
+                    max_controls_per_enclosure: 1000,
+                    max_spans: 20000,
+                    max_domain_cells: 100000,
+                    domain_cells_per_pair: 256,
+                },
+                1e-8,
+            )
             .unwrap();
         assert_eq!(trimmed_shell.pairs.len(), count * (count - 1) / 2);
         assert!(
@@ -4555,7 +4565,17 @@
             trimmed_shell.domain_cells
         );
         let zero_trim = expression
-            .inspect_shell_trimmed(0, 8, 1000, 20000, 1e-8, 0, 256)
+            .inspect_shell_trimmed(
+                crate::source_profile_body::ShellScanLimits {
+                    max_cells: 0,
+                    cells_per_pair: 8,
+                    max_controls_per_enclosure: 1000,
+                    max_spans: 20000,
+                    max_domain_cells: 0,
+                    domain_cells_per_pair: 256,
+                },
+                1e-8,
+            )
             .unwrap();
         assert_eq!(zero_trim.pending_pairs(), count * (count - 1) / 2);
 
