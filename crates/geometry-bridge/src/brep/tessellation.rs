@@ -477,14 +477,13 @@ impl EdgeSamplingRegistry {
     }
     pub(super) fn append(
         &mut self,
-        face: &brep_core::Face,
+        model: &brep_core::Model,
         use_: &brep_core::FaceUse,
         mut built: FaceMesh,
         face_ids: &mut Vec<usize>,
-        model_tolerance_mm: f64,
         allow_preview_retriangulation: bool,
-        model_face_count: usize,
     ) -> Result<()> {
+        let face = &model.faces[use_.face];
         let mut remap = Vec::with_capacity(built.uv.len());
         for (uv, shared) in built.uv.iter().zip(&built.shared) {
             remap.push(if let Some(position) = shared {
@@ -507,7 +506,7 @@ impl EdgeSamplingRegistry {
             }).collect();
             repair_collinear_triangles(&mut built, &points);
         }
-        if allow_preview_retriangulation && is_affine_plane(&face.surface, model_tolerance_mm) {
+        if allow_preview_retriangulation && is_affine_plane(&face.surface, model.tolerance_mm) {
             let points: Vec<[f64;3]> = remap.iter().map(|&i| {
                 let p = &self.mesh.positions[3*i..3*i+3]; [p[0],p[1],p[2]]
             }).collect();
@@ -521,7 +520,7 @@ impl EdgeSamplingRegistry {
             self.mesh.indices.extend(mapped);
             face_ids.push(use_.face);
         }
-        let triangle_limit = if model_face_count > 32 {
+        let triangle_limit = if model.faces.len() > 32 {
             160000
         } else {
             20000

@@ -19,7 +19,6 @@ pub(super) fn nurbs_with_schedule(model:&brep_core::Model,segments:usize,freefor
     let mut registry = EdgeSamplingRegistry::new(model, segments, reduce_linear_rulings)?;
     let mut face_ids = Vec::new();
     let mut closed_triangles = Vec::new();
-    let face_count = model.faces.len();
     for shell in &model.shells {
         for use_ in &shell.faces {
             let face = &model.faces[use_.face];
@@ -45,7 +44,7 @@ pub(super) fn nurbs_with_schedule(model:&brep_core::Model,segments:usize,freefor
                         })?,
                 )?
             };
-            registry.append(face, use_, built, &mut face_ids, model.tolerance_mm, reduce_linear_rulings, face_count)?;
+            registry.append(model, use_, built, &mut face_ids, reduce_linear_rulings)?;
             closed_triangles.resize(face_ids.len(), shell.closed);
         }
     }

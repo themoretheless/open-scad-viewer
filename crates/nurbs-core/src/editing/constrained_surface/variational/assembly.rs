@@ -12,41 +12,48 @@ pub(super) struct Assembly {
     pub sites: usize,
     pub terms: u64,
 }
-fn add(
-    h: &mut [Vec<f64>],
-    rest: &mut [f64],
-    constant: &mut f64,
-    row: &[f64],
-    target: f64,
-    weight: f64,
-    work: &mut u64,
-    max: u64,
-) -> Result<()> {
-    let active = row
-        .iter()
-        .enumerate()
-        .filter(|(_, x)| **x != 0.)
-        .collect::<Vec<_>>();
-    if !weight.is_finite()
-        || weight < 0.
-        || !target.is_finite()
-        || active.iter().any(|(_, x)| !x.is_finite())
-    {
-        return Err(error("Shell affine strain assembly overflow"));
-    }
-    let terms = active.len() as u64 * active.len() as u64;
-    if terms > max.saturating_sub(*work) {
-        return Err(error("Shell assembly work allowance exhausted"));
-    }
-    *work += terms;
-    *constant += 0.5 * weight * target * target;
-    for &(i, &a) in &active {
-        rest[i] += weight * a * target;
-        for &(j, &b) in &active {
-            h[i][j] += weight * a * b;
+/// Elastic quadratic `0.5 xᵀHx - restᵀx + constant` accumulated one strain row at a time.
+struct ElasticForm {
+    h: Vec<Vec<f64>>,
+    rest: Vec<f64>,
+    constant: f64,
+}
+impl ElasticForm {
+    fn add(
+        &mut self,
+        row: &[f64],
+        target: f64,
+        weight: f64,
+        work: &mut u64,
+        max: u64,
+    ) -> Result<()> {
+        let Self { h, rest, constant } = self;
+        let active = row
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| **x != 0.)
+            .collect::<Vec<_>>();
+        if !weight.is_finite()
+            || weight < 0.
+            || !target.is_finite()
+            || active.iter().any(|(_, x)| !x.is_finite())
+        {
+            return Err(error("Shell affine strain assembly overflow"));
         }
+        let terms = active.len() as u64 * active.len() as u64;
+        if terms > max.saturating_sub(*work) {
+            return Err(error("Shell assembly work allowance exhausted"));
+        }
+        *work += terms;
+        *constant += 0.5 * weight * target * target;
+        for &(i, &a) in &active {
+            rest[i] += weight * a * target;
+            for &(j, &b) in &active {
+                h[i][j] += weight * a * b;
+            }
+        }
+        Ok(())
     }
-    Ok(())
 }
 fn displacement(trial: &Surface, reference: &Surface, uv: [f64; 2]) -> Result<[f64; 3]> {
     let a = trial.evaluate(uv[0], uv[1])?.point;
@@ -61,10 +68,13 @@ pub(super) fn assemble(
 ) -> Result<Assembly> {
     let n = seed.control_points.len() * seed.control_points[0].len();
     let sites = quadrature::sites(seed, reference, o)?;
-    let mut elastic = vec![vec![0.; 3 * n]; 3 * n];
+    let mut form = ElasticForm {
+        h: vec![vec![0.; 3 * n]; 3 * n],
+        rest: vec![0.; 3 * n],
+        constant: 0.,
+    };
     let mut force = vec![0.; 3 * n];
-    let mut rest = vec![0.; 3 * n];
-    let (mut elastic_constant, mut load_constant) = (0., 0.);
+    let mut load_constant = 0.;
     let mut terms = 0;
     let nu = m.material.poisson;
     for &(uv, weight) in &sites {
@@ -107,16 +117,7 @@ pub(super) fn assemble(
                 (&diff, -off[0] + off[1], weight * (1. - nu) * 0.5),
                 (&rows[2], -off[2], weight * 2. * (1. - nu)),
             ] {
-                add(
-                    &mut elastic,
-                    &mut rest,
-                    &mut elastic_constant,
-                    row,
-                    target,
-                    w,
-                    &mut terms,
-                    o.max_assembly_terms,
-                )?;
+                form.add(row, target, w, &mut terms, o.max_assembly_terms)?;
             }
         }
     }
@@ -129,6 +130,11 @@ pub(super) fn assemble(
             }
         }
     }
+    let ElasticForm {
+        h: elastic,
+        rest,
+        constant: elastic_constant,
+    } = form;
     let mut h = elastic.clone();
     for (i, r) in h.iter_mut().enumerate() {
         r[i] += o.fitting.anchor_weight;
