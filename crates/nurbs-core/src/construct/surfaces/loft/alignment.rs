@@ -299,9 +299,11 @@ fn interpolate_mode(
                         &guides,
                         &guide_parameters,
                         targets,
-                        budget,
-                        max_cells,
-                        max_map_evaluations,
+                        crate::construct::surfaces::gordon::CurveAudit {
+                            tolerance: budget,
+                            max_cells,
+                            max_map_evaluations,
+                        },
                     )?;
                 tangent_certificates = tangents;
                 (surface, certificates)
@@ -311,9 +313,11 @@ fn interpolate_mode(
                     parameters,
                     &guides,
                     &guide_parameters,
-                    budget,
-                    max_cells,
-                    max_map_evaluations,
+                    crate::construct::surfaces::gordon::CurveAudit {
+                        tolerance: budget,
+                        max_cells,
+                        max_map_evaluations,
+                    },
                 )?
             };
             let upper = |index: usize| -> Result<f64> {

@@ -177,33 +177,48 @@ pub fn patch(
     combine(s)
 }
 
+/// Agreement tolerance and the cell and map-evaluation budgets of the curve
+/// audits that certify a constructed surface against its input curves.
+#[derive(Clone, Copy, Debug)]
+pub struct CurveAudit {
+    pub tolerance: f64,
+    pub max_cells: usize,
+    pub max_map_evaluations: usize,
+}
 /// Cartesian Gordon interpolation with independent rational crossing weights.
 /// Every authored section and guide must pass a bounded whole-domain retention
 /// audit. Returned certificates are numerical, never exact-identity claims.
 #[cfg(feature = "codec")]
-pub fn patch_cartesian(
-    u_curves: &[Curve], v_curves: &[Curve],
-    parameters_u: &[f64], parameters_v: &[f64],
-    tolerance: f64, max_cells: usize, max_map_evaluations: usize,
-) -> Result<(Surface, Vec<value_codec::Value>)> {
+pub fn patch_cartesian(u_curves: &[Curve], v_curves: &[Curve], parameters_u: &[f64], parameters_v: &[f64], audit: CurveAudit) -> Result<(Surface, Vec<value_codec::Value>)> {
+        let CurveAudit { max_cells, max_map_evaluations, .. } = audit;
     check((1..=1_000_000).contains(&max_cells)
         && (1..=1_000_000).contains(&max_map_evaluations),
         "Cartesian Gordon audit budgets must be in 1..1000000")?;
-    cartesian::checked(u_curves,v_curves,parameters_u,parameters_v,
-        tolerance,max_cells,max_map_evaluations)
+    cartesian::checked(
+        u_curves,
+        v_curves,
+        parameters_u,
+        parameters_v,
+        audit,
+    )
 }
 
 /// Cartesian network interpolation with authored dP/dV boundary fields.
 /// V and tangent-curve U parameters are normalized to [0,1]. Curve and tangent
 /// certificates must both establish their complete-domain numerical bounds.
 #[cfg(feature = "codec")]
-pub fn patch_cartesian_with_tangents(
-    u:&[Curve],v:&[Curve],pu:&[f64],pv:&[f64],tangents:&[Curve;2],
-    tolerance:f64,max_cells:usize,max_map_evaluations:usize,
-)->Result<(Surface,Vec<value_codec::Value>,Vec<value_codec::Value>)> {
+pub fn patch_cartesian_with_tangents(u:&[Curve], v:&[Curve], pu:&[f64], pv:&[f64], tangents:&[Curve;2], audit: CurveAudit)->Result<(Surface,Vec<value_codec::Value>,Vec<value_codec::Value>)> {
+        let CurveAudit { max_cells, max_map_evaluations, .. } = audit;
     check((1..=1_000_000).contains(&max_cells) && (1..=1_000_000).contains(&max_map_evaluations),
         "Cartesian tangent construction audit budgets must be in 1..1000000")?;
-    cartesian::checked_with_tangents(u,v,pu,pv,tangents,tolerance,max_cells,max_map_evaluations)
+    cartesian::checked_with_tangents(
+        u,
+        v,
+        pu,
+        pv,
+        tangents,
+        audit,
+    )
 }
 
 /// Certifies the complete boundary dP/dv field against contiguous target curves.
