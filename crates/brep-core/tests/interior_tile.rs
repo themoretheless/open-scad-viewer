@@ -26,9 +26,11 @@ fn compact_tile_keeps_a_closed_shell_and_qualifies_four_whole_g2_seams() {
     let before = source.clone();
     let out = r::propose_interior_tile(
         &source,
-        0,
-        [[0.25, 0.75]; 2],
-        [0.001; 3],
+        r::InteriorTile {
+            face: 0,
+            rectangle: [[0.25, 0.75]; 2],
+            displacement: [0.001; 3],
+        },
         1e-8,
         [1e-7, 1e-5, 1e-4],
         limits(),
@@ -83,7 +85,17 @@ fn outside_rectangle_and_exhausted_ownership_do_not_change_the_source() {
         let mut work = limits();
         work.domain_cells = budget;
         assert!(
-            r::propose_interior_tile(&source, 0, rect, [0.001; 3], 1e-8, [1e-7, 1e-5, 1e-4], work)
+            r::propose_interior_tile(
+                &source,
+                r::InteriorTile {
+                    face: 0,
+                    rectangle: rect,
+                    displacement: [0.001; 3],
+                },
+                1e-8,
+                [1e-7, 1e-5, 1e-4],
+                work,
+            )
                 .is_err()
         );
         assert_eq!(source, before);
@@ -137,9 +149,11 @@ fn correlated_graph_proof_qualifies_the_rotated_source_and_four_new_seams() {
     work.graph_coefficients = Some(20_000_000);
     let out = r::propose_interior_tile(
         &source,
-        0,
-        [[0.25, 0.75]; 2],
-        [0.001; 3],
+        r::InteriorTile {
+            face: 0,
+            rectangle: [[0.25, 0.75]; 2],
+            displacement: [0.001; 3],
+        },
         1e-8,
         [1e-7, 1e-5, 1e-4],
         work,
@@ -171,12 +185,14 @@ fn late_seam_and_closure_exhaustion_never_return_a_partial_body() {
         assert!(
             r::propose_interior_tile(
                 &source,
-                0,
-                [[0.25, 0.75]; 2],
-                [0.001; 3],
+                r::InteriorTile {
+                    face: 0,
+                    rectangle: [[0.25, 0.75]; 2],
+                    displacement: [0.001; 3],
+                },
                 1e-8,
                 [1e-7, 1e-5, 1e-4],
-                work
+                work,
             )
             .is_err()
         );
@@ -202,9 +218,11 @@ fn distributed_tile_requires_a_complete_curvature_receipt_and_retains_g2() {
     };
     let (out, curvature) = r::propose_curvature_limited_tile(
         &source,
-        0,
-        [[0.25, 0.75]; 2],
-        [0.00001; 3],
+        r::InteriorTile {
+            face: 0,
+            rectangle: [[0.25, 0.75]; 2],
+            displacement: [0.00001; 3],
+        },
         1e-8,
         [1e-7, 1e-5, 1e-4],
         limits(),
@@ -224,14 +242,16 @@ fn distributed_tile_requires_a_complete_curvature_receipt_and_retains_g2() {
     assert!(
         r::propose_curvature_limited_tile(
             &source,
-            0,
-            [[0.25, 0.75]; 2],
-            [0.00001; 3],
+            r::InteriorTile {
+                face: 0,
+                rectangle: [[0.25, 0.75]; 2],
+                displacement: [0.00001; 3],
+            },
             1e-8,
             [1e-7, 1e-5, 1e-4],
             limits(),
             1e-6,
-            work
+            work,
         )
         .is_err()
     );
@@ -244,14 +264,16 @@ fn distributed_tile_requires_a_complete_curvature_receipt_and_retains_g2() {
     assert!(
         r::propose_curvature_limited_tile(
             &source,
-            0,
-            [[0.25, 0.75]; 2],
-            [0.00001; 3],
+            r::InteriorTile {
+                face: 0,
+                rectangle: [[0.25, 0.75]; 2],
+                displacement: [0.00001; 3],
+            },
             1e-8,
             [1e-7, 1e-5, 1e-4],
             limits(),
             1.,
-            no_work
+            no_work,
         )
         .is_err()
     );

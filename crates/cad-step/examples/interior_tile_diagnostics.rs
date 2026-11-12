@@ -1,5 +1,5 @@
 //! Actual closed central-face subdivision. No material/solid admission.
-use brep_core::region_replacement::{InteriorTileLimits, propose_interior_tile};
+use brep_core::region_replacement::{InteriorTile, InteriorTileLimits, propose_interior_tile};
 use nurbs_core::{
     curve::basis,
     interval_eval::{self, Interval},
@@ -68,9 +68,11 @@ fn main() {
     eprintln!("phase=construct-and-qualify-tile");
     let out = match propose_interior_tile(
         &source,
-        face,
-        rectangle,
-        [delta; 3],
+        InteriorTile {
+            face,
+            rectangle,
+            displacement: [delta; 3],
+        },
         1e-8,
         [source.tolerance_mm, 1e-5, 1e-4],
         InteriorTileLimits {

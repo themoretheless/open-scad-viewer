@@ -90,20 +90,24 @@ pub fn certify_tile_rectangle_inside(
 /// Every complete boundary receives fresh original-support G2 inspection.
 /// Topology closure and continuous edge lifts are mandatory before return.
 /// The source is immutable. Material, embedding and thickness remain separate.
+/// One interior tile: the UV `rectangle` of source face `face`, displaced by
+/// `displacement`.
+#[derive(Clone, Copy, Debug)]
+pub struct InteriorTile {
+    pub face: usize,
+    pub rectangle: [[f64; 2]; 2],
+    pub displacement: [f64; 3],
+}
 pub fn propose_interior_tile(
     source: &Model,
-    face: usize,
-    rectangle: [[f64; 2]; 2],
-    displacement: [f64; 3],
+    tile: InteriorTile,
     tolerance_uv: f64,
     tolerances: [f64; 3],
     limits: InteriorTileLimits,
 ) -> Result<InteriorTileProposal> {
     build_tile(
         source,
-        face,
-        rectangle,
-        displacement,
+        tile,
         tolerance_uv,
         tolerances,
         limits,
@@ -115,9 +119,7 @@ pub fn propose_interior_tile(
 /// cover is Within the declared limit. No material or solid admission.
 pub fn propose_curvature_limited_tile(
     source: &Model,
-    face: usize,
-    rectangle: [[f64; 2]; 2],
-    displacement: [f64; 3],
+    tile: InteriorTile,
     tolerance_uv: f64,
     tolerances: [f64; 3],
     limits: InteriorTileLimits,
@@ -135,9 +137,7 @@ pub fn propose_curvature_limited_tile(
     )?;
     let out = build_tile(
         source,
-        face,
-        rectangle,
-        displacement,
+        tile,
         tolerance_uv,
         tolerances,
         limits,
@@ -162,14 +162,17 @@ pub fn propose_curvature_limited_tile(
 }
 fn build_tile(
     source: &Model,
-    face: usize,
-    rectangle: [[f64; 2]; 2],
-    displacement: [f64; 3],
+    tile: InteriorTile,
     tolerance_uv: f64,
     tolerances: [f64; 3],
     limits: InteriorTileLimits,
     distributed: bool,
 ) -> Result<InteriorTileProposal> {
+    let InteriorTile {
+        face,
+        rectangle,
+        displacement,
+    } = tile;
     check(
         limits.domain_cells <= 1_000_000
             && limits.agreement_cells <= 100000

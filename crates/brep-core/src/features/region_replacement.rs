@@ -609,7 +609,7 @@ mod interior_lift;
 pub use interior_lift::{InteriorLift, InteriorLiftProposal, propose_interior_lift};
 
 mod interior_tile;
-pub use interior_tile::{InteriorTileLimits, InteriorTileProposal, propose_interior_tile, propose_curvature_limited_tile, certify_tile_rectangle_inside};
+pub use interior_tile::{InteriorTile, InteriorTileLimits, InteriorTileProposal, propose_interior_tile, propose_curvature_limited_tile, certify_tile_rectangle_inside};
 
 mod corner_patch_network;
 pub use corner_patch_network::{CornerPatchNetwork,propose_corner_patch_network,propose_binary_corner_patch_network};
