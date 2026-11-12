@@ -61,11 +61,12 @@ impl ClosedCutCandidate {
             BooleanSourceSide::Second => (other, &self.source),
         };
         let material = closed_solid::qualify_boolean_face_box(
-            a,
-            b,
-            operation,
-            source_side,
-            self.face,
+            closed_solid::BooleanFace {
+                solids: [a, b],
+                operation,
+                side: source_side,
+                face: self.face,
+            },
             rectangle,
             directions,
             limits.boolean,

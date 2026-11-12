@@ -83,11 +83,12 @@ impl QualifiedBooleanFaceSeed {
         self.a.reverify()?;
         self.b.reverify()?;
         let f = qualify_boolean_face_seed(
-            &self.a,
-            &self.b,
-            self.operation,
-            self.side,
-            self.face,
+            BooleanFace {
+                solids: [&self.a, &self.b],
+                operation: self.operation,
+                side: self.side,
+                face: self.face,
+            },
             self.seed.parameters(),
             &self.directions,
             self.limits,
@@ -104,16 +105,27 @@ impl QualifiedBooleanFaceSeed {
         Ok(())
     }
 }
+/// One face of a boolean source: both qualified solids, the material
+/// operation, which solid supplies the face, and the face index there.
+#[derive(Clone, Copy)]
+pub struct BooleanFace<'a> {
+    pub solids: [&'a QualifiedClosedSolid; 2],
+    pub operation: BooleanMaterialOp,
+    pub side: BooleanSourceSide,
+    pub face: usize,
+}
 pub fn qualify_boolean_face_seed(
-    a: &QualifiedClosedSolid,
-    b: &QualifiedClosedSolid,
-    operation: BooleanMaterialOp,
-    side: BooleanSourceSide,
-    face: usize,
+    query: BooleanFace<'_>,
     uv: [f64; 2],
     directions: &[[f64; 3]],
     limits: BooleanFaceSeedLimits,
 ) -> Result<QualifiedBooleanFaceSeed> {
+    let BooleanFace {
+        solids: [a, b],
+        operation,
+        side,
+        face,
+    } = query;
     let (source, other) = match side {
         BooleanSourceSide::First => (a, b),
         BooleanSourceSide::Second => (b, a),

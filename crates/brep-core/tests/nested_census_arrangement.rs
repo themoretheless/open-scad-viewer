@@ -826,11 +826,12 @@ fn run(with_holes: bool, mirrored: bool) {
 fn nested_hole_operands_prove_material_boxes_without_census_shortcuts() {
     let (a, aface, b) = operands(true, false);
     let void = solid::qualify_boolean_face_box(
-        &a,
-        &b,
-        solid::BooleanMaterialOp::Difference,
-        solid::BooleanSourceSide::Second,
-        1,
+        solid::BooleanFace {
+            solids: [&a, &b],
+            operation: solid::BooleanMaterialOp::Difference,
+            side: solid::BooleanSourceSide::Second,
+            face: 1,
+        },
         [[0.499, 0.501], [0.724, 0.726]],
         &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
         Default::default(),
@@ -847,11 +848,12 @@ fn nested_hole_operands_prove_material_boxes_without_census_shortcuts() {
             [[0.949, 0.951], [0.049, 0.051]],
         ] {
             let result = solid::qualify_boolean_face_box(
-                &a,
-                &b,
-                solid::BooleanMaterialOp::Difference,
-                side,
-                face,
+                solid::BooleanFace {
+                    solids: [&a, &b],
+                    operation: solid::BooleanMaterialOp::Difference,
+                    side,
+                    face,
+                },
                 rectangle,
                 &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
                 Default::default(),

@@ -107,8 +107,8 @@ pub use material_seed::{
 };
 mod boolean_material;
 pub use boolean_material::{
-    BooleanFaceSeedLimits, BooleanMaterialOp, BooleanSourceSide, QualifiedBooleanFaceSeed,
-    qualify_boolean_face_seed,
+    BooleanFace, BooleanFaceSeedLimits, BooleanMaterialOp, BooleanSourceSide,
+    QualifiedBooleanFaceSeed, qualify_boolean_face_seed,
 };
 mod volume;
 pub use volume::{VolumeLimits, VolumeReport};

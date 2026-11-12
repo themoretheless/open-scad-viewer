@@ -170,11 +170,12 @@ fn all_boolean_operations_classify_entire_finite_face_cells_and_reject_boundary_
         (Op::Xor, true, true, true),
     ] {
         let yes = solid::qualify_boolean_face_box(
-            &a,
-            &b,
-            operation,
-            Side::First,
-            face(&a, 2.),
+            solid::BooleanFace {
+                solids: [&a, &b],
+                operation,
+                side: Side::First,
+                face: face(&a, 2.),
+            },
             [[0.4, 0.6]; 2],
             &directions(),
             Default::default(),
@@ -183,11 +184,12 @@ fn all_boolean_operations_classify_entire_finite_face_cells_and_reject_boundary_
         assert_eq!(yes.retain(), retain_inside);
         assert_eq!(yes.reverse_material_normal(), reverse_inside);
         let no = solid::qualify_boolean_face_box(
-            &a,
-            &b,
-            operation,
-            Side::First,
-            face(&a, 0.),
+            solid::BooleanFace {
+                solids: [&a, &b],
+                operation,
+                side: Side::First,
+                face: face(&a, 0.),
+            },
             [[0.4, 0.6]; 2],
             &directions(),
             Default::default(),
@@ -196,11 +198,12 @@ fn all_boolean_operations_classify_entire_finite_face_cells_and_reject_boundary_
         assert_eq!(no.retain(), retain_outside);
     }
     let subtract = solid::qualify_boolean_face_box(
-        &a,
-        &b,
-        Op::Difference,
-        Side::Second,
-        face(&b, 1.),
+        solid::BooleanFace {
+            solids: [&a, &b],
+            operation: Op::Difference,
+            side: Side::Second,
+            face: face(&b, 1.),
+        },
         [[0.48, 0.52]; 2],
         &directions(),
         Default::default(),
@@ -222,14 +225,15 @@ fn all_boolean_operations_classify_entire_finite_face_cells_and_reject_boundary_
         .unwrap();
     assert!(
         solid::qualify_boolean_face_box(
-            &a,
-            &b,
-            Op::Union,
-            Side::First,
-            top,
+            solid::BooleanFace {
+                solids: [&a, &b],
+                operation: Op::Union,
+                side: Side::First,
+                face: top,
+            },
             [[0.45, 0.55]; 2],
             &directions(),
-            Default::default()
+            Default::default(),
         )
         .is_err()
     );

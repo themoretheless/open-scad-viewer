@@ -138,11 +138,12 @@ impl QualifiedInteriorSsCensus {
             second.face
         };
         let material = closed_solid::qualify_boolean_face_box(
-            &first.source,
-            &second.source,
-            operation,
-            side,
-            face,
+            closed_solid::BooleanFace {
+                solids: [&first.source, &second.source],
+                operation,
+                side,
+                face,
+            },
             rectangle,
             directions,
             limits.boolean,

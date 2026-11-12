@@ -55,11 +55,12 @@ impl QualifiedBooleanFaceBox {
         self.a.reverify()?;
         self.b.reverify()?;
         let fresh = qualify_boolean_face_box(
-            &self.a,
-            &self.b,
-            self.operation,
-            self.side,
-            self.face,
+            BooleanFace {
+                solids: [&self.a, &self.b],
+                operation: self.operation,
+                side: self.side,
+                face: self.face,
+            },
             self.material.rectangle(),
             &self.directions,
             self.limits,
@@ -77,15 +78,17 @@ impl QualifiedBooleanFaceBox {
     }
 }
 pub fn qualify_boolean_face_box(
-    a: &QualifiedClosedSolid,
-    b: &QualifiedClosedSolid,
-    operation: BooleanMaterialOp,
-    side: BooleanSourceSide,
-    face: usize,
+    query: BooleanFace<'_>,
     rectangle: [[f64; 2]; 2],
     directions: &[[f64; 3]],
     limits: BooleanFaceBoxLimits,
 ) -> Result<QualifiedBooleanFaceBox> {
+    let BooleanFace {
+        solids: [a, b],
+        operation,
+        side,
+        face,
+    } = query;
     let (source, other) = match side {
         BooleanSourceSide::First => (a, b),
         BooleanSourceSide::Second => (b, a),
