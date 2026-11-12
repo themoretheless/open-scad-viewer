@@ -250,10 +250,12 @@ pub fn original_affine_patch_contacts(
                             let before = ctx.work_used();
                             let proof = rational_bspline_affine_patch_edge_sign(
                                 &mut ctx,
-                                &controls,
-                                &knots,
-                                c.degree,
-                                span,
+                                cad_predicates::RationalSpanRefs {
+                                    controls: &controls,
+                                    knots: &knots,
+                                    degree: c.degree,
+                                    span,
+                                },
                                 patch,
                                 edge,
                                 root.interval,

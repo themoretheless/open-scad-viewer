@@ -7,17 +7,12 @@ use super::*;
 /// coefficient or root-midpoint comparison enters this proof.
 pub fn rational_bspline_affine_patch_edge_root(
     ctx: &mut PredicateContext<'_>,
-    controls: &[[LeafRef; 4]],
-    knots: &[LeafRef],
-    degree: usize,
-    span: usize,
+    curve: super::quadric_edge::RationalSpanRefs<'_>,
     patch: [[LeafRef; 3]; 4],
     edge: usize,
     interval: [f64; 2],
 ) -> Result<OriginalPlaneCommonRootDecision, InputError> {
-    let d = query(
-        ctx, controls, knots, degree, span, patch, edge, interval, false,
-    )?;
+    let d = query(ctx, curve, patch, edge, interval, false)?;
     Ok(OriginalPlaneCommonRootDecision {
         outcome: match d.sign {
             Ok(Sign::Zero) => Outcome::Common,
@@ -33,29 +28,27 @@ pub fn rational_bspline_affine_patch_edge_root(
 /// this is the coordinate sign, not the unoriented plane numerator sign.
 pub fn rational_bspline_affine_patch_edge_sign(
     ctx: &mut PredicateContext<'_>,
-    controls: &[[LeafRef; 4]],
-    knots: &[LeafRef],
-    degree: usize,
-    span: usize,
+    curve: super::quadric_edge::RationalSpanRefs<'_>,
     patch: [[LeafRef; 3]; 4],
     edge: usize,
     interval: [f64; 2],
 ) -> Result<super::sign::OriginalPlaneRootSignDecision, InputError> {
-    query(
-        ctx, controls, knots, degree, span, patch, edge, interval, true,
-    )
+    query(ctx, curve, patch, edge, interval, true)
 }
 fn query(
     ctx: &mut PredicateContext<'_>,
-    controls: &[[LeafRef; 4]],
-    knots: &[LeafRef],
-    degree: usize,
-    span: usize,
+    curve: super::quadric_edge::RationalSpanRefs<'_>,
     patch: [[LeafRef; 3]; 4],
     edge: usize,
     interval: [f64; 2],
     signed: bool,
 ) -> Result<super::sign::OriginalPlaneRootSignDecision, InputError> {
+    let super::quadric_edge::RationalSpanRefs {
+        controls,
+        knots,
+        degree,
+        span,
+    } = curve;
     if edge > 3
         || !interval.iter().all(|v| v.is_finite())
         || interval[0] < 0.
