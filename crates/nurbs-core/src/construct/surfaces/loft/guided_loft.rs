@@ -706,10 +706,12 @@ mod authored_cartesian_tests {
             &[2., 7.],
             &[guide],
             &controls,
-            1e-6,
-            1e-8,
-            50000,
-            200000,
+            crate::loft_alignment::AlignmentLimits {
+                budget: 1e-6,
+                parameter_tolerance: 1e-8,
+                max_cells: 50000,
+                max_map_evaluations: 200000,
+            },
         )
         .unwrap();
         let mut conflicting = controls.clone();

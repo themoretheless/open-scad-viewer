@@ -15,14 +15,43 @@ if matches!(op.as_str(), "surface_auto_guided_loft" | "surface_auto_guided_loft_
         let parameter_tolerance=optional_field::<f64>(&v,"parameter_tolerance")?.unwrap_or(1e-8);
         let mut result=if op=="surface_auto_guided_loft_cartesian" {
             if let Some(controls)=control_tangents(&v)? {
-                loft_alignment::interpolate_cartesian_with_control_tangents(sections,&parameters,&guides,&controls,
-                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
+                loft_alignment::interpolate_cartesian_with_control_tangents(
+                    sections,
+                    &parameters,
+                    &guides,
+                    &controls,
+                    loft_alignment::AlignmentLimits {
+                        budget,
+                        parameter_tolerance,
+                        max_cells: field(&v,"maxCells")?,
+                        max_map_evaluations: field(&v,"maxMapEvaluations")?,
+                    },
+                )?
             } else if let Some(targets)=optional_field::<[curve::Curve;2]>(&v,"boundary_tangents")? {
-                loft_alignment::interpolate_cartesian_with_tangents(sections,&parameters,&guides,&targets,
-                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
+                loft_alignment::interpolate_cartesian_with_tangents(
+                    sections,
+                    &parameters,
+                    &guides,
+                    &targets,
+                    loft_alignment::AlignmentLimits {
+                        budget,
+                        parameter_tolerance,
+                        max_cells: field(&v,"maxCells")?,
+                        max_map_evaluations: field(&v,"maxMapEvaluations")?,
+                    },
+                )?
             } else {
-                loft_alignment::interpolate_cartesian_with_parameter_tolerance(sections,&parameters,&guides,
-                    budget,parameter_tolerance,field(&v,"maxCells")?,field(&v,"maxMapEvaluations")?)?
+                loft_alignment::interpolate_cartesian_with_parameter_tolerance(
+                    sections,
+                    &parameters,
+                    &guides,
+                    loft_alignment::AlignmentLimits {
+                        budget,
+                        parameter_tolerance,
+                        max_cells: field(&v,"maxCells")?,
+                        max_map_evaluations: field(&v,"maxMapEvaluations")?,
+                    },
+                )?
             }
         } else {
             loft_alignment::interpolate_with_parameter_tolerance(sections,&parameters,&guides,budget,parameter_tolerance)?

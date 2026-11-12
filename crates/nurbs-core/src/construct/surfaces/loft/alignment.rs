@@ -105,15 +105,28 @@ pub fn interpolate_with_parameter_tolerance(
 
 /// Automatic orientation/station mapping with independent rational guide weights.
 /// Curve audit budgets apply per curve; returned bounds include remapping error.
+/// Fitting budget, station-parameter tolerance and audit work of one automatic
+/// Cartesian alignment loft.
+#[derive(Clone, Copy, Debug)]
+pub struct AlignmentLimits {
+    pub budget: f64,
+    pub parameter_tolerance: f64,
+    pub max_cells: usize,
+    pub max_map_evaluations: usize,
+}
+
 pub fn interpolate_cartesian_with_parameter_tolerance(
     sections: &[Curve],
     parameters: &[f64],
     guides: &[Curve],
-    budget: f64,
-    parameter_tolerance: f64,
-    max_cells: usize,
-    max_map_evaluations: usize,
+    limits: AlignmentLimits,
 ) -> Result<AlignedLoft> {
+    let AlignmentLimits {
+        budget,
+        parameter_tolerance,
+        max_cells,
+        max_map_evaluations,
+    } = limits;
     interpolate_mode(
         sections,
         parameters,
@@ -131,11 +144,14 @@ pub fn interpolate_cartesian_with_tangents(
     parameters: &[f64],
     guides: &[Curve],
     targets: &[Curve; 2],
-    budget: f64,
-    parameter_tolerance: f64,
-    max_cells: usize,
-    max_map_evaluations: usize,
+    limits: AlignmentLimits,
 ) -> Result<AlignedLoft> {
+    let AlignmentLimits {
+        budget,
+        parameter_tolerance,
+        max_cells,
+        max_map_evaluations,
+    } = limits;
     interpolate_mode(
         sections,
         parameters,
@@ -153,11 +169,9 @@ pub fn interpolate_cartesian_with_control_tangents(
     parameters: &[f64],
     guides: &[Curve],
     controls: &[Vec<[f64; 3]>; 2],
-    budget: f64,
-    parameter_tolerance: f64,
-    max_cells: usize,
-    max_map_evaluations: usize,
+    limits: AlignmentLimits,
 ) -> Result<AlignedLoft> {
+    let AlignmentLimits { budget, max_cells, .. } = limits;
     let (authored, normalized) =
         crate::guided_loft::authored_control_tangent_fields(sections, parameters, controls)?;
     let mut result = interpolate_cartesian_with_tangents(
@@ -165,10 +179,7 @@ pub fn interpolate_cartesian_with_control_tangents(
         parameters,
         guides,
         &normalized,
-        budget,
-        parameter_tolerance,
-        max_cells,
-        max_map_evaluations,
+        limits,
     )?;
     result.tangent_certificates.clear();
     for end in 0..2 {
@@ -447,10 +458,12 @@ mod cartesian_tests {
             &sections,
             &[0., 1.],
             &[guide.clone()],
-            1e-6,
-            1e-8,
-            50000,
-            200000,
+            AlignmentLimits {
+                budget: 1e-6,
+                parameter_tolerance: 1e-8,
+                max_cells: 50000,
+                max_map_evaluations: 200000,
+            },
         )
         .unwrap();
         assert_eq!(result.reversed, vec![true]);
@@ -500,10 +513,12 @@ mod clamped_cartesian_tests {
             &[2., 7.],
             &[guide],
             &targets,
-            1e-6,
-            1e-8,
-            50000,
-            200000,
+            AlignmentLimits {
+                budget: 1e-6,
+                parameter_tolerance: 1e-8,
+                max_cells: 50000,
+                max_map_evaluations: 200000,
+            },
         )
         .unwrap();
         assert_eq!(result.reversed, vec![true]);
