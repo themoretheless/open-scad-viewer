@@ -554,7 +554,12 @@ pub(super) fn inspect_normal_pair(
         max_cells: usize,
         max_spans: usize,
     ) -> Result<ProfilePathReport> {
-        self.inspect_path(original, None, endpoints, threshold, max_cells, max_spans, None)
+        let limits = PathLimits {
+            threshold,
+            max_cells,
+            max_spans,
+        };
+        self.inspect_path(original, None, endpoints, limits, None)
     }
 /// Full affine-path comparison of factored profile limits against an
     /// original surface. Includes pole limits, but never certifies immersion
@@ -562,6 +567,7 @@ pub(super) fn inspect_normal_pair(
     pub fn inspect_original_factored_pole_path(&self,original:&Surface,
         endpoints:[[[f64;2];2];2],high:bool,threshold:f64,max_cells:usize,max_spans:usize
     )->Result<ProfilePathReport> {
-        self.inspect_path(original,None,endpoints,threshold,max_cells,max_spans,Some(high))
+        let limits=PathLimits{threshold,max_cells,max_spans};
+        self.inspect_path(original,None,endpoints,limits,Some(high))
     }
 }

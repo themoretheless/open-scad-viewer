@@ -11,26 +11,26 @@ impl<'source> WeightProfile<'source> {
         max_cells: usize,
         max_spans: usize,
     ) -> Result<ProfilePathReport> {
-        self.inspect_path(
-            other.source,
-            Some(other),
-            endpoints,
+        let limits = PathLimits {
             threshold,
             max_cells,
             max_spans,
-            None,
-        )
+        };
+        self.inspect_path(other.source, Some(other), endpoints, limits, None)
     }
 pub(super) fn inspect_path(
         &self,
         original: &Surface,
         other: Option<&WeightProfile<'_>>,
         endpoints: [[[f64; 2]; 2]; 2],
-        threshold: f64,
-        max_cells: usize,
-        max_spans: usize,
+        limits: PathLimits,
         pole: Option<bool>,
     ) -> Result<ProfilePathReport> {
+        let PathLimits {
+            threshold,
+            max_cells,
+            max_spans,
+        } = limits;
         check(
             (1..=100000).contains(&max_cells)
                 && (1..=100000).contains(&max_spans)

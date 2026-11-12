@@ -252,6 +252,13 @@ mod tests;
 mod profile;
 #[path="surface_weight_profile/end_transition_section.rs"]
 mod end_transition_section;
+/// Angular threshold and the cell and span budgets of one profile path comparison.
+#[derive(Clone, Copy)]
+struct PathLimits {
+    threshold: f64,
+    max_cells: usize,
+    max_spans: usize,
+}
 #[path="surface_weight_profile/weight_profile_section.rs"]
 mod weight_profile_section;
 #[path="surface_weight_profile/inspect_profile_path.rs"]
