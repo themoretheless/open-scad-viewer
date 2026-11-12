@@ -112,10 +112,8 @@ impl CoordinateBounds {
         multiplicity: usize,
         t: I,
         p: &[I],
-        a: I,
-        b: I,
+        raw: [I; 2],
     ) -> Result<Decision> {
-        let raw = [a, b];
         let ranges: [[Q; 2]; 2] = std::array::from_fn(|axis| {
             [
                 self.ranges[axis][0].clone().max(q(raw[axis].lo)),

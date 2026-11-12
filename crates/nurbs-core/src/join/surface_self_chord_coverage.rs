@@ -126,15 +126,22 @@ fn secant_exclusion(
     max_spans: usize,
     factored: Option<&crate::factored_surface_normals::Certificate<'_>>,
 ) -> Result<(bool, usize)> {
-    secant_exclusion_cached(s, pair, boxes, sine, max_spans, factored, None, None)
+    let normals = NormalProofs { factored, ..NormalProofs::default() };
+    secant_exclusion_cached(s, pair, boxes, sine, max_spans, normals)
+}
+/// Optional original normal proofs a secant exclusion may reuse instead of fresh bounds.
+#[derive(Clone, Copy, Default)]
+struct NormalProofs<'a> {
+    factored: Option<&'a crate::factored_surface_normals::Certificate<'a>>,
+    cached: Option<&'a crate::factored_surface_normals::PairBounds<'a>>,
+    original: Option<&'a normal_alignment::OriginalPairBounds<'a>>,
 }
 fn secant_exclusion_cached(
     s: &Surface, pair: Pair, boxes: [&Vec<[f64; 2]>; 2], sine: f64,
     max_spans: usize,
-    factored: Option<&crate::factored_surface_normals::Certificate<'_>>,
-    cached: Option<&crate::factored_surface_normals::PairBounds<'_>>,
-    original: Option<&normal_alignment::OriginalPairBounds<'_>>,
+    normals: NormalProofs<'_>,
 ) -> Result<(bool, usize)> {
+    let NormalProofs { factored, cached, original } = normals;
     let components = if let Some(cache) = cached {
         let proof = factored.ok_or(crate::input("Missing original normal proof"))?;
         crate::check(std::ptr::eq(s, proof.surface()), "Use original normal source")?;
@@ -407,9 +414,11 @@ fn qualify_impl<'a>(
                     [&a, &b],
                     max_sine_squared,
                     limits.spans - out.spans,
-                    factored,
-                    pair_normals.as_ref(),
-                    original_normals.as_ref(),
+                    NormalProofs {
+                        factored,
+                        cached: pair_normals.as_ref(),
+                        original: original_normals.as_ref(),
+                    },
                 )?;
                 out.spans += used;
                 if excluded {
@@ -453,8 +462,10 @@ fn qualify_impl<'a>(
                 if !done {
                     let chord=path.chord_bounds()?;
                     let zero=vec![[0.,0.];3];
+                    let normals=NormalProofs{factored,cached:pair_normals.as_ref(),
+                        original:original_normals.as_ref()};
                     let (done,used)=secant_exclusion_cached(s,pair,[&zero,&chord],max_sine_squared,
-                        limits.spans-out.spans,factored,pair_normals.as_ref(),original_normals.as_ref())?;
+                        limits.spans-out.spans,normals)?;
                     out.spans+=used;
                     if done {excluded=true;break;}
                 }

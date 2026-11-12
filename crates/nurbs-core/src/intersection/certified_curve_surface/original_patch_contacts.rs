@@ -238,7 +238,7 @@ pub fn original_affine_patch_contacts(
                     let mut coordinate_sign_proven = false;
                     let mut proven_outside = false;
                     if matches!(
-                        bounds.contact(s, span, root.multiplicity, t, &p, alpha, beta)?,
+                        bounds.contact(s, span, root.multiplicity, t, &p, [alpha, beta])?,
                         super::patch_coordinate_bounds::Decision::Unresolved
                     ) {
                         for edge in 0..4 {
@@ -285,7 +285,7 @@ pub fn original_affine_patch_contacts(
                     if proven_outside {
                         continue;
                     }
-                    match bounds.contact(s, span, root.multiplicity, t, &p, alpha, beta)? {
+                    match bounds.contact(s, span, root.multiplicity, t, &p, [alpha, beta])? {
                         super::patch_coordinate_bounds::Decision::Outside => {}
                         super::patch_coordinate_bounds::Decision::Unresolved => {
                             out.ambiguous_parameters.push([t.lo, t.hi])

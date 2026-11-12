@@ -144,8 +144,9 @@ fn factored_original_pole_normals_exclude_oblique_secants_but_refuse_foreign_sou
     let (excluded, used) = secant_exclusion(&s, pair, [&a, &b], 1e-6, 1, Some(&proof)).unwrap();
     assert!(excluded && used == 1);
     let cache = proof.pair_bounds(pair).unwrap();
-    assert_eq!(secant_exclusion_cached(&s, pair, [&a, &b], 1e-6, 0,
-        Some(&proof), Some(&cache), None).unwrap(), (true, 0));
+    let normals =
+        NormalProofs { factored: Some(&proof), cached: Some(&cache), ..NormalProofs::default() };
+    assert_eq!(secant_exclusion_cached(&s, pair, [&a, &b], 1e-6, 0, normals).unwrap(), (true, 0));
     assert!(cache.components(&proof, [pair[0]; 2]).is_err());
     let other = s.clone();
     let other_proof = crate::factored_surface_normals::prepare(&other, false, 1_000_000)
@@ -185,13 +186,11 @@ fn original_secant_direction_excludes_oblique_chords_and_refuses_overlap_or_no_w
     let (paid,cache)=normal_alignment::inspect_original_pair_cached(&s,pair,1e-6,100).unwrap();
     assert!(paid.spans>0);
     let cache=cache.unwrap();
-    assert_eq!(secant_exclusion_cached(&s,pair,[&a,&b],1e-6,0,None,None,
-        Some(&cache)).unwrap(),(true,0));
+    let normals=NormalProofs{original:Some(&cache),..NormalProofs::default()};
+    assert_eq!(secant_exclusion_cached(&s,pair,[&a,&b],1e-6,0,normals).unwrap(),(true,0));
     let foreign=s.clone();
-    assert!(secant_exclusion_cached(&foreign,pair,[&a,&b],1e-6,0,None,None,
-        Some(&cache)).is_err());
-    assert!(secant_exclusion_cached(&s,[pair[0];2],[&a,&a],1e-6,0,None,None,
-        Some(&cache)).is_err());
+    assert!(secant_exclusion_cached(&foreign,pair,[&a,&b],1e-6,0,normals).is_err());
+    assert!(secant_exclusion_cached(&s,[pair[0];2],[&a,&a],1e-6,0,normals).is_err());
 
     assert_eq!(
         secant_exclusion(&s, pair, [&a, &b], 1e-6, 0, None).unwrap(),
