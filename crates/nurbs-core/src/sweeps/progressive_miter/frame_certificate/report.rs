@@ -232,7 +232,14 @@ impl Report {
     }
     /// Optional XYZ axis/center laws use their own authored domains and share
     /// one component-cell budget. Scalar scale/twist budgets remain separate.
-    pub fn station_with_affine_laws(&self, edge:usize, fraction:[f64;2], authored:[f64;3], laws: StationLaws<'_>, max_cells:usize)->Result<Option<VectorEnclosure>> {
+    pub fn station_with_affine_laws(
+        &self,
+        edge:usize,
+        fraction:[f64;2],
+        authored:[f64;3],
+        laws: StationLaws<'_>,
+        max_cells:usize,
+    )->Result<Option<VectorEnclosure>> {
         let StationLaws { scale, twist, affine } = laws;
         let Some(traversal) = self.traversal(edge, fraction)? else {
             return Ok(None);
@@ -293,7 +300,15 @@ impl Report {
             max_cells,
         )
     }
-    pub(in super::super) fn station_frame_affine(&self, edge:usize, fraction:[f64;2], local:VectorEnclosure, source:FrameSource<'_>, laws: StationLaws<'_>, max_cells:usize)->Result<Option<VectorEnclosure>> {
+    pub(in super::super) fn station_frame_affine(
+        &self,
+        edge:usize,
+        fraction:[f64;2],
+        local:VectorEnclosure,
+        source:FrameSource<'_>,
+        laws: StationLaws<'_>,
+        max_cells:usize,
+    )->Result<Option<VectorEnclosure>> {
         let StationLaws { scale, twist, affine } = laws;
         check(local.iter().flatten().all(|x|x.is_finite()) && local[2]==[0.,0.],"Authored miter local profile must be finite and planar")?;
         let Some(traversal)=self.traversal(edge,fraction)? else {return Ok(None);};
@@ -346,7 +361,15 @@ impl Report {
             max_cells,
         )
     }
-    pub(in super::super) fn interpolation_upper_frame_affine(&self, edge:usize, fraction:[f64;2], local:VectorEnclosure, source:FrameSource<'_>, laws: StationLaws<'_>, max_cells:usize)->Result<Option<f64>> {
+    pub(in super::super) fn interpolation_upper_frame_affine(
+        &self,
+        edge:usize,
+        fraction:[f64;2],
+        local:VectorEnclosure,
+        source:FrameSource<'_>,
+        laws: StationLaws<'_>,
+        max_cells:usize,
+    )->Result<Option<f64>> {
         let StationLaws { scale, twist, affine } = laws;
         check(local.iter().flatten().all(|x|x.is_finite()) && local[2]==[0.,0.],"Authored miter local profile must be finite and planar")?;
         let Some(traversal)=self.traversal(edge,fraction)? else {return Ok(None);};
@@ -440,7 +463,14 @@ impl Report {
         )
     }
     /// Outward derivative remainder including XYZ axis scale and local center.
-    pub fn interpolation_upper_affine(&self, edge:usize, fraction:[f64;2], authored:[f64;3], laws: StationLaws<'_>, max_cells:usize)->Result<Option<f64>> {
+    pub fn interpolation_upper_affine(
+        &self,
+        edge:usize,
+        fraction:[f64;2],
+        authored:[f64;3],
+        laws: StationLaws<'_>,
+        max_cells:usize,
+    )->Result<Option<f64>> {
         let StationLaws { scale, twist, affine } = laws;
         check(
             authored.iter().all(|x| x.is_finite()),

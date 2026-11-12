@@ -95,7 +95,14 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         )
     }
     /// Numerical approximation gate only; material trim remains independent.
-    pub fn bisect_candidate_deviation_edges(&self, graph: &mut BoundaryGraphReport, candidates: FaceCandidateReport, work: BisectionWork, target_mm: f64, spans_per_query: usize) -> Result<InteriorBisectionReport> {
+    pub fn bisect_candidate_deviation_edges(
+        &self,
+        graph: &mut BoundaryGraphReport,
+        candidates: FaceCandidateReport,
+        work: BisectionWork,
+        target_mm: f64,
+        spans_per_query: usize,
+    ) -> Result<InteriorBisectionReport> {
         if !target_mm.is_finite() || target_mm <= 0. || spans_per_query > 100000 {
             return Err(Error::new(
                 "BREP_INTERIOR_BISECTION",
@@ -147,7 +154,14 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
             )),
         )
     }
-    fn bisect_interior(&self, graph: &mut BoundaryGraphReport, mut candidates: FaceCandidateReport, work: BisectionWork, deviation_gate: Option<(f64, usize)>, trim_gate: Option<(usize, usize, f64)>) -> Result<InteriorBisectionReport> {
+    fn bisect_interior(
+        &self,
+        graph: &mut BoundaryGraphReport,
+        mut candidates: FaceCandidateReport,
+        work: BisectionWork,
+        deviation_gate: Option<(f64, usize)>,
+        trim_gate: Option<(usize, usize, f64)>,
+    ) -> Result<InteriorBisectionReport> {
         let BisectionWork { max_splits, controls, max_spans } = work;
         if max_splits > 100000 || controls > 1000000 || max_spans > 100000 {
             return Err(Error::new(

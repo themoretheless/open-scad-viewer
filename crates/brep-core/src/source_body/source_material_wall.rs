@@ -42,8 +42,16 @@ pub struct WallRequirement {
 /// Fresh full pair coverage supplies a lower bound. A normal material chord
 /// connecting the selected unions supplies an upper witness. Positive evidence
 /// for both gates is mandatory, including matching immutable Body identities.
-pub fn qualify<'a,E:crate::source_seam_tangency::Carrier>(body: &'a Body<E>, groups: [&[usize]; 2], requirement: WallRequirement, origin: [f64; 3], direction: [f64; 3], tolerance_uv: f64, limits: Limits) -> Result<Report<'a,E>> {
-        let WallRequirement { minimum_mm, tolerance_mm } = requirement;
+pub fn qualify<'a,E:crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
+    groups: [&[usize]; 2],
+    requirement: WallRequirement,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    tolerance_uv: f64,
+    limits: Limits,
+) -> Result<Report<'a,E>> {
+    let WallRequirement { minimum_mm, tolerance_mm } = requirement;
     if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
         return Err(Error::new(
             "BREP_SOURCE_WALL_TOLERANCE",
@@ -102,8 +110,16 @@ pub struct SearchReport<'a,E = crate::source_shared_edge::SharedEdge> {
 /// Automatic upper witness search plus complete lower coverage of the supplied
 /// unions. Exhausting a finite search does not itself prove a global minimum;
 /// only the full source pair bound supplies the lower certificate.
-pub fn search_and_qualify<'a,E:crate::source_seam_tangency::Carrier>(body: &'a Body<E>, groups: [&[usize]; 2], requirement: WallRequirement, tolerance_uv: f64, grid: usize, max_attempts: usize, limits: Limits) -> Result<SearchReport<'a,E>> {
-        let WallRequirement { minimum_mm, tolerance_mm } = requirement;
+pub fn search_and_qualify<'a,E:crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
+    groups: [&[usize]; 2],
+    requirement: WallRequirement,
+    tolerance_uv: f64,
+    grid: usize,
+    max_attempts: usize,
+    limits: Limits,
+) -> Result<SearchReport<'a,E>> {
+    let WallRequirement { minimum_mm, tolerance_mm } = requirement;
     if !tolerance_mm.is_finite() || tolerance_mm <= 0. {
         return Err(Error::new(
             "BREP_SOURCE_WALL_TOLERANCE",
@@ -170,8 +186,16 @@ pub struct RefinedReport<'a,E = crate::source_shared_edge::SharedEdge> {
 /// Tighten the lower certificate toward a searched material upper witness.
 /// Initial and refinement full-pair visits share one gap budget. Refusal keeps
 /// the original valid interval and exposes the failed refinement separately.
-pub fn search_and_refine<'a,E:crate::source_seam_tangency::Carrier>(body: &'a Body<E>, groups: [&[usize]; 2], requirement: WallRequirement, tolerance_uv: f64, grid: usize, max_attempts: usize, limits: Limits) -> Result<RefinedReport<'a,E>> {
-        let WallRequirement { minimum_mm, tolerance_mm } = requirement;
+pub fn search_and_refine<'a,E:crate::source_seam_tangency::Carrier>(
+    body: &'a Body<E>,
+    groups: [&[usize]; 2],
+    requirement: WallRequirement,
+    tolerance_uv: f64,
+    grid: usize,
+    max_attempts: usize,
+    limits: Limits,
+) -> Result<RefinedReport<'a,E>> {
+    let WallRequirement { minimum_mm, tolerance_mm } = requirement;
     let budget = [limits.gap.cells, limits.gap.spans];
     let result = search_and_qualify(
         body,

@@ -51,8 +51,16 @@ fn residual(a: &surface_offset::Evaluation, b: &surface_offset::Evaluation) -> (
     let vector = std::array::from_fn(|k| a.point[k] - b.point[k]);
     (vector, vector[0].hypot(vector[1]).hypot(vector[2]))
 }
-pub fn propose(faces: crate::offset::contact_pcurve::OffsetFaces<'_>, seeds: [[f64; 2]; 2], fixed_axis: usize, numerical_tolerance_mm: f64, max_iterations: usize, padding_fraction: f64, max_spans: usize) -> Result<Report> {
-        let crate::offset::contact_pcurve::OffsetFaces { surfaces, distances } = faces;
+pub fn propose(
+    faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
+    seeds: [[f64; 2]; 2],
+    fixed_axis: usize,
+    numerical_tolerance_mm: f64,
+    max_iterations: usize,
+    padding_fraction: f64,
+    max_spans: usize,
+) -> Result<Report> {
+    let crate::offset::contact_pcurve::OffsetFaces { surfaces, distances } = faces;
     for s in surfaces {
         s.validate()?;
     }

@@ -250,7 +250,14 @@ pub struct ControlValuesReport {
     pub values:Option<Vec<[[f64;2];3]>>,
     pub reason:Option<&'static str>,
 }
-pub(super) fn control_value_with_fit(laws: ControlLaws<'_>, q:[[f64;2];3], traversal:[f64;2], max_cells:usize, frame:ValuesReport, transverse_fit:Option<I>)->Result<ControlValueReport>{
+pub(super) fn control_value_with_fit(
+    laws: ControlLaws<'_>,
+    q:[[f64;2];3],
+    traversal:[f64;2],
+    max_cells:usize,
+    frame:ValuesReport,
+    transverse_fit:Option<I>,
+)->Result<ControlValueReport>{
     let batch=control_values_with_fit(
         laws,
         &[q],
@@ -427,7 +434,14 @@ pub struct TrajectoriesReport {
     pub single_span:bool,
     pub reason:Option<&'static str>,
 }
-pub(super) fn control_trajectory_with_fit(laws: ControlLaws<'_>, q:[[f64;2];3], traversal:[f64;2], max_cells:usize, frame:Report, transverse_fit:Option<[I;3]>)->Result<TrajectoryReport>{
+pub(super) fn control_trajectory_with_fit(
+    laws: ControlLaws<'_>,
+    q:[[f64;2];3],
+    traversal:[f64;2],
+    max_cells:usize,
+    frame:Report,
+    transverse_fit:Option<[I;3]>,
+)->Result<TrajectoryReport>{
     let batch=control_trajectories_with_fit(
         laws,
         &[q],

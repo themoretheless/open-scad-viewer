@@ -185,8 +185,15 @@ pub fn automatically_between_faces(
 /// order and every final child is checked against the ORIGINAL source curve.
 /// Endpoint parameters reuse the exact existing source vertex after root-bound
 /// and full incident-edge lift checks; they never create a duplicate vertex.
-pub fn between_faces(source: &Model, contact: &Contact, supports: [&Surface; 2], cutters: [(&Model, usize, usize); 2], edge_parameters: [(usize, f64); 2], work: ContactWork) -> Result<Binding> {
-        let ContactWork { tolerance_uv, max_cells, max_exact } = work;
+pub fn between_faces(
+    source: &Model,
+    contact: &Contact,
+    supports: [&Surface; 2],
+    cutters: [(&Model, usize, usize); 2],
+    edge_parameters: [(usize, f64); 2],
+    work: ContactWork,
+) -> Result<Binding> {
+    let ContactWork { tolerance_uv, max_cells, max_exact } = work;
     source.validate()?;
     if !source.persistent_naming_complete()
         || !(1..=100000).contains(&max_cells)

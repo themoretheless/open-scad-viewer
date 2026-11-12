@@ -467,7 +467,14 @@ pub fn inspect_candidate(
         2000000,
     )
 }
-fn inspect_candidate_bounded(surface: &Surface, supports: [&Surface; 4], traces: [Trace; 4], o: Options, budget: crate::surface_g2_pcurves::G2Budget, max_coefficients: usize) -> Result<Report> {
+fn inspect_candidate_bounded(
+    surface: &Surface,
+    supports: [&Surface; 4],
+    traces: [Trace; 4],
+    o: Options,
+    budget: crate::surface_g2_pcurves::G2Budget,
+    max_coefficients: usize,
+) -> Result<Report> {
         let crate::surface_g2_pcurves::G2Budget { tolerances, max_cells, max_exact } = budget;
     surface.validate()?;
     check(

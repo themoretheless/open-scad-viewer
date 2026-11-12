@@ -72,7 +72,14 @@ impl<'a, 's, 'p, 'b> TransitionFace<'a, 's, 'p, 'b> {
     }
 /// Rebuild the owned whole-face recipe and correlated radius coefficients.
     /// No caller-provided diagnostic bound can construct the certificate.
-    pub fn qualify_radius_coefficients<'f>(&'f self, law: RadiusLawRefs<'_>, tolerance: f64, controls: usize, spans: usize, coefficient_work: usize) -> Result<TransitionCoefficientRadiusReport<'f, 'a, 's, 'p, 'b>> {
+    pub fn qualify_radius_coefficients<'f>(
+        &'f self,
+        law: RadiusLawRefs<'_>,
+        tolerance: f64,
+        controls: usize,
+        spans: usize,
+        coefficient_work: usize,
+    ) -> Result<TransitionCoefficientRadiusReport<'f, 'a, 's, 'p, 'b>> {
         let RadiusLawRefs { centers, radius, law_domains } = law;
         if !tolerance.is_finite() || tolerance <= 0. {
             return Err(Error::new(
@@ -151,8 +158,15 @@ pub fn qualify_radius<'f>(
             spans,
         )
     }
-pub fn qualify_radius_on_domains<'f>(&'f self, law: RadiusLawRefs<'_>, tolerance: f64, controls: usize, cells: usize, spans: usize) -> Result<TransitionRadiusReport<'f, 'a, 's, 'p, 'b>> {
-        let RadiusLawRefs { centers, radius, law_domains } = law;
+pub fn qualify_radius_on_domains<'f>(
+    &'f self,
+    law: RadiusLawRefs<'_>,
+    tolerance: f64,
+    controls: usize,
+    cells: usize,
+    spans: usize,
+) -> Result<TransitionRadiusReport<'f, 'a, 's, 'p, 'b>> {
+    let RadiusLawRefs { centers, radius, law_domains } = law;
         let root = self.boundary.rooted[0];
         let profile = root.restricted.proposal.profile(root.face).unwrap();
         let first = profile.section(root.axis, root.parameters[0])?;

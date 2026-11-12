@@ -125,8 +125,14 @@ fn fixed(side: usize) -> (usize, bool) {
 /// edges, global branch discovery/completeness and nonrectangular cap trimming
 /// require different constructors. Numerical search may refuse an existing root.
 #[allow(clippy::too_many_arguments)]
-pub fn thicken(sources: &[Surface; 2], reversed: [bool; 2], offset: crate::shell_thickness::planar_network::OffsetSettings, limits: Limits, search: Search) -> Result<Thickness> {
-        let crate::shell_thickness::planar_network::OffsetSettings { signed_thickness, normal_tolerance, normal_cells, sewing_tolerance } = offset;
+pub fn thicken(
+    sources: &[Surface; 2],
+    reversed: [bool; 2],
+    offset: crate::shell_thickness::planar_network::OffsetSettings,
+    limits: Limits,
+    search: Search,
+) -> Result<Thickness> {
+    let crate::shell_thickness::planar_network::OffsetSettings { signed_thickness, normal_tolerance, normal_cells, sewing_tolerance } = offset;
     super::freeform_network::validate(
         sources,
         sources,

@@ -31,8 +31,15 @@ pub struct CornerBudget {
 /// lie in one open shell and form its sole remaining opening. A newly authored
 /// face uses those actual owned 3D curves. Full saved-use verification and
 /// shell closure are mandatory after construction; source is never mutated.
-pub fn close(source: &Model, shell: usize, uses: [BoundaryUse; 4], options: corner_blend::Options, tolerance_uv: f64, budget: CornerBudget) -> Result<Closed> {
-        let CornerBudget { tolerances, max_cells, max_exact } = budget;
+pub fn close(
+    source: &Model,
+    shell: usize,
+    uses: [BoundaryUse; 4],
+    options: corner_blend::Options,
+    tolerance_uv: f64,
+    budget: CornerBudget,
+) -> Result<Closed> {
+    let CornerBudget { tolerances, max_cells, max_exact } = budget;
     source.validate()?;
     if !source.persistent_naming_complete()
         || shell >= source.shells.len()
@@ -146,8 +153,15 @@ pub(crate) struct Prepared {
 }
 /// Fresh original-support construction shared by open-rim closure and closed
 /// region replacement. Both callers must independently admit final topology.
-pub(crate) fn prepare(source: &Model, shell: usize, uses: [BoundaryUse; 4], options: corner_blend::Options, budget: CornerBudget, expected_uses: usize) -> Result<Prepared> {
-        let CornerBudget { tolerances, max_cells, max_exact } = budget;
+pub(crate) fn prepare(
+    source: &Model,
+    shell: usize,
+    uses: [BoundaryUse; 4],
+    options: corner_blend::Options,
+    budget: CornerBudget,
+    expected_uses: usize,
+) -> Result<Prepared> {
+    let CornerBudget { tolerances, max_cells, max_exact } = budget;
     prepare_sides(
         source,
         shell,
@@ -161,8 +175,15 @@ pub(crate) fn prepare(source: &Model, shell: usize, uses: [BoundaryUse; 4], opti
         expected_uses,
     )
 }
-pub(crate) fn prepare_sides(source: &Model, shell: usize, sides: [Vec<BoundaryUse>; 4], options: corner_blend::Options, budget: CornerBudget, expected_uses: usize) -> Result<Prepared> {
-        let CornerBudget { tolerances, max_cells, max_exact } = budget;
+pub(crate) fn prepare_sides(
+    source: &Model,
+    shell: usize,
+    sides: [Vec<BoundaryUse>; 4],
+    options: corner_blend::Options,
+    budget: CornerBudget,
+    expected_uses: usize,
+) -> Result<Prepared> {
+    let CornerBudget { tolerances, max_cells, max_exact } = budget;
     source.validate()?;
     if !source.persistent_naming_complete()
         || shell >= source.shells.len()

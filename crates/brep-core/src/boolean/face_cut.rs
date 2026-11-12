@@ -244,8 +244,15 @@ pub struct Retention {
 /// outside every other descendant. Boundary bands and incomplete winding proofs
 /// refuse; no nearest-face choice or caller-supplied classification is trusted.
 /// This is a material plan, not permission to export an open body as a solid.
-pub fn plan_projected_retention(source: &Model, face: usize, cuts: &[OwnedCut], keep_uv: &[[f64; 2]], limits: CutLimits, max_domain_cells: usize) -> Result<Retention> {
-        let CutLimits { tolerance_uv, max_cells, max_exact } = limits;
+pub fn plan_projected_retention(
+    source: &Model,
+    face: usize,
+    cuts: &[OwnedCut],
+    keep_uv: &[[f64; 2]],
+    limits: CutLimits,
+    max_domain_cells: usize,
+) -> Result<Retention> {
+    let CutLimits { tolerance_uv, max_cells, max_exact } = limits;
     if !(1..=256).contains(&keep_uv.len())
         || keep_uv.iter().flatten().any(|x| !x.is_finite())
         || !(1..=1000000).contains(&max_domain_cells)
@@ -447,8 +454,15 @@ pub(crate) fn partition_with_budget(
         10000,
     )
 }
-pub(crate) fn partition_with_shared_limits(source: &Model, face_id: usize, endpoints: [usize; 2], path: &[Segment], limits: CutLimits, max_pairs: usize) -> Result<Partition> {
-        let CutLimits { tolerance_uv, max_cells, max_exact } = limits;
+pub(crate) fn partition_with_shared_limits(
+    source: &Model,
+    face_id: usize,
+    endpoints: [usize; 2],
+    path: &[Segment],
+    limits: CutLimits,
+    max_pairs: usize,
+) -> Result<Partition> {
+    let CutLimits { tolerance_uv, max_cells, max_exact } = limits;
     source.validate()?;
     if !source.persistent_naming_complete()
         || !(1..=256).contains(&path.len())

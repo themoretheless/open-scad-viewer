@@ -18,11 +18,24 @@ pub struct FittedPatch {
 /// are retained. Fresh source/skin lifts and whole-original-curve deviation are
 /// mandatory. This returns a proposal, not a membership or closed-solid claim;
 /// pass its actual model to `attach_planned` for strict independent admission.
-pub fn fit_boundaries(source: &Model, patch: &Model, vertices: &[usize], keep_vertices: &[usize], work: super::ContactWork) -> Result<FittedPatch> {
+pub fn fit_boundaries(
+    source: &Model,
+    patch: &Model,
+    vertices: &[usize],
+    keep_vertices: &[usize],
+    work: super::ContactWork,
+) -> Result<FittedPatch> {
     fit_boundaries_with_charts(source, patch, vertices, keep_vertices, &[], work)
 }
-pub fn fit_boundaries_with_charts(source: &Model, patch: &Model, vertices: &[usize], keep_vertices: &[usize], charts: &[Option<Curve>], work: super::ContactWork) -> Result<FittedPatch> {
-        let super::ContactWork { tolerance_uv, max_cells, max_exact } = work;
+pub fn fit_boundaries_with_charts(
+    source: &Model,
+    patch: &Model,
+    vertices: &[usize],
+    keep_vertices: &[usize],
+    charts: &[Option<Curve>],
+    work: super::ContactWork,
+) -> Result<FittedPatch> {
+    let super::ContactWork { tolerance_uv, max_cells, max_exact } = work;
     if !(1..=100000).contains(&max_cells)
         || max_exact > 1000000
         || !tolerance_uv.is_finite()

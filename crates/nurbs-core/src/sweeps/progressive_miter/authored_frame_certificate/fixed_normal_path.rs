@@ -160,7 +160,13 @@ pub(crate) fn certify_proved_planar_relative_values(
 
 /// Full original position/pose field; the caller must own the exact plane
 /// premise and its work, just as for the independent-length relative field.
-pub(crate) fn certify_proved_planar_control_values(laws: super::ProfileLaws<'_>, normal:[f64;3], qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<ControlValuesReport>{
+pub(crate) fn certify_proved_planar_control_values(
+    laws: super::ProfileLaws<'_>,
+    normal:[f64;3],
+    qs:&[[[f64;2];3]],
+    traversal:[f64;2],
+    max_cells:usize,
+)->Result<ControlValuesReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=fixed_normal_values_at(path,normal,twist,traversal,traversal,max_cells,true)?;
     super::trajectory::control_values_with_fit(
@@ -173,7 +179,13 @@ pub(crate) fn certify_proved_planar_control_values(laws: super::ProfileLaws<'_>,
     )
 }
 
-pub fn certify_fixed_normal_control_values(laws: super::ProfileLaws<'_>, normal:[f64;3], qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<ControlValuesReport>{
+pub fn certify_fixed_normal_control_values(
+    laws: super::ProfileLaws<'_>,
+    normal:[f64;3],
+    qs:&[[[f64;2];3]],
+    traversal:[f64;2],
+    max_cells:usize,
+)->Result<ControlValuesReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_fixed_normal_path_values(path,normal,twist,traversal,max_cells)?;
     super::trajectory::control_values_with_fit(
@@ -186,7 +198,13 @@ pub fn certify_fixed_normal_control_values(laws: super::ProfileLaws<'_>, normal:
     )
 }
 
-pub fn certify_fixed_normal_control_trajectories(laws: super::ProfileLaws<'_>, normal:[f64;3], qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<TrajectoriesReport>{
+pub fn certify_fixed_normal_control_trajectories(
+    laws: super::ProfileLaws<'_>,
+    normal:[f64;3],
+    qs:&[[[f64;2];3]],
+    traversal:[f64;2],
+    max_cells:usize,
+)->Result<TrajectoriesReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_fixed_normal_path(path,normal,twist,traversal,max_cells)?;
     super::trajectory::control_trajectories_with_fit(

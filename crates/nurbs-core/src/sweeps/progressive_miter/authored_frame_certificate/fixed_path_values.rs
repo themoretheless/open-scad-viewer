@@ -32,7 +32,13 @@ pub fn certify_fixed_path_values(
     Ok(out)
 }
 
-pub fn certify_fixed_path_control_values(laws: super::ProfileLaws<'_>, normal:[f64;3], qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<ControlValuesReport>{
+pub fn certify_fixed_path_control_values(
+    laws: super::ProfileLaws<'_>,
+    normal:[f64;3],
+    qs:&[[[f64;2];3]],
+    traversal:[f64;2],
+    max_cells:usize,
+)->Result<ControlValuesReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     certify_fixed_path_control_values_with_frame_path(
         super::ProfileLaws { path, scale, twist, affine },
@@ -68,7 +74,13 @@ pub(crate) fn certify_fixed_path_control_values_with_frame_path(
 
 /// Relative pose in the original initial-tangent frame. Translation is owned
 /// separately by the source arc-length certificate, not by a proxy path.
-pub(crate) fn certify_fixed_relative_values(laws: super::ProfileLaws<'_>, normal:[f64;3], qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<ControlValuesReport>{
+pub(crate) fn certify_fixed_relative_values(
+    laws: super::ProfileLaws<'_>,
+    normal:[f64;3],
+    qs:&[[[f64;2];3]],
+    traversal:[f64;2],
+    max_cells:usize,
+)->Result<ControlValuesReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_fixed_path_values(path,normal,twist,traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
@@ -81,7 +93,13 @@ pub(crate) fn certify_fixed_relative_values(laws: super::ProfileLaws<'_>, normal
         None,
     )
 }
-pub(crate) fn certify_fixed_relative_value(laws: super::ProfileLaws<'_>, normal:[f64;3], q:[[f64;2];3], traversal:[f64;2], max_cells:usize)->Result<ControlValueReport>{
+pub(crate) fn certify_fixed_relative_value(
+    laws: super::ProfileLaws<'_>,
+    normal:[f64;3],
+    q:[[f64;2];3],
+    traversal:[f64;2],
+    max_cells:usize,
+)->Result<ControlValueReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_fixed_path_values(path,normal,twist,traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
@@ -95,7 +113,13 @@ pub(crate) fn certify_fixed_relative_value(laws: super::ProfileLaws<'_>, normal:
     )?;
     Ok(ControlValueReport {status:batch.status,cells:batch.cells,value:batch.values.map(|mut v|v.remove(0)),reason:batch.reason})
 }
-pub(crate) fn certify_fixed_relative_trajectory(laws: super::ProfileLaws<'_>, normal:[f64;3], q:[[f64;2];3], traversal:[f64;2], max_cells:usize)->Result<TrajectoryReport>{
+pub(crate) fn certify_fixed_relative_trajectory(
+    laws: super::ProfileLaws<'_>,
+    normal:[f64;3],
+    q:[[f64;2];3],
+    traversal:[f64;2],
+    max_cells:usize,
+)->Result<TrajectoryReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_fixed_path(path,normal,twist,traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
@@ -113,7 +137,13 @@ pub(crate) fn certify_fixed_relative_trajectory(laws: super::ProfileLaws<'_>, no
     )
 }
 
-pub(crate) fn certify_fixed_relative_trajectories(laws: super::ProfileLaws<'_>, normal:[f64;3], qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<TrajectoriesReport>{
+pub(crate) fn certify_fixed_relative_trajectories(
+    laws: super::ProfileLaws<'_>,
+    normal:[f64;3],
+    qs:&[[[f64;2];3]],
+    traversal:[f64;2],
+    max_cells:usize,
+)->Result<TrajectoriesReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_fixed_path(path,normal,twist,traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
@@ -144,7 +174,13 @@ pub fn certify_fixed_path(
     apply_twist(report,twist,traversal,max_cells)
 }
 
-pub fn certify_fixed_path_control_trajectories(laws: super::ProfileLaws<'_>, normal:[f64;3], qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<TrajectoriesReport>{
+pub fn certify_fixed_path_control_trajectories(
+    laws: super::ProfileLaws<'_>,
+    normal:[f64;3],
+    qs:&[[[f64;2];3]],
+    traversal:[f64;2],
+    max_cells:usize,
+)->Result<TrajectoriesReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     certify_fixed_path_control_trajectories_with_frame_path(
         super::ProfileLaws { path, scale, twist, affine },

@@ -35,8 +35,15 @@ pub struct RootedRetention {
 /// reports and vertices cannot be supplied by the caller. Both stages are
 /// private and share one cell ledger. Curve generation and closed replacement
 /// admission remain separate; no nearest-point welding is performed.
-pub fn plan_rooted_retention(source: &Model, cutter: &Model, cutter_face: usize, requests: &[RootedFace<'_>], limits: super::CutLimits, max_domain_cells: usize) -> Result<RootedRetention> {
-        let super::CutLimits { tolerance_uv, max_cells, max_exact } = limits;
+pub fn plan_rooted_retention(
+    source: &Model,
+    cutter: &Model,
+    cutter_face: usize,
+    requests: &[RootedFace<'_>],
+    limits: super::CutLimits,
+    max_domain_cells: usize,
+) -> Result<RootedRetention> {
+    let super::CutLimits { tolerance_uv, max_cells, max_exact } = limits;
     source.validate()?;
     cutter.validate()?;
     if !(1..=256).contains(&requests.len())

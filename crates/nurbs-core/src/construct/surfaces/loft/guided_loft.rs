@@ -199,8 +199,15 @@ pub fn authored_control_tangent_fields(
     Ok((fields, normalized))
 }
 
-pub fn interpolate_cartesian_with_control_tangents(sections: &[Curve], parameters: &[f64], guides: &[Curve], guide_parameters: &[f64], controls: &[Vec<[f64; 3]>; 2], audit: crate::construct::surfaces::gordon::CurveAudit) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
-        let crate::construct::surfaces::gordon::CurveAudit { tolerance, max_cells, .. } = audit;
+pub fn interpolate_cartesian_with_control_tangents(
+    sections: &[Curve],
+    parameters: &[f64],
+    guides: &[Curve],
+    guide_parameters: &[f64],
+    controls: &[Vec<[f64; 3]>; 2],
+    audit: crate::construct::surfaces::gordon::CurveAudit,
+) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
+    let crate::construct::surfaces::gordon::CurveAudit { tolerance, max_cells, .. } = audit;
     let (authored, normalized) = authored_control_tangent_fields(sections, parameters, controls)?;
     let (surface, curves, _) = interpolate_cartesian_with_tangents(
         sections,
@@ -235,7 +242,13 @@ pub fn interpolate_cartesian_with_control_tangents(sections: &[Curve], parameter
 /// generated boundary guides. Authored dP/dt arrays are supported by
 /// interpolate_cartesian_with_control_tangents; normalized rational fields use
 /// interpolate_cartesian_with_tangents.
-pub fn interpolate_cartesian(sections: &[Curve], parameters: &[f64], guides: &[Curve], guide_parameters: &[f64], audit: crate::construct::surfaces::gordon::CurveAudit) -> Result<(Surface, Vec<value_codec::Value>)> {
+pub fn interpolate_cartesian(
+    sections: &[Curve],
+    parameters: &[f64],
+    guides: &[Curve],
+    guide_parameters: &[f64],
+    audit: crate::construct::surfaces::gordon::CurveAudit,
+) -> Result<(Surface, Vec<value_codec::Value>)> {
     let (surface, curves, _) = interpolate_cartesian_mode(
         sections,
         parameters,
@@ -247,7 +260,14 @@ pub fn interpolate_cartesian(sections: &[Curve], parameters: &[f64], guides: &[C
     Ok((surface, curves))
 }
 /// Tangent fields describe dP/dV with normalized U and V parameters.
-pub fn interpolate_cartesian_with_tangents(sections: &[Curve], parameters: &[f64], guides: &[Curve], guide_parameters: &[f64], tangents: &[Curve; 2], audit: crate::construct::surfaces::gordon::CurveAudit) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
+pub fn interpolate_cartesian_with_tangents(
+    sections: &[Curve],
+    parameters: &[f64],
+    guides: &[Curve],
+    guide_parameters: &[f64],
+    tangents: &[Curve; 2],
+    audit: crate::construct::surfaces::gordon::CurveAudit,
+) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
     interpolate_cartesian_mode(
         sections,
         parameters,
@@ -257,7 +277,14 @@ pub fn interpolate_cartesian_with_tangents(sections: &[Curve], parameters: &[f64
         audit,
     )
 }
-fn interpolate_cartesian_mode(sections: &[Curve], parameters: &[f64], guides: &[Curve], guide_parameters: &[f64], tangents: Option<&[Curve; 2]>, audit: crate::construct::surfaces::gordon::CurveAudit) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
+fn interpolate_cartesian_mode(
+    sections: &[Curve],
+    parameters: &[f64],
+    guides: &[Curve],
+    guide_parameters: &[f64],
+    tangents: Option<&[Curve; 2]>,
+    audit: crate::construct::surfaces::gordon::CurveAudit,
+) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
     check(
         (2..=86).contains(&sections.len()),
         "Cartesian guided loft needs 2..86 sections",

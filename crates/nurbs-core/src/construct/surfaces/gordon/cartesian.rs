@@ -347,7 +347,13 @@ fn assemble_mode(
 }
 
 #[cfg(feature = "codec")]
-pub(super) fn checked(u: &[Curve], v: &[Curve], pu: &[f64], pv: &[f64], audit: super::CurveAudit) -> Result<(Surface, Vec<value_codec::Value>)> {
+pub(super) fn checked(
+    u: &[Curve],
+    v: &[Curve],
+    pu: &[f64],
+    pv: &[f64],
+    audit: super::CurveAudit,
+) -> Result<(Surface, Vec<value_codec::Value>)> {
         let tolerance = audit.tolerance;
     let surface = assemble(u, v, pu, pv, tolerance)?;
     let certificates = curve_audits(
@@ -361,8 +367,15 @@ pub(super) fn checked(u: &[Curve], v: &[Curve], pu: &[f64], pv: &[f64], audit: s
     Ok((surface, certificates))
 }
 #[cfg(feature = "codec")]
-fn curve_audits(surface: &Surface, u: &[Curve], v: &[Curve], pu: &[f64], pv: &[f64], audit: super::CurveAudit) -> Result<Vec<value_codec::Value>> {
-        let super::CurveAudit { tolerance, max_cells, max_map_evaluations } = audit;
+fn curve_audits(
+    surface: &Surface,
+    u: &[Curve],
+    v: &[Curve],
+    pu: &[f64],
+    pv: &[f64],
+    audit: super::CurveAudit,
+) -> Result<Vec<value_codec::Value>> {
+    let super::CurveAudit { tolerance, max_cells, max_map_evaluations } = audit;
     let pu = stations(pu, v.len())?;
     let pv = stations(pv, u.len())?;
     let mut certificates = Vec::new();
@@ -403,8 +416,15 @@ fn curve_audits(surface: &Surface, u: &[Curve], v: &[Curve], pu: &[f64], pv: &[f
 }
 
 #[cfg(feature = "codec")]
-pub(super) fn checked_with_tangents(u: &[Curve], v: &[Curve], pu: &[f64], pv: &[f64], targets: &[Curve; 2], audit: super::CurveAudit) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
-        let super::CurveAudit { tolerance, max_cells, .. } = audit;
+pub(super) fn checked_with_tangents(
+    u: &[Curve],
+    v: &[Curve],
+    pu: &[f64],
+    pv: &[f64],
+    targets: &[Curve; 2],
+    audit: super::CurveAudit,
+) -> Result<(Surface, Vec<value_codec::Value>, Vec<value_codec::Value>)> {
+    let super::CurveAudit { tolerance, max_cells, .. } = audit;
     let surface = assemble_mode(u, v, pu, pv, tolerance, Some(targets))?;
     let curves = curve_audits(
         &surface,

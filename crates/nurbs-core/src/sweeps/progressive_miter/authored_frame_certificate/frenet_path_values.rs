@@ -135,7 +135,13 @@ fn frenet_values_cell(
 
 /// Relative Frenet pose: original path derivatives and station laws retain
 /// distinct parameter intervals. Translation is covered separately by callers.
-pub(crate) fn certify_frenet_relative_values(laws: super::ProfileLaws<'_>, qs:&[[[f64;2];3]], path_traversal:[f64;2], law_traversal:[f64;2], max_cells:usize)->Result<ControlValuesReport>{
+pub(crate) fn certify_frenet_relative_values(
+    laws: super::ProfileLaws<'_>,
+    qs:&[[[f64;2];3]],
+    path_traversal:[f64;2],
+    law_traversal:[f64;2],
+    max_cells:usize,
+)->Result<ControlValuesReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=frenet_values_at(path,twist,path_traversal,law_traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
@@ -154,7 +160,13 @@ pub(crate) fn certify_frenet_relative_values(laws: super::ProfileLaws<'_>, qs:&[
 
 /// Tighter original Frenet image using its proved orthonormal binormal
 /// identity. Separate entry point preserves existing adaptive enclosures.
-pub(crate) fn certify_frenet_relative_values_with_binormal_identity(laws: super::ProfileLaws<'_>, qs:&[[[f64;2];3]], path_traversal:[f64;2], law_traversal:[f64;2], max_cells:usize)->Result<ControlValuesReport>{
+pub(crate) fn certify_frenet_relative_values_with_binormal_identity(
+    laws: super::ProfileLaws<'_>,
+    qs:&[[[f64;2];3]],
+    path_traversal:[f64;2],
+    law_traversal:[f64;2],
+    max_cells:usize,
+)->Result<ControlValuesReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=frenet_values_at_with_binormal_identity(path,twist,path_traversal,law_traversal,max_cells,true)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;

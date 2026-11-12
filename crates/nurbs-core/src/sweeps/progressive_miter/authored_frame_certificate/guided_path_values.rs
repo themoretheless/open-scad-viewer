@@ -119,7 +119,13 @@ pub(super) fn prepared_offset_frame_values(
 
 /// Original guided control image with explicit initial-coordinate premise.
 /// No contact fitting, cap, closed correction or retained interpolation proof.
-pub fn certify_path_guide_control_value(laws: super::ProfileLaws<'_>, guide: &Curve, q: [[f64; 2]; 3], traversal: [f64; 2], max_cells: usize) -> Result<ControlValueReport> {
+pub fn certify_path_guide_control_value(
+    laws: super::ProfileLaws<'_>,
+    guide: &Curve,
+    q: [[f64; 2]; 3],
+    traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<ControlValueReport> {
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame = certify_path_guide_values(path, guide, twist, traversal, max_cells)?;
     super::trajectory::control_value_from_frame(path, scale, affine, q, traversal, max_cells, frame)
@@ -202,7 +208,13 @@ pub(crate) fn certify_contact_relative_values(
     )
 }
 
-pub fn certify_path_guide_control_values(laws: super::ProfileLaws<'_>, guide:&Curve, qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<ControlValuesReport>{
+pub fn certify_path_guide_control_values(
+    laws: super::ProfileLaws<'_>,
+    guide:&Curve,
+    qs:&[[[f64;2];3]],
+    traversal:[f64;2],
+    max_cells:usize,
+)->Result<ControlValuesReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_path_guide_values(path,guide,twist,traversal,max_cells)?;
     super::trajectory::control_values_with_fit(
@@ -515,7 +527,13 @@ fn guided_curved_path_jets_enclose_analytic_tangent_derivatives() {
 }
 
 /// Original guided trajectory jets; local coordinates remain an explicit premise.
-pub fn certify_path_guide_control_trajectory(laws: super::ProfileLaws<'_>, guide: &Curve, q: [[f64; 2]; 3], traversal: [f64; 2], max_cells: usize) -> Result<TrajectoryReport> {
+pub fn certify_path_guide_control_trajectory(
+    laws: super::ProfileLaws<'_>,
+    guide: &Curve,
+    q: [[f64; 2]; 3],
+    traversal: [f64; 2],
+    max_cells: usize,
+) -> Result<TrajectoryReport> {
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame = certify_path_guide(path, guide, twist, traversal, max_cells)?;
     super::trajectory::control_trajectory_from_frame(
@@ -523,7 +541,13 @@ pub fn certify_path_guide_control_trajectory(laws: super::ProfileLaws<'_>, guide
     )
 }
 
-pub fn certify_path_guide_control_trajectories(laws: super::ProfileLaws<'_>, guide:&Curve, qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<TrajectoriesReport>{
+pub fn certify_path_guide_control_trajectories(
+    laws: super::ProfileLaws<'_>,
+    guide:&Curve,
+    qs:&[[[f64;2];3]],
+    traversal:[f64;2],
+    max_cells:usize,
+)->Result<TrajectoriesReport>{
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_path_guide(path,guide,twist,traversal,max_cells)?;
     super::trajectory::control_trajectories_with_fit(

@@ -119,7 +119,14 @@ pub(super) fn construct(
     }
     build_fields(input, Order::C2, o.max_patches)
 }
-pub(super) fn qualify(construction: Report, supports: [&Surface; 2], traces: [Trace; 2], o: Options, budget: crate::surface_g2_pcurves::G2Budget, target: Option<&Curve>) -> Result<TraceReport> {
+pub(super) fn qualify(
+    construction: Report,
+    supports: [&Surface; 2],
+    traces: [Trace; 2],
+    o: Options,
+    budget: crate::surface_g2_pcurves::G2Budget,
+    target: Option<&Curve>,
+) -> Result<TraceReport> {
         let crate::surface_g2_pcurves::G2Budget { tolerances, max_cells, max_exact } = budget;
     let mut r = TraceReport {
         construction,

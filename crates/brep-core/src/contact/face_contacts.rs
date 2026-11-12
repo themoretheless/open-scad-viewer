@@ -278,8 +278,15 @@ pub(crate) struct ContactModes {
     pub joint_exact_domain: bool,
     pub prepared: Option<(Option<crate::face_contact_groups::Cover>, usize)>,
 }
-fn inspect_impl(model: &Model, tolerance_uv: f64, limits: Limits, hulls: &[crate::boundary_hull_contact::Certificate], caps: &[[usize; 3]], modes: ContactModes) -> Result<Report> {
-        let ContactModes { sweep_hulls, joint_exact_domain, prepared } = modes;
+fn inspect_impl(
+    model: &Model,
+    tolerance_uv: f64,
+    limits: Limits,
+    hulls: &[crate::boundary_hull_contact::Certificate],
+    caps: &[[usize; 3]],
+    modes: ContactModes,
+) -> Result<Report> {
+    let ContactModes { sweep_hulls, joint_exact_domain, prepared } = modes;
     let mut inspector = Inspector::new(
         std::sync::Arc::new(model.clone()),
         tolerance_uv,
@@ -316,7 +323,14 @@ pub(crate) struct Inspector {
     incident: Option<usize>,
 }
 impl Inspector {
-    pub(crate) fn new(model: std::sync::Arc<Model>, tolerance_uv: f64, limits: Limits, hulls: Vec<crate::boundary_hull_contact::Certificate>, caps: Vec<[usize; 3]>, modes: ContactModes) -> Result<Self> {
+    pub(crate) fn new(
+        model: std::sync::Arc<Model>,
+        tolerance_uv: f64,
+        limits: Limits,
+        hulls: Vec<crate::boundary_hull_contact::Certificate>,
+        caps: Vec<[usize; 3]>,
+        modes: ContactModes,
+    ) -> Result<Self> {
         let ContactModes { sweep_hulls, joint_exact_domain, prepared } = modes;
         model.validate_boundary_diagnostic_inputs()?;
         if !(1..=100_000).contains(&limits.pairs)

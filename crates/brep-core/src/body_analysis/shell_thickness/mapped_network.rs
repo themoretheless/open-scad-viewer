@@ -173,8 +173,14 @@ pub fn thicken_with_caps(
 /// endpoint coupling only within sewing tolerance; the complete changed caps,
 /// source correspondence and all saved seams are independently verified below.
 #[allow(clippy::too_many_arguments)]
-pub fn thicken_from_windows(sources: &[Surface], windows: &[SourceWindow], reversed: &[bool], offset: crate::shell_thickness::planar_network::OffsetSettings, limits: Limits) -> Result<Thickness> {
-        let crate::shell_thickness::planar_network::OffsetSettings { signed_thickness, normal_tolerance, normal_cells, sewing_tolerance } = offset;
+pub fn thicken_from_windows(
+    sources: &[Surface],
+    windows: &[SourceWindow],
+    reversed: &[bool],
+    offset: crate::shell_thickness::planar_network::OffsetSettings,
+    limits: Limits,
+) -> Result<Thickness> {
+    let crate::shell_thickness::planar_network::OffsetSettings { signed_thickness, normal_tolerance, normal_cells, sewing_tolerance } = offset;
     super::freeform_network::validate(
         sources,
         sources,

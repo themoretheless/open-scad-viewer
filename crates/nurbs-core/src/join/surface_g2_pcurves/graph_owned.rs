@@ -71,7 +71,14 @@ pub fn inspect_owned_graph(
 }
 /// Fresh original-edge proof with literal saved-coedge traversal directions.
 /// Reversal is applied to exact rational clocks, never to rounded curve copies.
-pub fn inspect_owned_graph_oriented(curve: &Curve, p: [&Curve; 2], s: [&Surface; 2], reversed: [bool; 2], budget: crate::surface_g2_pcurves::G2Budget, max_coefficients: usize) -> Result<OwnedGraphInspection> {
+pub fn inspect_owned_graph_oriented(
+    curve: &Curve,
+    p: [&Curve; 2],
+    s: [&Surface; 2],
+    reversed: [bool; 2],
+    budget: crate::surface_g2_pcurves::G2Budget,
+    max_coefficients: usize,
+) -> Result<OwnedGraphInspection> {
         let crate::surface_g2_pcurves::G2Budget { tolerances, max_cells, max_exact } = budget;
     check(
         tolerances.iter().all(|x| x.is_finite() && *x > 0.)

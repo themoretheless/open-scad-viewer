@@ -116,8 +116,15 @@ pub fn partition_ruled_at_face(
     })
 }
 
-pub(super) fn partition_prebound(source: &Model, face: usize, cutter: &Model, cutter_face: usize, roots: &[(usize, [[f64; 2]; 3])], limits: super::CutLimits) -> Result<(Partition, [usize; 2], usize)> {
-        let super::CutLimits { tolerance_uv, max_cells, max_exact } = limits;
+pub(super) fn partition_prebound(
+    source: &Model,
+    face: usize,
+    cutter: &Model,
+    cutter_face: usize,
+    roots: &[(usize, [[f64; 2]; 3])],
+    limits: super::CutLimits,
+) -> Result<(Partition, [usize; 2], usize)> {
+    let super::CutLimits { tolerance_uv, max_cells, max_exact } = limits;
     if roots.len() != 2 || max_cells < 8 {
         return Err(unproven("Need two bound roots and remaining section work"));
     }

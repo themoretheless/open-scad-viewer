@@ -31,7 +31,14 @@ pub struct FiberCap {
 /// sections and explicit material-side intent to an owned closed cap. No
 /// partially cut model escapes on refusal. The actual cap/retained-face seam
 /// can be sharp; no prescribed-radius or G2 corner claim is made.
-pub fn trim_fiber_and_cap(source: &Model, requests: &[FiberCapRequest], remove_uncut: &[usize], cutter: &Model, cutter_face: usize, limits: super::CutLimits) -> Result<FiberCap> {
+pub fn trim_fiber_and_cap(
+    source: &Model,
+    requests: &[FiberCapRequest],
+    remove_uncut: &[usize],
+    cutter: &Model,
+    cutter_face: usize,
+    limits: super::CutLimits,
+) -> Result<FiberCap> {
     trim_fiber_and_cap_impl(
         source,
         requests,
@@ -45,7 +52,14 @@ pub fn trim_fiber_and_cap(source: &Model, requests: &[FiberCapRequest], remove_u
 
 /// Infer every section chart from shared original roots, then select material
 /// by the caller's original-face seeds and close atomically with the cutter.
-pub fn trim_fiber_and_cap_automatic(source: &Model, requests: &[AutomaticFiberCapRequest], remove_uncut: &[usize], cutter: &Model, cutter_face: usize, limits: super::CutLimits) -> Result<FiberCap> {
+pub fn trim_fiber_and_cap_automatic(
+    source: &Model,
+    requests: &[AutomaticFiberCapRequest],
+    remove_uncut: &[usize],
+    cutter: &Model,
+    cutter_face: usize,
+    limits: super::CutLimits,
+) -> Result<FiberCap> {
     source.validate()?;
     cutter.validate()?;
     if !(1..=256).contains(&requests.len()) {
@@ -259,8 +273,15 @@ pub fn partition_fiber_network_automatic(
     )
 }
 
-fn partition_fiber_network_impl(source: &Model, requests: &[FiberFaceRequest], cutter: &Model, cutter_face: usize, limits: super::CutLimits, automatic: bool) -> Result<FiberNetwork> {
-        let super::CutLimits { tolerance_uv, max_cells, max_exact } = limits;
+fn partition_fiber_network_impl(
+    source: &Model,
+    requests: &[FiberFaceRequest],
+    cutter: &Model,
+    cutter_face: usize,
+    limits: super::CutLimits,
+    automatic: bool,
+) -> Result<FiberNetwork> {
+    let super::CutLimits { tolerance_uv, max_cells, max_exact } = limits;
     source.validate()?;
     cutter.validate()?;
     if !(1..=256).contains(&requests.len())

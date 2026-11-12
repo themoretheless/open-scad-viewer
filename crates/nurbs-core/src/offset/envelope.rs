@@ -138,8 +138,16 @@ impl Arc {
 /// Every retained cell covers the entire driving center-parameter interval.
 /// `max_cells` bounds total evaluated arc cells, including failed parent cells.
 /// Unresolved leaves remain in the report and prevent a regularity claim.
-pub fn certify(faces: crate::offset::contact_pcurve::OffsetFaces<'_>, fixed_axis: usize, fixed_interval: [f64; 2], first_other: [f64; 2], second: [[f64; 2]; 2], max_spans: usize, max_cells: usize) -> Result<Report> {
-        let crate::offset::contact_pcurve::OffsetFaces { surfaces, distances } = faces;
+pub fn certify(
+    faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
+    fixed_axis: usize,
+    fixed_interval: [f64; 2],
+    first_other: [f64; 2],
+    second: [[f64; 2]; 2],
+    max_spans: usize,
+    max_cells: usize,
+) -> Result<Report> {
+    let crate::offset::contact_pcurve::OffsetFaces { surfaces, distances } = faces;
     certify_arc(
         crate::offset::contact_pcurve::OffsetFaces { surfaces, distances },
         crate::offset::contact_trims::ContactParameters { axis: fixed_axis, drive: fixed_interval, free: first_other, second, spans: max_spans },

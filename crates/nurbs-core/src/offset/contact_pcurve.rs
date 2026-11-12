@@ -66,8 +66,16 @@ fn interval(x: [f64; 2]) -> Result<I> {
 }
 /// Additional section queries refine only an already certified root enclosure.
 /// If the tighter query is inconclusive, retain the last certified enclosure.
-pub(crate) fn section(faces: OffsetFaces<'_>, axis: usize, t: f64, free: [f64; 2], second: [[f64; 2]; 2], spans: usize, refinements: usize) -> Result<(Option<Witness>, usize)> {
-        let OffsetFaces { surfaces: s, distances: d } = faces;
+pub(crate) fn section(
+    faces: OffsetFaces<'_>,
+    axis: usize,
+    t: f64,
+    free: [f64; 2],
+    second: [[f64; 2]; 2],
+    spans: usize,
+    refinements: usize,
+) -> Result<(Option<Witness>, usize)> {
+    let OffsetFaces { surfaces: s, distances: d } = faces;
     let mut calls = 1;
     let Verdict::Witness(mut witness) =
         surface_offset::certify_contact_section(s, d, axis, t, free, second, spans)?
@@ -101,8 +109,16 @@ pub(crate) fn section(faces: OffsetFaces<'_>, axis: usize, t: f64, free: [f64; 2
     Ok((Some(witness), calls))
 }
 /// A linear source pcurve is a proposal. Full-band correspondence is separate.
-pub fn propose(faces: OffsetFaces<'_>, axis: usize, drive: [f64; 2], free: [f64; 2], second: [[f64; 2]; 2], spans: usize, refinements: usize) -> Result<Option<[Curve; 2]>> {
-        let OffsetFaces { surfaces: s, distances: d } = faces;
+pub fn propose(
+    faces: OffsetFaces<'_>,
+    axis: usize,
+    drive: [f64; 2],
+    free: [f64; 2],
+    second: [[f64; 2]; 2],
+    spans: usize,
+    refinements: usize,
+) -> Result<Option<[Curve; 2]>> {
+    let OffsetFaces { surfaces: s, distances: d } = faces;
     check(
         axis < 2 && drive[0] < drive[1] && refinements <= 16,
         "Choose valid contact pcurve parameters and at most 16 refinements",

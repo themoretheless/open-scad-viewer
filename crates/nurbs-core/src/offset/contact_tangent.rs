@@ -24,8 +24,16 @@ pub struct RefinedReport {
 /// The final query repeats the last successful input, so failed/precision-
 /// limited further contraction cannot discard existing root authority.
 #[allow(clippy::too_many_arguments)]
-pub fn certify_refined(faces: crate::offset::contact_pcurve::OffsetFaces<'_>, axis: usize, drive: [f64; 2], free: [f64; 2], second: [[f64; 2]; 2], spans: usize, refinements: usize) -> Result<RefinedReport> {
-        let crate::offset::contact_pcurve::OffsetFaces { surfaces, distances } = faces;
+pub fn certify_refined(
+    faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
+    axis: usize,
+    drive: [f64; 2],
+    free: [f64; 2],
+    second: [[f64; 2]; 2],
+    spans: usize,
+    refinements: usize,
+) -> Result<RefinedReport> {
+    let crate::offset::contact_pcurve::OffsetFaces { surfaces, distances } = faces;
     check(
         refinements <= 16,
         "Choose at most sixteen uniform tube refinements",
