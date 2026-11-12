@@ -69,7 +69,7 @@ pub fn qualify_boundary<'a, E: Carrier>(
     requirement: PoleRequirement,
     limits: Limits,
 ) -> Result<BoundaryReport<'a, E>> {
-    qualify_boundary_impl(body, classes, requirement, limits, None, None, None, None)
+    qualify_boundary_impl(body, classes, requirement, limits, BoundaryExtras::default())
 }
 /// Additionally qualify meridian tangent planes on the full closed carrier
 /// using native factored-normal polynomials from this freshly admitted pole
@@ -93,10 +93,10 @@ pub fn qualify_boundary_with_polar_seams<'a, E: Carrier>(
         classes,
         requirement,
         limits,
-        Some(normal_coefficients),
-        None,
-        None,
-        None,
+        BoundaryExtras {
+            polar_coefficients: Some(normal_coefficients),
+            ..BoundaryExtras::default()
+        },
     )
 }
 /// Complete declared polar G2 carriers require this body's freshly admitted
@@ -122,10 +122,11 @@ pub fn qualify_boundary_with_polar_curvature<'a, E: Carrier>(
         classes,
         PoleRequirement::FacewiseCurvature(poles),
         limits,
-        Some(budgets.normal_coefficients),
-        Some(budgets),
-        None,
-        None,
+        BoundaryExtras {
+            polar_coefficients: Some(budgets.normal_coefficients),
+            curvature_budgets: Some(budgets),
+            ..BoundaryExtras::default()
+        },
     )
 }
 /// Exact original meridian jets plus full native regularity/limit coverage.
@@ -153,10 +154,12 @@ pub fn qualify_boundary_with_exact_polar_curvature<'a, E: Carrier>(
         classes,
         PoleRequirement::FacewiseCurvature(poles),
         limits,
-        Some(budgets.normal_coefficients),
-        Some(budgets),
-        Some(max_exact_work),
-        None,
+        BoundaryExtras {
+            polar_coefficients: Some(budgets.normal_coefficients),
+            curvature_budgets: Some(budgets),
+            exact_work: Some(max_exact_work),
+            ..BoundaryExtras::default()
+        },
     )
 }
 /// Exact G2 identities AND complete regularity on every curvature-class source
@@ -190,10 +193,12 @@ pub fn qualify_boundary_with_exact_curvature<'a, E: Carrier>(
         classes,
         PoleRequirement::FacewiseCurvature(poles),
         limits,
-        Some(budgets.normal_coefficients),
-        Some(budgets),
-        Some(max_exact_work),
-        Some(axes),
+        BoundaryExtras {
+            polar_coefficients: Some(budgets.normal_coefficients),
+            curvature_budgets: Some(budgets),
+            exact_work: Some(max_exact_work),
+            exact_axes: Some(axes),
+        },
     )
 }
 /// Exact G2 on ordinary regular carriers beside C1 physical pole stars.
@@ -223,22 +228,36 @@ pub fn qualify_boundary_with_exact_regular_curvature<'a, E: Carrier>(
         classes,
         PoleRequirement::TangentGraph(graphs),
         limits,
-        Some(normal_coefficients),
-        None,
-        Some(max_exact_work),
-        Some(axes),
+        BoundaryExtras {
+            polar_coefficients: Some(normal_coefficients),
+            exact_work: Some(max_exact_work),
+            exact_axes: Some(axes),
+            ..BoundaryExtras::default()
+        },
     )
+}
+/// Optional polar-coefficient, curvature, exact-work and exact-axis
+/// qualifications added to the boundary qualification.
+#[derive(Clone, Copy, Default)]
+struct BoundaryExtras<'x> {
+    polar_coefficients: Option<usize>,
+    curvature_budgets: Option<PolarBudgets>,
+    exact_work: Option<u64>,
+    exact_axes: Option<&'x [usize]>,
 }
 fn qualify_boundary_impl<'a, E: Carrier>(
     body: &'a Body<E>,
     classes: &[Class],
     requirement: PoleRequirement,
     limits: Limits,
-    polar_coefficients: Option<usize>,
-    curvature_budgets: Option<PolarBudgets>,
-    exact_work: Option<u64>,
-    exact_axes: Option<&[usize]>,
+    extras: BoundaryExtras<'_>,
 ) -> Result<BoundaryReport<'a, E>> {
+    let BoundaryExtras {
+        polar_coefficients,
+        curvature_budgets,
+        exact_work,
+        exact_axes,
+    } = extras;
     super::validate_limits(&limits)?;
     let shell = body.geometry().shell();
     if classes.is_empty() || classes.len() != shell.edges().len() || classes.len() > 100_000 {
