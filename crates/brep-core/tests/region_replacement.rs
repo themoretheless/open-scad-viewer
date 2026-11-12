@@ -88,10 +88,12 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
         &chart,
         &[rim.clone()],
         reversed,
-        1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        region_replacement::G2Qualification {
+            tolerance_uv: 1e-8,
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.interior.certified);
@@ -160,10 +162,12 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
             &kink,
             &[rim.clone()],
             reversed,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -176,10 +180,12 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
             &bad,
             &[rim.clone()],
             reversed,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -190,10 +196,12 @@ fn curved_uv_seams_on_a_nonplanar_chart_are_freshly_qualified_before_replacement
             &chart,
             &[rim],
             reversed,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            4,
-            0
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 4,
+                max_exact: 0,
+            },
         )
         .is_err()
     );
@@ -269,10 +277,12 @@ fn root_partitioned_rim_chains_keep_all_shared_edges_during_g2_replacement() {
         &[selected],
         chains.clone(),
         options,
-        1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        region_replacement::G2Qualification {
+            tolerance_uv: 1e-8,
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.corner.admitted && out.corner.interior.certified);
@@ -317,10 +327,12 @@ fn root_partitioned_rim_chains_keep_all_shared_edges_during_g2_replacement() {
             &[selected],
             duplicate,
             options,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -332,10 +344,12 @@ fn root_partitioned_rim_chains_keep_all_shared_edges_during_g2_replacement() {
             &[selected],
             gap,
             options,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -387,10 +401,12 @@ fn g2_region_is_built_from_original_retained_supports_and_replaces_the_old_chart
         &[selected],
         supports,
         options,
-        1e-8,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        1000000,
+        region_replacement::G2Qualification {
+            tolerance_uv: 1e-8,
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.corner.admitted && out.corner.interior.certified && out.corner.within_tolerance);
@@ -427,10 +443,12 @@ fn g2_region_is_built_from_original_retained_supports_and_replaces_the_old_chart
             &[selected],
             bad,
             options,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            100000,
-            1000000
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -440,10 +458,12 @@ fn g2_region_is_built_from_original_retained_supports_and_replaces_the_old_chart
             &[selected],
             supports,
             options,
-            1e-8,
-            [1e-7, 1e-5, 1e-4],
-            1,
-            0
+            region_replacement::G2Qualification {
+                tolerance_uv: 1e-8,
+                tolerances: [1e-7, 1e-5, 1e-4],
+                max_cells: 1,
+                max_exact: 0,
+            },
         )
         .is_err()
     );

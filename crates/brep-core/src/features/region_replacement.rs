@@ -33,6 +33,15 @@ pub struct SmoothReplacement {
     pub cells: usize,
     pub exact_work: u64,
 }
+/// UV tolerance, the position/tangent/curvature seam tolerances and the shared
+/// cell and exact-work budgets of one G2 region replacement.
+#[derive(Clone, Copy, Debug)]
+pub struct G2Qualification {
+    pub tolerance_uv: f64,
+    pub tolerances: [f64; 3],
+    pub max_cells: usize,
+    pub max_exact: u64,
+}
 pub struct QualifiedCandidate {
     pub replacement: Replacement,
     pub seams: Vec<(usize, nurbs_core::surface_g2_pcurves::Report)>,
@@ -50,11 +59,14 @@ pub fn replace_g2_candidate(
     surface: &Surface,
     loops: &[Vec<Coedge>],
     reversed: bool,
-    tolerance_uv: f64,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
+    qualification: G2Qualification,
 ) -> Result<QualifiedCandidate> {
+    let G2Qualification {
+        tolerance_uv,
+        tolerances,
+        max_cells,
+        max_exact,
+    } = qualification;
     source.validate()?;
     surface.validate()?;
     if !(4..=100000).contains(&max_cells)
@@ -198,21 +210,9 @@ pub fn replace_g2(
     selected: &[usize],
     supports: [crate::corner_close::BoundaryUse; 4],
     options: nurbs_core::corner_blend::Options,
-    tolerance_uv: f64,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
+    qualification: G2Qualification,
 ) -> Result<SmoothReplacement> {
-    replace_g2_sides(
-        source,
-        selected,
-        supports.map(|u| vec![u]),
-        options,
-        tolerance_uv,
-        tolerances,
-        max_cells,
-        max_exact,
-    )
+    replace_g2_sides(source, selected, supports.map(|u| vec![u]), options, qualification)
 }
 /// Each of the four sides may consist of several root-bound original edges in
 /// one support chart. Gaps, overlaps and nonidentical shared vertices refuse.
@@ -221,11 +221,14 @@ pub fn replace_g2_sides(
     selected: &[usize],
     supports: [Vec<crate::corner_close::BoundaryUse>; 4],
     options: nurbs_core::corner_blend::Options,
-    tolerance_uv: f64,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_exact: u64,
+    qualification: G2Qualification,
 ) -> Result<SmoothReplacement> {
+    let G2Qualification {
+        tolerance_uv,
+        tolerances,
+        max_cells,
+        max_exact,
+    } = qualification;
     source.validate()?;
     let first = *selected
         .first()
