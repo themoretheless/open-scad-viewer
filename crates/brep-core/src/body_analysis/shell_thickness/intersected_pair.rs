@@ -137,10 +137,12 @@ pub fn thicken(
         sources,
         sources,
         &reversed,
-        signed_thickness,
-        normal_tolerance,
-        normal_cells,
-        sewing_tolerance,
+        crate::shell_thickness::planar_network::OffsetSettings {
+            signed_thickness,
+            normal_tolerance,
+            normal_cells,
+            sewing_tolerance,
+        },
         limits,
     )?;
     if !(1..=32).contains(&search.iterations)

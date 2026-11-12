@@ -11,6 +11,15 @@ pub(super) mod topology;
 fn refused(message: &str) -> Error {
     Error::new("BREP_PLANAR_THICKNESS_REFUSED", message)
 }
+/// Signed normal-offset distance, the admitted normal-displacement error and
+/// its cell budget, and the boundary sewing tolerance of one thickened skin.
+#[derive(Clone, Copy, Debug)]
+pub struct OffsetSettings {
+    pub signed_thickness: f64,
+    pub normal_tolerance: f64,
+    pub normal_cells: usize,
+    pub sewing_tolerance: f64,
+}
 #[derive(Clone, Copy)]
 pub struct Limits {
     pub proof: ProofLimits,

@@ -1,6 +1,6 @@
 //! Closed skins with bilinear nonrectangular original-UV cap correspondence.
 //! Offset error and actual retained topology receive independent admission.
-pub use super::planar_network::{Boundary, Cut, CutKind, Limits};
+pub use super::planar_network::{Boundary, Cut, CutKind, Limits, OffsetSettings};
 use crate::feature_ops::region_pattern::Verification;
 use crate::{Error, Model, Result};
 use nurbs_core::{
@@ -72,10 +72,12 @@ impl Thickness {
             &self.caps,
             &self.regions,
             &self.reversed,
-            self.distance,
-            self.normal_tolerance,
-            self.normal_limit,
-            self.sewing_tolerance,
+            OffsetSettings {
+                signed_thickness: self.distance,
+                normal_tolerance: self.normal_tolerance,
+                normal_cells: self.normal_limit,
+                sewing_tolerance: self.sewing_tolerance,
+            },
             self.limits,
         )?;
         if actual.built.model != self.built.model
@@ -101,28 +103,21 @@ impl Thickness {
 /// owner's exact compatibility contract. Complete chart, edge/lift, closed
 /// incidence and saved-model replay gates remain mandatory. Global solid
 /// embedding, self-trimming and arbitrary curved source trims remain open.
-#[allow(clippy::too_many_arguments)]
 pub fn thicken_with_caps(
     sources: &[Surface],
     caps: &[Surface],
     regions: &[SourceRegion],
     reversed: &[bool],
-    signed_thickness: f64,
-    normal_tolerance: f64,
-    normal_cells: usize,
-    sewing_tolerance: f64,
+    offset: OffsetSettings,
     limits: Limits,
 ) -> Result<Thickness> {
-    super::freeform_network::validate(
-        sources,
-        caps,
-        reversed,
+    let OffsetSettings {
         signed_thickness,
         normal_tolerance,
         normal_cells,
         sewing_tolerance,
-        limits,
-    )?;
+    } = offset;
+    super::freeform_network::validate(sources, caps, reversed, offset, limits)?;
     if regions.len() != sources.len() {
         return Err(refused(
             "Each cap requires its explicit original UV quadrilateral",

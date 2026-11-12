@@ -1,4 +1,4 @@
-use brep_core::shell_thickness::mapped_network::{Limits, thicken_with_caps};
+use brep_core::shell_thickness::mapped_network::{Limits, OffsetSettings, thicken_with_caps};
 use nurbs_core::{
     surface::{Axis, Surface},
     surface_edit,
@@ -80,10 +80,12 @@ fn cylinder_plane_offset_intersection_keeps_originals_and_closes_without_interna
         &caps,
         &maps,
         &[false; 2],
-        0.1,
-        0.01,
-        100000,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 0.01,
+            normal_cells: 100000,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
     )
     .unwrap();
@@ -129,10 +131,12 @@ fn changed_cap_degree_uses_native_aligned_ruled_walls() {
         &[cap],
         &[[[0., 1.], [0., 1.]]],
         &[false],
-        0.1,
-        1e-7,
-        4096,
-        1e-7,
+        OffsetSettings {
+            signed_thickness: 0.1,
+            normal_tolerance: 1e-7,
+            normal_cells: 4096,
+            sewing_tolerance: 1e-7,
+        },
         Limits::default(),
     )
     .unwrap();
@@ -148,11 +152,13 @@ fn incorrect_maps_gapped_intersections_and_budget_exhaustion_refuse() {
             &caps,
             &maps,
             &[false; 2],
-            0.1,
-            0.01,
-            1,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.01,
+                normal_cells: 1,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -164,11 +170,13 @@ fn incorrect_maps_gapped_intersections_and_budget_exhaustion_refuse() {
             &caps,
             &bad,
             &[false; 2],
-            0.1,
-            0.01,
-            100000,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.01,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );
@@ -182,11 +190,13 @@ fn incorrect_maps_gapped_intersections_and_budget_exhaustion_refuse() {
             &broken,
             &maps,
             &[false; 2],
-            0.1,
-            0.01,
-            100000,
-            1e-7,
-            Limits::default()
+            OffsetSettings {
+                signed_thickness: 0.1,
+                normal_tolerance: 0.01,
+                normal_cells: 100000,
+                sewing_tolerance: 1e-7,
+            },
+            Limits::default(),
         )
         .is_err()
     );

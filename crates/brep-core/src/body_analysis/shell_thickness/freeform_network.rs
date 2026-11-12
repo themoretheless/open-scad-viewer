@@ -1,7 +1,7 @@
 //! Closed skins of coherent authored nonplanar cap networks. Continuous normal
 //! displacement is checked on original charts; no global solid embedding or
 //! closest-thickness claim is made. Creased offset intersections are not solved.
-pub use super::planar_network::{Boundary, Cut, CutKind, Limits};
+pub use super::planar_network::{Boundary, Cut, CutKind, Limits, OffsetSettings};
 use crate::feature_ops::region_pattern::{Verification, qualification};
 use crate::{Error, Model, Result};
 use nurbs_core::{
@@ -90,7 +90,6 @@ impl Thickness {
 /// Only exposed source pieces receive walls; original interior seams remain.
 /// Supplied caps must already meet across seams: this does not intersect offset
 /// supports or heal gaps, and tolerance never substitutes for a proof.
-#[allow(clippy::too_many_arguments)]
 pub fn thicken_with_caps(
     sources: &[Surface],
     caps: &[Surface],
@@ -105,10 +104,12 @@ pub fn thicken_with_caps(
         sources,
         caps,
         reversed,
-        signed_thickness,
-        normal_tolerance,
-        normal_cells,
-        sewing_tolerance,
+        crate::shell_thickness::planar_network::OffsetSettings {
+            signed_thickness,
+            normal_tolerance,
+            normal_cells,
+            sewing_tolerance,
+        },
         limits,
     )?;
     let mut used = 0;
@@ -161,17 +162,19 @@ pub fn thicken_with_caps(
     })
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn validate(
     sources: &[Surface],
     caps: &[Surface],
     reversed: &[bool],
-    signed_thickness: f64,
-    normal_tolerance: f64,
-    normal_cells: usize,
-    sewing_tolerance: f64,
+    offset: OffsetSettings,
     limits: Limits,
 ) -> Result<()> {
+    let OffsetSettings {
+        signed_thickness,
+        normal_tolerance,
+        normal_cells,
+        sewing_tolerance,
+    } = offset;
     qualification::limits(limits.proof)?;
     if sources.is_empty()
         || sources.len() > 32
@@ -240,10 +243,12 @@ pub fn thicken(
         sources,
         sources,
         reversed,
-        signed_thickness,
-        normal_tolerance,
-        normal_cells,
-        sewing_tolerance,
+        crate::shell_thickness::planar_network::OffsetSettings {
+            signed_thickness,
+            normal_tolerance,
+            normal_cells,
+            sewing_tolerance,
+        },
         limits,
     )?;
     let mut caps = Vec::with_capacity(sources.len());

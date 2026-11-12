@@ -189,10 +189,12 @@ pub fn thicken(
         sources,
         sources,
         &reversed,
-        signed_thickness,
-        normal_tolerance,
-        limits.caps.proof_cells,
-        sewing_tolerance,
+        crate::shell_thickness::planar_network::OffsetSettings {
+            signed_thickness,
+            normal_tolerance,
+            normal_cells: limits.caps.proof_cells,
+            sewing_tolerance,
+        },
         limits.sewing,
     )?;
     if !uv_tolerance.is_finite() || uv_tolerance <= 0. || normal_tolerance * 0.5 == 0. {
@@ -335,10 +337,12 @@ pub fn thicken(
         &caps,
         &maps,
         &reversed,
-        signed_thickness,
-        normal_tolerance,
-        remaining_normal,
-        sewing_tolerance,
+        parametric_network::OffsetSettings {
+            signed_thickness,
+            normal_tolerance,
+            normal_cells: remaining_normal,
+            sewing_tolerance,
+        },
         sewing,
     )?;
     Ok(Thickness {

@@ -298,10 +298,12 @@ pub fn discover(
         sources,
         sources,
         &reversed,
-        distance,
-        normal_tolerance,
-        limits.construction.caps.proof_cells,
-        sewing_tolerance,
+        crate::shell_thickness::planar_network::OffsetSettings {
+            signed_thickness: distance,
+            normal_tolerance,
+            normal_cells: limits.construction.caps.proof_cells,
+            sewing_tolerance,
+        },
         limits.construction.sewing,
     )?;
     let distances = reversed.map(|r| if r { -distance } else { distance });

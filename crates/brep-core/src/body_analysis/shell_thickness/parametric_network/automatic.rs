@@ -81,10 +81,12 @@ pub fn thicken_from_maps(
         sources,
         sources,
         reversed,
-        signed_thickness,
-        normal_tolerance,
-        proposal_limits.proof_cells,
-        sewing_tolerance,
+        crate::shell_thickness::planar_network::OffsetSettings {
+            signed_thickness,
+            normal_tolerance,
+            normal_cells: proposal_limits.proof_cells,
+            sewing_tolerance,
+        },
         limits,
     )?;
     if maps.len() != sources.len() {
@@ -157,10 +159,12 @@ pub fn thicken_from_maps(
         &caps,
         maps,
         reversed,
-        signed_thickness,
-        normal_tolerance,
-        remaining,
-        sewing_tolerance,
+        super::OffsetSettings {
+            signed_thickness,
+            normal_tolerance,
+            normal_cells: remaining,
+            sewing_tolerance,
+        },
         limits,
     )?;
     Ok(AutomaticThickness {

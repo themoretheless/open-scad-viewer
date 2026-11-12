@@ -1,6 +1,6 @@
 //! Closed normal-offset skins with independently based, rectangularly trimmed
 //! caps. Original UV-window correspondence is explicit and continuously proved.
-pub use super::planar_network::{Boundary, Cut, CutKind, Limits};
+pub use super::planar_network::{Boundary, Cut, CutKind, Limits, OffsetSettings};
 use crate::feature_ops::region_pattern::Verification;
 use crate::{Error, Model, Result};
 use nurbs_core::{
@@ -72,10 +72,12 @@ impl Thickness {
             &self.caps,
             &self.windows,
             &self.reversed,
-            self.distance,
-            self.normal_tolerance,
-            self.normal_limit,
-            self.sewing_tolerance,
+            OffsetSettings {
+                signed_thickness: self.distance,
+                normal_tolerance: self.normal_tolerance,
+                normal_cells: self.normal_limit,
+                sewing_tolerance: self.sewing_tolerance,
+            },
             self.limits,
         )?;
         if actual.built.model != self.built.model
@@ -96,28 +98,21 @@ impl Thickness {
 /// lift qualification. Source caps stay literal; only exposed boundaries get
 /// walls. Original/cap cuts must have compatible boundary clocks; arbitrary
 /// moving T cuts and nonrectangular cap trim regions require a separate path.
-#[allow(clippy::too_many_arguments)]
 pub fn thicken_with_caps(
     sources: &[Surface],
     caps: &[Surface],
     windows: &[SourceWindow],
     reversed: &[bool],
-    signed_thickness: f64,
-    normal_tolerance: f64,
-    normal_cells: usize,
-    sewing_tolerance: f64,
+    offset: OffsetSettings,
     limits: Limits,
 ) -> Result<Thickness> {
-    super::freeform_network::validate(
-        sources,
-        caps,
-        reversed,
+    let OffsetSettings {
         signed_thickness,
         normal_tolerance,
         normal_cells,
         sewing_tolerance,
-        limits,
-    )?;
+    } = offset;
+    super::freeform_network::validate(sources, caps, reversed, offset, limits)?;
     if windows.len() != sources.len() {
         return Err(refused("Each cap requires its explicit original UV window"));
     }
@@ -192,10 +187,12 @@ pub fn thicken_from_windows(
         sources,
         sources,
         reversed,
-        signed_thickness,
-        normal_tolerance,
-        normal_cells,
-        sewing_tolerance,
+        crate::shell_thickness::planar_network::OffsetSettings {
+            signed_thickness,
+            normal_tolerance,
+            normal_cells,
+            sewing_tolerance,
+        },
         limits,
     )?;
     if sources.len() != windows.len() {
@@ -245,10 +242,12 @@ pub fn thicken_from_windows(
         &caps,
         windows,
         reversed,
-        signed_thickness,
-        normal_tolerance,
-        normal_cells,
-        sewing_tolerance,
+        OffsetSettings {
+            signed_thickness,
+            normal_tolerance,
+            normal_cells,
+            sewing_tolerance,
+        },
         limits,
     )
 }
