@@ -7,19 +7,16 @@ fn choose(n: usize, k: usize) -> Q {
 pub(super) fn prove(
     s: &Surface,
     axes: [usize; 2],
-    o: &[Q; 2],
-    u: &[Q; 2],
-    v: &[Q; 2],
-    det: &Q,
+    frame: &AffineFrame,
 ) -> Option<[super::clock::Clock; 2]> {
     let (p, r) = (s.degree_u, s.degree_v);
     if s.control_points.len() != p + 1 || s.control_points[0].len() != r + 1 {
-        return bspline::prove(s, axes, o, u, v, det);
+        return bspline::prove(s, axes, frame);
     }
     // Channels [projected-u numerator, projected-v numerator, W], all
     // authored Euclidean source poles multiplied by their ORIGINAL weights.
     let h: Vec<Vec<[Q; 3]>> = (0..=p)
-        .map(|i| (0..=r).map(|j| pole(s, i, j, axes, o, u, v, det)).collect())
+        .map(|i| (0..=r).map(|j| pole(s, i, j, axes, frame)).collect())
         .collect();
     let uc: Vec<_> = (0..=p)
         .map(|i| [h[i][0][0].clone(), h[i][0][2].clone()])
@@ -41,11 +38,9 @@ pub(super) fn pole(
     i: usize,
     j: usize,
     axes: [usize; 2],
-    o: &[Q; 2],
-    u: &[Q; 2],
-    v: &[Q; 2],
-    det: &Q,
+    frame: &AffineFrame,
 ) -> [Q; 3] {
+    let AffineFrame { origin: o, u, v, det } = frame;
     let x = q(s.control_points[i][j][axes[0]]) - &o[0];
     let y = q(s.control_points[i][j][axes[1]]) - &o[1];
     let w = q(s.weights[i][j]);
@@ -124,13 +119,14 @@ mod tests {
                 let u = [q((p * p) as f64), q(0.)];
                 let v = [q(0.), q((r * r) as f64)];
                 let det = q((p * p * r * r) as f64);
-                let c = prove(&s, [0, 1], &o, &u, &v, &det).unwrap();
+                let frame = AffineFrame { origin: o, u, v, det };
+                let c = prove(&s, [0, 1], &frame).unwrap();
                 for (axis, d) in [p, r].into_iter().enumerate() {
                     let a = q(0.25) + q(0.25) / q(d as f64);
                     assert_eq!(c[axis].inverse(&a), [q(0.5), q(0.5)]);
                 }
                 s.control_points[1][1][0] = f64::from_bits(1f64.to_bits() + 1);
-                assert!(prove(&s, [0, 1], &o, &u, &v, &det).is_none());
+                assert!(prove(&s, [0, 1], &frame).is_none());
             }
         }
     }

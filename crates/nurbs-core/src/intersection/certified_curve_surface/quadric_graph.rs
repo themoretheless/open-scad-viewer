@@ -3,6 +3,14 @@ use super::affine_plane::q;
 use super::*;
 use cad_predicates::{BezierIdentity, BezierIdentityDecision};
 use num_rational::BigRational as Q;
+/// Exact affine parameter frame of a graph surface's corner poles: origin,
+/// the two edge vectors and their nonzero determinant.
+struct AffineFrame {
+    origin: [Q; 2],
+    u: [Q; 2],
+    v: [Q; 2],
+    det: Q,
+}
 mod chart;
 mod joint;
 mod triangular;

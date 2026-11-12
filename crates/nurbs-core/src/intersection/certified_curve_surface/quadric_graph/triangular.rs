@@ -9,15 +9,12 @@ impl Triangular {
     pub(super) fn prove(
         s: &Surface,
         axes: [usize; 2],
-        o: &[Q; 2],
-        u: &[Q; 2],
-        v: &[Q; 2],
-        det: &Q,
+        frame: &AffineFrame,
     ) -> Option<Self> {
         if s.control_points.len() == s.degree_u + 1 && s.control_points[0].len() == s.degree_v + 1 {
-            Bernstein::prove(s, axes, o, u, v, det).map(Self::Bernstein)
+            Bernstein::prove(s, axes, frame).map(Self::Bernstein)
         } else {
-            bspline::prove(s, axes, o, u, v, det).map(Self::Spline)
+            bspline::prove(s, axes, frame).map(Self::Spline)
         }
     }
     pub(super) fn enclosure(&self, r: &[[Q; 2]; 2]) -> Result<[[Q; 2]; 2]> {
@@ -37,10 +34,7 @@ impl Bernstein {
     pub(super) fn prove(
         s: &Surface,
         axes: [usize; 2],
-        o: &[Q; 2],
-        u: &[Q; 2],
-        v: &[Q; 2],
-        det: &Q,
+        frame: &AffineFrame,
     ) -> Option<Self> {
         let (p, r) = (s.degree_u, s.degree_v);
         if s.control_points.len() != p + 1 || s.control_points[0].len() != r + 1 {
@@ -49,7 +43,7 @@ impl Bernstein {
         let h: Vec<Vec<[Q; 3]>> = (0..=p)
             .map(|i| {
                 (0..=r)
-                    .map(|j| super::homogeneous_separable::pole(s, i, j, axes, o, u, v, det))
+                    .map(|j| super::homogeneous_separable::pole(s, i, j, axes, frame))
                     .collect()
             })
             .collect();

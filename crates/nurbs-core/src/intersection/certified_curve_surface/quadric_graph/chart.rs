@@ -126,6 +126,8 @@ impl Chart {
             if det.is_zero() {
                 continue;
             }
+            let frame = AffineFrame { origin, u, v, det };
+            let AffineFrame { origin, u, v, .. } = &frame;
             let affine = (0..nu).all(|i| {
                 (0..nv).all(|j| {
                     (0..2).all(|k| pole(i, j)[k] == &origin[k] + &u[k] * &gu[i] + &v[k] * &gv[j])
@@ -135,18 +137,18 @@ impl Chart {
             let homogeneous =
                 !ordinary && super::homogeneous_affine::prove(s, axes, &origin, &u, &v);
             let boundary_clocks = if !ordinary && !homogeneous {
-                super::homogeneous_separable::prove(s, axes, &origin, &u, &v, &det)
+                super::homogeneous_separable::prove(s, axes, &frame)
             } else {
                 None
             };
             let independent = boundary_clocks.is_some();
             let triangular = if !ordinary && !homogeneous && !independent {
-                super::triangular::Triangular::prove(s, axes, &origin, &u, &v, &det)
+                super::triangular::Triangular::prove(s, axes, &frame)
             } else {
                 None
             };
             let joint = if !ordinary && !homogeneous && !independent && triangular.is_none() {
-                super::joint::Joint::prove(s, axes, &origin, &u, &v, &det)
+                super::joint::Joint::prove(s, axes, &frame)
             } else {
                 None
             };
@@ -213,10 +215,10 @@ impl Chart {
                 },
                 joint,
                 triangular,
-                origin,
-                u,
-                v,
-                det,
+                origin: frame.origin,
+                u: frame.u,
+                v: frame.v,
+                det: frame.det,
             });
         }
         Err(crate::input(

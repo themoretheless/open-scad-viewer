@@ -15,30 +15,24 @@ impl Joint {
     pub(super) fn prove(
         s: &Surface,
         axes: [usize; 2],
-        o: &[Q; 2],
-        u: &[Q; 2],
-        v: &[Q; 2],
-        det: &Q,
+        frame: &AffineFrame,
     ) -> Option<Self> {
-        Self::prove_with_limit(s, axes, o, u, v, det, LIMIT)
+        Self::prove_with_limit(s, axes, frame, LIMIT)
     }
     fn prove_with_limit(
         s: &Surface,
         axes: [usize; 2],
-        o: &[Q; 2],
-        u: &[Q; 2],
-        v: &[Q; 2],
-        det: &Q,
+        frame: &AffineFrame,
         limit: u64,
     ) -> Option<Self> {
         let (p, r) = (s.degree_u, s.degree_v);
         if s.control_points.len() != p + 1 || s.control_points[0].len() != r + 1 {
-            return bspline::prove(s, axes, o, u, v, det, limit);
+            return bspline::prove(s, axes, frame, limit);
         }
         let h: Vec<Vec<[Q; 3]>> = (0..=p)
             .map(|i| {
                 (0..=r)
-                    .map(|j| super::homogeneous_separable::pole(s, i, j, axes, o, u, v, det))
+                    .map(|j| super::homogeneous_separable::pole(s, i, j, axes, frame))
                     .collect()
             })
             .collect();
@@ -133,7 +127,8 @@ mod tests {
         let l = f[0]["scale"].as_f64().unwrap();
         let (o, u, v) = ([q(0.), q(0.)], [q(l), q(0.)], [q(0.), q(l)]);
         let det = q(l) * q(l);
-        assert!(Joint::prove_with_limit(&s, [0, 1], &o, &u, &v, &det, 0).is_none());
-        assert!(Joint::prove_with_limit(&s, [0, 1], &o, &u, &v, &det, LIMIT).is_some());
+        let frame = AffineFrame { origin: o, u, v, det };
+        assert!(Joint::prove_with_limit(&s, [0, 1], &frame, 0).is_none());
+        assert!(Joint::prove_with_limit(&s, [0, 1], &frame, LIMIT).is_some());
     }
 }

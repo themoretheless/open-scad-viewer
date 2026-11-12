@@ -4,20 +4,14 @@ use super::*;
 pub(super) fn prove(
     s: &Surface,
     axes: [usize; 2],
-    o: &[Q; 2],
-    u: &[Q; 2],
-    v: &[Q; 2],
-    det: &Q,
+    frame: &AffineFrame,
 ) -> Option<[super::super::clock::Clock; 2]> {
-    prove_with_limit(s, axes, o, u, v, det, MAX_RESTRICTION_WORK)
+    prove_with_limit(s, axes, frame, MAX_RESTRICTION_WORK)
 }
 fn prove_with_limit(
     s: &Surface,
     axes: [usize; 2],
-    o: &[Q; 2],
-    u: &[Q; 2],
-    v: &[Q; 2],
-    det: &Q,
+    frame: &AffineFrame,
     limit: u64,
 ) -> Option<[super::super::clock::Clock; 2]> {
     let (p, r) = (s.degree_u, s.degree_v);
@@ -25,13 +19,13 @@ fn prove_with_limit(
     let mut work = Work::new(limit);
     let uc: Vec<[Q; 2]> = (0..nu)
         .map(|i| {
-            let h = super::pole(s, i, 0, axes, o, u, v, det);
+            let h = super::pole(s, i, 0, axes, frame);
             [h[0].clone(), h[2].clone()]
         })
         .collect();
     let vc: Vec<[Q; 2]> = (0..nv)
         .map(|j| {
-            let h = super::pole(s, 0, j, axes, o, u, v, det);
+            let h = super::pole(s, 0, j, axes, frame);
             [h[1].clone(), h[2].clone()]
         })
         .collect();
@@ -65,7 +59,7 @@ fn prove_with_limit(
             let mut h = vec![vec![[q(0.), q(0.), q(0.)]; r + 1]; p + 1];
             for j in 0..=r {
                 let base = (iu - p..=iu)
-                    .map(|i| super::pole(s, i, iv - r + j, axes, o, u, v, det))
+                    .map(|i| super::pole(s, i, iv - r + j, axes, frame))
                     .collect();
                 let c = restrict(base, &ku, p, iu, &mut work)?;
                 for i in 0..=p {
@@ -139,7 +133,8 @@ mod tests {
                     [q(0.), q((16 * r * r) as f64)],
                 );
                 let det = &u[0] * &v[1];
-                let c = prove(&s, [0, 1], &o, &u, &v, &det).unwrap();
+                let frame = AffineFrame { origin: o.clone(), u: u.clone(), v: v.clone(), det };
+                let c = prove(&s, [0, 1], &frame).unwrap();
                 for (axis, (degree, knots, values, end)) in
                     [(p, &s.knots_u, &x, &u[0]), (r, &s.knots_v, &y, &v[1])]
                         .into_iter()
@@ -151,9 +146,9 @@ mod tests {
                         .sum::<Q>();
                     assert_eq!(c[axis].inverse(&a), [q(0.5), q(0.5)], "degrees {p},{r}");
                 }
-                assert!(prove_with_limit(&s, [0, 1], &o, &u, &v, &det, 0).is_none());
+                assert!(prove_with_limit(&s, [0, 1], &frame, 0).is_none());
                 s.control_points[1][1][0] = f64::from_bits(s.control_points[1][1][0].to_bits() + 1);
-                assert!(prove(&s, [0, 1], &o, &u, &v, &det).is_none());
+                assert!(prove(&s, [0, 1], &frame).is_none());
             }
         }
     }

@@ -252,8 +252,28 @@ fn intersect_selected(
         return Ok(out);
     };
     solve(
-        a, b, axes, tolerance, max_cells, self_pairs, diagonal, false,
+        a,
+        b,
+        axes,
+        tolerance,
+        max_cells,
+        PairSearch {
+            self_pairs,
+            diagonal,
+            stop_after_first: false,
+        },
     )
+}
+
+/// Which span pairs a planar crossing search visits and whether it stops at
+/// the first certified crossing.
+#[derive(Clone, Copy)]
+struct PairSearch {
+    /// Both operands are the same curve; pair spans `sa < sb` only.
+    self_pairs: bool,
+    /// Also search each span against itself.
+    diagonal: bool,
+    stop_after_first: bool,
 }
 
 fn solve(
@@ -262,10 +282,13 @@ fn solve(
     axes: [usize; 2],
     tolerance: f64,
     max_cells: usize,
-    self_pairs: bool,
-    diagonal: bool,
-    stop_after_first: bool,
+    search: PairSearch,
 ) -> Result<CertifiedCurveIntersection> {
+    let PairSearch {
+        self_pairs,
+        diagonal,
+        stop_after_first,
+    } = search;
     let whole = [a.domain(), b.domain()];
     let mut out = CertifiedCurveIntersection {
         crossings: vec![],
@@ -454,6 +477,15 @@ pub fn intersect_surface_iso_at_certified_report(
         });
     };
     solve(
-        &source, &source, axes, tolerance, max_cells, true, true, true,
+        &source,
+        &source,
+        axes,
+        tolerance,
+        max_cells,
+        PairSearch {
+            self_pairs: true,
+            diagonal: true,
+            stop_after_first: true,
+        },
     )
 }

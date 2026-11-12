@@ -107,13 +107,14 @@ fn multispan_cross_identity_census_and_bounded_refusal_cover_all_degrees() {
                 [q(0.), q((16 * r * r) as f64)],
             );
             let det = &u[0] * &v[1];
+            let frame = AffineFrame { origin: o, u, v, det };
             assert!(
-                prove(&s, [0, 1], &o, &u, &v, &det).is_some(),
+                prove(&s, [0, 1], &frame).is_some(),
                 "degree {p},{r}"
             );
-            assert!(prove_with_limit(&s, [0, 1], &o, &u, &v, &det, 0).is_none());
+            assert!(prove_with_limit(&s, [0, 1], &frame, 0).is_none());
             s.control_points[1][1][0] = f64::from_bits(s.control_points[1][1][0].to_bits() + 1);
-            assert!(prove(&s, [0, 1], &o, &u, &v, &det).is_none());
+            assert!(prove(&s, [0, 1], &frame).is_none());
         }
     }
 }
@@ -134,12 +135,30 @@ fn flat_conditional_spans_and_discontinuous_basis_never_certify() {
         periodic_v: false,
     };
     let (o, u, v) = ([q(0.), q(0.)], [q(1.), q(0.)], [q(0.), q(1.)]);
-    assert!(prove(&s, [0, 1], &o, &u, &v, &q(1.)).is_none());
+    assert!(prove(
+        &s,
+        [0, 1],
+        &AffineFrame {
+            origin: o.clone(),
+            u: u.clone(),
+            v: v.clone(),
+            det: q(1.),
+        },
+    ).is_none());
     s.degree_u = 1;
     s.knots_u = vec![0., 0., 0.5, 0.5, 1., 1.];
     s.control_points.insert(2, s.control_points[1].clone());
     s.weights.insert(2, vec![1.; 3]);
-    assert!(prove(&s, [0, 1], &o, &u, &v, &q(1.)).is_none());
+    assert!(prove(
+        &s,
+        [0, 1],
+        &AffineFrame {
+            origin: o.clone(),
+            u: u.clone(),
+            v: v.clone(),
+            det: q(1.),
+        },
+    ).is_none());
 }
 
 #[test]

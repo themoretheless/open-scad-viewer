@@ -18,10 +18,7 @@ fn continuous(knots: &[f64], p: usize, n: usize) -> bool {
 pub(super) fn prove(
     s: &Surface,
     axes: [usize; 2],
-    o: &[Q; 2],
-    u: &[Q; 2],
-    v: &[Q; 2],
-    det: &Q,
+    frame: &AffineFrame,
     limit: u64,
 ) -> Option<Joint> {
     let (p, r) = (s.degree_u, s.degree_v);
@@ -32,7 +29,7 @@ pub(super) fn prove(
     let h: Vec<Vec<[Q; 3]>> = (0..n)
         .map(|i| {
             (0..m)
-                .map(|j| super::super::homogeneous_separable::pole(s, i, j, axes, o, u, v, det))
+                .map(|j| super::super::homogeneous_separable::pole(s, i, j, axes, frame))
                 .collect()
         })
         .collect();
@@ -155,8 +152,9 @@ mod tests {
         let l = f[4]["scale"].as_f64().unwrap();
         let (o, u, v) = ([q(0.), q(0.)], [q(l), q(0.)], [q(0.), q(l)]);
         let det = q(l) * q(l);
-        assert!(prove(&s, [0, 1], &o, &u, &v, &det, 0).is_none());
-        let chart = prove(&s, [0, 1], &o, &u, &v, &det, LIMIT).unwrap();
+        let frame = AffineFrame { origin: o, u, v, det };
+        assert!(prove(&s, [0, 1], &frame, 0).is_none());
+        let chart = prove(&s, [0, 1], &frame, LIMIT).unwrap();
         assert_eq!(chart.patches.len(), 2);
         let at = |row: &Vec<[Q; 3]>| {
             let mut d = row.clone();

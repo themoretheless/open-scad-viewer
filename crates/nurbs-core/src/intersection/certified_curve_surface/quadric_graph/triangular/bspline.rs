@@ -27,20 +27,14 @@ fn continuous(k: &[f64], p: usize, n: usize) -> bool {
 pub(super) fn prove(
     s: &Surface,
     axes: [usize; 2],
-    o: &[Q; 2],
-    u: &[Q; 2],
-    v: &[Q; 2],
-    det: &Q,
+    frame: &AffineFrame,
 ) -> Option<Spline> {
-    prove_with_limit(s, axes, o, u, v, det, MAX_RESTRICTION_WORK)
+    prove_with_limit(s, axes, frame, MAX_RESTRICTION_WORK)
 }
 fn prove_with_limit(
     s: &Surface,
     axes: [usize; 2],
-    o: &[Q; 2],
-    u: &[Q; 2],
-    v: &[Q; 2],
-    det: &Q,
+    frame: &AffineFrame,
     limit: u64,
 ) -> Option<Spline> {
     let (nu, nv) = (s.control_points.len(), s.control_points[0].len());
@@ -50,7 +44,7 @@ fn prove_with_limit(
     let h: Vec<Vec<[Q; 3]>> = (0..nu)
         .map(|i| {
             (0..nv)
-                .map(|j| super::super::homogeneous_separable::pole(s, i, j, axes, o, u, v, det))
+                .map(|j| super::super::homogeneous_separable::pole(s, i, j, axes, frame))
                 .collect()
         })
         .collect();
