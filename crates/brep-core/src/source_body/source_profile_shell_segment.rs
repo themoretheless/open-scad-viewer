@@ -209,10 +209,12 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                                 domain,
                                 origin,
                                 direction,
-                                tolerance_uv,
-                                max_cells - out.cells,
-                                max_spans - out.spans,
-                                max_work - out.coefficient_work,
+                                nurbs_core::profile_expression_bernstein::LineQueryLimits {
+                                    tolerance_uv,
+                                    max_cells: max_cells - out.cells,
+                                    max_spans: max_spans - out.spans,
+                                    max_work: max_work - out.coefficient_work,
+                                },
                             )?;
                             out.spans += line.spans;
                             out.coefficient_work += line.coefficient_work;
@@ -226,10 +228,12 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                         domain,
                         origin,
                         direction,
-                        tolerance_uv,
-                        max_cells - out.cells,
-                        max_spans - out.spans,
-                        max_work - out.coefficient_work,
+                        nurbs_core::profile_expression_bernstein::LineQueryLimits {
+                            tolerance_uv,
+                            max_cells: max_cells - out.cells,
+                            max_spans: max_spans - out.spans,
+                            max_work: max_work - out.coefficient_work,
+                        },
                     )?;
                     out.spans += line.spans;
                     out.coefficient_work += line.coefficient_work;

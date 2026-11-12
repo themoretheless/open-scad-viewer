@@ -2707,7 +2707,9 @@
         let target=profile.source().evaluate(u,0.5).unwrap().point;
         let origin=[center[0],center[1],center[2]];
         let direction=std::array::from_fn(|k|target[k]-origin[k]);
-        let line=bridge.inspect_line_intersections([[0.,1.];2],origin,direction,1e-5,1000,100000,100000000).unwrap();
+        let limits=nurbs_core::profile_expression_bernstein::LineQueryLimits{
+            tolerance_uv:1e-5,max_cells:1000,max_spans:100000,max_work:100000000};
+        let line=bridge.inspect_line_intersections([[0.,1.];2],origin,direction,limits).unwrap();
         let roots=line.intersections.expect("annular coefficient line enclosure");
         eprintln!("annular coefficient roots {:?}",roots);
         assert!(roots.unresolved.is_empty(),"annular line roots remain unresolved");

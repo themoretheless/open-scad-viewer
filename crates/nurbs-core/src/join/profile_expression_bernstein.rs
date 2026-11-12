@@ -104,6 +104,15 @@ pub struct CoefficientRadiusBound {
     pub coefficient_work: usize,
     pub reason: &'static str,
 }
+/// UV tolerance and the cell, span and coefficient work budgets of one
+/// line intersection query.
+#[derive(Clone, Copy, Debug)]
+pub struct LineQueryLimits {
+    pub tolerance_uv: f64,
+    pub max_cells: usize,
+    pub max_spans: usize,
+    pub max_work: usize,
+}
 pub struct CoefficientLineReport {
     pub intersections: Option<crate::ray_surface::Report>,
     pub spans: usize,
@@ -118,11 +127,14 @@ impl RailConstrainedBridge<'_, '_, '_, '_, '_> {
         domain: [[f64; 2]; 2],
         origin: [f64; 3],
         direction: [f64; 3],
-        tolerance_uv: f64,
-        cells: usize,
-        spans: usize,
-        coefficient_work: usize,
+        limits: LineQueryLimits,
     ) -> Result<CoefficientLineReport> {
+        let LineQueryLimits {
+            tolerance_uv,
+            max_cells: cells,
+            max_spans: spans,
+            max_work: coefficient_work,
+        } = limits;
         check(
             origin.iter().chain(&direction).all(|v| v.is_finite())
                 && direction.iter().any(|v| *v != 0.)
@@ -428,11 +440,14 @@ impl crate::surface_weight_profile::WeightProfile<'_> {
         domain: [[f64; 2]; 2],
         origin: [f64; 3],
         direction: [f64; 3],
-        tolerance_uv: f64,
-        max_cells: usize,
-        max_spans: usize,
-        max_work: usize,
+        limits: LineQueryLimits,
     ) -> Result<CoefficientLineReport> {
+        let LineQueryLimits {
+            tolerance_uv,
+            max_cells,
+            max_spans,
+            max_work,
+        } = limits;
         let s = self.source();
         check(
             domain

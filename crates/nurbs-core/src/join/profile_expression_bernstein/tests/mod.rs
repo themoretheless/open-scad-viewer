@@ -8,7 +8,8 @@ fn unsupported_line_degree_does_not_hide_invalid_queries() {
         weights:vec![vec![1.;2];18],periodic_u:false,periodic_v:false,
     };
     let p = crate::surface_weight_profile::qualify_weight_profile(&s,[0,0],100).unwrap().0.unwrap();
-    let query = |domain,direction| p.inspect_line_intersections(domain,[0.;3],direction,1e-5,100,100,10000);
+    let limits = LineQueryLimits{tolerance_uv:1e-5,max_cells:100,max_spans:100,max_work:10000};
+    let query = |domain,direction| p.inspect_line_intersections(domain,[0.;3],direction,limits);
     assert!(query([[0.,1.];2],[0.;3]).is_err());
     assert!(query([[-1.,1.],[0.,1.]],[0.,0.,1.]).is_err());
     let valid = query([[0.,1.];2],[0.,0.,1.]).unwrap();
@@ -95,10 +96,12 @@ fn corrected_cylinder_coefficients_cover_independent_rational_positions() {
             [[0., 1.]; 2],
             [0.5, 0., 0.],
             [0., 1., 1.],
-            1e-5,
-            1000,
-            10,
-            100000,
+            LineQueryLimits {
+                tolerance_uv: 1e-5,
+                max_cells: 1000,
+                max_spans: 10,
+                max_work: 100000,
+            },
         )
         .unwrap()
         .intersections
@@ -110,10 +113,12 @@ fn corrected_cylinder_coefficients_cover_independent_rational_positions() {
             [[0., 1.]; 2],
             [0.75, 0., 0.],
             [0., 1., 1.],
-            1e-5,
-            1000,
-            1,
-            100000,
+            LineQueryLimits {
+                tolerance_uv: 1e-5,
+                max_cells: 1000,
+                max_spans: 1,
+                max_work: 100000,
+            },
         )
         .unwrap();
     assert_eq!(limited.spans, 1);
@@ -124,10 +129,12 @@ fn corrected_cylinder_coefficients_cover_independent_rational_positions() {
             [[0., 1.]; 2],
             [0.25, 0., 0.],
             [0., 1., 1.],
-            1e-5,
-            1000,
-            10,
-            100000,
+            LineQueryLimits {
+                tolerance_uv: 1e-5,
+                max_cells: 1000,
+                max_spans: 10,
+                max_work: 100000,
+            },
         )
         .unwrap();
     assert_eq!(multi.spans, 2);
@@ -152,10 +159,12 @@ fn corrected_cylinder_coefficients_cover_independent_rational_positions() {
             [[0.25, 0.75], [0., 1.]],
             [0.5, 0., 0.],
             [0., 1., 1.],
-            1e-5,
-            1000,
-            100,
-            100000,
+            LineQueryLimits {
+                tolerance_uv: 1e-5,
+                max_cells: 1000,
+                max_spans: 100,
+                max_work: 100000,
+            },
         )
         .unwrap();
     let retained = retained.intersections.unwrap();
@@ -167,10 +176,12 @@ fn corrected_cylinder_coefficients_cover_independent_rational_positions() {
                 [[0.25, 0.75], [0., 1.]],
                 [0.5, 0., 0.],
                 [0., 1., 1.],
-                1e-5,
-                1000,
-                0,
-                100000
+                LineQueryLimits {
+                    tolerance_uv: 1e-5,
+                    max_cells: 1000,
+                    max_spans: 0,
+                    max_work: 100000,
+                },
             )
             .unwrap()
             .intersections
@@ -204,10 +215,12 @@ fn corrected_cylinder_coefficients_cover_independent_rational_positions() {
             [[0., 1.]; 2],
             [0.5, 0., 0.],
             [0., 1., 1.],
-            1e-5,
-            1000,
-            100000,
-            100000000,
+            LineQueryLimits {
+                tolerance_uv: 1e-5,
+                max_cells: 1000,
+                max_spans: 100000,
+                max_work: 100000000,
+            },
         )
         .unwrap();
     let roots = line.intersections.unwrap();
