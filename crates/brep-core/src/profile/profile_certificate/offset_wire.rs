@@ -288,15 +288,14 @@ fn round_check(a: &Cell, b: &Cell, d: f64, deviation: f64, points: &[[f64; 2]]) 
     }
     Ok(true)
 }
+/// Join two adjacent offset cells across the gap from `left` to `right`.
 fn join(
-    a: &Cell,
-    b: &Cell,
+    [a, b]: [&Cell; 2],
     d: f64,
     deviation: f64,
     style: &str,
     limit: f64,
-    left: [f64; 2],
-    right: [f64; 2],
+    [left, right]: [[f64; 2]; 2],
 ) -> Result<Vec<[f64; 2]>> {
     if style == "bevel" || d == 0. {
         return Ok(vec![left, right]);
@@ -373,14 +372,12 @@ pub fn certify_offset_wire(
     for i in 0..count {
         let j = (i + 1) % cells.len();
         joins.push(join(
-            &cells[i],
-            &cells[j],
+            [&cells[i], &cells[j]],
             distance,
             deviation,
             style,
             miter_limit,
-            *parts[i].points.last().unwrap(),
-            parts[j].points[0],
+            [*parts[i].points.last().unwrap(), parts[j].points[0]],
         )?);
     }
     let c = OffsetWireCertificate {

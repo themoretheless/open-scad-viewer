@@ -154,11 +154,15 @@ struct Grid {
     height: usize,
     chart: [[Q; 2]; 2],
     step: [Q; 2],
+    /// Node count of the whole grid.
+    nodes: usize,
+    /// Period copies covered on each wrapped side.
+    radius: usize,
 }
 impl Grid {
-    fn new(v: &ClearanceView<'_>, level: usize, r: usize, cap: usize) -> Option<(Self, usize)> {
+    fn new(v: &ClearanceView<'_>, level: usize, radius: usize, cap: usize) -> Option<Self> {
         let d = 1i64.checked_shl(level as u32)?;
-        let r = r as i64;
+        let r = radius as i64;
         let low = std::array::from_fn(|i| if v.wrapped()[i] { -r * d } else { 1 });
         let high = std::array::from_fn(|i| if v.wrapped()[i] { (r + 1) * d } else { d - 1 });
         let width = usize::try_from(high[0] - low[0] + 1).ok()?;
@@ -167,16 +171,15 @@ impl Grid {
         if n > cap {
             return None;
         }
-        Some((
-            Self {
-                low,
-                high,
-                height,
-                chart: v.chart().clone(),
-                step: v.periods().clone().map(|p| p / Q::from_integer(d.into())),
-            },
-            n,
-        ))
+        Some(Self {
+            low,
+            high,
+            height,
+            chart: v.chart().clone(),
+            step: v.periods().clone().map(|p| p / Q::from_integer(d.into())),
+            nodes: n,
+            radius,
+        })
     }
     fn id(&self, ij: [i64; 2]) -> Option<usize> {
         if (0..2).any(|a| ij[a] < self.low[a] || ij[a] > self.high[a]) {
@@ -221,10 +224,9 @@ fn grid_search(
     a: &[Q; 2],
     target: &[Q; 2],
     g: &Grid,
-    n: usize,
-    r: usize,
     b: &mut Budget,
 ) -> Result<Attempt> {
+    let (n, r) = (g.nodes, g.radius);
     let mut goals = BTreeMap::<usize, Vec<[Q; 2]>>::new();
     let ru = if v.wrapped()[0] { r as i64 } else { 0 };
     let rv = if v.wrapped()[1] { r as i64 } else { 0 };
@@ -328,12 +330,12 @@ fn connect(
             if r > radius {
                 continue;
             }
-            let Some((g, n)) = Grid::new(v, level, r, l.max_grid_nodes) else {
+            let Some(g) = Grid::new(v, level, r, l.max_grid_nodes) else {
                 skipped = true;
                 continue;
             };
             b.grids += 1;
-            match grid_search(v, at, &a, &target, &g, n, r, b)? {
+            match grid_search(v, at, &a, &target, &g, b)? {
                 Attempt::NoRoute => {}
                 result => return Ok(result),
             }
