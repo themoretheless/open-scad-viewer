@@ -23,6 +23,16 @@ mod homogeneous_affine;
 mod homogeneous_separable;
 pub use edge::GraphBoundaryProof;
 mod membership;
+/// Source curve, quadric-graph surface with its chart, and the quadric matrix
+/// with its product factors: the fixed inputs of every per-root membership query.
+#[derive(Clone, Copy)]
+struct QuadricQuery<'a> {
+    c: &'a Curve,
+    s: &'a Surface,
+    chart: &'a chart::Chart,
+    matrix: [[f64; 4]; 4],
+    products: &'a [[f64; 2]],
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginalQuadricGraphParameterization {
     PolynomialAffine,
@@ -155,26 +165,24 @@ pub fn original_quadric_graph_contacts(
         max_exact_work - work,
     )?;
     out.exact_work += carrier.exact_work;
+    let query = QuadricQuery {
+        c,
+        s,
+        chart: &chart,
+        matrix,
+        products,
+    };
     for root in &carrier.roots {
-        let mut decision = membership::contact(c, s, &chart, matrix, products, root, &[None; 4])?;
+        let mut decision = membership::contact(query, root, &[None; 4])?;
         let eligible = match &decision {
             membership::Decision::Unresolved(edges) => Some(*edges),
             _ => None,
         };
         if let Some(eligible) = eligible {
-            let proofs = edge::prove(
-                c,
-                s,
-                &chart,
-                matrix,
-                products,
-                root,
-                eligible,
-                max_exact_work - out.exact_work,
-            )?;
+            let proofs = edge::prove(query, root, eligible, max_exact_work - out.exact_work)?;
             out.exact_work += proofs.work;
             out.boundary_exact_work += proofs.work;
-            decision = membership::contact(c, s, &chart, matrix, products, root, &proofs.signs)?;
+            decision = membership::contact(query, root, &proofs.signs)?;
             out.boundary_proofs.extend(proofs.records);
         }
         match decision {

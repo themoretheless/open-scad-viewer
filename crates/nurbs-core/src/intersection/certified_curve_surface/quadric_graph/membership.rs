@@ -14,14 +14,17 @@ fn contradiction() -> crate::Error {
     )
 }
 pub(super) fn contact(
-    c: &Curve,
-    s: &Surface,
-    chart: &chart::Chart,
-    matrix: [[f64; 4]; 4],
-    products: &[[f64; 2]],
+    query: QuadricQuery<'_>,
     root: &OriginalQuadricCarrierRoot,
     signs: &[Option<cad_predicates::Sign>; 4],
 ) -> Result<Decision> {
+    let QuadricQuery {
+        c,
+        s,
+        chart,
+        matrix,
+        products,
+    } = query;
     let span = root.source_spans[0];
     let normalized = root.normalized_original_span_parameters[0];
     let mut parameter = root.parameter;

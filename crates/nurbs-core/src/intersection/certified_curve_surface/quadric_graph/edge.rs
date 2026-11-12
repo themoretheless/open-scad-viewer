@@ -19,15 +19,18 @@ pub(super) struct Proofs {
     pub work: u64,
 }
 pub(super) fn prove(
-    c: &Curve,
-    s: &Surface,
-    chart: &chart::Chart,
-    matrix: [[f64; 4]; 4],
-    products: &[[f64; 2]],
+    query: QuadricQuery<'_>,
     root: &OriginalQuadricCarrierRoot,
     eligible: [bool; 4],
     budget: u64,
 ) -> Result<Proofs> {
+    let QuadricQuery {
+        c,
+        s,
+        chart,
+        matrix,
+        products,
+    } = query;
     let mut out = Proofs {
         signs: [None; 4],
         records: vec![],

@@ -401,8 +401,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
         face: usize,
         circle_idx: usize,
         edges: &[(usize, f64, f64)],
-        (pa, ka): (f64, VKey),
-        (pb, kb): (f64, VKey),
+        [(pa, ka), (pb, kb)]: [(f64, VKey); 2],
     ) -> Result<()> {
         if pb - pa < EVENT_GAP {
             return Err(unsupported(
@@ -558,8 +557,7 @@ impl<'m, M: Mate> Imprint<'m, M> {
                     face,
                     i,
                     &edges,
-                    stations[w],
-                    stations[w + 1],
+                    [stations[w], stations[w + 1]],
                 )?;
             }
         }
