@@ -172,14 +172,11 @@ fn compare(
 /// original knot cell is compared with exact homogeneous Bernstein arithmetic.
 pub fn rational_bspline_restriction_identity(
     ctx: &mut PredicateContext<'_>,
-    ap: usize,
-    a: &[[LeafRef; 4]],
-    ak: &[LeafRef],
-    bp: usize,
-    b: &[[LeafRef; 4]],
-    bk: &[LeafRef],
+    [first, second]: [crate::SplineLeafRefs<'_, 4>; 2],
     translation: [LeafRef; 3],
 ) -> Result<BezierIdentityDecision, InputError> {
+    let crate::SplineLeafRefs { controls: a, knots: ak, degree: ap } = first;
+    let crate::SplineLeafRefs { controls: b, knots: bk, degree: bp } = second;
     if !(1..=32).contains(&ap)
         || !(1..=32).contains(&bp)
         || a.len() <= ap
@@ -304,12 +301,18 @@ mod tests {
             let mut ctx = PredicateContext::new(&arena, &tolerance, limits, cancel);
             rational_bspline_restriction_identity(
                 &mut ctx,
-                1,
-                &rows(0),
-                &ka,
-                1,
-                &rows(2),
-                &kb,
+                [
+                    crate::SplineLeafRefs {
+                        controls: &rows(0),
+                        knots: &ka,
+                        degree: 1,
+                    },
+                    crate::SplineLeafRefs {
+                        controls: &rows(2),
+                        knots: &kb,
+                        degree: 1,
+                    },
+                ],
                 shift,
             )
             .unwrap()

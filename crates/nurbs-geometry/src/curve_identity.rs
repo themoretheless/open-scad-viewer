@@ -38,6 +38,21 @@ pub fn compare_definitions(source:&Curve,candidate:&Curve,knot:f64,max_work:u64,
     let b = controls(offsets[1].0, candidate.control_points.len())?;
     let bk = knots(offsets[1].1, candidate.knots.len())?;
     let t = crate::leaves_at(&arena, translation)?;
-    let decision=cad_predicates::rational_bspline_restriction_identity(&mut ctx,p,&a,&ak,candidate.degree,&b,&bk,t).map_err(|e|crate::input(e.to_string()))?;
+    let decision=cad_predicates::rational_bspline_restriction_identity(
+        &mut ctx,
+        [
+            cad_predicates::SplineLeafRefs {
+                controls: &a,
+                knots: &ak,
+                degree: p,
+            },
+            cad_predicates::SplineLeafRefs {
+                controls: &b,
+                knots: &bk,
+                degree: candidate.degree,
+            },
+        ],
+        t,
+    ).map_err(|e|crate::input(e.to_string()))?;
     Ok(decision)
 }

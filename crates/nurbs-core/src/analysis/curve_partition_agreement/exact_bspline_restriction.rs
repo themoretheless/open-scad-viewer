@@ -82,12 +82,18 @@ pub fn verify_exact_bspline_restriction(
     );
     cad_predicates::rational_bspline_restriction_identity(
         &mut ctx,
-        original.degree,
-        &rows(0, original.control_points.len()),
-        &refs(offset, original.knots.len()),
-        child.degree,
-        &rows(original.control_points.len(), child.control_points.len()),
-        &refs(offset + original.knots.len(), child.knots.len()),
+        [
+            cad_predicates::SplineLeafRefs {
+                controls: &rows(0, original.control_points.len()),
+                knots: &refs(offset, original.knots.len()),
+                degree: original.degree,
+            },
+            cad_predicates::SplineLeafRefs {
+                controls: &rows(original.control_points.len(), child.control_points.len()),
+                knots: &refs(offset + original.knots.len(), child.knots.len()),
+                degree: child.degree,
+            },
+        ],
         std::array::from_fn(|k| arena.leaf(shift + k).unwrap()),
     )
     .map(Some)

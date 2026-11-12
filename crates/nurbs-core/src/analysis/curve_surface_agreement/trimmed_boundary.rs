@@ -99,9 +99,18 @@ pub(super) fn verify(
         );
         return cad_predicates::rational_bspline_trimmed_boundary_identity(
             &mut ctx,
-            [&aa, &bb],
-            [&ak, &bkk],
-            [c.degree, degrees[free]],
+            [
+                cad_predicates::SplineLeafRefs {
+                    controls: &aa,
+                    knots: &ak,
+                    degree: c.degree,
+                },
+                cad_predicates::SplineLeafRefs {
+                    controls: &bb,
+                    knots: &bkk,
+                    degree: degrees[free],
+                },
+            ],
             [arena.leaf(line).unwrap(), arena.leaf(line + 1).unwrap()],
             std::array::from_fn(|i| arena.leaf(line + 2 + i).unwrap()),
             [arena.leaf(line + 6).unwrap(), arena.leaf(line + 7).unwrap()],
