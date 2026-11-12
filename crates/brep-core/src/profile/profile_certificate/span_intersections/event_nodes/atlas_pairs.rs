@@ -121,11 +121,13 @@ pub(super) fn cover_source_pairs(
     for i in 0..n {
         for j in i + 1..n {
             let proof = prove_pair(
-                surface,
+                AtlasSurface {
+                    surface,
+                    natural,
+                    wrapped,
+                },
                 [charts[i].domain, charts[j].domain],
                 [bounds[i], bounds[j]],
-                natural,
-                wrapped,
                 limits,
                 &mut work,
                 &mut subdivision_cells,
@@ -140,17 +142,28 @@ pub(super) fn cover_source_pairs(
     Ok((bounds, pairs, work, subdivision_cells))
 }
 
-fn prove_pair(
-    surface: &nurbs_core::surface::Surface,
-    domains: [[[f64; 2]; 2]; 2],
-    bounds: [[[f64; 2]; 3]; 2],
+/// The surface whose chart pairs are proved, with its natural parameter
+/// domain and which directions wrap periodically.
+#[derive(Clone, Copy)]
+struct AtlasSurface<'a> {
+    surface: &'a nurbs_core::surface::Surface,
     natural: [[f64; 2]; 2],
     wrapped: [bool; 2],
+}
+fn prove_pair(
+    atlas: AtlasSurface<'_>,
+    domains: [[[f64; 2]; 2]; 2],
+    bounds: [[[f64; 2]; 3]; 2],
     limits: OriginalAtlasPairLimits,
     total_work: &mut usize,
     created: &mut usize,
     depth: usize,
 ) -> Result<OriginalAtlasPairProof> {
+    let AtlasSurface {
+        surface,
+        natural,
+        wrapped,
+    } = atlas;
     let mut work = *total_work;
     let mut proof = None;
     let pair_start_work = work;
@@ -340,11 +353,9 @@ fn prove_pair(
                     boxes[k] = [values[0], values[1], values[2]];
                 }
                 prove_pair(
-                    surface,
+                    atlas,
                     section,
                     boxes,
-                    natural,
-                    wrapped,
                     limits,
                     total_work,
                     created,
@@ -555,31 +566,23 @@ mod subdivision_tests {
         };
         let mut work = 0;
         let mut cells = 0;
-        let flat = prove_pair(
-            &surface,
-            domains,
-            bounds,
-            natural,
-            [true, true],
-            OriginalAtlasPairLimits {
+        let flat = prove_pair(AtlasSurface { surface: &surface, natural: natural, wrapped: [true, true] }, domains, bounds, OriginalAtlasPairLimits {
                 max_pair_depth: 0,
                 ..limits
-            },
-            &mut work,
-            &mut cells,
-            0,
-        )
+            }, &mut work, &mut cells, 0)
         .unwrap();
         assert!(!flat.is_proven());
         assert_eq!(cells, 0);
         let mut work = 0;
         let mut cells = 0;
         let proof = prove_pair(
-            &surface,
+            AtlasSurface {
+                surface: &surface,
+                natural,
+                wrapped: [true, true],
+            },
             domains,
             bounds,
-            natural,
-            [true, true],
             limits,
             &mut work,
             &mut cells,
