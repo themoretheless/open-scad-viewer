@@ -37,9 +37,11 @@ impl AutomaticThickness {
     /// Repeat proposal generation, continuous bounds and actual closed sewing.
     pub fn reverify(&self) -> Result<Verification> {
         let fresh = thicken_from_maps(
-            &self.skin.sources,
-            &self.skin.maps,
-            &self.skin.reversed,
+            MappedSources {
+                sources: &self.skin.sources,
+                maps: &self.skin.maps,
+                reversed: &self.skin.reversed,
+            },
             self.skin.distance,
             self.skin.normal_tolerance,
             self.proposal_limits,
@@ -55,6 +57,14 @@ impl AutomaticThickness {
     }
 }
 
+/// Original source patches with their authored UV maps and orientations, one
+/// entry of each per patch.
+#[derive(Clone, Copy)]
+pub struct MappedSources<'a> {
+    pub sources: &'a [Surface],
+    pub maps: &'a [Surface],
+    pub reversed: &'a [bool],
+}
 /// Build caps automatically over authored original UV maps, then require fresh
 /// continuous normal-offset and closed-model proofs. No cap or positive receipt
 /// is supplied by the caller. The original full source patches stay literal.
@@ -68,15 +78,18 @@ impl AutomaticThickness {
 /// heal mismatches or authorize them by the normal-displacement tolerance.
 #[allow(clippy::too_many_arguments)]
 pub fn thicken_from_maps(
-    sources: &[Surface],
-    maps: &[Surface],
-    reversed: &[bool],
+    mapped: MappedSources<'_>,
     signed_thickness: f64,
     normal_tolerance: f64,
     proposal_limits: ProposalLimits,
     sewing_tolerance: f64,
     limits: Limits,
 ) -> Result<AutomaticThickness> {
+    let MappedSources {
+        sources,
+        maps,
+        reversed,
+    } = mapped;
     super::super::freeform_network::validate(
         sources,
         sources,

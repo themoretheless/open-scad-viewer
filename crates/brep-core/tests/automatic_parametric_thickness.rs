@@ -1,4 +1,4 @@
-use brep_core::shell_thickness::parametric_network::{Limits, thicken_from_maps};
+use brep_core::shell_thickness::parametric_network::{Limits, MappedSources, thicken_from_maps};
 use nurbs_core::{
     surface::Surface,
     surface_offset::{ProposalLimits as P, ProposalStop},
@@ -46,9 +46,11 @@ fn automatic_cap_refines_and_closes_with_replay_and_all_work_charged() {
     let saved = (source.clone(), map.clone());
     let budget = P::default();
     let r = thicken_from_maps(
-        &[source.clone()],
-        &[map.clone()],
-        &[false],
+        MappedSources {
+            sources: &[source.clone()],
+            maps: &[map.clone()],
+            reversed: &[false],
+        },
         0.1,
         0.0005,
         budget,
@@ -81,9 +83,11 @@ fn automatic_adjacent_caps_share_a_seam_and_only_exposed_sides_get_walls() {
         uv([[0.; 3], [0.9, 0.84, 0.9]]),
     ];
     let r = thicken_from_maps(
-        &sources,
-        &maps,
-        &[false; 2],
+        MappedSources {
+            sources: &sources,
+            maps: &maps,
+            reversed: &[false; 2],
+        },
         0.1,
         0.0005,
         P::default(),
@@ -118,9 +122,11 @@ fn automatic_curved_source_cap_has_fresh_original_normal_and_closed_model_proofs
         .map(|u| [0.1, 0.9].map(|v| vec![u, v, 0.]).to_vec())
         .to_vec();
     let r = thicken_from_maps(
-        &[s.clone()],
-        &[m],
-        &[false],
+        MappedSources {
+            sources: &[s.clone()],
+            maps: &[m],
+            reversed: &[false],
+        },
         0.1,
         0.005,
         P::default(),
@@ -159,14 +165,16 @@ fn degree_and_each_shared_work_budget_refuse_without_publishing_a_body() {
     ] {
         assert!(
             thicken_from_maps(
-                &[source.clone()],
-                &[map.clone()],
-                &[false],
+                MappedSources {
+                    sources: &[source.clone()],
+                    maps: &[map.clone()],
+                    reversed: &[false],
+                },
                 0.1,
                 1e-12,
                 budget,
                 1e-7,
-                Limits::default()
+                Limits::default(),
             )
             .is_err()
         );

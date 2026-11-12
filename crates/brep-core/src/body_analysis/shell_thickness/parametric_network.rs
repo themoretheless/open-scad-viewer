@@ -8,7 +8,7 @@ use nurbs_core::{
     surface_offset::{self, CandidateCertificate, CandidateStatus},
 };
 mod automatic;
-pub use automatic::{AutomaticThickness, thicken_from_maps};
+pub use automatic::{AutomaticThickness, MappedSources, thicken_from_maps};
 fn refused(s: &str) -> Error {
     Error::new("BREP_PARAMETRIC_OFFSET_NETWORK_REFUSED", s)
 }
