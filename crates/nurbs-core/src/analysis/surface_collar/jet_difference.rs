@@ -463,6 +463,14 @@ pub struct G2Report {
     pub cells: usize,
     pub coefficient_work: usize,
 }
+/// Position, normal and curvature tolerances with the cell and coefficient
+/// work budgets of one collar G2 seam proof.
+#[derive(Clone, Copy, Debug)]
+pub struct CollarBudget {
+    pub tolerances: [f64; 3],
+    pub max_cells: usize,
+    pub max_work: usize,
+}
 /// Fresh original-coefficient G2 proof for an actual collar in the composed
 /// basis. Exact original composition is correlated with candidate jets, not
 /// replaced by a rounded proxy. No prior receipt or surface tag is trusted.
@@ -472,13 +480,9 @@ pub fn inspect_g2(
     pcurve: &Curve,
     direction: [f64; 2],
     candidate: &Surface,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_work: usize,
+    budget: CollarBudget,
 ) -> Result<G2Report> {
-    inspect_g2_frame(
-        source, pcurve, direction, candidate, tolerances, max_cells, max_work, 1.,
-    )
+    inspect_g2_frame(source, pcurve, direction, candidate, budget, 1.)
 }
 /// Compare the actual candidate V=0 seam with its transverse jet frame reversed.
 /// Source direction still enters the original retained chart; no source point
@@ -489,13 +493,9 @@ pub fn inspect_g2_opposite_cross(
     pcurve: &Curve,
     direction: [f64; 2],
     candidate: &Surface,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_work: usize,
+    budget: CollarBudget,
 ) -> Result<G2Report> {
-    inspect_g2_frame(
-        source, pcurve, direction, candidate, tolerances, max_cells, max_work, -1.,
-    )
+    inspect_g2_frame(source, pcurve, direction, candidate, budget, -1.)
 }
 /// Compare a V=0 seam in the signed affine transverse frame v=gain*s.
 /// Every order-b transverse jet is multiplied by the exact-real gain^b
@@ -507,24 +507,23 @@ pub fn inspect_g2_cross_frame(
     direction: [f64; 2],
     candidate: &Surface,
     cross_gain: f64,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_work: usize,
+    budget: CollarBudget,
 ) -> Result<G2Report> {
-    inspect_g2_frame(
-        source, pcurve, direction, candidate, tolerances, max_cells, max_work, cross_gain,
-    )
+    inspect_g2_frame(source, pcurve, direction, candidate, budget, cross_gain)
 }
 fn inspect_g2_frame(
     source: &Surface,
     pcurve: &Curve,
     direction: [f64; 2],
     candidate: &Surface,
-    tolerances: [f64; 3],
-    max_cells: usize,
-    max_work: usize,
+    budget: CollarBudget,
     cross_gain: f64,
 ) -> Result<G2Report> {
+    let CollarBudget {
+        tolerances,
+        max_cells,
+        max_work,
+    } = budget;
     use crate::analysis::surface_boundary::Decision;
     source.validate()?;
     pcurve.validate()?;

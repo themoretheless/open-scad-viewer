@@ -33,9 +33,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &pc,
         direction,
         &collar.surface,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        2000000,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_work: 2000000,
+        },
     )?;
     let report = value_codec::json!({"source":source,"pcurve":pc,"direction":direction,"collar":collar.surface,
         "constructionWork":collar.coefficient_work,"positionErrorUpperMm":collar.position_error_upper_mm,

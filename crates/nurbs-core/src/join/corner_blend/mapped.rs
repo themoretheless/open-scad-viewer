@@ -116,9 +116,11 @@ fn run(
             support.pcurve,
             support.direction,
             &constructed.surface,
-            half,
-            max_cells - cells,
-            max_coefficients - coefficients,
+            surface_collar::CollarBudget {
+                tolerances: half,
+                max_cells: max_cells - cells,
+                max_work: max_coefficients - coefficients,
+            },
         )?;
         cells += proof.cells;
         coefficients += proof.coefficient_work;
@@ -214,9 +216,11 @@ fn run(
             supports[side].direction,
             &actual,
             gain,
-            tolerances,
-            max_cells - cells,
-            max_coefficients - coefficients,
+            surface_collar::CollarBudget {
+                tolerances,
+                max_cells: max_cells - cells,
+                max_work: max_coefficients - coefficients,
+            },
         )?;
         cells += proof.cells;
         coefficients += proof.coefficient_work;

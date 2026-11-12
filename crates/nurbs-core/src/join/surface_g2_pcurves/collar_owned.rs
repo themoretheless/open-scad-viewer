@@ -41,8 +41,17 @@ pub fn inspect_owned_collar(
     };
     let mut coefficient_work=0;
     if positions.proven && positions.cells<max_cells {
-        let proof=crate::surface_collar::inspect_g2(source,pcurve,direction,candidate,tolerances,
-            max_cells-positions.cells,max_coefficients)?;
+        let proof=crate::surface_collar::inspect_g2(
+            source,
+            pcurve,
+            direction,
+            candidate,
+            crate::surface_collar::CollarBudget {
+                tolerances,
+                max_cells: max_cells-positions.cells,
+                max_work: max_coefficients,
+            },
+        )?;
         coefficient_work=proof.coefficient_work;
         geometric.cells+=proof.cells;
         if let (Decision::WithinTolerance,Some(upper),Some(orientation))=(proof.decision,proof.upper,proof.orientation){

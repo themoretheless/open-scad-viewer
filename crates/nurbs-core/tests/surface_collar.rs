@@ -98,9 +98,11 @@ fn nonlinear_collar_has_whole_rounding_bound_and_original_boundary_g2() {
         &pc,
         [0., 0.1],
         &defect,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        2000000,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_work: 2000000,
+        },
     )
     .unwrap();
     assert_eq!(
@@ -164,9 +166,11 @@ fn rational_collar_qualifies_by_fresh_coefficients_while_generic_query_is_unreso
         &pc,
         [0.05, 0.1],
         &out.surface,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        2000000,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_work: 2000000,
+        },
     )
     .unwrap();
     assert_eq!(

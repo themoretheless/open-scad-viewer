@@ -36,7 +36,17 @@ fn case() -> (Surface, Curve, Surface) {
     (s, pc, c)
 }
 fn inspect(s: &Surface, pc: &Curve, c: &Surface) -> surface_collar::G2Report {
-    surface_collar::inspect_g2(s, pc, [0.05, 0.1], c, [1e-7, 1e-5, 1e-4], 100000, 2000000).unwrap()
+    surface_collar::inspect_g2(
+        s,
+        pc,
+        [0.05, 0.1],
+        c,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_work: 2000000,
+        },
+    ).unwrap()
 }
 fn check_independent_formula(pc: &Curve, c: &Surface, sign: f64, upper: [f64; 3]) {
     for t in [0., 0.13, 0.5, 0.81, 1.] {
@@ -134,9 +144,11 @@ fn actual_candidate_gauge_reversal_and_budgets_keep_original_source_authority() 
         &chart_pc,
         [0.1, 0.4],
         &c,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        2000000,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_work: 2000000,
+        },
     )
     .unwrap();
     assert_eq!(scaled.decision, Decision::WithinTolerance);
@@ -176,9 +188,11 @@ fn actual_candidate_gauge_reversal_and_budgets_keep_original_source_authority() 
         &pc,
         [0.05, 0.1],
         &c,
-        [1e-7, 1e-5, 1e-4],
-        proof.cells - 1,
-        2000000,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: proof.cells - 1,
+            max_work: 2000000,
+        },
     )
     .unwrap();
     assert_eq!(scarce.decision, Decision::Unresolved);
@@ -188,9 +202,11 @@ fn actual_candidate_gauge_reversal_and_budgets_keep_original_source_authority() 
         &pc,
         [0.05, 0.1],
         &c,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        proof.coefficient_work - 1,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_work: proof.coefficient_work - 1,
+        },
     )
     .unwrap();
     assert_eq!(scarce.decision, Decision::Unresolved);
@@ -226,6 +242,15 @@ fn original_multispan_extraction_preserves_jets_and_refuses_cross_chart_maps() {
     changed.control_points.last_mut().unwrap()[1][2] += 0.01;
     assert_ne!(inspect(&changed, &pc, &c).decision, Decision::WithinTolerance);
     let crossing = nurbs_core::surface_edit::insert(&s, Axis::U, 0.5, 1).unwrap();
-    assert!(surface_collar::inspect_g2(&crossing, &pc, [0.05, 0.1], &c,
-        [1e-7, 1e-5, 1e-4], 100000, 2000000).is_err());
+    assert!(surface_collar::inspect_g2(
+        &crossing,
+        &pc,
+        [0.05, 0.1],
+        &c,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_work: 2000000,
+        },
+    ).is_err());
 }

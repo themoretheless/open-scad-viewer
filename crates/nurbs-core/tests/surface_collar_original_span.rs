@@ -37,9 +37,11 @@ fn original_multispan_rational_coefficients_admit_collar_without_extracted_refer
         &pc,
         direction,
         &out.surface,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        2000000,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_work: 2000000,
+        },
     )
     .unwrap();
     assert_eq!(proof.decision, Decision::WithinTolerance);
@@ -66,9 +68,11 @@ fn original_multispan_rational_coefficients_admit_collar_without_extracted_refer
         &pc,
         direction,
         &broken,
-        [1e-7, 1e-5, 1e-4],
-        100000,
-        2000000,
+        surface_collar::CollarBudget {
+            tolerances: [1e-7, 1e-5, 1e-4],
+            max_cells: 100000,
+            max_work: 2000000,
+        },
     )
     .unwrap();
     assert_ne!(invalid.decision, Decision::WithinTolerance);
