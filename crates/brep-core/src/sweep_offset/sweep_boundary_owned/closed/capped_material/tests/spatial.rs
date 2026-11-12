@@ -57,20 +57,41 @@ fn run(authored: bool, arc: bool, affine: bool, rational: bool) {
     ]
     .repeat(loops.len());
     run_source(
-        authored, arc, affine, rational, "legacy", profiles, caps, loops, classes,
+        authored,
+        arc,
+        affine,
+        rational,
+        SpatialSource {
+            label: "legacy",
+            profiles,
+            caps,
+            loops,
+            classes,
+        },
     );
+}
+/// Profiles, caps and loop classification of one spatial capped source.
+pub(super) struct SpatialSource<'a> {
+    pub label: &'a str,
+    pub profiles: Vec<Curve>,
+    pub caps: [LoftCap; 2],
+    pub loops: Vec<usize>,
+    pub classes: Vec<OriginalProfileClass>,
 }
 pub(super) fn run_source(
     authored: bool,
     arc: bool,
     affine: bool,
     rational: bool,
-    label: &str,
-    profiles: Vec<Curve>,
-    caps: [LoftCap; 2],
-    loops: Vec<usize>,
-    classes: Vec<OriginalProfileClass>,
+    source: SpatialSource<'_>,
 ) {
+    let SpatialSource {
+        label,
+        profiles,
+        caps,
+        loops,
+        classes,
+    } = source;
     // The original control simplex has determinant -1/512, so this is not a
     // planar-path case. Its Z derivative is strictly positive throughout.
     let path = curve(

@@ -49,7 +49,7 @@ fn contact_closed_g2_material_matrix_binds_every_ring_and_preserves_global_topol
         let w=body.work();eprintln!("contact material arc={reclock} warped={warped} hole={hole}: cells={} exact={} products={}",w.cells,w.exact_work,w.products);
         if reclock && warped && hole {
             #[cfg(feature="codec")]
-            source_record("positive",&profiles,&material,&path,&guide,&scale,&twist,&axes,&center,"arc-length");
+            source_record("positive",&profiles,&material,&path,[&guide,&scale,&twist,&axes,&center],"arc-length");
             let exact=OriginalClassifiedClosedMaterialLimits{volume:OriginalClassifiedVolumeLimits{
                 charts:OriginalSmoothVolumeLimits{cells:w.cells,exact_work:w.exact_work,products:w.products,..limits().volume.charts},
                 steps:v.profiles.as_ref().unwrap().steps},..limits()};
@@ -84,7 +84,7 @@ fn refused(profiles:&[nurbs::curve::Curve],material:&LoftCap,path:&nurbs::curve:
     } else {assert_eq!(q.reason,Some("original-material-region-unproved"));}
     assert!(q.work.cells<=limits().volume.charts.cells && q.work.exact_work<=limits().volume.charts.exact_work && q.work.products<=limits().volume.charts.products);
     #[cfg(feature="codec")]
-    if label=="genuine-material-self-intersection" {source_record("collision",profiles,material,path,&guide,&scale,&twist,&axes,&center,"parameter");}
+    if label=="genuine-material-self-intersection" {source_record("collision",profiles,material,path,[&guide,&scale,&twist,&axes,&center],"parameter");}
     eprintln!("contact material negative {label}: {:?}, cells={} exact={} products={}",q.reason,q.work.cells,q.work.exact_work,q.work.products);
 }
 #[test]
@@ -109,7 +109,7 @@ fn contact_material_region_orientation_nesting_rank_and_self_intersection_are_in
 
 #[cfg(feature="codec")]
 fn source_record(label:&str,profiles:&[nurbs::curve::Curve],material:&LoftCap,path:&nurbs::curve::Curve,
-    guide:&nurbs::curve::Curve,scale:&nurbs::curve::Curve,twist:&nurbs::curve::Curve,axes:&nurbs::curve::Curve,center:&nurbs::curve::Curve,clock:&str) {
+    [guide,scale,twist,axes,center]:[&nurbs::curve::Curve;5],clock:&str) {
     eprintln!("contact-material-source={}",value_codec::json!({"label":label,"path":path,"guide":guide,
         "scale":scale,"twist":twist,"axes":axes,"center":center,"selectedClock":clock,"normal":[0.,0.,1.],
         "profiles":profiles,"surface":&material.surface,"trims":&material.trims}));

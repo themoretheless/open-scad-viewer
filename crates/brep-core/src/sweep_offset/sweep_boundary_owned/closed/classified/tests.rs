@@ -169,9 +169,20 @@ fn material(g1: bool, hole: bool) -> (LoftCap, Vec<Curve>, Vec<usize>, Vec<Origi
     (LoftCap { surface, trims }, profiles, sizes, classes)
 }
 fn run(g1: bool, hole: bool, sharp: bool, mode: usize, arc: bool, image: bool, nonplanar: bool) {
-    run_profiles(g1, hole, sharp, mode, arc, image, nonplanar, false)
+    run_profiles(Case {
+        g1,
+        hole,
+        sharp,
+        mode,
+        arc,
+        image,
+        nonplanar,
+        multispan: false,
+    })
 }
-fn run_profiles(
+/// Material, frame and profile-shape switches of one classified closed case.
+#[derive(Clone, Copy, Default)]
+struct Case {
     g1: bool,
     hole: bool,
     sharp: bool,
@@ -180,7 +191,18 @@ fn run_profiles(
     image: bool,
     nonplanar: bool,
     multispan: bool,
-) {
+}
+fn run_profiles(case: Case) {
+    let Case {
+        g1,
+        hole,
+        sharp,
+        mode,
+        arc,
+        image,
+        nonplanar,
+        multispan,
+    } = case;
     let (mut material, mut profiles, mut sizes, classes) = material(g1, hole);
     if multispan {
         assert!(!image);
@@ -691,14 +713,28 @@ fn nonplanar_authored_closed_hollow_material_has_complete_classified_actual_soli
 
 #[test]
 fn multispan_closed_hollow_material_keeps_internal_g2_joins_and_trim_ownership() {
-    run_profiles(false, true, false, 0, false, false, false, true)
+    run_profiles(Case {
+        hole: true,
+        multispan: true,
+        ..Case::default()
+    })
 }
 #[test]
 fn multispan_nonplanar_authored_closed_material_keeps_internal_g2_joins() {
-    run_profiles(false, true, false, 1, false, false, true, true)
+    run_profiles(Case {
+        hole: true,
+        mode: 1,
+        nonplanar: true,
+        multispan: true,
+        ..Case::default()
+    })
 }
 
 #[test]
 fn multispan_rational_closed_material_keeps_internal_g1_curvature_jump() {
-    run_profiles(true, false, false, 0, false, false, false, true)
+    run_profiles(Case {
+        g1: true,
+        multispan: true,
+        ..Case::default()
+    })
 }

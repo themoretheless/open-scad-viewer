@@ -169,11 +169,13 @@ fn run(authored: bool, arc: bool, affine: bool) {
         arc,
         affine,
         true,
-        "rational-hollow",
-        profiles,
-        caps,
-        vec![5, 4],
-        classes,
+        super::spatial::SpatialSource {
+            label: "rational-hollow",
+            profiles,
+            caps,
+            loops: vec![5, 4],
+            classes,
+        },
     );
 }
 #[test]
