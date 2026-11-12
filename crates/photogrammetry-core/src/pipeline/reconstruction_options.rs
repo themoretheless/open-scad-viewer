@@ -137,13 +137,13 @@ pub(super) struct BundleScratch {
     observations: Vec<bundle::Observation>,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "pipeline state is passed explicitly across the solver boundary; a typed optimization context is the next modularization step"
-)]
+/// Registered cameras and triangulated tracks that bundle adjustment refines in place.
+pub(super) struct GeometryState<'a> {
+    pub(super) cameras: &'a mut [Option<Camera>],
+    pub(super) points: &'a mut [Point],
+}
 pub(super) fn optimize_geometry(
-    cameras: &mut [Option<Camera>],
-    points: &mut [Point],
+    geometry: GeometryState<'_>,
     features: &[Vec<Feature>],
     seed_pair: [usize; 2],
     options: &bundle::BundleOptions,
@@ -151,6 +151,7 @@ pub(super) fn optimize_geometry(
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
     scratch: &mut BundleScratch,
 ) -> Result<()> {
+    let GeometryState { cameras, points } = geometry;
     let BundleScratch {
         positions,
         observations,

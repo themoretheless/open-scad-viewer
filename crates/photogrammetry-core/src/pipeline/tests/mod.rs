@@ -93,8 +93,7 @@ fn optimize_twice(
     let mut scratch = BundleScratch::default();
     for _ in 0..2 {
         optimize_geometry(
-            cameras,
-            points,
+            GeometryState { cameras, points },
             features,
             [0, 1],
             options,

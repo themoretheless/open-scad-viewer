@@ -237,8 +237,10 @@ pub(super) fn grow(
         }
         if let Some(bundle) = &options.bundle {
             optimize_geometry(
-                &mut cameras,
-                &mut points,
+                GeometryState {
+                    cameras: &mut cameras,
+                    points: &mut points,
+                },
                 features,
                 [a, b],
                 bundle,
@@ -250,8 +252,10 @@ pub(super) fn grow(
     }
     if let Some(bundle) = &options.bundle {
         optimize_geometry(
-            &mut cameras,
-            &mut points,
+            GeometryState {
+                cameras: &mut cameras,
+                points: &mut points,
+            },
             features,
             [a, b],
             bundle,
