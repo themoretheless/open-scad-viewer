@@ -118,9 +118,11 @@ pub fn build() -> (brep_core::Model, contact_graft::Graft) {
         &patch.model,
         &mapping,
         &keeps,
-        1e-8,
-        100000,
-        1000000,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.trims.all_valid);

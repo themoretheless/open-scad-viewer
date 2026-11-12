@@ -60,7 +60,15 @@ fn circular_saved_skin_keeps_radius_after_graft_and_reload() {
 fn nominal_g2_setback_is_not_mistaken_for_circular_skin_radius() {
     let f = fixture::build();
     let graft = contact_graft::attach(
-        &f.source, &f.patch, &f.mapping, &f.targets, 1e-8, 100000, 1000000,
+        &f.source,
+        &f.patch,
+        &f.mapping,
+        &f.targets,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     let proof = fillet_radius::inspect_saved_skin(

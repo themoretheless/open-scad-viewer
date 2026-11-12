@@ -35,28 +35,20 @@ pub struct Graft {
     pub cells: usize,
     pub exact_work: u64,
 }
+/// UV tolerance and the shared cell and exact-work budgets of one contact
+/// graft or binding.
+#[derive(Clone, Copy, Debug)]
+pub struct ContactWork {
+    pub tolerance_uv: f64,
+    pub max_cells: usize,
+    pub max_exact: u64,
+}
 /// Infer target faces, then atomically trim and assemble with the same fresh
 /// admission gates as `attach`. Bound source roots and retention seeds remain
 /// required; this is not an unrestricted arbitrary-solid fillet operation.
-pub fn attach_planned(
-    source: &Model,
-    patch: &Model,
-    vertices: &[usize],
-    keep_vertices: &[usize],
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
-) -> Result<Graft> {
+pub fn attach_planned(source: &Model, patch: &Model, vertices: &[usize], keep_vertices: &[usize], work: ContactWork) -> Result<Graft> {
     let targets = plan_targets(source, patch, vertices, keep_vertices)?;
-    attach(
-        source,
-        patch,
-        vertices,
-        &targets,
-        tolerance_uv,
-        max_cells,
-        max_exact,
-    )
+    attach(source, patch, vertices, &targets, work)
 }
 fn invalid(s: &str) -> Error {
     Error::new("BREP_CONTACT_GRAFT_INPUT", s)
@@ -201,23 +193,15 @@ fn inside(pc: &Curve, domain: &FaceDomain, cells: &mut usize, max: usize) -> Res
 /// untouched boundary definitions survive. No nearest-vertex welding occurs.
 /// Returns a closed B-rep candidate only after fresh trim and continuous closure
 /// checks. Material/branch planning, injectivity and global volume remain separate.
-pub fn attach(
-    source: &Model,
-    patch: &Model,
-    vertices: &[usize],
-    targets: &[Target],
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_exact: u64,
-) -> Result<Graft> {
-    attach_with_charts(source,patch,vertices,targets,&[],tolerance_uv,max_cells,max_exact)
+pub fn attach(source: &Model, patch: &Model, vertices: &[usize], targets: &[Target], work: ContactWork) -> Result<Graft> {
+    attach_with_charts(source, patch, vertices, targets, &[], work)
 }
 /// Optional original-source chart definitions are proposals in 3D edge order.
 /// They avoid discarding an already constructed chart to approximate it again.
 /// All saved-endpoint edits, whole original lifts, membership and closure checks
 /// are repeated; caller evidence never grants admission.
-pub fn attach_with_charts(source:&Model,patch:&Model,vertices:&[usize],targets:&[Target],
-    charts:&[Option<Curve>],tolerance_uv:f64,max_cells:usize,max_exact:u64)->Result<Graft> {
+pub fn attach_with_charts(source:&Model, patch:&Model, vertices:&[usize], targets:&[Target], charts:&[Option<Curve>], work: ContactWork)->Result<Graft> {
+        let ContactWork { tolerance_uv, max_cells, max_exact } = work;
     source.validate()?;
     patch.validate()?;
     if !charts.is_empty() && charts.len()!=patch.edges.len() {return Err(invalid("Need one optional source chart per transition edge"));}

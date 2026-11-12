@@ -185,9 +185,11 @@ fn build_with_binding(automatic: bool, variable: bool, circular: bool) -> Fixtur
                 supports,
                 cutters,
                 proposals(source, &contacts[side], ys, side),
-                1e-8,
-                100000,
-                1000000,
+                contact_bind::ContactWork {
+                    tolerance_uv: 1e-8,
+                    max_cells: 100000,
+                    max_exact: 1000000,
+                },
             )
         }
         .unwrap()

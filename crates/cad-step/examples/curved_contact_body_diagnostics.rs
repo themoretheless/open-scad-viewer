@@ -10,9 +10,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &f.mapping,
             &f.keeps,
             &f.source_pcurves,
-            1e-8,
-            100000,
-            1000000,
+            brep_core::contact_graft::ContactWork {
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )?)
     } else {
         None
@@ -80,19 +82,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "curved contacts root-bound; end patch qualified; domain={:?}",
         f.law_domain
     );
-    let graft = brep_core::contact_graft::attach_with_charts(
-        &f.source,
-        fitted.as_ref().map(|p| &p.model).unwrap_or(&f.patch),
-        &f.mapping,
-        &brep_core::contact_graft::plan_targets(&f.source, &f.patch, &f.mapping, &f.keeps)?,
-        fitted
+    let graft = brep_core::contact_graft::attach_with_charts(&f.source, fitted.as_ref().map(|p| &p.model).unwrap_or(&f.patch), &f.mapping, &brep_core::contact_graft::plan_targets(&f.source, &f.patch, &f.mapping, &f.keeps)?, fitted
             .as_ref()
             .map(|p| p.source_pcurves.as_slice())
-            .unwrap_or(&f.source_pcurves),
-        1e-8,
-        100000 - fitted.as_ref().map(|p| p.cells).unwrap_or(0),
-        1000000 - fitted.as_ref().map(|p| p.exact_work).unwrap_or(0),
-    )?;
+            .unwrap_or(&f.source_pcurves), brep_core::contact_graft::ContactWork { tolerance_uv: 1e-8, max_cells: 100000 - fitted.as_ref().map(|p| p.cells).unwrap_or(0), max_exact: 1000000 - fitted.as_ref().map(|p| p.exact_work).unwrap_or(0) })?;
     println!(
         "closed body: faces={} edges={} vertices={} closure={:?}",
         graft.model.faces.len(),

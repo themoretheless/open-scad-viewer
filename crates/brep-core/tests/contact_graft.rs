@@ -13,9 +13,11 @@ fn variable_curved_body_keeps_fits_but_refuses_unproved_original_cap_membership(
         &f.mapping,
         &f.keeps,
         &f.source_pcurves,
-        1e-8,
-        100000,
-        1000000,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(
@@ -58,9 +60,11 @@ fn variable_curved_body_keeps_fits_but_refuses_unproved_original_cap_membership(
         &f.mapping,
         &targets,
         &fitted.source_pcurves,
-        1e-8,
-        100000 - fitted.cells,
-        1000000 - fitted.exact_work,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000 - fitted.cells,
+            max_exact: 1000000 - fitted.exact_work,
+        },
     )
     .err()
     .expect("Incomplete original cap membership must refuse");
@@ -77,9 +81,11 @@ fn variable_radius_contacts_are_root_bound_capped_and_grafted_into_a_closed_body
         &f.patch,
         &f.mapping,
         &f.targets.map(|t| t.keep_vertex),
-        1e-8,
-        100000,
-        1000000,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.trims.all_valid);
@@ -164,9 +170,11 @@ fn automatic_source_roots_and_target_faces_form_a_closed_transition() {
         &f.patch,
         &f.mapping,
         &f.targets.map(|t| t.keep_vertex),
-        1e-8,
-        100000,
-        1000000,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert!(out.trims.all_valid);
@@ -212,9 +220,11 @@ fn bound_transition_replaces_corner_sectors_with_one_closed_owned_boundary() {
         patch,
         &mapping,
         &fixture.targets.map(|t| t.keep_vertex),
-        1e-8,
-        100000,
-        1000000,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(out.model.vertices.len(), 10);
@@ -270,8 +280,28 @@ fn bound_transition_replaces_corner_sectors_with_one_closed_owned_boundary() {
     assert_eq!(source, &before);
     let mut wrong = targets.clone();
     wrong[0].keep_vertex = mapping[0];
-    assert!(contact_graft::attach(source, patch, &mapping, &wrong, 1e-8, 100000, 1000000).is_err());
-    assert!(contact_graft::attach(source, patch, &mapping, &targets, 1e-8, 1, 1000000).is_err());
+    assert!(contact_graft::attach(
+        source,
+        patch,
+        &mapping,
+        &wrong,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
+    ).is_err());
+    assert!(contact_graft::attach(
+        source,
+        patch,
+        &mapping,
+        &targets,
+        contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 1,
+            max_exact: 1000000,
+        },
+    ).is_err());
     assert_eq!(source, &before);
 }
 #[test]

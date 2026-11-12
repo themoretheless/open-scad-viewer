@@ -36,9 +36,11 @@ pub fn attach_radius_qualified(
         patch,
         vertices,
         targets,
-        tolerance_uv,
-        max_cells,
-        max_exact,
+        crate::contact_graft::ContactWork {
+            tolerance_uv,
+            max_cells,
+            max_exact,
+        },
     )?;
     let radius = crate::fillet_radius::inspect_saved_skin(
         &graft.model,

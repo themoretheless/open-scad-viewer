@@ -191,9 +191,11 @@ fn recomputed_contact_roots_bind_to_shared_body_vertices_on_both_incident_faces(
             [&a, skin],
             [(&first, f, 0), (&last, l, 0)],
             wrong,
-            1e-8,
-            100000,
-            1000000
+            contact_bind::ContactWork {
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -204,9 +206,11 @@ fn recomputed_contact_roots_bind_to_shared_body_vertices_on_both_incident_faces(
             [&a, skin],
             [(&first, f, 0), (&last, l, 0)],
             p0,
-            1e-8,
-            1,
-            1000000
+            contact_bind::ContactWork {
+                tolerance_uv: 1e-8,
+                max_cells: 1,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );
@@ -259,9 +263,11 @@ fn two_end_roots_on_one_original_edge_keep_all_three_children_and_atomic_failure
         [&a, skin],
         [(&first, f, 0), (&last, l, 0)],
         parameters,
-        1e-8,
-        100000,
-        1000000,
+        contact_bind::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )
     .unwrap();
     assert_eq!(out.source.edges.len(), source.edges.len() + 2);
@@ -287,9 +293,11 @@ fn two_end_roots_on_one_original_edge_keep_all_three_children_and_atomic_failure
             [&a, skin],
             [(&first, f, 0), (&last, l, 0)],
             invalid,
-            1e-8,
-            100000,
-            1000000
+            contact_bind::ContactWork {
+                tolerance_uv: 1e-8,
+                max_cells: 100000,
+                max_exact: 1000000,
+            },
         )
         .is_err()
     );

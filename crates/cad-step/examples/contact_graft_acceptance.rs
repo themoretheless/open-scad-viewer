@@ -18,9 +18,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &fixture.patch,
         &fixture.mapping,
         &fixture.targets,
-        1e-8,
-        100000,
-        1000000,
+        brep_core::contact_graft::ContactWork {
+            tolerance_uv: 1e-8,
+            max_cells: 100000,
+            max_exact: 1000000,
+        },
     )?;
     let (step, _, _) = cad_step::export_step_v5(&out.model)?;
     let sha = Sha256::digest(step.as_bytes())
