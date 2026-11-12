@@ -97,9 +97,11 @@ pub(super) fn apply(
         source,
         face,
         endpoints,
-        uv.to_vec(),
-        None,
-        fitting,
+        CapCurves {
+            uv: uv.to_vec(),
+            world: None,
+            fitting,
+        },
         limits,
         result,
     )?;

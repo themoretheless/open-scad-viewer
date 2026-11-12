@@ -219,9 +219,11 @@ pub(super) fn apply(
         source,
         input.face,
         endpoints,
-        vec![],
-        None,
-        vec![],
+        super::CapCurves {
+            uv: vec![],
+            world: None,
+            fitting: vec![],
+        },
         post,
         partition,
     )?;

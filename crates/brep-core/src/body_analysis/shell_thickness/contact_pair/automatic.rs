@@ -161,12 +161,11 @@ impl AutomaticReport {
     /// natural boundary. This returns a qualified UV Jordan region with world
     /// lifts, not a sewn solid or inferred material sector. Initial chain fit
     /// and closure's fresh chain rebuild each have their own stage allowance.
-    #[allow(clippy::too_many_arguments)]
+    /// The pair selects the original source side and its natural boundary.
     pub fn close_path(
         &self,
         index: usize,
-        side: usize,
-        far_side: usize,
+        [side, far_side]: [usize; 2],
         tolerance_uv: f64,
         tolerance_mm: f64,
         chain_limits: nurbs_core::surface_offset::contact_curve::chain::Limits,

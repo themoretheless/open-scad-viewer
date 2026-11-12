@@ -391,8 +391,7 @@ fn unseeded_nonlinear_pair_builds_from_discovered_original_paths() {
     let region = r
         .close_path(
             0,
-            0,
-            3,
+            [0, 3],
             1e-7,
             1e-7,
             nurbs_core::surface_offset::contact_curve::chain::Limits::default(),

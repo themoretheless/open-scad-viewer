@@ -346,9 +346,11 @@ fn apply(
         source,
         face,
         endpoints,
-        uv.to_vec(),
-        None,
-        fitting,
+        CapCurves {
+            uv: uv.to_vec(),
+            world: None,
+            fitting,
+        },
         limits,
         result,
     )
@@ -393,9 +395,11 @@ fn apply_world(
         source,
         face,
         endpoints,
-        vec![],
-        Some(curves.to_vec()),
-        vec![],
+        CapCurves {
+            uv: vec![],
+            world: Some(curves.to_vec()),
+            fitting: vec![],
+        },
         limits,
         result,
     )
@@ -404,9 +408,7 @@ fn finish(
     source: &Sheet,
     face: usize,
     endpoints: [usize; 2],
-    uv: Vec<Curve>,
-    world: Option<Vec<Curve>>,
-    fitting: Vec<lift::FitReport>,
+    curves: CapCurves,
     limits: Limits,
     result: face_cut::Partition,
 ) -> Result<(Model, Record)> {
@@ -414,7 +416,7 @@ fn finish(
         source,
         face,
         endpoints,
-        CapCurves { uv, world, fitting },
+        curves,
         limits,
         CutPartition {
             model: result.model,
