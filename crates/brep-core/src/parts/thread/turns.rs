@@ -10,15 +10,26 @@ pub struct TurnSheet {
 /// Assemble the retained finite thread patches as one open connected network.
 /// Adjacency comes from source patch roles; no nearest-edge matching is used.
 /// Missing/disconnected or unresolved patches refuse instead of dropping faces.
+/// Patch UV error, geometric tolerance and span cap shared by the thread
+/// sheet and network builders.
+#[derive(Clone, Copy, Debug)]
+pub struct PatchFit {
+    pub max_uv_error: f64,
+    pub tolerance: f64,
+    pub max_spans: usize,
+}
 pub fn clipped_thread_network(
     spec: nurbs_core::thread::Spec,
     z_limits: [f64; 2],
-    max_uv_error: f64,
-    tolerance: f64,
-    max_spans: usize,
+    fit: PatchFit,
     max_curve_change: f64,
     max_verification_cells: usize,
 ) -> Result<TurnSheet> {
+    let PatchFit {
+        max_uv_error,
+        tolerance,
+        max_spans,
+    } = fit;
     if max_verification_cells > 10_000_000 {
         return Err(Error::new(
             "BREP_INVALID_THREAD_PATCH",
@@ -158,12 +169,15 @@ pub fn untrimmed_turn_sheet(
     spec: nurbs_core::thread::Spec,
     start: usize,
     turn: usize,
-    max_uv_error: f64,
-    tolerance: f64,
-    max_spans: usize,
+    fit: PatchFit,
     max_endpoint_change: f64,
     max_verification_cells: usize,
 ) -> Result<TurnSheet> {
+    let PatchFit {
+        max_uv_error,
+        tolerance,
+        max_spans,
+    } = fit;
     if start >= spec.starts || turn >= spec.turns || max_verification_cells > 10_000_000 {
         return Err(Error::new(
             "BREP_INVALID_THREAD_PATCH",

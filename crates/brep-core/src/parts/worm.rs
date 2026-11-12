@@ -73,9 +73,7 @@ pub fn finite_with_certificates(
         source.trims(),
         spec.starts,
         z_limits,
-        limits.uv_error,
-        limits.tolerance_mm,
-        limits.max_spans,
+        limits.patch_fit(),
         limits.max_curve_change,
         limits.agreement_cells,
     )?;

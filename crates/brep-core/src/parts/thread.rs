@@ -175,7 +175,7 @@ pub use caps::{
 };
 
 mod turns;
-pub use turns::{TurnSheet, clipped_thread_network, untrimmed_turn_sheet};
+pub use turns::{PatchFit, TurnSheet, clipped_thread_network, untrimmed_turn_sheet};
 
 /// Match a sheet boundary's endpoints to an immutable source curve, changing
 /// incident endpoint controls only. Rechecks every resulting boundary use.
@@ -444,6 +444,16 @@ pub struct FiniteThreadLimits {
     pub mass_relative_tolerance: f64,
     pub mass_evaluations: usize,
 }
+impl FiniteThreadLimits {
+    /// The patch fit shared by the thread sheet and network builders.
+    pub fn patch_fit(&self) -> PatchFit {
+        PatchFit {
+            max_uv_error: self.uv_error,
+            tolerance: self.tolerance_mm,
+            max_spans: self.max_spans,
+        }
+    }
+}
 #[derive(Debug)]
 pub struct FiniteThreadCandidate {
     pub body: ClosedBodyCandidate,
@@ -481,9 +491,7 @@ pub fn finite_external_candidate(
     let network = clipped_thread_network(
         spec,
         z_limits,
-        limits.uv_error,
-        limits.tolerance_mm,
-        limits.max_spans,
+        limits.patch_fit(),
         limits.max_curve_change,
         limits.agreement_cells,
     )?;
@@ -545,12 +553,15 @@ pub fn clipped_patch_network(
     trims: &nurbs_core::thread::TrimCandidates,
     starts: usize,
     z_limits: [f64; 2],
-    max_uv_error: f64,
-    tolerance: f64,
-    max_spans: usize,
+    fit: PatchFit,
     max_curve_change: f64,
     max_verification_cells: usize,
 ) -> Result<TurnSheet> {
+    let PatchFit {
+        max_uv_error,
+        tolerance,
+        max_spans,
+    } = fit;
     if !(1..=8).contains(&starts) || trims.requested_z_bounds != z_limits {
         return Err(Error::new(
             "BREP_INVALID_THREAD_PATCH",

@@ -348,9 +348,7 @@ pub fn finite_internal_with_certificates(
     let network = clipped_thread_network(
         spec,
         z_limits,
-        limits.uv_error,
-        limits.tolerance_mm,
-        limits.max_spans,
+        limits.patch_fit(),
         limits.max_curve_change,
         limits.agreement_cells,
     )?;
@@ -407,9 +405,7 @@ pub(super) fn external_candidate(
     let network = clipped_thread_network(
         spec,
         z_limits,
-        limits.uv_error,
-        limits.tolerance_mm,
-        limits.max_spans,
+        limits.patch_fit(),
         limits.max_curve_change,
         limits.agreement_cells,
     )?;
