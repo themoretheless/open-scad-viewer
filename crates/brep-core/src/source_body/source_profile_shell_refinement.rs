@@ -718,11 +718,13 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                     self.inspect_trimmed_pair(
                         pair.support.faces,
                         product,
-                        limits.tolerance_uv,
-                        c,
-                        limits.controls_per_enclosure,
-                        s,
-                        d,
+                        TrimmedPairLimits {
+                            tolerance_uv: limits.tolerance_uv,
+                            max_cells: c,
+                            max_controls_per_enclosure: limits.controls_per_enclosure,
+                            max_spans: s,
+                            max_domain_cells: d,
+                        },
                     )
                 },
             )?;

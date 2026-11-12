@@ -4504,7 +4504,17 @@
 
         let removed_product = [[[0.8; 2], [0.5; 2]]; 2];
         let trim_removed = expression
-            .inspect_trimmed_pair(retained_ids, removed_product, 1e-8, 1, 1000, 100, 1000)
+            .inspect_trimmed_pair(
+                retained_ids,
+                removed_product,
+                crate::source_profile_body::TrimmedPairLimits {
+                    tolerance_uv: 1e-8,
+                    max_cells: 1,
+                    max_controls_per_enclosure: 1000,
+                    max_spans: 100,
+                    max_domain_cells: 1000,
+                },
+            )
             .unwrap();
         eprintln!(
             "removed strip product outside={} pending={} domainCells={}",
@@ -4516,7 +4526,17 @@
         assert!(!trim_removed.complete_separated());
         assert_eq!(trim_removed.outside, vec![removed_product]);
         let trim_no_work = expression
-            .inspect_trimmed_pair(retained_ids, removed_product, 1e-8, 1, 1000, 100, 0)
+            .inspect_trimmed_pair(
+                retained_ids,
+                removed_product,
+                crate::source_profile_body::TrimmedPairLimits {
+                    tolerance_uv: 1e-8,
+                    max_cells: 1,
+                    max_controls_per_enclosure: 1000,
+                    max_spans: 100,
+                    max_domain_cells: 0,
+                },
+            )
             .unwrap();
         assert_eq!(trim_no_work.pending, vec![removed_product]);
 

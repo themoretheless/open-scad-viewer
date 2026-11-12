@@ -10,6 +10,15 @@ pub struct SupportPairReport {
     pub cells: usize,
     pub spans: usize,
 }
+/// UV tolerance and work budgets of one trimmed support-pair inspection.
+#[derive(Clone, Copy, Debug)]
+pub struct TrimmedPairLimits {
+    pub tolerance_uv: f64,
+    pub max_cells: usize,
+    pub max_controls_per_enclosure: usize,
+    pub max_spans: usize,
+    pub max_domain_cells: usize,
+}
 /// Work limits of one whole-shell support scan: total and per-pair cells,
 /// control allowance per enclosure, spans, and total and per-pair domain cells.
 #[derive(Clone, Copy, Debug)]
@@ -297,11 +306,14 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
                     self.inspect_trimmed_pair(
                         faces,
                         domain,
-                        tolerance,
-                        pair_cells,
-                        max_controls_per_enclosure,
-                        max_spans - out.spans,
-                        domain_cells_per_pair.min(max_domain_cells - out.domain_cells),
+                        TrimmedPairLimits {
+                            tolerance_uv: tolerance,
+                            max_cells: pair_cells,
+                            max_controls_per_enclosure,
+                            max_spans: max_spans - out.spans,
+                            max_domain_cells: domain_cells_per_pair
+                                .min(max_domain_cells - out.domain_cells),
+                        },
                     )?
                 } else {
                     self.inspect_support_pair(
@@ -340,12 +352,15 @@ impl ExpressionShell<'_, '_, '_, '_, '_, '_, '_, '_> {
         &self,
         faces: [usize; 2],
         domain: SupportProduct,
-        tolerance_uv: f64,
-        max_cells: usize,
-        max_controls_per_enclosure: usize,
-        max_spans: usize,
-        max_domain_cells: usize,
+        limits: TrimmedPairLimits,
     ) -> Result<SupportPairReport> {
+        let TrimmedPairLimits {
+            tolerance_uv,
+            max_cells,
+            max_controls_per_enclosure,
+            max_spans,
+            max_domain_cells,
+        } = limits;
         if faces[0] == faces[1]
             || faces.iter().any(|i| *i >= self.faces.len())
             || max_controls_per_enclosure > 1000000
