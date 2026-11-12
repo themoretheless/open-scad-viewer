@@ -539,7 +539,8 @@ impl<'a> Sweep<'a> {
         let patches = patches(&coarse)?;
         let length_residual_upper = coarse_residual.map(|r| r.max(fine_residual.unwrap()));
         let certificate = if let Some([steps,_,_])=self.spatial_rmf_error_limits {
-            Some(authored_error::rmf_spatial_patch_error_with_transport(self,count,steps,max_cells,max_products,shared_length,shared_rmf,shared_pose)?)
+            Some(authored_error::rmf_spatial_patch_error_with_transport(self,count,steps,max_cells,max_products,
+                authored_error::SharedProofs{length:shared_length,rmf:shared_rmf,pose:shared_pose,..Default::default()})?)
         }else if self.frame_laws.is_some() {
             Some(authored_error::patch_error_with_path_evidence(self,count,max_cells,max_products,shared_length,shared_chord)?)
         } else if self.contact_source.is_some() {

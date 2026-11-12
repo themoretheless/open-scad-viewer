@@ -200,13 +200,14 @@ pub(super) fn rmf_default_patch_error_with_length(sweep:&Sweep<'_>,count:usize,m
         // The aggregate owner has already paid for this original source.
         // Reuse its frame/position proof instead of starting a per-profile
         // candidate that cannot share that expenditure.
-        return rmf_spatial_patch_error_with_transport(sweep,count,512,max_cells,max_products,shared_length,shared_rmf,shared_pose);
+        return rmf_spatial_patch_error_with_transport(sweep,count,512,max_cells,max_products,
+            SharedProofs{length:shared_length,rmf:shared_rmf,pose:shared_pose,..Default::default()});
     }
     let planar=rmf_planar_patch_error_with_pose(sweep,count,max_cells,max_products,shared_length,shared_pose.as_deref_mut())?;
     if !matches!(planar.reason,Some("source-plane-coefficients-nonzero"|"rmf-original-frame-correspondence-unproved"|"rmf-closed-correction-correspondence-unproved"))
         || planar.cells>=max_cells || planar.products>max_products {return Ok(planar);}
     let mut general=rmf_spatial_patch_error_with_transport(sweep,count,512,max_cells-planar.cells,
-        max_products-planar.products,shared_length,shared_rmf,shared_pose)?;
+        max_products-planar.products,SharedProofs{length:shared_length,rmf:shared_rmf,pose:shared_pose,..Default::default()})?;
     general.cells+=planar.cells;
     general.products+=planar.products;
     Ok(general)
@@ -552,9 +553,12 @@ pub(super) fn rmf_spatial_patch_error(sweep:&Sweep<'_>,count:usize,steps:usize,m
     rmf_spatial_patch_error_with_length(sweep,count,steps,max_cells,max_products,None)
 }
 pub(super) fn rmf_spatial_patch_error_with_length(sweep:&Sweep<'_>,count:usize,steps:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>)->Result<PatchErrorReport>{
-    rmf_spatial_patch_error_with_transport(sweep,count,steps,max_cells,max_products,shared_length,None,None)
+    rmf_spatial_patch_error_with_transport(sweep,count,steps,max_cells,max_products,
+        SharedProofs{length:shared_length,..Default::default()})
 }
-pub(super) fn rmf_spatial_patch_error_with_transport(sweep:&Sweep<'_>,count:usize,steps:usize,max_cells:usize,max_products:usize,shared_length:Option<&crate::curve_measure::DivisionReport>,shared_rmf:Option<&super::rmf_transport::OriginalRmfTransportReport>,shared_pose:Option<&mut SharedArcPose>)->Result<PatchErrorReport>{
+pub(super) fn rmf_spatial_patch_error_with_transport(sweep:&Sweep<'_>,count:usize,steps:usize,max_cells:usize,max_products:usize,
+    shared:SharedProofs<'_,'_>)->Result<PatchErrorReport>{
+    let SharedProofs{length:shared_length,rmf:shared_rmf,pose:shared_pose,..}=shared;
     check(count>=sweep.options.initial_sections && count<=sweep.options.max_sections
         && steps.is_power_of_two() && (2..=16384).contains(&steps)
         && max_cells<=100000 && max_products<=1000000,"Invalid spatial RMF proof limits")?;
