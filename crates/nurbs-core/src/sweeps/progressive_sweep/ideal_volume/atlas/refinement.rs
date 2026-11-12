@@ -2,16 +2,28 @@
 //! authorize geometry; every selected subcell still needs the same full SPD
 //! proof under ONE fixed metric over the complete joint hull.
 use super::*;
+/// The fixed candidate chart of one refinement: coordinate projection and
+/// scale, the metric, and the SPD predicate every subcell must pass under it.
+#[derive(Clone, Copy)]
+pub(super) struct MetricChart {
+    pub projection: [[f64; 3]; 3],
+    pub scale: [f64; 3],
+    pub metric: [[f64; 3]; 3],
+    pub predicate: fn([V3; 3], [[f64; 3]; 3]) -> Result<bool>,
+}
 pub(super) fn promising(
     pieces: &[Box3],
-    projection: [[f64; 3]; 3],
-    scale: [f64; 3],
-    metric: [[f64; 3]; 3],
-    predicate: fn([V3;3],[[f64;3];3])->Result<bool>,
+    chart: MetricChart,
     query: &mut impl FnMut(Box3, &mut IdealVolumeReport) -> Result<Enclosed>,
     out: &mut IdealVolumeReport,
     max: usize,
 ) -> Result<bool> {
+    let MetricChart {
+        projection,
+        scale,
+        metric,
+        predicate,
+    } = chart;
     for b in pieces {
         // Keep cheap corner rejection first. Rational carrier jets can be
         // benign at every corner but violate this candidate metric on a face
@@ -69,11 +81,11 @@ fn score(e:Enclosed,projection:[[f64;3];3],scale:[f64;3],metric:[[f64;3];3],pred
 /// SPD predicate under the parent's ONE fixed metric and coordinate scale.
 pub(super) enum Choice {Covered, Split{axis:usize,complete:[bool;2]}, Unavailable}
 pub(super) fn axis(
-    b:Box3,projection:[[f64;3];3],scale:[f64;3],metric:[[f64;3];3],
-    predicate:fn([V3;3],[[f64;3];3])->Result<bool>,
+    b:Box3,chart:MetricChart,
     query:&mut impl FnMut(Box3,&mut IdealVolumeReport)->Result<Enclosed>,
     out:&mut IdealVolumeReport,max:usize,
 )->Result<Choice> {
+    let MetricChart{projection,scale,metric,predicate}=chart;
     let Some((fallback,_))=widest(b) else{return Ok(Choice::Unavailable);};
     let mut best=(usize::MAX,f64::INFINITY,f64::INFINITY);
     let mut choice=Choice::Split{axis:fallback,complete:[false;2]};
