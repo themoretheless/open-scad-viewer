@@ -68,12 +68,14 @@ pub(in super::super) fn estimate_prepared(
                 sparse_intervals(
                     sparse,
                     index,
-                    reference,
-                    preamble.width,
-                    preamble.height,
-                    preamble.step,
-                    preamble.near,
-                    preamble.far,
+                    SweepGrid {
+                        reference,
+                        width: preamble.width,
+                        height: preamble.height,
+                        step: preamble.step,
+                        near: preamble.near,
+                        far: preamble.far,
+                    },
                 )
             } else {
                 None
@@ -166,12 +168,14 @@ pub(in super::super) fn estimate_prepared(
                 sparse_intervals(
                     sparse,
                     index,
-                    reference,
-                    coarse_width,
-                    coarse_height,
-                    coarse_step,
-                    near,
-                    far,
+                    SweepGrid {
+                        reference,
+                        width: coarse_width,
+                        height: coarse_height,
+                        step: coarse_step,
+                        near,
+                        far,
+                    },
                 )
             } else {
                 None
@@ -217,7 +221,18 @@ pub(in super::super) fn estimate_prepared(
         }
         if options.sparse_depth_prior {
             let sparse_ranges =
-                sparse_intervals(sparse, index, reference, width, height, step, near, far);
+                sparse_intervals(
+                    sparse,
+                    index,
+                    SweepGrid {
+                        reference,
+                        width,
+                        height,
+                        step,
+                        near,
+                        far,
+                    },
+                );
             match (&mut ranges, sparse_ranges) {
                 (Some((lo, hi)), Some((sparse_lo, sparse_hi))) => {
                     for i in 0..lo.len() {
@@ -390,12 +405,14 @@ fn finish_gpu_batch(
                     sparse_intervals(
                         sparse,
                         index,
-                        preamble.reference,
-                        preamble.width,
-                        preamble.height,
-                        preamble.step,
-                        preamble.near,
-                        preamble.far,
+                        SweepGrid {
+                            reference: preamble.reference,
+                            width: preamble.width,
+                            height: preamble.height,
+                            step: preamble.step,
+                            near: preamble.near,
+                            far: preamble.far,
+                        },
                     )
                 } else {
                     None
@@ -532,12 +549,14 @@ pub fn prepare_host_views(
             sparse_intervals(
                 sparse,
                 index,
-                reference,
-                preamble.width,
-                preamble.height,
-                preamble.step,
-                preamble.near,
-                preamble.far,
+                SweepGrid {
+                    reference,
+                    width: preamble.width,
+                    height: preamble.height,
+                    step: preamble.step,
+                    near: preamble.near,
+                    far: preamble.far,
+                },
             )
         } else {
             None

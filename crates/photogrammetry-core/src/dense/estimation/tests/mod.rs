@@ -523,9 +523,42 @@ fn sparse_intervals_cover_anchors_deterministically() {
         input_images: 1,
         reprojection_rmse: 0.,
     };
-    assert!(sparse_intervals(&sparse, 2, &camera, 64, 64, 1., 3., 6.).is_none());
-    let a = sparse_intervals(&sparse, 0, &camera, 64, 64, 1., 3., 6.).unwrap();
-    let b = sparse_intervals(&sparse, 0, &camera, 64, 64, 1., 3., 6.).unwrap();
+    assert!(sparse_intervals(
+        &sparse,
+        2,
+        SweepGrid {
+            reference: &camera,
+            width: 64,
+            height: 64,
+            step: 1.,
+            near: 3.,
+            far: 6.,
+        },
+    ).is_none());
+    let a = sparse_intervals(
+        &sparse,
+        0,
+        SweepGrid {
+            reference: &camera,
+            width: 64,
+            height: 64,
+            step: 1.,
+            near: 3.,
+            far: 6.,
+        },
+    ).unwrap();
+    let b = sparse_intervals(
+        &sparse,
+        0,
+        SweepGrid {
+            reference: &camera,
+            width: 64,
+            height: 64,
+            step: 1.,
+            near: 3.,
+            far: 6.,
+        },
+    ).unwrap();
     assert_eq!(a, b);
     // The window around each anchor brackets its padded depth interval.
     let pixel = camera.project([-0.5, -0.5, 4.]).unwrap();

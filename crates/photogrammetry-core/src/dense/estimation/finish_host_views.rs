@@ -116,20 +116,30 @@ const PRIOR_WINDOW: usize = 6;
 /// reference view (COLMAP-style geometric prior). Anchors are splatted to the
 /// map grid, then each pixel takes the padded min/max depth of anchors within
 /// a fixed square window. Returns None when the view has no usable anchors.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "projection scalar inputs are kept explicit for the dense kernel; group into a context object in the next API pass"
-)]
+/// The reference camera, depth-map size and pixel step, and the depth range
+/// of one sparse-prior sweep.
+#[derive(Clone, Copy)]
+pub(super) struct SweepGrid<'a> {
+    pub reference: &'a Camera,
+    pub width: usize,
+    pub height: usize,
+    pub step: f64,
+    pub near: f64,
+    pub far: f64,
+}
 pub(super) fn sparse_intervals(
     sparse: &Reconstruction,
     image: usize,
-    reference: &Camera,
-    width: usize,
-    height: usize,
-    step: f64,
-    near: f64,
-    far: f64,
+    grid: SweepGrid<'_>,
 ) -> Option<SweepRanges> {
+    let SweepGrid {
+        reference,
+        width,
+        height,
+        step,
+        near,
+        far,
+    } = grid;
     let mut cell_lo = vec![f64::INFINITY; width * height];
     let mut cell_hi = vec![0f64; width * height];
     let mut any = false;

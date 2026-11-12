@@ -101,16 +101,12 @@ fn gradient_interior(p: &[f32], w: usize, x: f64, y: f64) -> (f32, f32) {
 /// Interior gradient at an integer offset from (x0, y0); every sample shares
 /// the bilinear fractions (a, b), so they are computed once per corner.
 /// Arithmetic is identical to `gradient` on the same coordinates.
-#[allow(clippy::too_many_arguments)]
 fn gradient_offset(
     p: &[f32],
     w: usize,
-    x0: usize,
-    y0: usize,
-    dx: i32,
-    dy: i32,
-    a: f32,
-    b: f32,
+    [x0, y0]: [usize; 2],
+    [dx, dy]: [i32; 2],
+    [a, b]: [f32; 2],
 ) -> (f32, f32) {
     let at = |ix: usize, iy: usize| {
         (1. - b) * ((1. - a) * p[iy * w + ix] + a * p[iy * w + ix + 1])
@@ -361,7 +357,7 @@ fn describe(
     for dy in -6..=6 {
         for dx in -6..=6 {
             let (gx, gy) = if interior {
-                gradient_offset(p, w, x0, y0, dx, dy, fa, fb)
+                gradient_offset(p, w, [x0, y0], [dx, dy], [fa, fb])
             } else {
                 gradient(p, w, h, x + dx as f64, y + dy as f64)
             };
