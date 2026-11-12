@@ -166,10 +166,12 @@ pub fn certify_original_rmf_transport(
         path,
         normal,
         steps,
-        max_cells,
-        max_exact_work,
+        TransportWork {
+            max_cells,
+            max_exact_work,
+            shared: None,
+        },
         closed,
-        None,
         false,
     )
 }
@@ -187,10 +189,12 @@ pub(crate) fn certify_original_rmf_transport_shared(
         path,
         normal,
         steps,
-        max_work,
-        max_work as u64,
+        TransportWork {
+            max_cells: max_work,
+            max_exact_work: max_work as u64,
+            shared: Some(max_work),
+        },
         closed,
-        Some(max_work),
         false,
     )
 }
@@ -201,13 +205,16 @@ pub(crate) fn certify_original_rmf_transport_shared(
 /// angular fields and continuous tangent values preserve the normal globally.
 /// Arc phase jets and all source/retained Gk remain separate obligations.
 pub fn certify_original_arc_rmf_transport(path:&Curve,normal:[f64;3],steps:usize,max_cells:usize,max_exact_work:u64,closed:bool)->Result<OriginalRmfTransportReport>{
-    certify_original_rmf_transport_impl(path,normal,steps,max_cells,max_exact_work,closed,None,true)
+    let work=TransportWork{max_cells,max_exact_work,shared:None};
+    certify_original_rmf_transport_impl(path,normal,steps,work,closed,true)
 }
 pub(super) fn certify_original_rmf_transport_for_spacing(path:&Curve,normal:[f64;3],steps:usize,max_cells:usize,max_exact_work:u64,closed:bool,spacing:super::Spacing)->Result<OriginalRmfTransportReport>{
-    certify_original_rmf_transport_impl(path,normal,steps,max_cells,max_exact_work,closed,None,spacing!=super::Spacing::Parameter)
+    let work=TransportWork{max_cells,max_exact_work,shared:None};
+    certify_original_rmf_transport_impl(path,normal,steps,work,closed,spacing!=super::Spacing::Parameter)
 }
 pub(crate) fn certify_original_rmf_transport_shared_for_spacing(path:&Curve,normal:[f64;3],steps:usize,max_work:usize,closed:bool,spacing:super::Spacing)->Result<OriginalRmfTransportReport>{
-    certify_original_rmf_transport_impl(path,normal,steps,max_work,max_work as u64,closed,Some(max_work),spacing!=super::Spacing::Parameter)
+    let work=TransportWork{max_cells:max_work,max_exact_work:max_work as u64,shared:Some(max_work)};
+    certify_original_rmf_transport_impl(path,normal,steps,work,closed,spacing!=super::Spacing::Parameter)
 }
 
 /// Fresh source relative section images in (normal, binormal, tangent)
@@ -697,7 +704,7 @@ pub(super) mod tests ;
 
 #[path = "rmf_transport/bishop_integration.rs"]
 mod bishop_integration;
-use bishop_integration::certify_original_rmf_transport_impl;
+use bishop_integration::{TransportWork, certify_original_rmf_transport_impl};
 
 #[cfg(test)]
 mod arc_clock_tests;
