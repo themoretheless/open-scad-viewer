@@ -12,6 +12,13 @@ mod oriented_bezier;
 pub use point_lift::verify_exact_point;
 use crate::distance_bounds::{Interval, box_distance};
 use crate::{Result, check, curve::Curve, surface::Surface};
+/// A 3D curve, its pcurve and the surface that carries it.
+#[derive(Clone, Copy)]
+struct CurveOnSurface<'a> {
+    curve: &'a Curve,
+    pcurve: &'a Curve,
+    surface: &'a Surface,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
@@ -119,7 +126,8 @@ pub fn verify_on(
     source_interval: [f64;2], tolerance: f64, max_cells: usize,
 ) -> Result<Report> {
     let report=verify_on_direct(c,p,s,reversed,source_interval,tolerance,max_cells)?;
-    oriented_bezier::retry(c,p,s,reversed,source_interval,tolerance,max_cells,report)
+    let curve=CurveOnSurface{curve:c,pcurve:p,surface:s};
+    oriented_bezier::retry(curve,reversed,source_interval,tolerance,max_cells,report)
 }
 fn verify_on_direct(
     c: &Curve, p: &Curve, s: &Surface, reversed: bool,

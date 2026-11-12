@@ -19,15 +19,18 @@ fn mirrored(c: &Curve) -> Option<Curve> {
     Some(reversed)
 }
 pub(super) fn retry(
-    c: &Curve,
-    p: &Curve,
-    s: &Surface,
+    curve: CurveOnSurface<'_>,
     reversed: bool,
     interval: [f64; 2],
     tolerance: f64,
     max_cells: usize,
     mut report: Report,
 ) -> Result<Report> {
+    let CurveOnSurface {
+        curve: c,
+        pcurve: p,
+        surface: s,
+    } = curve;
     if report.status != Status::Unresolved || report.cells >= max_cells || interval != p.domain() {
         return Ok(report);
     }
@@ -115,9 +118,7 @@ mod tests {
                 c.clone()
             };
             let r = retry(
-                &world,
-                &p,
-                &s,
+                on(&world, &p, &s),
                 reversed,
                 p.domain(),
                 1e-7,
@@ -132,24 +133,31 @@ mod tests {
             assert_eq!(mirrored(&m).unwrap(), world);
         }
     }
+    fn on<'a>(curve: &'a Curve, pcurve: &'a Curve, surface: &'a Surface) -> CurveOnSurface<'a> {
+        CurveOnSurface {
+            curve,
+            pcurve,
+            surface,
+        }
+    }
     #[test]
     fn missing_budget_partial_source_and_changed_geometry_cannot_inherit_acceptance() {
         let (mut c, p, s) = fixture();
         assert_eq!(
-            retry(&c, &p, &s, false, p.domain(), 1e-7, 10, unresolved(10))
+            retry(on(&c, &p, &s), false, p.domain(), 1e-7, 10, unresolved(10))
                 .unwrap()
                 .status,
             Status::Unresolved
         );
         assert_eq!(
-            retry(&c, &p, &s, false, [-1., 2.], 1e-7, 1000, unresolved(0))
+            retry(on(&c, &p, &s), false, [-1., 2.], 1e-7, 1000, unresolved(0))
                 .unwrap()
                 .cells,
             0
         );
         c.control_points[1][2] = 0.01;
         assert_ne!(
-            retry(&c, &p, &s, false, p.domain(), 1e-7, 1000, unresolved(0))
+            retry(on(&c, &p, &s), false, p.domain(), 1e-7, 1000, unresolved(0))
                 .unwrap()
                 .status,
             Status::WithinTolerance

@@ -1,5 +1,6 @@
 //! Original-domain correspondence; no rounded trim/extraction is substituted.
 use super::{Status, curve_bounds, mapped};
+use super::CurveOnSurface;
 use crate::{
     Result, check,
     curve::Curve,
@@ -117,7 +118,12 @@ pub fn verify_oriented_correspondence(
     tolerance: f64,
     max_cells: usize,
 ) -> Result<CorrespondenceReport> {
-    verify_impl(c, p, s, nodes, edge_reversed, tolerance, max_cells, false)
+    let curve = CurveOnSurface {
+        curve: c,
+        pcurve: p,
+        surface: s,
+    };
+    verify_impl(curve, nodes, edge_reversed, tolerance, max_cells, false)
 }
 /// Verify an authored piecewise-affine relation in the ORIGINAL physical
 /// parameter domains. No rounded normalization to unit fractions is substituted.
@@ -133,9 +139,11 @@ pub fn verify_parameter_correspondence(
     max_cells: usize,
 ) -> Result<CorrespondenceReport> {
     verify_impl(
-        c,
-        p,
-        s,
+        CurveOnSurface {
+            curve: c,
+            pcurve: p,
+            surface: s,
+        },
         parameters,
         edge_reversed,
         tolerance,
@@ -144,15 +152,18 @@ pub fn verify_parameter_correspondence(
     )
 }
 fn verify_impl(
-    c: &Curve,
-    p: &Curve,
-    s: &Surface,
+    curve: CurveOnSurface<'_>,
     nodes: &[[f64; 2]],
     edge_reversed: bool,
     tolerance: f64,
     max_cells: usize,
     physical: bool,
 ) -> Result<CorrespondenceReport> {
+    let CurveOnSurface {
+        curve: c,
+        pcurve: p,
+        surface: s,
+    } = curve;
     c.validate()?;
     p.validate()?;
     s.validate()?;
