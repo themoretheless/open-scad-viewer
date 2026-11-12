@@ -355,6 +355,7 @@ pub fn qualify<E: Carrier>(edge: &E, limits: Limits) -> Result<Report<E>> {
 mod tests {
     use super::*;
     use crate::source_boundary_fragment::{Endpoint, Fragment, Role};
+    use crate::source_projective_edge::{EdgeSource, EdgeWork};
     use nurbs_core::{curve::Curve, surface::Surface};
     #[test]
     fn projective_rational_shared_boundary_tangency_survives_original_definition_replay() {
@@ -374,8 +375,9 @@ mod tests {
         let fa=Fragment::new(&a,&pa,Endpoint::Parameter(0.),Endpoint::Parameter(1.)).unwrap();
         let fb=Fragment::new(&b,&pb,Endpoint::Parameter(1.),Endpoint::Parameter(0.)).unwrap();
         let ranges=[[[0.,1.],[1.,1.]];2];
-        let r=crate::source_projective_edge::qualify(&world,[&fa,&fb],ranges,[[1.,1.],[1.,2.]],
-            [None;2],[[None;2];2],100000000,10000).unwrap();
+        let r=crate::source_projective_edge::qualify(EdgeSource{world:&world,fragments:[&fa,&fb],ranges,
+            weights:[[1.,1.],[1.,2.]],planes:[None;2]},
+            [[None;2];2],EdgeWork{max_work:100000000,max_driver:10000}).unwrap();
         let edge=r.edge.expect(r.reason);
         let definition=edge.definition();
         let encoded=value_codec::encode_binary(&definition).unwrap();
@@ -402,8 +404,9 @@ mod tests {
         // q=1/2 lies on x=y. The second original parameter is 1/3,
         // so a rounded binary64 candidate must not identify the root.
         let root_plane=[[0.,0.,0.],[1.,1.,0.],[0.,0.,1.]];
-        let trimmed=crate::source_projective_edge::qualify(&world,[&trimmed_a,&trimmed_b],ranges,[[1.,1.],[1.,2.]],
-            [None,Some(root_plane)],[[None;2];2],100000000,10000).unwrap();
+        let trimmed=crate::source_projective_edge::qualify(EdgeSource{world:&world,fragments:[&trimmed_a,&trimmed_b],ranges,
+            weights:[[1.,1.],[1.,2.]],planes:[None,Some(root_plane)]},
+            [[None;2];2],EdgeWork{max_work:100000000,max_driver:10000}).unwrap();
         let trimmed=trimmed.edge.expect(trimmed.reason);
         let trimmed_definition=trimmed.definition();
         let restored=crate::source_projective_edge::restore(trimmed_definition.clone(),10000,100000000,10000).unwrap();

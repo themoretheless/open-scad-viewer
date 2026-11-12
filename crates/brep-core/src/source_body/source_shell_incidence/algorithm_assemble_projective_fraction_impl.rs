@@ -68,21 +68,34 @@ pub fn assemble_projective_fraction_impl(
             let ranges = input.ranges.unwrap_or(full);
             let weights = weights.get(&input.index).copied().unwrap_or([[1., 1.]; 2]);
             let candidates = input.candidates.unwrap_or([[None; 2]; 2]);
+            let edge = crate::source_projective_edge::EdgeSource {
+                world: &input.pair.world,
+                fragments: input.sources,
+                ranges,
+                weights,
+                planes: input.planes,
+            };
+            let budget = crate::source_projective_edge::EdgeWork {
+                max_work: work,
+                max_driver: driver,
+            };
             let r = if let Some(fractions) = fractions.get(&input.index) {
-                crate::source_projective_edge::qualify_with_fraction_candidates(crate::source_projective_edge::EdgeSource { world: &input.pair.world, fragments: input.sources, ranges: ranges, weights: weights, planes: input.planes }, candidates, *fractions, crate::source_projective_edge::EdgeWork { max_work: work, max_driver: driver })?
-            } else if let Some([denominator, count]) = discovery {
-                crate::source_projective_edge::qualify_with_discovered_fraction_candidates(crate::source_projective_edge::EdgeSource { world: &input.pair.world, fragments: input.sources, ranges: ranges, weights: weights, planes: input.planes }, candidates, crate::source_projective_edge::FractionDiscovery { max_denominator: denominator, max_candidates_per_axis: count }, crate::source_projective_edge::EdgeWork { max_work: work, max_driver: driver })?
-            } else {
-                crate::source_projective_edge::qualify(
-                    &input.pair.world,
-                    input.sources,
-                    ranges,
-                    weights,
-                    input.planes,
+                crate::source_projective_edge::qualify_with_fraction_candidates(
+                    edge,
                     candidates,
-                    work,
-                    driver,
+                    *fractions,
+                    budget,
                 )?
+            } else if let Some([denominator, count]) = discovery {
+                let discovery = crate::source_projective_edge::FractionDiscovery {
+                    max_denominator: denominator,
+                    max_candidates_per_axis: count,
+                };
+                crate::source_projective_edge::qualify_with_discovered_fraction_candidates(
+                    edge, candidates, discovery, budget,
+                )?
+            } else {
+                crate::source_projective_edge::qualify(edge, candidates, budget)?
             };
             Ok(EdgeReport {
                 edge: r.edge,

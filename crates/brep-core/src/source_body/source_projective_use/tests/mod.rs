@@ -225,14 +225,18 @@ fn original_root_endpoint_is_retained_under_projective_mapping() {
     assert!(other.reversed());
     let plane = [[0.5, 0., 0.], [0.5, 1., 0.], [0.5, 0., 1.]];
     let edge_report = crate::source_projective_edge::qualify(
-        &world,
-        [&fragment, &other_fragment],
-        [range; 2],
-        [[1., 2.]; 2],
-        [None, Some(plane)],
+        crate::source_projective_edge::EdgeSource {
+            world: &world,
+            fragments: [&fragment, &other_fragment],
+            ranges: [range; 2],
+            weights: [[1., 2.]; 2],
+            planes: [None, Some(plane)],
+        },
         [[None; 2]; 2],
-        100000000,
-        10000,
+        crate::source_projective_edge::EdgeWork {
+            max_work: 100000000,
+            max_driver: 10000,
+        },
     )
     .unwrap();
     let edge = edge_report.edge.unwrap();
@@ -335,14 +339,18 @@ fn original_root_endpoint_is_retained_under_projective_mapping() {
     )
     .unwrap();
     let oblique = crate::source_projective_edge::qualify(
-        &world,
-        [&fragment, &oblique_fragment],
-        [range; 2],
-        [[1., 2.]; 2],
-        [None, Some(plane)],
+        crate::source_projective_edge::EdgeSource {
+            world: &world,
+            fragments: [&fragment, &oblique_fragment],
+            ranges: [range; 2],
+            weights: [[1., 2.]; 2],
+            planes: [None, Some(plane)],
+        },
         [[None; 2]; 2],
-        100000000,
-        10000,
+        crate::source_projective_edge::EdgeWork {
+            max_work: 100000000,
+            max_driver: 10000,
+        },
     )
     .unwrap()
     .edge

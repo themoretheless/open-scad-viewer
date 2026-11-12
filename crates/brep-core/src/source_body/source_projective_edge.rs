@@ -233,22 +233,8 @@ pub struct FractionDiscovery {
 }
 /// Both original source compositions and both retained endpoint identities
 /// share one exact-work budget. Root driving shares one cell budget.
-pub fn qualify(
-    world: &Curve,
-    fragments: [&Fragment; 2],
-    ranges: [[[f64; 2]; 2]; 2],
-    weights: [[f64; 2]; 2],
-    planes: [Option<Plane>; 2],
-    candidates: Candidates,
-    max_work: u64,
-    max_driver: usize,
-) -> Result<Report> {
-    qualify_impl(
-        EdgeSource { world, fragments, ranges, weights, planes },
-        candidates,
-        None,
-        EdgeWork { max_work, max_driver },
-    )
+pub fn qualify(edge: EdgeSource<'_>, candidates: Candidates, work: EdgeWork) -> Result<Report> {
+    qualify_impl(edge, candidates, None, work)
 }
 /// Rational parameter proposals are freshly checked against original roots.
 pub fn qualify_with_fraction_candidates(
@@ -486,14 +472,18 @@ mod fraction_tests {
         let weights = [[1., 1.], [1., 2.]];
         assert!(
             qualify(
-                &world,
-                [&fa, &fb],
-                ranges,
-                weights,
-                [None; 2],
+                EdgeSource {
+                    world: &world,
+                    fragments: [&fa, &fb],
+                    ranges,
+                    weights,
+                    planes: [None; 2],
+                },
                 [[None; 2]; 2],
-                100000000,
-                10000
+                EdgeWork {
+                    max_work: 100000000,
+                    max_driver: 10000,
+                },
             )
             .unwrap()
             .edge

@@ -294,14 +294,18 @@ fn source_body_replay_and_exchange_keep_native_provenance_without_wire_values() 
     let fresh = edge.requalify(edge_limits()).unwrap();
     assert!(edge.same_definition(&fresh.edge.expect(fresh.reason)));
     let projective = brep_core::source_projective_edge::qualify(
-        edge.world(),
-        edge.uses().each_ref(),
-        [[[0., 1.], [1., 1.]], [[1., 1.], [0., 1.]]],
-        [[1.; 2]; 2],
-        [None; 2],
+        brep_core::source_projective_edge::EdgeSource {
+            world: edge.world(),
+            fragments: edge.uses().each_ref(),
+            ranges: [[[0., 1.], [1., 1.]], [[1., 1.], [0., 1.]]],
+            weights: [[1.; 2]; 2],
+            planes: [None; 2],
+        },
         [[None; 2]; 2],
-        100000000,
-        100000,
+        brep_core::source_projective_edge::EdgeWork {
+            max_work: 100000000,
+            max_driver: 100000,
+        },
     )
     .unwrap();
     let projective = projective.edge.expect(projective.reason);
