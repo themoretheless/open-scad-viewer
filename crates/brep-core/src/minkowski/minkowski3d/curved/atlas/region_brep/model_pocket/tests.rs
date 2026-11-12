@@ -71,9 +71,11 @@ fn pocket(m: &Model, depth: u8) -> AlgebraicModelPocket {
         m,
         f,
         &floor(&m.faces[f].surface),
-        &circle(),
-        &[],
-        window(),
+        PocketRegion {
+            domain: &circle(),
+            factors: &[],
+            window: window(),
+        },
         None,
         depth,
     )
@@ -172,9 +174,11 @@ fn annular_removal_keeps_an_original_surface_island() {
         &model,
         f,
         &cap,
-        &encode(&d),
-        &[encode(&a), encode(&b)],
-        window(),
+        PocketRegion {
+            domain: &encode(&d),
+            factors: &[encode(&a), encode(&b)],
+            window: window(),
+        },
         None,
         0,
     )
@@ -222,9 +226,11 @@ fn annular_removal_keeps_an_original_surface_island() {
         &model,
         f,
         &cap,
-        &encode(&d),
-        &[encode(&a), encode(&b)],
-        window(),
+        PocketRegion {
+            domain: &encode(&d),
+            factors: &[encode(&a), encode(&b)],
+            window: window(),
+        },
         Some(&[one]),
         0,
     )
@@ -249,14 +255,17 @@ fn independent_cell_cuts_and_excessive_depth_do_not_make_unproved_bodies() {
         &model,
         f,
         &cap,
-        &encode(&d),
-        &factors,
-        window(),
+        PocketRegion {
+            domain: &encode(&d),
+            factors: &factors,
+            window: window(),
+        },
         Some(&[]),
         0,
     );
     assert!(reference.is_err());
-    let all = certify_model_pocket(&model, f, &cap, &encode(&d), &factors, window(), None, 0);
+    let region = PocketRegion { domain: &encode(&d), factors: &factors, window: window() };
+    let all = certify_model_pocket(&model, f, &cap, region, None, 0);
     assert!(
         all.is_err(),
         "diagonally touching selected quadrants must not form a manifold pocket"
@@ -277,9 +286,11 @@ fn independent_cell_cuts_and_excessive_depth_do_not_make_unproved_bodies() {
         &model,
         f,
         &cap,
-        &encode(&d),
-        &factors,
-        window(),
+        PocketRegion {
+            domain: &encode(&d),
+            factors: &factors,
+            window: window(),
+        },
         Some(&[cell]),
         0,
     )
@@ -292,8 +303,10 @@ fn independent_cell_cuts_and_excessive_depth_do_not_make_unproved_bodies() {
             p[2] -= 2.;
         }
     }
-    assert!(certify_model_pocket(&model, f, &too_deep, &circle(), &[], window(), None, 0).is_err());
+    let region = PocketRegion { domain: &circle(), factors: &[], window: window() };
+    assert!(certify_model_pocket(&model, f, &too_deep, region, None, 0).is_err());
     let mut invalid = window();
     invalid[0] = [ratio(1, 2), ratio(9, 16)];
-    assert!(certify_model_pocket(&model, f, &cap, &circle(), &[], invalid, None, 0).is_err());
+    let region = PocketRegion { domain: &circle(), factors: &[], window: invalid };
+    assert!(certify_model_pocket(&model, f, &cap, region, None, 0).is_err());
 }

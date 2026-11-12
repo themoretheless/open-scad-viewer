@@ -662,7 +662,7 @@ pub use atlas::region_brep::{
 
 pub use atlas::region_brep::{
     AlgebraicModelPocket, ModelPocketCertificate, PocketEdge, PocketEdgeUse, PocketFace,
-    PocketFaceKind, PocketVertex, certify_model_pocket, verify_model_pocket,
+    PocketFaceKind, PocketRegion, PocketVertex, certify_model_pocket, verify_model_pocket,
 };
 
 pub use atlas::region_brep::{

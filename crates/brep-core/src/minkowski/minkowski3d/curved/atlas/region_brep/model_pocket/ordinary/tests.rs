@@ -33,9 +33,11 @@ fn native(domain: DomainPolynomial) -> AlgebraicModelPocket {
         &m,
         f,
         &floor,
-        &domain,
-        &[],
-        [[ratio(3, 16), ratio(5, 16)], [ratio(3, 16), ratio(5, 16)]],
+        PocketRegion {
+            domain: &domain,
+            factors: &[],
+            window: [[ratio(3, 16), ratio(5, 16)], [ratio(3, 16), ratio(5, 16)]],
+        },
         None,
         0,
     )

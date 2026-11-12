@@ -284,6 +284,13 @@ impl AlgebraicModelPocket {
         Ok(p.each_ref().map(roots::ratio))
     }
 }
+/// Pocket region on the floor: its domain polynomial, the factor
+/// polynomials bounding it, and the exact UV window it lives in.
+pub struct PocketRegion<'a> {
+    pub domain: &'a DomainPolynomial,
+    pub factors: &'a [DomainPolynomial],
+    pub window: [[ExactRatio; 2]; 2],
+}
 /// Remove arbitrary selected two-dimensional CAD cells inside a proved window,
 /// replacing the original face region with an independent floor and exact
 /// algebraic ruled walls. Singular D is allowed when the selected union has
@@ -294,12 +301,15 @@ pub fn certify_model_pocket(
     model: &Model,
     source_face: usize,
     floor: &Surface,
-    domain: &DomainPolynomial,
-    factors: &[DomainPolynomial],
-    window: [[ExactRatio; 2]; 2],
+    region: PocketRegion<'_>,
     selection: Option<&[u32]>,
     depth: u8,
 ) -> Result<AlgebraicModelPocket> {
+    let PocketRegion {
+        domain,
+        factors,
+        window,
+    } = region;
     if source_face >= model.faces.len() || depth > 3 || factors.len() > 11 {
         return Err(fail("pocket source index/depth/factor budget exceeded"));
     }
@@ -463,9 +473,11 @@ pub fn verify_model_pocket(
         model,
         certificate.source_face,
         floor,
-        &certificate.domain,
-        &certificate.factors,
-        certificate.window.clone(),
+        PocketRegion {
+            domain: &certificate.domain,
+            factors: &certificate.factors,
+            window: certificate.window.clone(),
+        },
         Some(&certificate.selected),
         certificate.depth,
     )?;

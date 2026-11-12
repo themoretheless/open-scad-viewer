@@ -153,9 +153,11 @@ pub fn certify_graph_box_boolean(
         source,
         source_face,
         &floor,
-        &vec![vec![roots::ratio(&Q::one())]],
-        &[],
-        window.each_ref().map(|r| r.each_ref().map(roots::ratio)),
+        PocketRegion {
+            domain: &vec![vec![roots::ratio(&Q::one())]],
+            factors: &[],
+            window: window.each_ref().map(|r| r.each_ref().map(roots::ratio)),
+        },
         None,
         depth,
     )?;

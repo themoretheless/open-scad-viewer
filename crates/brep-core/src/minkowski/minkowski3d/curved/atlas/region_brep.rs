@@ -384,7 +384,7 @@ mod tests;
 mod model_pocket;
 pub use model_pocket::{
     certify_model_pocket, verify_model_pocket, AlgebraicModelPocket, ModelPocketCertificate,
-    PocketEdge, PocketEdgeUse, PocketFace, PocketFaceKind, PocketVertex,
+    PocketEdge, PocketEdgeUse, PocketFace, PocketFaceKind, PocketRegion, PocketVertex,
 };
 
 pub use model_pocket::{

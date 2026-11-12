@@ -162,9 +162,11 @@ pub fn certify_framed_pocket_boolean_model(
         &local_source,
         request.source_face,
         &local_floor,
-        &request.domain,
-        &request.factors,
-        request.window.clone(),
+        PocketRegion {
+            domain: &request.domain,
+            factors: &request.factors,
+            window: request.window.clone(),
+        },
         request.selected.as_deref(),
         request.depth,
     )?;
