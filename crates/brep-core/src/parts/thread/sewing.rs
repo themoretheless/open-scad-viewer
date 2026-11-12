@@ -312,10 +312,12 @@ pub(super) fn sew_boundaries_impl(
         &provisional,
         lc.trim(),
         &lf.surface,
-        &rc.pcurve,
-        rc.trim().map(|trim| (&re.curve, trim)),
-        &rf.surface,
-        true,
+        TargetUse {
+            pcurve: &rc.pcurve,
+            proof: rc.trim().map(|trim| (&re.curve, trim)),
+            surface: &rf.surface,
+            reversed: true,
+        },
         model.tolerance_mm,
         max_verification_cells,
     )?;
@@ -591,10 +593,12 @@ pub(super) fn attach_impl(
         &provisional,
         sc.trim(),
         &source_face.surface,
-        &tc.pcurve,
-        tc.trim().map(|trim| (&te.curve, trim)),
-        &target.faces[0].surface,
-        true,
+        TargetUse {
+            pcurve: &tc.pcurve,
+            proof: tc.trim().map(|trim| (&te.curve, trim)),
+            surface: &target.faces[0].surface,
+            reversed: true,
+        },
         tolerance,
         max_verification_cells,
     )?;
@@ -691,26 +695,41 @@ pub fn share_patch_edge(
         source,
         None,
         source_surface,
-        target_pcurve,
-        None,
-        target_surface,
-        target_reversed,
+        TargetUse {
+            pcurve: target_pcurve,
+            proof: None,
+            surface: target_surface,
+            reversed: target_reversed,
+        },
         tolerance,
         max_verification_cells,
     )
 }
 
+/// The receiving coedge use of a shared patch edge: its pcurve, the saved
+/// world curve and trim when it is already trimmed, its surface and whether it
+/// runs against the source edge.
+#[derive(Clone, Copy)]
+struct TargetUse<'a> {
+    pcurve: &'a nurbs_core::curve::Curve,
+    proof: Option<(&'a nurbs_core::curve::Curve, brep_topology::CoedgeTrim)>,
+    surface: &'a nurbs_core::surface::Surface,
+    reversed: bool,
+}
 fn share_patch_edge_with_trims(
     source: &nurbs_core::thread::MappedEdge,
     source_trim: Option<brep_topology::CoedgeTrim>,
     source_surface: &nurbs_core::surface::Surface,
-    target_pcurve: &nurbs_core::curve::Curve,
-    target_proof: Option<(&nurbs_core::curve::Curve, brep_topology::CoedgeTrim)>,
-    target_surface: &nurbs_core::surface::Surface,
-    target_reversed: bool,
+    target: TargetUse<'_>,
     tolerance: f64,
     max_verification_cells: usize,
 ) -> Result<SharedPatchEdge> {
+    let TargetUse {
+        pcurve: target_pcurve,
+        proof: target_proof,
+        surface: target_surface,
+        reversed: target_reversed,
+    } = target;
     use nurbs_core::curve_surface_agreement::Status;
     if !(1e-10..=1e-2).contains(&tolerance) || max_verification_cells > 100000 {
         return Err(Error::new(
