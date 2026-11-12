@@ -185,8 +185,10 @@ pub fn thicken(
         }
     });
     let section = predictor::propose(
-        sources.each_ref(),
-        distances,
+        nurbs_core::offset_contact_pcurve::OffsetFaces {
+            surfaces: sources.each_ref(),
+            distances,
+        },
         seeds,
         drive_axis,
         search.numerical_tolerance_mm,

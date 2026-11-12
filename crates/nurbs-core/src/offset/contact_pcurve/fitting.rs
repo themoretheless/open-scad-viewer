@@ -174,8 +174,10 @@ pub fn fit_branch(
         ];
         for &t in &sites {
             let (root, queries) = super::section(
-                surfaces,
-                distances,
+                crate::offset::contact_pcurve::OffsetFaces {
+                    surfaces,
+                    distances,
+                },
                 axis,
                 t,
                 free,
@@ -228,7 +230,17 @@ pub fn fit_branch(
                 out.attempts.push(FitAttempt { degree, reports });
                 return Ok(out);
             }
-            let proof = super::certify_refined(&curves[side], side, super::OffsetFaces { surfaces: surfaces, distances: distances }, super::ContactParameters { axis: axis, drive: drive, free: free, second: second, spans: limits.spans }, tolerance_uv, super::PcurveWork { max_cells: cells, refinements: limits.root_refinements, band_refinements: limits.root_refinements })?;
+            let proof = super::certify_refined(
+                &curves[side],
+                side,
+                super::OffsetFaces {
+                    surfaces,
+                    distances,
+                },
+                super::ContactParameters { axis: axis, drive: drive, free: free, second: second, spans: limits.spans },
+                tolerance_uv,
+                super::PcurveWork { max_cells: cells, refinements: limits.root_refinements, band_refinements: limits.root_refinements },
+            )?;
             out.proof_cells += proof.visited;
             out.root_queries += proof.section_queries;
             reports.push(proof);

@@ -166,8 +166,10 @@ fn curved() -> [Surface; 2] {
 fn nonlinear_source_clock_switch_preserves_actual_piece_lifts_after_binding() {
     let s = curved();
     let r = nurbs_core::offset_contact_predictor::propose(
-        s.each_ref(),
-        [0.1; 2],
+        nurbs_core::offset_contact_pcurve::OffsetFaces {
+            surfaces: s.each_ref(),
+            distances: [0.1; 2],
+        },
         [[0.92, 0.55], [0.12, 0.555]],
         1,
         1e-12,

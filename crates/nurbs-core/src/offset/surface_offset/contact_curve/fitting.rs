@@ -139,8 +139,10 @@ pub fn fit(
         let mut samples = Vec::with_capacity(n);
         for &t in &sites {
             let (root, queries) = uv::section(
-                surfaces,
-                distances,
+                crate::offset::contact_pcurve::OffsetFaces {
+                    surfaces,
+                    distances,
+                },
                 axis,
                 t,
                 free,

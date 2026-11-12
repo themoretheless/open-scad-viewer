@@ -130,8 +130,10 @@ pub fn certify(
             seed[0][axis] = t;
             out.numerical_queries += 1;
             let r = crate::offset_contact_predictor::propose(
-                surfaces,
-                distances,
+                crate::offset::contact_pcurve::OffsetFaces {
+                    surfaces,
+                    distances,
+                },
                 seed,
                 axis,
                 limits.numerical_tolerance_mm,

@@ -66,16 +66,8 @@ fn interval(x: [f64; 2]) -> Result<I> {
 }
 /// Additional section queries refine only an already certified root enclosure.
 /// If the tighter query is inconclusive, retain the last certified enclosure.
-pub(crate) fn section(
-    s: [&Surface; 2],
-    d: [f64; 2],
-    axis: usize,
-    t: f64,
-    free: [f64; 2],
-    second: [[f64; 2]; 2],
-    spans: usize,
-    refinements: usize,
-) -> Result<(Option<Witness>, usize)> {
+pub(crate) fn section(faces: OffsetFaces<'_>, axis: usize, t: f64, free: [f64; 2], second: [[f64; 2]; 2], spans: usize, refinements: usize) -> Result<(Option<Witness>, usize)> {
+        let OffsetFaces { surfaces: s, distances: d } = faces;
     let mut calls = 1;
     let Verdict::Witness(mut witness) =
         surface_offset::certify_contact_section(s, d, axis, t, free, second, spans)?
@@ -109,23 +101,26 @@ pub(crate) fn section(
     Ok((Some(witness), calls))
 }
 /// A linear source pcurve is a proposal. Full-band correspondence is separate.
-pub fn propose(
-    s: [&Surface; 2],
-    d: [f64; 2],
-    axis: usize,
-    drive: [f64; 2],
-    free: [f64; 2],
-    second: [[f64; 2]; 2],
-    spans: usize,
-    refinements: usize,
-) -> Result<Option<[Curve; 2]>> {
+pub fn propose(faces: OffsetFaces<'_>, axis: usize, drive: [f64; 2], free: [f64; 2], second: [[f64; 2]; 2], spans: usize, refinements: usize) -> Result<Option<[Curve; 2]>> {
+        let OffsetFaces { surfaces: s, distances: d } = faces;
     check(
         axis < 2 && drive[0] < drive[1] && refinements <= 16,
         "Choose valid contact pcurve parameters and at most 16 refinements",
     )?;
     let mut uv = [vec![], vec![]];
     for t in drive {
-        let (Some(w), _) = section(s, d, axis, t, free, second, spans, refinements)? else {
+        let (Some(w), _) = section(
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: s,
+                distances: d,
+            },
+            axis,
+            t,
+            free,
+            second,
+            spans,
+            refinements,
+        )? else {
             return Ok(None);
         };
         let mid = |x: [f64; 2]| x[0] + (x[1] - x[0]) * 0.5;
@@ -218,8 +213,10 @@ pub fn certify_refined(
     while let Some(range) = pending.pop() {
         out.visited += 1;
         let refined = offset_contact_tangent::certify_refined(
-            s,
-            d,
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: s,
+                distances: d,
+            },
             axis,
             range,
             free,
@@ -250,7 +247,18 @@ pub fn certify_refined(
                     };
                     let tm = range[0] + (range[1] - range[0]) * 0.5;
                     let (anchor, calls) =
-                        section(s, d, axis, tm, free, second, spans, refinements)?;
+                        section(
+                            crate::offset::contact_pcurve::OffsetFaces {
+                                surfaces: s,
+                                distances: d,
+                            },
+                            axis,
+                            tm,
+                            free,
+                            second,
+                            spans,
+                            refinements,
+                        )?;
                     out.section_queries += calls;
                     if let Some(anchor) = anchor {
                         let root = if side == 0 {
@@ -336,8 +344,10 @@ mod tests {
     fn proposed_uv_curves_follow_both_original_contact_parameters() {
         let [a, b] = pair();
         let curves = propose(
-            [&a, &b],
-            [0.2, 0.2],
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2, 0.2],
+            },
             0,
             [0.35, 0.39],
             [0.25, 0.35],
@@ -348,7 +358,18 @@ mod tests {
         .unwrap()
         .unwrap();
         for side in 0..2 {
-            let r = certify(&curves[side], side, OffsetFaces { surfaces: [&a, &b], distances: [0.2, 0.2] }, ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 }, 1e-8, 31, 3)
+            let r = certify(
+                &curves[side],
+                side,
+                OffsetFaces {
+                    surfaces: [&a, &b],
+                    distances: [0.2, 0.2],
+                },
+                ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 },
+                1e-8,
+                31,
+                3,
+            )
             .unwrap();
             assert!(r.correspondence_proven, "{}", r.reason);
             assert!(r.band_queries == r.visited);
@@ -362,8 +383,10 @@ mod tests {
         b.weights.push(vec![1.; 2]);
         b.knots_u = vec![0., 0., 1., 2., 2.];
         let curves = propose(
-            [&a, &b],
-            [0.2, 0.2],
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2, 0.2],
+            },
             0,
             [0.35, 0.39],
             [0.25, 0.35],
@@ -386,7 +409,18 @@ mod tests {
                 assert!((p[k] - q[k]).abs() < 1e-14);
             }
         }
-        let r = certify(&wrong, 1, OffsetFaces { surfaces: [&a, &b], distances: [0.2, 0.2] }, ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 }, 1e-6, 31, 3)
+        let r = certify(
+            &wrong,
+            1,
+            OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2, 0.2],
+            },
+            ContactParameters { axis: 0, drive: [0.35, 0.39], free: [0.25, 0.35], second: [[0.30, 0.44], [0.15, 0.25]], spans: 2 },
+            1e-6,
+            31,
+            3,
+        )
         .unwrap();
         assert!(!r.correspondence_proven);
         assert_eq!(r.reason, "pcurve-contact-mismatch");

@@ -257,8 +257,10 @@ fn coincident_world_branches_on_different_original_uv_sheets_are_not_welded() {
     let mut centers = vec![];
     for u in [0.152, 0.918] {
         let p = nurbs_core::offset_contact_predictor::propose(
-            [&a, &b],
-            [0.2; 2],
+            nurbs_core::offset_contact_pcurve::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2; 2],
+            },
             [[0.997, 0.3], [u, 0.2]],
             0,
             1e-10,

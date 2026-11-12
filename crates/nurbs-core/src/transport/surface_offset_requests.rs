@@ -128,8 +128,10 @@ fn try_dispatch_envelopes_and_contact_bands(v: &Value, op: &str) -> Option<Resul
             let a: Surface = field(v, "a")?;
             let b: Surface = field(v, "b")?;
             Ok(crate::offset_envelope::certify(
-                [&a, &b],
-                field(v, "distances")?,
+                crate::offset::contact_pcurve::OffsetFaces {
+                    surfaces: [&a, &b],
+                    distances: field(v, "distances")?,
+                },
                 field(v, "fixedAxis")?,
                 field(v, "fixedInterval")?,
                 field(v, "firstOther")?,

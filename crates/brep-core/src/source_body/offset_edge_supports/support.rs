@@ -270,19 +270,10 @@ pub fn propose_section(
         ));
     }
     let axis = usize::from(scores[1] > scores[0]);
-    nurbs_core::offset_contact_predictor::propose(
-        [
+    nurbs_core::offset_contact_predictor::propose(nurbs_core::offset_contact_pcurve::OffsetFaces { surfaces: [
             &prepared.supports[0].face.face().surface,
             &prepared.supports[1].face.face().surface,
-        ],
-        distances,
-        seeds,
-        axis,
-        numerical_tolerance_mm,
-        max_iterations,
-        padding_fraction,
-        max_spans,
-    )
+        ], distances: distances }, seeds, axis, numerical_tolerance_mm, max_iterations, padding_fraction, max_spans)
 }
 pub struct PathReport {
     pub driver: nurbs_core::curve_axis_driver::Report,

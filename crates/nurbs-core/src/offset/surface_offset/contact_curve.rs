@@ -112,8 +112,10 @@ pub fn certify(
     while let Some(range) = pending.pop() {
         out.visited += 1;
         let target = tangent::certify_refined(
-            surfaces,
-            distances,
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces,
+                distances,
+            },
             axis,
             range,
             free,
@@ -134,8 +136,10 @@ pub fn certify(
                 if let Some(derivative) = curve.derivatives {
                     let mid = range[0] * 0.5 + range[1] * 0.5;
                     let (anchor, queries) = uv::section(
-                        surfaces,
-                        distances,
+                        crate::offset::contact_pcurve::OffsetFaces {
+                            surfaces,
+                            distances,
+                        },
                         axis,
                         mid,
                         free,

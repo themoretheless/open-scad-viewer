@@ -280,8 +280,10 @@ fn a_section_root_cannot_admit_a_varying_nonrectangular_intersection() {
     // Establish that the section itself succeeds; refusal must come from
     // constructing/proving the full rectangular-cap proposal, not root search.
     let section = nurbs_core::offset_contact_predictor::propose(
-        sources.each_ref(),
-        [0.1; 2],
+        nurbs_core::offset_contact_pcurve::OffsetFaces {
+            surfaces: sources.each_ref(),
+            distances: [0.1; 2],
+        },
         [[1., 0.5], [0., 0.5]],
         1,
         1e-11,

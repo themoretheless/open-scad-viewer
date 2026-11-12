@@ -5,7 +5,6 @@ use crate::{
     Result, check,
     distance_bounds::Interval as I,
     offset_contact_tangent::{self, Report as Tangent},
-    surface::Surface,
     surface_offset::{self, ContactBand},
 };
 type V = [I; 3];
@@ -139,16 +138,8 @@ impl Arc {
 /// Every retained cell covers the entire driving center-parameter interval.
 /// `max_cells` bounds total evaluated arc cells, including failed parent cells.
 /// Unresolved leaves remain in the report and prevent a regularity claim.
-pub fn certify(
-    surfaces: [&Surface; 2],
-    distances: [f64; 2],
-    fixed_axis: usize,
-    fixed_interval: [f64; 2],
-    first_other: [f64; 2],
-    second: [[f64; 2]; 2],
-    max_spans: usize,
-    max_cells: usize,
-) -> Result<Report> {
+pub fn certify(faces: crate::offset::contact_pcurve::OffsetFaces<'_>, fixed_axis: usize, fixed_interval: [f64; 2], first_other: [f64; 2], second: [[f64; 2]; 2], max_spans: usize, max_cells: usize) -> Result<Report> {
+        let crate::offset::contact_pcurve::OffsetFaces { surfaces, distances } = faces;
     certify_arc(
         crate::offset::contact_pcurve::OffsetFaces { surfaces, distances },
         crate::offset::contact_trims::ContactParameters { axis: fixed_axis, drive: fixed_interval, free: first_other, second, spans: max_spans },
@@ -311,6 +302,7 @@ pub(crate) fn certify_arc(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::surface::Surface;
     fn plane() -> Surface {
         Surface {
             degree_u: 1,
@@ -340,8 +332,10 @@ mod tests {
     }
     fn run(a: &Surface, b: &Surface, cells: usize) -> Report {
         certify(
-            [a, b],
-            [0.2, 0.2],
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [a, b],
+                distances: [0.2, 0.2],
+            },
             0,
             [0.35, 0.39],
             [0.25, 0.35],
@@ -466,8 +460,10 @@ mod tests {
                 }
             }
             let r = certify(
-                [&aa, &bb],
-                [0.2, 0.2],
+                crate::offset::contact_pcurve::OffsetFaces {
+                    surfaces: [&aa, &bb],
+                    distances: [0.2, 0.2],
+                },
                 1,
                 [0.099999, 0.100001],
                 [u - 1e-4, u + 1e-4],
@@ -543,8 +539,10 @@ mod tests {
                     let av = 0.5 - db;
                     let bv = (da + 1.) / 2.;
                     let r = certify(
-                        [&a, &b],
-                        [da, db],
+                        crate::offset::contact_pcurve::OffsetFaces {
+                            surfaces: [&a, &b],
+                            distances: [da, db],
+                        },
                         0,
                         [0.35, 0.39],
                         [av - 0.05, av + 0.05],
@@ -568,28 +566,32 @@ mod tests {
         for distances in [[0., 0.], [0.2, 0.3], [f64::NAN, 0.2]] {
             assert!(
                 certify(
-                    [&a, &b],
-                    distances,
+                    crate::offset::contact_pcurve::OffsetFaces {
+                        surfaces: [&a, &b],
+                        distances,
+                    },
                     0,
                     [0.35, 0.39],
                     [0.25, 0.35],
                     [[0.30, 0.44], [0.15, 0.25]],
                     2,
-                    1
+                    1,
                 )
                 .is_err()
             );
         }
         assert!(
             certify(
-                [&a, &b],
-                [0.2, 0.2],
+                crate::offset::contact_pcurve::OffsetFaces {
+                    surfaces: [&a, &b],
+                    distances: [0.2, 0.2],
+                },
                 0,
                 [0.35, 0.39],
                 [0.25, 0.35],
                 [[0.30, 0.44], [0.15, 0.25]],
                 2,
-                0
+                0,
             )
             .is_err()
         );

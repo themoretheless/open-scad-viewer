@@ -51,16 +51,8 @@ fn residual(a: &surface_offset::Evaluation, b: &surface_offset::Evaluation) -> (
     let vector = std::array::from_fn(|k| a.point[k] - b.point[k]);
     (vector, vector[0].hypot(vector[1]).hypot(vector[2]))
 }
-pub fn propose(
-    surfaces: [&Surface; 2],
-    distances: [f64; 2],
-    seeds: [[f64; 2]; 2],
-    fixed_axis: usize,
-    numerical_tolerance_mm: f64,
-    max_iterations: usize,
-    padding_fraction: f64,
-    max_spans: usize,
-) -> Result<Report> {
+pub fn propose(faces: crate::offset::contact_pcurve::OffsetFaces<'_>, seeds: [[f64; 2]; 2], fixed_axis: usize, numerical_tolerance_mm: f64, max_iterations: usize, padding_fraction: f64, max_spans: usize) -> Result<Report> {
+        let crate::offset::contact_pcurve::OffsetFaces { surfaces, distances } = faces;
     for s in surfaces {
         s.validate()?;
     }
@@ -218,7 +210,18 @@ mod tests {
         for p in b.control_points.iter_mut().flatten() {
             p[2] = 1.;
         }
-        let r = propose([&a, &b], [0.2; 2], [[0.5; 2]; 2], 0, 1e-8, 8, 1e-3, 16).unwrap();
+        let r = propose(
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2; 2],
+            },
+            [[0.5; 2]; 2],
+            0,
+            1e-8,
+            8,
+            1e-3,
+            16,
+        ).unwrap();
         assert_eq!(r.reason, "predictor-jacobian-singular");
         assert!(r.certificate.is_none());
         assert_eq!(r.residual_mm, 1.);
@@ -228,17 +231,41 @@ mod tests {
     fn invalid_seed_radius_and_work_are_rejected_before_iteration() {
         let a = plane();
         assert!(propose(
-            [&a, &a],
-            [0.2; 2],
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &a],
+                distances: [0.2; 2],
+            },
             [[-0.1, 0.5], [0.5; 2]],
             0,
             1e-8,
             8,
             1e-3,
-            16
+            16,
         )
         .is_err());
-        assert!(propose([&a, &a], [0.2, 0.3], [[0.5; 2]; 2], 0, 1e-8, 8, 1e-3, 16).is_err());
-        assert!(propose([&a, &a], [0.2; 2], [[0.5; 2]; 2], 0, 1e-8, 0, 1e-3, 16).is_err());
+        assert!(propose(
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &a],
+                distances: [0.2, 0.3],
+            },
+            [[0.5; 2]; 2],
+            0,
+            1e-8,
+            8,
+            1e-3,
+            16,
+        ).is_err());
+        assert!(propose(
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &a],
+                distances: [0.2; 2],
+            },
+            [[0.5; 2]; 2],
+            0,
+            1e-8,
+            0,
+            1e-3,
+            16,
+        ).is_err());
     }
 }

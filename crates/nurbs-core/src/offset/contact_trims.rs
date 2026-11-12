@@ -170,7 +170,18 @@ pub fn certify(
             out.reason = "pcurve-work-limit";
             return Ok(out);
         }
-        let r = uv::certify(pcurves[side], side, uv::OffsetFaces { surfaces, distances }, uv::ContactParameters { axis: axis, drive: drive, free: free, second, spans: spans }, tolerance_uv, limits.uv_cells - out.uv_cells, limits.root_refinements)?;
+        let r = uv::certify(
+            pcurves[side],
+            side,
+            uv::OffsetFaces {
+                surfaces,
+                distances,
+            },
+            uv::ContactParameters { axis: axis, drive: drive, free: free, second, spans: spans },
+            tolerance_uv,
+            limits.uv_cells - out.uv_cells,
+            limits.root_refinements,
+        )?;
         out.uv_cells += r.visited;
         let valid = r.correspondence_proven;
         out.uv_reports.push(r);
@@ -429,8 +440,10 @@ mod tests {
         .unwrap()
         .unwrap();
         let pc = uv::propose(
-            [&a, &b],
-            [0.2, 0.2],
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2, 0.2],
+            },
             0,
             [0.35, 0.39],
             [0.25, 0.35],
@@ -558,7 +571,18 @@ mod tests {
             let c = fit::propose([&aa, &bb], [0.2, 0.2], 1, drive, free, second, 2)
                 .unwrap()
                 .unwrap();
-            let pc = uv::propose([&aa, &bb], [0.2, 0.2], 1, drive, free, second, 2, 3)
+            let pc = uv::propose(
+                crate::offset::contact_pcurve::OffsetFaces {
+                    surfaces: [&aa, &bb],
+                    distances: [0.2, 0.2],
+                },
+                1,
+                drive,
+                free,
+                second,
+                2,
+                3,
+            )
                 .unwrap()
                 .unwrap();
             let r = certify(
@@ -600,8 +624,10 @@ mod tests {
         .unwrap()
         .unwrap();
         let mut pc = uv::propose(
-            [&a, &b],
-            [0.2, 0.2],
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2, 0.2],
+            },
             0,
             [0.35, 0.39],
             [0.25, 0.35],
@@ -649,8 +675,10 @@ mod tests {
         .unwrap()
         .unwrap();
         let pc = uv::propose(
-            [&a, &b],
-            [0.2, 0.2],
+            crate::offset::contact_pcurve::OffsetFaces {
+                surfaces: [&a, &b],
+                distances: [0.2, 0.2],
+            },
             0,
             [0.35, 0.39],
             [0.25, 0.35],
