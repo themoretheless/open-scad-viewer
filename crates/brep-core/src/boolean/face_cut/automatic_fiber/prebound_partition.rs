@@ -5,7 +5,7 @@ mod endpoint;
 
 /// The face being cut and the cutter face, each in its own model.
 #[derive(Clone, Copy)]
-pub(crate) struct FiberFaces<'a> {
+pub struct FiberFaces<'a> {
     pub source: &'a Model,
     pub face: usize,
     pub cutter: &'a Model,

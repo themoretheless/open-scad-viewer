@@ -72,10 +72,12 @@ fn general_curved_cut_binds_actual_original_edge_roots_before_atomic_partition()
     let before = (source.clone(), cutter.clone());
     let box4 = [[0., 1.], [0.375, 0.625], [0.2, 0.55], [0.3, 0.7]];
     let out = face_cut::partition_fiber_at_face(
-        &source,
-        0,
-        &cutter,
-        0,
+        face_cut::FiberFaces {
+            source: &source,
+            face: 0,
+            cutter: &cutter,
+            cutter_face: 0,
+        },
         box4,
         ss::FiberAxis::FirstU,
         1e-8,
@@ -121,15 +123,17 @@ fn general_curved_cut_binds_actual_original_edge_roots_before_atomic_partition()
     assert_eq!(restored, out.partition.model);
     assert!(
         face_cut::partition_fiber_at_face(
-            &source,
-            0,
-            &cutter,
-            0,
+            face_cut::FiberFaces {
+                source: &source,
+                face: 0,
+                cutter: &cutter,
+                cutter_face: 0,
+            },
             box4,
             ss::FiberAxis::FirstU,
             1e-8,
             32,
-            1000000
+            1000000,
         )
         .is_err()
     );
@@ -137,15 +141,17 @@ fn general_curved_cut_binds_actual_original_edge_roots_before_atomic_partition()
     wrong[1] = [0.1, 0.2];
     assert!(
         face_cut::partition_fiber_at_face(
-            &source,
-            0,
-            &cutter,
-            0,
+            face_cut::FiberFaces {
+                source: &source,
+                face: 0,
+                cutter: &cutter,
+                cutter_face: 0,
+            },
             wrong,
             ss::FiberAxis::FirstU,
             1e-8,
             100000,
-            1000000
+            1000000,
         )
         .is_err()
     );
@@ -191,10 +197,12 @@ fn a_hole_in_the_actual_curved_cutter_cannot_be_treated_as_its_carrier() {
     cutter.validate().unwrap();
     let before = (source.clone(), cutter.clone());
     let result = face_cut::partition_fiber_at_face(
-        &source,
-        0,
-        &cutter,
-        0,
+        face_cut::FiberFaces {
+            source: &source,
+            face: 0,
+            cutter: &cutter,
+            cutter_face: 0,
+        },
         [[0., 1.], [0.375, 0.625], [0.2, 0.55], [0.3, 0.7]],
         ss::FiberAxis::FirstU,
         1e-8,

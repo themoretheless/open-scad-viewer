@@ -130,10 +130,12 @@ pub fn partition_fiber_branches_at_face(
                 let owned = pair.map(|r| (r.0, r.1));
                 let cutter_uv = pair.map(|r| r.2);
                 let axis = automatic_fiber::qualify_automatic_search(
-                    &model,
-                    owners[0],
-                    cutter,
-                    cutter_face,
+                    automatic_fiber::FiberFaces {
+                        source: &model,
+                        face: owners[0],
+                        cutter,
+                        cutter_face,
+                    },
                     &owned,
                     &cutter_uv,
                     &mut box4,

@@ -21,10 +21,7 @@ pub struct AutomaticFiberPartition {
 /// actual owned chart endpoints. All sectors survive. Other root branches,
 /// global SS coverage, material removal and corner construction remain separate.
 pub fn partition_fiber_at_face(
-    source: &Model,
-    face: usize,
-    cutter: &Model,
-    cutter_face: usize,
+    faces: FiberFaces<'_>,
     parameter_box: [[f64; 2]; 4],
     axis: ss::FiberAxis,
     tolerance_uv: f64,
@@ -32,10 +29,7 @@ pub fn partition_fiber_at_face(
     max_exact: u64,
 ) -> Result<AutomaticFiberPartition> {
     partition_fiber_impl(
-        source,
-        face,
-        cutter,
-        cutter_face,
+        faces,
         parameter_box,
         Some(axis),
         tolerance_uv,
@@ -61,10 +55,7 @@ pub fn partition_fiber_at_face_automatic(
     cutter.validate()?;
     let parameter_box = original_parameter_box(source, face, cutter, cutter_face)?;
     partition_fiber_impl(
-        source,
-        face,
-        cutter,
-        cutter_face,
+        FiberFaces { source, face, cutter, cutter_face },
         parameter_box,
         None,
         tolerance_uv,
@@ -74,16 +65,14 @@ pub fn partition_fiber_at_face_automatic(
 }
 
 fn partition_fiber_impl(
-    source: &Model,
-    face: usize,
-    cutter: &Model,
-    cutter_face: usize,
+    faces: FiberFaces<'_>,
     parameter_box: [[f64; 2]; 4],
     axis: Option<ss::FiberAxis>,
     tolerance_uv: f64,
     max_cells: usize,
     max_exact: u64,
 ) -> Result<AutomaticFiberPartition> {
+    let FiberFaces { source, face, cutter, cutter_face } = faces;
     source.validate()?;
     cutter.validate()?;
     let _free = match axis {
@@ -160,10 +149,7 @@ fn partition_fiber_impl(
     let axis = match axis {
         Some(axis) => axis,
         None => qualify_automatic_search(
-            &model,
-            face,
-            cutter,
-            cutter_face,
+            FiberFaces { source: &model, face, cutter, cutter_face },
             &roots,
             &cutter_roots,
             &mut parameter_box,
@@ -329,16 +315,14 @@ pub(super) fn automatic_search_chart(
 /// Failed proposal proofs consume the same allowance as successful ones. The
 /// actual constructed and endpoint-bound trace is still checked independently.
 pub(super) fn qualify_automatic_search(
-    model: &Model,
-    face: usize,
-    cutter: &Model,
-    cutter_face: usize,
+    faces: FiberFaces<'_>,
     roots: &[(usize, [[f64; 2]; 3])],
     cutter_roots: &[[[f64; 2]; 2]],
     parameter_box: &mut [[f64; 2]; 4],
     cells: &mut usize,
     max_cells: usize,
 ) -> Result<ss::FiberAxis> {
+    let FiberFaces { source: model, face, cutter, cutter_face } = faces;
     let original = *parameter_box;
     let sources = prebound_partition::original_fiber_sources(
         &model.faces[face].surface,
@@ -540,4 +524,5 @@ fn qualify_fiber_cover(
 
 #[path = "automatic_fiber/prebound_partition.rs"]
 mod prebound_partition;
-pub(super) use prebound_partition::{FiberFaces, FiberWork, partition_fiber_prebound};
+pub use prebound_partition::FiberFaces;
+pub(super) use prebound_partition::{FiberWork, partition_fiber_prebound};

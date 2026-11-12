@@ -48,7 +48,8 @@ pub use automatic_cap::{AutomaticCap, CapSelection, trim_ruled_and_cap};
 #[path = "face_cut/automatic_fiber.rs"]
 mod automatic_fiber;
 pub use automatic_fiber::{
-    AutomaticFiberPartition, partition_fiber_at_face, partition_fiber_at_face_automatic,
+    AutomaticFiberPartition, FiberFaces, partition_fiber_at_face,
+    partition_fiber_at_face_automatic,
 };
 #[path = "face_cut/fiber_branches.rs"]
 mod fiber_branches;

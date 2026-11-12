@@ -6,10 +6,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let directory = std::env::args().nth(1).ok_or("Need output directory")?;
     let (source, cutter) = fixture::pair();
     let out = brep_core::face_cut::partition_fiber_at_face(
-        &source,
-        0,
-        &cutter,
-        0,
+        brep_core::face_cut::FiberFaces {
+            source: &source,
+            face: 0,
+            cutter: &cutter,
+            cutter_face: 0,
+        },
         [[0., 1.], [0.375, 0.625], [0.2, 0.55], [0.3, 0.7]],
         ss::FiberAxis::FirstU,
         1e-8,

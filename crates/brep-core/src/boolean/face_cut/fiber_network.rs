@@ -380,10 +380,12 @@ fn partition_fiber_network_impl(
                 .flat_map(|e| cutter_roots[e].iter().copied())
                 .collect::<Vec<_>>();
             super::automatic_fiber::qualify_automatic_search(
-                &model,
-                request.face,
-                cutter,
-                cutter_face,
+                super::automatic_fiber::FiberFaces {
+                    source: &model,
+                    face: request.face,
+                    cutter,
+                    cutter_face,
+                },
                 &owned,
                 &cutter_owned,
                 &mut parameter_box,
