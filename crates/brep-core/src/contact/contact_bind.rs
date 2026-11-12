@@ -167,6 +167,11 @@ pub fn automatically_between_faces(
     if proposals[0] == proposals[1] {
         return Err(unproven("Distinct contact roots selected one cut"));
     }
+    let work = ContactWork {
+        tolerance_uv,
+        max_cells,
+        max_exact,
+    };
     bind_restriction(
         source,
         contact,
@@ -174,8 +179,7 @@ pub fn automatically_between_faces(
         cutters,
         proposals,
         restriction,
-        max_cells,
-        max_exact,
+        work,
     )
 }
 /// Body-edge indices and original natural parameters are proposals. Fresh roots,
@@ -235,8 +239,7 @@ pub fn between_faces(
         cutters,
         edge_parameters,
         restriction,
-        max_cells,
-        max_exact,
+        work,
     )
 }
 fn bind_restriction(
@@ -246,9 +249,13 @@ fn bind_restriction(
     cutters: [(&Model, usize, usize); 2],
     edge_parameters: [(usize, f64); 2],
     mut restriction: Restriction,
-    max_cells: usize,
-    max_exact: u64,
+    work: ContactWork,
 ) -> Result<Binding> {
+    let ContactWork {
+        max_cells,
+        max_exact,
+        ..
+    } = work;
     let tolerance = source.tolerance_mm;
     let mut cells = restriction.cells;
     let mut exact_work = restriction.exact_work;

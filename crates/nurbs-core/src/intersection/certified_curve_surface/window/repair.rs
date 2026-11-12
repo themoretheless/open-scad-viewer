@@ -2,16 +2,25 @@
 use super::*;
 mod boxes;
 use boxes::{contains, disjoint, expanded, subtract};
+/// Cell whose Krawczyk image proves one unique root with a fixed crossing sign.
+pub(super) struct UniqueCell {
+    pub existence: Box3,
+    pub image: [I; 3],
+    pub sign: i8,
+}
 pub(super) fn root(
     c: &Source<'_>,
     s: &Surface,
     ids: [usize; 3],
-    existence: Box3,
-    image: [I; 3],
-    sign: i8,
+    cell: UniqueCell,
     out: &mut WindowReport,
     max_cells: usize,
 ) -> Result<WindowRoot> {
+    let UniqueCell {
+        existence,
+        image,
+        sign,
+    } = cell;
     let mut domain = map_box(existence, [[0., 1.]; 3], image)?;
     let original = [
         [c.knots()[ids[0]], c.knots()[ids[0] + 1]],
@@ -170,7 +179,12 @@ pub(super) fn repair(
                 let index = if let Some(index) = same {
                     index
                 } else {
-                    let record = root(c, s, ids, proposal, image, sign, out, max_cells)?;
+                    let cell = UniqueCell {
+                        existence: proposal,
+                        image,
+                        sign,
+                    };
+                    let record = root(c, s, ids, cell, out, max_cells)?;
                     let index = out.roots.len();
                     out.roots.push(record);
                     index

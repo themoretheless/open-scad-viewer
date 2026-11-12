@@ -136,16 +136,12 @@ pub(super) fn search(
                 out.excluded += 1;
             }
             Verdict::Unique(root, sign) => {
-                let record = repair::root(
-                    &c,
-                    s,
-                    cell.ids,
-                    cell.domain,
-                    root,
+                let unique = repair::UniqueCell {
+                    existence: cell.domain,
+                    image: root,
                     sign,
-                    &mut out,
-                    max_cells,
-                )?;
+                };
+                let record = repair::root(&c, s, cell.ids, unique, &mut out, max_cells)?;
                 out.roots.push(record);
                 if stop_first {
                     out.unresolved.extend(stack.into_iter().map(|q| q.domain));

@@ -35,16 +35,26 @@ fn nonnegative(p: &P, lo: &Q, hi: &Q, ctx: &mut PredicateContext<'_>) -> Result<
 fn boundary(m: &Map, k: &Q, ctx: &mut PredicateContext<'_>) -> Result<P, Reason> {
     sub(&m.n, &scaled(&m.d, k, ctx)?, ctx)
 }
+/// Relation scale, source degree and contact order shared by every chart switch.
+#[derive(Clone, Copy)]
+struct MapForm<'a> {
+    scale: &'a Q,
+    degree: usize,
+    order: usize,
+}
 fn recover(
     a: &[H],
     b: &[H],
     interval: [&Q; 2],
     source_bounds: [&Q; 2],
-    scale: &Q,
-    degree: usize,
-    order: usize,
+    form: MapForm<'_>,
     ctx: &mut PredicateContext<'_>,
 ) -> Result<Option<Map>, Reason> {
+    let MapForm {
+        scale,
+        degree,
+        order,
+    } = form;
     let Some((l, m, inverse_degree, scales)) = coupled_coordinate(&a[0], ctx)? else {
         return Ok(None);
     };
@@ -153,6 +163,11 @@ pub(super) fn compare(
     scale: &Q,
     order: usize,
 ) -> Result<BezierIdentity, Reason> {
+    let form = MapForm {
+        scale,
+        degree: degrees[0],
+        order,
+    };
     let mut cursor = 0;
     let mut progress = Q::zero();
     for (bi, b) in &spans[1] {
@@ -165,17 +180,7 @@ pub(super) fn compare(
             return Err(Reason::MissingProof);
         };
         let interval = [&u[1][*bi], &u[1][bi + 1]];
-        let Some(mut map) = recover(
-            a,
-            b,
-            interval,
-            [&u[0][*ai], &u[0][ai + 1]],
-            scale,
-            degrees[0],
-            order,
-            ctx,
-        )?
-        else {
+        let Some(mut map) = recover(a, b, interval, [&u[0][*ai], &u[0][ai + 1]], form, ctx)? else {
             return Err(Reason::MissingProof);
         };
         let start_den = value(&map.d, interval[0], ctx)?;
@@ -216,9 +221,7 @@ pub(super) fn compare(
                 b,
                 interval,
                 [&u[0][*next_i], &u[0][next_i + 1]],
-                scale,
-                degrees[0],
-                order,
+                form,
                 ctx,
             )?
             else {
