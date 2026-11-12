@@ -517,7 +517,7 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
         let station=[i as f64/(count-1) as f64,(i+1) as f64/(count-1) as f64];
         let path_interval=[source[i][0],source[i+1][1]];
         let values=match mode {
-            OriginalTransport::RmfSpatial=>rmf_transport::relative_values(spatial_transport.as_ref().unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,&qs,[path_interval, station],max_cells-out.cells)?,
+            OriginalTransport::RmfSpatial=>rmf_transport::relative_values(spatial_transport.as_ref().unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::CorrectedPlanar if principal_phase.is_some()=>authored_frame_certificate::certify_planar_principal_relative_values(sweep.path,sweep.options.normal,principal_phase.unwrap(),sweep.scale,sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
             OriginalTransport::RmfPlanar|OriginalTransport::CorrectedPlanar=>authored_frame_certificate::certify_proved_planar_relative_values(sweep.path,sweep.options.normal,sweep.scale,
                 sweep.twist,sweep.affine_laws,&qs,path_interval,station,max_cells-out.cells)?,
