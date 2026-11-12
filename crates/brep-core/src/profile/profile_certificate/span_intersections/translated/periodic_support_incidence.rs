@@ -393,14 +393,14 @@ mod tests {
             };
             assert_eq!(
                 arithmetic::parameter_order::compare_rational(
-                    &f,
-                    [&n, &d],
-                    &root,
-                    &vec![Q::zero(), Q::one()],
-                    [&vec![expected], &vec![Q::one()]],
-                    &[Q::zero(), Q::zero()],
+                    arithmetic::parameter_order::RationalParameterRef::new(&f, [&n, &d], &root),
+                    arithmetic::parameter_order::RationalParameterRef::new(
+                        &vec![Q::zero(), Q::one()],
+                        [&vec![expected], &vec![Q::one()]],
+                        &[Q::zero(), Q::zero()],
+                    ),
                     128,
-                    128
+                    128,
                 )
                 .unwrap(),
                 std::cmp::Ordering::Equal
@@ -496,14 +496,18 @@ mod periodic_tests {
                     };
                     assert_eq!(
                         arithmetic::parameter_order::compare_rational(
-                            &f,
-                            [&n, &d],
-                            &root,
-                            &vec![Q::zero(), Q::one()],
-                            [&vec![expected], &vec![Q::one()]],
-                            &[Q::zero(), Q::zero()],
+                            arithmetic::parameter_order::RationalParameterRef::new(
+                                &f,
+                                [&n, &d],
+                                &root,
+                            ),
+                            arithmetic::parameter_order::RationalParameterRef::new(
+                                &vec![Q::zero(), Q::one()],
+                                [&vec![expected], &vec![Q::one()]],
+                                &[Q::zero(), Q::zero()],
+                            ),
                             128,
-                            128
+                            128,
                         )
                         .unwrap(),
                         std::cmp::Ordering::Equal
@@ -518,14 +522,10 @@ mod periodic_tests {
             let bd = decode_polynomial(&b.uv[0][1]).unwrap();
             assert_ne!(
                 arithmetic::parameter_order::compare_rational(
-                    &f,
-                    [&an, &ad],
-                    &ar,
-                    &g,
-                    [&bn, &bd],
-                    &br,
+                    arithmetic::parameter_order::RationalParameterRef::new(&f, [&an, &ad], &ar),
+                    arithmetic::parameter_order::RationalParameterRef::new(&g, [&bn, &bd], &br),
                     128,
-                    128
+                    128,
                 )
                 .unwrap(),
                 std::cmp::Ordering::Equal

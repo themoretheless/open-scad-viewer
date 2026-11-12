@@ -82,12 +82,16 @@ fn compare(
     }
     *used += 1;
     arithmetic::parameter_order::compare_rational(
-        &a.primitive,
-        [&a.coordinate[axis][0], &a.coordinate[axis][1]],
-        &a.root,
-        &b.primitive,
-        [&b.coordinate[axis][0], &b.coordinate[axis][1]],
-        &b.root,
+        arithmetic::parameter_order::RationalParameterRef::new(
+            &a.primitive,
+            [&a.coordinate[axis][0], &a.coordinate[axis][1]],
+            &a.root,
+        ),
+        arithmetic::parameter_order::RationalParameterRef::new(
+            &b.primitive,
+            [&b.coordinate[axis][0], &b.coordinate[axis][1]],
+            &b.root,
+        ),
         limits.algebraic.max_refinements,
         limits.algebraic.max_resultant_size,
     )

@@ -289,16 +289,43 @@ fn compose_fraction(h: &Poly, n: &Poly, d: &Poly, f: &Poly) -> Result<Poly> {
     }
     Ok(v)
 }
+/// A borrowed algebraic parameter value given by a rational map: the root of
+/// `primitive` isolated by `interval`, mapped through `fraction[0] / fraction[1]`.
+#[derive(Clone, Copy)]
+pub(in crate::profile::profile_certificate) struct RationalParameterRef<'a> {
+    pub primitive: &'a Poly,
+    pub fraction: [&'a Poly; 2],
+    pub interval: &'a [Q; 2],
+}
+impl<'a> RationalParameterRef<'a> {
+    pub(in crate::profile::profile_certificate) fn new(
+        primitive: &'a Poly,
+        fraction: [&'a Poly; 2],
+        interval: &'a [Q; 2],
+    ) -> Self {
+        Self {
+            primitive,
+            fraction,
+            interval,
+        }
+    }
+}
 pub(in crate::profile::profile_certificate) fn compare_rational(
-    f: &Poly,
-    x: [&Poly; 2],
-    a: &[Q; 2],
-    g: &Poly,
-    y: [&Poly; 2],
-    b: &[Q; 2],
+    first: RationalParameterRef<'_>,
+    second: RationalParameterRef<'_>,
     max_refinements: usize,
     max_matrix: usize,
 ) -> Result<Ordering> {
+    let RationalParameterRef {
+        primitive: f,
+        fraction: x,
+        interval: a,
+    } = first;
+    let RationalParameterRef {
+        primitive: g,
+        fraction: y,
+        interval: b,
+    } = second;
     let (f, n, d) = prepare_fraction(f, x[0], x[1], a)?;
     let (g, m, e) = prepare_fraction(g, y[0], y[1], b)?;
     let ca = constant_fraction(&f, &n, &d, a)?;
@@ -400,28 +427,20 @@ mod rational_tests {
         let one = vec![Q::one()];
         assert_eq!(
             compare_rational(
-                &f,
-                [&n, &d],
-                &[Q::one(), Q::one()],
-                &g,
-                [&one, &one],
-                &[Q::zero(), Q::zero()],
+                RationalParameterRef::new(&f, [&n, &d], &[Q::one(), Q::one()]),
+                RationalParameterRef::new(&g, [&one, &one], &[Q::zero(), Q::zero()]),
                 0,
-                1
+                1,
             )
             .unwrap(),
             Ordering::Equal
         );
         assert!(
             compare_rational(
-                &f,
-                [&n, &d],
-                &[-Q::one(), -Q::one()],
-                &g,
-                [&one, &one],
-                &[Q::zero(), Q::zero()],
+                RationalParameterRef::new(&f, [&n, &d], &[-Q::one(), -Q::one()]),
+                RationalParameterRef::new(&g, [&one, &one], &[Q::zero(), Q::zero()]),
                 0,
-                1
+                1,
             )
             .is_err()
         );
@@ -437,14 +456,10 @@ mod rational_tests {
         let one = vec![Q::one()];
         assert_eq!(
             compare_rational(
-                &f,
-                [&n, &d],
-                &[Q::one(), q(3, 2)],
-                &g,
-                [&m, &one],
-                &[q(2, 1), q(5, 2)],
+                RationalParameterRef::new(&f, [&n, &d], &[Q::one(), q(3, 2)]),
+                RationalParameterRef::new(&g, [&m, &one], &[q(2, 1), q(5, 2)]),
                 192,
-                64
+                64,
             )
             .unwrap(),
             Ordering::Equal

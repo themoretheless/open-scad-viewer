@@ -76,12 +76,16 @@ pub(in crate::profile::profile_certificate) fn compare(
     let bx = decode_polynomial(&b.numerator[0])?;
     let by = decode_polynomial(&b.numerator[1])?;
     arithmetic::parameter_order::compare_rational(
-        &decode_polynomial(&a.primitive)?,
-        [&ay, &ax],
-        &interval(&a.isolating_interval)?,
-        &decode_polynomial(&b.primitive)?,
-        [&by, &bx],
-        &interval(&b.isolating_interval)?,
+        arithmetic::parameter_order::RationalParameterRef::new(
+            &decode_polynomial(&a.primitive)?,
+            [&ay, &ax],
+            &interval(&a.isolating_interval)?,
+        ),
+        arithmetic::parameter_order::RationalParameterRef::new(
+            &decode_polynomial(&b.primitive)?,
+            [&by, &bx],
+            &interval(&b.isolating_interval)?,
+        ),
         l.max_refinements,
         l.max_resultant_size,
     )

@@ -77,12 +77,8 @@ impl Compare {
             .filter(|n| *n <= self.cap)
             .ok_or_else(|| refused("Native shore root comparison allowance exhausted"))?;
         arithmetic::parameter_order::compare_rational(
-            &a.f,
-            [&a.n, &a.d],
-            &a.root,
-            &b.f,
-            [&b.n, &b.d],
-            &b.root,
+            arithmetic::parameter_order::RationalParameterRef::new(&a.f, [&a.n, &a.d], &a.root),
+            arithmetic::parameter_order::RationalParameterRef::new(&b.f, [&b.n, &b.d], &b.root),
             self.limits.max_refinements,
             self.limits.max_resultant_size,
         )

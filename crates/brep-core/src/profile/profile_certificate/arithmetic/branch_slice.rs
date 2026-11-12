@@ -118,12 +118,8 @@ pub(in crate::profile::profile_certificate) fn compare(
     let a = value(&a, axis, &q, refinements)?;
     let b = value(&b, axis, &q, refinements)?;
     let result = parameter_order::compare_rational(
-        &a.f,
-        [&a.numerator, &a.denominator],
-        &a.root,
-        &b.f,
-        [&b.numerator, &b.denominator],
-        &b.root,
+        parameter_order::RationalParameterRef::new(&a.f, [&a.numerator, &a.denominator], &a.root),
+        parameter_order::RationalParameterRef::new(&b.f, [&b.numerator, &b.denominator], &b.root),
         refinements,
         matrix,
     )?;
