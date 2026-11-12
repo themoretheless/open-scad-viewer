@@ -230,11 +230,13 @@ fn affine_station_projects_the_same_axis_scale_and_center_into_corner_plane(){
     let r=certify(&[[0.,0.,0.],[0.,0.,10.],[10.,0.,10.]],[1.,0.,0.],false,2.,10).unwrap();
     let axes=[[2.,2.],[3.,3.],[1.,1.]];
     let center=[[0.5,0.5],[-1.,-1.],[2.,2.]];
+    let affine=StationAffine{axes,center};
     // q=(4.5,11,2), projection onto x+z=10 removes q.x+q.z.
-    contains(r.station_point_affine(0,[1.,1.],[1.,2.,0.],[2.,2.],[0.,0.],axes,center).unwrap().unwrap(),[4.5,11.,5.5]);
+    contains(r.station_point_affine(0,[1.,1.],[1.,2.,0.],[2.,2.],[0.,0.],affine).unwrap().unwrap(),[4.5,11.,5.5]);
     // At the open endpoint there is no miter projection.
-    contains(r.station_point_affine(0,[0.,0.],[1.,2.,0.],[2.,2.],[0.,0.],axes,center).unwrap().unwrap(),[4.5,11.,2.]);
-    assert!(r.station_point_affine(0,[0.,0.],[1.,2.,0.],[2.,2.],[0.,0.],[[0.,1.];3],center).is_err());
+    contains(r.station_point_affine(0,[0.,0.],[1.,2.,0.],[2.,2.],[0.,0.],affine).unwrap().unwrap(),[4.5,11.,2.]);
+    let degenerate=StationAffine{axes:[[0.,1.];3],..affine};
+    assert!(r.station_point_affine(0,[0.,0.],[1.,2.,0.],[2.,2.],[0.,0.],degenerate).is_err());
     let vector=|value:[f64;3]|crate::curve::Curve {degree:1,knots:vec![2.,2.,5.,5.],control_points:vec![value.to_vec();2],weights:vec![1.;2],periodic:false};
     let scalar=|value:f64|vector([value,0.,0.]);
     let axes=vector([2.,3.,1.]);let center=vector([0.5,-1.,2.]);

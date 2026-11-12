@@ -38,6 +38,20 @@ pub struct Report {
     pub(super) distribute_holonomy: bool,
     pub(super) sites: Option<Vec<[f64; 3]>>,
 }
+/// Interval enclosures of a station's local affine law: per-axis profile
+/// scale and the center offset in the rotated local frame.
+#[derive(Clone, Copy, Debug)]
+pub struct StationAffine {
+    pub axes: [[f64; 2]; 3],
+    pub center: [[f64; 2]; 3],
+}
+impl StationAffine {
+    /// Unit axis scale and zero center.
+    pub const IDENTITY: Self = Self {
+        axes: [[1., 1.]; 3],
+        center: [[0., 0.]; 3],
+    };
+}
 impl Report {
     pub(in super::super) fn without_distributed_holonomy(mut self)->Self {
         self.distribute_holonomy=false; self
@@ -153,15 +167,16 @@ impl Report {
         scale: [f64; 2],
         twist: [f64; 2],
     ) -> Result<Option<VectorEnclosure>> {
-        self.station_point_affine(edge,fraction,authored,scale,twist,[[1.,1.];3],[[0.,0.];3])
+        self.station_point_affine(edge,fraction,authored,scale,twist,StationAffine::IDENTITY)
     }
     /// Local affine law convention: uniform scale multiplies axis-scaled
     /// profile offsets; the center is added in the rotated local frame before
     /// the same miter projection as the profile. Axial center uses the tangent.
     pub fn station_point_affine(
         &self,edge:usize,fraction:[f64;2],authored:[f64;3],scale:[f64;2],twist:[f64;2],
-        axes:[[f64;2];3],center:[[f64;2];3],
+        affine:StationAffine,
     )->Result<Option<VectorEnclosure>> {
+        let StationAffine{axes,center}=affine;
         check(
             authored.iter().all(|x| x.is_finite()),
             "Station profile point must be finite",
@@ -256,7 +271,7 @@ impl Report {
             let axes=super::super::vector_certificate::certify_values_traversal(axes,traversal,max_cells,true)?;
             let center=super::super::vector_certificate::certify_values_traversal(center,traversal,max_cells-axes.cells,false)?;
             let (Some(axes),Some(center))=(axes.value,center.value) else {return Ok(None);};
-            self.station_point_affine(edge,fraction,authored,s,t,axes,center)
+            self.station_point_affine(edge,fraction,authored,s,t,StationAffine{axes,center})
         } else {
             self.station_point(edge, fraction, authored, s, t)
         }
