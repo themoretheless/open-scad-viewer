@@ -67,15 +67,9 @@ pub fn finish_host_views(
         diagnostics.evaluated_source_patches += pixels * options.depth_hypotheses * sources.len();
         diagnostics.sampled_source_pixels +=
             (pixels * options.depth_hypotheses * sources.len() * patch_side * patch_side) as u64;
-        let inverse_span = 1. / prep.near - 1. / prep.far;
         let (depth, confidence) = select_from_scores(
             view_scores,
-            prep.width,
-            prep.height,
-            prep.ranges.as_ref(),
-            prep.near,
-            prep.far,
-            inverse_span,
+            prep,
             options,
             &mut |row| {
                 cancelled(
@@ -227,18 +221,22 @@ pub(super) fn coarse_intervals(
 
 /// Per-pixel selection over a host/GPU-computed score map (f32 widened to f64,
 /// exact widening), shared by the native GPU sweep and the browser host path.
-#[allow(clippy::too_many_arguments)]
 fn select_from_scores(
     scores_map: &[f32],
-    width: usize,
-    height: usize,
-    ranges: Option<&SweepRanges>,
-    near: f64,
-    far: f64,
-    inverse_span: f64,
+    prep: &PreparedView,
     options: &DenseOptions,
     row_progress: &mut impl FnMut(usize) -> Result<()>,
 ) -> Result<(Vec<f64>, Vec<f32>)> {
+    let &PreparedView {
+        width,
+        height,
+        near,
+        far,
+        ref ranges,
+        ..
+    } = prep;
+    let ranges = ranges.as_ref();
+    let inverse_span = 1. / near - 1. / far;
     let mut depth = vec![0.; width * height];
     let mut confidence = vec![0.; width * height];
     for y in 3..height - 3 {

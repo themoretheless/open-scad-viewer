@@ -129,6 +129,14 @@ pub fn reconstruct_detailed_with_matches(
         report,
     }
 }
+/// Flat bundle-adjustment inputs, rebuilt on every optimization pass and kept
+/// between passes only to reuse their allocations.
+#[derive(Default)]
+pub(super) struct BundleScratch {
+    positions: Vec<V3>,
+    observations: Vec<bundle::Observation>,
+}
+
 #[expect(
     clippy::too_many_arguments,
     reason = "pipeline state is passed explicitly across the solver boundary; a typed optimization context is the next modularization step"
@@ -141,9 +149,12 @@ pub(super) fn optimize_geometry(
     options: &bundle::BundleOptions,
     report: &mut ReconstructionReport,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
-    positions: &mut Vec<V3>,
-    observations: &mut Vec<bundle::Observation>,
+    scratch: &mut BundleScratch,
 ) -> Result<()> {
+    let BundleScratch {
+        positions,
+        observations,
+    } = scratch;
     positions.clear();
     positions.extend(points.iter().map(|p| p.position));
     observations.clear();

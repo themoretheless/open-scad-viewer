@@ -43,8 +43,7 @@ pub(super) fn grow(
             tracks[b][m.b] = Some(id);
         }
     }
-    let mut ba_positions = Vec::new();
-    let mut ba_observations = Vec::new();
+    let mut scratch = BundleScratch::default();
     loop {
         let registered = cameras.iter().filter(|c| c.is_some()).count();
         if !progress("cameras", registered, images.len()) {
@@ -245,8 +244,7 @@ pub(super) fn grow(
                 bundle,
                 report,
                 progress,
-                &mut ba_positions,
-                &mut ba_observations,
+                &mut scratch,
             )?;
         }
     }
@@ -259,8 +257,7 @@ pub(super) fn grow(
             bundle,
             report,
             progress,
-            &mut ba_positions,
-            &mut ba_observations,
+            &mut scratch,
         )?;
     }
     // The track table is dead past this point, so filtered or merged empty tracks can leave.
