@@ -49,10 +49,12 @@ pub fn solve(
     solve_with_reference(
         seed,
         seed,
-        guides,
-        curvatures,
-        constraints,
-        locks,
+        super::ConstraintSet {
+            guides,
+            curvatures,
+            hard: constraints,
+            locks,
+        },
         model,
         options,
     )
@@ -61,13 +63,16 @@ pub fn solve(
 pub fn solve_with_reference(
     seed: &Surface,
     reference: &Surface,
-    guides: &[CurveConstraint<'_>],
-    curvatures: &[CurvatureConstraint<'_>],
-    constraints: &[Constraint],
-    locks: Option<BoundaryLocks<'_>>,
+    set: super::ConstraintSet<'_>,
     model: &variational::Model,
     options: Options,
 ) -> Result<Qualified> {
+    let super::ConstraintSet {
+        guides,
+        curvatures,
+        hard: constraints,
+        locks,
+    } = set;
     if !(1..=500000000).contains(&options.max_total_assembly_terms)
         || !options.curves.curvature_tolerance.is_finite()
         || options.curves.curvature_tolerance <= 0.

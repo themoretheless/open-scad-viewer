@@ -332,10 +332,12 @@ fn run(
                 rational::loading::solve_with_reference(
                     seed,
                     p.reference,
-                    &curves,
-                    &curvature,
-                    hard,
-                    locks,
+                    network::ConstraintSet {
+                        guides: &curves,
+                        curvatures: &curvature,
+                        hard,
+                        locks,
+                    },
                     p.model,
                     w,
                 )
@@ -344,10 +346,12 @@ fn run(
                 network::loading::solve_with_reference(
                     seed,
                     p.reference,
-                    &curves,
-                    &curvature,
-                    hard,
-                    locks,
+                    network::ConstraintSet {
+                        guides: &curves,
+                        curvatures: &curvature,
+                        hard,
+                        locks,
+                    },
                     p.model,
                     settings,
                 )

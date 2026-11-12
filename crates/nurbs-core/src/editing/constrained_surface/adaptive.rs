@@ -415,10 +415,12 @@ fn run(
                     Input::Authored(g, c) => rational::loading::solve_with_reference(
                         &anchor,
                         seed,
-                        g,
-                        c,
-                        hard,
-                        construction_locks,
+                        network::ConstraintSet {
+                            guides: g,
+                            curvatures: c,
+                            hard,
+                            locks: construction_locks,
+                        },
                         p.model,
                         w,
                     )
@@ -446,10 +448,12 @@ fn run(
                     Input::Authored(g, c) => network::loading::solve_with_reference(
                         &anchor,
                         seed,
-                        g,
-                        c,
-                        hard,
-                        construction_locks,
+                        network::ConstraintSet {
+                            guides: g,
+                            curvatures: c,
+                            hard,
+                            locks: construction_locks,
+                        },
                         p.model,
                         settings,
                     )

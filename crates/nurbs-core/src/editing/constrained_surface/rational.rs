@@ -310,10 +310,12 @@ fn run(
             network::loading::solve_with_reference(
                 &anchor,
                 p.reference,
-                guides,
-                curvatures,
-                hard,
-                locks,
+                network::ConstraintSet {
+                    guides,
+                    curvatures,
+                    hard,
+                    locks,
+                },
                 p.model,
                 p.options.loaded(verify_options, assembly_reserve),
             )

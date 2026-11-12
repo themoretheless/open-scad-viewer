@@ -53,10 +53,12 @@ pub(super) fn run(
                 match network::loading::solve_with_reference(
                     &anchor,
                     reference,
-                    guides,
-                    curvatures,
-                    hard,
-                    locks,
+                    network::ConstraintSet {
+                        guides,
+                        curvatures,
+                        hard,
+                        locks,
+                    },
                     model,
                     q.options.loaded(curves, assembly),
                 ) {

@@ -246,18 +246,32 @@ pub fn solve(
     model: &variational::Model,
     options: Options,
 ) -> Result<Qualified> {
-    solve_with_reference(seed, seed, guides, curvatures, hard, locks, model, options)
+    solve_with_reference(
+        seed,
+        seed,
+        network::ConstraintSet {
+            guides,
+            curvatures,
+            hard,
+            locks,
+        },
+        model,
+        options,
+    )
 }
 pub fn solve_with_reference(
     seed: &Surface,
     reference: &Surface,
-    guides: &[network::CurveConstraint<'_>],
-    curvatures: &[network::CurvatureConstraint<'_>],
-    hard: &[Constraint],
-    locks: Option<network::BoundaryLocks<'_>>,
+    set: network::ConstraintSet<'_>,
     model: &variational::Model,
     options: Options,
 ) -> Result<Qualified> {
+    let network::ConstraintSet {
+        guides,
+        curvatures,
+        hard,
+        locks,
+    } = set;
     super::validate(seed, guides, curvatures, hard, options.geometry)?;
     if options.max_weight_trials > 4096
         || !(1..=500000000).contains(&options.max_total_assembly_terms)
@@ -308,10 +322,12 @@ pub fn solve_with_reference(
         match network::loading::solve_with_reference(
             seed,
             reference,
-            guides,
-            curvatures,
-            hard,
-            locks,
+            network::ConstraintSet {
+                guides,
+                curvatures,
+                hard,
+                locks,
+            },
             model,
             options.loaded(p, reserve),
         ) {

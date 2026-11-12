@@ -74,6 +74,15 @@ impl Default for Options {
         }
     }
 }
+/// Every authored constraint of one network solve: guide curves, G2 curvature
+/// constraints, hard point constraints and optional boundary locks.
+#[derive(Clone, Copy)]
+pub struct ConstraintSet<'a> {
+    pub guides: &'a [CurveConstraint<'a>],
+    pub curvatures: &'a [CurvatureConstraint<'a>],
+    pub hard: &'a [Constraint],
+    pub locks: Option<BoundaryLocks<'a>>,
+}
 #[derive(Clone, Copy)]
 pub struct BoundaryLocks<'a> {
     pub reference: &'a Surface,
