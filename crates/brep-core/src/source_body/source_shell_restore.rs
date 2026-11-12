@@ -158,13 +158,17 @@ pub fn restore(value: Value, limits: &Limits) -> Result<source_shell_incidence::
         .collect::<Result<Vec<_>>>()?;
     source_shell_incidence::assemble_regions_with_pole_inputs(
         &regions,
-        &pairs,
-        &planes,
-        &maps,
-        &candidates,
-        &poles,
-        limits.exact_work,
-        limits.driver_cells,
+        source_shell_incidence::AffineInputs {
+            pairs: &pairs,
+            planes: &planes,
+            maps: &maps,
+            candidates: &candidates,
+            poles: &poles,
+        },
+        source_shell_incidence::AssemblyWork {
+            max_work: limits.exact_work,
+            max_driver_cells: limits.driver_cells,
+        },
     )
 }
 

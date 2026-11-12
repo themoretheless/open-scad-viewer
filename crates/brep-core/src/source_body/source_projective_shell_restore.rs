@@ -151,7 +151,7 @@ pub fn restore(value: Value, limits: &Limits) -> Result<source_shell_incidence::
             poles: &poles,
         },
         &fractions,
-        source_shell_incidence::ProjectiveWork {
+        source_shell_incidence::AssemblyWork {
             max_work: limits.exact_work,
             max_driver_cells: limits.driver_cells,
         },

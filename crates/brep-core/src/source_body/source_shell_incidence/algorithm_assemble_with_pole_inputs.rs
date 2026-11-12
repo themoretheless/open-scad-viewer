@@ -2,23 +2,13 @@
 use super::*;
 pub fn assemble_with_pole_inputs(
     faces: &[Vec<Wire>],
-    pairs: &[Pair],
-    planes: &[RootPlanes],
-    maps: &[AffineMaps],
-    candidates: &[RootCandidates],
-    poles: &[Pole],
-    max_work: u64,
-    max_driver_cells: usize,
+    inputs: AffineInputs<'_>,
+    work: AssemblyWork,
 ) -> Result<Report> {
     assemble_core(
         faces,
-        pairs,
-        planes,
-        maps,
-        candidates,
-        poles,
-        max_work,
-        max_driver_cells,
+        inputs,
+        work,
         |input, work, driver| {
             let p = input.pair;
             let report = if input.ranges.is_some() || input.candidates.is_some() {

@@ -211,13 +211,13 @@ pub fn assemble_regions_with_poles(
 }
 /// Recompute qualified material incidence with all root inputs and pole uses.
 pub fn assemble_regions_with_pole_inputs(
-    regions:&[crate::source_contour_proposal::SourceRegion],pairs:&[Pair],
-    planes:&[RootPlanes],maps:&[AffineMaps],candidates:&[RootCandidates],poles:&[Pole],
-    max_work:u64,max_driver_cells:usize,
-)->Result<Report> {
+    regions: &[crate::source_contour_proposal::SourceRegion],
+    inputs: AffineInputs<'_>,
+    work: AssemblyWork,
+) -> Result<Report> {
     if regions.len()<2 || regions.len()>4096 {return Err(error("Choose bounded qualified regions"));}
     let faces=regions.iter().map(|r|r.world_wires()).collect::<Result<Vec<_>>>()?;
-    let mut report=assemble_with_pole_inputs(&faces,pairs,planes,maps,candidates,poles,max_work,max_driver_cells)?;
+    let mut report = assemble_with_pole_inputs(&faces, inputs, work)?;
     if let Some(shell)=report.shell.as_mut() {shell.regions=Some(regions.to_vec());}
     Ok(report)
 }
@@ -256,13 +256,8 @@ pub fn assemble_with_endpoint_inputs(
 ) -> Result<Report> {
     assemble_with_pole_inputs(
         faces,
-        pairs,
-        planes,
-        maps,
-        candidates,
-        &[],
-        max_work,
-        max_driver_cells,
+        AffineInputs { pairs, planes, maps, candidates, poles: &[] },
+        AssemblyWork { max_work, max_driver_cells },
     )
 }
 /// Contract only independently qualified original collapsed boundaries.
@@ -273,7 +268,11 @@ pub fn assemble_with_poles(
     poles: &[Pole],
     max_work: u64,
 ) -> Result<Report> {
-    assemble_with_pole_inputs(faces, pairs, &[], &[], &[], poles, max_work, 0)
+    assemble_with_pole_inputs(
+        faces,
+        AffineInputs { pairs, planes: &[], maps: &[], candidates: &[], poles },
+        AssemblyWork { max_work, max_driver_cells: 0 },
+    )
 }
 type Ranges=[[[f64;2];2];2];
 type Planes=[Option<[[f64;3];3]>;2];
@@ -310,13 +309,13 @@ pub fn assemble_projective(
     assemble_projective_with_poles(
         faces,
         ProjectiveInputs { pairs, planes, maps, candidates, poles: &[] },
-        ProjectiveWork { max_work, max_driver_cells },
+        AssemblyWork { max_work, max_driver_cells },
     )
 }
 pub fn assemble_projective_with_poles(
     faces: &[Vec<Wire>],
     inputs: ProjectiveInputs<'_>,
-    work: ProjectiveWork,
+    work: AssemblyWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
     assemble_projective_with_fraction_candidates(faces, inputs, &[], work)
 }
@@ -325,7 +324,7 @@ pub fn assemble_projective_with_fraction_candidates(
     faces: &[Vec<Wire>],
     inputs: ProjectiveInputs<'_>,
     fraction_candidates: &[RootFractionCandidates],
-    work: ProjectiveWork,
+    work: AssemblyWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
     assemble_projective_fraction_impl(faces, inputs, fraction_candidates, None, work)
 }
@@ -339,10 +338,20 @@ pub struct ProjectiveInputs<'a> {
     pub candidates: &'a [RootCandidates],
     pub poles: &'a [Pole],
 }
+/// Root data shared by affine shell assembly: face pairs, root planes, affine
+/// maps, root candidates and poles.
+#[derive(Clone, Copy)]
+pub struct AffineInputs<'a> {
+    pub pairs: &'a [Pair],
+    pub planes: &'a [RootPlanes],
+    pub maps: &'a [AffineMaps],
+    pub candidates: &'a [RootCandidates],
+    pub poles: &'a [Pole],
+}
 pub use crate::source_projective_edge::FractionDiscovery;
-/// Exact-work and driver-cell limits of one projective assembly.
+/// Exact-work and driver-cell limits of one shell assembly.
 #[derive(Clone, Copy, Debug)]
-pub struct ProjectiveWork {
+pub struct AssemblyWork {
     pub max_work: u64,
     pub max_driver_cells: usize,
 }
@@ -351,7 +360,7 @@ pub fn assemble_projective_with_discovered_fraction_candidates(
     faces: &[Vec<Wire>],
     inputs: ProjectiveInputs<'_>,
     discovery: FractionDiscovery,
-    work: ProjectiveWork,
+    work: AssemblyWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
     let FractionDiscovery { max_denominator, max_candidates_per_axis } = discovery;
     if !(1..=4096).contains(&max_denominator) || !(1..=64).contains(&max_candidates_per_axis) {
@@ -379,13 +388,13 @@ pub fn assemble_regions_projective(
     assemble_regions_projective_with_poles(
         regions,
         ProjectiveInputs { pairs, planes, maps, candidates, poles: &[] },
-        ProjectiveWork { max_work, max_driver_cells },
+        AssemblyWork { max_work, max_driver_cells },
     )
 }
 pub fn assemble_regions_projective_with_poles(
     regions: &[crate::source_contour_proposal::SourceRegion],
     inputs: ProjectiveInputs<'_>,
-    work: ProjectiveWork,
+    work: AssemblyWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
     assemble_regions_projective_with_fraction_candidates(regions, inputs, &[], work)
 }
@@ -394,7 +403,7 @@ pub fn assemble_regions_projective_with_fraction_candidates(
     regions: &[crate::source_contour_proposal::SourceRegion],
     inputs: ProjectiveInputs<'_>,
     fraction_candidates: &[RootFractionCandidates],
-    work: ProjectiveWork,
+    work: AssemblyWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
     if !(2..=4096).contains(&regions.len()) {
         return Err(error("Choose bounded qualified source regions"));
@@ -413,15 +422,12 @@ pub fn assemble_regions_projective_with_fraction_candidates(
 
 fn assemble_core<E>(
     faces: &[Vec<Wire>],
-    pairs: &[Pair],
-    planes: &[RootPlanes],
-    maps: &[AffineMaps],
-    candidates: &[RootCandidates],
-    poles: &[Pole],
-    max_work: u64,
-    max_driver_cells: usize,
+    inputs: AffineInputs<'_>,
+    work: AssemblyWork,
     mut qualify: impl FnMut(PairInput<'_>, u64, usize) -> Result<EdgeReport<E>>,
 ) -> Result<Report<E>> {
+    let AffineInputs { pairs, planes, maps, candidates, poles } = inputs;
+    let AssemblyWork { max_work, max_driver_cells } = work;
     if faces.len() < 2
         || faces.len() > 4096
         || max_work == 0

@@ -106,13 +106,17 @@ impl Shell {
         }
         assemble_regions_with_pole_inputs(
             &regions,
-            &pairs,
-            &planes,
-            &maps,
-            &candidates,
-            &poles(self),
-            limits.exact_work,
-            limits.driver_cells,
+            AffineInputs {
+                pairs: &pairs,
+                planes: &planes,
+                maps: &maps,
+                candidates: &candidates,
+                poles: &poles(self),
+            },
+            AssemblyWork {
+                max_work: limits.exact_work,
+                max_driver_cells: limits.driver_cells,
+            },
         )
     }
 }
@@ -175,7 +179,7 @@ impl Shell<crate::source_projective_edge::Edge> {
                 poles: &poles(self),
             },
             &fractions,
-            ProjectiveWork {
+            AssemblyWork {
                 max_work: limits.exact_work,
                 max_driver_cells: limits.driver_cells,
             },

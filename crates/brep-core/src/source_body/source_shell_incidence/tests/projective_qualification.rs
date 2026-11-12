@@ -1013,7 +1013,7 @@
                 poles: &[],
             },
             &fractions,
-            ProjectiveWork {
+            AssemblyWork {
                 max_work: 100000000,
                 max_driver_cells: 10000,
             },
@@ -1027,7 +1027,7 @@
             &regions,
             ProjectiveInputs { pairs: &pairs, planes: &[], maps: &maps, candidates: &[], poles: &[] },
             FractionDiscovery { max_denominator: 128, max_candidates_per_axis: 16 },
-            ProjectiveWork { max_work: 100000000, max_driver_cells: 10000 },
+            AssemblyWork { max_work: 100000000, max_driver_cells: 10000 },
         ).unwrap();
         let automatic_work=automatic.work_used;
         let automatic=automatic.shell.expect(automatic.reason);
@@ -1042,7 +1042,7 @@
             &regions,
             ProjectiveInputs { pairs: &pairs, planes: &[], maps: &maps, candidates: &[], poles: &[] },
             FractionDiscovery { max_denominator: 128, max_candidates_per_axis: 16 },
-            ProjectiveWork { max_work: automatic_work-1, max_driver_cells: 10000 },
+            AssemblyWork { max_work: automatic_work-1, max_driver_cells: 10000 },
         ).unwrap().shell.is_none());
         let limits=crate::source_projective_shell_restore::Limits{regions:crate::source_region_restore::test_limits(),exact_work:100000000,driver_cells:10000};
         let native=shell.requalify(&limits).unwrap();
@@ -1071,7 +1071,7 @@
                 poles: &[],
             },
             &duplicate,
-            ProjectiveWork {
+            AssemblyWork {
                 max_work: 100000000,
                 max_driver_cells: 10000,
             },
@@ -1116,7 +1116,7 @@
             regions,
             ProjectiveInputs { pairs, planes: &[], maps: &maps, candidates: &[], poles: &[] },
             FractionDiscovery { max_denominator: 128, max_candidates_per_axis: 16 },
-            ProjectiveWork { max_work: 100000000, max_driver_cells: 10000 },
+            AssemblyWork { max_work: 100000000, max_driver_cells: 10000 },
         )
         .unwrap();
         let shell = r.shell.expect(r.reason);

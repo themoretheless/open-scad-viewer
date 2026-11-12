@@ -23,7 +23,7 @@ pub fn prepare(
 pub fn prepare_projective(model:&crate::Model,limits:Limits)
     ->crate::Result<crate::source_shell_incidence::Report<crate::source_projective_edge::Edge>> {
     prepare_using(model,limits,|regions,pairs,poles,work| {
-        crate::source_shell_incidence::assemble_regions_projective_with_poles(regions, crate::source_shell_incidence::ProjectiveInputs { pairs, planes: &[], maps: &[], candidates: &[], poles }, crate::source_shell_incidence::ProjectiveWork { max_work: work, max_driver_cells: 0 })
+        crate::source_shell_incidence::assemble_regions_projective_with_poles(regions, crate::source_shell_incidence::ProjectiveInputs { pairs, planes: &[], maps: &[], candidates: &[], poles }, crate::source_shell_incidence::AssemblyWork { max_work: work, max_driver_cells: 0 })
     })
 }
 fn prepare_using<E>(model:&crate::Model,limits:Limits,

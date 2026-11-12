@@ -5,10 +5,10 @@ pub fn assemble_projective_fraction_impl(
     inputs: ProjectiveInputs<'_>,
     fraction_candidates: &[RootFractionCandidates],
     discovery: Option<[usize; 2]>,
-    work: ProjectiveWork,
+    work: AssemblyWork,
 ) -> Result<Report<crate::source_projective_edge::Edge>> {
     let ProjectiveInputs { pairs, planes, maps, candidates, poles } = inputs;
-    let ProjectiveWork { max_work, max_driver_cells } = work;
+    let AssemblyWork { max_work, max_driver_cells } = work;
     let mut fractions = BTreeMap::new();
     for proposal in fraction_candidates {
         if proposal.pair >= pairs.len()
@@ -55,13 +55,8 @@ pub fn assemble_projective_fraction_impl(
         .collect();
     assemble_core(
         faces,
-        pairs,
-        planes,
-        &affine,
-        candidates,
-        poles,
-        max_work,
-        max_driver_cells,
+        AffineInputs { pairs, planes, maps: &affine, candidates, poles },
+        AssemblyWork { max_work, max_driver_cells },
         |input, work, driver| {
             let full = std::array::from_fn(|side| {
                 if input.pair.world_reversed[side] ^ input.sources[side].reversed() {
