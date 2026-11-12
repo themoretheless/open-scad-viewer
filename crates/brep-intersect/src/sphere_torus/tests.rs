@@ -384,11 +384,40 @@ fn clearly_off_axis_contacts_are_traced_and_certified() {
                 pieces,
                 distance_bound,
                 spans,
+                sphere_uv,
+                torus_uv,
+                lift_deviation,
             } = component
             else {
                 panic!("expected a traced component off the axis");
             };
             assert!(*distance_bound <= TRACE_TOLERANCE && *spans > 0);
+            assert!(*lift_deviation <= LIFT_TOLERANCE);
+            assert!(!sphere_uv.is_empty() && !torus_uv.is_empty());
+            // Independent check of the lifts: mapped pcurve samples sit on
+            // both canonical surfaces and inside the patch domain.
+            let lifted = |surface: &nurbs_core::surface::Surface, arcs: &[Curve]| {
+                for arc in arcs {
+                    for k in 0..=32 {
+                        let uv = arc.evaluate(k as f64 / 32.).unwrap().point;
+                        assert!(uv.iter().all(|x| (-1e-9..=1. + 1e-9).contains(x)), "{uv:?}");
+                        let p = surface
+                            .evaluate(uv[0].clamp(0., 1.), uv[1].clamp(0., 1.))
+                            .unwrap()
+                            .point;
+                        let d = sub([p[0], p[1], p[2]], at);
+                        let on_sphere = (d[0].hypot(d[1]).hypot(d[2]) - radius).abs();
+                        let on_torus = ((p[0].hypot(p[1]) - 3.).hypot(p[2]) - 1.).abs();
+                        assert!(on_sphere <= 2. * LIFT_TOLERANCE && on_torus <= 2. * LIFT_TOLERANCE);
+                    }
+                }
+            };
+            for lift in sphere_uv {
+                lifted(&sphere.faces[lift.patch].surface, &lift.arcs);
+            }
+            for lift in torus_uv {
+                lifted(&torus.faces[lift.patch].surface, &lift.arcs);
+            }
             // Independent dense samples against the canonical surfaces.
             for piece in pieces {
                 for k in 0..=40 {

@@ -19,8 +19,12 @@ impl value_codec::Serialize for SphereTorusComponent {
                 pieces,
                 distance_bound,
                 spans,
+                sphere_uv,
+                torus_uv,
+                lift_deviation,
             } => value_codec::json!({"kind":"traced","pieces":pieces,
-                "distanceBound":distance_bound,"spans":spans}),
+                "distanceBound":distance_bound,"spans":spans,"sphereUv":sphere_uv,
+                "torusUv":torus_uv,"liftDeviation":lift_deviation}),
         }
     }
 }

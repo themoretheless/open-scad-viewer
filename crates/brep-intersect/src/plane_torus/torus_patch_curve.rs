@@ -126,7 +126,7 @@ pub(super) fn plane_uv_metric(
 /// homogeneous arc gives tan(phi/2) = (s^2 + 2ws)/(s^2 + 4ws + 2) with
 /// w = cos(pi/4), whose discriminant is exactly 2; the nonnegative root is
 /// s = sqrt(2) tan(phi/2) / (1 - tan(phi/2)) and t = s/(1+s).
-pub(super) fn arc_parameter(local: f64) -> f64 {
+pub(crate) fn arc_parameter(local: f64) -> f64 {
     if (local - QUARTER).abs() <= 64. * f64::EPSILON * 4. {
         return 1.;
     }

@@ -12,8 +12,8 @@
 //! certified, never forced: a perpendicular offset at pure rounding scale
 //! snaps to the axis, an offset inside the recognition-scale band reports a
 //! `NearCoincidence` region, and a clearly off-axis contact is traced and
-//! certified as `Traced` pieces (the general sphere/torus pair is a quartic, out of
-//! scope) unless it provably misses: an off-axis sphere entirely outside the
+//! certified as `Traced` pieces with sampled cubic UV lifts on both surfaces
+//! (see `traced_lift`) unless it provably misses: an off-axis sphere entirely outside the
 //! tube, entirely inside it, or enclosing the whole torus resolves empty. Classification uses outward binary64 bands widened by both
 //! recognition deviations.
 //!
@@ -52,6 +52,8 @@
 //! region. Nothing here authorizes a topology change.
 #[cfg(feature = "codec")]
 mod serialization;
+mod traced_lift;
+pub use traced_lift::LIFT_TOLERANCE;
 use super::plane_torus::{
     CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
 };
@@ -84,14 +86,21 @@ pub enum SphereTorusComponent {
     /// rational form, traced and represented by cubic pieces that close into
     /// one loop with exactly shared ends. Every point of every piece is
     /// certified within `distance_bound` of both surfaces (Bernstein bounds
-    /// of the implicit equations in outward interval arithmetic). No UV
-    /// lifts yet, and completeness of the component set is not certified.
+    /// of the implicit equations in outward interval arithmetic).
+    /// Completeness of the component set is not certified.
     Traced {
         pieces: Vec<Curve>,
         /// Certified upper bound on the distance from either surface.
         distance_bound: f64,
         /// Number of certified Bezier spans.
         spans: usize,
+        /// Cubic UV pcurves per sphere patch, cut at the patch seams.
+        sphere_uv: Vec<SpherePatchCircle>,
+        /// Cubic UV pcurves per torus patch, cut at the patch seams.
+        torus_uv: Vec<TorusPatchCurve>,
+        /// Sampled (not certified) bound on the distance of mapped pcurve
+        /// points from the other surface, at most `LIFT_TOLERANCE`.
+        lift_deviation: f64,
     },
 }
 
@@ -227,13 +236,28 @@ pub fn intersect_sphere_torus(
             TRACE_TOLERANCE,
         ) {
             Ok(loops) if !loops.is_empty() => {
-                report
-                    .components
-                    .extend(loops.into_iter().map(|l| SphereTorusComponent::Traced {
+                for l in loops {
+                    let lifted = traced_lift::lift_traced(
+                        &sphere,
+                        &torus,
+                        sphere_model,
+                        torus_model,
+                        &l.pieces,
+                    );
+                    let Ok((sphere_uv, torus_uv, lift_deviation)) = lifted else {
+                        report.components.clear();
+                        report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+                        return Ok(report);
+                    };
+                    report.components.push(SphereTorusComponent::Traced {
                         pieces: l.pieces,
                         distance_bound: l.distance_bound,
                         spans: l.spans,
-                    }));
+                        sphere_uv,
+                        torus_uv,
+                        lift_deviation,
+                    });
+                }
             }
             Ok(_) => report.unresolved(domain, UnresolvedReason::UnsupportedSurface),
             Err(e) if e.message.contains("tangency") => {
