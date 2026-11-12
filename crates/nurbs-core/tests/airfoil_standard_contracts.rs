@@ -47,10 +47,11 @@ fn unsupported_codes_and_invalid_station_chord_and_fit_limits_are_refused() {
 }
 #[test]
 fn custom_max_camber_solver_remains_available_and_distinct_from_standard_code() {
+    use nurbs_core::construct::curves::airfoil::NacaFit;
     use nurbs_core::construct::curves::airfoil::{naca5,naca5_camber,naca5_camber_line,naca5_section_at};
     let custom=naca5_camber(0.15,0.02).unwrap();
     assert!((naca5_camber_line(0.15,&custom).0-0.02).abs()<1e-12);
-    naca5(0.15,0.02,0.12,1.,true,64,3,16).unwrap();
+    naca5(0.15,0.02,0.12,NacaFit{chord:1.,closed_te:true,samples:64,degree:3,controls:16}).unwrap();
     let (a,b)=naca5_section_at(23012,0.15,1.,true).unwrap();
     assert!(((a[1]+b[1])*0.5-0.02).abs()>0.001);
 }

@@ -148,14 +148,7 @@ fn mean_line_4(camber: f64, position: f64) -> Result<MeanLine> {
 /// B-spline curve fitted through the clustered analytic loop. `degree` and
 /// `controls` steer the fit; knot placement follows the data parameters so
 /// knots cluster at the nose automatically.
-pub fn naca4(
-    code: u32,
-    chord: f64,
-    closed_te: bool,
-    samples: usize,
-    degree: usize,
-    controls: usize,
-) -> Result<Curve> {
+pub fn naca4(code: u32, fit: NacaFit) -> Result<Curve> {
     check(
         (1..=9999).contains(&code) && code / 1000 <= 9,
         "NACA 4-digit code must be MPXX (e.g. 0012 passed as 12)",
@@ -168,26 +161,36 @@ pub fn naca4(
         "NACA thickness digits must encode at least 1 percent",
     )?;
     let mean = mean_line_4(camber, position)?;
-    let closure = |x: f64| mean.at(x);
-    let points = naca_points(&closure, thickness, chord, closed_te, samples)?;
-    fit_open_bspline(&points, degree, controls, 0., None)
+    fit_naca(&|x: f64| mean.at(x), thickness, fit)
 }
 
 /// NACA 5-digit-style profile from the design max-camber position and
 /// camber (the k1 constant is solved internally, see `naca5_camber`).
-pub fn naca5(
-    position: f64,
-    camber: f64,
-    thickness: f64,
-    chord: f64,
-    closed_te: bool,
-    samples: usize,
-    degree: usize,
-    controls: usize,
-) -> Result<Curve> {
+pub fn naca5(position: f64, camber: f64, thickness: f64, fit: NacaFit) -> Result<Curve> {
     let constants = naca5_camber(position, camber)?;
-    let closure = |x: f64| naca5_camber_line(x, &constants);
-    let points = naca_points(&closure, thickness, chord, closed_te, samples)?;
+    fit_naca(&|x: f64| naca5_camber_line(x, &constants), thickness, fit)
+}
+
+/// Chord, trailing-edge closure, analytic sample count and B-spline fit shape
+/// of a NACA profile curve.
+#[derive(Clone, Copy, Debug)]
+pub struct NacaFit {
+    pub chord: f64,
+    pub closed_te: bool,
+    pub samples: usize,
+    pub degree: usize,
+    pub controls: usize,
+}
+
+fn fit_naca(mean: &dyn Fn(f64) -> (f64, f64), thickness: f64, fit: NacaFit) -> Result<Curve> {
+    let NacaFit {
+        chord,
+        closed_te,
+        samples,
+        degree,
+        controls,
+    } = fit;
+    let points = naca_points(mean, thickness, chord, closed_te, samples)?;
     fit_open_bspline(&points, degree, controls, 0., None)
 }
 

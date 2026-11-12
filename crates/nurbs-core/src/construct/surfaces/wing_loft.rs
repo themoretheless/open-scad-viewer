@@ -632,7 +632,17 @@ mod tests {
     #[test]
     fn airfoil_sections_loft_into_wing() {
         // Smoke test with real NACA profiles: prismatic wing.
-        let profile = airfoil::naca4(12, 1., true, 80, 3, 20).unwrap();
+        let profile = airfoil::naca4(
+            12,
+            airfoil::NacaFit {
+                chord: 1.,
+                closed_te: true,
+                samples: 80,
+                degree: 3,
+                controls: 20,
+            },
+        )
+        .unwrap();
         let sections = vec![section(profile.clone(), 0.), section(profile, 3.)];
         let surface = loft_wing(&sections).unwrap();
         surface.validate().unwrap();
