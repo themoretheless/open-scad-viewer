@@ -795,6 +795,6 @@ pub use certificate::{ThreadCertificate, certify_patches, patches_certified};
 mod coverage;
 pub use coverage::{TrimCoverageCertificate, certify_trim_candidates};
 
-pub use coverage::certify_patch_trim_coverage;
+pub use coverage::{CoverageLimits, certify_patch_trim_coverage};
 
 use patches::parameters;

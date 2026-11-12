@@ -183,10 +183,19 @@ pub fn certify_trim_candidates(
         spec.turns,
         p.lead,
         trims,
-        max_uv_error,
-        axial_tolerance,
-        max_patches,
+        CoverageLimits {
+            max_uv_error,
+            axial_tolerance,
+            max_patches,
+        },
     )
+}
+/// UV error, axial tolerance and patch cap of one slab coverage proof.
+#[derive(Clone, Copy, Debug)]
+pub struct CoverageLimits {
+    pub max_uv_error: f64,
+    pub axial_tolerance: f64,
+    pub max_patches: usize,
 }
 /// Source-complete independent slab coverage for an original five-segment,
 /// four-quarter screw inventory. Nominal geometry qualification is separate.
@@ -196,10 +205,13 @@ pub fn certify_patch_trim_coverage(
     turns: usize,
     lead: f64,
     trims: &TrimCandidates,
-    max_uv_error: f64,
-    axial_tolerance: f64,
-    max_patches: usize,
+    limits: CoverageLimits,
 ) -> Result<TrimCoverageCertificate> {
+    let CoverageLimits {
+        max_uv_error,
+        axial_tolerance,
+        max_patches,
+    } = limits;
     check(
         (1..=8).contains(&starts) && (1..=16).contains(&turns) && lead.is_finite() && lead > 0.,
         "Invalid screw source census or lead",
