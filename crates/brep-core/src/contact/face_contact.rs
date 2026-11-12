@@ -20,16 +20,29 @@ pub struct Report {
     pub reason: &'static str,
 }
 
+/// One fixed-parameter contact section: the fixed axis and value on the first
+/// face, the first face's free interval and the second face's box.
+#[derive(Clone, Copy, Debug)]
+pub struct ContactSection {
+    pub fixed_axis: usize,
+    pub fixed: f64,
+    pub first_other: [f64; 2],
+    pub second: [[f64; 2]; 2],
+}
+
 pub fn inspect_section(
     model: &Model,
     faces: [usize; 2],
-    fixed_axis: usize,
-    fixed: f64,
-    first_other: [f64; 2],
-    second: [[f64; 2]; 2],
+    section: ContactSection,
     tolerance_uv: f64,
     max_domain_cells: usize,
 ) -> Result<Report> {
+    let ContactSection {
+        fixed_axis,
+        fixed,
+        first_other,
+        second,
+    } = section;
     model.validate_boundary_diagnostic_inputs()?;
     if faces[0] == faces[1]
         || faces.iter().any(|&f| f >= model.faces.len())
@@ -152,8 +165,14 @@ mod tests {
         }
         m
     }
+    const SECTION: ContactSection = ContactSection {
+        fixed_axis: 0,
+        fixed: 0.5,
+        first_other: [0., 1.],
+        second: [[0., 1.]; 2],
+    };
     fn run(m: &Model, budget: usize) -> Report {
-        inspect_section(m, [0, 1], 0, 0.5, [0., 1.], [[0., 1.]; 2], 1e-8, budget).unwrap()
+        inspect_section(m, [0, 1], SECTION, 1e-8, budget).unwrap()
     }
     #[test]
     fn both_interiors_and_budget_preserve_uncertainty() {
@@ -226,17 +245,7 @@ mod tests {
         for i in 0..2 {
             m.faces[caps[i]].surface = template.faces[i].surface.clone();
         }
-        let r = inspect_section(
-            &m,
-            [caps[0], caps[1]],
-            0,
-            0.5,
-            [0., 1.],
-            [[0., 1.]; 2],
-            1e-8,
-            1000,
-        )
-        .unwrap();
+        let r = inspect_section(&m, [caps[0], caps[1]], SECTION, 1e-8, 1000).unwrap();
         assert!(matches!(r.status, Status::Excluded));
         assert_eq!(r.reason, "unique-root-outside-trim");
         // A root in the hole must not hide other contacts of the same pair.
