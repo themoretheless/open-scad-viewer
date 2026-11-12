@@ -396,6 +396,15 @@ pub fn inspect_surface_jets_checked_report(
     })
 }
 
+/// Requested jet order, transverse scale, boundary orientation and accepted
+/// jet deviation of one checked surface jet match.
+#[derive(Clone, Copy, Debug)]
+pub struct JetMatchOptions {
+    pub order: usize,
+    pub scale: f64,
+    pub reverse: bool,
+    pub max_error: f64,
+}
 /// Application gate: require regularity, the requested tangential smoothness,
 /// and a continuous bound on all independently varying jet components.
 pub fn match_surface_jets_checked_report(
@@ -403,11 +412,14 @@ pub fn match_surface_jets_checked_report(
     edited: &Surface,
     reference_boundary: &str,
     edited_boundary: &str,
-    order: usize,
-    scale: f64,
-    reverse: bool,
-    max_error: f64,
+    options: JetMatchOptions,
 ) -> Result<SurfaceJetMatch> {
+    let JetMatchOptions {
+        order,
+        scale,
+        reverse,
+        max_error,
+    } = options;
     check(
         max_error.is_finite() && max_error >= 0.,
         "Surface matching tolerance must be finite and nonnegative",

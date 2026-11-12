@@ -270,29 +270,35 @@ fn periodic_and_multispan_seams_are_proved_without_sampling() {
 #[test]
 #[cfg(feature = "codec")]
 fn application_gate_requires_a_finite_budget_and_second_order_seam_smoothness() {
+    let gate = |s: &Surface, order: usize, max_error: f64| {
+        let options = JetMatchOptions {
+            order,
+            scale: 1.,
+            reverse: false,
+            max_error,
+        };
+        match_surface_jets_checked(s, s, "uMax", "uMin", options)
+    };
     let s = patch();
-    let accepted = match_surface_jets_checked(&s, &s, "uMax", "uMin", 2, 1., false, 1e-8).unwrap();
+    let accepted = gate(&s, 2, 1e-8).unwrap();
     assert_eq!(accepted["report"]["accepted"], json!(true), "{accepted:?}");
-    let refused = match_surface_jets_checked(&s, &s, "uMax", "uMin", 2, 1., false, 0.).unwrap();
+    let refused = gate(&s, 2, 0.).unwrap();
     assert_eq!(refused["report"]["accepted"], json!(false));
     assert_eq!(
         refused["report"]["reason"],
         json!("deviation-exceeds-budget")
     );
-    assert!(match_surface_jets_checked(&s, &s, "uMax", "uMin", 2, 1., false, f64::NAN).is_err());
+    assert!(gate(&s, 2, f64::NAN).is_err());
     let mut c = patch();
     c.degree_v = 2;
     c.knots_v = vec![0., 0., 0., 0.5, 1., 1., 1.];
-    let result = match_surface_jets_checked(&c, &c, "uMax", "uMin", 2, 1., false, 1e-6).unwrap();
+    let result = gate(&c, 2, 1e-6).unwrap();
     assert_eq!(result["report"]["accepted"], json!(false));
     assert_eq!(
         result["report"]["reason"],
         json!("unproven-tangential-smoothness")
     );
-    assert_eq!(
-        match_surface_jets_checked(&c, &c, "uMax", "uMin", 1, 1., false, 1e-6).unwrap()["report"]["accepted"],
-        json!(true)
-    );
+    assert_eq!(gate(&c, 1, 1e-6).unwrap()["report"]["accepted"], json!(true));
 }
 #[test]
 fn rounded_normalized_knots_cannot_hide_an_incompatible_basis() {

@@ -45,20 +45,14 @@ pub fn match_surface_jets_checked(
     edited: &Surface,
     reference_boundary: &str,
     edited_boundary: &str,
-    order: usize,
-    scale: f64,
-    reverse: bool,
-    max_error: f64,
+    options: JetMatchOptions,
 ) -> Result<Value> {
     Ok(match_surface_jets_checked_report(
         reference,
         edited,
         reference_boundary,
         edited_boundary,
-        order,
-        scale,
-        reverse,
-        max_error,
+        options,
     )?
     .to_value())
 }

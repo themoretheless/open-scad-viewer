@@ -179,10 +179,12 @@ fn try_dispatch_sculpt_coons_and_continuity(v: &Value, op: &str) -> Option<Resul
                 &field(v, "edited")?,
                 &field::<String>(v, "referenceBoundary")?,
                 &field::<String>(v, "editedBoundary")?,
-                field(v, "order")?,
-                field(v, "scale")?,
-                optional_field::<bool>(v, "reverse")?.unwrap_or(false),
-                optional_field::<f64>(v, "maxError")?.unwrap_or(1e-6),
+                continuity::JetMatchOptions {
+                    order: field(v, "order")?,
+                    scale: field(v, "scale")?,
+                    reverse: optional_field::<bool>(v, "reverse")?.unwrap_or(false),
+                    max_error: optional_field::<f64>(v, "maxError")?.unwrap_or(1e-6),
+                },
             )
         })(),
         _ => return None,

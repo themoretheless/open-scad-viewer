@@ -24,10 +24,12 @@ fn main() -> Result<()> {
         &patch(3.),
         "uMax",
         "uMin",
-        2,
-        1.,
-        false,
-        1e-8,
+        continuity::JetMatchOptions {
+            order: 2,
+            scale: 1.,
+            reverse: false,
+            max_error: 1e-8,
+        },
     )?;
     assert!(result.report.regularity_certified());
     let decision = result
