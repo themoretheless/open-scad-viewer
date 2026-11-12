@@ -25,7 +25,7 @@ pub struct Report {
 /// Every component retains its unresolved entries. Budgets are explicit per
 /// stage; callers must not interpret one successful stage as the whole result.
 pub fn inspect(model: &Model, tolerance_uv: f64, limits: Limits) -> Result<Report> {
-    inspect_impl(model, tolerance_uv, limits, 0, None, &[], false, true)
+    inspect_impl(model, tolerance_uv, limits, 0, EmbeddingMode::Plain { compatibility: true })
 }
 /// Optional independent shared whole-chart oblique injectivity cell budget.
 pub fn inspect_with_linear(
@@ -39,10 +39,9 @@ pub fn inspect_with_linear(
         tolerance_uv,
         limits,
         max_linear_cells,
-        None,
-        &[],
-        false,
-        false,
+        EmbeddingMode::Plain {
+            compatibility: false,
+        },
     )
 }
 /// Explicit cap selection; per-cap budgets are independent of joint audit budgets.
@@ -59,14 +58,10 @@ pub fn inspect_sweep(
         tolerance_uv,
         limits,
         max_linear_cells,
-        if caps.is_empty() {
-            None
-        } else {
-            Some((caps, cap_limits))
+        EmbeddingMode::Sweep {
+            caps: (!caps.is_empty()).then_some((caps, cap_limits)),
+            proposals: &[],
         },
-        &[],
-        true,
-        false,
     )
 }
 pub fn inspect_sweep_with_projections(
@@ -83,26 +78,35 @@ pub fn inspect_sweep_with_projections(
         tolerance_uv,
         limits,
         max_linear_cells,
-        if caps.is_empty() {
-            None
-        } else {
-            Some((caps, cap_limits))
+        EmbeddingMode::Sweep {
+            caps: (!caps.is_empty()).then_some((caps, cap_limits)),
+            proposals,
         },
-        proposals,
-        true,
-        false,
     )
+}
+/// Which embedding audit runs: the plain closed-body audit, optionally in
+/// compatibility mode, or the sweep audit with its caps, projection proposals
+/// and sweep hull checks.
+enum EmbeddingMode<'a> {
+    Plain {
+        compatibility: bool,
+    },
+    Sweep {
+        caps: Option<(&'a [usize], crate::sweep_cap_contacts::Budgets)>,
+        proposals: &'a [Option<[[i8; 3]; 2]>],
+    },
 }
 fn inspect_impl(
     model: &Model,
     tolerance_uv: f64,
     limits: Limits,
     max_linear_cells: usize,
-    caps: Option<(&[usize], crate::sweep_cap_contacts::Budgets)>,
-    proposals: &[Option<[[i8; 3]; 2]>],
-    sweep_hulls: bool,
-    compatibility: bool,
+    mode: EmbeddingMode<'_>,
 ) -> Result<Report> {
+    let (caps, proposals, sweep_hulls, compatibility) = match mode {
+        EmbeddingMode::Plain { compatibility } => (None, &[][..], false, compatibility),
+        EmbeddingMode::Sweep { caps, proposals } => (caps, proposals, true, false),
+    };
     // Includes connected shells, vertex fans, opposite edge uses and ownership.
     model.validate()?;
     if model.shells.is_empty() || model.shells.iter().any(|s| !s.closed || s.faces.is_empty()) {
