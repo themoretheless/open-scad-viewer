@@ -148,14 +148,34 @@ mod exact_curve_segments {
         // claiming wall injectivity or intersection classification.
         assert!(
             sweep
-                .inspect_wall_geometry_with_loops(&sections, &[1], 0., 1e-6, 0, 0, 0)
+                .inspect_wall_geometry_with_loops(
+                    &sections,
+                    &[1],
+                    crate::sweep_wall_audit::WallAuditLimits {
+                        clearance: 0.,
+                        distance_tolerance: 1e-6,
+                        max_injectivity_cells: 0,
+                        max_pairs: 0,
+                        max_pair_cells: 0,
+                    },
+                )
                 .is_ok()
         );
         let mut open = sections.clone();
         open[1][0].control_points[5][0] += 0.125;
         assert!(
             sweep
-                .inspect_wall_geometry_with_loops(&open, &[1], 0., 1e-6, 0, 0, 0)
+                .inspect_wall_geometry_with_loops(
+                    &open,
+                    &[1],
+                    crate::sweep_wall_audit::WallAuditLimits {
+                        clearance: 0.,
+                        distance_tolerance: 1e-6,
+                        max_injectivity_cells: 0,
+                        max_pairs: 0,
+                        max_pair_cells: 0,
+                    },
+                )
                 .is_err()
         );
         let mut rounded = c.clone();
@@ -177,11 +197,13 @@ mod exact_curve_segments {
                 .inspect_wall_geometry_with_loops(
                     &nonrepresentable_sections,
                     &[1],
-                    0.,
-                    1e-6,
-                    0,
-                    0,
-                    0
+                    crate::sweep_wall_audit::WallAuditLimits {
+                        clearance: 0.,
+                        distance_tolerance: 1e-6,
+                        max_injectivity_cells: 0,
+                        max_pairs: 0,
+                        max_pair_cells: 0,
+                    },
                 )
                 .is_ok()
         );
@@ -257,7 +279,17 @@ mod exact_curve_segments {
             )
             .unwrap();
             let sections = sweep.sections_at(1).unwrap();
-            let result = sweep.inspect_wall_geometry_with_loops(&sections, &[1], 0., 1e-6, 0, 0, 0);
+            let result = sweep.inspect_wall_geometry_with_loops(
+                &sections,
+                &[1],
+                crate::sweep_wall_audit::WallAuditLimits {
+                    clearance: 0.,
+                    distance_tolerance: 1e-6,
+                    max_injectivity_cells: 0,
+                    max_pairs: 0,
+                    max_pair_cells: 0,
+                },
+            );
             assert_eq!(result.is_ok(), expected_closed, "{result:?}");
         }
         assert_eq!(c, before);

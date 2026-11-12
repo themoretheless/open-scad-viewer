@@ -586,13 +586,31 @@ fn retained_level_certificate_counts_stored_error_and_discards_partial_budget() 
     assert_eq!(separation.boundary_only_pairs.len(), 2);
     assert!(separation.all_pairs_compatible && separation.unresolved.is_empty());
     let geometry = sweep
-        .inspect_wall_geometry(&sweep.sections_at(3).unwrap(), 0., 1e-6, 100, 100, 63)
+        .inspect_wall_geometry(
+            &sweep.sections_at(3).unwrap(),
+            crate::sweep_wall_audit::WallAuditLimits {
+                clearance: 0.,
+                distance_tolerance: 1e-6,
+                max_injectivity_cells: 100,
+                max_pairs: 100,
+                max_pair_cells: 63,
+            },
+        )
         .unwrap();
     assert!(geometry.charts_and_pairs_certified, "{geometry:?}");
     assert!(geometry.declared_boundaries_c0);
     assert_eq!(geometry.c0_boundaries, vec![[0, 1], [1, 2]]);
     let geometry = sweep
-        .inspect_wall_geometry(&sweep.sections_at(3).unwrap(), 0., 1e-6, 0, 100, 63)
+        .inspect_wall_geometry(
+            &sweep.sections_at(3).unwrap(),
+            crate::sweep_wall_audit::WallAuditLimits {
+                clearance: 0.,
+                distance_tolerance: 1e-6,
+                max_injectivity_cells: 0,
+                max_pairs: 100,
+                max_pair_cells: 63,
+            },
+        )
         .unwrap();
     assert!(!geometry.charts_and_pairs_certified);
     assert_eq!(geometry.injectivity_cells, 0);
@@ -690,7 +708,16 @@ fn certified_closed_rational_levels_cover_profile_interior_and_cyclic_ownership(
         let regularity = sweep.certify_wall_regularity(&sections, 10000).unwrap();
         if steps == 8 {
             let geometry = sweep
-                .inspect_wall_geometry(&sections, 0., 1e-6, 0, 10000, 256)
+                .inspect_wall_geometry(
+                    &sections,
+                    crate::sweep_wall_audit::WallAuditLimits {
+                        clearance: 0.,
+                        distance_tolerance: 1e-6,
+                        max_injectivity_cells: 0,
+                        max_pairs: 10000,
+                        max_pair_cells: 256,
+                    },
+                )
                 .unwrap();
             assert!(!geometry.charts_and_pairs_certified);
             assert_eq!(geometry.unresolved_charts.len(), sections.len() - 1);
