@@ -34,18 +34,30 @@ fn main() {
     };
     let strips = if let Ok(handle) = std::env::var("OSV_CENTRAL_GRAPH_HANDLE") {
         r::build_trihedral_strips_with_profile(
-            &m,
-            0,
-            0,
-            &requests,
-            runout,
-            2.,
+            r::TrihedralCorner {
+                source: &m,
+                shell: 0,
+                vertex: 0,
+                requested: &requests,
+                runout_mm: runout,
+                span_mm: 2.,
+            },
             limits,
             handle.parse().unwrap(),
         )
         .unwrap()
     } else {
-        r::build_trihedral_strips(&m, 0, 0, &requests, runout, 2., limits).unwrap()
+        r::build_trihedral_strips(
+            r::TrihedralCorner {
+                source: &m,
+                shell: 0,
+                vertex: 0,
+                requested: &requests,
+                runout_mm: runout,
+                span_mm: 2.,
+            },
+            limits,
+        ).unwrap()
     };
     let collars = r::prepare_trihedral_collars(
         &m,

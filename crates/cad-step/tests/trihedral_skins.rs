@@ -26,7 +26,17 @@ fn independent_radii_create_root_trimmed_g2_strip_faces() {
     let m = brep_core::cuboid([0.; 3], [10.; 3]).unwrap();
     let before = m.clone();
     let request = request(&m);
-    let out = region::build_trihedral_strips(&m, 0, 0, &request, 0.1, 2., limits()).unwrap();
+    let out = region::build_trihedral_strips(
+        region::TrihedralCorner {
+            source: &m,
+            shell: 0,
+            vertex: 0,
+            requested: &request,
+            runout_mm: 0.1,
+            span_mm: 2.,
+        },
+        limits(),
+    ).unwrap();
     assert_eq!(m, before);
     assert_eq!(out.strips.len(), 3);
     let rim = region::build_trihedral_rim(&out, limits().tolerances).unwrap();
@@ -172,17 +182,47 @@ fn invalid_span_or_work_returns_no_partial_geometry() {
     let m = brep_core::cuboid([0.; 3], [10.; 3]).unwrap();
     let before = m.clone();
     let r = request(&m);
-    assert!(region::build_trihedral_strips(&m, 0, 0, &r, 0.1, 20., limits()).is_err());
+    assert!(region::build_trihedral_strips(
+        region::TrihedralCorner {
+            source: &m,
+            shell: 0,
+            vertex: 0,
+            requested: &r,
+            runout_mm: 0.1,
+            span_mm: 20.,
+        },
+        limits(),
+    ).is_err());
     let mut low = limits();
     low.max_cells = 1;
-    assert!(region::build_trihedral_strips(&m, 0, 0, &r, 0.1, 2., low).is_err());
+    assert!(region::build_trihedral_strips(
+        region::TrihedralCorner {
+            source: &m,
+            shell: 0,
+            vertex: 0,
+            requested: &r,
+            runout_mm: 0.1,
+            span_mm: 2.,
+        },
+        low,
+    ).is_err());
     assert_eq!(m, before);
 }
 
 #[test]
 fn modified_original_surface_cannot_reuse_corner_boundary_proofs() {
     let m=brep_core::cuboid([0.;3],[10.;3]).unwrap();
-    let mut strips=region::build_trihedral_strips(&m,0,0,&request(&m),0.1,2.,limits()).unwrap();
+    let mut strips=region::build_trihedral_strips(
+        region::TrihedralCorner {
+            source: &m,
+            shell: 0,
+            vertex: 0,
+            requested: &request(&m),
+            runout_mm: 0.1,
+            span_mm: 2.,
+        },
+        limits(),
+    ).unwrap();
     for p in strips.strips[0].patch.model.faces[0].surface.control_points.iter_mut().flatten() {
         p[2]+=0.01;
     }

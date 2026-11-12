@@ -564,7 +564,7 @@ pub use trihedral_setbacks::{EdgeSetback, FacePort, TrihedralSetbacks, plan_trih
 #[path = "region_replacement/trihedral_skins.rs"]
 mod trihedral_skins;
 pub use trihedral_skins::{
-    StripLimits, StripPatch, StripSeparation, TrihedralStrips, build_trihedral_strips, build_trihedral_strips_with_profile, build_trihedral_strips_with_bounded_profile, build_trihedral_strips_with_matched_profile, build_trihedral_strips_with_quartic_profile,
+    StripLimits, StripPatch, StripSeparation, TrihedralCorner, TrihedralStrips, build_trihedral_strips, build_trihedral_strips_with_profile, build_trihedral_strips_with_bounded_profile, build_trihedral_strips_with_matched_profile, build_trihedral_strips_with_quartic_profile,
 };
 
 #[path = "region_replacement/trihedral_rim.rs"]

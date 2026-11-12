@@ -126,17 +126,69 @@ fn main() -> Result<()> {
         ));
     }
     let strips = if quartic {
-        r::build_trihedral_strips_with_quartic_profile(&source,0,0,&requested,0.1,2.,limits,10.)?
+        r::build_trihedral_strips_with_quartic_profile(
+            r::TrihedralCorner {
+                source: &source,
+                shell: 0,
+                vertex: 0,
+                requested: &requested,
+                runout_mm: 0.1,
+                span_mm: 2.,
+            },
+            limits,
+            10.,
+        )?
     } else if matched {
-        r::build_trihedral_strips_with_matched_profile(&source,0,0,&requested,0.1,2.,limits,10.)?
+        r::build_trihedral_strips_with_matched_profile(
+            r::TrihedralCorner {
+                source: &source,
+                shell: 0,
+                vertex: 0,
+                requested: &requested,
+                runout_mm: 0.1,
+                span_mm: 2.,
+            },
+            limits,
+            10.,
+        )?
     } else if bounded {
         r::build_trihedral_strips_with_bounded_profile(
-            &source, 0, 0, &requested, 0.1, 2., limits, 10.,
+            r::TrihedralCorner {
+                source: &source,
+                shell: 0,
+                vertex: 0,
+                requested: &requested,
+                runout_mm: 0.1,
+                span_mm: 2.,
+            },
+            limits,
+            10.,
         )?
     } else if let Some(p) = profile {
-        r::build_trihedral_strips_with_profile(&source, 0, 0, &requested, 0.1, 2., limits, p)?
+        r::build_trihedral_strips_with_profile(
+            r::TrihedralCorner {
+                source: &source,
+                shell: 0,
+                vertex: 0,
+                requested: &requested,
+                runout_mm: 0.1,
+                span_mm: 2.,
+            },
+            limits,
+            p,
+        )?
     } else {
-        r::build_trihedral_strips(&source, 0, 0, &requested, 0.1, 2., limits)?
+        r::build_trihedral_strips(
+            r::TrihedralCorner {
+                source: &source,
+                shell: 0,
+                vertex: 0,
+                requested: &requested,
+                runout_mm: 0.1,
+                span_mm: 2.,
+            },
+            limits,
+        )?
     };
     println!(
         "inputs stock_mm=10 radii_mm=[0.1,0.2,0.35] profile={profile:?} bounded={bounded} rim_origin={rim_origin} curvature_limit_per_mm=10"

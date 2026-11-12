@@ -25,7 +25,18 @@ fn rebuilt_three_strips_keep_original_contacts_g2_and_pass_ten_per_mm() {
         })
         .collect::<Vec<_>>();
     let strips =
-        r::build_trihedral_strips_with_profile(&source, 0, 0, &requests, 0.5, 2., limits(), 0.214)
+        r::build_trihedral_strips_with_profile(
+            r::TrihedralCorner {
+                source: &source,
+                shell: 0,
+                vertex: 0,
+                requested: &requests,
+                runout_mm: 0.5,
+                span_mm: 2.,
+            },
+            limits(),
+            0.214,
+        )
             .unwrap();
     for s in &strips.strips {
         let shape = &s.patch.model.faces[0].surface;
@@ -95,7 +106,18 @@ fn invalid_profile_is_refused_without_modifying_source() {
         .collect::<Vec<_>>();
     for h in [f64::NAN, 0., 0.5] {
         assert!(
-            r::build_trihedral_strips_with_profile(&source, 0, 0, &requests, 0.5, 2., limits(), h)
+            r::build_trihedral_strips_with_profile(
+                r::TrihedralCorner {
+                    source: &source,
+                    shell: 0,
+                    vertex: 0,
+                    requested: &requests,
+                    runout_mm: 0.5,
+                    span_mm: 2.,
+                },
+                limits(),
+                h,
+            )
                 .is_err()
         );
         assert_eq!(source, before);

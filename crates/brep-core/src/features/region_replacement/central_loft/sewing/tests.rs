@@ -25,10 +25,29 @@ fn with_corner_mode(bounded: bool, f: impl FnOnce(&CentralLoftCandidate<'_, '_, 
     let builder = |source, shell, vertex, requested: &[EdgeRadius], runout, span, limits| {
         if bounded {
             crate::region_replacement::build_trihedral_strips_with_bounded_profile(
-                source, shell, vertex, requested, runout, span, limits, 10.,
+                crate::region_replacement::TrihedralCorner {
+                    source,
+                    shell,
+                    vertex,
+                    requested,
+                    runout_mm: runout,
+                    span_mm: span,
+                },
+                limits,
+                10.,
             )
         } else {
-            build_trihedral_strips(source, shell, vertex, requested, runout, span, limits)
+            build_trihedral_strips(
+                crate::region_replacement::TrihedralCorner {
+                    source,
+                    shell,
+                    vertex,
+                    requested,
+                    runout_mm: runout,
+                    span_mm: span,
+                },
+                limits,
+            )
         }
     };
     let strips = builder(

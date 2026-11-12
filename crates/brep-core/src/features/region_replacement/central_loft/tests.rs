@@ -41,7 +41,17 @@ fn unequal_radius_center_preserves_the_whole_rim_and_stays_inside_original_stock
         })
         .collect();
     let strips =
-        build_trihedral_strips(&source, 0, 0, &requested, 0.1, 2., strip_limits()).unwrap();
+        build_trihedral_strips(
+            crate::region_replacement::TrihedralCorner {
+                source: &source,
+                shell: 0,
+                vertex: 0,
+                requested: &requested,
+                runout_mm: 0.1,
+                span_mm: 2.,
+            },
+            strip_limits(),
+        ).unwrap();
     let candidate = propose_trihedral_center(&body, &strips, options()).unwrap();
     let network=candidate.propose_common_denominator_patches(1000000).unwrap();
     let reports=candidate.inspect_network_exterior_jets(&network,6000,100000).unwrap();
@@ -254,7 +264,17 @@ fn cyclic_rim_origins_preserve_owned_source_curves_and_reverify_their_own_chart(
     let body=crate::source_box::qualify(&source,&limits).unwrap();
     let requested:Vec<_>=source.edges.iter().enumerate().filter(|(_,e)|e.vertices.contains(&0)).enumerate()
         .map(|(i,(edge,_))|EdgeRadius {edge,radius_mm:[0.1,0.2,0.35][i]}).collect();
-    let strips=build_trihedral_strips(&source,0,0,&requested,0.1,2.,strip_limits()).unwrap();
+    let strips=build_trihedral_strips(
+        crate::region_replacement::TrihedralCorner {
+            source: &source,
+            shell: 0,
+            vertex: 0,
+            requested: &requested,
+            runout_mm: 0.1,
+            span_mm: 2.,
+        },
+        strip_limits(),
+    ).unwrap();
     let canonical=propose_trihedral_center(&body,&strips,options()).unwrap();
     for origin in 0..3 {
         let c=propose_trihedral_center_at_rim(&body,&strips,options(),origin).unwrap();
@@ -274,7 +294,18 @@ fn quartic_rim_chart_changes_retain_full_original_boundary_positions() {
     let body=crate::source_box::qualify(&source,&limits).unwrap();
     let requested:Vec<_>=source.edges.iter().enumerate().filter(|(_,e)|e.vertices.contains(&0)).enumerate()
         .map(|(i,(edge,_))|EdgeRadius {edge,radius_mm:[0.1,0.2,0.35][i]}).collect();
-    let strips=crate::region_replacement::build_trihedral_strips_with_quartic_profile(&source,0,0,&requested,0.1,2.,strip_limits(),10.).unwrap();
+    let strips=crate::region_replacement::build_trihedral_strips_with_quartic_profile(
+        crate::region_replacement::TrihedralCorner {
+            source: &source,
+            shell: 0,
+            vertex: 0,
+            requested: &requested,
+            runout_mm: 0.1,
+            span_mm: 2.,
+        },
+        strip_limits(),
+        10.,
+    ).unwrap();
     let canonical=propose_trihedral_center(&body,&strips,options()).unwrap();
     for origin in 0..3 {
         let c=propose_trihedral_center_at_rim(&body,&strips,options(),origin).unwrap();
@@ -293,7 +324,18 @@ fn actual_unequal_radius_cyclic_network_proves_all_four_internal_original_g2_sea
     let body=crate::source_box::qualify(&source,&limits).unwrap();
     let requested:Vec<_>=source.edges.iter().enumerate().filter(|(_,e)|e.vertices.contains(&0)).enumerate()
         .map(|(i,(edge,_))|EdgeRadius {edge,radius_mm:[0.1,0.2,0.35][i]}).collect();
-    let strips=crate::region_replacement::build_trihedral_strips_with_quartic_profile(&source,0,0,&requested,0.1,2.,strip_limits(),10.).unwrap();
+    let strips=crate::region_replacement::build_trihedral_strips_with_quartic_profile(
+        crate::region_replacement::TrihedralCorner {
+            source: &source,
+            shell: 0,
+            vertex: 0,
+            requested: &requested,
+            runout_mm: 0.1,
+            span_mm: 2.,
+        },
+        strip_limits(),
+        10.,
+    ).unwrap();
     let c=propose_trihedral_center_at_rim(&body,&strips,options(),1).unwrap();
     let net=c.propose_curvature_search_patches(1000000,50000,6).unwrap();
     assert_eq!(net.len(),5);let mut cells=0;
@@ -316,7 +358,18 @@ fn actual_degree9_network_assembles_one_open_shell_with_owned_shared_roots() {
     let body=crate::source_box::qualify(&source,&limits).unwrap();
     let requested:Vec<_>=source.edges.iter().enumerate().filter(|(_,e)|e.vertices.contains(&0)).enumerate()
         .map(|(i,(edge,_))|EdgeRadius {edge,radius_mm:[0.1,0.2,0.35][i]}).collect();
-    let strips=crate::region_replacement::build_trihedral_strips_with_quartic_profile(&source,0,0,&requested,0.1,2.,strip_limits(),10.).unwrap();
+    let strips=crate::region_replacement::build_trihedral_strips_with_quartic_profile(
+        crate::region_replacement::TrihedralCorner {
+            source: &source,
+            shell: 0,
+            vertex: 0,
+            requested: &requested,
+            runout_mm: 0.1,
+            span_mm: 2.,
+        },
+        strip_limits(),
+        10.,
+    ).unwrap();
     let mut o=options();o.handle_mm=0.03125;
     let c=propose_trihedral_center_at_rim(&body,&strips,o,1).unwrap();
     let net=c.propose_joint_seam_degree9_patches(1000000,95000,3).unwrap();
@@ -352,7 +405,18 @@ fn actual_network_closed_stock_candidate_keeps_original_supports_and_cap_refusal
     let stock=crate::source_box::qualify(&source,&limits).unwrap();
     let requested:Vec<_>=source.edges.iter().enumerate().filter(|(_,e)|e.vertices.contains(&0)).enumerate()
         .map(|(i,(edge,_))|EdgeRadius {edge,radius_mm:[0.1,0.2,0.35][i]}).collect();
-    let strips=crate::region_replacement::build_trihedral_strips_with_quartic_profile(&source,0,0,&requested,0.1,2.,strip_limits(),10.).unwrap();
+    let strips=crate::region_replacement::build_trihedral_strips_with_quartic_profile(
+        crate::region_replacement::TrihedralCorner {
+            source: &source,
+            shell: 0,
+            vertex: 0,
+            requested: &requested,
+            runout_mm: 0.1,
+            span_mm: 2.,
+        },
+        strip_limits(),
+        10.,
+    ).unwrap();
     let mut o=options();o.handle_mm=0.03125;
     let c=propose_trihedral_center_at_rim(&stock,&strips,o,1).unwrap();
     let net=c.propose_joint_seam_degree9_patches(1000000,95000,3).unwrap();

@@ -30,12 +30,14 @@ fn main() {
     };
     eprintln!("phase=joint-strips");
     let strips = match r::build_trihedral_strips_with_profile(
-        &source,
-        0,
-        0,
-        &requested,
-        0.5,
-        2.,
+        r::TrihedralCorner {
+            source: &source,
+            shell: 0,
+            vertex: 0,
+            requested: &requested,
+            runout_mm: 0.5,
+            span_mm: 2.,
+        },
         striplimits,
         0.214,
     ) {

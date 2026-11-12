@@ -180,82 +180,105 @@ fn membership(source: &Model, face: usize, curve: &Curve, work: &mut Work) -> Re
     }
     Ok(())
 }
+/// One trihedral corner: the source vertex of `shell`, the radius requested on
+/// each incident edge, the common setback runout and the strip span.
+#[derive(Clone, Copy)]
+pub struct TrihedralCorner<'a> {
+    pub source: &'a Model,
+    pub shell: usize,
+    pub vertex: usize,
+    pub requested: &'a [EdgeRadius],
+    pub runout_mm: f64,
+    pub span_mm: f64,
+}
 /// Build three open strip faces with independently rechecked saved contacts,
 /// whole-seam G2, rolling-center laws and skin injectivity. span_mm explicitly
 /// bounds each strip beyond its common corner setback. All work is shared;
 /// no partial strip set escapes. This does not graft source faces or close a
 /// corner, and the rolling-center law is not a circular-section curvature law.
-pub fn build_trihedral_strips(
-    source: &Model,
-    shell: usize,
-    vertex: usize,
-    requested: &[EdgeRadius],
-    runout_mm: f64,
-    span_mm: f64,
-    limits: StripLimits,
-) -> Result<TrihedralStrips> {
+pub fn build_trihedral_strips(corner: TrihedralCorner<'_>, limits: StripLimits) -> Result<TrihedralStrips> {
+        let TrihedralCorner { source, shell, vertex, requested, runout_mm, span_mm } = corner;
     build_strips(
-        source, shell, vertex, requested, runout_mm, span_mm, limits, None,
+        TrihedralCorner {
+            source,
+            shell,
+            vertex,
+            requested,
+            runout_mm,
+            span_mm,
+        },
+        limits,
+        None,
     )
 }
 /// Joint-corner proposal with an explicit planar G2 profile. The unchanged
 /// default builder keeps its original profile. Every saved seam is rechecked.
-pub fn build_trihedral_strips_with_profile(
-    source: &Model,
-    shell: usize,
-    vertex: usize,
-    requested: &[EdgeRadius],
-    runout_mm: f64,
-    span_mm: f64,
-    limits: StripLimits,
-    handle_fraction: f64,
-) -> Result<TrihedralStrips> {
+pub fn build_trihedral_strips_with_profile(corner: TrihedralCorner<'_>, limits: StripLimits, handle_fraction: f64) -> Result<TrihedralStrips> {
+        let TrihedralCorner { source, shell, vertex, requested, runout_mm, span_mm } = corner;
     build_strips(
-        source,
-        shell,
-        vertex,
-        requested,
-        runout_mm,
-        span_mm,
+        TrihedralCorner {
+            source,
+            shell,
+            vertex,
+            requested,
+            runout_mm,
+            span_mm,
+        },
         limits,
         Some(fillet_contact::PlanarProfile::Handles(handle_fraction)),
     )
 }
 /// Explicit bounded-profile proposal; the same original-contact, radius,
 /// injectivity and G2 gates apply. This alone does not qualify a closed solid.
-pub fn build_trihedral_strips_with_bounded_profile(
-    source:&Model,shell:usize,vertex:usize,requested:&[EdgeRadius],runout_mm:f64,
-    span_mm:f64,limits:StripLimits,maximum:f64,
-) -> Result<TrihedralStrips> {
-    build_strips(source,shell,vertex,requested,runout_mm,span_mm,limits,
-        Some(fillet_contact::PlanarProfile::Bounded(maximum)))
+pub fn build_trihedral_strips_with_bounded_profile(corner: TrihedralCorner<'_>, limits:StripLimits, maximum:f64) -> Result<TrihedralStrips> {
+        let TrihedralCorner { source, shell, vertex, requested, runout_mm, span_mm } = corner;
+    build_strips(
+        TrihedralCorner {
+            source,
+            shell,
+            vertex,
+            requested,
+            runout_mm,
+            span_mm,
+        },
+        limits,
+        Some(fillet_contact::PlanarProfile::Bounded(maximum)),
+    )
 }
 /// Matched-jet profile proposal; no whole-body authority is inherited.
-pub fn build_trihedral_strips_with_matched_profile(
-    source:&Model,shell:usize,vertex:usize,requested:&[EdgeRadius],runout_mm:f64,
-    span_mm:f64,limits:StripLimits,maximum:f64,
-) -> Result<TrihedralStrips> {
-    build_strips(source,shell,vertex,requested,runout_mm,span_mm,limits,
-        Some(fillet_contact::PlanarProfile::Matched(maximum)))
+pub fn build_trihedral_strips_with_matched_profile(corner: TrihedralCorner<'_>, limits:StripLimits, maximum:f64) -> Result<TrihedralStrips> {
+        let TrihedralCorner { source, shell, vertex, requested, runout_mm, span_mm } = corner;
+    build_strips(
+        TrihedralCorner {
+            source,
+            shell,
+            vertex,
+            requested,
+            runout_mm,
+            span_mm,
+        },
+        limits,
+        Some(fillet_contact::PlanarProfile::Matched(maximum)),
+    )
 }
 /// Single-span quartic proposal; no body certificate is inherited.
-pub fn build_trihedral_strips_with_quartic_profile(
-    source:&Model,shell:usize,vertex:usize,requested:&[EdgeRadius],runout_mm:f64,
-    span_mm:f64,limits:StripLimits,maximum:f64,
-) -> Result<TrihedralStrips> {
-    build_strips(source,shell,vertex,requested,runout_mm,span_mm,limits,
-        Some(fillet_contact::PlanarProfile::Quartic(maximum)))
+pub fn build_trihedral_strips_with_quartic_profile(corner: TrihedralCorner<'_>, limits:StripLimits, maximum:f64) -> Result<TrihedralStrips> {
+        let TrihedralCorner { source, shell, vertex, requested, runout_mm, span_mm } = corner;
+    build_strips(
+        TrihedralCorner {
+            source,
+            shell,
+            vertex,
+            requested,
+            runout_mm,
+            span_mm,
+        },
+        limits,
+        Some(fillet_contact::PlanarProfile::Quartic(maximum)),
+    )
 }
-fn build_strips(
-    source: &Model,
-    shell: usize,
-    vertex: usize,
-    requested: &[EdgeRadius],
-    runout_mm: f64,
-    span_mm: f64,
-    limits: StripLimits,
-    handle: Option<fillet_contact::PlanarProfile>,
-) -> Result<TrihedralStrips> {
+fn build_strips(corner: TrihedralCorner<'_>, limits: StripLimits, handle: Option<fillet_contact::PlanarProfile>) -> Result<TrihedralStrips> {
+        let TrihedralCorner { source, shell, vertex, requested, runout_mm, span_mm } = corner;
     if !span_mm.is_finite()
         || span_mm <= 0.
         || limits.tolerances.iter().any(|v| !v.is_finite() || *v <= 0.)

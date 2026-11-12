@@ -14,23 +14,14 @@ fn main() {
         })
         .collect::<Vec<_>>();
     for fraction in [0.125, 0.175, 0.225, 0.275, 0.3] {
-        let result = r::build_trihedral_strips_with_profile(
-            &source,
-            0,
-            0,
-            &requested,
-            0.1,
-            2.,
-            r::StripLimits {
+        let result = r::build_trihedral_strips_with_profile(r::TrihedralCorner { source: &source, shell: 0, vertex: 0, requested: &requested, runout_mm: 0.1, span_mm: 2. }, r::StripLimits {
                 tolerances: [1e-7, 1e-5, 1e-4],
                 tolerance_uv: 1e-8,
                 max_geometry_work: 10000,
                 max_cells: 300000,
                 max_exact: 1000000,
                 max_coefficients: 2000000,
-            },
-            fraction,
-        );
+            }, fraction);
         let strips = match result {
             Ok(s) => s,
             Err(e) => {

@@ -17,22 +17,14 @@ fn fixture() -> (brep_core::Model, r::TrihedralStrips, r::CornerCollars) {
             radius_mm: [0.1, 0.2, 0.35][i],
         })
         .collect::<Vec<_>>();
-    let strips = r::build_trihedral_strips(
-        &m,
-        0,
-        0,
-        &requests,
-        0.1,
-        2.,
-        r::StripLimits {
+    let strips = r::build_trihedral_strips(r::TrihedralCorner { source: &m, shell: 0, vertex: 0, requested: &requests, runout_mm: 0.1, span_mm: 2. }, r::StripLimits {
             tolerances: [1e-7, 1e-5, 1e-4],
             tolerance_uv: 1e-8,
             max_geometry_work: 10000,
             max_cells: 300000,
             max_exact: 1000000,
             max_coefficients: 2000000,
-        },
-    )
+        })
     .unwrap();
     let collars = r::prepare_trihedral_collars(
         &m,
