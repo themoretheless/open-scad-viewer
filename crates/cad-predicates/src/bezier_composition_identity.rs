@@ -280,9 +280,15 @@ fn compare_composition(c:&[Poly],p:&[Poly],s:&[[Expansion;4]],d:&[Expansion],nu:
 /// Exact affine pullback of a canonical B-spline on one selected knot span.
 /// The predicate verifies both mapped endpoints are in that span exactly.
 pub fn rational_bspline_composition_affine_identity(
-    ctx:&mut PredicateContext<'_>,curve:&[[LeafRef;4]],knots:&[LeafRef],degree:usize,span:usize,
-    pcurve:&[[LeafRef;3]],surface:&[Vec<[LeafRef;4]>],domain:[[LeafRef;2];2],range:[[LeafRef;2];2],
-)->Result<BezierIdentityDecision,InputError>{
+    ctx: &mut PredicateContext<'_>,
+    spline: SplineLeafRefs<'_, 4>,
+    span: usize,
+    pcurve: &[[LeafRef; 3]],
+    surface: &[Vec<[LeafRef; 4]>],
+    domain: [[LeafRef; 2]; 2],
+    range: [[LeafRef; 2]; 2],
+) -> Result<BezierIdentityDecision, InputError> {
+    let SplineLeafRefs { controls: curve, knots, degree } = spline;
     if !(1..=32).contains(&degree) || curve.len()<=degree || knots.len()!=curve.len()+degree+1
         || span<degree || span>=curve.len() {return Err(InputError::InvalidInput("Invalid spline span layout"));}
     composition_identity_impl(ctx,curve,pcurve,surface,domain,Some(range),Some((knots,degree,Some(span))))
