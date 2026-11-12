@@ -226,10 +226,12 @@ pub fn inspect(
                             &[a],
                             model,
                             &[b],
-                            tolerance_mm,
-                            tolerance_uv,
-                            cells,
-                            domains,
+                            shell_distance::DistanceLimits {
+                                tolerance_mm,
+                                tolerance_uv,
+                                max_cells: cells,
+                                max_domain_cells: domains,
+                            },
                         )?;
                         report.cells += d.cells;
                         report.domain_cells += d.domain_cells;

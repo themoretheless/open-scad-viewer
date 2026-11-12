@@ -180,7 +180,15 @@ pub fn inspect(
     limits: Limits,
     hints: &[[f64; 2]],
 ) -> Result<Report> {
-    inspect_impl(model, face, maximum, tolerance_uv, limits, hints, None)
+    inspect_mode(
+        model,
+        face,
+        maximum,
+        tolerance_uv,
+        limits,
+        hints,
+        Coverage::Whole(None),
+    )
 }
 /// An exact C2 certificate may replace the conservative knot-multiplicity gate.
 /// It must borrow this same original face support; a caller flag, copied report,
@@ -202,25 +210,6 @@ pub fn inspect_with_continuity(
         continuity.order() >= 2 && std::ptr::eq(continuity.source(), &support.surface),
         "Curvature continuity must certify this original support to order two",
     )?;
-    inspect_impl(
-        model,
-        face,
-        maximum,
-        tolerance_uv,
-        limits,
-        hints,
-        Some(continuity),
-    )
-}
-fn inspect_impl(
-    model: &Model,
-    face: usize,
-    maximum: f64,
-    tolerance_uv: f64,
-    limits: Limits,
-    hints: &[[f64; 2]],
-    continuity: Option<&nurbs_core::analysis::surface_continuity::Certificate<'_>>,
-) -> Result<Report> {
     inspect_mode(
         model,
         face,
@@ -228,8 +217,7 @@ fn inspect_impl(
         tolerance_uv,
         limits,
         hints,
-        continuity,
-        false,
+        Coverage::Whole(Some(continuity)),
     )
 }
 /// Complete one-sided original-span curvature coverage. This deliberately
@@ -246,7 +234,7 @@ pub fn inspect_one_sided(
     tolerance_uv: f64,
     limits: Limits,
 ) -> Result<OneSidedReport> {
-    let field = inspect_mode(model, face, maximum, tolerance_uv, limits, &[], None, true)?;
+    let field = inspect_mode(model, face, maximum, tolerance_uv, limits, &[], Coverage::OneSided)?;
     let s = &model.faces[face].surface;
     let count = |p: usize, k: &[f64], n: usize| (p..n).filter(|&i| k[i] < k[i + 1]).count();
     Ok(OneSidedReport {
@@ -255,6 +243,15 @@ pub fn inspect_one_sided(
             * count(s.degree_v, &s.knots_v, s.control_points[0].len()),
     })
 }
+/// Which curvature coverage `inspect_mode` proves.
+#[derive(Clone, Copy)]
+enum Coverage<'r, 'c> {
+    /// The whole trimmed face, optionally with an exact C2 certificate in
+    /// place of the knot-multiplicity gate.
+    Whole(Option<&'r nurbs_core::analysis::surface_continuity::Certificate<'c>>),
+    /// Original spans only, one-sided at interior knots.
+    OneSided,
+}
 fn inspect_mode(
     model: &Model,
     face: usize,
@@ -262,9 +259,12 @@ fn inspect_mode(
     tolerance_uv: f64,
     limits: Limits,
     hints: &[[f64; 2]],
-    continuity: Option<&nurbs_core::analysis::surface_continuity::Certificate<'_>>,
-    one_sided: bool,
+    coverage: Coverage<'_, '_>,
 ) -> Result<Report> {
+    let (continuity, one_sided) = match coverage {
+        Coverage::Whole(continuity) => (continuity, false),
+        Coverage::OneSided => (None, true),
+    };
     check(
         maximum.is_finite()
             && maximum > 0.

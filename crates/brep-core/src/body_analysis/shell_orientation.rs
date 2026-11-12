@@ -9,15 +9,25 @@ pub struct Report {
     pub normal_method: &'static str,
     pub outward: Option<bool>,
 }
+/// Cell budgets shared by the parity ray and its crossing-face evidence.
+#[derive(Clone, Copy, Debug)]
+pub struct RayBudget {
+    pub max_cells: usize,
+    pub max_domain_cells: usize,
+    pub max_spans: usize,
+}
 pub fn inspect(
     model: &Model,
     point: [f64; 3],
     direction: [f64; 3],
     tolerance_uv: f64,
-    max_cells: usize,
-    max_domain_cells: usize,
-    max_spans: usize,
+    budget: RayBudget,
 ) -> Result<Report> {
+    let RayBudget {
+        max_cells,
+        max_domain_cells,
+        max_spans,
+    } = budget;
     model.validate()?;
     if model.shells.len() != 1
         || !model.shells[0].closed
@@ -136,26 +146,21 @@ pub fn inspect_trimmed(
     point: [f64; 3],
     direction: [f64; 3],
     tolerance_uv: f64,
-    max_cells: usize,
-    max_domain_cells: usize,
-    max_spans: usize,
+    budget: RayBudget,
     max_pairs: usize,
 ) -> Result<TrimmedReport> {
+    let RayBudget {
+        max_cells,
+        max_domain_cells,
+        ..
+    } = budget;
     if !(1..=100000).contains(&max_pairs) {
         return Err(Error::new(
             "BREP_INVALID_INPUT",
             "Trim orientation requires a bounded positive pair budget",
         ));
     }
-    let chart = inspect(
-        model,
-        point,
-        direction,
-        tolerance_uv,
-        max_cells,
-        max_domain_cells,
-        max_spans,
-    )?;
+    let chart = inspect(model, point, direction, tolerance_uv, budget)?;
     let mut out = TrimmedReport {
         cells: chart.ray.cells,
         domain_cells: chart.ray.domain_cells,
@@ -214,9 +219,11 @@ mod tests {
                 [0.3, 0.4, 0.5],
                 [1., 0.317, 0.173],
                 1e-7,
-                100000,
-                1000000,
-                100,
+                RayBudget {
+                    max_cells: 100000,
+                    max_domain_cells: 1000000,
+                    max_spans: 100,
+                },
                 pairs,
             )
             .unwrap()
@@ -247,10 +254,12 @@ mod tests {
                 [0.3, 0.4, 0.5],
                 [1., 0.317, 0.173],
                 1e-7,
-                100000,
-                1000000,
-                100,
-                1000
+                RayBudget {
+                    max_cells: 100000,
+                    max_domain_cells: 1000000,
+                    max_spans: 100,
+                },
+                1000,
             )
             .is_err()
         );
@@ -262,12 +271,32 @@ mod tests {
             (crate::sphere(2.).unwrap(), [0.; 3]),
         ] {
             let direction = [1., 0.317, 0.173];
-            let r = inspect(&m, point, direction, 1e-7, 100000, 1000000, 100).unwrap();
+            let r = inspect(
+                &m,
+                point,
+                direction,
+                1e-7,
+                RayBudget {
+                    max_cells: 100000,
+                    max_domain_cells: 1000000,
+                    max_spans: 100,
+                },
+            ).unwrap();
             assert_eq!(r.outward, Some(true));
             for f in &mut m.shells[0].faces {
                 f.reversed = !f.reversed;
             }
-            let r = inspect(&m, point, direction, 1e-7, 100000, 1000000, 100).unwrap();
+            let r = inspect(
+                &m,
+                point,
+                direction,
+                1e-7,
+                RayBudget {
+                    max_cells: 100000,
+                    max_domain_cells: 1000000,
+                    max_spans: 100,
+                },
+            ).unwrap();
             assert_eq!(r.outward, Some(false));
         }
     }
@@ -279,7 +308,17 @@ mod tests {
             ([0., 0.4, 0.5], [1., 0.1, 0.2], 10000, 100000),
             ([0.3, 0.4, 0.5], [1., 0.1, 0.2], 1, 1),
         ] {
-            let r = inspect(&m, point, direction, 1e-7, cells, domains, 10).unwrap();
+            let r = inspect(
+                &m,
+                point,
+                direction,
+                1e-7,
+                RayBudget {
+                    max_cells: cells,
+                    max_domain_cells: domains,
+                    max_spans: 10,
+                },
+            ).unwrap();
             assert!(r.outward.is_none());
         }
     }

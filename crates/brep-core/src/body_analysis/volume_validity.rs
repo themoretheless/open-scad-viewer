@@ -320,9 +320,11 @@ fn complete_after_boundary(
                 origin,
                 direction,
                 tolerance_uv,
-                (cells / remaining).max(1),
-                (domains / remaining).max(1),
-                limits.orientation_spans,
+                shell_orientation::RayBudget {
+                    max_cells: (cells / remaining).max(1),
+                    max_domain_cells: (domains / remaining).max(1),
+                    max_spans: limits.orientation_spans,
+                },
             )?;
             out.orientation_cells += r.ray.cells;
             out.orientation_domain_cells += r.ray.domain_cells;
@@ -460,8 +462,17 @@ fn frozen_inspect_impl(
             let domains = limits.orientation_domain_cells-out.orientation_domain_cells;
             if cells == 0 || domains == 0 { break; }
             let remaining = (model.shells.len()-i-1)*6+ray_count-attempt;
-            let r = shell_orientation::inspect(&shell, origin, direction, tolerance_uv,
-                (cells/remaining).max(1), (domains/remaining).max(1), limits.orientation_spans)?;
+            let r = shell_orientation::inspect(
+                &shell,
+                origin,
+                direction,
+                tolerance_uv,
+                shell_orientation::RayBudget {
+                    max_cells: (cells/remaining).max(1),
+                    max_domain_cells: (domains/remaining).max(1),
+                    max_spans: limits.orientation_spans,
+                },
+            )?;
             out.orientation_cells += r.ray.cells;
             out.orientation_domain_cells += r.ray.domain_cells;
             out.orientations[i].outward = r.outward;

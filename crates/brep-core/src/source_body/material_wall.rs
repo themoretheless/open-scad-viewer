@@ -41,10 +41,12 @@ pub fn inspect(
         groups[0],
         model,
         groups[1],
-        tolerance_mm,
-        tolerance_uv,
-        limits.distance_cells,
-        limits.distance_domain_cells,
+        shell_distance::DistanceLimits {
+            tolerance_mm,
+            tolerance_uv,
+            max_cells: limits.distance_cells,
+            max_domain_cells: limits.distance_domain_cells,
+        },
     )?;
     let candidate = material_chord::inspect_with_normals(
         model,

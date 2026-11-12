@@ -23,6 +23,14 @@ struct Pair {
     faces: [usize; 2],
     lower: f64,
 }
+/// Tolerances and shared cell budgets of one face-set distance query.
+#[derive(Clone, Copy, Debug)]
+pub struct DistanceLimits {
+    pub tolerance_mm: f64,
+    pub tolerance_uv: f64,
+    pub max_cells: usize,
+    pub max_domain_cells: usize,
+}
 /// Every face pair contributes a lower bound, even when the shared budget ends.
 /// The upper bound always comes from admitted points on two authored faces.
 pub fn distance(
@@ -38,10 +46,12 @@ pub fn distance(
         &(0..a.faces.len()).collect::<Vec<_>>(),
         b,
         &(0..b.faces.len()).collect::<Vec<_>>(),
-        tolerance_mm,
-        tolerance_uv,
-        max_cells,
-        max_domain_cells,
+        DistanceLimits {
+            tolerance_mm,
+            tolerance_uv,
+            max_cells,
+            max_domain_cells,
+        },
     )
 }
 /// Complete clearance between selected unions of authored trimmed faces.
@@ -52,11 +62,14 @@ pub fn distance_between_face_sets(
     faces_a: &[usize],
     b: &Model,
     faces_b: &[usize],
-    tolerance_mm: f64,
-    tolerance_uv: f64,
-    max_cells: usize,
-    max_domain_cells: usize,
+    limits: DistanceLimits,
 ) -> Result<ShellDistance> {
+    let DistanceLimits {
+        tolerance_mm,
+        tolerance_uv,
+        max_cells,
+        max_domain_cells,
+    } = limits;
     a.validate()?;
     b.validate()?;
     if !tolerance_mm.is_finite()
@@ -418,7 +431,18 @@ mod tests {
             (vec![0, 5, 10], vec![4, 9, 14, 18, 22, 26], 4.75),
             (vec![2, 7, 12, 16, 20, 24], vec![3, 8, 13, 17, 21, 25], 15.),
         ] {
-            let r = distance_between_face_sets(&model, &a, &model, &b, 1e-5, 1e-8, 10000, 1000000)
+            let r = distance_between_face_sets(
+                &model,
+                &a,
+                &model,
+                &b,
+                DistanceLimits {
+                    tolerance_mm: 1e-5,
+                    tolerance_uv: 1e-8,
+                    max_cells: 10000,
+                    max_domain_cells: 1000000,
+                },
+            )
                 .unwrap();
             assert!(
                 r.converged,
@@ -450,7 +474,18 @@ mod tests {
         assert_eq!(format!("{model:?}"), before);
         for group in [vec![], vec![0, 0], vec![27]] {
             assert!(
-                distance_between_face_sets(&model, &group, &model, &[3], 1e-5, 1e-8, 10, 100)
+                distance_between_face_sets(
+                    &model,
+                    &group,
+                    &model,
+                    &[3],
+                    DistanceLimits {
+                        tolerance_mm: 1e-5,
+                        tolerance_uv: 1e-8,
+                        max_cells: 10,
+                        max_domain_cells: 100,
+                    },
+                )
                     .is_err()
             );
         }
@@ -459,10 +494,12 @@ mod tests {
             &[0, 5, 10],
             &model,
             &[3, 8, 13, 17, 21, 25],
-            1e-5,
-            1e-8,
-            1,
-            10000,
+            DistanceLimits {
+                tolerance_mm: 1e-5,
+                tolerance_uv: 1e-8,
+                max_cells: 1,
+                max_domain_cells: 10000,
+            },
         )
         .unwrap();
         assert!(!exhausted.converged && exhausted.pairs == 18 && exhausted.cells == 1);
@@ -472,16 +509,29 @@ mod tests {
             &[0, 5, 10],
             &model,
             &[3, 8, 13, 17, 21, 25],
-            1e-5,
-            1e-8,
-            10000,
-            1,
+            DistanceLimits {
+                tolerance_mm: 1e-5,
+                tolerance_uv: 1e-8,
+                max_cells: 10000,
+                max_domain_cells: 1,
+            },
         )
         .unwrap();
         assert!(!no_witness.converged && no_witness.witness.is_none());
         assert!(no_witness.lower_bound_mm <= 13.75);
         let same =
-            distance_between_face_sets(&model, &[5], &model, &[5], 1e-5, 1e-8, 10, 10000).unwrap();
+            distance_between_face_sets(
+                &model,
+                &[5],
+                &model,
+                &[5],
+                DistanceLimits {
+                    tolerance_mm: 1e-5,
+                    tolerance_uv: 1e-8,
+                    max_cells: 10,
+                    max_domain_cells: 10000,
+                },
+            ).unwrap();
         assert!(same.converged && same.lower_bound_mm == 0. && same.upper_bound_mm.unwrap() < 1e-5);
         assert_eq!(same.faces, Some([5, 5]));
     }
@@ -515,7 +565,18 @@ mod tests {
         let aa = [2, 7, 12, 16, 20, 24];
         let bb = [3, 8, 13, 17, 21, 25];
         for model in [&original, &placed] {
-            let r = distance_between_face_sets(model, &aa, model, &bb, 1e-5, 1e-7, 100000, 1000000)
+            let r = distance_between_face_sets(
+                model,
+                &aa,
+                model,
+                &bb,
+                DistanceLimits {
+                    tolerance_mm: 1e-5,
+                    tolerance_uv: 1e-7,
+                    max_cells: 100000,
+                    max_domain_cells: 1000000,
+                },
+            )
                 .unwrap();
             assert!(
                 r.converged,
@@ -526,7 +587,18 @@ mod tests {
             assert!(r.upper_bound_mm.unwrap() - r.lower_bound_mm <= 1e-5);
             assert_eq!(r.pairs, 36);
             let coarse =
-                distance_between_face_sets(model, &aa, model, &bb, 1e-5, 1e-7, 1, 1).unwrap();
+                distance_between_face_sets(
+                    model,
+                    &aa,
+                    model,
+                    &bb,
+                    DistanceLimits {
+                        tolerance_mm: 1e-5,
+                        tolerance_uv: 1e-7,
+                        max_cells: 1,
+                        max_domain_cells: 1,
+                    },
+                ).unwrap();
             assert!(coarse.lower_bound_mm > 14.99 && coarse.lower_bound_mm <= 15.);
         }
         assert_eq!(format!("{placed:?}"), before);
