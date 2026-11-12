@@ -315,17 +315,28 @@ fn jumps_at(
 /// непрерывной величины скачок на ±ε линеен по ε (2ε·|производная|),
 /// и первая разность убирает этот законный тренд, оставляя истинный
 /// разрыв с остатком O(ε²).
-#[allow(clippy::too_many_arguments)]
-fn sample_line(
-    surface: &Surface,
+/// Одна внутренняя узловая линия: ось параметра, значение узла, кратность
+/// и степень поверхности вдоль этой оси.
+#[derive(Clone, Copy)]
+struct KnotLine {
     axis: KnotAxis,
     knot: f64,
     multiplicity: usize,
     degree: usize,
+}
+fn sample_line(
+    surface: &Surface,
+    line: KnotLine,
     eps: f64,
     samples: usize,
     tol: &Tolerances,
 ) -> Result<KnotLineReport> {
+    let KnotLine {
+        axis,
+        knot,
+        multiplicity,
+        degree,
+    } = line;
     let (du, dv) = (
         domain(&surface.knots_u, surface.degree_u, surface.control_points.len()),
         domain(
@@ -465,12 +476,15 @@ pub fn continuity_map(
                 .fold(f64::INFINITY, f64::min);
             let span = (knot - left).min(right - knot);
             let eps = (1e-5 * span).max(1e-12 * (dom[1] - dom[0]));
-            let report = sample_line(
-                surface,
+            let line = KnotLine {
                 axis,
                 knot,
                 multiplicity,
                 degree,
+            };
+            let report = sample_line(
+                surface,
+                line,
                 eps,
                 samples,
                 tolerances,
