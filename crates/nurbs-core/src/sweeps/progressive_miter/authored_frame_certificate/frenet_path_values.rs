@@ -135,10 +135,8 @@ fn frenet_values_cell(
 
 /// Relative Frenet pose: original path derivatives and station laws retain
 /// distinct parameter intervals. Translation is covered separately by callers.
-pub(crate) fn certify_frenet_relative_values(
-    path:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],path_traversal:[f64;2],law_traversal:[f64;2],max_cells:usize,
-)->Result<ControlValuesReport>{
+pub(crate) fn certify_frenet_relative_values(laws: super::ProfileLaws<'_>, qs:&[[[f64;2];3]], path_traversal:[f64;2], law_traversal:[f64;2], max_cells:usize)->Result<ControlValuesReport>{
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=frenet_values_at(path,twist,path_traversal,law_traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     // Relative translation is the constructor-owned literal zero curve.
@@ -156,10 +154,8 @@ pub(crate) fn certify_frenet_relative_values(
 
 /// Tighter original Frenet image using its proved orthonormal binormal
 /// identity. Separate entry point preserves existing adaptive enclosures.
-pub(crate) fn certify_frenet_relative_values_with_binormal_identity(
-    path:&Curve,scale:&Curve,twist:&Curve,affine:Option<(&Curve,&Curve)>,
-    qs:&[[[f64;2];3]],path_traversal:[f64;2],law_traversal:[f64;2],max_cells:usize,
-)->Result<ControlValuesReport>{
+pub(crate) fn certify_frenet_relative_values_with_binormal_identity(laws: super::ProfileLaws<'_>, qs:&[[[f64;2];3]], path_traversal:[f64;2], law_traversal:[f64;2], max_cells:usize)->Result<ControlValuesReport>{
+    let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=frenet_values_at_with_binormal_identity(path,twist,path_traversal,law_traversal,max_cells,true)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
     super::trajectory::control_values_with_prepared_path(
@@ -439,14 +435,36 @@ fn frenet_relative_values_separate_original_path_and_station_laws(){
     let scale=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();
     let twist=crate::primitives::line([0.;3],[0.25,0.,0.]).unwrap();
     let qs=[[[1.,1.],[0.,0.],[0.,0.]]];
-    let r=certify_frenet_relative_values(&path,&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],1000).unwrap();
+    let r=certify_frenet_relative_values(
+        super::ProfileLaws {
+            path: &path,
+            scale: &scale,
+            twist: &twist,
+            affine: None,
+        },
+        &qs,
+        [0.2,0.3],
+        [0.6,0.7],
+        1000,
+    ).unwrap();
     assert_eq!(r.status,Status::Certified);let bounds=r.values.as_ref().unwrap()[0];
     for u in [0.2_f64,0.25,0.3]{for s in [0.6_f64,0.65,0.7]{
         let d=(1.+4.*u*u).sqrt();let a=0.25*s;
         let expected=[-(1.+s)*2.*u*a.cos()/d,(1.+s)*a.cos()/d,(1.+s)*a.sin()];
         for k in 0..3{assert!(bounds[k][0]<=expected[k]&&expected[k]<=bounds[k][1],"{bounds:?} vs {expected:?}");}
     }}
-    let short=certify_frenet_relative_values(&path,&scale,&twist,None,&qs,[0.2,0.3],[0.6,0.7],r.cells-1).unwrap();
+    let short=certify_frenet_relative_values(
+        super::ProfileLaws {
+            path: &path,
+            scale: &scale,
+            twist: &twist,
+            affine: None,
+        },
+        &qs,
+        [0.2,0.3],
+        [0.6,0.7],
+        r.cells-1,
+    ).unwrap();
     assert_eq!(short.status,Status::Unresolved);assert!(short.values.is_none());
 }
 

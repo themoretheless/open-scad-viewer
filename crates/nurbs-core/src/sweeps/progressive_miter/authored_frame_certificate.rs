@@ -650,13 +650,9 @@ pub(crate) use frenet_path_values::{ArcTraversal, certify_c4_frenet_arc_relative
 
 /// Compose original source points with a frame proved by the owning sweep.
 /// All supplied frame work remains charged to the same request.
-pub(crate) fn control_values_from_owned_frame(
-    path: &Curve, scale: &Curve, affine: Option<(&Curve, &Curve)>,
-    coordinates: &[[[f64; 2]; 3]], fraction: [f64; 2], max_cells: usize,
-    frame: ValuesReport, transverse_fit: Option<crate::distance_bounds::Interval>,
-) -> Result<ControlValuesReport> {
+pub(crate) fn control_values_from_owned_frame(laws: ControlLaws<'_>, coordinates: &[[[f64; 2]; 3]], fraction: [f64; 2], max_cells: usize, frame: ValuesReport, transverse_fit: Option<crate::distance_bounds::Interval>) -> Result<ControlValuesReport> {
     trajectory::control_values_with_prepared_path(
-        ControlLaws { path, scale, affine },
+        laws,
         coordinates,
         fraction,
         max_cells,

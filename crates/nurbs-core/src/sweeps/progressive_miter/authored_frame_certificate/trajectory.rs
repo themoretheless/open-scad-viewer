@@ -229,7 +229,18 @@ pub(super) fn control_value_from_frame(
     max_cells: usize,
     frame: ValuesReport,
 ) -> Result<ControlValueReport> {
-    control_value_with_fit(path, scale, affine, q, traversal, max_cells, frame, None)
+    control_value_with_fit(
+        super::ControlLaws {
+            path,
+            scale,
+            affine,
+        },
+        q,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 #[derive(Clone,Debug)]
 pub struct ControlValuesReport {
@@ -239,12 +250,9 @@ pub struct ControlValuesReport {
     pub values:Option<Vec<[[f64;2];3]>>,
     pub reason:Option<&'static str>,
 }
-pub(super) fn control_value_with_fit(
-    path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,q:[[f64;2];3],
-    traversal:[f64;2],max_cells:usize,frame:ValuesReport,transverse_fit:Option<I>,
-)->Result<ControlValueReport>{
+pub(super) fn control_value_with_fit(laws: ControlLaws<'_>, q:[[f64;2];3], traversal:[f64;2], max_cells:usize, frame:ValuesReport, transverse_fit:Option<I>)->Result<ControlValueReport>{
     let batch=control_values_with_fit(
-        ControlLaws { path, scale, affine },
+        laws,
         &[q],
         traversal,
         max_cells,
@@ -396,7 +404,18 @@ pub(super) fn control_trajectory_from_frame(
     max_cells: usize,
     frame: Report,
 ) -> Result<TrajectoryReport> {
-    control_trajectory_with_fit(path, scale, affine, q, traversal, max_cells, frame, None)
+    control_trajectory_with_fit(
+        super::ControlLaws {
+            path,
+            scale,
+            affine,
+        },
+        q,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 #[derive(Clone,Debug)]
 pub struct TrajectoriesReport {
@@ -408,12 +427,9 @@ pub struct TrajectoriesReport {
     pub single_span:bool,
     pub reason:Option<&'static str>,
 }
-pub(super) fn control_trajectory_with_fit(
-    path:&Curve,scale:&Curve,affine:Option<(&Curve,&Curve)>,q:[[f64;2];3],
-    traversal:[f64;2],max_cells:usize,frame:Report,transverse_fit:Option<[I;3]>,
-)->Result<TrajectoryReport>{
+pub(super) fn control_trajectory_with_fit(laws: ControlLaws<'_>, q:[[f64;2];3], traversal:[f64;2], max_cells:usize, frame:Report, transverse_fit:Option<[I;3]>)->Result<TrajectoryReport>{
     let batch=control_trajectories_with_fit(
-        ControlLaws { path, scale, affine },
+        laws,
         &[q],
         traversal,
         max_cells,

@@ -155,10 +155,12 @@ impl SharedArcPose {
                 basis[j + 1][j] = [1.; 2];
             }
             let report = authored_frame_certificate::certify_frenet_relative_values(
-                sweep.path,
-                sweep.scale,
-                sweep.twist,
-                sweep.affine_laws,
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path: sweep.path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
                 &basis,
                 path,
                 law,

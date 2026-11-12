@@ -99,7 +99,18 @@ pub(crate) fn certify_fixed_relative_trajectory(laws: super::ProfileLaws<'_>, no
     let super::ProfileLaws { path, scale, twist, affine } = laws;
     let frame=certify_fixed_path(path,normal,twist,traversal,max_cells)?;
     let zero=crate::sweeps::progressive_sweep::constant_vector_law([0.;3])?;
-    super::trajectory::control_trajectory_with_fit(&zero,scale,affine,q,traversal,max_cells,frame,None)
+    super::trajectory::control_trajectory_with_fit(
+        super::ControlLaws {
+            path: &zero,
+            scale,
+            affine,
+        },
+        q,
+        traversal,
+        max_cells,
+        frame,
+        None,
+    )
 }
 
 pub(crate) fn certify_fixed_relative_trajectories(laws: super::ProfileLaws<'_>, normal:[f64;3], qs:&[[[f64;2];3]], traversal:[f64;2], max_cells:usize)->Result<TrajectoriesReport>{

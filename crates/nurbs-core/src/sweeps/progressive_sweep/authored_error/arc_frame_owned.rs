@@ -230,10 +230,30 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
             OriginalTransport::RmfPlanar|OriginalTransport::CorrectedPlanar=>authored_frame_certificate::certify_proved_planar_relative_values(profile_laws, sweep.options.normal, &qs, path_interval, station, rem)?,
             OriginalTransport::FixedNormal=>authored_frame_certificate::certify_fixed_normal_relative_values(profile_laws, sweep.options.normal, &qs, path_interval, station, rem)?,
             OriginalTransport::CorrectedRegular if shared_pose.is_some()=>shared_pose.as_deref_mut().unwrap().values(sweep,&qs,path_interval,station,rem)?,
-            OriginalTransport::Frenet if closed_frenet=>authored_frame_certificate::certify_frenet_relative_values_with_binormal_identity(sweep.path,sweep.scale,
-                sweep.twist,sweep.affine_laws,&qs,path_interval,station,rem)?,
-            OriginalTransport::Frenet|OriginalTransport::CorrectedRegular=>authored_frame_certificate::certify_frenet_relative_values(sweep.path,sweep.scale,
-                sweep.twist,sweep.affine_laws,&qs,path_interval,station,rem)?,
+            OriginalTransport::Frenet if closed_frenet=>authored_frame_certificate::certify_frenet_relative_values_with_binormal_identity(
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path: sweep.path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
+                &qs,
+                path_interval,
+                station,
+                rem,
+            )?,
+            OriginalTransport::Frenet|OriginalTransport::CorrectedRegular=>authored_frame_certificate::certify_frenet_relative_values(
+                crate::sweeps::progressive_sweep::SweepLaws {
+                    path: sweep.path,
+                    scale: sweep.scale,
+                    twist: sweep.twist,
+                    affine: sweep.affine_laws,
+                },
+                &qs,
+                path_interval,
+                station,
+                rem,
+            )?,
             OriginalTransport::Guided=>authored_frame_certificate::certify_path_guide_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::PathGuideTraversal { path: path_interval, guide: [guide_source[i][0],guide_source[i+1][1]], law: station, same_parameter: same_phase }, rem)?,
             OriginalTransport::Contact=>authored_frame_certificate::certify_contact_relative_values(authored_frame_certificate::ContactLaws { path: sweep.path, guide: sweep.orientation_guide.unwrap(), scale: sweep.scale, twist: sweep.twist, affine: sweep.affine_laws }, &qs, authored_frame_certificate::ContactTraversal { anchor: anchor.unwrap(), path: path_interval, guide: [guide_source[i][0],guide_source[i+1][1]], law: station, same_parameter: same_phase }, rem)?,
             _=>return Ok(out),
@@ -330,8 +350,17 @@ pub(super) fn original_frame_arc_length_section_interpolation_with_rmf_steps(swe
                     for e in 0..2 {
                         let endpoint=if let Some(pose)=shared_pose.as_deref_mut(){pose.values(sweep,&qs,source[i+e],[station[e];2],max_cells-out.cells)?}
                             else{authored_frame_certificate::certify_frenet_relative_values(
-                            sweep.path,sweep.scale,sweep.twist,sweep.affine_laws,&qs,source[i+e],
-                            [station[e];2],max_cells-out.cells)?};
+                                crate::sweeps::progressive_sweep::SweepLaws {
+                                    path: sweep.path,
+                                    scale: sweep.scale,
+                                    twist: sweep.twist,
+                                    affine: sweep.affine_laws,
+                                },
+                                &qs,
+                                source[i+e],
+                                [station[e];2],
+                                max_cells-out.cells,
+                            )?};
                         out.cells+=endpoint.cells;
                         if endpoint.status!=Status::Certified{break;}
                         endpoints.push(endpoint.values.unwrap());
