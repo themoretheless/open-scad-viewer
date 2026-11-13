@@ -89,12 +89,12 @@ fn insert(
     });
     Ok(())
 }
-fn derive(
-    o: &OwnedPeriodicArrangementCuts,
-) -> Result<(
-    Vec<Vec<OriginalPeriodicArrangementCut>>,
-    Vec<OriginalPeriodicArrangementInterval>,
-)> {
+const MAX_PAIRS: usize = 4096;
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+/// Number of unordered piece pairs (with self pairs). The stored census must
+/// hold exactly these plus the actual seam pairs, within the allowance.
+fn chart_pair_count(o: &OwnedPeriodicArrangementCuts) -> Result<usize> {
     let n = o.pieces.pieces().len();
     let count = n
         .checked_add(1)
@@ -105,17 +105,22 @@ fn derive(
         .checked_add(o.seams.as_ref().map_or(0, |s| s.pairs().len()))
         .ok_or_else(|| refused("Combined periodic pair count overflow"))?;
     if o.max_pairs == 0
-        || o.max_pairs > 4096
+        || o.max_pairs > MAX_PAIRS
         || total > o.max_pairs
         || o.pairs.len() != total
-        || o.limits.max_refinements > 512
-        || !(1..=128).contains(&o.limits.max_resultant_size)
+        || o.limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&o.limits.max_resultant_size)
     {
         return Err(refused(
             "Incomplete periodic pair census or invalid arrangement allowance",
         ));
     }
-    super::periodic_replay::verify_arc(&o.pieces, |p| p.reverify_source())?;
+    Ok(count)
+}
+/// The first `count` pairs are the zero-shift chart pairs in order; the rest
+/// are exactly the actual seam pairs over the same source cover.
+fn verify_census(o: &OwnedPeriodicArrangementCuts, count: usize) -> Result<()> {
+    let n = o.pieces.pieces().len();
     let mut ordinal = 0;
     for a in 0..n {
         for b in a..n {
@@ -132,22 +137,81 @@ fn derive(
             ordinal += 1;
         }
     }
-    if let Some(seams) = &o.seams {
-        if !Arc::ptr_eq(seams.embedding().wires().surface().pieces(), &o.pieces) {
+    let Some(seams) = &o.seams else {
+        return Ok(());
+    };
+    if !Arc::ptr_eq(seams.embedding().wires().surface().pieces(), &o.pieces) {
+        return Err(refused(
+            "Actual seam contacts and chart arrangement use different source covers",
+        ));
+    }
+    super::periodic_replay::verify_arc(seams, |s| s.reverify_source())?;
+    for (i, p) in seams.pairs().iter().enumerate() {
+        if !Arc::ptr_eq(&o.pairs[count + i], &p.owner) {
             return Err(refused(
-                "Actual seam contacts and chart arrangement use different source covers",
+                "Combined arrangement lost actual seam pair provenance",
             ));
         }
-        super::periodic_replay::verify_arc(seams, |s| s.reverify_source())?;
-        for (i, p) in seams.pairs().iter().enumerate() {
-            if !Arc::ptr_eq(&o.pairs[count + i], &p.owner) {
-                return Err(refused(
-                    "Combined arrangement lost actual seam pair provenance",
-                ));
+    }
+    Ok(())
+}
+/// Adds the events and common clip endpoints of one pair to both its pieces.
+fn insert_pair_cuts(
+    o: &OwnedPeriodicArrangementCuts,
+    index: usize,
+    cuts: &mut [Vec<OriginalPeriodicArrangementCut>],
+) -> Result<()> {
+    let pair = &o.pairs[index];
+    let events = pair.owner();
+    let pieces = events.pair();
+    if !Arc::ptr_eq(events.pieces(), &o.pieces) {
+        return Err(refused(
+            "Combined contact uses unrelated original source cover",
+        ));
+    }
+    super::periodic_replay::verify_arc(pair, |p| p.reverify_source())?;
+    for (event, node) in events.events().iter().enumerate() {
+        if !node.in_both_closed_pieces() {
+            continue;
+        }
+        for (side, piece) in pieces.into_iter().enumerate() {
+            insert(
+                &mut cuts[piece],
+                value(&node.node, side),
+                OriginalPeriodicArrangementOrigin::Event {
+                    pair: index,
+                    event,
+                    side,
+                },
+                o.limits,
+            )?;
+        }
+    }
+    for (clip, c) in pair.clips().iter().enumerate() {
+        for (end, endpoint) in c.endpoints.iter().enumerate() {
+            for (side, piece) in pieces.into_iter().enumerate() {
+                insert(
+                    &mut cuts[piece],
+                    value(endpoint, side),
+                    OriginalPeriodicArrangementOrigin::Common {
+                        pair: index,
+                        clip,
+                        end,
+                        side,
+                    },
+                    o.limits,
+                )?;
             }
         }
     }
-    let mut cuts = vec![Vec::new(); n];
+    Ok(())
+}
+/// Ordered cuts of every piece: its two boundary cuts, then every pair's
+/// events and common clip endpoints on it.
+fn arrangement_cuts(
+    o: &OwnedPeriodicArrangementCuts,
+) -> Result<Vec<Vec<OriginalPeriodicArrangementCut>>> {
+    let mut cuts = vec![Vec::new(); o.pieces.pieces().len()];
     for (piece, p) in o.pieces.pieces().iter().enumerate() {
         for end in 0..2 {
             insert(
@@ -158,49 +222,57 @@ fn derive(
             )?;
         }
     }
-    for (index, pair) in o.pairs.iter().enumerate() {
-        let events = pair.owner();
-        let [a, b] = events.pair();
-        if !Arc::ptr_eq(events.pieces(), &o.pieces) {
-            return Err(refused(
-                "Combined contact uses unrelated original source cover",
-            ));
-        }
-        super::periodic_replay::verify_arc(pair, |p| p.reverify_source())?;
-        for (event, node) in events.events().iter().enumerate() {
-            if node.in_both_closed_pieces() {
-                for (side, piece) in [a, b].into_iter().enumerate() {
-                    insert(
-                        &mut cuts[piece],
-                        value(&node.node, side),
-                        OriginalPeriodicArrangementOrigin::Event {
-                            pair: index,
-                            event,
-                            side,
-                        },
-                        o.limits,
-                    )?;
-                }
+    for index in 0..o.pairs.len() {
+        insert_pair_cuts(o, index, &mut cuts)?;
+    }
+    Ok(cuts)
+}
+/// Common clips of any pair that cover the whole interval between two
+/// adjacent cuts of `piece`.
+fn common_uses(
+    o: &OwnedPeriodicArrangementCuts,
+    piece: usize,
+    [lower, upper]: [&OriginalSourceParameter; 2],
+) -> Result<Vec<OriginalPeriodicArrangementUse>> {
+    let mut uses = Vec::new();
+    for (pair, owner) in o.pairs.iter().enumerate() {
+        for (side, id) in owner.owner().pair().into_iter().enumerate() {
+            if id != piece {
+                continue;
             }
-        }
-        for (clip, c) in pair.clips().iter().enumerate() {
-            for end in 0..2 {
-                for (side, piece) in [a, b].into_iter().enumerate() {
-                    insert(
-                        &mut cuts[piece],
-                        value(&c.endpoints[end], side),
-                        OriginalPeriodicArrangementOrigin::Common {
-                            pair: index,
-                            clip,
-                            end,
-                            side,
-                        },
-                        o.limits,
-                    )?;
+            for (clip, c) in owner.clips().iter().enumerate() {
+                if c.point_only {
+                    continue;
+                }
+                let a = value(&c.endpoints[0], side);
+                let b = value(&c.endpoints[1], side);
+                let reversed = compare(&a, &b, o.limits)? == Ordering::Greater;
+                let (lo, hi) = if reversed { (&b, &a) } else { (&a, &b) };
+                if compare(lower, lo, o.limits)? != Ordering::Less
+                    && compare(upper, hi, o.limits)? != Ordering::Greater
+                {
+                    uses.push(OriginalPeriodicArrangementUse {
+                        pair,
+                        clip,
+                        side,
+                        reversed,
+                    });
                 }
             }
         }
     }
+    Ok(uses)
+}
+fn derive(
+    o: &OwnedPeriodicArrangementCuts,
+) -> Result<(
+    Vec<Vec<OriginalPeriodicArrangementCut>>,
+    Vec<OriginalPeriodicArrangementInterval>,
+)> {
+    let count = chart_pair_count(o)?;
+    super::periodic_replay::verify_arc(&o.pieces, |p| p.reverify_source())?;
+    verify_census(o, count)?;
+    let cuts = arrangement_cuts(o)?;
     let mut intervals = Vec::new();
     for (piece, p) in o.pieces.pieces().iter().enumerate() {
         if cuts[piece].len() < 2 {
@@ -208,41 +280,13 @@ fn derive(
                 "Periodic source piece lost its closed boundary cuts",
             ));
         }
-        for i in 0..cuts[piece].len() - 1 {
-            let mut uses = Vec::new();
-            for (pair, owner) in o.pairs.iter().enumerate() {
-                for (side, id) in owner.owner().pair().into_iter().enumerate() {
-                    if id != piece {
-                        continue;
-                    }
-                    for (clip, c) in owner.clips().iter().enumerate() {
-                        if c.point_only {
-                            continue;
-                        }
-                        let a = value(&c.endpoints[0], side);
-                        let b = value(&c.endpoints[1], side);
-                        let reversed = compare(&a, &b, o.limits)? == Ordering::Greater;
-                        let (lo, hi) = if reversed { (&b, &a) } else { (&a, &b) };
-                        if compare(&cuts[piece][i].value, lo, o.limits)? != Ordering::Less
-                            && compare(&cuts[piece][i + 1].value, hi, o.limits)?
-                                != Ordering::Greater
-                        {
-                            uses.push(OriginalPeriodicArrangementUse {
-                                pair,
-                                clip,
-                                side,
-                                reversed,
-                            });
-                        }
-                    }
-                }
-            }
+        for (i, bounds) in cuts[piece].windows(2).enumerate() {
             intervals.push(OriginalPeriodicArrangementInterval {
                 piece,
                 source: p.source,
                 cell: p.cell,
                 cuts: [i, i + 1],
-                common_uses: uses,
+                common_uses: common_uses(o, piece, [&bounds[0].value, &bounds[1].value])?,
             });
         }
     }
