@@ -104,33 +104,28 @@ pub(super) fn cover_source_pairs(
     }
     let mut bounds = Vec::new();
     for chart in charts {
-        let b = nurbs_core::surface_distance::rectangle_bounds(surface, chart.domain)?;
-        if b.len() != 3
-            || b.iter()
-                .any(|a| a.iter().any(|v| !v.is_finite()) || a[0] > a[1])
-        {
-            return Err(refused(
-                "Original chart image enclosure is incomplete or nonfinite",
-            ));
-        }
-        bounds.push([b[0], b[1], b[2]]);
+        bounds.push(image_bounds(
+            surface,
+            chart.domain,
+            "Original chart image enclosure is incomplete or nonfinite",
+        )?);
     }
     let mut pairs = Vec::with_capacity(count);
-    let mut work = 0;
-    let mut subdivision_cells = 0;
+    let mut prover = PairProver {
+        atlas: AtlasSurface {
+            surface,
+            natural,
+            wrapped,
+        },
+        limits,
+        work: 0,
+        created: 0,
+    };
     for i in 0..n {
         for j in i + 1..n {
-            let proof = prove_pair(
-                AtlasSurface {
-                    surface,
-                    natural,
-                    wrapped,
-                },
+            let proof = prover.prove(
                 [charts[i].domain, charts[j].domain],
                 [bounds[i], bounds[j]],
-                limits,
-                &mut work,
-                &mut subdivision_cells,
                 0,
             )?;
             pairs.push(OriginalAtlasPair {
@@ -139,6 +134,7 @@ pub(super) fn cover_source_pairs(
             });
         }
     }
+    let (work, subdivision_cells) = (prover.work, prover.created);
     Ok((bounds, pairs, work, subdivision_cells))
 }
 
@@ -150,93 +146,133 @@ struct AtlasSurface<'a> {
     natural: [[f64; 2]; 2],
     wrapped: [bool; 2],
 }
-fn prove_pair(
-    atlas: AtlasSurface<'_>,
-    domains: [[[f64; 2]; 2]; 2],
-    bounds: [[[f64; 2]; 3]; 2],
-    limits: OriginalAtlasPairLimits,
-    total_work: &mut usize,
-    created: &mut usize,
-    depth: usize,
-) -> Result<OriginalAtlasPairProof> {
-    let AtlasSurface {
-        surface,
-        natural,
-        wrapped,
-    } = atlas;
-    let mut work = *total_work;
-    let mut proof = None;
-    let pair_start_work = work;
+/// Parameter rectangles of the two charts of one pair.
+type PairDomains = [[[f64; 2]; 2]; 2];
+/// World bounding boxes of the two chart images of one pair.
+type PairBounds = [[[f64; 2]; 3]; 2];
+/// Span work one injectivity attempt may spend from the shared allowance.
+const ATTEMPT_SPAN_WORK: usize = 100000;
+/// Finite world bounding box of the surface image of one parameter rectangle.
+fn image_bounds(
+    surface: &nurbs_core::surface::Surface,
+    domain: [[f64; 2]; 2],
+    invalid: &'static str,
+) -> Result<[[f64; 2]; 3]> {
+    let b = nurbs_core::surface_distance::rectangle_bounds(surface, domain)?;
+    if b.len() != 3
+        || b.iter()
+            .any(|a| a.iter().any(|v| !v.is_finite()) || a[0] > a[1])
+    {
+        return Err(refused(invalid));
+    }
+    Ok([b[0], b[1], b[2]])
+}
+/// The two image boxes are strictly apart along one world axis.
+fn separated_axis(bounds: PairBounds) -> Option<OriginalAtlasPairProof> {
     for axis in 0..3 {
         if bounds[0][axis][1] < bounds[1][axis][0] {
-            proof = Some(OriginalAtlasPairProof::SeparatedAxis {
+            return Some(OriginalAtlasPairProof::SeparatedAxis {
                 axis,
                 first_before_second: true,
             });
-            break;
         }
         if bounds[1][axis][1] < bounds[0][axis][0] {
-            proof = Some(OriginalAtlasPairProof::SeparatedAxis {
+            return Some(OriginalAtlasPairProof::SeparatedAxis {
                 axis,
                 first_before_second: false,
             });
-            break;
         }
     }
-    if proof.is_none() {
-        if let Some(lower) = nurbs_core::surface_distance::verify_rectangle_separation_gap(
-            surface,
-            surface,
-            [domains[0], domains[1]],
-        )? {
-            if lower.is_finite() && lower > 0. {
-                proof = Some(OriginalAtlasPairProof::SeparatedControlGap { lower });
-            }
-        }
+    None
+}
+/// Smallest rectangle containing both chart domains.
+fn common_domain(domains: PairDomains) -> [[f64; 2]; 2] {
+    let [a, b] = domains;
+    std::array::from_fn(|axis| [a[axis][0].min(b[axis][0]), a[axis][1].max(b[axis][1])])
+}
+/// Projection and contraction of a proved injectivity report.
+fn injective_frame<P>(
+    projection: Option<P>,
+    contraction_upper: Option<f64>,
+    spans: usize,
+    [no_projection, no_contraction, invalid]: [&'static str; 3],
+) -> Result<(P, f64)> {
+    let projection = projection.ok_or_else(|| refused(no_projection))?;
+    let contraction = contraction_upper.ok_or_else(|| refused(no_contraction))?;
+    if !contraction.is_finite() || !(0. ..1.).contains(&contraction) || spans == 0 {
+        return Err(refused(invalid));
     }
-    if proof.is_none() && work < limits.max_span_work {
-        let a = domains[0];
-        let b = domains[1];
-        let domain =
-            std::array::from_fn(|axis| [a[axis][0].min(b[axis][0]), a[axis][1].max(b[axis][1])]);
-        let remaining = (limits.max_span_work - work).min(100000);
+    Ok((projection, contraction))
+}
+/// Proves chart pairs against one surface, sharing the span work and the
+/// subdivision cell allowance across all pairs and all recursion levels.
+struct PairProver<'a> {
+    atlas: AtlasSurface<'a>,
+    limits: OriginalAtlasPairLimits,
+    work: usize,
+    created: usize,
+}
+impl PairProver<'_> {
+    fn exhausted(&self) -> bool {
+        self.work >= self.limits.max_span_work
+    }
+    /// The control nets of the two rectangles are a positive distance apart.
+    fn control_gap(&self, domains: PairDomains) -> Result<Option<OriginalAtlasPairProof>> {
+        let surface = self.atlas.surface;
+        let lower = nurbs_core::surface_distance::verify_rectangle_separation_gap(
+            surface, surface, domains,
+        )?;
+        Ok(lower
+            .filter(|lower| lower.is_finite() && *lower > 0.)
+            .map(|lower| OriginalAtlasPairProof::SeparatedControlGap { lower }))
+    }
+    /// The surface is injective on one rectangle that contains both charts.
+    fn common_rectangle(&mut self, domains: PairDomains) -> Result<Option<OriginalAtlasPairProof>> {
+        let domain = common_domain(domains);
+        let remaining = (self.limits.max_span_work - self.work).min(ATTEMPT_SPAN_WORK);
         let report = nurbs_core::surface_injectivity::certify_on_refined(
-            surface,
+            self.atlas.surface,
             domain,
             remaining,
-            limits.refinement_depth,
+            self.limits.refinement_depth,
         )?;
         if report.spans > remaining {
             return Err(refused(
                 "Original chart pair exceeds shared actual span work",
             ));
         }
-        work += report.spans;
-        if report.proven {
-            let projection = report
-                .projection
-                .ok_or_else(|| refused("Original pair common projection omitted"))?;
-            let contraction = report
-                .contraction_upper
-                .ok_or_else(|| refused("Original pair contraction omitted"))?;
-            if !contraction.is_finite() || !(0. ..1.).contains(&contraction) || report.spans == 0 {
-                return Err(refused("Original pair common injectivity proof is invalid"));
-            }
-            proof = Some(OriginalAtlasPairProof::CommonOriginalRectangle {
-                domain,
-                projection,
-                contraction_upper: contraction,
-                span_work: report.spans,
-            });
+        self.work += report.spans;
+        if !report.proven {
+            return Ok(None);
         }
+        let (projection, contraction_upper) = injective_frame(
+            report.projection,
+            report.contraction_upper,
+            report.spans,
+            [
+                "Original pair common projection omitted",
+                "Original pair contraction omitted",
+                "Original pair common injectivity proof is invalid",
+            ],
+        )?;
+        Ok(Some(OriginalAtlasPairProof::CommonOriginalRectangle {
+            domain,
+            projection,
+            contraction_upper,
+            span_work: report.spans,
+        }))
     }
-    if proof.is_none() && work < limits.max_span_work {
-        let a = domains[0];
-        let b = domains[1];
-        let direct: [Vec<[f64; 2]>; 2] = std::array::from_fn(|axis| {
-            vec![[a[axis][0].min(b[axis][0]), a[axis][1].max(b[axis][1])]]
-        });
-        let options: [Option<Vec<[f64; 2]>>; 2] = std::array::from_fn(|axis| {
+    /// The surface is injective on a rectangle that joins the two charts
+    /// across a wrapped seam on one or both axes.
+    fn seam_glued(&mut self, domains: PairDomains) -> Result<Option<OriginalAtlasPairProof>> {
+        let AtlasSurface {
+            surface,
+            natural,
+            wrapped,
+        } = self.atlas;
+        let [a, b] = domains;
+        let direct = common_domain(domains);
+        let across: [Option<Vec<[f64; 2]>>; 2] = std::array::from_fn(|axis| {
             if !wrapped[axis] {
                 return None;
             }
@@ -253,130 +289,154 @@ fn prove_pair(
             ])
         });
         for mask in 0..4 {
-            if work == limits.max_span_work {
+            if self.work == self.limits.max_span_work {
                 break;
             }
-            if (0..2).any(|axis| mask & (1 << axis) != 0 && options[axis].is_none()) {
+            let mut sections = [vec![direct[0]], vec![direct[1]]];
+            let mut available = true;
+            for axis in (0..2).filter(|axis| mask & (1 << axis) != 0) {
+                match &across[axis] {
+                    Some(parts) => sections[axis] = parts.clone(),
+                    None => available = false,
+                }
+            }
+            if !available {
                 continue;
             }
-            let sections = std::array::from_fn(|axis| {
-                if mask & (1 << axis) != 0 {
-                    options[axis].as_ref().unwrap().clone()
-                } else {
-                    direct[axis].clone()
-                }
-            });
-            let remaining = (limits.max_span_work - work).min(100000);
+            let remaining = (self.limits.max_span_work - self.work).min(ATTEMPT_SPAN_WORK);
             let report = nurbs_core::surface_injectivity::certify_seam_glued_rectangle(
                 surface,
                 sections.clone(),
                 remaining,
-                limits.refinement_depth,
+                self.limits.refinement_depth,
             )?;
             if report.spans > remaining {
                 return Err(refused(
                     "Original glued pair exceeds shared actual span work",
                 ));
             }
-            work += report.spans;
-            if report.proven {
-                let projection = report
-                    .projection
-                    .ok_or_else(|| refused("Original glued pair common projection omitted"))?;
-                let contraction = report
-                    .contraction_upper
-                    .ok_or_else(|| refused("Original glued pair contraction omitted"))?;
-                if !contraction.is_finite()
-                    || !(0. ..1.).contains(&contraction)
-                    || report.spans == 0
-                {
-                    return Err(refused("Original glued pair contraction is invalid"));
-                }
-                proof = Some(OriginalAtlasPairProof::SeamGluedRectangle {
-                    sections,
-                    projection,
-                    contraction_upper: contraction,
-                    span_work: report.spans,
-                    parameter_scale: report.parameter_scale,
-                });
-                break;
+            self.work += report.spans;
+            if !report.proven {
+                continue;
             }
+            let (projection, contraction_upper) = injective_frame(
+                report.projection,
+                report.contraction_upper,
+                report.spans,
+                [
+                    "Original glued pair common projection omitted",
+                    "Original glued pair contraction omitted",
+                    "Original glued pair contraction is invalid",
+                ],
+            )?;
+            return Ok(Some(OriginalAtlasPairProof::SeamGluedRectangle {
+                sections,
+                projection,
+                contraction_upper,
+                span_work: report.spans,
+                parameter_scale: report.parameter_scale,
+            }));
         }
+        Ok(None)
     }
-
-    *total_work = work;
-    if let Some(proof) = proof {
-        return Ok(proof);
+    /// The first proof that settles the pair without subdividing it.
+    fn direct(
+        &mut self,
+        domains: PairDomains,
+        bounds: PairBounds,
+    ) -> Result<Option<OriginalAtlasPairProof>> {
+        if let Some(proof) = separated_axis(bounds) {
+            return Ok(Some(proof));
+        }
+        if let Some(proof) = self.control_gap(domains)? {
+            return Ok(Some(proof));
+        }
+        if !self.exhausted()
+            && let Some(proof) = self.common_rectangle(domains)?
+        {
+            return Ok(Some(proof));
+        }
+        if self.exhausted() {
+            return Ok(None);
+        }
+        self.seam_glued(domains)
     }
-    if depth < limits.max_pair_depth
-        && *created + 2 <= limits.max_subdivision_cells
-        && work < limits.max_span_work
-    {
-        let side = depth % 2;
+    /// Where to halve one chart: the relatively wider axis first, if its
+    /// midpoint is strictly inside.
+    fn split(&self, domain: [[f64; 2]; 2]) -> Option<(usize, f64)> {
+        let natural = self.atlas.natural;
         let width = std::array::from_fn::<_, 2, _>(|axis| {
-            (domains[side][axis][1] - domains[side][axis][0])
-                / (natural[axis][1] - natural[axis][0])
+            (domain[axis][1] - domain[axis][0]) / (natural[axis][1] - natural[axis][0])
         });
         let preferred = if width[0] >= width[1] { 0 } else { 1 };
-        let mut split = None;
-        for axis in [preferred, 1 - preferred] {
-            let d = domains[side][axis];
+        [preferred, 1 - preferred].into_iter().find_map(|axis| {
+            let d = domain[axis];
             let cut = d[0] * 0.5 + d[1] * 0.5;
-            if d[0] < cut && cut < d[1] {
-                split = Some((axis, cut));
-                break;
-            }
-        }
-        if let Some((axis, cut)) = split {
-            *created += 2;
-            let mut first = domains;
-            let mut second = domains;
-            first[side][axis][1] = cut;
-            second[side][axis][0] = cut;
-            let child = |section: [[[f64; 2]; 2]; 2],
-                         total_work: &mut usize,
-                         created: &mut usize|
-             -> Result<OriginalAtlasPairProof> {
-                let mut boxes = [[[0.; 2]; 3]; 2];
-                for k in 0..2 {
-                    let values =
-                        nurbs_core::surface_distance::rectangle_bounds(surface, section[k])?;
-                    if values.len() != 3
-                        || values
-                            .iter()
-                            .any(|a| a.iter().any(|v| !v.is_finite()) || a[0] > a[1])
-                    {
-                        return Err(refused(
-                            "Original subdivided pair has an invalid source enclosure",
-                        ));
-                    }
-                    boxes[k] = [values[0], values[1], values[2]];
-                }
-                prove_pair(
-                    atlas,
-                    section,
-                    boxes,
-                    limits,
-                    total_work,
-                    created,
-                    depth + 1,
-                )
-            };
-            let a = child(first, total_work, created)?;
-            let b = child(second, total_work, created)?;
-            return Ok(OriginalAtlasPairProof::Subdivided {
-                domains,
-                side,
-                axis,
-                cut,
-                children: Box::new([a, b]),
-                span_work: *total_work - pair_start_work,
-            });
-        }
+            (d[0] < cut && cut < d[1]).then_some((axis, cut))
+        })
     }
-    Ok(OriginalAtlasPairProof::Unresolved {
-        span_work: work - pair_start_work,
-    })
+    /// Halves one chart (alternating by depth) and proves both halves.
+    fn subdivide(
+        &mut self,
+        domains: PairDomains,
+        depth: usize,
+        start_work: usize,
+    ) -> Result<Option<OriginalAtlasPairProof>> {
+        if depth >= self.limits.max_pair_depth
+            || self.created + 2 > self.limits.max_subdivision_cells
+            || self.exhausted()
+        {
+            return Ok(None);
+        }
+        let side = depth % 2;
+        let Some((axis, cut)) = self.split(domains[side]) else {
+            return Ok(None);
+        };
+        self.created += 2;
+        let mut halves = [domains, domains];
+        halves[0][side][axis][1] = cut;
+        halves[1][side][axis][0] = cut;
+        let mut children = Vec::with_capacity(2);
+        for section in halves {
+            let mut boxes = [[[0.; 2]; 3]; 2];
+            for (k, bounds) in boxes.iter_mut().enumerate() {
+                *bounds = image_bounds(
+                    self.atlas.surface,
+                    section[k],
+                    "Original subdivided pair has an invalid source enclosure",
+                )?;
+            }
+            children.push(self.prove(section, boxes, depth + 1)?);
+        }
+        let [Some(second), Some(first)] = [children.pop(), children.pop()] else {
+            return Ok(None);
+        };
+        Ok(Some(OriginalAtlasPairProof::Subdivided {
+            domains,
+            side,
+            axis,
+            cut,
+            children: Box::new([first, second]),
+            span_work: self.work - start_work,
+        }))
+    }
+    fn prove(
+        &mut self,
+        domains: PairDomains,
+        bounds: PairBounds,
+        depth: usize,
+    ) -> Result<OriginalAtlasPairProof> {
+        let start_work = self.work;
+        if let Some(proof) = self.direct(domains, bounds)? {
+            return Ok(proof);
+        }
+        if let Some(proof) = self.subdivide(domains, depth, start_work)? {
+            return Ok(proof);
+        }
+        Ok(OriginalAtlasPairProof::Unresolved {
+            span_work: self.work - start_work,
+        })
+    }
 }
 impl OriginalAtlasPairProof {
     pub fn is_proven(&self) -> bool {
@@ -564,33 +624,27 @@ mod subdivision_tests {
             refinement_depth: 4,
             ..Default::default()
         };
-        let mut work = 0;
-        let mut cells = 0;
-        let flat = prove_pair(AtlasSurface { surface: &surface, natural: natural, wrapped: [true, true] }, domains, bounds, OriginalAtlasPairLimits {
-                max_pair_depth: 0,
-                ..limits
-            }, &mut work, &mut cells, 0)
-        .unwrap();
-        assert!(!flat.is_proven());
-        assert_eq!(cells, 0);
-        let mut work = 0;
-        let mut cells = 0;
-        let proof = prove_pair(
-            AtlasSurface {
+        let prover = |limits| PairProver {
+            atlas: AtlasSurface {
                 surface: &surface,
                 natural,
                 wrapped: [true, true],
             },
-            domains,
-            bounds,
             limits,
-            &mut work,
-            &mut cells,
-            0,
-        )
-        .unwrap();
+            work: 0,
+            created: 0,
+        };
+        let mut flat_prover = prover(OriginalAtlasPairLimits {
+            max_pair_depth: 0,
+            ..limits
+        });
+        let flat = flat_prover.prove(domains, bounds, 0).unwrap();
+        assert!(!flat.is_proven());
+        assert_eq!(flat_prover.created, 0);
+        let mut full_prover = prover(limits);
+        let proof = full_prover.prove(domains, bounds, 0).unwrap();
         assert!(proof.is_proven());
-        assert!(cells > 0);
+        assert!(full_prover.created > 0);
         fn cover(p: &OriginalAtlasPairProof, expected: [[[f64; 2]; 2]; 2]) {
             if let OriginalAtlasPairProof::Subdivided {
                 domains,
