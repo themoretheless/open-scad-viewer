@@ -21,12 +21,16 @@ pub enum CylinderTorusComponent {
     /// the cap planes: closed loops on the side wall, traced into cubic
     /// pieces certified within `distance_bound` of both surfaces;
     /// `complete` says whether the set is certified complete (on the
-    /// cylinder side charts). No UV lifts yet.
+    /// cylinder side charts). UV lifts cut at the patch seams, certified
+    /// within `lift_deviation` of the other surface.
     Traced {
         pieces: Vec<Curve>,
         distance_bound: f64,
         spans: usize,
         complete: bool,
+        cylinder_uv: Vec<CylinderPatchCurve>,
+        torus_uv: Vec<TorusPatchCurve>,
+        lift_deviation: f64,
     },
 }
 
@@ -171,7 +175,7 @@ pub fn intersect_cylinder_torus(
             report.unresolved(domain, UnresolvedReason::NearCoincidence);
             return Ok(report);
         }
-        return general(report, domain, cylinder_model, &cylinder, &torus, band, terms);
+        return general(report, domain, cylinder_model, torus_model, &cylinder, &torus, band, terms);
     }
     let axis = cylinder.axis;
     let along = dot(delta, axis);
@@ -192,7 +196,7 @@ pub fn intersect_cylinder_torus(
             report.unresolved(domain, UnresolvedReason::NearCoincidence);
             return Ok(report);
         }
-        return general(report, domain, cylinder_model, &cylinder, &torus, band, terms);
+        return general(report, domain, cylinder_model, torus_model, &cylinder, &torus, band, terms);
     }
     let (r, big_r, r_c, half) = (
         torus.minor,
@@ -305,10 +309,12 @@ pub fn intersect_cylinder_torus(
 
 /// General tilted or offset pair. Only a torus strictly between the cap
 /// planes is handled: then every contact is a closed loop on the side wall.
+#[allow(clippy::too_many_arguments)]
 fn general(
     mut report: Report<CylinderTorusComponent>,
     domain: Vec<f64>,
     cylinder_model: &Model,
+    torus_model: &Model,
     cylinder: &CanonicalCylinder,
     torus: &CanonicalTorus,
     band: f64,
@@ -377,11 +383,28 @@ fn general(
         }
         return Ok(report);
     }
-    report.components.extend(loops.into_iter().map(|l| CylinderTorusComponent::Traced {
-        pieces: l.pieces,
-        distance_bound: l.distance_bound,
-        spans: l.spans,
-        complete,
-    }));
+    for l in loops {
+        let lifted = crate::sphere_torus::traced_lift::lift_pair(
+            crate::sphere_torus::traced_lift::Other::Cylinder(cylinder),
+            cylinder_model,
+            crate::sphere_torus::traced_lift::Other::Torus(torus),
+            torus_model,
+            &l.pieces,
+        );
+        let Ok((side, ring, lift_deviation)) = lifted else {
+            report.components.clear();
+            report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+            return Ok(report);
+        };
+        report.components.push(CylinderTorusComponent::Traced {
+            pieces: l.pieces,
+            distance_bound: l.distance_bound,
+            spans: l.spans,
+            complete,
+            cylinder_uv: side.into_iter().map(|(patch, arcs)| CylinderPatchCurve { patch, arcs }).collect(),
+            torus_uv: ring.into_iter().map(|(patch, arcs)| TorusPatchCurve { patch, arcs }).collect(),
+            lift_deviation,
+        });
+    }
     Ok(report)
 }

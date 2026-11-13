@@ -22,12 +22,16 @@ pub enum ConeTorusComponent {
     /// the cap planes (and away from the apex): closed loops on the side
     /// wall, traced and certified within `distance_bound` of both
     /// surfaces; `complete` says whether the set is certified complete (on
-    /// the cone side charts). No UV lifts yet.
+    /// the cone side charts). UV lifts cut at the patch seams, certified
+    /// within `lift_deviation` of the other surface.
     Traced {
         pieces: Vec<Curve>,
         distance_bound: f64,
         spans: usize,
         complete: bool,
+        cone_uv: Vec<CylinderPatchCurve>,
+        torus_uv: Vec<TorusPatchCurve>,
+        lift_deviation: f64,
     },
 }
 
@@ -172,7 +176,7 @@ pub fn intersect_cone_torus(
             report.unresolved(domain, UnresolvedReason::NearCoincidence);
             return Ok(report);
         }
-        return general(report, domain, cone_model, &cone, &torus, band, terms);
+        return general(report, domain, cone_model, torus_model, &cone, &torus, band, terms);
     }
     // Coaxiality: a center-line distance at pure rounding scale snaps to
     // zero; a recognition-scale offset is near_coincidence, never forced;
@@ -192,7 +196,7 @@ pub fn intersect_cone_torus(
             report.unresolved(domain, UnresolvedReason::NearCoincidence);
             return Ok(report);
         }
-        return general(report, domain, cone_model, &cone, &torus, band, terms);
+        return general(report, domain, cone_model, torus_model, &cone, &torus, band, terms);
     }
     let (r, big_r) = (torus.minor, torus.major);
     let (r_b, m, h) = (cone.r_bottom, cone.slope, cone.height);
@@ -345,10 +349,12 @@ pub fn intersect_cone_torus(
 /// General tilted or offset pair. Only a torus strictly between the cap
 /// planes and on the authored nappe's side of the apex is handled: then every
 /// contact is a closed loop on the side wall.
+#[allow(clippy::too_many_arguments)]
 fn general(
     mut report: Report<ConeTorusComponent>,
     domain: Vec<f64>,
     cone_model: &Model,
+    torus_model: &Model,
     cone: &CanonicalCone,
     torus: &CanonicalTorus,
     band: f64,
@@ -407,11 +413,27 @@ fn general(
         }
         return Ok(report);
     }
-    report.components.extend(loops.into_iter().map(|l| ConeTorusComponent::Traced {
-        pieces: l.pieces,
-        distance_bound: l.distance_bound,
-        spans: l.spans,
-        complete,
-    }));
+    for l in loops {
+        let Ok((side, ring, lift_deviation)) = crate::sphere_torus::traced_lift::lift_pair(
+            crate::sphere_torus::traced_lift::Other::Cone(cone),
+            cone_model,
+            crate::sphere_torus::traced_lift::Other::Torus(torus),
+            torus_model,
+            &l.pieces,
+        ) else {
+            report.components.clear();
+            report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+            return Ok(report);
+        };
+        report.components.push(ConeTorusComponent::Traced {
+            pieces: l.pieces,
+            distance_bound: l.distance_bound,
+            spans: l.spans,
+            complete,
+            cone_uv: side.into_iter().map(|(patch, arcs)| CylinderPatchCurve { patch, arcs }).collect(),
+            torus_uv: ring.into_iter().map(|(patch, arcs)| TorusPatchCurve { patch, arcs }).collect(),
+            lift_deviation,
+        });
+    }
     Ok(report)
 }

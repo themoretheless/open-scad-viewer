@@ -635,9 +635,20 @@ fn tilted_and_offset_tori_between_the_caps_are_traced_and_complete() {
         assert!(report.unresolved.is_empty(), "{name}: {:?}", report.unresolved);
         assert!(!report.components.is_empty(), "{name}");
         for component in &report.components {
-            let CylinderTorusComponent::Traced { pieces, distance_bound, complete, .. } = component else {
+            let CylinderTorusComponent::Traced {
+                pieces,
+                distance_bound,
+                complete,
+                cylinder_uv,
+                torus_uv,
+                lift_deviation,
+                ..
+            } = component
+            else {
                 panic!("expected traced loops");
             };
+            assert!(*lift_deviation <= crate::LIFT_TOLERANCE);
+            assert!(!cylinder_uv.is_empty() && !torus_uv.is_empty());
             assert!(*distance_bound <= crate::TRACE_TOLERANCE);
             assert!(*complete, "{name}: not certified complete");
             for piece in pieces {

@@ -20,8 +20,12 @@ impl value_codec::Serialize for CylinderTorusComponent {
                 distance_bound,
                 spans,
                 complete,
+                cylinder_uv,
+                torus_uv,
+                lift_deviation,
             } => value_codec::json!({"kind":"traced","pieces":pieces,
-                "distanceBound":distance_bound,"spans":spans,"complete":complete}),
+                "distanceBound":distance_bound,"spans":spans,"complete":complete,
+                "cylinderUv":cylinder_uv,"torusUv":torus_uv,"liftDeviation":lift_deviation}),
         }
     }
 }

@@ -600,9 +600,13 @@ fn off_axis_or_tilted_pairs_are_traced_or_refused_at_the_caps() {
         assert!(report.unresolved.is_empty(), "{:?}", report.unresolved);
         assert!(!report.components.is_empty());
         for component in &report.components {
-            let ConeTorusComponent::Traced { complete, distance_bound, .. } = component else {
+            let ConeTorusComponent::Traced { complete, distance_bound, cone_uv, torus_uv, lift_deviation, .. } =
+                component
+            else {
                 panic!("expected traced loops");
             };
+            assert!(*lift_deviation <= crate::LIFT_TOLERANCE);
+            assert!(!cone_uv.is_empty() && !torus_uv.is_empty());
             assert!(*complete && *distance_bound <= crate::TRACE_TOLERANCE);
         }
         let canon = recognize_cone(cone).unwrap().unwrap();

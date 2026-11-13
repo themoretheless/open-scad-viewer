@@ -519,3 +519,107 @@ pub(super) fn lift_traced(
         d,
     ))
 }
+
+/// UV lifts of one traced loop onto surface `this` (a torus, cylinder or
+/// cone), cut at its patch seams, each pcurve image certified within
+/// `LIFT_TOLERANCE` of the opposite surface `that`.
+fn lift_onto(
+    this: Other<'_>,
+    this_model: &Model,
+    that: &dyn crate::implicit_trace::Implicit,
+    pieces: &[Curve],
+) -> Result<(Vec<(usize, Vec<Curve>)>, f64)> {
+    let refuse = |m: &str| Error::new("BREP_INTERSECTION_LIFT_REFUSED", m.to_string());
+    let label = |p: [f64; 3]| this.patch(p).ok_or_else(|| refuse("traced point lies on no patch"));
+    let mut grouped: Vec<(usize, Vec<Curve>)> = Vec::new();
+    let mut worst = 0_f64;
+    for piece in pieces {
+        let [lo, hi] = piece.domain();
+        let mut breaks = vec![lo];
+        let (mut prev_t, mut prev) = (lo, label(point(piece, lo)?)?);
+        for k in 1..=512 {
+            let t = lo + (hi - lo) * k as f64 / 512.;
+            let l = label(point(piece, t)?)?;
+            if l != prev {
+                let (mut a, mut b) = (prev_t, t);
+                for _ in 0..60 {
+                    let m = 0.5 * (a + b);
+                    if label(point(piece, m)?)? == prev {
+                        a = m;
+                    } else {
+                        b = m;
+                    }
+                }
+                let cut = 0.5 * (a + b);
+                if cut - breaks.last().unwrap() > 1e-9 * (hi - lo) {
+                    breaks.push(cut);
+                }
+            }
+            prev = l;
+            prev_t = t;
+        }
+        if breaks.len() > 1 && hi - breaks.last().unwrap() <= 1e-9 * (hi - lo) {
+            breaks.pop();
+        }
+        breaks.push(hi);
+        // Runs between seams; a run whose fit does not certify is halved.
+        let mut runs: Vec<(f64, f64, usize)> = breaks.windows(2).map(|w| (w[0], w[1], 0)).collect();
+        runs.reverse();
+        while let Some((a, b, depth)) = runs.pop() {
+            let face = label(point(piece, 0.5 * (a + b))?)?;
+            let surface = &this_model.faces[face].surface;
+            let mut count = 17;
+            let (curve, deviation) = loop {
+                let uvs = (0..count)
+                    .map(|k| {
+                        let t = a + (b - a) * k as f64 / (count - 1) as f64;
+                        let uv = this
+                            .uv(face, point(piece, t)?)
+                            .ok_or_else(|| refuse("traced point does not invert into its patch"))?;
+                        Ok([uv[0], uv[1], 0.])
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let fitted = interpolate_curve(&uvs, 3, Parameterization::ChordLength, None)?;
+                let curve = Curve {
+                    control_points: fitted.control_points.iter().map(|c| vec![c[0], c[1]]).collect(),
+                    ..fitted
+                };
+                let deviation = crate::implicit_trace::certify_lift(surface, &curve, that, LIFT_TOLERANCE)?
+                    .unwrap_or(f64::INFINITY);
+                if deviation <= LIFT_TOLERANCE || count >= 129 {
+                    break (curve, deviation);
+                }
+                count = 2 * count - 1;
+            };
+            if deviation > LIFT_TOLERANCE {
+                if depth < 4 {
+                    let m = 0.5 * (a + b);
+                    runs.push((m, b, depth + 1));
+                    runs.push((a, m, depth + 1));
+                    continue;
+                }
+                return Err(refuse("traced curve UV lift exceeds its tolerance"));
+            }
+            worst = worst.max(deviation);
+            match grouped.iter_mut().find(|(f, _)| *f == face) {
+                Some((_, arcs)) => arcs.push(curve),
+                None => grouped.push((face, vec![curve])),
+            }
+        }
+    }
+    Ok((grouped, worst))
+}
+
+/// UV lifts of a traced loop onto two surfaces of revolution, grouped by
+/// face, and the worst certified deviation.
+pub(crate) fn lift_pair(
+    a: Other<'_>,
+    a_model: &Model,
+    b: Other<'_>,
+    b_model: &Model,
+    pieces: &[Curve],
+) -> Result<(Vec<(usize, Vec<Curve>)>, Vec<(usize, Vec<Curve>)>, f64)> {
+    let (la, da) = lift_onto(a, a_model, b.implicit().as_ref(), pieces)?;
+    let (lb, db) = lift_onto(b, b_model, a.implicit().as_ref(), pieces)?;
+    Ok((la, lb, da.max(db)))
+}
