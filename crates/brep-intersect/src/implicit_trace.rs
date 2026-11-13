@@ -222,6 +222,36 @@ impl Implicit for SphereImplicit {
     }
 }
 
+/// Plane through `origin` with unit `normal`: `g = n . (p - o)` is the
+/// signed distance itself.
+pub(crate) struct PlaneImplicit {
+    pub(crate) origin: P,
+    pub(crate) normal: P,
+}
+impl Implicit for PlaneImplicit {
+    fn value(&self, p: P) -> f64 {
+        dot(self.normal, sub(p, self.origin))
+    }
+    fn gradient(&self, _: P) -> P {
+        self.normal
+    }
+    fn compose(&self, xyz: &[Bern; 3]) -> Result<Bern> {
+        let w = Bern::constant(1., 0);
+        Ok(self.compose_homogeneous(&[xyz[0].clone(), xyz[1].clone(), xyz[2].clone(), w])?.0)
+    }
+    fn distance_factor(&self, _: &[Bern; 3]) -> f64 {
+        1.
+    }
+    fn compose_homogeneous(&self, xyzw: &[Bern; 4]) -> Result<(Bern, i32)> {
+        let w = &xyzw[3];
+        let mut g = xyzw[0].sub(&w.scale(self.origin[0])?)?.scale(self.normal[0])?;
+        for k in 1..3 {
+            g = g.add(&xyzw[k].sub(&w.scale(self.origin[k])?)?.scale(self.normal[k])?)?;
+        }
+        Ok((g, 1))
+    }
+}
+
 /// Infinite circular cylinder about `axis` through `center`:
 /// `g = x^2 + y^2 - R^2` in local coordinates, so `|d| = |g| / (rho + R)`
 /// and `|d| <= |g| / R`.
@@ -596,6 +626,29 @@ fn certify_span(
         return Ok(None);
     };
     Ok(Some(l.max(r)))
+}
+
+/// Certified distance bound of a cubic (or lower) curve from both surfaces,
+/// span by span with subdivision; `None` when some span does not certify.
+pub(crate) fn certify_curve(
+    surfaces: [&dyn Implicit; 2],
+    curve: &Curve,
+    tolerance: f64,
+) -> Result<Option<f64>> {
+    let mut worst = 0_f64;
+    let mut cells = 0;
+    for segment in curve.decompose()? {
+        let c = &segment.definition().control_points;
+        if c.len() != 4 {
+            return Ok(None);
+        }
+        let span: Span = std::array::from_fn(|i| std::array::from_fn(|k| Interval::point(c[i][k])));
+        match certify_span(surfaces, span, tolerance, 14, &mut cells)? {
+            Some(b) => worst = worst.max(b),
+            None => return Ok(None),
+        }
+    }
+    Ok(Some(worst))
 }
 
 /// A traced, certified intersection component.

@@ -67,8 +67,13 @@ impl Other<'_> {
         match self {
             Other::Torus(t) => Some(torus_patch(t, p)),
             Other::Cylinder(c) => {
-                let (rev, z, _) = self.cylindrical(p);
-                (z.abs() <= c.half_height).then(|| c.sides[quadrant(rev)])
+                let (rev, z, rho) = self.cylindrical(p);
+                // The nearer of the wall and the cap planes owns the point.
+                if (rho - c.radius).abs() <= (z.abs() - c.half_height).abs() {
+                    (z.abs() <= c.half_height + 1e-9).then(|| c.sides[quadrant(rev)])
+                } else {
+                    (rho <= c.radius + 1e-9).then(|| c.caps[usize::from(z > 0.)])
+                }
             }
             Other::Cone(c) => {
                 let (rev, z, _) = self.cylindrical(p);
@@ -80,9 +85,16 @@ impl Other<'_> {
         match self {
             Other::Torus(t) => torus_uv(t, face, p),
             Other::Cylinder(c) => {
-                let i = c.sides.iter().position(|&f| f == face)?;
-                let (rev, z, _) = self.cylindrical(p);
-                Some([arc_local(rev, i), ((z + c.half_height) / (2. * c.half_height)).clamp(0., 1.)])
+                if let Some(i) = c.sides.iter().position(|&f| f == face) {
+                    let (rev, z, _) = self.cylindrical(p);
+                    return Some([arc_local(rev, i), ((z + c.half_height) / (2. * c.half_height)).clamp(0., 1.)]);
+                }
+                c.caps.contains(&face).then(|| {
+                    let d = sub(p, c.center);
+                    let x = dot(d, c.frame[0]) / c.radius;
+                    let y = dot(d, c.frame[1]) / c.radius;
+                    [(0.5 * (x + 1.)).clamp(0., 1.), (0.5 * (y + 1.)).clamp(0., 1.)]
+                })
             }
             Other::Cone(c) => {
                 let i = c.sides.iter().position(|&f| f == face)?;
@@ -94,12 +106,29 @@ impl Other<'_> {
     fn distance(&self, p: [f64; 3]) -> f64 {
         match self {
             Other::Torus(t) => torus_distance(t, p),
-            Other::Cylinder(c) => (self.cylindrical(p).2 - c.radius).abs(),
+            Other::Cylinder(c) => {
+                let (_, z, rho) = self.cylindrical(p);
+                (rho - c.radius).max(z.abs() - c.half_height).abs()
+            }
             Other::Cone(c) => {
                 let (_, z, rho) = self.cylindrical(p);
                 (rho - c.r_bottom - c.slope * z).abs() / c.slope.hypot(1.)
             }
         }
+    }
+    /// Implicit equation of the surface carrying `face` (a cap plane for a
+    /// cylinder cap, the curved surface otherwise).
+    fn implicit_for(&self, face: usize) -> Box<dyn crate::implicit_trace::Implicit> {
+        if let Other::Cylinder(c) = self
+            && let Some(slot) = c.caps.iter().position(|&f| f == face)
+        {
+            let sign = if slot == 0 { -1. } else { 1. };
+            return Box::new(crate::implicit_trace::PlaneImplicit {
+                origin: std::array::from_fn(|k| c.center[k] + sign * c.half_height * c.axis[k]),
+                normal: c.axis,
+            });
+        }
+        self.implicit()
     }
     fn implicit(&self) -> Box<dyn crate::implicit_trace::Implicit> {
         let (o, f, axis) = self.chart();
@@ -186,7 +215,6 @@ pub(crate) struct Context<'a> {
     sphere_model: &'a Model,
     torus_model: &'a Model,
     sphere_implicit: crate::implicit_trace::SphereImplicit,
-    torus_implicit: Box<dyn crate::implicit_trace::Implicit>,
 }
 
 impl<'a> Context<'a> {
@@ -205,7 +233,6 @@ impl<'a> Context<'a> {
                 center: sphere.center,
                 radius: sphere.radius,
             },
-            torus_implicit: other.implicit(),
         }
     }
 }
@@ -249,11 +276,32 @@ impl Context<'_> {
 
     /// Certified distance bound of the pcurve image from the other surface.
     pub(crate) fn certify(&self, patch: Patch, uv_curve: &Curve) -> Result<Option<f64>> {
-        let (model, f, other): (_, _, &dyn crate::implicit_trace::Implicit) = match patch {
-            Patch::Sphere(f) => (self.sphere_model, f, self.torus_implicit.as_ref()),
-            Patch::Torus(f) => (self.torus_model, f, &self.sphere_implicit),
-        };
-        crate::implicit_trace::certify_lift(&model.faces[f].surface, uv_curve, other, LIFT_TOLERANCE)
+        self.certify_against(patch, uv_curve, None)
+    }
+    /// Certify a pcurve image against the other surface; for a sphere
+    /// pcurve, `other_face` selects which surface of the other operand the
+    /// run lies on (a cylinder wall or cap plane).
+    pub(crate) fn certify_against(
+        &self,
+        patch: Patch,
+        uv_curve: &Curve,
+        other_face: Option<usize>,
+    ) -> Result<Option<f64>> {
+        match patch {
+            Patch::Sphere(f) => {
+                let other = match other_face {
+                    Some(face) => self.other.implicit_for(face),
+                    None => self.other.implicit(),
+                };
+                crate::implicit_trace::certify_lift(&self.sphere_model.faces[f].surface, uv_curve, other.as_ref(), LIFT_TOLERANCE)
+            }
+            Patch::Torus(f) => crate::implicit_trace::certify_lift(
+                &self.torus_model.faces[f].surface,
+                uv_curve,
+                &self.sphere_implicit,
+                LIFT_TOLERANCE,
+            ),
+        }
     }
 
     /// Worst distance of mapped pcurve samples from the other surface.
@@ -373,7 +421,11 @@ fn lift_side(
                 // Cheap sampled screen first, then the certificate.
                 let mut deviation = ctx.deviation(patch, &curve)?;
                 if deviation <= LIFT_TOLERANCE {
-                    deviation = ctx.certify(patch, &curve)?.unwrap_or(f64::INFINITY);
+                    let other_face = match (patch, ctx.label(point(piece, 0.5 * (a + b))?, true)) {
+                        (Patch::Sphere(_), Ok(Patch::Torus(f))) => Some(f),
+                        _ => None,
+                    };
+                    deviation = ctx.certify_against(patch, &curve, other_face)?.unwrap_or(f64::INFINITY);
                 }
                 if deviation <= LIFT_TOLERANCE || count >= 129 {
                     break (curve, deviation);

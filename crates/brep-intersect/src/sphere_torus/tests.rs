@@ -655,8 +655,10 @@ fn off_axis_sphere_cylinder_and_cone_booleans_balance_volumes() {
             .unwrap()
             .signed_volume_mm3
     };
-    let cases: [(Model, f64, f64, [f64; 3], bool); 2] = [
+    let cases: [(Model, f64, f64, [f64; 3], bool); 3] = [
         (brep_core::analytic::cylinder(2., 8.).unwrap(), PI * 4. * 8., 1., [2.3, 0.4, 3.], true),
+        // Reaching the top cap across the rim.
+        (brep_core::analytic::cylinder(2., 8.).unwrap(), PI * 4. * 8., 3., [0.5, 0., 6.], true),
         (
             brep_core::analytic::frustum(2., 4., 6.).unwrap(),
             PI * 6. * (4. + 8. + 16.) / 3.,

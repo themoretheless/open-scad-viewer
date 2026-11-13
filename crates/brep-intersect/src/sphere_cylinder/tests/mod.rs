@@ -381,13 +381,41 @@ fn off_axis_spheres_between_the_caps_are_traced_and_complete() {
 }
 
 #[test]
-fn off_axis_spheres_reaching_a_cap_stay_unsupported() {
+fn off_axis_spheres_reaching_a_cap_give_closed_certified_cycles() {
     let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
-    let sphere = translated(&brep_core::analytic::sphere(3.).unwrap(), [0.5, 0., 6.]);
-    let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
-    assert!(report.components.is_empty(), "{report:?}");
-    assert_eq!(report.coverage, Coverage::Incomplete);
-    assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
+    // Crossing the top rim; crossing the top cap inside the disk only.
+    for (radius, at) in [(3., [0.5, 0., 6.]), (1., [0.6, 0.3, 8.2])] {
+        let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        assert!(report.unresolved.is_empty(), "{radius} at {at:?}: {:?}", report.unresolved);
+        assert!(!report.components.is_empty());
+        for component in &report.components {
+            let SphereCylinderComponent::Traced { pieces, distance_bound, complete, lift_deviation, .. } =
+                component
+            else {
+                panic!("expected a traced cycle");
+            };
+            assert!(*complete && *distance_bound <= crate::TRACE_TOLERANCE);
+            assert!(*lift_deviation <= crate::LIFT_TOLERANCE);
+            for w in pieces.windows(2) {
+                assert_eq!(w[0].control_points.last(), w[1].control_points.first());
+            }
+            assert_eq!(pieces.last().unwrap().control_points.last(), pieces[0].control_points.first());
+            for piece in pieces {
+                for k in 0..=20 {
+                    let p = piece.evaluate(k as f64 / 20.).unwrap().point;
+                    let d = sub([p[0], p[1], p[2]], at);
+                    assert!((d[0].hypot(d[1]).hypot(d[2]) - radius).abs() <= crate::TRACE_TOLERANCE);
+                    // On the wall within the slab or on a cap plane within the disk.
+                    let rho = p[0].hypot(p[1]);
+                    let wall = (rho - 2.).abs() <= crate::TRACE_TOLERANCE && (-1e-9..=8. + 1e-9).contains(&p[2]);
+                    let cap = (p[2].abs() <= crate::TRACE_TOLERANCE || (p[2] - 8.).abs() <= crate::TRACE_TOLERANCE)
+                        && rho <= 2. + 1e-9;
+                    assert!(wall || cap, "{p:?}");
+                }
+            }
+        }
+    }
 }
 
 #[test]

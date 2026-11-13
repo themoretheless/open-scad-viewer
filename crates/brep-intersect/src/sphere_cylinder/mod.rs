@@ -14,7 +14,8 @@
 //! off-axis sphere strictly between the cap planes is traced and certified
 //! as `Traced` loops on the side wall with a completeness certificate (or
 //! resolves empty when it provably misses the wall); an off-axis sphere
-//! reaching a cap plane stays `UnsupportedSurface`. Classification uses outward binary64 bands
+//! reaching a cap plane gives closed cycles of clipped wall arcs and cap
+//! circle arcs (see `capped`), recertified piece by piece. Classification uses outward binary64 bands
 //! widened by the observed recognition deviation. Resolved contacts are exact
 //! rational circles (four 90-degree arcs, weights cos(pi/4)) with UV lifts on
 //! both surfaces: iso-v lines across all four cylinder side patches, an exact
@@ -34,6 +35,7 @@ pub(crate) use brep_core::intersections::{CanonicalCylinder, recognize_cylinder}
 use super::*;
 use brep_core::Model;
 
+mod capped;
 mod cylinder_patch_curve;
 #[cfg(test)]
 mod tests;

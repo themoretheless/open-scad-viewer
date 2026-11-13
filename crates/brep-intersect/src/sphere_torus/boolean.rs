@@ -259,7 +259,7 @@ pub(crate) fn traced_boolean(
                 }
                 if agree <= LIFT_TOLERANCE {
                     let lifted = [
-                        ctx.certify(Patch::Sphere(sf), &pcs)?,
+                        ctx.certify_against(Patch::Sphere(sf), &pcs, Some(tf))?,
                         ctx.certify(Patch::Torus(tf), &pct)?,
                     ];
                     if let [Some(x), Some(y)] = lifted {

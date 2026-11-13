@@ -279,12 +279,11 @@
         let traced = run(&place(3., 0.5, 4.), &cylinder);
         assert_eq!(traced["components"][0]["kind"].as_str(), Some("traced"));
         assert_eq!(traced["components"][0]["complete"].as_bool(), Some(true));
-        // Off-axis and reaching a cap: still out of scope.
-        let off_axis = run(&place(3., 0.5, 6.), &cylinder);
-        assert_eq!(
-            off_axis["unresolved"][0]["reason"].as_str(),
-            Some("unsupported_surface")
-        );
+        // Off-axis and reaching a cap: wall arcs and cap arcs join into
+        // closed certified cycles.
+        let capped = run(&place(3., 0.5, 6.), &cylinder);
+        assert_eq!(capped["components"][0]["kind"].as_str(), Some("traced"));
+        assert_eq!(capped["components"][0]["complete"].as_bool(), Some(true));
         // A frustum is not the canonical cylinder: explicit refusal.
         let refused = run(
             &place(2., 0., 4.),
