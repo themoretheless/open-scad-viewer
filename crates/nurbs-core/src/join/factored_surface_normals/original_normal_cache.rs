@@ -2,6 +2,13 @@
 //! `analysis::normal_alignment`; this impl needs factored normal certificates from this module.
 use crate::analysis::normal_alignment::*;
 use crate::{check, surface::Surface, Result};
+/// Optional factored normal certificates for the two surfaces of a product
+/// inspection, and the query budget they share.
+#[derive(Clone, Copy, Default)]
+pub struct FactoredNormals<'c> {
+    pub certificates: [Option<&'c crate::factored_surface_normals::Certificate<'c>>; 2],
+    pub max_queries: usize,
+}
 impl<'a> OriginalNormalCache<'a> {
 pub fn new(surface:&'a Surface)->Self {
         Self{surface,rectangles:std::collections::HashMap::new(),factored_rectangles:std::collections::HashMap::new()}
@@ -9,14 +16,14 @@ pub fn new(surface:&'a Surface)->Self {
 pub fn inspect_product(&mut self, other:&mut Self,
         domains:[[[f64;2];2];2], sine:f64, max_cells:usize, max_spans:usize)
         ->Result<ProductReport> {
-        self.inspect_product_with_factors(other,domains,sine,max_cells,max_spans,[None,None],0)
+        self.inspect_product_with_factors(other,domains,sine,max_cells,max_spans,FactoredNormals::default())
     }
 /// Closed normal-direction coverage using exact source-bound limiting factors.
     /// Factored directions do not establish a regular tangent plane at a pole.
     pub fn inspect_product_with_factors(&mut self, other:&mut Self,
         domains:[[[f64;2];2];2], sine:f64, max_cells:usize, max_spans:usize,
-        factors:[Option<&crate::factored_surface_normals::Certificate<'_>>;2],
-        max_factored_queries:usize)->Result<ProductReport> {
+        factored:FactoredNormals<'_>)->Result<ProductReport> {
+        let FactoredNormals{certificates:factors,max_queries:max_factored_queries}=factored;
         check(max_factored_queries<=100000,"Factored normal query budget")?;
         for (surface,factor) in [self.surface,other.surface].into_iter().zip(factors) {
             if let Some(c)=factor {check(std::ptr::eq(surface,c.surface()),"Use original factored normal source")?;}

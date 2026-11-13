@@ -507,6 +507,7 @@ mod tests {
 }
 
 mod original_normal_cache;
+pub use original_normal_cache::FactoredNormals;
 mod pole_plane;
 pub use pole_plane::{PlaneLimit, PlaneLimitReport, PlanePairReport, prepare_plane_limit, compare_plane_limits};
 

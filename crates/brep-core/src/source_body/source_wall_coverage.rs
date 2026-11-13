@@ -543,8 +543,9 @@ pub fn qualify_with_mixed_pair_pass<'a, E: crate::source_shared_chord_map::Chord
                     [domain(surfaces[a]),domain(surfaces[b])],threshold,
                     factors.cells_per_pair.min(factors.cells-out.factored_product_cells),
                     limits.normal_spans-out.normal_spans,
-                    [prepared[a].as_ref(),prepared[b].as_ref()],
-                    factors.queries-out.factored_queries)?;
+                    nurbs_core::factored_surface_normals::FactoredNormals{
+                        certificates:[prepared[a].as_ref(),prepared[b].as_ref()],
+                        max_queries:factors.queries-out.factored_queries})?;
                 out.factored_product_cells+=r.cells;out.factored_queries+=r.factored_queries;
                 out.normal_spans+=r.spans;
                 if r.excluded {pair.reason="source-wall-factored-normal-pair-excluded";pair.proven=true;}

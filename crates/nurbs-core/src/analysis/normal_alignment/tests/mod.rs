@@ -155,6 +155,10 @@ fn plane() -> Surface {
         periodic_v: false,
     }
 }
+fn factored<'c>(certificates:[Option<&'c crate::factored_surface_normals::Certificate<'c>>;2],
+    max_queries:usize)->crate::factored_surface_normals::FactoredNormals<'c> {
+    crate::factored_surface_normals::FactoredNormals{certificates,max_queries}
+}
 #[test]
 fn factored_product_accounts_queries_and_rejects_rebound_sources() {
     let mut a=plane();a.degree_u=2;a.knots_u=vec![0.,0.,0.,1.,1.,1.];
@@ -167,14 +171,14 @@ fn factored_product_accounts_queries_and_rejects_rebound_sources() {
     let mut b=plane();for row in &mut b.control_points {for p in row {p.swap(0,2);}}
     let mut ca=OriginalNormalCache::new(&a);let mut cb=OriginalNormalCache::new(&b);
     let domains=[[[0.,1.];2];2];
-    let refused=ca.inspect_product_with_factors(&mut cb,domains,1e-6,1,1,[Some(c),None],0).unwrap();
+    let refused=ca.inspect_product_with_factors(&mut cb,domains,1e-6,1,1,factored([Some(c),None],0)).unwrap();
     assert!(!refused.excluded);assert_eq!(refused.unresolved,vec![domains]);
-    let paid=ca.inspect_product_with_factors(&mut cb,domains,1e-6,1,1,[Some(c),None],1).unwrap();
+    let paid=ca.inspect_product_with_factors(&mut cb,domains,1e-6,1,1,factored([Some(c),None],1)).unwrap();
     assert!(paid.excluded);assert_eq!(paid.factored_queries,1);
-    let cached=ca.inspect_product_with_factors(&mut cb,domains,1e-6,1,0,[Some(c),None],0).unwrap();
+    let cached=ca.inspect_product_with_factors(&mut cb,domains,1e-6,1,0,factored([Some(c),None],0)).unwrap();
     assert!(cached.excluded);assert_eq!(cached.factored_queries,0);assert_eq!(cached.spans,0);
     assert!(ca.inspect_product_with_factors(&mut cb,domains,1e-6,1,0,
-        [cloned.certificate.as_ref(),None],0).is_err());
+        factored([cloned.certificate.as_ref(),None],0)).is_err());
     let raw=ca.inspect_product(&mut cb,domains,1e-6,1,0).unwrap();
     assert!(!raw.excluded);assert_eq!(raw.unresolved,vec![domains]);
     let mut direct_a=OriginalNormalCache::new(&a);let mut direct_b=OriginalNormalCache::new(&b);
