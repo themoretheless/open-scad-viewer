@@ -614,3 +614,151 @@ fn rotated_translated_placement_keeps_the_exact_circles() {
         assert!(uv_worst <= 1e-9, "{uv_worst}");
     }
 }
+
+#[test]
+fn off_axis_sphere_torus_booleans_close_and_balance_volumes() {
+    use std::f64::consts::PI;
+    let volume = |m: &Model| {
+        brep_core::analysis::mass_properties(m, 1e-5, 2_000_000)
+            .unwrap()
+            .signed_volume_mm3
+    };
+    let torus = brep_core::analytic::torus(3., 1.).unwrap();
+    let vt = 2. * PI * PI * 3. * 1.;
+    for (radius, at) in [(1., [3.5, 0.4, 0.3]), (1., [4.5, 0., 0.])] {
+        let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
+        let vs = 4. / 3. * PI * radius * radius * radius;
+        let mut v = std::collections::BTreeMap::new();
+        for op in ["union", "intersection", "difference"] {
+            let result = sphere_torus_boolean(&sphere, &torus, op)
+                .unwrap_or_else(|e| panic!("{op} {radius} at {at:?}: {e:?}"));
+            result.validate().unwrap();
+            assert!(result.tolerance_mm <= 1e-5, "{op}: {}", result.tolerance_mm);
+            v.insert(op, volume(&result));
+        }
+        let (u, i, d) = (v["union"], v["intersection"], v["difference"]);
+        let tol = 1e-3 * (vs + vt);
+        assert!(i > 0. && i < vs.min(vt), "{i}");
+        assert!((u + i - vs - vt).abs() <= tol, "union {u} + inter {i} vs {}", vs + vt);
+        assert!((d - (vs - i)).abs() <= tol, "difference {d} vs {}", vs - i);
+        // The other operand order mirrors the difference.
+        let torus_minus = sphere_torus_boolean(&torus, &sphere, "difference").unwrap();
+        assert!((volume(&torus_minus) - (vt - i)).abs() <= tol);
+    }
+}
+
+#[test]
+fn off_axis_sphere_cylinder_and_cone_booleans_balance_volumes() {
+    use std::f64::consts::PI;
+    let volume = |m: &Model| {
+        brep_core::analysis::mass_properties(m, 1e-5, 2_000_000)
+            .unwrap()
+            .signed_volume_mm3
+    };
+    let cases: [(Model, f64, f64, [f64; 3], bool); 4] = [
+        // Reaching the top cap of a frustum across its rim.
+        (
+            brep_core::analytic::frustum(2., 4., 6.).unwrap(),
+            PI * 6. * (4. + 8. + 16.) / 3.,
+            2.5,
+            [1., 0.5, 5.5],
+            false,
+        ),
+        (brep_core::analytic::cylinder(2., 8.).unwrap(), PI * 4. * 8., 1., [2.3, 0.4, 3.], true),
+        // Reaching the top cap across the rim.
+        (brep_core::analytic::cylinder(2., 8.).unwrap(), PI * 4. * 8., 3., [0.5, 0., 6.], true),
+        (
+            brep_core::analytic::frustum(2., 4., 6.).unwrap(),
+            PI * 6. * (4. + 8. + 16.) / 3.,
+            1.,
+            [3., 0., 3.],
+            false,
+        ),
+    ];
+    for (other, vo, radius, at, cylinder) in cases {
+        let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
+        let vs = 4. / 3. * PI * radius.powi(3);
+        let run = |a: &Model, b: &Model, op: &str| {
+            if cylinder {
+                sphere_cylinder_boolean(a, b, op)
+            } else {
+                sphere_cone_boolean(a, b, op)
+            }
+            .unwrap_or_else(|e| panic!("{op} at {at:?}: {e:?}"))
+        };
+        let u = run(&sphere, &other, "union");
+        let i = run(&sphere, &other, "intersection");
+        let d = run(&other, &sphere, "difference");
+        for m in [&u, &i, &d] {
+            m.validate().unwrap();
+        }
+        let (u, i, d) = (volume(&u), volume(&i), volume(&d));
+        let tol = 1e-3 * (vs + vo);
+        assert!(i > 0. && i < vs.min(vo), "{i}");
+        assert!((u + i - vs - vo).abs() <= tol, "union {u} + {i} vs {}", vs + vo);
+        assert!((d - (vo - i)).abs() <= tol, "difference {d} vs {}", vo - i);
+    }
+}
+
+#[test]
+fn off_axis_torus_cylinder_and_cone_booleans_balance_volumes() {
+    use std::f64::consts::PI;
+    let volume = |m: &Model| {
+        brep_core::analysis::mass_properties(m, 1e-5, 2_000_000)
+            .unwrap()
+            .signed_volume_mm3
+    };
+    let small = brep_core::analytic::torus(2., 0.5).unwrap();
+    let big = brep_core::analytic::torus(3., 1.).unwrap();
+    let cases: [(Model, f64, Model, f64, bool); 4] = [
+        // A short frustum whose bottom cap the torus crosses.
+        (
+            translated(&brep_core::analytic::frustum(2., 3., 1.5).unwrap(), [0.6, 0.25, -0.9]),
+            PI * 1.5 * (4. + 6. + 9.) / 3.,
+            brep_core::analytic::torus(3., 1.).unwrap(),
+            2. * PI * PI * 3.,
+            false,
+        ),
+        // A short cylinder whose caps the torus crosses.
+        (
+            translated(&brep_core::analytic::cylinder(2.2, 1.5).unwrap(), [0.5, 0., -0.75]),
+            PI * 2.2 * 2.2 * 1.5,
+            brep_core::analytic::torus(3., 1.).unwrap(),
+            2. * PI * PI * 3.,
+            true,
+        ),
+        (
+            brep_core::analytic::cylinder(2., 12.).unwrap(),
+            PI * 4. * 12.,
+            translated(&small, [1.5, 0.3, 6.]),
+            2. * PI * PI * 2. * 0.25,
+            true,
+        ),
+        (
+            translated(&brep_core::analytic::frustum(1., 3., 6.).unwrap(), [0.5, 0., -3.]),
+            PI * 6. * (1. + 3. + 9.) / 3.,
+            big,
+            2. * PI * PI * 3.,
+            false,
+        ),
+    ];
+    for (other, vo, torus, vt, cylinder) in cases {
+        let run = |op: &str| {
+            if cylinder {
+                cylinder_torus_boolean(&other, &torus, op)
+            } else {
+                cone_torus_boolean(&other, &torus, op)
+            }
+            .unwrap_or_else(|e| panic!("{op} cylinder={cylinder}: {e:?}"))
+        };
+        let (u, i, d) = (run("union"), run("intersection"), run("difference"));
+        for m in [&u, &i, &d] {
+            m.validate().unwrap();
+        }
+        let (u, i, d) = (volume(&u), volume(&i), volume(&d));
+        let tol = 1e-3 * (vo + vt);
+        assert!(i > 0. && i < vo.min(vt), "{i}");
+        assert!((u + i - vo - vt).abs() <= tol, "union {u} + {i} vs {}", vo + vt);
+        assert!((d - (vo - i)).abs() <= tol, "difference {d} vs {}", vo - i);
+    }
+}

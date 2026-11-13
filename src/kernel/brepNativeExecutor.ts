@@ -88,6 +88,7 @@ export async function executeBrepNativeProgram(input:SemanticLoweringSuccess,con
   if(session!==undefined){
    try{callGeometryRust('brep_session',{action:'dispose',session})}catch(cleanupError){
     if(primary)primary.cleanupError=cleanupError
+    // eslint-disable-next-line no-unsafe-finally -- cleanup failure surfaces only when execution itself succeeded
     else throw cleanupError
    }
   }

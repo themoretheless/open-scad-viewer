@@ -222,6 +222,153 @@ impl Implicit for SphereImplicit {
     }
 }
 
+/// Plane through `origin` with unit `normal`: `g = n . (p - o)` is the
+/// signed distance itself.
+pub(crate) struct PlaneImplicit {
+    pub(crate) origin: P,
+    pub(crate) normal: P,
+}
+impl Implicit for PlaneImplicit {
+    fn value(&self, p: P) -> f64 {
+        dot(self.normal, sub(p, self.origin))
+    }
+    fn gradient(&self, _: P) -> P {
+        self.normal
+    }
+    fn compose(&self, xyz: &[Bern; 3]) -> Result<Bern> {
+        let w = Bern::constant(1., 0);
+        Ok(self.compose_homogeneous(&[xyz[0].clone(), xyz[1].clone(), xyz[2].clone(), w])?.0)
+    }
+    fn distance_factor(&self, _: &[Bern; 3]) -> f64 {
+        1.
+    }
+    fn compose_homogeneous(&self, xyzw: &[Bern; 4]) -> Result<(Bern, i32)> {
+        let w = &xyzw[3];
+        let mut g = xyzw[0].sub(&w.scale(self.origin[0])?)?.scale(self.normal[0])?;
+        for k in 1..3 {
+            g = g.add(&xyzw[k].sub(&w.scale(self.origin[k])?)?.scale(self.normal[k])?)?;
+        }
+        Ok((g, 1))
+    }
+}
+
+/// Infinite circular cylinder about `axis` through `center`:
+/// `g = x^2 + y^2 - R^2` in local coordinates, so `|d| = |g| / (rho + R)`
+/// and `|d| <= |g| / R`.
+pub(crate) struct CylinderImplicit {
+    pub(crate) center: P,
+    /// In-plane x, in-plane y, axis.
+    pub(crate) frame: [P; 3],
+    pub(crate) radius: f64,
+}
+impl CylinderImplicit {
+    fn planar(&self, p: P) -> [f64; 2] {
+        let d = sub(p, self.center);
+        [dot(d, self.frame[0]), dot(d, self.frame[1])]
+    }
+}
+impl Implicit for CylinderImplicit {
+    fn value(&self, p: P) -> f64 {
+        let [x, y] = self.planar(p);
+        x * x + y * y - self.radius * self.radius
+    }
+    fn gradient(&self, p: P) -> P {
+        let [x, y] = self.planar(p);
+        std::array::from_fn(|k| 2. * (x * self.frame[0][k] + y * self.frame[1][k]))
+    }
+    fn compose(&self, xyz: &[Bern; 3]) -> Result<Bern> {
+        let w = Bern::constant(1., 0);
+        let (g, _) = self.compose_homogeneous(&[xyz[0].clone(), xyz[1].clone(), xyz[2].clone(), w])?;
+        Ok(g)
+    }
+    fn distance_factor(&self, _: &[Bern; 3]) -> f64 {
+        1. / self.radius
+    }
+    fn compose_homogeneous(&self, xyzw: &[Bern; 4]) -> Result<(Bern, i32)> {
+        let w = &xyzw[3];
+        let mut sum = w.mul(w)?.scale(-self.radius * self.radius)?;
+        for axis in &self.frame[..2] {
+            let mut l = xyzw[0].sub(&w.scale(self.center[0])?)?.scale(axis[0])?;
+            for k in 1..3 {
+                l = l.add(&xyzw[k].sub(&w.scale(self.center[k])?)?.scale(axis[k])?)?;
+            }
+            sum = sum.add(&l.mul(&l)?)?;
+        }
+        Ok((sum, 2))
+    }
+}
+
+/// Circular cone with radius `r_bottom + slope * z` at axial height `z`
+/// above `bottom`: `g = x^2 + y^2 - c^2` with `c = r_bottom + slope * z`.
+/// Where `c > 0` (the authored nappe), `g = (rho - c)(rho + c)` and the
+/// meridian distance is `|rho - c| / sqrt(1 + slope^2)`, so
+/// `|d| <= |g| / (c_min sqrt(1 + slope^2))` over a span whose box keeps
+/// `c >= c_min > 0`.
+pub(crate) struct ConeImplicit {
+    pub(crate) bottom: P,
+    /// In-plane x, in-plane y, axis.
+    pub(crate) frame: [P; 3],
+    pub(crate) r_bottom: f64,
+    pub(crate) slope: f64,
+}
+impl ConeImplicit {
+    fn local(&self, p: P) -> P {
+        let d = sub(p, self.bottom);
+        self.frame.map(|axis| dot(d, axis))
+    }
+}
+impl Implicit for ConeImplicit {
+    fn value(&self, p: P) -> f64 {
+        let [x, y, z] = self.local(p);
+        let c = self.r_bottom + self.slope * z;
+        x * x + y * y - c * c
+    }
+    fn gradient(&self, p: P) -> P {
+        let [x, y, z] = self.local(p);
+        let c = self.r_bottom + self.slope * z;
+        let local = [2. * x, 2. * y, -2. * c * self.slope];
+        std::array::from_fn(|k| (0..3).map(|i| local[i] * self.frame[i][k]).sum())
+    }
+    fn compose(&self, xyz: &[Bern; 3]) -> Result<Bern> {
+        let w = Bern::constant(1., 0);
+        let (g, _) = self.compose_homogeneous(&[xyz[0].clone(), xyz[1].clone(), xyz[2].clone(), w])?;
+        Ok(g)
+    }
+    fn distance_factor(&self, xyz: &[Bern; 3]) -> f64 {
+        let c_low = (|| -> Result<f64> {
+            let mut z = Interval::point(0.);
+            for k in 0..3 {
+                let lo = xyz[k].0.iter().map(|x| x.lo).fold(f64::INFINITY, f64::min);
+                let hi = xyz[k].0.iter().map(|x| x.hi).fold(f64::NEG_INFINITY, f64::max);
+                let b = Interval::new(lo, hi)?.sub(Interval::point(self.bottom[k]))?;
+                z = z.add(b.mul(Interval::point(self.frame[2][k]))?)?;
+            }
+            let c = Interval::point(self.r_bottom).add(z.mul(Interval::point(self.slope))?)?;
+            Ok(c.lo)
+        })()
+        .unwrap_or(0.);
+        if c_low > 0. {
+            1. / (c_low * self.slope.hypot(1.))
+        } else {
+            f64::INFINITY
+        }
+    }
+    fn compose_homogeneous(&self, xyzw: &[Bern; 4]) -> Result<(Bern, i32)> {
+        let w = &xyzw[3];
+        let mut local = Vec::with_capacity(3);
+        for axis in &self.frame {
+            let mut l = xyzw[0].sub(&w.scale(self.bottom[0])?)?.scale(axis[0])?;
+            for k in 1..3 {
+                l = l.add(&xyzw[k].sub(&w.scale(self.bottom[k])?)?.scale(axis[k])?)?;
+            }
+            local.push(l);
+        }
+        let c = w.scale(self.r_bottom)?.add(&local[2].scale(self.slope)?)?;
+        let g = local[0].mul(&local[0])?.add(&local[1].mul(&local[1])?)?.sub(&c.mul(&c)?)?;
+        Ok((g, 2))
+    }
+}
+
 /// Ring torus about `axis` through `center`: in local coordinates
 /// `g = (|q|^2 + R^2 - r^2)^2 - 4 R^2 (x^2 + y^2)`, which factors as
 /// `(q_d^2 - r^2)((rho + R)^2 + z^2 - r^2)` with `q_d` the distance to the
@@ -479,6 +626,29 @@ fn certify_span(
         return Ok(None);
     };
     Ok(Some(l.max(r)))
+}
+
+/// Certified distance bound of a cubic (or lower) curve from both surfaces,
+/// span by span with subdivision; `None` when some span does not certify.
+pub(crate) fn certify_curve(
+    surfaces: [&dyn Implicit; 2],
+    curve: &Curve,
+    tolerance: f64,
+) -> Result<Option<f64>> {
+    let mut worst = 0_f64;
+    let mut cells = 0;
+    for segment in curve.decompose()? {
+        let c = &segment.definition().control_points;
+        if c.len() != 4 {
+            return Ok(None);
+        }
+        let span: Span = std::array::from_fn(|i| std::array::from_fn(|k| Interval::point(c[i][k])));
+        match certify_span(surfaces, span, tolerance, 14, &mut cells)? {
+            Some(b) => worst = worst.max(b),
+            None => return Ok(None),
+        }
+    }
+    Ok(Some(worst))
 }
 
 /// A traced, certified intersection component.

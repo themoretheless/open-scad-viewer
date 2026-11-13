@@ -242,7 +242,7 @@ fn handle_boolean(op: &str, v: &Value) -> Result<Value> {
             )?;
             general_nurbs_boolean_value(model, certificate)
         }
-        "brep_nurbs_boolean" => encode(brep_core::boolean(
+        "brep_nurbs_boolean" => encode(crate::curved_boolean(
             &field(v, "a")?,
             &field(v, "b")?,
             operation_str(v)?,

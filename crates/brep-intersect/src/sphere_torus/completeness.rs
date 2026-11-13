@@ -127,8 +127,8 @@ impl Bern2 {
         }
         lo > 0. || hi < 0.
     }
-    /// Halves along u (`axis = 0`) or v.
-    fn halves(&self, axis: usize) -> Result<(Self, Self)> {
+    /// Split along u (`axis = 0`) or v at ratio `t`.
+    fn halves(&self, axis: usize, t: f64) -> Result<(Self, Self)> {
         let transpose = |g: &Grid| -> Grid {
             (0..g[0].len()).map(|j| g.iter().map(|r| r[j]).collect()).collect()
         };
@@ -136,7 +136,7 @@ impl Bern2 {
         let mut left = Vec::new();
         let mut right = Vec::new();
         for row in g {
-            let (l, r) = halves1(&row)?;
+            let (l, r) = split1(&row, t)?;
             left.push(l);
             right.push(r);
         }
@@ -160,13 +160,18 @@ impl Bern2 {
 }
 
 fn halves1(c: &[Interval]) -> Result<(Vec<Interval>, Vec<Interval>)> {
-    let half = Interval::point(0.5);
+    split1(c, 0.5)
+}
+
+/// De Casteljau split at `t` into `[0, t]` and `[t, 1]`.
+fn split1(c: &[Interval], t: f64) -> Result<(Vec<Interval>, Vec<Interval>)> {
+    let (a, b) = (Interval::point(1. - t), Interval::point(t));
     let mut row = c.to_vec();
     let (mut left, mut right) = (vec![row[0]], vec![row[row.len() - 1]]);
     while row.len() > 1 {
         row = row
             .windows(2)
-            .map(|w| w[0].add(w[1])?.mul(half))
+            .map(|w| w[0].mul(a)?.add(w[1].mul(b)?))
             .collect::<Result<_>>()?;
         left.push(row[0]);
         right.push(row[row.len() - 1]);
@@ -296,15 +301,32 @@ fn crossings(
     Some(crossings(&left, axis, c, lo, hi, near, next)? + crossings(&right, axis, c, lo, hi, near, next)?)
 }
 
-struct Chart<'a> {
+/// Certify one chart square, retrying with shifted box grids when a traced
+/// curve passes too close to a grid point to be counted.
+fn certify_square(crossings: &dyn Crossings, f: Bern2) -> bool {
+    [0.5, 0.4637, 0.5419, 0.4171].iter().any(|&ratio| {
+        let mut chart = Chart {
+            crossings,
+            budget: 20_000,
+            ratio,
+        };
+        chart.certify_box(f.clone(), [0., 1.], [0., 1.], 18)
+    })
+}
+
+/// Traced crossings of the boundary of a chart box.
+trait Crossings {
+    fn boundary_crossings(&self, u: [f64; 2], v: [f64; 2]) -> Option<usize>;
+}
+
+/// Stereographic sphere chart.
+struct Stereographic<'a> {
     spans: &'a [ChartSpan],
-    budget: usize,
     /// Smallest chart denominator inside the unit square, with margin.
     near: f64,
 }
 
-impl Chart<'_> {
-    /// Traced crossings of the boundary of `[u0, u1] x [v0, v1]`.
+impl Crossings for Stereographic<'_> {
     fn boundary_crossings(&self, u: [f64; 2], v: [f64; 2]) -> Option<usize> {
         let mut total = 0;
         for span in self.spans {
@@ -313,6 +335,20 @@ impl Chart<'_> {
             }
         }
         Some(total)
+    }
+}
+
+struct Chart<'a> {
+    crossings: &'a dyn Crossings,
+    budget: usize,
+    /// Split ratio; values other than 1/2 move the box grid off points a
+    /// traced curve happens to pass through.
+    ratio: f64,
+}
+
+impl Chart<'_> {
+    fn boundary_crossings(&self, u: [f64; 2], v: [f64; 2]) -> Option<usize> {
+        self.crossings.boundary_crossings(u, v)
     }
 
     fn certify_box(&mut self, f: Bern2, u: [f64; 2], v: [f64; 2], depth: usize) -> bool {
@@ -334,6 +370,7 @@ impl Chart<'_> {
             }
             return match self.boundary_crossings(u, v) {
                 Some(n) if n == roots => true,
+
                 // A mismatch near a corner can be an artefact of where the
                 // traced and true curves cross; smaller boxes decide.
                 _ => self.split(f, u, v, depth),
@@ -347,18 +384,464 @@ impl Chart<'_> {
             return false;
         }
         let axis = if u[1] - u[0] >= v[1] - v[0] { 0 } else { 1 };
-        let Ok((a, b)) = f.halves(axis) else {
+        let t = self.ratio;
+        let Ok((a, b)) = f.halves(axis, t) else {
             return false;
         };
         let (ua, ub, va, vb) = if axis == 0 {
-            let m = 0.5 * (u[0] + u[1]);
+            let m = u[0] + t * (u[1] - u[0]);
             ([u[0], m], [m, u[1]], v, v)
         } else {
-            let m = 0.5 * (v[0] + v[1]);
+            let m = v[0] + t * (v[1] - v[0]);
             (u, u, [v[0], m], [m, v[1]])
         };
         self.certify_box(a, ua, va, depth - 1) && self.certify_box(b, ub, vb, depth - 1)
     }
+}
+
+/// The other surface of a sphere pair, as a homogeneous polynomial in
+/// world coordinates.
+pub(crate) enum Quadric<'a> {
+    Torus(&'a CanonicalTorus),
+    Cylinder {
+        center: [f64; 3],
+        /// In-plane x, in-plane y, axis.
+        frame: [[f64; 3]; 3],
+        radius: f64,
+    },
+    /// Radius `r_bottom + slope * z` above `bottom` along `frame[2]`.
+    Cone {
+        bottom: [f64; 3],
+        frame: [[f64; 3]; 3],
+        r_bottom: f64,
+        slope: f64,
+    },
+}
+
+/// Local cylindrical coordinates of a traced span (cubic Bernstein forms).
+#[derive(Clone)]
+struct LocalSpan {
+    x: Vec<Interval>,
+    y: Vec<Interval>,
+    z: Vec<Interval>,
+}
+
+fn hull1(c: &[Interval]) -> (f64, f64) {
+    c.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), x| (lo.min(x.lo), hi.max(x.hi)))
+}
+
+/// Angle of the 90-degree rational arc at parameter `t` (inverse of
+/// `arc_parameter`): `s = t / (1 - t)`, `tan(phi / 2) = s / (sqrt 2 + s)`.
+fn arc_angle(t: f64) -> f64 {
+    if t >= 1. {
+        return QUARTER;
+    }
+    let s = t / (1. - t);
+    2. * (s / (std::f64::consts::SQRT_2 + s)).atan()
+}
+
+/// One side patch of a canonical cylinder: quadrant `i`, `u` the exact arc
+/// parameter of the angle, `v = (z + h) / 2h`.
+struct CylinderSide<'a> {
+    spans: &'a [LocalSpan],
+    quadrant: usize,
+    /// Axial coordinate at v = 0 and the axial length of v in [0, 1].
+    z0: f64,
+    len: f64,
+}
+
+impl CylinderSide<'_> {
+    /// Crossings of one span with the iso line `{coordinate axis = c}` with
+    /// the other coordinate inside `(lo, hi)`.
+    fn crossings(&self, span: &LocalSpan, axis: usize, c: f64, lo: f64, hi: f64, depth: usize) -> Option<usize> {
+        let mid = self.quadrant as f64 * QUARTER + 0.5 * QUARTER;
+        let (cm, sm) = (mid.cos(), mid.sin());
+        // Rotated coordinates: X toward the patch middle.
+        let rot = |x: &[Interval], y: &[Interval], cs: f64, sn: f64| -> Option<Vec<Interval>> {
+            x.iter()
+                .zip(y)
+                .map(|(x, y)| x.mul(Interval::point(cs)).and_then(|a| a.add(y.mul(Interval::point(sn))?)).ok())
+                .collect()
+        };
+        let big_x = rot(&span.x, &span.y, cm, sm)?;
+        let big_y = rot(&span.y, &span.x, cm, -sm)?;
+        let (xl, xh) = hull1(&big_x);
+        let (zl, zh) = hull1(&span.z);
+        let vrange = ((zl - self.z0) / self.len, (zh - self.z0) / self.len);
+        let split = |this: &Self| -> Option<usize> {
+            if depth == 0 {
+                return None;
+            }
+            let (xa, xb) = halves1(&span.x).ok()?;
+            let (ya, yb) = halves1(&span.y).ok()?;
+            let (za, zb) = halves1(&span.z).ok()?;
+            Some(
+                this.crossings(&LocalSpan { x: xa, y: ya, z: za }, axis, c, lo, hi, depth - 1)?
+                    + this.crossings(&LocalSpan { x: xb, y: yb, z: zb }, axis, c, lo, hi, depth - 1)?,
+            )
+        };
+        // The patch is the wedge |Y| <= X (45 degrees each side of its
+        // middle); a span wholly outside the wedge has no crossing.
+        let (yl0, yh0) = hull1(&big_y);
+        if xh <= 0. || yl0 > xh || yh0 < -xh {
+            return Some(0);
+        }
+        if xl <= 0. {
+            return split(self);
+        }
+        // Local angle range from the box of (X, Y), X > 0.
+        let (yl, yh) = hull1(&big_y);
+        let angles = [yl.atan2(xl), yl.atan2(xh), yh.atan2(xl), yh.atan2(xh)];
+        let (al, ah) = angles.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(l, h), a| (l.min(*a), h.max(*a)));
+        // The arc parameter t(phi) = s / (1 + s), s = sqrt2 T / (1 - T),
+        // T = tan(phi / 2), is increasing on (-pi/2, pi/2): it extends past
+        // the seam at phi = 0 to negative t, and past phi = 90 degrees we
+        // only need "beyond 1".
+        let arc_t = |phi: f64| {
+            let t = (0.5 * phi).tan();
+            let s = std::f64::consts::SQRT_2 * t / (1. - t);
+            s / (1. + s)
+        };
+        let (ul, uh) = (
+            arc_t(al + 0.5 * QUARTER) - 1e-12,
+            if ah + 0.5 * QUARTER >= QUARTER { f64::INFINITY } else { arc_t(ah + 0.5 * QUARTER) + 1e-12 },
+        );
+        let (g, other) = if axis == 0 {
+            // u = c: the ruling at local angle arc_angle(c) - 45 degrees.
+            let a = arc_angle(c) - 0.5 * QUARTER;
+            let (ca, sa) = (a.cos(), a.sin());
+            let g: Vec<Interval> = big_x
+                .iter()
+                .zip(&big_y)
+                .map(|(x, y)| y.mul(Interval::point(ca)).and_then(|p| p.sub(x.mul(Interval::point(sa))?)).ok())
+                .collect::<Option<_>>()?;
+            (g, vrange)
+        } else {
+            let z0 = self.z0 + self.len * c;
+            let g: Vec<Interval> = span.z.iter().map(|z| z.sub(Interval::point(z0)).ok()).collect::<Option<_>>()?;
+            (g, (ul, uh))
+        };
+        let (gl, gh) = hull1(&g);
+        if gl > 0. || gh < 0. || other.1 < lo || other.0 > hi {
+            return Some(0);
+        }
+        match variations(&g) {
+            Some(0) => return Some(0),
+            Some(1) if other.0 > lo && other.1 < hi => return Some(1),
+            _ => {}
+        }
+        split(self)
+    }
+}
+
+impl Crossings for CylinderSide<'_> {
+    fn boundary_crossings(&self, u: [f64; 2], v: [f64; 2]) -> Option<usize> {
+        let mut total = 0;
+        for span in self.spans {
+            for (axis, c, range) in [(0, u[0], v), (0, u[1], v), (1, v[0], u), (1, v[1], u)] {
+                // A span ending exactly on the line (traces seeded on a
+                // symmetry plane) has an undecidable end sign; a line
+                // shifted by far less than any crossing separation gives the
+                // same transversal count.
+                let n = [0., 1e-11, -1e-11]
+                    .iter()
+                    .find_map(|&eps| self.crossings(span, axis, c + eps, range[0], range[1], 40))?;
+                total += n;
+            }
+        }
+        Some(total)
+    }
+}
+
+/// A planar cap chart: `u = (x / R + 1) / 2`, `v = (y / R + 1) / 2` in the
+/// cap frame, so both iso lines are linear in the point.
+struct Planar<'a> {
+    spans: &'a [LocalSpan],
+    radius: f64,
+}
+
+impl Planar<'_> {
+    fn crossings(&self, span: &LocalSpan, axis: usize, c: f64, lo: f64, hi: f64, depth: usize) -> Option<usize> {
+        let to_uv = |x: f64| (x / self.radius + 1.) * 0.5;
+        let (fixed, free) = if axis == 0 { (&span.x, &span.y) } else { (&span.y, &span.x) };
+        let level = self.radius * (2. * c - 1.);
+        let g: Vec<Interval> = fixed.iter().map(|x| x.sub(Interval::point(level)).ok()).collect::<Option<_>>()?;
+        let (fl, fh) = hull1(free);
+        let other = (to_uv(fl), to_uv(fh));
+        let (gl, gh) = hull1(&g);
+        if gl > 0. || gh < 0. || other.1 < lo || other.0 > hi {
+            return Some(0);
+        }
+        match variations(&g) {
+            Some(0) => return Some(0),
+            Some(1) if other.0 > lo && other.1 < hi => return Some(1),
+            _ => {}
+        }
+        if depth == 0 {
+            return None;
+        }
+        let (xa, xb) = halves1(&span.x).ok()?;
+        let (ya, yb) = halves1(&span.y).ok()?;
+        let (za, zb) = halves1(&span.z).ok()?;
+        Some(
+            self.crossings(&LocalSpan { x: xa, y: ya, z: za }, axis, c, lo, hi, depth - 1)?
+                + self.crossings(&LocalSpan { x: xb, y: yb, z: zb }, axis, c, lo, hi, depth - 1)?,
+        )
+    }
+}
+
+impl Crossings for Planar<'_> {
+    fn boundary_crossings(&self, u: [f64; 2], v: [f64; 2]) -> Option<usize> {
+        let mut total = 0;
+        for span in self.spans {
+            for (axis, c, range) in [(0, u[0], v), (0, u[1], v), (1, v[0], u), (1, v[1], u)] {
+                let n = [0., 1e-11, -1e-11]
+                    .iter()
+                    .find_map(|&eps| self.crossings(span, axis, c + eps, range[0], range[1], 40))?;
+                total += n;
+            }
+        }
+        Some(total)
+    }
+}
+
+/// True when the traced `cap_loops[slot]` provably are all the components
+/// of `other` with each cap plane of a canonical cylinder, over the whole
+/// square cap patch (which contains the cap disk).
+pub(crate) fn certify_complete_on_caps(
+    cylinder: &crate::sphere_cylinder::CanonicalCylinder,
+    cylinder_model: &Model,
+    other: &Quadric<'_>,
+    cap_loops: &[Vec<Vec<Curve>>; 2],
+) -> bool {
+    let frame = [cylinder.frame[0], cylinder.frame[1], cylinder.axis];
+    let caps: Vec<([f64; 3], f64, usize)> = (0..2)
+        .map(|slot| {
+            let sign = if slot == 0 { -1. } else { 1. };
+            (
+                std::array::from_fn(|k| cylinder.center[k] + sign * cylinder.half_height * cylinder.axis[k]),
+                cylinder.radius,
+                cylinder.caps[slot],
+            )
+        })
+        .collect();
+    certify_complete_on_disks(frame, &caps, cylinder_model, other, cap_loops)
+}
+
+/// The same for the ring caps of a canonical frustum (an apex has no cap;
+/// its loops must be empty).
+pub(crate) fn certify_complete_on_cone_caps(
+    cone: &brep_core::intersections::CanonicalCone,
+    cone_model: &Model,
+    other: &Quadric<'_>,
+    cap_loops: &[Vec<Vec<Curve>>; 2],
+) -> bool {
+    let frame = [cone.frame[0], cone.frame[1], cone.axis];
+    let mut caps = Vec::new();
+    for slot in 0..2 {
+        let (z, r) = if slot == 0 { (0., cone.r_bottom) } else { (cone.height, cone.r_top) };
+        match cone.caps[slot] {
+            Some(face) => caps.push((std::array::from_fn(|k| cone.bottom[k] + z * cone.axis[k]), r, face)),
+            None if cap_loops[slot].is_empty() => caps.push(([f64::NAN; 3], 0., usize::MAX)),
+            None => return false,
+        }
+    }
+    certify_complete_on_disks(frame, &caps, cone_model, other, cap_loops)
+}
+
+/// Bilinear cap squares `u = (x / R + 1) / 2`, `v = (y / R + 1) / 2`.
+fn certify_complete_on_disks(
+    frame: [[f64; 3]; 3],
+    caps: &[([f64; 3], f64, usize)],
+    model: &Model,
+    other: &Quadric<'_>,
+    cap_loops: &[Vec<Vec<Curve>>; 2],
+) -> bool {
+    (|| -> Result<bool> {
+        for (slot, &(origin, radius, face)) in caps.iter().enumerate() {
+            if face == usize::MAX {
+                continue;
+            }
+            let surface = &model.faces[face].surface;
+            for (u, v) in [(0.2, 0.3), (0.7, 0.9)] {
+                let p = surface.evaluate(u, v)?.point;
+                let d = sub([p[0], p[1], p[2]], origin);
+                let pu = (dot(d, frame[0]) / radius + 1.) * 0.5;
+                let pv = (dot(d, frame[1]) / radius + 1.) * 0.5;
+                if (pu - u).abs() > 1e-9 || (pv - v).abs() > 1e-9 || dot(d, frame[2]).abs() > 1e-9 {
+                    return Ok(false);
+                }
+            }
+            let mut spans = Vec::new();
+            for piece in cap_loops[slot].iter().flatten() {
+                for segment in piece.decompose()? {
+                    let c = &segment.definition().control_points;
+                    let local = |axis: [f64; 3]| -> Vec<Interval> {
+                        c.iter()
+                            .map(|p| Interval::point(dot(sub([p[0], p[1], p[2]], origin), axis)))
+                            .collect()
+                    };
+                    spans.push(LocalSpan { x: local(frame[0]), y: local(frame[1]), z: local(frame[2]) });
+                }
+            }
+            let f = on_patch(other, surface)?;
+            let chart = Planar { spans: &spans, radius };
+            if !certify_square(&chart, f) {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    })()
+    .unwrap_or(false)
+}
+
+/// True when the traced `loops` provably are all the components of the
+/// intersection of `other` with the side wall of a canonical cylinder (the
+/// caller guarantees the contact stays between the cap planes).
+pub(crate) fn certify_complete_on_cylinder(
+    cylinder: &crate::sphere_cylinder::CanonicalCylinder,
+    cylinder_model: &Model,
+    other: &Quadric<'_>,
+    loops: &[Vec<Curve>],
+) -> bool {
+    let h = cylinder.half_height;
+    certify_complete_on_side(
+        cylinder.center,
+        [cylinder.frame[0], cylinder.frame[1], cylinder.axis],
+        cylinder.sides,
+        (-h, 2. * h),
+        cylinder_model,
+        other,
+        loops,
+    )
+}
+
+/// The same on the side wall of a canonical frustum.
+pub(crate) fn certify_complete_on_cone(
+    cone: &brep_core::intersections::CanonicalCone,
+    cone_model: &Model,
+    other: &Quadric<'_>,
+    loops: &[Vec<Curve>],
+) -> bool {
+    certify_complete_on_side(
+        cone.bottom,
+        [cone.frame[0], cone.frame[1], cone.axis],
+        cone.sides,
+        (0., cone.height),
+        cone_model,
+        other,
+        loops,
+    )
+}
+
+/// Side patches of a solid of revolution: quadrant `i` patch has
+/// `u = arc_parameter(angle - i * 90 deg)` and `v = (z - z0) / len`.
+fn certify_complete_on_side(
+    origin: [f64; 3],
+    frame: [[f64; 3]; 3],
+    sides: [usize; 4],
+    (z0, len): (f64, f64),
+    model: &Model,
+    other: &Quadric<'_>,
+    loops: &[Vec<Curve>],
+) -> bool {
+    (|| -> Result<bool> {
+        let mut spans = Vec::new();
+        for piece in loops.iter().flatten() {
+            for segment in piece.decompose()? {
+                let c = &segment.definition().control_points;
+                let local = |axis: [f64; 3]| -> Vec<Interval> {
+                    c.iter()
+                        .map(|p| Interval::point(dot(sub([p[0], p[1], p[2]], origin), axis)))
+                        .collect()
+                };
+                spans.push(LocalSpan {
+                    x: local(frame[0]),
+                    y: local(frame[1]),
+                    z: local(frame[2]),
+                });
+            }
+        }
+        for (quadrant, &face) in sides.iter().enumerate() {
+            let surface = &model.faces[face].surface;
+            for (u, v) in [(0.2, 0.3), (0.7, 0.9)] {
+                let p = surface.evaluate(u, v)?.point;
+                let d = sub([p[0], p[1], p[2]], origin);
+                let angle = dot(d, frame[1]).atan2(dot(d, frame[0])).rem_euclid(std::f64::consts::TAU)
+                    - quadrant as f64 * QUARTER;
+                let pu = crate::plane_torus::arc_parameter(angle.clamp(0., QUARTER));
+                let pv = (dot(d, frame[2]) - z0) / len;
+                if (pu - u).abs() > 1e-9 || (pv - v).abs() > 1e-9 {
+                    return Ok(false);
+                }
+            }
+            let f = on_patch(other, surface)?;
+            let side = CylinderSide {
+                spans: &spans,
+                quadrant,
+                z0,
+                len,
+            };
+            if !certify_square(&side, f) {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    })()
+    .unwrap_or(false)
+}
+
+/// Homogeneous equation of `other` on a rational biquadratic patch.
+fn on_patch(other: &Quadric<'_>, surface: &nurbs_core::surface::Surface) -> Result<Bern2> {
+    match other {
+        Quadric::Torus(torus) => torus_on_patch(torus, surface),
+        Quadric::Cylinder { center, frame, radius } => {
+            let (w, local) = local_coordinates(surface, *center, *frame)?;
+            local[0]
+                .mul(&local[0])?
+                .add(&local[1].mul(&local[1])?)?
+                .sub(&w.mul(&w)?.scale(radius * radius)?)
+        }
+        Quadric::Cone { bottom, frame, r_bottom, slope } => {
+            let (w, local) = local_coordinates(surface, *bottom, *frame)?;
+            let c = w.scale(*r_bottom)?.add(&local[2].scale(*slope)?)?;
+            local[0].mul(&local[0])?.add(&local[1].mul(&local[1])?)?.sub(&c.mul(&c)?)
+        }
+    }
+}
+
+/// Weight and local homogeneous coordinates of a patch.
+fn local_coordinates(
+    surface: &nurbs_core::surface::Surface,
+    center: [f64; 3],
+    frame: [[f64; 3]; 3],
+) -> Result<(Bern2, Vec<Bern2>)> {
+    let coordinate = |k: usize| -> Bern2 {
+        Bern2(
+            surface
+                .control_points
+                .iter()
+                .zip(&surface.weights)
+                .map(|(row, w)| {
+                    row.iter()
+                        .zip(w)
+                        .map(|(p, w)| Interval::point(if k < 3 { p[k] * w } else { *w }))
+                        .collect()
+                })
+                .collect(),
+        )
+    };
+    let w = coordinate(3);
+    let mut local = Vec::with_capacity(3);
+    for axis in frame {
+        let mut sum = Bern2::constant(0.);
+        for k in 0..3 {
+            let shifted = coordinate(k).sub(&w.scale(center[k])?)?;
+            sum = sum.add(&shifted.scale(axis[k])?)?;
+        }
+        local.push(sum);
+    }
+    Ok((w, local))
 }
 
 /// Homogeneous torus equation on a rational biquadratic patch.
@@ -405,6 +888,16 @@ pub(super) fn certify_complete(
     sphere_model: &Model,
     loops: &[Vec<Curve>],
 ) -> bool {
+    certify_complete_against(sphere, &Quadric::Torus(torus), sphere_model, loops)
+}
+
+/// [`certify_complete`] against any supported quadric.
+pub(crate) fn certify_complete_against(
+    sphere: &CanonicalSphere,
+    other: &Quadric<'_>,
+    sphere_model: &Model,
+    loops: &[Vec<Curve>],
+) -> bool {
     (|| -> Result<bool> {
         for (face, model_face) in sphere_model.faces.iter().enumerate() {
             let surface = &model_face.surface;
@@ -446,13 +939,12 @@ pub(super) fn certify_complete(
                     });
                 }
             }
-            let f = torus_on_patch(torus, surface)?;
-            let mut chart = Chart {
+            let f = on_patch(other, surface)?;
+            let stereographic = Stereographic {
                 spans: &spans,
-                budget: 20_000,
                 near: 0.6 * sphere.radius,
             };
-            if !chart.certify_box(f, [0., 1.], [0., 1.], 16) {
+            if !certify_square(&stereographic, f) {
                 return Ok(false);
             }
         }

@@ -275,12 +275,15 @@
         let inside = run(&place(1., 0., 4.), &cylinder);
         assert_eq!(inside["coverage"].as_str(), Some("numerically_resolved"));
         assert_eq!(inside["components"].as_array().map(Vec::len), Some(0));
-        // Clearly off-axis: the general quartic is out of scope.
-        let off_axis = run(&place(3., 0.5, 4.), &cylinder);
-        assert_eq!(
-            off_axis["unresolved"][0]["reason"].as_str(),
-            Some("unsupported_surface")
-        );
+        // Off-axis between the caps: a traced, certified, complete loop.
+        let traced = run(&place(3., 0.5, 4.), &cylinder);
+        assert_eq!(traced["components"][0]["kind"].as_str(), Some("traced"));
+        assert_eq!(traced["components"][0]["complete"].as_bool(), Some(true));
+        // Off-axis and reaching a cap: wall arcs and cap arcs join into
+        // closed certified cycles.
+        let capped = run(&place(3., 0.5, 6.), &cylinder);
+        assert_eq!(capped["components"][0]["kind"].as_str(), Some("traced"));
+        assert_eq!(capped["components"][0]["complete"].as_bool(), Some(true));
         // A frustum is not the canonical cylinder: explicit refusal.
         let refused = run(
             &place(2., 0., 4.),
@@ -369,12 +372,10 @@
         let inside = run(&place(0.5, 0., 3.), &cone);
         assert_eq!(inside["coverage"].as_str(), Some("numerically_resolved"));
         assert_eq!(inside["components"].as_array().map(Vec::len), Some(0));
-        // Clearly off-axis: the general quartic is out of scope.
-        let off_axis = run(&place(2.5, 0.5, 0.5), &cone);
-        assert_eq!(
-            off_axis["unresolved"][0]["reason"].as_str(),
-            Some("unsupported_surface")
-        );
+        // Off-axis and reaching the bottom cap: closed certified cycles.
+        let capped = run(&place(2.5, 0.5, 0.5), &cone);
+        assert_eq!(capped["components"][0]["kind"].as_str(), Some("traced"));
+        assert_eq!(capped["components"][0]["complete"].as_bool(), Some(true));
         // An equal-radius frustum is a cylinder: explicit refusal as the
         // cone operand, never a numerical fallback.
         let refused = run(
@@ -1299,8 +1300,7 @@
         let traced = &off["components"][0];
         assert_eq!(traced["kind"].as_str(), Some("traced"));
         assert!(traced["distanceBound"].as_f64().unwrap() <= 1e-7);
-        assert!(!traced["sphereUv"].as_array().unwrap().is_empty());
-        assert!(!traced["torusUv"].as_array().unwrap().is_empty());
+        assert_eq!(traced["complete"].as_bool(), Some(true));
         // Non-canonical operands and swapped order: unsupported regions.
         let refused = run(&torus, &brep_core::analytic::cylinder(2.2, 8.).unwrap());
         assert_eq!(
@@ -1446,15 +1446,10 @@
             near["unresolved"][0]["reason"].as_str(),
             Some("near_coincidence")
         );
-        // Clearly off-axis: the quartic is traced into certified cubic pieces
-        // with UV lifts on both surfaces.
+        // Clearly off-axis with the torus between the caps: traced, complete.
         let off = run(&at(0.5), &torus);
-        assert_eq!(off["coverage"].as_str(), Some("numerically_resolved"));
-        let traced = &off["components"][0];
-        assert_eq!(traced["kind"].as_str(), Some("traced"));
-        assert!(traced["distanceBound"].as_f64().unwrap() <= 1e-7);
-        assert!(!traced["sphereUv"].as_array().unwrap().is_empty());
-        assert!(!traced["torusUv"].as_array().unwrap().is_empty());
+        assert_eq!(off["components"][0]["kind"].as_str(), Some("traced"));
+        assert_eq!(off["components"][0]["complete"].as_bool(), Some(true));
         // Non-canonical operands and swapped order: unsupported regions.
         let refused = run(&torus, &brep_core::analytic::frustum(1., 3., 6.).unwrap());
         assert_eq!(
@@ -1572,8 +1567,7 @@
             near["unresolved"][0]["reason"].as_str(),
             Some("near_coincidence")
         );
-        // Clearly off-axis: the quartic is traced into certified cubic pieces
-        // with UV lifts on both surfaces.
+        // Clearly off-axis: the general quartic is unsupported, no fallback.
         let off = brep_core::transform::affine(
             &at(3.),
             [
@@ -1585,12 +1579,10 @@
         )
         .unwrap();
         let off = run(&first, &off);
-        assert_eq!(off["coverage"].as_str(), Some("numerically_resolved"));
-        let traced = &off["components"][0];
-        assert_eq!(traced["kind"].as_str(), Some("traced"));
-        assert!(traced["distanceBound"].as_f64().unwrap() <= 1e-7);
-        assert!(!traced["sphereUv"].as_array().unwrap().is_empty());
-        assert!(!traced["torusUv"].as_array().unwrap().is_empty());
+        assert_eq!(
+            off["unresolved"][0]["reason"].as_str(),
+            Some("unsupported_surface")
+        );
         // Non-canonical operands on either side: unsupported regions.
         let refused = run(&first, &brep_core::analytic::sphere(2.).unwrap());
         assert_eq!(

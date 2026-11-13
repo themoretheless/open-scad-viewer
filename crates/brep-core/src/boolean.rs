@@ -12,6 +12,7 @@ pub(crate) mod torus_sphere_boolean;
 pub mod face_cut;
 pub(crate) mod imprint_assembly;
 pub mod imprint_pipeline;
+pub mod network_boolean;
 pub mod offset_end_boundary;
 pub mod operations;
 pub(crate) mod profile_imprint;

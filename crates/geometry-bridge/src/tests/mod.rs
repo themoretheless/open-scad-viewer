@@ -1813,3 +1813,20 @@ fn exact_brep_and_nurbs_mesh_boolean_fallback_have_distinct_evidence() {
     assert!(fallback.get("certificate").is_none());
     assert!(fallback.get("exact").is_none());
 }
+
+#[test]
+#[ignore = "about 37 minutes in a debug build; run with --release --ignored"]
+fn off_axis_sphere_torus_boolean_falls_back_to_the_certified_family() {
+    let torus = brep_core::analytic::torus(3., 1.).unwrap();
+    let sphere = brep_core::transform::affine(
+        &brep_core::analytic::sphere(1.).unwrap(),
+        [[1., 0., 0., 3.5], [0., 1., 0., 0.4], [0., 0., 1., 0.3], [0., 0., 0., 1.]],
+    )
+    .unwrap();
+    let request = json!({"op":"brep_nurbs_boolean","a":encode(torus).unwrap(),
+        "b":encode(sphere).unwrap(),"operation":"union"});
+    let result = dispatch(request).unwrap();
+    let model: brep_core::Model = value_codec::from_value(result).unwrap();
+    model.validate().unwrap();
+    assert!(model.faces.len() > 16);
+}

@@ -196,17 +196,20 @@ async function recoverRenderer(
       failureMessage = caught instanceof Error ? caught.message : context.options.translate('gpuRecoverFailed')
     } finally {
       context.options.viewportController.completeRecovery(token)
+      // eslint-disable-next-line no-unsafe-finally -- catch already absorbed the failure; finally only decides the recovery outcome
       if (!context.options.viewportController.isCurrentRecovery(token) || context.renderer !== instance) return
 
       const completion = context.rendererRecoveryGate.completeAttempt()
       if (completion === 'retry') {
         void recoverRenderer(instance, navigation)
+        // eslint-disable-next-line no-unsafe-finally -- catch already absorbed the failure; finally only decides the recovery outcome
         return
       }
 
       if (!ready || completion === 'exhausted' || instance.currentStatus.status === 'device-lost') {
         context.options.gpuOk.value = false
         context.options.error.value = failureMessage
+        // eslint-disable-next-line no-unsafe-finally -- catch already absorbed the failure; finally only decides the recovery outcome
         return
       }
 

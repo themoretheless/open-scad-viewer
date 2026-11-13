@@ -27,6 +27,21 @@ pub enum SphereCylinderComponent {
         /// and the cylinder side or cap plane equation.
         max_sample_residual: f64,
     },
+    /// Off-axis contact of a sphere lying strictly between the cap planes: a
+    /// closed quartic loop on the side wall, traced into cubic pieces with
+    /// exactly shared ends and certified within `distance_bound` of both
+    /// surfaces. `complete` says whether the component set is certified
+    /// complete. UV lifts are cubic pcurves cut at the patch seams, their
+    /// images certified within `lift_deviation` of the other surface.
+    Traced {
+        pieces: Vec<Curve>,
+        distance_bound: f64,
+        spans: usize,
+        complete: bool,
+        sphere_uv: Vec<SpherePatchCircle>,
+        cylinder_uv: Vec<CylinderPatchCurve>,
+        lift_deviation: f64,
+    },
 }
 
 /// Where a resolved circle sits on the cylinder boundary.
@@ -159,13 +174,11 @@ pub fn intersect_sphere_cylinder(
     let snap = 64. * f64::EPSILON * terms;
     if d_perp > snap {
         let near = RECOGNITION * (sphere.radius + cylinder.radius + cylinder.half_height);
-        let reason = if d_perp <= near {
-            UnresolvedReason::NearCoincidence
-        } else {
-            UnresolvedReason::UnsupportedSurface
-        };
-        report.unresolved(domain, reason);
-        return Ok(report);
+        if d_perp <= near {
+            report.unresolved(domain, UnresolvedReason::NearCoincidence);
+            return Ok(report);
+        }
+        return off_axis(&mut report, domain, sphere_model, cylinder_model, &sphere, &cylinder, s, d_perp, band, terms);
     }
     let r = sphere.radius;
     let big_r = cylinder.radius;
@@ -259,4 +272,212 @@ pub fn intersect_sphere_cylinder(
             .push(circle_component(&sphere, &cylinder, axial, site)?);
     }
     Ok(report)
+}
+
+/// Off-axis pair. Only a sphere strictly between the cap planes is handled:
+/// then the caps are untouched and every contact is a closed loop on the
+/// side wall. A sphere provably outside or inside the wall resolves empty.
+#[allow(clippy::too_many_arguments)]
+fn off_axis(
+    report: &mut Report<SphereCylinderComponent>,
+    domain: Vec<f64>,
+    sphere_model: &Model,
+    cylinder_model: &Model,
+    sphere: &CanonicalSphere,
+    cylinder: &CanonicalCylinder,
+    s: f64,
+    d_perp: f64,
+    band: f64,
+    terms: f64,
+) -> Result<Report<SphereCylinderComponent>> {
+    let (r, big_r, half) = (sphere.radius, cylinder.radius, cylinder.half_height);
+    let reaches_cap = s.abs() + r >= half - band;
+    if reaches_cap {
+        // Beyond both cap planes, or touching one: nothing to clip against.
+        if s - r > half + band || -s - r > half + band {
+            return Ok(std::mem::take(report));
+        }
+        if (s.abs() + r - half).abs() <= band || (s.abs() - r - half).abs() <= band {
+            report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
+            return Ok(std::mem::take(report));
+        }
+    }
+    // Distances from the axis of the sphere's points span
+    // [max(0, d_perp - r), d_perp + r]; the wall is at R.
+    let misses_wall = d_perp - r > big_r + band || d_perp + r < big_r - band;
+    if misses_wall && !reaches_cap {
+        return Ok(std::mem::take(report));
+    }
+    let frame = [cylinder.frame[0], cylinder.frame[1], cylinder.axis];
+    let s_implicit = crate::implicit_trace::SphereImplicit {
+        center: sphere.center,
+        radius: r,
+    };
+    let c_implicit = crate::implicit_trace::CylinderImplicit {
+        center: cylinder.center,
+        frame,
+        radius: big_r,
+    };
+    let seed = |theta: f64, phi: f64| -> [f64; 3] {
+        let (st, ct) = theta.sin_cos();
+        let (sp, cp) = phi.sin_cos();
+        std::array::from_fn(|k| {
+            sphere.center[k] + r * (st * cp * frame[0][k] + st * sp * frame[1][k] + ct * frame[2][k])
+        })
+    };
+    let traced = if misses_wall {
+        Ok(Vec::new())
+    } else {
+        crate::implicit_trace::trace_intersection(
+            &s_implicit,
+            &c_implicit,
+            seed,
+            terms + d_perp,
+            r.min(big_r),
+            crate::TRACE_TOLERANCE,
+        )
+    };
+    if reaches_cap {
+        let loops = match traced {
+            Ok(loops) => loops,
+            Err(e) if e.message.contains("tangency") => {
+                report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot);
+                return Ok(std::mem::take(report));
+            }
+            Err(_) => {
+                report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+                return Ok(std::mem::take(report));
+            }
+        };
+        return capped(report, domain, sphere_model, cylinder_model, sphere, cylinder, &s_implicit, &c_implicit, loops);
+    }
+    match traced {
+        Ok(loops) if !loops.is_empty() => {
+            let all: Vec<Vec<Curve>> = loops.iter().map(|l| l.pieces.clone()).collect();
+            let complete = crate::sphere_torus::completeness::certify_complete_against(
+                sphere,
+                &crate::sphere_torus::completeness::Quadric::Cylinder {
+                    center: cylinder.center,
+                    frame,
+                    radius: big_r,
+                },
+                sphere_model,
+                &all,
+            );
+            for l in loops {
+                let Ok((sphere_uv, side_uv, lift_deviation)) = crate::sphere_torus::traced_lift::lift_traced_with(
+                    sphere,
+                    crate::sphere_torus::traced_lift::Other::Cylinder(cylinder),
+                    sphere_model,
+                    cylinder_model,
+                    &l.pieces,
+                ) else {
+                    report.components.clear();
+                    report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+                    return Ok(std::mem::take(report));
+                };
+                report.components.push(SphereCylinderComponent::Traced {
+                    pieces: l.pieces,
+                    distance_bound: l.distance_bound,
+                    spans: l.spans,
+                    complete,
+                    sphere_uv,
+                    cylinder_uv: side_uv
+                        .into_iter()
+                        .map(|(patch, arcs)| CylinderPatchCurve { patch, arcs })
+                        .collect(),
+                    lift_deviation,
+                });
+            }
+        }
+        Ok(_) => report.unresolved(domain, UnresolvedReason::UnsupportedSurface),
+        Err(e) if e.message.contains("tangency") => {
+            report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot)
+        }
+        Err(_) => report.unresolved(domain, UnresolvedReason::UnsupportedSurface),
+    }
+    Ok(std::mem::take(report))
+}
+
+/// Contacts of a sphere reaching a cap plane: clipped wall loops plus cap
+/// circle arcs, joined into closed cycles, recertified piece by piece and
+/// lifted onto both operands.
+#[allow(clippy::too_many_arguments)]
+fn capped(
+    report: &mut Report<SphereCylinderComponent>,
+    domain: Vec<f64>,
+    sphere_model: &Model,
+    cylinder_model: &Model,
+    sphere: &CanonicalSphere,
+    cylinder: &CanonicalCylinder,
+    s_implicit: &crate::implicit_trace::SphereImplicit,
+    c_implicit: &crate::implicit_trace::CylinderImplicit,
+    loops: Vec<crate::implicit_trace::TracedLoop>,
+) -> Result<Report<SphereCylinderComponent>> {
+    let wall: Vec<Vec<Curve>> = loops.iter().map(|l| l.pieces.clone()).collect();
+    let frame = [cylinder.frame[0], cylinder.frame[1], cylinder.axis];
+    // The wall contact on the infinite cylinder must be provably complete;
+    // the cap circles are exact.
+    let complete = crate::sphere_torus::completeness::certify_complete_against(
+        sphere,
+        &crate::sphere_torus::completeness::Quadric::Cylinder {
+            center: cylinder.center,
+            frame,
+            radius: cylinder.radius,
+        },
+        sphere_model,
+        &wall,
+    );
+    let refuse = |report: &mut Report<SphereCylinderComponent>| {
+        report.components.clear();
+        report.unresolved(domain.clone(), UnresolvedReason::UnsupportedSurface);
+        Ok(std::mem::take(report))
+    };
+    let h = cylinder.half_height;
+    let slab = capped::Slab {
+        origin: cylinder.center,
+        frame,
+        planes: [(-h, cylinder.radius), (h, cylinder.radius)],
+    };
+    let wall_distance = |p: [f64; 3]| {
+        let d = sub(p, cylinder.center);
+        (dot(d, frame[0]).hypot(dot(d, frame[1])) - cylinder.radius).abs()
+    };
+    let Some(cycles) = capped::certified_cycles(
+        sphere,
+        crate::sphere_torus::traced_lift::Other::Cylinder(cylinder),
+        &slab,
+        sphere_model,
+        cylinder_model,
+        s_implicit,
+        c_implicit,
+        &wall_distance,
+        &wall,
+    )?
+    else {
+        return refuse(report);
+    };
+    for cycle in cycles {
+        report.components.push(SphereCylinderComponent::Traced {
+            spans: cycle.pieces.iter().map(|c| c.control_points.len() / 3).sum(),
+            pieces: cycle.pieces,
+            distance_bound: cycle.distance_bound,
+            complete,
+            sphere_uv: cycle.sphere_uv,
+            cylinder_uv: cycle
+                .other_uv
+                .into_iter()
+                .map(|(patch, arcs)| CylinderPatchCurve { patch, arcs })
+                .collect(),
+            lift_deviation: cycle.lift_deviation,
+        });
+    }
+    if report.components.is_empty() {
+        // No wall loop and no cap circle: provably no contact only when the
+        // wall certificate holds.
+        if !complete {
+            return refuse(report);
+        }
+    }
+    Ok(std::mem::take(report))
 }

@@ -107,6 +107,7 @@ try{
   await other.close();other=await context.newPage();await other.goto(origin);await saved(other)
   const prior=await page.evaluate(key=>localStorage.getItem(key),key)
   const cdp=await context.newCDPSession(other);await cdp.send('Debugger.enable')
+  // eslint-disable-next-line no-debugger -- debugger pauses the page through CDP at the chosen IndexedDB write
   await other.evaluate(({key,phase})=>{const original=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(value,...args){if(this.name==='heads'&&value.key===key){if(phase==='before')debugger;if(phase==='after')this.transaction.addEventListener('complete',()=>{debugger});return original.call(this,value,...args)}return original.call(this,value,...args)}},{key,phase})
   const paused=new Promise(resolve=>cdp.once('Debugger.paused',resolve))
   await menu(other).click()
