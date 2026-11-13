@@ -11,9 +11,9 @@
 //! never falls back to numerical surface/surface subdivision. Axiality is
 //! certified, never forced: a perpendicular offset at pure rounding scale
 //! snaps to the axis, an offset inside the recognition-scale band reports a
-//! `NearCoincidence` region, and a clearly off-axis pair is
-//! `UnsupportedSurface` (the general sphere/torus pair is a quartic, out of
-//! scope) unless it provably misses: an off-axis sphere entirely outside the
+//! `NearCoincidence` region, and a clearly off-axis contact is traced and
+//! certified as `Traced` pieces with sampled cubic UV lifts on both surfaces
+//! (see `traced_lift`) unless it provably misses: an off-axis sphere entirely outside the
 //! tube, entirely inside it, or enclosing the whole torus resolves empty. Classification uses outward binary64 bands widened by both
 //! recognition deviations.
 //!
@@ -52,17 +52,18 @@
 //! region. Nothing here authorizes a topology change.
 #[cfg(feature = "codec")]
 mod serialization;
+mod traced_lift;
+pub use traced_lift::LIFT_TOLERANCE;
 use super::plane_torus::{
     CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
 };
+use super::*;
+use brep_core::Model;
 #[cfg(test)]
 use brep_core::intersections::sphere_sphere::ARC_WEIGHT;
 use brep_core::intersections::sphere_sphere::{
     self, CanonicalSphere, RECOGNITION, SpherePatchCircle, circle_curve, lift,
 };
-use super::*;
-use brep_core::Model;
-
 
 #[derive(Clone, Debug)]
 pub enum SphereTorusComponent {
@@ -81,7 +82,30 @@ pub enum SphereTorusComponent {
         /// and the scaled torus implicit equation.
         max_sample_residual: f64,
     },
+    /// Off-axis transverse intersection: a space quartic with no exact
+    /// rational form, traced and represented by cubic pieces that close into
+    /// one loop with exactly shared ends. Every point of every piece is
+    /// certified within `distance_bound` of both surfaces (Bernstein bounds
+    /// of the implicit equations in outward interval arithmetic).
+    /// Completeness of the component set is not certified.
+    Traced {
+        pieces: Vec<Curve>,
+        /// Certified upper bound on the distance from either surface.
+        distance_bound: f64,
+        /// Number of certified Bezier spans.
+        spans: usize,
+        /// Cubic UV pcurves per sphere patch, cut at the patch seams.
+        sphere_uv: Vec<SpherePatchCircle>,
+        /// Cubic UV pcurves per torus patch, cut at the patch seams.
+        torus_uv: Vec<TorusPatchCurve>,
+        /// Sampled (not certified) bound on the distance of mapped pcurve
+        /// points from the other surface, at most `LIFT_TOLERANCE`.
+        lift_deviation: f64,
+    },
 }
+
+/// Certified distance of a traced curve from either surface.
+pub const TRACE_TOLERANCE: f64 = 1e-7;
 
 /// Exact circle component at axial height `z` above the torus center plane
 /// with radius `rho`, with UV lifts on both surfaces and a 16-sample
@@ -176,12 +200,71 @@ pub fn intersect_sphere_torus(
             return Ok(report);
         }
         let near = RECOGNITION * (sphere.radius + torus.major + torus.minor);
-        let reason = if d_perp <= near {
-            UnresolvedReason::NearCoincidence
-        } else {
-            UnresolvedReason::UnsupportedSurface
+        if d_perp <= near {
+            report.unresolved(domain, UnresolvedReason::NearCoincidence);
+            return Ok(report);
+        }
+        // A genuine off-axis contact: trace the quartic and certify it.
+        let frame = [torus.frame[0], torus.frame[1], torus.axis];
+        let s_implicit = crate::implicit_trace::SphereImplicit {
+            center: sphere.center,
+            radius: sphere.radius,
         };
-        report.unresolved(domain, reason);
+        let t_implicit = crate::implicit_trace::TorusImplicit {
+            center: torus.center,
+            frame,
+            major: torus.major,
+            minor: torus.minor,
+        };
+        let seed = |theta: f64, phi: f64| -> [f64; 3] {
+            let (st, ct) = theta.sin_cos();
+            let (sp, cp) = phi.sin_cos();
+            std::array::from_fn(|k| {
+                sphere.center[k]
+                    + sphere.radius
+                        * (st * cp * frame[0][k] + st * sp * frame[1][k] + ct * frame[2][k])
+            })
+        };
+        let scale = terms + d_perp;
+        let feature = sphere.radius.min(torus.minor);
+        match crate::implicit_trace::trace_intersection(
+            &s_implicit,
+            &t_implicit,
+            seed,
+            scale,
+            feature,
+            TRACE_TOLERANCE,
+        ) {
+            Ok(loops) if !loops.is_empty() => {
+                for l in loops {
+                    let lifted = traced_lift::lift_traced(
+                        &sphere,
+                        &torus,
+                        sphere_model,
+                        torus_model,
+                        &l.pieces,
+                    );
+                    let Ok((sphere_uv, torus_uv, lift_deviation)) = lifted else {
+                        report.components.clear();
+                        report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+                        return Ok(report);
+                    };
+                    report.components.push(SphereTorusComponent::Traced {
+                        pieces: l.pieces,
+                        distance_bound: l.distance_bound,
+                        spans: l.spans,
+                        sphere_uv,
+                        torus_uv,
+                        lift_deviation,
+                    });
+                }
+            }
+            Ok(_) => report.unresolved(domain, UnresolvedReason::UnsupportedSurface),
+            Err(e) if e.message.contains("tangency") => {
+                report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot)
+            }
+            Err(_) => report.unresolved(domain, UnresolvedReason::UnsupportedSurface),
+        }
         return Ok(report);
     }
     let (r_t, r_s, big_r) = (torus.minor, sphere.radius, torus.major);

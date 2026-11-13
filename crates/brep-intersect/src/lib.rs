@@ -31,6 +31,7 @@ mod plane_torus;
 mod sphere_cone;
 mod sphere_cylinder;
 mod sphere_torus;
+mod implicit_trace;
 mod torus_torus;
 pub use cone_cone::{ConeConeComponent, intersect_cone_cone};
 pub use cone_torus::{ConeTorusComponent, intersect_cone_torus};
@@ -42,7 +43,9 @@ pub use plane_sphere::{PlanePatchCurve, PlaneSphereComponent, intersect_plane_sp
 pub use plane_torus::{PlaneTorusComponent, TorusPatchCurve, intersect_plane_torus};
 pub use sphere_cone::{SphereConeComponent, intersect_sphere_cone};
 pub use sphere_cylinder::{CylinderPatchCurve, SphereCylinderComponent, intersect_sphere_cylinder};
-pub use sphere_torus::{SphereTorusComponent, intersect_sphere_torus};
+pub use sphere_torus::{
+    LIFT_TOLERANCE, SphereTorusComponent, TRACE_TOLERANCE, intersect_sphere_torus,
+};
 pub use torus_torus::{TorusTorusComponent, intersect_torus_torus};
 pub use brep_core::intersections::{SpherePatchCircle, SphereSphereComponent, intersect_sphere_sphere};
 
