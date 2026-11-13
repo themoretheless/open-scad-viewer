@@ -1,35 +1,16 @@
 import type { GeometryQuality } from '../core/build'
 import {
   ACTIVE_GEOMETRY_MANIFEST_VERSIONS,
-  canonicalJson,
-  GEOMETRY_ENGINE_ROUTES,
   GEOMETRY_MANIFEST_ARCHIVE,
-  MAX_GEOMETRY_SOURCE_CHARACTERS,
-  planGeometrySourceExecution,
   type GeometryBuildPurpose,
   type GeometryEngineRegistrySnapshot,
   type GeometryExecutionDescriptor,
 } from '../core/geometryExecution'
 import type { LanguageDiagnosticCode } from '../core/languageContract'
-import { sha256Hex } from '../core/sha256'
 import {
-  attachGeometryExecutionToError,
-  GeometryCapabilityUnavailableError,
-  GeometryEngineUnavailableError,
-  geometryExecutionForError,
-  GeometryLanguageContractError,
-  GeometryProviderContractError,
   type GeometryBuildResult,
   type GeometryEngineAvailabilityCause,
 } from '../kernel/geometryBuildEngine'
-import {
-  GEOMETRY_WORKER_PAYLOAD_LIMITS,
-  isGeometryEvaluationResultPayload,
-} from '../kernel/geometryWorkerProtocol'
-import { AbortedError, OpenSCADParseError } from '../language/openscadErrors'
-import { isWellFormedUnicode as wellFormed } from '../core/unicode'
-import { truncateWellFormed } from '../core/unicode'
-import { record, ownData, exactDataKeys, positiveSafeInteger } from '../core/plainData'
 export { isDirectGeometryBuildRequest, isDirectGeometryCapabilitiesRequest, isDirectGeometryRequest, isDirectGeometryCancel, isDirectGeometryStarted, isDirectGeometryCapabilities, isDirectGeometryTerminal, isDirectGeometryNodeTerminal } from './directGeometryProtocol/isDirectGeometryBuildRequest'
 export { serializeDirectGeometryError, directGeometryExecutionForError, reconstructDirectGeometryRemoteError } from './directGeometryProtocol/serializeDirectGeometryError'
 

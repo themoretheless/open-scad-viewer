@@ -1,17 +1,11 @@
 // assetEvaluator: compatibilityDxfProfile.
-import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
-import type { CallNode, ExpressionArgument, Value } from '../../language/openscadCompiler'
+import type { CallNode, Value } from '../../language/openscadCompiler'
 
 import { formatOpenScadValue } from '../../language/semantic/openScadValueSemantics'
 
-import {
-  resolveOpenScadFragments,
-  type OpenScadFragmentResolutionInput,
-} from '../../language/semantic/openScadStableModuleSemantics'
 
 import {
-  OpenScadProjectError,
   resolveOpenScadProjectPath,
 } from '../../language/openScadProject'
 
@@ -19,24 +13,9 @@ import {
   loadPreparedOpenScadImport,
   OpenScadImportError,
   OpenScadImportPositionedError,
-  type OpenScad2021LegacyImportFormat,
-  type OpenScadImportErrorCode,
 } from '../../exchange/openScadImport'
 
-import {
-  loadOpenScadSurfaceHeightMap,
-  OpenScadSurfaceDataError,
-  OpenScadSurfaceError,
-  triangulateOpenScadSurface,
-} from '../../language/openScadSurface'
 
-import {
-  OpenScadTextError,
-  OpenScadTextPositionedError,
-  renderOpenScadText,
-  type OpenScadTextErrorCode,
-  type OpenScadTextParameters,
-} from '../../language/openScadText'
 
 import { nextColor } from '../../language/openscadColors'
 
@@ -46,20 +25,13 @@ import {
   type Vec2,
 } from '.././types'
 
-import { callExpressionArguments } from '.././astDiscovery'
 
 import {
-  arg,
   compatibilityString,
   currentEntityId,
-  evalExpression,
-  evaluateStableBuiltinModuleArguments,
-  resolveStableVariable,
-  trackedSolid,
   warn,
 } from '.././expressionEvaluator'
 
-import { stableModuleSemanticsContext } from '.././geometryEvaluator'
 import { importCallError } from './surfaceCallSource'
 
 

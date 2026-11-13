@@ -6,25 +6,22 @@ import {
   ref,
   watch,
   watchEffect,
-  type ComponentPublicInstance,
   type ComputedRef,
   type Ref,
   type ShallowRef,
 } from 'svet'
 import type { DirectBody, DirectDocument, Point2 } from '../../app/directModeling'
-import { createDirectProjector, directExtrusionTool, directFaceShade, projectDirectPoint } from '../../app/directModelingTools'
+import { createDirectProjector, directExtrusionTool, projectDirectPoint } from '../../app/directModelingTools'
 import type { Vec3 } from '../../app/directSketchGeometry'
 import type { PolygonMesh } from '../../kernel/geometry/polygon'
-import { SolidDisplayCache, type DisplayMesh } from '../../kernel/solidDisplayCache'
+import { SolidDisplayCache } from '../../kernel/solidDisplayCache'
 import { SolidDisplayQueue } from '../../kernel/solidDisplayQueue'
-import { isSolidGpuSupported, smoothTriangleList, SolidGpuLayer, type SolidGpuBody } from '../../kernel/solidGpuView'
+import { smoothTriangleList, SolidGpuLayer, type SolidGpuBody } from '../../kernel/solidGpuView'
 import { solidMaterialRgb } from '../../kernel/solidMaterial'
-import type { SolidNurbsSurface } from '../../kernel/solidNurbs'
 import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import type { SolidSurfaceDisplayQueue } from '../../kernel/solidSurfaceDisplayQueue'
 import { TransparentBsp } from '../../render/transparentBsp'
-import { prepareVrPolygons } from '../../render/vrScene'
-import { COARSE_DISPLAY, type Pane } from './helpers'
+import { type Pane } from './helpers'
 
 export interface UseViewportLayerAndPolygonsOptions {
   props: { open: boolean }
@@ -61,7 +58,7 @@ export interface UseViewportLayerAndPolygonsOptions {
 }
 
 export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygonsOptions) {
-  const {hasDragNodes, setDragNodes, fpsTick, applyDragPreviewTransform, clearDragPreview, settleAfterDrag, triangleNormals, displayMeshFor, shadeFromNormal, stopGpuLayer, retryGpuLayer, mountGpuCanvas, refreshDisplayPreparation, vrSnapshot, meshPolygons, polygonColor, surfacePolygons} = createViewportOperations({
+  const {hasDragNodes, setDragNodes, fpsTick, applyDragPreviewTransform, clearDragPreview, settleAfterDrag, displayMeshFor, shadeFromNormal, stopGpuLayer, retryGpuLayer, mountGpuCanvas, refreshDisplayPreparation, vrSnapshot, meshPolygons, polygonColor, surfacePolygons} = createViewportOperations({
     get fpsPrevious() { return fpsPrevious },
     set fpsPrevious(value: typeof fpsPrevious) { fpsPrevious = value },
     get fpsIntervals() { return fpsIntervals },

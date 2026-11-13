@@ -1,11 +1,5 @@
 import type { CallNode } from './openscadCompiler'
 import { OpenSCADParseError } from './openscadErrors'
-import {
-  OpenScadProject,
-  resolveOpenScadProjectPath,
-  type OpenScadProjectFile,
-} from './openScadProject'
-import { u32 } from '../core/bytes'
 export { parseOpenScadSurfaceDat } from './openScadSurface/parseOpenScadSurfaceDat'
 export { decodeOpenScadSurfacePng, prepareOpenScadSurfaceAssets, loadOpenScadSurfaceHeightMap, triangulateOpenScadSurface } from './openScadSurface/decodeOpenScadSurfacePng'
 

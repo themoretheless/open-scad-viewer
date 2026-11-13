@@ -11,12 +11,6 @@ export {isOpenScadBuiltinFunction,findClosestOpenScadBuiltinFunction} from './op
 
 import {evaluateDegreeScalar as nativeDegreeMath} from './openScadDegreeMath'
 
-import {
-  TT,
-  type Expr,
-  type ExpressionArgument,
-  type FunctionValue,
-} from './openscadCompiler'
 import { arrayValue, binaryNumber, equalValues, expectCount, fail, finiteNumberValue, formatValue, minMax, numberValue, registerArray, registerString, roundAwayFromZero, seededRandom, unaryNumber, warn } from './openScadBuiltinFunctions/createDeferredOpenScadBuiltinArguments'
 import { characterString, isWellFormedUnicode, predicate, returnMatches, searchNeedles, searchStringRows, unsignedSearchParameter } from './openScadBuiltinFunctions/isOpenScadBuiltinFunctionName'
 export { createDeferredOpenScadBuiltinArguments } from './openScadBuiltinFunctions/createDeferredOpenScadBuiltinArguments'

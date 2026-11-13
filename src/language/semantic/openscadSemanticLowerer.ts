@@ -1,102 +1,35 @@
-import {resolveLegacyOpenScadSegments,roundLegacyOpenScadSegments} from '../openScadLegacySegments'
 import type { GeometryQuality } from '../../core/build'
 import {
-  deriveSemanticAmbiguityGroupId,
-  deriveSemanticCapabilityClosure,
   deriveSemanticOccurrenceId,
-  deriveSemanticOperationId,
   deriveSemanticSceneEntityId,
-  semanticNodeInputs,
-  semanticNodeProducerOperationNames,
-  semanticResultItems,
-  SEMANTIC_PROGRAM_CAPABILITY_GRAPH,
-  SEMANTIC_PROGRAM_EXECUTION_FEATURE,
-  SEMANTIC_PROGRAM_EXECUTION_VERSION,
-  SEMANTIC_PROGRAM_IDENTITY,
-  type SemanticColor,
   type SemanticDiagnosticArgument,
   type SemanticDiscardedEffect,
-  type SemanticExecutionPlanV1,
   type SemanticDimension,
   type SemanticDynamicSlot,
-  type SemanticIdentityValue,
   type SemanticMatrix4,
   type SemanticNode,
   type SemanticOccurrence,
-  type SemanticOperationCategory,
-  type SemanticOutputRef,
   type SemanticProgramCoreV1,
-  type SemanticProgramV1,
-  type SemanticResult,
   type SemanticStaticOperation,
-  type SemanticStructuralPathSegment,
   type SemanticTessellationIntent,
-  type SemanticValueType,
 } from '../../core/semanticProgram'
-import { clamp01 } from '../../kernel/geometry/math3d'
-import { parseGeometrySourceRoutingHeader } from '../../core/geometryRouting'
 import { sha256Hex } from '../../core/sha256'
 import {
-  TT,
-  compileOpenSCAD,
-  hasOpenScadViewportModifier,
   type CallNode,
-  type Expr,
   type ExpressionArgument,
   type FunctionNode,
-  type FunctionValue,
   type ModuleNode,
   type OpenScadLanguageProfile,
   type Statement,
   type Value,
 } from '../openscadCompiler'
-import { AbortedError, OpenSCADParseError } from '../openscadErrors'
-import {
-  createDeferredOpenScadBuiltinArguments,
-  evaluateOpenScadBuiltinFunction,
-  type OpenScadBuiltinValue,
-} from '../openScadBuiltinFunctions'
-import {
-  formatOpenScadValue,
-  isOpenScadRange,
-  openScadIndex,
-  openScadMember,
-  openScadTruthy,
-  openScadUnary,
-} from './openScadValueSemantics'
+import { OpenSCADParseError } from '../openscadErrors'
 import { OpenScadStableScope } from '../openScadStableScope'
 import {
-  MAX_EVAL_DEPTH,
-  MAX_EVAL_OPS,
-  MAX_EVALUATED_VALUE_UNITS,
-  MAX_EXPRESSION_DEPTH,
-  MAX_RANGE_ITEMS,
-  MAX_VALUE_ELEMENTS,
-  appendComprehensionValues,
-  compactDiagnosticText,
   createStableExpressionEvaluators,
-  evaluationError,
-  isFunctionValue,
-  isListComprehensionExpression,
-  isStableProfile,
-  overlayDynamicVariables,
-  registerArrayValue,
-  stableOverlayContext,
-  type StableFunctionValue,
 } from '../openScadStableExpressionEval'
-import { createOpenScadStableRuntimeVariables } from '../openScadStableRuntime'
-import {
-  attestSemanticProgram,
-  encodeSemanticProgram,
-} from './semanticProgramCodec'
-import { normalizeSemanticProgram, semanticSourceDescriptor } from './semanticProgramValidator'
-import {
-  type SemanticLoweringReport,
-  type SemanticLoweringSuccess,
-} from './semanticProgramTrust'
 import { canonicalNumber, finiteNumber, resolveStableVariable, stableWarning } from './openscadSemanticLowerer/semanticValueType'
 import { evalBuiltin, evalExpression } from './openscadSemanticLowerer/evalExpression'
-import { requestedSegments } from './openscadSemanticLowerer/evalPreparedNodes'
 export { lowerOpenSCADToSemanticProgramUnchecked } from './openscadSemanticLowerer/lowerOpenSCADToSemanticProgramUnchecked'
 
 export {

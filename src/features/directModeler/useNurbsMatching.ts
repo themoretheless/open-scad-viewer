@@ -32,7 +32,7 @@ export interface NurbsMatchingOptions {
 }
 
 export function useNurbsMatching(options: NurbsMatchingOptions) {
-  const { advanced, advancedOp, bodyEditError, document, edgeIndex, edgeIndexes, history, label, pointTrimPick, project, selectedBody, selectedNurbsCurve, selectedNurbsSurface, selection, surfaceInputLabel, surfaceInputs } = options
+  const { advanced, advancedOp, bodyEditError, document, edgeIndex, edgeIndexes, history, label, pointTrimPick, project, selectedBody, selectedNurbsCurve, selectedNurbsSurface, surfaceInputLabel, surfaceInputs } = options
 const rebuildPeriodic=computed(()=>advancedOp.value==='nurbs-rebuild'?!!selectedNurbsCurve.value?.curve.periodic:advancedOp.value==='nurbs-surface-rebuild'?!!(advanced.value.surfaceAxis==='u'?selectedNurbsSurface.value?.surface.periodicU:selectedNurbsSurface.value?.surface.periodicV):false)
 const nurbsRefitResult=shallowRef<ReturnType<typeof refitSolidNurbs>|null>(null)
 const nurbsReduction=computed(()=>isSolidNurbsRefit(advancedOp.value)?{value:nurbsRefitResult.value,error:bodyEditError().value}:null)
@@ -113,7 +113,7 @@ function surfaceMatchError(reason:string){
  return label('Ошибка производных превышает допуск. Измените масштаб или допуск.','Derivative error exceeds the tolerance. Change the scale or tolerance.')
 }
 function resultAdvanced(_onSweepReport?:(report:FramedSweepResult['report'])=>void):DirectDocument {
- const d=history.document,p=advanced.value,id=selection.value,b=d.bodies.find(b=>b.id===id),s=d.sketches.find(s=>s.id===id)
+ const d=history.document
  switch(advancedOp.value){
   case 'profile-prepare': {const r=profilePreparation.value;if(!r?.value)throw Error(r?.error||'Profile preparation unavailable.');if(!r.value.report.accepted)throw Error(profilePreparationError(r.value.report.reason,r.value.report.segmentDefect?.kind));return r.value.document}
   case 'nurbs-curve-match': {const r=curveMatch.value;if(!r?.value)throw Error(r?.error||'Curve matching unavailable.');if(!r.value.report.accepted)throw Error(curveMatchError(r.value.report.reason));return r.value.document}

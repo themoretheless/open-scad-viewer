@@ -9,7 +9,7 @@
  */
 
 import { runGpuCompute } from './webgpuCompute'
-import { dot3, cross3, normalizeVec3 } from '../kernel/geometry/math3d'
+import { normalizeVec3 } from '../kernel/geometry/math3d'
 import { forEachChunkedAsync, type CooperativeAsyncOptions } from '../core/cooperativeAsync'
 
 export interface SlicerOptions extends CooperativeAsyncOptions {

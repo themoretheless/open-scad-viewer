@@ -141,7 +141,6 @@ export class SolidGpuLayer {
   private transparentPipeline: GPURenderPipeline | null = null
   private transparentBindGroup: GPUBindGroup | null = null
   private transparentVertices: GPUBuffer | null = null
-  private transparencyLimited=false
   private transparentTree: TransparentBsp | null = null
   private transparentData: Float32Array | null = null
   private transparentDirection: number[] | null = null
@@ -250,7 +249,7 @@ export class SolidGpuLayer {
     let total = 0
     for (const body of bodies) {const opacity=body.opacity??1;if(!Number.isFinite(opacity)||opacity<0||opacity>1)throw Error('Invalid material opacity');total += body.positions.length / 3}
     const data = new Float32Array(total * 13)
-    this.opaqueCount=0;this.transparentTriangles=[];this.dragOffsets.clear();this.transparencyLimited=false;this.onTransparencyLimit?.(false)
+    this.opaqueCount=0;this.transparentTriangles=[];this.dragOffsets.clear();this.onTransparencyLimit?.(false)
     const ordered: SolidGpuBody[] = []
     for (let i = 0; i < bodies.length; i++) {
       const b = bodies[i]!
@@ -366,7 +365,7 @@ export class SolidGpuLayer {
       if(!(error instanceof Error)||!/^Transparency (?:(?:input|operation|fragment) limit exceeded|(?:input|output) exceeds transport limit)$/.test(error.message))throw error
       // Native admission remains bounded. Show the same geometry opaque until the next
       // scene upload instead of destroying a healthy GPU device for a temporary preview.
-      this.transparencyLimited=true;this.onTransparencyLimit?.(true)
+      this.onTransparencyLimit?.(true)
       for(const triangle of this.transparentTriangles)for(let i=0;i<3;i++)packed[(triangle.first+i)*13+12]=1
       this.opaqueCount+=this.transparentTriangles.length*3
       if(this.vertexBuffer){

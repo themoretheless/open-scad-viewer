@@ -87,9 +87,9 @@ import { GpuPicker } from './gpuPicker'
 export { GpuPicker } from './gpuPicker'
 import { GpuWboitRenderer } from './gpuWboit'
 export { GpuWboitRenderer } from './gpuWboit'
-import { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline'
+import { GpuBufferArena } from './gpuZeroCopyPipeline'
 export { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline'
-import { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
+import { runGpuMeshSlicer, type SlicerResult } from './gpuSlicer'
 export { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
 export { GeometryWorkerPool, detectHardwareConcurrency } from '../kernel/geometryWorkerPool'
 import {
@@ -97,7 +97,6 @@ import {
   DEFAULT_DISTANCE,
   DEFAULT_GRID_STEP,
   FOV_Y,
-  getGpuExecutionTopologyReport,
   GRID_FADE_DISTANCES,
   GRID_MIN_EXTENT,
   MAX_DEPTH_CANDIDATES,
@@ -106,7 +105,6 @@ import {
   WHEEL_HISTORY_IDLE_MS,
   type Bounds,
   type GMesh,
-  type GpuExecutionTopologyReport,
   type OverlaySlot,
   type WebGPUFrameDiagnostics,
 } from './types'
@@ -120,8 +118,6 @@ export {
 } from './types'
 import {
   sameTypedArray,
-  sortEdgeDraws,
-  sortOpaqueDraws,
 } from './drawSorting'
 export { sortEdgeDraws, sortOpaqueDraws } from './drawSorting'
 import {

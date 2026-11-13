@@ -5,7 +5,7 @@ import { SemanticProgramBuilder, resolveStableExpressionArguments } from '../ope
 import type { EvalContext, SemanticShape } from '../openscadSemanticLowerer'
 import { OpenScadStableScope } from '../../openScadStableScope'
 import { SEMANTIC_PROGRAM_EXECUTION_VERSION, semanticNodeInputs, semanticNodeProducerOperationNames, semanticResultItems } from '../../../core/semanticProgram'
-import type { SemanticColor, SemanticDynamicSlot, SemanticExecutionPlanV1, SemanticNode, SemanticOccurrence, SemanticOutputRef, SemanticProgramCoreV1, SemanticResult } from '../../../core/semanticProgram'
+import type { SemanticColor, SemanticDynamicSlot, SemanticExecutionPlanV1, SemanticOccurrence, SemanticOutputRef, SemanticProgramCoreV1, SemanticResult } from '../../../core/semanticProgram'
 import { callExpressionArguments, evalExpression } from './evalExpression'
 import { evaluationError, isStableProfile, overlayDynamicVariables } from '../../openScadStableExpressionEval'
 import { frameChildren, invoke, semanticSlot } from './evalPreparedNodes'

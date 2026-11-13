@@ -1,12 +1,5 @@
-import {
-  OpenScadProject,
-  resolveOpenScadProjectPath,
-  type OpenScadProjectBlobFile,
-} from './openScadProject'
 import type { CallNode } from './openscadCompiler'
 import { OpenSCADParseError } from './openscadErrors'
-import { isWellFormedUnicode } from '../core/unicode'
-import { u32 } from '../core/bytes'
 import { textError } from './openScadText/prepareOpenScadTextAssets'
 export { prepareOpenScadTextAssets, calculateOpenScadTextSegments } from './openScadText/prepareOpenScadTextAssets'
 export { renderOpenScadText } from './openScadText/renderOpenScadText'

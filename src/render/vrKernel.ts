@@ -1,4 +1,3 @@
-import {decodeBase91} from '../kernel/wasmBase91'
 import bytes from '../generated/vr-core/bytes'
 import {unpackWasmBase64} from '../kernel/wasmPacking'
 

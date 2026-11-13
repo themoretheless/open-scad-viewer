@@ -1,4 +1,4 @@
-import {GeometryKernelError,decodeNurbsResult,kernelRuntime,kernelVertexFormat} from './kernel'
+import {decodeNurbsResult,kernelRuntime,kernelVertexFormat} from './kernel'
 import {copyBuffer} from './bufferTransport'
 
 export interface KernelManifoldReport {

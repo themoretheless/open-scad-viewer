@@ -1,14 +1,5 @@
-import {
-  OpenScadProject,
-  OpenScadProjectError,
-  OPENSCAD_PROJECT_MAX_FILES,
-  normalizeOpenScadProjectPath,
-  resolveOpenScadProjectPath,
-  type OpenScadProjectFile,
-} from '../language/openScadProject'
 import type { CallNode } from '../language/openscadCompiler'
 import { OpenSCADParseError } from '../language/openscadErrors'
-import { readSvgDocument, type SvgOptions } from './svgDocument'
 export { parseOpenScadStl, parseOpenScadOff } from './openScadImport/parseOpenScadStl'
 export { parseOpenScadAmf } from './openScadImport/parseOpenScadAmf'
 export { parseOpenScad3mf, parseOpenScadSvg } from './openScadImport/parseOpenScad3mf'

@@ -8,7 +8,6 @@
  * {@link StableExpressionEvalHost}.
  */
 import {
-  TT,
   type Expr,
   type ExpressionArgument,
   type FunctionNode,
@@ -18,14 +17,8 @@ import {
   type Statement,
   type Value,
 } from './openscadCompiler'
-import { OpenSCADParseError } from './openscadErrors'
 import { OpenScadStableScope } from './openScadStableScope'
 import {
-  formatOpenScadValue,
-  isOpenScadRange,
-  materializeOpenScadRange,
-  openScadBinary,
-  openScadTruthy,
   type OpenScadValueSemanticsContext,
 } from './semantic/openScadValueSemantics'
 export { isStableProfile, evaluationError, registerArrayValue, stableOverlayContext, overlayDynamicVariables, isListComprehensionExpression, isFunctionValue, compactDiagnosticText, appendComprehensionValues } from './openScadStableExpressionEval/isStableProfile'

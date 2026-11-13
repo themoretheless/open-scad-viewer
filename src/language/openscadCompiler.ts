@@ -1,7 +1,6 @@
 import type { SourceOperationId } from '../core/mesh'
 import type { LanguageDiagnosticCode } from '../core/languageContract'
 import { OpenSCADParseError } from './openscadErrors'
-import { deepFreeze } from '../core/objects'
 export { hasOpenScadViewportModifier, finalizeOpenScadProgram, parseOpenScadProjectSource, compileOpenSCAD } from './openscadCompiler/hasOpenScadViewportModifier'
 
 const MAX_AST_NODES = 25_000

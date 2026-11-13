@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { chmod, lstat, realpath, stat } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import {
@@ -12,20 +12,12 @@ import {
   ModelRevisionConflictError,
   MAX_STORED_ARTIFACT_BYTES,
   MAX_STORED_BUILD_WARNINGS,
-  MAX_STORED_DIAGNOSTIC_MESSAGE_LENGTH,
-  MAX_STORED_DIAGNOSTIC_NAME_LENGTH,
-  MAX_STORED_DIAGNOSTIC_DETAIL_COUNT,
-  MAX_STORED_DIAGNOSTIC_DETAIL_LENGTH,
-  MAX_STORED_DIAGNOSTIC_JSON_BYTES,
-  MAX_STORED_EXECUTION_JSON_BYTES,
   MAX_STORED_WARNING_LENGTH,
   isWellFormedUnicode,
   validateModelId,
   validateModelName,
   validateModelSource,
   type CatalogStats,
-  type BuildDiagnostic,
-  type BuildMetrics,
   type ModelStore,
   type RecordBuildInput,
   type SaveModelInput,
@@ -34,23 +26,14 @@ import {
   type StoredArtifact,
   type StoredArtifactSummary,
   type StoredBuild,
-  type StoredBuildDiagnostic,
   type StoredModel,
   type StoredModelRevision,
   type StoredModelRevisionSummary,
   type StoredModelSummary,
 } from './modelStore'
 import {
-  expectedPublicErrorRetryable,
-  isPublicErrorCode,
-} from './errorContract'
-import {
-  geometryEngineClassForLanguageContract,
-  LEGACY_MANIFOLD_EXECUTION,
   parseGeometrySourceRoutingHeader,
-  type GeometryExecutionDescriptor,
 } from '../core/geometryExecution'
-import { archivedGeometryManifest } from './engineManifest'
 import { boundedLimit, isoTimestamp, requiredString, safeInteger, validateBuildDiagnostic, validateDiagnosticExecutionContext } from './duckdbModelStore/boundedLimit'
 import { artifactSummaryFromRow, buildFromRow, expectedArtifactMimeType, modelFromRow, modelRevisionFromRow, serializeExecutionDescriptor, sha256 } from './duckdbModelStore/validateExecutionDescriptor'
 

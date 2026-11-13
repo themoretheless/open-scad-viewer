@@ -324,9 +324,7 @@ export class DirectHistory {
   private snapshot(text:string):DirectSnapshot { return packHistoryText(text,this.textPool) }
   private sweep() { return sweepHistoryTextPool(this.textPool,[this.current,...this.past,...this.future]) }
   private past: DirectSnapshot[] = []
-  private pastCharacters = 0
   private future: DirectSnapshot[] = []
-  private futureCharacters = 0
   private current: DirectSnapshot & {document?:DirectDocument; ids?:string[]}
   constructor(document = emptyDirectDocument()) {
     const text = stringifyMeshJson(document)
@@ -349,8 +347,6 @@ export class DirectHistory {
       return this.snapshot(text)
     }
     this.past=this.past.map(stamp);this.future=this.future.map(stamp)
-    this.pastCharacters=this.past.reduce((sum,s)=>sum+s.characters,0)
-    this.futureCharacters=this.future.reduce((sum,s)=>sum+s.characters,0)
     this.current={...stamp(this.current),document:{...this.currentDocument,blenderProjectId:id}}
     this.sweep()
     return id

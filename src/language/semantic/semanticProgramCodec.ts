@@ -1,16 +1,9 @@
-import { sha256Hex } from '../../core/sha256'
 import {
   SEMANTIC_PROGRAM_CONTRACT,
   SEMANTIC_PROGRAM_LIMITS,
-  type SemanticProgramCoreV1,
   type SemanticTessellationIntent,
-  type SemanticProgramV1,
 } from '../../core/semanticProgram'
 import {
-  normalizeSemanticProgramCoreInput,
-  normalizeSemanticProgram,
-  normalizeDecodedSemanticProgram,
-  normalizeDecodedSemanticProgramCore,
   SemanticProgramValidationError,
 } from './semanticProgramValidator'
 import { compareBytes, encodeSemanticProgramCore } from './semanticProgramCodec/isSemanticProgramCodecOwnedGraph'

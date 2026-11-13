@@ -4,7 +4,7 @@ import type {
   GeometryEngineRegistrySnapshot,
   GeometryExecutionDescriptor,
 } from '../core/geometryExecution'
-import type { MeshData, MeshSourceReference } from '../core/mesh'
+import type { MeshData } from '../core/mesh'
 import {
   attachGeometryExecutionToError,
   defaultGeometryBuildEngine,
@@ -12,11 +12,9 @@ import {
   type GeometryBuildResult,
 } from '../kernel/geometryBuildEngine'
 import { buildBinaryStl, buildObj } from '../exchange/meshExport'
-import { inspectMesh } from '../kernel/meshInspection'
 import {
   extractCustomizerParameters,
   replaceCustomizerValue,
-  type CustomizerParameter,
   type CustomizerValue,
 } from '../language/scadCustomizer'
 import {

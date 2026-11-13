@@ -7,7 +7,6 @@ import type {
   SourceProvenanceRow,
 } from '../components/cadPanels.types'
 import type { MeshData } from '../core/mesh'
-import type { Language } from '../i18n/appStrings'
 import type { CameraState } from '../render/cameraHistory'
 import { inspectMesh } from '../kernel/meshInspection'
 import { useModelingGrid } from '../app/modelingGrid'

@@ -1,20 +1,14 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
-import { lstat, readFile, realpath, stat } from 'node:fs/promises'
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { join, resolve } from 'node:path'
 import {
   OFFICIAL_OPENSCAD_RUNTIME_ARCHIVE_SHA256,
   OFFICIAL_OPENSCAD_FONT_FAMILY,
   OFFICIAL_OPENSCAD_FONT_FILENAME,
   OFFICIAL_OPENSCAD_FONT_LICENSE_FILENAME,
-  OFFICIAL_OPENSCAD_RUNTIME_FILENAME,
   OFFICIAL_OPENSCAD_RUNTIME_MANIFEST_FILENAME,
   OFFICIAL_OPENSCAD_RUNTIME_PATCH_VERSION,
   OFFICIAL_OPENSCAD_RUNTIME_VERSION,
   OFFICIAL_OPENSCAD_PINNED_INTEGRITY,
-  isOfficialOpenScadRuntimeManifest,
-  matchesOfficialOpenScadRuntimeIntegrity,
-  sha256Buffer,
   type OfficialOpenScadRuntimeIntegrity,
   type OfficialOpenScadRuntimeManifest,
 } from './officialOpenScadRuntimePatch'
@@ -22,23 +16,8 @@ import {
   OFFICIAL_OPENSCAD_DEFAULT_TIMEOUT_MS,
   OFFICIAL_OPENSCAD_EXPERIMENTAL_FEATURES,
   OFFICIAL_OPENSCAD_EXPORT_FORMATS,
-  OFFICIAL_OPENSCAD_MAX_DEFINE_BYTES,
-  OFFICIAL_OPENSCAD_MAX_DEFINES,
-  OFFICIAL_OPENSCAD_MAX_LOG_BYTES,
-  OFFICIAL_OPENSCAD_MAX_LOG_ENTRIES,
-  OFFICIAL_OPENSCAD_MAX_OUTPUT_BYTES,
-  OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES,
-  OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
-  OFFICIAL_OPENSCAD_MAX_PROJECT_FILES,
-  OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES,
   OFFICIAL_OPENSCAD_MAX_TIMEOUT_MS,
-  OFFICIAL_OPENSCAD_MAX_WIRE_REQUEST_BYTES,
-  OFFICIAL_OPENSCAD_PROTOCOL_VERSION,
-  isOfficialOpenScadWireRequest,
   isOfficialOpenScadWireTerminal,
-  isWellFormedOfficialOpenScadText,
-  normalizeOfficialOpenScadProjectPath,
-  officialOpenScadProjectPathsConflict,
   type OfficialOpenScadBackend,
   type OfficialOpenScadExperimentalFeature,
   type OfficialOpenScadExportFormat,

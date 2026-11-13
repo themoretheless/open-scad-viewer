@@ -1,7 +1,6 @@
 import { computed, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import {
   MAX_DOCUMENT_CHARACTERS,
-  parseDirectDocument,
   serializeDirectDocument,
   type DirectBody,
   type DirectDocument,
@@ -104,7 +103,6 @@ export function useFileExchange(options: UseFileExchangeOptions) {
     finishCommit,
     commit,
     sync,
-    run,
     fit,
     pickObject,
   } = options

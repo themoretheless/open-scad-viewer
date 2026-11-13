@@ -108,7 +108,7 @@ function registerCapabilities(ctx: McpServerContext): void {
 }
 
 function registerGeometryEngineManifest(ctx: McpServerContext): void {
-  const { geometry, officialRuntime, server } = ctx
+  const { officialRuntime, server } = ctx
   server.registerResource('official-runtime', 'openscad://official-runtime', {
     title: 'Official OpenSCAD runtime',
     description: 'Live availability, pinned integrity identity, isolation contract, supported exports, experiments, limits, and setup command for the opt-in upstream runtime.',

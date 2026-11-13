@@ -10,7 +10,6 @@ import { sha256Hex } from '../core/sha256'
 import { OPENSCAD_2021_01_BUILTIN_FUNCTION_NAMES } from './openScadBuiltinFunctions'
 import {
   compileOpenSCAD,
-  type CallNode,
   type Expr,
   type ExpressionArgument,
   type FunctionNode,
