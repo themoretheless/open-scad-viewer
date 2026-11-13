@@ -59,9 +59,11 @@ pub(crate) fn propose(
         images,
         features,
         cache,
-        limit,
-        geometry_options,
-        &SeedOptions::default(),
+        SeedSearch {
+            limit,
+            geometry_options,
+            seed_options: &SeedOptions::default(),
+        },
         report,
         progress,
     )
@@ -84,17 +86,26 @@ pub(crate) fn pair_candidates(image_count: usize) -> Vec<(usize, usize)> {
     pairs
 }
 
-#[allow(clippy::too_many_arguments)]
+/// How many seed pairs to keep and the pose and seed options used to rank them.
+#[derive(Clone, Copy)]
+pub(crate) struct SeedSearch<'a> {
+    pub(crate) limit: usize,
+    pub(crate) geometry_options: &'a camera::GeometryOptions,
+    pub(crate) seed_options: &'a SeedOptions,
+}
 pub(crate) fn propose_with_options(
     images: &[Image],
     features: &[Vec<Feature>],
     cache: &mut MatchGraph,
-    limit: usize,
-    geometry_options: &camera::GeometryOptions,
-    seed_options: &SeedOptions,
+    search: SeedSearch<'_>,
     report: &mut ReconstructionReport,
     progress: &mut impl FnMut(&str, usize, usize) -> bool,
 ) -> Result<Vec<Seed>> {
+    let SeedSearch {
+        limit,
+        geometry_options,
+        seed_options,
+    } = search;
     let mut candidates = Vec::new();
     let mut matches_by_pair = std::collections::BTreeMap::new();
     // All pairs for browser projects, acquisition-order window for larger native sets.
@@ -292,9 +303,11 @@ mod tests {
             &images,
             features,
             &mut cache,
-            limit,
-            &GeometryOptions::default(),
-            seed_options,
+            SeedSearch {
+                limit,
+                geometry_options: &GeometryOptions::default(),
+                seed_options,
+            },
             &mut report,
             &mut |_, _, _| true,
         )

@@ -333,9 +333,11 @@ fn solve(
         images,
         features,
         &mut cache,
-        options.max_seed_pairs,
-        &options.geometry_options,
-        &options.seed_options,
+        crate::seeding::SeedSearch {
+            limit: options.max_seed_pairs,
+            geometry_options: &options.geometry_options,
+            seed_options: &options.seed_options,
+        },
         report,
         progress,
     )?;
