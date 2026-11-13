@@ -17,37 +17,36 @@ pub struct OwnedOriginalOverlapPartition {
     groups: Vec<Vec<OriginalOverlapContactRef>>,
     segments: Vec<[OriginalOverlapSplit; 2]>,
 }
-fn node<'a>(
-    owners: &'a [Arc<OwnedOriginalOverlapContacts>],
+fn node(
+    owners: &[Arc<OwnedOriginalOverlapContacts>],
     r: OriginalOverlapContactRef,
     side: usize,
-) -> &'a AlgebraicEventNode {
+) -> &AlgebraicEventNode {
     let o = &owners[r.source];
     &o.contacts()[side].nodes()[o.cuts()[r.contact].nodes[side]]
 }
-fn derive_partition(
-    o: &OwnedOriginalOverlapPartition,
-) -> Result<(
-    Vec<Vec<OriginalOverlapContactRef>>,
-    Vec<[OriginalOverlapSplit; 2]>,
-)> {
-    if o.limits.max_refinements > 512
-        || !(1..=128).contains(&o.limits.max_resultant_size)
-        || o.sources.len() > 32
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+const MAX_SOURCES: usize = 32;
+const MAX_CONTACTS: usize = 4096;
+const MAX_ORDERING_WORK: usize = 65536;
+fn verify_limits(o: &OwnedOriginalOverlapPartition) -> Result<()> {
+    if o.limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&o.limits.max_resultant_size)
+        || o.sources.len() > MAX_SOURCES
         || o.sources.len() != o.owners.len()
         || !o.width.is_finite()
         || !(1e-18..=1e-3).contains(&o.width)
     {
         return Err(refused("Invalid common-carrier third-source census"));
     }
-    o.overlap.reverify_source()?;
-    let c = o
-        .overlap
-        .components()
-        .get(o.component)
-        .ok_or_else(|| refused("Unknown common-carrier component"))?;
+    Ok(())
+}
+/// Every owner is bound to this component, this source and this width, and
+/// together they stay within the contact allowance.
+fn verify_owners(o: &OwnedOriginalOverlapPartition) -> Result<()> {
     let mut count = 0usize;
-    for (i, owner) in o.owners.iter().enumerate() {
+    for (owner, source) in o.owners.iter().zip(&o.sources) {
         if !Arc::ptr_eq(owner.overlap(), &o.overlap) || owner.component() != o.component {
             return Err(refused(
                 "Common-carrier partition rebound to another context",
@@ -55,8 +54,7 @@ fn derive_partition(
         }
         owner.reverify_source()?;
         for pair in owner.contacts() {
-            if pair.sources()[1] != o.sources[i] || pair.census().maximum_parameter_width != o.width
-            {
+            if pair.sources()[1] != *source || pair.census().maximum_parameter_width != o.width {
                 return Err(refused(
                     "Common-carrier partition omits or rebinds a third-source census",
                 ));
@@ -64,61 +62,80 @@ fn derive_partition(
         }
         count = count.saturating_add(owner.cuts().len());
     }
-    if count > 4096 {
+    if count > MAX_CONTACTS {
         return Err(refused("Common-carrier global contact count exceeded"));
     }
-    let mut work = 0usize;
-    let mut groups: Vec<Vec<OriginalOverlapContactRef>> = Vec::new();
-    for (source, owner) in o.owners.iter().enumerate() {
-        for contact in 0..owner.cuts().len() {
-            let r = OriginalOverlapContactRef { source, contact };
-            let mut pos = 0;
-            let mut joined = false;
-            while pos < groups.len() {
-                work += 1;
-                if work > 65536 {
-                    return Err(refused("Common-carrier global ordering budget exceeded"));
-                }
-                let previous = groups[pos][0];
-                let a = parameter_cmp(
-                    node(&o.owners, previous, 0),
-                    0,
-                    node(&o.owners, r, 0),
-                    0,
-                    o.limits,
-                )?;
-                let b = parameter_cmp(
-                    node(&o.owners, previous, 1),
-                    0,
-                    node(&o.owners, r, 1),
-                    0,
-                    o.limits,
-                )?;
-                if (a == Ordering::Equal) != (b == Ordering::Equal) {
-                    return Err(refused(
-                        "Common-carrier clocks disagree on global cut identity",
-                    ));
-                }
-                if a == Ordering::Equal {
-                    if o.owners[previous.source].cuts()[previous.contact].endpoint
-                        != owner.cuts()[contact].endpoint
-                    {
-                        return Err(refused("Common-carrier global endpoint identity disagrees"));
-                    }
-                    groups[pos].push(r);
-                    joined = true;
-                    break;
-                }
-                if (a == Ordering::Greater) == (c.directions[0] > 0) {
-                    break;
-                }
-                pos += 1;
-            }
-            if !joined {
-                groups.insert(pos, vec![r]);
-            }
+    Ok(())
+}
+/// Contacts of all third sources merged into groups ordered along the carrier.
+struct Grouping<'a> {
+    o: &'a OwnedOriginalOverlapPartition,
+    /// The first clock runs with the carrier.
+    forward: bool,
+    work: usize,
+    groups: Vec<Vec<OriginalOverlapContactRef>>,
+}
+impl Grouping<'_> {
+    /// Order of two contacts on the first clock, after both clocks agree on
+    /// whether they are one cut.
+    fn relation(
+        &self,
+        previous: OriginalOverlapContactRef,
+        r: OriginalOverlapContactRef,
+    ) -> Result<Ordering> {
+        let clock = |side: usize| {
+            parameter_cmp(
+                node(&self.o.owners, previous, side),
+                0,
+                node(&self.o.owners, r, side),
+                0,
+                self.o.limits,
+            )
+        };
+        let a = clock(0)?;
+        let b = clock(1)?;
+        if (a == Ordering::Equal) != (b == Ordering::Equal) {
+            return Err(refused(
+                "Common-carrier clocks disagree on global cut identity",
+            ));
         }
+        Ok(a)
     }
+    /// Joins the contact to the group of the same cut or opens a new group
+    /// at its place in carrier order.
+    fn place(&mut self, r: OriginalOverlapContactRef) -> Result<()> {
+        let owners = &self.o.owners;
+        let mut pos = 0;
+        while pos < self.groups.len() {
+            self.work += 1;
+            if self.work > MAX_ORDERING_WORK {
+                return Err(refused("Common-carrier global ordering budget exceeded"));
+            }
+            let previous = self.groups[pos][0];
+            let order = self.relation(previous, r)?;
+            if order == Ordering::Equal {
+                if owners[previous.source].cuts()[previous.contact].endpoint
+                    != owners[r.source].cuts()[r.contact].endpoint
+                {
+                    return Err(refused("Common-carrier global endpoint identity disagrees"));
+                }
+                self.groups[pos].push(r);
+                return Ok(());
+            }
+            if (order == Ordering::Greater) == self.forward {
+                break;
+            }
+            pos += 1;
+        }
+        self.groups.insert(pos, vec![r]);
+        Ok(())
+    }
+}
+/// Carrier segments between consecutive interior contact groups.
+fn segments(
+    o: &OwnedOriginalOverlapPartition,
+    groups: &[Vec<OriginalOverlapContactRef>],
+) -> Vec<[OriginalOverlapSplit; 2]> {
     let mut bounds = vec![OriginalOverlapSplit::Endpoint(0)];
     for (g, refs) in groups.iter().enumerate() {
         let r = refs[0];
@@ -127,8 +144,35 @@ fn derive_partition(
         }
     }
     bounds.push(OriginalOverlapSplit::Endpoint(1));
-    let segments = bounds.windows(2).map(|b| [b[0], b[1]]).collect();
-    Ok((groups, segments))
+    bounds.windows(2).map(|b| [b[0], b[1]]).collect()
+}
+/// Contact groups in carrier order and the segments between them.
+type Partition = (
+    Vec<Vec<OriginalOverlapContactRef>>,
+    Vec<[OriginalOverlapSplit; 2]>,
+);
+fn derive_partition(o: &OwnedOriginalOverlapPartition) -> Result<Partition> {
+    verify_limits(o)?;
+    o.overlap.reverify_source()?;
+    let c = o
+        .overlap
+        .components()
+        .get(o.component)
+        .ok_or_else(|| refused("Unknown common-carrier component"))?;
+    verify_owners(o)?;
+    let mut grouping = Grouping {
+        o,
+        forward: c.directions[0] > 0,
+        work: 0,
+        groups: Vec::new(),
+    };
+    for (source, owner) in o.owners.iter().enumerate() {
+        for contact in 0..owner.cuts().len() {
+            grouping.place(OriginalOverlapContactRef { source, contact })?;
+        }
+    }
+    let segments = segments(o, &grouping.groups);
+    Ok((grouping.groups, segments))
 }
 impl OwnedOriginalOverlapPartition {
     pub fn overlap(&self) -> &Arc<OwnedOriginalOverlapComponents> {
