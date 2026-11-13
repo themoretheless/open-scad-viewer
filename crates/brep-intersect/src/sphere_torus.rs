@@ -13,6 +13,7 @@
 //! snaps to the axis, an offset inside the recognition-scale band reports a
 //! `NearCoincidence` region, and a clearly off-axis contact is traced and
 //! certified as `Traced` pieces with certified cubic UV lifts on both surfaces
+//! and a completeness certificate for the component set (see `completeness`)
 //! (see `traced_lift`) unless it provably misses: an off-axis sphere entirely outside the
 //! tube, entirely inside it, or enclosing the whole torus resolves empty. Classification uses outward binary64 bands widened by both
 //! recognition deviations.
@@ -52,6 +53,7 @@
 //! region. Nothing here authorizes a topology change.
 #[cfg(feature = "codec")]
 mod serialization;
+mod completeness;
 mod traced_lift;
 pub use traced_lift::LIFT_TOLERANCE;
 use super::plane_torus::{
@@ -87,7 +89,7 @@ pub enum SphereTorusComponent {
     /// one loop with exactly shared ends. Every point of every piece is
     /// certified within `distance_bound` of both surfaces (Bernstein bounds
     /// of the implicit equations in outward interval arithmetic).
-    /// Completeness of the component set is not certified.
+    /// `complete` says whether the component set is certified complete.
     Traced {
         pieces: Vec<Curve>,
         /// Certified upper bound on the distance from either surface.
@@ -101,6 +103,9 @@ pub enum SphereTorusComponent {
         /// Certified bound on the distance of the pcurve images (on their own
         /// surface) from the other surface, at most `LIFT_TOLERANCE`.
         lift_deviation: f64,
+        /// True when the traced components are certified to be all of the
+        /// intersection (see `completeness`); the same for every component.
+        complete: bool,
     },
 }
 
@@ -236,6 +241,9 @@ pub fn intersect_sphere_torus(
             TRACE_TOLERANCE,
         ) {
             Ok(loops) if !loops.is_empty() => {
+                let all: Vec<Vec<Curve>> = loops.iter().map(|l| l.pieces.clone()).collect();
+                let complete =
+                    completeness::certify_complete(&sphere, &torus, sphere_model, &all);
                 for l in loops {
                     let lifted = traced_lift::lift_traced(
                         &sphere,
@@ -256,6 +264,7 @@ pub fn intersect_sphere_torus(
                         sphere_uv,
                         torus_uv,
                         lift_deviation,
+                        complete,
                     });
                 }
             }

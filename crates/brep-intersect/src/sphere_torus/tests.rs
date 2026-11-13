@@ -387,12 +387,14 @@ fn clearly_off_axis_contacts_are_traced_and_certified() {
                 sphere_uv,
                 torus_uv,
                 lift_deviation,
+                complete,
             } = component
             else {
                 panic!("expected a traced component off the axis");
             };
             assert!(*distance_bound <= TRACE_TOLERANCE && *spans > 0);
             assert!(*lift_deviation <= LIFT_TOLERANCE);
+            assert!(*complete, "{radius} at {at:?}: component set not certified complete");
             assert!(!sphere_uv.is_empty() && !torus_uv.is_empty());
             // Independent check of the lifts: mapped pcurve samples sit on
             // both canonical surfaces and inside the patch domain.
