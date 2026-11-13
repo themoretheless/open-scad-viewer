@@ -112,7 +112,7 @@ function surfaceMatchError(reason:string){
  if(reason==='unproven-tangential-smoothness')return label('Гладкость вдоль шва недостаточна. Снизьте порядок или подготовьте границу.','Insufficient smoothness along the seam. Lower the order or prepare the boundary.')
  return label('Ошибка производных превышает допуск. Измените масштаб или допуск.','Derivative error exceeds the tolerance. Change the scale or tolerance.')
 }
-function resultAdvanced(onSweepReport?:(report:FramedSweepResult['report'])=>void):DirectDocument {
+function resultAdvanced(_onSweepReport?:(report:FramedSweepResult['report'])=>void):DirectDocument {
  const d=history.document,p=advanced.value,id=selection.value,b=d.bodies.find(b=>b.id===id),s=d.sketches.find(s=>s.id===id)
  switch(advancedOp.value){
   case 'profile-prepare': {const r=profilePreparation.value;if(!r?.value)throw Error(r?.error||'Profile preparation unavailable.');if(!r.value.report.accepted)throw Error(profilePreparationError(r.value.report.reason,r.value.report.segmentDefect?.kind));return r.value.document}

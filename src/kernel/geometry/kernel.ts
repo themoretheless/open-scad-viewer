@@ -39,7 +39,7 @@ export class GeometryKernelError extends Error {
   constructor(public readonly code: string, message: string) { super(message); this.name = 'GeometryKernelError' }
 }
 export class NurbsCurveError extends GeometryKernelError {
-  constructor(public readonly code: 'NURBS_INVALID_INPUT' | 'NURBS_RESOURCE_LIMIT' | 'NURBS_NUMERIC_ERROR', message: string) {
+  constructor(public override readonly code: 'NURBS_INVALID_INPUT' | 'NURBS_RESOURCE_LIMIT' | 'NURBS_NUMERIC_ERROR', message: string) {
     super(code, message)
     this.name = 'NurbsCurveError'
   }

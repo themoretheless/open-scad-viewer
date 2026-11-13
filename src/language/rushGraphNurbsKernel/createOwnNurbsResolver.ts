@@ -27,7 +27,7 @@ import { tessellateSubdivision } from '../../kernel/geometry/subdivision'
 
 import { buildNativePrimitive } from './buildNativePrimitive'
 type NativeNode = ReturnType<typeof compileRushGraphNurbs>['resolved_document']['nodes'][number]
-export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, request: OwnNurbsRequest, resolveSweep?: SweepResolver, resolveBody?: BodyResolver, resolveMiter?: MiterResolver, resolveStations?:StationResolver) {
+export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, _request: OwnNurbsRequest, resolveSweep?: SweepResolver, resolveBody?: BodyResolver, resolveMiter?: MiterResolver, resolveStations?:StationResolver) {
     const cache = new Map<string, Value>()
     const needCurve = (key: string) => { const result = get(key); if (result.kind !== 'curve')
         throw new Error(`Expected curve at ${key}.`); return result.data; };

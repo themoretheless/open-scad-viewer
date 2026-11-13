@@ -421,7 +421,7 @@ class ManifoldPlanSession implements SemanticBackendSession<ManifoldPlanPayloadF
     return cleanupErrors
   }
 
-  private resultLease(retained: ReadonlySet<SemanticBackendPayloadLease>): SemanticBackendResultLease {
+  private resultLease(_retained: ReadonlySet<SemanticBackendPayloadLease>): SemanticBackendResultLease {
     let disposePromise: Promise<void> | undefined
     return Object.freeze({
       dispose: () => {

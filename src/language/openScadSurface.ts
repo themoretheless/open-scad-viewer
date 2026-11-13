@@ -46,7 +46,7 @@ export class OpenScadSurfaceError extends OpenSCADParseError {
   constructor(
     source: string,
     node: Pick<CallNode, 'p' | 'end'>,
-    readonly code: OpenScadSurfaceErrorCode,
+    override readonly code: OpenScadSurfaceErrorCode,
     message: string,
     details: OpenScadSurfaceErrorDetails,
   ) {

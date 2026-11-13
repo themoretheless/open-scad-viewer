@@ -39,7 +39,7 @@ function listed(values: Array<[string, string, number | undefined]>, locale: str
 
 /** Stable machine code + structured evidence; the worker envelope preserves both. */
 export class PrintReadinessError extends Error {
-  readonly name = 'PrintReadinessError'
+  override readonly name = 'PrintReadinessError'
   constructor(
     readonly code: PrintReadinessErrorCode,
     readonly details: PrintReadinessErrorDetails = {},
