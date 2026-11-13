@@ -2,7 +2,6 @@
 use super::super::super::super::algebraic_intersections::{decode_polynomial, decode_ratio};
 use super::*;
 use num_bigint::BigInt;
-use std::cmp::Ordering;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OriginalPeriodicEvent {
     pub source: usize,
@@ -113,8 +112,8 @@ fn endpoint(
     })
 }
 // Size and work allowances of one derivation. `work` is a single counter
-// shared by the lattice census, the cut ordering and the cell coverage, so
-// each work limit bounds the running total, not its own phase.
+// shared by the lattice census and by the cut ordering and cell coverage in
+// `atomic_cuts`, so each work limit bounds the running total, not its own phase.
 const MAX_SOURCES: usize = 32;
 const MAX_LEVELS: usize = 4096;
 const MAX_REFINEMENTS: usize = 512;
@@ -123,8 +122,6 @@ const LATTICE_CENSUS_WORK: usize = 16384;
 const MAX_EVENTS: usize = 16384;
 const MAX_COINCIDENT_CELLS: usize = 8192;
 const MAX_RAW_CUTS: usize = 32768;
-const CUT_ORDERING_WORK: usize = 131072;
-const CELL_COVERAGE_WORK: usize = 262144;
 type RawCut = (OriginalSourceParameter, OriginalPeriodicCutOrigin);
 /// Exact chart corner and period on each axis.
 struct Lattice {
@@ -177,11 +174,7 @@ impl Census {
             raw: vec![Vec::new(); o.sources.len()],
         };
         for (source, cs) in originals.iter().enumerate() {
-            let knots = cs
-                .iter()
-                .map(|c| &c.domain[0])
-                .chain(cs.last().map(|c| &c.domain[1]));
-            for (boundary, q) in knots.enumerate() {
+            for (boundary, q) in atomic_cuts::knots(cs).enumerate() {
                 out.raw[source].push((
                     chart_intervals::rational(q),
                     OriginalPeriodicCutOrigin::Knot { boundary },
@@ -317,98 +310,6 @@ impl Census {
         }
     }
 }
-/// Sorts one source's cut proposals by exact parameter order and merges the
-/// origins of equal parameters into one cut.
-fn order_cuts(
-    input: Vec<RawCut>,
-    limits: ParameterOrderLimits,
-    work: &mut usize,
-) -> Result<Vec<OriginalPeriodicCut>> {
-    let mut ordered: Vec<OriginalPeriodicCut> = Vec::new();
-    for (value, origin) in input {
-        let mut pos = 0;
-        let mut joined = false;
-        while pos < ordered.len() {
-            *work += 1;
-            if *work > CUT_ORDERING_WORK {
-                return Err(refused("Original periodic cut ordering allowance exceeded"));
-            }
-            match source_carriers::compare(&ordered[pos].value, &value, limits)? {
-                Ordering::Equal => {
-                    ordered[pos].origins.push(origin);
-                    joined = true;
-                    break;
-                }
-                Ordering::Greater => break,
-                Ordering::Less => pos += 1,
-            }
-        }
-        if !joined {
-            ordered.insert(
-                pos,
-                OriginalPeriodicCut {
-                    value,
-                    origins: vec![origin],
-                },
-            );
-        }
-    }
-    Ok(ordered)
-}
-/// The first and last cuts must be exactly the ends of the source domain.
-fn require_complete_domain(
-    source_cuts: &[OriginalPeriodicCut],
-    cs: &[Cell],
-    limits: ParameterOrderLimits,
-) -> Result<()> {
-    if source_cuts.len() < 2
-        || source_carriers::compare(
-            &source_cuts[0].value,
-            &chart_intervals::rational(&cs[0].domain[0]),
-            limits,
-        )? != Ordering::Equal
-        || source_carriers::compare(
-            &source_cuts.last().unwrap().value,
-            &chart_intervals::rational(&cs.last().unwrap().domain[1]),
-            limits,
-        )? != Ordering::Equal
-    {
-        return Err(refused(
-            "Original periodic pieces do not cover the complete source domain",
-        ));
-    }
-    Ok(())
-}
-/// The single source cell that contains the interval between two adjacent cuts.
-fn owning_cell(
-    cs: &[Cell],
-    [lower, upper]: [&OriginalSourceParameter; 2],
-    limits: ParameterOrderLimits,
-    work: &mut usize,
-) -> Result<usize> {
-    let mut found = Vec::new();
-    for (cell, c) in cs.iter().enumerate() {
-        *work += 1;
-        if *work > CELL_COVERAGE_WORK {
-            return Err(refused(
-                "Original periodic source cell coverage allowance exceeded",
-            ));
-        }
-        if source_carriers::compare(lower, &chart_intervals::rational(&c.domain[0]), limits)?
-            != Ordering::Less
-            && source_carriers::compare(upper, &chart_intervals::rational(&c.domain[1]), limits)?
-                != Ordering::Greater
-        {
-            found.push(cell);
-        }
-    }
-    match found[..] {
-        [cell] => Ok(cell),
-        _ => Err(refused(
-            "Original periodic interval does not own one source cell",
-        )),
-    }
-}
 /// Tile index, exact translation back to the base tile and shore incidence of
 /// one piece on each wrapped axis.
 struct Placement {
@@ -522,19 +423,49 @@ fn derive(o: &OwnedOriginalPeriodicPieces) -> Result<Data> {
     if raw.iter().map(Vec::len).sum::<usize>() > MAX_RAW_CUTS {
         return Err(refused("Original periodic cut allowance exceeded"));
     }
-    let cuts = raw
-        .into_iter()
-        .map(|input| order_cuts(input, o.limits, &mut work))
-        .collect::<Result<Vec<_>>>()?;
+    let mut cuts = Vec::new();
+    for input in raw {
+        let ordered = atomic_cuts::merge_ordered(
+            input,
+            o.limits,
+            &mut work,
+            "Original periodic cut ordering allowance exceeded",
+        )?;
+        cuts.push(
+            ordered
+                .into_iter()
+                .map(|(value, origins)| OriginalPeriodicCut { value, origins })
+                .collect::<Vec<_>>(),
+        );
+    }
     let mut pieces: Vec<OriginalPeriodicPiece> = Vec::new();
     let mut transitions = Vec::new();
     for (source, source_cuts) in cuts.iter().enumerate() {
         let cs = &originals[source];
-        require_complete_domain(source_cuts, cs, o.limits)?;
+        if source_cuts.len() < 2
+            || !atomic_cuts::spans_domain(
+                [&source_cuts[0].value, &source_cuts.last().unwrap().value],
+                cs,
+                o.limits,
+            )?
+        {
+            return Err(refused(
+                "Original periodic pieces do not cover the complete source domain",
+            ));
+        }
         let mut previous: Option<usize> = None;
         for cut in 0..source_cuts.len() - 1 {
             let interval = [&source_cuts[cut].value, &source_cuts[cut + 1].value];
-            let cell = owning_cell(cs, interval, o.limits, &mut work)?;
+            let cell = atomic_cuts::owning_cell(
+                cs,
+                interval,
+                o.limits,
+                &mut work,
+                [
+                    "Original periodic source cell coverage allowance exceeded",
+                    "Original periodic interval does not own one source cell",
+                ],
+            )?;
             let c = &cs[cell];
             let witness =
                 chart_intervals::interior(interval[0], interval[1], o.limits.max_refinements)?;

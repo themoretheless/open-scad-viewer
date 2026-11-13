@@ -12,6 +12,7 @@ pub use periodic_surface::{
     OriginalPeriodicPieceCoverage, OwnedOriginalPeriodicSurface,
     bind_original_periodic_pieces_to_surface,
 };
+mod atomic_cuts;
 mod periodic_pieces;
 pub use periodic_pieces::{
     OriginalPeriodicCut, OriginalPeriodicCutOrigin, OriginalPeriodicEvent, OriginalPeriodicPiece,

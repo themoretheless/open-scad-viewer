@@ -89,12 +89,7 @@ fn derive(
     let mut raw = vec![Vec::new(); owner.sources().len()];
     let mut total = 0usize;
     for (source, cs) in original.iter().enumerate() {
-        for (boundary, q) in cs
-            .iter()
-            .map(|c| &c.domain[0])
-            .chain(cs.last().map(|c| &c.domain[1]))
-            .enumerate()
-        {
+        for (boundary, q) in atomic_cuts::knots(cs).enumerate() {
             raw[source].push((rational(q), OriginalChartCutOrigin::Knot { boundary }));
             total += 1;
         }
@@ -120,75 +115,45 @@ fn derive(
     let mut cuts = Vec::new();
     let mut work = 0usize;
     for input in raw {
-        let mut ordered: Vec<OriginalChartCut> = Vec::new();
-        for (value, origin) in input {
-            let mut pos = 0;
-            let mut joined = false;
-            while pos < ordered.len() {
-                work += 1;
-                if work > 131072 {
-                    return Err(refused("Original chart cut ordering allowance exceeded"));
-                }
-                match source_carriers::compare(&ordered[pos].value, &value, l)? {
-                    Ordering::Equal => {
-                        ordered[pos].origins.push(origin);
-                        joined = true;
-                        break;
-                    }
-                    Ordering::Greater => break,
-                    Ordering::Less => pos += 1,
-                }
-            }
-            if !joined {
-                ordered.insert(
-                    pos,
-                    OriginalChartCut {
-                        value,
-                        origins: vec![origin],
-                    },
-                );
-            }
-        }
-        cuts.push(ordered);
+        let ordered = atomic_cuts::merge_ordered(
+            input,
+            l,
+            &mut work,
+            "Original chart cut ordering allowance exceeded",
+        )?;
+        cuts.push(
+            ordered
+                .into_iter()
+                .map(|(value, origins)| OriginalChartCut { value, origins })
+                .collect::<Vec<_>>(),
+        );
     }
     let mut intervals = Vec::new();
     let chart = owner.chart().map(|a| a.map(|q| Q::from_float(q).unwrap()));
     for (source, values) in cuts.iter().enumerate() {
         let cs = &original[source];
         if values.len() < 2
-            || source_carriers::compare(&values[0].value, &rational(&cs[0].domain[0]), l)?
-                != Ordering::Equal
-            || source_carriers::compare(
-                &values.last().unwrap().value,
-                &rational(&cs.last().unwrap().domain[1]),
+            || !atomic_cuts::spans_domain(
+                [&values[0].value, &values.last().unwrap().value],
+                cs,
                 l,
-            )? != Ordering::Equal
+            )?
         {
             return Err(refused(
                 "Original chart intervals do not cover the full source domain",
             ));
         }
         for cut in 0..values.len() - 1 {
-            let mut found = Vec::new();
-            for (cell, c) in cs.iter().enumerate() {
-                work += 1;
-                if work > 262144 {
-                    return Err(refused("Original chart cell coverage allowance exceeded"));
-                }
-                if source_carriers::compare(&values[cut].value, &rational(&c.domain[0]), l)?
-                    != Ordering::Less
-                    && source_carriers::compare(&values[cut + 1].value, &rational(&c.domain[1]), l)?
-                        != Ordering::Greater
-                {
-                    found.push(cell);
-                }
-            }
-            if found.len() != 1 {
-                return Err(refused(
+            let cell = atomic_cuts::owning_cell(
+                cs,
+                [&values[cut].value, &values[cut + 1].value],
+                l,
+                &mut work,
+                [
+                    "Original chart cell coverage allowance exceeded",
                     "Original chart interval does not own one actual knot cell",
-                ));
-            }
-            let cell = found[0];
+                ],
+            )?;
             let c = &cs[cell];
             let witness = interior(
                 &values[cut].value,
