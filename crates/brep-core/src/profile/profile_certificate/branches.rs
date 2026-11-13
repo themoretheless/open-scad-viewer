@@ -348,111 +348,140 @@ fn add_event_factor(projection: &mut Poly, factors: &mut Vec<Poly>, q: &Poly) ->
     Ok(())
 }
 
-fn finish(
-    content: Poly,
-    p: Bi,
-    mut projection: Poly,
-    dpoly: Option<Poly>,
-    diagonal_projection: Option<Poly>,
-    width: &Q,
-    projection_factors: Option<Vec<Poly>>,
-) -> Result<ParameterBranchDecomposition> {
-    let leading = projection.last().unwrap().clone();
-    for x in &mut projection {
-        *x /= &leading
-    }
-    let mut w = width.clone();
-    let mut cuts;
-    loop {
-        cuts = exact_roots(&projection, &w)?;
-        if cuts.windows(2).all(|v| v[0][1] < v[1][0]) {
-            break;
-        }
-        w /= Q::from_integer(2.into());
-        if w.denom().bits() > 1024 {
-            return Err(refused("Critical branch roots cannot be separated"));
-        }
-    }
-    let mut out = Vec::new();
-    for (k, i) in cuts.iter().enumerate() {
-        // A root of a proved factor in the globally isolated interval is the
-        // SAME critical parameter. Keep the global root census unchanged,
-        // but avoid arithmetic in unrelated number-field factors.
-        let mut local_projection = projection.clone();
-        if let Some(factors) = &projection_factors {
-            if i[0] == i[1] {
-                local_projection = vec![-i[0].clone(), Q::one()];
-            } else {
-                for factor in factors {
-                    if factor.len() < local_projection.len()
-                        && roots::count(factor, &i[0], &i[1])? == 1
-                    {
-                        local_projection = factor.clone();
-                    }
-                }
+/// Denominator size at which a repeatedly halved isolation width is refused.
+const MAX_WIDTH_BITS: u64 = 1024;
+const DIAGONAL_NODE_ROUNDS: usize = 192;
+const SLAB_ROUNDS: usize = 256;
+fn halve(width: &mut Q) {
+    *width /= Q::from_integer(2.into());
+}
+/// Whether consecutive isolating intervals are strictly apart.
+fn separated(intervals: &[[Q; 2]]) -> bool {
+    intervals.windows(2).all(|v| v[0][1] < v[1][0])
+}
+/// The reduced relation, its content and its optional diagonal: the inputs
+/// every critical cut and every slab between cuts are derived from.
+struct Relation<'a> {
+    content: &'a Poly,
+    p: &'a Bi,
+    dpoly: Option<&'a Poly>,
+    diagonal_projection: Option<&'a Poly>,
+    width: &'a Q,
+    projection_factors: Option<&'a [Poly]>,
+}
+impl Relation<'_> {
+    /// Isolated roots of the projection, refined until they are pairwise apart.
+    fn critical_cuts(&self, projection: &Poly) -> Result<Vec<[Q; 2]>> {
+        let mut w = self.width.clone();
+        loop {
+            let cuts = exact_roots(projection, &w)?;
+            if separated(&cuts) {
+                return Ok(cuts);
+            }
+            halve(&mut w);
+            if w.denom().bits() > MAX_WIDTH_BITS {
+                return Err(refused("Critical branch roots cannot be separated"));
             }
         }
-        let vertical = fibers::zero(&content, &local_projection, i)?;
-        let mut fiber = p.clone();
+    }
+    /// A root of a proved factor in the globally isolated interval is the
+    /// SAME critical parameter. Keep the global root census unchanged,
+    /// but avoid arithmetic in unrelated number-field factors.
+    fn local_projection(&self, projection: &Poly, i: &[Q; 2]) -> Result<Poly> {
+        let Some(factors) = self.projection_factors else {
+            return Ok(projection.clone());
+        };
+        if i[0] == i[1] {
+            return Ok(vec![-i[0].clone(), Q::one()]);
+        }
+        let mut local = projection.clone();
+        for factor in factors {
+            if factor.len() < local.len() && roots::count(factor, &i[0], &i[1])? == 1 {
+                local = factor.clone();
+            }
+        }
+        Ok(local)
+    }
+    /// The relation on a critical fiber. A vertical fiber is the whole unit
+    /// interval, so its ends and its diagonal point become explicit nodes.
+    fn critical_fiber(&self, vertical: bool) -> Bi {
+        let mut fiber = self.p.clone();
         if vertical {
             fiber = multiply_t(&fiber, &vec![Vec::new(), vec![Q::one()]]);
             fiber = multiply_t(&fiber, &vec![vec![-Q::one()], vec![Q::one()]]);
-            if let Some(d) = &dpoly {
+            if let Some(d) = self.dpoly {
                 fiber = multiply_t(
                     &fiber,
                     &vec![d.iter().map(|q| -q).collect(), vec![Q::one()]],
                 )
             }
         }
-        let mut fw = width.clone();
+        fiber
+    }
+    /// Marks the fiber node that is the diagonal point, when the diagonal
+    /// meets this critical fiber. May refine `nodes` and `fw` to single it out.
+    fn excluded_nodes(
+        &self,
+        fiber: &Bi,
+        local_projection: &Poly,
+        i: &[Q; 2],
+        vertical: bool,
+        nodes: &mut Vec<[Q; 2]>,
+        fw: &mut Q,
+    ) -> Result<Vec<bool>> {
+        let mut excluded = vec![false; nodes.len()];
+        let (Some(d), Some(diagonal_projection)) = (self.dpoly, self.diagonal_projection) else {
+            return Ok(excluded);
+        };
+        if !vertical && !fibers::zero(diagonal_projection, local_projection, i)? {
+            return Ok(excluded);
+        }
+        let linear = vec![d.iter().map(|q| -q).collect(), vec![Q::one()]];
+        for _ in 0..DIAGONAL_NODE_ROUNDS {
+            let dr = fibers::isolate_at(&linear, local_projection, i, fw)?;
+            if dr.is_empty() {
+                return Ok(excluded);
+            }
+            let candidates = nodes
+                .iter()
+                .enumerate()
+                .filter(|(_, n)| n[0] <= dr[0][1] && dr[0][0] <= n[1])
+                .map(|(j, _)| j)
+                .collect::<Vec<_>>();
+            if let [only] = candidates[..] {
+                excluded[only] = true;
+                return Ok(excluded);
+            }
+            halve(fw);
+            *nodes = fibers::isolate_at(fiber, local_projection, i, fw)?;
+            if fw.denom().bits() > MAX_WIDTH_BITS {
+                return Err(refused("Diagonal critical node is unproved"));
+            }
+        }
+        Err(refused("Diagonal critical node isolation exhausted"))
+    }
+    /// One critical cut: its separated fiber nodes and their one-sided incidence.
+    fn cut(&self, k: usize, cuts: &[[Q; 2]], projection: &Poly) -> Result<BranchCut> {
+        let i = &cuts[k];
+        let local_projection = self.local_projection(projection, i)?;
+        let vertical = fibers::zero(self.content, &local_projection, i)?;
+        let fiber = self.critical_fiber(vertical);
+        let mut fw = self.width.clone();
         let mut nodes;
         loop {
             nodes = fibers::isolate_at(&fiber, &local_projection, i, &fw)?;
-            if nodes.windows(2).all(|v| v[0][1] < v[1][0]) {
+            if separated(&nodes) {
                 break;
             }
-            fw /= Q::from_integer(2.into());
-            if fw.denom().bits() > 1024 {
+            halve(&mut fw);
+            if fw.denom().bits() > MAX_WIDTH_BITS {
                 return Err(refused("Critical fiber nodes cannot be separated"));
             }
         }
-        let mut excluded_nodes = vec![false; nodes.len()];
-        if let Some(d) = &dpoly {
-            if vertical
-                || fibers::zero(diagonal_projection.as_ref().unwrap(), &local_projection, i)?
-            {
-                let linear = vec![d.iter().map(|q| -q).collect(), vec![Q::one()]];
-                let mut accounted = false;
-                for _ in 0..192 {
-                    let dr = fibers::isolate_at(&linear, &local_projection, i, &fw)?;
-                    if dr.is_empty() {
-                        accounted = true;
-                        break;
-                    }
-                    let candidates = nodes
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, n)| n[0] <= dr[0][1] && dr[0][0] <= n[1])
-                        .map(|(j, _)| j)
-                        .collect::<Vec<_>>();
-                    if candidates.len() == 1 {
-                        excluded_nodes[candidates[0]] = true;
-                        accounted = true;
-                        break;
-                    }
-                    fw /= Q::from_integer(2.into());
-                    nodes = fibers::isolate_at(&fiber, &local_projection, i, &fw)?;
-                    if fw.denom().bits() > 1024 {
-                        return Err(refused("Diagonal critical node is unproved"));
-                    }
-                }
-                if !accounted {
-                    return Err(refused("Diagonal critical node isolation exhausted"));
-                }
-            }
-        }
+        let excluded_nodes =
+            self.excluded_nodes(&fiber, &local_projection, i, vertical, &mut nodes, &mut fw)?;
         let (left, right) = incidence(
-            &p,
+            self.p,
             &local_projection,
             i,
             &nodes,
@@ -467,7 +496,7 @@ fn finish(
         } else {
             Vec::new()
         };
-        out.push(BranchCut {
+        Ok(BranchCut {
             parameter: enc(i),
             fibers: nodes.iter().map(enc).collect(),
             vertical,
@@ -475,27 +504,22 @@ fn finish(
             left,
             right,
             excluded_nodes,
-        });
+        })
     }
-    let mut slabs = Vec::new();
-    for (k, cut) in cuts.windows(2).enumerate() {
+    /// The open slab between two adjacent cuts, sampled at its midpoint:
+    /// its root sections and the side of the diagonal each one lies on.
+    fn slab(&self, cut: &[[Q; 2]]) -> Result<BranchSlab> {
         let sample = (&cut[0][1] + &cut[1][0]) / Q::from_integer(2.into());
-        let f = bi::fiber(&p, &sample);
-        let mut fw = width.clone();
-        let mut values;
-        let sides;
-        let mut iterations = 0;
-        loop {
-            iterations += 1;
-            if iterations > 256 {
-                return Err(refused("Diagonal branch classification exhausted"));
-            }
-            values = exact_roots(&f, &fw)?;
-            if let Some(d) = &dpoly {
+        let f = bi::fiber(self.p, &sample);
+        let mut fw = self.width.clone();
+        for _ in 0..SLAB_ROUNDS {
+            let values = exact_roots(&f, &fw)?;
+            let mut sides = Vec::new();
+            if let Some(d) = self.dpoly {
                 let t = at(d, &sample);
                 let on = at(&f, &t).is_zero();
                 if values.iter().any(|i| i[0] <= t && t <= i[1] && !on) {
-                    fw /= Q::from_integer(2.into());
+                    halve(&mut fw);
                     continue;
                 }
                 sides = values
@@ -510,19 +534,51 @@ fn finish(
                         }
                     })
                     .collect();
-            } else {
-                sides = Vec::new()
             }
-            break;
+            return Ok(BranchSlab {
+                sample: ratio(&sample),
+                roots: values.iter().map(enc).collect(),
+                diagonal_side: sides,
+            });
         }
-        if out[k].right.len() != values.len() || out[k + 1].left.len() != values.len() {
+        Err(refused("Diagonal branch classification exhausted"))
+    }
+}
+fn finish(
+    content: Poly,
+    p: Bi,
+    mut projection: Poly,
+    dpoly: Option<Poly>,
+    diagonal_projection: Option<Poly>,
+    width: &Q,
+    projection_factors: Option<Vec<Poly>>,
+) -> Result<ParameterBranchDecomposition> {
+    let Some(leading) = projection.last().cloned() else {
+        return Err(refused("Critical branch roots cannot be separated"));
+    };
+    for x in &mut projection {
+        *x /= &leading
+    }
+    let relation = Relation {
+        content: &content,
+        p: &p,
+        dpoly: dpoly.as_ref(),
+        diagonal_projection: diagonal_projection.as_ref(),
+        width,
+        projection_factors: projection_factors.as_deref(),
+    };
+    let cuts = relation.critical_cuts(&projection)?;
+    let mut out = Vec::new();
+    for k in 0..cuts.len() {
+        out.push(relation.cut(k, &cuts, &projection)?);
+    }
+    let mut slabs = Vec::new();
+    for (k, cut) in cuts.windows(2).enumerate() {
+        let slab = relation.slab(cut)?;
+        if out[k].right.len() != slab.roots.len() || out[k + 1].left.len() != slab.roots.len() {
             return Err(refused("Branch graph incidence omits a root section"));
         }
-        slabs.push(BranchSlab {
-            sample: ratio(&sample),
-            roots: values.iter().map(enc).collect(),
-            diagonal_side: sides,
-        });
+        slabs.push(slab);
     }
     Ok(ParameterBranchDecomposition {
         dimension: 1,
