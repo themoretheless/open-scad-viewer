@@ -92,10 +92,306 @@ fn join(p: &mut [usize], a: usize, b: usize) {
 fn cycles(o: &OwnedPeriodicChartFanPatches) -> &Arc<OwnedPeriodicChartCycles> {
     o.owner().owner().owner()
 }
+const MAX_ALLOWANCE: usize = 1000000;
+/// Material patch that owns every chart edge, through the boundary loop carrying it.
+fn edge_patches(
+    patches: &[OriginalPeriodicChartStrictPatch],
+    loops: &[OriginalPeriodicChartBoundaryLoop],
+    n: usize,
+) -> Result<Vec<usize>> {
+    let mut loop_patch = vec![usize::MAX; loops.len()];
+    for (patch, p) in patches.iter().enumerate() {
+        for boundary in std::iter::once(p.outer).chain(p.holes.iter().copied()) {
+            if std::mem::replace(&mut loop_patch[boundary], patch) != usize::MAX {
+                return Err(refused("Loop belongs to multiple actual material patches"));
+            }
+        }
+    }
+    let mut edge_patch = vec![usize::MAX; n];
+    for (id, b) in loops.iter().enumerate() {
+        if loop_patch[id] == usize::MAX {
+            return Err(refused("Sewn face omits an original boundary loop"));
+        }
+        for &edge in &b.edges {
+            edge_patch[edge] = loop_patch[id];
+        }
+    }
+    Ok(edge_patch)
+}
+/// Number of material boundary walks of every patch; each walk stays in one
+/// patch and each patch has at least one.
+fn patch_boundary_counts(
+    walks: &[Vec<usize>],
+    edge_patch: &[usize],
+    patches: usize,
+) -> Result<Vec<usize>> {
+    let mut counts = vec![0usize; patches];
+    for walk in walks {
+        let patch = edge_patch[*walk
+            .first()
+            .ok_or_else(|| refused("Empty original material boundary"))?];
+        if walk.iter().any(|&e| edge_patch[e] != patch) {
+            return Err(refused(
+                "Original contact fan walk needs further owned material patch separation",
+            ));
+        }
+        counts[patch] += 1;
+    }
+    if counts.contains(&0) {
+        return Err(refused("Unbounded or boundary-free chart patch is unowned"));
+    }
+    Ok(counts)
+}
+/// Auxiliary seam intervals paired with their exact opposites.
+struct SeamPairs {
+    /// Counterpart of every chart edge that is one side of a seam.
+    paired: Vec<Option<usize>>,
+    seams: Vec<[usize; 2]>,
+}
+/// Pairs every auxiliary interval with its single exact opposite original
+/// interval. `matching` is the exact comparison; each call is charged.
+fn pair_seams(
+    auxiliary: &[(usize, [usize; 2])],
+    n: usize,
+    max_comparisons: usize,
+    matching: impl Fn([usize; 2], [usize; 2]) -> Result<bool>,
+) -> Result<SeamPairs> {
+    let mut out = SeamPairs {
+        paired: vec![None; n],
+        seams: vec![],
+    };
+    let mut comparisons = 0usize;
+    for &(e, a) in auxiliary {
+        if out.paired[e].is_some() {
+            continue;
+        }
+        let mut matched = None;
+        for &(f, b) in auxiliary.iter().filter(|(f, _)| *f != e) {
+            comparisons = comparisons
+                .checked_add(1)
+                .filter(|v| *v <= max_comparisons)
+                .ok_or_else(|| {
+                    refused("Complete exact auxiliary interval pairing exceeds allowance")
+                })?;
+            if matching(a, b)? && matched.replace(f).is_some() {
+                return Err(refused(
+                    "Auxiliary interval has multiple exact original counterparts",
+                ));
+            }
+        }
+        let f = matched.ok_or_else(|| {
+            refused("Unpaired auxiliary interval: authored seam-boundary admission is required")
+        })?;
+        if out.paired[f].is_some() {
+            return Err(refused("Auxiliary seam counterpart is already owned"));
+        }
+        out.paired[e] = Some(f);
+        out.paired[f] = Some(e);
+        out.seams.push([e, f]);
+    }
+    Ok(out)
+}
+/// Quotient vertices of the outgoing-edge fans under the seam identifications,
+/// and the vertex of every fan.
+fn sewn_vertices(
+    chart_edges: &[OriginalPeriodicChartCycleEdge],
+    successor: &[usize],
+    seams: &[[usize; 2]],
+) -> (Vec<OriginalPeriodicSewnVertex>, Vec<usize>) {
+    let n = chart_edges.len();
+    let mut parent = (0..n).collect::<Vec<_>>();
+    for &[e, f] in seams {
+        // Original CCW directions are opposite in the exact world seam.
+        // A fan is the interval link between its original incoming/outgoing
+        // boundary ports. Joining its two seam link ends gives connected
+        // paths/circles, preserving distinct unrelated contact fans.
+        join(&mut parent, e, successor[f]);
+        join(&mut parent, successor[e], f);
+    }
+    let mut vertices: Vec<OriginalPeriodicSewnVertex> = vec![];
+    let mut vertex_ids = BTreeMap::new();
+    let mut fan_vertex = vec![0; n];
+    for fan in 0..n {
+        let root = find(&mut parent, fan);
+        let next = vertices.len();
+        let id = *vertex_ids.entry(root).or_insert_with(|| {
+            vertices.push(OriginalPeriodicSewnVertex {
+                fans: vec![],
+                chart_vertices: vec![],
+            });
+            next
+        });
+        vertices[id].fans.push(fan);
+        vertices[id]
+            .chart_vertices
+            .push(chart_edges[fan].vertices[0]);
+        fan_vertex[fan] = id;
+    }
+    for v in &mut vertices {
+        v.chart_vertices.sort();
+        v.chart_vertices.dedup();
+    }
+    (vertices, fan_vertex)
+}
+/// World edges after sewing: one per boundary chart edge, one per seam pair.
+struct SewnEdges {
+    edges: Vec<OriginalPeriodicSewnEdge>,
+    /// World edge of every chart edge.
+    ids: Vec<usize>,
+    /// Whether a chart edge runs against its world edge (the second seam side).
+    reversed: Vec<bool>,
+}
+fn sewn_edges(
+    chart_edges: &[OriginalPeriodicChartCycleEdge],
+    successor: &[usize],
+    paired: &[Option<usize>],
+    fan_vertex: &[usize],
+) -> Result<SewnEdges> {
+    let n = chart_edges.len();
+    let mut out = SewnEdges {
+        edges: vec![],
+        ids: vec![usize::MAX; n],
+        reversed: vec![false; n],
+    };
+    for e in 0..n {
+        if out.ids[e] != usize::MAX {
+            continue;
+        }
+        let id = out.edges.len();
+        let mut members = vec![e];
+        out.ids[e] = id;
+        if let Some(f) = paired[e] {
+            out.ids[f] = id;
+            out.reversed[f] = true;
+            members.push(f);
+            if fan_vertex[e] != fan_vertex[successor[f]]
+                || fan_vertex[successor[e]] != fan_vertex[f]
+            {
+                return Err(refused(
+                    "Sewn edge endpoints disagree with exact opposite interval orientation",
+                ));
+            }
+        }
+        out.edges.push(OriginalPeriodicSewnEdge {
+            vertices: [fan_vertex[e], fan_vertex[successor[e]]],
+            chart_edges: members,
+            original: chart_edges[e].kind,
+        });
+    }
+    Ok(out)
+}
+/// Next actual boundary edge after every unpaired edge, skipping across sewn
+/// seams. The map must be a bijection on the unpaired edges.
+fn boundary_successors(
+    successor: &[usize],
+    paired: &[Option<usize>],
+    fan_vertex: &[usize],
+) -> Result<Vec<usize>> {
+    let n = successor.len();
+    let mut next = vec![usize::MAX; n];
+    let mut predecessor = vec![0usize; n];
+    for e in (0..n).filter(|&e| paired[e].is_none()) {
+        let mut at = successor[e];
+        let mut steps = 0;
+        while let Some(f) = paired[at] {
+            steps += 1;
+            if steps > n {
+                return Err(refused(
+                    "Sewn boundary successor never reaches an actual boundary",
+                ));
+            }
+            at = successor[f];
+        }
+        if fan_vertex[successor[e]] != fan_vertex[at] {
+            return Err(refused(
+                "Sewn boundary successor misses its original quotient fan vertex",
+            ));
+        }
+        next[e] = at;
+        predecessor[at] += 1;
+    }
+    if (0..n).any(|e| paired[e].is_none() && predecessor[e] != 1) {
+        return Err(refused("Sewn material boundary successor is not bijective"));
+    }
+    Ok(next)
+}
+/// Boundary cycles of every sewn face, as world edge ids keyed by face root.
+fn boundary_cycles(
+    paired: &[Option<usize>],
+    next: &[usize],
+    edge_patch: &[usize],
+    edge_ids: &[usize],
+    patch_parent: &mut [usize],
+) -> Result<BTreeMap<usize, Vec<Vec<usize>>>> {
+    let n = next.len();
+    let mut cycles: BTreeMap<usize, Vec<Vec<usize>>> = BTreeMap::new();
+    let mut seen = vec![false; n];
+    for e in 0..n {
+        if paired[e].is_some() || seen[e] {
+            continue;
+        }
+        let root = find(patch_parent, edge_patch[e]);
+        let mut at = e;
+        let mut walk = vec![];
+        loop {
+            if seen[at] {
+                if at != e {
+                    return Err(refused(
+                        "Sewn boundary walk joins another already owned cycle",
+                    ));
+                }
+                break;
+            }
+            if find(patch_parent, edge_patch[at]) != root {
+                return Err(refused("Sewn boundary crosses an unrelated material face"));
+            }
+            seen[at] = true;
+            walk.push(edge_ids[at]);
+            at = next[at];
+        }
+        cycles.entry(root).or_default().push(walk);
+    }
+    Ok(cycles)
+}
+/// One sewn face: its Euler characteristic from the quotient vertex and edge
+/// counts, and the genus that characteristic implies.
+fn sewn_face(
+    patches: Vec<usize>,
+    boundary_cycles: Vec<Vec<usize>>,
+    patch_boundaries: &[usize],
+    incident: impl Iterator<Item = ([usize; 2], usize)>,
+) -> Result<OriginalPeriodicSewnFace> {
+    let mut vs = BTreeSet::new();
+    let mut es = BTreeSet::new();
+    for (ends, edge) in incident {
+        vs.extend(ends);
+        es.insert(edge);
+    }
+    // Each normalized chart patch is planar with b actual material-fan
+    // boundary cycles, hence chi=2-b, INCLUDING tangent hole contacts.
+    // V0=E0 on those boundary circles. Exact seam quotient gives V,E here.
+    let correction = patches
+        .iter()
+        .map(|&p| 2 - patch_boundaries[p] as i64)
+        .sum::<i64>();
+    let chi = vs.len() as i64 - es.len() as i64 + correction;
+    let twice_genus = 2 - boundary_cycles.len() as i64 - chi;
+    if twice_genus < 0 || twice_genus % 2 != 0 {
+        return Err(refused(
+            "Sewn oriented material fan topology has inconsistent Euler data",
+        ));
+    }
+    Ok(OriginalPeriodicSewnFace {
+        patches,
+        boundary_cycles,
+        euler_characteristic: chi,
+        genus: (twice_genus / 2) as usize,
+    })
+}
 fn derive(o: &OwnedPeriodicSewnFaces) -> Result<Data> {
     let _replay = super::periodic_replay::scope();
-    if !(1..=1000000).contains(&o.limits.max_edges)
-        || !(1..=1000000).contains(&o.limits.max_seam_comparisons)
+    if !(1..=MAX_ALLOWANCE).contains(&o.limits.max_edges)
+        || !(1..=MAX_ALLOWANCE).contains(&o.limits.max_seam_comparisons)
     {
         return Err(refused("Invalid complete sewn face allowance"));
     }
@@ -122,141 +418,31 @@ fn derive(o: &OwnedPeriodicSewnFaces) -> Result<Data> {
     if n > o.limits.max_edges {
         return Err(refused("Complete sewn face edge census exceeds allowance"));
     }
-    let loops = o.owner.owner().owner();
-    let mut loop_patch = vec![usize::MAX; loops.loops().len()];
-    for (patch, p) in patches.iter().enumerate() {
-        for boundary in std::iter::once(p.outer).chain(p.holes.iter().copied()) {
-            if std::mem::replace(&mut loop_patch[boundary], patch) != usize::MAX {
-                return Err(refused("Loop belongs to multiple actual material patches"));
-            }
-        }
-    }
-    let mut edge_patch = vec![usize::MAX; n];
-    for (id, b) in loops.loops().iter().enumerate() {
-        if loop_patch[id] == usize::MAX {
-            return Err(refused("Sewn face omits an original boundary loop"));
-        }
-        for &edge in &b.edges {
-            edge_patch[edge] = loop_patch[id];
-        }
-    }
-    let mut patch_boundaries = vec![0usize; patches.len()];
-    for walk in c.walks() {
-        let patch = edge_patch[*walk
-            .first()
-            .ok_or_else(|| refused("Empty original material boundary"))?];
-        if walk.iter().any(|&e| edge_patch[e] != patch) {
-            return Err(refused(
-                "Original contact fan walk needs further owned material patch separation",
-            ));
-        }
-        patch_boundaries[patch] += 1;
-    }
-    if patch_boundaries.iter().any(|b| *b == 0) {
-        return Err(refused("Unbounded or boundary-free chart patch is unowned"));
-    }
+    let successor = c.successor();
+    let edge_patch = edge_patches(patches, o.owner.owner().owner().loops(), n)?;
+    let patch_boundaries = patch_boundary_counts(c.walks(), &edge_patch, patches.len())?;
     let mut auxiliary = Vec::new();
     for (e, edge) in c.edges().iter().enumerate() {
-        if let OriginalPeriodicChartCycleEdgeKind::NativeShore { shore, interval } = edge.kind {
-            if shores.shores()[shore].role == OriginalPeriodicNativeShoreRole::AuxiliarySeam {
-                auxiliary.push((e, [shore, interval]));
-            }
+        if let OriginalPeriodicChartCycleEdgeKind::NativeShore { shore, interval } = edge.kind
+            && shores.shores()[shore].role == OriginalPeriodicNativeShoreRole::AuxiliarySeam
+        {
+            auxiliary.push((e, [shore, interval]));
         }
     }
-    let mut paired = vec![None; n];
-    let mut seams = vec![];
-    let mut comparisons = 0usize;
-    for &(e, a) in &auxiliary {
-        if paired[e].is_some() {
-            continue;
-        }
-        let mut matched = None;
-        for &(f, b) in &auxiliary {
-            if f != e {
-                comparisons = comparisons
-                    .checked_add(1)
-                    .filter(|v| *v <= o.limits.max_seam_comparisons)
-                    .ok_or_else(|| {
-                        refused("Complete exact auxiliary interval pairing exceeds allowance")
-                    })?;
-                if shores.matching_opposite_interval(a, b)? {
-                    if matched.replace(f).is_some() {
-                        return Err(refused(
-                            "Auxiliary interval has multiple exact original counterparts",
-                        ));
-                    }
-                }
-            }
-        }
-        let f = matched.ok_or_else(|| {
-            refused("Unpaired auxiliary interval: authored seam-boundary admission is required")
+    let SeamPairs { paired, seams } =
+        pair_seams(&auxiliary, n, o.limits.max_seam_comparisons, |a, b| {
+            shores.matching_opposite_interval(a, b)
         })?;
-        if paired[f].is_some() {
-            return Err(refused("Auxiliary seam counterpart is already owned"));
-        }
-        paired[e] = Some(f);
-        paired[f] = Some(e);
-        seams.push([e, f]);
-    }
-    let mut vertex_parent = (0..n).collect::<Vec<_>>();
     let mut patch_parent = (0..patches.len()).collect::<Vec<_>>();
     for &[e, f] in &seams {
-        // Original CCW directions are opposite in the exact world seam.
-        // A fan is the interval link between its original incoming/outgoing
-        // boundary ports. Joining its two seam link ends gives connected
-        // paths/circles, preserving distinct unrelated contact fans.
-        join(&mut vertex_parent, e, c.successor()[f]);
-        join(&mut vertex_parent, c.successor()[e], f);
         join(&mut patch_parent, edge_patch[e], edge_patch[f]);
     }
-    let mut vertices: Vec<OriginalPeriodicSewnVertex> = vec![];
-    let mut vertex_ids = BTreeMap::new();
-    let mut fan_vertex = vec![0; n];
-    for fan in 0..n {
-        let root = find(&mut vertex_parent, fan);
-        let next = vertices.len();
-        let id = *vertex_ids.entry(root).or_insert_with(|| {
-            vertices.push(OriginalPeriodicSewnVertex {
-                fans: vec![],
-                chart_vertices: vec![],
-            });
-            next
-        });
-        vertices[id].fans.push(fan);
-        vertices[id].chart_vertices.push(c.edges()[fan].vertices[0]);
-        fan_vertex[fan] = id;
-    }
-    for v in &mut vertices {
-        v.chart_vertices.sort();
-        v.chart_vertices.dedup();
-    }
-    let mut edges = vec![];
-    let mut edge_ids = vec![usize::MAX; n];
-    let mut reversed = vec![false; n];
-    for e in 0..n {
-        if edge_ids[e] == usize::MAX {
-            let id = edges.len();
-            let mut chart_edges = vec![e];
-            edge_ids[e] = id;
-            if let Some(f) = paired[e] {
-                edge_ids[f] = id;
-                reversed[f] = true;
-                chart_edges.push(f);
-                if fan_vertex[e] != fan_vertex[c.successor()[f]]
-                    || fan_vertex[c.successor()[e]] != fan_vertex[f]
-                {
-                    return Err(refused(
-                        "Sewn edge endpoints disagree with exact opposite interval orientation",
-                    ));
-                }
-            }
-            edges.push(OriginalPeriodicSewnEdge {
-                vertices: [fan_vertex[e], fan_vertex[c.successor()[e]]],
-                chart_edges,
-                original: c.edges()[e].kind,
-            });
-        }
-    }
+    let (vertices, fan_vertex) = sewn_vertices(c.edges(), successor, &seams);
+    let SewnEdges {
+        edges,
+        ids: edge_ids,
+        reversed,
+    } = sewn_edges(c.edges(), successor, &paired, &fan_vertex)?;
     let coedges = (0..n)
         .map(|e| OriginalPeriodicSewnCoedge {
             patch: edge_patch[e],
@@ -270,92 +456,17 @@ fn derive(o: &OwnedPeriodicSewnFaces) -> Result<Data> {
         let root = find(&mut patch_parent, p);
         face_patches.entry(root).or_default().push(p);
     }
-    let mut next = vec![usize::MAX; n];
-    let mut predecessor = vec![0usize; n];
-    for e in 0..n {
-        if paired[e].is_none() {
-            let mut at = c.successor()[e];
-            let mut steps = 0;
-            while let Some(f) = paired[at] {
-                steps += 1;
-                if steps > n {
-                    return Err(refused(
-                        "Sewn boundary successor never reaches an actual boundary",
-                    ));
-                }
-                at = c.successor()[f];
-            }
-            if fan_vertex[c.successor()[e]] != fan_vertex[at] {
-                return Err(refused(
-                    "Sewn boundary successor misses its original quotient fan vertex",
-                ));
-            }
-            next[e] = at;
-            predecessor[at] += 1;
-        }
-    }
-    if (0..n).any(|e| paired[e].is_none() && predecessor[e] != 1) {
-        return Err(refused("Sewn material boundary successor is not bijective"));
-    }
-    let mut face_boundaries: BTreeMap<usize, Vec<Vec<usize>>> = BTreeMap::new();
-    let mut seen = vec![false; n];
-    for e in 0..n {
-        if paired[e].is_none() && !seen[e] {
-            let root = find(&mut patch_parent, edge_patch[e]);
-            let mut at = e;
-            let mut walk = vec![];
-            loop {
-                if seen[at] {
-                    if at != e {
-                        return Err(refused(
-                            "Sewn boundary walk joins another already owned cycle",
-                        ));
-                    }
-                    break;
-                }
-                if find(&mut patch_parent, edge_patch[at]) != root {
-                    return Err(refused("Sewn boundary crosses an unrelated material face"));
-                }
-                seen[at] = true;
-                walk.push(edge_ids[at]);
-                at = next[at];
-            }
-            face_boundaries.entry(root).or_default().push(walk);
-        }
-    }
+    let next = boundary_successors(successor, &paired, &fan_vertex)?;
+    let mut face_boundaries =
+        boundary_cycles(&paired, &next, &edge_patch, &edge_ids, &mut patch_parent)?;
     let mut faces = vec![];
     for (root, ps) in face_patches {
         let selected = ps.iter().copied().collect::<BTreeSet<_>>();
-        let mut vs = BTreeSet::new();
-        let mut es = BTreeSet::new();
-        for e in 0..n {
-            if selected.contains(&edge_patch[e]) {
-                vs.insert(fan_vertex[e]);
-                vs.insert(fan_vertex[c.successor()[e]]);
-                es.insert(edge_ids[e]);
-            }
-        }
-        // Each normalized chart patch is planar with b actual material-fan
-        // boundary cycles, hence chi=2-b, INCLUDING tangent hole contacts.
-        // V0=E0 on those boundary circles. Exact seam quotient gives V,E here.
-        let correction = ps
-            .iter()
-            .map(|&p| 2 - patch_boundaries[p] as i64)
-            .sum::<i64>();
-        let chi = vs.len() as i64 - es.len() as i64 + correction;
-        let boundary_cycles = face_boundaries.remove(&root).unwrap_or_default();
-        let twice_genus = 2 - boundary_cycles.len() as i64 - chi;
-        if twice_genus < 0 || twice_genus % 2 != 0 {
-            return Err(refused(
-                "Sewn oriented material fan topology has inconsistent Euler data",
-            ));
-        }
-        faces.push(OriginalPeriodicSewnFace {
-            patches: ps,
-            boundary_cycles,
-            euler_characteristic: chi,
-            genus: (twice_genus / 2) as usize,
-        });
+        let incident = (0..n)
+            .filter(|&e| selected.contains(&edge_patch[e]))
+            .map(|e| ([fan_vertex[e], fan_vertex[successor[e]]], edge_ids[e]));
+        let boundary = face_boundaries.remove(&root).unwrap_or_default();
+        faces.push(sewn_face(ps, boundary, &patch_boundaries, incident)?);
     }
     Ok(Data {
         vertices,
