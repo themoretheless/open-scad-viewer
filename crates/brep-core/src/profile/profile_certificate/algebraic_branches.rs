@@ -117,15 +117,17 @@ fn multiplicity(mut p: Poly, selector: &Poly, range: &[Q; 2]) -> Result<usize> {
     }
     Err(refused("Algebraic branch multiplicity is not finite"))
 }
-pub fn certify_algebraic_branches(input: &[Vec<ExactRatio>]) -> Result<VerifiedAlgebraicBranches> {
-    let h = decode(input)?;
-    let encoded = h
-        .iter()
-        .map(|r| r.iter().map(atlas_roots::ratio).collect::<Vec<_>>())
-        .collect::<Vec<_>>();
+const MAX_GRAPH_ENTITIES: usize = 16384;
+/// Vertex id of every (cut, fiber rank).
+type VertexIds = BTreeMap<(usize, usize), u32>;
+fn decode_interval(r: &[ExactRatio; 2]) -> Result<[Q; 2]> {
+    Ok([atlas_roots::decode(&r[0])?, atlas_roots::decode(&r[1])?])
+}
+/// Hex SHA-256 of the exact coefficient tensor under a fixed domain tag.
+fn source_digest(h: &[Poly]) -> String {
     let mut hash = Sha256::new();
     hash.update(b"exact-algebraic-branch-square-v1");
-    for r in &h {
+    for r in h {
         hash.update(b"[");
         for q in r {
             hash.update(q.numer().to_string());
@@ -135,32 +137,23 @@ pub fn certify_algebraic_branches(input: &[Vec<ExactRatio>]) -> Result<VerifiedA
         }
         hash.update(b"]");
     }
-    let source = hash.finalize().iter().map(|b| format!("{b:02x}")).collect();
-    let decomposition = branches::decompose(&h, None, &Q::new(1.into(), 65536.into()))?;
-    let (radical, content) = original_radical(&h)?;
-    let projection = decomposition
-        .projection
-        .iter()
-        .map(atlas_roots::decode)
-        .collect::<Result<Poly>>()?;
-    let relation = decomposition
-        .fiber_relation
-        .iter()
-        .map(|r| r.iter().map(atlas_roots::decode).collect())
-        .collect::<Result<Vec<Poly>>>()?;
+    hash.finalize().iter().map(|b| format!("{b:02x}")).collect()
+}
+/// One vertex per fiber node of every critical cut. A node is singular when
+/// both partial derivatives of the radical vanish there.
+fn branch_vertices(
+    decomposition: &ParameterBranchDecomposition,
+    relation: &[Poly],
+    projection: &Poly,
+    radical: &[Poly],
+) -> Result<(Vec<AlgebraicBranchVertex>, VertexIds)> {
     let dx = radical.iter().map(|r| derivative(r)).collect::<Vec<_>>();
-    let dy = dy(&radical);
+    let dy = dy(radical);
     let mut vertices = vec![];
     let mut ids = BTreeMap::new();
     for (cut, c) in decomposition.cuts.iter().enumerate() {
-        let x = c
-            .parameter
-            .each_ref()
-            .map(atlas_roots::decode)
-            .into_iter()
-            .collect::<Result<Vec<_>>>()?;
-        let x = [x[0].clone(), x[1].clone()];
-        let mut node_relation = relation.clone();
+        let x = decode_interval(&c.parameter)?;
+        let mut node_relation = relation.to_vec();
         if c.vertical {
             // Only these artificial boundary nodes are added by decompose(None).
             let mut out = vec![vec![]; relation.len() + 2];
@@ -171,12 +164,9 @@ pub fn certify_algebraic_branches(input: &[Vec<ExactRatio>]) -> Result<VerifiedA
             node_relation = out;
         }
         for (rank, range) in c.fibers.iter().enumerate() {
-            let y = [
-                atlas_roots::decode(&range[0])?,
-                atlas_roots::decode(&range[1])?,
-            ];
-            let singular = fibers::zero_at_node(&dx, &node_relation, &projection, &x, &y)?
-                && fibers::zero_at_node(&dy, &node_relation, &projection, &x, &y)?;
+            let y = decode_interval(range)?;
+            let singular = fibers::zero_at_node(&dx, &node_relation, projection, &x, &y)?
+                && fibers::zero_at_node(&dy, &node_relation, projection, &x, &y)?;
             ids.insert((cut, rank), vertices.len() as u32);
             vertices.push(AlgebraicBranchVertex {
                 cut,
@@ -186,13 +176,23 @@ pub fn certify_algebraic_branches(input: &[Vec<ExactRatio>]) -> Result<VerifiedA
             });
         }
     }
+    Ok((vertices, ids))
+}
+/// One edge per root section of every slab, joining its limits on the two
+/// neighbouring cuts.
+fn section_edges(
+    h: &Vec<Poly>,
+    decomposition: &ParameterBranchDecomposition,
+    relation: &Vec<Poly>,
+    ids: &VertexIds,
+) -> Result<Vec<AlgebraicBranchEdge>> {
     let mut edges = vec![];
     for (slab, s) in decomposition.slabs.iter().enumerate() {
         let u = atlas_roots::decode(&s.sample)?;
-        let f = bi::fiber(&h, &u);
-        let selector = bi::fiber(&relation, &u);
+        let f = bi::fiber(h, &u);
+        let selector = bi::fiber(relation, &u);
         for (rank, r) in s.roots.iter().enumerate() {
-            let range = [atlas_roots::decode(&r[0])?, atlas_roots::decode(&r[1])?];
+            let range = decode_interval(r)?;
             let a = *ids
                 .get(&(slab, decomposition.cuts[slab].right[rank]))
                 .ok_or_else(|| refused("Missing left algebraic incidence"))?;
@@ -206,80 +206,126 @@ pub fn certify_algebraic_branches(input: &[Vec<ExactRatio>]) -> Result<VerifiedA
             });
         }
     }
+    Ok(edges)
+}
+/// One edge per arc of every vertical cut, with the multiplicity of the
+/// content at that cut.
+fn vertical_edges(
+    decomposition: &ParameterBranchDecomposition,
+    content: &Poly,
+    projection: &Poly,
+    ids: &VertexIds,
+) -> Result<Vec<AlgebraicBranchEdge>> {
+    let node = |cut: usize, rank: usize| {
+        ids.get(&(cut, rank))
+            .copied()
+            .ok_or_else(|| refused("Missing vertical algebraic incidence"))
+    };
+    let mut edges = vec![];
     for (cut, c) in decomposition
         .cuts
         .iter()
         .enumerate()
         .filter(|(_, c)| c.vertical)
     {
-        let x = [
-            atlas_roots::decode(&c.parameter[0])?,
-            atlas_roots::decode(&c.parameter[1])?,
-        ];
-        let m = multiplicity(content.clone(), &projection, &x)?;
+        let x = decode_interval(&c.parameter)?;
+        let m = multiplicity(content.clone(), projection, &x)?;
         for [a, b] in &c.vertical_arcs {
             edges.push(AlgebraicBranchEdge {
                 kind: AlgebraicBranchKind::Vertical { cut, rank: *a },
-                endpoints: [ids[&(cut, *a)], ids[&(cut, *b)]],
+                endpoints: [node(cut, *a)?, node(cut, *b)?],
                 multiplicity: m,
             });
         }
     }
-    if vertices.len() + edges.len() > 16384 {
-        return Err(refused("Algebraic branch graph entity budget exceeded"));
+    Ok(edges)
+}
+/// Cyclic position of an edge end around a vertex of `cut`: right sections
+/// by rank, the upward vertical arc, left sections by descending rank, then
+/// the downward vertical arc.
+fn port_order(kind: &AlgebraicBranchKind, side: usize, cut: usize) -> (u8, usize) {
+    match *kind {
+        AlgebraicBranchKind::Section { slab, rank } if slab == cut => (0, rank),
+        AlgebraicBranchKind::Section { rank, .. } => (2, usize::MAX - rank),
+        AlgebraicBranchKind::Vertical { .. } if side == 0 => (1, 0),
+        AlgebraicBranchKind::Vertical { .. } => (3, 0),
     }
+}
+/// Signed, cyclically ordered edge ends at every vertex: +k for the start of
+/// edge k-1 and -k for its end.
+fn assign_ports(vertices: &mut [AlgebraicBranchVertex], edges: &[AlgebraicBranchEdge]) {
     for (id, v) in vertices.iter_mut().enumerate() {
         let mut ports = vec![];
         for (k, e) in edges.iter().enumerate() {
             for side in 0..2 {
                 if e.endpoints[side] as usize == id {
                     let signed = (k + 1) as i32 * if side == 0 { 1 } else { -1 };
-                    let order = match e.kind {
-                        AlgebraicBranchKind::Section { slab, rank } => {
-                            if slab == v.cut {
-                                (0, rank)
-                            } else {
-                                (2, usize::MAX - rank)
-                            }
-                        }
-                        AlgebraicBranchKind::Vertical { .. } => {
-                            if side == 0 {
-                                (1, 0)
-                            } else {
-                                (3, 0)
-                            }
-                        }
-                    };
-                    ports.push((order, signed));
+                    ports.push((port_order(&e.kind, side, v.cut), signed));
                 }
             }
         }
         ports.sort_by_key(|p| p.0);
         v.ports = ports.into_iter().map(|p| p.1).collect();
     }
+}
+fn graph_components(
+    vertices: &[AlgebraicBranchVertex],
+    edges: &[AlgebraicBranchEdge],
+) -> Vec<AlgebraicBranchComponent> {
     let mut components = vec![];
     let mut seen = BTreeSet::new();
     for start in 0..vertices.len() as u32 {
-        if !seen.contains(&start) {
-            let mut stack = vec![start];
-            let mut vs = BTreeSet::new();
-            let mut es = BTreeSet::new();
-            while let Some(v) = stack.pop() {
-                if seen.insert(v) {
-                    vs.insert(v);
-                    for port in &vertices[v as usize].ports {
-                        let e = port.unsigned_abs() - 1;
-                        es.insert(e);
-                        stack.extend(edges[e as usize].endpoints);
-                    }
-                }
-            }
-            components.push(AlgebraicBranchComponent {
-                vertices: vs.into_iter().collect(),
-                edges: es.into_iter().collect(),
-            });
+        if seen.contains(&start) {
+            continue;
         }
+        let mut stack = vec![start];
+        let mut vs = BTreeSet::new();
+        let mut es = BTreeSet::new();
+        while let Some(v) = stack.pop() {
+            if !seen.insert(v) {
+                continue;
+            }
+            vs.insert(v);
+            for port in &vertices[v as usize].ports {
+                let e = port.unsigned_abs() - 1;
+                es.insert(e);
+                stack.extend(edges[e as usize].endpoints);
+            }
+        }
+        components.push(AlgebraicBranchComponent {
+            vertices: vs.into_iter().collect(),
+            edges: es.into_iter().collect(),
+        });
     }
+    components
+}
+pub fn certify_algebraic_branches(input: &[Vec<ExactRatio>]) -> Result<VerifiedAlgebraicBranches> {
+    let h = decode(input)?;
+    let encoded = h
+        .iter()
+        .map(|r| r.iter().map(atlas_roots::ratio).collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+    let source = source_digest(&h);
+    let decomposition = branches::decompose(&h, None, &Q::new(1.into(), 65536.into()))?;
+    let (radical, content) = original_radical(&h)?;
+    let projection = decomposition
+        .projection
+        .iter()
+        .map(atlas_roots::decode)
+        .collect::<Result<Poly>>()?;
+    let relation = decomposition
+        .fiber_relation
+        .iter()
+        .map(|r| r.iter().map(atlas_roots::decode).collect())
+        .collect::<Result<Vec<Poly>>>()?;
+    let (mut vertices, ids) = branch_vertices(&decomposition, &relation, &projection, &radical)?;
+    let mut edges = section_edges(&h, &decomposition, &relation, &ids)?;
+    edges.extend(vertical_edges(&decomposition, &content, &projection, &ids)?);
+    if vertices.len() + edges.len() > MAX_GRAPH_ENTITIES {
+        return Err(refused("Algebraic branch graph entity budget exceeded"));
+    }
+    assign_ports(&mut vertices, &edges);
+    let components = graph_components(&vertices, &edges);
     let dimension = if h.is_empty() {
         AlgebraicSetDimension::Area
     } else if !edges.is_empty() {
