@@ -89,10 +89,10 @@ fn pole_sphere_all_analytic_pair_kinds_preserve_source_uv_constraints() {
     assert!(pair.unresolved.is_empty(), "{:?}", pair.unresolved);
     assert!(!pair.permits_topology_change());
     assert_eq!(pair.components.len(), 2);
-    for SphereCylinderComponent::Circle {
-        curve, sphere_uv, ..
-    } in &pair.components
-    {
+    for component in &pair.components {
+        let SphereCylinderComponent::Circle { curve, sphere_uv, .. } = component else {
+            panic!("axial pairs give circles");
+        };
         lifts(&centered, sphere_uv, curve);
     }
     let cone = analytic::frustum(0.5, 2., 6.).unwrap();

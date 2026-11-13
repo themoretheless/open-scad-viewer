@@ -31,7 +31,10 @@ fn circle_of(component: &SphereCylinderComponent) -> SphereCylinderCircle<'_> {
         sphere_uv,
         cylinder_uv,
         max_sample_residual,
-    } = component;
+    } = component
+    else {
+        panic!("expected a circle component");
+    };
     (
         curve,
         *center,
@@ -343,21 +346,46 @@ fn near_axial_offset_within_the_band_stays_unresolved() {
 }
 
 #[test]
-fn clearly_off_axis_pairs_are_unsupported_regions() {
+fn off_axis_spheres_between_the_caps_are_traced_and_complete() {
     let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
-    let sphere = translated(&brep_core::analytic::sphere(3.).unwrap(), [0.5, 0., 4.]);
+    for (radius, at) in [(3., [0.5, 0., 4.]), (1., [2.3, 0.4, 3.]), (1.5, [-0.7, 1.9, 5.])] {
+        let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        assert!(report.unresolved.is_empty(), "{radius} at {at:?}: {:?}", report.unresolved);
+        assert!(!report.components.is_empty());
+        for component in &report.components {
+            let SphereCylinderComponent::Traced { pieces, distance_bound, complete, .. } = component
+            else {
+                panic!("expected a traced loop");
+            };
+            assert!(*distance_bound <= crate::TRACE_TOLERANCE);
+            assert!(*complete, "{radius} at {at:?}");
+            for piece in pieces {
+                for k in 0..=40 {
+                    let p = piece.evaluate(k as f64 / 40.).unwrap().point;
+                    let d = sub([p[0], p[1], p[2]], at);
+                    assert!((d[0].hypot(d[1]).hypot(d[2]) - radius).abs() <= crate::TRACE_TOLERANCE);
+                    assert!((p[0].hypot(p[1]) - 2.).abs() <= crate::TRACE_TOLERANCE);
+                }
+            }
+        }
+    }
+    // Provable misses between the caps: outside and inside the wall.
+    for (radius, at) in [(1., [4., 0., 4.]), (0.5, [0.7, 0., 4.])] {
+        let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
+        let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
+        assert!(report.components.is_empty() && report.unresolved.is_empty(), "{report:?}");
+    }
+}
+
+#[test]
+fn off_axis_spheres_reaching_a_cap_stay_unsupported() {
+    let cylinder = brep_core::analytic::cylinder(2., 8.).unwrap();
+    let sphere = translated(&brep_core::analytic::sphere(3.).unwrap(), [0.5, 0., 6.]);
     let report = intersect_sphere_cylinder(&sphere, &cylinder, Options::default()).unwrap();
     assert!(report.components.is_empty(), "{report:?}");
     assert_eq!(report.coverage, Coverage::Incomplete);
-    assert_eq!(report.unresolved.len(), 1);
-    assert_eq!(
-        report.unresolved[0].reason,
-        UnresolvedReason::UnsupportedSurface
-    );
-    assert_eq!(
-        report.unresolved[0].parameter_box,
-        vec![0., 1., 0., 1., 0., 1., 0., 1.]
-    );
+    assert_eq!(report.unresolved[0].reason, UnresolvedReason::UnsupportedSurface);
 }
 
 #[test]

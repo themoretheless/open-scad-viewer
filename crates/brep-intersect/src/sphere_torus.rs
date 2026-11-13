@@ -54,7 +54,7 @@
 #[cfg(feature = "codec")]
 mod serialization;
 mod boolean;
-mod completeness;
+pub(crate) mod completeness;
 mod traced_lift;
 pub use boolean::sphere_torus_boolean;
 pub use traced_lift::LIFT_TOLERANCE;

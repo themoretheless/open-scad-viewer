@@ -222,6 +222,52 @@ impl Implicit for SphereImplicit {
     }
 }
 
+/// Infinite circular cylinder about `axis` through `center`:
+/// `g = x^2 + y^2 - R^2` in local coordinates, so `|d| = |g| / (rho + R)`
+/// and `|d| <= |g| / R`.
+pub(crate) struct CylinderImplicit {
+    pub(crate) center: P,
+    /// In-plane x, in-plane y, axis.
+    pub(crate) frame: [P; 3],
+    pub(crate) radius: f64,
+}
+impl CylinderImplicit {
+    fn planar(&self, p: P) -> [f64; 2] {
+        let d = sub(p, self.center);
+        [dot(d, self.frame[0]), dot(d, self.frame[1])]
+    }
+}
+impl Implicit for CylinderImplicit {
+    fn value(&self, p: P) -> f64 {
+        let [x, y] = self.planar(p);
+        x * x + y * y - self.radius * self.radius
+    }
+    fn gradient(&self, p: P) -> P {
+        let [x, y] = self.planar(p);
+        std::array::from_fn(|k| 2. * (x * self.frame[0][k] + y * self.frame[1][k]))
+    }
+    fn compose(&self, xyz: &[Bern; 3]) -> Result<Bern> {
+        let w = Bern::constant(1., 0);
+        let (g, _) = self.compose_homogeneous(&[xyz[0].clone(), xyz[1].clone(), xyz[2].clone(), w])?;
+        Ok(g)
+    }
+    fn distance_factor(&self, _: &[Bern; 3]) -> f64 {
+        1. / self.radius
+    }
+    fn compose_homogeneous(&self, xyzw: &[Bern; 4]) -> Result<(Bern, i32)> {
+        let w = &xyzw[3];
+        let mut sum = w.mul(w)?.scale(-self.radius * self.radius)?;
+        for axis in &self.frame[..2] {
+            let mut l = xyzw[0].sub(&w.scale(self.center[0])?)?.scale(axis[0])?;
+            for k in 1..3 {
+                l = l.add(&xyzw[k].sub(&w.scale(self.center[k])?)?.scale(axis[k])?)?;
+            }
+            sum = sum.add(&l.mul(&l)?)?;
+        }
+        Ok((sum, 2))
+    }
+}
+
 /// Ring torus about `axis` through `center`: in local coordinates
 /// `g = (|q|^2 + R^2 - r^2)^2 - 4 R^2 (x^2 + y^2)`, which factors as
 /// `(q_d^2 - r^2)((rho + R)^2 + z^2 - r^2)` with `q_d` the distance to the

@@ -275,8 +275,12 @@
         let inside = run(&place(1., 0., 4.), &cylinder);
         assert_eq!(inside["coverage"].as_str(), Some("numerically_resolved"));
         assert_eq!(inside["components"].as_array().map(Vec::len), Some(0));
-        // Clearly off-axis: the general quartic is out of scope.
-        let off_axis = run(&place(3., 0.5, 4.), &cylinder);
+        // Off-axis between the caps: a traced, certified, complete loop.
+        let traced = run(&place(3., 0.5, 4.), &cylinder);
+        assert_eq!(traced["components"][0]["kind"].as_str(), Some("traced"));
+        assert_eq!(traced["components"][0]["complete"].as_bool(), Some(true));
+        // Off-axis and reaching a cap: still out of scope.
+        let off_axis = run(&place(3., 0.5, 6.), &cylinder);
         assert_eq!(
             off_axis["unresolved"][0]["reason"].as_str(),
             Some("unsupported_surface")

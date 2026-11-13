@@ -361,6 +361,66 @@ impl Chart<'_> {
     }
 }
 
+/// The other surface of a sphere pair, as a homogeneous polynomial in
+/// world coordinates.
+pub(crate) enum Quadric<'a> {
+    Torus(&'a CanonicalTorus),
+    Cylinder {
+        center: [f64; 3],
+        /// In-plane x, in-plane y, axis.
+        frame: [[f64; 3]; 3],
+        radius: f64,
+    },
+}
+
+/// Homogeneous equation of `other` on a rational biquadratic patch.
+fn on_patch(other: &Quadric<'_>, surface: &nurbs_core::surface::Surface) -> Result<Bern2> {
+    match other {
+        Quadric::Torus(torus) => torus_on_patch(torus, surface),
+        Quadric::Cylinder { center, frame, radius } => {
+            let (w, local) = local_coordinates(surface, *center, *frame)?;
+            local[0]
+                .mul(&local[0])?
+                .add(&local[1].mul(&local[1])?)?
+                .sub(&w.mul(&w)?.scale(radius * radius)?)
+        }
+    }
+}
+
+/// Weight and local homogeneous coordinates of a patch.
+fn local_coordinates(
+    surface: &nurbs_core::surface::Surface,
+    center: [f64; 3],
+    frame: [[f64; 3]; 3],
+) -> Result<(Bern2, Vec<Bern2>)> {
+    let coordinate = |k: usize| -> Bern2 {
+        Bern2(
+            surface
+                .control_points
+                .iter()
+                .zip(&surface.weights)
+                .map(|(row, w)| {
+                    row.iter()
+                        .zip(w)
+                        .map(|(p, w)| Interval::point(if k < 3 { p[k] * w } else { *w }))
+                        .collect()
+                })
+                .collect(),
+        )
+    };
+    let w = coordinate(3);
+    let mut local = Vec::with_capacity(3);
+    for axis in frame {
+        let mut sum = Bern2::constant(0.);
+        for k in 0..3 {
+            let shifted = coordinate(k).sub(&w.scale(center[k])?)?;
+            sum = sum.add(&shifted.scale(axis[k])?)?;
+        }
+        local.push(sum);
+    }
+    Ok((w, local))
+}
+
 /// Homogeneous torus equation on a rational biquadratic patch.
 fn torus_on_patch(torus: &CanonicalTorus, surface: &nurbs_core::surface::Surface) -> Result<Bern2> {
     let coordinate = |k: usize| -> Bern2 {
@@ -405,6 +465,16 @@ pub(super) fn certify_complete(
     sphere_model: &Model,
     loops: &[Vec<Curve>],
 ) -> bool {
+    certify_complete_against(sphere, &Quadric::Torus(torus), sphere_model, loops)
+}
+
+/// [`certify_complete`] against any supported quadric.
+pub(crate) fn certify_complete_against(
+    sphere: &CanonicalSphere,
+    other: &Quadric<'_>,
+    sphere_model: &Model,
+    loops: &[Vec<Curve>],
+) -> bool {
     (|| -> Result<bool> {
         for (face, model_face) in sphere_model.faces.iter().enumerate() {
             let surface = &model_face.surface;
@@ -446,7 +516,7 @@ pub(super) fn certify_complete(
                     });
                 }
             }
-            let f = torus_on_patch(torus, surface)?;
+            let f = on_patch(other, surface)?;
             let mut chart = Chart {
                 spans: &spans,
                 budget: 20_000,
