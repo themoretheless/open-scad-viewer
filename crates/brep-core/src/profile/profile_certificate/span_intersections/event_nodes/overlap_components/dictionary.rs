@@ -44,24 +44,26 @@ fn compare(
     };
     parameter_cmp(&wrap(a), side, &wrap(b), other, l)
 }
-fn derive(o: &OwnedOriginalCommonDictionary) -> Result<Vec<OriginalCommonEdge>> {
-    if o.sources.len() > 32
-        || !o.width.is_finite()
-        || !(1e-18..=1e-3).contains(&o.width)
-        || o.limits.max_refinements > 512
-        || !(1..=128).contains(&o.limits.max_resultant_size)
-    {
-        return Err(refused(
-            "Invalid original common dictionary source census or limits",
-        ));
-    }
+const MAX_SOURCES: usize = 32;
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+const MAX_PARTITIONS: usize = 4096;
+const MAX_SEGMENTS: usize = 4096;
+const MATCHING_WORK: usize = 65536;
+/// One segment of one common partition, as (partition, segment).
+type Candidate = (usize, usize);
+/// Other candidates on the same edge, each with whether it runs reversed.
+type Links = Vec<Vec<(usize, bool)>>;
+/// Every source pair has one verified owner over exactly those two sources;
+/// returns the (pair, component) of every common component, in order.
+fn expected_partitions(o: &OwnedOriginalCommonDictionary) -> Result<Vec<(usize, usize)>> {
     let expected = (0..o.sources.len())
         .flat_map(|a| (a..o.sources.len()).map(move |b| [a, b]))
         .collect::<Vec<_>>();
     if o.pairs != expected || o.owners.len() != expected.len() {
         return Err(refused("Original common dictionary omits a source pair"));
     }
-    let mut expected_parts = Vec::new();
+    let mut parts = Vec::new();
     for (pair, (&ids, owner)) in o.pairs.iter().zip(&o.owners).enumerate() {
         owner.reverify_source()?;
         if owner.owner().sources() != &[o.sources[ids[0]].clone(), o.sources[ids[1]].clone()]
@@ -72,18 +74,23 @@ fn derive(o: &OwnedOriginalCommonDictionary) -> Result<Vec<OriginalCommonEdge>> 
                 "Original common dictionary pair rebound to different sources",
             ));
         }
-        for component in 0..owner.components().len() {
-            expected_parts.push((pair, component));
-        }
+        parts.extend((0..owner.components().len()).map(|component| (pair, component)));
     }
-    if expected_parts.len() != o.partitions.len() || o.partitions.len() > 4096 {
+    if parts.len() != o.partitions.len() || o.partitions.len() > MAX_PARTITIONS {
         return Err(refused(
             "Original common dictionary component coverage is incomplete",
         ));
     }
+    Ok(parts)
+}
+/// Every stored partition is the verified partition of its expected
+/// component; returns all their segments.
+fn segment_candidates(
+    o: &OwnedOriginalCommonDictionary,
+    expected: &[(usize, usize)],
+) -> Result<Vec<Candidate>> {
     let mut candidates = Vec::new();
-    for (partition, (p, &(pair, component))) in o.partitions.iter().zip(&expected_parts).enumerate()
-    {
+    for (partition, (p, &(pair, component))) in o.partitions.iter().zip(expected).enumerate() {
         if p.pair != pair
             || p.component != component
             || !Arc::ptr_eq(p.owner.base(), &o.owners[pair])
@@ -95,111 +102,146 @@ fn derive(o: &OwnedOriginalCommonDictionary) -> Result<Vec<OriginalCommonEdge>> 
             ));
         }
         p.owner.reverify_source()?;
-        for segment in 0..p.owner.segments().len() {
-            candidates.push((partition, segment));
-        }
+        candidates.extend((0..p.owner.segments().len()).map(|segment| (partition, segment)));
     }
-    if candidates.len() > 4096 {
+    if candidates.len() > MAX_SEGMENTS {
         return Err(refused(
             "Original common dictionary edge allowance exceeded",
         ));
     }
+    Ok(candidates)
+}
+/// How two segments relate on one shared source. `Some(reverse)` when they
+/// are the same interval, `None` when they do not overlap; a partial overlap
+/// is refused.
+fn relate(
+    x: [&AlgebraicEventPosition; 2],
+    sa: usize,
+    y: [&AlgebraicEventPosition; 2],
+    sb: usize,
+    l: ParameterOrderLimits,
+) -> Result<Option<bool>> {
+    let same = |a: &AlgebraicEventPosition, b: &AlgebraicEventPosition| -> Result<bool> {
+        Ok(compare(a, sa, b, sb, l)? == Ordering::Equal)
+    };
+    let forward = same(x[0], y[0])? && same(x[1], y[1])?;
+    let reverse = same(x[0], y[1])? && same(x[1], y[0])?;
+    if forward || reverse {
+        return Ok(Some(reverse));
+    }
+    let xi = if compare(x[0], sa, x[1], sa, l)? == Ordering::Less {
+        [0, 1]
+    } else {
+        [1, 0]
+    };
+    let yi = if compare(y[0], sb, y[1], sb, l)? == Ordering::Less {
+        [0, 1]
+    } else {
+        [1, 0]
+    };
+    if compare(x[xi[0]], sa, y[yi[1]], sb, l)? == Ordering::Less
+        && compare(y[yi[0]], sb, x[xi[1]], sa, l)? == Ordering::Less
+    {
+        return Err(refused(
+            "Original common dictionary has an unaligned partial source interval",
+        ));
+    }
+    Ok(None)
+}
+/// Links every two segments that are the same interval of a shared source.
+fn link_candidates(o: &OwnedOriginalCommonDictionary, candidates: &[Candidate]) -> Result<Links> {
     let endpoints = |candidate: usize| {
         let (p, s) = candidates[candidate];
         let owner = &o.partitions[p].owner;
         let cuts = owner.segments()[s].cuts;
         [&owner.cuts()[cuts[0]].exact, &owner.cuts()[cuts[1]].exact]
     };
-    let mut links = vec![Vec::<(usize, bool)>::new(); candidates.len()];
+    let sources = |candidate: usize| o.pairs[o.partitions[candidates[candidate].0].pair];
+    let mut links = vec![Vec::new(); candidates.len()];
     let mut work = 0usize;
     for a in 0..candidates.len() {
         for b in a + 1..candidates.len() {
-            let pa = o.pairs[o.partitions[candidates[a].0].pair];
-            let pb = o.pairs[o.partitions[candidates[b].0].pair];
-            for sa in 0..2 {
-                for sb in 0..2 {
-                    if pa[sa] != pb[sb] {
-                        continue;
-                    }
-                    work += 1;
-                    if work > 65536 {
-                        return Err(refused(
-                            "Original common dictionary matching allowance exceeded",
-                        ));
-                    }
-                    let x = endpoints(a);
-                    let y = endpoints(b);
-                    let forward = compare(x[0], sa, y[0], sb, o.limits)? == Ordering::Equal
-                        && compare(x[1], sa, y[1], sb, o.limits)? == Ordering::Equal;
-                    let reverse = compare(x[0], sa, y[1], sb, o.limits)? == Ordering::Equal
-                        && compare(x[1], sa, y[0], sb, o.limits)? == Ordering::Equal;
-                    if forward || reverse {
-                        links[a].push((b, reverse));
-                        links[b].push((a, reverse));
-                        continue;
-                    }
-                    let xi = if compare(x[0], sa, x[1], sa, o.limits)? == Ordering::Less {
-                        [0, 1]
-                    } else {
-                        [1, 0]
-                    };
-                    let yi = if compare(y[0], sb, y[1], sb, o.limits)? == Ordering::Less {
-                        [0, 1]
-                    } else {
-                        [1, 0]
-                    };
-                    if compare(x[xi[0]], sa, y[yi[1]], sb, o.limits)? == Ordering::Less
-                        && compare(y[yi[0]], sb, x[xi[1]], sa, o.limits)? == Ordering::Less
-                    {
-                        return Err(refused(
-                            "Original common dictionary has an unaligned partial source interval",
-                        ));
-                    }
+            let (pa, pb) = (sources(a), sources(b));
+            for (sa, sb) in [(0, 0), (0, 1), (1, 0), (1, 1)] {
+                if pa[sa] != pb[sb] {
+                    continue;
+                }
+                work += 1;
+                if work > MATCHING_WORK {
+                    return Err(refused(
+                        "Original common dictionary matching allowance exceeded",
+                    ));
+                }
+                if let Some(reverse) = relate(endpoints(a), sa, endpoints(b), sb, o.limits)? {
+                    links[a].push((b, reverse));
+                    links[b].push((a, reverse));
                 }
             }
         }
     }
-    let mut assigned = vec![None; candidates.len()];
+    Ok(links)
+}
+/// One edge per connected group of linked segments, with a consistent
+/// orientation of every member relative to the group's first segment.
+fn orient_edges(candidates: &[Candidate], links: &Links) -> Result<Vec<OriginalCommonEdge>> {
+    let mut assigned: Vec<Option<bool>> = vec![None; candidates.len()];
     let mut edges = Vec::new();
     for seed in 0..candidates.len() {
         if assigned[seed].is_some() {
             continue;
         }
         assigned[seed] = Some(false);
-        let mut queue = vec![seed];
+        let mut queue = vec![(seed, false)];
         let mut members = Vec::new();
-        while let Some(a) = queue.pop() {
-            members.push(a);
-            let parity = assigned[a].unwrap();
+        while let Some((a, parity)) = queue.pop() {
+            members.push((a, parity));
             for &(b, reverse) in &links[a] {
                 let wanted = parity ^ reverse;
-                if let Some(actual) = assigned[b] {
-                    if actual != wanted {
+                match assigned[b] {
+                    Some(actual) if actual != wanted => {
                         return Err(refused(
                             "Original common-edge orientation cycle is inconsistent",
                         ));
                     }
-                } else {
-                    assigned[b] = Some(wanted);
-                    queue.push(b);
+                    Some(_) => {}
+                    None => {
+                        assigned[b] = Some(wanted);
+                        queue.push((b, wanted));
+                    }
                 }
             }
         }
         members.sort_unstable();
         let uses = members
             .into_iter()
-            .map(|a| {
+            .map(|(a, reversed)| {
                 let (partition, segment) = candidates[a];
                 OriginalCommonEdgeUse {
                     partition,
                     segment,
-                    reversed: assigned[a].unwrap(),
+                    reversed,
                 }
             })
             .collect();
         edges.push(OriginalCommonEdge { uses });
     }
     Ok(edges)
+}
+fn derive(o: &OwnedOriginalCommonDictionary) -> Result<Vec<OriginalCommonEdge>> {
+    if o.sources.len() > MAX_SOURCES
+        || !o.width.is_finite()
+        || !(1e-18..=1e-3).contains(&o.width)
+        || o.limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&o.limits.max_resultant_size)
+    {
+        return Err(refused(
+            "Invalid original common dictionary source census or limits",
+        ));
+    }
+    let expected = expected_partitions(o)?;
+    let candidates = segment_candidates(o, &expected)?;
+    let links = link_candidates(o, &candidates)?;
+    orient_edges(&candidates, &links)
 }
 impl OwnedOriginalCommonDictionary {
     pub fn sources(&self) -> &[Curve] {
