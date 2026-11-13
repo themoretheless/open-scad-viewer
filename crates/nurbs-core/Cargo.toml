@@ -78,3 +78,7 @@ required-features = ["codec"]
 [[example]]
 name = "surface_collar_correlated"
 required-features = ["codec"]
+
+[[bench]]
+name = "kernels"
+harness = false
