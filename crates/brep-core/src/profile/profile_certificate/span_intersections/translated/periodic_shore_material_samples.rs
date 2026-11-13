@@ -88,6 +88,182 @@ fn record(
         selected: sample.selected(),
     }
 }
+const MAX_ALLOWANCE: usize = 1000000;
+const MAX_LEVELS: usize = 512;
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+/// One interval of one native shore.
+#[derive(Clone, Copy)]
+struct ShoreInterval<'a> {
+    shore: usize,
+    interval: usize,
+    s: &'a OriginalPeriodicNativeShore,
+}
+/// The shared inputs of every interval label.
+struct Sampler<'a> {
+    owner: &'a OwnedPeriodicNativeChartShores,
+    limits: PeriodicShoreMaterialSampleLimits,
+    labels: &'a super::periodic_material::MaterialView,
+    sides: &'a [Arc<OwnedPeriodicSupportSides>],
+    chart: [[Q; 2]; 2],
+    wrapped: [bool; 2],
+    /// Start of every winding query path.
+    base: [ExactRatio; 2],
+}
+impl Sampler<'_> {
+    /// Reuses one existing source-side sample of `row` when its probe,
+    /// transported onto this shore, is the sample's actual material query.
+    fn side_sample(
+        &self,
+        at: ShoreInterval<'_>,
+        row: usize,
+    ) -> Result<Option<OriginalPeriodicShoreMaterialSample>> {
+        let ShoreInterval { shore, interval, s } = at;
+        let side = &self.sides[row];
+        let chart = &self.chart;
+        let lifted = side
+            .probes()
+            .lifted_queries()
+            .iter()
+            .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
+            .collect::<Result<Vec<_>>>()?;
+        let center = std::array::from_fn::<_, 2, _>(|a| {
+            (&lifted[0][a] + &lifted[1][a]) / Q::from_integer(2.into())
+        });
+        let fixed = s.fixed_axis;
+        let source_end = if center[fixed] == chart[fixed][0] {
+            0
+        } else if center[fixed] == chart[fixed][1] {
+            1
+        } else {
+            return Ok(None);
+        };
+        if source_end != s.end && !self.wrapped[fixed] {
+            return Ok(None);
+        }
+        if !self
+            .owner
+            .interior_contains(shore, interval, &center[1 - fixed])?
+        {
+            return Ok(None);
+        }
+        for (k, lifted_probe) in lifted.iter().enumerate() {
+            let delta = &lifted_probe[fixed] - &center[fixed];
+            if (s.end == 0 && delta <= Q::zero()) || (s.end == 1 && delta >= Q::zero()) {
+                continue;
+            }
+            let mut transported = lifted_probe.clone();
+            transported[fixed] += &chart[fixed][s.end] - &center[fixed];
+            if !inside(&transported, chart) {
+                continue;
+            }
+            let Some(sample) = side.samples()[k].as_ref() else {
+                continue;
+            };
+            let actual_query = sample
+                .query()
+                .path()
+                .last()
+                .ok_or_else(|| refused("Owned shore sample lost its actual query"))?;
+            for axis in 0..2 {
+                if decode_ratio(&actual_query[axis])? != transported[axis] {
+                    return Err(refused(
+                        "Transported shore probe does not equal its actual canonical material query",
+                    ));
+                }
+            }
+            // Transport of a selected material label requires the full
+            // actual Surface seam proof and descending operand periods,
+            // both already replayed by the support/selection owner.
+            let mut target_center = center.clone();
+            target_center[fixed] = chart[fixed][s.end].clone();
+            return Ok(Some(record(
+                shore,
+                interval,
+                target_center,
+                transported,
+                OriginalPeriodicShoreSampleOrigin::OwnedSide { row, side: k },
+                sample,
+            )));
+        }
+        Ok(None)
+    }
+    /// An existing source-side certificate handles a coincident carrier
+    /// without ever querying winding on the source or on the chart shore.
+    fn owned(
+        &self,
+        at: ShoreInterval<'_>,
+        work: &mut Work,
+    ) -> Result<Option<OriginalPeriodicShoreMaterialSample>> {
+        for row in 0..self.sides.len() {
+            work.charge()?;
+            if let Some(sample) = self.side_sample(at, row)? {
+                return Ok(Some(sample));
+            }
+        }
+        Ok(None)
+    }
+    /// Labels the interval from a probe on its inward normal: the first
+    /// halving step whose closed leg from the shore avoids every source.
+    fn probed(
+        &self,
+        at: ShoreInterval<'_>,
+        work: &mut Work,
+    ) -> Result<OriginalPeriodicShoreMaterialSample> {
+        let ShoreInterval { shore, interval, s } = at;
+        let l = self.limits;
+        let center = self.owner.interior_uv(shore, interval, l.max_levels)?;
+        let center_dto = center.clone().map(|q| ratio(&q));
+        work.charge()?;
+        if !self.labels.clear(
+            &[center_dto.clone(), center_dto.clone()],
+            l.max_clearance_work,
+        )? {
+            return Err(refused(
+                "Shore sample lies on an original source and needs a locally rebound owned side probe",
+            ));
+        }
+        let fixed = s.fixed_axis;
+        let mut epsilon =
+            (&self.chart[fixed][1] - &self.chart[fixed][0]) / Q::from_integer(2.into());
+        for _ in 0..l.max_levels {
+            let mut probe = center.clone();
+            if s.end == 0 {
+                probe[fixed] += &epsilon
+            } else {
+                probe[fixed] -= &epsilon
+            }
+            if !inside(&probe, &self.chart) {
+                return Err(refused(
+                    "Native shore normal sample escaped the strict original chart",
+                ));
+            }
+            let probe_dto = probe.clone().map(|q| ratio(&q));
+            work.charge()?;
+            if self.labels.clear(
+                &[center_dto.clone(), probe_dto.clone()],
+                l.max_clearance_work,
+            )? {
+                work.charge()?;
+                let sample = self
+                    .labels
+                    .sample(&[self.base.clone(), probe_dto], l.max_winding_work)?;
+                return Ok(record(
+                    shore,
+                    interval,
+                    center,
+                    probe,
+                    OriginalPeriodicShoreSampleOrigin::ClearedNormalLeg,
+                    &sample,
+                ));
+            }
+            epsilon /= Q::from_integer(2.into());
+        }
+        Err(refused(
+            "Native shore inside probe is unresolved within allowance",
+        ))
+    }
+}
 fn derive(
     o: &OwnedPeriodicShoreMaterialSamples,
 ) -> Result<(Vec<OriginalPeriodicShoreMaterialSample>, usize)> {
@@ -100,10 +276,10 @@ fn derive(
         l.max_winding_work,
     ]
     .iter()
-    .any(|n| !(1..=1000000).contains(n))
-        || !(1..=512).contains(&l.max_levels)
-        || o.parameters.max_refinements > 512
-        || !(1..=128).contains(&o.parameters.max_resultant_size)
+    .any(|n| !(1..=MAX_ALLOWANCE).contains(n))
+        || !(1..=MAX_LEVELS).contains(&l.max_levels)
+        || o.parameters.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&o.parameters.max_resultant_size)
         || o.owner.interval_count() > l.max_intervals
     {
         return Err(refused("Invalid native shore material sample allowance"));
@@ -117,13 +293,28 @@ fn derive(
     let lifts = regions.owner().owner();
     let selection = lifts.owner().owner();
     let cover = selection.rule().support().augmented().surface().pieces();
-    let chart = cover.chart().map(|d| d.map(|v| Q::from_float(v).unwrap()));
+    let mut chart = [[Q::zero(), Q::zero()], [Q::zero(), Q::zero()]];
+    for (exact, bounds) in chart.iter_mut().zip(cover.chart()) {
+        for (q, v) in exact.iter_mut().zip(bounds) {
+            *q = Q::from_float(v)
+                .ok_or_else(|| refused("Invalid native shore material sample allowance"))?;
+        }
+    }
     let material = selection.rule().material();
     if !Arc::ptr_eq(labels.rule(), material) {
         return Err(refused(
             "Shore material batch belongs to a different actual rule",
         ));
     }
+    let sampler = Sampler {
+        owner: &o.owner,
+        limits: l,
+        labels: &labels,
+        sides: selection.sides(),
+        chart,
+        wrapped: cover.wrapped(),
+        base: material.base().path()[0].clone(),
+    };
     let mut work = Work {
         used: 0,
         cap: l.max_queries,
@@ -131,140 +322,12 @@ fn derive(
     let mut records = Vec::with_capacity(o.owner.interval_count());
     for (shore, s) in o.owner.shores().iter().enumerate() {
         for interval in 0..s.intervals.len() {
-            let mut owned = None;
-            // An existing source-side certificate handles a coincident carrier
-            // without ever querying winding on the source or on the chart shore.
-            for (row, side) in selection.sides().iter().enumerate() {
-                work.charge()?;
-                let probes = side.probes();
-                let lifted = probes
-                    .lifted_queries()
-                    .iter()
-                    .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
-                    .collect::<Result<Vec<_>>>()?;
-                let center = std::array::from_fn::<_, 2, _>(|a| {
-                    (&lifted[0][a] + &lifted[1][a]) / Q::from_integer(2.into())
-                });
-                let fixed = s.fixed_axis;
-                let source_end = if center[fixed] == chart[fixed][0] {
-                    Some(0)
-                } else if center[fixed] == chart[fixed][1] {
-                    Some(1)
-                } else {
-                    None
-                };
-                let Some(source_end) = source_end else {
-                    continue;
-                };
-                if source_end != s.end && !cover.wrapped()[fixed] {
-                    continue;
-                }
-                if !o
-                    .owner
-                    .interior_contains(shore, interval, &center[1 - fixed])?
-                {
-                    continue;
-                }
-                for k in 0..2 {
-                    let delta = &lifted[k][fixed] - &center[fixed];
-                    if (s.end == 0 && delta <= Q::zero()) || (s.end == 1 && delta >= Q::zero()) {
-                        continue;
-                    }
-                    let mut transported = lifted[k].clone();
-                    transported[fixed] += &chart[fixed][s.end] - &center[fixed];
-                    if !inside(&transported, &chart) {
-                        continue;
-                    }
-                    let Some(sample) = side.samples()[k].as_ref() else {
-                        continue;
-                    };
-                    let actual_query = sample
-                        .query()
-                        .path()
-                        .last()
-                        .ok_or_else(|| refused("Owned shore sample lost its actual query"))?;
-                    for axis in 0..2 {
-                        if decode_ratio(&actual_query[axis])? != transported[axis] {
-                            return Err(refused(
-                                "Transported shore probe does not equal its actual canonical material query",
-                            ));
-                        }
-                    }
-                    // Transport of a selected material label requires the full
-                    // actual Surface seam proof and descending operand periods,
-                    // both already replayed by the support/selection owner.
-                    let mut target_center = center.clone();
-                    target_center[fixed] = chart[fixed][s.end].clone();
-                    owned = Some(record(
-                        shore,
-                        interval,
-                        target_center,
-                        transported,
-                        OriginalPeriodicShoreSampleOrigin::OwnedSide { row, side: k },
-                        sample,
-                    ));
-                    break;
-                }
-                if owned.is_some() {
-                    break;
-                }
-            }
-            if let Some(sample) = owned {
-                records.push(sample);
-                continue;
-            }
-            let center = o.owner.interior_uv(shore, interval, l.max_levels)?;
-            let center_dto = center.clone().map(|q| ratio(&q));
-            work.charge()?;
-            if !labels.clear(
-                &[center_dto.clone(), center_dto.clone()],
-                l.max_clearance_work,
-            )? {
-                return Err(refused(
-                    "Shore sample lies on an original source and needs a locally rebound owned side probe",
-                ));
-            }
-            let fixed = s.fixed_axis;
-            let mut epsilon = (&chart[fixed][1] - &chart[fixed][0]) / Q::from_integer(2.into());
-            let mut found = None;
-            for _ in 0..l.max_levels {
-                let mut probe = center.clone();
-                if s.end == 0 {
-                    probe[fixed] += &epsilon
-                } else {
-                    probe[fixed] -= &epsilon
-                }
-                if !inside(&probe, &chart) {
-                    return Err(refused(
-                        "Native shore normal sample escaped the strict original chart",
-                    ));
-                }
-                let probe_dto = probe.clone().map(|q| ratio(&q));
-                work.charge()?;
-                if labels.clear(
-                    &[center_dto.clone(), probe_dto.clone()],
-                    l.max_clearance_work,
-                )? {
-                    work.charge()?;
-                    let sample = labels.sample(
-                        &[material.base().path()[0].clone(), probe_dto],
-                        l.max_winding_work,
-                    )?;
-                    found = Some(record(
-                        shore,
-                        interval,
-                        center.clone(),
-                        probe,
-                        OriginalPeriodicShoreSampleOrigin::ClearedNormalLeg,
-                        &sample,
-                    ));
-                    break;
-                }
-                epsilon /= Q::from_integer(2.into());
-            }
-            records.push(found.ok_or_else(|| {
-                refused("Native shore inside probe is unresolved within allowance")
-            })?);
+            let at = ShoreInterval { shore, interval, s };
+            let sample = match sampler.owned(at, &mut work)? {
+                Some(sample) => sample,
+                None => sampler.probed(at, &mut work)?,
+            };
+            records.push(sample);
         }
     }
     if records.len() != o.owner.interval_count() {
