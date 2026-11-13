@@ -82,6 +82,118 @@ fn sign(
         .ok_or_else(|| refused("Original chart copy root-check allowance exhausted"))?;
     arithmetic::event_coordinates::sign_at(p, f, root, refinements)
 }
+const MAX_ALLOWANCE: usize = 1000000;
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+/// The native chart and the shared root-check counter of one derivation.
+struct Copier {
+    native: [[Q; 2]; 2],
+    periods: [Q; 2],
+    wrapped: [bool; 2],
+    max_root_checks: usize,
+    refinements: usize,
+    root_checks: usize,
+}
+impl Copier {
+    fn sign(&mut self, p: &Vec<Q>, f: &Vec<Q>, root: &[Q; 2]) -> Result<i8> {
+        sign(
+            p,
+            f,
+            root,
+            &mut self.root_checks,
+            self.max_root_checks,
+            self.refinements,
+        )
+    }
+    /// Canonical coordinate of one chart copy on one axis: the use's position
+    /// minus its whole-period translation, with its exact membership in the
+    /// lower or upper native bound.
+    fn coordinate(
+        &mut self,
+        u: &OriginalPeriodicVertexChartUse,
+        shift: &str,
+        axis: usize,
+        f: &Vec<Q>,
+        root: &[Q; 2],
+    ) -> Result<([ExactPolynomial; 2], Option<usize>)> {
+        let shift: BigInt = shift
+            .parse()
+            .map_err(|_| refused("Invalid actual chart copy period shift"))?;
+        let offset = decode_ratio(&u.translation[axis])?;
+        if offset != Q::from_integer(shift.clone()) * &self.periods[axis]
+            || (!self.wrapped[axis] && !shift.is_zero())
+        {
+            return Err(refused(
+                "Original chart copy transport is not its actual whole period",
+            ));
+        }
+        let mut n = decode_polynomial(&u.position[axis][0])?;
+        let d = decode_polynomial(&u.position[axis][1])?;
+        n.resize(n.len().max(d.len()), Q::zero());
+        for (i, q) in d.iter().enumerate() {
+            n[i] -= &offset * q;
+        }
+        // Exact subtraction may cancel the entire numerator. Preserve
+        // the codec's canonical zero/trailing-coefficient convention
+        // and coefficient ceiling before any derived point is issued.
+        let encoded = [coordinate(&n)?, coordinate(&d)?];
+        let ds = self.sign(&d, f, root)?;
+        if ds == 0 {
+            return Err(refused(
+                "Original chart copy coordinate denominator vanishes",
+            ));
+        }
+        let mut sides = [0i8, 0i8];
+        for end in 0..2 {
+            let mut delta = n.clone();
+            delta.resize(delta.len().max(d.len()), Q::zero());
+            for (i, q) in d.iter().enumerate() {
+                delta[i] -= &self.native[axis][end] * q;
+            }
+            sides[end] = ds * self.sign(&delta, f, root)?;
+        }
+        if sides[0] < 0 || sides[1] > 0 || (sides[0] == 0 && sides[1] == 0) {
+            return Err(refused(
+                "Original canonical chart copy escaped actual native bounds",
+            ));
+        }
+        let bound = if sides[0] == 0 {
+            Some(0)
+        } else if sides[1] == 0 {
+            Some(1)
+        } else {
+            None
+        };
+        Ok((encoded, bound))
+    }
+    /// One canonical copy of a vertex: every use with the same period shift.
+    /// Parent transport proves every use in this group has the SAME
+    /// common point and SAME whole-period offset, even in distinct root
+    /// fields. Subtracting that offset preserves exact copy identity.
+    fn copy(
+        &mut self,
+        v: &OriginalPeriodicVertexChart,
+        period_shift: [String; 2],
+        uses: Vec<usize>,
+    ) -> Result<OriginalPeriodicSourceChartCopy> {
+        let u = &v.uses[uses[0]];
+        let f = decode_polynomial(&u.parameter.primitive)?;
+        let root = [
+            decode_ratio(&u.parameter.interval[0])?,
+            decode_ratio(&u.parameter.interval[1])?,
+        ];
+        let (first, first_bound) = self.coordinate(u, &period_shift[0], 0, &f, &root)?;
+        let (second, second_bound) = self.coordinate(u, &period_shift[1], 1, &f, &root)?;
+        Ok(OriginalPeriodicSourceChartCopy {
+            source_vertex: v.vertex,
+            period_shift,
+            uses,
+            parameter: u.parameter.clone(),
+            uv: [first, second],
+            bounds: [first_bound, second_bound],
+        })
+    }
+}
 fn derive(o: &OwnedPeriodicSourceChartCopies) -> Result<Data> {
     let _replay = super::periodic_replay::scope();
     if [
@@ -90,9 +202,9 @@ fn derive(o: &OwnedPeriodicSourceChartCopies) -> Result<Data> {
         o.limits.max_root_checks,
     ]
     .iter()
-    .any(|n| !(1..=1000000).contains(n))
-        || o.parameter_limits.max_refinements > 512
-        || !(1..=128).contains(&o.parameter_limits.max_resultant_size)
+    .any(|n| !(1..=MAX_ALLOWANCE).contains(n))
+        || o.parameter_limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&o.parameter_limits.max_resultant_size)
     {
         return Err(refused("Invalid original chart copy allowance"));
     }
@@ -104,7 +216,13 @@ fn derive(o: &OwnedPeriodicSourceChartCopies) -> Result<Data> {
     let charts = cycles.rotation().owner().owner();
     let support = cycles.owner().rule().support();
     let cover = support.augmented().surface().pieces();
-    let native = cover.chart().map(|d| d.map(|v| Q::from_float(v).unwrap()));
+    let mut native = [[Q::zero(), Q::zero()], [Q::zero(), Q::zero()]];
+    for (exact, bounds) in native.iter_mut().zip(cover.chart()) {
+        for (q, v) in exact.iter_mut().zip(bounds) {
+            *q =
+                Q::from_float(v).ok_or_else(|| refused("Invalid original chart copy allowance"))?;
+        }
+    }
     let periods = native.clone().map(|d| d[1].clone() - &d[0]);
     let source_uses = charts.charts().iter().try_fold(0usize, |n, v| {
         n.checked_add(v.uses.len())
@@ -115,8 +233,15 @@ fn derive(o: &OwnedPeriodicSourceChartCopies) -> Result<Data> {
             "Complete original chart copy census exceeds allowance",
         ));
     }
+    let mut copier = Copier {
+        native,
+        periods,
+        wrapped: cover.wrapped(),
+        max_root_checks: o.limits.max_root_checks,
+        refinements: o.parameter_limits.max_refinements,
+        root_checks: 0,
+    };
     let mut copies = Vec::new();
-    let mut root_checks = 0;
     for (vertex, v) in charts.charts().iter().enumerate() {
         if v.vertex != vertex {
             return Err(refused(
@@ -131,97 +256,13 @@ fn derive(o: &OwnedPeriodicSourceChartCopies) -> Result<Data> {
             if copies.len() >= o.limits.max_copies {
                 return Err(refused("Original chart copy count exceeds allowance"));
             }
-            let u = &v.uses[uses[0]];
-            let f = decode_polynomial(&u.parameter.primitive)?;
-            let root = [
-                decode_ratio(&u.parameter.interval[0])?,
-                decode_ratio(&u.parameter.interval[1])?,
-            ];
-            let mut uv = [[Vec::new(), Vec::new()], [Vec::new(), Vec::new()]];
-            let mut bounds = [None, None];
-            for axis in 0..2 {
-                let shift: BigInt = period_shift[axis]
-                    .parse()
-                    .map_err(|_| refused("Invalid actual chart copy period shift"))?;
-                let offset = decode_ratio(&u.translation[axis])?;
-                if offset != Q::from_integer(shift.clone()) * &periods[axis]
-                    || (!cover.wrapped()[axis] && !shift.is_zero())
-                {
-                    return Err(refused(
-                        "Original chart copy transport is not its actual whole period",
-                    ));
-                }
-                let mut n = decode_polynomial(&u.position[axis][0])?;
-                let d = decode_polynomial(&u.position[axis][1])?;
-                n.resize(n.len().max(d.len()), Q::zero());
-                for (i, q) in d.iter().enumerate() {
-                    n[i] -= &offset * q;
-                }
-                // Exact subtraction may cancel the entire numerator. Preserve
-                // the codec's canonical zero/trailing-coefficient convention
-                // and coefficient ceiling before any derived point is issued.
-                let encoded = [coordinate(&n)?, coordinate(&d)?];
-                let ds = sign(
-                    &d,
-                    &f,
-                    &root,
-                    &mut root_checks,
-                    o.limits.max_root_checks,
-                    o.parameter_limits.max_refinements,
-                )?;
-                if ds == 0 {
-                    return Err(refused(
-                        "Original chart copy coordinate denominator vanishes",
-                    ));
-                }
-                let mut sides = [0i8, 0i8];
-                for end in 0..2 {
-                    let mut delta = n.clone();
-                    delta.resize(delta.len().max(d.len()), Q::zero());
-                    for (i, q) in d.iter().enumerate() {
-                        delta[i] -= &native[axis][end] * q;
-                    }
-                    sides[end] = ds
-                        * sign(
-                            &delta,
-                            &f,
-                            &root,
-                            &mut root_checks,
-                            o.limits.max_root_checks,
-                            o.parameter_limits.max_refinements,
-                        )?;
-                }
-                if sides[0] < 0 || sides[1] > 0 || (sides[0] == 0 && sides[1] == 0) {
-                    return Err(refused(
-                        "Original canonical chart copy escaped actual native bounds",
-                    ));
-                }
-                bounds[axis] = if sides[0] == 0 {
-                    Some(0)
-                } else if sides[1] == 0 {
-                    Some(1)
-                } else {
-                    None
-                };
-                uv[axis] = encoded;
-            }
-            // Parent transport proves every use in this group has the SAME
-            // common point and SAME whole-period offset, even in distinct root
-            // fields. Subtracting that offset preserves exact copy identity.
-            copies.push(OriginalPeriodicSourceChartCopy {
-                source_vertex: vertex,
-                period_shift,
-                uses,
-                parameter: u.parameter.clone(),
-                uv,
-                bounds,
-            });
+            copies.push(copier.copy(v, period_shift, uses)?);
         }
     }
     Ok(Data {
         copies,
         source_uses,
-        root_checks,
+        root_checks: copier.root_checks,
     })
 }
 impl OwnedPeriodicSourceChartCopies {
