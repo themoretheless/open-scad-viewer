@@ -12,7 +12,7 @@
 //! certified, never forced: a perpendicular offset at pure rounding scale
 //! snaps to the axis, an offset inside the recognition-scale band reports a
 //! `NearCoincidence` region, and a clearly off-axis contact is traced and
-//! certified as `Traced` pieces with sampled cubic UV lifts on both surfaces
+//! certified as `Traced` pieces with certified cubic UV lifts on both surfaces
 //! (see `traced_lift`) unless it provably misses: an off-axis sphere entirely outside the
 //! tube, entirely inside it, or enclosing the whole torus resolves empty. Classification uses outward binary64 bands widened by both
 //! recognition deviations.
@@ -98,8 +98,8 @@ pub enum SphereTorusComponent {
         sphere_uv: Vec<SpherePatchCircle>,
         /// Cubic UV pcurves per torus patch, cut at the patch seams.
         torus_uv: Vec<TorusPatchCurve>,
-        /// Sampled (not certified) bound on the distance of mapped pcurve
-        /// points from the other surface, at most `LIFT_TOLERANCE`.
+        /// Certified bound on the distance of the pcurve images (on their own
+        /// surface) from the other surface, at most `LIFT_TOLERANCE`.
         lift_deviation: f64,
     },
 }

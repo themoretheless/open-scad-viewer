@@ -5,15 +5,18 @@
 //! sampled, inverted exactly into its patch UV (the certified stereographic
 //! inversion of `CanonicalSphere::invert_uv`; on the torus the exact
 //! 90-degree-arc parameter of the revolution and profile angles) and
-//! interpolated by a cubic UV curve. The lift is accepted only when dense
-//! samples of the mapped pcurve, evaluated on the authored face surface,
-//! stay within `LIFT_TOLERANCE` of the other operand. The bound is sampled,
-//! not certified.
+//! interpolated by a cubic UV curve. The lift is accepted only when the
+//! image of the pcurve on the authored face surface is certified within
+//! `LIFT_TOLERANCE` of the other operand: the patch composed with each cubic
+//! UV span is a rational polynomial, the other surface's implicit equation
+//! in homogeneous form becomes a polynomial in the Bernstein basis, and
+//! outward interval bounds with subdivision turn it into a distance bound.
+//! Dense samples serve only as a cheap screen before the certificate.
 use super::*;
 use crate::plane_torus::arc_parameter;
 use nurbs_core::foundation::interpolation::{Parameterization, interpolate_curve};
 
-/// Sampled bound on the distance of mapped pcurve points from the other
+/// Certified bound on the distance of the pcurve images from the other
 /// surface.
 pub const LIFT_TOLERANCE: f64 = 1e-6;
 
@@ -82,6 +85,8 @@ struct Context<'a> {
     torus: &'a CanonicalTorus,
     sphere_model: &'a Model,
     torus_model: &'a Model,
+    sphere_implicit: crate::implicit_trace::SphereImplicit,
+    torus_implicit: crate::implicit_trace::TorusImplicit,
 }
 
 impl Context<'_> {
@@ -116,6 +121,15 @@ impl Context<'_> {
                 "traced point does not invert into its patch",
             )
         })
+    }
+
+    /// Certified distance bound of the pcurve image from the other surface.
+    fn certify(&self, patch: Patch, uv_curve: &Curve) -> Result<Option<f64>> {
+        let (model, f, other): (_, _, &dyn crate::implicit_trace::Implicit) = match patch {
+            Patch::Sphere(f) => (self.sphere_model, f, &self.torus_implicit),
+            Patch::Torus(f) => (self.torus_model, f, &self.sphere_implicit),
+        };
+        crate::implicit_trace::certify_lift(&model.faces[f].surface, uv_curve, other, LIFT_TOLERANCE)
     }
 
     /// Worst distance of mapped pcurve samples from the other surface.
@@ -225,7 +239,11 @@ fn lift_side(
                         .collect(),
                     ..fitted
                 };
-                let deviation = ctx.deviation(patch, &curve)?;
+                // Cheap sampled screen first, then the certificate.
+                let mut deviation = ctx.deviation(patch, &curve)?;
+                if deviation <= LIFT_TOLERANCE {
+                    deviation = ctx.certify(patch, &curve)?.unwrap_or(f64::INFINITY);
+                }
                 if deviation <= LIFT_TOLERANCE || count >= 129 {
                     break (curve, deviation);
                 }
@@ -264,6 +282,16 @@ pub(super) fn lift_traced(
         torus,
         sphere_model,
         torus_model,
+        sphere_implicit: crate::implicit_trace::SphereImplicit {
+            center: sphere.center,
+            radius: sphere.radius,
+        },
+        torus_implicit: crate::implicit_trace::TorusImplicit {
+            center: torus.center,
+            frame: [torus.frame[0], torus.frame[1], torus.axis],
+            major: torus.major,
+            minor: torus.minor,
+        },
     };
     let (s, ds) = lift_side(&ctx, pieces, false)?;
     let (t, dt) = lift_side(&ctx, pieces, true)?;

@@ -139,6 +139,28 @@ impl Bern {
         }
         Ok(Self(out))
     }
+    /// Hull of the coefficients: encloses `p(t)` on `[0, 1]`.
+    fn hull(&self) -> Result<Interval> {
+        let lo = self.0.iter().map(|x| x.lo).fold(f64::INFINITY, f64::min);
+        let hi = self.0.iter().map(|x| x.hi).fold(f64::NEG_INFINITY, f64::max);
+        Interval::new(lo, hi)
+    }
+    /// De Casteljau halves on `[0, 1/2]` and `[1/2, 1]`.
+    fn halves(&self) -> Result<(Self, Self)> {
+        let half = Interval::point(0.5);
+        let mut row = self.0.clone();
+        let (mut left, mut right) = (vec![row[0]], vec![*row.last().unwrap()]);
+        while row.len() > 1 {
+            row = row
+                .windows(2)
+                .map(|w| w[0].add(w[1])?.mul(half))
+                .collect::<Result<_>>()?;
+            left.push(row[0]);
+            right.push(*row.last().unwrap());
+        }
+        right.reverse();
+        Ok((Self(left), Self(right)))
+    }
     /// Upper bound of `|p(t)|` on `[0, 1]` (convex-hull property).
     fn magnitude(&self) -> f64 {
         self.0
@@ -159,6 +181,9 @@ pub(crate) trait Implicit {
     /// `distance <= |g| * factor` for points of a span whose control points
     /// (and so the whole span, by the convex-hull property) lie in `xyz`.
     fn distance_factor(&self, xyz: &[Bern; 3]) -> f64;
+    /// Homogeneous form for rational points `X / W`: returns `(G, k)` with
+    /// `g(X / W) = G / W^k`.
+    fn compose_homogeneous(&self, xyzw: &[Bern; 4]) -> Result<(Bern, i32)>;
 }
 
 /// `|p - c|^2 - r^2`; `|d| = |g| / (|p - c| + r) <= |g| / r`.
@@ -185,6 +210,15 @@ impl Implicit for SphereImplicit {
     }
     fn distance_factor(&self, _: &[Bern; 3]) -> f64 {
         1. / self.radius
+    }
+    fn compose_homogeneous(&self, xyzw: &[Bern; 4]) -> Result<(Bern, i32)> {
+        let w = &xyzw[3];
+        let mut sum = w.mul(w)?.scale(-self.radius * self.radius)?;
+        for k in 0..3 {
+            let d = xyzw[k].sub(&w.scale(self.center[k])?)?;
+            sum = sum.add(&d.mul(&d)?)?;
+        }
+        Ok((sum, 2))
     }
 }
 
@@ -244,6 +278,25 @@ impl Implicit for TorusImplicit {
             .add(&local[2].mul(&local[2])?)?
             .add(&Bern::constant(r2 - m2, 0))?;
         s.mul(&s)?.sub(&planar.scale(4. * r2)?)
+    }
+    fn compose_homogeneous(&self, xyzw: &[Bern; 4]) -> Result<(Bern, i32)> {
+        let w = &xyzw[3];
+        let shifted: Vec<Bern> = (0..3)
+            .map(|k| xyzw[k].sub(&w.scale(self.center[k])?))
+            .collect::<Result<_>>()?;
+        let mut local = Vec::with_capacity(3);
+        for axis in self.frame {
+            let mut sum = shifted[0].scale(axis[0])?;
+            for k in 1..3 {
+                sum = sum.add(&shifted[k].scale(axis[k])?)?;
+            }
+            local.push(sum);
+        }
+        let (r2, m2) = (self.major * self.major, self.minor * self.minor);
+        let w2 = w.mul(w)?;
+        let planar = local[0].mul(&local[0])?.add(&local[1].mul(&local[1])?)?;
+        let s = planar.add(&local[2].mul(&local[2])?)?.add(&w2.scale(r2 - m2)?)?;
+        Ok((s.mul(&s)?.sub(&planar.mul(&w2)?.scale(4. * r2)?)?, 4))
     }
     fn distance_factor(&self, xyz: &[Bern; 3]) -> f64 {
         // The second factor is at least (rho_min + R)^2 - r^2, where rho_min
@@ -551,6 +604,122 @@ pub(crate) fn trace_intersection(
         })?);
     }
     Ok(out)
+}
+
+/// Homogeneous Bernstein coordinates `[X, Y, Z, W]` of a single-span
+/// rational Bezier patch composed with a Bezier UV span given by the
+/// Bernstein forms of `u(t)` and `v(t)` (already mapped to the patch's
+/// parameter domain).
+pub(crate) fn compose_patch(surface: &nurbs_core::surface::Surface, u: &Bern, v: &Bern) -> Result<[Bern; 4]> {
+    let (p, q) = (surface.degree_u, surface.degree_v);
+    if surface.control_points.len() != p + 1 || surface.control_points[0].len() != q + 1 {
+        return Err(refuse("lift certificate needs a single-span patch"));
+    }
+    let map = |b: &Bern, knots: &[f64], degree: usize| -> Result<Bern> {
+        let (a, z) = (knots[degree], knots[knots.len() - degree - 1]);
+        Ok(Bern(
+            b.0.iter()
+                .map(|x| x.sub(Interval::point(a))?.div(Interval::point(z - a)))
+                .collect::<Result<_>>()?,
+        ))
+    };
+    let (u, v) = (map(u, &surface.knots_u, p)?, map(v, &surface.knots_v, q)?);
+    // Bernstein basis polynomials B_i^n(s(t)) as polynomials in t.
+    let basis = |s: &Bern, n: usize| -> Result<Vec<Bern>> {
+        let one_minus = Bern::constant(1., 0).sub(s)?;
+        (0..=n)
+            .map(|i| {
+                let mut b = Bern::constant(binomial(n, i), 0);
+                for _ in 0..i {
+                    b = b.mul(s)?;
+                }
+                for _ in 0..n - i {
+                    b = b.mul(&one_minus)?;
+                }
+                Ok(b)
+            })
+            .collect()
+    };
+    let (bu, bv) = (basis(&u, p)?, basis(&v, q)?);
+    let mut out: [Bern; 4] = std::array::from_fn(|_| Bern::constant(0., 0));
+    for i in 0..=p {
+        for j in 0..=q {
+            let w = surface.weights[i][j];
+            let b = bu[i].mul(&bv[j])?.scale(w)?;
+            for k in 0..3 {
+                out[k] = out[k].add(&b.scale(surface.control_points[i][j][k])?)?;
+            }
+            out[3] = out[3].add(&b)?;
+        }
+    }
+    Ok(out)
+}
+
+/// Certified bound on the distance from `other` of every point of a
+/// rational span `X / W`, or `None` when subdivision to `depth` cannot
+/// reach `tolerance` (or a weight is not provably positive).
+pub(crate) fn certify_rational_span(
+    other: &dyn Implicit,
+    xyzw: [Bern; 4],
+    tolerance: f64,
+    depth: usize,
+    cells: &mut usize,
+) -> Result<Option<f64>> {
+    *cells += 1;
+    if *cells > 200_000 {
+        return Ok(None);
+    }
+    let w = xyzw[3].hull()?;
+    if w.lo > 0. {
+        let (g, k) = other.compose_homogeneous(&xyzw)?;
+        let box3: [Bern; 3] = std::array::from_fn(|i| {
+            xyzw[i]
+                .hull()
+                .and_then(|x| x.div(w))
+                .map(|x| Bern(vec![x]))
+                .unwrap_or_else(|_| Bern(vec![Interval::point(f64::INFINITY)]))
+        });
+        let bound = g.magnitude() / w.lo.powi(k) * other.distance_factor(&box3);
+        if bound.is_finite() && bound <= tolerance {
+            return Ok(Some(bound));
+        }
+    }
+    if depth == 0 {
+        return Ok(None);
+    }
+    let halves: Vec<(Bern, Bern)> = xyzw.iter().map(Bern::halves).collect::<Result<_>>()?;
+    let left = std::array::from_fn(|i| halves[i].0.clone());
+    let right = std::array::from_fn(|i| halves[i].1.clone());
+    let Some(l) = certify_rational_span(other, left, tolerance, depth - 1, cells)? else {
+        return Ok(None);
+    };
+    let Some(r) = certify_rational_span(other, right, tolerance, depth - 1, cells)? else {
+        return Ok(None);
+    };
+    Ok(Some(l.max(r)))
+}
+
+/// Certified distance bound from `other` of the image of a UV pcurve
+/// (any degree, B-spline) on a single-span patch.
+pub(crate) fn certify_lift(
+    surface: &nurbs_core::surface::Surface,
+    pcurve: &Curve,
+    other: &dyn Implicit,
+    tolerance: f64,
+) -> Result<Option<f64>> {
+    let mut worst = 0_f64;
+    let mut cells = 0;
+    for segment in pcurve.decompose()? {
+        let c = &segment.definition().control_points;
+        let u = Bern(c.iter().map(|p| Interval::point(p[0])).collect());
+        let v = Bern(c.iter().map(|p| Interval::point(p[1])).collect());
+        let xyzw = compose_patch(surface, &u, &v)?;
+        match certify_rational_span(other, xyzw, tolerance, 12, &mut cells)? {
+            Some(b) => worst = worst.max(b),
+            None => return Ok(None),
+        }
+    }
+    Ok(Some(worst))
 }
 
 #[cfg(test)]
