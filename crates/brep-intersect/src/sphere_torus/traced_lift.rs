@@ -134,7 +134,7 @@ impl Other<'_> {
     }
     /// Implicit equation of the surface carrying `face` (a cap plane for a
     /// cylinder cap, the curved surface otherwise).
-    fn implicit_for(&self, face: usize) -> Box<dyn crate::implicit_trace::Implicit> {
+    pub(crate) fn implicit_for(&self, face: usize) -> Box<dyn crate::implicit_trace::Implicit> {
         if let Other::Cylinder(c) = self
             && let Some(slot) = c.caps.iter().position(|&f| f == face)
         {
@@ -526,7 +526,7 @@ pub(super) fn lift_traced(
 fn lift_onto(
     this: Other<'_>,
     this_model: &Model,
-    that: &dyn crate::implicit_trace::Implicit,
+    that: Other<'_>,
     pieces: &[Curve],
 ) -> Result<(Vec<(usize, Vec<Curve>)>, f64)> {
     let refuse = |m: &str| Error::new("BREP_INTERSECTION_LIFT_REFUSED", m.to_string());
@@ -566,8 +566,15 @@ fn lift_onto(
         let mut runs: Vec<(f64, f64, usize)> = breaks.windows(2).map(|w| (w[0], w[1], 0)).collect();
         runs.reverse();
         while let Some((a, b, depth)) = runs.pop() {
-            let face = label(point(piece, 0.5 * (a + b))?)?;
+            let mid = point(piece, 0.5 * (a + b))?;
+            let face = label(mid)?;
             let surface = &this_model.faces[face].surface;
+            // The opposite surface the run lies on (a wall or a cap plane).
+            let that_implicit = match that.patch(mid) {
+                Some(f) => that.implicit_for(f),
+                None => that.implicit(),
+            };
+            let that = that_implicit.as_ref();
             let mut count = 17;
             let (curve, deviation) = loop {
                 let uvs = (0..count)
@@ -619,7 +626,7 @@ pub(crate) fn lift_pair(
     b_model: &Model,
     pieces: &[Curve],
 ) -> Result<(Vec<(usize, Vec<Curve>)>, Vec<(usize, Vec<Curve>)>, f64)> {
-    let (la, da) = lift_onto(a, a_model, b.implicit().as_ref(), pieces)?;
-    let (lb, db) = lift_onto(b, b_model, a.implicit().as_ref(), pieces)?;
+    let (la, da) = lift_onto(a, a_model, b, pieces)?;
+    let (lb, db) = lift_onto(b, b_model, a, pieces)?;
     Ok((la, lb, da.max(db)))
 }

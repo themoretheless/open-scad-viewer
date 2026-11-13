@@ -553,6 +553,106 @@ impl Crossings for CylinderSide<'_> {
     }
 }
 
+/// A planar cap chart: `u = (x / R + 1) / 2`, `v = (y / R + 1) / 2` in the
+/// cap frame, so both iso lines are linear in the point.
+struct Planar<'a> {
+    spans: &'a [LocalSpan],
+    radius: f64,
+}
+
+impl Planar<'_> {
+    fn crossings(&self, span: &LocalSpan, axis: usize, c: f64, lo: f64, hi: f64, depth: usize) -> Option<usize> {
+        let to_uv = |x: f64| (x / self.radius + 1.) * 0.5;
+        let (fixed, free) = if axis == 0 { (&span.x, &span.y) } else { (&span.y, &span.x) };
+        let level = self.radius * (2. * c - 1.);
+        let g: Vec<Interval> = fixed.iter().map(|x| x.sub(Interval::point(level)).ok()).collect::<Option<_>>()?;
+        let (fl, fh) = hull1(free);
+        let other = (to_uv(fl), to_uv(fh));
+        let (gl, gh) = hull1(&g);
+        if gl > 0. || gh < 0. || other.1 < lo || other.0 > hi {
+            return Some(0);
+        }
+        match variations(&g) {
+            Some(0) => return Some(0),
+            Some(1) if other.0 > lo && other.1 < hi => return Some(1),
+            _ => {}
+        }
+        if depth == 0 {
+            return None;
+        }
+        let (xa, xb) = halves1(&span.x).ok()?;
+        let (ya, yb) = halves1(&span.y).ok()?;
+        let (za, zb) = halves1(&span.z).ok()?;
+        Some(
+            self.crossings(&LocalSpan { x: xa, y: ya, z: za }, axis, c, lo, hi, depth - 1)?
+                + self.crossings(&LocalSpan { x: xb, y: yb, z: zb }, axis, c, lo, hi, depth - 1)?,
+        )
+    }
+}
+
+impl Crossings for Planar<'_> {
+    fn boundary_crossings(&self, u: [f64; 2], v: [f64; 2]) -> Option<usize> {
+        let mut total = 0;
+        for span in self.spans {
+            for (axis, c, range) in [(0, u[0], v), (0, u[1], v), (1, v[0], u), (1, v[1], u)] {
+                let n = [0., 1e-11, -1e-11]
+                    .iter()
+                    .find_map(|&eps| self.crossings(span, axis, c + eps, range[0], range[1], 40))?;
+                total += n;
+            }
+        }
+        Some(total)
+    }
+}
+
+/// True when the traced `cap_loops[slot]` provably are all the components
+/// of `other` with each cap plane of a canonical cylinder, over the whole
+/// square cap patch (which contains the cap disk).
+pub(crate) fn certify_complete_on_caps(
+    cylinder: &crate::sphere_cylinder::CanonicalCylinder,
+    cylinder_model: &Model,
+    other: &Quadric<'_>,
+    cap_loops: &[Vec<Vec<Curve>>; 2],
+) -> bool {
+    (|| -> Result<bool> {
+        for (slot, &face) in cylinder.caps.iter().enumerate() {
+            let sign = if slot == 0 { -1. } else { 1. };
+            let origin: [f64; 3] =
+                std::array::from_fn(|k| cylinder.center[k] + sign * cylinder.half_height * cylinder.axis[k]);
+            let frame = [cylinder.frame[0], cylinder.frame[1], cylinder.axis];
+            let surface = &cylinder_model.faces[face].surface;
+            for (u, v) in [(0.2, 0.3), (0.7, 0.9)] {
+                let p = surface.evaluate(u, v)?.point;
+                let d = sub([p[0], p[1], p[2]], origin);
+                let pu = (dot(d, frame[0]) / cylinder.radius + 1.) * 0.5;
+                let pv = (dot(d, frame[1]) / cylinder.radius + 1.) * 0.5;
+                if (pu - u).abs() > 1e-9 || (pv - v).abs() > 1e-9 || dot(d, frame[2]).abs() > 1e-9 {
+                    return Ok(false);
+                }
+            }
+            let mut spans = Vec::new();
+            for piece in cap_loops[slot].iter().flatten() {
+                for segment in piece.decompose()? {
+                    let c = &segment.definition().control_points;
+                    let local = |axis: [f64; 3]| -> Vec<Interval> {
+                        c.iter()
+                            .map(|p| Interval::point(dot(sub([p[0], p[1], p[2]], origin), axis)))
+                            .collect()
+                    };
+                    spans.push(LocalSpan { x: local(frame[0]), y: local(frame[1]), z: local(frame[2]) });
+                }
+            }
+            let f = on_patch(other, surface)?;
+            let chart = Planar { spans: &spans, radius: cylinder.radius };
+            if !certify_square(&chart, f) {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    })()
+    .unwrap_or(false)
+}
+
 /// True when the traced `loops` provably are all the components of the
 /// intersection of `other` with the side wall of a canonical cylinder (the
 /// caller guarantees the contact stays between the cap planes).

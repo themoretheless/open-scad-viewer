@@ -190,7 +190,7 @@ pub(crate) fn traced_boolean(
             let [lo, hi] = piece.domain();
             ts.dedup_by(|x, y| (*x - *y).abs() <= 1e-9 * (hi - lo));
             for t in ts {
-                if t < hi {
+                if t < hi - 1e-9 * (hi - lo) {
                     cuts.push((index, t));
                 }
             }
@@ -463,7 +463,9 @@ fn pair_boolean(
             }
             ts.sort_by(f64::total_cmp);
             ts.dedup_by(|x, y| (*x - *y).abs() <= 1e-9 * (hi - lo));
-            cuts.extend(ts.into_iter().filter(|&t| t < hi).map(|t| (index, t)));
+            // A seam cut at the piece end coincides with the next piece's
+            // start; drop it instead of leaving a sliver.
+            cuts.extend(ts.into_iter().filter(|&t| t < hi - 1e-9 * (hi - lo)).map(|t| (index, t)));
         }
         if cuts.len() < 2 {
             return Err(refuse("Pair Boolean: a traced loop needs two cuts"));
@@ -527,13 +529,13 @@ fn pair_boolean(
                         crate::implicit_trace::certify_lift(
                             &a_model.faces[faces[0]].surface,
                             &pcs[0],
-                            b.implicit().as_ref(),
+                            b.implicit_for(faces[1]).as_ref(),
                             LIFT_TOLERANCE,
                         )?,
                         crate::implicit_trace::certify_lift(
                             &b_model.faces[faces[1]].surface,
                             &pcs[1],
-                            a.implicit().as_ref(),
+                            a.implicit_for(faces[0]).as_ref(),
                             LIFT_TOLERANCE,
                         )?,
                     ];

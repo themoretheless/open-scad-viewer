@@ -63,45 +63,37 @@ pub(crate) struct Slab {
     pub(crate) planes: [(f64, f64); 2],
 }
 
-/// Closed cycles of a sphere contact with any capped solid of revolution.
-pub(crate) fn capped_cycles_in(
-    sphere: &CanonicalSphere,
-    slab: &Slab,
-    loops: &[Vec<Curve>],
-) -> Result<Vec<Vec<Curve>>> {
-    let axis = slab.frame[2];
-    let axial = |p: P| dot(sub(p, slab.origin), axis);
-    let (z_lo, z_hi) = (slab.planes[0].0, slab.planes[1].0);
-    // 1. Wall arcs inside the slab, from each traced loop.
-    let mut wall: Vec<Arc> = Vec::new();
+/// What meets the cap planes.
+pub(crate) enum CapContacts<'a> {
+    /// A sphere: its cap-plane sections are exact circles.
+    Sphere(&'a CanonicalSphere),
+    /// Traced loops of the other surface with each cap plane (bottom, top).
+    Traced(&'a [Vec<Vec<Curve>>; 2]),
+}
+
+/// Split traced loops at the zero set of `h` (negative inside): closed loops
+/// wholly inside, and open inside arcs between boundary crossings.
+fn clip(loops: &[Vec<Curve>], h: &dyn Fn(P) -> f64) -> Result<(Vec<Arc>, Vec<Vec<Curve>>)> {
+    let mut open: Vec<Arc> = Vec::new();
     let mut closed: Vec<Vec<Curve>> = Vec::new();
+    let inside = |p: P| h(p) < 0.;
     for pieces in loops {
-        // Dense samples along the loop with their (piece, t).
         let mut pts: Vec<P> = Vec::new();
-        for piece in pieces {
+        let mut flat: Vec<(usize, f64)> = Vec::new();
+        for (i, piece) in pieces.iter().enumerate() {
             let [lo, hi] = piece.domain();
-            let n = 256;
-            for k in 0..n {
-                pts.push(point(piece, lo + (hi - lo) * k as f64 / n as f64)?);
+            for k in 0..256 {
+                let t = lo + (hi - lo) * k as f64 / 256.;
+                pts.push(point(piece, t)?);
+                flat.push((i, t));
             }
         }
-        let inside = |p: P| (z_lo..z_hi).contains(&axial(p));
         if pts.iter().all(|&p| inside(p)) {
             closed.push(pieces.clone());
             continue;
         }
         if pts.iter().all(|&p| !inside(p)) {
             continue;
-        }
-        // Bisection on the plane crossing between two samples, along the
-        // straight chord refined onto the traced curve: locate the crossing
-        // on the piece parameter instead.
-        let mut flat: Vec<(usize, f64)> = Vec::new();
-        for (i, piece) in pieces.iter().enumerate() {
-            let [lo, hi] = piece.domain();
-            for k in 0..256 {
-                flat.push((i, lo + (hi - lo) * k as f64 / 256.));
-            }
         }
         let start = (0..flat.len()).find(|&k| !inside(pts[k])).expect("some sample outside");
         let n = flat.len();
@@ -110,18 +102,13 @@ pub(crate) fn capped_cycles_in(
             let (k0, k1) = ((start + step - 1) % n, (start + step) % n);
             let (in0, in1) = (inside(pts[k0]), inside(pts[k1]));
             if in0 != in1 {
-                // The crossing lies on the piece of k0 between its two
-                // parameters (or at the shared piece end).
                 let (i, t0) = flat[k0];
                 let t1 = if flat[k1].0 == i { flat[k1].1 } else { pieces[i].domain()[1] };
-                // The plane crossed is the one beyond the outside sample.
-                let outside = if in0 { pts[k1] } else { pts[k0] };
-                let q = if axial(outside) >= z_hi { z_hi } else { z_lo };
-                let f = |t: f64| -> Result<f64> { Ok(axial(point(&pieces[i], t)?) - q) };
+                let f = |t: f64| -> Result<f64> { Ok(h(point(&pieces[i], t)?)) };
                 let (mut a, mut b) = (t0, t1);
                 let fa = f(a)?;
                 if fa * f(b)? > 0. {
-                    return Err(refuse("cap crossing could not be bracketed"));
+                    return Err(refuse("boundary crossing could not be bracketed"));
                 }
                 for _ in 0..80 {
                     let m = 0.5 * (a + b);
@@ -132,28 +119,76 @@ pub(crate) fn capped_cycles_in(
                     }
                 }
                 let cross = point(&pieces[i], 0.5 * (a + b))?;
+                let near = |a: P, b: P| {
+                    let d = sub(a, b);
+                    dot(d, d).sqrt() < 1e-7
+                };
                 if in1 {
-                    current = Some(vec![cross]);
+                    let mut arc = vec![cross];
+                    if !near(cross, pts[k1]) {
+                        arc.push(pts[k1]);
+                    }
+                    current = Some(arc);
                 } else if let Some(mut arc) = current.take() {
+                    // The crossing replaces a sample it nearly coincides with.
+                    if arc.len() > 1 && near(*arc.last().unwrap(), cross) {
+                        arc.pop();
+                    }
                     arc.push(cross);
-                    wall.push(Arc { samples: arc });
+                    open.push(Arc { samples: arc });
                 }
             } else if in1 && let Some(arc) = current.as_mut() {
                 arc.push(pts[k1]);
             }
         }
         if current.is_some() {
-            return Err(refuse("wall arc did not close at a cap plane"));
+            return Err(refuse("an inside arc did not close at the boundary"));
         }
     }
-    // A wall arc grazing a cap plane would show as a sample near it.
-    for arc in &wall {
+    // An arc grazing the boundary would show as an interior sample near it.
+    for arc in &open {
         for &p in &arc.samples[1..arc.samples.len() - 1] {
-            if (axial(p) - z_lo).abs() < 1e-6 || (axial(p) - z_hi).abs() < 1e-6 {
-                return Err(refuse("wall arc touches a cap plane"));
+            if h(p).abs() < 1e-6 {
+                return Err(refuse("a contact arc touches a face boundary"));
             }
         }
     }
+    Ok((open, closed))
+}
+
+/// Closed cycles of a contact with any capped solid of revolution: wall
+/// loops clipped to the slab plus cap contacts clipped to the cap disks.
+pub(crate) fn capped_cycles_in(
+    contacts: CapContacts<'_>,
+    slab: &Slab,
+    loops: &[Vec<Curve>],
+) -> Result<Vec<Vec<Curve>>> {
+    let axis = slab.frame[2];
+    let axial = |p: P| dot(sub(p, slab.origin), axis);
+    let (z_lo, z_hi) = (slab.planes[0].0, slab.planes[1].0);
+    let (wall, mut closed) = clip(loops, &|p| (z_lo - axial(p)).max(axial(p) - z_hi))?;
+    let mut caps: Vec<Arc> = Vec::new();
+    let sphere = match contacts {
+        CapContacts::Sphere(sphere) => sphere,
+        CapContacts::Traced(cap_loops) => {
+            for (slot, (_, big_r)) in slab.planes.iter().enumerate() {
+                if cap_loops[slot].is_empty() {
+                    continue;
+                }
+                if *big_r <= 0. {
+                    return Err(refuse("contact reaches the apex plane of a cone"));
+                }
+                let rho = |p: P| {
+                    let d = sub(p, slab.origin);
+                    dot(d, slab.frame[0]).hypot(dot(d, slab.frame[1]))
+                };
+                let (open, inside) = clip(&cap_loops[slot], &|p| rho(p) - big_r)?;
+                caps.extend(open);
+                closed.extend(inside);
+            }
+            return join(wall, caps, closed);
+        }
+    };
     // 2. Cap arcs: the sphere/cap-plane circle inside the disk.
     let mut caps: Vec<Arc> = Vec::new();
     let offset = sub(sphere.center, slab.origin);
@@ -202,7 +237,11 @@ pub(crate) fn capped_cycles_in(
         let samples: Vec<P> = (0..=n).map(|i| at(a + (b - a) * i as f64 / n as f64)).collect();
         caps.push(Arc { samples });
     }
-    // 3. Join arcs at their shared rim points into cycles.
+    join(wall, caps, closed)
+}
+
+/// Join open wall and cap arcs at their shared rim points into cycles.
+fn join(wall: Vec<Arc>, caps: Vec<Arc>, mut closed: Vec<Vec<Curve>>) -> Result<Vec<Vec<Curve>>> {
     let mut arcs: Vec<(Arc, bool)> = wall.into_iter().map(|a| (a, false)).collect();
     arcs.extend(caps.into_iter().map(|a| (a, false)));
     let same = |a: P, b: P| {
@@ -277,7 +316,7 @@ pub(crate) fn certified_cycles(
     wall_distance: &dyn Fn(P) -> f64,
     loops: &[Vec<Curve>],
 ) -> Result<Option<Vec<Cycle>>> {
-    let Ok(cycles) = capped_cycles_in(sphere, slab, loops) else {
+    let Ok(cycles) = capped_cycles_in(CapContacts::Sphere(sphere), slab, loops) else {
         return Ok(None);
     };
     let axis = slab.frame[2];

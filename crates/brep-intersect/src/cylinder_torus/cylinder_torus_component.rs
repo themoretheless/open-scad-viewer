@@ -324,9 +324,9 @@ fn general(
     // |s| + R sqrt(1 - (a_t . a_c)^2) + r.
     let s = dot(sub(torus.center, cylinder.center), cylinder.axis);
     let c = dot(torus.axis, cylinder.axis).clamp(-1., 1.);
-    let reach = s.abs() + torus.major * (1. - c * c).sqrt() + torus.minor;
-    if reach >= cylinder.half_height - band {
-        report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+    let extent = torus.major * (1. - c * c).sqrt() + torus.minor;
+    let reaches_cap = s.abs() + extent >= cylinder.half_height - band;
+    if s - extent > cylinder.half_height + band || -s - extent > cylinder.half_height + band {
         return Ok(report);
     }
     let frame = [cylinder.frame[0], cylinder.frame[1], cylinder.axis];
@@ -376,6 +376,9 @@ fn general(
         &crate::sphere_torus::completeness::Quadric::Torus(torus),
         &all,
     );
+    if reaches_cap {
+        return capped(report, domain, cylinder_model, torus_model, cylinder, torus, &wall, &ring, terms, all, complete);
+    }
     if loops.is_empty() {
         // No loop found: an empty answer only with the certificate.
         if !complete {
@@ -405,6 +408,112 @@ fn general(
             torus_uv: ring.into_iter().map(|(patch, arcs)| TorusPatchCurve { patch, arcs }).collect(),
             lift_deviation,
         });
+    }
+    Ok(report)
+}
+
+/// The torus reaches a cap plane: wall loops clipped to the slab, plane x
+/// torus loops traced on each reached cap plane and clipped to the disk,
+/// joined into closed cycles, recertified, lifted.
+#[allow(clippy::too_many_arguments)]
+fn capped(
+    mut report: Report<CylinderTorusComponent>,
+    domain: Vec<f64>,
+    cylinder_model: &Model,
+    torus_model: &Model,
+    cylinder: &CanonicalCylinder,
+    torus: &CanonicalTorus,
+    wall: &crate::implicit_trace::CylinderImplicit,
+    ring: &crate::implicit_trace::TorusImplicit,
+    terms: f64,
+    wall_loops: Vec<Vec<Curve>>,
+    wall_complete: bool,
+) -> Result<Report<CylinderTorusComponent>> {
+    let refuse = |mut report: Report<CylinderTorusComponent>, reason| {
+        report.components.clear();
+        report.unresolved(domain.clone(), reason);
+        Ok(report)
+    };
+    let frame = [cylinder.frame[0], cylinder.frame[1], cylinder.axis];
+    let h = cylinder.half_height;
+    let mut caps: [Vec<Vec<Curve>>; 2] = [Vec::new(), Vec::new()];
+    let mut planes = Vec::new();
+    for (slot, sign) in [(0usize, -1.), (1, 1.)] {
+        let origin: [f64; 3] = std::array::from_fn(|k| cylinder.center[k] + sign * h * cylinder.axis[k]);
+        let plane = crate::implicit_trace::PlaneImplicit { origin, normal: cylinder.axis };
+        let reach = 1.5 * cylinder.radius;
+        let seed = |theta: f64, phi: f64| -> [f64; 3] {
+            let r = reach * theta / std::f64::consts::PI;
+            let (sp, cp) = phi.sin_cos();
+            std::array::from_fn(|k| origin[k] + r * (cp * frame[0][k] + sp * frame[1][k]))
+        };
+        match crate::implicit_trace::trace_intersection(&plane, ring, seed, terms, torus.minor, crate::TRACE_TOLERANCE) {
+            Ok(loops) => caps[slot] = loops.into_iter().map(|l| l.pieces).collect(),
+            Err(e) if e.message.contains("tangency") => {
+                return refuse(report, UnresolvedReason::TangencyOrMultipleRoot);
+            }
+            Err(_) => return refuse(report, UnresolvedReason::UnsupportedSurface),
+        }
+        planes.push(plane);
+    }
+    let complete = wall_complete
+        && crate::sphere_torus::completeness::certify_complete_on_caps(
+            cylinder,
+            cylinder_model,
+            &crate::sphere_torus::completeness::Quadric::Torus(torus),
+            &caps,
+        );
+    let slab = crate::sphere_cylinder::capped::Slab {
+        origin: cylinder.center,
+        frame,
+        planes: [(-h, cylinder.radius), (h, cylinder.radius)],
+    };
+    let Ok(cycles) = crate::sphere_cylinder::capped::capped_cycles_in(
+        crate::sphere_cylinder::capped::CapContacts::Traced(&caps),
+        &slab,
+        &wall_loops,
+    ) else {
+        return refuse(report, UnresolvedReason::UnsupportedSurface);
+    };
+    for cycle in cycles {
+        let mut bound = 0_f64;
+        for piece in &cycle {
+            let [lo, hi] = piece.domain();
+            let m = piece.evaluate(0.5 * (lo + hi))?.point;
+            let d = sub([m[0], m[1], m[2]], cylinder.center);
+            let z = dot(d, cylinder.axis);
+            let rho = dot(d, frame[0]).hypot(dot(d, frame[1]));
+            let surface: &dyn crate::implicit_trace::Implicit = if (rho - cylinder.radius).abs() <= (z.abs() - h).abs() {
+                wall
+            } else {
+                &planes[usize::from(z > 0.)]
+            };
+            match crate::implicit_trace::certify_curve([ring, surface], piece, crate::TRACE_TOLERANCE)? {
+                Some(b) => bound = bound.max(b),
+                None => return refuse(report, UnresolvedReason::UnsupportedSurface),
+            }
+        }
+        let Ok((side, ring_uv, lift_deviation)) = crate::sphere_torus::traced_lift::lift_pair(
+            crate::sphere_torus::traced_lift::Other::Cylinder(cylinder),
+            cylinder_model,
+            crate::sphere_torus::traced_lift::Other::Torus(torus),
+            torus_model,
+            &cycle,
+        ) else {
+            return refuse(report, UnresolvedReason::UnsupportedSurface);
+        };
+        report.components.push(CylinderTorusComponent::Traced {
+            spans: cycle.iter().map(|c| c.control_points.len() / 3).sum(),
+            pieces: cycle,
+            distance_bound: bound,
+            complete,
+            cylinder_uv: side.into_iter().map(|(patch, arcs)| CylinderPatchCurve { patch, arcs }).collect(),
+            torus_uv: ring_uv.into_iter().map(|(patch, arcs)| TorusPatchCurve { patch, arcs }).collect(),
+            lift_deviation,
+        });
+    }
+    if report.components.is_empty() && !complete {
+        return refuse(report, UnresolvedReason::UnsupportedSurface);
     }
     Ok(report)
 }

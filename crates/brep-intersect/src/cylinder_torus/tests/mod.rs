@@ -481,21 +481,18 @@ fn off_axis_or_tilted_pairs_are_traced_or_refused_at_the_caps() {
             &[],
         ));
     }
-    // A short cylinder whose caps the torus reaches stays unsupported.
+    // A short cylinder whose caps the torus reaches: wall arcs and plane x
+    // torus arcs on the caps join into closed certified cycles.
     let short = translated(&brep_core::analytic::cylinder(2.2, 1.5).unwrap(), [0.5, 0., -0.75]);
-    for cylinder in [&short] {
-        let report = intersect_cylinder_torus(cylinder, &torus, Options::default()).unwrap();
-        assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved.len(), 1);
-        assert_eq!(
-            report.unresolved[0].reason,
-            UnresolvedReason::UnsupportedSurface
-        );
-        assert_eq!(
-            report.unresolved[0].parameter_box,
-            vec![0., 1., 0., 1., 0., 1., 0., 1.]
-        );
+    let report = intersect_cylinder_torus(&short, &torus, Options::default()).unwrap();
+    assert!(report.unresolved.is_empty(), "{:?}", report.unresolved);
+    assert!(!report.components.is_empty());
+    for component in &report.components {
+        let CylinderTorusComponent::Traced { pieces, complete, distance_bound, lift_deviation, .. } = component else {
+            panic!("expected traced cycles");
+        };
+        assert!(*complete && *distance_bound <= crate::TRACE_TOLERANCE && *lift_deviation <= crate::LIFT_TOLERANCE);
+        assert_eq!(pieces.last().unwrap().control_points.last(), pieces[0].control_points.first());
     }
 }
 
