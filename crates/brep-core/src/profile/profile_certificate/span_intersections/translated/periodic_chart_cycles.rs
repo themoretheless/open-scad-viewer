@@ -240,6 +240,171 @@ fn vertex(
     ids.insert(key, i);
     Ok(i)
 }
+const MAX_ALLOWANCE: usize = 1000000;
+/// Displacement sector and source rotation rank of one edge end.
+type Germ = (u8, Option<usize>);
+/// Canonical chart copy and vertex key of every (source vertex, chart use).
+type Aliases = BTreeMap<(usize, usize), (usize, OriginalPeriodicChartVertexKey)>;
+/// Rank of every original port in its vertex rotation, which must follow
+/// the native axis/quadrant sector order.
+fn rotation_ranks(ports: &[OriginalPeriodicPort], rotations: &[Vec<usize>]) -> Result<Vec<usize>> {
+    let mut ranks = vec![usize::MAX; ports.len()];
+    for (v, row) in rotations.iter().enumerate() {
+        let mut previous = None;
+        for (rank, &p) in row.iter().enumerate() {
+            let port = &ports[p];
+            let s = sector(port.component_signs)?;
+            if port.vertex != v || ranks[p] != usize::MAX || previous.is_some_and(|old| old > s) {
+                return Err(refused(
+                    "Actual source rotation is not anchored in native axis/quadrant order",
+                ));
+            }
+            previous = Some(s);
+            ranks[p] = rank;
+        }
+    }
+    if ranks.contains(&usize::MAX) {
+        return Err(refused("Local chart source rotation omits original ports"));
+    }
+    Ok(ranks)
+}
+/// Every original chart use belongs to exactly one canonical source copy.
+fn canonical_aliases(
+    corners: &OwnedPeriodicNativeChartCorners,
+    max_uses: usize,
+) -> Result<Aliases> {
+    let mut aliases = BTreeMap::new();
+    let mut alias_uses = 0usize;
+    for (copy, c) in corners.owner().copies().iter().enumerate() {
+        let key = copy_key(corners, copy)?;
+        for &use_ in &c.uses {
+            alias_uses = alias_uses
+                .checked_add(1)
+                .filter(|n| *n <= max_uses)
+                .ok_or_else(|| refused("Local chart source use allowance exhausted"))?;
+            if aliases
+                .insert((c.source_vertex, use_), (copy, key))
+                .is_some()
+            {
+                return Err(refused(
+                    "Local chart original use belongs to multiple canonical copies",
+                ));
+            }
+        }
+    }
+    Ok(aliases)
+}
+/// The chart boundary graph under construction.
+struct Graph<'a> {
+    corners: &'a OwnedPeriodicNativeChartCorners,
+    max_vertices: usize,
+    ids: BTreeMap<OriginalPeriodicChartVertexKey, usize>,
+    vertices: Vec<OriginalPeriodicChartCycleVertex>,
+    edges: Vec<OriginalPeriodicChartCycleEdge>,
+    /// Germ of both ends of every edge.
+    germs: Vec<[Germ; 2]>,
+}
+impl Graph<'_> {
+    fn vertex(&mut self, key: OriginalPeriodicChartVertexKey) -> Result<usize> {
+        vertex(
+            key,
+            self.corners,
+            &mut self.ids,
+            &mut self.vertices,
+            self.max_vertices,
+        )
+    }
+    /// Edge of one selected source trace between the canonical chart copies
+    /// of its dart and twin ports.
+    fn source_edge(
+        &mut self,
+        trace: usize,
+        part: &OriginalPeriodicBoundaryPart,
+        ports: &[OriginalPeriodicPort],
+        ranks: &[usize],
+        aliases: &Aliases,
+    ) -> Result<()> {
+        let copies = self.corners.owner().copies();
+        let a = ports
+            .get(part.dart)
+            .ok_or_else(|| refused("Local trace lost its actual original dart"))?;
+        if a.edge != part.edge {
+            return Err(refused(
+                "Local trace dart belongs to a different physical source edge",
+            ));
+        }
+        let twin = part
+            .edge
+            .checked_mul(2)
+            .and_then(|n| n.checked_add(1 - a.end))
+            .ok_or_else(|| refused("Local trace twin overflow"))?;
+        let mut ends = [0; 2];
+        let mut germ = [(0, None); 2];
+        for (end, pid) in [part.dart, twin].into_iter().enumerate() {
+            let p = ports
+                .get(pid)
+                .ok_or_else(|| refused("Local trace lost its actual twin port"))?;
+            let &(copy, key) = aliases
+                .get(&(p.vertex, p.chart_use))
+                .ok_or_else(|| refused("Local source port lacks its actual canonical chart use"))?;
+            ends[end] = self.vertex(key)?;
+            if self.vertices[ends[end]].source_vertex != Some(p.vertex) {
+                return Err(refused(
+                    "Local source port changed physical vertex ownership",
+                ));
+            }
+            let bounds = copies[copy].bounds;
+            let outward = (0..2).any(|axis| match bounds[axis] {
+                Some(0) => p.component_signs[axis] < 0,
+                Some(1) => p.component_signs[axis] > 0,
+                _ => false,
+            });
+            if outward {
+                return Err(refused(
+                    "Selected original germ points outside its canonical native chart",
+                ));
+            }
+            germ[end] = (sector(p.component_signs)?, Some(ranks[pid]));
+        }
+        self.edges.push(OriginalPeriodicChartCycleEdge {
+            vertices: ends,
+            kind: OriginalPeriodicChartCycleEdgeKind::SourceTrace(trace),
+        });
+        self.germs.push(germ);
+        Ok(())
+    }
+    /// Edge of one selected native shore interval, oriented along the CCW
+    /// frame traversal.
+    fn frame_edge(
+        &mut self,
+        [shore, interval]: [usize; 2],
+        s: &OriginalPeriodicNativeShore,
+        at: [usize; 2],
+    ) -> Result<()> {
+        let mut points = at;
+        if s.direction < 0 {
+            points.swap(0, 1)
+        }
+        if s.direction != 1 && s.direction != -1 {
+            return Err(refused("Invalid native frame boundary direction"));
+        }
+        let mut ends = [0; 2];
+        let mut germ = [(0, None); 2];
+        for end in 0..2 {
+            let key = frame_key(self.corners, shore, s.points[points[end]])?;
+            ends[end] = self.vertex(key)?;
+            let mut signs = [0i8; 2];
+            signs[1 - s.fixed_axis] = s.direction * if end == 0 { 1 } else { -1 };
+            germ[end] = (sector(signs)?, None);
+        }
+        self.edges.push(OriginalPeriodicChartCycleEdge {
+            vertices: ends,
+            kind: OriginalPeriodicChartCycleEdgeKind::NativeShore { shore, interval },
+        });
+        self.germs.push(germ);
+        Ok(())
+    }
+}
 fn derive(o: &OwnedPeriodicChartCycles) -> Result<Data> {
     let _replay = super::periodic_replay::scope();
     let l = o.limits;
@@ -251,7 +416,7 @@ fn derive(o: &OwnedPeriodicChartCycles) -> Result<Data> {
         l.max_walk_steps,
     ]
     .iter()
-    .any(|n| !(1..=1000000).contains(n))
+    .any(|n| !(1..=MAX_ALLOWANCE).contains(n))
     {
         return Err(refused("Invalid exact local chart cycle allowance"));
     }
@@ -266,8 +431,8 @@ fn derive(o: &OwnedPeriodicChartCycles) -> Result<Data> {
     let lifts = regions.owner().owner();
     let cycles = lifts.owner();
     let rotation = cycles.rotation();
-    let ports = rotation.owner();
-    if ports.ports().len() > l.max_ports
+    let ports = rotation.owner().ports();
+    if ports.len() > l.max_ports
         || traces
             .traces()
             .len()
@@ -278,150 +443,47 @@ fn derive(o: &OwnedPeriodicChartCycles) -> Result<Data> {
             "Complete local chart source/frame edge census exceeds allowance",
         ));
     }
-    let mut ranks = vec![usize::MAX; ports.ports().len()];
-    for (v, row) in rotation.rotations().iter().enumerate() {
-        let mut previous = None;
-        for (rank, &p) in row.iter().enumerate() {
-            let port = &ports.ports()[p];
-            let s = sector(port.component_signs)?;
-            if port.vertex != v || ranks[p] != usize::MAX || previous.is_some_and(|old| old > s) {
-                return Err(refused(
-                    "Actual source rotation is not anchored in native axis/quadrant order",
-                ));
-            }
-            previous = Some(s);
-            ranks[p] = rank;
-        }
-    }
-    if ranks.contains(&usize::MAX) {
-        return Err(refused("Local chart source rotation omits original ports"));
-    }
-    let mut aliases = BTreeMap::new();
-    let mut alias_uses = 0usize;
-    for (copy, c) in copies.copies().iter().enumerate() {
-        let key = copy_key(corners, copy)?;
-        for &use_ in &c.uses {
-            alias_uses = alias_uses
-                .checked_add(1)
-                .filter(|n| *n <= l.max_source_uses)
-                .ok_or_else(|| refused("Local chart source use allowance exhausted"))?;
-            if aliases
-                .insert((c.source_vertex, use_), (copy, key))
-                .is_some()
-            {
-                return Err(refused(
-                    "Local chart original use belongs to multiple canonical copies",
-                ));
-            }
-        }
-    }
+    let ranks = rotation_ranks(ports, rotation.rotations())?;
+    let aliases = canonical_aliases(corners, l.max_source_uses)?;
     let coincident = o
         .owner
         .contacts()
         .iter()
-        .filter_map(|c| {
-            if c.period_shift == [0, 0]
+        .filter(|c| {
+            c.period_shift == [0, 0]
                 && matches!(c.kind, OriginalPeriodicShoreContactKind::Coincident { .. })
-            {
-                Some(c.piece)
-            } else {
-                None
-            }
         })
+        .map(|c| c.piece)
         .collect::<BTreeSet<_>>();
-    let mut ids = BTreeMap::new();
-    let mut vertices = Vec::new();
-    let mut edges = Vec::new();
-    let mut edge_ports = Vec::new();
+    let mut graph = Graph {
+        corners,
+        max_vertices: l.max_vertices,
+        ids: BTreeMap::new(),
+        vertices: Vec::new(),
+        edges: Vec::new(),
+        germs: Vec::new(),
+    };
     let mut coincident_traces = Vec::new();
     for (trace, t) in traces.traces().iter().enumerate() {
-        let part = &t.original;
-        if coincident.contains(&part.piece) {
+        if coincident.contains(&t.original.piece) {
             coincident_traces.push(trace);
             continue;
         }
-        let a = ports
-            .ports()
-            .get(part.dart)
-            .ok_or_else(|| refused("Local trace lost its actual original dart"))?;
-        if a.edge != part.edge {
-            return Err(refused(
-                "Local trace dart belongs to a different physical source edge",
-            ));
-        }
-        let twin = part
-            .edge
-            .checked_mul(2)
-            .and_then(|n| n.checked_add(1 - a.end))
-            .ok_or_else(|| refused("Local trace twin overflow"))?;
-        let mut ends = [0; 2];
-        for (end, pid) in [part.dart, twin].into_iter().enumerate() {
-            let p = ports
-                .ports()
-                .get(pid)
-                .ok_or_else(|| refused("Local trace lost its actual twin port"))?;
-            let &(copy, key) = aliases
-                .get(&(p.vertex, p.chart_use))
-                .ok_or_else(|| refused("Local source port lacks its actual canonical chart use"))?;
-            ends[end] = vertex(key, corners, &mut ids, &mut vertices, l.max_vertices)?;
-            if vertices[ends[end]].source_vertex != Some(p.vertex) {
-                return Err(refused(
-                    "Local source port changed physical vertex ownership",
-                ));
-            }
-            let c = &copies.copies()[copy];
-            for axis in 0..2 {
-                if let Some(bound) = c.bounds[axis] {
-                    if (bound == 0 && p.component_signs[axis] < 0)
-                        || (bound == 1 && p.component_signs[axis] > 0)
-                    {
-                        return Err(refused(
-                            "Selected original germ points outside its canonical native chart",
-                        ));
-                    }
-                }
-            }
-        }
-        edges.push(OriginalPeriodicChartCycleEdge {
-            vertices: ends,
-            kind: OriginalPeriodicChartCycleEdgeKind::SourceTrace(trace),
-        });
-        edge_ports.push([
-            (sector(a.component_signs)?, Some(ranks[part.dart])),
-            (
-                sector(ports.ports()[twin].component_signs)?,
-                Some(ranks[twin]),
-            ),
-        ]);
+        graph.source_edge(trace, &t.original, ports, &ranks, &aliases)?;
     }
     for (shore, s) in shores.shores().iter().enumerate() {
         for (interval, at) in s.intervals.iter().enumerate() {
-            if !o.owner.selected(shore, interval)? {
-                continue;
+            if o.owner.selected(shore, interval)? {
+                graph.frame_edge([shore, interval], s, *at)?;
             }
-            let mut points = *at;
-            if s.direction < 0 {
-                points.swap(0, 1)
-            }
-            if s.direction != 1 && s.direction != -1 {
-                return Err(refused("Invalid native frame boundary direction"));
-            }
-            let mut ends = [0; 2];
-            let mut germ = [(0, None); 2];
-            for end in 0..2 {
-                let key = frame_key(corners, shore, s.points[points[end]])?;
-                ends[end] = vertex(key, corners, &mut ids, &mut vertices, l.max_vertices)?;
-                let mut signs = [0i8; 2];
-                signs[1 - s.fixed_axis] = s.direction * if end == 0 { 1 } else { -1 };
-                germ[end] = (sector(signs)?, None);
-            }
-            edges.push(OriginalPeriodicChartCycleEdge {
-                vertices: ends,
-                kind: OriginalPeriodicChartCycleEdgeKind::NativeShore { shore, interval },
-            });
-            edge_ports.push(germ);
         }
     }
+    let Graph {
+        vertices,
+        edges,
+        germs,
+        ..
+    } = graph;
     if edges.len().checked_mul(2).is_none_or(|n| n > l.max_ports) {
         return Err(refused("Local chart boundary port allowance exhausted"));
     }
@@ -431,8 +493,8 @@ fn derive(o: &OwnedPeriodicChartCycles) -> Result<Data> {
             local[e.vertices[end]].push(Port {
                 edge,
                 end,
-                sector: edge_ports[edge][end].0,
-                rank: edge_ports[edge][end].1,
+                sector: germs[edge][end].0,
+                rank: germs[edge][end].1,
             })
         }
     }
