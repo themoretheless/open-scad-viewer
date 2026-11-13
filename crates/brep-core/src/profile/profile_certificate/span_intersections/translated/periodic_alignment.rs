@@ -112,18 +112,221 @@ type Data = (
     Vec<OriginalPeriodicIntervalAlias>,
     usize,
 );
+const MAX_LIFTS: usize = 100000;
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+/// One side of one non-point common clip: the piece that carries the side
+/// and the opposite piece its cuts are lifted to.
+#[derive(Clone, Copy)]
+struct ClipSide<'a> {
+    pair: usize,
+    clip: usize,
+    side: usize,
+    source: usize,
+    target: usize,
+    c: &'a OriginalPeriodicCommonClip,
+    owner: &'a OwnedPeriodicCommonClips,
+}
+impl ClipSide<'_> {
+    /// Whether a parameter lies in the clip's closed interval on `side`.
+    fn contains(
+        &self,
+        v: &OriginalSourceParameter,
+        side: usize,
+        limits: ParameterOrderLimits,
+    ) -> Result<bool> {
+        inside(
+            v,
+            &value(&self.c.endpoints[0], side),
+            &value(&self.c.endpoints[1], side),
+            limits,
+        )
+    }
+}
+/// Both sides of every non-point clip, in pair, clip, side order.
+fn clip_sides(o: &OwnedPeriodicAlignedIntervals) -> Vec<ClipSide<'_>> {
+    let mut out = Vec::new();
+    for (pair, p) in o.owner.pairs().iter().enumerate() {
+        let pieces = p.owner().pair();
+        for (clip, c) in p.clips().iter().enumerate() {
+            if c.point_only {
+                continue;
+            }
+            for side in 0..2 {
+                out.push(ClipSide {
+                    pair,
+                    clip,
+                    side,
+                    source: pieces[side],
+                    target: pieces[1 - side],
+                    c,
+                    owner: p,
+                });
+            }
+        }
+    }
+    out
+}
+/// Source cells of both operands of every pair.
+type PairCells = Vec<(Vec<Cell>, Vec<Cell>)>;
+fn pair_cells(o: &OwnedPeriodicAlignedIntervals) -> Result<PairCells> {
+    let mut contexts = Vec::new();
+    for pair in o.owner.pairs() {
+        let c = pair.owner().census();
+        let (_, x, y) = context(
+            &c.sources[0],
+            &c.sources[1],
+            &c.offsets,
+            false,
+            c.certificate.maximum_parameter_width,
+        )?;
+        contexts.push((x, y));
+    }
+    Ok(contexts)
+}
+/// The growing cut sets of every piece and the lifts spent so far.
+struct Propagation<'a> {
+    o: &'a OwnedPeriodicAlignedIntervals,
+    contexts: PairCells,
+    cuts: Vec<Vec<OriginalPeriodicAlignedCut>>,
+    lifts: usize,
+}
+impl Propagation<'_> {
+    /// Lifts one source cut across a clip to its unique counterpart on the
+    /// opposite piece and inserts it there. Returns whether it was new.
+    fn lift(
+        &mut self,
+        at: ClipSide<'_>,
+        cut: OriginalSourceParameter,
+    ) -> Result<(bool, OriginalPeriodicIntervalBinding)> {
+        let limits = self.o.limits;
+        if self.lifts >= self.o.max_lifts {
+            return Err(refused(
+                "Complete periodic common cut propagation exhausted its lift allowance",
+            ));
+        }
+        self.lifts += 1;
+        let (x, y) = &self.contexts[at.pair];
+        let nodes = lift_value(at.owner.owner(), at.c.pair, at.side, &cut, x, y)?;
+        let node = nodes
+            .into_iter()
+            .next()
+            .ok_or_else(|| refused("Missing unique periodic cut counterpart"))?;
+        let target_value = value(&node, 1 - at.side);
+        if !at.contains(&target_value, 1 - at.side, limits)? {
+            return Err(refused(
+                "Common cut counterpart escaped its proved clipped component",
+            ));
+        }
+        let changed = insert(&mut self.cuts[at.target], target_value, limits)?;
+        Ok((
+            changed,
+            OriginalPeriodicIntervalBinding {
+                pair: at.pair,
+                clip: at.clip,
+                side: at.side,
+                source: cut,
+                node,
+            },
+        ))
+    }
+    /// Lifts every cut inside every clip side once. Returns the bindings of
+    /// this round and whether any piece gained a cut.
+    fn round(
+        &mut self,
+        sides: &[ClipSide<'_>],
+    ) -> Result<(bool, Vec<OriginalPeriodicIntervalBinding>)> {
+        let mut changed = false;
+        let mut bindings = Vec::new();
+        for &at in sides {
+            for cut in self.cuts[at.source].clone() {
+                if !at.contains(&cut.value, at.side, self.o.limits)? {
+                    continue;
+                }
+                let (new, binding) = self.lift(at, cut.value)?;
+                changed |= new;
+                bindings.push(binding);
+            }
+        }
+        Ok((changed, bindings))
+    }
+    /// Records on every propagated cut which clip side produced it.
+    fn record_origins(&mut self, bindings: &[OriginalPeriodicIntervalBinding]) -> Result<()> {
+        let limits = self.o.limits;
+        for b in bindings {
+            let pieces = self.o.owner.pairs()[b.pair].owner().pair();
+            let target = pieces[1 - b.side];
+            let i = index(&self.cuts[target], &value(&b.node, 1 - b.side), limits)?;
+            let origin = OriginalPeriodicAlignedOrigin::Propagated {
+                pair: b.pair,
+                clip: b.clip,
+                side: b.side,
+                source: b.source.clone(),
+            };
+            if !self.cuts[target][i].origins.contains(&origin) {
+                self.cuts[target][i].origins.push(origin);
+            }
+        }
+        Ok(())
+    }
+    /// Every source interval inside a clip side, paired with the one whole
+    /// counterpart interval between the lifts of its two ends.
+    fn aliases(
+        &self,
+        at: ClipSide<'_>,
+        bindings: &[OriginalPeriodicIntervalBinding],
+        out: &mut Vec<OriginalPeriodicIntervalAlias>,
+    ) -> Result<()> {
+        let limits = self.o.limits;
+        let target_index = |v: &OriginalSourceParameter| -> Result<usize> {
+            let binding = bindings
+                .iter()
+                .find(|r| {
+                    r.pair == at.pair && r.clip == at.clip && r.side == at.side && r.source == *v
+                })
+                .ok_or_else(|| refused("Missing complete common endpoint binding"))?;
+            index(
+                &self.cuts[at.target],
+                &value(&binding.node, 1 - at.side),
+                limits,
+            )
+        };
+        for (i, bounds) in self.cuts[at.source].windows(2).enumerate() {
+            let (a, b) = (&bounds[0].value, &bounds[1].value);
+            if !at.contains(a, at.side, limits)? || !at.contains(b, at.side, limits)? {
+                continue;
+            }
+            let x = target_index(a)?;
+            let y = target_index(b)?;
+            if x.abs_diff(y) != 1 {
+                return Err(refused(
+                    "Common source interval does not match one WHOLE counterpart interval",
+                ));
+            }
+            out.push(OriginalPeriodicIntervalAlias {
+                pair: at.pair,
+                clip: at.clip,
+                side: at.side,
+                pieces: [at.source, at.target],
+                intervals: [i, x.min(y)],
+                reversed: x > y,
+            });
+        }
+        Ok(())
+    }
+}
 fn derive(o: &OwnedPeriodicAlignedIntervals) -> Result<Data> {
     if o.max_lifts == 0
-        || o.max_lifts > 100000
-        || o.limits.max_refinements > 512
-        || !(1..=128).contains(&o.limits.max_resultant_size)
+        || o.max_lifts > MAX_LIFTS
+        || o.limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&o.limits.max_resultant_size)
     {
         return Err(refused(
             "Invalid complete periodic cut propagation allowance",
         ));
     }
     super::periodic_replay::verify(&o.owner)?;
-    let mut cuts = o
+    let cuts = o
         .owner
         .cuts()
         .iter()
@@ -137,154 +340,27 @@ fn derive(o: &OwnedPeriodicAlignedIntervals) -> Result<Data> {
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
-    let mut contexts = Vec::new();
-    for pair in o.owner.pairs() {
-        let c = pair.owner().census();
-        let (_, x, y) = context(
-            &c.sources[0],
-            &c.sources[1],
-            &c.offsets,
-            false,
-            c.certificate.maximum_parameter_width,
-        )?;
-        contexts.push((x, y));
-    }
-    let mut lifts = 0;
+    let mut propagation = Propagation {
+        o,
+        contexts: pair_cells(o)?,
+        cuts,
+        lifts: 0,
+    };
+    let sides = clip_sides(o);
+    // Lift to a fixed point: the bindings of the first round that adds no
+    // cut cover every cut of every clip side.
     let bindings = loop {
-        let mut changed = false;
-        let mut round = Vec::new();
-        for (pair, p) in o.owner.pairs().iter().enumerate() {
-            let pieces = p.owner().pair();
-            for (clip, c) in p.clips().iter().enumerate() {
-                if c.point_only {
-                    continue;
-                }
-                for side in 0..2 {
-                    let source = pieces[side];
-                    let target = pieces[1 - side];
-                    for cut in cuts[source].clone() {
-                        if !inside(
-                            &cut.value,
-                            &value(&c.endpoints[0], side),
-                            &value(&c.endpoints[1], side),
-                            o.limits,
-                        )? {
-                            continue;
-                        }
-                        if lifts >= o.max_lifts {
-                            return Err(refused(
-                                "Complete periodic common cut propagation exhausted its lift allowance",
-                            ));
-                        }
-                        lifts += 1;
-                        let nodes = lift_value(
-                            p.owner(),
-                            c.pair,
-                            side,
-                            &cut.value,
-                            &contexts[pair].0,
-                            &contexts[pair].1,
-                        )?;
-                        let node = nodes
-                            .into_iter()
-                            .next()
-                            .ok_or_else(|| refused("Missing unique periodic cut counterpart"))?;
-                        let target_value = value(&node, 1 - side);
-                        if !inside(
-                            &target_value,
-                            &value(&c.endpoints[0], 1 - side),
-                            &value(&c.endpoints[1], 1 - side),
-                            o.limits,
-                        )? {
-                            return Err(refused(
-                                "Common cut counterpart escaped its proved clipped component",
-                            ));
-                        }
-                        changed |= insert(&mut cuts[target], target_value, o.limits)?;
-                        round.push(OriginalPeriodicIntervalBinding {
-                            pair,
-                            clip,
-                            side,
-                            source: cut.value,
-                            node,
-                        });
-                    }
-                }
-            }
-        }
+        let (changed, round) = propagation.round(&sides)?;
         if !changed {
             break round;
         }
     };
-    for b in &bindings {
-        let pieces = o.owner.pairs()[b.pair].owner().pair();
-        let target = pieces[1 - b.side];
-        let i = index(&cuts[target], &value(&b.node, 1 - b.side), o.limits)?;
-        let origin = OriginalPeriodicAlignedOrigin::Propagated {
-            pair: b.pair,
-            clip: b.clip,
-            side: b.side,
-            source: b.source.clone(),
-        };
-        if !cuts[target][i].origins.contains(&origin) {
-            cuts[target][i].origins.push(origin);
-        }
-    }
+    propagation.record_origins(&bindings)?;
     let mut aliases = Vec::new();
-    for (pair, p) in o.owner.pairs().iter().enumerate() {
-        let pieces = p.owner().pair();
-        for (clip, c) in p.clips().iter().enumerate() {
-            if c.point_only {
-                continue;
-            }
-            for side in 0..2 {
-                let source = pieces[side];
-                let target = pieces[1 - side];
-                for i in 0..cuts[source].len() - 1 {
-                    let a = &cuts[source][i].value;
-                    let b = &cuts[source][i + 1].value;
-                    if !inside(
-                        a,
-                        &value(&c.endpoints[0], side),
-                        &value(&c.endpoints[1], side),
-                        o.limits,
-                    )? || !inside(
-                        b,
-                        &value(&c.endpoints[0], side),
-                        &value(&c.endpoints[1], side),
-                        o.limits,
-                    )? {
-                        continue;
-                    }
-                    let target_index = |v: &OriginalSourceParameter| -> Result<usize> {
-                        let binding = bindings
-                            .iter()
-                            .find(|r| {
-                                r.pair == pair && r.clip == clip && r.side == side && r.source == *v
-                            })
-                            .ok_or_else(|| refused("Missing complete common endpoint binding"))?;
-                        index(&cuts[target], &value(&binding.node, 1 - side), o.limits)
-                    };
-                    let x = target_index(a)?;
-                    let y = target_index(b)?;
-                    if x.abs_diff(y) != 1 {
-                        return Err(refused(
-                            "Common source interval does not match one WHOLE counterpart interval",
-                        ));
-                    }
-                    aliases.push(OriginalPeriodicIntervalAlias {
-                        pair,
-                        clip,
-                        side,
-                        pieces: [source, target],
-                        intervals: [i, x.min(y)],
-                        reversed: x > y,
-                    });
-                }
-            }
-        }
+    for &at in &sides {
+        propagation.aliases(at, &bindings, &mut aliases)?;
     }
-    Ok((cuts, bindings, aliases, lifts))
+    Ok((propagation.cuts, bindings, aliases, propagation.lifts))
 }
 impl OwnedPeriodicAlignedIntervals {
     pub fn owner(&self) -> &Arc<OwnedPeriodicArrangementCuts> {
