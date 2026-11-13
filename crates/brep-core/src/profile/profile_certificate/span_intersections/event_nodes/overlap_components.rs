@@ -266,21 +266,18 @@ fn parameter_cmp(
         l.max_resultant_size,
     )
 }
-fn contact_cuts(
+const MAX_CONTACT_REFINEMENTS: usize = 512;
+const MAX_CONTACT_RESULTANT: usize = 128;
+const MAX_SIDE_CONTACTS: usize = 4096;
+const MAX_CONTACT_COMPARISONS: usize = 65536;
+/// A contact node of one side with the overlap endpoint it coincides with, if any.
+type SideContact = (usize, Option<usize>);
+/// Both censuses are complete isolated-contact censuses of an overlap
+/// source against the same third curve.
+fn verify_contact_sources(
     overlap: &OwnedOriginalOverlapComponents,
-    component: usize,
     contacts: &[Arc<CurveEventNodes>; 2],
-    l: ParameterOrderLimits,
-) -> Result<Vec<OriginalOverlapContact>> {
-    use std::cmp::Ordering;
-    if l.max_refinements > 512 || !(1..=128).contains(&l.max_resultant_size) {
-        return Err(refused("Invalid common-carrier contact comparison budget"));
-    }
-    overlap.reverify_source()?;
-    let c = overlap
-        .components()
-        .get(component)
-        .ok_or_else(|| refused("Unknown original overlap component"))?;
+) -> Result<()> {
     for side in 0..2 {
         contacts[side].reverify_source()?;
         if contacts[side].sources()[0] != overlap.owner().sources()[side]
@@ -297,59 +294,123 @@ fn contact_cuts(
             ));
         }
     }
-    let mut selected = [Vec::new(), Vec::new()];
-    for side in 0..2 {
-        let ends = if c.directions[side] > 0 {
-            [0, 1]
+    Ok(())
+}
+/// Contacts of one side whose source parameter lies in the closed overlap
+/// component, each with the component endpoint it equals, if any.
+fn contacts_on_component(
+    c: &OriginalOverlapComponent,
+    nodes: &[AlgebraicEventNode],
+    side: usize,
+    l: ParameterOrderLimits,
+) -> Result<Vec<SideContact>> {
+    use std::cmp::Ordering;
+    let ends = if c.directions[side] > 0 {
+        [0, 1]
+    } else {
+        [1, 0]
+    };
+    let mut selected = Vec::new();
+    for (i, n) in nodes.iter().enumerate() {
+        let lo = parameter_cmp(n, 0, &c.endpoints[ends[0]], side, l)?;
+        let hi = parameter_cmp(n, 0, &c.endpoints[ends[1]], side, l)?;
+        if lo == Ordering::Less || hi == Ordering::Greater {
+            continue;
+        }
+        let endpoint = if lo == Ordering::Equal {
+            Some(ends[0])
+        } else if hi == Ordering::Equal {
+            Some(ends[1])
         } else {
-            [1, 0]
+            None
         };
-        for (i, n) in contacts[side].nodes().iter().enumerate() {
-            let lo = parameter_cmp(n, 0, &c.endpoints[ends[0]], side, l)?;
-            let hi = parameter_cmp(n, 0, &c.endpoints[ends[1]], side, l)?;
-            if lo != Ordering::Less && hi != Ordering::Greater {
-                let endpoint = if lo == Ordering::Equal {
-                    Some(ends[0])
-                } else if hi == Ordering::Equal {
-                    Some(ends[1])
-                } else {
-                    None
-                };
-                selected[side].push((i, endpoint));
+        selected.push((i, endpoint));
+    }
+    Ok(selected)
+}
+/// The single second-side contact at the same third-source parameter as
+/// `a`, as (index into `candidates`, node). Same original third-source
+/// parameter proves the same spatial event; parameter boxes or rounded
+/// coordinates never do.
+fn counterpart(
+    contacts: &[Arc<CurveEventNodes>; 2],
+    (a, endpoint): SideContact,
+    candidates: &[SideContact],
+    l: ParameterOrderLimits,
+) -> Result<(usize, usize)> {
+    let mut matches = Vec::new();
+    for (j, &(b, other_endpoint)) in candidates.iter().enumerate() {
+        if parameter_cmp(&contacts[0].nodes()[a], 1, &contacts[1].nodes()[b], 1, l)?
+            == std::cmp::Ordering::Equal
+        {
+            if endpoint != other_endpoint {
+                return Err(refused("Common-carrier endpoint correspondence disagrees"));
             }
+            matches.push((j, b));
         }
     }
-    if selected[0].len() > 4096 || selected[1].len() > 4096 {
+    match matches[..] {
+        [only] => Ok(only),
+        _ => Err(refused(
+            "Common-carrier third-source contact correspondence is not unique",
+        )),
+    }
+}
+/// Inserts a contact so the list stays ordered along the component's first
+/// source in its traversal direction.
+fn insert_along(
+    out: &mut Vec<OriginalOverlapContact>,
+    cut: OriginalOverlapContact,
+    nodes: &[AlgebraicEventNode],
+    increasing: bool,
+    l: ParameterOrderLimits,
+) -> Result<()> {
+    use std::cmp::Ordering;
+    let mut pos = out.len();
+    while pos > 0 {
+        let order = parameter_cmp(&nodes[out[pos - 1].nodes[0]], 0, &nodes[cut.nodes[0]], 0, l)?;
+        if order == Ordering::Equal || (order == Ordering::Less) == increasing {
+            break;
+        }
+        pos -= 1;
+    }
+    out.insert(pos, cut);
+    Ok(())
+}
+fn contact_cuts(
+    overlap: &OwnedOriginalOverlapComponents,
+    component: usize,
+    contacts: &[Arc<CurveEventNodes>; 2],
+    l: ParameterOrderLimits,
+) -> Result<Vec<OriginalOverlapContact>> {
+    if l.max_refinements > MAX_CONTACT_REFINEMENTS
+        || !(1..=MAX_CONTACT_RESULTANT).contains(&l.max_resultant_size)
+    {
+        return Err(refused("Invalid common-carrier contact comparison budget"));
+    }
+    overlap.reverify_source()?;
+    let c = overlap
+        .components()
+        .get(component)
+        .ok_or_else(|| refused("Unknown original overlap component"))?;
+    verify_contact_sources(overlap, contacts)?;
+    let selected = [
+        contacts_on_component(c, contacts[0].nodes(), 0, l)?,
+        contacts_on_component(c, contacts[1].nodes(), 1, l)?,
+    ];
+    if selected[0].len() > MAX_SIDE_CONTACTS || selected[1].len() > MAX_SIDE_CONTACTS {
         return Err(refused("Common-carrier contact budget exceeded"));
     }
     if selected[0].len() != selected[1].len() {
         return Err(refused("Common-carrier contact censuses disagree"));
     }
-    if selected[0].len().saturating_mul(selected[1].len()) > 65536 {
+    if selected[0].len().saturating_mul(selected[1].len()) > MAX_CONTACT_COMPARISONS {
         return Err(refused("Common-carrier contact comparison budget exceeded"));
     }
     let mut used = vec![false; selected[1].len()];
     let mut out = Vec::new();
     for &(a, endpoint) in &selected[0] {
-        let mut matches = Vec::new();
-        for (j, &(b, other_endpoint)) in selected[1].iter().enumerate() {
-            // Same original third-source parameter proves the same spatial
-            // event; parameter boxes or rounded coordinates never do.
-            if parameter_cmp(&contacts[0].nodes()[a], 1, &contacts[1].nodes()[b], 1, l)?
-                == Ordering::Equal
-            {
-                if endpoint != other_endpoint {
-                    return Err(refused("Common-carrier endpoint correspondence disagrees"));
-                }
-                matches.push((j, b));
-            }
-        }
-        if matches.len() != 1 {
-            return Err(refused(
-                "Common-carrier third-source contact correspondence is not unique",
-            ));
-        }
-        let (j, b) = matches[0];
+        let (j, b) = counterpart(contacts, (a, endpoint), &selected[1], l)?;
         if used[j] {
             return Err(refused("Common-carrier contact used more than once"));
         }
@@ -358,25 +419,7 @@ fn contact_cuts(
             nodes: [a, b],
             endpoint,
         };
-        let mut pos = out.len();
-        while pos > 0 {
-            let previous: &OriginalOverlapContact = &out[pos - 1];
-            let order = parameter_cmp(
-                &contacts[0].nodes()[previous.nodes[0]],
-                0,
-                &contacts[0].nodes()[a],
-                0,
-                l,
-            )?;
-            if order == Ordering::Equal {
-                break;
-            }
-            if (order == Ordering::Less) == (c.directions[0] > 0) {
-                break;
-            }
-            pos -= 1;
-        }
-        out.insert(pos, cut);
+        insert_along(&mut out, cut, contacts[0].nodes(), c.directions[0] > 0, l)?;
     }
     if used.iter().any(|v| !v) {
         return Err(refused(
