@@ -614,18 +614,60 @@ pub(crate) fn certify_complete_on_caps(
     other: &Quadric<'_>,
     cap_loops: &[Vec<Vec<Curve>>; 2],
 ) -> bool {
-    (|| -> Result<bool> {
-        for (slot, &face) in cylinder.caps.iter().enumerate() {
+    let frame = [cylinder.frame[0], cylinder.frame[1], cylinder.axis];
+    let caps: Vec<([f64; 3], f64, usize)> = (0..2)
+        .map(|slot| {
             let sign = if slot == 0 { -1. } else { 1. };
-            let origin: [f64; 3] =
-                std::array::from_fn(|k| cylinder.center[k] + sign * cylinder.half_height * cylinder.axis[k]);
-            let frame = [cylinder.frame[0], cylinder.frame[1], cylinder.axis];
-            let surface = &cylinder_model.faces[face].surface;
+            (
+                std::array::from_fn(|k| cylinder.center[k] + sign * cylinder.half_height * cylinder.axis[k]),
+                cylinder.radius,
+                cylinder.caps[slot],
+            )
+        })
+        .collect();
+    certify_complete_on_disks(frame, &caps, cylinder_model, other, cap_loops)
+}
+
+/// The same for the ring caps of a canonical frustum (an apex has no cap;
+/// its loops must be empty).
+pub(crate) fn certify_complete_on_cone_caps(
+    cone: &brep_core::intersections::CanonicalCone,
+    cone_model: &Model,
+    other: &Quadric<'_>,
+    cap_loops: &[Vec<Vec<Curve>>; 2],
+) -> bool {
+    let frame = [cone.frame[0], cone.frame[1], cone.axis];
+    let mut caps = Vec::new();
+    for slot in 0..2 {
+        let (z, r) = if slot == 0 { (0., cone.r_bottom) } else { (cone.height, cone.r_top) };
+        match cone.caps[slot] {
+            Some(face) => caps.push((std::array::from_fn(|k| cone.bottom[k] + z * cone.axis[k]), r, face)),
+            None if cap_loops[slot].is_empty() => caps.push(([f64::NAN; 3], 0., usize::MAX)),
+            None => return false,
+        }
+    }
+    certify_complete_on_disks(frame, &caps, cone_model, other, cap_loops)
+}
+
+/// Bilinear cap squares `u = (x / R + 1) / 2`, `v = (y / R + 1) / 2`.
+fn certify_complete_on_disks(
+    frame: [[f64; 3]; 3],
+    caps: &[([f64; 3], f64, usize)],
+    model: &Model,
+    other: &Quadric<'_>,
+    cap_loops: &[Vec<Vec<Curve>>; 2],
+) -> bool {
+    (|| -> Result<bool> {
+        for (slot, &(origin, radius, face)) in caps.iter().enumerate() {
+            if face == usize::MAX {
+                continue;
+            }
+            let surface = &model.faces[face].surface;
             for (u, v) in [(0.2, 0.3), (0.7, 0.9)] {
                 let p = surface.evaluate(u, v)?.point;
                 let d = sub([p[0], p[1], p[2]], origin);
-                let pu = (dot(d, frame[0]) / cylinder.radius + 1.) * 0.5;
-                let pv = (dot(d, frame[1]) / cylinder.radius + 1.) * 0.5;
+                let pu = (dot(d, frame[0]) / radius + 1.) * 0.5;
+                let pv = (dot(d, frame[1]) / radius + 1.) * 0.5;
                 if (pu - u).abs() > 1e-9 || (pv - v).abs() > 1e-9 || dot(d, frame[2]).abs() > 1e-9 {
                     return Ok(false);
                 }
@@ -643,7 +685,7 @@ pub(crate) fn certify_complete_on_caps(
                 }
             }
             let f = on_patch(other, surface)?;
-            let chart = Planar { spans: &spans, radius: cylinder.radius };
+            let chart = Planar { spans: &spans, radius };
             if !certify_square(&chart, f) {
                 return Ok(false);
             }

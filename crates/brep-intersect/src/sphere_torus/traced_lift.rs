@@ -70,9 +70,9 @@ impl Other<'_> {
                 let (rev, z, rho) = self.cylindrical(p);
                 // The nearer of the wall and the cap planes owns the point.
                 if (rho - c.radius).abs() <= (z.abs() - c.half_height).abs() {
-                    (z.abs() <= c.half_height + 1e-9).then(|| c.sides[quadrant(rev)])
+                    (z.abs() <= c.half_height + 1e-6).then(|| c.sides[quadrant(rev)])
                 } else {
-                    (rho <= c.radius + 1e-9).then(|| c.caps[usize::from(z > 0.)])
+                    (rho <= c.radius + 1e-6).then(|| c.caps[usize::from(z > 0.)])
                 }
             }
             Other::Cone(c) => {
@@ -80,11 +80,11 @@ impl Other<'_> {
                 let wall = (rho - c.r_bottom - c.slope * z).abs() / c.slope.hypot(1.);
                 let plane = z.abs().min((z - c.height).abs());
                 if wall <= plane {
-                    (-1e-9..=c.height + 1e-9).contains(&z).then(|| c.sides[quadrant(rev)])
+                    (-1e-6..=c.height + 1e-6).contains(&z).then(|| c.sides[quadrant(rev)])
                 } else {
                     let slot = usize::from(z > 0.5 * c.height);
                     let disk = if slot == 0 { c.r_bottom } else { c.r_top };
-                    if rho <= disk + 1e-9 { c.caps[slot] } else { None }
+                    if rho <= disk + 1e-6 { c.caps[slot] } else { None }
                 }
             }
         }

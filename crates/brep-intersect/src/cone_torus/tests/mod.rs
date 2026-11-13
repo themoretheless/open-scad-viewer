@@ -618,21 +618,17 @@ fn off_axis_or_tilted_pairs_are_traced_or_refused_at_the_caps() {
             &[],
         ));
     }
-    // A short frustum whose caps the torus reaches stays unsupported.
+    // A short frustum whose caps the torus reaches: closed certified cycles.
     let short = translated(&brep_core::analytic::frustum(2., 3., 1.5).unwrap(), [0.5, 0., -0.75]);
-    for cone in [&short] {
-        let report = intersect_cone_torus(cone, &torus, Options::default()).unwrap();
-        assert!(report.components.is_empty(), "{report:?}");
-        assert_eq!(report.coverage, Coverage::Incomplete);
-        assert_eq!(report.unresolved.len(), 1);
-        assert_eq!(
-            report.unresolved[0].reason,
-            UnresolvedReason::UnsupportedSurface
-        );
-        assert_eq!(
-            report.unresolved[0].parameter_box,
-            vec![0., 1., 0., 1., 0., 1., 0., 1.]
-        );
+    let report = intersect_cone_torus(&short, &torus, Options::default()).unwrap();
+    assert!(report.unresolved.is_empty(), "{:?}", report.unresolved);
+    assert!(!report.components.is_empty());
+    for component in &report.components {
+        let ConeTorusComponent::Traced { pieces, complete, distance_bound, lift_deviation, .. } = component else {
+            panic!("expected traced cycles");
+        };
+        assert!(*complete && *distance_bound <= crate::TRACE_TOLERANCE && *lift_deviation <= crate::LIFT_TOLERANCE);
+        assert_eq!(pieces.last().unwrap().control_points.last(), pieces[0].control_points.first());
     }
 }
 
