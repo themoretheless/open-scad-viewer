@@ -1,5 +1,14 @@
 # План реорганизации `nurbs-core`
 
+> **Статус: выполнен, документ исторический (2026-11-13).** Целевое дерево
+> модулей (`core/`, `numerics/`, `construct/`, `analysis/`, `editing/`,
+> `join/`, `trim/`, `tessellation/`, `sweeps/`, `offset/`, `intersection/`)
+> существует, часть фундамента вынесена в отдельные крейты
+> (`nurbs-foundation`, `nurbs-geometry`, `nurbs-numerics`, `nurbs-intersect`).
+> Цифры ниже относятся к моменту анализа; сейчас в `nurbs-core/src` 1086
+> файлов, около 274 тысяч строк и около 4.1 тысячи тестов. Текущие замеры
+> даёт `tools/refactor-audit/run.sh` (`docs/refactor/`).
+
 Дата: анализ текущего HEAD. Крейт: 146 публичных модулей в `src/lib.rs` (205 строк), 246 `.rs`-файлов, ~76k строк, 790 тестов. Ноль `unsafe`, ошибки через `Result`, deps: math-core, geometry-ops, brep-topology, cad-predicates, value-codec.
 
 ## 1. Целевое дерево модулей
