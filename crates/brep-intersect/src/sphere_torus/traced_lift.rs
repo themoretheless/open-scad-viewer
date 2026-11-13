@@ -63,7 +63,7 @@ impl Other<'_> {
         let (x, y) = (dot(d, f[0]), dot(d, f[1]));
         (y.atan2(x).rem_euclid(TAU), dot(d, axis), x.hypot(y))
     }
-    fn patch(&self, p: [f64; 3]) -> Option<usize> {
+    pub(crate) fn patch(&self, p: [f64; 3]) -> Option<usize> {
         match self {
             Other::Torus(t) => Some(torus_patch(t, p)),
             Other::Cylinder(c) => {
@@ -89,7 +89,7 @@ impl Other<'_> {
             }
         }
     }
-    fn uv(&self, face: usize, p: [f64; 3]) -> Option<[f64; 2]> {
+    pub(crate) fn uv(&self, face: usize, p: [f64; 3]) -> Option<[f64; 2]> {
         match self {
             Other::Torus(t) => torus_uv(t, face, p),
             Other::Cylinder(c) => {
@@ -155,7 +155,7 @@ impl Other<'_> {
         }
         self.implicit()
     }
-    fn implicit(&self) -> Box<dyn crate::implicit_trace::Implicit> {
+    pub(crate) fn implicit(&self) -> Box<dyn crate::implicit_trace::Implicit> {
         let (o, f, axis) = self.chart();
         let frame = [f[0], f[1], axis];
         match self {

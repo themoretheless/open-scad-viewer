@@ -56,7 +56,10 @@ mod serialization;
 mod boolean;
 pub(crate) mod completeness;
 pub(crate) mod traced_lift;
-pub use boolean::{sphere_cone_boolean, sphere_cylinder_boolean, sphere_torus_boolean};
+pub use boolean::{
+    cone_torus_boolean, cylinder_torus_boolean, sphere_cone_boolean, sphere_cylinder_boolean,
+    sphere_torus_boolean,
+};
 pub use traced_lift::LIFT_TOLERANCE;
 use super::plane_torus::{
     CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,

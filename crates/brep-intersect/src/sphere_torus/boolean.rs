@@ -411,3 +411,245 @@ fn decide(signed: f64, what: &str) -> Result<bool> {
     }
     Ok(signed < 0.)
 }
+
+/// Boolean of two canonical solids of revolution (`a` a cylinder or cone,
+/// `b` a torus, or any pair of `Other`) from certified, complete traced
+/// loops lying on their curved walls.
+#[allow(clippy::too_many_arguments)]
+fn pair_boolean(
+    a_model: &Model,
+    b_model: &Model,
+    operation: &str,
+    a: super::traced_lift::Other<'_>,
+    b: super::traced_lift::Other<'_>,
+    loops: &[Vec<Curve>],
+    mut tolerance: f64,
+    inside: &dyn Fn(usize, [f64; 3]) -> Result<bool>,
+) -> Result<Model> {
+    let sides = [(a, a_model), (b, b_model)];
+    let label = |o: usize, p: [f64; 3]| {
+        sides[o]
+            .0
+            .patch(p)
+            .ok_or_else(|| refuse("Pair Boolean: traced point lies on no patch"))
+    };
+    let mut network = Vec::new();
+    let mut free_id = 0;
+    for pieces in loops {
+        let mut cuts: Vec<(usize, f64)> = Vec::new();
+        for (index, piece) in pieces.iter().enumerate() {
+            let [lo, hi] = piece.domain();
+            let mut ts = vec![lo];
+            for o in 0..2 {
+                let (mut prev_t, mut prev) = (lo, label(o, point(piece, lo)?)?);
+                for k in 1..=512 {
+                    let t = lo + (hi - lo) * k as f64 / 512.;
+                    let l = label(o, point(piece, t)?)?;
+                    if l != prev {
+                        let (mut x, mut y) = (prev_t, t);
+                        for _ in 0..60 {
+                            let m = 0.5 * (x + y);
+                            if label(o, point(piece, m)?)? == prev {
+                                x = m;
+                            } else {
+                                y = m;
+                            }
+                        }
+                        ts.push(0.5 * (x + y));
+                    }
+                    prev = l;
+                    prev_t = t;
+                }
+            }
+            ts.sort_by(f64::total_cmp);
+            ts.dedup_by(|x, y| (*x - *y).abs() <= 1e-9 * (hi - lo));
+            cuts.extend(ts.into_iter().filter(|&t| t < hi).map(|t| (index, t)));
+        }
+        if cuts.len() < 2 {
+            return Err(refuse("Pair Boolean: a traced loop needs two cuts"));
+        }
+        let ends = cuts
+            .iter()
+            .map(|&(index, t)| -> Result<NetworkEnd> {
+                let p = point(&pieces[index], t)?;
+                let mut on = [None, None];
+                for (o, (_, model)) in sides.iter().enumerate() {
+                    on[o] = on_edge(model, p)?.map(|(edge, te)| (o, edge, te));
+                }
+                if on.iter().any(Option::is_some) {
+                    return Ok(NetworkEnd::Edges { on, point: p });
+                }
+                free_id += 1;
+                Ok(NetworkEnd::Free { id: free_id, point: p })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        for k in 0..cuts.len() {
+            let (index, t0) = cuts[k];
+            let (next_index, t1) = cuts[(k + 1) % cuts.len()];
+            let piece = &pieces[index];
+            let t1 = if next_index == index && t1 > t0 { t1 } else { piece.domain()[1] };
+            let mid = point(piece, 0.5 * (t0 + t1))?;
+            let faces = [label(0, mid)?, label(1, mid)?];
+            let mut count = 17;
+            let built = loop {
+                let ts: Vec<f64> = (0..count).map(|i| t0 + (t1 - t0) * i as f64 / (count - 1) as f64).collect();
+                let p3 = ts.iter().map(|&t| point(piece, t)).collect::<Result<Vec<_>>>()?;
+                let curve = fit(&p3)?;
+                let mut pcs = Vec::with_capacity(2);
+                for (o, (other, _)) in sides.iter().enumerate() {
+                    let uvs = p3
+                        .iter()
+                        .map(|&p| {
+                            other
+                                .uv(faces[o], p)
+                                .map(|uv| [uv[0], uv[1], 0.])
+                                .ok_or_else(|| refuse("Pair Boolean: point does not invert"))
+                        })
+                        .collect::<Result<Vec<_>>>()?;
+                    pcs.push(planar(fit(&uvs)?));
+                }
+                let mut agree = 0_f64;
+                for i in 0..=256 {
+                    let s = i as f64 / 256.;
+                    let c = curve.evaluate(s)?.point;
+                    for o in 0..2 {
+                        let uv = pcs[o].evaluate(s)?.point;
+                        let q = sides[o].1.faces[faces[o]]
+                            .surface
+                            .evaluate(uv[0].clamp(0., 1.), uv[1].clamp(0., 1.))?
+                            .point;
+                        let d = sub([q[0], q[1], q[2]], [c[0], c[1], c[2]]);
+                        agree = agree.max(dot(d, d).sqrt());
+                    }
+                }
+                if agree <= LIFT_TOLERANCE {
+                    let certified = [
+                        crate::implicit_trace::certify_lift(
+                            &a_model.faces[faces[0]].surface,
+                            &pcs[0],
+                            b.implicit().as_ref(),
+                            LIFT_TOLERANCE,
+                        )?,
+                        crate::implicit_trace::certify_lift(
+                            &b_model.faces[faces[1]].surface,
+                            &pcs[1],
+                            a.implicit().as_ref(),
+                            LIFT_TOLERANCE,
+                        )?,
+                    ];
+                    if let [Some(x), Some(y)] = certified {
+                        tolerance = tolerance.max(2. * agree.max(x).max(y));
+                        let second = pcs.pop().expect("two pcurves");
+                        let first = pcs.pop().expect("two pcurves");
+                        break Some((curve, [first, second]));
+                    }
+                }
+                if count >= 129 {
+                    break None;
+                }
+                count = 2 * count - 1;
+            };
+            let Some((curve, pcurves)) = built else {
+                return Err(refuse("Pair Boolean: a network piece misses its tolerance"));
+            };
+            network.push(NetworkPiece {
+                faces,
+                curve,
+                pcurves,
+                ends: [ends[k], ends[(k + 1) % ends.len()]],
+            });
+        }
+    }
+    network_boolean(a_model, b_model, operation, &network, inside, tolerance)
+}
+
+fn inside_cylinder(c: &crate::sphere_cylinder::CanonicalCylinder, p: [f64; 3]) -> Result<bool> {
+    let d = sub(p, c.center);
+    let z = dot(d, c.axis);
+    let rho = dot(d, c.frame[0]).hypot(dot(d, c.frame[1]));
+    decide((rho - c.radius).max(z.abs() - c.half_height), "cylinder")
+}
+
+fn inside_cone(c: &brep_core::intersections::CanonicalCone, p: [f64; 3]) -> Result<bool> {
+    let d = sub(p, c.bottom);
+    let z = dot(d, c.axis);
+    let rho = dot(d, c.frame[0]).hypot(dot(d, c.frame[1]));
+    let wall = (rho - c.r_bottom - c.slope * z) / c.slope.hypot(1.);
+    decide(wall.max(-z).max(z - c.height), "cone")
+}
+
+/// Off-axis cylinder x torus Boolean (cylinder first, torus between the caps).
+pub fn cylinder_torus_boolean(cylinder_model: &Model, torus_model: &Model, operation: &str) -> Result<Model> {
+    use crate::cylinder_torus::{CylinderTorusComponent, intersect_cylinder_torus};
+    use crate::sphere_cylinder::recognize_cylinder;
+    let (Some(cylinder), Some(torus)) = (recognize_cylinder(cylinder_model)?, recognize_torus(torus_model)?) else {
+        return Err(refuse("Cylinder-torus Boolean needs a canonical cylinder and torus"));
+    };
+    let report = intersect_cylinder_torus(cylinder_model, torus_model, Options::default())?;
+    if !report.unresolved.is_empty() {
+        return Err(refuse("Cylinder-torus Boolean: the intersection is not resolved"));
+    }
+    let mut loops = Vec::new();
+    let mut tolerance = 1e-6_f64;
+    for component in &report.components {
+        let CylinderTorusComponent::Traced { pieces, distance_bound, complete, .. } = component else {
+            return Err(refuse("Cylinder-torus Boolean: coaxial pairs belong to brep_core::boolean"));
+        };
+        if !complete {
+            return Err(refuse("Cylinder-torus Boolean: the component set is not certified complete"));
+        }
+        tolerance = tolerance.max(2. * distance_bound);
+        loops.push(pieces.clone());
+    }
+    let inside = |o: usize, p: [f64; 3]| -> Result<bool> {
+        if o == 0 { inside_torus(&torus, p) } else { inside_cylinder(&cylinder, p) }
+    };
+    pair_boolean(
+        cylinder_model,
+        torus_model,
+        operation,
+        super::traced_lift::Other::Cylinder(&cylinder),
+        super::traced_lift::Other::Torus(&torus),
+        &loops,
+        tolerance,
+        &inside,
+    )
+}
+
+/// Off-axis frustum x torus Boolean (frustum first, torus between the caps).
+pub fn cone_torus_boolean(cone_model: &Model, torus_model: &Model, operation: &str) -> Result<Model> {
+    use crate::cone_torus::{ConeTorusComponent, intersect_cone_torus};
+    use brep_core::intersections::recognize_cone;
+    let (Some(cone), Some(torus)) = (recognize_cone(cone_model)?, recognize_torus(torus_model)?) else {
+        return Err(refuse("Cone-torus Boolean needs a canonical frustum and torus"));
+    };
+    let report = intersect_cone_torus(cone_model, torus_model, Options::default())?;
+    if !report.unresolved.is_empty() {
+        return Err(refuse("Cone-torus Boolean: the intersection is not resolved"));
+    }
+    let mut loops = Vec::new();
+    let mut tolerance = 1e-6_f64;
+    for component in &report.components {
+        let ConeTorusComponent::Traced { pieces, distance_bound, complete, .. } = component else {
+            return Err(refuse("Cone-torus Boolean: coaxial pairs belong to brep_core::boolean"));
+        };
+        if !complete {
+            return Err(refuse("Cone-torus Boolean: the component set is not certified complete"));
+        }
+        tolerance = tolerance.max(2. * distance_bound);
+        loops.push(pieces.clone());
+    }
+    let inside = |o: usize, p: [f64; 3]| -> Result<bool> {
+        if o == 0 { inside_torus(&torus, p) } else { inside_cone(&cone, p) }
+    };
+    pair_boolean(
+        cone_model,
+        torus_model,
+        operation,
+        super::traced_lift::Other::Cone(&cone),
+        super::traced_lift::Other::Torus(&torus),
+        &loops,
+        tolerance,
+        &inside,
+    )
+}

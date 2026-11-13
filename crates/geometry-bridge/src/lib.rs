@@ -139,7 +139,7 @@ use value_codec::{Value, json};
 use bridge_codec::{Deserialize, Routed, Router, Serialize, response};
 pub use math_core::{Error, Result};
 /// `brep_core::boolean`, falling back to the certified curved families of
-/// `brep-intersect` (off-axis sphere x torus, cylinder, frustum) when the core refuses the
+/// `brep-intersect` (off-axis sphere x torus, cylinder, frustum; cylinder or frustum x torus in that order) when the core refuses the
 /// pair as unsupported. Any fallback refusal returns the core's error.
 pub(crate) fn curved_boolean(
     a: &brep_core::Model,
@@ -153,6 +153,8 @@ pub(crate) fn curved_boolean(
             brep_intersect::sphere_torus_boolean(a, b, operation)
                 .or_else(|_| brep_intersect::sphere_cylinder_boolean(a, b, operation))
                 .or_else(|_| brep_intersect::sphere_cone_boolean(a, b, operation))
+                .or_else(|_| brep_intersect::cylinder_torus_boolean(a, b, operation))
+                .or_else(|_| brep_intersect::cone_torus_boolean(a, b, operation))
                 .map_err(|_| error)
         }
         other => other,

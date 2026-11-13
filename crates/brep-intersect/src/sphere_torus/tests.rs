@@ -699,3 +699,50 @@ fn off_axis_sphere_cylinder_and_cone_booleans_balance_volumes() {
         assert!((d - (vo - i)).abs() <= tol, "difference {d} vs {}", vo - i);
     }
 }
+
+#[test]
+fn off_axis_torus_cylinder_and_cone_booleans_balance_volumes() {
+    use std::f64::consts::PI;
+    let volume = |m: &Model| {
+        brep_core::analysis::mass_properties(m, 1e-5, 2_000_000)
+            .unwrap()
+            .signed_volume_mm3
+    };
+    let small = brep_core::analytic::torus(2., 0.5).unwrap();
+    let big = brep_core::analytic::torus(3., 1.).unwrap();
+    let cases: [(Model, f64, Model, f64, bool); 2] = [
+        (
+            brep_core::analytic::cylinder(2., 12.).unwrap(),
+            PI * 4. * 12.,
+            translated(&small, [1.5, 0.3, 6.]),
+            2. * PI * PI * 2. * 0.25,
+            true,
+        ),
+        (
+            translated(&brep_core::analytic::frustum(1., 3., 6.).unwrap(), [0.5, 0., -3.]),
+            PI * 6. * (1. + 3. + 9.) / 3.,
+            big,
+            2. * PI * PI * 3.,
+            false,
+        ),
+    ];
+    for (other, vo, torus, vt, cylinder) in cases {
+        let run = |op: &str| {
+            if cylinder {
+                cylinder_torus_boolean(&other, &torus, op)
+            } else {
+                cone_torus_boolean(&other, &torus, op)
+            }
+            .unwrap_or_else(|e| panic!("{op} cylinder={cylinder}: {e:?}"))
+        };
+        let (u, i, d) = (run("union"), run("intersection"), run("difference"));
+        for m in [&u, &i, &d] {
+            m.validate().unwrap();
+        }
+        let (u, i, d) = (volume(&u), volume(&i), volume(&d));
+        let tol = 1e-3 * (vo + vt);
+        assert!(i > 0. && i < vo.min(vt), "{i}");
+        assert!((u + i - vo - vt).abs() <= tol, "union {u} + {i} vs {}", vo + vt);
+        assert!((d - (vo - i)).abs() <= tol, "difference {d} vs {}", vo - i);
+    }
+}
