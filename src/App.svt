@@ -39,7 +39,7 @@ import { BUSHING_DEFAULTS, generateBushing } from './app/bushingGenerator'
 import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, computeSpinnerParameterSuggestions, generateSpinner, generateSpinnerSafe } from './app/spinnerGenerator'
 import {restoreSourceHistory,boundedSourceHistory} from './app/mainSourceEditing'
 import type { DirectDocument, DirectBody } from './app/directModeling'
-import { APP_STRINGS as L, type Language } from './i18n/appStrings'
+import { translate, type Language, type TranslateParams } from './i18n/appStrings'
 import { useAppearance } from './composables/useAppearance'
 import { useEditorFind } from './composables/useEditorFind'
 import { emptyDirectDocument } from './app/directModeling'
@@ -153,7 +153,7 @@ const showNotice=useTransientNotice(notice)
 const fileName = ref(props.initialWorkspace.fileName)
 const exampleGalleryOpen = ref(false)
 let componentActive = true
-const t = (key: string) => L[lang.value][key] ?? key
+const t = (key: string, params?: TranslateParams) => translate(lang.value, key, params)
 const formatNumber = (value: number, digits = 0) => value.toLocaleString(lang.value, { maximumFractionDigits: digits })
 
 const {
@@ -871,8 +871,8 @@ const paletteCommands = computed(() => {
   return buildPaletteDescriptors({
     resolveLabel: key => t(key),
     aliasResolvers: [
-      key => L.ru[key] ?? key,
-      key => L.en[key] ?? key,
+      key => translate('ru', key),
+      key => translate('en', key),
     ],
     state,
     mru: commandMru.value,
