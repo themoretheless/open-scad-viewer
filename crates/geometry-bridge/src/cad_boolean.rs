@@ -27,7 +27,7 @@ pub fn boolean(v: Value) -> Result<Value> {
         .collect::<Result<Vec<_>>>()?;
     let mut result = models[0].clone();
     for model in &models[1..] {
-        result = brep_core::boolean(&result, model, &operation)?;
+        result = crate::curved_boolean(&result, model, &operation)?;
     }
     if result.bodies.is_empty() {
         return encode(Vec::<Value>::new());
