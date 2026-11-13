@@ -1,0 +1,17 @@
+# Code formatting is ratcheted per directory by `npm run lint`; these paths are not checked.
+node_modules/
+dist/
+output/
+tmp/
+public/
+docs/
+crates/
+integrations/
+forma-studio/
+ui/
+tests/fixtures/
+src/generated/
+src/render/shaders/generated/
+*.d.ts
+.ci-*/
+.kimi-worktrees/

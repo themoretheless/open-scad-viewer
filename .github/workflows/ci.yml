@@ -172,6 +172,8 @@ jobs:
           echo "OSV_TEST_WASM_OPT_NATIVE=$wasm_opt" >> "$GITHUB_ENV"
       - run: npm run test:architecture
       - run: npm run audit:architecture
+      # TypeScript/JavaScript lint ratchet: per-directory ESLint and Prettier counts may only go down.
+      - run: npm run lint
       - run: npm run test:wasm-optimize
       - run: npm run test:qualification-drift
       - run: npm run build:geometry
