@@ -48,19 +48,20 @@ pub(super) fn merge_ordered<O>(
     }
     Ok(ordered)
 }
-/// Whether the first and last cuts are exactly the two ends of the source domain.
+/// Whether the cuts start and end exactly at the two ends of the source
+/// domain. Fewer than two cuts, or a source without cells, never do.
 pub(super) fn spans_domain(
-    [first, last]: [&OriginalSourceParameter; 2],
+    cuts: &[&OriginalSourceParameter],
     cs: &[Cell],
     limits: ParameterOrderLimits,
 ) -> Result<bool> {
+    let ([first, .., last], Some(start), Some(end)) = (cuts, cs.first(), cs.last()) else {
+        return Ok(false);
+    };
     Ok(
-        compare(first, &chart_intervals::rational(&cs[0].domain[0]), limits)? == Ordering::Equal
-            && compare(
-                last,
-                &chart_intervals::rational(&cs.last().unwrap().domain[1]),
-                limits,
-            )? == Ordering::Equal,
+        compare(first, &chart_intervals::rational(&start.domain[0]), limits)? == Ordering::Equal
+            && compare(last, &chart_intervals::rational(&end.domain[1]), limits)?
+                == Ordering::Equal,
     )
 }
 /// The single source cell that contains the interval between two adjacent

@@ -128,6 +128,11 @@ struct Lattice {
     chart: [[Q; 2]; 2],
     periods: [Q; 2],
 }
+/// Exact rational value of a finite binary64 input.
+fn exact(value: f64) -> Result<Q> {
+    Q::from_float(value)
+        .ok_or_else(|| refused("Invalid original periodic source domain or proof budget"))
+}
 fn validate(o: &OwnedOriginalPeriodicPieces) -> Result<()> {
     if o.sources.len() > MAX_SOURCES
         || !o.width.is_finite()
@@ -207,12 +212,11 @@ impl Census {
         // Positive homogeneous weights prove the full actual cell lies in
         // this EXACT control hull. It proposes all possible lattice levels.
         let hull = c.net.iter().map(|p| &p[axis] / &p[2]).collect::<Vec<_>>();
-        let low = ((hull.iter().min().unwrap() - origin) / period)
-            .ceil()
-            .to_integer();
-        let high = ((hull.iter().max().unwrap() - origin) / period)
-            .floor()
-            .to_integer();
+        let (Some(min), Some(max)) = (hull.iter().min(), hull.iter().max()) else {
+            return Err(refused("Original periodic cell has no control hull"));
+        };
+        let low = ((min - origin) / period).ceil().to_integer();
+        let high = ((max - origin) / period).floor().to_integer();
         if high < low {
             return Ok(());
         }
@@ -221,7 +225,7 @@ impl Census {
                 "Original periodic cell crosses too many candidate lattice shores",
             ));
         }
-        let width = Q::from_float(o.width).unwrap() / (&c.domain[1] - &c.domain[0]).max(Q::one());
+        let width = exact(o.width)? / (&c.domain[1] - &c.domain[0]).max(Q::one());
         let mut level = low;
         while level <= high {
             *work += 1;
@@ -266,9 +270,9 @@ impl Census {
             level: level.to_string(),
             domain: c.domain.clone().map(|q| ratio(&q)),
         });
-        for endpoint in 0..2 {
+        for (endpoint, q) in c.domain.iter().enumerate() {
             self.raw[source].push((
-                chart_intervals::rational(&c.domain[endpoint]),
+                chart_intervals::rational(q),
                 OriginalPeriodicCutOrigin::Coincident {
                     cell: index,
                     endpoint,
@@ -353,7 +357,7 @@ fn place(
 fn tile_index(piece: &OriginalPeriodicPiece, axis: usize) -> Result<BigInt> {
     piece.tiles[axis]
         .as_ref()
-        .unwrap()
+        .ok_or_else(|| refused("Invalid periodic tile integer"))?
         .parse::<BigInt>()
         .map_err(|_| refused("Invalid periodic tile integer"))
 }
@@ -410,7 +414,10 @@ fn seam(
 }
 fn derive(o: &OwnedOriginalPeriodicPieces) -> Result<Data> {
     validate(o)?;
-    let chart = o.chart.map(|a| a.map(|q| Q::from_float(q).unwrap()));
+    let chart = [
+        [exact(o.chart[0][0])?, exact(o.chart[0][1])?],
+        [exact(o.chart[1][0])?, exact(o.chart[1][1])?],
+    ];
     let periods = chart.each_ref().map(|a| &a[1] - &a[0]);
     let lattice = Lattice { chart, periods };
     let originals = o.sources.iter().map(cells).collect::<Result<Vec<_>>>()?;
@@ -442,13 +449,8 @@ fn derive(o: &OwnedOriginalPeriodicPieces) -> Result<Data> {
     let mut transitions = Vec::new();
     for (source, source_cuts) in cuts.iter().enumerate() {
         let cs = &originals[source];
-        if source_cuts.len() < 2
-            || !atomic_cuts::spans_domain(
-                [&source_cuts[0].value, &source_cuts.last().unwrap().value],
-                cs,
-                o.limits,
-            )?
-        {
+        let values = source_cuts.iter().map(|c| &c.value).collect::<Vec<_>>();
+        if !atomic_cuts::spans_domain(&values, cs, o.limits)? {
             return Err(refused(
                 "Original periodic pieces do not cover the complete source domain",
             ));

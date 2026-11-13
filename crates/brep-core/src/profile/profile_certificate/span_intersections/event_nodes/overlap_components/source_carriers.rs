@@ -87,6 +87,8 @@ const MAX_CUT_PROPOSALS: usize = 8192;
 /// Allowance on the running work total after matching common edge aliases.
 const ALIAS_MATCHING_WORK: usize = 262144;
 type RawCut = (OriginalSourceParameter, OriginalSourceCutOrigin);
+/// Knot cells of every source, indexed by source.
+type SourceCells = Vec<Vec<Cell>>;
 /// Unordered cut proposals of every source, bounded in total.
 struct Proposals {
     raw: Vec<Vec<RawCut>>,
@@ -109,7 +111,7 @@ impl Proposals {
 }
 /// Proposes every knot, pair cut and common partition cut on its source, and
 /// returns the proposals together with each source's knot cells.
-fn propose(o: &OwnedOriginalSourceCarriers) -> Result<(Vec<Vec<RawCut>>, Vec<Vec<Cell>>)> {
+fn propose(o: &OwnedOriginalSourceCarriers) -> Result<(Vec<Vec<RawCut>>, SourceCells)> {
     let sources = o.dictionary.sources();
     let mut out = Proposals {
         raw: vec![Vec::new(); sources.len()],
@@ -169,13 +171,8 @@ fn atomic_carriers(
     let mut carriers = Vec::new();
     for (source, source_cuts) in cuts.iter().enumerate() {
         let cells = &source_cells[source];
-        if source_cuts.len() < 2
-            || !atomic_cuts::spans_domain(
-                [&source_cuts[0].value, &source_cuts.last().unwrap().value],
-                cells,
-                limits,
-            )?
-        {
+        let values = source_cuts.iter().map(|c| &c.value).collect::<Vec<_>>();
+        if !atomic_cuts::spans_domain(&values, cells, limits)? {
             return Err(refused(
                 "Unified original source cuts do not cover its full natural domain",
             ));

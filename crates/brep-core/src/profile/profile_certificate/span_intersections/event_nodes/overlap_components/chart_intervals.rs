@@ -132,13 +132,8 @@ fn derive(
     let chart = owner.chart().map(|a| a.map(|q| Q::from_float(q).unwrap()));
     for (source, values) in cuts.iter().enumerate() {
         let cs = &original[source];
-        if values.len() < 2
-            || !atomic_cuts::spans_domain(
-                [&values[0].value, &values.last().unwrap().value],
-                cs,
-                l,
-            )?
-        {
+        let parameters = values.iter().map(|c| &c.value).collect::<Vec<_>>();
+        if !atomic_cuts::spans_domain(&parameters, cs, l)? {
             return Err(refused(
                 "Original chart intervals do not cover the full source domain",
             ));
