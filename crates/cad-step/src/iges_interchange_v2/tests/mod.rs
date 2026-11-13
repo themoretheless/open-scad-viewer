@@ -1212,3 +1212,41 @@ fn multiple_bodies_and_cavities_roundtrip_without_topology_reconstruction() {
     );
     assert!(report.identity.preserved);
 }
+
+#[test]
+fn rational_sphere_and_torus_round_trip_through_126_and_128() {
+    for model in [
+        brep_core::analytic::sphere(2.5).unwrap(),
+        brep_core::analytic::torus(3., 1.).unwrap(),
+    ] {
+        let (text, _, _) = export_iges_v2(&model).unwrap();
+        let (back, _, _) = import_iges_v2(&text).unwrap();
+        assert_eq!(back.faces.len(), model.faces.len());
+        for (a, b) in model.faces.iter().zip(&back.faces) {
+            // Rational weights survive, and the surfaces agree pointwise.
+            assert!(a.surface.weights.iter().flatten().any(|w| (w - 1.).abs() > 1e-6));
+            assert_eq!(a.surface.weights.len(), b.surface.weights.len());
+            for (wa, wb) in a.surface.weights.iter().flatten().zip(b.surface.weights.iter().flatten()) {
+                assert!((wa - wb).abs() <= 1e-12 * wa.abs().max(1.));
+            }
+            let ([u0, u1], [v0, v1]) = (
+                [a.surface.knots_u[0], *a.surface.knots_u.last().unwrap()],
+                [a.surface.knots_v[0], *a.surface.knots_v.last().unwrap()],
+            );
+            let ([p0, p1], [q0, q1]) = (
+                [b.surface.knots_u[0], *b.surface.knots_u.last().unwrap()],
+                [b.surface.knots_v[0], *b.surface.knots_v.last().unwrap()],
+            );
+            for i in 0..=8 {
+                for j in 0..=8 {
+                    let (s, t) = (i as f64 / 8., j as f64 / 8.);
+                    let pa = a.surface.evaluate(u0 + s * (u1 - u0), v0 + t * (v1 - v0)).unwrap().point;
+                    let pb = b.surface.evaluate(p0 + s * (p1 - p0), q0 + t * (q1 - q0)).unwrap().point;
+                    for k in 0..3 {
+                        assert!((pa[k] - pb[k]).abs() <= 1e-9, "{pa:?} vs {pb:?}");
+                    }
+                }
+            }
+        }
+    }
+}

@@ -387,12 +387,14 @@ fn clearly_off_axis_contacts_are_traced_and_certified() {
                 sphere_uv,
                 torus_uv,
                 lift_deviation,
+                complete,
             } = component
             else {
                 panic!("expected a traced component off the axis");
             };
             assert!(*distance_bound <= TRACE_TOLERANCE && *spans > 0);
             assert!(*lift_deviation <= LIFT_TOLERANCE);
+            assert!(*complete, "{radius} at {at:?}: component set not certified complete");
             assert!(!sphere_uv.is_empty() && !torus_uv.is_empty());
             // Independent check of the lifts: mapped pcurve samples sit on
             // both canonical surfaces and inside the patch domain.
@@ -408,7 +410,13 @@ fn clearly_off_axis_contacts_are_traced_and_certified() {
                         let d = sub([p[0], p[1], p[2]], at);
                         let on_sphere = (d[0].hypot(d[1]).hypot(d[2]) - radius).abs();
                         let on_torus = ((p[0].hypot(p[1]) - 3.).hypot(p[2]) - 1.).abs();
-                        assert!(on_sphere <= 2. * LIFT_TOLERANCE && on_torus <= 2. * LIFT_TOLERANCE);
+                        // The certified bound covers every sample (plus the
+                        // authored surfaces' own rounding).
+                        let bound = lift_deviation + 1e-12;
+                        assert!(
+                            on_sphere.min(on_torus) <= 1e-12 && on_sphere.max(on_torus) <= bound,
+                            "{on_sphere} {on_torus} > {lift_deviation}"
+                        );
                     }
                 }
             };

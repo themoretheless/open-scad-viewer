@@ -1,21 +1,13 @@
 //! Owned scene bounds hierarchy for broadphase picking, using f64 throughout.
+use crate::aabb_tree::{BoxTree, SplitRule};
 #[derive(Clone, Copy, Debug)]
 pub struct Item {
     pub id: i64,
     pub min: [f64; 3],
     pub max: [f64; 3],
 }
-struct Node {
-    min: [f64; 3],
-    max: [f64; 3],
-    contents: Contents,
-}
-enum Contents {
-    Leaf(Vec<Item>),
-    Branch(Box<Node>, Box<Node>),
-}
 pub struct Index {
-    root: Option<Node>,
+    root: Option<BoxTree<Item>>,
     pub item_count: usize,
     pub node_count: usize,
 }
@@ -36,7 +28,11 @@ impl Index {
         let root = if items.is_empty() {
             None
         } else {
-            Some(build(items, leaf.clamp(1, 32), &mut node_count))
+            let rule = SplitRule {
+                leaf: leaf.clamp(1, 32),
+                ..SCENE_SPLIT
+            };
+            Some(BoxTree::build_with(items, &rule, &mut node_count))
         };
         Self {
             root,
@@ -53,76 +49,44 @@ impl Index {
         } else {
             f64::INFINITY
         };
-        let mut pending = Vec::new();
-        if let Some(root) = &self.root {
-            pending.push(root)
-        }
         let mut result = Vec::new();
-        while let Some(node) = pending.pop() {
-            if entry(origin, direction, node.min, node.max, maximum).is_none() {
-                continue;
-            }
-            match &node.contents {
-                Contents::Branch(left, right) => {
-                    pending.push(left);
-                    pending.push(right)
-                }
-                Contents::Leaf(items) => {
-                    for item in items {
-                        if let Some(distance) =
-                            entry(origin, direction, item.min, item.max, maximum)
-                        {
-                            result.push(Candidate {
-                                id: item.id,
-                                distance,
-                            })
-                        }
+        if let Some(root) = &self.root {
+            root.walk(
+                |min, max| entry(origin, direction, min, max, maximum).is_some(),
+                |item| {
+                    if let Some(distance) = entry(origin, direction, item.min, item.max, maximum) {
+                        result.push(Candidate {
+                            id: item.id,
+                            distance,
+                        })
                     }
-                }
-            }
+                },
+            );
         }
         result.sort_by(|a, b| a.distance.total_cmp(&b.distance).then(a.id.cmp(&b.id)));
         result
     }
 }
-fn build(mut items: Vec<Item>, leaf: usize, count: &mut usize) -> Node {
-    *count += 1;
-    let mut min = [f64::INFINITY; 3];
-    let mut max = [f64::NEG_INFINITY; 3];
-    let mut cmin = min;
-    let mut cmax = max;
-    for item in &items {
-        for a in 0..3 {
-            min[a] = min[a].min(item.min[a]);
-            max[a] = max[a].max(item.max[a]);
-            let c = center(item, a);
-            cmin[a] = cmin[a].min(c);
-            cmax[a] = cmax[a].max(c);
-        }
-    }
-    let contents = if items.len() <= leaf {
-        items.sort_by_key(|v| v.id);
-        Contents::Leaf(items)
-    } else {
+const SCENE_SPLIT: SplitRule<Item> = SplitRule {
+    leaf: 1,
+    bounds: |item| (item.min, item.max),
+    // Widest item-centre axis; ties keep the first such axis.
+    axis: |e| {
         let mut axis = 0;
         for a in 1..3 {
-            if cmax[a] - cmin[a] > cmax[axis] - cmin[axis] {
+            if e.center_max[a] - e.center_min[a] > e.center_max[axis] - e.center_min[axis] {
                 axis = a
             }
         }
-        items.sort_by(|a, b| {
-            center(a, axis)
-                .total_cmp(&center(b, axis))
-                .then(a.id.cmp(&b.id))
-        });
-        let right = items.split_off(items.len() / 2);
-        Contents::Branch(
-            Box::new(build(items, leaf, count)),
-            Box::new(build(right, leaf, count)),
-        )
-    };
-    Node { min, max, contents }
-}
+        axis
+    },
+    order: |a, b, axis| {
+        center(a, axis)
+            .total_cmp(&center(b, axis))
+            .then(a.id.cmp(&b.id))
+    },
+    leaf_order: Some(|a, b| a.id.cmp(&b.id)),
+};
 fn center(item: &Item, a: usize) -> f64 {
     item.min[a] * 0.5 + item.max[a] * 0.5
 }

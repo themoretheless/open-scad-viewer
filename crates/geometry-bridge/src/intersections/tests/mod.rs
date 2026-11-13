@@ -1139,7 +1139,8 @@
             near["unresolved"][0]["reason"].as_str(),
             Some("near_coincidence")
         );
-        // Clearly off-axis: the general quartic is unsupported, no fallback.
+        // Clearly off-axis: the quartic is traced into certified cubic pieces
+        // with UV lifts on both surfaces.
         let off = run(
             &brep_core::transform::affine(
                 &brep_core::analytic::sphere(5.2_f64.sqrt()).unwrap(),
@@ -1153,10 +1154,12 @@
             .unwrap(),
             &torus,
         );
-        assert_eq!(
-            off["unresolved"][0]["reason"].as_str(),
-            Some("unsupported_surface")
-        );
+        assert_eq!(off["coverage"].as_str(), Some("numerically_resolved"));
+        let traced = &off["components"][0];
+        assert_eq!(traced["kind"].as_str(), Some("traced"));
+        assert!(traced["distanceBound"].as_f64().unwrap() <= 1e-7);
+        assert!(!traced["sphereUv"].as_array().unwrap().is_empty());
+        assert!(!traced["torusUv"].as_array().unwrap().is_empty());
         // Non-canonical operands and swapped order: unsupported regions.
         let refused = run(&torus, &brep_core::analytic::sphere(2.).unwrap());
         assert_eq!(
@@ -1289,12 +1292,15 @@
             near["unresolved"][0]["reason"].as_str(),
             Some("near_coincidence")
         );
-        // Clearly off-axis: the general quartic is unsupported, no fallback.
+        // Clearly off-axis: the quartic is traced into certified cubic pieces
+        // with UV lifts on both surfaces.
         let off = run(&at(2.2, 0.5), &torus);
-        assert_eq!(
-            off["unresolved"][0]["reason"].as_str(),
-            Some("unsupported_surface")
-        );
+        assert_eq!(off["coverage"].as_str(), Some("numerically_resolved"));
+        let traced = &off["components"][0];
+        assert_eq!(traced["kind"].as_str(), Some("traced"));
+        assert!(traced["distanceBound"].as_f64().unwrap() <= 1e-7);
+        assert!(!traced["sphereUv"].as_array().unwrap().is_empty());
+        assert!(!traced["torusUv"].as_array().unwrap().is_empty());
         // Non-canonical operands and swapped order: unsupported regions.
         let refused = run(&torus, &brep_core::analytic::cylinder(2.2, 8.).unwrap());
         assert_eq!(
@@ -1440,12 +1446,15 @@
             near["unresolved"][0]["reason"].as_str(),
             Some("near_coincidence")
         );
-        // Clearly off-axis: the general quartic is unsupported, no fallback.
+        // Clearly off-axis: the quartic is traced into certified cubic pieces
+        // with UV lifts on both surfaces.
         let off = run(&at(0.5), &torus);
-        assert_eq!(
-            off["unresolved"][0]["reason"].as_str(),
-            Some("unsupported_surface")
-        );
+        assert_eq!(off["coverage"].as_str(), Some("numerically_resolved"));
+        let traced = &off["components"][0];
+        assert_eq!(traced["kind"].as_str(), Some("traced"));
+        assert!(traced["distanceBound"].as_f64().unwrap() <= 1e-7);
+        assert!(!traced["sphereUv"].as_array().unwrap().is_empty());
+        assert!(!traced["torusUv"].as_array().unwrap().is_empty());
         // Non-canonical operands and swapped order: unsupported regions.
         let refused = run(&torus, &brep_core::analytic::frustum(1., 3., 6.).unwrap());
         assert_eq!(
@@ -1563,7 +1572,8 @@
             near["unresolved"][0]["reason"].as_str(),
             Some("near_coincidence")
         );
-        // Clearly off-axis: the general quartic is unsupported, no fallback.
+        // Clearly off-axis: the quartic is traced into certified cubic pieces
+        // with UV lifts on both surfaces.
         let off = brep_core::transform::affine(
             &at(3.),
             [
@@ -1575,10 +1585,12 @@
         )
         .unwrap();
         let off = run(&first, &off);
-        assert_eq!(
-            off["unresolved"][0]["reason"].as_str(),
-            Some("unsupported_surface")
-        );
+        assert_eq!(off["coverage"].as_str(), Some("numerically_resolved"));
+        let traced = &off["components"][0];
+        assert_eq!(traced["kind"].as_str(), Some("traced"));
+        assert!(traced["distanceBound"].as_f64().unwrap() <= 1e-7);
+        assert!(!traced["sphereUv"].as_array().unwrap().is_empty());
+        assert!(!traced["torusUv"].as_array().unwrap().is_empty());
         // Non-canonical operands on either side: unsupported regions.
         let refused = run(&first, &brep_core::analytic::sphere(2.).unwrap());
         assert_eq!(

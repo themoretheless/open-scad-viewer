@@ -62,7 +62,7 @@ pub use crate::numerics::guards;
 pub mod min_zone_fit;
 pub mod interpolation;
 pub mod local_interpolation;
-pub use local_interpolation::interpolate_curve_local;
+pub use local_interpolation::{interpolate_curve_local, interpolate_surface_local};
 pub mod bracketed;
 pub mod oslo;
 pub mod knot_removal;

@@ -1267,7 +1267,10 @@ fn layered_fillet_bridge_checks_chain_and_cavity() {
         })
         .map(|(i, _)| i)
         .collect();
-    assert!(edges.len() > 1);
+    // The cutter never touches the x = 0 or y = 0 walls, so the minimal
+    // difference keeps the outer corner as one edge (older Boolean output
+    // split it into a chain).
+    assert_eq!(edges.len(), 1);
     let encoded = encode(model).unwrap();
     let request = json!({"op":"brep_nurbs_exact_layered_prism_fillet","model":encoded.clone(),"edges":edges.clone(),"radius":1.});
     let result = dispatch(request.clone()).unwrap();
@@ -1285,9 +1288,10 @@ fn layered_fillet_bridge_checks_chain_and_cavity() {
         bad["radius"] = json!(radius);
         assert!(dispatch(bad).is_err());
     }
-    let mut partial = request;
-    partial["edges"] = json!([edges[0]]);
-    assert!(dispatch(partial).is_err());
+    // A non-corner edge (a top rim edge) is not a layered prism corner.
+    let mut wrong = request;
+    wrong["edges"] = json!([edges[0] + 1]);
+    assert!(dispatch(wrong).is_err());
 }
 
 #[test]

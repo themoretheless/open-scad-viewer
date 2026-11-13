@@ -257,16 +257,14 @@ impl Program {
                 scale,
                 ..
             } = node
-            {
-                if !height.is_finite()
+                && (!height.is_finite()
                     || *height <= 0.
                     || *slices > 513
                     || !twist.is_finite()
                     || !scale.iter().all(|v| v.is_finite())
-                    || !rings.iter().flatten().flatten().all(|v| v.is_finite())
-                {
-                    return Err(crate::fail("Invalid solid program extrusion"));
-                }
+                    || !rings.iter().flatten().flatten().all(|v| v.is_finite()))
+            {
+                return Err(crate::fail("Invalid solid program extrusion"));
             }
         }
         crate::program_graph::validate(
