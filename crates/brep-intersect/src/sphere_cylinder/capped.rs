@@ -145,6 +145,14 @@ fn clip(loops: &[Vec<Curve>], h: &dyn Fn(P) -> f64) -> Result<(Vec<Arc>, Vec<Vec
             return Err(refuse("an inside arc did not close at the boundary"));
         }
     }
+    // Two boundary crossings almost on top of each other mean the curve
+    // nearly touches the boundary there: a tangency, not two crossings.
+    for arc in &open {
+        let d = sub(arc.samples[0], *arc.samples.last().unwrap());
+        if arc.samples.len() <= 3 && dot(d, d).sqrt() < 1e-5 {
+            return Err(refuse("a contact arc nearly touches a face boundary"));
+        }
+    }
     // An arc grazing the boundary would show as an interior sample near it.
     for arc in &open {
         for &p in &arc.samples[1..arc.samples.len() - 1] {

@@ -710,7 +710,15 @@ fn off_axis_torus_cylinder_and_cone_booleans_balance_volumes() {
     };
     let small = brep_core::analytic::torus(2., 0.5).unwrap();
     let big = brep_core::analytic::torus(3., 1.).unwrap();
-    let cases: [(Model, f64, Model, f64, bool); 3] = [
+    let cases: [(Model, f64, Model, f64, bool); 4] = [
+        // A short frustum whose bottom cap the torus crosses.
+        (
+            translated(&brep_core::analytic::frustum(2., 3., 1.5).unwrap(), [0.6, 0.25, -0.9]),
+            PI * 1.5 * (4. + 6. + 9.) / 3.,
+            brep_core::analytic::torus(3., 1.).unwrap(),
+            2. * PI * PI * 3.,
+            false,
+        ),
         // A short cylinder whose caps the torus crosses.
         (
             translated(&brep_core::analytic::cylinder(2.2, 1.5).unwrap(), [0.5, 0., -0.75]),
