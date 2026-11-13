@@ -354,12 +354,14 @@ fn off_axis_spheres_between_the_caps_are_traced_and_complete() {
         assert!(report.unresolved.is_empty(), "{radius} at {at:?}: {:?}", report.unresolved);
         assert!(!report.components.is_empty());
         for component in &report.components {
-            let SphereCylinderComponent::Traced { pieces, distance_bound, complete, .. } = component
+            let SphereCylinderComponent::Traced { pieces, distance_bound, complete, sphere_uv, cylinder_uv, lift_deviation, .. } = component
             else {
                 panic!("expected a traced loop");
             };
             assert!(*distance_bound <= crate::TRACE_TOLERANCE);
             assert!(*complete, "{radius} at {at:?}");
+            assert!(*lift_deviation <= crate::LIFT_TOLERANCE);
+            assert!(!sphere_uv.is_empty() && !cylinder_uv.is_empty());
             for piece in pieces {
                 for k in 0..=40 {
                     let p = piece.evaluate(k as f64 / 40.).unwrap().point;

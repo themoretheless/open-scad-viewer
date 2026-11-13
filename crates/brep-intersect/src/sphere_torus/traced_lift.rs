@@ -21,9 +21,109 @@ use nurbs_core::foundation::interpolation::{Parameterization, interpolate_curve}
 pub const LIFT_TOLERANCE: f64 = 1e-6;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub(super) enum Patch {
+pub(crate) enum Patch {
     Sphere(usize),
+    /// A face of the other operand (torus, cylinder or cone).
     Torus(usize),
+}
+
+/// The non-sphere operand of a traced pair.
+#[derive(Clone, Copy)]
+pub(crate) enum Other<'a> {
+    Torus(&'a CanonicalTorus),
+    Cylinder(&'a crate::sphere_cylinder::CanonicalCylinder),
+    Cone(&'a brep_core::intersections::CanonicalCone),
+}
+
+/// Unwrap an angle into quadrant `q` and map it to the exact 90-degree arc
+/// parameter.
+fn arc_local(angle: f64, q: usize) -> f64 {
+    let mut a = angle - q as f64 * QUARTER;
+    if a > TAU - QUARTER {
+        a -= TAU;
+    } else if a < -QUARTER {
+        a += TAU;
+    }
+    arc_parameter(a.clamp(0., QUARTER)).clamp(0., 1.)
+}
+
+impl Other<'_> {
+    /// Origin, in-plane frame and axis of the revolution chart.
+    fn chart(&self) -> ([f64; 3], [[f64; 3]; 2], [f64; 3]) {
+        match self {
+            Other::Torus(t) => (t.center, t.frame, t.axis),
+            Other::Cylinder(c) => (c.center, c.frame, c.axis),
+            Other::Cone(c) => (c.bottom, c.frame, c.axis),
+        }
+    }
+    /// Revolution angle in [0, TAU), axial coordinate and axis distance.
+    fn cylindrical(&self, p: [f64; 3]) -> (f64, f64, f64) {
+        let (o, f, axis) = self.chart();
+        let d = sub(p, o);
+        let (x, y) = (dot(d, f[0]), dot(d, f[1]));
+        (y.atan2(x).rem_euclid(TAU), dot(d, axis), x.hypot(y))
+    }
+    fn patch(&self, p: [f64; 3]) -> Option<usize> {
+        match self {
+            Other::Torus(t) => Some(torus_patch(t, p)),
+            Other::Cylinder(c) => {
+                let (rev, z, _) = self.cylindrical(p);
+                (z.abs() <= c.half_height).then(|| c.sides[quadrant(rev)])
+            }
+            Other::Cone(c) => {
+                let (rev, z, _) = self.cylindrical(p);
+                (0. ..=c.height).contains(&z).then(|| c.sides[quadrant(rev)])
+            }
+        }
+    }
+    fn uv(&self, face: usize, p: [f64; 3]) -> Option<[f64; 2]> {
+        match self {
+            Other::Torus(t) => torus_uv(t, face, p),
+            Other::Cylinder(c) => {
+                let i = c.sides.iter().position(|&f| f == face)?;
+                let (rev, z, _) = self.cylindrical(p);
+                Some([arc_local(rev, i), ((z + c.half_height) / (2. * c.half_height)).clamp(0., 1.)])
+            }
+            Other::Cone(c) => {
+                let i = c.sides.iter().position(|&f| f == face)?;
+                let (rev, z, _) = self.cylindrical(p);
+                Some([arc_local(rev, i), (z / c.height).clamp(0., 1.)])
+            }
+        }
+    }
+    fn distance(&self, p: [f64; 3]) -> f64 {
+        match self {
+            Other::Torus(t) => torus_distance(t, p),
+            Other::Cylinder(c) => (self.cylindrical(p).2 - c.radius).abs(),
+            Other::Cone(c) => {
+                let (_, z, rho) = self.cylindrical(p);
+                (rho - c.r_bottom - c.slope * z).abs() / c.slope.hypot(1.)
+            }
+        }
+    }
+    fn implicit(&self) -> Box<dyn crate::implicit_trace::Implicit> {
+        let (o, f, axis) = self.chart();
+        let frame = [f[0], f[1], axis];
+        match self {
+            Other::Torus(t) => Box::new(crate::implicit_trace::TorusImplicit {
+                center: o,
+                frame,
+                major: t.major,
+                minor: t.minor,
+            }),
+            Other::Cylinder(c) => Box::new(crate::implicit_trace::CylinderImplicit {
+                center: o,
+                frame,
+                radius: c.radius,
+            }),
+            Other::Cone(c) => Box::new(crate::implicit_trace::ConeImplicit {
+                bottom: o,
+                frame,
+                r_bottom: c.r_bottom,
+                slope: c.slope,
+            }),
+        }
+    }
 }
 
 /// The sphere patch whose exact inversion lands in its quarter disk; at a
@@ -80,45 +180,43 @@ fn torus_uv(torus: &CanonicalTorus, patch: usize, p: [f64; 3]) -> Option<[f64; 2
     Some([local(rev, i), local(prof, j)])
 }
 
-pub(super) struct Context<'a> {
+pub(crate) struct Context<'a> {
     sphere: &'a CanonicalSphere,
-    torus: &'a CanonicalTorus,
+    other: Other<'a>,
     sphere_model: &'a Model,
     torus_model: &'a Model,
     sphere_implicit: crate::implicit_trace::SphereImplicit,
-    torus_implicit: crate::implicit_trace::TorusImplicit,
+    torus_implicit: Box<dyn crate::implicit_trace::Implicit>,
 }
 
 impl<'a> Context<'a> {
-    pub(super) fn new(
+    pub(crate) fn new(
         sphere: &'a CanonicalSphere,
-        torus: &'a CanonicalTorus,
+        other: Other<'a>,
         sphere_model: &'a Model,
-        torus_model: &'a Model,
+        other_model: &'a Model,
     ) -> Self {
         Context {
-        sphere,
-        torus,
-        sphere_model,
-        torus_model,
-        sphere_implicit: crate::implicit_trace::SphereImplicit {
-            center: sphere.center,
-            radius: sphere.radius,
-        },
-        torus_implicit: crate::implicit_trace::TorusImplicit {
-            center: torus.center,
-            frame: [torus.frame[0], torus.frame[1], torus.axis],
-            major: torus.major,
-            minor: torus.minor,
-        },
+            sphere,
+            other,
+            sphere_model,
+            torus_model: other_model,
+            sphere_implicit: crate::implicit_trace::SphereImplicit {
+                center: sphere.center,
+                radius: sphere.radius,
+            },
+            torus_implicit: other.implicit(),
         }
     }
 }
 
 impl Context<'_> {
-    pub(super) fn label(&self, p: [f64; 3], torus_side: bool) -> Result<Patch> {
+    pub(crate) fn label(&self, p: [f64; 3], torus_side: bool) -> Result<Patch> {
         if torus_side {
-            Ok(Patch::Torus(torus_patch(self.torus, p)))
+            self.other
+                .patch(p)
+                .map(Patch::Torus)
+                .ok_or_else(|| Error::new("BREP_INTERSECTION_LIFT_REFUSED", "traced point lies on no side patch"))
         } else {
             sphere_patch(self.sphere, self.sphere_model.faces.len(), p)
                 .map(Patch::Sphere)
@@ -131,7 +229,7 @@ impl Context<'_> {
         }
     }
 
-    pub(super) fn uv(&self, patch: Patch, p: [f64; 3]) -> Result<[f64; 2]> {
+    pub(crate) fn uv(&self, patch: Patch, p: [f64; 3]) -> Result<[f64; 2]> {
         let uv = match patch {
             Patch::Sphere(f) => self.sphere.invert_uv(f, p).map(|uv| {
                 // Seam points: snap rounding-scale negatives onto the patch.
@@ -139,7 +237,7 @@ impl Context<'_> {
                 let n = uv[0].hypot(uv[1]);
                 if n > 1. { uv.map(|x| x / n) } else { uv }
             }),
-            Patch::Torus(f) => torus_uv(self.torus, f, p),
+            Patch::Torus(f) => self.other.uv(f, p),
         };
         uv.ok_or_else(|| {
             Error::new(
@@ -150,9 +248,9 @@ impl Context<'_> {
     }
 
     /// Certified distance bound of the pcurve image from the other surface.
-    pub(super) fn certify(&self, patch: Patch, uv_curve: &Curve) -> Result<Option<f64>> {
+    pub(crate) fn certify(&self, patch: Patch, uv_curve: &Curve) -> Result<Option<f64>> {
         let (model, f, other): (_, _, &dyn crate::implicit_trace::Implicit) = match patch {
-            Patch::Sphere(f) => (self.sphere_model, f, &self.torus_implicit),
+            Patch::Sphere(f) => (self.sphere_model, f, self.torus_implicit.as_ref()),
             Patch::Torus(f) => (self.torus_model, f, &self.sphere_implicit),
         };
         crate::implicit_trace::certify_lift(&model.faces[f].surface, uv_curve, other, LIFT_TOLERANCE)
@@ -174,7 +272,7 @@ impl Context<'_> {
                 .point;
             let p = [p[0], p[1], p[2]];
             let other = match patch {
-                Patch::Sphere(_) => torus_distance(self.torus, p),
+                Patch::Sphere(_) => self.other.distance(p),
                 Patch::Torus(_) => {
                     let d = sub(p, self.sphere.center);
                     (d[0].hypot(d[1]).hypot(d[2]) - self.sphere.radius).abs()
@@ -194,14 +292,14 @@ fn torus_distance(torus: &CanonicalTorus, p: [f64; 3]) -> f64 {
     ((rho - torus.major).hypot(z) - torus.minor).abs()
 }
 
-pub(super) fn point(curve: &Curve, t: f64) -> Result<[f64; 3]> {
+pub(crate) fn point(curve: &Curve, t: f64) -> Result<[f64; 3]> {
     let p = curve.evaluate(t)?.point;
     Ok([p[0], p[1], p[2]])
 }
 
 /// Parameters where `piece` crosses a patch seam of one surface, framed by
 /// the piece's domain ends.
-pub(super) fn seam_breaks(ctx: &Context, piece: &Curve, torus_side: bool) -> Result<Vec<f64>> {
+pub(crate) fn seam_breaks(ctx: &Context, piece: &Curve, torus_side: bool) -> Result<Vec<f64>> {
     let [lo, hi] = piece.domain();
     // Seam breakpoints by bisection between samples of different labels.
     const SAMPLES: usize = 512;
@@ -301,16 +399,16 @@ fn lift_side(
     Ok((grouped, worst))
 }
 
-/// Sphere and torus UV lifts of one traced loop and their worst sampled
-/// deviation from the other surface.
-pub(super) fn lift_traced(
+/// Sphere and other-surface UV lifts of one traced loop, grouped by face,
+/// and their worst certified deviation.
+pub(crate) fn lift_traced_with(
     sphere: &CanonicalSphere,
-    torus: &CanonicalTorus,
+    other: Other<'_>,
     sphere_model: &Model,
-    torus_model: &Model,
+    other_model: &Model,
     pieces: &[Curve],
-) -> Result<(Vec<SpherePatchCircle>, Vec<TorusPatchCurve>, f64)> {
-    let ctx = Context::new(sphere, torus, sphere_model, torus_model);
+) -> Result<(Vec<SpherePatchCircle>, Vec<(usize, Vec<Curve>)>, f64)> {
+    let ctx = Context::new(sphere, other, sphere_model, other_model);
     let (s, ds) = lift_side(&ctx, pieces, false)?;
     let (t, dt) = lift_side(&ctx, pieces, true)?;
     Ok((
@@ -321,9 +419,26 @@ pub(super) fn lift_traced(
                 implicit: None,
             })
             .collect(),
+        t,
+        ds.max(dt),
+    ))
+}
+
+/// Sphere and torus UV lifts of one traced loop and their worst certified
+/// deviation from the other surface.
+pub(super) fn lift_traced(
+    sphere: &CanonicalSphere,
+    torus: &CanonicalTorus,
+    sphere_model: &Model,
+    torus_model: &Model,
+    pieces: &[Curve],
+) -> Result<(Vec<SpherePatchCircle>, Vec<TorusPatchCurve>, f64)> {
+    let (s, t, d) = lift_traced_with(sphere, Other::Torus(torus), sphere_model, torus_model, pieces)?;
+    Ok((
+        s,
         t.into_iter()
             .map(|(patch, arcs)| TorusPatchCurve { patch, arcs })
             .collect(),
-        ds.max(dt),
+        d,
     ))
 }

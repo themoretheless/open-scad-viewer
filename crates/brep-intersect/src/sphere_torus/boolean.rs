@@ -112,7 +112,6 @@ pub fn sphere_torus_boolean(a: &Model, b: &Model, operation: &str) -> Result<Mod
     if !report.unresolved.is_empty() {
         return Err(refuse("Sphere-torus Boolean: the intersection is not resolved"));
     }
-    let torus_index = 1 - sphere_index;
     let operands = [a, b];
     let inside = |o: usize, p: [f64; 3]| -> Result<bool> {
         if o == sphere_index {
@@ -146,10 +145,41 @@ pub fn sphere_torus_boolean(a: &Model, b: &Model, operation: &str) -> Result<Mod
             }
         }
     }
-    let ctx = Context::new(&sphere, &torus, sphere_model, torus_model);
+    traced_boolean(
+        operands,
+        operation,
+        sphere_index,
+        &sphere,
+        super::traced_lift::Other::Torus(&torus),
+        sphere_model,
+        torus_model,
+        &loops,
+        tolerance,
+        &inside,
+    )
+}
+
+/// Boolean of a sphere and another canonical solid from certified, complete
+/// traced loops: cut at seams, fit on a common parameter, certify lifts and
+/// assemble with `inside` as the material predicate.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn traced_boolean(
+    operands: [&Model; 2],
+    operation: &str,
+    sphere_index: usize,
+    sphere: &CanonicalSphere,
+    other: super::traced_lift::Other<'_>,
+    sphere_model: &Model,
+    torus_model: &Model,
+    loops: &[Vec<Curve>],
+    mut tolerance: f64,
+    inside: &dyn Fn(usize, [f64; 3]) -> Result<bool>,
+) -> Result<Model> {
+    let torus_index = 1 - sphere_index;
+    let ctx = Context::new(sphere, other, sphere_model, torus_model);
     let mut network = Vec::new();
     let mut free_id = 0;
-    for pieces in &loops {
+    for pieces in loops {
         // Cut points of the whole loop: piece joins and every seam of both
         // surfaces. Each cut becomes one shared network vertex.
         let mut cuts: Vec<(usize, f64)> = Vec::new();
@@ -258,5 +288,126 @@ pub fn sphere_torus_boolean(a: &Model, b: &Model, operation: &str) -> Result<Mod
             });
         }
     }
-    network_boolean(operands[0], operands[1], operation, &network, &inside, tolerance)
+    network_boolean(operands[0], operands[1], operation, &network, inside, tolerance)
+}
+
+/// Off-axis sphere x cylinder Boolean (sphere strictly between the caps).
+pub fn sphere_cylinder_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
+    use crate::sphere_cylinder::{SphereCylinderComponent, intersect_sphere_cylinder, recognize_cylinder};
+    let (sphere_index, sphere_model, other_model) =
+        match (sphere_sphere::recognize_any(a)?, recognize_cylinder(b)?) {
+            (Some(_), Some(_)) => (0, a, b),
+            _ => match (recognize_cylinder(a)?, sphere_sphere::recognize_any(b)?) {
+                (Some(_), Some(_)) => (1, b, a),
+                _ => return Err(refuse("Sphere-cylinder Boolean needs a canonical sphere and cylinder")),
+            },
+        };
+    let sphere = sphere_sphere::recognize_any(sphere_model)?.expect("recognized above");
+    let cylinder = recognize_cylinder(other_model)?.expect("recognized above");
+    let report = intersect_sphere_cylinder(sphere_model, other_model, Options::default())?;
+    if !report.unresolved.is_empty() {
+        return Err(refuse("Sphere-cylinder Boolean: the intersection is not resolved"));
+    }
+    let mut loops = Vec::new();
+    let mut tolerance = 1e-6_f64;
+    for component in &report.components {
+        let SphereCylinderComponent::Traced { pieces, distance_bound, complete, .. } = component else {
+            return Err(refuse("Sphere-cylinder Boolean: axial pairs belong to brep_core::boolean"));
+        };
+        if !complete {
+            return Err(refuse("Sphere-cylinder Boolean: the component set is not certified complete"));
+        }
+        tolerance = tolerance.max(2. * distance_bound);
+        loops.push(pieces.clone());
+    }
+    let inside = |o: usize, p: [f64; 3]| -> Result<bool> {
+        if o == sphere_index {
+            let d = sub(p, cylinder.center);
+            let z = dot(d, cylinder.axis);
+            let rho = dot(d, cylinder.frame[0]).hypot(dot(d, cylinder.frame[1]));
+            decide((rho - cylinder.radius).max(z.abs() - cylinder.half_height), "cylinder")
+        } else {
+            inside_sphere(&sphere, p)
+        }
+    };
+    let operands = [a, b];
+    traced_boolean(
+        operands,
+        operation,
+        sphere_index,
+        &sphere,
+        super::traced_lift::Other::Cylinder(&cylinder),
+        sphere_model,
+        other_model,
+        &loops,
+        tolerance,
+        &inside,
+    )
+}
+
+/// Off-axis sphere x frustum Boolean (sphere strictly between the caps).
+pub fn sphere_cone_boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
+    use crate::sphere_cone::{SphereConeComponent, intersect_sphere_cone};
+    use brep_core::intersections::recognize_cone;
+    let (sphere_index, sphere_model, other_model) =
+        match (sphere_sphere::recognize_any(a)?, recognize_cone(b)?) {
+            (Some(_), Some(_)) => (0, a, b),
+            _ => match (recognize_cone(a)?, sphere_sphere::recognize_any(b)?) {
+                (Some(_), Some(_)) => (1, b, a),
+                _ => return Err(refuse("Sphere-cone Boolean needs a canonical sphere and cone")),
+            },
+        };
+    let sphere = sphere_sphere::recognize_any(sphere_model)?.expect("recognized above");
+    let cone = recognize_cone(other_model)?.expect("recognized above");
+    let report = intersect_sphere_cone(sphere_model, other_model, Options::default())?;
+    if !report.unresolved.is_empty() {
+        return Err(refuse("Sphere-cone Boolean: the intersection is not resolved"));
+    }
+    let mut loops = Vec::new();
+    let mut tolerance = 1e-6_f64;
+    for component in &report.components {
+        let SphereConeComponent::Traced { pieces, distance_bound, complete, .. } = component else {
+            return Err(refuse("Sphere-cone Boolean: axial pairs belong to brep_core::boolean"));
+        };
+        if !complete {
+            return Err(refuse("Sphere-cone Boolean: the component set is not certified complete"));
+        }
+        tolerance = tolerance.max(2. * distance_bound);
+        loops.push(pieces.clone());
+    }
+    let inside = |o: usize, p: [f64; 3]| -> Result<bool> {
+        if o == sphere_index {
+            let d = sub(p, cone.bottom);
+            let z = dot(d, cone.axis);
+            let rho = dot(d, cone.frame[0]).hypot(dot(d, cone.frame[1]));
+            let wall = (rho - cone.r_bottom - cone.slope * z) / cone.slope.hypot(1.);
+            decide(wall.max(-z).max(z - cone.height), "cone")
+        } else {
+            inside_sphere(&sphere, p)
+        }
+    };
+    let operands = [a, b];
+    traced_boolean(
+        operands,
+        operation,
+        sphere_index,
+        &sphere,
+        super::traced_lift::Other::Cone(&cone),
+        sphere_model,
+        other_model,
+        &loops,
+        tolerance,
+        &inside,
+    )
+}
+
+/// Inside when a signed distance-like value is negative beyond `MARGIN`.
+fn decide(signed: f64, what: &str) -> Result<bool> {
+    if signed.abs() <= MARGIN {
+        return Err(Error::new(
+            "BREP_UNSUPPORTED_OPERATION",
+            format!("Sphere Boolean: region sample on the {what} boundary"),
+        ));
+    }
+    Ok(signed < 0.)
 }

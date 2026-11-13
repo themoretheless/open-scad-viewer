@@ -20,12 +20,16 @@ pub enum SphereConeComponent {
     /// Off-axis contact of a sphere strictly between the cap planes: a
     /// closed quartic loop on the side wall, traced into cubic pieces and
     /// certified within `distance_bound` of both surfaces; `complete` says
-    /// whether the component set is certified complete. No UV lifts yet.
+    /// whether the component set is certified complete. UV lifts are cubic
+    /// pcurves cut at the patch seams, certified within `lift_deviation`.
     Traced {
         pieces: Vec<Curve>,
         distance_bound: f64,
         spans: usize,
         complete: bool,
+        sphere_uv: Vec<SpherePatchCircle>,
+        cone_uv: Vec<CylinderPatchCurve>,
+        lift_deviation: f64,
     },
 }
 
@@ -163,7 +167,7 @@ pub fn intersect_sphere_cone(
             report.unresolved(domain, UnresolvedReason::NearCoincidence);
             return Ok(report);
         }
-        return off_axis(report, domain, sphere_model, &sphere, &cone, s0, d_perp, band, terms);
+        return off_axis(report, domain, sphere_model, cone_model, &sphere, &cone, s0, d_perp, band, terms);
     }
     let r = sphere.radius;
     let h = cone.height;
@@ -274,6 +278,7 @@ fn off_axis(
     mut report: Report<SphereConeComponent>,
     domain: Vec<f64>,
     sphere_model: &Model,
+    cone_model: &Model,
     sphere: &CanonicalSphere,
     cone: &CanonicalCone,
     s0: f64,
@@ -334,12 +339,31 @@ fn off_axis(
                 sphere_model,
                 &all,
             );
-            report.components.extend(loops.into_iter().map(|l| SphereConeComponent::Traced {
-                pieces: l.pieces,
-                distance_bound: l.distance_bound,
-                spans: l.spans,
-                complete,
-            }));
+            for l in loops {
+                let Ok((sphere_uv, side_uv, lift_deviation)) = crate::sphere_torus::traced_lift::lift_traced_with(
+                    sphere,
+                    crate::sphere_torus::traced_lift::Other::Cone(cone),
+                    sphere_model,
+                    cone_model,
+                    &l.pieces,
+                ) else {
+                    report.components.clear();
+                    report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+                    return Ok(report);
+                };
+                report.components.push(SphereConeComponent::Traced {
+                    pieces: l.pieces,
+                    distance_bound: l.distance_bound,
+                    spans: l.spans,
+                    complete,
+                    sphere_uv,
+                    cone_uv: side_uv
+                        .into_iter()
+                        .map(|(patch, arcs)| CylinderPatchCurve { patch, arcs })
+                        .collect(),
+                    lift_deviation,
+                });
+            }
         }
         Ok(_) => report.unresolved(domain, UnresolvedReason::UnsupportedSurface),
         Err(e) if e.message.contains("tangency") => {
