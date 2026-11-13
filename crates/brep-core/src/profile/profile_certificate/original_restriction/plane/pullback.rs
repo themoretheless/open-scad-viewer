@@ -20,6 +20,7 @@ impl UvSpan {
         self.net.iter().map(|h| h.each_ref().map(ratio)).collect()
     }
 }
+const MAX_REFINEMENTS: usize = 512;
 fn cross(x: &[Q; 2], y: &[Q; 2]) -> Q {
     &x[0] * &y[1] - &x[1] * &y[0]
 }
@@ -120,6 +121,94 @@ impl Pullback {
                 .collect(),
         ))
     }
+    /// Exact inverse of an affine chart at the point offset `p` from its origin.
+    fn affine_inverse(&self, p: &[Q; 2]) -> [[Q; 2]; 2] {
+        let c = &self.chart.coefficients;
+        let det = cross(&c[1], &c[2]);
+        let uv = [cross(p, &c[2]) / &det, cross(&c[1], p) / &det];
+        native_box(&self.chart, uv.map(|v| [v.clone(), v]))
+    }
+    /// Enclosure of the second chart coordinate at one root of the first,
+    /// from whichever axis has the denominator farthest from zero. `None`
+    /// when both denominators may vanish on the current root interval.
+    fn second_coordinate(&self, p: &[Q; 2], f: &a::Poly, root: &[Q; 2]) -> Result<Option<[Q; 2]>> {
+        let c = &self.chart.coefficients;
+        let mut best: Option<(Q, [Q; 2])> = None;
+        for axis in 0..2 {
+            let denominator = vec![c[2][axis].clone(), c[3][axis].clone()];
+            let d = a::parameter_order::range(&denominator, root);
+            if d[0] <= Q::zero() && d[1] >= Q::zero() {
+                continue;
+            }
+            let score = d[0].clone().abs().min(d[1].clone().abs());
+            let numerator = vec![p[axis].clone(), -c[1][axis].clone()];
+            let v = if a::event_coordinates::zero_at(&numerator, f, root)? {
+                [Q::zero(), Q::zero()]
+            } else if a::event_coordinates::zero_at(&a::sub(&numerator, &denominator), f, root)? {
+                [Q::one(), Q::one()]
+            } else {
+                divide(a::parameter_order::range(&numerator, root), d)
+            };
+            if best.as_ref().is_none_or(|(s, _)| score > *s) {
+                best = Some((score, v));
+            }
+        }
+        Ok(best.map(|(_, v)| v))
+    }
+    /// Refines one root of the first coordinate until its inverse point is
+    /// proved outside the chart domain (`None`) or enclosed within `width`.
+    fn resolve_root(
+        &self,
+        p: &[Q; 2],
+        f: &a::Poly,
+        mut root: [Q; 2],
+        width: &Q,
+        refinements: usize,
+    ) -> Result<Option<[[Q; 2]; 2]>> {
+        for step in 0..=refinements {
+            if let Some(v) = self.second_coordinate(p, f, &root)? {
+                if v[1] < Q::zero() || v[0] > Q::one() {
+                    return Ok(None);
+                }
+                if v[0] >= Q::zero() && v[1] <= Q::one() {
+                    let bounds = native_box(&self.chart, [root.clone(), v]);
+                    if bounds.iter().all(|b| &b[1] - &b[0] <= *width) {
+                        return Ok(Some(bounds));
+                    }
+                }
+            }
+            if step < refinements {
+                a::parameter_order::refine(f, &mut root)?;
+            }
+        }
+        Err(refused(
+            "Native bilinear inverse remains unresolved within allowance",
+        ))
+    }
+    /// Inverse of a genuinely bilinear chart: the first coordinate is a root
+    /// of a quadratic, and exactly one root may map into the chart domain.
+    fn bilinear_inverse(&self, p: &[Q; 2], width: &Q, refinements: usize) -> Result<[[Q; 2]; 2]> {
+        let c = &self.chart.coefficients;
+        let f = vec![
+            cross(p, &c[2]),
+            cross(p, &c[3]) - cross(&c[1], &c[2]),
+            -cross(&c[1], &c[3]),
+        ];
+        // Trim the possible zero quadratic coefficient without floating tests.
+        let f = a::sub(&f, &[]);
+        let roots =
+            a::algebraic_events::isolates(&f, Q::zero(), Q::one(), &Q::new(1.into(), 1024.into()))?;
+        let mut candidates = Vec::new();
+        for root in roots {
+            candidates.extend(self.resolve_root(p, &f, root, width, refinements)?);
+        }
+        match <[_; 1]>::try_from(candidates) {
+            Ok([bounds]) => Ok(bounds),
+            Err(_) => Err(refused(
+                "Native inverse does not own one unique domain root",
+            )),
+        }
+    }
     /// Certified enclosure in original UV units. Exhaustion returns no box.
     pub fn inverse_box(
         &self,
@@ -129,7 +218,7 @@ impl Pullback {
     ) -> Result<InverseBox> {
         self.reverify()?;
         let width = decode_ratio(&width)?;
-        if width <= Q::zero() || refinements > 512 {
+        if width <= Q::zero() || refinements > MAX_REFINEMENTS {
             return Err(refused("Invalid native inverse width or allowance"));
         }
         let value = self.world.evaluate_natural(parameter.clone())?;
@@ -137,83 +226,9 @@ impl Pullback {
         let c = &self.chart.coefficients;
         let p = [&point[0] - &c[0][0], &point[1] - &c[0][1]];
         let bounds = if c[3].iter().all(Zero::is_zero) {
-            let det = cross(&c[1], &c[2]);
-            let uv = [cross(&p, &c[2]) / &det, cross(&c[1], &p) / &det];
-            native_box(&self.chart, uv.map(|v| [v.clone(), v]))
+            self.affine_inverse(&p)
         } else {
-            let f = vec![
-                cross(&p, &c[2]),
-                cross(&p, &c[3]) - cross(&c[1], &c[2]),
-                -cross(&c[1], &c[3]),
-            ];
-            // Trim the possible zero quadratic coefficient without floating tests.
-            let f = a::sub(&f, &[]);
-            let mut candidates = Vec::new();
-            for mut root in a::algebraic_events::isolates(
-                &f,
-                Q::zero(),
-                Q::one(),
-                &Q::new(1.into(), 1024.into()),
-            )? {
-                let mut resolved = None;
-                for step in 0..=refinements {
-                    let mut best: Option<(Q, [Q; 2])> = None;
-                    for axis in 0..2 {
-                        let denominator = vec![c[2][axis].clone(), c[3][axis].clone()];
-                        let d = a::parameter_order::range(&denominator, &root);
-                        if d[0] <= Q::zero() && d[1] >= Q::zero() {
-                            continue;
-                        }
-                        let score = d[0].clone().abs().min(d[1].clone().abs());
-                        let numerator = vec![p[axis].clone(), -c[1][axis].clone()];
-                        let v = if a::event_coordinates::zero_at(&numerator, &f, &root)? {
-                            [Q::zero(), Q::zero()]
-                        } else if a::event_coordinates::zero_at(
-                            &a::sub(&numerator, &denominator),
-                            &f,
-                            &root,
-                        )? {
-                            [Q::one(), Q::one()]
-                        } else {
-                            divide(a::parameter_order::range(&numerator, &root), d)
-                        };
-                        if best.as_ref().is_none_or(|(s, _)| score > *s) {
-                            best = Some((score, v));
-                        }
-                    }
-                    if let Some((_, v)) = best {
-                        if v[1] < Q::zero() || v[0] > Q::one() {
-                            resolved = Some(None);
-                            break;
-                        }
-                        if v[0] >= Q::zero() && v[1] <= Q::one() {
-                            let bounds = native_box(&self.chart, [root.clone(), v]);
-                            if bounds.iter().all(|b| &b[1] - &b[0] <= width) {
-                                resolved = Some(Some(bounds));
-                                break;
-                            }
-                        }
-                    }
-                    if step < refinements {
-                        a::parameter_order::refine(&f, &mut root)?;
-                    }
-                }
-                match resolved {
-                    Some(Some(b)) => candidates.push(b),
-                    Some(None) => {}
-                    None => {
-                        return Err(refused(
-                            "Native bilinear inverse remains unresolved within allowance",
-                        ));
-                    }
-                }
-            }
-            if candidates.len() != 1 {
-                return Err(refused(
-                    "Native inverse does not own one unique domain root",
-                ));
-            }
-            candidates.remove(0)
+            self.bilinear_inverse(&p, &width, refinements)?
         };
         Ok(InverseBox {
             owner: self.clone(),
