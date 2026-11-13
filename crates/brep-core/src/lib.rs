@@ -56,6 +56,7 @@ pub use crate::boolean::retained_uv_boolean;
 use crate::boolean::retained_uv_rim;
 use crate::boolean::sphere_mate;
 pub use crate::boolean::tolerant_boolean;
+pub use crate::boolean::network_boolean;
 pub use crate::parts::worm;
 pub use gear::{GearGeometry, GearSpec, gear, gear_with_report};
 use crate::model::body_edit;

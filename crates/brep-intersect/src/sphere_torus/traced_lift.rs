@@ -21,7 +21,7 @@ use nurbs_core::foundation::interpolation::{Parameterization, interpolate_curve}
 pub const LIFT_TOLERANCE: f64 = 1e-6;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum Patch {
+pub(super) enum Patch {
     Sphere(usize),
     Torus(usize),
 }
@@ -80,7 +80,7 @@ fn torus_uv(torus: &CanonicalTorus, patch: usize, p: [f64; 3]) -> Option<[f64; 2
     Some([local(rev, i), local(prof, j)])
 }
 
-struct Context<'a> {
+pub(super) struct Context<'a> {
     sphere: &'a CanonicalSphere,
     torus: &'a CanonicalTorus,
     sphere_model: &'a Model,
@@ -89,8 +89,34 @@ struct Context<'a> {
     torus_implicit: crate::implicit_trace::TorusImplicit,
 }
 
+impl<'a> Context<'a> {
+    pub(super) fn new(
+        sphere: &'a CanonicalSphere,
+        torus: &'a CanonicalTorus,
+        sphere_model: &'a Model,
+        torus_model: &'a Model,
+    ) -> Self {
+        Context {
+        sphere,
+        torus,
+        sphere_model,
+        torus_model,
+        sphere_implicit: crate::implicit_trace::SphereImplicit {
+            center: sphere.center,
+            radius: sphere.radius,
+        },
+        torus_implicit: crate::implicit_trace::TorusImplicit {
+            center: torus.center,
+            frame: [torus.frame[0], torus.frame[1], torus.axis],
+            major: torus.major,
+            minor: torus.minor,
+        },
+        }
+    }
+}
+
 impl Context<'_> {
-    fn label(&self, p: [f64; 3], torus_side: bool) -> Result<Patch> {
+    pub(super) fn label(&self, p: [f64; 3], torus_side: bool) -> Result<Patch> {
         if torus_side {
             Ok(Patch::Torus(torus_patch(self.torus, p)))
         } else {
@@ -105,7 +131,7 @@ impl Context<'_> {
         }
     }
 
-    fn uv(&self, patch: Patch, p: [f64; 3]) -> Result<[f64; 2]> {
+    pub(super) fn uv(&self, patch: Patch, p: [f64; 3]) -> Result<[f64; 2]> {
         let uv = match patch {
             Patch::Sphere(f) => self.sphere.invert_uv(f, p).map(|uv| {
                 // Seam points: snap rounding-scale negatives onto the patch.
@@ -124,7 +150,7 @@ impl Context<'_> {
     }
 
     /// Certified distance bound of the pcurve image from the other surface.
-    fn certify(&self, patch: Patch, uv_curve: &Curve) -> Result<Option<f64>> {
+    pub(super) fn certify(&self, patch: Patch, uv_curve: &Curve) -> Result<Option<f64>> {
         let (model, f, other): (_, _, &dyn crate::implicit_trace::Implicit) = match patch {
             Patch::Sphere(f) => (self.sphere_model, f, &self.torus_implicit),
             Patch::Torus(f) => (self.torus_model, f, &self.sphere_implicit),
@@ -168,9 +194,50 @@ fn torus_distance(torus: &CanonicalTorus, p: [f64; 3]) -> f64 {
     ((rho - torus.major).hypot(z) - torus.minor).abs()
 }
 
-fn point(curve: &Curve, t: f64) -> Result<[f64; 3]> {
+pub(super) fn point(curve: &Curve, t: f64) -> Result<[f64; 3]> {
     let p = curve.evaluate(t)?.point;
     Ok([p[0], p[1], p[2]])
+}
+
+/// Parameters where `piece` crosses a patch seam of one surface, framed by
+/// the piece's domain ends.
+pub(super) fn seam_breaks(ctx: &Context, piece: &Curve, torus_side: bool) -> Result<Vec<f64>> {
+    let [lo, hi] = piece.domain();
+    // Seam breakpoints by bisection between samples of different labels.
+    const SAMPLES: usize = 512;
+    // Seam slivers shorter than this (a piece starting or ending on a
+    // seam) merge into the neighbouring run; their points are clamped
+    // onto that patch at rounding scale.
+    const MERGE: f64 = 1e-9;
+    let mut breaks = vec![lo];
+    let mut prev_t = lo;
+    let mut prev = ctx.label(point(piece, lo)?, torus_side)?;
+    for k in 1..=SAMPLES {
+        let t = lo + (hi - lo) * k as f64 / SAMPLES as f64;
+        let label = ctx.label(point(piece, t)?, torus_side)?;
+        if label != prev {
+            let (mut a, mut b) = (prev_t, t);
+            for _ in 0..60 {
+                let m = 0.5 * (a + b);
+                if ctx.label(point(piece, m)?, torus_side)? == prev {
+                    a = m;
+                } else {
+                    b = m;
+                }
+            }
+            let cut = 0.5 * (a + b);
+            if cut - breaks.last().unwrap() > MERGE * (hi - lo) {
+                breaks.push(cut);
+            }
+        }
+        prev = label;
+        prev_t = t;
+    }
+    if breaks.len() > 1 && hi - breaks.last().unwrap() <= MERGE * (hi - lo) {
+        breaks.pop();
+    }
+    breaks.push(hi);
+    Ok(breaks)
 }
 
 /// Lifts of one traced loop onto one surface, grouped by face, plus the
@@ -183,41 +250,7 @@ fn lift_side(
     let mut grouped: Vec<(usize, Vec<Curve>)> = Vec::new();
     let mut worst = 0_f64;
     for piece in pieces {
-        let [lo, hi] = piece.domain();
-        // Seam breakpoints by bisection between samples of different labels.
-        const SAMPLES: usize = 512;
-        // Seam slivers shorter than this (a piece starting or ending on a
-        // seam) merge into the neighbouring run; their points are clamped
-        // onto that patch at rounding scale.
-        const MERGE: f64 = 1e-9;
-        let mut breaks = vec![lo];
-        let mut prev_t = lo;
-        let mut prev = ctx.label(point(piece, lo)?, torus_side)?;
-        for k in 1..=SAMPLES {
-            let t = lo + (hi - lo) * k as f64 / SAMPLES as f64;
-            let label = ctx.label(point(piece, t)?, torus_side)?;
-            if label != prev {
-                let (mut a, mut b) = (prev_t, t);
-                for _ in 0..60 {
-                    let m = 0.5 * (a + b);
-                    if ctx.label(point(piece, m)?, torus_side)? == prev {
-                        a = m;
-                    } else {
-                        b = m;
-                    }
-                }
-                let cut = 0.5 * (a + b);
-                if cut - breaks.last().unwrap() > MERGE * (hi - lo) {
-                    breaks.push(cut);
-                }
-            }
-            prev = label;
-            prev_t = t;
-        }
-        if breaks.len() > 1 && hi - breaks.last().unwrap() <= MERGE * (hi - lo) {
-            breaks.pop();
-        }
-        breaks.push(hi);
+        let breaks = seam_breaks(ctx, piece, torus_side)?;
         for w in breaks.windows(2) {
             let (a, b) = (w[0], w[1]);
             let patch = ctx.label(point(piece, 0.5 * (a + b))?, torus_side)?;
@@ -277,22 +310,7 @@ pub(super) fn lift_traced(
     torus_model: &Model,
     pieces: &[Curve],
 ) -> Result<(Vec<SpherePatchCircle>, Vec<TorusPatchCurve>, f64)> {
-    let ctx = Context {
-        sphere,
-        torus,
-        sphere_model,
-        torus_model,
-        sphere_implicit: crate::implicit_trace::SphereImplicit {
-            center: sphere.center,
-            radius: sphere.radius,
-        },
-        torus_implicit: crate::implicit_trace::TorusImplicit {
-            center: torus.center,
-            frame: [torus.frame[0], torus.frame[1], torus.axis],
-            major: torus.major,
-            minor: torus.minor,
-        },
-    };
+    let ctx = Context::new(sphere, torus, sphere_model, torus_model);
     let (s, ds) = lift_side(&ctx, pieces, false)?;
     let (t, dt) = lift_side(&ctx, pieces, true)?;
     Ok((

@@ -614,3 +614,35 @@ fn rotated_translated_placement_keeps_the_exact_circles() {
         assert!(uv_worst <= 1e-9, "{uv_worst}");
     }
 }
+
+#[test]
+fn off_axis_sphere_torus_booleans_close_and_balance_volumes() {
+    use std::f64::consts::PI;
+    let volume = |m: &Model| {
+        brep_core::analysis::mass_properties(m, 1e-5, 2_000_000)
+            .unwrap()
+            .signed_volume_mm3
+    };
+    let torus = brep_core::analytic::torus(3., 1.).unwrap();
+    let vt = 2. * PI * PI * 3. * 1.;
+    for (radius, at) in [(1., [3.5, 0.4, 0.3]), (1., [4.5, 0., 0.])] {
+        let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
+        let vs = 4. / 3. * PI * radius * radius * radius;
+        let mut v = std::collections::BTreeMap::new();
+        for op in ["union", "intersection", "difference"] {
+            let result = sphere_torus_boolean(&sphere, &torus, op)
+                .unwrap_or_else(|e| panic!("{op} {radius} at {at:?}: {e:?}"));
+            result.validate().unwrap();
+            assert!(result.tolerance_mm <= 1e-5, "{op}: {}", result.tolerance_mm);
+            v.insert(op, volume(&result));
+        }
+        let (u, i, d) = (v["union"], v["intersection"], v["difference"]);
+        let tol = 1e-3 * (vs + vt);
+        assert!(i > 0. && i < vs.min(vt), "{i}");
+        assert!((u + i - vs - vt).abs() <= tol, "union {u} + inter {i} vs {}", vs + vt);
+        assert!((d - (vs - i)).abs() <= tol, "difference {d} vs {}", vs - i);
+        // The other operand order mirrors the difference.
+        let torus_minus = sphere_torus_boolean(&torus, &sphere, "difference").unwrap();
+        assert!((volume(&torus_minus) - (vt - i)).abs() <= tol);
+    }
+}

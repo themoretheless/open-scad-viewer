@@ -53,8 +53,10 @@
 //! region. Nothing here authorizes a topology change.
 #[cfg(feature = "codec")]
 mod serialization;
+mod boolean;
 mod completeness;
 mod traced_lift;
+pub use boolean::sphere_torus_boolean;
 pub use traced_lift::LIFT_TOLERANCE;
 use super::plane_torus::{
     CanonicalTorus, TorusPatchCurve, lift_parallel, recognize_torus, torus_residual,
