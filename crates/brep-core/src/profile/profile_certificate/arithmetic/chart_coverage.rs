@@ -7,6 +7,89 @@ fn cut_sign(g: &Poly, domain: &[Q; 2], cut: &ParameterValue, refinements: usize)
     let value = event_coordinates::compose(g, &p, &cut.primitive)?;
     event_coordinates::sign_at(&value, &cut.primitive, &cut.interval, refinements)
 }
+const MAX_REFINEMENTS: usize = 512;
+const MAX_MATRIX: usize = 128;
+/// The part of one cell's parameter domain between the two algebraic bounds.
+/// `cut[k]` is set when bound `k` lies strictly inside the cell, so that end
+/// is the bound itself and not the cell end.
+struct CarrierInterval<'a> {
+    domain: &'a [Q; 2],
+    bounds: &'a [ParameterValue; 2],
+    cut: [bool; 2],
+    refinements: usize,
+    matrix: usize,
+}
+impl CarrierInterval<'_> {
+    /// Sign of `g` at one end of the interval; an exact zero at a cell end
+    /// counts as inside.
+    fn end_sign(&self, g: &Poly, end: usize) -> Result<i8> {
+        if self.cut[end] {
+            return cut_sign(g, self.domain, &self.bounds[end], self.refinements);
+        }
+        let local_end = if end == 0 { Q::zero() } else { Q::one() };
+        Ok(if at(g, &local_end) < Q::zero() { -1 } else { 1 })
+    }
+    /// Number of critical points of `g` inside the interval; `g` must be
+    /// nonnegative at each of them.
+    fn interior_extrema(&self, g: &Poly) -> Result<usize> {
+        let critical = derivative(g);
+        if critical.is_empty() {
+            return Ok(0);
+        }
+        let width = Q::new(1.into(), 1024.into());
+        let mut count = 0;
+        for root in algebraic_events::isolates(&critical, Q::zero(), Q::one(), &width)? {
+            let order = |bound: &ParameterValue| {
+                selected_winding::compare(
+                    &critical,
+                    &root,
+                    self.domain,
+                    bound,
+                    self.refinements,
+                    self.matrix,
+                )
+            };
+            if order(&self.bounds[0])? == Ordering::Less
+                || order(&self.bounds[1])? == Ordering::Greater
+            {
+                continue;
+            }
+            count += 1;
+            if event_coordinates::sign_at(g, &critical, &root, self.refinements)? < 0 {
+                return Err(refused(
+                    "Original carrier has an interior excursion outside the actual surface chart",
+                ));
+            }
+        }
+        Ok(count)
+    }
+    /// Proves the cell stays inside the chart on this interval and counts
+    /// the interior extrema against each of the four chart sides.
+    fn extrema_counts(&self, net: &[[Q; 3]], chart: &[[Q; 2]; 2]) -> Result<[usize; 4]> {
+        let w = power(net, 2);
+        let mut counts = [0; 4];
+        for axis in 0..2 {
+            for side in 0..2 {
+                let x = power(net, axis);
+                let bound = w.iter().map(|w| w * &chart[axis][side]).collect::<Poly>();
+                // Nonnegative exactly where the cell is on the chart side of this bound.
+                let g = if side == 0 {
+                    sub(&x, &bound)
+                } else {
+                    sub(&bound, &x)
+                };
+                let (lower, upper) = (self.end_sign(&g, 0)?, self.end_sign(&g, 1)?);
+                if lower < 0 || upper < 0 {
+                    return Err(refused(
+                        "Original algebraic carrier endpoint lies outside the actual surface chart",
+                    ));
+                }
+                counts[2 * axis + side] = self.interior_extrema(&g)?;
+            }
+        }
+        Ok(counts)
+    }
+}
 pub(in crate::profile::profile_certificate) fn prove(
     cells: &[(Vec<[Q; 3]>, [Q; 2])],
     bounds: &[ParameterValue; 2],
@@ -14,7 +97,10 @@ pub(in crate::profile::profile_certificate) fn prove(
     refinements: usize,
     matrix: usize,
 ) -> Result<Vec<(usize, [usize; 4])>> {
-    if refinements > 512 || !(1..=128).contains(&matrix) || chart.iter().any(|a| a[0] >= a[1]) {
+    if refinements > MAX_REFINEMENTS
+        || !(1..=MAX_MATRIX).contains(&matrix)
+        || chart.iter().any(|a| a[0] >= a[1])
+    {
         return Err(refused(
             "Invalid original chart coverage allowance or domain",
         ));
@@ -31,74 +117,17 @@ pub(in crate::profile::profile_certificate) fn prove(
                 "Original chart cell has nonpositive rational weights",
             ));
         }
-        let lower_cut = shore_carrier::bound_sign(&bounds[0], &domain[0], refinements)? > 0;
-        let upper_cut = shore_carrier::bound_sign(&bounds[1], &domain[1], refinements)? < 0;
-        let w = power(net, 2);
-        let mut counts = [0; 4];
-        for axis in 0..2 {
-            for side in 0..2 {
-                let x = power(net, axis);
-                let bound = w.iter().map(|w| w * &chart[axis][side]).collect::<Poly>();
-                let g = if side == 0 {
-                    sub(&x, &bound)
-                } else {
-                    sub(&bound, &x)
-                };
-                let lower = if lower_cut {
-                    cut_sign(&g, domain, &bounds[0], refinements)?
-                } else {
-                    let value = at(&g, &Q::zero());
-                    if value < Q::zero() { -1 } else { 1 }
-                };
-                let upper = if upper_cut {
-                    cut_sign(&g, domain, &bounds[1], refinements)?
-                } else {
-                    let value = at(&g, &Q::one());
-                    if value < Q::zero() { -1 } else { 1 }
-                };
-                if lower < 0 || upper < 0 {
-                    return Err(refused(
-                        "Original algebraic carrier endpoint lies outside the actual surface chart",
-                    ));
-                }
-                let critical = derivative(&g);
-                if !critical.is_empty() {
-                    for root in algebraic_events::isolates(
-                        &critical,
-                        Q::zero(),
-                        Q::one(),
-                        &Q::new(1.into(), 1024.into()),
-                    )? {
-                        let lo = selected_winding::compare(
-                            &critical,
-                            &root,
-                            domain,
-                            &bounds[0],
-                            refinements,
-                            matrix,
-                        )?;
-                        let hi = selected_winding::compare(
-                            &critical,
-                            &root,
-                            domain,
-                            &bounds[1],
-                            refinements,
-                            matrix,
-                        )?;
-                        if lo == Ordering::Less || hi == Ordering::Greater {
-                            continue;
-                        }
-                        counts[2 * axis + side] += 1;
-                        if event_coordinates::sign_at(&g, &critical, &root, refinements)? < 0 {
-                            return Err(refused(
-                                "Original carrier has an interior excursion outside the actual surface chart",
-                            ));
-                        }
-                    }
-                }
-            }
-        }
-        result.push((index, counts));
+        let interval = CarrierInterval {
+            domain,
+            bounds,
+            cut: [
+                shore_carrier::bound_sign(&bounds[0], &domain[0], refinements)? > 0,
+                shore_carrier::bound_sign(&bounds[1], &domain[1], refinements)? < 0,
+            ],
+            refinements,
+            matrix,
+        };
+        result.push((index, interval.extrema_counts(net, chart)?));
     }
     if result.is_empty() {
         return Err(refused(
