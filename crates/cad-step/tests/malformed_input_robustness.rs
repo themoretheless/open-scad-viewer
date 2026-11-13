@@ -78,8 +78,17 @@ fn seeds() -> Vec<(String, String)> {
     {
         seeds.push(("export_nurbs_step".into(), text));
     }
+    // The trimmed capability admits LINE boundary edges only, so its seed is
+    // a bilinear (non-planar) sheet written as a bicubic: every iso line is
+    // straight in 3D.
+    let mut ruled = bicubic.clone();
+    for (i, row) in ruled.control_points.iter_mut().enumerate() {
+        for (j, p) in row.iter_mut().enumerate() {
+            p[2] = 0.75 * (i as f64 / 3.) * (j as f64 / 3.);
+        }
+    }
     let hole = [[0.4, 0.4], [0.6, 0.4], [0.6, 0.6], [0.4, 0.6]];
-    if let Ok(face) = bicubic_trimmed_face(bicubic, hole)
+    if let Ok(face) = bicubic_trimmed_face(ruled, hole)
         && let Ok((text, _)) = export_nurbs_step_trimmed(&face)
     {
         seeds.push(("export_nurbs_step_trimmed".into(), text));
@@ -247,7 +256,9 @@ fn importers_never_panic_on_damaged_exchange_files() {
         .filter(|(_, ok)| !**ok)
         .map(|((name, _), _)| *name)
         .collect();
-    eprintln!("importers with no accepted seed (mutations only reach the front end): {unseeded:?}");
+    // Every importer must see at least one input it accepts, so mutations
+    // reach past the front end.
+    assert!(unseeded.is_empty(), "importers with no accepted seed: {unseeded:?}");
     panics.sort();
     panics.dedup();
     assert!(
