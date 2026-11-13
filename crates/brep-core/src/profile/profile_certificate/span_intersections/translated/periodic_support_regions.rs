@@ -93,36 +93,26 @@ struct ArcCell {
     domain: [Q; 2],
     bounds: [ParameterValue; 2],
 }
-fn derive_signatures(o: &OwnedPeriodicSupportSignatures) -> Result<SignatureData> {
-    let _replay = super::periodic_replay::scope();
-    if !(1..=1000000).contains(&o.max_work)
-        || o.limits.max_refinements > 512
-        || !(1..=128).contains(&o.limits.max_resultant_size)
-    {
-        return Err(refused("Invalid original material signature allowance"));
-    }
-    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
-    let selection = o.owner.owner().owner();
-    let graph = selection.rule().material().base().owner().owner().owner();
-    let cover = graph.owner().owner().pieces();
-    let n = o.owner.walks().len();
-    let parts = o.owner.parts_count();
-    let mut work = 0;
-    add(&mut work, n, o.max_work)?;
-    if product(n, n.saturating_sub(2))? > o.max_work {
-        return Err(refused(
-            "Complete material signature storage exceeds allowance",
-        ));
-    }
-    let h = o
-        .owner
-        .walks()
+const MAX_WORK: usize = 1000000;
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+/// Sparse integer rows over the boundary walks.
+type Basis = Vec<Vec<(usize, BigInt)>>;
+/// Exact parameter-square path of one material probe.
+type ProbePath = Vec<[Q; 2]>;
+/// Homology of every boundary walk. A walk may wind only around a wrapped
+/// axis, and the oriented boundary as a whole must be null-homologous.
+fn walk_homology(
+    walks: &[OriginalPeriodicBoundaryWalk],
+    wrapped: [bool; 2],
+) -> Result<Vec<[BigInt; 2]>> {
+    let h = walks
         .iter()
         .map(|w| Ok([integer(&w.homology[0])?, integer(&w.homology[1])?]))
         .collect::<Result<Vec<_>>>()?;
     for row in &h {
         for axis in 0..2 {
-            if !cover.wrapped()[axis] && !row[axis].is_zero() {
+            if !wrapped[axis] && !row[axis].is_zero() {
                 return Err(refused("Boundary homology invents an unwrapped period"));
             }
         }
@@ -134,9 +124,13 @@ fn derive_signatures(o: &OwnedPeriodicSupportSignatures) -> Result<SignatureData
             ));
         }
     }
-    let basis = kernel(&h);
-    // Each free column has a unique nonzero free coefficient, giving independence
-    // and dimension n-rank(H). Every row is checked in the exact original H.
+    Ok(h)
+}
+/// A basis of the integer combinations of walks with zero ambient homology.
+/// Each free column has a unique nonzero free coefficient, giving independence
+/// and dimension n-rank(H). Every row is checked in the exact original H.
+fn separating_basis(h: &[[BigInt; 2]]) -> Result<Basis> {
+    let basis = kernel(h);
     for row in &basis {
         for axis in 0..2 {
             if row.iter().map(|(i, c)| c * &h[*i][axis]).sum::<BigInt>() != BigInt::from(0) {
@@ -146,6 +140,185 @@ fn derive_signatures(o: &OwnedPeriodicSupportSignatures) -> Result<SignatureData
             }
         }
     }
+    Ok(basis)
+}
+/// The selected material sample at the first part of one walk: the
+/// (edge, side) it belongs to and its exact query path.
+fn walk_probe(
+    w: &OriginalPeriodicBoundaryWalk,
+    selection: &OwnedPeriodicSupportSelection,
+    graph: &OwnedPeriodicQuotientGraph,
+) -> Result<([usize; 2], ProbePath)> {
+    let part = w
+        .parts
+        .first()
+        .ok_or_else(|| refused("Material signature lost a boundary walk"))?;
+    let side = &selection.sides()[part.edge];
+    let s = match side.selected() {
+        [true, false] => 0,
+        [false, true] => 1,
+        _ => {
+            return Err(refused(
+                "Boundary signature has no unique selected material side",
+            ));
+        }
+    };
+    let physical_direction = if graph.edges()[part.edge].carriers[0].reversed {
+        -part.direction
+    } else {
+        part.direction
+    };
+    if side.boundary_direction() != Some(physical_direction) {
+        return Err(refused(
+            "Boundary signature lost its original directed material side",
+        ));
+    }
+    let sample = side.samples()[s]
+        .as_ref()
+        .ok_or_else(|| refused("Boundary signature invented an exterior material sample"))?;
+    if !sample.selected() || !Arc::ptr_eq(sample.rule(), selection.rule().material()) {
+        return Err(refused(
+            "Boundary signature belongs to a different material rule",
+        ));
+    }
+    let path = sample
+        .query()
+        .path()
+        .iter()
+        .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
+        .collect::<Result<Vec<_>>>()?;
+    Ok(([part.edge, s], path))
+}
+/// One boundary part as its translated original cell restricted to its cuts.
+fn arc_cell(
+    walk: usize,
+    p: &OriginalPeriodicBoundaryPart,
+    cover: &OwnedOriginalPeriodicPieces,
+    original: &[Vec<Cell>],
+) -> Result<ArcCell> {
+    let c = &original[p.source][p.cell];
+    let piece = &cover.pieces()[p.piece];
+    let offset = [
+        decode_ratio(&piece.translation[0])?,
+        decode_ratio(&piece.translation[1])?,
+    ];
+    let net = c
+        .net
+        .iter()
+        .map(|p| {
+            [
+                &p[0] + &offset[0] * &p[2],
+                &p[1] + &offset[1] * &p[2],
+                p[2].clone(),
+            ]
+        })
+        .collect();
+    let mut bounds = p
+        .parameters
+        .iter()
+        .map(|t| {
+            Ok(ParameterValue {
+                primitive: decode_polynomial(&t.primitive)?,
+                value: decode_polynomial(&t.parameter)?,
+                interval: [decode_ratio(&t.interval[0])?, decode_ratio(&t.interval[1])?],
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if p.direction < 0 {
+        bounds.reverse();
+    }
+    Ok(ArcCell {
+        walk,
+        direction: p.direction,
+        net,
+        domain: c.domain.clone(),
+        bounds: bounds
+            .try_into()
+            .map_err(|_| refused("Material signature lost original native cuts"))?,
+    })
+}
+/// Every boundary part of every walk, each physical edge used once.
+fn arc_cells(
+    walks: &[OriginalPeriodicBoundaryWalk],
+    cover: &OwnedOriginalPeriodicPieces,
+    original: &[Vec<Cell>],
+    edges: usize,
+) -> Result<Vec<ArcCell>> {
+    let mut arcs = Vec::new();
+    let mut seen = vec![false; edges];
+    for (walk, w) in walks.iter().enumerate() {
+        for p in &w.parts {
+            if p.edge >= seen.len() || seen[p.edge] {
+                return Err(refused(
+                    "Material signature repeats a physical boundary edge",
+                ));
+            }
+            seen[p.edge] = true;
+            arcs.push(arc_cell(walk, p, cover, original)?);
+        }
+    }
+    Ok(arcs)
+}
+/// Signed crossings of one probe path with every walk, paired with every
+/// basis cochain.
+fn signature(
+    basis: &Basis,
+    arcs: &[ArcCell],
+    path: &ProbePath,
+    walks: usize,
+    limits: ParameterOrderLimits,
+) -> Result<Vec<String>> {
+    let mut delta = vec![BigInt::from(0); walks];
+    for arc in arcs {
+        for segment in path.windows(2) {
+            let d = arithmetic::selected_winding::segment(
+                &arc.net,
+                &arc.domain,
+                &arc.bounds,
+                &[segment[0].clone(), segment[1].clone()],
+                limits.max_refinements,
+                limits.max_resultant_size,
+            )?
+            .ok_or_else(|| {
+                refused("Material signature probe lies on selected original geometry")
+            })?;
+            delta[arc.walk] += BigInt::from(d) * BigInt::from(arc.direction);
+        }
+    }
+    Ok(basis
+        .iter()
+        .map(|row| {
+            row.iter()
+                .map(|(i, c)| c * &delta[*i])
+                .sum::<BigInt>()
+                .to_string()
+        })
+        .collect())
+}
+fn derive_signatures(o: &OwnedPeriodicSupportSignatures) -> Result<SignatureData> {
+    let _replay = super::periodic_replay::scope();
+    if !(1..=MAX_WORK).contains(&o.max_work)
+        || o.limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&o.limits.max_resultant_size)
+    {
+        return Err(refused("Invalid original material signature allowance"));
+    }
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
+    let selection = o.owner.owner().owner();
+    let graph = selection.rule().material().base().owner().owner().owner();
+    let cover = graph.owner().owner().pieces();
+    let walks = o.owner.walks();
+    let n = walks.len();
+    let parts = o.owner.parts_count();
+    let mut work = 0;
+    add(&mut work, n, o.max_work)?;
+    if product(n, n.saturating_sub(2))? > o.max_work {
+        return Err(refused(
+            "Complete material signature storage exceeds allowance",
+        ));
+    }
+    let h = walk_homology(walks, cover.wrapped())?;
+    let basis = separating_basis(&h)?;
     add(&mut work, product(n, basis.len())?, o.max_work)?;
     add(
         &mut work,
@@ -164,50 +337,11 @@ fn derive_signatures(o: &OwnedPeriodicSupportSignatures) -> Result<SignatureData
                 .collect(),
         })
         .collect();
-    let mut endpoints = Vec::new();
     let mut queries = Vec::new();
-    for (walk, w) in o.owner.walks().iter().enumerate() {
-        let part = w
-            .parts
-            .first()
-            .ok_or_else(|| refused("Material signature lost a boundary walk"))?;
-        let side = &selection.sides()[part.edge];
-        let s = match side.selected() {
-            [true, false] => 0,
-            [false, true] => 1,
-            _ => {
-                return Err(refused(
-                    "Boundary signature has no unique selected material side",
-                ));
-            }
-        };
-        let physical_direction = if graph.edges()[part.edge].carriers[0].reversed {
-            -part.direction
-        } else {
-            part.direction
-        };
-        if side.boundary_direction() != Some(physical_direction) {
-            return Err(refused(
-                "Boundary signature lost its original directed material side",
-            ));
-        }
-        let sample = side.samples()[s]
-            .as_ref()
-            .ok_or_else(|| refused("Boundary signature invented an exterior material sample"))?;
-        if !sample.selected() || !Arc::ptr_eq(sample.rule(), selection.rule().material()) {
-            return Err(refused(
-                "Boundary signature belongs to a different material rule",
-            ));
-        }
-        let path = sample
-            .query()
-            .path()
-            .iter()
-            .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
-            .collect::<Result<Vec<_>>>()?;
+    for w in walks {
+        let (endpoint, path) = walk_probe(w, selection, graph)?;
         add(&mut work, product(path.len() - 1, parts)?, o.max_work)?;
-        endpoints.push((walk, [part.edge, s]));
-        queries.push(path);
+        queries.push((endpoint, path));
     }
     if n == 0 {
         if parts != 0 {
@@ -230,95 +364,18 @@ fn derive_signatures(o: &OwnedPeriodicSupportSignatures) -> Result<SignatureData
         .iter()
         .map(cells)
         .collect::<Result<Vec<_>>>()?;
-    let mut arcs = Vec::new();
-    let mut seen = vec![false; graph.edges().len()];
-    for (walk, w) in o.owner.walks().iter().enumerate() {
-        for p in &w.parts {
-            if p.edge >= seen.len() || seen[p.edge] {
-                return Err(refused(
-                    "Material signature repeats a physical boundary edge",
-                ));
-            }
-            seen[p.edge] = true;
-            let c = &original[p.source][p.cell];
-            let piece = &cover.pieces()[p.piece];
-            let offset = [
-                decode_ratio(&piece.translation[0])?,
-                decode_ratio(&piece.translation[1])?,
-            ];
-            let net = c
-                .net
-                .iter()
-                .map(|p| {
-                    [
-                        &p[0] + &offset[0] * &p[2],
-                        &p[1] + &offset[1] * &p[2],
-                        p[2].clone(),
-                    ]
-                })
-                .collect();
-            let mut bounds = p
-                .parameters
-                .iter()
-                .map(|t| {
-                    Ok(ParameterValue {
-                        primitive: decode_polynomial(&t.primitive)?,
-                        value: decode_polynomial(&t.parameter)?,
-                        interval: [decode_ratio(&t.interval[0])?, decode_ratio(&t.interval[1])?],
-                    })
-                })
-                .collect::<Result<Vec<_>>>()?;
-            if p.direction < 0 {
-                bounds.reverse();
-            }
-            arcs.push(ArcCell {
-                walk,
-                direction: p.direction,
-                net,
-                domain: c.domain.clone(),
-                bounds: bounds
-                    .try_into()
-                    .map_err(|_| refused("Material signature lost original native cuts"))?,
-            });
-        }
-    }
+    let arcs = arc_cells(walks, cover, &original, graph.edges().len())?;
     if arcs.len() != parts || parts != selection.selected().len() {
         return Err(refused(
             "Material signature omitted selected original geometry",
         ));
     }
     let mut probes = Vec::new();
-    for ((walk, endpoint), path) in endpoints.into_iter().zip(queries) {
-        let mut delta = vec![BigInt::from(0); n];
-        for arc in &arcs {
-            for segment in path.windows(2) {
-                let d = arithmetic::selected_winding::segment(
-                    &arc.net,
-                    &arc.domain,
-                    &arc.bounds,
-                    &[segment[0].clone(), segment[1].clone()],
-                    o.limits.max_refinements,
-                    o.limits.max_resultant_size,
-                )?
-                .ok_or_else(|| {
-                    refused("Material signature probe lies on selected original geometry")
-                })?;
-                delta[arc.walk] += BigInt::from(d) * BigInt::from(arc.direction);
-            }
-        }
-        let signature = basis
-            .iter()
-            .map(|row| {
-                row.iter()
-                    .map(|(i, c)| c * &delta[*i])
-                    .sum::<BigInt>()
-                    .to_string()
-            })
-            .collect();
+    for (walk, (endpoint, path)) in queries.into_iter().enumerate() {
         probes.push(OriginalPeriodicRegionProbe {
             walk,
             endpoint,
-            signature,
+            signature: signature(&basis, &arcs, &path, n, o.limits)?,
         });
     }
     Ok(SignatureData {
