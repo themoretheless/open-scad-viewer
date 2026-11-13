@@ -144,13 +144,11 @@ fuzzing импортёров и транспорта покрыт мутацио
 - **Пункты «Partial»** из `docs/design/brep-completion-status.md`: NURBS
   foundation, canonical primitives, extrusion/revolution, routing,
   SemanticProgram, legacy adapter, воспроизводимость workspace.
-- **Падающий тест** `geometry-bridge::tests::layered_fillet_bridge_checks_chain_and_cavity`
-  (падает и на чистом `origin/main` 2026-11-13): после булевой разности
-  кубоидов вертикальное ребро в углу остаётся одним, а тест ждёт цепочку из
-  нескольких рёбер.
 
 Закрыто: все 12 тестов B-rep и оба теста NURBS, падавшие на базовом коммите
-(причины перечислены в истории этого документа); сборки STEP с
+(причины перечислены в истории этого документа); тест
+`layered_fillet_bridge_checks_chain_and_cavity` ждал цепочку рёбер из
+устаревшего неминимального вывода булевой операции и обновлён; сборки STEP с
 размещениями импортируются, а отказ для внешних ссылок без полной
 идентичности задуман (нужен загрузчик внешних файлов, которого в API нет).
 
