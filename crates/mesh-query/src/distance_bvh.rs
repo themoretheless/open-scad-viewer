@@ -1,5 +1,6 @@
 //! Binary64 BVH for repeated surface distances and parity-based inside tests.
 //! Separate from the float32 picking BVH to retain sampled-field precision.
+use crate::aabb_tree::{BoxTree, SplitRule};
 use crate::proximity::closest_triangle;
 use crate::{MeshView, Result};
 use math_core::{cross, dot, sub};
@@ -34,46 +35,25 @@ pub struct DistanceTriangle {
     pub min: P,
     pub max: P,
 }
-pub struct DistanceBvh {
-    pub min: P,
-    pub max: P,
-    pub triangles: Vec<DistanceTriangle>,
-    pub children: Option<Box<[DistanceBvh; 2]>>,
-}
-impl DistanceBvh {
-    pub fn build(mut triangles: Vec<DistanceTriangle>) -> Self {
-        let min = std::array::from_fn(|k| {
-            triangles
-                .iter()
-                .map(|t| t.min[k])
-                .fold(f64::INFINITY, f64::min)
-        });
-        let max = std::array::from_fn(|k| {
-            triangles
-                .iter()
-                .map(|t| t.max[k])
-                .fold(f64::NEG_INFINITY, f64::max)
-        });
-        if triangles.len() <= 8 {
-            return Self {
-                min,
-                max,
-                triangles,
-                children: None,
-            };
-        }
-        let axis = (0..3)
-            .max_by(|&a, &b| (max[a] - min[a]).total_cmp(&(max[b] - min[b])))
-            .unwrap();
-        triangles
-            .sort_by(|a, b| (a.min[axis] + a.max[axis]).total_cmp(&(b.min[axis] + b.max[axis])));
-        let right = triangles.split_off(triangles.len() / 2);
-        Self {
-            min,
-            max,
-            triangles: vec![],
-            children: Some(Box::new([Self::build(triangles), Self::build(right)])),
-        }
+/// Distance hierarchy over owned triangles, on the shared box node core.
+pub type DistanceBvh = BoxTree<DistanceTriangle>;
+
+const DISTANCE_SPLIT: SplitRule<DistanceTriangle> = SplitRule {
+    leaf: 8,
+    bounds: |t| (t.min, t.max),
+    // Longest node-box axis; ties pick the last such axis.
+    axis: |e| {
+        (0..3)
+            .max_by(|&a, &b| (e.max[a] - e.min[a]).total_cmp(&(e.max[b] - e.min[b])))
+            .unwrap_or(0)
+    },
+    order: |a, b, axis| (a.min[axis] + a.max[axis]).total_cmp(&(b.min[axis] + b.max[axis])),
+    leaf_order: None,
+};
+
+impl BoxTree<DistanceTriangle> {
+    pub fn build(triangles: Vec<DistanceTriangle>) -> Self {
+        Self::build_with(triangles, &DISTANCE_SPLIT, &mut 0)
     }
     fn bound(&self, p: P) -> f64 {
         (0..3)
@@ -89,7 +69,7 @@ impl DistanceBvh {
             children[first].nearest(p, best);
             children[1 - first].nearest(p, best)
         } else {
-            for t in &self.triangles {
+            for t in &self.items {
                 let q = closest_triangle(p, t.p[0], t.p[1], t.p[2]);
                 *best = best.min(dot(sub(p, q), sub(p, q)))
             }
@@ -116,7 +96,7 @@ impl DistanceBvh {
             children[0].hits(p, d, hits);
             children[1].hits(p, d, hits)
         } else {
-            for t in &self.triangles {
+            for t in &self.items {
                 let e1 = sub(t.p[1], t.p[0]);
                 let e2 = sub(t.p[2], t.p[0]);
                 let h = cross(d, e2);
@@ -180,7 +160,7 @@ pub fn flatten_distance_bvh(root: &DistanceBvh) -> (Vec<f32>, Vec<f32>) {
             nodes[index as usize * 10 + 6] = f32::from_bits(u32::MAX);
             nodes[index as usize * 10 + 7] = f32::from_bits(u32::MAX);
             let start = (triangles.len() / 9) as u32;
-            for t in &node.triangles {
+            for t in &node.items {
                 for point in t.p {
                     for coordinate in point {
                         triangles.push(coordinate as f32);

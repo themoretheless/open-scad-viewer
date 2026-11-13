@@ -99,7 +99,7 @@ pub fn closest_point_bvh(
             stack.push(&c[0]);
             stack.push(&c[1]);
         } else {
-            for t in &node.triangles {
+            for t in &node.items {
                 let point = closest_triangle(query, t.p[0], t.p[1], t.p[2]);
                 let d2 = dot(sub(query, point), sub(query, point));
                 if d2 < best
@@ -264,8 +264,8 @@ pub fn body_distance_bvh(
                 }
             }
             (None, None) => {
-                for x in &a.triangles {
-                    for y in &b.triangles {
+                for x in &a.items {
+                    for y in &b.items {
                         let (pa, pb, d) = triangle_pair(x, y);
                         if d < best {
                             best = d;

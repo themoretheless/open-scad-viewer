@@ -2,6 +2,7 @@
 //! Triangle BVH construction, borrowed-buffer ray picking and mesh distances.
 //! Does not depend on polygon-core, serialization, WASM or an executor.
 pub mod body_queries;
+pub mod aabb_tree;
 pub mod bvh;
 pub mod bvh_codec;
 pub mod bvh_query;
