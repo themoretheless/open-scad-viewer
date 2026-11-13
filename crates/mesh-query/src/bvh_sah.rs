@@ -40,111 +40,137 @@ struct Record {
     triangle: u32,
 }
 
-struct Builder {
-    records: Vec<Record>,
-    leaf_size: usize,
-    bounds: Vec<f32>,
-    nodes: Vec<u32>,
-}
-
-impl Builder {
-    /// Best binned split of `start..end` as (axis, bin boundary) or None
-    /// when a leaf is cheaper or every centroid coincides.
-    fn split(&self, start: usize, end: usize, node: &Aabb) -> Option<(usize, f64, f64, usize)> {
-        let count = end - start;
-        let mut cmin = [f64::INFINITY; 3];
-        let mut cmax = [f64::NEG_INFINITY; 3];
-        for r in &self.records[start..end] {
-            for k in 0..3 {
-                cmin[k] = cmin[k].min(r.centroid[k]);
-                cmax[k] = cmax[k].max(r.centroid[k]);
-            }
+/// Best binned split of `records` as (axis, centroid min, extent, bin
+/// boundary), or None when a leaf is cheaper or every centroid coincides.
+fn split(records: &[Record], leaf_size: usize, node: &Aabb) -> Option<(usize, f64, f64, usize)> {
+    let count = records.len();
+    let mut cmin = [f64::INFINITY; 3];
+    let mut cmax = [f64::NEG_INFINITY; 3];
+    for r in records {
+        for k in 0..3 {
+            cmin[k] = cmin[k].min(r.centroid[k]);
+            cmax[k] = cmax[k].max(r.centroid[k]);
         }
-        let mut best: Option<(f64, usize, usize)> = None;
-        for axis in 0..3 {
-            let extent = cmax[axis] - cmin[axis];
-            if extent.is_nan() || extent <= 0. {
+    }
+    let mut best: Option<(f64, usize, usize)> = None;
+    for axis in 0..3 {
+        let extent = cmax[axis] - cmin[axis];
+        if extent.is_nan() || extent <= 0. {
+            continue;
+        }
+        let mut boxes = [empty(); BINS];
+        let mut counts = [0usize; BINS];
+        for r in records {
+            let b = bin(r.centroid[axis], cmin[axis], extent);
+            counts[b] += 1;
+            grow(&mut boxes[b], &r.bounds);
+        }
+        // Suffix sweep, then prefix sweep scoring each boundary.
+        let mut right_area = [0.; BINS];
+        let mut right_count = [0usize; BINS];
+        let (mut acc, mut n) = (empty(), 0);
+        for b in (1..BINS).rev() {
+            grow(&mut acc, &boxes[b]);
+            n += counts[b];
+            right_area[b] = half_area(&acc);
+            right_count[b] = n;
+        }
+        let (mut acc, mut n) = (empty(), 0);
+        for b in 1..BINS {
+            grow(&mut acc, &boxes[b - 1]);
+            n += counts[b - 1];
+            if n == 0 || right_count[b] == 0 {
                 continue;
             }
-            let mut boxes = [empty(); BINS];
-            let mut counts = [0usize; BINS];
-            for r in &self.records[start..end] {
-                let b = bin(r.centroid[axis], cmin[axis], extent);
-                counts[b] += 1;
-                grow(&mut boxes[b], &r.bounds);
-            }
-            // Suffix sweep, then prefix sweep scoring each boundary.
-            let mut right_area = [0.; BINS];
-            let mut right_count = [0usize; BINS];
-            let (mut acc, mut n) = (empty(), 0);
-            for b in (1..BINS).rev() {
-                grow(&mut acc, &boxes[b]);
-                n += counts[b];
-                right_area[b] = half_area(&acc);
-                right_count[b] = n;
-            }
-            let (mut acc, mut n) = (empty(), 0);
-            for b in 1..BINS {
-                grow(&mut acc, &boxes[b - 1]);
-                n += counts[b - 1];
-                if n == 0 || right_count[b] == 0 {
-                    continue;
-                }
-                let cost = n as f64 * half_area(&acc) + right_count[b] as f64 * right_area[b];
-                if best.is_none_or(|(c, _, _)| cost < c) {
-                    best = Some((cost, axis, b));
-                }
+            let cost = n as f64 * half_area(&acc) + right_count[b] as f64 * right_area[b];
+            if best.is_none_or(|(c, _, _)| cost < c) {
+                best = Some((cost, axis, b));
             }
         }
-        let (cost, axis, boundary) = best?;
-        let parent = half_area(node);
-        let leaf_cost = count as f64;
-        let split_cost = if parent > 0. {
-            TRAVERSAL_COST + cost / parent
-        } else {
-            leaf_cost
-        };
-        (count > self.leaf_size || split_cost < leaf_cost)
-            .then(|| (axis, cmin[axis], cmax[axis] - cmin[axis], boundary))
     }
+    let (cost, axis, boundary) = best?;
+    let parent = half_area(node);
+    let leaf_cost = count as f64;
+    let split_cost = if parent > 0. {
+        TRAVERSAL_COST + cost / parent
+    } else {
+        leaf_cost
+    };
+    (count > leaf_size || split_cost < leaf_cost)
+        .then(|| (axis, cmin[axis], cmax[axis] - cmin[axis], boundary))
+}
 
-    fn build(&mut self, start: usize, end: usize) -> usize {
-        let node = self.nodes.len() / 2;
-        self.nodes.extend([0, 0]);
-        let mut aabb = empty();
-        for r in &self.records[start..end] {
-            grow(&mut aabb, &r.bounds);
-        }
-        self.bounds.extend(aabb.0);
-        self.bounds.extend(aabb.1);
-        let count = end - start;
-        let middle = if count <= self.leaf_size {
-            None
-        } else {
-            Some(match self.split(start, end, &aabb) {
-                Some((axis, lo, extent, boundary)) => {
-                    let left = |r: &Record| bin(r.centroid[axis], lo, extent) < boundary;
-                    stable_partition(&mut self.records[start..end], left) + start
-                }
-                // Coincident centroids: split by count in record order.
-                None => start + count / 2,
-            })
-        };
-        match middle {
-            None => {
-                self.nodes[node * 2] = start as u32;
-                self.nodes[node * 2 + 1] = LEAF_BIT | count as u32;
-            }
-            Some(middle) => {
-                let left = self.build(start, middle);
-                let right = self.build(middle, end);
-                self.nodes[node * 2] = left as u32;
-                self.nodes[node * 2 + 1] = right as u32;
+/// Preorder subtree buffers with node indices and leaf starts local to the
+/// subtree and its record slice.
+struct Subtree {
+    nodes: Vec<u32>,
+    bounds: Vec<f32>,
+}
+
+impl Subtree {
+    /// Append `child` (built over records starting at `record_offset`),
+    /// shifting its node indices and leaf starts. Returns its root index.
+    fn append(&mut self, child: Subtree, record_offset: usize) -> u32 {
+        let base = (self.nodes.len() / 2) as u32;
+        for pair in child.nodes.as_chunks::<2>().0 {
+            if pair[1] & LEAF_BIT != 0 {
+                self.nodes.extend([pair[0] + record_offset as u32, pair[1]]);
+            } else {
+                self.nodes.extend([pair[0] + base, pair[1] + base]);
             }
         }
-        node
+        self.bounds.extend(child.bounds);
+        base
     }
 }
+
+/// Build the subtree over `records`, partitioning them in place. While
+/// `threads > 1` the two halves are built on scoped threads; the result is
+/// identical to the sequential build because each half only depends on its
+/// own records.
+fn subtree(records: &mut [Record], leaf_size: usize, threads: usize) -> Subtree {
+    let mut aabb = empty();
+    for r in records.iter() {
+        grow(&mut aabb, &r.bounds);
+    }
+    let mut out = Subtree {
+        nodes: vec![0, 0],
+        bounds: aabb.0.iter().chain(&aabb.1).copied().collect(),
+    };
+    let count = records.len();
+    if count <= leaf_size {
+        out.nodes[1] = LEAF_BIT | count as u32;
+        return out;
+    }
+    let middle = match split(records, leaf_size, &aabb) {
+        Some((axis, lo, extent, boundary)) => {
+            stable_partition(records, |r| bin(r.centroid[axis], lo, extent) < boundary)
+        }
+        // Coincident centroids: split by count in record order.
+        None => count / 2,
+    };
+    let (left_records, right_records) = records.split_at_mut(middle);
+    let (left, right) = if threads > 1 && count >= PARALLEL_MIN {
+        std::thread::scope(|scope| {
+            let right = scope.spawn(|| subtree(right_records, leaf_size, threads / 2));
+            let left = subtree(left_records, leaf_size, threads - threads / 2);
+            (left, right.join().expect("BVH subtree thread panicked"))
+        })
+    } else {
+        (
+            subtree(left_records, leaf_size, 1),
+            subtree(right_records, leaf_size, 1),
+        )
+    };
+    let l = out.append(left, 0);
+    let r = out.append(right, middle);
+    out.nodes[0] = l;
+    out.nodes[1] = r;
+    out
+}
+
+/// Below this many records a subtree is not worth a thread.
+const PARALLEL_MIN: usize = 4096;
 
 fn bin(value: f64, lo: f64, extent: f64) -> usize {
     (((value - lo) / extent * BINS as f64) as usize).min(BINS - 1)
@@ -171,6 +197,24 @@ pub fn build_mesh_bvh_sah(
     vertex_stride: usize,
     leaf_size: usize,
 ) -> MeshBvh {
+    build_records(records(vertices, indices, vertex_stride), leaf_size, 1)
+}
+
+/// [`build_mesh_bvh_sah`] with the top levels built on up to `threads`
+/// scoped OS threads. The buffers are identical to the sequential build.
+/// Native only: WASM builds stay single-threaded.
+#[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
+pub fn build_mesh_bvh_sah_parallel(
+    vertices: &[f32],
+    indices: &[u32],
+    vertex_stride: usize,
+    leaf_size: usize,
+    threads: usize,
+) -> MeshBvh {
+    build_records(records(vertices, indices, vertex_stride), leaf_size, threads)
+}
+
+fn records(vertices: &[f32], indices: &[u32], vertex_stride: usize) -> Vec<Record> {
     let vertex_count = if vertex_stride >= 3 {
         vertices.len() / vertex_stride
     } else {
@@ -207,6 +251,10 @@ pub fn build_mesh_bvh_sah(
             triangle: triangle as u32,
         });
     }
+    records
+}
+
+fn build_records(mut records: Vec<Record>, leaf_size: usize, threads: usize) -> MeshBvh {
     if records.is_empty() {
         return MeshBvh {
             node_count: 0,
@@ -215,19 +263,12 @@ pub fn build_mesh_bvh_sah(
             triangles: Vec::new(),
         };
     }
-    let count = records.len();
-    let mut builder = Builder {
-        records,
-        leaf_size: leaf_size.max(1),
-        bounds: Vec::new(),
-        nodes: Vec::new(),
-    };
-    builder.build(0, count);
+    let tree = subtree(&mut records, leaf_size.max(1), threads.max(1));
     MeshBvh {
-        node_count: builder.nodes.len() / 2,
-        bounds: builder.bounds,
-        nodes: builder.nodes,
-        triangles: builder.records.iter().map(|r| r.triangle).collect(),
+        node_count: tree.nodes.len() / 2,
+        bounds: tree.bounds,
+        nodes: tree.nodes,
+        triangles: records.iter().map(|r| r.triangle).collect(),
     }
 }
 
@@ -324,6 +365,28 @@ mod tests {
         // Deterministic.
         let again = build_mesh_bvh_sah(&v, &idx, 3, 4);
         assert_eq!((again.nodes, again.triangles), (sah.nodes, sah.triangles));
+    }
+
+    #[cfg(feature = "parallel")]
+    #[test]
+    fn parallel_sah_build_matches_the_sequential_bytes() {
+        // Large enough to cross PARALLEL_MIN several times.
+        let mut v = Vec::new();
+        let mut idx = Vec::new();
+        for i in 0..20000u32 {
+            let (x, y) = ((i % 200) as f32, (i / 200) as f32);
+            let z = (x * 0.37).sin() * (y * 0.11).cos() * 5.;
+            let f = (v.len() / 3) as u32;
+            v.extend([x, y, z, x + 0.9, y, z, x, y + 0.9, z + 0.2]);
+            idx.extend([f, f + 1, f + 2]);
+        }
+        let seq = build_mesh_bvh_sah(&v, &idx, 3, 4);
+        for threads in [2, 3, 8] {
+            let par = build_mesh_bvh_sah_parallel(&v, &idx, 3, 4, threads);
+            assert_eq!(par.nodes, seq.nodes);
+            assert_eq!(par.bounds, seq.bounds);
+            assert_eq!(par.triangles, seq.triangles);
+        }
     }
 
     #[test]

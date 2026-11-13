@@ -14,6 +14,8 @@ pub mod scene_bvh;
 pub mod semantic_pick;
 pub use bvh::{MeshBvh, build_mesh_bvh, build_mesh_bvh_cooperative};
 pub use bvh_sah::build_mesh_bvh_sah;
+#[cfg(all(feature = "parallel", not(target_arch = "wasm32")))]
+pub use bvh_sah::build_mesh_bvh_sah_parallel;
 pub use bvh_query::{Hit, Query, QueryError, raycast};
 pub use bvh_range::{
     Neighbor, OverlapIter, RefitError, intersect_aabb, nearest, overlap_aabb, overlap_aabb_iter,

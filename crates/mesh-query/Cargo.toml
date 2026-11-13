@@ -16,6 +16,10 @@ include = ["src/**", "tests/**", "examples/**", "benches/**", "Cargo.toml", "REA
 math-core = { workspace = true }
 mesh-topology = { workspace = true }
 
+[features]
+# Scoped-thread SAH builds on native targets; no extra dependency.
+parallel = []
+
 [dev-dependencies]
 serde_json = "1"
 
