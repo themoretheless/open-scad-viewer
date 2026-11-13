@@ -43,18 +43,175 @@ pub struct OwnedPeriodicChartCycleSides {
 fn inside(p: &[Q; 2], chart: &[[Q; 2]; 2]) -> bool {
     (0..2).all(|a| chart[a][0] < p[a] && p[a] < chart[a][1])
 }
+const MAX_ALLOWANCE: usize = 1000000;
+const MAX_LEVELS: usize = 512;
+fn validate(limits: PeriodicChartCycleSideLimits, invalid: &'static str) -> Result<()> {
+    if !(1..=MAX_ALLOWANCE).contains(&limits.max_cycles)
+        || !(1..=MAX_ALLOWANCE).contains(&limits.max_query_work)
+        || !(1..=MAX_LEVELS).contains(&limits.max_levels)
+    {
+        return Err(refused(invalid));
+    }
+    Ok(())
+}
 fn derive(o: &OwnedPeriodicChartCycleSides) -> Result<Vec<OriginalPeriodicChartCycleSides>> {
     let _replay = super::periodic_replay::scope();
     let limits = o.limits;
-    if !(1..=1000000).contains(&limits.max_cycles)
-        || !(1..=1000000).contains(&limits.max_query_work)
-        || !(1..=512).contains(&limits.max_levels)
-    {
-        return Err(refused("Invalid complete cycle side witness allowance"));
-    }
+    validate(limits, "Invalid complete cycle side witness allowance")?;
     super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let cycles = o.owner.owner();
     derive_sides(cycles, cycles.walks(), limits, |p| o.owner.windings(p))
+}
+/// Left and right witnesses of a source trace edge: the two certified
+/// transverse probes of its physical side, shrunk towards their interior
+/// center until both lie strictly inside the chart.
+fn source_witnesses(
+    side: &OwnedPeriodicSupportSides,
+    p: &OriginalPeriodicBoundaryPart,
+    chart: &[[Q; 2]; 2],
+    limits: PeriodicChartCycleSideLimits,
+    work: &mut usize,
+) -> Result<[[Q; 2]; 2]> {
+    if p.dart / 2 != p.edge || side.probes().edge() != p.edge {
+        return Err(refused(
+            "Cycle side rebound its original directed physical edge",
+        ));
+    }
+    let graph = side.probes().owner().owner().owner();
+    let carrier = graph.edges()[p.edge]
+        .carriers
+        .first()
+        .ok_or_else(|| refused("Cycle side lost its original canonical carrier"))?;
+    if (
+        carrier.piece,
+        carrier.source,
+        carrier.cell,
+        carrier.interval,
+    ) != (p.piece, p.source, p.cell, p.interval)
+    {
+        return Err(refused(
+            "Cycle side probe belongs to a different canonical source image",
+        ));
+    }
+    let left = p.dart % 2;
+    if !side.selected()[left] || side.selected()[1 - left] {
+        return Err(refused(
+            "Cycle side is not the actual selected material boundary",
+        ));
+    }
+    let q = side
+        .probes()
+        .lifted_queries()
+        .iter()
+        .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
+        .collect::<Result<Vec<_>>>()?;
+    let center =
+        std::array::from_fn::<_, 2, _>(|a| (&q[0][a] + &q[1][a]) / Q::from_integer(2.into()));
+    // A retained non-frame trace must have an interior center.
+    // Shrinking the already certified transverse segment preserves
+    // its unique center contact and the actual material germs.
+    if !inside(&center, chart) {
+        return Err(refused(
+            "Source cycle witness needs an interior original chart center",
+        ));
+    }
+    let mut points = [q[left].clone(), q[1 - left].clone()];
+    for _ in 0..limits.max_levels {
+        *work = work
+            .checked_add(1)
+            .filter(|n| *n <= limits.max_query_work)
+            .ok_or_else(|| refused("Cycle side refinement work exhausted"))?;
+        if points.iter().all(|p| inside(p, chart)) {
+            return Ok(points);
+        }
+        for p in &mut points {
+            for a in 0..2 {
+                p[a] = (&p[a] + &center[a]) / Q::from_integer(2.into());
+            }
+        }
+    }
+    Err(refused(
+        "Interior original cycle side witnesses exceed refinement allowance",
+    ))
+}
+/// Left and right witnesses of a native shore edge: its owned inside probe
+/// on the inward normal, and that probe mirrored strictly outside the chart.
+fn frame_witnesses(
+    s: &OriginalPeriodicNativeShore,
+    sample: &OriginalPeriodicShoreMaterialSample,
+    chart: &[[Q; 2]; 2],
+) -> Result<[[Q; 2]; 2]> {
+    if !sample.selected {
+        return Err(refused(
+            "Retained frame interval has no actual inside material",
+        ));
+    }
+    let center = [
+        decode_ratio(&sample.center[0])?,
+        decode_ratio(&sample.center[1])?,
+    ];
+    let left = [
+        decode_ratio(&sample.probe[0])?,
+        decode_ratio(&sample.probe[1])?,
+    ];
+    let fixed = s.fixed_axis;
+    if !inside(&left, chart)
+        || left[1 - fixed] != center[1 - fixed]
+        || center[fixed] != chart[fixed][s.end]
+    {
+        return Err(refused(
+            "Frame cycle side is not its owned normal inside germ",
+        ));
+    }
+    let mut right = left.clone();
+    right[fixed] = &center[fixed] * Q::from_integer(2.into()) - &left[fixed];
+    let outside = if s.end == 0 {
+        right[fixed] < chart[fixed][0]
+    } else {
+        right[fixed] > chart[fixed][1]
+    };
+    if !outside {
+        return Err(refused(
+            "Frame cycle right witness is not strictly outside the chart",
+        ));
+    }
+    Ok([left, right])
+}
+/// Orientation of `cycle` from the winding vectors left and right of its
+/// edge, over the first `cycles` entries. The certified transverse segment
+/// crosses this one original edge, so only this cycle's winding may jump,
+/// by exactly one.
+fn orientation(
+    cycle: usize,
+    cycles: usize,
+    windings: &[Vec<i64>; 2],
+) -> Result<PeriodicChartCycleOrientation> {
+    let pairs = windings[0].iter().zip(&windings[1]).take(cycles);
+    for (i, (left, right)) in pairs.enumerate() {
+        if left.checked_sub(*right) != Some(if i == cycle { 1 } else { 0 }) {
+            return Err(refused(
+                "Cycle side winding jump disagrees with its owned transverse germ",
+            ));
+        }
+    }
+    for (side, values) in windings.iter().enumerate() {
+        let sum = values
+            .iter()
+            .try_fold(0i64, |n, v| n.checked_add(*v))
+            .ok_or_else(|| refused("Cycle side material winding overflow"))?;
+        if sum != if side == 0 { 1 } else { 0 } {
+            return Err(refused(
+                "Cycle side winding does not reproduce actual material germs",
+            ));
+        }
+    }
+    match [windings[0][cycle], windings[1][cycle]] {
+        [1, 0] => Ok(PeriodicChartCycleOrientation::Positive),
+        [0, -1] => Ok(PeriodicChartCycleOrientation::Negative),
+        _ => Err(refused(
+            "Cycle orientation needs further owned fan decomposition",
+        )),
+    }
 }
 /// Caller owns fresh source verification and the complete source-edge partition.
 pub(super) fn derive_sides(
@@ -63,12 +220,7 @@ pub(super) fn derive_sides(
     limits: PeriodicChartCycleSideLimits,
     mut query: impl FnMut(&[ExactRatio; 2]) -> Result<Option<Vec<i64>>>,
 ) -> Result<Vec<OriginalPeriodicChartCycleSides>> {
-    if !(1..=1000000).contains(&limits.max_cycles)
-        || !(1..=1000000).contains(&limits.max_query_work)
-        || !(1..=512).contains(&limits.max_levels)
-    {
-        return Err(refused("Invalid complete loop side witness allowance"));
-    }
+    validate(limits, "Invalid complete loop side witness allowance")?;
     let samples = cycles.owner().owner();
     let shores = samples.owner();
     let traces = shores.owner().owner().owner().owner();
@@ -76,7 +228,13 @@ pub(super) fn derive_sides(
     let lifts = regions.owner().owner();
     let selection = lifts.owner().owner();
     let cover = selection.rule().support().augmented().surface().pieces();
-    let chart = cover.chart().map(|r| r.map(|v| Q::from_float(v).unwrap()));
+    let mut chart = [[Q::zero(), Q::zero()], [Q::zero(), Q::zero()]];
+    for (exact, bounds) in chart.iter_mut().zip(cover.chart()) {
+        for (q, v) in exact.iter_mut().zip(bounds) {
+            *q = Q::from_float(v)
+                .ok_or_else(|| refused("Invalid complete loop side witness allowance"))?;
+        }
+    }
     if walks.len() > limits.max_cycles {
         return Err(refused("Complete cycle side census exceeds allowance"));
     }
@@ -113,73 +271,7 @@ pub(super) fn derive_sides(
                     .sides()
                     .get(p.edge)
                     .ok_or_else(|| refused("Cycle side lost its original physical side proof"))?;
-                if p.dart / 2 != p.edge || side.probes().edge() != p.edge {
-                    return Err(refused(
-                        "Cycle side rebound its original directed physical edge",
-                    ));
-                }
-                let graph = side.probes().owner().owner().owner();
-                let carrier = graph.edges()[p.edge]
-                    .carriers
-                    .first()
-                    .ok_or_else(|| refused("Cycle side lost its original canonical carrier"))?;
-                if (
-                    carrier.piece,
-                    carrier.source,
-                    carrier.cell,
-                    carrier.interval,
-                ) != (p.piece, p.source, p.cell, p.interval)
-                {
-                    return Err(refused(
-                        "Cycle side probe belongs to a different canonical source image",
-                    ));
-                }
-                let left = p.dart % 2;
-                if side.selected()[left] != true || side.selected()[1 - left] != false {
-                    return Err(refused(
-                        "Cycle side is not the actual selected material boundary",
-                    ));
-                }
-                let q = side
-                    .probes()
-                    .lifted_queries()
-                    .iter()
-                    .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
-                    .collect::<Result<Vec<_>>>()?;
-                let center = std::array::from_fn::<_, 2, _>(|a| {
-                    (&q[0][a] + &q[1][a]) / Q::from_integer(2.into())
-                });
-                // A retained non-frame trace must have an interior center.
-                // Shrinking the already certified transverse segment preserves
-                // its unique center contact and the actual material germs.
-                if !inside(&center, &chart) {
-                    return Err(refused(
-                        "Source cycle witness needs an interior original chart center",
-                    ));
-                }
-                let mut points = [q[left].clone(), q[1 - left].clone()];
-                let mut found = false;
-                for _ in 0..limits.max_levels {
-                    work = work
-                        .checked_add(1)
-                        .filter(|n| *n <= limits.max_query_work)
-                        .ok_or_else(|| refused("Cycle side refinement work exhausted"))?;
-                    if points.iter().all(|p| inside(p, &chart)) {
-                        found = true;
-                        break;
-                    }
-                    for p in &mut points {
-                        for a in 0..2 {
-                            p[a] = (&p[a] + &center[a]) / Q::from_integer(2.into());
-                        }
-                    }
-                }
-                if !found {
-                    return Err(refused(
-                        "Interior original cycle side witnesses exceed refinement allowance",
-                    ));
-                }
-                points
+                source_witnesses(side, p, &chart, limits, &mut work)?
             }
             OriginalPeriodicChartCycleEdgeKind::NativeShore { shore, interval } => {
                 let s = shores
@@ -189,81 +281,21 @@ pub(super) fn derive_sides(
                 let sample = sample_index.get(&(shore, interval)).ok_or_else(|| {
                     refused("Cycle side lost its complete native interval material germ")
                 })?;
-                if !sample.selected {
-                    return Err(refused(
-                        "Retained frame interval has no actual inside material",
-                    ));
-                }
-                let center = [
-                    decode_ratio(&sample.center[0])?,
-                    decode_ratio(&sample.center[1])?,
-                ];
-                let left = [
-                    decode_ratio(&sample.probe[0])?,
-                    decode_ratio(&sample.probe[1])?,
-                ];
-                if !inside(&left, &chart)
-                    || left[1 - s.fixed_axis] != center[1 - s.fixed_axis]
-                    || center[s.fixed_axis] != chart[s.fixed_axis][s.end]
-                {
-                    return Err(refused(
-                        "Frame cycle side is not its owned normal inside germ",
-                    ));
-                }
-                let mut right = left.clone();
-                right[s.fixed_axis] =
-                    &center[s.fixed_axis] * Q::from_integer(2.into()) - &left[s.fixed_axis];
-                if !(if s.end == 0 {
-                    right[s.fixed_axis] < chart[s.fixed_axis][0]
-                } else {
-                    right[s.fixed_axis] > chart[s.fixed_axis][1]
-                }) {
-                    return Err(refused(
-                        "Frame cycle right witness is not strictly outside the chart",
-                    ));
-                }
-                [left, right]
+                frame_witnesses(s, sample, &chart)?
             }
         }
         .map(|p| p.map(|q| ratio(&q)));
-        let mut values = Vec::with_capacity(2);
-        for p in &points {
-            values.push(
-                query(p)?.ok_or_else(|| {
-                    refused("Owned cycle side witness touches a retained boundary")
-                })?,
-            );
+        let mut windings = [Vec::new(), Vec::new()];
+        for (values, p) in windings.iter_mut().zip(&points) {
+            *values = query(p)?
+                .ok_or_else(|| refused("Owned cycle side witness touches a retained boundary"))?;
         }
-        let windings = [values.remove(0), values.remove(0)];
-        // The certified transverse normal segment crosses this one original
-        // edge. Other cycle values must remain unchanged, including at contacts.
-        for i in 0..walks.len() {
-            if windings[0][i].checked_sub(windings[1][i]) != Some(if i == cycle { 1 } else { 0 }) {
-                return Err(refused(
-                    "Cycle side winding jump disagrees with its owned transverse germ",
-                ));
-            }
+        if windings.iter().any(|values| values.len() < walks.len()) {
+            return Err(refused(
+                "Cycle side winding jump disagrees with its owned transverse germ",
+            ));
         }
-        for (side, values) in windings.iter().enumerate() {
-            let sum = values
-                .iter()
-                .try_fold(0i64, |n, v| n.checked_add(*v))
-                .ok_or_else(|| refused("Cycle side material winding overflow"))?;
-            if sum != if side == 0 { 1 } else { 0 } {
-                return Err(refused(
-                    "Cycle side winding does not reproduce actual material germs",
-                ));
-            }
-        }
-        let orientation = match [windings[0][cycle], windings[1][cycle]] {
-            [1, 0] => PeriodicChartCycleOrientation::Positive,
-            [0, -1] => PeriodicChartCycleOrientation::Negative,
-            _ => {
-                return Err(refused(
-                    "Cycle orientation needs further owned fan decomposition",
-                ));
-            }
-        };
+        let orientation = orientation(cycle, walks.len(), &windings)?;
         result.push(OriginalPeriodicChartCycleSides {
             cycle,
             edge,
