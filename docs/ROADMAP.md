@@ -13,15 +13,13 @@
 
 | # | Задача | Пакет | Готово, когда |
 |---|---|---|---|
-| 1 | Храповик ESLint/Prettier для TS | P2 | `npm run lint` в CI сравнивает с сохранённой базовой линией и падает на новых нарушениях |
-| 2 | Уборка неподключённых файлов `nurbs-core` | N21 | неподключённые корневые файлы удалены, `cargo check --workspace --all-targets` зелёный |
-| 3 | Аудит синхронных путей редактора | C1 | таблица p50/p95 по каждому оставшемуся синхронному пути; пути вне целей перенесены в worker или оформлены задачами |
-| 4 | Стенд матрицы команд и контрольные модели | C2, C3 | браузерный стенд прогоняет все команды палитры, отчёт со списком дефектов |
-| 5 | Сертифицированное касание в пересечениях кривая/плоскость и поверхность/поверхность | N1 | касательные случаи в `nurbs-intersect/src/queries/curve_plane.rs` возвращают точку или кривую с кратностью, есть тесты на касание и почти касание |
-| 6 | Вывести в редактор готовые нативные результаты | N4 | история Full Round, closed graph Boolean и непрерывный offset доступны командами редактора с отменой, Undo и экспортом в STEP |
-| 7 | Корпус дифференциальных Boolean-тестов Manifold до 100 пар | S4 | `tools/manifold-bench/differential-corpus.json` содержит не меньше 100 случаев, включая вырожденные, и проходит в CI |
-| 8 | LOD тесселяции во вьюере | N20 | `lod::select` вызывается через bridge, вьюер переключает уровни по экранному размеру |
-| 9 | Сверка квалификационных доказательств | P1 | четыре набора доказательств и `audit:qualification-drift` зелёные; делать в момент низкой активности в ядре |
+| 1 | Аудит синхронных путей редактора | C1 | таблица p50/p95 по каждому оставшемуся синхронному пути; пути вне целей перенесены в worker или оформлены задачами |
+| 2 | Стенд матрицы команд и контрольные модели | C2, C3 | браузерный стенд прогоняет все команды палитры, отчёт со списком дефектов |
+| 3 | Сертифицированное касание в пересечениях кривая/плоскость и поверхность/поверхность | N1 | касательные случаи в `nurbs-intersect/src/queries/curve_plane.rs` возвращают точку или кривую с кратностью, есть тесты на касание и почти касание |
+| 4 | Вывести в редактор готовые нативные результаты | N4 | история Full Round, closed graph Boolean и непрерывный offset доступны командами редактора с отменой, Undo и экспортом в STEP |
+| 5 | Корпус дифференциальных Boolean-тестов Manifold до 100 пар | S4 | `tools/manifold-bench/differential-corpus.json` содержит не меньше 100 случаев, включая вырожденные, и проходит в CI |
+| 6 | LOD тесселяции во вьюере | N20 | `lod::select` вызывается через bridge, вьюер переключает уровни по экранному размеру |
+| 7 | Сверка квалификационных доказательств | P1 | четыре набора доказательств и `audit:qualification-drift` зелёные; делать в момент низкой активности в ядре |
 
 ## Параллельные потоки
 
@@ -62,7 +60,6 @@
 | **N18. Квалификация и релизные гейты.** Закрыть G0.14 (чистый прогон 4740 единиц на трёх ОС), воспроизводимость, SBOM, дифференциальная матрица против OCCT/geomdl/curvo | P1 | L | да | N17 | [master-plan](design/brep-nurbs-14-stage-master-plan.md) G0.14, карточки 4, 14; [rust-migration-forward-plan](design/rust-migration-forward-plan.md) D3, D4 |
 | **N19. Прогресс и отмена.** Контракт `Progress` и кооперативный `CancellationToken` в циклах пересечений, тесселяции и аппроксимации; поведение при OOM | P1 | M | нет | — | [nurbs-priorities](../nurbs-priorities.md) 920, 921; [brep-completion-status](design/brep-completion-status.md) 12 |
 | **N20. LOD тесселяции во вьюере.** Вывести `tessellation::lod::select` через geometry-bridge и WASM, переключать по экранному размеру | P1 | S–M | да | — | [nurbs-priorities](../nurbs-priorities.md) 149 |
-| **N21. Гигиена репозитория.** Проверить сборкой и удалить неподключённые корневые копии в `nurbs-core/src` (`gordon*.rs`, `chord_*.rs`, `natural_loft.rs`, `primitives.rs`, `affine.rs`, `hermite.rs` и др.); проверить честность границы `fixed_normal_arc_line` для весов [1, 2] | P1 | S | да | — | [roadmap-status](design/nurbs-brep-bvh-roadmap-status.md) «Уборка» |
 | **N22. Упрощение и распознавание аналитики.** Удаление узлов, понижение степени, распознавание примитивов по коэффициентам, `detect_cylinder`/`detect_cone` в лечении | P2 | M | частично | — | [nurbs-next-five](design/nurbs-next-five-priorities-2026-10-22.md) §4; [nurbs-priorities](../nurbs-priorities.md) 814, 874, 876, 1041 |
 | **N24. Параллелизм, память, детерминизм.** rayon в тесселяции и Boolean, кэши базиса, арены, SoA-буферы в GPU | P2 | L | нет | N17 | [nurbs-priorities](../nurbs-priorities.md) 183, 184, 817–826, 1068–1070 |
 | **N25. BVH: TS-обёртка и упакованное дерево.** SAH, параллельная сборка, общее ядро и проброс в протокол сделаны; остаются TS-обёртка новых действий `mesh_picking` (нужна пересборка WASM владельцем) и перевод упакованного float32-дерева на общее ядро | P2 | S | да | — | [roadmap-status](design/nurbs-brep-bvh-roadmap-status.md) «BVH» |
@@ -131,7 +128,7 @@
 | Пакет | P | Размер | ∥ | Зависит от | Источники |
 |---|---|---|---|---|---|
 | **P1. Сверка квалификационных доказательств.** Сделать зелёными 4 падающих набора (`engineManifest`, `g0ToolchainFingerprints`, `g1GithubActionsQualification`, `qualificationPlanArtifact`) и `audit:qualification-drift` через ревьюируемое обновление, без переписывания истории | P0 | M | нет (после правок ядра) | — | [optimization-status](design/optimization-status-2026-09-19.md); [product-priorities](design/product-architecture-priorities-2026-09-20.md) шаг 1 |
-| **P2. TS lint, format, строгий tsconfig.** ESLint и Prettier с храповиком по образцу clippy (refactor F3), `packageManager`, флаги `noUnused*` и прочие постепенно | P0 | S–M | да | — | [RECOMMENDATIONS](RECOMMENDATIONS.md) 3.5; [ISSUES](ISSUES.md) E1–E9 |
+| **P2. Строгий tsconfig и снижение базовой линии линтера.** ESLint и Prettier с храповиком (`npm run lint`) и `packageManager` сделаны; остаются флаги `noUnused*` и прочие постепенно, разбор подозрительных мест (`no-dupe-keys`, `no-unsafe-finally`, `debugger`) и снижение пинов в `architecture-baseline.json` | P1 | S–M | да | — | [RECOMMENDATIONS](RECOMMENDATIONS.md) 3.5; [ISSUES](ISSUES.md) E1–E9 |
 | **P3. Декомпозиция оболочки и общие диалоги.** Общие `Modal` и `SidePanel` с focus trap и `aria-modal`, `App.svt` меньше 1000 строк (сейчас 1773) | P1 | M | нет (App.svt) | — | [RECOMMENDATIONS](RECOMMENDATIONS.md) 1.4; [recommendation](recommendation.md) R4 |
 | **P4. Интеграция редактора кода.** Адаптер редактора, затем CodeMirror или Monaco; сохранить undo, IME, навигацию к сцене; замеры задержки ввода и бандла | P1 | L | нет (App.svt) | P3 | [product-priorities](design/product-architecture-priorities-2026-09-20.md) шаг 2; [recommendation](recommendation.md) R9 |
 | **P5. Браузерные и performance-гейты в CI.** Playwright со швом рендера без GPU, визуальные фикстуры, счётчики операций | P1 | L | да | P2 | [recommendation](recommendation.md) R11 |
