@@ -19,7 +19,7 @@ pub fn multiply(a:f64,b:f64)->Option<f64>{
     successor(a*b)
 }
 /// 6369051672525773 / 2^52 has exact square greater than two.
-pub fn sqrt_two(value:f64)->Option<f64>{multiply(value,1.4142135623730951)}
+pub fn sqrt_two(value:f64)->Option<f64>{multiply(value,std::f64::consts::SQRT_2)}
 #[cfg(test)]
 mod tests{
     use super::*;
