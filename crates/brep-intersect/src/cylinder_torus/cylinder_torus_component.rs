@@ -17,6 +17,17 @@ pub enum CylinderTorusComponent {
         /// or cap plane equation and the scaled torus implicit equation.
         max_sample_residual: f64,
     },
+    /// General (tilted or offset) contact with the torus strictly between
+    /// the cap planes: closed loops on the side wall, traced into cubic
+    /// pieces certified within `distance_bound` of both surfaces;
+    /// `complete` says whether the set is certified complete (on the
+    /// cylinder side charts). No UV lifts yet.
+    Traced {
+        pieces: Vec<Curve>,
+        distance_bound: f64,
+        spans: usize,
+        complete: bool,
+    },
 }
 
 /// Where a resolved circle sits on the cylinder boundary.
@@ -156,13 +167,11 @@ pub fn intersect_cylinder_torus(
         + cylinder.error / (2. * cylinder.half_height)
         + torus.error / (2. * torus.major);
     if tilt > axis_snap {
-        let reason = if tilt <= RECOGNITION {
-            UnresolvedReason::NearCoincidence
-        } else {
-            UnresolvedReason::UnsupportedSurface
-        };
-        report.unresolved(domain, reason);
-        return Ok(report);
+        if tilt <= RECOGNITION {
+            report.unresolved(domain, UnresolvedReason::NearCoincidence);
+            return Ok(report);
+        }
+        return general(report, domain, cylinder_model, &cylinder, &torus, band, terms);
     }
     let axis = cylinder.axis;
     let along = dot(delta, axis);
@@ -179,13 +188,11 @@ pub fn intersect_cylinder_torus(
     // a clear offset is the unsupported general (quartic) configuration.
     let dist_snap = 64. * f64::EPSILON * terms + cylinder.error + torus.error;
     if d_perp > dist_snap {
-        let reason = if d_perp <= RECOGNITION * terms {
-            UnresolvedReason::NearCoincidence
-        } else {
-            UnresolvedReason::UnsupportedSurface
-        };
-        report.unresolved(domain, reason);
-        return Ok(report);
+        if d_perp <= RECOGNITION * terms {
+            report.unresolved(domain, UnresolvedReason::NearCoincidence);
+            return Ok(report);
+        }
+        return general(report, domain, cylinder_model, &cylinder, &torus, band, terms);
     }
     let (r, big_r, r_c, half) = (
         torus.minor,
@@ -293,5 +300,88 @@ pub fn intersect_cylinder_torus(
             .components
             .push(circle_component(&cylinder, &torus, z, site)?);
     }
+    Ok(report)
+}
+
+/// General tilted or offset pair. Only a torus strictly between the cap
+/// planes is handled: then every contact is a closed loop on the side wall.
+fn general(
+    mut report: Report<CylinderTorusComponent>,
+    domain: Vec<f64>,
+    cylinder_model: &Model,
+    cylinder: &CanonicalCylinder,
+    torus: &CanonicalTorus,
+    band: f64,
+    terms: f64,
+) -> Result<Report<CylinderTorusComponent>> {
+    // Axial extent of the torus along the cylinder axis:
+    // |s| + R sqrt(1 - (a_t . a_c)^2) + r.
+    let s = dot(sub(torus.center, cylinder.center), cylinder.axis);
+    let c = dot(torus.axis, cylinder.axis).clamp(-1., 1.);
+    let reach = s.abs() + torus.major * (1. - c * c).sqrt() + torus.minor;
+    if reach >= cylinder.half_height - band {
+        report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+        return Ok(report);
+    }
+    let frame = [cylinder.frame[0], cylinder.frame[1], cylinder.axis];
+    let wall = crate::implicit_trace::CylinderImplicit {
+        center: cylinder.center,
+        frame,
+        radius: cylinder.radius,
+    };
+    let ring = crate::implicit_trace::TorusImplicit {
+        center: torus.center,
+        frame: [torus.frame[0], torus.frame[1], torus.axis],
+        major: torus.major,
+        minor: torus.minor,
+    };
+    let h = cylinder.half_height;
+    let seed = |theta: f64, phi: f64| -> [f64; 3] {
+        let z = (theta / std::f64::consts::PI) * 2. * h - h;
+        let (sp, cp) = phi.sin_cos();
+        std::array::from_fn(|k| {
+            cylinder.center[k] + cylinder.radius * (cp * frame[0][k] + sp * frame[1][k]) + z * frame[2][k]
+        })
+    };
+    let traced = crate::implicit_trace::trace_intersection(
+        &wall,
+        &ring,
+        seed,
+        terms,
+        torus.minor.min(cylinder.radius),
+        crate::TRACE_TOLERANCE,
+    );
+    let loops = match traced {
+        Ok(loops) => loops,
+        Err(e) => {
+            let reason = if e.message.contains("tangency") {
+                UnresolvedReason::TangencyOrMultipleRoot
+            } else {
+                UnresolvedReason::UnsupportedSurface
+            };
+            report.unresolved(domain, reason);
+            return Ok(report);
+        }
+    };
+    let all: Vec<Vec<Curve>> = loops.iter().map(|l| l.pieces.clone()).collect();
+    let complete = crate::sphere_torus::completeness::certify_complete_on_cylinder(
+        cylinder,
+        cylinder_model,
+        &crate::sphere_torus::completeness::Quadric::Torus(torus),
+        &all,
+    );
+    if loops.is_empty() {
+        // No loop found: an empty answer only with the certificate.
+        if !complete {
+            report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+        }
+        return Ok(report);
+    }
+    report.components.extend(loops.into_iter().map(|l| CylinderTorusComponent::Traced {
+        pieces: l.pieces,
+        distance_bound: l.distance_bound,
+        spans: l.spans,
+        complete,
+    }));
     Ok(report)
 }

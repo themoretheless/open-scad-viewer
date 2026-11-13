@@ -31,7 +31,10 @@ fn circle_of(
         cylinder_uv,
         torus_uv,
         max_sample_residual,
-    } = component;
+    } = component
+    else {
+        panic!("expected a circle component");
+    };
     (
         curve,
         *center,
@@ -443,7 +446,7 @@ fn near_coaxial_bands_stay_unresolved_not_forced() {
 }
 
 #[test]
-fn clearly_off_axis_or_tilted_pairs_are_unsupported_regions() {
+fn off_axis_or_tilted_pairs_are_traced_or_refused_at_the_caps() {
     let torus = brep_core::analytic::torus(3., 1.).unwrap();
     let base = translated(&brep_core::analytic::cylinder(2.2, 8.).unwrap(), [0., 0., -4.]);
     let off = translated(&base, [0.5, 0., 0.]);
@@ -458,7 +461,29 @@ fn clearly_off_axis_or_tilted_pairs_are_unsupported_regions() {
         ],
     )
     .unwrap();
+    // The torus stays between the cap planes: traced, certified, complete.
     for cylinder in [&off, &tilted] {
+        let report = intersect_cylinder_torus(cylinder, &torus, Options::default()).unwrap();
+        assert!(report.unresolved.is_empty(), "{:?}", report.unresolved);
+        for component in &report.components {
+            let CylinderTorusComponent::Traced { complete, .. } = component else {
+                panic!("expected traced loops");
+            };
+            assert!(complete);
+        }
+        // Without the traced loops the certificate fails.
+        let canon = recognize_cylinder(cylinder).unwrap().unwrap();
+        let ring = recognize_torus(&torus).unwrap().unwrap();
+        assert!(!crate::sphere_torus::completeness::certify_complete_on_cylinder(
+            &canon,
+            cylinder,
+            &crate::sphere_torus::completeness::Quadric::Torus(&ring),
+            &[],
+        ));
+    }
+    // A short cylinder whose caps the torus reaches stays unsupported.
+    let short = translated(&brep_core::analytic::cylinder(2.2, 1.5).unwrap(), [0.5, 0., -0.75]);
+    for cylinder in [&short] {
         let report = intersect_cylinder_torus(cylinder, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);
@@ -595,5 +620,32 @@ fn rotated_translated_placement_keeps_the_exact_circles() {
             |p| placed_check(p).1,
         );
         assert!(uv_worst <= 1e-9, "{uv_worst}");
+    }
+}
+
+#[test]
+fn tilted_and_offset_tori_between_the_caps_are_traced_and_complete() {
+    let cylinder = brep_core::analytic::cylinder(2., 12.).unwrap();
+    // Torus R = 2, r = 0.5 crossing the wall: shifted sideways, and tilted.
+    let torus = brep_core::analytic::torus(2., 0.5).unwrap();
+    let shifted = translated(&torus, [1.5, 0.3, 6.]);
+    let tilted = rotated_translated(&torus, 0.4, [0.8, 0., 6.]);
+    for (name, t) in [("shifted", &shifted), ("tilted", &tilted)] {
+        let report = intersect_cylinder_torus(&cylinder, t, Options::default()).unwrap();
+        assert!(report.unresolved.is_empty(), "{name}: {:?}", report.unresolved);
+        assert!(!report.components.is_empty(), "{name}");
+        for component in &report.components {
+            let CylinderTorusComponent::Traced { pieces, distance_bound, complete, .. } = component else {
+                panic!("expected traced loops");
+            };
+            assert!(*distance_bound <= crate::TRACE_TOLERANCE);
+            assert!(*complete, "{name}: not certified complete");
+            for piece in pieces {
+                for k in 0..=20 {
+                    let p = piece.evaluate(k as f64 / 20.).unwrap().point;
+                    assert!((p[0].hypot(p[1]) - 2.).abs() <= crate::TRACE_TOLERANCE, "{name} {p:?}");
+                }
+            }
+        }
     }
 }
