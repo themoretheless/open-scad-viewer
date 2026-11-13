@@ -31,6 +31,9 @@ pub struct Triangle {
 pub struct Mesh {
     pub points: Vec<[f64; 3]>,
     pub triangles: Vec<Triangle>,
+    /// One representative chart `(patch, [u, v])` per point; welded seam
+    /// points keep the chart of their lowest grid index.
+    pub charts: Vec<(usize, [f64; 2])>,
 }
 #[derive(Clone, Debug)]
 pub struct Report {
@@ -211,10 +214,15 @@ pub fn tessellate(
     let map: Vec<_> = (0..points.len()).map(|i| root(&parent, i)).collect();
     let mut remap = vec![0; points.len()];
     let mut compact = Vec::with_capacity(points.len());
+    let mut charts = Vec::with_capacity(points.len());
+    let per_patch = (n + 1) * (n + 1);
     for i in 0..points.len() {
         if map[i] == i {
             remap[i] = compact.len();
             compact.push(points[i]);
+            let (patch, local) = (i / per_patch, i % per_patch);
+            let g = &grids[patch];
+            charts.push((patch, [g[0][local / (n + 1)], g[1][local % (n + 1)]]));
         }
     }
     let mut triangles = Vec::with_capacity(surfaces.len() * n * n * 2);
@@ -265,6 +273,7 @@ pub fn tessellate(
     report.mesh = Some(Mesh {
         points: compact,
         triangles,
+        charts,
     });
     Ok(report)
 }

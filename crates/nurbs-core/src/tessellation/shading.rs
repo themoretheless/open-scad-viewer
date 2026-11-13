@@ -14,7 +14,7 @@ use math_core::{cross, norm};
 /// There the tangent along the collapsed boundary vanishes linearly, and the
 /// mixed derivative S_uv takes its place in the cross product, which gives
 /// the exact limiting normal. No finite-difference probe is used.
-fn analytic_normal(surface: &Surface, u: f64, v: f64) -> Result<Option<[f64; 3]>> {
+pub(crate) fn analytic_normal(surface: &Surface, u: f64, v: f64) -> Result<Option<[f64; 3]>> {
     let evaluation = surface.evaluate(u, v)?;
     if let Some(n) = evaluation.unit_normal() {
         return Ok(Some(n));

@@ -4,3 +4,4 @@ pub mod lod;
 pub mod shading;
 pub mod shared_tessellation;
 pub mod surface_tessellation;
+pub mod watertight;
