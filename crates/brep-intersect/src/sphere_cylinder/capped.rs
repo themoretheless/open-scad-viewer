@@ -53,14 +53,25 @@ fn pieces_of(arc: &Arc, per: usize) -> Result<Vec<Curve>> {
     Ok(out)
 }
 
-/// Closed cycles of a sphere/cylinder contact reaching the caps.
-pub(super) fn capped_cycles(
+/// The slab of a capped solid of revolution: axial coordinates measured
+/// from `origin` along `frame[2]`, and per cap plane its axial position and
+/// disk radius.
+pub(crate) struct Slab {
+    pub(crate) origin: P,
+    /// In-plane x, in-plane y, axis.
+    pub(crate) frame: [P; 3],
+    pub(crate) planes: [(f64, f64); 2],
+}
+
+/// Closed cycles of a sphere contact with any capped solid of revolution.
+pub(crate) fn capped_cycles_in(
     sphere: &CanonicalSphere,
-    cylinder: &CanonicalCylinder,
+    slab: &Slab,
     loops: &[Vec<Curve>],
 ) -> Result<Vec<Vec<Curve>>> {
-    let axial = |p: P| dot(sub(p, cylinder.center), cylinder.axis);
-    let half = cylinder.half_height;
+    let axis = slab.frame[2];
+    let axial = |p: P| dot(sub(p, slab.origin), axis);
+    let (z_lo, z_hi) = (slab.planes[0].0, slab.planes[1].0);
     // 1. Wall arcs inside the slab, from each traced loop.
     let mut wall: Vec<Arc> = Vec::new();
     let mut closed: Vec<Vec<Curve>> = Vec::new();
@@ -74,7 +85,7 @@ pub(super) fn capped_cycles(
                 pts.push(point(piece, lo + (hi - lo) * k as f64 / n as f64)?);
             }
         }
-        let inside = |p: P| axial(p).abs() < half;
+        let inside = |p: P| (z_lo..z_hi).contains(&axial(p));
         if pts.iter().all(|&p| inside(p)) {
             closed.push(pieces.clone());
             continue;
@@ -103,11 +114,9 @@ pub(super) fn capped_cycles(
                 // parameters (or at the shared piece end).
                 let (i, t0) = flat[k0];
                 let t1 = if flat[k1].0 == i { flat[k1].1 } else { pieces[i].domain()[1] };
-                let q = if axial(pts[k0]).abs().max(axial(pts[k1]).abs()) > 0. {
-                    if axial(pts[k0]) + axial(pts[k1]) > 0. { half } else { -half }
-                } else {
-                    half
-                };
+                // The plane crossed is the one beyond the outside sample.
+                let outside = if in0 { pts[k1] } else { pts[k0] };
+                let q = if axial(outside) >= z_hi { z_hi } else { z_lo };
                 let f = |t: f64| -> Result<f64> { Ok(axial(point(&pieces[i], t)?) - q) };
                 let (mut a, mut b) = (t0, t1);
                 let fa = f(a)?;
@@ -140,33 +149,35 @@ pub(super) fn capped_cycles(
     // A wall arc grazing a cap plane would show as a sample near it.
     for arc in &wall {
         for &p in &arc.samples[1..arc.samples.len() - 1] {
-            if (axial(p).abs() - half).abs() < 1e-6 {
+            if (axial(p) - z_lo).abs() < 1e-6 || (axial(p) - z_hi).abs() < 1e-6 {
                 return Err(refuse("wall arc touches a cap plane"));
             }
         }
     }
     // 2. Cap arcs: the sphere/cap-plane circle inside the disk.
     let mut caps: Vec<Arc> = Vec::new();
-    let offset = sub(sphere.center, cylinder.center);
-    let s = dot(offset, cylinder.axis);
-    let perp = sub(offset, cylinder.axis.map(|x| x * s));
-    let ex = cylinder.frame[0];
-    let ey = cylinder.frame[1];
+    let offset = sub(sphere.center, slab.origin);
+    let s = dot(offset, axis);
+    let perp = sub(offset, axis.map(|x| x * s));
+    let ex = slab.frame[0];
+    let ey = slab.frame[1];
     let c2 = [dot(perp, ex), dot(perp, ey)];
     let d = c2[0].hypot(c2[1]);
-    let big_r = cylinder.radius;
-    for q in [-half, half] {
+    for (q, big_r) in slab.planes {
         let h = q - s;
         let rho2 = sphere.radius * sphere.radius - h * h;
         if rho2 <= 0. {
             continue;
+        }
+        if big_r <= 0. {
+            return Err(refuse("sphere reaches the apex plane of a cone"));
         }
         let rho = rho2.sqrt();
         let at = |phi: f64| -> P {
             let (sn, cs) = phi.sin_cos();
             let x = c2[0] + rho * cs;
             let y = c2[1] + rho * sn;
-            std::array::from_fn(|k| cylinder.center[k] + q * cylinder.axis[k] + x * ex[k] + y * ey[k])
+            std::array::from_fn(|k| slab.origin[k] + q * axis[k] + x * ex[k] + y * ey[k])
         };
         if (d + rho - big_r).abs() < 1e-7 || (d - rho - big_r).abs() < 1e-7 || (rho - d - big_r).abs() < 1e-7 {
             return Err(refuse("cap circle touches the rim"));
@@ -240,4 +251,76 @@ pub(super) fn capped_cycles(
         closed.push(cycle);
     }
     Ok(closed)
+}
+
+/// One certified, lifted contact cycle.
+pub(crate) struct Cycle {
+    pub(crate) pieces: Vec<Curve>,
+    pub(crate) distance_bound: f64,
+    pub(crate) sphere_uv: Vec<SpherePatchCircle>,
+    pub(crate) other_uv: Vec<(usize, Vec<Curve>)>,
+    pub(crate) lift_deviation: f64,
+}
+
+/// Cycles of a sphere reaching a cap plane, each piece recertified against
+/// the sphere and the surface it lies on (the wall or a cap plane) and
+/// lifted onto both operands; `None` when anything does not certify.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn certified_cycles(
+    sphere: &CanonicalSphere,
+    other: crate::sphere_torus::traced_lift::Other<'_>,
+    slab: &Slab,
+    sphere_model: &Model,
+    other_model: &Model,
+    s_implicit: &dyn crate::implicit_trace::Implicit,
+    wall: &dyn crate::implicit_trace::Implicit,
+    wall_distance: &dyn Fn(P) -> f64,
+    loops: &[Vec<Curve>],
+) -> Result<Option<Vec<Cycle>>> {
+    let Ok(cycles) = capped_cycles_in(sphere, slab, loops) else {
+        return Ok(None);
+    };
+    let axis = slab.frame[2];
+    let mut out = Vec::with_capacity(cycles.len());
+    for cycle in cycles {
+        let mut bound = 0_f64;
+        for piece in &cycle {
+            let [lo, hi] = piece.domain();
+            let mid = point(piece, 0.5 * (lo + hi))?;
+            let z = dot(sub(mid, slab.origin), axis);
+            let (plane_z, plane_gap) = slab
+                .planes
+                .iter()
+                .map(|&(q, _)| (q, (z - q).abs()))
+                .min_by(|a, b| a.1.total_cmp(&b.1))
+                .expect("two planes");
+            let plane;
+            let surface: &dyn crate::implicit_trace::Implicit = if wall_distance(mid) <= plane_gap {
+                wall
+            } else {
+                plane = crate::implicit_trace::PlaneImplicit {
+                    origin: std::array::from_fn(|k| slab.origin[k] + plane_z * axis[k]),
+                    normal: axis,
+                };
+                &plane
+            };
+            match crate::implicit_trace::certify_curve([s_implicit, surface], piece, crate::TRACE_TOLERANCE)? {
+                Some(b) => bound = bound.max(b),
+                None => return Ok(None),
+            }
+        }
+        let Ok((sphere_uv, other_uv, lift_deviation)) =
+            crate::sphere_torus::traced_lift::lift_traced_with(sphere, other, sphere_model, other_model, &cycle)
+        else {
+            return Ok(None);
+        };
+        out.push(Cycle {
+            pieces: cycle,
+            distance_bound: bound,
+            sphere_uv,
+            other_uv,
+            lift_deviation,
+        });
+    }
+    Ok(Some(out))
 }

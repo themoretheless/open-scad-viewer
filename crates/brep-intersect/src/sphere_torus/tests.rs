@@ -655,7 +655,15 @@ fn off_axis_sphere_cylinder_and_cone_booleans_balance_volumes() {
             .unwrap()
             .signed_volume_mm3
     };
-    let cases: [(Model, f64, f64, [f64; 3], bool); 3] = [
+    let cases: [(Model, f64, f64, [f64; 3], bool); 4] = [
+        // Reaching the top cap of a frustum across its rim.
+        (
+            brep_core::analytic::frustum(2., 4., 6.).unwrap(),
+            PI * 6. * (4. + 8. + 16.) / 3.,
+            2.5,
+            [1., 0.5, 5.5],
+            false,
+        ),
         (brep_core::analytic::cylinder(2., 8.).unwrap(), PI * 4. * 8., 1., [2.3, 0.4, 3.], true),
         // Reaching the top cap across the rim.
         (brep_core::analytic::cylinder(2., 8.).unwrap(), PI * 4. * 8., 3., [0.5, 0., 6.], true),
@@ -686,7 +694,7 @@ fn off_axis_sphere_cylinder_and_cone_booleans_balance_volumes() {
         }
         let (u, i, d) = (volume(&u), volume(&i), volume(&d));
         let tol = 1e-3 * (vs + vo);
-        assert!(i > 0. && i < vs, "{i}");
+        assert!(i > 0. && i < vs.min(vo), "{i}");
         assert!((u + i - vs - vo).abs() <= tol, "union {u} + {i} vs {}", vs + vo);
         assert!((d - (vo - i)).abs() <= tol, "difference {d} vs {}", vo - i);
     }

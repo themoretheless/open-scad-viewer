@@ -372,12 +372,10 @@
         let inside = run(&place(0.5, 0., 3.), &cone);
         assert_eq!(inside["coverage"].as_str(), Some("numerically_resolved"));
         assert_eq!(inside["components"].as_array().map(Vec::len), Some(0));
-        // Clearly off-axis: the general quartic is out of scope.
-        let off_axis = run(&place(2.5, 0.5, 0.5), &cone);
-        assert_eq!(
-            off_axis["unresolved"][0]["reason"].as_str(),
-            Some("unsupported_surface")
-        );
+        // Off-axis and reaching the bottom cap: closed certified cycles.
+        let capped = run(&place(2.5, 0.5, 0.5), &cone);
+        assert_eq!(capped["components"][0]["kind"].as_str(), Some("traced"));
+        assert_eq!(capped["components"][0]["complete"].as_bool(), Some(true));
         // An equal-radius frustum is a cylinder: explicit refusal as the
         // cone operand, never a numerical fallback.
         let refused = run(

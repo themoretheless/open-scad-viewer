@@ -417,9 +417,11 @@ fn near_axial_offset_within_the_band_stays_unresolved() {
 }
 
 #[test]
-fn clearly_off_axis_pairs_are_unsupported_regions() {
-    let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
-    let sphere = translated(&brep_core::analytic::sphere(2.5).unwrap(), [0.5, 0., 0.5]);
+fn off_axis_spheres_crossing_the_apex_plane_are_unsupported_regions() {
+    // A cone with its apex on the bottom plane: a sphere crossing that plane
+    // could reach the other nappe and is not handled.
+    let cone = brep_core::analytic::frustum(0., 3., 6.).unwrap();
+    let sphere = translated(&brep_core::analytic::sphere(1.).unwrap(), [0.5, 0., 0.5]);
     let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
     assert!(report.components.is_empty(), "{report:?}");
     assert_eq!(report.coverage, Coverage::Incomplete);
@@ -467,6 +469,26 @@ fn off_axis_spheres_between_the_caps_are_traced_and_complete() {
                     assert!(gap <= crate::TRACE_TOLERANCE, "{gap}");
                 }
             }
+        }
+    }
+}
+
+#[test]
+fn off_axis_spheres_reaching_a_frustum_cap_give_closed_certified_cycles() {
+    let cone = brep_core::analytic::frustum(2., 4., 6.).unwrap();
+    for (radius, at) in [(2.5, [1., 0.5, 5.5]), (1., [0.5, 0., -0.3])] {
+        let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
+        let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
+        assert!(report.unresolved.is_empty(), "{radius} at {at:?}: {:?}", report.unresolved);
+        assert!(!report.components.is_empty());
+        for component in &report.components {
+            let SphereConeComponent::Traced { pieces, distance_bound, complete, lift_deviation, .. } = component
+            else {
+                panic!("expected a traced cycle");
+            };
+            assert!(*complete && *distance_bound <= crate::TRACE_TOLERANCE);
+            assert!(*lift_deviation <= crate::LIFT_TOLERANCE);
+            assert_eq!(pieces.last().unwrap().control_points.last(), pieces[0].control_points.first());
         }
     }
 }

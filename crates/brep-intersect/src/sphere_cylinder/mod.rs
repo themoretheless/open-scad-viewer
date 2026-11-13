@@ -35,7 +35,7 @@ pub(crate) use brep_core::intersections::{CanonicalCylinder, recognize_cylinder}
 use super::*;
 use brep_core::Model;
 
-mod capped;
+pub(crate) mod capped;
 mod cylinder_patch_curve;
 #[cfg(test)]
 mod tests;

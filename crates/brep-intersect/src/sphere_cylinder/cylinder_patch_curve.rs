@@ -433,56 +433,43 @@ fn capped(
         report.unresolved(domain.clone(), UnresolvedReason::UnsupportedSurface);
         Ok(std::mem::take(report))
     };
-    let cycles = match capped::capped_cycles(sphere, cylinder, &wall) {
-        Ok(c) => c,
-        Err(_) => return refuse(report),
+    let h = cylinder.half_height;
+    let slab = capped::Slab {
+        origin: cylinder.center,
+        frame,
+        planes: [(-h, cylinder.radius), (h, cylinder.radius)],
+    };
+    let wall_distance = |p: [f64; 3]| {
+        let d = sub(p, cylinder.center);
+        (dot(d, frame[0]).hypot(dot(d, frame[1])) - cylinder.radius).abs()
+    };
+    let Some(cycles) = capped::certified_cycles(
+        sphere,
+        crate::sphere_torus::traced_lift::Other::Cylinder(cylinder),
+        &slab,
+        sphere_model,
+        cylinder_model,
+        s_implicit,
+        c_implicit,
+        &wall_distance,
+        &wall,
+    )?
+    else {
+        return refuse(report);
     };
     for cycle in cycles {
-        let mut bound = 0_f64;
-        for piece in &cycle {
-            let [lo, hi] = piece.domain();
-            let mid = piece.evaluate(0.5 * (lo + hi))?.point;
-            let d = sub([mid[0], mid[1], mid[2]], cylinder.center);
-            let z = dot(d, cylinder.axis);
-            let rho = dot(d, frame[0]).hypot(dot(d, frame[1]));
-            let plane;
-            let other: &dyn crate::implicit_trace::Implicit =
-                if (rho - cylinder.radius).abs() <= (z.abs() - cylinder.half_height).abs() {
-                    c_implicit
-                } else {
-                    let sign = if z > 0. { 1. } else { -1. };
-                    plane = crate::implicit_trace::PlaneImplicit {
-                        origin: std::array::from_fn(|k| cylinder.center[k] + sign * cylinder.half_height * cylinder.axis[k]),
-                        normal: cylinder.axis,
-                    };
-                    &plane
-                };
-            match crate::implicit_trace::certify_curve([s_implicit, other], piece, crate::TRACE_TOLERANCE)? {
-                Some(b) => bound = bound.max(b),
-                None => return refuse(report),
-            }
-        }
-        let lifted = crate::sphere_torus::traced_lift::lift_traced_with(
-            sphere,
-            crate::sphere_torus::traced_lift::Other::Cylinder(cylinder),
-            sphere_model,
-            cylinder_model,
-            &cycle,
-        );
-        let Ok((sphere_uv, side_uv, lift_deviation)) = lifted else {
-            return refuse(report);
-        };
         report.components.push(SphereCylinderComponent::Traced {
-            spans: cycle.iter().map(|c| c.control_points.len() / 3).sum(),
-            pieces: cycle,
-            distance_bound: bound,
+            spans: cycle.pieces.iter().map(|c| c.control_points.len() / 3).sum(),
+            pieces: cycle.pieces,
+            distance_bound: cycle.distance_bound,
             complete,
-            sphere_uv,
-            cylinder_uv: side_uv
+            sphere_uv: cycle.sphere_uv,
+            cylinder_uv: cycle
+                .other_uv
                 .into_iter()
                 .map(|(patch, arcs)| CylinderPatchCurve { patch, arcs })
                 .collect(),
-            lift_deviation,
+            lift_deviation: cycle.lift_deviation,
         });
     }
     if report.components.is_empty() {

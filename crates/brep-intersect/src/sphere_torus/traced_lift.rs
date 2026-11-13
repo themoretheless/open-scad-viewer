@@ -76,8 +76,16 @@ impl Other<'_> {
                 }
             }
             Other::Cone(c) => {
-                let (rev, z, _) = self.cylindrical(p);
-                (0. ..=c.height).contains(&z).then(|| c.sides[quadrant(rev)])
+                let (rev, z, rho) = self.cylindrical(p);
+                let wall = (rho - c.r_bottom - c.slope * z).abs() / c.slope.hypot(1.);
+                let plane = z.abs().min((z - c.height).abs());
+                if wall <= plane {
+                    (-1e-9..=c.height + 1e-9).contains(&z).then(|| c.sides[quadrant(rev)])
+                } else {
+                    let slot = usize::from(z > 0.5 * c.height);
+                    let disk = if slot == 0 { c.r_bottom } else { c.r_top };
+                    if rho <= disk + 1e-9 { c.caps[slot] } else { None }
+                }
             }
         }
     }
@@ -97,9 +105,16 @@ impl Other<'_> {
                 })
             }
             Other::Cone(c) => {
-                let i = c.sides.iter().position(|&f| f == face)?;
-                let (rev, z, _) = self.cylindrical(p);
-                Some([arc_local(rev, i), (z / c.height).clamp(0., 1.)])
+                if let Some(i) = c.sides.iter().position(|&f| f == face) {
+                    let (rev, z, _) = self.cylindrical(p);
+                    return Some([arc_local(rev, i), (z / c.height).clamp(0., 1.)]);
+                }
+                let slot = c.caps.iter().position(|&f| f == Some(face))?;
+                let disk = if slot == 0 { c.r_bottom } else { c.r_top };
+                let d = sub(p, c.bottom);
+                let x = dot(d, c.frame[0]) / disk;
+                let y = dot(d, c.frame[1]) / disk;
+                Some([(0.5 * (x + 1.)).clamp(0., 1.), (0.5 * (y + 1.)).clamp(0., 1.)])
             }
         }
     }
@@ -112,7 +127,8 @@ impl Other<'_> {
             }
             Other::Cone(c) => {
                 let (_, z, rho) = self.cylindrical(p);
-                (rho - c.r_bottom - c.slope * z).abs() / c.slope.hypot(1.)
+                let wall = (rho - c.r_bottom - c.slope * z) / c.slope.hypot(1.);
+                wall.max(-z).max(z - c.height).abs()
             }
         }
     }
@@ -125,6 +141,15 @@ impl Other<'_> {
             let sign = if slot == 0 { -1. } else { 1. };
             return Box::new(crate::implicit_trace::PlaneImplicit {
                 origin: std::array::from_fn(|k| c.center[k] + sign * c.half_height * c.axis[k]),
+                normal: c.axis,
+            });
+        }
+        if let Other::Cone(c) = self
+            && let Some(slot) = c.caps.iter().position(|&f| f == Some(face))
+        {
+            let z = if slot == 0 { 0. } else { c.height };
+            return Box::new(crate::implicit_trace::PlaneImplicit {
+                origin: std::array::from_fn(|k| c.bottom[k] + z * c.axis[k]),
                 normal: c.axis,
             });
         }
