@@ -355,90 +355,209 @@ pub(in super::super) fn produce(
         width,
     )
 }
+/// Shear multipliers tried, in order, to make the projection generic.
+const PROJECTIONS: [u8; 7] = [0, 1, 2, 3, 5, 7, 11];
+const MAX_FACTORS: usize = 256;
+const CLASSIFY_ROUNDS: usize = 192;
+/// A system with a nonzero constant equation has no solutions.
+fn unsolvable(system: &[Bi; 2]) -> bool {
+    system
+        .iter()
+        .any(|p| p.len() == 1 && p[0].len() == 1 && !p[0][0].is_zero())
+}
+/// One sheared system with the settings shared by all of its factors.
+struct Projection<'a> {
+    e: [Bi; 2],
+    k: u8,
+    self_pair: bool,
+    width: &'a Q,
+}
+impl Projection<'_> {
+    fn new<'a>(system: &[Bi; 2], k: u8, self_pair: bool, width: &'a Q) -> Result<Projection<'a>> {
+        Ok(Projection {
+            e: [shear(&system[0], k)?, shear(&system[1], k)?],
+            k,
+            self_pair,
+            width,
+        })
+    }
+    /// Upper end of the projection parameter domain.
+    fn end(&self) -> Q {
+        Q::from_integer((self.k as i64 + 1).into())
+    }
+    /// Isolates and classifies every root of one factor in the projection domain.
+    fn classified_roots(&self, f: &Poly, t: &Poly) -> Result<Vec<Root>> {
+        let mut roots = Vec::new();
+        for mut interval in isolates(f, Q::zero(), self.end(), self.width)? {
+            let mut found = None;
+            for _ in 0..CLASSIFY_ROUNDS {
+                if let Some((kind, _)) =
+                    classify(f, t, &interval, self.k, self.self_pair, self.width)?
+                {
+                    found = Some(kind);
+                    break;
+                }
+                interval = refine(f, &interval)?;
+            }
+            roots.push(Root {
+                interval,
+                kind: found.ok_or_else(|| {
+                    refused("Algebraic event domain classification is unresolved")
+                })?,
+            });
+        }
+        Ok(roots)
+    }
+    /// Splits the eliminant into factors that each carry one parameter map
+    /// (or none), with the classified roots of every mapped factor.
+    fn factorize(&self) -> Result<Vec<Factor>> {
+        let r = eliminant(&self.e)?;
+        if r.len() == 1 {
+            return Ok(Vec::new());
+        }
+        let mut queue = vec![r];
+        let mut factors = Vec::new();
+        while let Some(f) = queue.pop() {
+            if factors.len() + queue.len() > MAX_FACTORS {
+                return Err(refused("Algebraic factor census exceeded"));
+            }
+            if projection_roots(&f, self.k)? == 0 {
+                factors.push(Factor {
+                    polynomial: f,
+                    map: None,
+                    roots: Vec::new(),
+                });
+                continue;
+            }
+            match map(&self.e, &f) {
+                Err(ModularError::Split(g)) => {
+                    if g.len() < 2 || g.len() >= f.len() {
+                        return Err(refused("Algebraic factor split is not proper"));
+                    }
+                    queue.push(monic(quotient(&f, &g)?));
+                    queue.push(g);
+                }
+                Err(ModularError::Geometry(e)) => return Err(e),
+                Ok(map) => {
+                    let roots = match &map {
+                        Some(t) => self.classified_roots(&f, t)?,
+                        None => Vec::new(),
+                    };
+                    factors.push(Factor {
+                        polynomial: f,
+                        map,
+                        roots,
+                    });
+                }
+            }
+        }
+        Ok(factors)
+    }
+    /// The claimed root intervals of one mapped factor isolate exactly its
+    /// projection roots, in order, with the claimed classification. Appends
+    /// the events they stand for.
+    fn verify_roots(&self, f: &Factor, t: &Poly, events: &mut Vec<Event>) -> Result<()> {
+        let end = self.end();
+        let mut total = 0;
+        let mut previous: Option<Q> = None;
+        for root in &f.roots {
+            let [lo, hi] = &root.interval;
+            if lo < &Q::zero()
+                || hi > &end
+                || lo > hi
+                || previous
+                    .as_ref()
+                    .is_some_and(|p| p > lo || (p == lo && at(&f.polynomial, lo).is_zero()))
+            {
+                return Err(refused(
+                    "Algebraic root intervals overlap or leave the projection domain",
+                ));
+            }
+            if lo != hi && (at(&f.polynomial, lo).is_zero() || at(&f.polynomial, hi).is_zero())
+                || count(&f.polynomial, lo, hi)? != 1
+            {
+                return Err(refused("Algebraic interval does not isolate one root"));
+            }
+            previous = Some(hi.clone());
+            total += 1;
+            let (kind, event) = classify(
+                &f.polynomial,
+                t,
+                &root.interval,
+                self.k,
+                self.self_pair,
+                self.width,
+            )?
+            .ok_or_else(|| refused("Algebraic root classification remains unproved"))?;
+            if kind != root.kind {
+                return Err(refused("Algebraic event classification is false"));
+            }
+            if kind == "event" || kind == "diagonal" {
+                events.push(event);
+            }
+        }
+        let expected = count(&f.polynomial, &Q::zero(), &end)?
+            + usize::from(at(&f.polynomial, &Q::zero()).is_zero())
+            + usize::from(at(&f.polynomial, &end).is_zero());
+        if total != expected {
+            return Err(refused(
+                "Algebraic root census omits or adds a projection root",
+            ));
+        }
+        Ok(())
+    }
+    /// One claimed factor: its parameter map is recomputed and its roots verified.
+    fn verify_factor(&self, f: &Factor, events: &mut Vec<Event>) -> Result<()> {
+        if f.map.is_none() && projection_roots(&f.polynomial, self.k)? == 0 {
+            if !f.roots.is_empty() {
+                return Err(refused("Excluded projection factor has root events"));
+            }
+            return Ok(());
+        }
+        let actual = map(&self.e, &f.polynomial)
+            .map_err(|_| refused("Algebraic fiber representation is not independently proved"))?;
+        if actual != f.map {
+            return Err(refused("Algebraic parameter map is false"));
+        }
+        let Some(t) = &f.map else {
+            if !f.roots.is_empty() {
+                return Err(refused("Empty fiber has root events"));
+            }
+            return Ok(());
+        };
+        self.verify_roots(f, t, events)
+    }
+}
+/// A factor is monic, squarefree and coprime to every earlier factor.
+fn verify_factor_shape(f: &Factor, earlier: &[Factor]) -> Result<()> {
+    bound(&f.polynomial)?;
+    if f.polynomial.len() < 2
+        || monic(f.polynomial.clone()) != f.polynomial
+        || gcd(&f.polynomial, &derivative(&f.polynomial))?.len() != 1
+    {
+        return Err(refused("Algebraic factor is not monic squarefree"));
+    }
+    for other in earlier {
+        if gcd(&f.polynomial, &other.polynomial)?.len() != 1 {
+            return Err(refused("Algebraic factors are not disjoint"));
+        }
+    }
+    Ok(())
+}
 pub(in super::super) fn produce_system(
     system: &[Bi; 2],
     self_pair: bool,
     width: &Q,
 ) -> Result<(u8, Vec<Factor>)> {
-    if system
-        .iter()
-        .any(|p| p.len() == 1 && p[0].len() == 1 && !p[0][0].is_zero())
-    {
+    if unsolvable(system) {
         return Ok((0, Vec::new()));
     }
     let mut failures = Vec::new();
-    for k in [0, 1, 2, 3, 5, 7, 11] {
-        let attempt = (|| -> Result<Vec<Factor>> {
-            let e = [shear(&system[0], k)?, shear(&system[1], k)?];
-            let r = eliminant(&e)?;
-            if r.len() == 1 {
-                return Ok(Vec::new());
-            }
-            let mut queue = vec![r];
-            let mut factors = Vec::new();
-            while let Some(f) = queue.pop() {
-                if factors.len() + queue.len() > 256 {
-                    return Err(refused("Algebraic factor census exceeded"));
-                }
-                if projection_roots(&f, k)? == 0 {
-                    factors.push(Factor {
-                        polynomial: f,
-                        map: None,
-                        roots: Vec::new(),
-                    });
-                    continue;
-                }
-                match map(&e, &f) {
-                    Err(ModularError::Split(g)) => {
-                        if g.len() < 2 || g.len() >= f.len() {
-                            return Err(refused("Algebraic factor split is not proper"));
-                        }
-                        queue.push(monic(quotient(&f, &g)?));
-                        queue.push(g);
-                    }
-                    Err(ModularError::Geometry(e)) => return Err(e),
-                    Ok(map) => {
-                        let mut roots = Vec::new();
-                        if let Some(t) = &map {
-                            for mut interval in isolates(
-                                &f,
-                                Q::zero(),
-                                Q::from_integer((k as i64 + 1).into()),
-                                width,
-                            )? {
-                                let mut found = None;
-                                for _ in 0..192 {
-                                    if let Some((kind, _)) =
-                                        classify(&f, t, &interval, k, self_pair, width)?
-                                    {
-                                        found = Some(kind);
-                                        break;
-                                    }
-                                    interval = refine(&f, &interval)?;
-                                }
-                                roots.push(Root {
-                                    interval,
-                                    kind: found.ok_or_else(|| {
-                                        refused(
-                                            "Algebraic event domain classification is unresolved",
-                                        )
-                                    })?,
-                                });
-                            }
-                        }
-                        factors.push(Factor {
-                            polynomial: f,
-                            map,
-                            roots,
-                        });
-                    }
-                }
-            }
-            Ok(factors)
-        })();
+    for k in PROJECTIONS {
+        let attempt = Projection::new(system, k, self_pair, width).and_then(|p| p.factorize());
         match attempt {
             Ok(factors) => {
-                verify_system(system,self_pair,width,k,&factors)?;
+                verify_system(system, self_pair, width, k, &factors)?;
                 return Ok((k, factors));
             }
             Err(error) => failures.push(format!("projection {k}: {error}")),
@@ -472,94 +591,24 @@ pub(in super::super) fn verify_system(
     k: u8,
     factors: &[Factor],
 ) -> Result<Vec<Event>> {
-    if system
-        .iter()
-        .any(|p| p.len() == 1 && p[0].len() == 1 && !p[0][0].is_zero())
-    {
+    if unsolvable(system) {
         if k != 0 || !factors.is_empty() {
             return Err(refused("Unit residual system has extraneous events"));
         }
         return Ok(Vec::new());
     }
-    if ![0, 1, 2, 3, 5, 7, 11].contains(&k) || factors.len() > 256 {
+    if !PROJECTIONS.contains(&k) || factors.len() > MAX_FACTORS {
         return Err(refused("Invalid algebraic projection or factor count"));
     }
-    let e = [shear(&system[0], k)?, shear(&system[1], k)?];
-    let r = eliminant(&e)?;
+    let projection = Projection::new(system, k, self_pair, width)?;
+    let r = eliminant(&projection.e)?;
     let mut product_all = vec![Q::one()];
     let mut events = Vec::new();
     for (n, f) in factors.iter().enumerate() {
-        bound(&f.polynomial)?;
-        if f.polynomial.len() < 2
-            || monic(f.polynomial.clone()) != f.polynomial
-            || gcd(&f.polynomial, &derivative(&f.polynomial))?.len() != 1
-        {
-            return Err(refused("Algebraic factor is not monic squarefree"));
-        }
-        for other in &factors[..n] {
-            if gcd(&f.polynomial, &other.polynomial)?.len() != 1 {
-                return Err(refused("Algebraic factors are not disjoint"));
-            }
-        }
+        verify_factor_shape(f, &factors[..n])?;
         product_all = product(&product_all, &f.polynomial);
         bound(&product_all)?;
-        if f.map.is_none() && projection_roots(&f.polynomial, k)? == 0 {
-            if !f.roots.is_empty() {
-                return Err(refused("Excluded projection factor has root events"));
-            }
-            continue;
-        }
-        let actual = map(&e, &f.polynomial)
-            .map_err(|_| refused("Algebraic fiber representation is not independently proved"))?;
-        if actual != f.map {
-            return Err(refused("Algebraic parameter map is false"));
-        }
-        let Some(t) = &f.map else {
-            if !f.roots.is_empty() {
-                return Err(refused("Empty fiber has root events"));
-            }
-            continue;
-        };
-        let end = Q::from_integer((k as i64 + 1).into());
-        let mut total = 0;
-        let mut previous: Option<Q> = None;
-        for root in &f.roots {
-            let [lo, hi] = &root.interval;
-            if lo < &Q::zero()
-                || hi > &end
-                || lo > hi
-                || previous
-                    .as_ref()
-                    .is_some_and(|p| p > lo || (p == lo && at(&f.polynomial, lo).is_zero()))
-            {
-                return Err(refused(
-                    "Algebraic root intervals overlap or leave the projection domain",
-                ));
-            }
-            if lo != hi && (at(&f.polynomial, lo).is_zero() || at(&f.polynomial, hi).is_zero())
-                || count(&f.polynomial, lo, hi)? != 1
-            {
-                return Err(refused("Algebraic interval does not isolate one root"));
-            }
-            previous = Some(hi.clone());
-            total += 1;
-            let (kind, event) = classify(&f.polynomial, t, &root.interval, k, self_pair, width)?
-                .ok_or_else(|| refused("Algebraic root classification remains unproved"))?;
-            if kind != root.kind {
-                return Err(refused("Algebraic event classification is false"));
-            }
-            if kind == "event" || kind == "diagonal" {
-                events.push(event);
-            }
-        }
-        let expected = count(&f.polynomial, &Q::zero(), &end)?
-            + usize::from(at(&f.polynomial, &Q::zero()).is_zero())
-            + usize::from(at(&f.polynomial, &end).is_zero());
-        if total != expected {
-            return Err(refused(
-                "Algebraic root census omits or adds a projection root",
-            ));
-        }
+        projection.verify_factor(f, &mut events)?;
     }
     if monic(product_all) != r {
         return Err(refused(
