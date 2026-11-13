@@ -17,6 +17,16 @@ pub enum SphereConeComponent {
         /// and the cone side profile or cap plane equation.
         max_sample_residual: f64,
     },
+    /// Off-axis contact of a sphere strictly between the cap planes: a
+    /// closed quartic loop on the side wall, traced into cubic pieces and
+    /// certified within `distance_bound` of both surfaces; `complete` says
+    /// whether the component set is certified complete. No UV lifts yet.
+    Traced {
+        pieces: Vec<Curve>,
+        distance_bound: f64,
+        spans: usize,
+        complete: bool,
+    },
 }
 
 /// Where a resolved circle sits on the cone boundary.
@@ -149,13 +159,11 @@ pub fn intersect_sphere_cone(
     let snap = 64. * f64::EPSILON * terms;
     if d_perp > snap {
         let near = RECOGNITION * (sphere.radius + cone.r_bottom + cone.r_top + cone.height);
-        let reason = if d_perp <= near {
-            UnresolvedReason::NearCoincidence
-        } else {
-            UnresolvedReason::UnsupportedSurface
-        };
-        report.unresolved(domain, reason);
-        return Ok(report);
+        if d_perp <= near {
+            report.unresolved(domain, UnresolvedReason::NearCoincidence);
+            return Ok(report);
+        }
+        return off_axis(report, domain, sphere_model, &sphere, &cone, s0, d_perp, band, terms);
     }
     let r = sphere.radius;
     let h = cone.height;
@@ -254,6 +262,90 @@ pub fn intersect_sphere_cone(
         report
             .components
             .push(circle_component(&sphere, &cone, axial, site)?);
+    }
+    Ok(report)
+}
+
+/// Off-axis pair. Only a sphere strictly between the cap planes is handled:
+/// the caps (and the apex, and the other nappe) stay untouched, so every
+/// contact is a closed loop on the side wall. Provable misses resolve empty.
+#[allow(clippy::too_many_arguments)]
+fn off_axis(
+    mut report: Report<SphereConeComponent>,
+    domain: Vec<f64>,
+    sphere_model: &Model,
+    sphere: &CanonicalSphere,
+    cone: &CanonicalCone,
+    s0: f64,
+    d_perp: f64,
+    band: f64,
+    terms: f64,
+) -> Result<Report<SphereConeComponent>> {
+    let r = sphere.radius;
+    if s0 - r <= band || s0 + r >= cone.height - band {
+        report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+        return Ok(report);
+    }
+    let radius_at = |z: f64| cone.r_bottom + cone.slope * z;
+    let (c_lo, c_hi) = {
+        let (a, b) = (radius_at(s0 - r), radius_at(s0 + r));
+        (a.min(b), a.max(b))
+    };
+    // Points of the sphere are within [d_perp - r, d_perp + r] of the axis.
+    if d_perp - r > c_hi + band || d_perp + r < c_lo - band {
+        return Ok(report);
+    }
+    let frame = [cone.frame[0], cone.frame[1], cone.axis];
+    let s_implicit = crate::implicit_trace::SphereImplicit {
+        center: sphere.center,
+        radius: r,
+    };
+    let c_implicit = crate::implicit_trace::ConeImplicit {
+        bottom: cone.bottom,
+        frame,
+        r_bottom: cone.r_bottom,
+        slope: cone.slope,
+    };
+    let seed = |theta: f64, phi: f64| -> [f64; 3] {
+        let (st, ct) = theta.sin_cos();
+        let (sp, cp) = phi.sin_cos();
+        std::array::from_fn(|k| {
+            sphere.center[k] + r * (st * cp * frame[0][k] + st * sp * frame[1][k] + ct * frame[2][k])
+        })
+    };
+    match crate::implicit_trace::trace_intersection(
+        &s_implicit,
+        &c_implicit,
+        seed,
+        terms + d_perp,
+        r.min(c_lo.max(1e-3)),
+        crate::TRACE_TOLERANCE,
+    ) {
+        Ok(loops) if !loops.is_empty() => {
+            let all: Vec<Vec<Curve>> = loops.iter().map(|l| l.pieces.clone()).collect();
+            let complete = crate::sphere_torus::completeness::certify_complete_against(
+                sphere,
+                &crate::sphere_torus::completeness::Quadric::Cone {
+                    bottom: cone.bottom,
+                    frame,
+                    r_bottom: cone.r_bottom,
+                    slope: cone.slope,
+                },
+                sphere_model,
+                &all,
+            );
+            report.components.extend(loops.into_iter().map(|l| SphereConeComponent::Traced {
+                pieces: l.pieces,
+                distance_bound: l.distance_bound,
+                spans: l.spans,
+                complete,
+            }));
+        }
+        Ok(_) => report.unresolved(domain, UnresolvedReason::UnsupportedSurface),
+        Err(e) if e.message.contains("tangency") => {
+            report.unresolved(domain, UnresolvedReason::TangencyOrMultipleRoot)
+        }
+        Err(_) => report.unresolved(domain, UnresolvedReason::UnsupportedSurface),
     }
     Ok(report)
 }

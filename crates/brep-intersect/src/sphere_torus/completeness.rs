@@ -371,6 +371,13 @@ pub(crate) enum Quadric<'a> {
         frame: [[f64; 3]; 3],
         radius: f64,
     },
+    /// Radius `r_bottom + slope * z` above `bottom` along `frame[2]`.
+    Cone {
+        bottom: [f64; 3],
+        frame: [[f64; 3]; 3],
+        r_bottom: f64,
+        slope: f64,
+    },
 }
 
 /// Homogeneous equation of `other` on a rational biquadratic patch.
@@ -383,6 +390,11 @@ fn on_patch(other: &Quadric<'_>, surface: &nurbs_core::surface::Surface) -> Resu
                 .mul(&local[0])?
                 .add(&local[1].mul(&local[1])?)?
                 .sub(&w.mul(&w)?.scale(radius * radius)?)
+        }
+        Quadric::Cone { bottom, frame, r_bottom, slope } => {
+            let (w, local) = local_coordinates(surface, *bottom, *frame)?;
+            let c = w.scale(*r_bottom)?.add(&local[2].scale(*slope)?)?;
+            local[0].mul(&local[0])?.add(&local[1].mul(&local[1])?)?.sub(&c.mul(&c)?)
         }
     }
 }

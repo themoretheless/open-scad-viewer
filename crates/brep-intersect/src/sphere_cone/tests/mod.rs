@@ -31,7 +31,10 @@ fn circle_of(
         sphere_uv,
         cone_uv,
         max_sample_residual,
-    } = component;
+    } = component
+    else {
+        panic!("expected a circle component");
+    };
     (
         curve,
         *center,
@@ -429,6 +432,41 @@ fn clearly_off_axis_pairs_are_unsupported_regions() {
         report.unresolved[0].parameter_box,
         vec![0., 1., 0., 1., 0., 1., 0., 1.]
     );
+}
+
+#[test]
+fn off_axis_spheres_between_the_caps_are_traced_and_complete() {
+    for (cone, radius, at) in [
+        (brep_core::analytic::frustum(2., 4., 6.).unwrap(), 1., [3., 0., 3.]),
+        (brep_core::analytic::frustum(4., 1., 6.).unwrap(), 1.2, [1.5, 1., 2.5]),
+    ] {
+        let canon = recognize_cone(&cone).unwrap().unwrap();
+        let sphere = translated(&brep_core::analytic::sphere(radius).unwrap(), at);
+        let report = intersect_sphere_cone(&sphere, &cone, Options::default()).unwrap();
+        assert!(report.unresolved.is_empty(), "{radius} at {at:?}: {:?}", report.unresolved);
+        assert!(!report.components.is_empty());
+        for component in &report.components {
+            let SphereConeComponent::Traced { pieces, distance_bound, complete, .. } = component else {
+                panic!("expected a traced loop");
+            };
+            assert!(*distance_bound <= crate::TRACE_TOLERANCE);
+            assert!(*complete, "{radius} at {at:?}");
+            for piece in pieces {
+                for k in 0..=40 {
+                    let p = piece.evaluate(k as f64 / 40.).unwrap().point;
+                    let p = [p[0], p[1], p[2]];
+                    let d = sub(p, at);
+                    assert!((d[0].hypot(d[1]).hypot(d[2]) - radius).abs() <= crate::TRACE_TOLERANCE);
+                    // Meridian distance to the cone line.
+                    let q = sub(p, canon.bottom);
+                    let z = dot(q, canon.axis);
+                    let rho = dot(q, canon.frame[0]).hypot(dot(q, canon.frame[1]));
+                    let gap = (rho - canon.r_bottom - canon.slope * z).abs() / canon.slope.hypot(1.);
+                    assert!(gap <= crate::TRACE_TOLERANCE, "{gap}");
+                }
+            }
+        }
+    }
 }
 
 #[test]

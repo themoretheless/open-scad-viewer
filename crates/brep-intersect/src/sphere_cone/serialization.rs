@@ -15,6 +15,13 @@ impl value_codec::Serialize for SphereConeComponent {
             } => value_codec::json!({"kind":"circle","curve":curve,"center":center,"radius":radius,
                 "normal":normal,"sphereUv":sphere_uv,"coneUv":cone_uv,
                 "maxSampleResidual":max_sample_residual}),
+            Self::Traced {
+                pieces,
+                distance_bound,
+                spans,
+                complete,
+            } => value_codec::json!({"kind":"traced","pieces":pieces,
+                "distanceBound":distance_bound,"spans":spans,"complete":complete}),
         }
     }
 }
