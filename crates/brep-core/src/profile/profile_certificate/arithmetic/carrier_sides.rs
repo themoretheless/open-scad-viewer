@@ -16,7 +16,13 @@ pub(in crate::profile::profile_certificate) struct TransverseSegment<'a> {
 pub(in crate::profile::profile_certificate) fn probes(
     segment: TransverseSegment<'_>,
 ) -> Result<[[Q; 2]; 2]> {
-    probes_impl(segment, None, 64, None, None)
+    let own = Ownership {
+        centers: None,
+        intervals: None,
+        groups: None,
+        matrix: 64,
+    };
+    probes_impl(segment, own)
 }
 #[derive(Clone)]
 pub(in crate::profile::profile_certificate) struct CenterInterval {
@@ -37,13 +43,13 @@ pub(in crate::profile::profile_certificate) fn probes_with_centers(
     {
         return Err(refused("Invalid original common center interval census"));
     }
-    probes_impl(
-        segment,
-        Some(centers),
+    let own = Ownership {
+        centers: Some(centers),
+        intervals: None,
+        groups: None,
         matrix,
-        None,
-        None,
-    )
+    };
+    probes_impl(segment, own)
 }
 /// Complete transverse census restricted to every actual selected original cell
 /// interval. Native-cell continuations outside these bounds are not geometry.
@@ -134,21 +140,231 @@ fn owned_groups(
             ));
         }
     }
-    probes_impl(
-        segment,
-        Some(centers),
-        matrix,
-        Some(intervals),
+    let own = Ownership {
+        centers: Some(centers),
+        intervals: Some(intervals),
         groups,
-    )
+        matrix,
+    };
+    probes_impl(segment, own)
 }
-fn probes_impl(
-    segment: TransverseSegment<'_>,
-    centers: Option<&[CenterInterval]>,
+const MAX_REFINEMENTS: usize = 512;
+/// Which crossings of the normal segment the census may treat as its own.
+#[derive(Clone, Copy)]
+struct Ownership<'a> {
+    /// Candidate center intervals; without them only the selected cell at `t` is the center.
+    centers: Option<&'a [CenterInterval]>,
+    /// Actual owned parameter interval of every cell; roots outside are not geometry.
+    intervals: Option<&'a [[branch_neighbourhood::ParameterValue; 2]]>,
+    /// Source carrier of every center candidate; exactly one root per carrier.
+    groups: Option<&'a [usize]>,
     matrix: usize,
-    intervals: Option<&[[branch_neighbourhood::ParameterValue; 2]]>,
-    groups: Option<&[usize]>,
-) -> Result<[[Q; 2]; 2]> {
+}
+/// The regular center point and its normal line, with the segment half-length
+/// scaled by the squared normal length.
+struct NormalLine {
+    point: [Q; 2],
+    tangent: [Q; 2],
+    normal: [Q; 2],
+    bound: Q,
+}
+fn normal_line(segment: TransverseSegment<'_>) -> Result<NormalLine> {
+    let TransverseSegment {
+        nets,
+        selected,
+        t,
+        radius,
+        ..
+    } = segment;
+    let net = &nets[selected];
+    let powers = [power(net, 0), power(net, 1), power(net, 2)];
+    let h = powers.clone().map(|p| at(&p, t));
+    if h[2] <= Q::zero() {
+        return Err(refused("Original carrier denominator is not positive"));
+    }
+    let point = [&h[0] / &h[2], &h[1] / &h[2]];
+    let tangent: [Q; 2] = std::array::from_fn(|axis| {
+        at(&derivative(&powers[axis]), t) * &h[2] - &h[axis] * at(&derivative(&powers[2]), t)
+    });
+    let normal = [-tangent[1].clone(), tangent[0].clone()];
+    let length = &normal[0] * &normal[0] + &normal[1] * &normal[1];
+    if length.is_zero() {
+        return Err(refused(
+            "Carrier transverse witness needs a regular original point",
+        ));
+    }
+    Ok(NormalLine {
+        bound: radius * &length,
+        point,
+        tangent,
+        normal,
+    })
+}
+/// One cell against the normal line: `f` vanishes where the cell meets the
+/// line, `lateral` is the signed offset along it, and `upper`/`lower` compare
+/// that offset with the two segment ends.
+struct CellLine {
+    f: Poly,
+    lateral: Poly,
+    upper: Poly,
+    lower: Poly,
+}
+/// `None` when the whole cell lies on the normal line but provably outside
+/// the closed segment.
+fn cell_line(net: &[[Q; 3]], line: &NormalLine) -> Result<Option<CellLine>> {
+    if net.iter().any(|h| h[2] <= Q::zero()) {
+        return Err(refused("Original transverse cell has nonpositive weights"));
+    }
+    let NormalLine {
+        point,
+        tangent,
+        normal,
+        bound,
+    } = line;
+    let w = power(net, 2);
+    let x = sub(
+        &power(net, 0),
+        &w.iter().map(|w| w * &point[0]).collect::<Poly>(),
+    );
+    let y = sub(
+        &power(net, 1),
+        &w.iter().map(|w| w * &point[1]).collect::<Poly>(),
+    );
+    let linear = |a: &Q, b: &Q| -> Poly {
+        let mut p = vec![Q::zero(); x.len().max(y.len())];
+        for (i, c) in x.iter().enumerate() {
+            p[i] += c * a;
+        }
+        for (i, c) in y.iter().enumerate() {
+            p[i] += c * b;
+        }
+        trim(p)
+    };
+    let f = linear(&tangent[0], &tangent[1]);
+    if f.is_empty() {
+        // Coincident normal-line cells may be discarded only by a complete
+        // positive-weight Bernstein bound outside the closed segment.
+        let offset = |h: &[Q; 3]| {
+            (&h[0] - &point[0] * &h[2]) * &normal[0] + (&h[1] - &point[1] * &h[2]) * &normal[1]
+        };
+        let all_above = net.iter().all(|h| offset(h) > bound * &h[2]);
+        let all_below = net.iter().all(|h| offset(h) < -bound * &h[2]);
+        if !all_above && !all_below {
+            return Err(refused(
+                "Coincident normal-line cell is not excluded from the transverse segment",
+            ));
+        }
+        return Ok(None);
+    }
+    let lateral = linear(&normal[0], &normal[1]);
+    let upper = sub(&lateral, &w.iter().map(|w| w * bound).collect::<Poly>());
+    let lower = sub(&lateral, &w.iter().map(|w| -w * bound).collect::<Poly>());
+    Ok(Some(CellLine {
+        f,
+        lateral,
+        upper,
+        lower,
+    }))
+}
+/// Running census of the crossings of one normal segment.
+struct Census<'a> {
+    segment: TransverseSegment<'a>,
+    own: Ownership<'a>,
+    center_count: usize,
+    /// Center crossings owned by every candidate (or by every group).
+    alias_counts: Vec<usize>,
+}
+impl Census<'_> {
+    /// Order of the root of `f` in `root` against an algebraic bound.
+    fn compare_root(
+        &self,
+        f: &Poly,
+        root: &[Q; 2],
+        bound: &branch_neighbourhood::ParameterValue,
+    ) -> Result<std::cmp::Ordering> {
+        parameter_order::compare(
+            parameter_order::ParameterRef::new(f, &vec![Q::zero(), Q::one()], root),
+            parameter_order::ParameterRef::new(&bound.primitive, &bound.value, &bound.interval),
+            self.segment.refinements,
+            self.own.matrix,
+        )
+    }
+    /// The single center candidate (or group) whose open interval holds this root.
+    fn center_owner(
+        &self,
+        centers: &[CenterInterval],
+        cell: usize,
+        f: &Poly,
+        root: &[Q; 2],
+    ) -> Result<usize> {
+        let mut matched = Vec::new();
+        for (alias, c) in centers.iter().enumerate().filter(|(_, c)| c.cell == cell) {
+            if self.compare_root(f, root, &c.bounds[0])? == std::cmp::Ordering::Greater
+                && self.compare_root(f, root, &c.bounds[1])? == std::cmp::Ordering::Less
+            {
+                let group = self.own.groups.map_or(alias, |g| g[alias]);
+                if !matched.contains(&group) {
+                    matched.push(group);
+                }
+            }
+        }
+        match matched[..] {
+            [owner] => Ok(owner),
+            _ => Err(refused(
+                "Original center crossing lacks one unique common carrier owner",
+            )),
+        }
+    }
+    /// Counts one crossing of the normal line as a center, skips it when it
+    /// is outside the owned interval, or refuses it when it meets the segment.
+    fn classify(&mut self, cell: usize, line: &CellLine, root: &[Q; 2]) -> Result<()> {
+        let TransverseSegment {
+            selected,
+            t,
+            refinements,
+            ..
+        } = self.segment;
+        let f = &line.f;
+        if let Some(intervals) = self.own.intervals
+            && (self.compare_root(f, root, &intervals[cell][0])? == std::cmp::Ordering::Less
+                || self.compare_root(f, root, &intervals[cell][1])? == std::cmp::Ordering::Greater)
+        {
+            return Ok(());
+        }
+        match self.own.centers {
+            Some(centers) => {
+                if zero_at(&line.lateral, f, root)? {
+                    let owner = self.center_owner(centers, cell, f, root)?;
+                    self.alias_counts[owner] += 1;
+                    return Ok(());
+                }
+            }
+            None => {
+                if cell == selected && zero_at(&vec![-t.clone(), Q::one()], f, root)? {
+                    self.center_count += 1;
+                    return Ok(());
+                }
+            }
+        }
+        if sign_at(&line.upper, f, root, refinements)? <= 0
+            && sign_at(&line.lower, f, root, refinements)? >= 0
+        {
+            return Err(refused(
+                "Another original branch meets the closed transverse segment",
+            ));
+        }
+        Ok(())
+    }
+    /// Exactly one center crossing overall, or one per candidate or group.
+    fn owns_one_center(&self) -> bool {
+        if self.own.centers.is_some() {
+            self.alias_counts.iter().all(|&n| n == 1)
+        } else {
+            self.center_count == 1
+        }
+    }
+}
+fn probes_impl(segment: TransverseSegment<'_>, own: Ownership<'_>) -> Result<[[Q; 2]; 2]> {
     let TransverseSegment {
         nets,
         selected,
@@ -160,163 +376,37 @@ fn probes_impl(
         || t <= &Q::zero()
         || t >= &Q::one()
         || radius <= &Q::zero()
-        || refinements > 512
+        || refinements > MAX_REFINEMENTS
     {
         return Err(refused("Invalid original carrier transverse query"));
     }
-    let net = &nets[selected];
-    let powers = [power(net, 0), power(net, 1), power(net, 2)];
-    let h = powers.clone().map(|p| at(&p, t));
-    if h[2] <= Q::zero() {
-        return Err(refused("Original carrier denominator is not positive"));
-    }
-    let point = [&h[0] / &h[2], &h[1] / &h[2]];
-    let d: [Q; 2] = std::array::from_fn(|axis| {
-        at(&derivative(&powers[axis]), t) * &h[2] - &h[axis] * at(&derivative(&powers[2]), t)
-    });
-    let normal = [-d[1].clone(), d[0].clone()];
-    let length = &normal[0] * &normal[0] + &normal[1] * &normal[1];
-    if length.is_zero() {
-        return Err(refused(
-            "Carrier transverse witness needs a regular original point",
-        ));
-    }
-    let bound = radius * &length;
-    let mut center_count = 0;
-    let mut alias_counts = vec![
-        0usize;
-        groups.map_or_else(
-            || centers.map_or(0, |c| c.len()),
-            |g| g.iter().max().unwrap() + 1
-        )
-    ];
+    let line = normal_line(segment)?;
+    let aliases = match (own.groups, own.centers) {
+        (Some(groups), _) => groups.iter().max().map_or(0, |max| max + 1),
+        (None, Some(centers)) => centers.len(),
+        (None, None) => 0,
+    };
+    let mut census = Census {
+        segment,
+        own,
+        center_count: 0,
+        alias_counts: vec![0usize; aliases],
+    };
+    let width = Q::new(1.into(), 1024.into());
     for (cell, net) in nets.iter().enumerate() {
-        if net.iter().any(|h| h[2] <= Q::zero()) {
-            return Err(refused("Original transverse cell has nonpositive weights"));
-        }
-        let w = power(net, 2);
-        let x = sub(
-            &power(net, 0),
-            &w.iter().map(|w| w * &point[0]).collect::<Poly>(),
-        );
-        let y = sub(
-            &power(net, 1),
-            &w.iter().map(|w| w * &point[1]).collect::<Poly>(),
-        );
-        let linear = |a: &Q, b: &Q| -> Poly {
-            let mut p = vec![Q::zero(); x.len().max(y.len())];
-            for (i, c) in x.iter().enumerate() {
-                p[i] += c * a;
-            }
-            for (i, c) in y.iter().enumerate() {
-                p[i] += c * b;
-            }
-            trim(p)
-        };
-        let f = linear(&d[0], &d[1]);
-        if f.is_empty() {
-            // Coincident normal-line cells may be discarded only by a complete
-            // positive-weight Bernstein bound outside the closed segment.
-            let all_above = net.iter().all(|h| {
-                (&h[0] - &point[0] * &h[2]) * &normal[0] + (&h[1] - &point[1] * &h[2]) * &normal[1]
-                    > &bound * &h[2]
-            });
-            let all_below = net.iter().all(|h| {
-                (&h[0] - &point[0] * &h[2]) * &normal[0] + (&h[1] - &point[1] * &h[2]) * &normal[1]
-                    < -&bound * &h[2]
-            });
-            if !all_above && !all_below {
-                return Err(refused(
-                    "Coincident normal-line cell is not excluded from the transverse segment",
-                ));
-            }
+        let Some(cell_line) = cell_line(net, &line)? else {
             continue;
-        }
-        let lateral = linear(&normal[0], &normal[1]);
-        let upper = sub(&lateral, &w.iter().map(|w| w * &bound).collect::<Poly>());
-        let lower = sub(&lateral, &w.iter().map(|w| -w * &bound).collect::<Poly>());
-        let roots =
-            algebraic_events::isolates(&f, Q::zero(), Q::one(), &Q::new(1.into(), 1024.into()))?;
-        for root in roots {
-            if let Some(intervals) = intervals {
-                let compare = |b: &branch_neighbourhood::ParameterValue| {
-                    parameter_order::compare(
-                        parameter_order::ParameterRef::new(&f, &vec![Q::zero(), Q::one()], &root),
-                        parameter_order::ParameterRef::new(&b.primitive, &b.value, &b.interval),
-                        refinements,
-                        matrix,
-                    )
-                };
-                if compare(&intervals[cell][0])? == std::cmp::Ordering::Less
-                    || compare(&intervals[cell][1])? == std::cmp::Ordering::Greater
-                {
-                    continue;
-                }
-            }
-
-            if let Some(centers) = centers {
-                if zero_at(&lateral, &f, &root)? {
-                    let mut matched = Vec::new();
-                    for (alias, c) in centers.iter().enumerate().filter(|(_, c)| c.cell == cell) {
-                        let compare = |bound: &branch_neighbourhood::ParameterValue| {
-                            parameter_order::compare(
-                                parameter_order::ParameterRef::new(
-                                    &f,
-                                    &vec![Q::zero(), Q::one()],
-                                    &root,
-                                ),
-                                parameter_order::ParameterRef::new(
-                                    &bound.primitive,
-                                    &bound.value,
-                                    &bound.interval,
-                                ),
-                                refinements,
-                                matrix,
-                            )
-                        };
-                        if compare(&c.bounds[0])? == std::cmp::Ordering::Greater
-                            && compare(&c.bounds[1])? == std::cmp::Ordering::Less
-                        {
-                            let group = groups.map_or(alias, |g| g[alias]);
-                            if !matched.contains(&group) {
-                                matched.push(group);
-                            }
-                        }
-                    }
-                    if matched.len() != 1 {
-                        return Err(refused(
-                            "Original center crossing lacks one unique common carrier owner",
-                        ));
-                    }
-                    alias_counts[matched[0]] += 1;
-                    continue;
-                }
-            }
-            if centers.is_none()
-                && cell == selected
-                && zero_at(&vec![-t.clone(), Q::one()], &f, &root)?
-            {
-                center_count += 1;
-                continue;
-            }
-            if sign_at(&upper, &f, &root, refinements)? <= 0
-                && sign_at(&lower, &f, &root, refinements)? >= 0
-            {
-                return Err(refused(
-                    "Another original branch meets the closed transverse segment",
-                ));
-            }
+        };
+        for root in algebraic_events::isolates(&cell_line.f, Q::zero(), Q::one(), &width)? {
+            census.classify(cell, &cell_line, &root)?;
         }
     }
-    if if centers.is_some() {
-        alias_counts.iter().any(|&n| n != 1)
-    } else {
-        center_count != 1
-    } {
+    if !census.owns_one_center() {
         return Err(refused(
             "Transverse census does not own exactly one original center crossing",
         ));
     }
+    let NormalLine { point, normal, .. } = line;
     Ok(std::array::from_fn(|side| {
         std::array::from_fn(|axis| {
             if side == 0 {
