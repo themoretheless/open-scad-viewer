@@ -445,7 +445,9 @@ fn arc_angle(t: f64) -> f64 {
 struct CylinderSide<'a> {
     spans: &'a [LocalSpan],
     quadrant: usize,
-    half: f64,
+    /// Axial coordinate at v = 0 and the axial length of v in [0, 1].
+    z0: f64,
+    len: f64,
 }
 
 impl CylinderSide<'_> {
@@ -465,7 +467,7 @@ impl CylinderSide<'_> {
         let big_y = rot(&span.y, &span.x, cm, -sm)?;
         let (xl, xh) = hull1(&big_x);
         let (zl, zh) = hull1(&span.z);
-        let vrange = ((zl + self.half) / (2. * self.half), (zh + self.half) / (2. * self.half));
+        let vrange = ((zl - self.z0) / self.len, (zh - self.z0) / self.len);
         let split = |this: &Self| -> Option<usize> {
             if depth == 0 {
                 return None;
@@ -515,7 +517,7 @@ impl CylinderSide<'_> {
                 .collect::<Option<_>>()?;
             (g, vrange)
         } else {
-            let z0 = 2. * self.half * c - self.half;
+            let z0 = self.z0 + self.len * c;
             let g: Vec<Interval> = span.z.iter().map(|z| z.sub(Interval::point(z0)).ok()).collect::<Option<_>>()?;
             (g, (ul, uh))
         };
@@ -560,15 +562,55 @@ pub(crate) fn certify_complete_on_cylinder(
     other: &Quadric<'_>,
     loops: &[Vec<Curve>],
 ) -> bool {
+    let h = cylinder.half_height;
+    certify_complete_on_side(
+        cylinder.center,
+        [cylinder.frame[0], cylinder.frame[1], cylinder.axis],
+        cylinder.sides,
+        (-h, 2. * h),
+        cylinder_model,
+        other,
+        loops,
+    )
+}
+
+/// The same on the side wall of a canonical frustum.
+pub(crate) fn certify_complete_on_cone(
+    cone: &brep_core::intersections::CanonicalCone,
+    cone_model: &Model,
+    other: &Quadric<'_>,
+    loops: &[Vec<Curve>],
+) -> bool {
+    certify_complete_on_side(
+        cone.bottom,
+        [cone.frame[0], cone.frame[1], cone.axis],
+        cone.sides,
+        (0., cone.height),
+        cone_model,
+        other,
+        loops,
+    )
+}
+
+/// Side patches of a solid of revolution: quadrant `i` patch has
+/// `u = arc_parameter(angle - i * 90 deg)` and `v = (z - z0) / len`.
+fn certify_complete_on_side(
+    origin: [f64; 3],
+    frame: [[f64; 3]; 3],
+    sides: [usize; 4],
+    (z0, len): (f64, f64),
+    model: &Model,
+    other: &Quadric<'_>,
+    loops: &[Vec<Curve>],
+) -> bool {
     (|| -> Result<bool> {
-        let frame = [cylinder.frame[0], cylinder.frame[1], cylinder.axis];
         let mut spans = Vec::new();
         for piece in loops.iter().flatten() {
             for segment in piece.decompose()? {
                 let c = &segment.definition().control_points;
                 let local = |axis: [f64; 3]| -> Vec<Interval> {
                     c.iter()
-                        .map(|p| Interval::point(dot(sub([p[0], p[1], p[2]], cylinder.center), axis)))
+                        .map(|p| Interval::point(dot(sub([p[0], p[1], p[2]], origin), axis)))
                         .collect()
                 };
                 spans.push(LocalSpan {
@@ -578,16 +620,15 @@ pub(crate) fn certify_complete_on_cylinder(
                 });
             }
         }
-        for (quadrant, &face) in cylinder.sides.iter().enumerate() {
-            let surface = &cylinder_model.faces[face].surface;
-            // The chart must be this patch's own parameterization.
+        for (quadrant, &face) in sides.iter().enumerate() {
+            let surface = &model.faces[face].surface;
             for (u, v) in [(0.2, 0.3), (0.7, 0.9)] {
                 let p = surface.evaluate(u, v)?.point;
-                let d = sub([p[0], p[1], p[2]], cylinder.center);
+                let d = sub([p[0], p[1], p[2]], origin);
                 let angle = dot(d, frame[1]).atan2(dot(d, frame[0])).rem_euclid(std::f64::consts::TAU)
                     - quadrant as f64 * QUARTER;
                 let pu = crate::plane_torus::arc_parameter(angle.clamp(0., QUARTER));
-                let pv = (dot(d, frame[2]) + cylinder.half_height) / (2. * cylinder.half_height);
+                let pv = (dot(d, frame[2]) - z0) / len;
                 if (pu - u).abs() > 1e-9 || (pv - v).abs() > 1e-9 {
                     return Ok(false);
                 }
@@ -596,7 +637,8 @@ pub(crate) fn certify_complete_on_cylinder(
             let side = CylinderSide {
                 spans: &spans,
                 quadrant,
-                half: cylinder.half_height,
+                z0,
+                len,
             };
             if !certify_square(&side, f) {
                 return Ok(false);

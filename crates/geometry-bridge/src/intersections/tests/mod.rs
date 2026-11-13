@@ -1446,12 +1446,10 @@
             near["unresolved"][0]["reason"].as_str(),
             Some("near_coincidence")
         );
-        // Clearly off-axis: the general quartic is unsupported, no fallback.
+        // Clearly off-axis with the torus between the caps: traced, complete.
         let off = run(&at(0.5), &torus);
-        assert_eq!(
-            off["unresolved"][0]["reason"].as_str(),
-            Some("unsupported_surface")
-        );
+        assert_eq!(off["components"][0]["kind"].as_str(), Some("traced"));
+        assert_eq!(off["components"][0]["complete"].as_bool(), Some(true));
         // Non-canonical operands and swapped order: unsupported regions.
         let refused = run(&torus, &brep_core::analytic::frustum(1., 3., 6.).unwrap());
         assert_eq!(

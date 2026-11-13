@@ -44,7 +44,10 @@ fn circle_of(
         cone_uv,
         torus_uv,
         max_sample_residual,
-    } = component;
+    } = component
+    else {
+        panic!("expected a circle component");
+    };
     (
         curve,
         *center,
@@ -573,7 +576,7 @@ fn near_coaxial_bands_stay_unresolved_not_forced() {
 }
 
 #[test]
-fn clearly_off_axis_or_tilted_pairs_are_unsupported_regions() {
+fn off_axis_or_tilted_pairs_are_traced_or_refused_at_the_caps() {
     let torus = brep_core::analytic::torus(3., 1.).unwrap();
     let base = translated(
         &brep_core::analytic::frustum(1., 3., 6.).unwrap(),
@@ -591,7 +594,29 @@ fn clearly_off_axis_or_tilted_pairs_are_unsupported_regions() {
         ],
     )
     .unwrap();
+    // The torus stays between the cap planes: traced, certified, complete.
     for cone in [&off, &tilted] {
+        let report = intersect_cone_torus(cone, &torus, Options::default()).unwrap();
+        assert!(report.unresolved.is_empty(), "{:?}", report.unresolved);
+        assert!(!report.components.is_empty());
+        for component in &report.components {
+            let ConeTorusComponent::Traced { complete, distance_bound, .. } = component else {
+                panic!("expected traced loops");
+            };
+            assert!(*complete && *distance_bound <= crate::TRACE_TOLERANCE);
+        }
+        let canon = recognize_cone(cone).unwrap().unwrap();
+        let ring = recognize_torus(&torus).unwrap().unwrap();
+        assert!(!crate::sphere_torus::completeness::certify_complete_on_cone(
+            &canon,
+            cone,
+            &crate::sphere_torus::completeness::Quadric::Torus(&ring),
+            &[],
+        ));
+    }
+    // A short frustum whose caps the torus reaches stays unsupported.
+    let short = translated(&brep_core::analytic::frustum(2., 3., 1.5).unwrap(), [0.5, 0., -0.75]);
+    for cone in [&short] {
         let report = intersect_cone_torus(cone, &torus, Options::default()).unwrap();
         assert!(report.components.is_empty(), "{report:?}");
         assert_eq!(report.coverage, Coverage::Incomplete);

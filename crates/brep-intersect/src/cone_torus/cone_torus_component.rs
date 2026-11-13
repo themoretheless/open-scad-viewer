@@ -18,6 +18,17 @@ pub enum ConeTorusComponent {
         /// equation.
         max_sample_residual: f64,
     },
+    /// General (tilted or offset) contact with the torus strictly between
+    /// the cap planes (and away from the apex): closed loops on the side
+    /// wall, traced and certified within `distance_bound` of both
+    /// surfaces; `complete` says whether the set is certified complete (on
+    /// the cone side charts). No UV lifts yet.
+    Traced {
+        pieces: Vec<Curve>,
+        distance_bound: f64,
+        spans: usize,
+        complete: bool,
+    },
 }
 
 /// Where a resolved circle sits on the cone boundary.
@@ -157,13 +168,11 @@ pub fn intersect_cone_torus(
     let axis_snap =
         64. * f64::EPSILON + cone.error / cone.height + torus.error / (2. * torus.major);
     if tilt > axis_snap {
-        let reason = if tilt <= RECOGNITION {
-            UnresolvedReason::NearCoincidence
-        } else {
-            UnresolvedReason::UnsupportedSurface
-        };
-        report.unresolved(domain, reason);
-        return Ok(report);
+        if tilt <= RECOGNITION {
+            report.unresolved(domain, UnresolvedReason::NearCoincidence);
+            return Ok(report);
+        }
+        return general(report, domain, cone_model, &cone, &torus, band, terms);
     }
     // Coaxiality: a center-line distance at pure rounding scale snaps to
     // zero; a recognition-scale offset is near_coincidence, never forced;
@@ -179,13 +188,11 @@ pub fn intersect_cone_torus(
     };
     let dist_snap = 64. * f64::EPSILON * terms + cone.error + torus.error;
     if d_perp > dist_snap {
-        let reason = if d_perp <= RECOGNITION * terms {
-            UnresolvedReason::NearCoincidence
-        } else {
-            UnresolvedReason::UnsupportedSurface
-        };
-        report.unresolved(domain, reason);
-        return Ok(report);
+        if d_perp <= RECOGNITION * terms {
+            report.unresolved(domain, UnresolvedReason::NearCoincidence);
+            return Ok(report);
+        }
+        return general(report, domain, cone_model, &cone, &torus, band, terms);
     }
     let (r, big_r) = (torus.minor, torus.major);
     let (r_b, m, h) = (cone.r_bottom, cone.slope, cone.height);
@@ -332,5 +339,79 @@ pub fn intersect_cone_torus(
             .components
             .push(circle_component(&cone, &torus, z, site)?);
     }
+    Ok(report)
+}
+
+/// General tilted or offset pair. Only a torus strictly between the cap
+/// planes and on the authored nappe's side of the apex is handled: then every
+/// contact is a closed loop on the side wall.
+fn general(
+    mut report: Report<ConeTorusComponent>,
+    domain: Vec<f64>,
+    cone_model: &Model,
+    cone: &CanonicalCone,
+    torus: &CanonicalTorus,
+    band: f64,
+    terms: f64,
+) -> Result<Report<ConeTorusComponent>> {
+    let s = dot(sub(torus.center, cone.bottom), cone.axis);
+    let c = dot(torus.axis, cone.axis).clamp(-1., 1.);
+    let reach = torus.major * (1. - c * c).sqrt() + torus.minor;
+    let apex = -cone.r_bottom / cone.slope;
+    if s - reach <= band || s + reach >= cone.height - band || (s - reach..=s + reach).contains(&apex) {
+        report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+        return Ok(report);
+    }
+    let frame = [cone.frame[0], cone.frame[1], cone.axis];
+    let wall = crate::implicit_trace::ConeImplicit {
+        bottom: cone.bottom,
+        frame,
+        r_bottom: cone.r_bottom,
+        slope: cone.slope,
+    };
+    let ring = crate::implicit_trace::TorusImplicit {
+        center: torus.center,
+        frame: [torus.frame[0], torus.frame[1], torus.axis],
+        major: torus.major,
+        minor: torus.minor,
+    };
+    let seed = |theta: f64, phi: f64| -> [f64; 3] {
+        let z = (theta / std::f64::consts::PI) * cone.height;
+        let rho = cone.r_bottom + cone.slope * z;
+        let (sp, cp) = phi.sin_cos();
+        std::array::from_fn(|k| cone.bottom[k] + rho * (cp * frame[0][k] + sp * frame[1][k]) + z * frame[2][k])
+    };
+    let feature = torus.minor.min(cone.r_bottom.min(cone.r_top).max(1e-3));
+    let loops = match crate::implicit_trace::trace_intersection(&wall, &ring, seed, terms, feature, crate::TRACE_TOLERANCE) {
+        Ok(loops) => loops,
+        Err(e) => {
+            let reason = if e.message.contains("tangency") {
+                UnresolvedReason::TangencyOrMultipleRoot
+            } else {
+                UnresolvedReason::UnsupportedSurface
+            };
+            report.unresolved(domain, reason);
+            return Ok(report);
+        }
+    };
+    let all: Vec<Vec<Curve>> = loops.iter().map(|l| l.pieces.clone()).collect();
+    let complete = crate::sphere_torus::completeness::certify_complete_on_cone(
+        cone,
+        cone_model,
+        &crate::sphere_torus::completeness::Quadric::Torus(torus),
+        &all,
+    );
+    if loops.is_empty() {
+        if !complete {
+            report.unresolved(domain, UnresolvedReason::UnsupportedSurface);
+        }
+        return Ok(report);
+    }
+    report.components.extend(loops.into_iter().map(|l| ConeTorusComponent::Traced {
+        pieces: l.pieces,
+        distance_bound: l.distance_bound,
+        spans: l.spans,
+        complete,
+    }));
     Ok(report)
 }
