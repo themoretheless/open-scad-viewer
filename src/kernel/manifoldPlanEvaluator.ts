@@ -180,11 +180,13 @@ async function evaluateInternal(
       await execution.dispose()
     } catch (disposeFailure) {
       if (failed) {
+        // eslint-disable-next-line no-unsafe-finally -- disposal failure is reported, joined with the primary failure when there is one
         throw new AggregateError(
           [primaryFailure, disposeFailure],
           'Manifold plan evaluation failed and result disposal also failed',
         )
       }
+      // eslint-disable-next-line no-unsafe-finally -- disposal failure is reported, joined with the primary failure when there is one
       throw disposeFailure
     }
   }
