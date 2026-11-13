@@ -31,6 +31,14 @@ pub enum NetworkEnd {
         on: [Option<(usize, usize, f64)>; 2],
         point: [f64; 3],
     },
+    /// At original vertex `vertex` of `operand`, and optionally on an edge
+    /// `(other operand, edge, curve parameter)` of the other operand.
+    Vertex {
+        operand: usize,
+        vertex: usize,
+        on: Option<(usize, usize, f64)>,
+        point: [f64; 3],
+    },
     /// A free network vertex; ends with the same `id` are the same vertex.
     Free { id: usize, point: [f64; 3] },
 }
@@ -79,6 +87,13 @@ pub fn network_boolean(
                 return Err(Error::new("BREP_INVALID_INPUT", "Network piece face out of range"));
             }
         }
+        for end in piece.ends {
+            if let NetworkEnd::Vertex { operand, vertex, .. } = end
+                && (operand > 1 || vertex >= operands[operand].vertices.len())
+            {
+                return Err(Error::new("BREP_INVALID_INPUT", "Network vertex out of range"));
+            }
+        }
     }
     if pieces.is_empty() {
         let relation = if inside(0, a.vertices[0].point)? {
@@ -102,6 +117,21 @@ pub fn network_boolean(
                     if asm.split_at(o, e, t, 1e-7) != Some(id) {
                         asm.attach_edge(id, o, e, t);
                     }
+                }
+                id
+            }
+            NetworkEnd::Vertex { operand, vertex, on, point } => {
+                // A special that shares the original vertex's chart slot.
+                let existing = asm.specials.iter().position(|v| v.orig == Some((operand, vertex)));
+                let id = existing.unwrap_or_else(|| {
+                    let id = asm.special(point);
+                    asm.specials[id].orig = Some((operand, vertex));
+                    id
+                });
+                if let Some((o, e, t)) = on
+                    && asm.split_at(o, e, t, 1e-7) != Some(id)
+                {
+                    asm.attach_edge(id, o, e, t);
                 }
                 id
             }
