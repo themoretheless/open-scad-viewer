@@ -24,6 +24,12 @@ assert_eq!(distance, 2.);
   bounding box), `within_radius` and `nearest` (k nearest triangles), ordered by
   distance and then triangle ID. `refit` recomputes node boxes after vertices
   move, keeping the topology; it leaves the tree unchanged on error.
+  `overlap_aabb_iter` is the lazy form of the box query: an iterator in
+  traversal order that collects nothing.
+- `bvh_sah`: binned surface-area-heuristic builder (`build_mesh_bvh_sah`) with
+  the same buffer layout, so every query and `refit` work on its trees. The
+  median builder stays the default and the only one in the TypeScript parity
+  fixture.
 - `bvh_codec`: versioned little-endian bytes for a built tree (`encode`,
   `decode`). Decoding validates the structure; the tree stays tied to the vertex
   and index buffers it was built from.

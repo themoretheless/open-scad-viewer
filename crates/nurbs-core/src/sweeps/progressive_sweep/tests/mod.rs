@@ -1,5 +1,7 @@
 use super::*;
 
+mod fixed_normal_arc_line;
+
 #[test]
 fn contact_union_work_exhaustion_keeps_only_known_profile_refusal_bound() {
     let profile=crate::primitives::line([1.,0.,0.],[2.,0.,0.]).unwrap();

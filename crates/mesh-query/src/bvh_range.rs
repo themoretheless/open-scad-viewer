@@ -168,6 +168,97 @@ pub fn overlap_aabb(
     Ok(found)
 }
 
+/// Lazy form of [`overlap_aabb`]: yields the IDs of triangles whose
+/// bounding box touches the inclusive box `[min, max]` in traversal order
+/// (not sorted), without collecting them. A repeated node yields one
+/// `Err(QueryError::InvalidTree)` and ends the iteration.
+pub struct OverlapIter<'a> {
+    bvh: &'a MeshBvh,
+    vertices: &'a [f32],
+    indices: &'a [u32],
+    stride: usize,
+    min: V3,
+    max: V3,
+    stack: Vec<usize>,
+    visited: Vec<bool>,
+    leaf: std::ops::Range<usize>,
+}
+
+impl OverlapIter<'_> {
+    fn overlaps(&self, lo: V3, hi: V3) -> bool {
+        (0..3).all(|k| lo[k] <= self.max[k] && hi[k] >= self.min[k])
+    }
+}
+
+impl Iterator for OverlapIter<'_> {
+    type Item = Result<u32, QueryError>;
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(slot) = self.leaf.next() {
+                let id = self.bvh.triangles[slot];
+                let Some(p) = triangle_points(self.vertices, self.indices, self.stride, id) else {
+                    continue;
+                };
+                let lo = std::array::from_fn(|k| p[0][k].min(p[1][k]).min(p[2][k]));
+                let hi = std::array::from_fn(|k| p[0][k].max(p[1][k]).max(p[2][k]));
+                if self.overlaps(lo, hi) {
+                    return Some(Ok(id));
+                }
+                continue;
+            }
+            let node = self.stack.pop()?;
+            if node >= self.visited.len() {
+                continue;
+            }
+            if std::mem::replace(&mut self.visited[node], true) {
+                self.stack.clear();
+                return Some(Err(QueryError::InvalidTree));
+            }
+            let Some((lo, hi)) = node_box(self.bvh, node) else {
+                continue;
+            };
+            if !self.overlaps(lo, hi) {
+                continue;
+            }
+            let first = self.bvh.nodes[node * 2] as usize;
+            let metadata = self.bvh.nodes[node * 2 + 1];
+            if metadata & LEAF_BIT != 0 {
+                let end = first
+                    .saturating_add((metadata & !LEAF_BIT) as usize)
+                    .min(self.bvh.triangles.len());
+                self.leaf = first.min(end)..end;
+            } else {
+                self.stack.push(metadata as usize);
+                self.stack.push(first);
+            }
+        }
+    }
+}
+
+/// Lazy bounding-box overlap query; see [`OverlapIter`].
+pub fn overlap_aabb_iter<'a>(
+    bvh: &'a MeshBvh,
+    vertices: &'a [f32],
+    indices: &'a [u32],
+    stride: usize,
+    min: V3,
+    max: V3,
+) -> OverlapIter<'a> {
+    let count = node_count(bvh);
+    let valid = stride >= 3 && (0..3).all(|k| min[k] <= max[k]) && count > 0;
+    OverlapIter {
+        bvh,
+        vertices,
+        indices,
+        stride,
+        min,
+        max,
+        stack: if valid { vec![0] } else { Vec::new() },
+        visited: vec![false; count],
+        leaf: 0..0,
+    }
+}
+
 /// Separating-axis test of a triangle against an inclusive box (Akenine-
 /// Moeller): the three box axes, the triangle normal and the nine edge cross
 /// products. Touching counts as intersecting.
