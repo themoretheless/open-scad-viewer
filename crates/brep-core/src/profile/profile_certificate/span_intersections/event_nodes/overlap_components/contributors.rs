@@ -61,121 +61,106 @@ fn cmp(
     };
     parameter_cmp(&node(a), side, &node(b), other, l)
 }
-fn derive(
+const MAX_SOURCES: usize = 32;
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+const MAX_CUT_PROPOSALS: usize = 4096;
+/// Allowance on the running work total after ordering the cuts.
+const ORDERING_WORK: usize = 65536;
+/// Allowance on the running work total after matching contributors.
+const COVERAGE_WORK: usize = 131072;
+type RawCut = (AlgebraicEventPosition, OriginalCommonCutOrigin);
+/// The base component of the partition with its endpoints in increasing
+/// order of the first source parameter.
+struct BaseInterval<'a> {
+    component: &'a OriginalOverlapComponent,
+    ends: [usize; 2],
+}
+/// Cut proposals of one third source: its pair cuts inside the base
+/// interval, lifted to the base pair, and both boundaries of every clip.
+fn source_proposals(
     o: &OwnedOriginalCommonPartition,
-) -> Result<(Vec<OriginalCommonCut>, Vec<OriginalCommonSegment>)> {
-    if o.sources.len() > 32
-        || o.sources.len() != o.owners.len()
-        || !o.width.is_finite()
-        || !(1e-18..=1e-3).contains(&o.width)
-        || o.limits.max_refinements > 512
-        || !(1..=128).contains(&o.limits.max_resultant_size)
+    source: usize,
+    base: &BaseInterval<'_>,
+    raw: &mut Vec<RawCut>,
+) -> Result<()> {
+    let owner = &o.owners[source];
+    if !Arc::ptr_eq(owner.base(), &o.base)
+        || owner.component() != o.component
+        || owner.third().owner().sources()[1] != o.sources[source]
+        || owner.third().owner().census().maximum_parameter_width != o.width
     {
-        return Err(refused(
-            "Invalid original common partition census or limits",
-        ));
+        return Err(refused("Original common partition lost a source context"));
     }
-    o.base.reverify_source()?;
-    let base = o
-        .base
-        .components()
-        .get(o.component)
-        .ok_or_else(|| refused("Unknown original common partition component"))?;
-    let ends = if base.directions[0] > 0 {
-        [0, 1]
-    } else {
-        [1, 0]
-    };
-    let mut raw = ends
-        .iter()
-        .map(|&i| {
-            (
-                base.endpoints[i].exact.clone(),
-                OriginalCommonCutOrigin::BaseEndpoint(i),
-            )
-        })
-        .collect::<Vec<_>>();
-    for (source, owner) in o.owners.iter().enumerate() {
-        if !Arc::ptr_eq(owner.base(), &o.base)
-            || owner.component() != o.component
-            || owner.third().owner().sources()[1] != o.sources[source]
-            || owner.third().owner().census().maximum_parameter_width != o.width
-        {
-            return Err(refused("Original common partition lost a source context"));
-        }
-        owner.reverify_source()?;
-        // Include all pair candidates: isolated contacts and overlap endpoints,
-        // including singleton touches which have no positive common interval.
-        for (cut, c) in owner.third_cuts().cuts().iter().enumerate() {
-            let lo = cmp(
-                &c.node.exact,
-                0,
-                &base.endpoints[ends[0]].exact,
-                0,
+    owner.reverify_source()?;
+    let endpoint = |end: usize| &base.component.endpoints[base.ends[end]].exact;
+    // Include all pair candidates: isolated contacts and overlap endpoints,
+    // including singleton touches which have no positive common interval.
+    for (cut, c) in owner.third_cuts().cuts().iter().enumerate() {
+        let lo = cmp(&c.node.exact, 0, endpoint(0), 0, o.limits)?;
+        let hi = cmp(&c.node.exact, 0, endpoint(1), 0, o.limits)?;
+        if lo != Ordering::Less && hi != Ordering::Greater {
+            let exact = common_clip::lifted(
+                owner.third_cuts().clone(),
+                cut,
+                &o.base.owner().sources()[1],
+                base.component,
+                o.width,
                 o.limits,
             )?;
-            let hi = cmp(
-                &c.node.exact,
-                0,
-                &base.endpoints[ends[1]].exact,
-                0,
-                o.limits,
-            )?;
-            if lo != Ordering::Less && hi != Ordering::Greater {
-                let exact = common_clip::lifted(
-                    owner.third_cuts().clone(),
-                    cut,
-                    &o.base.owner().sources()[1],
-                    base,
-                    o.width,
-                    o.limits,
-                )?;
-                raw.push((exact, OriginalCommonCutOrigin::ThirdCut { source, cut }));
-            }
-        }
-        for (clip, c) in owner.clips().iter().enumerate() {
-            for boundary in 0..2 {
-                raw.push((
-                    c.boundaries[boundary].positions[0].clone(),
-                    OriginalCommonCutOrigin::ClipBoundary {
-                        source,
-                        clip,
-                        boundary,
-                    },
-                ));
-            }
-        }
-        if raw.len() > 4096 {
-            return Err(refused("Original common partition cut allowance exceeded"));
+            raw.push((exact, OriginalCommonCutOrigin::ThirdCut { source, cut }));
         }
     }
-    let mut work = 0usize;
+    for (clip, c) in owner.clips().iter().enumerate() {
+        for (boundary, b) in c.boundaries.iter().enumerate() {
+            raw.push((
+                b.positions[0].clone(),
+                OriginalCommonCutOrigin::ClipBoundary {
+                    source,
+                    clip,
+                    boundary,
+                },
+            ));
+        }
+    }
+    if raw.len() > MAX_CUT_PROPOSALS {
+        return Err(refused("Original common partition cut allowance exceeded"));
+    }
+    Ok(())
+}
+/// Sorts the proposals by the first source parameter and merges equal
+/// ones, which must also agree on the second source parameter.
+fn order_cuts(
+    raw: Vec<RawCut>,
+    limits: ParameterOrderLimits,
+    work: &mut usize,
+) -> Result<Vec<OriginalCommonCut>> {
     let mut cuts: Vec<OriginalCommonCut> = Vec::new();
     for (exact, origin) in raw {
         let mut pos = 0;
         let mut joined = false;
         while pos < cuts.len() {
-            work += 1;
-            if work > 65536 {
+            *work += 1;
+            if *work > ORDERING_WORK {
                 return Err(refused(
                     "Original common partition ordering allowance exceeded",
                 ));
             }
-            let a = cmp(&cuts[pos].exact, 0, &exact, 0, o.limits)?;
-            if a == Ordering::Equal {
-                if cmp(&cuts[pos].exact, 1, &exact, 1, o.limits)? != Ordering::Equal {
-                    return Err(refused("Original common partition source clocks disagree"));
+            match cmp(&cuts[pos].exact, 0, &exact, 0, limits)? {
+                Ordering::Equal => {
+                    if cmp(&cuts[pos].exact, 1, &exact, 1, limits)? != Ordering::Equal {
+                        return Err(refused("Original common partition source clocks disagree"));
+                    }
+                    joined = true;
+                    break;
                 }
-                cuts[pos].origins.push(origin);
-                joined = true;
-                break;
+                Ordering::Greater => break,
+                Ordering::Less => pos += 1,
             }
-            if a == Ordering::Greater {
-                break;
-            }
-            pos += 1;
         }
-        if !joined {
+        if joined {
+            cuts[pos].origins.push(origin);
+        } else {
             cuts.insert(
                 pos,
                 OriginalCommonCut {
@@ -185,40 +170,94 @@ fn derive(
             );
         }
     }
-    let mut segments = Vec::new();
-    for index in 0..cuts.len() - 1 {
-        let mut contributors = Vec::new();
-        for (source, owner) in o.owners.iter().enumerate() {
-            for (clip, c) in owner.clips().iter().enumerate() {
-                work += 1;
-                if work > 131072 {
-                    return Err(refused(
-                        "Original common partition coverage allowance exceeded",
-                    ));
-                }
-                let lower = &c.boundaries[0].positions[0];
-                let upper = &c.boundaries[1].positions[0];
-                let lo = cmp(&cuts[index].exact, 0, lower, 0, o.limits)?;
-                let hi = cmp(&cuts[index + 1].exact, 0, upper, 0, o.limits)?;
-                if lo != Ordering::Less && hi != Ordering::Greater {
-                    let third = &owner.third().components()[c.third_component];
-                    contributors.push(OriginalCommonContributor {
-                        source,
-                        clip,
-                        direction: third.directions[0] * third.directions[1],
-                    });
-                } else if cmp(&cuts[index].exact, 0, upper, 0, o.limits)? == Ordering::Less
-                    && cmp(&cuts[index + 1].exact, 0, lower, 0, o.limits)? == Ordering::Greater
-                {
-                    return Err(refused(
-                        "Original common partition misses a contributor boundary",
-                    ));
-                }
+    Ok(cuts)
+}
+/// Clips of every source that cover the whole segment between two adjacent
+/// cuts. A clip that only partly overlaps the segment is refused.
+fn contributors(
+    o: &OwnedOriginalCommonPartition,
+    [start, end]: [&AlgebraicEventPosition; 2],
+    work: &mut usize,
+) -> Result<Vec<OriginalCommonContributor>> {
+    let mut out = Vec::new();
+    for (source, owner) in o.owners.iter().enumerate() {
+        for (clip, c) in owner.clips().iter().enumerate() {
+            *work += 1;
+            if *work > COVERAGE_WORK {
+                return Err(refused(
+                    "Original common partition coverage allowance exceeded",
+                ));
+            }
+            let lower = &c.boundaries[0].positions[0];
+            let upper = &c.boundaries[1].positions[0];
+            let lo = cmp(start, 0, lower, 0, o.limits)?;
+            let hi = cmp(end, 0, upper, 0, o.limits)?;
+            if lo != Ordering::Less && hi != Ordering::Greater {
+                let third = &owner.third().components()[c.third_component];
+                out.push(OriginalCommonContributor {
+                    source,
+                    clip,
+                    direction: third.directions[0] * third.directions[1],
+                });
+            } else if cmp(start, 0, upper, 0, o.limits)? == Ordering::Less
+                && cmp(end, 0, lower, 0, o.limits)? == Ordering::Greater
+            {
+                return Err(refused(
+                    "Original common partition misses a contributor boundary",
+                ));
             }
         }
+    }
+    Ok(out)
+}
+fn derive(
+    o: &OwnedOriginalCommonPartition,
+) -> Result<(Vec<OriginalCommonCut>, Vec<OriginalCommonSegment>)> {
+    if o.sources.len() > MAX_SOURCES
+        || o.sources.len() != o.owners.len()
+        || !o.width.is_finite()
+        || !(1e-18..=1e-3).contains(&o.width)
+        || o.limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&o.limits.max_resultant_size)
+    {
+        return Err(refused(
+            "Invalid original common partition census or limits",
+        ));
+    }
+    o.base.reverify_source()?;
+    let component = o
+        .base
+        .components()
+        .get(o.component)
+        .ok_or_else(|| refused("Unknown original common partition component"))?;
+    let base = BaseInterval {
+        component,
+        ends: if component.directions[0] > 0 {
+            [0, 1]
+        } else {
+            [1, 0]
+        },
+    };
+    let mut raw = base
+        .ends
+        .iter()
+        .map(|&i| {
+            (
+                component.endpoints[i].exact.clone(),
+                OriginalCommonCutOrigin::BaseEndpoint(i),
+            )
+        })
+        .collect::<Vec<_>>();
+    for source in 0..o.owners.len() {
+        source_proposals(o, source, &base, &mut raw)?;
+    }
+    let mut work = 0usize;
+    let cuts = order_cuts(raw, o.limits, &mut work)?;
+    let mut segments = Vec::new();
+    for (index, bounds) in cuts.windows(2).enumerate() {
         segments.push(OriginalCommonSegment {
             cuts: [index, index + 1],
-            contributors,
+            contributors: contributors(o, [&bounds[0].exact, &bounds[1].exact], &mut work)?,
         });
     }
     Ok((cuts, segments))
