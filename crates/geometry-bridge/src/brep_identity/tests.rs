@@ -150,20 +150,29 @@ fn js_number_formatting_matches_json_stringify() {
     assert_eq!(js_number(&Number::Float(42.0)), "42");
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "test fixture mirrors the operation wire shape"
-)]
-fn operation(
+/// One operation wire row; omitted parent and ambiguity group default to `null`.
+#[derive(Default)]
+struct Operation<'a> {
     id: u64,
     parent: Value,
     child_ordinal: u64,
-    name: &str,
-    category: &str,
-    path: &[Value],
-    evidence: &str,
+    name: &'a str,
+    category: &'a str,
+    path: &'a [Value],
+    evidence: &'a str,
     group: Value,
-) -> Value {
+}
+fn operation(row: Operation<'_>) -> Value {
+    let Operation {
+        id,
+        parent,
+        child_ordinal,
+        name,
+        category,
+        path,
+        evidence,
+        group,
+    } = row;
     json!({
         "id": id,
         "operationId": derive_operation_id(path),
@@ -182,46 +191,45 @@ fn operation(
 fn operations() -> Vec<Value> {
     let group = derive_ambiguity_group_id(&root_path(), "geometry", "cube");
     vec![
-        operation(
-            0,
-            Value::Null,
-            0,
-            "$root",
-            "module",
-            &root_path(),
-            "structural-unique",
-            Value::Null,
-        ),
-        operation(
-            1,
-            json!(0),
-            0,
-            "cube",
-            "geometry",
-            &cube_path(0),
-            "same-name-positional",
-            json!(group.clone()),
-        ),
-        operation(
-            2,
-            json!(1),
-            0,
-            "translate",
-            "transform",
-            &body_path(),
-            "structural-unique",
-            Value::Null,
-        ),
-        operation(
-            3,
-            json!(0),
-            1,
-            "cube",
-            "geometry",
-            &cube_path(1),
-            "same-name-positional",
-            json!(group),
-        ),
+        operation(Operation {
+            id: 0,
+            child_ordinal: 0,
+            name: "$root",
+            category: "module",
+            path: &root_path(),
+            evidence: "structural-unique",
+            ..Default::default()
+        }),
+        operation(Operation {
+            id: 1,
+            parent: json!(0),
+            child_ordinal: 0,
+            name: "cube",
+            category: "geometry",
+            path: &cube_path(0),
+            evidence: "same-name-positional",
+            group: json!(group.clone()),
+        }),
+        operation(Operation {
+            id: 2,
+            parent: json!(1),
+            child_ordinal: 0,
+            name: "translate",
+            category: "transform",
+            path: &body_path(),
+            evidence: "structural-unique",
+            ..Default::default()
+        }),
+        operation(Operation {
+            id: 3,
+            parent: json!(0),
+            child_ordinal: 1,
+            name: "cube",
+            category: "geometry",
+            path: &cube_path(1),
+            evidence: "same-name-positional",
+            group: json!(group),
+        }),
     ]
 }
 
@@ -325,13 +333,11 @@ fn refuses_wrong_by_one_operation_mutations() {
     assert!(validate_operations(&long_root).is_err());
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "test fixture mirrors the occurrence wire shape"
-)]
-fn occurrence(
+/// One occurrence wire row; omitted links and identities default to `null`.
+#[derive(Default)]
+struct Occurrence<'a> {
     id: u64,
-    occurrence_id: &str,
+    occurrence_id: &'a str,
     operation: u64,
     parent: Value,
     static_parent: Value,
@@ -339,7 +345,19 @@ fn occurrence(
     node: Value,
     output_ordinal: Value,
     scene_entity_id: Value,
-) -> Value {
+}
+fn occurrence(row: Occurrence<'_>) -> Value {
+    let Occurrence {
+        id,
+        occurrence_id,
+        operation,
+        parent,
+        static_parent,
+        slots,
+        node,
+        output_ordinal,
+        scene_entity_id,
+    } = row;
     json!({
         "id": id,
         "occurrenceId": occurrence_id,
@@ -357,39 +375,35 @@ fn occurrence(
 /// rows (dense ordinals 0 and 1), all digests re-derived.
 fn occurrences() -> (Vec<Value>, Vec<Value>) {
     let ops = operations();
-    let frame = occurrence(
-        0,
-        OCC_ROOT,
-        0,
-        Value::Null,
-        Value::Null,
-        json!([]),
-        Value::Null,
-        Value::Null,
-        Value::Null,
-    );
-    let row0 = occurrence(
-        1,
-        OCC_CUBE,
-        1,
-        json!(0),
-        json!(0),
-        json!([]),
-        json!(0),
-        json!(0),
-        json!(ENT0),
-    );
-    let row1 = occurrence(
-        2,
-        OCC_CUBE,
-        1,
-        json!(0),
-        json!(0),
-        json!([]),
-        json!(0),
-        json!(1),
-        json!(ENT1),
-    );
+    let frame = occurrence(Occurrence {
+        id: 0,
+        occurrence_id: OCC_ROOT,
+        operation: 0,
+        slots: json!([]),
+        ..Default::default()
+    });
+    let row0 = occurrence(Occurrence {
+        id: 1,
+        occurrence_id: OCC_CUBE,
+        operation: 1,
+        parent: json!(0),
+        static_parent: json!(0),
+        slots: json!([]),
+        node: json!(0),
+        output_ordinal: json!(0),
+        scene_entity_id: json!(ENT0),
+    });
+    let row1 = occurrence(Occurrence {
+        id: 2,
+        occurrence_id: OCC_CUBE,
+        operation: 1,
+        parent: json!(0),
+        static_parent: json!(0),
+        slots: json!([]),
+        node: json!(0),
+        output_ordinal: json!(1),
+        scene_entity_id: json!(ENT1),
+    });
     (vec![frame, row0, row1], ops)
 }
 
@@ -404,17 +418,17 @@ fn admits_a_valid_occurrence_identity_chain() {
         {"name":"$fn","value":{"tag":"number","value":0.5},"duplicateOrdinal":0},
         {"name":"$preview","value":{"tag":"boolean","value":true},"duplicateOrdinal":0},
     ]);
-    let mut slotted = occurrence(
-        1,
-        OCC_SLOTS,
-        1,
-        json!(0),
-        json!(0),
+    let mut slotted = occurrence(Occurrence {
+        id: 1,
+        occurrence_id: OCC_SLOTS,
+        operation: 1,
+        parent: json!(0),
+        static_parent: json!(0),
         slots,
-        json!(0),
-        json!(0),
-        Value::Null,
-    );
+        node: json!(0),
+        output_ordinal: json!(0),
+        ..Default::default()
+    });
     // Scene identity for the slotted occurrence derives from OCC_SLOTS.
     slotted["sceneEntityId"] = json!(derive_scene_entity_id(OCC_SLOTS, 0));
     let occurrences = vec![occurrences[0].clone(), slotted];
@@ -458,17 +472,15 @@ fn refuses_wrong_by_one_occurrence_mutations() {
     // parent referencing a non-canonical later row of the same ID: derive the
     // otherwise-correct ID so only the canonical-row rule can refuse.
     let late_id = derive_occurrence_id(Some(OCC_CUBE), Some(OCC_ROOT), OP_CUBE, &[]);
-    let extra = occurrence(
-        3,
-        &late_id,
-        1,
-        json!(2),
-        json!(0),
-        json!([]),
-        Value::Null,
-        Value::Null,
-        Value::Null,
-    );
+    let extra = occurrence(Occurrence {
+        id: 3,
+        occurrence_id: &late_id,
+        operation: 1,
+        parent: json!(2),
+        static_parent: json!(0),
+        slots: json!([]),
+        ..Default::default()
+    });
     let mut late_reference_rows = occurrences.clone();
     late_reference_rows.push(extra);
     assert!(validate_occurrence_identity(&late_reference_rows, &ops, 1).is_err());
@@ -517,54 +529,44 @@ fn refuses_wrong_by_one_occurrence_mutations() {
 #[test]
 fn refuses_duplicate_ordinal_disorder_across_rows() {
     let ops = operations();
-    let frame = occurrence(
-        0,
-        OCC_ROOT,
-        0,
-        Value::Null,
-        Value::Null,
-        json!([]),
-        Value::Null,
-        Value::Null,
-        Value::Null,
-    );
+    let frame = occurrence(Occurrence {
+        id: 0,
+        occurrence_id: OCC_ROOT,
+        operation: 0,
+        slots: json!([]),
+        ..Default::default()
+    });
     let slot = |ordinal: u64| json!([{"name":"v","value":{"tag":"number","value":7},"duplicateOrdinal":ordinal}]);
     // Two rows with equal dynamic values need dense ordinals 0 then 1.
-    let first = occurrence(
-        1,
-        OCC_DUP0,
-        3,
-        json!(0),
-        json!(0),
-        slot(0),
-        Value::Null,
-        Value::Null,
-        Value::Null,
-    );
-    let second = occurrence(
-        2,
-        OCC_DUP1,
-        3,
-        json!(0),
-        json!(0),
-        slot(1),
-        Value::Null,
-        Value::Null,
-        Value::Null,
-    );
+    let first = occurrence(Occurrence {
+        id: 1,
+        occurrence_id: OCC_DUP0,
+        operation: 3,
+        parent: json!(0),
+        static_parent: json!(0),
+        slots: slot(0),
+        ..Default::default()
+    });
+    let second = occurrence(Occurrence {
+        id: 2,
+        occurrence_id: OCC_DUP1,
+        operation: 3,
+        parent: json!(0),
+        static_parent: json!(0),
+        slots: slot(1),
+        ..Default::default()
+    });
     validate_occurrence_identity(&[frame.clone(), first.clone(), second.clone()], &ops, 1).unwrap();
     // Skipping ordinal 0 is refused.
-    let skipped = occurrence(
-        1,
-        OCC_DUP1,
-        3,
-        json!(0),
-        json!(0),
-        slot(1),
-        Value::Null,
-        Value::Null,
-        Value::Null,
-    );
+    let skipped = occurrence(Occurrence {
+        id: 1,
+        occurrence_id: OCC_DUP1,
+        operation: 3,
+        parent: json!(0),
+        static_parent: json!(0),
+        slots: slot(1),
+        ..Default::default()
+    });
     assert!(validate_occurrence_identity(&[frame.clone(), skipped], &ops, 1).is_err());
     // Two rows with the same ordinal must carry the same occurrence ID; here
     // the second row repeats the first row's exact identity as a frame row.
