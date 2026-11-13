@@ -98,126 +98,175 @@ type Data = (
     Vec<OriginalPeriodicChartEdge>,
     Vec<OriginalPeriodicChartRelation>,
 );
-fn derive(o: &OwnedPeriodicChartGraph) -> Result<Data> {
-    if o.limits.max_refinements > 512 || !(1..=128).contains(&o.limits.max_resultant_size) {
-        return Err(refused(
-            "Invalid exact periodic chart graph comparison allowance",
-        ));
-    }
-    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
-    let mut ids = BTreeMap::new();
-    let mut refs = Vec::new();
-    let mut raw_edges = Vec::new();
-    let mut edge_ids = BTreeMap::new();
-    for (piece, cuts) in o.owner.cuts().iter().enumerate() {
-        for cut in 0..cuts.len() {
-            let r = OriginalPeriodicChartCutRef { piece, cut };
-            ids.insert(r, refs.len());
-            refs.push(r);
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+/// Whole-interval aliases of every raw edge, each with whether it runs reversed.
+type Adjacency = Vec<Vec<(usize, bool)>>;
+/// Every source cut and every interval between adjacent cuts, with the
+/// union-find that identifies cuts related by an event, a common clip end or
+/// a whole-interval alias.
+struct Quotient {
+    ids: BTreeMap<OriginalPeriodicChartCutRef, usize>,
+    refs: Vec<OriginalPeriodicChartCutRef>,
+    /// (piece, interval) of every raw edge.
+    raw_edges: Vec<(usize, usize)>,
+    edge_ids: BTreeMap<(usize, usize), usize>,
+    parents: Vec<usize>,
+    relations: Vec<OriginalPeriodicChartRelation>,
+}
+impl Quotient {
+    fn new(o: &OwnedPeriodicChartGraph) -> Self {
+        let mut ids = BTreeMap::new();
+        let mut refs = Vec::new();
+        let mut raw_edges = Vec::new();
+        let mut edge_ids = BTreeMap::new();
+        for (piece, cuts) in o.owner.cuts().iter().enumerate() {
+            for cut in 0..cuts.len() {
+                let r = OriginalPeriodicChartCutRef { piece, cut };
+                ids.insert(r, refs.len());
+                refs.push(r);
+            }
+            for interval in 0..cuts.len().saturating_sub(1) {
+                edge_ids.insert((piece, interval), raw_edges.len());
+                raw_edges.push((piece, interval));
+            }
         }
-        for interval in 0..cuts.len() - 1 {
-            edge_ids.insert((piece, interval), raw_edges.len());
-            raw_edges.push((piece, interval));
+        Self {
+            parents: (0..refs.len()).collect(),
+            ids,
+            refs,
+            raw_edges,
+            edge_ids,
+            relations: Vec::new(),
         }
     }
-    let mut parents = (0..refs.len()).collect::<Vec<_>>();
-    let mut relations = Vec::new();
-    let mut relate = |cuts: [OriginalPeriodicChartCutRef; 2],
-                      origin: OriginalPeriodicChartRelationOrigin|
-     -> Result<()> {
-        let a = *ids
+    fn relate(
+        &mut self,
+        cuts: [OriginalPeriodicChartCutRef; 2],
+        origin: OriginalPeriodicChartRelationOrigin,
+    ) -> Result<()> {
+        let a = *self
+            .ids
             .get(&cuts[0])
             .ok_or_else(|| refused("Missing source graph cut"))?;
-        let b = *ids
+        let b = *self
+            .ids
             .get(&cuts[1])
             .ok_or_else(|| refused("Missing counterpart graph cut"))?;
-        union(&mut parents, a, b);
-        relations.push(OriginalPeriodicChartRelation { cuts, origin });
+        union(&mut self.parents, a, b);
+        self.relations
+            .push(OriginalPeriodicChartRelation { cuts, origin });
         Ok(())
-    };
-    for (pair, p) in o.owner.owner().pairs().iter().enumerate() {
-        let pieces = p.owner().pair();
-        for (event, n) in p.owner().events().iter().enumerate() {
-            if n.in_both_closed_pieces() {
-                relate(
-                    [
-                        cut(o, pieces[0], &value(&n.node, 0))?,
-                        cut(o, pieces[1], &value(&n.node, 1))?,
-                    ],
-                    OriginalPeriodicChartRelationOrigin::Event { pair, event },
-                )?;
+    }
+    /// Identifies both source cuts of every event in both closed pieces and
+    /// of both ends of every common clip.
+    fn relate_pairs(&mut self, o: &OwnedPeriodicChartGraph) -> Result<()> {
+        for (pair, p) in o.owner.owner().pairs().iter().enumerate() {
+            let pieces = p.owner().pair();
+            let both = |node: &AlgebraicEventNode| -> Result<[OriginalPeriodicChartCutRef; 2]> {
+                Ok([
+                    cut(o, pieces[0], &value(node, 0))?,
+                    cut(o, pieces[1], &value(node, 1))?,
+                ])
+            };
+            for (event, n) in p.owner().events().iter().enumerate() {
+                if n.in_both_closed_pieces() {
+                    let origin = OriginalPeriodicChartRelationOrigin::Event { pair, event };
+                    self.relate(both(&n.node)?, origin)?;
+                }
+            }
+            for (clip, c) in p.clips().iter().enumerate() {
+                for (end, endpoint) in c.endpoints.iter().enumerate() {
+                    let origin = OriginalPeriodicChartRelationOrigin::Common { pair, clip, end };
+                    self.relate(both(endpoint)?, origin)?;
+                }
             }
         }
-        for (clip, c) in p.clips().iter().enumerate() {
+        Ok(())
+    }
+    /// Identifies the matching ends of every whole-interval alias and
+    /// returns which raw edges each alias glues together.
+    fn relate_aliases(&mut self, o: &OwnedPeriodicChartGraph) -> Result<Adjacency> {
+        let mut adjacency = vec![Vec::new(); self.raw_edges.len()];
+        for (alias, a) in o.owner.aliases().iter().enumerate() {
+            let x = *self
+                .edge_ids
+                .get(&(a.pieces[0], a.intervals[0]))
+                .ok_or_else(|| refused("Missing whole source edge interval"))?;
+            let y = *self
+                .edge_ids
+                .get(&(a.pieces[1], a.intervals[1]))
+                .ok_or_else(|| refused("Missing whole counterpart edge interval"))?;
+            adjacency[x].push((y, a.reversed));
+            adjacency[y].push((x, a.reversed));
             for end in 0..2 {
-                relate(
+                let target_end = if a.reversed { 1 - end } else { end };
+                self.relate(
                     [
-                        cut(o, pieces[0], &value(&c.endpoints[end], 0))?,
-                        cut(o, pieces[1], &value(&c.endpoints[end], 1))?,
+                        OriginalPeriodicChartCutRef {
+                            piece: a.pieces[0],
+                            cut: a.intervals[0] + end,
+                        },
+                        OriginalPeriodicChartCutRef {
+                            piece: a.pieces[1],
+                            cut: a.intervals[1] + target_end,
+                        },
                     ],
-                    OriginalPeriodicChartRelationOrigin::Common { pair, clip, end },
+                    OriginalPeriodicChartRelationOrigin::Alias { alias, end },
                 )?;
             }
         }
+        Ok(adjacency)
     }
-    let mut adjacency = vec![Vec::new(); raw_edges.len()];
-    for (alias, a) in o.owner.aliases().iter().enumerate() {
-        let x = *edge_ids
-            .get(&(a.pieces[0], a.intervals[0]))
-            .ok_or_else(|| refused("Missing whole source edge interval"))?;
-        let y = *edge_ids
-            .get(&(a.pieces[1], a.intervals[1]))
-            .ok_or_else(|| refused("Missing whole counterpart edge interval"))?;
-        adjacency[x].push((y, a.reversed));
-        adjacency[y].push((x, a.reversed));
-        for end in 0..2 {
-            let target_end = if a.reversed { 1 - end } else { end };
-            relate(
-                [
-                    OriginalPeriodicChartCutRef {
-                        piece: a.pieces[0],
-                        cut: a.intervals[0] + end,
-                    },
-                    OriginalPeriodicChartCutRef {
-                        piece: a.pieces[1],
-                        cut: a.intervals[1] + target_end,
-                    },
-                ],
-                OriginalPeriodicChartRelationOrigin::Alias { alias, end },
-            )?;
-        }
-    }
-    drop(relate);
-    let mut vertex_ids = BTreeMap::new();
-    let mut vertices: Vec<OriginalPeriodicChartVertex> = Vec::new();
-    for (id, r) in refs.iter().enumerate() {
-        let representative = root(&parents, id);
-        let next = vertices.len();
-        let vertex = *vertex_ids.entry(representative).or_insert_with(|| {
-            vertices.push(OriginalPeriodicChartVertex {
-                uses: Vec::new(),
-                incidences: Vec::new(),
+    /// One vertex per class of identified cuts, and the vertex of every cut.
+    fn vertices(&self) -> (Vec<OriginalPeriodicChartVertex>, Vec<usize>) {
+        let mut vertex_ids = BTreeMap::new();
+        let mut vertices: Vec<OriginalPeriodicChartVertex> = Vec::new();
+        let mut cut_vertex = Vec::with_capacity(self.refs.len());
+        for (id, r) in self.refs.iter().enumerate() {
+            let representative = root(&self.parents, id);
+            let next = vertices.len();
+            let vertex = *vertex_ids.entry(representative).or_insert_with(|| {
+                vertices.push(OriginalPeriodicChartVertex {
+                    uses: Vec::new(),
+                    incidences: Vec::new(),
+                });
+                next
             });
-            next
-        });
-        vertices[vertex].uses.push(*r);
+            vertices[vertex].uses.push(*r);
+            cut_vertex.push(vertex);
+        }
+        (vertices, cut_vertex)
     }
-    let vertex = |piece: usize, cut: usize| -> usize {
-        vertex_ids[&root(&parents, ids[&OriginalPeriodicChartCutRef { piece, cut }])]
+}
+/// One edge per group of raw edges glued by whole-interval aliases, with a
+/// consistent direction of every carrier relative to the group's first.
+fn merged_edges(
+    o: &OwnedPeriodicChartGraph,
+    quotient: &Quotient,
+    adjacency: &Adjacency,
+    cut_vertex: &[usize],
+) -> Result<Vec<OriginalPeriodicChartEdge>> {
+    let raw_edges = &quotient.raw_edges;
+    let ends_of = |(piece, interval): (usize, usize)| -> Result<[usize; 2]> {
+        let at = |cut: usize| {
+            quotient
+                .ids
+                .get(&OriginalPeriodicChartCutRef { piece, cut })
+                .map(|&id| cut_vertex[id])
+                .ok_or_else(|| refused("Missing source graph cut"))
+        };
+        Ok([at(interval)?, at(interval + 1)?])
     };
-    let mut groups = vec![None; raw_edges.len()];
+    let mut groups: Vec<Option<(usize, bool)>> = vec![None; raw_edges.len()];
     let mut edges: Vec<OriginalPeriodicChartEdge> = Vec::new();
     for first in 0..raw_edges.len() {
         if groups[first].is_some() {
             continue;
         }
         let edge = edges.len();
-        let (piece, interval) = raw_edges[first];
-        let ends = [vertex(piece, interval), vertex(piece, interval + 1)];
-        edges.push(OriginalPeriodicChartEdge {
-            vertices: ends,
-            carriers: Vec::new(),
-        });
+        let ends = ends_of(raw_edges[first])?;
+        let mut carriers = Vec::new();
         let mut stack = vec![(first, false)];
         while let Some((id, reversed)) = stack.pop() {
             if let Some((old_edge, old_reversed)) = groups[id] {
@@ -231,14 +280,13 @@ fn derive(o: &OwnedPeriodicChartGraph) -> Result<Data> {
             groups[id] = Some((edge, reversed));
             let (piece, interval) = raw_edges[id];
             let piece_source = &o.owner.owner().pieces().pieces()[piece];
-            let actual = [vertex(piece, interval), vertex(piece, interval + 1)];
             let expected = if reversed { [ends[1], ends[0]] } else { ends };
-            if actual != expected {
+            if ends_of(raw_edges[id])? != expected {
                 return Err(refused(
                     "Whole common edge endpoints do not agree with its direction proof",
                 ));
             }
-            edges[edge].carriers.push(OriginalPeriodicChartCarrier {
+            carriers.push(OriginalPeriodicChartCarrier {
                 piece,
                 interval,
                 source: piece_source.source,
@@ -249,14 +297,36 @@ fn derive(o: &OwnedPeriodicChartGraph) -> Result<Data> {
                 stack.push((other, reversed ^ parity));
             }
         }
-        edges[edge].carriers.sort_by_key(|c| (c.piece, c.interval));
-        for end in 0..2 {
-            vertices[ends[end]]
+        carriers.sort_by_key(|c| (c.piece, c.interval));
+        edges.push(OriginalPeriodicChartEdge {
+            vertices: ends,
+            carriers,
+        });
+    }
+    Ok(edges)
+}
+fn derive(o: &OwnedPeriodicChartGraph) -> Result<Data> {
+    if o.limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&o.limits.max_resultant_size)
+    {
+        return Err(refused(
+            "Invalid exact periodic chart graph comparison allowance",
+        ));
+    }
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
+    let mut quotient = Quotient::new(o);
+    quotient.relate_pairs(o)?;
+    let adjacency = quotient.relate_aliases(o)?;
+    let (mut vertices, cut_vertex) = quotient.vertices();
+    let edges = merged_edges(o, &quotient, &adjacency, &cut_vertex)?;
+    for (edge, e) in edges.iter().enumerate() {
+        for (end, &vertex) in e.vertices.iter().enumerate() {
+            vertices[vertex]
                 .incidences
                 .push(OriginalPeriodicChartIncidence { edge, end });
         }
     }
-    Ok((vertices, edges, relations))
+    Ok((vertices, edges, quotient.relations))
 }
 impl OwnedPeriodicChartGraph {
     pub fn owner(&self) -> &Arc<OwnedPeriodicAlignedIntervals> {
