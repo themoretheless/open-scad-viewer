@@ -67,16 +67,25 @@ type Data = (
     Vec<OriginalPeriodicWireFlux>,
     usize,
 );
-fn derive(o: &OwnedPeriodicWireJumps) -> Result<Data> {
-    let graph = o.owner.owner();
-    let cover = graph.owner().owner().pieces();
-    if o.max_work == 0 || o.max_work > 10000000 {
-        return Err(refused("Invalid complete original wire jump allowance"));
+const MAX_WORK: usize = 10000000;
+/// Work spent so far against the allowance of one derivation.
+struct Budget {
+    work: usize,
+    max: usize,
+}
+impl Budget {
+    fn bump(&mut self) -> Result<()> {
+        bump(&mut self.work, self.max)
     }
-    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
-    let wires = graph.seam_contacts().embedding().wires();
-    let mut source_wire = vec![None; cover.sources().len()];
-    for (wire, uses) in wires.source_uses().iter().enumerate() {
+}
+/// Wire and traversal direction of every original source curve.
+type SourceWires = Vec<(usize, bool)>;
+/// Period shift of every transported source cut.
+type CutShifts = BTreeMap<OriginalPeriodicChartCutRef, [BigInt; 2]>;
+/// Every source curve belongs to exactly one authored wire.
+fn source_wires(uses: &[Vec<OriginalPeriodicSourceUse>], sources: usize) -> Result<SourceWires> {
+    let mut source_wire = vec![None; sources];
+    for (wire, uses) in uses.iter().enumerate() {
         for u in uses {
             let slot = source_wire
                 .get_mut(u.source)
@@ -86,14 +95,17 @@ fn derive(o: &OwnedPeriodicWireJumps) -> Result<Data> {
             }
         }
     }
-    if source_wire.iter().any(Option::is_none) {
-        return Err(refused("Original wire jump census omits a source"));
-    }
-    let mut work = 0;
+    source_wire
+        .into_iter()
+        .collect::<Option<Vec<_>>>()
+        .ok_or_else(|| refused("Original wire jump census omits a source"))
+}
+/// Exact period shift of every source cut some vertex chart transports.
+fn cut_shifts(o: &OwnedPeriodicWireJumps, budget: &mut Budget) -> Result<CutShifts> {
     let mut shifts = BTreeMap::new();
     for chart in o.owner.charts() {
         for u in &chart.uses {
-            bump(&mut work, o.max_work)?;
+            budget.bump()?;
             let value = [integer(&u.period_shift[0])?, integer(&u.period_shift[1])?];
             if shifts.insert(u.source, value).is_some() {
                 return Err(refused(
@@ -102,117 +114,168 @@ fn derive(o: &OwnedPeriodicWireJumps) -> Result<Data> {
             }
         }
     }
-    let mut flux = vec![[BigInt::from(0), BigInt::from(0)]; wires.wires().len()];
-    let mut edges = Vec::new();
-    for (edge, e) in graph.edges().iter().enumerate() {
-        let first = e
-            .carriers
-            .first()
-            .ok_or_else(|| refused("Wire jump physical edge lacks an original carrier"))?;
-        let transport = |end: usize| -> Result<&[BigInt; 2]> {
-            let source_end = end ^ usize::from(first.reversed);
-            shifts
-                .get(&OriginalPeriodicChartCutRef {
-                    piece: first.piece,
-                    cut: first.interval + source_end,
-                })
-                .ok_or_else(|| refused("Original wire flux edge endpoint lacks a proved chart"))
-        };
-        let a = transport(0)?;
-        let b = transport(1)?;
-        let deck = [&a[0] - &b[0], &a[1] - &b[1]];
-        let mut sums: BTreeMap<usize, BigInt> = BTreeMap::new();
-        let mut contributions = Vec::new();
-        for (carrier, c) in e.carriers.iter().enumerate() {
-            bump(&mut work, o.max_work)?;
-            let (wire, reversed) = source_wire
-                .get(c.source)
-                .and_then(|v| *v)
-                .ok_or_else(|| refused("Original edge contribution has no authored wire"))?;
-            let sign = if reversed ^ c.reversed { -1 } else { 1 };
-            *sums.entry(wire).or_default() += BigInt::from(sign);
-            contributions.push(OriginalPeriodicWireContribution {
-                carrier,
-                source: c.source,
-                wire,
-                sign,
-            });
+    Ok(shifts)
+}
+/// The jump of one physical edge: its deck translation between the charts
+/// at its two ends, and the signed count of each wire running along it.
+/// Adds deck times count to each wire's running flux.
+fn edge_jump(
+    edge: usize,
+    e: &OriginalPeriodicChartEdge,
+    source_wire: &SourceWires,
+    shifts: &CutShifts,
+    flux: &mut [[BigInt; 2]],
+    budget: &mut Budget,
+) -> Result<OriginalPeriodicEdgeJump> {
+    let first = e
+        .carriers
+        .first()
+        .ok_or_else(|| refused("Wire jump physical edge lacks an original carrier"))?;
+    let transport = |end: usize| -> Result<&[BigInt; 2]> {
+        let source_end = end ^ usize::from(first.reversed);
+        shifts
+            .get(&OriginalPeriodicChartCutRef {
+                piece: first.piece,
+                cut: first.interval + source_end,
+            })
+            .ok_or_else(|| refused("Original wire flux edge endpoint lacks a proved chart"))
+    };
+    let a = transport(0)?;
+    let b = transport(1)?;
+    let deck = [&a[0] - &b[0], &a[1] - &b[1]];
+    let mut sums: BTreeMap<usize, BigInt> = BTreeMap::new();
+    let mut contributions = Vec::new();
+    for (carrier, c) in e.carriers.iter().enumerate() {
+        budget.bump()?;
+        let &(wire, reversed) = source_wire
+            .get(c.source)
+            .ok_or_else(|| refused("Original edge contribution has no authored wire"))?;
+        let sign = if reversed ^ c.reversed { -1 } else { 1 };
+        *sums.entry(wire).or_default() += BigInt::from(sign);
+        contributions.push(OriginalPeriodicWireContribution {
+            carrier,
+            source: c.source,
+            wire,
+            sign,
+        });
+    }
+    let mut jumps = Vec::new();
+    for (wire, delta) in sums {
+        if delta == BigInt::from(0) {
+            continue;
         }
-        let mut jumps = Vec::new();
-        for (wire, delta) in sums {
-            if delta == BigInt::from(0) {
-                continue;
-            }
-            for axis in 0..2 {
-                bump(&mut work, o.max_work)?;
-                flux[wire][axis] += &delta * &deck[axis];
-            }
-            jumps.push(OriginalPeriodicWireJump {
-                wire,
+        for axis in 0..2 {
+            budget.bump()?;
+            flux[wire][axis] += &delta * &deck[axis];
+        }
+        jumps.push(OriginalPeriodicWireJump {
+            wire,
+            delta: delta.to_string(),
+        });
+    }
+    Ok(OriginalPeriodicEdgeJump {
+        edge,
+        deck: deck.map(|q| q.to_string()),
+        contributions,
+        jumps,
+    })
+}
+/// Signed wire jumps of the edges at one vertex; every wire must cancel.
+fn vertex_balance(
+    vertex: usize,
+    v: &OriginalPeriodicChartVertex,
+    edges: &[OriginalPeriodicEdgeJump],
+    budget: &mut Budget,
+) -> Result<OriginalPeriodicVertexBalance> {
+    let mut sums: BTreeMap<usize, BigInt> = BTreeMap::new();
+    let mut terms = Vec::new();
+    for incidence in &v.incidences {
+        if incidence.end > 1 {
+            return Err(refused(
+                "Original wire conservation has invalid endpoint incidence",
+            ));
+        }
+        let edge = edges
+            .get(incidence.edge)
+            .ok_or_else(|| refused("Original wire conservation lost its physical edge"))?;
+        for j in &edge.jumps {
+            budget.bump()?;
+            let value = integer(&j.delta)?;
+            let delta = if incidence.end == 0 { value } else { -value };
+            *sums.entry(j.wire).or_default() += &delta;
+            terms.push(OriginalPeriodicBalanceTerm {
+                edge: incidence.edge,
+                end: incidence.end,
+                wire: j.wire,
                 delta: delta.to_string(),
             });
         }
-        edges.push(OriginalPeriodicEdgeJump {
+    }
+    if sums.values().any(|q| q != &BigInt::from(0)) {
+        return Err(refused(
+            "Authored original wire jumps do not conserve at the actual physical vertex",
+        ));
+    }
+    Ok(OriginalPeriodicVertexBalance { vertex, terms })
+}
+/// The flux summed over physical edges must equal the wire's authored homology.
+fn wire_flux(
+    wire: usize,
+    w: &OriginalPeriodicWire,
+    flux: &[BigInt; 2],
+) -> Result<OriginalPeriodicWireFlux> {
+    for axis in 0..2 {
+        let expected = match &w.homology[axis] {
+            Some(v) => integer(v)?,
+            None => BigInt::from(0),
+        };
+        if flux[axis] != expected {
+            return Err(refused(
+                "Physical edge contributions do not reconstruct ORIGINAL authored wire homology",
+            ));
+        }
+    }
+    Ok(OriginalPeriodicWireFlux {
+        wire,
+        native_homology: w.homology.clone(),
+        reconstructed: flux.clone().map(|q| q.to_string()),
+    })
+}
+fn derive(o: &OwnedPeriodicWireJumps) -> Result<Data> {
+    let graph = o.owner.owner();
+    let cover = graph.owner().owner().pieces();
+    if o.max_work == 0 || o.max_work > MAX_WORK {
+        return Err(refused("Invalid complete original wire jump allowance"));
+    }
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
+    let wires = graph.seam_contacts().embedding().wires();
+    let source_wire = source_wires(wires.source_uses(), cover.sources().len())?;
+    let mut budget = Budget {
+        work: 0,
+        max: o.max_work,
+    };
+    let shifts = cut_shifts(o, &mut budget)?;
+    let mut flux = vec![[BigInt::from(0), BigInt::from(0)]; wires.wires().len()];
+    let mut edges = Vec::new();
+    for (edge, e) in graph.edges().iter().enumerate() {
+        edges.push(edge_jump(
             edge,
-            deck: deck.map(|q| q.to_string()),
-            contributions,
-            jumps,
-        });
+            e,
+            &source_wire,
+            &shifts,
+            &mut flux,
+            &mut budget,
+        )?);
     }
     let mut balances = Vec::new();
     for (vertex, v) in graph.vertices().iter().enumerate() {
-        let mut sums: BTreeMap<usize, BigInt> = BTreeMap::new();
-        let mut terms = Vec::new();
-        for incidence in &v.incidences {
-            if incidence.end > 1 {
-                return Err(refused(
-                    "Original wire conservation has invalid endpoint incidence",
-                ));
-            }
-            let edge = edges
-                .get(incidence.edge)
-                .ok_or_else(|| refused("Original wire conservation lost its physical edge"))?;
-            for j in &edge.jumps {
-                bump(&mut work, o.max_work)?;
-                let value = integer(&j.delta)?;
-                let delta = if incidence.end == 0 { value } else { -value };
-                *sums.entry(j.wire).or_default() += &delta;
-                terms.push(OriginalPeriodicBalanceTerm {
-                    edge: incidence.edge,
-                    end: incidence.end,
-                    wire: j.wire,
-                    delta: delta.to_string(),
-                });
-            }
-        }
-        if sums.values().any(|q| q != &BigInt::from(0)) {
-            return Err(refused(
-                "Authored original wire jumps do not conserve at the actual physical vertex",
-            ));
-        }
-        balances.push(OriginalPeriodicVertexBalance { vertex, terms });
+        balances.push(vertex_balance(vertex, v, &edges, &mut budget)?);
     }
     let mut fluxes = Vec::new();
     for (wire, w) in wires.wires().iter().enumerate() {
-        for axis in 0..2 {
-            let expected = if let Some(v) = &w.homology[axis] {
-                integer(v)?
-            } else {
-                BigInt::from(0)
-            };
-            if flux[wire][axis] != expected {
-                return Err(refused(
-                    "Physical edge contributions do not reconstruct ORIGINAL authored wire homology",
-                ));
-            }
-        }
-        fluxes.push(OriginalPeriodicWireFlux {
-            wire,
-            native_homology: w.homology.clone(),
-            reconstructed: flux[wire].clone().map(|q| q.to_string()),
-        });
+        fluxes.push(wire_flux(wire, w, &flux[wire])?);
     }
-    Ok((edges, balances, fluxes, work))
+    Ok((edges, balances, fluxes, budget.work))
 }
 impl OwnedPeriodicWireJumps {
     pub fn owner(&self) -> &Arc<OwnedPeriodicVertexCharts> {
