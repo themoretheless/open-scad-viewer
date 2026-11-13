@@ -96,9 +96,14 @@ pub fn select(levels: &[Level], current: Option<usize>, request: Request) -> Res
     let (level, reason) = if let Some(current) = current_valid {
         if projected(current) > request.pixel_budget * request.hysteresis {
             (base, Reason::PixelBudget)
-        } else if current > 0 && projected(current) < request.pixel_budget / request.hysteresis {
+        } else if current > 0
+            && projected(current) < request.pixel_budget / request.hysteresis
+            && projected(current - 1) <= request.pixel_budget
+        {
             // One transition per query prevents a fine level from oscillating
-            // through the whole chain when the camera jumps.
+            // through the whole chain when the camera jumps. The coarser level
+            // must itself fit the budget, otherwise the next query upgrades
+            // straight back and the selection cycles.
             (current - 1, Reason::PixelBudget)
         } else {
             (current, Reason::HysteresisHold)

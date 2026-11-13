@@ -89,15 +89,42 @@ fn invalid_or_unordered_levels_are_refused() {
     let mut non_finite = levels();
     non_finite[1].error_upper = f64::NAN;
     assert!(lod::select(&non_finite, None, request(1.)).is_err());
-    assert!(
-        lod::select(
-            &levels(),
-            None,
-            Request {
-                hysteresis: 0.9,
-                ..request(1.)
-            },
-        )
-        .is_err()
-    );
+    assert!(lod::select(
+        &levels(),
+        None,
+        Request {
+            hysteresis: 0.9,
+            ..request(1.)
+        },
+    )
+    .is_err());
+}
+
+#[test]
+fn downgrade_never_leaves_the_pixel_budget_and_settles() {
+    // Projected errors at scale 2: 40, 20, 2 px against a 10 px budget. The
+    // fine level is far below budget / hysteresis, but the next coarser level
+    // would exceed the budget, so the selector must hold instead of cycling.
+    let levels = [
+        Level {
+            triangle_count: 100,
+            error_upper: 20.,
+        },
+        Level {
+            triangle_count: 200,
+            error_upper: 10.,
+        },
+        Level {
+            triangle_count: 400,
+            error_upper: 1.,
+        },
+    ];
+    let mut current = Some(0);
+    let mut seen = Vec::new();
+    for _ in 0..6 {
+        let selection = lod::select(&levels, current, request(2.)).unwrap();
+        seen.push(selection.level);
+        current = Some(selection.level);
+    }
+    assert_eq!(seen, vec![2, 2, 2, 2, 2, 2]);
 }

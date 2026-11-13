@@ -39,9 +39,19 @@ describe('app strings', () => {
   it('selects CLDR plural forms by count', () => {
     expect([1, 2, 5, 21].map(n => pluralCategory('ru', n))).toEqual(['one', 'few', 'many', 'one'])
     const ru = APP_STRINGS.ru as Record<string, string>
-    Object.assign(ru, { __items_one: '{count} деталь', __items_few: '{count} детали', __items_many: '{count} деталей', __items_other: '{count} детали' })
+    Object.assign(ru, {
+      __items_one: '{count} деталь',
+      __items_few: '{count} детали',
+      __items_many: '{count} деталей',
+      __items_other: '{count} детали',
+    })
     try {
-      expect([1, 3, 11, 1.5].map(count => translate('ru', '__items', { count }))).toEqual(['1 деталь', '3 детали', '11 деталей', '1.5 детали'])
+      expect([1, 3, 11, 1.5].map(count => translate('ru', '__items', { count }))).toEqual([
+        '1 деталь',
+        '3 детали',
+        '11 деталей',
+        '1.5 детали',
+      ])
     } finally {
       for (const key of ['__items_one', '__items_few', '__items_many', '__items_other']) delete ru[key]
     }
