@@ -30,9 +30,9 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done
 Goal: `src/App.svt` becomes a thin shell that composes children.
 
 - [~] **1.1** i18n: dictionaries already live in `src/i18n/appStrings.ts` (ru/en); `t()` in `App.svt` is still a plain key lookup with no interpolation/pluralization
-- [ ] **1.4** Introduce a shared `SidePanel` + `Modal` to standardize open/close + focus behavior (dialogs in `App.svt`, `KeyboardShortcuts.svt`, `ExampleGallery.svt`, `CommandPalette.svt`, `FunctionReference.svt` each wire their own)
+- [x] **1.4** Shared `Modal` and `SidePanel` (`src/components/`, behavior in `src/composables/useModalDialog.ts`): `role="dialog"`, `aria-modal`, title label, focus moved in, Tab/Shift+Tab trap, Escape, focus restore, background scroll lock. The export dialog (`ExportDialog.svt`), `KeyboardShortcuts.svt`, `ExampleGallery.svt`, `CommandPalette.svt` and `FunctionReference.svt` use `Modal`; `SidePanel` has no consumer yet (candidates in P7: `ScanPlanePanel`, DirectModeler operation cards). `MechanicalGenerator.svt` keeps the native `<dialog>` with `showModal()`. Covered by `tests/modalDialogUi.test.ts`
 
-**Exit criteria:** `App.svt` < 1,000 lines; build green; no behavior regressions. Also tracked as R4 in [recommendation.md](./recommendation.md).
+**Exit criteria:** `App.svt` < 1,000 lines; build green; no behavior regressions. Also tracked as R4 in [recommendation.md](./recommendation.md). Status: `App.svt` is 894 lines after moving workspace modes, source history, palette commands and dispatch, shell actions, geometry analysis and customizer state into `src/composables/`, and the group source panel, export dialog, sweep evidence, performance panel and parameter suggestions into `src/components/`.
 
 ---
 
