@@ -23,13 +23,40 @@ pub struct DrStep {
     pub independent: bool,
 }
 
+/// Generic rigidity of the bar subgraph: points joined by `Distance`
+/// constraints, decomposed by the (2,3)-pebble game before numeric solving.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BarRigidity {
+    /// Constraint index of every bar, in the order given to the pebble game.
+    pub constraints: Vec<usize>,
+    /// Edge indices in `analysis` refer to positions in `constraints`;
+    /// vertices are point indices.
+    pub analysis: crate::PebbleAnalysis,
+}
+
+impl BarRigidity {
+    /// Distance constraints that are structurally redundant for every
+    /// generic placement (for example the sixth bar of K4).
+    pub fn redundant_constraints(&self) -> Vec<usize> {
+        self.analysis
+            .redundant_edges
+            .iter()
+            .map(|&edge| self.constraints[edge])
+            .collect()
+    }
+}
+
 /// Structural/numerical DR plan consumed by the existing global solver pipeline.
-/// This is a local first-order decomposition, not a global rigidity certificate.
+/// Clusters are connected components with a first-order (Jacobian rank)
+/// rigidity check at the input geometry; `bars` adds the combinatorial
+/// pebble-game decomposition of the distance subgraph into rigid components.
+/// Neither is a global rigidity certificate.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DrPlan {
     pub clusters: Vec<RigidCluster>,
     pub steps: Vec<DrStep>,
     pub characteristic_scale: f64,
+    pub bars: BarRigidity,
 }
 
 #[derive(Clone, Debug)]
@@ -376,9 +403,23 @@ pub fn plan_dr(sketch: &Sketch, tolerance: f64) -> Result<DrPlan> {
             }
         })
         .collect();
+    let (bar_constraints, bar_edges): (Vec<usize>, Vec<(usize, usize)>) = sketch
+        .constraints
+        .iter()
+        .enumerate()
+        .filter_map(|(ci, constraint)| match *constraint {
+            Constraint::Distance { a, b, .. } if a != b => Some((ci, (a, b))),
+            _ => None,
+        })
+        .unzip();
+    let bars = BarRigidity {
+        analysis: crate::pebble_game_2d(n_points, &bar_edges)?,
+        constraints: bar_constraints,
+    };
     Ok(DrPlan {
         clusters,
         steps,
         characteristic_scale: scale,
+        bars,
     })
 }

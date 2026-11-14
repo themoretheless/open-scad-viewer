@@ -373,6 +373,41 @@ fn controls(s: &Surface) -> Vec<f64> {
         .flat_map(|k| s.control_points.iter().flatten().map(move |p| p[k]))
         .collect()
 }
+struct Potential {
+    elastic: f64,
+    anchor: f64,
+    work: f64,
+    total: f64,
+}
+/// Total potential of control displacement `u`: elastic `0.5 uᵀEu - restᵀu + c`,
+/// anchor `0.5 w uᵀu`, minus dead-load work `forceᵀu + c`.
+fn potential(a: &assembly::Assembly, u: &[f64], anchor_weight: f64) -> Potential {
+    let anchor = 0.5 * anchor_weight * dot(u, u);
+    let elastic = 0.5
+        * a.elastic
+            .iter()
+            .map(|r| dot(r, u))
+            .zip(u)
+            .map(|(a, b)| a * b)
+            .sum::<f64>()
+        - dot(&a.rest, u)
+        + a.elastic_constant;
+    let work = dot(&a.force, u) + a.load_constant;
+    Potential {
+        elastic,
+        anchor,
+        work,
+        total: elastic + anchor - work,
+    }
+}
+/// Analytic gradient of [`potential`]: `H u - rhs` with `H = E + w I` and
+/// `rhs = rest + force`, the same system the solver drives to zero.
+fn potential_gradient(a: &assembly::Assembly, u: &[f64]) -> Vec<f64> {
+    a.h.iter()
+        .zip(&a.rhs)
+        .map(|(r, f)| dot(r, u) - f)
+        .collect()
+}
 fn inspect(
     seed: &Surface,
     actual: &Surface,
@@ -396,11 +431,7 @@ fn inspect(
         .map(|(a, b)| a - b)
         .collect::<Vec<_>>();
     let hu = a.h.iter().map(|r| dot(r, &u)).collect::<Vec<_>>();
-    let gradient = hu
-        .iter()
-        .zip(&a.rhs)
-        .map(|(h, f)| h - f)
-        .collect::<Vec<_>>();
+    let gradient = potential_gradient(a, &u);
     let mut identity = vec![vec![0.; u.len()]; u.len()];
     for (i, r) in identity.iter_mut().enumerate() {
         r[i] = 1.;
@@ -414,18 +445,12 @@ fn inspect(
             .map(|(g, n)| g - n)
             .collect::<Vec<_>>(),
     ) / norm(&a.rhs).max(norm(&hu)).max(1.);
-    let anchor = 0.5 * o.fitting.anchor_weight * dot(&u, &u);
-    let elastic = 0.5
-        * a.elastic
-            .iter()
-            .map(|r| dot(r, &u))
-            .zip(&u)
-            .map(|(a, b)| a * b)
-            .sum::<f64>()
-        - dot(&a.rest, &u)
-        + a.elastic_constant;
-    let work = dot(&a.force, &u) + a.load_constant;
-    let total = elastic + anchor - work;
+    let Potential {
+        elastic,
+        anchor,
+        work,
+        total,
+    } = potential(a, &u, o.fitting.anchor_weight);
     if [residual, anchor, elastic, work, total]
         .iter()
         .any(|v| !v.is_finite())
@@ -507,4 +532,77 @@ pub fn solve_preserving_g2(
         tolerances,
     });
     Ok(result)
+}
+
+#[cfg(test)]
+mod gradient_tests {
+    use super::*;
+
+    #[test]
+    fn potential_gradient_matches_central_differences_on_random_shells() {
+        let mut state = 0x5eed_0847_u64;
+        let mut next = move || {
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (state >> 11) as f64 / (1u64 << 52) as f64 - 1.
+        };
+        for trial in 0..4 {
+            let degree = 2 + trial % 2;
+            let net = (0..=degree)
+                .map(|i| {
+                    (0..=degree)
+                        .map(|j| {
+                            vec![
+                                i as f64 / degree as f64 + 0.05 * next(),
+                                j as f64 / degree as f64 + 0.05 * next(),
+                                0.2 * next(),
+                            ]
+                        })
+                        .collect()
+                })
+                .collect();
+            let mut seed = crate::patches::bezier(net, None).unwrap();
+            seed.weights[1][1] = 1. + 0.4 * next();
+            let model = Model {
+                material: Material {
+                    membrane: 1. + next().abs(),
+                    bending: 0.1 + 0.1 * next().abs(),
+                    poisson: 0.3,
+                },
+                traction: [next(), next(), next()],
+                pressure: next(),
+                points: vec![PointLoad {
+                    uv: [0.3, 0.6],
+                    force: [next(), next(), next()],
+                }],
+            };
+            let mut options = Options::default();
+            options.fitting.anchor_weight = 0.5 + next().abs();
+            let a = assembly::assemble(&seed, &seed, &model, options).unwrap();
+            let u: Vec<f64> = (0..a.rhs.len()).map(|_| 0.05 * next()).collect();
+            let w = options.fitting.anchor_weight;
+            let gradient = potential_gradient(&a, &u);
+            let base = potential(&a, &u, w).total.abs();
+            let h = 1e-6;
+            for k in 0..u.len() {
+                let mut plus = u.clone();
+                plus[k] += h;
+                let mut minus = u.clone();
+                minus[k] -= h;
+                let numeric_derivative =
+                    (potential(&a, &plus, w).total - potential(&a, &minus, w).total) / (2. * h);
+                let scale = gradient[k]
+                    .abs()
+                    .max(numeric_derivative.abs())
+                    .max(base)
+                    .max(1.);
+                assert!(
+                    (gradient[k] - numeric_derivative).abs() / scale < 1e-6,
+                    "trial {trial} coordinate {k}: analytic={} numeric={numeric_derivative}",
+                    gradient[k]
+                );
+            }
+        }
+    }
 }

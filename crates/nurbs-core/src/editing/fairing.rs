@@ -197,6 +197,26 @@ fn energy_of(curve: &Curve, form: &[Vec<f64>]) -> Result<f64> {
     Ok(total.max(0.))
 }
 
+/// Analytic gradient of E = xᵀAx over every control coordinate, 2·A·x per
+/// axis. The fairing solve sets its free rows to zero; tests check it
+/// against central differences of [`energy_of`].
+#[cfg(test)]
+fn energy_gradient(curve: &Curve, form: &[Vec<f64>]) -> Vec<Vec<f64>> {
+    let n = curve.control_points.len();
+    let dimension = curve.control_points[0].len();
+    (0..n)
+        .map(|i| {
+            (0..dimension)
+                .map(|axis| {
+                    2. * (0..n)
+                        .map(|j| form[i][j] * curve.control_points[j][axis])
+                        .sum::<f64>()
+                })
+                .collect()
+        })
+        .collect()
+}
+
 fn clamped(curve: &Curve) -> bool {
     let n = curve.control_points.len();
     let p = curve.degree;
@@ -548,6 +568,92 @@ pub fn fair_curve_report(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Deterministic uniform values in [-1, 1) (64-bit LCG).
+    struct Lcg(u64);
+    impl Lcg {
+        fn next(&mut self) -> f64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (self.0 >> 11) as f64 / (1u64 << 52) as f64 - 1.
+        }
+    }
+
+    fn random_curve(rng: &mut Lcg, degree: usize, n: usize) -> Curve {
+        let mut interior: Vec<f64> = (0..n - degree - 1)
+            .map(|_| 0.5 + 0.45 * rng.next())
+            .collect();
+        interior.sort_by(f64::total_cmp);
+        let mut knots = vec![0.; degree + 1];
+        knots.extend(interior);
+        knots.extend(vec![1.; degree + 1]);
+        Curve {
+            degree,
+            knots,
+            control_points: (0..n)
+                .map(|_| (0..3).map(|_| 2. * rng.next()).collect())
+                .collect(),
+            weights: vec![1.; n],
+            periodic: false,
+        }
+    }
+
+    #[test]
+    fn every_curve_energy_gradient_matches_central_differences_on_random_curves() {
+        let mut rng = Lcg(0x5eed_0847);
+        for energy in [
+            FairingEnergy::Stretch,
+            FairingEnergy::Bending,
+            FairingEnergy::Variation,
+        ] {
+            for trial in 0..6 {
+                let degree = energy.derivative_order().max(3) + trial % 2;
+                let curve = random_curve(&mut rng, degree, degree + 3 + trial);
+                let form = assemble_energy_form(&curve, energy.derivative_order()).unwrap();
+                let gradient = energy_gradient(&curve, &form);
+                let base = energy_of(&curve, &form).unwrap();
+                let h = 1e-6;
+                for i in 0..curve.control_points.len() {
+                    for axis in 0..3 {
+                        let mut plus = curve.clone();
+                        plus.control_points[i][axis] += h;
+                        let mut minus = curve.clone();
+                        minus.control_points[i][axis] -= h;
+                        let numeric_derivative = (energy_of(&plus, &form).unwrap()
+                            - energy_of(&minus, &form).unwrap())
+                            / (2. * h);
+                        let analytic = gradient[i][axis];
+                        let scale = analytic
+                            .abs()
+                            .max(numeric_derivative.abs())
+                            .max(base)
+                            .max(1.);
+                        assert!(
+                            (analytic - numeric_derivative).abs() / scale < 1e-6,
+                            "{energy:?} trial {trial} ({i},{axis}): analytic={analytic} numeric={numeric_derivative}"
+                        );
+                    }
+                }
+                // The faired curve is stationary in every free coordinate.
+                let faired = fair_curve_report(&curve, energy, false, false)
+                    .unwrap()
+                    .curve;
+                let at_rest = energy_gradient(&faired, &form);
+                let scale = gradient
+                    .iter()
+                    .flatten()
+                    .fold(1f64, |m, g| m.max(g.abs()));
+                for row in &at_rest[1..at_rest.len() - 1] {
+                    assert!(
+                        row.iter().all(|g| g.abs() / scale < 1e-8),
+                        "{energy:?} {row:?}"
+                    );
+                }
+            }
+        }
+    }
 
     pub(crate) fn noisy_cubic() -> Curve {
         // Clamped cubic, 5 control points; interior controls perturbed off

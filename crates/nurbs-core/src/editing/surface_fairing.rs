@@ -672,6 +672,67 @@ mod tests {
     }
 
     #[test]
+    fn analytic_gradient_matches_central_differences_on_random_nets() {
+        // Deterministic 64-bit LCG in [-1, 1).
+        let mut state = 0x5eed_0847_u64;
+        let mut next = move || {
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (state >> 11) as f64 / (1u64 << 52) as f64 - 1.
+        };
+        for trial in 0..6 {
+            let (nu, nv) = (5 + trial % 3, 6 + trial % 2);
+            let (pu, pv) = (2 + trial % 3, 3);
+            let mut knots = |n: usize, p: usize| {
+                let mut inner: Vec<f64> = (0..n - p - 1).map(|_| 0.5 + 0.45 * next()).collect();
+                inner.sort_by(f64::total_cmp);
+                let mut k = vec![0.; p + 1];
+                k.extend(inner);
+                k.extend(vec![1.; p + 1]);
+                k
+            };
+            let (knots_u, knots_v) = (knots(nu, pu), knots(nv, pv));
+            let surface = Surface {
+                degree_u: pu,
+                degree_v: pv,
+                knots_u,
+                knots_v,
+                control_points: (0..nu)
+                    .map(|_| (0..nv).map(|_| (0..3).map(|_| 2. * next()).collect()).collect())
+                    .collect(),
+                weights: vec![vec![1.; nv]; nu],
+                periodic_u: false,
+                periodic_v: false,
+            };
+            let (alpha, beta) = (0.5 + 0.5 * next(), 0.5 + 0.5 * next());
+            let form = composite_form(&surface, FairingWeights::new(alpha, beta).unwrap()).unwrap();
+            let gradient = energy_gradient(&surface, &form).unwrap();
+            let base = energy_of(&surface, &form).unwrap();
+            let h = 1e-6;
+            for i in 0..nu {
+                for j in 0..nv {
+                    for axis in 0..3 {
+                        let mut plus = surface.clone();
+                        plus.control_points[i][j][axis] += h;
+                        let mut minus = surface.clone();
+                        minus.control_points[i][j][axis] -= h;
+                        let numeric_derivative =
+                            (energy_of(&plus, &form).unwrap() - energy_of(&minus, &form).unwrap())
+                                / (2. * h);
+                        let analytic = gradient[i][j][axis];
+                        let scale = analytic.abs().max(numeric_derivative.abs()).max(base).max(1.);
+                        assert!(
+                            (analytic - numeric_derivative).abs() / scale < 1e-6,
+                            "trial {trial} ({i},{j},{axis}): analytic={analytic} numeric={numeric_derivative}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn analytic_gradient_matches_central_differences() {
         let surface = noisy_plane();
         let weights = FairingWeights::new(0.4, 0.6).unwrap();

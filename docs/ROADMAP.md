@@ -32,7 +32,7 @@
 | Д. Тесты, CI, квалификация | `tests/`, `tools/`, `.github/` | P2 → C2, C3 → P5 → N17 → N18; P1 последним | S4 (медленные тесты), C1 (LFS) |
 | Е. Manifold | `manifold-core`, `manifold-ops`, `tools/manifold-bench` | S4 → S6 → S5 → S7, S8, S9 → S1 | O2, O4 (размер WASM, горячие пути) |
 | Ж. Обмен | `cad-step` | N8 → N9 → N10, C13 | M1: весь STEP/IGES в `cad-step` |
-| З. Независимые | каждый в своём крейте | S10, S11, S14, S15, S16, N26, C12, C22 | — |
+| З. Независимые | каждый в своём крейте | S10, S11, S14, S15, S16, C12, C22 | — |
 
 ## 1. NURBS и B-rep
 
@@ -59,7 +59,6 @@
 | **N19. Прогресс и отмена.** Контракт `Progress` и кооперативный `CancellationToken` в циклах пересечений, тесселяции и аппроксимации; поведение при OOM | P1 | M | нет | — | [nurbs-priorities](../nurbs-priorities.md) 920, 921; [brep-completion-status](design/brep-completion-status.md) 12 |
 | **N22. Упрощение до аналитики: остаток.** Жадное удаление узлов кривых и поверхностей с границей ошибки, понижение степени, распознавание plane/sphere/cylinder/cone/torus по коэффициентам (`analysis::analytic_recognition`) и сертифицированная аннотация cylinder/cone в `cast_canonical_surfaces` сделаны; остаются замена freeform-грани на несущую cylinder/cone с перепроецированием pcurve (сейчас только аннотация, геометрия не меняется), replace face на цилиндр (874, 876) и приёмка §4 на шестернях spinner | P2 | M | частично | — | [nurbs-next-five](design/nurbs-next-five-priorities-2026-10-22.md) §4; [nurbs-priorities](../nurbs-priorities.md) 814, 874, 876, 1041 |
 | **N24. Параллелизм, память, детерминизм.** rayon в тесселяции и Boolean, кэши базиса, арены, SoA-буферы в GPU | P2 | L | нет | N17 | [nurbs-priorities](../nurbs-priorities.md) 183, 184, 817–826, 1068–1070 |
-| **N26. Мелкие пробелы NURBS и анализа: остаток.** Сертифицированные длина, площадь, объём, FFD с сохранением объёма, квадратичная сходимость границ `shared_tessellation`/`watertight` и заметка о T-сплайнах сделаны; остаются градиентная проверка всех fairness-функционалов (847) и DR-планирование графа ограничений через pebble game (1001) | P2 | S | да | — | [roadmap-status](design/nurbs-brep-bvh-roadmap-status.md) «NURBS-ядро»; [nurbs-priorities](../nurbs-priorities.md) 847, 1001 |
 | **N27. Квалификация каталога NURBS.** Довести первые 100 фигур до `qualified` (сейчас 0 из 253), затем расширять каталог | P2 | L | нет | N4 | [nurbs-complete-program](design/nurbs-complete-program-2026-10-01.md) |
 | **N28. Платформа: DSL, CLI, привязки.** CLI `cad`, C API, pyo3 | P2 | L | да | N18 | [nurbs-priorities](../nurbs-priorities.md) 174, 175, 181, 915–919 |
 
