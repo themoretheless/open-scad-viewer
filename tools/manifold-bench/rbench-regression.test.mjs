@@ -1,20 +1,21 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { compareRuns, measureRun, median } from './rbench-regression.mjs'
+import path from 'node:path'
+import { compareRuns, hostEnvironment, measureRun, median, mergeRuns, platformBaselinePath } from './rbench-regression.mjs'
 
-function run(values = [100, 120], operations = [1, 2]) {
+function run(values = [100, 120], operations = [1, 2], caseId = 'check/tetra') {
   return {
     schema: 1,
     id: 'test',
     status: 'complete',
     environment: { arch: 'aarch64', os: 'macos' },
     cases: [{
-      id: 'check/tetra',
+      id: caseId,
       contract: { samples: '2', 'param.triangles': '4' },
       metrics: [{ id: 'wall', unit: 'ns', direction: 'lower' }],
     }],
     observations: values.map((value, sequence) => ({
-      case: 'check/tetra', metric: 'wall', variant: 'candidate', process: 0,
+      case: caseId, metric: 'wall', variant: 'candidate', process: 0,
       sequence, value: String(value), operations: operations[sequence], availability: { state: 'available' },
     })),
   }
@@ -67,4 +68,35 @@ test('rejects wrong sample counts, zero batches and unsafe values', () => {
   assert.throws(() => measureRun(missingSample, 'fixture'), /expected 2 samples/)
   assert.throws(() => measureRun(run([100, 100], [1, 0]), 'fixture'), /operation count/)
   assert.throws(() => measureRun(run([100, Number.MAX_SAFE_INTEGER + 1]), 'fixture'), /batch value/)
+})
+
+test('defaults to a 15 percent budget', () => {
+  assert.equal(compareRuns(run(), run([114, 136])).ok, true)
+  const report = compareRuns(run(), run([120, 140]))
+  assert.equal(report.maxRegression, 0.15)
+  assert.equal(report.ok, false)
+})
+
+test('reports cases added since the baseline without gating them, but rejects removed cases', () => {
+  const current = mergeRuns([run(), run([500, 500], [1, 1], 'hull/sphere')])
+  const report = compareRuns(run(), current)
+  assert.equal(report.ok, true)
+  assert.deepEqual(report.cases.map(testCase => [testCase.id, Boolean(testCase.added)]), [['check/tetra', false], ['hull/sphere', true]])
+  assert.throws(() => compareRuns(current, run()), /lacks: hull\/sphere/)
+})
+
+test('merges suites from one environment only', () => {
+  const merged = mergeRuns([run(), run([1, 1], [1, 1], 'decimate/sphere')])
+  assert.equal(merged.cases.length, 2)
+  assert.equal(merged.observations.length, 4)
+  const linux = run([1, 1], [1, 1], 'decimate/sphere')
+  linux.environment.os = 'linux'
+  assert.throws(() => mergeRuns([run(), linux]), /different environments/)
+  assert.throws(() => mergeRuns([]), /No rbench suites/)
+})
+
+test('names the per-platform baseline with rbench environment names', () => {
+  assert.deepEqual(hostEnvironment('darwin', 'arm64'), { os: 'macos', arch: 'aarch64' })
+  assert.deepEqual(hostEnvironment('linux', 'x64'), { os: 'linux', arch: 'x86_64' })
+  assert.equal(path.basename(platformBaselinePath({ os: 'linux', arch: 'x86_64' })), 'rbench-baseline.linux-x86_64.json')
 })
