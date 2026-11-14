@@ -55,6 +55,201 @@ fn bound(p: &OriginalSourceParameter, domain: Option<&[Q; 2]>) -> Result<Paramet
 fn derive_probes(o: &OwnedPeriodicSideProbes) -> Result<ProbeData> {
     source_probe_data(&o.owner, o.edge, &o.radius, o.limits, o.transported, false)
 }
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+/// Queries inside the chart and the period shift of every coordinate.
+type CanonicalQueries = ([[Q; 2]; 2], [[String; 2]; 2]);
+/// The exact source chart, its periods and which axes a query may be
+/// transported across.
+struct SideChart {
+    chart: [[Q; 2]; 2],
+    periods: [Q; 2],
+    wrapped: [bool; 2],
+    transported: bool,
+}
+impl SideChart {
+    fn new(cover: &OwnedOriginalPeriodicPieces, transported: bool) -> Result<Self> {
+        let mut chart = [[Q::zero(), Q::zero()], [Q::zero(), Q::zero()]];
+        for (exact, bounds) in chart.iter_mut().zip(cover.chart()) {
+            for (q, v) in exact.iter_mut().zip(bounds) {
+                *q = Q::from_float(v)
+                    .ok_or_else(|| refused("Periodic side chart bound is not finite"))?;
+            }
+        }
+        let periods = chart.each_ref().map(|d| &d[1] - &d[0]);
+        Ok(Self {
+            chart,
+            periods,
+            wrapped: cover.wrapped(),
+            transported,
+        })
+    }
+    fn transports(&self, axis: usize) -> bool {
+        self.transported && self.wrapped[axis]
+    }
+    /// Period shifts of every tile in the finite census.
+    fn tiles(&self) -> Vec<[i8; 2]> {
+        let mut tiles = vec![[0i8, 0i8]];
+        for axis in 0..2 {
+            if self.transports(axis) {
+                tiles = tiles
+                    .into_iter()
+                    .flat_map(|t| {
+                        [0, -1, 1].map(|v| {
+                            let mut n = t;
+                            n[axis] = v;
+                            n
+                        })
+                    })
+                    .collect();
+            }
+        }
+        tiles
+    }
+    /// Completeness of the finite tile census: every actual canonical piece is
+    /// inside the closed source chart. Further tiles are >=one full period
+    /// away from its center, while this segment stays <half a period away.
+    fn verify_census(&self, lifted: &[[Q; 2]; 2]) -> Result<()> {
+        for axis in 0..2 {
+            let center = (&lifted[0][axis] + &lifted[1][axis]) / Q::from_integer(2.into());
+            if center < self.chart[axis][0] || center > self.chart[axis][1] {
+                return Err(refused(
+                    "Periodic side center escaped its actual original source chart",
+                ));
+            }
+            if self.transports(axis)
+                && (&lifted[0][axis] - &lifted[1][axis]).abs() >= self.periods[axis]
+            {
+                return Err(refused(
+                    "Periodic side exceeds the complete adjacent-tile radius allowance",
+                ));
+            }
+        }
+        Ok(())
+    }
+    /// The query coordinate lies strictly inside the chart, or beyond a
+    /// natural boundary when the caller owns that boundary separately.
+    fn admit(&self, q: &Q, axis: usize, allow_natural: bool) -> Result<()> {
+        let [low, high] = &self.chart[axis];
+        let inside = q > low && q < high;
+        let natural = allow_natural && !self.wrapped[axis] && (q < low || q > high);
+        if inside || natural {
+            return Ok(());
+        }
+        Err(refused(
+            "Periodic side query needs another physical chart or natural support boundary owner",
+        ))
+    }
+    /// Lifted queries moved back into the chart, with the period shift of
+    /// every coordinate.
+    fn canonicalize(&self, lifted: &[[Q; 2]; 2], allow_natural: bool) -> Result<CanonicalQueries> {
+        let mut canonical = lifted.clone();
+        let mut shifts = std::array::from_fn(|_| std::array::from_fn(|_| "0".to_string()));
+        for side in 0..2 {
+            for axis in 0..2 {
+                if self.transports(axis) {
+                    let k = ((&canonical[side][axis] - &self.chart[axis][0]) / &self.periods[axis])
+                        .floor()
+                        .to_integer();
+                    canonical[side][axis] -= Q::from_integer(k.clone()) * &self.periods[axis];
+                    shifts[side][axis] = k.to_string();
+                }
+                self.admit(&canonical[side][axis], axis, allow_natural)?;
+            }
+        }
+        Ok((canonical, shifts))
+    }
+}
+/// Translated nets, parameter intervals and views of every piece in every
+/// tile, in tile-major order.
+struct TileCensus {
+    nets: Vec<Vec<[Q; 3]>>,
+    intervals: Vec<[ParameterValue; 2]>,
+    views: Vec<OriginalPeriodicSideView>,
+}
+fn tile_census(
+    cover: &OwnedOriginalPeriodicPieces,
+    original: &[Vec<Cell>],
+    tiles: &[[i8; 2]],
+    periods: &[Q; 2],
+) -> Result<TileCensus> {
+    let mut census = TileCensus {
+        nets: Vec::new(),
+        intervals: Vec::new(),
+        views: Vec::new(),
+    };
+    for tile in tiles {
+        for (piece, p) in cover.pieces().iter().enumerate() {
+            let cell = &original[p.source][p.cell];
+            let offset = [
+                decode_ratio(&p.translation[0])? + Q::from_integer(tile[0].into()) * &periods[0],
+                decode_ratio(&p.translation[1])? + Q::from_integer(tile[1].into()) * &periods[1],
+            ];
+            census.nets.push(
+                cell.net
+                    .iter()
+                    .map(|v| {
+                        [
+                            &v[0] + &offset[0] * &v[2],
+                            &v[1] + &offset[1] * &v[2],
+                            v[2].clone(),
+                        ]
+                    })
+                    .collect(),
+            );
+            census.intervals.push([
+                bound(&cover.cuts()[p.source][p.cuts[0]].value, Some(&cell.domain))?,
+                bound(&cover.cuts()[p.source][p.cuts[1]].value, Some(&cell.domain))?,
+            ]);
+            census.views.push(OriginalPeriodicSideView {
+                piece,
+                period_shift: tile.map(|n| n.to_string()),
+            });
+        }
+    }
+    Ok(census)
+}
+/// Center intervals with the carrier each one belongs to.
+type CenterGroups = (Vec<arithmetic::carrier_sides::CenterInterval>, Vec<usize>);
+/// Center intervals of every carrier of the edge in every tile, with the
+/// carrier each one belongs to.
+fn center_groups(
+    e: &OriginalPeriodicChartEdge,
+    cover: &OwnedOriginalPeriodicPieces,
+    cuts: &[Vec<OriginalPeriodicAlignedCut>],
+    original: &[Vec<Cell>],
+    tiles: usize,
+) -> Result<CenterGroups> {
+    let mut centers = Vec::new();
+    let mut groups = Vec::new();
+    for (group, c) in e.carriers.iter().enumerate() {
+        let p = &cover.pieces()[c.piece];
+        if p.source != c.source || p.cell != c.cell {
+            return Err(refused("Periodic side carrier lost its original cell"));
+        }
+        let cell = &original[c.source][c.cell];
+        let bounds = [
+            bound(&cuts[c.piece][c.interval].value, Some(&cell.domain))?,
+            bound(&cuts[c.piece][c.interval + 1].value, Some(&cell.domain))?,
+        ];
+        for tile in 0..tiles {
+            centers.push(arithmetic::carrier_sides::CenterInterval {
+                cell: tile * cover.pieces().len() + c.piece,
+                bounds: bounds.clone(),
+            });
+            groups.push(group);
+        }
+    }
+    Ok((centers, groups))
+}
+/// Jump of every wire flux across the edge.
+fn edge_jumps(owner: &OwnedPeriodicWireJumps, edge: usize) -> Vec<String> {
+    let mut jumps = vec!["0".to_string(); owner.wire_fluxes().len()];
+    for j in &owner.edges()[edge].jumps {
+        jumps[j.wire] = j.delta.clone();
+    }
+    jumps
+}
 /// Shared complete source census. Allowing a natural exterior returns DATA,
 /// never an ordinary qualified side owner; the typed support caller must prove
 /// the actual natural carrier and the inward/outward half-space separately.
@@ -66,31 +261,18 @@ pub(in super::super) fn source_probe_data(
     transported: bool,
     allow_natural: bool,
 ) -> Result<ProbeData> {
-    struct Request<'a> {
-        owner: &'a Arc<OwnedPeriodicWireJumps>,
-        edge: usize,
-        radius: &'a ExactRatio,
-        limits: ParameterOrderLimits,
-        transported: bool,
-    }
-    let o = Request {
-        owner,
-        edge,
-        radius,
-        limits,
-        transported,
-    };
-
-    if o.limits.max_refinements > 512 || !(1..=128).contains(&o.limits.max_resultant_size) {
+    if limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&limits.max_resultant_size)
+    {
         return Err(refused("Invalid periodic side parameter allowance"));
     }
-    super::periodic_replay::verify_arc(o.owner, |x| x.reverify_source())?;
-    let graph = o.owner.owner().owner();
+    super::periodic_replay::verify_arc(owner, |x| x.reverify_source())?;
+    let graph = owner.owner().owner();
     let aligned = graph.owner();
     let cover = aligned.owner().pieces();
     let e = graph
         .edges()
-        .get(o.edge)
+        .get(edge)
         .ok_or_else(|| refused("Periodic side names a missing physical edge"))?;
     let c = e
         .carriers
@@ -108,159 +290,38 @@ pub(in super::super) fn source_probe_data(
             bound(&aligned.cuts()[c.piece][c.interval].value, None)?,
             bound(&aligned.cuts()[c.piece][c.interval + 1].value, None)?,
         ],
-        o.limits.max_refinements,
+        limits.max_refinements,
     )?;
     let local = (&parameter - &selected.domain[0]) / (&selected.domain[1] - &selected.domain[0]);
-    let chart = cover.chart().map(|d| d.map(|v| Q::from_float(v).unwrap()));
-    let periods = chart.each_ref().map(|d| &d[1] - &d[0]);
-    let wrapped = cover.wrapped();
-    let mut tiles = vec![[0i8, 0i8]];
-    if o.transported {
-        for axis in 0..2 {
-            if wrapped[axis] {
-                tiles = tiles
-                    .into_iter()
-                    .flat_map(|t| {
-                        [0, -1, 1].map(|v| {
-                            let mut n = t;
-                            n[axis] = v;
-                            n
-                        })
-                    })
-                    .collect();
-            }
-        }
-    }
-    let mut nets = Vec::new();
-    let mut intervals = Vec::new();
-    let mut views = Vec::new();
-    for tile in &tiles {
-        for (piece, p) in cover.pieces().iter().enumerate() {
-            let cell = &original[p.source][p.cell];
-            let offset = [
-                decode_ratio(&p.translation[0])? + Q::from_integer(tile[0].into()) * &periods[0],
-                decode_ratio(&p.translation[1])? + Q::from_integer(tile[1].into()) * &periods[1],
-            ];
-            nets.push(
-                cell.net
-                    .iter()
-                    .map(|v| {
-                        [
-                            &v[0] + &offset[0] * &v[2],
-                            &v[1] + &offset[1] * &v[2],
-                            v[2].clone(),
-                        ]
-                    })
-                    .collect(),
-            );
-            intervals.push([
-                bound(&cover.cuts()[p.source][p.cuts[0]].value, Some(&cell.domain))?,
-                bound(&cover.cuts()[p.source][p.cuts[1]].value, Some(&cell.domain))?,
-            ]);
-            views.push(OriginalPeriodicSideView {
-                piece,
-                period_shift: tile.map(|n| n.to_string()),
-            });
-        }
-    }
-    let mut centers = Vec::new();
-    let mut groups = Vec::new();
-    for (group, c) in e.carriers.iter().enumerate() {
-        let p = &cover.pieces()[c.piece];
-        if p.source != c.source || p.cell != c.cell {
-            return Err(refused("Periodic side carrier lost its original cell"));
-        }
-        let cell = &original[c.source][c.cell];
-        let bounds = [
-            bound(
-                &aligned.cuts()[c.piece][c.interval].value,
-                Some(&cell.domain),
-            )?,
-            bound(
-                &aligned.cuts()[c.piece][c.interval + 1].value,
-                Some(&cell.domain),
-            )?,
-        ];
-        for tile in 0..tiles.len() {
-            centers.push(arithmetic::carrier_sides::CenterInterval {
-                cell: tile * cover.pieces().len() + c.piece,
-                bounds: bounds.clone(),
-            });
-            groups.push(group);
-        }
-    }
+    let frame = SideChart::new(cover, transported)?;
+    let tiles = frame.tiles();
+    let census = tile_census(cover, &original, &tiles, &frame.periods)?;
+    let (centers, groups) = center_groups(e, cover, aligned.cuts(), &original, tiles.len())?;
     let mut lifted = arithmetic::carrier_sides::probes_with_owned_center_groups(
         arithmetic::carrier_sides::TransverseSegment {
-            nets: &nets,
+            nets: &census.nets,
             selected: c.piece,
             t: &local,
-            radius: &decode_ratio(&o.radius)?,
-            refinements: o.limits.max_refinements,
+            radius: &decode_ratio(radius)?,
+            refinements: limits.max_refinements,
         },
         &centers,
-        o.limits.max_resultant_size,
-        &intervals,
+        limits.max_resultant_size,
+        &census.intervals,
         &groups,
     )?;
     if c.reversed {
         lifted.swap(0, 1);
     }
-    // Completeness of the finite tile census: every actual canonical piece is
-    // inside the closed source chart. Further tiles are >=one full period
-    // away from its center, while this segment stays <half a period away.
-    for axis in 0..2 {
-        let center = (&lifted[0][axis] + &lifted[1][axis]) / Q::from_integer(2.into());
-        if center < chart[axis][0] || center > chart[axis][1] {
-            return Err(refused(
-                "Periodic side center escaped its actual original source chart",
-            ));
-        }
-        if o.transported && wrapped[axis] {
-            let extent = (&lifted[0][axis] - &lifted[1][axis]).abs();
-            if extent >= periods[axis] {
-                return Err(refused(
-                    "Periodic side exceeds the complete adjacent-tile radius allowance",
-                ));
-            }
-        }
-    }
-    let mut canonical = lifted.clone();
-    let mut shifts = std::array::from_fn(|_| std::array::from_fn(|_| "0".to_string()));
-    for side in 0..2 {
-        for axis in 0..2 {
-            if o.transported && wrapped[axis] {
-                let k = ((&canonical[side][axis] - &chart[axis][0]) / &periods[axis])
-                    .floor()
-                    .to_integer();
-                canonical[side][axis] -= Q::from_integer(k.clone()) * &periods[axis];
-                shifts[side][axis] = k.to_string();
-            }
-            if canonical[side][axis] <= chart[axis][0] || canonical[side][axis] >= chart[axis][1] {
-                if allow_natural
-                    && !wrapped[axis]
-                    && (canonical[side][axis] < chart[axis][0]
-                        || canonical[side][axis] > chart[axis][1])
-                {
-                    continue;
-                }
-
-                return Err(refused(
-                    "Periodic side query needs another physical chart or natural support boundary owner",
-                ));
-            }
-        }
-    }
-    let mut jumps = vec!["0".to_string(); o.owner.wire_fluxes().len()];
-    for j in &o.owner.edges()[o.edge].jumps {
-        jumps[j.wire] = j.delta.clone();
-    }
+    frame.verify_census(&lifted)?;
+    let (canonical, shifts) = frame.canonicalize(&lifted, allow_natural)?;
     Ok((
         ratio(&parameter),
         canonical.map(|p| p.map(|q| ratio(&q))),
         lifted.map(|p| p.map(|q| ratio(&q))),
         shifts,
-        views,
-        jumps,
+        census.views,
+        edge_jumps(owner, edge),
     ))
 }
 impl OwnedPeriodicSideProbes {
