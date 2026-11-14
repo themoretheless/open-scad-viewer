@@ -6,7 +6,7 @@
 
 ## P0 — надёжность и ежедневный интерфейс
 
-- [ ] Завершить аудит всех путей UI → worker → Rust: копирование, сериализация, прочие обработчики геометрии и проекция на экран требуют отдельного аудита. Перенос команд не доказывает отзывчивость всего приложения.
+- [ ] Синхронные пути главного потока проинвентаризированы и измерены (раздел «Аудит синхронных путей», `benchmarks/sync-paths.mts`); применение Boolean переведено на разбор в worker. Открыто: копия документа в начале жеста и в запросе worker, автосохранение, клон/сериализация в `commitAsync` и синхронный `commit()` выше цели на 100+ телах и 1000 экземплярах; время кадра браузера — P5.
 - [ ] Закрыть полную матрицу мышь/клавиатура для всех 95 зарегистрированных команд палитры: точный ввод, preview, применение, Esc, Undo/Redo, повтор, смена выбора/группы/модели/панели и ошибка worker. Инвентаризация реестра, навигация по палитре, примитивы, объекты/экземпляры и полигональные команды эскиза проверены отдельными группами (`command-coverage-2026-10-01/`); выполнение остальных команд не квалифицировано. Клавиатурный обход требует сокращения числа переходов Tab.
 - [ ] У каждой ошибки обеспечить конкретный проблемный вход или место в сцене, объяснение на языке интерфейса и доступный следующий шаг. Все темы и все инструменты ещё не прошли общую приёмку.
 - [ ] Проверить отклик на больших сценах, включая main-thread копирование документов, восстановление экземпляров и историю.
@@ -52,3 +52,59 @@
 4. Общие профили, поверхности и замкнутый sweep.
 5. Большие сцены и отображение.
 6. Интеграции и сложное восстановление.
+
+## Аудит синхронных путей (C1, 2026-11-14)
+
+Инвентаризация путей, которые редактор выполняет синхронно на главном потоке. «Worker» означает, что вычисление уже идёт в отменяемом worker, а на главном потоке остаются только подготовка запроса и применение результата.
+
+| Путь | Код | Вызов из UI | Где выполняется |
+|---|---|---|---|
+| Копия документа | `DirectHistory.document` (`structuredClone`), `src/app/directModeling.ts` | начало каждого жеста (`gesture`, `vertexDrag`, `cvDrag`, `curveDrag`, `manipulatorDrag`), `sync()` после коммита без готового документа, дублирование и трансформации (`before`) | главный поток |
+| Сериализация | `serializeDirectDocument`; `persist` в `src/features/directModeler/useDraftPersistence.ts` | каждый `sync()` (автосохранение черновика); запрос `directTransformWorker` при наличии экземпляров | главный поток; запись в IndexedDB асинхронна |
+| Передача в worker | `postMessage` (structured clone) в `MainSolidWorkerClient` | каждый запрос `gizmoWorker`/`booleanWorker`/`nativeNurbsWorker`, в том числе на каждое движение манипулятора | главный поток (клонирование отправителем) |
+| Коммит истории, синхронный | `DirectHistory.commit` → `parseDirectDocument(stringifyMeshJson)` + `serializeDirectDocument` | `commit()` в `DirectModeler.svt`: эскизы, рисование, правки, оставшиеся синхронные команды | главный поток |
+| Коммит истории, после worker | `DirectHistory.commitAsync` (`clone` + `serializeDirectDocument` + проверка блокировок) | дублирование, трансформации, гизмо, теперь и Boolean/Минковский | главный поток (без повторного разбора) |
+| Политика коммита | `prepareDocumentCommit`, `src/features/directModeler/prepareDocumentCommit.ts` | перед каждым коммитом | главный поток |
+| Undo/Redo | `DirectHistory.restoreAsync` + `restoreDocument` | кнопки и сочетания истории | worker (разбор), главный поток сравнивает текст снимка |
+| Разрешение ссылок | `resolveSolidInstances`, `src/kernel/solidInstances.ts` | внутри `parseDirectDocument`, т. е. внутри синхронного `commit()` и импорта | главный поток при синхронном коммите, иначе worker |
+| Прямой Boolean | `applySolidBoolean` в `mainSolidWorkerRuntime`; `useBooleanOperations.runBoolean` | меню Boolean, вычитание A−B, Минковский | вычисление в worker; до C1 применение шло синхронным `commit()` с полным разбором и разрешением экземпляров на главном потоке |
+| Массивы | `setLiveBodyPattern`/`expandLiveBodyPatterns`, `src/app/liveBodyPattern.ts` | действие `pattern` скрипта транзакций и правка массива (`sceneEdit` в worker) | worker; синхронно только через `executeDirectTransaction` (запись/воспроизведение скрипта) |
+| Манипуляторы | `requestDragJob` → `gizmoWorker`; `snapped3` → `resolveModelingSnap` | каждое движение указателя при перетаскивании | правка в worker; привязка и клонирование запроса на главном потоке; чистое смещение — экранный сдвиг без пересчёта |
+| Проекция на экран | `pickBodyAt` → `pickDirectMesh` (`src/app/directPicking.ts`); `polygonView` в `useViewportLayerAndPolygons.ts` | наведение (не чаще раза в 16 мс), щелчок при активном GPU-слое; CPU-отрисовка без WebGPU | главный поток; при WebGPU проекция треугольников идёт на GPU |
+
+Замер: `node --import tsx --import ./src/mcp/registerRawSourceImports.mjs benchmarks/sync-paths.mts [out.json]` (`--quick` для короткого прогона). Значения p50 / p95 в миллисекундах; ✗ — p95 выше цели (визуал ≤50, preview ≤150, Cancel ≤100). Это время JavaScript и WASM в node v22.23.4 на Apple M4 Max (3 прогрева, 20 замеров) при параллельной нагрузке машины другими сборками; оно не является временем кадра браузера: компоновка, отрисовка, сборка мусора от другой работы и доставка `postMessage` не входят. Сцены: 10/100/200 независимых тел из контрольных деталей `benchmarks/cad-roadmap-fixtures.ts` (200 — предел документа) и 1 источник + 999 связанных экземпляров (предел 1000 экземпляров). Строка массива для сцены с 999 экземплярами пропущена: 99 новых экземпляров превысили бы предел.
+
+| Путь (место вызова) | Цель, мс | 10 | 100 | 200 | 1 + 999 экз. |
+|---|---|---:|---:|---:|---:|
+| copy: history.document (structuredClone) (`DirectHistory.document; gesture start, sync()`) | visual ≤50 | 4.21 / 21.8 | 50.0 / 96.8 ✗ | 121.3 / 192.8 ✗ | 240.1 / 362.4 ✗ |
+| serialize: serializeDirectDocument (`useDraftPersistence.persist; directTransformWorker payload`) | visual ≤50 | 1.64 / 6.67 | 33.2 / 73.8 ✗ | 66.3 / 114.6 ✗ | 1.19 / 1.24 |
+| parse: parseDirectDocument (validate + resolve) (`DirectHistory.commit; import fallback`) | preview ≤150 | 2.42 / 17.5 | 47.1 / 77.1 | 100.0 / 138.2 | 681.4 / 740.8 ✗ |
+| history commit, synchronous (`DirectModeler commit() -> DirectHistory.commit`) | preview ≤150 | 9.96 / 22.5 | 155.3 / 192.1 ✗ | 327.6 / 418.6 ✗ | 846.2 / 882.4 ✗ |
+| history commit, worker-validated (commitAsync) (`commitAsync after worker parse`) | visual ≤50 | 5.30 / 20.5 | 136.3 / 183.1 ✗ | 271.1 / 374.6 ✗ | 222.1 / 266.3 ✗ |
+| commit policy: prepareDocumentCommit (`DirectModeler prepareCommit`) | visual ≤50 | 0.00 / 0.00 | 0.03 / 0.03 | 0.06 / 0.10 | 154.4 / 159.2 ✗ |
+| reference resolution: resolveSolidInstances (`parseDirectDocument, transformSolidInstance`) | preview ≤150 | 2.22 / 12.9 | 77.7 / 123.3 | 158.5 / 233.2 ✗ | 860.4 / 883.0 ✗ |
+| direct Boolean apply: sync commit of worker result (before C1) (`useBooleanOperations runBoolean -> commit()`) | preview ≤150 | 11.1 / 33.4 | 163.1 / 207.4 ✗ | 361.3 / 463.2 ✗ | 831.1 / 848.0 ✗ |
+| direct Boolean apply: commitAsync of validated result (C1) (`useBooleanOperations runBoolean -> commitWorkerResult()`) | visual ≤50 | 11.1 / 32.7 | 103.5 / 157.1 ✗ | 268.7 / 496.1 ✗ | 280.0 / 308.7 ✗ |
+| array: setLiveBodyPattern 10x10 + resolve (`pattern action -> resolveSolidInstances`) | preview ≤150 | 236.5 / 289.1 ✗ | 294.1 / 330.4 ✗ | 263.4 / 333.0 ✗ | — |
+| manipulator move: snap resolve over scene edges (`DirectModeler snapped3 -> resolveModelingSnap`) | visual ≤50 | 0.18 / 2.27 | 1.95 / 6.64 | 2.11 / 2.96 | 6.09 / 6.57 |
+| manipulator move: worker request clone (postMessage proxy) (`requestDragJob -> gizmoWorker.run`) | visual ≤50 | 2.02 / 21.0 | 57.8 / 98.7 ✗ | 103.3 / 177.4 ✗ | 286.9 / 301.1 ✗ |
+| screen projection: ray pick over all triangles (`DirectModeler pickBodyAt (hover/GPU click)`) | visual ≤50 | 0.17 / 0.19 | 0.28 / 0.65 | 0.24 / 1.49 | 0.28 / 1.16 |
+| screen projection: project + depth-sort all triangles (CPU fallback) (`useViewportLayerAndPolygons polygonView`) | visual ≤50 | 0.21 / 0.23 | 2.35 / 4.67 | 5.64 / 10.8 | 5.87 / 6.81 |
+
+Что сделано по итогам замера:
+
+- Прямой Boolean и Минковский: worker прогоняет результат через авторитетный `parseDirectDocument` (как уже делалось для `sceneEdit`), UI применяет его через `commitAsync` (`commitWorkerResult` в `DirectModeler.svt`) без повторного разбора и разрешения экземпляров на главном потоке. На сцене с 999 экземплярами применение сократилось с p50 831 мс до 280 мс, на 100 телах с 163 до 104 мс. Тест: `tests/mainSolidWorkerRuntime.test.ts` проверяет, что документ из worker совпадает с результатом повторного разбора и экземпляры разрешены.
+- Луч выбора вынесен в чистую функцию `pickDirectMesh` с тестом `tests/directPicking.test.ts`; замер показывает, что переносить его не нужно (p95 ≤1,5 мс на всех сценах).
+
+Не требуют переноса (ниже цели на всех сценах): привязка при движении манипулятора (p95 ≤7 мс), луч выбора, CPU-проекция и сортировка треугольников (p95 ≤11 мс; при WebGPU не используется).
+
+Остаются выше цели (оформлены задачами, а не перенесены):
+
+1. Копия документа `history.document` в начале жеста и в `sync()`: 97 мс на 100 телах, 193 мс на 200, 362 мс на 999 экземплярах. Нужна неизменяемая модель документа (жест хранит ссылку на снимок, правка создаёт новый объект), а не копия; это изменение владения по всему `DirectModeler.svt`.
+2. Клонирование запроса worker на каждом движении манипулятора (99–301 мс на больших сценах): тот же корень. Решение — держать документ в worker сеанса и отправлять только идентификаторы и параметры жеста.
+3. Автосохранение `serializeDirectDocument` в каждом `sync()`: 74 мс на 100 телах, 115 мс на 200. Можно переиспользовать уже сериализованный текст снимка истории или сериализовать в worker.
+4. `commitAsync` (клон + сериализация, 183–375 мс на 100–200 телах, 266 мс на экземплярах) и `prepareDocumentCommit` на экземплярах (159 мс из-за построчного `stringifyMeshJson` каждой пары экземпляров): worker может вернуть готовый текст снимка, а проверка экземпляров — сравнивать матрицы и ссылку на источник без сериализации сеток.
+5. Синхронный `commit()` (разбор + разрешение ссылок, 192–882 мс): остаётся для эскизов и мелких правок; на больших сценах его нужно заменить разбором в worker по образцу Boolean.
+6. Массивы через `executeDirectTransaction` (p50 236–294 мс): синхронно только при записи и воспроизведении скрипта, интерактивная правка массива идёт в worker.
+
+Время кадра в браузере, Cancel ≤100 мс и FPS при вращении этим замером не покрываются и остаются в P5.
