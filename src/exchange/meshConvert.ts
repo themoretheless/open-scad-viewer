@@ -28,11 +28,11 @@ export type ExportMeshQualityPreset = 'viewport' | 'high' | 'ultra'
 
 export interface MeshExportOptions {
   /** 3MF only: DEFLATE the OPC package. Default true. */
-  readonly compressed?: boolean
+  readonly compressed?: boolean | undefined
   /** Optional export tessellation quality ('viewport' uses existing mesh; 'high'/'ultra' rebuilds from source). */
-  readonly quality?: ExportMeshQualityPreset
+  readonly quality?: ExportMeshQualityPreset | undefined
   /** Source code used to rebuild a denser mesh when quality is 'high' or 'ultra'. */
-  readonly source?: string
+  readonly source?: string | undefined
 }
 export interface MeshConvertOptions extends MeshImportOptions, MeshExportOptions {}
 export type MeshExportArtifact = Awaited<ReturnType<typeof exportMeshFormatCompressed>>

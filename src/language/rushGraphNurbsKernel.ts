@@ -30,7 +30,7 @@ export type OwnNurbsRequest = {
     evaluations?: Array<{
         node: string;
         u: number;
-        v?: number;
+        v?: number | undefined;
     }>;
 };
 export {collectSdfJobs,type SdfTessellationJob} from './rushGraphSdfJobs'

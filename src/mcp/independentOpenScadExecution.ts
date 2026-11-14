@@ -12,10 +12,10 @@ import { parseOpenScadProject } from '../language/openscadParser'
 export type IndependentOpenScadProjectFile = Readonly<{
   path: string
   text: string
-  data_base64?: never
+  data_base64?: undefined
 } | {
   path: string
-  text?: never
+  text?: undefined
   data_base64: string
 }>
 

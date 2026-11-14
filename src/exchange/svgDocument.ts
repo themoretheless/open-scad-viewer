@@ -6,14 +6,14 @@ export { SVG_MAX_BYTES, SVG_MAX_FONT_BYTES, SVG_MAX_TOTAL_FONT_BYTES, SVG_MAX_FO
 
 export interface SvgOptions {
   /** CSS pixels per inch. Standalone documents use 96; OpenSCAD supplies its own DPI. */
-  dpi?: number
+  dpi?: number | undefined
   /** Maximum curve flattening error in millimeters. */
-  tolerance?: number
-  fonts?: readonly Uint8Array[]
-  geometryMode?: 'vector' | 'silhouette'
+  tolerance?: number | undefined
+  fonts?: readonly Uint8Array[] | undefined
+  geometryMode?: 'vector' | 'silhouette' | undefined
   /** Longest raster edge, used only for the explicitly selected silhouette mode. */
-  rasterSize?: number
-  alphaThreshold?: number
+  rasterSize?: number | undefined
+  alphaThreshold?: number | undefined
 }
 
 export interface SvgDocumentResult {

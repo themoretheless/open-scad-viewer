@@ -171,7 +171,7 @@ export interface McpGeometryService {
   export(
     source: string,
     format: ArtifactFormat,
-    options?: { maxBytes?: number; signal?: AbortSignal; name?: string },
+    options?: { maxBytes?: number | undefined; signal?: AbortSignal | undefined; name?: string | undefined },
   ): Promise<GeometryExport>
   customize(source: string, values: Record<string, CustomizerValue>): CustomizeResult
 }
@@ -274,7 +274,7 @@ export class HeadlessGeometryService implements McpGeometryService {
   async export(
     source: string,
     format: ArtifactFormat,
-    options: { maxBytes?: number; signal?: AbortSignal; name?: string } = {},
+    options: { maxBytes?: number | undefined; signal?: AbortSignal | undefined; name?: string | undefined } = {},
   ): Promise<GeometryExport> {
     const maxBytes = options.maxBytes ?? DEFAULT_MAX_ARTIFACT_BYTES
     validateArtifactLimit(maxBytes)
