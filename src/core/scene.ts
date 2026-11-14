@@ -2,6 +2,7 @@ import {isNativeGeometryArtifact,type NativeGeometryArtifact} from './nativeGeom
 import type {
   MeshBvh,
   MeshData,
+  MeshLodLevel,
   MeshProvenanceRun,
   MeshTopologyDiagnostics,
   SceneEntityId,
@@ -42,6 +43,8 @@ export interface SceneEntity {
   readonly color: readonly [number, number, number, number]
   readonly transform: Float32Array
   readonly inspection?: GeometryInspectionArtifacts
+  /** Certified display levels, coarse to fine, in the entity's local coordinates. */
+  readonly lods?: readonly MeshLodLevel[]
 }
 
 export interface GeometryScene {
@@ -109,6 +112,7 @@ export function geometrySceneFromMeshes(meshes: readonly MeshData[]): GeometrySc
       id: mesh.entityId ?? `entity:legacy/${index}`,
       geometryAssetId: id,
       ...(mesh.nativeGeometry?{nativeGeometry:mesh.nativeGeometry}:{}),
+      ...(mesh.lods?{lods:mesh.lods}:{}),
       color: [...mesh.color] as [number, number, number, number],
       transform: mesh.transform,
       inspection: Object.freeze({
@@ -140,6 +144,7 @@ export function meshesFromGeometryScene(scene: GeometryScene): MeshData[] {
       entityId: entity.id,
       geometryAssetId: asset.id,
       ...(entity.nativeGeometry?{nativeGeometry:entity.nativeGeometry}:{}),
+      ...(entity.lods?{lods:entity.lods}:{}),
       vertices: asset.vertices,
       indices: asset.indices,
       bvh: artifacts.bvh,
@@ -169,6 +174,10 @@ export function geometrySceneTransferables(scene: GeometryScene): ArrayBuffer[] 
   for (const asset of scene.assets) { add(asset.vertices); add(asset.indices) }
   for (const entity of scene.entities) {
     add(entity.transform)
+    for (const level of entity.lods ?? []) {
+      add(level.vertices); add(level.indices); add(level.edgeIndices); add(level.faceIds)
+      add(level.bvh.bounds); add(level.bvh.nodes); add(level.bvh.triangles)
+    }
     const artifacts = entity.inspection
     if (artifacts?.state !== 'ready') continue
     add(artifacts.edgeIndices)
@@ -199,6 +208,23 @@ export function assertGeometryScene(scene: GeometryScene): void {
       || entity.color.length !== 4 || !entity.color.every(Number.isFinite)) {
       throw new Error(`Scene entity ${entity.id} has invalid presentation data`)
     }
+    if (entity.lods !== undefined) assertSceneLods(entity.id, entity.lods)
     entityIds.add(entity.id)
   }
+}
+
+function assertSceneLods(id: SceneEntityId, lods: readonly MeshLodLevel[]): void {
+  if (lods.length < 2 || lods.length > 3) throw new Error(`Scene entity ${id} needs two or three display levels`)
+  lods.forEach((level, index) => {
+    const vertexCount = level.vertices.length / 6
+    if (!Number.isInteger(vertexCount) || level.indices.length % 3 !== 0 || level.triangleCount !== level.indices.length / 3
+      || level.faceIds.length !== level.triangleCount || level.indices.some(vertex => vertex >= vertexCount)
+      || !(level.errorUpper >= 0) || !Number.isFinite(level.errorUpper)) {
+      throw new Error(`Scene entity ${id} has an invalid display level ${index}`)
+    }
+    const coarser = lods[index - 1]
+    if (coarser && !(coarser.triangleCount < level.triangleCount && coarser.errorUpper > level.errorUpper)) {
+      throw new Error(`Scene entity ${id} display levels must be ordered coarse to fine`)
+    }
+  })
 }

@@ -315,12 +315,28 @@ export function isMeshBvh(
   return reachedCount === nodeCount && coveredCount === triangles.length
 }
 
+/** Deep element checks for display levels; shape and budgets are checked by the success payload scan. */
+function isMeshLodLevels(value: unknown): boolean {
+  return isDenseExactArray(value, 3) && value.length >= 2 && value.every(level => {
+    if (!isRecord(level) || !isFloat32Payload(level.vertices) || !isUint32Payload(level.indices)
+      || !isUint32Payload(level.edgeIndices) || !isUint32Payload(level.faceIds)) return false
+    const vertexCount = level.vertices.length / MESH_VERTEX_STRIDE, triangleCount = level.indices.length / 3
+    return Number.isInteger(vertexCount) && Number.isInteger(triangleCount)
+      && level.vertices.every(Number.isFinite)
+      && level.edgeIndices.length % 2 === 0
+      && hasOnlyVertexReferences(level.indices, vertexCount)
+      && hasOnlyVertexReferences(level.edgeIndices, vertexCount)
+      && level.faceIds.length === triangleCount
+      && isRecord(level.bvh) && isMeshBvh(level.bvh, triangleCount)
+  })
+}
+
 export function isMeshData(value: unknown): value is MeshData {
   if (!isRecord(value)) return false
   if (!hasExactKeys(value, [
     'vertices', 'indices', 'bvh', 'edgeIndices', 'color', 'transform',
     'faceIds', 'provenance', 'topology',
-  ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'faceIdsInferred', 'nativeGeometry'])
+  ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'faceIdsInferred', 'nativeGeometry', 'lods'])
     || !isFloat32Payload(value.vertices)
     || !isUint32Payload(value.indices)
     || !isUint32Payload(value.edgeIndices)
@@ -343,6 +359,7 @@ export function isMeshData(value: unknown): value is MeshData {
         && candidate.length <= GEOMETRY_WORKER_PAYLOAD_LIMITS.identityCharacters
         && candidate.startsWith('asset:'))
     && optionalKey(value, 'nativeGeometry', isNativeGeometryArtifact)
+    && optionalKey(value, 'lods', isMeshLodLevels)
     && Number.isInteger(vertexCount)
     && Number.isInteger(triangleCount)
     && value.vertices.every(Number.isFinite)

@@ -30,7 +30,7 @@ export function hasSafeSuccessPayload(value: Record<string, unknown>): boolean {
       || !hasExactKeys(candidate, [
         'vertices', 'indices', 'bvh', 'edgeIndices', 'color', 'transform',
         'faceIds', 'provenance', 'topology',
-      ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'faceIdsInferred', 'nativeGeometry'])
+      ], ['entityId', 'geometryAssetId', 'faceIdsAuthoritative', 'faceIdsInferred', 'nativeGeometry', 'lods'])
       || !isFloat32Payload(candidate.vertices)
       || !isUint32Payload(candidate.indices)
       || !isUint32Payload(candidate.edgeIndices)
@@ -63,6 +63,12 @@ export function hasSafeSuccessPayload(value: Record<string, unknown>): boolean {
       const buffer = view.buffer as ArrayBuffer
       if (payloadBuffers.has(buffer)) return false
       payloadBuffers.add(buffer)
+    }
+    if (candidate.lods !== undefined) {
+      const lods = lodPayloadSize(candidate.lods, payloadBuffers)
+      if (!lods) return false
+      triangles += lods.triangles
+      bytes += lods.bytes
     }
     if (candidate.entityId !== undefined) {
       if (typeof candidate.entityId !== 'string' || entityIds.has(candidate.entityId)) return false
@@ -104,6 +110,45 @@ export function hasSafeSuccessPayload(value: Record<string, unknown>): boolean {
       || textCharacters > GEOMETRY_WORKER_PAYLOAD_LIMITS.totalTextCharacters) return false
   }
   return true
+}
+
+/**
+ * Two or three coarse-to-fine display levels: typed views owned by this
+ * publication, a BVH, one provenance run and finite ordered error bounds.
+ * Returns the levels' triangle and byte totals for the publication budget.
+ */
+function lodPayloadSize(value: unknown, payloadBuffers: Set<ArrayBuffer>): { triangles: number; bytes: number } | null {
+  if (!isDenseExactArray(value, 3) || value.length < 2) return null
+  let triangles = 0, bytes = 0, previous: { triangleCount: number; errorUpper: number } | null = null
+  for (const level of value) {
+    if (!isRecord(level)
+      || !hasExactKeys(level, ['vertices', 'indices', 'edgeIndices', 'faceIds', 'bvh', 'provenance', 'triangleCount', 'errorUpper'])
+      || !isFloat32Payload(level.vertices) || !isUint32Payload(level.indices)
+      || !isUint32Payload(level.edgeIndices) || !isUint32Payload(level.faceIds)
+      || !isRecord(level.bvh) || !hasExactKeys(level.bvh, ['version', 'vertexStride', 'leafSize', 'nodeCount', 'bounds', 'nodes', 'triangles'])
+      || !isFloat32Payload(level.bvh.bounds) || !isUint32Payload(level.bvh.nodes) || !isUint32Payload(level.bvh.triangles)
+      || !isNonNegativeSafeInteger(level.triangleCount) || level.indices.length !== level.triangleCount * 3
+      || level.faceIds.length !== level.triangleCount
+      || !isNonNegativeFiniteNumber(level.errorUpper)
+      || !isDenseExactArray(level.provenance, 1)) return null
+    const run = level.provenance[0]
+    if (!isRecord(run) || !hasExactKeys(run, ['triangleStart', 'triangleEnd', 'source', 'backside'])
+      || run.triangleStart !== 0 || run.triangleEnd !== level.triangleCount
+      || (run.source !== null && (!isRecord(run.source)
+        || !hasExactKeys(run.source, ['id', 'originalId', 'start', 'end', 'label'], ['operationId', 'instanceId'])
+        || typeof run.source.label !== 'string'
+        || run.source.label.length > GEOMETRY_WORKER_PAYLOAD_LIMITS.warningCharacters))) return null
+    if (previous && !(previous.triangleCount < level.triangleCount && previous.errorUpper > level.errorUpper)) return null
+    previous = { triangleCount: level.triangleCount, errorUpper: level.errorUpper }
+    for (const view of [level.vertices, level.indices, level.edgeIndices, level.faceIds, level.bvh.bounds, level.bvh.nodes, level.bvh.triangles]) {
+      const buffer = view.buffer as ArrayBuffer
+      if (payloadBuffers.has(buffer)) return null
+      payloadBuffers.add(buffer)
+      bytes += view.byteLength
+    }
+    triangles += level.triangleCount
+  }
+  return { triangles, bytes }
 }
 
 /**

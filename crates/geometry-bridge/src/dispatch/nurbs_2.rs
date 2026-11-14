@@ -19,6 +19,7 @@ const OPS: &[&str] = &[
     "brep_nurbs_display",
     "brep_nurbs_to_polygon",
     "nurbs_viewer_lod_select",
+    "brep_nurbs_display_levels",
 ];
 
 pub(crate) fn route(v: Value) -> Routed {
@@ -152,6 +153,7 @@ fn handle(mut v: Value) -> Result<Value> {
         )?),
         "brep_nurbs_display" => brep_display::dispatch(v),
         "nurbs_viewer_lod_select" => viewer_lod::dispatch(v),
+        "brep_nurbs_display_levels" => brep_display::dispatch_levels(v),
         "brep_nurbs_to_polygon" => {
             let t = brep::nurbs(&take_field(&mut v, "model")?, field(&v, "segments")?)?;
             encode(polygon_core::solid::brep::from_mesh(

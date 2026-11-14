@@ -73,6 +73,7 @@ import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
 import { MeshInstances } from '../kernel/meshInstances'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
+import { updateMeshLods } from './meshLod'
 import {
   OBJECT_UNIFORM_LAYOUT,
   SCENE_UNIFORM_LAYOUT,
@@ -342,6 +343,7 @@ export class WebGPURenderer {
   private frameRetryCount = 0
   /** Frame counter for async validation results; a late clean result must not clear a newer failure. */
   private frameSequence = 0
+  private lastMeshLodKey = ''
   private lastFailedFrame = 0
   private dead = true
   private initialized = false
@@ -1668,6 +1670,7 @@ export class WebGPURenderer {
     this.raf = 0
     if (this.dead || this.lost || !this.initialized) return
     this.notifyCameraChange()
+    this.applyMeshLods()
     // WebGPU validation errors (invalid pipeline, missing bind group, ...) are
     // asynchronous: encoding succeeds and the whole frame is silently dropped
     // while the canvas keeps the previous image. A per-frame validation scope
@@ -1717,6 +1720,42 @@ export class WebGPURenderer {
   }
 
   /** Every camera mutation requests a frame, so per-frame diffing observes them all. */
+  /** Bind the certified display level each LOD mesh needs at the current camera. */
+  private applyMeshLods() {
+    const dev = this.dev, canvas = this.canvas
+    if (!dev || !canvas || !this.meshes.some(mesh => mesh.lod)) return
+    const camera = this.cameraState()
+    const viewportHeightPx = canvas.height > 0 ? canvas.height : canvas.clientHeight
+    if (!(viewportHeightPx > 0)) return
+    // Selection is a pure function of camera, viewport, scene and visibility;
+    // skip the native call on frames where none of them moved.
+    const key = `${camera.eye.join(',')}|${this.dist}|${this.projection}|${this.perspectiveFovY}|${viewportHeightPx}|${this.sceneEpoch}|${this.meshes.map(mesh => mesh.visible ? 1 : 0).join('')}`
+    if (key === this.lastMeshLodKey) return
+    this.lastMeshLodKey = key
+    let changed: GMesh[]
+    try {
+      changed = updateMeshLods(dev, this.meshes, {
+        eye: camera.eye, distance: this.dist, eyeDistance: camera.eyeDistance,
+        fovY: this.perspectiveFovY, projection: this.projection, viewportHeightPx,
+      }, this.nativePicking)
+    } catch {
+      // A refused selection keeps the bound geometry; it is still a valid display.
+      return
+    }
+    if (!changed.length) return
+    const touched = new Set(changed)
+    // Triangle-level hits index the previous level's triangles.
+    if (this.selectedHit && this.selected !== null && touched.has(this.meshes[this.selected])) {
+      this.selectedHit = null
+      this.clearSelectionOverlayBuffers()
+    }
+    if (this.hoveredHit && this.hovered !== null && touched.has(this.meshes[this.hovered])) this.hoveredHit = null
+    this.resetDepthCycle()
+    this.clearDrawCaches()
+    this.rebuildEdgeBufferCache()
+    this.invalidateShadowMap()
+  }
+
   private notifyCameraChange() {
     if (!this.onCameraChange) return
     const state = this.getCameraState()

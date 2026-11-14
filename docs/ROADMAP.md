@@ -18,8 +18,7 @@
 | 3 | Сертифицированное касание в пересечениях кривая/плоскость и поверхность/поверхность | N1 | касательные случаи в `nurbs-intersect/src/queries/curve_plane.rs` возвращают точку или кривую с кратностью, есть тесты на касание и почти касание |
 | 4 | Вывести в редактор готовые нативные результаты | N4 | история Full Round, closed graph Boolean и непрерывный offset доступны командами редактора с отменой, Undo и экспортом в STEP |
 | 5 | Корпус дифференциальных Boolean-тестов Manifold до 100 пар | S4 | `tools/manifold-bench/differential-corpus.json` содержит не меньше 100 случаев, включая вырожденные, и проходит в CI |
-| 6 | Уровни тесселяции во вьюере | N20 | тело хранит 2–3 сертифицированных уровня, вьюер подменяет сетку по `selectViewerLod` при движении камеры |
-| 7 | Сверка квалификационных доказательств | P1 | четыре набора доказательств и `audit:qualification-drift` зелёные; делать в момент низкой активности в ядре |
+| 6 | Сверка квалификационных доказательств | P1 | четыре набора доказательств и `audit:qualification-drift` зелёные; делать в момент низкой активности в ядре |
 
 ## Параллельные потоки
 
@@ -28,7 +27,7 @@
 | Поток | Модули | Очерёдность | Пересечение с рефакторингом |
 |---|---|---|---|
 | А. Пересечения и Boolean | `nurbs-intersect`, `brep-core/src/{intersection,boolean,model}` | N1 → N3 → N2 → N6 → N7, N11, N12 | L2, L8 в brep-core: стартовать от свежего `main`, обходить модули с незакоммиченными правками L2 |
-| Б. Доставка в продукт | `geometry-bridge`, `geometry-wasm`, `src/kernel` | N4 → C15, N14 → N20 | новые операции добавлять в стиле таблиц обработчиков L1 |
+| Б. Доставка в продукт | `geometry-bridge`, `geometry-wasm`, `src/kernel` | N4 → C15, N14 | новые операции добавлять в стиле таблиц обработчиков L1 |
 | В. Оболочка UI | `App.svt`, `DirectModeler.svt`, `src/components` | P3 → C5 → C6 → C7 → C9; затем P4, P7 | границы `src/` из M9/M10 |
 | Г. Отзывчивость и масштаб | workers, `directTransactions`, `sceneController`; `geometry-bridge/src/{abi,mesh}.rs` | C1 → C8 → C14; S2 отдельным исполнителем | S2 пересекается с L1/L2 |
 | Д. Тесты, CI, квалификация | `tests/`, `tools/`, `.github/` | P2 → C2, C3 → P5 → N17 → N18; P1 последним | S4 (медленные тесты), C1 (LFS) |
@@ -59,7 +58,6 @@
 | **N17. Инфраструктура надёжности.** Бенчи ядра и мутационные тесты импортёров уже есть (без внешних зависимостей), `unwrap` классифицированы; остаётся заменить на `Result` 2729 вызовов категории `other` там, где отказ возможен на входе, решить про criterion/proptest, генераторы B-rep с оракулами | P1 | M | нет (Cargo.lock) | — | [roadmap-status](design/nurbs-brep-bvh-roadmap-status.md) «Уборка»; [refactor/unwraps](refactor/unwraps.md); [nurbs-priorities](../nurbs-priorities.md) 224, 226, 232 |
 | **N18. Квалификация и релизные гейты.** Закрыть G0.14 (чистый прогон 4740 единиц на трёх ОС), воспроизводимость, SBOM, дифференциальная матрица против OCCT/geomdl/curvo | P1 | L | да | N17 | [master-plan](design/brep-nurbs-14-stage-master-plan.md) G0.14, карточки 4, 14; [rust-migration-forward-plan](design/rust-migration-forward-plan.md) D3, D4 |
 | **N19. Прогресс и отмена.** Контракт `Progress` и кооперативный `CancellationToken` в циклах пересечений, тесселяции и аппроксимации; поведение при OOM | P1 | M | нет | — | [nurbs-priorities](../nurbs-priorities.md) 920, 921; [brep-completion-status](design/brep-completion-status.md) 12 |
-| **N20. LOD тесселяции во вьюере.** Селектор `tessellation::lod::select` (исправлено колебание при понижении уровня), команда bridge `nurbs_viewer_lod_select` и расчёт экранного масштаба `src/render/viewerLod.ts` сделаны. Остаётся производить во вьюере 2–3 уровня с сертифицированной погрешностью (`brep_nurbs_certified_tessellate` на нескольких допусках) и подменять сетку тела по выбору селектора; нужна пересборка WASM | P1 | S–M | да | — | [nurbs-priorities](../nurbs-priorities.md) 149 |
 | **N22. Упрощение и распознавание аналитики.** Удаление узлов, понижение степени, распознавание примитивов по коэффициентам, `detect_cylinder`/`detect_cone` в лечении | P2 | M | частично | — | [nurbs-next-five](design/nurbs-next-five-priorities-2026-10-22.md) §4; [nurbs-priorities](../nurbs-priorities.md) 814, 874, 876, 1041 |
 | **N24. Параллелизм, память, детерминизм.** rayon в тесселяции и Boolean, кэши базиса, арены, SoA-буферы в GPU | P2 | L | нет | N17 | [nurbs-priorities](../nurbs-priorities.md) 183, 184, 817–826, 1068–1070 |
 | **N26. Мелкие пробелы NURBS и анализа.** Сертифицированная погрешность длины, площади и объёма, FFD с сохранением объёма, сходимость границ `shared_tessellation`/`watertight` лучше линейной, заметка о T-сплайнах | P2 | M | да | — | [roadmap-status](design/nurbs-brep-bvh-roadmap-status.md) «NURBS-ядро»; [nurbs-priorities](../nurbs-priorities.md) 847, 859, 1001, 1031 |

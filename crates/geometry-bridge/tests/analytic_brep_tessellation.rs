@@ -141,3 +141,57 @@ fn rotated_holed_concave_boolean_chains_preserve_volume_and_manifold_seams() {
         assert!((mesh.built.report.signed_volume_mm3 - next_volume).abs() < 1e-6);
     }
 }
+
+#[test]
+fn certified_display_levels_feed_the_viewer_lod_selector() {
+    use geometry_bridge::brep::certified_display_levels;
+    for model in [cylinder(3., 7.).unwrap(), sphere(2.).unwrap()] {
+        let levels = certified_display_levels(&model, &[2, 4, 8])
+            .unwrap()
+            .expect("curved shells refine");
+        assert_eq!(
+            levels.iter().map(|l| l.0).collect::<Vec<_>>(),
+            vec![2, 4, 8]
+        );
+        for pair in levels.windows(2) {
+            assert!(pair[0].1 > pair[1].1, "bounds strictly decrease");
+            assert!(pair[0].2.built.mesh.indices.len() < pair[1].2.built.mesh.indices.len());
+        }
+        for (_, bound, tessellation) in &levels {
+            assert!(bound.is_finite() && *bound > 0.);
+            assert!(tessellation.built.report.closed);
+        }
+        let ladder: Vec<_> = levels
+            .iter()
+            .map(|(_, bound, t)| nurbs_core::tessellation::lod::Level {
+                triangle_count: t.built.mesh.indices.len() / 3,
+                error_upper: *bound,
+            })
+            .collect();
+        let request = |pixels_per_unit| nurbs_core::tessellation::lod::Request {
+            pixels_per_unit,
+            pixel_budget: 1.,
+            triangle_budget: 100_000,
+            hysteresis: 1.5,
+        };
+        let coarse_enough = 1. / ladder[0].error_upper;
+        assert_eq!(
+            nurbs_core::tessellation::lod::select(&ladder, None, request(coarse_enough * 0.5))
+                .unwrap()
+                .level,
+            2
+        );
+        assert_eq!(
+            nurbs_core::tessellation::lod::select(&ladder, Some(2), request(coarse_enough * 0.5))
+                .unwrap()
+                .level,
+            1
+        );
+    }
+    let planar = cuboid([0., 0., 0.], [3., 4., 5.]).unwrap();
+    assert!(certified_display_levels(&planar, &[2, 4])
+        .unwrap()
+        .is_none());
+    assert!(certified_display_levels(&planar, &[4, 2]).is_err());
+    assert!(certified_display_levels(&planar, &[2]).is_err());
+}

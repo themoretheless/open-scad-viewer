@@ -11,7 +11,12 @@ pub(super) fn nurbs_with_freeform_note(
 ) -> Result<Tessellation> {
     nurbs_with_schedule(model, segments, freeform_note, true)
 }
-pub(super) fn nurbs_with_schedule(model:&brep_core::Model,segments:usize,freeform_note:FreeformTessNote,reduce_linear_rulings:bool)->Result<Tessellation> {
+pub(super) fn nurbs_with_schedule(
+    model: &brep_core::Model,
+    segments: usize,
+    freeform_note: FreeformTessNote,
+    reduce_linear_rulings: bool,
+) -> Result<Tessellation> {
     model.validate()?;
     if !(1..=32).contains(&segments) {
         return Err(input("B-rep tessellation segments must be 1..32"));
@@ -84,7 +89,7 @@ pub fn certified_nurbs(
     chord_tolerance_mm: f64,
     max_triangles: usize,
 ) -> Result<CertifiedTessellation> {
-    use brep_core::predicate_evidence::{PredicateEvidence, compose_predicate_evidence};
+    use brep_core::predicate_evidence::{compose_predicate_evidence, PredicateEvidence};
     if !(chord_tolerance_mm.is_finite() && chord_tolerance_mm > 0.)
         || !(12..=20_000).contains(&max_triangles)
     {
@@ -108,7 +113,8 @@ pub fn certified_nurbs(
             "Requested two-sided analytic deviation needs more than 32 subdivisions per patch, or a shell is outside the certified finite matrix",
         ))?;
     let deviation = brep_core::analysis::certified_tessellation_deviation(model, segments)?;
-    let tessellation = nurbs_with_schedule(model, segments, FreeformTessNote::SampledUncertified, false)?;
+    let tessellation =
+        nurbs_with_schedule(model, segments, FreeformTessNote::SampledUncertified, false)?;
     if tessellation.built.mesh.indices.len() / 3 > max_triangles {
         return Err(nurbs_core::Error::new(
             "BREP_TESSELLATION_BUDGET_EXHAUSTED",
@@ -171,7 +177,7 @@ pub fn certified_freeform_nurbs(
     chord_tolerance_mm: f64,
     max_triangles: usize,
 ) -> Result<CertifiedTessellation> {
-    use brep_core::predicate_evidence::{PredicateEvidence, compose_predicate_evidence};
+    use brep_core::predicate_evidence::{compose_predicate_evidence, PredicateEvidence};
     if !(chord_tolerance_mm.is_finite() && chord_tolerance_mm > 0.)
         || !(12..=20_000).contains(&max_triangles)
     {
@@ -471,4 +477,45 @@ pub(super) fn quarter_disk_face(
         }
     }
     Ok(Some(out))
+}
+
+/// Display levels for the viewer LOD selector: one tessellation per requested
+/// subdivision count, each paired with its certified two-sided deviation.
+/// Counts must be strictly increasing within 1..=32. A model outside the
+/// certified analytic families is a typed refusal; a model whose bounds do not
+/// strictly decrease (all-planar bodies have zero deviation at every count)
+/// returns `None`, because one level already displays it exactly.
+pub fn certified_display_levels(
+    model: &brep_core::Model,
+    segments: &[usize],
+) -> Result<Option<Vec<(usize, f64, Tessellation)>>> {
+    if !(2..=3).contains(&segments.len())
+        || segments.windows(2).any(|pair| pair[0] >= pair[1])
+        || segments.iter().any(|count| !(1..=32).contains(count))
+    {
+        return Err(nurbs_core::Error::new(
+            "BREP_TESSELLATION_OPTIONS_INVALID",
+            "Display levels need two or three strictly increasing subdivision counts in 1..32",
+        ));
+    }
+    model.validate()?;
+    let bounds = segments
+        .iter()
+        .map(|&count| brep_core::analysis::certified_tessellation_deviation(model, count))
+        .collect::<Result<Vec<_>>>()?;
+    if bounds.windows(2).any(|pair| pair[0] <= pair[1]) {
+        return Ok(None);
+    }
+    segments
+        .iter()
+        .zip(bounds)
+        .map(|(&count, bound)| {
+            Ok((
+                count,
+                bound,
+                nurbs_with_schedule(model, count, FreeformTessNote::SampledUncertified, false)?,
+            ))
+        })
+        .collect::<Result<Vec<_>>>()
+        .map(Some)
 }

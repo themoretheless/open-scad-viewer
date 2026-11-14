@@ -9,6 +9,7 @@ import type {
   ShadingModel,
 } from './rendererContracts'
 import { buildSceneAabbIndex, type SceneAabbIndex } from './sceneAabbIndex'
+import { createMeshLodState, releaseMeshLod } from './meshLod'
 import { effectiveDisplayAlpha } from './backendQuality'
 import { OBJECT_UNIFORM_LAYOUT } from './shaders'
 import { fillObjectUniform } from './uniformFill'
@@ -173,6 +174,7 @@ export function stageSceneMeshes(
           shadingModel: m.material?.shadingModel ?? ctx.defaultShadingModel,
         })
         const added = next[next.length - 1]
+        added.lod = createMeshLodState(added, m.lods)
         if (added.assetId) {
           const candidates = reusableByAsset.get(added.assetId) ?? []
           candidates.push(added)
@@ -300,6 +302,7 @@ export function destroySceneMeshes(
     buffer.destroy()
   }
   for (const g of meshes) {
+    releaseMeshLod(g, nativePicking)
     if (!preserved.has(g.vb)) nativePicking.release(g.vb)
     destroy(g.edgeIB)
     destroy(g.vb); destroy(g.ib); destroy(g.ub); destroy(g.morphVB)
