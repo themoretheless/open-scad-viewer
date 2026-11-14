@@ -523,3 +523,5 @@ mod point_cloud_filter_tests {
 
 #[cfg(test)]
 mod integration_tests;
+#[cfg(test)]
+mod camera_model_tests;
