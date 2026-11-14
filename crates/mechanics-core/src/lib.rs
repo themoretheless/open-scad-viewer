@@ -17,6 +17,8 @@ pub mod diagnostics;
 pub mod frame;
 pub mod print_strength;
 pub mod section;
+pub mod solid_fem;
+pub mod solid_mesh;
 pub mod structural_profiles;
 pub mod thermal_strength;
 pub mod truss;
