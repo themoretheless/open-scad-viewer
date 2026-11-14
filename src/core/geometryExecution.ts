@@ -8,12 +8,9 @@ import { RUNTIME_GEOMETRY_EVIDENCE_V3 } from './runtimeGeometryEvidenceV3'
 import { RUNTIME_GEOMETRY_EVIDENCE_V4 } from './runtimeGeometryEvidenceV4'
 import { OWN_RUST_CAD_EVIDENCE } from './ownRustCadEvidence'
 import type { GeometryQuality } from './build'
-import { sha256Hex } from './sha256'
 import {
-  parseGeometrySourceRoutingHeader,
   type GeometryLanguageContract,
 } from './geometryRouting'
-import { isWellFormedUnicode } from './unicode'
 import { deepFreeze } from './objects'
 import { computeGeometryManifestDigest, qualifiedRuntimeManifestVersion } from './geometryExecution/geometryEngineClassForLanguageContract'
 export { geometryEngineClassForLanguageContract, canonicalJson, toWireManifest, computeGeometryManifestDigest, geometryProviderAdmissionForManifest, planGeometrySourceExecution, freezeGeometryExecutionDescriptor } from './geometryExecution/geometryEngineClassForLanguageContract'

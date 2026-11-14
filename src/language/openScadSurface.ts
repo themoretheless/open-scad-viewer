@@ -1,11 +1,5 @@
 import type { CallNode } from './openscadCompiler'
 import { OpenSCADParseError } from './openscadErrors'
-import {
-  OpenScadProject,
-  resolveOpenScadProjectPath,
-  type OpenScadProjectFile,
-} from './openScadProject'
-import { u32 } from '../core/bytes'
 export { parseOpenScadSurfaceDat } from './openScadSurface/parseOpenScadSurfaceDat'
 export { decodeOpenScadSurfacePng, prepareOpenScadSurfaceAssets, loadOpenScadSurfaceHeightMap, triangulateOpenScadSurface } from './openScadSurface/decodeOpenScadSurfacePng'
 
@@ -46,7 +40,7 @@ export class OpenScadSurfaceError extends OpenSCADParseError {
   constructor(
     source: string,
     node: Pick<CallNode, 'p' | 'end'>,
-    readonly code: OpenScadSurfaceErrorCode,
+    override readonly code: OpenScadSurfaceErrorCode,
     message: string,
     details: OpenScadSurfaceErrorDetails,
   ) {

@@ -963,6 +963,18 @@ it('cancels subtraction with Escape even when focus is inside its operand panel'
  expect(ui.doc()).toEqual(before)
 })
 
+it('exposes the subtraction card as a labelled non-modal dialog with a pressed operand',async()=>{
+ const ui=await mount();await ui.click('Cube')
+ await ui.click('B-rep A − B')
+ const panel=ui.all().find(n=>n.props.class==='operation-card subtract-card')!
+ expect(panel.props.role).toBe('dialog')
+ expect(panel.props['aria-modal']).toBe('false')
+ const title=ui.all().find(n=>n.props.id===panel.props['aria-labelledby'])
+ expect(title?.tag).toBe('strong')
+ const fields=ui.all().filter(n=>n.props.class==='subtract-field')
+ expect(fields.filter(n=>n.props['aria-pressed']===true)).toHaveLength(1)
+})
+
 it('leaves native Enter on a Cancel button alone and ignores composing Enter',async()=>{
  const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
  const cancel=ui.button('Esc')

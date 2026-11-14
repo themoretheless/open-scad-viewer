@@ -6,6 +6,7 @@ import {
   type ReferenceLanguage,
 } from '../data/functionReference'
 import { highlightCode } from '../language/codeHighlight'
+import Modal from './Modal.svt'
 
 const props = defineProps<{ open: boolean; locale: 'ru' | 'en'; language: ReferenceLanguage; initialQuery?: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -43,9 +44,9 @@ const exampleLanguage = ref<ReferenceLanguage>(props.language)
 const selectedId = ref('translate'), selectedIdSig = signal('translate')
 const copyState = ref<'idle' | 'copying' | 'copied' | 'error'>('idle')
 const searchRef = shallowRef<HTMLInputElement | null>(null)
-const dialogRef = shallowRef<HTMLElement | null>(null)
+const modalRef = shallowRef<{ dialog: HTMLElement | null } | null>(null)
 const detailRef = shallowRef<HTMLElement | null>(null)
-let previousFocus: HTMLElement | null = null, copyRequest = 0
+let copyRequest = 0
 
 function selectFunction(id: string) {
   selectedId.value = id; selectedIdSig.set(id)
@@ -68,23 +69,13 @@ watch([selectedId, exampleLanguage], async () => {
   detailRef.value?.scrollTo({ top: 0 })
 })
 
-watch(() => props.open, async open => {
-  if (open) {
-    previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    query.value = props.initialQuery?.slice(0, 200) ?? ''
-    category.value = 'all'
-    exampleLanguage.value = props.language
-    selectFunction('translate')
-    resetCopyState()
-    await nextTick()
-    if (props.open) searchRef.value?.focus()
-  } else {
-    resetCopyState()
-    const target = previousFocus
-    previousFocus = null
-    await nextTick()
-    if (!props.open && target?.isConnected) target.focus({ preventScroll: true })
-  }
+watch(() => props.open, open => {
+  resetCopyState()
+  if (!open) return
+  query.value = props.initialQuery?.slice(0, 200) ?? ''
+  category.value = 'all'
+  exampleLanguage.value = props.language
+  selectFunction('translate')
 }, { immediate: true })
 
 function requestClose() { emit('close') }
@@ -115,7 +106,7 @@ async function copyExample() {
 }
 
 function focusSelected() {
-  const button = dialogRef.value?.querySelector<HTMLElement>('[data-reference-function][aria-pressed="true"]')
+  const button = modalRef.value?.dialog?.querySelector<HTMLElement>('[data-reference-function][aria-pressed="true"]')
   button?.focus({ preventScroll: true })
   button?.scrollIntoView({ block: 'nearest' })
 }
@@ -132,166 +123,144 @@ async function handleListKeydown(event: KeyboardEvent, index: number) {
   await nextTick()
   focusSelected()
 }
-
-function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    event.stopPropagation()
-    requestClose()
-  } else if (event.key === 'Tab') {
-    const controls = [...(dialogRef.value?.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]',
-    ) ?? [])].filter(control => control.tabIndex >= 0 && control.getClientRects().length > 0)
-    if (!controls.length) return
-    const current = controls.indexOf(document.activeElement as HTMLElement)
-    const next = event.shiftKey
-      ? (current <= 0 ? controls.length - 1 : current - 1)
-      : (current === controls.length - 1 ? 0 : current + 1)
-    event.preventDefault()
-    controls[next].focus()
-  }
-}
 </script>
 
 <template>
-  <Teleport to="body">
-    <div v-if="open" class="reference-backdrop" @pointerdown.self="requestClose">
-      <section
-        ref="dialogRef"
-        class="reference"
-        role="dialog"
-        aria-modal="true"
-        :aria-labelledby="titleId"
-        :aria-describedby="descriptionId"
-        @keydown="handleKeydown"
-      >
-        <header class="reference-header">
-          <div class="reference-heading">
-            <svg class="reference-book" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-              <path d="M12 5.5C9 3.5 5.5 3.5 3 4.5v15c2.5-1 6-1 9 1 3-2 6.5-2 9-1v-15c-2.5-1-6-1-9 1Zm0 0v15" />
-              <path d="M6 8h3M6 11h3m6-3h3m-3 3h3" />
-            </svg>
-            <div>
-              <h2 :id="titleId">{{ copy.title }}</h2>
-              <p :id="descriptionId">{{ copy.description }}</p>
-            </div>
-          </div>
-          <button type="button" class="reference-close" :aria-label="copy.close" @click="requestClose">×</button>
-        </header>
-
-        <div class="reference-toolbar">
-          <div class="reference-search">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" />
-            </svg>
-            <input
-              ref="searchRef"
-              v-model="query"
-              type="search"
-              autocomplete="off"
-              spellcheck="false"
-              maxlength="200"
-              :aria-label="copy.search"
-              :placeholder="copy.placeholder"
-              @keydown.down.prevent="focusSelected"
-            >
-          </div>
-          <div class="reference-languages" role="group" :aria-label="copy.language">
-            <button type="button" :aria-pressed="exampleLanguage === 'openscad'" @click="exampleLanguage = 'openscad'">OpenSCAD</button>
-            <button type="button" :aria-pressed="exampleLanguage === 'rush'" @click="exampleLanguage = 'rush'">RushGraph</button>
-          </div>
+  <Modal
+    ref="modalRef"
+    :open="open"
+    :labelledby="titleId"
+    :describedby="descriptionId"
+    backdrop-class="reference-backdrop"
+    dialog-class="reference"
+    :initial-focus="() => searchRef"
+    @close="requestClose"
+  >
+    <header class="reference-header">
+      <div class="reference-heading">
+        <svg class="reference-book" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M12 5.5C9 3.5 5.5 3.5 3 4.5v15c2.5-1 6-1 9 1 3-2 6.5-2 9-1v-15c-2.5-1-6-1-9 1Zm0 0v15" />
+          <path d="M6 8h3M6 11h3m6-3h3m-3 3h3" />
+        </svg>
+        <div>
+          <h2 :id="titleId">{{ copy.title }}</h2>
+          <p :id="descriptionId">{{ copy.description }}</p>
         </div>
+      </div>
+      <button type="button" class="reference-close" :aria-label="copy.close" @click="requestClose">×</button>
+    </header>
 
-        <div class="reference-body">
-          <aside class="reference-sidebar" :aria-label="copy.functions">
-            <div class="reference-filter">
-              <label :for="categoryId">{{ copy.category }}</label>
-              <select :id="categoryId" v-model="category">
-                <option value="all">{{ copy.all }}</option>
-                <option v-for="item in REFERENCE_CATEGORIES" :key="item.id" :value="item.id">{{ item.label[locale] }}</option>
-              </select>
-              <span class="reference-count" role="status">{{ copy.found }}: {{ filtered.length }}</span>
-            </div>
-            <nav class="reference-list" :aria-label="copy.functions">
-              <button
-                v-for="(entry, index) in filtered"
-                :key="entry.id"
-                type="button"
-                data-reference-function
-                :aria-pressed="entry.id === selectedIdSig()"
-                :aria-controls="detailId"
-                :tabindex="entry.id === selectedIdSig() ? 0 : -1"
-                @click="selectFunction(entry.id)"
-                @keydown="handleListKeydown($event, index)"
-              >
-                <span class="reference-function-name">{{ entry.name }}</span>
-                <span class="reference-function-summary">{{ entry.summary[locale] }}</span>
-              </button>
-            </nav>
-          </aside>
-
-          <article
-            v-if="selected && variant"
-            :id="detailId"
-            ref="detailRef"
-            class="reference-detail"
-            tabindex="0"
-            :aria-label="`${copy.detail}: ${selected.name}`"
-          >
-            <span class="reference-category-tag">{{ selectedCategory?.label[locale] }}</span>
-            <h3>{{ selected.name }}</h3>
-            <p class="reference-summary">{{ selected.summary[locale] }}</p>
-
-            <h4>{{ copy.syntax }}</h4>
-            <pre class="reference-signature"><code>{{ variant.signature }}</code></pre>
-
-            <template v-if="variant.parameters.length">
-              <h4>{{ copy.parameters }}</h4>
-              <dl class="reference-parameters">
-                <div v-for="parameter in variant.parameters" :key="parameter.name">
-                  <dt><code>{{ parameter.name }}</code></dt>
-                  <dd>{{ parameter.description[locale] }}</dd>
-                </div>
-              </dl>
-            </template>
-
-            <aside v-if="variant.notes" class="reference-note">
-              <h4>{{ copy.note }}</h4>
-              <p>{{ variant.notes[locale] }}</p>
-            </aside>
-
-            <div class="reference-example-heading">
-              <h4>{{ copy.example }}</h4>
-              <span>{{ exampleLanguage === 'openscad' ? 'OpenSCAD' : 'RushGraph' }}</span>
-              <button type="button" class="reference-copy" :disabled="copyState === 'copying'" @click="copyExample">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                  <path v-if="copyState === 'copied'" d="m5 12 4 4L19 6" />
-                  <template v-else><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V4H4v12h4" /></template>
-                </svg>
-                {{ copyState === 'copied' ? copy.copied : copyState === 'copying' ? copy.copying : copy.copy }}
-              </button>
-            </div>
-            <pre class="reference-example" tabindex="0" :aria-label="copy.example"><code v-html="highlightedExample"></code></pre>
-            <p class="reference-example-hint">{{ copy.exampleHint }}</p>
-            <p class="reference-copy-status" :class="{ 'is-error': copyState === 'error' }" role="status" aria-live="polite" aria-atomic="true">
-              {{ copyState === 'copied' ? copy.copied : copyState === 'error' ? copy.copyError : '' }}
-            </p>
-          </article>
-
-          <div v-else :id="detailId" class="reference-empty">
-            <h3>{{ copy.empty }}</h3>
-            <p>{{ copy.emptyHint }}</p>
-            <button type="button" @click="resetFilters">{{ copy.reset }}</button>
-          </div>
-        </div>
-      </section>
+    <div class="reference-toolbar">
+      <div class="reference-search">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" />
+        </svg>
+        <input
+          ref="searchRef"
+          v-model="query"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          maxlength="200"
+          :aria-label="copy.search"
+          :placeholder="copy.placeholder"
+          @keydown.down.prevent="focusSelected"
+        >
+      </div>
+      <div class="reference-languages" role="group" :aria-label="copy.language">
+        <button type="button" :aria-pressed="exampleLanguage === 'openscad'" @click="exampleLanguage = 'openscad'">OpenSCAD</button>
+        <button type="button" :aria-pressed="exampleLanguage === 'rush'" @click="exampleLanguage = 'rush'">RushGraph</button>
+      </div>
     </div>
-  </Teleport>
+
+    <div class="reference-body">
+      <aside class="reference-sidebar" :aria-label="copy.functions">
+        <div class="reference-filter">
+          <label :for="categoryId">{{ copy.category }}</label>
+          <select :id="categoryId" v-model="category">
+            <option value="all">{{ copy.all }}</option>
+            <option v-for="item in REFERENCE_CATEGORIES" :key="item.id" :value="item.id">{{ item.label[locale] }}</option>
+          </select>
+          <span class="reference-count" role="status">{{ copy.found }}: {{ filtered.length }}</span>
+        </div>
+        <nav class="reference-list" :aria-label="copy.functions">
+          <button
+            v-for="(entry, index) in filtered"
+            :key="entry.id"
+            type="button"
+            data-reference-function
+            :aria-pressed="entry.id === selectedIdSig()"
+            :aria-controls="detailId"
+            :tabindex="entry.id === selectedIdSig() ? 0 : -1"
+            @click="selectFunction(entry.id)"
+            @keydown="handleListKeydown($event, index)"
+          >
+            <span class="reference-function-name">{{ entry.name }}</span>
+            <span class="reference-function-summary">{{ entry.summary[locale] }}</span>
+          </button>
+        </nav>
+      </aside>
+
+      <article
+        v-if="selected && variant"
+        :id="detailId"
+        ref="detailRef"
+        class="reference-detail"
+        tabindex="0"
+        :aria-label="`${copy.detail}: ${selected.name}`"
+      >
+        <span class="reference-category-tag">{{ selectedCategory?.label[locale] }}</span>
+        <h3>{{ selected.name }}</h3>
+        <p class="reference-summary">{{ selected.summary[locale] }}</p>
+
+        <h4>{{ copy.syntax }}</h4>
+        <pre class="reference-signature"><code>{{ variant.signature }}</code></pre>
+
+        <template v-if="variant.parameters.length">
+          <h4>{{ copy.parameters }}</h4>
+          <dl class="reference-parameters">
+            <div v-for="parameter in variant.parameters" :key="parameter.name">
+              <dt><code>{{ parameter.name }}</code></dt>
+              <dd>{{ parameter.description[locale] }}</dd>
+            </div>
+          </dl>
+        </template>
+
+        <aside v-if="variant.notes" class="reference-note">
+          <h4>{{ copy.note }}</h4>
+          <p>{{ variant.notes[locale] }}</p>
+        </aside>
+
+        <div class="reference-example-heading">
+          <h4>{{ copy.example }}</h4>
+          <span>{{ exampleLanguage === 'openscad' ? 'OpenSCAD' : 'RushGraph' }}</span>
+          <button type="button" class="reference-copy" :disabled="copyState === 'copying'" @click="copyExample">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path v-if="copyState === 'copied'" d="m5 12 4 4L19 6" />
+              <template v-else><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V4H4v12h4" /></template>
+            </svg>
+            {{ copyState === 'copied' ? copy.copied : copyState === 'copying' ? copy.copying : copy.copy }}
+          </button>
+        </div>
+        <pre class="reference-example" tabindex="0" :aria-label="copy.example"><code v-html="highlightedExample"></code></pre>
+        <p class="reference-example-hint">{{ copy.exampleHint }}</p>
+        <p class="reference-copy-status" :class="{ 'is-error': copyState === 'error' }" role="status" aria-live="polite" aria-atomic="true">
+          {{ copyState === 'copied' ? copy.copied : copyState === 'error' ? copy.copyError : '' }}
+        </p>
+      </article>
+
+      <div v-else :id="detailId" class="reference-empty">
+        <h3>{{ copy.empty }}</h3>
+        <p>{{ copy.emptyHint }}</p>
+        <button type="button" @click="resetFilters">{{ copy.reset }}</button>
+      </div>
+    </div>
+  </Modal>
 </template>
 
 <style scoped>
-.reference-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(4, 6, 10, .64); backdrop-filter: blur(3px); }
-.reference { display: flex; flex-direction: column; width: min(940px, 100%); height: min(760px, 92dvh); min-height: 0; overflow: hidden; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 80px rgba(0, 0, 0, .45); }
+:global(.reference-backdrop) { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(4, 6, 10, .64); backdrop-filter: blur(3px); }
+:global(.reference) { display: flex; flex-direction: column; width: min(940px, 100%); height: min(760px, 92dvh); min-height: 0; overflow: hidden; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 80px rgba(0, 0, 0, .45); }
 .reference button, .reference input, .reference select { font: inherit; }
 .reference button { color: inherit; cursor: pointer; }
 .reference button:focus-visible, .reference input:focus-visible, .reference select:focus-visible, .reference [tabindex="0"]:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
@@ -358,8 +327,8 @@ function handleKeydown(event: KeyboardEvent) {
 .reference-empty p { margin: 0; color: var(--text-dim); font-size: .8rem; line-height: 1.5; }
 .reference-empty button { min-height: 36px; margin-top: 6px; padding: 7px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-raised); font-size: .75rem; }
 @media (max-width: 620px) {
-  .reference-backdrop { padding: 8px; }
-  .reference { height: 96dvh; border-radius: 11px; }
+  :global(.reference-backdrop) { padding: 8px; }
+  :global(.reference) { height: 96dvh; border-radius: 11px; }
   .reference-header { padding: 14px 13px 12px; gap: 8px; }
   .reference-heading { gap: 9px; }
   .reference-book { width: 20px; }

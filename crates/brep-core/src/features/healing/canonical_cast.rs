@@ -7,11 +7,14 @@
 //! rewritten. Any failed fit, projection, area or validation gate discards the
 //! private staged model.
 
-use crate::analysis::surface_classify::{SurfaceClass, classify_surface, face_area};
+use crate::analysis::surface_classify::{
+    SurfaceClass, SurfaceClassification, classify_surface, face_area,
+};
 use crate::healing_report::{
     HealingConversion, HealingGapSummary, HealingReport, HealingRun, HealingStageReport,
-    HealingStatus, model_hash,
+    HealingStageSkip, HealingStatus, model_hash,
 };
+use nurbs_core::analysis::analytic_recognition::{AnalyticPrimitive, certify_primitive};
 use crate::{Coedge, Model};
 use nurbs_core::analysis::ransac_primitives::{
     PrimitiveKind, PrimitiveParams, RansacOptions, detect_primitives,
@@ -29,6 +32,10 @@ pub const CANONICAL_CAST_PROJECTION: &str = "BREP_CANONICAL_CAST_PROJECTION";
 pub const CANONICAL_CAST_AREA_DELTA: &str = "BREP_CANONICAL_CAST_AREA_DELTA";
 pub const CANONICAL_CAST_AREA_GREW: &str = "BREP_CANONICAL_CAST_AREA_GREW";
 pub const CANONICAL_CAST_VALIDATION: &str = "BREP_CANONICAL_CAST_VALIDATION";
+/// Stage-skip code for a freeform face certified (from its coefficients) to
+/// lie on a cylinder or cone. The face geometry is left untouched; the
+/// annotation carries the primitive parameters and the distance bound.
+pub const CANONICAL_CAST_ANALYTIC_ANNOTATED: &str = "BREP_CANONICAL_CAST_ANALYTIC_ANNOTATED";
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CanonicalCastBudget {
@@ -388,6 +395,66 @@ fn reproject_trims(
     Ok(replacements)
 }
 
+/// Turn a sampled cylinder/cone classification into exact primitive
+/// parameters and certify the face carrier against them from its
+/// coefficients. Cone apex/half-angle come from a least-squares line of
+/// radial distance against axial height along the classified axis.
+fn certify_rotational(
+    surface: &Surface,
+    class: &SurfaceClassification,
+    tolerance_mm: f64,
+) -> Result<Option<(AnalyticPrimitive, f64)>> {
+    let Some(axis) = class.axis else { return Ok(None) };
+    let primitive = match class.class {
+        SurfaceClass::Cylinder => {
+            let Some(radius) = class.radius else { return Ok(None) };
+            AnalyticPrimitive::Cylinder { point: axis.point, axis: axis.direction, radius }
+        }
+        SurfaceClass::Cone => {
+            let mut e = axis.direction;
+            let (p, q) = (surface.degree_u, surface.degree_v);
+            let (n, m) = (surface.control_points.len(), surface.control_points[0].len());
+            let (u0, u1) = (surface.knots_u[p], surface.knots_u[n]);
+            let (v0, v1) = (surface.knots_v[q], surface.knots_v[m]);
+            let mut rows = Vec::new();
+            for i in 0..=8 {
+                for j in 0..=8 {
+                    let ev = surface.evaluate(
+                        u0 + (u1 - u0) * i as f64 / 8.,
+                        v0 + (v1 - v0) * j as f64 / 8.,
+                    )?;
+                    let d = sub([ev.point[0], ev.point[1], ev.point[2]], axis.point);
+                    let h = dot(d, e);
+                    rows.push((h, norm(sub(d, mul(e, h)))));
+                }
+            }
+            let k = rows.len() as f64;
+            let (sh, sr) = rows.iter().fold((0., 0.), |a, r| (a.0 + r.0, a.1 + r.1));
+            let (mh, mr) = (sh / k, sr / k);
+            let (sxy, sxx) = rows
+                .iter()
+                .fold((0., 0.), |a, r| (a.0 + (r.0 - mh) * (r.1 - mr), a.1 + (r.0 - mh).powi(2)));
+            if !(sxx > 0.) {
+                return Ok(None);
+            }
+            let mut slope = sxy / sxx;
+            let apex_h = mh - mr / slope;
+            if !slope.is_finite() || slope == 0. || !apex_h.is_finite() {
+                return Ok(None);
+            }
+            let apex = add(axis.point, mul(e, apex_h));
+            if slope < 0. {
+                e = mul(e, -1.);
+                slope = -slope;
+            }
+            AnalyticPrimitive::Cone { apex, axis: e, half_angle: slope.atan() }
+        }
+        _ => return Ok(None),
+    };
+    let Ok(Some(bound)) = certify_primitive(surface, &primitive) else { return Ok(None) };
+    Ok((bound <= tolerance_mm).then_some((primitive, bound)))
+}
+
 fn unsupported_rotational(class: SurfaceClass) -> Result<()> {
     if matches!(class, SurfaceClass::Cylinder | SurfaceClass::Cone) {
         Err(fail(
@@ -429,8 +496,11 @@ fn check_area_delta(before: f64, after: f64, cap: f64) -> Result<f64> {
 
 /// Cast eligible near-plane faces to exact affine plane carriers.
 ///
-/// The input is never mutated. Cylinder/cone targets and subcurve coedge trims
-/// are typed unsupported refusals. Existing exact affine planes and already
+/// The input is never mutated. Cylinder/cone faces whose coefficients are
+/// certified within `tolerance_mm` of the classified primitive are annotated
+/// in an `analyticRecognition` stage (geometry unchanged); uncertified
+/// cylinder/cone targets and subcurve coedge trims are typed unsupported
+/// refusals. Existing exact affine planes and already
 /// analytic rotational faces are left untouched, making replay idempotent.
 pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Result<HealingRun> {
     if !budget.tolerance_mm.is_finite()
@@ -454,6 +524,7 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
     })?;
 
     let mut candidates = Vec::new();
+    let mut annotations = Vec::new();
     for face in 0..model.faces.len() {
         let surface = &model.faces[face].surface;
         if exact_affine_plane(surface) {
@@ -461,6 +532,19 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
         }
         let candidate = classify_surface(surface, budget.tolerance_mm, &budget.work)?;
         if matches!(candidate.class, SurfaceClass::Cylinder | SurfaceClass::Cone) {
+            if let Some((primitive, bound)) =
+                certify_rotational(surface, &candidate, budget.tolerance_mm)?
+            {
+                annotations.push(HealingStageSkip {
+                    entity: model.1.faces[face],
+                    code: CANONICAL_CAST_ANALYTIC_ANNOTATED.into(),
+                    message: format!(
+                        "Coefficient-certified {primitive:?}; distance bound {bound:.3e} mm; geometry unchanged"
+                    ),
+                    measured_mm: Some(bound),
+                });
+                continue;
+            }
             let strict = classify_surface(surface, model.tolerance_mm.max(1e-7), &budget.work)?;
             if strict.class == candidate.class {
                 continue;
@@ -556,6 +640,22 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
         )
     })?;
     let fixed = conversions.len();
+    let mut stages = vec![HealingStageReport {
+        stage: "canonicalCast".into(),
+        fixed,
+        skipped: 0,
+        remaining: 0,
+        skipped_details: Vec::new(),
+    }];
+    if !annotations.is_empty() {
+        stages.push(HealingStageReport {
+            stage: "analyticRecognition".into(),
+            fixed: 0,
+            skipped: annotations.len(),
+            remaining: 0,
+            skipped_details: annotations,
+        });
+    }
     if fixed == 0 {
         before_deviation = 0.;
         after_deviation = 0.;
@@ -578,13 +678,7 @@ pub fn cast_canonical_surfaces(model: &Model, budget: CanonicalCastBudget) -> Re
         unresolved_defects: Vec::new(),
         refusal_reasons: Vec::new(),
         tolerance_unification: None,
-        stages: vec![HealingStageReport {
-            stage: "canonicalCast".into(),
-            fixed,
-            skipped: 0,
-            remaining: 0,
-            skipped_details: Vec::new(),
-        }],
+        stages,
     };
     report.validate()?;
     Ok(HealingRun {
@@ -740,6 +834,48 @@ mod tests {
         let model = near_plane(1e-4, 1.);
         let error = cast_canonical_surfaces(&model, options(f64::NAN, 1.)).unwrap_err();
         assert_eq!(error.code, CANONICAL_CAST_BUDGET);
+    }
+
+    #[test]
+    fn analytic_cylinder_and_cone_faces_are_certified_and_annotated() {
+        for (model, kind) in [
+            (crate::cylinder(1.5, 3.).unwrap(), "Cylinder"),
+            (crate::frustum(2., 1., 3.).unwrap(), "Cone"),
+        ] {
+            let run = cast_canonical_surfaces(&model, options(1e-6, 1e-6)).unwrap();
+            assert_eq!(run.report.input_hash, run.report.output_hash, "geometry unchanged");
+            let stage = run
+                .report
+                .stages
+                .iter()
+                .find(|s| s.stage == "analyticRecognition")
+                .expect("annotation stage");
+            assert_eq!(stage.skipped, 4, "{kind}: four side patches");
+            for skip in &stage.skipped_details {
+                assert_eq!(skip.code, CANONICAL_CAST_ANALYTIC_ANNOTATED);
+                assert!(skip.message.contains(kind), "{}", skip.message);
+                assert!(skip.measured_mm.unwrap() <= 1e-6);
+            }
+        }
+    }
+
+    #[test]
+    fn near_cylinder_off_tolerance_is_not_annotated() {
+        let mut model = crate::cylinder(1.5, 3.).unwrap();
+        let side = (0..model.faces.len())
+            .find(|&f| model.faces[f].surface.degree_u == 2 || model.faces[f].surface.degree_v == 2)
+            .unwrap();
+        let class = classify_surface(&model.faces[side].surface, 1e-3, &Budget::default()).unwrap();
+        assert_eq!(class.class, SurfaceClass::Cylinder);
+        // Shift the carrier radially by 1e-4: still a sampled near-cylinder at
+        // 1e-3, but the coefficient certificate at 1e-6 must refuse it.
+        for row in &mut model.faces[side].surface.control_points {
+            for p in row {
+                p[0] *= 1. + 1e-4;
+            }
+        }
+        let class = classify_surface(&model.faces[side].surface, 1e-3, &Budget::default()).unwrap();
+        assert!(certify_rotational(&model.faces[side].surface, &class, 1e-6).unwrap().is_none());
     }
 
     #[test]

@@ -157,3 +157,27 @@ describe('real B-rep SemanticProgram scene assembly', () => {
     } finally { spy.mockRestore() }
   })
 })
+
+describe('certified display levels on B-rep scene bodies', () => {
+  it('publishes ordered levels for curved bodies and carries them through validation and scene transport', async () => {
+    const build = await buildBrepSemanticScene(lower('cylinder(h=4, r=2);'), policy)
+    const [mesh] = build.result.meshes
+    expect(mesh.lods?.map(level => level.triangleCount).every((count, i, all) => i === 0 || count > all[i - 1])).toBe(true)
+    expect(mesh.lods?.length).toBe(3)
+    for (const [i, level] of mesh.lods!.entries()) {
+      expect(level.indices.length).toBe(level.triangleCount * 3)
+      expect(level.faceIds.length).toBe(level.triangleCount)
+      expect(level.provenance).toEqual([expect.objectContaining({triangleStart: 0, triangleEnd: level.triangleCount})])
+      if (i) expect(level.errorUpper).toBeLessThan(mesh.lods![i - 1].errorUpper)
+    }
+    expect(isGeometryEvaluationResultPayload(build.result)).toBe(true)
+    const [restored] = meshesFromGeometryScene(geometrySceneFromMeshes(build.result.meshes))
+    expect(restored.lods).toBe(mesh.lods)
+  })
+
+  it('publishes no levels for planar bodies, which one level shows exactly', async () => {
+    const build = await buildBrepSemanticScene(lower('cube([2,3,4]);'), policy)
+    expect(build.result.meshes[0].lods).toBeUndefined()
+    expect(isGeometryEvaluationResultPayload(build.result)).toBe(true)
+  })
+})

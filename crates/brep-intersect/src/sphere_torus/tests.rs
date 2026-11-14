@@ -655,7 +655,15 @@ fn off_axis_sphere_cylinder_and_cone_booleans_balance_volumes() {
             .unwrap()
             .signed_volume_mm3
     };
-    let cases: [(Model, f64, f64, [f64; 3], bool); 4] = [
+    // A sphere through the cylinder's rim/seam vertex (2, 0, 8): the network
+    // has a vertex at an original vertex.
+    let through_vertex = {
+        let dir = [-0.6, 0.3, -0.742_f64];
+        let n = dir.iter().map(|x| x * x).sum::<f64>().sqrt();
+        [2. + 1.5 * dir[0] / n, 1.5 * dir[1] / n, 8. + 1.5 * dir[2] / n]
+    };
+    let cases: [(Model, f64, f64, [f64; 3], bool); 5] = [
+        (brep_core::analytic::cylinder(2., 8.).unwrap(), PI * 4. * 8., 1.5, through_vertex, true),
         // Reaching the top cap of a frustum across its rim.
         (
             brep_core::analytic::frustum(2., 4., 6.).unwrap(),
@@ -710,15 +718,22 @@ fn off_axis_torus_cylinder_and_cone_booleans_balance_volumes() {
     };
     let small = brep_core::analytic::torus(2., 0.5).unwrap();
     let big = brep_core::analytic::torus(3., 1.).unwrap();
-    let cases: [(Model, f64, Model, f64, bool); 4] = [
-        // A short frustum whose bottom cap the torus crosses.
+    let short_frustum = |at: [f64; 3]| {
         (
-            translated(&brep_core::analytic::frustum(2., 3., 1.5).unwrap(), [0.6, 0.25, -0.9]),
+            translated(&brep_core::analytic::frustum(2., 3., 1.5).unwrap(), at),
             PI * 1.5 * (4. + 6. + 9.) / 3.,
             brep_core::analytic::torus(3., 1.).unwrap(),
             2. * PI * PI * 3.,
             false,
-        ),
+        )
+    };
+    let cases: [(Model, f64, Model, f64, bool); 6] = [
+        // A short frustum whose bottom cap the torus crosses.
+        short_frustum([0.6, 0.25, -0.9]),
+        // Both caps crossed; the loop grazes the bottom rim, and a run
+        // between two cuts spans several traced pieces.
+        short_frustum([0.5, 0.21, -0.75]),
+        short_frustum([0.37, 0.13, -0.75]),
         // A short cylinder whose caps the torus crosses.
         (
             translated(&brep_core::analytic::cylinder(2.2, 1.5).unwrap(), [0.5, 0., -0.75]),
@@ -761,4 +776,15 @@ fn off_axis_torus_cylinder_and_cone_booleans_balance_volumes() {
         assert!((u + i - vo - vt).abs() <= tol, "union {u} + {i} vs {}", vo + vt);
         assert!((d - (vo - i)).abs() <= tol, "difference {d} vs {}", vo - i);
     }
+}
+
+#[test]
+fn torus_tangent_to_its_own_seam_at_a_vertex_is_refused() {
+    // The mirror plane y = 0 makes the contact curve touch the torus's inner
+    // equator seam at its vertex (-2, 0, 0): the chart cannot order the two
+    // tangent edges, so the Boolean refuses instead of guessing.
+    let frustum = translated(&brep_core::analytic::frustum(2., 3., 1.5).unwrap(), [0.5, 0., -0.75]);
+    let torus = brep_core::analytic::torus(3., 1.).unwrap();
+    let error = cone_torus_boolean(&frustum, &torus, "union").unwrap_err();
+    assert_eq!(error.code, "BREP_UNSUPPORTED_OPERATION");
 }

@@ -7,9 +7,9 @@
  */
 
 
-import type { GpuCsgPrimitive, GpuCsgTerm, GpuCsgTree } from './gpuCsgTypes'
-import { CSG_COMMON_WGSL, CSG_DEPTH_WGSL, CSG_SHADE_WGSL } from './gpuCsgShaders'
-import { generateUnitCube, generateUnitCylinder, generateUnitSphere, normalMatrixFromModel, multiplyMat4, type GeometryData } from './gpuCsgPrimitives'
+import type { GpuCsgPrimitive, GpuCsgTree } from './gpuCsgTypes'
+import { CSG_DEPTH_WGSL, CSG_SHADE_WGSL } from './gpuCsgShaders'
+import { normalMatrixFromModel } from './gpuCsgPrimitives'
 import { GpuCsgGeometryCache } from './gpuCsgGeometryCache'
 
 export interface CsgPipelines {

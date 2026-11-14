@@ -1,5 +1,46 @@
-import {GeometryKernelError,decodeNurbsResult,kernelRuntime,kernelVertexFormat} from './kernel'
+import {decodeNurbsResult,GeometryKernelError,kernelRuntime,kernelVertexFormat} from './kernel'
 import {copyBuffer} from './bufferTransport'
+import manifoldReportSchema from './manifoldReportSchema.json'
+
+/**
+ * Versioned contract of the Manifold reports below. The same file is read by
+ * a geometry-bridge test that compares it with the Rust `MANIFOLD_REPORT_SCHEMA`,
+ * and by a TS test that compares it with the field sets of real kernel reports.
+ */
+export const MANIFOLD_REPORT_SCHEMA = manifoldReportSchema
+/** Manifold WASM export surface version this TypeScript expects. */
+export const MANIFOLD_ABI_VERSION: number = manifoldReportSchema.abiVersion
+
+/** The loaded geometry kernel exports a different Manifold ABI than this TypeScript expects. */
+export class ManifoldAbiMismatchError extends GeometryKernelError {
+  constructor(public readonly expected: number, public readonly actual: number | null) {
+    super('GEOMETRY_ABI_MISMATCH', actual === null
+      ? `Geometry kernel has no Manifold ABI version export (expected v${expected}); rebuild the WASM kernel`
+      : `Geometry kernel Manifold ABI v${actual} does not match TypeScript v${expected}; rebuild the WASM kernel or reload the app`)
+    this.name = 'ManifoldAbiMismatchError'
+  }
+}
+
+const verifiedManifoldExports = new WeakSet<object>()
+
+/**
+ * Refuse a kernel instance whose Manifold ABI differs from this build. Runs
+ * once per instance, before its first Manifold call; a stale kernel paired
+ * with newer TS (or the reverse) fails with a typed error instead of reading
+ * misaligned result slots.
+ */
+export function assertManifoldAbi(exports: {abi_manifold_abi_version?: () => number}): void {
+  if (verifiedManifoldExports.has(exports)) return
+  const actual = typeof exports.abi_manifold_abi_version === 'function' ? exports.abi_manifold_abi_version() >>> 0 : null
+  if (actual !== MANIFOLD_ABI_VERSION) throw new ManifoldAbiMismatchError(MANIFOLD_ABI_VERSION, actual)
+  verifiedManifoldExports.add(exports)
+}
+
+function manifoldRuntime(): ReturnType<typeof kernelRuntime> {
+  const runtime = kernelRuntime()
+  assertManifoldAbi(runtime.exports)
+  return runtime
+}
 
 export interface KernelManifoldReport {
   readonly vertexCount: number
@@ -40,7 +81,7 @@ export function checkManifoldInKernel(
   vertices: Float32Array | Float64Array,
   indices: Uint32Array,
 ): KernelManifoldReport {
-  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
   let vp = 0
   let ip = 0
   let handle = 0
@@ -83,7 +124,7 @@ export function repairManifoldInKernel(
   epsilon: number,
   full = false,
 ): KernelManifoldRepair {
-  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
   let vp = 0
   let ip = 0
   let handle = 0
@@ -146,7 +187,7 @@ export function metricsManifoldInKernel(
   vertices: Float32Array | Float64Array,
   indices: Uint32Array,
 ): KernelManifoldMetrics {
-  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
   let vp = 0
   let ip = 0
   let handle = 0
@@ -193,20 +234,23 @@ export function metricsManifoldInKernel(
 }
 
 /** Boolean operation kinds for the manifold-ops kernel (abi_manifold_boolean). */
-export type ManifoldBooleanOp = 'union' | 'intersection' | 'difference'
+export type ManifoldBooleanOp = 'union' | 'intersection' | 'difference' | 'xor'
 
-const MANIFOLD_BOOLEAN_OP_TAG: Record<ManifoldBooleanOp, number> = {union: 0, intersection: 1, difference: 2}
+const MANIFOLD_BOOLEAN_OP_TAG: Record<ManifoldBooleanOp, number> = {union: 0, intersection: 1, difference: 2, xor: 3}
 
 export interface ManifoldBooleanOptions {
   /** Absolute mm epsilon for necessary pre/post repair; zero keeps exact welding. */
   readonly weldEpsilonMm?: number
   /** BSP tolerance relative to the longest combined input-bound side. */
   readonly relativeTolerance?: number
+  /** BSP work budget per kernel step, 1..=64_000_000. */
+  readonly maxWork?: number
 }
 
 export const MANIFOLD_BOOLEAN_DEFAULT_OPTIONS: Required<ManifoldBooleanOptions> = Object.freeze({
   weldEpsilonMm: 0,
   relativeTolerance: 1e-9,
+  maxWork: 8_000_000,
 })
 
 /** Boolean result from the manifold-ops kernel (abi_manifold_boolean). */
@@ -240,7 +284,11 @@ export function booleanManifoldInKernel(
 ): KernelManifoldBoolean {
   const weldEpsilonMm = options.weldEpsilonMm ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.weldEpsilonMm
   const relativeTolerance = options.relativeTolerance ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.relativeTolerance
-  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  const maxWork = options.maxWork ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.maxWork
+  if (!Number.isInteger(maxWork) || maxWork < 1 || maxWork > 64_000_000) {
+    throw new RangeError('maxWork must be an integer within 1..=64000000')
+  }
+  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
   let avp = 0
   let aip = 0
   let bvp = 0
@@ -255,7 +303,7 @@ export function booleanManifoldInKernel(
       takeResponse(wasm.abi_manifold_boolean(
         avp, aVertices.length, aip, aIndices.length, kernelVertexFormat(aVertices),
         bvp, bVertices.length, bip, bIndices.length, kernelVertexFormat(bVertices),
-        MANIFOLD_BOOLEAN_OP_TAG[op], weldEpsilonMm, relativeTolerance,
+        MANIFOLD_BOOLEAN_OP_TAG[op], weldEpsilonMm, relativeTolerance, maxWork,
       )),
     )
     const buffer = memory.buffer
@@ -278,5 +326,141 @@ export function booleanManifoldInKernel(
     if (bvp) wasm.abi_free(bvp, bVertices.byteLength)
     if (aip) wasm.abi_free(aip, aIndices.byteLength)
     if (avp) wasm.abi_free(avp, aVertices.byteLength)
+  }
+}
+
+/** Shell pair closer than the clearance threshold (abi_manifold_diagnostics). */
+export interface KernelManifoldClearancePair {
+  readonly componentA: number
+  readonly componentB: number
+  /** Closest triangle distance; 0 when the shells touch or intersect. */
+  readonly distance: number
+  readonly triangleA: number
+  readonly triangleB: number
+}
+
+/** Mass properties at the requested density (abi_manifold_diagnostics). */
+export interface KernelManifoldMass {
+  readonly volume: number
+  readonly mass: number
+  readonly centerOfMass: readonly [number, number, number]
+  /** Row-major 3x3 inertia tensor about the center of mass, scaled by density. */
+  readonly inertia: readonly number[]
+}
+
+/** Geometric diagnostics from the manifold-core kernel (abi_manifold_diagnostics). */
+export interface KernelManifoldDiagnostics {
+  /** Flat [i, j] intersecting triangle pairs, i < j. */
+  readonly selfIntersectionPairs: Uint32Array<ArrayBuffer>
+  readonly selfIntersectionCandidatePairs: number
+  /** True when the pair list hit the kernel's reporting cap. */
+  readonly selfIntersectionTruncated: boolean
+  /** Smallest sampled wall thickness; null when no inward ray hit. */
+  readonly minThickness: number | null
+  readonly maxThickness: number | null
+  readonly minThicknessTriangle: number | null
+  readonly thicknessSamples: number
+  readonly thicknessMissed: number
+  /** Triangles whose thickness sample is below the `minThickness` option. */
+  readonly thinTriangles: Uint32Array<ArrayBuffer>
+  /** Smallest free distance in front of a face (outward ray); null when all rays escape. */
+  readonly minGap: number | null
+  readonly minGapTriangle: number | null
+  readonly componentCount: number
+  readonly clearancePairs: KernelManifoldClearancePair[]
+  /** Null for open or zero-volume meshes. */
+  readonly mass: KernelManifoldMass | null
+}
+
+export interface ManifoldDiagnosticsOptions {
+  /** Material density (mass per unit volume), > 0. */
+  readonly density?: number
+  /** Wall thickness threshold for `thinTriangles`, >= 0. */
+  readonly minThickness?: number
+  /** Gap threshold between shells, > 0. */
+  readonly clearanceThreshold?: number
+  /** Work budget per pass (candidate pairs, rays), 1..=64_000_000. */
+  readonly maxWork?: number
+}
+
+export const MANIFOLD_DIAGNOSTICS_DEFAULT_OPTIONS: Required<ManifoldDiagnosticsOptions> = Object.freeze({
+  density: 1,
+  minThickness: 0,
+  clearanceThreshold: 0.2,
+  maxWork: 4_000_000,
+})
+
+const finiteOrNull = (value: number): number | null => (Number.isNaN(value) ? null : value)
+
+/**
+ * Self-intersections, sampled wall thickness, clearance between shells and
+ * mass properties of a mesh. A pass over `maxWork` rejects with a
+ * GeometryKernelError (`GEOMETRY_RESOURCE_LIMIT`).
+ */
+export function diagnoseManifoldInKernel(
+  vertices: Float32Array | Float64Array,
+  indices: Uint32Array,
+  options: ManifoldDiagnosticsOptions = {},
+): KernelManifoldDiagnostics {
+  const o = {...MANIFOLD_DIAGNOSTICS_DEFAULT_OPTIONS, ...options}
+  if (!Number.isInteger(o.maxWork) || o.maxWork < 1 || o.maxWork > 64_000_000) {
+    throw new RangeError('maxWork must be an integer within 1..=64000000')
+  }
+  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
+  let vp = 0
+  let ip = 0
+  let handle = 0
+  try {
+    vp = copyBuffer(wasm, new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
+    ip = copyBuffer(wasm, new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength))
+    handle = decodeNurbsResult<number>(
+      takeResponse(wasm.abi_manifold_diagnostics(
+        vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices),
+        o.density, o.minThickness, o.clearanceThreshold, o.maxWork,
+      )),
+    )
+    const buffer = memory.buffer
+    const u32 = (slot: number) =>
+      new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
+    const clearance = u32(4)
+    const floats = new Float64Array(new Float64Array(buffer, wasm.abi_array_field(handle, 6), wasm.abi_array_field(handle, 7)))
+    const flags = wasm.abi_array_field(handle, 9)
+    const minTriangle = wasm.abi_array_field(handle, 13)
+    const gapTriangle = wasm.abi_array_field(handle, 14)
+    const clearancePairs: KernelManifoldClearancePair[] = []
+    for (let p = 0; p < clearance.length / 4; p++) {
+      clearancePairs.push({
+        componentA: clearance[p * 4],
+        componentB: clearance[p * 4 + 1],
+        distance: floats[17 + p],
+        triangleA: clearance[p * 4 + 2],
+        triangleB: clearance[p * 4 + 3],
+      })
+    }
+    return {
+      selfIntersectionPairs: u32(0),
+      selfIntersectionCandidatePairs: wasm.abi_array_field(handle, 8),
+      selfIntersectionTruncated: (flags & 1) !== 0,
+      minThickness: finiteOrNull(floats[0]),
+      maxThickness: finiteOrNull(floats[1]),
+      minThicknessTriangle: minTriangle === 0 ? null : minTriangle - 1,
+      thicknessSamples: wasm.abi_array_field(handle, 10),
+      thicknessMissed: wasm.abi_array_field(handle, 11),
+      thinTriangles: u32(2),
+      minGap: finiteOrNull(floats[2]),
+      minGapTriangle: gapTriangle === 0 ? null : gapTriangle - 1,
+      componentCount: wasm.abi_array_field(handle, 12),
+      clearancePairs,
+      mass: (flags & 2) === 0 ? null : {
+        volume: floats[3],
+        mass: floats[4],
+        centerOfMass: [floats[5], floats[6], floats[7]],
+        inertia: Array.from(floats.subarray(8, 17)),
+      },
+    }
+  } finally {
+    if (handle) wasm.abi_array_free(handle)
+    if (ip) wasm.abi_free(ip, indices.byteLength)
+    if (vp) wasm.abi_free(vp, vertices.byteLength)
   }
 }

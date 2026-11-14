@@ -1,14 +1,9 @@
 // assetEvaluator: makeImport.
-import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
-import type { CallNode, ExpressionArgument, Value } from '../../language/openscadCompiler'
+import type { CallNode } from '../../language/openscadCompiler'
 
 import { formatOpenScadValue } from '../../language/semantic/openScadValueSemantics'
 
-import {
-  resolveOpenScadFragments,
-  type OpenScadFragmentResolutionInput,
-} from '../../language/semantic/openScadStableModuleSemantics'
 
 import {
   OpenScadProjectError,
@@ -20,7 +15,6 @@ import {
   OpenScadImportError,
   OpenScadImportPositionedError,
   type OpenScad2021LegacyImportFormat,
-  type OpenScadImportErrorCode,
 } from '../../exchange/openScadImport'
 
 import {
@@ -30,13 +24,6 @@ import {
   triangulateOpenScadSurface,
 } from '../../language/openScadSurface'
 
-import {
-  OpenScadTextError,
-  OpenScadTextPositionedError,
-  renderOpenScadText,
-  type OpenScadTextErrorCode,
-  type OpenScadTextParameters,
-} from '../../language/openScadText'
 
 import { nextColor } from '../../language/openscadColors'
 
@@ -46,7 +33,6 @@ import {
   type Vec2,
 } from '.././types'
 
-import { callExpressionArguments } from '.././astDiscovery'
 
 import {
   arg,
@@ -54,12 +40,10 @@ import {
   currentEntityId,
   evalExpression,
   evaluateStableBuiltinModuleArguments,
-  resolveStableVariable,
   trackedSolid,
   warn,
 } from '.././expressionEvaluator'
 
-import { stableModuleSemanticsContext } from '.././geometryEvaluator'
 import { importCallError, surfaceCallSource, IMPORT_POSITIONAL_PARAMETERS, importArgumentValues } from './surfaceCallSource'
 
 

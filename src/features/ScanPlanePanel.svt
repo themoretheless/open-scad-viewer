@@ -101,7 +101,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section
-    class="scan-panel" role="dialog" aria-labelledby="scan-plane-title"
+    class="scan-panel" role="dialog" aria-modal="false" aria-labelledby="scan-plane-title" aria-describedby="scan-plane-hint"
     @pointerdown.stop @pointerup.stop @click.stop @dblclick.stop @wheel.stop
     @keydown.stop @keyup.stop @keydown.esc.prevent.stop="close"
   >
@@ -110,7 +110,7 @@ onBeforeUnmount(() => {
       <button ref="closeButton" class="close" type="button" :aria-label="ru ? 'Закрыть панель' : 'Close panel'" @click="close">×</button>
     </header>
 
-    <p class="hint">{{ ru ? 'Перемещайте срез, чтобы заглянуть внутрь модели. Срез влияет только на просмотр: при экспорте модель остаётся целой.' : 'Move the cut to look inside the model. The cut only affects the view; exports keep the complete model.' }}</p>
+    <p id="scan-plane-hint" class="hint">{{ ru ? 'Перемещайте срез, чтобы заглянуть внутрь модели. Срез влияет только на просмотр: при экспорте модель остаётся целой.' : 'Move the cut to look inside the model. The cut only affects the view; exports keep the complete model.' }}</p>
     <p v-if="!available" class="hint unavailable" role="status">{{ ru ? 'Сначала постройте модель.' : 'Build a model first.' }}</p>
     <label class="enable">
       <input type="checkbox" :checked="enabled" :disabled="!available && !enabled" @change="setEnabled">

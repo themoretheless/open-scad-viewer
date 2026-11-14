@@ -9,7 +9,6 @@
 
 import MARCHING_TETRAHEDRA_WGSL from '../../crates/compute-core/shaders/marching_tetrahedra.wgsl?raw'
 import { runGpuCompute } from './webgpuCompute'
-import type { MeshData } from '../core/mesh'
 
 export interface MarchingGrid {
   min: [number, number, number]

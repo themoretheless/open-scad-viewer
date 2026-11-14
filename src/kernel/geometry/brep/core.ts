@@ -355,6 +355,20 @@ export interface CertifiedFreeformBrepTessellation extends Omit<CertifiedBrepTes
  capability:'certified-generic-rational-freeform-tessellation/1'
 }
 export const tessellateCertifiedFreeformNurbsBrep=(model:NurbsBrep,chordToleranceMm:number,maxTriangles=20000):CertifiedFreeformBrepTessellation=>{const r=callGeometryRust<CertifiedFreeformBrepTessellation>('brep_nurbs_certified_freeform_tessellate',{model,chordToleranceMm,maxTriangles});normalizePolygonMesh(r.tessellation);return r}
+/** Certified coarse-to-fine display level of a B-rep for the viewer LOD selector. */
+export interface BrepDisplayLevel {
+  readonly segments: number
+  readonly errorUpper: number
+  readonly triangleCount: number
+  readonly faceIds: number[]
+  readonly displayVertices: number[]
+  readonly displayIndices: number[]
+  readonly surfaceArea: number
+  readonly closed: boolean
+}
+/** Two or three certified display levels, or null when one level already shows the model exactly. */
+export const prepareBrepDisplayLevels=(model:NurbsBrep,segments:readonly number[]=[2,4,8]):BrepDisplayLevel[]|null=>
+  callGeometryRust<{levels:BrepDisplayLevel[]|null}>('brep_nurbs_display_levels',{model,segments}).levels
 export const prepareBrepDisplay=(model:NurbsBrep,segments=4):Pick<BrepMesh,'report'|'faceIds'|'topologyFaceIds'>&{displayVertices:number[];displayIndices:number[];surfaceArea:number}=>callGeometryRust('brep_nurbs_display',{model,segments})
 /** Polygon B-rep carriers embed one PolygonMesh per face; box the decoded plain
  * arrays into typed views once, here at the kernel boundary. */

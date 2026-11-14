@@ -5,7 +5,7 @@
  * caller uploads the scratch to its uniform buffer.
  */
 import { lookAt, orthographic, type Mat4, type Vec3 } from '../kernel/geometry/math3d'
-import { OBJECT_UNIFORM_LAYOUT, SCENE_UNIFORM_LAYOUT } from './shaders'
+import { SCENE_UNIFORM_LAYOUT } from './shaders'
 import type { MaterialDef, RenderTheme } from './rendererContracts'
 import { SHADOW_MAP_SIZE } from './textureResources'
 

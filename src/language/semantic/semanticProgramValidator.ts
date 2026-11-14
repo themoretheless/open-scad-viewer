@@ -1,40 +1,6 @@
 import {
-  deriveSemanticAmbiguityGroupId,
-  deriveSemanticCapabilityClosure,
-  deriveSemanticOccurrenceId,
-  deriveSemanticOperationId,
-  deriveSemanticSceneEntityId,
-  SEMANTIC_PROGRAM_CAPABILITY_GRAPH,
-  SEMANTIC_PROGRAM_DIAGNOSTIC_CODES,
-  SEMANTIC_PROGRAM_EXECUTION_FEATURE,
-  SEMANTIC_PROGRAM_EXECUTION_VERSION,
-  SEMANTIC_PROGRAM_IDENTITY,
-  SEMANTIC_PROGRAM_LIMITS,
-  semanticNodeInputs,
-  semanticNodeProducerOperationNames,
-  semanticResultItems,
-  type SemanticDiagnosticTemplate,
-  type SemanticDimension,
-  type SemanticDynamicSlot,
-  type SemanticIdentityValue,
-  type SemanticNode,
-  type SemanticOccurrence,
-  type SemanticOperationCategory,
-  type SemanticProgramCoreV1,
   type SemanticProgramDiagnosticCode,
-  type SemanticProgramEnvelopeV1,
-  type SemanticProgramV1,
-  type SemanticSourceDescriptor,
-  type SemanticSourceSpan,
-  type SemanticStaticOperation,
-  type SemanticStructuralPathSegment,
-  type SemanticValueType,
 } from '../../core/semanticProgram'
-import { sha256Hex } from '../../core/sha256'
-import { parseGeometrySourceRoutingHeader } from '../../core/geometryRouting'
-import { isSemanticProgramCodecOwnedGraph } from './semanticProgramCodec'
-import { deepFreeze } from '../../core/objects'
-import { utf8Compare } from '../../core/utf8Order'
 export { validateSemanticProgramV1, normalizeSemanticProgram, normalizeDecodedSemanticProgram, normalizeSemanticProgramCore, normalizeDecodedSemanticProgramCore, normalizeSemanticProgramCoreInput, semanticSourceDescriptor, attestSemanticProgramSource, semanticDiagnosticCodeIsPublic } from './semanticProgramValidator/validateSemanticProgramV1'
 
 export class SemanticProgramValidationError extends TypeError {

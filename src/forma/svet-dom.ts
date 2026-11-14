@@ -91,7 +91,7 @@ function patchEvent(el: any, rawName: string, _prevValue: any, nextValue: any): 
   }
 }
 
-function shouldSetAsProp(el: any, key: string, value: any, isSVG: boolean): boolean {
+function shouldSetAsProp(el: any, key: string, _value: any, isSVG: boolean): boolean {
   if (isSVG) {
     if (key === 'innerHTML' || key === 'textContent') return true
     return false

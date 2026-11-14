@@ -1,51 +1,35 @@
 // framePassEncoder: encodeAndSubmitFrame.
-import { invert, type Mat4, type Vec3 } from '../../kernel/geometry/math3d'
+import { invert } from '../../kernel/geometry/math3d'
 
 import type {
-  DisplayMode,
-  PickHit,
-  RenderTheme,
-  SelectionMode,
   ShadingModel,
 } from '../rendererContracts'
 
 import { resolveMeshShaderId } from '../rendererContracts'
 
-import type { TransparentSortBuffer } from '../transparentOrdering'
 
-import type { MeshDrawBundle } from '../meshDrawBundle'
 
-import type { ViewFrustum } from '../viewFrustum'
 
-import type { MeshInstances } from '../../kernel/meshInstances'
 
 import { isTransparentAlpha } from '../backendQuality'
 
 import {
-  OBJECT_UNIFORM_LAYOUT,
   SCENE_UNIFORM_LAYOUT,
 } from '../shaders'
 
 import {
   DEEP_DEPTH,
-  type PipelineFactory,
   TRANSPARENT_DEPTH,
   type PipelineFlavor,
 } from '../pipelineFactory'
 
-import type { TextureResources } from '../textureResources'
 
 import { fillSceneUniforms } from '../uniformFill'
 
-import { GpuCsgRenderer, type GpuCsgTree } from '../gpuCsgPreview'
 
-import type { GpuWboitRenderer } from '../gpuWboit'
 
 import {
   NO_GHOST_MESHES,
-  type Bounds,
-  type GMesh,
-  type OverlaySlot,
 } from '../types'
 
 import { sortEdgeDraws, sortOpaqueDraws } from '../drawSorting'

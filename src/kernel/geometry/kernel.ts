@@ -39,7 +39,7 @@ export class GeometryKernelError extends Error {
   constructor(public readonly code: string, message: string) { super(message); this.name = 'GeometryKernelError' }
 }
 export class NurbsCurveError extends GeometryKernelError {
-  constructor(public readonly code: 'NURBS_INVALID_INPUT' | 'NURBS_RESOURCE_LIMIT' | 'NURBS_NUMERIC_ERROR', message: string) {
+  constructor(public override readonly code: 'NURBS_INVALID_INPUT' | 'NURBS_RESOURCE_LIMIT' | 'NURBS_NUMERIC_ERROR', message: string) {
     super(code, message)
     this.name = 'NurbsCurveError'
   }
@@ -70,10 +70,12 @@ interface KernelExports extends WebAssembly.Exports {
  abi_solid_analysis_cancel(job:number):void
  abi_array_field(handle:number,slot:number):number
  abi_array_free(handle:number):void
+ abi_manifold_abi_version():number
  abi_manifold_check(vp:number,vl:number,ip:number,il:number,fmt:number):bigint
  abi_manifold_repair(vp:number,vl:number,ip:number,il:number,fmt:number,epsilon:number,mode:number):bigint
  abi_manifold_metrics(vp:number,vl:number,ip:number,il:number,fmt:number):bigint
- abi_manifold_boolean(aVp:number,aVl:number,aIp:number,aIl:number,aFmt:number,bVp:number,bVl:number,bIp:number,bIl:number,bFmt:number,op:number,weldEpsilon:number,relativeTolerance:number):bigint
+ abi_manifold_diagnostics(vp:number,vl:number,ip:number,il:number,fmt:number,density:number,minThickness:number,clearanceThreshold:number,maxWork:number):bigint
+ abi_manifold_boolean(aVp:number,aVl:number,aIp:number,aIl:number,aFmt:number,bVp:number,bVl:number,bIp:number,bIl:number,bFmt:number,op:number,weldEpsilon:number,relativeTolerance:number,maxWork:number):bigint
  abi_certified_error_add(a:number,b:number):number
  abi_certified_error_mul(a:number,b:number):number
  abi_certified_error_sqrt_two(value:number):number

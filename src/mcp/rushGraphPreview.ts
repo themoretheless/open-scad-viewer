@@ -28,7 +28,6 @@ function png(pixels: Buffer) {
   for (let y = 0; y < SIZE; y++) pixels.copy(rows, y * (1 + SIZE * 3) + 1, y * SIZE * 3, (y + 1) * SIZE * 3)
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', deflateSync(rows)), chunk('IEND', Buffer.alloc(0))])
 }
-type P = [number, number, number]
 const INV_SQRT2 = 1 / Math.sqrt(2), INV_SQRT6 = 1 / Math.sqrt(6), INV_SQRT3 = 1 / Math.sqrt(3)
 /** Orthographic CPU snapshots of actual triangles, independent of a browser/GPU. */
 export function renderRushGraphPreviews(meshes: Pick<MeshData, 'vertices' | 'indices' | 'transform'>[]) {

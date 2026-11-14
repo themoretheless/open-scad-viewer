@@ -1,48 +1,16 @@
 // geometryEvaluator: differenceChildren.
-import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
-import { clamp01 } from '../../kernel/geometry/math3d'
 
-import { resolveLegacyOpenScadSegments } from '../../language/openScadLegacySegments'
 
-import type { CallNode, ExpressionArgument, Statement, Value } from '../../language/openscadCompiler'
+import type { CallNode, Value } from '../../language/openscadCompiler'
 
-import { formatOpenScadValue } from '../../language/semantic/openScadValueSemantics'
 
-import {
-  resolveOpenScadFragments,
-  type OpenScadFragmentResolutionInput,
-  type OpenScadStableModuleSemanticsContext,
-} from '../../language/semantic/openScadStableModuleSemantics'
+
+
 
 import {
-  resolveOpenScadCircle,
-  resolveOpenScadCube,
-  resolveOpenScadCylinder,
-  resolveOpenScadPolygon,
-  resolveOpenScadPolyhedron,
-  resolveOpenScadSphere,
-  resolveOpenScadSquare,
-  type OpenScadStablePrimitiveContext,
-} from '../../language/semantic/openScadStablePrimitiveSemantics'
-
-import {
-  resolveOpenScadMirror,
-  resolveOpenScadMultmatrix,
-  resolveOpenScadRotate,
-  resolveOpenScadScale,
-  resolveOpenScadTranslate,
-  resolveOpenScadViewerAxisAngle,
-  type OpenScadStableTransformContext,
-  type OpenScadStableTransformPlan,
-} from '../../language/semantic/openScadStableTransformSemantics'
-
-import {
-  resolveOpenScad2dMultmatrix,
   resolveOpenScadLinearExtrude,
   resolveOpenScadResize,
-  resolveOpenScadRotateExtrude,
-  type OpenScadStableGeometryContext,
 } from '../../language/semantic/openScadStableGeometrySemantics'
 
 import {
@@ -50,13 +18,9 @@ import {
   isStableProfile,
 } from '../../language/openScadStableExpressionEval'
 
-import { CSS_COLORS, nextColor, type RGBA } from '../../language/openscadColors'
 
 import {
   compatibilityDxfProfile,
-  makeImport,
-  makeSurface,
-  makeText,
 } from '.././assetEvaluator'
 
 import {
@@ -70,21 +34,17 @@ import {
 } from '.././types'
 
 import {
-  callExpressionArguments,
   finiteNumber,
   vectorValue,
 } from '.././astDiscovery'
 
 import {
   arg,
-  compatibilityString,
   currentEntityId,
   enterStableStatementScope,
-  evalExpression,
   evaluateStableBuiltinModuleArguments,
   evaluateStableCompatibilityArguments,
   kernelCall,
-  resolveStableVariable,
   trackedSolid,
   warn,
 } from '.././expressionEvaluator'

@@ -346,3 +346,35 @@ fn invalid_inputs_and_iteration_budgets_remain_typed_and_bounded() {
     .unwrap_err();
     assert_eq!(error.code, "SKETCH_INVALID_INPUT");
 }
+
+#[test]
+fn dr_plan_runs_the_pebble_game_on_distance_bars() {
+    let square = |extra: &[(usize, usize)]| {
+        let points = vec![[0.0, 0.0], [4.0, 0.0], [4.0, 4.0], [0.0, 4.0]];
+        let mut constraints = vec![Constraint::Horizontal { a: 0, b: 1 }];
+        for &(a, b) in [(0, 1), (1, 2), (2, 3), (3, 0)].iter().chain(extra) {
+            let d = ((points[a][0] - points[b][0]) as f64).hypot(points[a][1] - points[b][1]);
+            constraints.push(distance(a, b, d));
+        }
+        Sketch {
+            points,
+            circles: vec![],
+            constraints,
+        }
+    };
+    let flexible = plan_dr(&square(&[]), 1e-6).unwrap();
+    assert_eq!(flexible.bars.constraints, vec![1, 2, 3, 4]);
+    assert!(!flexible.bars.analysis.rigid);
+    assert_eq!(flexible.bars.analysis.components.len(), 4);
+
+    let braced = plan_dr(&square(&[(0, 2)]), 1e-6).unwrap();
+    assert!(braced.bars.analysis.rigid);
+    assert_eq!(braced.bars.analysis.components, vec![vec![0, 1, 2, 3]]);
+    assert!(braced.bars.redundant_constraints().is_empty());
+
+    let k4 = plan_dr(&square(&[(0, 2), (1, 3)]), 1e-6).unwrap();
+    assert_eq!(k4.bars.redundant_constraints(), vec![6]);
+    // The numeric first-order plan agrees on the over-constraint.
+    let cluster = k4.clusters.iter().find(|c| c.points.len() == 4).unwrap();
+    assert_eq!(cluster.redundant_equations, 1);
+}

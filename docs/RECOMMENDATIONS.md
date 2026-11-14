@@ -30,9 +30,9 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done
 Goal: `src/App.svt` becomes a thin shell that composes children.
 
 - [~] **1.1** i18n: dictionaries already live in `src/i18n/appStrings.ts` (ru/en); `t()` in `App.svt` is still a plain key lookup with no interpolation/pluralization
-- [ ] **1.4** Introduce a shared `SidePanel` + `Modal` to standardize open/close + focus behavior (dialogs in `App.svt`, `KeyboardShortcuts.svt`, `ExampleGallery.svt`, `CommandPalette.svt`, `FunctionReference.svt` each wire their own)
+- [x] **1.4** Shared `Modal` and `SidePanel` (`src/components/`, behavior in `src/composables/useModalDialog.ts`): `role="dialog"`, `aria-modal`, title label, focus moved in, Tab/Shift+Tab trap, Escape, focus restore, background scroll lock. The export dialog (`ExportDialog.svt`), `KeyboardShortcuts.svt`, `ExampleGallery.svt`, `CommandPalette.svt` and `FunctionReference.svt` use `Modal`; `SidePanel` has no consumer yet (candidates in P7: `ScanPlanePanel`, DirectModeler operation cards). `MechanicalGenerator.svt` keeps the native `<dialog>` with `showModal()`. Covered by `tests/modalDialogUi.test.ts`
 
-**Exit criteria:** `App.svt` < 1,000 lines; build green; no behavior regressions. Also tracked as R4 in [recommendation.md](./recommendation.md).
+**Exit criteria:** `App.svt` < 1,000 lines; build green; no behavior regressions. Also tracked as R4 in [recommendation.md](./recommendation.md). Status: `App.svt` is 894 lines after moving workspace modes, source history, palette commands and dispatch, shell actions, geometry analysis and customizer state into `src/composables/`, and the group source panel, export dialog, sweep evidence, performance panel and parameter suggestions into `src/components/`.
 
 ---
 
@@ -46,10 +46,10 @@ Goal: `src/App.svt` becomes a thin shell that composes children.
 
 ## Phase 4 — Accessibility
 
-- [~] **4.4** A11y: `aria-live` status regions exist; a shared focus trap and `aria-modal` are not applied to every dialog (`ScanPlanePanel.svt` and the DirectModeler subtract card declare `role="dialog"` without `aria-modal`)
-- [ ] **4.5** A11y: non-color cues for errors / diff / CSG (icons, hatch patterns)
+- [x] **4.4** A11y: `aria-live` status regions; true modals (export, palette, shortcuts, gallery, reference) share `Modal`/`SidePanel` with focus trap and `aria-modal`; the non-modal `ScanPlanePanel` and DirectModeler subtract card are labelled `role="dialog"` with `aria-modal="false"`. The 3D canvas is focusable with a focus ring, a name, a key description and arrow/Shift+arrow/+/- orbit, pan and zoom; the ViewCube is named as fixed presets with `aria-pressed` and a live current-view status
+- [~] **4.5** A11y: non-color cues: invalid fields get `aria-invalid` plus a dashed border, hovered sketch paths a dashed stroke, pressed buttons a heavier outline, the active subtract operand a text marker, the active ViewCube preset a heavier outline; save/build errors already carry icons or text. Remaining: hatch patterns for diff/CSG rendering in the 3D viewport
 
-**Exit criteria:** passes basic axe a11y checks.
+**Exit criteria:** passes basic axe a11y checks. `axe-core` is not a dependency yet; until browser gates (ROADMAP P5) exist, `tests/accessibilityUi.test.ts` checks roles, names and ARIA state of the touched components.
 
 ---
 

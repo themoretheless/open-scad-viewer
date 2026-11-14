@@ -1,13 +1,10 @@
 // geometryEvaluator: EvalNodesFn.
 import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
-import { clamp01 } from '../../kernel/geometry/math3d'
 
-import { resolveLegacyOpenScadSegments } from '../../language/openScadLegacySegments'
 
-import type { CallNode, ExpressionArgument, Statement, Value } from '../../language/openscadCompiler'
+import type { CallNode, Statement, Value } from '../../language/openscadCompiler'
 
-import { formatOpenScadValue } from '../../language/semantic/openScadValueSemantics'
 
 import {
   resolveOpenScadFragments,
@@ -27,63 +24,32 @@ import {
 } from '../../language/semantic/openScadStablePrimitiveSemantics'
 
 import {
-  resolveOpenScadMirror,
-  resolveOpenScadMultmatrix,
-  resolveOpenScadRotate,
-  resolveOpenScadScale,
-  resolveOpenScadTranslate,
-  resolveOpenScadViewerAxisAngle,
   type OpenScadStableTransformContext,
-  type OpenScadStableTransformPlan,
 } from '../../language/semantic/openScadStableTransformSemantics'
 
 import {
-  resolveOpenScad2dMultmatrix,
-  resolveOpenScadLinearExtrude,
-  resolveOpenScadResize,
-  resolveOpenScadRotateExtrude,
   type OpenScadStableGeometryContext,
 } from '../../language/semantic/openScadStableGeometrySemantics'
 
 import {
   evaluationError,
-  isStableProfile,
 } from '../../language/openScadStableExpressionEval'
 
-import { CSS_COLORS, nextColor, type RGBA } from '../../language/openscadColors'
+import { nextColor, type RGBA } from '../../language/openscadColors'
+
 
 import {
-  compatibilityDxfProfile,
-  makeImport,
-  makeSurface,
-  makeText,
-} from '.././assetEvaluator'
-
-import {
-  MAX_EXTRUDE_SLICES,
   type EvalContext,
   type Shape,
-  type Shape2D,
-  type Shape3D,
   type Vec2,
   type Vec3,
 } from '.././types'
 
-import {
-  callExpressionArguments,
-  finiteNumber,
-  vectorValue,
-} from '.././astDiscovery'
 
 import {
-  arg,
-  compatibilityString,
   currentEntityId,
-  enterStableStatementScope,
   evalExpression,
   evaluateStableBuiltinModuleArguments,
-  evaluateStableCompatibilityArguments,
-  kernelCall,
   resolveStableVariable,
   trackedSolid,
   warn,

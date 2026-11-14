@@ -1,55 +1,26 @@
 // lowererBuilder: countStatements.
-import type { GeometryQuality } from '../../../core/build'
 
 import {
-  deriveSemanticAmbiguityGroupId,
-  deriveSemanticOccurrenceId,
-  deriveSemanticOperationId,
-  deriveSemanticSceneEntityId,
   semanticNodeInputs,
   semanticNodeProducerOperationNames,
   semanticResultItems,
   SEMANTIC_PROGRAM_EXECUTION_VERSION,
   type SemanticColor,
-  type SemanticDiagnosticArgument,
-  type SemanticDimension,
-  type SemanticDiscardedEffect,
-  type SemanticDynamicSlot,
   type SemanticExecutionPlanV1,
-  type SemanticIdentityValue,
-  type SemanticNode,
   type SemanticOccurrence,
-  type SemanticOperationCategory,
   type SemanticOutputRef,
   type SemanticProgramCoreV1,
   type SemanticResult,
-  type SemanticStaticOperation,
-  type SemanticStructuralPathSegment,
-  type SemanticTessellationIntent,
-  type SemanticValueType,
 } from '../../../core/semanticProgram'
 
-import { sha256Hex } from '../../../core/sha256'
 
 import type {
-  CallNode,
-  FunctionNode,
-  ModuleNode,
-  OpenScadLanguageProfile,
   Statement,
-  Value,
 } from '../../openscadCompiler'
 
-import { OpenSCADParseError } from '../../openscadErrors'
 
-import {
-  formatOpenScadValue,
-  isOpenScadRange,
-} from '../openScadValueSemantics'
 
-import type { OpenScadStableScope } from '../../openScadStableScope'
 
-import { isFunctionValue } from '../../openScadStableExpressionEval'
 import { SemanticShape } from './MAX_SHAPES'
 import { SemanticProgramBuilder } from './SemanticProgramBuilder'
 

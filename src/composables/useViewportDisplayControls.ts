@@ -7,7 +7,6 @@ import type {
   SourceProvenanceRow,
 } from '../components/cadPanels.types'
 import type { MeshData } from '../core/mesh'
-import type { Language } from '../i18n/appStrings'
 import type { CameraState } from '../render/cameraHistory'
 import { inspectMesh } from '../kernel/meshInspection'
 import { useModelingGrid } from '../app/modelingGrid'
@@ -24,6 +23,7 @@ import { DEFAULT_ENV, DEFAULT_MATCAP, getMaterialPreset } from '../render/render
 import type { SceneController, SceneState } from '../app/sceneController'
 import type { ViewportController, ViewportState } from '../render/viewportController'
 import type { WebGPURenderer } from '../render/webgpuRenderer'
+import { resolveKeyboardCameraStep } from '../render/keyboardCamera'
 
 export interface UseViewportDisplayControlsOptions {
   viewportController: ViewportController
@@ -213,6 +213,17 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
     if (viewportController.state.camera.projection !== state.projection) {
       getRenderer()?.setProjection(viewportController.state.camera.projection)
     }
+  }
+
+  /** Arrow/Shift+arrow/+/- camera navigation of the focused viewport; true when the key was consumed. */
+  function handleCameraKey(event: KeyboardEvent): boolean {
+    const step = resolveKeyboardCameraStep(event)
+    if (!step) return false
+    const renderer = getRenderer()
+    if (!renderer) return false
+    event.preventDefault()
+    renderer.applyKeyboardCameraStep(step)
+    return true
   }
 
   function focusSelection() {
@@ -438,6 +449,7 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
     currentInspection,
     panelMeasurement,
     fitView,
+    handleCameraKey,
     resetView,
     previousView,
     syncCameraState,

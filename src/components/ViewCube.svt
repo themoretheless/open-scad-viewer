@@ -70,6 +70,12 @@ const triadAxes = computed<TriadAxis[]>(() => {
   })
 })
 
+/** Spoken current view: the faces are fixed presets, so the live state is named in text. */
+const currentViewText = computed(() =>
+  props.activeView === 'custom'
+    ? 'Current view: custom orbit / Текущий вид: произвольный'
+    : `Current view / Текущий вид: ${labels[props.activeView]}`)
+
 function choose(view: StandardView) {
   emit('view', view)
 }
@@ -92,11 +98,14 @@ function handleOrbitKeydown(event: KeyboardEvent) {
   <div
     class="view-cube"
     role="group"
-    aria-label="View orientation / Ориентация вида"
-    title="View orientation (Arrow keys: 15° step, Shift+Arrow: 90° step)"
+    aria-label="View presets / Стандартные виды"
+    aria-describedby="view-cube-help"
+    title="View presets. On a focused preset, arrow keys orbit 15°, Shift+Arrow 90°"
     @keydown="handleOrbitKeydown"
   >
-    <svg class="cube-svg" viewBox="0 0 128 132" aria-hidden="false">
+    <span id="view-cube-help" class="view-cube-sr">Fixed preset faces with a live axis compass. On a focused preset, arrow keys orbit 15°, Shift+Arrow 90°. / Фиксированные кнопки видов и живой компас осей. Стрелки на кнопке вращают на 15°, Shift+стрелка на 90°.</span>
+    <span class="view-cube-sr" role="status" aria-live="polite">{{ currentViewText }}</span>
+    <svg class="cube-svg" viewBox="0 0 128 132">
       <g class="axes" aria-hidden="true">
         <template v-for="axis in triadAxes" :key="axis.name">
           <line
@@ -254,6 +263,15 @@ function handleOrbitKeydown(event: KeyboardEvent) {
   filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.32));
 }
 
+.view-cube-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .cube-svg {
   width: 100%;
   height: 100%;
@@ -343,6 +361,8 @@ function handleOrbitKeydown(event: KeyboardEvent) {
 .cube-action.active .iso-button {
   fill: color-mix(in srgb, var(--accent, #559dff) 78%, #26384e);
   stroke: #ffffff;
+  /* Non-color cue: the active preset also gets a heavier outline. */
+  stroke-width: 2.4;
   filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent, #559dff) 70%, transparent));
 }
 

@@ -1,18 +1,15 @@
 import {createRendererOperations} from './useBuildAndRendererLifecycle/rendererOperations'
-import { computed, nextTick, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef, type WritableComputedRef } from 'svet'
+import { computed, nextTick, shallowRef, type ComputedRef, type Ref, type ShallowRef, type WritableComputedRef } from 'svet'
 import type { GeometryQuality } from '../core/build'
-import { meshTransferables, type MeshData } from '../core/mesh'
+import { type MeshData } from '../core/mesh'
 import { AutoBuildScheduler } from '../app/autoBuildScheduler'
 import {
   BuildCoordinator,
   type BuildCoordinatorState,
-  type PublishedGeometryBuild,
 } from '../app/buildCoordinator'
 import { BuildPerformanceHistory, type BuildPerformanceSample } from '../app/buildPerformance'
-import { planGeometryPublication } from '../app/buildPromotionPolicy'
 import type { CameraState } from '../render/cameraHistory'
-import { diagnosticFromBuildError, type EditorDiagnostic } from '../language/editorDiagnostics'
-import { withSelectionSurfaces } from '../kernel/meshSurfaceGroups'
+import { type EditorDiagnostic } from '../language/editorDiagnostics'
 import type {
   DisplayMode,
   PickHit,
@@ -22,7 +19,6 @@ import type {
 } from '../render/rendererContracts'
 import { RendererRecoveryGate } from '../render/rendererRecoveryGate'
 import type { SceneController } from '../app/sceneController'
-import { planScenePublication } from '../app/scenePublication'
 import type { ViewportController } from '../render/viewportController'
 import { WebGPURenderer } from '../render/webgpuRenderer'
 import { buildSources } from '../appHelpers'
@@ -99,7 +95,7 @@ export interface RendererRecoveryNavigationSnapshot {
 }
 
 export function useBuildAndRendererLifecycle(options: UseBuildAndRendererLifecycleOptions) {
-  const {initializeViewportRenderer, bindRendererCallbacks, recoverRenderer, handleGeometryResponse} = createRendererOperations({
+  const {initializeViewportRenderer, recoverRenderer, handleGeometryResponse} = createRendererOperations({
     get options() { return options },
     get renderer() { return renderer },
     set renderer(value: typeof renderer) { renderer = value },

@@ -14,18 +14,30 @@
 //! previously scattered across `polygon-core` (private `vertex_manifold`),
 //! `brep-core` (`close_topology`) and the TypeScript mesh services.
 
-/// Undirected edge key with canonical ordering.
+/// Version of the check/repair/metrics report contract. Bump it whenever a
+/// report gains, loses, renames or reorders a field; the geometry bridge
+/// republishes it in its Manifold report schema so the TypeScript wrappers
+/// cannot drift silently.
+pub const REPORT_SCHEMA_VERSION: u32 = 2;
+
+/// Undirected edge key with canonical ordering: always `(min, max)`.
 pub type EdgeKey = (usize, usize);
 
 pub(crate) fn edge_key(a: usize, b: usize) -> EdgeKey {
     if a < b { (a, b) } else { (b, a) }
 }
 
+pub mod diagnostics;
 mod metrics;
 pub mod repair;
 mod validation;
 pub mod vertex_link;
 
+pub use diagnostics::{
+    ClearanceOptions, ClearancePair, ClearanceReport, DiagnosticsError, MassProperties,
+    SelfIntersectionOptions, SelfIntersectionReport, ThicknessOptions, ThicknessReport, clearance,
+    mass_properties, self_intersections, wall_thickness,
+};
 pub use metrics::{ComponentMetrics, MeshMetrics, metrics};
 pub use repair::{RepairMode, RepairOutcome, RepairReport, repair, repair_with_mode};
 pub use validation::{IndexedMeshError, validate_indexed_mesh};
@@ -194,6 +206,14 @@ fn disconnected_fans(fans: &VertexFans, vertex_count: usize) -> Vec<usize> {
 
 /// Analyse an indexed triangle mesh (`positions` as xyz triples,
 /// `indices` as triangle corners) and return a full manifoldness report.
+///
+/// Invariants:
+/// - memory is O(V + F); time is O(V + F) plus the edge sort inside
+///   `mesh_topology::EdgeUses`;
+/// - the report is a pure function of the input and every defect list has a
+///   deterministic order: edges as canonical `(min, max)` keys in ascending
+///   order, triangle and vertex indices ascending;
+/// - an empty mesh yields an empty report with `component_count == 0`.
 pub fn check(positions: &[f64], indices: &[usize]) -> ManifoldReport {
     let vertex_count = positions.len() / 3;
     let triangles: Vec<[usize; 3]> = indices
@@ -310,6 +330,41 @@ mod component_count_regression;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn check_defect_lists_are_canonical_sorted_and_deterministic() {
+        // A deliberately messy soup: triple edge, flipped face, repeated-index
+        // triangle, bowtie vertex, isolated vertices, triangles in scrambled order.
+        let positions: Vec<f64> = (0..12)
+            .flat_map(|i| [i as f64, (i * i % 7) as f64, (i % 3) as f64])
+            .collect();
+        let indices = vec![
+            9, 8, 10, 1, 0, 2, 0, 1, 3, 1, 0, 4, 5, 5, 6, 2, 1, 3, 8, 7, 9, 2, 3, 0, 7, 8, 11,
+        ];
+        let first = check(&positions, &indices);
+        assert_eq!(first, check(&positions, &indices));
+        for edges in [
+            &first.boundary_edges,
+            &first.non_manifold_edges,
+            &first.orientation_edges,
+        ] {
+            assert!(edges.iter().all(|&(a, b)| a < b), "{edges:?}");
+            assert!(edges.windows(2).all(|w| w[0] < w[1]), "{edges:?}");
+        }
+        for list in [
+            &first.degenerate_triangles,
+            &first.non_manifold_vertices,
+            &first.isolated_vertices,
+        ] {
+            assert!(list.windows(2).all(|w| w[0] < w[1]), "{list:?}");
+        }
+        assert!(!first.non_manifold_edges.is_empty());
+        assert_eq!(first.degenerate_triangles, vec![4]);
+
+        let empty = check(&[], &[]);
+        assert_eq!(empty.component_count, 0);
+        assert!(empty.is_manifold_with_boundary() && empty.boundary_edges.is_empty());
+    }
 
     /// Unit cube: 8 vertices, 12 triangles, consistently oriented (CCW
     /// seen from outside).

@@ -26,6 +26,11 @@ mod foreign_words;
 mod job;
 mod package_3mf;
 mod parser;
+mod printer;
+pub use printer::{
+    PrinterProfile, builtin_printer_ids, builtin_printer_profiles, emit_job_variable_width,
+    emit_printer_job, extrusion_length_mm, printer_profile,
+};
 pub mod stats;
 mod writer;
 pub use stats::{filament_cost_estimate, filament_mass_grams, filament_volume_mm3};

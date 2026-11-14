@@ -3,32 +3,18 @@ import type { CadKernelHandle } from '../../kernel/cadKernelOps'
 
 import type { CallNode, ExpressionArgument, Value } from '../../language/openscadCompiler'
 
-import { formatOpenScadValue } from '../../language/semantic/openScadValueSemantics'
 
 import {
   resolveOpenScadFragments,
   type OpenScadFragmentResolutionInput,
 } from '../../language/semantic/openScadStableModuleSemantics'
 
-import {
-  OpenScadProjectError,
-  resolveOpenScadProjectPath,
-} from '../../language/openScadProject'
 
 import {
-  loadPreparedOpenScadImport,
-  OpenScadImportError,
   OpenScadImportPositionedError,
-  type OpenScad2021LegacyImportFormat,
   type OpenScadImportErrorCode,
 } from '../../exchange/openScadImport'
 
-import {
-  loadOpenScadSurfaceHeightMap,
-  OpenScadSurfaceDataError,
-  OpenScadSurfaceError,
-  triangulateOpenScadSurface,
-} from '../../language/openScadSurface'
 
 import {
   OpenScadTextError,
@@ -49,13 +35,9 @@ import {
 import { callExpressionArguments } from '.././astDiscovery'
 
 import {
-  arg,
-  compatibilityString,
   currentEntityId,
   evalExpression,
-  evaluateStableBuiltinModuleArguments,
   resolveStableVariable,
-  trackedSolid,
   warn,
 } from '.././expressionEvaluator'
 

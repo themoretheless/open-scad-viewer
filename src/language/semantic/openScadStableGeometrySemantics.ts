@@ -10,7 +10,6 @@
 import { languageRequest } from '../languages/kernel'
 import type { RangeValue } from '../openscadCompiler'
 import {
-  OPENSCAD_2021_GEOMETRY_EPSILON,
   resolveOpenScadSweepFragments,
   type OpenScadStableModuleSemanticsContext,
 } from './openScadStableModuleSemantics'

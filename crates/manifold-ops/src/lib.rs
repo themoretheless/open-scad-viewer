@@ -27,15 +27,21 @@ pub enum BooleanOp {
     Union,
     Intersection,
     Difference,
+    /// Symmetric difference `(A ∪ B) − (A ∩ B)`. Overlapping operands whose
+    /// surfaces cross leave the two parts sharing only the crossing curve;
+    /// such a result is not a 2-manifold and is rejected with an error
+    /// (kernel validity or [`BooleanError::NonManifoldOutput`]), never
+    /// returned.
+    Xor,
 }
 
-impl From<BooleanOp> for boolean::Operation {
-    #[inline]
-    fn from(op: BooleanOp) -> Self {
-        match op {
-            BooleanOp::Union => boolean::Operation::Union,
-            BooleanOp::Intersection => boolean::Operation::Intersection,
-            BooleanOp::Difference => boolean::Operation::Difference,
+impl BooleanOp {
+    fn kernel(self) -> Option<boolean::Operation> {
+        match self {
+            BooleanOp::Union => Some(boolean::Operation::Union),
+            BooleanOp::Intersection => Some(boolean::Operation::Intersection),
+            BooleanOp::Difference => Some(boolean::Operation::Difference),
+            BooleanOp::Xor => None,
         }
     }
 }
@@ -133,11 +139,18 @@ pub struct BooleanOptions {
     pub weld_epsilon: f64,
     /// BSP tolerance relative to the longest combined input-bound side.
     pub relative_tolerance: f64,
+    /// BSP work budget per kernel call (`1..=MAX_WORK_BUDGET`).
+    pub max_work: usize,
 }
+
+/// Default BSP work budget, equal to the kernel default.
+pub const DEFAULT_WORK_BUDGET: usize = 8_000_000;
+/// Largest accepted BSP work budget.
+pub const MAX_WORK_BUDGET: usize = 64_000_000;
 
 impl Default for BooleanOptions {
     fn default() -> Self {
-        Self { weld_epsilon: 0.0, relative_tolerance: 1e-9 }
+        Self { weld_epsilon: 0.0, relative_tolerance: 1e-9, max_work: DEFAULT_WORK_BUDGET }
     }
 }
 
@@ -149,25 +162,35 @@ fn invalid_options(message: &'static str) -> BooleanError {
 /// mode when necessary.
 fn admit(operand: usize, positions: &[f64], indices: &[usize], weld_epsilon: f64) -> Result<Admitted, BooleanError> {
     let first = manifold_core::check(positions, indices);
-    if first.is_manifold() {
-        return Ok(Admitted {
-            positions: positions.to_vec(),
-            indices: indices.to_vec(),
-            repair: None,
-        });
+    let mut admitted = if first.is_manifold() {
+        Admitted { positions: positions.to_vec(), indices: indices.to_vec(), repair: None }
+    } else {
+        let out = manifold_core::repair_with_mode(positions, indices, weld_epsilon, RepairMode::Full);
+        if !out.is_manifold() {
+            return Err(BooleanError::UnrepairableInput {
+                operand,
+                residual: Box::new(out.report.residual),
+            });
+        }
+        Admitted { positions: out.positions, indices: out.indices, repair: Some(out.report) }
+    };
+    // A consistently oriented closed mesh can still face inward (an
+    // inside-out solid, or orientation unified towards a flipped seed
+    // triangle). Reverse it so the kernel receives an outward solid.
+    let mesh = Mesh { positions: admitted.positions, indices: admitted.indices, uv: None };
+    let inverted = mesh.volume() < 0.0;
+    let Mesh { positions, mut indices, .. } = mesh;
+    if inverted {
+        for triangle in indices.chunks_mut(3) {
+            triangle.swap(1, 2);
+        }
+        if admitted.repair.is_none() {
+            admitted.repair = Some(manifold_core::repair_with_mode(&positions, &indices, weld_epsilon, RepairMode::Full).report);
+        }
     }
-    let out = manifold_core::repair_with_mode(positions, indices, weld_epsilon, RepairMode::Full);
-    if !out.is_manifold() {
-        return Err(BooleanError::UnrepairableInput {
-            operand,
-            residual: Box::new(out.report.residual),
-        });
-    }
-    Ok(Admitted {
-        positions: out.positions,
-        indices: out.indices,
-        repair: Some(out.report),
-    })
+    admitted.positions = positions;
+    admitted.indices = indices;
+    Ok(admitted)
 }
 
 struct Admitted {
@@ -202,29 +225,65 @@ pub fn boolean_manifold_with_options(
     if !(1e-12..=1e-5).contains(&options.relative_tolerance) {
         return Err(invalid_options("Boolean relative tolerance must be within 1e-12..=1e-5"));
     }
+    if !(1..=MAX_WORK_BUDGET).contains(&options.max_work) {
+        return Err(invalid_options("Boolean work budget must be within 1..=64000000"));
+    }
     let a = admit(0, a_positions, a_indices, options.weld_epsilon)?;
     let b = admit(1, b_positions, b_indices, options.weld_epsilon)?;
 
-    let to_mesh = |positions: Vec<f64>, indices: Vec<usize>| Mesh {
-        positions,
-        indices,
-        uv: None,
+    let operand_repairs = [a.repair, b.repair];
+    let a = Mesh { positions: a.positions, indices: a.indices, uv: None };
+    let b = Mesh { positions: b.positions, indices: b.indices, uv: None };
+    let kernel_options = boolean::Options {
+        relative_tolerance: options.relative_tolerance,
+        max_work: options.max_work,
+        ..boolean::Options::default()
     };
-    let built = boolean::boolean(
-        &to_mesh(a.positions, a.indices),
-        &to_mesh(b.positions, b.indices),
-        op.into(),
-        &boolean::Options { relative_tolerance: options.relative_tolerance, ..boolean::Options::default() },
-    )
-    .map_err(BooleanError::Kernel)?;
+    let run = |x: &Mesh, y: &Mesh, op: boolean::Operation| {
+        boolean::boolean(x, y, op, &kernel_options).map_err(BooleanError::Kernel)
+    };
+    let report_of = |built: &polygon_core::BuiltMesh, op: boolean::Operation| {
+        built.report.boolean.clone().unwrap_or(boolean::BooleanReport {
+            operation: op,
+            tolerance_mm: 0.0,
+            work: 0,
+            fragments: 0,
+            input_triangles: [0, 0],
+        })
+    };
+    let (built_mesh, kernel_report) = match op.kernel() {
+        Some(kop) => {
+            let built = run(&a, &b, kop)?;
+            let report = report_of(&built, kop);
+            (built.mesh, report)
+        }
+        None => {
+            let union = run(&a, &b, boolean::Operation::Union)?;
+            let common = run(&a, &b, boolean::Operation::Intersection)?;
+            let built = run(&union.mesh, &common.mesh, boolean::Operation::Difference)?;
+            let parts = [
+                report_of(&union, boolean::Operation::Union),
+                report_of(&common, boolean::Operation::Intersection),
+                report_of(&built, boolean::Operation::Difference),
+            ];
+            let report = boolean::BooleanReport {
+                operation: boolean::Operation::Difference,
+                tolerance_mm: parts.iter().map(|r| r.tolerance_mm).fold(0.0, f64::max),
+                work: parts.iter().map(|r| r.work).sum(),
+                fragments: parts.iter().map(|r| r.fragments).sum(),
+                input_triangles: [a.indices.len() / 3, b.indices.len() / 3],
+            };
+            (built.mesh, report)
+        }
+    };
 
     // Post-check: the result must be strictly manifold. BSP seam vertices
     // can duplicate bitwise, so one conservative weld pass is legitimate.
-    let report = manifold_core::check(&built.mesh.positions, &built.mesh.indices);
+    let report = manifold_core::check(&built_mesh.positions, &built_mesh.indices);
     let (positions, indices, output_report) = if report.is_manifold() {
-        (built.mesh.positions, built.mesh.indices, report)
+        (built_mesh.positions, built_mesh.indices, report)
     } else {
-        let out = manifold_core::repair(&built.mesh.positions, &built.mesh.indices, options.weld_epsilon);
+        let out = manifold_core::repair(&built_mesh.positions, &built_mesh.indices, options.weld_epsilon);
         if !out.is_manifold() {
             return Err(BooleanError::NonManifoldOutput {
                 residual: Box::new(out.report.residual),
@@ -236,16 +295,69 @@ pub fn boolean_manifold_with_options(
     Ok(BooleanOutcome {
         positions,
         indices,
-        kernel_report: built.report.boolean.unwrap_or(boolean::BooleanReport {
-            operation: op.into(),
+        kernel_report,
+        operand_repairs,
+        output_report,
+    })
+}
+
+/// One operand of an n-ary boolean: flat `positions` and triangle `indices`.
+pub type Operand<'a> = (&'a [f64], &'a [usize]);
+
+/// Result of [`boolean_manifold_many`]: the final mesh plus totals over every
+/// pairwise step.
+#[derive(Debug, Clone)]
+pub struct ManyOutcome {
+    pub outcome: BooleanOutcome,
+    /// Pre-repair of each input operand, in input order.
+    pub operand_repairs: Vec<Option<RepairReport>>,
+    /// Kernel work summed over all pairwise steps.
+    pub total_work: usize,
+    /// Number of pairwise kernel steps evaluated.
+    pub steps: usize,
+}
+
+/// N-ary boolean folded left to right: union of all, intersection of all, or
+/// the first operand minus every other one. Every operand is checked (and
+/// repaired once, if needed) before any boolean runs; `max_work` bounds each
+/// step. `Xor` folds as an odd-parity symmetric difference. A single operand
+/// is returned after admission; an empty list is invalid input.
+pub fn boolean_manifold_many(
+    operands: &[Operand<'_>],
+    op: BooleanOp,
+    options: BooleanOptions,
+) -> Result<ManyOutcome, BooleanError> {
+    if operands.is_empty() {
+        return Err(invalid_options("N-ary boolean needs at least one operand"));
+    }
+    let mut admitted = Vec::with_capacity(operands.len());
+    for (slot, (positions, indices)) in operands.iter().enumerate() {
+        admitted.push(admit(slot, positions, indices, options.weld_epsilon)?);
+    }
+    let operand_repairs: Vec<_> = admitted.iter().map(|a| a.repair.clone()).collect();
+    let mut iter = admitted.into_iter();
+    let first = iter.next().expect("non-empty");
+    let mut outcome = BooleanOutcome {
+        output_report: manifold_core::check(&first.positions, &first.indices),
+        positions: first.positions,
+        indices: first.indices,
+        kernel_report: boolean::BooleanReport {
+            operation: op.kernel().unwrap_or(boolean::Operation::Difference),
             tolerance_mm: 0.0,
             work: 0,
             fragments: 0,
             input_triangles: [0, 0],
-        }),
-        operand_repairs: [a.repair, b.repair],
-        output_report,
-    })
+        },
+        operand_repairs: [None, None],
+    };
+    let (mut total_work, mut steps) = (0, 0);
+    for next in iter {
+        let step = boolean_manifold_with_options(&outcome.positions, &outcome.indices, &next.positions, &next.indices, op, options)?;
+        total_work += step.kernel_report.work;
+        steps += 1;
+        outcome = step;
+    }
+    Ok(ManyOutcome { outcome, operand_repairs, total_work, steps })
 }
 
 #[cfg(test)]
@@ -345,7 +457,7 @@ mod tests {
         let (bp, bi) = cube([5.0, 0.0, 0.0], 10.0);
         let out = boolean_manifold_with_options(
             &ap, &ai, &bp, &bi, BooleanOp::Union,
-            BooleanOptions { weld_epsilon: 1e-4, relative_tolerance: 1e-7 },
+            BooleanOptions { weld_epsilon: 1e-4, relative_tolerance: 1e-7, ..BooleanOptions::default() },
         ).unwrap();
         assert!((out.kernel_report.tolerance_mm - 1.5e-6).abs() < 1e-12);
         for options in [
@@ -356,6 +468,100 @@ mod tests {
         ] {
             let error = boolean_manifold_with_options(&ap, &ai, &bp, &bi, BooleanOp::Union, options).unwrap_err();
             assert!(matches!(error, BooleanError::Kernel(ref e) if e.code == "GEOMETRY_INVALID_INPUT"));
+        }
+    }
+
+    fn volume_of(out: &BooleanOutcome) -> f64 {
+        out.volume()
+    }
+
+    #[test]
+    fn xor_of_nested_cubes_is_a_hollow_shell() {
+        let (ap, ai) = cube([0.0; 3], 4.0);
+        let (bp, bi) = cube([1.0; 3], 2.0);
+        let out = boolean_manifold(&ap, &ai, &bp, &bi, BooleanOp::Xor).unwrap();
+        assert!(out.output_report.is_manifold());
+        assert!((volume_of(&out) - 56.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn xor_of_disjoint_cubes_keeps_both() {
+        let (ap, ai) = cube([0.0; 3], 1.0);
+        let (bp, bi) = cube([3.0, 0.0, 0.0], 1.0);
+        let out = boolean_manifold(&ap, &ai, &bp, &bi, BooleanOp::Xor).unwrap();
+        assert!((volume_of(&out) - 2.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn xor_of_identical_cubes_is_empty() {
+        let (ap, ai) = cube([0.0; 3], 1.0);
+        let out = boolean_manifold(&ap, &ai, &ap, &ai, BooleanOp::Xor).unwrap();
+        assert!(out.indices.is_empty());
+    }
+
+    #[test]
+    fn xor_of_crossing_cubes_is_refused_not_returned_non_manifold() {
+        let (ap, ai) = cube([0.0; 3], 2.0);
+        let (bp, bi) = cube([1.0; 3], 2.0);
+        match boolean_manifold(&ap, &ai, &bp, &bi, BooleanOp::Xor) {
+            Ok(out) => {
+                assert!(out.output_report.is_manifold());
+                assert!((volume_of(&out) - 14.0).abs() < 1e-9);
+            }
+            Err(BooleanError::NonManifoldOutput { .. }) => {}
+            Err(BooleanError::Kernel(e)) if e.code != "GEOMETRY_INVALID_INPUT" || e.message.contains("not a valid solid") => {}
+            Err(e) => panic!("unexpected error {e}"),
+        }
+    }
+
+    #[test]
+    fn work_budget_is_validated_and_enforced() {
+        let (ap, ai) = cube([0.0; 3], 2.0);
+        let (bp, bi) = cube([1.0; 3], 2.0);
+        for max_work in [0, MAX_WORK_BUDGET + 1] {
+            let options = BooleanOptions { max_work, ..BooleanOptions::default() };
+            assert!(boolean_manifold_with_options(&ap, &ai, &bp, &bi, BooleanOp::Union, options).is_err());
+        }
+        let options = BooleanOptions { max_work: 1, ..BooleanOptions::default() };
+        match boolean_manifold_with_options(&ap, &ai, &bp, &bi, BooleanOp::Union, options) {
+            Err(BooleanError::Kernel(e)) => assert_ne!(e.code, "GEOMETRY_INVALID_INPUT"),
+            other => panic!("tiny work budget must exhaust the kernel, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn n_ary_union_intersection_and_difference_fold_all_operands() {
+        let cubes: Vec<_> = (0..4).map(|i| cube([i as f64 * 1.5, 0.0, 0.0], 2.0)).collect();
+        let operands: Vec<Operand<'_>> = cubes.iter().map(|(p, i)| (p.as_slice(), i.as_slice())).collect();
+        let union = boolean_manifold_many(&operands, BooleanOp::Union, BooleanOptions::default()).unwrap();
+        assert_eq!(union.steps, 3);
+        assert!(union.total_work > 0);
+        assert!((union.outcome.volume() - 2.0 * 2.0 * 6.5).abs() < 1e-9);
+        let common = boolean_manifold_many(&operands[..2], BooleanOp::Intersection, BooleanOptions::default()).unwrap();
+        assert!((common.outcome.volume() - 0.5 * 4.0).abs() < 1e-9);
+        let (bp, bi) = cube([-1.0; 3], 10.0);
+        let mut cut: Vec<Operand<'_>> = vec![(bp.as_slice(), bi.as_slice())];
+        cut.extend_from_slice(&operands);
+        let diff = boolean_manifold_many(&cut, BooleanOp::Difference, BooleanOptions::default()).unwrap();
+        assert!((diff.outcome.volume() - (1000.0 - 26.0)).abs() < 1e-9);
+        assert_eq!(diff.operand_repairs.len(), 5);
+        assert!(boolean_manifold_many(&[], BooleanOp::Union, BooleanOptions::default()).is_err());
+        let single = boolean_manifold_many(&operands[..1], BooleanOp::Union, BooleanOptions::default()).unwrap();
+        assert_eq!(single.steps, 0);
+    }
+
+    #[test]
+    fn inside_out_and_partly_flipped_operands_are_reoriented() {
+        let (ap, ai) = cube([0.0; 3], 2.0);
+        let (bp, bi) = cube([1.0; 3], 2.0);
+        let mut inverted = ai.clone();
+        inverted.chunks_mut(3).for_each(|t| t.swap(1, 2));
+        let mut flipped = ai.clone();
+        flipped[..6].chunks_mut(3).for_each(|t| t.swap(1, 2));
+        for indices in [inverted, flipped] {
+            let out = boolean_manifold(&ap, &indices, &bp, &bi, BooleanOp::Union).unwrap();
+            assert!(out.operand_repairs[0].is_some());
+            assert!((out.volume() - 15.0).abs() < 1e-9);
         }
     }
 }

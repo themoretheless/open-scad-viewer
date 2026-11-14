@@ -91,6 +91,25 @@ export interface MeshData {
   /** Compact triangle runs mapped back to the source operation that created them. */
   provenance: MeshProvenanceRun[]
   topology: MeshTopologyDiagnostics
+  /**
+   * Optional coarse-to-fine display levels with certified geometric error
+   * bounds; the viewer swaps among them by screen size. The published
+   * geometry above stays the base shown before the first selection.
+   */
+  lods?: readonly MeshLodLevel[]
+}
+
+/** One display level of a mesh, in the mesh's local coordinates. */
+export interface MeshLodLevel {
+  vertices: Float32Array
+  indices: Uint32Array
+  edgeIndices: Uint32Array
+  faceIds: Uint32Array
+  bvh: MeshBvh
+  provenance: MeshProvenanceRun[]
+  triangleCount: number
+  /** Certified two-sided deviation from the exact surface, model units. */
+  errorUpper: number
 }
 
 /**
@@ -113,6 +132,15 @@ export function meshTransferables(meshes: readonly MeshData[]): ArrayBuffer[] {
     add(mesh.bvh.bounds.buffer)
     add(mesh.bvh.nodes.buffer)
     add(mesh.bvh.triangles.buffer)
+    for (const level of mesh.lods ?? []) {
+      add(level.vertices.buffer)
+      add(level.indices.buffer)
+      add(level.edgeIndices.buffer)
+      add(level.faceIds.buffer)
+      add(level.bvh.bounds.buffer)
+      add(level.bvh.nodes.buffer)
+      add(level.bvh.triangles.buffer)
+    }
   }
 
   return [...buffers]

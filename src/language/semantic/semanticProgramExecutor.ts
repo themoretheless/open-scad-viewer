@@ -1,7 +1,4 @@
 import {
-  semanticNodeInputs,
-  semanticNodeProducerOperationNames,
-  semanticResultItems,
   type SemanticColor,
   type SemanticGeometryKind,
   type SemanticNode,
@@ -12,10 +9,6 @@ import {
   type SemanticValueType,
 } from '../../core/semanticProgram'
 import type { SemanticProgramAttestation } from './semanticProgramCodec'
-import {
-  requireTrustedSemanticLowering,
-  type SemanticLoweringSuccess,
-} from './semanticProgramLowerer'
 export { checkSemanticExecutionControl } from './semanticProgramExecutor/checkSemanticExecutionControl'
 export { executeSemanticProgram } from './semanticProgramExecutor/executeSemanticProgram'
 

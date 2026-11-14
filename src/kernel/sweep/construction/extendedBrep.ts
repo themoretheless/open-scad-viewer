@@ -1,33 +1,27 @@
 import type {ExactAffineLatticePlacement} from './brep'
 // Original-request native candidates and their explicit transport ownership.
 import type {NurbsBrep} from '../../geometry/brep/core'
-import {constructMiterOwnedBoundary,constructProgressiveMiterOwnedBoundary,constructUnbudgetedDirectMiterBoundary,progressiveMiterOwnedRequest,reconstructMiterOwnedBoundary,type MiterOwnedBoundaryReport,type DirectMiterOwnedSourceRequest,type UnbudgetedAnnularMiterBoundaryReport} from '../../nurbsMiterOwnedBoundary'
+import {constructMiterOwnedBoundary,constructUnbudgetedDirectMiterBoundary,reconstructMiterOwnedBoundary,type DirectMiterOwnedSourceRequest,type UnbudgetedAnnularMiterBoundaryReport} from '../../nurbsMiterOwnedBoundary'
 
 import {inspectMiterProfileSmoothness,type MiterProfileSmoothness} from '../../miterProfileSmoothness'
 
 import {type SweepBoundaryCertificate} from '../../sweepBoundaryCertificate'
 
-import {planMiterBody,ownedMiterSharpStations,previewMiterWalls} from '../../miterBodyLayout'
 
-import {correctMiterSweepSections,type SweepSectionCorrection} from '../../nurbsSectionProjection'
+import {type SweepSectionCorrection} from '../../nurbsSectionProjection'
 
-import {inspectSweepRetainedCorrespondence,inspectSweepRetainedDecomposition,inspectSweepRetainedCaps,inspectSweepRetainedCapDecomposition,type SweepRetainedCaps,type SweepRetainedCorrespondence} from '../../sweepRetainedCorrespondence'
+import {type SweepRetainedCorrespondence} from '../../sweepRetainedCorrespondence'
 
-import {inspectSweepEmbedding,DEFAULT_SWEEP_EMBEDDING_BUDGETS,type SweepEmbeddingAudit,inspectSweepVolume,inspectSweepVolumeAndCharts,inspectSweepVolumeAndChartsAsync,DEFAULT_SWEEP_VOLUME_BUDGETS,type SweepVolumeAudit} from '../../nurbsSweepEmbedding'
+import {inspectSweepVolume,inspectSweepVolumeAndCharts,inspectSweepVolumeAndChartsAsync,DEFAULT_SWEEP_VOLUME_BUDGETS,type SweepVolumeAudit} from '../../nurbsSweepEmbedding'
 
-import type {DirectSketch} from '../../../app/directModeling'
 
 import {callGeometryRust} from '../../geometry/kernel'
 
 import type {NurbsCurve} from '../../nurbsCurve'
 
-import type {NurbsSurface} from '../../nurbsSurface'
 
-import {normalizePolygonMesh} from '../../geometry/polygon'
 
-import type {PolygonMesh,PolygonBuild} from '../../geometry/polygon'
 
-import type {RustChangeSet,TopoId} from '../../../core/topologyLineage'
 
 /** Affine edit of authored carriers. Reflections also reverse shell face uses. */
 // These are native-derived optimization selections, never positive proof
@@ -36,15 +30,12 @@ import type {RustChangeSet,TopoId} from '../../../core/topologyLineage'
 import {nativeSweepPlanarCapSelections,readNativeSweepPlanarCapFaces} from './nativeCapSelections'
 export {readNativeSweepPlanarCapFaces} from './nativeCapSelections'
 
-import {miterNurbsProfileSections} from '../../nurbsConstructors'
 
-import {inspectProgressiveMiterIdealCapDomains,inspectProgressiveMiterCapProjection,inspectProgressiveMiterCapParallelism,inspectProgressiveMiterWalls,streamProgressiveMiterNurbsProfiles,type ProgressiveMiterOptions,type ProgressiveMiterResult} from '../../nurbsConstructors'
 
-import {inspectSweepContours,inspectSweepProfileRegularity,type SweepProfileRegularityAudit,type SweepContourAudit} from '../../nurbsSweepAudit'
+import {inspectSweepProfileRegularity,type SweepProfileRegularityAudit} from '../../nurbsSweepAudit'
 
-import {inspectSweepRetainedWallCharts,type SweepRetainedChartEvidence} from '../../nurbsSweepRetainedCharts'
+import {type SweepRetainedChartEvidence} from '../../nurbsSweepRetainedCharts'
 
-import {inspectSweepCapContacts,inspectSweepCapPairs,type SweepCapPairEvidence,type SweepCapContactEvidence} from '../../nurbsSweepCapContacts'
 
 // Route original requests and station metadata by object identity. Rust replays
 // and compares actual geometry/certificates before deriving modifier bounds.

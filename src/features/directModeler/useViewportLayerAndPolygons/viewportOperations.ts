@@ -1,30 +1,15 @@
 import {
-  computed,
-  nextTick,
-  onUnmounted,
-  ref,
-  watch,
-  watchEffect,
   type ComponentPublicInstance,
-  type ComputedRef,
-  type Ref,
-  type ShallowRef,
 } from 'svet'
-import type { DirectBody, DirectDocument, Point2 } from '../../../app/directModeling'
+import type { DirectDocument } from '../../../app/directModeling'
 import { createDirectProjector, directExtrusionTool, directFaceShade, projectDirectPoint } from '../../../app/directModelingTools'
-import type { Vec3 } from '../../../app/directSketchGeometry'
 import type { PolygonMesh } from '../../../kernel/geometry/polygon'
-import { SolidDisplayCache, type DisplayMesh } from '../../../kernel/solidDisplayCache'
-import { SolidDisplayQueue } from '../../../kernel/solidDisplayQueue'
-import { isSolidGpuSupported, smoothTriangleList, SolidGpuLayer, type SolidGpuBody } from '../../../kernel/solidGpuView'
+import { type DisplayMesh } from '../../../kernel/solidDisplayCache'
+import { isSolidGpuSupported, SolidGpuLayer } from '../../../kernel/solidGpuView'
 import { solidMaterialRgb } from '../../../kernel/solidMaterial'
 import type { SolidNurbsSurface } from '../../../kernel/solidNurbs'
-import { createSolidPreviewWorker } from '../../../kernel/solidPreviewWorker'
-import type { SolidSurfaceDisplayQueue } from '../../../kernel/solidSurfaceDisplayQueue'
-import { TransparentBsp } from '../../../render/transparentBsp'
 import { prepareVrPolygons } from '../../../render/vrScene'
-import { COARSE_DISPLAY, type Pane } from '.././helpers'
-import type {UseViewportLayerAndPolygonsOptions} from '../useViewportLayerAndPolygons'
+import { COARSE_DISPLAY } from '.././helpers'
 import type {ViewportOperationsContext} from './viewportOperationsContext'
 export function createViewportOperations(context: ViewportOperationsContext) {
 function hasDragNodes(): boolean { return context.dragNodes.length > 0 }

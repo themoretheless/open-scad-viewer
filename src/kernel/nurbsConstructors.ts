@@ -1,14 +1,13 @@
-import {streamNativeSweep} from './sweep/transport/streamNative'
 import type {ProgressiveOriginalFrameSmoothness,ProgressiveClosedPathFrameSmoothness,ProgressiveClosedAuthoredFrameSmoothness,ProgressiveClosedGuidedFrameSmoothness,ProgressiveRetainedDecompositionJoins,ProgressiveRetainedDecompositionSmoothness} from './sweep/certificates/progressiveSweepApi'
 import type { RationalReparameterization } from './nurbsFoundation'
 /** Surface construction is implemented by the own Rust kernel. */
 import { type NurbsCurve } from './nurbsCurve'
 import { type NurbsSurface } from './nurbsSurface'
 import { callNurbsRust } from './geometry/nurbs'
-import {inspectAuthoredFrameRegularity,type AuthoredFrameRegularity} from './nurbsAuthoredFrameRegularity'
-import {inspectRetainedPatchRegularity,type RetainedPatchRegularity} from './nurbsRetainedPatchRegularity'
-import {inspectFrenetFrameRegularity,type FrenetFrameRegularity} from './nurbsFrenetFrameRegularity'
-import {inspectFixedNormalFrameRegularity,type FixedNormalFrameRegularity} from './nurbsFixedNormalFrameRegularity'
+import {type AuthoredFrameRegularity} from './nurbsAuthoredFrameRegularity'
+import {type RetainedPatchRegularity} from './nurbsRetainedPatchRegularity'
+import {type FrenetFrameRegularity} from './nurbsFrenetFrameRegularity'
+import {type FixedNormalFrameRegularity} from './nurbsFixedNormalFrameRegularity'
 /** Rational sphere surface; its poles are intentional parameter singularities. */
 export const sphereNurbsSurface = (center: [number,number,number], radius: number): NurbsSurface => callNurbsRust('surface_sphere',{center,radius})
 /** Circular cylinder side, without caps. */

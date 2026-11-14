@@ -343,6 +343,25 @@ pub enum AnalysisBuffers {
         /// flags bit 0: watertight.
         summary: [u32; 8],
     },
+    /// manifold-core diagnostics.
+    ManifoldDiagnostics {
+        /// Flat `[i, j]` intersecting triangle pairs.
+        intersection_pairs: Vec<u32>,
+        /// Triangles whose thickness sample is below the threshold.
+        thin_triangles: Vec<u32>,
+        /// 4 u32 per close shell pair: [component_a, component_b,
+        /// triangle_a, triangle_b].
+        clearance_pairs: Vec<u32>,
+        /// [min_thickness, max_thickness, min_gap, volume, mass, com x3,
+        /// inertia x9 (row-major)] (NaN when undefined), then one distance
+        /// per clearance pair.
+        floats: Vec<f64>,
+        /// [candidate_pairs, flags, thickness_samples, thickness_missed,
+        ///  component_count, min_thickness_triangle + 1 (0 = none),
+        ///  min_gap_triangle + 1 (0 = none), 0]
+        /// flags bit 0: intersection list truncated; bit 1: mass present.
+        summary: [u32; 8],
+    },
     /// manifold-ops boolean output mesh plus kernel stats.
     ManifoldBoolean {
         positions: Vec<f64>,
@@ -512,6 +531,27 @@ pub fn field(handle: usize, slot: u32) -> usize {
             .or_else(|| {
                 summary
                     .get(slot.checked_sub(6)? as usize)
+                    .map(|&v| v as usize)
+            })
+            .unwrap_or(0),
+            AnalysisBuffers::ManifoldDiagnostics {
+                intersection_pairs,
+                thin_triangles,
+                clearance_pairs,
+                floats,
+                summary,
+            } => pair_slot(
+                &[
+                    ptr_len(intersection_pairs),
+                    ptr_len(thin_triangles),
+                    ptr_len(clearance_pairs),
+                    ptr_len(floats),
+                ],
+                slot,
+            )
+            .or_else(|| {
+                summary
+                    .get(slot.checked_sub(8)? as usize)
                     .map(|&v| v as usize)
             })
             .unwrap_or(0),

@@ -5,6 +5,9 @@
 //! existing centred, square-pixel pinhole. No invalid/black border is manufactured.
 use crate::{Image, Result};
 
+mod chessboard;
+pub use chessboard::*;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Calibration {
     pub width: usize,

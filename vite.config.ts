@@ -2,6 +2,7 @@ import {compactRuntimeChunks} from './scripts/compact-runtime-chunks.mjs'
 import { defineConfig } from 'vite'
 import { svetPlugin } from './scripts/svet-vite-plugin.mjs'
 import {compactWgslPlugin} from './scripts/compact-wgsl.mjs'
+import { pwaBuildPlugin } from './scripts/pwa-build.mjs'
 
 // Keep readable names for budgeted payloads and workers; content hashes identify
 // smaller lazy chunks without repeating long module names in every import URL.
@@ -17,7 +18,7 @@ function runtimeChunkFileName(chunk: {name: string}) {
 // entry preload list.
 export default defineConfig({
   define: { __G1_SHARED_GEOMETRY_MODULE__: 'false' },
-  plugins: [compactWgslPlugin(),svetPlugin(),compactRuntimeChunks()],
+  plugins: [compactWgslPlugin(),svetPlugin(),compactRuntimeChunks(),pwaBuildPlugin()],
   worker: { plugins:()=>[compactRuntimeChunks()], format: 'es', rollupOptions: { output: { chunkFileNames: runtimeChunkFileName, manualChunks(id) {
     // Share decoder code on disk; each worker still owns its runtime state.
     if (/src[\\/]services[\\/](wasmPacking|wasmBase91|wasmBrotliPacking)\.ts$/.test(id)) return 'worker-wasm-packing'

@@ -406,3 +406,170 @@ pub fn reduce_surface_degree_report(
     reduce_surface_axis_report(source, axis, SurfaceSimplification::Reduce,
         0., degree, max_error, tolerance)
 }
+
+/// Indices of interior knot occurrences (with multiplicity) of a clamped vector.
+fn interior_occurrences(knots: &[f64], degree: usize) -> Vec<usize> {
+    let n = knots.len();
+    if n < 2 * (degree + 1) {
+        return Vec::new();
+    }
+    let (lo, hi) = (knots[degree], knots[n - degree - 1]);
+    (degree + 1..n - degree - 1)
+        .filter(|&i| knots[i] > lo && knots[i] < hi)
+        .collect()
+}
+
+/// Greedy search shared by curve and surface removal: repeatedly try to drop
+/// one interior knot occurrence; `trial` refits from the ORIGINAL geometry and
+/// returns `Some((candidate, bound))` only when the bound meets the budget.
+fn greedy_remove<T>(
+    mut knots: Vec<f64>,
+    degree: usize,
+    mut trial: impl FnMut(Vec<f64>) -> Result<Option<(T, f64)>>,
+) -> Result<(Option<(T, f64)>, Vec<f64>)> {
+    let mut best = None;
+    let mut removed = Vec::new();
+    loop {
+        let mut progressed = false;
+        let mut index = knots.len();
+        while index > 0 {
+            index -= 1;
+            if !interior_occurrences(&knots, degree).contains(&index) {
+                continue;
+            }
+            let mut reduced = knots.clone();
+            let knot = reduced.remove(index);
+            if let Some(found) = trial(reduced.clone())? {
+                knots = reduced;
+                best = Some(found);
+                removed.push(knot);
+                progressed = true;
+            }
+        }
+        if !progressed {
+            break;
+        }
+    }
+    Ok((best, removed))
+}
+
+fn greedy_certificate(
+    operation: EditOperation,
+    accepted: bool,
+    error: f64,
+    max_error: f64,
+    tolerance: Option<ToleranceContext>,
+) -> EditCertificate {
+    EditCertificate {
+        operation,
+        accepted,
+        exact_zero_recognized: accepted && error == 0.,
+        error_upper: error,
+        budget: max_error,
+        tolerance: context(tolerance),
+        rebuild: None,
+    }
+}
+
+/// Tiller-style greedy knot removal for a non-periodic curve: removes as many
+/// interior knot occurrences as the budget allows. Every trial candidate is
+/// refit from the ORIGINAL curve onto the reduced knot vector and admitted
+/// only by a fresh continuous deviation bound against the ORIGINAL curve, so
+/// errors never accumulate across removals. Returns the edit and the removed
+/// knot values; with nothing removed the source is returned with bound zero.
+pub fn remove_curve_knots_report(
+    source: &Curve,
+    max_error: f64,
+    tolerance: Option<ToleranceContext>,
+) -> Result<(CurveEdit, Vec<f64>)> {
+    source.validate()?;
+    check(!source.periodic, "Certified removal currently requires non-periodic storage")?;
+    check(max_error.is_finite() && max_error >= 0., "Maximum error must be finite and nonnegative")?;
+    let (best, removed) = greedy_remove(source.knots.clone(), source.degree, |knots| {
+        let Ok(candidate) = refit_curve(source, source.degree, knots) else {
+            return Ok(None);
+        };
+        let report = crate::distance::curve_deviation::inspect(
+            source,
+            &candidate,
+            (max_error * 0.01).max(1e-12),
+            4096,
+        )?;
+        let bound = report.bounds[1];
+        Ok((bound.is_finite() && bound <= max_error).then_some((candidate, bound)))
+    })?;
+    let accepted = best.is_some();
+    let (curve, error) = best.unwrap_or_else(|| (source.clone(), 0.));
+    Ok((
+        CurveEdit {
+            curve,
+            certificate: greedy_certificate(EditOperation::KnotRemoval, accepted, error, max_error, tolerance),
+        },
+        removed,
+    ))
+}
+
+/// Greedy knot removal along one non-periodic surface axis. Each trial is a
+/// [`remove_surface_knots_report`] refit from the ORIGINAL surface, admitted
+/// only by its whole-surface positional bound against the ORIGINAL surface.
+pub fn remove_surface_axis_knots_report(
+    source: &Surface,
+    axis: Axis,
+    max_error: f64,
+    tolerance: Option<ToleranceContext>,
+) -> Result<(SurfaceEdit, Vec<f64>)> {
+    source.validate()?;
+    check(max_error.is_finite() && max_error > 0., "Greedy surface knot removal needs a positive finite error budget")?;
+    let (degree, original) = match axis {
+        Axis::U => (source.degree_u, source.knots_u.clone()),
+        Axis::V => (source.degree_v, source.knots_v.clone()),
+    };
+    let (best, removed) = greedy_remove(original, degree, |knots| {
+        let Ok(edit) = remove_surface_knots_report(source, axis, knots, max_error, None) else {
+            return Ok(None);
+        };
+        Ok(edit
+            .certificate
+            .accepted
+            .then_some((edit.surface, edit.certificate.error_upper)))
+    })?;
+    let accepted = best.is_some();
+    let (surface, error) = best.unwrap_or_else(|| (source.clone(), 0.));
+    Ok((
+        SurfaceEdit {
+            surface,
+            certificate: greedy_certificate(EditOperation::SurfaceKnotRemoval, accepted, error, max_error, tolerance),
+        },
+        removed,
+    ))
+}
+
+/// Greedy knot removal in both surface directions. The U pass may spend the
+/// whole budget; the V pass gets what remains and is bounded against the U
+/// result. Both refits keep the parameterization, so the reported bound is
+/// the sum of the two positional bounds (triangle inequality per parameter).
+pub fn remove_surface_knots_greedy_report(
+    source: &Surface,
+    max_error: f64,
+    tolerance: Option<ToleranceContext>,
+) -> Result<(SurfaceEdit, [Vec<f64>; 2])> {
+    let (u, removed_u) = remove_surface_axis_knots_report(source, Axis::U, max_error, None)?;
+    let spent = u.certificate.error_upper;
+    let remaining = max_error - spent;
+    let (surface, removed_v, v_error) = if remaining > 0. {
+        let (v, removed_v) = remove_surface_axis_knots_report(&u.surface, Axis::V, remaining, None)?;
+        let e = v.certificate.error_upper;
+        (v.surface, removed_v, e)
+    } else {
+        (u.surface, Vec::new(), 0.)
+    };
+    let accepted = !(removed_u.is_empty() && removed_v.is_empty());
+    let error = spent + v_error;
+    Ok((
+        SurfaceEdit {
+            surface,
+            certificate: greedy_certificate(EditOperation::SurfaceKnotRemoval, accepted, error, max_error, tolerance),
+        },
+        [removed_u, removed_v],
+    ))
+}

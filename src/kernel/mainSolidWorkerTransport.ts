@@ -106,6 +106,6 @@ export function prepareMainSolidTransfer(response: MainSolidResponse): { respons
 
 /** Typed arrays survive structuredClone intact, so protocol validation sees them
  * directly; this stays as the seam for any future packing. */
-export function decodeMainSolidResult(kind: MainSolidJob['kind'], result: unknown): unknown {
+export function decodeMainSolidResult(_kind: MainSolidJob['kind'], result: unknown): unknown {
   return result
 }

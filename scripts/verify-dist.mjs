@@ -4,6 +4,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { extname, join, relative } from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import { CACHE_VERSION_PLACEHOLDER, findInlineScripts } from './pwa-build.mjs'
 import { verifyPackedWasmChunk, verifyUniquePackedWasm, verifyRawWasm } from './verify-packed-wasm.mjs'
 
 const rootUrl = new URL('../dist/', import.meta.url)
@@ -17,6 +18,12 @@ function walk(directory) {
   }
 }
 walk(root)
+// The Content-Security-Policy forbids inline scripts, and the service worker must carry a build-derived version.
+const builtIndex = readFileSync(join(root, 'index.html'), 'utf8')
+const inlineScripts = findInlineScripts(builtIndex)
+if (inlineScripts.length) throw new Error(`dist/index.html has inline scripts, which the CSP blocks: ${inlineScripts.join(' ')}`)
+if (!/http-equiv="Content-Security-Policy"/.test(builtIndex)) throw new Error('dist/index.html has no Content-Security-Policy meta tag')
+if (readFileSync(join(root, 'sw.js'), 'utf8').includes(CACHE_VERSION_PLACEHOLDER)) throw new Error('dist/sw.js CACHE_VERSION was not stamped')
 const geometryDelivery=selectGeometryDeliveryBudget(createHash('sha256')
   .update(readFileSync(new URL('../src/generated/geometry-kernels/kernel_bg.wasm',import.meta.url))).digest('hex'))
 

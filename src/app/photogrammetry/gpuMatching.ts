@@ -9,9 +9,6 @@
 
 import { runGpuCompute } from '../../render/webgpuCompute'
 
-/** Workgroup size baked into the kernel's MATCH_WGSL (the compute-core anchor). */
-const MATCH_WORKGROUP = 256
-
 export interface GpuMatchingPayload {
   imageCount: number
   pairCount: number

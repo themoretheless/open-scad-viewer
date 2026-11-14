@@ -210,7 +210,7 @@ export function validateExecution(
         }
       }
       const admittedProducers = new Set<number>()
-      occurrences.forEach((candidate, candidateIndex) => {
+      occurrences.forEach((candidate, _candidateIndex) => {
         if (candidate.node !== root || candidate.outputOrdinal === null) return
         if (!semanticNodeProducerOperationNames(nodes[root]).includes(
           operations[candidate.operation].name,

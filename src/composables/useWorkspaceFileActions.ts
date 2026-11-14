@@ -1,4 +1,4 @@
-import { nextTick, onUnmounted, ref, type ComputedRef, type Ref, type ShallowRef } from 'svet'
+import { onUnmounted, ref, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import { useMainSolidTask } from '../features/useMainSolidTask'
 import { createSolidPreviewWorker } from '../kernel/solidPreviewWorker'
 import { downloadBlob, sanitizeFileName } from '../appHelpers'
@@ -45,7 +45,6 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
   const fileInputRef = ref<HTMLInputElement | null>(null)
   const convertInputRef = ref<HTMLInputElement | null>(null)
   const exportDialogOpen = ref(false)
-  const exportDialogRef = ref<HTMLElement | null>(null)
   const additionalExportFormat = ref<MeshExportFormat>('stl_binary')
   const exportMeshQuality = ref<ExportMeshQualityPreset>('high')
   const conversionTask = useMainSolidTask(createSolidPreviewWorker())
@@ -57,12 +56,9 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     conversionTask.dispose()
   })
 
+  /** Initial focus, the Tab trap and focus restore belong to the shared `Modal`. */
   function openExportDialog() {
     exportDialogOpen.value = true
-    void nextTick(() => {
-      const dialog = exportDialogRef.value
-      ;(dialog?.querySelector<HTMLElement>('input:checked') ?? dialog?.querySelector<HTMLElement>('button'))?.focus()
-    })
   }
 
   async function confirmExport() {
@@ -228,7 +224,6 @@ export function useWorkspaceFileActions(options: UseWorkspaceFileActionsOptions)
     fileInputRef,
     convertInputRef,
     exportDialogOpen,
-    exportDialogRef,
     additionalExportFormat,
     exportMeshQuality,
     conversionPending,

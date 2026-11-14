@@ -6,6 +6,7 @@ import type { FaceTriangleIndex } from './meshSelectionOverlay'
 import type { MaterialDef, ShadingModel } from './rendererContracts'
 
 /* ── GPU mesh handle ──────────────────────────────── */
+import type { GMeshLodState } from './meshLod'
 
 export interface GMesh {
   entityId?: MeshData['entityId']
@@ -46,6 +47,8 @@ export interface GMesh {
   material?: MaterialDef
   /** Resolved shading model; drives mesh pipeline selection at draw time. */
   shadingModel: ShadingModel
+  /** Certified display levels and the one currently bound, when published. */
+  lod?: GMeshLodState
 }
 
 /** Shared empty list so render() never allocates when there are no ghosts. */

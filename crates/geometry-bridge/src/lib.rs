@@ -17,6 +17,7 @@ mod sweep_viewport;
 pub use math_core::Acceleration;
 pub mod brep_attestation;
 mod brep_display;
+mod viewer_lod;
 mod brep_exact_full_round;
 pub mod brep_envelope;
 pub mod brep_execution_plan;

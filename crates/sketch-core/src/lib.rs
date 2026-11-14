@@ -190,11 +190,13 @@ pub(crate) fn subtract(a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
 mod dr;
 mod geometry_ops;
 mod identity;
+mod pebble;
 mod profile;
 mod residuals;
 mod solver;
 
-pub use dr::{DrPlan, DrStep, RigidCluster, plan_dr};
+pub use dr::{BarRigidity, DrPlan, DrStep, RigidCluster, plan_dr};
+pub use pebble::{MAX_PEBBLE_EDGES, MAX_PEBBLE_VERTICES, PebbleAnalysis, pebble_game_2d};
 pub use identity::{PersistentIds, RebuildMap};
 pub use profile::{ValidatedProfile, validate_profile};
 pub use solver::{

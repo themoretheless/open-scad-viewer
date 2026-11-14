@@ -1,0 +1,58 @@
+<script setup lang="ts">
+import { ref } from 'svet'
+import { useModalDialog } from '../composables/useModalDialog'
+
+/**
+ * Shared modal side panel: the same dialog contract as `Modal` (role, `aria-modal`,
+ * title label, focus in, Tab trap, Escape, focus restore, scroll lock), docked to one
+ * edge of the window instead of centered.
+ */
+const props = withDefaults(defineProps<{
+  open: boolean
+  labelledby: string
+  describedby?: string
+  side?: 'left' | 'right'
+  panelClass?: string
+  initialFocus?: () => HTMLElement | null | undefined
+  restoreFocus?: boolean
+}>(), { side: 'right', restoreFocus: true })
+const emit = defineEmits<{ close: []; keydown: [event: KeyboardEvent] }>()
+const panelRef = ref<HTMLElement | null>(null)
+const { handleKeydown } = useModalDialog({
+  open: () => props.open,
+  dialog: panelRef,
+  initialFocus: () => props.initialFocus?.(),
+  restoreFocus: () => props.restoreFocus,
+  onClose: () => emit('close'),
+  onKeydown: event => emit('keydown', event),
+})
+defineExpose({ panel: panelRef })
+</script>
+
+<template>
+  <Teleport to="body">
+    <div v-if="open" class="side-panel-backdrop" @pointerdown.self="emit('close')">
+      <aside
+        ref="panelRef"
+        class="side-panel"
+        :class="[`side-panel-${side}`, panelClass]"
+        role="dialog"
+        aria-modal="true"
+        :aria-labelledby="labelledby"
+        :aria-describedby="describedby"
+        tabindex="-1"
+        @keydown="handleKeydown"
+      >
+        <slot />
+      </aside>
+    </div>
+  </Teleport>
+</template>
+
+<style scoped>
+.side-panel-backdrop { position: fixed; z-index: 100; inset: 0; display: flex; background: rgba(4, 6, 10, .5); }
+.side-panel { display: flex; flex-direction: column; width: min(420px, 100%); height: 100%; overflow: auto; color: var(--text); background: var(--surface); border: 0 solid var(--border); box-shadow: 0 0 48px rgba(0, 0, 0, .4); }
+.side-panel:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.side-panel-right { margin-left: auto; border-left-width: 1px; }
+.side-panel-left { margin-right: auto; border-right-width: 1px; }
+</style>

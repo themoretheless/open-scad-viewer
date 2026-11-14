@@ -1,17 +1,7 @@
-import { createHash } from 'node:crypto'
 import {
-  McpServer,
-  ResourceNotFoundError,
-  ResourceTemplate,
-  SUPPORTED_PROTOCOL_VERSIONS,
   type RequestId,
 } from '@modelcontextprotocol/server'
 import { z } from 'zod/v4'
-import type {
-  GeometryBuildPurpose,
-  GeometryEngineRegistrySnapshot,
-  GeometryExecutionDescriptor,
-} from '../core/geometryExecution'
 import {
   ACTIVE_GEOMETRY_MANIFEST_VERSIONS,
   GEOMETRY_MANIFEST_ARCHIVE,
@@ -21,54 +11,18 @@ import {
   OPENSCAD_2021_01_CONTRACT,
   OPENSCAD_2021_01_INDEPENDENT_ENGINE,
 } from '../core/openScad2021Contract'
-import { EXAMPLE_CATALOG, EXAMPLES } from '../data/examples'
-import {
-  attachGeometryExecutionToError,
-  geometryExecutionForError,
-  GeometryCapabilityUnavailableError,
-  GeometryEngineUnavailableError,
-  GeometryLanguageContractError,
-} from '../kernel/geometryBuildEngine'
-import type { CustomizerValue } from '../language/scadCustomizer'
 import {
   OPENSCAD_PROJECT_MAX_BLOB_BYTES,
   OPENSCAD_PROJECT_MAX_FILES,
   OPENSCAD_PROJECT_MAX_PATH_BYTES,
   OPENSCAD_PROJECT_MAX_SOURCE_BYTES,
-  OPENSCAD_PROJECT_MAX_TOTAL_BYTES,
   normalizeOpenScadProjectPath,
 } from '../language/openScadProject'
-import { buildBinaryStl, buildObj } from '../exchange/meshExport'
 import {
-  DEFAULT_MAX_IN_FLIGHT_REQUESTS,
-  DEFAULT_MAX_PENDING_CONTROL_MESSAGES,
-  DEFAULT_MAX_PENDING_OUTBOUND_MESSAGES,
-  MAX_MCP_SUBSCRIPTIONS,
-  MAX_MCP_STRING_REQUEST_ID_LENGTH,
-} from './boundedTransport'
-import {
-  ArtifactSizeError,
   DEFAULT_MAX_ARTIFACT_BYTES,
-  GeometryBusyError,
-  HeadlessGeometryService,
   MAX_ARTIFACT_BYTES,
-  MAX_PENDING_GEOMETRY_JOBS,
-  type GeometryAnalysis,
   type McpGeometryService,
 } from './geometryService'
-import {
-  IndependentArtifactCache,
-  MAX_INDEPENDENT_ARTIFACT_CACHE_BYTES,
-  MAX_INDEPENDENT_ARTIFACT_CACHE_ENTRIES,
-  independentArtifactMimeType,
-  type IndependentArtifactSummary,
-  type IndependentArtifactFormat,
-} from './independentArtifactCache'
-import {
-  executeIndependentOpenScad,
-  INDEPENDENT_OPENSCAD_ENGINE_ATTESTATION,
-  independentOpenScadMetrics,
-} from './independentOpenScadExecution'
 import {
   DIRECT_GEOMETRY_CANCEL_GRACE_MS,
   DIRECT_GEOMETRY_JOB_DEADLINE_MS,
@@ -77,42 +31,15 @@ import {
   DIRECT_GEOMETRY_STARTUP_TIMEOUT_MS,
 } from './directGeometrySupervisor'
 import {
-  assertGeometryManifestArchive,
-  canonicalJson,
-  engineManifestUri,
-  immutableEngineManifestToWire,
-  staticEngineManifestToWire,
-} from './engineManifest'
-import {
   MAX_MODEL_ID_LENGTH,
-  MAX_MODEL_NAME_LENGTH,
   MAX_MODEL_SOURCE_LENGTH,
-  ModelRevisionConflictError,
   isWellFormedUnicode,
-  validateModelId,
   type ModelStore,
-  type StoredBuild,
-  type StoredModel,
-  type StoredModelRevision,
 } from './modelStore'
 import {
-  buildDiagnostic,
-  isAbortError,
-  ModelNotFoundError,
   PUBLIC_ERROR_CODES,
-  publicToolError,
 } from './publicError'
 import {
-  OfficialArtifactCache,
-  type OfficialArtifactSummary,
-} from './officialArtifactCache'
-import {
-  OfficialOpenScadRemoteError,
-  OfficialOpenScadRuntimeSupervisor,
-  type OfficialOpenScadCapabilities,
-  type OfficialOpenScadCheckResult,
-  type OfficialOpenScadExportResult,
-  type OfficialOpenScadRunOptions,
   type OfficialOpenScadRuntimeService,
 } from './officialOpenScadRuntimeService'
 import {
@@ -124,14 +51,11 @@ import {
   OFFICIAL_OPENSCAD_MAX_LOG_BYTES,
   OFFICIAL_OPENSCAD_MAX_LOG_ENTRIES,
   OFFICIAL_OPENSCAD_MAX_LOG_ENTRY_BYTES,
-  OFFICIAL_OPENSCAD_MAX_PROJECT_BYTES,
   OFFICIAL_OPENSCAD_MAX_PROJECT_FILE_BYTES,
   OFFICIAL_OPENSCAD_MAX_PROJECT_FILES,
   OFFICIAL_OPENSCAD_MAX_SOURCE_BYTES,
   OFFICIAL_OPENSCAD_MAX_TIMEOUT_MS,
   normalizeOfficialOpenScadProjectPath,
-  officialOpenScadMimeType,
-  officialOpenScadProjectPathsConflict,
 } from './officialOpenScadRuntimeProtocol'
 import {
   OFFICIAL_OPENSCAD_FONT_FAMILY,
@@ -141,7 +65,6 @@ import {
   OFFICIAL_OPENSCAD_RUNTIME_PATCH_VERSION,
   OFFICIAL_OPENSCAD_RUNTIME_VERSION,
 } from './officialOpenScadRuntimePatch'
-import { truncateWellFormed } from '../core/unicode'
 import { meshExecutionSchemaForManifest, validateIndependentProjectInput } from './createServer/officialToolInputSchema'
 export { persistedFailureStatus } from './createServer/persistedFailureStatus'
 export { createOpenScadMcpServer } from './createServer/createOpenScadMcpServer'

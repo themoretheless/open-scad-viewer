@@ -86,7 +86,7 @@ export class CadSolid extends Handle {
     private affine(operation: string, args: object) { const result = new CadSolid(call('transform', { id: this.handle, operation, ...args })); result.original = this.original; return result; }
     rotate(v: Vec3) { return this.affine('rotate', { angles: v }); }
     mirror(v: Vec3) { return this.affine('mirror', { normal: v }); }
-    delete() { super.delete(); this.meshSnapshot = undefined; }
+    override delete() { super.delete(); this.meshSnapshot = undefined; }
     originalID() { return this.original; }
     asOriginal() { const m = new CadSolid(call('copy', { id: this.handle })); return m; }
     status(): ErrorStatus { return !this.invalidImport && (this.isEmpty() || this.inspect().report?.closed) ? 'NoError' : 'NotManifold'; }

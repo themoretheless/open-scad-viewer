@@ -68,7 +68,7 @@ export function circularDirectCopies(sketch: DirectSketch, count: number, center
   if (!Number.isInteger(count) || count < 2 || count > 64 || !center.every(Number.isFinite) || !Number.isFinite(sweep) || Math.abs(sweep) < .01 || Math.abs(sweep) > 360) throw new Error('Use 2–64 instances and an angle up to 360 degrees.')
   const closed = Math.abs(sweep) === 360
   return Array.from({ length: count - 1 }, (_, i) => {
-    const a = (i + 1) * sweep / (closed ? count : count - 1) * Math.PI / 180, c = Math.cos(a), s = Math.sin(a)
+    const a = (i + 1) * sweep / (closed ? count : count - 1) * Math.PI / 180
     return { ...transformSketch(sketch,[0,0],a*180/Math.PI,1,center), id: makeId(), name: (sketch.name + ' · ' + (i + 2)).slice(0,100) }
   })
 }

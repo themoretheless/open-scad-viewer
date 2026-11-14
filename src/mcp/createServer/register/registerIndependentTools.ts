@@ -10,7 +10,7 @@ import type { McpServerContext } from './context'
 
 /** Independent stable-2021.01 evaluator: check and full-quality export. */
 export function registerIndependentTools(ctx: McpServerContext): void {
-  const { geometry, independentArtifacts, server, notifyResourceListChanged } = ctx
+  const { independentArtifacts, server, notifyResourceListChanged } = ctx
   server.registerTool('openscad_independent_check', {
     title: 'Check with the independent OpenSCAD engine',
     description: 'Execute an inline source or bounded include/use project with the project-owned OpenSCAD 2021.01 frontend and geometry pipeline, without invoking the upstream OpenSCAD runtime. This remains a development surface, not a complete-language production claim.',

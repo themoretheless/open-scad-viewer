@@ -4,12 +4,12 @@ import { createExactFullRoundSnapshot } from './exactFullRoundSnapshot'
  * This executable seam does not register a qualified production engine.
  */
 import type {GeometryEvaluationResult, GeometryQuality} from '../core/build'
-import type {MeshData} from '../core/mesh'
+import type {MeshData, MeshLodLevel, MeshProvenanceRun} from '../core/mesh'
 import {createNativeGeometryArtifact, MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
 import {geometryAssetId} from '../core/scene'
 import {type SemanticOccurrenceId, type SemanticOperationId} from '../core/semanticProgram'
 import {executeBrepNativeProgram} from './brepNativeExecutor'
-import {prepareBrepDisplay} from './geometry/brep'
+import {prepareBrepDisplay, prepareBrepDisplayLevels} from './geometry/brep'
 import {callGeometryRust} from './geometry/kernel'
 import {buildMeshBvh} from './meshBvh'
 import {extractSemanticEdges} from './meshTopology'
@@ -113,7 +113,12 @@ export async function buildBrepSemanticScene(
       const source = provenanceByOperation.get(sourceOccurrence.operation)
       const edges = extractSemanticEdges(vertices, indices)
       const assetId = geometryAssetId(vertices, indices)
+      const provenanceFor = (triangles: number): MeshProvenanceRun[] => [{triangleStart: 0, triangleEnd: triangles, backside: false,
+        source: source ? {id: sourceOccurrence.operation, originalId: sourceOccurrence.operation,
+          instanceId: entityId, start: source.span.start, end: source.span.end, label: source.label} : null}]
+      const lods = exact ? undefined : displayLevels(geometry.model, provenanceFor)
       meshes.push({
+        ...(lods ? {lods} : {}),
         vertices, indices, geometryAssetId: assetId, entityId, nativeGeometry: snapshot,
         bvh: buildMeshBvh(vertices, indices), edgeIndices: edges.indices,
         topology: {boundary: mesh.report.boundaryEdges, nonManifold: mesh.report.nonManifoldEdges,
@@ -144,4 +149,18 @@ export async function buildBrepSemanticScene(
   // pending must still prevent publication of the assembled scene.
   checkControl(control)
   return assembled
+}
+
+/** Levels whose finest mesh still fits the per-body display budget; any refusal keeps the single published mesh. */
+const MAX_LOD_TRIANGLES = 20_000
+function displayLevels(model: Parameters<typeof prepareBrepDisplayLevels>[0], provenanceFor: (triangles: number) => MeshProvenanceRun[]): MeshLodLevel[] | undefined {
+  let levels
+  try { levels = prepareBrepDisplayLevels(model) } catch { return undefined }
+  if (!levels || levels.some(level => !level.closed || level.triangleCount > MAX_LOD_TRIANGLES)) return undefined
+  return levels.map(level => {
+    const vertices = new Float32Array(level.displayVertices), indices = new Uint32Array(level.displayIndices)
+    return {vertices, indices, edgeIndices: extractSemanticEdges(vertices, indices).indices,
+      faceIds: new Uint32Array(level.faceIds), bvh: buildMeshBvh(vertices, indices),
+      provenance: provenanceFor(indices.length / 3), triangleCount: level.triangleCount, errorUpper: level.errorUpper}
+  })
 }

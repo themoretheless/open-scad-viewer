@@ -57,6 +57,7 @@ import {
   computeWheelDistance,
 } from './cameraGestures'
 export { computePinchUpdate } from './cameraGestures'
+import type { KeyboardCameraStep } from './keyboardCamera'
 export type { PinchCameraState, PinchPoint } from './cameraGestures'
 import {
   chooseDepthCandidate,
@@ -73,6 +74,7 @@ import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
 import { MeshInstances } from '../kernel/meshInstances'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
+import { updateMeshLods } from './meshLod'
 import {
   OBJECT_UNIFORM_LAYOUT,
   SCENE_UNIFORM_LAYOUT,
@@ -87,9 +89,9 @@ import { GpuPicker } from './gpuPicker'
 export { GpuPicker } from './gpuPicker'
 import { GpuWboitRenderer } from './gpuWboit'
 export { GpuWboitRenderer } from './gpuWboit'
-import { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline'
+import { GpuBufferArena } from './gpuZeroCopyPipeline'
 export { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline'
-import { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
+import { runGpuMeshSlicer, type SlicerResult } from './gpuSlicer'
 export { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
 export { GeometryWorkerPool, detectHardwareConcurrency } from '../kernel/geometryWorkerPool'
 import {
@@ -97,7 +99,6 @@ import {
   DEFAULT_DISTANCE,
   DEFAULT_GRID_STEP,
   FOV_Y,
-  getGpuExecutionTopologyReport,
   GRID_FADE_DISTANCES,
   GRID_MIN_EXTENT,
   MAX_DEPTH_CANDIDATES,
@@ -106,7 +107,6 @@ import {
   WHEEL_HISTORY_IDLE_MS,
   type Bounds,
   type GMesh,
-  type GpuExecutionTopologyReport,
   type OverlaySlot,
   type WebGPUFrameDiagnostics,
 } from './types'
@@ -120,8 +120,6 @@ export {
 } from './types'
 import {
   sameTypedArray,
-  sortEdgeDraws,
-  sortOpaqueDraws,
 } from './drawSorting'
 export { sortEdgeDraws, sortOpaqueDraws } from './drawSorting'
 import {
@@ -346,6 +344,7 @@ export class WebGPURenderer {
   private frameRetryCount = 0
   /** Frame counter for async validation results; a late clean result must not clear a newer failure. */
   private frameSequence = 0
+  private lastMeshLodKey = ''
   private lastFailedFrame = 0
   private dead = true
   private initialized = false
@@ -1412,6 +1411,34 @@ export class WebGPURenderer {
     })
   }
 
+  /**
+   * Keyboard camera navigation: the same orbit, pan and wheel-zoom math as pointer
+   * gestures, one history-bearing step per key press.
+   */
+  /** Absolute orbit angles (ViewCube stepped orbit), one history-bearing step. */
+  setOrbitAngles(yaw: number, pitch: number): boolean {
+    if (!Number.isFinite(yaw) || !Number.isFinite(pitch)) return false
+    return this.commitCameraChange(() => {
+      this.yaw = yaw
+      this.pitch = Math.max(-MAX_ORBIT_PITCH, Math.min(MAX_ORBIT_PITCH, pitch))
+    })
+  }
+
+  applyKeyboardCameraStep(step: KeyboardCameraStep): boolean {
+    return this.commitCameraChange(() => {
+      const camera = { yaw: this.yaw, pitch: this.pitch, dist: this.dist, tx: this.tx, ty: this.ty, tz: this.tz }
+      if (step.kind === 'zoom') {
+        this.dist = computeWheelDistance(this.dist, step.delta)
+        return
+      }
+      const next = step.kind === 'pan'
+        ? computePanUpdate(camera, step.dx, step.dy, this.canvas?.clientHeight || 1, this.perspectiveFovY)
+        : computeOrbitUpdate(camera, step.dx, step.dy)
+      this.yaw = next.yaw; this.pitch = next.pitch; this.dist = next.dist
+      this.tx = next.tx; this.ty = next.ty; this.tz = next.tz
+    })
+  }
+
   private commitCameraChange(mutator: () => void): boolean {
     this.flushActiveGestureCameraSnapshot()
     const before = this.getCameraState()
@@ -1672,6 +1699,7 @@ export class WebGPURenderer {
     this.raf = 0
     if (this.dead || this.lost || !this.initialized) return
     this.notifyCameraChange()
+    this.applyMeshLods()
     // WebGPU validation errors (invalid pipeline, missing bind group, ...) are
     // asynchronous: encoding succeeds and the whole frame is silently dropped
     // while the canvas keeps the previous image. A per-frame validation scope
@@ -1721,6 +1749,42 @@ export class WebGPURenderer {
   }
 
   /** Every camera mutation requests a frame, so per-frame diffing observes them all. */
+  /** Bind the certified display level each LOD mesh needs at the current camera. */
+  private applyMeshLods() {
+    const dev = this.dev, canvas = this.canvas
+    if (!dev || !canvas || !this.meshes.some(mesh => mesh.lod)) return
+    const camera = this.cameraState()
+    const viewportHeightPx = canvas.height > 0 ? canvas.height : canvas.clientHeight
+    if (!(viewportHeightPx > 0)) return
+    // Selection is a pure function of camera, viewport, scene and visibility;
+    // skip the native call on frames where none of them moved.
+    const key = `${camera.eye.join(',')}|${this.dist}|${this.projection}|${this.perspectiveFovY}|${viewportHeightPx}|${this.sceneEpoch}|${this.meshes.map(mesh => mesh.visible ? 1 : 0).join('')}`
+    if (key === this.lastMeshLodKey) return
+    this.lastMeshLodKey = key
+    let changed: GMesh[]
+    try {
+      changed = updateMeshLods(dev, this.meshes, {
+        eye: camera.eye, distance: this.dist, eyeDistance: camera.eyeDistance,
+        fovY: this.perspectiveFovY, projection: this.projection, viewportHeightPx,
+      }, this.nativePicking)
+    } catch {
+      // A refused selection keeps the bound geometry; it is still a valid display.
+      return
+    }
+    if (!changed.length) return
+    const touched = new Set(changed)
+    // Triangle-level hits index the previous level's triangles.
+    if (this.selectedHit && this.selected !== null && touched.has(this.meshes[this.selected])) {
+      this.selectedHit = null
+      this.clearSelectionOverlayBuffers()
+    }
+    if (this.hoveredHit && this.hovered !== null && touched.has(this.meshes[this.hovered])) this.hoveredHit = null
+    this.resetDepthCycle()
+    this.clearDrawCaches()
+    this.rebuildEdgeBufferCache()
+    this.invalidateShadowMap()
+  }
+
   private notifyCameraChange() {
     if (!this.onCameraChange) return
     const state = this.getCameraState()

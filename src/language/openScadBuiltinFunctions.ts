@@ -11,12 +11,6 @@ export {isOpenScadBuiltinFunction,findClosestOpenScadBuiltinFunction} from './op
 
 import {evaluateDegreeScalar as nativeDegreeMath} from './openScadDegreeMath'
 
-import {
-  TT,
-  type Expr,
-  type ExpressionArgument,
-  type FunctionValue,
-} from './openscadCompiler'
 import { arrayValue, binaryNumber, equalValues, expectCount, fail, finiteNumberValue, formatValue, minMax, numberValue, registerArray, registerString, roundAwayFromZero, seededRandom, unaryNumber, warn } from './openScadBuiltinFunctions/createDeferredOpenScadBuiltinArguments'
 import { characterString, isWellFormedUnicode, predicate, returnMatches, searchNeedles, searchStringRows, unsignedSearchParameter } from './openScadBuiltinFunctions/isOpenScadBuiltinFunctionName'
 export { createDeferredOpenScadBuiltinArguments } from './openScadBuiltinFunctions/createDeferredOpenScadBuiltinArguments'
@@ -315,13 +309,13 @@ const search: BuiltinHandler = (args, context) => {
   return undefined
 }
 
-const version: BuiltinHandler = (args, context) => {
+const version: BuiltinHandler = (_args, context) => {
   // The pinned 2021.01 implementation ignores surplus arguments.
   // The official 2021.01 release reports an explicit zero day component.
   return registerArray(context, 'version', [2021, 1, 0])
 }
 
-const versionNum: BuiltinHandler = (args, context) => {
+const versionNum: BuiltinHandler = (args, _context) => {
   if (args.length === 0) return 20210100
   const value = args[0]
   if (!Array.isArray(value)) return undefined

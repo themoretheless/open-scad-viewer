@@ -1,6 +1,4 @@
 import type { GeometryLanguageContract } from './geometryExecution'
-import { sha256Hex } from './sha256'
-import { utf8Compare } from './utf8Order'
 export { semanticResultItems, semanticNodeInputs, semanticNodeProducerOperationNames, deriveSemanticCapabilityClosure, deriveSemanticOperationId, deriveSemanticAmbiguityGroupId, deriveSemanticOccurrenceId, deriveSemanticSceneEntityId } from './semanticProgram/semanticResultItems'
 
 export const SEMANTIC_PROGRAM_CONTRACT = 'semantic-program-contract-v1' as const

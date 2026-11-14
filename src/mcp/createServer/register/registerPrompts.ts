@@ -4,7 +4,7 @@ import type { McpServerContext } from './context'
 
 /** Guided prompts. */
 export function registerPrompts(ctx: McpServerContext): void {
-  const { geometry, server } = ctx
+  const { server } = ctx
   const promptRevisionSchema = z.string().max(16).regex(/^\d+$/)
     .refine(value => Number.isSafeInteger(Number(value)), 'Revision must be a safe integer')
     .describe('Optional immutable model revision written as a decimal integer.')

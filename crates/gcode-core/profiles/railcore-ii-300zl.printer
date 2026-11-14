@@ -1,0 +1,24 @@
+# RailCore II 300ZL, RepRapFirmware on Duet, 0.4 mm nozzle.
+id = railcore-ii-300zl
+name = RailCore II 300ZL
+flavor = reprapfirmware
+bed_x_mm = 300
+bed_y_mm = 300
+bed_z_mm = 590
+nozzle_diameter_mm = 0.4
+filament_diameter_mm = 1.75
+layer_height_mm = 0.2
+line_width_mm = 0.45
+print_speed_mm_s = 80
+travel_speed_mm_s = 250
+retract_length_mm = 1
+retract_speed_mm_s = 40
+retract_min_travel_mm = 1
+nozzle_temp_c = 215
+bed_temp_c = 65
+fan_speed = 255
+start_gcode = G29 S1
+end_gcode = G91
+end_gcode = G0 Z10 F600
+end_gcode = G90
+end_gcode = M84
