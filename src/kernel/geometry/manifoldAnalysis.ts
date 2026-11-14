@@ -193,20 +193,23 @@ export function metricsManifoldInKernel(
 }
 
 /** Boolean operation kinds for the manifold-ops kernel (abi_manifold_boolean). */
-export type ManifoldBooleanOp = 'union' | 'intersection' | 'difference'
+export type ManifoldBooleanOp = 'union' | 'intersection' | 'difference' | 'xor'
 
-const MANIFOLD_BOOLEAN_OP_TAG: Record<ManifoldBooleanOp, number> = {union: 0, intersection: 1, difference: 2}
+const MANIFOLD_BOOLEAN_OP_TAG: Record<ManifoldBooleanOp, number> = {union: 0, intersection: 1, difference: 2, xor: 3}
 
 export interface ManifoldBooleanOptions {
   /** Absolute mm epsilon for necessary pre/post repair; zero keeps exact welding. */
   readonly weldEpsilonMm?: number
   /** BSP tolerance relative to the longest combined input-bound side. */
   readonly relativeTolerance?: number
+  /** BSP work budget per kernel step, 1..=64_000_000. */
+  readonly maxWork?: number
 }
 
 export const MANIFOLD_BOOLEAN_DEFAULT_OPTIONS: Required<ManifoldBooleanOptions> = Object.freeze({
   weldEpsilonMm: 0,
   relativeTolerance: 1e-9,
+  maxWork: 8_000_000,
 })
 
 /** Boolean result from the manifold-ops kernel (abi_manifold_boolean). */
@@ -240,6 +243,10 @@ export function booleanManifoldInKernel(
 ): KernelManifoldBoolean {
   const weldEpsilonMm = options.weldEpsilonMm ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.weldEpsilonMm
   const relativeTolerance = options.relativeTolerance ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.relativeTolerance
+  const maxWork = options.maxWork ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.maxWork
+  if (!Number.isInteger(maxWork) || maxWork < 1 || maxWork > 64_000_000) {
+    throw new RangeError('maxWork must be an integer within 1..=64000000')
+  }
   const {exports: wasm, memory, takeResponse} = kernelRuntime()
   let avp = 0
   let aip = 0
@@ -255,7 +262,7 @@ export function booleanManifoldInKernel(
       takeResponse(wasm.abi_manifold_boolean(
         avp, aVertices.length, aip, aIndices.length, kernelVertexFormat(aVertices),
         bvp, bVertices.length, bip, bIndices.length, kernelVertexFormat(bVertices),
-        MANIFOLD_BOOLEAN_OP_TAG[op], weldEpsilonMm, relativeTolerance,
+        MANIFOLD_BOOLEAN_OP_TAG[op], weldEpsilonMm, relativeTolerance, maxWork,
       )),
     )
     const buffer = memory.buffer

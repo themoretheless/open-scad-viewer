@@ -162,8 +162,9 @@ pub unsafe fn abi_manifold_metrics(vp: usize, vl: usize, ip: usize, il: usize, f
 }
 
 /// Run a manifold-ops boolean `a OP b` (`op`: 0 = union, 1 = intersection,
-/// 2 = difference) with guaranteed strictly manifold output and return the
-/// result mesh plus kernel stats (`ManifoldBoolean` slots).
+/// 2 = difference, 3 = symmetric difference) with guaranteed strictly manifold output and return the
+/// result mesh plus kernel stats (`ManifoldBoolean` slots). `max_work` is the
+/// BSP work budget per kernel step; 0 selects the default budget.
 /// # Safety
 /// All vertex/index buffers must reference live caller-owned memory; read only.
 #[allow(clippy::too_many_arguments)]
@@ -181,11 +182,13 @@ pub unsafe fn abi_manifold_boolean(
     op: u32,
     weld_epsilon: f64,
     relative_tolerance: f64,
+    max_work: u32,
 ) -> u64 {
     let op = match op {
         0 => manifold_ops::BooleanOp::Union,
         1 => manifold_ops::BooleanOp::Intersection,
         2 => manifold_ops::BooleanOp::Difference,
+        3 => manifold_ops::BooleanOp::Xor,
         _ => return packed(geometry(Err(input("Invalid boolean operation")))),
     };
     let (a_positions, a_indices) = match unsafe { read_mesh(a_fmt, a_vp, a_vl, a_ip, a_il) } {
@@ -205,6 +208,7 @@ pub unsafe fn abi_manifold_boolean(
         manifold_ops::BooleanOptions {
             weld_epsilon,
             relative_tolerance,
+            max_work: if max_work == 0 { manifold_ops::DEFAULT_WORK_BUDGET } else { max_work as usize },
         },
     ) {
         Ok(out) => out,
