@@ -18,7 +18,7 @@
 /// report gains, loses, renames or reorders a field; the geometry bridge
 /// republishes it in its Manifold report schema so the TypeScript wrappers
 /// cannot drift silently.
-pub const REPORT_SCHEMA_VERSION: u32 = 1;
+pub const REPORT_SCHEMA_VERSION: u32 = 2;
 
 /// Undirected edge key with canonical ordering: always `(min, max)`.
 pub type EdgeKey = (usize, usize);
@@ -27,11 +27,17 @@ pub(crate) fn edge_key(a: usize, b: usize) -> EdgeKey {
     if a < b { (a, b) } else { (b, a) }
 }
 
+pub mod diagnostics;
 mod metrics;
 pub mod repair;
 mod validation;
 pub mod vertex_link;
 
+pub use diagnostics::{
+    ClearanceOptions, ClearancePair, ClearanceReport, DiagnosticsError, MassProperties,
+    SelfIntersectionOptions, SelfIntersectionReport, ThicknessOptions, ThicknessReport, clearance,
+    mass_properties, self_intersections, wall_thickness,
+};
 pub use metrics::{ComponentMetrics, MeshMetrics, metrics};
 pub use repair::{RepairMode, RepairOutcome, RepairReport, repair, repair_with_mode};
 pub use validation::{IndexedMeshError, validate_indexed_mesh};
@@ -329,13 +335,19 @@ mod tests {
     fn check_defect_lists_are_canonical_sorted_and_deterministic() {
         // A deliberately messy soup: triple edge, flipped face, repeated-index
         // triangle, bowtie vertex, isolated vertices, triangles in scrambled order.
-        let positions: Vec<f64> = (0..12).flat_map(|i| [i as f64, (i * i % 7) as f64, (i % 3) as f64]).collect();
+        let positions: Vec<f64> = (0..12)
+            .flat_map(|i| [i as f64, (i * i % 7) as f64, (i % 3) as f64])
+            .collect();
         let indices = vec![
             9, 8, 10, 1, 0, 2, 0, 1, 3, 1, 0, 4, 5, 5, 6, 2, 1, 3, 8, 7, 9, 2, 3, 0, 7, 8, 11,
         ];
         let first = check(&positions, &indices);
         assert_eq!(first, check(&positions, &indices));
-        for edges in [&first.boundary_edges, &first.non_manifold_edges, &first.orientation_edges] {
+        for edges in [
+            &first.boundary_edges,
+            &first.non_manifold_edges,
+            &first.orientation_edges,
+        ] {
             assert!(edges.iter().all(|&(a, b)| a < b), "{edges:?}");
             assert!(edges.windows(2).all(|w| w[0] < w[1]), "{edges:?}");
         }
