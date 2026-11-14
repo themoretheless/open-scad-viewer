@@ -120,14 +120,12 @@ describe('mesh LOD binding', () => {
   it('selects by projected error with world scale and skips hidden meshes', () => {
     const { dev } = device(),
       cache = picking()
-    const select = vi
-      .spyOn(viewerLod, 'selectViewerLod')
-      .mockImplementation((levels, current) => ({
-        level: current === null ? levels.length - 1 : 0,
-        projectedError: 0,
-        withinPixelBudget: true,
-        reason: 'initial',
-      }))
+    const select = vi.spyOn(viewerLod, 'selectViewerLod').mockImplementation((levels, current) => ({
+      level: current === null ? levels.length - 1 : 0,
+      projectedError: 0,
+      withinPixelBudget: true,
+      reason: 'initial',
+    }))
     const m = mesh([level(4, 0.4), level(16, 0.1)]),
       hidden = mesh([level(4, 0.4), level(16, 0.1)])
     hidden.visible = false

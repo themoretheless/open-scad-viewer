@@ -9,10 +9,34 @@ const box = (origin, size, rotate) => (rotate ? { origin, size, rotate } : { ori
 function boxMesh([x, y, z], [sx, sy, sz]) {
   return {
     positions: [
-      x, y, z, x + sx, y, z, x + sx, y + sy, z, x, y + sy, z,
-      x, y, z + sz, x + sx, y, z + sz, x + sx, y + sy, z + sz, x, y + sy, z + sz,
+      x,
+      y,
+      z,
+      x + sx,
+      y,
+      z,
+      x + sx,
+      y + sy,
+      z,
+      x,
+      y + sy,
+      z,
+      x,
+      y,
+      z + sz,
+      x + sx,
+      y,
+      z + sz,
+      x + sx,
+      y + sy,
+      z + sz,
+      x,
+      y + sy,
+      z + sz,
     ],
-    indices: [0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 2, 3, 7, 2, 7, 6, 1, 2, 6, 1, 6, 5, 3, 0, 4, 3, 4, 7],
+    indices: [
+      0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 2, 3, 7, 2, 7, 6, 1, 2, 6, 1, 6, 5, 3, 0, 4, 3, 4, 7,
+    ],
   }
 }
 
@@ -59,14 +83,52 @@ const shift = (mesh, offset) => ({
   indices: mesh.indices,
 })
 
-const L = [[0, 0], [4, 0], [4, 1], [1, 1], [1, 4], [0, 4]]
-const U = [[0, 0], [5, 0], [5, 4], [4, 4], [4, 1], [1, 1], [1, 4], [0, 4]]
-const STAR = [[0, -1], [2, -2], [1, 0], [2, 2], [0, 1], [-2, 2], [-1, 0], [-2, -2]]
-const T = [[0, 0], [1, 0], [1, 2], [2.5, 2], [2.5, 3], [-1.5, 3], [-1.5, 2], [0, 2]]
+const L = [
+  [0, 0],
+  [4, 0],
+  [4, 1],
+  [1, 1],
+  [1, 4],
+  [0, 4],
+]
+const U = [
+  [0, 0],
+  [5, 0],
+  [5, 4],
+  [4, 4],
+  [4, 1],
+  [1, 1],
+  [1, 4],
+  [0, 4],
+]
+const STAR = [
+  [0, -1],
+  [2, -2],
+  [1, 0],
+  [2, 2],
+  [0, 1],
+  [-2, 2],
+  [-1, 0],
+  [-2, -2],
+]
+const T = [
+  [0, 0],
+  [1, 0],
+  [1, 2],
+  [2.5, 2],
+  [2.5, 3],
+  [-1.5, 3],
+  [-1.5, 2],
+  [0, 2],
+]
 
 const cases = []
 const add = (id, a, b, extra = {}) => cases.push({ id, a, b, ...extra })
-const axes = [[0, 'x'], [1, 'y'], [2, 'z']]
+const axes = [
+  [0, 'x'],
+  [1, 'y'],
+  [2, 'z'],
+]
 const withAxis = (base, axis, value) => base.map((v, i) => (i === axis ? value : v))
 
 // The original eight hand-written cases.
@@ -98,15 +160,30 @@ add('coplanar-offset-same-height', box([0, 0, 0], [2, 2, 1]), box([1, 1, 0], [2,
 const emptyIntersection = { expect: { ops: { intersection: 'empty' } } }
 const refusedUnion = { expect: { ops: { union: 'refused' } } }
 for (const [axis, name] of axes) {
-  add(`touching-face-full-${name}`, box([0, 0, 0], [1, 1, 1]), box(withAxis([0, 0, 0], axis, 1), [1, 1, 1]), emptyIntersection)
-  add(`touching-face-partial-${name}`, box([0, 0, 0], [1, 1, 1]), box(withAxis([0.5, 0.5, 0.5], axis, 1), [1, 1, 1]), emptyIntersection)
+  add(
+    `touching-face-full-${name}`,
+    box([0, 0, 0], [1, 1, 1]),
+    box(withAxis([0, 0, 0], axis, 1), [1, 1, 1]),
+    emptyIntersection,
+  )
+  add(
+    `touching-face-partial-${name}`,
+    box([0, 0, 0], [1, 1, 1]),
+    box(withAxis([0.5, 0.5, 0.5], axis, 1), [1, 1, 1]),
+    emptyIntersection,
+  )
   add(`touching-edge-${name}`, box([0, 0, 0], [1, 1, 1]), box(withAxis([1, 1, 1], axis, 0), [1, 1, 1]), refusedUnion)
 }
 add('touching-vertex', box([0, 0, 0], [1, 1, 1]), box([1, 1, 1], [1, 1, 1]), refusedUnion)
 add('touching-vertex-negative', box([0, 0, 0], [1, 1, 1]), box([-1, -1, -1], [1, 1, 1]), refusedUnion)
 
 // Nested solids.
-for (const [i, [offset, size]] of [[0.5, 1], [1, 2], [0.25, 3.5], [1.5, 0.5]].entries()) {
+for (const [i, [offset, size]] of [
+  [0.5, 1],
+  [1, 2],
+  [0.25, 3.5],
+  [1.5, 0.5],
+].entries()) {
   add(`nested-${i}`, box([0, 0, 0], [4, 4, 4]), box([offset, offset, offset], [size, size, size]))
   add(`nested-reversed-${i}`, box([offset, offset, offset], [size, size, size]), box([0, 0, 0], [4, 4, 4]))
 }
@@ -159,7 +236,9 @@ add('u-prism-inside-gap', { mesh: prism(U, 0, 2) }, box([1.5, 1.5, 0.5], [2, 2, 
 // The box faces pass exactly through the star's reflex vertices (±1, 0); the
 // kernel refuses that difference instead of returning a non-manifold result,
 // while manifold-3d returns one. The clear variant avoids the vertex contact.
-add('star-prism-box', { mesh: prism(STAR, 0, 1) }, box([-1, 0, -0.5], [2, 2, 2]), { expect: { ops: { difference: 'refused' } } })
+add('star-prism-box', { mesh: prism(STAR, 0, 1) }, box([-1, 0, -0.5], [2, 2, 2]), {
+  expect: { ops: { difference: 'refused' } },
+})
 add('star-prism-box-clear', { mesh: prism(STAR, 0, 1) }, box([-0.5, -0.5, -0.5], [1, 3, 2]))
 add('star-prism-shifted-copy', { mesh: prism(STAR, 0, 1) }, { mesh: shift(prism(STAR, 0, 1), [0.25, 0.5, 0.25]) })
 add('t-prism-crossbar-cut', { mesh: prism(T, 0, 1) }, box([-2, 1.5, -1], [5, 1, 3]))
@@ -174,9 +253,19 @@ const other = box([1, 1, 1], [2, 2, 2])
 const repairedA = { expect: { repaired: [true, false] }, reference: { a: { mesh: cube } } }
 const refused = { expect: { refused: true } }
 const flip = indices => indices.map((_, i, a) => a[i - (i % 3) + [0, 2, 1][i % 3]])
-add('defect-flipped-face', { mesh: { positions: cube.positions, indices: [...flip(cube.indices.slice(0, 6)), ...cube.indices.slice(6)] } }, other, repairedA)
+add(
+  'defect-flipped-face',
+  { mesh: { positions: cube.positions, indices: [...flip(cube.indices.slice(0, 6)), ...cube.indices.slice(6)] } },
+  other,
+  repairedA,
+)
 add('defect-inside-out', { mesh: { positions: cube.positions, indices: flip(cube.indices) } }, other, repairedA)
-add('defect-duplicated-face', { mesh: { positions: cube.positions, indices: [...cube.indices, ...cube.indices.slice(0, 3)] } }, other, refused)
+add(
+  'defect-duplicated-face',
+  { mesh: { positions: cube.positions, indices: [...cube.indices, ...cube.indices.slice(0, 3)] } },
+  other,
+  refused,
+)
 const soup = { positions: [], indices: [] }
 for (const v of cube.indices) {
   soup.indices.push(soup.positions.length / 3)
@@ -184,17 +273,36 @@ for (const v of cube.indices) {
 }
 add('defect-unwelded-soup', { mesh: soup }, other, repairedA)
 add('defect-open-boundary', { mesh: { positions: cube.positions, indices: cube.indices.slice(6) } }, other, repairedA)
-add('defect-degenerate-triangle', { mesh: { positions: [...cube.positions, 1, 0, 0], indices: [...cube.indices, 0, 8, 1] } }, other, refused)
-add('defect-two-sided-fin', { mesh: { positions: [...cube.positions, 1, 1, 5], indices: [...cube.indices, 4, 5, 8, 4, 8, 5] } }, other, refused)
+add(
+  'defect-degenerate-triangle',
+  { mesh: { positions: [...cube.positions, 1, 0, 0], indices: [...cube.indices, 0, 8, 1] } },
+  other,
+  refused,
+)
+add(
+  'defect-two-sided-fin',
+  { mesh: { positions: [...cube.positions, 1, 1, 5], indices: [...cube.indices, 4, 5, 8, 4, 8, 5] } },
+  other,
+  refused,
+)
 const far = boxMesh([2, 2, 2], [2, 2, 2])
-add('defect-vertex-pinched-cubes', {
-  mesh: { positions: [...cube.positions, ...far.positions], indices: [...cube.indices, ...far.indices.map(i => i + 8)] },
-}, box([10, 0, 0], [1, 1, 1]), refused)
+add(
+  'defect-vertex-pinched-cubes',
+  {
+    mesh: {
+      positions: [...cube.positions, ...far.positions],
+      indices: [...cube.indices, ...far.indices.map(i => i + 8)],
+    },
+  },
+  box([10, 0, 0], [1, 1, 1]),
+  refused,
+)
 
 const text = `${JSON.stringify({ schemaVersion: 1, cases }, null, 2)}\n`
 const target = new URL('./differential-corpus.json', import.meta.url)
 if (process.argv.includes('--check')) {
-  if ((await readFile(target, 'utf8')) !== text) throw new Error('differential-corpus.json is stale; run npm run corpus:generate')
+  if ((await readFile(target, 'utf8')) !== text)
+    throw new Error('differential-corpus.json is stale; run npm run corpus:generate')
   console.log(`differential corpus up to date: ${cases.length} cases`)
 } else {
   await writeFile(target, text)
