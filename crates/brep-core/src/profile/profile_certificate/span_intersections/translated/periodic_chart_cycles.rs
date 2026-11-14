@@ -405,21 +405,55 @@ impl Graph<'_> {
         Ok(())
     }
 }
-fn derive(o: &OwnedPeriodicChartCycles) -> Result<Data> {
-    let _replay = super::periodic_replay::scope();
-    let l = o.limits;
-    if [
+fn verify_allowance(l: &PeriodicChartCycleLimits) -> Result<()> {
+    let limits = [
         l.max_edges,
         l.max_vertices,
         l.max_ports,
         l.max_source_uses,
         l.max_walk_steps,
-    ]
-    .iter()
-    .any(|n| !(1..=MAX_ALLOWANCE).contains(n))
-    {
+    ];
+    if limits.iter().any(|n| !(1..=MAX_ALLOWANCE).contains(n)) {
         return Err(refused("Invalid exact local chart cycle allowance"));
     }
+    Ok(())
+}
+/// Pieces whose canonical copy runs along a shore; their traces are owned
+/// by the shore frame instead of the source graph.
+fn coincident_pieces(owner: &OwnedPeriodicShoreMaterialIntervals) -> BTreeSet<usize> {
+    owner
+        .contacts()
+        .iter()
+        .filter(|c| {
+            c.period_shift == [0, 0]
+                && matches!(c.kind, OriginalPeriodicShoreContactKind::Coincident { .. })
+        })
+        .map(|c| c.piece)
+        .collect()
+}
+/// The ports at every vertex, one per edge end, with the germ of that end.
+fn local_ports(
+    edges: &[OriginalPeriodicChartCycleEdge],
+    germs: &[[Germ; 2]],
+    vertices: usize,
+) -> Vec<Vec<Port>> {
+    let mut local = vec![Vec::new(); vertices];
+    for (edge, e) in edges.iter().enumerate() {
+        for end in 0..2 {
+            local[e.vertices[end]].push(Port {
+                edge,
+                end,
+                sector: germs[edge][end].0,
+                rank: germs[edge][end].1,
+            })
+        }
+    }
+    local
+}
+fn derive(o: &OwnedPeriodicChartCycles) -> Result<Data> {
+    let _replay = super::periodic_replay::scope();
+    let l = o.limits;
+    verify_allowance(&l)?;
     super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
     let samples = o.owner.owner();
     let shores = samples.owner();
@@ -445,16 +479,7 @@ fn derive(o: &OwnedPeriodicChartCycles) -> Result<Data> {
     }
     let ranks = rotation_ranks(ports, rotation.rotations())?;
     let aliases = canonical_aliases(corners, l.max_source_uses)?;
-    let coincident = o
-        .owner
-        .contacts()
-        .iter()
-        .filter(|c| {
-            c.period_shift == [0, 0]
-                && matches!(c.kind, OriginalPeriodicShoreContactKind::Coincident { .. })
-        })
-        .map(|c| c.piece)
-        .collect::<BTreeSet<_>>();
+    let coincident = coincident_pieces(&o.owner);
     let mut graph = Graph {
         corners,
         max_vertices: l.max_vertices,
@@ -487,17 +512,7 @@ fn derive(o: &OwnedPeriodicChartCycles) -> Result<Data> {
     if edges.len().checked_mul(2).is_none_or(|n| n > l.max_ports) {
         return Err(refused("Local chart boundary port allowance exhausted"));
     }
-    let mut local = vec![Vec::new(); vertices.len()];
-    for (edge, e) in edges.iter().enumerate() {
-        for end in 0..2 {
-            local[e.vertices[end]].push(Port {
-                edge,
-                end,
-                sector: germs[edge][end].0,
-                rank: germs[edge][end].1,
-            })
-        }
-    }
+    let mut local = local_ports(&edges, &germs, vertices.len());
     let (successor, walks) = permutations(&edges, &mut local, l.max_walk_steps)?;
     Ok(Data {
         vertices,
