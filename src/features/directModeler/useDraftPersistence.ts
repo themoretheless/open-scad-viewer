@@ -13,11 +13,15 @@ import { readSolidDraftHead, writeSolidDraftHead } from '../../kernel/solidDraft
 import {
   collectSolidDraftSnapshots,
   readSolidDraftSnapshot,
-  removeSolidDraftSnapshot,
   solidDraftSnapshotId,
   withSolidDraftLock,
-  writeSolidDraftSnapshot,
 } from '../../kernel/solidDraftStore'
+import { createSolidDraftStorageIo, saveSolidDraft, solidDraftRecoveryText } from '../../kernel/solidDraftSaveProtocol'
+
+const storageIo = createSolidDraftStorageIo({
+  get: key => storageGet(key),
+  set: (key, value) => storageSet(key, value),
+})
 import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import type { Pane } from './helpers'
 
@@ -77,8 +81,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
   let stored = persistedReference ?? storageGet(legacyKey)
   const restoringDraft = ref(
     !props.initialDocument &&
-      (typeof indexedDB !== 'undefined' ||
-        (!!stored && (!isGeometryKernelReady() || !!solidDraftSnapshotId(stored)))),
+      (typeof indexedDB !== 'undefined' || (!!stored && (!isGeometryKernelReady() || !!solidDraftSnapshotId(stored)))),
   )
   let restoreDisposed = false
   onUnmounted(() => {
@@ -163,8 +166,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
             ),
           )
         const text =
-          head?.text ??
-          (solidDraftSnapshotId(reference) ? await readSolidDraftSnapshot(reference!) : reference!)
+          head?.text ?? (solidDraftSnapshotId(reference) ? await readSolidDraftSnapshot(reference!) : reference!)
         if (!current()) return
         // The shared draft lock keeps the canonical head stable until the validated
         // replacement is published. Local edits remain the preceding history entry.
@@ -211,41 +213,23 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
     if (!persisted.curves?.length) delete persisted.curves
     if (!persisted.surfaces?.length) delete persisted.surfaces
     const text = serializeDirectDocument(persisted)
-    void withSolidDraftLock(key, async () => {
-      await durableReady
-      if (generation !== saveGeneration || restoreDisposed) return
-      if (storageGet(key) !== previous) {
-        draftConflict.value = true
-        throw Error('DRAFT_CONFLICT')
-      }
-      let marker: string | undefined
-      try {
-        if (text.length > MAX_DRAFT_CHARACTERS) marker = await writeSolidDraftSnapshot(text)
-        if (generation !== saveGeneration || restoreDisposed) {
-          if (marker) await removeSolidDraftSnapshot(marker)
-          return
-        }
-        const head = await writeSolidDraftHead(
-          key,
-          persistedRevision,
-          text,
-          () => generation === saveGeneration && !restoreDisposed,
-        )
-        persistedRevision = head.revision
-        if (generation !== saveGeneration || restoreDisposed) {
-          if (marker) await removeSolidDraftSnapshot(marker)
-          return
-        }
-        const reference = marker ?? text
-        if (!storageSet(key, reference)) throw Error('DRAFT_REFERENCE_FAILED')
-        stored = persistedReference = reference
+    const live = () => generation === saveGeneration && !restoreDisposed
+    void saveSolidDraft(storageIo, {
+      ready: durableReady,
+      key,
+      text,
+      expectedRevision: () => persistedRevision,
+      expectedPointer: previous,
+      inlineLimit: MAX_DRAFT_CHARACTERS,
+      current: live,
+      // Runs inside the lock so the next queued save compares against this revision.
+      committed: result => {
+        if (result.revision) persistedRevision = result.revision
+        if (result.pointer === null || !live()) return
+        stored = persistedReference = result.pointer
         saveError.value = false
         draftConflict.value = false
-        await removeSolidDraftSnapshot(previous).catch(() => {})
-      } catch (e) {
-        if (marker && stored !== marker) void removeSolidDraftSnapshot(marker).catch(() => {})
-        throw e
-      }
+      },
     })
       .catch(e => {
         if (generation === saveGeneration && !restoreDisposed) {
@@ -337,13 +321,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
       kernelReady.value = true
       if (!restoringDraft.value || !current()) return
       const head = await durableReady
-      const text =
-        head?.text ??
-        (reference
-          ? solidDraftSnapshotId(reference)
-            ? await readSolidDraftSnapshot(reference)
-            : reference
-          : null)
+      const text = await solidDraftRecoveryText(head, reference, readSolidDraftSnapshot)
       if (!current()) return
       if (text) {
         const applied = await target.resetAsync(async () => {
@@ -392,8 +370,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
                 'Сохранённый снимок отсутствует или повреждён. Импортируйте резервный JSON через меню «Файл».',
                 detail,
               )
-            : label('Не удалось восстановить сохранённый документ: ', 'Could not restore the saved document: ') +
-              detail
+            : label('Не удалось восстановить сохранённый документ: ', 'Could not restore the saved document: ') + detail
     } finally {
       if (generation === draftRecoveryGeneration) {
         restoringDraft.value = false

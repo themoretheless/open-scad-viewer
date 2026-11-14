@@ -1,6 +1,8 @@
 import {MAX_DOCUMENT_CHARACTERS} from '../core/directDocumentLimits'
+import {withSolidDraftLease} from './solidDraftLease'
 const databaseName='scad-solid-draft-snapshots-v1',storeName='snapshots'
-interface Snapshot {id:string;text:string;createdAt?:number}
+interface Snapshot {id:string;text:string;createdAt?:number;conflictOf?:string}
+const CONFLICT_RETENTION_MS=30*24*60*60*1000
 const request=<T>(r:IDBRequest<T>)=>new Promise<T>((resolve,reject)=>{r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error??Error('Draft storage request failed.'))})
 const complete=(t:IDBTransaction)=>new Promise<void>((resolve,reject)=>{t.oncomplete=()=>resolve();t.onabort=t.onerror=()=>reject(t.error??Error('Draft storage transaction failed.'))})
 async function database():Promise<IDBDatabase>{
@@ -35,10 +37,30 @@ export async function writeSolidDraftSnapshot(text:string):Promise<string>{
  return JSON.stringify({version:1,solidDraftId:id})
 }
 
-/** Serialize reference publication across tabs, including the comparison immediately before writing. */
+/** Keep a tab's rejected version durable after DRAFT_CONFLICT so both versions survive a crash. */
+export async function writeSolidDraftConflict(key:string,text:string,now=Date.now()):Promise<string>{
+ if(text.length>MAX_DOCUMENT_CHARACTERS)throw Error('Document exceeds 64 MB.')
+ const id=crypto.randomUUID(),db=await database()
+ try{const tx=db.transaction(storeName,'readwrite',{durability:'strict'});await Promise.all([request(tx.objectStore(storeName).add({id,text,createdAt:now,conflictOf:key})),complete(tx)])}finally{db.close()}
+ return id
+}
+/** Conflict copies for `key`, newest first. */
+export async function listSolidDraftConflicts(key:string):Promise<Array<{id:string;text:string;createdAt:number}>>{
+ const db=await database()
+ try{
+  const tx=db.transaction(storeName,'readonly'),[rows]=await Promise.all([request<Snapshot[]>(tx.objectStore(storeName).getAll()),complete(tx)])
+  return rows.filter(r=>r.conflictOf===key&&typeof r.text==='string').map(r=>({id:r.id,text:r.text,createdAt:r.createdAt??0})).sort((a,b)=>b.createdAt-a.createdAt)
+ }finally{db.close()}
+}
+
+/**
+ * Serialize reference publication across tabs, including the comparison immediately before writing.
+ * Without Web Locks an expiring IndexedDB lease (solidDraftLease.ts) provides the same exclusion;
+ * without IndexedDB either, saving is refused and JSON download remains available.
+ */
 export async function withSolidDraftLock<T>(key:string,action:()=>T|Promise<T>):Promise<T>{
  const locks=globalThis.navigator?.locks
- if(!locks)throw Error('Safe draft locking is unavailable. Open a secure browser context or download JSON.')
+ if(!locks)return withSolidDraftLease(`solid-draft:${key}`,action)
  return locks.request(`solid-draft:${key}`,{mode:'exclusive'},action)
 }
 
@@ -66,7 +88,8 @@ export async function collectSolidDraftSnapshots(now=Date.now()):Promise<number>
     cursor.onsuccess=()=>{
      const entry=cursor.result;if(!entry){resolve();return}
      const row=entry.value as Snapshot
-     if(!retained.has(row.id)&&typeof row.createdAt==='number'&&Number.isFinite(row.createdAt)&&row.createdAt<=now-24*60*60*1000){entry.delete();removed++}
+     const age=typeof row.conflictOf==='string'?CONFLICT_RETENTION_MS:24*60*60*1000
+     if(!retained.has(row.id)&&typeof row.createdAt==='number'&&Number.isFinite(row.createdAt)&&row.createdAt<=now-age){entry.delete();removed++}
      entry.continue()
     }
    })
