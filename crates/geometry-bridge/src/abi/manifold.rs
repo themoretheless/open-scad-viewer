@@ -5,7 +5,7 @@ use super::*;
 /// with their own `MANIFOLD_ABI_VERSION` before the first Manifold call and
 /// refuse with `GEOMETRY_ABI_MISMATCH` when they differ. Bump on any change
 /// to an export signature or a result slot layout.
-pub const MANIFOLD_ABI_VERSION: u32 = 1;
+pub const MANIFOLD_ABI_VERSION: u32 = 2;
 
 /// Documented shape of the Manifold operation reports as the TypeScript
 /// wrappers expose them. Mirrored by `src/kernel/geometry/manifoldReportSchema.json`;
@@ -85,7 +85,46 @@ pub const MANIFOLD_REPORT_SCHEMA: ManifoldReportSchema = ManifoldReportSchema {
         ),
         (
             "boolean",
-            &["positions", "indices", "operandRepaired", "kernel", "isManifold"],
+            &[
+                "positions",
+                "indices",
+                "operandRepaired",
+                "kernel",
+                "isManifold",
+            ],
+        ),
+        (
+            "diagnostics",
+            &[
+                "selfIntersectionPairs",
+                "selfIntersectionCandidatePairs",
+                "selfIntersectionTruncated",
+                "minThickness",
+                "maxThickness",
+                "minThicknessTriangle",
+                "thicknessSamples",
+                "thicknessMissed",
+                "thinTriangles",
+                "minGap",
+                "minGapTriangle",
+                "componentCount",
+                "clearancePairs",
+                "mass",
+            ],
+        ),
+        (
+            "diagnosticsClearancePair",
+            &[
+                "componentA",
+                "componentB",
+                "distance",
+                "triangleA",
+                "triangleB",
+            ],
+        ),
+        (
+            "diagnosticsMass",
+            &["volume", "mass", "centerOfMass", "inertia"],
         ),
     ],
 };
@@ -303,7 +342,11 @@ pub unsafe fn abi_manifold_boolean(
         manifold_ops::BooleanOptions {
             weld_epsilon,
             relative_tolerance,
-            max_work: if max_work == 0 { manifold_ops::DEFAULT_WORK_BUDGET } else { max_work as usize },
+            max_work: if max_work == 0 {
+                manifold_ops::DEFAULT_WORK_BUDGET
+            } else {
+                max_work as usize
+            },
         },
     ) {
         Ok(out) => out,
@@ -333,4 +376,147 @@ pub unsafe fn abi_manifold_boolean(
         ],
     };
     packed(geometry(encode(mesh_analysis::store(buffers))))
+}
+
+/// Default work budget of [`abi_manifold_diagnostics`] (`max_work == 0`).
+pub const DIAGNOSTICS_DEFAULT_WORK: usize = 4_000_000;
+
+fn diagnostics_error(e: manifold_core::DiagnosticsError) -> Error {
+    let code = match e {
+        manifold_core::DiagnosticsError::WorkBudgetExceeded { .. } => "GEOMETRY_RESOURCE_LIMIT",
+        _ => "GEOMETRY_INVALID_INPUT",
+    };
+    Error::new(code, e.to_string())
+}
+
+fn diagnostics_buffers(
+    vertices: &[f64],
+    indices: &[usize],
+    density: f64,
+    min_thickness: f64,
+    clearance_threshold: f64,
+    max_work: usize,
+) -> Result<mesh_analysis::AnalysisBuffers> {
+    use manifold_core::DiagnosticsError;
+    let si = manifold_core::self_intersections(
+        vertices,
+        indices,
+        manifold_core::SelfIntersectionOptions {
+            max_candidate_pairs: max_work,
+            ..Default::default()
+        },
+    )
+    .map_err(diagnostics_error)?;
+    let th = manifold_core::wall_thickness(
+        vertices,
+        indices,
+        manifold_core::ThicknessOptions {
+            min_thickness,
+            max_rays: max_work,
+        },
+    )
+    .map_err(diagnostics_error)?;
+    let cl = manifold_core::clearance(
+        vertices,
+        indices,
+        manifold_core::ClearanceOptions {
+            threshold: clearance_threshold,
+            max_candidate_pairs: max_work,
+        },
+    )
+    .map_err(diagnostics_error)?;
+    let mass = match manifold_core::mass_properties(vertices, indices, density) {
+        Ok(m) => Some(m),
+        Err(DiagnosticsError::OpenMesh | DiagnosticsError::ZeroVolume) => None,
+        Err(e) => return Err(diagnostics_error(e)),
+    };
+    let mut floats = vec![
+        th.min_thickness.unwrap_or(f64::NAN),
+        th.max_thickness.unwrap_or(f64::NAN),
+        th.min_gap.unwrap_or(f64::NAN),
+    ];
+    match &mass {
+        Some(m) => {
+            floats.extend([m.volume, m.mass]);
+            floats.extend(m.center_of_mass);
+            floats.extend(m.inertia.iter().flatten());
+        }
+        None => floats.extend([f64::NAN; 14]),
+    }
+    floats.extend(cl.pairs.iter().map(|p| p.distance));
+    let flags = si.truncated as u32 | ((mass.is_some() as u32) << 1);
+    Ok(mesh_analysis::AnalysisBuffers::ManifoldDiagnostics {
+        intersection_pairs: si
+            .pairs
+            .iter()
+            .flat_map(|&(a, b)| [a as u32, b as u32])
+            .collect(),
+        thin_triangles: th.thin_triangles.iter().map(|&t| t as u32).collect(),
+        clearance_pairs: cl
+            .pairs
+            .iter()
+            .flat_map(|p| {
+                [
+                    p.component_a as u32,
+                    p.component_b as u32,
+                    p.triangle_a as u32,
+                    p.triangle_b as u32,
+                ]
+            })
+            .collect(),
+        floats,
+        summary: [
+            si.candidate_pairs as u32,
+            flags,
+            th.samples as u32,
+            th.missed as u32,
+            cl.component_count as u32,
+            th.min_triangle.map_or(0, |t| t as u32 + 1),
+            th.min_gap_triangle.map_or(0, |t| t as u32 + 1),
+            0,
+        ],
+    })
+}
+
+/// Run the manifold-core diagnostics (self-intersections, wall thickness,
+/// shell clearance, mass properties) and return a result handle for
+/// `abi_array_field` (`ManifoldDiagnostics` slots). `max_work` bounds every
+/// pass (candidate pairs, rays); 0 selects [`DIAGNOSTICS_DEFAULT_WORK`].
+/// Mass properties are omitted (flag bit 1 clear) for open or zero-volume
+/// meshes; a pass over budget fails with `GEOMETRY_RESOURCE_LIMIT`.
+/// # Safety
+/// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
+/// caller-owned buffers; they are only read.
+#[allow(clippy::too_many_arguments)]
+pub unsafe fn abi_manifold_diagnostics(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    density: f64,
+    min_thickness: f64,
+    clearance_threshold: f64,
+    max_work: u32,
+) -> u64 {
+    let (vertices, indices) = match unsafe { read_mesh(fmt, vp, vl, ip, il) } {
+        Ok(mesh) => mesh,
+        Err(error) => return packed(geometry(Err(error))),
+    };
+    let max_work = if max_work == 0 {
+        DIAGNOSTICS_DEFAULT_WORK
+    } else {
+        max_work as usize
+    };
+    match diagnostics_buffers(
+        &vertices,
+        &indices,
+        density,
+        min_thickness,
+        clearance_threshold,
+        max_work,
+    ) {
+        Ok(buffers) => packed(geometry(encode(mesh_analysis::store(buffers)))),
+        Err(error) => packed(geometry(Err(error))),
+    }
 }

@@ -282,6 +282,36 @@ pub unsafe extern "C" fn abi_manifold_metrics(
 }
 
 /// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers; read only.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn abi_manifold_diagnostics(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    density: f64,
+    min_thickness: f64,
+    clearance_threshold: f64,
+    max_work: u32,
+) -> u64 {
+    unsafe {
+        geometry_bridge::abi::abi_manifold_diagnostics(
+            vp,
+            vl,
+            ip,
+            il,
+            fmt,
+            density,
+            min_thickness,
+            clearance_threshold,
+            max_work,
+        )
+    }
+}
+
+/// # Safety
 /// All vertex/index buffers must reference live caller-owned memory; read only.
 /// `op`: 0 = union, 1 = intersection, 2 = difference.
 #[unsafe(no_mangle)]
@@ -303,8 +333,20 @@ pub unsafe extern "C" fn abi_manifold_boolean(
 ) -> u64 {
     unsafe {
         geometry_bridge::abi::abi_manifold_boolean(
-            a_vp, a_vl, a_ip, a_il, a_fmt, b_vp, b_vl, b_ip, b_il, b_fmt, op,
-            weld_epsilon, relative_tolerance, max_work,
+            a_vp,
+            a_vl,
+            a_ip,
+            a_il,
+            a_fmt,
+            b_vp,
+            b_vl,
+            b_ip,
+            b_il,
+            b_fmt,
+            op,
+            weld_epsilon,
+            relative_tolerance,
+            max_work,
         )
     }
 }
@@ -312,21 +354,30 @@ pub unsafe extern "C" fn abi_manifold_boolean(
 /// # Safety
 /// Byte range must be a live caller-owned allocation from this module.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn abi_mesh_decode(format:u32,ptr:usize,len:usize)->u64{
- unsafe{geometry_bridge::abi::abi_mesh_decode(format,ptr,len)}
+pub unsafe extern "C" fn abi_mesh_decode(format: u32, ptr: usize, len: usize) -> u64 {
+    unsafe { geometry_bridge::abi::abi_mesh_decode(format, ptr, len) }
 }
 /// # Safety
 /// Float range must be a live caller-owned allocation from this module.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn abi_mesh_soup_render(ptr:usize,len:usize)->u64{
- unsafe{geometry_bridge::abi::abi_mesh_soup_render(ptr,len)}
+pub unsafe extern "C" fn abi_mesh_soup_render(ptr: usize, len: usize) -> u64 {
+    unsafe { geometry_bridge::abi::abi_mesh_soup_render(ptr, len) }
 }
 
 /// # Safety
 /// vp/vl must reference a live caller-owned f64 buffer, read only.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn abi_transparent_bsp(width:usize,vp:usize,vl:usize,limit:usize,operations:usize,tolerance:f64)->u64 {
-    unsafe { geometry_bridge::abi::abi_transparent_bsp(width,vp,vl,limit,operations,tolerance) }
+pub unsafe extern "C" fn abi_transparent_bsp(
+    width: usize,
+    vp: usize,
+    vl: usize,
+    limit: usize,
+    operations: usize,
+    tolerance: f64,
+) -> u64 {
+    unsafe {
+        geometry_bridge::abi::abi_transparent_bsp(width, vp, vl, limit, operations, tolerance)
+    }
 }
 
 #[unsafe(no_mangle)]

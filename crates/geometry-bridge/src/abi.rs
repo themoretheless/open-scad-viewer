@@ -581,7 +581,7 @@ pub unsafe fn abi_array_free(handle: usize) {
 }
 
 mod manifold;
-pub use manifold::{abi_manifold_abi_version,abi_manifold_check,abi_manifold_repair,abi_manifold_metrics,abi_manifold_boolean,MANIFOLD_ABI_VERSION,MANIFOLD_REPORT_SCHEMA,ManifoldReportSchema};
+pub use manifold::{abi_manifold_abi_version,abi_manifold_check,abi_manifold_repair,abi_manifold_metrics,abi_manifold_boolean,abi_manifold_diagnostics,DIAGNOSTICS_DEFAULT_WORK,MANIFOLD_ABI_VERSION,MANIFOLD_REPORT_SCHEMA,ManifoldReportSchema};
 
 
 #[cfg(test)]

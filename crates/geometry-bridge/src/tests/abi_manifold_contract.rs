@@ -29,7 +29,10 @@ fn manifold_report_schema_matches_typescript_schema_file() {
     ))
     .unwrap();
     let schema = MANIFOLD_REPORT_SCHEMA;
-    assert_eq!(file["schemaVersion"].as_u64(), Some(schema.schema_version as u64));
+    assert_eq!(
+        file["schemaVersion"].as_u64(),
+        Some(schema.schema_version as u64)
+    );
     assert_eq!(file["abiVersion"].as_u64(), Some(schema.abi_version as u64));
     assert_eq!(abi_manifold_abi_version(), schema.abi_version);
     assert_eq!(schema.schema_version, manifold_core::REPORT_SCHEMA_VERSION);
@@ -106,15 +109,25 @@ fn manifold_transport_f32_f64_edge_coordinates_have_identical_semantics() {
         }
     }
     // Explicit -0.0 in every zero slot is finite and accepted.
-    let positions = [-0.0, -0.0, -0.0, 1., -0.0, -0.0, -0.0, 1., -0.0, -0.0, -0.0, 1.];
+    let positions = [
+        -0.0, -0.0, -0.0, 1., -0.0, -0.0, -0.0, 1., -0.0, -0.0, -0.0, 1.,
+    ];
     let indices = [0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3];
     for fmt in [FMT_F32, FMT_F64] {
-        assert_eq!(check_as(fmt, &positions, &indices).1, CLOSED_TETRA, "-0.0 fmt={fmt}");
+        assert_eq!(
+            check_as(fmt, &positions, &indices).1,
+            CLOSED_TETRA,
+            "-0.0 fmt={fmt}"
+        );
     }
     // f64-only extremes (outside f32 range) analyse on the f64 path.
     for scale in [1.0e300, f64::MIN_POSITIVE, 5.0e-324] {
         let (positions, indices) = tetra(scale, 0.0);
-        assert_eq!(check_as(FMT_F64, &positions, &indices).1, CLOSED_TETRA, "f64 scale {scale}");
+        assert_eq!(
+            check_as(FMT_F64, &positions, &indices).1,
+            CLOSED_TETRA,
+            "f64 scale {scale}"
+        );
     }
     // A value beyond f32 range becomes infinity in f32 transport and is refused.
     let (positions, indices) = tetra(1.0e300, 0.0);
@@ -153,4 +166,94 @@ fn manifold_transport_refuses_nan_and_infinity_in_both_formats() {
     let (positions, _) = tetra(1.0, 0.0);
     let (response, _) = check_as(7, &positions, &indices);
     assert_eq!(response["ok"].as_bool(), Some(false));
+}
+
+/// Run abi_manifold_diagnostics on f64 positions; returns the response.
+fn diagnostics(positions: &[f64], indices: &[u32], density: f64, max_work: u32) -> Value {
+    let (vp, vl) = upload(positions);
+    let (ip, il) = upload(indices);
+    unsafe { abi_manifold_diagnostics(vp, vl, ip, il, FMT_F64, density, 0.6, 0.5, max_work) };
+    let response = unsafe { take_response() };
+    unsafe {
+        reclaim::<f64>(vp, vl);
+        reclaim::<u32>(ip, il);
+    }
+    response
+}
+
+unsafe fn slice<T: Copy>(handle: usize, slot: u32) -> Vec<T> {
+    let (ptr, len) = unsafe {
+        (
+            abi_array_field(handle, slot),
+            abi_array_field(handle, slot + 1),
+        )
+    };
+    if len == 0 {
+        return Vec::new();
+    }
+    unsafe { std::slice::from_raw_parts(ptr as *const T, len) }.to_vec()
+}
+
+#[test]
+fn manifold_diagnostics_reports_intersections_thickness_clearance_and_mass() {
+    // Two overlapping unit tetrahedra and a third one 1.2 beyond the second.
+    let (a, ia) = tetra(1.0, 0.0);
+    let (b, _) = tetra(1.0, 0.25);
+    let far: Vec<f64> = a
+        .chunks(3)
+        .flat_map(|p| [p[0] + 2.45, p[1], p[2]])
+        .collect();
+    let mut positions = a.clone();
+    positions.extend(&b);
+    positions.extend(&far);
+    let mut indices: Vec<u32> = ia.to_vec();
+    indices.extend(ia.iter().map(|i| i + 4));
+    indices.extend(ia.iter().map(|i| i + 8));
+    let response = diagnostics(&positions, &indices, 2.0, 0);
+    let handle = response["value"].as_u64().expect("diagnostics ok") as usize;
+    unsafe {
+        let pairs: Vec<u32> = slice(handle, 0);
+        assert!(!pairs.is_empty());
+        assert!(pairs.chunks(2).all(|p| p[0] < 4 && (4..8).contains(&p[1])));
+        let clearance: Vec<u32> = slice(handle, 4);
+        let floats: Vec<f64> = slice(handle, 6);
+        // Shells 0 and 1 overlap (distance 0); shell 2 is farther than 0.5.
+        assert_eq!(clearance.len(), 4);
+        assert_eq!(&clearance[..2], &[0, 1]);
+        assert_eq!(floats.len(), 17 + 1);
+        assert_eq!(floats[17], 0.0);
+        // The far tetrahedron's faces see the second one across the gap.
+        assert!(floats[2] > 0.0 && abi_array_field(handle, 14) > 0);
+        assert!(floats[0] > 0.0 && floats[0] <= floats[1]);
+        // Three closed tetrahedra: volume 3/6, mass 2 * 0.5.
+        assert_eq!(abi_array_field(handle, 9) & 2, 2);
+        assert!((floats[3] - 0.5).abs() < 1e-12 && (floats[4] - 1.0).abs() < 1e-12);
+        assert_eq!(abi_array_field(handle, 10), 12, "one ray per triangle");
+        assert_eq!(abi_array_field(handle, 12), 3, "three shells");
+        abi_array_free(handle);
+    }
+
+    // Open mesh: no mass (flag clear, NaN floats), still a valid report.
+    let response = diagnostics(&a, &ia[..9], 1.0, 0);
+    let handle = response["value"].as_u64().unwrap() as usize;
+    unsafe {
+        assert_eq!(abi_array_field(handle, 9) & 2, 0);
+        let floats: Vec<f64> = slice(handle, 6);
+        assert!(floats[3].is_nan());
+        abi_array_free(handle);
+    }
+
+    // Budget and parameter failures are typed.
+    let over = diagnostics(&positions, &indices, 1.0, 1);
+    assert_eq!(
+        over["error"]["code"].as_str(),
+        Some("GEOMETRY_RESOURCE_LIMIT"),
+        "{over:?}"
+    );
+    let bad = diagnostics(&a, &ia, -1.0, 0);
+    assert_eq!(
+        bad["error"]["code"].as_str(),
+        Some("GEOMETRY_INVALID_INPUT"),
+        "{bad:?}"
+    );
 }

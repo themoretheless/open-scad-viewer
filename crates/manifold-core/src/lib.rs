@@ -18,7 +18,7 @@
 /// report gains, loses, renames or reorders a field; the geometry bridge
 /// republishes it in its Manifold report schema so the TypeScript wrappers
 /// cannot drift silently.
-pub const REPORT_SCHEMA_VERSION: u32 = 1;
+pub const REPORT_SCHEMA_VERSION: u32 = 2;
 
 /// Undirected edge key with canonical ordering: always `(min, max)`.
 pub type EdgeKey = (usize, usize);

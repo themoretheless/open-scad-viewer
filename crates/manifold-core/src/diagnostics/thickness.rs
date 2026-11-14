@@ -7,8 +7,8 @@ use super::{DiagnosticsError, Mesh, P, triangle_tree};
 pub struct ThicknessOptions {
     /// Samples thinner than this are flagged (model units, `>= 0`).
     pub min_thickness: f64,
-    /// Maximum number of rays (one per non-degenerate triangle); more fails
-    /// with [`DiagnosticsError::WorkBudgetExceeded`].
+    /// Maximum number of sampled triangles (each casts one inward and one
+    /// outward ray); more fails with [`DiagnosticsError::WorkBudgetExceeded`].
     pub max_rays: usize,
 }
 
@@ -36,6 +36,12 @@ pub struct ThicknessReport {
     pub missed: usize,
     /// Triangles whose sample is below `min_thickness`, ascending.
     pub thin_triangles: Vec<usize>,
+    /// Smallest free distance in front of a face: an outward ray from a
+    /// centroid to the next surface (a narrow slot within one body, or
+    /// another shell). `None` when every outward ray escapes.
+    pub min_gap: Option<f64>,
+    /// Triangle whose outward ray gave `min_gap`.
+    pub min_gap_triangle: Option<usize>,
 }
 
 impl ThicknessReport {
@@ -95,8 +101,38 @@ fn ray_box(o: P, inv: P, min: P, max: P, best: f64) -> bool {
     lo <= hi
 }
 
+/// Nearest hit along `o + s d`, `s > eps`, skipping triangle `skip`.
+fn nearest_hit(
+    tree: &mesh_query::aabb_tree::BoxTree<super::TriBox>,
+    mesh: &Mesh<'_>,
+    skip: usize,
+    o: P,
+    d: P,
+    eps: f64,
+) -> f64 {
+    let inv = d.map(|v| 1.0 / v);
+    let nearest = std::cell::Cell::new(f64::INFINITY);
+    tree.walk(
+        |min, max| ray_box(o, inv, min, max, nearest.get()),
+        |item| {
+            if item.index == skip {
+                return;
+            }
+            if let Some(s) = ray_triangle(o, d, &mesh.corners(item.index))
+                && s > eps
+                && s < nearest.get()
+            {
+                nearest.set(s);
+            }
+        },
+    );
+    nearest.get()
+}
+
 /// Estimate wall thickness: from each triangle centroid cast a ray against
 /// the outward normal and take the distance to the nearest other triangle.
+/// A second ray along the outward normal measures the free gap in front of
+/// the face (`min_gap`).
 ///
 /// The outward side follows the sign of the enclosed volume, so inward
 /// oriented solids work too. This is a sampled estimate, not a medial-axis
@@ -141,29 +177,18 @@ pub fn wall_thickness(
         let len = dot(n, n).sqrt();
         let d = n.map(|v| inward * v / len);
         let o: P = std::array::from_fn(|k| (c[0][k] + c[1][k] + c[2][k]) / 3.0);
-        let inv = d.map(|v| 1.0 / v);
         let scale = c
             .iter()
             .flatten()
             .fold(0.0f64, |m, v| m.max(v.abs()))
             .max(1.0);
         let eps = scale * 1e-12;
-        let nearest = std::cell::Cell::new(f64::INFINITY);
-        tree.walk(
-            |min, max| ray_box(o, inv, min, max, nearest.get()),
-            |item| {
-                if item.index == t {
-                    return;
-                }
-                if let Some(s) = ray_triangle(o, d, &mesh.corners(item.index))
-                    && s > eps
-                    && s < nearest.get()
-                {
-                    nearest.set(s);
-                }
-            },
-        );
-        let best = nearest.get();
+        let gap = nearest_hit(&tree, &mesh, t, o, d.map(|v| -v), eps);
+        if gap.is_finite() && report.min_gap.is_none_or(|m| gap < m) {
+            report.min_gap = Some(gap);
+            report.min_gap_triangle = Some(t);
+        }
+        let best = nearest_hit(&tree, &mesh, t, o, d, eps);
         if !best.is_finite() {
             report.missed += 1;
             continue;
@@ -234,6 +259,23 @@ mod tests {
         .unwrap();
         assert!((r.min_thickness.unwrap() - 0.25).abs() < 1e-9, "{r:?}");
         assert_eq!(r.thin_triangles.len(), 24);
+    }
+
+    #[test]
+    fn outward_rays_measure_gaps_in_front_of_faces() {
+        // Single box: every outward ray escapes.
+        let (p, i) = box_mesh([0.; 3], [1.; 3]);
+        let r = wall_thickness(&p, &i, Default::default()).unwrap();
+        assert_eq!(r.min_gap, None);
+        // Two boxes 0.3 apart: the facing x sides (triangles 10, 11 of the
+        // first box and 20, 21 overall of the second) see the gap.
+        let (p, i) = merge(
+            box_mesh([0.; 3], [1.; 3]),
+            box_mesh([1.3, 0., 0.], [2., 1., 1.]),
+        );
+        let r = wall_thickness(&p, &i, Default::default()).unwrap();
+        assert!((r.min_gap.unwrap() - 0.3).abs() < 1e-9, "{r:?}");
+        assert!([10, 11, 20, 21].contains(&r.min_gap_triangle.unwrap()));
     }
 
     #[test]
