@@ -9,6 +9,7 @@ import { BrowserWorkspacePersistence } from './app/workspacePersistence'
 import { readWorkspaceShareHash } from './app/workspaceShare'
 import { setOptionalWasmCompiler } from './kernel/wasmCompilation'
 import { compileStreamingWasm } from './kernel/wasmStreaming'
+import { installTestSeamHooks } from './dev/testSeam'
 
 if (import.meta.env.DEV && new URLSearchParams(location.search).get('xrEmulator') === '1') {
   const { installVrEmulator } = await import('./dev/vrEmulator')
@@ -16,6 +17,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).get('xrEmulator'
 }
 
 setOptionalWasmCompiler(compileStreamingWasm)
+installTestSeamHooks()
 
 // Apply the bounded built-in palette before the asynchronous workspace bootstrap.
 const legacyThemeRaw = storageGet('scad-theme')

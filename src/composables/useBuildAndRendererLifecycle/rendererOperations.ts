@@ -6,7 +6,8 @@ import { planGeometryPublication } from '../../app/buildPromotionPolicy'
 import { diagnosticFromBuildError } from '../../language/editorDiagnostics'
 import { withSelectionSurfaces } from '../../kernel/meshSurfaceGroups'
 import { planScenePublication } from '../../app/scenePublication'
-import { WebGPURenderer } from '../../render/webgpuRenderer'
+import type { WebGPURenderer } from '../../render/webgpuRenderer'
+import { createViewportRenderer } from '../../render/viewportRendererFactory'
 import { buildSources } from '../../appHelpers'
 import type {RendererRecoveryNavigationSnapshot} from '../useBuildAndRendererLifecycle'
 import type {RendererOperationsContext} from './rendererOperationsContext'
@@ -16,7 +17,7 @@ async function initializeViewportRenderer() {
     if (!canvas || !context.options.isComponentActive() || !context.options.sourceViewportVisible.value || context.options.rendererInitializing.value) return
     context.options.rendererInitializing.value = true
     context.options.rendererUnavailableMessage.value = ''
-    const nextRenderer = new WebGPURenderer()
+    const nextRenderer = createViewportRenderer()
     const ok = await nextRenderer.init(canvas)
     if (!context.options.isComponentActive() || !context.options.sourceViewportVisible.value) {
       nextRenderer.destroy()
