@@ -6,7 +6,7 @@
 
 export interface OpenScadStableRuntimeOptions {
   readonly quality: 'preview' | 'full'
-  readonly animationTime?: number
+  readonly animationTime?: number | undefined
 }
 
 export type OpenScadStableRuntimeValue = number | boolean | readonly number[]

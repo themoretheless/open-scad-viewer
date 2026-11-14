@@ -48,7 +48,7 @@ export function prepareSolidProfile(document:DirectDocument,ids:string[],toleran
   const source=curve!.curve,n=source.controlPoints.length
   if(source.periodic||source.knots.slice(0,source.degree+1).some(k=>k!==source.knots[source.degree])||source.knots.slice(n).some(k=>k!==source.knots[n]))throw Error(`Profile input ${curve!.id} requires exactly clamped non-periodic endpoints.`)
   const projected=projection!.curves[projectedIndex++]
-  return {id:curve!.id,name:curve!.name,group:curve!.group,closed:false,points:[],plane,curves:[projected]}
+  return {id:curve!.id,name:curve!.name,...(curve!.group!==undefined?{group:curve!.group}:{}),closed:false,points:[],plane,curves:[projected]}
  })
  const first=sketches[0]
  const report=items.some(i=>i.curve)||sketches.some(s=>s.analytic)
@@ -72,9 +72,9 @@ export function prepareSolidProfile(document:DirectDocument,ids:string[],toleran
  const next=structuredClone(document)
  if(report.accepted){
   next.sketches=next.sketches.filter(s=>!ids.slice(1).includes(s.id))
-  next.curves=next.curves?.filter(c=>!ids.includes(c.id))
+  if(next.curves)next.curves=next.curves.filter(c=>!ids.includes(c.id))
   let result=next.sketches.find(s=>s.id===first.id)
-  if(!result){result={id:first.id,name:first.name,group:first.group,closed:false,points:[],plane};next.sketches.push(result)}
+  if(!result){result={id:first.id,name:first.name,...(first.group!==undefined?{group:first.group}:{}),closed:false,points:[],plane};next.sketches.push(result)}
   if(report.profile)Object.assign(result,withRetainedProfile(result,report.profile))
   else{result.points=report.points;result.closed=true}
   delete result.analytic;delete result.dimensions

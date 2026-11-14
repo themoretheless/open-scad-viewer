@@ -380,7 +380,7 @@ export class DirectHistory {
   }
   private commitValidated(next:DirectDocument,validateChange?:(resolved:DirectDocument)=>void) {
     const base=this.current
-    next.blenderProjectId ??= (this.current.document??JSON.parse(unpackHistoryText(this.current)) as DirectDocument).blenderProjectId
+    if(next.blenderProjectId===undefined){const inherited=(this.current.document??JSON.parse(unpackHistoryText(this.current)) as DirectDocument).blenderProjectId;if(inherited!==undefined)next.blenderProjectId=inherited}
     // UI policies (for example locked linked bodies) must see resolved geometry.
     // Give the policy its own copy so it cannot mutate the validated state.
     if (validateChange) validateChange(clone(next))

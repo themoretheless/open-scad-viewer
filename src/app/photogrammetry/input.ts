@@ -69,7 +69,7 @@ export interface ImportedPhoto {
   readonly url: string
   readonly equivalent: number
   readonly hint: boolean
-  readonly calibrationGroupId?: string
+  readonly calibrationGroupId?: string | undefined
 }
 
 interface ObjectUrls {

@@ -168,9 +168,9 @@ export function collectTransferableBuffers(payload: unknown): ArrayBuffer[] {
 
 export interface WorkerTaskOptions {
   priority?: number
-  signal?: AbortSignal
+  signal?: AbortSignal | undefined
   transfer?: boolean
-  timeoutMs?: number
+  timeoutMs?: number | undefined
 }
 
 export type TaskExecutor<TInput, TOutput> = (input: TInput, workerIndex: number) => Promise<TOutput> | TOutput
@@ -179,8 +179,8 @@ interface QueuedTask<TInput, TOutput> {
   id: number
   input: TInput
   priority: number
-  signal?: AbortSignal
-  timeoutMs?: number
+  signal?: AbortSignal | undefined
+  timeoutMs?: number | undefined
   aborted?: boolean
   resolve: (value: TOutput) => void
   reject: (reason: unknown) => void

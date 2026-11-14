@@ -28,7 +28,7 @@ export interface GpuDispatchBuffers {
 export interface GpuComputeJob {
   wgsl: string
   /** Ordered from newest/fastest to most compatible. The first supported variant wins. */
-  wgslVariants?: readonly WgslVariant[]
+  wgslVariants?: readonly WgslVariant[] | undefined
   entryPoint: string
   /** One entry per compute dispatch sharing the pipeline; each writes its own
    * output buffer(s). All dispatches go into one pass and one submit. */

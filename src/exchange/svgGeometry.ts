@@ -64,8 +64,8 @@ export function contoursExtrusion(contours: SvgContours, height: number): string
   return source
 }
 export interface SvgProjectionOptions {
-  axis?: 'x' | 'y' | 'z'
-  face?: { meshIndex: number; triangleIndex: number }
+  axis?: 'x' | 'y' | 'z' | undefined
+  face?: { meshIndex: number; triangleIndex: number } | undefined
 }
 export type SvgProjectionMesh = Pick<MeshData, 'vertices' | 'indices' | 'transform' | 'faceIds'>
 

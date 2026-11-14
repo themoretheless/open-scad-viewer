@@ -42,7 +42,7 @@ export interface StableExpressionEvalContext {
   readonly valueBudget: { used: number }
   readonly valueWeights: WeakMap<Value[], number>
   readonly valueDepths: WeakMap<Value[], number>
-  readonly stableScope?: OpenScadStableScope
+  readonly stableScope?: OpenScadStableScope | undefined
   readonly scopeVisibleBefore?: number
 }
 

@@ -27,12 +27,12 @@ export interface ParseOptions {
    */
   recordExactSolids?: boolean
   /** Versioned frontend profile. The legacy public route remains subset@1. */
-  languageProfile?: OpenScadLanguageProfile
-  quality?: GeometryQuality
+  languageProfile?: OpenScadLanguageProfile | undefined
+  quality?: GeometryQuality | undefined
   /** Optional export-only tessellation density boost ('viewport' | 'high' | 'ultra'). */
-  exportQuality?: ExportMeshQuality
+  exportQuality?: ExportMeshQuality | undefined
   /** Host animation position exposed as OpenSCAD's dynamic `$t` (0..1). */
-  animationTime?: number
+  animationTime?: number | undefined
   /**
    * Cooperative cancellation probe. The evaluator yields to the event loop
    * periodically (top-level statements and long `for` / `intersection_for`
@@ -41,15 +41,15 @@ export interface ParseOptions {
    * still will not yield mid-call — BuildCoordinator's worker-replacement grace
    * remains that hard boundary.
    */
-  shouldAbort?: () => boolean
+  shouldAbort?: (() => boolean) | undefined
   /**
    * Liveness hook invoked after each successful yield. A hosting worker can
    * forward it as a (throttled) progress heartbeat so a watchdog can tell
    * "alive but heavy" from "wedged" instead of killing legitimate long builds.
    */
-  onYield?: () => void
+  onYield?: (() => void) | undefined
   /** Approximate sweep levels; never authoritative scene results. */
-  onSweepPreview?: import('../language/rushGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview']
+  onSweepPreview?: import('../language/rushGraphNurbsKernel').OwnNurbsBuildControl['onSweepPreview'] | undefined
   /** Injectable monotonic clock for deterministic phase-timing tests. */
   now?: () => number
   /** Injectable macrotask yield used by cooperative-cancellation tests. */
@@ -115,22 +115,22 @@ export class CooperativeCheckpoint {
 export interface EvalContext {
   kernel: CadKernelOps
   source: string
-  project?: OpenScadProject
-  importAssets?: PreparedOpenScadImportAssets
-  surfaceAssets?: PreparedOpenScadSurfaceAssets
-  textAssets?: PreparedOpenScadTextAssets
+  project?: OpenScadProject | undefined
+  importAssets?: PreparedOpenScadImportAssets | undefined
+  surfaceAssets?: PreparedOpenScadSurfaceAssets | undefined
+  textAssets?: PreparedOpenScadTextAssets | undefined
   languageProfile: OpenScadLanguageProfile
   env: Map<string, Value>
   functions: Map<string, FunctionNode>
   modules: Map<string, ModuleNode>
   warnings: string[]
   quality: GeometryQuality
-  exportQuality?: ExportMeshQuality
+  exportQuality?: ExportMeshQuality | undefined
   sourceReferences: Map<number, MeshSourceReference>
-  callChildren?: Statement[] | PassedCallChildren
+  callChildren?: Statement[] | PassedCallChildren | undefined
   functionStack: string[]
   moduleStack: string[]
-  stableScope?: OpenScadStableScope
+  stableScope?: OpenScadStableScope | undefined
   scopeVisibleBefore?: number
   depth: number
   /** Shared mutable evaluation budget — one object across all ctx spreads. */
@@ -156,7 +156,7 @@ export interface PassedCallChildren {
   readonly statements: readonly Statement[]
   readonly env: ReadonlyMap<string, Value>
   readonly scope: OpenScadStableScope
-  readonly continuation?: Statement[] | PassedCallChildren
+  readonly continuation?: Statement[] | PassedCallChildren | undefined
 }
 
 export interface Shape2D { dimension: 2; geometry: CadKernelHandle; color: RGBA; entityId: SceneEntityId }

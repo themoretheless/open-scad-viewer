@@ -9,7 +9,7 @@ export interface MainSolidPort {
   terminate():void
 }
 export interface MainSolidTiming {clientElapsedMs:number;warmupMs:number;executeMs:number;prepareMs:number}
-export interface MainSolidRunOptions {signal?:AbortSignal; timeoutMs?:number; onTiming?:(timing:MainSolidTiming)=>void; onProgress?:(progress:MainSolidProgress)=>void}
+export interface MainSolidRunOptions {signal?:AbortSignal | undefined; timeoutMs?:number | undefined; onTiming?:(timing:MainSolidTiming)=>void; onProgress?:(progress:MainSolidProgress)=>void}
 export class MainSolidWorkerError extends Error {
   constructor(readonly code:string, message:string, name='MainSolidWorkerError') {super(message);this.name=name}
 }

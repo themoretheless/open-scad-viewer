@@ -21,7 +21,7 @@ interface ComputedNode<T> extends ObserverNode {
 }
 interface EffectNode extends ObserverNode {
   readonly kind: 'effect'; fn: (onCleanupFn: (cb: () => void) => void) => void | (() => void)
-  owner: OwnerScope | null; queued: boolean; running: boolean; sync: boolean; scheduler?: () => void
+  owner: OwnerScope | null; queued: boolean; running: boolean; sync: boolean; scheduler?: (() => void) | undefined
 }
 
 let nextNodeId = 1
@@ -233,7 +233,7 @@ export function computed<T>(fn: () => T, equals: (a: T, b: T) => boolean = Objec
 
 export function effect(
   fn: (onCleanupFn: (cb: () => void) => void) => void | (() => void),
-  options?: { sync?: boolean; scheduler?: () => void },
+  options?: { sync?: boolean; scheduler?: (() => void) | undefined },
 ): EffectHandle {
   const node: EffectNode = {
     kind: 'effect', id: allocNodeId(), state: STATE_DIRTY, deps: new Set(), cleanups: [], disposed: false,

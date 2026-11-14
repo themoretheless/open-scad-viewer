@@ -44,7 +44,8 @@ function checkJob(job: SvgJob): SvgJob {
   if (job.meshes.reduce((sum, mesh) => sum + mesh.indices.length / 3, 0) > 20000) throw new RangeError('SVG projection is limited to 20000 triangles.')
   if (job.meshes.reduce((sum, mesh) => sum + mesh.vertices.byteLength + mesh.indices.byteLength + mesh.faceIds.byteLength + mesh.transform.byteLength, 0) > 16 * 1024 * 1024) throw new RangeError('SVG projection data exceeds 16 MiB.')
   // Do not clone renderer metadata or send Vue proxies; never transfer buffers owned by the live scene.
-  return { ...job, options, face: undefined,
+  const { face: _face, ...projection } = job
+  return { ...projection, options,
     meshes: job.meshes.map(mesh => ({ vertices: mesh.vertices, indices: mesh.indices, faceIds: mesh.faceIds, transform: mesh.transform })) }
 }
 

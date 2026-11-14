@@ -57,7 +57,7 @@ export class CadSolid extends Handle {
     private normalAngle = 52.5;
     private invalidImport = false;
     private original = ++original;
-    private meshSnapshot?: { normals: boolean; normalAngle: number; mesh: Omit<KernelRenderMesh, 'vertices'> & { vertices: Float32Array | Float64Array } };
+    private meshSnapshot?: { normals: boolean; normalAngle: number; mesh: Omit<KernelRenderMesh, 'vertices'> & { vertices: Float32Array | Float64Array } } | undefined;
     constructor(value: number | Mesh) { super(typeof value === 'number' ? value : importCadMesh(value.numProp, value.vertProperties, value.triVerts)); if (typeof value !== 'number' && value.triVerts.length > 0 && this.isEmpty())
         this.invalidImport = true; }
     static cube(size: Vec3 | number, center = false) { return new CadSolid(call('cube', { size: typeof size === 'number' ? [size, size, size] : size, center })); }

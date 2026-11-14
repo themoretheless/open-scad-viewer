@@ -87,8 +87,8 @@ export interface PassedCallChildren {
   readonly expansionOperation: number
   readonly statements: readonly Statement[]
   readonly env: Map<string, Value>
-  readonly scope?: OpenScadStableScope
-  readonly continuation?: PassedCallChildren
+  readonly scope?: OpenScadStableScope | undefined
+  readonly continuation?: PassedCallChildren | undefined
 }
 
 export interface EvalContext {
@@ -107,16 +107,16 @@ export interface EvalContext {
   readonly valueDepths: WeakMap<Value[], number>
   readonly parentOccurrence: number | null
   readonly pendingSlots: readonly SemanticDynamicSlot[]
-  readonly callChildren?: Readonly<PassedCallChildren>
+  readonly callChildren?: Readonly<PassedCallChildren> | undefined
   readonly functionStack: readonly string[]
   readonly moduleStack: readonly string[]
-  readonly stableScope?: OpenScadStableScope
+  readonly stableScope?: OpenScadStableScope | undefined
   readonly scopeVisibleBefore?: number
   /** Once `!` wins at runtime, nested root markers are ordinary calls. */
   readonly viewportRootLocked?: boolean
   /** The winning call ignores its own `#`/`%` chain, as OpenSCAD does. */
   readonly viewportRootOwner?: CallNode
-  readonly shouldAbort?: () => boolean
+  readonly shouldAbort?: (() => boolean) | undefined
 }
 
 export class StableViewportRootSelection {
@@ -128,11 +128,11 @@ export class StableViewportRootSelection {
 }
 
 export interface SemanticLoweringOptions {
-  readonly languageProfile?: OpenScadLanguageProfile
-  readonly quality?: GeometryQuality
+  readonly languageProfile?: OpenScadLanguageProfile | undefined
+  readonly quality?: GeometryQuality | undefined
   /** Host animation position exposed as OpenSCAD's dynamic `$t` (0..1). */
-  readonly animationTime?: number
-  readonly shouldAbort?: () => boolean
+  readonly animationTime?: number | undefined
+  readonly shouldAbort?: (() => boolean) | undefined
   /** Qualification-only: preserve a deterministic evaluation failure as a kernel-prefix plan. */
   readonly captureTerminalFailure?: boolean
 }

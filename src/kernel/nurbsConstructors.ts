@@ -124,19 +124,19 @@ export const checkedProfileSweepNurbsSurface=(profile:NurbsCurve,path:NurbsCurve
  callNurbsRust('brep_sweep_constructor',{operation:'surface_profile_sweep',profile,path,scale,normal,sections,maxDeviation,...(maxCells===undefined?{}:{maxCells})})
 export interface NurbsVectorLaw {degree:number;knots:number[];values:[number,number,number][];weights:number[]}
 export interface ProgressiveSweepOptions {
- axisScale?:NurbsVectorLaw
- centerLaw?:NurbsVectorLaw
+ axisScale?:NurbsVectorLaw | undefined
+ centerLaw?:NurbsVectorLaw | undefined
  normal:[number,number,number]
- orientation?:'rmf'|'fixed'|'fixed_normal'|'frenet'|'corrected_frenet'
- spacing?:'parameter'|'arc_length'
- initialSections?:number
- maxSections?:number
+ orientation?:'rmf'|'fixed'|'fixed_normal'|'frenet'|'corrected_frenet' | undefined
+ spacing?:'parameter'|'arc_length' | undefined
+ initialSections?:number | undefined
+ maxSections?:number | undefined
  maxDeviation:number
- lengthTolerance?:number
- lengthMaxCells?:number
- rmfTransportSteps?:number
- errorMaxCells?:number
- errorMaxProducts?:number
+ lengthTolerance?:number | undefined
+ lengthMaxCells?:number | undefined
+ rmfTransportSteps?:number | undefined
+ errorMaxCells?:number | undefined
+ errorMaxProducts?:number | undefined
 }
 /** Complete orientation independent of path tangent; native reports distinguish
  * certified retained-patch error from sampled transport acceptance. */
@@ -156,7 +156,7 @@ export interface GuidedProgressiveSweepOptions extends Omit<ProgressiveSweepOpti
 }
 export type ProgressiveGuidedSurfaceSweepOptions=ProgressiveSurfaceSweepOptions|GuidedProgressiveSweepOptions
 export const sweepGuidePayload=(options:ProgressiveGuidedSurfaceSweepOptions)=>callNurbsRust<{orientation_guide?:NurbsCurve;contact_profile?:number;contact_parameter?:number}>('brep_sweep_law_payload',{kind:'guide',options})
-export const sweepFrameLawPayload=(options:{orientation?:string;frameAxis?:NurbsVectorLaw;frameNormal?:NurbsVectorLaw})=>callNurbsRust<{frame_axis?:NurbsCurve;frame_normal?:NurbsCurve}>('brep_sweep_law_payload',{kind:'frame',options})
+export const sweepFrameLawPayload=(options:{orientation?:string | undefined;frameAxis?:NurbsVectorLaw | undefined;frameNormal?:NurbsVectorLaw | undefined})=>callNurbsRust<{frame_axis?:NurbsCurve;frame_normal?:NurbsCurve}>('brep_sweep_law_payload',{kind:'frame',options})
 /** Positive dimensionless axis scale and local-frame center offsets in mm. */
 export const sweepAffineLawPayload=(options:Pick<ProgressiveSweepOptions,'axisScale'|'centerLaw'>)=>callNurbsRust<{axis_scale:NurbsCurve|null;center_law:NurbsCurve|null}>('brep_sweep_law_payload',{kind:'affine',options})
 export interface ProgressiveSweepReport {
@@ -208,33 +208,33 @@ export interface ProgressiveSweepPreview<R=ProgressiveSweepReport|ProgressiveMit
 export const previewProgressiveNurbsProfiles=(profiles:NurbsCurve[],path:NurbsCurve,scale:NurbsScaleLaw,twist:NurbsScaleLaw,options:ProgressiveGuidedSurfaceSweepOptions,sections:number):ProgressiveSweepPreview<ProgressiveSweepReport>=>callNurbsRust('brep_sweep_constructor',{operation:'surface_progressive_sweep_level',preview_sections:sections,profiles,path,scale,twist,options})
 export interface ProgressiveSweepStreamOptions {
  /** Worker cancellation state, sampled at the same boundaries as signal. */
- shouldAbort?:()=>boolean
- signal?:AbortSignal
+ shouldAbort?:(()=>boolean) | undefined
+ signal?:AbortSignal | undefined
 }
 /** With authored frames and a guide, frameAxis defines the axis and the projected guide defines the normal. */
 export interface ProgressiveMiterOptions {
- orientationGuide?:NurbsCurve
- frameAxis?:NurbsVectorLaw
- frameNormal?:NurbsVectorLaw
- axisScale?:NurbsVectorLaw
- centerLaw?:NurbsVectorLaw
- capDomainBudgets?:{tolerance:number;maxPairs:number;maxCells:number;maxExactWork:number}
- retainedDecompositionBudgets?:{maxProducts:number;maxFaces:number}
- capProjectionBudgets?:{maxCells:number;maxExactWork:number}
- circleCorrection?:{quantum:number;tolerance:number;maxWork:number}
- capCorrection?:{quantum:number;tolerance:number;maxWork:number;authoredFrame?:boolean}
- capWallMaxWalls?:number
- contourAuditBudgets?:{tolerance:number;maxPairs:number;maxCells:number}
- retainedWallMaxInjectivityCells?:number
- capPairAuditBudgets?:Omit<import('./nurbsSweepAudit').SweepWallAuditOptions,'sharedBoundaries'>
- embeddingBudgets?:import('./nurbsSweepEmbedding').SweepEmbeddingBudgets
- volumeBudgets?:import('./nurbsSweepEmbedding').SweepVolumeBudgets
- wallAuditBudgets?:Omit<import('./nurbsSweepAudit').SweepWallAuditOptions,'sharedBoundaries'>
+ orientationGuide?:NurbsCurve | undefined
+ frameAxis?:NurbsVectorLaw | undefined
+ frameNormal?:NurbsVectorLaw | undefined
+ axisScale?:NurbsVectorLaw | undefined
+ centerLaw?:NurbsVectorLaw | undefined
+ capDomainBudgets?:{tolerance:number;maxPairs:number;maxCells:number;maxExactWork:number} | undefined
+ retainedDecompositionBudgets?:{maxProducts:number;maxFaces:number} | undefined
+ capProjectionBudgets?:{maxCells:number;maxExactWork:number} | undefined
+ circleCorrection?:{quantum:number;tolerance:number;maxWork:number} | undefined
+ capCorrection?:{quantum:number;tolerance:number;maxWork:number;authoredFrame?:boolean | undefined} | undefined
+ capWallMaxWalls?:number | undefined
+ contourAuditBudgets?:{tolerance:number;maxPairs:number;maxCells:number} | undefined
+ retainedWallMaxInjectivityCells?:number | undefined
+ capPairAuditBudgets?:Omit<import('./nurbsSweepAudit').SweepWallAuditOptions,'sharedBoundaries'> | undefined
+ embeddingBudgets?:import('./nurbsSweepEmbedding').SweepEmbeddingBudgets | undefined
+ volumeBudgets?:import('./nurbsSweepEmbedding').SweepVolumeBudgets | undefined
+ wallAuditBudgets?:Omit<import('./nurbsSweepAudit').SweepWallAuditOptions,'sharedBoundaries'> | undefined
  normal:[number,number,number]
- closed?:boolean
- miterLimit?:number
- initialSteps?:number
- maxSteps?:number
+ closed?:boolean | undefined
+ miterLimit?:number | undefined
+ initialSteps?:number | undefined
+ maxSteps?:number | undefined
  maxDeviation:number
 }
 export interface ProgressiveMiterReport {

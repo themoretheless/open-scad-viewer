@@ -421,7 +421,7 @@ export class DuckDbModelStore implements ModelStore {
     return this.serial(() => this.getBuildDirect(id))
   }
 
-  listBuilds(options: { modelId?: string; limit?: number } = {}): Promise<StoredBuild[]> {
+  listBuilds(options: { modelId?: string | undefined; limit?: number | undefined } = {}): Promise<StoredBuild[]> {
     if (options.modelId) validateModelId(options.modelId)
     const limit = boundedLimit(options.limit)
     return this.serial(async () => {

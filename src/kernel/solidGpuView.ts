@@ -19,10 +19,10 @@ export interface SolidGpuBody {
   /** HSL hue per triangle (220 base, 266 selected, 190 hovered, 40 selected face). */
   hues: Float32Array
   /** RGB color used when the triangle hue is negative. */
-  color?: [number,number,number]
-  metallic?: number
-  roughness?: number
-  opacity?: number
+  color?: [number,number,number] | undefined
+  metallic?: number | undefined
+  roughness?: number | undefined
+  opacity?: number | undefined
 }
 
 export interface SolidGpuView {

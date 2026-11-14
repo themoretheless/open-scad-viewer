@@ -16,7 +16,7 @@ const svgInput = {
   fonts: z.array(z.string().max(5592408)).max(16).optional().describe('Optional outline TTF/OTF/TTC fonts encoded as base64; 4 MiB per font, 8 MiB total. Noto Sans is bundled. Color SVG/COLR and bitmap glyph tables are unsupported; convert colored glyphs to SVG paths first.'),
 }
 
-function options(input: Omit<SvgOptions, 'fonts'> & { fonts?: string[] }): SvgOptions {
+function options(input: Omit<SvgOptions, 'fonts'> & { fonts?: string[] | undefined }): SvgOptions {
   let bytes = 0
   const fonts = input.fonts?.map(value => {
     if (value.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(value)) throw new Error('Invalid base64 SVG font.')

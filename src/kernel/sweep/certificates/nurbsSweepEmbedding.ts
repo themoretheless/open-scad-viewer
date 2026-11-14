@@ -96,7 +96,7 @@ export function inspectSweepVolumeAndCharts(model:NurbsBrep,capFaces:number[],bu
 }
 
 export async function inspectSweepVolumeAndChartsAsync(model:NurbsBrep,capFaces:number[],budgets:SweepVolumeBudgets,
- control:{shouldAbort?:()=>boolean;onYield?:()=>void}={}):Promise<SweepVolumeAudit & {retainedWallCharts:SweepRetainedChartEvidence}> {
+ control:{shouldAbort?:(()=>boolean)|undefined;onYield?:(()=>void)|undefined}={}):Promise<SweepVolumeAudit & {retainedWallCharts:SweepRetainedChartEvidence}> {
  const check=()=>{if(control.shouldAbort?.())throw new DOMException('Build cancelled','AbortError')}
  check()
  const start=callGeometryRust<{session:string}>('brep_sweep_volume_begin',{model,capFaces,...budgets})

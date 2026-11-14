@@ -86,7 +86,7 @@ export function officialErrorResult(error: unknown) {
 
 export async function resolveSource(
   store: ModelStore,
-  input: { source?: string; model_id?: string; revision?: number },
+  input: { source?: string | undefined; model_id?: string | undefined; revision?: number | undefined },
 ): Promise<{ source: string; model: SelectedModel | null }> {
   if (input.source !== undefined) return { source: input.source, model: null }
   const model = input.revision === undefined
@@ -208,7 +208,7 @@ export async function recordFailure(
     purpose: GeometryBuildPurpose
     durationMs: number
     error: unknown
-    execution?: GeometryExecutionDescriptor
+    execution?: GeometryExecutionDescriptor | undefined
   },
 ): Promise<StoredBuild | null> {
   try {

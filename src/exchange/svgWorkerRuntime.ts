@@ -6,7 +6,7 @@ import type { SvgGeometryResult, SvgJob, SvgWorkerRequest, SvgWorkerResponse } f
 export async function executeSvgJob(job: SvgJob): Promise<SvgGeometryResult> {
   if (job.kind === 'preview') return svgPreview(job.svg, job.options)
   if (job.kind === 'project') {
-    const svg = contoursSvg(await meshSvgContours(job.meshes, { axis: job.axis, face: job.face }))
+    const svg = contoursSvg(await meshSvgContours(job.meshes, { axis: job.axis, ...(job.face !== undefined ? { face: job.face } : {}) }))
     return { ...await svgPreview(svg, job.options), svg }
   }
   const profile = await svgProfile(job.svg, job.options)

@@ -279,7 +279,7 @@ export function stableCompatibilityDeprecation(
   stableWarning(ctx, node.p, message, 'W_OPENSCAD_DEPRECATED')
 }
 
-export function bindAssertArguments(node: CallNode, ctx: EvalContext): { condition: Expr; conditionText: string; message?: Expr } {
+export function bindAssertArguments(node: CallNode, ctx: EvalContext): { condition: Expr; conditionText: string; message?: Expr | undefined } {
   const keys = Object.keys(node.args)
   const unknown = keys.find(key => node.argKinds[key] === 'named'
     ? key !== 'condition' && key !== 'message'

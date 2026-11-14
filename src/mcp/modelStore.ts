@@ -47,11 +47,11 @@ export interface StoredModelRevisionSummary extends Omit<StoredModelRevision, 's
 }
 
 export interface SaveModelInput {
-  id?: string
+  id?: string | undefined
   name: string
   source: string
   /** Optimistic concurrency guard. A new model has revision 0. */
-  expectedRevision?: number
+  expectedRevision?: number | undefined
 }
 
 export interface SaveModelSourceInput {
@@ -101,8 +101,8 @@ export type BuildSourceAttestation =
 
 export interface RecordBuildInput {
   id?: string
-  modelId?: string
-  modelRevision?: number
+  modelId?: string | undefined
+  modelRevision?: number | undefined
   /** Exact source used; inline history persists it, model-backed history binds its revision. */
   source: string
   sourceSha256: string
@@ -131,9 +131,9 @@ export interface StoredBuild extends Omit<RecordBuildInput, 'id' | 'modelId' | '
 export type ArtifactFormat = 'stl' | 'obj'
 
 export interface StoreArtifactInput {
-  id?: string
+  id?: string | undefined
   buildId: string
-  modelId?: string
+  modelId?: string | undefined
   format: ArtifactFormat
   fileName: string
   mimeType: string
@@ -184,7 +184,7 @@ export interface ModelStore {
   listModelRevisions(id: string, limit?: number): Promise<StoredModelRevisionSummary[]>
   recordBuild(input: RecordBuildInput): Promise<StoredBuild>
   getBuild(id: string): Promise<StoredBuild | null>
-  listBuilds(options?: { modelId?: string; limit?: number }): Promise<StoredBuild[]>
+  listBuilds(options?: { modelId?: string | undefined; limit?: number | undefined }): Promise<StoredBuild[]>
   storeArtifact(input: StoreArtifactInput): Promise<StoredArtifactSummary>
   getArtifact(id: string): Promise<StoredArtifact | null>
   listArtifacts(limit?: number): Promise<StoredArtifactSummary[]>

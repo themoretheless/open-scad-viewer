@@ -181,7 +181,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
           kind: 'rushGraphImport',
           document: history.document,
           text,
-          group: activeGroup.value || undefined,
+          ...(activeGroup.value ? { group: activeGroup.value } : {}),
         })
         if (!current()) return
         const { validateLocked, added } = prepareCommit(next)

@@ -1,15 +1,15 @@
 export interface PaletteCommand {
   id: string
   label: string
-  detail?: string
-  shortcut?: string
+  detail?: string | undefined
+  shortcut?: string | undefined
   keywords?: string | readonly string[]
   /** Alternative localized names, for example both Russian and English. */
   aliases?: readonly string[]
   /** Omit or set to true when the command can be executed in the current context. */
   enabled?: boolean
   /** Human-readable explanation shown for a command that is currently unavailable. */
-  disabledReason?: string
+  disabledReason?: string | undefined
   /** Lower values are more recent. Used only to resolve otherwise equal ranks. */
   mruRank?: number
 }

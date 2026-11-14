@@ -5,7 +5,7 @@ export type SnapKind = 'vertex' | 'midpoint' | 'center' | 'edge' | 'intersection
 export interface SnapPoint { point: Vec3; kind: SnapKind }
 export interface SnapSegment { a: Vec3; b: Vec3; nurbs?: {curve:NurbsCurve;start:number;end:number}; arc?: {plane:SketchPlane;center:Point2;radius:number;start:number;sweep:number} }
 export interface SnapGeometry { points: SnapPoint[]; segments: SnapSegment[]; circles?: { center: Vec3; radius: number; start: number; sweep: number }[] }
-export interface SnapResult { point: Vec3; kind: SnapKind | null; guide?: [Vec3, Vec3] }
+export interface SnapResult { point: Vec3; kind: SnapKind | null; guide?: [Vec3, Vec3] | undefined }
 const distance2 = (a: readonly number[], b: readonly number[]) => { let sum = 0; for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; sum += d * d } return sum }
 const lerp = (a: Vec3, b: Vec3, t: number) => a.map((v, i) => v + (b[i] - v) * t) as Vec3
 const priority: Record<SnapKind, number> = { vertex: 0, intersection: 0, center: 0, midpoint: 0, edge: 2, axis: 3, grid: 4, quadrant:0, tangent:1, perpendicular:1, origin:0, 'bounds-center':0 }

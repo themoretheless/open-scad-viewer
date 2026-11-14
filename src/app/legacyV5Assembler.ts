@@ -33,9 +33,9 @@ export interface LegacyV5AssemblyArtifact {
 }
 
 export interface LegacyV5AssemblyOptions {
-  readonly quality?: GeometryQuality
-  readonly shouldAbort?: () => boolean
-  readonly onYield?: () => void
+  readonly quality?: GeometryQuality | undefined
+  readonly shouldAbort?: (() => boolean) | undefined
+  readonly onYield?: (() => void) | undefined
   readonly yieldControl?: () => Promise<void>
 }
 

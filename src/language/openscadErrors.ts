@@ -18,7 +18,7 @@ export function positionKernelError(source: string, position: number, error: unk
 export class OpenSCADParseError extends Error {
   readonly line: number
   readonly column: number
-  readonly code?: LanguageDiagnosticCode
+  readonly code?: LanguageDiagnosticCode | undefined
   readonly start: number
   readonly end: number
   /** Source-free diagnostic detail supplied by the language evaluator. */

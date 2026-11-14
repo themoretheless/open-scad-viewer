@@ -34,7 +34,7 @@ export async function saveProjectStepModel(model:NurbsBrep,report:StepCapability
   const db=await database()
   try{
     const transaction=db.transaction(WORKSPACE_STEP_MODEL_STORE,'readwrite')
-    await Promise.all([request(transaction.objectStore(WORKSPACE_STEP_MODEL_STORE).put(validate({slot:'active',version:2,model,document,report}))),complete(transaction)])
+    await Promise.all([request(transaction.objectStore(WORKSPACE_STEP_MODEL_STORE).put(validate({slot:'active',version:2,model,...(document!==undefined?{document}:{}),report}))),complete(transaction)])
   }finally{db.close()}
 }
 

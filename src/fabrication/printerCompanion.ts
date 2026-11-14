@@ -79,7 +79,7 @@ export async function companionSend(
   return {
     remoteName: body.remoteName,
     verified: !!body.verified,
-    gcodeState: body.gcodeState,
+    ...(body.gcodeState !== undefined ? { gcodeState: body.gcodeState } : {}),
   }
 }
 

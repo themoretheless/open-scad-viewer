@@ -76,7 +76,8 @@ function removeGroup(name: string) {
     if(next.curves)next.curves=next.curves.filter(item=>item.group!==name)
     if(next.surfaces)next.surfaces=next.surfaces.filter(item=>item.group!==name)
     const remaining = (next.groups ?? []).filter(group => group.name !== name)
-    next.groups = remaining.length ? remaining : undefined
+    if (remaining.length) next.groups = remaining
+    else delete next.groups
     cancelGesture()
     commit(next)
     if (!next.bodies.some(body => body.id === selection.value)) selection.value = ''

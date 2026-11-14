@@ -123,7 +123,7 @@ export class BoundedTransport implements Transport {
   }
 
   get hasPerRequestStream() {
-    return this.inner.hasPerRequestStream
+    return this.inner.hasPerRequestStream === true
   }
 
   readonly setProtocolVersion = (version: string) => {

@@ -173,12 +173,12 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
       meshId: mesh.entityId ?? index,
       meshName: `${t('object')} ${index + 1}`,
       triangleCount: facts.triangles,
-      surfaceArea: sceneMeshes.value.length === 1 ? surfaceArea.value : undefined,
-      volume: sceneMeshes.value.length === 1 ? volume.value : undefined,
-      position: hit?.point,
-      normal: hit?.normal,
-      bounds: facts.bounds ?? undefined,
-      source,
+      ...(sceneMeshes.value.length === 1 && surfaceArea.value !== undefined ? { surfaceArea: surfaceArea.value } : {}),
+      ...(sceneMeshes.value.length === 1 && volume.value !== undefined ? { volume: volume.value } : {}),
+      ...(hit?.point !== undefined ? { position: hit.point } : {}),
+      ...(hit?.normal !== undefined ? { normal: hit.normal } : {}),
+      ...(facts.bounds != null ? { bounds: facts.bounds } : {}),
+      ...(source !== undefined ? { source } : {}),
     }
   })
 
@@ -186,7 +186,7 @@ export function useViewportDisplayControls(options: UseViewportDisplayControlsOp
     measurement.value
       ? {
           points: measurement.value.points,
-          distance: measurement.value.distance ?? undefined,
+          ...(measurement.value.distance != null ? { distance: measurement.value.distance } : {}),
         }
       : null,
   )
