@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="Browser-based OpenSCAD 3D viewer using WebGPU. Edit, render and view models directly in the browser." />
   <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#141416" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="OpenSCAD Viewer" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
   <title>OpenSCAD WebGPU Viewer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,20 +21,6 @@
 <body>
   <div id="app"></div>
   <script type="module" src="/src/main.ts"></script>
-  <script>
-    // The offline shell is a production concern. In development it would serve stale
-    // modules from its cache, so any registration left over from a build is removed.
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        if ('%DEV%' === 'true') {
-          navigator.serviceWorker.getRegistrations()
-            .then(registrations => registrations.forEach(registration => registration.unregister()))
-            .catch(() => {})
-          return
-        }
-        navigator.serviceWorker.register('/sw.js').catch(() => {})
-      })
-    }
-  </script>
+  <script type="module" src="/src/registerServiceWorker.ts"></script>
 </body>
 </html>

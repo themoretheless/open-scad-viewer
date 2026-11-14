@@ -32,7 +32,7 @@
 | Д. Тесты, CI, квалификация | `tests/`, `tools/`, `.github/` | P2 → C2, C3 → P5 → N17 → N18; P1 последним | S4 (медленные тесты), C1 (LFS) |
 | Е. Manifold | `manifold-core`, `manifold-ops`, `tools/manifold-bench` | S4 → S6 → S5 → S7, S8, S9 → S1 | O2, O4 (размер WASM, горячие пути) |
 | Ж. Обмен | `cad-step` | N8 → N9 → N10, C13 | M1: весь STEP/IGES в `cad-step` |
-| З. Независимые | каждый в своём крейте | S10, S11, S15, S16, P8, N26, C12, C22, S14 | — |
+| З. Независимые | каждый в своём крейте | S10, S11, S15, S16, N26, C12, C22, S14 | — |
 
 ## 1. NURBS и B-rep
 
@@ -130,6 +130,5 @@
 | **P5. Браузерные и performance-гейты в CI.** Playwright со швом рендера без GPU, визуальные фикстуры, счётчики операций | P1 | L | да | P2 | [recommendation](recommendation.md) R11 |
 | **P6. Единый семантический фронтенд на Rust.** Один интерфейс для обоих профилей языка, удалить дублирующий TS-путь (`scadCompileRust` без вызовов) | P1 | L | нет (refactor L1) | S2 | [product-priorities](design/product-architecture-priorities-2026-09-20.md) шаг 4 |
 | **P7. Доступность.** `aria-modal` в `ScanPlanePanel` и DirectModeler, нецветовые признаки, клавиатурная орбита, честный ViewCube, axe | P1 | M | да | P3 | [RECOMMENDATIONS](RECOMMENDATIONS.md) 4.4, 4.5; [recommendation](recommendation.md) R10 |
-| **P8. Укрепление PWA и безопасности.** CSP без inline-скрипта, ограниченный кэш service worker, производный `CACHE_VERSION`, иконки | P1 | M | да | — | [ISSUES](ISSUES.md) E10–E20 |
 | **P9. Многофайловое рабочее пространство и вывод донора из эксплуатации.** VFS для `include`/`use`, ревью конфликтов, типизированные миграции хранилища | P2 | L | да | P4 | [recommendation](recommendation.md) R9, R13 |
 | **P10. Завершение панели Inspect и экспорта.** Семантическое дерево CSG, силуэты, точные контуры сечений, привязки, ViewCube, GLB | P2 | L | да | S3 | [second-pass](research/second-pass-recommendations.md) |
