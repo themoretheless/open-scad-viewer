@@ -1,3 +1,4 @@
+import { countOperation } from '../dev/operationCounters'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
   isGeometryWorkerEvent,
@@ -354,6 +355,7 @@ export class BuildCoordinator {
     record.workerGeneration = binding.generation
     record.lifecycle = 'posted'
     try {
+      countOperation('geometryWorkerRequests')
       binding.worker.postMessage(record.request)
       // Posting another quality tier or coalescing a request is not evidence
       // of Worker liveness. Start the clock only if no clock is running.

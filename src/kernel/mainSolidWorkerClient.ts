@@ -1,3 +1,4 @@
+import { countOperation } from '../dev/operationCounters'
 import {mainSolidExpectation, mainSolidResult, type MainSolidExpectation, type MainSolidJob, type MainSolidProgress, type MainSolidProgressMessage, type MainSolidRequest, type MainSolidResponse, type MainSolidResults} from './mainSolidProtocol'
 import {decodeMainSolidResult} from './mainSolidWorkerTransport'
 
@@ -91,6 +92,7 @@ export class MainSolidWorkerClient {
       this.active={fail}
       signal?.addEventListener('abort',abort,{once:true})
       timer=setTimeout(()=>fail(new MainSolidWorkerError('CAD_TIMEOUT','CAD operation exceeded its time limit'),true),timeoutMs)
+      countOperation('solidWorkerRequests')
       try {worker.postMessage({version:1,id,job,...(onTiming?{traceTiming:true}:{})})}
       catch {fail(new MainSolidWorkerError('CAD_TRANSPORT','CAD request could not be sent'),true)}
     })
