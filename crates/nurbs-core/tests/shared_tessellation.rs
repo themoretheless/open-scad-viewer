@@ -76,11 +76,21 @@ fn mismatched_seam_or_insufficient_geometric_accuracy_never_passes() {
     let r = shared_tessellation::tessellate(&input, &[seam(false)], 4, 1e-5, 10000, 10000).unwrap();
     assert!(!r.within_tolerance);
     assert!(r.mesh.is_none());
-    let input = vec![patch(0.), patch(1.)];
+    // A twisted (saddle) left patch: one grid cell per patch truly deviates
+    // by about 0.125 from its two triangles, far above the tolerance.
+    let mut twisted = patch(0.);
+    twisted.control_points[0][0][2] = 0.5;
+    let input = vec![twisted, patch(1.)];
     let coarse =
         shared_tessellation::tessellate(&input, &[seam(false)], 1, 1e-5, 10000, 10000).unwrap();
     assert!(!coarse.within_tolerance);
     assert!(coarse.mesh.is_some());
+    // Flat parallelogram patches are reproduced exactly by their triangles;
+    // the curvature bound certifies that even on a single cell.
+    let input = vec![patch(0.), patch(1.)];
+    let flat =
+        shared_tessellation::tessellate(&input, &[seam(false)], 1, 1e-5, 10000, 10000).unwrap();
+    assert!(flat.within_tolerance && flat.error_upper <= 1e-12, "{}", flat.error_upper);
     assert!(shared_tessellation::tessellate(&input, &[seam(false)], 8, 0.1, 1, 10000).is_err());
     assert!(shared_tessellation::tessellate(&input, &[seam(false)], 0, 0.1, 10000, 10000).is_err());
 }

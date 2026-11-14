@@ -17,8 +17,9 @@
 //! - reports whether the mesh is closed and consistently oriented: every
 //!   directed edge appears once and its reverse once.
 //!
-//! The per-triangle bounds come from box enclosures and shrink only linearly
-//! with the grid step, so tight tolerances need fine grids.
+//! The per-triangle bounds take the smaller of a box enclosure and a
+//! second-order Taylor bound from interval jets of the cell; inside one knot
+//! span the latter shrinks with the square of the grid step.
 //!
 //! At a crease seam (a cube edge) a welded vertex gets the normal of one
 //! side only; split the seam if per-face normals are needed there.
