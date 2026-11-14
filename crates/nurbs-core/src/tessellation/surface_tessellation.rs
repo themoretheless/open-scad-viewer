@@ -3,6 +3,7 @@ use crate::{
     Result, check,
     distance_bounds::{Interval as I, box_distance},
     foundation::guards::{Budget, require_finite_f64},
+    numerics::progress::Control,
     resource,
     surface::Surface,
 };
@@ -73,6 +74,18 @@ fn measure(s: &Surface, span: [usize; 2], domain: [[f64; 2]; 2]) -> Result<Cell>
 /// Bounds certify corresponding positions and symmetric Hausdorff deviation;
 /// they do not certify mesh topology or regularity. Periodic seams stay cut.
 pub fn tessellate(surface: &Surface, tolerance: f64, max_cells: usize) -> Result<Report> {
+    tessellate_with(surface, tolerance, max_cells, &mut Control::none())
+}
+
+/// [`tessellate`] with cooperative cancellation, progress (`done` counts
+/// evaluated rectangles against `max_cells`) and a byte budget for the grid
+/// and output buffers. A cancelled call returns `Cancelled` and no report.
+pub fn tessellate_with(
+    surface: &Surface,
+    tolerance: f64,
+    max_cells: usize,
+    ctl: &mut Control<'_>,
+) -> Result<Report> {
     surface.validate()?;
     require_finite_f64(tolerance, "tessellation tolerance")?;
     check(tolerance > 0., "Tessellation tolerance must be positive")?;
@@ -110,9 +123,17 @@ pub fn tessellate(surface: &Surface, tolerance: f64, max_cells: usize) -> Result
             "Initial surface knot rectangles exceed the cell budget",
         ));
     }
-    let mut grid = Vec::with_capacity(spans[0].len() * spans[1].len());
+    let total = max_cells as u64;
+    ctl.begin("surface-tessellation", total)?;
+    // Worst case: max_cells live rectangles and their output triangles.
+    ctl.memory.admit::<Cell>(max_cells, "surface-tessellation.grid")?;
+    ctl.memory.admit::<Triangle>(max_cells * 2, "surface-tessellation.triangles")?;
+    let mut grid = ctl
+        .memory
+        .vec::<Cell>(spans[0].len() * spans[1].len(), "surface-tessellation.grid")?;
     for &u in &spans[0] {
         for &v in &spans[1] {
+            ctl.step(grid.len() as u64 + 1, total)?;
             grid.push(measure(
                 surface,
                 [u, v],
@@ -130,6 +151,7 @@ pub fn tessellate(surface: &Surface, tolerance: f64, max_cells: usize) -> Result
     let reason = loop {
         guard.tick()?;
         guard.check()?;
+        ctl.step(work as u64, total)?;
         let worst = grid
             .iter()
             .max_by(|a, b| a.error.total_cmp(&b.error))
@@ -165,10 +187,15 @@ pub fn tessellate(surface: &Surface, tolerance: f64, max_cells: usize) -> Result
                 StopReason::PrecisionLimit
             };
         };
-        let mut next = Vec::with_capacity(grid.len() + strip);
+        let mut next = ctl
+            .memory
+            .vec::<Cell>(grid.len() + strip, "surface-tessellation.refinement")?;
+        let mut measured = work as u64;
         for c in grid {
             if c.domain[axis] == d[axis] {
                 for half in 0..2 {
+                    measured += 1;
+                    ctl.step(measured, total)?;
                     let mut domain = c.domain;
                     domain[axis][1 - half] = midpoint;
                     next.push(measure(surface, c.span, domain)?);
@@ -181,9 +208,9 @@ pub fn tessellate(surface: &Surface, tolerance: f64, max_cells: usize) -> Result
         grid = next;
     };
     let mut out = Report {
-        points: Vec::with_capacity(grid.len() + 1),
-        parameters: Vec::with_capacity(grid.len() + 1),
-        triangles: Vec::with_capacity(grid.len() * 2),
+        points: ctl.memory.vec(grid.len() + 1, "surface-tessellation.points")?,
+        parameters: ctl.memory.vec(grid.len() + 1, "surface-tessellation.parameters")?,
+        triangles: ctl.memory.vec(grid.len() * 2, "surface-tessellation.triangles")?,
         error_upper: 0.,
         within_tolerance: reason == StopReason::Tolerance,
         cells: work,
@@ -212,6 +239,7 @@ pub fn tessellate(surface: &Surface, tolerance: f64, max_cells: usize) -> Result
     }
     // Метрика отчёта обязана быть конечной: NaN в отчёте — баг, не данные.
     require_finite_f64(out.error_upper, "tessellation error_upper")?;
+    ctl.finish(total, None)?;
     Ok(out)
 }
 

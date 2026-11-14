@@ -4,6 +4,7 @@ use crate::{
     curve::Curve,
     curve_distance::enclosure,
     distance_bounds::{Interval, box_distance},
+    numerics::progress::Control,
     resource,
 };
 #[derive(Clone, Debug)]
@@ -24,6 +25,18 @@ pub struct Report {
 /// by comparing the original interval image to the actual returned binary64
 /// chord endpoints. Work/precision limits retain uncertified segments explicitly.
 pub fn tessellate(curve: &Curve, tolerance: f64, max_cells: usize) -> Result<Report> {
+    tessellate_with(curve, tolerance, max_cells, &mut Control::none())
+}
+
+/// [`tessellate`] with cooperative cancellation, progress (`done` counts
+/// processed cells against `max_cells`) and a byte budget for the output.
+/// A cancelled call returns `Cancelled` and no report.
+pub fn tessellate_with(
+    curve: &Curve,
+    tolerance: f64,
+    max_cells: usize,
+    ctl: &mut Control<'_>,
+) -> Result<Report> {
     curve.validate()?;
     check(
         tolerance.is_finite() && tolerance > 0.,
@@ -52,8 +65,16 @@ pub fn tessellate(curve: &Curve, tolerance: f64, max_cells: usize) -> Result<Rep
         ));
     }
     let mut cells = pending.len();
-    let mut segments = Vec::with_capacity(pending.len() * 2);
+    let total = max_cells as u64;
+    ctl.begin("curve-tessellation", total)?;
+    // Worst case keeps every admitted cell as a segment: refuse up front
+    // instead of failing an allocation halfway through refinement.
+    ctl.memory.admit::<Segment>(max_cells, "curve-tessellation.segments")?;
+    let mut segments = ctl.memory.vec(pending.len() * 2, "curve-tessellation.segments")?;
+    let mut processed = 0_u64;
     while let Some((span, domain)) = pending.pop() {
+        processed += 1;
+        ctl.step(processed, total)?;
         let points = [
             curve.evaluate(domain[0])?.point,
             curve.evaluate(domain[1])?.point,
@@ -80,6 +101,7 @@ pub fn tessellate(curve: &Curve, tolerance: f64, max_cells: usize) -> Result<Rep
         }
     }
     segments.sort_by(|a, b| a.domain[0].total_cmp(&b.domain[0]));
+    ctl.finish(total, None)?;
     Ok(Report {
         within_tolerance: segments.iter().all(|x| x.within_tolerance),
         error_upper: segments.iter().map(|x| x.error_upper).fold(0., f64::max),

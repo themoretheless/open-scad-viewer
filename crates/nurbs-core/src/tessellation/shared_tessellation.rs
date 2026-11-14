@@ -5,6 +5,7 @@ use crate::{
     curve_surface_agreement::{self, Report as Agreement, Status},
     distance_bounds::{Interval as I, box_distance},
     foundation::guards::require_finite_f64,
+    numerics::progress::Control,
     surface::{Axis, Surface},
     surface_distance,
 };
@@ -147,6 +148,31 @@ pub fn tessellate(
     max_cells: usize,
     max_agreement_cells: usize,
 ) -> Result<Report> {
+    tessellate_with(
+        surfaces,
+        seams,
+        segments,
+        tolerance,
+        max_cells,
+        max_agreement_cells,
+        &mut Control::none(),
+    )
+}
+
+/// [`tessellate`] with cooperative cancellation, progress and a byte budget.
+/// Work units are seam proofs, grid evaluations and triangulated cells
+/// (`2 * seams + patches * ((n + 1)^2 + n^2)`). A cancelled call returns
+/// `Cancelled` and no report; seam refusals return early without `finish`.
+#[allow(clippy::too_many_arguments)]
+pub fn tessellate_with(
+    surfaces: &[Surface],
+    seams: &[Seam],
+    segments: usize,
+    tolerance: f64,
+    max_cells: usize,
+    max_agreement_cells: usize,
+    ctl: &mut Control<'_>,
+) -> Result<Report> {
     require_finite_f64(tolerance, "shared tessellation tolerance")?;
     check(
         (1..=16).contains(&surfaces.len())
@@ -165,6 +191,14 @@ pub fn tessellate(
         surfaces.len() * segments * segments <= max_cells,
         "Shared grid exceeds cell budget",
     )?;
+    let n = segments;
+    let points_total = surfaces.len() * (n + 1) * (n + 1);
+    let cells_total = surfaces.len() * n * n;
+    ctl.memory.admit::<[f64; 3]>(points_total, "shared-tessellation.points")?;
+    ctl.memory.admit::<Triangle>(cells_total * 2, "shared-tessellation.triangles")?;
+    let total = (2 * seams.len() + points_total + cells_total) as u64;
+    let mut done = 0_u64;
+    ctl.begin("shared-tessellation", total)?;
     let mut report = Report {
         mesh: None,
         agreements: Vec::with_capacity(seams.len() * 2),
@@ -187,6 +221,8 @@ pub fn tessellate(
             if report.agreement_cells == max_agreement_cells {
                 return Ok(report);
             }
+            done += 1;
+            ctl.step(done, total)?;
             let proof = curve_surface_agreement::verify(
                 &c,
                 p,
@@ -203,8 +239,8 @@ pub fn tessellate(
             }
         }
     }
-    let n = segments;
-    let mut points: Vec<[f64; 3]> = Vec::new();
+    done = 2 * seams.len() as u64;
+    let mut points: Vec<[f64; 3]> = ctl.memory.vec(points_total, "shared-tessellation.points")?;
     let mut grids = Vec::new();
     for s in surfaces {
         let d = domain(s);
@@ -227,6 +263,8 @@ pub fn tessellate(
         )?;
         for &u in &grid[0] {
             for &v in &grid[1] {
+                done += 1;
+                ctl.step(done, total)?;
                 points.push(s.evaluate(u, v)?.point.try_into().unwrap());
             }
         }
@@ -262,10 +300,12 @@ pub fn tessellate(
             charts.push((patch, [g[0][local / (n + 1)], g[1][local % (n + 1)]]));
         }
     }
-    let mut triangles = Vec::with_capacity(surfaces.len() * n * n * 2);
+    let mut triangles = ctl.memory.vec(cells_total * 2, "shared-tessellation.triangles")?;
     for (patch, s) in surfaces.iter().enumerate() {
         for i in 0..n {
             for j in 0..n {
+                done += 1;
+                ctl.step(done, total)?;
                 let base = patch * (n + 1) * (n + 1) + i * (n + 1) + j;
                 let ids = [base, base + n + 1, base + n + 2, base + 1].map(|v| remap[map[v]]);
                 let bounds = surface_distance::rectangle_bounds(
@@ -319,6 +359,7 @@ pub fn tessellate(
         }
     }
     report.within_tolerance = report.error_upper <= tolerance;
+    ctl.finish(total, None)?;
     report.mesh = Some(Mesh {
         points: compact,
         triangles,

@@ -15,6 +15,7 @@ pub use nurbs_numerics::sturm;
 pub use nurbs_numerics::error_upper;
 pub use nurbs_numerics::bernstein_interpolation;
 pub use nurbs_numerics::guards;
+pub use nurbs_numerics::progress;
 
 #[cfg(test)]
 #[path = "numerics/integration_tests.rs"]

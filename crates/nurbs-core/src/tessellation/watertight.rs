@@ -25,6 +25,7 @@
 //! side only; split the seam if per-face normals are needed there.
 use crate::tessellation::lod::Level;
 use crate::tessellation::shading::{NormalSource, Orientation, VertexNormal, analytic_normal};
+use crate::numerics::progress::Control;
 use crate::tessellation::shared_tessellation::{self, Seam};
 use crate::{Error, Result, check, surface::Surface};
 use math_core::{cross, norm, sub};
@@ -55,6 +56,31 @@ pub fn tessellate_lods(
     max_cells: usize,
     max_agreement_cells: usize,
 ) -> Result<Vec<LodMesh>> {
+    tessellate_lods_with(
+        surfaces,
+        seams,
+        orientations,
+        tolerances,
+        max_cells,
+        max_agreement_cells,
+        &mut Control::none(),
+    )
+}
+
+/// [`tessellate_lods`] with cooperative cancellation, progress and a byte
+/// budget. Every grid attempt runs [`shared_tessellation::tessellate_with`]
+/// as its own `shared-tessellation` phase; the token is also polled between
+/// levels. A cancelled call returns `Cancelled` and no levels.
+#[allow(clippy::too_many_arguments)]
+pub fn tessellate_lods_with(
+    surfaces: &[Surface],
+    seams: &[Seam],
+    orientations: &[Orientation],
+    tolerances: &[f64],
+    max_cells: usize,
+    max_agreement_cells: usize,
+    ctl: &mut Control<'_>,
+) -> Result<Vec<LodMesh>> {
     check(
         orientations.len() == surfaces.len(),
         "Watertight tessellation needs one orientation per patch",
@@ -73,13 +99,14 @@ pub fn tessellate_lods(
                 surfaces.len() * segments * segments <= max_cells,
                 "Watertight tessellation exceeds its cell budget",
             )?;
-            let report = shared_tessellation::tessellate(
+            let report = shared_tessellation::tessellate_with(
                 surfaces,
                 seams,
                 segments,
                 tolerance,
                 max_cells,
                 max_agreement_cells,
+                ctl,
             )?;
             if report.mesh.is_none() {
                 return Err(Error::new(
@@ -105,6 +132,7 @@ pub fn tessellate_lods(
                 v
             })
             .collect();
+        ctl.token.check("watertight-tessellation.normals")?;
         let normals = vertex_normals(surfaces, orientations, &mesh.points, &mesh.charts, &triangles)?;
         let closed = closed(&triangles);
         levels.push(LodMesh {
