@@ -7,6 +7,7 @@ import {
 } from '../app/parameterPresets'
 import { type CustomizerParameter, type CustomizerValue, encodeCustomizerValue } from '../language/scadCustomizer'
 import { applySourceSplice } from '../kernel/sourceSplice'
+import type { EditorAdapter } from '../editor/EditorAdapter'
 import {
   MAX_WORKSPACE_SOURCE_LENGTH,
   updateWorkspaceDocument,
@@ -16,7 +17,7 @@ import type { Language } from '../i18n/appStrings'
 
 export interface UseParameterPresetsOptions {
   code: Ref<string>
-  editorRef: Ref<HTMLTextAreaElement | null>
+  editor: EditorAdapter
   workspaceDocument: Ref<WorkspaceDocumentSnapshot>
   lang: Ref<Language>
   customizerParameters: ComputedRef<readonly CustomizerParameter[]>
@@ -46,7 +47,7 @@ export interface UseParameterPresetsReturn {
 export function useParameterPresets(options: UseParameterPresetsOptions): UseParameterPresetsReturn {
   const {
     code,
-    editorRef,
+    editor,
     workspaceDocument,
     lang,
     customizerParameters,
@@ -115,10 +116,9 @@ export function useParameterPresets(options: UseParameterPresetsOptions): UsePar
 
   function replacePresetSource(source: string) {
     if (source.length > MAX_WORKSPACE_SOURCE_LENGTH) throw new Error('source limit')
-    const editor = editorRef.value
-    if (editor) {
-      editor.setRangeText(source, 0, editor.value.length, 'preserve')
-      code.value = editor.value
+    if (editor.mounted) {
+      editor.setText(source, 'preserve')
+      code.value = editor.getText()
     } else code.value = source
   }
 
@@ -165,10 +165,9 @@ export function useParameterPresets(options: UseParameterPresetsOptions): UsePar
       expected: code.value.slice(parameter.valueStart, parameter.valueEnd),
       origin: 'customizer',
     })
-    const editor = editorRef.value
-    if (editor) {
-      editor.setRangeText(encoded, parameter.valueStart, parameter.valueEnd, 'select')
-      code.value = editor.value
+    if (editor.mounted) {
+      editor.replaceRange(encoded, parameter.valueStart, parameter.valueEnd, 'select')
+      code.value = editor.getText()
     } else code.value = applied.source
   }
 
@@ -191,10 +190,9 @@ export function useParameterPresets(options: UseParameterPresetsOptions): UsePar
         origin: 'customizer',
       }).source
     }
-    const editor = editorRef.value
-    if (editor) {
-      editor.value = nextSource
-      code.value = editor.value
+    if (editor.mounted) {
+      editor.setText(nextSource, 'end')
+      code.value = editor.getText()
     } else {
       code.value = nextSource
     }

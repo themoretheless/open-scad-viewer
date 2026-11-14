@@ -46,6 +46,7 @@ import { SPINNER_DEFAULTS, SPINNER_SAFE_DEFAULTS, generateSpinner, generateSpinn
 import { translate, type TranslateParams } from './i18n/appStrings'
 import { useAppearance } from './composables/useAppearance'
 import { useEditorFind } from './composables/useEditorFind'
+import { createTextareaEditorAdapter } from './editor/EditorAdapter'
 import { WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './app/workspaceModes'
 const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.svt'))
 const MeshModeler = defineAsyncComponent(() => import('./features/MeshModeler.svt'))
@@ -103,13 +104,15 @@ const editorWidth = ref(clamp(Number(storageGet('scad-editor-width')) || 440, 30
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
+/** All editor reads and writes go through this engine-neutral adapter (ROADMAP P4). */
+const editor = createTextareaEditorAdapter(editorRef)
 const highlightRef = ref<HTMLPreElement | null>(null)
 const selectedEditorName = ref('')
 const {
   foldedLines, highlightedCode, foldedRows, lineNumbersRef, guidesRef, editorLineCount, guideRowPx, visibleGutterRows, visibleGuideRows, gutterLinesHeight, toggleFold,
   editFoldedLine, syncHighlightScroll
 } = useCodeEditorViewport({
-  code, selectedEditorName, editorRef, highlightRef
+  code, selectedEditorName, editor, highlightRef
 })
 watch(code, () => { foldedLines.value = new Set(); void nextTick(syncHighlightScroll) }, { flush: 'post' })
 const findInputRef = ref<HTMLInputElement | null>(null)
@@ -248,7 +251,7 @@ const {
 // Direct-modeling actions of the Code viewport are reached through the command palette.
 const mainToolsRef = ref<MainToolsHandle | null>(null)
 const find = useEditorFind({
-  code, editor: editorRef, input: findInputRef,
+  code, editor, input: findInputRef,
   translate: key => t(key), notify: message => showNotice(message), onEdited: () => handleEditorInput(),
 })
 const {
@@ -262,7 +265,7 @@ const {
   presetName, presetSelection, presetError, presetUndo, parameterPresets, selectedPreset, presetCompatible, saveParameterPreset, replacePresetSource,
   restoreParameterPreset, undoParameterPreset, removeParameterPreset, updateCustomizer, updateCustomizerBatch
 } = useParameterPresets({
-  code, editorRef, workspaceDocument, lang, customizerParameters, bumpWorkspaceEditGeneration, scheduleWorkspacePersistence
+  code, editor, workspaceDocument, lang, customizerParameters, bumpWorkspaceEditGeneration, scheduleWorkspacePersistence
 })
 
 const stale = computed(() => renderedSource.value !== '' && (renderedSource.value !== code.value || renderedQuality.value === 'preview'))
@@ -279,7 +282,7 @@ const canExport = computed(() => exportEligibility.value.allowed)
 const {
   syncSourceHighlightFromEditor, highlightSource, revealSource
 } = useSourceProvenanceCaret({
-  code, editorRef, selectedEditorName, sceneMeshes, sourceMatchesEditor, getRenderer: () => getRenderer(), showNotice, translate: t
+  code, editor, selectedEditorName, sceneMeshes, sourceMatchesEditor, getRenderer: () => getRenderer(), showNotice, translate: t
 })
 const build = useBuildAndRendererLifecycle({
   canvasRef, code, lang, autoRender, sourceViewportVisible, viewportController, sceneController, sceneMeshes, meshVisibility, selectedMesh, selectedHit, isolated,
@@ -378,9 +381,10 @@ onMounted(async () => {
     layoutResizeObserver.observe(mainRef.value)
   }
   guideRowPx.value = 1.58 * 0.82 * (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
-  if (editorRef.value) {
+  const editorElement = editor.element()
+  if (editorElement) {
     editorResizeObserver = new ResizeObserver(syncHighlightScroll)
-    editorResizeObserver.observe(editorRef.value)
+    editorResizeObserver.observe(editorElement)
   }
   window.addEventListener('keydown', handleGlobalKey)
   try {
@@ -482,12 +486,10 @@ async function loadEditorDocument(example: string, nextFileName: string) {
     source: example,
     fileName: nextFileName,
   })
-  const editor = editorRef.value
-  if (editor) {
-    editor.setRangeText(example, 0, editor.value.length, 'start')
-    editor.scrollTop = 0
-    editor.scrollLeft = 0
-    code.value = editor.value
+  if (editor.mounted) {
+    editor.setText(example, 'start')
+    editor.setScroll({ top: 0, left: 0 })
+    code.value = editor.getText()
   } else {
     code.value = example
   }
@@ -497,7 +499,7 @@ async function loadEditorDocument(example: string, nextFileName: string) {
   markFitNextRender()
   await nextTick()
   applyingWorkspaceReplacement = false
-  editor?.focus({ preventScroll: true })
+  editor.focus({ preventScroll: true })
 }
 
 async function loadExample(id: string) {
@@ -517,6 +519,8 @@ async function loadMechanicalModel(source: string, name: string) {
 }
 
 function handleEditorInput() {
+  // Intermediate IME text is not a source edit; compositionend commits it once.
+  if (editor.isComposing()) return
   editorDiagnostic.value = null
   // The v-model update precedes this handler, so this also clears stale
   // geometry immediately instead of waiting for the next Worker response.
@@ -524,7 +528,7 @@ function handleEditorInput() {
 }
 
 function revealCurrentDiagnostic() {
-  if (editorRef.value && editorDiagnostic.value) revealDiagnostic(editorRef.value, editorDiagnostic.value)
+  if (editor.mounted && editorDiagnostic.value) revealDiagnostic(editor, editorDiagnostic.value)
 }
 
 function openFunctionReference(query = '') {
@@ -534,10 +538,10 @@ function openFunctionReference(query = '') {
 
 function openFunctionReferenceFromCommand(paletteWasOpen: boolean) {
   if (paletteWasOpen) functionReferenceButton.value?.focus()
-  openFunctionReference(document.activeElement === editorRef.value ? selectedEditorName.value : '')
+  openFunctionReference(editor.hasFocus() ? selectedEditorName.value : '')
 }
 
-const { formatEditor, handleEditorKey } = useEditorFormatting({ code, editorRef, foldedLines, syncHighlightScroll, handleEditorInput, dispatchKeyboardCommand })
+const { formatEditor, handleEditorKey } = useEditorFormatting({ code, editor, foldedLines, syncHighlightScroll, handleEditorInput, dispatchKeyboardCommand })
 
 const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEditorResize({ mainRef, editorWidth, editorMaxWidth })
 
