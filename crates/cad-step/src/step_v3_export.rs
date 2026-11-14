@@ -131,7 +131,7 @@ fn knot_form(knots: &[f64]) -> (Vec<usize>, Vec<f64>) {
         if k.last()
             .is_some_and(|v: &f64| (*v - x).abs() <= f64::EPSILON)
         {
-            *m.last_mut().unwrap() += 1;
+            *m.last_mut().expect("m grows in lockstep with k, which is non-empty here") += 1;
         } else {
             k.push(x);
             m.push(1);
@@ -175,7 +175,7 @@ fn knot_form_exchange(knots: &[f64], exact: bool) -> (Vec<usize>, Vec<f64>) {
     let mut values = Vec::new();
     for &knot in knots {
         if values.last() == Some(&knot) {
-            *counts.last_mut().unwrap() += 1;
+            *counts.last_mut().expect("counts grows in lockstep with values, which is non-empty here") += 1;
         } else {
             values.push(knot);
             counts.push(1);

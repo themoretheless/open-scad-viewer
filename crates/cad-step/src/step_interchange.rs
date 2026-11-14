@@ -92,13 +92,13 @@ pub(crate) fn attach_v2_identity(text: &str, model: &Model) -> Result<String> {
                 .find('(')
                 .ok_or_else(|| refuse("STEP topology entity has no argument list"))?;
             let rest = &line[open + 1..];
-            let quote_end = rest
-                .find('\'')
-                .and_then(|first| rest[first + 1..].find('\'').map(|last| first + 1 + last));
-            let Some(quote_end) = quote_end else {
+            let quotes = rest.find('\'').and_then(|first| {
+                rest[first + 1..].find('\'').map(|last| (first, first + 1 + last))
+            });
+            let Some((first, quote_end)) = quotes else {
                 return Err(refuse("STEP topology entity has no name field"));
             };
-            let first_quote = open + 1 + rest.find('\'').unwrap();
+            let first_quote = open + 1 + first;
             let last_quote = open + 1 + quote_end;
             rewritten = format!(
                 "{}'{}'{}",
@@ -990,9 +990,9 @@ fn export_kind(kind: &AnalyticKind) -> Result<(String, FeatureCertificate)> {
             };
 
             let ruling = w.line_edge(
-                vid_b.expect("bottom vertex"),
-                vid_t.expect("top vertex"),
-                pid_b.expect("bottom point"),
+                vid_b.expect("both cap branches always emit a bottom vertex"),
+                vid_t.expect("both cap branches always emit a top vertex"),
+                pid_b.expect("both cap branches always emit a bottom point"),
                 *axis,
             );
             let mut side = side_edges;

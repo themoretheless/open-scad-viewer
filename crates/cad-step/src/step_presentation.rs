@@ -419,10 +419,7 @@ pub(crate) fn parse(
                     });
                     continue;
                 };
-                if slot.is_none() {
-                    *slot = Some(style);
-                }
-                let slot = slot.as_mut().unwrap();
+                let slot = slot.get_or_insert(style);
                 if !slot.layers.contains(layer) {
                     slot.layers.push(layer.clone());
                 }
