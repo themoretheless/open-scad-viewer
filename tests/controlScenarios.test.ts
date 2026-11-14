@@ -189,7 +189,7 @@ describe('C3 scenario: 20 edits, Undo/Redo, reload, STEP export and independent 
       try {
         next = step(history.document)
       } catch (error) {
-        throw Error(`${name}: ${error instanceof Error ? error.message : error}`)
+        throw Error(`${name}: ${error instanceof Error ? error.message : error}`, { cause: error })
       }
       expect(serializeDirectDocument(history.document), name + ' must not mutate the committed document').toBe(before)
       history.commit(next)
