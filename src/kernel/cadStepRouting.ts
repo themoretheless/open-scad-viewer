@@ -1,4 +1,5 @@
 import {importFacetedStep,importTessellatedStepV10,type StepTessellatedPresentation} from './cadStep'
+import {DirectInputError} from '../i18n/kernelErrors'
 import {
   exportDirectStepV9,exportDirectStepV10,importDirectStepV10,importDirectStepScene,importDirectStepLod0,
   type DirectStepV10Document,type DirectStepSceneTree,type DirectStepDisplay,type DirectStepSceneProduct,
@@ -146,7 +147,7 @@ export function importStepForWorkbench(text:string):RoutedStepImport {
   if(route==='semantic-csg')throw Error(
     'STEP product route semantic-csg is recognized, but this procedural entity set has no explicit semantic evaluator; no mesh relabeling was performed.',
   )
-  if(route==='unsupported-product')throw Error(
+  if(route==='unsupported-product')throw new DirectInputError('STEP_UNSUPPORTED_ROOT',
     'STEP product root is outside retained B-rep, faceted B-rep, tessellated shape, and recognized semantic CSG routes.',
   )
   const imported=importDirectStepV10(text)

@@ -24,6 +24,7 @@ import type {MainSolidJob} from '../kernel/mainSolidProtocol'
 import SceneObjectControls from '../components/SceneObjectControls.svt'
 import CommandActions from '../components/CommandActions.svt'
 import { workbenchCssVars, workbenchLayout } from '../ui/workbenchLayout'
+import { presentKernelError } from '../i18n/kernelErrors'
 import { resolveSelectionState, SELECTION_STATES, SELECTION_STATE_ORDER, selectionStateLabel, type SelectionState } from '../ui/selectionStates'
 import { connectedEdgeChain } from '../app/edgeSelection'
 import CadQuantityInput from '../components/CadQuantityInput.svt'
@@ -310,10 +311,19 @@ let previewTimer: ReturnType<typeof setTimeout> | undefined
 const previewWorker=createSolidPreviewWorker()
 let previewGeneration=0,previewIdentity=''
 const solidPreviewResult=shallowRef<DirectDocument|null>(null), previewPending=ref(false)
+// C4: the inspector field and scene objects a failed calculation points at.
+const errorField=ref(''), invalidSceneIds=shallowRef<readonly string[]>([])
+function markError(error:unknown){
+ const presented=presentKernelError(error,props.locale==='ru'?'ru':'en')
+ const fallback=presented.input==='sketch'?selectedSketch.value?.id:['body','face','edge'].includes(presented.input)?(selectedBody.value?.id??targetBody.value):undefined
+ errorField.value=presented.field??''
+ invalidSceneIds.value=presented.targetIds.length?presented.targetIds:fallback?[fallback]:[]
+}
+function clearErrorMark(){errorField.value='';invalidSceneIds.value=[]}
 // keepPreview: a parameter edit of the same operation leaves the last preview on screen until its replacement arrives (no blinking).
 function invalidateSolidPreview(keepPreview=false) {
  clearTimeout(previewTimer);previewGeneration++;previewWorker.cancel();previewPending.value=false
- if(!keepPreview){solidPreviewResult.value=null;previewBody.value=null;previewEmpty.value=false;previewError.value=''}
+ if(!keepPreview){solidPreviewResult.value=null;previewBody.value=null;previewEmpty.value=false;previewError.value='';clearErrorMark()}
 }
 onUnmounted(() => { invalidateSolidPreview();previewWorker.dispose() })
 let orbitDrag: { x: number; y: number; yaw: number; pitch: number; pointer: number; svg: SVGSVGElement } | null = null
@@ -704,6 +714,7 @@ const chainProject=(point:[number,number,number])=>project(point,'3d')
 const currentChain=shallowRef<{curves:import('../kernel/solidNurbs').SolidNurbsCurve[];diagnostics:import('../kernel/curveOffsetDiagnostics').CurveOffsetDiagnostics}|null>(null)
 const curveOffsetState=shallowRef<Awaited<ReturnType<typeof import('../kernel/previewSolidCurveOffset').previewSolidCurveOffset>>|null>(null)
 const bodyEditPending=ref(false),bodyEditResult=shallowRef<DirectDocument|null>(null),bodyEditError=ref('')
+watch([previewError,bodyEditError],([solid,body])=>{if(!solid&&!body)clearErrorMark()})
 function cancelBodyEdit(){curveOffsetState.value=null;bodyEditApplyGeneration=null;bodyEditGeneration++;bodyEditWorker.cancel();bodyEditPending.value=false;bodyEditResult.value=null;preparedProfileResult.value=null;nurbsRefitResult.value=null;surfaceBuildResult.value=null;curveMatchResult.value=null;surfaceMatchResult.value=null;seamPrepareResult.value=null;bodyEditError.value=''}
 onUnmounted(()=>{cancelBodyEdit();bodyEditWorker.dispose()})
 const invalidQuantitiesKey=computed(()=>JSON.stringify(invalidQuantities.value))
@@ -782,7 +793,7 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
     ?await bodyEditWorker.run({kind:'profileEdit',document:source,options:options as SolidProfileEditOptions})
     :await bodyEditWorker.run({kind:'bodyEdit',document:source,options:options as SolidBodyEditOptions})
    if(generation===bodyEditGeneration)bodyEditResult.value=result
-  }catch(e){if(generation===bodyEditGeneration){bodyEditError.value=bodyCalculationFailure(e);bodyEditRetryVisible.value=true}}
+  }catch(e){if(generation===bodyEditGeneration){bodyEditError.value=bodyCalculationFailure(e);markError(e);bodyEditRetryVisible.value=true}}
   finally{if(generation===bodyEditGeneration){bodyEditPending.value=false;if(bodyEditApplyGeneration===generation){bodyEditApplyGeneration=null;applyCommand()}}}
  })
 },{flush:'sync'})
@@ -1152,12 +1163,12 @@ watch([document, () => props.open, operation, selectedSketch, profileIds, active
         : await previewWorker.run({kind:'revolve',document:source,options:{...revolveOptions(),sketchId:selectedSketch.value!.id,geometry:revolveGeometry.value,operation:extrusionMode.value,targetId:targetBody.value,id,tessellation:brepSegments.value,
             name:selectedSketch.value!.name+' · '+(revolveGeometry.value==='faceted'?label('гранёный B-rep','faceted B-rep'):label('точный B-rep','exact B-rep'))}})
       if(generation!==previewGeneration)return
-      solidPreviewResult.value=result
+      solidPreviewResult.value=result;previewError.value='';clearErrorMark()
       previewBody.value=result.bodies.find(b=>b.id===(extrusionMode.value==='new'?id:targetBody.value))??null
       previewEmpty.value=!previewBody.value
       if(fitNextPreview){fit('3d');fitNextPreview=false}
     }
-    catch (e) { if(generation===previewGeneration){solidPreviewResult.value=null;previewBody.value=null;previewError.value=bodyCalculationFailure(e);solidPreviewRetryVisible.value=true} }
+    catch (e) { if(generation===previewGeneration){solidPreviewResult.value=null;previewError.value=bodyCalculationFailure(e);markError(e);solidPreviewRetryVisible.value=true} }
     finally {if(generation===previewGeneration)previewPending.value=false}
   }, 60)
 }, {flush:'sync'})
@@ -1502,7 +1513,7 @@ const layout = computed(() => workbenchLayout({ ...windowSize.value, dockOpen: d
 const layoutVars = computed(() => workbenchCssVars(layout.value))
 const dockStacked = computed(() => layout.value.stacked)
 function sceneRowState(id: string): SelectionState | undefined {
-  return resolveSelectionState({ locked: lockedIds.value.includes(id), operand: !!subtract.value && (subtract.value.a.includes(id) || subtract.value.b.includes(id)), selected: selectedIds.value.includes(id), hover: hovered.value === id })
+  return resolveSelectionState({ invalid: invalidSceneIds.value.includes(id), locked: lockedIds.value.includes(id), operand: !!subtract.value && (subtract.value.a.includes(id) || subtract.value.b.includes(id)), selected: selectedIds.value.includes(id), hover: hovered.value === id })
 }
 /** Why Apply is disabled, mirroring `commandReady`; shown next to the disabled button. */
 const commandBlockedReason = computed(() => {
@@ -2802,18 +2813,19 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <small v-if="selectedSketch?.supportBodyId">{{ label('Добавить — наружу от грани. Вычесть — внутрь тела.', 'Add extends outward from the face. Cut goes into the body.') }}</small>
               <small v-if="previewPending" role="status">{{ label('Вычисление предпросмотра… Esc — отмена.', 'Calculating preview… Esc to cancel.') }}</small>
               <small v-if="previewEmpty">{{ label('Вырез полностью удалит выбранное тело.', 'The cut will remove the entire target body.') }}</small>
-              <label v-if="operation === 'extrude'">{{ label('Высота, мм', 'Height, mm') }}<CadQuantityInput :aria-label="label('Высота, мм', 'Height, mm')" v-model="height" kind="length" :locale="locale" @validity="quantityValidity('height', $event)" step="1" /></label>
+              <label v-if="operation === 'extrude'">{{ label('Высота, мм', 'Height, mm') }}<CadQuantityInput data-field="height" :aria-invalid="errorField==='height'?'true':undefined" :aria-describedby="errorField==='height'?'solid-preview-error':undefined" :aria-label="label('Высота, мм', 'Height, mm')" v-model="height" kind="length" :locale="locale" @validity="quantityValidity('height', $event)" step="1" /></label>
               <label v-if="operation === 'extrude'">{{ label('Смещение от плоскости, мм', 'Plane offset, mm') }}<CadQuantityInput :aria-label="label('Смещение от плоскости, мм', 'Plane offset, mm')" v-model="baseZ" kind="length" :locale="locale" @validity="quantityValidity('baseZ', $event)" step="1" /></label>
               <template v-if="operation === 'revolve'">
                 <label>{{ label('Ось в эскизе', 'Sketch axis') }}<select v-model="revolveAxis"><option value="y">Y · {{ label('вертикаль', 'vertical') }}</option><option value="x">X · {{ label('горизонталь', 'horizontal') }}</option></select></label>
-                <label>{{ label('Смещение оси, мм', 'Axis offset, mm') }}<CadQuantityInput :aria-label="label('Смещение оси, мм', 'Axis offset, mm')" v-model="revolveOffset" kind="length" :locale="locale" @validity="quantityValidity('revolveOffset', $event)" step="1" /></label>
-                <label>{{ label('Угол, °', 'Angle, °') }}<CadQuantityInput :aria-label="label('Угол, °', 'Angle, °')" v-model="revolveAngle" kind="angle" :locale="locale" @validity="quantityValidity('revolveAngle', $event)" :min="-360" :max="360" step="15" /></label>
+                <label>{{ label('Смещение оси, мм', 'Axis offset, mm') }}<CadQuantityInput data-field="revolveOffset" :aria-invalid="errorField==='revolveOffset'?'true':undefined" :aria-describedby="errorField==='revolveOffset'?'solid-preview-error':undefined" :aria-label="label('Смещение оси, мм', 'Axis offset, mm')" v-model="revolveOffset" kind="length" :locale="locale" @validity="quantityValidity('revolveOffset', $event)" step="1" /></label>
+                <label>{{ label('Угол, °', 'Angle, °') }}<CadQuantityInput data-field="revolveAngle" :aria-invalid="errorField==='revolveAngle'?'true':undefined" :aria-describedby="errorField==='revolveAngle'?'solid-preview-error':undefined" :aria-label="label('Угол, °', 'Angle, °')" v-model="revolveAngle" kind="angle" :locale="locale" @validity="quantityValidity('revolveAngle', $event)" :min="-360" :max="360" step="15" /></label>
             <label>{{ label('Поверхности вращения','Revolve surfaces') }}<select v-model="revolveGeometry" @keydown="revolveGeometryKey"><option value="faceted" :disabled="!!selectedSketch?.retainedProfile">{{ label('Гранёные','Faceted') }}</option><option value="exact">{{ label('Точные NURBS','Exact NURBS') }}</option></select></label>
                 <label>{{ label('Сегменты', 'Segments') }}<input v-model.number="revolveSegments" type="number" min="8" max="128"></label>
                 <small>{{ label('Пунктир слева — ось вращения. Контур должен лежать по одну сторону от неё.', 'The dashed line on the left is the rotation axis. Keep the profile on one side of it.') }}</small>
               </template>
               <label v-if="extrusionMode !== 'new'">{{ label('Тело', 'Body') }}<select v-model="targetBody"><option v-for="b in document.bodies" :key="b.id" :value="b.id">{{ b.name }}</option></select></label>
-              <small v-if="previewError" role="alert">{{ previewError }}</small>
+              <small v-if="previewError" id="solid-preview-error" role="alert">{{ previewError }}</small>
+              <small v-if="previewError && previewBody" data-preview-retained>{{ label('Показан последний корректный предпросмотр.', 'Showing the last valid preview.') }}</small>
               <button v-if="solidPreviewRetryVisible" type="button" :disabled="previewPending || Object.keys(invalidQuantities).length>0" @click="solidPreviewRevision++">{{ label('Повторить вычисление','Retry calculation') }}</button>
               <CommandActions :ready="commandReady" :reason="commandBlockedReason" :locale="locale" @apply="applyCommand" @cancel="cancelCommand" />
             </div>

@@ -73,7 +73,7 @@ const commands=computed<MainCommand[]>(()=>{
   cmd('lighten','Облегчение','Lighten',()=>{cancel();sketchOpen.value=false;workbenchAction.value='lighten';workbenchOpen.value=true},{detail:l('Панель','Panel')}),
   cmd('dimensions',dimensionOpen.value?'Скрыть размеры':'Размеры',dimensionOpen.value?'Hide dimensions':'Dimensions',()=>{dimensionOpen.value=!dimensionOpen.value},{detail:l('Наложение','Overlay')}),
   ...kinds.map(k=>cmd(`add-${k[0]}`,k[1],k[2],()=>run(()=>emit('append',primitiveSource(k[0],size.value))),{detail:l(`Примитив · ${size.value} мм`,`Primitive · ${size.value} mm`),keywords:['primitive','примитив']})),
-  ...[10,20,50].map(mm=>cmd(`size-${mm}`,`Размер примитива ${mm} мм`,`Primitive size ${mm} mm`,()=>{size.value=mm},{detail:l('Настройка','Setting'),enabled:size.value!==mm})),
+  ...[10,20,50].map(mm=>cmd(`size-${mm}`,`Размер примитива ${mm} мм`,`Primitive size ${mm} mm`,()=>{size.value=mm},{detail:l('Настройка','Setting'),enabled:size.value!==mm,disabledReason:l('Этот размер уже выбран','This size is already selected')})),
   cmd('undo','Отменить правку','Undo edit',()=>{cancel();emit('undo')},{shortcut:'Ctrl Z',enabled:props.canUndo,disabledReason:l('Нечего отменять','Nothing to undo')}),
   cmd('redo','Повторить правку','Redo edit',()=>{cancel();emit('redo')},{shortcut:'Ctrl Shift Z',enabled:props.canRedo,disabledReason:l('Нечего повторять','Nothing to redo')}),
   ...ops.map(o=>cmd(`op-${o[0]}`,o[1],o[2],()=>choose(o[0]),{detail:bodyLabel||l('Тело','Body'),enabled:props.selected!==null&&props.ready,disabledReason:needBody})),

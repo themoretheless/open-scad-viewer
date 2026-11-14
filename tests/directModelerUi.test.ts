@@ -693,7 +693,7 @@ it('preserves authored B-rep for movement and push while refusing retained shell
  await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon'&&n.props['data-body']===original.id)!);await ui.click('Push / Pull');await ui.click('Apply · Enter')
  expect(ui.doc().bodies.find(b=>b.id===original.id)!.brep).toBeDefined()
  await ui.click('↶');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon'&&n.props['data-body']===original.id)!);await ui.click('Shell');await ui.click('Apply · Enter')
- expect(ui.text(ui.all()[0])).toContain('refuse faceted fallback')
+ expect(ui.text(ui.all()[0])).toContain('An exact shell is unproven for this B-rep body')
  expect(ui.button('Apply · Enter').props.disabled).toBe(true)
  expect(ui.doc().bodies.find(b=>b.id===original.id)).toEqual(original)
 })
@@ -846,6 +846,39 @@ it('draws on a picked 3D face, then adds and cuts material from its supporting b
  expect(Number(ui.all(ui.all().find(n=>n.tag==='label'&&ui.text(n)==='Height, mm')!).find(n=>n.tag==='input')!.value)).toBe(-2)
  await ui.click('Apply · Enter');expect(analyzeNurbsBrep(ui.doc().bodies[0].brep!).signedVolumeMm3).toBeCloseTo(992)
  await ui.click('↶');expect(analyzeNurbsBrep(ui.doc().bodies[0].brep!).signedVolumeMm3).toBeCloseTo(1000)
+})
+it('keeps the last valid extrusion preview and marks the height field when an edit fails',async()=>{
+ const ui=await mount({initialDocument:{version:1,bodies:[],sketches:[{id:'square',name:'Square',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}]},initialSelection:'square'})
+ const heightInput=()=>ui.all(ui.all().find(n=>n.tag==='label'&&ui.text(n)==='Height, mm')!).find(n=>n.tag==='input')!
+ const setHeight=async(value:number)=>{heightInput().props['onUpdate:modelValue'](value);await nextTick();await new Promise(resolve=>setTimeout(resolve,100));await nextTick()}
+ await ui.click('Extrude · E');await setHeight(4)
+ expect(ui.all().some(n=>n.props.role==='alert'&&n.props.id==='solid-preview-error')).toBe(false)
+ expect(heightInput().props['aria-invalid']).toBe(false)
+ const previewPolygons=()=>ui.all(ui.svg()).filter(n=>n.tag==='polygon').length
+ const before=previewPolygons()
+ expect(before).toBeGreaterThan(0)
+ await setHeight(0)
+ const alert=ui.all().find(n=>n.props.id==='solid-preview-error')!
+ expect(ui.text(alert)).toContain('The extrusion height must be nonzero.')
+ expect(ui.text(alert)).toContain('Enter a nonzero height.')
+ expect(heightInput().props['aria-invalid']).toBe(true)
+ expect(String(heightInput().props['aria-describedby'])).toContain('solid-preview-error')
+ expect(ui.all().some(n=>n.props['data-preview-retained']!==undefined)).toBe(true)
+ expect(previewPolygons()).toBe(before)
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true)
+ expect(ui.doc().bodies.some(b=>b.name==='Square · 3D')).toBe(false)
+ await setHeight(5)
+ expect(ui.all().some(n=>n.props.id==='solid-preview-error')).toBe(false)
+ expect(heightInput().props['aria-invalid']).toBe(false)
+ await ui.click('Apply · Enter');expect(ui.doc().bodies.some(b=>b.name==='Square · 3D')).toBe(true)
+})
+it('highlights a self-intersecting sketch as invalid in the scene list',async()=>{
+ const ui=await mount({initialDocument:{version:1,bodies:[],sketches:[{id:'bow',name:'Bow',closed:true,points:[[0,0],[10,10],[10,0],[0,10]]}]},initialSelection:'bow'})
+ await ui.click('Extrude · E');await new Promise(resolve=>setTimeout(resolve,100));await nextTick()
+ const alert=ui.all().find(n=>n.props.id==='solid-preview-error')!
+ expect(ui.text(alert)).toContain('The sketch contour intersects itself.')
+ const row=ui.all().find(n=>n.tag==='li'&&n.props['data-sel-state']!==undefined&&ui.text(n).includes('Bow'))!
+ expect(row.props['data-sel-state']).toBe('invalid')
 })
 it('selects an inner contour as a hole in the extrusion profile',async()=>{
  const sketch=(id:string,name:string,a:number,b:number)=>({id,name,closed:true,points:[[a,a],[b,a],[b,b],[a,b]]})
