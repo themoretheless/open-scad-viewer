@@ -1,0 +1,67 @@
+<script setup lang="ts">
+import { ref } from 'svet'
+import Modal from './Modal.svt'
+import { MESH_EXPORT_FORMATS, MESH_FORMAT_LABELS, type MeshExportFormat } from '../exchange/meshFormats'
+import type { ExportMeshQualityPreset } from '../exchange/meshConvert'
+
+defineProps<{
+  open: boolean
+  summary: string
+  canExport: boolean
+  conversionPending: boolean
+  t: (key: string) => string
+}>()
+const format = defineModel<MeshExportFormat>('format', { required: true })
+const quality = defineModel<ExportMeshQualityPreset>('quality', { required: true })
+const emit = defineEmits<{ close: []; convert: []; confirm: [] }>()
+const qualities = [
+  ['viewport', 'exportQualityViewport'],
+  ['high', 'exportQualityHigh'],
+  ['ultra', 'exportQualityUltra'],
+] as const
+const modalRef = ref<{ dialog: HTMLElement | null } | null>(null)
+function initialFocus() {
+  const dialog = modalRef.value?.dialog
+  return dialog?.querySelector<HTMLElement>('input:checked') ?? dialog?.querySelector<HTMLElement>('button')
+}
+</script>
+
+<template>
+  <Modal
+    ref="modalRef"
+    :open="open"
+    labelledby="export-dialog-title"
+    backdrop-class="dialog-backdrop"
+    dialog-class="dialog export-dialog"
+    :initial-focus="initialFocus"
+    @close="emit('close')"
+  >
+    <header class="dialog-header">
+      <div><h2 id="export-dialog-title">{{ t('exportTitle') }}</h2><p>{{ summary }}</p></div>
+      <button class="icon-btn" type="button" :aria-label="t('close')" @click="emit('close')">×</button>
+    </header>
+    <fieldset class="format-grid" :disabled="conversionPending">
+      <legend>{{ t('exportFormat') }}</legend>
+      <label v-for="option in MESH_EXPORT_FORMATS" :key="option" class="format-card" :class="{ active: format === option }">
+        <input v-model="format" type="radio" name="export-format" :value="option">
+        <span class="format-name">{{ MESH_FORMAT_LABELS[option] }}</span>
+        <small>{{ option === 'obj' || option === 'ply' || option === 'off' ? t('forCad') : t('forPrinting') }}</small>
+      </label>
+    </fieldset>
+    <fieldset class="format-grid quality-grid" :disabled="conversionPending">
+      <legend>{{ t('exportQuality') }}</legend>
+      <label v-for="[option, key] in qualities" :key="option" class="format-card" :class="{ active: quality === option }">
+        <input v-model="quality" type="radio" name="export-quality" :value="option">
+        <span class="format-name">{{ t(key) }}</span>
+        <small>{{ t(`${key}Hint`) }}</small>
+      </label>
+    </fieldset>
+    <p class="dialog-note" :class="{ warning: !canExport }">{{ canExport ? t('exportScope') : t('needsFullBuild') }}</p>
+    <footer class="dialog-footer">
+      <button class="btn" type="button" :disabled="conversionPending" :title="t('convertFileHelp')" @click="emit('close'); emit('convert')">{{ t('convertFile') }}</button>
+      <span class="statusbar-spacer" aria-hidden="true" />
+      <button class="btn" type="button" @click="emit('close')">{{ t('cancel') }}</button>
+      <button class="btn btn-primary" type="button" :disabled="!canExport || conversionPending" @click="emit('confirm')">{{ t('download') }} {{ MESH_FORMAT_LABELS[format] }}</button>
+    </footer>
+  </Modal>
+</template>

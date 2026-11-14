@@ -1,0 +1,66 @@
+<script setup lang="ts">
+import { computed } from 'svet'
+import ParameterSuggestions from './ParameterSuggestions.svt'
+import { highlightCode } from '../language/codeHighlight'
+import type { SpinnerParameterSuggestion } from '../app/spinnerGenerator'
+
+interface GroupSourceEdit { name: string; source: string; replaces: string | null }
+
+/** Left panel that edits one Solid scene group's source instead of the document. */
+const props = defineProps<{
+  /** Edited in place: the name and source fields are bound to the inputs. */
+  edit: GroupSourceEdit
+  width: number
+  lang: 'ru' | 'en'
+  building: boolean
+  error: string
+  suggestions: readonly SpinnerParameterSuggestion[]
+}>()
+const emit = defineEmits<{ cancel: []; build: [request: GroupSourceEdit]; applySuggestion: [changes: Record<string, number>] }>()
+const highlighted = computed(() => highlightCode(props.edit.source, 'group.scad'))
+</script>
+
+<template>
+  <section
+    class="editor-panel group-editor"
+    :style="{ width: `${width}px` }"
+    :aria-label="lang === 'ru' ? 'Код группы' : 'Group source'"
+  >
+    <div class="toolbar editor-toolbar">
+      <input
+        v-model="edit.name"
+        class="group-name-input"
+        type="text"
+        maxlength="100"
+        :aria-label="lang === 'ru' ? 'Имя группы' : 'Group name'"
+      >
+      <span class="toolbar-spacer" aria-hidden="true" />
+      <button class="btn" type="button" @click="emit('cancel')">{{ lang === 'ru' ? 'Отмена' : 'Cancel' }}</button>
+      <button
+        class="btn btn-primary"
+        type="button"
+        :disabled="building || !edit.name.trim() || !edit.source.trim()"
+        @click="emit('build', { ...edit })"
+      >{{ building ? '…' : (lang === 'ru' ? 'Построить' : 'Build') }}</button>
+    </div>
+    <div class="code-area group-code">
+      <pre class="code code-highlight" aria-hidden="true"><span class="highlight-content" v-html="highlighted" /></pre>
+      <textarea
+        v-model="edit.source"
+        class="code code-input"
+        wrap="off"
+        spellcheck="false"
+        autocomplete="off"
+        :aria-label="lang === 'ru' ? 'Код группы' : 'Group source'"
+        :maxlength="100000"
+      />
+    </div>
+    <ParameterSuggestions :suggestions="suggestions" @apply="changes => emit('applySuggestion', changes)" />
+    <div v-if="error" class="message error" role="alert" aria-live="assertive">
+      {{ error }}
+    </div>
+    <p class="group-hint">{{ lang === 'ru'
+      ? 'Строится как точные тела. hull, projection, offset и polyhedron точной формы не имеют и будут отклонены.'
+      : 'Built as exact solids. hull, projection, offset and polyhedron have no exact form and are refused.' }}</p>
+  </section>
+</template>
