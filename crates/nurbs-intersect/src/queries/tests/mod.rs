@@ -215,8 +215,9 @@ fn roots_are_isolated_without_seed_sampling_and_residuals_are_checked() {
 }
 #[test]
 fn tangencies_and_work_exhaustion_are_not_reported_as_empty() {
-    let tangent =
-        curve_plane(&bezier(&[0.25, -0.25, 0.25]), plane(0.), Options::default()).unwrap();
+    // A non-dyadic double root cannot be certified and stays a typed
+    // refusal; certified tangencies are covered in tests/tangency.rs.
+    let tangent = curve_plane(&bezier(&[1., -2., 4.]), plane(0.), Options::default()).unwrap();
     assert_eq!(tangent.coverage, Coverage::Incomplete);
     assert!(
         tangent
@@ -2443,3 +2444,4 @@ fn full_sweep_over_knot_dyadic_and_domain_end_roots_has_no_dupes_or_misses() {
     assert_eq!(hits, 3, "{report:?}");
     assert_eq!(report.coverage, Coverage::NumericallyResolved, "{report:?}");
 }
+mod tangency;

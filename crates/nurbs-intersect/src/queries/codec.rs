@@ -74,9 +74,10 @@ impl value_codec::Serialize for CurvePoint {
         let contact = match self.contact {
             Contact::Transverse => "transverse",
             Contact::Boundary => "boundary",
+            Contact::Tangent { .. } => "tangent",
         };
         value_codec::json!({"parameter":self.parameter,"parameterInterval":self.parameter_interval,"point":self.point,
-            "planeResidual":self.plane_residual,"contact":contact})
+            "planeResidual":self.plane_residual,"contact":contact,"multiplicity":self.contact.multiplicity()})
     }
 }
 impl value_codec::Serialize for CurvePlaneComponent {
@@ -233,6 +234,7 @@ impl value_codec::Serialize for CurveCurveComponent {
                 let contact = match contact {
                     Contact::Transverse => "transverse",
                     Contact::Boundary => "boundary",
+                    Contact::Tangent { .. } => "tangent",
                 };
                 value_codec::json!({"kind":"point","first":first,"firstInterval":first_interval,
                     "second":second,"secondInterval":second_interval,"point":point,
@@ -283,6 +285,7 @@ impl value_codec::Serialize for CurveRuledSurfaceComponent {
                 let contact = match contact {
                     Contact::Transverse => "transverse",
                     Contact::Boundary => "boundary",
+                    Contact::Tangent { .. } => "tangent",
                 };
                 value_codec::json!({"kind":"point","t":t,"tInterval":t_interval,
                     "uv":uv,"uvBox":uv_box,"point":point,

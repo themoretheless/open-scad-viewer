@@ -31,6 +31,15 @@ B1. **Tangency certification**: tangent contacts are still reported as
     classification on the exact rational representations) so provable
     tangencies resolve to points/curves with explicit multiplicity evidence
     instead of bands.
+    Status (curve/plane slice done): `queries/curve_plane_tangency.rs`
+    re-decides curve/plane refusals with exact floating-point expansions of
+    the span's homogeneous Bernstein coefficients (Rolle bound on the first
+    one-signed derivative plus endpoint multiplicity and sign parity).
+    Tangencies at binary64-dyadic parameters return points with
+    `Contact::Tangent { multiplicity }`, near tangency returns 0 or 2 proved
+    simple roots, in-plane spans are overlaps. Open: tangency at non-dyadic
+    parameters (still `TangencyOrMultipleRoot`), curve/surface beyond the
+    plane reduction, surface/surface tangency and degenerate branch tracing.
 B2. **Non-axial quartic configurations** (sphere/cylinder off-axis,
     cylinder/cylinder non-parallel, cone/cone non-coaxial, oblique plane/torus
     incl. Villarceau circles, sphere/torus off-axis contact): coaxial pairs and
