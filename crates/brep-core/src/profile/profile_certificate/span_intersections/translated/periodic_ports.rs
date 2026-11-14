@@ -27,97 +27,89 @@ pub struct OwnedPeriodicPorts {
     ports: Vec<OriginalPeriodicPort>,
     vertices: Vec<Vec<usize>>,
 }
-fn derive(o: &OwnedPeriodicPorts) -> Result<(Vec<OriginalPeriodicPort>, Vec<Vec<usize>>)> {
-    if o.max_refinements > 512 {
-        return Err(refused(
-            "Invalid original quotient port germ refinement allowance",
-        ));
+const MAX_REFINEMENTS: usize = 512;
+/// Ports of every edge end, built from the unchanged original cells.
+struct PortBuilder<'a> {
+    o: &'a OwnedPeriodicPorts,
+    original: Vec<Vec<Cell>>,
+}
+impl PortBuilder<'_> {
+    /// The port of one end of an edge: its chart use at the end vertex and
+    /// the leading ray of the original branch leaving that vertex.
+    fn port(
+        &self,
+        edge: usize,
+        e: &OriginalPeriodicChartEdge,
+        representative: &OriginalPeriodicChartCarrier,
+        end: usize,
+    ) -> Result<OriginalPeriodicPort> {
+        let source_end = end ^ usize::from(representative.reversed);
+        let cut = representative.interval + source_end;
+        let vertex = e.vertices[end];
+        let source_ref = OriginalPeriodicChartCutRef {
+            piece: representative.piece,
+            cut,
+        };
+        let chart = &self.o.owner.charts()[vertex];
+        let chart_use = chart
+            .uses
+            .iter()
+            .position(|u| u.source == source_ref)
+            .ok_or_else(|| refused("Original quotient port has no proved local chart transport"))?;
+        let value = &chart.uses[chart_use].parameter;
+        let f = decode_polynomial(&value.primitive)?;
+        let parameter = decode_polynomial(&value.parameter)?;
+        let root = [
+            decode_ratio(&value.interval[0])?,
+            decode_ratio(&value.interval[1])?,
+        ];
+        let cell = &self.original[representative.source][representative.cell];
+        let direction = if source_end == 0 { 1 } else { -1 };
+        // Constant chart translations cancel in every rational displacement
+        // derivative D^k(X+cW)W-(X+cW)D^kW. Use unchanged ORIGINAL cells.
+        let germ = arithmetic::branch_germ::BranchGerm {
+            net: &cell.net,
+            domain: &cell.domain,
+            parameter: &parameter,
+            f: &f,
+            root: &root,
+            direction,
+        };
+        let refinements = self.o.max_refinements;
+        let (order, numerator, signs) = arithmetic::branch_germ::leading(germ, refinements)?;
+        let component_signs = [
+            arithmetic::branch_germ::component_sign(germ, 0, refinements)?,
+            arithmetic::branch_germ::component_sign(germ, 1, refinements)?,
+        ];
+        Ok(OriginalPeriodicPort {
+            edge,
+            end,
+            vertex,
+            carrier: 0,
+            piece: representative.piece,
+            source: representative.source,
+            cell: representative.cell,
+            interval: representative.interval,
+            cut,
+            chart_use,
+            direction,
+            ray: LeadingBranchRay {
+                primitive: value.primitive.clone(),
+                isolating_interval: value.interval.clone(),
+                numerator: numerator.map(|p| polynomial(&p)),
+                signs,
+                order,
+            },
+            component_signs,
+        })
     }
-    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
-    let graph = o.owner.owner();
-    let cover = graph.owner().owner().pieces();
-    let mut original = Vec::new();
-    for source in cover.sources() {
-        original.push(cells(source)?);
-    }
-    let mut ports = Vec::new();
-    let mut vertices = vec![Vec::new(); graph.vertices().len()];
-    for (edge, e) in graph.edges().iter().enumerate() {
-        let representative = e
-            .carriers
-            .first()
-            .ok_or_else(|| refused("Physical quotient edge has no original source carrier"))?;
-        let piece = &cover.pieces()[representative.piece];
-        if piece.source != representative.source || piece.cell != representative.cell {
-            return Err(refused(
-                "Quotient port carrier lost actual original cell identity",
-            ));
-        }
-        for end in 0..2 {
-            let source_end = end ^ usize::from(representative.reversed);
-            let cut = representative.interval + source_end;
-            let vertex = e.vertices[end];
-            let source_ref = OriginalPeriodicChartCutRef {
-                piece: representative.piece,
-                cut,
-            };
-            let chart = &o.owner.charts()[vertex];
-            let chart_use = chart
-                .uses
-                .iter()
-                .position(|u| u.source == source_ref)
-                .ok_or_else(|| {
-                    refused("Original quotient port has no proved local chart transport")
-                })?;
-            let value = &chart.uses[chart_use].parameter;
-            let f = decode_polynomial(&value.primitive)?;
-            let parameter = decode_polynomial(&value.parameter)?;
-            let root = [
-                decode_ratio(&value.interval[0])?,
-                decode_ratio(&value.interval[1])?,
-            ];
-            let cell = &original[piece.source][piece.cell];
-            let direction = if source_end == 0 { 1 } else { -1 };
-            // Constant chart translations cancel in every rational displacement
-            // derivative D^k(X+cW)W-(X+cW)D^kW. Use unchanged ORIGINAL cells.
-            let germ = arithmetic::branch_germ::BranchGerm {
-                net: &cell.net,
-                domain: &cell.domain,
-                parameter: &parameter,
-                f: &f,
-                root: &root,
-                direction,
-            };
-            let (order, numerator, signs) =
-                arithmetic::branch_germ::leading(germ, o.max_refinements)?;
-            let component_signs = [
-                arithmetic::branch_germ::component_sign(germ, 0, o.max_refinements)?,
-                arithmetic::branch_germ::component_sign(germ, 1, o.max_refinements)?,
-            ];
-            vertices[vertex].push(ports.len());
-            ports.push(OriginalPeriodicPort {
-                edge,
-                end,
-                vertex,
-                carrier: 0,
-                piece: representative.piece,
-                source: piece.source,
-                cell: piece.cell,
-                interval: representative.interval,
-                cut,
-                chart_use,
-                direction,
-                ray: LeadingBranchRay {
-                    primitive: value.primitive.clone(),
-                    isolating_interval: value.interval.clone(),
-                    numerator: numerator.map(|p| polynomial(&p)),
-                    signs,
-                    order,
-                },
-                component_signs,
-            });
-        }
-    }
+}
+/// Every vertex owns exactly the ports of its endpoint incidences.
+fn verify_incidences(
+    graph: &OwnedPeriodicQuotientGraph,
+    ports: &[OriginalPeriodicPort],
+    vertices: &[Vec<usize>],
+) -> Result<()> {
     for (vertex, v) in graph.vertices().iter().enumerate() {
         if vertices[vertex].len() != v.incidences.len() {
             return Err(refused(
@@ -135,6 +127,43 @@ fn derive(o: &OwnedPeriodicPorts) -> Result<(Vec<OriginalPeriodicPort>, Vec<Vec<
             }
         }
     }
+    Ok(())
+}
+fn derive(o: &OwnedPeriodicPorts) -> Result<(Vec<OriginalPeriodicPort>, Vec<Vec<usize>>)> {
+    if o.max_refinements > MAX_REFINEMENTS {
+        return Err(refused(
+            "Invalid original quotient port germ refinement allowance",
+        ));
+    }
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
+    let graph = o.owner.owner();
+    let cover = graph.owner().owner().pieces();
+    let original = cover
+        .sources()
+        .iter()
+        .map(cells)
+        .collect::<Result<Vec<_>>>()?;
+    let builder = PortBuilder { o, original };
+    let mut ports = Vec::new();
+    let mut vertices = vec![Vec::new(); graph.vertices().len()];
+    for (edge, e) in graph.edges().iter().enumerate() {
+        let representative = e
+            .carriers
+            .first()
+            .ok_or_else(|| refused("Physical quotient edge has no original source carrier"))?;
+        let piece = &cover.pieces()[representative.piece];
+        if piece.source != representative.source || piece.cell != representative.cell {
+            return Err(refused(
+                "Quotient port carrier lost actual original cell identity",
+            ));
+        }
+        for end in 0..2 {
+            let port = builder.port(edge, e, representative, end)?;
+            vertices[port.vertex].push(ports.len());
+            ports.push(port);
+        }
+    }
+    verify_incidences(graph, &ports, &vertices)?;
     Ok((ports, vertices))
 }
 impl OwnedPeriodicPorts {
