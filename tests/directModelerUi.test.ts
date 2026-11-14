@@ -120,7 +120,7 @@ class Node {
  get ownerSVGElement():Node|null{return this.tag==='svg'?this:this.parent?.ownerSVGElement??null}
  get clientWidth(){return 1000}get clientHeight(){return 1000}
  getRootNode(){return {activeElement:null}}
- focus(){}addEventListener(){}removeEventListener(){}setPointerCapture(){}hasPointerCapture(){return false}
+ focus(){}select(){}scrollIntoView(){}querySelector(){return null}addEventListener(){}removeEventListener(){}setPointerCapture(){}hasPointerCapture(){return false}
  getScreenCTM(){return {inverse:()=>({})}}
  setAttribute(key:string,v:any){this.props[key]=v}removeAttribute(key:string){delete this.props[key]}
 }
@@ -839,7 +839,7 @@ it('draws on a picked 3D face, then adds and cuts material from its supporting b
  expect(sketch.supportBodyId).toBe('base');expect(sketch.plane!.origin[2]).toBeCloseTo(10)
  expect(ui.doc().bodies).toHaveLength(1)
  const setHeight=async(value:number)=>{const input=ui.all(ui.all().find(n=>n.tag==='label'&&ui.text(n)==='Height, mm')!).find(n=>n.tag==='input')!;input.props['onUpdate:modelValue'](value);await nextTick();await new Promise(resolve=>setTimeout(resolve,100));await nextTick()}
- await ui.click('Extrude · E');expect(ui.button('Add').props['aria-pressed']).toBe(true);await setHeight(3)
+ await ui.click('Extrude · E');expect(ui.button('Add').props['aria-checked']).toBe(true);await setHeight(3)
  expect(analyzeNurbsBrep(ui.doc().bodies[0].brep!).signedVolumeMm3).toBeCloseTo(1000)
  await ui.click('Apply · Enter');expect(ui.doc().bodies).toHaveLength(1);expect(analyzeNurbsBrep(ui.doc().bodies[0].brep!).signedVolumeMm3).toBeCloseTo(1012)
  await ui.click('↶');await ui.click(sketch.name);await ui.click('Extrude · E');await setHeight(2);await ui.click('Cut');await new Promise(resolve=>setTimeout(resolve,100));await nextTick()
@@ -4838,4 +4838,271 @@ it('keeps duplicate shortcuts and menu blocked until the active extrusion is can
  await commandKey(ui,'Escape');await commandKey(ui,'d',undefined,{ctrlKey:true});await flushClearance()
  expect(ui.doc().sketches).toHaveLength(before.sketches.length+1)
  expect(ui.doc().bodies).toEqual(before.bodies)
+})
+
+// Roadmap C2: interaction matrix generated from the live command inventories.
+// Every Solid palette command and every registry command is enumerated at run
+// time; each step either runs headlessly, records a skip with its reason, or
+// fails. The report lands in tmp/command-matrix.{json,md} (not committed).
+type MatrixStatus='pass'|'skip'|'fail'
+type MatrixCell={status:MatrixStatus;note?:string}
+type MatrixRow={source:'solid'|'registry';id:string;label:string;kind:string;fixture:string;steps:Record<string,MatrixCell>}
+const MATRIX_STEPS=['palette','shortcut','exactInput','preview','apply','escape','undoRedo','repeat','selectionChange','workerError'] as const
+// Known defects found by the matrix and recorded in the C2 roadmap row: "<command>:<step>".
+const MATRIX_KNOWN_FAILURES=new Set<string>([])
+type MatrixUi=Awaited<ReturnType<typeof mount>>
+type MatrixFixture={name:string;other:string;setup:(ui:MatrixUi)=>Promise<void>}
+const MATRIX_FIXTURES:MatrixFixture[]=[
+ {name:'empty selection',other:'Cube',setup:async()=>{}},
+ {name:'closed sketch',other:'Cube',setup:async ui=>{await ui.click('Profile')}},
+ {name:'circle sketch',other:'Cube',setup:async ui=>{await ui.click('Circle')}},
+ {name:'open sketch',other:'Cube',setup:async ui=>{await ui.click('Line')}},
+ {name:'mesh body',other:'Profile',setup:async ui=>{await ui.click('Cube')}},
+ {name:'two closed sketches',other:'Cube',setup:async ui=>{await ui.click('Profile');await ui.click('Circle',true)}},
+ {name:'B-rep body',other:'Cube',setup:async ui=>{await ui.click('Box')}},
+ {name:'B-rep and mesh bodies',other:'Profile',setup:async ui=>{await ui.click('Box');await ui.click('Cube',true)}},
+ {name:'body face',other:'Profile',setup:async ui=>{await ui.click('Cube');await ui.click('Faces');await vi.waitFor(()=>expect(ui.all(ui.svg()).some(n=>n.tag==='polygon'&&n.props.onPointerdown)).toBe(true));await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon'&&n.props.onPointerdown)!)}},
+ {name:'B-rep edge',other:'Cube',setup:async ui=>{await ui.click('Box');await ui.click('Edges');await vi.waitFor(()=>expect(ui.all(ui.svg()).some(n=>n.props['data-topology-edge']!==undefined)).toBe(true));await ui.pointer(ui.all(ui.svg()).find(n=>n.props['data-topology-edge']!==undefined)!)}},
+ {name:'NURBS curve',other:'Cube',setup:async ui=>{await ui.click('NURBS curve')}},
+ {name:'NURBS surface',other:'Cube',setup:async ui=>{await ui.click('NURBS surface')}},
+]
+// Jobs that only feed display, snapping or restore; a worker error there is not a command failure.
+const DISPLAY_JOBS=new Set(['restoreDocument','displayMesh','topology','bodyEdges','bodySnaps','sketchSnaps','surfaceMesh','curveDisplay','profileDisplay','faceSketch','surfaceBoundary'])
+const settle=async(ms=120)=>{await new Promise(resolve=>setTimeout(resolve,ms));await flushClearance()}
+const applyButton=(ui:MatrixUi)=>ui.all().find(n=>n.tag==='button'&&n.props.class==='primary'&&ui.text(n).endsWith('· Enter')&&n.parent?.props.class==='command-actions')
+const commandJobs=()=>[previewWorkerRun,primitiveWorkerRun,measurementWorkerRun].flatMap(mock=>mock.mock.calls.map(([job])=>job?.kind as string)).filter(kind=>kind&&!DISPLAY_JOBS.has(kind))
+const resetWorkers=()=>{for(const mock of [previewWorkerRun,primitiveWorkerRun,measurementWorkerRun,displayWorkerRun,topologyWorkerRun,bodyEdgesWorkerRun,bodySnapsWorkerRun,sketchSnapsWorkerRun,surfaceDisplayWorkerRun,boundaryWorkerRun,faceSketchWorkerRun])mock.mockReset();downloadArtifactBytes.mockReset()}
+const unmountAll=()=>{mounts.splice(0).forEach(f=>f())}
+const clearWorkerCalls=()=>{for(const mock of [previewWorkerRun,primitiveWorkerRun,measurementWorkerRun])mock.mockClear()}
+// Polls until Apply is enabled; a disabled Apply must state its reason.
+async function awaitApply(ui:MatrixUi){
+ for(let i=0;i<20&&applyButton(ui)?.props.disabled;i++)await settle(100)
+ const apply=applyButton(ui),reason=apply?.parent&&ui.all(apply.parent).find(n=>n.props.class==='command-blocked')
+ return {apply,enabled:!!apply&&!apply.props.disabled,reason:reason?ui.text(reason).trim():''}
+}
+const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b)
+function solidShortcutKey(shortcut:string|undefined){
+ if(!shortcut)return undefined
+ const parts=shortcut.split(' '),key=parts.at(-1)!
+ return {key:key==='Del'?'Delete':key.length===1?key.toLowerCase():key,ctrlKey:parts.includes('Ctrl'),shiftKey:parts.includes('Shift')}
+}
+async function openSolidCommandFromPalette(ui:MatrixUi,id:string){
+ const command=ui.commands().find(c=>c.id===id)!
+ await commandKey(ui,'k',undefined,{ctrlKey:true});await nextTick()
+ const option=ui.all().find(n=>n.props.role==='option'&&ui.all(n).some(c=>c.props.class==='command-label'&&ui.text(c)===command.label))
+ if(!option)return 'option not rendered'
+ option.props.onClick();await settle()
+ return ui.all().some(n=>n.props.role==='option')?'palette stayed open':''
+}
+async function runSolidRow(id:string,fixture:MatrixFixture):Promise<MatrixRow>{
+ const steps:Record<string,MatrixCell>={},set=(step:string,status:MatrixStatus,note?:string)=>{steps[step]={status,...(note?{note}:{})}}
+ // A: palette (mouse), preview, Escape.
+ resetWorkers();let ui=await mount();await fixture.setup(ui);clearWorkerCalls()
+ const entry=ui.commands().find(c=>c.id===id) as {label:string;shortcut?:string}
+ const label=entry.label,shortcut=entry.shortcut
+ let before=ui.doc()
+ const paletteError=await openSolidCommandFromPalette(ui,id)
+ set('palette',paletteError?'fail':'pass',paletteError||undefined)
+ const kind=applyButton(ui)?'modal':same(ui.doc(),before)?'view':'document'
+ if(kind==='modal'){
+  const {enabled,reason}=await awaitApply(ui)
+  const jobs=[...new Set(commandJobs())],marker=ui.all().some(n=>n.props['data-preview']!==undefined)
+  if(enabled)set('preview','pass',jobs.length?`worker ${jobs.join(',')}`:marker?'data-preview marker':'synchronous preview, Apply enabled')
+  else set('preview',reason?'skip':'fail',reason?`Apply blocked for this fixture: ${reason}`:'Apply disabled without a stated reason')
+  await commandKey(ui,'Escape');await settle(60)
+  set('escape',!applyButton(ui)&&same(ui.doc(),before)?'pass':'fail',applyButton(ui)?'command still active':same(ui.doc(),before)?undefined:'document changed')
+ }else{
+  set('preview','skip',kind==='document'?'commits immediately, no preview stage':'no document effect')
+  set('escape','skip',kind==='document'?'commits immediately, nothing to cancel':'no document effect')
+ }
+ unmountAll()
+ // B: exact input, Apply, Undo/Redo, repeat.
+ resetWorkers();lastJobs=[];ui=await mount();await fixture.setup(ui);before=ui.doc();clearWorkerCalls()
+ await ui.click(label);await settle(kind==='modal'?250:120)
+ if(kind==='modal'){
+  await awaitApply(ui)
+  const panel=applyButton(ui)?.parent?.parent
+  // First editable non-zero quantity: integers step down by one (counts, degrees), decimals scale to 80 %.
+  const field=panel&&ui.all(panel).find(n=>n.tag==='input'&&n.props['onUpdate:modelValue']&&!n.props.disabled&&n.props.type!=='checkbox'&&n.props.type!=='range'&&String(n.value)!==''&&Number.isFinite(Number(n.value))&&Number(n.value)!==0&&Number(n.value)!==1)
+  if(field){
+   const current=Number(field.value),next=Number.isInteger(current)?current-Math.sign(current):Math.round(current*8e5)/1e6
+   // Native number inputs cast through v-model.number; quantity fields parse text with units.
+   field.props['onUpdate:modelValue'](field.props.type==='number'?next:String(next));await settle(150)
+   const shown=Number(field.value)
+   set('exactInput',shown===next?'pass':'fail',`${current} -> ${next}${shown===next?'':' (field shows '+field.value+')'}`)
+  }else set('exactInput','skip','no numeric field in the command panel')
+  const {enabled,reason}=await awaitApply(ui)
+  if(!enabled){set('apply',reason?'skip':'fail',reason?`Apply blocked for this fixture: ${reason}`:'Apply disabled without a stated reason');set('undoRedo','skip','nothing applied');set('repeat','skip','nothing applied')}
+  else{
+   await commandKey(ui,'Enter');await settle()
+   lastJobs=[...new Set(commandJobs())]
+   const applied=ui.doc(),changed=!same(applied,before)
+   set('apply',changed&&!applyButton(ui)?'pass':'fail',changed?applyButton(ui)?'command stayed open':undefined:'Enter did not change the document')
+   if(changed){
+    await ui.click('↶');const undone=same(ui.doc(),before)
+    await ui.click('↷');const redone=same(ui.doc(),applied)
+    set('undoRedo',undone&&redone?'pass':'fail',undone?redone?'one Undo step':'Redo did not restore':'one Undo did not restore the document')
+    let repeat=ui.commands().find(c=>c.id==='repeat')!
+    // Most commands consume their input; pick the fixture again as a user would before repeating.
+    if(repeat.enabled===false){await fixture.setup(ui);await settle();repeat=ui.commands().find(c=>c.id==='repeat')!}
+    const repeatBase=ui.doc()
+    if(repeat.enabled===false)set('repeat','skip',`Repeat disabled: ${repeat.disabledReason}`)
+    else{
+     await commandKey(ui,'R',undefined,{shiftKey:true});await settle()
+     const active=!!applyButton(ui);await commandKey(ui,'Escape');await settle(60)
+     set('repeat',active&&same(ui.doc(),repeatBase)?'pass':'fail',active?undefined:'Shift R did not reopen the command')
+    }
+   }else{set('undoRedo','skip','nothing applied');set('repeat','skip','nothing applied')}
+  }
+ }else if(kind==='document'){
+  set('exactInput','skip','no parameters');set('apply','pass','commits on execution');lastJobs=[...new Set(commandJobs())]
+  const applied=ui.doc()
+  if(id==='undo'||id==='redo'){set('undoRedo','skip','the command is itself Undo/Redo; its effect is checked by every other row');set('repeat','skip','Repeat records parameterised commands only')}
+  else{
+  await ui.click('↶');const undone=same(ui.doc(),before)
+  await ui.click('↷');const redone=same(ui.doc(),applied)
+  set('undoRedo',undone&&redone?'pass':'fail',undone?redone?'one Undo step':'Redo did not restore':'one Undo did not restore the document')
+  set('repeat','skip','Repeat records parameterised commands only')
+  }
+ }else{
+  for(const step of ['exactInput','apply','undoRedo','repeat'])set(step,'skip','no document effect')
+  if(!same(ui.doc(),before))set('apply','fail','view command changed the document')
+ }
+ unmountAll()
+ // C: shortcut, then selection change while the command is active.
+ const key=solidShortcutKey(shortcut)
+ if(key){
+  resetWorkers();ui=await mount();await fixture.setup(ui);before=ui.doc()
+  await commandKey(ui,key.key,undefined,{ctrlKey:key.ctrlKey,shiftKey:key.shiftKey});await settle()
+  const reacted=!!applyButton(ui)||!same(ui.doc(),before)||kind==='view'
+  set('shortcut',reacted?'pass':'fail',`${shortcut}${kind==='view'?' (view effect, not observable in the document)':reacted?'':' had no effect'}`)
+  unmountAll()
+ }else set('shortcut','skip','no shortcut assigned')
+ if(kind==='modal'){
+  resetWorkers();ui=await mount();await fixture.setup(ui);before=ui.doc()
+  await ui.click(label);await settle(250)
+  let error=''
+  try{await ui.click(fixture.other);await settle(250)}catch(e){error=String(e).slice(0,120)}
+  const active=!!applyButton(ui),unchanged=same(ui.doc(),before)
+  if(active){await commandKey(ui,'Escape');await settle(60)}
+  const clean=same(ui.doc(),before)&&!applyButton(ui)
+  set('selectionChange',!error&&unchanged&&clean?'pass':'fail',error||`${active?'kept active':'cancelled'} after picking ${fixture.other}${unchanged?'':', document changed'}${clean?'':', Esc did not restore'}`)
+  unmountAll()
+ }else set('selectionChange','skip',kind==='document'?'commits immediately':'no document effect')
+ // D: injected worker error for the command's own worker jobs.
+ const failing=[...new Set(steps.apply?.status==='pass'?lastJobs:[])]
+ if(failing.length&&kind!=='view'){
+  resetWorkers()
+  const crash=(job:{kind?:string}|undefined)=>failing.includes(job?.kind??"")?Promise.reject(Object.assign(Error('internal crash detail'),{code:'CAD_CRASH'})):undefined
+  previewWorkerRun.mockImplementation(crash);primitiveWorkerRun.mockImplementation(crash);measurementWorkerRun.mockImplementation(crash)
+  ui=await mount();await fixture.setup(ui);before=ui.doc()
+  await ui.click(label);await settle(250)
+  const apply=applyButton(ui)
+  if(apply&&!apply.props.disabled){await commandKey(ui,'Enter');await settle()}
+  // English keeps the kernel text as a secondary detail, so only the localized lead sentence is required.
+  const page=ui.text(ui.all()[0]),unchanged=same(ui.doc(),before)
+  const localized=page.includes('The calculation stopped unexpectedly')
+  set('workerError',localized&&unchanged?'pass':'fail',`${failing.join(',')}${localized?'':', no localized message'}${unchanged?'':', document changed'}`)
+  unmountAll();resetWorkers()
+ }else set('workerError','skip',kind==='view'?'no document effect':'no command worker job observed')
+ return {source:'solid',id,label,kind,fixture:fixture.name,steps}
+}
+let lastJobs:string[]=[]
+
+it('C2 matrix: drives every palette command through palette, shortcut, input, preview, Apply, Esc, Undo/Redo, repeat, selection change and worker error',async()=>{
+ const {COMMAND_REGISTRY,resolveKeyboardCommand}=await import('../src/app/commandRegistry')
+ const CommandPalette=(await import('../src/components/CommandPalette.svt')).default
+ const {mkdirSync,writeFileSync}=await import('node:fs')
+ const rows:MatrixRow[]=[]
+ // Enumerate the Solid inventory and find the first fixture that enables each command.
+ const fixtureFor=new Map<string,MatrixFixture>(),labels=new Map<string,{label:string;reason?:string}>()
+ for(const fixture of MATRIX_FIXTURES){
+  resetWorkers();const ui=await mount();await fixture.setup(ui)
+  for(const c of ui.commands()){
+   if(!labels.has(c.id))labels.set(c.id,{label:c.label,reason:c.disabledReason})
+   if(c.enabled!==false&&!fixtureFor.has(c.id))fixtureFor.set(c.id,fixture)
+  }
+  unmountAll()
+ }
+ // Downloads and file handoff leave the modeler; Repeat is its own matrix step.
+ const external=new Set(['bake','to-mesh','download-svg','download-blender','download-json','download-scad','repeat'])
+ for(const [id,{label,reason}] of labels){
+  const fixture=fixtureFor.get(id)
+  if(!fixture||external.has(id)){
+   const note=!fixture?`no matrix fixture enables it: ${reason}`:id==='repeat'?'meta command, covered by the repeat step':'file handoff, covered by dedicated export tests'
+   rows.push({source:'solid',id,label,kind:'skipped',fixture:'-',steps:Object.fromEntries(MATRIX_STEPS.map(step=>[step,{status:'skip' as const,note}]))})
+   continue
+  }
+  try{rows.push(await runSolidRow(id,fixture))}catch(error){
+   rows.push({source:'solid',id,label,kind:'error',fixture:fixture.name,steps:Object.fromEntries(MATRIX_STEPS.map(step=>[step,{status:'fail' as const,note:String((error as Error).stack??error).split('\n').slice(0,3).join(' ').slice(0,240)}]))})
+   unmountAll()
+  }
+ }
+ // Registry commands: palette rendering and keyboard routing; their effects live in the viewer.
+ for(const definition of COMMAND_REGISTRY){
+  const steps:Record<string,MatrixCell>={}
+  if(definition.palette){
+   const executed:string[]=[],root=new Node('root')
+   const app=renderer.createApp({setup:()=>()=>h(CommandPalette,{open:true,commands:[{id:definition.id,label:definition.labelKey}],onExecute:(id:string)=>executed.push(id),onClose:()=>{}})})
+   app.mount(root);await nextTick()
+   const all=(n:Node):Node[]=>[n,...n.children.flatMap(all)]
+   all(root).find(n=>n.props.role==='option')?.props.onClick();app.unmount()
+   steps.palette=executed[0]===definition.id?{status:'pass'}:{status:'fail',note:'option did not execute'}
+  }else steps.palette={status:'skip',note:'keyboard-only command'}
+  const bindings=(definition as {bindings?:readonly {key?:string;code?:string;primary?:boolean;ctrl?:boolean;meta?:boolean;alt?:boolean;shift?:boolean;scope:'global'|'editor'|'viewport'}[]}).bindings??[]
+  if(bindings.length){
+   const misses=bindings.filter(b=>resolveKeyboardCommand({key:b.key??'',code:b.code,ctrlKey:!!(b.primary||b.ctrl),metaKey:!!b.meta,altKey:!!b.alt,shiftKey:!!b.shift,target:null},b.scope,{isEnabled:id=>id===definition.id||!['cancel-measure'].includes(id)})!==definition.id)
+   steps.shortcut=misses.length?{status:'fail',note:`unresolved: ${misses.map(b=>b.key??b.code).join(', ')}`}:{status:'pass',note:`${bindings.length} binding(s)`}
+  }else steps.shortcut={status:'skip',note:'no shortcut assigned'}
+  for(const step of MATRIX_STEPS)if(!steps[step])steps[step]={status:'skip',note:'viewer command: view or file state, no Solid document or preview'}
+  rows.push({source:'registry',id:definition.id,label:definition.labelKey,kind:'viewer',fixture:'-',steps})
+ }
+ const counts=Object.fromEntries(MATRIX_STEPS.map(step=>[step,{pass:0,skip:0,fail:0}]))
+ for(const row of rows)for(const step of MATRIX_STEPS)counts[step][row.steps[step].status]++
+ const failures=rows.flatMap(row=>MATRIX_STEPS.filter(step=>row.steps[step].status==='fail').map(step=>`${row.id}:${step}`))
+ mkdirSync('tmp',{recursive:true})
+ writeFileSync('tmp/command-matrix.json',JSON.stringify({generated:new Date().toISOString(),steps:MATRIX_STEPS,counts,failures,rows},null,1))
+ const mark={pass:'pass',skip:'skip',fail:'FAIL'}
+ writeFileSync('tmp/command-matrix.md',[`| source | command | kind | fixture | ${MATRIX_STEPS.join(' | ')} |`,`|${'---|'.repeat(MATRIX_STEPS.length+4)}`,
+  ...rows.map(row=>`| ${row.source} | ${row.id} | ${row.kind} | ${row.fixture} | ${MATRIX_STEPS.map(step=>mark[row.steps[step].status]).join(' | ')} |`),'',
+  ...rows.flatMap(row=>MATRIX_STEPS.filter(step=>row.steps[step].status!=='pass'&&row.steps[step].note).map(step=>`- ${row.id} ${step}: ${row.steps[step].status}: ${row.steps[step].note}`))].join('\n')+'\n')
+ expect(rows.filter(row=>row.source==='solid').length).toBeGreaterThan(80)
+ expect(failures.filter(failure=>!MATRIX_KNOWN_FAILURES.has(failure))).toEqual([])
+},1800000)
+
+it.each([
+ ['en','Sphere','The calculation stopped unexpectedly (CAD_CRASH). The model is unchanged.'],
+ ['ru','Сфера','Вычисление прервано из-за сбоя (CAD_CRASH). Модель не изменена.'],
+])('localizes a primitive worker crash in %s and keeps the document',async(locale,name,message)=>{
+ primitiveWorkerRun.mockImplementation(()=>Promise.reject(Object.assign(Error('internal crash detail'),{code:'CAD_CRASH'})))
+ const ui=await mount({locale}),before=ui.doc()
+ await ui.click(name);await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ expect(ui.text(ui.all()[0])).toContain(message)
+ if(locale==='ru')expect(ui.text(ui.all()[0])).not.toContain('internal crash detail')
+})
+
+// Tab order: native focusables in document order, minus tabindex=-1, disabled and hidden-by-ancestor nodes.
+function tabStops(ui:MatrixUi,root:Node){
+ const focusable=(n:Node)=>!n.props.disabled&&n.props.tabindex!==-1&&n.props.tabindex!=='-1'&&(['button','select','textarea','summary'].includes(n.tag)||n.tag==='input'&&n.props.type!=='hidden'||n.tag==='a'&&n.props.href!==undefined||n.props.tabindex===0||n.props.tabindex==='0')
+ const hidden=(n:Node|null):boolean=>!!n&&(n.props.inert!==undefined&&n.props.inert!==false||n.props['aria-hidden']===true||n.props['aria-hidden']==='true'||hidden(n.parent))
+ return ui.all(root).filter(n=>focusable(n)&&!hidden(n)).map(n=>`${n.tag}:${n.props['aria-label']??ui.text(n).trim().slice(0,40)}`)
+}
+it('C2 tab order: one stop for the extrusion result mode, arrows switch it, and the palette keeps a single stop',async()=>{
+ const ui=await mount();await ui.click('Profile');await ui.click('Extrude');await settle(250)
+ const card=()=>applyButton(ui)!.parent!.parent!
+ // Before C2 the three result-mode buttons were three stops (9 in total for this panel).
+ expect(tabStops(ui,card())).toEqual(['button:New','input:','input:','input:Height, mm','input:Plane offset, mm','button:Apply · Enter','button:Cancel · Esc'])
+ const group=ui.all(card()).find(n=>n.props.role==='radiogroup')!
+ expect(group.props['aria-label']).toBe('Result mode')
+ const key=async(name:string)=>{const prevented=vi.fn();group.props.onKeydown({key:name,currentTarget:group,preventDefault:prevented,stopPropagation(){}});await flushClearance();return prevented}
+ expect(await key('ArrowRight')).toHaveBeenCalled()
+ expect(ui.button('Add').props['aria-checked']).toBe(true);expect(tabStops(ui,card())[0]).toBe('button:Add')
+ await key('ArrowRight');await key('ArrowRight');expect(ui.button('New').props['aria-checked']).toBe(true)
+ await key('ArrowLeft');expect(ui.button('Cut').props['aria-checked']).toBe(true);expect(ui.button('New').props.tabindex).toBe(-1)
+ expect(await key('Tab')).not.toHaveBeenCalled()
+ const before=ui.doc();await commandKey(ui,'Escape');expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'k',undefined,{ctrlKey:true});await nextTick()
+ const dialog=ui.all().find(n=>n.props.role==='dialog'&&String(n.props.class).includes('palette'))!
+ expect(tabStops(ui,dialog)).toEqual(['input:Search commands / Поиск команд'])
 })

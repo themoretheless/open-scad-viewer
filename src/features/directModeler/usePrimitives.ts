@@ -1,4 +1,5 @@
 import {primitiveCreationError} from '../../app/primitiveCreationError'
+import { presentKernelError } from '../../i18n/kernelErrors'
 import { primitiveKinds, type Pane } from './helpers'
 import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import { type DirectSketch, type DirectDocument, type DirectHistory } from '../../app/directModeling'
@@ -90,7 +91,7 @@ async function addPrimitive(kind: typeof primitiveKinds[number]) {
  }catch(e){if(current()){
   const message=e instanceof Error?e.message:String(e),code=e&&typeof e==='object'&&'code' in e&&typeof e.code==='string'?e.code:'';failedPrimitive.value=kind
   primitiveG2Invalid.value=kind==='tube'&&primitiveG2Enabled.value&&(code==='BREP_G2_ANNULAR_LIMITS'||message.includes('BREP_G2_ANNULAR_LIMITS')||message.includes('G2 tube transition size'))
-  error.value=primitiveCreationError(message,primitiveG2Invalid.value,label,code)
+  error.value=primitiveCreationError(message,primitiveG2Invalid.value,label,code,presentKernelError(e,label('ru','en')==='ru'?'ru':'en').message)
  }}
  finally{if(generation===primitiveGeneration)primitivePending.value=false}
 }

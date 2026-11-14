@@ -1103,6 +1103,17 @@ function beginExtrude(kind: 'extrude'|'revolve' = 'extrude') {
 }
 const profileChoices=computed(()=>document.value.sketches.filter(s=>s.closed&&samePlane(s.plane,selectedSketch.value?.plane)))
 function extrusionOptions(id='preview') { return {sketchIds:[...profileIds.value],height:height.value,offset:baseZ.value,operation:extrusionMode.value,targetId:targetBody.value,id,segments:brepSegments.value} }
+// C2: the result mode is one tab stop; arrow keys move the checked radio (roving tabindex).
+function extrusionModeKey(e: KeyboardEvent) {
+  const modes = ['new', 'union', 'difference'] as const
+  const step = ({ ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 } as Record<string, number>)[e.key]
+  if (!step) return
+  e.preventDefault(); e.stopPropagation()
+  const next = modes[(modes.indexOf(extrusionMode.value) + step + modes.length) % modes.length]
+  setExtrusionMode(next)
+  const group = e.currentTarget as HTMLElement | null
+  void nextTick(() => group?.querySelector?.<HTMLElement>('[data-mode="' + next + '"]')?.focus())
+}
 function setExtrusionMode(value: 'new'|'union'|'difference') {
   extrusionMode.value=value
   if(selectedSketch.value?.supportBodyId && value!=='new')height.value=Math.abs(height.value)*(value==='difference'?-1:1)
@@ -2808,7 +2819,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             <div v-if="pane === '2d' && drawMeasure" class="live-measure">{{ drawMeasure }}</div>
             <div v-if="pane === '3d' && solidActive" class="operation-card">
               <strong>{{ operation === 'revolve' ? label('Вращение профиля', 'Revolve profile') : label('Выдавливание', 'Extrusion') }}</strong><small v-if="operation === 'extrude'">{{ label('Тяните зелёную ручку или введите размер', 'Drag the green handle or enter a dimension') }}</small>
-              <div class="segmented"><button v-for="(name,value) in {new:label('Новое','New'),union:label('Добавить','Add'),difference:label('Вычесть','Cut')}" :key="value" :aria-pressed="extrusionMode === value" @click="setExtrusionMode(value)">{{ name }}</button></div>
+              <div class="segmented" role="radiogroup" :aria-label="label('Режим результата','Result mode')" @keydown="extrusionModeKey"><button v-for="(name,value) in {new:label('Новое','New'),union:label('Добавить','Add'),difference:label('Вычесть','Cut')}" :key="value" type="button" role="radio" :aria-checked="extrusionMode === value" :tabindex="extrusionMode === value ? 0 : -1" :data-mode="value" @click="setExtrusionMode(value)">{{ name }}</button></div>
               <fieldset v-if="operation==='extrude' && profileChoices.length>1" class="profile-choices"><legend>{{ label('Контуры профиля', 'Profile contours') }}</legend><label v-for="sketch in profileChoices" :key="sketch.id"><input v-model="profileIds" type="checkbox" :value="sketch.id">{{ sketch.name }}</label><small>{{ label('Внутренние контуры образуют отверстия; вложенные островки сохраняются.', 'Inner contours form holes; nested islands remain solid.') }}</small></fieldset>
               <small v-if="selectedSketch?.supportBodyId">{{ label('Добавить — наружу от грани. Вычесть — внутрь тела.', 'Add extends outward from the face. Cut goes into the body.') }}</small>
               <small v-if="previewPending" role="status">{{ label('Вычисление предпросмотра… Esc — отмена.', 'Calculating preview… Esc to cancel.') }}</small>
