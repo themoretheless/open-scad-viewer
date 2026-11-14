@@ -247,7 +247,7 @@ fn manifold_boolean_unions_overlapping_boxes() {
     let (bip, bil) = upload(&bi);
     unsafe {
         abi_manifold_boolean(
-            avp, avl, aip, ail, FMT_F64, bvp, bvl, bip, bil, FMT_F64, 0, 0.0, 1e-9,
+            avp, avl, aip, ail, FMT_F64, bvp, bvl, bip, bil, FMT_F64, 0, 0.0, 1e-9, 0,
         )
     };
     let response = unsafe { take_response() };
@@ -401,7 +401,7 @@ fn manifold_abi_fuzz_rejects_bad_buffers_without_handle_leaks() {
                     2 => abi_manifold_metrics(call_vp, call_vl, call_ip, call_il, fmt),
                     _ => abi_manifold_boolean(
                         call_vp, call_vl, call_ip, call_il, fmt, call_vp, call_vl, call_ip,
-                        call_il, fmt, 0, 0.0, 1e-9,
+                        call_il, fmt, 0, 0.0, 1e-9, 0,
                     ),
                 }
             });

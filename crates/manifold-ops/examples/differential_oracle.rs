@@ -11,27 +11,84 @@ struct Corpus {
 #[derive(Deserialize)]
 struct Case {
     id: String,
-    a: BoxSpec,
-    b: BoxSpec,
+    a: Solid,
+    b: Solid,
+}
+
+/// Either an axis-aligned box (optionally rotated in degrees about X, then
+/// Y, then Z around the world origin, then translated to `origin`, matching
+/// manifold-3d `cube(size).rotate(r).translate(origin)`), or an explicit mesh.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum Solid {
+    Mesh { mesh: MeshSpec },
+    Box(BoxSpec),
+}
+
+#[derive(Deserialize)]
+struct MeshSpec {
+    positions: Vec<f64>,
+    indices: Vec<usize>,
 }
 
 #[derive(Deserialize)]
 struct BoxSpec {
     origin: [f64; 3],
     size: [f64; 3],
+    #[serde(default)]
+    rotate: Option<[f64; 3]>,
+}
+
+impl Solid {
+    fn mesh(&self) -> (Vec<f64>, Vec<usize>) {
+        match self {
+            Solid::Mesh { mesh } => (mesh.positions.clone(), mesh.indices.clone()),
+            Solid::Box(b) => b.mesh(),
+        }
+    }
+}
+
+/// Degree sine/cosine with exact quarter turns, like manifold's `sind`/`cosd`.
+fn sincosd(deg: f64) -> (f64, f64) {
+    let r = deg.rem_euclid(360.0);
+    if r % 90.0 == 0.0 {
+        return match (r / 90.0) as i32 {
+            0 => (0.0, 1.0),
+            1 => (1.0, 0.0),
+            2 => (0.0, -1.0),
+            _ => (-1.0, 0.0),
+        };
+    }
+    deg.to_radians().sin_cos()
 }
 
 impl BoxSpec {
     fn mesh(&self) -> (Vec<f64>, Vec<usize>) {
         assert!(self.origin.iter().chain(&self.size).all(|v| v.is_finite()));
         assert!(self.size.iter().all(|&v| v > 0.0));
-        let [x, y, z] = self.origin;
         let [sx, sy, sz] = self.size;
         #[rustfmt::skip]
-        let positions = vec![
-            x, y, z, x + sx, y, z, x + sx, y + sy, z, x, y + sy, z,
-            x, y, z + sz, x + sx, y, z + sz, x + sx, y + sy, z + sz, x, y + sy, z + sz,
+        let mut positions = vec![
+            0.0, 0.0, 0.0, sx, 0.0, 0.0, sx, sy, 0.0, 0.0, sy, 0.0,
+            0.0, 0.0, sz, sx, 0.0, sz, sx, sy, sz, 0.0, sy, sz,
         ];
+        if let Some([rx, ry, rz]) = self.rotate {
+            let (s, c) = sincosd(rx);
+            let (t, d) = sincosd(ry);
+            let (u, e) = sincosd(rz);
+            for p in positions.chunks_mut(3) {
+                let (x, y, z) = (p[0], p[1], p[2]);
+                let (y, z) = (c * y - s * z, s * y + c * z);
+                let (x, z) = (d * x + t * z, -t * x + d * z);
+                let (x, y) = (e * x - u * y, u * x + e * y);
+                p.copy_from_slice(&[x, y, z]);
+            }
+        }
+        for p in positions.chunks_mut(3) {
+            for k in 0..3 {
+                p[k] += self.origin[k];
+            }
+        }
         #[rustfmt::skip]
         let indices = vec![
             0, 2, 1, 0, 3, 2,
@@ -60,6 +117,7 @@ struct ResultRecord {
     volume: Option<f64>,
     surface_area: Option<f64>,
     genus: Option<i64>,
+    repaired: Option<[bool; 2]>,
 }
 
 impl ResultRecord {
@@ -71,6 +129,7 @@ impl ResultRecord {
             volume: None,
             surface_area: None,
             genus: None,
+            repaired: None,
         }
     }
 }
@@ -106,6 +165,7 @@ fn main() {
                         volume: Some(out.volume()),
                         surface_area: Some(out.surface_area()),
                         genus,
+                        repaired: Some([out.operand_repairs[0].is_some(), out.operand_repairs[1].is_some()]),
                     });
                 }
                 Err(error) => results.push(ResultRecord::error(&case.id, name, error.to_string())),
