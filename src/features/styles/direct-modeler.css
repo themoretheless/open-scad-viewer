@@ -105,3 +105,32 @@
 .direct-workspace input, .direct-workspace select { border-color: var(--hairline); }
 /* Non-color validity cue: invalid fields also switch to a dashed border. */
 input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--danger);border-style:dashed}
+/* Workbench layout (roadmap C5). Column sizes come from src/ui/workbenchLayout.ts through --dm-* properties. */
+.workspace-row{display:grid;grid-template-columns:minmax(0,1fr) auto}
+.workspace-row>.split-workspace{min-width:0}
+.side-dock{width:var(--dm-dock-w,344px);flex:none}
+.side-dock.collapsed{width:var(--dm-dock-rail,46px)}
+.canvas-wrap>.operation-card{flex-basis:var(--dm-command-w,245px)}
+.dock-stacked .dock-inspector-heading{border-top:1px solid var(--border)}
+/* Selection state table (src/ui/selectionStates.ts). Outline style/width and the glyph carry the state; color only reinforces it. */
+.direct-workspace{--sel-hover:#89baff;--sel-selected:#b496ff;--sel-operand:#ffb35c;--sel-preview:#77eac5;--sel-invalid:#ff7a7a;--sel-locked:#a7afba}
+[data-theme="light"] .direct-workspace{--sel-hover:#2f6fd1;--sel-selected:#6a3fd0;--sel-operand:#a65c00;--sel-preview:#08795a;--sel-invalid:#c02626;--sel-locked:#5c6470}
+[data-sel-state=hover]{outline:1px dotted var(--sel-hover);outline-offset:-1px}
+[data-sel-state=selected]{outline:2px solid var(--sel-selected);outline-offset:-2px}
+[data-sel-state=operand]{outline:3px double var(--sel-operand);outline-offset:-3px}
+[data-sel-state=preview]{outline:2px dashed var(--sel-preview);outline-offset:-2px}
+[data-sel-state=invalid]{outline:3px dashed var(--sel-invalid);outline-offset:-3px}
+[data-sel-state=locked]{outline:2px dotted var(--sel-locked);outline-offset:-2px}
+.sel-state-mark{display:inline-block;min-width:1ch;font-family:var(--font-ui,sans-serif);font-size:11px;line-height:1}
+[data-sel-state=hover] .sel-state-mark{color:var(--sel-hover)}[data-sel-state=selected] .sel-state-mark{color:var(--sel-selected)}[data-sel-state=operand] .sel-state-mark{color:var(--sel-operand)}[data-sel-state=preview] .sel-state-mark{color:var(--sel-preview)}[data-sel-state=invalid] .sel-state-mark{color:var(--sel-invalid)}[data-sel-state=locked] .sel-state-mark{color:var(--sel-locked)}
+.state-legend .state-chip{display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:4px;font-size:11px}
+.direct-workspace .workspace-state .state-legend{display:flex;flex-wrap:wrap}
+@media(max-width:1279px){.direct-workspace .workspace-state .state-legend{display:none}}
+/* Viewport SVG overlays use the same table as dash patterns. */
+.canvas-wrap svg .hovered{stroke-dasharray:2 3}
+.canvas-wrap svg .operand{stroke-dasharray:8 2 2 2;stroke-width:3}
+.canvas-wrap svg .preview-stroke{stroke-dasharray:6 3}
+.canvas-wrap svg .invalid{stroke-dasharray:1 3;stroke-width:3}
+.canvas-wrap svg .locked{stroke-dasharray:1 5}
+/* Inspector fields: invalid input already switches to a dashed border; a locked object's inspector reads as locked. */
+.dock-props[data-sel-state=locked] input,.dock-props[data-sel-state=locked] button{border-style:dotted}

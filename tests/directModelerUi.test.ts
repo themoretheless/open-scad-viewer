@@ -398,7 +398,7 @@ it('removes a fully subtracted B-rep body and restores it with Undo',async()=>{
  const body=(id:string)=>({id,name:id,brep:structuredClone(brep),mesh:{positions:built.positions,indices:built.indices}})
  const ui=await mount({initialDocument:{version:1,sketches:[],bodies:[body('Stock'),body('Cutter')]}})
  // The command opens the guided panel with A and B prefilled from the selection; OK runs it.
- await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B');await ui.click('OK')
+ await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B');await ui.click('Apply · Enter')
  expect(ui.doc().bodies).toEqual([])
  await ui.click('↶');expect(ui.doc().bodies.map(b=>b.id)).toEqual(['Stock','Cutter'])
 })
@@ -411,7 +411,7 @@ it('reports the worker tolerance for a subtraction and clears it after an exact 
  const body=(id:string)=>{const brep=createBrepBox([0,0,0],[3,3,5]),built=tessellateNurbsBrep(brep,1);return {id,name:id,brep,mesh:{positions:built.positions,indices:built.indices}}}
  const initialDocument={version:1 as const,sketches:[],bodies:[body('Stock'),body('Cutter')]}
  const ui=await mount({initialDocument},stringifyMeshJson(initialDocument))
- const subtract=async()=>{await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B');await ui.click('OK')}
+ const subtract=async()=>{await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep A − B');await ui.click('Apply · Enter')}
  await subtract()
  expect(requests).toHaveLength(1)
  expect(requests[0].job.options).toMatchObject({operation:'difference',a:['Stock'],b:['Cutter']})
@@ -535,7 +535,7 @@ it.each(['x','y'])('keeps exact partial revolve outward oriented around %s and r
 })
 it('binds splitting and Shift selection to shared transforms',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Split');await ui.click('Apply · Enter');expect(ui.doc().bodies).toHaveLength(2)
- const names=ui.doc().bodies.map(b=>b.name);await ui.click(names[0]);await ui.click(names[1],true);await ui.click('Transform selection');await ui.click('Esc');expect(ui.doc().bodies).toHaveLength(2)
+ const names=ui.doc().bodies.map(b=>b.name);await ui.click(names[0]);await ui.click(names[1],true);await ui.click('Transform selection');await ui.click('Cancel · Esc');expect(ui.doc().bodies).toHaveLength(2)
  await ui.click('Duplicate · ⌘/Ctrl D');expect(ui.doc().bodies).toHaveLength(4)
 })
 it('binds analytic radius editing and offset without baking the curve',async()=>{
@@ -977,16 +977,16 @@ it('exposes the subtraction card as a labelled non-modal dialog with a pressed o
 
 it('leaves native Enter on a Cancel button alone and ignores composing Enter',async()=>{
  const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
- const cancel=ui.button('Esc')
+ const cancel=ui.button('Cancel · Esc')
  expect(await commandKey(ui,'Enter',{closest:()=>cancel} as unknown as Node)).not.toHaveBeenCalled()
  expect(await commandKey(ui,'Enter',undefined,{isComposing:true})).not.toHaveBeenCalled()
  expect(ui.doc()).toEqual(before)
- await ui.click('Esc');expect(ui.doc()).toEqual(before)
+ await ui.click('Cancel · Esc');expect(ui.doc()).toEqual(before)
 })
 
 it('does not apply incomplete subtraction and closes its command before Undo',async()=>{
  const ui=await mount();await ui.click('Box');await ui.click('B-rep A − B');const before=ui.doc()
- expect(ui.button('OK').props.disabled).toBe(true)
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true)
  await commandKey(ui,'Enter');expect(ui.doc()).toEqual(before)
  await ui.click('↶')
  expect(ui.all().some(n=>n.props.class==='operation-card subtract-card')).toBe(false)
@@ -2355,7 +2355,7 @@ it('discards Boolean replies after Escape, operand changes, document edits and p
  expect(ui.text(ui.all()[0])).toContain('Computing Boolean')
  await commandKey(ui,'Escape');requests[0].resolve(applySolidBoolean(requests[0].job.document,requests[0].job.options));await flushClearance()
  expect(ui.doc()).toEqual(before)
- await ui.click('B-rep A − B');await ui.click('OK');expect(ui.button('OK').props.disabled).toBe(true)
+ await ui.click('B-rep A − B');await ui.click('Apply · Enter');expect(ui.button('Apply · Enter').props.disabled).toBe(true)
  ui.all().find(n=>n.props.class==='subtract-field')!.props.onClick();await flushClearance();await ui.click('Cutter')
  requests[1].reject(Error('obsolete kernel refusal'));await flushClearance()
  expect(ui.text(ui.all()[0])).not.toContain('obsolete kernel refusal');expect(ui.doc()).toEqual(before)
@@ -4510,7 +4510,7 @@ it('keeps partial annular mode preview-only and ignores a response after Escape'
   expect(ui.text(ui.all()[0])).toContain('Preview only: geometry checks remain incomplete')
   expect(ui.button('Apply · Enter').props.disabled).toBe(true)
   await ui.click('Apply · Enter');expect(ui.doc()).toEqual(before)
-  await ui.click('Esc')
+  await ui.click('Cancel · Esc')
   resolvePreview({body:seed.bodies[0],evidence:{qualification:{status:'preview-only',commitAllowed:false}}})
   await flushClearance();expect(ui.doc()).toEqual(before)
   expect(ui.all().some(n=>n.tag==='select'&&n.props['aria-label']==='Fillet type')).toBe(false)
