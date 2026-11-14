@@ -581,12 +581,16 @@ pub unsafe fn abi_array_free(handle: usize) {
 }
 
 mod manifold;
-pub use manifold::{abi_manifold_check,abi_manifold_repair,abi_manifold_metrics,abi_manifold_boolean};
+pub use manifold::{abi_manifold_abi_version,abi_manifold_check,abi_manifold_repair,abi_manifold_metrics,abi_manifold_boolean,MANIFOLD_ABI_VERSION,MANIFOLD_REPORT_SCHEMA,ManifoldReportSchema};
 
 
 #[cfg(test)]
 #[path = "tests/abi.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/abi_manifold_contract.rs"]
+mod manifold_contract_tests;
 
 /// Decode bounded mesh bytes without expanding each byte through the value codec.
 /// # Safety

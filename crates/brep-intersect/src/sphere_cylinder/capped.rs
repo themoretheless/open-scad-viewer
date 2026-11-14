@@ -118,21 +118,49 @@ fn clip(loops: &[Vec<Curve>], h: &dyn Fn(P) -> f64) -> Result<(Vec<Arc>, Vec<Vec
                         b = m;
                     }
                 }
-                let cross = point(&pieces[i], 0.5 * (a + b))?;
-                let near = |a: P, b: P| {
+                let tc = 0.5 * (a + b);
+                let cross = point(&pieces[i], tc)?;
+                // Relative to the sample spacing: a crossing a sliver away
+                // from a sample makes the chord-length cubic overshoot.
+                let gap = |a: P, b: P| {
                     let d = sub(a, b);
-                    dot(d, d).sqrt() < 1e-7
+                    dot(d, d).sqrt()
+                };
+                let spacing = gap(pts[k0], pts[k1]);
+                let near = |a: P, b: P| gap(a, b) < (0.25 * spacing).max(1e-7);
+                // Grade the samples towards the crossing: the interpolating
+                // cubic's end error grows with the square of the end interval.
+                let graded = |from: f64, to: f64| -> Result<Vec<P>> {
+                    [0.125, 0.25, 0.5].iter().map(|&w| point(&pieces[i], from + (to - from) * w)).collect()
                 };
                 if in1 {
                     let mut arc = vec![cross];
                     if !near(cross, pts[k1]) {
+                        arc.extend(graded(tc, t1)?);
                         arc.push(pts[k1]);
+                    } else {
+                        // The crossing stands in for that sample; grade
+                        // towards the one after it.
+                        let (j, t2) = flat[(k1 + 1) % n];
+                        if j == i && t2 > tc {
+                            arc.extend(graded(tc, t2)?);
+                        }
                     }
                     current = Some(arc);
                 } else if let Some(mut arc) = current.take() {
                     // The crossing replaces a sample it nearly coincides with.
                     if arc.len() > 1 && near(*arc.last().unwrap(), cross) {
                         arc.pop();
+                        let (j, t2) = flat[(k0 + n - 1) % n];
+                        if j == i && t2 < tc && arc.len() > 1 {
+                            let mut back = graded(tc, t2)?;
+                            back.reverse();
+                            arc.extend(back);
+                        }
+                    } else {
+                        let mut back = graded(tc, t0)?;
+                        back.reverse();
+                        arc.extend(back);
                     }
                     arc.push(cross);
                     open.push(Arc { samples: arc });

@@ -53,13 +53,41 @@ fn inside_torus(torus: &CanonicalTorus, p: [f64; 3]) -> Result<bool> {
 /// The original edge of `model` nearest to `p`, as `(edge, t)`, when `p`
 /// lies within `EDGE_GAP` of it (a traced point is up to the trace bound off
 /// the true curve, hence off the seam edge); refuses at original vertices.
-fn on_edge(model: &Model, p: [f64; 3]) -> Result<Option<(usize, f64)>> {
-    if model.vertices.iter().any(|v| {
+/// The original vertex of `model` at `p`, if any.
+fn at_vertex(model: &Model, p: [f64; 3]) -> Option<usize> {
+    model.vertices.iter().position(|v| {
         let d = sub(v.point, p);
         dot(d, d).sqrt() <= 1e-6
-    }) {
-        return Err(refuse("Sphere-torus Boolean: network vertex at an original vertex"));
+    })
+}
+
+/// How a cut point attaches to the operands' original topology.
+fn network_end(models: [&Model; 2], p: [f64; 3], free_id: &mut usize) -> Result<NetworkEnd> {
+    let vertices = models.map(|m| at_vertex(m, p));
+    match vertices {
+        [Some(_), Some(_)] => Err(refuse("Pair Boolean: network vertex at original vertices of both operands")),
+        [Some(v), None] | [None, Some(v)] => {
+            let operand = usize::from(vertices[0].is_none());
+            let other = 1 - operand;
+            let on = on_edge(models[other], p)?.map(|(edge, t)| (other, edge, t));
+            Ok(NetworkEnd::Vertex { operand, vertex: v, on, point: models[operand].vertices[v].point })
+        }
+        [None, None] => {
+            let mut on = [None, None];
+            for (o, model) in models.iter().enumerate() {
+                on[o] = on_edge(model, p)?.map(|(edge, te)| (o, edge, te));
+            }
+            if on.iter().any(Option::is_some) {
+                return Ok(NetworkEnd::Edges { on, point: p });
+            }
+            *free_id += 1;
+            Ok(NetworkEnd::Free { id: *free_id, point: p })
+        }
     }
+}
+
+/// The original edge of `model` through `p`, away from its vertices.
+fn on_edge(model: &Model, p: [f64; 3]) -> Result<Option<(usize, f64)>> {
     let options = nurbs_core::analysis::point_inversion::PointInversionOptions {
         epsilon1: 1e-12,
         epsilon2: 1e-12,
@@ -198,18 +226,7 @@ pub(crate) fn traced_boolean(
         // End descriptor of every cut, in loop order.
         let ends = cuts
             .iter()
-            .map(|&(index, t)| -> Result<NetworkEnd> {
-                let p = point(&pieces[index], t)?;
-                let mut on = [None, None];
-                for (o, model) in [(sphere_index, sphere_model), (torus_index, torus_model)] {
-                    on[o] = on_edge(model, p)?.map(|(edge, te)| (o, edge, te));
-                }
-                if on.iter().any(Option::is_some) {
-                    return Ok(NetworkEnd::Edges { on, point: p });
-                }
-                free_id += 1;
-                Ok(NetworkEnd::Free { id: free_id, point: p })
-            })
+            .map(|&(index, t)| network_end(operands, point(&pieces[index], t)?, &mut free_id))
             .collect::<Result<Vec<_>>>()?;
         if cuts.len() < 2 {
             return Err(refuse("Sphere-torus Boolean: a traced loop needs two cuts"));
@@ -416,6 +433,9 @@ fn decide(signed: f64, what: &str) -> Result<bool> {
 /// `b` a torus, or any pair of `Other`) from certified, complete traced
 /// loops lying on their curved walls.
 #[allow(clippy::too_many_arguments)]
+/// Cuts closer than this in 3D are one crossing.
+const SLIVER: f64 = 1e-6;
+
 fn pair_boolean(
     a_model: &Model,
     b_model: &Model,
@@ -467,35 +487,73 @@ fn pair_boolean(
             // start; drop it instead of leaving a sliver.
             cuts.extend(ts.into_iter().filter(|&t| t < hi - 1e-9 * (hi - lo)).map(|t| (index, t)));
         }
+        // A loop that crosses a rim at a grazing angle flips the patch label
+        // back and forth within rounding; collapse cuts that coincide in 3D
+        // so no sliver piece reaches the arrangement.
+        let mut kept: Vec<((usize, f64), [f64; 3])> = Vec::with_capacity(cuts.len());
+        for &(index, t) in &cuts {
+            let p = point(&pieces[index], t)?;
+            if kept.last().is_some_and(|&(_, q)| dot(sub(p, q), sub(p, q)).sqrt() <= SLIVER) {
+                continue;
+            }
+            kept.push(((index, t), p));
+        }
+        while kept.len() > 2 && {
+            let (a, b) = (kept[0].1, kept[kept.len() - 1].1);
+            dot(sub(a, b), sub(a, b)).sqrt() <= SLIVER
+        } {
+            kept.pop();
+        }
+        let cuts: Vec<(usize, f64)> = kept.into_iter().map(|(c, _)| c).collect();
         if cuts.len() < 2 {
             return Err(refuse("Pair Boolean: a traced loop needs two cuts"));
         }
         let ends = cuts
             .iter()
-            .map(|&(index, t)| -> Result<NetworkEnd> {
-                let p = point(&pieces[index], t)?;
-                let mut on = [None, None];
-                for (o, (_, model)) in sides.iter().enumerate() {
-                    on[o] = on_edge(model, p)?.map(|(edge, te)| (o, edge, te));
-                }
-                if on.iter().any(Option::is_some) {
-                    return Ok(NetworkEnd::Edges { on, point: p });
-                }
-                free_id += 1;
-                Ok(NetworkEnd::Free { id: free_id, point: p })
-            })
+            .map(|&(index, t)| network_end([a_model, b_model], point(&pieces[index], t)?, &mut free_id))
             .collect::<Result<Vec<_>>>()?;
         for k in 0..cuts.len() {
             let (index, t0) = cuts[k];
             let (next_index, t1) = cuts[(k + 1) % cuts.len()];
-            let piece = &pieces[index];
-            let t1 = if next_index == index && t1 > t0 { t1 } else { piece.domain()[1] };
-            let mid = point(piece, 0.5 * (t0 + t1))?;
+            // The run from this cut to the next may cross several traced
+            // pieces; walk all of them, weighted by their parameter share.
+            let mut run: Vec<(usize, f64, f64)> = Vec::new();
+            if next_index == index && t1 > t0 {
+                run.push((index, t0, t1));
+            } else {
+                run.push((index, t0, pieces[index].domain()[1]));
+                let mut i = (index + 1) % pieces.len();
+                while i != next_index {
+                    let [lo, hi] = pieces[i].domain();
+                    run.push((i, lo, hi));
+                    i = (i + 1) % pieces.len();
+                }
+                run.push((next_index, pieces[next_index].domain()[0], t1));
+            }
+            let weights: Vec<f64> = run
+                .iter()
+                .map(|&(i, a, b)| {
+                    let [lo, hi] = pieces[i].domain();
+                    (b - a) / (hi - lo)
+                })
+                .collect();
+            let total: f64 = weights.iter().sum();
+            let at = |s: f64| -> Result<[f64; 3]> {
+                let mut rest = s * total;
+                let mut k = 0;
+                while k + 1 < run.len() && rest > weights[k] {
+                    rest -= weights[k];
+                    k += 1;
+                }
+                let (i, a, b) = run[k];
+                let f = if weights[k] > 0. { (rest / weights[k]).clamp(0., 1.) } else { 0. };
+                point(&pieces[i], a + (b - a) * f)
+            };
+            let mid = at(0.5)?;
             let faces = [label(0, mid)?, label(1, mid)?];
             let mut count = 17;
             let built = loop {
-                let ts: Vec<f64> = (0..count).map(|i| t0 + (t1 - t0) * i as f64 / (count - 1) as f64).collect();
-                let p3 = ts.iter().map(|&t| point(piece, t)).collect::<Result<Vec<_>>>()?;
+                let p3 = (0..count).map(|i| at(i as f64 / (count - 1) as f64)).collect::<Result<Vec<_>>>()?;
                 let curve = fit(&p3)?;
                 let mut pcs = Vec::with_capacity(2);
                 for (o, (other, _)) in sides.iter().enumerate() {

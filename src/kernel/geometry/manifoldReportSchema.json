@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "abiVersion": 1,
+  "reports": {
+    "check": ["vertexCount", "triangleCount", "componentCount", "isManifold", "isManifoldWithBoundary", "boundaryEdges", "nonManifoldEdges", "orientationEdges", "degenerateTriangles", "nonManifoldVertices", "isolatedVertices"],
+    "repair": ["positions", "indices", "weldedVertices", "removedDegenerateTriangles", "flippedTriangles", "splitVertices", "filledHoles", "filledTriangles", "mode", "isManifold", "isManifoldWithBoundary"],
+    "metrics": ["vertexCount", "triangleCount", "edgeCount", "eulerCharacteristic", "componentCount", "signedVolume", "surfaceArea", "watertight", "components"],
+    "metricsComponent": ["triangleCount", "vertexCount", "edgeCount", "boundaryEdges", "eulerCharacteristic", "genus", "signedVolume", "surfaceArea"],
+    "boolean": ["positions", "indices", "operandRepaired", "kernel", "isManifold"]
+  }
+}

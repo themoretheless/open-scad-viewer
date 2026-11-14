@@ -1,5 +1,46 @@
 import {decodeNurbsResult,kernelRuntime,kernelVertexFormat} from './kernel'
 import {copyBuffer} from './bufferTransport'
+import manifoldReportSchema from './manifoldReportSchema.json'
+
+/**
+ * Versioned contract of the Manifold reports below. The same file is read by
+ * a geometry-bridge test that compares it with the Rust `MANIFOLD_REPORT_SCHEMA`,
+ * and by a TS test that compares it with the field sets of real kernel reports.
+ */
+export const MANIFOLD_REPORT_SCHEMA = manifoldReportSchema
+/** Manifold WASM export surface version this TypeScript expects. */
+export const MANIFOLD_ABI_VERSION: number = manifoldReportSchema.abiVersion
+
+/** The loaded geometry kernel exports a different Manifold ABI than this TypeScript expects. */
+export class ManifoldAbiMismatchError extends GeometryKernelError {
+  constructor(public readonly expected: number, public readonly actual: number | null) {
+    super('GEOMETRY_ABI_MISMATCH', actual === null
+      ? `Geometry kernel has no Manifold ABI version export (expected v${expected}); rebuild the WASM kernel`
+      : `Geometry kernel Manifold ABI v${actual} does not match TypeScript v${expected}; rebuild the WASM kernel or reload the app`)
+    this.name = 'ManifoldAbiMismatchError'
+  }
+}
+
+const verifiedManifoldExports = new WeakSet<object>()
+
+/**
+ * Refuse a kernel instance whose Manifold ABI differs from this build. Runs
+ * once per instance, before its first Manifold call; a stale kernel paired
+ * with newer TS (or the reverse) fails with a typed error instead of reading
+ * misaligned result slots.
+ */
+export function assertManifoldAbi(exports: {abi_manifold_abi_version?: () => number}): void {
+  if (verifiedManifoldExports.has(exports)) return
+  const actual = typeof exports.abi_manifold_abi_version === 'function' ? exports.abi_manifold_abi_version() >>> 0 : null
+  if (actual !== MANIFOLD_ABI_VERSION) throw new ManifoldAbiMismatchError(MANIFOLD_ABI_VERSION, actual)
+  verifiedManifoldExports.add(exports)
+}
+
+function manifoldRuntime(): ReturnType<typeof kernelRuntime> {
+  const runtime = kernelRuntime()
+  assertManifoldAbi(runtime.exports)
+  return runtime
+}
 
 export interface KernelManifoldReport {
   readonly vertexCount: number
@@ -40,7 +81,7 @@ export function checkManifoldInKernel(
   vertices: Float32Array | Float64Array,
   indices: Uint32Array,
 ): KernelManifoldReport {
-  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
   let vp = 0
   let ip = 0
   let handle = 0
@@ -83,7 +124,7 @@ export function repairManifoldInKernel(
   epsilon: number,
   full = false,
 ): KernelManifoldRepair {
-  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
   let vp = 0
   let ip = 0
   let handle = 0
@@ -146,7 +187,7 @@ export function metricsManifoldInKernel(
   vertices: Float32Array | Float64Array,
   indices: Uint32Array,
 ): KernelManifoldMetrics {
-  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
   let vp = 0
   let ip = 0
   let handle = 0
@@ -240,7 +281,7 @@ export function booleanManifoldInKernel(
 ): KernelManifoldBoolean {
   const weldEpsilonMm = options.weldEpsilonMm ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.weldEpsilonMm
   const relativeTolerance = options.relativeTolerance ?? MANIFOLD_BOOLEAN_DEFAULT_OPTIONS.relativeTolerance
-  const {exports: wasm, memory, takeResponse} = kernelRuntime()
+  const {exports: wasm, memory, takeResponse} = manifoldRuntime()
   let avp = 0
   let aip = 0
   let bvp = 0

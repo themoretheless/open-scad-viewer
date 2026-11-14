@@ -233,6 +233,12 @@ pub unsafe extern "C" fn abi_array_free(handle: usize) {
     unsafe { geometry_bridge::abi::abi_array_free(handle) }
 }
 
+/// Manifold export surface version; checked by the TS wrappers at startup.
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_manifold_abi_version() -> u32 {
+    geometry_bridge::abi::abi_manifold_abi_version()
+}
+
 /// # Safety
 /// vp/vl and ip/il must reference live caller-owned buffers; read only.
 #[unsafe(no_mangle)]
