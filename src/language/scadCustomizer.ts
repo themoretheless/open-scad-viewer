@@ -8,7 +8,7 @@ export interface CustomizerParameter {
   valueEnd: number
   min?: number
   max?: number
-  step?: number
+  step?: number | undefined
   options?: CustomizerValue[]
 }
 

@@ -33,12 +33,12 @@ export interface StepCapabilityReport {
 export interface RoutedStepImport {
   bodies:DirectBody[]
   retainedModel?:NurbsBrep
-  retainedDocument?:DirectStepV10Document
+  retainedDocument?:DirectStepV10Document | undefined
   tessellatedPresentation?:StepTessellatedPresentation[]
-  sceneTree?:DirectStepSceneTree
-  display?:DirectStepDisplay
-  xde?:DirectStepSceneProduct[]
-  lod0?:CachedStepLod0Import
+  sceneTree?:DirectStepSceneTree | undefined
+  display?:DirectStepDisplay | undefined
+  xde?:DirectStepSceneProduct[] | undefined
+  lod0?:CachedStepLod0Import | undefined
   report:StepCapabilityReport
 }
 const RETAINED_STEP_KEY='open-scad-viewer.retained-step-v1'
@@ -188,7 +188,7 @@ export function importStepForWorkbench(text:string):RoutedStepImport {
       productHierarchy:imported.document.productHierarchy,
       externalReferences:[],
       semanticConformance:uncheckedStepConformance(),
-      ...(sceneTree?{sceneTree,display,xde}: {}),
+      ...(sceneTree?{sceneTree,...(display!==undefined?{display}:{}),...(xde!==undefined?{xde}:{})}: {}),
       ...(lod0?{lod0CacheKey:lod0.cacheKey,lod0ShellCacheKeys:lod0.lod0Shells.map(shell=>shell.cacheKey)}: {}),
     },retainedDocument:imported.document,sceneTree,display,xde,lod0,
   }
@@ -217,7 +217,8 @@ export const retainedStepSession={
     if(!model){retainedRecord=undefined;storageRemove(RETAINED_STEP_KEY);return false}
     inspectNurbsBrep(model)
     const preview=tessellateNurbsBrep(model,8)
-    const record:RetainedStepRecord={version:2,model,document:document??retainedRecord?.document,preview:{positions:Array.from(preview.positions),indices:Array.from(preview.indices)},
+    const retainedDocument=document??retainedRecord?.document
+    const record:RetainedStepRecord={version:2,model,...(retainedDocument!==undefined?{document:retainedDocument}:{}),preview:{positions:Array.from(preview.positions),indices:Array.from(preview.indices)},
       report:report??retainedRecord?.report??{route:'retained-ap242-brep',retained:true,refusalBoundary:[],identityLoss:[],metadataLoss:[],
         definitionIdentities:[],occurrenceIdentities:[],productHierarchy:[],externalReferences:[],
         semanticConformance:uncheckedStepConformance()}}

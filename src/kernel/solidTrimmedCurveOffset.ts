@@ -46,7 +46,7 @@ export function offsetTrimmedSolidCurve(source:DirectDocument,p:TrimmedOffsetOpt
    const id=`${p.createdId}:${l}:${i}`
    if(occupied.has(id))throw Error('Trimmed offset identities already exist.')
    occupied.add(id);ids.push(id)
-   return {offsetRegion:{version:1 as const,scope:'at-construction' as const,sourceId:selected.id,loopId:`${p.createdId}:${l}`,part:i,parts:loop.length,fillRule:p.fillRule,originalOffsetTopologyCertified:false as const},id,name:`${selected.name} · offset ${l+1}.${i+1}`,group:selected.group,curve:{...c,controlPoints:q.map(v=>dimension===3?[...v,z!]:[...v])}}
+   return {offsetRegion:{version:1 as const,scope:'at-construction' as const,sourceId:selected.id,loopId:`${p.createdId}:${l}`,part:i,parts:loop.length,fillRule:p.fillRule,originalOffsetTopologyCertified:false as const},id,name:`${selected.name} · offset ${l+1}.${i+1}`,...(selected.group!==undefined?{group:selected.group}:{}),curve:{...c,controlPoints:q.map(v=>dimension===3?[...v,z!]:[...v])}}
   })
   if(loop[0]!.controlPoints[0]!.some((v,k)=>v!==loop.at(-1)!.controlPoints.at(-1)![k]))throw Error('Open trimmed boundary.')
   return added

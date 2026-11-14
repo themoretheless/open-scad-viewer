@@ -49,10 +49,10 @@ export type MiterArguments=Parameters<typeof createProgressiveMiterBrepProfileBo
 export type MiterResolver=(nodeId:string,args:MiterArguments)=>ProgressiveMiterBrepBody
 export class PendingProgressiveMiter {constructor(readonly nodeId:string,readonly args:MiterArguments){}}
 export interface OwnNurbsBuildControl {
- shouldAbort?:()=>boolean
- onYield?:()=>void
- onSweepPreview?:(nodeId:string,preview:ProgressiveSweepPreview)=>void|Promise<void>
- exportQuality?:import('../parser/types').ExportMeshQuality
+ shouldAbort?:(()=>boolean) | undefined
+ onYield?:(()=>void) | undefined
+ onSweepPreview?:((nodeId:string,preview:ProgressiveSweepPreview)=>void|Promise<void>) | undefined
+ exportQuality?:import('../parser/types').ExportMeshQuality | undefined
 }
 
 export type StationArguments=Parameters<typeof reconstructCertifiedProgressiveStations>

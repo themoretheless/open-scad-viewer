@@ -136,8 +136,8 @@ export interface SemanticProgramBackend<TPayloadFamily extends object> {
 }
 
 export interface SemanticExecutionControl {
-  readonly shouldAbort?: () => boolean
-  readonly signal?: AbortSignal
+  readonly shouldAbort?: (() => boolean) | undefined
+  readonly signal?: AbortSignal | undefined
   readonly now?: () => number
   readonly deadlineAt?: number
   readonly maxNodes?: number

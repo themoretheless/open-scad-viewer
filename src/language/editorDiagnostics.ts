@@ -3,7 +3,7 @@ import type { GeometryBuildError } from '../kernel/geometryWorkerProtocol'
 export interface EditorDiagnostic {
   readonly severity: 'error' | 'warning'
   readonly message: string
-  readonly code?: string
+  readonly code?: string | undefined
   readonly line: number
   readonly column: number
   readonly start: number

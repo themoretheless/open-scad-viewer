@@ -15,13 +15,13 @@ import {
 
 export interface FormaRenderContext {
   state: Record<string, unknown>
-  signals?: Map<string, Signal<unknown>>
+  signals?: Map<string, Signal<unknown>> | undefined
   tokens: Record<string, string>
   i18n: Record<string, string>
   locals: Record<string, unknown>
-  slots?: Slots
-  onAction?: (name: string, args: unknown[], event?: Event) => void
-  onBinding?: (path: string, value: unknown) => void
+  slots?: Slots | undefined
+  onAction?: ((name: string, args: unknown[], event?: Event) => void) | undefined
+  onBinding?: ((path: string, value: unknown) => void) | undefined
 }
 
 function getByPathParts(obj: unknown, parts: readonly string[]): unknown {

@@ -146,7 +146,7 @@ async function run(data: PhotoWorkerRequest): Promise<void> {
     } catch {
       // Preserve the original error if report transport also fails.
     }
-    post({type: 'error', message: errorMessage(error), diagnostics})
+    post({type: 'error', message: errorMessage(error), ...(diagnostics !== undefined ? {diagnostics} : {})})
   } finally {
     try {
       kernel?.clear()

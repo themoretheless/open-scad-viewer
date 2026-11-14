@@ -209,7 +209,7 @@ export class PhotogrammetryKernel {
    * Browser WebGPU sweep, stage 1: returns the packed shader payload and WGSL
    * text, or null when the request is ineligible for the GPU path.
    */
-  densePrepare(resolution: number, preset: PhotoDensePreset = 'baseline'): {payload: Uint8Array, wgsl: string, wgslVariants?: WgslVariant[]} | null {
+  densePrepare(resolution: number, preset: PhotoDensePreset = 'baseline'): {payload: Uint8Array, wgsl: string, wgslVariants?: WgslVariant[] | undefined} | null {
     const presetCode = preset === 'accurate' ? 3 : preset === 'slanted-plane' ? 1 : preset === 'dual-scale-volume' ? 2 : 0
     const decoded = decodePacked<Response<{ptr: number, len: number, wgsl: string, wgslVariants?: WgslVariant[]} | null>>(
       this.wasm.memory,

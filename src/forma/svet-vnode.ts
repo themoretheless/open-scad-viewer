@@ -18,7 +18,7 @@ export interface DirectiveBinding {
   dir: Directive
   value: any
   oldValue?: any
-  arg?: string
+  arg?: string | undefined
   modifiers: Record<string, boolean>
 }
 
@@ -45,8 +45,8 @@ export interface SvetVNode {
   component: SvetComponentInstance | null
   dirs: DirectiveBinding[] | null
   scopeId: string | null
-  patchFlag?: number
-  dynamicProps?: string[] | null
+  patchFlag?: number | undefined
+  dynamicProps?: string[] | null | undefined
 }
 
 export interface SvetComponentInstance {

@@ -43,12 +43,12 @@ export const OPENSCAD_TEXT_ERROR_CODES = Object.freeze([
 export type OpenScadTextErrorCode = typeof OPENSCAD_TEXT_ERROR_CODES[number]
 
 export interface OpenScadTextErrorDetails {
-  readonly sourcePath?: string
-  readonly font?: string
-  readonly fontPath?: string
-  readonly faceIndex?: number
-  readonly limit?: number
-  readonly actual?: number
+  readonly sourcePath?: string | undefined
+  readonly font?: string | undefined
+  readonly fontPath?: string | undefined
+  readonly faceIndex?: number | undefined
+  readonly limit?: number | undefined
+  readonly actual?: number | undefined
 }
 
 export class OpenScadTextError extends Error {
@@ -74,11 +74,11 @@ export interface OpenScadTextPositionedErrorDetails extends OpenScadTextErrorDet
 export class OpenScadTextPositionedError extends OpenSCADParseError {
   readonly details: Readonly<OpenScadTextPositionedErrorDetails>
   readonly sourcePath: string
-  readonly font?: string
-  readonly fontPath?: string
-  readonly faceIndex?: number
-  readonly limit?: number
-  readonly actual?: number
+  readonly font?: string | undefined
+  readonly fontPath?: string | undefined
+  readonly faceIndex?: number | undefined
+  readonly limit?: number | undefined
+  readonly actual?: number | undefined
 
   constructor(
     source: string,
@@ -131,7 +131,7 @@ export type OpenScadTextContour = readonly OpenScadTextPoint[]
 export interface OpenScadTextParameters {
   readonly text?: string
   readonly size?: number
-  readonly font?: string
+  readonly font?: string | undefined
   readonly halign?: string
   readonly valign?: string
   readonly spacing?: number

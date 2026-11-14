@@ -26,14 +26,14 @@ export interface BrepGearNodeSpec {
   module: number
   teeth: number
   height: number
-  pressure_angle?: number
-  helix_angle?: number
-  herringbone?: boolean
-  bore?: number
-  internal?: boolean
-  rim_width?: number
-  clearance?: number
-  backlash?: number
+  pressure_angle?: number | undefined
+  helix_angle?: number | undefined
+  herringbone?: boolean | undefined
+  bore?: number | undefined
+  internal?: boolean | undefined
+  rim_width?: number | undefined
+  clearance?: number | undefined
+  backlash?: number | undefined
 }
 
 export interface BrepGraphBuilder {

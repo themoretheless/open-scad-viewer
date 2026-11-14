@@ -76,7 +76,7 @@ export function callExpressionArguments(node: CallNode): ExpressionArgument[] {
 export interface BoundAssertArguments {
   condition: Expr
   conditionText: string
-  message?: Expr
+  message?: Expr | undefined
 }
 
 export function bindAssertArguments(node: CallNode, ctx: EvalContext): BoundAssertArguments {

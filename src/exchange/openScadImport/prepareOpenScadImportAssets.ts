@@ -117,7 +117,7 @@ export function validateImportOptions(
       sourcePath, specifier, assetPath,
     })
   }
-  return { origin: [origin[0], origin[1]], scale, center: options.center ?? false, dpi, layer: options.layer }
+  return { origin: [origin[0], origin[1]], scale, center: options.center ?? false, dpi, ...(options.layer !== undefined ? { layer: options.layer } : {}) }
 }
 
 export function transformLoadedGeometry(

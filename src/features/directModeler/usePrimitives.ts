@@ -81,7 +81,7 @@ async function addPrimitive(kind: typeof primitiveKinds[number]) {
  primitivePending.value=true;workspace.value?.focus()
  try{
   if(!Number.isFinite(primitiveSize.value)||primitiveSize.value<.1||primitiveSize.value>10000)throw Error(label('Размер от 0.1 до 10000 мм','Size must be 0.1–10000 mm'))
-  const next=await primitiveWorker.run({kind:'primitive',document:history.document,options:{kind,id,name,size:primitiveSize.value,topRadius:primitiveTopRadius.value,innerRadius:primitiveInnerRadius.value,...(kind==='tube'&&primitiveG2Enabled.value?{g2TransitionSize:primitiveG2Size.value,...(primitiveG2Individual.value?{g2TransitionSizes:[...primitiveG2Sizes.value] as [number,number,number,number]}:{})}:{}),round:roundGeometry.value,segments:brepSegments.value,group:activeGroup.value||undefined}})
+  const next=await primitiveWorker.run({kind:'primitive',document:history.document,options:{kind,id,name,size:primitiveSize.value,topRadius:primitiveTopRadius.value,innerRadius:primitiveInnerRadius.value,...(kind==='tube'&&primitiveG2Enabled.value?{g2TransitionSize:primitiveG2Size.value,...(primitiveG2Individual.value?{g2TransitionSizes:[...primitiveG2Sizes.value] as [number,number,number,number]}:{})}:{}),round:roundGeometry.value,segments:brepSegments.value,...(activeGroup.value?{group:activeGroup.value}:{})}})
   if(!current())return
   const {validateLocked,added}=prepareCommit(next)
   const applied=await target.commitAsync(async()=>next,validateLocked)

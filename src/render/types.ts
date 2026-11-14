@@ -15,15 +15,15 @@ export interface GMesh {
    * position attribute toward `from` (vertex slot 1) by `ob.morph.x`, so the
    * CPU never rewrites vertex buffers per frame.
    */
-  morph?: { from: Float32Array; target: Float32Array; started: number; matrix?: (t: number) => Mat4; currentMatrix?: Mat4 }
+  morph?: ({ from: Float32Array; target: Float32Array; started: number; matrix?: ((t: number) => Mat4) | undefined; currentMatrix?: Mat4 | undefined }) | undefined
   /** GPU copy of `morph.from` (positions only, stride 3); capacity-grown. */
   morphVB: GPUBuffer | null
   morphVBCapacity: number
   /** Buffer bound at vertex slot 1: morph source while morphing, else the shared dummy. */
   morphSlot: GPUBuffer | null
-  nativeGeometry?: MeshData['nativeGeometry']
-  faceIdsAuthoritative?: boolean
-  assetId?: GeometryAssetId
+  nativeGeometry?: MeshData['nativeGeometry'] | undefined
+  faceIdsAuthoritative?: boolean | undefined
+  assetId?: GeometryAssetId | undefined
   vb: GPUBuffer; ib: GPUBuffer; ic: number
   ub: GPUBuffer; bg: GPUBindGroup
   edgeIB: GPUBuffer | null; edgeIC: number
@@ -37,18 +37,18 @@ export interface GMesh {
   worldBounds: Bounds
   visible: boolean
   /** Lazily built faceId → triangles index; undefined = not built yet, null = unavailable. */
-  faceIndex?: FaceTriangleIndex | null
+  faceIndex?: FaceTriangleIndex | null | undefined
   /** Last style vector written to the uniform buffer (alpha, selected, edge, hovered). */
   styleAlpha: number
   styleSelected: number
   styleEdge: number
   styleHovered: number
   /** Presentation material from MeshData; undefined = legacy Phong defaults. */
-  material?: MaterialDef
+  material?: MaterialDef | undefined
   /** Resolved shading model; drives mesh pipeline selection at draw time. */
   shadingModel: ShadingModel
   /** Certified display levels and the one currently bound, when published. */
-  lod?: GMeshLodState
+  lod?: GMeshLodState | undefined
 }
 
 /** Shared empty list so render() never allocates when there are no ghosts. */

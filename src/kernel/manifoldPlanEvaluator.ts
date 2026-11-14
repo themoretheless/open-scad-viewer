@@ -28,7 +28,7 @@ import {
 const MAX_SOURCE_LENGTH = 250_000
 
 export interface ManifoldPlanEvaluationOptions extends LegacyV5AssemblyOptions {
-  readonly quality?: GeometryQuality
+  readonly quality?: GeometryQuality | undefined
   readonly now?: () => number
 }
 

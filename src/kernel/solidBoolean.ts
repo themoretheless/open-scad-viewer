@@ -57,8 +57,7 @@ function booleanPair(a:DirectBody,b:DirectBody,operation:BrepBooleanOperation,se
    const brep=booleanNurbsBrep(a.brep,b.brep,operation)
    const built=tessellateNurbsBrep(brep,segments)
    const result={...a,brep,mesh:{positions:built.positions.slice(),indices:built.indices.slice()}}
-   const toleranceMm=brep.toleranceMm>TOLERANT_ABOVE_MM?brep.toleranceMm:undefined
-   return {body:result.brep.bodies.length?result:null,exact:true,toleranceMm}
+   return {body:result.brep.bodies.length?result:null,exact:true,...(brep.toleranceMm>TOLERANT_ABOVE_MM?{toleranceMm:brep.toleranceMm}:{})}
   }catch(refusal){
    // The kernel certifies each surface pairing it walks; an uncertified pairing is a
    // capability limit of the exact kernel, not a defect in the model, and the bodies are
@@ -76,5 +75,6 @@ function booleanPair(a:DirectBody,b:DirectBody,operation:BrepBooleanOperation,se
  let built
  try{built=weldedBoolean(scale*1e-6)}catch{built=weldedBoolean(scale*1e-4)}
  if(built.indices.length===0)return {body:null,exact:false}
- return {body:{...a,brep:undefined,mesh:{positions:built.positions.slice(),indices:built.indices.slice()}},exact:false}
+ const {brep:_brep,...meshBody}=a
+ return {body:{...meshBody,mesh:{positions:built.positions.slice(),indices:built.indices.slice()}},exact:false}
 }

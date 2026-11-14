@@ -40,7 +40,7 @@ export class SolidDisplayQueue {
   let changed=yielded&&hasCached
   for(const [key,body] of requested){
    try{
-    const result=await this.port.run({kind:'displayMesh',mesh:body.mesh,brep:body.brep,segments:12})
+    const result=await this.port.run({kind:'displayMesh',mesh:body.mesh,...(body.brep!==undefined?{brep:body.brep}:{}),segments:12})
     if(generation!==this.generation)return false
     // Defend against in-place edits in addition to the caller's revision watcher.
     if(solidDisplayKey(body)!==key){this.keys.delete(body);continue}

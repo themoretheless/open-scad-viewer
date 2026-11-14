@@ -13,7 +13,7 @@ export const OPENSCAD_LANGUAGE_PROFILES = Object.freeze([
 ] as const)
 export type OpenScadLanguageProfile = typeof OPENSCAD_LANGUAGE_PROFILES[number]
 export interface CompileOpenScadOptions {
-  readonly languageProfile?: OpenScadLanguageProfile
+  readonly languageProfile?: OpenScadLanguageProfile | undefined
 }
 
 export type ScalarValue = number | string | boolean | undefined
@@ -129,7 +129,7 @@ export type Expr =
   | { kind: 'literal'; value: Value; p: number }
   | { kind: 'identifier'; name: string; p: number }
   | { kind: 'vector'; items: Expr[]; p: number }
-  | { kind: 'range'; start: Expr; step?: Expr; end: Expr; p: number }
+  | { kind: 'range'; start: Expr; step?: Expr | undefined; end: Expr; p: number }
   | { kind: 'unary'; op: TT; value: Expr; p: number }
   | { kind: 'binary'; op: TT; left: Expr; right: Expr; p: number }
   | { kind: 'ternary'; test: Expr; yes: Expr; no: Expr; p: number }
@@ -150,7 +150,7 @@ export type Expr =
   | ListComprehensionExpression
 
 export interface ExpressionArgument {
-  readonly name?: string
+  readonly name?: string | undefined
   readonly value: Expr
   readonly p: number
   readonly end: number
@@ -198,7 +198,7 @@ export interface CallNode {
 }
 
 export interface AssignNode { type: 'assign'; name: string; value: Expr; p: number; end: number }
-export interface ModuleParam { name: string; defaultValue?: Expr }
+export interface ModuleParam { name: string; defaultValue?: Expr | undefined }
 export type FunctionParam = ModuleParam
 export interface ModuleNode {
   type: 'module'

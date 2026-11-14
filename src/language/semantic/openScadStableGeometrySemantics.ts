@@ -34,8 +34,8 @@ export type OpenScadStableGeometryWarningCode =
 export interface OpenScadStableGeometryWarning {
   readonly code: OpenScadStableGeometryWarningCode
   readonly message: string
-  readonly value?: unknown
-  readonly limit?: number
+  readonly value?: unknown | undefined
+  readonly limit?: number | undefined
 }
 
 export interface OpenScadStableGeometryContext {

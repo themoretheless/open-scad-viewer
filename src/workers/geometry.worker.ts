@@ -31,7 +31,7 @@ interface ActiveJob {
   request: GeometryBuildRequest
   startedAt: number
   cancelled: GeometryCancelReason | null
-  previewWait?:{nodeId:string;sections:number;release:()=>void}
+  previewWait?:({nodeId:string;sections:number;release:()=>void}) | undefined
   initialization: AbortController
 }
 

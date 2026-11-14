@@ -13,9 +13,9 @@ export interface GpuCsgPrimitive {
   /** RGBA color [r, g, b, a] in 0..1 range */
   color: [number, number, number, number]
   /** Interleaved vertex data [x, y, z, nx, ny, nz] (stride 6 floats = 24 bytes) */
-  vertices?: Float32Array
+  vertices?: Float32Array | undefined
   /** Triangle indices */
-  indices?: Uint32Array
+  indices?: Uint32Array | undefined
 }
 
 export interface GpuCsgTerm {
