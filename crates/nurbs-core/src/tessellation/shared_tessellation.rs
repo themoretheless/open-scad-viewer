@@ -95,6 +95,43 @@ fn root(parent: &[usize], mut i: usize) -> usize {
     }
     i
 }
+/// Second-order deviation data for a grid cell lying inside one knot span.
+///
+/// For a parameter triangle with vertices `p_i` and a point `x` with
+/// barycentric weights `λ_i`, Taylor's formula with integral remainder gives
+/// `S(x) - Σ λ_i S(p_i) = -Σ λ_i ∫₀¹ (1-t) D²S(x + t(p_i-x))[d_i, d_i] dt`
+/// with `d_i = p_i - x` (the first-order terms cancel since `Σ λ_i d_i = 0`).
+/// In the cell's unit coordinates `|d_i|` is at most 1 per axis, so
+/// `|S(x) - flat(x)| <= (|S_uu| + 2|S_uv| + |S_vv|) / 2` using interval jet
+/// norms of the original rational surface over the cell. The welded vertex
+/// may differ from `S(p_i)`; that displacement (per cell corner, in grid order
+/// `(i,j), (i+1,j), (i+1,j+1), (i,j+1)`) is added by the caller. The bound
+/// shrinks with the square of the grid step. `None` when the cell crosses a
+/// knot or the jets fail; the box bound then stands alone.
+fn taylor_cell(s: &Surface, domain: [[f64; 2]; 2], vertices: [[f64; 3]; 4]) -> Option<(f64, [f64; 4])> {
+    use crate::analysis::surface_measure::jets;
+    use crate::numerics::interval_vec3::norm;
+    let find = |knots: &[f64], degree: usize, count: usize, [a, b]: [f64; 2]| {
+        (degree..count).find(|&k| knots[k] < knots[k + 1] && knots[k] <= a && b <= knots[k + 1])
+    };
+    let span = [
+        find(&s.knots_u, s.degree_u, s.control_points.len(), domain[0])?,
+        find(&s.knots_v, s.degree_v, s.control_points[0].len(), domain[1])?,
+    ];
+    let j = jets::calculate(s, span, domain, None).ok()?;
+    let m = |v| norm(v).ok().map(|n| n.hi);
+    let curvature = ((m(j[2][0])? + 2. * m(j[1][1])? + m(j[0][2])?) / 2.).next_up();
+    let origin = &s.control_points[span[0] - s.degree_u][span[1] - s.degree_v];
+    let mut displacement = [0.; 4];
+    for (k, corner) in [[0, 0], [1, 0], [1, 1], [0, 1]].into_iter().enumerate() {
+        let c = jets::calculate(s, span, domain, Some(corner)).ok()?;
+        let exact: Vec<I> = (0..3).map(|a| c[0][0][a].add(I::point(origin[a]))).collect::<Result<_>>().ok()?;
+        let vertex: Vec<I> = vertices[k].iter().map(|&x| I::point(x)).collect();
+        displacement[k] = box_distance(&exact, &vertex).ok()?.1;
+    }
+    (curvature.is_finite() && displacement.iter().all(|d| d.is_finite())).then_some((curvature, displacement))
+}
+
 /// Uniform common normalized strips guarantee no T-junction on declared seams.
 /// Seams use explicit affine/reversed chart correspondence. Full original
 /// edge/lift agreement precedes any welding. Every output triangle gets a
@@ -242,7 +279,15 @@ pub fn tessellate(
                     .iter()
                     .map(|b| I::new(b[0], b[1]))
                     .collect::<Result<Vec<_>>>()?;
-                for vertices in [[ids[0], ids[1], ids[2]], [ids[0], ids[2], ids[3]]] {
+                let taylor = taylor_cell(
+                    s,
+                    [
+                        [grids[patch][0][i], grids[patch][0][i + 1]],
+                        [grids[patch][1][j], grids[patch][1][j + 1]],
+                    ],
+                    ids.map(|v| compact[v]),
+                );
+                for (corners, vertices) in [([0, 1, 2], [ids[0], ids[1], ids[2]]), ([0, 2, 3], [ids[0], ids[2], ids[3]])] {
                     let represented = (0..3)
                         .map(|axis| {
                             I::new(
@@ -257,7 +302,11 @@ pub fn tessellate(
                             )
                         })
                         .collect::<Result<Vec<_>>>()?;
-                    let error_upper = box_distance(&image, &represented)?.1;
+                    let mut error_upper = box_distance(&image, &represented)?.1;
+                    if let Some((curvature, displacement)) = taylor {
+                        let shift = corners.iter().map(|&c| displacement[c]).fold(0., f64::max);
+                        error_upper = error_upper.min((curvature + shift).next_up());
+                    }
                     report.error_upper = report.error_upper.max(error_upper);
                     triangles.push(Triangle {
                         patch,
@@ -276,4 +325,91 @@ pub fn tessellate(
         charts,
     });
     Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A rational biquadratic dome; `split` adds an interior knot in u at 0.3.
+    fn dome(split: bool) -> Surface {
+        let mut control_points: Vec<Vec<Vec<f64>>> = (0..3)
+            .map(|i| {
+                (0..3)
+                    .map(|j| vec![i as f64 / 2., j as f64 / 2., if i == 1 && j == 1 { 0.8 } else { 0.1 * i as f64 }])
+                    .collect()
+            })
+            .collect();
+        let mut weights = vec![vec![1., 0.8, 1.], vec![0.9, 1.3, 0.9], vec![1., 0.8, 1.]];
+        let mut knots_u = vec![0., 0., 0., 1., 1., 1.];
+        if split {
+            control_points.insert(2, (0..3).map(|j| vec![0.75, j as f64 / 2., 0.3]).collect());
+            weights.insert(2, vec![1.; 3]);
+            knots_u = vec![0., 0., 0., 0.3, 1., 1., 1.];
+        }
+        Surface {
+            degree_u: 2,
+            degree_v: 2,
+            knots_u,
+            knots_v: vec![0., 0., 0., 1., 1., 1.],
+            control_points,
+            weights,
+            periodic_u: false,
+            periodic_v: false,
+        }
+    }
+
+    /// Largest sampled distance between surface points and the flat triangle
+    /// at the same barycentric coordinates, per triangle.
+    fn sampled(s: &Surface, mesh: &Mesh) -> Vec<f64> {
+        mesh.triangles
+            .iter()
+            .map(|t| {
+                let uv = t.vertices.map(|v| mesh.charts[v].1);
+                let xyz = t.vertices.map(|v| mesh.points[v]);
+                let mut worst: f64 = 0.;
+                for a in 0..=8 {
+                    for b in 0..=8 - a {
+                        let l = [a as f64 / 8., b as f64 / 8., (8 - a - b) as f64 / 8.];
+                        let p: [f64; 2] = std::array::from_fn(|k| (0..3).map(|i| l[i] * uv[i][k]).sum());
+                        let flat: [f64; 3] = std::array::from_fn(|k| (0..3).map(|i| l[i] * xyz[i][k]).sum());
+                        let e = s.evaluate(p[0], p[1]).unwrap().point;
+                        worst = worst.max((0..3).map(|k| (e[k] - flat[k]).powi(2)).sum::<f64>().sqrt());
+                    }
+                }
+                worst
+            })
+            .collect()
+    }
+
+    #[test]
+    fn deviation_bounds_converge_quadratically_and_stay_conservative() {
+        let s = dome(false);
+        let mut previous: Option<f64> = None;
+        for n in [8, 16, 32, 64] {
+            let r = tessellate(std::slice::from_ref(&s), &[], n, 1., 100_000, 1).unwrap();
+            let mesh = r.mesh.as_ref().unwrap();
+            for (t, d) in mesh.triangles.iter().zip(sampled(&s, mesh)) {
+                assert!(d <= t.error_upper, "n={n}: sampled {d} > bound {}", t.error_upper);
+            }
+            if let Some(p) = previous {
+                // Box enclosures only halve per refinement; the curvature bound quarters.
+                let ratio = p / r.error_upper;
+                assert!(ratio > 3.5, "n={n}: ratio {ratio}");
+            }
+            previous = Some(r.error_upper);
+        }
+    }
+
+    #[test]
+    fn cells_across_knots_keep_a_conservative_bound() {
+        let s = dome(true);
+        for n in [2, 3, 10] {
+            let r = tessellate(std::slice::from_ref(&s), &[], n, 1., 100_000, 1).unwrap();
+            let mesh = r.mesh.as_ref().unwrap();
+            for (t, d) in mesh.triangles.iter().zip(sampled(&s, mesh)) {
+                assert!(d <= t.error_upper, "n={n}: sampled {d} > bound {}", t.error_upper);
+            }
+        }
+    }
 }
