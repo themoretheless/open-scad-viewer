@@ -148,7 +148,7 @@ fn cap_correction(
                     b
                 }
             })
-            .unwrap();
+            .expect("0..3 is non-empty");
         if !direction[axis].is_finite() || direction[axis] == 0. {
             return Err(input("Cap correction needs a nonzero endpoint direction"));
         }

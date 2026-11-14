@@ -188,7 +188,7 @@ pub fn inspect(
                         json!({"surface":s,"world":stored,"uv":uv,"reversed":u.reversed,"maxWork":work}),
                     )?;
                     charge(&mut work, &exact, "work")?;
-                    let label = boundaries[wall_faces.iter().position(|&f| f == u.face).unwrap()];
+                    let label = boundaries[wall_faces.iter().position(|&f| f == u.face).expect("wall_uses is filtered to faces in wall_faces")];
                     let coverage = if let Some(label) = label {
                         audit(
                             "sweep_boundary_coverage_audit",

@@ -354,7 +354,7 @@ pub fn dihedral_angles(mesh: MeshView<'_>) -> Result<DihedralReport> {
         min_radians: min,
         max_radians: max,
         mean_radians: sum / weights,
-        endpoint_radians: endpoints.unwrap(),
+        endpoint_radians: endpoints.expect("count > 0 means some edge set the endpoints"),
         edges: count,
     })
 }

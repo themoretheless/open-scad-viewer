@@ -148,7 +148,7 @@ fn import_step_direct_impl(
             if containers.len() > 1 || containers.is_empty() && exact.len() != 1 || containers.len() == 1 && exact.len() > 1 {
                 return Err(refuse("Ambiguous multiple exact B-rep representation roots"));
             }
-            let mut root = containers.first().or_else(|| exact.first()).copied().unwrap();
+            let mut root = containers.first().or_else(|| exact.first()).copied().expect("the ambiguity check above leaves exactly one container or exact root");
             if !containers.is_empty() {
                 if exact.iter().any(|candidate| {
                     !entities.keys().any(|relationship| {
@@ -481,7 +481,7 @@ pub fn import_step_v3(text: &str) -> Result<(Model, FeatureCertificate, StepV3Re
 
 pub fn import_step_v3_with_metadata(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report, StepSemanticMetadata)> {
     let (model, certificate, report, semantic) = import_step_direct_impl(text, false, false, false, STEP_INTERCHANGE_V3_CAPABILITY, true)?;
-    Ok((model, certificate, report, semantic.unwrap()))
+    Ok((model, certificate, report, semantic.expect("metadata=true always returns semantic metadata")))
 }
 
 pub fn import_step_v4(text: &str) -> Result<(Model, FeatureCertificate, StepV3Report)> {
@@ -526,7 +526,7 @@ pub fn import_step_v9_with_metadata(text: &str) -> Result<(Model, StepV8Certific
         "general_affine_occurrences", "retained_open_shell_products",
         "ap214_face_body_product_presentation", "typed_xde_product_attributes",
     ]);
-    Ok((model, certificate, report, semantic.unwrap()))
+    Ok((model, certificate, report, semantic.expect("metadata=true always returns semantic metadata")))
 }
 
 fn step_v10_graph_identity(entities: &BTreeMap<usize, Entity>) -> Result<String> {

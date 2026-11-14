@@ -268,3 +268,124 @@ fn importers_never_panic_on_damaged_exchange_files() {
         panics[..panics.len().min(20)].join("\n")
     );
 }
+
+/// Structured keyword swaps: unlike the byte-level mutations above, each swap
+/// keeps the Part 21 / IGES syntax valid and changes one semantic choice
+/// (bound kind, orientation flag, curve or surface form, header entity), so
+/// the damaged file reaches the topology and geometry builders.
+const SWAPS: &[(&str, &str)] = &[
+    ("FACE_OUTER_BOUND", "FACE_BOUND"),
+    ("FACE_BOUND", "FACE_OUTER_BOUND"),
+    (".T.", ".F."),
+    (".F.", ".T."),
+    ("CIRCLE", "LINE"),
+    ("LINE", "CIRCLE"),
+    ("B_SPLINE_SURFACE_WITH_KNOTS", "B_SPLINE_SURFACE"),
+    ("B_SPLINE_CURVE_WITH_KNOTS", "B_SPLINE_CURVE"),
+    ("ADVANCED_FACE", "FACE_SURFACE"),
+    ("PLANE", "CYLINDRICAL_SURFACE"),
+    ("FILE_SCHEMA", "FILE_SCHEME"),
+    ("VERTEX_POINT", "CARTESIAN_POINT"),
+];
+
+/// Apply `from -> to` at the `nth` occurrence (or at every occurrence when
+/// `nth` is `None`).
+fn swap(text: &str, from: &str, to: &str, nth: Option<usize>) -> Option<String> {
+    let hits: Vec<usize> = text.match_indices(from).map(|(i, _)| i).collect();
+    match nth {
+        None if !hits.is_empty() => Some(text.replace(from, to)),
+        Some(n) if n < hits.len() => {
+            let at = hits[n];
+            Some(format!("{}{to}{}", &text[..at], &text[at + from.len()..]))
+        }
+        _ => None,
+    }
+}
+
+fn panics_of(inputs: &[(String, String)]) -> Vec<String> {
+    let importers = importers();
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let mut panics = Vec::new();
+    for (label, text) in inputs {
+        for (importer, run) in &importers {
+            if let Err(payload) = catch_unwind(AssertUnwindSafe(|| run(text))) {
+                let message = payload
+                    .downcast_ref::<String>()
+                    .cloned()
+                    .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+                    .unwrap_or_default();
+                panics.push(format!("{importer} on {label}: {message}"));
+            }
+        }
+    }
+    std::panic::set_hook(hook);
+    panics.sort();
+    panics.dedup();
+    panics
+}
+
+#[test]
+fn importers_never_panic_on_keyword_swaps() {
+    let seeds = seeds();
+    let per_swap: usize = std::env::var("CAD_STEP_SWAP_OCCURRENCES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(3);
+    let mut inputs = Vec::new();
+    let mut rng = Lcg(0x5A9);
+    for (name, seed) in &seeds {
+        for &(from, to) in SWAPS {
+            let count = seed.matches(from).count();
+            if let Some(text) = swap(seed, from, to, None) {
+                inputs.push((format!("{name} [all {from} -> {to}]"), text));
+            }
+            for _ in 0..per_swap.min(count) {
+                let n = rng.below(count);
+                if let Some(text) = swap(seed, from, to, Some(n)) {
+                    inputs.push((format!("{name} [{from} #{n} -> {to}]"), text));
+                }
+            }
+        }
+    }
+    assert!(inputs.len() >= 50, "only {} swapped inputs", inputs.len());
+    let panics = panics_of(&inputs);
+    eprintln!("{} swapped inputs", inputs.len());
+    assert!(
+        panics.is_empty(),
+        "{} distinct panics:\n{}",
+        panics.len(),
+        panics[..panics.len().min(20)].join("\n")
+    );
+}
+
+/// Regression: an ADVANCED_FACE whose bounds are all inner FACE_BOUNDs and
+/// whose same_sense flag is false used to unwrap a missing outer loop while
+/// reversing the face. It must now import or be refused, never panic.
+#[test]
+fn faces_without_outer_bound_and_reversed_sense_do_not_panic() {
+    let mut inputs = Vec::new();
+    for (name, seed) in seeds() {
+        if !seed.contains("ADVANCED_FACE") {
+            continue;
+        }
+        let Some(inner_only) = swap(&seed, "FACE_OUTER_BOUND", "FACE_BOUND", None) else {
+            continue;
+        };
+        let reversed = inner_only
+            .lines()
+            .map(|line| {
+                if line.contains("ADVANCED_FACE") {
+                    line.replace(".T.);", ".F.);")
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        inputs.push((format!("{name} [inner-only, reversed]"), reversed));
+    }
+    assert!(!inputs.is_empty());
+    let panics = panics_of(&inputs);
+    assert!(panics.is_empty(), "{}", panics.join("\n"));
+}

@@ -256,7 +256,7 @@ pub fn step_solid_analysis(id: u32) -> crate::Result<usize> {
             .iter()
             .position(|slot| matches!(slot, Some((job_id, _)) if *job_id == id))
             .ok_or_else(|| crate::input("Unknown or completed solid analysis job"))?;
-        let future = &mut jobs.jobs[slot_idx].as_mut().unwrap().1;
+        let future = &mut jobs.jobs[slot_idx].as_mut().expect("position() matched a Some slot").1;
         let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
         match future.as_mut().poll(&mut cx) {
             std::task::Poll::Pending => Ok(0),

@@ -114,7 +114,7 @@ pub fn read(v: Value) -> Result<Value> {
     if !declared {
         return Ok(result);
     }
-    let n = len(&s["edgeIds"]).unwrap();
+    let n = len(&s["edgeIds"]).expect("declared requires edgeIds to be an array");
     let complete = extraction(s);
     let maximum = if s.get("maxWork").is_none() {
         Some(1000000)
@@ -187,7 +187,7 @@ pub fn read(v: Value) -> Result<Value> {
         });
     result["profileG2Certified"] = json!(profile_g2);
     result["profileG1Certified"] = json!(profile_g1);
-    result["profileSeamCount"] = json!(len(&p["seams"]).unwrap());
+    result["profileSeamCount"] = json!(len(&p["seams"]).expect("declared requires seams to be an array"));
     result["stationContinuity"] = json!(if station_g2 {
         "G2"
     } else if station_g1 {

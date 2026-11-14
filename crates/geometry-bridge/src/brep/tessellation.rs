@@ -650,7 +650,7 @@ fn split_boundary_chords(mesh: &mut FaceMesh, edges_of: &[[usize; 2]]) {
         let mut replacement = Vec::with_capacity(4);
         for &index in &[first, second] {
             let t = mesh.triangles[index];
-            let x = t.into_iter().find(|&v| v != p && v != q).unwrap();
+            let x = t.into_iter().find(|&v| v != p && v != q).expect("a triangle sharing edge p-q has a distinct third vertex");
             // Keep the winding: p -> q -> x becomes p -> m -> x, m -> q -> x.
             if (0..3).any(|k| t[k] == p && t[(k + 1) % 3] == q) {
                 replacement.push([p, m, x]);

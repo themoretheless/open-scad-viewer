@@ -41,7 +41,7 @@ fn number_size(x: f64) -> usize {
     let _ = write!(cursor, "{:e}", abs);
     let len = cursor.position() as usize;
     let raw = std::str::from_utf8(&buf[..len]).unwrap_or("0e0");
-    let (mantissa, exponent) = raw.split_once('e').unwrap();
+    let (mantissa, exponent) = raw.split_once('e').expect("LowerExp always carries an exponent");
     let exponent: i32 = exponent.parse().unwrap();
     let digits = mantissa.bytes().filter(|b| *b != b'.').count();
     if !(-6..21).contains(&exponent) {
@@ -66,7 +66,7 @@ pub fn characters(value: &Value) -> usize {
                 5
             }
         }
-        Value::Number(v) => number_size(v.as_f64().unwrap()),
+        Value::Number(v) => number_size(v.as_f64().expect("JSON numbers always convert to f64")),
         Value::String(s) => string_size(s),
         Value::Array(a) => 2 + a.len().saturating_sub(1) + a.iter().map(characters).sum::<usize>(),
         Value::Object(o) => {

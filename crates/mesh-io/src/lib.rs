@@ -47,9 +47,9 @@ pub fn export_stl(mesh: &MeshView<'_>) -> Result<String> {
             normal[1] / len,
             normal[2] / len
         )
-        .unwrap();
+        .expect("writing to a String cannot fail");
         for p in [a, b, c] {
-            writeln!(output, "      vertex {} {} {}", p[0], p[1], p[2]).unwrap();
+            writeln!(output, "      vertex {} {} {}", p[0], p[1], p[2]).expect("writing to a String cannot fail");
         }
         output.push_str("    endloop\n  endfacet\n");
         check(output.len() <= 4 * 1024 * 1024, "STL export exceeds 4 MiB.")?;

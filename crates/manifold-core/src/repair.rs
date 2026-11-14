@@ -1080,7 +1080,7 @@ fn fill_boundary_loops(
         .enumerate()
         .max_by(|a, b| a.1.abs().total_cmp(&b.1.abs()))
         .map(|(i, _)| i)
-        .unwrap();
+        .expect("loops is non-empty here");
     let mut edges: HashSet<EdgeKey> = mesh
         .tris
         .iter()
