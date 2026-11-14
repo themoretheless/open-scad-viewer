@@ -14,7 +14,7 @@ describe('editor diagnostics', () => {
   it('focuses and selects a diagnostic without owning editor state', () => {
     const focus = vi.fn()
     const setSelectionRange = vi.fn()
-    revealDiagnostic({ focus, setSelectionRange }, {
+    revealDiagnostic({ focus, setSelection: setSelectionRange }, {
       severity: 'error', message: 'bad', line: 1, column: 1, start: 2, end: 5,
     })
     expect(focus).toHaveBeenCalledWith({ preventScroll: false })

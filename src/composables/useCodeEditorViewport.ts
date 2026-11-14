@@ -2,11 +2,12 @@ import { computed, nextTick, ref, type ComputedRef, type Ref } from 'svet'
 import { GUTTER_CONTENT_PADDING_PX, GUTTER_OVERSCAN_ROWS, gutterRowPx } from '../appHelpers'
 import { highlightCode } from '../language/codeHighlight'
 import { editorBlocks, guideFitsIndent, type EditorBlock } from '../language/editorBlocks'
+import type { EditorAdapter } from '../editor/EditorAdapter'
 
 export interface UseCodeEditorViewportOptions {
   code: Ref<string>
   selectedEditorName: Ref<string>
-  editorRef: Ref<HTMLTextAreaElement | null>
+  editor: EditorAdapter
   highlightRef: Ref<HTMLPreElement | null>
 }
 
@@ -45,7 +46,7 @@ export interface UseCodeEditorViewportReturn {
 export function useCodeEditorViewport(
   options: UseCodeEditorViewportOptions,
 ): UseCodeEditorViewportReturn {
-  const { code, selectedEditorName, editorRef, highlightRef } = options
+  const { code, selectedEditorName, editor, highlightRef } = options
 
   const blocks = computed(() => editorBlocks(code.value))
   const foldedLines = ref(new Set<number>())
@@ -138,33 +139,33 @@ export function useCodeEditorViewport(
   const gutterLinesHeight = computed(() => `${editorRows.value.length * 1.58}em`)
 
   function syncHighlightScroll() {
-    if (!editorRef.value || !highlightRef.value) return
+    if (!editor.mounted || !highlightRef.value) return
+    const scroll = editor.getScroll()
     const layer = highlightRef.value.firstElementChild as HTMLElement | null
     if (layer) {
-      layer.style.transform = `translate(${-editorRef.value.scrollLeft}px, ${-editorRef.value.scrollTop}px)`
+      layer.style.transform = `translate(${-scroll.left}px, ${-scroll.top}px)`
     }
     if (guidesRef.value) {
-      guidesRef.value.style.transform = `translate(${-editorRef.value.scrollLeft}px, ${-editorRef.value.scrollTop}px)`
+      guidesRef.value.style.transform = `translate(${-scroll.left}px, ${-scroll.top}px)`
     }
     if (lineNumbersRef.value) {
-      lineNumbersRef.value.style.transform = `translateY(${-editorRef.value.scrollTop}px)`
+      lineNumbersRef.value.style.transform = `translateY(${-scroll.top}px)`
     }
-    gutterScrollTop.value = editorRef.value.scrollTop
-    gutterViewportHeight.value = editorRef.value.clientHeight
+    gutterScrollTop.value = scroll.top
+    gutterViewportHeight.value = scroll.clientHeight
   }
 
   async function editFoldedLine(line: number) {
     foldedLines.value = new Set()
     await nextTick()
-    const editor = editorRef.value
-    if (!editor) return
+    if (!editor.mounted) return
     const offset = code.value
       .split('\n')
       .slice(0, line)
       .reduce((n, s) => n + s.length + 1, 0)
     editor.focus()
-    editor.setSelectionRange(offset, offset)
-    editor.scrollTop = Math.max(0, line * parseFloat(getComputedStyle(editor).lineHeight) - 40)
+    editor.setSelection(offset, offset)
+    editor.setScroll({ top: Math.max(0, line * editor.lineHeightPx() - 40) })
     syncHighlightScroll()
   }
 

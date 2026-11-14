@@ -2,6 +2,7 @@ import type { ComputedRef, Ref } from 'svet'
 import type { MeshData } from '../core/mesh'
 import type { SourceProvenanceRow } from '../components/cadPanels.types'
 import { clamp } from '../kernel/geometry/math3d'
+import type { EditorAdapter } from '../editor/EditorAdapter'
 import type { WebGPURenderer } from '../render/webgpuRenderer'
 
 export interface ProvenanceSpan {
@@ -12,7 +13,7 @@ export interface ProvenanceSpan {
 
 export interface UseSourceProvenanceCaretOptions {
   code: Ref<string>
-  editorRef: Ref<HTMLTextAreaElement | null>
+  editor: EditorAdapter
   selectedEditorName: Ref<string>
   sceneMeshes: ComputedRef<MeshData[]>
   sourceMatchesEditor: ComputedRef<boolean>
@@ -24,7 +25,7 @@ export interface UseSourceProvenanceCaretOptions {
 export function useSourceProvenanceCaret(options: UseSourceProvenanceCaretOptions) {
   const {
     code,
-    editorRef,
+    editor,
     selectedEditorName,
     sceneMeshes,
     sourceMatchesEditor,
@@ -63,14 +64,14 @@ export function useSourceProvenanceCaret(options: UseSourceProvenanceCaretOption
   }
 
   function sourceIdAtEditorCaret(): number | null {
-    const editor = editorRef.value
-    if (!editor || !sourceMatchesEditor.value) return null
+    if (!editor.mounted || !sourceMatchesEditor.value) return null
+    const selection = editor.getSelection()
     const caret =
-      editor.selectionStart === editor.selectionEnd
-        ? editor.selectionStart
-        : editor.selectionDirection === 'backward'
-          ? editor.selectionStart
-          : Math.max(editor.selectionStart, editor.selectionEnd - 1)
+      selection.start === selection.end
+        ? selection.start
+        : selection.direction === 'backward'
+          ? selection.start
+          : Math.max(selection.start, selection.end - 1)
     const { spans, maxEnd } = provenanceSpanIndex(sceneMeshes.value)
     // Rightmost span with start <= caret; only that prefix can contain the caret.
     let lo = 0,
@@ -100,15 +101,14 @@ export function useSourceProvenanceCaret(options: UseSourceProvenanceCaretOption
   }
 
   function syncSourceHighlightFromEditor() {
-    const input = editorRef.value
-    if (input) {
-      const start = input.selectionStart,
-        end = input.selectionEnd
-      const selected = input.value.slice(start, end)
+    if (editor.mounted) {
+      const { start, end } = editor.getSelection()
+      const text = editor.getText()
+      const selected = text.slice(start, end)
       selectedEditorName.value =
         /^\$?[A-Za-z_][\w$]*$/.test(selected) &&
-        !/[\w$]/.test(input.value[start - 1] ?? '') &&
-        !/[\w$]/.test(input.value[end] ?? '')
+        !/[\w$]/.test(text[start - 1] ?? '') &&
+        !/[\w$]/.test(text[end] ?? '')
           ? selected
           : ''
     }
@@ -125,12 +125,12 @@ export function useSourceProvenanceCaret(options: UseSourceProvenanceCaretOption
       showNotice(translate('sourceStale'))
       return
     }
-    const editor = editorRef.value
-    if (!editor) return
+    if (!editor.mounted) return
     const start = clamp(source.sourceStart, 0, code.value.length)
     const end = clamp(source.sourceEnd, start, code.value.length)
     editor.focus({ preventScroll: false })
-    editor.setSelectionRange(start, end, 'forward')
+    editor.setSelection(start, end, 'forward')
+    editor.setHighlights([{ start, end, kind: 'source' }])
     getRenderer()?.setSourceHighlight(source.sourceId)
   }
 
