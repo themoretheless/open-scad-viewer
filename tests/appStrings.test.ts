@@ -15,6 +15,18 @@ describe('app strings', () => {
     }
   })
 
+  it('keeps kernel error reasons and steps in both languages with the same placeholders', () => {
+    const kernelKeys = (lang: 'ru' | 'en') =>
+      Object.keys(APP_STRINGS[lang])
+        .filter(key => /^kernel(Error|Step)\./.test(key))
+        .sort()
+    expect(kernelKeys('ru').length).toBeGreaterThan(40)
+    expect(kernelKeys('ru')).toEqual(kernelKeys('en'))
+    for (const key of kernelKeys('en'))
+      expect(placeholders(APP_STRINGS.ru[key]!), key).toEqual(placeholders(APP_STRINGS.en[key]!))
+    expect(APP_STRINGS.en['kernelError.unknown']).toContain('{code}')
+  })
+
   it('has no empty translations', () => {
     for (const lang of ['ru', 'en'] as const)
       for (const [key, value] of Object.entries(APP_STRINGS[lang])) expect(value.trim(), `${lang}.${key}`).not.toBe('')

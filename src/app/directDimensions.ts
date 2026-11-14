@@ -1,4 +1,5 @@
 import {requirePolylineSketch} from './retainedSketchProfile'
+import { DirectInputError } from '../i18n/kernelErrors'
 import { callGeometryRust } from '../kernel/geometry/kernel'
 import type { DirectSketch, Point2 } from './directModeling'
 import { sampleCurve } from './directSketchGeometry'
@@ -16,7 +17,7 @@ export function sketchDimensions(sketch:DirectSketch,edit?:{index:number;value:n
     return measuredCache.get(sketch)!
   }
   if (sketch.analytic && (sketch.dimensions??[]).every(d=>d.kind==='radius'||d.kind==='diameter')) {
-    const radius = edit ? (edit.value > 0 ? (sketch.dimensions![edit.index]?.kind === 'diameter' ? edit.value / 2 : edit.value) : (()=>{throw Error('Radius must be positive.')})()) : sketch.analytic.radius
+    const radius = edit ? (edit.value > 0 ? (sketch.dimensions![edit.index]?.kind === 'diameter' ? edit.value / 2 : edit.value) : (()=>{throw new DirectInputError('DIRECT_DIMENSION_POSITIVE','Radius must be positive.','dimension',[sketch.id])})()) : sketch.analytic.radius
     const result = (sketch.dimensions??[]).map(d => { const value=d.kind==='diameter'?radius*2:radius; const offset=[radius*1.2,0] as Point2; const label:Point2=[sketch.analytic!.center[0]+offset[0],sketch.analytic!.center[1]]; const lines:Point2[][]=[[[sketch.analytic!.center[0],sketch.analytic!.center[1]],[sketch.analytic!.center[0]+radius,sketch.analytic!.center[1]]]]; return {value,label,lines} })
     const out = {points:sketch.points,measurements:result}
     if (!edit) measuredCache.set(sketch, out)
@@ -38,7 +39,7 @@ export function sketchDimensions(sketch:DirectSketch,edit?:{index:number;value:n
   return measured
 }
 export function editSketchDimension(sketch:DirectSketch,index:number,value:number):DirectSketch {
-  if(sketch.analytic) { const dimension=sketch.dimensions?.[index]; if(!dimension || (dimension.kind!=='radius'&&dimension.kind!=='diameter')) throw Error('Analytic curves support radius and diameter dimensions only.'); const radius=dimension.kind==='diameter'?value/2:value; if(!(radius>0&&Number.isFinite(radius))) throw Error('Radius must be positive.'); const analytic={...sketch.analytic,radius}; return {...sketch,analytic,points:sampleCurve(analytic)} }
+  if(sketch.analytic) { const dimension=sketch.dimensions?.[index]; if(!dimension || (dimension.kind!=='radius'&&dimension.kind!=='diameter')) throw Error('Analytic curves support radius and diameter dimensions only.'); const radius=dimension.kind==='diameter'?value/2:value; if(!(radius>0&&Number.isFinite(radius))) throw new DirectInputError('DIRECT_DIMENSION_POSITIVE','Radius must be positive.','dimension',[sketch.id]); const analytic={...sketch.analytic,radius}; return {...sketch,analytic,points:sampleCurve(analytic)} }
   return {...sketch,points:sketchDimensions(sketch,{index,value}).points}
 }
 export function bridgeNurbsCurves(a:NurbsCurve,b:NurbsCurve,endA:'start'|'end'='end',endB:'start'|'end'='start',tension=1):NurbsCurve {
