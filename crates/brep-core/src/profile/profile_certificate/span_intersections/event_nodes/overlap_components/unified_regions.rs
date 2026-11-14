@@ -61,97 +61,25 @@ fn boundary_sides(
     }
     sides.ok_or_else(|| refused("Unified material boundary is empty"))
 }
-/// Crossing the boundary changes only its own winding, by exactly one.
-fn verify_jumps(boundary: usize, n: usize, l: &[i64], r: &[i64]) -> Result<()> {
-    if l.len() != n
-        || r.len() != n
-        || l.iter().zip(r).enumerate().any(|(other, (a, b))| {
-            if other == boundary {
-                a.checked_sub(*b) != Some(1)
-            } else {
-                a != b
-            }
-        })
-    {
-        return Err(refused(
-            "Unified component containment has inconsistent exact side jumps",
-        ));
-    }
-    Ok(())
-}
-/// Every hole joins the unique innermost outer boundary that contains it.
-fn assign_holes(
-    outer: &[usize],
-    holes: Vec<usize>,
-    left: &[Vec<i64>],
-) -> Result<Vec<OriginalFilledRegion>> {
-    let mut regions = outer
-        .iter()
-        .map(|&outer| OriginalFilledRegion {
-            outer,
-            holes: Vec::new(),
-        })
-        .collect::<Vec<_>>();
-    for hole in holes {
-        let candidates = outer
-            .iter()
-            .copied()
-            .filter(|&o| left[hole][o] == 1)
-            .collect::<Vec<_>>();
-        let innermost = candidates
-            .iter()
-            .copied()
-            .filter(|&c| {
-                candidates
-                    .iter()
-                    .all(|&other| c == other || left[c][other] == 1)
-            })
-            .collect::<Vec<_>>();
-        let [owner] = innermost[..] else {
-            return Err(refused(
-                "Unified hole has no unique proved innermost outer boundary",
-            ));
-        };
-        regions
-            .iter_mut()
-            .find(|r| r.outer == owner)
-            .ok_or_else(|| refused("Unified hole has no unique proved innermost outer boundary"))?
-            .holes
-            .push(hole);
-    }
-    Ok(regions)
-}
-type Containment = (Vec<Vec<i64>>, Vec<Vec<i64>>, Vec<OriginalFilledRegion>);
-fn derive(owner: &OwnedOriginalUnifiedFilled, limits: ParameterOrderLimits) -> Result<Containment> {
+use super::super::filled_containment as regions;
+const MESSAGES: regions::Messages = regions::Messages {
+    jumps: "Unified component containment has inconsistent exact side jumps",
+    classify: "Unified material component is not a proved outer or hole boundary",
+    hole: "Unified hole has no unique proved innermost outer boundary",
+    simple: "Unified material containment is not a simple component relation",
+};
+fn derive(
+    owner: &OwnedOriginalUnifiedFilled,
+    limits: ParameterOrderLimits,
+) -> Result<regions::Containment> {
     owner.reverify_source()?;
     verify_limits(owner, limits)?;
-    let n = owner.boundaries().len();
-    let mut left = Vec::new();
-    let mut right = Vec::new();
-    let mut outer = Vec::new();
-    let mut holes = Vec::new();
-    for (boundary, darts) in owner.boundaries().iter().enumerate() {
-        let (l, r) = boundary_sides(owner, darts, limits)?;
-        verify_jumps(boundary, n, &l, &r)?;
-        match (l[boundary], r[boundary]) {
-            (1, 0) => outer.push(boundary),
-            (0, -1) => holes.push(boundary),
-            _ => {
-                return Err(refused(
-                    "Unified material component is not a proved outer or hole boundary",
-                ));
-            }
-        }
-        left.push(l);
-        right.push(r);
-    }
-    let regions = assign_holes(&outer, holes, &left)?;
-    if (0..n).any(|i| (0..n).any(|j| i != j && !matches!(left[i][j], -1..=1))) {
-        return Err(refused(
-            "Unified material containment is not a simple component relation",
-        ));
-    }
-    Ok((left, right, regions))
+    let boundaries = owner.boundaries();
+    regions::containment(
+        boundaries.len(),
+        |boundary| boundary_sides(owner, &boundaries[boundary], limits),
+        &MESSAGES,
+    )
 }
 impl OwnedOriginalUnifiedRegions {
     pub fn owner(&self) -> &Arc<OwnedOriginalUnifiedFilled> {

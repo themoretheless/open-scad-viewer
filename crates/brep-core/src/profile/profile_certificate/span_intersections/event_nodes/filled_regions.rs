@@ -14,118 +14,57 @@ pub struct OwnedOriginalFilledRegions {
     right: Vec<Vec<i64>>,
     regions: Vec<OriginalFilledRegion>,
 }
-type RegionData = (Vec<Vec<i64>>, Vec<Vec<i64>>, Vec<OriginalFilledRegion>);
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+const MESSAGES: filled_containment::Messages = filled_containment::Messages {
+    jumps: "Original selected component containment has inconsistent side jumps",
+    classify: "Original material component is not a qualified outer or hole boundary",
+    hole: "Original hole does not have one proved innermost material outer boundary",
+    simple: "Original material containment is not a simple boundary relation",
+};
+/// Winding vectors on the left and right of one boundary; every halfedge of
+/// the boundary must report the same pair.
+fn boundary_sides(
+    owner: &OwnedOriginalFilledBoundaries,
+    edges: &[usize],
+    limits: ParameterOrderLimits,
+) -> Result<(Vec<i64>, Vec<i64>)> {
+    let mut sides: Option<(Vec<i64>, Vec<i64>)> = None;
+    for &h in edges {
+        let side = &owner.side_witnesses()[h / 2];
+        let winding = |end: usize| {
+            boundary_winding::evaluate_verified(owner, &side.certificates()[end].point, limits)
+        };
+        let a = winding(h % 2)?;
+        let b = winding(1 - h % 2)?;
+        match &sides {
+            Some((l, r)) if *l != a || *r != b => {
+                return Err(refused(
+                    "Original boundary component has inconsistent exact side containment",
+                ));
+            }
+            Some(_) => {}
+            None => sides = Some((a, b)),
+        }
+    }
+    sides.ok_or_else(|| refused("Original material boundary is empty"))
+}
 fn derive(
     owner: &OwnedOriginalFilledBoundaries,
     limits: ParameterOrderLimits,
-) -> Result<RegionData> {
+) -> Result<filled_containment::Containment> {
     owner.reverify_source()?;
-    if limits.max_refinements > 512 || !(1..=128).contains(&limits.max_resultant_size) {
+    if limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&limits.max_resultant_size)
+    {
         return Err(refused("Invalid original material containment allowance"));
     }
-    let n = owner.boundaries().len();
-    let mut left = Vec::new();
-    let mut right = Vec::new();
-    let mut outer = Vec::new();
-    let mut holes = Vec::new();
-    for (boundary, edges) in owner.boundaries().iter().enumerate() {
-        let mut l = None;
-        let mut r = None;
-        for &h in edges {
-            let side = &owner.side_witnesses()[h / 2];
-            let a = boundary_winding::evaluate_verified(
-                owner,
-                &side.certificates()[h % 2].point,
-                limits,
-            )?;
-            let b = boundary_winding::evaluate_verified(
-                owner,
-                &side.certificates()[1 - h % 2].point,
-                limits,
-            )?;
-            if let Some(previous) = &l {
-                if previous != &a || r.as_ref() != Some(&b) {
-                    return Err(refused(
-                        "Original boundary component has inconsistent exact side containment",
-                    ));
-                }
-            } else {
-                l = Some(a);
-                r = Some(b);
-            }
-        }
-        let l = l.ok_or_else(|| refused("Original material boundary is empty"))?;
-        let r = r.unwrap();
-        if l.len() != n
-            || r.len() != n
-            || l.iter().zip(&r).enumerate().any(|(j, (a, b))| {
-                if j == boundary {
-                    a.checked_sub(*b) != Some(1)
-                } else {
-                    a != b
-                }
-            })
-        {
-            return Err(refused(
-                "Original selected component containment has inconsistent side jumps",
-            ));
-        }
-        match (l[boundary], r[boundary]) {
-            (1, 0) => outer.push(boundary),
-            (0, -1) => holes.push(boundary),
-            _ => {
-                return Err(refused(
-                    "Original material component is not a qualified outer or hole boundary",
-                ));
-            }
-        }
-        left.push(l);
-        right.push(r);
-    }
-    let mut regions = outer
-        .iter()
-        .map(|&outer| OriginalFilledRegion {
-            outer,
-            holes: Vec::new(),
-        })
-        .collect::<Vec<_>>();
-    for hole in holes {
-        let candidates = outer
-            .iter()
-            .copied()
-            .filter(|&o| left[hole][o] == 1)
-            .collect::<Vec<_>>();
-        let innermost = candidates
-            .iter()
-            .copied()
-            .filter(|&candidate| {
-                candidates
-                    .iter()
-                    .all(|&other| candidate == other || left[candidate][other] == 1)
-            })
-            .collect::<Vec<_>>();
-        if innermost.len() != 1 {
-            return Err(refused(
-                "Original hole does not have one proved innermost material outer boundary",
-            ));
-        }
-        regions
-            .iter_mut()
-            .find(|r| r.outer == innermost[0])
-            .unwrap()
-            .holes
-            .push(hole);
-    }
-    for i in 0..n {
-        for j in 0..n {
-            if i != j && !matches!(left[i][j], -1..=1) {
-                return Err(refused(
-                    "Original material containment is not a simple boundary relation",
-                ));
-            }
-        }
-    }
-    Ok((left, right, regions))
+    let boundaries = owner.boundaries();
+    filled_containment::containment(
+        boundaries.len(),
+        |boundary| boundary_sides(owner, &boundaries[boundary], limits),
+        &MESSAGES,
+    )
 }
 impl OwnedOriginalFilledRegions {
     pub fn owner(&self) -> &Arc<OwnedOriginalFilledBoundaries> {

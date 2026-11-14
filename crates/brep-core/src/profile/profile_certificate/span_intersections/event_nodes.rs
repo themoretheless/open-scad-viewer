@@ -95,6 +95,7 @@ pub use automatic_boundaries::{
 };
 mod filled_boundaries;
 mod filled_selection;
+mod filled_containment;
 pub use filled_boundaries::{OwnedOriginalFilledBoundaries, own_original_filled_boundaries};
 mod carrier_sides;
 pub use carrier_sides::{OwnedOriginalCarrierSides, own_original_carrier_sides};
