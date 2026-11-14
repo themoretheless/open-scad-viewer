@@ -42,7 +42,7 @@ onUnmounted(()=>emit('validity',true))
 </script>
 <template>
   <span class="quantity-field">
-    <input v-bind="$attrs" v-model="text" type="text" :aria-invalid="!!failure" :aria-describedby="[$attrs['aria-describedby'], message ? errorId : undefined].filter(Boolean).join(' ') || undefined" :aria-errormessage="message ? errorId : undefined" :title="message || hint" autocomplete="off" spellcheck="false" @change="onCommitChange" />
+    <input v-bind="$attrs" v-model="text" type="text" :aria-invalid="!!failure || $attrs['aria-invalid'] === 'true' || $attrs['aria-invalid'] === true" :aria-describedby="[$attrs['aria-describedby'], message ? errorId : undefined].filter(Boolean).join(' ') || undefined" :aria-errormessage="message ? errorId : undefined" :title="message || hint" autocomplete="off" spellcheck="false" @change="onCommitChange" />
     <small v-if="message" :id="errorId" role="alert">{{ message }}</small>
   </span>
 </template>
