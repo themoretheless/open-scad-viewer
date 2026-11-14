@@ -283,6 +283,7 @@ impl Tube {
 /// injective Q transfers this to source UV, without requiring its image convex.
 /// The bound covers both seam pieces with the SAME periodic reference. For
 /// path-aligned frames A0 is orthonormal and the spectral floor is one.
+#[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
 fn tube_bound(width: I, radius: I, length: I, curvature: I, angular: I) -> Result<bool> {
     tube_bound_with_floor(width, radius, length, curvature, angular, I::point(1.))
 }
