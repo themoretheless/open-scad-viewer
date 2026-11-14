@@ -99,10 +99,22 @@ pub(crate) fn emit_job_body(
     job: &JobProfile,
     out: &mut impl Write,
 ) -> Result<()> {
+    emit_job_widths(layers, &[], job, out)
+}
+
+/// Shared job writer. `widths[l][p]`, when present, holds one extrusion width per
+/// segment of path `p` in layer `l`; an empty table means the nominal line width.
+pub(crate) fn emit_job_widths(
+    layers: &[PlannedLayer],
+    widths: &[Vec<Vec<f64>>],
+    job: &JobProfile,
+    out: &mut impl Write,
+) -> Result<()> {
     job.validate()?;
     require_layers(layers)?;
     let machine = &job.machine;
-    let ratio = machine.bead_area_mm2() / machine.filament_area_mm2();
+    let nominal_ratio = machine.bead_area_mm2() / machine.filament_area_mm2();
+    let width_ratio = machine.layer_height_mm / machine.filament_area_mm2();
     let print_f = machine.print_feedrate_mm_s * 60.0;
     let travel_f = machine.travel_feedrate_mm_s * 60.0;
     let retract_f = job.retract_feedrate_mm_s * 60.0;
@@ -138,7 +150,11 @@ pub(crate) fn emit_job_body(
             writeln!(out, "{command}").map_err(output_limit)?;
         }
         writeln!(out, "G1 Z{z:.5} F{travel_f:.3}").map_err(output_limit)?;
-        for path in &layer.paths {
+        for (path_index, path) in layer.paths.iter().enumerate() {
+            let path_widths = widths
+                .get(index)
+                .and_then(|layer_widths| layer_widths.get(path_index))
+                .map(Vec::as_slice);
             let Some(first) = path.points.first() else {
                 continue;
             };
@@ -185,17 +201,22 @@ pub(crate) fn emit_job_body(
                 filament_retracted = false;
             }
             let mut previous = start;
-            for point in path
+            for (segment, point) in path
                 .points
                 .iter()
                 .skip(1)
                 .chain(path.closed.then_some(first))
+                .enumerate()
             {
                 let next = point.map(rounded_coordinate);
                 let length = travel_xy(previous, next);
                 if length == 0.0 {
                     continue;
                 }
+                let ratio = match path_widths {
+                    Some(list) => list[segment] * width_ratio,
+                    None => nominal_ratio,
+                };
                 let next_e = e + length * ratio;
                 if !next_e.is_finite() || next_e <= e {
                     return Err(invalid(
