@@ -179,6 +179,16 @@ impl FfdLattice {
         self.counts
     }
 
+    /// Lattice degrees per axis.
+    pub fn degrees(&self) -> [usize; 3] {
+        self.degrees
+    }
+
+    /// The axis-aligned box `(min, max)` the lattice parameterizes.
+    pub fn bounds(&self) -> ([f64; 3], [f64; 3]) {
+        (self.min, std::array::from_fn(|k| self.min[k] + self.extent[k]))
+    }
+
     /// Overwrite one lattice control point.
     pub fn set_control(&mut self, slot: usize, position: [f64; 3]) -> Result<()> {
         check(slot < self.controls.len(), "FFD control slot out of range")?;
