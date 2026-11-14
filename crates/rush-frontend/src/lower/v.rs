@@ -125,6 +125,18 @@ pub(super) fn raw(v: V) -> R<J> {
         V::Json(j) if j.get("sequence").is_some() => Ok(j["sequence"].clone()),
         V::Json(j) => Ok(j),
         V::Array(a) => a.into_iter().map(raw).collect::<R<Vec<_>>>().map(J::Array),
+        // Option records such as B-rep edge queries keep their field names; text becomes a string.
+        V::Record(fields, _, _, _) => {
+            let mut result = value_codec::Map::new();
+            for (name, value) in fields {
+                let value = match value {
+                    V::Json(j) if j.get("text").is_some() => j["text"].clone(),
+                    value => raw(value)?,
+                };
+                result.insert(name, value);
+            }
+            Ok(J::Object(result))
+        }
         _ => Err(crate::error("Expected numeric geometry argument")),
     }
 }
