@@ -1,0 +1,28 @@
+{
+  "baseCommit": "f3afbde96",
+  "status": "new-contracts-and-independent-proof-passed-full-native-regression-pending",
+  "catalogueCapability": "NURBS-0253",
+  "catalogueCredited": false,
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_derivative.rs": "6cef58ba37d241383df6c7d660ec51932f1194ad945db2fb2344ea3ef4b34abd",
+    "crates/nurbs-core/src/editing/exact_derivative/torsion.rs": "3ecb32e43e75e682bc2addf0831b0055d36d03b4248c39b3f55d31ac70e2adcb",
+    "crates/nurbs-core/src/editing/bounded_differential.rs": "d4bee2615fb213695e96c25a3b2f2b5b0ed5d4ceacb827705404cf67e5dcbe9e",
+    "crates/nurbs-core/tests/torsion_field_contracts.rs": "16800f48f2d10b3e360a19227604bcb7e337a9d4834e5c3ba339533eae82f64d"
+  },
+  "focused": {
+    "newContractsPassed": 16,
+    "boundedCurveRegressionPassed": 16,
+    "curveOrderRegressionPassed": 15,
+    "failed": 0
+  },
+  "independentOracle": {
+    "sourceRecords": 13,
+    "outputPieces": 16,
+    "negativeControls": 10,
+    "globalGaugeControl": true,
+    "largerValidBoundControl": true,
+    "sourceReconstructionSha256": "f317bc91a7130b9eabdc41d1ce5e3a251a6ef00134f8bd31a78567e95fa259be",
+    "scope": "Exact original Cox-de Boor reconstruction and independent generic quotient-pair jets; original nonzero binormal, full polynomial stored-bit identities or nonnegative squared-error certificates. No sampled acceptance, Frenet frame, topology or application authority."
+  },
+  "scope": "Exact or continuously bounded whole-span torsion fields with original-binormal admission before cancellation. No sampled point-query substitution, global smoothness, Frenet frame, topology, evaluator error or application qualification."
+}
