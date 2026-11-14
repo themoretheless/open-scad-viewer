@@ -51,6 +51,13 @@ const indices = new Uint32Array([
 const checked = checkManifoldInKernel(positions, indices)
 assert.equal(checked.isManifold, true)
 assert.equal(checked.componentCount, 1)
+assert.equal(checked.manifoldComponentCount, 1)
+assert.equal(checked.nonOrientableComponents, 0)
+assert.equal(checked.zeroAreaTriangles.length, 0)
+const padded = new Float64Array([...positions, 9, 9, 9])
+const compacted = repairManifoldInKernel(padded, indices, 0, false, true)
+assert.equal(compacted.removedIsolatedVertices, 1)
+assert.deepEqual([...(compacted.vertexRemap ?? [])], [0, 1, 2, 3, 0xffffffff])
 
 const measured = metricsManifoldInKernel(positions, indices)
 assert.ok(Math.abs(measured.signedVolume - 1 / 6) < 1e-12)

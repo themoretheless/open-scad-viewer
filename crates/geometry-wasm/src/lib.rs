@@ -248,8 +248,9 @@ pub unsafe extern "C" fn abi_manifold_check(
     ip: usize,
     il: usize,
     fmt: u32,
+    sliver_area: f64,
 ) -> u64 {
-    unsafe { geometry_bridge::abi::abi_manifold_check(vp, vl, ip, il, fmt) }
+    unsafe { geometry_bridge::abi::abi_manifold_check(vp, vl, ip, il, fmt, sliver_area) }
 }
 
 /// # Safety
@@ -264,8 +265,11 @@ pub unsafe extern "C" fn abi_manifold_repair(
     fmt: u32,
     epsilon: f64,
     mode: u32,
+    remove_isolated: u32,
 ) -> u64 {
-    unsafe { geometry_bridge::abi::abi_manifold_repair(vp, vl, ip, il, fmt, epsilon, mode) }
+    unsafe {
+        geometry_bridge::abi::abi_manifold_repair(vp, vl, ip, il, fmt, epsilon, mode, remove_isolated)
+    }
 }
 
 /// # Safety

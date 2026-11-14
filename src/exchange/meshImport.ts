@@ -50,7 +50,7 @@ export class MeshImportError extends Error {
 }
 
 export type MeshImportRepairMode = 'none' | 'conservative' | 'full'
-export type MeshImportRepairStats = Omit<KernelManifoldRepair, 'positions' | 'indices'>
+export type MeshImportRepairStats = Omit<KernelManifoldRepair, 'positions' | 'indices' | 'vertexRemap' | 'removedIsolatedVertices'>
 
 /** Before/after topology evidence and the changes made by the selected repair. */
 export interface MeshImportManifoldAnalysis {

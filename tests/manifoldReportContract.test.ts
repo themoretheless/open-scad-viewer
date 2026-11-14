@@ -32,6 +32,10 @@ const tsReports: Record<string, string[]> = {
     degenerateTriangles: true,
     nonManifoldVertices: true,
     isolatedVertices: true,
+    zeroAreaTriangles: true,
+    sliverTriangles: true,
+    manifoldComponentCount: true,
+    nonOrientableComponents: true,
   }),
   repair: fields<KernelManifoldRepair>({
     positions: true,
@@ -45,6 +49,8 @@ const tsReports: Record<string, string[]> = {
     mode: true,
     isManifold: true,
     isManifoldWithBoundary: true,
+    removedIsolatedVertices: true,
+    vertexRemap: true,
   }),
   metrics: fields<KernelManifoldMetrics>({
     vertexCount: true,

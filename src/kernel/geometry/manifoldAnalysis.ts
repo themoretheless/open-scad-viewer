@@ -55,6 +55,14 @@ export interface KernelManifoldReport {
   readonly degenerateTriangles: Uint32Array<ArrayBuffer>
   readonly nonManifoldVertices: Uint32Array<ArrayBuffer>
   readonly isolatedVertices: Uint32Array<ArrayBuffer>
+  /** Triangles with distinct corners and exactly zero area. */
+  readonly zeroAreaTriangles: Uint32Array<ArrayBuffer>
+  /** Triangles with distinct corners and 0 < area <= the sliver threshold. */
+  readonly sliverTriangles: Uint32Array<ArrayBuffer>
+  /** Components joined only across manifold edges (shells touching at a non-manifold edge or vertex count separately). */
+  readonly manifoldComponentCount: number
+  /** Manifold components that cannot be consistently oriented (Möbius strip, Klein bottle). */
+  readonly nonOrientableComponents: number
 }
 
 /** Repair result from the manifold-core kernel (abi_manifold_repair). */
@@ -74,12 +82,18 @@ export interface KernelManifoldRepair {
   readonly mode: number
   readonly isManifold: boolean
   readonly isManifoldWithBoundary: boolean
+  /** Unreferenced vertices dropped (only with `removeIsolated`). */
+  readonly removedIsolatedVertices: number
+  /** Input vertex -> output vertex (0xffffffff = removed); `null` unless `removeIsolated`. */
+  readonly vertexRemap: Uint32Array<ArrayBuffer> | null
 }
 
-/** Run the manifold-core manifoldness check on an uploaded mesh. */
+/** Run the manifold-core manifoldness check on an uploaded mesh. Triangles
+ * with distinct corners and area in (0, `sliverArea`] are reported as slivers. */
 export function checkManifoldInKernel(
   vertices: Float32Array | Float64Array,
   indices: Uint32Array,
+  sliverArea = 0,
 ): KernelManifoldReport {
   const {exports: wasm, memory, takeResponse} = manifoldRuntime()
   let vp = 0
@@ -89,13 +103,13 @@ export function checkManifoldInKernel(
     vp = copyBuffer(wasm, new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
     ip = copyBuffer(wasm, new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength))
     handle = decodeNurbsResult<number>(
-      takeResponse(wasm.abi_manifold_check(vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices))),
+      takeResponse(wasm.abi_manifold_check(vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices), sliverArea)),
     )
     // Allocation above may grow memory. Never cache memory.buffer between calls.
     const buffer = memory.buffer
     const u32 = (slot: number) =>
       new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
-    const flags = wasm.abi_array_field(handle, 15)
+    const flags = wasm.abi_array_field(handle, 19)
     return {
       boundaryEdges: u32(0),
       nonManifoldEdges: u32(2),
@@ -103,9 +117,13 @@ export function checkManifoldInKernel(
       degenerateTriangles: u32(6),
       nonManifoldVertices: u32(8),
       isolatedVertices: u32(10),
-      vertexCount: wasm.abi_array_field(handle, 12),
-      triangleCount: wasm.abi_array_field(handle, 13),
-      componentCount: wasm.abi_array_field(handle, 14),
+      zeroAreaTriangles: u32(12),
+      sliverTriangles: u32(14),
+      vertexCount: wasm.abi_array_field(handle, 16),
+      triangleCount: wasm.abi_array_field(handle, 17),
+      componentCount: wasm.abi_array_field(handle, 18),
+      manifoldComponentCount: wasm.abi_array_field(handle, 20),
+      nonOrientableComponents: wasm.abi_array_field(handle, 21),
       isManifold: (flags & 1) !== 0,
       isManifoldWithBoundary: (flags & 2) !== 0,
     }
@@ -117,12 +135,14 @@ export function checkManifoldInKernel(
 }
 
 /** Repair a mesh toward manifoldness in the kernel. `full` additionally splits
- * non-manifold edges/vertices and fills simple boundary loops. */
+ * non-manifold edges/vertices and fills simple boundary loops; `removeIsolated`
+ * drops unreferenced vertices and returns the input-to-output vertex remap. */
 export function repairManifoldInKernel(
   vertices: Float32Array | Float64Array,
   indices: Uint32Array,
   epsilon: number,
   full = false,
+  removeIsolated = false,
 ): KernelManifoldRepair {
   const {exports: wasm, memory, takeResponse} = manifoldRuntime()
   let vp = 0
@@ -132,22 +152,26 @@ export function repairManifoldInKernel(
     vp = copyBuffer(wasm, new Uint8Array(vertices.buffer, vertices.byteOffset, vertices.byteLength))
     ip = copyBuffer(wasm, new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength))
     handle = decodeNurbsResult<number>(
-      takeResponse(wasm.abi_manifold_repair(vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices), epsilon, full ? 1 : 0)),
+      takeResponse(wasm.abi_manifold_repair(vp, vertices.length, ip, indices.length, kernelVertexFormat(vertices), epsilon, full ? 1 : 0, removeIsolated ? 1 : 0)),
     )
     const buffer = memory.buffer
-    const flags = wasm.abi_array_field(handle, 7)
+    const flags = wasm.abi_array_field(handle, 9)
     return {
       positions: new Float64Array(new Float64Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1))),
       indices: new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, 2), wasm.abi_array_field(handle, 3))),
-      weldedVertices: wasm.abi_array_field(handle, 4),
-      removedDegenerateTriangles: wasm.abi_array_field(handle, 5),
-      flippedTriangles: wasm.abi_array_field(handle, 6),
+      vertexRemap: removeIsolated
+        ? new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, 4), wasm.abi_array_field(handle, 5)))
+        : null,
+      weldedVertices: wasm.abi_array_field(handle, 6),
+      removedDegenerateTriangles: wasm.abi_array_field(handle, 7),
+      flippedTriangles: wasm.abi_array_field(handle, 8),
       isManifold: (flags & 1) !== 0,
       isManifoldWithBoundary: (flags & 2) !== 0,
-      splitVertices: wasm.abi_array_field(handle, 8),
-      filledHoles: wasm.abi_array_field(handle, 9),
-      filledTriangles: wasm.abi_array_field(handle, 10),
-      mode: wasm.abi_array_field(handle, 11),
+      splitVertices: wasm.abi_array_field(handle, 10),
+      filledHoles: wasm.abi_array_field(handle, 11),
+      filledTriangles: wasm.abi_array_field(handle, 12),
+      mode: wasm.abi_array_field(handle, 13),
+      removedIsolatedVertices: wasm.abi_array_field(handle, 14),
     }
   } finally {
     if (handle) wasm.abi_array_free(handle)

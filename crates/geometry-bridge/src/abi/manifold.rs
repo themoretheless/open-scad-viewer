@@ -5,7 +5,7 @@ use super::*;
 /// with their own `MANIFOLD_ABI_VERSION` before the first Manifold call and
 /// refuse with `GEOMETRY_ABI_MISMATCH` when they differ. Bump on any change
 /// to an export signature or a result slot layout.
-pub const MANIFOLD_ABI_VERSION: u32 = 2;
+pub const MANIFOLD_ABI_VERSION: u32 = 3;
 
 /// Documented shape of the Manifold operation reports as the TypeScript
 /// wrappers expose them. Mirrored by `src/kernel/geometry/manifoldReportSchema.json`;
@@ -38,6 +38,10 @@ pub const MANIFOLD_REPORT_SCHEMA: ManifoldReportSchema = ManifoldReportSchema {
                 "degenerateTriangles",
                 "nonManifoldVertices",
                 "isolatedVertices",
+                "zeroAreaTriangles",
+                "sliverTriangles",
+                "manifoldComponentCount",
+                "nonOrientableComponents",
             ],
         ),
         (
@@ -54,6 +58,8 @@ pub const MANIFOLD_REPORT_SCHEMA: ManifoldReportSchema = ManifoldReportSchema {
                 "mode",
                 "isManifold",
                 "isManifoldWithBoundary",
+                "removedIsolatedVertices",
+                "vertexRemap",
             ],
         ),
         (
@@ -163,16 +169,34 @@ unsafe fn read_mesh(
 }
 
 /// Run manifold-core `check` on an uploaded mesh and return a result handle
-/// for `abi_array_field` (`ManifoldCheck` slots).
+/// for `abi_array_field` (`ManifoldCheck` slots). `sliver_area` is the
+/// area threshold of `sliverTriangles` (finite, `>= 0`; `0` reports none).
 /// # Safety
 /// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
 /// caller-owned buffers; they are only read.
-pub unsafe fn abi_manifold_check(vp: usize, vl: usize, ip: usize, il: usize, fmt: u32) -> u64 {
+pub unsafe fn abi_manifold_check(
+    vp: usize,
+    vl: usize,
+    ip: usize,
+    il: usize,
+    fmt: u32,
+    sliver_area: f64,
+) -> u64 {
+    if !(sliver_area.is_finite() && sliver_area >= 0.0) {
+        return packed(geometry(Err(input("Invalid sliver area threshold"))));
+    }
     let (vertices, indices) = match unsafe { read_mesh(fmt, vp, vl, ip, il) } {
         Ok(mesh) => mesh,
         Err(error) => return packed(geometry(Err(error))),
     };
-    let report = manifold_core::check(&vertices, &indices);
+    let report = manifold_core::check_with_options(
+        &vertices,
+        &indices,
+        &manifold_core::CheckOptions {
+            sliver_area_threshold: sliver_area,
+        },
+    );
+    let list = |items: &[usize]| -> Vec<u32> { items.iter().map(|&i| i as u32).collect() };
     let flat = |edges: &[manifold_core::EdgeKey]| -> Vec<u32> {
         edges
             .iter()
@@ -194,12 +218,16 @@ pub unsafe fn abi_manifold_check(vp: usize, vl: usize, ip: usize, il: usize, fmt
             .iter()
             .map(|&i| i as u32)
             .collect(),
-        isolated_vertices: report.isolated_vertices.iter().map(|&i| i as u32).collect(),
+        isolated_vertices: list(&report.isolated_vertices),
+        zero_area_triangles: list(&report.zero_area_triangles),
+        sliver_triangles: list(&report.sliver_triangles),
         summary: [
             report.vertex_count as u32,
             report.triangle_count as u32,
             report.component_count as u32,
             flags,
+            report.manifold_component_count as u32,
+            report.non_orientable_components as u32,
         ],
     };
     packed(geometry(encode(mesh_analysis::store(buffers))))
@@ -208,7 +236,9 @@ pub unsafe fn abi_manifold_check(vp: usize, vl: usize, ip: usize, il: usize, fmt
 /// Run manifold-core `repair` and return the repaired mesh plus stats
 /// (`ManifoldRepair` slots). `mode`: 0 = Conservative (weld + de-degenerate +
 /// orientation unify), 1 = Full (additionally splits non-manifold
-/// edges/vertices and fills simple boundary loops).
+/// edges/vertices and fills simple boundary loops). `remove_isolated` != 0
+/// drops unreferenced vertices and returns the input-to-output vertex remap
+/// (`u32::MAX` = removed); otherwise the remap buffer is empty.
 /// # Safety
 /// vp/vl (vertices, format `fmt`) and ip/il (u32 indices) must reference live
 /// caller-owned buffers; they are only read. `epsilon` must be finite.
@@ -220,6 +250,7 @@ pub unsafe fn abi_manifold_repair(
     fmt: u32,
     epsilon: f64,
     mode: u32,
+    remove_isolated: u32,
 ) -> u64 {
     if !epsilon.is_finite() {
         return packed(geometry(Err(input("Invalid weld epsilon"))));
@@ -233,12 +264,30 @@ pub unsafe fn abi_manifold_repair(
         Ok(mesh) => mesh,
         Err(error) => return packed(geometry(Err(error))),
     };
-    let out = manifold_core::repair_with_mode(&vertices, &indices, epsilon, mode);
+    let options = manifold_core::RepairOptions {
+        mode,
+        epsilon,
+        remove_isolated_vertices: remove_isolated != 0,
+        ..manifold_core::RepairOptions::default()
+    };
+    let out = match manifold_core::repair_with_options(&vertices, &indices, &options) {
+        Ok(out) => out,
+        Err(exhausted) => *exhausted.partial, // unreachable: no budget set
+    };
+    let vertex_remap = if remove_isolated != 0 {
+        out.vertex_remap
+            .iter()
+            .map(|v| v.map_or(u32::MAX, |w| w as u32))
+            .collect()
+    } else {
+        Vec::new()
+    };
     let flags = (out.report.residual.is_manifold() as u32)
         | ((out.report.residual.is_manifold_with_boundary() as u32) << 1);
     let buffers = mesh_analysis::AnalysisBuffers::ManifoldRepair {
         positions: out.positions,
         indices: out.indices.iter().map(|&i| i as u32).collect(),
+        vertex_remap,
         stats: [
             out.report.welded_vertices as u32,
             out.report.removed_degenerate_triangles as u32,
@@ -248,6 +297,7 @@ pub unsafe fn abi_manifold_repair(
             out.report.filled_holes as u32,
             out.report.filled_triangles as u32,
             mode as u32,
+            out.report.removed_isolated_vertices as u32,
         ],
     };
     packed(geometry(encode(mesh_analysis::store(buffers))))

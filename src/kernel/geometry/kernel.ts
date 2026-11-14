@@ -71,8 +71,8 @@ interface KernelExports extends WebAssembly.Exports {
  abi_array_field(handle:number,slot:number):number
  abi_array_free(handle:number):void
  abi_manifold_abi_version():number
- abi_manifold_check(vp:number,vl:number,ip:number,il:number,fmt:number):bigint
- abi_manifold_repair(vp:number,vl:number,ip:number,il:number,fmt:number,epsilon:number,mode:number):bigint
+ abi_manifold_check(vp:number,vl:number,ip:number,il:number,fmt:number,sliverArea:number):bigint
+ abi_manifold_repair(vp:number,vl:number,ip:number,il:number,fmt:number,epsilon:number,mode:number,removeIsolated:number):bigint
  abi_manifold_metrics(vp:number,vl:number,ip:number,il:number,fmt:number):bigint
  abi_manifold_diagnostics(vp:number,vl:number,ip:number,il:number,fmt:number,density:number,minThickness:number,clearanceThreshold:number,maxWork:number):bigint
  abi_manifold_boolean(aVp:number,aVl:number,aIp:number,aIl:number,aFmt:number,bVp:number,bVl:number,bIp:number,bIl:number,bFmt:number,op:number,weldEpsilon:number,relativeTolerance:number,maxWork:number):bigint

@@ -317,17 +317,23 @@ pub enum AnalysisBuffers {
         degenerate_triangles: Vec<u32>,
         non_manifold_vertices: Vec<u32>,
         isolated_vertices: Vec<u32>,
-        /// [vertex_count, triangle_count, component_count, flags]
+        zero_area_triangles: Vec<u32>,
+        sliver_triangles: Vec<u32>,
+        /// [vertex_count, triangle_count, component_count, flags,
+        ///  manifold_component_count, non_orientable_components]
         /// flags bit 0: strict manifold; bit 1: manifold with boundary.
-        summary: [u32; 4],
+        summary: [u32; 6],
     },
     /// manifold-core repair output mesh plus stats
     /// [welded_vertices, removed_degenerates, flipped_triangles, residual_flags,
-    ///  split_vertices, filled_holes, filled_triangles, mode].
+    ///  split_vertices, filled_holes, filled_triangles, mode,
+    ///  removed_isolated_vertices]. `vertex_remap`: input vertex -> output
+    /// vertex (`u32::MAX` = removed), empty unless isolated removal was asked.
     ManifoldRepair {
         positions: Vec<f64>,
         indices: Vec<u32>,
-        stats: [u32; 8],
+        vertex_remap: Vec<u32>,
+        stats: [u32; 9],
     },
     /// manifold-core metrics: flat per-component records plus summary counts.
     ManifoldMetrics {
@@ -486,6 +492,8 @@ pub fn field(handle: usize, slot: u32) -> usize {
                 degenerate_triangles,
                 non_manifold_vertices,
                 isolated_vertices,
+                zero_area_triangles,
+                sliver_triangles,
                 summary,
             } => pair_slot(
                 &[
@@ -495,23 +503,29 @@ pub fn field(handle: usize, slot: u32) -> usize {
                     ptr_len(degenerate_triangles),
                     ptr_len(non_manifold_vertices),
                     ptr_len(isolated_vertices),
+                    ptr_len(zero_area_triangles),
+                    ptr_len(sliver_triangles),
                 ],
                 slot,
             )
             .or_else(|| {
                 summary
-                    .get(slot.checked_sub(12)? as usize)
+                    .get(slot.checked_sub(16)? as usize)
                     .map(|&v| v as usize)
             })
             .unwrap_or(0),
             AnalysisBuffers::ManifoldRepair {
                 positions,
                 indices,
+                vertex_remap,
                 stats,
-            } => pair_slot(&[ptr_len(positions), ptr_len(indices)], slot)
+            } => pair_slot(
+                &[ptr_len(positions), ptr_len(indices), ptr_len(vertex_remap)],
+                slot,
+            )
                 .or_else(|| {
                     stats
-                        .get(slot.checked_sub(4)? as usize)
+                        .get(slot.checked_sub(6)? as usize)
                         .map(|&v| v as usize)
                 })
                 .unwrap_or(0),
