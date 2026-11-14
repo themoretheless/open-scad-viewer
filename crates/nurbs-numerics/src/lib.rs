@@ -59,3 +59,4 @@ pub mod error_upper;
 pub mod bernstein_interpolation;
 /// Finite-value checks, budgets and canonical hashing (formerly `foundation::guards`).
 pub mod guards;
+pub mod progress;

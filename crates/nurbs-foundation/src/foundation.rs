@@ -72,7 +72,8 @@ pub use fitting::serialization::{
     interpolate_surface_grid,
 };
 pub use fitting::{
-    fit_curve_cloud_certified_report, fit_curve_points_report, fit_surface_cloud_certified_report,
+    fit_curve_cloud_certified_report, fit_curve_cloud_certified_report_with, fit_curve_points_report,
+    fit_surface_cloud_certified_report,
     interpolate_surface_grid_report,
 };
 pub mod parameter_mapping;
