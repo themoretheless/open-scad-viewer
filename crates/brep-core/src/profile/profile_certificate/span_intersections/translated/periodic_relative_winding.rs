@@ -20,20 +20,22 @@ pub struct OwnedPeriodicRelativeWinding {
     crossings: Vec<OriginalPeriodicPathCrossing>,
     deltas: Vec<String>,
 }
-fn derive(
-    o: &OwnedPeriodicRelativeWinding,
-) -> Result<(Vec<OriginalPeriodicPathCrossing>, Vec<String>)> {
-    if !(2..=4096).contains(&o.path.len())
-        || !(1..=1000000).contains(&o.max_work)
-        || o.limits.max_refinements > 512
-        || !(1..=128).contains(&o.limits.max_resultant_size)
+const MAX_PATH_POINTS: usize = 4096;
+const MAX_WORK: usize = 1000000;
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+type Winding = (Vec<OriginalPeriodicPathCrossing>, Vec<String>);
+fn derive(o: &OwnedPeriodicRelativeWinding) -> Result<Winding> {
+    if !(2..=MAX_PATH_POINTS).contains(&o.path.len())
+        || !(1..=MAX_WORK).contains(&o.max_work)
+        || o.limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&o.limits.max_resultant_size)
     {
         return Err(refused(
             "Invalid complete chart-local winding path allowance",
         ));
     }
-    let graph = o.owner.owner().owner();
-    let cover = graph.owner().owner().pieces();
+    let cover = o.owner.owner().owner().owner().owner().pieces();
     if (o.path.len() - 1)
         .checked_mul(cover.pieces().len())
         .is_none_or(|n| n > o.max_work)
@@ -43,104 +45,9 @@ fn derive(
         ));
     }
     super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
-    let chart = cover.chart().map(|d| d.map(|v| Q::from_float(v).unwrap()));
-    let path = o
-        .path
-        .iter()
-        .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
-        .collect::<Result<Vec<_>>>()?;
-    for p in &path {
-        for axis in 0..2 {
-            if p[axis] <= chart[axis][0] || p[axis] >= chart[axis][1] {
-                return Err(refused(
-                    "Relative winding path must stay strictly inside the original chart",
-                ));
-            }
-        }
-    }
-    let wires = graph.seam_contacts().embedding().wires();
-    let mut source_wire = vec![None; cover.sources().len()];
-    for (wire, uses) in wires.source_uses().iter().enumerate() {
-        for u in uses {
-            if source_wire[u.source].replace((wire, u.reversed)).is_some() {
-                return Err(refused(
-                    "Relative winding source occurs in multiple authored wires",
-                ));
-            }
-        }
-    }
-    let original = cover
-        .sources()
-        .iter()
-        .map(cells)
-        .collect::<Result<Vec<_>>>()?;
-    let mut prepared = Vec::new();
-    for p in cover.pieces() {
-        let cell = &original[p.source][p.cell];
-        let shift = [
-            decode_ratio(&p.translation[0])?,
-            decode_ratio(&p.translation[1])?,
-        ];
-        let net = cell
-            .net
-            .iter()
-            .map(|v| {
-                [
-                    &v[0] + &shift[0] * &v[2],
-                    &v[1] + &shift[1] * &v[2],
-                    v[2].clone(),
-                ]
-            })
-            .collect::<Vec<_>>();
-        let bound = |i: usize| -> Result<arithmetic::branch_neighbourhood::ParameterValue> {
-            let p = &cover.cuts()[p.source][p.cuts[i]].value;
-            Ok(arithmetic::branch_neighbourhood::ParameterValue {
-                primitive: decode_polynomial(&p.primitive)?,
-                value: decode_polynomial(&p.parameter)?,
-                interval: [decode_ratio(&p.interval[0])?, decode_ratio(&p.interval[1])?],
-            })
-        };
-        prepared.push((net, cell.domain.clone(), [bound(0)?, bound(1)?]));
-    }
-    let mut totals = vec![BigInt::from(0); wires.wires().len()];
-    let mut crossings = Vec::new();
-    for (segment, points) in path.windows(2).enumerate() {
-        for (piece, p) in cover.pieces().iter().enumerate() {
-            let (wire, reversed) = source_wire[p.source]
-                .ok_or_else(|| refused("Relative winding has no authored wire"))?;
-            let (net, domain, bounds) = &prepared[piece];
-            let value = arithmetic::selected_winding::segment(
-                net,
-                domain,
-                bounds,
-                &[points[0].clone(), points[1].clone()],
-                o.limits.max_refinements,
-                o.limits.max_resultant_size,
-            )?
-            .ok_or_else(|| {
-                refused("Relative winding path vertex lies on an original selected source")
-            })?;
-            let delta = if reversed {
-                value
-                    .checked_neg()
-                    .ok_or_else(|| refused("Relative winding sign overflow"))?
-            } else {
-                value
-            };
-            totals[wire] += BigInt::from(delta);
-            crossings.push(OriginalPeriodicPathCrossing {
-                segment,
-                piece,
-                source: p.source,
-                wire,
-                delta,
-            });
-        }
-    }
-    Ok((
-        crossings,
-        totals.into_iter().map(|v| v.to_string()).collect(),
-    ))
+    let view = RelativeWindingView::prepare(o.owner.clone(), o.limits, false)?;
+    let path = view.interior_path(&o.path)?;
+    view.compute(&path)
 }
 impl OwnedPeriodicRelativeWinding {
     pub fn owner(&self) -> &Arc<OwnedPeriodicWireJumps> {
@@ -190,6 +97,12 @@ pub fn own_periodic_relative_winding(
     Ok(o)
 }
 
+/// A translated piece net, its cell domain and the two cuts that bound it.
+type PreparedPiece = (
+    Vec<[Q; 3]>,
+    [Q; 2],
+    [arithmetic::branch_neighbourhood::ParameterValue; 2],
+);
 /// A batch-local, source-verified census. No caller can construct its prepared data.
 /// Ordinary returned certificates still replay through the independent legacy path.
 pub(super) struct RelativeWindingView {
@@ -201,11 +114,7 @@ pub(super) struct RelativeWindingView {
     source_wire: Vec<Option<(usize, bool)>>,
     sources: Vec<usize>,
     wire_count: usize,
-    prepared: Vec<(
-        Vec<[Q; 3]>,
-        [Q; 2],
-        [arithmetic::branch_neighbourhood::ParameterValue; 2],
-    )>,
+    prepared: Vec<PreparedPiece>,
 }
 impl RelativeWindingView {
     #[allow(dead_code)]
@@ -226,7 +135,9 @@ impl RelativeWindingView {
         limits: ParameterOrderLimits,
         replay: bool,
     ) -> Result<Self> {
-        if limits.max_refinements > 512 || !(1..=128).contains(&limits.max_resultant_size) {
+        if limits.max_refinements > MAX_REFINEMENTS
+            || !(1..=MAX_RESULTANT_SIZE).contains(&limits.max_resultant_size)
+        {
             return Err(refused("Invalid batch winding parameter allowance"));
         }
         if replay {
@@ -279,7 +190,13 @@ impl RelativeWindingView {
             prepared.push((net, cell.domain.clone(), [bound(0)?, bound(1)?]));
         }
 
-        let chart = cover.chart().map(|d| d.map(|v| Q::from_float(v).unwrap()));
+        let mut chart = [[Q::zero(), Q::zero()], [Q::zero(), Q::zero()]];
+        for (exact, bounds) in chart.iter_mut().zip(cover.chart()) {
+            for (q, v) in exact.iter_mut().zip(bounds) {
+                *q = Q::from_float(v)
+                    .ok_or_else(|| refused("Relative winding chart bound is not finite"))?;
+            }
+        }
         let periods = chart.clone().map(|d| d[1].clone() - &d[0]);
         let wrapped = cover.wrapped();
         let sources = cover.pieces().iter().map(|p| p.source).collect();
@@ -311,19 +228,7 @@ impl RelativeWindingView {
                 "Complete batch winding crossing census exceeds allowance",
             ));
         }
-        let decoded = path
-            .iter()
-            .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
-            .collect::<Result<Vec<_>>>()?;
-        for p in &decoded {
-            for axis in 0..2 {
-                if p[axis] <= self.chart[axis][0] || p[axis] >= self.chart[axis][1] {
-                    return Err(refused(
-                        "Relative winding path must stay strictly inside the original chart",
-                    ));
-                }
-            }
-        }
+        let decoded = self.interior_path(path)?;
         let (crossings, deltas) = self.compute(&decoded)?;
         Ok(OwnedPeriodicRelativeWinding {
             owner: self.owner.clone(),
@@ -421,7 +326,25 @@ impl RelativeWindingView {
         }
         Ok(true)
     }
-    fn compute(&self, path: &[[Q; 2]]) -> Result<(Vec<OriginalPeriodicPathCrossing>, Vec<String>)> {
+    /// The decoded path; every vertex must lie strictly inside the chart.
+    fn interior_path(&self, path: &[[ExactRatio; 2]]) -> Result<Vec<[Q; 2]>> {
+        let decoded = path
+            .iter()
+            .map(|p| Ok([decode_ratio(&p[0])?, decode_ratio(&p[1])?]))
+            .collect::<Result<Vec<_>>>()?;
+        let inside = |p: &[Q; 2]| {
+            (0..2).all(|axis| p[axis] > self.chart[axis][0] && p[axis] < self.chart[axis][1])
+        };
+        if !decoded.iter().all(inside) {
+            return Err(refused(
+                "Relative winding path must stay strictly inside the original chart",
+            ));
+        }
+        Ok(decoded)
+    }
+    /// Crossings of every path segment with every piece, and the total
+    /// winding change of every authored wire.
+    fn compute(&self, path: &[[Q; 2]]) -> Result<Winding> {
         let mut totals = vec![BigInt::from(0); self.wire_count];
         let mut crossings = Vec::new();
         for (segment, points) in path.windows(2).enumerate() {
