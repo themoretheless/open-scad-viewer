@@ -54,13 +54,11 @@ pub struct OwnedOriginalPhysicalFaces {
     embedding: Arc<OwnedOriginalGlobalChartEmbedding>,
     geometry: Geometry,
 }
-fn derive(embedding: &OwnedOriginalGlobalChartEmbedding) -> Result<Geometry> {
-    embedding.reverify_source()?;
-    let topology = embedding.pairs().atlas().regularity().coverage().topology();
-    let dictionary = topology.seams().dictionary();
-    let regions = dictionary.regions();
-    let chart = dictionary.chart();
-    let owner = chart.graph().owner();
+/// One physical vertex per quotient vertex, with the index of each.
+fn vertices(
+    topology: &OwnedOriginalPeriodicTopology,
+    groups: &[Vec<usize>],
+) -> Result<(Vec<OriginalPhysicalVertex>, BTreeMap<usize, usize>)> {
     let mut vertex_ids = BTreeMap::new();
     let mut vertices = Vec::new();
     for link in topology.vertex_links() {
@@ -69,25 +67,42 @@ fn derive(embedding: &OwnedOriginalGlobalChartEmbedding) -> Result<Geometry> {
         }
         vertices.push(OriginalPhysicalVertex {
             chart_group: link.vertex,
-            uv_aliases: chart.groups()[link.vertex].clone(),
+            uv_aliases: groups[link.vertex].clone(),
         });
     }
+    Ok((vertices, vertex_ids))
+}
+/// One physical edge per quotient edge, with the original trace of every
+/// halfedge and no uses yet.
+fn edges(
+    topology: &OwnedOriginalPeriodicTopology,
+    carriers: &[OriginalAtomicCarrier],
+    vertex_ids: &BTreeMap<usize, usize>,
+) -> Result<Vec<OriginalPhysicalEdge>> {
+    let id = |vertex: usize, missing: &'static str| {
+        vertex_ids
+            .get(&vertex)
+            .copied()
+            .ok_or_else(|| refused(missing))
+    };
     let mut edges = Vec::new();
     for edge in topology.edges() {
         let vertices = [
-            *vertex_ids
-                .get(&edge.vertices[0])
-                .ok_or_else(|| refused("Physical edge start has no actual quotient vertex"))?,
-            *vertex_ids
-                .get(&edge.vertices[1])
-                .ok_or_else(|| refused("Physical edge end has no actual quotient vertex"))?,
+            id(
+                edge.vertices[0],
+                "Physical edge start has no actual quotient vertex",
+            )?,
+            id(
+                edge.vertices[1],
+                "Physical edge end has no actual quotient vertex",
+            )?,
         ];
         let traces = edge
             .halfedges
             .iter()
             .map(|h| {
                 let carrier = h / 2;
-                let c = &owner.carriers()[carrier];
+                let c = &carriers[carrier];
                 OriginalPhysicalTrace {
                     carrier,
                     source: c.source,
@@ -102,21 +117,19 @@ fn derive(embedding: &OwnedOriginalGlobalChartEmbedding) -> Result<Geometry> {
             uses: Vec::new(),
         });
     }
-    let patches = regions
-        .regions()
-        .iter()
-        .enumerate()
-        .map(|(region, r)| OriginalPhysicalFacePatch {
-            region,
-            outer: r.outer,
-            holes: r.holes.clone(),
-        })
-        .collect::<Vec<_>>();
-    let mut patch_faces = vec![None; patches.len()];
+    Ok(edges)
+}
+/// Faces as the components of the topology, and the face owning each
+/// patch; every patch belongs to exactly one face.
+fn faces(
+    topology: &OwnedOriginalPeriodicTopology,
+    patches: usize,
+) -> Result<(Vec<OriginalPhysicalFace>, Vec<usize>)> {
+    let mut patch_faces = vec![None; patches];
     let mut faces = Vec::new();
     for (face, component) in topology.components().iter().enumerate() {
         for &patch in component {
-            if patch >= patches.len() || patch_faces[patch].replace(face).is_some() {
+            if patch >= patches || patch_faces[patch].replace(face).is_some() {
                 return Err(refused(
                     "Physical patch has invalid or repeated face ownership",
                 ));
@@ -128,13 +141,24 @@ fn derive(embedding: &OwnedOriginalGlobalChartEmbedding) -> Result<Geometry> {
             euler_characteristic: topology.euler_characteristics()[face],
         });
     }
-    if patch_faces.iter().any(Option::is_none) {
-        return Err(refused("Physical trim omits an actual material patch"));
-    }
+    let patch_faces = patch_faces
+        .into_iter()
+        .collect::<Option<Vec<_>>>()
+        .ok_or_else(|| refused("Physical trim omits an actual material patch"))?;
+    Ok((faces, patch_faces))
+}
+/// Records every coedge of every patch loop as a use of its edge, and
+/// returns the face of every halfedge.
+fn record_uses(
+    topology: &OwnedOriginalPeriodicTopology,
+    patches: &[OriginalPhysicalFacePatch],
+    patch_faces: &[usize],
+    edges: &mut [OriginalPhysicalEdge],
+) -> Result<BTreeMap<usize, usize>> {
     let mut boundary_patch = vec![None; topology.loops().len()];
     let mut halfedge_faces = BTreeMap::new();
     for (patch, p) in patches.iter().enumerate() {
-        let face = patch_faces[patch].unwrap();
+        let face = patch_faces[patch];
         for boundary in std::iter::once(p.outer).chain(p.holes.iter().copied()) {
             if boundary_patch[boundary].replace(patch).is_some() {
                 return Err(refused("Physical trim loop belongs to multiple patches"));
@@ -154,14 +178,20 @@ fn derive(embedding: &OwnedOriginalGlobalChartEmbedding) -> Result<Geometry> {
             }
         }
     }
-    if boundary_patch.iter().any(Option::is_none)
-        || edges
-            .iter()
-            .any(|e| e.uses.len() != e.traces.len() || e.uses.is_empty() || e.uses.len() > 2)
+    if boundary_patch.iter().any(Option::is_none) {
+        return Err(refused("Physical edge/loop use census is incomplete"));
+    }
+    Ok(halfedge_faces)
+}
+/// Every edge has one or two uses, exactly the halfedges of its traces.
+fn verify_edge_uses(edges: &[OriginalPhysicalEdge]) -> Result<()> {
+    if edges
+        .iter()
+        .any(|e| e.uses.len() != e.traces.len() || e.uses.is_empty() || e.uses.len() > 2)
     {
         return Err(refused("Physical edge/loop use census is incomplete"));
     }
-    for edge in &edges {
+    for edge in edges {
         let trace_ids = edge
             .traces
             .iter()
@@ -178,6 +208,14 @@ fn derive(embedding: &OwnedOriginalGlobalChartEmbedding) -> Result<Geometry> {
             ));
         }
     }
+    Ok(())
+}
+/// Assigns every boundary cycle to the one face all its halfedges use.
+fn assign_boundaries(
+    topology: &OwnedOriginalPeriodicTopology,
+    halfedge_faces: &BTreeMap<usize, usize>,
+    faces: &mut [OriginalPhysicalFace],
+) -> Result<()> {
     for (cycle, boundary) in topology.boundaries().iter().enumerate() {
         let face = *halfedge_faces
             .get(&boundary[0])
@@ -190,6 +228,30 @@ fn derive(embedding: &OwnedOriginalGlobalChartEmbedding) -> Result<Geometry> {
         }
         faces[face].boundary_cycles.push(cycle);
     }
+    Ok(())
+}
+fn derive(embedding: &OwnedOriginalGlobalChartEmbedding) -> Result<Geometry> {
+    embedding.reverify_source()?;
+    let topology = embedding.pairs().atlas().regularity().coverage().topology();
+    let dictionary = topology.seams().dictionary();
+    let chart = dictionary.chart();
+    let (vertices, vertex_ids) = vertices(topology, chart.groups())?;
+    let mut edges = edges(topology, chart.graph().owner().carriers(), &vertex_ids)?;
+    let patches = dictionary
+        .regions()
+        .regions()
+        .iter()
+        .enumerate()
+        .map(|(region, r)| OriginalPhysicalFacePatch {
+            region,
+            outer: r.outer,
+            holes: r.holes.clone(),
+        })
+        .collect::<Vec<_>>();
+    let (mut faces, patch_faces) = faces(topology, patches.len())?;
+    let halfedge_faces = record_uses(topology, &patches, &patch_faces, &mut edges)?;
+    verify_edge_uses(&edges)?;
+    assign_boundaries(topology, &halfedge_faces, &mut faces)?;
     Ok(Geometry {
         vertices,
         edges,
