@@ -30,31 +30,17 @@ pub struct OwnedPeriodicNativeChartCorners {
     max_work_per_corner: usize,
     data: Data,
 }
-fn derive(o: &OwnedPeriodicNativeChartCorners) -> Result<Data> {
-    let _replay = super::periodic_replay::scope();
-    if !(1..=1000000).contains(&o.max_work_per_corner) {
-        return Err(refused("Invalid exact native corner work allowance"));
-    }
-    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
-    let incidence = o.owner.owner();
-    let traces = incidence.owner();
-    let regions = traces.owner();
-    let lifts = regions.owner().owner();
-    let cycles = lifts.owner();
-    let source = cycles.owner().rule().support().augmented().surface();
-    let cover = source.pieces();
-    let wrapped = cover.wrapped();
-    for axis in 0..2 {
-        if wrapped[axis] && source.seam_proofs()[axis].is_none() {
-            return Err(refused(
-                "Native corner identification lacks actual Surface seam identity",
-            ));
-        }
-    }
-    let chart = cover.chart().map(|d| d.map(|v| Q::from_float(v).unwrap()));
-    let layout = [[0usize, 0usize], [1, 0], [1, 1], [0, 1]];
-    let key =
-        |ends: [usize; 2]| std::array::from_fn(|axis| if wrapped[axis] { 0 } else { ends[axis] });
+const MAX_WORK: usize = 1000000;
+/// Native chart corners in counter-clockwise order, as side flags per axis.
+const CORNER_LAYOUT: [[usize; 2]; 4] = [[0, 0], [1, 0], [1, 1], [0, 1]];
+/// Quotient key of a corner: wrapped axes identify both sides.
+fn quotient_key(wrapped: [bool; 2], ends: [usize; 2]) -> [usize; 2] {
+    std::array::from_fn(|axis| if wrapped[axis] { 0 } else { ends[axis] })
+}
+type CornerCopies = ([Option<usize>; 4], BTreeMap<[usize; 2], usize>);
+/// The canonical copy at each native corner, and the source vertex of each
+/// quotient key; identifications must agree with the seam quotient.
+fn corner_copies(o: &OwnedPeriodicNativeChartCorners, wrapped: [bool; 2]) -> Result<CornerCopies> {
     let mut existing = [None; 4];
     let mut sources = BTreeMap::new();
     let mut source_keys = BTreeMap::new();
@@ -63,7 +49,7 @@ fn derive(o: &OwnedPeriodicNativeChartCorners) -> Result<Data> {
             continue;
         };
         let ends = [u, v];
-        let i = layout
+        let i = CORNER_LAYOUT
             .iter()
             .position(|e| *e == ends)
             .ok_or_else(|| refused("Original corner copy has invalid native side flags"))?;
@@ -72,7 +58,7 @@ fn derive(o: &OwnedPeriodicNativeChartCorners) -> Result<Data> {
                 "Original source contains multiple canonical copies at one native corner",
             ));
         }
-        let k = key(ends);
+        let k = quotient_key(wrapped, ends);
         if sources
             .insert(k, c.source_vertex)
             .is_some_and(|old| old != c.source_vertex)
@@ -90,65 +76,94 @@ fn derive(o: &OwnedPeriodicNativeChartCorners) -> Result<Data> {
             ));
         }
     }
+    Ok((existing, sources))
+}
+/// World point of a rational native corner, evaluated in the exact alpha=0
+/// field. This calls pure arithmetic after ONE fresh immutable owner replay.
+fn corner_world(
+    surface: &nurbs_core::surface::Surface,
+    uv: &[Q; 2],
+    max_work: usize,
+) -> Result<[Q; 3]> {
+    let value = arithmetic::surface_expression::evaluate(
+        surface,
+        &vec![Q::zero(), Q::one()],
+        &[Q::zero(), Q::zero()],
+        &[
+            [vec![uv[0].clone()], vec![Q::one()]],
+            [vec![uv[1].clone()], vec![Q::one()]],
+        ],
+        128,
+        max_work,
+    )?;
+    let mut world = [Q::zero(), Q::zero(), Q::zero()];
+    for (axis, [numerator, denominator]) in value.iter().enumerate() {
+        if numerator.len() > 1 || denominator.len() > 1 {
+            return Err(refused(
+                "Native rational corner did not remain in its exact constant field",
+            ));
+        }
+        let n = numerator.first().cloned().unwrap_or_else(Q::zero);
+        let d = denominator.first().cloned().unwrap_or_else(Q::zero);
+        if d <= Q::zero() {
+            return Err(refused(
+                "Native rational corner has a nonpositive exact denominator",
+            ));
+        }
+        world[axis] = n / d;
+    }
+    Ok(world)
+}
+fn derive(o: &OwnedPeriodicNativeChartCorners) -> Result<Data> {
+    let _replay = super::periodic_replay::scope();
+    if !(1..=MAX_WORK).contains(&o.max_work_per_corner) {
+        return Err(refused("Invalid exact native corner work allowance"));
+    }
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
+    let lifts = o.owner.owner().owner().owner().owner().owner();
+    let source = lifts.owner().owner().rule().support().augmented().surface();
+    let cover = source.pieces();
+    let wrapped = cover.wrapped();
+    if (0..2).any(|axis| wrapped[axis] && source.seam_proofs()[axis].is_none()) {
+        return Err(refused(
+            "Native corner identification lacks actual Surface seam identity",
+        ));
+    }
+    let mut chart = [[Q::zero(), Q::zero()], [Q::zero(), Q::zero()]];
+    for (exact, bounds) in chart.iter_mut().zip(cover.chart()) {
+        for (q, v) in exact.iter_mut().zip(bounds) {
+            *q = Q::from_float(v)
+                .ok_or_else(|| refused("Native corner chart bound is not finite"))?;
+        }
+    }
+    let (existing, sources) = corner_copies(o, wrapped)?;
     let mut vertex_map = BTreeMap::new();
     let mut vertices: Vec<OriginalPeriodicNativeCornerVertex> = Vec::new();
     let mut corners: Vec<OriginalPeriodicNativeChartCorner> = Vec::with_capacity(4);
-    for (i, ends) in layout.into_iter().enumerate() {
-        let k = key(ends);
-        let physical_vertex = if let Some(&v) = vertex_map.get(&k) {
-            v
-        } else {
-            let v = vertices.len();
-            vertex_map.insert(k, v);
+    for (i, ends) in CORNER_LAYOUT.into_iter().enumerate() {
+        let k = quotient_key(wrapped, ends);
+        let physical_vertex = *vertex_map.entry(k).or_insert_with(|| {
             vertices.push(OriginalPeriodicNativeCornerVertex {
                 quotient_key: k,
                 source_vertex: sources.get(&k).copied(),
                 corners: Vec::new(),
             });
-            v
-        };
+            vertices.len() - 1
+        });
         let uv = [chart[0][ends[0]].clone(), chart[1][ends[1]].clone()];
-        // A rational native corner is evaluated in the exact alpha=0 field.
-        // This calls pure arithmetic after ONE fresh immutable owner replay.
-        let value = arithmetic::surface_expression::evaluate(
-            source.surface(),
-            &vec![Q::zero(), Q::one()],
-            &[Q::zero(), Q::zero()],
-            &[
-                [vec![uv[0].clone()], vec![Q::one()]],
-                [vec![uv[1].clone()], vec![Q::one()]],
-            ],
-            128,
-            o.max_work_per_corner,
-        )?;
-        let mut world = [Q::zero(), Q::zero(), Q::zero()];
-        for axis in 0..3 {
-            if value[axis].iter().any(|p| p.len() > 1) {
-                return Err(refused(
-                    "Native rational corner did not remain in its exact constant field",
-                ));
-            }
-            let n = value[axis][0].first().cloned().unwrap_or_else(Q::zero);
-            let d = value[axis][1].first().cloned().unwrap_or_else(Q::zero);
-            if d <= Q::zero() {
-                return Err(refused(
-                    "Native rational corner has a nonpositive exact denominator",
-                ));
-            }
-            world[axis] = n / d;
-        }
+        let world = corner_world(source.surface(), &uv, o.max_work_per_corner)?.map(|q| ratio(&q));
         // Equality is a consistency check AFTER whole-seam source authority;
         // it is never the criterion for identifying physical vertices.
-        if let Some(&other) = vertices[physical_vertex].corners.first() {
-            if corners[other].world != world.clone().map(|q| ratio(&q)) {
-                return Err(refused("Actual native seam corner values disagree"));
-            }
+        if let Some(&other) = vertices[physical_vertex].corners.first()
+            && corners[other].world != world
+        {
+            return Err(refused("Actual native seam corner values disagree"));
         }
         vertices[physical_vertex].corners.push(i);
         corners.push(OriginalPeriodicNativeChartCorner {
             ends,
             uv: uv.map(|q| ratio(&q)),
-            world: world.map(|q| ratio(&q)),
+            world,
             existing_copy: existing[i],
             physical_vertex,
         });
