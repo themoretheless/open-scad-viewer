@@ -38,6 +38,7 @@ pub use diagnostics::{
     SelfIntersectionOptions, SelfIntersectionReport, ThicknessOptions, ThicknessReport, clearance,
     mass_properties, self_intersections, wall_thickness,
 };
+pub use diagnostics::predicates::{orient2d, orient3d};
 pub use metrics::{ComponentMetrics, MeshMetrics, metrics};
 pub use repair::{
     HoleFillLimits, RepairBudget, RepairBudgetExhausted, RepairBudgetKind, RepairMode,

@@ -16,6 +16,20 @@
 //! This crate sits above `manifold-core` because `polygon-core` itself
 //! depends on `manifold-core` — the facade cannot live in the core without
 //! a dependency cycle.
+//!
+//! Mesh operations of the S8 package live in submodules: [`hull`] (quickhull
+//! with exact predicates), [`decimate`] (QEM), [`section`] (plane section,
+//! capped cut, projection, coplanar simplification), [`offset`] (vertex-normal
+//! offset and shell), [`transform`] (affine deformations and Loop refinement).
+
+pub mod decimate;
+mod geom;
+pub mod hull;
+pub mod offset;
+pub mod section;
+pub mod transform;
+
+pub use geom::PlaneFrame;
 
 use manifold_core::{ManifoldReport, RepairMode, RepairReport};
 use polygon_core::Mesh;

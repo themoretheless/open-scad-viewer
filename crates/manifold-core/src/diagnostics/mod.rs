@@ -8,7 +8,7 @@
 
 mod clearance;
 mod mass;
-mod predicates;
+pub(crate) mod predicates;
 mod self_intersection;
 mod thickness;
 mod tri;

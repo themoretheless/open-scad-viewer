@@ -9,6 +9,10 @@ publish.workspace = true
 manifold-core = { workspace = true }
 polygon-core = { workspace = true, features = ["codec"] }
 math-core = { workspace = true }
+mesh-topology = { workspace = true }
+mesh-query = { workspace = true }
+mesh-section = { workspace = true }
+subdivision-core = { workspace = true }
 
 [dev-dependencies]
 serde = { version = "1", features = ["derive"] }
