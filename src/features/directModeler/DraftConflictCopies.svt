@@ -1,0 +1,107 @@
+<script setup lang="ts">
+import { ref, watch } from 'svet'
+import Modal from '../../components/Modal.svt'
+import { listSolidDraftConflicts, removeSolidDraftConflict } from '../../kernel/solidDraftStore'
+import { download } from './helpers'
+
+/**
+ * Conflict copies kept after DRAFT_CONFLICT: list with time and size, restore one
+ * as the open draft (the parent saves it through the revision-checked path),
+ * download it as JSON, or delete it.
+ */
+const props = defineProps<{ open: boolean; draftKey: string; ru: boolean; restore: (text: string) => Promise<boolean> }>()
+const emit = defineEmits<{ close: [] }>()
+const copies = ref<Array<{ id: string; text: string; createdAt: number }>>([])
+const loading = ref(false)
+const busy = ref(false)
+const failure = ref('')
+const label = (a: string, b: string) => (props.ru ? a : b)
+
+async function refresh() {
+  loading.value = true
+  failure.value = ''
+  try {
+    copies.value = await listSolidDraftConflicts(props.draftKey)
+  } catch (e) {
+    copies.value = []
+    failure.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    loading.value = false
+  }
+}
+watch(
+  () => props.open,
+  open => {
+    if (open) void refresh()
+  },
+  { immediate: true },
+)
+
+function when(time: number) {
+  return time > 0 ? new Date(time).toLocaleString(props.ru ? 'ru-RU' : 'en-US') : label('время неизвестно', 'unknown time')
+}
+function size(text: string) {
+  const bytes = new TextEncoder().encode(text).length
+  return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`
+}
+function stamp(time: number) {
+  return time > 0 ? new Date(time).toISOString().replace(/[:.]/g, '-') : 'unknown'
+}
+
+async function restoreCopy(copy: { text: string }) {
+  if (busy.value) return
+  busy.value = true
+  failure.value = ''
+  try {
+    if (await props.restore(copy.text)) emit('close')
+  } finally {
+    busy.value = false
+  }
+}
+function downloadCopy(copy: { text: string; createdAt: number }) {
+  download(copy.text, `solid-draft-conflict-${stamp(copy.createdAt)}.json`, 'application/json')
+}
+async function deleteCopy(copy: { id: string }) {
+  if (busy.value) return
+  busy.value = true
+  failure.value = ''
+  try {
+    await removeSolidDraftConflict(props.draftKey, copy.id)
+    copies.value = copies.value.filter(c => c.id !== copy.id)
+  } catch (e) {
+    failure.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    busy.value = false
+  }
+}
+</script>
+
+<template>
+  <Modal
+    :open="open"
+    labelledby="draft-conflict-copies-title"
+    backdrop-class="dialog-backdrop"
+    dialog-class="dialog draft-conflict-copies"
+    @close="emit('close')"
+  >
+    <h2 id="draft-conflict-copies-title">{{ label('Конфликтные копии черновика', 'Draft conflict copies') }}</h2>
+    <p v-if="loading">{{ label('Загрузка…', 'Loading…') }}</p>
+    <p v-else-if="failure" role="alert">{{ failure }}</p>
+    <p v-else-if="!copies.length">{{ label('Конфликтных копий нет.', 'No conflict copies.') }}</p>
+    <ul v-if="!loading && copies.length">
+      <li v-for="copy in copies" :key="copy.id" data-conflict-copy>
+        <span>{{ when(copy.createdAt) }} · {{ size(copy.text) }}</span>
+        <button type="button" :disabled="busy" @click="restoreCopy(copy)">{{ label('Восстановить', 'Restore') }}</button>
+        <button type="button" @click="downloadCopy(copy)">{{ label('Скачать JSON', 'Download JSON') }}</button>
+        <button type="button" :disabled="busy" @click="deleteCopy(copy)">{{ label('Удалить', 'Delete') }}</button>
+      </li>
+    </ul>
+    <button type="button" @click="emit('close')">{{ label('Закрыть', 'Close') }}</button>
+  </Modal>
+</template>
+
+<style scoped>
+:global(.draft-conflict-copies) ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+:global(.draft-conflict-copies) li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+:global(.draft-conflict-copies) li span { flex: 1 1 12rem; }
+</style>

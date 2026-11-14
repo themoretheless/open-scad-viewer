@@ -73,6 +73,7 @@ import { useSourceBodyTools } from './directModeler/useSourceBodyTools'
 import { useDiagnostics } from './directModeler/useDiagnostics'
 import { useMeasurements } from './directModeler/useMeasurements'
 import { useDraftPersistence } from './directModeler/useDraftPersistence'
+import DraftConflictCopies from './directModeler/DraftConflictCopies.svt'
 import { useFileExchange } from './directModeler/useFileExchange'
 import { useDisplayAndSnapQueues } from './directModeler/useDisplayAndSnapQueues'
 import { useViewportLayerAndPolygons } from './directModeler/useViewportLayerAndPolygons'
@@ -95,6 +96,7 @@ const {
   isRestoreDisposed,
   getSaveGeneration,
   loadLatestDraft,
+  restoreConflictCopy,
   persist,
   kernelReady,
   kernelLoadError,
@@ -123,6 +125,7 @@ const {
   getFit: () => fit,
 })
 let history = new DirectHistory(initial)
+const conflictCopiesOpen = ref(false)
 const document = shallowRef(history.document)
 // Committed render snapshot; gestures publish separate documents and never update this ref.
 const snapDocument = shallowRef(document.value)
@@ -2130,6 +2133,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <input ref="stlInput" type="file" :accept="MESH_IMPORT_ACCEPT" hidden @change="importStl" />
         <button type="button" :disabled="svgBusy" @click="svgInput?.click()">{{ label('Импорт SVG как профили', 'Import SVG as profiles') }}</button>
         <button v-if="draftConflict" type="button" :disabled="loadingLatestDraft" @click="loadLatestDraft">{{ label('Загрузить сохранённую версию · локальная останется в Undo','Load saved version · keep local in Undo') }}</button>
+        <button type="button" :disabled="restoringDraft" @click="conflictCopiesOpen=true">{{ label('Конфликтные копии черновика…','Draft conflict copies…') }}</button>
         <button v-if="saveError && !draftConflict" type="button" :disabled="savePending" @click="persist">{{ label('Повторить сохранение черновика','Retry saving draft') }}</button>
         <input ref="svgInput" type="file" accept=".svg,image/svg+xml" hidden @change="importSvg" />
         <button type="button" :disabled="stepBusy" @click="stepInput?.click()">{{ label('Импорт STEP', 'Import STEP') }}</button>
@@ -3108,5 +3112,6 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       {{ minkowskiProof.maximumCoordinateRoundingMm?label('Погрешность координат сетки ≤ ','Mesh coordinate error ≤ ')+formatUpperMm(minkowskiProof.maximumCoordinateRoundingMm)+' mm':label('Координаты сетки точные.','Mesh coordinates are exact.') }}
       <button @click="downloadMinkowskiProof">{{ label('Скачать сертификат','Download certificate') }}</button>
     </div>
+    <DraftConflictCopies :open="conflictCopiesOpen" :draft-key="key" :ru="ru" :restore="restoreConflictCopy" @close="conflictCopiesOpen=false" />
 </template>
 <style scoped src="./styles/direct-modeler.css"></style>

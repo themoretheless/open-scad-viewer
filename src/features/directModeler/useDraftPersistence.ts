@@ -202,6 +202,50 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
     }
   }
 
+  /**
+   * Make a conflict copy the open document. It enters local history like any edit
+   * (Undo returns to the previous model) and is saved through the ordinary
+   * revision-checked path, so a newer version in another tab still conflicts.
+   */
+  async function restoreConflictCopy(text: string): Promise<boolean> {
+    if (loadingLatestDraft.value || historyPending.value) return false
+    getCancelCommand()()
+    const document = getDocument()
+    const generation = bumpHistoryGeneration(),
+      before = document.value,
+      target = getHistory()
+    const current = () =>
+      !restoreDisposed &&
+      props.open &&
+      generation === getHistoryGeneration() &&
+      document.value === before &&
+      target === getHistory()
+    historyMode.value = 'restore'
+    historyPending.value = true
+    try {
+      const applied = await target.commitAsync(async () => {
+        const next = await historyWorker.run({ kind: 'restoreDocument', text })
+        if (!current())
+          throw Error(label('Документ изменился во время восстановления.', 'Document changed while restoring.'))
+        return next
+      })
+      if (!applied || !current()) return false
+      error.value = ''
+      getSync()()
+      return true
+    } catch (e) {
+      if (current()) {
+        saveError.value = true
+        error.value =
+          label('Не удалось восстановить конфликтную копию: ', 'Could not restore the conflict copy: ') +
+          (e instanceof Error ? e.message : String(e))
+      }
+      return false
+    } finally {
+      if (generation === getHistoryGeneration()) historyPending.value = false
+    }
+  }
+
   function persist() {
     const document = getDocument()
     const generation = ++saveGeneration,
@@ -389,6 +433,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
     isRestoreDisposed: () => restoreDisposed,
     getSaveGeneration: () => saveGeneration,
     loadLatestDraft,
+    restoreConflictCopy,
     persist,
     kernelReady,
     kernelLoadError,

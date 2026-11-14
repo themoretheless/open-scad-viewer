@@ -52,6 +52,17 @@ export async function listSolidDraftConflicts(key:string):Promise<Array<{id:stri
   return rows.filter(r=>r.conflictOf===key&&typeof r.text==='string').map(r=>({id:r.id,text:r.text,createdAt:r.createdAt??0})).sort((a,b)=>b.createdAt-a.createdAt)
  }finally{db.close()}
 }
+/** Delete one conflict copy; published snapshots and other rows are never touched. */
+export async function removeSolidDraftConflict(key:string,id:string):Promise<boolean>{
+ const db=await database()
+ try{
+  const tx=db.transaction(storeName,'readwrite',{durability:'strict'}),store=tx.objectStore(storeName),done=complete(tx)
+  const row=await request<Snapshot|undefined>(store.get(id))
+  const owned=row?.conflictOf===key
+  if(owned)await request(store.delete(id))
+  await done;return owned
+ }finally{db.close()}
+}
 
 /**
  * Serialize reference publication across tabs, including the comparison immediately before writing.
