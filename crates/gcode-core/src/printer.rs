@@ -227,7 +227,10 @@ fn profile_error(message: &str) -> crate::Error {
 
 /// All built-in profiles, parsed and validated from their data files.
 pub fn builtin_printer_profiles() -> Result<Vec<PrinterProfile>> {
-    BUILTIN_SOURCES.iter().map(|s| PrinterProfile::parse(s)).collect()
+    BUILTIN_SOURCES
+        .iter()
+        .map(|s| PrinterProfile::parse(s))
+        .collect()
 }
 
 /// Ids of the built-in profiles in a stable order.

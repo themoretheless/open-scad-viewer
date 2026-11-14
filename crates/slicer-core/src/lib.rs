@@ -242,9 +242,10 @@ mod adhesion_and_support;
 mod infill;
 
 pub use adhesion_and_support::{
-    BrimConfig, Contour, FuzzySkinConfig, RaftConfig, SkirtConfig, SupportConfig, TreeSupportNode,
+    BrimConfig, Contour, FuzzySkinConfig, RaftConfig, ShellConfig, SkirtConfig, SupportConfig,
+    SupportPattern, TreeSupportNode,
     VariableLayerConfig, apply_fuzzy_skin_to_contour, generate_brim, generate_raft, generate_skirt,
-    plan_layers_with_skins_and_supports, plan_tree_support_trunks, schedule_adaptive_heights,
+    plan_layers_with_shells, plan_layers_with_skins_and_supports, plan_tree_support_trunks, schedule_adaptive_heights,
 };
 pub use infill::generate_gyroid_infill_lines;
 use infill::{generate_cubic_infill, generate_infill, hatch, hatch_angled};

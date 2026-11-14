@@ -253,6 +253,7 @@ fn adaptive_heights_and_skin_support_detection_work() {
     let support_cfg = SupportConfig {
         overhang_offset_mm: 1.0,
         support_spacing_mm: 2.0,
+        ..SupportConfig::default()
     };
     let planned = plan_layers_with_skins_and_supports(
         &sections,

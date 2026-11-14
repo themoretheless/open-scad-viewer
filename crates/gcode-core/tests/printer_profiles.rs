@@ -56,7 +56,10 @@ fn at_least_three_builtin_profiles_validate_and_are_selectable() {
     }
     let flavors: Vec<Flavor> = profiles.iter().map(|p| p.job.flavor).collect();
     for flavor in Flavor::ALL {
-        assert!(flavors.contains(&flavor), "no built-in profile for {flavor:?}");
+        assert!(
+            flavors.contains(&flavor),
+            "no built-in profile for {flavor:?}"
+        );
     }
     assert!(printer_profile("no-such-printer").is_err());
 }
@@ -66,7 +69,12 @@ fn each_profile_respects_its_bed_and_firmware_dialect() {
     for profile in builtin_printer_profiles().unwrap() {
         let [bx, by, bz] = profile.bed_size_mm;
         // A part spanning nearly the whole bed fits.
-        let layers = square_layers([1.0, 1.0], bx.min(by) - 2.0, 3, profile.machine().layer_height_mm);
+        let layers = square_layers(
+            [1.0, 1.0],
+            bx.min(by) - 2.0,
+            3,
+            profile.machine().layer_height_mm,
+        );
         let gcode = emit_printer_job(&layers, &[], &profile).unwrap();
         assert!(gcode.contains(&format!(";PRINTER:{}", profile.id)));
         assert!(gcode.contains(&format!(";FLAVOR:{}", profile.job.flavor.header_label())));
@@ -79,7 +87,11 @@ fn each_profile_respects_its_bed_and_firmware_dialect() {
             }
         }
         for custom in profile.start_gcode.iter().chain(&profile.end_gcode) {
-            assert!(gcode.lines().any(|l| l == custom), "{} lacks {custom}", profile.id);
+            assert!(
+                gcode.lines().any(|l| l == custom),
+                "{} lacks {custom}",
+                profile.id
+            );
         }
         let start = gcode.find(";START_GCODE").unwrap();
         let first_layer = gcode.find(";LAYER:0").unwrap();
@@ -103,13 +115,23 @@ fn each_profile_respects_its_bed_and_firmware_dialect() {
         let two_islands = vec![PlannedLayer {
             z_mm: profile.machine().layer_height_mm,
             paths: vec![
-                square_layers([5.0, 5.0], 60.0, 1, 0.2).remove(0).paths.remove(0),
-                square_layers([100.0, 100.0], 60.0, 1, 0.2).remove(0).paths.remove(0),
+                square_layers([5.0, 5.0], 60.0, 1, 0.2)
+                    .remove(0)
+                    .paths
+                    .remove(0),
+                square_layers([100.0, 100.0], 60.0, 1, 0.2)
+                    .remove(0)
+                    .paths
+                    .remove(0),
             ],
         }];
         let gcode = emit_printer_job(&two_islands, &[], &profile).unwrap();
         let retract_f = format!("F{:.3}", profile.job.retract_feedrate_mm_s * 60.0);
-        assert!(gcode.lines().any(|l| l.starts_with("G1 E") && l.ends_with(&retract_f)));
+        assert!(
+            gcode
+                .lines()
+                .any(|l| l.starts_with("G1 E") && l.ends_with(&retract_f))
+        );
 
         // Off-bed in X, Y or Z is refused.
         let off_x = square_layers([bx - 1.0, 1.0], 5.0, 1, 0.2);
