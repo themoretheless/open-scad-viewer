@@ -39,12 +39,15 @@ pub use diagnostics::{
     mass_properties, self_intersections, wall_thickness,
 };
 pub use metrics::{ComponentMetrics, MeshMetrics, metrics};
-pub use repair::{RepairMode, RepairOutcome, RepairReport, repair, repair_with_mode};
+pub use repair::{
+    HoleFillLimits, RepairBudget, RepairBudgetExhausted, RepairBudgetKind, RepairMode,
+    RepairOptions, RepairOutcome, RepairReport, repair, repair_with_mode, repair_with_options,
+};
 pub use validation::{IndexedMeshError, validate_indexed_mesh};
 pub use vertex_link::{VertexLinkDefect, validate_vertex_links};
 
 /// Structured manifoldness report for an indexed triangle mesh.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ManifoldReport {
     /// `positions.len() / 3`.
     pub vertex_count: usize,

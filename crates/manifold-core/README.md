@@ -26,6 +26,12 @@ and slicers require this property.
   orientation unification via dual-graph BFS. It never drops faces to hide
   non-manifold edges or pinches; what it cannot fix is reported in
   `RepairReport.residual` (a `ManifoldReport` on the repaired mesh).
+- `repair_with_options(positions, indices, &RepairOptions)` — Full/Conservative
+  repair with work, split and fill budgets (`RepairBudgetExhausted` carries a
+  deterministic partial result), hole-filling limits (loop length, area,
+  plane deviation), stitching of self-touching boundary loops, duplicate-face
+  removal, outward orientation by volume, bounded fixed-point iteration and
+  per-triangle `source_triangles`.
 - `validate_vertex_links(vertex_count, indices)` — strict solid vertex-link
   validation (degree-2 link cycle, single fan). Canonical implementation
   used by the `polygon-core` boolean kernels.

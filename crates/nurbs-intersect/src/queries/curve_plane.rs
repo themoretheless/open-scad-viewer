@@ -73,7 +73,9 @@ fn sign_variations(coefficients: &[Coefficient]) -> usize {
 }
 
 /// Isolate intersections of any validated positive-weight 3D NURBS curve with
-/// a plane, over the curve's entire active knot domain. Multiple/tangent roots,
+/// a plane, over the curve's entire active knot domain. Tangent and multiple
+/// roots that exact Bernstein sign arithmetic can certify are returned as
+/// points with `Contact::Tangent { multiplicity }`; uncertifiable ones,
 /// precision bands and work exhaustion stay explicit instead of becoming empty.
 pub fn curve_plane(
     curve: &Curve,
@@ -285,6 +287,22 @@ pub fn curve_plane(
         };
         parameter(a).total_cmp(&parameter(b))
     });
+    // Tangent or near-tangent contacts that subdivision could only refuse
+    // are re-decided with exact Bernstein signs; if any span stays
+    // ambiguous the typed refusal above is kept unchanged.
+    if report.unresolved.iter().any(|u| {
+        matches!(
+            u.reason,
+            UnresolvedReason::TangencyOrMultipleRoot | UnresolvedReason::NearCoincidence
+        )
+    }) && let Some(certified) = super::curve_plane_tangency::certify_tangencies(
+        curve,
+        plane,
+        options,
+        report.boxes_visited,
+    )? {
+        return Ok(certified);
+    }
     Ok(report)
 }
 /// Merge curve/plane point events whose isolating intervals touch in
