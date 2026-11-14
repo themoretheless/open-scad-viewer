@@ -32,16 +32,26 @@ type Data = (
     Vec<Vec<usize>>,
     Vec<Option<usize>>,
 );
-fn connect(
-    rows: &[Vec<usize>],
+/// Sectors of every vertex and the selected dart preceding every dart.
+type VertexSectors = (Vec<Vec<OriginalPeriodicMaterialSector>>, Vec<Option<usize>>);
+/// Boundary orbits and the orbit of every selected dart.
+type Walks = (Vec<Vec<usize>>, Vec<Option<usize>>);
+/// Darts of the physical graph with their side labels, their place in the
+/// cyclic vertex rows and whether they bound selected material.
+struct Darts<'a> {
+    labels: &'a [[Label; 2]],
+    active: Vec<bool>,
+    positions: Vec<Option<(usize, usize)>>,
+}
+/// Darts of the selected edges; each edge is selected at most once.
+fn active_darts(
     labels: &[[Label; 2]],
     selected: &[OriginalPeriodicSelectedEdge],
-) -> Result<Data> {
+) -> Result<Vec<bool>> {
     let n = labels
         .len()
         .checked_mul(2)
         .ok_or_else(|| refused("Selected material dart count overflow"))?;
-    let mut positions = vec![None; n];
     let mut active = vec![false; n];
     for e in selected {
         if e.edge >= labels.len() || ![-1, 1].contains(&e.direction) {
@@ -52,8 +62,11 @@ fn connect(
             return Err(refused("Repeated selected original edge dart"));
         }
     }
-    let side =
-        |dart: usize, left: bool| -> &Label { &labels[dart / 2][(dart % 2) ^ usize::from(!left)] };
+    Ok(active)
+}
+/// Vertex and row position of every dart; each dart appears exactly once.
+fn dart_positions(rows: &[Vec<usize>], n: usize) -> Result<Vec<Option<(usize, usize)>>> {
+    let mut positions = vec![None; n];
     for (vertex, row) in rows.iter().enumerate() {
         for (position, &dart) in row.iter().enumerate() {
             if dart >= n || positions[dart].replace((vertex, position)).is_some() {
@@ -66,49 +79,66 @@ fn connect(
     if positions.iter().any(Option::is_none) {
         return Err(refused("Material sectors omit original physical darts"));
     }
-    for dart in 0..n {
-        if active[dart] != (side(dart, true).material && !side(dart, false).material) {
-            return Err(refused(
-                "Selected material direction disagrees with complete side labels",
-            ));
-        }
+    Ok(positions)
+}
+impl Darts<'_> {
+    fn side(&self, dart: usize, left: bool) -> &Label {
+        &self.labels[dart / 2][(dart % 2) ^ usize::from(!left)]
     }
-    let mut sectors = Vec::new();
-    let mut previous = vec![None; n];
-    for (vertex, row) in rows.iter().enumerate() {
-        let mut local = Vec::new();
-        let mut last = row.iter().rev().copied().find(|&dart| active[dart]);
-        for (position, &dart) in row.iter().enumerate() {
-            let next = row[(position + 1) % row.len()];
-            let left = side(dart, true);
-            let right = side(next, false);
-            if left != right {
+    /// A dart is selected exactly when material lies on its left only.
+    fn verify_labels(&self) -> Result<()> {
+        for (dart, &active) in self.active.iter().enumerate() {
+            if active != (self.side(dart, true).material && !self.side(dart, false).material) {
                 return Err(refused(
-                    "Adjacent original germs disagree on their shared material sector",
+                    "Selected material direction disagrees with complete side labels",
                 ));
             }
-            local.push(OriginalPeriodicMaterialSector {
-                vertex,
-                ccw_ports: [dart, next],
-                operand_inside: left.operands.clone(),
-                material: left.material,
-            });
-            previous[dart] = last;
-            if active[dart] {
-                last = Some(dart);
-            }
         }
-        sectors.push(local);
+        Ok(())
     }
-    let mut successor = vec![None; n];
-    let mut incoming = vec![0usize; n];
-    for dart in 0..n {
-        if active[dart] {
+    /// Material sectors between consecutive darts of every vertex, and the
+    /// selected dart that precedes every dart clockwise.
+    fn sectors(&self, rows: &[Vec<usize>]) -> Result<VertexSectors> {
+        let mut sectors = Vec::new();
+        let mut previous = vec![None; self.active.len()];
+        for (vertex, row) in rows.iter().enumerate() {
+            let mut local = Vec::new();
+            let mut last = row.iter().rev().copied().find(|&dart| self.active[dart]);
+            for (position, &dart) in row.iter().enumerate() {
+                let next = row[(position + 1) % row.len()];
+                let left = self.side(dart, true);
+                if left != self.side(next, false) {
+                    return Err(refused(
+                        "Adjacent original germs disagree on their shared material sector",
+                    ));
+                }
+                local.push(OriginalPeriodicMaterialSector {
+                    vertex,
+                    ccw_ports: [dart, next],
+                    operand_inside: left.operands.clone(),
+                    material: left.material,
+                });
+                previous[dart] = last;
+                if self.active[dart] {
+                    last = Some(dart);
+                }
+            }
+            sectors.push(local);
+        }
+        Ok((sectors, previous))
+    }
+    /// The boundary continuation of every selected dart at its arrival
+    /// vertex; it must be a permutation of the selected darts.
+    fn successors(&self, previous: &[Option<usize>]) -> Result<Vec<Option<usize>>> {
+        let n = self.active.len();
+        let mut successor = vec![None; n];
+        let mut incoming = vec![0usize; n];
+        for dart in (0..n).filter(|&d| self.active[d]) {
             let twin = dart ^ 1;
             let next = previous[twin].ok_or_else(|| {
                 refused("Selected material boundary has no outgoing continuation")
             })?;
-            if positions[twin].map(|p| p.0) != positions[next].map(|p| p.0) {
+            if self.positions[twin].map(|p| p.0) != self.positions[next].map(|p| p.0) {
                 return Err(refused(
                     "Material continuation leaves the actual arrival vertex",
                 ));
@@ -116,18 +146,25 @@ fn connect(
             successor[dart] = Some(next);
             incoming[next] += 1;
         }
-    }
-    for dart in 0..n {
-        if incoming[dart] != usize::from(active[dart]) {
+        if incoming
+            .iter()
+            .zip(&self.active)
+            .any(|(&count, &active)| count != usize::from(active))
+        {
             return Err(refused(
                 "Selected material continuation is not a complete permutation",
             ));
         }
+        Ok(successor)
     }
-    let mut dart_walks = vec![None; n];
-    let mut walks = Vec::new();
-    for start in 0..n {
-        if active[start] && dart_walks[start].is_none() {
+    /// Orbits of the continuation, and the orbit of every selected dart.
+    fn walks(&self, successor: &[Option<usize>]) -> Result<Walks> {
+        let mut dart_walks = vec![None; self.active.len()];
+        let mut walks = Vec::new();
+        for start in 0..self.active.len() {
+            if !self.active[start] || dart_walks[start].is_some() {
+                continue;
+            }
             let mut walk = Vec::new();
             let mut current = start;
             while dart_walks[current].is_none() {
@@ -143,7 +180,25 @@ fn connect(
             }
             walks.push(walk);
         }
+        Ok((walks, dart_walks))
     }
+}
+fn connect(
+    rows: &[Vec<usize>],
+    labels: &[[Label; 2]],
+    selected: &[OriginalPeriodicSelectedEdge],
+) -> Result<Data> {
+    let active = active_darts(labels, selected)?;
+    let positions = dart_positions(rows, active.len())?;
+    let darts = Darts {
+        labels,
+        active,
+        positions,
+    };
+    darts.verify_labels()?;
+    let (sectors, previous) = darts.sectors(rows)?;
+    let successor = darts.successors(&previous)?;
+    let (walks, dart_walks) = darts.walks(&successor)?;
     Ok((sectors, successor, walks, dart_walks))
 }
 /// Source-domain support labels: None is exterior, never an all-false vector.
