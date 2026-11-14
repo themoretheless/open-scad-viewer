@@ -46,7 +46,7 @@ pub(super) fn bounded_request(v: &Value, miter: bool) -> Result<(Value, Vec<usiz
     let profiles = json!(loops.iter().flatten().cloned().collect::<Vec<_>>());
     let sizes = loops.iter().map(Vec::len).collect();
     let mut spans = 0;
-    for p in profiles.as_array().unwrap() {
+    for p in loops.iter().flatten() {
         spans += nurbs("curve_decompose", json!({"curve":p}))?
             .as_array()
             .ok_or_else(|| input("Invalid native decomposition"))?
@@ -404,7 +404,7 @@ pub fn law_payload(v: Value) -> Result<Value> {
     match kind.as_str() {
         "source" => {
             let mut request = profile_request(&v, &Value::Null)?;
-            let object = request.as_object_mut().unwrap();
+            let object = request.as_object_mut().expect("profile_request builds a JSON object");
             for key in [
                 "profiles",
                 "rmf_transport_steps",

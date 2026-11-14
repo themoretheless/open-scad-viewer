@@ -137,7 +137,7 @@ pub fn remove_isolated_vertices(positions: &[f64], indices: &[usize]) -> Isolate
     }
     let removed = vertex_count - out.len() / 3;
     IsolatedVertexRemoval {
-        indices: indices.iter().map(|&i| remap[i].unwrap()).collect(),
+        indices: indices.iter().map(|&i| remap[i].expect("every referenced vertex was marked used and remapped")).collect(),
         positions: out,
         remap,
         removed,

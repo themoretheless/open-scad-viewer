@@ -619,7 +619,7 @@ impl VertexTree {
         if ids.len() > Self::LEAF {
             let axis = (0..3)
                 .max_by(|&a, &b| (hi[a] - lo[a]).total_cmp(&(hi[b] - lo[b])))
-                .unwrap();
+                .expect("0..3 is non-empty");
             let mid = ids.len() / 2;
             ids.select_nth_unstable_by(mid, |&a, &b| {
                 vertices[a as usize][axis].total_cmp(&vertices[b as usize][axis])
@@ -784,5 +784,5 @@ pub(crate) fn import_buffers(stride: usize, vertices: &[f64], indices: &[u32]) -
         uv: None,
     };
     let id = put_solid(solid::clean(mesh)?)?;
-    Ok(id.as_u64().unwrap() as u32)
+    Ok(id.as_u64().expect("put() returns the numeric registry id") as u32)
 }

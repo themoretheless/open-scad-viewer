@@ -22,7 +22,7 @@ pub fn diagnose(v:Value)->Result<Value> {
 }
 pub(crate) fn cap_value(model:&Model,r:&brep_core::sweep_smoothness::AxisReport,remaining:&mut usize)->Result<Value> {
     let geometric=inspect(model,&r.edge_ids,Tolerances {position:0.,normal:1e-7,curvature:1e-5},*remaining)?;
-    *remaining-=geometric["cells"].as_u64().unwrap() as usize;
+    *remaining=remaining.saturating_sub(geometric["cells"].as_u64().expect("inspect() serializes report.cells as an integer") as usize);
     Ok(json!({"method":"retained-annular-cap-internal-jets","edgeIds":r.edge_ids,
         "g1Certified":r.g1_certified,"g2Certified":r.g2_certified,"exactWork":r.exact_work,"maxWork":r.max_work,
         "unclassifiedFaces":r.unclassified_faces,"unpairedEdges":r.unpaired_edges,"extractionComplete":r.extraction_complete,

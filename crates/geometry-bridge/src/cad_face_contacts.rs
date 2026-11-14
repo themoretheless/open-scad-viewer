@@ -34,7 +34,7 @@ fn diagnose_sweep_volume_impl(v:Value,proposals:&[Option<[[i8;3];2]>],capture_ch
         let key=volume_request_key(&v)?;
         if let Some(mut report)=VOLUME_SESSIONS.with(|r|r.borrow_mut().completed.take())
             .filter(|(previous,_)|*previous==key).map(|(_,report)|report) {
-            if !capture_charts {report.as_object_mut().unwrap().remove("retainedWallCharts");}
+            if !capture_charts {if let Some(object)=report.as_object_mut() {object.remove("retainedWallCharts");}}
             return Ok(report);
         }
     }
