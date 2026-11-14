@@ -1,0 +1,50 @@
+<script setup lang="ts">
+import { ref } from 'svet'
+import { useModalDialog } from '../composables/useModalDialog'
+
+/**
+ * Shared modal dialog: `role="dialog"`, `aria-modal`, labelled by the caller's title,
+ * focus moved in on open and trapped while open, Escape and backdrop close, focus
+ * returned to the opener. Callers style the surfaces through `backdropClass` and
+ * `dialogClass` (scoped styles reach them with `:global(...)`).
+ */
+const props = withDefaults(defineProps<{
+  open: boolean
+  labelledby: string
+  describedby?: string
+  backdropClass?: string
+  dialogClass?: string
+  initialFocus?: () => HTMLElement | null | undefined
+  restoreFocus?: boolean
+}>(), { restoreFocus: true })
+const emit = defineEmits<{ close: []; keydown: [event: KeyboardEvent] }>()
+const dialogRef = ref<HTMLElement | null>(null)
+const { handleKeydown } = useModalDialog({
+  open: () => props.open,
+  dialog: dialogRef,
+  initialFocus: () => props.initialFocus?.(),
+  restoreFocus: () => props.restoreFocus,
+  onClose: () => emit('close'),
+  onKeydown: event => emit('keydown', event),
+})
+defineExpose({ dialog: dialogRef })
+</script>
+
+<template>
+  <Teleport to="body">
+    <div v-if="open" :class="backdropClass" @pointerdown.self="emit('close')">
+      <section
+        ref="dialogRef"
+        :class="dialogClass"
+        role="dialog"
+        aria-modal="true"
+        :aria-labelledby="labelledby"
+        :aria-describedby="describedby"
+        tabindex="-1"
+        @keydown="handleKeydown"
+      >
+        <slot />
+      </section>
+    </div>
+  </Teleport>
+</template>
