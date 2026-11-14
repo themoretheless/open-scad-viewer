@@ -90,29 +90,109 @@ pub(in crate::profile::profile_certificate) fn compare(
         l.max_resultant_size,
     )
 }
+const MAX_PORTS: usize = 4096;
+const MAX_COMPARISONS: usize = 65536;
+const MAX_NEIGHBOURHOOD_STEPS: usize = 512;
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+fn verify_allowance(
+    atlas: &OriginalContactAtlas,
+    group: usize,
+    l: ContactPortOrderLimits,
+) -> Result<()> {
+    if group >= atlas.groups().len()
+        || !(1..=MAX_PORTS).contains(&l.max_ports)
+        || l.max_comparisons > MAX_COMPARISONS
+        || !(1..=MAX_NEIGHBOURHOOD_STEPS).contains(&l.max_neighbourhood_steps)
+        || l.algebraic.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&l.algebraic.max_resultant_size)
+    {
+        return Err(refused("Invalid original contact port group or allowance"));
+    }
+    Ok(())
+}
+/// The ports of one contact kept in cyclic order while they are admitted.
+struct PortCycle<'a> {
+    atlas: &'a OriginalContactAtlas,
+    l: ContactPortOrderLimits,
+    ports: Vec<OriginalContactPort>,
+    comparisons: usize,
+}
+impl PortCycle<'_> {
+    /// Strict order of two ports: by leading ray, then by the intrinsic
+    /// order of tangent branches.
+    fn order(
+        &self,
+        candidate: &OriginalContactPort,
+        other: &OriginalContactPort,
+    ) -> Result<Ordering> {
+        let leading = compare(candidate.branch.ray(), other.branch.ray(), self.l.algebraic)?;
+        if leading != Ordering::Equal {
+            return Ok(leading);
+        }
+        match intrinsic::compare(self.atlas, candidate, other, self.l)? {
+            Ordering::Equal => Err(refused(
+                "Intrinsic original tangent branches are not separated",
+            )),
+            order => Ok(order),
+        }
+    }
+    /// Inserts the port at its place by binary search within the allowances.
+    fn insert(&mut self, candidate: OriginalContactPort) -> Result<()> {
+        if self.ports.len() == self.l.max_ports {
+            return Err(refused("Original contact port allowance exhausted"));
+        }
+        let (mut lo, mut hi) = (0, self.ports.len());
+        while lo < hi {
+            if self.comparisons == self.l.max_comparisons {
+                return Err(refused(
+                    "Original cyclic port comparison allowance exhausted",
+                ));
+            }
+            self.comparisons += 1;
+            let mid = lo + (hi - lo) / 2;
+            if self.order(&candidate, &self.ports[mid])? == Ordering::Less {
+                hi = mid;
+            } else {
+                lo = mid + 1;
+            }
+        }
+        self.ports.insert(lo, candidate);
+        Ok(())
+    }
+    /// Leading +X rays can approach the cut from below (angle 2pi-ε).
+    /// Moves that exact below-axis prefix to the end for canonical CCW order.
+    fn canonicalize(&mut self) -> Result<()> {
+        let mut below = 0;
+        for port in &self.ports {
+            if port.branch.ray().signs != [1, 0]
+                || intrinsic::transverse_sign(port, self.l.algebraic.max_refinements)? >= 0
+            {
+                break;
+            }
+            below += 1;
+        }
+        self.ports.rotate_left(below);
+        Ok(())
+    }
+}
 fn build(
     atlas: &OriginalContactAtlas,
     group: usize,
     l: ContactPortOrderLimits,
 ) -> Result<(Vec<OriginalContactPort>, usize)> {
-    if group >= atlas.groups().len()
-        || l.max_ports == 0
-        || l.max_ports > 4096
-        || l.max_comparisons > 65536
-        || l.max_neighbourhood_steps == 0
-        || l.max_neighbourhood_steps > 512
-        || l.algebraic.max_refinements > 512
-        || !(1..=128).contains(&l.algebraic.max_resultant_size)
-    {
-        return Err(refused("Invalid original contact port group or allowance"));
-    }
+    verify_allowance(atlas, group, l)?;
     atlas.reverify_source()?;
     let members = atlas.groups()[group]
         .iter()
         .copied()
         .collect::<std::collections::BTreeSet<_>>();
-    let mut ports = Vec::<OriginalContactPort>::new();
-    let mut comparisons = 0;
+    let mut cycle = PortCycle {
+        atlas,
+        l,
+        ports: Vec::new(),
+        comparisons: 0,
+    };
     for (source, parameters) in atlas.ordered_parameters().iter().enumerate() {
         for (parameter_group, refs) in parameters.iter().enumerate() {
             let r = refs[0];
@@ -121,7 +201,7 @@ fn build(
             }
             let occurrence = atlas.occurrences()[r.occurrence];
             for direction in [-1, 1] {
-                let Some(branch) = try_own_event_branch(
+                let branch = try_own_event_branch(
                     atlas.owners()[occurrence.pair].clone(),
                     EventParameterRef {
                         node: occurrence.node,
@@ -129,64 +209,23 @@ fn build(
                     },
                     direction,
                     l.algebraic.max_refinements,
-                )?
-                else {
-                    continue;
-                };
-                if ports.len() == l.max_ports {
-                    return Err(refused("Original contact port allowance exhausted"));
+                )?;
+                if let Some(branch) = branch {
+                    cycle.insert(OriginalContactPort {
+                        source,
+                        parameter_group,
+                        direction,
+                        branch,
+                    })?;
                 }
-                let candidate = OriginalContactPort {
-                    source,
-                    parameter_group,
-                    direction,
-                    branch,
-                };
-                let (mut lo, mut hi) = (0, ports.len());
-                while lo < hi {
-                    if comparisons == l.max_comparisons {
-                        return Err(refused(
-                            "Original cyclic port comparison allowance exhausted",
-                        ));
-                    }
-                    comparisons += 1;
-                    let mid = lo + (hi - lo) / 2;
-                    match compare(candidate.branch.ray(), ports[mid].branch.ray(), l.algebraic)? {
-                        Ordering::Less => hi = mid,
-                        Ordering::Greater => lo = mid + 1,
-                        Ordering::Equal => {
-                            match intrinsic::compare(atlas, &candidate, &ports[mid], l)? {
-                                Ordering::Less => hi = mid,
-                                Ordering::Greater => lo = mid + 1,
-                                Ordering::Equal => {
-                                    return Err(refused(
-                                        "Intrinsic original tangent branches are not separated",
-                                    ));
-                                }
-                            }
-                        }
-                    }
-                }
-                ports.insert(lo, candidate);
             }
         }
     }
-    if ports.is_empty() {
+    if cycle.ports.is_empty() {
         return Err(refused("Original contact has no owned incident branch"));
     }
-    // Leading +X rays can approach the cut from below (angle 2pi-ε).
-    // Move that exact below-axis prefix to the end for canonical CCW order.
-    let mut below = 0;
-    for port in &ports {
-        if port.branch.ray().signs != [1, 0]
-            || intrinsic::transverse_sign(port, l.algebraic.max_refinements)? >= 0
-        {
-            break;
-        }
-        below += 1;
-    }
-    ports.rotate_left(below);
-    Ok((ports, comparisons))
+    cycle.canonicalize()?;
+    Ok((cycle.ports, cycle.comparisons))
 }
 impl OwnedContactPortOrder {
     pub fn atlas(&self) -> &Arc<OriginalContactAtlas> {
