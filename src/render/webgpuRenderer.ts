@@ -74,6 +74,7 @@ import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
 import { MeshInstances } from '../kernel/meshInstances'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
+import { DEFAULT_DISPLAY_BUDGET, ProgressiveLevelStore } from './displayScheduler'
 import { updateMeshLods } from './meshLod'
 import {
   OBJECT_UNIFORM_LAYOUT,
@@ -345,6 +346,8 @@ export class WebGPURenderer {
   /** Frame counter for async validation results; a late clean result must not clear a newer failure. */
   private frameSequence = 0
   private lastMeshLodKey = ''
+  /** Progressive LOD level uploads, shared by asset; recreated per device. */
+  private levelStore: { dev: GPUDevice; store: ProgressiveLevelStore; epoch: number } | null = null
   private lastFailedFrame = 0
   private dead = true
   private initialized = false
@@ -1761,12 +1764,13 @@ export class WebGPURenderer {
     const key = `${camera.eye.join(',')}|${this.dist}|${this.projection}|${this.perspectiveFovY}|${viewportHeightPx}|${this.sceneEpoch}|${this.meshes.map(mesh => mesh.visible ? 1 : 0).join('')}`
     if (key === this.lastMeshLodKey) return
     this.lastMeshLodKey = key
+    const store = this.meshLevelStore(dev)
     let changed: GMesh[]
     try {
       changed = updateMeshLods(dev, this.meshes, {
         eye: camera.eye, distance: this.dist, eyeDistance: camera.eyeDistance,
         fovY: this.perspectiveFovY, projection: this.projection, viewportHeightPx,
-      }, this.nativePicking)
+      }, this.nativePicking, undefined, { budget: DEFAULT_DISPLAY_BUDGET, store })
     } catch {
       // A refused selection keeps the bound geometry; it is still a valid display.
       return
@@ -1783,6 +1787,25 @@ export class WebGPURenderer {
     this.clearDrawCaches()
     this.rebuildEdgeBufferCache()
     this.invalidateShadowMap()
+  }
+
+  /** Level store for `dev`; a scene change drops cached levels of geometry that left the scene. */
+  private meshLevelStore(dev: GPUDevice): ProgressiveLevelStore {
+    if (this.levelStore?.dev !== dev) {
+      this.levelStore?.store.dispose()
+      const generation = this.generation
+      const store = new ProgressiveLevelStore(DEFAULT_DISPLAY_BUDGET.budgetBytes, () => {
+        if (this.dead || this.generation !== generation) return
+        // A finer level landed: force reselection on the next frame.
+        this.lastMeshLodKey = ''
+        this.requestRender()
+      })
+      this.levelStore = { dev, store, epoch: this.sceneEpoch }
+    } else if (this.levelStore.epoch !== this.sceneEpoch) {
+      this.levelStore.store.retain(this.meshes)
+      this.levelStore.epoch = this.sceneEpoch
+    }
+    return this.levelStore.store
   }
 
   private notifyCameraChange() {
@@ -2234,6 +2257,8 @@ export class WebGPURenderer {
     this.geometryGhosts = []
     this.geometryFade = null
     this.destroyMeshes(this.meshes)
+    this.levelStore?.store.dispose()
+    this.levelStore = null
     this.nativePicking.clear()
     this.edgeBuffersByVertexBuffer.clear()
     this.meshes = []
