@@ -192,6 +192,12 @@ impl PrinterProfile {
         Ok(())
     }
 
+    /// Extrusion widths this profile accepts for a bead: 0.75..2 times the
+    /// nozzle diameter, the same range `validate` enforces for the line width.
+    pub fn extrusion_width_range_mm(&self) -> (f64, f64) {
+        (self.nozzle_diameter_mm * 0.75, self.nozzle_diameter_mm * 2.0)
+    }
+
     /// Machine extrusion geometry (layer height, width, speeds, filament).
     pub fn machine(&self) -> &MachineProfile {
         &self.job.machine

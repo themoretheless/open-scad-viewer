@@ -192,6 +192,7 @@ pub(crate) fn toolpaths(v: &Value) -> Result<Value> {
                     slicer_core::PathRole::SolidSkin => "solid_skin",
                     slicer_core::PathRole::Bridge => "bridge",
                     slicer_core::PathRole::Support => "support",
+                    slicer_core::PathRole::ThinWall => "thin_wall",
                 },
                 "closed": path.closed,
                 "points": path.points,

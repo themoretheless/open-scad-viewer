@@ -12,6 +12,7 @@ use crate::{
     infill::{generate_cubic_infill, generate_infill, hatch_angled},
     inset_rings, invalid, path_from_ring, point_count, require_section, require_settings,
     valid_coordinate,
+    thin_walls::{ThinWallConfig, split_thin_walls},
 };
 
 /// Configuration for curvature / surface-normal adaptive layer thickness.
@@ -185,6 +186,47 @@ pub fn plan_layers_with_shells(
     shells: &ShellConfig,
     support: Option<&SupportConfig>,
 ) -> Result<Vec<ToolpathLayer>> {
+    plan_layers_core(sections, settings, pattern, shells, support, None).map(|(layers, _)| layers)
+}
+
+/// Layers plus the per-segment extrusion width table that
+/// `gcode_core::emit_job_variable_width` consumes (`widths[layer][path][segment]`).
+#[derive(Clone, Debug, PartialEq)]
+pub struct WidthPlan {
+    pub layers: Vec<ToolpathLayer>,
+    pub widths: Vec<Vec<Vec<f64>>>,
+}
+
+/// Like [`plan_layers_with_shells`], but strips narrower than two nominal line
+/// widths are printed as one [`PathRole::ThinWall`] centre-line bead whose
+/// segment widths follow the local wall thickness, clamped to `thin`. Every
+/// other path gets the nominal line width. A layer without thin strips plans
+/// exactly as [`plan_layers_with_shells`] does.
+pub fn plan_layers_with_thin_walls(
+    sections: &[LayerSection],
+    settings: &ToolpathSettings,
+    pattern: InfillPattern,
+    shells: &ShellConfig,
+    support: Option<&SupportConfig>,
+    thin: &ThinWallConfig,
+) -> Result<WidthPlan> {
+    require_settings(settings)?;
+    thin.validate(settings.line_width_mm)?;
+    let (layers, widths) =
+        plan_layers_core(sections, settings, pattern, shells, support, Some(thin))?;
+    Ok(WidthPlan { layers, widths })
+}
+
+type WidthTable = Vec<Vec<Vec<f64>>>;
+
+fn plan_layers_core(
+    sections: &[LayerSection],
+    settings: &ToolpathSettings,
+    pattern: InfillPattern,
+    shells: &ShellConfig,
+    support: Option<&SupportConfig>,
+    thin: Option<&ThinWallConfig>,
+) -> Result<(Vec<ToolpathLayer>, WidthTable)> {
     require_settings(settings)?;
     if shells.top_layers > 64 || shells.bottom_layers > 64 {
         return Err(invalid(
@@ -248,8 +290,21 @@ pub fn plan_layers_with_shells(
     }
 
     let mut out_layers = Vec::with_capacity(sections.len());
+    let mut out_widths = Vec::with_capacity(if thin.is_some() { sections.len() } else { 0 });
     for i in 0..sections.len() {
-        let source = &normalized[i];
+        let (split_source, beads) = match thin {
+            Some(config) => {
+                let (walls, beads) =
+                    split_thin_walls(&normalized[i], settings.line_width_mm, config, &mut budget)?;
+                if beads.is_empty() {
+                    (None, beads)
+                } else {
+                    (Some(walls), beads)
+                }
+            }
+            None => (None, Vec::new()),
+        };
+        let source = split_source.as_ref().unwrap_or(&normalized[i]);
         let mut paths = Vec::with_capacity(settings.wall_count * source.len() + 8);
         for wall in 0..settings.wall_count {
             let inset = (wall as f64 + 0.5) * settings.line_width_mm;
@@ -375,12 +430,28 @@ pub fn plan_layers_with_shells(
                 )?);
             }
         }
+        if thin.is_some() {
+            let mut layer_widths: Vec<Vec<f64>> = paths
+                .iter()
+                .map(|path| {
+                    let segments = path.points.len().saturating_sub(1)
+                        + usize::from(path.closed && path.points.len() >= 3);
+                    vec![settings.line_width_mm; segments]
+                })
+                .collect();
+            for bead in beads {
+                budget.points(bead.path.points.len())?;
+                paths.push(bead.path);
+                layer_widths.push(bead.widths);
+            }
+            out_widths.push(layer_widths);
+        }
         out_layers.push(ToolpathLayer {
             z_mm: sections[i].z_mm,
             paths,
         });
     }
-    Ok(out_layers)
+    Ok((out_layers, out_widths))
 }
 
 /// Closed 2D contour loop (`Vec<[f64; 2]>`) in millimeter coordinates.
