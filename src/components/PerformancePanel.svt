@@ -1,0 +1,31 @@
+<script setup lang="ts">
+import type { BuildPerformanceSample } from '../app/buildPerformance'
+
+/** Build timing measurements of this session, shown in the dock. */
+defineProps<{
+  lang: 'ru' | 'en'
+  last: BuildPerformanceSample | undefined
+  rows: readonly (readonly [string, string])[]
+  counters: { builds: number; superseded: number; workerStarts: number; hardRestarts: number }
+  sampleCount: number
+  ms: (value: number | null | undefined) => string
+}>()
+const emit = defineEmits<{ export: [] }>()
+</script>
+
+<template>
+<details class="performance-panel" open>
+  <summary>{{ lang === 'ru' ? 'Замеры сборки' : 'Build measurements' }}<span v-if="last"> · {{ last.quality }} · {{ ms(last.hostMs) }}</span></summary>
+  <div class="performance-content">
+    <p>{{ lang === 'ru' ? 'Последние 60 успешных публикаций этой сессии. Отправка кадра не означает его показ на экране. Этапы вложены друг в друга: значения не нужно складывать.' : 'Last 60 successful publications in this session. Frame submission is not display presentation. Timings overlap; do not add them together.' }}</p>
+    <p>{{ lang === 'ru' ? 'Сборки / вытеснены / запуски Worker / принудительные перезапуски' : 'Builds / superseded / Worker starts / forced restarts' }}: {{ counters.builds }} / {{ counters.superseded }} / {{ counters.workerStarts }} / {{ counters.hardRestarts }}</p>
+    <table v-if="last">
+      <caption>{{ lang === 'ru' ? 'Последняя публикация' : 'Latest publication' }} · {{ last.quality }} · #{{ last.revision }}</caption>
+      <tbody><tr v-for="row in rows" :key="row[0]"><th scope="row">{{ row[0] }}</th><td>{{ row[1] }}</td></tr></tbody>
+    </table>
+    <p v-else>{{ lang === 'ru' ? 'Замеры появятся после успешной сборки.' : 'Measurements will appear after a successful build.' }}</p>
+    <p>{{ lang === 'ru' ? '«—»: этап не наблюдался. Объём загрузки учитывает только вершины и индексы, без рёбер и служебных данных.' : '“—”: boundary not observed. Upload bytes cover vertices and indices only, excluding edges and auxiliary data.' }}</p>
+    <button type="button" :disabled="!sampleCount" @click="emit('export')">{{ lang === 'ru' ? 'Скачать отчёт JSON' : 'Download JSON report' }}</button>
+  </div>
+</details>
+</template>

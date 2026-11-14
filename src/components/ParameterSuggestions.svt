@@ -1,0 +1,18 @@
+<script setup lang="ts">
+import type { SpinnerParameterSuggestion } from '../app/spinnerGenerator'
+
+/** Dependent parameter updates offered after a spinner parameter edit. */
+defineProps<{ suggestions: readonly SpinnerParameterSuggestion[] }>()
+const emit = defineEmits<{ apply: [changes: Record<string, number>] }>()
+</script>
+
+<template>
+  <div v-if="suggestions.length" class="message warning" role="region" aria-label="Предложения по пересчёту параметров">
+    <div v-for="(suggestion, idx) in suggestions" :key="idx" style="display:flex;flex-direction:column;gap:5px;margin-bottom:4px">
+      <span>💡 {{ suggestion.description }}</span>
+      <button type="button" class="btn" style="align-self:flex-start;font-weight:600" @click="emit('apply', suggestion.changes)">
+        {{ suggestion.title }}
+      </button>
+    </div>
+  </div>
+</template>

@@ -1,0 +1,128 @@
+<script setup lang="ts">
+import { computed } from 'svet'
+import SweepBoundaryBadges from './SweepBoundaryBadges.svt'
+import type { MeshData } from '../core/mesh'
+import type { SweepViewportProgressSnapshot } from '../composables/useBuildAndRendererLifecycle'
+import { readSweepBodyBoundaryViewportEvidence, readSweepPatchViewportEvidence, readSweepViewportEvidence } from '../kernel/sweepViewportEvidence'
+
+/** Sweep certification evidence of the current build and the progressive wall preview. */
+const props = defineProps<{
+  lang: 'ru' | 'en'
+  meshes: readonly MeshData[]
+  /** Evidence describes the editor source only while the build is current and finished. */
+  current: boolean
+  progress: SweepViewportProgressSnapshot | null
+  formatNumber: (value: number, digits?: number) => string
+}>()
+function present<T>(read: (geometry: MeshData['nativeGeometry']) => T | null) {
+  return computed(() => (props.current ? props.meshes.map(mesh => read(mesh.nativeGeometry)).filter((evidence): evidence is T => evidence !== null) : []))
+}
+const solidEvidence = present(readSweepViewportEvidence)
+const patchEvidence = present(readSweepPatchViewportEvidence)
+const bodyEvidence = present(readSweepBodyBoundaryViewportEvidence)
+</script>
+
+<template>
+  <div v-if="bodyEvidence.length" class="sweep-preview-status" data-testid="sweep-body-final-evidence" role="status" aria-live="polite">
+    <div v-for="evidence in bodyEvidence" :key="evidence.nodeId">
+      {{ lang === 'ru' ? 'Непрерывная ошибка границы sweep-тела' : 'Continuous sweep body boundary error' }}:
+      {{ evidence.continuousBound ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+      <span v-if="evidence.errorUpper !== null"> · {{ lang === 'ru' ? 'оценка' : 'bound' }} ≈ {{ evidence.errorUpper > 0 && evidence.errorUpper < 0.000001 ? evidence.errorUpper.toExponential(3) : formatNumber(evidence.errorUpper, 6) }} mm</span>
+      <span v-if="evidence.withinBudget === false"> · {{ lang === 'ru' ? 'превышает допуск' : 'exceeds tolerance' }}</span>
+      <SweepBoundaryBadges :lang="lang" :evidence="evidence" />
+    </div>
+  </div>
+  <div v-if="patchEvidence.length" class="sweep-preview-status" data-testid="sweep-patch-final-evidence" role="status" aria-live="polite">
+    <div v-for="evidence in patchEvidence" :key="evidence.nodeId">
+      {{ lang === 'ru' ? 'Ошибка sweep-поверхностей относительно исходного переноса профиля' : 'Sweep patch error relative to original profile transport' }}:
+      {{ evidence.continuousBound ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+      <template v-if="evidence.errorUpper !== null"> · ≤{{ evidence.errorUpper.toPrecision(6) }} / {{ evidence.budget?.toPrecision(6) }} mm</template>
+      <template v-if="evidence.sourceFrameC2Certified !== null && evidence.closedSourceFrameC2Certified === null">
+        · {{ lang === 'ru' ? 'C2 исходного кадра' : 'Original frame C2' }}:
+        {{ evidence.sourceFrameC2Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+      </template>
+      <template v-if="evidence.closedSourceFrameC2Certified !== null">
+        · {{ lang === 'ru' ? 'C2 замкнутого исходного кадра' : 'Closed source frame C2' }}:
+        {{ evidence.closedSourceFrameC2Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+      </template>
+      <template v-if="evidence.closedSourceFrameC1Certified !== null">
+        · {{ lang === 'ru' ? 'C1 замкнутого исходного кадра' : 'Closed source frame C1' }}:
+        {{ evidence.closedSourceFrameC1Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+      </template>
+      <template v-if="evidence.decompositionG2Certified !== null">
+        · {{ lang === 'ru' ? 'G2 между частями одного профиля' : 'G2 between parts of one profile' }}:
+        {{ evidence.decompositionG2Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+        <template v-if="evidence.decompositionJoinCount !== null"> ({{ evidence.decompositionJoinCount }})</template>
+      </template>
+      <template v-if="evidence.decompositionG1Certified !== null && evidence.decompositionG2Certified !== true">
+        · {{ lang === 'ru' ? 'G1 между частями одного профиля' : 'G1 between parts of one profile' }}:
+        {{ evidence.decompositionG1Certified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+      </template>
+      <template v-if="evidence.sourceFrameRegularityCertified !== null">
+        · {{ lang === 'ru' ? 'Регулярность исходного кадра' : 'Original frame regularity' }}:
+        {{ evidence.sourceFrameRegularityCertified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+      </template>
+      · {{ lang === 'ru' ? 'Регулярность поверхностей' : 'Surface regularity' }}:
+      {{ evidence.surfaceRegularityCertified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }}
+      · {{ lang === 'ru' ? 'Область: сохранённые поверхности' : 'Scope: retained patches' }}
+    </div>
+  </div>
+  <div v-if="solidEvidence.length" class="sweep-preview-status" data-testid="sweep-final-evidence" role="status" aria-live="polite">
+    <div v-for="evidence in solidEvidence" :key="evidence.nodeId">
+      {{ lang === 'ru' ? 'Геометрия тела' : 'Solid geometry' }}:
+      {{ evidence.solidGeometryCertified ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }} ·
+      {{ lang === 'ru' ? 'Непрерывная ошибка границы' : 'Continuous boundary error' }}:
+      {{ evidence.continuousBound ? (lang === 'ru' ? 'доказана' : 'certified') : (lang === 'ru' ? 'не доказана' : 'unproved') }} ·
+      {{ lang === 'ru' ? 'Регулярность профиля / стен' : 'Profile / wall regularity' }}:
+      {{ evidence.profileRegularityCertified ? '✓' : '?' }} / {{ evidence.wallRegularityCertified ? '✓' : '?' }}
+      <template v-if="evidence.profileG2Certified !== undefined">
+        · {{ lang === 'ru' ? 'G1 / G2 стыков профиля' : 'Profile joins G1 / G2' }}:
+        {{ evidence.profileG1Certified ? '✓' : '?' }} / {{ evidence.profileG2Certified ? '✓' : '?' }} ({{ evidence.profileSeamCount }})
+        · {{ lang === 'ru' ? 'Стыки вдоль пути' : 'Path station joins' }}: {{ evidence.stationContinuity ?? 'C0' }}
+        <template v-if="evidence.capContinuity === 'C0'"> · {{ lang === 'ru' ? 'Стыки крышек' : 'Cap joins' }}: C0</template>
+      </template>
+      <template v-if="evidence.boundaryErrorUpper !== null">
+        · {{ lang === 'ru' ? 'Оценка ошибки границы' : 'Boundary error bound' }}:
+        ≈{{ evidence.boundaryErrorUpper.toPrecision(6) }} mm
+        <template v-if="evidence.boundaryErrorBudget !== null">
+          / {{ evidence.boundaryErrorBudget.toPrecision(6) }} mm
+        </template>
+        · {{ evidence.boundaryErrorWithinBudget === true ? (lang === 'ru' ? 'в допуске' : 'within budget') : evidence.boundaryErrorWithinBudget === false ? (lang === 'ru' ? 'выше допуска' : 'over budget') : (lang === 'ru' ? 'допуск не подтверждён' : 'budget unproved') }}
+      </template>
+    </div>
+  </div>
+  <div v-if="progress" class="sweep-preview-status" role="status" aria-live="polite">
+    {{ lang === 'ru' ? 'Предпросмотр стен' : 'Wall preview' }} ·
+    {{ progress.sections }} {{ lang === 'ru' ? 'сечений' : 'sections' }} ·
+    {{ lang === 'ru' ? 'Контрольное отклонение' : 'Sampled deviation' }}
+    {{ formatNumber(progress.deviation, 6) }} /
+    {{ formatNumber(progress.budget, 6) }} mm
+    <span v-if="progress.certifiedErrorUpper !== undefined"> ·
+      {{ progress.certifiedErrorUpper === null
+        ? (lang === 'ru' ? 'Граница ошибки интерполяции не доказана' : 'Section interpolation bound unproved')
+        : (lang === 'ru' ? 'Доказанная граница ошибки интерполяции' : 'Certified section interpolation bound') }}
+      <template v-if="progress.certifiedErrorUpper !== null">:
+        {{ formatNumber(progress.certifiedErrorUpper, 6) }} mm
+      </template>
+    </span>
+    <span v-else-if="progress.continuousErrorUpper !== undefined"> ·
+      {{ lang === 'ru' ? 'Непрерывная оценка' : 'Continuous estimate' }}:
+      {{ formatNumber(progress.continuousErrorUpper, 6) }} mm
+      ({{ lang === 'ru' ? 'без сертификации округления' : 'rounding uncertified' }})
+    </span>
+    <span v-if="progress.profileRegularityCertified !== undefined"> ·
+      {{ progress.profileRegularityCertified
+        ? (lang === 'ru' ? 'Касательные профиля доказаны' : 'Profile tangents certified')
+        : (lang === 'ru' ? 'Касательные профиля не доказаны' : 'Profile tangents unproved') }}
+    </span>
+    <span v-if="progress.wallRegularityCertified !== undefined"> ·
+      {{ progress.wallRegularityCertified === null
+        ? (lang === 'ru' ? 'Регулярность стен ожидает допуска ошибки' : 'Wall regularity awaits error admission')
+        : progress.wallRegularityCertified
+          ? (lang === 'ru' ? 'Jacobian стен доказан' : 'Wall Jacobian certified')
+          : (lang === 'ru' ? 'Jacobian стен не доказан' : 'Wall Jacobian unproved') }}
+    </span>
+    <span v-if="progress.frameTransportCertified === false"> · {{ lang === 'ru' ? 'Не доказан перенос кадров' : 'Frame transport unproved' }}</span>
+    <span v-if="progress.phaseResolved === false"> · {{ lang === 'ru' ? 'Уточняется фаза twist' : 'Resolving twist phase' }}</span>
+  </div>
+</template>

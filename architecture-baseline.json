@@ -22,7 +22,7 @@
     "scripts/refresh-qualification-fingerprints-v45-v62.mjs": 533,
     "scripts/run-browser-qualification.mjs": 1374,
     "scripts/run-manifold-g1-memory-qualification.mjs": 1046,
-    "src/App.svt": 1773,
+    "src/App.svt": 894,
     "src/app/buildCoordinator.ts": 911,
     "src/features/DirectModeler.svt": 3112,
     "src/kernel/geometryBuildEngine.ts": 657,
