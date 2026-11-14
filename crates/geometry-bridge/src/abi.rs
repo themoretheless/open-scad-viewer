@@ -111,7 +111,7 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
         0 => geometry(dispatch(value)),
         1 | 2 | 3 | 4 | 5 | 10 | 11 => language_abi(op, value),
         6 => {
-            let result: Result<Value> = try {
+            let result: Result<Value> = (|| {
                 let surface: Surface =
                     value_codec::from_value(value).map_err(|e| input(e.to_string()))?;
                 let sampler = SurfaceSampler::new(&surface)?;
@@ -124,12 +124,12 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
                         s[id] = Some(sampler);
                     }
                     encode(id)
-                })?
-            };
+                })
+            })();
             geometry(result)
         }
         7 => {
-            let result: Result<Value> = try {
+            let result: Result<Value> = (|| {
                 let id = field::<usize>(&value, "id")?;
                 let u = field(&value, "u")?;
                 let v = field(&value, "v")?;
@@ -140,28 +140,28 @@ pub unsafe fn abi_request(op: u32, ptr: usize, len: usize) -> u64 {
                         .and_then(Option::as_ref)
                         .ok_or_else(|| input("Surface evaluator is disposed"))?;
                     encode(sampler.evaluate(u, v)?)
-                })?
-            };
+                })
+            })();
             geometry(result)
         }
         8 => {
-            let result: Result<Value> = try {
+            let result: Result<Value> = (|| {
                 let id = field::<usize>(&value, "id")?;
                 SAMPLERS.with(|s| {
                     if let Some(s) = s.borrow_mut().get_mut(id) {
                         *s = None
                     }
                 });
-                Value::Null
-            };
+                Ok(Value::Null)
+            })();
             geometry(result)
         }
         9 => {
-            let result: Result<Value> = try {
+            let result: Result<Value> = (|| {
                 let id = field::<u32>(&value, "id")?;
                 let mesh = mesh::export_buffers(id)?;
-                encode(Box::into_raw(Box::new(mesh)) as usize)?
-            };
+                encode(Box::into_raw(Box::new(mesh)) as usize)
+            })();
             geometry(result)
         }
         _ => geometry(Err(input("Unknown ABI operation"))),

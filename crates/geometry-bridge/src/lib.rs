@@ -4,7 +4,6 @@
 //!
 //! Language compilation lives in `languages-bridge`; this crate executes
 //! typed geometry and has no language frontend dependency.
-#![feature(try_blocks)]
 // Adapters should turn bad input into typed errors (refactor plan L6). The remaining calls rely on
 // internal invariants; the crate's `clippyUnwrap` pin counts them and may only go down.
 #![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
