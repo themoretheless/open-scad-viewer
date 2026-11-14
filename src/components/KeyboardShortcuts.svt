@@ -11,9 +11,15 @@ const props = withDefaults(defineProps<{
 }>(), { platform: 'unknown' })
 const emit = defineEmits<{ close: [] }>()
 const labels = {
-  ru: { title: 'Горячие клавиши', close: 'Закрыть', workspace: 'Файл и приложение', editor: 'Редактор', navigation: 'Навигация', selection: 'Выбор', inspection: 'Измерения и анализ', display: 'Отображение', note: 'Сочетания в разделе сцены работают, когда фокус не находится в поле ввода.' },
-  en: { title: 'Keyboard shortcuts', close: 'Close', workspace: 'File and app', editor: 'Editor', navigation: 'Navigation', selection: 'Selection', inspection: 'Measure and inspect', display: 'Display', note: 'Viewport shortcuts work while focus is outside an editable field.' },
+  ru: { title: 'Горячие клавиши', close: 'Закрыть', workspace: 'Файл и приложение', editor: 'Редактор', navigation: 'Навигация', selection: 'Выбор', inspection: 'Измерения и анализ', display: 'Отображение', camera: 'Камера (фокус на сцене)', orbit: 'Вращать', pan: 'Сдвигать', zoom: 'Приблизить / отдалить', arrows: 'Стрелки', shiftArrows: 'Shift+стрелки', note: 'Сочетания в разделе сцены работают, когда фокус не находится в поле ввода.' },
+  en: { title: 'Keyboard shortcuts', close: 'Close', workspace: 'File and app', editor: 'Editor', navigation: 'Navigation', selection: 'Selection', inspection: 'Measure and inspect', display: 'Display', camera: 'Camera (viewport focused)', orbit: 'Orbit', pan: 'Pan', zoom: 'Zoom in / out', arrows: 'Arrows', shiftArrows: 'Shift+Arrows', note: 'Viewport shortcuts work while focus is outside an editable field.' },
 } as const
+/** Camera keys handled directly by the focused canvas (not registry commands). */
+const cameraRows = [
+  { id: 'orbit', shortcuts: ['arrows'] },
+  { id: 'pan', shortcuts: ['shiftArrows'] },
+  { id: 'zoom', shortcuts: ['+', '−'] },
+] as const
 const instanceId = useId()
 const titleId = `${instanceId}-title`
 const noteId = `${instanceId}-note`
@@ -54,6 +60,19 @@ function handleKeydown(event: KeyboardEvent) {
             <dd>
               <template v-for="(shortcut, index) in row.shortcuts" :key="shortcut">
                 <span v-if="index" aria-hidden="true"> / </span><kbd>{{ formatShortcutForPlatform(shortcut) }}</kbd>
+              </template>
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="shortcut-group" data-group="camera">
+        <h3>{{ labels[locale].camera }}</h3>
+        <dl>
+          <div v-for="row in cameraRows" :key="row.id" class="shortcut-row">
+            <dt>{{ labels[locale][row.id] }}</dt>
+            <dd>
+              <template v-for="(shortcut, index) in row.shortcuts" :key="shortcut">
+                <span v-if="index" aria-hidden="true"> / </span><kbd>{{ shortcut === 'arrows' || shortcut === 'shiftArrows' ? labels[locale][shortcut] : shortcut }}</kbd>
               </template>
             </dd>
           </div>

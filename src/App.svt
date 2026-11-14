@@ -232,7 +232,7 @@ const viewport = useViewportDisplayControls({
 const {
   projection, gridVisible, gridStep, standardView, activeView, cameraYaw, cameraPitch, displayMode, shadingModel, matcapId, envId, shadowsEnabled, renderThemeId,
   defaultBaseColor, defaultMetallic, defaultRoughness, selectionMode, sceneRows, selectedSceneMeshId, hoveredMesh, currentInspection, panelMeasurement, fitView,
-  resetView, previousView, syncCameraState, focusSelection, clearSelection, toggleIsolate, toggleProjection, toggleGrid, changeStandardView, setStandardView,
+  handleCameraKey, resetView, previousView, syncCameraState, focusSelection, clearSelection, toggleIsolate, toggleProjection, toggleGrid, changeStandardView, setStandardView,
   setDisplayMode, setShadingModel, setRenderTheme, defaultMaterialState, setDefaultBaseColor, setDefaultMetallic, setDefaultRoughness, setMatcap, setEnv, setShadows,
   applyMaterialPreset, setSelectionMode, selectSceneMesh, setSceneMeshVisibility, preselectSceneMesh, focusSceneMesh, isolateSceneMesh, startMeasure, cancelMeasure,
   clearMeasurement, copyMeasurement
@@ -325,6 +325,13 @@ const palette = usePaletteCommands({
   mainTools: () => mainToolsRef.value, viewport, section,
 })
 const { paletteCommands, visiblePaletteCommands } = palette
+const viewportKeysId = 'viewport-keyboard-help'
+/** Camera keys of the focused canvas win over viewport commands bound to the same keys (none today). */
+function handleCanvasKey(event: KeyboardEvent) {
+  if (shortcutHelpOpen.value || paletteOpen.value) return
+  if (handleCameraKey(event)) return
+  handleViewportKey(event)
+}
 const { executeCommand, dispatchKeyboardCommand, handleViewportKey, handleGlobalKey } = useCommandDispatch({
   palette, paletteOpen, shortcutHelpOpen, mainTools: () => mainToolsRef.value, openCommandPalette, renderFull: () => doRender('full'), toggleTheme, dockOpen,
   measureActive, selectedMesh, meshVisibility, viewport, section, files, openEditorFind, openFunctionReferenceFromCommand,
@@ -803,11 +810,13 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           role="application"
           tabindex="0"
           :aria-label="t('viewport')"
-          @keydown="handleViewportKey"
+          :aria-describedby="viewportKeysId"
+          @keydown="handleCanvasKey"
         />
+        <p :id="viewportKeysId" class="sr-only">{{ lang === 'ru' ? 'Стрелки вращают камеру, Shift со стрелками сдвигает, плюс и минус приближают и отдаляют.' : 'Arrow keys orbit the camera, Shift with arrows pans, plus and minus zoom.' }}</p>
         <SweepEvidenceStatus :lang="lang" :meshes="sceneMeshes" :current="!rendering && !stale && renderedSource === code" :progress="sweepViewportProgress" :format-number="formatNumber" />
         <div v-if="!gpuOk" class="no-gpu" role="alert"><span>{{ rendererInitializing ? t('initializingViewport') : (rendererUnavailableMessage || t('noGpu')) }}</span><button v-if="!rendererInitializing" class="btn" type="button" @click="initializeViewportRenderer">{{ t('retryRenderer') }}</button></div>
-        <div class="view-cube-wrap" :class="{ 'with-dock': dockOpen }"><ViewCube :active-view="activeView" :yaw="cameraYaw" :pitch="cameraPitch" @view="setStandardView" /></div>
+        <div class="view-cube-wrap" :class="{ 'with-dock': dockOpen }"><ViewCube :active-view="activeView" :yaw="cameraYaw" :pitch="cameraPitch" @view="setStandardView" @orbit-step="angles => getRenderer()?.setOrbitAngles(angles.yaw, angles.pitch)" /></div>
         <div v-if="dockOpen" id="cad-sidebar" class="cad-dock">
           <div class="dock-body">
           <div id="dock-panel" class="dock-panel" role="tabpanel" :aria-labelledby="`dock-tab-${dockTab}`">
@@ -853,7 +862,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           <FormaRegion :source="dockRailUi" :locale="lang" :state="{ sidebarLabel: t('sidebar'), dockTab, tabs: dockTabs.map(tab => ({ id: tab, domId: `dock-tab-${tab}`, label: t(tab), iconPath: DOCK_ICONS[tab] })), closeSidebarLabel: t('closeSidebar') }" @action="handleShellAction" />
         </div>
         <div v-if="rendering" class="rendering-badge" role="status"><span class="spinner" />{{ t('compiling') }} · {{ t(renderingQuality) }}</div>
-        <div v-else-if="stale" class="stale-badge">{{ t('stale') }}</div>
+        <div v-else-if="stale" class="stale-badge" role="status">{{ t('stale') }}</div>
       </section>
     </main>
 

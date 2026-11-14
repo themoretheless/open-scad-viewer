@@ -2808,14 +2808,14 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
             </div>
             <div v-if="pane === '2d' && !document.sketches.length && !draft.length" class="empty-hint"><strong>{{ label('Начните с контура', 'Start with a contour') }}</strong><span>{{ label('Выберите фигуру сверху и нарисуйте её мышью', 'Choose a tool above and draw with the mouse') }}</span></div>
             <div v-if="pane === '3d' && !frozenBodyDisplay && !advancedOp && !document.bodies.length && !(document.sourceBodies?.length) && !document.curves?.length && !document.surfaces?.length && !solidActive" class="empty-hint"><strong>{{ label('Из плоской фигуры — в объём', 'Turn a flat shape into a solid') }}</strong><span>{{ label('Выберите эскиз слева и нажмите «Выдавить»', 'Select a sketch on the left and press Extrude') }}</span></div>
-            <div v-if="pane === '3d' && subtract" class="operation-card subtract-card" role="dialog" :aria-label="label('Вычитание', 'Subtraction')">
-              <strong>{{ label('Вычесть: A − B', 'Subtract: A − B') }}</strong>
+            <div v-if="pane === '3d' && subtract" class="operation-card subtract-card" role="dialog" aria-modal="false" aria-labelledby="subtract-card-title">
+              <strong id="subtract-card-title">{{ label('Вычесть: A − B', 'Subtract: A − B') }}</strong>
               <button type="button" class="subtract-field" :aria-pressed="subtract.active === 'a'" @click="subtract.active = 'a'">
-                <span>{{ label('A · из чего вычитаем', 'A · subtract from') }}</span>
+                <span><span class="subtract-active-mark" aria-hidden="true">{{ subtract.active === 'a' ? '▸ ' : '' }}</span>{{ label('A · из чего вычитаем', 'A · subtract from') }}</span>
                 <small>{{ subtractNames(subtract.a) }}</small>
               </button>
               <button type="button" class="subtract-field" :aria-pressed="subtract.active === 'b'" @click="subtract.active = 'b'">
-                <span>{{ label('B · что вычитаем', 'B · subtract') }}</span>
+                <span><span class="subtract-active-mark" aria-hidden="true">{{ subtract.active === 'b' ? '▸ ' : '' }}</span>{{ label('B · что вычитаем', 'B · subtract') }}</span>
                 <small>{{ subtractNames(subtract.b) }}</small>
               </button>
               <small>{{ label('Кликайте по телам, Shift добавляет. Enter выполняет, Esc отменяет.', 'Click bodies, Shift adds. Enter runs, Esc cancels.') }}</small>

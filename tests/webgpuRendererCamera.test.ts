@@ -62,6 +62,31 @@ describe('WebGPURenderer camera history integration', () => {
     expect(renderer.canGoToPreviousView).toBe(false)
   })
 
+  it('applies keyboard orbit, pan, zoom and stepped orbit angles as history actions', () => {
+    const renderer = new WebGPURenderer()
+    const initial = renderer.getCameraState()
+
+    expect(renderer.applyKeyboardCameraStep({ kind: 'orbit', dx: 24, dy: 0 })).toBe(true)
+    const orbited = renderer.getCameraState()
+    expect(orbited.yaw).not.toBe(initial.yaw)
+    expect(orbited.target).toEqual(initial.target)
+
+    expect(renderer.applyKeyboardCameraStep({ kind: 'pan', dx: 40, dy: 0 })).toBe(true)
+    const panned = renderer.getCameraState()
+    expect(panned.yaw).toBe(orbited.yaw)
+    expect(panned.target).not.toEqual(orbited.target)
+
+    expect(renderer.applyKeyboardCameraStep({ kind: 'zoom', delta: -120 })).toBe(true)
+    expect(renderer.getCameraState().distance).toBeLessThan(panned.distance)
+
+    expect(renderer.setOrbitAngles(0.5, 0.25)).toBe(true)
+    expect(renderer.getCameraState()).toMatchObject({ yaw: 0.5, pitch: 0.25 })
+    expect(renderer.setOrbitAngles(Number.NaN, 0)).toBe(false)
+
+    for (let i = 0; i < 4; i++) renderer.previousView()
+    expect(renderer.getCameraState()).toEqual(initial)
+  })
+
   it('notifies consumers when history becomes available or empty', () => {
     const renderer = new WebGPURenderer()
     const states: boolean[] = []

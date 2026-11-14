@@ -57,6 +57,7 @@ import {
   computeWheelDistance,
 } from './cameraGestures'
 export { computePinchUpdate } from './cameraGestures'
+import type { KeyboardCameraStep } from './keyboardCamera'
 export type { PinchCameraState, PinchPoint } from './cameraGestures'
 import {
   chooseDepthCandidate,
@@ -1407,6 +1408,34 @@ export class WebGPURenderer {
     this.commitCameraChange(() => {
       this.projection = projection
       ;[this.yaw, this.pitch] = standardViewOrientation(view)
+    })
+  }
+
+  /**
+   * Keyboard camera navigation: the same orbit, pan and wheel-zoom math as pointer
+   * gestures, one history-bearing step per key press.
+   */
+  /** Absolute orbit angles (ViewCube stepped orbit), one history-bearing step. */
+  setOrbitAngles(yaw: number, pitch: number): boolean {
+    if (!Number.isFinite(yaw) || !Number.isFinite(pitch)) return false
+    return this.commitCameraChange(() => {
+      this.yaw = yaw
+      this.pitch = Math.max(-MAX_ORBIT_PITCH, Math.min(MAX_ORBIT_PITCH, pitch))
+    })
+  }
+
+  applyKeyboardCameraStep(step: KeyboardCameraStep): boolean {
+    return this.commitCameraChange(() => {
+      const camera = { yaw: this.yaw, pitch: this.pitch, dist: this.dist, tx: this.tx, ty: this.ty, tz: this.tz }
+      if (step.kind === 'zoom') {
+        this.dist = computeWheelDistance(this.dist, step.delta)
+        return
+      }
+      const next = step.kind === 'pan'
+        ? computePanUpdate(camera, step.dx, step.dy, this.canvas?.clientHeight || 1, this.perspectiveFovY)
+        : computeOrbitUpdate(camera, step.dx, step.dy)
+      this.yaw = next.yaw; this.pitch = next.pitch; this.dist = next.dist
+      this.tx = next.tx; this.ty = next.ty; this.tz = next.tz
     })
   }
 
