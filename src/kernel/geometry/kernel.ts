@@ -70,6 +70,7 @@ interface KernelExports extends WebAssembly.Exports {
  abi_solid_analysis_cancel(job:number):void
  abi_array_field(handle:number,slot:number):number
  abi_array_free(handle:number):void
+ abi_manifold_abi_version():number
  abi_manifold_check(vp:number,vl:number,ip:number,il:number,fmt:number):bigint
  abi_manifold_repair(vp:number,vl:number,ip:number,il:number,fmt:number,epsilon:number,mode:number):bigint
  abi_manifold_metrics(vp:number,vl:number,ip:number,il:number,fmt:number):bigint

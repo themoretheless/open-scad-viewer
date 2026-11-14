@@ -1,5 +1,100 @@
 use super::*;
 
+/// Version of the Manifold WASM export surface (`abi_manifold_*` signatures
+/// and `abi_array_field` slot layouts). The TypeScript wrappers compare it
+/// with their own `MANIFOLD_ABI_VERSION` before the first Manifold call and
+/// refuse with `GEOMETRY_ABI_MISMATCH` when they differ. Bump on any change
+/// to an export signature or a result slot layout.
+pub const MANIFOLD_ABI_VERSION: u32 = 1;
+
+/// Documented shape of the Manifold operation reports as the TypeScript
+/// wrappers expose them. Mirrored by `src/kernel/geometry/manifoldReportSchema.json`;
+/// a bridge test fails when the two differ.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ManifoldReportSchema {
+    /// `manifold_core::REPORT_SCHEMA_VERSION`.
+    pub schema_version: u32,
+    /// [`MANIFOLD_ABI_VERSION`].
+    pub abi_version: u32,
+    /// `(report kind, ordered field names)`.
+    pub reports: &'static [(&'static str, &'static [&'static str])],
+}
+
+pub const MANIFOLD_REPORT_SCHEMA: ManifoldReportSchema = ManifoldReportSchema {
+    schema_version: manifold_core::REPORT_SCHEMA_VERSION,
+    abi_version: MANIFOLD_ABI_VERSION,
+    reports: &[
+        (
+            "check",
+            &[
+                "vertexCount",
+                "triangleCount",
+                "componentCount",
+                "isManifold",
+                "isManifoldWithBoundary",
+                "boundaryEdges",
+                "nonManifoldEdges",
+                "orientationEdges",
+                "degenerateTriangles",
+                "nonManifoldVertices",
+                "isolatedVertices",
+            ],
+        ),
+        (
+            "repair",
+            &[
+                "positions",
+                "indices",
+                "weldedVertices",
+                "removedDegenerateTriangles",
+                "flippedTriangles",
+                "splitVertices",
+                "filledHoles",
+                "filledTriangles",
+                "mode",
+                "isManifold",
+                "isManifoldWithBoundary",
+            ],
+        ),
+        (
+            "metrics",
+            &[
+                "vertexCount",
+                "triangleCount",
+                "edgeCount",
+                "eulerCharacteristic",
+                "componentCount",
+                "signedVolume",
+                "surfaceArea",
+                "watertight",
+                "components",
+            ],
+        ),
+        (
+            "metricsComponent",
+            &[
+                "triangleCount",
+                "vertexCount",
+                "edgeCount",
+                "boundaryEdges",
+                "eulerCharacteristic",
+                "genus",
+                "signedVolume",
+                "surfaceArea",
+            ],
+        ),
+        (
+            "boolean",
+            &["positions", "indices", "operandRepaired", "kernel", "isManifold"],
+        ),
+    ],
+};
+
+/// Manifold export surface version for the worker startup check.
+pub fn abi_manifold_abi_version() -> u32 {
+    MANIFOLD_ABI_VERSION
+}
+
 fn validate_transport(fmt: u32, vp: usize, vl: usize, ip: usize, il: usize) -> Result<()> {
     if fmt > FMT_F64 || vl > vertex_limit(fmt, LIMIT) || il > LIMIT / 4 {
         return Err(input("Mesh exceeds transport limit"));

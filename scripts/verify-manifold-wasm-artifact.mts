@@ -27,6 +27,7 @@ const manifoldExports = [
   'abi_free',
   'abi_array_field',
   'abi_array_free',
+  'abi_manifold_abi_version',
   'abi_manifold_check',
   'abi_manifold_repair',
   'abi_manifold_metrics',
