@@ -81,9 +81,10 @@ pub(super) fn nurbs_with_schedule(
     Ok(result)
 }
 
-/// Certified finite tessellation for independently recognized analytic shells.
-/// Shared-edge registry incidence supplies no-crack/orientation proof; curved
-/// deviation is selected from closed-form sphere/cone/torus/cylinder bounds.
+/// Certified finite tessellation. Shared-edge registry incidence supplies
+/// no-crack/orientation proof; curved deviation is selected from closed-form
+/// sphere/cone/torus/cylinder bounds, or for general NURBS faces (variable
+/// weights, lofts, curved sweeps) from per-cell bounds on the emitted mesh.
 pub fn certified_nurbs(
     model: &brep_core::Model,
     chord_tolerance_mm: f64,
@@ -102,17 +103,35 @@ pub fn certified_nurbs(
     let audit = brep_core::solid_audit::audit_solid(model)?;
     // Classify before adaptive search so unsupported geometry is a typed
     // refusal, distinct from a proved family exhausting the finite budget.
-    brep_core::analysis::certified_tessellation_deviation(model, 1)?;
-    let segments = (1..=32)
-        .find(|segments| {
-            brep_core::analysis::certified_tessellation_deviation(model, *segments)
-                .is_ok_and(|deviation| deviation <= chord_tolerance_mm)
-        })
-        .ok_or_else(|| nurbs_core::Error::new(
+    // Classify before reporting budget exhaustion so unsupported geometry is a
+    // typed refusal. A count refuses only when every count refuses: general
+    // cells may straddle a C0 knot at coarse grids yet certify on finer ones.
+    let mut first_error = None;
+    let mut certified_any = false;
+    let mut chosen = None;
+    for segments in 1..=32 {
+        match certified_deviation(model, segments) {
+            Ok((deviation, _)) => {
+                certified_any = true;
+                if deviation <= chord_tolerance_mm {
+                    chosen = Some(segments);
+                    break;
+                }
+            }
+            Err(error) => {
+                first_error.get_or_insert(error);
+            }
+        }
+    }
+    let segments = match (chosen, certified_any, first_error) {
+        (Some(segments), _, _) => segments,
+        (None, false, Some(error)) => return Err(error),
+        _ => return Err(nurbs_core::Error::new(
             "BREP_TESSELLATION_BUDGET_EXHAUSTED",
-            "Requested two-sided analytic deviation needs more than 32 subdivisions per patch, or a shell is outside the certified finite matrix",
-        ))?;
-    let deviation = brep_core::analysis::certified_tessellation_deviation(model, segments)?;
+            "Requested two-sided deviation needs more than 32 subdivisions per patch, or a shell is outside the certified finite matrix",
+        )),
+    };
+    let (deviation, capability) = certified_deviation(model, segments)?;
     let tessellation =
         nurbs_with_schedule(model, segments, FreeformTessNote::SampledUncertified, false)?;
     if tessellation.built.mesh.indices.len() / 3 > max_triangles {
@@ -156,7 +175,7 @@ pub fn certified_nurbs(
         ],
     )?;
     Ok(CertifiedTessellation {
-        capability: CERTIFIED_TESSELLATION_CAPABILITY,
+        capability,
         context: context.spec_identity(),
         surface_to_mesh_deviation_mm: deviation,
         mesh_to_surface_deviation_mm: deviation,
@@ -482,7 +501,8 @@ pub(super) fn quarter_disk_face(
 /// Display levels for the viewer LOD selector: one tessellation per requested
 /// subdivision count, each paired with its certified two-sided deviation.
 /// Counts must be strictly increasing within 1..=32. A model outside the
-/// certified analytic families is a typed refusal; a model whose bounds do not
+/// certified analytic families and the general full-chart NURBS cell is a
+/// typed refusal; a model whose bounds do not
 /// strictly decrease (all-planar bodies have zero deviation at every count)
 /// returns `None`, because one level already displays it exactly.
 pub fn certified_display_levels(
@@ -501,7 +521,7 @@ pub fn certified_display_levels(
     model.validate()?;
     let bounds = segments
         .iter()
-        .map(|&count| brep_core::analysis::certified_tessellation_deviation(model, count))
+        .map(|&count| certified_deviation(model, count).map(|(bound, _)| bound))
         .collect::<Result<Vec<_>>>()?;
     if bounds.windows(2).any(|pair| pair[0] <= pair[1]) {
         return Ok(None);

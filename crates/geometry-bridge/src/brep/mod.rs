@@ -10,6 +10,8 @@ mod registry_tests;
 mod tessellation;
 mod nurbs;
 mod polygons;
+mod certified_general;
+pub use certified_general::*;
 pub use tessellation::*;
 pub use nurbs::*;
 pub use polygons::*;

@@ -59,8 +59,14 @@ C1. **Explicit healing (row 10)**: boundary correspondence, exact sew and
     idempotence and cancellation rollback is still missing. Post-hoc mesh
     welding never counts.
 C2. **Certified tessellation beyond the closed cells (row 11)**: analytic and
-    equal-weight Bezier ≤3 freeform tessellation are certified; varying-weight,
-    loft and bent-sweep surfaces remain ExplicitRefuse.
+    equal-weight Bezier ≤3 freeform tessellation are certified. Varying-weight,
+    loft and curved-sweep solids whose curved faces are full rectangular charts
+    are now certified on the emitted mesh (`certified-general-nurbs-tessellation/1`,
+    per-cell Taylor bound plus vertex displacement, also feeding
+    `certified_display_levels`), with a certified divergence volume
+    (`certified-freeform-divergence-volume/1`). Still refused: trimmed curved
+    faces, cells crossing a C0 knot, and certified centroid/inertia/area for
+    these bodies.
 
 ### D. Production surface and qualification (rows 3, 4, 12)
 

@@ -49,6 +49,7 @@ pub mod surface_correspondence;
 pub mod surface_differential;
 pub mod surface_injectivity;
 pub mod surface_linear_monotonicity;
+pub mod surface_chord_bound;
 pub mod surface_measure;
 pub mod surface_volume;
 pub mod surface_monotonicity;
