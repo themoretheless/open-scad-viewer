@@ -323,6 +323,20 @@ it('builds a ruled solid loft in the worker with its requested identity',async()
  expect(JSON.stringify(document)).toBe(before)
 })
 
+it('returns Boolean documents already validated by the history parser, with linked instances resolved',async()=>{
+ const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {parseDirectDocument,serializeDirectDocument}=await import('../src/app/directModeling')
+ const body=(id:string,min:number,max:number)=>{const brep=createBrepBox([min,0,0],[max,10,10]),mesh=tessellateNurbsBrep(brep,4);return {id,name:id,brep,mesh:{positions:mesh.positions,indices:mesh.indices}}}
+ const link={id:'L',name:'L',mesh:{positions:[],indices:[]},instance:{sourceId:'C',matrix:[[1,0,0,0],[0,1,0,20],[0,0,1,0],[0,0,0,1]]}}
+ const document=parseDirectDocument(serializeDirectDocument({version:1,sketches:[],bodies:[body('A',0,10),body('B',5,15),body('C',30,35),link]}))
+ const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
+ await handle({version:1,id:1,job:{kind:'boolean',document,options:{operation:'union',a:['A'],b:['B'],segments:4,ru:false}}})
+ const result=(messages[0] as Extract<MainSolidResponse,{ok:true}>).result as {document:import('../src/app/directModeling').DirectDocument}
+ // The UI commits this through commitAsync without parsing it again on the main thread.
+ expect(serializeDirectDocument(result.document)).toBe(serializeDirectDocument(parseDirectDocument(serializeDirectDocument(result.document))))
+ expect(result.document.bodies.find(b=>b.id==='L')!.mesh.positions.length).toBeGreaterThan(0)
+})
+
 it('runs exact Boolean groups in a worker with one anchor ID, empty results and immutable inputs',async()=>{
  const {createBrepBox,tessellateNurbsBrep,analyzeNurbsBrep}=await import('../src/kernel/geometry/brep')
  const {mainSolidResult}=await import('../src/kernel/mainSolidProtocol')
