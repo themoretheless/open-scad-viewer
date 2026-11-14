@@ -34,7 +34,7 @@
 | Д. Тесты, CI, квалификация | `tests/`, `tools/`, `.github/` | P2 → C2, C3 → P5 → N17 → N18; P1 последним | S4 (медленные тесты), C1 (LFS) |
 | Е. Manifold | `manifold-core`, `manifold-ops`, `tools/manifold-bench` | S4 → S6 → S5 → S7, S8, S9 → S1 | O2, O4 (размер WASM, горячие пути) |
 | Ж. Обмен | `cad-step` | N8 → N9 → N10, C13 | M1: весь STEP/IGES в `cad-step` |
-| З. Независимые | каждый в своём крейте | S10, S11, S15, S16, P8, N25, N26, C12, C22, S14 | — |
+| З. Независимые | каждый в своём крейте | S10, S11, S15, S16, P8, N26, C12, C22, S14 | — |
 
 ## 1. NURBS и B-rep
 
@@ -62,7 +62,6 @@
 | **N20. LOD тесселяции во вьюере.** Селектор `tessellation::lod::select` (исправлено колебание при понижении уровня), команда bridge `nurbs_viewer_lod_select` и расчёт экранного масштаба `src/render/viewerLod.ts` сделаны. Остаётся производить во вьюере 2–3 уровня с сертифицированной погрешностью (`brep_nurbs_certified_tessellate` на нескольких допусках) и подменять сетку тела по выбору селектора; нужна пересборка WASM | P1 | S–M | да | — | [nurbs-priorities](../nurbs-priorities.md) 149 |
 | **N22. Упрощение и распознавание аналитики.** Удаление узлов, понижение степени, распознавание примитивов по коэффициентам, `detect_cylinder`/`detect_cone` в лечении | P2 | M | частично | — | [nurbs-next-five](design/nurbs-next-five-priorities-2026-10-22.md) §4; [nurbs-priorities](../nurbs-priorities.md) 814, 874, 876, 1041 |
 | **N24. Параллелизм, память, детерминизм.** rayon в тесселяции и Boolean, кэши базиса, арены, SoA-буферы в GPU | P2 | L | нет | N17 | [nurbs-priorities](../nurbs-priorities.md) 183, 184, 817–826, 1068–1070 |
-| **N25. BVH: TS-обёртка и упакованное дерево.** SAH, параллельная сборка, общее ядро и проброс в протокол сделаны; остаются TS-обёртка новых действий `mesh_picking` (нужна пересборка WASM владельцем) и перевод упакованного float32-дерева на общее ядро | P2 | S | да | — | [roadmap-status](design/nurbs-brep-bvh-roadmap-status.md) «BVH» |
 | **N26. Мелкие пробелы NURBS и анализа.** Сертифицированная погрешность длины, площади и объёма, FFD с сохранением объёма, сходимость границ `shared_tessellation`/`watertight` лучше линейной, заметка о T-сплайнах | P2 | M | да | — | [roadmap-status](design/nurbs-brep-bvh-roadmap-status.md) «NURBS-ядро»; [nurbs-priorities](../nurbs-priorities.md) 847, 859, 1001, 1031 |
 | **N27. Квалификация каталога NURBS.** Довести первые 100 фигур до `qualified` (сейчас 0 из 253), затем расширять каталог | P2 | L | нет | N4 | [nurbs-complete-program](design/nurbs-complete-program-2026-10-01.md) |
 | **N28. Платформа: DSL, CLI, привязки.** CLI `cad`, C API, pyo3 | P2 | L | да | N18 | [nurbs-priorities](../nurbs-priorities.md) 174, 175, 181, 915–919 |
