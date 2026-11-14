@@ -8,6 +8,7 @@
 pub(crate) use bridge_codec::{Error, Result, Routed, Value};
 
 mod drawing_pdf;
+mod drawing_views;
 pub mod bundled_font;
 pub mod svg;
 pub mod svg_css;
@@ -35,6 +36,7 @@ pub fn dispatch(v: Value) -> Routed {
             let bytes=drawing_pdf::generate(&bridge_codec::field::<Vec<String>>(&v,"sheets")?)?;
             value_codec::to_value(bytes).map_err(|e|bridge_codec::input(e.to_string()))
         })()),
+        "drawing_views" => Routed::Handled(drawing_views::run(&v)),
         "svg" => Routed::Handled(svg::dispatch(v)),
         _ => Routed::Unhandled(v),
     }
