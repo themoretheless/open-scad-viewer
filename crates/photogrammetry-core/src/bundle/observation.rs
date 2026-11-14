@@ -288,7 +288,7 @@ pub(super) fn validate(
     checkpoints: &mut Checkpoints,
 ) -> Result<Layout> {
     if !checkpoints.check() {
-        do yeet crate::error("Cancelled");
+        return Err(crate::error("Cancelled"));
     }
     options.validate()?;
     if cameras.len() > 200
@@ -298,20 +298,20 @@ pub(super) fn validate(
         || positions.len() < 6
         || observations.len() < 12
     {
-        do yeet crate::error(
+        return Err(crate::error(
             "Bundle adjustment input exceeds its bounds or has too little support",
-        );
+        ));
     }
     let Some(anchor_pose) = cameras.get(anchor).and_then(Option::as_ref) else {
-        do yeet crate::error("Bundle anchor camera is not registered");
+        return Err(crate::error("Bundle anchor camera is not registered"));
     };
     let Some(scale_pose) = cameras.get(scale_camera).and_then(Option::as_ref) else {
-        do yeet crate::error("Bundle scale camera is not registered");
+        return Err(crate::error("Bundle scale camera is not registered"));
     };
     let anchor_center = anchor_pose.center();
     let baseline = norm(sub(scale_pose.center(), anchor_center));
     if anchor == scale_camera || !baseline.is_finite() || baseline <= 1e-10 {
-        do yeet crate::error("Bundle adjustment needs a nonzero initial baseline");
+        return Err(crate::error("Bundle adjustment needs a nonzero initial baseline"));
     }
     for camera in cameras.iter().flatten() {
         if !camera.rotation.iter().flatten().all(|v| v.is_finite())
@@ -322,34 +322,34 @@ pub(super) fn validate(
             || !camera.cy.is_finite()
             || (det(camera.rotation) - 1.).abs() > 1e-3
         {
-            do yeet crate::error("Invalid bundle camera");
+            return Err(crate::error("Invalid bundle camera"));
         }
         let rrt = mm(camera.rotation, tr(camera.rotation));
         if (0..3).any(|i| (0..3).any(|j| (rrt[i][j] - f64::from(i == j)).abs() > 1e-3)) {
-            do yeet crate::error("Bundle camera rotation is not orthonormal");
+            return Err(crate::error("Bundle camera rotation is not orthonormal"));
         }
     }
     for (index, point) in positions.iter().enumerate() {
         if !checkpoints.every(index, 256) {
-            do yeet crate::error("Cancelled");
+            return Err(crate::error("Cancelled"));
         }
         if !point.iter().all(|v| v.is_finite()) {
-            do yeet crate::error("Non-finite bundle point");
+            return Err(crate::error("Non-finite bundle point"));
         }
     }
     let mut seen = vec![false; cameras.len()];
     for (index, observation) in observations.iter().enumerate() {
         if !checkpoints.every(index, 256) {
-            do yeet crate::error("Cancelled");
+            return Err(crate::error("Cancelled"));
         }
         let Some(camera) = cameras.get(observation.camera).and_then(Option::as_ref) else {
-            do yeet crate::error("Bundle observation references an unregistered camera");
+            return Err(crate::error("Bundle observation references an unregistered camera"));
         };
         let Some(&position) = positions.get(observation.point) else {
-            do yeet crate::error("Bundle observation references a missing point");
+            return Err(crate::error("Bundle observation references a missing point"));
         };
         if !observation.xy.iter().all(|v| v.is_finite()) || projection(camera, position).is_none() {
-            do yeet crate::error("Invalid bundle observation or non-positive initial depth");
+            return Err(crate::error("Invalid bundle observation or non-positive initial depth"));
         }
         seen[observation.camera] = true;
     }
