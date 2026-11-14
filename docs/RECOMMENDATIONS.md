@@ -46,10 +46,10 @@ Goal: `src/App.svt` becomes a thin shell that composes children.
 
 ## Phase 4 — Accessibility
 
-- [~] **4.4** A11y: `aria-live` status regions exist; a shared focus trap and `aria-modal` are not applied to every dialog (`ScanPlanePanel.svt` and the DirectModeler subtract card declare `role="dialog"` without `aria-modal`)
-- [ ] **4.5** A11y: non-color cues for errors / diff / CSG (icons, hatch patterns)
+- [x] **4.4** A11y: `aria-live` status regions; true modals (export, palette, shortcuts, gallery, reference) share `Modal`/`SidePanel` with focus trap and `aria-modal`; the non-modal `ScanPlanePanel` and DirectModeler subtract card are labelled `role="dialog"` with `aria-modal="false"`. The 3D canvas is focusable with a focus ring, a name, a key description and arrow/Shift+arrow/+/- orbit, pan and zoom; the ViewCube is named as fixed presets with `aria-pressed` and a live current-view status
+- [~] **4.5** A11y: non-color cues: invalid fields get `aria-invalid` plus a dashed border, hovered sketch paths a dashed stroke, pressed buttons a heavier outline, the active subtract operand a text marker, the active ViewCube preset a heavier outline; save/build errors already carry icons or text. Remaining: hatch patterns for diff/CSG rendering in the 3D viewport
 
-**Exit criteria:** passes basic axe a11y checks.
+**Exit criteria:** passes basic axe a11y checks. `axe-core` is not a dependency yet; until browser gates (ROADMAP P5) exist, `tests/accessibilityUi.test.ts` checks roles, names and ARIA state of the touched components.
 
 ---
 

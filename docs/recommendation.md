@@ -217,12 +217,13 @@ Reopen these only for a demonstrated regression.
   stable roving tab stop; shortcut help is screen-reader-visible and coarse
   pointer targets expand to 44 px. Splitter pointer, keyboard, persisted and
   responsive bounds share one tested policy, expose a dynamic ARIA maximum and
-  stop on lost pointer capture.
+  stop on lost pointer capture. The focused canvas orbits, pans and zooms from the
+  keyboard, and the ViewCube is named as fixed presets with a live compass and
+  current-view status.
 - **Risk:** controls advertise behavior they do not provide, and mobile/keyboard
   workflows are incomplete.
 - **Acceptance remaining:** identity-based object multi-selection across scene,
-  renderer and publication; keyboard orbit/pan/dolly; a truly camera-projected
-  cube (or honest preset/compass naming); bounded live-result announcements;
+  renderer and publication; bounded live-result announcements;
   browser/AT verification and a resizable side-by-side Scene/Inspect workflow.
 
 ### R11 — Add conformance, browser and performance gates
