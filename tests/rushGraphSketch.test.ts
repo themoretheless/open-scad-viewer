@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { solveRushGraphSketch, type SketchPoint, type SketchConstraint } from '../src/language/rushGraphSketch'
 import { compileRushGraph, setRushGraphParameters, RUSH_GRAPH_SKETCH_EXAMPLE, RushGraphError } from '../src/language/rushGraph'
 import { HeadlessGeometryService } from '../src/mcp/geometryService'
@@ -83,6 +84,63 @@ describe('bounded sketch constraint solver', () => {
     expect(() => solveRushGraphSketch([...points, points[0]!], [])).toThrow('unique')
     expect(() => solveRushGraphSketch(points, [{ id: 'bad', kind: 'distance', a: 'a', b: 'b', value: 0 }])).toThrow('positive')
     expect(() => compileRushGraph(document({ boundary: ['a', 'b', 'a'] }))).toThrow('Boundary')
+  })
+})
+
+describe('sketch circles, arcs and holes', () => {
+  const arcsExample = () => JSON.parse(readFileSync('docs/languages/rush-1.sketch-arcs.example.json', 'utf8'))
+  it('solves a free radius from a tangent line with near-zero residual', () => {
+    const pts: SketchPoint[] = [{ id: 'o', position: [0.3, 0.2] }, { id: 'p', position: [-10, 6] }, { id: 'q', position: [10, 5] }]
+    const cs: SketchConstraint[] = [
+      { id: 'fo', kind: 'fix', point: 'o', at: [0, 0] },
+      { id: 'fp', kind: 'fix', point: 'p', at: [-10, 7] },
+      { id: 'h', kind: 'horizontal', a: 'p', b: 'q' },
+      { id: 'd', kind: 'distance', a: 'p', b: 'q', value: 20 },
+      { id: 't', kind: 'tangent_line_circle', a: 'p', b: 'q', circle: 'c' },
+    ]
+    const result = solveRushGraphSketch(pts, cs, 1e-6, [{ id: 'c', center: 'o', radius: 2 }])
+    expect(result.status).toBe('solved')
+    expect(result.circles![0]!.radius).toBeCloseTo(7, 6)
+    expect(Math.abs(result.constraints.find(c => c.id === 't')!.residual_mm)).toBeLessThan(1e-6)
+  })
+  it('solves tangent and concentric circles', () => {
+    const pts: SketchPoint[] = [{ id: 'o', position: [0, 0] }, { id: 'p', position: [9, 0.4] }, { id: 'q', position: [0.1, 0.1] }]
+    const cs: SketchConstraint[] = [
+      { id: 'fo', kind: 'fix', point: 'o', at: [0, 0] },
+      { id: 'ra', kind: 'radius', circle: 'a', value: 3 },
+      { id: 'rb', kind: 'radius', circle: 'b', value: 4 },
+      { id: 'h', kind: 'horizontal', a: 'o', b: 'p' },
+      { id: 't', kind: 'tangent_circles', a: 'a', b: 'b' },
+      { id: 'k', kind: 'concentric', a: 'a', b: 'c' },
+      { id: 'e', kind: 'equal_radius', a: 'b', b: 'c' },
+    ]
+    const result = solveRushGraphSketch(pts, cs, 1e-6, [{ id: 'a', center: 'o', radius: 2 }, { id: 'b', center: 'p', radius: 2 }, { id: 'c', center: 'q', radius: 1 }])
+    expect(result.constraints.every(c => c.satisfied)).toBe(true)
+    expect(Math.hypot(...result.circles![1]!.center)).toBeCloseTo(7, 5)
+    expect(result.circles![2]!.radius).toBeCloseTo(4, 5)
+  })
+  it('refuses an over-constrained radius', () => {
+    const cs: SketchConstraint[] = [{ id: 'r1', kind: 'radius', circle: 'k', value: 3 }, { id: 'r2', kind: 'radius', circle: 'k', value: 4 }]
+    expect(solveRushGraphSketch(points, cs, 1e-6, [{ id: 'k', center: 'a', radius: 2 }]).status).not.toBe('solved')
+    const doc = arcsExample()
+    doc.nodes[0].constraints.push({ id: 'extra', kind: 'radius', circle: 'end', value: 7 })
+    expect(() => compileRushGraph(doc)).toThrow(RushGraphError)
+    expect(() => solveRushGraphSketch(points, [{ id: 'x', kind: 'radius', circle: 'a', value: 1 }])).toThrow('Unknown sketch circle')
+  })
+  it('compiles the arc and hole example into the expected solid', async () => {
+    const compiled = compileRushGraph(arcsExample())
+    const report = compiled.sketch_solutions[0]!
+    expect(report.status).toBe('solved')
+    expect(report.circles!.find(c => c.id === 'end')!.radius).toBeCloseTo(5, 6)
+    expect(compiled.source).toContain('difference()')
+    const runtime = new DirectGeometrySupervisor()
+    try {
+      const built = await new HeadlessGeometryService(defaultGeometryBuildEngine, runtime).analyze(compiled.source, 'full')
+      expect(built.volume).toBeCloseTo((200 + Math.PI * 25 / 2 - Math.PI * 4) * 3, 0)
+    } finally { await runtime.close() }
+    const bad = arcsExample()
+    bad.parameters[2].value = 5.5
+    expect(() => compileRushGraph(bad)).toThrow('inside the boundary')
   })
 })
 

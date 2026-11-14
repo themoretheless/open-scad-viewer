@@ -464,6 +464,21 @@ pub(super) fn sketch_constraint(value: &mut Value, path: &str) -> Result<()> {
             required("c", Rule::Id),
             required("d", Rule::Id),
         ],
+        "radius" => &[
+            ID,
+            KIND,
+            required("circle", Rule::Id),
+            required("value", Rule::Expr),
+        ],
+        "concentric" | "equal_radius" => &[ID, KIND, A, B],
+        "point_on_circle" => &[
+            ID,
+            KIND,
+            required("point", Rule::Id),
+            required("circle", Rule::Id),
+        ],
+        "tangent_line_circle" => &[ID, KIND, A, B, required("circle", Rule::Id)],
+        "tangent_circles" => &[ID, KIND, A, B, bool_default("internal", false)],
         kind => {
             return Err(invalid(
                 &child_path(path, "kind"),

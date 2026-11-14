@@ -33,6 +33,8 @@ pub(super) enum Rule {
     Mate,
     Joint,
     SketchPoint,
+    SketchCircle,
+    SketchArc,
     SketchConstraint,
     Parameter,
     Constraint,
@@ -472,6 +474,20 @@ pub(super) fn rule(value: &mut Value, path: &str, expected: Rule) -> Result<()> 
             ],
         )?,
         Rule::SketchPoint => object(value, path, &[ID, required("position", Rule::Vector(2))])?,
+        Rule::SketchCircle => object(
+            value,
+            path,
+            &[ID, required("center", Rule::Id), required("radius", Rule::Expr)],
+        )?,
+        Rule::SketchArc => object(
+            value,
+            path,
+            &[
+                required("from", Rule::Id),
+                required("circle", Rule::Id),
+                bool_default("ccw", true),
+            ],
+        )?,
         Rule::SketchConstraint => sketch_constraint(value, path)?,
         Rule::Parameter => object(
             value,

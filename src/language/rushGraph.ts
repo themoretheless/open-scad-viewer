@@ -114,6 +114,11 @@ const sketchConstraint = z.discriminatedUnion('kind', [
   z.object({ id, kind: z.enum(['horizontal', 'vertical', 'coincident']), a: id, b: id }).strict(),
   z.object({ id, kind: z.literal('distance'), a: id, b: id, value: scalar }).strict(),
   z.object({ id, kind: z.enum(['parallel', 'perpendicular', 'equal_length']), a: id, b: id, c: id, d: id }).strict(),
+  z.object({ id, kind: z.literal('radius'), circle: id, value: scalar }).strict(),
+  z.object({ id, kind: z.enum(['concentric', 'equal_radius']), a: id, b: id }).strict(),
+  z.object({ id, kind: z.literal('point_on_circle'), point: id, circle: id }).strict(),
+  z.object({ id, kind: z.literal('tangent_line_circle'), a: id, b: id, circle: id }).strict(),
+  z.object({ id, kind: z.literal('tangent_circles'), a: id, b: id, internal: z.boolean().default(false) }).strict(),
 ])
 const frameSchema = z.object({ origin: vector, rotation: vector }).strict()
 const affineRow = z.tuple([scalar, scalar, scalar, scalar])
@@ -138,7 +143,7 @@ const node = z.discriminatedUnion('op', [
 
   z.object({ id, op: z.literal('loft'), profile: z.array(vector2).min(3).max(64), sections: z.array(z.object({ z: scalar, scale: vector2, offset: vector2 }).strict()).min(2).max(32) }).strict(),
   z.object({ id, op: z.literal('assembly'), components: z.array(z.object({ id, input: id, anchors: z.array(z.object({ id, origin: vector, rotation: vector }).strict()).max(32), placement: frameSchema.optional(), mate: z.object({ component: id, anchor: id, own_anchor: id, gap: scalar, rotation: vector, joint: z.object({ kind: z.enum(['revolute', 'slider']), position: scalar, min: scalar, max: scalar }).strict().optional() }).strict().optional() }).strict()).min(1).max(32) }).strict(),
-  z.object({ id, op: z.literal('sketch'), points: z.array(z.object({ id, position: vector2 }).strict()).min(3).max(16), boundary: z.array(id).min(3).max(16), constraints: z.array(sketchConstraint).max(48), allow_underconstrained: z.boolean().default(false) }).strict(),
+  z.object({ id, op: z.literal('sketch'), points: z.array(z.object({ id, position: vector2 }).strict()).min(3).max(16), boundary: z.array(id).min(3).max(16), circles: z.array(z.object({ id, center: id, radius: scalar }).strict()).max(8).optional(), constraints: z.array(sketchConstraint).max(48), arcs: z.array(z.object({ from: id, circle: id, ccw: z.boolean().default(true) }).strict()).max(16).optional(), holes: z.array(id).max(8).optional(), allow_underconstrained: z.boolean().default(false) }).strict(),
   z.object({ id, op: z.literal('rectangle'), size: z.union([vector2,scalar]), center: z.boolean().default(false) }).strict(),
   z.object({ id, op: z.literal('circle'), radius: scalar }).strict(),
   z.object({ id, op: z.literal('polygon'), points: z.array(vector2).min(3).max(256) }).strict(),
@@ -261,7 +266,8 @@ A profile node {id,op:"sketch",points:[{id,position:[x,y]}],boundary:[pointIds],
 Constraint forms: {id,kind:"fix",point:id,at:[x,y]}; {id,kind:"horizontal"|"vertical"|"coincident",a:pointId,b:pointId}; {id,kind:"distance",a,b,value:positiveLength}; {id,kind:"parallel"|"perpendicular"|"equal_length",a,b,c,d} relates segments a-b and c-d. Use coincident for zero distance. Parallel/perpendicular reject zero-length segments at the resulting solution.
 The bounded numerical solver uses initial guesses to select a local solution. Limits: 3..16 points, at most 48 constraints, 64 iterations, 16 expanded sketch solves per compilation. Tolerance is 0.000001 mm. sketch_solutions contains solved coordinates, per-constraint residual_mm/satisfied, maximum residual, iterations, local degrees_of_freedom (Jacobian nullity) and redundant_equations (local equation-count minus rank). Rank is numerical, not a global uniqueness proof. Redundancy counts equations, not necessarily removable constraints.
 Statuses: solved; underconstrained (satisfied but local freedom remains); inconsistent (unsatisfied linear system with augmented-rank conflict); not_converged (nonlinear solver exhausted its budget, singular start or degenerate segment). Unsatisfied residuals identify problematic constraints but are not a proven minimal conflict set. No global impossibility claim is made for nonlinear nonconvergence. By default only solved sketches emit geometry. allow_underconstrained:true explicitly accepts a locally underconstrained solution using the initial guess. Invalid or self-intersecting solved boundaries still fail profile validation. Compilation errors include the solver report in error.details; successful compilation and rush_report include sketch_solutions.
-No arc/circle/tangency solver, assembly solver or automatic repair is implemented by this node.`
+Circles: circles:[{id,center:pointId,radius:positiveLength}] (radius is an initial guess unless constrained; circle IDs share the point namespace). Circle constraints: {id,kind:"radius",circle,value}; {id,kind:"concentric"|"equal_radius",a:circleId,b:circleId}; {id,kind:"point_on_circle",point,circle}; {id,kind:"tangent_line_circle",a:pointId,b:pointId,circle}; {id,kind:"tangent_circles",a,b,internal?:false}. sketch_solutions[].circles reports solved center and radius. arcs:[{from:pointId,circle,ccw?:true}] replaces the boundary edge from that point to the next one with an arc of the circle (both endpoints must lie on it; add point_on_circle). holes:[circleId] subtracts circles that lie strictly inside the boundary. Limits: 8 circles, 16 arcs, 8 holes.
+No assembly solver or automatic repair is implemented by this node.`
 
 export const RUSH_GRAPH_SKETCH_EXAMPLE = {
   language: 'rush/ir-1', units: 'mm', parameters: [{ id: 'width', value: 20 }],

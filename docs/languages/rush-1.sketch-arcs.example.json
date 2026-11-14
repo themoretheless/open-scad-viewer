@@ -1,0 +1,46 @@
+{
+  "language": "rush/ir-1",
+  "units": "mm",
+  "parameters": [
+    { "id": "width", "value": 20 },
+    { "id": "height", "value": 10 },
+    { "id": "hole_radius", "value": 2 }
+  ],
+  "nodes": [
+    {
+      "id": "tab",
+      "op": "sketch",
+      "points": [
+        { "id": "a", "position": [0.1, 0] },
+        { "id": "b", "position": [19, 0.2] },
+        { "id": "c", "position": [20, 11] },
+        { "id": "d", "position": [0, 10] },
+        { "id": "m", "position": [20.5, 4] },
+        { "id": "hc", "position": [8, 5] }
+      ],
+      "circles": [
+        { "id": "end", "center": "m", "radius": 3 },
+        { "id": "hole", "center": "hc", "radius": 1 }
+      ],
+      "constraints": [
+        { "id": "origin", "kind": "fix", "point": "a", "at": [0, 0] },
+        { "id": "bottom", "kind": "horizontal", "a": "a", "b": "b" },
+        { "id": "width", "kind": "distance", "a": "a", "b": "b", "value": { "param": "width" } },
+        { "id": "right", "kind": "vertical", "a": "b", "b": "c" },
+        { "id": "height", "kind": "distance", "a": "b", "b": "c", "value": { "param": "height" } },
+        { "id": "top", "kind": "horizontal", "a": "c", "b": "d" },
+        { "id": "left", "kind": "vertical", "a": "d", "b": "a" },
+        { "id": "center_on_edge", "kind": "vertical", "a": "b", "b": "m" },
+        { "id": "b_on_end", "kind": "point_on_circle", "point": "b", "circle": "end" },
+        { "id": "c_on_end", "kind": "point_on_circle", "point": "c", "circle": "end" },
+        { "id": "hole_center", "kind": "fix", "point": "hc", "at": [8, 5] },
+        { "id": "hole_size", "kind": "radius", "circle": "hole", "value": { "param": "hole_radius" } }
+      ],
+      "boundary": ["a", "b", "c", "d"],
+      "arcs": [{ "from": "b", "circle": "end" }],
+      "holes": ["hole"]
+    },
+    { "id": "part", "op": "extrude", "input": "tab", "height": 3 }
+  ],
+  "root": "part"
+}
