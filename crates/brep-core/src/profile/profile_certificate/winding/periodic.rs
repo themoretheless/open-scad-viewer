@@ -143,21 +143,28 @@ struct Compressed {
     coefficients: Vec<i32>,
     original_cycles: Vec<Vec<usize>>,
 }
-fn compress(graph: &WeightedChartGraph) -> Result<Compressed> {
-    if graph.original_edges > 512
-        || graph.expanded_edges > 512
-        || graph.edges.len() > 512
+/// Owner limit on edges, loops, cancellations and coefficients.
+const MAX_EDGES: usize = 512;
+fn verify_sizes(graph: &WeightedChartGraph) -> Result<()> {
+    if graph.original_edges > MAX_EDGES
+        || graph.expanded_edges > MAX_EDGES
+        || graph.edges.len() > MAX_EDGES
         || graph
             .edges
             .iter()
-            .any(|e| !(1..=512).contains(&e.coefficient))
-        || graph.loops.len() > 512
-        || graph.cancellations.len() > 512
+            .any(|e| !(1..=MAX_EDGES).contains(&e.coefficient))
+        || graph.loops.len() > MAX_EDGES
+        || graph.cancellations.len() > MAX_EDGES
     {
         return Err(refused(
             "Weighted periodic region source exceeds its 512-edge owner limit",
         ));
     }
+    Ok(())
+}
+/// Every original edge contributes exactly once, and every dictionary edge
+/// or cancellation sums to its integer flow.
+fn verify_provenance(graph: &WeightedChartGraph) -> Result<()> {
     let mut seen = vec![false; graph.original_edges];
     for (contributions, expected) in graph
         .edges
@@ -187,6 +194,53 @@ fn compress(graph: &WeightedChartGraph) -> Result<Compressed> {
     if seen.iter().any(|x| !x) {
         return Err(refused("Weighted source provenance omits an original edge"));
     }
+    Ok(())
+}
+/// A repeated closed walk collapsed to its primitive cyclic word, in its
+/// least rotation, with how many times it repeats.
+fn primitive_word(cycle: &[usize]) -> (Vec<usize>, i32) {
+    let period = (1..=cycle.len())
+        .find(|&d| {
+            cycle.len().is_multiple_of(d) && (0..cycle.len()).all(|i| cycle[i] == cycle[i % d])
+        })
+        .unwrap_or(cycle.len());
+    let base = &cycle[..period];
+    let key = (0..period)
+        .map(|shift| {
+            (0..period)
+                .map(|j| base[(j + shift) % period])
+                .collect::<Vec<_>>()
+        })
+        .min()
+        .unwrap_or_default();
+    (key, (cycle.len() / period) as i32)
+}
+impl Compressed {
+    /// Adds one occurrence of a primitive word from an original cycle.
+    fn add(&mut self, key: Vec<usize>, coefficient: i32, cycle_id: usize) {
+        if let Some(i) = self.edges.iter().position(|ids| *ids == key) {
+            self.coefficients[i] += coefficient;
+            self.original_cycles[i].push(cycle_id);
+        } else {
+            self.edges.push(key);
+            self.coefficients.push(coefficient);
+            self.original_cycles.push(vec![cycle_id]);
+        }
+    }
+    /// Dictionary-edge use counts of the compressed cycles.
+    fn counts(&self, edges: usize) -> Vec<usize> {
+        let mut counts = vec![0usize; edges];
+        for (cycle, &coefficient) in self.edges.iter().zip(&self.coefficients) {
+            for &i in cycle {
+                counts[i] += coefficient as usize;
+            }
+        }
+        counts
+    }
+}
+fn compress(graph: &WeightedChartGraph) -> Result<Compressed> {
+    verify_sizes(graph)?;
+    verify_provenance(graph)?;
     let mut counts = vec![0usize; graph.edges.len()];
     let mut total = 0usize;
     let mut out = Compressed {
@@ -195,7 +249,10 @@ fn compress(graph: &WeightedChartGraph) -> Result<Compressed> {
         original_cycles: Vec::new(),
     };
     for (cycle_id, cycle) in graph.loops.iter().enumerate() {
-        if cycle.is_empty() || cycle.len() > 512 || total.saturating_add(cycle.len()) > 512 {
+        if cycle.is_empty()
+            || cycle.len() > MAX_EDGES
+            || total.saturating_add(cycle.len()) > MAX_EDGES
+        {
             return Err(refused(
                 "Weighted periodic cycles exceed their complete flow budget",
             ));
@@ -207,29 +264,9 @@ fn compress(graph: &WeightedChartGraph) -> Result<Compressed> {
                 .ok_or_else(|| refused("Weighted periodic cycle references an unknown edge"))?;
             *n += 1;
         }
-        // Collapse a repeated closed walk to its primitive cyclic word. Every
-        // occurrence remains accounted for by its integer coefficient.
-        let period = (1..=cycle.len())
-            .find(|&d| cycle.len() % d == 0 && (0..cycle.len()).all(|i| cycle[i] == cycle[i % d]))
-            .unwrap();
-        let base = &cycle[..period];
-        let key = (0..period)
-            .map(|shift| {
-                (0..period)
-                    .map(|j| base[(j + shift) % period])
-                    .collect::<Vec<_>>()
-            })
-            .min()
-            .unwrap();
-        let coefficient = (cycle.len() / period) as i32;
-        if let Some(i) = out.edges.iter().position(|ids| *ids == key) {
-            out.coefficients[i] += coefficient;
-            out.original_cycles[i].push(cycle_id);
-        } else {
-            out.edges.push(key);
-            out.coefficients.push(coefficient);
-            out.original_cycles.push(vec![cycle_id]);
-        }
+        // Every occurrence remains accounted for by its integer coefficient.
+        let (key, coefficient) = primitive_word(cycle);
+        out.add(key, coefficient, cycle_id);
     }
     if total != graph.expanded_edges
         || counts
@@ -242,13 +279,7 @@ fn compress(graph: &WeightedChartGraph) -> Result<Compressed> {
         ));
     }
     // Also independently check the compressed dictionary-flow identity.
-    let mut compressed_counts = vec![0usize; graph.edges.len()];
-    for (cycle, &coefficient) in out.edges.iter().zip(&out.coefficients) {
-        for &i in cycle {
-            compressed_counts[i] += coefficient as usize;
-        }
-    }
-    if counts != compressed_counts {
+    if counts != out.counts(graph.edges.len()) {
         return Err(refused(
             "Periodic cycle compression changed integer boundary flow",
         ));
