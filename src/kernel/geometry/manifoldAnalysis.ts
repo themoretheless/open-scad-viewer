@@ -1,4 +1,4 @@
-import {decodeNurbsResult,kernelRuntime,kernelVertexFormat} from './kernel'
+import {decodeNurbsResult,GeometryKernelError,kernelRuntime,kernelVertexFormat} from './kernel'
 import {copyBuffer} from './bufferTransport'
 import manifoldReportSchema from './manifoldReportSchema.json'
 
