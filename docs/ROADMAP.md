@@ -32,7 +32,7 @@
 | Д. Тесты, CI, квалификация | `tests/`, `tools/`, `.github/` | P2 → C2, C3 → P5 → N17 → N18; P1 последним | S4 (медленные тесты), C1 (LFS) |
 | Е. Manifold | `manifold-core`, `manifold-ops`, `tools/manifold-bench` | S4 → S6 → S5 → S7, S8, S9 → S1 | O2, O4 (размер WASM, горячие пути) |
 | Ж. Обмен | `cad-step` | N8 → N9 → N10, C13 | M1: весь STEP/IGES в `cad-step` |
-| З. Независимые | каждый в своём крейте | S10, S11, S15, S16, N26, C12, C22, S14 | — |
+| З. Независимые | каждый в своём крейте | S10, S11, S15, S16, N26, C22, S14 | — |
 
 ## 1. NURBS и B-rep
 
@@ -80,7 +80,6 @@
 | **C9. Цепочка создания тела с Boolean внутри команды.** new/union/subtract в одной команде, Boolean в Sweep/Revolve, многооперандный Boolean, Boolean Region; отдельная квалификация касаний и совпадений; никогда не подменять B-rep мешем молча | P1 | L | нет | C4 | [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) группа 4, этапы 2, 3 |
 | **C10. Скругления в редакторе.** Выбор цепочек, радиус мышью и числом, сохранение выбора; расширять классы только после геометрической матрицы. Библиотечная часть в N12 | P1 | L | частично | N12 | [cad-remaining](design/cad-remaining-2026-09-29.md) P1; [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) этап 3 |
 | **C11. Точная диагностика B-rep.** Расстояние тело-тело с точками на поверхностях, включение и пересечение заполненных объёмов, самопересечения, толщина криволинейных стенок; вывести аудит самопересечений поверхностей в редактор (сейчас есть только `shellDistance`) | P1 | L | да | N1 | [cad-remaining](design/cad-remaining-2026-09-29.md) P1 диагностика; [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 2 |
-| **C12. Восстановление после сбоя и автосохранение в нескольких вкладках.** Восстановление на каждой стадии записи, согласованность вкладок, поведение без Web Locks | P1 | M | да | — | [cad-remaining](design/cad-remaining-2026-09-29.md) P1 п. 3 |
 | **C13. Точность обмена STEP/IGES.** Импорт → правка → экспорт → проверка OpenCascade на широком корпусе; настройки качества и единиц mesh-экспорта отдельно от CAD; прозрачность и текстуры в STEP. Код только в `cad-step` | P1 | L | нет (с N9, N10) | C3 | [cad-remaining](design/cad-remaining-2026-09-29.md) P1 п. 4; [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 9 |
 | **C14. Большие сцены (1000 экземпляров).** История, правка и восстановление; стабильные p50/p95, FPS при вращении, пиковая память. Последний замер: Redo около 1,7 с | P1 | L | нет | C1, C8 | [cad-remaining](design/cad-remaining-2026-09-29.md) P0 п. 4, P2 |
 | **C15. Lineage паттернов и общая параметрическая история.** Lineage через Boolean и паттерны, правка ранних параметров, граф зависимостей, перенос изменённых ID, ModelGraph, миграции схемы; стабильные идентичности выбора при Undo/Redo | P1 | L | да | N6 | [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 7, 8; [plasticity-plan](design/plasticity-development-plan-2026-09-27.md) этап 1 |
