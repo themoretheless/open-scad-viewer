@@ -8,87 +8,83 @@ pub struct OwnedOriginalUnifiedRegions {
     right: Vec<Vec<i64>>,
     regions: Vec<OriginalFilledRegion>,
 }
-fn derive(
-    owner: &OwnedOriginalUnifiedFilled,
-    limits: ParameterOrderLimits,
-) -> Result<(Vec<Vec<i64>>, Vec<Vec<i64>>, Vec<OriginalFilledRegion>)> {
-    owner.reverify_source()?;
-    if limits.max_refinements > 512 || !(1..=128).contains(&limits.max_resultant_size) {
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+const MAX_BOUNDARIES: usize = 1024;
+const MAX_CENSUS: usize = 1_048_576;
+fn verify_limits(owner: &OwnedOriginalUnifiedFilled, limits: ParameterOrderLimits) -> Result<()> {
+    if limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&limits.max_resultant_size)
+    {
         return Err(refused("Invalid unified material containment limits"));
     }
-    let n = owner.boundaries().len();
-    if n > 1024
-        || owner
-            .retained()
-            .len()
-            .saturating_mul(owner.retained().len())
-            .saturating_mul(2)
-            > 1_048_576
+    let retained = owner.retained().len();
+    if owner.boundaries().len() > MAX_BOUNDARIES
+        || retained.saturating_mul(retained).saturating_mul(2) > MAX_CENSUS
     {
         return Err(refused(
             "Unified material containment census allowance exceeded",
         ));
     }
+    Ok(())
+}
+/// Winding vectors on the left and right of one boundary; every dart of the
+/// boundary must report the same pair.
+fn boundary_sides(
+    owner: &OwnedOriginalUnifiedFilled,
+    darts: &[usize],
+    limits: ParameterOrderLimits,
+) -> Result<(Vec<i64>, Vec<i64>)> {
     let ports = owner.cycles().owner().owner();
-    let mut left = Vec::new();
-    let mut right = Vec::new();
-    let mut outer = Vec::new();
-    let mut holes = Vec::new();
-    for (boundary, darts) in owner.boundaries().iter().enumerate() {
-        let mut l = None;
-        let mut r = None;
-        for &dart in darts {
-            let p = &ports.ports()[dart];
-            let side = &owner.sides()[p.edge];
-            let a = unified_boundary_winding::evaluate_verified(
+    let mut sides: Option<(Vec<i64>, Vec<i64>)> = None;
+    for &dart in darts {
+        let p = &ports.ports()[dart];
+        let side = &owner.sides()[p.edge];
+        let winding = |end: usize| {
+            unified_boundary_winding::evaluate_verified(
                 owner,
-                &side.certificates()[p.endpoint].point,
+                &side.certificates()[end].point,
                 limits,
-            )?;
-            let b = unified_boundary_winding::evaluate_verified(
-                owner,
-                &side.certificates()[1 - p.endpoint].point,
-                limits,
-            )?;
-            if let Some(previous) = &l {
-                if previous != &a || r.as_ref() != Some(&b) {
-                    return Err(refused(
-                        "Unified selected boundary side containment is not constant",
-                    ));
-                }
-            } else {
-                l = Some(a);
-                r = Some(b);
-            }
-        }
-        let l = l.ok_or_else(|| refused("Unified material boundary is empty"))?;
-        let r = r.unwrap();
-        if l.len() != n
-            || r.len() != n
-            || l.iter().zip(&r).enumerate().any(|(other, (a, b))| {
-                if other == boundary {
-                    a.checked_sub(*b) != Some(1)
-                } else {
-                    a != b
-                }
-            })
-        {
-            return Err(refused(
-                "Unified component containment has inconsistent exact side jumps",
-            ));
-        }
-        match (l[boundary], r[boundary]) {
-            (1, 0) => outer.push(boundary),
-            (0, -1) => holes.push(boundary),
-            _ => {
+            )
+        };
+        let a = winding(p.endpoint)?;
+        let b = winding(1 - p.endpoint)?;
+        match &sides {
+            Some((l, r)) if *l != a || *r != b => {
                 return Err(refused(
-                    "Unified material component is not a proved outer or hole boundary",
+                    "Unified selected boundary side containment is not constant",
                 ));
             }
+            Some(_) => {}
+            None => sides = Some((a, b)),
         }
-        left.push(l);
-        right.push(r);
     }
+    sides.ok_or_else(|| refused("Unified material boundary is empty"))
+}
+/// Crossing the boundary changes only its own winding, by exactly one.
+fn verify_jumps(boundary: usize, n: usize, l: &[i64], r: &[i64]) -> Result<()> {
+    if l.len() != n
+        || r.len() != n
+        || l.iter().zip(r).enumerate().any(|(other, (a, b))| {
+            if other == boundary {
+                a.checked_sub(*b) != Some(1)
+            } else {
+                a != b
+            }
+        })
+    {
+        return Err(refused(
+            "Unified component containment has inconsistent exact side jumps",
+        ));
+    }
+    Ok(())
+}
+/// Every hole joins the unique innermost outer boundary that contains it.
+fn assign_holes(
+    outer: &[usize],
+    holes: Vec<usize>,
+    left: &[Vec<i64>],
+) -> Result<Vec<OriginalFilledRegion>> {
     let mut regions = outer
         .iter()
         .map(|&outer| OriginalFilledRegion {
@@ -111,26 +107,49 @@ fn derive(
                     .all(|&other| c == other || left[c][other] == 1)
             })
             .collect::<Vec<_>>();
-        if innermost.len() != 1 {
+        let [owner] = innermost[..] else {
             return Err(refused(
                 "Unified hole has no unique proved innermost outer boundary",
             ));
-        }
+        };
         regions
             .iter_mut()
-            .find(|r| r.outer == innermost[0])
-            .unwrap()
+            .find(|r| r.outer == owner)
+            .ok_or_else(|| refused("Unified hole has no unique proved innermost outer boundary"))?
             .holes
             .push(hole);
     }
-    for i in 0..n {
-        for j in 0..n {
-            if i != j && !matches!(left[i][j], -1..=1) {
+    Ok(regions)
+}
+type Containment = (Vec<Vec<i64>>, Vec<Vec<i64>>, Vec<OriginalFilledRegion>);
+fn derive(owner: &OwnedOriginalUnifiedFilled, limits: ParameterOrderLimits) -> Result<Containment> {
+    owner.reverify_source()?;
+    verify_limits(owner, limits)?;
+    let n = owner.boundaries().len();
+    let mut left = Vec::new();
+    let mut right = Vec::new();
+    let mut outer = Vec::new();
+    let mut holes = Vec::new();
+    for (boundary, darts) in owner.boundaries().iter().enumerate() {
+        let (l, r) = boundary_sides(owner, darts, limits)?;
+        verify_jumps(boundary, n, &l, &r)?;
+        match (l[boundary], r[boundary]) {
+            (1, 0) => outer.push(boundary),
+            (0, -1) => holes.push(boundary),
+            _ => {
                 return Err(refused(
-                    "Unified material containment is not a simple component relation",
+                    "Unified material component is not a proved outer or hole boundary",
                 ));
             }
         }
+        left.push(l);
+        right.push(r);
+    }
+    let regions = assign_holes(&outer, holes, &left)?;
+    if (0..n).any(|i| (0..n).any(|j| i != j && !matches!(left[i][j], -1..=1))) {
+        return Err(refused(
+            "Unified material containment is not a simple component relation",
+        ));
     }
     Ok((left, right, regions))
 }
