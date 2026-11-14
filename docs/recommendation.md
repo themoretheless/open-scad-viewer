@@ -365,13 +365,29 @@ Reopen these only for a demonstrated regression.
 
 ### Print P2 — mesh sections to G-code preview
 
-- **Priority/status:** P2 / Preview pipeline implemented; machine-specific output pending.
+- **Priority/status:** P2 / Preview pipeline and machine-specific job output implemented.
 - **Evidence:** [`G-code preview contract`](design/gcode-preview.md) connects
   indexed mesh sections, bounded walls/hatch planning, strict G-code parse-back,
   WASM dispatch and a cancellable browser worker with layer preview. Native,
   host and UI regression tests cover the supported preview workflow.
-- **Acceptance remaining:** qualified machine profiles, physical layer placement,
-  solid skins/supports and variable width. Does not launch a printer.
+  Machine output (S14): `gcode-core` loads four printer profiles from data files
+  (`crates/gcode-core/profiles/*.printer`: Ender-3 V2 and MK3S+ on Marlin,
+  Voron 2.4 on Klipper, RailCore II on RepRapFirmware) with bed volume, nozzle,
+  flavor, start/end G-code, retraction, speeds and temperatures, validated on
+  load and selected by id. `emit_printer_job` refuses toolpaths outside the bed
+  and splices custom G-code around the flavor dialect; `emit_job_variable_width`
+  writes per-segment E = width x height x length / filament area.
+  `slicer-core::plan_layers_with_shells` honours wall count plus top/bottom solid
+  layer counts; `SupportConfig::from_overhang_angle` and `SupportPattern::{Lines,
+  Grid}` generate supports beneath overhangs. Covered by
+  `crates/gcode-core/tests/printer_profiles.rs` and
+  `crates/slicer-core/tests/shells_supports_profiles.rs`.
+- **Acceptance remaining:** profiles are checked against vendor specifications,
+  not physically qualified by test prints; first-layer/nozzle placement on the
+  bed is the host's job (out-of-bed paths are refused, not moved); slicer-side
+  automatic thin-wall width detection and the TS printer-profile picker are not
+  wired. Overhang detection erodes the unsupported band, an approximation of a
+  true per-edge angle test. Does not launch a printer.
 
 ## Update rule
 
