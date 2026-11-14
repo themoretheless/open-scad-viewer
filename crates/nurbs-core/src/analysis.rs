@@ -38,6 +38,7 @@ pub mod point_inversion;
 pub mod primitive_fit;
 pub use crate::distance::radial_bounds;
 pub mod ransac_primitives;
+pub mod analytic_recognition;
 pub mod ray_surface;
 pub mod reference_deviation;
 pub mod skin_radius;
