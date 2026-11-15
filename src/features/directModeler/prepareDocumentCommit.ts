@@ -1,5 +1,5 @@
 import type {DirectDocument} from '../../app/directModeling'
-import {stringifyMeshJson} from '../../exchange/meshJson'
+import {sameMeshJson} from '../../exchange/sameMeshJson'
 const documentObjects=(d:DirectDocument)=>[...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[]]
 export function prepareDocumentCommit(next:DirectDocument,previous:DirectDocument|undefined,fallbackIds:Iterable<string>,lockedIds:string[],activeGroup:string,origin:'edit'|'file',label:(ru:string,en:string)=>string) {
   const existing=new Set(previous?documentObjects(previous).map(b=>b.id):fallbackIds)
@@ -16,11 +16,11 @@ export function prepareDocumentCommit(next:DirectDocument,previous:DirectDocumen
     const sourceId=body.instance.sourceId
     if(!sourceChanges.has(sourceId)) {
       const oldSource=previousBodies.get(sourceId),newSource=nextBodies.get(sourceId)
-      sourceChanges.set(sourceId,stringifyMeshJson({mesh:oldSource?.mesh,brep:oldSource?.brep})!==stringifyMeshJson({mesh:newSource?.mesh,brep:newSource?.brep}))
+      sourceChanges.set(sourceId,!sameMeshJson({mesh:oldSource?.mesh,brep:oldSource?.brep},{mesh:newSource?.mesh,brep:newSource?.brep}))
     }
     const candidate=nextBodies.get(body.id)
-    if(!sourceChanges.get(sourceId)&&candidate?.instance&&stringifyMeshJson(candidate.instance)===stringifyMeshJson(body.instance)
-      &&stringifyMeshJson({mesh:candidate.mesh,brep:candidate.brep})!==stringifyMeshJson({mesh:body.mesh,brep:body.brep}))
+    if(!sourceChanges.get(sourceId)&&candidate?.instance&&sameMeshJson(candidate.instance,body.instance)
+      &&!sameMeshJson({mesh:candidate.mesh,brep:candidate.brep},{mesh:body.mesh,brep:body.brep}))
       throw Error(label('Измените источник или отсоедините экземпляр: ','Edit the source or detach the instance: ')+body.name)
   }
   const lockedObjects=(previous?documentObjects(previous):[]).filter(object=>lockedIds.includes(object.id))
@@ -28,7 +28,7 @@ export function prepareDocumentCommit(next:DirectDocument,previous:DirectDocumen
     const nextObjects=new Map(documentObjects(resolved).map(o=>[o.id,o]))
     for(const object of lockedObjects){
       const replacement=nextObjects.get(object.id)
-      if(!replacement||stringifyMeshJson(object)!==stringifyMeshJson(replacement))throw Error(label('Объект заблокирован: ','Object is locked: ')+object.name)
+      if(!replacement||!sameMeshJson(object,replacement))throw Error(label('Объект заблокирован: ','Object is locked: ')+object.name)
     }
   }:undefined
   for(const body of documentObjects(next))if(!existing.has(body.id)&&(origin==='file'?body.group===undefined:!body.group)&&activeGroup)body.group=activeGroup

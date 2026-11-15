@@ -4,6 +4,7 @@ import type {DirectDocument,DirectBody} from '../app/directModeling'
 import {normalizePolygonMesh} from './geometry/polygon'
 import {callGeometryRust} from './geometry/kernel'
 import {stringifyMeshJson} from '../exchange/meshJson'
+import {sha256Hex} from '../core/sha256'
 export interface SolidInstanceLink {sourceId:string;matrix:number[][];pattern?:boolean}
 /** Relative world-space edit about the current mesh bounds center. */
 export function transformSolidInstance(document:DirectDocument,id:string,delta:number[],axis:number[],angle:number,scale:number,cache?:SolidInstanceBatchCache):DirectDocument {
@@ -30,17 +31,22 @@ export function resolveSolidInstances(document:DirectDocument,cache?:SolidInstan
  const geometry=new Map<string,Pick<DirectBody,'mesh'|'brep'>>()
  for(const [sourceId,group] of groups){
   const source=bodies.get(sourceId)!
-  const batchSize=Math.max(1,Math.min(32,Math.floor(1_000_000/stringifyMeshJson({mesh:source.mesh,brep:source.brep}).length)))
+  const sourceText=stringifyMeshJson({mesh:source.mesh,brep:source.brep})
+  const batchSize=Math.max(1,Math.min(32,Math.floor(1_000_000/sourceText.length)))
+  // Each instance is an independent transform of the source, so results are cached per
+  // (source, matrix): editing one placement re-runs only that instance, not its whole batch.
+  const sourceKey=cache?sha256Hex(sourceText):''
+  const keyOf=(body:DirectBody)=>sourceKey+JSON.stringify(body.instance!.matrix)
+  const missing=cache?[] as DirectBody[]:group
+  if(cache)for(const body of group){const hit=cache.get(keyOf(body))?.[0];if(hit){normalizePolygonMesh(hit.mesh);geometry.set(body.id,hit)}else missing.push(body)}
   // Bound temporary native Value/transport allocations, not just the final document.
   // A single 1000-body packet caused a 37-second first allocation in qualification.
-  for(let start=0;start<group.length;start+=batchSize){
-   const batch=group.slice(start,start+batchSize)
+  for(let start=0;start<missing.length;start+=batchSize){
+   const batch=missing.slice(start,start+batchSize)
    const input={mesh:source.mesh,...(source.brep?{brep:source.brep}:{}),matrices:batch.map(body=>body.instance!.matrix)}
-   const key=cache?stringifyMeshJson(input):undefined
-   let result=key===undefined?undefined:cache!.get(key)
-   if(!result){result=callGeometryRust<Pick<DirectBody,'mesh'|'brep'>[]>('cad_instances',input);if(key!==undefined&&result.length===batch.length)cache!.set(key,result)}
+   const result=callGeometryRust<Pick<DirectBody,'mesh'|'brep'>[]>('cad_instances',input)
    if(result.length!==batch.length)throw Error('Instance batch returned an incomplete result.')
-   result.forEach((item,i)=>{normalizePolygonMesh(item.mesh);geometry.set(batch[i].id,item)})
+   result.forEach((item,i)=>{if(cache)cache.set(keyOf(batch[i]),[item]);normalizePolygonMesh(item.mesh);geometry.set(batch[i].id,item)})
   }
  }
  const resolved=document.bodies.map(body=>{
