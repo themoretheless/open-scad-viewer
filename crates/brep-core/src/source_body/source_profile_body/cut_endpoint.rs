@@ -1,6 +1,114 @@
 //! source profile body operations: cut_endpoint.
 use super::*;
 use nurbs_core::interval_eval::Interval as I;
+use nurbs_core::normal_alignment::ProfilePathReport;
+
+/// Upper sine-squared bound of a path report that claims alignment.
+fn qualified_upper(angular: &ProfilePathReport) -> Result<f64> {
+    angular
+        .upper_sine_squared
+        .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Bound endpoint and path work"))
+}
+
+/// Seam whose proposed-face UV path is a pair of affine lines on fixed
+/// natural boundaries, checked first at both endpoints and then along the
+/// whole path against the neighbor's proposed or original surface.
+struct AffineSeam<'p, 'a> {
+    profile: &'p WeightProfile<'a>,
+    other: Option<&'p WeightProfile<'a>>,
+    original: &'p Surface,
+    lines: [[[f64; 2]; 2]; 2],
+    threshold: f64,
+    cells: usize,
+    spans: usize,
+}
+
+impl AffineSeam<'_, '_> {
+    fn fresh_report() -> ProfilePathReport {
+        ProfilePathReport {
+            aligned: None,
+            cells: 0,
+            spans: 0,
+            accepted_cells: 0,
+            upper_sine_squared: None,
+            pending: vec![[0., 1.]],
+            reason: "profile-path-work-limit",
+        }
+    }
+
+    /// Endpoint prepass; `Err` carries the refusing report.
+    fn endpoints(&self) -> Result<std::result::Result<(ProfilePathReport, f64), ProfilePathReport>> {
+        let mut pre = Self::fresh_report();
+        let mut endpoint_upper = 0_f64;
+        for end in 0..2 {
+            if pre.cells == self.cells || pre.spans == self.spans {
+                return Ok(Err(pre));
+            }
+            let rectangles = std::array::from_fn(|side| self.lines[side][end].map(|x| [x, x]));
+            pre.cells += 1;
+            let budget = self.spans - pre.spans;
+            let r = match self.other {
+                Some(other) => {
+                    self.profile
+                        .inspect_profile_normals(other, rectangles, self.threshold, budget)?
+                }
+                None => self.profile.inspect_original_normals(
+                    self.original,
+                    rectangles,
+                    self.threshold,
+                    budget,
+                )?,
+            };
+            pre.spans += r.spans;
+            if r.aligned != Some(true) {
+                pre.pending.push([end as f64; 2]);
+                pre.reason = if r.reason == "span-limit" {
+                    "profile-path-work-limit"
+                } else if r.aligned == Some(false) {
+                    pre.aligned = Some(false);
+                    "profile-path-angular-mismatch"
+                } else {
+                    "profile-seam-endpoint-normal-unresolved"
+                };
+                return Ok(Err(pre));
+            }
+            let interval = r
+                .sine_squared_interval
+                .ok_or_else(|| Error::new("BREP_PROFILE_SEAM", "Bound endpoint and path work"))?;
+            endpoint_upper = endpoint_upper.max(interval[1]);
+            pre.accepted_cells += 1;
+        }
+        if pre.cells == self.cells || pre.spans == self.spans {
+            return Ok(Err(pre));
+        }
+        Ok(Ok((pre, endpoint_upper)))
+    }
+
+    /// Whole-path inspection with the prepass work and bound folded in.
+    fn path(&self, pre: ProfilePathReport, endpoint_upper: f64) -> Result<ProfilePathReport> {
+        let (cells, spans) = (self.cells - pre.cells, self.spans - pre.spans);
+        let mut angular = match self.other {
+            Some(other) => {
+                self.profile
+                    .inspect_profile_path(other, self.lines, self.threshold, cells, spans)?
+            }
+            None => self.profile.inspect_original_path(
+                self.original,
+                self.lines,
+                self.threshold,
+                cells,
+                spans,
+            )?,
+        };
+        angular.cells += pre.cells;
+        angular.spans += pre.spans;
+        angular.accepted_cells += pre.accepted_cells;
+        if let Some(upper) = angular.upper_sine_squared.as_mut() {
+            *upper = upper.max(endpoint_upper);
+        }
+        Ok(angular)
+    }
+}
 
 /// Section end at `parameter` on a selected edge use that must be affine
 /// along `axis` on the preserved natural `boundary` of its face.
@@ -264,7 +372,7 @@ pub(super) fn qualify_selected_seam<'p>(
                         faces: [face, neighbor],
                         edge: index,
                         threshold,
-                        upper: angular.upper_sine_squared.unwrap(),
+                        upper: qualified_upper(&angular)?,
                     });
                 }
                 out.angular = Some(angular);
@@ -285,90 +393,30 @@ pub(super) fn qualify_selected_seam<'p>(
                 })
             })
         });
-        if !(1..=100000).contains(&cells) || !(1..=100000).contains(&spans) {
+        if !(1..=span_work::MAX_WORK).contains(&cells) || !(1..=span_work::MAX_WORK).contains(&spans)
+        {
             return Err(Error::new(
                 "BREP_PROFILE_SEAM",
                 "Bound endpoint and path work",
             ));
         }
-        let mut pre = nurbs_core::normal_alignment::ProfilePathReport {
-            aligned: None,
-            cells: 0,
-            spans: 0,
-            accepted_cells: 0,
-            upper_sine_squared: None,
-            pending: vec![[0., 1.]],
-            reason: "profile-path-work-limit",
+        let seam = AffineSeam {
+            profile,
+            other: self.profile(neighbor),
+            original: map.surfaces()[1],
+            lines,
+            threshold,
+            cells,
+            spans,
         };
-        let mut endpoint_upper = 0_f64;
-        for end in 0..2 {
-            if pre.cells == cells || pre.spans == spans {
+        let angular = match seam.endpoints()? {
+            Ok((pre, endpoint_upper)) => seam.path(pre, endpoint_upper)?,
+            Err(pre) => {
                 out.reason = pre.reason;
                 out.angular = Some(pre);
                 return Ok(out);
             }
-            let rectangles = std::array::from_fn(|side| lines[side][end].map(|x| [x, x]));
-            pre.cells += 1;
-            let r = match self.profile(neighbor) {
-                Some(other) => profile.inspect_profile_normals(
-                    other,
-                    rectangles,
-                    threshold,
-                    spans - pre.spans,
-                )?,
-                None => profile.inspect_original_normals(
-                    map.surfaces()[1],
-                    rectangles,
-                    threshold,
-                    spans - pre.spans,
-                )?,
-            };
-            pre.spans += r.spans;
-            if r.aligned != Some(true) {
-                pre.pending.push([end as f64; 2]);
-                pre.reason = if r.reason == "span-limit" {
-                    "profile-path-work-limit"
-                } else if r.aligned == Some(false) {
-                    pre.aligned = Some(false);
-                    "profile-path-angular-mismatch"
-                } else {
-                    "profile-seam-endpoint-normal-unresolved"
-                };
-                out.reason = pre.reason;
-                out.angular = Some(pre);
-                return Ok(out);
-            }
-            endpoint_upper = endpoint_upper.max(r.sine_squared_interval.unwrap()[1]);
-            pre.accepted_cells += 1;
-        }
-        if pre.cells == cells || pre.spans == spans {
-            out.reason = pre.reason;
-            out.angular = Some(pre);
-            return Ok(out);
-        }
-        let mut angular = match self.profile(neighbor) {
-            Some(other) => profile.inspect_profile_path(
-                other,
-                lines,
-                threshold,
-                cells - pre.cells,
-                spans - pre.spans,
-            )?,
-            None => profile.inspect_original_path(
-                map.surfaces()[1],
-                lines,
-                threshold,
-                cells - pre.cells,
-                spans - pre.spans,
-            )?,
         };
-        angular.cells += pre.cells;
-        angular.spans += pre.spans;
-        angular.accepted_cells += pre.accepted_cells;
-        if let Some(upper) = angular.upper_sine_squared.as_mut() {
-            *upper = upper.max(endpoint_upper);
-        }
-
         out.reason = angular.reason;
         if angular.aligned == Some(true) {
             out.seam = Some(Seam {
@@ -376,7 +424,7 @@ pub(super) fn qualify_selected_seam<'p>(
                 faces: [face, neighbor],
                 edge: map.edge(),
                 threshold,
-                upper: angular.upper_sine_squared.unwrap(),
+                upper: qualified_upper(&angular)?,
             });
         }
         out.angular = Some(angular);
@@ -521,7 +569,7 @@ pub(super) fn qualify_selected_seam<'p>(
                 edge,
                 canonical,
                 threshold,
-                upper: angular.upper_sine_squared.unwrap(),
+                upper: qualified_upper(&angular)?,
             })
         } else {
             None
