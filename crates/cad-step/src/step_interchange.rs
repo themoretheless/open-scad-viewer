@@ -1565,6 +1565,135 @@ fn require_entity_type(
     Ok(())
 }
 
+/// Surface types an analytic ADVANCED_FACE may carry.
+const ANALYTIC_FACE_SURFACES: [&str; 5] = [
+    "PLANE",
+    "CYLINDRICAL_SURFACE",
+    "CONICAL_SURFACE",
+    "SPHERICAL_SURFACE",
+    "TOROIDAL_SURFACE",
+];
+
+/// Walks the topology chain under one MANIFOLD_SOLID_BREP, collecting every
+/// linked entity id. One method per topology level.
+struct SolidGraphWalk<'a> {
+    entities: &'a BTreeMap<usize, (String, String)>,
+    closure: BTreeSet<usize>,
+}
+
+impl SolidGraphWalk<'_> {
+    /// Checks `id` against `allowed`, records it, and returns its references.
+    fn link(&mut self, id: usize, allowed: &[&str], owner: &str) -> Result<Vec<usize>> {
+        require_entity_type(self.entities, id, allowed, owner)?;
+        self.closure.insert(id);
+        self.refs_of(id)
+    }
+
+    fn refs_of(&self, id: usize) -> Result<Vec<usize>> {
+        let (_, args) = self
+            .entities
+            .get(&id)
+            .ok_or_else(|| refuse(&format!("Linked STEP entity #{id} is missing")))?;
+        Ok(entity_refs(args))
+    }
+
+    fn walk_solid(&mut self, solid: usize) -> Result<()> {
+        self.closure.insert(solid);
+        let [shell] = self.refs_of(solid)?[..] else {
+            return Err(refuse(
+                "MANIFOLD_SOLID_BREP must reference exactly one CLOSED_SHELL",
+            ));
+        };
+        let faces = self.link(shell, &["CLOSED_SHELL"], "MANIFOLD_SOLID_BREP")?;
+        if faces.is_empty() {
+            return Err(refuse("CLOSED_SHELL must reference ADVANCED_FACE entities"));
+        }
+        faces.into_iter().try_for_each(|face| self.walk_face(face))
+    }
+
+    fn walk_face(&mut self, face: usize) -> Result<()> {
+        let refs = self.link(face, &["ADVANCED_FACE"], "CLOSED_SHELL")?;
+        let Some((&surface, bounds)) = refs.split_last().filter(|(_, b)| !b.is_empty()) else {
+            return Err(refuse(
+                "ADVANCED_FACE requires at least one bound and one surface",
+            ));
+        };
+        require_entity_type(
+            self.entities,
+            surface,
+            &ANALYTIC_FACE_SURFACES,
+            "ADVANCED_FACE",
+        )?;
+        self.closure.insert(surface);
+        bounds.iter().try_for_each(|&bound| self.walk_bound(bound))
+    }
+
+    fn walk_bound(&mut self, bound: usize) -> Result<()> {
+        let loops = self.link(bound, &["FACE_OUTER_BOUND", "FACE_BOUND"], "ADVANCED_FACE")?;
+        let [loop_id] = loops[..] else {
+            return Err(refuse("FACE bound must reference exactly one EDGE_LOOP"));
+        };
+        let oriented_edges = self.link(loop_id, &["EDGE_LOOP"], "FACE bound")?;
+        if oriented_edges.is_empty() {
+            return Err(refuse("EDGE_LOOP must reference ORIENTED_EDGE entities"));
+        }
+        oriented_edges
+            .into_iter()
+            .try_for_each(|oriented| self.walk_oriented_edge(oriented))
+    }
+
+    fn walk_oriented_edge(&mut self, oriented: usize) -> Result<()> {
+        let edge_refs = self.link(oriented, &["ORIENTED_EDGE"], "EDGE_LOOP")?;
+        let [edge] = edge_refs[..] else {
+            return Err(refuse(
+                "ORIENTED_EDGE must reference exactly one EDGE_CURVE",
+            ));
+        };
+        let geometry_refs = self.link(edge, &["EDGE_CURVE"], "ORIENTED_EDGE")?;
+        let [start, end, curve] = geometry_refs[..] else {
+            return Err(refuse(
+                "EDGE_CURVE must reference two vertices and one curve",
+            ));
+        };
+        self.walk_vertex(start)?;
+        self.walk_vertex(end)?;
+        require_entity_type(self.entities, curve, &["LINE", "CIRCLE"], "EDGE_CURVE")?;
+        self.closure.insert(curve);
+        Ok(())
+    }
+
+    fn walk_vertex(&mut self, vertex: usize) -> Result<()> {
+        let point_refs = self.link(vertex, &["VERTEX_POINT"], "EDGE_CURVE")?;
+        let [point] = point_refs[..] else {
+            return Err(refuse(
+                "VERTEX_POINT must reference exactly one CARTESIAN_POINT",
+            ));
+        };
+        require_entity_type(self.entities, point, &["CARTESIAN_POINT"], "VERTEX_POINT")?;
+        self.closure.insert(point);
+        Ok(())
+    }
+
+    /// Include geometric placement dependencies, but only from already-linked
+    /// topology/surface/curve entities.
+    fn close_dependencies(mut self) -> Result<BTreeSet<usize>> {
+        let mut frontier: Vec<usize> = self.closure.iter().copied().collect();
+        while let Some(id) = frontier.pop() {
+            for reference in self.refs_of(id)? {
+                if !self.entities.contains_key(&reference) {
+                    return Err(refuse(&format!(
+                        "Linked STEP entity #{id} has broken dependency #{reference}"
+                    )));
+                }
+                if self.closure.insert(reference) {
+                    frontier.push(reference);
+                }
+            }
+        }
+        Ok(self.closure)
+    }
+}
+
 /// Validate the exact topology chain reachable from MANIFOLD_SOLID_BREP and
 /// return its dependency closure. Orphan entities are deliberately excluded
 /// from surface recognition and the curved CIRCLE gate.
@@ -1573,127 +1702,17 @@ fn validate_solid_graph(entities: &BTreeMap<usize, (String, String)>) -> Result<
         .iter()
         .filter_map(|(id, (ty, _))| (ty == "MANIFOLD_SOLID_BREP").then_some(*id))
         .collect();
-    if solids.len() != 1 {
+    let [solid] = solids[..] else {
         return Err(refuse(
             "Analytic STEP requires exactly one MANIFOLD_SOLID_BREP",
         ));
-    }
-    let mut closure = BTreeSet::new();
-    let solid = solids[0];
-    closure.insert(solid);
-    let solid_refs = entity_refs(&entities[&solid].1);
-    if solid_refs.len() != 1 {
-        return Err(refuse(
-            "MANIFOLD_SOLID_BREP must reference exactly one CLOSED_SHELL",
-        ));
-    }
-    let shell = solid_refs[0];
-    require_entity_type(entities, shell, &["CLOSED_SHELL"], "MANIFOLD_SOLID_BREP")?;
-    closure.insert(shell);
-    let faces = entity_refs(&entities[&shell].1);
-    if faces.is_empty() {
-        return Err(refuse("CLOSED_SHELL must reference ADVANCED_FACE entities"));
-    }
-    for face in faces {
-        require_entity_type(entities, face, &["ADVANCED_FACE"], "CLOSED_SHELL")?;
-        closure.insert(face);
-        let refs = entity_refs(&entities[&face].1);
-        if refs.len() < 2 {
-            return Err(refuse(
-                "ADVANCED_FACE requires at least one bound and one surface",
-            ));
-        }
-        let surface = *refs.last().unwrap();
-        require_entity_type(
-            entities,
-            surface,
-            &[
-                "PLANE",
-                "CYLINDRICAL_SURFACE",
-                "CONICAL_SURFACE",
-                "SPHERICAL_SURFACE",
-                "TOROIDAL_SURFACE",
-            ],
-            "ADVANCED_FACE",
-        )?;
-        closure.insert(surface);
-        for bound in &refs[..refs.len() - 1] {
-            require_entity_type(
-                entities,
-                *bound,
-                &["FACE_OUTER_BOUND", "FACE_BOUND"],
-                "ADVANCED_FACE",
-            )?;
-            closure.insert(*bound);
-            let loops = entity_refs(&entities[bound].1);
-            if loops.len() != 1 {
-                return Err(refuse("FACE bound must reference exactly one EDGE_LOOP"));
-            }
-            let loop_id = loops[0];
-            require_entity_type(entities, loop_id, &["EDGE_LOOP"], "FACE bound")?;
-            closure.insert(loop_id);
-            let oriented_edges = entity_refs(&entities[&loop_id].1);
-            if oriented_edges.is_empty() {
-                return Err(refuse("EDGE_LOOP must reference ORIENTED_EDGE entities"));
-            }
-            for oriented in oriented_edges {
-                require_entity_type(entities, oriented, &["ORIENTED_EDGE"], "EDGE_LOOP")?;
-                closure.insert(oriented);
-                let edge_refs = entity_refs(&entities[&oriented].1);
-                if edge_refs.len() != 1 {
-                    return Err(refuse(
-                        "ORIENTED_EDGE must reference exactly one EDGE_CURVE",
-                    ));
-                }
-                let edge = edge_refs[0];
-                require_entity_type(entities, edge, &["EDGE_CURVE"], "ORIENTED_EDGE")?;
-                closure.insert(edge);
-                let geometry_refs = entity_refs(&entities[&edge].1);
-                if geometry_refs.len() != 3 {
-                    return Err(refuse(
-                        "EDGE_CURVE must reference two vertices and one curve",
-                    ));
-                }
-                for vertex in &geometry_refs[..2] {
-                    require_entity_type(entities, *vertex, &["VERTEX_POINT"], "EDGE_CURVE")?;
-                    closure.insert(*vertex);
-                    let point_refs = entity_refs(&entities[vertex].1);
-                    if point_refs.len() != 1 {
-                        return Err(refuse(
-                            "VERTEX_POINT must reference exactly one CARTESIAN_POINT",
-                        ));
-                    }
-                    require_entity_type(
-                        entities,
-                        point_refs[0],
-                        &["CARTESIAN_POINT"],
-                        "VERTEX_POINT",
-                    )?;
-                    closure.insert(point_refs[0]);
-                }
-                let curve = geometry_refs[2];
-                require_entity_type(entities, curve, &["LINE", "CIRCLE"], "EDGE_CURVE")?;
-                closure.insert(curve);
-            }
-        }
-    }
-
-    // Include geometric placement dependencies, but only from already-linked
-    // topology/surface/curve entities.
-    let mut frontier: Vec<usize> = closure.iter().copied().collect();
-    while let Some(id) = frontier.pop() {
-        for reference in entity_refs(&entities[&id].1) {
-            if !entities.contains_key(&reference) {
-                return Err(refuse(&format!(
-                    "Linked STEP entity #{id} has broken dependency #{reference}"
-                )));
-            }
-            if closure.insert(reference) {
-                frontier.push(reference);
-            }
-        }
-    }
-    Ok(closure)
+    };
+    let mut walk = SolidGraphWalk {
+        entities,
+        closure: BTreeSet::new(),
+    };
+    walk.walk_solid(solid)?;
+    walk.close_dependencies()
 }
 
 fn curved_requires_circle(kind: &AnalyticKind) -> bool {
