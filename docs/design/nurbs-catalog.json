@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 282,
-  "unallocatedCount": 718,
+  "specifiedCount": 283,
+  "unallocatedCount": 717,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7560,6 +7560,28 @@
       "remainingQualification": [
         "Coalesces consecutive compatible charts while preserving both original parameter laws and removing only exactly redundant seam knots. Late failure withholds the entire strip.",
         "Compatible ordered tensor charts. Retains absolute UV, transverse basis and exact denominators. No shell topology or B-rep certification.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0283",
+      "name": "Точное объединение прямоугольной сетки смежных NURBS-патчей с согласованием базисов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_merge::merge_surface_grid",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_merge.rs",
+        "crates/nurbs-core/src/editing/exact_surface_merge/grid.rs",
+        "crates/nurbs-core/src/editing/exact_surface_merge/strip.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_insertion.rs",
+        "crates/nurbs-core/tests/exact_surface_grid_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-283-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-283-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Merges and compacts compatible rows, then inserts the union of exact transverse knots so that rows with different genuine seam structures remain joinable. Absolute UV maps and denominators are retained.",
+        "Ordered Cartesian charts with exact shared boundaries and compatible degrees. Arithmetic refusal never publishes a partial grid. No B-rep topology claim.",
         "WASM and application integration are separate."
       ]
     }

@@ -1,5 +1,7 @@
 //! Structural concatenation: no fitting, snapping or parameter arithmetic.
 use crate::{Result,surface::{Surface,Axis}};
+mod grid;
+pub use grid::{GridMerge, GridRefusal, merge_surface_grid};
 mod strip;
 pub use strip::{StripMerge, StripRefusal, merge_surface_strip};
 
