@@ -74,12 +74,12 @@ import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
 import { MeshInstances } from '../kernel/meshInstances'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
-import { DEFAULT_DISPLAY_BUDGET, ProgressiveLevelStore } from './displayScheduler'
+import { DEFAULT_DISPLAY_BUDGET, type DisplayBudget } from './displayScheduler'
+import { MeshDisplayController } from './meshDisplayController'
 import { GpuResidencyCache } from './gpuResidencyCache'
 import { combineBounds, measureMeshBounds, type MeshBoundsCache } from './meshBounds'
 import { GpuGeometryCache } from './gpuGeometryCache'
 import { carryInteraction, diffSceneEntities, previousSceneIntact, sameInteractionTarget } from './sceneDelta'
-import { updateMeshLods } from './meshLod'
 import {
   OBJECT_UNIFORM_LAYOUT,
   SCENE_UNIFORM_LAYOUT,
@@ -344,9 +344,8 @@ export class WebGPURenderer {
   private frameRetryCount = 0
   /** Frame counter for async validation results; a late clean result must not clear a newer failure. */
   private frameSequence = 0
-  private lastMeshLodKey = ''
-  /** Progressive LOD level uploads, shared by asset; recreated per device. */
-  private levelStore: { dev: GPUDevice; store: ProgressiveLevelStore; epoch: number } | null = null
+  /** Budget preset, progressive and on-demand LOD levels, bounding-box draws. */
+  private readonly display = new MeshDisplayController(() => { if (!this.dead) this.requestRender() })
   private residency: { dev: GPUDevice; cache: GpuResidencyCache; geometry: GpuGeometryCache } | null = null
   private lastFailedFrame = 0
   private dead = true
@@ -1555,7 +1554,8 @@ export class WebGPURenderer {
         return this.csgRenderer
       },
       getWboitRenderer: () => this.wboitRenderer,
-      isMeshVisible: index => this.isMeshVisible(index),
+      isMeshVisible: index => this.isMeshVisible(index) && !this.meshes[index].displayBox,
+      boundingBoxSlot: this.display.boxes.slot,
       usesObjectSelectionStyle: index => this.usesObjectSelectionStyle(index),
       usesObjectHoverStyle: index => this.usesObjectHoverStyle(index),
     })
@@ -1649,26 +1649,18 @@ export class WebGPURenderer {
   /** Bind the certified display level each LOD mesh needs at the current camera. */
   private applyMeshLods() {
     const dev = this.dev, canvas = this.canvas
-    if (!dev || !canvas || !this.meshes.some(mesh => mesh.lod)) return
+    if (!dev || !canvas) return
     const camera = this.cameraState()
     const viewportHeightPx = canvas.height > 0 ? canvas.height : canvas.clientHeight
     if (!(viewportHeightPx > 0)) return
-    // Selection is a pure function of camera, viewport, scene and visibility;
-    // skip the native call on frames where none of them moved.
-    const key = `${camera.eye.join(',')}|${this.dist}|${this.projection}|${this.perspectiveFovY}|${viewportHeightPx}|${this.sceneEpoch}|${this.meshes.map(mesh => mesh.visible ? 1 : 0).join('')}`
-    if (key === this.lastMeshLodKey) return
-    this.lastMeshLodKey = key
-    const store = this.meshLevelStore(dev)
-    let changed: GMesh[]
-    try {
-      changed = updateMeshLods(dev, this.meshes, {
-        eye: camera.eye, distance: this.dist, eyeDistance: camera.eyeDistance,
-        fovY: this.perspectiveFovY, projection: this.projection, viewportHeightPx,
-      }, this.nativePicking, undefined, { budget: DEFAULT_DISPLAY_BUDGET, store })
-    } catch {
-      // A refused selection keeps the bound geometry; it is still a valid display.
-      return
-    }
+    // Selection is a pure function of camera, viewport, scene, visibility and budget.
+    const changed = this.display.update({
+      dev, meshes: this.meshes, sceneEpoch: this.sceneEpoch, residency: this.gpuResidency(dev).cache,
+      camera: { eye: camera.eye, distance: this.dist, eyeDistance: camera.eyeDistance,
+        fovY: this.perspectiveFovY, projection: this.projection, viewportHeightPx },
+      selectionKey: `${camera.eye.join(',')}|${this.dist}|${this.projection}|${this.perspectiveFovY}|${viewportHeightPx}|${this.sceneEpoch}|${this.meshes.map(mesh => mesh.visible ? 1 : 0).join('')}`,
+      nativePicking: this.nativePicking, drawable: index => this.isMeshVisible(index),
+    })
     if (!changed.length) return
     const touched = new Set(changed)
     // Triangle-level hits index the previous level's triangles.
@@ -1683,23 +1675,13 @@ export class WebGPURenderer {
     this.invalidateShadowMap()
   }
 
-  /** Level store for `dev`; a scene change drops cached levels of geometry that left the scene. */
-  private meshLevelStore(dev: GPUDevice): ProgressiveLevelStore {
-    if (this.levelStore?.dev !== dev) {
-      this.levelStore?.store.dispose()
-      const generation = this.generation
-      const store = new ProgressiveLevelStore(this.gpuResidency(dev).cache, () => {
-        if (this.dead || this.generation !== generation) return
-        // A finer level landed: force reselection on the next frame.
-        this.lastMeshLodKey = ''
-        this.requestRender()
-      })
-      this.levelStore = { dev, store, epoch: this.sceneEpoch }
-    } else if (this.levelStore.epoch !== this.sceneEpoch) {
-      this.levelStore.store.retain(this.meshes)
-      this.levelStore.epoch = this.sceneEpoch
-    }
-    return this.levelStore.store
+  /** Display-quality budget used by the LOD scheduler; changing it reselects levels on the next frame. */
+  setDisplayBudget(budget: DisplayBudget) {
+    if (this.display.setBudget(budget)) this.requestRender()
+  }
+
+  getDisplayBudget(): DisplayBudget {
+    return this.display.displayBudget
   }
 
   private notifyCameraChange() {
@@ -2105,8 +2087,7 @@ export class WebGPURenderer {
   /** One residency budget per device for retained base geometry and LOD levels. */
   private gpuResidency(dev: GPUDevice) {
     if (this.residency?.dev !== dev) {
-      this.levelStore?.store.dispose()
-      this.levelStore = null
+      this.display.dropDeviceState()
       this.residency?.geometry.dispose()
       const cache = new GpuResidencyCache(DEFAULT_DISPLAY_BUDGET.budgetBytes)
       this.residency = { dev, cache, geometry: new GpuGeometryCache(cache, ({ vb }) => this.nativePicking.release(vb)) }
@@ -2163,8 +2144,7 @@ export class WebGPURenderer {
     this.geometryGhosts = []
     this.geometryFade = null
     this.destroyMeshes(this.meshes)
-    this.levelStore?.store.dispose()
-    this.levelStore = null
+    this.display.dispose()
     this.residency?.geometry.dispose()
     this.residency?.cache.dispose()
     this.residency = null
