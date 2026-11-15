@@ -881,6 +881,178 @@ fn write_cuboid_topology(w: &mut StepWriter, min: [f64; 3], max: [f64; 3]) {
     w.close_shell(&face_ids);
 }
 
+/// Height below which a frustum's semi-angle is treated as zero.
+const FRUSTUM_FLAT_HEIGHT: f64 = 1e-15;
+
+/// Axis placement shared by the rotational analytic kinds.
+struct AxialPlacement {
+    origin: [f64; 3],
+    axis: [f64; 3],
+    ref_dir: [f64; 3],
+    top: [f64; 3],
+    height: f64,
+}
+
+impl AxialPlacement {
+    fn new(origin: [f64; 3], axis: [f64; 3], frame: &[[f64; 3]; 2], height: f64) -> Self {
+        Self {
+            origin,
+            axis,
+            ref_dir: frame[0],
+            top: add3(origin, scale3(axis, height)),
+            height,
+        }
+    }
+
+    fn axis2_at(&self, w: &mut StepWriter, origin: [f64; 3]) -> usize {
+        w.axis2(origin, self.axis, self.ref_dir)
+    }
+
+    fn plane_at(&self, w: &mut StepWriter, origin: [f64; 3]) -> (usize, usize) {
+        let ax = self.axis2_at(w, origin);
+        let plane = w.emit(format!("PLANE('',#{ax})"));
+        (ax, plane)
+    }
+
+    fn rim_point(&self, center: [f64; 3], radius: f64) -> [f64; 3] {
+        add3(center, scale3(self.ref_dir, radius))
+    }
+}
+
+fn write_cylinder(w: &mut StepWriter, at: &AxialPlacement, radius: f64) {
+    let ax_cyl = at.axis2_at(w, at.origin);
+    let cyl = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_cyl},{:.15})", radius));
+    let (ax_bot, plane_b) = at.plane_at(w, at.origin);
+    let (ax_top, plane_t) = at.plane_at(w, at.top);
+
+    let pid_b = w.cartesian(at.rim_point(at.origin, radius));
+    let pid_t = w.cartesian(at.rim_point(at.top, radius));
+    let vid_b = w.vertex_point(pid_b);
+    let vid_t = w.vertex_point(pid_t);
+    let circ_b = w.circle_edge(vid_b, vid_b, ax_bot, radius);
+    let circ_t = w.circle_edge(vid_t, vid_t, ax_top, radius);
+    let ruling = w.line_edge(vid_b, vid_t, pid_b, at.axis);
+
+    let face_ids = [
+        w.face_from_edges(cyl, &[circ_b, ruling, circ_t]),
+        w.face_from_edges(plane_b, &[circ_b]),
+        w.face_from_edges(plane_t, &[circ_t]),
+    ];
+    w.close_shell(&face_ids);
+}
+
+/// Cap faces and rim edges collected while emitting the two frustum ends.
+#[derive(Default)]
+struct FrustumEnds {
+    cap_faces: Vec<usize>,
+    rim_edges: Vec<usize>,
+}
+
+impl FrustumEnds {
+    /// Emits one frustum end: a capped circle when `radius > 0`, otherwise an
+    /// apex vertex. Returns `(vertex, point)`.
+    fn write_end(
+        &mut self,
+        w: &mut StepWriter,
+        at: &AxialPlacement,
+        center: [f64; 3],
+        radius: f64,
+    ) -> (usize, usize) {
+        if radius > 0. {
+            let (ax, plane) = at.plane_at(w, center);
+            let pid = w.cartesian(at.rim_point(center, radius));
+            let vid = w.vertex_point(pid);
+            let circ = w.circle_edge(vid, vid, ax, radius);
+            self.cap_faces.push(w.face_from_edges(plane, &[circ]));
+            self.rim_edges.push(circ);
+            (vid, pid)
+        } else {
+            let pid = w.cartesian(center);
+            (w.vertex_point(pid), pid)
+        }
+    }
+}
+
+fn write_frustum(w: &mut StepWriter, at: &AxialPlacement, r_bottom: f64, r_top: f64) {
+    let semi = if at.height.abs() > FRUSTUM_FLAT_HEIGHT {
+        ((r_top - r_bottom) / at.height).atan()
+    } else {
+        0.
+    };
+    let ax_cone = at.axis2_at(w, at.origin);
+    let cone = w.emit(format!(
+        "CONICAL_SURFACE('',#{ax_cone},{:.15},{:.15})",
+        r_bottom, semi
+    ));
+    let mut ends = FrustumEnds::default();
+    let (vid_b, pid_b) = ends.write_end(w, at, at.origin, r_bottom);
+    let (vid_t, _pid_t) = ends.write_end(w, at, at.top, r_top);
+    let FrustumEnds {
+        cap_faces: mut face_ids,
+        rim_edges: mut side,
+    } = ends;
+    side.push(w.line_edge(vid_b, vid_t, pid_b, at.axis));
+    face_ids.insert(0, w.face_from_edges(cone, &side));
+    w.close_shell(&face_ids);
+}
+
+fn write_sphere(w: &mut StepWriter, center: [f64; 3], radius: f64) {
+    let ax = w.axis2(center, [0., 0., 1.], [1., 0., 0.]);
+    let surf = w.emit(format!("SPHERICAL_SURFACE('',#{ax},{:.15})", radius));
+    let p = [center[0] + radius, center[1], center[2]];
+    let pid = w.cartesian(p);
+    let vid = w.vertex_point(pid);
+    let circ = w.circle_edge(vid, vid, ax, radius);
+    let face = w.face_from_edges(surf, &[circ]);
+    w.close_shell(&[face]);
+}
+
+fn write_torus(w: &mut StepWriter, at: &AxialPlacement, major: f64, minor: f64) {
+    let ax = at.axis2_at(w, at.origin);
+    let surf = w.emit(format!(
+        "TOROIDAL_SURFACE('',#{ax},{:.15},{:.15})",
+        major, minor
+    ));
+    let pid = w.cartesian(at.rim_point(at.origin, major + minor));
+    let vid = w.vertex_point(pid);
+    let circ = w.circle_edge(vid, vid, ax, major);
+    let face = w.face_from_edges(surf, &[circ]);
+    w.close_shell(&[face]);
+}
+
+fn write_tube(w: &mut StepWriter, at: &AxialPlacement, outer: f64, inner: f64) {
+    let ax_o = at.axis2_at(w, at.origin);
+    let cyl_o = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_o},{:.15})", outer));
+    let ax_i = at.axis2_at(w, at.origin);
+    let cyl_i = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_i},{:.15})", inner));
+    let (ax_bot, plane_b) = at.plane_at(w, at.origin);
+    let (ax_top, plane_t) = at.plane_at(w, at.top);
+
+    let pid_bo = w.cartesian(at.rim_point(at.origin, outer));
+    let pid_bi = w.cartesian(at.rim_point(at.origin, inner));
+    let pid_to = w.cartesian(at.rim_point(at.top, outer));
+    let pid_ti = w.cartesian(at.rim_point(at.top, inner));
+    let vid_bo = w.vertex_point(pid_bo);
+    let vid_bi = w.vertex_point(pid_bi);
+    let vid_to = w.vertex_point(pid_to);
+    let vid_ti = w.vertex_point(pid_ti);
+
+    let circ_bo = w.circle_edge(vid_bo, vid_bo, ax_bot, outer);
+    let circ_bi = w.circle_edge(vid_bi, vid_bi, ax_bot, inner);
+    let circ_to = w.circle_edge(vid_to, vid_to, ax_top, outer);
+    let circ_ti = w.circle_edge(vid_ti, vid_ti, ax_top, inner);
+    let ruling_o = w.line_edge(vid_bo, vid_to, pid_bo, at.axis);
+    let ruling_i = w.line_edge(vid_bi, vid_ti, pid_bi, at.axis);
+
+    let face_ids = [
+        w.face_from_edges(cyl_o, &[circ_bo, ruling_o, circ_to]),
+        w.face_from_edges(cyl_i, &[circ_bi, ruling_i, circ_ti]),
+        w.annular_face(plane_b, circ_bo, circ_bi),
+        w.annular_face(plane_t, circ_to, circ_ti),
+    ];
+    w.close_shell(&face_ids);
+}
+
 fn export_kind(kind: &AnalyticKind) -> Result<(String, FeatureCertificate)> {
     let mut w = StepWriter::new();
     let preamble = vec![
@@ -898,41 +1070,18 @@ fn export_kind(kind: &AnalyticKind) -> Result<(String, FeatureCertificate)> {
     let _ctx = w.emit("APPLICATION_CONTEXT('configuration controlled 3D design')".into());
 
     match kind {
-        AnalyticKind::Cuboid { min, max } => {
-            write_cuboid_topology(&mut w, *min, *max);
-        }
+        AnalyticKind::Cuboid { min, max } => write_cuboid_topology(&mut w, *min, *max),
         AnalyticKind::Cylinder {
             radius,
             height,
             origin,
             axis,
             frame,
-        } => {
-            let top_o = add3(*origin, scale3(*axis, *height));
-            let ax_cyl = w.axis2(*origin, *axis, frame[0]);
-            let cyl = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_cyl},{:.15})", radius));
-            let ax_bot = w.axis2(*origin, *axis, frame[0]);
-            let plane_b = w.emit(format!("PLANE('',#{ax_bot})"));
-            let ax_top = w.axis2(top_o, *axis, frame[0]);
-            let plane_t = w.emit(format!("PLANE('',#{ax_top})"));
-
-            let p_bot = add3(*origin, scale3(frame[0], *radius));
-            let p_top = add3(top_o, scale3(frame[0], *radius));
-            let pid_b = w.cartesian(p_bot);
-            let pid_t = w.cartesian(p_top);
-            let vid_b = w.vertex_point(pid_b);
-            let vid_t = w.vertex_point(pid_t);
-            let circ_b = w.circle_edge(vid_b, vid_b, ax_bot, *radius);
-            let circ_t = w.circle_edge(vid_t, vid_t, ax_top, *radius);
-            let ruling = w.line_edge(vid_b, vid_t, pid_b, *axis);
-
-            let face_ids = [
-                w.face_from_edges(cyl, &[circ_b, ruling, circ_t]),
-                w.face_from_edges(plane_b, &[circ_b]),
-                w.face_from_edges(plane_t, &[circ_t]),
-            ];
-            w.close_shell(&face_ids);
-        }
+        } => write_cylinder(
+            &mut w,
+            &AxialPlacement::new(*origin, *axis, frame, *height),
+            *radius,
+        ),
         AnalyticKind::Frustum {
             r_bottom,
             r_top,
@@ -940,96 +1089,25 @@ fn export_kind(kind: &AnalyticKind) -> Result<(String, FeatureCertificate)> {
             origin,
             axis,
             frame,
-        } => {
-            let top_o = add3(*origin, scale3(*axis, *height));
-            let semi = if (*height).abs() > 1e-15 {
-                ((*r_top - *r_bottom) / *height).atan()
-            } else {
-                0.
-            };
-            let ax_cone = w.axis2(*origin, *axis, frame[0]);
-            let cone = w.emit(format!(
-                "CONICAL_SURFACE('',#{ax_cone},{:.15},{:.15})",
-                r_bottom, semi
-            ));
-            let mut face_ids = Vec::new();
-            let mut side_edges = Vec::new();
-
-            let (circ_b, vid_b, pid_b) = if *r_bottom > 0. {
-                let ax_bot = w.axis2(*origin, *axis, frame[0]);
-                let plane_b = w.emit(format!("PLANE('',#{ax_bot})"));
-                let p = add3(*origin, scale3(frame[0], *r_bottom));
-                let pid = w.cartesian(p);
-                let vid = w.vertex_point(pid);
-                let circ = w.circle_edge(vid, vid, ax_bot, *r_bottom);
-                face_ids.push(w.face_from_edges(plane_b, &[circ]));
-                side_edges.push(circ);
-                (Some(circ), Some(vid), Some(pid))
-            } else {
-                let p = *origin;
-                let pid = w.cartesian(p);
-                let vid = w.vertex_point(pid);
-                (None, Some(vid), Some(pid))
-            };
-
-            let (circ_t, vid_t, _pid_t) = if *r_top > 0. {
-                let ax_top = w.axis2(top_o, *axis, frame[0]);
-                let plane_t = w.emit(format!("PLANE('',#{ax_top})"));
-                let p = add3(top_o, scale3(frame[0], *r_top));
-                let pid = w.cartesian(p);
-                let vid = w.vertex_point(pid);
-                let circ = w.circle_edge(vid, vid, ax_top, *r_top);
-                face_ids.push(w.face_from_edges(plane_t, &[circ]));
-                side_edges.push(circ);
-                (Some(circ), Some(vid), Some(pid))
-            } else {
-                let p = top_o;
-                let pid = w.cartesian(p);
-                let vid = w.vertex_point(pid);
-                (None, Some(vid), Some(pid))
-            };
-
-            let ruling = w.line_edge(
-                vid_b.expect("both cap branches always emit a bottom vertex"),
-                vid_t.expect("both cap branches always emit a top vertex"),
-                pid_b.expect("both cap branches always emit a bottom point"),
-                *axis,
-            );
-            let mut side = side_edges;
-            side.push(ruling);
-            let _ = (circ_b, circ_t);
-            face_ids.insert(0, w.face_from_edges(cone, &side));
-            w.close_shell(&face_ids);
-        }
-        AnalyticKind::Sphere { center, radius } => {
-            let ax = w.axis2(*center, [0., 0., 1.], [1., 0., 0.]);
-            let surf = w.emit(format!("SPHERICAL_SURFACE('',#{ax},{:.15})", radius));
-            let p = [center[0] + *radius, center[1], center[2]];
-            let pid = w.cartesian(p);
-            let vid = w.vertex_point(pid);
-            let circ = w.circle_edge(vid, vid, ax, *radius);
-            let face = w.face_from_edges(surf, &[circ]);
-            w.close_shell(&[face]);
-        }
+        } => write_frustum(
+            &mut w,
+            &AxialPlacement::new(*origin, *axis, frame, *height),
+            *r_bottom,
+            *r_top,
+        ),
+        AnalyticKind::Sphere { center, radius } => write_sphere(&mut w, *center, *radius),
         AnalyticKind::Torus {
             major,
             minor,
             center,
             axis,
             frame,
-        } => {
-            let ax = w.axis2(*center, *axis, frame[0]);
-            let surf = w.emit(format!(
-                "TOROIDAL_SURFACE('',#{ax},{:.15},{:.15})",
-                major, minor
-            ));
-            let p = add3(*center, scale3(frame[0], *major + *minor));
-            let pid = w.cartesian(p);
-            let vid = w.vertex_point(pid);
-            let circ = w.circle_edge(vid, vid, ax, *major);
-            let face = w.face_from_edges(surf, &[circ]);
-            w.close_shell(&[face]);
-        }
+        } => write_torus(
+            &mut w,
+            &AxialPlacement::new(*center, *axis, frame, 0.),
+            *major,
+            *minor,
+        ),
         AnalyticKind::Tube {
             outer,
             inner,
@@ -1037,45 +1115,12 @@ fn export_kind(kind: &AnalyticKind) -> Result<(String, FeatureCertificate)> {
             origin,
             axis,
             frame,
-        } => {
-            let top_o = add3(*origin, scale3(*axis, *height));
-            let ax_o = w.axis2(*origin, *axis, frame[0]);
-            let cyl_o = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_o},{:.15})", outer));
-            let ax_i = w.axis2(*origin, *axis, frame[0]);
-            let cyl_i = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_i},{:.15})", inner));
-            let ax_bot = w.axis2(*origin, *axis, frame[0]);
-            let plane_b = w.emit(format!("PLANE('',#{ax_bot})"));
-            let ax_top = w.axis2(top_o, *axis, frame[0]);
-            let plane_t = w.emit(format!("PLANE('',#{ax_top})"));
-
-            let p_bo = add3(*origin, scale3(frame[0], *outer));
-            let p_bi = add3(*origin, scale3(frame[0], *inner));
-            let p_to = add3(top_o, scale3(frame[0], *outer));
-            let p_ti = add3(top_o, scale3(frame[0], *inner));
-            let pid_bo = w.cartesian(p_bo);
-            let pid_bi = w.cartesian(p_bi);
-            let pid_to = w.cartesian(p_to);
-            let pid_ti = w.cartesian(p_ti);
-            let vid_bo = w.vertex_point(pid_bo);
-            let vid_bi = w.vertex_point(pid_bi);
-            let vid_to = w.vertex_point(pid_to);
-            let vid_ti = w.vertex_point(pid_ti);
-
-            let circ_bo = w.circle_edge(vid_bo, vid_bo, ax_bot, *outer);
-            let circ_bi = w.circle_edge(vid_bi, vid_bi, ax_bot, *inner);
-            let circ_to = w.circle_edge(vid_to, vid_to, ax_top, *outer);
-            let circ_ti = w.circle_edge(vid_ti, vid_ti, ax_top, *inner);
-            let ruling_o = w.line_edge(vid_bo, vid_to, pid_bo, *axis);
-            let ruling_i = w.line_edge(vid_bi, vid_ti, pid_bi, *axis);
-
-            let face_ids = [
-                w.face_from_edges(cyl_o, &[circ_bo, ruling_o, circ_to]),
-                w.face_from_edges(cyl_i, &[circ_bi, ruling_i, circ_ti]),
-                w.annular_face(plane_b, circ_bo, circ_bi),
-                w.annular_face(plane_t, circ_to, circ_ti),
-            ];
-            w.close_shell(&face_ids);
-        }
+        } => write_tube(
+            &mut w,
+            &AxialPlacement::new(*origin, *axis, frame, *height),
+            *outer,
+            *inner,
+        ),
     }
 
     let mut out = preamble;
