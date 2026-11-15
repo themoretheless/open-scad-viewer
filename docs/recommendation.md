@@ -157,8 +157,13 @@ Reopen these only for a demonstrated regression.
   rebuild source overlays unless isolation changed effective visibility.
 - **Risk:** edit and hover latency scale with the full scene and cause avoidable
   allocation/queue pressure.
-- **Acceptance remaining:** explicit refcounted/LRU asset cache and scene deltas;
-  share lazy edge buffers; worker-cached bounds; typed-array overlay staging;
+  Base geometry buffers are now owned by an asset-keyed LRU
+  ([`gpuGeometryCache.ts`](../src/render/gpuGeometryCache.ts)) that shares one
+  byte budget with LOD levels ([`gpuResidencyCache.ts`](../src/render/gpuResidencyCache.ts)),
+  and publications are diffed by entity/asset ([`sceneDelta.ts`](../src/render/sceneDelta.ts)):
+  persisting entities keep uniforms and interaction state.
+- **Acceptance remaining:** App consumes renderer deltas instead of its own
+  publication plan; share lazy edge buffers; worker-cached bounds; typed-array overlay staging;
   capacity-retained measurement buffer; incremental TLAS rebuild/refit and
   counter/browser benchmarks for 1,000 entities and deep picking.
 
@@ -261,6 +266,10 @@ Reopen these only for a demonstrated regression.
   A weighted blended OIT pass ([`gpuWboit.ts`](../src/render/gpuWboit.ts))
   now exists behind `setTransparencyMode('wboit')`; the default mode and the
   UI tier in `backendQuality.ts` remain `object-sorted-alpha`.
+  A CPU reference ([`wboitReference.ts`](../src/render/wboitReference.ts)) now
+  qualifies its math (order independence, exact coverage, energy bounds) and
+  records two limits: the weight saturates at its clamp for alpha >= 0.25 at
+  every depth, and 22 full-alpha layers overflow the rgba16float accumulation.
 - **Acceptance remaining:** extract a pure frame plan and pipeline descriptor
   tests; qualify the WBOIT pass with a pixel budget, transactional attachments
   and sorted-alpha downgrade before making it the default; browser visual
