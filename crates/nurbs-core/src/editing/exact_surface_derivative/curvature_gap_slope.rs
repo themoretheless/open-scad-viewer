@@ -59,7 +59,7 @@ pub fn curvature_gap_graph_slope(
     })
 }
 
-fn slope_bounds(
+pub(super) fn slope_bounds(
     residual: &Poly,
     domain: [[f64; 2]; 2],
     axis: Axis,

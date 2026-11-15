@@ -197,21 +197,9 @@ pub fn sample_curvature_gap_graph(
         let CurvatureGapGraph::Unique { increasing } = graph else {
             return Ok((graph, None));
         };
-        let start = work.lift(start)?;
-        let end = work.lift(end)?;
-        let width = work.op(&end, &start, |a, b| a - b)?;
-        let mut samples = Vec::with_capacity(transverse.len());
-        for &transverse in transverse {
-            let value = work.lift(transverse)?;
-            let offset = work.op(&value, &start, |a, b| a - b)?;
-            let unit = work.op(&offset, &width, |a, b| a / b)?;
-            let coefficients = restrict(&residual, root_axis, &unit, &mut work)?;
-            let root_interval = bisect(&coefficients, increasing, max_depth, &mut work)?;
-            samples.push(CurvatureGapSample {
-                transverse,
-                root_interval,
-            });
-        }
+        let samples = sample_certified(
+            &residual, domain, root_axis, increasing, transverse, max_depth, &mut work,
+        )?;
         Ok((graph, Some(samples)))
     })();
     let (graph, samples, refusal) = match result {
@@ -225,6 +213,34 @@ pub fn sample_curvature_gap_graph(
         work_used: work.used,
         refusal,
     })
+}
+
+pub(super) fn sample_certified(
+    residual: &Poly,
+    domain: [[f64; 2]; 2],
+    root_axis: usize,
+    increasing: bool,
+    transverse: &[f64],
+    max_depth: u8,
+    work: &mut Work,
+) -> PResult<Vec<CurvatureGapSample>> {
+    let [start, end] = domain[1 - root_axis];
+    let start = work.lift(start)?;
+    let end = work.lift(end)?;
+    let width = work.op(&end, &start, |a, b| a - b)?;
+    let mut samples = Vec::with_capacity(transverse.len());
+    for &transverse in transverse {
+        let value = work.lift(transverse)?;
+        let offset = work.op(&value, &start, |a, b| a - b)?;
+        let unit = work.op(&offset, &width, |a, b| a / b)?;
+        let coefficients = restrict(residual, root_axis, &unit, work)?;
+        let root_interval = bisect(&coefficients, increasing, max_depth, work)?;
+        samples.push(CurvatureGapSample {
+            transverse,
+            root_interval,
+        });
+    }
+    Ok(samples)
 }
 
 fn restrict(residual: &Poly, axis: usize, unit: &Q, work: &mut Work) -> PResult<Vec<Q>> {
