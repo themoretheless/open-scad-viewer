@@ -569,7 +569,9 @@ fn select_attach_coedges<'a>(
     if source.vertices[se.vertices[0]].point != target.vertices[te.vertices[1]].point
         || source.vertices[se.vertices[1]].point != target.vertices[te.vertices[0]].point
     {
-        return Err(invalid_patch("Join needs exact opposite boundary endpoints"));
+        return Err(invalid_patch(
+            "Join needs exact opposite boundary endpoints",
+        ));
     }
     Ok(AttachSelection {
         source_face,
