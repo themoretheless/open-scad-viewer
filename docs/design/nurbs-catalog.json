@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 261,
-  "unallocatedCount": 739,
+  "specifiedCount": 262,
+  "unallocatedCount": 738,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7059,6 +7059,29 @@
       ],
       "remainingQualification": [
         "Classifies each complete original cell as everywhere umbilic, strictly separated everywhere, or containing at least one nonumbilic point without a whole-cell separation proof. The audit uses exact polynomials without storing a curvature field or locating isolated umbilics.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0262",
+      "name": "Адаптивное уточнение областей разделения главных кривизн NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::refine_umbilics",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/umbilic_cell_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
+        "docs/qualification/nurbs-curvature-field-262-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-262-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exact dyadic Bernstein refinement covers each original cell. A positive coefficient net proves strict separation. Regions without that proof retain an existential nonumbilic status at the depth cap.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]

@@ -19,6 +19,8 @@ mod mixed;
 pub(super) mod polynomial;
 pub(super) mod storage;
 mod umbilic;
+mod umbilic_subdivision;
+pub use umbilic_subdivision::{RefinedUmbilicAudit, UmbilicRegion, refine_umbilics};
 pub use umbilic::{UmbilicAudit, UmbilicCell, UmbilicStatus, audit_umbilics};
 pub(super) type Poly = BTreeMap<(usize, usize), Q>;
 type PResult<T> = std::result::Result<T, Refusal>;
