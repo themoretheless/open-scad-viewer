@@ -22,6 +22,7 @@ import {
 import { stringifyMeshJson } from '../src/exchange/meshJson'
 import { prepareDocumentCommit } from '../src/features/directModeler/prepareDocumentCommit'
 import { resolveSolidInstances } from '../src/kernel/solidInstances'
+import { SolidInstanceBatchCache } from '../src/kernel/solidInstanceBatchCache'
 import { setLiveBodyPattern } from '../src/app/liveBodyPattern'
 import { applySolidBoolean } from '../src/kernel/solidBoolean'
 import { resolveModelingSnap, type SnapGeometry } from '../src/app/modelingSnaps'
@@ -92,20 +93,40 @@ const scenes: Array<{ name: string; bodies: number; document: () => DirectDocume
 ]
 
 const quantile = (sorted: number[], q: number) => sorted[Math.min(sorted.length - 1, Math.ceil(q * sorted.length) - 1)]!
-async function time(run: () => unknown | Promise<unknown>, setup?: () => void) {
+const gc = (globalThis as { gc?: () => void }).gc
+async function time(run: () => unknown | Promise<unknown>, setup?: () => unknown | Promise<unknown>) {
   const samples: number[] = []
+  // Peak memory: the largest heap growth observed across one call (heapUsed after minus before,
+  // with a forced GC before the call when node runs with --expose-gc). Retained results count.
+  let peakHeap = 0
   for (let i = -WARMUP; i < SAMPLES; i++) {
-    setup?.()
+    await setup?.()
+    gc?.()
+    const before = process.memoryUsage().heapUsed
     const start = performance.now()
-    await run()
+    const result = await run()
     const elapsed = performance.now() - start
-    if (i >= 0) samples.push(elapsed)
+    const grown = process.memoryUsage().heapUsed - before
+    void result
+    if (i >= 0) {
+      samples.push(elapsed)
+      peakHeap = Math.max(peakHeap, grown)
+    }
   }
   samples.sort((a, b) => a - b)
-  return { p50: quantile(samples, 0.5), p95: quantile(samples, 0.95) }
+  return { p50: quantile(samples, 0.5), p95: quantile(samples, 0.95), peakHeapMb: peakHeap / 1048576 }
 }
 
-type Row = { path: string; site: string; target: Target; scene: string; p50: number; p95: number; overTarget: boolean }
+type Row = {
+  path: string
+  site: string
+  target: Target
+  scene: string
+  p50: number
+  p95: number
+  peakHeapMb: number
+  overTarget: boolean
+}
 const rows: Row[] = []
 async function measure(
   scene: string,
@@ -113,10 +134,10 @@ async function measure(
   site: string,
   target: Target,
   run: () => unknown | Promise<unknown>,
-  setup?: () => void,
+  setup?: () => unknown | Promise<unknown>,
 ) {
-  const { p50, p95 } = await time(run, setup)
-  rows.push({ path, site, target, scene, p50, p95, overTarget: p95 > TARGETS[target] })
+  const { p50, p95, peakHeapMb } = await time(run, setup)
+  rows.push({ path, site, target, scene, p50, p95, peakHeapMb, overTarget: p95 > TARGETS[target] })
 }
 
 for (const scene of scenes) {
@@ -132,10 +153,30 @@ for (const scene of scenes) {
   // Document copy and serialization.
   await measure(
     name,
-    'copy: history.document (structuredClone)',
+    'copy: structuredClone (history.document before C14)',
     'DirectHistory.document; gesture start, sync()',
     'visual',
     () => structuredClone(document),
+  )
+  const copyHistory = new DirectHistory(document)
+  await measure(
+    name,
+    'copy: history.document (cloneDocumentTree)',
+    'DirectHistory.document; sync() after a synchronous commit, mutating callers',
+    'visual',
+    () => copyHistory.document,
+  )
+  const synced = copyHistory.syncedDocument
+  await measure(
+    name,
+    'autosave text: history snapshot reuse (canonicalText)',
+    'useDraftPersistence.persist after commit/restore',
+    'visual',
+    () => {
+      const text = copyHistory.canonicalText(synced)
+      if (text === undefined) throw Error('synced document is not canonical')
+      return text
+    },
   )
   await measure(
     name,
@@ -180,6 +221,48 @@ for (const scene of scenes) {
   )
   await measure(name, 'commit policy: prepareDocumentCommit', 'DirectModeler prepareCommit', 'visual', () =>
     prepareDocumentCommit(next, document, [], [], '', 'edit', (ru: string) => ru),
+  )
+
+  // Undo/Redo: the worker parses the snapshot text (restoreDocument with its instance cache),
+  // the response crosses postMessage (structuredClone proxy), the main thread applies it.
+  const workerCache = new SolidInstanceBatchCache()
+  const restoreInWorker = async (text: string) => structuredClone(parseDirectDocument(text, workerCache))
+  let redoHistory = new DirectHistory(document)
+  await measure(
+    name,
+    'history Redo: worker restore + response clone + apply',
+    'DirectModeler undo(true) -> restoreAsync(restoreDocument)',
+    'preview',
+    async () => {
+      if (!(await redoHistory.restoreAsync('redo', restoreInWorker))) throw Error('Redo did not apply')
+    },
+    async () => {
+      redoHistory = new DirectHistory(document)
+      redoHistory.commit(renamed())
+      await redoHistory.restoreAsync('undo', async text => parseDirectDocument(text, workerCache))
+    },
+  )
+  let undoHistory = new DirectHistory(document)
+  await measure(
+    name,
+    'history Undo: worker restore + response clone + apply',
+    'DirectModeler undo() -> restoreAsync(restoreDocument)',
+    'preview',
+    async () => {
+      if (!(await undoHistory.restoreAsync('undo', restoreInWorker))) throw Error('Undo did not apply')
+    },
+    () => {
+      undoHistory = new DirectHistory(document)
+      undoHistory.commit(renamed())
+    },
+  )
+  const coldText = serializeDirectDocument(renamed())
+  await measure(
+    name,
+    'history Redo, worker part, cold instance cache',
+    'mainSolidWorkerRuntime restoreDocument (first visit)',
+    'preview',
+    () => parseDirectDocument(coldText, new SolidInstanceBatchCache()),
   )
 
   // Reference resolution.
@@ -319,9 +402,9 @@ const out = resolve(outArg ?? 'tmp/performance/sync-paths.json')
 mkdirSync(dirname(out), { recursive: true })
 writeFileSync(out, JSON.stringify(report, null, 2))
 const fmt = (n: number) => n.toFixed(n < 10 ? 2 : 1)
-console.log('| Scene | Path | Target | p50 ms | p95 ms | Over |')
-console.log('|---|---|---|---:|---:|---|')
+console.log('| Scene | Path | Target | p50 ms | p95 ms | peak heap MB | Over |')
+console.log('|---|---|---|---:|---:|---:|---|')
 for (const row of rows)
   console.log(
-    `| ${row.scene} | ${row.path} | ${row.target} ≤${TARGETS[row.target]} | ${fmt(row.p50)} | ${fmt(row.p95)} | ${row.overTarget ? 'yes' : ''} |`,
+    `| ${row.scene} | ${row.path} | ${row.target} ≤${TARGETS[row.target]} | ${fmt(row.p50)} | ${fmt(row.p95)} | ${fmt(row.peakHeapMb)} | ${row.overTarget ? 'yes' : ''} |`,
   )

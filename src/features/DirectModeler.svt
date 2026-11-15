@@ -135,7 +135,7 @@ const {
 })
 let history = new DirectHistory(initial)
 const conflictCopiesOpen = ref(false)
-const document = shallowRef(history.document)
+const document = shallowRef(history.syncedDocument)
 // Committed render snapshot; gestures publish separate documents and never update this ref.
 const snapDocument = shallowRef(document.value)
 const undoable = ref(false), redoable = ref(false)
@@ -408,12 +408,12 @@ function startVertexDrag(e:PointerEvent,index:number){
  // Exact B-rep bodies keep their surfaces: dragging a corner moves the whole body instead of editing the mesh.
  if(body.brep){
   // The move path uses XY model coordinates, not projected SVG coordinates.
-  gesture={start:plane(position(e),'3d'),document:history.document,vertex:null,id:body.id,pointer:e.pointerId,pane:'3d',svg,pan:false,center:[...centers.value['3d']],
+  gesture={start:plane(position(e),'3d'),document:committedView(),vertex:null,id:body.id,pointer:e.pointerId,pane:'3d',svg,pan:false,center:[...centers.value['3d']],
    anchor3:Array.from(body.mesh.positions.slice(index*3,index*3+3)) as Vec3,dragStart:[e.clientX,e.clientY]}
   svg.setPointerCapture(e.pointerId);return
  }
  const groups=coincidentVertexGroups(body.mesh.positions),ids=[...new Set(vertexIndexes.value.flatMap(i=>{const key=`${body.mesh.positions[i*3].toFixed(5)},${body.mesh.positions[i*3+1].toFixed(5)},${body.mesh.positions[i*3+2].toFixed(5)}`;return groups.get(key)??[i]}))]
- vertexDrag={svg,pointer:e.pointerId,start:position(e),ids,before:history.document,moved:false,inverse:svg.getScreenCTM()?.inverse()??null}
+ vertexDrag={svg,pointer:e.pointerId,start:position(e),ids,before:committedView(),moved:false,inverse:svg.getScreenCTM()?.inverse()??null}
  svg.setPointerCapture(e.pointerId)
 }
 const nativeNurbsWorker=createSolidPreviewWorker(),nativeNurbsPending=ref(false)
@@ -698,7 +698,7 @@ async function runNativeBrep(options:Exclude<SolidBrepToolOptions,{kind:'display
  const generation=++nativeNurbsGeneration
  nativeBrepMode.value=options.kind;nativeNurbsPending.value=true
  try{
-  const result=await nativeNurbsWorker.run({kind:'brepTool',document:history.document,options})
+  const result=await nativeNurbsWorker.run({kind:'brepTool',document:committedView(),options})
   if(generation!==nativeNurbsGeneration||!props.open)return
   nativeNurbsPending.value=false;nativeBrepMode.value=null
   if(result.kind==='mass')brepMass.value=result.mass
@@ -1002,13 +1002,13 @@ function startGizmo(e:PointerEvent,kind:'move'|'rotate'|'scale'|'push'|'split',a
  const n=kind==='push'?selectedFace.value!.normal:axisVector(axis),a=project(center,'3d'),b=project(center.map((x,i)=>x+n[i]),'3d')
  if(kind==='push'){advanced.value.distance=0;beginAdvanced('push')}
  dragConstraint.value=kind==='push'?label('Нормаль грани','Face normal'):axis.toUpperCase()
- manipulatorDrag={svg,pointer:e.pointerId,x:e.clientX,y:e.clientY,kind,axis,direction:[b[0]-a[0],b[1]-a[1]],before:history.document,initial:advanced.value.distance,startPoint:position(e),center:project(center,'3d')};svg.setPointerCapture(e.pointerId)
+ manipulatorDrag={svg,pointer:e.pointerId,x:e.clientX,y:e.clientY,kind,axis,direction:[b[0]-a[0],b[1]-a[1]],before:committedView(),initial:advanced.value.distance,startPoint:position(e),center:project(center,'3d')};svg.setPointerCapture(e.pointerId)
 }
 function startCurve(e:PointerEvent,kind:'center'|'radius'|'start'|'end'){
  if(!requireSketchSnaps(e))return
  cancelNativeNurbs();cancelGizmoWorker();if(directTransformPending.value)cancelDirectTransform()
  if(!selectedSketch.value?.analytic)return
- e.preventDefault();e.stopPropagation();advancedOp.value=null;const svg=canvasOf(e);svg.focus();curveDrag={id:selection.value,kind,before:history.document,pointer:e.pointerId,inverse:svg.getScreenCTM()?.inverse()??null};svg.setPointerCapture(e.pointerId)
+ e.preventDefault();e.stopPropagation();advancedOp.value=null;const svg=canvasOf(e);svg.focus();curveDrag={id:selection.value,kind,before:committedView(),pointer:e.pointerId,inverse:svg.getScreenCTM()?.inverse()??null};svg.setPointerCapture(e.pointerId)
 }
 function startCv(e:PointerEvent,u:number,v:number) {
  if(!requireBodySnaps(e,document.value))return
@@ -1016,7 +1016,7 @@ function startCv(e:PointerEvent,u:number,v:number) {
  const point=selectedNurbsCurve.value?.curve.controlPoints[u]??selectedNurbsSurface.value?.surface.controlPoints[u]?.[v]
  if(!selectedNurbs.value||!point)return
  e.preventDefault();e.stopPropagation();cvU.value=u;cvV.value=v
- const svg=canvasOf(e);svg.focus();cvDrag={id:selectedNurbs.value.id,u,v,before:history.document,point:[...point],start:position(e),pointer:e.pointerId,svg,inverse:svg.getScreenCTM()?.inverse()??null};svg.setPointerCapture(e.pointerId)
+ const svg=canvasOf(e);svg.focus();cvDrag={id:selectedNurbs.value.id,u,v,before:committedView(),point:[...point],start:position(e),pointer:e.pointerId,svg,inverse:svg.getScreenCTM()?.inverse()??null};svg.setPointerCapture(e.pointerId)
 }
 function pickEdge(e:PointerEvent|KeyboardEvent,index:number){
  // Navigation must bubble to the canvas even when it starts on an edge.
@@ -1103,7 +1103,11 @@ function moveAt(e: PointerEvent) {
   } catch { /* canvas not ready */ }
 }
 
-function sync(next:DirectDocument=history.document) { snapDocument.value=next; document.value=next; const ids=new Set([...documentObjects(document.value),...document.value.sourceBodies??[]].map(o=>o.id));if(selection.value&&!ids.has(selection.value))selection.value='';extraSelection.value=extraSelection.value.filter(id=>ids.has(id)); if (gpuActive.value) settleAfterDrag(); const s=document.value.sketches.find(s=>s.id===selection.value);if(s&&!samePlane(s.plane,activePlane.value)){activePlane.value=s.plane??xyPlane();workplaneOutline.value=[]} undoable.value = history.canUndo; redoable.value = history.canRedo; persist() }
+/** Read-only view of the committed state for gesture snapshots and worker payloads: the
+ * document the last sync() published (a private copy equal to the history state), so a
+ * gesture start does not deep-copy the whole document. Callers must not mutate it. */
+function committedView():DirectDocument{return snapDocument.value}
+function sync(next:DirectDocument=history.syncedDocument) { snapDocument.value=next; document.value=next; const ids=new Set([...documentObjects(document.value),...document.value.sourceBodies??[]].map(o=>o.id));if(selection.value&&!ids.has(selection.value))selection.value='';extraSelection.value=extraSelection.value.filter(id=>ids.has(id)); if (gpuActive.value) settleAfterDrag(); const s=document.value.sketches.find(s=>s.id===selection.value);if(s&&!samePlane(s.plane,activePlane.value)){activePlane.value=s.plane??xyPlane();workplaneOutline.value=[]} undoable.value = history.canUndo; redoable.value = history.canRedo; persist() }
 function prepareCommit(next:DirectDocument,origin:'edit'|'file'='edit') {
  return prepareDocumentCommit(next,origin==='file'&&!lockedIds.value.length?undefined:snapDocument.value,history.objectIds,lockedIds.value,activeGroup.value,origin,label)
 }
@@ -1211,10 +1215,10 @@ async function duplicate() {
  if(commandActive.value){error.value=label('Завершите текущую команду','Finish the current command');return}
  if(!canDuplicate.value){error.value=label('Для копирования выберите только тела или эскизы','Select only bodies or sketches to duplicate');return}
  cancelDirectTransform()
- const generation=directTransformGeneration,before=history.document,ids=[...selectedIds.value],copyIds=ids.map(()=>crypto.randomUUID())
+ const generation=directTransformGeneration,before=committedView(),ids=[...selectedIds.value],copyIds=ids.map(()=>crypto.randomUUID())
  directTransformPending.value=true;directTransformOperation.value='duplicate';error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:before.bodies.some(body=>body.instance)?serializeDirectDocument(before):before,options:{operation:'duplicate',id:ids[0]??'',ids,copyIds,createdId:'',x:10,y:10,z:0,axis:'z',angle:0,scale:1}})
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before.bodies.some(body=>body.instance)?history.canonicalText(before)??serializeDirectDocument(before):before,options:{operation:'duplicate',id:ids[0]??'',ids,copyIds,createdId:'',x:10,y:10,z:0,axis:'z',angle:0,scale:1}})
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
   const applied=await history.commitAsync(async()=>result,validateLocked)
@@ -1325,7 +1329,7 @@ async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Ve
  const generation=directTransformGeneration
  directTransformPending.value=true;directTransformOperation.value=metadata?.operation??(detach?'instance-detach':'transform');error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:before.bodies.some(body=>body.instance)?serializeDirectDocument(before):before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before.bodies.some(body=>body.instance)?history.canonicalText(before)??serializeDirectDocument(before):before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
   result.blenderProjectId ??= snapDocument.value.blenderProjectId
@@ -1896,7 +1900,7 @@ function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null
   if (pane === '2d' && vertex !== null) cornerVertex.value = vertex
   if (drawing && tool.value === 'polyline') { if (draft.value.length >= 3 && Math.hypot(p[0]-draft.value[0][0],p[1]-draft.value[0][1]) < views.value['2d']/100) { finish(true); return } draft.value = [...draft.value, p]; return }
   if (tool.value === 'select' || (pane === '3d'&&!drawing)) { if(!selectedIds.value.includes(id))pickObject(id,pane); if (!id) return }
-  gesture = { inverse:svg.getScreenCTM()?.inverse()??null,start: p, document: history.document, vertex, id, sketch:drawing&&tool.value!=='select', pointer: e.pointerId, pane, svg, pan: false, center: [...centers.value[pane]] }
+  gesture = { inverse:svg.getScreenCTM()?.inverse()??null,start: p, document: committedView(), vertex, id, sketch:drawing&&tool.value!=='select', pointer: e.pointerId, pane, svg, pan: false, center: [...centers.value[pane]] }
   if (pane === '2d' && id && vertex === null) {
     const sketch = visibleSketches.value.find(s=>s.id===id)
     if(sketch?.points.length) gesture.anchor = [...sketch.points.reduce((best,q)=>Math.hypot(q[0]-p[0],q[1]-p[1])<Math.hypot(best[0]-p[0],best[1]-p[1])?q:best)]
@@ -2108,7 +2112,7 @@ function updateCv() { run(() => {
     return
   }
   cancelCommand();numericPointEdit=true
-  requestDragJob({kind:'pointEdit',document:history.document,options:{kind:'cv',id:selection.value,u:cvU.value,v:cvV.value,point:point as Vec3,weight:cvWeight.value}});gizmoApplyRevision=gizmoRevision
+  requestDragJob({kind:'pointEdit',document:committedView(),options:{kind:'cv',id:selection.value,u:cvU.value,v:cvV.value,point:point as Vec3,weight:cvWeight.value}});gizmoApplyRevision=gizmoRevision
 }) }
 function cancelNativeNurbs(){nativeNurbsGeneration++;nativeNurbsWorker.cancel();nativeNurbsPending.value=false;nativeBrepMode.value=null}
 async function runNativeNurbs(options:SolidNurbsEditOptions){
@@ -2117,7 +2121,7 @@ async function runNativeNurbs(options:SolidNurbsEditOptions){
  const generation=++nativeNurbsGeneration
  nativeNurbsPending.value=true
  try{
-  const result=await nativeNurbsWorker.run({kind:'nurbsEdit',document:history.document,options})
+  const result=await nativeNurbsWorker.run({kind:'nurbsEdit',document:committedView(),options})
   if(generation!==nativeNurbsGeneration||!props.open)return
   nativeNurbsPending.value=false;commit(result)
   if(options.kind==='trim')cvU.value=cvV.value=0
