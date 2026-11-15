@@ -85,6 +85,20 @@ pub(crate) fn boundary(s: &Surface, p: &Curve, axis: Axis) -> Option<&'static st
         (Axis::Station, _) => "vMax",
     })
 }
+/// Full parameter side of a coedge (profile first, then station) and whether
+/// its use runs along increasing free parameter.
+pub(crate) fn coedge_side(
+    s: &Surface,
+    pcurve: &Curve,
+    reversed: bool,
+) -> Option<(&'static str, bool)> {
+    let label = boundary(s, pcurve, Axis::Profile).or_else(|| boundary(s, pcurve, Axis::Station))?;
+    let free = usize::from(label.starts_with('u'));
+    let [first, last] = pcurve.control_points.as_slice() else {
+        return None;
+    };
+    Some((label, (last.get(free) > first.get(free)) != reversed))
+}
 /// Upper bound on the exact work one retained smoothness audit may spend.
 const MAX_SMOOTHNESS_WORK: u64 = 2_000_000;
 fn invalid(message: &str) -> Error {

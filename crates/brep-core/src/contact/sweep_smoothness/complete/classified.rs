@@ -86,15 +86,8 @@ pub fn inspect(model: &Model, classes: &[Class], limits: Limits) -> Result<Repor
                 if !step(&mut out, limits.incidence_steps) {
                     return Ok(out);
                 }
-                let label = boundary(&f.surface, &c.pcurve, Axis::Profile)
-                    .or_else(|| boundary(&f.surface, &c.pcurve, Axis::Station));
-                let direction = label.map(|l| {
-                    let free = usize::from(l.starts_with('u'));
-                    (c.pcurve.control_points.last().unwrap()[free]
-                        > c.pcurve.control_points[0][free])
-                        != c.reversed
-                });
-                uses[c.edge].push((face, label, direction));
+                let side = coedge_side(&f.surface, &c.pcurve, c.reversed);
+                uses[c.edge].push((face, side.map(|s| s.0), side.map(|s| s.1)));
             }
         }
     }

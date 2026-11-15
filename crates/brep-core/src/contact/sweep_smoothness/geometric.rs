@@ -89,22 +89,14 @@ fn collect_edge_uses(model: &Model) -> Vec<Vec<EdgeUseRef<'_>>> {
     for (face, f) in model.faces.iter().enumerate() {
         for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
             for c in &model.loops[wire].coedges {
-                let label = super::boundary(&f.surface, &c.pcurve, super::Axis::Profile)
-                    .or_else(|| super::boundary(&f.surface, &c.pcurve, super::Axis::Station));
-                let side = label.map(|label| match label {
+                let found = super::coedge_side(&f.surface, &c.pcurve, c.reversed);
+                let side = found.map(|(label, _)| match label {
                     "uMin" => Boundary::UMin,
                     "uMax" => Boundary::UMax,
                     "vMin" => Boundary::VMin,
-                    "vMax" => Boundary::VMax,
-                    _ => unreachable!(),
+                    _ => Boundary::VMax,
                 });
-                let increasing = side.map(|side| {
-                    let free = usize::from(matches!(side, Boundary::UMin | Boundary::UMax));
-                    (c.pcurve.control_points.last().unwrap()[free]
-                        > c.pcurve.control_points[0][free])
-                        != c.reversed
-                });
-                uses[c.edge].push((face, side, increasing, c));
+                uses[c.edge].push((face, side, found.map(|f| f.1), c));
             }
         }
     }
