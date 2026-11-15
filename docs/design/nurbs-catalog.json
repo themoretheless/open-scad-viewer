@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 270,
-  "unallocatedCount": 730,
+  "specifiedCount": 271,
+  "unallocatedCount": 729,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7270,6 +7270,30 @@
       ],
       "remainingQualification": [
         "Covers the original cell with a polyline at supplied transverse parameters. Exact bracket midpoint error and implicit slope variation bound the whole segment in the absolute root clock. This is a UV parameter bound, not a world-space mesh or contour topology certificate.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0271",
+      "name": "Адаптивная UV-ломаная порогового контура NURBS по заданному допуску",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::adapt_curvature_gap_polyline",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "docs/qualification/nurbs-curvature-field-271-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-271-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Automatically inserts transverse midpoints where the continuous bound exceeds the absolute root-axis tolerance. Vertex and precision limits return the complete ordered cover with actual bounds, while exact work refusal is atomic.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]
