@@ -5,7 +5,7 @@ import type { SemanticProgramCoreV1 } from '../src/core/semanticProgram'
 import { validateNodes } from '../src/language/semantic/semanticProgramValidator/validateNodes'
 import { validateOperations } from '../src/language/semantic/semanticProgramValidator/fail'
 import { validateOccurrenceProduction } from '../src/language/semantic/semanticProgramValidator/validateOccurrenceProduction'
-import { remapSemanticNode } from '../src/language/semantic/lowererBuilder'
+import { remapSemanticNode } from '../src/language/semantic/remapSemanticNode'
 import { nodeMustReturnValueAfterReduction } from '../src/language/semantic/semanticProgramExecutor/checkSemanticExecutionControl'
 
 function fixture(): SemanticProgramCoreV1 {
