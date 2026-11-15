@@ -8,7 +8,10 @@ use crate::{
     Result, check,
     core::bounded_rational::Work,
     curve::Curve,
-    editing::{exact_derivative::Refusal, rational_factor::polynomial as poly},
+    editing::{
+        exact_derivative::{PResult, Refusal, add},
+        rational_factor::polynomial::{self as poly, Poly},
+    },
     surface::Surface,
 };
 use std::ops::ControlFlow;
@@ -64,28 +67,128 @@ pub fn compare_pcurve_edge(
                 return Err(Refusal::UnprovedIdentity.into());
             }
             let original = original_span(edge, span, parameter, work)?;
-            for coordinate in 0..3 {
-                let left = poly::multiply(&original[coordinate], &target[3], work)
-                    .map_err(Refusal::from)?;
-                let right = poly::multiply(&target[coordinate], &original[3], work)
-                    .map_err(Refusal::from)?;
-                if left != right {
-                    return Ok(ControlFlow::Break(PcurveEdgeAgreement::Different {
-                        parameter,
-                        coordinate,
-                    }));
-                }
-            }
-            Ok(ControlFlow::Continue(()))
+            compare_trace(parameter, &original, target, work)
         },
     );
+    Ok(agreement_report(result, work.used))
+}
+
+fn agreement_report(
+    result: std::result::Result<ControlFlow<PcurveEdgeAgreement>, PcurvePullbackRefusal>,
+    work_used: u64,
+) -> PcurveEdgeAgreementReport {
     let outcome = match result {
         Ok(ControlFlow::Continue(())) => PcurveEdgeAgreement::Equal,
         Ok(ControlFlow::Break(mismatch)) => mismatch,
         Err(reason) => PcurveEdgeAgreement::Refused(reason),
     };
-    Ok(PcurveEdgeAgreementReport {
-        outcome,
-        work_used: work.used,
-    })
+    PcurveEdgeAgreementReport { outcome, work_used }
+}
+
+fn compare_trace(
+    parameter: [f64; 2],
+    original: &[Poly],
+    target: &[Poly],
+    work: &mut Work,
+) -> std::result::Result<ControlFlow<PcurveEdgeAgreement>, PcurvePullbackRefusal> {
+    for coordinate in 0..3 {
+        let left =
+            poly::multiply(&original[coordinate], &target[3], work).map_err(Refusal::from)?;
+        let right =
+            poly::multiply(&target[coordinate], &original[3], work).map_err(Refusal::from)?;
+        if left != right {
+            return Ok(ControlFlow::Break(PcurveEdgeAgreement::Different {
+                parameter,
+                coordinate,
+            }));
+        }
+    }
+    Ok(ControlFlow::Continue(()))
+}
+
+/// Compare two surface-owned pcurves in the same original absolute parameter.
+/// Their tensor knot grids and their UV curve partitions may differ. Exact
+/// polynomial comparison uses the union of the lifted parameter partitions,
+/// keeping the original rational expressions on both faces.
+pub fn compare_surface_pcurve_seam(
+    left: (&Surface, &Curve),
+    right: (&Surface, &Curve),
+    max_work: u64,
+) -> Result<PcurveEdgeAgreementReport> {
+    let left_axes = validate_inputs(left.0, left.1, max_work)?;
+    let right_axes = validate_inputs(right.0, right.1, max_work)?;
+    check(
+        left.1.domain() == right.1.domain(),
+        "Paired UV traces must use the same absolute parameter domain",
+    )?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let result = (|| {
+        let mut left_pieces = Vec::new();
+        let _: ControlFlow<()> = trace_cells(
+            left.0,
+            left.1,
+            &left_axes,
+            &[],
+            &mut work,
+            |parameter, target, _| {
+                left_pieces.push((parameter, target.to_vec()));
+                Ok(ControlFlow::Continue(()))
+            },
+        )?;
+        let breaks: Vec<_> = left_pieces
+            .iter()
+            .map(|(parameter, _)| parameter[1])
+            .collect();
+        trace_cells(
+            right.0,
+            right.1,
+            &right_axes,
+            &breaks,
+            &mut work,
+            |parameter, target, work| {
+                let index = breaks.partition_point(|&end| end <= parameter[0]);
+                let Some((cover, original)) = left_pieces.get(index) else {
+                    return Err(Refusal::UnprovedIdentity.into());
+                };
+                if parameter[0] < cover[0] || parameter[1] > cover[1] {
+                    return Err(Refusal::UnprovedIdentity.into());
+                }
+                if parameter == *cover {
+                    compare_trace(parameter, original, target, work)
+                } else {
+                    let restricted = restrict_trace(original, *cover, parameter, work)?;
+                    compare_trace(parameter, &restricted, target, work)
+                }
+            },
+        )
+    })();
+    Ok(agreement_report(result, work.used))
+}
+
+fn restrict_trace(
+    original: &[Poly],
+    [a, b]: [f64; 2],
+    [lo, hi]: [f64; 2],
+    work: &mut Work,
+) -> PResult<Vec<Poly>> {
+    let [a, b, lo, hi] = [work.lift(a)?, work.lift(b)?, work.lift(lo)?, work.lift(hi)?];
+    let span = work.op(&b, &a, |a, b| a - b)?;
+    let start = work.op(&lo, &a, |a, b| a - b)?;
+    let width = work.op(&hi, &lo, |a, b| a - b)?;
+    let linear = vec![
+        work.op(&start, &span, |a, b| a / b)?,
+        work.op(&width, &span, |a, b| a / b)?,
+    ];
+    original
+        .iter()
+        .map(|channel| {
+            channel.iter().rev().try_fold(Vec::new(), |acc, q| {
+                let product = poly::multiply(&acc, &linear, work)?;
+                add(&product, &vec![q.clone()], false, work)
+            })
+        })
+        .collect()
 }

@@ -17,7 +17,9 @@ pub use mobius_spline::{
     mobius_spline_surface,
 };
 mod pcurve_agreement;
-pub use pcurve_agreement::{PcurveEdgeAgreement, PcurveEdgeAgreementReport, compare_pcurve_edge};
+pub use pcurve_agreement::{
+    PcurveEdgeAgreement, PcurveEdgeAgreementReport, compare_pcurve_edge, compare_surface_pcurve_seam,
+};
 mod pcurve_lift;
 pub use pcurve_lift::{PcurveLiftReport, lift_pcurve_to_surface};
 mod pcurve_mobius;

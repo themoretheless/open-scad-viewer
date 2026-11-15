@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 301,
-  "unallocatedCount": 699,
+  "specifiedCount": 302,
+  "unallocatedCount": 698,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7971,6 +7971,27 @@
       "remainingQualification": [
         "Compare original homogeneous edge and tensor-composed trim traces on their full common parameter partition without storing reconstructed edge pieces.",
         "Same absolute curve parameter domain, exact UV grid cuts. Reports an exact mismatch even when endpoint positions agree. No generated edge binary64 storage required.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0302",
+      "name": "Точная сверка общего шва по двум UV-контурам соседних поверхностей",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::compare_surface_pcurve_seam",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_agreement.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_lift.rs",
+        "crates/nurbs-core/tests/exact_surface_pcurve_seam_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-302-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-302-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Prove equality or locate the first exact mismatch between paired surface-owned trim traces over the union of their parameter partitions.",
+        "Shared absolute trim parameter, arbitrary different covered UV cells, exact representable cell cuts. No intermediate space-curve storage needed.",
         "WASM and application integration are separate."
       ]
     }
