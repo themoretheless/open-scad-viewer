@@ -541,7 +541,7 @@ fn construct_impl(
                 }
                 if let Some(last) = levels.last_mut() {
                     last.accepted = false;
-                    last.error_certificate_reason = Some("complete-boundary-refinement");
+                    last.error.certificate_reason = Some("complete-boundary-refinement");
                 }
                 previous.append(&mut levels);
                 spent = spent

@@ -93,26 +93,26 @@ pub(super) fn construct_attempt(
     let report = levels
         .last()
         .ok_or_else(|| invalid("Progressive miter produced no level"))?;
-    if !report.frame_transport_certified {
+    if !report.frame_transport.certified {
         return Err(invalid(
             "Progressive miter frame transport could not be proved; review the path, normal and miter limit",
         ));
     }
-    if !report.profile_regularity_certified {
+    if !report.regularity.profile_certified {
         return Err(invalid(
             "Progressive miter profile tangent regularity could not be proved",
         ));
     }
-    if report.wall_regularity_certified == Some(false) {
+    if report.regularity.wall_certified == Some(false) {
         return Err(invalid(
             "Progressive miter retained wall Jacobian regularity could not be proved",
         ));
     }
-    let Some(source_error) = report.certified_error_upper else {
+    let Some(source_error) = report.error.certified_upper else {
         return Err(invalid(format!(
             "Progressive miter wall error bound could not be proved: {}",
             report
-                .error_certificate_reason
+                .error.certificate_reason
                 .unwrap_or("unresolved certificate")
         )));
     };
@@ -347,7 +347,7 @@ pub(super) fn construct_attempt(
             ideal_domains_certified: domains.ideal_cap_domains_certified,
             retained_regions_exact: regions,
             projection_normal_dots: projection.normal_dots,
-            endpoint_error: report.endpoint_contour_error_upper,
+            endpoint_error: report.error.endpoint_contour_upper,
             correction: Some(displacement),
             decomposition,
             parallel_planes: parallel.parallel.unwrap_or([false; 2]),

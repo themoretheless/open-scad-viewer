@@ -196,28 +196,36 @@ pub(super) fn nurbs_boolean_graph_patch_transverse(
         capability,
         status: "Complete",
         operation: operation.into(),
-        axis: iso.first_axis,
-        fixed_parameter: fixed,
-        source_face: source_id.to_string(),
-        retained_face: result.1.faces[1].to_string(),
-        deleted_region: if keep_positive_parameter {
-            "lower-parameter-cell"
-        } else {
-            "upper-parameter-cell"
+        cut: GraphBooleanCut {
+            axis: iso.first_axis,
+            fixed_parameter: fixed,
+            tensor_cells: arrangement.cells.len(),
         },
-        intersection_edge: result.1.edges[seam.edge(&result)?].to_string(),
-        tensor_cells: arrangement.cells.len(),
-        exact_correspondence: correspondence.permits_exact_correspondence(),
+        lineage: GraphBooleanLineage {
+            source_face: source_id.to_string(),
+            retained_face: result.1.faces[1].to_string(),
+            deleted_region: if keep_positive_parameter {
+                "lower-parameter-cell"
+            } else {
+                "upper-parameter-cell"
+            },
+            intersection_edge: result.1.edges[seam.edge(&result)?].to_string(),
+        },
         sew: audit.sew.clone(),
         audit,
         change_set: result.1.change_set.clone(),
-        naming_complete: result.persistent_naming_complete(),
-        no_fallback: true,
-        separation_proof: true,
-        homogeneous_root_proof: rational,
-        denominator_lower_bound,
-        weight_condition_number: denominator_upper_bound / denominator_lower_bound,
-        resource_bound: (top.degree_u + 1) * (top.degree_v + 1),
+        proofs: GraphBooleanProofs {
+            exact_correspondence: correspondence.permits_exact_correspondence(),
+            naming_complete: result.persistent_naming_complete(),
+            no_fallback: true,
+            separation_proof: true,
+            homogeneous_root_proof: rational,
+        },
+        conditioning: GraphBooleanConditioning {
+            denominator_lower_bound,
+            weight_condition_number: denominator_upper_bound / denominator_lower_bound,
+            resource_bound: (top.degree_u + 1) * (top.degree_v + 1),
+        },
     };
     if !cert.permits_topology_change() {
         return Err(refuse("V3 aggregate certificate failed closed"));

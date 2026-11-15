@@ -60,29 +60,51 @@ impl<'a> Certificate<'a> {
         &self.intrinsic
     }
 }
+/// Pairs excluded by each proof, counted by the proof that closed them.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Exclusions {
+    pub intrinsic: usize,
+    /// Subset of intrinsic exclusions closed by the polar argument.
+    pub polar: usize,
+    pub polar_factor_refusals: usize,
+    pub angular: usize,
+    /// Subset of angular exclusions closed by the factored normal.
+    pub factored_angular: usize,
+    pub direction: usize,
+    /// Subset of direction exclusions proved by the original mean matrix.
+    pub mean_matrix: usize,
+    pub distance: usize,
+}
+/// Work of the coordinate-path argument over the whole cell.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CoordinatePathWork {
+    pub exclusions: usize,
+    pub attempts: usize,
+    pub refusals: usize,
+}
+/// Work of the local coordinate-path argument.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct LocalPathWork {
+    pub exclusions: usize,
+    /// Qualified local paths by proven margin: three, one, quarter width.
+    pub margin_exclusions: [usize; 3],
+    pub attempts: usize,
+    pub refusals: usize,
+}
+/// Rectangle enclosures reused instead of recomputed.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CacheHits {
+    pub complete_rectangle: usize,
+    pub original_normal_rectangle: usize,
+}
 pub struct Report<'a> {
     pub certificate: Option<Certificate<'a>>,
     pub cells: usize,
     pub spans: usize,
-    pub intrinsic_exclusions: usize,
-    pub polar_exclusions: usize,
-    pub coordinate_path_exclusions: usize,
-    pub coordinate_path_attempts: usize,
-    pub coordinate_path_refusals: usize,
-    pub local_coordinate_path_exclusions: usize,
-    /// Qualified local paths by proven margin: three, one, quarter width.
-    pub local_margin_exclusions: [usize; 3],
-    pub local_coordinate_path_attempts: usize,
-    pub local_coordinate_path_refusals: usize,
-    pub polar_factor_refusals: usize,
-    pub angular_exclusions: usize,
-    pub factored_angular_exclusions: usize,
-    pub direction_exclusions: usize,
-    /// Subset of direction exclusions proved by the original mean matrix.
-    pub mean_matrix_exclusions: usize,
-    pub complete_rectangle_cache_hits: usize,
-    pub original_normal_rectangle_cache_hits: usize,
-    pub distance_exclusions: usize,
+    pub exclusions: Exclusions,
+    pub coordinate_path: CoordinatePathWork,
+    pub local_path: LocalPathWork,
+    pub cache_hits: CacheHits,
     pub pending: usize,
     pub uncertain: Option<Pair>,
     /// Remaining closed pair representatives in original parameter coordinates.
@@ -302,23 +324,10 @@ fn qualify_impl<'a>(
         certificate: None,
         cells: 0,
         spans: 0,
-        intrinsic_exclusions: 0,
-        polar_exclusions: 0,
-        coordinate_path_exclusions: 0,
-        coordinate_path_attempts: 0,
-        coordinate_path_refusals: 0,
-        local_coordinate_path_exclusions: 0,
-        local_margin_exclusions: [0; 3],
-        local_coordinate_path_attempts: 0,
-        local_coordinate_path_refusals: 0,
-        polar_factor_refusals: 0,
-        angular_exclusions: 0,
-        factored_angular_exclusions: 0,
-        direction_exclusions: 0,
-        mean_matrix_exclusions: 0,
-        complete_rectangle_cache_hits: 0,
-        original_normal_rectangle_cache_hits: 0,
-        distance_exclusions: 0,
+        exclusions: Exclusions::default(),
+        coordinate_path: CoordinatePathWork::default(),
+        local_path: LocalPathWork::default(),
+        cache_hits: CacheHits::default(),
         pending: 1,
         uncertain: None,
         unresolved_pairs: Vec::new(),
@@ -344,10 +353,10 @@ fn qualify_impl<'a>(
             ]
         });
         let (r,reused)=rectangles.qualify(union,limits.spans-out.spans)?;
-        out.complete_rectangle_cache_hits+=usize::from(reused);
+        out.cache_hits.complete_rectangle+=usize::from(reused);
         out.spans += r.spans;
         if let Some(c) = r.certificate {
-            out.intrinsic_exclusions += 1;
+            out.exclusions.intrinsic += 1;
             intrinsic.push(c);
             continue;
         }
@@ -362,8 +371,8 @@ fn qualify_impl<'a>(
             )?;
             out.spans += r.spans;
             if let Some(c) = r.certificate {
-                out.intrinsic_exclusions += 1;
-                out.polar_exclusions += 1;
+                out.exclusions.intrinsic += 1;
+                out.exclusions.polar += 1;
                 intrinsic.push(c);
                 continue;
             }
@@ -377,8 +386,8 @@ fn qualify_impl<'a>(
                     out.spans += 2;
                     let r = normal_alignment::inspect_pair_bounds(components, threshold)?;
                     if r.aligned == Some(false) {
-                        out.angular_exclusions += 1;
-                        out.factored_angular_exclusions += 1;
+                        out.exclusions.angular += 1;
+                        out.exclusions.factored_angular += 1;
                         continue;
                     }
                 }
@@ -388,11 +397,11 @@ fn qualify_impl<'a>(
                     threshold,
                     limits.spans - out.spans,
                 )?;
-                out.original_normal_rectangle_cache_hits+=hits;
+                out.cache_hits.original_normal_rectangle+=hits;
                 original_normals=cache;
                 out.spans += r.spans;
                 if r.aligned == Some(false) {
-                    out.angular_exclusions += 1;
+                    out.exclusions.angular += 1;
                     continue;
                 }
             }
@@ -405,7 +414,7 @@ fn qualify_impl<'a>(
             let b = surface_distance::rectangle_bounds(s, pair[1])?;
             out.spans += work;
             if surface_distance::enclosure_distance(&a, &b)?.0 >= minimum_mm {
-                out.distance_exclusions += 1;
+                out.exclusions.distance += 1;
                 continue;
             }
             if out.spans < limits.spans || pair_normals.is_some() || original_normals.is_some() {
@@ -423,7 +432,7 @@ fn qualify_impl<'a>(
                 )?;
                 out.spans += used;
                 if excluded {
-                    out.direction_exclusions += 1;
+                    out.exclusions.direction += 1;
                     continue;
                 }
             }
@@ -435,8 +444,8 @@ fn qualify_impl<'a>(
                     limits.spans-out.spans,cached,original_normals.as_ref())?;
                 out.spans += used;
                 if excluded {
-                    out.direction_exclusions += 1;
-                    out.mean_matrix_exclusions += 1;
+                    out.exclusions.direction += 1;
+                    out.exclusions.mean_matrix += 1;
                     continue;
                 }
             }
@@ -448,11 +457,11 @@ fn qualify_impl<'a>(
             for endpoints in [pair,[pair[1],pair[0]]] {
                 if out.spans==limits.spans {break;}
                 let (u,reused)=rectangles.qualify([union[0],endpoints[0][1]],limits.spans-out.spans)?;
-                out.spans+=u.spans;out.complete_rectangle_cache_hits+=usize::from(reused);
+                out.spans+=u.spans;out.cache_hits.complete_rectangle+=usize::from(reused);
                 let Some(u)=u.mean_matrix else {continue};
                 if out.spans==limits.spans {break;}
                 let (v,reused)=rectangles.qualify([endpoints[1][0],union[1]],limits.spans-out.spans)?;
-                out.spans+=v.spans;out.complete_rectangle_cache_hits+=usize::from(reused);
+                out.spans+=v.spans;out.cache_hits.complete_rectangle+=usize::from(reused);
                 let Some(v)=v.mean_matrix else {continue};
                 let path=matrix.coordinate_path(endpoints,&u,&v)?;
                 // Normal caches are indexed by the original endpoint order.
@@ -472,7 +481,7 @@ fn qualify_impl<'a>(
                 }
 
             }
-            if excluded {out.direction_exclusions+=1;continue;}
+            if excluded {out.exclusions.direction+=1;continue;}
         }
         if let (Some(differential), Some(normals)) = (differential, factored) {
             if out.spans < limits.spans {
@@ -486,21 +495,21 @@ fn qualify_impl<'a>(
                     pair_normals.as_ref(),
                 )?;
                 out.spans += r.spans;
-                out.coordinate_path_attempts += usize::from(r.coordinate_path_attempted);
-                out.coordinate_path_refusals +=
+                out.coordinate_path.attempts += usize::from(r.coordinate_path_attempted);
+                out.coordinate_path.refusals +=
                     usize::from(r.coordinate_path_attempted && !r.coordinate_path_available);
-                out.coordinate_path_exclusions += usize::from(r.coordinate_path_excluded);
-                out.local_coordinate_path_exclusions += usize::from(r.local_path_excluded);
+                out.coordinate_path.exclusions += usize::from(r.coordinate_path_excluded);
+                out.local_path.exclusions += usize::from(r.local_path_excluded);
                 if let Some(margin) = r.local_path_margin {
                     let index = [3., 1., 0.25].iter().position(|m| *m == margin)
                         .expect("Only original proven local path margins are reported");
-                    out.local_margin_exclusions[index] += 1;
+                    out.local_path.margin_exclusions[index] += 1;
                 }
-                out.local_coordinate_path_attempts += usize::from(r.local_path_attempted);
-                out.local_coordinate_path_refusals +=
+                out.local_path.attempts += usize::from(r.local_path_attempted);
+                out.local_path.refusals +=
                     usize::from(r.local_path_attempted && !r.local_path_available);
                 if r.excluded {
-                    out.direction_exclusions += 1;
+                    out.exclusions.direction += 1;
                     continue;
                 }
             }
@@ -515,11 +524,11 @@ fn qualify_impl<'a>(
             )?;
             out.spans += r.spans;
             if r.reason == "polar-chord-factor-unproven" {
-                out.polar_factor_refusals += 1;
+                out.exclusions.polar_factor_refusals += 1;
             }
             if let Some(c) = r.certificate {
-                out.intrinsic_exclusions += 1;
-                out.polar_exclusions += 1;
+                out.exclusions.intrinsic += 1;
+                out.exclusions.polar += 1;
                 intrinsic.push(c);
                 continue;
             }

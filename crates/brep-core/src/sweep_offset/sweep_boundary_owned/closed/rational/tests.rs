@@ -173,9 +173,9 @@ fn body(a: RationalClosedAttempt) -> Box<RationalClosedBody> {
             r.reason,
             r.work.source_exact_work,
             r.caps.len(),
-            r.binding.as_ref().map(|p| (p.certified, p.faces, p.reason)),
-            r.volume,
-            r.smoothness.as_ref().map(|p| (
+            r.audits.binding.as_ref().map(|p| (p.certified, p.faces, p.reason)),
+            r.audits.volume,
+            r.audits.smoothness.as_ref().map(|p| (
                 &p.unresolved_edges,
                 p.g2_certified,
                 p.regularity.all_faces_regular
@@ -222,8 +222,8 @@ fn original_and_actual_rational_body_own_full_filled_planar_and_nonplanar_cap_g2
         assert_eq!(b.model().validate().unwrap().boundary_edge_count, 0);
         eprintln!(
             "actual physical annular graph caps nonplanar={nonplanar}, source/actual G2, volume={:?}, exact binding={} faces={}",
-            r.volume,
-            r.binding.as_ref().unwrap().exact_work,
+            r.audits.volume,
+            r.audits.binding.as_ref().unwrap().exact_work,
             b.model().faces.len()
         );
     }
@@ -352,8 +352,8 @@ fn sharp_cap_join_is_explicit_c0_and_cannot_be_hidden_by_an_empty_cap_selection(
     assert!(b.joint_certificate(0).is_ok());
     assert!(b.joint_certificate(1).is_err());
     assert_eq!(b.report().source.seam_continuity, "C0");
-    assert!(b.report().c0_regularity.as_ref().unwrap().all_faces_regular);
-    assert!(b.report().c0_agreement.as_ref().unwrap().all_equal);
+    assert!(b.report().audits.c0_regularity.as_ref().unwrap().all_faces_regular);
+    assert!(b.report().audits.c0_agreement.as_ref().unwrap().all_equal);
 }
 
 #[test]
@@ -393,7 +393,7 @@ fn all_original_caps_volume_construction_and_boundary_owner_budgets_refuse_parti
             ..limits()
         });
     }
-    for budget in [0, r.binding.as_ref().unwrap().exact_work - 1] {
+    for budget in [0, r.audits.binding.as_ref().unwrap().exact_work - 1] {
         cases.push(RationalClosedLimits {
             binding_work: budget,
             ..limits()
@@ -411,24 +411,24 @@ fn all_original_caps_volume_construction_and_boundary_owner_budgets_refuse_parti
             ..limits()
         });
     }
-    for budget in [0, r.volume.as_ref().unwrap().cells - 1] {
+    for budget in [0, r.audits.volume.as_ref().unwrap().cells - 1] {
         let mut l = limits();
         l.volume.cells = budget;
         cases.push(l);
     }
-    for budget in [0, r.volume.as_ref().unwrap().exact_work - 1] {
+    for budget in [0, r.audits.volume.as_ref().unwrap().exact_work - 1] {
         let mut l = limits();
         l.volume.exact_work = budget;
         cases.push(l);
     }
-    for budget in [0, r.smoothness.as_ref().unwrap().exact_work - 1] {
+    for budget in [0, r.audits.smoothness.as_ref().unwrap().exact_work - 1] {
         let mut l = limits();
         l.smoothness.exact_work = budget;
         cases.push(l);
     }
     for budget in [
         0,
-        r.smoothness
+        r.audits.smoothness
             .as_ref()
             .unwrap()
             .edge_correspondence
@@ -441,7 +441,7 @@ fn all_original_caps_volume_construction_and_boundary_owner_budgets_refuse_parti
         l.smoothness.agreement_work = budget;
         cases.push(l);
     }
-    for budget in [0, r.smoothness.as_ref().unwrap().regularity.cells - 1] {
+    for budget in [0, r.audits.smoothness.as_ref().unwrap().regularity.cells - 1] {
         let mut l = limits();
         l.smoothness.regularity_cells = budget;
         cases.push(l);
@@ -596,10 +596,10 @@ fn supplied_rational_cap_body_is_reproved_without_reconstruction_or_reorientatio
         let mut short = l;
         match stage {
             0 => short.binding_work = 0,
-            1 => short.binding_work = r.binding.as_ref().unwrap().exact_work - 1,
+            1 => short.binding_work = r.audits.binding.as_ref().unwrap().exact_work - 1,
             2 => short.orientation_cells = r.work.orientation_cells - 1,
-            3 => short.volume.cells = r.volume.as_ref().unwrap().cells - 1,
-            4 => short.smoothness.exact_work = r.smoothness.as_ref().unwrap().exact_work - 1,
+            3 => short.volume.cells = r.audits.volume.as_ref().unwrap().cells - 1,
+            4 => short.smoothness.exact_work = r.audits.smoothness.as_ref().unwrap().exact_work - 1,
             5 => short.smoothness.agreement_work = 0,
             _ => unreachable!(),
         }
@@ -657,7 +657,7 @@ fn clock_conjugacy_transfers_original_global_volume_without_borrowing_retained_p
             r.reference.as_ref().map(|r| (
                 r.reason,
                 r.work.source_exact_work,
-                r.volume.as_ref().map(|v| v.reason)
+                r.audits.volume.as_ref().map(|v| v.reason)
             ))
         ),
     };

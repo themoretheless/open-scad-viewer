@@ -159,7 +159,7 @@ pub(super) fn curved_graph_boolean_value(
     model: brep_core::Model,
     certificate: brep_core::CurvedGraphBooleanCertificate,
 ) -> Result<Value> {
-    let axis = match certificate.axis {
+    let axis = match certificate.cut.axis {
         brep_core::nurbs_ss_g6::ExactIsoAxis::U => "U",
         brep_core::nurbs_ss_g6::ExactIsoAxis::V => "V",
     };
@@ -170,15 +170,15 @@ pub(super) fn curved_graph_boolean_value(
             "status": certificate.status,
             "operation": certificate.operation,
             "axis": axis,
-            "fixedParameter": certificate.fixed_parameter,
+            "fixedParameter": certificate.cut.fixed_parameter,
             "lineage": {
-                "sourceFace": certificate.source_face,
-                "retainedFace": certificate.retained_face,
-                "deletedRegion": certificate.deleted_region,
-                "generatedIntersectionEdge": certificate.intersection_edge
+                "sourceFace": certificate.lineage.source_face,
+                "retainedFace": certificate.lineage.retained_face,
+                "deletedRegion": certificate.lineage.deleted_region,
+                "generatedIntersectionEdge": certificate.lineage.intersection_edge
             },
-            "tensorCells": certificate.tensor_cells,
-            "exactCorrespondence": certificate.exact_correspondence,
+            "tensorCells": certificate.cut.tensor_cells,
+            "exactCorrespondence": certificate.proofs.exact_correspondence,
             "sew": {
                 "matched": certificate.sew.matched,
                 "complete": certificate.sew.complete,
@@ -194,13 +194,13 @@ pub(super) fn curved_graph_boolean_value(
                 "notes": certificate.audit.notes
             },
             "changeSet": encode(certificate.change_set)?,
-            "namingComplete": certificate.naming_complete,
-            "noFallback": certificate.no_fallback,
-            "separationProof": certificate.separation_proof,
-            "homogeneousRootProof": certificate.homogeneous_root_proof,
-            "denominatorLowerBound": certificate.denominator_lower_bound,
-            "weightConditionNumber": certificate.weight_condition_number,
-            "resourceBound": certificate.resource_bound
+            "namingComplete": certificate.proofs.naming_complete,
+            "noFallback": certificate.proofs.no_fallback,
+            "separationProof": certificate.proofs.separation_proof,
+            "homogeneousRootProof": certificate.proofs.homogeneous_root_proof,
+            "denominatorLowerBound": certificate.conditioning.denominator_lower_bound,
+            "weightConditionNumber": certificate.conditioning.weight_condition_number,
+            "resourceBound": certificate.conditioning.resource_bound
         }
     }))
 }

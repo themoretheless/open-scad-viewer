@@ -50,10 +50,10 @@ pub(super) fn same(a: &Model, b: &Model, r: &mut FiberedBodyReport, max: usize) 
                     + 1)
             })
             .sum::<usize>();
-    if extra > max - r.binding_rows {
+    if extra > max - r.work.binding_rows {
         return false;
     }
-    r.binding_rows += extra;
+    r.work.binding_rows += extra;
     let mut actual = std::collections::BTreeMap::new();
     for (i, v) in a.vertices.iter().enumerate() {
         if actual.insert(point_key(v.point), i).is_some() {
