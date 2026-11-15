@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 308,
-  "unallocatedCount": 692,
+  "specifiedCount": 309,
+  "unallocatedCount": 691,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8122,6 +8122,28 @@
       "remainingQualification": [
         "Assign a new absolute curve parameter range and direction, preserving the complete rational trace with exact knot storage.",
         "Both directions, including unclamped exterior knots and periodic data. Nonrepresentable knot maps refuse atomically.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0309",
+      "name": "Точная сверка обоих направлений общего шва с разными диапазонами параметров",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::compare_pcurve_seam_orientations",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_orientation.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_agreement.rs",
+        "crates/nurbs-core/tests/exact_pcurve_orientation_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-309-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-309-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compare both endpoint-induced affine seam correspondences and keep evidence for each orientation under one shared budget.",
+        "Endpoint-induced affine correspondences with exact storage of transformed knots. An unrepresentable clock or exhausted budget is distinguished from geometric mismatch.",
         "WASM and application integration are separate."
       ]
     }

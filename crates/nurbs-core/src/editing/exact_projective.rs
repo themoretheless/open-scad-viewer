@@ -39,6 +39,10 @@ pub use pcurve_mobius::{
     PcurveChartCertificate, PcurvePullback, PcurvePullbackRefusal, certify_pcurve_chart_domain,
     pullback_mobius_pcurve,
 };
+mod pcurve_orientation;
+pub use pcurve_orientation::{
+    PcurveOrientationOutcome, PcurveOrientationReport, compare_pcurve_seam_orientations,
+};
 mod pcurve_relayout;
 pub use pcurve_relayout::pullback_relayout_pcurve;
 mod pcurve_seam;
