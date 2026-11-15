@@ -4852,6 +4852,19 @@ const MATRIX_STEPS=['palette','shortcut','exactInput','preview','apply','escape'
 const MATRIX_KNOWN_FAILURES=new Set<string>([])
 type MatrixUi=Awaited<ReturnType<typeof mount>>
 type MatrixFixture={name:string;other:string;setup:(ui:MatrixUi)=>Promise<void>}
+// Creates objects with the toolbar, then selects every new one by its tree name (Shift adds).
+async function selectCreated(ui:MatrixUi,buttons:string[],...lists:('curves'|'surfaces'|'bodies')[]){
+ const ids=(doc:Record<string,unknown>)=>lists.flatMap(list=>((doc[list] as {id:string}[]|undefined)??[]).map(o=>o.id))
+ const known=new Set(ids(ui.doc()))
+ for(const b of buttons){await ui.click(b);await flushClearance()}
+ const created=ids(ui.doc()).filter(id=>!known.has(id))
+ // Names repeat ("NURBS curve"), so rows are found by the scene key that carries the object ID.
+ for(const [index,id] of created.entries()){
+  const row=ui.all().find(n=>n.tag==='button'&&typeof n.parent?.props['data-scene-key']==='string'&&n.parent.props['data-scene-key'].endsWith(id))
+  if(!row)throw Error('Missing scene row '+id)
+  row.props.onClick({shiftKey:index>0});await flushClearance()
+ }
+}
 const MATRIX_FIXTURES:MatrixFixture[]=[
  {name:'empty selection',other:'Cube',setup:async()=>{}},
  {name:'closed sketch',other:'Cube',setup:async ui=>{await ui.click('Profile')}},
@@ -4865,6 +4878,12 @@ const MATRIX_FIXTURES:MatrixFixture[]=[
  {name:'B-rep edge',other:'Cube',setup:async ui=>{await ui.click('Box');await ui.click('Edges');await vi.waitFor(()=>expect(ui.all(ui.svg()).some(n=>n.props['data-topology-edge']!==undefined)).toBe(true));await ui.pointer(ui.all(ui.svg()).find(n=>n.props['data-topology-edge']!==undefined)!)}},
  {name:'NURBS curve',other:'Cube',setup:async ui=>{await ui.click('NURBS curve')}},
  {name:'NURBS surface',other:'Cube',setup:async ui=>{await ui.click('NURBS surface')}},
+ {name:'two NURBS curves',other:'Cube',setup:async ui=>{await selectCreated(ui,['NURBS curve','NURBS curve'],'curves')}},
+ {name:'four NURBS curves',other:'Cube',setup:async ui=>{await selectCreated(ui,['NURBS curve','NURBS curve','NURBS curve','NURBS curve'],'curves')}},
+ {name:'two NURBS surfaces',other:'Cube',setup:async ui=>{await selectCreated(ui,['NURBS surface','NURBS surface'],'surfaces')}},
+ {name:'two NURBS surfaces and a curve',other:'Cube',setup:async ui=>{await selectCreated(ui,['NURBS surface','NURBS surface','NURBS curve'],'surfaces','curves')}},
+ {name:'two B-rep bodies',other:'Cube',setup:async ui=>{await selectCreated(ui,['Box','Box'],'bodies')}},
+ {name:'linked instance',other:'Profile',setup:async ui=>{await ui.click('Cube');await ui.click('Create linked instance');await commandKey(ui,'Enter');await flushClearance()}},
 ]
 // Jobs that only feed display, snapping or restore; a worker error there is not a command failure.
 const DISPLAY_JOBS=new Set(['restoreDocument','displayMesh','topology','bodyEdges','bodySnaps','sketchSnaps','surfaceMesh','curveDisplay','profileDisplay','faceSketch','surfaceBoundary'])
@@ -4937,7 +4956,9 @@ async function runSolidRow(id:string,fixture:MatrixFixture):Promise<MatrixRow>{
    await commandKey(ui,'Enter');await settle()
    lastJobs=[...new Set(commandJobs())]
    const applied=ui.doc(),changed=!same(applied,before)
-   set('apply',changed&&!applyButton(ui)?'pass':'fail',changed?applyButton(ui)?'command stayed open':undefined:'Enter did not change the document')
+   // A panel whose defaults are an identity (no numeric field to edit) closes on Enter without an edit.
+   const identity=!changed&&!applyButton(ui)&&steps.exactInput?.status==='skip'
+   set('apply',identity?'skip':changed&&!applyButton(ui)?'pass':'fail',identity?'defaults are an identity; Enter closed the command without an edit':changed?applyButton(ui)?'command stayed open':undefined:'Enter did not change the document')
    if(changed){
     await ui.click('↶');const undone=same(ui.doc(),before)
     await ui.click('↷');const redone=same(ui.doc(),applied)
