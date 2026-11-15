@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0297",
+  "testedBase": "a3e3b6234270510f53960ae819b3254f3c87b8a2",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_seam_split_contracts",
+    "--test",
+    "exact_pcurve_seam_isolation_contracts",
+    "--test",
+    "exact_mobius_pcurve_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 7,
+  "scope": [
+    "Split original rational UV spans at representable seam contacts, keeping the absolute curve parameter and proving each stored piece against the original geometry.",
+    "Coincident spans are retained and open pieces record their seam side. Nonrepresentable cuts or derived poles refuse atomically."
+  ],
+  "logSha256": "c0a12610a238721ee4da1a5ef482b00cf12b847580ea9971d0813634b360cf10",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "41021f6d204d4d8af5b432dd96a3620d5bdef6a3412c5522a288303367688856",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs": "0838bd8878bbf3f327b75500b65504390a7a92837e213944a01d5b30f04a7008",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "9a95c5591b934c39c357131866f9f9eb3138bba81eb4a68cfc8ca3d5dd699385",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_split.rs": "b57d3120ac82d0fb42df0cd13d436ca2b32503f611c917f83dd045b38d9ef8c5",
+    "crates/nurbs-core/tests/exact_pcurve_seam_split_contracts.rs": "2f0a00655bb43a679a320b78c04beb339f182050c7525d9e019223a76877b6a8"
+  }
+}

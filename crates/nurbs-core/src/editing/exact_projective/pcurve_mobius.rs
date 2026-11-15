@@ -262,7 +262,15 @@ fn store_piece(
         poly::multiply(nv, du, work)?,
         poly::multiply(du, dv, work)?,
     ];
-    let reduced = exact::reduced(&target, work)?;
+    store_target(interval, &target, work)
+}
+
+pub(super) fn store_target(
+    interval: [f64; 2],
+    target: &[Poly],
+    work: &mut Work,
+) -> exact::PResult<Curve> {
+    let reduced = exact::reduced(target, work)?;
     let degree = reduced
         .iter()
         .map(|p| p.len().saturating_sub(1))
@@ -286,6 +294,6 @@ fn store_piece(
         periodic: false,
     };
     out.validate().map_err(|_| Refusal::InvalidOutput)?;
-    proof::stored(&out, &target, work)?;
+    proof::stored(&out, target, work)?;
     Ok(out)
 }

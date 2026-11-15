@@ -65,7 +65,7 @@ pub fn isolate_pcurve_seam(
         used: 0,
         limit: max_work,
     };
-    let (spans, refusal) = match isolate(source, coordinate, seam, max_width, &mut work) {
+    let (spans, refusal) = match isolate(source, coordinate, seam, Some(max_width), &mut work) {
         Ok(spans) => (Some(spans), None),
         Err(reason) => (None, Some(reason)),
     };
@@ -76,15 +76,15 @@ pub fn isolate_pcurve_seam(
     })
 }
 
-fn isolate(
+pub(super) fn isolate(
     source: &Curve,
     coordinate: usize,
     seam: f64,
-    max_width: f64,
+    max_width: Option<f64>,
     work: &mut Work,
 ) -> PResult<Vec<PcurveSeamIsolatedSpan>> {
     let seam = work.lift(seam)?;
-    let max_width = work.lift(max_width)?;
+    let max_width = max_width.map(|width| work.lift(width)).transpose()?;
     active_spans(source)
         .map(|(span, parameter)| {
             let power = seam_power(source, span, parameter, coordinate, &seam, work)?;
@@ -100,7 +100,7 @@ fn isolate(
                     domain: parameter,
                     origin: work.lift(parameter[0])?,
                     width: distance(parameter, work)?,
-                    max_width: &max_width,
+                    max_width: max_width.as_ref(),
                 }
                 .roots(work)?;
                 PcurveSeamIsolation::Discrete {
@@ -120,7 +120,7 @@ struct Isolator<'a> {
     domain: [f64; 2],
     origin: Q,
     width: Q,
-    max_width: &'a Q,
+    max_width: Option<&'a Q>,
 }
 
 #[derive(Clone, Copy)]
@@ -150,6 +150,13 @@ impl Isolator<'_> {
         })
     }
 
+    fn within_width(&self, parameter: [f64; 2], work: &mut Work) -> PResult<bool> {
+        match self.max_width {
+            Some(width) => Ok(distance(parameter, work)? <= *width),
+            None => Ok(false),
+        }
+    }
+
     fn roots(&self, work: &mut Work) -> PResult<Vec<PcurveSeamRoot>> {
         let mut pending = vec![[
             self.endpoint(self.domain[0], work)?,
@@ -168,7 +175,7 @@ impl Isolator<'_> {
                 continue;
             }
             let parameter = [left.t, right.t];
-            if all == 1 && (right.is_root || distance(parameter, work)? <= *self.max_width) {
+            if all == 1 && (right.is_root || self.within_width(parameter, work)?) {
                 roots.push(PcurveSeamRoot {
                     parameter: if right.is_root {
                         [right.t; 2]
