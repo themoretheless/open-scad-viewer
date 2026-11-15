@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0282",
+  "testedBase": "304fe12cb0a71da6770a2da34f986fb2ae620607",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_strip_contracts",
+    "--test",
+    "exact_surface_merge_contracts",
+    "--test",
+    "exact_tensor_compression_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 13,
+  "scope": [
+    "Coalesces consecutive compatible charts while preserving both original parameter laws and removing only exactly redundant seam knots. Late failure withholds the entire strip.",
+    "Compatible ordered tensor charts. Retains absolute UV, transverse basis and exact denominators. No shell topology or B-rep certification."
+  ],
+  "logSha256": "f11d7cb44b1f8e5808622e2af05aa58870de815fa63c2c7abba28f6840e97c8c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_merge.rs": "f4884d83e57344d25108aa46a1ab14267418ee471455a021dd82453ce03e2707",
+    "crates/nurbs-core/src/editing/exact_surface_merge/strip.rs": "d5c5773010dbd43a7527ef4988b21889849f3a650dda88c17c4462765091b34b",
+    "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs": "f453be68e444b94048c55613cb0faf051bf53958ed1b35af48e4897ab16ef33a",
+    "crates/nurbs-core/tests/exact_surface_strip_contracts.rs": "f4755833ff90e3fc4e8de25b03b759b9d17c85b37f8f0d93360c50a16ea98eb8"
+  }
+}

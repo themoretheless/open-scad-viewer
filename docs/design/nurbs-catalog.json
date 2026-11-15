@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 281,
-  "unallocatedCount": 719,
+  "specifiedCount": 282,
+  "unallocatedCount": 718,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7539,6 +7539,27 @@
       "remainingQualification": [
         "Compresses independent input charts in order under one work and copy budget. A late refusal never publishes a partially compressed patch set.",
         "Clamped nonperiodic charts on both axes. Exhaustion preserves earlier proved edits. No global minimality or B-rep certificate.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0282",
+      "name": "Точное объединение полосы смежных NURBS-патчей с удалением избыточных швов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_merge::merge_surface_strip",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_merge.rs",
+        "crates/nurbs-core/src/editing/exact_surface_merge/strip.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs",
+        "crates/nurbs-core/tests/exact_surface_strip_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-282-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-282-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Coalesces consecutive compatible charts while preserving both original parameter laws and removing only exactly redundant seam knots. Late failure withholds the entire strip.",
+        "Compatible ordered tensor charts. Retains absolute UV, transverse basis and exact denominators. No shell topology or B-rep certification.",
         "WASM and application integration are separate."
       ]
     }

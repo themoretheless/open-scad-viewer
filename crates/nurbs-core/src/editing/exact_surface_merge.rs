@@ -1,5 +1,7 @@
 //! Structural concatenation: no fitting, snapping or parameter arithmetic.
 use crate::{Result,surface::{Surface,Axis}};
+mod strip;
+pub use strip::{StripMerge, StripRefusal, merge_surface_strip};
 
 #[derive(Clone,Debug,PartialEq,Eq)]
 pub enum Refusal {
