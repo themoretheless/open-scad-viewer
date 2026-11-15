@@ -450,13 +450,13 @@ watch(() => props.open, async open => {
 const selectedSketch = computed(() => document.value.sketches.find(s => s.id === selection.value))
 function changeBodyMaterial(event:Event) {
  const color=(event.target as HTMLInputElement).value
- run(()=>commit(assignSolidMaterial(document.value,selectedIds.value,{...selectedBody.value?.material,name:'Custom',color})))
+ void commitInWorker(()=>assignSolidMaterial(snapDocument.value,selectedIds.value,{...selectedBody.value?.material,name:'Custom',color}))
 }
 function changeMaterialParameter(key:'metallic'|'roughness'|'opacity',event:Event){
  const value=Number((event.target as HTMLInputElement).value)
- run(()=>commit(assignSolidMaterial(document.value,selectedIds.value,{name:'Custom',color:'#7094ba',...selectedBody.value?.material,[key]:value})))
+ void commitInWorker(()=>assignSolidMaterial(snapDocument.value,selectedIds.value,{name:'Custom',color:'#7094ba',...selectedBody.value?.material,[key]:value}))
 }
-function resetBodyMaterial(){run(()=>commit(assignSolidMaterial(document.value,selectedIds.value)))}
+function resetBodyMaterial(){void commitInWorker(()=>assignSolidMaterial(snapDocument.value,selectedIds.value))}
 const selectedBody = computed(() => document.value.bodies.find(s => s.id === selection.value))
 const selectedNurbsCurve = computed(() => document.value.curves?.find(s => s.id === selection.value))
 const selectedNurbsSurface = computed(() => document.value.surfaces?.find(s => s.id === selection.value))
@@ -1157,6 +1157,32 @@ function commit(next:DirectDocument){
  const {validateLocked,added}=prepareCommit(next)
  history.commit(next,validateLocked);finishCommit(added)
 }
+const commitWorker=createSolidPreviewWorker()
+let commitQueue:Promise<unknown>=Promise.resolve()
+/** Commands migrated off the synchronous `commit()`: `build` runs once the previous queued
+ * commit settled (so it sees the latest committed state), the worker runs the authoritative
+ * parser, and the result commits only if the history did not move meanwhile (Undo, another
+ * commit); a stale result is dropped. Errors land in `error`, as `run()` reports them. */
+function commitInWorker(build:()=>DirectDocument|undefined,after?:(next:DirectDocument)=>void):Promise<boolean>{
+ error.value=''
+ const task=commitQueue.then(async()=>{
+  try{
+   const next=build()
+   if(!next)return false
+   const {validateLocked,added}=prepareCommit(next)
+   const base=history.snapshotKey
+   const validated=await commitWorker.run({kind:'restoreDocument',text:history.commitPayload(next)})
+   if(history.snapshotKey!==base||!props.open)return false
+   if(!await history.commitAsync(async()=>validated,validateLocked))return false
+   finishCommit(added,validated);after?.(validated);return true
+  }catch(e){
+   if(!(e instanceof Error&&e.name==='AbortError'))error.value=e instanceof Error?e.message:String(e)
+   return false
+  }
+ })
+ commitQueue=task
+ return task
+}
 /** Worker results already passed the authoritative parser: commit without re-validating here. */
 async function commitWorkerResult(next:DirectDocument):Promise<boolean>{
  const {validateLocked,added}=prepareCommit(next,'edit',true)
@@ -1172,8 +1198,10 @@ async function undo(redo = false) {
  workspace.value?.focus()
  try{
   let restored:DirectDocument|undefined
-  // History takes its own copy; the UI can own the original worker response.
-  const applied=await target.restoreAsync(redo?'redo':'undo',async text=>restored=await historyWorker.run({kind:'restoreDocument',text}))
+  // When the published document is the history's current state, the worker answers only the
+  // objects that differ from it and the rest stay the published objects.
+  const base=document.value,baseText=target.canonicalText(base)
+  const applied=await target.restoreAsync(redo?'redo':'undo',async text=>restored=await historyWorker.run({kind:'restoreDocument',text,...(baseText!==undefined?{base:baseText}:{})},{restoreBase:base}))
   if(generation!==historyGeneration||target!==history||!props.open)return
   historyPending.value=false
   if(applied&&restored)sync(restored)
@@ -1181,7 +1209,7 @@ async function undo(redo = false) {
  finally{if(generation===historyGeneration)historyPending.value=false}
 }
 watch(()=>[props.open,document.value,lockedIds.value.join(','),activeGroup.value],()=>{if(historyPending.value)cancelHistoryRestore()},{flush:'sync'})
-onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose()})
+onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose();commitWorker.dispose()})
 function addSketch(points: Point2[], closed: boolean, analytic?: import('../app/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../kernel/geometry/brepProfile').BrepProfile) {
   validateSimpleSketch(points,closed)
   const d = history.document, id = crypto.randomUUID()
@@ -1289,16 +1317,16 @@ watch([document, () => props.open, operation, selectedSketch, profileIds, active
   }, 60)
 }, {flush:'sync'})
 watch(selection, () => { advancedOp.value=null; operation.value = null; previewBody.value = null; cornerVertex.value = 0 })
-function remove() { run(() => {
+function remove() {
   const selectedSet = new Set(selectedIds.value)
   advancedOp.value=null
-  const d = history.document
-  d.sketches = d.sketches.filter(s => !selectedSet.has(s.id))
-  d.bodies = d.bodies.filter(b => !selectedSet.has(b.id))
-  d.curves = d.curves!.filter(c => !selectedSet.has(c.id))
-  d.surfaces = d.surfaces!.filter(s => !selectedSet.has(s.id))
-  commit(d); selection.value = ''; extraSelection.value=[]
-}) }
+  // Built from the published state without copying it; the worker validates the result.
+  void commitInWorker(() => {
+    const d = snapDocument.value
+    return {...d, sketches: d.sketches.filter(s => !selectedSet.has(s.id)), bodies: d.bodies.filter(b => !selectedSet.has(b.id)),
+      curves: (d.curves ?? []).filter(c => !selectedSet.has(c.id)), surfaces: (d.surfaces ?? []).filter(s => !selectedSet.has(s.id))}
+  }, () => { selection.value = ''; extraSelection.value=[] })
+}
 function restoreGizmoPreview(){
  if(gizmoBase&&gizmoPublished===document.value){gizmoPublishing=true;document.value=gizmoBase;gizmoPublishing=false}
  gizmoPublished=null

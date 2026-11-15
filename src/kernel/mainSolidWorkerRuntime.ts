@@ -66,7 +66,7 @@ import {checkLatticeGraphInput, checkLatticeGraphMeshInput, isNominalLatticeGrap
 import {warmGeometryKernel} from './geometry/kernel'
 import {prepareMainSolidTransfer} from './mainSolidWorkerTransport'
 import {createWorkerHandler} from '../core/workerHandlerRuntime'
-import {directDocumentDelta} from './directDocumentDelta'
+import {directDocumentDelta,directSnapshotDelta} from './directDocumentDelta'
 import {MAIN_SOLID_JOB_KINDS,isResidentDocumentRef,type MainSolidJob,type MainSolidProgress,type MainSolidProgressMessage,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
 
 /** Run the authoritative history parser here so the UI can commit without re-validating on its thread. */
@@ -76,6 +76,12 @@ const validatedDocumentResult=<T extends {document:DirectDocument}>(result:T):T=
 const documentResult=<T extends {document:DirectDocument}>(job:{document:DirectDocument;delta?:true},result:T):T=>{
   const validated=validatedDocumentResult(result)
   return job.delta===true?{...validated,document:directDocumentDelta(job.document,validated.document) as unknown as DirectDocument}:validated
+}
+/** Undo/Redo: validate the snapshot; with `base`, answer only what differs from the client's state. */
+const restoreDocumentResult=(job:{text:string;base?:string}):DirectDocument=>{
+  const next=parseDirectDocument(job.text,instanceCache)
+  if(typeof job.base!=='string')return next
+  return (directSnapshotDelta(job.base,job.text,next) as unknown as DirectDocument|undefined)??next
 }
 async function execute(job:MainSolidJob,onProgress?:(progress:MainSolidProgress)=>void):Promise<MainSolidResults[keyof MainSolidResults]> {
   switch(job.kind) {
@@ -134,7 +140,7 @@ case 'transaction':return executeDirectTransaction(job.document,job.script)
     case 'measureEdge':return measureSolidEdgeCurvature(job.body,job.edge,job.parameter)
     case 'primitive':return addSolidPrimitive(job.document,job.options)
     case 'displayMesh':return prepareSolidDisplay(job.mesh,job.brep,job.segments)
-    case 'restoreDocument':return parseDirectDocument(job.text,instanceCache)
+    case 'restoreDocument':return restoreDocumentResult(job)
     case 'rushGraphImport':return (await import('../exchange/solidRushGraphImport')).importSolidRushGraph(job.document,job.text,job.group)
     case 'brepTool':return applySolidBrepTool(job.document,job.options)
     case 'curveChainInspection':return (await import('../app/inspectCurrentCurveChain')).inspectCurrentCurveChain(job.document,job.ids,job.maxPairs)

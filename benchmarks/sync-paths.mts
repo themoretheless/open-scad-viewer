@@ -21,7 +21,12 @@ import {
 } from '../src/app/directModeling'
 import { stringifyMeshJson } from '../src/exchange/meshJson'
 import { prepareDocumentCommit } from '../src/features/directModeler/prepareDocumentCommit'
-import { applyDirectDocumentDelta, directDocumentDelta } from '../src/kernel/directDocumentDelta'
+import {
+  applyDirectDocumentDelta,
+  directDocumentDelta,
+  directSnapshotDelta,
+  isDirectDocumentDelta,
+} from '../src/kernel/directDocumentDelta'
 import { resolveSolidInstances } from '../src/kernel/solidInstances'
 import { SolidInstanceBatchCache } from '../src/kernel/solidInstanceBatchCache'
 import { setLiveBodyPattern } from '../src/app/liveBodyPattern'
@@ -141,7 +146,8 @@ async function measure(
   rows.push({ path, site, target, scene, p50, p95, peakHeapMb, overTarget: p95 > TARGETS[target] })
 }
 
-for (const scene of scenes) {
+const sceneFilter = process.argv.find(arg => arg.startsWith('--scene='))?.slice('--scene='.length)
+for (const scene of scenes.filter(scene => !sceneFilter || scene.name.includes(sceneFilter))) {
   const document = scene.document()
   const name = scene.name
   const serialized = serializeDirectDocument(document)
@@ -279,6 +285,98 @@ for (const scene of scenes) {
     () => {
       undoHistory = new DirectHistory(document)
       undoHistory.commit(renamed())
+    },
+  )
+  // C1/C14: restore answered as a delta against the published state (`restoreDocument` with
+  // `base`): the worker parses the snapshot and diffs snapshot texts, only changed objects cross
+  // postMessage, the client rebuilds the document from its published objects.
+  const restoreDelta =
+    (history: DirectHistory, published: () => DirectDocument, keep: (d: DirectDocument) => void) =>
+    async (text: string) => {
+      const base = published(),
+        baseText = history.canonicalText(base)
+      if (baseText === undefined) throw Error('published document is not canonical')
+      const next = parseDirectDocument(text, workerCache)
+      const wire = structuredClone(directSnapshotDelta(baseText, text, next) ?? next)
+      const rebuilt = isDirectDocumentDelta(wire) ? applyDirectDocumentDelta(base, wire) : wire
+      if (!rebuilt) throw Error('delta did not apply')
+      keep(rebuilt)
+      return rebuilt
+    }
+  let deltaRedoHistory = new DirectHistory(document),
+    deltaRedoPublished = deltaRedoHistory.syncedDocument
+  await measure(
+    name,
+    'history Redo: worker restore answered as delta + apply (C1/C14)',
+    'DirectModeler undo(true) -> restoreDocument{base}',
+    'preview',
+    async () => {
+      const load = restoreDelta(
+        deltaRedoHistory,
+        () => deltaRedoPublished,
+        d => (deltaRedoPublished = d),
+      )
+      if (!(await deltaRedoHistory.restoreAsync('redo', load))) throw Error('Redo did not apply')
+    },
+    async () => {
+      deltaRedoHistory = new DirectHistory(document)
+      deltaRedoHistory.commit(renamed())
+      deltaRedoPublished = deltaRedoHistory.syncedDocument
+      const load = restoreDelta(
+        deltaRedoHistory,
+        () => deltaRedoPublished,
+        d => (deltaRedoPublished = d),
+      )
+      await deltaRedoHistory.restoreAsync('undo', load)
+    },
+  )
+  let deltaUndoHistory = new DirectHistory(document),
+    deltaUndoPublished = deltaUndoHistory.syncedDocument
+  await measure(
+    name,
+    'history Undo: worker restore answered as delta + apply (C1/C14)',
+    'DirectModeler undo() -> restoreDocument{base}',
+    'preview',
+    async () => {
+      const load = restoreDelta(
+        deltaUndoHistory,
+        () => deltaUndoPublished,
+        d => (deltaUndoPublished = d),
+      )
+      if (!(await deltaUndoHistory.restoreAsync('undo', load))) throw Error('Undo did not apply')
+    },
+    () => {
+      deltaUndoHistory = new DirectHistory(document)
+      deltaUndoHistory.commit(renamed())
+      deltaUndoPublished = deltaUndoHistory.syncedDocument
+    },
+  )
+  // The first synchronous commit after an async restore adopts the restored document instead
+  // of re-parsing the snapshot on the main thread.
+  let afterUndoHistory = new DirectHistory(document),
+    afterUndoNext = document
+  await measure(
+    name,
+    'history commit, synchronous, right after async Undo',
+    'DirectModeler commit() after undo()',
+    'preview',
+    () => afterUndoHistory.commit(afterUndoNext),
+    async () => {
+      afterUndoHistory = new DirectHistory(document)
+      afterUndoHistory.commit(renamed())
+      let published = afterUndoHistory.syncedDocument
+      await afterUndoHistory.restoreAsync(
+        'undo',
+        restoreDelta(
+          afterUndoHistory,
+          () => published,
+          d => (published = d),
+        ),
+      )
+      afterUndoNext = {
+        ...published,
+        bodies: [{ ...published.bodies[0]!, name: `again-${Math.random()}` }, ...published.bodies.slice(1)],
+      }
     },
   )
   const coldText = serializeDirectDocument(renamed())

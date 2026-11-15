@@ -404,3 +404,18 @@ it('rebuilds a Boolean answered as a delta against the sent document',async()=>{
   ports[0].reply({ok:true,result:{exact:true,toleranceMm:0,resultId:null,document:{delta:1,keys:['bodies'],fields:{},collections:{bodies:['missing']}}}})
   await expect(bad).rejects.toMatchObject({code:'CAD_PROTOCOL'})
 })
+
+it('sends a restore base only with the published document and rebuilds the delta from it',async()=>{
+  const {client,ports}=setup()
+  const tri={positions:[0,0,0,1,0,0,0,1,0],indices:[0,1,2]}
+  const doc={version:1,sketches:[],bodies:[{id:'a',name:'a',mesh:tri},{id:'b',name:'b',mesh:tri}]} as unknown as DirectDocument
+  const renamed={id:'b',name:'renamed',mesh:tri}
+  const task=client.run({kind:'restoreDocument',text:'{}',base:'{"version":1}'},{restoreBase:doc})
+  expect((ports[0].postMessage.mock.lastCall![0].job as {base?:string}).base).toBe('{"version":1}')
+  ports[0].reply({ok:true,result:{delta:1,keys:['version','sketches','bodies'],fields:{},collections:{sketches:[],bodies:['a',renamed]}}})
+  const result=await task
+  expect(result.bodies[0]).toBe(doc.bodies[0]);expect(result.bodies[1]).toEqual(renamed)
+  const full=client.run({kind:'restoreDocument',text:'{}',base:'{"version":1}'})
+  expect('base' in ports[0].postMessage.mock.lastCall![0].job).toBe(false)
+  ports[0].reply({ok:true,result:doc});await expect(full).resolves.toBe(doc)
+})

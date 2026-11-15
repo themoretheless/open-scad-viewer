@@ -426,7 +426,8 @@ export class DirectHistory {
     for(const key of Object.keys(record)){
       const value=record[key]
       let text:string|undefined
-      if(HISTORY_COLLECTIONS.has(key)&&Array.isArray(value))text='['+value.map(item=>this.fragment(key,item).text).join(',')+']'
+      // A published copy serializes like the owned item it twins, whose text is usually cached.
+      if(HISTORY_COLLECTIONS.has(key)&&Array.isArray(value))text='['+value.map(item=>this.fragment(key,(item&&typeof item==='object'&&this.twins.get(item))||item).text).join(',')+']'
       else text=stringifyMeshJson(value)
       if(text!==undefined)parts.push(JSON.stringify(key)+':'+text)
     }
@@ -472,13 +473,21 @@ export class DirectHistory {
   private sweep() { return sweepHistoryTextPool(this.textPool,[this.current,...this.past,...this.future]) }
   private past: DirectSnapshot[] = []
   private future: DirectSnapshot[] = []
-  private current: DirectSnapshot & {document?:DirectDocument; ids?:string[]}
+  private current: DirectSnapshot & {document?:DirectDocument; ids?:string[]; restored?:DirectDocument}
   constructor(document = emptyDirectDocument()) {
     const text = stringifyMeshJson(document)
     const validated = parseDirectDocument(text,this.instanceCache)
     this.current = { ...this.pack(validated), document: validated }
   }
   private get currentDocument():DirectDocument {
+    const restored=this.current.restored
+    if(restored&&!this.current.document){
+      delete this.current.restored
+      // The published result may have been mutated since (UI state should not be, but the
+      // history must not depend on it): keep the copy only if it still serializes to the snapshot.
+      const adopted=this.adopt(restored)
+      if(this.text(adopted)===unpackHistoryText(this.current))this.current.document=adopted
+    }
     return this.current.document ??= parseDirectDocument(unpackHistoryText(this.current),this.instanceCache)
   }
   /** Export identity is metadata: retain it across existing Undo/Redo states without adding a geometry edit. */
@@ -512,7 +521,7 @@ export class DirectHistory {
   get objectIds():string[] {
     // Async restore intentionally retains only a validated compact snapshot.
     // Reading identities must not resolve every linked instance on the UI thread.
-    const d=this.current.document??JSON.parse(unpackHistoryText(this.current)) as DirectDocument
+    const d=this.current.document??this.current.restored??JSON.parse(unpackHistoryText(this.current)) as DirectDocument
     return [...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[],...d.sourceBodies??[]].map(object=>object.id)
   }
   /** Immutable identity for consumers caching a committed snapshot across document copies. */
@@ -531,8 +540,10 @@ export class DirectHistory {
    * The parser rebuilds instance geometry from the source either way; omitting an unchanged
    * cache only skips serializing, parsing and re-checking geometry this history itself resolved.
    * A cache that differs from the current state is still sent and checked. */
+  /** The text `commit(document)` hands to the authoritative parser, for a worker to parse instead. */
+  commitPayload(document:DirectDocument):string { return this.commitText(document) }
   private commitText(document:DirectDocument):string {
-    const current=this.current.document
+    const current=this.current.restored?this.currentDocument:this.current.document
     if(!current||!Array.isArray(document.bodies)||!document.bodies.some(body=>body?.instance))return stringifyMeshJson(document)
     const known=new Map(current.bodies.map(body=>[body.id,body]))
     return stringifyMeshJson({...document,bodies:document.bodies.map(body=>{
@@ -610,10 +621,11 @@ export class DirectHistory {
     // A response for another snapshot cannot move the stacks. Geometry validation
     // belongs to the loader; re-parsing here would block the main thread again.
     if(this.text(loaded)!==unpackHistoryText(snapshot))throw Error('History restore returned a different document.')
-    // Retain the already validated immutable snapshot; materialize a private copy
-    // only if a synchronous history consumer asks for geometry later.
     from.pop();to.push({chunks:base.chunks,characters:base.characters})
-    this.current={...snapshot}
+    // Retain the compact snapshot plus the validated published result; a synchronous history
+    // consumer that asks for geometry later adopts it (copying only items this history does
+    // not already own) instead of re-parsing the snapshot on this thread.
+    this.current={...snapshot,restored:loaded}
     this.canonical.set(loaded,this.current)
     countOperation('historyRestores')
     return true

@@ -175,7 +175,8 @@ it('edits physical material parameters without losing color or history, then res
  const change=async(label:string,value:string)=>{
   const input=ui.all().find(n=>n.tag==='input'&&n.props['aria-label']===label)!
   expect(input).toBeDefined()
-  input.props.onChange({target:{value}});await nextTick()
+  // Material edits validate in the CAD worker and commit in order.
+  input.props.onChange({target:{value}});await flushClearance()
  }
  await change('Metallic','1');await change('Roughness','0.2');await change('Material color','#b87333')
  expect(ui.doc().bodies[0].material).toEqual({name:'Custom',color:'#b87333',metallic:1,roughness:.2})
@@ -184,6 +185,26 @@ it('edits physical material parameters without losing color or history, then res
  await ui.click('↷')
  const saved=ui.serialized(),restored=await mount({},saved)
  expect(restored.doc().bodies[0].material).toEqual({name:'Custom',color:'#b87333',metallic:1,roughness:.2})
+})
+
+it('queues worker-validated material commits in order and drops a commit overtaken by Undo',async()=>{
+ const ui=await mount()
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&n.props['aria-label']==='Cube')).toBe(true))
+ await ui.click('Cube');await ui.click('Properties')
+ const input=(label:string)=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']===label)!
+ // Both edits are issued before either validation finishes; the second builds on the first.
+ input('Metallic').props.onChange({target:{value:'1'}});input('Roughness').props.onChange({target:{value:'0.3'}})
+ await flushClearance()
+ expect(ui.doc().bodies[0].material).toMatchObject({metallic:1,roughness:.3})
+ const before=ui.serialized()
+ // A delete whose validation is overtaken by Undo is discarded, not applied over the restored state.
+ let release!:()=>void
+ previewWorkerRun.mockImplementationOnce(async(job:{kind:string;text:string})=>{
+  const {parseDirectDocument}=await import('../src/app/directModeling')
+  await new Promise<void>(resolve=>{release=resolve});return parseDirectDocument(job.text)
+ })
+ await ui.click('Delete');await ui.click('↶');release();await flushClearance()
+ expect(ui.doc().bodies).toHaveLength(1);expect(ui.serialized()).not.toBe(before)
 })
 
 it('imports a mesh through the Solid worker with Full manifold repair',async()=>{

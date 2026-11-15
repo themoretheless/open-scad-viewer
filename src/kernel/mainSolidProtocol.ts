@@ -122,7 +122,7 @@ export type MainSolidJob =
   | {kind:'meshExport';mesh:MeshExportInput;target:import('../exchange/meshFormats').MeshExportFormat;options:MeshExportOptions}
   | {kind:'measureEdge';body:DirectBody;edge:number;parameter:number}
   | {kind:'displayMesh';mesh:PolygonMesh;brep?:NurbsBrep;segments:number}
-  | {kind:'restoreDocument';text:string}
+  | {kind:'restoreDocument';text:string;/** Snapshot text of the state the client holds: answer as a delta against it. */base?:string}
   | {kind:'primitive';document:DirectDocument;options:SolidPrimitiveOptions}
   | {kind:'rushGraphImport';document:DirectDocument;text:string;group?:string}
   | {kind:'brepTool';document:DirectDocument;options:SolidBrepToolOptions}

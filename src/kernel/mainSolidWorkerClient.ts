@@ -21,7 +21,10 @@ export interface MainSolidRunOptions {signal?:AbortSignal | undefined; timeoutMs
   residentDocument?:{text?:()=>string|undefined}
   /** `boolean`/`minkowski3d` only: answer `result.document` as a delta against `job.document`,
    * rebuilt here from that same object. Same immutability contract as `residentDocument`. */
-  documentDelta?:boolean}
+  documentDelta?:boolean
+  /** `restoreDocument` with `job.base` only: the document whose canonical snapshot text is
+   * `job.base`; the delta answer is rebuilt from it. Without it `base` is not sent. */
+  restoreBase?:DirectDocument}
 export class MainSolidWorkerError extends Error {
   constructor(readonly code:string, message:string, name='MainSolidWorkerError') {super(message);this.name=name}
 }
@@ -59,6 +62,9 @@ export class MainSolidWorkerClient {
     const drag=job as MainSolidJob
     if(options.documentDelta&&(drag.kind==='boolean'||drag.kind==='minkowski3d')&&drag.document&&typeof drag.document==='object') {
       base=drag.document;wire={...drag,delta:true}
+    } else if(drag.kind==='restoreDocument'&&drag.base!==undefined) {
+      if(options.restoreBase)base=options.restoreBase
+      else {const {base:_base,...full}=drag;wire=full}
     } else if(options.residentDocument&&(drag.kind==='sceneEdit'||drag.kind==='pointEdit')&&typeof drag.document==='object'&&!isResidentDocumentRef(drag.document)) {
       const edit=drag
       base=edit.document as DirectDocument
