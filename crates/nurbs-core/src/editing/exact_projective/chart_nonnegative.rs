@@ -176,3 +176,13 @@ fn evaluate(p: &Poly, x: &Q, work: &mut Work) -> PResult<Q> {
         Ok(work.op(&product, q, |a, b| a + b)?)
     })
 }
+
+pub(super) fn midpoint_coordinate(coordinate: &Poly, weight: &Poly, work: &mut Work) -> PResult<Q> {
+    let half = Q::new(1.into(), 2.into());
+    let numerator = evaluate(coordinate, &half, work)?;
+    let denominator = evaluate(weight, &half, work)?;
+    if !denominator.is_positive() {
+        return Err(Refusal::UnprovedDenominator);
+    }
+    Ok(work.op(&numerator, &denominator, |a, b| a / b)?)
+}

@@ -195,7 +195,7 @@ fn factors(degree: usize, lambda: &[f64], work: &mut Work) -> PResult<Vec<Q>> {
     Ok(factors)
 }
 
-fn validate_layout(layout: BezierSpanLayout<'_>) -> Result<()> {
+pub(super) fn validate_layout(layout: BezierSpanLayout<'_>) -> Result<()> {
     check(
         layout.factors.len().checked_add(1) == Some(layout.breaks.len())
             && !layout.factors.is_empty()

@@ -61,7 +61,7 @@ mod curvature_gap_threshold;
 pub use curvature_gap_threshold::{
     CurvatureGapAudit, CurvatureGapCell, CurvatureGapComparison, compare_curvature_gap,
 };
-mod extraction;
+pub(super) mod extraction;
 mod gaussian;
 mod mean_curvature;
 mod mixed;

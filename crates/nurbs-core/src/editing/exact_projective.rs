@@ -16,11 +16,19 @@ pub use mobius_spline::{
     MobiusLandmark, fit_mobius_spline_curve, fit_mobius_spline_surface, mobius_spline_curve,
     mobius_spline_surface,
 };
+mod pcurve_agreement;
+pub use pcurve_agreement::{
+    PcurveEdgeAgreement, PcurveEdgeAgreementReport, compare_pcurve_edge, compare_surface_pcurve_seam,
+};
+mod pcurve_lift;
+pub use pcurve_lift::{PcurveLiftReport, lift_pcurve_to_surface};
 mod pcurve_mobius;
 pub use pcurve_mobius::{
     PcurveChartCertificate, PcurvePullback, PcurvePullbackRefusal, certify_pcurve_chart_domain,
     pullback_mobius_pcurve,
 };
+mod pcurve_relayout;
+pub use pcurve_relayout::pullback_relayout_pcurve;
 mod pcurve_seam;
 pub use pcurve_seam::{
     PcurveSeamContact, PcurveSeamReport, PcurveSeamSpan, UvAxis, classify_pcurve_seam,
@@ -34,10 +42,13 @@ mod pcurve_seam_split;
 pub use pcurve_seam_split::{
     PcurveSeamPiece, PcurveSeamSide, PcurveSeamSplitReport, split_pcurve_at_seam,
 };
+mod pcurve_tangent;
+pub use pcurve_tangent::{PcurveTangentOutcome, PcurveTangentReport, compare_pcurve_tangent_planes};
 mod proof;
 mod trimmed_mobius;
 pub use trimmed_mobius::{
     ReclockedTrimmedSurface, TrimmedMobiusRefusal, TrimmedMobiusReport, mobius_trimmed_surface,
+    relayout_trimmed_bezier_surface,
 };
 /// Row-major homogeneous map: `[x*w,y*w,z*w,w] -> M * H`.
 pub type Matrix = [[f64; 4]; 4];
