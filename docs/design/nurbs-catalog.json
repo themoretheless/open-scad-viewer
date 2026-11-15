@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 279,
-  "unallocatedCount": 721,
+  "specifiedCount": 280,
+  "unallocatedCount": 720,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7495,6 +7495,28 @@
       "remainingQualification": [
         "Bounds every possible plane intersection by clipping an outward affine signed enclosure. Opposite strict endpoint signs certify a crossing without claiming uniqueness.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0280",
+      "name": "Совместное точное упрощение узлов и степеней NURBS-поверхности по U и V",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_knot_removal::compress_tensor_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal/compression.rs",
+        "crates/nurbs-core/src/editing/exact_surface_degree_reduction.rs",
+        "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
+        "crates/nurbs-core/tests/exact_tensor_compression_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-280-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-280-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Alternates exact tensor knot removal and smooth degree reduction across both axes, preserving the complete UV law and denominator under a shared work budget.",
+        "Clamped nonperiodic charts on both axes. Exhaustion preserves earlier proved edits. No global minimality or B-rep certificate.",
         "WASM and application integration are separate."
       ]
     }

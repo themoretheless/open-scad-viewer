@@ -1,6 +1,8 @@
 //! Atomic exact tensor edit: row geometry AND polynomial denominators.
 use crate::{Result,check,surface::{Surface,Axis}};
 use super::exact_knot_removal;
+mod compression;
+pub use compression::{TensorCompression, compress_tensor_surface};
 
 pub use super::exact_tensor_edit::Refusal;
 #[derive(Clone,Debug)]
