@@ -1,0 +1,31 @@
+{
+  "capability": "NURBS-0254",
+  "status": "native-qualified",
+  "baseCommit": "f1014cd71cf8b2c6020820dd8f3639a802d9e515",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/surface_volume.rs": "929333695007401443222c6d8a73bb6ff856c21c5269cd9ac80c278ac3d39b86"
+  },
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--lib",
+    "analysis::surface_volume::tests"
+  ],
+  "passed": 5,
+  "failed": 0,
+  "log": "signed-volume.log.gz",
+  "logSha256": "44edcfadb30e52b34d00cf0882b2ef6e8f6e7509c69baa7b33a6693f8242f4f6",
+  "analyticControls": [
+    "Cuboid volume and translation invariance",
+    "Signed cuboid volume using a nonunit directional field, known zero-flux omitted faces and a reversed cap",
+    "Rational sphere compared to analytic volume",
+    "Work limit preserves an enclosure"
+  ],
+  "scope": "Bound signed volume within the requested error when the report reaches tolerance. The caller provides closure, face orientation and valid zero-flux omissions. General trimmed faces and app transport are outside this capability."
+}

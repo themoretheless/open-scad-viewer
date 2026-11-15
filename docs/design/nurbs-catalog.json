@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 253,
-  "unallocatedCount": 747,
+  "specifiedCount": 254,
+  "unallocatedCount": 746,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6904,6 +6904,22 @@
         "Exact and bounded native APIs, 16 contracts and independent full-span proofs passed. The implementation revision also passed full default and no-codec nurbs-core regression.",
         "Original squared binormal must be proved strictly positive before cancellation; unresolved or zero curvature sources refuse atomically. Scalar torsion carrier, one-sided original clocks, degree25/1m-work/4096-bit and geometry/weight limits unchanged.",
         "No global Frenet frame, knot smoothness, topology, evaluator arithmetic, JSON/WASM/Rush/editor/STEP or whole-app qualification."
+      ]
+    },
+    {
+      "id": "NURBS-0254",
+      "name": "Сертифицированная оценка знакового объёма замкнутой оболочки из NURBS-патчей",
+      "status": "native",
+      "prioritySet": "native-1000-certified-measurements",
+      "category": "Измерения и запросы",
+      "nativeApi": "nurbs_core::surface_volume::enclosed_volume_oriented",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_volume.rs",
+        "docs/qualification/nurbs-signed-volume-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-signed-volume-2026-11-15/signed-volume.log.gz"
+      ],
+      "remainingQualification": [
+        "The native API integrates the oriented NURBS flux and reports a rigorous signed-volume enclosure. The caller supplies shell closure, orientation and any zero-flux face omissions. Reaching the cell limit can leave the requested tolerance unmet. General trimmed faces and application transport are outside this contract."
       ]
     }
   ],
