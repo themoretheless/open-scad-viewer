@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 263,
-  "unallocatedCount": 737,
+  "specifiedCount": 264,
+  "unallocatedCount": 736,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7105,6 +7105,29 @@
       ],
       "remainingQualification": [
         "An exact polynomial residual compares squared principal curvature separation to a positive threshold. Each cell reports inclusive bounds, identity, opposite corner signs or an unresolved comparison.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0264",
+      "name": "Непрерывный числовой диапазон квадрата разности главных кривизн NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::curvature_gap_ranges",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_range.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_threshold_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
+        "docs/qualification/nurbs-curvature-field-264-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-264-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bounds the original curvature gap on a complete knot cell by the convex hull of exact coefficient ratios with positive denominator coefficients. Numeric endpoints are checked outward against the exact ratios.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]

@@ -12,6 +12,8 @@ use std::collections::BTreeMap;
 mod content;
 mod curvature;
 mod curvature_gap;
+mod curvature_gap_range;
+pub use curvature_gap_range::{CurvatureGapRangeCell, CurvatureGapRanges, curvature_gap_ranges};
 mod curvature_gap_threshold;
 pub use curvature_gap_threshold::{
     CurvatureGapAudit, CurvatureGapCell, CurvatureGapComparison, compare_curvature_gap,
