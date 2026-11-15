@@ -257,6 +257,7 @@ mod tests {
         StepPresentationStyle {
             colour: Some(StepColour::new(red, green, blue).unwrap()),
             layers: vec![layer.into()],
+            ..StepPresentationStyle::default()
         }
     }
 
