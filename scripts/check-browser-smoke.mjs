@@ -348,6 +348,65 @@ try {
 
   // C5: the workbench at 1440×900 in both themes: no page overflow, the Solid region
   // fills the viewport and the selection-state legend uses the `selectionStates` table.
+  // C10 in the browser: the radius grip at the manipulator drags and steps the value,
+  // Apply commits once, and Undo brings back the body with its edge chain selected.
+  await step('fillet radius grip drags, applies and Undo reselects the edge chain', async () => {
+    await page.keyboard.press('Escape')
+    await solid.locator('polygon[data-body]').first().click({ force: true })
+    await page.waitForFunction(() => document.body.innerText.includes('Выбрано: 1'))
+    await solid.getByRole('button', { name: 'Рёбра', exact: true }).click()
+    const edgeSelect = solid.getByRole('combobox', { name: 'Выбрать ребро', exact: true })
+    await page.waitForFunction(() => document.querySelectorAll('[data-topology-edge]').length > 0, null, {
+      timeout: 30000,
+    })
+    const edgeValue = await edgeSelect.locator('option').nth(1).getAttribute('value')
+    await edgeSelect.selectOption(edgeValue)
+    await command('Fillet 3D')
+    const field = solid.getByRole('textbox', { name: 'Размер у манипулятора, мм', exact: true })
+    const grip = solid.locator('[data-dimension-grip]')
+    await grip.waitFor()
+    await field.fill('0.5 mm')
+    await ready()
+    const readRadius = async () => Number.parseFloat((await field.inputValue()).replace(',', '.'))
+    const startRadius = await readRadius()
+    const box = await grip.boundingBox()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 6 })
+    await page.mouse.up()
+    const dragged = await readRadius()
+    assert.ok(dragged > startRadius, `dragging the grip grows the radius (${startRadius} -> ${dragged})`)
+    assert.equal(Math.round(dragged * 2), dragged * 2, 'the drag snaps to 0.5 mm')
+    await grip.focus()
+    await page.keyboard.press('ArrowLeft')
+    const stepped = await readRadius()
+    assert.ok(Math.abs(stepped - (dragged - 0.5)) < 1e-9, `ArrowLeft steps by 0.5 mm (${dragged} -> ${stepped})`)
+    // Keep the radius small enough for the 10×6×3 mm box.
+    await field.fill('1 mm')
+    await ready()
+    const before = await operations()
+    await solid.getByRole('button', { name: 'Готово · Enter', exact: true }).click()
+    await ready()
+    await page.waitForFunction(() => !document.querySelector('[data-dimension-grip]'))
+    const used = delta(await operations(), before)
+    budgets.filletGrip = used
+    assert.equal(used.historyCommits, BUDGET.historyCommitsPerApply, 'one fillet Apply = one history commit')
+    await solid.getByRole('button', { name: '↶', exact: true }).click()
+    await ready()
+    await page.waitForFunction(
+      value =>
+        document.querySelector('[aria-label="Solid — CAD-лепка"] select[aria-label="Выбрать ребро"]')?.value === value,
+      edgeValue,
+      { timeout: 10000 },
+    )
+    assert.ok(
+      (await solid.locator('[data-topology-edge][aria-pressed="true"]').count()) >= 1,
+      'the restored edge chain is highlighted',
+    )
+    await solid.getByRole('button', { name: 'Тела', exact: true }).click()
+    await page.keyboard.press('Escape')
+  })
+
   await step('workbench layout at 1440×900 in both themes', async () => {
     const table = await readFile('src/ui/selectionStates.ts', 'utf8')
     const expected = Object.fromEntries(
