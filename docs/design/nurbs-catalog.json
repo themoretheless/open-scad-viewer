@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 286,
-  "unallocatedCount": 714,
+  "specifiedCount": 287,
+  "unallocatedCount": 713,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7642,6 +7642,27 @@
       "remainingQualification": [
         "Refines one complete source tensor before slicing so every output uses the same rational gauge and literal seam poles. Absolute charts are retained and the returned grid can be merged exactly.",
         "Clamped nonperiodic selected axis; untouched axis retained. Unrepresentable or exhausted requests return no partial sides.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0287",
+      "name": "Точное перепараметрирование Безье-кривых и патчей преобразованиями Мёбиуса",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::mobius_bezier_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_mobius_bezier_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-287-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-287-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Positive endpoint-preserving fractional-linear clocks act diagonally on the original Bernstein weights. A single exact gauge preserves the shape and orientation while changing interior parameter correspondence.",
+        "Single clamped nonperiodic Bézier charts; no automatic multi-span clock fitting. Finite exact weight bounds and affine endpoints are retained.",
         "WASM and application integration are separate."
       ]
     }
