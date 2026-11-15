@@ -3,6 +3,8 @@ use crate::core::bounded_rational::{Error, Work};
 use crate::{Result, check, curve::Curve, surface::Surface};
 use num_rational::BigRational as Q;
 use num_traits::{Signed, Zero};
+mod affine_curve;
+pub use affine_curve::affine_curve_clock;
 mod chart_nonnegative;
 mod mobius;
 pub use mobius::{mobius_bezier_curve, mobius_bezier_surface};

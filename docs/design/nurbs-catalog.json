@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 307,
-  "unallocatedCount": 693,
+  "specifiedCount": 308,
+  "unallocatedCount": 692,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8102,6 +8102,26 @@
       "remainingQualification": [
         "Isolate strict angular tolerance violations with exact rational sign and root proofs on the complete shared parameter partition.",
         "Unoriented regular tangent planes; all strict bands with certified endpoint brackets. Singular normals and arithmetic refusal withhold all bands.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0308",
+      "name": "Точная аффинная смена диапазона и направления параметра NURBS-кривой",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::affine_curve_clock",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs",
+        "crates/nurbs-core/tests/exact_affine_curve_clock_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-308-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-308-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Assign a new absolute curve parameter range and direction, preserving the complete rational trace with exact knot storage.",
+        "Both directions, including unclamped exterior knots and periodic data. Nonrepresentable knot maps refuse atomically.",
         "WASM and application integration are separate."
       ]
     }
