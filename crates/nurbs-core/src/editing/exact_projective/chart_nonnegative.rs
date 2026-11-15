@@ -25,14 +25,20 @@ pub(super) fn nonnegative(power: &Poly, degree: usize, work: &mut Work) -> PResu
     {
         return Ok(false);
     }
-    let mut odd = odd_roots(power, work)?;
-    if odd.first().is_some_and(Zero::is_zero) {
-        odd = quotient(&odd, &vec![Q::zero(), Q::one()], work)?;
+    Ok(interior_root_count(odd_roots(power, work)?, work)? == 0)
+}
+
+/// Count distinct interior contacts and the subset with odd multiplicity.
+pub(super) fn contact_counts(power: &Poly, work: &mut Work) -> PResult<[usize; 2]> {
+    if power.len() <= 1 {
+        return Ok([0, 0]);
     }
-    if sum(&odd, work)?.is_zero() {
-        odd = quotient(&odd, &vec![-Q::one(), Q::one()], work)?;
-    }
-    Ok(no_interior_roots(odd, work)?)
+    let (distinct, common) = square_free_layer(power, work)?;
+    let odd = quotient(&distinct, &odd_roots(&common, work)?, work)?;
+    Ok([
+        interior_root_count(distinct, work)?,
+        interior_root_count(odd, work)?,
+    ])
 }
 
 fn derivative(power: &Poly, work: &mut Work) -> PResult<Poly> {
@@ -59,15 +65,19 @@ fn odd_roots(power: &Poly, work: &mut Work) -> PResult<Poly> {
     if power.len() <= 1 {
         return Ok(vec![Q::one()]);
     }
-    let common = poly::gcd(power.clone(), derivative(power, work)?, work)?;
-    let distinct = quotient(power, &common, work)?;
+    let (distinct, common) = square_free_layer(power, work)?;
     // A multiple root has opposite multiplicity parity in gcd(p,p').
     // Remove its odd roots from the distinct roots of p.
     let remove = odd_roots(&common, work)?;
     quotient(&distinct, &remove, work)
 }
 
-fn sum(power: &Poly, work: &mut Work) -> PResult<Q> {
+fn square_free_layer(power: &Poly, work: &mut Work) -> PResult<(Poly, Poly)> {
+    let common = poly::gcd(power.clone(), derivative(power, work)?, work)?;
+    Ok((quotient(power, &common, work)?, common))
+}
+
+pub(super) fn sum(power: &Poly, work: &mut Work) -> PResult<Q> {
     power.iter().try_fold(Q::zero(), |acc, q| {
         work.op(&acc, q, |a, b| a + b).map_err(Into::into)
     })
@@ -89,9 +99,17 @@ impl Signs {
     }
 }
 
-fn no_interior_roots(mut a: Poly, work: &mut Work) -> PResult<bool> {
+fn interior_root_count(mut a: Poly, work: &mut Work) -> PResult<usize> {
+    // Both callers supply square-free polynomials, so each endpoint factor
+    // occurs at most once.
+    if a.first().is_some_and(Zero::is_zero) {
+        a = quotient(&a, &vec![Q::zero(), Q::one()], work)?;
+    }
+    if sum(&a, work)?.is_zero() {
+        a = quotient(&a, &vec![-Q::one(), Q::one()], work)?;
+    }
     if a.len() <= 1 {
-        return Ok(true);
+        return Ok(0);
     }
     let mut at_zero = Signs::default();
     let mut at_one = Signs::default();
@@ -106,5 +124,8 @@ fn no_interior_roots(mut a: Poly, work: &mut Work) -> PResult<bool> {
         a = b;
         b = remainder.into_iter().map(|q| -q).collect();
     }
-    Ok(at_zero.variations == at_one.variations)
+    at_zero
+        .variations
+        .checked_sub(at_one.variations)
+        .ok_or(Refusal::UnprovedIdentity)
 }

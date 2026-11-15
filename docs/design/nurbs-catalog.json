@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 294,
-  "unallocatedCount": 706,
+  "specifiedCount": 295,
+  "unallocatedCount": 705,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7815,6 +7815,28 @@
       "remainingQualification": [
         "Certify a rational UV curve on its whole closed rectangular chart, distinguishing a true exit from even-multiplicity contacts and arithmetic refusal.",
         "Exact original homogeneous spans. Positive NURBS weights and rational Sturm arithmetic; work exhaustion yields no decision.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0295",
+      "name": "Точная классификация пересечений UV-контура с координатным швом",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::classify_pcurve_seam",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam.rs",
+        "crates/nurbs-core/tests/exact_pcurve_seam_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-295-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-295-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify rational UV seam contacts per original span by exact multiplicity, including whole coincident spans and one-sided endpoints.",
+        "Coordinate seams U = constant or V = constant. Endpoint ownership is per original span, with no loop-level duplication rule.",
         "WASM and application integration are separate."
       ]
     }

@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0295",
+  "testedBase": "582b85b2e6615ce3fb8cb2dd9a4c32cb7ce58c38",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_seam_contracts",
+    "--test",
+    "exact_pcurve_chart_contracts",
+    "--test",
+    "exact_mobius_pcurve_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 8,
+  "scope": [
+    "Classify rational UV seam contacts per original span by exact multiplicity, including whole coincident spans and one-sided endpoints.",
+    "Coordinate seams U = constant or V = constant. Endpoint ownership is per original span, with no loop-level duplication rule."
+  ],
+  "logSha256": "24f522ab39852bbf904373dee853c2df73fdde448964569f2439527a3049bf89",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "93ee6d78e85301933d6abb30072c244f89716b73b391024cbe8e5ef47cae2248",
+    "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs": "7d3995db65711c40018574f3deda22b165f90c60c2f28ad651e969cd8c193ee1",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs": "79ffa392ae28f440b88c6f670a804708fa7299f8ef0e214df1c2a8d7bd597bbb",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam.rs": "22c49df1603b1163c1f8889f96d184b19e513d172932130f220e15a00fa44fc3",
+    "crates/nurbs-core/tests/exact_pcurve_seam_contracts.rs": "3deea3c1780a01bd68efda93268fd17834fba2af1f2cee9eae7228d2cbecd72c"
+  }
+}

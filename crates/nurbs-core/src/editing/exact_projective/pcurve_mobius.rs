@@ -110,7 +110,7 @@ fn validate_chart(source: &Curve, domain: [[f64; 2]; 2]) -> Result<()> {
     Ok(())
 }
 
-fn active_spans(source: &Curve) -> impl Iterator<Item = (usize, [f64; 2])> + '_ {
+pub(super) fn active_spans(source: &Curve) -> impl Iterator<Item = (usize, [f64; 2])> + '_ {
     (source.degree..source.control_points.len()).filter_map(|span| {
         let [a, b] = [source.knots[span], source.knots[span + 1]];
         (a < b).then_some((span, [a, b]))
@@ -202,7 +202,7 @@ fn inverse_axis(domain: [f64; 2], lambda: f64, work: &mut Work) -> exact::PResul
     })
 }
 
-fn original_span(
+pub(super) fn original_span(
     source: &Curve,
     span: usize,
     [a, b]: [f64; 2],
@@ -242,7 +242,7 @@ fn remap_component(
     Ok([numerator, denominator])
 }
 
-fn scale(poly: &Poly, factor: &Q, work: &mut Work) -> exact::PResult<Poly> {
+pub(super) fn scale(poly: &Poly, factor: &Q, work: &mut Work) -> exact::PResult<Poly> {
     let mut scaled = poly
         .iter()
         .map(|q| work.op(q, factor, |a, b| a * b).map_err(Refusal::from))
