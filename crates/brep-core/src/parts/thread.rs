@@ -789,6 +789,26 @@ pub fn clipped_patch_network(
         ));
     }
 
+    assemble_clipped_network(
+        trims,
+        starts,
+        z_limits,
+        fit,
+        max_curve_change,
+        max_verification_cells,
+    )
+}
+
+/// Fit and join every retained candidate of a clipped screw network after
+/// the caller has checked its source and global budget.
+fn assemble_clipped_network(
+    trims: &nurbs_core::thread::TrimCandidates,
+    starts: usize,
+    z_limits: [f64; 2],
+    fit: PatchFit,
+    max_curve_change: f64,
+    max_verification_cells: usize,
+) -> Result<TurnSheet> {
     if !trims.unresolved.is_empty()
         || trims.candidates.is_empty()
         || trims.candidates.len() > MAX_NETWORK_PATCHES

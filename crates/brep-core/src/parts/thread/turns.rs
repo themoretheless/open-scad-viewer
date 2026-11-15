@@ -25,142 +25,21 @@ pub fn clipped_thread_network(
     max_curve_change: f64,
     max_verification_cells: usize,
 ) -> Result<TurnSheet> {
-    let PatchFit {
-        max_uv_error,
-        tolerance,
-        max_spans,
-    } = fit;
-    if max_verification_cells > 10_000_000 {
+    if max_verification_cells > MAX_NETWORK_CELLS {
         return Err(Error::new(
             "BREP_INVALID_THREAD_PATCH",
             "Network budget exceeds 10000000 cells",
         ));
     }
-    let trims = nurbs_core::thread::trim_candidates(spec, z_limits, tolerance)?;
-    if !trims.unresolved.is_empty() || trims.candidates.is_empty() || trims.candidates.len() > 254 {
-        return Err(Error::new(
-            "BREP_THREAD_PATCH_UNRESOLVED",
-            "Network needs 1..254 retained patches without unresolved clipping",
-        ));
-    }
-    let mut sheets = Vec::new();
-    let mut used = 0;
-    let mut adjustment: f64 = 0.;
-    for c in &trims.candidates {
-        let mut planar = false;
-        for &z in &z_limits {
-            planar |= !c.plane_boundary_indices(z)?.is_empty();
-        }
-        let remaining = (max_verification_cells - used).min(100000);
-        if planar {
-            let sheet = trimmed_patch_sheet_with_planar_ends(
-                c,
-                &z_limits,
-                max_uv_error,
-                tolerance,
-                max_spans,
-                max_curve_change,
-                remaining,
-            )?;
-            used += sheet.verification_cells;
-            adjustment = adjustment.max(sheet.max_curve_change_upper_bound);
-            sheets.push(sheet.model);
-        } else {
-            let sheet = trimmed_patch_sheet(c, max_uv_error, tolerance, max_spans, remaining)?;
-            used += sheet.verification_cells;
-            sheets.push(sheet.model);
-        }
-    }
-    let key = |p: &nurbs_core::thread::Patch| (p.start, p.turn, p.quarter, p.profile_segment);
-    let neighbour = |p: &nurbs_core::thread::Patch, axis: usize| {
-        if axis == 0 {
-            if p.profile_segment < 4 {
-                (p.start, p.turn, p.quarter, p.profile_segment + 1)
-            } else if p.start + 1 < spec.starts {
-                (p.start + 1, p.turn, p.quarter, 0)
-            } else {
-                (0, p.turn + 1, p.quarter, 0)
-            }
-        } else if p.quarter < 3 {
-            (p.start, p.turn, p.quarter + 1, p.profile_segment)
-        } else {
-            (p.start, p.turn + 1, 0, p.profile_segment)
-        }
-    };
-    let boundary = |m: &Model, wire: usize, axis: usize, value: f64| {
-        m.loops[wire]
-            .coedges
-            .iter()
-            .position(|c| c.pcurve.control_points.iter().all(|p| p[axis] == value))
-    };
-    let mut order = vec![0];
-    let mut model = sheets[0].clone();
-    while order.len() < sheets.len() {
-        let mut next = None;
-        for j in 0..sheets.len() {
-            if order.contains(&j) {
-                continue;
-            }
-            let mut pairs = Vec::new();
-            for (wire, &i) in order.iter().enumerate() {
-                for axis in 0..2 {
-                    let p = &trims.candidates[i].patch;
-                    let q = &trims.candidates[j].patch;
-                    let values = if neighbour(p, axis) == key(q) {
-                        Some((1., 0.))
-                    } else if neighbour(q, axis) == key(p) {
-                        Some((0., 1.))
-                    } else {
-                        None
-                    };
-                    if let Some((sv, tv)) = values {
-                        if let (Some(s), Some(t)) = (
-                            boundary(&model, wire, axis, sv),
-                            boundary(&sheets[j], 0, axis, tv),
-                        ) {
-                            pairs.push(([wire, s], t));
-                        }
-                    }
-                }
-            }
-            if !pairs.is_empty() {
-                next = Some((j, pairs));
-                break;
-            }
-        }
-        let (j, pairs) = next.ok_or_else(|| {
-            Error::new(
-                "BREP_THREAD_PATCH_UNRESOLVED",
-                "Retained patch network is disconnected",
-            )
-        })?;
-        let assignments: Vec<_> = pairs
-            .iter()
-            .map(|&(s, t)| (t, &model.edges[model.loops[s[0]].coedges[s[1]].edge].curve))
-            .collect();
-        let aligned = align_patch_endpoints_many(
-            &sheets[j],
-            &assignments,
-            max_curve_change,
-            (max_verification_cells - used).min(100000),
-        )?;
-        used += aligned.verification_cells;
-        adjustment = adjustment.max(aligned.max_curve_change_upper_bound);
-        let (assembled, cells) = attach_patch_sheet_edges(
-            &model,
-            &aligned.model,
-            &pairs,
-            (max_verification_cells - used).min(100000),
-        )?;
-        used += cells;
-        model = assembled;
-        order.push(j);
-    }
-    Ok(TurnSheet {
-        model,
-        verification_cells: used,
-        max_endpoint_adjustment_upper_bound: adjustment,
-    })
+    let trims = nurbs_core::thread::trim_candidates(spec, z_limits, fit.tolerance)?;
+    assemble_clipped_network(
+        &trims,
+        spec.starts,
+        z_limits,
+        fit,
+        max_curve_change,
+        max_verification_cells,
+    )
 }
 
 /// Assemble all twenty original patches of one untrimmed thread turn/start.
