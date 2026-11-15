@@ -3,21 +3,9 @@ use nurbs_core::{
     curve_surface_agreement::{self, LiftMethod, Status},
     surface::Surface,
 };
-fn plane() -> Surface {
-    Surface {
-        degree_u: 1,
-        degree_v: 1,
-        knots_u: vec![0., 0., 1., 1.],
-        knots_v: vec![0., 0., 1., 1.],
-        control_points: vec![
-            vec![vec![0., 0., 0.], vec![0., 1., 0.]],
-            vec![vec![1., 0., 0.], vec![1., 1., 0.]],
-        ],
-        weights: vec![vec![1.; 2]; 2],
-        periodic_u: false,
-        periodic_v: false,
-    }
-}
+#[path = "common/unit_plane.rs"]
+mod unit_plane;
+use unit_plane::plane;
 #[test]
 fn quintic_tensor_diagonal_lifts_with_owned_ends_and_whole_original_agreement() {
     let choose=|n:usize,k:usize| {let mut v=1.;for i in 0..k {v*= (n-i) as f64/(i+1) as f64;}v};

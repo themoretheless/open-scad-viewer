@@ -4,21 +4,9 @@ use nurbs_core::{
     tessellation::shading::{self, NormalPolicy, NormalSource, Orientation},
 };
 
-fn plane() -> Surface {
-    Surface {
-        degree_u: 1,
-        degree_v: 1,
-        knots_u: vec![0., 0., 1., 1.],
-        knots_v: vec![0., 0., 1., 1.],
-        control_points: vec![
-            vec![vec![0., 0., 0.], vec![0., 1., 0.]],
-            vec![vec![1., 0., 0.], vec![1., 1., 0.]],
-        ],
-        weights: vec![vec![1.; 2]; 2],
-        periodic_u: false,
-        periodic_v: false,
-    }
-}
+#[path = "common/unit_plane.rs"]
+mod unit_plane;
+use unit_plane::plane;
 
 fn curved_panel() -> Surface {
     let mut surface = plane();
