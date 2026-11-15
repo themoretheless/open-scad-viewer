@@ -24,7 +24,7 @@ fn original_correlated_center_motion_owns_caps_and_global_g2_without_reference()
     assert!(b.report().source.g2);
     assert_eq!(
         b.report()
-            .proof_coordinates
+            .chart.proof_coordinates
             .as_ref()
             .unwrap()
             .column_factor
@@ -73,8 +73,8 @@ fn carrier_axis_outside_material_owns_original_global_g2() {
         )
         .unwrap(),
     );
-    assert_eq!(b.report().material_uv_bounds, Some([[1., 5.], [-2., 2.]]));
-    let w = b.report().proof_uv_window;
+    assert_eq!(b.report().chart.material_uv_bounds, Some([[1., 5.], [-2., 2.]]));
+    let w = b.report().chart.proof_uv_window;
     assert!(w[0][0] > 0. && w[0][1] < 1.);
     assert_eq!(b.joint_certificate(2).unwrap().boundary_error_upper(), 0.);
     assert_eq!(b.report().caps.len(), 2);
@@ -129,9 +129,9 @@ fn sheared_uv_window_singularity_outside_material_uses_exact_original_plane_char
             )
             .unwrap(),
         );
-        let uv = b.report().material_uv_bounds.unwrap();
+        let uv = b.report().chart.material_uv_bounds.unwrap();
         assert!(uv[0][0] < 0.875 && uv[0][1] > 0.875 && uv[1][0] < 0. && uv[1][1] > 0.);
-        let chart = b.report().material_plane_chart.as_ref().unwrap();
+        let chart = b.report().chart.material_plane_chart.as_ref().unwrap();
         assert_eq!(chart.axes, [0, 1]);
         assert!(if reversed {
             chart.determinant[1] < 0.

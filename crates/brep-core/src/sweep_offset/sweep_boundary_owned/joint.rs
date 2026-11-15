@@ -162,8 +162,8 @@ impl RationalClosedBody {
         let exact = r.certified
             && r.source.boundary_exact
             && r.topology_preserved
-            && r.binding.as_ref().is_some_and(|p| p.certified)
-            && global(r.volume.as_ref());
+            && r.audits.binding.as_ref().is_some_and(|p| p.certified)
+            && global(r.audits.volume.as_ref());
         admit(
             self.model(),
             Premises {
@@ -174,8 +174,8 @@ impl RationalClosedBody {
                 original: exact,
                 source_g1: r.source.g1,
                 source_g2: r.source.g2,
-                g1: r.smoothness.as_ref().is_some_and(|p| p.g1_certified),
-                g2: r.smoothness.as_ref().is_some_and(|p| p.g2_certified),
+                g1: r.audits.smoothness.as_ref().is_some_and(|p| p.g1_certified),
+                g2: r.audits.smoothness.as_ref().is_some_and(|p| p.g2_certified),
             },
             order,
         )
