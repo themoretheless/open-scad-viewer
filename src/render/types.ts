@@ -49,6 +49,8 @@ export interface GMesh {
   shadingModel: ShadingModel
   /** Certified display levels and the one currently bound, when published. */
   lod?: GMeshLodState | undefined
+  /** The display scheduler chose the 'bounding-box' representation: draw the world box, pick the box. */
+  displayBox?: boolean | undefined
 }
 
 /** Shared empty list so render() never allocates when there are no ghosts. */

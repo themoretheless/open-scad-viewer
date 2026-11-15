@@ -9,11 +9,13 @@
  *   level, evicting least recently used entries once the byte budget is hit.
  * - `ProgressiveLevelStore` uploads a requested level off the frame (idle
  *   callback), keeps showing the best coarser level that is ready and asks for
- *   a redraw once the finer level lands.
+ *   a redraw once the finer level lands. Deferred placeholder levels are first
+ *   produced by a `DeferredLevelLoader` (the display level worker).
  */
 import type { MeshLodLevel } from '../core/mesh'
 import { selectDisplayRepresentation, type DisplayRepresentation } from '../kernel/geometry/displayPolicy'
 import type { GMesh } from './types'
+import { isDeferredLevel, levelByteSize } from './deferredLevels'
 import { ByteLruCache, GpuResidencyCache, type ResidentResource } from './gpuResidencyCache'
 import { pixelsPerUnit, type ViewerLodCamera } from './viewerLod'
 
@@ -26,6 +28,19 @@ export interface DisplayBudget {
 
 export const DEFAULT_DISPLAY_BUDGET: DisplayBudget = { budgetBytes: 256 * 1024 * 1024, targetErrorPixels: 24 }
 
+export type DisplayQualityPreset = 'low' | 'medium' | 'high'
+export const DISPLAY_QUALITY_PRESETS: readonly DisplayQualityPreset[] = ['low', 'medium', 'high']
+
+/** Budget presets offered by the display-quality control; medium is the default budget. */
+export const DISPLAY_BUDGET_PRESETS: Readonly<Record<DisplayQualityPreset, DisplayBudget>> = {
+  low: { budgetBytes: 64 * 1024 * 1024, targetErrorPixels: 48 },
+  medium: DEFAULT_DISPLAY_BUDGET,
+  high: { budgetBytes: 1024 * 1024 * 1024, targetErrorPixels: 8 },
+}
+
+export const isDisplayQualityPreset = (value: unknown): value is DisplayQualityPreset =>
+  value === 'low' || value === 'medium' || value === 'high'
+
 export interface DisplayPlanEntry {
   readonly representation: DisplayRepresentation
   /** Finest level index (levels are coarse to fine) the mesh may bind. */
@@ -33,7 +48,8 @@ export interface DisplayPlanEntry {
   readonly projectedPixels: number
 }
 
-export const levelBytes = (level: MeshLodLevel) => level.vertices.byteLength + level.indices.byteLength
+/** Upload size of a level; deferred placeholders report the size their summary promises. */
+export const levelBytes = (level: MeshLodLevel) => levelByteSize(level)
 
 /** Maps a representation onto the coarse-to-fine level list of one mesh. */
 export function representationCap(representation: DisplayRepresentation, levelCount: number): number {
@@ -43,8 +59,9 @@ export function representationCap(representation: DisplayRepresentation, levelCo
 }
 
 /**
- * Pick a representation for every visible LOD mesh. No GPU bounding-box draw
- * path exists, so 'bounding-box' degrades to the coarsest certified level.
+ * Pick a representation for every visible LOD mesh. A 'bounding-box' entry
+ * keeps the coarsest level bound (for picking fallbacks and quick recovery)
+ * while the renderer draws the mesh as its world box.
  */
 export function planDisplayCaps(
   meshes: readonly GMesh[],
@@ -104,6 +121,13 @@ export const defaultIdleScheduler: IdleScheduler = task => {
 
 export type LevelState = 'missing' | 'pending' | 'ready'
 
+/** Produces the arrays of deferred placeholder levels (see `onDemandLevels`). */
+export interface DeferredLevelLoader {
+  load(mesh: GMesh, level: number): Promise<void>
+  /** Abort a different level still being produced for this mesh's geometry. */
+  cancelStale(mesh: GMesh, keep: number): void
+}
+
 export interface ResolvedLevel {
   readonly level: number
   readonly buffers: LevelBuffers
@@ -144,6 +168,7 @@ export class ProgressiveLevelStore {
     budget: number | GpuResidencyCache,
     private readonly onReady: () => void = () => {},
     private readonly schedule: IdleScheduler = defaultIdleScheduler,
+    private readonly deferred: DeferredLevelLoader | null = null,
   ) {
     this.residency = typeof budget === 'number' ? new GpuResidencyCache(budget) : budget
     this.cache = this.residency.lru
@@ -171,6 +196,7 @@ export class ProgressiveLevelStore {
     if (!lod || !lod.levels[target]) return null
     const ready = this.ready(mesh, target)
     if (ready) return { level: target, buffers: ready }
+    this.deferred?.cancelStale(mesh, target)
     this.request(dev, mesh, target)
     for (let level = target - 1; level >= 0; level--) {
       const buffers = this.ready(mesh, level)
@@ -235,6 +261,25 @@ export class ProgressiveLevelStore {
     if (queued && queued.source === source) return
     const ticket = { generation: ++this.generation, source }
     this.pending.set(key, ticket)
+    if (isDeferredLevel(source)) {
+      if (!this.deferred) {
+        this.pending.delete(key)
+        return
+      }
+      // The worker fills the shared level list in place; upload the produced level on success.
+      this.deferred.load(mesh, level).then(
+        () => {
+          if (this.pending.get(key) !== ticket) return
+          this.pending.delete(key)
+          const produced = mesh.lod?.levels[level]
+          if (produced && !isDeferredLevel(produced)) this.request(dev, mesh, level)
+        },
+        () => {
+          if (this.pending.get(key) === ticket) this.pending.delete(key)
+        },
+      )
+      return
+    }
     this.queue.push(() => {
       if (this.pending.get(key) !== ticket) return
       this.pending.delete(key)
