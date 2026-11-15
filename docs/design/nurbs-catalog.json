@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 267,
-  "unallocatedCount": 733,
+  "specifiedCount": 268,
+  "unallocatedCount": 732,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7199,6 +7199,29 @@
       ],
       "remainingQualification": [
         "Strict Bernstein derivative signs and opposite signs over two complete faces certify one simple contour crossing per transverse parameter in the chosen chart axis.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0268",
+      "name": "Выборка сертифицированной ветви порогового контура NURBS с гарантированными UV-интервалами",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::sample_curvature_gap_graph",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_graph_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
+        "docs/qualification/nurbs-curvature-field-268-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-268-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exactly lifts each transverse binary64 parameter and bisects only a certified unique contour. All returned intervals have exact dyadic unit coordinates and a width bounded by the requested depth.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]
