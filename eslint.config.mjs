@@ -17,6 +17,8 @@ export const LINT_IGNORES = [
   'ui/**',
   'tests/fixtures/**',
   'src/generated/**',
+  // Byte-frozen qualification generator copies (pinned by scripts/qualificationFrozenArchives.mjs).
+  'scripts/refresh-qualification-fingerprints-v*-v*.mjs',
   'src/render/shaders/generated/**',
   '**/*.d.ts',
   '.ci-*/**',

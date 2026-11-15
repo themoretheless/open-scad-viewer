@@ -15,3 +15,5 @@ src/render/shaders/generated/
 *.d.ts
 .ci-*/
 .kimi-worktrees/
+# Byte-frozen qualification generator copies (pinned by scripts/qualificationFrozenArchives.mjs).
+scripts/refresh-qualification-fingerprints-v*-v*.mjs
