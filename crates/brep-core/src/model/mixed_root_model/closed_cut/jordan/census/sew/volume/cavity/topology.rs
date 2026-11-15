@@ -7,10 +7,16 @@ pub(super) fn assemble(
     [crate::mixed_root_model::MixedTopologyMap; 2],
     MixedBrep,
 )> {
-    let original = MixedBrep::from_closed_solid(outer)?;
-    let (joined, mut lineage) = original.concatenate(inner.model())?.into_parts();
+    assemble_models(MixedBrep::from_closed_solid(outer)?, inner.model())
+}
+
+pub(super) fn assemble_models(
+    original: MixedBrep,
+    inner: &MixedBrep,
+) -> Result<(MixedBrep, [crate::mixed_root_model::MixedTopologyMap; 2], MixedBrep)> {
+    let (joined, mut lineage) = original.concatenate(inner)?.into_parts();
     let mut t = joined.topology().clone();
-    let source = inner.model().topology();
+    let source = inner.topology();
     if !source.bodies[0].inner_shells.is_empty() {
         return Err(unproved("Paired cavity source has foreign nested shells"));
     }

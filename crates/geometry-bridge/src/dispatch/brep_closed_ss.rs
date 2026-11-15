@@ -33,7 +33,7 @@ pub(super) fn partition(v: Value) -> Result<Value> {
     Ok(
         json!({"a":result.first.model.to_value(),"b":result.second.model.to_value(),
         "facesA":result.first.faces,"facesB":result.second.faces,
-        "originalSourceClosedCoverage":true,"materialClassified":false,
+        "coverageDomain":result.coverage_domain,"originalSourceClosedCoverage":result.covers_entire_surfaces,"materialClassified":false,
         "segments":result.trace.segments().len(),"cells":result.trace.cells(),
         "worldErrorUpper":result.trace.world_error_upper(),"uvErrorUpper":result.trace.uv_error_upper()}),
     )
@@ -52,9 +52,9 @@ pub(super) fn network(v: Value) -> Result<Value> {
         "toleranceUv",
     ];
     if required.iter().any(|k| !object.contains_key(*k))
-        || object
-            .keys()
-            .any(|k| !required.contains(&k.as_str()) && k != "maxRepairs")
+        || object.keys().any(|k| {
+            !required.contains(&k.as_str()) && k != "maxRepairs" && k != "maxStartAttempts"
+        })
     {
         return Err(nurbs_core::Error::new(
             "BREP_CLOSED_SS_INPUT",
@@ -68,6 +68,15 @@ pub(super) fn network(v: Value) -> Result<Value> {
     limits.trace.tolerance_uv = field(&v, "toleranceUv")?;
     if object.contains_key("maxRepairs") {
         limits.branches.max_repairs = field(&v, "maxRepairs")?;
+    }
+    if let Some(value) = object.get("maxStartAttempts") {
+        let attempts = value
+            .as_u64()
+            .filter(|attempts| (1..=128).contains(attempts))
+            .ok_or_else(|| {
+                nurbs_core::Error::new("BREP_CLOSED_SS_INPUT", "Invalid maxStartAttempts")
+            })?;
+        limits.cycle.max_start_attempts = attempts as usize;
     }
     let result = brep_core::face_cut::partition_all_closed_ss(
         &a,
@@ -90,7 +99,7 @@ pub(super) fn network(v: Value) -> Result<Value> {
     });
     Ok(
         json!({"a":result.models[0].to_value(),"b":result.models[1].to_value(),"facesA":result.faces[0],"facesB":result.faces[1],
-        "originalSourceClosedCoverage":true,"materialClassified":false,"branches":result.traces.len(),
+        "coverageDomain":result.coverage_domain,"originalSourceClosedCoverage":result.covers_entire_surfaces,"materialClassified":false,"branches":result.traces.len(),
         "segments":result.traces.iter().map(|t|t.segments().len()).sum::<usize>(),"placementAttempts":result.placement_attempts,
         "worldErrorUpper":world,"uvErrorUpper":uv}),
     )

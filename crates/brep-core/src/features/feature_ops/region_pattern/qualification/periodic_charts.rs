@@ -23,7 +23,7 @@ fn outward(x: Q, upper: bool) -> Result<f64> {
     }
     Ok(v)
 }
-fn axis(bounds: [f64; 2], natural: [f64; 2], periodic: bool) -> Result<Vec<[f64; 2]>> {
+pub(crate) fn axis(bounds: [f64; 2], natural: [f64; 2], periodic: bool) -> Result<Vec<[f64; 2]>> {
     if !periodic {
         if bounds[0] < natural[0] || bounds[1] > natural[1] || bounds[0] >= bounds[1] {
             return Err(error("Face UV enclosure leaves nonperiodic chart"));

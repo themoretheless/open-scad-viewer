@@ -241,7 +241,7 @@ mod source_box;
 pub use source_box::{RootSurfaceMaterialLimits,QualifiedRootSurfaceMaterialBox};
 
 mod cavity;
-pub use cavity::{RootCavityLimits,RootCavityCoverageWork,QualifiedRootCavitySolid};
+pub use cavity::{RootDisjointBodyAssembly, RootShellSubtraction, RootCavityLimits,RootCavityCoverageWork,QualifiedRootCavitySolid};
 
 mod relation;
 pub use relation::{RootRelationKind,RootRelationLimits,RootRelationWork,QualifiedRootRelation};
@@ -250,4 +250,4 @@ mod shell_forest;
 pub use shell_forest::QualifiedRootShellForest;
 
 mod root_boolean;
-pub use root_boolean::QualifiedRootBoolean;
+pub use root_boolean::{QualifiedRootBoolean, SeparatedRootBoolean};

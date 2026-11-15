@@ -235,7 +235,7 @@ mod partition;
 pub use partition::{RootEdgePartitionRequest,RootBrepPartitionLimits,QualifiedRootBrepEdgeSubdivision};
 
 mod uv_closure;
-pub use uv_closure::{QualifiedRootUvClosure,qualify_root_uv_joint};
+pub use uv_closure::{QualifiedRootPeriodicUvClosure, RootUvLoopLift, QualifiedRootUvClosure,qualify_root_uv_joint,qualify_root_uv_joint_period_delta};
 
 mod face_contours;
 pub use face_contours::RootFaceContour;
@@ -253,10 +253,24 @@ mod chord_boundary;
 pub use chord_boundary::{RootChordBoundaryLimits,QualifiedRootChordBoundary};
 
 mod face_region;
-pub use face_region::{RootFaceRegion,QualifiedRootFaceRegion};
+pub use face_region::{QualifiedRootPeriodicFace,QualifiedRootPeriodicFaceBox,QualifiedRootPeriodicFaceEdge,QualifiedRootPeriodicFacePoint,RootFaceRegion,QualifiedRootFaceRegion};
 
 mod retention;
 pub use retention::RootFaceRetention;
 
 mod paired_split;
 pub use paired_split::{QualifiedRootPairedChordSplit, RootPairedChordLimits};
+
+mod periodic_split;
+pub use periodic_split::{QualifiedRootPeriodicChordSplit, QualifiedRootPeriodicChildSelection, QualifiedRootPeriodicChildMaterialSeed};
+
+mod periodic_material;
+pub use periodic_material::{QualifiedRootPeriodicChildMaterial, RootPeriodicBooleanContribution};
+
+mod sew;
+
+mod shell_charts;
+pub use shell_charts::{QualifiedRootShellCharts, QualifiedRootShellContacts};
+
+mod shell_flux;
+pub use shell_flux::{QualifiedRootShellPositiveFlux, RootShellFluxLimits, RootShellFluxReport};

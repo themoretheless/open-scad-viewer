@@ -171,8 +171,7 @@ impl OrderedClosedFiberCycle {
         let fs = self.owner.owner().proof().coverage().fibers();
         check(
             ids.contains(&self.first_chart)
-                && same(&self.arcs[0].fiber, &fs[self.first_chart])
-                && self.arcs[0].forward,
+                && same(&self.arcs[0].fiber, &fs[self.first_chart]),
             "Traversal not bound to its original component",
         )?;
         let mut replay = 0usize;
@@ -213,8 +212,8 @@ impl OrderedClosedFiberCycle {
             if i > 0 && i + 1 < n {
                 check(
                     disjoint(start, arc.fiber.domain())
-                        || (inside(start, arc.fiber.domain(), false)
-                            && before(start, a, arc.fiber.free_axis().index(), arc.forward)),
+                        || before(start, a, arc.fiber.free_axis().index(), arc.forward)
+                        || before(b, start, arc.fiber.free_axis().index(), arc.forward),
                     "An intermediate arc may already cross the start root",
                 )?;
             }

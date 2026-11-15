@@ -52,6 +52,24 @@ pub fn construct_qualified_closed_ss_branches(
     source: &FiberSources,
     limits: ClosedSSBuildLimits,
 ) -> crate::Result<QualifiedClosedFiberBranches> {
+    construct_closed_branches(source, None, limits)
+}
+
+/// Prove every closed component in a specified native UV product. A root
+/// touching its boundary refuses. Roots outside the product are out of scope.
+pub fn construct_qualified_closed_ss_branches_in_box(
+    source: &FiberSources,
+    domain: [[f64; 2]; 4],
+    limits: ClosedSSBuildLimits,
+) -> crate::Result<QualifiedClosedFiberBranches> {
+    construct_closed_branches(source, Some(domain), limits)
+}
+
+fn construct_closed_branches(
+    source: &FiberSources,
+    domain: Option<[[f64; 2]; 4]>,
+    limits: ClosedSSBuildLimits,
+) -> crate::Result<QualifiedClosedFiberBranches> {
     crate::check(
         (1..=64).contains(&limits.max_charts) && limits.max_repairs <= 64,
         "Need bounded closed proposal chart count",
@@ -64,13 +82,41 @@ pub fn construct_qualified_closed_ss_branches(
     }
     let conditioned = FiberSources::with_exact_graph_shear(source.first(), source.second()).ok();
     let source = conditioned.as_ref().unwrap_or(source);
-    let (mut charts, mut used) = closed_proposals::construct(source, limits)?;
+    let natural = closed_proposals::natural_product(source);
+    let window = domain.unwrap_or(natural);
+    crate::check((0..4).all(|axis| {
+        let [lo, hi] = window[axis];
+        lo.is_finite() && hi.is_finite()
+            && natural[axis][0] <= lo && lo < hi && hi <= natural[axis][1]
+    }), "Invalid closed intersection proposal domain")?;
+    // Periodic traces currently rely on the overlap produced by the
+    // natural-coordinate proposal scale. The census remains windowed.
+    let proposal_domain = if [source.first(), source.second()]
+        .into_iter()
+        .any(|surface| surface.periodic_u || surface.periodic_v)
+    {
+        natural
+    } else {
+        window
+    };
+    let (mut charts, mut used) = closed_proposals::construct(source, proposal_domain, limits)?;
+    charts = restrict_closed_charts(
+        source,
+        charts,
+        domain,
+        &mut used,
+        limits.proposal_rectangles,
+    )?;
     closed_proposals::prune(&mut charts);
     let mut round = 0;
     let coverage = loop {
-        let attempted = match cover_graph_fiber_surfaces(&charts, limits.coverage)? {
-            Some(reduced) => reduced,
-            None => cover_mixed_fiber_surfaces(&charts, limits.coverage)?,
+        let attempted = if let Some(domain) = domain {
+            cover_mixed_fiber_box(&charts, domain, limits.coverage)?
+        } else {
+            match cover_graph_fiber_surfaces(&charts, limits.coverage)? {
+                Some(reduced) => reduced,
+                None => cover_mixed_fiber_surfaces(&charts, limits.coverage)?,
+            }
         };
         let diagnostic = format!(
             "Closed intersection mixed root coverage remains unproved: {} charts, {:?}; proposal work {used}/{}, repair round {round}/{}",
@@ -94,17 +140,20 @@ pub fn construct_qualified_closed_ss_branches(
         };
         let (extra, work) = closed_proposals::repair(
             source,
+            proposal_domain,
             cell,
             limits.proposal_rectangles - used,
             limits.max_charts - charts.len(),
         )?;
         used += work;
+        let extra =
+            restrict_closed_charts(source, extra, domain, &mut used, limits.proposal_rectangles)?;
         if extra.is_empty() {
             return Err(crate::input(&diagnostic));
         }
         charts.extend(extra);
         closed_proposals::prune(&mut charts);
-        if charts.len() >= 56 {
+        if domain.is_none() && charts.len() >= 56 {
             closed_proposals::compact(&mut charts, &mut used, limits.proposal_rectangles)?;
         }
         round += 1;
@@ -112,7 +161,56 @@ pub fn construct_qualified_closed_ss_branches(
     let components = connect_mixed_fiber_cover_automatic(&coverage, limits.components)?
         .into_components()
         .ok_or_else(|| crate::input("Closed intersection transition census remains unproved"))?;
-    assemble_closed_fiber_branches(Arc::new(components), limits.physical)
+    if domain.is_some() {
+        fiber_coverage::assemble_closed_fiber_branches_in_box(Arc::new(components), limits.physical)
+    } else {
+        assemble_closed_fiber_branches(Arc::new(components), limits.physical)
+    }
+}
+fn restrict_closed_charts(
+    source: &FiberSources,
+    charts: Vec<QualifiedFiber>,
+    domain: Option<[[f64; 2]; 4]>,
+    used: &mut usize,
+    budget: usize,
+) -> crate::Result<Vec<QualifiedFiber>> {
+    if let Some(domain) = domain {
+        let mut restricted = Vec::new();
+        for chart in charts {
+            let overlap = std::array::from_fn(|axis| {
+                let range = chart.domain()[axis];
+                [range[0].max(domain[axis][0]), range[1].min(domain[axis][1])]
+            });
+            if overlap.iter().any(|bounds| bounds[0] >= bounds[1]) {
+                continue;
+            }
+            if overlap == chart.domain() {
+                restricted.push(chart);
+                continue;
+            }
+            let remaining = budget.saturating_sub(*used);
+            if remaining == 0 {
+                return Err(crate::input(
+                    "Closed chart restriction exhausted proposal work",
+                ));
+            }
+            let certified = source.certify(
+                overlap,
+                chart.free_axis(),
+                FiberLimits {
+                    max_rectangles: remaining.min(100000),
+                    ..Default::default()
+                },
+            )?;
+            *used += certified.report().rectangles;
+            if let Some(chart) = certified.into_fiber() {
+                restricted.push(chart);
+            }
+        }
+        Ok(restricted)
+    } else {
+        Ok(charts)
+    }
 }
 #[derive(Clone, Copy, Debug, Default)]
 pub struct QualifiedSSBuildLimits {

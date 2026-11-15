@@ -1,7 +1,7 @@
 //! Actual saved charts, trim regions and complete boundary lifts. Numerical
 //! mass establishes an orientation diagnostic, never a global volume proof.
 use super::*;
-mod periodic_charts;
+pub(crate) mod periodic_charts;
 mod pole_charts;
 pub(crate) fn limits(o: Limits) -> Result<()> {
     if !(1..=100000).contains(&o.max_cells)

@@ -124,7 +124,91 @@ fn derive(source: &FiberSources) -> Result<Net> {
         .map(|(b, a)| b.iter().zip(a).map(|(b, a)| b - a).collect())
         .collect())
 }
+/// Exclude a closed original UV box for polynomial carriers with the
+/// same injective affine XY frame.
+pub fn exclude_shared_frame_graph_contact(source: &FiberSources, domain: [[f64; 2]; 4]) -> Result<bool> {
+    Ok(restrict_contact(source, domain)?.is_none_or(|(net, _)| excluded(&net)))
+}
+
+/// If the restricted height difference has one sign and is nonzero on
+/// each open edge, return every possible root as an exact UV4 corner.
+pub fn shared_frame_graph_contact_corners(
+    source: &FiberSources,
+    domain: [[f64; 2]; 4],
+) -> Result<Option<Vec<[Q; 4]>>> {
+    let Some((net, ranges)) = restrict_contact(source, domain)? else {
+        return Ok(Some(Vec::new()));
+    };
+    let u = net.len() - 1;
+    let v = net[0].len() - 1;
+    let [u_open, v_open] = ranges.each_ref().map(|range| range[0] < range[1]);
+    if (net.iter().flatten().any(Signed::is_positive)
+        && net.iter().flatten().any(Signed::is_negative))
+        || (v_open && [0, u].into_iter().any(|i| net[i].iter().all(Zero::is_zero)))
+        || (u_open && [0, v].into_iter().any(|j| net.iter().all(|row| row[j].is_zero())))
+    {
+        return Ok(None);
+    }
+    let mut corners = Vec::new();
+    for (i, row) in [0, u].into_iter().enumerate() {
+        for (j, col) in [0, v].into_iter().enumerate() {
+            if net[row][col].is_zero() {
+                corners.push(std::array::from_fn(|axis| {
+                    let t = &ranges[axis % 2][[i, j][axis % 2]];
+                    let surface = if axis < 2 { source.first() } else { source.second() };
+                    let knots = if axis % 2 == 0 { &surface.knots_u } else { &surface.knots_v };
+                    let lo = Q::from_float(knots[0]).unwrap();
+                    let hi = Q::from_float(*knots.last().unwrap()).unwrap();
+                    &lo + (hi - &lo) * t
+                }));
+            }
+        }
+    }
+    corners.sort_unstable();
+    corners.dedup();
+    Ok(Some(corners))
+}
+
+fn restrict_contact(
+    source: &FiberSources,
+    domain: [[f64; 2]; 4],
+) -> Result<Option<(Net, Cell)>> {
+    let mut net = derive(source)?;
+    let mut ranges = full_cell();
+    for (axis, range) in ranges.iter_mut().enumerate() {
+        let normalize = |surface: &Surface, index: usize| -> Result<[Q; 2]> {
+            let knots = if axis == 0 { &surface.knots_u } else { &surface.knots_v };
+            let lo = q(knots[0])?;
+            let width = q(*knots.last().unwrap())? - &lo;
+            let [a, b] = domain[index];
+            check(knots[0] <= a && a <= b && b <= *knots.last().unwrap(),
+                "Graph exclusion window leaves natural support")?;
+            Ok([(q(a)? - &lo) / &width, (q(b)? - lo) / width])
+        };
+        let [a, b] = normalize(source.first(), axis)?;
+        let [c, d] = normalize(source.second(), axis + 2)?;
+        let lo = a.max(c);
+        let hi = b.min(d);
+        if lo > hi {
+            return Ok(None);
+        }
+        *range = [lo.clone(), hi.clone()];
+        let [prefix, _] = split_at(&net, axis, &hi);
+        net = if hi.is_zero() {
+            prefix
+        } else {
+            let [_, suffix] = split_at(&prefix, axis, &(lo / hi));
+            suffix
+        };
+    }
+    Ok(Some((net, ranges)))
+}
+
 fn split(n: &Net, axis: usize) -> [Net; 2] {
+    split_at(n, axis, &Q::new(1.into(), 2.into()))
+}
+fn split_at(n: &Net, axis: usize, parameter: &Q) -> [Net; 2] {
+    let complement = Q::from_integer(1.into()) - parameter;
     let (nu, nv) = (n.len(), n[0].len());
     let mut out = [vec![vec![Q::zero(); nv]; nu], vec![vec![Q::zero(); nv]; nu]];
     for line in 0..if axis == 0 { nv } else { nu } {
@@ -147,7 +231,7 @@ fn split(n: &Net, axis: usize) -> [Net; 2] {
                 out[1][line][count - step - 1] = p[count - step - 1].clone();
             }
             for k in 0..count - step - 1 {
-                p[k] = (&p[k] + &p[k + 1]) / Q::from_integer(2.into());
+                p[k] = &p[k] * &complement + &p[k + 1] * parameter;
             }
         }
     }

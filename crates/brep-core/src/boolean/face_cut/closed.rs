@@ -83,7 +83,112 @@ fn reverse(path: &[Segment]) -> Result<Vec<Segment>> {
         })
         .collect()
 }
-/// Insert a simple closed contour wholly inside a nonperiodic original face.
+pub(super) fn outer_uv_control_bounds(source: &Model, outer: usize) -> [[f64; 2]; 2] {
+    let mut hull = [[f64::INFINITY, f64::NEG_INFINITY]; 2];
+    for point in source.loops[outer]
+        .coedges
+        .iter()
+        .flat_map(|coedge| &coedge.pcurve.control_points)
+    {
+        for (axis, bounds) in hull.iter_mut().enumerate() {
+            bounds[0] = bounds[0].min(point[axis]);
+            bounds[1] = bounds[1].max(point[axis]);
+        }
+    }
+    hull
+}
+
+fn align_periodic_path(
+    path: &[Segment],
+    surface: &crate::Surface,
+    hull: [[f64; 2]; 2],
+    native: [[f64; 2]; 2],
+    periodic: [bool; 2],
+) -> Result<Option<Vec<Segment>>> {
+    use num_rational::BigRational as Q;
+    use num_traits::{ToPrimitive, Zero};
+    let exact = |value| Q::from_float(value).ok_or_else(|| invalid("Invalid periodic UV bound"));
+    let mut shifted = None;
+    for (axis, periodic) in periodic.into_iter().enumerate() {
+        if !periodic {
+            continue;
+        }
+        let [lo, hi] = native[axis];
+        if nurbs_core::periodic_trim::verify_surface_seam_identity(surface, axis)?.is_none() {
+            return Err(unproven("Closed cut periodic seam identity is unproved"));
+        }
+        let period = exact(hi)? - exact(lo)?;
+        let endpoint = |segment: &Segment, end: bool| {
+            let poles = &segment.pcurve.control_points;
+            let point = if end { poles.last() } else { poles.first() };
+            point
+                .and_then(|point| point.get(axis))
+                .copied()
+                .ok_or_else(|| invalid("Missing periodic closed-cut endpoint"))
+                .and_then(exact)
+        };
+        let mut previous = endpoint(&path[0], false)?;
+        let mut phases = Vec::with_capacity(path.len());
+        for segment in path {
+            let phase = &previous - endpoint(segment, false)?;
+            if !(&phase / &period).is_integer() {
+                return Err(unproven(
+                    "Periodic closed-cut endpoints differ by a nonintegral period",
+                ));
+            }
+            previous = endpoint(segment, true)? + &phase;
+            phases.push(phase);
+        }
+        if previous != endpoint(&path[0], false)? {
+            return Err(unproven("Closed cut path has nonzero periodic winding"));
+        }
+        let mut bounds: Option<[Q; 2]> = None;
+        for (segment, phase) in path.iter().zip(&phases) {
+            for point in &segment.pcurve.control_points {
+                let value = exact(
+                    *point
+                        .get(axis)
+                        .ok_or_else(|| invalid("Invalid periodic closed-cut UV coordinate"))?,
+                )? + phase;
+                bounds = Some(match bounds {
+                    Some([lo, hi]) => [lo.min(value.clone()), hi.max(value)],
+                    None => [value.clone(), value],
+                });
+            }
+        }
+        let [minimum, maximum] = bounds.ok_or_else(|| invalid("Empty periodic closed-cut path"))?;
+        let [start, end] = hull[axis];
+        let offset = ((exact(start)? - minimum) / &period).ceil();
+        let shift = offset * period;
+        if maximum + &shift > exact(end)? {
+            return Err(unproven(
+                "Closed cut trim must stay inside the lifted face bounds",
+            ));
+        }
+        if shift.is_zero() && phases.iter().all(Zero::is_zero) {
+            continue;
+        }
+        for (segment, phase) in shifted
+            .get_or_insert_with(|| path.to_vec())
+            .iter_mut()
+            .zip(phases)
+        {
+            let shift = phase + &shift;
+            for point in &mut segment.pcurve.control_points {
+                let translated = exact(point[axis])? + &shift;
+                point[axis] = translated
+                    .to_f64()
+                    .filter(|value| Q::from_float(*value).as_ref() == Some(&translated))
+                    .ok_or_else(|| {
+                        unproven("Closed cut periodic translation is not exactly representable")
+                    })?;
+            }
+        }
+    }
+    Ok(shifted)
+}
+
+/// Insert a simple closed contour wholly inside one native UV chart of an original face.
 /// Whole-loop separation/containment assigns all original holes. Both sectors
 /// and both actual orientations of every new edge lift are proved before any
 /// candidate is returned. No nearest-vertex welding or Solid admission occurs.
@@ -110,11 +215,14 @@ pub fn partition_closed(
         .faces
         .get(face_id)
         .ok_or_else(|| invalid("Missing closed cut support face"))?;
-    if face.surface.periodic_u || face.surface.periodic_v || face.holes.len() > 14 {
-        return Err(unproven(
-            "Closed cut needs a nonperiodic chart and space for the new hole",
-        ));
+    if face.holes.len() > 14 {
+        return Err(unproven("Closed cut needs space for the new hole"));
     }
+    let hull = outer_uv_control_bounds(source, face.outer);
+    let native = crate::boolean_robustness::surface_uv_domains(&face.surface);
+    let periodic = [face.surface.periodic_u, face.surface.periodic_v];
+    let shifted = align_periodic_path(path, &face.surface, hull, native, periodic)?;
+    let path = shifted.as_deref().unwrap_or(path);
     let uses: Vec<_> = source
         .shells
         .iter()
@@ -148,6 +256,35 @@ pub fn partition_closed(
         }
     }
     let curves = |ring: &[Coedge]| ring.iter().map(|c| c.pcurve.clone()).collect::<Vec<_>>();
+    // Positive weights keep the entire outer loop in its UV control hull.
+    // A saved endpoint outside that hull rules out whole-contour placement.
+    if path.iter().any(|segment| {
+        hull.iter()
+            .zip(&segment.pcurve.control_points[0])
+            .any(|([lo, hi], value)| value < lo || value > hi)
+    }) {
+        return Err(unproven(
+            "Closed cut endpoint lies outside the outer UV control bounds",
+        ));
+    }
+    if periodic.into_iter().any(|axis| axis) {
+        use crate::feature_ops::region_pattern::qualification::periodic_charts::axis;
+        let axes = [
+            axis(hull[0], native[0], periodic[0])?,
+            axis(hull[1], native[1], periodic[1])?,
+        ];
+        let proof = nurbs_core::surface_injectivity::certify_seam_glued_rectangle(
+            &face.surface,
+            axes,
+            limits.cells.min(100_000),
+            4,
+        )?;
+        if !proof.proven {
+            return Err(unproven(
+                "Closed cut carrier injectivity remains unproved on its UV bounds",
+            ));
+        }
+    }
     let original_region: Vec<_> = std::iter::once(face.outer)
         .chain(face.holes.iter().copied())
         .map(|w| curves(&source.loops[w].coedges))

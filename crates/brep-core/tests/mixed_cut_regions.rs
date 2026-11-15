@@ -227,6 +227,79 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
     let cut = mixed::split_closed_contour_candidate(&a, 1, &wire, 0, [0.5; 2], Default::default())
         .unwrap();
     let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
+    let rejected = census.sew_intersection_candidate(
+        [[[0.48, 0.52], [0.66, 0.70]]; 2],
+        &directions,
+        1e-7,
+        Default::default(),
+        [Default::default(); 2],
+        Default::default(),
+    ).err().expect("a discarded face cannot contribute to the intersection");
+    assert!(rejected.to_string().contains("discarded face"), "{rejected}");
+    // The plane is above the bowl within the ring, so this lens is
+    // the bounded first-minus-second component.
+    let lens = census.sew_boolean_candidate(
+        Op::Difference,
+        [[[0.48, 0.52], [0.66, 0.70]]; 2],
+        &directions,
+        1e-7,
+        Default::default(),
+        [Default::default(); 2],
+        mixed::RootBoundaryVolumeLimits { absolute_error: 5e-4, cells: 16384, ..Default::default() },
+    ).unwrap();
+    let [lo, hi] = lens.volume();
+    let expected = std::f64::consts::PI * 0.3125_f64.powi(4) / 2.;
+    assert!(lo <= expected && expected <= hi);
+    assert!(lens.model().topology().boundary_edges().is_empty());
+    // The two-face lens is only one part of this difference. The
+    // completeness check must reject it as a result for the entire body pair.
+    let exterior = [[[0.035, 0.065]; 2]];
+    assert!(census.sew_complete_paired_boolean(
+        Op::Difference,
+        [[[0.48, 0.52], [0.66, 0.70]]; 2],
+        [&exterior, &exterior],
+        &directions,
+        1e-7,
+        Default::default(),
+        [Default::default(); 2],
+        Default::default(),
+        64,
+    ).is_err());
+    let above = graph::above_bowl();
+    assert_eq!(&above.faces[1].surface, wire.edges()[0].curve().source().second());
+    let above = solid::qualify(above, curved_policy).unwrap().into_solid().unwrap();
+    let intersection_loop = mixed::qualify_paired_interior_loop(
+        &a, 1, &above, 1, &wire, [[0.5; 2]; 2], Default::default(),
+    ).unwrap();
+    let coverage = ss::cover_quotient_fiber_surfaces(&charts, Default::default())
+        .unwrap().into_coverage().unwrap();
+    let intersection_census = std::sync::Arc::new(mixed::qualify_interior_ss_census(
+        vec![std::sync::Arc::new(intersection_loop)], coverage, &anchors, Default::default(),
+    ).unwrap());
+    let missing_region = intersection_census.sew_complete_paired_intersection(
+        [[[0.48, 0.52], [0.66, 0.70]]; 2],
+        [&[], &[]],
+        &directions,
+        1e-7,
+        Default::default(),
+        [Default::default(); 2],
+        Default::default(),
+        2048,
+    ).err().expect("complete intersection requires coverage of every region");
+    assert!(missing_region.to_string().contains("every arrangement region"));
+    let common = intersection_census.sew_complete_single_loop_intersection(
+        [[[0.48, 0.52], [0.66, 0.70]]; 2],
+        [[[0.035, 0.065]; 2]; 2],
+        &directions,
+        1e-7,
+        Default::default(),
+        [Default::default(); 2],
+        mixed::RootBoundaryVolumeLimits { absolute_error: 5e-4, cells: 16384, ..Default::default() },
+        2048,
+    ).unwrap();
+    let [lo, hi] = common.volume();
+    assert!(lo <= expected && expected <= hi);
+    assert!(common.model().topology().boundary_edges().is_empty());
     let arrangement=std::sync::Arc::new(census.build_face_arrangement(0,Default::default()).unwrap());
     let bound=arrangement.qualify_boolean_rectangle(Op::Difference,[[0.48,0.52],[0.66,0.70]],&directions,Default::default()).unwrap();
     assert_eq!(bound.face(),arrangement.region_faces()[1]);

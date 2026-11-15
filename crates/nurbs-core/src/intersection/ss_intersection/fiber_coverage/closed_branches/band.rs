@@ -43,15 +43,34 @@ pub(super) fn refine_band(f: &QualifiedFiber, interval: [f64; 2], max: usize) ->
         if used == max {
             return Err(crate::resource("Original root band refinement exhausted"));
         }
-        let r = f
-            .source()
-            .certify_contracted(next, f.free_axis(), (max - used).min(100000))?;
-        used += r.rectangles();
-        if let Some(next) = r.into_fiber() {
-            point = next;
+        let mut refined = None;
+        for &extra in if interval[0] == interval[1] {
+            &[0.0, 0.25, 0.5][..]
         } else {
-            break;
+            &[0.0][..]
+        } {
+            let mut proposal = next;
+            for axis in 0..4 {
+                if axis != f.free_axis().index() {
+                    let old = point.domain()[axis];
+                    proposal[axis][0] += (old[0] - proposal[axis][0]) * extra;
+                    proposal[axis][1] += (old[1] - proposal[axis][1]) * extra;
+                }
+            }
+            if used == max {
+                break;
+            }
+            let result =
+                f.source()
+                    .certify_contracted(proposal, f.free_axis(), (max - used).min(100000))?;
+            used += result.rectangles();
+            if let Some(candidate) = result.into_fiber() {
+                refined = Some(candidate);
+                break;
+            }
         }
+        let Some(candidate) = refined else { break };
+        point = candidate;
     }
     Ok(RootBand {
         fiber: point,

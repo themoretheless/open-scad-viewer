@@ -57,6 +57,17 @@ impl OriginalSsRootCurve {
         Ok(proof)
     }
 
+    /// Exact original-coordinate domain of an affine graph chart.
+    pub fn original_graph_domain(&self) -> Result<[[Q; 2]; 4]> {
+        let frame = frames::frame(self)?;
+        let domain = self.coordinate_domain();
+        Ok(std::array::from_fn(|axis| {
+            domain[axis].map(|bound| {
+                &frame[axis][0] + &frame[axis][1] * Q::from_float(bound).unwrap()
+            })
+        }))
+    }
+
     /// The sealed carrier supplies source-equivalent graph uniqueness. Exact
     /// rational frame containment transfers that authority to original UV4.
     /// No periodic shift or nonlinear blowdown is silently identified here.

@@ -2,6 +2,7 @@
 //! axes. Parameter-root coverage does not identify physical branches or trims.
 use super::*;
 mod graph_reduction;
+pub use graph_reduction::{exclude_shared_frame_graph_contact, shared_frame_graph_contact_corners};
 #[derive(Clone, Debug, PartialEq)]
 pub enum MixedCoverageKind {
     Fiber {

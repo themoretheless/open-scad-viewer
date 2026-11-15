@@ -155,3 +155,126 @@ fn saved_uv_reference_refuses_interior_deformation_even_on_the_same_plane() {
     );
     assert!(work.cells > 0);
 }
+
+#[test]
+fn closed_cut_inside_periodic_chart_preserves_the_carrier() {
+    let ring = [[0., 0.], [1., 1.], [2., 0.], [1., -1.], [0., 0.]];
+    let surface = nurbs_core::surface::Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![-0.25, 0., 0.25, 0.5, 0.75, 1., 1.25],
+        control_points: [0., 1.]
+            .map(|y| ring.map(|[x, z]| vec![x, y, z]).to_vec())
+            .to_vec(),
+        weights: vec![vec![1.; 5]; 2],
+        periodic_u: false,
+        periodic_v: true,
+    };
+    let path = |corners: &[[f64; 2]]| {
+        (0..corners.len())
+            .map(|i| {
+                let a = corners[i];
+                let b = corners[(i + 1) % corners.len()];
+                Segment {
+                    curve: crate::line(
+                        surface
+                            .evaluate(a[0], a[1].rem_euclid(1.))
+                            .unwrap()
+                            .point
+                            .to_vec(),
+                        surface
+                            .evaluate(b[0], b[1].rem_euclid(1.))
+                            .unwrap()
+                            .point
+                            .to_vec(),
+                    ),
+                    pcurve: crate::line(a.to_vec(), b.to_vec()),
+                }
+            })
+            .collect::<Vec<_>>()
+    };
+    let sheet = |corners: &[[f64; 2]]| {
+        let boundary = path(corners);
+        let mut model = Model::empty(1e-7).unwrap();
+        for (i, segment) in boundary.iter().enumerate() {
+            model.vertices.push(Vertex {
+                point: segment.curve.control_points[0].clone().try_into().unwrap(),
+            });
+            model.edges.push(Edge {
+                curve: segment.curve.clone(),
+                vertices: [i, (i + 1) % boundary.len()],
+                degenerate: false,
+            });
+        }
+        model.loops.push(Loop {
+            coedges: boundary
+                .iter()
+                .enumerate()
+                .map(|(i, segment)| Coedge::new(i, false, segment.pcurve.clone()))
+                .collect(),
+        });
+        model.faces.push(Face {
+            surface: surface.clone(),
+            outer: 0,
+            holes: vec![],
+        });
+        model.shells.push(crate::Shell {
+            closed: false,
+            faces: vec![FaceUse {
+                face: 0,
+                reversed: false,
+            }],
+        });
+        model.rebuild_topology_ids();
+        model
+    };
+    let corners = [
+        [0.125, 0.03125],
+        [0.875, 0.03125],
+        [0.875, 0.21875],
+        [0.125, 0.21875],
+    ];
+    let model = sheet(&corners);
+    let inner = path(&[
+        [0.25, 0.0625],
+        [0.75, 0.0625],
+        [0.75, 0.1875],
+        [0.25, 0.1875],
+    ]);
+    let cut = partition_closed(&model, 0, &inner, 1e-8, Default::default()).unwrap();
+    assert_eq!(cut.model.faces[0].holes.len(), 1);
+    assert_eq!(cut.model.faces[cut.faces[1]].surface, surface);
+    let mut lifted = inner.clone();
+    for segment in &mut lifted {
+        for point in &mut segment.pcurve.control_points {
+            point[1] += 1.;
+        }
+    }
+    let lifted_cut = partition_closed(&model, 0, &lifted, 1e-8, Default::default()).unwrap();
+    assert_eq!(lifted_cut.model.loops, cut.model.loops);
+    assert_eq!(lifted_cut.model.edges, cut.model.edges);
+    let touches_shore = path(&[[0.25, 0.], [0.75, 0.], [0.75, 0.1875], [0.25, 0.1875]]);
+    let error = partition_closed(&model, 0, &touches_shore, 1e-8, Default::default())
+        .err()
+        .unwrap();
+    assert!(error.to_string().contains("lifted face bounds"), "{error}");
+    let across = |u0, u1, v: f64| [[u0, -v], [u1, -v], [u1, 0.], [u1, v], [u0, v], [u0, 0.]];
+    let across_model = sheet(&across(0.125, 0.875, 0.125));
+    let across_path = path(&across(0.25, 0.75, 0.0625));
+    let cut = partition_closed(&across_model, 0, &across_path, 1e-8, Default::default()).unwrap();
+    cut.model.validate().unwrap();
+    assert_eq!(cut.model.faces[0].holes.len(), 1);
+    assert_eq!(cut.edges.len(), 6);
+    assert_eq!(cut.model.faces[cut.faces[1]].surface, surface);
+    let mut native_pieces = across_path;
+    for index in [0, 1, 5] {
+        for point in &mut native_pieces[index].pcurve.control_points {
+            point[1] += 1.;
+        }
+    }
+    let glued =
+        partition_closed(&across_model, 0, &native_pieces, 1e-8, Default::default()).unwrap();
+    assert_eq!(glued.model.loops, cut.model.loops);
+    assert_eq!(glued.model.edges, cut.model.edges);
+}

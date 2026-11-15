@@ -73,6 +73,14 @@ impl OriginalSsRootCurve {
         }
     }
 
+    /// Match a graph supplied by a sealed quotient census.
+    pub fn matches_quotient_fiber(&self, fiber: &QualifiedQuotientFiber) -> Result<bool> {
+        if !matches!(self.carrier, Carrier::Quotient(_)) {
+            return Ok(false);
+        }
+        self.same_definition(&Self::from_quotient(fiber.clone()))
+    }
+
     pub fn from_native(fiber: QualifiedFiber) -> Self {
         Self {
             carrier: Carrier::Native(fiber),
@@ -169,7 +177,7 @@ mod point;
 pub use point::OriginalSsRootPoint;
 
 mod port;
-pub use port::{OriginalSsPortKind, QualifiedOriginalSsPort, bind_original_ss_port,bind_original_ss_third_port};
+pub use port::{OriginalSsPortKind, QualifiedOriginalSsPort, bind_original_ss_port,bind_original_ss_third_port,bind_original_ss_third_port_with_phase};
 mod wire;
 pub use wire::{OriginalSsRootEdge,OriginalSsRootWire};
 pub use wire::{OriginalSsWindingLimits,QualifiedOriginalSsWinding,qualify_original_ss_winding};

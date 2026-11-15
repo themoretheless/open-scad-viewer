@@ -212,6 +212,32 @@ fn operands(
     let b = admitted.into_solid().unwrap();
     (a, aface, b)
 }
+#[test]
+fn intersection_keeps_annulus_between_two_closed_contours() {
+    let (a, aface, _) = operands(false, false);
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let b = solid::qualify(graph::above_body(), limits).unwrap().into_solid().unwrap();
+    let census = census_for(&a, aface, &b, false);
+    let excluded = [[[0.49, 0.51]; 2], [[0.94, 0.96], [0.04, 0.06]]];
+    let result = census.sew_complete_paired_intersection(
+        [[[0.724, 0.726], [0.499, 0.501]]; 2],
+        [&excluded, &excluded],
+        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+        1e-9,
+        Default::default(),
+        [Default::default(); 2],
+        mixed::RootBoundaryVolumeLimits { absolute_error: 5e-4, cells: 4096, ..Default::default() },
+        4096,
+    ).unwrap();
+    assert_eq!(result.genus(), 1);
+    assert!(result.model().topology().boundary_edges().is_empty());
+    let expected = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    let [lo, hi] = result.volume();
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}");
+}
+
 fn run(with_holes: bool, mirrored: bool) {
     let (a, aface, b) = operands(with_holes, mirrored);
     let census = census_for(&a, aface, &b, mirrored);

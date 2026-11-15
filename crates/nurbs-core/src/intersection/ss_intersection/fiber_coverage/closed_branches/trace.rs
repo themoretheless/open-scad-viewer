@@ -139,16 +139,53 @@ fn tube(
     let axis = f.free_axis().index();
     let bounds = port.parameter_bounds();
     let [a, b] = bounds[axis];
-    let mid = canonical.parameters[axis];
-    let padding = if a == b {
-        0.
-    } else {
-        (4. * (b - a)).max(32. * (mid.next_up() - mid).abs())
-    };
-    let interval = [
-        (a - padding).max(f.domain()[axis][0]),
-        (b + padding).min(f.domain()[axis][1]),
-    ];
+    // The saved inner arc starts at the canonical clock. Only the
+    // interval connecting that clock to the original port needs a tube.
+    let clock = canonical.parameters[axis];
+    let interval = [a.min(clock), b.max(clock)];
+    let selector = port.selector();
+    if selector.free_axis() == f.free_axis()
+        && selector.domain()[axis] == interval
+        && contained(selector.domain(), f.domain())
+    {
+        // The original port certificate already proves this singleton in
+        // the adjacent arc's uniqueness box, including the shared UV root.
+        let cells = selector.report().rectangles;
+        if cells <= w.remaining()? {
+            w.used += cells;
+            return Ok(selector.clone());
+        }
+    }
+    // The established port enclosure supplies a local proposal. Certify
+    // the entire clock interval before using any bounds from this box.
+    for factor in [1., 16., 256.] {
+        let mut local = f.domain();
+        local[axis] = interval;
+        for k in 0..4 {
+            if k != axis {
+                let [lo, hi] = bounds[k];
+                let pad = factor
+                    * (hi - lo)
+                        .max((b - a) * 8.)
+                        .max(64. * (midpoint(bounds[k]).next_up() - midpoint(bounds[k])));
+                local[k] = [(lo - pad).max(local[k][0]), (hi + pad).min(local[k][1])];
+            }
+        }
+        if contained(bounds, local) && (0..4).all(|k| k == axis || local[k][0] < local[k][1]) {
+            let result = f.source().certify(
+                local,
+                f.free_axis(),
+                FiberLimits {
+                    max_rectangles: w.remaining()?.min(100000),
+                    preconditioner: None,
+                },
+            )?;
+            w.used += result.report().rectangles;
+            if let Some(tube) = result.into_fiber() {
+                return Ok(tube);
+            }
+        }
+    }
     let refined = band::refine_band(f, interval, w.remaining()?.min(100000))?;
     w.used += refined.cells;
     let mut d = refined.fiber.domain();
@@ -157,12 +194,20 @@ fn tube(
             d[k] = [d[k][0].min(bounds[k][0]), d[k][1].max(bounds[k][1])];
         }
     }
+    if contained(bounds, refined.fiber.domain()) {
+        return Ok(refined.fiber);
+    }
     let r = f.source().certify(
         d,
         f.free_axis(),
         FiberLimits {
             max_rectangles: w.remaining()?.min(100000),
-            preconditioner: None,
+            preconditioner: refined
+                .fiber
+                .report()
+                .operator
+                .as_ref()
+                .map(|op| op.preconditioner()),
         },
     )?;
     w.used += r.report().rectangles;
@@ -227,7 +272,7 @@ pub fn construct_closed_fiber_trace(
     let n = cycle.arcs().len();
     let mut ports = Vec::new();
     for p in cycle.ports() {
-        let box3 = world_bounds(p.selector().source().first(), p.parameter_bounds(), &mut w)?;
+        let box3 = shared_world_bounds(p.selector().source(), p.parameter_bounds(), &mut w)?;
         ports.push(Port {
             parameters: p.parameter_bounds().map(midpoint),
             world: box3.map(midpoint),
@@ -265,12 +310,28 @@ pub fn construct_closed_fiber_trace(
             .ok_or_else(|| crate::input("Original closed arc clipping remains unproved"))?;
         let ta = tube(arc, &cycle.ports()[i], a, &mut w)?;
         let tb = tube(arc, &cycle.ports()[(i + 1) % n], b, &mut w)?;
-        let (world, uv) = tube_errors(&[ta.clone(), tb.clone()], &[a, b], &mut w)?;
-        check(
-            world <= limits.tolerance_world / 4.
-                && uv.iter().all(|v| *v <= limits.tolerance_uv / 4.),
-            "Closed junction tube exceeds tolerance",
+        let (world, uv) = tube_errors(
+            &[ta.clone(), tb.clone()],
+            &[a, b],
+            [
+                cycle.ports()[i].parameter_bounds(),
+                cycle.ports()[(i + 1) % n].parameter_bounds(),
+            ],
+            &mut w,
         )?;
+        if world > limits.tolerance_world / 4.
+            || uv.iter().any(|error| *error > limits.tolerance_uv / 4.)
+        {
+            let clocks = [ta.domain()[axis], tb.domain()[axis]];
+            let port_widths = [i, (i + 1) % n].map(|index| {
+                cycle.ports()[index]
+                    .parameter_bounds()
+                    .map(|[lo, hi]| hi - lo)
+            });
+            return Err(crate::input(&format!(
+                "Closed junction tube exceeds tolerance on arc {i}: world={world}, UV={uv:?}, free axis={axis}, clocks={clocks:?}, port widths={port_widths:?}",
+            )));
+        }
         let build = super::super::construct_trace::construct_local_fiber_trace(
             &inner,
             FiberTraceBuildLimits {

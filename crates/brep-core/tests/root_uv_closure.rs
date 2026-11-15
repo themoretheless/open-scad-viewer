@@ -1,3 +1,5 @@
+#[path = "support/closed_solid_policy.rs"]
+mod solid_policy;
 use brep_core::root_model::{RootBrep,QualifiedRootUvClosure,qualify_root_uv_joint};
 use std::sync::Arc;
 #[path="../../nurbs-core/tests/support/ss_root_circle.rs"] mod fixture;
@@ -7,6 +9,22 @@ fn both_face_projections_have_exact_uv_closed_incidence() {
     let source=Arc::new(RootBrep::paired_contours(&wire,&[],1e-7).unwrap());
     let proof=QualifiedRootUvClosure::qualify(source.clone(),16).unwrap();
     assert_eq!(proof.joints(),16);assert!(Arc::ptr_eq(proof.source(),&source));proof.reverify().unwrap();
+    use brep_core::root_model::QualifiedRootPeriodicUvClosure;
+    let lifted = QualifiedRootPeriodicUvClosure::qualify(source.clone(), 16).unwrap();
+    assert_eq!(lifted.loops().len(), 2);
+    for (face, lift) in lifted.loops().iter().enumerate() {
+        assert_eq!(lift.face, face);
+        assert_eq!(lift.coedge_offsets, vec![[0, 0]; 8]);
+        assert_eq!(lift.winding, [0, 0]);
+    }
+    lifted.reverify().unwrap();
+    use brep_core::root_model::QualifiedRootLoopWinding;
+    let winding = QualifiedRootLoopWinding::qualify_lifted(
+        source.clone(), 0, 0, [[0.5; 2]; 2], Default::default(),
+    ).unwrap();
+    assert_eq!(winding.winding().abs(), 1);
+    winding.reverify().unwrap();
+    assert!(QualifiedRootPeriodicUvClosure::qualify(source.clone(), 15).is_err());
     assert!(QualifiedRootUvClosure::qualify(source.clone(),15).is_err());
     assert!(QualifiedRootUvClosure::qualify(source,0).is_err());
     let a=wire.edges()[0].end();let b=wire.edges()[1].start();
@@ -194,4 +212,394 @@ fn actual_mixed_pair_face_preserves_world_and_uv_curves() {
     assert!(W::qualify(face.clone(),0,0,[[13./64.;2],[0.5;2]],ss::OriginalSsWindingLimits {max_segments:16,..Default::default()}).is_err());
     assert!(W::qualify(face,0,0,[[0.195;2],[0.5;2]],ss::OriginalSsWindingLimits {max_segments:1,..Default::default()}).is_err());
     assert!(RootBrep::face_contours(ab.source().first().clone(),RootFaceContour {wire:contour,supports:vec![0,1]},vec![],1e-7).is_err());
+}
+
+#[test]
+fn periodic_face_contour_reports_signed_winding_on_original_ss_arcs() {
+    use brep_core::root_model::{
+        QualifiedRootLoopWinding, QualifiedRootPeriodicUvClosure, RootFaceContour,
+    };
+
+    let original = fixture::wire();
+    let mut plane = original.edges()[2].curve().source().first().clone();
+    for point in plane.control_points.iter_mut().flatten() {
+        point[2] = -1.;
+    }
+    let wire = fixture::wire_on(plane);
+    let ab = wire.edges()[2].curve().clone();
+    let mut third = sheet(0.25, 0.);
+    third.periodic_v = true;
+    third.knots_v = vec![-0.5, 0., 0.5, 1., 1.5];
+    for row in &mut third.control_points {
+        row[0][2] = -1. + row[0][1] - 0.6875;
+        row[1][2] = row[0][2] + 0.375;
+        row.push(row[0].clone());
+    }
+    third.weights = vec![vec![1.; 3]; 2];
+
+    let candidates = candidate(&ab, &third);
+    let witness = |v| {
+        let point = Arc::new(ss::OriginalSsRootPoint::new(ab.clone(), v).unwrap());
+        Arc::new(ss::QualifiedSsThirdSurfacePoint::qualify(
+            candidates.clone(), point, Default::default(),
+        ).unwrap())
+    };
+    let seam = witness(0.6875);
+    let middle = witness(0.3125);
+    let sources = ss::FiberSources::new(ab.source().first(), &third).unwrap();
+    let graph = |span| {
+        let ideal = ss::qualify_original_ss_ideal(&sources, [1, 1, 1, span], Default::default()).unwrap();
+        let basis = ss::qualify_ss_groebner_basis(&ideal, Default::default()).unwrap();
+        let system = ss::qualify_ss_deflated_system(&basis, Default::default()).unwrap();
+        let fiber = ss::qualify_deflated_ss_fiber(
+            &system, [[0.24, 0.27], [0.25, 0.75], [0.25, 0.75], [0., 1.]],
+            ss::FiberAxis::SecondV, Default::default(),
+        ).unwrap();
+        let report = format!("{:?}", fiber.report());
+        Arc::new(ss::OriginalSsRootCurve::from_deflated(
+            fiber.into_fiber().unwrap_or_else(|| panic!("{report}")),
+        ))
+    };
+    let first = graph(1);
+    let second = graph(2);
+    let port = |witness: &Arc<ss::QualifiedSsThirdSurfacePoint>, graph: &Arc<ss::OriginalSsRootCurve>, phase| {
+        ss::bind_original_ss_third_port_with_phase(
+            witness.clone(), graph.clone(), [0, 2], [0, 0, 0, phase], Default::default(),
+        ).unwrap()
+    };
+    let a = ss::OriginalSsRootEdge::new(port(&seam, &first, 0), port(&middle, &first, 0)).unwrap();
+    let b = ss::OriginalSsRootEdge::new(port(&middle, &second, 0), port(&seam, &second, 1)).unwrap();
+    let contour = RootFaceContour {
+        wire: ss::OriginalSsRootWire::new(vec![a, b]).unwrap(),
+        supports: vec![1, 1],
+    };
+    assert!(RootBrep::face_contours(third.clone(), contour.clone(), vec![], 1e-7).is_err());
+    let face = Arc::new(RootBrep::periodic_face_contours(third, contour, vec![], 1e-7).unwrap());
+    let closure = QualifiedRootPeriodicUvClosure::qualify(face.clone(), 2).unwrap();
+    assert_eq!(closure.loops()[0].coedge_offsets, [[0, 0]; 2]);
+    assert_eq!(closure.loops()[0].winding, [0, 1]);
+    closure.reverify().unwrap();
+    assert!(QualifiedRootLoopWinding::qualify_lifted(
+        face.clone(), 0, 0, [[0.5; 2]; 2], Default::default(),
+    ).is_err());
+
+    let mut topology = face.topology().clone();
+    for coedge in &mut topology.loops[0].coedges {
+        coedge.reversed = true;
+        coedge.pcurve.reversed = true;
+    }
+    let reversed = Arc::new(RootBrep::from_topology(topology).unwrap());
+    let closure = QualifiedRootPeriodicUvClosure::qualify(reversed, 2).unwrap();
+    assert_eq!(closure.loops()[0].coedge_offsets, [[0, 0], [0, -1]]);
+    assert_eq!(closure.loops()[0].winding, [0, -1]);
+}
+
+#[test]
+fn lifted_winding_classifies_a_face_crossing_the_periodic_seam_twice() {
+    use brep_core::root_model::{
+        QualifiedRootLoopWinding as W, QualifiedRootPeriodicUvClosure, RootFaceContour,
+    };
+
+    // A square tube with its seam at x=z=0. The patch runs from native
+    // v=7/8 through v=0 to v=1/8, between u=1/4 and u=3/4.
+    let ring = [[0., 0.], [1., 1.], [2., 0.], [1., -1.], [0., 0.]];
+    let mut tube = sheet(0., 0.);
+    tube.periodic_v = true;
+    tube.knots_v = vec![-0.25, 0., 0.25, 0.5, 0.75, 1., 1.25];
+    tube.control_points = [0., 1.].map(|y| ring.map(|[x, z]| vec![x, y, z]).to_vec()).to_vec();
+    tube.weights = vec![vec![1.; 5]; 2];
+    let plane = |axis: usize, value| {
+        let mut surface = sheet(0., 0.);
+        for (i, row) in surface.control_points.iter_mut().enumerate() {
+            for (j, p) in row.iter_mut().enumerate() {
+                p[axis] = value;
+                p[1 - axis] = -1. + 4. * i as f64;
+                p[2] = -2. + 4. * j as f64;
+                if axis == 1 {
+                    p[1] += 0.375 * p[2];
+                }
+            }
+        }
+        surface
+    };
+    let make_contour = |bounds: [f64; 2], width: f64, rotation: usize, cut: bool| {
+        let sides = bounds.map(|u| plane(1, u));
+        let cap = plane(0, width);
+        let seam = plane(0, 0.);
+        let graph = |other: &Surface, span, axis, domain| {
+            let sources = ss::FiberSources::new(&tube, other).unwrap();
+            let ideal = ss::qualify_original_ss_ideal(&sources, [1, span, 1, 1], Default::default()).unwrap();
+            let basis = ss::qualify_ss_groebner_basis(&ideal, Default::default()).unwrap();
+            let system = ss::qualify_ss_deflated_system(&basis, Default::default()).unwrap();
+            let fiber = ss::qualify_deflated_ss_fiber(&system, domain, axis, Default::default()).unwrap();
+            let report = format!("{:?}", fiber.report());
+            Arc::new(ss::OriginalSsRootCurve::from_deflated(
+                fiber.into_fiber().unwrap_or_else(|| panic!("{report}")),
+            ))
+        };
+        let horizontal = sides.each_ref().map(|side| [1, 4].map(|span| {
+            graph(side, span, ss::FiberAxis::FirstV, [[0.02, 0.98], if span == 1 { [0., 0.5] } else { [0.5, 1.] }, [0.2, 0.6], [0.2, 0.8]])
+        }));
+        let vertical = [1, 4].map(|span| {
+            graph(&cap, span, ss::FiberAxis::FirstU, [[0.02, 0.98], [0.1, 0.9], [0.2, 0.6], [0.2, 0.8]])
+        });
+        let witness = |curve: &Arc<ss::OriginalSsRootCurve>, parameter, other: &Surface| {
+            Arc::new(ss::QualifiedSsThirdSurfacePoint::qualify(
+                candidate(curve, other),
+                Arc::new(ss::OriginalSsRootPoint::new(curve.clone(), parameter).unwrap()),
+                Default::default(),
+            ).unwrap())
+        };
+        let port = |witness: &Arc<ss::QualifiedSsThirdSurfacePoint>,
+                    graph: &Arc<ss::OriginalSsRootCurve>, role, phase| {
+            ss::bind_original_ss_third_port_with_phase(
+                witness.clone(), graph.clone(), [0, role], [0, phase, 0, 0], Default::default(),
+            ).unwrap()
+        };
+
+        let seams = horizontal.each_ref().map(|graphs| witness(&graphs[0], 0., &seam));
+        let corners = horizontal.each_ref().map(|graphs| [witness(&graphs[0], width, &cap), witness(&graphs[1], 1. - width, &cap)]);
+        let edge = |start, end| ss::OriginalSsRootEdge::new(start, end).unwrap();
+        let [low, high] = &horizontal;
+        let [bottom, top] = &corners;
+        let mut edges = vec![
+            edge(port(&seams[0], &low[0], 1, 0), port(&bottom[0], &low[0], 1, 0)),
+            edge(port(&bottom[0], &vertical[0], 2, 0), port(&top[0], &vertical[0], 2, 0)),
+            edge(port(&top[0], &high[0], 1, 0), port(&seams[1], &high[0], 1, 0)),
+            edge(port(&seams[1], &high[1], 1, 1), port(&top[1], &high[1], 1, 0)),
+            edge(port(&top[1], &vertical[1], 2, 0), port(&bottom[1], &vertical[1], 2, 0)),
+            edge(port(&bottom[1], &low[1], 1, 0), port(&seams[0], &low[1], 1, 1)),
+        ];
+        let chord = if cut {
+            let cut_plane = plane(0, width * 0.5);
+            let graph = graph(&cut_plane, 1, ss::FiberAxis::FirstU,
+                [[0.02, 0.98], [0.1, 0.9], [0.2, 0.6], [0.2, 0.8]]);
+            let lower = witness(&low[0], width * 0.5, &cut_plane);
+            let upper = witness(&high[0], width * 0.5, &cut_plane);
+            let a = port(&lower, &low[0], 1, 0);
+            let b = port(&upper, &high[0], 1, 0);
+            edges.splice(2..3, [
+                edge(edges[2].start().clone(), b.clone()),
+                edge(b, edges[2].end().clone()),
+            ]);
+            edges.splice(0..1, [
+                edge(edges[0].start().clone(), a.clone()),
+                edge(a, edges[0].end().clone()),
+            ]);
+            Some(edge(port(&lower, &graph, 2, 0), port(&upper, &graph, 2, 0)))
+        } else {
+            None
+        };
+        edges.rotate_left(rotation);
+        let supports = vec![0; edges.len()];
+        (RootFaceContour { wire: ss::OriginalSsRootWire::new(edges).unwrap(), supports }, chord)
+    };
+    let (cut_contour, chord) = make_contour([0.25, 0.75], 0.5, 0, true);
+    let cut_hole = make_contour([0.375, 0.625], 0.1875, 3, false).0;
+    let cut_source = Arc::new(RootBrep::periodic_face_contours(
+        tube.clone(), cut_contour, vec![cut_hole], 1e-7,
+    ).unwrap());
+    let qualified = brep_core::root_model::QualifiedRootPeriodicChordSplit::qualify(
+        cut_source, 0, chord.unwrap(), 0, Default::default(), Default::default(),
+    ).unwrap();
+    assert!(qualified.boundary().entries() > 0);
+    assert_eq!(qualified.hole_assignment().sides(), &[true]);
+    qualified.reverify().unwrap();
+    let split = qualified.split();
+    assert!(split.output().topology().faces[0].holes.is_empty());
+    assert_eq!(split.output().topology().faces[1].holes.len(), 1);
+    let cut_closure = QualifiedRootPeriodicUvClosure::qualify(split.output().clone(), 16).unwrap();
+    assert_eq!(cut_closure.loops().len(), 3);
+    assert!(cut_closure.loops().iter().all(|lift| lift.winding == [0, 0]));
+    assert!(cut_closure.loops().iter().any(|lift| lift.coedge_offsets.iter().any(|&offset| offset != [0, 0])));
+    for (child, u, v) in [(0, 0.5, 0.09375), (1, 0.5, 0.90625)] {
+        let proof = brep_core::root_model::QualifiedRootPeriodicFacePoint::qualify(
+            split.output().clone(), child, [u, v], Default::default(),
+        ).unwrap();
+        assert_eq!(proof.region(), &brep_core::root_model::RootFaceRegion::InsideSupport);
+    }
+    let selection = qualified.select_child(
+        [[0.49, 0.51], [0.90, 0.91]], Default::default(),
+    ).unwrap();
+    let solid = brep_core::closed_solid::qualify(
+        brep_core::cuboid([0.25, 0.25, -0.5], [0.5, 0.75, -0.25]).unwrap(),
+        solid_policy::policy(),
+    ).unwrap().into_solid().unwrap();
+    let directions = [[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]];
+    use brep_core::root_model::QualifiedRootPeriodicChildMaterial;
+    let whole = QualifiedRootPeriodicChildMaterial::qualify(
+        qualified.clone(), 0, &solid, &directions, Default::default(), Default::default(),
+    ).unwrap();
+    assert!(!whole.inside());
+    use brep_core::closed_solid::{BooleanFaceDisposition as D, BooleanMaterialOp as Op, BooleanSourceSide as Side};
+    assert_eq!(whole.boolean_disposition(Op::Union, Side::First), D::Keep);
+    assert_eq!(whole.boolean_disposition(Op::Intersection, Side::First), D::Discard);
+    let contribution = whole.boolean_contribution(Op::Union, Side::First).unwrap();
+    assert_eq!(contribution.disposition(), D::Keep);
+    assert_eq!(contribution.lineage().unwrap().face_map(), &[Some(0), None]);
+    assert!(!contribution.patch().unwrap().topology().shells[0].faces[0].reversed);
+    let discarded = whole.boolean_contribution(Op::Intersection, Side::First).unwrap();
+    assert!(discarded.patch().is_none());
+    use brep_core::root_model::{QualifiedRootShellPositiveFlux, RootShellFluxLimits};
+    let flux = RootShellFluxLimits {
+        axis: 2,
+        origin: 0.,
+        max_cells: 32,
+        max_spans: 32,
+        max_depth: 2,
+        winding: Default::default(),
+    };
+    let empty = QualifiedRootShellPositiveFlux::from_boolean_contributions(
+        &[discarded.clone()], 1e-7, 32, vec![], 128, flux,
+    ).unwrap_err();
+    assert!(empty.to_string().contains("no retained shell faces"));
+    assert!(QualifiedRootShellPositiveFlux::assemble_boolean_selection(
+        std::slice::from_ref(&discarded), 1e-7, 32, vec![], 128, flux,
+    ).unwrap().is_none());
+    assert!(QualifiedRootShellPositiveFlux::assemble_boolean_selection(
+        &[], 1e-7, 32, vec![], 128, flux,
+    ).is_err());
+    // A retained patch from a real Boolean classification still has open
+    // edges. Discarding its sibling must not turn it into a closed shell.
+    assert!(QualifiedRootShellPositiveFlux::assemble_boolean_selection(
+        &[discarded, contribution], 1e-7, 32, vec![], 128, flux,
+    ).is_err());
+
+    let enclosing = brep_core::closed_solid::qualify(
+        brep_core::cuboid([-1.; 3], [3.; 3]).unwrap(), solid_policy::policy(),
+    ).unwrap().into_solid().unwrap();
+    let enclosed = QualifiedRootPeriodicChildMaterial::qualify(
+        qualified.clone(), 0, &enclosing, &directions, Default::default(), Default::default(),
+    ).unwrap();
+    let reversed = enclosed.boolean_contribution(Op::Difference, Side::Second).unwrap();
+    assert_eq!(reversed.disposition(), D::Reverse);
+    assert!(reversed.patch().unwrap().topology().shells[0].faces[0].reversed);
+    assert_eq!(Op::Difference.face_disposition(Side::Second, true), D::Reverse);
+    assert_eq!(Op::Xor.face_disposition(Side::First, true), D::Reverse);
+    let both = qualified.boolean_contributions(
+        &enclosing, &directions, Default::default(), Default::default(),
+        Op::Difference, Side::Second,
+    ).unwrap();
+    for (child, contribution) in both.iter().enumerate() {
+        assert_eq!(contribution.disposition(), D::Reverse);
+        let lineage = contribution.lineage().unwrap();
+        assert_eq!(lineage.face_map()[child], Some(0));
+        let topology = contribution.patch().unwrap().topology();
+        assert!(topology.shells[0].faces[0].reversed);
+        assert_eq!(topology.faces[0].holes.len(), child);
+    }
+
+    assert!(!whole.boxes().is_empty());
+    assert!(QualifiedRootPeriodicChildMaterial::qualify(
+        qualified.clone(), 1, &solid, &directions, Default::default(), Default::default(),
+    ).is_err());
+    assert!(qualified.boolean_contributions(
+        &solid, &directions, Default::default(), Default::default(),
+        Op::Union, Side::First,
+    ).is_err());
+    let corner_body = brep_core::closed_solid::qualify(
+        brep_core::cuboid([0.46, 0.35, 0.46], [0.51, 0.37, 0.51]).unwrap(),
+        solid_policy::policy(),
+    ).unwrap().into_solid().unwrap();
+    let refined = QualifiedRootPeriodicChildMaterial::qualify(
+        qualified.clone(), 0, &corner_body, &directions, Default::default(), Default::default(),
+    ).unwrap();
+    assert!(!refined.inside());
+    assert!(refined.excluded_cells() > 0);
+    let seed = selection.qualify_material_seed(&solid, &directions, Default::default()).unwrap();
+    assert_eq!(seed.child(), 1);
+    assert!(seed.material().inside());
+    let opposite = qualified.select_child(
+        [[0.49, 0.51], [0.09, 0.10]], Default::default(),
+    ).unwrap();
+    assert!(!opposite.qualify_material_seed(&solid, &directions, Default::default())
+        .unwrap().material().inside());
+    assert_eq!(selection.child(), 1);
+    let retained = selection.retention();
+    assert_eq!(retained.face_map(), &[None, Some(0)]);
+    assert_eq!(retained.output().topology().faces[0].holes.len(), 1);
+    selection.reverify().unwrap();
+    assert_eq!(selection.trim().unwrap().face_map(), retained.face_map());
+    assert!(qualified.retain_child_containing(
+        [[0.49, 0.51], [0.06, 0.07]], Default::default(),
+    ).is_err());
+    let (contour, _) = make_contour([0.25, 0.75], 0.5, 0, false);
+    let hole = make_contour([0.375, 0.625], 0.25, 3, false).0;
+    let nested = make_contour([0.4375, 0.5625], 0.1875, 0, false).0;
+    let sample_edge = nested.wire.edges()[0].clone();
+    let invalid = Arc::new(RootBrep::periodic_face_contours(
+        tube.clone(), contour.clone(), vec![hole.clone(), nested], 1e-7,
+    ).unwrap());
+    let error = brep_core::root_model::QualifiedRootFaceRegion::qualify_lifted_auto(
+        invalid, 0, [[0.5; 2], [0.; 2]], Default::default(),
+    ).unwrap_err();
+    assert!(error.to_string().contains("inside another hole"), "{error}");
+    // The wider hole begins inside the first hole's axial interval and
+    // ends beyond it. Its lower boundary intersects both periodic shores
+    // of the first hole, whose lift starts from the opposite direction.
+    let crossing = make_contour([0.5, 0.6875], 0.375, 0, false).0;
+    let crossing_face = Arc::new(RootBrep::periodic_face_contours(
+        tube.clone(), contour.clone(), vec![hole.clone(), crossing], 1e-7,
+    ).unwrap());
+    let error = brep_core::root_model::QualifiedRootPeriodicFace::qualify(
+        crossing_face, 0, Default::default(),
+    ).unwrap_err();
+    assert!(error.to_string().contains("Lifted hole"), "{error}");
+    let face = Arc::new(RootBrep::periodic_face_contours(tube, contour, vec![hole], 1e-7).unwrap());
+    face.audit_face_trim_arc_separation(0, Default::default()).unwrap();
+    assert!(face.audit_face_trim_arc_separation(
+        0, ss::OriginalSsCurveLimits { interval_operations: 0, ..Default::default() },
+    ).is_err());
+    let closure = QualifiedRootPeriodicUvClosure::qualify(face.clone(), 12).unwrap();
+    assert_eq!(closure.loops()[0].winding, [0, 0]);
+    assert_eq!(closure.loops()[0].coedge_offsets, [[0, 0], [0, 0], [0, 0], [0, -1], [0, -1], [0, -1]]);
+    let inside = W::qualify_lifted(face.clone(), 0, 0, [[0.49, 0.51], [-0.02, 0.02]], Default::default()).unwrap();
+    assert_eq!(inside.winding(), -1);
+    inside.reverify().unwrap();
+    assert_eq!(W::qualify_lifted(face.clone(), 0, 0, [[0.1; 2], [0.; 2]], Default::default()).unwrap().winding(), 0);
+    use brep_core::root_model::{QualifiedRootFaceRegion, RootFaceRegion};
+    let classify = |u, offsets| QualifiedRootFaceRegion::qualify_lifted(
+        face.clone(), 0, [[u; 2], [0.; 2]], offsets, Default::default(),
+    );
+    let excluded = classify(0.5, vec![[0, -1]]).unwrap();
+    assert_eq!(excluded.region(), &RootFaceRegion::ExcludedByHoles(vec![0]));
+    excluded.reverify().unwrap();
+    assert!(W::qualify_lifted(
+        face.clone(), 0, 0, [[0.28125, 0.71875], [-0.0625, 0.0625]],
+        ss::OriginalSsWindingLimits { max_segments: 64, ..Default::default() },
+    ).is_err());
+    let automatic = QualifiedRootFaceRegion::qualify_lifted_auto(
+        face.clone(), 0, [[0.5; 2], [0.; 2]], Default::default(),
+    ).unwrap();
+    assert_eq!(automatic.hole_offsets(), Some([[0, -1]].as_slice()));
+    assert_eq!(automatic.region(), excluded.region());
+    automatic.reverify().unwrap();
+    use brep_core::root_model::QualifiedRootPeriodicFacePoint as PeriodicPoint;
+    let native = PeriodicPoint::qualify(face.clone(), 0, [0.5, 0.96875], Default::default()).unwrap();
+    assert_eq!(native.image_offset(), Some([0, -1]));
+    assert_eq!(native.region(), &RootFaceRegion::ExcludedByHoles(vec![0]));
+    native.reverify().unwrap();
+    let domain = Arc::new(brep_core::root_model::QualifiedRootPeriodicFace::qualify(
+        face.clone(), 0, Default::default(),
+    ).unwrap());
+    use brep_core::root_model::QualifiedRootPeriodicFaceEdge;
+    let classified = QualifiedRootPeriodicFaceEdge::qualify(domain.clone(), sample_edge.clone(), 0, 32).unwrap();
+    assert_eq!(classified.region(), &RootFaceRegion::ExcludedByHoles(vec![0]));
+    assert!(QualifiedRootPeriodicFaceEdge::qualify(domain.clone(), sample_edge, 1, 32).is_err());
+    let across_seam = domain.classify_box([[0.49, 0.51], [0.99, 1.01]]).unwrap();
+    assert_eq!(across_seam.region(), &RootFaceRegion::ExcludedByHoles(vec![0]));
+    assert_eq!(across_seam.image_offset(), Some([0, -1]));
+    assert!(domain.classify_box([[0.3, 0.5], [0.99, 1.01]]).is_err());
+    assert!(domain.classify_box([[0.5; 2], [1., 0.]]).is_err());
+    let support = domain.classify_point([0.28125, 0.96875]).unwrap();
+    assert_eq!(support.region(), &RootFaceRegion::InsideSupport);
+    let outside = domain.classify_point([0.5, 0.5]).unwrap();
+    assert_eq!(outside.region(), &RootFaceRegion::OutsideOuter);
+    assert_eq!(outside.image_offset(), None);
+
+    assert_eq!(classify(0.3125, vec![[0, -1]]).unwrap().region(), &RootFaceRegion::InsideSupport);
+    assert_eq!(classify(0.1, vec![[0, -1]]).unwrap().region(), &RootFaceRegion::OutsideOuter);
+    assert!(classify(0.5, vec![[1, -1]]).is_err());
+    assert!(classify(0.5, vec![]).is_err());
+    assert!(W::qualify(face, 0, 0, [[0.5; 2], [0.; 2]], Default::default()).is_err());
 }

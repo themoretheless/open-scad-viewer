@@ -615,3 +615,52 @@ pub use quotient::{QuotientDiscoveryLimits,QuotientDiscoveryReport,QuotientDisco
 
 
 pub(crate) use quotient::original_axis_sections;
+
+impl QualifiedFiber {
+    /// Bound displacement from the entire anchor enclosure along the same
+    /// uniformly unique graph, using its certified contraction operator.
+    pub(super) fn transported_root_bounds(
+        &self,
+        anchor: [[f64; 2]; 4],
+        max_rectangles: usize,
+    ) -> Result<(Option<[[f64; 2]; 4]>, usize)> {
+        let free = self.free_axis().index();
+        let domain = self.domain();
+        let op = self.report().operator.as_ref().unwrap();
+        let q = self.report().contraction_upper.unwrap();
+        let surfaces = self.source().equation_surfaces()?;
+        let support = free / 2;
+        let mut budget = Budget { used: 0, max: max_rectangles };
+        let Some((_, jacobian)) = evaluate(
+            surfaces[support],
+            [domain[2 * support], domain[2 * support + 1]],
+            true,
+            &mut budget,
+        )? else {
+            return Ok((None, budget.used));
+        };
+        let mut gain = 0_f64;
+        for (row, scale) in op.preconditioner().into_iter().zip(op.scales()) {
+            let mut projected = I::point(0.);
+            for (derivatives, coefficient) in jacobian.iter().zip(row) {
+                projected = projected.add(derivatives[free % 2].mul(I::point(coefficient))?)?;
+            }
+            gain = gain.max(I::point(projected.lo.abs().max(projected.hi.abs()))
+                .div(I::point(scale))?.hi);
+        }
+        let delta = I::point(domain[free][1]).sub(I::point(domain[free][0]))?;
+        let scaled = delta.mul(I::point(gain))?.div(I::point(1.).sub(I::point(q))?)?;
+        let mut bounds = domain;
+        let mut unknown = 0;
+        for axis in 0..4 {
+            if axis != free {
+                let radius = scaled.mul(I::point(op.scales()[unknown]))?.hi;
+                let reach = I::new(anchor[axis][0], anchor[axis][1])?
+                    .add(I::new(-radius, radius)?)?;
+                bounds[axis] = [domain[axis][0].max(reach.lo), domain[axis][1].min(reach.hi)];
+                unknown += 1;
+            }
+        }
+        Ok((Some(bounds), budget.used))
+    }
+}

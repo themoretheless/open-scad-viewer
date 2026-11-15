@@ -134,8 +134,15 @@ fn proposal(
         ]
     })
 }
+pub(super) fn natural_product(source: &FiberSources) -> [[f64; 2]; 4] {
+    let a = surface_domain(source.first());
+    let b = surface_domain(source.second());
+    [a[0], a[1], b[0], b[1]]
+}
+
 pub(super) fn construct(
     source: &FiberSources,
+    domain: [[f64; 2]; 4],
     limits: ClosedSSBuildLimits,
 ) -> crate::Result<(Vec<QualifiedFiber>, usize)> {
     crate::check(
@@ -144,9 +151,6 @@ pub(super) fn construct(
             && (1..=100000).contains(&limits.proposal_rectangles),
         "Need bounded closed intersection proposals",
     )?;
-    let a = surface_domain(source.first());
-    let b = surface_domain(source.second());
-    let domain = [a[0], a[1], b[0], b[1]];
     let mut charts: Vec<QualifiedFiber> = vec![];
     let mut used = 0;
     let mut seeds = 0;
@@ -238,13 +242,11 @@ pub(super) fn construct(
 /// resolve. The cell is not assumed nonempty; only fresh operators may admit it.
 fn repair_one(
     source: &FiberSources,
+    domain: [[f64; 2]; 4],
     cell: [[f64; 2]; 4],
     remaining: usize,
     preferred: Option<usize>,
 ) -> crate::Result<(Option<QualifiedFiber>, usize)> {
-    let a = surface_domain(source.first());
-    let b = surface_domain(source.second());
-    let domain = [a[0], a[1], b[0], b[1]];
     let seed = std::array::from_fn(|k| {
         ((cell[k][0] * 0.5 + cell[k][1] * 0.5) - domain[k][0]) / (domain[k][1] - domain[k][0])
     });
@@ -286,27 +288,28 @@ fn repair_one(
 /// original remaining ledger; NONE is coverage authority until the fresh census.
 pub(super) fn repair(
     source: &FiberSources,
+    domain: [[f64; 2]; 4],
     cell: [[f64; 2]; 4],
     remaining: usize,
     max_charts: usize,
 ) -> crate::Result<(Vec<QualifiedFiber>, usize)> {
-    let (first, mut used) = repair_one(source, cell, remaining, None)?;
+    let (first, mut used) = repair_one(source, domain, cell, remaining, None)?;
     let Some(first) = first else {
         return Ok((vec![], used));
     };
     let axis = first.free_axis().index();
-    let domain = first.domain();
+    let chart = first.domain();
     let mut charts = vec![first];
     for fraction in [0.125, 0.875] {
         if used == remaining || charts.len() == max_charts {
             break;
         }
-        let mut neighbor = domain;
-        let center = domain[axis][0] + fraction * (domain[axis][1] - domain[axis][0]);
+        let mut neighbor = chart;
+        let center = chart[axis][0] + fraction * (chart[axis][1] - chart[axis][0]);
         // A singleton proposal coordinate is allowed here; repair_one uses
         // only its center as a Newton seed and proves a fresh positive box.
         neighbor[axis] = [center, center];
-        let (extra, work) = repair_one(source, neighbor, remaining - used, Some(axis))?;
+        let (extra, work) = repair_one(source, domain, neighbor, remaining - used, Some(axis))?;
         used += work;
         if let Some(extra) = extra {
             charts.push(extra);

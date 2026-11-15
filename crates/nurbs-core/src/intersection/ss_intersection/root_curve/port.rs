@@ -4,7 +4,7 @@
 use super::*;
 pub(super) mod membership;
 mod third;
-pub use third::bind_original_ss_third_port;
+pub use third::{bind_original_ss_third_port, bind_original_ss_third_port_with_phase};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginalSsPortKind {
     SameRootSelector,
@@ -52,20 +52,38 @@ impl QualifiedOriginalSsPort {
     /// triple witness and surface role. World incidence alone is insufficient
     /// on self-intersecting or periodic surfaces. False means unproved.
     pub fn same_third_surface_uv(&self, other: &Self, support: usize, other_support: usize) -> Result<bool> {
+        Ok(self.third_surface_uv_period_delta(other, support, other_support)? == Some([0, 0]))
+    }
+
+    /// Return the exact native period offset from this support to the other
+    /// support when both are bound to the same witness and surface role.
+    /// Each nonzero phase was checked against the original surface seam
+    /// during binding. A zero component denotes identical native coordinates.
+    pub fn third_surface_uv_period_delta(
+        &self,
+        other: &Self,
+        support: usize,
+        other_support: usize,
+    ) -> Result<Option<[i32; 2]>> {
         check(support < 2 && other_support < 2, "Invalid triple-port surface support")?;
-        Ok(match (&self.third, &other.third) {
-            (Some((a, ar, _)), Some((b, br, _))) => Arc::ptr_eq(a,b)
-                && ar[support] == br[other_support]
-                && self.point.same_selector(&other.point)
-                && self.phase == [0;4] && other.phase == [0;4],
-            _ => false,
-        })
+        let (Some((a, ar, _)), Some((b, br, _))) = (&self.third, &other.third) else {
+            return Ok(None);
+        };
+        if !Arc::ptr_eq(a, b)
+            || ar[support] != br[other_support]
+            || !self.point.same_selector(&other.point)
+        {
+            return Ok(None);
+        }
+        Ok(Some(std::array::from_fn(|axis| {
+            other.phase[2 * other_support + axis] - self.phase[2 * support + axis]
+        })))
     }
     /// Replace an independent endpoint owner only after exact point identity.
     pub fn rebind_equivalent(&self, point: Arc<OriginalSsRootPoint>, limits: SsAlgebraicClockLimits) -> Result<Self> {
         if let Some((witness, roles, _)) = &self.third {
             check(point.same_selector(witness.point()), "Third-surface port requires its literal global vertex owner")?;
-            let mut fresh = bind_original_ss_third_port(witness.clone(), self.target.clone(), *roles, self.limits)?;
+            let mut fresh = bind_original_ss_third_port_with_phase(witness.clone(), self.target.clone(), *roles, self.phase, self.limits)?;
             fresh.point = point;
             return Ok(fresh);
         }
@@ -77,9 +95,9 @@ impl QualifiedOriginalSsPort {
         self.target.reverify()?;
         if let Some((witness, roles, _)) = &self.third {
             witness.reverify()?;
-            let fresh = bind_original_ss_third_port(witness.clone(), self.target.clone(), *roles, self.limits)?;
+            let fresh = bind_original_ss_third_port_with_phase(witness.clone(), self.target.clone(), *roles, self.phase, self.limits)?;
             return check(self.point.same_selector(witness.point()) && self.parameter == fresh.parameter
-                && self.kind == fresh.kind && self.phase == [0;4]
+                && self.kind == fresh.kind && self.phase == fresh.phase
                 && self.third_target_local_uv_bounds() == fresh.third_target_local_uv_bounds(), "Third-surface port proof changed");
         }
         let fresh = bind_original_ss_port(

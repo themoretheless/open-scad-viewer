@@ -394,5 +394,8 @@ fn edited_hole_cap_matches_the_exchange_fixture() {
     let edited = partition_same_hole(&m, 0, ends, &[segment], 1e-8, Default::default())
         .unwrap()
         .model;
-    crate::exchange_fixtures::assert_matches("face_cut_hole", value_codec::json!({"model": value_codec::to_value(&edited).unwrap(), "curve": value_codec::to_value(&world).unwrap(), "source_faces": m.faces.len(), "source_edges": m.edges.len()}));
+    crate::exchange_fixtures::assert_matches(
+        "face_cut_hole",
+        value_codec::json!({"model": value_codec::to_value(&edited).unwrap(), "curve": value_codec::to_value(&world).unwrap(), "source_faces": m.faces.len(), "source_edges": m.edges.len()}),
+    );
 }

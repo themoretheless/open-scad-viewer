@@ -237,5 +237,8 @@ fn edited_rational_bridge_body_matches_the_exchange_fixture() {
     ];
     let r = partition_bridges(&m, 0, &p, 1e-8, Default::default()).unwrap();
     check(&m, &p, &r);
-    crate::exchange_fixtures::assert_matches("face_cut_bridge", value_codec::json!({"model": value_codec::to_value(&r.model).unwrap(), "curves": value_codec::to_value(p.iter().map(|path| path.segments[0].curve.clone()).collect::<Vec<_>>()).unwrap()}));
+    crate::exchange_fixtures::assert_matches(
+        "face_cut_bridge",
+        value_codec::json!({"model": value_codec::to_value(&r.model).unwrap(), "curves": value_codec::to_value(p.iter().map(|path| path.segments[0].curve.clone()).collect::<Vec<_>>()).unwrap()}),
+    );
 }
