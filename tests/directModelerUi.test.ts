@@ -5225,7 +5225,7 @@ it('marks the NURBS loft inputs and the curve overlay when the same curve is cho
  const ui=await mount({},JSON.stringify({version:1,sketches:[],bodies:[],curves:[a,b]}))
  await ui.click('First curve');await ui.click('Second curve',true);await ui.click('NURBS loft');await flushClearance()
  const alert=ui.all().find(n=>n.props.id==='advanced-command-error')!
- expect(ui.text(alert)).toContain('The same curve is chosen more than once.')
+ expect(ui.text(alert)).toContain('Choose a distinct curve for each role.')
  const selects=ui.all().filter(n=>n.tag==='select'&&String(n.props['aria-label']).startsWith('Section '))
  expect(selects.map(n=>n.props['aria-invalid'])).toEqual([undefined,'true'])
  const curve=ui.all(ui.svg()).find(n=>n.tag==='polyline'&&n.props['data-sel-state']==='invalid')
