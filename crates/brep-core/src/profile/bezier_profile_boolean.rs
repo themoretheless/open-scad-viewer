@@ -452,22 +452,47 @@ impl FragmentSelector<'_> {
         Ok(false)
     }
 }
+/// Departure angles closer than this are treated as tied.
+const ANGLE_TIE: f64 = 1e-10;
+
 pub(super) fn assemble(
     mut selected: Vec<(Curve, usize)>,
     tolerance: f64,
     contacts: bool,
 ) -> Result<Vec<Vec<Curve>>> {
+    let (vertex_count, links) = cluster_vertices(&mut selected, tolerance)?;
+    let outgoing = outgoing_links(&links, vertex_count, contacts)?;
+    let next = successors(&selected, &links, &outgoing)?;
+    let loops = trace_loops(&selected, &next, tolerance)?;
+    if !loops.is_empty() {
+        super::classify_components(&loops, tolerance)?;
+    }
+    Ok(loops)
+}
+
+/// Snap fragment endpoints to unique vertex clusters; returns the vertex
+/// count and each fragment's `[start, end]` vertex.
+fn cluster_vertices(
+    selected: &mut [(Curve, usize)],
+    tolerance: f64,
+) -> Result<(usize, Vec<[usize; 2]>)> {
     let mut vertices: Vec<Vec<f64>> = Vec::new();
     let mut links = Vec::new();
-    for (curve, _) in &mut selected {
+    for (curve, _) in selected.iter_mut() {
         let mut pair = [0usize; 2];
-        let last = curve.control_points.len() - 1;
+        let last = curve
+            .control_points
+            .len()
+            .checked_sub(1)
+            .ok_or_else(|| refused("Bézier span has no control points"))?;
         for (side, index) in [0, last].into_iter().enumerate() {
             let p = &curve.control_points[index];
             let nearby: Vec<_> = vertices
                 .iter()
                 .enumerate()
-                .filter(|(_, q)| (p[0] - q[0]).hypot(p[1] - q[1]) <= 8. * tolerance)
+                .filter(|(_, q)| {
+                    (p[0] - q[0]).hypot(p[1] - q[1]) <= arrangement::HULL_GAP * tolerance
+                })
                 .map(|(i, _)| i)
                 .collect();
             if nearby.len() > 1 {
@@ -488,8 +513,17 @@ pub(super) fn assemble(
         }
         links.push(pair);
     }
-    let mut outgoing = vec![Vec::new(); vertices.len()];
-    let mut incoming = vec![0usize; vertices.len()];
+    Ok((vertices.len(), links))
+}
+
+/// Outgoing fragments per vertex, refusing unbalanced or forbidden contacts.
+fn outgoing_links(
+    links: &[[usize; 2]],
+    vertex_count: usize,
+    contacts: bool,
+) -> Result<Vec<Vec<usize>>> {
+    let mut outgoing = vec![Vec::new(); vertex_count];
+    let mut incoming = vec![0usize; vertex_count];
     for (i, p) in links.iter().enumerate() {
         outgoing[p[0]].push(i);
         incoming[p[1]] += 1;
@@ -501,60 +535,80 @@ pub(super) fn assemble(
     {
         return Err(refused("Bézier Boolean has a nonmanifold boundary contact"));
     }
+    Ok(outgoing)
+}
+
+/// Successor of every fragment by the turning order at its end vertex.
+fn successors(
+    selected: &[(Curve, usize)],
+    links: &[[usize; 2]],
+    outgoing: &[Vec<usize>],
+) -> Result<Vec<usize>> {
     let mut next = vec![0usize; selected.len()];
     let mut predecessor = vec![0usize; selected.len()];
     let mut order_work = 0;
     for (i, link) in links.iter().enumerate() {
-        let curve = &selected[i].0;
-        let reverse = curve.reverse()?;
-        let d = super::departure_ops::direction(&reverse)
-            .ok_or_else(|| refused("Boundary direction is unresolved"))?;
-        let back = d[1].atan2(d[0]);
-        let mut candidates = Vec::new();
-        for &j in &outgoing[link[1]] {
-            let c = &selected[j].0;
-            let d = super::departure_ops::direction(c)
-                .ok_or_else(|| refused("Boundary cusp has no nonzero jet"))?;
-            candidates.push((
-                (back - d[1].atan2(d[0])).rem_euclid(std::f64::consts::TAU),
-                j,
-            ));
-        }
-        if candidates.len() > 1 {
-            let tied = candidates.iter().any(|a| a.0 < 1e-10)
-                || candidates.iter().enumerate().any(|(i, a)| {
-                    candidates
-                        .iter()
-                        .skip(i + 1)
-                        .any(|b| (a.0 - b.0).abs() < 1e-10)
-                });
-            if tied {
-                let branches: Vec<_> = outgoing[link[1]]
-                    .iter()
-                    .map(|j| (*j, &selected[*j].0))
-                    .collect();
-                let chosen = super::departure_ops::continuation(curve, &branches, &mut order_work)?
-                    .ok_or_else(|| refused("Boundary tangent departure ordering is unresolved"))?;
-                next[i] = chosen;
-                predecessor[chosen] += 1;
-                continue;
-            }
-        }
-        if candidates.is_empty() {
-            return Err(refused(
-                "Boundary has only zero-angle tangent continuations",
-            ));
-        }
-        candidates.sort_by(|a, b| a.0.total_cmp(&b.0));
-        if candidates.len() > 1 && (candidates[0].0 - candidates[1].0).abs() < 1e-10 {
-            return Err(refused("Boundary tangent ordering is ambiguous"));
-        }
-        next[i] = candidates[0].1;
+        next[i] = successor(selected, &selected[i].0, &outgoing[link[1]], &mut order_work)?;
         predecessor[next[i]] += 1;
     }
     if predecessor.iter().any(|n| *n != 1) {
         return Err(refused("Boundary traversal is nonmanifold"));
     }
+    Ok(next)
+}
+
+fn successor(
+    selected: &[(Curve, usize)],
+    curve: &Curve,
+    outgoing: &[usize],
+    order_work: &mut usize,
+) -> Result<usize> {
+    let reverse = curve.reverse()?;
+    let d = super::departure_ops::direction(&reverse)
+        .ok_or_else(|| refused("Boundary direction is unresolved"))?;
+    let back = d[1].atan2(d[0]);
+    let mut candidates = Vec::new();
+    for &j in outgoing {
+        let d = super::departure_ops::direction(&selected[j].0)
+            .ok_or_else(|| refused("Boundary cusp has no nonzero jet"))?;
+        candidates.push((
+            (back - d[1].atan2(d[0])).rem_euclid(std::f64::consts::TAU),
+            j,
+        ));
+    }
+    if candidates.len() > 1 && angles_tied(&candidates) {
+        let branches: Vec<_> = outgoing.iter().map(|j| (*j, &selected[*j].0)).collect();
+        return super::departure_ops::continuation(curve, &branches, order_work)?
+            .ok_or_else(|| refused("Boundary tangent departure ordering is unresolved"));
+    }
+    if candidates.is_empty() {
+        return Err(refused(
+            "Boundary has only zero-angle tangent continuations",
+        ));
+    }
+    candidates.sort_by(|a, b| a.0.total_cmp(&b.0));
+    if candidates.len() > 1 && (candidates[0].0 - candidates[1].0).abs() < ANGLE_TIE {
+        return Err(refused("Boundary tangent ordering is ambiguous"));
+    }
+    Ok(candidates[0].1)
+}
+
+/// A zero turning angle, or two candidates with the same turning angle.
+fn angles_tied(candidates: &[(f64, usize)]) -> bool {
+    candidates.iter().any(|a| a.0 < ANGLE_TIE)
+        || candidates.iter().enumerate().any(|(i, a)| {
+            candidates
+                .iter()
+                .skip(i + 1)
+                .any(|b| (a.0 - b.0).abs() < ANGLE_TIE)
+        })
+}
+
+fn trace_loops(
+    selected: &[(Curve, usize)],
+    next: &[usize],
+    tolerance: f64,
+) -> Result<Vec<Vec<Curve>>> {
     let mut used = vec![false; selected.len()];
     let mut loops = Vec::new();
     let mut emitted = 0;
@@ -575,43 +629,43 @@ pub(super) fn assemble(
             wire.push(selected[current].0.clone());
             current = next[current];
         }
-        // A valid curved lens may have only two boundary carriers. Preserve
-        // both and split one retained curve to satisfy the cap builder's
-        // three-span wire convention; no chord or fitted carrier is introduced.
         if wire.len() == 2 {
-            let index = usize::from(wire[1].degree > wire[0].degree);
-            let original = &wire[index];
-            let [a, b] = original.domain();
-            let mut parts = original.split(a * 0.5 + b * 0.5)?;
-            let endpoints = [
-                original.control_points[0].clone(),
-                original.control_points.last().unwrap().clone(),
-            ];
-            let middle = parts[0].control_points.last().unwrap().clone();
-            let last = parts[1].control_points.len() - 1;
-            for (part, index, p) in [
-                (0, 0, endpoints[0].clone()),
-                (1, 0, middle),
-                (1, last, endpoints[1].clone()),
-            ] {
-                let q = &parts[part].control_points[index];
-                if (q[0] - p[0]).hypot(q[1] - p[1]) > tolerance {
-                    return Err(refused("Lens trim endpoint conformance exceeds tolerance"));
-                }
-                parts[part].control_points[index] = p;
-            }
-            wire.splice(index..index + 1, parts);
+            split_lens(&mut wire, tolerance)?;
         }
         emitted += wire.len();
-        if emitted > 2048 {
+        if emitted > arrangement::FRAGMENT_BUDGET {
             return Err(refused("Bézier output fragment budget exceeded"));
         }
         loops.push(wire);
     }
-    if !loops.is_empty() {
-        super::classify_components(&loops, tolerance)?;
-    }
     Ok(loops)
+}
+
+/// A valid curved lens may have only two boundary carriers. Preserve both and
+/// split one retained curve to satisfy the cap builder's three-span wire
+/// convention; no chord or fitted carrier is introduced.
+fn split_lens(wire: &mut Vec<Curve>, tolerance: f64) -> Result<()> {
+    let index = usize::from(wire[1].degree > wire[0].degree);
+    let original = &wire[index];
+    let [a, b] = original.domain();
+    let mut parts = original.split(a * 0.5 + b * 0.5)?;
+    let (start, end) = arrangement::control_ends(&original.control_points)?;
+    let endpoints = [start.clone(), end.clone()];
+    let middle = arrangement::control_ends(&parts[0].control_points)?.1.clone();
+    let last = parts[1].control_points.len() - 1;
+    for (part, index, p) in [
+        (0, 0, endpoints[0].clone()),
+        (1, 0, middle),
+        (1, last, endpoints[1].clone()),
+    ] {
+        let q = &parts[part].control_points[index];
+        if (q[0] - p[0]).hypot(q[1] - p[1]) > tolerance {
+            return Err(refused("Lens trim endpoint conformance exceeds tolerance"));
+        }
+        parts[part].control_points[index] = p;
+    }
+    wire.splice(index..index + 1, parts);
+    Ok(())
 }
 
 #[cfg(test)]mod algebraic_cuts_tests{
