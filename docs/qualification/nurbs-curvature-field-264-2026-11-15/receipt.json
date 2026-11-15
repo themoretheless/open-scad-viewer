@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0264",
+  "testedBase": "1def828ce8ca4c612f48e1f001a41068ff477acd",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_threshold_contracts",
+    "--test",
+    "principal_curvature_gap_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 9,
+  "scope": [
+    "Bounds the original curvature gap on a complete knot cell by the convex hull of exact coefficient ratios with positive denominator coefficients. Numeric endpoints are checked outward against the exact ratios.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "b4613aad53877a1e28b6a73d112db74e1e58f42703ad8522f8885dd87d23da4f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "9622c119ad1b822859867622b9bc3c6cf3158981a989fd0f23f2565b584a828c",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_range.rs": "37eb8ac124b69c642f00e17019f1e04a7011f281855b0c4d3ec43dcb998a17b3",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_threshold_contracts.rs": "ccfed530b983ff6e8dff2906f95605e338cb599752205e31921535c33b159cd4",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs": "30a2c08f982e18f0947bdd53485095277213ced5aa2e8078af710b52abae943d"
+  }
+}

@@ -10,10 +10,37 @@ use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
 use std::collections::BTreeMap;
 mod content;
+mod curvature;
+mod curvature_gap;
+mod curvature_gap_edge;
+pub use curvature_gap_edge::{
+    CurvatureGapEdge, EdgeThresholdAudit, EdgeThresholdBracket, EdgeThresholdRoots,
+    curvature_gap_edge_roots,
+};
+mod curvature_gap_graph;
+pub use curvature_gap_graph::{
+    CurvatureGapGraph, CurvatureGapGraphAudit, certify_curvature_gap_graph,
+};
+mod curvature_gap_range;
+mod curvature_gap_refinement;
+pub use curvature_gap_refinement::{
+    CurvatureGapRegion, RefinedCurvatureGapAudit, refine_curvature_gap,
+};
+pub use curvature_gap_range::{CurvatureGapRangeCell, CurvatureGapRanges, curvature_gap_ranges};
+mod curvature_gap_threshold;
+pub use curvature_gap_threshold::{
+    CurvatureGapAudit, CurvatureGapCell, CurvatureGapComparison, compare_curvature_gap,
+};
 mod extraction;
+mod gaussian;
+mod mean_curvature;
 mod mixed;
 pub(super) mod polynomial;
 pub(super) mod storage;
+mod umbilic;
+mod umbilic_subdivision;
+pub use umbilic_subdivision::{RefinedUmbilicAudit, UmbilicRegion, refine_umbilics};
+pub use umbilic::{UmbilicAudit, UmbilicCell, UmbilicStatus, audit_umbilics};
 pub(super) type Poly = BTreeMap<(usize, usize), Q>;
 type PResult<T> = std::result::Result<T, Refusal>;
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -71,6 +98,9 @@ pub(super) enum Field {
     AreaNormal,
     Metric,
     Mixed([usize; 2]),
+    GaussianCurvature,
+    SquaredMeanCurvature,
+    SquaredPrincipalCurvatureGap,
 }
 fn area_target(h: &[Poly], widths: &[Q], w: &mut Work) -> PResult<Vec<Poly>> {
     let u = target(h, Axis::U, &widths[0], w)?;
@@ -134,6 +164,9 @@ pub(super) fn original_target(
         Field::AreaNormal => area_target(&h, &widths, w)?,
         Field::Metric => metric_target(&h, &widths, w)?,
         Field::Mixed(orders) => mixed::target(&h, orders, &widths, w)?,
+        Field::GaussianCurvature => gaussian::target(&h, &widths, w)?,
+        Field::SquaredMeanCurvature => mean_curvature::target(&h, &widths, w)?,
+        Field::SquaredPrincipalCurvatureGap => curvature_gap::target(&h, &widths, w)?,
     })
 }
 pub(super) fn reduced_target(target: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
@@ -195,6 +228,32 @@ pub fn mixed_partial(source: &Surface, orders: [usize; 2], max_work: u64) -> Res
     )?;
     apply(source, Field::Mixed(orders), max_work)
 }
+/// Construct the scalar Gaussian curvature carrier `[K, 0, 0]` on every
+/// original UV cell. K has units of inverse length squared. The original
+/// squared area normal must have strictly positive tensor Bernstein
+/// coefficients on each cell before cancellation. Unresolved or singular
+/// cells and nonrepresentable exact outputs refuse the entire result.
+pub fn gaussian_curvature(source: &Surface, max_work: u64) -> Result<Report> {
+    apply(source, Field::GaussianCurvature, max_work)
+}
+
+/// Construct the rational scalar carrier `[H², 0, 0]` on all original UV cells.
+/// H is half the sum of signed principal curvatures. Squaring makes the
+/// value independent of normal orientation. The original normal must be
+/// proved regular on every cell, even when the curvature is zero.
+pub fn squared_mean_curvature(source: &Surface, max_work: u64) -> Result<Report> {
+    apply(source, Field::SquaredMeanCurvature, max_work)
+}
+
+/// Construct `[(k1 - k2)², 0, 0]` over all original UV cells.
+/// The scalar separation is independent of normal orientation and of the
+/// order of the principal curvatures. It stays defined at regular umbilics.
+/// The source regularity proof and exact storage rules match the other
+/// curvature fields. This API does not construct principal directions.
+pub fn squared_principal_curvature_gap(source: &Surface, max_work: u64) -> Result<Report> {
+    apply(source, Field::SquaredPrincipalCurvatureGap, max_work)
+}
+
 fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
     source.validate()?;
     check(
