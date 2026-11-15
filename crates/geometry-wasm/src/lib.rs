@@ -218,6 +218,26 @@ pub extern "C" fn abi_solid_analysis_cancel(job: u32) {
     geometry_bridge::abi::abi_solid_analysis_cancel(job)
 }
 
+/// Unified start/step/cancel protocol for long kernel jobs.
+/// # Safety
+/// The operand id range must be a live caller-owned allocation.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn abi_job_boolean_start(ids_ptr: usize, ids_len: usize, op: u32) -> u64 {
+    unsafe { geometry_bridge::abi::abi_job_boolean_start(ids_ptr, ids_len, op) }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_job_render_start(id: u32, crease_cosine: f64) -> u64 {
+    geometry_bridge::abi::abi_job_render_start(id, crease_cosine)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_job_step(job: u32, budget: u32) -> u64 {
+    geometry_bridge::abi::abi_job_step(job, budget)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn abi_job_cancel(job: u32) {
+    geometry_bridge::abi::abi_job_cancel(job)
+}
+
 /// # Safety
 /// The handle must reference a live result from `abi_bvh_build`,
 /// `abi_semantic_edges`, `abi_render_mesh` or `abi_analyze_solid`.

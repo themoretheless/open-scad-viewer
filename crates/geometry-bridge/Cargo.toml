@@ -43,6 +43,7 @@ planar-geometry = { workspace = true }
 subdivision-core = { workspace = true, features = ["codec"] }
 sdf-core = { workspace = true, features = ["codec"] }
 nurbs-core = { workspace = true, features = ["transport"] }
+nurbs-numerics = { workspace = true }
 polygon-core = { workspace = true, features = ["codec"] }
 base64 = "0.22"
 sha2 = "0.11"

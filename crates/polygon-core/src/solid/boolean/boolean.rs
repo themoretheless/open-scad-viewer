@@ -522,6 +522,14 @@ pub(super) fn connected_groups(boxes: &[Option<(Point, Point)>], pad: f64) -> Ve
     }
     groups
 }
+/// Fold plan of [`union_many_refs`]: bound-connected operand groups, each
+/// folded pairwise in operand order. Exposed so cooperative drivers execute
+/// exactly the same sequence of pairwise operations as the one-shot fold.
+pub fn union_groups(meshes: &[&Mesh]) -> Vec<Vec<usize>> {
+    let boxes: Vec<_> = meshes.iter().map(|m| bounds(m)).collect();
+    let pad = bounds_pad(&boxes);
+    connected_groups(&boxes, pad)
+}
 /// Union of many solids. Operands whose bounds are separated never meet in
 /// CSG: each bound-connected group is folded through `pairwise` in operand
 /// order and the group results are joined, which is exact for disjoint
@@ -538,10 +546,8 @@ pub fn union_many_refs(
     meshes: &[&Mesh],
     pairwise: &mut dyn FnMut(&Mesh, &Mesh) -> Result<Mesh>,
 ) -> Result<Mesh> {
-    let boxes: Vec<_> = meshes.iter().map(|m| bounds(m)).collect();
-    let pad = bounds_pad(&boxes);
     let mut parts = Vec::new();
-    for group in connected_groups(&boxes, pad) {
+    for group in union_groups(meshes) {
         let mut folded: Option<Mesh> = None;
         for i in group {
             folded = Some(match folded {
