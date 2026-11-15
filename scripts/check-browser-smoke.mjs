@@ -214,6 +214,196 @@ try {
     assert.equal(used.historyRestores, 2, 'one restore per undo and per redo')
   })
 
+  async function rectangle(width, height) {
+    await command('Rectangle')
+    await input('Начальная координата X', '0 mm')
+    await input('Начальная координата Y', '0 mm')
+    await input('Размер прямоугольника Ширина', `${width} mm`)
+    await input('Размер прямоугольника Высота', `${height} mm`)
+    await solid.getByRole('button', { name: 'Создать прямоугольник', exact: true }).click()
+    await ready()
+    await page.keyboard.press('Escape')
+  }
+  async function waitBodies(predicate, arg) {
+    await page.waitForFunction(
+      ([source, value]) =>
+        new Function('count', 'value', `return ${source}`)(
+          document.querySelectorAll('[aria-label="Solid — CAD-лепка"] [data-body]').length,
+          value,
+        ),
+      [predicate, arg],
+    )
+  }
+
+  // C4 in the browser: a refused parameter is explained in place, marks its field and
+  // input object `invalid`, blocks Apply and leaves the document unchanged.
+  await step('extrude with zero height is refused in place with a localized reason', async () => {
+    await rectangle(10, 6)
+    const bodiesBefore = await bodies()
+    const before = await operations()
+    await command('Extrude')
+    await solid.getByText('Новое', { exact: true }).click()
+    const heightField = solid.getByLabel('Высота, мм', { exact: true })
+    await heightField.fill('0 mm')
+    await solid.getByText('Высота выдавливания должна быть ненулевой.', { exact: false }).first().waitFor()
+    await page.waitForFunction(() =>
+      document.querySelector('[data-field="height"][aria-invalid="true"], [data-field="height"] [aria-invalid="true"]'),
+    )
+    const overlay = solid.locator('g.invalid-input-geometry')
+    await overlay.waitFor({ state: 'attached' })
+    const invalidIds = (await overlay.getAttribute('data-invalid-ids')).split(' ').filter(Boolean)
+    assert.ok(invalidIds.length >= 1, 'the failed input object is outlined in the 3D view')
+    assert.ok(await overlay.locator('path, polygon').count(), 'the invalid outline has geometry')
+    assert.equal(
+      await solid.getByRole('button', { name: 'Готово · Enter', exact: true }).isDisabled(),
+      true,
+      'Apply is blocked',
+    )
+    assert.equal(await bodies(), bodiesBefore, 'the refused preview adds no body')
+    // Correcting the value clears the mark and Apply commits once.
+    await heightField.fill('3 mm')
+    await overlay.waitFor({ state: 'detached' })
+    assert.equal(await page.locator('[data-field="height"][aria-invalid="true"]').count(), 0)
+    await solid.getByRole('button', { name: 'Готово · Enter', exact: true }).click()
+    await ready()
+    await waitBodies('count > value', bodiesBefore)
+    const used = delta(await operations(), before)
+    budgets.refusedThenCorrected = used
+    assert.equal(
+      used.historyCommits,
+      BUDGET.historyCommitsPerApply,
+      'the refusal commits nothing; the correction commits once',
+    )
+  })
+
+  // C3 in the browser: edits, Undo/Redo of all of them, draft restore after reload,
+  // STEP export with the expected extents and reopening the file through STEP import.
+  await step('edits survive Undo/Redo and a reload, export to STEP and reopen', async () => {
+    const bodiesNow = await bodies()
+    const undo = solid.getByRole('button', { name: '↶', exact: true })
+    const redo = solid.getByRole('button', { name: '↷', exact: true })
+    const edits = 4 // two rectangles and two extrusions in this session
+    for (let i = 0; i < edits; i++) {
+      await undo.click()
+      await ready()
+    }
+    const bodiesUndone = await bodies()
+    assert.ok(bodiesUndone < bodiesNow, 'undo removes the extruded bodies')
+    for (let i = 0; i < edits; i++) {
+      await redo.click()
+      await ready()
+    }
+    await waitBodies('count === value', bodiesNow)
+    await solid.locator('.save-status:not(.error)').waitFor()
+    await page.waitForFunction(
+      () => !document.querySelector('[aria-label="Solid — CAD-лепка"] .save-status')?.textContent?.includes('…'),
+    )
+    await page.waitForTimeout(500)
+    await page.reload()
+    await solid.waitFor({ timeout: 20000 })
+    await ready()
+    await waitBodies('count === value', bodiesNow)
+
+    // Assembly STEP refuses a document with sketches, in the UI language.
+    await solid.locator('details.file-menu > summary').click()
+    await solid.getByRole('button', { name: 'STEP сборки · тела и группы', exact: true }).click()
+    await page.getByText('STEP сборки переносит только тела', { exact: false }).first().waitFor()
+    await solid.locator('details.file-menu > summary').click()
+    await solid.locator('polygon[data-body]').first().click({ force: true })
+    await page.waitForFunction(() => document.body.innerText.includes('Выбрано: 1'))
+    await solid.locator('details.file-menu > summary').click()
+    const downloadPromise = page.waitForEvent('download', { timeout: 30000 })
+    await solid.getByRole('button', { name: 'STEP выбранного тела · текущая геометрия', exact: true }).click()
+    const download = await downloadPromise
+    const stepFile = path.join(directory, 'scenario-assembly.step')
+    await download.saveAs(stepFile)
+    const text = await readFile(stepFile, 'utf8')
+    assert.match(text, /^ISO-10303-21;/, 'a STEP Part 21 file')
+    const points = [...text.matchAll(/CARTESIAN_POINT\('[^']*',\(([^)]*)\)\)/g)]
+      .map(m => m[1].split(',').map(Number))
+      .filter(p => p.length === 3 && p.every(Number.isFinite))
+    const span = axis => Math.max(...points.map(p => p[axis])) - Math.min(...points.map(p => p[axis]))
+    const extents = [span(0), span(1), span(2)]
+    budgets.stepExport = { bytes: text.length, points: points.length, extents }
+    // Both bodies are 10×6 mm rectangles extruded by 7 mm and 3 mm.
+    const near = (value, expected) => Math.abs(value - expected) < 1e-6
+    assert.ok(near(extents[0], 10) && near(extents[1], 6), `STEP footprint ${extents}`)
+    assert.ok(near(extents[2], 7) || near(extents[2], 3), `STEP height ${extents[2]}`)
+
+    await solid.locator('details.file-menu > summary').click()
+    await solid.locator('details.file-menu input[type=file][accept=".step,.stp"]').setInputFiles(stepFile)
+    await ready()
+    await waitBodies('count > value', bodiesNow)
+    await page.keyboard.press('Escape')
+  })
+
+  // C5: the workbench at 1440×900 in both themes: no page overflow, the Solid region
+  // fills the viewport and the selection-state legend uses the `selectionStates` table.
+  await step('workbench layout at 1440×900 in both themes', async () => {
+    const table = await readFile('src/ui/selectionStates.ts', 'utf8')
+    const expected = Object.fromEntries(
+      [...table.matchAll(/(\w+): \{.*?color: \{ light: '(#[0-9a-f]{6})', dark: '(#[0-9a-f]{6})' \}/g)].map(m => [
+        m[1],
+        { light: m[2], dark: m[3] },
+      ]),
+    )
+    assert.equal(Object.keys(expected).length, 6, 'six selection states in the table')
+    const hex = rgb =>
+      '#' +
+      (rgb.match(/\d+/g) ?? [])
+        .slice(0, 3)
+        .map(n => Number(n).toString(16).padStart(2, '0'))
+        .join('')
+    const layout = {}
+    for (const scheme of ['light', 'dark']) {
+      await page.emulateMedia({ colorScheme: scheme })
+      await page.waitForFunction(next => document.documentElement.dataset.theme === next, scheme)
+      await page.evaluate(() => document.fonts.ready)
+      const file = path.join(directory, `workbench-1440x900-${scheme}.png`)
+      await page.screenshot({ path: file, animations: 'disabled', caret: 'hide' })
+      const metrics = await page.evaluate(() => {
+        const region = document.querySelector('[aria-label="Solid — CAD-лепка"]').getBoundingClientRect()
+        const chips = Object.fromEntries(
+          [...document.querySelectorAll('.state-legend [data-sel-state]')].map(chip => [
+            chip.dataset.selState,
+            getComputedStyle(chip.querySelector('.sel-state-mark')).color,
+          ]),
+        )
+        const offscreen = [
+          ...document.querySelectorAll(
+            '[aria-label="Solid — CAD-лепка"] button, [aria-label="Solid — CAD-лепка"] summary',
+          ),
+        ]
+          .filter(el => el.checkVisibility?.() && el.getBoundingClientRect().width > 0)
+          .filter(el => {
+            const r = el.getBoundingClientRect()
+            return r.right > innerWidth + 1 || r.left < -1
+          }).length
+        return {
+          scrollWidth: document.scrollingElement.scrollWidth,
+          scrollHeight: document.scrollingElement.scrollHeight,
+          region: [region.left, region.top, region.width, region.height],
+          chips,
+          offscreen,
+          background: getComputedStyle(document.body).backgroundColor,
+        }
+      })
+      assert.ok(metrics.scrollWidth <= 1440, `no horizontal page overflow (${metrics.scrollWidth})`)
+      assert.ok(metrics.scrollHeight <= 900, `no vertical page overflow (${metrics.scrollHeight})`)
+      assert.equal(metrics.offscreen, 0, 'no visible Solid control is clipped horizontally')
+      assert.ok(
+        metrics.region[2] >= 1000 && metrics.region[3] >= 600,
+        `Solid region fills the viewport: ${metrics.region}`,
+      )
+      for (const [state, colors] of Object.entries(expected))
+        assert.equal(hex(metrics.chips[state] ?? ''), colors[scheme], `${scheme} ${state} legend colour`)
+      layout[scheme] = { ...metrics, screenshot: path.basename(file) }
+    }
+    assert.notEqual(layout.light.background, layout.dark.background, 'the page background follows the theme')
+    await page.emulateMedia({ colorScheme: 'light' })
+    budgets.workbenchLayout = layout
+  })
+
   await step('open the source editor with the recording viewport', async () => {
     await page.getByRole('button', { name: 'Исходный код', exact: true }).click()
     await page.waitForFunction(() => window.__osvTest.viewport()?.status === 'ready')
