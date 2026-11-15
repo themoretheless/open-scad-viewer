@@ -4,6 +4,7 @@ import { z } from 'zod/v4'
 import type { McpGeometryService } from './geometryService'
 import { compileRushGraph, rushGraphSchema } from '../language/rushGraph'
 import { renderRushGraphPreviews } from './rushGraphPreview'
+import { rushReportOutputSchema } from './rushOutputSchemas'
 
 function buildLineStarts(source: string): number[] {
   const starts = [0]
@@ -41,50 +42,112 @@ function findSourceMapEntry<T extends { line: number }>(sourceMap: readonly T[],
 }
 
 export function registerRushGraphReport(server: McpServer, geometry: McpGeometryService) {
-  server.registerTool('rush_report', {
-    description: 'Build actual geometry and return measurements, source-to-node provenance and front/top/isometric PNG images. Preview limits may produce images_status=unavailable while measurements remain available. Does not certify printability.',
-    inputSchema: z.object({ document: rushGraphSchema }), annotations: { readOnlyHint: true, openWorldHint: false },
-  }, async (input, context) => {
-    try {
-      const compiled = compileRushGraph(input.document)
-      const built = await geometry.compile(compiled.source, 'full', context.mcpReq.signal)
-      const checks = await evaluateRushGraphGeometry(compiled.geometry_assertions, built.meshes, async source => (await geometry.compile(source, 'full', context.mcpReq.signal)).meshes)
-      const lineStarts = buildLineStarts(compiled.source)
-      const references: Array<{
-        mesh: number
-        triangle_start: number
-        triangle_end: number
-        node_id: string | null
-        instance_path: string | null
-      }> = []
-      let totalReferences = 0
-      for (let meshIndex = 0; meshIndex < built.meshes.length; meshIndex++) {
-        const mesh = built.meshes[meshIndex]!
-        for (let r = 0; r < mesh.provenance.length; r++) {
-          totalReferences++
-          if (references.length >= 2048) continue
-          const run = mesh.provenance[r]!
-          let line: number | null = null
-          if (run.source) {
-            const end = Math.min(run.source.start, compiled.source.length)
-            line = lineNumberAtOffset(lineStarts, end)
+  server.registerTool(
+    'rush_report',
+    {
+      description:
+        'Build actual geometry and return measurements, source-to-node provenance and front/top/isometric PNG images. Preview limits may produce images_status=unavailable while measurements remain available. Does not certify printability.',
+      inputSchema: z.object({ document: rushGraphSchema }),
+      outputSchema: rushReportOutputSchema,
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async (input, context) => {
+      try {
+        const compiled = compileRushGraph(input.document)
+        const built = await geometry.compile(compiled.source, 'full', context.mcpReq.signal)
+        const checks = await evaluateRushGraphGeometry(
+          compiled.geometry_assertions,
+          built.meshes,
+          async source => (await geometry.compile(source, 'full', context.mcpReq.signal)).meshes,
+        )
+        const lineStarts = buildLineStarts(compiled.source)
+        const references: Array<{
+          mesh: number
+          triangle_start: number
+          triangle_end: number
+          node_id: string | null
+          instance_path: string | null
+        }> = []
+        let totalReferences = 0
+        for (let meshIndex = 0; meshIndex < built.meshes.length; meshIndex++) {
+          const mesh = built.meshes[meshIndex]!
+          for (let r = 0; r < mesh.provenance.length; r++) {
+            totalReferences++
+            if (references.length >= 2048) continue
+            const run = mesh.provenance[r]!
+            let line: number | null = null
+            if (run.source) {
+              const end = Math.min(run.source.start, compiled.source.length)
+              line = lineNumberAtOffset(lineStarts, end)
+            }
+            const match = line !== null ? findSourceMapEntry(compiled.source_map, line) : undefined
+            references.push({
+              mesh: meshIndex,
+              triangle_start: run.triangleStart,
+              triangle_end: run.triangleEnd,
+              node_id: match?.node_id ?? null,
+              instance_path: match?.instance_path ?? null,
+            })
           }
-          const match = line !== null ? findSourceMapEntry(compiled.source_map, line) : undefined
-          references.push({
-            mesh: meshIndex,
-            triangle_start: run.triangleStart,
-            triangle_end: run.triangleEnd,
-            node_id: match?.node_id ?? null,
-            instance_path: match?.instance_path ?? null,
-          })
+        }
+        let previews: ReturnType<typeof renderRushGraphPreviews> = [],
+          imageError: string | null = null
+        try {
+          previews = renderRushGraphPreviews(built.meshes)
+        } catch (error) {
+          imageError = error instanceof Error ? error.message : 'Preview unavailable'
+        }
+        const markdown_summary = formatEngineeringSummaryMarkdown({
+          nodeCount: compiled.document.nodes.length,
+          bodyCount: built.analysis.meshCount,
+          totalVolumeMm3: built.analysis.volume,
+          totalSurfaceAreaMm2: built.analysis.surfaceArea,
+          warnings: built.analysis.warnings,
+        })
+        const report = {
+          checks,
+          document_sha256: compiled.document_sha256,
+          analysis: built.analysis,
+          constraints: compiled.constraint_report,
+          sketch_solutions: compiled.sketch_solutions,
+          assembly_components: compiled.assembly_components,
+          mechanical_reports: compiled.mechanical_reports,
+          mechanical_parts: compiled.mechanical_parts,
+          references,
+          references_truncated: totalReferences > 2048,
+          reference_scope: 'generated-operation provenance; not persistent face identifiers',
+          images_status: imageError ? 'unavailable' : 'rendered',
+          image_error: imageError,
+          views: previews.map(item => item.view),
+          printability: 'unknown',
+          markdown_summary,
+        }
+        return {
+          isError: checks.some(c => c.status !== 'passed'),
+          structuredContent: report,
+          content: [
+            { type: 'text' as const, text: JSON.stringify(report) },
+            ...previews.map(item => ({
+              type: 'image' as const,
+              mimeType: 'image/png',
+              data: item.png.toString('base64'),
+            })),
+          ],
+        }
+      } catch {
+        const error = {
+          error: { code: 'report_failed', message: 'Report failed. Call rush_compile and rush_check for diagnostics.' },
+        }
+        return {
+          isError: true,
+          structuredContent: error,
+          content: [
+            { type: 'text' as const, text: 'Report failed. Call rush_compile and rush_check for diagnostics.' },
+          ],
         }
       }
-      let previews: ReturnType<typeof renderRushGraphPreviews> = [], imageError: string | null = null
-      try { previews = renderRushGraphPreviews(built.meshes) } catch (error) { imageError = error instanceof Error ? error.message : 'Preview unavailable' }
-      const report = { checks, document_sha256: compiled.document_sha256, analysis: built.analysis, constraints: compiled.constraint_report, sketch_solutions: compiled.sketch_solutions, assembly_components: compiled.assembly_components, mechanical_reports: compiled.mechanical_reports, mechanical_parts: compiled.mechanical_parts, references, references_truncated: totalReferences > 2048, reference_scope: 'generated-operation provenance; not persistent face identifiers', images_status: imageError ? 'unavailable' : 'rendered', image_error: imageError, views: previews.map(item => item.view), printability: 'unknown' }
-      return { isError: checks.some(c => c.status !== 'passed'), structuredContent: report, content: [{ type: 'text' as const, text: JSON.stringify(report) }, ...previews.map(item => ({ type: 'image' as const, mimeType: 'image/png', data: item.png.toString('base64') }))] }
-    } catch { return { isError: true, content: [{ type: 'text' as const, text: 'Report failed. Call rush_compile and rush_check for diagnostics.' }] } }
-  })
+    },
+  )
 }
 
 export interface EngineeringSummaryReportInput {

@@ -1,6 +1,6 @@
 import { HeadlessGeometryService } from '../geometryService'
-import { CACHE_FIVE_MINUTES, SERVER_INSTRUCTIONS } from '../createServer'
-import type { CreateOpenScadMcpServerOptions } from '../createServer'
+import { CACHE_FIVE_MINUTES, SERVER_INSTRUCTIONS } from '../server/contracts'
+import type { CreateOpenScadMcpServerOptions } from './schemas/commonSchemas'
 import { IndependentArtifactCache } from '../independentArtifactCache'
 import { McpServer, SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/server'
 import { OfficialArtifactCache } from '../officialArtifactCache'
@@ -12,6 +12,8 @@ import { registerEngineTools } from './register/registerEngineTools'
 import { registerOfficialTools } from './register/registerOfficialTools'
 import { registerIndependentTools } from './register/registerIndependentTools'
 import { registerBuildTools } from './register/registerBuildTools'
+import { registerSweepTools } from './register/registerSweepTools'
+import { registerHandoffTools } from './register/registerHandoffTools'
 import { registerPrompts } from './register/registerPrompts'
 import { registerStaticResources } from './register/registerStaticResources'
 import { registerTemplateResources } from './register/registerTemplateResources'
@@ -48,12 +50,23 @@ export function createOpenScadMcpServer(options: CreateOpenScadMcpServerOptions)
     })
   }
 
-  const ctx: McpServerContext = { options, store, geometry, officialRuntime, officialArtifacts, independentArtifacts, server, notifyResourceListChanged }
+  const ctx: McpServerContext = {
+    options,
+    store,
+    geometry,
+    officialRuntime,
+    officialArtifacts,
+    independentArtifacts,
+    server,
+    notifyResourceListChanged,
+  }
   registerCatalogTools(ctx)
   registerEngineTools(ctx)
   registerOfficialTools(ctx)
   registerIndependentTools(ctx)
   registerBuildTools(ctx)
+  registerSweepTools(ctx)
+  registerHandoffTools(ctx)
   registerPrompts(ctx)
   registerStaticResources(ctx)
   registerTemplateResources(ctx)
