@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 271,
-  "unallocatedCount": 729,
+  "specifiedCount": 272,
+  "unallocatedCount": 728,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7294,6 +7294,30 @@
       ],
       "remainingQualification": [
         "Automatically inserts transverse midpoints where the continuous bound exceeds the absolute root-axis tolerance. Vertex and precision limits return the complete ordered cover with actual bounds, while exact work refusal is atomic.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0272",
+      "name": "Непрерывные границы второй производной порогового контура NURBS в исходном UV",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::curvature_gap_graph_second_derivative",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_second.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "docs/qualification/nurbs-curvature-field-272-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-272-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bounds the signed implicit second derivative on the certified contour. Exact rational coefficient proofs preserve constant derivatives even when unreduced degree exceeds the Bernstein hull limit.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]

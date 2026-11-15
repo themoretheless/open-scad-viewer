@@ -28,6 +28,10 @@ pub use curvature_gap_polyline::{
     CurvaturePolylineStop, adapt_curvature_gap_polyline, certify_curvature_gap_polyline,
 };
 mod curvature_gap_range;
+mod curvature_gap_second;
+pub use curvature_gap_second::{
+    CurvatureGapSecondDerivativeAudit, curvature_gap_graph_second_derivative,
+};
 mod curvature_gap_slope;
 pub use curvature_gap_slope::{CurvatureGapSlopeAudit, curvature_gap_graph_slope};
 mod curvature_gap_refinement;

@@ -239,3 +239,38 @@ fn adjacent_transverse_floats_report_parameter_precision_limit() {
     assert_eq!(result.polyline.samples.unwrap().len(), 2);
     assert!(result.polyline.segment_error_upper.unwrap()[0] > options.max_error);
 }
+
+#[test]
+fn exact_quadratic_contour_has_constant_second_derivative_in_absolute_clocks() {
+    use nurbs_core::editing::exact_surface_derivative::curvature_gap_graph_second_derivative;
+    let mut s = quadratic_transverse_chart();
+    let audit = |surface: &Surface| {
+        curvature_gap_graph_second_derivative(surface, [2, 4], Axis::U, 0.5, WORK).unwrap()
+    };
+    let r = audit(&s);
+    assert_eq!(r.second_derivative, Some([-0.375; 2]), "{r:?}");
+    s.control_points.reverse();
+    assert_eq!(audit(&s).second_derivative, Some([0.375; 2]));
+}
+
+#[test]
+fn affine_contour_has_zero_second_derivative() {
+    use nurbs_core::editing::exact_surface_derivative::curvature_gap_graph_second_derivative;
+    let s = sheared_parabola(0.125, 9.);
+    let r = curvature_gap_graph_second_derivative(&s, [2, 2], Axis::U, 1., WORK).unwrap();
+    assert_eq!(r.second_derivative, Some([0.; 2]));
+    let r = curvature_gap_graph_second_derivative(&s, [2, 2], Axis::V, 1., WORK).unwrap();
+    assert_eq!(r.graph, Some(CurvatureGapGraph::Unresolved));
+    assert!(r.second_derivative.is_none());
+}
+
+#[test]
+fn late_second_derivative_budget_refuses_atomically() {
+    use nurbs_core::editing::exact_surface_derivative::curvature_gap_graph_second_derivative;
+    let s = quadratic_transverse_chart();
+    let r = curvature_gap_graph_second_derivative(&s, [2, 4], Axis::U, 0.5, WORK).unwrap();
+    let short =
+        curvature_gap_graph_second_derivative(&s, [2, 4], Axis::U, 0.5, r.work_used - 1).unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.graph.is_none() && short.second_derivative.is_none());
+}
