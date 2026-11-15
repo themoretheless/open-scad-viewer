@@ -95,8 +95,9 @@ fn gear_bodies_tessellate_closed() {
 
 #[test]
 fn gears_take_part_in_booleans() {
-    // A bore drilled after the fact: the planar/ruled walls meet the
-    // cylinder through the exact and tolerant paths.
+    // A bore drilled after the fact: no exact proof covers the ruled tooth
+    // walls against a cylinder, and the core is fail-closed, so it refuses
+    // instead of returning a numerical result.
     let spur = gear(&GearSpec {
         module: 2.,
         teeth: 20,
@@ -114,14 +115,16 @@ fn gears_take_part_in_booleans() {
         ],
     )
     .unwrap();
-    let bored = operations::boolean(&spur, &drill, "difference")
-        .unwrap_or_else(|e| panic!("bore: {} {}", e.code, e.message));
-    bored.validate().unwrap();
-    let v = closed(&bored, "bored gear");
-    let v_full = closed(&spur, "spur");
-    assert!(v < v_full && v > 0.5 * v_full);
+    let refused = operations::boolean(&spur, &drill, "difference")
+        .err()
+        .expect("bore: unexpectedly certified");
+    assert!(
+        matches!(refused.code, "BREP_NURBS_BOOLEAN_UNPROVED" | "BREP_UNSUPPORTED_OPERATION"),
+        "bore: {refused:?}"
+    );
+    closed(&spur, "spur");
     // Two meshing spur gears with backlash: interleaved teeth, no material
-    // in common, one union of two separated bodies.
+    // in common.
     let mate = transform::affine(
         &gear(&GearSpec {
             module: 2.,
@@ -141,8 +144,13 @@ fn gears_take_part_in_booleans() {
         ],
     )
     .unwrap();
-    let pair = operations::boolean(&spur, &mate, "union")
-        .unwrap_or_else(|e| panic!("pair: {} {}", e.code, e.message));
-    assert_eq!(pair.bodies.len(), 2);
-    closed(&pair, "meshing pair");
+    // The ruled tooth flanks are outside the analytic matrix as well, so the
+    // fail-closed core refuses the union rather than guess the clearance.
+    let refused = operations::boolean(&spur, &mate, "union")
+        .err()
+        .expect("pair: unexpectedly certified");
+    assert!(
+        matches!(refused.code, "BREP_NURBS_BOOLEAN_UNPROVED" | "BREP_UNSUPPORTED_OPERATION"),
+        "pair: {refused:?}"
+    );
 }

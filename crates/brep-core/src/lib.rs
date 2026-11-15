@@ -173,6 +173,7 @@ pub use crate::contact::sweep_smoothness;
 pub use crate::sweep_offset::sweep_station_reconstruction;
 #[cfg(feature = "codec")]
 pub use crate::features::tolerance_unify;
+pub use crate::features::{operation_contracts, tolerance_hierarchy};
 pub use crate::features::transactions;
 pub use crate::model::transform;
 use crate::model::transform_plane_charts;

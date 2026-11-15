@@ -52,16 +52,19 @@ pub fn metrics(positions: &[f64], indices: &[usize]) -> MeshMetrics {
         .collect();
 
     let labels = component_labels(&triangles);
-    // Dense component ids in first-seen order.
-    let mut remap: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
+    // Dense component ids in first-seen order (labels are triangle indices).
+    let mut remap = vec![usize::MAX; labels.len()];
+    let mut component_count = 0;
     let dense: Vec<usize> = labels
         .iter()
         .map(|&root| {
-            let next = remap.len();
-            *remap.entry(root).or_insert(next)
+            if remap[root] == usize::MAX {
+                remap[root] = component_count;
+                component_count += 1;
+            }
+            remap[root]
         })
         .collect();
-    let component_count = remap.len();
 
     let mut comp_triangles: Vec<Vec<usize>> = vec![Vec::new(); component_count];
     for (ti, &c) in dense.iter().enumerate() {
@@ -74,27 +77,43 @@ pub fn metrics(positions: &[f64], indices: &[usize]) -> MeshMetrics {
     let mut total_euler = 0i64;
     let mut watertight = true;
 
-    for tris in &comp_triangles {
-        let mut vertices = std::collections::HashSet::new();
-        let mut edges = std::collections::HashSet::new();
-        let mut boundary: std::collections::HashMap<EdgeKey, usize> =
-            std::collections::HashMap::new();
+    // Per-component distinct edges and once-used (boundary) edges from one
+    // sorted `(component, edge)` list, and distinct vertices via a component
+    // stamp per vertex; hash sets per component dominated on 1M+ meshes.
+    let mut component_edges: Vec<(usize, EdgeKey)> = Vec::with_capacity(triangles.len() * 3);
+    for (ti, t) in triangles.iter().enumerate() {
+        for i in 0..3 {
+            component_edges.push((dense[ti], edge_key(t[i], t[(i + 1) % 3])));
+        }
+    }
+    component_edges.sort_unstable();
+    let mut edge_counts = vec![(0usize, 0usize); component_count];
+    for group in component_edges.chunk_by(|x, y| x == y) {
+        let counts = &mut edge_counts[group[0].0];
+        counts.0 += 1;
+        counts.1 += usize::from(group.len() == 1);
+    }
+    drop(component_edges);
+    let mut stamp = vec![usize::MAX; vertex_count];
+
+    for (component, tris) in comp_triangles.iter().enumerate() {
+        let mut vertex_total = 0usize;
         let mut volume = 0.0;
         let mut area = 0.0;
         for &ti in tris {
             let t = triangles[ti];
-            for i in 0..3 {
-                vertices.insert(t[i]);
-                let key = edge_key(t[i], t[(i + 1) % 3]);
-                edges.insert(key);
-                *boundary.entry(key).or_default() += 1;
+            for &v in &t {
+                if stamp[v] != component {
+                    stamp[v] = component;
+                    vertex_total += 1;
+                }
             }
             let (a, b, c) = triangle_points(positions, &t);
             volume += signed_tetra_volume(a, b, c);
             area += triangle_area(a, b, c);
         }
-        let boundary_edges = boundary.values().filter(|&&uses| uses == 1).count();
-        let euler = vertices.len() as i64 - edges.len() as i64 + tris.len() as i64;
+        let (edge_total, boundary_edges) = edge_counts[component];
+        let euler = vertex_total as i64 - edge_total as i64 + tris.len() as i64;
         let genus = if boundary_edges == 0 {
             let g2 = 2 - euler;
             // A closed orientable surface has even 2 - 2g χ decomposition;
@@ -116,8 +135,8 @@ pub fn metrics(positions: &[f64], indices: &[usize]) -> MeshMetrics {
         total_euler += euler;
         components.push(ComponentMetrics {
             triangle_count: tris.len(),
-            vertex_count: vertices.len(),
-            edge_count: edges.len(),
+            vertex_count: vertex_total,
+            edge_count: edge_total,
             boundary_edges,
             euler_characteristic: euler,
             genus,

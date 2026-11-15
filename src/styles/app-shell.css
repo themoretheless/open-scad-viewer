@@ -170,19 +170,22 @@
 .highlight-content { display: block; width: max-content; min-width: 100%; transform-origin: top left; }
 .code-input { z-index: 2; background: transparent; color: transparent; -webkit-text-fill-color: transparent; }
 .code-input::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
-.code-highlight .syntax-comment { color: color-mix(in srgb, var(--text-dim) 80%, var(--bg)); }
-.code-highlight .syntax-keyword { color: #7ab8f5; }
-.code-highlight .syntax-string { color: #9fd0a8; }
-.code-highlight .syntax-number { color: #9fd0a8; }
-.code-highlight .syntax-function { color: #e6c07b; }
-.code-highlight .syntax-property { color: var(--warning); }
-.code-highlight .syntax-operator { color: var(--text-dim); }
-[data-theme="light"] .code-highlight .syntax-keyword { color: #1f6fc2; }
-[data-theme="light"] .code-highlight .syntax-function { color: #8a5b00; }
-[data-theme="light"] .code-highlight .syntax-string, [data-theme="light"] .code-highlight .syntax-number { color: #2f7d3f; }
+.code-highlight .syntax-comment, .code-editor-cm .syntax-comment { color: color-mix(in srgb, var(--text-dim) 80%, var(--bg)); }
+.code-highlight .syntax-keyword, .code-editor-cm .syntax-keyword { color: #7ab8f5; }
+.code-highlight .syntax-string, .code-editor-cm .syntax-string { color: #9fd0a8; }
+.code-highlight .syntax-number, .code-editor-cm .syntax-number { color: #9fd0a8; }
+.code-highlight .syntax-function, .code-editor-cm .syntax-function { color: #e6c07b; }
+.code-highlight .syntax-property, .code-editor-cm .syntax-property { color: var(--warning); }
+.code-highlight .syntax-operator, .code-editor-cm .syntax-operator { color: var(--text-dim); }
+[data-theme="light"] .code-highlight .syntax-keyword, [data-theme="light"] .code-editor-cm .syntax-keyword { color: #1f6fc2; }
+[data-theme="light"] .code-highlight .syntax-function, [data-theme="light"] .code-editor-cm .syntax-function { color: #8a5b00; }
+[data-theme="light"] .code-highlight .syntax-string, [data-theme="light"] .code-highlight .syntax-number,
+[data-theme="light"] .code-editor-cm .syntax-string, [data-theme="light"] .code-editor-cm .syntax-number { color: #2f7d3f; }
+.code-editor-cm .cm-editor { flex: 1; min-width: 0; height: 100%; }
 @media (forced-colors: active) {
   .code-highlight { display: none; }
   .code-input { color: CanvasText; -webkit-text-fill-color: CanvasText; }
+  .code-editor-cm .cm-editor.cm-focused { outline-color: Highlight; }
 }
 
 /* Messages and stats */

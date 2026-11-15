@@ -7,6 +7,45 @@ import type {NurbsBrep} from '../src/kernel/geometry/brep'
 import type {NurbsCurve} from '../src/kernel/nurbsCurve'
 import {intersectionTraceToNurbsCurveSegments} from '../src/kernel/geometry/intersections'
 
+// Kernel trace tolerance for certified traced loops (brep-intersect TRACE_TOLERANCE).
+const TRACE_TOLERANCE=1e-7
+type SurfaceDistance=(p:[number,number,number])=>number
+const sphereDistance=(c:[number,number,number],r:number):SurfaceDistance=>p=>Math.abs(Math.hypot(p[0]-c[0],p[1]-c[1],p[2]-c[2])-r)
+const cylinderDistance=(x:number,r:number):SurfaceDistance=>p=>Math.abs(Math.hypot(p[0]-x,p[1])-r)
+// Distance to the closed frustum boundary: the side, or a cap plane within its disk
+// (off-axis loops may run across a cap).
+const coneDistance=(x:number,z0:number,rBottom:number,rTop:number,h:number):SurfaceDistance=>p=>{
+ const m=(rTop-rBottom)/h,rho=Math.hypot(p[0]-x,p[1])
+ const side=Math.abs(rho-(rBottom+m*(p[2]-z0)))/Math.hypot(1,m)
+ const bottom=rho<=rBottom+TRACE_TOLERANCE?Math.abs(p[2]-z0):Infinity
+ const top=rho<=rTop+TRACE_TOLERANCE?Math.abs(p[2]-z0-h):Infinity
+ return Math.min(side,bottom,top)
+}
+const torusDistance=(R:number,r:number):SurfaceDistance=>p=>Math.abs(Math.hypot(Math.hypot(p[0],p[1])-R,p[2])-r)
+// A certified traced loop set: resolved, complete, bounded, and every sample of
+// every piece lies on both implicit surfaces within the trace tolerance.
+const expectCertifiedTracedLoops=(report:{coverage:string;unresolved:unknown[];permitsTopologyChange:boolean;components:{kind:string}[]},first:SurfaceDistance,second:SurfaceDistance)=>{
+ expect(report.coverage).toBe('numerically_resolved')
+ expect(report.unresolved).toHaveLength(0)
+ expect(report.permitsTopologyChange).toBe(false)
+ expect(report.components.length).toBeGreaterThan(0)
+ for(const component of report.components){
+  if(component.kind!=='traced')throw Error('Expected a traced loop')
+  const loop=component as unknown as {pieces:NurbsCurve[];distanceBound:number;complete:boolean}
+  expect(loop.complete).toBe(true)
+  expect(loop.distanceBound).toBeLessThanOrEqual(TRACE_TOLERANCE)
+  expect(loop.pieces.length).toBeGreaterThan(0)
+  for(const piece of loop.pieces){
+   const t0=piece.knots[0],t1=piece.knots[piece.knots.length-1]
+   for(let k=0;k<=40;k++){
+    const p=evaluateNurbsCurve(piece,t0+(t1-t0)*k/40).point as [number,number,number]
+    expect(first(p)).toBeLessThanOrEqual(TRACE_TOLERANCE)
+    expect(second(p)).toBeLessThanOrEqual(TRACE_TOLERANCE)
+   }
+  }
+ }
+}
+
 it('admits the entire ruled trace interval before returning native curves',()=>{
  for(const middle of [3,.25,1]){
   const original={degreeU:2,degreeV:1,knotsU:[0,0,0,1,1,1],knotsV:[0,0,1,1],
@@ -150,9 +189,21 @@ it('returns root intervals for rational arcs and explicit unresolved tangent/bud
  expect(hit.curve.planeResidual).toBeLessThan(1e-9)
  expect(hit.curve.parameterInterval[1]-hit.curve.parameterInterval[0]).toBeLessThanOrEqual(1e-10)
  const tangent:NurbsCurve={degree:2,knots:[0,0,0,1,1,1],controlPoints:[[0,0,.25],[.5,0,-.25],[1,0,.25]],weights:[1,1,1]}
+ // z(t)=0.25(1-2t)^2: an exact double root at t=1/2, certified as a tangent
+ // contact of multiplicity 2 instead of a tangency refusal.
  const report=intersectNurbsCurvePlane(tangent,{normal:[0,0,1],offset:0})
- expect(report.coverage).toBe('incomplete')
- expect(report.unresolved.some(u=>u.reason==='tangency_or_multiple_root')).toBe(true)
+ expect(report.coverage).toBe('numerically_resolved')
+ expect(report.unresolved).toHaveLength(0)
+ expect(report.components).toHaveLength(1)
+ const touch=report.components[0]
+ if(touch.kind!=='point')throw Error('Expected tangent point')
+ expect(touch.curve.contact).toBe('tangent')
+ expect(touch.curve.multiplicity).toBe(2)
+ expect(touch.curve.parameterInterval[0]).toBeLessThanOrEqual(.5)
+ expect(touch.curve.parameterInterval[1]).toBeGreaterThanOrEqual(.5)
+ expect(Math.abs(touch.curve.parameter-.5)).toBeLessThan(1e-9)
+ expect(Math.hypot(touch.curve.point[0]-.5,touch.curve.point[1],touch.curve.point[2])).toBeLessThan(1e-9)
+ expect(touch.curve.planeResidual).toBeLessThan(1e-12)
  const limited=intersectNurbsCurvePlane(arc,{normal:[1,0,0],offset:1},{maxBoxes:1})
  expect(limited.coverage).toBe('incomplete')
  expect(limited.boxesVisited).toBe(1)
@@ -1183,9 +1234,8 @@ it('keeps sphere/cylinder bands, tangencies and refusals explicit through WASM',
  // Near-axial within the recognition band: near_coincidence, not forced axial.
  const near=intersectSphereCylinder(place(3,1e-10,4),cylinder)
  expect(near.unresolved.map(u=>u.reason)).toEqual(['near_coincidence'])
- // Clearly off-axis: unsupported_surface, the general quartic is out of scope.
- const off=intersectSphereCylinder(place(3,.5,4),cylinder)
- expect(off.unresolved.map(u=>u.reason)).toEqual(['unsupported_surface'])
+ // Clearly off-axis between the caps: certified, complete traced loops on both surfaces.
+ expectCertifiedTracedLoops(intersectSphereCylinder(place(3,.5,4),cylinder),sphereDistance([.5,0,4],3),cylinderDistance(0,2))
  // Empty resolved: small sphere inside, sphere beyond the caps, big swallow.
  for(const sphere of [place(1,0,4),place(1.5,0,11),place(20,0,4)]){
   const report=intersectSphereCylinder(sphere,cylinder)
@@ -1748,9 +1798,8 @@ it('keeps sphere/cone bands, tangencies and refusals explicit through WASM',()=>
  // Near-axial within the recognition band: near_coincidence, not forced axial.
  const near=intersectSphereCone(place(2.5,1e-10,.5),frustum)
  expect(near.unresolved.map(u=>u.reason)).toEqual(['near_coincidence'])
- // Clearly off-axis: unsupported_surface, the general quartic is out of scope.
- const off=intersectSphereCone(place(2.5,.5,.5),frustum)
- expect(off.unresolved.map(u=>u.reason)).toEqual(['unsupported_surface'])
+ // Clearly off-axis: a certified, complete traced loop on both surfaces.
+ expectCertifiedTracedLoops(intersectSphereCone(place(2.5,.5,.5),frustum),sphereDistance([.5,0,.5],2.5),coneDistance(0,0,2,4,6))
  // Empty resolved: small sphere inside, sphere beyond the top, big swallow.
  for(const sphere of [place(.5,0,3),place(1,0,8),place(20,0,3)]){
   const report=intersectSphereCone(sphere,frustum)
@@ -2119,9 +2168,9 @@ it('keeps sphere/torus tangencies and refusals explicit through WASM',()=>{
  // Near-axial offset within the recognition band: near_coincidence, never snapped.
  const near=intersectSphereTorus(transformNurbsBrep(createBrepSphere(Math.sqrt(5.2)),[[1,0,0,1e-10],[0,1,0,0],[0,0,1,0],[0,0,0,1]]),torus)
  expect(near.unresolved.map(u=>u.reason)).toEqual(['near_coincidence'])
- // Clearly off-axis: the general quartic is unsupported, no fallback.
+ // Clearly off-axis: certified, complete traced loops on both surfaces.
  const off=intersectSphereTorus(transformNurbsBrep(createBrepSphere(Math.sqrt(5.2)),[[1,0,0,.5],[0,1,0,0],[0,0,1,0],[0,0,0,1]]),torus)
- expect(off.unresolved.map(u=>u.reason)).toEqual(['unsupported_surface'])
+ expectCertifiedTracedLoops(off,sphereDistance([.5,0,0],Math.sqrt(5.2)),torusDistance(3,1))
  // Non-canonical operands and swapped order: explicit unsupported_surface.
  for(const [a,b] of [[createBrepSphere(2),createBrepCylinder(1,3)],[torus,createBrepSphere(2)],[createBrepSphere(2),createBrepSphere(2)]] as const){
   const refused=intersectSphereTorus(a,b)
@@ -2129,9 +2178,9 @@ it('keeps sphere/torus tangencies and refusals explicit through WASM',()=>{
   expect(refused.components).toHaveLength(0)
   expect(refused.unresolved.map(u=>u.reason)).toEqual(['unsupported_surface'])
  }
- // JSON roundtrip preserves the regions.
+ // JSON roundtrip preserves the traced loops.
  const round=JSON.parse(JSON.stringify(off)) as typeof off
- expect(round.unresolved.map(u=>u.reason)).toEqual(['unsupported_surface'])
+ expect(round).toEqual(off)
 })
 
 
@@ -2243,9 +2292,9 @@ it('keeps cylinder/torus tangencies and refusals explicit through WASM',()=>{
  // snapped.
  const near=intersectCylinderTorus(at(2.2,1e-10),torus)
  expect(near.unresolved.map(u=>u.reason)).toEqual(['near_coincidence'])
- // Clearly off-axis: the general quartic is unsupported, no fallback.
+ // Clearly off-axis: certified, complete traced loops on both surfaces.
  const off=intersectCylinderTorus(at(2.2,.5),torus)
- expect(off.unresolved.map(u=>u.reason)).toEqual(['unsupported_surface'])
+ expectCertifiedTracedLoops(off,cylinderDistance(.5,2.2),torusDistance(3,1))
  // Non-canonical operands and swapped order: explicit unsupported_surface.
  for(const [a,b] of [[createBrepSphere(2),torus],[torus,createBrepCylinder(2.2,8)],[createBrepCylinder(2.2,8),createBrepSphere(2)]] as const){
   const refused=intersectCylinderTorus(a,b)
@@ -2253,9 +2302,9 @@ it('keeps cylinder/torus tangencies and refusals explicit through WASM',()=>{
   expect(refused.components).toHaveLength(0)
   expect(refused.unresolved.map(u=>u.reason)).toEqual(['unsupported_surface'])
  }
- // JSON roundtrip preserves the regions.
+ // JSON roundtrip preserves the traced loops.
  const round=JSON.parse(JSON.stringify(off)) as typeof off
- expect(round.unresolved.map(u=>u.reason)).toEqual(['unsupported_surface'])
+ expect(round).toEqual(off)
 })
 
 
@@ -2394,9 +2443,9 @@ it('keeps cone/torus tangencies and refusals explicit through WASM',()=>{
  // snapped.
  const near=intersectConeTorus(transformNurbsBrep(cone,[[1,0,0,1e-10],[0,1,0,0],[0,0,1,0],[0,0,0,1]]),torus)
  expect(near.unresolved.map(u=>u.reason)).toEqual(['near_coincidence'])
- // Clearly off-axis: the general quartic is unsupported, no fallback.
+ // Clearly off-axis: certified, complete traced loops on both surfaces.
  const off=intersectConeTorus(transformNurbsBrep(cone,[[1,0,0,.5],[0,1,0,0],[0,0,1,0],[0,0,0,1]]),torus)
- expect(off.unresolved.map(u=>u.reason)).toEqual(['unsupported_surface'])
+ expectCertifiedTracedLoops(off,coneDistance(.5,-3,1,3,6),torusDistance(3,1))
  // Non-canonical operands and swapped order: explicit unsupported_surface.
  for(const [a,b] of [[createBrepSphere(2),torus],[createBrepCylinder(2.2,8),torus],[torus,createBrepFrustum(1,3,6)],[createBrepFrustum(1,3,6),createBrepSphere(2)]] as const){
   const refused=intersectConeTorus(a,b)
@@ -2404,9 +2453,9 @@ it('keeps cone/torus tangencies and refusals explicit through WASM',()=>{
   expect(refused.components).toHaveLength(0)
   expect(refused.unresolved.map(u=>u.reason)).toEqual(['unsupported_surface'])
  }
- // JSON roundtrip preserves the regions.
+ // JSON roundtrip preserves the traced loops.
  const round=JSON.parse(JSON.stringify(off)) as typeof off
- expect(round.unresolved.map(u=>u.reason)).toEqual(['unsupported_surface'])
+ expect(round).toEqual(off)
 })
 
 it('resolves torus/torus coaxial circle pairs analytically through packed WASM',()=>{

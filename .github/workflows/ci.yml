@@ -104,16 +104,19 @@ jobs:
         working-directory: tools/manifold-bench
         run: npm run test:rbench
       # Both revisions run on this same machine; never compare absolute times
-      # from a developer workstation with a hosted runner.
-      # quick is a smoke profile (8 x 1 ms). Use 100 x 10 ms observations
-      # for the blocking comparison; the regression threshold stays at 25%.
+      # from a developer workstation with a hosted runner. `measure` runs every
+      # kernel suite present in a checkout (manifold-core and manifold-ops);
+      # suites the base lacks are reported as new and not gated.
+      # thorough is 100 x 10 ms observations; the regression budget is 15%.
       - name: Measure base manifold kernels
-        run: cargo run --quiet --locked --release --manifest-path baseline/crates/Cargo.toml -p manifold-core --example bench_manifold -- --profile thorough --json --output "$RUNNER_TEMP/manifold-rbench-base"
-      - name: Measure current manifold kernels
-        run: cargo run --quiet --locked --release --manifest-path crates/Cargo.toml -p manifold-core --example bench_manifold -- --profile thorough --json --output "$RUNNER_TEMP/manifold-rbench-current"
-      - name: Block manifold performance regressions over 25 percent
         working-directory: tools/manifold-bench
-        run: node rbench-regression.mjs compare --baseline "$RUNNER_TEMP/manifold-rbench-base/run.json" --current "$RUNNER_TEMP/manifold-rbench-current/run.json" --max-regression 0.25 --report "$RUNNER_TEMP/manifold-rbench-comparison.json"
+        run: node rbench-regression.mjs measure --root "$GITHUB_WORKSPACE/baseline" --out "$RUNNER_TEMP/manifold-rbench-base.json" --profile thorough
+      - name: Measure current manifold kernels
+        working-directory: tools/manifold-bench
+        run: node rbench-regression.mjs measure --out "$RUNNER_TEMP/manifold-rbench-current.json" --profile thorough
+      - name: Block manifold performance regressions over 15 percent
+        working-directory: tools/manifold-bench
+        run: node rbench-regression.mjs compare --baseline "$RUNNER_TEMP/manifold-rbench-base.json" --current "$RUNNER_TEMP/manifold-rbench-current.json" --max-regression 0.15 --report "$RUNNER_TEMP/manifold-rbench-comparison.json"
       - name: Upload the manifold performance comparison
         if: always()
         uses: actions/upload-artifact@v4
@@ -121,8 +124,35 @@ jobs:
           name: manifold-rbench-comparison
           path: |
             ${{ runner.temp }}/manifold-rbench-comparison.json
-            ${{ runner.temp }}/manifold-rbench-base/run.json
-            ${{ runner.temp }}/manifold-rbench-current/run.json
+            ${{ runner.temp }}/manifold-rbench-base.json
+            ${{ runner.temp }}/manifold-rbench-current.json
+          if-no-files-found: warn
+
+  manifold-performance-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+      - name: Test the rbench regression comparator
+        working-directory: tools/manifold-bench
+        run: npm run test:rbench
+      # Compares against the committed rbench-baseline.linux-x86_64.json when
+      # it exists (failing over 15%). Until then it only records a baseline
+      # and uploads it, so a reviewed run can be committed as that file.
+      - name: Compare manifold kernels with the committed Linux baseline
+        working-directory: tools/manifold-bench
+        run: node rbench-regression.mjs check --profile thorough --max-regression 0.15 --record-missing "$RUNNER_TEMP/rbench-baseline.linux-x86_64.json" --report "$RUNNER_TEMP/manifold-rbench-linux-comparison.json"
+      - name: Upload the Linux manifold baseline or comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifold-rbench-linux
+          path: |
+            ${{ runner.temp }}/rbench-baseline.linux-x86_64.json
+            ${{ runner.temp }}/manifold-rbench-linux-comparison.json
           if-no-files-found: warn
 
   check:

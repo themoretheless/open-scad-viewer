@@ -1,4 +1,5 @@
-//! Every tolerant (numerical SSI) Boolean result across a sweep of sphere
+//! Every certified Boolean result (the core, then the curved families of
+//! brep-intersect on a proof refusal) across a sweep of sphere
 //! placements through a cylinder's wall, cap and rim zones must tessellate
 //! as a closed manifold shell at the app's LOD, and its mesh must respect
 //! the B-rep's control hull and vertices. Refusals are allowed; invalid or
@@ -26,13 +27,22 @@ fn tolerant_results_across_a_placement_sweep_tessellate_closed() {
             )
             .unwrap();
             for operation in ["union", "difference", "intersection"] {
-                let model = match operations::boolean(&c, &s, operation) {
+                let core = operations::boolean(&c, &s, operation);
+                let certified = match core {
+                    Err(e) if matches!(e.code, "BREP_UNSUPPORTED_OPERATION" | "BREP_NURBS_BOOLEAN_UNPROVED") => {
+                        brep_intersect::sphere_cylinder_boolean(&c, &s, operation).map_err(|_| e)
+                    }
+                    other => other,
+                };
+                let model = match certified {
                     Ok(model) => model,
                     Err(e) => {
                         assert!(
                             matches!(
                                 e.code,
-                                "BREP_UNSUPPORTED_OPERATION" | "BREP_ANALYTIC_BOOLEAN_REFUSED"
+                                "BREP_UNSUPPORTED_OPERATION"
+                                    | "BREP_ANALYTIC_BOOLEAN_REFUSED"
+                                    | "BREP_NURBS_BOOLEAN_UNPROVED"
                             ),
                             "{operation} at ({x}, {z}): {} {}",
                             e.code,

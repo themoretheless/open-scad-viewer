@@ -350,9 +350,12 @@ pub fn check_with_options(
         .collect();
 
     // Connected components via face adjacency over shared edges.
-    let component_count = count_components(&triangles);
+    // One sorted edge-use list serves both passes (it replaced two hash maps
+    // that dominated `check` on 1M+ triangle meshes).
+    let uses = sorted_edge_uses(&triangles);
+    let component_count = count_roots(&labels_from_uses(triangles.len(), &uses));
     let (manifold_component_count, non_orientable_components) =
-        manifold_components(&triangles);
+        manifold_components(&triangles, &uses);
 
     ManifoldReport {
         vertex_count,
@@ -387,31 +390,22 @@ fn triangle_area(positions: &[f64], t: &[usize; 3]) -> f64 {
 /// `(components joined across manifold edges, how many of them are
 /// non-orientable)`. Uses a parity union-find: the parity of a triangle is
 /// whether it must be flipped relative to its root to agree in orientation.
-fn manifold_components(triangles: &[[usize; 3]]) -> (usize, usize) {
-    // edge -> (use count, first triangle, first traversal is a->b with a<b)
-    let mut edges: std::collections::HashMap<EdgeKey, (usize, usize, bool, usize, bool)> =
-        std::collections::HashMap::new();
-    let mut live = vec![false; triangles.len()];
-    for (ti, t) in triangles.iter().enumerate() {
-        if t[0] == t[1] || t[1] == t[2] || t[0] == t[2] {
-            continue;
-        }
-        live[ti] = true;
-        for i in 0..3 {
-            let (a, b) = (t[i], t[(i + 1) % 3]);
-            let entry = edges.entry(edge_key(a, b)).or_insert((0, ti, a < b, 0, false));
-            if entry.0 == 1 {
-                entry.3 = ti;
-                entry.4 = a < b;
-            }
-            entry.0 += 1;
-        }
-    }
+fn manifold_components(triangles: &[[usize; 3]], uses: &[EdgeUse]) -> (usize, usize) {
+    let live: Vec<bool> = triangles
+        .iter()
+        .map(|t| !(t[0] == t[1] || t[1] == t[2] || t[0] == t[2]))
+        .collect();
     let mut parent: Vec<usize> = (0..triangles.len()).collect();
     let mut parity = vec![false; triangles.len()];
     let mut conflict = vec![false; triangles.len()];
-    fn find(parent: &mut [usize], parity: &mut [bool], x: usize) -> (usize, bool) {
-        let mut path = Vec::new();
+    let mut path = Vec::new();
+    fn find(
+        parent: &mut [usize],
+        parity: &mut [bool],
+        path: &mut Vec<usize>,
+        x: usize,
+    ) -> (usize, bool) {
+        path.clear();
         let mut r = x;
         while parent[r] != r {
             path.push(r);
@@ -427,16 +421,25 @@ fn manifold_components(triangles: &[[usize; 3]]) -> (usize, usize) {
         }
         (r, if x == r { false } else { parity[x] })
     }
-    let mut keys: Vec<_> = edges.into_iter().filter(|(_, e)| e.0 == 2).collect();
-    keys.sort_unstable_by_key(|(k, _)| *k);
-    for (_, (_, t1, d1, t2, d2)) in keys {
+    // Edges used exactly twice, in ascending key order; within a group the
+    // uses are sorted by triangle, so `t1 < t2` is first-seen order.
+    for group in uses.chunk_by(|x, y| x.key == y.key) {
+        let [first, second] = group else {
+            continue;
+        };
+        let (t1, d1, t2, d2) = (
+            first.triangle(),
+            first.forward(),
+            second.triangle(),
+            second.forward(),
+        );
         if t1 == t2 {
             continue;
         }
         // Same traversal direction means one of the two must be flipped.
         let need = d1 == d2;
-        let (r1, p1) = find(&mut parent, &mut parity, t1);
-        let (r2, p2) = find(&mut parent, &mut parity, t2);
+        let (r1, p1) = find(&mut parent, &mut parity, &mut path, t1);
+        let (r2, p2) = find(&mut parent, &mut parity, &mut path, t2);
         if r1 == r2 {
             if (p1 ^ p2) != need {
                 conflict[r1] = true;
@@ -463,8 +466,12 @@ pub fn is_manifold(positions: &[f64], indices: &[usize]) -> bool {
     check(positions, indices).is_manifold()
 }
 
+#[cfg(test)]
 fn count_components(triangles: &[[usize; 3]]) -> usize {
-    let labels = component_labels(triangles);
+    count_roots(&component_labels(triangles))
+}
+
+fn count_roots(labels: &[usize]) -> usize {
     // Each union-find component has exactly one representative, and that
     // triangle labels itself. Count those fixed points without another hash
     // table or an allocation proportional to the number of components.
@@ -475,13 +482,53 @@ fn count_components(triangles: &[[usize; 3]]) -> usize {
         .count()
 }
 
+/// One directed use of an undirected edge by a non-degenerate triangle.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct EdgeUse {
+    /// Canonical `(min, max)` endpoints.
+    key: EdgeKey,
+    /// `triangle << 1 | (traversed min -> max)`.
+    tagged: usize,
+}
+
+impl EdgeUse {
+    fn triangle(self) -> usize {
+        self.tagged >> 1
+    }
+    fn forward(self) -> bool {
+        self.tagged & 1 == 1
+    }
+}
+
+/// All edge uses of the non-degenerate triangles, sorted by edge key and
+/// then by triangle index. A flat sort is several times faster and smaller
+/// than a hash map keyed by edge on million-triangle meshes.
+pub(crate) fn sorted_edge_uses(triangles: &[[usize; 3]]) -> Vec<EdgeUse> {
+    let mut uses = Vec::with_capacity(triangles.len() * 3);
+    for (ti, t) in triangles.iter().enumerate() {
+        if t[0] == t[1] || t[1] == t[2] || t[0] == t[2] {
+            continue;
+        }
+        for i in 0..3 {
+            let (a, b) = (t[i], t[(i + 1) % 3]);
+            uses.push(EdgeUse {
+                key: edge_key(a, b),
+                tagged: (ti << 1) | usize::from(a < b),
+            });
+        }
+    }
+    uses.sort_unstable();
+    uses
+}
+
 /// Union-find label (component root) per triangle; empty mesh yields an
 /// empty vector. Labels are not dense — compare, don't index by them.
 pub(crate) fn component_labels(triangles: &[[usize; 3]]) -> Vec<usize> {
-    if triangles.is_empty() {
-        return Vec::new();
-    }
-    let mut parent: Vec<usize> = (0..triangles.len()).collect();
+    labels_from_uses(triangles.len(), &sorted_edge_uses(triangles))
+}
+
+fn labels_from_uses(triangle_count: usize, uses: &[EdgeUse]) -> Vec<usize> {
+    let mut parent: Vec<usize> = (0..triangle_count).collect();
     fn find(parent: &mut [usize], x: usize) -> usize {
         let mut r = x;
         while parent[r] != r {
@@ -495,24 +542,20 @@ pub(crate) fn component_labels(triangles: &[[usize; 3]]) -> Vec<usize> {
         }
         r
     }
-    // An edge seen for the second time joins its two incident triangles
-    // (boundary edges never repeat and therefore never join anything).
-    let mut owner: std::collections::HashMap<EdgeKey, usize> = std::collections::HashMap::new();
-    for (ti, t) in triangles.iter().enumerate() {
-        if t[0] == t[1] || t[1] == t[2] || t[0] == t[2] {
-            continue;
-        }
-        for i in 0..3 {
-            let key = edge_key(t[i], t[(i + 1) % 3]);
-            if let Some(other) = owner.insert(key, ti) {
-                let (ra, rb) = (find(&mut parent, other), find(&mut parent, ti));
-                if ra != rb {
-                    parent[ra] = rb;
-                }
+    // Every further use of an edge joins its triangle to the previous user
+    // (boundary edges have one use and therefore never join anything).
+    for pair in uses.windows(2) {
+        if pair[0].key == pair[1].key {
+            let (ra, rb) = (
+                find(&mut parent, pair[0].triangle()),
+                find(&mut parent, pair[1].triangle()),
+            );
+            if ra != rb {
+                parent[ra] = rb;
             }
         }
     }
-    (0..triangles.len()).map(|i| find(&mut parent, i)).collect()
+    (0..triangle_count).map(|i| find(&mut parent, i)).collect()
 }
 
 #[cfg(test)]
