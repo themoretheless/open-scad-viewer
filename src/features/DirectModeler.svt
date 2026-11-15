@@ -2197,6 +2197,12 @@ watch(()=>[props.open,kernelReady.value,selectedBody.value,document.value],()=>{
  cancelTopology(true)
  if(props.open&&kernelReady.value&&selectedBody.value)void prepareTopology(selectedBody.value)
 },{immediate:true,flush:'sync'})
+// Escape cancels topology preparation along with the command; choosing face picking for the
+// same, still selected body must prepare it again or the face list stays empty.
+watch(pickMode,mode=>{
+ const body=selectedBody.value
+ if(mode==='face'&&props.open&&kernelReady.value&&body&&!topologyPending.value&&!isTopologyReadyFor(body))void prepareTopology(body)
+})
 
 watch(()=>[props.open,kernelReady.value,selectedBody.value,document.value,pickMode.value],()=>void refreshBodyEdges(),{immediate:true,flush:'post'})
 
