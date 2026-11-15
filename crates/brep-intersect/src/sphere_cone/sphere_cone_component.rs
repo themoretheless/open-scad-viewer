@@ -406,11 +406,13 @@ fn off_axis(
             (rho - cone.r_bottom - cone.slope * z).abs() / cone.slope.hypot(1.)
         };
         let Some(cycles) = crate::sphere_cylinder::capped::certified_cycles(
-            sphere,
-            crate::sphere_torus::traced_lift::Other::Cone(cone),
+            crate::sphere_torus::traced_lift::SphereSides {
+                sphere,
+                other: crate::sphere_torus::traced_lift::Other::Cone(cone),
+                sphere_model,
+                other_model: cone_model,
+            },
             &slab,
-            sphere_model,
-            cone_model,
             &s_implicit,
             &c_implicit,
             &wall_distance,

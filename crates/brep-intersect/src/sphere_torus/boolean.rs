@@ -15,7 +15,7 @@
 //! Refused: axial pairs (exact circles, handled by `brep_core::boolean`),
 //! tangencies, an uncertified component set, a network vertex at an
 //! original vertex, and any piece whose fits miss the tolerance.
-use super::traced_lift::{Context, Patch, point, seam_breaks};
+use super::traced_lift::{Context, Patch, SphereSides, point, seam_breaks};
 use super::*;
 use brep_core::network_boolean::{NetworkEnd, NetworkPiece, network_boolean};
 use nurbs_core::foundation::interpolation::{Parameterization, interpolate_curve};
@@ -189,15 +189,6 @@ pub fn sphere_torus_boolean(a: &Model, b: &Model, operation: &str) -> Result<Mod
             inside: &inside,
         },
     )
-}
-
-/// The sphere operand and the other canonical solid of a traced Boolean,
-/// with the models they were recognized from.
-pub(crate) struct SphereSides<'a> {
-    pub(crate) sphere: &'a CanonicalSphere,
-    pub(crate) other: super::traced_lift::Other<'a>,
-    pub(crate) sphere_model: &'a Model,
-    pub(crate) other_model: &'a Model,
 }
 
 /// Certified, complete traced loops of a pair, the tolerance they need and

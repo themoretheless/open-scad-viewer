@@ -27,6 +27,15 @@ pub(crate) enum Patch {
     Torus(usize),
 }
 
+/// The sphere operand and the other canonical solid of a traced Boolean,
+/// with the models they were recognized from.
+pub(crate) struct SphereSides<'a> {
+    pub(crate) sphere: &'a CanonicalSphere,
+    pub(crate) other: Other<'a>,
+    pub(crate) sphere_model: &'a Model,
+    pub(crate) other_model: &'a Model,
+}
+
 /// The non-sphere operand of a traced pair.
 #[derive(Clone, Copy)]
 pub(crate) enum Other<'a> {

@@ -471,11 +471,13 @@ fn capped(
         (dot(d, frame[0]).hypot(dot(d, frame[1])) - cylinder.radius).abs()
     };
     let Some(cycles) = capped::certified_cycles(
-        sphere,
-        crate::sphere_torus::traced_lift::Other::Cylinder(cylinder),
+        crate::sphere_torus::traced_lift::SphereSides {
+            sphere,
+            other: crate::sphere_torus::traced_lift::Other::Cylinder(cylinder),
+            sphere_model,
+            other_model: cylinder_model,
+        },
         &slab,
-        sphere_model,
-        cylinder_model,
         s_implicit,
         c_implicit,
         &wall_distance,
