@@ -325,7 +325,8 @@ const solidPreviewResult=shallowRef<DirectDocument|null>(null), previewPending=r
 const errorField=ref(''), invalidSceneIds=shallowRef<readonly string[]>([])
 function markError(error:unknown){
  const presented=presentKernelError(error,props.locale==='ru'?'ru':'en')
- const fallback=presented.input==='sketch'?selectedSketch.value?.id:['body','face','edge'].includes(presented.input)?(selectedBody.value?.id??targetBody.value):undefined
+ // A parameter refusal also marks the object the command reads (the profile sketch or the body).
+ const fallback=presented.input==='sketch'?selectedSketch.value?.id:['body','face','edge'].includes(presented.input)?(selectedBody.value?.id??targetBody.value):presented.input==='field'?(selectedSketch.value?.id??selectedBody.value?.id):undefined
  errorField.value=presented.field??''
  invalidSceneIds.value=presented.targetIds.length?presented.targetIds:fallback?[fallback]:[]
 }
@@ -1601,6 +1602,12 @@ function splitKey(e: KeyboardEvent) {
 // tessellation waits for the kernel's asynchronous warm-up and shows the working mesh until then.
 if (!kernelReady.value || restoringDraft.value) void restoreInitialDraft()
 const commandFailure = computed(() => Object.keys(invalidQuantities.value).length ? label('Исправьте числовой ввод', 'Correct the numeric input') : advancedOp.value ? advancedPreview.value.error : cornerActive.value ? cornerPreview.value.error : solidActive.value ? previewError.value : operation.value==='array'?sketchEditFailure.value:'')
+// C4: the `invalid` outline is an SVG layer above both the GPU canvas and the CPU polygons, so it shows on either backend.
+const invalidOverlayIds = computed<readonly string[]>(() => {
+  const ids = new Set(invalidSceneIds.value)
+  if (commandFailure.value && selectedBody.value && !(edgeIndexes.value.length && ['edge-fillet','chamfer'].includes(advancedOp.value ?? ''))) ids.add(selectedBody.value.id)
+  return [...ids]
+})
 const commandActive = computed(() => !!(advancedOp.value || operation.value || subtract.value || booleanPending.value || directTransformPending.value || gizmoPending.value || nativeNurbsPending.value))
 const commandHint = computed(() => {
   if(nativeNurbsPending.value&&nativeBrepMode.value)return label('Вычисляется B-rep. Esc — отменить.', 'Computing B-rep. Esc cancels.')
@@ -2619,8 +2626,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <text :x="extrusionHandle.top[0]+views['3d']/35" :y="extrusionHandle.top[1]" :font-size="views['3d']/45" fill="#77eac5" pointer-events="none" style="user-select:none">{{ height.toFixed(2) }} mm</text>
               </g>
 
-              <g v-if="pane==='3d' && commandFailure && selectedBody && !(edgeIndexes.length && ['edge-fillet','chamfer'].includes(advancedOp??''))" class="invalid-input-geometry" pointer-events="none" aria-label="Operation input with an error">
-                <polygon v-for="p in polygons.filter(p=>p.id===selectedBody?.id)" :key="'invalid-'+p.key" :points="p.points" fill="none" stroke="var(--danger, #ff6978)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" />
+              <g v-if="pane==='3d' && invalidOverlayIds.length" class="invalid-input-geometry" :data-invalid-ids="invalidOverlayIds.join(' ')" pointer-events="none" aria-label="Operation input with an error">
+                <polygon v-for="p in polygons.filter(p=>invalidOverlayIds.includes(p.id))" :key="'invalid-'+p.key" :points="p.points" fill="none" stroke="var(--danger, #ff6978)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" />
+                <path v-for="s in document.sketches.filter(s=>invalidOverlayIds.includes(s.id)&&objectInView(s.id))" :key="'invalid-sketch-'+s.id" :d="sketchPath(s,'3d')" fill="none" stroke="var(--danger, #ff6978)" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" />
               </g>
               <g v-if="pane==='3d'" pointer-events="none">
                 <path v-for="s in document.sketches.filter(s=>objectInView(s.id))" :key="'plane-'+s.id" :d="sketchPath(s,'3d')" fill="none" stroke="#77eac5" stroke-opacity=".6" vector-effect="non-scaling-stroke" />

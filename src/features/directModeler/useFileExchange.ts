@@ -354,7 +354,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
       setNotice(
         imported.report.retained
           ? label(
-              `AP242: ${imported.report.occurrenceIdentities.length} экземпляров; оригинал сохранён.`,
+              `AP242: ${imported.report.occurrenceIdentities.length} ${({ one: 'экземпляр', few: 'экземпляра', many: 'экземпляров' } as Record<string, string>)[new Intl.PluralRules('ru').select(imported.report.occurrenceIdentities.length)] ?? 'экземпляра'}; оригинал сохранён.`,
               `AP242: ${imported.report.occurrenceIdentities.length} occurrence(s); original saved.`,
             )
           : label('STEP: сетка импортирована.', 'STEP: mesh imported.'),

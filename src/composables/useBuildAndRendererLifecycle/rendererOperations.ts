@@ -4,6 +4,7 @@ import {
 } from '../../app/buildCoordinator'
 import { planGeometryPublication } from '../../app/buildPromotionPolicy'
 import { diagnosticFromBuildError } from '../../language/editorDiagnostics'
+import { presentLanguageError } from '../../i18n/kernelErrors'
 import { withSelectionSurfaces } from '../../kernel/meshSurfaceGroups'
 import { planScenePublication } from '../../app/scenePublication'
 import type { WebGPURenderer } from '../../render/webgpuRenderer'
@@ -217,7 +218,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
     }
 
     if (response.status === 'failed') {
-      context.options.error.value = response.error.code === 'WORKER_TIMEOUT' ? context.options.translate('buildTimeout') : response.error.message
+      context.options.error.value = response.error.code === 'WORKER_TIMEOUT' ? context.options.translate('buildTimeout') : presentLanguageError(response.error, context.options.translate)
       context.options.editorDiagnostic.value = diagnosticFromBuildError(source, response.error)
       return
     }

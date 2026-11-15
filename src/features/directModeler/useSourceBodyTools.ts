@@ -5,6 +5,7 @@ import { type SourceWallResult } from '../../kernel/sourceWallTransport'
 import { type SourceWallCoverageResult } from '../../kernel/sourceWallCoverageTransport'
 import { type SourceWallScanResult } from '../../kernel/sourceWallScanTransport'
 import { download, type Pane } from './helpers'
+import { presentKernelError } from '../../i18n/kernelErrors'
 import { type DirectDocument, type Point2, type DirectBody } from '../../app/directModeling'
 import { computed, ref, shallowRef, watch, onUnmounted, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 
@@ -192,7 +193,7 @@ async function exportStepAssembly() {
   try {
     const {exportSolidStepAssembly}=await import('../../kernel/solidStepAssembly')
     download(await exportSolidStepAssembly(snapshot),'edited-scene.step')
-  } catch(e){error.value=e instanceof Error?e.message:String(e)}
+  } catch(e){error.value=presentKernelError(e,label('ru','en')==='ru'?'ru':'en').message}
 }
 async function exportStepOriginal() {
   if(restoringDraft.value)return
