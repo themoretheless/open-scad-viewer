@@ -8,8 +8,12 @@ use crate::{
     Result, check,
     core::bounded_rational::Work,
     curve::Curve,
-    editing::exact_derivative::{self as exact, Refusal},
+    editing::{
+        exact_derivative::{self as exact, Refusal},
+        rational_factor::polynomial::Poly,
+    },
 };
+use num_rational::BigRational as Q;
 use num_traits::Zero;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -55,17 +59,7 @@ pub fn classify_pcurve_seam(
     seam: f64,
     max_work: u64,
 ) -> Result<PcurveSeamReport> {
-    source.validate()?;
-    check(
-        source.control_points[0].len() == 2,
-        "A UV seam needs a two-dimensional curve",
-    )?;
-    check(seam.is_finite(), "A UV seam coordinate must be finite")?;
-    validate_clock(&[], max_work)?;
-    let coordinate = match axis {
-        UvAxis::U => 0,
-        UvAxis::V => 1,
-    };
+    let coordinate = validate_seam(source, axis, seam, max_work)?;
     let mut work = Work {
         used: 0,
         limit: max_work,
@@ -81,6 +75,38 @@ pub fn classify_pcurve_seam(
     })
 }
 
+pub(super) fn validate_seam(
+    source: &Curve,
+    axis: UvAxis,
+    seam: f64,
+    max_work: u64,
+) -> Result<usize> {
+    source.validate()?;
+    check(
+        source.control_points[0].len() == 2,
+        "A UV seam needs a two-dimensional curve",
+    )?;
+    check(seam.is_finite(), "A UV seam coordinate must be finite")?;
+    validate_clock(&[], max_work)?;
+    Ok(match axis {
+        UvAxis::U => 0,
+        UvAxis::V => 1,
+    })
+}
+
+pub(super) fn seam_power(
+    source: &Curve,
+    span: usize,
+    parameter: [f64; 2],
+    coordinate: usize,
+    seam: &Q,
+    work: &mut Work,
+) -> exact::PResult<Poly> {
+    let h = original_span(source, span, parameter, work)?;
+    let offset = scale(&h[2], seam, work)?;
+    exact::add(&h[coordinate], &offset, true, work)
+}
+
 fn classify(
     source: &Curve,
     coordinate: usize,
@@ -90,9 +116,7 @@ fn classify(
     let seam = work.lift(seam)?;
     active_spans(source)
         .map(|(span, parameter)| {
-            let h = original_span(source, span, parameter, work)?;
-            let offset = scale(&h[2], &seam, work)?;
-            let power = exact::add(&h[coordinate], &offset, true, work)?;
+            let power = seam_power(source, span, parameter, coordinate, &seam, work)?;
             let contact = if power.is_empty() {
                 PcurveSeamContact::Coincident
             } else {

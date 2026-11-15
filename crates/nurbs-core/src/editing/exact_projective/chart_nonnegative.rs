@@ -33,11 +33,16 @@ pub(super) fn contact_counts(power: &Poly, work: &mut Work) -> PResult<[usize; 2
     if power.len() <= 1 {
         return Ok([0, 0]);
     }
+    let [distinct, odd] = interior_contact_factors(power, work)?;
+    Ok([count_roots(distinct, work)?, count_roots(odd, work)?])
+}
+
+pub(super) fn interior_contact_factors(power: &Poly, work: &mut Work) -> PResult<[Poly; 2]> {
     let (distinct, common) = square_free_layer(power, work)?;
     let odd = quotient(&distinct, &odd_roots(&common, work)?, work)?;
     Ok([
-        interior_root_count(distinct, work)?,
-        interior_root_count(odd, work)?,
+        without_endpoints(distinct, work)?,
+        without_endpoints(odd, work)?,
     ])
 }
 
@@ -99,33 +104,75 @@ impl Signs {
     }
 }
 
-fn interior_root_count(mut a: Poly, work: &mut Work) -> PResult<usize> {
-    // Both callers supply square-free polynomials, so each endpoint factor
-    // occurs at most once.
-    if a.first().is_some_and(Zero::is_zero) {
+fn without_endpoints(mut a: Poly, work: &mut Work) -> PResult<Poly> {
+    if a.len() <= 1 {
+        return Ok(a);
+    }
+    // The input is square-free, so each endpoint factor occurs at most once.
+    if a[0].is_zero() {
         a = quotient(&a, &vec![Q::zero(), Q::one()], work)?;
     }
     if sum(&a, work)?.is_zero() {
         a = quotient(&a, &vec![-Q::one(), Q::one()], work)?;
     }
+    Ok(a)
+}
+
+fn interior_root_count(a: Poly, work: &mut Work) -> PResult<usize> {
+    count_roots(without_endpoints(a, work)?, work)
+}
+
+fn count_roots(a: Poly, work: &mut Work) -> PResult<usize> {
     if a.len() <= 1 {
         return Ok(0);
     }
-    let mut at_zero = Signs::default();
-    let mut at_one = Signs::default();
-    let mut b = derivative(&a, work)?;
-    at_zero.append(&a[0]);
-    at_one.append(&sum(&a, work)?);
-    // Exact Sturm variations, with the endpoint roots already removed.
-    while !b.is_empty() {
-        at_zero.append(&b[0]);
-        at_one.append(&sum(&b, work)?);
-        let (_, remainder) = poly::divide(&a, &b, work)?;
-        a = b;
-        b = remainder.into_iter().map(|q| -q).collect();
+    let chain = SturmChain::new(a, work)?;
+    let (start, _) = chain.at(&Q::zero(), work)?;
+    let (end, _) = chain.at(&Q::one(), work)?;
+    start.checked_sub(end).ok_or(Refusal::UnprovedIdentity)
+}
+
+pub(super) struct SturmChain(Vec<Poly>);
+
+impl SturmChain {
+    /// A square-free, nonzero polynomial gives variations which count roots
+    /// in (left, right], including when a bisection hits an exact root.
+    pub(super) fn new(a: Poly, work: &mut Work) -> PResult<Self> {
+        let mut b = derivative(&a, work)?;
+        let mut chain = vec![a];
+        while !b.is_empty() {
+            let (_, remainder) = poly::divide(chain.last().unwrap(), &b, work)?;
+            chain.push(b);
+            b = remainder.into_iter().map(|q| -q).collect();
+        }
+        Ok(Self(chain))
     }
-    at_zero
-        .variations
-        .checked_sub(at_one.variations)
-        .ok_or(Refusal::UnprovedIdentity)
+
+    pub(super) fn at(&self, x: &Q, work: &mut Work) -> PResult<(usize, bool)> {
+        let mut signs = Signs::default();
+        let mut root = false;
+        for (i, p) in self.0.iter().enumerate() {
+            let value = evaluate(p, x, work)?;
+            if i == 0 {
+                root = value.is_zero();
+            }
+            signs.append(&value);
+        }
+        Ok((signs.variations, root))
+    }
+}
+
+fn evaluate(p: &Poly, x: &Q, work: &mut Work) -> PResult<Q> {
+    if x.is_zero() {
+        return Ok(p.first().cloned().unwrap_or_default());
+    }
+    if x.is_one() {
+        return sum(p, work);
+    }
+    let mut it = p.iter().rev();
+    let start = it.next().cloned().unwrap_or_default();
+    it.try_fold(start, |acc, q| {
+        let product = work.op(&acc, x, |a, b| a * b)?;
+        Ok(work.op(&product, q, |a, b| a + b)?)
+    })
 }

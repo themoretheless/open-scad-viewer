@@ -25,6 +25,11 @@ mod pcurve_seam;
 pub use pcurve_seam::{
     PcurveSeamContact, PcurveSeamReport, PcurveSeamSpan, UvAxis, classify_pcurve_seam,
 };
+mod pcurve_seam_isolation;
+pub use pcurve_seam_isolation::{
+    PcurveSeamIsolatedSpan, PcurveSeamIsolation, PcurveSeamIsolationReport, PcurveSeamRoot,
+    isolate_pcurve_seam,
+};
 mod proof;
 mod trimmed_mobius;
 pub use trimmed_mobius::{

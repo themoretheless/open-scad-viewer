@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 295,
-  "unallocatedCount": 705,
+  "specifiedCount": 296,
+  "unallocatedCount": 704,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7837,6 +7837,28 @@
       "remainingQualification": [
         "Classify rational UV seam contacts per original span by exact multiplicity, including whole coincident spans and one-sided endpoints.",
         "Coordinate seams U = constant or V = constant. Endpoint ownership is per original span, with no loop-level duplication rule.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0296",
+      "name": "Сертифицированная локализация пересечений UV-контура со швом",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::isolate_pcurve_seam",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/tests/exact_pcurve_seam_isolation_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-296-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-296-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Isolate each original rational pcurve seam contact in a certified absolute-parameter bracket, with exact crossing parity.",
+        "One-sided endpoints and coincident spans remain explicit. Single-root brackets have exact width bounds; an unresolved binary64 bracket refuses the whole request.",
         "WASM and application integration are separate."
       ]
     }
