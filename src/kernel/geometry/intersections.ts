@@ -26,7 +26,9 @@ export interface IntersectionCurvePoint {
  parameterInterval:Vec2
  point:Vec3
  planeResidual:number
- contact:'transverse'|'boundary'
+ contact:'transverse'|'boundary'|'tangent'
+ /** Certified root multiplicity: 1 for transverse and boundary contacts, at least 2 for a certified tangent contact. */
+ multiplicity?:number
 }
 export interface IntersectionSurfacePoint {uv:Vec2;point:Vec3;planeResidual:number}
 /** Retained procedural geometry, never a fit through the report's samples. */
@@ -89,8 +91,11 @@ export type SphereSphereIntersection =
 export const intersectSphereSphere=(first:NurbsBrep,second:NurbsBrep,options:IntersectionOptions={}):IntersectionReport<SphereSphereIntersection>=>callGeometryRust('brep_intersect_sphere_sphere',{first,second,options})
 
 /** One cylinder face's share of an intersection circle in that face's UV: an iso-v line on a side patch, exact quarter arcs on a cap. */export interface CylinderPatchCurveLift {patch:number;arcs:NurbsCurve[]}
+/** Certified traced loop of an off-axis analytic pair: NURBS pieces whose distance to both surfaces is bounded by distanceBound; complete certifies the loop set. Per-operand UV lifts ride alongside. */
+export interface TracedIntersectionLoop {kind:'traced';pieces:NurbsCurve[];distanceBound:number;spans:number;complete:boolean;liftDeviation:number}
 export type SphereCylinderIntersection =
  | {kind:'circle';curve:NurbsCurve;center:Vec3;radius:number;normal:Vec3;sphereUv:SpherePatchCircleLift[];cylinderUv:CylinderPatchCurveLift[];maxSampleResidual:number}
+ | TracedIntersectionLoop&{sphereUv:unknown[];cylinderUv:unknown[]}
 /** Analytic sphere/cylinder for the canonical solids in the axial configuration only (sphere center certified on the cylinder axis; rigid affine placements admitted). Non-canonical operands and clearly off-axis pairs are explicit unsupported_surface regions — never a numerical fallback; near-axial offsets report near_coincidence, the r==R band reports coincident_trim, and every rim or cap-plane tangency stays tangency_or_multiple_root — tangent contacts are never points or guessed circles. Never authorizes topology changes. */
 export const intersectSphereCylinder=(first:NurbsBrep,second:NurbsBrep,options:IntersectionOptions={}):IntersectionReport<SphereCylinderIntersection>=>callGeometryRust('brep_intersect_sphere_cylinder',{first,second,options})
 
@@ -114,6 +119,7 @@ export const intersectPlaneCylinder=(first:NurbsBrep,second:NurbsBrep,options:In
 
 export type SphereConeIntersection =
  | {kind:'circle';curve:NurbsCurve;center:Vec3;radius:number;normal:Vec3;sphereUv:SpherePatchCircleLift[];coneUv:CylinderPatchCurveLift[];maxSampleResidual:number}
+ | TracedIntersectionLoop&{sphereUv:unknown[];coneUv:unknown[]}
 /** Analytic sphere/cone (frustum) for the canonical solids in the axial configuration only (sphere center certified on the cone axis; rigid affine placements admitted; true-apex cones admitted, an equal-radius frustum is a cylinder and is refused). Non-canonical operands and clearly off-axis pairs are explicit unsupported_surface regions — never a numerical fallback (the general pair is a quartic); near-axial offsets report near_coincidence. Side contacts solve one exact quadratic in the axial offset: two distinct in-height roots yield exact circles of linearly interpolated ring radius with iso-v side lifts and per-patch sphere lifts, cap-plane crossings inside a ring disk yield exact cap-plane circles with UV-circle cap lifts, and provable misses resolve empty. The side tangency (double root), rim contacts, apex contacts and cap-plane touches stay tangency_or_multiple_root — tangent contacts are never points or guessed circles. Never authorizes topology changes. */
 export const intersectSphereCone=(first:NurbsBrep,second:NurbsBrep,options:IntersectionOptions={}):IntersectionReport<SphereConeIntersection>=>callGeometryRust('brep_intersect_sphere_cone',{first,second,options})
 
@@ -139,16 +145,19 @@ export const intersectPlaneTorus=(first:NurbsBrep,second:NurbsBrep,options:Inter
 
 export type SphereTorusIntersection =
  | {kind:'circle';curve:NurbsCurve;center:Vec3;radius:number;normal:Vec3;sphereUv:SpherePatchCircleLift[];torusUv:TorusPatchCurveLift[];maxSampleResidual:number}
+ | TracedIntersectionLoop&{sphereUv:unknown[];torusUv:unknown[]}
 /** Analytic sphere/torus for the canonical solids in the axial configuration only (sphere center certified on the torus axis; rigid affine placements admitted; strict ring torus R-r>=1e-5 — the constructor refuses horn and spindle tori). Non-canonical operands and clearly off-axis pairs are explicit unsupported_surface regions — never a numerical fallback (the general pair is a quartic); near-axial offsets report near_coincidence. In the meridian half-plane the section is circle/circle: two distinct roots revolve into two exact circles (radius rho*, height z*) with iso-v torus lifts at the exact rational-arc v parameter and per-patch stereographic sphere lifts; the meridian tangencies (double roots, external d==r_t+r_s or internal d==|r_t-r_s|) and the pole-collapse guard stay tangency_or_multiple_root — tangent contacts are never guessed circles; provably separate or contained meridian circles resolve empty. Never authorizes topology changes. */
 export const intersectSphereTorus=(first:NurbsBrep,second:NurbsBrep,options:IntersectionOptions={}):IntersectionReport<SphereTorusIntersection>=>callGeometryRust('brep_intersect_sphere_torus',{first,second,options})
 
 export type CylinderTorusIntersection =
  | {kind:'circle';curve:NurbsCurve;center:Vec3;radius:number;normal:Vec3;cylinderUv:CylinderPatchCurveLift[];torusUv:TorusPatchCurveLift[];maxSampleResidual:number}
+ | TracedIntersectionLoop&{cylinderUv:unknown[];torusUv:unknown[]}
 /** Analytic cylinder/torus for the canonical solids in the coaxial configuration only (the cylinder axis certified coincident with the torus axis; rigid affine placements admitted; strict ring torus R-r>=1e-5 — the constructor refuses horn and spindle tori). Non-canonical operands and clearly tilted or off-axis pairs are explicit unsupported_surface regions — never a numerical fallback (the general pair is a quartic); recognition-scale tilts and near-coaxial offsets report near_coincidence, never forced coaxial. In the meridian half-plane the cylinder side is the line rho=R_c against the torus circle (rho-R)^2+z^2=r^2: a provable miss resolves empty, the tangent line (|R_c-R|==r, double root at z=0) stays tangency_or_multiple_root, and otherwise the two distinct exact circles of radius R_c at z=+-sqrt(r^2-(R_c-R)^2) are clipped by the finite height (a circle on a cap plane is the rim tangency, unresolved). Cap planes crossing the tube (|h_c|<r) cut the exact circle pair R+-sqrt(r^2-h_c^2): radii inside the cap disk are cap circle components, a radius equal to R_c within the band is the rim tangency. Resolved circles carry exact lifts: iso-v side lines or cap UV circles on the cylinder, iso-v parallels at the exact rational-arc v parameter on the torus. Tangent contacts are never guessed; coincident_trim is unused (a cylinder side never coincides with a curved torus patch). Never authorizes topology changes. */
 export const intersectCylinderTorus=(first:NurbsBrep,second:NurbsBrep,options:IntersectionOptions={}):IntersectionReport<CylinderTorusIntersection>=>callGeometryRust('brep_intersect_cylinder_torus',{first,second,options})
 
 export type ConeTorusIntersection =
  | {kind:'circle';curve:NurbsCurve;center:Vec3;radius:number;normal:Vec3;coneUv:CylinderPatchCurveLift[];torusUv:TorusPatchCurveLift[];maxSampleResidual:number}
+ | TracedIntersectionLoop&{coneUv:unknown[];torusUv:unknown[]}
 /** Analytic cone/torus (frustum/torus) for the canonical solids in the coaxial configuration only (the cone axis certified coincident with the torus axis, either orientation — anti-axial pairs oriented by the axes' dot sign; rigid affine placements admitted; true-apex cones admitted, an equal-radius frustum is a cylinder and is refused; strict ring torus R-r>=1e-5 — the constructor refuses horn and spindle tori). Non-canonical operands and clearly tilted or off-axis pairs are explicit unsupported_surface regions — never a numerical fallback (the general pair is a quartic); recognition-scale tilts and near-coaxial offsets report near_coincidence, never forced coaxial. In the meridian half-plane the cone side is the slanted line (rho,z)=(r_b+m t,z_b+s t) against the torus circle (rho-R)^2+z^2=r^2 — one exact quadratic in the cone axial parameter: a provable miss resolves empty, the tangent line (double root) stays tangency_or_multiple_root, and distinct roots revolve into exact circles (radius rho*, height z*) clipped by the finite height (a root on a ring plane is the rim contact, unresolved; the rho*≈0 apex/pole guard is structurally unreachable for a strict ring torus and kept honest). Ring planes crossing the tube (|h_c|<r) cut the exact circle pair R+-sqrt(r^2-h_c^2): radii inside the ring disk are cap circle components, a radius equal to the ring radius within the band is the rim tangency. Resolved circles carry exact lifts: iso-v side lines or cap UV circles on the cone, iso-v parallels at the exact rational-arc v parameter on the torus. Tangent contacts are never guessed; coincident_trim is unused (a cone side never coincides with a curved torus patch). Never authorizes topology changes. */
 export const intersectConeTorus=(first:NurbsBrep,second:NurbsBrep,options:IntersectionOptions={}):IntersectionReport<ConeTorusIntersection>=>callGeometryRust('brep_intersect_cone_torus',{first,second,options})
 
