@@ -30,6 +30,10 @@ pub use pcurve_seam_isolation::{
     PcurveSeamIsolatedSpan, PcurveSeamIsolation, PcurveSeamIsolationReport, PcurveSeamRoot,
     isolate_pcurve_seam,
 };
+mod pcurve_seam_split;
+pub use pcurve_seam_split::{
+    PcurveSeamPiece, PcurveSeamSide, PcurveSeamSplitReport, split_pcurve_at_seam,
+};
 mod proof;
 mod trimmed_mobius;
 pub use trimmed_mobius::{

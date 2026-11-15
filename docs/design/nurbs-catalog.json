@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 296,
-  "unallocatedCount": 704,
+  "specifiedCount": 297,
+  "unallocatedCount": 703,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7859,6 +7859,28 @@
       "remainingQualification": [
         "Isolate each original rational pcurve seam contact in a certified absolute-parameter bracket, with exact crossing parity.",
         "One-sided endpoints and coincident spans remain explicit. Single-root brackets have exact width bounds; an unresolved binary64 bracket refuses the whole request.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0297",
+      "name": "Точное разбиение рационального UV-контура по шву",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::split_pcurve_at_seam",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_split.rs",
+        "crates/nurbs-core/tests/exact_pcurve_seam_split_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-297-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-297-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Split original rational UV spans at representable seam contacts, keeping the absolute curve parameter and proving each stored piece against the original geometry.",
+        "Coincident spans are retained and open pieces record their seam side. Nonrepresentable cuts or derived poles refuse atomically.",
         "WASM and application integration are separate."
       ]
     }
