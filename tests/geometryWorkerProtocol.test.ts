@@ -7,13 +7,63 @@ import {
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
   GEOMETRY_WORKER_PAYLOAD_LIMITS,
-  isGeometryWorkerEvent,
+  isGeometryWorkerEvent as isWireGeometryWorkerEvent,
   isGeometryWorkerRequest,
   type GeometryWorkerEvent,
 } from '../src/kernel/geometryWorkerProtocol'
 import type { MeshData } from '../src/core/mesh'
 import { parseOpenSCAD } from '../src/language/openscadParser'
 import { sha256Hex } from '../src/core/sha256'
+
+/**
+ * Wire scene for the mesh-shaped fixtures below, built without validation so
+ * malformed meshes reach the validator as malformed entities/assets.
+ */
+function rawScene(meshes: readonly unknown[]) {
+  const views = meshes.map(mesh => (mesh ?? {}) as Record<string, unknown>)
+  return {
+    version: 1,
+    assets: views.map((mesh, index) => ({
+      version: 1, id: mesh.geometryAssetId ?? `asset:test/${index}`, vertices: mesh.vertices, indices: mesh.indices,
+    })),
+    entities: views.map((mesh, index) => {
+      const {
+        vertices: _vertices, indices: _indices, entityId, geometryAssetId, nativeGeometry, lods, color, transform,
+        bvh, edgeIndices, faceIds, faceIdsInferred, faceIdsAuthoritative, provenance, topology, ...extra
+      } = mesh
+      return {
+        id: entityId ?? `entity:test/${index}`, geometryAssetId: geometryAssetId ?? `asset:test/${index}`, color, transform,
+        ...(nativeGeometry === undefined ? {} : { nativeGeometry }),
+        ...(lods === undefined ? {} : { lods }),
+        inspection: {
+          state: 'ready', version: 1, bvh, edgeIndices, faceIds, provenance, topology,
+          ...(faceIdsInferred === undefined ? {} : { faceIdsInferred }),
+          ...(faceIdsAuthoritative === undefined ? {} : { faceIdsAuthoritative }),
+        },
+        ...extra,
+      }
+    }),
+  }
+}
+
+/**
+ * The fixtures in this file describe successes with the host-side `meshes`
+ * view; translate them to the wire `scene` form without reading accessors or
+ * dropping hidden/symbol properties, so every other wire check still applies.
+ */
+function isGeometryWorkerEvent(value: unknown) {
+  if (value === null || typeof value !== 'object') return isWireGeometryWorkerEvent(value)
+  const descriptors = Object.getOwnPropertyDescriptors(value)
+  const status = descriptors.status, meshes = descriptors.meshes
+  if (status?.value !== 'succeeded' || !meshes || !('value' in meshes) || !Array.isArray(meshes.value)) {
+    return isWireGeometryWorkerEvent(value)
+  }
+  const { meshes: _meshes, ...rest } = descriptors
+  const wire = Object.create(Object.getPrototypeOf(value), {
+    ...rest, scene: { value: rawScene(meshes.value), enumerable: true, writable: true, configurable: true },
+  })
+  return isWireGeometryWorkerEvent(wire)
+}
 
 const envelope = {
   protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,

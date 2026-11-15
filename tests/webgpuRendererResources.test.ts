@@ -178,7 +178,7 @@ describe('WebGPURenderer retained geometry resources', () => {
     expect(values[36]).toBeCloseTo(mode === 'xray' ? 0.625 : 0.24, 6)
   })
 
-  it('reuses verified vertex/index buffers and only replaces entity uniforms', () => {
+  it('reuses verified vertex/index buffers and updates a persisting entity uniform in place', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
     const { renderer, device, internal } = harness()
     const first = fixture()
@@ -190,11 +190,16 @@ describe('WebGPURenderer retained geometry resources', () => {
     const replacement = fixture()
     renderer.setMeshes([replacement])
     expect(renderer.sceneUploadMetrics).toEqual({ geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 1 })
-    expect(device.buffers).toHaveLength(4)
+    expect(device.buffers).toHaveLength(3)
     expect(internal.meshes[0].vb).toBe(initial.vb)
     expect(internal.meshes[0].ib).toBe(initial.ib)
+    expect(internal.meshes[0].ub).toBe(initial.ub)
     expect(initial.vb.destroyCalls).toBe(0)
     expect(initial.ib.destroyCalls).toBe(0)
+    expect(initial.ub.destroyCalls).toBe(0)
+    // A different entity sharing the asset gets its own uniform buffer.
+    renderer.setMeshes([{ ...fixture(), entityId: 'entity:other' }])
+    expect(device.buffers).toHaveLength(4)
     expect(initial.ub.destroyCalls).toBe(1)
   })
 
@@ -315,7 +320,7 @@ describe('WebGPURenderer retained geometry resources', () => {
     const live = internal.meshes[0]
     device.failCreateAt = device.buffers.length + 1
 
-    expect(() => renderer.setMeshes([fixture()])).toThrow('injected allocation failure')
+    expect(() => renderer.setMeshes([{ ...fixture(), entityId: 'entity:other' }])).toThrow('injected allocation failure')
     expect(internal.meshes[0]).toBe(live)
     expect(live.vb.destroyCalls).toBe(0)
     expect(live.ib.destroyCalls).toBe(0)
@@ -330,7 +335,8 @@ describe('WebGPURenderer retained geometry resources', () => {
     const publishedUniform = live.ub.contents.slice()
     const metrics = renderer.sceneUploadMetrics
     const stagedStart = device.buffers.length
-    device.failBindGroupAt = device.bindGroupCalls + 2
+    // The persisting entity keeps its bind group; the new entity's is the first created.
+    device.failBindGroupAt = device.bindGroupCalls + 1
     const replacement = fixture()
     replacement.color = [0, 0.5, 1, 0.25]
     replacement.transform[3] = 12
@@ -429,7 +435,8 @@ it('replaces changed topology opaquely and releases retired buffers', () => {
     const old = internal.meshes[0].vb
     renderer.setMeshes([{ ...fixture(10), indices: new Uint32Array([2,1,0]) }], { animate: true })
     expect(state.geometryFade).toBeNull()
-    expect(old.destroyCalls).toBe(1)
+    // The retired asset stays resident in the GPU geometry cache until eviction or teardown.
+    expect(old.destroyCalls).toBe(0)
     expect(state.geometryGhosts).toHaveLength(0)
     expect(new Float32Array(internal.meshes[0].ub.contents.buffer)[36]).toBe(1)
     renderer.destroy()
@@ -512,4 +519,57 @@ it('refuses singular geometry transforms before replacing the published scene', 
     expect(live.vb.destroyCalls).toBe(0)
     expect(device.buffers).toHaveLength(count)
   } finally { renderer.destroy(); vi.unstubAllGlobals() }
+})
+
+describe('WebGPURenderer scene deltas', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('keeps selection, hover and measurement for entities that persist unchanged', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer } = harness()
+    const state = renderer as unknown as { hovered: number | null; measurementPoints: unknown[] }
+    const selections: Array<number | null> = []
+    renderer.onSelectionChange = index => selections.push(index)
+    try {
+      renderer.setMeshes([fixture(), fixture(2)])
+      renderer.selectMesh(1)
+      renderer.setPreselection(0)
+      expect(renderer.restoreMeasurement({ points: [[0, 0, 0], [1, 0, 0]], distance: 1 }, true)).toBe(true)
+      selections.length = 0
+      // Same entities in a new order: state follows the entity, not the array index.
+      renderer.setMeshes([fixture(2), fixture()])
+      expect(renderer.selectedIndex).toBe(0)
+      expect(state.hovered).toBe(1)
+      expect(state.measurementPoints).toHaveLength(2)
+      expect(selections).toEqual([0])
+      // A changed geometry for the selected entity clears its selection and the measurement.
+      renderer.setMeshes([{ ...fixture(2), indices: new Uint32Array([2, 1, 0]), geometryAssetId: undefined }, fixture()])
+      expect(renderer.selectedIndex).toBeNull()
+      expect(state.hovered).toBe(1)
+      expect(state.measurementPoints).toHaveLength(0)
+      // Callers that own re-selection can opt out.
+      renderer.setPreselection(0)
+      renderer.selectMesh(1)
+      renderer.setMeshes([fixture(2), fixture()], { preserveInteraction: false })
+      expect(renderer.selectedIndex).toBeNull()
+      expect(state.hovered).toBeNull()
+    } finally { renderer.destroy() }
+  })
+
+  it('retains unreferenced geometry across publications and reuses it without upload', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 1, INDEX: 2, UNIFORM: 4, COPY_DST: 8 })
+    const { renderer, internal } = harness()
+    try {
+      renderer.setMeshes([fixture()])
+      const first = internal.meshes[0]
+      renderer.setMeshes([fixture(2)])
+      expect(first.vb.destroyCalls).toBe(0)
+      renderer.setMeshes([fixture()])
+      expect(renderer.sceneUploadMetrics).toEqual({ geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 1 })
+      expect(internal.meshes[0].vb).toBe(first.vb)
+      expect(internal.meshes[0].ib).toBe(first.ib)
+      renderer.destroy()
+      expect(first.vb.destroyCalls).toBe(1)
+    } finally { renderer.destroy() }
+  })
 })

@@ -8,7 +8,8 @@ import {validCurveOffsetConstruction} from '../kernel/curveOffsetConstruction'
 import {extrudeSketchProfile} from './directExtrusion'
 import {withRetainedProfile} from './retainedSketchProfile'
 import {validateBrepProfile,type BrepProfile} from '../kernel/geometry/brepProfile'
-import type {SolidInstanceBatchCache} from '../kernel/solidInstanceBatchCache'
+import {SolidInstanceBatchCache} from '../kernel/solidInstanceBatchCache'
+import {cloneDocumentTree} from './documentClone'
 import {resolveSolidInstances,type SolidInstanceLink} from '../kernel/solidInstances'
 import { sketchDimensions, type SketchDimension } from './directDimensions'
 import {callGeometryRust} from '../kernel/geometry/kernel'
@@ -42,7 +43,7 @@ export interface DirectInterchangeMetadata {
 }
 export interface DirectDocument { sourceBodies?:SourceBodyRecord[]; version: 1; blenderProjectId?: string; units?: DocumentLengthUnit; pivots?: DirectPivot[]; cplane?: DirectCPlane; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
-const clone = <T>(value: T): T => { countOperation('documentClones'); return structuredClone(value) }
+const clone = <T>(value: T): T => { countOperation('documentClones'); return cloneDocumentTree(value) }
 const DEEP_JSON_NORMALIZATION = Symbol('deep JSON normalization')
 /** Only for a freshly parsed, exclusively owned JSON tree, never caller-owned objects. */
 function normalizeOwnedJson(value: unknown, depth = 0): unknown {
@@ -73,6 +74,29 @@ export function serializeDirectDocument(document:DirectDocument):string {
   const {mesh:_mesh,brep:_brep,...linked}=body
   return linked
  })})
+}
+
+/** Draft form: the serialization without empty top-level `curves`/`surfaces`. With the full
+ * `serialized` text of the same document, derives it without serializing geometry again. */
+export function serializeDirectDraft(document:DirectDocument,serialized?:string):string {
+ const record=document as unknown as Record<string,unknown>
+ const strip=(key:string)=>(key==='curves'||key==='surfaces')&&Array.isArray(record[key])&&!(record[key] as unknown[]).length
+ const keys=Object.keys(document),first=keys.findIndex(strip)
+ if(first<0)return serialized??serializeDirectDocument(document)
+ if(serialized!==undefined){
+  // The stripped keys normally sit in a short top-level tail (version, sketches, bodies, curves, surfaces, ...).
+  const tailKeys=keys.slice(first)
+  const tail=stringifyMeshJson(Object.fromEntries(tailKeys.map(k=>[k,record[k]])))
+  const kept=stringifyMeshJson(Object.fromEntries(tailKeys.filter(k=>!strip(k)).map(k=>[k,record[k]])))
+  if(tail.length<=serialized.length&&serialized.endsWith(tail.slice(1))){
+   const prefix=serialized.slice(0,serialized.length-tail.length+1)
+   if(prefix==='{')return kept
+   return kept==='{}'?prefix.slice(0,-1)+'}':prefix+kept.slice(1)
+  }
+ }
+ const persisted:Record<string,unknown>={...record}
+ for(const key of keys)if(strip(key))delete persisted[key]
+ return serializeDirectDocument(persisted as unknown as DirectDocument)
 }
 
 function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBatchCache): Generator<void, DirectDocument> {
@@ -327,6 +351,9 @@ const aabbFromBrep = (brep: NurbsBrep): { inner: Aabb; outer: Aabb } => {
 type DirectSnapshot = HistoryText
 export class DirectHistory {
   private restoreGeneration = 0
+  /** Synchronous commit/undo/redo re-validate on this thread; unchanged linked instances
+   * reuse their transformed geometry instead of re-running the kernel for every instance. */
+  private instanceCache = new SolidInstanceBatchCache()
   private textPool = new Map<string,string>()
   private snapshot(text:string):DirectSnapshot { return packHistoryText(text,this.textPool) }
   private sweep() { return sweepHistoryTextPool(this.textPool,[this.current,...this.past,...this.future]) }
@@ -335,12 +362,12 @@ export class DirectHistory {
   private current: DirectSnapshot & {document?:DirectDocument; ids?:string[]}
   constructor(document = emptyDirectDocument()) {
     const text = stringifyMeshJson(document)
-    const validated = parseDirectDocument(text)
+    const validated = parseDirectDocument(text,this.instanceCache)
     const validatedText = serializeDirectDocument(validated)
     this.current = { ...this.snapshot(validatedText), document: validated }
   }
   private get currentDocument():DirectDocument {
-    return this.current.document ??= parseDirectDocument(unpackHistoryText(this.current))
+    return this.current.document ??= parseDirectDocument(unpackHistoryText(this.current),this.instanceCache)
   }
   /** Export identity is metadata: retain it across existing Undo/Redo states without adding a geometry edit. */
   ensureBlenderProjectId(): string {
@@ -359,6 +386,17 @@ export class DirectHistory {
     return id
   }
   get document() { return clone(this.currentDocument) }
+  /** Copies whose content is known to equal a snapshot: the UI document after a commit,
+   * restore or `syncedDocument`. Autosave reuses the snapshot text instead of serializing. */
+  private canonical = new WeakMap<object, DirectSnapshot>()
+  /** A fresh copy of the current state, registered as matching the current snapshot. */
+  get syncedDocument() { const copy=this.document; this.canonical.set(copy,this.current); return copy }
+  /** Serialized current state when `document` is a registered copy of it (not mutated in place
+   * afterwards, which UI state never is); otherwise undefined and the caller serializes. */
+  canonicalText(document:object):string|undefined {
+    const snapshot=this.canonical.get(document)
+    return snapshot===this.current?unpackHistoryText(snapshot):undefined
+  }
   /** Detached metadata projection: callers needing only identities do not copy geometry. */
   get objectIds():string[] {
     // Async restore intentionally retains only a validated compact snapshot.
@@ -375,7 +413,7 @@ export class DirectHistory {
       retainedCharacters:this.sweep()}
   }
   commit(document: DirectDocument, validateChange?: (resolved:DirectDocument)=>void) {
-    this.commitValidated(parseDirectDocument(stringifyMeshJson(document)),validateChange)
+    this.commitValidated(parseDirectDocument(stringifyMeshJson(document),this.instanceCache),validateChange)
   }
   /** Loader must run the authoritative parser; no history changes while it runs. */
   async commitAsync(load:()=>Promise<DirectDocument>,validateChange?:(resolved:DirectDocument)=>void):Promise<boolean> {
@@ -383,6 +421,7 @@ export class DirectHistory {
     const loaded=await load()
     if(generation!==this.restoreGeneration||this.current!==base)return false
     this.commitValidated(clone(loaded),validateChange)
+    if(loaded.blenderProjectId===this.currentDocument.blenderProjectId)this.canonical.set(loaded,this.current)
     return true
   }
   private commitValidated(next:DirectDocument,validateChange?:(resolved:DirectDocument)=>void) {
@@ -407,7 +446,7 @@ export class DirectHistory {
   undo() {
     const d = this.past.at(-1)
     if (d) {
-      const document=parseDirectDocument(unpackHistoryText(d))
+      const document=parseDirectDocument(unpackHistoryText(d),this.instanceCache)
       this.past.pop();this.future.push({chunks:this.current.chunks,characters:this.current.characters});this.current={...d,document}
     }
     return this.document
@@ -415,7 +454,7 @@ export class DirectHistory {
   redo() {
     const d = this.future.at(-1)
     if (d) {
-      const document=parseDirectDocument(unpackHistoryText(d))
+      const document=parseDirectDocument(unpackHistoryText(d),this.instanceCache)
       this.future.pop();this.past.push({chunks:this.current.chunks,characters:this.current.characters});this.current={...d,document}
     }
     return this.document
@@ -447,6 +486,7 @@ export class DirectHistory {
     // only if a synchronous history consumer asks for geometry later.
     from.pop();to.push({chunks:base.chunks,characters:base.characters})
     this.current={...snapshot}
+    this.canonical.set(loaded,this.current)
     countOperation('historyRestores')
     return true
   }

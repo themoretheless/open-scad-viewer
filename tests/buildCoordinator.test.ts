@@ -16,6 +16,7 @@ import {
   type GeometryWorkerRequest,
 } from '../src/kernel/geometryWorkerProtocol'
 import type { MeshData } from '../src/core/mesh'
+import { geometrySceneFromMeshes } from '../src/core/scene'
 
 class FakeWorker implements WorkerLike {
   readonly messages: GeometryWorkerRequest[] = []
@@ -121,7 +122,7 @@ function success(request: GeometryBuildRequest): GeometryBuildSuccess {
       ...planGeometrySourceExecution('cube(1);', { quality: request.quality, purpose: request.quality }),
       evidence: 'runtime',
     },
-    meshes: [],
+    scene: geometrySceneFromMeshes([]),
     warnings: [],
     volume: request.documentRevision,
     surfaceArea: 0,
@@ -410,7 +411,7 @@ describe('BuildCoordinator', () => {
     const request = buildRequests(workers[0])[0]
     workers[0].emitMessage({
       ...success(request),
-      meshes: [emptyMeshWithSourceEnd(request.source.length + 1)],
+      scene: geometrySceneFromMeshes([emptyMeshWithSourceEnd(request.source.length + 1)]),
     })
 
     expect(workers[0].terminated).toBe(true)
@@ -477,7 +478,7 @@ describe('BuildCoordinator', () => {
     coordinator.requestBuild({ documentRevision: 62, source, quality: 'full' })
     const request = buildRequests(workers[0])[0]
     const originalMesh = emptyMeshWithSourceEnd(source.length)
-    const terminal = { ...success(request), meshes: [originalMesh] }
+    const terminal = { ...success(request), scene: geometrySceneFromMeshes([originalMesh]) }
     workers[0].emitMessage(terminal)
 
     const outcome = published.at(-1) as GeometryBuildSuccess

@@ -3,14 +3,16 @@ import {
   type GeometryExecutionDescriptor,
 } from '../core/geometryExecution'
 import type { MeshData } from '../core/mesh'
+import type { GeometryScene } from '../core/scene'
 export { isGeometryEvaluationResultPayload, isGeometryWorkerRequest, isGeometryWorkerEvent } from './geometryWorkerProtocol/isGeometryEvaluationResultPayload'
+export { materializeGeometryWorkerEvent } from './geometryWorkerProtocol/geometrySceneWire'
 
 /**
  * Increment this when the worker wire format changes incompatibly. Keeping the
  * version in every message makes an old, cached worker fail visibly instead of
  * accidentally publishing data into a newer application state.
  */
-export const GEOMETRY_WORKER_PROTOCOL_VERSION = 12 as const
+export const GEOMETRY_WORKER_PROTOCOL_VERSION = 13 as const
 
 export type GeometryWorkerProtocolVersion = typeof GEOMETRY_WORKER_PROTOCOL_VERSION
 export type GeometryJobId = number
@@ -116,6 +118,15 @@ export interface GeometryBuildSuccess extends GeometryJobEnvelope {
   durationMs: number
 }
 
+/**
+ * Wire form of a success. Shared tessellation crosses the boundary once as
+ * `GeometryScene` assets referenced by entities; the host materializes the
+ * eager `meshes` view with `materializeGeometryWorkerEvent` after validation.
+ */
+export interface GeometryBuildSuccessWire extends Omit<GeometryBuildSuccess, 'meshes'> {
+  scene: GeometryScene
+}
+
 export interface GeometryBuildFailure extends GeometryJobEnvelope {
   status: 'failed'
   phase: GeometryBuildPhase
@@ -156,6 +167,11 @@ export type GeometryWorkerEvent =
   | GeometryBuildProgress
   | GeometrySweepPreview
   | GeometryBuildTerminal
+
+/** Events as posted by the Worker; only the success payload differs from the host view. */
+export type GeometryWorkerWireEvent =
+  | Exclude<GeometryWorkerEvent, GeometryBuildSuccess>
+  | GeometryBuildSuccessWire
 
 export const QUALITIES = new Set<GeometryQuality>(['preview', 'full'])
 export const PHASES = new Set<GeometryBuildPhase>(['queued', 'initializing', 'compiling', 'serializing', 'complete'])

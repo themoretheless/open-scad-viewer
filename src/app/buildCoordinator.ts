@@ -1,7 +1,7 @@
 import { countOperation } from '../dev/operationCounters'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
-  isGeometryWorkerEvent,
+  isGeometryWorkerEvent, materializeGeometryWorkerEvent,
   type DocumentRevision,
   type GeometryBuildError,
   type GeometryBuildFailure,
@@ -455,7 +455,7 @@ export class BuildCoordinator {
     try {
       // Snapshot immediately after admission for same-realm test doubles; real
       // Worker events already own their transferred buffers.
-      event = freezeAttestedWorkerEvent(data, this.snapshotEvents)
+      event = freezeAttestedWorkerEvent(materializeGeometryWorkerEvent(data), this.snapshotEvents)
     } catch {
       this.handleProtocolFailure(generation)
       return

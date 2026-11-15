@@ -34,7 +34,7 @@
     "src/mcp/directGeometrySupervisor.ts": 740,
     "src/mcp/duckdbModelStore.ts": 1286,
     "src/mcp/officialOpenScadRuntimeService.ts": 624,
-    "src/render/webgpuRenderer.ts": 2276
+    "src/render/webgpuRenderer.ts": 2274
   },
   "layers": [],
   "unreachable": [],
@@ -513,7 +513,6 @@
     "src/render/gpuSubdivision.ts::runGpuSubdivisionRefine@1": 202,
     "src/render/gpuSubdivisionReference.ts::referenceRefineSubdivision@1": 182,
     "src/render/gpuTrussSolver.ts::referenceSolveTrussPcg@1": 173,
-    "src/render/meshBufferManager.ts::stageSceneMeshes@1": 152,
     "src/workers/geometry.worker.ts::runBuild@1": 170
   },
   "clippy": {

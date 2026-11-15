@@ -252,7 +252,7 @@ function handleGeometryResponse(response: PublishedGeometryBuild) {
 
       const frameToken = context.nextPerformanceFrameToken++
       context.renderer?.setMeshes(displayMeshes, {
-        frameToken,
+        frameToken, preserveInteraction: false, // planScenePublication owns selection here.
         animate: context.options.renderedSource.value !== '' && !sameSourceSnapshot,
         preserveMeasurement: publication.measurementMayBePreserved,
       })

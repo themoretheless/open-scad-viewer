@@ -3,7 +3,7 @@ import {
   emptyDirectDocument,
   MAX_DRAFT_CHARACTERS,
   parseDirectDocument,
-  serializeDirectDocument,
+  serializeDirectDraft,
   type DirectDocument,
   type DirectHistory,
 } from '../../app/directModeling'
@@ -253,10 +253,8 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
     savePending.value = true
     // Serialization finishes before the asynchronous write. Only top-level empty
     // collections are omitted; cloning materialized instance geometry is unnecessary.
-    const persisted = { ...document.value }
-    if (!persisted.curves?.length) delete persisted.curves
-    if (!persisted.surfaces?.length) delete persisted.surfaces
-    const text = serializeDirectDocument(persisted)
+    // After a commit or restore the history already holds the full serialization.
+    const text = serializeDirectDraft(document.value, getHistory().canonicalText(document.value))
     const live = () => generation === saveGeneration && !restoreDisposed
     void saveSolidDraft(storageIo, {
       ready: durableReady,
@@ -388,7 +386,7 @@ export function useDraftPersistence(options: UseDraftPersistenceOptions) {
         if (!applied || !current()) return
         const snapDocument = getSnapDocument()
         const document = getDocument()
-        snapDocument.value = history.document
+        snapDocument.value = history.syncedDocument
         document.value = snapDocument.value
         error.value = ''
         saveError.value = false

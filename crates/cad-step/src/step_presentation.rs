@@ -32,6 +32,8 @@ impl StepColour {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct StepPresentationStyle {
     pub colour: Option<StepColour>,
+    /// `SURFACE_STYLE_TRANSPARENT` value: 0 is opaque, 1 is fully transparent.
+    pub transparency: Option<f64>,
     pub layers: Vec<String>,
 }
 
@@ -71,13 +73,18 @@ impl StepPresentation {
             .as_ref()
             .and_then(|style| style.colour)
             .or_else(|| product_style.as_ref().and_then(|style| style.colour));
+        let transparency = body_style
+            .as_ref()
+            .and_then(|style| style.transparency)
+            .or_else(|| product_style.as_ref().and_then(|style| style.transparency));
         let layers = [&body_style, &product_style]
             .into_iter()
             .flatten()
             .find(|style| !style.layers.is_empty())
             .map(|style| style.layers.clone())
             .unwrap_or_default();
-        (colour.is_some() || !layers.is_empty()).then_some(StepPresentationStyle { colour, layers })
+        (colour.is_some() || transparency.is_some() || !layers.is_empty())
+            .then_some(StepPresentationStyle { colour, transparency, layers })
     }
 
     /// Resolves colour and layers independently, so a face colour override does
@@ -92,19 +99,26 @@ impl StepPresentation {
             .and_then(|style| style.colour)
             .or_else(|| body.as_ref().and_then(|style| style.colour))
             .or_else(|| product.as_ref().and_then(|style| style.colour));
+        let transparency = face
+            .as_ref()
+            .and_then(|style| style.transparency)
+            .or_else(|| body.as_ref().and_then(|style| style.transparency))
+            .or_else(|| product.as_ref().and_then(|style| style.transparency));
         let layers = [&face, &body, &product]
             .into_iter()
             .flatten()
             .find(|style| !style.layers.is_empty())
             .map(|style| style.layers.clone())
             .unwrap_or_default();
-        (colour.is_some() || !layers.is_empty()).then_some(StepPresentationStyle { colour, layers })
+        (colour.is_some() || transparency.is_some() || !layers.is_empty())
+            .then_some(StepPresentationStyle { colour, transparency, layers })
     }
 
     fn inherited_product_style(&self, product: usize) -> Option<StepPresentationStyle> {
         let mut current = Some(product);
         let mut visited = BTreeSet::new();
         let mut colour = None;
+        let mut transparency = None;
         let mut layers = Vec::new();
         while let Some(id) = current {
             if !visited.insert(id) {
@@ -112,13 +126,15 @@ impl StepPresentation {
             }
             if let Some(style) = self.product_styles.get(&id) {
                 colour = colour.or(style.colour);
+                transparency = transparency.or(style.transparency);
                 if layers.is_empty() {
                     layers = style.layers.clone();
                 }
             }
             current = self.product_parents.get(&id).copied();
         }
-        (colour.is_some() || !layers.is_empty()).then_some(StepPresentationStyle { colour, layers })
+        (colour.is_some() || transparency.is_some() || !layers.is_empty())
+            .then_some(StepPresentationStyle { colour, transparency, layers })
     }
 
     pub fn validate_for_model(&self, model: &Model) -> Result<()> {
@@ -140,6 +156,9 @@ impl StepPresentation {
             if let Some(colour) = style.colour {
                 StepColour::new(colour.red, colour.green, colour.blue)?;
             }
+            if let Some(transparency) = style.transparency {
+                checked_transparency(transparency)?;
+            }
             if style.layers.len() > 256
                 || style
                     .layers
@@ -150,6 +169,60 @@ impl StepPresentation {
             }
         }
         Ok(())
+    }
+}
+
+fn checked_transparency(value: f64) -> Result<f64> {
+    if value.is_finite() && (0. ..=1.).contains(&value) {
+        Ok(value)
+    } else {
+        Err(super::refuse("STEP surface transparency must be finite and in 0..=1"))
+    }
+}
+
+/// Follows the same style chain as [`colour`] down to a
+/// `SURFACE_STYLE_TRANSPARENT`, either directly in a `SURFACE_SIDE_STYLE`
+/// or inside the AP242 `SURFACE_STYLE_RENDERING_WITH_PROPERTIES` property
+/// list that OpenCascade writes.
+fn transparency(entities: &BTreeMap<usize, Entity>, id: usize, depth: usize) -> Result<Option<f64>> {
+    if depth > 16 {
+        return Err(super::refuse("STEP presentation style chain exceeds 16 links"));
+    }
+    if matches!(entities[&id].value, Value::List(_)) {
+        for (kind, args) in components(entities, id)? {
+            if let ("SURFACE_STYLE_USAGE", [_, style]) | ("PRESENTATION_STYLE_BY_CONTEXT", [style, ..]) =
+                (kind, args)
+            {
+                return transparency(entities, one_ref(style, "complex surface style")?, depth + 1);
+            }
+        }
+        return Ok(None);
+    }
+    let (kind, args) = call(entities, id)?;
+    let walk = |items: &Value, label: &str| -> Result<Option<f64>> {
+        for item in list(items, label)? {
+            if let Some(value) = transparency(entities, one_ref(item, label)?, depth + 1)? {
+                return Ok(Some(value));
+            }
+        }
+        Ok(None)
+    };
+    match kind {
+        "SURFACE_STYLE_TRANSPARENT" if args.len() == 1 => {
+            Ok(Some(checked_transparency(number(&args[0], "surface transparency")?)?))
+        }
+        "SURFACE_STYLE_RENDERING_WITH_PROPERTIES" if args.len() == 3 => {
+            walk(&args[2], "surface rendering properties")
+        }
+        "SURFACE_SIDE_STYLE" if args.len() == 2 => walk(&args[1], "surface side styles"),
+        "SURFACE_STYLE_USAGE" if args.len() == 2 => {
+            transparency(entities, one_ref(&args[1], "surface style usage")?, depth + 1)
+        }
+        "PRESENTATION_STYLE_ASSIGNMENT" if args.len() == 1 => walk(&args[0], "presentation styles"),
+        "PRESENTATION_STYLE_BY_CONTEXT" if !args.is_empty() => {
+            transparency(entities, one_ref(&args[0], "contextual presentation style")?, depth + 1)
+        }
+        _ => Ok(None),
     }
 }
 
@@ -214,6 +287,22 @@ fn colour(entities: &BTreeMap<usize, Entity>, id: usize, depth: usize) -> Result
         }
         "SURFACE_STYLE_USAGE" if args.len() == 2 => {
             colour(entities, one_ref(&args[1], "surface style usage")?, depth + 1)
+        }
+        // AP242 rendering styles carry the colour OpenCascade writes for
+        // transparent faces.
+        "SURFACE_STYLE_RENDERING_WITH_PROPERTIES" if args.len() == 3 => {
+            colour(entities, one_ref(&args[1], "surface rendering colour")?, depth + 1)
+        }
+        "SURFACE_STYLE_RENDERING" if args.len() == 2 => {
+            colour(entities, one_ref(&args[1], "surface rendering colour")?, depth + 1)
+        }
+        "PRESENTATION_STYLE_ASSIGNMENT" if args.len() == 1 => {
+            for item in list(&args[0], "presentation styles")? {
+                if let Some(colour) = colour(entities, one_ref(item, "presentation style")?, depth + 1)? {
+                    return Ok(Some(colour));
+                }
+            }
+            Ok(None)
         }
         "PRESENTATION_STYLE_BY_CONTEXT" if !args.is_empty() => {
             colour(entities, one_ref(&args[0], "contextual presentation style")?, depth + 1)
@@ -342,30 +431,37 @@ pub(crate) fn parse(
         product_parents,
         ..StepPresentation::default()
     };
-    let mut styled_colours = BTreeMap::<usize, Option<StepColour>>::new();
+    let mut styled_colours = BTreeMap::<usize, (Option<StepColour>, Option<f64>)>::new();
     for (&id, entity) in entities {
         if let Value::Call(kind, args) = &entity.value
             && kind == "STYLED_ITEM"
             && args.len() == 3
         {
             let mut found = None;
+            let mut found_transparency = None;
             for style in list(&args[1], "styled item styles")? {
                 let style = one_ref(style, "styled item style")?;
-                if let Some(colour) = colour(entities, style, 0)? {
-                    found = Some(colour);
-                    break;
+                if found.is_none() {
+                    found = colour(entities, style, 0)?;
+                }
+                if found_transparency.is_none() {
+                    found_transparency = transparency(entities, style, 0)?;
                 }
             }
-            if found.is_none() {
+            if found.is_none() && found_transparency.is_none() {
                 result.unsupported.push(StepPresentationUnsupported {
                     code: "STEP_PRESENTATION_STYLE_UNSUPPORTED",
                     entity: id,
                     detail: "No COLOUR_RGB/fill_area_style_colour chain was retained".into(),
                 });
             }
-            styled_colours.insert(id, found);
+            styled_colours.insert(id, (found, found_transparency));
             let target = one_ref(&args[2], "styled representation item")?;
-            let style = StepPresentationStyle { colour: found, layers: vec![] };
+            let style = StepPresentationStyle {
+                colour: found,
+                transparency: found_transparency,
+                layers: vec![],
+            };
             if let Some(face) = face_indices.get(&target) {
                 result.face_styles[*face] = Some(style);
             } else if let Some(body) = body_indices.get(&target) {
@@ -398,8 +494,13 @@ pub(crate) fn parse(
             for assigned in list(&args[2], "presentation layer items")? {
                 let assigned = one_ref(assigned, "presentation layer item")?;
                 let target = styled_target(entities, assigned)?.unwrap_or(assigned);
-                let styled = styled_colours.get(&assigned).copied().flatten();
-                let style = StepPresentationStyle { colour: styled, layers: vec![layer.clone()] };
+                let (styled, styled_transparency) =
+                    styled_colours.get(&assigned).copied().unwrap_or_default();
+                let style = StepPresentationStyle {
+                    colour: styled,
+                    transparency: styled_transparency,
+                    layers: vec![layer.clone()],
+                };
                 if let Some(product) = representation_products.get(&target).copied() {
                     let product_style = result.product_styles.entry(product).or_default();
                     if !product_style.layers.contains(layer) {
@@ -450,6 +551,12 @@ pub(crate) fn emit(
     bodies: &[usize],
     representation: usize,
 ) -> Result<()> {
+    let inherited_colour = presentation
+        .body_styles
+        .iter()
+        .flatten()
+        .chain(presentation.product_styles.values())
+        .find_map(|style| style.colour);
     for (target, style) in faces
         .iter()
         .zip(&presentation.face_styles)
@@ -459,18 +566,45 @@ pub(crate) fn emit(
         }))
         .chain(presentation.product_styles.values().map(|style| (representation, style)))
     {
-        let colour = if let Some(colour) = style.colour {
-            let colour = writer.emit(format!(
-                "COLOUR_RGB('',{},{},{})",
-                real(colour.red),
-                real(colour.green),
-                real(colour.blue)
-            ));
-            let fill_colour = writer.emit(format!("FILL_AREA_STYLE_COLOUR('',#{colour})"));
-            let fill = writer.emit(format!("FILL_AREA_STYLE('',(#{fill_colour}))"));
-            let surface_fill = writer.emit(format!("SURFACE_STYLE_FILL_AREA(#{fill})"));
-            let side = writer.emit(format!("SURFACE_SIDE_STYLE('',(#{surface_fill}))"));
-            Some(writer.emit(format!("SURFACE_STYLE_USAGE('',#{side})")))
+        let colour = if style.colour.is_some() || style.transparency.is_some() {
+            let mut side_items = Vec::new();
+            let colour_ref = style.colour.map(|colour| {
+                writer.emit(format!(
+                    "COLOUR_RGB('',{},{},{})",
+                    real(colour.red),
+                    real(colour.green),
+                    real(colour.blue)
+                ))
+            });
+            if let Some(colour) = colour_ref {
+                let fill_colour = writer.emit(format!("FILL_AREA_STYLE_COLOUR('',#{colour})"));
+                let fill = writer.emit(format!("FILL_AREA_STYLE('',(#{fill_colour}))"));
+                side_items.push(writer.emit(format!("SURFACE_STYLE_FILL_AREA(#{fill})")));
+            }
+            if let Some(value) = style.transparency {
+                let value = checked_transparency(value)?;
+                // AP242 rendering form, read by OpenCascade as alpha. Its colour
+                // is mandatory and every reader takes it as the face colour, so
+                // a transparency-only style writes the colour it would inherit
+                // (exact for single-body models), else white.
+                let rendering_colour = colour_ref.unwrap_or_else(|| {
+                    let colour = inherited_colour.unwrap_or(StepColour { red: 1., green: 1., blue: 1. });
+                    writer.emit(format!(
+                        "COLOUR_RGB('',{},{},{})",
+                        real(colour.red),
+                        real(colour.green),
+                        real(colour.blue)
+                    ))
+                });
+                let transparent =
+                    writer.emit(format!("SURFACE_STYLE_TRANSPARENT({})", real(value)));
+                side_items.push(writer.emit(format!(
+                    "SURFACE_STYLE_RENDERING_WITH_PROPERTIES(.NORMAL_SHADING.,#{rendering_colour},(#{transparent}))"
+                )));
+            }
+            let items = side_items.iter().map(|id| format!("#{id}")).collect::<Vec<_>>().join(",");
+            let side = writer.emit(format!("SURFACE_SIDE_STYLE('',({items}))"));
+            Some(writer.emit(format!("SURFACE_STYLE_USAGE(.BOTH.,#{side})")))
         } else {
             None
         };
