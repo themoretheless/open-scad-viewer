@@ -1,6 +1,8 @@
 import {afterEach, expect, it, vi} from 'vitest'
 import {MainSolidWorkerClient, type MainSolidPort} from '../src/kernel/mainSolidWorkerClient'
 import type {MainSolidJob,MainSolidRequest} from '../src/kernel/mainSolidProtocol'
+import type {DirectDocument} from '../src/app/directModeling'
+import type {SolidSceneEditOptions} from '../src/kernel/solidSceneEdit'
 import type {TrussModel, TrussResponse} from '../src/kernel/trussAnalysis'
 
 class Port implements MainSolidPort {
@@ -351,4 +353,37 @@ it('accepts measured thermal properties and rejects inconsistent results',async(
   const task=client.run(job);ports.at(-1)!.reply({ok:true,result})
   await expect(task).rejects.toMatchObject({code:'CAD_PROTOCOL'})
  }
+})
+
+type Wire={document:unknown;retainAs?:string;delta?:boolean}
+
+it('keeps a drag base resident: first request sends it once, later requests send its key and get deltas',async()=>{
+  const {client,ports}=setup()
+  const doc={version:1,sketches:[],bodies:[{id:'a',name:'a',mesh:{positions:[0,0,0,1,0,0,0,1,0],indices:[0,1,2]}},{id:'b',name:'b',mesh:{positions:[0,0,0,1,0,0,0,1,0],indices:[0,1,2]}}]} as unknown as DirectDocument
+  const options:SolidSceneEditOptions={operation:'transform',id:'a',ids:['a'],createdId:'',x:1,y:0,z:0,axis:'z',angle:0,scale:1}
+  const moved={...doc.bodies[0],mesh:{positions:[1,0,0,2,0,0,1,1,0],indices:[0,1,2]}}
+  const first=client.run({kind:'sceneEdit',document:doc,options},{residentDocument:{text:()=>'TEXT'}})
+  const sent=ports[0].postMessage.mock.lastCall![0].job as unknown as Wire
+  expect(sent.document).toBe('TEXT');expect(sent.delta).toBe(true);expect(typeof sent.retainAs).toBe('string')
+  ports[0].reply({ok:true,result:{delta:1,keys:['version','sketches','bodies'],fields:{},collections:{sketches:[],bodies:[moved,'b']}}})
+  const result=await first
+  expect(result.bodies[0]).toEqual(moved);expect(result.bodies[1]).toBe(doc.bodies[1])
+  const second=client.run({kind:'sceneEdit',document:doc,options},{residentDocument:{}})
+  expect((ports[0].postMessage.mock.lastCall![0].job as unknown as Wire).document).toEqual({resident:sent.retainAs})
+  ports[0].reply({ok:false,error:{name:'Error',code:'CAD_RESIDENT_MISSING',message:'gone'}})
+  await expect(second).rejects.toMatchObject({code:'CAD_RESIDENT_MISSING'})
+  const third=client.run({kind:'sceneEdit',document:doc,options},{residentDocument:{}})
+  const resent=ports[0].postMessage.mock.lastCall![0].job as unknown as Wire
+  expect(resent.document).toBe(doc);expect(resent.retainAs).not.toBe(sent.retainAs)
+  ports[0].reply({ok:true,result:{delta:1,keys:['version'],fields:{},collections:{bodies:['zzz']}}})
+  await expect(third).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+})
+
+it('runs without residency exactly as before when the option is absent',async()=>{
+  const {client,ports}=setup()
+  const doc={version:1,sketches:[],bodies:[]} as unknown as DirectDocument
+  const task=client.run({kind:'sceneEdit',document:doc,options:{operation:'group-create',id:'',ids:[],createdId:'',x:0,y:0,z:0,axis:'z',angle:0,scale:1,group:'G'}})
+  const job=ports[0].postMessage.mock.lastCall![0].job as unknown as Wire
+  expect(job.document).toBe(doc);expect(job.retainAs).toBeUndefined();expect(job.delta).toBeUndefined()
+  ports[0].reply({ok:true,result:doc});await expect(task).resolves.toBe(doc)
 })

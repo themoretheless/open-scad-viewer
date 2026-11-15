@@ -1108,8 +1108,8 @@ function moveAt(e: PointerEvent) {
  * gesture start does not deep-copy the whole document. Callers must not mutate it. */
 function committedView():DirectDocument{return snapDocument.value}
 function sync(next:DirectDocument=history.syncedDocument) { snapDocument.value=next; document.value=next; const ids=new Set([...documentObjects(document.value),...document.value.sourceBodies??[]].map(o=>o.id));if(selection.value&&!ids.has(selection.value))selection.value='';extraSelection.value=extraSelection.value.filter(id=>ids.has(id)); if (gpuActive.value) settleAfterDrag(); const s=document.value.sketches.find(s=>s.id===selection.value);if(s&&!samePlane(s.plane,activePlane.value)){activePlane.value=s.plane??xyPlane();workplaneOutline.value=[]} undoable.value = history.canUndo; redoable.value = history.canRedo; persist() }
-function prepareCommit(next:DirectDocument,origin:'edit'|'file'='edit') {
- return prepareDocumentCommit(next,origin==='file'&&!lockedIds.value.length?undefined:snapDocument.value,history.objectIds,lockedIds.value,activeGroup.value,origin,label)
+function prepareCommit(next:DirectDocument,origin:'edit'|'file'='edit',resolved=false) {
+ return prepareDocumentCommit(next,origin==='file'&&!lockedIds.value.length?undefined:snapDocument.value,history.objectIds,lockedIds.value,activeGroup.value,origin,label,resolved)
 }
 function finishCommit(added:string[],next?:DirectDocument){
  sync(next)
@@ -1121,7 +1121,7 @@ function commit(next:DirectDocument){
 }
 /** Worker results already passed the authoritative parser: commit without re-validating here. */
 async function commitWorkerResult(next:DirectDocument):Promise<boolean>{
- const {validateLocked,added}=prepareCommit(next)
+ const {validateLocked,added}=prepareCommit(next,'edit',true)
  if(!await history.commitAsync(async()=>next,validateLocked))return false
  finishCommit(added,next);return true
 }
@@ -1218,7 +1218,7 @@ async function duplicate() {
  const generation=directTransformGeneration,before=committedView(),ids=[...selectedIds.value],copyIds=ids.map(()=>crypto.randomUUID())
  directTransformPending.value=true;directTransformOperation.value='duplicate';error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:before.bodies.some(body=>body.instance)?history.canonicalText(before)??serializeDirectDocument(before):before,options:{operation:'duplicate',id:ids[0]??'',ids,copyIds,createdId:'',x:10,y:10,z:0,axis:'z',angle:0,scale:1}})
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:'duplicate',id:ids[0]??'',ids,copyIds,createdId:'',x:10,y:10,z:0,axis:'z',angle:0,scale:1}},residentTransformBase(before))
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
   const applied=await history.commitAsync(async()=>result,validateLocked)
@@ -1285,7 +1285,9 @@ async function drainGizmoTransforms(){
   while(gizmoQueued&&epoch===gizmoEpoch){
    const job=gizmoQueued;gizmoQueued=null
    try{
-    const result=await gizmoWorker.run(job.job)
+    // The drag base stays resident in the worker: only the first move sends it, as snapshot text.
+    const base=job.job.document
+    const result=await gizmoWorker.run(job.job,{residentDocument:{text:()=>history.canonicalText(base)}})
     if(epoch!==gizmoEpoch)return
     if(job.revision!==gizmoRevision)continue
     if(gizmoApplyRevision===job.revision){
@@ -1324,12 +1326,15 @@ function cancelDirectTransform(){
  if(directTransformPending.value){history.cancelRestore();clearDragPreview()}
  directTransformPending.value=false
 }
+/** Transform requests name their base by key or send it as text; the answer is a delta whose
+ * unchanged objects are `before`'s own, which keeps the commit policy and history incremental. */
+const residentTransformBase=(before:DirectDocument)=>({residentDocument:{text:()=>history.canonicalText(before)??(before.bodies.some(body=>body.instance)?serializeDirectDocument(before):undefined)}})
 async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false,detach=false,metadata?:{operation:'group-create'|'group-move';group:string}){
  cancelDirectTransform()
  const generation=directTransformGeneration
  directTransformPending.value=true;directTransformOperation.value=metadata?.operation??(detach?'instance-detach':'transform');error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:before.bodies.some(body=>body.instance)?history.canonicalText(before)??serializeDirectDocument(before):before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}},residentTransformBase(before))
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
   result.blenderProjectId ??= snapDocument.value.blenderProjectId

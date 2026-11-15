@@ -1,7 +1,7 @@
 import type {DirectDocument} from '../../app/directModeling'
 import {sameMeshJson} from '../../exchange/sameMeshJson'
 const documentObjects=(d:DirectDocument)=>[...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[]]
-export function prepareDocumentCommit(next:DirectDocument,previous:DirectDocument|undefined,fallbackIds:Iterable<string>,lockedIds:string[],activeGroup:string,origin:'edit'|'file',label:(ru:string,en:string)=>string) {
+export function prepareDocumentCommit(next:DirectDocument,previous:DirectDocument|undefined,fallbackIds:Iterable<string>,lockedIds:string[],activeGroup:string,origin:'edit'|'file',label:(ru:string,en:string)=>string,resolved=false) {
   const existing=new Set(previous?documentObjects(previous).map(b=>b.id):fallbackIds)
   const sourceChanges=new Map<string,boolean>()
   const previousBodies=new Map(previous?.bodies.map(body=>[body.id,body])??[])
@@ -12,7 +12,9 @@ export function prepareDocumentCommit(next:DirectDocument,previous:DirectDocumen
   }
   // Imported caches are checked and rebuilt by the authoritative history parser.
   // The edit-only guard detects attempts to modify a live linked body directly.
-  for(const body of previous?.bodies??[])if(origin==='edit'&&body.instance) {
+  // `resolved`: the candidate already came out of that parser (a worker result), which derives
+  // every instance from its source, so a linked body cannot differ from its source there.
+  if(!resolved)for(const body of previous?.bodies??[])if(origin==='edit'&&body.instance) {
     const sourceId=body.instance.sourceId
     if(!sourceChanges.has(sourceId)) {
       const oldSource=previousBodies.get(sourceId),newSource=nextBodies.get(sourceId)

@@ -66,7 +66,8 @@ import {checkLatticeGraphInput, checkLatticeGraphMeshInput, isNominalLatticeGrap
 import {warmGeometryKernel} from './geometry/kernel'
 import {prepareMainSolidTransfer} from './mainSolidWorkerTransport'
 import {createWorkerHandler} from '../core/workerHandlerRuntime'
-import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidProgress,type MainSolidProgressMessage,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
+import {directDocumentDelta} from './directDocumentDelta'
+import {MAIN_SOLID_JOB_KINDS,isResidentDocumentRef,type MainSolidJob,type MainSolidProgress,type MainSolidProgressMessage,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
 
 /** Run the authoritative history parser here so the UI can commit without re-validating on its thread. */
 const validatedDocumentResult=<T extends {document:DirectDocument}>(result:T):T=>({...result,document:parseDirectDocument(serializeDirectDocument(result.document),instanceCache)})
@@ -134,10 +135,10 @@ case 'transaction':return executeDirectTransaction(job.document,job.script)
     case 'trimmedCurveOffset':return (await import('./solidTrimmedCurveOffset')).offsetTrimmedSolidCurve(job.document,job.options)
     case 'curveOffset':return (await import('./solidCurveOffset')).offsetSolidCurve(job.document,job.options)
     case 'nurbsEdit':return (await import('./solidNurbsEdit')).applySolidNurbsEdit(job.document,job.options)
-    case 'pointEdit':return applySolidPointEdit(job.document,job.options)
+    case 'pointEdit':{const base=residentBase(job);return residentResult(job,base,applySolidPointEdit(base,job.options))}
     case 'sketchEdit':return applySolidSketchEdit(job.document,job.options)
     case 'boolean':return validatedDocumentResult(applySolidBoolean(job.document,job.options))
-    case 'sceneEdit':return parseDirectDocument(serializeDirectDocument(applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document,instanceCache):job.document,job.options,instanceCache)),instanceCache)
+    case 'sceneEdit':{const base=residentBase(job);return residentResult(job,base,parseDirectDocument(serializeDirectDocument(applySolidSceneEdit(base,job.options,instanceCache)),instanceCache))}
     case 'curveMatch':return matchSolidCurve(...job.args)
     case 'surfaceMatch':return matchSolidSurface(...job.args)
     case 'seamPrepare':return prepareSolidSurfaceSeams(...job.args)
@@ -210,3 +211,20 @@ export function createMainSolidWorkerHandler(
 }
 
 const instanceCache=new SolidInstanceBatchCache()
+/** The base document of the current drag: sent once, then named by key on every move, so the
+ * UI thread does not clone the whole scene per pointer event. One slot per worker realm. */
+let residentDocument:{key:string;document:DirectDocument}|null=null
+type ResidentJob=Extract<MainSolidJob,{kind:'sceneEdit'|'pointEdit'}>
+function residentBase(job:ResidentJob):DirectDocument {
+  const source=job.document
+  if(isResidentDocumentRef(source)) {
+    if(residentDocument?.key!==source.resident)throw Object.assign(Error('CAD worker does not hold the referenced document.'),{code:'CAD_RESIDENT_MISSING'})
+    return residentDocument.document
+  }
+  const document=typeof source==='string'?parseDirectDocument(source,instanceCache):source
+  if(typeof job.retainAs==='string')residentDocument={key:job.retainAs,document}
+  return document
+}
+/** The client that asked for a delta rebuilds the document from its own copy of the base. */
+const residentResult=(job:ResidentJob,base:DirectDocument,result:DirectDocument):DirectDocument=>
+  job.delta===true?directDocumentDelta(base,result) as unknown as DirectDocument:result
