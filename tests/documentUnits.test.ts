@@ -1,7 +1,21 @@
 import { describe, it, expect } from 'vitest'
-import { DOCUMENT_LENGTH_UNITS, MM_PER_UNIT, documentUnit, exportScaleFromMillimetres, formatLength, fromMillimetres, importScaleToMillimetres, isDocumentLengthUnit, toMillimetres } from '../src/app/documentUnits'
+import {
+  DOCUMENT_LENGTH_UNITS,
+  MM_PER_UNIT,
+  documentUnit,
+  exportScaleFromMillimetres,
+  formatLength,
+  fromMillimetres,
+  importScaleToMillimetres,
+  isDocumentLengthUnit,
+  toMillimetres,
+} from '../src/app/documentUnits'
 import { emptyDirectDocument, parseDirectDocument, serializeDirectDocument } from '../src/app/directModeling'
-import { appendDirectCheckpoint, appendDirectDocumentEdit, executeDirectTransaction } from '../src/app/directTransactions'
+import {
+  appendDirectCheckpoint,
+  appendDirectDocumentEdit,
+  executeDirectTransaction,
+} from '../src/app/directTransactions'
 
 describe('document length units', () => {
   it('uses exact conversion factors', () => {
@@ -28,7 +42,8 @@ describe('document length units', () => {
   })
 
   it('stores, validates and round-trips the document unit', () => {
-    const doc = emptyDirectDocument(); doc.units = 'in'
+    const doc = emptyDirectDocument()
+    doc.units = 'in'
     const parsed = parseDirectDocument(serializeDirectDocument(doc))
     expect(parsed.units).toBe('in')
     expect(documentUnit(parsed)).toBe('in')
@@ -38,8 +53,10 @@ describe('document length units', () => {
 
   it('records unit changes as replayable metadata edits', () => {
     const base = emptyDirectDocument()
-    const inch = structuredClone(base); inch.units = 'in'
-    const back = structuredClone(inch); delete back.units
+    const inch = structuredClone(base)
+    inch.units = 'in'
+    const back = structuredClone(inch)
+    delete back.units
     let script = appendDirectCheckpoint({ version: 1, actions: [] }, base)
     script = appendDirectDocumentEdit(script, base, inch)
     expect(executeDirectTransaction(base, JSON.stringify(script)).units).toBe('in')
