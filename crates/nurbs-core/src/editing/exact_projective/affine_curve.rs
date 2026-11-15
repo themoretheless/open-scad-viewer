@@ -1,6 +1,7 @@
 //! Exact affine change of a rational curve's absolute clock.
 use super::{Curve, PResult, Refusal, Report, Work, finish, mobius::validate_clock};
 use crate::{Result, check};
+use num_rational::BigRational as Q;
 
 /// Place a rational curve's original start and end at the given parameter
 /// values. Descending endpoints reverse the traversal. All knots,
@@ -49,23 +50,44 @@ pub(super) fn map_knots(
     [start, end]: [f64; 2],
     work: &mut Work,
 ) -> PResult<Vec<f64>> {
-    let old_start = work.lift(a)?;
-    let old_end = work.lift(b)?;
-    let new_start = work.lift(start)?;
-    let new_end = work.lift(end)?;
-    let original_width = work.op(&old_end, &old_start, |a, b| a - b)?;
-    let output_width = work.op(&new_end, &new_start, |a, b| a - b)?;
-    let scale = work.op(&output_width, &original_width, |a, b| a / b)?;
-    let mut knots = Vec::with_capacity(source.len());
-    for &knot in source {
-        let k = work.lift(knot)?;
-        let offset = work.op(&k, &old_start, |a, b| a - b)?;
-        let delta = work.op(&offset, &scale, |a, b| a * b)?;
-        let absolute = work.op(&new_start, &delta, |a, b| a + b)?;
-        knots.push(work.float(&absolute)?);
-    }
+    let map = AffineMap::new([a, b], [start, end], work)?;
+    let mut knots = source
+        .iter()
+        .map(|&k| map.store(k, work))
+        .collect::<PResult<Vec<_>>>()?;
     if start > end {
         knots.reverse();
     }
     Ok(knots)
+}
+
+pub(super) struct AffineMap {
+    old_start: Q,
+    new_start: Q,
+    scale: Q,
+}
+
+impl AffineMap {
+    pub(super) fn new([a, b]: [f64; 2], [start, end]: [f64; 2], work: &mut Work) -> PResult<Self> {
+        let old_start = work.lift(a)?;
+        let old_end = work.lift(b)?;
+        let new_start = work.lift(start)?;
+        let new_end = work.lift(end)?;
+        let original_width = work.op(&old_end, &old_start, |a, b| a - b)?;
+        let output_width = work.op(&new_end, &new_start, |a, b| a - b)?;
+        let scale = work.op(&output_width, &original_width, |a, b| a / b)?;
+        Ok(Self {
+            old_start,
+            new_start,
+            scale,
+        })
+    }
+
+    pub(super) fn store(&self, value: f64, work: &mut Work) -> PResult<f64> {
+        let value = work.lift(value)?;
+        let offset = work.op(&value, &self.old_start, |a, b| a - b)?;
+        let delta = work.op(&offset, &self.scale, |a, b| a * b)?;
+        let absolute = work.op(&self.new_start, &delta, |a, b| a + b)?;
+        Ok(work.float(&absolute)?)
+    }
 }

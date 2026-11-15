@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 310,
-  "unallocatedCount": 690,
+  "specifiedCount": 311,
+  "unallocatedCount": 689,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8165,6 +8165,29 @@
       "remainingQualification": [
         "Map both tensor axes to independent absolute ranges and directions with exact knot storage and a matching control-net permutation.",
         "Independent signs and domains on both tensor axes, including exterior and periodic knots. Nonrepresentable output refuses atomically.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0311",
+      "name": "Точная аффинная перепараметризация поверхности вместе с контурами обрезки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::affine_trimmed_surface_clock",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/affine_trim.rs",
+        "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs",
+        "crates/nurbs-core/src/editing/exact_projective/trimmed_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/tests/exact_affine_trim_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-311-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-311-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Change the signed absolute UV domains of a rational tensor surface and its closed rational trims in one atomic operation.",
+        "Closed loops inside the active UV rectangle. Original trim knots and weights are retained, including under an axis reversal. Exact storage and a shared budget are required.",
         "WASM and application integration are separate."
       ]
     }
