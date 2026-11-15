@@ -1,6 +1,6 @@
 //! Rational squared mean curvature using the original surface jets.
 use super::*;
-use curvature::{dot, require_regular};
+use curvature::{dot, require_regular, second_form, trace_numerator};
 
 pub(super) fn target(h: &[Poly], widths: &[Q], work: &mut Work) -> PResult<Vec<Poly>> {
     let normal = area_target(h, widths, work)?;
@@ -8,20 +8,8 @@ pub(super) fn target(h: &[Poly], widths: &[Q], work: &mut Work) -> PResult<Vec<P
     require_regular(&norm_squared, work)?;
 
     let metric = metric_target(h, widths, work)?;
-    let e = dot(&normal, &mixed::target(h, [2, 0], widths, work)?, work)?;
-    let f = dot(&normal, &mixed::target(h, [1, 1], widths, work)?, work)?;
-    let g = dot(&normal, &mixed::target(h, [0, 2], widths, work)?, work)?;
-    let eg = polynomial::multiply(&e, &metric[2], work)?;
-    let fe = polynomial::multiply(&g, &metric[0], work)?;
-    let cross_term = polynomial::multiply(&f, &metric[1], work)?;
-    let mut trace = polynomial::subtract(
-        polynomial::subtract(eg, &cross_term, work)?,
-        &cross_term,
-        work,
-    )?;
-    for (key, value) in fe {
-        polynomial::accumulate(&mut trace, key, &value, work)?;
-    }
+    let second = second_form(h, widths, &normal, work)?;
+    let trace = trace_numerator(&metric, &second, work)?;
 
     // The unnormalized second form is over W^7, the first form over W^4.
     // Squaring their trace gives W^22, while |Su × Sv|^6 gives W^24.

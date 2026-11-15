@@ -11,6 +11,7 @@ use num_traits::{One, Zero};
 use std::collections::BTreeMap;
 mod content;
 mod curvature;
+mod curvature_gap;
 mod extraction;
 mod gaussian;
 mod mean_curvature;
@@ -76,6 +77,7 @@ pub(super) enum Field {
     Mixed([usize; 2]),
     GaussianCurvature,
     SquaredMeanCurvature,
+    SquaredPrincipalCurvatureGap,
 }
 fn area_target(h: &[Poly], widths: &[Q], w: &mut Work) -> PResult<Vec<Poly>> {
     let u = target(h, Axis::U, &widths[0], w)?;
@@ -141,6 +143,7 @@ pub(super) fn original_target(
         Field::Mixed(orders) => mixed::target(&h, orders, &widths, w)?,
         Field::GaussianCurvature => gaussian::target(&h, &widths, w)?,
         Field::SquaredMeanCurvature => mean_curvature::target(&h, &widths, w)?,
+        Field::SquaredPrincipalCurvatureGap => curvature_gap::target(&h, &widths, w)?,
     })
 }
 pub(super) fn reduced_target(target: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
@@ -217,6 +220,15 @@ pub fn gaussian_curvature(source: &Surface, max_work: u64) -> Result<Report> {
 /// proved regular on every cell, even when the curvature is zero.
 pub fn squared_mean_curvature(source: &Surface, max_work: u64) -> Result<Report> {
     apply(source, Field::SquaredMeanCurvature, max_work)
+}
+
+/// Construct `[(k1 - k2)², 0, 0]` over all original UV cells.
+/// The scalar separation is independent of normal orientation and of the
+/// order of the principal curvatures. It stays defined at regular umbilics.
+/// The source regularity proof and exact storage rules match the other
+/// curvature fields. This API does not construct principal directions.
+pub fn squared_principal_curvature_gap(source: &Surface, max_work: u64) -> Result<Report> {
+    apply(source, Field::SquaredPrincipalCurvatureGap, max_work)
 }
 
 fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {

@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0260",
+  "testedBase": "30f4f1de78488ac5c01b51665996c8bb4f5739f3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "principal_curvature_gap_contracts",
+    "--test",
+    "gaussian_curvature_field_contracts",
+    "--test",
+    "mean_curvature_field_contracts"
+  ],
+  "newContractsPassed": 5,
+  "regressionContractsPassed": 12,
+  "scope": [
+    "The squared gap measures the separation of the principal curvatures without a square root or an eigenvector chart. A bounded carrier alone is not a proof of an umbilic or of a positive gap.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "b760ffa01888085d7dcbde72d64de11a7826c2543f8051f0d4e8b6a6f4951114",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "054b433c9cc9efa297be6b45890635320cd5b020037e12ac255f83e7ddaaee64",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs": "30a2c08f982e18f0947bdd53485095277213ced5aa2e8078af710b52abae943d",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/principal_curvature_gap_contracts.rs": "0cbf0f4119f664ea654236967df2c33d8bbd2df53fa32c9b3ff984af11a7e6cd"
+  }
+}
