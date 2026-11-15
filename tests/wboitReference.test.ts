@@ -21,7 +21,9 @@ const background: Rgb = [0.9, 0.9, 0.9]
 
 function permutations<T>(items: readonly T[]): T[][] {
   if (items.length <= 1) return [[...items]]
-  return items.flatMap((item, index) => permutations([...items.slice(0, index), ...items.slice(index + 1)]).map(rest => [item, ...rest]))
+  return items.flatMap((item, index) =>
+    permutations([...items.slice(0, index), ...items.slice(index + 1)]).map(rest => [item, ...rest]),
+  )
 }
 
 describe('WBOIT CPU reference qualification', () => {
@@ -37,7 +39,10 @@ describe('WBOIT CPU reference qualification', () => {
   it('accumulates premultiplied weighted color and multiplies revealage', () => {
     const pixel = accumulateWboit(layers)
     const weights = layers.map(layer => wboitWeight(layer.depth, layer.alpha))
-    expect(pixel.accum[3]).toBeCloseTo(layers.reduce((sum, layer, index) => sum + layer.alpha * weights[index], 0), 6)
+    expect(pixel.accum[3]).toBeCloseTo(
+      layers.reduce((sum, layer, index) => sum + layer.alpha * weights[index], 0),
+      6,
+    )
     expect(pixel.accum[0]).toBeCloseTo(layers[0].alpha * weights[0], 6)
     expect(pixel.reveal).toBeCloseTo(0.65 * 0.5 * 0.35, 12)
   })
@@ -77,12 +82,26 @@ describe('WBOIT CPU reference qualification', () => {
     // From alpha 0.25 up the weight saturates at the clamp for every depth, so
     // the pass reduces to an alpha-weighted average with no depth preference.
     for (const depth of [0, 0.25, 0.5, 0.75, 1]) expect(wboitWeight(depth, 0.25)).toBe(WBOIT_WEIGHT_MAX)
-    const near = compositeWboit(accumulateWboit([{ ...layers[0], depth: 0.01 }, { ...layers[2], depth: 0.99 }]), background)
-    const far = compositeWboit(accumulateWboit([{ ...layers[0], depth: 0.99 }, { ...layers[2], depth: 0.01 }]), background)
+    const near = compositeWboit(
+      accumulateWboit([
+        { ...layers[0], depth: 0.01 },
+        { ...layers[2], depth: 0.99 },
+      ]),
+      background,
+    )
+    const far = compositeWboit(
+      accumulateWboit([
+        { ...layers[0], depth: 0.99 },
+        { ...layers[2], depth: 0.01 },
+      ]),
+      background,
+    )
     for (let channel = 0; channel < 3; channel++) expect(near[channel]).toBeCloseTo(far[channel], 12)
     // rgba16float headroom: at the weight cap and alpha 1, 22 layers overflow the accumulation alpha.
     expect(Math.floor(HALF_FLOAT_MAX / WBOIT_WEIGHT_MAX)).toBe(21)
-    const deep = accumulateWboit(Array.from({ length: 22 }, (_, index) => ({ color: [1, 1, 1] as Rgb, alpha: 1, depth: index / 22 })))
+    const deep = accumulateWboit(
+      Array.from({ length: 22 }, (_, index) => ({ color: [1, 1, 1] as Rgb, alpha: 1, depth: index / 22 })),
+    )
     expect(deep.accum[3]).toBeGreaterThan(HALF_FLOAT_MAX)
   })
 })

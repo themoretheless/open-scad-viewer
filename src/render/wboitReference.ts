@@ -61,7 +61,9 @@ export function compositeWboit(pixel: WboitPixel, background: Rgb): Rgb {
   if (pixel.reveal >= 0.99999) return background
   const total = Math.max(pixel.accum[3], 1e-5)
   const alpha = 1 - pixel.reveal
-  return [0, 1, 2].map(channel => (pixel.accum[channel] / total) * alpha + background[channel] * (1 - alpha)) as unknown as Rgb
+  return [0, 1, 2].map(
+    channel => (pixel.accum[channel] / total) * alpha + background[channel] * (1 - alpha),
+  ) as unknown as Rgb
 }
 
 /** Exact back-to-front "over" compositing; fragments are sorted far to near by depth. */

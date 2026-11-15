@@ -193,7 +193,16 @@ export type RendererStatusChangeHandler = (event: RendererLifecycleEvent) => voi
 export interface SetMeshesOptions {
   /** Animate compatible parameter edits in display buffers only. */
   animate?: boolean
+  /**
+   * Keep the measurement. Omitted: kept only when every previous entity
+   * persists with unchanged geometry and transform.
+   */
   preserveMeasurement?: boolean
+  /**
+   * Carry selection, hover and isolation to persisting unchanged entities
+   * (default). False clears them, for callers that re-apply their own plan.
+   */
+  preserveInteraction?: boolean
   /** Opaque publication token, echoed only after its first GPU submission. */
   frameToken?: number
 }
