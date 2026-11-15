@@ -21,6 +21,12 @@ pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
         Err(error) if super::seam_boolean::refusal(error.code) => result,
         Err(error) => return Err(error),
     };
+    // Approximate coplanar cleanup: merge adjacent faces on one plane and drop
+    // their shared edges and collinear vertices. Optional, like the pass above.
+    let result = match super::coincident_faces::merge_coplanar_faces(&result) {
+        Ok((model, _)) => model,
+        Err(_) => result,
+    };
     cad_predicates::declare_brep_tolerance_contract(
         cad_predicates::OperationBoundary::Boolean,
         &[a.tolerance_mm, b.tolerance_mm],
