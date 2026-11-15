@@ -61,6 +61,39 @@ pub fn certify(
     let Some(orientation) = orientation.certificate else {
         return Ok(out);
     };
+    let (boundary, boundary_indices, collapsed) =
+        natural_boundary(s, axes, |_, i, j| s.weights[i][j]);
+    out.reason = "projected-boundary-simplicity-unproven";
+    let Some(separators) = boundary_separators(
+        &boundary,
+        tolerance,
+        max_work,
+        max_cells,
+        &mut out.exact_work,
+        &mut out.boundary_cells,
+    )?
+    else {
+        return Ok(out);
+    };
+    out.certificate = Some(Certificate {
+        orientation,
+        boundary,
+        boundary_indices,
+        collapsed,
+        separators,
+    });
+    out.reason = "original-projection-jordan-interior-injective";
+    Ok(out)
+}
+
+/// Natural rectangle edges (v-low, u-high, v-high, u-low) of `s` projected to
+/// `axes`, split into non-collapsed boundary curves and collapsed edge indices.
+/// `weight(edge, i, j)` supplies each projected control weight.
+pub(crate) fn natural_boundary(
+    s: &Surface,
+    axes: [usize; 2],
+    weight: impl Fn(usize, usize, usize) -> f64,
+) -> (Vec<Curve>, Vec<usize>, Vec<usize>) {
     let (p, q) = (s.degree_u, s.degree_v);
     let natural = [
         ((0..=p).map(|i| (i, 0)).collect::<Vec<_>>(), p),
@@ -86,7 +119,7 @@ pub fn certify(
                     ]
                 })
                 .collect(),
-            weights: indices.iter().map(|&(i, j)| s.weights[i][j]).collect(),
+            weights: indices.iter().map(|&(i, j)| weight(index, i, j)).collect(),
             periodic: false,
         };
         if c.control_points.iter().all(|p| p == &c.control_points[0]) {
@@ -96,17 +129,29 @@ pub fn certify(
             boundary.push(c);
         }
     }
-    out.reason = "projected-boundary-simplicity-unproven";
+    (boundary, boundary_indices, collapsed)
+}
+
+/// Proves the projected boundary simple, separating adjacent tangent joins.
+/// `None` means simplicity stayed unproven; the counters carry the work spent.
+pub(crate) fn boundary_separators(
+    boundary: &[Curve],
+    tolerance: f64,
+    max_work: u64,
+    max_cells: usize,
+    exact_work: &mut u64,
+    boundary_cells: &mut usize,
+) -> Result<Option<Vec<separator::Certificate>>> {
     if boundary.len() < 3 {
-        return Ok(out);
+        return Ok(None);
     }
-    let audit = trim_simplicity::inspect(&boundary, tolerance, 6, max_cells)?;
-    out.boundary_cells = audit.cells;
+    let audit = trim_simplicity::inspect(boundary, tolerance, 6, max_cells)?;
+    *boundary_cells = audit.cells;
     if audit.exact_joins != Some(true)
         || audit.injective.iter().any(|b| !*b)
         || audit.pairs.len() != audit.total_pairs
     {
-        return Ok(out);
+        return Ok(None);
     }
     let mut separators = Vec::new();
     for pair in audit.pairs {
@@ -119,7 +164,7 @@ pub fn certify(
         } else if a == 0 && b == boundary.len() - 1 {
             [0, 1]
         } else {
-            return Ok(out);
+            return Ok(None);
         };
         let curves = [&boundary[a], &boundary[b]];
         let frame_index = if ends[0] == 0 {
@@ -144,32 +189,24 @@ pub fn certify(
                 continue;
             }
             let remaining = max_work
-                .saturating_sub(out.exact_work)
+                .saturating_sub(*exact_work)
                 .min(cad_predicates::MAX_WORK);
             if remaining == 0 {
-                return Ok(out);
+                return Ok(None);
             }
             let r = separator::certify(curves, ends, frame_index, beta, remaining)?;
-            out.exact_work += r.exact_work;
+            *exact_work += r.exact_work;
             if let Some(c) = r.certificate {
                 proof = Some(c);
                 break;
             }
         }
         let Some(proof) = proof else {
-            return Ok(out);
+            return Ok(None);
         };
         separators.push(proof);
     }
-    out.certificate = Some(Certificate {
-        orientation,
-        boundary,
-        boundary_indices,
-        collapsed,
-        separators,
-    });
-    out.reason = "original-projection-jordan-interior-injective";
-    Ok(out)
+    Ok(Some(separators))
 }
 
 #[cfg(test)]

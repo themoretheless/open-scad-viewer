@@ -6,7 +6,6 @@
 use crate::{
     Result, check, curve::Curve, curve_quadratic_separator as separator,
     profile_projection_jacobian as jacobian, surface_weight_profile::WeightProfile,
-    trim_simplicity,
 };
 pub struct Certificate<'p, 's> {
     orientation: jacobian::Certificate<'p, 's>,
@@ -65,116 +64,27 @@ pub fn certify<'p, 's>(
     let Some(orientation) = orientation.certificate else {
         return Ok(out);
     };
-    let (p, q) = (s.degree_u, s.degree_v);
-    let natural = [
-        ((0..=p).map(|i| (i, 0)).collect::<Vec<_>>(), p),
-        ((0..=q).map(|j| (p, j)).collect(), q),
-        ((0..=p).rev().map(|i| (i, q)).collect(), p),
-        ((0..=q).rev().map(|j| (0, j)).collect(), q),
-    ];
-    let mut boundary = Vec::new();
-    let mut boundary_indices = Vec::new();
-    let mut collapsed = Vec::new();
-    for (index, (indices, degree)) in natural.into_iter().enumerate() {
-        let c = Curve {
-            degree,
-            knots: std::iter::repeat_n(0., degree + 1)
-                .chain(std::iter::repeat_n(1., degree + 1))
-                .collect(),
-            control_points: indices
-                .iter()
-                .map(|&(i, j)| {
-                    vec![
-                        s.control_points[i][j][axes[0]],
-                        s.control_points[i][j][axes[1]],
-                    ]
-                })
-                .collect(),
-            // Fixed-axis positive factors cancel exactly from the rational curve.
-            weights: indices
-                .iter()
-                .map(|&(i, j)| {
-                    if index % 2 == 0 {
-                        row_weights[i]
-                    } else {
-                        column_weights[j]
-                    }
-                })
-                .collect(),
-            periodic: false,
-        };
-        if c.control_points.iter().all(|p| p == &c.control_points[0]) {
-            collapsed.push(index);
-        } else {
-            boundary_indices.push(index);
-            boundary.push(c);
-        }
-    }
+    // Fixed-axis positive factors cancel exactly from the rational curve.
+    let (boundary, boundary_indices, collapsed) =
+        super::surface_projected_jordan::natural_boundary(s, axes, |index, i, j| {
+            if index % 2 == 0 {
+                row_weights[i]
+            } else {
+                column_weights[j]
+            }
+        });
     out.reason = "projected-boundary-simplicity-unproven";
-    if boundary.len() < 3 {
+    let Some(separators) = super::surface_projected_jordan::boundary_separators(
+        &boundary,
+        tolerance,
+        max_work,
+        max_cells,
+        &mut out.exact_work,
+        &mut out.boundary_cells,
+    )?
+    else {
         return Ok(out);
-    }
-    let audit = trim_simplicity::inspect(&boundary, tolerance, 6, max_cells)?;
-    out.boundary_cells = audit.cells;
-    if audit.exact_joins != Some(true)
-        || audit.injective.iter().any(|b| !*b)
-        || audit.pairs.len() != audit.total_pairs
-    {
-        return Ok(out);
-    }
-    let mut separators = Vec::new();
-    for pair in audit.pairs {
-        if pair.proven {
-            continue;
-        }
-        let [a, b] = pair.curves;
-        let ends = if b == a + 1 {
-            [1, 0]
-        } else if a == 0 && b == boundary.len() - 1 {
-            [0, 1]
-        } else {
-            return Ok(out);
-        };
-        let curves = [&boundary[a], &boundary[b]];
-        let frame_index = if ends[0] == 0 {
-            1
-        } else {
-            curves[0].degree - 1
-        };
-        let join = &curves[0].control_points[ends[0] * curves[0].degree];
-        let t = &curves[0].control_points[frame_index];
-        let direction = [t[0] - join[0], t[1] - join[1]];
-        let ratio = |c: &Curve, u: f64| -> Result<f64> {
-            let point = c.evaluate(u)?.point;
-            let delta = [point[0] - join[0], point[1] - join[1]];
-            let dot = direction[0] * delta[0] + direction[1] * delta[1];
-            Ok((direction[0] * delta[1] - direction[1] * delta[0]) / (dot * dot))
-        };
-        let mut proof = None;
-        for fraction in [0.1, 0.25, 0.5, 0.75, 0.9] {
-            let parameters = ends.map(|end| if end == 0 { fraction } else { 1. - fraction });
-            let beta = (ratio(curves[0], parameters[0])? + ratio(curves[1], parameters[1])?) * 0.5;
-            if !beta.is_finite() {
-                continue;
-            }
-            let remaining = max_work
-                .saturating_sub(out.exact_work)
-                .min(cad_predicates::MAX_WORK);
-            if remaining == 0 {
-                return Ok(out);
-            }
-            let r = separator::certify(curves, ends, frame_index, beta, remaining)?;
-            out.exact_work += r.exact_work;
-            if let Some(c) = r.certificate {
-                proof = Some(c);
-                break;
-            }
-        }
-        let Some(proof) = proof else {
-            return Ok(out);
-        };
-        separators.push(proof);
-    }
+    };
     out.certificate = Some(Certificate {
         orientation,
         boundary,
