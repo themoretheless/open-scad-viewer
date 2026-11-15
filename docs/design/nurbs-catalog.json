@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 272,
-  "unallocatedCount": 728,
+  "specifiedCount": 273,
+  "unallocatedCount": 727,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7318,6 +7318,31 @@
       ],
       "remainingQualification": [
         "Bounds the signed implicit second derivative on the certified contour. Exact rational coefficient proofs preserve constant derivatives even when unreduced degree exceeds the Bernstein hull limit.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0273",
+      "name": "Адаптивная UV-ломаная по границе второй производной контура NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::adapt_curvature_gap_polyline_second_order",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_second.rs",
+        "docs/qualification/nurbs-curvature-field-273-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-273-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Combines the certified second-derivative chord remainder with the first-order bound and exact vertex bracket error. The quadratic bound can meet a requested UV tolerance with fewer vertices.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]

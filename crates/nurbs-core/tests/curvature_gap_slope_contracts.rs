@@ -274,3 +274,47 @@ fn late_second_derivative_budget_refuses_atomically() {
     assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
     assert!(short.graph.is_none() && short.second_derivative.is_none());
 }
+
+#[test]
+fn second_order_adaptation_meets_the_same_tolerance_with_fewer_vertices() {
+    use nurbs_core::editing::exact_surface_derivative::{
+        AdaptiveCurvaturePolylineOptions, CurvaturePolylineStop, adapt_curvature_gap_polyline,
+        adapt_curvature_gap_polyline_second_order,
+    };
+    let s = quadratic_transverse_chart();
+    let options = AdaptiveCurvaturePolylineOptions {
+        max_error: 0.1,
+        max_vertices: 32,
+        root_depth: 16,
+        max_work: WORK,
+    };
+    let first = adapt_curvature_gap_polyline(&s, [2, 4], Axis::U, 0.5, options).unwrap();
+    let second =
+        adapt_curvature_gap_polyline_second_order(&s, [2, 4], Axis::U, 0.5, options).unwrap();
+    assert_eq!(first.stop, Some(CurvaturePolylineStop::ToleranceMet));
+    assert_eq!(second.stop, first.stop);
+    assert!(first.polyline.samples.unwrap().len() > 3);
+    assert_eq!(second.polyline.samples.unwrap().len(), 3);
+    assert_eq!(
+        second.polyline.segment_error_upper.unwrap(),
+        vec![3. / 64.; 2]
+    );
+}
+
+#[test]
+fn second_order_adaptation_keeps_the_error_from_inexact_vertices() {
+    use nurbs_core::editing::exact_surface_derivative::{
+        AdaptiveCurvaturePolylineOptions, CurvaturePolylineStop,
+        adapt_curvature_gap_polyline_second_order,
+    };
+    let s = sheared_parabola(0.125, 9.);
+    let options = AdaptiveCurvaturePolylineOptions {
+        max_error: 0.001,
+        max_vertices: 2,
+        root_depth: 10,
+        max_work: WORK,
+    };
+    let r = adapt_curvature_gap_polyline_second_order(&s, [2, 2], Axis::U, 1., options).unwrap();
+    assert_eq!(r.stop, Some(CurvaturePolylineStop::VertexLimit));
+    assert_eq!(r.polyline.segment_error_upper.unwrap(), vec![1. / 512.]);
+}

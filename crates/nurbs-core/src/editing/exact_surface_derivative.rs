@@ -25,7 +25,8 @@ pub use curvature_gap_graph::{
 mod curvature_gap_polyline;
 pub use curvature_gap_polyline::{
     AdaptiveCurvaturePolyline, AdaptiveCurvaturePolylineOptions, CurvatureGapPolyline,
-    CurvaturePolylineStop, adapt_curvature_gap_polyline, certify_curvature_gap_polyline,
+    CurvaturePolylineStop, adapt_curvature_gap_polyline, adapt_curvature_gap_polyline_second_order,
+    certify_curvature_gap_polyline,
 };
 mod curvature_gap_range;
 mod curvature_gap_second;
