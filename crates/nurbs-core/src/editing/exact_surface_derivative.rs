@@ -24,6 +24,10 @@ pub use curvature_gap_graph::{
     CurvatureGapGraph, CurvatureGapGraphAudit, CurvatureGapSample, CurvatureGapSamples,
     certify_curvature_gap_graph, sample_curvature_gap_graph,
 };
+mod curvature_gap_pair_distance;
+pub use curvature_gap_pair_distance::{
+    CurvatureGapContourSpec, CurvatureGapPairDistance, distance_between_curvature_gap_contours,
+};
 mod curvature_gap_polyline;
 pub use curvature_gap_polyline::{
     AdaptiveCurvaturePolyline, AdaptiveCurvaturePolylineOptions, CurvatureGapPolyline,

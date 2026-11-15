@@ -264,17 +264,22 @@ pub fn bound_curvature_gap_contour(
     let mut segments = Vec::with_capacity(errors.len());
     let mut overall = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
     for (pair, error) in points.windows(2).zip(errors) {
-        let mut bounds = [[0.; 2]; 3];
-        let offset = I::new(-error, error)?;
-        for i in 0..3 {
-            let [a, b] = [pair[0][i], pair[1][i]];
-            let bound = I::new(a.min(b), a.max(b))?.add(offset)?;
-            bounds[i] = [bound.lo, bound.hi];
-            overall[i] = [overall[i][0].min(bound.lo), overall[i][1].max(bound.hi)];
+        let bounds = chord_box(pair[0], pair[1], error)?.map(|i| [i.lo, i.hi]);
+        for (overall, [lo, hi]) in overall.iter_mut().zip(bounds) {
+            *overall = [overall[0].min(lo), overall[1].max(hi)];
         }
         segments.push(bounds);
     }
     report.segment_bounds = Some(segments);
     report.bounds = Some(overall);
     Ok(report)
+}
+
+pub(super) fn chord_box(a: [f64; 3], b: [f64; 3], error: f64) -> Result<[I; 3]> {
+    let mut bounds = [I::point(0.); 3];
+    let offset = I::new(-error, error)?;
+    for ((bound, a), b) in bounds.iter_mut().zip(a).zip(b) {
+        *bound = I::new(a.min(b), a.max(b))?.add(offset)?;
+    }
+    Ok(bounds)
 }

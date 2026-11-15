@@ -81,22 +81,9 @@ fn bounds(
         let end = lift(vertex, work)?;
         let squared = segment_distance_squared(&point, &start, &end, work)?;
         start = end;
-        let Some(lo) = outward(&squared, false, work)? else {
+        let Some([lower, upper]) = squared_distance_range(&squared, error, work)? else {
             return Ok(None);
         };
-        let Some(hi) = outward(&squared, true, work)? else {
-            return Ok(None);
-        };
-        let radius = I::point(error);
-        let lower = I::point(lo.sqrt().next_down().max(0.))
-            .sub(radius)
-            .map_err(|_| Refusal::InvalidOutput)?
-            .lo
-            .max(0.);
-        let upper = I::point(hi.sqrt().next_up())
-            .add(radius)
-            .map_err(|_| Refusal::InvalidOutput)?
-            .hi;
         best[0] = best[0].min(lower);
         if upper < best[1] {
             best[1] = upper;
@@ -106,7 +93,31 @@ fn bounds(
     Ok(Some((best, upper_segment)))
 }
 
-fn lift(values: [f64; 3], work: &mut Work) -> PResult<[Q; 3]> {
+pub(super) fn squared_distance_range(
+    squared: &Q,
+    error: f64,
+    work: &mut Work,
+) -> PResult<Option<[f64; 2]>> {
+    let Some(lo) = outward(squared, false, work)? else {
+        return Ok(None);
+    };
+    let Some(hi) = outward(squared, true, work)? else {
+        return Ok(None);
+    };
+    let radius = I::point(error);
+    let lower = I::point(lo.sqrt().next_down().max(0.))
+        .sub(radius)
+        .map_err(|_| Refusal::InvalidOutput)?
+        .lo
+        .max(0.);
+    let upper = I::point(hi.sqrt().next_up())
+        .add(radius)
+        .map_err(|_| Refusal::InvalidOutput)?
+        .hi;
+    Ok(Some([lower, upper]))
+}
+
+pub(super) fn lift(values: [f64; 3], work: &mut Work) -> PResult<[Q; 3]> {
     Ok([
         work.lift(values[0])?,
         work.lift(values[1])?,
@@ -114,7 +125,7 @@ fn lift(values: [f64; 3], work: &mut Work) -> PResult<[Q; 3]> {
     ])
 }
 
-fn difference(a: &[Q; 3], b: &[Q; 3], work: &mut Work) -> PResult<[Q; 3]> {
+pub(super) fn difference(a: &[Q; 3], b: &[Q; 3], work: &mut Work) -> PResult<[Q; 3]> {
     let mut out = [Q::zero(), Q::zero(), Q::zero()];
     for i in 0..3 {
         out[i] = work.op(&a[i], &b[i], |x, y| x - y)?;
@@ -122,7 +133,7 @@ fn difference(a: &[Q; 3], b: &[Q; 3], work: &mut Work) -> PResult<[Q; 3]> {
     Ok(out)
 }
 
-fn dot(a: &[Q; 3], b: &[Q; 3], work: &mut Work) -> PResult<Q> {
+pub(super) fn dot(a: &[Q; 3], b: &[Q; 3], work: &mut Work) -> PResult<Q> {
     let mut sum = Q::zero();
     for i in 0..3 {
         let term = work.op(&a[i], &b[i], |x, y| x * y)?;
@@ -131,7 +142,12 @@ fn dot(a: &[Q; 3], b: &[Q; 3], work: &mut Work) -> PResult<Q> {
     Ok(sum)
 }
 
-fn segment_distance_squared(p: &[Q; 3], a: &[Q; 3], b: &[Q; 3], work: &mut Work) -> PResult<Q> {
+pub(super) fn segment_distance_squared(
+    p: &[Q; 3],
+    a: &[Q; 3],
+    b: &[Q; 3],
+    work: &mut Work,
+) -> PResult<Q> {
     let mut offset = difference(p, a, work)?;
     let direction = difference(b, a, work)?;
     let length = dot(&direction, &direction, work)?;

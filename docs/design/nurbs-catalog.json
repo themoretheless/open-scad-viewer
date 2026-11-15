@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 277,
-  "unallocatedCount": 723,
+  "specifiedCount": 278,
+  "unallocatedCount": 722,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7444,6 +7444,32 @@
       ],
       "remainingQualification": [
         "Outward per-segment world-axis boxes enclose the whole original contour for broad-phase exclusion.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0278",
+      "name": "Сертифицированное минимальное расстояние между двумя пространственными контурами кривизны NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::distance_between_curvature_gap_contours",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_pair_distance.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_distance.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs",
+        "docs/qualification/nurbs-curvature-field-278-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-278-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Combines exact segment-pair projections and continuous world-space contour errors. Certified boxes prune pairs that cannot improve the upper bound.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]

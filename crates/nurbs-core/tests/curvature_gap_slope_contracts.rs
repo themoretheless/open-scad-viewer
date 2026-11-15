@@ -536,3 +536,84 @@ fn world_boxes_are_absent_when_the_contour_has_no_certificate() {
     assert_eq!(short.uv.refusal, Some(Refusal::ResourceLimit));
     assert!(short.bounds.is_none() && short.segment_bounds.is_none());
 }
+
+fn contour_spec<'a>(
+    surface: &'a Surface,
+    transverse: &'a [f64],
+) -> nurbs_core::editing::exact_surface_derivative::CurvatureGapContourSpec<'a> {
+    use nurbs_core::editing::exact_surface_derivative::CurvatureGapContourSpec;
+    CurvatureGapContourSpec {
+        surface,
+        span: [2, 2],
+        axis: Axis::U,
+        level: 0.5,
+        transverse,
+        root_depth: 16,
+    }
+}
+
+#[test]
+fn contour_pair_distance_finds_the_interior_skew_minimum() {
+    use nurbs_core::editing::exact_surface_derivative::distance_between_curvature_gap_contours;
+    let a = sheared_parabola(0., 9.);
+    let mut b = a.clone();
+    for p in b.control_points.iter_mut().flatten() {
+        p.swap(0, 1);
+        p[2] += 1.;
+    }
+    let r = distance_between_curvature_gap_contours(
+        contour_spec(&a, &[7., 9.]),
+        contour_spec(&b, &[7., 9.]),
+        WORK,
+    )
+    .unwrap();
+    let [lo, hi] = r.distance_bounds.unwrap();
+    assert!(lo <= 1. && 1. <= hi && hi - lo < 1e-8, "{r:?}");
+    assert_eq!(r.upper_segments, Some([0, 0]));
+    assert_eq!(r.compared_pairs, 1);
+}
+
+#[test]
+fn parallel_contours_prune_far_pairs_without_changing_their_distance() {
+    use nurbs_core::editing::exact_surface_derivative::distance_between_curvature_gap_contours;
+    let a = sheared_parabola(0., 9.);
+    let mut b = a.clone();
+    for p in b.control_points.iter_mut().flatten() {
+        p[0] += 1.;
+    }
+    let grid = [7., 7.5, 8., 8.5, 9.];
+    let r = distance_between_curvature_gap_contours(
+        contour_spec(&a, &grid),
+        contour_spec(&b, &grid),
+        WORK,
+    )
+    .unwrap();
+    let [lo, hi] = r.distance_bounds.unwrap();
+    assert!(lo <= 1. && 1. <= hi && hi - lo < 1e-8, "{r:?}");
+    assert!(r.pruned_pairs > 0);
+    assert_eq!(r.compared_pairs + r.pruned_pairs, 16);
+}
+
+#[test]
+fn intersecting_contours_allow_zero_and_late_work_refusal_returns_no_distance() {
+    use nurbs_core::editing::exact_surface_derivative::distance_between_curvature_gap_contours;
+    let a = sheared_parabola(0., 9.);
+    let mut b = a.clone();
+    for p in b.control_points.iter_mut().flatten() {
+        p.swap(0, 1);
+    }
+    let run = |work| {
+        distance_between_curvature_gap_contours(
+            contour_spec(&a, &[7., 9.]),
+            contour_spec(&b, &[7., 9.]),
+            work,
+        )
+    };
+    let full = run(WORK).unwrap();
+    let [lo, hi] = full.distance_bounds.unwrap();
+    assert_eq!(lo, 0.);
+    assert!(hi < 1e-8);
+    let short = run(full.work_used - 1).unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.distance_bounds.is_none() && short.upper_segments.is_none());
+}
