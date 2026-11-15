@@ -1,4 +1,5 @@
 use super::*;
+use std::borrow::Cow;
 
 /// Version of the Manifold WASM export surface (`abi_manifold_*` signatures
 /// and `abi_array_field` slot layouts). The TypeScript wrappers compare it
@@ -150,19 +151,63 @@ fn validate_transport(fmt: u32, vp: usize, vl: usize, ip: usize, il: usize) -> R
     Ok(())
 }
 
-unsafe fn read_mesh(
+/// Borrow `len` elements of `T` at `ptr` when the caller's buffer is
+/// suitably aligned, so the kernel reads the uploaded bytes in place.
+///
+/// # Safety
+/// `ptr` must be readable for `len * size_of::<T>()` bytes for the returned
+/// lifetime, every bit pattern must be a valid `T`, and nothing may write the
+/// range meanwhile.
+unsafe fn borrow_aligned<'a, T>(ptr: usize, len: usize) -> Option<&'a [T]> {
+    if len == 0 {
+        return Some(&[]);
+    }
+    (ptr != 0 && ptr % std::mem::align_of::<T>() == 0)
+        .then(|| unsafe { std::slice::from_raw_parts(ptr as *const T, len) })
+}
+
+/// Read one uploaded mesh for a Manifold call without duplicating whole
+/// buffers: aligned f64 positions (and, on 32-bit targets such as wasm32,
+/// aligned u32 indices) are borrowed from the caller's upload; otherwise each
+/// element is converted once straight into the owned buffer, with no
+/// intermediate copy of the raw upload. On a 1M-triangle f64 mesh this
+/// removes ~40 MB of transient WASM heap per operand.
+///
+/// # Safety
+/// vp/vl and ip/il must reference live caller-owned buffers that stay
+/// unmodified for the returned lifetime (the duration of the ABI call).
+unsafe fn read_mesh<'a>(
     fmt: u32,
     vp: usize,
     vl: usize,
     ip: usize,
     il: usize,
-) -> Result<(Vec<f64>, Vec<usize>)> {
+) -> Result<(Cow<'a, [f64]>, Cow<'a, [usize]>)> {
     validate_transport(fmt, vp, vl, ip, il)?;
-    let positions = unsafe { read_vertices_f64(fmt, vp, vl) }?;
-    let indices: Vec<usize> = unsafe { read_u32(ip, il) }
-        .into_iter()
-        .map(|index| index as usize)
-        .collect();
+    let positions: Cow<'a, [f64]> = match fmt {
+        FMT_F64 => match unsafe { borrow_aligned::<f64>(vp, vl) } {
+            Some(slice) => Cow::Borrowed(slice),
+            None => Cow::Owned(unsafe { read_pod(vp, vl) }),
+        },
+        _ => Cow::Owned(
+            (0..vl)
+                .map(|k| f64::from(unsafe { std::ptr::read_unaligned((vp as *const f32).add(k)) }))
+                .collect(),
+        ),
+    };
+    let borrowed_indices = if std::mem::size_of::<usize>() == std::mem::size_of::<u32>() {
+        unsafe { borrow_aligned::<usize>(ip, il) }
+    } else {
+        None
+    };
+    let indices: Cow<'a, [usize]> = match borrowed_indices {
+        Some(slice) => Cow::Borrowed(slice),
+        None => Cow::Owned(
+            (0..il)
+                .map(|k| unsafe { std::ptr::read_unaligned((ip as *const u32).add(k)) } as usize)
+                .collect(),
+        ),
+    };
     manifold_core::validate_indexed_mesh(&positions, &indices)
         .map_err(|error| input(error.to_string()))?;
     Ok((positions, indices))
@@ -568,5 +613,98 @@ pub unsafe fn abi_manifold_diagnostics(
     ) {
         Ok(buffers) => packed(geometry(encode(mesh_analysis::store(buffers)))),
         Err(error) => packed(geometry(Err(error))),
+    }
+}
+
+#[cfg(test)]
+mod read_mesh_tests {
+    use super::*;
+
+    const TETRA_F64: [f64; 12] = [0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., 1.];
+    const TETRA_INDICES: [u32; 12] = [0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3];
+
+    #[test]
+    fn aligned_f64_positions_are_read_in_place() {
+        let (positions, indices) = unsafe {
+            read_mesh(
+                FMT_F64,
+                TETRA_F64.as_ptr() as usize,
+                12,
+                TETRA_INDICES.as_ptr() as usize,
+                12,
+            )
+        }
+        .expect("valid tetrahedron");
+        assert!(matches!(positions, Cow::Borrowed(_)));
+        assert_eq!(positions.as_ptr(), TETRA_F64.as_ptr());
+        assert_eq!(&*positions, &TETRA_F64);
+        let expected: Vec<usize> = TETRA_INDICES.iter().map(|&i| i as usize).collect();
+        assert_eq!(&*indices, expected.as_slice());
+        // u32 indices can only be borrowed where usize is 32 bits (wasm32).
+        assert_eq!(
+            matches!(indices, Cow::Borrowed(_)),
+            std::mem::size_of::<usize>() == 4
+        );
+    }
+
+    #[test]
+    fn misaligned_uploads_are_copied_once_with_identical_values() {
+        // Byte buffers offset by one force unaligned f64 and u32 reads.
+        let mut vertex_bytes = vec![0u8; 1 + 12 * 8];
+        for (k, v) in TETRA_F64.iter().enumerate() {
+            vertex_bytes[1 + k * 8..1 + (k + 1) * 8].copy_from_slice(&v.to_ne_bytes());
+        }
+        let mut index_bytes = vec![0u8; 1 + 12 * 4];
+        for (k, i) in TETRA_INDICES.iter().enumerate() {
+            index_bytes[1 + k * 4..1 + (k + 1) * 4].copy_from_slice(&i.to_ne_bytes());
+        }
+        let (positions, indices) = unsafe {
+            read_mesh(
+                FMT_F64,
+                vertex_bytes.as_ptr() as usize + 1,
+                12,
+                index_bytes.as_ptr() as usize + 1,
+                12,
+            )
+        }
+        .expect("valid tetrahedron");
+        assert!(matches!(positions, Cow::Owned(_)));
+        assert!(matches!(indices, Cow::Owned(_)));
+        assert_eq!(&*positions, &TETRA_F64);
+        assert_eq!(
+            indices.iter().map(|&i| i as u32).collect::<Vec<_>>(),
+            TETRA_INDICES
+        );
+    }
+
+    #[test]
+    fn f32_positions_widen_exactly_and_bad_meshes_still_fail() {
+        let f32s: Vec<f32> = [0.1f32, 0.2, 0.3, 1., 0., 0., 0., 1., 0., 0., 0., 1.].to_vec();
+        let (positions, _) = unsafe {
+            read_mesh(
+                FMT_F32,
+                f32s.as_ptr() as usize,
+                12,
+                TETRA_INDICES.as_ptr() as usize,
+                12,
+            )
+        }
+        .expect("valid mesh");
+        let widened: Vec<f64> = f32s.iter().map(|&v| f64::from(v)).collect();
+        assert_eq!(&*positions, widened.as_slice());
+        let out_of_range = [0u32, 1, 9];
+        let error = unsafe {
+            read_mesh(
+                FMT_F64,
+                TETRA_F64.as_ptr() as usize,
+                12,
+                out_of_range.as_ptr() as usize,
+                3,
+            )
+        }
+        .expect_err("index 9 is out of range");
+        assert_eq!(error.code, "GEOMETRY_INVALID_INPUT");
+        let empty = unsafe { read_mesh(FMT_F64, 0, 0, 0, 0) }.expect("empty mesh");
+        assert!(empty.0.is_empty() && empty.1.is_empty());
     }
 }
