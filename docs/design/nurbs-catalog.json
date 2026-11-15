@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 313,
-  "unallocatedCount": 687,
+  "specifiedCount": 314,
+  "unallocatedCount": 686,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8230,6 +8230,26 @@
       "remainingQualification": [
         "Apply a tensor-axis permutation and signed affine coordinates as one trimmed-face edit with exact final storage checks.",
         "Endpoint pairs use output axis order. Closed original contours and exact representability of final parameters and poles are required.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0314",
+      "name": "Точное распознавание аффинной размерности активной NURBS-поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::exact_affine_hull::classify_surface_affine_hull",
+      "evidence": [
+        "crates/nurbs-core/src/analysis.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/nurbs-core/tests/exact_surface_affine_hull_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-314-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-314-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify the affine dimension of a rational tensor surface with exact active-pole witnesses.",
+        "Positive weights and active tensor basis. Inactive exterior poles are excluded. Exact affine hull dimension does not imply surface regularity.",
         "WASM and application integration are separate."
       ]
     }
