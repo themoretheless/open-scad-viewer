@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 284,
-  "unallocatedCount": 716,
+  "specifiedCount": 285,
+  "unallocatedCount": 715,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7602,6 +7602,26 @@
       "remainingQualification": [
         "Uses exact stored UV endpoints to recover a V-major Cartesian tiling. Sparse occupancy distinguishes holes, duplicates and tiles spanning more than one Cartesian cell.",
         "Exact UV layout only. Seam geometry and B-rep topology are independent checks.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0285",
+      "name": "Точное деление NURBS-поверхности на две части с общими полюсами и весами шва",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_knot_insertion::split_tensor_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_knot_insertion.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_insertion/split.rs",
+        "crates/nurbs-core/tests/exact_tensor_split_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-285-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-285-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certified knot insertion followed by structural slicing preserves the complete UV charts and a common rational gauge. The two parts share identical binary64 seam poles and weights.",
+        "Clamped nonperiodic selected axis; untouched axis retained. Unrepresentable or exhausted requests return no partial sides.",
         "WASM and application integration are separate."
       ]
     }
