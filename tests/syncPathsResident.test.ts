@@ -2,28 +2,83 @@ import { expect, it } from 'vitest'
 import { createMainSolidWorkerHandler } from '../src/kernel/mainSolidWorkerRuntime'
 import type { MainSolidResponse } from '../src/kernel/mainSolidProtocol'
 import { applyDirectDocumentDelta } from '../src/kernel/directDocumentDelta'
-import { DirectHistory, extrudeDirectSketch, serializeDirectDocument, type DirectDocument } from '../src/app/directModeling'
+import {
+  DirectHistory,
+  extrudeDirectSketch,
+  serializeDirectDocument,
+  type DirectDocument,
+} from '../src/app/directModeling'
 import { createSolidInstance } from '../src/kernel/solidInstances'
 import { stringifyMeshJson } from '../src/exchange/meshJson'
 
-const square = { id: 's', name: 'Square', closed: true, points: [[0, 0], [10, 0], [10, 10], [0, 10]] as [number, number][] }
+const square = {
+  id: 's',
+  name: 'Square',
+  closed: true,
+  points: [
+    [0, 0],
+    [10, 0],
+    [10, 10],
+    [0, 10],
+  ] as [number, number][],
+}
 const scene = (): DirectDocument => {
-  let document: DirectDocument = { version: 1, sketches: [square], bodies: [extrudeDirectSketch(square, 10, 'source')], curves: [], surfaces: [] }
+  let document: DirectDocument = {
+    version: 1,
+    sketches: [square],
+    bodies: [extrudeDirectSketch(square, 10, 'source')],
+    curves: [],
+    surfaces: [],
+  }
   for (let i = 0; i < 3; i++)
-    document = createSolidInstance(document, 'source', `linked-${i}`, [[1, 0, 0, 20 * (i + 1)], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+    document = createSolidInstance(document, 'source', `linked-${i}`, [
+      [1, 0, 0, 20 * (i + 1)],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1],
+    ])
   return document
 }
-const move = (x: number) => ({ operation: 'transform' as const, id: 'source', ids: ['source'], createdId: '', x, y: 0, z: 0, axis: 'z' as const, angle: 0, scale: 1 })
+const move = (x: number) => ({
+  operation: 'transform' as const,
+  id: 'source',
+  ids: ['source'],
+  createdId: '',
+  x,
+  y: 0,
+  z: 0,
+  axis: 'z' as const,
+  angle: 0,
+  scale: 1,
+})
 
 it('a resident drag base gives the same documents as sending the whole document every move', async () => {
   const document = scene()
   const messages: MainSolidResponse[] = [],
     handle = createMainSolidWorkerHandler(message => messages.push(message))
   await handle({ version: 1, id: 1, job: { kind: 'sceneEdit', document, options: move(3) } })
-  await handle({ version: 1, id: 2, job: { kind: 'sceneEdit', document: serializeDirectDocument(document), options: move(3), retainAs: 'k1', delta: true } })
+  await handle({
+    version: 1,
+    id: 2,
+    job: {
+      kind: 'sceneEdit',
+      document: serializeDirectDocument(document),
+      options: move(3),
+      retainAs: 'k1',
+      delta: true,
+    },
+  })
   await handle({ version: 1, id: 3, job: { kind: 'sceneEdit', document, options: move(7) } })
-  await handle({ version: 1, id: 4, job: { kind: 'sceneEdit', document: { resident: 'k1' }, options: move(7), delta: true } })
-  await handle({ version: 1, id: 5, job: { kind: 'sceneEdit', document: { resident: 'other' }, options: move(7), delta: true } })
+  await handle({
+    version: 1,
+    id: 4,
+    job: { kind: 'sceneEdit', document: { resident: 'k1' }, options: move(7), delta: true },
+  })
+  await handle({
+    version: 1,
+    id: 5,
+    job: { kind: 'sceneEdit', document: { resident: 'other' }, options: move(7), delta: true },
+  })
   const result = (i: number) => (messages[i] as { result: unknown }).result
   const viaDelta = (i: number) => applyDirectDocumentDelta(document, result(i))!
   expect(stringifyMeshJson(viaDelta(1))).toBe(stringifyMeshJson(result(0)))
@@ -38,7 +93,10 @@ it('history commits of worker results reuse unchanged objects and keep the same 
   const incremental = new DirectHistory(document),
     reference = new DirectHistory(document)
   const published = incremental.syncedDocument
-  const moved = { ...published, bodies: published.bodies.map(body => (body.id === 'linked-1' ? { ...body, name: 'renamed' } : body)) }
+  const moved = {
+    ...published,
+    bodies: published.bodies.map(body => (body.id === 'linked-1' ? { ...body, name: 'renamed' } : body)),
+  }
   expect(await incremental.commitAsync(async () => moved)).toBe(true)
   reference.commit(structuredClone(moved))
   expect(incremental.snapshotKey).toBe(reference.snapshotKey)
