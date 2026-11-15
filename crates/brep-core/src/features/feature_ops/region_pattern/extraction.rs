@@ -1,5 +1,11 @@
 //! Compact original face subcomplex and close its supported outer/hole rims.
 use super::*;
+/// Largest original feature face selection accepted for one region.
+const MAX_SELECTED_FACES: usize = 64;
+/// History stage label for the closed feature region.
+const CLOSE_STAGE: &str = "feature-region-close";
+/// Role shared by the closing shell/body and by a lone cap face or rim loop.
+const SUPPORT_RIM_ROLE: &str = "original-support-rim";
 pub(super) struct Build {
     pub model: Model,
     pub supports: Vec<usize>,
@@ -16,6 +22,32 @@ struct CapBinding {
     parents: Vec<Vec<usize>>,
     supports: Vec<usize>,
 }
+type Incidence = BTreeMap<usize, Vec<(usize, usize)>>;
+/// Rim edges, outside neighbour uses and selected-face adjacency.
+struct RimScan {
+    rim: BTreeSet<usize>,
+    neighbors: BTreeSet<(usize, usize)>,
+    adjacency: BTreeMap<usize, Vec<usize>>,
+}
+/// Source index to compacted tool index, per entity kind.
+#[derive(Default)]
+struct Compaction {
+    vertices: BTreeMap<usize, usize>,
+    edges: BTreeMap<usize, usize>,
+    loops: BTreeMap<usize, usize>,
+    faces: BTreeMap<usize, usize>,
+}
+/// Stable signature keys shared by every derived closing id.
+struct ClosureKeys {
+    support: String,
+    signature: String,
+}
+/// Growing topology of the closed tool while cap faces are appended.
+struct ToolParts {
+    loops: Vec<crate::Loop>,
+    faces: Vec<crate::Face>,
+    shell_faces: Vec<crate::FaceUse>,
+}
 pub(super) fn build(
     source: &Model,
     faces: &[usize],
@@ -23,36 +55,9 @@ pub(super) fn build(
     limits: Limits,
 ) -> Result<Build> {
     source.validate()?;
-    let selected = faces.iter().copied().collect::<BTreeSet<_>>();
-    if selected.is_empty()
-        || selected.len() > 64
-        || selected.len() != faces.len()
-        || selected.iter().any(|f| *f >= source.faces.len())
-    {
-        return Err(error("Choose 1..64 distinct original feature faces"));
-    }
-    let owners = source
-        .shells
-        .iter()
-        .enumerate()
-        .filter(|(_, s)| s.faces.iter().any(|f| selected.contains(&f.face)))
-        .map(|(i, _)| i)
-        .collect::<Vec<_>>();
-    if owners.len() != 1 {
-        return Err(error("Feature region needs one original shell"));
-    }
-    let shell_id = owners[0];
+    let selected = validated_selection(source, faces)?;
+    let (shell_id, body) = owning_shell(source, &selected)?;
     let shell = &source.shells[shell_id];
-    let body = source
-        .bodies
-        .iter()
-        .position(|b| b.outer_shell == shell_id && b.inner_shells.is_empty())
-        .ok_or_else(|| {
-            error("Feature transfer requires one cavity-free original outer shell owner")
-        })?;
-    if !shell.closed {
-        return Err(error("Original feature shell is open"));
-    }
     let uses = shell
         .faces
         .iter()
@@ -61,165 +66,239 @@ pub(super) fn build(
     if selected.iter().any(|f| !uses.contains_key(f)) {
         return Err(error("Feature has an unowned face"));
     }
-    let mut incidence = BTreeMap::<usize, Vec<(usize, usize)>>::new();
+    let incidence = shell_incidence(source, shell);
+    let scan = scan_rim(&incidence, &selected)?;
+    ensure_connected(&selected, &scan.adjacency)?;
+    let closure = super::closure::prepare(
+        source,
+        &selected,
+        &uses,
+        &incidence,
+        &scan.rim,
+        &scan.neighbors,
+        limits,
+    )?;
+    let compaction = compact(source, &selected);
+    let invert = matches!(role, FeatureRole::Subtractive);
+    let (mut tool, bindings) =
+        assemble_tool(source, &selected, &uses, &compaction, closure.caps, invert);
+    tool.rebuild_topology_ids();
+    let mut map = carry_ids(&mut tool, source, &compaction);
+    let keys = ClosureKeys {
+        support: sorted_face_key(source, &closure.supports),
+        signature: sorted_face_key(source, selected.iter()),
+    };
+    derive_closure_ids(&mut tool, &bindings, &keys);
+    map.insert(source.1.shells[shell_id], tool.1.shells[0]);
+    map.insert(source.1.bodies[body], tool.1.bodies[0]);
+    carry_attributes(&mut tool, source, &map);
+    tool.refresh_change_set(&[source]);
+    record_history(&mut tool, source, &bindings, shell_id, body)?;
+    tool.validate()?;
+    Ok(Build {
+        model: tool,
+        supports: closure.supports,
+        support_loop: closure.source_loop,
+        caps: bindings.iter().map(|b| b.face).collect(),
+        map,
+        work: closure.work,
+    })
+}
+fn validated_selection(source: &Model, faces: &[usize]) -> Result<BTreeSet<usize>> {
+    let selected = faces.iter().copied().collect::<BTreeSet<_>>();
+    if selected.is_empty()
+        || selected.len() > MAX_SELECTED_FACES
+        || selected.len() != faces.len()
+        || selected.iter().any(|f| *f >= source.faces.len())
+    {
+        return Err(error("Choose 1..64 distinct original feature faces"));
+    }
+    Ok(selected)
+}
+/// The single closed, cavity-free shell owning the selection, and its body.
+fn owning_shell(source: &Model, selected: &BTreeSet<usize>) -> Result<(usize, usize)> {
+    let owners = source
+        .shells
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.faces.iter().any(|f| selected.contains(&f.face)))
+        .map(|(i, _)| i)
+        .collect::<Vec<_>>();
+    let [shell_id] = owners[..] else {
+        return Err(error("Feature region needs one original shell"));
+    };
+    let body = source
+        .bodies
+        .iter()
+        .position(|b| b.outer_shell == shell_id && b.inner_shells.is_empty())
+        .ok_or_else(|| {
+            error("Feature transfer requires one cavity-free original outer shell owner")
+        })?;
+    if !source.shells[shell_id].closed {
+        return Err(error("Original feature shell is open"));
+    }
+    Ok((shell_id, body))
+}
+fn face_wires(face: &crate::Face) -> impl Iterator<Item = usize> + '_ {
+    std::iter::once(face.outer).chain(face.holes.iter().copied())
+}
+fn shell_incidence(source: &Model, shell: &crate::Shell) -> Incidence {
+    let mut incidence = Incidence::new();
     for f in &shell.faces {
-        let face = &source.faces[f.face];
-        for &wire in std::iter::once(&face.outer).chain(&face.holes) {
+        for wire in face_wires(&source.faces[f.face]) {
             for c in &source.loops[wire].coedges {
                 incidence.entry(c.edge).or_default().push((f.face, wire));
             }
         }
     }
-    let mut rim = BTreeSet::new();
-    let mut neighbors = BTreeSet::new();
-    let mut adjacency = BTreeMap::<usize, Vec<usize>>::new();
-    for (&edge, u) in &incidence {
-        if u.len() != 2 {
+    incidence
+}
+fn scan_rim(incidence: &Incidence, selected: &BTreeSet<usize>) -> Result<RimScan> {
+    let mut scan = RimScan {
+        rim: BTreeSet::new(),
+        neighbors: BTreeSet::new(),
+        adjacency: BTreeMap::new(),
+    };
+    for (&edge, u) in incidence {
+        let &[first, second] = &u[..] else {
             return Err(error(
                 "Original feature incidence is not closed two-manifold",
             ));
-        }
-        let a = selected.contains(&u[0].0);
-        let b = selected.contains(&u[1].0);
+        };
+        let a = selected.contains(&first.0);
+        let b = selected.contains(&second.0);
         if a && b {
-            adjacency.entry(u[0].0).or_default().push(u[1].0);
-            adjacency.entry(u[1].0).or_default().push(u[0].0);
+            scan.adjacency.entry(first.0).or_default().push(second.0);
+            scan.adjacency.entry(second.0).or_default().push(first.0);
         }
         if a != b {
-            rim.insert(edge);
-            neighbors.insert(if a { u[1] } else { u[0] });
+            scan.rim.insert(edge);
+            scan.neighbors.insert(if a { second } else { first });
         }
     }
+    Ok(scan)
+}
+fn ensure_connected(
+    selected: &BTreeSet<usize>,
+    adjacency: &BTreeMap<usize, Vec<usize>>,
+) -> Result<()> {
     let mut seen = BTreeSet::new();
-    let mut todo = vec![*selected.first().unwrap()];
+    let mut todo = selected.first().copied().into_iter().collect::<Vec<_>>();
     while let Some(f) = todo.pop() {
         if seen.insert(f) {
             todo.extend(adjacency.get(&f).into_iter().flatten());
         }
     }
-    if seen != selected {
+    if seen != *selected {
         return Err(error("Original feature faces are disconnected"));
     }
-    let closure = super::closure::prepare(
-        source, &selected, &uses, &incidence, &rim, &neighbors, limits,
-    )?;
-    let mut vm = BTreeMap::new();
-    let mut em = BTreeMap::new();
-    let mut lm = BTreeMap::new();
-    let mut fm = BTreeMap::new();
-    for &f in &selected {
-        fm.insert(f, 0);
-        let face = &source.faces[f];
-        for &w in std::iter::once(&face.outer).chain(&face.holes) {
-            lm.insert(w, 0);
+    Ok(())
+}
+fn compact(source: &Model, selected: &BTreeSet<usize>) -> Compaction {
+    let mut maps = Compaction::default();
+    for &f in selected {
+        maps.faces.insert(f, 0);
+        for w in face_wires(&source.faces[f]) {
+            maps.loops.insert(w, 0);
             for c in &source.loops[w].coedges {
-                em.insert(c.edge, 0);
+                maps.edges.insert(c.edge, 0);
                 for v in source.edges[c.edge].vertices {
-                    vm.insert(v, 0);
+                    maps.vertices.insert(v, 0);
                 }
             }
         }
     }
-    for (i, v) in vm.values_mut().enumerate() {
-        *v = i;
+    for map in [
+        &mut maps.vertices,
+        &mut maps.edges,
+        &mut maps.loops,
+        &mut maps.faces,
+    ] {
+        for (i, v) in map.values_mut().enumerate() {
+            *v = i;
+        }
     }
-    for (i, v) in em.values_mut().enumerate() {
-        *v = i;
-    }
-    for (i, v) in lm.values_mut().enumerate() {
-        *v = i;
-    }
-    for (i, v) in fm.values_mut().enumerate() {
-        *v = i;
-    }
-    let vertices = vm.keys().map(|v| source.vertices[*v].clone()).collect();
-    let edges = em
+    maps
+}
+fn joined(ids: &[TopoId]) -> String {
+    ids.iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("/")
+}
+fn sorted_face_key<'a>(source: &Model, faces: impl IntoIterator<Item = &'a usize>) -> String {
+    let mut ids = faces
+        .into_iter()
+        .map(|f| source.1.faces[*f])
+        .collect::<Vec<_>>();
+    ids.sort();
+    joined(&ids)
+}
+/// Copies the compacted subcomplex and appends one closing face per cap.
+fn assemble_tool(
+    source: &Model,
+    selected: &BTreeSet<usize>,
+    uses: &BTreeMap<usize, bool>,
+    maps: &Compaction,
+    caps: Vec<super::closure::Cap>,
+    invert: bool,
+) -> (Model, Vec<CapBinding>) {
+    let vertices = maps
+        .vertices
+        .keys()
+        .map(|v| source.vertices[*v].clone())
+        .collect();
+    let edges = maps
+        .edges
         .keys()
         .map(|e| {
             let mut e = source.edges[*e].clone();
-            e.vertices = e.vertices.map(|v| vm[&v]);
+            e.vertices = e.vertices.map(|v| maps.vertices[&v]);
             e
         })
         .collect();
-    let mut loops = lm
-        .keys()
-        .map(|w| {
-            let mut w = source.loops[*w].clone();
-            for c in &mut w.coedges {
-                c.edge = em[&c.edge];
-            }
-            w
-        })
-        .collect::<Vec<_>>();
-    let mut copied = fm
-        .keys()
-        .map(|f| {
-            let mut f = source.faces[*f].clone();
-            f.outer = lm[&f.outer];
-            f.holes = f.holes.iter().map(|w| lm[w]).collect();
-            f
-        })
-        .collect::<Vec<_>>();
-    let invert = matches!(role, FeatureRole::Subtractive);
-    let mut shell_faces = selected
-        .iter()
-        .map(|f| crate::FaceUse {
-            face: fm[f],
-            reversed: uses[f] ^ invert,
-        })
-        .collect::<Vec<_>>();
-    let mut bindings = Vec::new();
-    for cap in closure.caps {
-        let mut cap_loops = Vec::new();
-        let mut rim_keys = Vec::new();
-        for mut ring in cap.rings {
-            let mut ids = ring
-                .iter()
-                .map(|c| source.1.edges[c.edge])
-                .collect::<Vec<_>>();
-            ids.sort();
-            rim_keys.push(
-                ids.iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join("/"),
-            );
-            for c in &mut ring {
-                c.edge = em[&c.edge];
-            }
-            cap_loops.push(loops.len());
-            loops.push(crate::Loop { coedges: ring });
-        }
-        let mut sorted = rim_keys.clone();
-        sorted.sort();
-        let key = sorted.join("/");
-        let face = copied.len();
-        copied.push(crate::Face {
-            surface: cap.surface,
-            outer: cap_loops[0],
-            holes: cap_loops[1..].to_vec(),
-        });
-        shell_faces.push(crate::FaceUse {
-            face,
-            reversed: cap.reversed ^ invert,
-        });
-        bindings.push(CapBinding {
-            face,
-            loops: cap_loops,
-            rim_keys,
-            key,
-            parents: cap.loop_parents,
-            supports: cap.supports,
-        });
-    }
-    let mut tool = Model(
+    let mut parts = ToolParts {
+        loops: maps
+            .loops
+            .keys()
+            .map(|w| {
+                let mut w = source.loops[*w].clone();
+                for c in &mut w.coedges {
+                    c.edge = maps.edges[&c.edge];
+                }
+                w
+            })
+            .collect(),
+        faces: maps
+            .faces
+            .keys()
+            .map(|f| {
+                let mut f = source.faces[*f].clone();
+                f.outer = maps.loops[&f.outer];
+                f.holes = f.holes.iter().map(|w| maps.loops[w]).collect();
+                f
+            })
+            .collect(),
+        shell_faces: selected
+            .iter()
+            .map(|f| crate::FaceUse {
+                face: maps.faces[f],
+                reversed: uses[f] ^ invert,
+            })
+            .collect(),
+    };
+    let bindings = caps
+        .into_iter()
+        .map(|cap| append_cap(source, maps, cap, invert, &mut parts))
+        .collect();
+    let tool = Model(
         brep_topology::Model {
             vertices,
             edges,
-            loops,
-            faces: copied,
+            loops: parts.loops,
+            faces: parts.faces,
             shells: vec![crate::Shell {
-                faces: shell_faces,
+                faces: parts.shell_faces,
                 closed: true,
             }],
             bodies: vec![crate::Body {
@@ -230,94 +309,102 @@ pub(super) fn build(
         },
         crate::TopologyIds::default(),
     );
-    tool.rebuild_topology_ids();
+    (tool, bindings)
+}
+fn append_cap(
+    source: &Model,
+    maps: &Compaction,
+    cap: super::closure::Cap,
+    invert: bool,
+    parts: &mut ToolParts,
+) -> CapBinding {
+    let mut cap_loops = Vec::new();
+    let mut rim_keys = Vec::new();
+    for mut ring in cap.rings {
+        let mut ids = ring
+            .iter()
+            .map(|c| source.1.edges[c.edge])
+            .collect::<Vec<_>>();
+        ids.sort();
+        rim_keys.push(joined(&ids));
+        for c in &mut ring {
+            c.edge = maps.edges[&c.edge];
+        }
+        cap_loops.push(parts.loops.len());
+        parts.loops.push(crate::Loop { coedges: ring });
+    }
+    let mut sorted = rim_keys.clone();
+    sorted.sort();
+    let key = sorted.join("/");
+    let face = parts.faces.len();
+    parts.faces.push(crate::Face {
+        surface: cap.surface,
+        outer: cap_loops[0],
+        holes: cap_loops[1..].to_vec(),
+    });
+    parts.shell_faces.push(crate::FaceUse {
+        face,
+        reversed: cap.reversed ^ invert,
+    });
+    CapBinding {
+        face,
+        loops: cap_loops,
+        rim_keys,
+        key,
+        parents: cap.loop_parents,
+        supports: cap.supports,
+    }
+}
+/// Reuses source ids on copied entities and returns the source-to-tool map.
+fn carry_ids(tool: &mut Model, source: &Model, maps: &Compaction) -> BTreeMap<TopoId, TopoId> {
     let mut map = BTreeMap::new();
-    for (&old, &new) in &vm {
+    for (&old, &new) in &maps.vertices {
         tool.1.vertices[new] = source.1.vertices[old];
         map.insert(source.1.vertices[old], tool.1.vertices[new]);
     }
-    for (&old, &new) in &em {
+    for (&old, &new) in &maps.edges {
         tool.1.edges[new] = source.1.edges[old];
         map.insert(source.1.edges[old], tool.1.edges[new]);
     }
-    for (&old, &new) in &lm {
+    for (&old, &new) in &maps.loops {
         tool.1.loops[new] = source.1.loops[old];
         map.insert(source.1.loops[old], tool.1.loops[new]);
     }
-    for (&old, &new) in &fm {
+    for (&old, &new) in &maps.faces {
         tool.1.faces[new] = source.1.faces[old];
         map.insert(source.1.faces[old], tool.1.faces[new]);
     }
-    let mut selected_ids = selected
-        .iter()
-        .map(|f| source.1.faces[*f])
-        .collect::<Vec<_>>();
-    selected_ids.sort();
-    let signature = selected_ids
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join("/");
-    let mut support_ids = closure
-        .supports
-        .iter()
-        .map(|f| source.1.faces[*f])
-        .collect::<Vec<_>>();
-    support_ids.sort();
-    let support_key = support_ids
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join("/");
-    for (kind, child) in [
-        (TopoKind::Shell, &mut tool.1.shells[0]),
-        (TopoKind::Body, &mut tool.1.bodies[0]),
-    ] {
-        *child = TopoId::derive(
-            kind,
-            "feature-region-close",
-            &support_key,
-            &signature,
-            b"original-support-rim",
-        );
-    }
+    map
+}
+fn derive_closure_ids(tool: &mut Model, bindings: &[CapBinding], keys: &ClosureKeys) {
+    let derive =
+        |kind, role: &[u8]| TopoId::derive(kind, CLOSE_STAGE, &keys.support, &keys.signature, role);
+    tool.1.shells[0] = derive(TopoKind::Shell, SUPPORT_RIM_ROLE.as_bytes());
+    tool.1.bodies[0] = derive(TopoKind::Body, SUPPORT_RIM_ROLE.as_bytes());
     let total_rims = bindings.iter().map(|b| b.loops.len()).sum::<usize>();
-    for binding in &bindings {
+    for binding in bindings {
         let role = if bindings.len() == 1 {
-            "original-support-rim"
+            SUPPORT_RIM_ROLE
         } else {
             &binding.key
         };
-        tool.1.faces[binding.face] = TopoId::derive(
-            TopoKind::Face,
-            "feature-region-close",
-            &support_key,
-            &signature,
-            role.as_bytes(),
-        );
-        for (i, &wire) in binding.loops.iter().enumerate() {
+        tool.1.faces[binding.face] = derive(TopoKind::Face, role.as_bytes());
+        for (wire, rim_key) in binding.loops.iter().zip(&binding.rim_keys) {
             let role = if total_rims == 1 {
-                "original-support-rim"
+                SUPPORT_RIM_ROLE
             } else {
-                &binding.rim_keys[i]
+                rim_key
             };
-            tool.1.loops[wire] = TopoId::derive(
-                TopoKind::Loop,
-                "feature-region-close",
-                &support_key,
-                &signature,
-                role.as_bytes(),
-            );
+            tool.1.loops[*wire] = derive(TopoKind::Loop, role.as_bytes());
         }
     }
-    map.insert(source.1.shells[shell_id], tool.1.shells[0]);
-    map.insert(source.1.bodies[body], tool.1.bodies[0]);
+}
+fn carry_attributes(tool: &mut Model, source: &Model, map: &BTreeMap<TopoId, TopoId>) {
     tool.1.local_tolerances_mm = source
         .1
         .local_tolerances_mm
         .iter()
-        .filter(|(id, _)| map.contains_key(id))
-        .map(|(id, t)| (map[id], *t))
+        .filter_map(|(id, t)| map.get(id).map(|new| (*new, *t)))
         .collect();
     tool.1.sewed_edges = source
         .1
@@ -325,18 +412,25 @@ pub(super) fn build(
         .intersection(&map.keys().copied().collect())
         .copied()
         .collect();
-    tool.refresh_change_set(&[source]);
-    for binding in &bindings {
+}
+fn record_history(
+    tool: &mut Model,
+    source: &Model,
+    bindings: &[CapBinding],
+    shell_id: usize,
+    body: usize,
+) -> Result<()> {
+    for binding in bindings {
         for (wire, parents) in binding.loops.iter().zip(&binding.parents) {
             naming::derived(
-                &mut tool,
+                tool,
                 parents.iter().map(|w| source.1.loops[*w]).collect(),
                 *wire,
                 true,
             )?;
         }
         naming::derived(
-            &mut tool,
+            tool,
             binding
                 .supports
                 .iter()
@@ -349,26 +443,17 @@ pub(super) fn build(
     let shell_child = tool.1.shells[0];
     let body_child = tool.1.bodies[0];
     naming::modified(
-        &mut tool,
+        tool,
         source.1.shells[shell_id],
         shell_child,
-        "feature-region-close",
-        "original-support-rim",
+        CLOSE_STAGE,
+        SUPPORT_RIM_ROLE,
     )?;
     naming::modified(
-        &mut tool,
+        tool,
         source.1.bodies[body],
         body_child,
-        "feature-region-close",
-        "original-support-rim",
-    )?;
-    tool.validate()?;
-    Ok(Build {
-        model: tool,
-        supports: closure.supports,
-        support_loop: closure.source_loop,
-        caps: bindings.iter().map(|b| b.face).collect(),
-        map,
-        work: closure.work,
-    })
+        CLOSE_STAGE,
+        SUPPORT_RIM_ROLE,
+    )
 }
