@@ -6492,10 +6492,10 @@
             );
             assert!(!wall.complete && wall.cells == 0 && wall.spans == 0);
             assert_eq!(
-                wall.total_pairs,
+                wall.pairs.total,
                 expression.faces().len() * (expression.faces().len() + 1) / 2
             );
-            assert_eq!(wall.pending.len(), wall.total_pairs);
+            assert_eq!(wall.pending.len(), wall.pairs.total);
             for face in 0..expression.faces().len() {
                 assert!(wall.pending.iter().any(|p| p.faces == [face, face]));
             }
@@ -6505,8 +6505,8 @@
                     v.parse::<usize>()
                         .expect("wall cell budget must be an integer")
                 })
-                .unwrap_or(wall.total_pairs);
-            assert!(wall_cells >= wall.total_pairs && wall_cells <= 100000);
+                .unwrap_or(wall.pairs.total);
+            assert!(wall_cells >= wall.pairs.total && wall_cells <= 100000);
             let trim_cells = std::env::var("BREP_EXPRESSION_WALL_TRIM_CELLS")
                 .ok()
                 .map(|v| v.parse::<usize>().expect("trim budget must be an integer"))
@@ -6555,16 +6555,16 @@
             );
             eprintln!(
                 "expression whole-wall initial={} total={} pending={} cells={} spans={} distanceExcluded={} angleExcluded={} planarExcluded={} intrinsicExcluded={} cacheHits={}",
-                wall.initial_pairs_checked,
-                wall.total_pairs,
+                wall.pairs.initial_checked,
+                wall.pairs.total,
                 wall.pending.len(),
                 wall.cells,
                 wall.spans,
-                wall.distance_excluded,
-                wall.angle_excluded,
-                wall.planar_excluded,
+                wall.excluded.distance,
+                wall.excluded.angle,
+                wall.excluded.planar,
                 wall.intrinsic.excluded,
-                wall.cache_hits
+                wall.pairs.cache_hits
             );
             assert_eq!(
                 wall.pending.len(),
@@ -6622,18 +6622,18 @@
             }
             assert!(wall.profile_transition.checked <= wall.cells);
             assert!(wall.profile_transition.excluded <= wall.profile_transition.checked);
-            assert!(wall.profile_transition.excluded <= wall.angle_excluded);
+            assert!(wall.profile_transition.excluded <= wall.excluded.angle);
             assert!(wall.profile_transition.spans <= wall.spans);
             assert_eq!(
-                wall.initial_pairs_checked, wall.total_pairs,
+                wall.pairs.initial_checked, wall.pairs.total,
                 "visit every original pair before refinement"
             );
             assert!(
-                wall.planar_excluded > 0,
+                wall.excluded.planar > 0,
                 "exact planar self/coplanar products must be excluded"
             );
             assert!(
-                wall.cache_hits > 0,
+                wall.pairs.cache_hits > 0,
                 "reuse paid rectangles only within this owner-bound audit"
             );
             assert!(wall.plane_controls <= expression.faces().len() * 1000);
@@ -6643,7 +6643,7 @@
                 wall.pending.is_empty(),
                 "coverage cannot hide pending rectangles"
             );
-            if wall_cells == wall.total_pairs {
+            if wall_cells == wall.pairs.total {
                 assert!(
                     !wall.complete,
                     "the initial-pair budget cannot cover all refinements"

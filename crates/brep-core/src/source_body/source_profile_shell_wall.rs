@@ -178,6 +178,22 @@ pub struct ExpressionWallPendingCauses {
     /// At the requested or representable UV resolution.
     pub resolution: usize,
 }
+/// Face pairs excluded by each cheap test before chord coverage.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ExpressionWallExclusions {
+    pub distance: usize,
+    pub angle: usize,
+    pub planar: usize,
+    pub trim: usize,
+}
+/// Face pair bookkeeping.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ExpressionWallPairs {
+    pub total: usize,
+    pub initial_checked: usize,
+    pub symmetry_reused: usize,
+    pub cache_hits: usize,
+}
 pub struct ExpressionWallReport {
     pub minimum_mm: f64,
     pub max_sine_squared: f64,
@@ -187,15 +203,9 @@ pub struct ExpressionWallReport {
     pub cells: usize,
     pub spans: usize,
     pub span_stages: ExpressionWallSpanStages,
-    pub distance_excluded: usize,
-    pub angle_excluded: usize,
-    pub planar_excluded: usize,
+    pub excluded: ExpressionWallExclusions,
     pub plane_controls: usize,
-    pub cache_hits: usize,
-    pub total_pairs: usize,
-    pub initial_pairs_checked: usize,
-    pub symmetry_reused: usize,
-    pub trim_excluded: usize,
+    pub pairs: ExpressionWallPairs,
     pub domain_cells: usize,
     pub profile_transition: ExpressionWallTransitions,
     pub intrinsic: ExpressionWallIntrinsic,
@@ -218,8 +228,8 @@ impl value_codec::Serialize for ExpressionWallReport {
                 "shared_corner":self.span_stages.shared_corner,"original_pair":self.span_stages.original_pair,
                 "retained_pair":self.span_stages.retained_pair,"corrected_pair":self.span_stages.corrected_pair,
             },
-            "distance_excluded":self.distance_excluded,"angle_excluded":self.angle_excluded,
-            "planar_excluded":self.planar_excluded,"intrinsic_excluded":self.intrinsic.excluded,
+            "distance_excluded":self.excluded.distance,"angle_excluded":self.excluded.angle,
+            "planar_excluded":self.excluded.planar,"intrinsic_excluded":self.intrinsic.excluded,
             "intrinsic_checked":self.intrinsic.checked,"intrinsic_spans":self.intrinsic.spans,
             "intrinsic_unresolved":self.intrinsic.unresolved,
             "profile_transition_checked":self.profile_transition.checked,
@@ -227,9 +237,9 @@ impl value_codec::Serialize for ExpressionWallReport {
             "profile_transition_inconclusive":self.profile_transition.inconclusive,
             "profile_transition_unresolved":self.profile_transition.unresolved,
             "profile_transition_spans":self.profile_transition.spans,
-            "plane_controls":self.plane_controls,"cache_hits":self.cache_hits,
-            "total_pairs":self.total_pairs,"initial_pairs_checked":self.initial_pairs_checked,
-            "symmetry_reused":self.symmetry_reused,"trim_excluded":self.trim_excluded,
+            "plane_controls":self.plane_controls,"cache_hits":self.pairs.cache_hits,
+            "total_pairs":self.pairs.total,"initial_pairs_checked":self.pairs.initial_checked,
+            "symmetry_reused":self.pairs.symmetry_reused,"trim_excluded":self.excluded.trim,
             "domain_cells":self.domain_cells,"budget_pending":self.pending_causes.budget,
             "enclosure_pending":self.pending_causes.enclosure,"resolution_pending":self.pending_causes.resolution
         })
