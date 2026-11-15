@@ -3,7 +3,7 @@ import { remapNativeFaceSelection } from './nativeFaceSelection'
  * WebGPU 3D renderer — Phong shading, orbit camera, grid floor, axis gizmo.
  */
 import {
-  type Aabb3, type Mat4, type Vec3,
+  type Aabb3, type Vec3,
 } from '../kernel/geometry/math3d'
 import {
   CameraHistory,
@@ -75,6 +75,10 @@ import { ViewFrustum } from './viewFrustum'
 import { MeshInstances } from '../kernel/meshInstances'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
 import { DEFAULT_DISPLAY_BUDGET, ProgressiveLevelStore } from './displayScheduler'
+import { GpuResidencyCache } from './gpuResidencyCache'
+import { combineBounds, measureMeshBounds, type MeshBoundsCache } from './meshBounds'
+import { GpuGeometryCache } from './gpuGeometryCache'
+import { carryInteraction, diffSceneEntities, previousSceneIntact, sameInteractionTarget } from './sceneDelta'
 import { updateMeshLods } from './meshLod'
 import {
   OBJECT_UNIFORM_LAYOUT,
@@ -92,7 +96,8 @@ import { GpuWboitRenderer } from './gpuWboit'
 export { GpuWboitRenderer } from './gpuWboit'
 import { GpuBufferArena } from './gpuZeroCopyPipeline'
 export { GpuBufferArena, createZeroCopyMeshBuffers } from './gpuZeroCopyPipeline'
-import { runGpuMeshSlicer, type SlicerResult } from './gpuSlicer'
+import { type SlicerResult } from './gpuSlicer'
+import { sliceVisibleMeshes, type SceneSliceOptions } from './meshBounds'
 export { runGpuMeshSlicer, computeSliceArea, type SlicerResult } from './gpuSlicer'
 export { GeometryWorkerPool, detectHardwareConcurrency } from '../kernel/geometryWorkerPool'
 import {
@@ -119,9 +124,6 @@ export {
   type GpuMemoryArchitectureProfile,
   type WebGPUFrameDiagnostics,
 } from './types'
-import {
-  sameTypedArray,
-} from './drawSorting'
 export { sortEdgeDraws, sortOpaqueDraws } from './drawSorting'
 import {
   pointForOverlay,
@@ -132,6 +134,7 @@ import {
 } from './overlayBuilder'
 import {
   destroySceneMeshes,
+  preservedBuffers,
   ensureMeshEdgeBuffer,
   rebuildEdgeBufferCacheMap,
   reconcileMeshStyles,
@@ -300,11 +303,7 @@ export class WebGPURenderer {
   }
   /** Zero positions bound at vertex slot 1 whenever a mesh is not morphing. */
   private morphDummyVB: GPUBuffer | null = null
-  // Keyed by geometryAssetId (content) so republished equal meshes hit; per
-  // content id a small list of transform snapshots covers instance edits.
-  private meshBoundsCache = new Map<string, {
-    transformSnapshot: Float32Array; result: { local: Aabb3; world: Bounds } | null
-  }[]>()
+  private meshBoundsCache: MeshBoundsCache = new Map()
   private readonly viewFrustum = new ViewFrustum()
   private readonly opaqueDraws: GMesh[] = []
   private readonly edgeDraws: GMesh[] = []
@@ -348,6 +347,7 @@ export class WebGPURenderer {
   private lastMeshLodKey = ''
   /** Progressive LOD level uploads, shared by asset; recreated per device. */
   private levelStore: { dev: GPUDevice; store: ProgressiveLevelStore; epoch: number } | null = null
+  private residency: { dev: GPUDevice; cache: GpuResidencyCache; geometry: GpuGeometryCache } | null = null
   private lastFailedFrame = 0
   private dead = true
   private initialized = false
@@ -639,26 +639,8 @@ export class WebGPURenderer {
     return this.gpuBufferArena
   }
 
-  async sliceSceneMeshesGpu(options: {
-    planeNormal: [number, number, number]
-    firstPlaneOffset: number
-    layerThickness: number
-    numLayers: number
-  }): Promise<Array<{ meshIndex: number; slice: SlicerResult }>> {
-    const results: Array<{ meshIndex: number; slice: SlicerResult }> = []
-    for (let i = 0; i < this.meshes.length; i++) {
-      const m = this.meshes[i]
-      if (!m.visible) continue
-      const slice = await runGpuMeshSlicer(m.vertices, m.indices, {
-        strideFloats: 6,
-        planeNormal: options.planeNormal,
-        firstLayerDistance: options.firstPlaneOffset,
-        layerStep: options.layerThickness,
-        numLayers: options.numLayers,
-      })
-      results.push({ meshIndex: i, slice })
-    }
-    return results
+  sliceSceneMeshesGpu(options: SceneSliceOptions): Promise<Array<{ meshIndex: number; slice: SlicerResult }>> {
+    return sliceVisibleMeshes(this.meshes, options)
   }
 
   setMeshes(meshes: MeshData[], options: SetMeshesOptions = {}) {
@@ -669,10 +651,9 @@ export class WebGPURenderer {
     const previous = this.meshes
     const animate = (options.animate || this.geometryFade !== null || this.meshes.some(mesh => mesh.morph)) && !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)
 
-    const { next, nextSceneIndex, retainedGeometryBuffers, metrics } = stageSceneMeshes(meshes, {
-      dev,
-      previous,
-      animate,
+    const geometryCache = this.gpuResidency(dev).geometry
+    const { next, nextSceneIndex, retainedGeometryBuffers, metrics } = geometryCache.stage(meshes.flatMap(mesh => mesh.geometryAssetId ?? []), () => stageSceneMeshes(meshes, {
+      dev, previous, animate, geometryCache,
       displayMode: this.displayMode,
       defaultShadingModel: this.defaultShadingModel,
       defaultMaterial: this.defaultMaterial,
@@ -680,13 +661,13 @@ export class WebGPURenderer {
       morphDummyVB: this.morphDummyVB,
       objectUniformScratch: this.objectUniformScratch,
       nativePicking: this.nativePicking,
-      measureMeshBounds: (assetId, vertices, transform) =>
-        this.measureMeshBounds(assetId, vertices, transform),
-    })
-
-    const nextBounds = this.combineBounds(next.map(mesh => mesh.worldBounds))
-    const selectionChanged = this.selected !== null || this.isolated
-    const hoverChanged = this.hovered !== null || this.hoveredHit !== null
+      measureMeshBounds: (assetId, vertices, transform) => measureMeshBounds(this.meshBoundsCache, assetId, vertices, transform),
+    }))
+    const nextBounds = combineBounds(next.map(mesh => mesh.worldBounds))
+    // Interaction state survives for entities that persist unchanged (scene delta).
+    const delta = diffSceneEntities(previous, next)
+    const before = { selected: this.selected, selectedHit: this.selectedHit, hovered: this.hovered, hoveredHit: this.hoveredHit, isolated: this.isolated }
+    const after = carryInteraction(before, options.preserveInteraction === false ? null : delta)
     this.clearDrawCaches()
     this.meshes = next
     this.rebuildEdgeBufferCache()
@@ -698,122 +679,35 @@ export class WebGPURenderer {
     this.bounds = nextBounds
     this.sceneEpoch++
     this.invalidateShadowMap()
-    this.selected = null
-    this.selectedHit = null
-    this.hovered = null
-    this.hoveredHit = null
-    this.isolated = false
-    this.resetDepthCycle()
-    if (!options.preserveMeasurement) {
+    ;({ selected: this.selected, selectedHit: this.selectedHit, hovered: this.hovered, hoveredHit: this.hoveredHit, isolated: this.isolated } = after)
+    this.depthCycleState = null
+    if (!(options.preserveMeasurement ?? previousSceneIntact(delta, previous.length))) {
       this.measurementPoints = []
       this.measureActive = false
     }
     this.rebuildMeasurementBuffer()
-    this.clearSelectionOverlayBuffers()
+    if (after.selected === null && after.hovered === null) this.clearSelectionOverlayBuffers()
+    else this.rebuildSelectionOverlays()
     this.sourceHighlightId = null
     this.clearSourceHighlightOverlayBuffers()
     this.emitMeasurementChange()
+    geometryCache.publish(next.flatMap(mesh => mesh.assetId ?? []))
     this.destroyMeshes(previous, retainedGeometryBuffers)
     this.geometryFade = null
-    if (this.displayMode === 'edges') {
-      for (const mesh of next) this.ensureEdgeBuffer(mesh)
-    }
+    if (this.displayMode === 'edges') for (const mesh of next) this.ensureEdgeBuffer(mesh)
     // Pre-build the remaining edge buffers off the critical path so the first
     // hover highlight does not pay a synchronous multi-megabyte upload.
     this.scheduleEdgeBufferWarmup()
-    if (selectionChanged) this.emitSelectionChange()
-    if (hoverChanged) {
-      try { this.onHoverChange?.(null) } catch { /* UI callbacks must not break rendering. */ }
+    if (!sameInteractionTarget(before, after, 'selected')) this.emitSelectionChange()
+    if (!sameInteractionTarget(before, after, 'hovered')) {
+      try { this.onHoverChange?.(this.hoveredHit) } catch { /* UI callbacks must not break rendering. */ }
     }
 
     if (nextBounds && !this.initialFitDone) {
       this.initialFitDone = true
       this.applyFitBounds(nextBounds)
-      this.requestRender()
-    } else {
-      this.requestRender()
     }
-  }
-
-  /**
-   * Scalar min/max scan over the interleaved vertex stream (no per-vertex
-   * allocations or closures). Cache each immutable geometry/instance pair so
-   * shared assets do not evict each other's transformed bounds. Weak keys do
-   * not keep previous scene instances alive; snapshots detect transform edits.
-   */
-  private measureMeshBounds(assetId: string | null, vertices: Float32Array, transform: Mat4): { local: Aabb3; world: Bounds } | null {
-    // Meshes without a content identity compute bounds without caching.
-    const entries = assetId === null ? undefined : this.meshBoundsCache.get(assetId)
-    if (entries) {
-      for (const entry of entries) {
-        if (sameTypedArray(entry.transformSnapshot, transform)) return entry.result
-      }
-    }
-
-    const m0 = transform[0], m1 = transform[1], m2 = transform[2], m3 = transform[3]
-    const m4 = transform[4], m5 = transform[5], m6 = transform[6], m7 = transform[7]
-    const m8 = transform[8], m9 = transform[9], m10 = transform[10], m11 = transform[11]
-    const m12 = transform[12], m13 = transform[13], m14 = transform[14], m15 = transform[15]
-
-    let lMinX = Infinity, lMinY = Infinity, lMinZ = Infinity
-    let lMaxX = -Infinity, lMaxY = -Infinity, lMaxZ = -Infinity
-    let wMinX = Infinity, wMinY = Infinity, wMinZ = Infinity
-    let wMaxX = -Infinity, wMaxY = -Infinity, wMaxZ = -Infinity
-    for (let i = 0; i + 2 < vertices.length; i += 6) {
-      const x = vertices[i], y = vertices[i+1], z = vertices[i+2]
-      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue
-      const w = m12*x + m13*y + m14*z + m15
-      const iw = Number.isFinite(w) && Math.abs(w) > 1e-12 ? 1 / w : 1
-      const wx = (m0*x + m1*y + m2*z + m3) * iw
-      const wy = (m4*x + m5*y + m6*z + m7) * iw
-      const wz = (m8*x + m9*y + m10*z + m11) * iw
-      if (!Number.isFinite(wx) || !Number.isFinite(wy) || !Number.isFinite(wz)) continue
-      if (x < lMinX) lMinX = x
-      if (y < lMinY) lMinY = y
-      if (z < lMinZ) lMinZ = z
-      if (x > lMaxX) lMaxX = x
-      if (y > lMaxY) lMaxY = y
-      if (z > lMaxZ) lMaxZ = z
-      if (wx < wMinX) wMinX = wx
-      if (wy < wMinY) wMinY = wy
-      if (wz < wMinZ) wMinZ = wz
-      if (wx > wMaxX) wMaxX = wx
-      if (wy > wMaxY) wMaxY = wy
-      if (wz > wMaxZ) wMaxZ = wz
-    }
-    if (!Number.isFinite(lMinX)) return null
-    const result = {
-      local: { min: [lMinX, lMinY, lMinZ] as Vec3, max: [lMaxX, lMaxY, lMaxZ] as Vec3 },
-      world: {
-        center: [(wMinX+wMaxX)/2, (wMinY+wMaxY)/2, (wMinZ+wMaxZ)/2] as [number, number, number],
-        radius: Math.hypot(wMaxX-wMinX, wMaxY-wMinY, wMaxZ-wMinZ) / 2,
-        min: [wMinX, wMinY, wMinZ] as [number, number, number],
-        max: [wMaxX, wMaxY, wMaxZ] as [number, number, number],
-      },
-    }
-    if (assetId === null) return result
-    let list = this.meshBoundsCache.get(assetId)
-    if (!list) {
-      list = []
-      this.meshBoundsCache.set(assetId, list)
-    }
-    if (list.length >= 8) list.shift()
-    list.push({ transformSnapshot: new Float32Array(transform), result })
-    return result
-  }
-
-  private combineBounds(bounds: Bounds[]): Bounds | null {
-    if (!bounds.length) return null
-    const min: Vec3 = [Infinity, Infinity, Infinity]
-    const max: Vec3 = [-Infinity, -Infinity, -Infinity]
-    for (const bound of bounds) {
-      for (let axis = 0; axis < 3; axis++) {
-        min[axis] = Math.min(min[axis], bound.min[axis])
-        max[axis] = Math.max(max[axis], bound.max[axis])
-      }
-    }
-    const center: Vec3 = [(min[0]+max[0])/2, (min[1]+max[1])/2, (min[2]+max[2])/2]
-    return { center, radius: Math.hypot(max[0]-min[0], max[1]-min[1], max[2]-min[2]) / 2, min, max }
+    this.requestRender()
   }
 
   /** Match a recovered photo camera without changing the default CAD field of view. */
@@ -1223,7 +1117,7 @@ export class WebGPURenderer {
     // Rebuild the O(n log n) index lazily on the next pointer query, even when
     // a recovery transaction changes hundreds of object visibility flags.
     this.sceneAabbIndexDirty = true
-    this.bounds = this.combineBounds(visibleBounds)
+    this.bounds = combineBounds(visibleBounds)
     this.invalidateShadowMap()
     if (stylesChanged) this.updateMeshStyles()
     this.rebuildSelectionOverlays()
@@ -1794,7 +1688,7 @@ export class WebGPURenderer {
     if (this.levelStore?.dev !== dev) {
       this.levelStore?.store.dispose()
       const generation = this.generation
-      const store = new ProgressiveLevelStore(DEFAULT_DISPLAY_BUDGET.budgetBytes, () => {
+      const store = new ProgressiveLevelStore(this.gpuResidency(dev).cache, () => {
         if (this.dead || this.generation !== generation) return
         // A finer level landed: force reselection on the next frame.
         this.lastMeshLodKey = ''
@@ -2204,8 +2098,20 @@ export class WebGPURenderer {
     this.resizeObserver.observe(this.canvas)
   }
 
-  private destroyMeshes(meshes: GMesh[], preserved: ReadonlySet<GPUBuffer> = new Set()) {
-    destroySceneMeshes(meshes, this.nativePicking, preserved)
+  private destroyMeshes(meshes: GMesh[], retained: ReadonlySet<GPUBuffer> = new Set()) {
+    destroySceneMeshes(meshes, this.nativePicking, preservedBuffers(retained, this.residency?.geometry))
+  }
+
+  /** One residency budget per device for retained base geometry and LOD levels. */
+  private gpuResidency(dev: GPUDevice) {
+    if (this.residency?.dev !== dev) {
+      this.levelStore?.store.dispose()
+      this.levelStore = null
+      this.residency?.geometry.dispose()
+      const cache = new GpuResidencyCache(DEFAULT_DISPLAY_BUDGET.budgetBytes)
+      this.residency = { dev, cache, geometry: new GpuGeometryCache(cache, ({ vb }) => this.nativePicking.release(vb)) }
+    }
+    return this.residency
   }
 
   destroy() {
@@ -2259,6 +2165,9 @@ export class WebGPURenderer {
     this.destroyMeshes(this.meshes)
     this.levelStore?.store.dispose()
     this.levelStore = null
+    this.residency?.geometry.dispose()
+    this.residency?.cache.dispose()
+    this.residency = null
     this.nativePicking.clear()
     this.edgeBuffersByVertexBuffer.clear()
     this.meshes = []

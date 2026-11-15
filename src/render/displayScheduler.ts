@@ -14,6 +14,7 @@
 import type { MeshLodLevel } from '../core/mesh'
 import { selectDisplayRepresentation, type DisplayRepresentation } from '../kernel/geometry/displayPolicy'
 import type { GMesh } from './types'
+import { ByteLruCache, GpuResidencyCache, type ResidentResource } from './gpuResidencyCache'
 import { pixelsPerUnit, type ViewerLodCamera } from './viewerLod'
 
 export interface DisplayBudget {
@@ -80,84 +81,14 @@ export function planDisplayCaps(
   return plan
 }
 
-interface CacheEntry<V> {
-  value: V
-  bytes: number
-}
-
-/** Least-recently-used map bounded by total bytes; pinned entries are never evicted. */
-export class ByteLruCache<V> {
-  private readonly entries = new Map<string, CacheEntry<V>>()
-  private total = 0
-
-  constructor(
-    readonly budgetBytes: number,
-    private readonly onEvict: (key: string, value: V) => void = () => {},
-    private readonly pinned: (key: string) => boolean = () => false,
-  ) {}
-
-  get bytes() {
-    return this.total
-  }
-
-  get size() {
-    return this.entries.size
-  }
-
-  keys(): string[] {
-    return [...this.entries.keys()]
-  }
-
-  has(key: string) {
-    return this.entries.has(key)
-  }
-
-  get(key: string): V | undefined {
-    const entry = this.entries.get(key)
-    if (!entry) return undefined
-    this.entries.delete(key)
-    this.entries.set(key, entry)
-    return entry.value
-  }
-
-  set(key: string, value: V, bytes: number) {
-    this.delete(key)
-    this.entries.set(key, { value, bytes })
-    this.total += bytes
-    this.evict(key)
-  }
-
-  delete(key: string): boolean {
-    const entry = this.entries.get(key)
-    if (!entry) return false
-    this.entries.delete(key)
-    this.total -= entry.bytes
-    this.onEvict(key, entry.value)
-    return true
-  }
-
-  /** Drop every entry whose key matches; returns how many were removed. */
-  invalidate(match: (key: string) => boolean): number {
-    let removed = 0
-    for (const key of [...this.entries.keys()]) if (match(key) && this.delete(key)) removed++
-    return removed
-  }
-
-  /** Evict oldest unpinned entries until the budget holds; `keep` is the entry just inserted. */
-  private evict(keep: string) {
-    for (const key of [...this.entries.keys()]) {
-      if (this.total <= this.budgetBytes) return
-      if (key !== keep && !this.pinned(key)) this.delete(key)
-    }
-  }
-}
+export { ByteLruCache }
 
 export interface LevelBuffers {
   readonly vb: GPUBuffer
   readonly ib: GPUBuffer
 }
 
-interface CachedLevel extends LevelBuffers {
+interface CachedLevel extends LevelBuffers, ResidentResource {
   /** Level data the buffers were uploaded from; a different object means the geometry changed. */
   readonly source: MeshLodLevel
 }
@@ -189,44 +120,44 @@ export function geometryKey(mesh: GMesh): string {
   return key
 }
 
-const cacheKey = (geometry: string, level: number) => `${geometry}#${level}`
-const geometryOf = (key: string) => key.slice(0, key.lastIndexOf('#'))
+const LEVEL_PREFIX = 'lod:'
+const cacheKey = (geometry: string, level: number) => `${LEVEL_PREFIX}${geometry}#${level}`
+/** Geometry of a level key, or null for keys owned by another residency client. */
+const geometryOf = (key: string) =>
+  key.startsWith(LEVEL_PREFIX) ? key.slice(LEVEL_PREFIX.length, key.lastIndexOf('#')) : null
 
 /**
  * Uploads LOD level buffers on idle callbacks, one level per callback, and
  * shares them between instances of the same asset through a byte-bounded LRU.
  */
 export class ProgressiveLevelStore {
-  private readonly cache: ByteLruCache<CachedLevel>
+  private readonly residency: GpuResidencyCache
+  private readonly cache: ByteLruCache<ResidentResource>
   private readonly pending = new Map<string, { generation: number; source: MeshLodLevel }>()
   private readonly queue: (() => void)[] = []
   private bound = new Set<string>()
   private generation = 0
   private draining = false
 
+  /** A number creates a private residency budget; a shared cache puts levels under its one budget. */
   constructor(
-    budgetBytes: number,
+    budget: number | GpuResidencyCache,
     private readonly onReady: () => void = () => {},
     private readonly schedule: IdleScheduler = defaultIdleScheduler,
   ) {
-    this.cache = new ByteLruCache<CachedLevel>(
-      budgetBytes,
-      (_key, value) => {
-        value.vb.destroy()
-        value.ib.destroy()
-      },
-      key => this.bound.has(key),
-    )
+    this.residency = typeof budget === 'number' ? new GpuResidencyCache(budget) : budget
+    this.cache = this.residency.lru
+    this.residency.pin(key => this.bound.has(key))
   }
 
   get cachedBytes() {
-    return this.cache.bytes
+    return this.cache.bytesWhere(key => geometryOf(key) !== null)
   }
 
   state(mesh: GMesh, level: number): LevelState {
     const key = cacheKey(geometryKey(mesh), level)
     if (this.pending.has(key)) return 'pending'
-    const cached = this.cache.has(key) ? this.cache.get(key) : undefined
+    const cached = this.cache.has(key) ? (this.cache.get(key) as CachedLevel | undefined) : undefined
     return cached && cached.source === mesh.lod?.levels[level] ? 'ready' : 'missing'
   }
 
@@ -278,14 +209,18 @@ export class ProgressiveLevelStore {
   }
 
   private invalidateWhere(match: (geometry: string) => boolean) {
-    this.cache.invalidate(key => match(geometryOf(key)))
-    for (const key of [...this.pending.keys()]) if (match(geometryOf(key))) this.pending.delete(key)
+    const own = (key: string) => {
+      const geometry = geometryOf(key)
+      return geometry !== null && match(geometry)
+    }
+    this.cache.invalidate(own)
+    for (const key of [...this.pending.keys()]) if (own(key)) this.pending.delete(key)
   }
 
   private ready(mesh: GMesh, level: number): CachedLevel | undefined {
     const geometry = geometryKey(mesh)
     const key = cacheKey(geometry, level)
-    const cached = this.cache.get(key)
+    const cached = this.cache.get(key) as CachedLevel | undefined
     if (!cached) return undefined
     if (cached.source === mesh.lod?.levels[level]) return cached
     // Same asset id with different level data: the geometry changed underneath.
@@ -313,7 +248,16 @@ export class ProgressiveLevelStore {
       })
       dev.queue.writeBuffer(vb, 0, source.vertices)
       dev.queue.writeBuffer(ib, 0, source.indices)
-      this.cache.set(key, { vb, ib, source }, levelBytes(source))
+      const level: CachedLevel = {
+        vb,
+        ib,
+        source,
+        destroy: () => {
+          vb.destroy()
+          ib.destroy()
+        },
+      }
+      this.cache.set(key, level, levelBytes(source))
       this.onReady()
     })
     this.drain()

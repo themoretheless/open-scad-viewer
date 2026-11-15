@@ -16,6 +16,7 @@
 //! material classification still require a subsequent validation stage.
 
 pub use math_core::{Error, Result};
+pub mod drawing;
 use math_core::{cross, sub};
 pub use mesh_topology::MeshView;
 fn check(condition: bool, message: &str) -> Result<()> {

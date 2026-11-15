@@ -210,7 +210,14 @@ pub fn fillet_edges(
     fillet_edges_certified(model, edge_ids, radius, segments).map(|(model, _)| model)
 }
 
-/// Faceted fillet with an explicit, conservative arc-deviation hand-off.
+/// Faceted fillet with an audited tolerance hand-off.
+///
+/// The planar facets are the intended, exact output geometry. Their chordal
+/// deviation from the ideal circular arc, `r * (1 / cos(alpha / 2n) - 1)`, is
+/// a design approximation chosen through `segments`, so it is reported as
+/// `design_approximation_mm` and is not published as model tolerance (which
+/// would also break the global tolerance ceiling for coarse fillets). Only
+/// genuine numerical tolerance growth is handed off.
 pub fn fillet_edges_certified(
     model: &Model,
     edge_ids: &[usize],
@@ -220,21 +227,25 @@ pub fn fillet_edges_certified(
     crate::admit_operation_input(cad_predicates::OperationBoundary::Fillet, model.tolerance_mm)?;
     model.validate()?;
     let input_mm = model.tolerance_mm;
-    let mut measured_output_mm: f64 = 0.;
+    let mut design_approximation_mm: f64 = 0.;
     for &edge_id in edge_ids {
         let adjacent = edge_faces(model, edge_id)?;
         let a = face_plane(model, adjacent[0])?;
         let b = face_plane(model, adjacent[1])?;
         let alpha = dot(a.normal, b.normal).clamp(-1., 1.).acos();
         let deviation = radius * ((alpha / (2. * segments as f64)).cos().recip() - 1.);
-        measured_output_mm = measured_output_mm.max(deviation);
+        design_approximation_mm = design_approximation_mm.max(deviation);
     }
     let mut result = edge_operation(model, edge_ids, radius, Some(segments))?;
-    let handoff = crate::enforce_model_tolerance_handoff(
+    // Planar facets are rebuilt from exact plane intersections; any numerical
+    // growth is already carried by the rebuilt model's own tolerance.
+    let numerical_output_mm = result.tolerance_mm;
+    let mut handoff = crate::enforce_model_tolerance_handoff(
         cad_predicates::OperationBoundary::Fillet,
         input_mm,
-        measured_output_mm.next_up(),
+        numerical_output_mm,
         &mut result,
     )?;
+    handoff.design_approximation_mm = design_approximation_mm.next_up();
     Ok((result, handoff))
 }

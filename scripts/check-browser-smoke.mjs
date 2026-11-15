@@ -351,6 +351,62 @@ try {
     }
   })
 
+  await step('CodeMirror source editor: typing, undo groups, find and Tab indent', async () => {
+    const content = page.locator('.code-editor-cm .cm-content')
+    await content.waitFor({ state: 'visible' })
+    const label = await content.getAttribute('aria-label')
+    assert.ok(label && label.trim(), 'editor content has an accessible name')
+    const text = () =>
+      content.evaluate(el => [...el.querySelectorAll('.cm-line')].map(line => line.textContent).join('\n'))
+    await content.click()
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type('cube(1);', { delay: 15 })
+    // A pause longer than the 500 ms history window starts a new undo group.
+    await page.waitForTimeout(700)
+    await page.keyboard.type(' sphere(2);', { delay: 15 })
+    assert.equal(await text(), 'cube(1); sphere(2);')
+    await page.keyboard.press('ControlOrMeta+z')
+    assert.equal(await text(), 'cube(1);', 'one undo removes one typing group')
+    await page.keyboard.press('ControlOrMeta+Shift+z')
+    assert.equal(await text(), 'cube(1); sphere(2);', 'redo restores the group')
+    await page.keyboard.press('ControlOrMeta+f')
+    const findInput = page.locator('.find-bar input[type=search]')
+    await findInput.waitFor({ state: 'visible' })
+    await findInput.fill('sphere')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Escape')
+    await findInput.waitFor({ state: 'detached' })
+    await expectFocus(content)
+    assert.equal(
+      await page.evaluate(() => String(document.getSelection())),
+      'sphere',
+      'find selects the match in CodeMirror',
+    )
+    await page.keyboard.press('Home')
+    await page.keyboard.press('Tab')
+    assert.match(await text(), /^\s+cube\(1\); sphere\(2\);$/, 'Tab indents the line')
+    await expectFocus(content)
+    await page.keyboard.press('ControlOrMeta+z')
+    assert.equal(await text(), 'cube(1); sphere(2);', 'Tab indent is one undo step')
+    // Theme evidence for both schemes; the colours come from the app's CSS variables.
+    const editorPane = page.locator('.code-editor-cm')
+    const shots = []
+    const schemes = {}
+    for (const scheme of ['dark', 'light']) {
+      await page.emulateMedia({ colorScheme: scheme })
+      await page.waitForFunction(next => document.documentElement.dataset.theme === next, scheme)
+      const file = path.join(directory, `codemirror-editor-${scheme}.png`)
+      await editorPane.screenshot({ path: file, animations: 'disabled', caret: 'hide' })
+      schemes[scheme] = await page
+        .locator('.code-editor-cm .syntax-function')
+        .first()
+        .evaluate(el => getComputedStyle(el).color)
+      shots.push(path.basename(file))
+    }
+    assert.notEqual(schemes.dark, schemes.light, 'syntax colours follow the theme')
+    budgets.codeMirrorEditor = { label, functionColor: schemes, screenshots: shots }
+  })
+
   await step('keyboard camera keys orbit, pan and zoom the viewport', async () => {
     const canvas = page.locator('canvas.gpu-canvas')
     await canvas.focus()

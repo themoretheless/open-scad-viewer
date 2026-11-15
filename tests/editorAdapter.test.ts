@@ -5,7 +5,25 @@ import type { MeshData } from '../src/core/mesh'
 import { useEditorFind } from '../src/composables/useEditorFind'
 import { useEditorFormatting } from '../src/composables/useEditorFormatting'
 import { useSourceProvenanceCaret } from '../src/composables/useSourceProvenanceCaret'
-import { createTextareaEditorAdapter, type EditorSelectMode, type TextareaLike } from '../src/editor/EditorAdapter'
+import {
+  createTextareaEditorAdapter,
+  type EditorAdapter,
+  type EditorSelectMode,
+  type TextareaLike,
+} from '../src/editor/EditorAdapter'
+import {
+  createCodeMirrorEditorAdapter,
+  resolveEditorEngine,
+  type CodeMirrorEngine,
+} from '../src/editor/codemirrorAdapter'
+import {
+  HISTORY_GROUP_MS,
+  PROGRAMMATIC_USER_EVENT,
+  createEngineCore,
+  createHeadlessHost,
+  minimalChange,
+} from '../src/editor/codemirrorCore'
+import { Transaction } from '@codemirror/state'
 import { EditHistory } from '../src/editor/editHistory'
 import { vModelText } from '../src/forma/svet-directives'
 import type { WebGPURenderer } from '../src/render/webgpuRenderer'
@@ -85,6 +103,269 @@ function bindModel(el: FakeTextarea, code: { value: string }, onInput: () => voi
   el.addEventListener('input', onInput)
 }
 
+/** One engine under the shared adapter contract. */
+interface Harness {
+  adapter: EditorAdapter
+  /** The engine's own document, read past the adapter. */
+  engineText(): string
+  focused(): boolean
+  unmount(): void
+}
+
+function textareaHarness(initial: string): Harness {
+  const { el, elementRef, adapter } = mount(initial)
+  return { adapter, engineText: () => el.value, focused: () => el.focused, unmount: () => (elementRef.value = null) }
+}
+
+/** CodeMirror engine over a DOM-free host: real `@codemirror/state` transactions and history. */
+function headlessCodeMirror(initial: string) {
+  const host = createHeadlessHost(initial)
+  let focused = false
+  const scroll = { top: 0, left: 0 }
+  const engine: CodeMirrorEngine = {
+    ...createEngineCore(host),
+    element: () => null,
+    focus: () => void (focused = true),
+    hasFocus: () => focused,
+    getScroll: () => ({ ...scroll, clientHeight: 400 }),
+    setScroll: next => Object.assign(scroll, next),
+    lineHeightPx: () => 20,
+    isComposing: () => false,
+    onComposition: () => () => {},
+    destroy() {},
+  }
+  return { host, engine, focused: () => focused }
+}
+
+function codeMirrorHarness(initial: string): Harness {
+  const { host, engine, focused } = headlessCodeMirror(initial)
+  const engineRef = ref<CodeMirrorEngine | null>(engine)
+  const adapter = createCodeMirrorEditorAdapter(engineRef)
+  return { adapter, engineText: () => host.state.doc.toString(), focused, unmount: () => (engineRef.value = null) }
+}
+
+const engines: [string, (initial: string) => Harness][] = [
+  ['textarea', textareaHarness],
+  ['codemirror', codeMirrorHarness],
+]
+
+describe.each(engines)('editor adapter contract: %s', (_name, create) => {
+  it('reads and writes text, selection and scroll', () => {
+    const { adapter, engineText, focused } = create('cube(1);')
+    expect(adapter.mounted).toBe(true)
+    adapter.setSelection(0, 4, 'backward')
+    expect(adapter.getSelection()).toEqual({ start: 0, end: 4, direction: 'backward' })
+    adapter.replaceRange('sphere', 0, 4, 'select')
+    expect(adapter.getText()).toBe('sphere(1);')
+    expect(adapter.getSelection()).toMatchObject({ start: 0, end: 6 })
+    adapter.setText('x', 'start')
+    expect(engineText()).toBe('x')
+    expect(adapter.getSelection()).toMatchObject({ start: 0, end: 0 })
+    adapter.setScroll({ top: 40, left: 3 })
+    expect(adapter.getScroll()).toEqual({ top: 40, left: 3, clientHeight: 400 })
+    expect(adapter.lineHeightPx()).toBe(20)
+    adapter.focus()
+    expect(focused()).toBe(true)
+  })
+
+  it('maps the selection through a preserved replacement like setRangeText', () => {
+    const { adapter } = create('aaaa bbbb cccc')
+    adapter.setSelection(10, 14)
+    adapter.replaceRange('X', 0, 4)
+    expect(adapter.getText()).toBe('X bbbb cccc')
+    expect(adapter.getSelection()).toMatchObject({ start: 7, end: 11 })
+    adapter.setSelection(3, 3)
+    adapter.replaceRange('', 2, 6)
+    expect(adapter.getSelection()).toMatchObject({ start: 2, end: 2 })
+    adapter.setText('X bbbb cccc!', 'end')
+    expect(adapter.getSelection()).toMatchObject({ start: 12, end: 12 })
+  })
+
+  it('is a safe no-op while unmounted', () => {
+    const { adapter, unmount } = create('a')
+    unmount()
+    expect(adapter.mounted).toBe(false)
+    expect(adapter.getText()).toBe('')
+    expect(() => adapter.setText('b')).not.toThrow()
+    expect(adapter.getSelection()).toEqual({ start: 0, end: 0, direction: 'none' })
+    expect(adapter.undo()).toBe(false)
+    expect(adapter.isComposing()).toBe(false)
+  })
+
+  it('keeps highlight decorations', () => {
+    const { adapter } = create('cube(1);')
+    adapter.setHighlights([{ start: 0, end: 4, kind: 'source' }])
+    expect(adapter.getHighlights()).toEqual([{ start: 0, end: 4, kind: 'source' }])
+    adapter.setHighlights([])
+    expect(adapter.getHighlights()).toEqual([])
+  })
+
+  it('seeds find from the selection and replaces through the adapter', async () => {
+    const { adapter, engineText } = create('cube(1); cube(2);')
+    const code = ref(adapter.getText())
+    const onEdited = vi.fn()
+    const find = useEditorFind({
+      code,
+      editor: adapter,
+      input: ref(null),
+      translate: k => k,
+      notify: () => {},
+      onEdited,
+    })
+    adapter.setSelection(0, 4)
+    find.openEditorFind(true)
+    expect(find.findQuery.value).toBe('cube')
+    await nextTick()
+    find.findReplacement.value = 'sphere'
+    find.navigateFind(1)
+    expect(adapter.getSelection()).toMatchObject({ start: 9, end: 13 })
+    find.replaceCurrentFindMatch()
+    expect(code.value).toBe('cube(1); sphere(2);')
+    expect(onEdited).toHaveBeenCalledTimes(1)
+    find.replaceAllFindMatches()
+    expect(code.value).toBe('sphere(1); sphere(2);')
+    expect(engineText()).toBe(code.value)
+  })
+
+  it('indents the selection with Tab and keeps the model in sync', () => {
+    const { adapter, engineText } = create('a;\nb;')
+    const code = ref(adapter.getText())
+    const handleEditorInput = vi.fn()
+    const { handleEditorKey } = useEditorFormatting({
+      code,
+      editor: adapter,
+      foldedLines: ref(new Set<number>()),
+      syncHighlightScroll: () => {},
+      handleEditorInput,
+      dispatchKeyboardCommand: () => {},
+    })
+    adapter.setSelection(0, 4)
+    handleEditorKey({
+      key: 'Tab',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      isComposing: false,
+      preventDefault() {},
+    } as KeyboardEvent)
+    expect(code.value).toBe(engineText())
+    expect(code.value.split('\n').every(line => /^\s+/.test(line))).toBe(true)
+    expect(handleEditorInput).toHaveBeenCalledTimes(1)
+  })
+
+  it('reveals a diagnostic or scene pick as a forward selection and decoration', () => {
+    const source = 'union() { cube(1); sphere(2); }'
+    const cubeStart = source.indexOf('cube')
+    const { adapter, focused } = create(source)
+    const setSourceHighlight = vi.fn()
+    const caret = useSourceProvenanceCaret({
+      code: ref(source),
+      editor: adapter,
+      selectedEditorName: ref(''),
+      sceneMeshes: computed(() => [
+        { provenance: [{ source: { id: 2, start: cubeStart, end: cubeStart + 8 } }] } as unknown as MeshData,
+      ]),
+      sourceMatchesEditor: computed(() => true),
+      getRenderer: () => ({ setSourceHighlight }) as unknown as WebGPURenderer,
+      showNotice: () => {},
+      translate: k => k,
+    })
+    caret.revealSource({ sourceId: 2, sourceStart: cubeStart, sourceEnd: cubeStart + 8 } as SourceProvenanceRow)
+    expect(focused()).toBe(true)
+    expect(adapter.getSelection()).toEqual({ start: cubeStart, end: cubeStart + 8, direction: 'forward' })
+    expect(adapter.getHighlights()).toEqual([{ start: cubeStart, end: cubeStart + 8, kind: 'source' }])
+  })
+})
+
+describe('CodeMirror engine history (headless @codemirror/state)', () => {
+  function typeAt(host: ReturnType<typeof createHeadlessHost>, pos: number, text: string, time: number) {
+    host.dispatch({
+      changes: { from: pos, insert: text },
+      selection: { anchor: pos + text.length },
+      userEvent: 'input.type',
+      annotations: Transaction.time.of(time),
+    })
+  }
+
+  it('coalesces adjacent typing within the 500 ms window into one undo step', () => {
+    const { host, engine } = headlessCodeMirror('')
+    const base = 1_000_000
+    'cube'.split('').forEach((ch, i) => typeAt(host, i, ch, base + i * 100))
+    expect(engine.undoDepth()).toBe(1)
+    typeAt(host, 4, '(', base + 300 + HISTORY_GROUP_MS + 1)
+    expect(engine.undoDepth()).toBe(2)
+    engine.undo()
+    expect(engine.getText()).toBe('cube')
+    engine.undo()
+    expect(engine.getText()).toBe('')
+    engine.redo()
+    engine.redo()
+    expect(engine.getText()).toBe('cube(')
+  })
+
+  it('records each programmatic edit as exactly one step, never merged with typing, and clears redo', () => {
+    const { host, engine } = headlessCodeMirror('cube(1);')
+    const now = Date.now()
+    typeAt(host, 8, ' ', now)
+    engine.setText('cube(2); ', 'preserve')
+    engine.replaceRange('3', 5, 6)
+    typeAt(host, 9, 'x', now + 10)
+    expect(engine.undoDepth()).toBe(4)
+    expect(host.transactions.filter(tr => tr.isUserEvent(PROGRAMMATIC_USER_EVENT))).toHaveLength(2)
+    engine.undo()
+    engine.undo()
+    expect(engine.getText()).toBe('cube(2); ')
+    engine.replaceRange('//', 0, 0)
+    expect(engine.redoDepth()).toBe(0)
+  })
+
+  it('joins IME composition transactions into one undo step', () => {
+    const { host, engine } = headlessCodeMirror('a = ;')
+    const t0 = 1_000_000
+    host.dispatch({
+      changes: { from: 4, insert: 'n' },
+      userEvent: 'input.type.compose.start',
+      annotations: Transaction.time.of(t0),
+    })
+    host.dispatch({
+      changes: { from: 4, to: 5, insert: 'に' },
+      userEvent: 'input.type.compose',
+      annotations: Transaction.time.of(t0 + 900),
+    })
+    host.dispatch({
+      changes: { from: 4, to: 5, insert: '日本' },
+      userEvent: 'input.type.compose',
+      annotations: Transaction.time.of(t0 + 2000),
+    })
+    expect(engine.getText()).toBe('a = 日本;')
+    expect(engine.undoDepth()).toBe(1)
+    engine.undo()
+    expect(engine.getText()).toBe('a = ;')
+    engine.redo()
+    expect(engine.getText()).toBe('a = 日本;')
+  })
+
+  it('maps highlight decorations through edits', () => {
+    const { engine } = headlessCodeMirror('cube(1); sphere(2);')
+    engine.setHighlights([{ start: 9, end: 15, kind: 'source' }])
+    engine.replaceRange('// ', 0, 0)
+    expect(engine.getHighlights()).toEqual([{ start: 12, end: 18, kind: 'source' }])
+  })
+
+  it('turns whole-document programmatic replacements into a minimal change', () => {
+    expect(minimalChange('cube(1);\nsphere(2);', 'cube(1);\nsphere(3);')).toEqual({ from: 16, to: 17, insert: '3' })
+    expect(minimalChange('abc', 'abc')).toEqual({ from: 3, to: 3, insert: '' })
+  })
+
+  it('selects the engine from the URL flag, then storage, defaulting to CodeMirror', () => {
+    expect(resolveEditorEngine('', null)).toBe('codemirror')
+    expect(resolveEditorEngine('?editor=textarea', null)).toBe('textarea')
+    expect(resolveEditorEngine('', 'textarea')).toBe('textarea')
+    expect(resolveEditorEngine('?editor=codemirror', 'textarea')).toBe('codemirror')
+  })
+})
+
 describe('textarea editor adapter', () => {
   it('reads and writes text, selection and scroll like direct textarea access', () => {
     const { el, adapter } = mount('cube(1);')
@@ -156,63 +437,7 @@ describe('IME composition', () => {
   })
 })
 
-describe('find and replace through the adapter', () => {
-  it('seeds the query from the selection and replaces as one programmatic edit', async () => {
-    const { el, adapter } = mount('cube(1); cube(2);')
-    const code = ref(el.value)
-    const onEdited = vi.fn()
-    const find = useEditorFind({
-      code,
-      editor: adapter,
-      input: ref(null),
-      translate: k => k,
-      notify: () => {},
-      onEdited,
-    })
-    adapter.setSelection(0, 4)
-    find.openEditorFind(true)
-    expect(find.findQuery.value).toBe('cube')
-    await nextTick()
-    find.findReplacement.value = 'sphere'
-    find.navigateFind(1)
-    expect(adapter.getSelection()).toMatchObject({ start: 9, end: 13 })
-    find.replaceCurrentFindMatch()
-    expect(code.value).toBe('cube(1); sphere(2);')
-    expect(onEdited).toHaveBeenCalledTimes(1)
-    find.replaceAllFindMatches()
-    expect(code.value).toBe('sphere(1); sphere(2);')
-    expect(el.value).toBe(code.value)
-  })
-})
-
 describe('formatting through the adapter', () => {
-  it('indents the selection with Tab and keeps the model in sync', () => {
-    const { el, adapter } = mount('a;\nb;')
-    const code = ref(el.value)
-    const handleEditorInput = vi.fn()
-    const { handleEditorKey } = useEditorFormatting({
-      code,
-      editor: adapter,
-      foldedLines: ref(new Set<number>()),
-      syncHighlightScroll: () => {},
-      handleEditorInput,
-      dispatchKeyboardCommand: () => {},
-    })
-    adapter.setSelection(0, 4)
-    handleEditorKey({
-      key: 'Tab',
-      shiftKey: false,
-      ctrlKey: false,
-      metaKey: false,
-      altKey: false,
-      isComposing: false,
-      preventDefault() {},
-    } as KeyboardEvent)
-    expect(code.value).toBe(el.value)
-    expect(code.value.split('\n').every(line => /^\s+/.test(line))).toBe(true)
-    expect(handleEditorInput).toHaveBeenCalledTimes(1)
-  })
-
   it('does not indent while an IME composition is open', () => {
     const { el, adapter } = mount('a;')
     const code = ref(el.value)

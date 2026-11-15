@@ -210,10 +210,18 @@ export const rushReportOutputSchema = rushToolOutputSchema(
   }),
 )
 
+const pairClearanceSchema = z.object({
+  status: z.enum(['contact', 'clear', 'beyond_threshold', 'unknown']),
+  min_distance_mm: z.number().nullable(),
+  method: z.enum(['bounds_gap', 'kernel_triangle_distance', 'mesh_unavailable']),
+})
+
 export const rushInterferenceOutputSchema = rushToolOutputSchema(
   z.object({
     document_sha256: sha256Schema,
     scope: z.string(),
+    clearance_threshold_mm: z.number().positive(),
+    contact_tolerance_mm: z.number().positive(),
     volume_tolerance_mm3: z.number().positive(),
     pairs: z.array(
       z.object({
@@ -222,6 +230,8 @@ export const rushInterferenceOutputSchema = rushToolOutputSchema(
         status: z.enum(['overlap', 'no_volume_overlap', 'unknown']),
         intersection_volume_mm3: z.number().nullable(),
         method: z.string(),
+        clearance: pairClearanceSchema.optional(),
+        min_clearance_mm: z.number().nullable().optional(),
       }),
     ),
     status: z.enum(['overlap', 'no_volume_overlap', 'unknown']),

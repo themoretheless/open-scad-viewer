@@ -2645,7 +2645,7 @@ it('keeps the CV panel available and invalidates a numeric edit when coordinates
  previewWorkerRun.mockImplementation(job=>job.kind==='pointEdit'?new Promise(resolve=>requests.push({job,resolve})):undefined)
  const ui=await mount();await ui.click('+ NURBS surface');const before=ui.doc()
  const card=()=>ui.all().find(n=>String(n.props.class).includes('nurbs-card'))!
- const input=ui.all(card()).find(n=>n.tag==='label'&&ui.text(n).trim()==='X')!.children.find(n=>n.tag==='input')!
+ const input=ui.all(ui.all(card()).find(n=>n.tag==='label'&&ui.text(n).trim().startsWith('X'))!).find(n=>n.tag==='input')!
  input.props['onUpdate:modelValue'](5);await flushClearance();await ui.click('Apply CV')
  expect(card()).toBeDefined();expect(ui.button('Apply CV').props.disabled).toBe(true)
  input.props['onUpdate:modelValue'](7);await flushClearance();await ui.click('Apply CV')
@@ -5105,4 +5105,83 @@ it('C2 tab order: one stop for the extrusion result mode, arrows switch it, and 
  await commandKey(ui,'k',undefined,{ctrlKey:true});await nextTick()
  const dialog=ui.all().find(n=>n.props.role==='dialog'&&String(n.props.class).includes('palette'))!
  expect(tabStops(ui,dialog)).toEqual(['input:Search commands / Поиск команд'])
+})
+
+it('evaluates unit expressions in the CV panel and flags invalid input with a localized message',async()=>{
+ const requests:Array<{options:{point:number[]}}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='pointEdit'?new Promise(()=>requests.push(job)):undefined)
+ const ui=await mount();await ui.click('+ NURBS surface')
+ const field=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='CV X')!
+ field().props['onUpdate:modelValue']('10mm+1in');await flushClearance()
+ await ui.click('Apply CV');await flushClearance()
+ expect(requests[0].options.point[0]).toBeCloseTo(35.4,9)
+ field().props['onUpdate:modelValue']('2*x');await flushClearance()
+ expect(field().props['aria-invalid']).toBe(false)
+ field().props['onUpdate:modelValue']('5 deg');await flushClearance()
+ expect(field().props['aria-invalid']).toBe(true)
+ expect(ui.all().some(n=>n.props.role==='alert'&&ui.text(n).includes('Allowed units'))).toBe(true)
+ await ui.click('Apply CV');expect(requests).toHaveLength(1)
+})
+it('accepts unit expressions in the grid cell field and rejects invalid ones',async()=>{
+ const ui=await mount(),settings=useModelingGrid()
+ ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Cell units')!.props.onChange({target:{value:'mm'}});await nextTick()
+ const size=()=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Cell size')!
+ size().props.onChange({target:{value:'1in+4.6mm'}});await nextTick()
+ expect(settings.step.value).toBeCloseTo(30,9)
+ size().props.onChange({target:{value:'abc'}});await nextTick()
+ expect(size().props['aria-invalid']).toBe('true')
+ expect(ui.all().some(n=>n.props.role==='alert'&&ui.text(n)==='Enter a number or expression')).toBe(true)
+ expect(settings.step.value).toBeCloseTo(30,9)
+})
+it('nests isolation levels, steps out one level with Escape and migrates a flat saved list',async()=>{
+ const ui=await mount();await ui.click('Box');const boxBody=ui.doc().bodies.at(-1)!,box=boxBody.id,cube=ui.doc().bodies.find(b=>b.name==='Cube')!.id
+ await ui.click('Cube');await ui.click(boxBody.name,true);await ui.click('Isolate bodies')
+ await ui.click('Cube');await ui.click('Isolate within')
+ expect(ui.text(ui.all()[0])).toContain('Isolation level: 2')
+ expect(ui.all(ui.svg()).some(n=>n.props['data-body']===box)).toBe(false)
+ await commandKey(ui,'Escape')
+ expect(ui.all(ui.svg()).some(n=>n.props['data-body']===box)).toBe(true)
+ expect(ui.button('Exit isolation').props['aria-pressed']).toBe(true)
+ await commandKey(ui,'Escape');expect(ui.button('Isolate bodies').props['aria-pressed']).toBe(false)
+ const restored=await mount({},ui.serialized(),{...ui.preferences,'scad-solid-workspace-v1':JSON.stringify({version:1,hidden:[],locked:[],isolated:[cube]})})
+ expect(restored.button('Exit isolation').props['aria-pressed']).toBe(true)
+ expect(restored.all(restored.svg()).some(n=>n.props['data-body']===box)).toBe(false)
+})
+it('lists overlapping objects on right-click with names and selection cues, and selects the chosen one',async()=>{
+ const ui=await mount();await ui.click('Box');const box=ui.doc().bodies.at(-1)!
+ await ui.click('Cube')
+ const svg=ui.svg();svg.props.onContextmenu({...ui.event(svg,0,0),offsetX:5,offsetY:5});await nextTick()
+ const menu=()=>ui.all().find(n=>n.props.role==='menu'&&String(n.props.class).includes('pick-candidates'))
+ const items=ui.all(menu()!).filter(n=>n.props.role==='menuitem').map(n=>ui.text(n))
+ expect(items.some(t=>t.includes('Cube')&&t.includes('Selected'))).toBe(true)
+ const boxItem=items.find(t=>t.includes(box.name))!
+ expect(boxItem).toBeDefined()
+ await ui.click(boxItem)
+ expect(ui.button(box.name).props['aria-pressed']).toBe(true)
+ expect(menu()).toBeUndefined()
+})
+it('saves a pivot in the document and switches coordinate systems from the panel and keyboard',async()=>{
+ const ui=await mount();await ui.click('Cube');await ui.click('Properties')
+ await ui.click('Pivot: origin')
+ const cube=ui.doc().bodies.find(b=>b.name==='Cube')!
+ expect(ui.doc().pivots).toEqual([{key:cube.id,point:[0,0,0],snap:'origin'}])
+ await ui.click('↶');expect('pivots' in ui.doc()).toBe(false);await ui.click('↷')
+ const system=()=>ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Coordinate system')!
+ expect(system().props.value).toBe('world')
+ await commandKey(ui,'c',undefined,{altKey:true,code:'KeyC'});expect(system().props.value).toBe('cplane')
+ expect(ui.text(ui.all()[0])).toContain('No CPlane set')
+ await commandKey(ui,'c',undefined,{altKey:true,code:'KeyC'});expect(system().props.value).toBe('local')
+})
+it('copies with a base point and pastes at a target point',async()=>{
+ const ui=await mount();await ui.click('Cube');await ui.click('Properties')
+ const count=ui.doc().bodies.length,xs=(id:string)=>(ui.doc().bodies.find(b=>b.id===id)!.mesh.positions as unknown as number[]).filter((_,i)=>i%3===0)
+ const cube=ui.doc().bodies.find(b=>b.name==='Cube')!.id
+ await ui.click('Pivot: origin');await ui.click('Copy with base point');await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain('Copied with base point 0, 0, 0 mm')
+ ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Paste point X')!.props['onUpdate:modelValue']('50');await flushClearance()
+ await ui.click('Paste');await flushClearance()
+ expect(ui.doc().bodies).toHaveLength(count+1)
+ const pasted=ui.doc().bodies.at(-1)!.id
+ expect(pasted).not.toBe(cube)
+ expect(Math.min(...xs(pasted))-Math.min(...xs(cube))).toBeCloseTo(50,6)
 })

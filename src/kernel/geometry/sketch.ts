@@ -5,6 +5,7 @@ export type SketchConstraint =
  | {kind:'distance';a:number;b:number;value:number}
  | {kind:'parallel'|'perpendicular'|'equal_length';a:number;b:number;c:number;d:number}
  | {kind:'radius';circle:number;value:number}
+ | {kind:'concentric'|'equal_radius';a:number;b:number}
  | {kind:'point_on_circle';point:number;circle:number}
  | {kind:'tangent_line_circle';a:number;b:number;circle:number}
  | {kind:'tangent_circles';a:number;b:number;internal:boolean}

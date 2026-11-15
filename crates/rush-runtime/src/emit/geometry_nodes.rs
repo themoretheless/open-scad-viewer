@@ -237,6 +237,10 @@ impl<'a> Emitter<'a> {
                 for (i, p) in array(&item["points"]).iter().enumerate() {
                     points.push(json!({"id":p["id"],"position":self.vector(&p["position"],scope,current,&format!("points/{i}/position"),LENGTH)?}));
                 }
+                let mut circles = vec![];
+                for (i, c) in item["circles"].as_array().map(Vec::as_slice).unwrap_or(&[]).iter().enumerate() {
+                    circles.push(json!({"id":c["id"],"center":c["center"],"radius":self.value(&c["radius"],scope,current,&format!("circles/{i}/radius"),LENGTH)?}));
+                }
                 let mut constraints = vec![];
                 for (i, c) in array(&item["constraints"]).iter().enumerate() {
                     let mut constraint = c.clone();
@@ -250,7 +254,7 @@ impl<'a> Emitter<'a> {
                                 LENGTH
                             )?)
                         }
-                        "distance" => {
+                        "distance" | "radius" => {
                             constraint["value"] = json!(self.value(
                                 &c["value"],
                                 scope,
@@ -274,7 +278,7 @@ impl<'a> Emitter<'a> {
                         ));
                     }
                 }
-                let mut report = sketch::solve(&points, &constraints, current)?;
+                let mut report = sketch::solve(&points, &circles, &constraints, current)?;
                 report["instance_path"] = json!(current);
                 self.sketch_solutions.push(report.clone());
                 let status = str_at(&report, "status");
@@ -283,22 +287,26 @@ impl<'a> Emitter<'a> {
                 {
                     return Err(fail(&format!("sketch_{status}"),"Sketch could not produce a fully constrained profile. Inspect the solver report.").with_details(report));
                 }
-                let polygon: Vec<[f64; 2]> = boundary
-                    .iter()
-                    .map(|id| {
-                        let p = array(&report["points"])
-                            .iter()
-                            .find(|p| p["id"] == *id)
-                            .unwrap();
-                        [
-                            p["position"][0].as_f64().unwrap(),
-                            p["position"][1].as_f64().unwrap(),
-                        ]
-                    })
-                    .collect();
+                let (polygon, holes) =
+                    sketch::profile(item, boundary, &report, current)?;
                 profiles::validate(&polygon, current)?;
-                self.lines
-                    .push(format!("polygon(points={});", json_string(&json!(polygon))));
+                let outline = format!("polygon(points={});", json_string(&json!(polygon)));
+                if holes.is_empty() {
+                    self.lines.push(outline);
+                } else {
+                    let cutters: String = holes
+                        .iter()
+                        .map(|([x, y], r)| {
+                            format!(
+                                "translate([{}, {}]) circle(r={}, $fn=96);",
+                                number(*x),
+                                number(*y),
+                                number(*r)
+                            )
+                        })
+                        .collect();
+                    self.lines.push(format!("difference() {{ {outline} {cutters} }}"));
+                }
             }
             _ => unreachable!(),
         }

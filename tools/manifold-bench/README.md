@@ -28,16 +28,16 @@ npm run bench:memory -- tmp/memory.json
 
 ```sh
 npm run test:rbench
-npm run bench:kernel:check -- --baseline rbench-baseline.macos-aarch64.json --max-regression 0.25
+npm run bench:kernel:check
 ```
 
-The runner executes the release `manifold-core` rbench suite and compares wall-clock medians normalized to nanoseconds per operation. The default budget is 25%; exceeding it exits nonzero and still writes `tmp/rbench-comparison.json`. Missing cases, changed contracts, incomplete samples, and OS/architecture mismatches are errors. A stored baseline is meaningful only for repeated measurements on the same machine. Record a replacement only after reviewing an intentional performance change:
+The runner executes the release `manifold-core` and `manifold-ops` rbench suites (thorough profile) and compares wall-clock medians normalized to nanoseconds per operation against `rbench-baseline.<os>-<arch>.json` for the host. The default budget is 15%; exceeding it exits nonzero and still writes `tmp/rbench-comparison.json`. Baseline cases missing from the run, changed contracts, incomplete samples, and OS/architecture mismatches are errors; cases added since the baseline are reported as `NEW` and not gated. A stored baseline is meaningful only for repeated measurements on the same machine. Record a replacement only after reviewing an intentional performance change:
 
 ```sh
-npm run bench:kernel:record -- --baseline rbench-baseline.macos-aarch64.json
+npm run bench:kernel:record
 ```
 
-CI instead builds and measures the base revision and current revision on the same macOS runner, then applies the same 25% gate. `compare --baseline BASE/run.json --current CURRENT/run.json` compares existing reports without rerunning either revision.
+CI instead builds and measures the base revision and current revision on the same macOS runner (`measure --root`), then applies the same 15% gate. A separate Linux job compares with `rbench-baseline.linux-x86_64.json` when that file exists and otherwise records one and uploads it as an artifact without failing (`check --record-missing FILE`). `compare --baseline BASE/run.json --current CURRENT/run.json` compares existing reports without rerunning either revision.
 
 ## Differential qualification
 

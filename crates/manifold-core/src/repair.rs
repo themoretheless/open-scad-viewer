@@ -244,13 +244,13 @@ pub fn repair_with_options(
     let mut out = repair_pass(positions, indices, options, &mut budget);
     let mut report = out.report.clone();
     report.iterations = 1;
-    let mut seen: Vec<(Vec<u64>, Vec<usize>)> = vec![state_key(positions, indices)];
-    let mut converged = state_key(&out.positions, &out.indices) == seen[0];
+    // Convergence compares buffers in place; copies of earlier states are
+    // kept only once a pass changes the mesh again (oscillation detection),
+    // so the usual one- or two-pass repair never duplicates whole buffers.
+    let mut history: Vec<(Vec<u64>, Vec<usize>)> = Vec::new();
+    let mut converged = same_state(&out.positions, &out.indices, positions, indices);
     while !converged && budget.exhausted.is_none() && report.iterations < max_iterations {
-        let key = state_key(&out.positions, &out.indices);
-        seen.push(key);
         let next = repair_pass(&out.positions, &out.indices, options, &mut budget);
-        let next_key = state_key(&next.positions, &next.indices);
         report.iterations += 1;
         accumulate(&mut report, &next.report);
         let source = next
@@ -258,9 +258,21 @@ pub fn repair_with_options(
             .iter()
             .map(|s| s.and_then(|j| out.source_triangles[j]))
             .collect();
-        converged = next_key == *seen.last().unwrap();
-        if !converged && seen.contains(&next_key) {
+        converged = same_state(&next.positions, &next.indices, &out.positions, &out.indices);
+        if !converged
+            && (same_state(&next.positions, &next.indices, positions, indices)
+                || history.iter().any(|(p, i)| {
+                    i == &next.indices
+                        && p.len() == next.positions.len()
+                        && p.iter()
+                            .zip(&next.positions)
+                            .all(|(a, b)| *a == b.to_bits())
+                }))
+        {
             report.oscillation_detected = true;
+        }
+        if !converged && !report.oscillation_detected {
+            history.push(state_key(&out.positions, &out.indices));
         }
         let vertex_remap = out
             .vertex_remap
@@ -301,6 +313,22 @@ pub fn repair_with_options(
         }),
         None => Ok(out),
     }
+}
+
+/// Bitwise equality of two indexed meshes (so `-0.0 != 0.0` and NaN
+/// payloads count, matching [`state_key`]).
+fn same_state(
+    a_positions: &[f64],
+    a_indices: &[usize],
+    b_positions: &[f64],
+    b_indices: &[usize],
+) -> bool {
+    a_indices == b_indices
+        && a_positions.len() == b_positions.len()
+        && a_positions
+            .iter()
+            .zip(b_positions)
+            .all(|(a, b)| a.to_bits() == b.to_bits())
 }
 
 fn state_key(positions: &[f64], indices: &[usize]) -> (Vec<u64>, Vec<usize>) {
@@ -485,7 +513,9 @@ fn repair_pass(
 fn weld(positions: &[f64], epsilon: f64) -> (Vec<f64>, Vec<usize>, usize) {
     let vertex_count = positions.len() / 3;
     let mut remap: Vec<usize> = (0..vertex_count).collect();
-    let mut out: Vec<f64> = Vec::with_capacity(positions.len());
+    // Grows with the welded vertex count instead of reserving the whole
+    // (often mostly duplicate) input, which the returned mesh would keep.
+    let mut out: Vec<f64> = Vec::new();
 
     if epsilon == 0.0 {
         // Exact weld on bit patterns.
@@ -610,44 +640,39 @@ fn orient_outward(positions: &[f64], triangles: &mut [[usize; 3]]) -> (usize, us
         }
         r
     }
-    let mut edge_tris: BTreeMap<EdgeKey, Vec<usize>> = BTreeMap::new();
-    for (ti, t) in triangles.iter().enumerate() {
-        for i in 0..3 {
-            edge_tris
-                .entry(edge_key(t[i], t[(i + 1) % 3]))
-                .or_default()
-                .push(ti);
-        }
-    }
+    let corners = sorted_corner_edges(triangles);
     let mut open_root: HashSet<usize> = HashSet::new();
     let mut open_tris: Vec<usize> = Vec::new();
-    for tris in edge_tris.values() {
-        for w in tris.windows(2) {
-            let (a, b) = (find(&mut parent, w[0]), find(&mut parent, w[1]));
+    for group in corners.chunk_by(|x, y| x.0 == y.0) {
+        for w in group.windows(2) {
+            let (a, b) = (find(&mut parent, w[0].1 / 3), find(&mut parent, w[1].1 / 3));
             if a != b {
                 parent[a] = b;
             }
         }
-        if tris.len() != 2 {
-            open_tris.extend_from_slice(tris);
+        if group.len() != 2 {
+            open_tris.extend(group.iter().map(|c| c.1 / 3));
         }
     }
+    drop(corners);
     for t in open_tris {
         open_root.insert(find(&mut parent, t));
     }
-    let mut volume: BTreeMap<usize, f64> = BTreeMap::new();
+    // Per-root signed volume, summed in triangle order (roots are triangle ids).
+    let mut volume = vec![0.0f64; n];
     for ti in 0..n {
         let root = find(&mut parent, ti);
         let p = |v: usize| [positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2]];
         let [a, b, c] = triangles[ti].map(p);
         let det = a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0])
             + a[2] * (b[0] * c[1] - b[1] * c[0]);
-        *volume.entry(root).or_default() += det / 6.0;
+        volume[root] += det / 6.0;
     }
     let inverted: HashSet<usize> = volume
         .iter()
+        .enumerate()
         .filter(|(r, v)| **v < 0.0 && !open_root.contains(r))
-        .map(|(r, _)| *r)
+        .map(|(r, _)| r)
         .collect();
     let mut flipped = 0;
     for ti in 0..n {
@@ -659,6 +684,20 @@ fn orient_outward(positions: &[f64], triangles: &mut [[usize; 3]]) -> (usize, us
     (inverted.len(), flipped)
 }
 
+/// `(edge key, triangle * 3 + corner)` for every corner edge `t[i] -> t[i+1]`,
+/// sorted: the iteration order of a `BTreeMap<EdgeKey, Vec<_>>` filled in
+/// triangle and corner order, without a heap allocation per edge.
+fn sorted_corner_edges(triangles: &[[usize; 3]]) -> Vec<(EdgeKey, usize)> {
+    let mut corners = Vec::with_capacity(triangles.len() * 3);
+    for (ti, t) in triangles.iter().enumerate() {
+        for i in 0..3 {
+            corners.push((edge_key(t[i], t[(i + 1) % 3]), ti * 3 + i));
+        }
+    }
+    corners.sort_unstable();
+    corners
+}
+
 /// Flip triangles so every edge shared by exactly two triangles is
 /// traversed in opposite directions. Returns the flip count.
 ///
@@ -668,33 +707,45 @@ fn orient_outward(positions: &[f64], triangles: &mut [[usize; 3]]) -> (usize, us
 /// seed triangle; conflicting components cannot exist because constraints
 /// are only checked, never forced.
 fn unify_orientation(triangles: &mut [[usize; 3]]) -> usize {
-    // Edge -> incident (triangle, direction of traversal: true if a->b
-    // with a < b... store actual (from, to) of the directed half-edge).
-    // Ordered edges make adjacency insertion and BFS traversal reproducible.
-    let mut half_edges: BTreeMap<EdgeKey, Vec<(usize, usize, usize)>> = BTreeMap::new();
-    for (ti, t) in triangles.iter().enumerate() {
-        for i in 0..3 {
-            let (a, b) = (t[i], t[(i + 1) % 3]);
-            half_edges
-                .entry(edge_key(a, b))
-                .or_default()
-                .push((ti, a, b));
-        }
-    }
     // Dual adjacency with the constraint: for edge used by triangles
     // (t1, a, b) and (t2, c, d), orientations agree iff the directed
-    // half-edges are opposite, i.e. a == d && b == c.
-    let mut dual: HashMap<usize, Vec<(usize, bool)>> = HashMap::new();
-    for uses in half_edges.values() {
-        if uses.len() != 2 {
+    // half-edges are opposite, i.e. a == d && b == c. Edges are visited in
+    // ascending key order and each triangle's neighbours keep that order,
+    // which makes the BFS below reproducible (a flat sorted list replaced an
+    // ordered map of per-edge vectors that dominated 1M+ triangle repairs).
+    let corners = sorted_corner_edges(triangles);
+    let half_edge = |corner: usize| {
+        let (t, i) = (corner / 3, corner % 3);
+        (t, triangles[t][i], triangles[t][(i + 1) % 3])
+    };
+    let mut links: Vec<(usize, usize, bool)> = Vec::new();
+    for group in corners.chunk_by(|x, y| x.0 == y.0) {
+        let [first, second] = group else {
             continue;
-        }
-        let (t1, a, b) = uses[0];
-        let (t2, c, d) = uses[1];
+        };
+        let (t1, a, b) = half_edge(first.1);
+        let (t2, c, d) = half_edge(second.1);
         let agree = a == d && b == c;
-        dual.entry(t1).or_default().push((t2, agree));
-        dual.entry(t2).or_default().push((t1, agree));
+        links.push((t1, t2, agree));
+        links.push((t2, t1, agree));
     }
+    drop(corners);
+    // Stable counting sort of the links by source triangle (CSR).
+    let mut offsets = vec![0usize; triangles.len() + 1];
+    for &(t, _, _) in &links {
+        offsets[t + 1] += 1;
+    }
+    for t in 0..triangles.len() {
+        offsets[t + 1] += offsets[t];
+    }
+    let mut fill = offsets.clone();
+    let mut dual = vec![(0usize, false); links.len()];
+    for &(t, n, agree) in &links {
+        dual[fill[t]] = (n, agree);
+        fill[t] += 1;
+    }
+    drop(links);
+    drop(fill);
 
     // BFS assigning desired flip parity per component.
     let mut flip = vec![false; triangles.len()];
@@ -716,14 +767,12 @@ fn unify_orientation(triangles: &mut [[usize; 3]]) -> usize {
             }
             flip[t] = parity;
             visited[t] = true;
-            if let Some(neighbors) = dual.get(&t) {
-                for &(n, agree) in neighbors {
-                    // If we flip t, neighbor must flip too to keep the
-                    // (dis)agreement.
-                    let n_parity = if agree { parity } else { !parity };
-                    if !visited[n] {
-                        stack.push((n, n_parity));
-                    }
+            for &(n, agree) in &dual[offsets[t]..offsets[t + 1]] {
+                // If we flip t, neighbor must flip too to keep the
+                // (dis)agreement.
+                let n_parity = if agree { parity } else { !parity };
+                if !visited[n] {
+                    stack.push((n, n_parity));
                 }
             }
         }
@@ -762,20 +811,17 @@ fn split_non_manifold_edges(
         return 0;
     }
     // Ordered traversal keeps shell ownership and new vertex IDs stable.
-    let mut edge_tris: BTreeMap<EdgeKey, Vec<usize>> = BTreeMap::new();
-    for (ti, t) in triangles.iter().enumerate() {
-        for i in 0..3 {
-            edge_tris
-                .entry(edge_key(t[i], t[(i + 1) % 3]))
-                .or_default()
-                .push(ti);
-        }
-    }
+    // Only 3+-use edges matter, so keep just those from the sorted corners.
+    let corners = sorted_corner_edges(triangles);
+    let edge_tris: Vec<(EdgeKey, Vec<usize>)> = corners
+        .chunk_by(|x, y| x.0 == y.0)
+        .filter(|group| group.len() > 2)
+        .map(|group| (group[0].0, group.iter().map(|c| c.1 / 3).collect()))
+        .collect();
+    drop(corners);
     let mut duplicated = 0usize;
-    for (&edge, tris) in &edge_tris {
-        if tris.len() <= 2 {
-            continue;
-        }
+    for (edge, tris) in &edge_tris {
+        let edge = *edge;
         if !budget.charge(tris.len() as u64) {
             return duplicated;
         }

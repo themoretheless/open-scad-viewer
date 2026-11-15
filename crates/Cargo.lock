@@ -1141,6 +1141,7 @@ dependencies = [
  "mesh-topology",
  "osv-math",
  "polygon-core",
+ "rbench",
  "serde",
  "serde_json",
  "subdivision-core",

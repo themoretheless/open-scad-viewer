@@ -7,7 +7,7 @@ import { pwaBuildPlugin } from './scripts/pwa-build.mjs'
 // Keep readable names for budgeted payloads and workers; content hashes identify
 // smaller lazy chunks without repeating long module names in every import URL.
 function runtimeChunkFileName(chunk: {name: string}) {
-  return /bytes|\.worker$|^(index|renderer|DirectModeler|MainModelingTools)$/.test(chunk.name)
+  return /bytes|\.worker$|^(index|renderer|DirectModeler|MainModelingTools|codemirrorView|geometryBuildEngine|profileIntersections|wasmStreaming)$/.test(chunk.name)
     ? 'assets/[name]-[hash].js' : 'assets/[hash].js'
 }
 
@@ -65,8 +65,8 @@ export default defineConfig({
             // compiler it would pull the language kernel into the entry preload.
             { name: 'wasm-host', test: /src[\\/]services[\\/](wasmHost|wasmBrotliPacking)\.ts$/ },
             // Keep the two worker result protocols as separate shared contracts.
-            { name: 'cad-result-protocol', test: /src[\\/]services[\\/](mainSolidProtocol(?:[\\/]|\.ts$)|mainSolidWorker(Client|Transport)\.ts$)/, includeDependenciesRecursively: false },
-            { name: 'geometry-result-protocol', test: /src[\\/]services[\\/]geometryWorkerProtocol(?:[\\/]|\.ts$)/, includeDependenciesRecursively: false },
+            { name: 'cad-result-protocol', test: /src[\\/](?:services|kernel)[\\/](mainSolidProtocol(?:[\\/]|\.ts$)|mainSolidWorker(Client|Transport)\.ts$)/, includeDependenciesRecursively: false },
+            { name: 'geometry-result-protocol', test: /src[\\/](?:services|kernel)[\\/]geometryWorkerProtocol(?:[\\/]|\.ts$)/, includeDependenciesRecursively: false },
             // Cache the viewport state owner and its pure helpers together.
             // Their dependencies keep their existing kernel/runtime groups.
             { name: 'direct-viewport', test: /src[\\/]features[\\/]directModeler[\\/](useViewportLayerAndPolygons(?:[\\/]|\.ts$)|helpers\.ts$)/, includeDependenciesRecursively: false },
@@ -79,8 +79,8 @@ export default defineConfig({
             // Result validation is shared by the CAD client and worker adapters.
             // Keep its dependencies independently cacheable instead of merging
             // the full validator into the client lifecycle chunk.
-            { name: 'main-solid-protocol', test: /src[\\/]services[\\/]mainSolidProtocol\.ts$/, includeDependenciesRecursively: false },
-            { name: 'main-solid-results', test: /src[\\/]services[\\/]mainSolidProtocol[\\/]mainSolidResult\.ts$/, includeDependenciesRecursively: false },
+            { name: 'main-solid-protocol', test: /src[\\/](?:services|kernel)[\\/]mainSolidProtocol\.ts$/, includeDependenciesRecursively: false },
+            { name: 'main-solid-results', test: /src[\\/](?:services|kernel)[\\/]mainSolidProtocol[\\/]mainSolidResult\.ts$/, includeDependenciesRecursively: false },
             { name: 'cad-validators', test: /src[\\/]services[\\/](solid(Distance|SelfIntersection|FaceContacts|BoundaryAgreement|WholeWall|MaterialVolume|MaterialWall)|nurbs(OffsetContactQualification|OffsetEnvelopeFit|OffsetDeviation|ProfileBridgeChords)|expressionShell(Inspection)?|sourceBody(Archive)?)\.ts$/, includeDependenciesRecursively: false },
             { name: 'command-registry', test: /src[\\/]services[\\/]commandRegistry\.ts$/, includeDependenciesRecursively: false },
             { name: 'solid-draft-storage', test: /src[\\/]services[\\/]solidDraft(Head)?Store\.ts$/ },

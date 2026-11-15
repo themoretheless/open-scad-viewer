@@ -8,6 +8,7 @@
  * reject any drift between the two public surfaces.
  */
 import type { MeshData } from '../core/mesh'
+import { carryMeshPublication } from './sceneDelta'
 import { countOperation } from '../dev/operationCounters'
 import { CameraHistory, cameraStatesEqual, type CameraHistorySnapshot, type CameraState } from './cameraHistory'
 import { clampGestureDistance, computeOrbitUpdate, computePanUpdate, computeWheelDistance } from './cameraGestures'
@@ -296,19 +297,18 @@ export class RecordingRenderer implements PublicRenderer {
   setMeshes(meshes: MeshData[], options: SetMeshesOptions = {}) {
     this.record('setMeshes')
     if (this.status.status !== 'ready') return
+    const { selected, selectedHit, isolated, measurement } = this
+    const kept = carryMeshPublication(this.meshes, meshes, { selected, selectedHit, isolated, measurement }, options)
     this.meshes = meshes
     this.visibility = meshes.map(() => true)
-    this.selected = null
-    this.selectedHit = null
-    this.isolated = false
-    if (!options.preserveMeasurement) this.measurement = null
+    this.selected = kept.selected
+    this.selectedHit = kept.selectedHit
+    this.isolated = kept.isolated
+    this.measurement = kept.measurement
     this.sceneUploads++
     countOperation('viewportSceneUploads')
-    this.uploadMetrics = {
-      geometryUploadBytes: meshes.reduce((sum, mesh) => sum + mesh.vertices.byteLength + mesh.indices.byteLength, 0),
-      geometryBuffersCreated: meshes.length,
-      reusedEntities: 0,
-    }
+    const bytes = meshes.reduce((sum, mesh) => sum + mesh.vertices.byteLength + mesh.indices.byteLength, 0)
+    this.uploadMetrics = { geometryUploadBytes: bytes, geometryBuffersCreated: meshes.length, reusedEntities: 0 }
     this.pendingFrameToken = options.frameToken ?? null
     this.requestRender()
   }
