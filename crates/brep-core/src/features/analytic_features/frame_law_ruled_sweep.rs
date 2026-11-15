@@ -1,5 +1,30 @@
 use super::*;
 
+const FRAME_LAW_REFUSED: &str = "BREP_FRAME_LAW_REFUSED";
+/// Station / profile vertex budget.
+const FRAME_LAW_BUDGET: usize = 64;
+/// Minimum span length before a station counts as collapsed.
+const MIN_STATION_SPAN: f64 = 1e-9;
+/// Relative cross-product bound for parallel path spans.
+const PARALLEL_SPAN_TOLERANCE: f64 = 1e-6;
+/// Norm below which a frame vector is degenerate.
+const FRAME_UNIT_EPSILON: f64 = 1e-15;
+/// Tangent z-component above which the seed helper switches to +X.
+const FRAME_HELPER_SWITCH: f64 = 0.9;
+
+fn frame_norm3(v: [f64; 3]) -> f64 {
+    v[0].hypot(v[1]).hypot(v[2])
+}
+
+fn frame_unit3(v: [f64; 3]) -> Option<[f64; 3]> {
+    let n = frame_norm3(v);
+    if n <= FRAME_UNIT_EPSILON {
+        None
+    } else {
+        Some([v[0] / n, v[1] / n, v[2] / n])
+    }
+}
+
 /// FrameLaw production sweep: Frenet / rotation-minimizing / fixed frames along a
 /// polyline path, authored as a ruled solid (no mesh faceted_sweep).
 pub fn frame_law_ruled_sweep(
@@ -7,155 +32,8 @@ pub fn frame_law_ruled_sweep(
     path: &[[f64; 3]],
     frame_law: &str,
 ) -> Result<(Model, FeatureCertificate)> {
-    if profile.len() < 3 || path.len() < 2 {
-        return Err(refuse(
-            "BREP_FRAME_LAW_REFUSED",
-            "FrameLaw sweep requires a closed-capable profile (≥3) and a path (≥2)",
-        ));
-    }
-    if profile.len() > 64 || path.len() > 64 {
-        return Err(refuse(
-            "BREP_FRAME_LAW_REFUSED",
-            "FrameLaw sweep exceeded station/profile budget (64)",
-        ));
-    }
-    let law = match frame_law {
-        "frenet" | "rotation-minimizing" | "rmf" | "fixed" => frame_law,
-        _ => {
-            return Err(refuse(
-                "BREP_FRAME_LAW_REFUSED",
-                "FrameLaw must be frenet, rotation-minimizing, or fixed",
-            ));
-        }
-    };
-    let mut area = 0.;
-    for i in 0..profile.len() {
-        let j = (i + 1) % profile.len();
-        area += profile[i][0] * profile[j][1] - profile[j][0] * profile[i][1];
-        if !profile[i][0].is_finite() || !profile[i][1].is_finite() {
-            return Err(refuse(
-                "BREP_FRAME_LAW_REFUSED",
-                "Profile points must be finite",
-            ));
-        }
-    }
-    if area <= 0. {
-        return Err(refuse(
-            "BREP_FRAME_LAW_REFUSED",
-            "Profile must be counter-clockwise",
-        ));
-    }
-    for w in path.windows(2) {
-        let d = [w[1][0] - w[0][0], w[1][1] - w[0][1], w[1][2] - w[0][2]];
-        if d[0].hypot(d[1]).hypot(d[2]) <= 1e-9 {
-            return Err(refuse(
-                "BREP_FRAME_LAW_REFUSED",
-                "Path has a collapsed station; refuse Frenet singularity",
-            ));
-        }
-        if !w[0].iter().chain(&w[1]).all(|x| x.is_finite()) {
-            return Err(refuse(
-                "BREP_FRAME_LAW_REFUSED",
-                "Path points must be finite",
-            ));
-        }
-    }
-    // Station planes must stay parallel for ruled_loft caps (translation/extrusion
-    // FrameLaw). Bent paths with non-parallel stations refuse typed — no mesh sweep.
-    if path.len() >= 2 {
-        let t0 = [
-            path[1][0] - path[0][0],
-            path[1][1] - path[0][1],
-            path[1][2] - path[0][2],
-        ];
-        for w in path.windows(2).skip(1) {
-            let t = [w[1][0] - w[0][0], w[1][1] - w[0][1], w[1][2] - w[0][2]];
-            let c = [
-                t0[1] * t[2] - t0[2] * t[1],
-                t0[2] * t[0] - t0[0] * t[2],
-                t0[0] * t[1] - t0[1] * t[0],
-            ];
-            if c[0].hypot(c[1]).hypot(c[2]) > 1e-6 * t0[0].hypot(t0[1]).hypot(t0[2]).max(1.) {
-                return Err(refuse(
-                    "BREP_FRAME_LAW_REFUSED",
-                    "Non-parallel path stations are outside ruled FrameLaw production; refuse mesh sweep",
-                ));
-            }
-        }
-    }
-    pub(super) fn norm3(v: [f64; 3]) -> f64 {
-        v[0].hypot(v[1]).hypot(v[2])
-    }
-    pub(super) fn unit3(v: [f64; 3]) -> Option<[f64; 3]> {
-        let n = norm3(v);
-        if n <= 1e-15 {
-            None
-        } else {
-            Some([v[0] / n, v[1] / n, v[2] / n])
-        }
-    }
-    pub(super) fn cross3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-        [
-            a[1] * b[2] - a[2] * b[1],
-            a[2] * b[0] - a[0] * b[2],
-            a[0] * b[1] - a[1] * b[0],
-        ]
-    }
-    pub(super) fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
-        a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-    }
-    let mut frames: Vec<([f64; 3], [f64; 3], [f64; 3])> = Vec::new();
-    let mut prev_n: Option<[f64; 3]> = None;
-    for i in 0..path.len() {
-        let t = if i + 1 < path.len() {
-            unit3([
-                path[i + 1][0] - path[i][0],
-                path[i + 1][1] - path[i][1],
-                path[i + 1][2] - path[i][2],
-            ])
-        } else {
-            unit3([
-                path[i][0] - path[i - 1][0],
-                path[i][1] - path[i - 1][1],
-                path[i][2] - path[i - 1][2],
-            ])
-        }
-        .ok_or_else(|| refuse("BREP_FRAME_LAW_REFUSED", "Degenerate path tangent"))?;
-        let n = if law == "fixed" {
-            let helper = if t[2].abs() < 0.9 {
-                [0., 0., 1.]
-            } else {
-                [1., 0., 0.]
-            };
-            unit3(cross3(cross3(t, helper), t))
-                .ok_or_else(|| refuse("BREP_FRAME_LAW_REFUSED", "Fixed frame collapsed"))?
-        } else if let Some(pn) = prev_n {
-            // Rotation-minimizing / Frenet: project previous normal onto plane ⊥ T.
-            let n0 = [
-                pn[0] - dot3(pn, t) * t[0],
-                pn[1] - dot3(pn, t) * t[1],
-                pn[2] - dot3(pn, t) * t[2],
-            ];
-            unit3(n0).ok_or_else(|| {
-                refuse(
-                    "BREP_FRAME_LAW_REFUSED",
-                    "Frenet/RMF normal collapsed (inflection)",
-                )
-            })?
-        } else {
-            let helper = if t[2].abs() < 0.9 {
-                [0., 0., 1.]
-            } else {
-                [1., 0., 0.]
-            };
-            unit3(cross3(cross3(t, helper), t))
-                .ok_or_else(|| refuse("BREP_FRAME_LAW_REFUSED", "Seed normal collapsed"))?
-        };
-        let bvec = unit3(cross3(t, n))
-            .ok_or_else(|| refuse("BREP_FRAME_LAW_REFUSED", "Binormal collapsed"))?;
-        prev_n = Some(n);
-        frames.push((t, n, bvec));
-    }
+    let law = validate_frame_law_inputs(profile, path, frame_law)?;
+    let frames = frame_law_frames(path, law)?;
     let mut sections = Vec::new();
     for (station, (_t, n, bvec)) in path.iter().zip(frames.iter()) {
         let mut pts = Vec::new();
@@ -178,6 +56,132 @@ pub fn frame_law_ruled_sweep(
             notes: vec!["frame_law_parallel_translation_walking_slice"],
         },
     ))
+}
+
+/// Budget, law name, profile orientation and path span checks.
+fn validate_frame_law_inputs<'a>(
+    profile: &[[f64; 2]],
+    path: &[[f64; 3]],
+    frame_law: &'a str,
+) -> Result<&'a str> {
+    if profile.len() < 3 || path.len() < 2 {
+        return Err(refuse(
+            FRAME_LAW_REFUSED,
+            "FrameLaw sweep requires a closed-capable profile (≥3) and a path (≥2)",
+        ));
+    }
+    if profile.len() > FRAME_LAW_BUDGET || path.len() > FRAME_LAW_BUDGET {
+        return Err(refuse(
+            FRAME_LAW_REFUSED,
+            "FrameLaw sweep exceeded station/profile budget (64)",
+        ));
+    }
+    let law = match frame_law {
+        "frenet" | "rotation-minimizing" | "rmf" | "fixed" => frame_law,
+        _ => {
+            return Err(refuse(
+                FRAME_LAW_REFUSED,
+                "FrameLaw must be frenet, rotation-minimizing, or fixed",
+            ));
+        }
+    };
+    let mut area = 0.;
+    for i in 0..profile.len() {
+        let j = (i + 1) % profile.len();
+        area += profile[i][0] * profile[j][1] - profile[j][0] * profile[i][1];
+        if !profile[i][0].is_finite() || !profile[i][1].is_finite() {
+            return Err(refuse(FRAME_LAW_REFUSED, "Profile points must be finite"));
+        }
+    }
+    if area <= 0. {
+        return Err(refuse(
+            FRAME_LAW_REFUSED,
+            "Profile must be counter-clockwise",
+        ));
+    }
+    validate_parallel_path(path)?;
+    Ok(law)
+}
+
+fn validate_parallel_path(path: &[[f64; 3]]) -> Result<()> {
+    for w in path.windows(2) {
+        let d = [w[1][0] - w[0][0], w[1][1] - w[0][1], w[1][2] - w[0][2]];
+        if frame_norm3(d) <= MIN_STATION_SPAN {
+            return Err(refuse(
+                FRAME_LAW_REFUSED,
+                "Path has a collapsed station; refuse Frenet singularity",
+            ));
+        }
+        if !w[0].iter().chain(&w[1]).all(|x| x.is_finite()) {
+            return Err(refuse(FRAME_LAW_REFUSED, "Path points must be finite"));
+        }
+    }
+    // Station planes must stay parallel for ruled_loft caps (translation/extrusion
+    // FrameLaw). Bent paths with non-parallel stations refuse typed — no mesh sweep.
+    if let [p0, p1, ..] = path {
+        let t0 = sub3(*p1, *p0);
+        for w in path.windows(2).skip(1) {
+            let t = sub3(w[1], w[0]);
+            let c = cross3(t0, t);
+            if frame_norm3(c) > PARALLEL_SPAN_TOLERANCE * frame_norm3(t0).max(1.) {
+                return Err(refuse(
+                    FRAME_LAW_REFUSED,
+                    "Non-parallel path stations are outside ruled FrameLaw production; refuse mesh sweep",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Seed normal perpendicular to `t` from a fixed helper axis.
+fn seeded_normal(t: [f64; 3], message: &str) -> Result<[f64; 3]> {
+    let helper = if t[2].abs() < FRAME_HELPER_SWITCH {
+        [0., 0., 1.]
+    } else {
+        [1., 0., 0.]
+    };
+    frame_unit3(cross3(cross3(t, helper), t)).ok_or_else(|| refuse(FRAME_LAW_REFUSED, message))
+}
+
+/// Station frame: (tangent, normal, binormal).
+type StationFrame = ([f64; 3], [f64; 3], [f64; 3]);
+
+/// (tangent, normal, binormal) per station under the frame law.
+fn frame_law_frames(path: &[[f64; 3]], law: &str) -> Result<Vec<StationFrame>> {
+    let mut frames: Vec<StationFrame> = Vec::new();
+    let mut prev_n: Option<[f64; 3]> = None;
+    for i in 0..path.len() {
+        let t = if i + 1 < path.len() {
+            frame_unit3(sub3(path[i + 1], path[i]))
+        } else {
+            frame_unit3(sub3(path[i], path[i - 1]))
+        }
+        .ok_or_else(|| refuse(FRAME_LAW_REFUSED, "Degenerate path tangent"))?;
+        let n = if law == "fixed" {
+            seeded_normal(t, "Fixed frame collapsed")?
+        } else if let Some(pn) = prev_n {
+            // Rotation-minimizing / Frenet: project previous normal onto plane ⊥ T.
+            let n0 = [
+                pn[0] - dot3(pn, t) * t[0],
+                pn[1] - dot3(pn, t) * t[1],
+                pn[2] - dot3(pn, t) * t[2],
+            ];
+            frame_unit3(n0).ok_or_else(|| {
+                refuse(
+                    FRAME_LAW_REFUSED,
+                    "Frenet/RMF normal collapsed (inflection)",
+                )
+            })?
+        } else {
+            seeded_normal(t, "Seed normal collapsed")?
+        };
+        let bvec = frame_unit3(cross3(t, n))
+            .ok_or_else(|| refuse(FRAME_LAW_REFUSED, "Binormal collapsed"))?;
+        prev_n = Some(n);
+        frames.push((t, n, bvec));
+    }
+    Ok(frames)
 }
 
 /// Certified successor entry point for the only exact frame-law slice authored
