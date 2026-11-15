@@ -22,10 +22,59 @@ fn gap_model() -> Model {
 fn faceted_fillet_publishes_measured_audited_handoff() {
     let model = cuboid([0.; 3], [10.; 3]).unwrap();
     let (result, handoff) = brep_core::operations::fillet_edges_certified(&model, &[0], 1., 8).unwrap();
-    assert!(handoff.measured_output_mm > 0.);
+    assert!(handoff.design_approximation_mm > 0.);
     assert!(result.tolerance_mm >= model.tolerance_mm);
     assert!(result.tolerance_mm >= handoff.measured_output_mm);
     assert!(handoff.audit.ok);
+}
+
+fn arc_deviation(radius: f64, alpha: f64, segments: usize) -> f64 {
+    radius * ((alpha / (2. * segments as f64)).cos().recip() - 1.)
+}
+
+#[test]
+fn coarse_faceted_fillet_reports_deviation_without_inflating_tolerance() {
+    let model = cuboid([0.; 3], [10.; 3]).unwrap();
+    let (result, handoff) = brep_core::operations::fillet_edges_certified(&model, &[0], 1., 4).unwrap();
+    let expected = arc_deviation(1., std::f64::consts::FRAC_PI_2, 4);
+    // The faceting deviation exceeds the 1e-2 mm tolerance ceiling...
+    assert!(expected > 1e-2);
+    assert!(handoff.design_approximation_mm >= expected);
+    assert!(handoff.design_approximation_mm <= expected * (1. + 1e-12));
+    // ...but it is design evidence, not published model tolerance.
+    assert_eq!(result.tolerance_mm, model.tolerance_mm);
+    assert!(result.tolerance_mm <= 1e-2);
+    result.validate().unwrap();
+    assert!(handoff.audit.ok);
+}
+
+#[test]
+fn finer_faceted_fillets_keep_input_tolerance() {
+    let model = cuboid([0.; 3], [10.; 3]).unwrap();
+    for segments in [6, 8, 16, 32] {
+        let (result, handoff) =
+            brep_core::operations::fillet_edges_certified(&model, &[0], 1., segments).unwrap();
+        assert_eq!(result.tolerance_mm, model.tolerance_mm, "segments={segments}");
+        assert!(handoff.design_approximation_mm >= arc_deviation(1., std::f64::consts::FRAC_PI_2, segments));
+        result.validate().unwrap();
+    }
+}
+
+#[test]
+fn genuine_tolerance_growth_is_still_handed_off() {
+    let model = cuboid([0.; 3], [10.; 3]).unwrap();
+    let mut grown = model.clone();
+    let measured = model.tolerance_mm * 4.;
+    let handoff = brep_core::enforce_model_tolerance_handoff(
+        cad_predicates::OperationBoundary::Fillet,
+        model.tolerance_mm,
+        measured,
+        &mut grown,
+    )
+    .unwrap();
+    assert_eq!(grown.tolerance_mm, measured);
+    assert_eq!(handoff.measured_output_mm, measured);
+    assert_eq!(handoff.design_approximation_mm, 0.);
 }
 
 #[test]

@@ -15,6 +15,12 @@ pub struct ModelToleranceHandoff {
     pub contract: OperationToleranceContract,
     /// Measured value or a conservative analytic upper bound, in millimetres.
     pub measured_output_mm: f64,
+    /// Intended design approximation of the produced geometry (for example the
+    /// chordal deviation of an exact faceted round from its ideal arc), in
+    /// millimetres. Reported as evidence only: it is a property of the chosen
+    /// representation, not numerical error, and is never published as
+    /// `Model::tolerance_mm`.
+    pub design_approximation_mm: f64,
     pub audit: SolidAuditCertificate,
 }
 
@@ -63,6 +69,7 @@ pub fn enforce_model_tolerance_handoff(
     Ok(ModelToleranceHandoff {
         contract,
         measured_output_mm,
+        design_approximation_mm: 0.,
         audit,
     })
 }
