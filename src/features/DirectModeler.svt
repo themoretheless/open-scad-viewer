@@ -41,6 +41,7 @@ import { stringifyMeshJson } from '../exchange/meshJson'
 import { PickCycle, pickDirectMesh, pickDirectMeshHits, type PickHit } from '../app/directPicking'
 import { activeFrame, coordinateSystemLabel, COORDINATE_SYSTEMS, frameDeltaToWorld, frameFromFace, nextCoordinateSystem, type CoordinateSystem } from '../app/coordinateSystems'
 import { cplaneFrame, cplaneFromFrame, pivotFrame, savedPivot, snapPivot, withSavedPivot, type PivotSnap } from '../app/directPivots'
+import { rememberEdgeFeature, recallEdgeFeature, type EdgeFeatureMemory } from '../app/edgeFeatureEditing'
 import { createDirectClipboardPayload, parseDirectClipboardPayload, pasteDirectClipboardPayload } from '../app/directClipboard'
 import { documentUnit, fromMillimetres } from '../app/documentUnits'
 import { addToIsolation, isolateWithin, pruneIsolation, readIsolation, stepOutIsolation, type IsolationStack } from '../app/isolationStack'
@@ -135,6 +136,7 @@ const {
   getFit: () => fit,
 })
 let history = new DirectHistory(initial)
+let edgeFeatureMemory: EdgeFeatureMemory | null = null
 const conflictCopiesOpen = ref(false)
 const document = shallowRef(history.syncedDocument)
 // Committed render snapshot; gestures publish separate documents and never update this ref.
@@ -931,7 +933,17 @@ const {
   getNotice: () => notice.value,
   label,
 })
-const { advancedPolygons, advancedSurfacePolygons, advancedPreview, pointTrimPreviewPoints, pointTrimCut, patchBudgetCurve, patchGapPoints, applyAdvanced, axisVector, advancedBodyIds, advancedSurfaceIds, advancedSketches, advancedSketchDisplay, authoredEdges, bodyEdgesPending, cancelBodyEdges, refreshBodyEdges } = useAdvancedPreview({ activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commit, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady: () => kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies: () => sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed })
+const { advancedPolygons, advancedSurfacePolygons, advancedPreview, pointTrimPreviewPoints, pointTrimCut, patchBudgetCurve, patchGapPoints, applyAdvanced, axisVector, advancedBodyIds, advancedSurfaceIds, advancedSketches, advancedSketchDisplay, authoredEdges, bodyEdgesPending, cancelBodyEdges, refreshBodyEdges } = useAdvancedPreview({ onEdgeFeatureApplied: memory => { edgeFeatureMemory = memory }, activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commit, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady: () => kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies: () => sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed })
+// Undoing a fillet or chamfer brings its body back; reselect the edge chain it consumed (C10).
+watch(document,()=>{
+ if(!edgeFeatureMemory)return
+ const {edges,keep}=recallEdgeFeature(edgeFeatureMemory,document.value.bodies)
+ const bodyId=edgeFeatureMemory.bodyId
+ if(!keep)edgeFeatureMemory=null
+ if(!edges||advancedOp.value||operation.value)return
+ selection.value=bodyId;extraSelection.value=[];faceIndex.value=-1;openingFaces.value=[]
+ edgeIndex.value=edges[0];edgeIndexes.value=edges
+})
 watch(() => [props.open, kernelReady.value, smoothDisplay.value, renderBodies.value,
   previewBody.value, advancedPreview.value.document, previewingTransform.value,
   previewingTransform.value ? selectedIds.value.join(',') : ''] as const, () => {
@@ -2748,7 +2760,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </g>
 
             </svg>
-            <CadDimensionOverlay v-if="pane==='3d' && inlineDimensionVisible && commandAnchor" :anchor="commandAnchor" :center="centers['3d']" :size="views['3d']" v-model="inlineDimension" :locale="locale" :failed="!!commandFailure" :label="label('Размер у манипулятора, мм','Dimension at manipulator, mm')" @validity="quantityValidity('inline',$event)" />
+            <CadDimensionOverlay v-if="pane==='3d' && inlineDimensionVisible && commandAnchor" :anchor="commandAnchor" :center="centers['3d']" :size="views['3d']" v-model="inlineDimension" :locale="locale" :failed="!!commandFailure" :label="label('Размер у манипулятора, мм','Dimension at manipulator, mm')" :min="['edge-fillet','chamfer','shell'].includes(advancedOp ?? '') ? .01 : undefined" @validity="quantityValidity('inline',$event)" />
             <div class="zoom-tools"><button :aria-label="label('Приблизить ', 'Zoom in ') + pane" @click="zoom(pane, .8)">+</button><button :aria-label="label('Отдалить ', 'Zoom out ') + pane" @click="zoom(pane, 1.25)">−</button></div>
             <div v-if="pane === '3d'" class="fps-badge" :class="{ low: fps > 0 && fps < 30 }" role="status" :aria-label="label('Кадров в секунду', 'Frames per second')">{{ fps }} FPS · {{ frameMs }} ms<template v-if="gpuActive"> · draw {{ drawMs }} ms</template></div>
             </div>
