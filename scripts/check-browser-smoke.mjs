@@ -11,6 +11,7 @@ import { createServer } from 'node:http'
 import { mkdir, readFile, writeFile, copyFile, access } from 'node:fs/promises'
 import path from 'node:path'
 import { loadQualificationPlaywrightPackage } from './qualificationPlaywrightPackage.mjs'
+import { runControlModels } from './browserSmokeControlModels.mjs'
 
 const root = path.resolve(process.env.SMOKE_DIST ?? 'dist')
 const directory = path.resolve(process.argv.slice(2).find(arg => !arg.startsWith('--')) ?? 'tmp/browser-smoke')
@@ -846,6 +847,16 @@ try {
     } finally {
       await scenarioContext.close()
     }
+  })
+
+  // The remaining nine C3 control models, each in a fresh context (scripts/browserSmokeControlModels.mjs).
+  await step('nine control models through the Solid UI', async () => {
+    budgets.controlModels = await runControlModels({
+      browser,
+      origin: `http://127.0.0.1:${server.address().port}`,
+      directory,
+      errors,
+    })
   })
 
   assert.deepEqual(errors, [], 'no console errors or page errors')
