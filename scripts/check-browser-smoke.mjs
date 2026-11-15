@@ -97,24 +97,32 @@ try {
   const operations = () => page.evaluate(() => window.__osvTest.operations())
   const viewport = () => page.evaluate(() => window.__osvTest.viewport())
   const delta = (after, before) => Object.fromEntries(Object.keys(after).map(key => [key, after[key] - before[key]]))
-  const solid = page.getByRole('region', { name: 'Solid — CAD-лепка', exact: true })
-  const search = page.getByRole('combobox', { name: 'Search commands / Поиск команд' })
-  const bodies = () => solid.locator('[data-body]').count()
-  async function ready() {
-    await page.waitForFunction(() => !document.body.innerText.includes('Восстанавливаю геометрию'))
-    for (const name of ['history-restore', 'primitive-build', 'display-refinement']) {
-      await solid.getByRole('status', { name, exact: true }).waitFor({ state: 'hidden' })
+  // Solid workspace helpers for one page (the C3 scenario runs in its own fresh context).
+  function solidUi(target) {
+    const region = target.getByRole('region', { name: 'Solid — CAD-лепка', exact: true })
+    const palette = target.getByRole('combobox', { name: 'Search commands / Поиск команд' })
+    return {
+      solid: region,
+      search: palette,
+      async ready() {
+        await target.waitForFunction(() => !document.body.innerText.includes('Восстанавливаю геометрию'))
+        for (const name of ['history-restore', 'primitive-build', 'display-refinement']) {
+          await region.getByRole('status', { name, exact: true }).waitFor({ state: 'hidden' })
+        }
+      },
+      async command(name) {
+        await target.getByRole('button', { name: 'Команды', exact: true }).click()
+        await palette.fill(name)
+        await palette.press('Enter')
+        await palette.waitFor({ state: 'detached' })
+      },
+      async input(name, value) {
+        await region.getByRole('textbox', { name, exact: true }).fill(value)
+      },
     }
   }
-  async function command(name) {
-    await page.getByRole('button', { name: 'Команды', exact: true }).click()
-    await search.fill(name)
-    await search.press('Enter')
-    await search.waitFor({ state: 'detached' })
-  }
-  async function input(name, value) {
-    await solid.getByRole('textbox', { name, exact: true }).fill(value)
-  }
+  const { solid, search, ready, command, input } = solidUi(page)
+  const bodies = () => solid.locator('[data-body]').count()
   async function expectFocus(locator) {
     await page.waitForFunction(element => element === document.activeElement, await locator.elementHandle(), {
       timeout: 5000,
@@ -379,7 +387,24 @@ try {
             const r = el.getBoundingClientRect()
             return r.right > innerWidth + 1 || r.left < -1
           }).length
+        // Floating pane toolbars must not cover the other pane overlays (grid controls,
+        // body actions, frame-time badge): each overlay is hit-testable at its centre.
+        const covered = [
+          ...document.querySelectorAll(
+            '.split-workspace .modeling-grid-controls, .split-workspace .workspace-action-bar, .split-workspace .fps-badge',
+          ),
+        ]
+          .filter(el => el.checkVisibility?.() && el.getBoundingClientRect().width > 0)
+          .filter(el => {
+            const r = el.getBoundingClientRect()
+            const hit = document.elementFromPoint(r.left + Math.min(8, r.width / 2), r.top + r.height / 2)
+            return el.classList.contains('fps-badge')
+              ? [...document.querySelectorAll('.split-workspace .pane-tools')].some(tools => tools.contains(hit))
+              : !el.contains(hit)
+          })
+          .map(el => el.className)
         return {
+          covered,
           scrollWidth: document.scrollingElement.scrollWidth,
           scrollHeight: document.scrollingElement.scrollHeight,
           region: [region.left, region.top, region.width, region.height],
@@ -391,6 +416,7 @@ try {
       assert.ok(metrics.scrollWidth <= 1440, `no horizontal page overflow (${metrics.scrollWidth})`)
       assert.ok(metrics.scrollHeight <= 900, `no vertical page overflow (${metrics.scrollHeight})`)
       assert.equal(metrics.offscreen, 0, 'no visible Solid control is clipped horizontally')
+      assert.deepEqual(metrics.covered, [], 'floating pane toolbars cover no pane overlay')
       assert.ok(
         metrics.region[2] >= 1000 && metrics.region[3] >= 600,
         `Solid region fills the viewport: ${metrics.region}`,
@@ -613,6 +639,213 @@ try {
     const state = await viewport()
     assert.ok(state.cameraHistory >= 3, 'each camera key is one Previous View entry')
     budgets.camera = { calls: state.calls.applyKeyboardCameraStep, history: state.cameraHistory }
+  })
+
+  // C3 in the browser: the full 20-edit scenario (primitives, duplicate, union, guided
+  // subtraction, groups, delete, sketches, extrusions) through the UI in a fresh context,
+  // with analytic volume and area read from «Свойства B-rep», then Undo of all 20 edits,
+  // Redo of all 20 and a reopen of the earlier STEP file with its volume and area.
+  await step('20-edit scenario with groups, duplicate and Boolean through the UI', async () => {
+    const scenarioContext = await browser.newContext({
+      viewport: { width: 1440, height: 900 },
+      colorScheme: 'light',
+      reducedMotion: 'reduce',
+      locale: 'ru-RU',
+    })
+    const p = await scenarioContext.newPage()
+    p.on('pageerror', error => errors.push(`scenario pageerror: ${error.stack ?? error}`))
+    p.on('console', message => message.type() === 'error' && errors.push(`scenario console: ${message.text()}`))
+    try {
+      const ui = solidUi(p)
+      await p.goto(`http://127.0.0.1:${server.address().port}/?renderSeam=recording`)
+      await ui.solid.waitFor({ timeout: 20000 })
+      await ui.ready()
+      const commits = () => p.evaluate(() => window.__osvTest.operations().historyCommits)
+      const rows = ui.solid.locator('li.object-row > button[aria-pressed]')
+      const tab = name => ui.solid.getByRole('tab', { name, exact: true }).click()
+      // Scene rows exist only while the scene dock tab is open.
+      const names = async () => {
+        await tab('Сцена')
+        await ui.solid.locator('li.object-row, li.scene-empty').first().waitFor()
+        return rows.evaluateAll(elements => elements.map(element => element.getAttribute('aria-label')))
+      }
+      const index = async name => {
+        const found = (await names()).indexOf(name)
+        assert.ok(found >= 0, `scene row ${name}`)
+        return found
+      }
+      async function pick(...indexes) {
+        await tab('Сцена')
+        for (const [k, i] of indexes.entries()) await rows.nth(i).click(k ? { modifiers: ['Shift'] } : {})
+      }
+      // Volume and area of one body as the properties panel prints them (4 decimals).
+      async function mass(name) {
+        await pick(await index(name))
+        await tab('Свойства')
+        await ui.command('Свойства B-rep')
+        const text = ui.solid.getByText(/V = -?[\d.]+ mm³/).first()
+        await text.waitFor({ timeout: 20000 })
+        const [volume, area] = (await text.textContent())
+          .match(/V = (-?[\d.]+) mm³ · A = (-?[\d.]+)/)
+          .slice(1)
+          .map(Number)
+        return { volume, area }
+      }
+      const expectMass = async (name, volume, area) => {
+        const measured = await mass(name)
+        assert.ok(Math.abs(measured.volume - volume) <= volume * 1e-6, `${name} volume ${measured.volume} ≠ ${volume}`)
+        assert.ok(Math.abs(measured.area - area) <= area * 1e-6, `${name} area ${measured.area} ≠ ${area}`)
+        return measured
+      }
+      const start = await commits()
+      const log = []
+      async function edit(name, run) {
+        const target = (await commits()) + 1
+        await run()
+        await p.waitForFunction(n => window.__osvTest.operations().historyCommits >= n, target, { timeout: 30000 })
+        await ui.ready()
+        assert.equal(await commits(), target, `${name} is one history commit`)
+        log.push(name)
+      }
+      const button = name => ui.solid.getByRole('button', { name, exact: true }).click()
+      const subtract = async (a, b) => {
+        await pick(await index(a), await index(b))
+        await ui.command('Вычесть: A − B')
+        await button('Готово · Enter')
+      }
+      const union = async (a, b) => {
+        await pick(await index(a), await index(b))
+        await ui.command('Объединить тела')
+      }
+      async function rectangle() {
+        await p.keyboard.press('Escape')
+        await ui.command('Rectangle')
+        await ui.input('Начальная координата X', '0 mm')
+        await ui.input('Начальная координата Y', '0 mm')
+        await ui.input('Размер прямоугольника Ширина', '10 mm')
+        await ui.input('Размер прямоугольника Высота', '6 mm')
+        await button('Создать прямоугольник')
+      }
+      async function extrude(height) {
+        await p.keyboard.press('Escape')
+        await ui.command('Extrude')
+        await ui.solid.getByText('Новое', { exact: true }).click()
+        await ui.solid.getByLabel('Высота, мм', { exact: true }).fill(`${height} mm`)
+        await button('Готово · Enter')
+      }
+      // A 20 mm box is centred in XY on [0, 20] in Z; a copy is offset by (10, 10, 0).
+      const box = 'Куб · 3D',
+        copy = 'Куб · 3D · copy'
+      await edit('box primitive', () => ui.command('Куб'))
+      await edit('duplicate the box', () => ui.command('Копия'))
+      await edit('union box and copy', () => union(box, copy))
+      await expectMass(box, 14000, 3800)
+      await edit('duplicate the union', async () => {
+        await pick(await index(box))
+        await ui.command('Копия')
+      })
+      await edit('subtract the shifted union', () => subtract(box, copy))
+      await expectMass(box, 6000, 2200) // an L of three 10×10×20 cells
+      await edit('create group 1', () => button('Новая группа'))
+      await edit('move the L into group 1', async () => {
+        await pick(await index(box))
+        await button('Перенести выбор')
+      })
+      await edit('duplicate the L', async () => {
+        await pick(await index(box))
+        await ui.command('Копия')
+      })
+      await edit('delete the duplicate', async () => {
+        await pick(await index(copy))
+        await ui.command('Удалить')
+      })
+      await edit('rectangle 10×6', rectangle)
+      await edit('extrude 7 mm', () => extrude(7))
+      await p.keyboard.press('Escape')
+      await edit('second box primitive', () => ui.command('Куб'))
+      const ids = await names()
+      await edit('subtract the L from the second box', async () => {
+        await pick(ids.lastIndexOf(box), ids.indexOf(box))
+        await ui.command('Вычесть: A − B')
+        await button('Готово · Enter')
+      })
+      await expectMass(box, 2000, 1000) // the remaining 10×10×20 cell
+      await edit('create group 2', () => button('Новая группа'))
+      await edit('move the cell into group 2', async () => {
+        await pick(await index(box))
+        await button('Перенести выбор')
+      })
+      await edit('duplicate the cell', async () => {
+        await pick(await index(box))
+        await ui.command('Копия')
+      })
+      await edit('delete the cell duplicate', async () => {
+        await pick(await index(copy))
+        await ui.command('Удалить')
+      })
+      await edit('second rectangle 10×6', rectangle)
+      await edit('extrude 3 mm', () => extrude(3))
+      await p.keyboard.press('Escape')
+      await edit('union the extrusions', () => union('Эскиз 1 · 3D', 'Эскиз 2 · 3D'))
+      assert.equal(log.length, 20, 'twenty edits')
+      assert.equal((await commits()) - start, 20, 'twenty history commits')
+      const final = await names()
+      assert.deepEqual(final, ['Эскиз 1', 'Эскиз 2', 'Эскиз 1 · 3D', box], 'final scene rows')
+      const groups = await ui.solid.locator('.scene-group .group-name').allTextContents()
+      assert.ok(
+        ['Группа 1', 'Группа 2'].every(group => groups.some(text => text.includes(group))),
+        `groups ${groups}`,
+      )
+      const measured = {
+        extrusions: await expectMass('Эскиз 1 · 3D', 420, 344),
+        cell: await expectMass(box, 2000, 1000),
+      }
+
+      // Undo all 20 edits back to the empty scene, then Redo all of them.
+      await p.keyboard.press('Escape')
+      const undo = ui.solid.getByRole('button', { name: '↶', exact: true })
+      const redo = ui.solid.getByRole('button', { name: '↷', exact: true })
+      for (let i = 0; i < 20; i++) {
+        await undo.click()
+        await ui.ready()
+      }
+      assert.equal(await undo.isDisabled(), true, 'all edits undone')
+      await tab('Сцена')
+      assert.deepEqual(await names(), [], 'Undo of all edits empties the scene')
+      for (let i = 0; i < 20; i++) {
+        await redo.click()
+        await ui.ready()
+      }
+      assert.equal(await redo.isDisabled(), true, 'all edits redone')
+      assert.deepEqual(await names(), final, 'Redo restores the scene rows')
+      await expectMass('Эскиз 1 · 3D', 420, 344)
+      await expectMass(box, 2000, 1000)
+      assert.equal((await commits()) - start, 20, 'Undo/Redo add no commits')
+
+      // Control model «imported STEP body»: the 10×6 mm body exported earlier.
+      const stepFile = path.join(directory, 'scenario-assembly.step')
+      await p.keyboard.press('Escape')
+      await ui.solid.locator('details.file-menu > summary').click()
+      await ui.solid.locator('details.file-menu input[type=file][accept=".step,.stp"]').setInputFiles(stepFile)
+      await ui.ready()
+      await p.waitForFunction(count => document.querySelectorAll('li.object-row').length > count, final.length)
+      if (await ui.solid.locator('details.file-menu[open]').count())
+        await ui.solid.locator('details.file-menu > summary').click()
+      const imported = (await names()).filter(name => !final.includes(name))
+      assert.equal(imported.length, 1, `one imported body: ${imported}`)
+      const stepMass = await mass(imported[0])
+      const options = [
+        { volume: 420, area: 344 },
+        { volume: 180, area: 216 },
+      ]
+      assert.ok(
+        options.some(o => Math.abs(stepMass.volume - o.volume) <= 1e-3 && Math.abs(stepMass.area - o.area) <= 1e-3),
+        `imported STEP body ${JSON.stringify(stepMass)}`,
+      )
+      budgets.controlScenario = { edits: log, measured, importedStep: stepMass }
+    } finally {
+      await scenarioContext.close()
+    }
   })
 
   assert.deepEqual(errors, [], 'no console errors or page errors')
