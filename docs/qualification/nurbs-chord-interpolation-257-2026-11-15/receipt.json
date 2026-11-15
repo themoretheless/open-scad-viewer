@@ -1,0 +1,24 @@
+{
+  "id": "NURBS-0257",
+  "baseCommit": "891191e446dfd8589457b813a2ced6f2c10d15f3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "chord_interpolation_contracts"
+  ],
+  "passed": 9,
+  "failed": 0,
+  "scope": "Covers the complete supplied rectangular UV grid for either diagonal in each cell. The worst bound includes actual vertex displacement and charges all original knot rectangles against a single budget. Only finite rectilinear untrimmed grids with increasing axes are admitted.",
+  "sha256": {
+    "crates/nurbs-core/src/analysis/surface_chord_bound.rs": "d4d337761588226fd48055e96feedaab6fd1cd40851d4838a0d6cce3e72b2bd5",
+    "crates/nurbs-core/tests/chord_interpolation_contracts.rs": "0d436fbc3eedf32644d4d6c540c130d3a90bf471231bdb3a1de0b0fbea07eb43"
+  },
+  "logSha256": "7e484e334bdde1608d6ce64a6cb5c85c73131b0668abe793cddb2d518bad7be0"
+}

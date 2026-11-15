@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0259",
+  "testedBase": "e7511c45c078db9d4b5bccb262c35386d7296720",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "mean_curvature_field_contracts",
+    "--test",
+    "gaussian_curvature_field_contracts",
+    "--test",
+    "bounded_surface_differential_contracts"
+  ],
+  "newContractsPassed": 6,
+  "regressionContractsPassed": 22,
+  "scope": [
+    "H\u00b2 is expressed with original rational first and second forms as a scalar field in inverse length squared. The sign of the mean curvature and the normal orientation are outside the squared invariant.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "81f4651aa7687b94965904595407cfb393f5762bc8fcb7ce34d66a39876bf16d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "83ee237647048ed0e522cd01468c22e621341074b798e0ec52c0cf0baeff269b",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/mean_curvature.rs": "d2290dd8925efea1e8d2cba3a08262158ba7fedbfaed4176ab2cf31f5bdc534d",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "ff1f137f78ad9358570c96c41fe8b496b55a4af75d8efc611e4a68194fd9f00d",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "b787f618f1b9840b84116777e44b6154967f049bfaf07d9013e4a2f2c6781dd6",
+    "crates/nurbs-core/tests/mean_curvature_field_contracts.rs": "07f27ccf868eab8121931329ab61d9aa6f36006825a6150ccaea401beafabd84"
+  }
+}

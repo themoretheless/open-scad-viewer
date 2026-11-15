@@ -18,8 +18,10 @@ use crate::{
     surface::Surface,
 };
 
+type KnotPiece = (usize, [f64; 2]);
+
 /// Knot pieces of `[a, b]`, refusing interior knots below `C¹`.
-fn pieces(knots: &[f64], degree: usize, count: usize, [a, b]: [f64; 2]) -> Result<Vec<(usize, [f64; 2])>> {
+fn pieces(knots: &[f64], degree: usize, count: usize, [a, b]: [f64; 2]) -> Result<Vec<KnotPiece>> {
     check(a < b && a >= knots[degree] && b <= knots[count], "Chord cell must lie inside the surface domain")?;
     for &k in &knots[degree + 1..count] {
         if a < k && k < b {
@@ -64,6 +66,184 @@ pub fn cell_flatness(s: &Surface, domain: [[f64; 2]; 2]) -> Result<f64> {
     let bound = ((uu + 2. * uv + vv) / 2.).next_up().next_up();
     check(bound.is_finite(), "Chord cell bound is not finite")?;
     Ok(bound)
+}
+
+/// Enclose the interpolation error of every parameter triangle in `domain`.
+///
+/// In unit rectangle coordinates the weighted variance of each coordinate
+/// of the triangle vertices is at most 1/4. Cauchy–Schwarz bounds the
+/// weighted absolute mixed product by 1/4 as well. Applying these bounds
+/// to the integral Taylor remainder gives (M_uu + 2 M_uv + M_vv)/8,
+/// where each M is an upper bound on the corresponding second jet norm.
+/// The reference vertices are exact surface points in the same chart.
+/// A cell crossing a knot must have at least C¹ continuity in that axis.
+pub fn cell_interpolation_error(
+    s: &Surface,
+    domain: [[f64; 2]; 2],
+    max_cells: usize,
+) -> Result<f64> {
+    s.validate()?;
+    check_chord_budget(max_cells)?;
+    let u = pieces(&s.knots_u, s.degree_u, s.control_points.len(), domain[0])?;
+    let v = pieces(&s.knots_v, s.degree_v, s.control_points[0].len(), domain[1])?;
+    if u.len() * v.len() > max_cells {
+        return Err(crate::resource("Chord knot rectangles exceed the work budget"));
+    }
+    interpolation_bound(s, domain, &u, &v)
+}
+
+fn check_chord_budget(max_cells: usize) -> Result<()> {
+    check((1..=4096).contains(&max_cells), "Chord cell budget must be 1..4096")
+}
+
+fn interpolation_bound(
+    s: &Surface,
+    domain: [[f64; 2]; 2],
+    u: &[KnotPiece],
+    v: &[KnotPiece],
+) -> Result<f64> {
+    let width = |d: [f64; 2]| I::point(d[1]).sub(I::point(d[0]));
+    let [u_width, v_width] = [width(domain[0])?, width(domain[1])?];
+    let mut maxima = [0f64; 3];
+    for &(ku, du) in u {
+        for &(kv, dv) in v {
+            let j = jets::calculate(s, [ku, kv], [du, dv], None)?;
+            let su = u_width.div(width(du)?)?;
+            let sv = v_width.div(width(dv)?)?;
+            for (maximum, (jet, scale)) in maxima.iter_mut().zip([
+                (j[2][0], su.mul(su)?),
+                (j[1][1], su.mul(sv)?),
+                (j[0][2], sv.mul(sv)?),
+            ]) {
+                *maximum = maximum.max(norm(jet)?.mul(scale)?.hi);
+            }
+        }
+    }
+    let [uu, uv, vv] = maxima.map(I::point);
+    Ok(uu.add(uv.mul(I::point(2.))?)?.add(vv)?.mul(I::point(0.125))?.hi)
+}
+
+/// Upper bounds for the parameter-matched deviation of a stored triangle.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TriangleInterpolationError {
+    /// Error of the triangle through the exact surface samples.
+    pub interpolation: f64,
+    /// Maximum displacement of a stored vertex from its exact sample.
+    pub vertex_displacement: f64,
+    /// Outward-rounded sum of both error bounds.
+    pub total: f64,
+}
+
+/// Bound the deviation from the exact surface over the parameter triangle to
+/// the stored triangle at matching barycentric coordinates. The UV triangle
+/// must have a bounding rectangle of positive width in both axes. The
+/// result concerns this correspondence and does not certify mesh topology.
+pub fn triangle_interpolation_error(
+    s: &Surface,
+    uv: [[f64; 2]; 3],
+    vertices: [[f64; 3]; 3],
+    max_cells: usize,
+) -> Result<TriangleInterpolationError> {
+    check(
+        uv.iter()
+            .flatten()
+            .chain(vertices.iter().flatten())
+            .all(|x| x.is_finite()),
+        "Triangle parameters and vertices must be finite",
+    )?;
+    let domain = std::array::from_fn(|axis| {
+        let [a, b, c] = uv.map(|p| p[axis]);
+        [a.min(b).min(c), a.max(b).max(c)]
+    });
+    let interpolation = cell_interpolation_error(s, domain, max_cells)?;
+    let mut vertex_displacement = 0f64;
+    for (uv, point) in uv.into_iter().zip(vertices) {
+        vertex_displacement = vertex_displacement.max(point_distance(s, uv, point)?);
+    }
+    let total = combine_errors(interpolation, vertex_displacement)?;
+    Ok(TriangleInterpolationError {
+        interpolation,
+        vertex_displacement,
+        total,
+    })
+}
+
+fn combine_errors(interpolation: f64, displacement: f64) -> Result<f64> {
+    Ok(I::point(interpolation).add(I::point(displacement))?.hi)
+}
+
+/// Maximum certified deviation over the complete rectangular mesh grid.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GridInterpolationError {
+    pub upper: f64,
+    /// Indices of the lower U and V lines of the cell with the largest bound.
+    pub worst_cell: [usize; 2],
+    pub knot_rectangles: usize,
+}
+
+/// Certify a retained UV grid across its entire rectangular domain.
+///
+/// Vertices are in U-major order, with V varying fastest. The four corners
+/// in each cell are covered for either choice of diagonal. Grid lines must
+/// increase strictly and may coincide with a kink. A single cell cannot
+/// cross a kink. All vertex and knot-rectangle checks share this call, so
+/// an invalid cell cannot leave a partially certified result.
+pub fn grid_interpolation_error(
+    s: &Surface,
+    u: &[f64],
+    v: &[f64],
+    vertices: &[[f64; 3]],
+    max_cells: usize,
+) -> Result<GridInterpolationError> {
+    s.validate()?;
+    check_chord_budget(max_cells)?;
+    check(u.len() >= 2 && v.len() >= 2, "Chord grid needs two lines per axis")?;
+    let grid_cells = (u.len() - 1).checked_mul(v.len() - 1);
+    if grid_cells.is_none_or(|count| count > max_cells) {
+        return Err(crate::resource("Chord grid exceeds the cell budget"));
+    }
+    check(
+        u.len().checked_mul(v.len()) == Some(vertices.len())
+            && vertices.iter().flatten().all(|value| value.is_finite()),
+        "Chord grid needs one finite point per UV vertex",
+    )?;
+    let axis_pieces = |grid: &[f64], knots: &[f64], degree, count| {
+        grid.windows(2)
+            .map(|pair| pieces(knots, degree, count, [pair[0], pair[1]]))
+            .collect::<Result<Vec<_>>>()
+    };
+    let u_pieces = axis_pieces(u, &s.knots_u, s.degree_u, s.control_points.len())?;
+    let v_pieces = axis_pieces(v, &s.knots_v, s.degree_v, s.control_points[0].len())?;
+    let total = |axis: &[Vec<KnotPiece>]| axis.iter().map(Vec::len).sum::<usize>();
+    let knot_rectangles = total(&u_pieces) * total(&v_pieces);
+    if knot_rectangles > max_cells {
+        return Err(crate::resource("Chord knot rectangles exceed the work budget"));
+    }
+
+    let mut shift = Vec::with_capacity(vertices.len());
+    for (&u, row) in u.iter().zip(vertices.chunks_exact(v.len())) {
+        for (&v, &vertex) in v.iter().zip(row) {
+            shift.push(point_distance(s, [u, v], vertex)?);
+        }
+    }
+
+    let mut upper = 0f64;
+    let mut worst_cell = [0, 0];
+    for (i, up) in u_pieces.iter().enumerate() {
+        for (j, vp) in v_pieces.iter().enumerate() {
+            let domain = [[u[i], u[i + 1]], [v[j], v[j + 1]]];
+            let interpolation = interpolation_bound(s, domain, up, vp)?;
+            let a = i * v.len() + j;
+            let b = a + v.len();
+            let displacement = shift[a].max(shift[a + 1]).max(shift[b]).max(shift[b + 1]);
+            let cell = combine_errors(interpolation, displacement)?;
+            if cell > upper {
+                upper = cell;
+                worst_cell = [i, j];
+            }
+        }
+    }
+    Ok(GridInterpolationError { upper, worst_cell, knot_rectangles })
 }
 
 /// Upper bound on `|S(uv) - q|`, evaluated with interval jets.

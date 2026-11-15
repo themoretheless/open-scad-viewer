@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 253,
-  "unallocatedCount": 747,
+  "specifiedCount": 264,
+  "unallocatedCount": 736,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -4696,7 +4696,7 @@
       "nativeApi": "nurbs_core::surface_measure::area",
       "evidence": [
         "crates/nurbs-core/src/analysis/surface_measure.rs",
-        "crates/nurbs-core/src/surface_measure/jets.rs",
+        "crates/nurbs-core/src/analysis/surface_measure/jets.rs",
         "crates/nurbs-core/tests/surface_measure.rs",
         "crates/nurbs-core/examples/surface_measure.rs",
         "docs/design/nurbs-surface-area.md"
@@ -6887,7 +6887,7 @@
     {
       "id": "NURBS-0253",
       "name": "Построение точного и непрерывно ограниченного поля кручения пространственной NURBS-кривой",
-      "status": "planned",
+      "status": "native",
       "prioritySet": "native-1000-differential-fields",
       "category": "Дифференциальная геометрия",
       "nativeApi": "nurbs_core::editing::exact_derivative::torsion",
@@ -6901,9 +6901,235 @@
         "docs/qualification/nurbs-torsion-field-2026-11-03/independent_oracle.py"
       ],
       "remainingQualification": [
-        "Exact and bounded native APIs,16 new contracts and independent full-span proofs pass. Full native regression remains pending; no completed native credit yet.",
+        "Exact and bounded native APIs, 16 contracts and independent full-span proofs passed. The implementation revision also passed full default and no-codec nurbs-core regression.",
         "Original squared binormal must be proved strictly positive before cancellation; unresolved or zero curvature sources refuse atomically. Scalar torsion carrier, one-sided original clocks, degree25/1m-work/4096-bit and geometry/weight limits unchanged.",
         "No global Frenet frame, knot smoothness, topology, evaluator arithmetic, JSON/WASM/Rush/editor/STEP or whole-app qualification."
+      ]
+    },
+    {
+      "id": "NURBS-0254",
+      "name": "Сертифицированная оценка знакового объёма замкнутой оболочки из NURBS-патчей",
+      "status": "native",
+      "prioritySet": "native-1000-certified-measurements",
+      "category": "Измерения и запросы",
+      "nativeApi": "nurbs_core::surface_volume::enclosed_volume_oriented",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_volume.rs",
+        "docs/qualification/nurbs-signed-volume-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-signed-volume-2026-11-15/signed-volume.log.gz"
+      ],
+      "remainingQualification": [
+        "The native API integrates the oriented NURBS flux and reports a rigorous signed-volume enclosure. The caller supplies shell closure, orientation and any zero-flux face omissions. Reaching the cell limit can leave the requested tolerance unmet. General trimmed faces and application transport are outside this contract."
+      ]
+    },
+    {
+      "id": "NURBS-0255",
+      "name": "Непрерывная оценка ошибки линейной интерполяции внутри UV-ячейки NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-certified-tessellation",
+      "category": "Измерения и запросы",
+      "nativeApi": "nurbs_core::surface_chord_bound::cell_interpolation_error",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_chord_bound.rs",
+        "crates/nurbs-core/tests/chord_interpolation_contracts.rs",
+        "docs/qualification/nurbs-chord-interpolation-255-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-chord-interpolation-255-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "An outward interval certificate using normalized second jets and the weighted variance bound. It covers exact surface samples in every triangle contained in the cell, with original knot pieces and an explicit cell budget. Crossing a knot requires C1 continuity.",
+        "Application and WASM delivery are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0256",
+      "name": "Сертификат отклонения сохранённого треугольника от участка NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-certified-tessellation",
+      "category": "Измерения и запросы",
+      "nativeApi": "nurbs_core::surface_chord_bound::triangle_interpolation_error",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_chord_bound.rs",
+        "crates/nurbs-core/tests/chord_interpolation_contracts.rs",
+        "docs/qualification/nurbs-chord-interpolation-256-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-chord-interpolation-256-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "The report combines the continuous interpolation error and the outward maximum displacement of stored vertices from exact surface points. Matching barycentric coordinates give the geometric correspondence. Mesh topology is outside this API.",
+        "Application and WASM delivery are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0257",
+      "name": "Сертификат отклонения сохранённой прямоугольной сетки от NURBS по всей UV-области",
+      "status": "native",
+      "prioritySet": "native-1000-certified-tessellation",
+      "category": "Измерения и запросы",
+      "nativeApi": "nurbs_core::surface_chord_bound::grid_interpolation_error",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_chord_bound.rs",
+        "crates/nurbs-core/tests/chord_interpolation_contracts.rs",
+        "docs/qualification/nurbs-chord-interpolation-257-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-chord-interpolation-257-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Covers the complete supplied rectangular UV grid for either diagonal in each cell. The worst bound includes actual vertex displacement and charges all original knot rectangles against a single budget. Only finite rectilinear untrimmed grids with increasing axes are admitted.",
+        "Application and WASM delivery are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0258",
+      "name": "Точное и непрерывно ограниченное поле гауссовой кривизны NURBS-поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::gaussian_curvature",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/gaussian.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/gaussian_curvature_field_contracts.rs",
+        "docs/qualification/nurbs-gaussian-curvature-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-gaussian-curvature-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exact or continuously error-bounded [K,0,0] field on the original UV cells. The original squared area normal must have a strictly positive tensor Bernstein enclosure before cancellation. Singular or unresolved cells and storage/work refusals return no partial fields.",
+        "One-sided original clocks and inverse-length-squared units. WASM and application delivery are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0259",
+      "name": "Точное и непрерывно ограниченное поле квадрата средней кривизны NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::squared_mean_curvature",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/mean_curvature.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/mean_curvature_field_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-259-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-259-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "H² is expressed with original rational first and second forms as a scalar field in inverse length squared. The sign of the mean curvature and the normal orientation are outside the squared invariant.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0260",
+      "name": "Точное и непрерывно ограниченное поле квадрата разности главных кривизн NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::squared_principal_curvature_gap",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/principal_curvature_gap_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-260-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-260-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "The squared gap measures the separation of the principal curvatures without a square root or an eigenvector chart. A bounded carrier alone is not a proof of an umbilic or of a positive gap.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0261",
+      "name": "Точная классификация умбилических и разделённых UV-ячеек NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::audit_umbilics",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/umbilic_cell_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
+        "docs/qualification/nurbs-curvature-field-261-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-261-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classifies each complete original cell as everywhere umbilic, strictly separated everywhere, or containing at least one nonumbilic point without a whole-cell separation proof. The audit uses exact polynomials without storing a curvature field or locating isolated umbilics.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0262",
+      "name": "Адаптивное уточнение областей разделения главных кривизн NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::refine_umbilics",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/umbilic_cell_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
+        "docs/qualification/nurbs-curvature-field-262-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-262-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exact dyadic Bernstein refinement covers each original cell. A positive coefficient net proves strict separation. Regions without that proof retain an existential nonumbilic status at the depth cap.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0263",
+      "name": "Сертификат сравнения квадрата разности главных кривизн NURBS с порогом",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::compare_curvature_gap",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_threshold_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
+        "docs/qualification/nurbs-curvature-field-263-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-263-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "An exact polynomial residual compares squared principal curvature separation to a positive threshold. Each cell reports inclusive bounds, identity, opposite corner signs or an unresolved comparison.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0264",
+      "name": "Непрерывный числовой диапазон квадрата разности главных кривизн NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::curvature_gap_ranges",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_range.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_threshold_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
+        "docs/qualification/nurbs-curvature-field-264-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-264-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bounds the original curvature gap on a complete knot cell by the convex hull of exact coefficient ratios with positive denominator coefficients. Numeric endpoints are checked outward against the exact ratios.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
       ]
     }
   ],

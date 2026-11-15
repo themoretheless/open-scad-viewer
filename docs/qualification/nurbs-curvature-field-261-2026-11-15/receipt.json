@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0261",
+  "testedBase": "a079373145f5d06f48b586a2f1d6a12453b9d3d8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "umbilic_cell_contracts",
+    "--test",
+    "principal_curvature_gap_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 5,
+  "scope": [
+    "Classifies each complete original cell as everywhere umbilic, strictly separated everywhere, or containing at least one nonumbilic point without a whole-cell separation proof. The audit uses exact polynomials without storing a curvature field or locating isolated umbilics.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "e0f9c7f45424154383ff1077f6298cf63bdaf3d9043d60f651db3280a98d0a4a",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "57cec4c69cbd08a13e241205b089baa2599188323d87d8b906eeae19df487cf1",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic.rs": "757a7c846c22f39599602f4b043fbbe2111a5ce4692e26d79e6e498c54e7a98f",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/umbilic_cell_contracts.rs": "a827996bd875b396a3a7ac181477f55f5d241c8f1456d8aef167bbb89090dc63",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs": "30a2c08f982e18f0947bdd53485095277213ced5aa2e8078af710b52abae943d"
+  }
+}

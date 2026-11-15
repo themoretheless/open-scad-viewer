@@ -163,6 +163,8 @@
     "ray_surface",
     "ss_intersection",
     "surface_measure",
+    "surface_chord_bound",
+    "surface_volume",
     "surface_shape_operator",
     "surface_contact",
     "surface_contact_search",
