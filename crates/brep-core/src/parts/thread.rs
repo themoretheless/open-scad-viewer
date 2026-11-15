@@ -54,6 +54,76 @@ pub fn qualify_closed_candidate(
     })
 }
 
+/// Subdivision budget of the top-cap normal direction bound.
+const TOP_CAP_NORMAL_SUBDIVISIONS: usize = 100;
+
+fn missing_top_cap() -> Error {
+    Error::new(
+        "BREP_THREAD_PATCH_UNRESOLVED",
+        "Candidate needs a planar top-cap orientation witness",
+    )
+}
+
+/// Whether the shell must be reversed so the highest planar cap faces +Z.
+fn top_cap_orientation_reversed(model: &Model) -> Result<bool> {
+    let (face, _) = model
+        .faces
+        .iter()
+        .enumerate()
+        .filter_map(|(i, f)| {
+            let z = f.surface.control_points[0][0][2];
+            f.surface
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == z)
+                .then_some((i, z))
+        })
+        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .ok_or_else(missing_top_cap)?;
+    let surface = &model.faces[face].surface;
+    let domain = [
+        [
+            surface.knots_u[surface.degree_u],
+            surface.knots_u[surface.control_points.len()],
+        ],
+        [
+            surface.knots_v[surface.degree_v],
+            surface.knots_v[surface.control_points[0].len()],
+        ],
+    ];
+    let mut normal = nurbs_core::surface_injectivity::normal_direction_bounds(
+        surface,
+        domain,
+        [0., 0., 1.],
+        TOP_CAP_NORMAL_SUBDIVISIONS,
+    )?
+    .ok_or_else(|| {
+        Error::new(
+            "BREP_THREAD_PATCH_UNRESOLVED",
+            "Top-cap normal direction is unresolved",
+        )
+    })?;
+    let use_ = model.shells[0]
+        .faces
+        .iter()
+        .find(|u| u.face == face)
+        .ok_or_else(missing_top_cap)?;
+    if use_.reversed {
+        normal = [-normal[1], -normal[0]];
+    }
+    if normal[1] < 0. {
+        Ok(true)
+    } else if normal[0] > 0. {
+        Ok(false)
+    } else {
+        Err(Error::new(
+            "BREP_THREAD_PATCH_UNRESOLVED",
+            "Top-cap normal sign is unresolved",
+        ))
+    }
+}
+
 /// Admit combinatorial closure, orient by the highest planar cap normal,
 /// then require positive numerical signed volume.
 /// Returns an explicitly unqualified body candidate; independent embedding,
@@ -82,68 +152,7 @@ pub fn closed_body_candidate(
     });
     model.rebuild_topology_ids();
     model.validate()?;
-    let (face, _) = model
-        .faces
-        .iter()
-        .enumerate()
-        .filter_map(|(i, f)| {
-            let z = f.surface.control_points[0][0][2];
-            f.surface
-                .control_points
-                .iter()
-                .flatten()
-                .all(|p| p[2] == z)
-                .then_some((i, z))
-        })
-        .max_by(|a, b| a.1.total_cmp(&b.1))
-        .ok_or_else(|| {
-            Error::new(
-                "BREP_THREAD_PATCH_UNRESOLVED",
-                "Candidate needs a planar top-cap orientation witness",
-            )
-        })?;
-    let surface = &model.faces[face].surface;
-    let domain = [
-        [
-            surface.knots_u[surface.degree_u],
-            surface.knots_u[surface.control_points.len()],
-        ],
-        [
-            surface.knots_v[surface.degree_v],
-            surface.knots_v[surface.control_points[0].len()],
-        ],
-    ];
-    let mut normal = nurbs_core::surface_injectivity::normal_direction_bounds(
-        surface,
-        domain,
-        [0., 0., 1.],
-        100,
-    )?
-    .ok_or_else(|| {
-        Error::new(
-            "BREP_THREAD_PATCH_UNRESOLVED",
-            "Top-cap normal direction is unresolved",
-        )
-    })?;
-    if model.shells[0]
-        .faces
-        .iter()
-        .find(|u| u.face == face)
-        .unwrap()
-        .reversed
-    {
-        normal = [-normal[1], -normal[0]];
-    }
-    let reversed = if normal[1] < 0. {
-        true
-    } else if normal[0] > 0. {
-        false
-    } else {
-        return Err(Error::new(
-            "BREP_THREAD_PATCH_UNRESOLVED",
-            "Top-cap normal sign is unresolved",
-        ));
-    };
+    let reversed = top_cap_orientation_reversed(&model)?;
     if reversed {
         for use_ in &mut model.shells[0].faces {
             use_.reversed = !use_.reversed;
