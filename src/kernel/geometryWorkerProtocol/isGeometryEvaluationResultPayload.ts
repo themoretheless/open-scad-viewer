@@ -1,5 +1,6 @@
 import { GEOMETRY_WORKER_PAYLOAD_LIMITS, GEOMETRY_WORKER_PROTOCOL_VERSION } from '../geometryWorkerProtocol'
-import type { GeometryBuildRequest, GeometryCancelRequest, GeometryWorkerEvent, GeometryWorkerRequest } from '../geometryWorkerProtocol'
+import type { GeometryBuildRequest, GeometryCancelRequest, GeometryWorkerRequest, GeometryWorkerWireEvent } from '../geometryWorkerProtocol'
+import { materializeWireScene } from './geometrySceneWire'
 import type { GeometryEvaluationResult } from '../../core/build'
 import { MAX_GEOMETRY_SOURCE_CHARACTERS } from '../../core/geometryExecution'
 import { MAX_NATIVE_GEOMETRY_CHARACTERS } from '../../core/nativeGeometry'
@@ -12,7 +13,7 @@ import { sha256Hex } from '../../core/sha256'
  * loop is O(mesh count), never O(vertex/triangle count), and allocates no
  * scratch buffers.
  */
-export function hasSafeSuccessPayload(value: Record<string, unknown>): boolean {
+export function hasSafeSuccessPayload(value: Record<string, unknown>, sharedAssetBuffers: ReadonlySet<ArrayBuffer> = new Set()): boolean {
   if (!isDenseExactArray(value.meshes, GEOMETRY_WORKER_PAYLOAD_LIMITS.meshes)
     || !isDenseExactArray(value.warnings, GEOMETRY_WORKER_PAYLOAD_LIMITS.warnings)) return false
   if (!value.warnings.every(warning => typeof warning === 'string'
@@ -25,6 +26,7 @@ export function hasSafeSuccessPayload(value: Record<string, unknown>): boolean {
   let textCharacters = (value.warnings as string[]).reduce((total, warning) => total + warning.length, 0)
   const entityIds = new Set<string>()
   const payloadBuffers = new Set<ArrayBuffer>()
+  const countedAssetBuffers = new Set<ArrayBuffer>()
   for (const candidate of value.meshes) {
     if (!isRecord(candidate)
       || !hasExactKeys(candidate, [
@@ -59,9 +61,15 @@ export function hasSafeSuccessPayload(value: Record<string, unknown>): boolean {
       candidate.vertices, candidate.indices, candidate.edgeIndices, candidate.faceIds,
       candidate.transform, candidate.bvh.bounds, candidate.bvh.nodes, candidate.bvh.triangles,
     ] as const
-    for (const view of views) {
+    for (const [index, view] of views.entries()) {
       const buffer = view.buffer as ArrayBuffer
-      if (payloadBuffers.has(buffer)) return false
+      // Scene assets back the vertices/indices of every instance; count their bytes once.
+      if (index < 2 && sharedAssetBuffers.has(buffer)) {
+        if (countedAssetBuffers.has(buffer)) bytes -= view.byteLength
+        countedAssetBuffers.add(buffer)
+        continue
+      }
+      if (payloadBuffers.has(buffer) || sharedAssetBuffers.has(buffer)) return false
       payloadBuffers.add(buffer)
     }
     if (candidate.lods !== undefined) {
@@ -225,7 +233,7 @@ export function isGeometryWorkerRequest(value: unknown): value is GeometryWorker
   }
 }
 
-export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEvent {
+export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerWireEvent {
   try {
     if (!isRecord(value)
       || !hasBoundedDataProperties(value, 24)
@@ -277,23 +285,26 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerEv
           && (value.continuousBound===undefined?value.accepted===((value.knownProfileErrorUpper===undefined||(value.knownProfileErrorUpper as number)<=(value.budget as number))&&(value.sampledControlDeviation as number)<=(value.budget as number)&&(value.phaseResolved??true)&&(value.frameTransportCertified??true)&&(value.profileRegularityCertified??true)&&(value.wallRegularityCertified===undefined||value.wallRegularityCertified===true)&&(value.certifiedErrorUpper===undefined?(value.continuousErrorUpper===undefined||(value.continuousErrorUpper as number)<=(value.budget as number)):(value.certifiedErrorUpper!==null&&(value.certifiedErrorUpper as number)<=(value.budget as number)))):(!value.accepted||(value.continuousBound&&((value.knownProfileErrorUpper===undefined||(value.knownProfileErrorUpper as number)<=(value.budget as number))&&(value.sampledControlDeviation as number)<=(value.budget as number)&&(value.phaseResolved??true)&&(value.frameTransportCertified??true)&&(value.profileRegularityCertified??true)&&(value.wallRegularityCertified===undefined||value.wallRegularityCertified===true)&&(value.certifiedErrorUpper===undefined?(value.continuousErrorUpper===undefined||(value.continuousErrorUpper as number)<=(value.budget as number)):(value.certifiedErrorUpper!==null&&(value.certifiedErrorUpper as number)<=(value.budget as number)))))))
           && (value.meshes as unknown[]).every(mesh=>isMeshData(mesh)&&!('nativeGeometry' in mesh)
             && mesh.faceIdsAuthoritative===false && mesh.provenance.every(run=>run.source===null))
-      case 'succeeded':
-        return hasExactKeys(value, [
+      case 'succeeded': {
+        if (!hasExactKeys(value, [
           'protocolVersion', 'documentRevision', 'jobId', 'quality', 'sourceSha256',
-          'status', 'phase', 'execution', 'meshes', 'warnings', 'volume', 'surfaceArea',
+          'status', 'phase', 'execution', 'scene', 'warnings', 'volume', 'surfaceArea',
           'reduced', 'timings', 'durationMs',
-        ])
+        ])) return false
+        // The eager view shares asset views between instances; deep checks run on it.
+        const scene = materializeWireScene(value.scene)
+        return scene !== null
           && value.phase === 'complete'
           && isQuality(value.quality)
           && isExecutionDescriptor(value.execution, value.quality)
-          && hasSafeSuccessPayload(value)
-          && isDenseExactArray(value.meshes, GEOMETRY_WORKER_PAYLOAD_LIMITS.meshes)
-          && value.meshes.every(isMeshData)
+          && hasSafeSuccessPayload({ ...value, meshes: scene.meshes }, scene.assetBuffers)
+          && scene.meshes.every(isMeshData)
           && isNonNegativeFiniteNumber(value.volume)
           && isNonNegativeFiniteNumber(value.surfaceArea)
           && typeof value.reduced === 'boolean'
           && isPhaseTimings(value.timings)
           && isNonNegativeFiniteNumber(value.durationMs)
+      }
       case 'failed':
         return hasExactKeys(value, [
           'protocolVersion', 'documentRevision', 'jobId', 'quality', 'sourceSha256',

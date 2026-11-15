@@ -13,6 +13,7 @@ import { createMeshLodState, releaseMeshLod } from './meshLod'
 import { effectiveDisplayAlpha } from './backendQuality'
 import { OBJECT_UNIFORM_LAYOUT } from './shaders'
 import { fillObjectUniform } from './uniformFill'
+import type { GpuGeometryCache } from './gpuGeometryCache'
 import {
   MAX_EDGE_BUFFER_BYTES,
   type Bounds,
@@ -41,6 +42,8 @@ export interface StageSceneMeshesContext {
   readonly morphDummyVB: GPUBuffer | null
   readonly objectUniformScratch: Float32Array
   readonly nativePicking: NativePickingCache
+  /** Asset-keyed buffers retained across publications under the residency budget. */
+  readonly geometryCache?: GpuGeometryCache
   readonly measureMeshBounds: (
     assetId: string | null,
     vertices: Float32Array,
@@ -72,6 +75,7 @@ export function stageSceneMeshes(
     reusableByAsset.set(mesh.assetId, candidates)
   }
   const retainedGeometryBuffers = new Set<GPUBuffer>()
+  const claimedUniforms = new Map<GPUBuffer, GMesh>()
   const next: GMesh[] = []
   let nextSceneIndex: SceneAabbIndex
   try {
@@ -87,36 +91,24 @@ export function stageSceneMeshes(
       const inverseTransform = invert(transform)
 
       const old = m.entityId ? previousById.get(m.entityId) : undefined
-      // Equal index counts do not establish vertex correspondence after CSG.
-      // Animate only rigid transforms of unchanged geometry, per entity.
-      const matrix = animate && old && sameTypedArray(old.vertices, m.vertices)
-        && sameTypedArray(old.indices, m.indices) ? geometryTransformTransition(old.morph?.currentMatrix ?? old.transform, transform) : null
-      const morphFrom = animate && old && matrix
-        && (!sameTypedArray(old.morph?.target ?? old.vertices, m.vertices) || !sameTypedArray(old.morph?.currentMatrix ?? old.transform, transform))
-        ? (old.morph ? blendMorphPositions(old.morph, started) : extractPositions(old.vertices))
-        : null
-      const retainedMorph = matrix && old?.morph && sameTypedArray(old.transform, transform) ? old.morph : null
+      const { matrix, morphFrom, retainedMorph } = planEntityMorph(m, old, transform, animate, started)
       // Animated geometry must own its buffer: instances may have different start shapes.
-      const candidates = !animate && m.geometryAssetId ? reusableByAsset.get(m.geometryAssetId) : undefined
-      // Prefer the already verified views staged earlier in this publication.
-      // A newly built shared asset needs one content comparison, not one per instance.
-      const reusable = candidates?.find(candidate => candidate.vertices === m.vertices && candidate.indices === m.indices)
-        ?? candidates?.find(candidate => (
-            sameTypedArray(candidate.vertices, m.vertices)
-            && sameTypedArray(candidate.indices, m.indices)
-          ))
-      let vb: GPUBuffer | null = reusable?.vb ?? null
-      let ib: GPUBuffer | null = reusable?.ib ?? null
-      let ub: GPUBuffer | null = null
+      const reusable = animate ? undefined : findReusableMesh(m, reusableByAsset)
+      const cached = animate || reusable || !m.geometryAssetId ? null : ctx.geometryCache?.lookup(m.geometryAssetId, m.vertices, m.indices) ?? null
+      // A persisting entity with unchanged geometry keeps its uniform buffer and bind group.
+      const keptUniform = old && !animate && !old.morph && old.assetId && old.assetId === m.geometryAssetId && !claimedUniforms.has(old.ub) ? old : null
+      let vb: GPUBuffer | null = reusable?.vb ?? cached?.vb ?? null
+      let ib: GPUBuffer | null = reusable?.ib ?? cached?.ib ?? null
+      let ub: GPUBuffer | null = keptUniform?.ub ?? null
       // The morph source buffer is capacity-grown and inherited across the
       // publications of one entity, so repeated edits do not realloc it.
       let morphVB = old?.morphVB ?? null
       let morphVBCapacity = old?.morphVBCapacity ?? 0
-      const ownsGeometryBuffers = !reusable
+      const ownsGeometryBuffers = !reusable && !cached
       try {
         if (!vb) vb = dev.createBuffer({ size: m.vertices.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
         if (!ib) ib = dev.createBuffer({ size: m.indices.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST })
-        ub = dev.createBuffer({ size: OBJECT_UNIFORM_LAYOUT.bytes, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
+        if (!ub) ub = dev.createBuffer({ size: OBJECT_UNIFORM_LAYOUT.bytes, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST })
         const materialAlpha = m.material ? m.material.alpha ?? 1 : ctx.defaultMaterial.alpha
         const initialAlpha = effectiveDisplayAlpha(m.color[3] * materialAlpha, ctx.displayMode)
         const initialEdge = ctx.displayMode === 'edges' ? 0.7 : 0
@@ -140,11 +132,11 @@ export function stageSceneMeshes(
         const uniform = ctx.objectUniformScratch
         fillObjectUniform(uniform, transform, inverseTransform, m.color, initialAlpha, initialEdge, m.material, ctx.defaultMaterial)
         dev.queue.writeBuffer(ub, 0, uniform)
-        const bg = dev.createBindGroup({
+        const bg = keptUniform?.bg ?? dev.createBindGroup({
           layout: ctx.objBGL,
           entries: [{ binding: 0, resource: { buffer: ub } }],
         })
-        if (reusable) metrics.reusedEntities++
+        if (reusable || cached) metrics.reusedEntities++
         const reuseEdges = reusable && sameTypedArray(reusable.edgeIndices, m.edgeIndices)
         const morph = retainedMorph ?? (morphFrom ? { from: morphFrom, target: m.vertices, started, matrix: matrix ?? undefined, currentMatrix: matrix?.(0) } : undefined)
         next.push({
@@ -175,7 +167,9 @@ export function stageSceneMeshes(
         })
         const added = next[next.length - 1]
         added.lod = createMeshLodState(added, m.lods)
+        if (keptUniform) { claimedUniforms.set(keptUniform.ub, keptUniform); retainedGeometryBuffers.add(keptUniform.ub) }
         if (added.assetId) {
+          ctx.geometryCache?.adopt(added.assetId, m.vertices, m.indices, vb, ib)
           const candidates = reusableByAsset.get(added.assetId) ?? []
           candidates.push(added)
           reusableByAsset.set(added.assetId, candidates)
@@ -194,7 +188,7 @@ export function stageSceneMeshes(
         // A morph buffer created for the failed staged mesh must not leak;
         // an inherited one still belongs to the live previous mesh.
         if (morphVB && morphVB !== old?.morphVB) morphVB.destroy()
-        ub?.destroy()
+        if (ub !== keptUniform?.ub) ub?.destroy()
         throw error
       }
     }
@@ -202,12 +196,60 @@ export function stageSceneMeshes(
       id, bounds: { min: mesh.worldBounds.min, max: mesh.worldBounds.max },
     })))
   } catch (error) {
-    destroySceneMeshes(next, ctx.nativePicking, retainedGeometryBuffers)
+    // Kept uniforms belong to the live scene again: restore their contents.
+    for (const old of claimedUniforms.values()) restoreObjectUniform(dev, old, ctx)
+    destroySceneMeshes(next, ctx.nativePicking, preservedBuffers(retainedGeometryBuffers, ctx.geometryCache))
     throw error
   }
 
   return { next, nextSceneIndex, retainedGeometryBuffers, metrics }
 }
+
+interface MorphPlan {
+  readonly matrix: ReturnType<typeof geometryTransformTransition> | null
+  readonly morphFrom: Float32Array | null
+  readonly retainedMorph: NonNullable<GMesh['morph']> | null
+}
+
+/**
+ * Equal index counts do not establish vertex correspondence after CSG.
+ * Animate only rigid transforms of unchanged geometry, per entity.
+ */
+function planEntityMorph(m: MeshData, old: GMesh | undefined, transform: Float32Array, animate: boolean, started: number): MorphPlan {
+  const matrix = animate && old && sameTypedArray(old.vertices, m.vertices)
+    && sameTypedArray(old.indices, m.indices) ? geometryTransformTransition(old.morph?.currentMatrix ?? old.transform, transform) : null
+  const morphFrom = animate && old && matrix
+    && (!sameTypedArray(old.morph?.target ?? old.vertices, m.vertices) || !sameTypedArray(old.morph?.currentMatrix ?? old.transform, transform))
+    ? (old.morph ? blendMorphPositions(old.morph, started) : extractPositions(old.vertices))
+    : null
+  const retainedMorph = matrix && old?.morph && sameTypedArray(old.transform, transform) ? old.morph : null
+  return { matrix, morphFrom, retainedMorph }
+}
+
+/**
+ * Prefer the already verified views staged earlier in this publication.
+ * A newly built shared asset needs one content comparison, not one per instance.
+ */
+function findReusableMesh(m: MeshData, reusableByAsset: ReadonlyMap<GeometryAssetId, GMesh[]>): GMesh | undefined {
+  const candidates = m.geometryAssetId ? reusableByAsset.get(m.geometryAssetId) : undefined
+  return candidates?.find(candidate => candidate.vertices === m.vertices && candidate.indices === m.indices)
+    ?? candidates?.find(candidate => sameTypedArray(candidate.vertices, m.vertices) && sameTypedArray(candidate.indices, m.indices))
+}
+
+function restoreObjectUniform(dev: GPUDevice, mesh: GMesh, ctx: StageSceneMeshesContext) {
+  const uniform = ctx.objectUniformScratch
+  fillObjectUniform(uniform, mesh.transform, mesh.inverseTransform, mesh.color, mesh.styleAlpha, mesh.styleEdge, mesh.material, ctx.defaultMaterial)
+  uniform[37] = mesh.styleSelected
+  uniform[39] = mesh.styleHovered
+  dev.queue.writeBuffer(mesh.ub, 0, uniform)
+}
+
+/** Buffers a scene teardown must not destroy: explicit retention plus everything the geometry cache owns. */
+export function preservedBuffers(retained: ReadonlySet<GPUBuffer>, cache: GpuGeometryCache | undefined): BufferSet {
+  return { has: buffer => retained.has(buffer) || !!cache?.owns(buffer) }
+}
+
+export type BufferSet = Pick<ReadonlySet<GPUBuffer>, 'has'>
 
 /** Rebuild at publication so cached handles never outlive their scene. */
 export function rebuildEdgeBufferCacheMap(
@@ -293,7 +335,7 @@ export function reconcileMeshStyles(
 export function destroySceneMeshes(
   meshes: readonly GMesh[],
   nativePicking: NativePickingCache,
-  preserved: ReadonlySet<GPUBuffer> = new Set(),
+  preserved: BufferSet = new Set(),
 ) {
   const destroyed = new Set<GPUBuffer>()
   const destroy = (buffer: GPUBuffer | null) => {

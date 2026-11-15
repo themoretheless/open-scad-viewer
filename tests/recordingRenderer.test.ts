@@ -41,4 +41,31 @@ describe('recording render seam', () => {
     expect(renderer.canGoToPreviousView).toBe(true)
     expect(renderer.previousView()).not.toBeNull()
   })
+
+  it('keeps selection and measurement across publications of unchanged entities', async () => {
+    const renderer = new RecordingRenderer()
+    await renderer.init({ clientHeight: 100 } as HTMLCanvasElement)
+    const identity = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
+    const entity = (id: string, asset: string) =>
+      ({
+        ...triangle,
+        entityId: id,
+        geometryAssetId: asset,
+        transform: identity,
+        faceIds: new Uint32Array([0]),
+      }) as MeshData
+    renderer.setMeshes([entity('entity:a', 'asset:a'), entity('entity:b', 'asset:b')])
+    renderer.selectMesh(1)
+    renderer.restoreMeasurement({
+      points: [
+        [0, 0, 0],
+        [1, 0, 0],
+      ],
+      distance: 1,
+    })
+    renderer.setMeshes([entity('entity:b', 'asset:b'), entity('entity:a', 'asset:a')])
+    expect(renderer.snapshot()).toMatchObject({ selectedIndex: 0, measuring: true })
+    renderer.setMeshes([entity('entity:b', 'asset:changed'), entity('entity:a', 'asset:a')])
+    expect(renderer.snapshot()).toMatchObject({ selectedIndex: null, measuring: false })
+  })
 })
