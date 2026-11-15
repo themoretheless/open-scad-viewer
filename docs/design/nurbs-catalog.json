@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 314,
-  "unallocatedCount": 686,
+  "specifiedCount": 315,
+  "unallocatedCount": 685,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8250,6 +8250,25 @@
       "remainingQualification": [
         "Classify the affine dimension of a rational tensor surface with exact active-pole witnesses.",
         "Positive weights and active tensor basis. Inactive exterior poles are excluded. Exact affine hull dimension does not imply surface regularity.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0315",
+      "name": "Точная двумерная проекция плоской NURBS-поверхности с рациональным подъёмом",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::exact_affine_hull::project_planar_surface",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/nurbs-core/tests/exact_planar_surface_projection_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-315-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-315-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Project a certified planar rational tensor surface into two Cartesian coordinates without changing its basis, with an exact rational inverse on the support plane.",
+        "Exact two-dimensional active affine hull. Inverse coefficients remain rational even when not binary64; inactive poles need not lie on the plane.",
         "WASM and application integration are separate."
       ]
     }
