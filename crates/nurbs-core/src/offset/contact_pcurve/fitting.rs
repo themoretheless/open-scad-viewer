@@ -1,8 +1,8 @@
 //! Degree-refined UV proposals, qualified against the same original root tube.
+use crate::offset::polynomial_fit;
 use crate::{
     Result, bernstein_interpolation as interpolation, check,
     curve::Curve,
-    distance_bounds::Interval as I,
     surface_offset::{self, ContactBand},
 };
 
@@ -52,25 +52,6 @@ pub struct FitReport {
     pub coefficient_work: usize,
     pub proof_cells: usize,
     pub stop: FitStop,
-}
-fn nodes(domain: [f64; 2], degree: usize) -> Result<Vec<f64>> {
-    let result: Vec<_> = (0..=degree)
-        .map(|i| {
-            if i == 0 {
-                domain[0]
-            } else if i == degree {
-                domain[1]
-            } else {
-                let t = (1. - (std::f64::consts::PI * i as f64 / degree as f64).cos()) * 0.5;
-                domain[0] * (1. - t) + domain[1] * t
-            }
-        })
-        .collect();
-    check(
-        result.windows(2).all(|r| r[0] < r[1]),
-        "UV fit nodes reached original parameter resolution",
-    )?;
-    Ok(result)
 }
 /// Fit both original UV traces of ONE freshly certified continuous contact
 /// tube, without caller-authored curves or point seeds. Certified station-root
@@ -140,10 +121,7 @@ pub fn fit_branch(
         }
         ContactBand::ContinuousBranch(_) => {}
     }
-    let mut degrees = vec![1usize];
-    while *degrees.last().unwrap() < limits.max_degree {
-        degrees.push((2 * degrees.last().unwrap()).min(limits.max_degree));
-    }
+    let degrees = polynomial_fit::degree_ladder(limits.max_degree);
     for (attempt, &degree) in degrees.iter().enumerate() {
         let n = degree + 1;
         let per_root = limits.root_refinements + 1;
@@ -160,7 +138,11 @@ pub fn fit_branch(
             out.stop = FitStop::CoefficientLimit;
             break;
         }
-        let sites = nodes(drive, degree)?;
+        let sites = polynomial_fit::chebyshev_sites(
+            drive,
+            degree,
+            "UV fit nodes reached original parameter resolution",
+        )?;
         let (Some(basis), work) = interpolation::basis_on(
             &sites,
             drive,
@@ -196,26 +178,11 @@ pub fn fit_branch(
             samples[0].push(root.first_uv.map(middle));
             samples[1].push(root.second_uv.map(middle));
         }
-        let mut points = [vec![vec![0.; 2]; n], vec![vec![0.; 2]; n]];
-        for side in 0..2 {
-            for k in 0..2 {
-                let nodal: Vec<_> = samples[side].iter().map(|p| I::point(p[k])).collect();
-                let c = interpolation::reconstruct(&nodal, &basis)?;
-                out.coefficient_work += n * n;
-                for (i, c) in c.into_iter().enumerate() {
-                    points[side][i][k] = c.lo * 0.5 + c.hi * 0.5;
-                }
-            }
-        }
-        let curves = points.map(|control_points| Curve {
-            degree,
-            knots: std::iter::repeat_n(drive[0], n)
-                .chain(std::iter::repeat_n(drive[1], n))
-                .collect(),
-            control_points,
-            weights: vec![1.; n],
-            periodic: false,
-        });
+        let points = [
+            polynomial_fit::interpolate_poles(&samples[0], &basis, &mut out.coefficient_work)?,
+            polynomial_fit::interpolate_poles(&samples[1], &basis, &mut out.coefficient_work)?,
+        ];
+        let curves = points.map(|control_points| polynomial_fit::bezier(drive, control_points));
         let mut reports = vec![];
         for side in 0..2 {
             let available_cells = ((limits.proof_cells - out.proof_cells)
