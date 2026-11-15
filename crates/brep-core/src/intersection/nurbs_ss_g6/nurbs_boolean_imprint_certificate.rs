@@ -426,19 +426,19 @@ pub(super) fn canonical_graph_frame_cell(
             "Graph source must be the canonical one-body graph solid",
         ));
     }
-    let tolerance = source.tolerance_mm.max(1e-9) * 8.;
+    let tolerance = planar_tolerance(source);
     let nonplanar: Vec<_> = source
         .faces
         .iter()
         .enumerate()
         .filter(|(_, face)| planar_support(&face.surface, tolerance).is_none())
         .collect();
-    if nonplanar.len() != 1 {
+    let [(face_id, face)] = nonplanar[..] else {
         return Err(refuse(
             "Graph source must contain exactly one non-planar face",
         ));
-    }
-    let (face_id, top) = (nonplanar[0].0, &nonplanar[0].1.surface);
+    };
+    let top = &face.surface;
     let admitted_top = if multispan {
         positive_multispan_graph(top)
     } else if rational {
@@ -449,7 +449,7 @@ pub(super) fn canonical_graph_frame_cell(
     if !(2..=3).contains(&top.degree_u)
         || !(2..=3).contains(&top.degree_v)
         || !admitted_top
-        || !source.faces[face_id].holes.is_empty()
+        || !face.holes.is_empty()
     {
         return Err(refuse(
             "Curved face is outside the admitted degree-2/3 graph cell",
@@ -472,41 +472,12 @@ pub(super) fn canonical_graph_frame_cell(
     }
     let mut normal = normalize(cross(u, v)).ok_or_else(|| refuse("V3 graph frame is singular"))?;
     let corners = [o, pu, p11, pv];
-    let last_u = top.control_points.len() - 1;
-    let last_v = top.control_points[0].len() - 1;
-    for (i, row) in top.control_points.iter().enumerate().take(last_u + 1) {
-        for (j, p) in row.iter().enumerate().take(last_v + 1) {
-            if (i == 0 || i == last_u || j == 0 || j == last_v)
-                && dot(sub([p[0], p[1], p[2]], o), normal).abs() > tolerance
-            {
-                return Err(refuse(
-                    "V3 graph boundary must remain on its affine corner plane",
-                ));
-            }
-        }
+    if !graph_boundary_on_plane(top, o, normal, tolerance) {
+        return Err(refuse(
+            "V3 graph boundary must remain on its affine corner plane",
+        ));
     }
-    let mut offset = None;
-    'candidate: for vertex in &source.vertices {
-        let w = sub(vertex.point, o);
-        if norm(w) <= tolerance
-            || dot(w, u).abs() > tolerance * norm(u)
-            || dot(w, v).abs() > tolerance * norm(v)
-        {
-            continue;
-        }
-        for corner in corners {
-            let target = [corner[0] + w[0], corner[1] + w[1], corner[2] + w[2]];
-            if !source
-                .vertices
-                .iter()
-                .any(|candidate| near_point(candidate.point, target, tolerance))
-            {
-                continue 'candidate;
-            }
-        }
-        offset = Some(w);
-        break;
-    }
+    let offset = parallel_affine_floor(source, o, [u, v], corners, tolerance);
     let w = offset.ok_or_else(|| refuse("V3 graph solid has no exact parallel affine floor"))?;
     if dot(w, normal) > 0. {
         normal = normal.map(|value| -value);
@@ -519,6 +490,49 @@ pub(super) fn canonical_graph_frame_cell(
         return Err(refuse("V3 graph-to-floor separation proof failed"));
     }
     Ok((face_id, top, o, u, v, w))
+}
+
+/// Whether every boundary control point lies on the plane `(o, normal)`.
+fn graph_boundary_on_plane(top: &Surface, o: [f64; 3], normal: [f64; 3], tolerance: f64) -> bool {
+    let last_u = top.control_points.len().saturating_sub(1);
+    let last_v = top
+        .control_points
+        .first()
+        .map_or(0, Vec::len)
+        .saturating_sub(1);
+    !top.control_points.iter().enumerate().any(|(i, row)| {
+        row.iter().enumerate().take(last_v + 1).any(|(j, p)| {
+            (i == 0 || i == last_u || j == 0 || j == last_v)
+                && dot(sub([p[0], p[1], p[2]], o), normal).abs() > tolerance
+        })
+    })
+}
+
+/// First vertex offset `w`, orthogonal to `u` and `v`, that translates every
+/// graph corner onto a source vertex.
+fn parallel_affine_floor(
+    source: &Model,
+    o: [f64; 3],
+    [u, v]: [[f64; 3]; 2],
+    corners: [[f64; 3]; 4],
+    tolerance: f64,
+) -> Option<[f64; 3]> {
+    source
+        .vertices
+        .iter()
+        .map(|vertex| sub(vertex.point, o))
+        .find(|&w| {
+            !(norm(w) <= tolerance
+                || dot(w, u).abs() > tolerance * norm(u)
+                || dot(w, v).abs() > tolerance * norm(v))
+                && corners.iter().all(|corner| {
+                    let target = [corner[0] + w[0], corner[1] + w[1], corner[2] + w[2]];
+                    source
+                        .vertices
+                        .iter()
+                        .any(|candidate| near_point(candidate.point, target, tolerance))
+                })
+        })
 }
 
 pub(super) fn canonical_graph_frame(source: &Model) -> Result<GraphFrame<'_>> {
