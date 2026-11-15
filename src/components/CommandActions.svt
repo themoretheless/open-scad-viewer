@@ -1,0 +1,41 @@
+<script setup lang="ts">
+/**
+ * Shared Apply/Cancel row for every active modeling command. A disabled Apply
+ * always states why (visible text, `title` and `aria-describedby`). With
+ * `handleKeys` the row itself maps Enter to apply and Escape to cancel; the
+ * direct modeler leaves it off because its workspace owns those keys.
+ */
+const props = withDefaults(defineProps<{
+  ready: boolean
+  reason?: string
+  locale: string
+  applyText?: string
+  handleKeys?: boolean
+}>(), { reason: '', applyText: '', handleKeys: false })
+const emit = defineEmits<{ apply: []; cancel: [] }>()
+const reasonId = `command-blocked-${Math.random().toString(36).slice(2, 10)}`
+const ru = () => props.locale === 'ru'
+function keydown(event: KeyboardEvent) {
+  if (!props.handleKeys || event.isComposing) return
+  if (event.key === 'Escape') { event.preventDefault(); emit('cancel'); return }
+  if (event.key === 'Enter' && props.ready) { event.preventDefault(); emit('apply') }
+}
+</script>
+<template>
+  <div class="command-actions" role="group" :aria-label="ru() ? 'Действия команды' : 'Command actions'" @keydown="keydown">
+    <button
+      class="primary"
+      type="button"
+      :disabled="!ready"
+      :title="!ready && reason ? reason : undefined"
+      :aria-describedby="!ready && reason ? reasonId : undefined"
+      @click="emit('apply')"
+    >{{ (applyText || (ru() ? 'Готово' : 'Apply')) + ' · Enter' }}</button>
+    <button type="button" class="command-cancel" @click="emit('cancel')">{{ (ru() ? 'Отмена' : 'Cancel') + ' · Esc' }}</button>
+    <small v-if="!ready && reason" :id="reasonId" class="command-blocked" role="status">{{ reason }}</small>
+  </div>
+</template>
+<style scoped>
+.command-actions{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.command-blocked{flex-basis:100%;font-size:11px;line-height:1.4;color:var(--text-dim);border-left:2px dashed currentColor;padding-left:6px}
+</style>

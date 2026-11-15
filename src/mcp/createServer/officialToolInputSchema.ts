@@ -18,7 +18,7 @@ export function officialToolInputSchema<T extends z.ZodRawShape>(extra: T) {
   return z.object({ ...officialRunInputShape, ...extra }).strict().superRefine((input, context) => {
     const project = input as unknown as {
       source: string
-      files: Array<{ path: string; text?: string; data_base64?: string }>
+      files: Array<{ path: string; text?: string | undefined; data_base64?: string | undefined }>
     }
     const paths = new Set<string>()
     let bytes = utf8Encoder.encode(project.source).byteLength
@@ -69,7 +69,7 @@ export function meshExecutionSchemaForManifest(
 export function validateIndependentProjectInput(
   input: {
     source: string
-    files: Array<{ path: string; text?: string; data_base64?: string }>
+    files: Array<{ path: string; text?: string | undefined; data_base64?: string | undefined }>
   },
   context: z.core.$RefinementCtx,
 ): void {

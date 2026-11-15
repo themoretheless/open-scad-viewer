@@ -1,3 +1,4 @@
+import { countOperation } from '../dev/operationCounters'
 import {mainSolidExpectation, mainSolidResult, type MainSolidExpectation, type MainSolidJob, type MainSolidProgress, type MainSolidProgressMessage, type MainSolidRequest, type MainSolidResponse, type MainSolidResults} from './mainSolidProtocol'
 import {decodeMainSolidResult} from './mainSolidWorkerTransport'
 
@@ -9,7 +10,7 @@ export interface MainSolidPort {
   terminate():void
 }
 export interface MainSolidTiming {clientElapsedMs:number;warmupMs:number;executeMs:number;prepareMs:number}
-export interface MainSolidRunOptions {signal?:AbortSignal; timeoutMs?:number; onTiming?:(timing:MainSolidTiming)=>void; onProgress?:(progress:MainSolidProgress)=>void}
+export interface MainSolidRunOptions {signal?:AbortSignal | undefined; timeoutMs?:number | undefined; onTiming?:(timing:MainSolidTiming)=>void; onProgress?:(progress:MainSolidProgress)=>void}
 export class MainSolidWorkerError extends Error {
   constructor(readonly code:string, message:string, name='MainSolidWorkerError') {super(message);this.name=name}
 }
@@ -91,6 +92,7 @@ export class MainSolidWorkerClient {
       this.active={fail}
       signal?.addEventListener('abort',abort,{once:true})
       timer=setTimeout(()=>fail(new MainSolidWorkerError('CAD_TIMEOUT','CAD operation exceeded its time limit'),true),timeoutMs)
+      countOperation('solidWorkerRequests')
       try {worker.postMessage({version:1,id,job,...(onTiming?{traceTiming:true}:{})})}
       catch {fail(new MainSolidWorkerError('CAD_TRANSPORT','CAD request could not be sent'),true)}
     })

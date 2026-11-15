@@ -117,7 +117,7 @@ export interface NativeDirectMiterGeometry extends MiterBrepBody {
  * correction, cap selection and the complete numerical bound are Rust-owned.
  * The live Rush route must switch only with a matching qualified WASM. */
 export const createNativeDirectMiterGeometry=(loops:NurbsCurve[][],points:[number,number,number][],normal:[number,number,number],miterLimit=4,closed=false,capCorrection?:{quantum:number;tolerance:number;maxWork:number}):NativeDirectMiterGeometry=>{
- const source={direct:true as const,loops,points,normal,closed,miterLimit,capCorrection}
+ const source={direct:true as const,loops,points,normal,closed,miterLimit,...(capCorrection!==undefined?{capCorrection}:{})}
  const owned=constructUnbudgetedDirectMiterBoundary(source,{smoothnessMaxWork:2000000})
  if(owned.retainedSmoothness===null)throw new Error('Native direct miter retained smoothness report missing')
  const model=owned.model,retainedWallCharts=owned.retainedWallCharts
@@ -148,8 +148,8 @@ export interface ProgressiveAnnularFilling {
 }
 
 export interface ProgressiveBrepBody {model:NurbsBrep;approximation:ProgressiveMultiSweepResult;globalEmbeddingCertified:false;
- capRepresentation?:'radial-annular'|'closed'|'legacy';capSelectionExactWork?:number;capFaceGroups?:[number[],number[]];capFaces?:number[];planarCapFaces?:number[]
- retainedAnnularFilling?:ProgressiveAnnularFilling|null
+ capRepresentation?:'radial-annular'|'closed'|'legacy'|undefined;capSelectionExactWork?:number|undefined;capFaceGroups?:[number[],number[]];capFaces?:number[];planarCapFaces?:number[]
+ retainedAnnularFilling?:ProgressiveAnnularFilling|null|undefined
  retainedSmoothness?:(Omit<NonNullable<UnbudgetedAnnularMiterBoundaryReport['retainedSmoothness']>,'capWallContinuity'> & {capWallContinuity:'C0'|'absent'})|null
  bodyDecompositionErrorUpper?:number|null;bodyDecompositionProducts?:number
  capProjection?:{idealCapDomainsCertified:boolean;normalDots:[[number,number],[number,number]]|null;reversesOrientation:[boolean,boolean]|null;
@@ -218,7 +218,7 @@ export function reconstructCertifiedProgressiveStations(...args:Parameters<typeo
 }
 
 export async function reconstructCertifiedProgressiveStationsAsync(source:ProgressiveBrepBody,
- options:Parameters<typeof prepareCertifiedProgressiveStations>[1],control:{shouldAbort?:()=>boolean;onYield?:()=>void}={}) {
+ options:Parameters<typeof prepareCertifiedProgressiveStations>[1],control:{shouldAbort?:(()=>boolean)|undefined;onYield?:(()=>void)|undefined}={}) {
  const prepared=prepareCertifiedProgressiveStations(source,options)
  const {retainedWallCharts,...volume}=await inspectSweepVolumeAndChartsAsync(prepared.model,readNativeSweepPlanarCapFaces(prepared.model)??sweepCapFaces(prepared.model,prepared.boundaryCertificate.closed),DEFAULT_SWEEP_VOLUME_BUDGETS,control)
  return {...prepared,retainedWallCharts,...chartReceiptFields(retainedWallCharts),volume}

@@ -5,6 +5,7 @@ use super::{
     next_up, numeric, solve,
 };
 use crate::numerics::guards::{Budget, require_finite_at};
+use crate::numerics::progress::Control;
 #[cfg(feature = "codec")]
 pub mod serialization;
 
@@ -184,6 +185,19 @@ pub fn fit_curve_cloud_certified_report(
     control_count: usize,
     tolerance: Option<ToleranceContext>,
 ) -> Result<CurveFitResult<CloudCurveCertificate>> {
+    fit_curve_cloud_certified_report_with(points, control_count, tolerance, &mut Control::none())
+}
+
+/// [`fit_curve_cloud_certified_report`] with cooperative cancellation,
+/// progress and a byte budget for the design matrix. Work units are design
+/// rows over every rank-descent attempt (`total = controls * sites`, an upper
+/// bound reached by `finish`). A cancelled call returns `Cancelled`.
+pub fn fit_curve_cloud_certified_report_with(
+    points: Vec<Vec<f64>>,
+    control_count: usize,
+    tolerance: Option<ToleranceContext>,
+    ctl: &mut Control<'_>,
+) -> Result<CurveFitResult<CloudCurveCertificate>> {
     check(
         points.len() >= 2 && points.len() <= 4096,
         "Cloud curve fitting needs 2..4096 sites",
@@ -207,19 +221,25 @@ pub fn fit_curve_cloud_certified_report(
     let mut last_error = None;
     // Rank-descent budget: `working` strictly decreases from at most 26.
     let mut descent = Budget::with_iterations(working + 1)?.guard("cloud-fit-rank-descent");
+    let total = (working * points.len()) as u64;
+    let mut done = 0_u64;
+    ctl.begin("cloud-curve-fit", total)?;
+    ctl.memory.admit::<f64>(working * points.len(), "cloud-curve-fit.design")?;
     let (controls, rank, pivot_min) = loop {
         descent.tick()?;
         let degree = working - 1;
-        let design = parameters
-            .iter()
-            .map(|&t| {
+        let mut design = ctl.memory.vec::<Vec<f64>>(parameters.len(), "cloud-curve-fit.design")?;
+        for &t in &parameters {
+            done += 1;
+            ctl.step(done, total)?;
+            design.push(
                 (0..working)
                     .map(|i| {
                         binomial(degree, i) * t.powi(i as i32) * (1. - t).powi((degree - i) as i32)
                     })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
+                    .collect::<Vec<_>>(),
+            );
+        }
         let matrix = (0..working)
             .map(|i| {
                 (0..working)
@@ -282,6 +302,7 @@ pub fn fit_curve_cloud_certified_report(
     let delta = 1. / (points.len() - 1).max(1) as f64;
     let hausdorff = next_up(site_error + next_up(speed) * delta);
     let tolerance = context(tolerance);
+    ctl.finish(total, None)?;
     Ok(CurveFitResult {
         curve,
         certificate: CloudCurveCertificate {

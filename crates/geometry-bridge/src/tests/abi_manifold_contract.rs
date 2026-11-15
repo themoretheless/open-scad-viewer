@@ -67,12 +67,12 @@ fn check_as(fmt: u32, positions: &[f64], indices: &[u32]) -> (Value, Option<[usi
     } else {
         upload(positions)
     };
-    unsafe { abi_manifold_check(vp, vl, ip, il, fmt) };
+    unsafe { abi_manifold_check(vp, vl, ip, il, fmt, 0.0) };
     let response = unsafe { take_response() };
     let summary = (response["ok"].as_bool() == Some(true)).then(|| {
         let handle = response["value"].as_u64().unwrap() as usize;
         unsafe {
-            let s = [12, 13, 14, 15].map(|slot| abi_array_field(handle, slot));
+            let s = [16, 17, 18, 19].map(|slot| abi_array_field(handle, slot));
             abi_array_free(handle);
             s
         }
@@ -154,7 +154,7 @@ fn manifold_transport_refuses_nan_and_infinity_in_both_formats() {
             let (ip, il) = upload(&indices);
             unsafe { abi_manifold_metrics(vp, vl, ip, il, FMT_F64) };
             assert_eq!(unsafe { take_response() }["ok"].as_bool(), Some(false));
-            unsafe { abi_manifold_repair(vp, vl, ip, il, FMT_F64, 0.0, 0) };
+            unsafe { abi_manifold_repair(vp, vl, ip, il, FMT_F64, 0.0, 0, 0) };
             assert_eq!(unsafe { take_response() }["ok"].as_bool(), Some(false));
             unsafe {
                 reclaim::<f64>(vp, vl);
@@ -256,4 +256,72 @@ fn manifold_diagnostics_reports_intersections_thickness_clearance_and_mass() {
         Some("GEOMETRY_INVALID_INPUT"),
         "{bad:?}"
     );
+}
+
+#[test]
+fn manifold_check_and_repair_expose_v3_fields() {
+    // Möbius strip of 6 quads plus a zero-area triangle, a sliver and one
+    // unused vertex.
+    let n = 6u32;
+    let mut positions = Vec::new();
+    for i in 0..n {
+        let a = i as f64 / n as f64 * std::f64::consts::TAU;
+        positions.extend([a.cos(), a.sin(), 1.0, a.cos(), a.sin(), -1.0]);
+    }
+    let mut indices: Vec<u32> = Vec::new();
+    for i in 0..n {
+        let (t0, b0) = (2 * i, 2 * i + 1);
+        let (t1, b1) = if i + 1 < n { (2 * i + 2, 2 * i + 3) } else { (1, 0) };
+        indices.extend([t0, b0, t1, b0, b1, t1]);
+    }
+    let base = (positions.len() / 3) as u32;
+    positions.extend([
+        10., 0., 0., 11., 0., 0., 12., 0., 0., // collinear
+        10., 1e-7, 0., // sliver apex
+        50., 50., 50., // unused
+    ]);
+    indices.extend([base, base + 1, base + 2, base, base + 2, base + 3]);
+    let vertex_count = positions.len() / 3;
+    let (vp, vl) = upload(&positions);
+    let (ip, il) = upload(&indices);
+    unsafe { abi_manifold_check(vp, vl, ip, il, FMT_F64, 1e-3) };
+    let response = unsafe { take_response() };
+    let handle = response["value"].as_u64().unwrap() as usize;
+    unsafe {
+        assert_eq!(slice::<u32>(handle, 12), vec![12], "zero-area");
+        assert_eq!(slice::<u32>(handle, 14), vec![13], "sliver");
+        assert_eq!(slice::<u32>(handle, 10), vec![base + 4], "isolated");
+        assert_eq!(abi_array_field(handle, 18), 2, "component count");
+        assert_eq!(abi_array_field(handle, 20), 2, "manifold components");
+        assert_eq!(abi_array_field(handle, 21), 1, "non-orientable components");
+        abi_array_free(handle);
+    }
+    unsafe { abi_manifold_check(vp, vl, ip, il, FMT_F64, -1.0) };
+    assert_eq!(unsafe { take_response() }["ok"].as_bool(), Some(false));
+
+    unsafe { abi_manifold_repair(vp, vl, ip, il, FMT_F64, 0.0, 0, 1) };
+    let response = unsafe { take_response() };
+    let handle = response["value"].as_u64().unwrap() as usize;
+    unsafe {
+        let out_indices = slice::<u32>(handle, 2);
+        let remap = slice::<u32>(handle, 4);
+        assert_eq!(remap.len(), vertex_count);
+        assert_eq!(remap[vertex_count - 1], u32::MAX);
+        assert_eq!(abi_array_field(handle, 14), 1, "removed isolated vertices");
+        assert_eq!(abi_array_field(handle, 1), (vertex_count - 1) * 3);
+        assert!(out_indices.iter().all(|&i| (i as usize) < vertex_count - 1));
+        abi_array_free(handle);
+    }
+    unsafe { abi_manifold_repair(vp, vl, ip, il, FMT_F64, 0.0, 0, 0) };
+    let response = unsafe { take_response() };
+    let handle = response["value"].as_u64().unwrap() as usize;
+    unsafe {
+        assert_eq!(abi_array_field(handle, 5), 0, "no remap unless asked");
+        assert_eq!(abi_array_field(handle, 14), 0);
+        abi_array_free(handle);
+    }
+    unsafe {
+        reclaim::<f64>(vp, vl);
+        reclaim::<u32>(ip, il);
+    }
 }

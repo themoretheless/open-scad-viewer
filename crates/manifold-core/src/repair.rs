@@ -47,6 +47,10 @@ pub struct RepairOutcome {
     /// For every output triangle, the input triangle it came from; `None`
     /// for triangles added by hole filling.
     pub source_triangles: Vec<Option<usize>>,
+    /// For every input vertex, the output vertex it became (after welding
+    /// and, with `remove_isolated_vertices`, compaction); `None` when it was
+    /// removed as unreferenced. Vertices added by splitting have no entry.
+    pub vertex_remap: Vec<Option<usize>>,
     pub report: RepairReport,
 }
 
@@ -107,6 +111,9 @@ pub struct RepairOptions {
     /// Upper bound on repeated passes until the mesh stops changing
     /// (`1` = single pass).
     pub max_iterations: usize,
+    /// Drop vertices no output triangle references, compacting positions;
+    /// `RepairOutcome::vertex_remap` tells the caller where each input vertex went.
+    pub remove_isolated_vertices: bool,
 }
 
 impl Default for RepairOptions {
@@ -120,6 +127,7 @@ impl Default for RepairOptions {
             remove_duplicate_faces: false,
             orient_outward: false,
             max_iterations: 1,
+            remove_isolated_vertices: false,
         }
     }
 }
@@ -172,6 +180,8 @@ pub struct RepairReport {
     pub filled_triangles: usize,
     /// Boundary loops left open because they exceed [`HoleFillLimits`].
     pub refused_holes: usize,
+    /// Unreferenced vertices dropped by `remove_isolated_vertices`.
+    pub removed_isolated_vertices: usize,
     /// Work units spent (see [`RepairBudget::max_work`]).
     pub work: u64,
     /// Passes run.
@@ -252,12 +262,32 @@ pub fn repair_with_options(
         if !converged && seen.contains(&next_key) {
             report.oscillation_detected = true;
         }
+        let vertex_remap = out
+            .vertex_remap
+            .iter()
+            .map(|v| v.and_then(|w| next.vertex_remap[w]))
+            .collect();
         out = RepairOutcome {
             source_triangles: source,
+            vertex_remap,
             ..next
         };
         if report.oscillation_detected {
             break;
+        }
+    }
+    if options.remove_isolated_vertices {
+        let compact = crate::remove_isolated_vertices(&out.positions, &out.indices);
+        if compact.removed > 0 {
+            report.removed_isolated_vertices = compact.removed;
+            out.vertex_remap = out
+                .vertex_remap
+                .iter()
+                .map(|v| v.and_then(|w| compact.remap[w]))
+                .collect();
+            out.positions = compact.positions;
+            out.indices = compact.indices;
+            out.report.residual = check(&out.positions, &out.indices);
         }
     }
     report.converged = converged;
@@ -441,6 +471,7 @@ fn repair_pass(
         positions: pos,
         indices: flat_indices,
         source_triangles: mesh.source,
+        vertex_remap: remap.into_iter().map(Some).collect(),
         report,
     }
 }
@@ -1049,7 +1080,7 @@ fn fill_boundary_loops(
         .enumerate()
         .max_by(|a, b| a.1.abs().total_cmp(&b.1.abs()))
         .map(|(i, _)| i)
-        .unwrap();
+        .expect("loops is non-empty here");
     let mut edges: HashSet<EdgeKey> = mesh
         .tris
         .iter()

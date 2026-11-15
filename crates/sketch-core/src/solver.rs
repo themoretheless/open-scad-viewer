@@ -7,7 +7,7 @@ pub(crate) fn solve_linear_in_place(a: &mut [f64], b: &mut [f64], x: &mut [f64],
         let i_base = i * n;
         let pivot = (i..n)
             .max_by(|&j, &k| a[j * n + i].abs().total_cmp(&a[k * n + i].abs()))
-            .unwrap();
+            .expect("i < n, so i..n is non-empty");
         let pivot_base = pivot * n;
         if !a[pivot_base + i].is_finite() || a[pivot_base + i].abs() < 1e-18 {
             return false;
@@ -54,7 +54,7 @@ pub(crate) fn rank_flat(a: &mut [f64], m: usize, n: usize) -> usize {
         }
         let pivot = (row..m)
             .max_by(|&i, &j| a[i * n + col].abs().total_cmp(&a[j * n + col].abs()))
-            .unwrap();
+            .expect("row < m, so row..m is non-empty");
         if a[pivot * n + col].abs() < 1e-7 {
             continue;
         }
@@ -220,8 +220,8 @@ fn analytic_seed(sketch: &mut Sketch) -> Result<usize> {
             .collect();
         'pairs: for (index, &(a, ra)) in distances.iter().enumerate() {
             for &(b, rb) in &distances[index + 1..] {
-                let pa = fixed[a].unwrap();
-                let pb = fixed[b].unwrap();
+                let pa = fixed[a].expect("distances keeps only constraints whose anchor is fixed");
+                let pb = fixed[b].expect("distances keeps only constraints whose anchor is fixed");
                 let delta = subtract(pb, pa);
                 let d = length(delta);
                 if d <= 1e-12 || d > ra + rb || d < (ra - rb).abs() {
@@ -608,7 +608,7 @@ pub fn analyze_dof(sketch: &Sketch, tolerance: f64) -> Result<DofAnalysis> {
         }
         let pivot = (row..m)
             .max_by(|&i, &j| a[i * n + col].abs().total_cmp(&a[j * n + col].abs()))
-            .unwrap();
+            .expect("row < m, so row..m is non-empty");
         if a[pivot * n + col].abs() < 1e-7 {
             continue;
         }

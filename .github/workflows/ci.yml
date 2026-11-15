@@ -228,6 +228,51 @@ jobs:
             manifold-plan-memory.json
           if-no-files-found: warn
 
+  browser-smoke:
+    # P5: built app in headless Chromium with the no-GPU render seam
+    # (?renderSeam=recording), UI flows, operation budgets and a visual fixture.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-09-16
+          targets: wasm32-unknown-unknown
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            crates/target
+          key: rust-wasm-immutable-v2-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock', 'rust-toolchain.toml') }}
+      - run: npm ci
+      - name: Install checksummed native Binaryen 116
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/binaryen-version_116-x86_64-linux.tar.gz"
+          curl --fail --location --retry 3 "https://github.com/WebAssembly/binaryen/releases/download/version_116/binaryen-version_116-x86_64-linux.tar.gz" --output "$archive"
+          echo "c55b74f3109cdae97490faf089b0286d3bba926bb6ea5ed00c8c784fc53718fd  $archive" | sha256sum --check -
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          echo "OSV_WASM_OPT_NATIVE=$RUNNER_TEMP/binaryen-version_116/bin/wasm-opt" >> "$GITHUB_ENV"
+      - run: npm run build:geometry
+      - run: node node_modules/vite/bin/vite.js build
+      - name: Install the qualification Playwright package and Chromium
+        run: |
+          npm ci --prefix tools/browser-qualification --ignore-scripts --include=dev --registry=https://registry.npmjs.org/ --audit=false --fund=false
+          tools/browser-qualification/node_modules/.bin/playwright install --with-deps chromium
+      - run: node scripts/check-browser-smoke.mjs tmp/browser-smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-smoke
+          path: tmp/browser-smoke
+          if-no-files-found: warn
+
   native-smoke:
     runs-on: ${{ matrix.os }}
     # Windows previously exhausted 90 minutes before the last workspace packages.

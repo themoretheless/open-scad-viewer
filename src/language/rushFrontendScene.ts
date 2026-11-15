@@ -43,7 +43,7 @@ export async function buildTextNurbsScene(document: unknown, quality: GeometryQu
 /** Display-only adapter shared by final scenes and intermediate sweep previews. */
 export function ownNurbsDisplayMesh(
  mesh:ReturnType<typeof import('../kernel/geometry/tessellation').tessellateNurbsSurface>,
- entityId:import('../core/mesh').MeshData['entityId'],
+ entityId:import('../core/mesh').SceneEntityId,
  nativeGeometry?:import('../core/nativeGeometry').NativeGeometryArtifact,
 ){
   const posArray = mesh.positions instanceof Float64Array ? mesh.positions : Float64Array.from(mesh.positions)

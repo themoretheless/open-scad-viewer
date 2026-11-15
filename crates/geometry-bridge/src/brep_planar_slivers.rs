@@ -16,7 +16,7 @@ fn admissible_diagonal(uv: [[f64; 2]; 4]) -> bool {
         uv.into_iter().flatten().map(|v| AuthoredScalar::Binary64Bits(v.to_bits())).collect()) else { return false; };
     let tolerance = ToleranceContext::default_valid();
     let mut context = PredicateContext::new(&source, &tolerance, Limits::default(), None);
-    let refs = std::array::from_fn::<_, 4, _>(|i| [source.leaf(2*i).unwrap(), source.leaf(2*i+1).unwrap()]);
+    let refs = std::array::from_fn::<_, 4, _>(|i| [source.leaf(2*i).expect("the arena was authored from exactly these coordinates"), source.leaf(2*i+1).expect("the arena was authored from exactly these coordinates")]);
     let mut sign = |t: [usize; 3]| orient2d(&mut context, refs[t[0]], refs[t[1]], refs[t[2]])
         .ok().and_then(|r| match r.outcome { Outcome::Sign(s) => Some(s), _ => None });
     let Some(winding) = sign([0, 1, 2]) else { return false; };

@@ -1,3 +1,4 @@
+import { countOperation } from '../dev/operationCounters'
 import {packHistoryText,unpackHistoryText,sweepHistoryTextPool,type HistoryText} from './historyText'
 import {qualifySourceBodyRecord,type SourceBodyRecord} from '../kernel/sourceBodyArchive'
 import {withEditableSketchPath} from './editableSketchPath'
@@ -39,7 +40,7 @@ export interface DirectInterchangeMetadata {
 }
 export interface DirectDocument { sourceBodies?:SourceBodyRecord[]; version: 1; blenderProjectId?: string; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
-const clone = <T>(value: T): T => structuredClone(value)
+const clone = <T>(value: T): T => { countOperation('documentClones'); return structuredClone(value) }
 const DEEP_JSON_NORMALIZATION = Symbol('deep JSON normalization')
 /** Only for a freshly parsed, exclusively owned JSON tree, never caller-owned objects. */
 function normalizeOwnedJson(value: unknown, depth = 0): unknown {
@@ -380,7 +381,7 @@ export class DirectHistory {
   }
   private commitValidated(next:DirectDocument,validateChange?:(resolved:DirectDocument)=>void) {
     const base=this.current
-    next.blenderProjectId ??= (this.current.document??JSON.parse(unpackHistoryText(this.current)) as DirectDocument).blenderProjectId
+    if(next.blenderProjectId===undefined){const inherited=(this.current.document??JSON.parse(unpackHistoryText(this.current)) as DirectDocument).blenderProjectId;if(inherited!==undefined)next.blenderProjectId=inherited}
     // UI policies (for example locked linked bodies) must see resolved geometry.
     // Give the policy its own copy so it cannot mutate the validated state.
     if (validateChange) validateChange(clone(next))
@@ -389,6 +390,7 @@ export class DirectHistory {
     if (nextText.length === this.current.characters && nextText === unpackHistoryText(this.current)) return
     this.past.push({chunks:this.current.chunks,characters:this.current.characters})
     this.current = { ...this.snapshot(nextText), document: next }; this.future = []
+    countOperation('historyCommits')
     // Count unique retained text, including the current snapshot. Keep at least
     // one undo state even when a single document exceeds the storage budget.
     let retained = this.sweep()
@@ -439,6 +441,7 @@ export class DirectHistory {
     // only if a synchronous history consumer asks for geometry later.
     from.pop();to.push({chunks:base.chunks,characters:base.characters})
     this.current={...snapshot}
+    countOperation('historyRestores')
     return true
   }
 }

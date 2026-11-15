@@ -1071,6 +1071,7 @@ fn general_multispan_boolean_bridge_is_strict_and_audited() {
 fn certified_freeform_tessellation_crosses_bridge() {
     let planar =
         encode(cad_step::freeform_cuboid_solid([0., 0., 0.], [2., 3., 4.]).unwrap()).unwrap();
+    // The general full-chart cell now certifies elevated planar Bezier faces.
     assert!(
         dispatch(json!({
             "op":"brep_nurbs_certified_tessellate",
@@ -1078,7 +1079,7 @@ fn certified_freeform_tessellation_crosses_bridge() {
             "chordToleranceMm":0.1,
             "maxTriangles":20000
         }))
-        .is_err()
+        .is_ok()
     );
     let planar_cert = dispatch(json!({
         "op":"brep_nurbs_certified_freeform_tessellate",

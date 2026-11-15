@@ -37,7 +37,7 @@ fn sign(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> Result<Sign> {
             .collect(),
     )
     .map_err(|_| input("Invalid cusp sampling coordinates"))?;
-    let refs = |i: usize| std::array::from_fn(|k| source.leaf(2 * i + k).unwrap());
+    let refs = |i: usize| std::array::from_fn(|k| source.leaf(2 * i + k).expect("the arena was authored from exactly these coordinates"));
     let tolerance = ToleranceContext::default_valid();
     let mut limits = Limits::default();
     limits.max_work = 10000;

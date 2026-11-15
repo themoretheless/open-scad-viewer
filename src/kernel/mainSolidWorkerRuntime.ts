@@ -35,7 +35,7 @@ import {inspectMeshManifoldObjects} from './meshManifoldDefects'
 import {addSolidPrimitive} from './solidPrimitive'
 import {prepareSolidDisplay} from './solidDisplayPreparation'
 import {SolidInstanceBatchCache} from './solidInstanceBatchCache'
-import {parseDirectDocument,serializeDirectDocument} from '../app/directModeling'
+import {parseDirectDocument,serializeDirectDocument,type DirectDocument} from '../app/directModeling'
 import {applySolidBrepTool} from './solidBrepTool'
 import {applySolidPointEdit} from './solidPointEdit'
 import {applySolidSketchEdit} from './solidSketchEdit'
@@ -68,13 +68,15 @@ import {prepareMainSolidTransfer} from './mainSolidWorkerTransport'
 import {createWorkerHandler} from '../core/workerHandlerRuntime'
 import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidProgress,type MainSolidProgressMessage,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
 
+/** Run the authoritative history parser here so the UI can commit without re-validating on its thread. */
+const validatedDocumentResult=<T extends {document:DirectDocument}>(result:T):T=>({...result,document:parseDirectDocument(serializeDirectDocument(result.document),instanceCache)})
 async function execute(job:MainSolidJob,onProgress?:(progress:MainSolidProgress)=>void):Promise<MainSolidResults[keyof MainSolidResults]> {
   switch(job.kind) {
 case 'frozenGraphBodyDisplay':return displayFrozenGraphBody(job.artifact,job.segments,job.options)
 case 'frozenGraphBodyRestore':return restoreFrozenGraphBody(job.artifact,job.options)
 case 'sourceGraphG2Preview':return createSourceGraphG2Preview(job.sources,job.width,job.options)
 case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)
-case 'minkowski3d':return (await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options)
+case 'minkowski3d':return validatedDocumentResult((await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options))
 case 'animationFrames':return (await import('../exchange/assemblyFrameExport')).exportAssemblyFrames(job.document,job.animation,job.fps)
 case 'animationSample':return (await import('../app/assemblyAnimation')).sampleAssemblyAnimation(job.document,job.animation,job.time)
 case 'drawingPdf':return (await import('../app/drawingSheets')).vectorDrawingPdf(job.sheets)
@@ -134,7 +136,7 @@ case 'transaction':return executeDirectTransaction(job.document,job.script)
     case 'nurbsEdit':return (await import('./solidNurbsEdit')).applySolidNurbsEdit(job.document,job.options)
     case 'pointEdit':return applySolidPointEdit(job.document,job.options)
     case 'sketchEdit':return applySolidSketchEdit(job.document,job.options)
-    case 'boolean':return applySolidBoolean(job.document,job.options)
+    case 'boolean':return validatedDocumentResult(applySolidBoolean(job.document,job.options))
     case 'sceneEdit':return parseDirectDocument(serializeDirectDocument(applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document,instanceCache):job.document,job.options,instanceCache)),instanceCache)
     case 'curveMatch':return matchSolidCurve(...job.args)
     case 'surfaceMatch':return matchSolidSurface(...job.args)

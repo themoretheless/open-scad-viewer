@@ -150,7 +150,7 @@ pub(super) fn build(v: Value) -> Result<Value> {
             let legacy=if annular_mode {None}else{
                 Some(brep_core::analytic::progressive_profile_body_with_rmf_policy_and_corrections(brep_core::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine, frames: frame_axis.as_ref().zip(frame_normal.as_ref()), guidance }, options, brep_core::analytic::ProgressiveBodyPolicy { correction, profile_correction, rmf_policy })?)
             };
-            let result=owned.as_ref().map(|body|body.evidence()).or(legacy.as_ref()).unwrap();
+            let result=owned.as_ref().map(|body|body.evidence()).or(legacy.as_ref()).expect("exactly one of the annular (owned) and legacy constructors runs");
             // Replay the complete original constructor, never caller-authored sections,
             // retained geometry or a scalar certificate. The base receipt stays separate.
             let station_reconstruction=if v["op"].as_str().is_some_and(|op|op.ends_with("_reconstruct_stations")) {

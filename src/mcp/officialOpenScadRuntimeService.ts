@@ -45,16 +45,16 @@ export interface OfficialOpenScadProjectFileInput {
 }
 
 export interface OfficialOpenScadRunOptions {
-  readonly files?: readonly OfficialOpenScadProjectFileInput[]
-  readonly experimentalFeatures?: readonly OfficialOpenScadExperimentalFeature[]
-  readonly defines?: readonly string[]
-  readonly time?: number
-  readonly backend?: OfficialOpenScadBackend
-  readonly hardWarnings?: boolean
-  readonly checkParameters?: boolean
-  readonly checkParameterRanges?: boolean
-  readonly signal?: AbortSignal
-  readonly timeoutMs?: number
+  readonly files?: readonly OfficialOpenScadProjectFileInput[] | undefined
+  readonly experimentalFeatures?: readonly OfficialOpenScadExperimentalFeature[] | undefined
+  readonly defines?: readonly string[] | undefined
+  readonly time?: number | undefined
+  readonly backend?: OfficialOpenScadBackend | undefined
+  readonly hardWarnings?: boolean | undefined
+  readonly checkParameters?: boolean | undefined
+  readonly checkParameterRanges?: boolean | undefined
+  readonly signal?: AbortSignal | undefined
+  readonly timeoutMs?: number | undefined
 }
 
 export interface OfficialOpenScadCheckResult {

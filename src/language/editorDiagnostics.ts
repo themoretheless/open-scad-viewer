@@ -1,9 +1,10 @@
+import type { EditorAdapter } from '../editor/EditorAdapter'
 import type { GeometryBuildError } from '../kernel/geometryWorkerProtocol'
 
 export interface EditorDiagnostic {
   readonly severity: 'error' | 'warning'
   readonly message: string
-  readonly code?: string
+  readonly code?: string | undefined
   readonly line: number
   readonly column: number
   readonly start: number
@@ -35,7 +36,7 @@ export function diagnosticFromBuildError(source: string, error: GeometryBuildErr
   }
 }
 
-export function revealDiagnostic(editor: Pick<HTMLTextAreaElement, 'focus' | 'setSelectionRange'>, diagnostic: EditorDiagnostic) {
+export function revealDiagnostic(editor: Pick<EditorAdapter, 'focus' | 'setSelection'>, diagnostic: EditorDiagnostic) {
   editor.focus({ preventScroll: false })
-  editor.setSelectionRange(diagnostic.start, diagnostic.end, 'forward')
+  editor.setSelection(diagnostic.start, diagnostic.end, 'forward')
 }

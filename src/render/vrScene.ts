@@ -14,7 +14,7 @@ export function prepareVrScene(meshes: readonly Pick<MeshData, 'vertices' | 'ind
 }
 
 /** Adapter for Solid/Mesh workspaces, whose published polygon coordinates are world-space. */
-export function prepareVrPolygons(meshes: readonly { positions: ArrayLike<number>; indices: ArrayLike<number>; color?: readonly number[] }[]): VrMesh[] {
+export function prepareVrPolygons(meshes: readonly { positions: ArrayLike<number>; indices: ArrayLike<number>; color?: readonly number[] | undefined }[]): VrMesh[] {
   return prepareVrScene(meshes.map(mesh => {
     const vertices = new Float32Array(mesh.positions.length * 2)
     for (let i = 0; i < mesh.positions.length; i++) vertices[Math.floor(i / 3) * 6 + i % 3] = mesh.positions[i]

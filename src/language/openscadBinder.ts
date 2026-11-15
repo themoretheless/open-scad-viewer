@@ -59,12 +59,12 @@ export interface BoundProgram {
 }
 
 export interface BindOpenScadOptions {
-  readonly languageProfile?: OpenScadLanguageProfile
+  readonly languageProfile?: OpenScadLanguageProfile | undefined
   readonly source?: string
 }
 
 export interface PrepareOpenScadFrontEndOptions {
-  readonly languageProfile?: OpenScadLanguageProfile
+  readonly languageProfile?: OpenScadLanguageProfile | undefined
   readonly compile?: (source: string) => readonly Statement[]
   readonly now?: () => number
 }

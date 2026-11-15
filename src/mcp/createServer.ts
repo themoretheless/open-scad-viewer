@@ -865,12 +865,12 @@ export interface OfficialToolRunInput {
   source: string
   files: Array<{
     path: string
-    text?: string
-    data_base64?: string
+    text?: string | undefined
+    data_base64?: string | undefined
   }>
   experimental_features: Array<typeof OFFICIAL_OPENSCAD_EXPERIMENTAL_FEATURES[number]>
   defines: string[]
-  time?: number
+  time?: number | undefined
   backend: 'Manifold' | 'CGAL'
   hard_warnings: boolean
   check_parameters: boolean

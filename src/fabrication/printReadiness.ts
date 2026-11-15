@@ -125,7 +125,7 @@ export function assertPrintReady(mesh: PolygonMesh, options: SolidIntersectionOp
   }
   if (!intersections.complete) {
     throw new PrintReadinessError('PRINT_CHECK_INCOMPLETE', {
-      stopReason: intersections.stopReason ?? undefined,
+      ...(intersections.stopReason != null ? { stopReason: intersections.stopReason } : {}),
       work: intersections.work,
       maxWork: intersections.maxWork,
       maxContacts: intersections.maxContacts,

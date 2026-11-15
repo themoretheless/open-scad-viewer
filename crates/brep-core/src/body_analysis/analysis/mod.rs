@@ -13,6 +13,8 @@ pub const CERTIFIED_MASS_PROPERTIES_CAPABILITY: &str = "certified-mass-propertie
 
 mod certified_cylinder_radius;
 mod certified_mass_properties;
+mod certified_freeform_volume;
+pub use certified_freeform_volume::*;
 pub mod draft;
 mod mass_properties;
 mod mechanics;

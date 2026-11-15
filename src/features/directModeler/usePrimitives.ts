@@ -1,4 +1,5 @@
 import {primitiveCreationError} from '../../app/primitiveCreationError'
+import { presentKernelError } from '../../i18n/kernelErrors'
 import { primitiveKinds, type Pane } from './helpers'
 import { createSolidPreviewWorker } from '../../kernel/solidPreviewWorker'
 import { type DirectSketch, type DirectDocument, type DirectHistory } from '../../app/directModeling'
@@ -81,7 +82,7 @@ async function addPrimitive(kind: typeof primitiveKinds[number]) {
  primitivePending.value=true;workspace.value?.focus()
  try{
   if(!Number.isFinite(primitiveSize.value)||primitiveSize.value<.1||primitiveSize.value>10000)throw Error(label('Размер от 0.1 до 10000 мм','Size must be 0.1–10000 mm'))
-  const next=await primitiveWorker.run({kind:'primitive',document:history.document,options:{kind,id,name,size:primitiveSize.value,topRadius:primitiveTopRadius.value,innerRadius:primitiveInnerRadius.value,...(kind==='tube'&&primitiveG2Enabled.value?{g2TransitionSize:primitiveG2Size.value,...(primitiveG2Individual.value?{g2TransitionSizes:[...primitiveG2Sizes.value] as [number,number,number,number]}:{})}:{}),round:roundGeometry.value,segments:brepSegments.value,group:activeGroup.value||undefined}})
+  const next=await primitiveWorker.run({kind:'primitive',document:history.document,options:{kind,id,name,size:primitiveSize.value,topRadius:primitiveTopRadius.value,innerRadius:primitiveInnerRadius.value,...(kind==='tube'&&primitiveG2Enabled.value?{g2TransitionSize:primitiveG2Size.value,...(primitiveG2Individual.value?{g2TransitionSizes:[...primitiveG2Sizes.value] as [number,number,number,number]}:{})}:{}),round:roundGeometry.value,segments:brepSegments.value,...(activeGroup.value?{group:activeGroup.value}:{})}})
   if(!current())return
   const {validateLocked,added}=prepareCommit(next)
   const applied=await target.commitAsync(async()=>next,validateLocked)
@@ -90,7 +91,7 @@ async function addPrimitive(kind: typeof primitiveKinds[number]) {
  }catch(e){if(current()){
   const message=e instanceof Error?e.message:String(e),code=e&&typeof e==='object'&&'code' in e&&typeof e.code==='string'?e.code:'';failedPrimitive.value=kind
   primitiveG2Invalid.value=kind==='tube'&&primitiveG2Enabled.value&&(code==='BREP_G2_ANNULAR_LIMITS'||message.includes('BREP_G2_ANNULAR_LIMITS')||message.includes('G2 tube transition size'))
-  error.value=primitiveCreationError(message,primitiveG2Invalid.value,label,code)
+  error.value=primitiveCreationError(message,primitiveG2Invalid.value,label,code,presentKernelError(e,label('ru','en')==='ru'?'ru':'en').message)
  }}
  finally{if(generation===primitiveGeneration)primitivePending.value=false}
 }

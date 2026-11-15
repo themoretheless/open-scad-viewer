@@ -50,7 +50,7 @@ export class MeshImportError extends Error {
 }
 
 export type MeshImportRepairMode = 'none' | 'conservative' | 'full'
-export type MeshImportRepairStats = Omit<KernelManifoldRepair, 'positions' | 'indices'>
+export type MeshImportRepairStats = Omit<KernelManifoldRepair, 'positions' | 'indices' | 'vertexRemap' | 'removedIsolatedVertices'>
 
 /** Before/after topology evidence and the changes made by the selected repair. */
 export interface MeshImportManifoldAnalysis {
@@ -73,13 +73,13 @@ export interface ImportedMesh extends PolygonMesh {
 
 export interface MeshImportOptions {
   /** Override extension-based detection. */
-  readonly format?: MeshImportFormat
+  readonly format?: MeshImportFormat | undefined
   /**
    * Absolute welding tolerance. `0` (default) merges only bit-identical
    * positions, which is enough to close well-formed STL/PLY soups without
    * distorting geometry. `false` keeps the file's own indexing.
    */
-  readonly weld?: number | false
+  readonly weld?: number | false | undefined
   /** Topology repair after import welding. Conservative is the safe default;
    * Full additionally splits non-manifold fans and fills simple boundary loops.
    * With `weld: false`, repair defaults to `none` so file indexing is preserved. */

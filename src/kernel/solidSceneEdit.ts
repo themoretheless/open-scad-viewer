@@ -1,4 +1,5 @@
 import type {SolidInstanceBatchCache} from './solidInstanceBatchCache'
+import {DirectInputError} from '../i18n/kernelErrors'
 import {transformSketch} from '../app/directSketchGeometry'
 import {parseDirectDocument,type DirectDocument} from '../app/directModeling'
 import {transformSelection} from '../app/directSolidTools'
@@ -48,7 +49,7 @@ export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOpti
    body.instance.matrix[0][3]=p.x;body.instance.matrix[1][3]=p.y;body.instance.matrix[2][3]=p.z
    return resolveSolidInstances(d,instanceCache)
   }
-  case 'loft':d.bodies.push({id:p.createdId,name:'Ruled loft',...createRuledSketchLoft(d.sketches,p.ids)});return parseDirectDocument(stringifyMeshJson(d))
+  case 'loft':if(p.ids.length<2||p.ids.length>64)throw new DirectInputError('DIRECT_LOFT_SECTIONS','Select 2–64 closed polygon sketches in loft order.',undefined,p.ids);d.bodies.push({id:p.createdId,name:'Ruled loft',...createRuledSketchLoft(d.sketches,p.ids)});return parseDirectDocument(stringifyMeshJson(d))
   default:throw Error('Unsupported scene edit.')
  }
 }

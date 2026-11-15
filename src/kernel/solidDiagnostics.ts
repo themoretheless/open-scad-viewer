@@ -21,7 +21,7 @@ export function inspectSolidDisplay(mesh:PolygonMesh,offset:number,normal:number
 }
 
 export interface SolidMeshContact {triangles:number[];point:number[];sharedVertices:number;toleranceMm:number}
-export interface SolidIntersectionOptions {maxWork?:number;maxContacts?:number}
+export interface SolidIntersectionOptions {maxWork?:number | undefined;maxContacts?:number | undefined}
 export interface SolidIntersectionReport {contacts:SolidMeshContact[];complete:boolean;stopReason:'work-limit'|'contact-limit'|null;work:number;maxWork:number;maxContacts:number;relativeTolerance:number;scope:'display-mesh-all-contacts'}
 /** Enumerates disallowed mesh pairs; complete=false never certifies their absence. */
 export function inspectSolidIntersections(mesh:PolygonMesh,options:SolidIntersectionOptions={}) {

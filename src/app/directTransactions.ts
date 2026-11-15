@@ -94,7 +94,7 @@ export function appendDirectDocumentEdit(script:DirectActionScript,before:Direct
  for(const collection of ['sketches','bodies','curves','surfaces','groups'] as const){
   const key=collection==='groups'?'name':'id',a=(before[collection]??[]) as any[],b=(after[collection]??[]) as any[]
   const ids=new Set([...a,...b].map(e=>e[key]))
-  for(const id of ids){const old=a.find(e=>e[key]===id)??null,index=b.findIndex(e=>e[key]===id),value=index<0?null:b[index];if(!sameEntity(old,value))edits.push({collection,id,before:structuredClone(old),after:structuredClone(value),index:index<0?undefined:index})}
+  for(const id of ids){const old=a.find(e=>e[key]===id)??null,index=b.findIndex(e=>e[key]===id),value=index<0?null:b[index];if(!sameEntity(old,value))edits.push({collection,id,before:structuredClone(old),after:structuredClone(value),...(index<0?{}:{index})})}
   const aOrder=a.map(e=>e[key]),bOrder=b.map(e=>e[key])
   if(!sameEntity(aOrder,bOrder))edits.push({collection:'order',id:collection,before:aOrder,after:bOrder})
  }

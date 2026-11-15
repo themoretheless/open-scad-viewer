@@ -6,7 +6,7 @@ import type { PlacedAssemblyComponent } from './rushGraphAssembly'
 import type { solveRushGraphSketch } from './rushGraphSketch'
 import { z } from 'zod/v4'
 
-export type CheckedValueType = {name:string;args?:CheckedValueType[];fields?:Record<string,CheckedValueType>}
+export type CheckedValueType = {name:string;args?:CheckedValueType[] | undefined;fields?:Record<string,CheckedValueType> | undefined}
 export type MatchPattern =
   | {kind:'wildcard'}
   | {kind:'bind';name:string}
@@ -14,15 +14,15 @@ export type MatchPattern =
   | {kind:'as';name:string;pattern:MatchPattern}
   | {kind:'or';patterns:MatchPattern[]}
   | {kind:'range';start:Expression;end:Expression;inclusive:boolean}
-  | {kind:'list';prefix:MatchPattern[];suffix:MatchPattern[];rest?:string}
+  | {kind:'list';prefix:MatchPattern[];suffix:MatchPattern[];rest?:string | undefined}
   | {kind:'record';fields:Record<string,MatchPattern>;exact:boolean}
   | {kind:'type';name:'int'|'f32'|'f64'|'str'|'length'|'angle'|'list'|'record';pattern:MatchPattern}
-export type ScalarConstraint = {id:string;left:Expression;relation:'le'|'ge'|'eq'|'lt'|'gt';right:Expression;tolerance?:Expression;message:string}
-export type GeometryAssertion = {id:string;target:string;check:'hasBodies'|'isWatertight'|'hasNoDegenerateTriangles'|'height'|'width'|'depth';expected?:Expression;tolerance?:Expression;message:string}
+export type ScalarConstraint = {id:string;left:Expression;relation:'le'|'ge'|'eq'|'lt'|'gt';right:Expression;tolerance?:Expression | undefined;message:string}
+export type GeometryAssertion = {id:string;target:string;check:'hasBodies'|'isWatertight'|'hasNoDegenerateTriangles'|'height'|'width'|'depth';expected?:Expression | undefined;tolerance?:Expression | undefined;message:string}
 export type Expression =
   {op:'memo';id:string;value:Expression} |
   {op:'geometry_effects';input:string;value:Expression} |
-  {op:'guarded';input:Expression;binding:string;steps:{kind:'assert'|'where'|'while';value:Expression}[]} |  {op:'assert_value';constraints?:ScalarConstraint[];geometry_assertions?:GeometryAssertion[];value:Expression} |
+  {op:'guarded';input:Expression;binding:string;steps:{kind:'assert'|'where'|'while';value:Expression}[]} |  {op:'assert_value';constraints?:ScalarConstraint[] | undefined;geometry_assertions?:GeometryAssertion[] | undefined;value:Expression} |
   { op: 'checked'; checks: Expression[]; value: Expression } |
   { op: 'typed'; type: RushGraphNumericType; value: Expression } |
   { op: 'quantity'; value: number; unit: Unit }
@@ -31,14 +31,14 @@ export type Expression =
   | { op: 'apply'; function: Expression; args: Expression[] }
   | { op: 'list'; items: Expression[] }
   | { op: 'range'; count: Expression; start: Expression; step: Expression }
-  | { op: 'interval'; start: Expression; end: Expression; inclusive: boolean; count?: Expression; step?: Expression }
+  | { op: 'interval'; start: Expression; end: Expression; inclusive: boolean; count?: Expression | undefined; step?: Expression | undefined }
   | { op: 'zip'; inputs: Expression[] }
   | { op: 'enumerate'; input: Expression }
   | { op: 'map' | 'filter' | 'flatmap'; input: Expression; function: Expression }
   | { op: 'text'; value: string }
   | { op: 'record'; fields: Record<string, Expression> }
   | { op: 'field'; input: Expression; name: string }
-  | { op: 'query'; method: string; input: Expression; function?: Expression; argument?: Expression; functions?: Expression[]; keys?: {function: Expression; descending: boolean}[] }
+  | { op: 'query'; method: string; input: Expression; function?: Expression | undefined; argument?: Expression | undefined; functions?: Expression[] | undefined; keys?: {function: Expression; descending: boolean}[] | undefined }
   | { op: 'reduce'; input: Expression; function: Expression; initial: Expression }
   | { op: 'at'; input: Expression; index: Expression }
   | { op: 'length'; input: Expression }
@@ -46,7 +46,7 @@ export type Expression =
   | { op: 'add' | 'subtract' | 'multiply' | 'divide' | 'min' | 'max' | 'pow' | 'mod' | 'lt' | 'le' | 'eq' | 'and' | 'or'; args: [Expression, Expression] }
   | { op: 'negate' | 'abs' | 'sqrt' | 'sin' | 'cos' | 'floor' | 'ceil' | 'not'; value: Expression }
   | { op: 'typed_value'; value:Expression; type:CheckedValueType }
-  | { op: 'match'; input:Expression; arms:{pattern:MatchPattern;guard?:Expression;body:Expression}[] }
+  | { op: 'match'; input:Expression; arms:{pattern:MatchPattern;guard?:Expression | undefined;body:Expression}[] }
   | { op: 'if'; condition: Expression; then: Expression; else: Expression }
   | { op: 'let'; name: string; value: Expression; body: Expression }
   | { op: 'call'; function: string; args: Record<string, Expression> }

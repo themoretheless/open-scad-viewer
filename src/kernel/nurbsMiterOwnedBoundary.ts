@@ -21,13 +21,13 @@ export interface MiterOwnedSourceRequest {
  initialSteps:number
  maxSteps:number
  maxDeviation:number
- axisScale?:NurbsCurve
- centerLaw?:NurbsCurve
- frameAxis?:NurbsCurve
- frameNormal?:NurbsCurve
- orientationGuide?:NurbsCurve
- circleCorrection?:{quantum:number;tolerance:number;maxWork:number|null}
- capCorrection?:{quantum:number;tolerance:number;maxWork:number|null;authoredFrame?:boolean}
+ axisScale?:NurbsCurve | undefined
+ centerLaw?:NurbsCurve | undefined
+ frameAxis?:NurbsCurve | undefined
+ frameNormal?:NurbsCurve | undefined
+ orientationGuide?:NurbsCurve | undefined
+ circleCorrection?:{quantum:number;tolerance:number;maxWork:number|null} | undefined
+ capCorrection?:{quantum:number;tolerance:number;maxWork:number|null;authoredFrame?:boolean | undefined} | undefined
  limits?:{
   maxProducts:number;maxFaces:number;exactWork:number
   correspondenceMaxFaces?:number;capMaxEdges?:number;wallCells?:number

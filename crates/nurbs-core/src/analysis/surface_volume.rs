@@ -82,11 +82,33 @@ fn position(s: &Surface, span: [usize; 2], j: &jets::Jets) -> Result<V> {
     add(j[0][0], std::array::from_fn(|k| Interval::point(origin[k])))
 }
 
-fn cell(s: &Surface, patch: usize, span: [usize; 2], domain: [[f64; 2]; 2], serial: usize) -> Result<Cell> {
+/// Field selector: `None` integrates `F = x` (divergence 3); `Some(e)`
+/// integrates `F = (x·e) e` (divergence `e·e`), whose flux vanishes on every
+/// face with normal orthogonal to `e`.
+#[derive(Clone, Copy)]
+struct Field {
+    axis: Option<[f64; 3]>,
+    sign: f64,
+}
+impl Field {
+    fn project(&self, v: V) -> Result<V> {
+        match self.axis {
+            None => Ok(v),
+            Some(e) => {
+                let e = e.map(Interval::point);
+                scale(e, dot(v, e)?)
+            }
+        }
+    }
+}
+
+fn cell(s: &Surface, patch: usize, span: [usize; 2], domain: [[f64; 2]; 2], serial: usize, field: Field) -> Result<Cell> {
     // Local unit-square coordinates: the jets carry the chain-rule factors, so
-    // the cell flux equals the unit-square integral of f = S·(S_u × S_v).
+    // the cell flux equals the unit-square integral of f = F(S)·(S_u × S_v).
+    // F is linear, so F(S)_u = F(S_u) and so on.
     let j = jets::calculate(s, span, domain, None)?;
-    let p = position(s, span, &j)?;
+    let p = field.project(position(s, span, &j)?)?;
+    let (pu, pv, puu, pvv) = (field.project(j[1][0])?, field.project(j[0][1])?, field.project(j[2][0])?, field.project(j[0][2])?);
     let n = cross(j[1][0], j[0][1])?;
     let f = dot(p, n)?;
     let (mut lo, mut hi) = (f.lo, f.hi);
@@ -96,8 +118,8 @@ fn cell(s: &Surface, patch: usize, span: [usize; 2], domain: [[f64; 2]; 2], seri
     let nvv = lin(&[(j[1][2], j[0][1], 1.), (j[1][1], j[0][2], 2.), (j[1][0], j[0][3], 1.)])?;
     // f_uu = S_uu·N + 2 S_u·N_u + S·N_uu, likewise along v.
     let two = Interval::point(2.);
-    let fuu = dot(j[2][0], n)?.add(dot(j[1][0], nu)?.mul(two)?)?.add(dot(p, nuu)?)?;
-    let fvv = dot(j[0][2], n)?.add(dot(j[0][1], nv)?.mul(two)?)?.add(dot(p, nvv)?)?;
+    let fuu = dot(puu, n)?.add(dot(pu, nu)?.mul(two)?)?.add(dot(p, nuu)?)?;
+    let fvv = dot(pvv, n)?.add(dot(pv, nv)?.mul(two)?)?.add(dot(p, nvv)?)?;
     let mag = |x: Interval| x.lo.abs().max(x.hi.abs());
     let remainder = ((mag(fuu) + mag(fvv)) / 12.).next_up();
     if remainder.is_finite() {
@@ -105,7 +127,7 @@ fn cell(s: &Surface, patch: usize, span: [usize; 2], domain: [[f64; 2]; 2], seri
         for u in 0..2 {
             for v in 0..2 {
                 let c = jets::calculate(s, span, domain, Some([u, v]))?;
-                corners = corners.add(dot(position(s, span, &c)?, cross(c[1][0], c[0][1])?)?)?;
+                corners = corners.add(dot(field.project(position(s, span, &c)?)?, cross(c[1][0], c[0][1])?)?)?;
             }
         }
         let t = corners.mul(Interval::point(0.25))?;
@@ -113,14 +135,15 @@ fn cell(s: &Surface, patch: usize, span: [usize; 2], domain: [[f64; 2]; 2], seri
         hi = hi.min((t.hi + remainder).next_up());
     }
     numeric(lo <= hi, "Volume cell enclosures are inconsistent")?;
-    Ok(Cell { patch, span, domain, flux: Interval::new(lo, hi)?, serial })
+    let flux = if field.sign < 0. { Interval::new(-hi, -lo)? } else { Interval::new(lo, hi)? };
+    Ok(Cell { patch, span, domain, flux, serial })
 }
 
 fn sum(heap: &BinaryHeap<Cell>) -> Result<Interval> {
     heap.iter().try_fold(Interval::point(0.), |t, c| t.add(c.flux))
 }
-fn report(flux: Interval, cells: usize, tolerance: f64, reason: StopReason) -> Result<VolumeReport> {
-    let total = Interval::new((flux.lo / 3.).next_down(), (flux.hi / 3.).next_up())?;
+fn report(flux: Interval, divergence: Interval, cells: usize, tolerance: f64, reason: StopReason) -> Result<VolumeReport> {
+    let total = flux.div(divergence)?;
     let value = total.lo + (total.hi - total.lo) / 2.;
     let error_upper = (value - total.lo).max(total.hi - value).next_up();
     numeric(value.is_finite() && error_upper.is_finite(), "Enclosed volume exhausted numeric range")?;
@@ -138,12 +161,37 @@ fn report(flux: Interval, cells: usize, tolerance: f64, reason: StopReason) -> R
 /// Enclose the signed volume bounded by `surfaces`. A budget stop returns a
 /// valid enclosure with `within_tolerance == false`.
 pub fn enclosed_volume(surfaces: &[Surface], tolerance: f64, max_cells: usize) -> Result<VolumeReport> {
-    check(!surfaces.is_empty(), "Enclosed volume needs at least one patch")?;
+    let patches: Vec<_> = surfaces.iter().map(|s| (s, false)).collect();
+    enclosed_volume_oriented(&patches, None, tolerance, max_cells)
+}
+
+/// Oriented variant for B-rep shells. `reversed` patches contribute with the
+/// opposite normal `S_v × S_u`. With `axis = Some(e)` the divergence field is
+/// `(x·e) e`: patches whose normal is everywhere orthogonal to `e` contribute
+/// zero flux, so the caller may omit them (for example trimmed planar caps
+/// parallel to `e`). Omitted patches are the caller's contract, as is closure.
+pub fn enclosed_volume_oriented(
+    patches: &[(&Surface, bool)],
+    axis: Option<[f64; 3]>,
+    tolerance: f64,
+    max_cells: usize,
+) -> Result<VolumeReport> {
+    check(!patches.is_empty(), "Enclosed volume needs at least one patch")?;
+    let divergence = match axis {
+        None => Interval::point(3.),
+        Some(e) => {
+            check(e.iter().all(|x| x.is_finite()), "Volume field axis must be finite")?;
+            let e = e.map(Interval::point);
+            dot(e, e)?
+        }
+    };
+    check(divergence.lo > 0., "Volume field axis must be nonzero")?;
     check(tolerance.is_finite() && tolerance > 0., "Volume tolerance must be finite and positive")?;
     check((1..=200_000).contains(&max_cells), "Volume work budget must be 1..200000 cell enclosures")?;
     let mut heap = BinaryHeap::new();
     let mut cells = 0;
-    for (patch, s) in surfaces.iter().enumerate() {
+    let field = |patch: usize| Field { axis, sign: if patches[patch].1 { -1. } else { 1. } };
+    for (patch, &(s, _)) in patches.iter().enumerate() {
         s.validate()?;
         for u in s.degree_u..s.control_points.len() {
             for v in s.degree_v..s.control_points[0].len() {
@@ -152,27 +200,27 @@ pub fn enclosed_volume(surfaces: &[Surface], tolerance: f64, max_cells: usize) -
                         return Err(resource("Initial volume knot rectangles exceed the work budget"));
                     }
                     let domain = [[s.knots_u[u], s.knots_u[u + 1]], [s.knots_v[v], s.knots_v[v + 1]]];
-                    heap.push(cell(s, patch, [u, v], domain, cells)?);
+                    heap.push(cell(s, patch, [u, v], domain, cells, field(patch))?);
                     cells += 1;
                 }
             }
         }
     }
     loop {
-        let r = report(sum(&heap)?, cells, tolerance, StopReason::WorkLimit)?;
+        let r = report(sum(&heap)?, divergence, cells, tolerance, StopReason::WorkLimit)?;
         if r.within_tolerance || cells + 4 > max_cells {
             return Ok(r);
         }
         let parent = heap.pop().unwrap();
-        let s = &surfaces[parent.patch];
+        let s = patches[parent.patch].0;
         let [[u0, u1], [v0, v1]] = parent.domain;
         let (um, vm) = (u0 + (u1 - u0) / 2., v0 + (v1 - v0) / 2.);
         if !(u0 < um && um < u1 && v0 < vm && vm < v1) {
             heap.push(parent);
-            return report(sum(&heap)?, cells, tolerance, StopReason::PrecisionLimit);
+            return report(sum(&heap)?, divergence, cells, tolerance, StopReason::PrecisionLimit);
         }
         for d in [[[u0, um], [v0, vm]], [[um, u1], [v0, vm]], [[u0, um], [vm, v1]], [[um, u1], [vm, v1]]] {
-            heap.push(cell(s, parent.patch, parent.span, d, cells)?);
+            heap.push(cell(s, parent.patch, parent.span, d, cells, field(parent.patch))?);
             cells += 1;
         }
     }

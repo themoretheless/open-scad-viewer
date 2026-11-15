@@ -5,7 +5,7 @@ import type {BrepBooleanOperation} from '../../kernel/geometry/brep'
 import {createSolidPreviewWorker} from '../../kernel/solidPreviewWorker'
 interface BooleanOptions<T> {
  document:Ref<DirectDocument>;snapDocument:Ref<DirectDocument>;selectedIds:Readonly<Ref<string[]>>;selection:Ref<string>;extraSelection:Ref<string[]>;ru:Readonly<Ref<boolean>>;mode:Ref<'2d'|'3d'>;brepSegments:Ref<number>;error:Ref<string>;props:Readonly<{open:boolean}>
- label:(ru:string,en:string)=>string;commit:(document:DirectDocument)=>void;fit:(pane:'3d')=>void;cancelCommand:()=>void;run:(action:()=>void)=>void
+ label:(ru:string,en:string)=>string;commit:(document:DirectDocument)=>Promise<boolean>;fit:(pane:'3d')=>void;cancelCommand:()=>void;run:(action:()=>void)=>void
  setNotice:(message:string)=>void;captureCommand:()=>T;recordCommand:(command:T)=>void;calculationFailure:(error:unknown,retry:boolean)=>string
  download:(text:string,name:string)=>void;EMPTY_NOTICE:()=>string;FALLBACK_NOTICE:()=>string;TOLERANT_NOTICE:(mm:number)=>string
 }
@@ -29,7 +29,8 @@ async function runBoolean(options:SolidBooleanOptions,guided=false){
   if(generation!==booleanGeneration)return
   // Commit triggers the document watcher, so clear pending before publishing the transaction.
   booleanPending.value=false
-  commit(result.document);selection.value=result.resultId??'';extraSelection.value=[]
+  if(!await commit(result.document)||generation!==booleanGeneration)return
+  selection.value=result.resultId??'';extraSelection.value=[]
   if(guided){subtract.value=null;if(snapshot)state.recordCommand(snapshot)}
   if(result.resultId===null)state.setNotice(EMPTY_NOTICE())
   else if(!result.exact)state.setNotice(FALLBACK_NOTICE())
@@ -47,7 +48,9 @@ async function applyMinkowski(){
  try{
   const result=await booleanWorker.run({kind:'minkowski3d',document:document.value,options:{ids:[ids[0],ids[1]],createdId:crypto.randomUUID(),ru:ru.value,maximumSourceDeviationMm:minkowskiDeviation.value}})
   if(generation!==booleanGeneration)return
-  booleanPending.value=false;commit(result.document);selection.value=result.resultId??'';extraSelection.value=[]
+  booleanPending.value=false
+  if(!await commit(result.document)||generation!==booleanGeneration)return
+  selection.value=result.resultId??'';extraSelection.value=[]
   minkowskiProof.value=result;mode.value='3d';fit('3d')
  }catch(e){if(generation===booleanGeneration)error.value=state.calculationFailure(e,false)}
  finally{if(generation===booleanGeneration)booleanPending.value=false}

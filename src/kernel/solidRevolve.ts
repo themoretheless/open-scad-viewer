@@ -1,4 +1,5 @@
 import {sketchProfile,requirePolylineSketch} from '../app/retainedSketchProfile'
+import {DirectInputError} from '../i18n/kernelErrors'
 import {applyDirectRevolve,type DirectRevolveOptions} from '../app/directProfileTools'
 import {parseDirectDocument,type DirectDocument,type DirectSketch,type DirectBody} from '../app/directModeling'
 import {xyPlane,cross3,type Vec3} from '../app/directSketchGeometry'
@@ -14,7 +15,7 @@ function authoredRevolve(sketch:DirectSketch, options:SolidRevolveOptions) {
  const axis=options.axis,offset=options.offset
  const sourcePoints=sketch.retainedProfile?.loops.flatMap(loop=>loop.flatMap(curve=>curve.controlPoints))??sketch.points
  const signed=sourcePoints.map(point=>axis==='y'?point[0]-offset:point[1]-offset)
- if(signed.some(value=>Math.abs(value)>1e-7&&Math.sign(value)!==Math.sign(signed.find(v=>Math.abs(v)>1e-7)!)))throw Error('The revolve profile must stay on one side of its axis.')
+ if(signed.some(value=>Math.abs(value)>1e-7&&Math.sign(value)!==Math.sign(signed.find(v=>Math.abs(v)>1e-7)!)))throw new DirectInputError('DIRECT_REVOLVE_AXIS','The revolve profile must stay on one side of its axis.','revolveOffset',[sketch.id])
  const sign=Math.sign(signed.find(value=>Math.abs(value)>1e-7)??1)
  let profile=sketch.points.map(point=>[Math.abs(axis==='y'?point[0]-offset:point[1]-offset),axis==='y'?point[1]:point[0]] as [number,number])
  const area=profile.reduce((sum,p,i)=>{const q=profile[(i+1)%profile.length];return sum+p[0]*q[1]-q[0]*p[1]},0)

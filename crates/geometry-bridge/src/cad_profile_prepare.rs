@@ -26,7 +26,7 @@ fn contour_defect(points: &[P]) -> Option<Value> {
     };
     let tolerance = ToleranceContext::default_valid();
     let mut ctx = PredicateContext::new(&arena, &tolerance, Limits::default(), None);
-    let pair = |i: usize| [arena.leaf(2 * i).unwrap(), arena.leaf(2 * i + 1).unwrap()];
+    let pair = |i: usize| [arena.leaf(2 * i).expect("the arena was authored from exactly these coordinates"), arena.leaf(2 * i + 1).expect("the arena was authored from exactly these coordinates")];
     let mut sign = |a, b, c| {
         orient2d(&mut ctx, pair(a), pair(b), pair(c))
             .ok()

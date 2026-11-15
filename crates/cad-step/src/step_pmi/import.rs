@@ -518,7 +518,7 @@ fn import_parsed_pmi(
         let (_, args) = parts
             .iter()
             .find(|(ty, _)| is_shape_aspect_type(ty))
-            .unwrap();
+            .expect("aspect_ids only holds entities with a shape-aspect component");
         let mut related_aspects = Vec::new();
         let mut candidates = face_candidates(entities, aspect, face_entities);
         let mut visited = BTreeSet::from([aspect]);
@@ -615,7 +615,8 @@ fn import_parsed_pmi(
             }
             continue;
         };
-        let kind = GeometricToleranceKind::from_step(kind_name).unwrap();
+        let kind = GeometricToleranceKind::from_step(kind_name)
+            .expect("tolerance_part was selected by from_step(..).is_some()");
         let (_, args) = parts
             .iter()
             .find(|(ty, _)| *ty == "GEOMETRIC_TOLERANCE")

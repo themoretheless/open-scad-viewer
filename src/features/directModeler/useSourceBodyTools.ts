@@ -52,8 +52,9 @@ async function qualifySourceSeam(){
  if(!record||!selected||restoringDraft.value||!props.open||!objectSelectable(record.id))return
  sourceSeamPending.value=true
  try{
-  const result=await sourceSeamWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
-   displaySegments:0,faceDisplay:undefined,stepExchange:undefined,
+  const {faceDisplay:_faceDisplay,stepExchange:_stepExchange,...recordOptions}=sourceBodyRecordOptions(record)
+  const result=await sourceSeamWorker.run({kind:'sourceBodyRestore',options:{...recordOptions,
+   displaySegments:0,
    seamQualification:{edge:selected.index,endpointLimitsExactWork:100000000,limits:{maxSineSquared:1e-6,cells:100000,curveSpans:100000,normalSpans:100000}}}})
   if(generation!==sourceSeamGeneration||document.value!==source||sourceEdgeSelection.value!==selection||selectedSourceBody.value!==record||!props.open||isRestoreDisposed())return
   if(!result.admitted||!result.seamQualification)throw Error(result.diagnostics.reason)
@@ -136,8 +137,9 @@ async function qualifySourceWall(scan=false,coverage=false){
  if(sourceWallInputError.value){sourceWallError.value=sourceWallInputError.value;return}
  sourceWallPending.value=true
  try{
-  const result=await sourceWallWorker.run({kind:'sourceBodyRestore',options:{...sourceBodyRecordOptions(record),
-   displaySegments:0,faceDisplay:undefined,stepExchange:undefined,seamQualification:undefined,
+  const {faceDisplay:_faceDisplay,stepExchange:_stepExchange,seamQualification:_seamQualification,...recordOptions}=sourceBodyRecordOptions(record)
+  const result=await sourceWallWorker.run({kind:'sourceBodyRestore',options:{...recordOptions,
+   displaySegments:0,
    ...(coverage?{wallCoverage:{minimumMm:sourceWallMinimum.value,mixedProducts:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:1024,spansPerPair:4096,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8,normalSpans:100000,normalSpansPerPair:10000},retainedGap:{cells:100000,spans:100000,domainCells:1000000,cellsPerPair:256,spansPerPair:512,domainCellsPerPair:10000,domainCellsPerQuery:256,toleranceUv:1e-8},normalProducts:{cells:50000,cellsPerPair:128},factoredNormals:{exactWork:100000000,queries:10000,cells:10000,cellsPerPair:128},adaptiveSelf:{planeControls:1000000,cells:50000,spans:100000,cellsPerFace:8192,spansPerFace:10000,refinement:{cells:100000,spans:100000,cellsPerFace:100000,spansPerFace:100000},pole:{exactWork:100000000,cells:100000,spans:100000,cellsPerFace:4096,spansPerFace:100000}},limits:{pairs:100000,planeControls:1000000,normalSpans:20000,gapCells:100000,gapSpans:100000,maxSineSquared:1e-6}}}:scan?{wallScan:{minimumMm:sourceWallMinimum.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
     limits:{cells:10000,domainCells:10000,normalSpans:1000,maxSineSquared:1e-6}}}:{wallQualification:{groups:[[...sourceWallGroups.value[0]],[...sourceWallGroups.value[1]]],minimumMm:sourceWallMinimum.value,
     toleranceMm:sourceWallTolerance.value,toleranceUv:1e-7,grid:3,maxAttempts:256,
@@ -158,7 +160,8 @@ async function exportSourceStep(){
  if(!record||restoringDraft.value||!props.open)return
  sourceStepPending.value=true
  try{
-  const options={...sourceBodyRecordOptions(record),displaySegments:0,faceDisplay:undefined,
+  const {faceDisplay:_faceDisplay,...recordOptions}=sourceBodyRecordOptions(record)
+  const options={...recordOptions,displaySegments:0,
    stepExchange:{toleranceMm:sourceStepTolerance.value,trimWork:10_000_000,
     limits:{rootChecks:100000,mappingCells:100000,replayMappingPerUse:100000,
      exactWork:100_000_000,driverCells:100000,spans:100000,endpoints:100000}}}

@@ -519,10 +519,10 @@ pub(crate) fn expand(mults: &[usize], knots: &[f64]) -> Result<Vec<f64>> {
     let expanded = mults.iter().try_fold(0usize, |total, &multiplicity| {
         total.checked_add(multiplicity)
     });
-    if expanded.is_none_or(|count| count > MAX_EXPANDED_KNOTS) {
+    let Some(expanded) = expanded.filter(|&count| count <= MAX_EXPANDED_KNOTS) else {
         return Err(refuse("Expanded knot vector exceeds the 4096-entry budget"));
-    }
-    let mut out = Vec::with_capacity(expanded.unwrap());
+    };
+    let mut out = Vec::with_capacity(expanded);
     for (&m, &k) in mults.iter().zip(knots) {
         out.extend(std::iter::repeat_n(k, m));
     }

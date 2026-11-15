@@ -61,7 +61,7 @@ export interface ComponentRendererCallbacks<HostNode = any, HostElement = any> {
   getFirstHostNode(vnode: SvetVNode | null): HostNode | null
   getNextHostNode(vnode: SvetVNode): HostNode | null
   hostParentNode(node: HostNode): HostElement | null
-  querySelector?(selector: string): HostElement | null
+  querySelector?: ((selector: string) => HostElement | null) | undefined
   render(vnode: SvetVNode | null, container: HostElement): void
 }
 

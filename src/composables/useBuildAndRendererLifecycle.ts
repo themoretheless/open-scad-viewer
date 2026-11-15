@@ -28,12 +28,12 @@ export interface SweepViewportProgressSnapshot {
   sections: number
   deviation: number
   budget: number
-  profileRegularityCertified?: boolean
-  wallRegularityCertified?: boolean | null
-  certifiedErrorUpper?: number | null
-  continuousErrorUpper?: number
-  phaseResolved?: boolean
-  frameTransportCertified?: boolean
+  profileRegularityCertified?: boolean | undefined
+  wallRegularityCertified?: boolean | null | undefined
+  certifiedErrorUpper?: number | null | undefined
+  continuousErrorUpper?: number | undefined
+  phaseResolved?: boolean | undefined
+  frameTransportCertified?: boolean | undefined
 }
 
 export interface UseBuildAndRendererLifecycleOptions {

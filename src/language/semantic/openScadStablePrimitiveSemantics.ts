@@ -32,9 +32,9 @@ export interface OpenScadStablePrimitiveWarning {
   readonly message: string
   readonly primitive: OpenScadStablePrimitiveName
   readonly field?: string
-  readonly value?: unknown
-  readonly index?: number
-  readonly limit?: number
+  readonly value?: unknown | undefined
+  readonly index?: number | undefined
+  readonly limit?: number | undefined
   readonly actual?: number
 }
 

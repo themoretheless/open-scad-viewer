@@ -1,4 +1,5 @@
 import type {DirectBody,DirectDocument} from '../app/directModeling'
+import {DirectInputError} from '../i18n/kernelErrors'
 import {booleanNurbsBrep,tessellateNurbsBrep,type BrepBooleanOperation} from './geometry/brep'
 import {booleanPolygonMeshes} from './geometry/polygon'
 import {mergeByDistance} from './meshEditing'
@@ -21,9 +22,9 @@ export interface SolidBooleanResult {
 export function applySolidBoolean(source:DirectDocument,options:SolidBooleanOptions):SolidBooleanResult {
  const d=structuredClone(source),{operation,a,b,segments,ru}=options
  const label=(r:string,e:string)=>ru?r:e
- if(!a.length||!b.length)throw Error(label('Заполните оба поля: A — из чего вычитаем, B — что вычитаем.','Fill both fields: A is what to subtract from, B is what to subtract.'))
+ if(!a.length||!b.length)throw new DirectInputError('DIRECT_BOOLEAN_OPERANDS',label('Заполните оба поля: A — из чего вычитаем, B — что вычитаем.','Fill both fields: A is what to subtract from, B is what to subtract.'))
  const ids=[...a,...b]
- if(new Set(ids).size!==ids.length)throw Error(label('Тело должно быть только в одном поле A или B.','Each body must occur once, in either A or B.'))
+ if(new Set(ids).size!==ids.length)throw new DirectInputError('DIRECT_BOOLEAN_DUPLICATE',label('Тело должно быть только в одном поле A или B.','Each body must occur once, in either A or B.'),undefined,ids.filter((id,i)=>ids.indexOf(id)!==i))
  const bodyOf=(id:string)=>{const body=d.bodies.find(item=>item.id===id);if(!body)throw Error(label('Тело больше не существует.','A body no longer exists.'));return body}
  let exact=true,toleranceMm=0
  const combine=(left:DirectBody,right:DirectBody,op:BrepBooleanOperation)=>{
@@ -57,8 +58,7 @@ function booleanPair(a:DirectBody,b:DirectBody,operation:BrepBooleanOperation,se
    const brep=booleanNurbsBrep(a.brep,b.brep,operation)
    const built=tessellateNurbsBrep(brep,segments)
    const result={...a,brep,mesh:{positions:built.positions.slice(),indices:built.indices.slice()}}
-   const toleranceMm=brep.toleranceMm>TOLERANT_ABOVE_MM?brep.toleranceMm:undefined
-   return {body:result.brep.bodies.length?result:null,exact:true,toleranceMm}
+   return {body:result.brep.bodies.length?result:null,exact:true,...(brep.toleranceMm>TOLERANT_ABOVE_MM?{toleranceMm:brep.toleranceMm}:{})}
   }catch(refusal){
    // The kernel certifies each surface pairing it walks; an uncertified pairing is a
    // capability limit of the exact kernel, not a defect in the model, and the bodies are
@@ -76,5 +76,6 @@ function booleanPair(a:DirectBody,b:DirectBody,operation:BrepBooleanOperation,se
  let built
  try{built=weldedBoolean(scale*1e-6)}catch{built=weldedBoolean(scale*1e-4)}
  if(built.indices.length===0)return {body:null,exact:false}
- return {body:{...a,brep:undefined,mesh:{positions:built.positions.slice(),indices:built.indices.slice()}},exact:false}
+ const {brep:_brep,...meshBody}=a
+ return {body:{...meshBody,mesh:{positions:built.positions.slice(),indices:built.indices.slice()}},exact:false}
 }

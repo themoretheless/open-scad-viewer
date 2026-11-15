@@ -80,7 +80,7 @@ fn det2(a: &[f64], b: &[f64], c: &[f64], d: &[f64]) -> Vec<f64> {
 
 /// Sign of det[b-a, c-a, d-a]: positive when `d` lies on the side of plane
 /// `abc` that the right-hand normal (b-a)x(c-a) points to.
-pub(crate) fn orient3d(a: P, b: P, c: P, d: P) -> Ordering {
+pub fn orient3d(a: P, b: P, c: P, d: P) -> Ordering {
     let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
     let v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
     let w = [d[0] - a[0], d[1] - a[1], d[2] - a[2]];
@@ -105,7 +105,7 @@ pub(crate) fn orient3d(a: P, b: P, c: P, d: P) -> Ordering {
 
 /// Sign of the 2D orientation of `(a, b, c)` in the coordinate plane that
 /// drops `axis` (axes `axis+1`, `axis+2` in cyclic order).
-pub(crate) fn orient2d(a: P, b: P, c: P, axis: usize) -> Ordering {
+pub fn orient2d(a: P, b: P, c: P, axis: usize) -> Ordering {
     let (x, y) = ((axis + 1) % 3, (axis + 2) % 3);
     let l = (b[x] - a[x]) * (c[y] - a[y]);
     let r = (b[y] - a[y]) * (c[x] - a[x]);

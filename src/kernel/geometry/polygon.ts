@@ -48,7 +48,7 @@ export interface PolygonReport {
   boolean?: PolygonBooleanReport
   construction: 'boolean' | 'triangle_mesh' | 'sampled_surface' | 'fixed_vector_thickening'
   uvArea?: number
-  sampledDeviationMm?: number
+  sampledDeviationMm?: number | undefined
   parameterSeamsWelded?: { u: boolean; v: boolean }
   collapsedBoundaryCount?: number
 }
@@ -92,13 +92,13 @@ export function sectionPolygonMesh(mesh: PolygonMesh, z: number): MeshSectionRes
 }
 
 export interface ToolpathSettingsInput {
-  layerHeightMm?: number
-  lineWidthMm?: number
-  wallCount?: number
-  infillSpacingMm?: number
-  feedrateMmS?: number
-  travelFeedrateMmS?: number
-  filamentDiameterMm?: number
+  layerHeightMm?: number | undefined
+  lineWidthMm?: number | undefined
+  wallCount?: number | undefined
+  infillSpacingMm?: number | undefined
+  feedrateMmS?: number | undefined
+  travelFeedrateMmS?: number | undefined
+  filamentDiameterMm?: number | undefined
 }
 export interface ToolpathPath {
   role: 'outline' | 'inset' | 'hatch'
@@ -151,13 +151,13 @@ export interface GcodeJobExportResult extends GcodeExportResult {
 }
 /** Result of opening an arbitrary G-code file: preview plus what was detected. */
 export interface GcodeFirmwareState {
-  activeTool?:number; bedTargetC?:number|null; chamberTargetC?:number|null;
-  tools?:{id:number;targetC:number|null;standbyC:number|null;retracted:boolean|null}[];
-  events?:{line:number;tool:number|null;targetC:number|null;wait:string;retractOffsetMm:number|null}[];
-  unverifiedLines?:number[]; error?:string;
+  activeTool?:number; bedTargetC?:number|null; chamberTargetC?:number|null | undefined;
+  tools?:{id:number;targetC:number|null;standbyC:number|null;retracted:boolean|null}[] | undefined;
+  events?:{line:number;tool:number|null;targetC:number|null;wait:string;retractOffsetMm:number|null}[] | undefined;
+  unverifiedLines?:number[]; error?:string | undefined;
 }
 export interface GcodeInspectResult {
-  firmware?:GcodeFirmwareState|null;
+  firmware?:GcodeFirmwareState|null | undefined;
   preview: GcodePreviewResult
   /** Native dialect line, or `"<generator> G-code (tolerant preview)"` for foreign files. */
   dialect: string
@@ -169,18 +169,18 @@ export interface GcodeInspectResult {
   filamentDiameterMm: number | null
 }
 export interface JobSettingsInput extends ToolpathSettingsInput {
-  inches?:boolean; relativeXyz?:boolean; relativeE?:boolean; startTemplate?:string; zHopMm?:number; chamberTempC?:number;
-  nozzleTempC?: number
-  bedTempC?: number
-  retractLengthMm?: number
-  retractFeedrateMmS?: number
-  unretractFeedrateMmS?: number
-  retractMinTravelMm?: number
-  fanSpeed?: number
-  homeAxes?: boolean
-  flavor?: GcodeFlavor
-  simplifyToleranceMm?: number
-  max2optSwaps?: number
+  inches?:boolean | undefined; relativeXyz?:boolean | undefined; relativeE?:boolean | undefined; startTemplate?:string | undefined; zHopMm?:number | undefined; chamberTempC?:number | undefined;
+  nozzleTempC?: number | undefined
+  bedTempC?: number | undefined
+  retractLengthMm?: number | undefined
+  retractFeedrateMmS?: number | undefined
+  unretractFeedrateMmS?: number | undefined
+  retractMinTravelMm?: number | undefined
+  fanSpeed?: number | undefined
+  homeAxes?: boolean | undefined
+  flavor?: GcodeFlavor | undefined
+  simplifyToleranceMm?: number | undefined
+  max2optSwaps?: number | undefined
 }
 
 // Explicit fields preserve the operation and mesh even for untyped callers.

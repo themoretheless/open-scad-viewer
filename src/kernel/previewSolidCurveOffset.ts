@@ -7,7 +7,7 @@ export async function previewSolidCurveOffset(client:MainSolidWorkerClient,docum
   const result=await client.run({kind:'trimmedCurveOffset',document,options:{...options,maxWitnessChecks:1000000,intersectionToleranceMm:p.maxError,fillRule:p.offsetJoin==='trim-evenodd'?'evenodd':'nonzero'}})
   return {document:result.document,report:null,trimmedReport:result.report}
  }
- const result=await client.run({kind:'curveOffset',document,options:{...options,join:p.offsetJoin==='bevel'?'bevel':undefined}})
+ const result=await client.run({kind:'curveOffset',document,options:{...options,...(p.offsetJoin==='bevel'?{join:'bevel' as const}:{})}})
  return {document:result.document,report:result.report,trimmedReport:null}
 }
  catch(error){

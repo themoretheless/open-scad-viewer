@@ -8,12 +8,8 @@
 import type { MeshLodLevel } from '../core/mesh'
 import type { NativePickingCache } from './nativePickingCache'
 import type { GMesh } from './types'
+import { planDisplayCaps, type DisplayBudget, type LevelBuffers, type ProgressiveLevelStore } from './displayScheduler'
 import { pixelsPerUnit, selectViewerLod, type ViewerLodCamera } from './viewerLod'
-
-interface LevelBuffers {
-  vb: GPUBuffer
-  ib: GPUBuffer
-}
 
 export interface GMeshLodState {
   readonly levels: readonly MeshLodLevel[]
@@ -54,11 +50,18 @@ export function createMeshLodState(
  * when the mesh is already showing that level. The caller clears draw caches
  * and any triangle-level hit state, which no longer indexes this geometry.
  */
-export function bindMeshLod(dev: GPUDevice, mesh: GMesh, level: number, nativePicking: NativePickingCache): boolean {
+export function bindMeshLod(
+  dev: GPUDevice,
+  mesh: GMesh,
+  level: number,
+  nativePicking: NativePickingCache,
+  shared?: LevelBuffers,
+): boolean {
   const lod = mesh.lod
   if (!lod || lod.current === level || !lod.levels[level]) return false
   const data = lod.levels[level]
-  let buffers = lod.buffers[level]
+  // Shared buffers are owned by the display cache, not by this mesh.
+  let buffers = shared ?? lod.buffers[level]
   if (!buffers) {
     const vb = dev.createBuffer({
       size: data.vertices.byteLength,
@@ -116,6 +119,13 @@ export function releaseMeshLod(mesh: GMesh, nativePicking: NativePickingCache): 
   lod.buffers.fill(null)
 }
 
+export interface MeshLodDisplayOptions {
+  /** Caps each mesh's finest level through `selectDisplayRepresentation`. */
+  readonly budget?: DisplayBudget
+  /** Uploads levels progressively and shares them by asset; without it levels upload synchronously. */
+  readonly store?: ProgressiveLevelStore
+}
+
 /**
  * Evaluate every LOD mesh against the camera and bind the chosen levels.
  * Returns the meshes whose geometry changed.
@@ -126,8 +136,10 @@ export function updateMeshLods(
   camera: ViewerLodCamera,
   nativePicking: NativePickingCache,
   policy: MeshLodPolicy = DEFAULT_MESH_LOD_POLICY,
+  display: MeshLodDisplayOptions = {},
 ): GMesh[] {
   const changed: GMesh[] = []
+  const plan = display.budget ? planDisplayCaps(meshes, camera, display.budget) : null
   for (const mesh of meshes) {
     const lod = mesh.lod
     if (!lod || !mesh.visible) continue
@@ -140,8 +152,13 @@ export function updateMeshLods(
       lod.current,
       { pixelsPerUnit: pixelsPerUnit(camera, center, radius), ...policy },
     )
-    if (bindMeshLod(dev, mesh, selection.level, nativePicking)) changed.push(mesh)
+    const target = Math.min(selection.level, plan?.get(mesh)?.maxLevel ?? selection.level)
+    if (display.store) {
+      const resolved = display.store.resolve(dev, mesh, target)
+      if (resolved && bindMeshLod(dev, mesh, resolved.level, nativePicking, resolved.buffers)) changed.push(mesh)
+    } else if (bindMeshLod(dev, mesh, target, nativePicking)) changed.push(mesh)
   }
+  display.store?.setBound(meshes)
   return changed
 }
 

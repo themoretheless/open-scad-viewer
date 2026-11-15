@@ -1136,10 +1136,14 @@ name = "manifold-ops"
 version = "0.1.0"
 dependencies = [
  "manifold-core",
+ "mesh-query",
+ "mesh-section",
+ "mesh-topology",
  "osv-math",
  "polygon-core",
  "serde",
  "serde_json",
+ "subdivision-core",
 ]
 
 [[package]]

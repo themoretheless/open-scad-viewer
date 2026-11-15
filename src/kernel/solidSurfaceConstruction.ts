@@ -44,14 +44,14 @@ export function buildSolidSurface(document:DirectDocument,p:SolidSurfaceBuildOpt
   let source=document
   const patchReports:CoonsBoundaryPreparation['report'][]=[]
   if(p.kind==='nurbs-patch'&&p.patchPreparation?.enabled){
-   source={...document,curves:document.curves?.map(item=>{
+   source={...document,...(document.curves?{curves:document.curves.map(item=>{
     const role=p.ids.indexOf(item.id)
     if(role<0)return item
     const result=prepareCoonsBoundaryWeights(item.curve,p.patchPreparation!.maxError)
     patchReports.push(result.report)
     if(!result.report.accepted)throw Error(`PATCH_BUDGET:${role}`)
     return {...item,curve:result.curve}
-   })}
+   })}:{})}
   }
   const surface=constructSolidSurface(source,p.ids,p.kind,p.id,p.group,p.reversed,p.sweep,value=>{report=value})
   return {document:{...document,surfaces:[...document.surfaces??[],surface]},error:'',report,...patchReports.length?{patchReports}:{}}

@@ -405,7 +405,10 @@ fn parse(text: &str) -> Result<(BTreeMap<usize, Entity>, IgesLengthUnit, f64)> {
         .collect::<Vec<_>>();
     if !order
         .windows(2)
-        .all(|w| "SGDPT".find(w[0]).unwrap() <= "SGDPT".find(w[1]).unwrap())
+        .all(|w| {
+            let rank = |c: char| "SGDPT".find(c).expect("parse() rejects unknown section markers");
+            rank(w[0]) <= rank(w[1])
+        })
     {
         return Err(refuse("IGES sections are out of order"));
     }
@@ -807,7 +810,7 @@ fn filter_discarded_entities(
             .iter()
             .find(|(_, count)| **count > 0)
             .map(|(&de, _)| de)
-            .unwrap();
+            .expect("Kahn's sort left unprocessed nodes, so one keeps a positive indegree");
         return Err(refuse(format!(
             "IGES 402 associativity cycle involving DE {de}"
         )));

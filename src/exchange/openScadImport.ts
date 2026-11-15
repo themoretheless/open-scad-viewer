@@ -90,10 +90,10 @@ export class OpenScadImportError extends Error {
   readonly details: Readonly<OpenScadImportErrorDetails>
   readonly sourcePath: string
   readonly specifier: string
-  readonly assetPath?: string
-  readonly format?: OpenScadImportFormat
-  readonly limit?: number
-  readonly actual?: number
+  readonly assetPath?: string | undefined
+  readonly format?: OpenScadImportFormat | undefined
+  readonly limit?: number | undefined
+  readonly actual?: number | undefined
 
   constructor(
     readonly code: OpenScadImportErrorCode,
@@ -137,10 +137,10 @@ export class OpenScadImportPositionedError extends OpenSCADParseError {
   readonly details: Readonly<OpenScadImportErrorDetails>
   readonly sourcePath: string
   readonly specifier: string
-  readonly assetPath?: string
-  readonly format?: OpenScadImportFormat
-  readonly limit?: number
-  readonly actual?: number
+  readonly assetPath?: string | undefined
+  readonly format?: OpenScadImportFormat | undefined
+  readonly limit?: number | undefined
+  readonly actual?: number | undefined
 
   constructor(
     source: string,

@@ -35,6 +35,8 @@ export function expandLiveBodyPatterns(document:DirectDocument):DirectDocument {
 export function setLiveBodyPattern(document:DirectDocument,sourceId:string,pattern:LiveBodyPattern|null):DirectDocument {
  const next=structuredClone(document),source=next.bodies.find(b=>b.id===sourceId)
  if(!source||source.instance)throw Error('Select an independent source body.')
+ // Refuse invalid parameters now; otherwise they persist and fail on the next instance resolve.
+ if(pattern)callGeometryRust<number[][][]>('cad_live_pattern',{pattern})
  next.bodies=next.bodies.filter(b=>!(b.instance?.pattern&&b.instance.sourceId===sourceId))
  if(pattern)source.livePattern=structuredClone(pattern);else delete source.livePattern
  return next

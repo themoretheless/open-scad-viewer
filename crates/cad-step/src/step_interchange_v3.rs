@@ -944,7 +944,8 @@ fn surface_v5(entities: &BTreeMap<usize, Entity>, id: usize, scale: f64) -> Resu
         ));
     }
     let (knots_u, knots_v) = if form == "B_SPLINE_SURFACE_WITH_KNOTS" {
-        let knots = component(&parts, form).unwrap();
+        let knots = component(&parts, form)
+            .ok_or_else(|| refuse("Malformed B_SPLINE_SURFACE_WITH_KNOTS component"))?;
         let offset = if explicit_simple { 8 } else { 0 };
         if knots.len() != offset + 5 {
             return Err(refuse("Malformed B_SPLINE_SURFACE_WITH_KNOTS component"));
@@ -1123,12 +1124,12 @@ fn validate_exchange_structure(text: &str) -> Result<()> {
     let description = header_entity_offset(header_text, "FILE_DESCRIPTION");
     let name = header_entity_offset(header_text, "FILE_NAME");
     let schema = header_entity_offset(header_text, "FILE_SCHEMA");
-    if description.is_none() || name.is_none() || schema.is_none() {
+    let (Some(_), Some(_), Some(schema)) = (description, name, schema) else {
         return Err(refuse(
             "HEADER requires FILE_DESCRIPTION, FILE_NAME, and FILE_SCHEMA",
         ));
-    }
-    let schema = schema.unwrap() + header;
+    };
+    let schema = schema + header;
     let schema_end = structural[schema..first_end]
         .find(';')
         .map(|offset| schema + offset)
@@ -1720,7 +1721,7 @@ fn direct_bounded_curve(
     }
     let parameter = |target: &[f64]| -> Result<f64> {
         if kind == "CIRCLE" {
-            let (_, args) = parts.iter().find(|(name, _)| *name == "CIRCLE").unwrap();
+            let (_, args) = parts.iter().find(|(name, _)| *name == "CIRCLE").ok_or_else(|| refuse("AP242 direct CIRCLE component is missing"))?;
             let (origin, x, y) = axis2(
                 entities,
                 one_ref(&args[1], "direct CIRCLE placement")?,
@@ -1772,7 +1773,7 @@ fn direct_bounded_curve(
         }
         return basis.trim(start_parameter, end_parameter);
     }
-    let (_, args) = parts.iter().find(|(name, _)| *name == "CIRCLE").unwrap();
+    let (_, args) = parts.iter().find(|(name, _)| *name == "CIRCLE").ok_or_else(|| refuse("AP242 direct CIRCLE component is missing"))?;
     let (origin, x, mut y) = axis2(
         entities,
         one_ref(&args[1], "direct CIRCLE placement")?,
@@ -2170,7 +2171,7 @@ impl<'a> DirectBuilder<'a> {
             for knot in &mut surface.knots_u {
                 *knot = sum - *knot
             }
-            for loop_index in std::iter::once(outer.unwrap()).chain(holes.iter().copied()) {
+            for loop_index in outer.into_iter().chain(holes.iter().copied()) {
                 for coedge in &mut self.loops[loop_index].coedges {
                     for point in &mut coedge.pcurve.control_points {
                         point[0] = sum - point[0]

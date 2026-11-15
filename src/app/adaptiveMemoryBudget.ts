@@ -1,5 +1,5 @@
 /** Approximate browser hints; these do not measure free system RAM or GPU/WASM use. */
-export interface MemoryHints { deviceGiB?: number; heapLimit?: number; heapUsed?: number }
+export interface MemoryHints { deviceGiB?: number | undefined; heapLimit?: number | undefined; heapUsed?: number | undefined }
 export function readMemoryHints(): MemoryHints {
   const nav = typeof navigator === 'undefined' ? undefined : navigator as Navigator & { deviceMemory?: number }
   const heap = typeof performance === 'undefined' ? undefined : (performance as Performance & {

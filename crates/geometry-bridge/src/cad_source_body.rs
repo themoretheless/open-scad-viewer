@@ -516,13 +516,13 @@ fn restore_using<E:EditorCarrier>(v:Value, restore_body:impl FnOnce(Value,brep_c
         let uses = shell.uses()[index];
         let mut vertices = shell.vertices()[uses[0].face][uses[0].wire][uses[0].edge];
         if shell.edges()[index].restriction_reversed(0) { vertices.reverse(); }
-        let display = if display_segments == 0 { None } else { Some(boundary_display.as_ref().unwrap().edges[index].segments.iter().map(|(range, points, bounds)| json!([range, points, bounds])).collect::<Vec<_>>()) };
+        let display = if display_segments == 0 { None } else { Some(boundary_display.as_ref().expect("boundary display is built whenever display_segments > 0").edges[index].segments.iter().map(|(range, points, bounds)| json!([range, points, bounds])).collect::<Vec<_>>()) };
         Ok(json!({"index":index,"displaySegments":display,"definition":r.definition(),"parameterBounds":r.parameter_bounds()?,
             "endpointBoxes":r.endpoint_boxes(max_spans)?,"vertices":vertices,
             "uses":uses.map(|a|[a.face,a.wire,a.edge])}))
     }).collect::<Result<Vec<_>>>()?;
     let display_faces = face_display.map(|(divisions,tolerance_uv,domain_cells)| -> Result<Vec<Value>> {
-        shell.regions().unwrap().iter().enumerate().map(|(index,region)| -> Result<Value> {
+        shell.regions().ok_or_else(|| super::input("Source body has no retained regions for face display"))?.iter().enumerate().map(|(index,region)| -> Result<Value> {
             let preview=brep_core::source_region_display::prepare(region,divisions,tolerance_uv,domain_cells)?;
             let tiles=preview.tiles.into_iter().map(|tile| {
                 let mut corners=tile.corners;

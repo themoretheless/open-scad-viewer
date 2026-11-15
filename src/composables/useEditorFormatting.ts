@@ -1,26 +1,26 @@
 import { nextTick, type Ref } from 'svet'
 import { formatCode } from '../language/codeFormat'
 import { indentSelection } from '../language/editorBlocks'
+import type { EditorAdapter } from '../editor/EditorAdapter'
 interface Options {
   code: Ref<string>
-  editorRef: Ref<HTMLTextAreaElement | null>
+  editor: EditorAdapter
   foldedLines: Ref<Set<number>>
   syncHighlightScroll: () => void
   handleEditorInput: () => void
   dispatchKeyboardCommand: (event: KeyboardEvent, scope: 'editor') => void
 }
 export function useEditorFormatting(options: Options) {
-  const { code, editorRef, foldedLines, syncHighlightScroll, handleEditorInput, dispatchKeyboardCommand } = options
+  const { code, editor, foldedLines, syncHighlightScroll, handleEditorInput, dispatchKeyboardCommand } = options
 function formatEditor() {
   const formatted = formatCode(code.value)
   if(formatted === code.value) return
-  const editor = editorRef.value
-  const caret = editor?.selectionStart ?? 0
-  if(editor) editor.setRangeText(formatted,0,editor.value.length,'preserve')
+  const caret = editor.mounted ? editor.getSelection().start : 0
+  editor.setText(formatted,'preserve')
   code.value = formatted
   foldedLines.value = new Set()
   void nextTick(()=>{
-    if(editor) { editor.focus(); editor.setSelectionRange(Math.min(caret,formatted.length),Math.min(caret,formatted.length)) }
+    if(editor.mounted) { editor.focus(); editor.setSelection(Math.min(caret,formatted.length),Math.min(caret,formatted.length)) }
     syncHighlightScroll()
   })
   handleEditorInput()
@@ -30,10 +30,11 @@ function handleEditorKey(event: KeyboardEvent) {
   if(event.altKey && event.shiftKey && event.code === 'KeyF') { event.preventDefault(); formatEditor(); return }
   if(event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing) {
     event.preventDefault()
-    const editor=editorRef.value; if(!editor) return
-    const edit=indentSelection(code.value,editor.selectionStart,editor.selectionEnd,event.shiftKey)
-    editor.setRangeText(edit.text,edit.start,edit.end,'preserve')
-    code.value=editor.value; editor.setSelectionRange(edit.selectionStart,edit.selectionEnd)
+    if(!editor.mounted) return
+    const selection=editor.getSelection()
+    const edit=indentSelection(code.value,selection.start,selection.end,event.shiftKey)
+    editor.replaceRange(edit.text,edit.start,edit.end,'preserve')
+    code.value=editor.getText(); editor.setSelection(edit.selectionStart,edit.selectionEnd)
     handleEditorInput(); return
   }
   dispatchKeyboardCommand(event, 'editor')

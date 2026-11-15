@@ -28,8 +28,8 @@ export type OpenScadSurfaceErrorCode = typeof OPENSCAD_SURFACE_ERROR_CODES[numbe
 export interface OpenScadSurfaceErrorDetails {
   readonly sourcePath: string
   readonly specifier?: string
-  readonly assetPath?: string
-  readonly limit?: number
+  readonly assetPath?: string | undefined
+  readonly limit?: number | undefined
   readonly actual?: number
 }
 

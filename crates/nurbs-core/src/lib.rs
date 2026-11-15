@@ -152,6 +152,8 @@ pub use crate::analysis::ray_surface;
 pub use crate::intersection::ss_intersection;
 pub use crate::core::surface;
 pub use crate::analysis::surface_measure;
+pub use crate::analysis::surface_chord_bound;
+pub use crate::analysis::surface_volume;
 pub use crate::analysis::curve_regularity;
 pub use crate::sweeps::audit::pair as sweep_pair_audit;
 pub use crate::analysis::surface_injectivity;
