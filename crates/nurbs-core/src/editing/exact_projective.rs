@@ -3,6 +3,8 @@ use crate::core::bounded_rational::{Error, Work};
 use crate::{Result, check, curve::Curve, surface::Surface};
 use num_rational::BigRational as Q;
 use num_traits::{Signed, Zero};
+mod affine_curve;
+pub use affine_curve::affine_curve_clock;
 mod chart_nonnegative;
 mod mobius;
 pub use mobius::{mobius_bezier_curve, mobius_bezier_surface};
@@ -19,6 +21,16 @@ pub use mobius_spline::{
 mod pcurve_agreement;
 pub use pcurve_agreement::{
     PcurveEdgeAgreement, PcurveEdgeAgreementReport, compare_pcurve_edge, compare_surface_pcurve_seam,
+};
+mod pcurve_angle;
+pub use pcurve_angle::{PcurveAngleOutcome, PcurveAngleReport, certify_pcurve_seam_angle};
+mod pcurve_angle_bands;
+pub use pcurve_angle_bands::{PcurveAngleBandsOutcome, PcurveAngleBandsReport, isolate_pcurve_seam_angle};
+mod pcurve_gap;
+pub use pcurve_gap::{PcurveGapOutcome, PcurveGapReport, certify_pcurve_seam_gap};
+mod pcurve_gap_bands;
+pub use pcurve_gap_bands::{
+    PcurveGapBand, PcurveGapBandsReport, PcurveGapBoundary, isolate_pcurve_seam_gap,
 };
 mod pcurve_lift;
 pub use pcurve_lift::{PcurveLiftReport, lift_pcurve_to_surface};
