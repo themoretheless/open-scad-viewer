@@ -268,8 +268,20 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
     let above = graph::above_bowl();
     assert_eq!(&above.faces[1].surface, wire.edges()[0].curve().source().second());
     let above = solid::qualify(above, curved_policy).unwrap().into_solid().unwrap();
+    let outside_hole = vec![
+        [0.0625, 0.0625], [0.0625, 0.125], [0.125, 0.125], [0.125, 0.0625],
+    ];
+    let perforated = brep_core::extrude_polygon_with_holes(
+        &[[0., 0.], [1., 0.], [1., 1.], [0., 1.]], &[outside_hole], -1., 0.,
+    ).unwrap();
+    let cut_face = perforated.faces.iter().position(|face| {
+        face.surface == *wire.edges()[0].curve().source().first()
+    }).expect("perforated face must retain the planar SS support");
+    assert_eq!(perforated.faces[cut_face].holes.len(), 1);
+    let perforated = solid::qualify(perforated, policy::policy())
+        .unwrap().into_solid().unwrap();
     let intersection_loop = mixed::qualify_paired_interior_loop(
-        &a, 1, &above, 1, &wire, [[0.5; 2]; 2], Default::default(),
+        &perforated, cut_face, &above, 1, &wire, [[0.5; 2]; 2], Default::default(),
     ).unwrap();
     let coverage = ss::cover_quotient_fiber_surfaces(&charts, Default::default())
         .unwrap().into_coverage().unwrap();
@@ -287,9 +299,11 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
         2048,
     ).err().expect("complete intersection requires coverage of every region");
     assert!(missing_region.to_string().contains("every arrangement region"));
-    let common = intersection_census.sew_complete_single_loop_intersection(
-        [[[0.48, 0.52], [0.66, 0.70]]; 2],
-        [[[0.035, 0.065]; 2]; 2],
+    let exterior = [[[0.13, 0.15]; 2]];
+    let (common, [lo, hi]) = intersection_census.assemble_complete_paired_boolean(
+        Op::Intersection,
+        &[[[[0.48, 0.52], [0.66, 0.70]]; 2]],
+        [&exterior, &exterior],
         &directions,
         1e-7,
         Default::default(),
@@ -297,9 +311,9 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
         mixed::RootBoundaryVolumeLimits { absolute_error: 5e-4, cells: 16384, ..Default::default() },
         2048,
     ).unwrap();
-    let [lo, hi] = common.volume();
     assert!(lo <= expected && expected <= hi);
-    assert!(common.model().topology().boundary_edges().is_empty());
+    assert_eq!(common.topology().bodies.len(), 1);
+    assert!(common.topology().boundary_edges().is_empty());
     let arrangement=std::sync::Arc::new(census.build_face_arrangement(0,Default::default()).unwrap());
     let bound=arrangement.qualify_boolean_rectangle(Op::Difference,[[0.48,0.52],[0.66,0.70]],&directions,Default::default()).unwrap();
     assert_eq!(bound.face(),arrangement.region_faces()[1]);

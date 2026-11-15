@@ -220,22 +220,231 @@ fn intersection_keeps_annulus_between_two_closed_contours() {
     limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
     let b = solid::qualify(graph::above_body(), limits).unwrap().into_solid().unwrap();
     let census = census_for(&a, aface, &b, false);
-    let excluded = [[[0.49, 0.51]; 2], [[0.94, 0.96], [0.04, 0.06]]];
-    let result = census.sew_complete_paired_intersection(
-        [[[0.724, 0.726], [0.499, 0.501]]; 2],
-        [&excluded, &excluded],
+    let union = census.select_automatic_paired_boolean_patches(
+        solid::BooleanMaterialOp::Union,
+        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+        Default::default(),
+        [Default::default(); 2],
+        4096,
+        64,
+    ).unwrap();
+    for (side, input) in [&a, &b].into_iter().enumerate() {
+        let arrangement = union.arrangements()[side];
+        let faces = union.uncut_faces()[side];
+        assert_eq!(faces.len(), input.model().faces.len() - 1);
+        assert_eq!(union.cut_regions()[side].len(), 2);
+        for face in faces {
+            assert!(!arrangement.region_faces().contains(&face.face));
+            let source = input.model().shells.iter().flat_map(|shell| &shell.faces)
+                .find(|source| source.face == face.face).unwrap();
+            assert_eq!(face.reversed, source.reversed);
+        }
+    }
+    let (sewn_union, [union_lo, union_hi]) = census.assemble_paired_union(
         &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
         1e-9,
         Default::default(),
         [Default::default(); 2],
-        mixed::RootBoundaryVolumeLimits { absolute_error: 5e-4, cells: 4096, ..Default::default() },
+        mixed::RootBoundaryVolumeLimits { absolute_error: 2e-3, cells: 4096, ..Default::default() },
+        solid::VolumeLimits {
+            axis: 2, origin: 0., absolute_error: 2e-3, cells: 4096, spans: 16384,
+            domain_cells: 100000, algebra: Default::default(),
+        },
         4096,
+        64,
     ).unwrap();
-    assert_eq!(result.genus(), 1);
-    assert!(result.model().topology().boundary_edges().is_empty());
+    // Both original boxes have unit footprint and thickness ten.
+    let overlap = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(union_lo <= 20. - overlap && 20. - overlap <= union_hi, "{union_lo}..{union_hi}");
+    assert!(union_hi - union_lo <= 2e-3);
+    let topology = sewn_union.topology();
+    assert_eq!(topology.shells.len(), 2);
+    assert!(topology.shells.iter().all(|shell| shell.closed));
+    let mut shell_sizes: Vec<_> = topology.shells.iter().map(|shell| shell.faces.len()).collect();
+    shell_sizes.sort_unstable();
+    assert_eq!(shell_sizes, [2, a.model().faces.len() + b.model().faces.len()]);
+    assert!(topology.boundary_edges().is_empty());
+    assert!(topology.edges.iter().any(|edge| matches!(edge.curve, mixed::MixedEdge::Rational(_))));
+    assert!(topology.edges.iter().any(|edge| matches!(edge.curve, mixed::MixedEdge::Root(_))));
+    let inner_shell = topology.shells.iter().position(|shell| shell.faces.len() == 2).unwrap();
+    let directions = [[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]];
+    assert!(union.shell_is_inside(
+        inner_shell, 1 - inner_shell, 1e-9, &directions, Default::default(),
+    ).unwrap());
+    assert!(!union.shell_is_inside(
+        1 - inner_shell, inner_shell, 1e-9, &directions, Default::default(),
+    ).unwrap());
+    for (shell, point, expected) in [
+        (1 - inner_shell, [0.5, 0.5, 0.02], true),
+        (inner_shell, [0.5, 0.5, 0.02], true),
+        (1 - inner_shell, [0.5, 0.5, -1.], true),
+        (inner_shell, [0.5, 0.5, -1.], false),
+        (1 - inner_shell, [1.5, 0.5, 0.02], false),
+    ] {
+        let report = union.classify_shell_point(
+            shell, 1e-9, point, &directions, Default::default(),
+        ).unwrap();
+        assert_eq!(report.parity, Some(expected), "{shell} {point:?}: {report:?}");
+    }
+    let flux = union.paired_shell_signed_volume(
+        inner_shell,
+        1e-9,
+        mixed::RootBoundaryVolumeLimits { absolute_error: 5e-4, cells: 4096, ..Default::default() },
+    ).unwrap();
+    let [lo, hi] = flux.signed_bounds.unwrap();
+    let r2 = 0.15625_f64.powi(2);
+    let outer_r2 = 0.3125_f64.powi(2);
+    let signed_cavity = -6. * std::f64::consts::PI * r2.powi(2) * (3. * outer_r2 - r2);
+    assert!(flux.accuracy_proven && hi < 0.);
+    assert!(lo <= signed_cavity && signed_cavity <= hi, "{lo}..{hi}");
+    let exterior = union.shell_signed_volume(
+        1 - inner_shell,
+        1e-9,
+        1e-9,
+        mixed::RootBoundaryVolumeLimits {
+            absolute_error: 2e-3,
+            cells: 32768,
+            arc_subdivisions: 64,
+            ..Default::default()
+        },
+    ).unwrap();
+    let [lo, hi] = exterior.signed_bounds.unwrap();
+    let expected_exterior = 20. - overlap - signed_cavity;
+    assert!(exterior.accuracy_proven && lo > 0., "{exterior:?}");
+    assert!(lo <= expected_exterior && expected_exterior <= hi, "{lo}..{hi}");
+    let assemble_material = |operation| census.assemble_automatic_paired_boolean(
+        operation,
+        &directions,
+        1e-9,
+        Default::default(),
+        [Default::default(); 2],
+        mixed::RootBoundaryVolumeLimits {
+            absolute_error: 8e-3,
+            cells: 32768,
+            arc_subdivisions: 64,
+            ..Default::default()
+        },
+        4096,
+        64,
+    );
+    let (body, [body_lo, body_hi]) = assemble_material(solid::BooleanMaterialOp::Union).unwrap();
+    let bodies = &body.topology().bodies;
+    assert_eq!(bodies.len(), 1);
+    assert_eq!(bodies[0].outer_shell, 1 - inner_shell);
+    assert_eq!(bodies[0].inner_shells, [inner_shell]);
+    assert!(body_lo <= 20. - overlap && 20. - overlap <= body_hi);
+    assert!(body_hi - body_lo <= 8e-3);
+    assert!(body_lo <= union_hi && union_lo <= body_hi);
+    let (difference, [difference_lo, difference_hi]) =
+        assemble_material(solid::BooleanMaterialOp::Difference).unwrap();
+    assert_eq!(difference.topology().bodies.len(), 1);
+    assert!(difference.topology().bodies[0].inner_shells.is_empty());
+    assert!(difference.topology().boundary_edges().is_empty());
+    assert!(difference_lo <= 10. - overlap && 10. - overlap <= difference_hi);
+    assert!(difference_hi - difference_lo <= 8e-3);
+    let (xor, [xor_lo, xor_hi]) = assemble_material(solid::BooleanMaterialOp::Xor).unwrap();
+    let xor = xor.topology();
+    assert_eq!(xor.bodies.len(), 2);
+    assert_eq!(xor.shells.len(), 2);
+    assert!(xor.boundary_edges().is_empty());
+    let root_edges = |shell: usize| {
+        xor.shells[shell].faces.iter()
+            .flat_map(|use_| {
+                let face = &xor.faces[use_.face];
+                std::iter::once(face.outer).chain(face.holes.iter().copied())
+            })
+            .flat_map(|wire| &xor.loops[wire].coedges)
+            .filter_map(|coedge| match &xor.edges[coedge.edge].curve {
+                mixed::MixedEdge::Root(edge) => Some((coedge.edge, edge)),
+                _ => None,
+            })
+            .collect::<std::collections::BTreeMap<_, _>>()
+    };
+    let first = root_edges(xor.bodies[0].outer_shell);
+    let second = root_edges(xor.bodies[1].outer_shell);
+    assert!(!first.is_empty());
+    assert_eq!(first.len(), second.len());
+    assert!(first.keys().all(|id| !second.contains_key(id)));
+    assert!(first.values().all(|edge| second.values().any(|other| {
+        edge.start().point().same_selector(other.start().point())
+            && edge.end().point().same_selector(other.end().point())
+    })));
+    assert!(xor_lo <= 20. - 2. * overlap && 20. - 2. * overlap <= xor_hi);
+    assert!(xor_hi - xor_lo <= 8e-3);
+    let assemble = |cells_per_support| {
+        census.assemble_automatic_paired_boolean(
+            solid::BooleanMaterialOp::Intersection,
+            &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+            1e-9,
+            Default::default(),
+            [Default::default(); 2],
+            mixed::RootBoundaryVolumeLimits {
+                absolute_error: 5e-4,
+                cells: 4096,
+                ..Default::default()
+            },
+            4096,
+            cells_per_support,
+        )
+    };
+    let err = assemble(1).err().expect("One probe cannot cover three regions");
+    assert!(err.to_string().contains("Boolean region witness search found"));
+    let (result, [lo, hi]) = assemble(64).unwrap();
+    let topology = result.topology();
+    assert_eq!(topology.bodies.len(), 1);
+    assert_eq!(topology.shells.len(), 1);
+    assert_eq!(topology.faces.len(), 2);
+    assert!(topology.faces.iter().all(|face| face.holes.len() == 1));
+    assert!(topology.boundary_edges().is_empty());
     let expected = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
-    let [lo, hi] = result.volume();
     assert!(lo <= expected && expected <= hi, "{lo}..{hi}");
+}
+
+#[test]
+fn union_flux_preserves_a_rational_hole_inside_a_closed_ss_rim() {
+    let hole = vec![
+        [0.46875, 0.46875], [0.46875, 0.53125],
+        [0.53125, 0.53125], [0.53125, 0.46875],
+    ];
+    let model = brep_core::extrude_polygon_with_holes(
+        &[[0., 0.], [1., 0.], [1., 1.], [0., 1.]], &[hole], -10., 0.,
+    ).unwrap();
+    let aface = model.faces.iter().position(|face| {
+        face.surface.control_points.iter().flatten().all(|point| point[2] == 0.)
+    }).unwrap();
+    let a = solid::qualify(model, policy::policy()).unwrap().into_solid().unwrap();
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let b = solid::qualify(graph::above_body(), limits).unwrap().into_solid().unwrap();
+    let census = census_for(&a, aface, &b, false);
+    let union = census.select_automatic_paired_boolean_patches(
+        solid::BooleanMaterialOp::Union,
+        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+        Default::default(), [Default::default(); 2], 4096, 64,
+    ).unwrap();
+    let model = union.sew_closed_shells(1e-9).unwrap();
+    let topology = model.topology();
+    assert_eq!(topology.shells.len(), 1);
+    let is_root = |loop_id: usize| {
+        let edge = topology.loops[loop_id].coedges[0].edge;
+        matches!(topology.edges[edge].curve, mixed::MixedEdge::Root(_))
+    };
+    assert!(topology.faces.iter().any(|face| {
+        is_root(face.outer) && face.holes.iter().any(|&hole| !is_root(hole))
+    }));
+    let flux = union.shell_signed_volume(
+        0, 1e-9, 1e-9,
+        mixed::RootBoundaryVolumeLimits {
+            origin: 0.015625, absolute_error: 5e-3, cells: 65536, spans: 65536,
+            arc_subdivisions: 64, ..Default::default()
+        },
+    ).unwrap();
+    let [lo, hi] = flux.signed_bounds.unwrap();
+    let overlap = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    let expected = 20. - overlap - 10. * 0.0625_f64.powi(2);
+    assert!(flux.accuracy_proven && lo > 0., "{flux:?}");
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}, expected {expected}");
 }
 
 fn run(with_holes: bool, mirrored: bool) {

@@ -49,8 +49,15 @@ impl FaceDomain {
                 Ok(loop_.coedges.iter().map(|c| c.pcurve.clone()).collect())
             })
             .collect::<Result<Vec<_>>>()?;
-        let region = TrimDomain::new(&loops, tolerance_uv)?;
-        let s = &face.surface;
+        Self::from_pcurves(&face.surface, &loops, tolerance_uv)
+    }
+
+    pub(crate) fn from_pcurves(
+        s: &crate::Surface,
+        loops: &[Vec<nurbs_core::curve::Curve>],
+        tolerance_uv: f64,
+    ) -> Result<Self> {
+        let region = TrimDomain::new(loops, tolerance_uv)?;
         let natural = [
             [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
             [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],

@@ -136,3 +136,93 @@ fn non_mobius_nonbinary_factor_products_keep_exact_rational_ownership() {
     assert!(!nurbs_core::surface_injectivity::certify_chart(&drift,1000).unwrap().proven);
     assert_eq!(s,before);
 }
+
+#[test]
+fn coupled_rational_walls_have_continuous_global_and_station_certificates() {
+    // Each wall has W(u,v) varying across both axes. Its z coordinate is
+    // exactly affine in v, while the fraction along the side depends on v.
+    let corners = [[0., 0.], [4., 0.], [4., 4.], [0., 4.]];
+    let sections = [0., 7., 14.].map(|z| {
+        vec![(0..4).map(|i| {
+            let [x, y] = corners[i];
+            let [xx, yy] = corners[(i + 1) % 4];
+            crate::line(vec![x, y, z], vec![xx, yy, z])
+        }).collect::<Vec<_>>()]
+    });
+    let mut model = crate::rational_section_loft(&sections).unwrap();
+    let middle_weight = |xy: &[f64]| if xy[0] == xy[1] { 1. } else { 16. };
+    let station_poles = |a: &[f64], b: &[f64], w: f64| {
+        // The first and last three coefficients are unchanged, so the
+        // coupled interior weights do not alter the seam jets through order two.
+        (0..=7).map(|i| {
+            let distance = match i {
+                3 => 3. / w,
+                4 => 7. - 3. / w,
+                _ => i as f64,
+            };
+            vec![a[0], a[1], a[2] + distance * ((b[2] - a[2]) / 7.)]
+        }).collect()
+    };
+    let wall_count = model.faces.len() - 2;
+    let knots = [vec![0.; 8], vec![1.; 8]].concat();
+    let weights_for = |w| vec![1., 1., 1., w, w, 1., 1., 1.];
+    for face in &mut model.0.faces[..wall_count] {
+        let surface = &mut face.surface;
+        surface.degree_v = 7;
+        surface.knots_v = knots.clone();
+        for (row, weights) in surface.control_points.iter_mut().zip(&mut surface.weights) {
+            let w = middle_weight(&row[0]);
+            *row = station_poles(&row[0], &row[1], w);
+            *weights = weights_for(w);
+        }
+    }
+    for edge in &mut model.0.edges {
+        let curve = &mut edge.curve;
+        let [a, b] = curve.control_points.as_slice() else { continue };
+        if a[..2] == b[..2] && a[2] != b[2] {
+            let w = middle_weight(a);
+            curve.control_points = station_poles(a, b, w);
+            curve.degree = 7;
+            curve.knots = knots.clone();
+            curve.weights = weights_for(w);
+        }
+    }
+    model.validate().unwrap();
+
+    let surface = &model.faces[0].surface;
+    assert_ne!(surface.weights[0][3], surface.weights[1][3]);
+    let chart = nurbs_core::surface_injectivity::certify_chart(surface, 1000).unwrap();
+    assert!(chart.proven, "{chart:?}");
+    assert_eq!(chart.reason, "global-exact-rational-triangular");
+    assert!(chart.contraction_upper.is_none());
+    let mut drift = surface.clone();
+    drift.control_points[0][3][2] = drift.control_points[0][3][2].next_up();
+    let changed = nurbs_core::surface_injectivity::certify_chart(&drift, 1000).unwrap();
+    assert_ne!(changed.reason, chart.reason);
+    assert!(!nurbs_core::surface_injectivity::certify_chart(surface, chart.spans - 1).unwrap().proven);
+
+    let mut retained = model.clone();
+    for face in &mut retained.0.faces[..wall_count] {
+        for weight in face.surface.weights.iter_mut().flatten() {
+            *weight *= 2.;
+        }
+    }
+    let full = inspect(&model, &retained, 1e-8, 0., limits()).unwrap();
+    assert!(full.continuous_bound && full.error_upper == Some(0.));
+    assert!(full.certified, "{:?}; geometry {:?}", full.reason,
+        full.reference_volume.as_ref().map(|volume| (
+            volume.boundary.agreement.all_equal,
+            volume.boundary.intersections.faces.all_faces_injective,
+            volume.boundary.intersections.pairs.all_pairs_classified,
+        )));
+    let mut short = limits();
+    short.reference_volume.boundary.contacts.cells = 1;
+    let refused = inspect(&model, &retained, 1e-8, 0., short).unwrap();
+    assert!(refused.continuous_bound && !refused.certified);
+    let caps = [wall_count, wall_count + 1];
+    let station = crate::sweep_smoothness::inspect_axis(
+        &retained, &caps, crate::sweep_smoothness::Axis::Station, 2_000_000,
+    ).unwrap();
+    assert!(station.extraction_complete && station.g1_certified && station.g2_certified);
+    assert_eq!(station.edge_ids.len(), 4);
+}

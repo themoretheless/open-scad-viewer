@@ -253,6 +253,57 @@ impl QualifiedArrangementMaterialRectangle {
     }
 }
 impl CensusFaceArrangement {
+    /// Search natural UV space breadth-first so smaller regions receive probes
+    /// even when nearby cells already have witnesses for larger regions.
+    pub(super) fn discover_boolean_regions(
+        self: &Arc<Self>,
+        operation: crate::closed_solid::BooleanMaterialOp,
+        directions: &[[f64; 3]],
+        limits: CutMaterialLimits,
+        max_cells: usize,
+    ) -> Result<Vec<QualifiedArrangementMaterialRectangle>> {
+        let cut = self.census.parent(self.support)?;
+        let surface = &cut.source.model().faces[cut.face].surface;
+        let bounds = [
+            [surface.knots_u[surface.degree_u], surface.knots_u[surface.control_points.len()]],
+            [surface.knots_v[surface.degree_v], surface.knots_v[surface.control_points[0].len()]],
+        ];
+        // Include the split-axis choice in the queue so both normalized
+        // parameters are refined regardless of their physical units.
+        let mut pending = std::collections::VecDeque::from([(bounds, 0)]);
+        let mut witnessed = std::collections::BTreeSet::new();
+        let mut retained = Vec::new();
+        for _ in 0..max_cells {
+            let Some((mut cell, axis)) = pending.pop_front() else { break };
+            let probe = cell.map(|[lo, hi]| {
+                let mid = lo * 0.5 + hi * 0.5;
+                [mid * 0.96875 + lo * 0.03125, mid * 0.96875 + hi * 0.03125]
+            });
+            if probe.iter().all(|[lo, hi]| lo < hi) {
+                if let Ok(region) = self.qualify_boolean_rectangle(operation, probe, directions, limits) {
+                    if witnessed.insert(region.face()) && region.material().boolean_material().retain() {
+                        retained.push(region);
+                    }
+                    if witnessed.len() == self.faces.len() {
+                        return Ok(retained);
+                    }
+                }
+            }
+            let [lo, hi] = cell[axis];
+            let mid = lo * 0.5 + hi * 0.5;
+            if lo < mid && mid < hi {
+                let mut right = cell;
+                cell[axis][1] = mid;
+                right[axis][0] = mid;
+                pending.extend([(cell, 1 - axis), (right, 1 - axis)]);
+            }
+        }
+        Err(unproved(&format!(
+            "Boolean region witness search found {} of {} regions on support {}",
+            witnessed.len(), self.faces.len(), self.support,
+        )))
+    }
+
     /// Material ownership is bound to this exact immutable topology and its
     /// literal region face, rather than to an unattached bit vector.
     pub fn qualify_boolean_rectangle(

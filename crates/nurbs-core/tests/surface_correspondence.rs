@@ -43,9 +43,16 @@ fn unequal_weights_and_knot_partitions_use_original_homogeneous_nets() {
     for w in b.weights.iter_mut().flatten() {
         *w *= 2.;
     }
-    let r = inspect(&a, &b, 1e-9, limits()).unwrap();
+    let r = inspect(&a, &b, 0., limits()).unwrap();
     assert!(r.within_budget, "{r:?}");
+    assert_eq!(r.error_upper, Some(0.));
     assert!(r.products > 27);
+    let short = inspect(&a, &b, 0., Limits { products: r.products - 1, ..limits() }).unwrap();
+    assert!(!short.within_budget);
+    let mut drift = b.clone();
+    drift.weights[0][1] = drift.weights[0][1].next_up();
+    let changed = inspect(&a, &drift, 0., Limits { cells: 1, ..limits() }).unwrap();
+    assert!(!changed.within_budget);
     let b = nurbs_core::surface_edit::insert(&b, nurbs_core::surface::Axis::U, 0.5, 1).unwrap();
     let r = inspect(&a, &b, 1e-8, limits()).unwrap();
     assert!(r.within_budget, "{r:?}");

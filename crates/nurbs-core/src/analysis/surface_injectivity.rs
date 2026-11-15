@@ -8,6 +8,7 @@ mod separable_monotone;
 mod affine_separable;
 mod rational_clock;
 mod rational_separable;
+pub(crate) mod rational_triangular;
 /// Whole-chart injectivity, allowing exact strictly monotone coordinates with
 /// isolated zero derivatives. Unlike `certify_contraction`, this does NOT prove
 /// immersion/rank. Consumers requiring regularity must prove it independently.
@@ -35,6 +36,18 @@ pub fn certify_chart(s:&Surface,max_work:usize)->Result<Report> {
             report.proven=true;report.reason="global-exact-rational-separable-monotonicity";
             report.projection=Some(axes);report.linear_projection=None;report.projective_projection=None;
             report.polar_projection=None;report.polar_p_matrix=None;report.contraction_upper=None;
+        }
+    }
+    if !report.proven && report.spans < max_work {
+        if let Some(axes) = rational_triangular::certify(s, &mut report.spans, max_work) {
+            report.proven = true;
+            report.reason = "global-exact-rational-triangular";
+            report.projection = Some(axes);
+            report.linear_projection = None;
+            report.projective_projection = None;
+            report.polar_projection = None;
+            report.polar_p_matrix = None;
+            report.contraction_upper = None;
         }
     }
     if !report.proven && report.spans==max_work {report.reason="work-limit";}

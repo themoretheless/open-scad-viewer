@@ -25,7 +25,27 @@ pub fn inspect(surface: &Surface, max_cells: usize) -> Result<Report> {
         (1..=100000).contains(&max_cells),
         "Regularity needs 1..100000 cells",
     )?;
-    if let Some(report) = bernstein::inspect(surface, max_cells)? {
+    let mut triangular_work = 0;
+    // A cheap proposal limits the exact trial to coupled weight nets.
+    // Rounded products only select the trial and never prove rank.
+    let w = &surface.weights;
+    let coupled = w.iter().skip(1).any(|row| {
+        row.iter().zip(&w[0]).skip(1).any(|(&x, &y)| x * w[0][0] != row[0] * y)
+    });
+    if coupled && crate::surface_injectivity::rational_triangular::certify(
+        surface, &mut triangular_work, max_cells / 2,
+    ).is_some() {
+        return Ok(Report {
+            spanwise_regular: true,
+            interior_basis_c1: true,
+            unresolved: Vec::new(),
+            cells: triangular_work,
+            proven_cells: 1,
+        });
+    }
+    let max_cells = max_cells - triangular_work;
+    if let Some(mut report) = bernstein::inspect(surface, max_cells)? {
+        report.cells += triangular_work;
         return Ok(report);
     }
     let mut pending = Vec::new();
@@ -101,7 +121,7 @@ pub fn inspect(surface: &Surface, max_cells: usize) -> Result<Report> {
             surface.control_points[0].len(),
         ),
         unresolved,
-        cells,
+        cells: cells + triangular_work,
         proven_cells,
     })
 }
