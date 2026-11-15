@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 311,
-  "unallocatedCount": 689,
+  "specifiedCount": 312,
+  "unallocatedCount": 688,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8188,6 +8188,27 @@
       "remainingQualification": [
         "Change the signed absolute UV domains of a rational tensor surface and its closed rational trims in one atomic operation.",
         "Closed loops inside the active UV rectangle. Original trim knots and weights are retained, including under an axis reversal. Exact storage and a shared budget are required.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0312",
+      "name": "Точная перестановка осей U и V у рациональной поверхности с обрезкой",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::transpose_trimmed_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/affine_trim.rs",
+        "crates/nurbs-geometry/src/surface_transpose.rs",
+        "crates/nurbs-core/tests/exact_trimmed_transpose_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-312-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-312-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exchange both tensor axes and every closed UV trim together, including different basis degrees and rational weights.",
+        "Natural UV domain containment and exact loop closure. The signed permutation reverses winding and preserves original curve clocks and world-space traces.",
         "WASM and application integration are separate."
       ]
     }

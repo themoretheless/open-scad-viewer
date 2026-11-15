@@ -8,7 +8,7 @@ pub use affine_curve::affine_curve_clock;
 mod affine_surface;
 pub use affine_surface::affine_surface_clock;
 mod affine_trim;
-pub use affine_trim::affine_trimmed_surface_clock;
+pub use affine_trim::{affine_trimmed_surface_clock, transpose_trimmed_surface};
 mod chart_nonnegative;
 mod mobius;
 pub use mobius::{mobius_bezier_curve, mobius_bezier_surface};
