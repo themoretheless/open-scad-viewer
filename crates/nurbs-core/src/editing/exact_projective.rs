@@ -18,6 +18,10 @@ pub use mobius_spline::{
 mod pcurve_mobius;
 pub use pcurve_mobius::{PcurvePullback, PcurvePullbackRefusal, pullback_mobius_pcurve};
 mod proof;
+mod trimmed_mobius;
+pub use trimmed_mobius::{
+    ReclockedTrimmedSurface, TrimmedMobiusRefusal, TrimmedMobiusReport, mobius_trimmed_surface,
+};
 /// Row-major homogeneous map: `[x*w,y*w,z*w,w] -> M * H`.
 pub type Matrix = [[f64; 4]; 4];
 #[derive(Clone, Debug, PartialEq, Eq)]
