@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 273,
-  "unallocatedCount": 727,
+  "specifiedCount": 274,
+  "unallocatedCount": 726,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7343,6 +7343,32 @@
       ],
       "remainingQualification": [
         "Combines the certified second-derivative chord remainder with the first-order bound and exact vertex bracket error. The quadratic bound can meet a requested UV tolerance with fewer vertices.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0274",
+      "name": "Непрерывный сертификат отклонения пространственной ломаной от порогового контура NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_world_polyline",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs",
+        "crates/nurbs-core/src/analysis/surface_measure/jets.rs",
+        "docs/qualification/nurbs-curvature-field-274-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-274-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Lifts a certified UV contour to stored 3D vertices. The continuous Euclidean bound includes the UV certificate, UV-to-absolute rounding, interval point storage and the original patch Hessian along each chord.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]

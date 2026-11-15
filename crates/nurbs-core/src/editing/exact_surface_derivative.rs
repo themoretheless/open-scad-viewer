@@ -34,6 +34,8 @@ pub use curvature_gap_second::{
     CurvatureGapSecondDerivativeAudit, curvature_gap_graph_second_derivative,
 };
 mod curvature_gap_slope;
+mod curvature_gap_world;
+pub use curvature_gap_world::{CurvatureGapWorldPolyline, certify_curvature_gap_world_polyline};
 pub use curvature_gap_slope::{CurvatureGapSlopeAudit, curvature_gap_graph_slope};
 mod curvature_gap_refinement;
 pub use curvature_gap_refinement::{

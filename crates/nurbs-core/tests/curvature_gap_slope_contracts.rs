@@ -318,3 +318,77 @@ fn second_order_adaptation_keeps_the_error_from_inexact_vertices() {
     assert_eq!(r.stop, Some(CurvaturePolylineStop::VertexLimit));
     assert_eq!(r.polyline.segment_error_upper.unwrap(), vec![1. / 512.]);
 }
+
+#[test]
+fn world_polyline_covers_the_analytic_contour_between_vertices() {
+    use nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_world_polyline;
+    let mut s = sheared_parabola(0.125, 9.);
+    // Keep the parabolic cylinder and change the transverse clock to
+    // y(s) = (s+s²)/2. At x=1/2 the physical contour is a straight line,
+    // but the chord error at equal transverse parameters is 1/8.
+    for row in &mut s.control_points {
+        row[1][1] = 0.25;
+    }
+    let evaluate = |grid: &[f64]| {
+        certify_curvature_gap_world_polyline(&s, [2, 2], Axis::U, 0.5, grid, 16, WORK).unwrap()
+    };
+    let coarse = evaluate(&[7., 9.]);
+    let world = coarse
+        .points
+        .unwrap_or_else(|| panic!("{:?}", coarse.uv.graph));
+    let errors = coarse.world_error_upper.unwrap();
+    assert!(errors[0] >= 0.125);
+    assert!((world[0][0] - 0.5).abs() < 1e-12 && (world[1][2] - 0.25).abs() < 1e-12);
+    let fine = evaluate(&[7., 8., 9.]);
+    let fine_points = fine.points.unwrap();
+    let fine_errors = fine.world_error_upper.unwrap();
+    for i in 0..2 {
+        let span_mid = (i as f64 + 0.5) * 0.5;
+        let y = (span_mid + span_mid * span_mid) * 0.5;
+        let exact = [0.5, y, 0.25];
+        let error = (0..3)
+            .map(|axis| {
+                let p = (fine_points[i][axis] + fine_points[i + 1][axis]) * 0.5;
+                (p - exact[axis]).powi(2)
+            })
+            .sum::<f64>()
+            .sqrt();
+        assert!(error <= fine_errors[i]);
+        assert!(fine_errors[i] < errors[0]);
+    }
+}
+
+#[test]
+fn world_polyline_preserves_unresolved_graph_and_exact_work_refusal() {
+    use nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_world_polyline;
+    let s = sheared_parabola(0.125, 9.);
+    let unresolved =
+        certify_curvature_gap_world_polyline(&s, [2, 2], Axis::V, 1., &[2., 6.], 16, WORK).unwrap();
+    assert_eq!(unresolved.uv.graph, Some(CurvatureGapGraph::Unresolved));
+    assert!(unresolved.points.is_none() && unresolved.world_error_upper.is_none());
+    let short =
+        certify_curvature_gap_world_polyline(&s, [2, 2], Axis::U, 1., &[7., 9.], 16, 1).unwrap();
+    assert_eq!(short.uv.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.points.is_none() && short.world_error_upper.is_none());
+}
+
+#[test]
+fn world_bound_includes_displacement_from_coarse_root_brackets() {
+    use nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_world_polyline;
+    let s = sheared_parabola(0.125, 9.);
+    let r =
+        certify_curvature_gap_world_polyline(&s, [2, 2], Axis::U, 1., &[7., 9.], 3, WORK).unwrap();
+    let x = ((4f64.cbrt() - 1.) / 4.).sqrt();
+    let upper = r.world_error_upper.unwrap()[0];
+    for (i, point) in r.points.unwrap().iter().enumerate() {
+        let exact = [x, i as f64, x * x];
+        let distance = (0..3)
+            .map(|axis| (point[axis] - exact[axis]).powi(2))
+            .sum::<f64>()
+            .sqrt();
+        assert!(
+            distance > 1e-4 && distance <= upper,
+            "{distance} <= {upper}"
+        );
+    }
+}
