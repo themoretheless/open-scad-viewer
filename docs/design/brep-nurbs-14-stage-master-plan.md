@@ -755,7 +755,7 @@ bounded resumable `JobMachine`; checked leased/chunked ABI; worker epochs;
 protocol v6 and `GeometrySceneV2`; export lease and restart/rebuild contract.
 
 На момент плана protocol был v5 с единственным запланированным преемником v6.
-На 2026-11-13 `GEOMETRY_WORKER_PROTOCOL_VERSION` равен 12
+На 2026-11-15 `GEOMETRY_WORKER_PROTOCOL_VERSION` равен 13
 (`src/kernel/geometryWorkerProtocol.ts`), а `GeometrySceneV2` в `src/` не найден;
 соответствие нумерации v6 из этого плана текущим версиям не проверено.
 
