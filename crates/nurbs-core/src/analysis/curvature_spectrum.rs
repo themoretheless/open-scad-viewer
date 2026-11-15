@@ -425,7 +425,6 @@ pub fn iso_spectrum(
 /// (items 991) Карта спектров по `lines` равномерно расположенным
 /// изопараметрическим линиям (поперечный параметр — доли домена, без
 /// концевых интрузий вырождений: inset 2%).
-#[allow(clippy::too_many_arguments)]
 pub fn spectrum_map(
     surface: &Surface,
     axis: IsoAxis,

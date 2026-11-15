@@ -34,7 +34,6 @@ pub struct FitReport {
 /// Certified section-root boxes define only an interpolating world proposal.
 /// Actual rounded poles need fresh COMPLETE world correspondence. No UV curve,
 /// shared-edge receipt or positive certificate is accepted from the caller.
-#[allow(clippy::too_many_arguments)]
 pub fn fit(
     faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
     axis: usize,

@@ -71,7 +71,6 @@ pub fn tessellate_lods(
 /// budget. Every grid attempt runs [`shared_tessellation::tessellate_with`]
 /// as its own `shared-tessellation` phase; the token is also polled between
 /// levels. A cancelled call returns `Cancelled` and no levels.
-#[allow(clippy::too_many_arguments)]
 pub fn tessellate_lods_with(
     surfaces: &[Surface],
     seams: &[Seam],

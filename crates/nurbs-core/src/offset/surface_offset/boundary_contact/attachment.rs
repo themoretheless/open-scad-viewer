@@ -50,7 +50,6 @@ fn collar(p: &Proof) -> PairDomain {
 /// This proves connected subsets of the ORIGINAL four-parameter contact set.
 /// Missing arcs, full-root coverage, world embedding, trims and material roles
 /// remain independent; even disjoint collar/path sets may connect elsewhere.
-#[allow(clippy::too_many_arguments)]
 pub fn certify(
     surfaces: [&Surface; 2],
     distances: [f64; 2],

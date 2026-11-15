@@ -81,7 +81,6 @@ fn nodes(domain: [f64; 2], degree: usize) -> Result<Vec<f64>> {
 /// This is UV correspondence within one admitted band, not trimmed material,
 /// world curve/lift agreement, region injectivity, BRep cutting or global branch
 /// completeness. Work/degree exhaustion never publishes one successful side.
-#[allow(clippy::too_many_arguments)]
 pub fn fit_branch(
     faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
     axis: usize,
