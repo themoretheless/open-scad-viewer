@@ -167,7 +167,20 @@ pub fn intersect_sphere_cone(
             report.unresolved(domain, UnresolvedReason::NearCoincidence);
             return Ok(report);
         }
-        return off_axis(report, domain, sphere_model, cone_model, &sphere, &cone, s0, d_perp, band, terms);
+        return off_axis(
+            report,
+            domain,
+            Pair {
+                sphere_model,
+                cone_model,
+                sphere: &sphere,
+                cone: &cone,
+            },
+            s0,
+            d_perp,
+            band,
+            terms,
+        );
     }
     let r = sphere.radius;
     let h = cone.height;
@@ -270,22 +283,34 @@ pub fn intersect_sphere_cone(
     Ok(report)
 }
 
+/// The two operands of a sphere/cone intersection: their models and
+/// canonical forms.
+#[derive(Clone, Copy)]
+struct Pair<'a> {
+    sphere_model: &'a Model,
+    cone_model: &'a Model,
+    sphere: &'a CanonicalSphere,
+    cone: &'a CanonicalCone,
+}
+
 /// Off-axis pair. Only a sphere strictly between the cap planes is handled:
 /// the caps (and the apex, and the other nappe) stay untouched, so every
 /// contact is a closed loop on the side wall. Provable misses resolve empty.
-#[allow(clippy::too_many_arguments)]
 fn off_axis(
     mut report: Report<SphereConeComponent>,
     domain: Vec<f64>,
-    sphere_model: &Model,
-    cone_model: &Model,
-    sphere: &CanonicalSphere,
-    cone: &CanonicalCone,
+    pair: Pair<'_>,
     s0: f64,
     d_perp: f64,
     band: f64,
     terms: f64,
 ) -> Result<Report<SphereConeComponent>> {
+    let Pair {
+        sphere_model,
+        cone_model,
+        sphere,
+        cone,
+    } = pair;
     let r = sphere.radius;
     let reaches_cap = s0 - r <= band || s0 + r >= cone.height - band;
     if reaches_cap {
