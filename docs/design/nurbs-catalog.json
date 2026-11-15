@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 260,
-  "unallocatedCount": 740,
+  "specifiedCount": 261,
+  "unallocatedCount": 739,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7036,6 +7036,29 @@
       ],
       "remainingQualification": [
         "The squared gap measures the separation of the principal curvatures without a square root or an eigenvector chart. A bounded carrier alone is not a proof of an umbilic or of a positive gap.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0261",
+      "name": "Точная классификация умбилических и разделённых UV-ячеек NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::audit_umbilics",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/umbilic_cell_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
+        "docs/qualification/nurbs-curvature-field-261-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-261-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classifies each complete original cell as everywhere umbilic, strictly separated everywhere, or containing at least one nonumbilic point without a whole-cell separation proof. The audit uses exact polynomials without storing a curvature field or locating isolated umbilics.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]

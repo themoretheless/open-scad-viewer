@@ -18,6 +18,8 @@ mod mean_curvature;
 mod mixed;
 pub(super) mod polynomial;
 pub(super) mod storage;
+mod umbilic;
+pub use umbilic::{UmbilicAudit, UmbilicCell, UmbilicStatus, audit_umbilics};
 pub(super) type Poly = BTreeMap<(usize, usize), Q>;
 type PResult<T> = std::result::Result<T, Refusal>;
 #[derive(Clone, Debug, PartialEq, Eq)]
