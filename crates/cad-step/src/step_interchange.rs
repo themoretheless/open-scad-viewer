@@ -1310,163 +1310,185 @@ fn frame_from_axis_ref(axis: [f64; 3], ref_dir: [f64; 3]) -> [[f64; 3]; 2] {
     [ref_dir, y]
 }
 
-fn kind_from_surfaces(entities: &BTreeMap<usize, (String, String)>) -> Option<AnalyticKind> {
-    let mut spherical = None;
-    let mut toroidal = None;
-    let mut cylindrical = Vec::new();
-    let mut conical = None;
-    let mut planes = 0usize;
-    for (ty, args) in entities.values() {
-        match ty.as_str() {
-            "SPHERICAL_SURFACE" => {
-                let parts: Vec<&str> = args.split(',').collect();
-                if parts.len() >= 2 {
-                    let axis_id: usize = parts[parts.len() - 2]
-                        .trim()
-                        .trim_start_matches('#')
-                        .parse()
-                        .ok()?;
-                    let radius: f64 = parts[parts.len() - 1].trim().parse().ok()?;
-                    let (o, _, _) = resolve_axis2(entities, axis_id)?;
-                    spherical = Some(AnalyticKind::Sphere { center: o, radius });
-                }
-            }
-            "TOROIDAL_SURFACE" => {
-                let parts: Vec<&str> = args.split(',').collect();
-                if parts.len() >= 3 {
-                    let axis_id: usize = parts[parts.len() - 3]
-                        .trim()
-                        .trim_start_matches('#')
-                        .parse()
-                        .ok()?;
-                    let major: f64 = parts[parts.len() - 2].trim().parse().ok()?;
-                    let minor: f64 = parts[parts.len() - 1].trim().parse().ok()?;
-                    let (o, a, r) = resolve_axis2(entities, axis_id)?;
-                    toroidal = Some(AnalyticKind::Torus {
-                        major,
-                        minor,
-                        center: o,
-                        axis: a,
-                        frame: frame_from_axis_ref(a, r),
-                    });
-                }
-            }
-            "CYLINDRICAL_SURFACE" => {
-                let parts: Vec<&str> = args.split(',').collect();
-                if parts.len() >= 2 {
-                    let axis_id: usize = parts[parts.len() - 2]
-                        .trim()
-                        .trim_start_matches('#')
-                        .parse()
-                        .ok()?;
-                    let radius: f64 = parts[parts.len() - 1].trim().parse().ok()?;
-                    if let Some((o, a, r)) = resolve_axis2(entities, axis_id) {
-                        cylindrical.push((radius, o, a, r));
+/// Radius at or below which a recovered single-cap cone end counts as an apex.
+const CONE_APEX_RADIUS_TOL: f64 = 1e-12;
+/// Recovered frustum radii at or below this snap to an exact apex.
+const CONE_APEX_SNAP: f64 = 1e-9;
+
+type CylinderSurface = (f64, [f64; 3], [f64; 3], [f64; 3]);
+type ConeSurface = (f64, [f64; 3], [f64; 3], [f64; 3], f64);
+
+/// Splits the trailing `#axis, real...` arguments of an elementary surface.
+/// Outer `None`: a present argument failed to parse (the whole recognition
+/// refuses). Inner `None`: too few arguments, so the surface is skipped.
+fn surface_tail(args: &str, reals: usize) -> Option<Option<(usize, Vec<f64>)>> {
+    let parts: Vec<&str> = args.split(',').collect();
+    if parts.len() < reals + 1 {
+        return Some(None);
+    }
+    let tail = &parts[parts.len() - reals - 1..];
+    let axis_id: usize = tail[0].trim().trim_start_matches('#').parse().ok()?;
+    let values = tail[1..]
+        .iter()
+        .map(|v| v.trim().parse::<f64>().ok())
+        .collect::<Option<Vec<f64>>>()?;
+    Some(Some((axis_id, values)))
+}
+
+/// Elementary surfaces found in one Part21 entity index.
+#[derive(Default)]
+struct SurfaceCensus {
+    spherical: Option<AnalyticKind>,
+    toroidal: Option<AnalyticKind>,
+    cylindrical: Vec<CylinderSurface>,
+    conical: Option<ConeSurface>,
+    planes: usize,
+}
+
+impl SurfaceCensus {
+    fn collect(entities: &BTreeMap<usize, (String, String)>) -> Option<Self> {
+        let mut census = Self::default();
+        for (ty, args) in entities.values() {
+            match ty.as_str() {
+                "SPHERICAL_SURFACE" => {
+                    if let Some((axis_id, v)) = surface_tail(args, 1)? {
+                        let (o, _, _) = resolve_axis2(entities, axis_id)?;
+                        census.spherical = Some(AnalyticKind::Sphere {
+                            center: o,
+                            radius: v[0],
+                        });
                     }
                 }
-            }
-            "CONICAL_SURFACE" => {
-                let parts: Vec<&str> = args.split(',').collect();
-                if parts.len() >= 3 {
-                    let axis_id: usize = parts[parts.len() - 3]
-                        .trim()
-                        .trim_start_matches('#')
-                        .parse()
-                        .ok()?;
-                    let r_bottom: f64 = parts[parts.len() - 2].trim().parse().ok()?;
-                    let semi: f64 = parts[parts.len() - 1].trim().parse().ok()?;
-                    let (o, a, r) = resolve_axis2(entities, axis_id)?;
-                    conical = Some((r_bottom, o, a, r, semi));
+                "TOROIDAL_SURFACE" => {
+                    if let Some((axis_id, v)) = surface_tail(args, 2)? {
+                        let (o, a, r) = resolve_axis2(entities, axis_id)?;
+                        census.toroidal = Some(AnalyticKind::Torus {
+                            major: v[0],
+                            minor: v[1],
+                            center: o,
+                            axis: a,
+                            frame: frame_from_axis_ref(a, r),
+                        });
+                    }
                 }
+                "CYLINDRICAL_SURFACE" => {
+                    if let Some((axis_id, v)) = surface_tail(args, 1)?
+                        && let Some((o, a, r)) = resolve_axis2(entities, axis_id)
+                    {
+                        census.cylindrical.push((v[0], o, a, r));
+                    }
+                }
+                "CONICAL_SURFACE" => {
+                    if let Some((axis_id, v)) = surface_tail(args, 2)? {
+                        let (o, a, r) = resolve_axis2(entities, axis_id)?;
+                        census.conical = Some((v[0], o, a, r, v[1]));
+                    }
+                }
+                "PLANE" => census.planes += 1,
+                _ => {}
             }
-            "PLANE" => planes += 1,
-            _ => {}
+        }
+        Some(census)
+    }
+}
+
+fn frustum_from_cone(
+    entities: &BTreeMap<usize, (String, String)>,
+    plane_origins: &[[f64; 3]],
+    (rb, o, a, r, semi): ConeSurface,
+) -> Option<AnalyticKind> {
+    let height = if plane_origins.len() >= 2 {
+        axial_height_from_planes(o, a, plane_origins)?
+    } else {
+        // Apex / single-cap only: one radius must be zero after recovery.
+        let height = axial_height_from_points(entities, o, a)?;
+        let r_top = rb + height * semi.tan();
+        if !(rb.abs() <= CONE_APEX_RADIUS_TOL || r_top.abs() <= CONE_APEX_RADIUS_TOL) {
+            return None;
+        }
+        height
+    };
+    // `tan` differs across libm implementations; a true apex must recover to exactly 0.
+    let snap_apex = |r: f64| if r.abs() <= CONE_APEX_SNAP { 0. } else { r };
+    let r_top = snap_apex(rb + height * semi.tan());
+    Some(AnalyticKind::Frustum {
+        r_bottom: snap_apex(rb),
+        r_top,
+        height,
+        origin: o,
+        axis: a,
+        frame: frame_from_axis_ref(a, r),
+    })
+}
+
+fn tube_from_cylinders(
+    cylindrical: &[CylinderSurface],
+    plane_origins: &[[f64; 3]],
+) -> Option<AnalyticKind> {
+    let mut pair = cylindrical.to_vec();
+    pair.sort_by(|x, y| x.0.partial_cmp(&y.0).unwrap_or(Ordering::Equal));
+    let [(inner, o, a, r), (outer, _, _, _)] = pair[..] else {
+        return None;
+    };
+    let height = axial_height_from_planes(o, a, plane_origins)?;
+    Some(AnalyticKind::Tube {
+        outer,
+        inner,
+        height,
+        origin: o,
+        axis: a,
+        frame: frame_from_axis_ref(a, r),
+    })
+}
+
+fn cuboid_from_points(entities: &BTreeMap<usize, (String, String)>) -> Option<AnalyticKind> {
+    let mut min = [f64::INFINITY; 3];
+    let mut max = [f64::NEG_INFINITY; 3];
+    let mut n = 0usize;
+    for (ty, args) in entities.values() {
+        if ty == "CARTESIAN_POINT"
+            && let Some(coords) = args.rsplit_once('(').map(|(_, c)| c.trim_end_matches(')'))
+            && let Some(p) = parse_vec3(coords)
+        {
+            for i in 0..3 {
+                min[i] = min[i].min(p[i]);
+                max[i] = max[i].max(p[i]);
+            }
+            n += 1;
         }
     }
+    (n >= 4 && min.iter().all(|v| v.is_finite()) && max.iter().all(|v| v.is_finite()))
+        .then_some(AnalyticKind::Cuboid { min, max })
+}
+
+fn kind_from_surfaces(entities: &BTreeMap<usize, (String, String)>) -> Option<AnalyticKind> {
+    let census = SurfaceCensus::collect(entities)?;
     let plane_origins = plane_axis_origins(entities);
 
-    if let Some(s) = spherical {
+    if let Some(s) = census.spherical {
         return Some(s);
     }
-    if let Some(t) = toroidal {
+    if let Some(t) = census.toroidal {
         return Some(t);
     }
-    if let Some((rb, o, a, r, semi)) = conical {
-        let height = if plane_origins.len() >= 2 {
-            axial_height_from_planes(o, a, &plane_origins)?
-        } else {
-            // Apex / single-cap only: one radius must be zero after recovery.
-            let height = axial_height_from_points(entities, o, a)?;
-            let r_top = rb + height * semi.tan();
-            if !(rb.abs() <= 1e-12 || r_top.abs() <= 1e-12) {
-                return None;
-            }
-            height
-        };
-        // `tan` differs across libm implementations; a true apex must recover to exactly 0.
-        let snap_apex = |r: f64| if r.abs() <= 1e-9 { 0. } else { r };
-        let r_top = snap_apex(rb + height * semi.tan());
-        return Some(AnalyticKind::Frustum {
-            r_bottom: snap_apex(rb),
-            r_top,
-            height,
-            origin: o,
-            axis: a,
-            frame: frame_from_axis_ref(a, r),
-        });
+    if let Some(cone) = census.conical {
+        return frustum_from_cone(entities, &plane_origins, cone);
     }
-    if cylindrical.len() == 1 {
-        let (radius, o, a, r) = cylindrical[0];
-        let height = axial_height_from_planes(o, a, &plane_origins)?;
-        return Some(AnalyticKind::Cylinder {
-            radius,
-            height,
-            origin: o,
-            axis: a,
-            frame: frame_from_axis_ref(a, r),
-        });
-    }
-    if cylindrical.len() == 2 {
-        let mut pair = cylindrical.clone();
-        pair.sort_by(|x, y| x.0.partial_cmp(&y.0).unwrap_or(Ordering::Equal));
-        let (inner, outer) = (pair[0].0, pair[1].0);
-        let (_, o, a, r) = pair[0];
-        let height = axial_height_from_planes(o, a, &plane_origins)?;
-        return Some(AnalyticKind::Tube {
-            outer,
-            inner,
-            height,
-            origin: o,
-            axis: a,
-            frame: frame_from_axis_ref(a, r),
-        });
-    }
-    if planes >= 6
-        && spherical.is_none()
-        && toroidal.is_none()
-        && cylindrical.is_empty()
-        && conical.is_none()
-    {
-        let mut min = [f64::INFINITY; 3];
-        let mut max = [f64::NEG_INFINITY; 3];
-        let mut n = 0usize;
-        for (ty, args) in entities.values() {
-            if ty == "CARTESIAN_POINT"
-                && let Some(coords) = args.rsplit_once('(').map(|(_, c)| c.trim_end_matches(')'))
-                && let Some(p) = parse_vec3(coords)
-            {
-                for i in 0..3 {
-                    min[i] = min[i].min(p[i]);
-                    max[i] = max[i].max(p[i]);
-                }
-                n += 1;
-            }
+    match census.cylindrical[..] {
+        [(radius, o, a, r)] => {
+            let height = axial_height_from_planes(o, a, &plane_origins)?;
+            Some(AnalyticKind::Cylinder {
+                radius,
+                height,
+                origin: o,
+                axis: a,
+                frame: frame_from_axis_ref(a, r),
+            })
         }
-        if n >= 4 && min.iter().all(|v| v.is_finite()) && max.iter().all(|v| v.is_finite()) {
-            return Some(AnalyticKind::Cuboid { min, max });
-        }
+        [_, _] => tube_from_cylinders(&census.cylindrical, &plane_origins),
+        [] if census.planes >= 6 => cuboid_from_points(entities),
+        _ => None,
     }
-    None
 }
 
 fn refuse_mesh_payloads(text: &str) -> Result<()> {
