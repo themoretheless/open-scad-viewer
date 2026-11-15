@@ -101,3 +101,55 @@ fn work_exhaustion_never_commits_unproved_steps() {
         assert!((point[2] - (u + 0.5)).abs() < 1e-14);
     }
 }
+
+#[test]
+fn batch_compresses_in_order_and_preserves_each_parameter_law() {
+    use nurbs_core::editing::exact_surface_knot_removal::compress_tensor_surface_batch;
+    let inputs = [refined_surface(false), refined_surface(true)];
+    let r = compress_tensor_surface_batch(&inputs, WORK).unwrap();
+    let output = r.patches.unwrap();
+    assert_eq!(output.len(), 2);
+    assert_eq!(output[0].reduced_degrees, [1, 1]);
+    assert_eq!(output[1].reduced_degrees, [0, 1]);
+    assert!(r.work_used >= output.iter().map(|p| p.work_used).sum::<u64>() + 50);
+    for (before, after) in inputs.iter().zip(output) {
+        for (u, v) in [(0.125, 0.75), (0.5, 0.25), (1., 1.)] {
+            let original = before.evaluate(u, v).unwrap();
+            let result = after.surface.evaluate(u, v).unwrap();
+            assert!(
+                original
+                    .point
+                    .iter()
+                    .zip(result.point)
+                    .all(|(a, b)| (a - b).abs() < 1e-14)
+            );
+        }
+    }
+}
+
+#[test]
+fn late_input_and_work_failures_return_no_partial_batch() {
+    use nurbs_core::editing::exact_surface_knot_removal::compress_tensor_surface_batch;
+    let inputs = [refined_surface(false), refined_surface(true)];
+    let full = compress_tensor_surface_batch(&inputs, WORK).unwrap();
+    let short = compress_tensor_surface_batch(&inputs, full.work_used - 1).unwrap();
+    assert!(short.patches.is_none() && short.work_used < full.work_used);
+    assert!(short.work_used > full.patches.as_ref().unwrap()[0].work_used);
+    let mut invalid = inputs;
+    invalid[1].weights.clear();
+    assert!(compress_tensor_surface_batch(&invalid, WORK).is_err());
+}
+
+#[test]
+fn no_op_charts_still_consume_batch_budget() {
+    use nurbs_core::editing::exact_surface_knot_removal::compress_tensor_surface_batch;
+    let bilinear = compress_tensor_surface(&refined_surface(false), WORK)
+        .unwrap()
+        .surface;
+    let sources = [bilinear.clone(), bilinear];
+    let result = compress_tensor_surface_batch(&sources, 9).unwrap();
+    assert_eq!(result.work_used, 8);
+    assert_eq!(result.patches.unwrap().len(), 2);
+    let short = compress_tensor_surface_batch(&sources, 8).unwrap();
+    assert!(short.patches.is_none());
+}

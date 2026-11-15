@@ -18,11 +18,16 @@ pub struct TensorCompression {
 /// denominator. Work exhaustion retains only fully proved steps.
 /// The completed flag describes the search, without claiming global minimality.
 pub fn compress_tensor_surface(source: &Surface, max_work: u64) -> Result<TensorCompression> {
-    source.validate()?;
     check(
         (1..=cad_predicates::MAX_WORK).contains(&max_work),
         "Exact tensor compression work must be in [1,1000000]",
     )?;
+    validate_chart(source)?;
+    compress_validated(source, max_work)
+}
+
+fn validate_chart(source: &Surface) -> Result<()> {
+    source.validate()?;
     for (degree, knots, count, periodic) in [
         (
             source.degree_u,
@@ -44,6 +49,10 @@ pub fn compress_tensor_surface(source: &Surface, max_work: u64) -> Result<Tensor
             "Exact tensor compression requires both axes clamped and nonperiodic",
         )?;
     }
+    Ok(())
+}
+
+fn compress_validated(source: &Surface, max_work: u64) -> Result<TensorCompression> {
     let mut report = TensorCompression {
         surface: source.clone(),
         removed_knots: [0; 2],
@@ -110,4 +119,58 @@ pub fn compress_tensor_surface(source: &Surface, max_work: u64) -> Result<Tensor
             return Ok(report);
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct TensorCompressionBatch {
+    /// Complete results in input order, or None if the shared budget expires.
+    pub patches: Option<Vec<TensorCompression>>,
+    pub work_used: u64,
+}
+
+/// Compress independent tensor charts as one transaction. Each output
+/// preserves the complete original UV law and denominator. The batch
+/// charges one unit per input control point before each chart's edit
+/// proofs, so even no-op charts consume a bounded share of the work
+/// ledger. Work exhaustion discards all proposed charts. This operation
+/// preserves supplied chart geometry and does not modify shell topology.
+pub fn compress_tensor_surface_batch(
+    sources: &[Surface],
+    max_work: u64,
+) -> Result<TensorCompressionBatch> {
+    check(
+        !sources.is_empty(),
+        "Tensor compression requires at least one patch",
+    )?;
+    check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact tensor compression work must be in [1,1000000]",
+    )?;
+    let mut work_used = 0;
+    let mut patches = Vec::new();
+    for source in sources {
+        validate_chart(source)?;
+        let controls = (source.control_points.len() * source.control_points[0].len()) as u64;
+        // Reserve at least one proof unit before creating a candidate.
+        if controls >= max_work - work_used {
+            return Ok(TensorCompressionBatch {
+                patches: None,
+                work_used,
+            });
+        }
+        work_used += controls;
+        let patch = compress_validated(source, max_work - work_used)?;
+        work_used += patch.work_used;
+        if !patch.completed {
+            return Ok(TensorCompressionBatch {
+                patches: None,
+                work_used,
+            });
+        }
+        patches.push(patch);
+    }
+    Ok(TensorCompressionBatch {
+        patches: Some(patches),
+        work_used,
+    })
 }

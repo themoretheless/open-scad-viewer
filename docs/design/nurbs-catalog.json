@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 280,
-  "unallocatedCount": 720,
+  "specifiedCount": 281,
+  "unallocatedCount": 719,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7516,6 +7516,28 @@
       ],
       "remainingQualification": [
         "Alternates exact tensor knot removal and smooth degree reduction across both axes, preserving the complete UV law and denominator under a shared work budget.",
+        "Clamped nonperiodic charts on both axes. Exhaustion preserves earlier proved edits. No global minimality or B-rep certificate.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0281",
+      "name": "Атомарное точное пакетное упрощение набора NURBS-патчей",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_knot_removal::compress_tensor_surface_batch",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal/compression.rs",
+        "crates/nurbs-core/src/editing/exact_surface_degree_reduction.rs",
+        "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
+        "crates/nurbs-core/tests/exact_tensor_compression_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-281-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-281-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compresses independent input charts in order under one work and copy budget. A late refusal never publishes a partially compressed patch set.",
         "Clamped nonperiodic charts on both axes. Exhaustion preserves earlier proved edits. No global minimality or B-rep certificate.",
         "WASM and application integration are separate."
       ]
