@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
-import {auditArchitecture, layerViolations, nextBaseline, measureSizes, mechanicalNames} from '../scripts/audit-architecture.mjs'
+import {auditArchitecture, crateCycles, crateEdges, manifestEdges, layerViolations, nextBaseline, measureSizes, mechanicalNames} from '../scripts/audit-architecture.mjs'
 import {scanModules, unreachableRustFiles} from '../scripts/rustModuleTree.mjs'
 
 test('new oversized file fails, pinned file may shrink but not grow', () => {
@@ -15,6 +15,19 @@ test('upward crate dependency is a layering violation', () => {
   assert.deepEqual(layerViolations([['math-core', 'compute-core'], ['brep-core', 'math-core']]), ['math-core -> compute-core'])
   assert.deepEqual(layerViolations([['new-crate', 'math-core']]), ['new-crate: crate has no layer'])
   assert.match(auditArchitecture({sizes: {}, layers: ['x -> y']}, {sizes: {}, layers: []})[0], /upward/)
+})
+
+test('manifest edges read workspace deps by name, normal and dev separately', () => {
+  const manifest = '[package]\nname = "a"\n[dependencies]\nb = { workspace = true }\nserde = "1"\nc.workspace = true\n[dev-dependencies]\nd = { workspace = true }\n[[example]]\nname = "b"\n'
+  assert.deepEqual(manifestEdges('a', manifest, new Set(['a', 'b', 'c', 'd'])), [['a', 'b', 'normal'], ['a', 'c', 'normal'], ['a', 'd', 'dev']])
+  assert.deepEqual(layerViolations([['math-core', 'compute-core', 'dev']]), [])
+})
+
+test('the real workspace has crate edges and no cycles', () => {
+  const edges = crateEdges(new URL('..', import.meta.url).pathname)
+  assert.ok(edges.some(([from, to, kind]) => from === 'brep-core' && to === 'nurbs-core' && kind === 'normal'))
+  assert.deepEqual(crateCycles(edges), [])
+  assert.deepEqual(crateCycles([['a', 'b'], ['b', 'c'], ['c', 'a']]), ['a -> b -> c -> a'])
 })
 
 test('update only lowers pins and drops fixed violations', () => {

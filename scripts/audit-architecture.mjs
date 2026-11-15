@@ -18,17 +18,20 @@ const SIZE_EXCLUDE = [/^crates\/vendor\//, /\/generated\//, /\.golden\.ts$/, /\.
 
 // Lower layers never depend on higher ones; same-layer dependencies are allowed.
 export const CRATE_LAYERS = {
-  'value-codec': 0, 'math-core': 0, 'cad-predicates': 0, 'vr-core': 0, 'wasm-brotli': 0,
-  'gpu-compute': 1, 'compute-core': 1, 'tensor-core': 1, 'compute-cuda': 1, 'compute-mlx': 1,
-  'raster-core': 1, 'math-compute': 1, 'mesh-topology': 1, 'mesh-query': 1, 'mesh-section': 1, 'mesh-io': 1,
-  'geometry-ops': 2, 'planar-geometry': 2, 'polygon-core': 2, 'nurbs-core': 2, 'nurbs-intersect': 2, 'sdf-core': 2,
+  'value-codec': 0, 'math-core': 0, 'cad-predicates': 0, 'vr-core': 0, 'wasm-brotli': 0, 'bridge-codec': 0,
+  // External crates from the forma repository.
+  'gpu-compute': 1, 'compute-core': 1, 'math-compute': 1,
+  // Geometric primitives sit below the mesh crates that use them.
+  'geometry-ops': 1, 'planar-geometry': 1,
+  'mesh-topology': 1, 'mesh-query': 1, 'mesh-section': 1, 'mesh-io': 1,
+  'nurbs-numerics': 2, 'nurbs-geometry': 2, 'nurbs-foundation': 2,
+  'polygon-core': 2, 'nurbs-core': 2, 'nurbs-intersect': 2, 'sdf-core': 2,
   'subdivision-core': 2, 'sketch-core': 2, 'brep-topology': 2, 'manifold-core': 2, 'manifold-ops': 2,
   'brep-core': 3,
   'cad-step': 4, 'brep-intersect': 4, 'rush-runtime': 4, 'rush-frontend': 4,
-  'openscad-core': 4, 'modelgraph-runtime': 4, 'modelgraph-text': 4, 'mechanical-core': 4,
+  'openscad-core': 4, 'mechanical-core': 4,
   'mechanics-core': 4, 'gcode-core': 4, 'gcode-optimize': 4, 'slicer-core': 4, 'laser-core': 4,
   'printer-core': 4, 'photogrammetry-core': 4,
-  'bridge-codec': 0,
   'bridge-cam': 5, 'bridge-analysis': 5, 'bridge-svg': 5, 'geometry-bridge': 5, 'languages-bridge': 5, 'photogrammetry-ffi': 5, 'printer-cli': 5,
   'geometry-wasm': 6, 'languages-wasm': 6, 'photogrammetry-wasm': 6,
 }
@@ -70,20 +73,55 @@ export function measureSizes(root, files) {
   return sizes
 }
 
+const DEPENDENCY_SECTION = /^\[(?:target\.[^\]]+\.)?(dependencies|dev-dependencies|build-dependencies)\]$/
+
+/** Workspace dependency edges `[from, to, kind]`, kind `normal` or `dev`, read from every member manifest. */
 export function crateEdges(root) {
+  const crates = readdirSync(resolve(root, 'crates'))
+    .filter(crate => crate !== 'vendor' && existsSync(resolve(root, 'crates', crate, 'Cargo.toml')))
+  const known = new Set([...crates, ...Object.keys(CRATE_LAYERS)])
   const edges = []
-  for (const crate of readdirSync(resolve(root, 'crates'))) {
-    const manifest = resolve(root, 'crates', crate, 'Cargo.toml')
-    if (crate === 'vendor' || !existsSync(manifest)) continue
-    for (const [, dep] of readFileSync(manifest, 'utf8').matchAll(/path\s*=\s*"\.\.\/([\w-]+)"/g))
-      edges.push([crate, dep])
+  for (const crate of crates) edges.push(...manifestEdges(crate, readFileSync(resolve(root, 'crates', crate, 'Cargo.toml'), 'utf8'), known))
+  return edges
+}
+
+export function manifestEdges(crate, manifest, known) {
+  const edges = []
+  let kind = null
+  for (const raw of manifest.split('\n')) {
+    const line = raw.trim()
+    if (line.startsWith('[')) {
+      const section = line.match(DEPENDENCY_SECTION)
+      kind = section === null ? null : section[1] === 'dev-dependencies' ? 'dev' : 'normal'
+      continue
+    }
+    const dep = kind && line.match(/^([\w-]+)\s*(?:\.|=)/)?.[1]
+    if (dep && dep !== crate && known.has(dep) && !edges.some(([, to, k]) => to === dep && k === kind)) edges.push([crate, dep, kind])
   }
   return edges
 }
 
+/** Dependency cycles among workspace crates, normal and dev edges together (cargo rejects only normal ones). */
+export function crateCycles(edges) {
+  const next = new Map()
+  for (const [from, to] of edges) next.set(from, [...(next.get(from) ?? []), to])
+  const state = new Map(), stack = [], cycles = new Set()
+  const visit = node => {
+    state.set(node, 1); stack.push(node)
+    for (const to of next.get(node) ?? []) {
+      if (state.get(to) === 1) cycles.add(stack.slice(stack.indexOf(to)).concat(to).join(' -> '))
+      else if (!state.has(to)) visit(to)
+    }
+    stack.pop(); state.set(node, 2)
+  }
+  for (const node of [...next.keys()].sort()) if (!state.has(node)) visit(node)
+  return [...cycles].sort()
+}
+
 export function layerViolations(edges) {
   const violations = new Set()
-  for (const [from, to] of edges) {
+  for (const [from, to, kind = 'normal'] of edges) {
+    if (kind !== 'normal') continue
     if (CRATE_LAYERS[from] === undefined) violations.add(`${from}: crate has no layer`)
     else if (CRATE_LAYERS[to] !== undefined && CRATE_LAYERS[to] > CRATE_LAYERS[from])
       violations.add(`${from} -> ${to}`)
@@ -139,7 +177,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const baselinePath = resolve(root, 'architecture-baseline.json')
   const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', 'crates', 'src', 'scripts'], {cwd: root, encoding: 'utf8', maxBuffer: 1 << 28}).split('\n').filter(Boolean)
   const present = files.filter(path => existsSync(resolve(root, path)))
-  const observed = {sizes: measureSizes(root, files), layers: layerViolations(crateEdges(root)),
+  const edges = crateEdges(root)
+  const cycles = crateCycles(edges)
+  if (cycles.length) { for (const cycle of cycles) console.error(`crate cycle: ${cycle}`); process.exit(1) }
+  const observed = {sizes: measureSizes(root, files), layers: layerViolations(edges),
     unreachable: unreachableRustFiles(root, present), mechanical: mechanicalNames(present),
     functions: measureFunctions(root, present, FROZEN_ARCHIVES),
     moduleLayers: Object.keys(MODULE_LAYERS).flatMap(crate => upwardModuleEdges(root, crate, present)),
