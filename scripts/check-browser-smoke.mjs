@@ -152,6 +152,10 @@ try {
     await ready()
   })
 
+  await step('main window passes the accessibility audit', async () => {
+    assert.deepEqual(await page.evaluate(() => window.__osvTest.accessibility()), [])
+  })
+
   await step('command palette opens, cancels and restores focus', async () => {
     const trigger = page.getByRole('button', { name: 'Команды', exact: true })
     await trigger.focus()
