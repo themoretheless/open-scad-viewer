@@ -193,115 +193,134 @@ pub fn align_patch_endpoints(
         max_verification_cells,
     )
 }
-/// Agree on all endpoint assignments before editing. Conflicting assignments
-/// to the same vertex refuse, even when their difference is below tolerance.
-pub fn align_patch_endpoints_many(
+/// Verification cells one endpoint alignment may spend.
+const MAX_ALIGNMENT_CELLS: usize = 100000;
+
+fn invalid_alignment() -> Error {
+    Error::new(
+        "BREP_INVALID_THREAD_PATCH",
+        "Endpoint alignment requires a clamped single-face sheet and finite movement budget",
+    )
+}
+
+fn clamped_spatial(c: &nurbs_core::curve::Curve) -> bool {
+    let [a, b] = c.domain();
+    c.control_points[0].len() == 3
+        && c.knots[..=c.degree].iter().all(|&k| k == a)
+        && c.knots[c.knots.len() - c.degree - 1..]
+            .iter()
+            .all(|&k| k == b)
+}
+
+/// Refuse anything but a clamped single-face open sheet whose edge ends sit
+/// exactly on their vertices, with a finite movement and cell budget.
+fn check_alignment_input(
     target: &Model,
     boundaries: &[(usize, &nurbs_core::curve::Curve)],
     max_change: f64,
     max_verification_cells: usize,
-) -> Result<EndpointAlignment> {
-    use nurbs_core::curve_surface_agreement::{self, Status};
-    let invalid = || {
-        Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Endpoint alignment requires a clamped single-face sheet and finite movement budget",
-        )
-    };
+) -> Result<()> {
     target.validate()?;
     if boundaries.is_empty() || boundaries.len() > target.edges.len() {
-        return Err(invalid());
+        return Err(invalid_alignment());
     }
     for (_, curve) in boundaries {
         curve.validate()?;
     }
     if !max_change.is_finite()
         || max_change < 0.
-        || max_verification_cells > 100000
+        || max_verification_cells > MAX_ALIGNMENT_CELLS
         || target.faces.len() != 1
         || target.loops.len() != 1
         || target.shells.len() != 1
         || target.shells[0].closed
         || !target.bodies.is_empty()
     {
-        return Err(invalid());
+        return Err(invalid_alignment());
     }
-    let clamped = |c: &nurbs_core::curve::Curve| {
-        let [a, b] = c.domain();
-        c.control_points[0].len() == 3
-            && c.knots[..=c.degree].iter().all(|&k| k == a)
-            && c.knots[c.knots.len() - c.degree - 1..]
-                .iter()
-                .all(|&k| k == b)
-    };
-    if boundaries.iter().any(|(_, c)| !clamped(c))
-        || target.edges.iter().any(|e| !clamped(&e.curve))
+    if boundaries.iter().any(|(_, c)| !clamped_spatial(c))
+        || target.edges.iter().any(|e| !clamped_spatial(&e.curve))
     {
-        return Err(invalid());
+        return Err(invalid_alignment());
     }
     for e in &target.edges {
-        if e.curve.control_points.first().unwrap().as_slice()
-            != target.vertices[e.vertices[0]].point.as_slice()
-            || e.curve.control_points.last().unwrap().as_slice()
-                != target.vertices[e.vertices[1]].point.as_slice()
+        let first = e
+            .curve
+            .control_points
+            .first()
+            .ok_or_else(invalid_alignment)?;
+        let last = e
+            .curve
+            .control_points
+            .last()
+            .ok_or_else(invalid_alignment)?;
+        if first.as_slice() != target.vertices[e.vertices[0]].point.as_slice()
+            || last.as_slice() != target.vertices[e.vertices[1]].point.as_slice()
         {
-            return Err(invalid());
+            return Err(invalid_alignment());
         }
     }
+    Ok(())
+}
+
+/// Desired position of every touched vertex; the source curve runs against
+/// the forward target coedge. Conflicting assignments refuse.
+fn collect_endpoint_assignments(
+    target: &Model,
+    boundaries: &[(usize, &nurbs_core::curve::Curve)],
+) -> Result<std::collections::BTreeMap<usize, [f64; 3]>> {
     let mut assignments = std::collections::BTreeMap::new();
     for &(index, curve) in boundaries {
-        let coedge = target.loops[0].coedges.get(index).ok_or_else(invalid)?;
+        let coedge = target.loops[0]
+            .coedges
+            .get(index)
+            .ok_or_else(invalid_alignment)?;
         if coedge.reversed {
-            return Err(invalid());
+            return Err(invalid_alignment());
         }
         let edge = &target.edges[coedge.edge];
         let desired = [
-            curve.control_points.last().unwrap(),
+            curve.control_points.last().ok_or_else(invalid_alignment)?,
             &curve.control_points[0],
         ];
         for i in 0..2 {
             let p = [desired[i][0], desired[i][1], desired[i][2]];
-            if let Some(previous) = assignments.insert(edge.vertices[i], p) {
-                if previous != p {
-                    return Err(Error::new(
-                        "BREP_INVALID_THREAD_PATCH",
-                        "Conflicting endpoint assignments",
-                    ));
-                }
+            if let Some(previous) = assignments.insert(edge.vertices[i], p)
+                && previous != p
+            {
+                return Err(Error::new(
+                    "BREP_INVALID_THREAD_PATCH",
+                    "Conflicting endpoint assignments",
+                ));
             }
         }
     }
-    let mut result = target.clone();
-    let mut bound: f64 = 0.;
-    for (vertex, p) in assignments {
-        let original = target.vertices[vertex].point;
-        let mut squared: f64 = 0.;
-        for axis in 0..3 {
-            if original[axis] == p[axis] {
-                continue;
-            }
-            let delta = (original[axis] - p[axis]).abs().next_up();
-            squared = (squared + (delta * delta).next_up()).next_up();
+    Ok(assignments)
+}
+
+/// Outward-rounded Euclidean distance between two points.
+fn movement_upper_bound(original: [f64; 3], p: [f64; 3]) -> f64 {
+    let mut squared: f64 = 0.;
+    for axis in 0..3 {
+        if original[axis] == p[axis] {
+            continue;
         }
-        let movement = if squared == 0. {
-            0.
-        } else {
-            squared.sqrt().next_up()
-        };
-        bound = bound.max(movement);
-        result.vertices[vertex].point = p;
+        let delta = (original[axis] - p[axis]).abs().next_up();
+        squared = (squared + (delta * delta).next_up()).next_up();
     }
-    if !bound.is_finite() || bound > max_change {
-        return Err(Error::new(
-            "BREP_THREAD_PATCH_UNRESOLVED",
-            "Endpoint movement exceeds requested budget",
-        ));
+    if squared == 0. {
+        0.
+    } else {
+        squared.sqrt().next_up()
     }
-    let vertices = &result.0.vertices;
-    for e in &mut result.0.edges {
-        e.curve.control_points[0] = vertices[e.vertices[0]].point.to_vec();
-        *e.curve.control_points.last_mut().unwrap() = vertices[e.vertices[1]].point.to_vec();
-    }
+}
+
+/// Recheck every boundary use of the edited sheet under one budget.
+fn verify_aligned_boundaries(
+    result: &Model,
+    max_verification_cells: usize,
+) -> Result<(Vec<Report>, usize)> {
+    use nurbs_core::curve_surface_agreement::{self, Status};
     let mut used = 0;
     let mut agreements = Vec::new();
     for c in &result.loops[0].coedges {
@@ -328,6 +347,39 @@ pub fn align_patch_endpoints_many(
         }
         agreements.push(report);
     }
+    Ok((agreements, used))
+}
+
+/// Agree on all endpoint assignments before editing. Conflicting assignments
+/// to the same vertex refuse, even when their difference is below tolerance.
+pub fn align_patch_endpoints_many(
+    target: &Model,
+    boundaries: &[(usize, &nurbs_core::curve::Curve)],
+    max_change: f64,
+    max_verification_cells: usize,
+) -> Result<EndpointAlignment> {
+    check_alignment_input(target, boundaries, max_change, max_verification_cells)?;
+    let assignments = collect_endpoint_assignments(target, boundaries)?;
+    let mut result = target.clone();
+    let mut bound: f64 = 0.;
+    for (vertex, p) in assignments {
+        bound = bound.max(movement_upper_bound(target.vertices[vertex].point, p));
+        result.vertices[vertex].point = p;
+    }
+    if !bound.is_finite() || bound > max_change {
+        return Err(Error::new(
+            "BREP_THREAD_PATCH_UNRESOLVED",
+            "Endpoint movement exceeds requested budget",
+        ));
+    }
+    let vertices = &result.0.vertices;
+    for e in &mut result.0.edges {
+        e.curve.control_points[0] = vertices[e.vertices[0]].point.to_vec();
+        if let Some(last) = e.curve.control_points.last_mut() {
+            *last = vertices[e.vertices[1]].point.to_vec();
+        }
+    }
+    let (agreements, used) = verify_aligned_boundaries(&result, max_verification_cells)?;
     result.rebuild_topology_ids();
     result.inherit_topology_ids(&[target]);
     result.validate()?;
@@ -557,6 +609,8 @@ const MAX_STEP_CELLS: usize = 100000;
 const MAX_NETWORK_PATCHES: usize = 254;
 
 type PatchKey = (usize, usize, usize, usize);
+/// `([assembled wire, coedge], sheet coedge)` boundary correspondences.
+type BoundaryPairs = Vec<([usize; 2], usize)>;
 
 fn patch_key(p: &nurbs_core::thread::Patch) -> PatchKey {
     (p.start, p.turn, p.quarter, p.profile_segment)
@@ -647,7 +701,7 @@ struct NetworkAssembly<'a> {
 
 impl NetworkAssembly<'_> {
     /// Shared boundaries between the assembled wires and sheet `j`.
-    fn shared_boundaries(&self, j: usize) -> Vec<([usize; 2], usize)> {
+    fn shared_boundaries(&self, j: usize) -> BoundaryPairs {
         let mut pairs = Vec::new();
         for (wire, &i) in self.order.iter().enumerate() {
             for axis in 0..2 {
@@ -673,7 +727,7 @@ impl NetworkAssembly<'_> {
         pairs
     }
 
-    fn next_neighbour(&self) -> Result<(usize, Vec<([usize; 2], usize)>)> {
+    fn next_neighbour(&self) -> Result<(usize, BoundaryPairs)> {
         (0..self.sheets.len())
             .filter(|j| !self.order.contains(j))
             .map(|j| (j, self.shared_boundaries(j)))

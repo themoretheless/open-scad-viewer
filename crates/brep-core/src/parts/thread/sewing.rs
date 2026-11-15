@@ -733,8 +733,13 @@ pub(super) fn attach_impl(
     let selection =
         select_attach_coedges(source, target, source_loop, source_coedge, target_coedge)?;
     let tolerance = source.tolerance_mm.min(target.tolerance_mm);
-    let (transferred_trim, shared) =
-        verify_attach_seam(source, target, &selection, tolerance, max_verification_cells)?;
+    let (transferred_trim, shared) = verify_attach_seam(
+        source,
+        target,
+        &selection,
+        tolerance,
+        max_verification_cells,
+    )?;
     let AttachSelection { sc, tc, .. } = selection;
     let se = &source.edges[sc.edge];
     let te = &target.edges[tc.edge];
