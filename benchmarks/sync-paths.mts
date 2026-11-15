@@ -21,6 +21,7 @@ import {
 } from '../src/app/directModeling'
 import { stringifyMeshJson } from '../src/exchange/meshJson'
 import { prepareDocumentCommit } from '../src/features/directModeler/prepareDocumentCommit'
+import { applyDirectDocumentDelta, directDocumentDelta } from '../src/kernel/directDocumentDelta'
 import { resolveSolidInstances } from '../src/kernel/solidInstances'
 import { SolidInstanceBatchCache } from '../src/kernel/solidInstanceBatchCache'
 import { setLiveBodyPattern } from '../src/app/liveBodyPattern'
@@ -222,6 +223,30 @@ for (const scene of scenes) {
   await measure(name, 'commit policy: prepareDocumentCommit', 'DirectModeler prepareCommit', 'visual', () =>
     prepareDocumentCommit(next, document, [], [], '', 'edit', (ru: string) => ru),
   )
+  await measure(
+    name,
+    'commit policy: prepareDocumentCommit, worker result (C1)',
+    'commitWorkerResult/gizmo -> prepareCommit(resolved)',
+    'visual',
+    () => prepareDocumentCommit(next, document, [], [], '', 'edit', (ru: string) => ru, true),
+  )
+  // C1: a worker result that shares the published document's unchanged objects (a delta
+  // answer rebuilt on the client) commits by reusing the history's own copies of them.
+  let sharedHistory = new DirectHistory(document)
+  let shared = document
+  await measure(
+    name,
+    'history commit, worker result sharing unchanged objects (C1)',
+    'gizmo/transform delta -> commitAsync',
+    'visual',
+    () => sharedHistory.commitAsync(async () => shared),
+    () => {
+      sharedHistory = new DirectHistory(document)
+      const published = sharedHistory.syncedDocument
+      const renamedBody = { ...published.bodies[0]!, name: `renamed-${Math.random()}` }
+      shared = { ...published, bodies: [renamedBody, ...published.bodies.slice(1)] }
+    },
+  )
 
   // Undo/Redo: the worker parses the snapshot text (restoreDocument with its instance cache),
   // the response crosses postMessage (structuredClone proxy), the main thread applies it.
@@ -349,10 +374,41 @@ for (const scene of scenes) {
   )
   await measure(
     name,
-    'manipulator move: worker request clone (postMessage proxy)',
-    'requestDragJob -> gizmoWorker.run',
+    'manipulator move: worker request clone (postMessage proxy, before C1)',
+    'requestDragJob -> gizmoWorker.run (whole document)',
     'visual',
     () => structuredClone({ kind: 'sceneEdit', document }),
+  )
+  // C1: the drag base is resident in the worker. The first move sends the snapshot text,
+  // later moves only its key; the answer is a delta that the client applies to its base.
+  const residentText = new DirectHistory(document).snapshotKey
+  await measure(
+    name,
+    'manipulator first move: resident base as snapshot text (C1)',
+    'gizmoWorker.run residentDocument (first request)',
+    'visual',
+    () => structuredClone({ kind: 'sceneEdit', document: residentText, retainAs: 'k', delta: true }),
+  )
+  await measure(
+    name,
+    'manipulator move: resident key request clone (C1)',
+    'gizmoWorker.run residentDocument (later moves)',
+    'visual',
+    () =>
+      structuredClone({
+        kind: 'sceneEdit',
+        document: { resident: 'k' },
+        delta: true,
+        options: { operation: 'transform', x: 1 },
+      }),
+  )
+  const movedOne = { ...document, bodies: [{ ...document.bodies[0]!, name: 'moved' }, ...document.bodies.slice(1)] }
+  await measure(
+    name,
+    'manipulator move: delta answer (worker diff + clone + client apply) (C1)',
+    'mainSolidWorkerRuntime residentResult -> client applyDirectDocumentDelta',
+    'visual',
+    () => applyDirectDocumentDelta(document, structuredClone(directDocumentDelta(document, movedOne))),
   )
 
   // Screen projection: CPU ray pick (hover, GPU click) and CPU projection of all triangles.
