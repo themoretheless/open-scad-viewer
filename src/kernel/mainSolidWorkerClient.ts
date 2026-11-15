@@ -18,7 +18,10 @@ export interface MainSolidRunOptions {signal?:AbortSignal | undefined; timeoutMs
    * cheaper to clone than the object tree); later requests with the same object send only its
    * key, and answers arrive as deltas against it. Unchanged objects of the result are then the
    * base's own objects, so the base must not be mutated in place (published UI documents are not). */
-  residentDocument?:{text?:()=>string|undefined}}
+  residentDocument?:{text?:()=>string|undefined}
+  /** `boolean`/`minkowski3d` only: answer `result.document` as a delta against `job.document`,
+   * rebuilt here from that same object. Same immutability contract as `residentDocument`. */
+  documentDelta?:boolean}
 export class MainSolidWorkerError extends Error {
   constructor(readonly code:string, message:string, name='MainSolidWorkerError') {super(message);this.name=name}
 }
@@ -54,7 +57,9 @@ export class MainSolidWorkerClient {
     // The previous request is settled (or its worker discarded) by now: choose the wire form.
     let wire:MainSolidJob=job,base:DirectDocument|undefined,retainAs:string|undefined
     const drag=job as MainSolidJob
-    if(options.residentDocument&&(drag.kind==='sceneEdit'||drag.kind==='pointEdit')&&typeof drag.document==='object'&&!isResidentDocumentRef(drag.document)) {
+    if(options.documentDelta&&(drag.kind==='boolean'||drag.kind==='minkowski3d')&&drag.document&&typeof drag.document==='object') {
+      base=drag.document;wire={...drag,delta:true}
+    } else if(options.residentDocument&&(drag.kind==='sceneEdit'||drag.kind==='pointEdit')&&typeof drag.document==='object'&&!isResidentDocumentRef(drag.document)) {
       const edit=drag
       base=edit.document as DirectDocument
       const resident=this.resident
@@ -111,6 +116,10 @@ export class MainSolidWorkerClient {
           let result=decodeMainSolidResult(expected.kind,data.result)
           // A malformed delta decodes to undefined and fails the protocol check below.
           if(base!==undefined&&isDirectDocumentDelta(result))result=applyDirectDocumentDelta(base,result)
+          else if(base!==undefined&&result&&typeof result==='object'&&isDirectDocumentDelta((result as {document?:unknown}).document)) {
+            const document=applyDirectDocumentDelta(base,(result as {document:unknown}).document)
+            result=document?{...(result as object),document}:undefined
+          }
           if(mainSolidResult(expected,result))finish(undefined,result as MainSolidResults[K],false,data.timing)
           else fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid CAD worker response'),true)
         } else if('ok' in data&&data.ok===false && 'error' in data && data.error

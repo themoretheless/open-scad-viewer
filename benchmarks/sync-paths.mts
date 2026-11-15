@@ -329,6 +329,22 @@ for (const scene of scenes) {
       booleanValidated = parseDirectDocument(serializeDirectDocument(booleanResult.document))
     },
   )
+  // C1: the worker answers the Boolean as a delta against the sent document; the client
+  // rebuilds it from its published copy, so unchanged bodies are the history's own twins.
+  const booleanDelta = directDocumentDelta(document, booleanValidated)
+  let deltaHistory = new DirectHistory(document)
+  let deltaPublished = deltaHistory.syncedDocument
+  await measure(
+    name,
+    'direct Boolean apply: delta answer -> commitAsync (C1)',
+    'useBooleanOperations runBoolean(documentDelta) -> commitWorkerResult()',
+    'visual',
+    () => deltaHistory.commitAsync(async () => applyDirectDocumentDelta(deltaPublished, booleanDelta)!),
+    () => {
+      deltaHistory = new DirectHistory(document)
+      deltaPublished = deltaHistory.syncedDocument
+    },
+  )
 
   // Arrays: live pattern edit and its expansion into linked instances.
   const source = document.bodies.find(body => !body.instance)!.id

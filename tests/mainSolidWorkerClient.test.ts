@@ -387,3 +387,20 @@ it('runs without residency exactly as before when the option is absent',async()=
   expect(job.document).toBe(doc);expect(job.retainAs).toBeUndefined();expect(job.delta).toBeUndefined()
   ports[0].reply({ok:true,result:doc});await expect(task).resolves.toBe(doc)
 })
+
+it('rebuilds a Boolean answered as a delta against the sent document',async()=>{
+  const {client,ports}=setup()
+  const tri={positions:[0,0,0,1,0,0,0,1,0],indices:[0,1,2]}
+  const doc={version:1,sketches:[],bodies:[{id:'a',name:'a',mesh:tri},{id:'b',name:'b',mesh:tri},{id:'c',name:'c',mesh:tri}]} as unknown as DirectDocument
+  const union={id:'u',name:'u',mesh:tri}
+  const options={operation:'union' as const,a:['a'],b:['b'],segments:24,ru:false}
+  const task=client.run({kind:'boolean',document:doc,options},{documentDelta:true})
+  const job=ports[0].postMessage.mock.lastCall![0].job as unknown as Wire
+  expect(job.document).toBe(doc);expect(job.delta).toBe(true)
+  ports[0].reply({ok:true,result:{exact:true,toleranceMm:0,resultId:'u',document:{delta:1,keys:['version','sketches','bodies'],fields:{},collections:{sketches:[],bodies:['c',union]}}}})
+  const result=await task
+  expect(result.resultId).toBe('u');expect(result.document.bodies[0]).toBe(doc.bodies[2]);expect(result.document.bodies[1]).toEqual(union)
+  const bad=client.run({kind:'boolean',document:doc,options},{documentDelta:true})
+  ports[0].reply({ok:true,result:{exact:true,toleranceMm:0,resultId:null,document:{delta:1,keys:['bodies'],fields:{},collections:{bodies:['missing']}}}})
+  await expect(bad).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+})

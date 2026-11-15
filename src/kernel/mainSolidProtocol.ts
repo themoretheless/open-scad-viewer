@@ -132,7 +132,7 @@ export type MainSolidJob =
   | {kind:'curveOffset';document:DirectDocument;options:SolidCurveOffsetOptions}
   | ({kind:'pointEdit';document:DirectDocument|string|ResidentDocumentRef;options:SolidPointEditOptions}&ResidentDocumentOptions)
   | {kind:'sketchEdit';document:DirectDocument;options:SolidSketchEditOptions}
-  | {kind:'boolean';document:DirectDocument;options:SolidBooleanOptions}
+  | {kind:'boolean';document:DirectDocument;options:SolidBooleanOptions;delta?:true}
   | ({kind:'sceneEdit';document:DirectDocument|string|ResidentDocumentRef;options:SolidSceneEditOptions}&ResidentDocumentOptions)
   | {kind:'curveMatch';args:Parameters<typeof matchSolidCurve>}
   | {kind:'surfaceMatch';args:Parameters<typeof matchSolidSurface>}
@@ -169,7 +169,7 @@ export type MainSolidJob =
   | {kind:'drawingSheets';bodies:DirectBody[];options:DrawingSheetOptions}
   | {kind:'animationFrames';document:DirectDocument;animation:AssemblyAnimation;fps:number}
   | {kind:'animationSample';document:DirectDocument;animation:AssemblyAnimation;time:number}
-  | {kind:'minkowski3d';document:DirectDocument;options:SolidMinkowskiOptions}
+  | {kind:'minkowski3d';document:DirectDocument;options:SolidMinkowskiOptions;delta?:true}
 /** Exhaustive registry: adding a typed job must also admit it at the worker boundary. */
 export const MAIN_SOLID_JOB_KINDS:Readonly<Record<MainSolidJob['kind'],true>>={
  profileBridgeChords:true,

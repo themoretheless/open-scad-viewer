@@ -71,13 +71,19 @@ import {MAIN_SOLID_JOB_KINDS,isResidentDocumentRef,type MainSolidJob,type MainSo
 
 /** Run the authoritative history parser here so the UI can commit without re-validating on its thread. */
 const validatedDocumentResult=<T extends {document:DirectDocument}>(result:T):T=>({...result,document:parseDirectDocument(serializeDirectDocument(result.document),instanceCache)})
+/** Whole-scene rebuilds (Boolean, Minkowski) answer a `delta` request against the document the
+ * client sent: unchanged objects travel as ids and stay the client's own objects. */
+const documentResult=<T extends {document:DirectDocument}>(job:{document:DirectDocument;delta?:true},result:T):T=>{
+  const validated=validatedDocumentResult(result)
+  return job.delta===true?{...validated,document:directDocumentDelta(job.document,validated.document) as unknown as DirectDocument}:validated
+}
 async function execute(job:MainSolidJob,onProgress?:(progress:MainSolidProgress)=>void):Promise<MainSolidResults[keyof MainSolidResults]> {
   switch(job.kind) {
 case 'frozenGraphBodyDisplay':return displayFrozenGraphBody(job.artifact,job.segments,job.options)
 case 'frozenGraphBodyRestore':return restoreFrozenGraphBody(job.artifact,job.options)
 case 'sourceGraphG2Preview':return createSourceGraphG2Preview(job.sources,job.width,job.options)
 case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)
-case 'minkowski3d':return validatedDocumentResult((await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options))
+case 'minkowski3d':return documentResult(job,(await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options))
 case 'animationFrames':return (await import('../exchange/assemblyFrameExport')).exportAssemblyFrames(job.document,job.animation,job.fps)
 case 'animationSample':return (await import('../app/assemblyAnimation')).sampleAssemblyAnimation(job.document,job.animation,job.time)
 case 'drawingPdf':return (await import('../app/drawingSheets')).vectorDrawingPdf(job.sheets)
@@ -137,7 +143,7 @@ case 'transaction':return executeDirectTransaction(job.document,job.script)
     case 'nurbsEdit':return (await import('./solidNurbsEdit')).applySolidNurbsEdit(job.document,job.options)
     case 'pointEdit':{const base=residentBase(job);return residentResult(job,base,applySolidPointEdit(base,job.options))}
     case 'sketchEdit':return applySolidSketchEdit(job.document,job.options)
-    case 'boolean':return validatedDocumentResult(applySolidBoolean(job.document,job.options))
+    case 'boolean':return documentResult(job,applySolidBoolean(job.document,job.options))
     case 'sceneEdit':{const base=residentBase(job);return residentResult(job,base,parseDirectDocument(serializeDirectDocument(applySolidSceneEdit(base,job.options,instanceCache)),instanceCache))}
     case 'curveMatch':return matchSolidCurve(...job.args)
     case 'surfaceMatch':return matchSolidSurface(...job.args)
