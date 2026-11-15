@@ -12,6 +12,7 @@ import type {SolidInstanceBatchCache} from '../kernel/solidInstanceBatchCache'
 import {resolveSolidInstances,type SolidInstanceLink} from '../kernel/solidInstances'
 import { sketchDimensions, type SketchDimension } from './directDimensions'
 import {callGeometryRust} from '../kernel/geometry/kernel'
+import {validatePivots,validCPlane,type DirectCPlane,type DirectPivot} from './directPivots'
 import { MAX_DOCUMENT_CHARACTERS, MAX_BODY_MESH_COMPONENTS } from '../core/directDocumentLimits'
 export { MAX_DOCUMENT_CHARACTERS } from '../core/directDocumentLimits'
 import { sampleCurve, dot3, type AnalyticCurve, type SketchPlane } from './directSketchGeometry'
@@ -39,7 +40,7 @@ export interface DirectInterchangeMetadata {
     sceneTree?:DirectStepSceneTree;display?:DirectStepDisplay;xde?:DirectStepSceneProduct[];
     lod0CacheKey?:string;lod0ShellCacheKeys?:string[]}
 }
-export interface DirectDocument { sourceBodies?:SourceBodyRecord[]; version: 1; blenderProjectId?: string; units?: DocumentLengthUnit; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
+export interface DirectDocument { sourceBodies?:SourceBodyRecord[]; version: 1; blenderProjectId?: string; units?: DocumentLengthUnit; pivots?: DirectPivot[]; cplane?: DirectCPlane; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
 const clone = <T>(value: T): T => { countOperation('documentClones'); return structuredClone(value) }
 const DEEP_JSON_NORMALIZATION = Symbol('deep JSON normalization')
@@ -247,6 +248,9 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
   }
   // JSON.parse and newly sampled sketch points already have exclusive ownership.
   // Preserve JSON number normalization without serializing/copying the whole tree.
+  if(d.cplane!==undefined&&!validCPlane(d.cplane))throw Error('Invalid construction plane.')
+  const pivots=validatePivots(d.pivots,new Set([...d.sketches,...d.bodies,...d.curves??[],...d.surfaces??[],...d.sourceBodies??[]].map(o=>(o as {id:string}).id)))
+  if(pivots)d.pivots=pivots;else delete d.pivots
   try { normalizeOwnedJson(d); return d }
   catch (error) {
     if (error !== DEEP_JSON_NORMALIZATION) throw error

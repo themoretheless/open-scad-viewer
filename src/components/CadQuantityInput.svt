@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, useId, watch } from 'svet'
 import { evaluateSafeMathExpression, parseCadQuantity, type QuantityKind } from '../kernel/cadQuantity'
+import { evaluateUnitExpression } from '../app/documentUnits'
 defineOptions({ inheritAttrs: false, evaluateSafeMathExpression })
-const props = withDefaults(defineProps<{modelValue: number; kind?: QuantityKind; locale?: string; min?: number; max?: number}>(), {kind:'length',locale:'en'})
+const props = withDefaults(defineProps<{modelValue: number; kind?: QuantityKind; locale?: string; min?: number; max?: number; variables?: Readonly<Record<string, number>>}>(), {kind:'length',locale:'en'})
 const emit = defineEmits<{'update:modelValue':[number]; validity:[boolean]}>()
 const raw = ref<string | null>(null), failure = ref('')
 const errorId=useId()+'-error'
@@ -14,7 +15,9 @@ const message = computed(() => !failure.value ? '' : props.locale === 'ru'
 function commitValue(value: string | number, normalizeDisplay = false) {
   raw.value=String(value)
   try {
-    const result=parseCadQuantity(raw.value,props.kind,props.min,props.max)
+    let result=parseCadQuantity(raw.value,props.kind,props.min,props.max)
+    // Per-term units and named variables (`10mm+1in`, `2*pi*r`).
+    if(!result.valid&&result.reason!=='range'){const mixed=evaluateUnitExpression(raw.value,evaluateSafeMathExpression,{kind:props.kind,variables:props.variables,min:props.min,max:props.max});if(mixed.valid||mixed.reason!=='number')result=mixed}
     failure.value=result.valid?'':result.reason
     emit('validity',result.valid)
     if(result.valid){

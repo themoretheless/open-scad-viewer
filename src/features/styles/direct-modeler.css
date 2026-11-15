@@ -134,3 +134,6 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--danger);bo
 .canvas-wrap svg .locked{stroke-dasharray:1 5}
 /* Inspector fields: invalid input already switches to a dashed border; a locked object's inspector reads as locked. */
 .dock-props[data-sel-state=locked] input,.dock-props[data-sel-state=locked] button{border-style:dotted}
+/* Candidate list for overlapping objects and the pivot / coordinate system block (roadmap C6). */
+.pick-candidates{position:absolute;z-index:6;display:grid;gap:2px;min-width:180px;max-width:min(320px,90%);padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 30px #0004}.pick-candidates button{text-align:left}.pick-candidates small{color:var(--text-dim)}
+.input-frames{display:grid;gap:6px}.input-frames label{display:flex;align-items:center;gap:5px;color:var(--text-dim)}.input-frame-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.input-frame-actions input{width:64px}
