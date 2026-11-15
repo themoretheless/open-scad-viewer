@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 254,
-  "unallocatedCount": 746,
+  "specifiedCount": 255,
+  "unallocatedCount": 745,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6920,6 +6920,24 @@
       ],
       "remainingQualification": [
         "The native API integrates the oriented NURBS flux and reports a rigorous signed-volume enclosure. The caller supplies shell closure, orientation and any zero-flux face omissions. Reaching the cell limit can leave the requested tolerance unmet. General trimmed faces and application transport are outside this contract."
+      ]
+    },
+    {
+      "id": "NURBS-0255",
+      "name": "Непрерывная оценка ошибки линейной интерполяции внутри UV-ячейки NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-certified-tessellation",
+      "category": "Измерения и запросы",
+      "nativeApi": "nurbs_core::surface_chord_bound::cell_interpolation_error",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_chord_bound.rs",
+        "crates/nurbs-core/tests/chord_interpolation_contracts.rs",
+        "docs/qualification/nurbs-chord-interpolation-255-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-chord-interpolation-255-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "An outward interval certificate using normalized second jets and the weighted variance bound. It covers exact surface samples in every triangle contained in the cell, with original knot pieces and an explicit cell budget. Crossing a knot requires C1 continuity.",
+        "Application and WASM delivery are separate."
       ]
     }
   ],

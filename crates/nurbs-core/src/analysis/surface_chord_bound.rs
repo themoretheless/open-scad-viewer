@@ -66,6 +66,48 @@ pub fn cell_flatness(s: &Surface, domain: [[f64; 2]; 2]) -> Result<f64> {
     Ok(bound)
 }
 
+/// Enclose the interpolation error of every parameter triangle in `domain`.
+///
+/// In unit rectangle coordinates the weighted variance of each coordinate
+/// of the triangle vertices is at most 1/4. Cauchy–Schwarz bounds the
+/// weighted absolute mixed product by 1/4 as well. Applying these bounds
+/// to the integral Taylor remainder gives (M_uu + 2 M_uv + M_vv)/8,
+/// where each M is an upper bound on the corresponding second jet norm.
+/// The reference vertices are exact surface points in the same chart.
+/// A cell crossing a knot must have at least C¹ continuity in that axis.
+pub fn cell_interpolation_error(
+    s: &Surface,
+    domain: [[f64; 2]; 2],
+    max_cells: usize,
+) -> Result<f64> {
+    s.validate()?;
+    check((1..=4096).contains(&max_cells), "Chord cell budget must be 1..4096")?;
+    let u = pieces(&s.knots_u, s.degree_u, s.control_points.len(), domain[0])?;
+    let v = pieces(&s.knots_v, s.degree_v, s.control_points[0].len(), domain[1])?;
+    if u.len() * v.len() > max_cells {
+        return Err(crate::resource("Chord knot rectangles exceed the work budget"));
+    }
+    let width = |d: [f64; 2]| I::point(d[1]).sub(I::point(d[0]));
+    let [u_width, v_width] = [width(domain[0])?, width(domain[1])?];
+    let mut maxima = [0f64; 3];
+    for &(ku, du) in &u {
+        for &(kv, dv) in &v {
+            let j = jets::calculate(s, [ku, kv], [du, dv], None)?;
+            let su = u_width.div(width(du)?)?;
+            let sv = v_width.div(width(dv)?)?;
+            for (maximum, (jet, scale)) in maxima.iter_mut().zip([
+                (j[2][0], su.mul(su)?),
+                (j[1][1], su.mul(sv)?),
+                (j[0][2], sv.mul(sv)?),
+            ]) {
+                *maximum = maximum.max(norm(jet)?.mul(scale)?.hi);
+            }
+        }
+    }
+    let [uu, uv, vv] = maxima.map(I::point);
+    Ok(uu.add(uv.mul(I::point(2.))?)?.add(vv)?.mul(I::point(0.125))?.hi)
+}
+
 /// Upper bound on `|S(uv) - q|`, evaluated with interval jets.
 pub fn point_distance(s: &Surface, uv: [f64; 2], q: [f64; 3]) -> Result<f64> {
     let locate = |knots: &[f64], degree: usize, count: usize, t: f64| -> Result<(usize, [f64; 2], usize)> {
