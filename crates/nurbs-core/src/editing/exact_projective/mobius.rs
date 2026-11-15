@@ -84,7 +84,7 @@ pub fn mobius_bezier_surface(
     Ok(finish(result, work))
 }
 
-fn validate_clock(lambda: &[f64], max_work: u64) -> Result<()> {
+pub(super) fn validate_clock(lambda: &[f64], max_work: u64) -> Result<()> {
     check(
         lambda.iter().all(|&t| t.is_finite() && t > 0.),
         "Möbius clock factors must be finite and positive",
@@ -119,7 +119,7 @@ fn weighted(weight: f64, scale: &Q, work: &mut Work) -> PResult<Q> {
     Ok(work.op(&weight, scale, |a, b| a * b)?)
 }
 
-fn exact_weights(weights: &[Q], work: &mut Work) -> PResult<Vec<f64>> {
+pub(super) fn exact_weights(weights: &[Q], work: &mut Work) -> PResult<Vec<f64>> {
     let (_, stored) =
         rational_edit::store(&[weights.to_vec()], work).map_err(|reason| match reason {
             rational_factor::Refusal::ResourceLimit => Refusal::ResourceLimit,
