@@ -251,13 +251,16 @@ pub(super) fn ordered_prism_cap_profile(
         neighbors.entry(a).or_default().push(b);
         neighbors.entry(b).or_default().push(a);
     }
-    if neighbors.len() < 3 || neighbors.values().any(|n| n.len() != 2) {
-        return Err(refuse(
+    let not_simple = || {
+        refuse(
             "BREP_EXACT_FILLET_REFUSED",
             "Prism cap requires a closed simple boundary",
-        ));
+        )
+    };
+    if neighbors.len() < 3 || neighbors.values().any(|n| n.len() != 2) {
+        return Err(not_simple());
     }
-    let start = *neighbors.keys().next().unwrap();
+    let start = *neighbors.keys().next().ok_or_else(not_simple)?;
     let mut current = start;
     let mut previous = usize::MAX;
     let mut profile = Vec::with_capacity(neighbors.len());
@@ -270,10 +273,10 @@ pub(super) fn ordered_prism_cap_profile(
         }
         let p = vertices[current];
         profile.push([p[0], p[1]]);
-        let next = *neighbors[&current]
-            .iter()
-            .find(|&&v| v != previous)
-            .unwrap();
+        let next = *neighbors
+            .get(&current)
+            .and_then(|adjacent| adjacent.iter().find(|&&v| v != previous))
+            .ok_or_else(not_simple)?;
         previous = current;
         current = next;
     }
