@@ -151,20 +151,20 @@ fn pieces(
     Ok(pieces)
 }
 
-struct ChartInterval {
+pub(super) struct ChartInterval {
     origin: Q,
     width: Q,
 }
 
 impl ChartInterval {
-    fn new([a, b]: [f64; 2], work: &mut Work) -> exact::PResult<Self> {
+    pub(super) fn new([a, b]: [f64; 2], work: &mut Work) -> exact::PResult<Self> {
         let origin = work.lift(a)?;
         let end = work.lift(b)?;
         let width = work.op(&end, &origin, |a, b| a - b)?;
         Ok(Self { origin, width })
     }
 
-    fn contained(
+    pub(super) fn contained(
         &self,
         coordinate: &Poly,
         weight: &Poly,

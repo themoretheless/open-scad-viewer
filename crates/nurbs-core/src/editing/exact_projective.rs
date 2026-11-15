@@ -16,6 +16,8 @@ pub use mobius_spline::{
     MobiusLandmark, fit_mobius_spline_curve, fit_mobius_spline_surface, mobius_spline_curve,
     mobius_spline_surface,
 };
+mod pcurve_lift;
+pub use pcurve_lift::{PcurveLiftReport, lift_pcurve_to_surface};
 mod pcurve_mobius;
 pub use pcurve_mobius::{
     PcurveChartCertificate, PcurvePullback, PcurvePullbackRefusal, certify_pcurve_chart_domain,

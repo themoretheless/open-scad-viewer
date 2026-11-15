@@ -72,19 +72,11 @@ fn relocate(
     layout: [BezierSpanLayout<'_>; 2],
     work: &mut Work,
 ) -> Transfer<Vec<Curve>> {
-    let lift_axis = |axis: &[f64], work: &mut Work| {
-        axis.iter()
-            .map(|&value| work.lift(value).map_err(Refusal::from))
-            .collect::<std::result::Result<Vec<_>, _>>()
-    };
-    let exact = [lift_axis(old[0], work)?, lift_axis(old[1], work)?];
+    let exact = exact_breaks(old, work)?;
     let mut out = Vec::new();
     for (span, domain) in active_spans(source) {
         let h = original_span(source, span, domain, work)?;
-        let mut cuts = domain.to_vec();
-        append_cuts(&h, &exact, domain, &mut cuts, work)?;
-        cuts.sort_by(f64::total_cmp);
-        cuts.dedup_by(|a, b| *a == *b);
+        let cuts = grid_cuts(&h, &exact, domain, work)?;
         for bounds in cuts.windows(2) {
             let interval = [bounds[0], bounds[1]];
             let h = original_span(source, span, interval, work)?;
@@ -114,13 +106,25 @@ fn relocate(
     Ok(out)
 }
 
-fn append_cuts(
+pub(super) fn exact_breaks(
+    breaks: [&[f64]; 2],
+    work: &mut Work,
+) -> std::result::Result<[Vec<Q>; 2], Refusal> {
+    let lift_axis = |axis: &[f64], work: &mut Work| {
+        axis.iter()
+            .map(|&value| work.lift(value).map_err(Refusal::from))
+            .collect::<std::result::Result<Vec<_>, _>>()
+    };
+    Ok([lift_axis(breaks[0], work)?, lift_axis(breaks[1], work)?])
+}
+
+pub(super) fn grid_cuts(
     h: &[Poly],
     axes: &[Vec<Q>; 2],
     domain: [f64; 2],
-    cuts: &mut Vec<f64>,
     work: &mut Work,
-) -> Transfer<()> {
+) -> Transfer<Vec<f64>> {
+    let mut cuts = domain.to_vec();
     for (coordinate, axis) in h.iter().zip(axes) {
         for seam in &axis[1..axis.len() - 1] {
             let power = add(coordinate, &scale(&h[2], seam, work)?, true, work)?;
@@ -136,7 +140,9 @@ fn append_cuts(
             }
         }
     }
-    Ok(())
+    cuts.sort_by(f64::total_cmp);
+    cuts.dedup_by(|a, b| *a == *b);
+    Ok(cuts)
 }
 
 fn map_component(

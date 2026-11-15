@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 299,
-  "unallocatedCount": 701,
+  "specifiedCount": 300,
+  "unallocatedCount": 700,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7926,6 +7926,30 @@
       "remainingQualification": [
         "Relayout a piecewise Bézier tensor patch with its ordered closed UV trims under a shared budget, preserving their three-dimensional images.",
         "Closed source and output UV loops. One arithmetic budget; nonrepresentable cuts or poles withhold the entire result.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0300",
+      "name": "Точное построение пространственного NURBS-ребра по UV-контуру",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::lift_pcurve_to_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_lift.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_relayout.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/tests/exact_pcurve_lift_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-300-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-300-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compose an authored rational pcurve with the exact original tensor basis across knot cells and store its complete world-space curve in the same absolute parameter.",
+        "Natural UV rectangle with exact representable cell cuts, poles and weights. Verified in the authored pcurve clock. Topological edge authority remains separate.",
         "WASM and application integration are separate."
       ]
     }
