@@ -7,31 +7,31 @@ impl Serialize for Report {
         json!({
             "accepted":self.accepted,
             "phaseResolved":self.phase_resolved,
-            "frameTransportCertified":self.frame_transport_certified,
-            "frameTransportReason":self.frame_transport_reason,
+            "frameTransportCertified":self.frame_transport.certified,
+            "frameTransportReason":self.frame_transport.reason,
             "steps":self.steps,
             "sections":self.sections,
             "stations":self.stations,
-            "sampledControlDeviation":self.sampled_control_deviation,
-            "continuousErrorUpper":self.continuous_error_upper,
-            "certifiedErrorUpper":self.certified_error_upper,
-            "endpointContourErrorUpper":self.endpoint_contour_error_upper,
-            "errorCertificateCells":self.error_certificate_cells,
-            "errorCertificateReason":self.error_certificate_reason,
-            "profileRegularityCertified":self.profile_regularity_certified,
-            "wallRegularityCertified":self.wall_regularity_certified,
-            "regularityCells":self.regularity_cells,
-            "unresolvedWallPatches":self.unresolved_wall_patches,
-            "affineLawsApplied":self.affine_laws_applied,
-            "authoredFramesApplied":self.authored_frames_applied,
-            "orientationGuideApplied":self.orientation_guide_applied,
-            "continuousErrorMethod":if self.orientation_guide_applied && self.authored_frames_applied {
+            "sampledControlDeviation":self.error.sampled_control_deviation,
+            "continuousErrorUpper":self.error.continuous_upper,
+            "certifiedErrorUpper":self.error.certified_upper,
+            "endpointContourErrorUpper":self.error.endpoint_contour_upper,
+            "errorCertificateCells":self.error.certificate_cells,
+            "errorCertificateReason":self.error.certificate_reason,
+            "profileRegularityCertified":self.regularity.profile_certified,
+            "wallRegularityCertified":self.regularity.wall_certified,
+            "regularityCells":self.regularity.cells,
+            "unresolvedWallPatches":self.regularity.unresolved_wall_patches,
+            "affineLawsApplied":self.applied.affine_laws,
+            "authoredFramesApplied":self.applied.authored_frames,
+            "orientationGuideApplied":self.applied.orientation_guide,
+            "continuousErrorMethod":if self.applied.orientation_guide && self.applied.authored_frames {
                 "interval-authored-axis-guide-frame-interpolation"
-            } else if self.orientation_guide_applied {
+            } else if self.applied.orientation_guide {
                 "interval-guide-frame-interpolation"
-            } else if self.authored_frames_applied {
+            } else if self.applied.authored_frames {
                 "interval-authored-frame-interpolation"
-            } else if self.affine_laws_applied {
+            } else if self.applied.affine_laws {
                 "interval-affine-law-interpolation"
             } else {
                 "rational-law-derivative-interpolation-real-arithmetic"

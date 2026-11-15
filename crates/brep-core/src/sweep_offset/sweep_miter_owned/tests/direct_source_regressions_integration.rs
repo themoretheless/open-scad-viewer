@@ -670,7 +670,7 @@ fn complete_boundary_refines_after_cap_correction_and_keeps_shared_work() {
     let coarse = construct(&request, &limits()).unwrap();
     assert_eq!(coarse.levels().len(), 1);
     let coarse_error = coarse.boundary().error_upper.unwrap();
-    let source_error = coarse.levels()[0].certified_error_upper.unwrap();
+    let source_error = coarse.levels()[0].error.certified_upper.unwrap();
     request.options.initial_steps = 16;
     let fine_error = construct(&request, &limits())
         .unwrap()
@@ -685,14 +685,14 @@ fn complete_boundary_refines_after_cap_correction_and_keeps_shared_work() {
     request.options.initial_steps = 1;
     let body = construct(&request, &limits()).unwrap();
     assert!(body.complete_boundary().is_some());
-    assert!(body.levels()[0].certified_error_upper.unwrap() < request.options.max_deviation);
+    assert!(body.levels()[0].error.certified_upper.unwrap() < request.options.max_deviation);
     assert!(body.boundary().error_upper.unwrap() <= request.options.max_deviation);
     assert!(body.levels().len() > 1);
     assert!(!body.levels()[0].accepted);
     let rejected = body
         .levels()
         .iter()
-        .find(|r| r.error_certificate_reason == Some("complete-boundary-refinement"))
+        .find(|r| r.error.certificate_reason == Some("complete-boundary-refinement"))
         .expect("The cap budget must cause additional refinement");
     assert!(!rejected.accepted);
     assert!(body.levels().last().unwrap().steps > rejected.steps);
@@ -930,9 +930,9 @@ fn derives_owned_hollow_boundary_and_correction_from_original_request() {
     assert!(body.complete_boundary().is_some());
     let report = body.levels().last().unwrap();
     assert!(
-        report.authored_frames_applied
-            && report.orientation_guide_applied
-            && report.affine_laws_applied
+        report.applied.authored_frames
+            && report.applied.orientation_guide
+            && report.applied.affine_laws
     );
     let denied = Request {
         circle: Some(Budget {
