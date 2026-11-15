@@ -14,84 +14,30 @@ pub fn nurbs_boolean_graph_containment_v4(
             "V4 containment admits union, intersection, or difference",
         ));
     }
-    let (_, top, origin, u, v, floor_offset) = canonical_graph_frame(graph)?;
-    if cutter.bodies.len() != 1
-        || cutter.shells.len() != 1
-        || !cutter.bodies[0].inner_shells.is_empty()
-        || cutter
-            .faces
-            .iter()
-            .any(|face| planar_support(&face.surface, cutter.tolerance_mm.max(1e-9) * 8.).is_none())
-    {
+    let frame = canonical_graph_frame(graph)?;
+    if !is_single_affine_body(cutter) {
         return Err(refuse(
             "V4 containment cutter must be one affine-planar body",
         ));
     }
-    let normal =
-        normalize(cross(u, v)).ok_or_else(|| refuse("V4 containment graph frame is singular"))?;
-    let normal = if dot(floor_offset, normal) < 0. {
-        normal
-    } else {
-        normal.map(|value| -value)
-    };
-    let floor_height = dot(floor_offset, normal);
-    let roof_lower_bound = top
-        .control_points
-        .iter()
-        .flatten()
-        .map(|point| dot(sub([point[0], point[1], point[2]], origin), normal))
-        .fold(f64::INFINITY, f64::min);
-    let uu = dot(u, u);
-    let uv = dot(u, v);
-    let vv = dot(v, v);
-    let determinant = uu * vv - uv * uv;
-    if determinant <= 1e-18 {
-        return Err(refuse("V4 containment graph projection is singular"));
-    }
+    let [uv_margin, floor_clearance, roof_clearance] = graph_frame_clearances(frame, cutter)
+        .map_err(|fault| match fault {
+            ClearanceFault::SingularFrame => refuse("V4 containment graph frame is singular"),
+            ClearanceFault::SingularProjection => {
+                refuse("V4 containment graph projection is singular")
+            }
+        })?;
     let clear = graph
         .tolerance_context()
         .map_err(|_| refuse("V4 containment tolerance context is invalid"))?
         .spatial_bounds()
         .clear_mm;
-    let mut uv_margin = f64::INFINITY;
-    let mut floor_clearance = f64::INFINITY;
-    let mut roof_clearance = f64::INFINITY;
-    for vertex in &cutter.vertices {
-        let rhs = sub(vertex.point, origin);
-        let ru = dot(rhs, u);
-        let rv = dot(rhs, v);
-        let su = (ru * vv - rv * uv) / determinant;
-        let sv = (rv * uu - ru * uv) / determinant;
-        let height = dot(rhs, normal);
-        uv_margin = uv_margin.min(su).min(1. - su).min(sv).min(1. - sv);
-        floor_clearance = floor_clearance.min(height - floor_height);
-        roof_clearance = roof_clearance.min(roof_lower_bound - height);
-    }
     if uv_margin <= clear || floor_clearance <= clear || roof_clearance <= clear {
         return Err(refuse(
             "V4 strict containment, floor, or convex-hull roof separation proof failed",
         ));
     }
-    let tolerance = graph.tolerance_mm.max(cutter.tolerance_mm);
-    let mut result = match operation {
-        "union" => graph.clone(),
-        "intersection" => cutter.clone(),
-        "difference" => crate::imprint_pipeline::cavity(graph, cutter, tolerance)?,
-        _ => unreachable!(),
-    };
-    result.inherit_topology_ids(&[graph, cutter]);
-    let current_ids: std::collections::BTreeSet<_> = result
-        .identity_groups()
-        .into_iter()
-        .flat_map(|(_, ids)| ids.iter().copied())
-        .collect();
-    for change in &mut result.1.change_set.changes {
-        if change.children.iter().any(|id| current_ids.contains(id)) {
-            change.provenance.operation = NURBS_BOOLEAN_CAPABILITY_V4.into();
-            change.role = format!("v4-{operation}-{}", change.topo_kind.as_str());
-        }
-    }
-    result.1.change_set.validate()?;
+    let result = contained_operation_result(graph, cutter, operation)?;
     let audited = LocallyValidatedModel::new(result)?.audit()?;
     let mut audit = audited.certificate().clone();
     audit.notes.push("v4_strict_containment_convex_bounds_ok");
@@ -107,7 +53,11 @@ pub fn nurbs_boolean_graph_containment_v4(
         strict_uv_margin: uv_margin,
         floor_clearance,
         roof_clearance,
-        cavity_proof: operation != "difference" || result.bodies[0].inner_shells.len() == 1,
+        cavity_proof: operation != "difference"
+            || result
+                .bodies
+                .first()
+                .is_some_and(|body| body.inner_shells.len() == 1),
         separation_proof: true,
         audit,
         change_set: result.1.change_set.clone(),
@@ -118,4 +68,33 @@ pub fn nurbs_boolean_graph_containment_v4(
         return Err(refuse("V4 containment aggregate certificate failed closed"));
     }
     Ok((result, cert))
+}
+
+/// Result model of a strict containment with V4 change-set provenance.
+fn contained_operation_result(graph: &Model, cutter: &Model, operation: &str) -> Result<Model> {
+    let tolerance = graph.tolerance_mm.max(cutter.tolerance_mm);
+    let mut result = match operation {
+        "union" => graph.clone(),
+        "intersection" => cutter.clone(),
+        "difference" => crate::imprint_pipeline::cavity(graph, cutter, tolerance)?,
+        _ => {
+            return Err(refuse(
+                "V4 containment admits union, intersection, or difference",
+            ));
+        }
+    };
+    result.inherit_topology_ids(&[graph, cutter]);
+    let current_ids: std::collections::BTreeSet<_> = result
+        .identity_groups()
+        .into_iter()
+        .flat_map(|(_, ids)| ids.iter().copied())
+        .collect();
+    for change in &mut result.1.change_set.changes {
+        if change.children.iter().any(|id| current_ids.contains(id)) {
+            change.provenance.operation = NURBS_BOOLEAN_CAPABILITY_V4.into();
+            change.role = format!("v4-{operation}-{}", change.topo_kind.as_str());
+        }
+    }
+    result.1.change_set.validate()?;
+    Ok(result)
 }

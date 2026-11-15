@@ -96,21 +96,11 @@ pub fn author_general_nurbs_boolean(
 
 /// Resource limit shared by every multispan decomposition and SS certificate.
 const MULTISPAN_RESOURCE_LIMIT: usize = 64;
-/// Gram determinant at or below which the graph frame projection is singular.
-const SINGULAR_PROJECTION_DETERMINANT: f64 = 1e-18;
-/// Smallest tolerance used when admitting a cutter face as planar.
-const MIN_PLANAR_TOLERANCE_MM: f64 = 1e-9;
-/// Multiplier applied to the cutter tolerance for planar admission.
-const PLANAR_TOLERANCE_FACTOR: f64 = 8.;
 /// Exact parallelotope cutter shape (vertices, faces).
 const PARALLELOTOPE_VERTICES: usize = 8;
 const PARALLELOTOPE_FACES: usize = 6;
 /// Required number of strict-interior branch roots for a finite slab.
 const SLAB_ROOT_COUNT: usize = 2;
-
-fn planar_tolerance(cutter: &Model) -> f64 {
-    cutter.tolerance_mm.max(MIN_PLANAR_TOLERANCE_MM) * PLANAR_TOLERANCE_FACTOR
-}
 
 /// The admitted graph source, the affine cutter, and the graph frame.
 struct GeneralOperands<'a> {
@@ -670,56 +660,23 @@ pub(crate) fn graph_affine_strict_containment_bounds(
     graph: &Model,
     cutter: &Model,
 ) -> Result<Option<[f64; 3]>> {
-    let Ok((_, top, origin, u, v, floor_offset)) = canonical_graph_frame(graph) else {
+    let Ok(frame) = canonical_graph_frame(graph) else {
         return Ok(None);
     };
-    if cutter.bodies.len() != 1
-        || cutter.shells.len() != 1
-        || !cutter.bodies[0].inner_shells.is_empty()
-        || cutter
-            .faces
-            .iter()
-            .any(|face| planar_support(&face.surface, planar_tolerance(cutter)).is_none())
-    {
+    if !is_single_affine_body(cutter) {
         return Ok(None);
     }
-    let normal =
-        normalize(cross(u, v)).ok_or_else(|| refuse("V4 containment graph frame is singular"))?;
-    let normal = if dot(floor_offset, normal) < 0. {
-        normal
-    } else {
-        normal.map(|value| -value)
+    let bounds = match graph_frame_clearances(frame, cutter) {
+        Ok(bounds) => bounds,
+        Err(ClearanceFault::SingularFrame) => {
+            return Err(refuse("V4 containment graph frame is singular"));
+        }
+        Err(ClearanceFault::SingularProjection) => return Ok(None),
     };
-    let floor_height = dot(floor_offset, normal);
-    let roof_lower_bound = top
-        .control_points
-        .iter()
-        .flatten()
-        .map(|point| dot(sub([point[0], point[1], point[2]], origin), normal))
-        .fold(f64::INFINITY, f64::min);
-    let uu = dot(u, u);
-    let uv = dot(u, v);
-    let vv = dot(v, v);
-    let determinant = uu * vv - uv * uv;
-    if determinant <= SINGULAR_PROJECTION_DETERMINANT {
-        return Ok(None);
-    }
     let clear = graph
         .tolerance_context()
         .map_err(|_| refuse("V4 containment tolerance context is invalid"))?
         .spatial_bounds()
         .clear_mm;
-    let mut bounds = [f64::INFINITY; 3];
-    for vertex in &cutter.vertices {
-        let rhs = sub(vertex.point, origin);
-        let ru = dot(rhs, u);
-        let rv = dot(rhs, v);
-        let su = (ru * vv - rv * uv) / determinant;
-        let sv = (rv * uu - ru * uv) / determinant;
-        let height = dot(rhs, normal);
-        bounds[0] = bounds[0].min(su).min(1. - su).min(sv).min(1. - sv);
-        bounds[1] = bounds[1].min(height - floor_height);
-        bounds[2] = bounds[2].min(roof_lower_bound - height);
-    }
     Ok((bounds.iter().all(|value| *value > clear)).then_some(bounds))
 }
