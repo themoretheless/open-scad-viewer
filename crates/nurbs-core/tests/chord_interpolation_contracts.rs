@@ -1,6 +1,8 @@
 use nurbs_core::{
     surface::Surface,
-    surface_chord_bound::{cell_interpolation_error, triangle_interpolation_error},
+    surface_chord_bound::{
+        cell_interpolation_error, grid_interpolation_error, triangle_interpolation_error,
+    },
 };
 
 const UNIT: [[f64; 2]; 2] = [[0., 1.], [0., 1.]];
@@ -134,4 +136,47 @@ fn stored_triangle_validates_coordinates_and_respects_cell_budget() {
     assert!(triangle_interpolation_error(&s, outside, stored, 2).is_err());
     let error = triangle_interpolation_error(&s, uv, stored, 2).unwrap();
     assert!((0.75..0.750_000_01).contains(&error.total));
+}
+
+fn quadratic_grid(u: &[f64], v: &[f64]) -> Vec<[f64; 3]> {
+    u.iter()
+        .flat_map(|&u| v.iter().map(move |&v| [u, v, u * u + u * v + v * v]))
+        .collect()
+}
+
+#[test]
+fn certifies_complete_grid_and_identifies_worst_cell() {
+    let s = quadratic(true);
+    let lines = [0., 0.5, 1.];
+    let mut vertices = quadratic_grid(&lines, &lines);
+    vertices[8][2] += 0.375;
+    let report = grid_interpolation_error(&s, &lines, &lines, &vertices, 4).unwrap();
+    assert_eq!(report.knot_rectangles, 4);
+    assert_eq!(report.worst_cell, [1, 1]);
+    assert!((0.5625..0.562_500_01).contains(&report.upper), "{report:?}");
+}
+
+#[test]
+fn global_grid_work_charges_the_original_knot_pieces() {
+    let s = quadratic(true);
+    let u = [0., 1.];
+    let v = [0., 0.5, 1.];
+    let vertices = quadratic_grid(&u, &v);
+    assert!(grid_interpolation_error(&s, &u, &v, &vertices, 3).is_err());
+    let report = grid_interpolation_error(&s, &u, &v, &vertices, 4).unwrap();
+    assert_eq!(report.knot_rectangles, 4);
+    assert!((0.4375..0.437_500_01).contains(&report.upper), "{report:?}");
+}
+
+#[test]
+fn grid_refuses_missing_vertices_and_out_of_order_parameters() {
+    let s = quadratic(false);
+    let u = [0., 0.5, 1.];
+    let v = [0., 1.];
+    let mut vertices = quadratic_grid(&u, &v);
+    assert!(grid_interpolation_error(&s, &u, &v, &vertices[1..], 2).is_err());
+    assert!(grid_interpolation_error(&s, &[0., 0.5, 0.5], &v, &vertices, 2).is_err());
+    assert!(grid_interpolation_error(&s, &[0., 1., 0.5], &v, &vertices, 2).is_err());
+    vertices[5][2] = f64::NAN;
+    assert!(grid_interpolation_error(&s, &u, &v, &vertices, 2).is_err());
 }

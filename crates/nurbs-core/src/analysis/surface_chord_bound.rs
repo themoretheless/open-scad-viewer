@@ -18,8 +18,10 @@ use crate::{
     surface::Surface,
 };
 
+type KnotPiece = (usize, [f64; 2]);
+
 /// Knot pieces of `[a, b]`, refusing interior knots below `C¹`.
-fn pieces(knots: &[f64], degree: usize, count: usize, [a, b]: [f64; 2]) -> Result<Vec<(usize, [f64; 2])>> {
+fn pieces(knots: &[f64], degree: usize, count: usize, [a, b]: [f64; 2]) -> Result<Vec<KnotPiece>> {
     check(a < b && a >= knots[degree] && b <= knots[count], "Chord cell must lie inside the surface domain")?;
     for &k in &knots[degree + 1..count] {
         if a < k && k < b {
@@ -81,17 +83,30 @@ pub fn cell_interpolation_error(
     max_cells: usize,
 ) -> Result<f64> {
     s.validate()?;
-    check((1..=4096).contains(&max_cells), "Chord cell budget must be 1..4096")?;
+    check_chord_budget(max_cells)?;
     let u = pieces(&s.knots_u, s.degree_u, s.control_points.len(), domain[0])?;
     let v = pieces(&s.knots_v, s.degree_v, s.control_points[0].len(), domain[1])?;
     if u.len() * v.len() > max_cells {
         return Err(crate::resource("Chord knot rectangles exceed the work budget"));
     }
+    interpolation_bound(s, domain, &u, &v)
+}
+
+fn check_chord_budget(max_cells: usize) -> Result<()> {
+    check((1..=4096).contains(&max_cells), "Chord cell budget must be 1..4096")
+}
+
+fn interpolation_bound(
+    s: &Surface,
+    domain: [[f64; 2]; 2],
+    u: &[KnotPiece],
+    v: &[KnotPiece],
+) -> Result<f64> {
     let width = |d: [f64; 2]| I::point(d[1]).sub(I::point(d[0]));
     let [u_width, v_width] = [width(domain[0])?, width(domain[1])?];
     let mut maxima = [0f64; 3];
-    for &(ku, du) in &u {
-        for &(kv, dv) in &v {
+    for &(ku, du) in u {
+        for &(kv, dv) in v {
             let j = jets::calculate(s, [ku, kv], [du, dv], None)?;
             let su = u_width.div(width(du)?)?;
             let sv = v_width.div(width(dv)?)?;
@@ -145,14 +160,90 @@ pub fn triangle_interpolation_error(
     for (uv, point) in uv.into_iter().zip(vertices) {
         vertex_displacement = vertex_displacement.max(point_distance(s, uv, point)?);
     }
-    let total = I::point(interpolation)
-        .add(I::point(vertex_displacement))?
-        .hi;
+    let total = combine_errors(interpolation, vertex_displacement)?;
     Ok(TriangleInterpolationError {
         interpolation,
         vertex_displacement,
         total,
     })
+}
+
+fn combine_errors(interpolation: f64, displacement: f64) -> Result<f64> {
+    Ok(I::point(interpolation).add(I::point(displacement))?.hi)
+}
+
+/// Maximum certified deviation over the complete rectangular mesh grid.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GridInterpolationError {
+    pub upper: f64,
+    /// Indices of the lower U and V lines of the cell with the largest bound.
+    pub worst_cell: [usize; 2],
+    pub knot_rectangles: usize,
+}
+
+/// Certify a retained UV grid across its entire rectangular domain.
+///
+/// Vertices are in U-major order, with V varying fastest. The four corners
+/// in each cell are covered for either choice of diagonal. Grid lines must
+/// increase strictly and may coincide with a kink. A single cell cannot
+/// cross a kink. All vertex and knot-rectangle checks share this call, so
+/// an invalid cell cannot leave a partially certified result.
+pub fn grid_interpolation_error(
+    s: &Surface,
+    u: &[f64],
+    v: &[f64],
+    vertices: &[[f64; 3]],
+    max_cells: usize,
+) -> Result<GridInterpolationError> {
+    s.validate()?;
+    check_chord_budget(max_cells)?;
+    check(u.len() >= 2 && v.len() >= 2, "Chord grid needs two lines per axis")?;
+    let grid_cells = (u.len() - 1).checked_mul(v.len() - 1);
+    if grid_cells.is_none_or(|count| count > max_cells) {
+        return Err(crate::resource("Chord grid exceeds the cell budget"));
+    }
+    check(
+        u.len().checked_mul(v.len()) == Some(vertices.len())
+            && vertices.iter().flatten().all(|value| value.is_finite()),
+        "Chord grid needs one finite point per UV vertex",
+    )?;
+    let axis_pieces = |grid: &[f64], knots: &[f64], degree, count| {
+        grid.windows(2)
+            .map(|pair| pieces(knots, degree, count, [pair[0], pair[1]]))
+            .collect::<Result<Vec<_>>>()
+    };
+    let u_pieces = axis_pieces(u, &s.knots_u, s.degree_u, s.control_points.len())?;
+    let v_pieces = axis_pieces(v, &s.knots_v, s.degree_v, s.control_points[0].len())?;
+    let total = |axis: &[Vec<KnotPiece>]| axis.iter().map(Vec::len).sum::<usize>();
+    let knot_rectangles = total(&u_pieces) * total(&v_pieces);
+    if knot_rectangles > max_cells {
+        return Err(crate::resource("Chord knot rectangles exceed the work budget"));
+    }
+
+    let mut shift = Vec::with_capacity(vertices.len());
+    for (&u, row) in u.iter().zip(vertices.chunks_exact(v.len())) {
+        for (&v, &vertex) in v.iter().zip(row) {
+            shift.push(point_distance(s, [u, v], vertex)?);
+        }
+    }
+
+    let mut upper = 0f64;
+    let mut worst_cell = [0, 0];
+    for (i, up) in u_pieces.iter().enumerate() {
+        for (j, vp) in v_pieces.iter().enumerate() {
+            let domain = [[u[i], u[i + 1]], [v[j], v[j + 1]]];
+            let interpolation = interpolation_bound(s, domain, up, vp)?;
+            let a = i * v.len() + j;
+            let b = a + v.len();
+            let displacement = shift[a].max(shift[a + 1]).max(shift[b]).max(shift[b + 1]);
+            let cell = combine_errors(interpolation, displacement)?;
+            if cell > upper {
+                upper = cell;
+                worst_cell = [i, j];
+            }
+        }
+    }
+    Ok(GridInterpolationError { upper, worst_cell, knot_rectangles })
 }
 
 /// Upper bound on `|S(uv) - q|`, evaluated with interval jets.
