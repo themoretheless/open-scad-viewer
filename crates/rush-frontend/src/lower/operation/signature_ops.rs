@@ -51,6 +51,7 @@ const MODIFIER_OPS: &[&str] = &[
     "brep_revolve",
     "brep_chamfer",
     "brep_fillet",
+    "brep_full_round_exact",
     "ribbon_surface",
     "variable_pipe_surface",
     "pipe_surface",
