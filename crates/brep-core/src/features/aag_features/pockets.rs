@@ -105,44 +105,18 @@ enum PocketRole {
     Fillet,
 }
 
-/// Multiplier on `model.tolerance_mm` for the same-surface linear tolerance.
-const SAME_SURFACE_TOLERANCE_FACTOR: f64 = 100.;
-/// Lower bound of the same-surface linear tolerance.
-const SAME_SURFACE_TOLERANCE_FLOOR: f64 = 1e-7;
 /// Minimum pocket depth, in multiples of `model.tolerance_mm`.
 const MIN_DEPTH_TOLERANCE_FACTOR: f64 = 10.;
-/// Probe offset relative to the pocket depth.
-const PROBE_OFFSET_DEPTH_FRACTION: f64 = 1e-3;
-/// Lower bound of the probe offset, in multiples of `model.tolerance_mm`.
-const PROBE_OFFSET_TOLERANCE_FACTOR: f64 = 10.;
 /// A wall leaning further than this off perpendicular faces the floor.
 const MAX_WALL_LEAN_DEG: f64 = 45.;
 /// Wall leans above this angle report the pocket as drafted.
 const DRAFT_THRESHOLD_DEG: f64 = 0.5;
-/// Error text when face attributes are missing or stale.
-const STALE_ATTRS_MESSAGE: &str =
-    "AAG face attributes missing or stale; run attach_face_attrs first";
 
 /// Plane key of a face: outward normal and signed offset along it.
 type PlaneKey = ([f64; 3], f64);
 
 /// One adjacency between supernodes: (root_a, root_b, class, aag edge index).
 type SupernodeEdge = (usize, usize, DihedralClass, usize);
-
-/// Union-find root with path compression.
-fn union_root(parent: &mut [usize], i: usize) -> usize {
-    let mut r = i;
-    while parent[r] != r {
-        r = parent[r];
-    }
-    let mut c = i;
-    while parent[c] != c {
-        let next = parent[c];
-        parent[c] = r;
-        c = next;
-    }
-    r
-}
 
 /// Fillet-chain collapse: every chain becomes one supernode. Returns the
 /// supernode root of every face and the set of fillet supernode roots.
@@ -416,8 +390,7 @@ impl PocketSearch<'_> {
         if !(depth.is_finite() && depth > MIN_DEPTH_TOLERANCE_FACTOR * tolerance) {
             return Ok(None);
         }
-        let eps =
-            (PROBE_OFFSET_DEPTH_FRACTION * depth).max(PROBE_OFFSET_TOLERANCE_FACTOR * tolerance);
+        let eps = probe_offset(self.model, depth);
         Ok(Some(FloorFrame {
             normal,
             center,
@@ -661,8 +634,7 @@ pub fn find_pockets(model: &Model, graph: &Aag, budget: &Budget) -> Result<Vec<P
         roots,
         fillet_roots,
         adj,
-        linear_tol: (model.tolerance_mm * SAME_SURFACE_TOLERANCE_FACTOR)
-            .max(SAME_SURFACE_TOLERANCE_FLOOR),
+        linear_tol: linear_tolerance(model),
         plane_keys: Default::default(),
         seen: Default::default(),
         pockets: Vec::new(),

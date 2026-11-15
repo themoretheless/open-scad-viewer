@@ -69,6 +69,43 @@ const HOLE_SAMPLE_GRID: usize = 9;
 const AXIS_DOT_TOLERANCE: f64 = 1e-6;
 /// Relative radius tolerance for clustering sibling cylinder patches.
 const RADIUS_REL_TOLERANCE: f64 = 1e-4;
+/// Multiplier on `model.tolerance_mm` for coaxial and same-surface checks.
+const LINEAR_TOLERANCE_FACTOR: f64 = 100.;
+/// Lower bound of the coaxial and same-surface linear tolerance.
+const LINEAR_TOLERANCE_FLOOR: f64 = 1e-7;
+/// Ray-parity probe offset relative to the feature depth.
+const PROBE_OFFSET_DEPTH_FRACTION: f64 = 1e-3;
+/// Lower bound of the probe offset, in multiples of `model.tolerance_mm`.
+const PROBE_OFFSET_TOLERANCE_FACTOR: f64 = 10.;
+/// Error text when face attributes are missing or stale.
+const STALE_ATTRS_MESSAGE: &str =
+    "AAG face attributes missing or stale; run attach_face_attrs first";
+
+/// Linear tolerance for coaxial checks: a small multiple of the modeling
+/// tolerance, so genuine axis splits merge but distinct features do not.
+fn linear_tolerance(model: &Model) -> f64 {
+    (model.tolerance_mm * LINEAR_TOLERANCE_FACTOR).max(LINEAR_TOLERANCE_FLOOR)
+}
+
+/// Offset of a ray-parity probe past a feature boundary of `depth`.
+fn probe_offset(model: &Model, depth: f64) -> f64 {
+    (PROBE_OFFSET_DEPTH_FRACTION * depth).max(PROBE_OFFSET_TOLERANCE_FACTOR * model.tolerance_mm)
+}
+
+/// Union-find root with path compression.
+fn union_root(parent: &mut [usize], i: usize) -> usize {
+    let mut r = i;
+    while parent[r] != r {
+        r = parent[r];
+    }
+    let mut c = i;
+    while parent[c] != c {
+        let next = parent[c];
+        parent[c] = r;
+        c = next;
+    }
+    r
+}
 
 fn features_error(message: impl Into<String>) -> Error {
     Error::new("BREP_AAG_FEATURES_INPUT", message)
@@ -325,42 +362,28 @@ fn step_kind(fa: &FaceAttrs, axis: &Axis, radius: f64, linear_tol: f64) -> Optio
 
 /// Union-find over cylinder faces linked by smooth edges with same axis/radius.
 fn cluster_cylinders(graph: &Aag, linear_tol: f64) -> Vec<Vec<usize>> {
-    let cylinders: Vec<usize> = graph
+    // (face, axis, radius) of every fully attributed cylinder face.
+    let cylinders: Vec<(usize, Axis, f64)> = graph
         .nodes
         .iter()
-        .filter(|n| {
-            n.attrs.as_ref().is_some_and(|a| {
-                a.class == SurfaceClass::Cylinder && a.axis.is_some() && a.radius.is_some()
-            })
+        .filter_map(|n| {
+            let a = n.attrs.as_ref()?;
+            if a.class != SurfaceClass::Cylinder {
+                return None;
+            }
+            Some((n.face, a.axis?, a.radius?))
         })
-        .map(|n| n.face)
         .collect();
     let mut parent: Vec<usize> = (0..cylinders.len()).collect();
-    fn root(parent: &mut Vec<usize>, i: usize) -> usize {
-        let mut r = i;
-        while parent[r] != r {
-            r = parent[r];
-        }
-        let mut c = i;
-        while parent[c] != c {
-            let next = parent[c];
-            parent[c] = r;
-            c = next;
-        }
-        r
-    }
-    let index_of = |face: usize| cylinders.iter().position(|&f| f == face);
-    for (i, &face) in cylinders.iter().enumerate() {
-        let attrs = graph.nodes[face].attrs.as_ref().expect("filtered above");
-        let (axis_a, radius_a) = (attrs.axis.unwrap(), attrs.radius.unwrap());
+    let index_of = |face: usize| cylinders.iter().position(|&(f, ..)| f == face);
+    for (i, &(face, axis_a, radius_a)) in cylinders.iter().enumerate() {
         for sib in neighbors_via(graph, face, |c| c == DihedralClass::Smooth) {
             let Some(j) = index_of(sib) else { continue };
-            let sattrs = graph.nodes[sib].attrs.as_ref().expect("filtered above");
-            let (axis_b, radius_b) = (sattrs.axis.unwrap(), sattrs.radius.unwrap());
+            let (_, axis_b, radius_b) = cylinders[j];
             let same_radius =
                 (radius_a - radius_b).abs() <= RADIUS_REL_TOLERANCE * radius_a.max(radius_b);
             if same_radius && coaxial(&axis_a, &axis_b, linear_tol) {
-                let (ra, rb) = (root(&mut parent, i), root(&mut parent, j));
+                let (ra, rb) = (union_root(&mut parent, i), union_root(&mut parent, j));
                 if ra != rb {
                     parent[ra] = rb;
                 }
@@ -368,8 +391,8 @@ fn cluster_cylinders(graph: &Aag, linear_tol: f64) -> Vec<Vec<usize>> {
         }
     }
     let mut groups: std::collections::BTreeMap<usize, Vec<usize>> = Default::default();
-    for (i, &face) in cylinders.iter().enumerate() {
-        let r = root(&mut parent, i);
+    for (i, &(face, ..)) in cylinders.iter().enumerate() {
+        let r = union_root(&mut parent, i);
         groups.entry(r).or_default().push(face);
     }
     groups.into_values().collect()
@@ -387,15 +410,11 @@ pub fn find_holes(model: &Model, graph: &Aag, budget: &Budget) -> Result<Vec<Hol
         return Err(features_error("AAG node count does not match model faces"));
     }
     if !graph.stale_face_attrs(model).is_empty() {
-        return Err(features_error(
-            "AAG face attributes missing or stale; run attach_face_attrs first",
-        ));
+        return Err(features_error(STALE_ATTRS_MESSAGE));
     }
     let mut guard: BudgetGuard = budget.guard("aag-find-holes");
     guard.check()?;
-    // Linear tolerance for coaxial checks: a small multiple of the modeling
-    // tolerance, so genuine axis splits merge but distinct holes do not.
-    let linear_tol = (model.tolerance_mm * 100.).max(1e-7);
+    let linear_tol = linear_tolerance(model);
 
     let clusters = cluster_cylinders(graph, linear_tol);
     let mut holes = Vec::new();
@@ -515,7 +534,7 @@ pub fn find_holes(model: &Model, graph: &Aag, budget: &Budget) -> Result<Vec<Hol
         } else {
             [0.; 3]
         };
-        let eps = (1e-3 * depth).max(10. * model.tolerance_mm);
+        let eps = probe_offset(model, depth);
         let probe_offset = 0.25 * radius;
         let probe_dirs = [
             [1., 0.317, 0.173],
