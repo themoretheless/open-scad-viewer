@@ -58,7 +58,7 @@ export function executeDirectTransaction(document:DirectDocument,text:string):Di
        if(!sameEntity(original.map((e:any)=>e[key]),edit.before)||ids.length!==list.length||new Set(ids).size!==ids.length||ids.some(id=>!list.some((e:any)=>e[key]===id)))throw Error('Recorded entity order does not match the source.')
        value[edit.id]=ids.map(id=>list.find((e:any)=>e[key]===id))
       }else if(edit.collection==='metadata'){
-       if(!['interchange','blenderProjectId'].includes(edit.id)||!sameEntity(value[edit.id],edit.before))throw Error('Recorded metadata no longer matches the source.')
+       if(!['interchange','blenderProjectId','units'].includes(edit.id)||!sameEntity(value[edit.id],edit.before))throw Error('Recorded metadata no longer matches the source.')
        if(edit.after===null)delete value[edit.id];else value[edit.id]=edit.after
       }else{
        const list:any[]=value[edit.collection]??[],key=edit.collection==='groups'?'name':'id',index=list.findIndex(e=>e[key]===edit.id)
@@ -98,7 +98,7 @@ export function appendDirectDocumentEdit(script:DirectActionScript,before:Direct
   const aOrder=a.map(e=>e[key]),bOrder=b.map(e=>e[key])
   if(!sameEntity(aOrder,bOrder))edits.push({collection:'order',id:collection,before:aOrder,after:bOrder})
  }
- for(const id of ['interchange','blenderProjectId'] as const)if(!sameEntity(before[id]??null,after[id]??null))edits.push({collection:'metadata',id,before:structuredClone(before[id]??null),after:structuredClone(after[id]??null)})
+ for(const id of ['interchange','blenderProjectId','units'] as const)if(!sameEntity(before[id]??null,after[id]??null))edits.push({collection:'metadata',id,before:structuredClone(before[id]??null),after:structuredClone(after[id]??null)})
  if(!edits.length)return script
  const next:DirectActionScript={version:1,actions:[...script.actions,{kind:'documentEdit',edits}]}
  if(next.actions.length>80||!withinScriptByteLimit(JSON.stringify(next)))throw Error('Recording limit reached (80 commands / 16 MiB).')
