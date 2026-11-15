@@ -33,7 +33,7 @@ impl QualifiedOriginalSsJoint {
         )
     }
 }
-fn short(
+pub(super) fn short(
     edge: &OriginalSsRootEdge,
     end: bool,
     depth: usize,

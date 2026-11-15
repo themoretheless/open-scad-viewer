@@ -177,7 +177,7 @@ impl MixedBrep {
 mod closed_cut;
 pub use closed_cut::{
     PairedRootSolidAdmission, QualifiedPairedRootSolid, QualifiedRootBoolean,QualifiedRootShellForest,RootRelationKind,RootRelationLimits,RootRelationWork,QualifiedRootRelation,RootCavityLimits,RootCavityCoverageWork,QualifiedRootCavitySolid,RootSurfaceMaterialLimits,QualifiedRootSurfaceMaterialBox,RootMaterialBoxLimits,RootMaterialBoxWork,QualifiedRootMaterialBox,RootSolidPointLimits, RootSolidPointReport, RootSolidRayReport, RootBoundaryVolumeLimits, RootBoundaryVolumeReport, QualifiedPairedRootBoundary, QualifiedArrangementMaterialRectangle, CensusArrangementLimits, CensusFaceArrangement, CensusRectangleReport, QualifiedCensusMaterialRectangle, InteriorCensusAnchor, InteriorCensusLimits, QualifiedInteriorSsCensus, qualify_interior_ss_census,
-    InteriorLoopLimits, QualifiedInteriorSsLoop, qualify_paired_interior_loop,
+    InteriorLoopLimits, QualifiedInteriorSsLoop, qualify_paired_interior_loop, qualify_loop_neighborhoods,
     ClosedCutCandidate, ClosedCutLimits, CutMaterialLimits, CutRectangleLimits, CutRectangleReport,
     QualifiedCutMaterialRectangle, split_closed_contour_candidate,
 };
