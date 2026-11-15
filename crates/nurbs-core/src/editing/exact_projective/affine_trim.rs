@@ -26,19 +26,49 @@ pub fn affine_trimmed_surface_clock(
     endpoints: [[f64; 2]; 2],
     max_work: u64,
 ) -> Result<TrimmedMobiusReport> {
+    remap_trimmed_surface_axes(source, loops, TrimmedAxisOrder::Uv, endpoints, max_work)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TrimmedAxisOrder {
+    Uv,
+    Vu,
+}
+
+/// Remap a trimmed tensor chart by an axis permutation followed by signed
+/// affine maps. Endpoint pairs are in output order and specify where each
+/// source axis starts and ends. The contour clock and rational weights stay
+/// attached to their original curves. The result includes the surface and
+/// every verified closed contour, or a single refusal.
+pub fn remap_trimmed_surface_axes(
+    source: &Surface,
+    loops: &[Vec<Curve>],
+    order: TrimmedAxisOrder,
+    endpoints: [[f64; 2]; 2],
+    max_work: u64,
+) -> Result<TrimmedMobiusReport> {
     source.validate()?;
     let old = domain(source);
+    let [u_axis, v_axis] = match order {
+        TrimmedAxisOrder::Uv => [0, 1],
+        TrimmedAxisOrder::Vu => [1, 0],
+    };
     transfer_report(
         loops,
         max_work,
-        || affine_surface_clock(source, endpoints, max_work),
+        || match order {
+            TrimmedAxisOrder::Uv => affine_surface_clock(source, endpoints, max_work),
+            TrimmedAxisOrder::Vu => affine_surface_clock(&transpose(source)?, endpoints, max_work),
+        },
         |curve, budget| {
             map_curve(curve, old, budget, |out, work| {
-                let u = AffineMap::new(old[0], endpoints[0], work).map_err(curve_refusal)?;
-                let v = AffineMap::new(old[1], endpoints[1], work).map_err(curve_refusal)?;
+                let u = AffineMap::new(old[u_axis], endpoints[0], work).map_err(curve_refusal)?;
+                let v = AffineMap::new(old[v_axis], endpoints[1], work).map_err(curve_refusal)?;
                 for p in &mut out.control_points {
-                    p[0] = u.store(p[0], work).map_err(curve_refusal)?;
-                    p[1] = v.store(p[1], work).map_err(curve_refusal)?;
+                    let new_u = u.store(p[u_axis], work).map_err(curve_refusal)?;
+                    let new_v = v.store(p[v_axis], work).map_err(curve_refusal)?;
+                    p[0] = new_u;
+                    p[1] = new_v;
                 }
                 Ok(())
             })

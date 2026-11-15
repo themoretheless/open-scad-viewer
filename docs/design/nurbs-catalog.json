@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 312,
-  "unallocatedCount": 688,
+  "specifiedCount": 313,
+  "unallocatedCount": 687,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8209,6 +8209,27 @@
       "remainingQualification": [
         "Exchange both tensor axes and every closed UV trim together, including different basis degrees and rational weights.",
         "Natural UV domain containment and exact loop closure. The signed permutation reverses winding and preserves original curve clocks and world-space traces.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0313",
+      "name": "Единое точное преобразование порядка, направления и диапазонов осей обрезанной поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::remap_trimmed_surface_axes",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/affine_trim.rs",
+        "crates/nurbs-core/src/editing/exact_projective/affine_surface.rs",
+        "crates/nurbs-core/tests/exact_trimmed_axis_remap_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-313-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-313-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Apply a tensor-axis permutation and signed affine coordinates as one trimmed-face edit with exact final storage checks.",
+        "Endpoint pairs use output axis order. Closed original contours and exact representability of final parameters and poles are required.",
         "WASM and application integration are separate."
       ]
     }

@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0313",
+  "testedBase": "b0d29939a97e5337aba7e1230de0d0c5fe926e50",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_trimmed_axis_remap_contracts",
+    "--test",
+    "exact_affine_trim_contracts",
+    "--test",
+    "exact_trimmed_transpose_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 5,
+  "scope": [
+    "Apply a tensor-axis permutation and signed affine coordinates as one trimmed-face edit with exact final storage checks.",
+    "Endpoint pairs use output axis order. Closed original contours and exact representability of final parameters and poles are required."
+  ],
+  "logSha256": "a343563f3b43b8bb7c5b851adbc2446dccc52ecc175986396256a8db584e13d7",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "55b1bccf38a4375813024f3985d31ad42cf9eca1d3e37a9d8471b2d2ac3a5a89",
+    "crates/nurbs-core/src/editing/exact_projective/affine_trim.rs": "98937715e3f8ab9674af9cbd08291c7aadd024b7c05dcaab998cb777bf5b6f38",
+    "crates/nurbs-core/src/editing/exact_projective/affine_surface.rs": "0c322331746aa6d0ae0f4632ba264da1c0b979149ecaaaecb9bb93b92165632f",
+    "crates/nurbs-core/tests/exact_trimmed_axis_remap_contracts.rs": "99f7d3ccb2d829b00ebcf96f3bf49cd6df0e3280fd5883d65aad7a5172901f69"
+  }
+}
