@@ -1,10 +1,37 @@
 use super::*;
-pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
-    let (loops, mut geometry) = profile_with_report(spec)?;
-    let beta = spec.helix_angle_deg.to_radians();
-    let total_twist = spec.height * beta.tan() / geometry.pitch_radius;
-    // Axial layers: (z0, z1, theta0, twist).
-    let layers: Vec<(f64, f64, f64, f64)> = if spec.herringbone && beta != 0. {
+use nurbs_core::interval_eval::Interval as I;
+
+/// Model tolerance of the assembled gear body, in millimetres.
+const GEAR_MODEL_TOLERANCE_MM: f64 = 1e-7;
+
+/// Axial layer: (z0, z1, theta0, twist).
+type Layer = (f64, f64, f64, f64);
+/// Nominal start and twist intervals of one layer.
+type NominalTwist = ([f64; 2], [f64; 2]);
+
+/// Per outline loop at one layer boundary: the level vertices (one per curve
+/// start) and level edges (one per outline curve).
+struct Level {
+    z: f64,
+    theta: f64,
+    vertices: Vec<Vec<usize>>,
+    edges: Vec<Vec<usize>>,
+}
+
+/// Topology arrays of the gear body under construction plus sweep tallies.
+struct GearBodyBuilder<'a> {
+    loops: &'a [Vec<Curve>],
+    vertices: Vec<Vertex>,
+    edges: Vec<Edge>,
+    loops_out: Vec<Loop>,
+    faces: Vec<Face>,
+    uses: Vec<FaceUse>,
+    sweep_deviation: f64,
+    sweep_rounding_certified: bool,
+}
+
+fn axial_layers(spec: &GearSpec, beta: f64, total_twist: f64) -> Vec<Layer> {
+    if spec.herringbone && beta != 0. {
         let half = spec.height / 2.;
         vec![
             (0., half, 0., total_twist / 2.),
@@ -12,42 +39,60 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
         ]
     } else {
         vec![(0., spec.height, 0., total_twist)]
-    };
-    let mut vertices: Vec<Vertex> = Vec::new();
-    let mut edges: Vec<Edge> = Vec::new();
-    let mut loops_out: Vec<Loop> = Vec::new();
-    let mut faces: Vec<Face> = Vec::new();
-    let mut uses: Vec<FaceUse> = Vec::new();
-    let mut sweep_deviation: f64 = 0.;
-    let nominal_twist = nurbs_core::involute::derive_gear_twist_bounds(
-        spec.module,
-        spec.teeth,
-        spec.height,
-        spec.helix_angle_deg,
-    )
-    .ok();
-    let mut sweep_rounding_certified = nominal_twist.is_some();
-    // Per level (layer boundaries) and per loop: the level edges (one per
-    // outline curve) and the level vertices (one per curve start).
-    let level_z: Vec<f64> = std::iter::once(layers[0].0)
-        .chain(layers.iter().map(|l| l.1))
-        .collect();
-    let level_theta: Vec<f64> = std::iter::once(layers[0].2)
-        .chain(layers.iter().map(|l| l.2 + l.3))
-        .collect();
-    let mut level_vertices: Vec<Vec<Vec<usize>>> = Vec::new();
-    let mut level_edges: Vec<Vec<Vec<usize>>> = Vec::new();
-    for (li, &z) in level_z.iter().enumerate() {
-        let theta = level_theta[li];
-        let mut vl = Vec::new();
-        let mut el = Vec::new();
-        for outline_loop in &loops {
+    }
+}
+
+fn max_radius<'p>(points: impl Iterator<Item = &'p Vec<f64>>) -> f64 {
+    points.map(|p| p[0].hypot(p[1])).fold(0., f64::max)
+}
+
+/// Sweep budget of one curve, scaled by its radius relative to its loop.
+fn curve_budget(c: &Curve, loop_max_radius: f64) -> f64 {
+    let curve_radius = max_radius(c.control_points.iter());
+    if loop_max_radius > 0. && curve_radius > 0. {
+        (SWEEP_FIT * (curve_radius / loop_max_radius)).min(SWEEP_FIT)
+    } else {
+        SWEEP_FIT
+    }
+}
+
+fn layer_nominal_twist(
+    nominal_twist: Option<[f64; 2]>,
+    layer_count: usize,
+    layer: usize,
+) -> Result<Option<NominalTwist>> {
+    nominal_twist
+        .map(|total| -> Result<_> {
+            let t = I::new(total[0], total[1])?;
+            if layer_count == 2 {
+                let half = t.div(I::point(2.))?;
+                if layer == 0 {
+                    Ok(([0.; 2], [half.lo, half.hi]))
+                } else {
+                    Ok(([half.lo, half.hi], [-half.hi, -half.lo]))
+                }
+            } else {
+                Ok(([0.; 2], [t.lo, t.hi]))
+            }
+        })
+        .transpose()
+}
+
+impl<'a> GearBodyBuilder<'a> {
+    fn push_level(&mut self, z: f64, theta: f64) -> Level {
+        let mut level = Level {
+            z,
+            theta,
+            vertices: Vec::new(),
+            edges: Vec::new(),
+        };
+        for outline_loop in self.loops {
             let mut vs = Vec::new();
             for c in outline_loop {
                 let rotated = lift(&rotate2(c, theta), z);
                 let p = rotated.control_points[0].clone();
-                vs.push(vertices.len());
-                vertices.push(Vertex {
+                vs.push(self.vertices.len());
+                self.vertices.push(Vertex {
                     point: [p[0], p[1], p[2]],
                 });
             }
@@ -55,164 +100,214 @@ pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
             let mut es = Vec::new();
             for (k, c) in outline_loop.iter().enumerate() {
                 let rotated = lift(&rotate2(c, theta), z);
-                es.push(edges.len());
-                edges.push(Edge {
+                es.push(self.edges.len());
+                self.edges.push(Edge {
                     degenerate: false,
                     vertices: [vs[k], vs[(k + 1) % n]],
                     curve: rotated,
                 });
             }
-            vl.push(vs);
-            el.push(es);
+            level.vertices.push(vs);
+            level.edges.push(es);
         }
-        level_vertices.push(vl);
-        level_edges.push(el);
+        level
     }
-    // Walls.
-    for (layer, &(z0, z1, theta0, twist)) in layers.iter().enumerate() {
-        for (loop_index, outline_loop) in loops.iter().enumerate() {
-            let n = outline_loop.len();
-            // Vertical edges at every curve start of this layer.
-            let mut vertical: Vec<usize> = Vec::with_capacity(n);
-            let mut surfaces: Vec<Surface> = Vec::with_capacity(n);
-            let loop_max_radius = outline_loop
-                .iter()
-                .flat_map(|c| &c.control_points)
-                .map(|p| p[0].hypot(p[1]))
-                .fold(0., f64::max);
-            for c in outline_loop {
-                let curve_radius = c
-                    .control_points
-                    .iter()
-                    .map(|p| p[0].hypot(p[1]))
-                    .fold(0., f64::max);
-                let loop_budget = if loop_max_radius > 0. && curve_radius > 0. {
-                    (SWEEP_FIT * (curve_radius / loop_max_radius)).min(SWEEP_FIT)
-                } else {
-                    SWEEP_FIT
-                };
-                let nominal = nominal_twist
-                    .map(|total| -> Result<_> {
-                        use nurbs_core::interval_eval::Interval as I;
-                        let t = I::new(total[0], total[1])?;
-                        if layers.len() == 2 {
-                            let half = t.div(I::point(2.))?;
-                            if layer == 0 {
-                                Ok(([0.; 2], [half.lo, half.hi]))
-                            } else {
-                                Ok(([half.lo, half.hi], [-half.hi, -half.lo]))
-                            }
-                        } else {
-                            Ok(([0.; 2], [t.lo, t.hi]))
-                        }
-                    })
-                    .transpose()?;
-                let (surface, dev, certified) =
-                    wall(c, z0, z1, theta0, twist, loop_budget, nominal)?;
-                sweep_rounding_certified &= certified;
-                sweep_deviation = sweep_deviation.max(dev);
-                surfaces.push(surface);
-            }
-            for k in 0..n {
-                let curve = column(&surfaces[k], false);
-                vertical.push(edges.len());
-                edges.push(Edge {
-                    degenerate: false,
-                    vertices: [
-                        level_vertices[layer][loop_index][k],
-                        level_vertices[layer + 1][loop_index][k],
-                    ],
-                    curve,
-                });
-            }
-            for k in 0..n {
-                let next = (k + 1) % n;
-                let bottom = level_edges[layer][loop_index][k];
-                let top = level_edges[layer + 1][loop_index][k];
-                let coedges = vec![
-                    Coedge::new(bottom, false, unit_line([0., 0.], [1., 0.])),
-                    Coedge::new(vertical[next], false, unit_line([1., 0.], [1., 1.])),
-                    Coedge::new(top, true, unit_line([1., 1.], [0., 1.])),
-                    Coedge::new(vertical[k], true, unit_line([0., 1.], [0., 0.])),
-                ];
-                loops_out.push(Loop { coedges });
-                faces.push(Face {
-                    surface: surfaces[k].clone(),
-                    outer: loops_out.len() - 1,
-                    holes: vec![],
-                });
-                uses.push(FaceUse {
-                    face: faces.len() - 1,
-                    reversed: false,
-                });
-            }
+
+    fn wall_surfaces(
+        &mut self,
+        outline_loop: &[Curve],
+        layer: Layer,
+        nominal: Option<NominalTwist>,
+    ) -> Result<Vec<Surface>> {
+        let (z0, z1, theta0, twist) = layer;
+        let loop_max_radius = max_radius(outline_loop.iter().flat_map(|c| &c.control_points));
+        let mut surfaces = Vec::with_capacity(outline_loop.len());
+        for c in outline_loop {
+            let loop_budget = curve_budget(c, loop_max_radius);
+            let (surface, dev, certified) = wall(c, z0, z1, theta0, twist, loop_budget, nominal)?;
+            self.sweep_rounding_certified &= certified;
+            self.sweep_deviation = self.sweep_deviation.max(dev);
+            surfaces.push(surface);
+        }
+        Ok(surfaces)
+    }
+
+    /// Vertical edges at every curve start, then one wall face per curve.
+    fn push_wall_faces(
+        &mut self,
+        surfaces: &[Surface],
+        bottom: (&[usize], &[usize]),
+        top: (&[usize], &[usize]),
+    ) {
+        let n = surfaces.len();
+        let mut vertical: Vec<usize> = Vec::with_capacity(n);
+        for (k, surface) in surfaces.iter().enumerate() {
+            let curve = column(surface, false);
+            vertical.push(self.edges.len());
+            self.edges.push(Edge {
+                degenerate: false,
+                vertices: [bottom.0[k], top.0[k]],
+                curve,
+            });
+        }
+        for (k, surface) in surfaces.iter().enumerate() {
+            let next = (k + 1) % n;
+            let coedges = vec![
+                Coedge::new(bottom.1[k], false, unit_line([0., 0.], [1., 0.])),
+                Coedge::new(vertical[next], false, unit_line([1., 0.], [1., 1.])),
+                Coedge::new(top.1[k], true, unit_line([1., 1.], [0., 1.])),
+                Coedge::new(vertical[k], true, unit_line([0., 1.], [0., 0.])),
+            ];
+            self.loops_out.push(Loop { coedges });
+            self.faces.push(Face {
+                surface: surface.clone(),
+                outer: self.loops_out.len() - 1,
+                holes: vec![],
+            });
+            self.uses.push(FaceUse {
+                face: self.faces.len() - 1,
+                reversed: false,
+            });
         }
     }
-    // Caps: bottom (reversed use, normal -z) and top.
-    for (li, reversed) in [(0usize, true), (level_z.len() - 1, false)] {
-        let z = level_z[li];
-        let theta = level_theta[li];
-        let rotated: Vec<Vec<Curve>> = loops
+
+    fn push_walls(
+        &mut self,
+        layers: &[Layer],
+        levels: &[Level],
+        nominal_twist: Option<[f64; 2]>,
+    ) -> Result<()> {
+        let loops = self.loops;
+        for (layer, (&bounds, pair)) in layers.iter().zip(levels.windows(2)).enumerate() {
+            let (low, high) = (&pair[0], &pair[1]);
+            for (loop_index, outline_loop) in loops.iter().enumerate() {
+                let nominal = layer_nominal_twist(nominal_twist, layers.len(), layer)?;
+                let surfaces = self.wall_surfaces(outline_loop, bounds, nominal)?;
+                self.push_wall_faces(
+                    &surfaces,
+                    (&low.vertices[loop_index], &low.edges[loop_index]),
+                    (&high.vertices[loop_index], &high.edges[loop_index]),
+                );
+            }
+        }
+        Ok(())
+    }
+
+    fn push_cap(&mut self, level: &Level, reversed: bool) {
+        let rotated: Vec<Vec<Curve>> = self
+            .loops
             .iter()
-            .map(|l| l.iter().map(|c| rotate2(c, theta)).collect())
+            .map(|l| l.iter().map(|c| rotate2(c, level.theta)).collect())
             .collect();
         let all: Vec<&Curve> = rotated.iter().flatten().collect();
-        let (surface, map) = cap(&all, z);
+        let (surface, map) = cap(&all, level.z);
         let mut loop_ids = Vec::new();
-        for (loop_index, curves) in rotated.iter().enumerate() {
+        for (curves, level_edges) in rotated.iter().zip(&level.edges) {
             let coedges = curves
                 .iter()
-                .enumerate()
-                .map(|(k, c)| {
-                    Coedge::new(level_edges[li][loop_index][k], false, cap_pcurve(c, map))
-                })
+                .zip(level_edges)
+                .map(|(c, &edge)| Coedge::new(edge, false, cap_pcurve(c, map)))
                 .collect();
-            loops_out.push(Loop { coedges });
-            loop_ids.push(loops_out.len() - 1);
+            self.loops_out.push(Loop { coedges });
+            loop_ids.push(self.loops_out.len() - 1);
         }
-        faces.push(Face {
+        self.faces.push(Face {
             surface,
             outer: loop_ids[0],
             holes: loop_ids[1..].to_vec(),
         });
-        uses.push(FaceUse {
-            face: faces.len() - 1,
+        self.uses.push(FaceUse {
+            face: self.faces.len() - 1,
             reversed,
         });
     }
-    geometry.sweep_deviation = sweep_deviation;
-    geometry.sweep_rounding_certified = sweep_rounding_certified;
-    geometry.ideal_wall_error_upper = if sweep_rounding_certified {
-        if let Some(profile) = geometry.profile_error_upper {
-            use nurbs_core::interval_eval::Interval as I;
-            Some(I::point(profile).add(I::point(sweep_deviation))?.hi)
-        } else {
-            None
-        }
-    } else {
-        None
+
+    fn into_model(self) -> Result<Model> {
+        let mut model = Model(
+            brep_topology::Model {
+                vertices: self.vertices,
+                edges: self.edges,
+                loops: self.loops_out,
+                faces: self.faces,
+                shells: vec![Shell {
+                    faces: self.uses,
+                    closed: true,
+                }],
+                bodies: vec![Body {
+                    outer_shell: 0,
+                    inner_shells: vec![],
+                }],
+                tolerance_mm: GEAR_MODEL_TOLERANCE_MM,
+            },
+            TopologyIds::default(),
+        );
+        model.rebuild_topology_ids();
+        model.validate()?;
+        Ok(model)
+    }
+}
+
+fn ideal_wall_error_upper(
+    sweep_rounding_certified: bool,
+    profile_error_upper: Option<f64>,
+    sweep_deviation: f64,
+) -> Result<Option<f64>> {
+    if !sweep_rounding_certified {
+        return Ok(None);
+    }
+    match profile_error_upper {
+        Some(profile) => Ok(Some(I::point(profile).add(I::point(sweep_deviation))?.hi)),
+        None => Ok(None),
+    }
+}
+
+pub fn gear_with_report(spec: &GearSpec) -> Result<(Model, GearGeometry)> {
+    let (loops, mut geometry) = profile_with_report(spec)?;
+    let beta = spec.helix_angle_deg.to_radians();
+    let total_twist = spec.height * beta.tan() / geometry.pitch_radius;
+    let layers = axial_layers(spec, beta, total_twist);
+    let nominal_twist = nurbs_core::involute::derive_gear_twist_bounds(
+        spec.module,
+        spec.teeth,
+        spec.height,
+        spec.helix_angle_deg,
+    )
+    .ok();
+    let mut builder = GearBodyBuilder {
+        loops: &loops,
+        vertices: Vec::new(),
+        edges: Vec::new(),
+        loops_out: Vec::new(),
+        faces: Vec::new(),
+        uses: Vec::new(),
+        sweep_deviation: 0.,
+        sweep_rounding_certified: nominal_twist.is_some(),
     };
-    geometry.face_count = faces.len();
-    let mut model = Model(
-        brep_topology::Model {
-            vertices,
-            edges,
-            loops: loops_out,
-            faces,
-            shells: vec![Shell {
-                faces: uses,
-                closed: true,
-            }],
-            bodies: vec![Body {
-                outer_shell: 0,
-                inner_shells: vec![],
-            }],
-            tolerance_mm: 1e-7,
-        },
-        TopologyIds::default(),
-    );
-    model.rebuild_topology_ids();
-    model.validate()?;
+    let level_z_theta: Vec<(f64, f64)> = layers
+        .iter()
+        .take(1)
+        .map(|l| (l.0, l.2))
+        .chain(layers.iter().map(|l| (l.1, l.2 + l.3)))
+        .collect();
+    let levels: Vec<Level> = level_z_theta
+        .into_iter()
+        .map(|(z, theta)| builder.push_level(z, theta))
+        .collect();
+    builder.push_walls(&layers, &levels, nominal_twist)?;
+    // Caps: bottom (reversed use, normal -z) and top.
+    if let (Some(bottom), Some(top)) = (levels.first(), levels.last()) {
+        builder.push_cap(bottom, true);
+        builder.push_cap(top, false);
+    }
+    geometry.sweep_deviation = builder.sweep_deviation;
+    geometry.sweep_rounding_certified = builder.sweep_rounding_certified;
+    geometry.ideal_wall_error_upper = ideal_wall_error_upper(
+        builder.sweep_rounding_certified,
+        geometry.profile_error_upper,
+        builder.sweep_deviation,
+    )?;
+    geometry.face_count = builder.faces.len();
+    let model = builder.into_model()?;
     Ok((model, geometry))
 }
 
