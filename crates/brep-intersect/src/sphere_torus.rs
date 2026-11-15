@@ -55,6 +55,8 @@
 mod serialization;
 mod boolean;
 pub(crate) mod completeness;
+mod drill;
+pub use drill::cylinder_drill_boolean;
 pub(crate) mod traced_lift;
 pub use boolean::{
     cone_torus_boolean, cylinder_torus_boolean, sphere_cone_boolean, sphere_cylinder_boolean,

@@ -1,3 +1,4 @@
+import { rememberEdgeFeature } from '../../app/edgeFeatureEditing'
 import type { buildSolidSurface } from '../../kernel/solidSurfaceConstruction'
 import { isSolidNurbsRefit } from '../../kernel/solidCurveReduction'
 import { isSolidSurfaceBuild } from '../../kernel/solidSurfaceConstruction'
@@ -27,6 +28,7 @@ export interface AdvancedPreviewOptions {
   document: ShallowRef<DirectDocument>
   edgeIndex: Ref<number>
   edgeIndexes: Ref<number[]>
+  onEdgeFeatureApplied?: (memory: import('../../app/edgeFeatureEditing').EdgeFeatureMemory | null) => void
   error: Ref<string>
   extraSelection: Ref<string[]>
   faceIndex: Ref<number>
@@ -99,7 +101,9 @@ function applyAdvanced(){run(()=>{
  const prepared=advancedOp.value==='nurbs-prepare'
  const profileId=(isProfileCommand(advancedOp.value))?surfaceInputs.value[0]:''
  const created=(advancedOp.value==='instance-create'||advancedOp.value==='nurbs-offset'||advancedOp.value==='loft')?loftPreviewId.value:''
- commit(d);advancedOp.value=null;if(profileId){selection.value=profileId;extraSelection.value=[]}if(prepared)advanced.value.matchReverse=false;if(created)pickObject(created,'3d');faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]
+ // Edge features consume their edges; remember the chain so undo can restore the selection.
+ const edgeMemory=advancedOp.value==='edge-fillet'||advancedOp.value==='chamfer'?rememberEdgeFeature(selectedBody.value,edgeIndexes.value.length?edgeIndexes.value:[edgeIndex.value]):null
+ commit(d);options.onEdgeFeatureApplied?.(edgeMemory);advancedOp.value=null;if(profileId){selection.value=profileId;extraSelection.value=[]}if(prepared)advanced.value.matchReverse=false;if(created)pickObject(created,'3d');faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]
 })}
 const axisVector=(axis:string):Vec3=>axis==='x'?[1,0,0]:axis==='y'?[0,1,0]:[0,0,1]
 const advancedBodyIds=computed(()=>new Set([...selectedIds.value,...sceneBodies().value.filter(b=>b.instance&&selectedIds.value.includes(b.instance.sourceId)).map(b=>b.id),'preview-split',loftPreviewId.value]))

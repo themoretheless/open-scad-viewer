@@ -1,7 +1,7 @@
 use super::*;
-/// Fresh stored output bits, full polynomial cross-products. The target is the
-/// un-cancelled original-source derivative, not the construction's quotient.
-pub(super) fn stored(c: &Curve, target: &[Poly], w: &mut Work) -> PResult<()> {
+/// Verify full polynomial cross-products from the stored bits against the
+/// original target before cancellation.
+pub(in crate::editing) fn stored(c: &Curve, target: &[Poly], w: &mut Work) -> PResult<()> {
     let dim = c.control_points[0].len();
     let mut channels = vec![Vec::new(); dim + 1];
     for (p, &weight) in c.control_points.iter().zip(&c.weights) {

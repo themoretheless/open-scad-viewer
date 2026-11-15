@@ -73,6 +73,7 @@ export const KERNEL_ERROR_REASONS = [
   'sweepDeviation',
   'profilePlane',
   'targetBody',
+  'stepAssemblyContent',
 ] as const
 export type KernelErrorReason = (typeof KERNEL_ERROR_REASONS)[number]
 
@@ -112,6 +113,7 @@ export const KERNEL_ERROR_STEPS = [
   'useMeshExport',
   'reduceComplexity',
   'separateProfiles',
+  'exportBodiesOnly',
 ] as const
 export type KernelErrorStep = (typeof KERNEL_ERROR_STEPS)[number]
 
@@ -140,6 +142,7 @@ const SPECIFIC: Partial<Record<KernelErrorCode, KernelErrorSpec>> = {
   DIRECT_BOOLEAN_DUPLICATE: { reason: 'booleanDuplicate', input: 'body', step: 'removeDuplicate' },
   BREP_INVALID_SIZE: { reason: 'invalidSize', input: 'field', field: 'size', step: 'enterPositive' },
   BREP_INVALID_SELECTION: { reason: 'invalidSelection', input: 'edge', step: 'selectEdges' },
+  DIRECT_STEP_ASSEMBLY_CONTENT: { reason: 'stepAssemblyContent', input: 'none', step: 'exportBodiesOnly' },
   CAD_CRASH: { reason: 'crash', input: 'none', step: 'retry' },
   CAD_TIMEOUT: { reason: 'timeout', input: 'none', step: 'simplify' },
   WORKER_TIMEOUT: { reason: 'timeout', input: 'none', step: 'simplify' },
@@ -307,6 +310,51 @@ export function presentKernelError(
     ...(field ? { field } : {}),
     targetIds: ids,
   }
+}
+
+export const LANGUAGE_ERROR_REASONS = [
+  'unsupportedFeature',
+  'projectRequired',
+  'fileMissing',
+  'invalidData',
+  'unsupported',
+  'limit',
+  'nonManifold',
+  'empty',
+  'failed',
+] as const
+export type LanguageErrorReason = (typeof LANGUAGE_ERROR_REASONS)[number]
+
+/**
+ * Reason family for an OpenSCAD language diagnostic code (`LanguageDiagnosticCode`,
+ * `E_FEATURE_*`, `E_SURFACE_*`, `E_IMPORT_*`, `E_TEXT_*`); `undefined` for other codes.
+ */
+export function languageErrorReason(code: string): LanguageErrorReason | undefined {
+  if (/^E_FEATURE_/.test(code)) return 'unsupportedFeature'
+  if (!/^E_(SURFACE|IMPORT|TEXT)_/.test(code)) return undefined
+  if (/_PROJECT_(REQUIRED|MISMATCH)$|_FILE_REQUIRED$/.test(code)) return 'projectRequired'
+  if (/_PATH_INVALID$|_FILE_MISSING$|_FONT_NOT_FOUND$/.test(code)) return 'fileMissing'
+  if (/_LIMIT$/.test(code)) return 'limit'
+  if (/_NON_MANIFOLD$/.test(code)) return 'nonManifold'
+  if (/_EMPTY$/.test(code)) return 'empty'
+  if (/UNSUPPORTED|UNAVAILABLE/.test(code)) return 'unsupported'
+  if (/INVALID|ENCODING/.test(code)) return 'invalidData'
+  return 'failed'
+}
+
+/**
+ * Localized text for a failed OpenSCAD build. Language diagnostics get a reason and a next
+ * step in the UI language plus the code; the evaluator's own text (line, column, the
+ * offending name) stays as detail. Other errors keep their message unchanged.
+ */
+export function presentLanguageError(
+  error: { code?: string | undefined; message: string },
+  t: (key: string) => string,
+): string {
+  const reason = error.code ? languageErrorReason(error.code) : undefined
+  if (!reason) return error.message
+  const detail = error.message.trim()
+  return `${t(`languageError.${reason}`)} (${error.code})${detail ? ` ${detail}` : ''}`
 }
 
 /** Typed refusal raised by TypeScript-side validation before the kernel is called. */

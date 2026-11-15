@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0265",
+  "testedBase": "2eebd1f98394f6d017526ae0bafeb7b844f661bd",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_threshold_contracts",
+    "--test",
+    "umbilic_cell_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 14,
+  "scope": [
+    "Exact dyadic subdivision of the threshold residual produces a full UV cover with proven inclusive comparisons or explicit unresolved leaves.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "a402094c0beafc56960790c4e1afc1388f6831f9f4ad7f0379c2ab4df222b636",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "033e35ec23835c9078f5e761d1774c25734e9e7f61b510e41ae7488f1c8b5193",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_refinement.rs": "fdadcfad99ba7680c0bf08bb2f24bcf590b69ae050c0e914bea7699c440ad33f",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_threshold_contracts.rs": "ff9a358b34d491b479bfbfac3e7d9bd49d70cdd1ffa392d9e38f2b09f596ee39",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs": "2caf811e137eeeb3539dbd115b9df24e464b0dd8c85104699de3a046dfb7f9a0",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs": "034cddeb6ea363f71fffce76ce0b743b227b4f5e65f459c23b6076e0ca7fc9a3"
+  }
+}

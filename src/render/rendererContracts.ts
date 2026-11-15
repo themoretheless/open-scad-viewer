@@ -1,6 +1,7 @@
 import type { MeshSourceReference } from '../core/mesh'
 import type { CameraState } from './cameraHistory'
 import type { Vec3 } from '../kernel/geometry/math3d'
+import { selectionStateRgb } from '../ui/selectionStates'
 export type { ProjectionMode, StandardView } from './viewportModel'
 
 export type DisplayMode = 'shaded' | 'edges' | 'xray'
@@ -140,13 +141,14 @@ export interface RenderTheme {
 }
 
 /**
- * Built-in render themes. `default` reproduces the previously hard-coded
- * shader colors exactly, so the out-of-the-box look is unchanged.
+ * Built-in render themes. Selection and hover colors come from the selection
+ * state table (`src/ui/selectionStates.ts`): `default` and `dark-contrast` use
+ * its dark-theme colors, `light` its light-theme colors.
  */
 export const THEME_PRESETS: readonly RenderTheme[] = [
-  { id: 'default', name: 'Default', selectionColor: [1, 0.52, 0.06], hoverColor: [0.12, 0.78, 1], edgeColor: [0.025, 0.03, 0.04], xrayColor: [1, 0.42, 0.06], gridColor: [0.42, 0.42, 0.42], capColor: [0.85, 0.87, 0.9] },
-  { id: 'dark-contrast', name: 'Dark Contrast', selectionColor: [1, 0.6, 0], hoverColor: [0.3, 0.9, 1], edgeColor: [0, 0, 0.01], xrayColor: [1, 0.5, 0.1], gridColor: [0.55, 0.55, 0.6], capColor: [0.8, 0.82, 0.88], backgroundColor: [0.05, 0.05, 0.07] },
-  { id: 'light', name: 'Light', selectionColor: [0.9, 0.35, 0], hoverColor: [0, 0.5, 0.9], edgeColor: [0.1, 0.1, 0.12], xrayColor: [0.85, 0.3, 0.05], gridColor: [0.6, 0.6, 0.62], capColor: [0.58, 0.6, 0.66], backgroundColor: [0.92, 0.92, 0.94] },
+  { id: 'default', name: 'Default', selectionColor: selectionStateRgb('selected', 'dark'), hoverColor: selectionStateRgb('hover', 'dark'), edgeColor: [0.025, 0.03, 0.04], xrayColor: [1, 0.42, 0.06], gridColor: [0.42, 0.42, 0.42], capColor: [0.85, 0.87, 0.9] },
+  { id: 'dark-contrast', name: 'Dark Contrast', selectionColor: selectionStateRgb('selected', 'dark'), hoverColor: selectionStateRgb('hover', 'dark'), edgeColor: [0, 0, 0.01], xrayColor: [1, 0.5, 0.1], gridColor: [0.55, 0.55, 0.6], capColor: [0.8, 0.82, 0.88], backgroundColor: [0.05, 0.05, 0.07] },
+  { id: 'light', name: 'Light', selectionColor: selectionStateRgb('selected', 'light'), hoverColor: selectionStateRgb('hover', 'light'), edgeColor: [0.1, 0.1, 0.12], xrayColor: [0.85, 0.3, 0.05], gridColor: [0.6, 0.6, 0.62], capColor: [0.58, 0.6, 0.66], backgroundColor: [0.92, 0.92, 0.94] },
 ]
 export const DEFAULT_THEME: RenderTheme = THEME_PRESETS[0]
 

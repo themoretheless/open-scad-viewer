@@ -3,7 +3,45 @@ use crate::core::bounded_rational::{Error, Work};
 use crate::{Result, check, curve::Curve, surface::Surface};
 use num_rational::BigRational as Q;
 use num_traits::{Signed, Zero};
+mod chart_nonnegative;
+mod mobius;
+pub use mobius::{mobius_bezier_curve, mobius_bezier_surface};
+mod mobius_piecewise;
+pub use mobius_piecewise::{
+    BezierSpanLayout, mobius_piecewise_bezier_curve, mobius_piecewise_bezier_surface,
+    relayout_bezier_curve, relayout_bezier_surface,
+};
+mod mobius_spline;
+pub use mobius_spline::{
+    MobiusLandmark, fit_mobius_spline_curve, fit_mobius_spline_surface, mobius_spline_curve,
+    mobius_spline_surface,
+};
+mod pcurve_mobius;
+pub use pcurve_mobius::{
+    PcurveChartCertificate, PcurvePullback, PcurvePullbackRefusal, certify_pcurve_chart_domain,
+    pullback_mobius_pcurve,
+};
+mod pcurve_relayout;
+pub use pcurve_relayout::pullback_relayout_pcurve;
+mod pcurve_seam;
+pub use pcurve_seam::{
+    PcurveSeamContact, PcurveSeamReport, PcurveSeamSpan, UvAxis, classify_pcurve_seam,
+};
+mod pcurve_seam_isolation;
+pub use pcurve_seam_isolation::{
+    PcurveSeamIsolatedSpan, PcurveSeamIsolation, PcurveSeamIsolationReport, PcurveSeamRoot,
+    isolate_pcurve_seam,
+};
+mod pcurve_seam_split;
+pub use pcurve_seam_split::{
+    PcurveSeamPiece, PcurveSeamSide, PcurveSeamSplitReport, split_pcurve_at_seam,
+};
 mod proof;
+mod trimmed_mobius;
+pub use trimmed_mobius::{
+    ReclockedTrimmedSurface, TrimmedMobiusRefusal, TrimmedMobiusReport, mobius_trimmed_surface,
+    relayout_trimmed_bezier_surface,
+};
 /// Row-major homogeneous map: `[x*w,y*w,z*w,w] -> M * H`.
 pub type Matrix = [[f64; 4]; 4];
 #[derive(Clone, Debug, PartialEq, Eq)]

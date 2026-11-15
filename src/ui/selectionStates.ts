@@ -57,3 +57,13 @@ export function nonColorCueKey(state: SelectionState): string {
 export function selectionStateLabel(state: SelectionState, locale: string): string {
   return locale === 'ru' ? SELECTION_STATES[state].label.ru : SELECTION_STATES[state].label.en
 }
+
+/**
+ * A state's theme color as 0..1 RGB (each 8-bit channel / 255) for the GPU render theme
+ * (`selectionColor`/`hoverColor` in `src/render/rendererContracts.ts`), so the
+ * viewport highlight uses the same table as the DOM and SVG cues.
+ */
+export function selectionStateRgb(state: SelectionState, theme: ThemeName): [number, number, number] {
+  const hex = SELECTION_STATES[state].color[theme]
+  return [1, 3, 5].map(i => Math.round((parseInt(hex.slice(i, i + 2), 16) / 255) * 1000) / 1000) as [number, number, number]
+}

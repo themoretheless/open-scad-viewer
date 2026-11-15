@@ -1,6 +1,7 @@
 import type { Vec3 } from '../kernel/geometry/math3d'
 import { transformSelection } from './directSolidTools'
 import { parseDirectDocument, serializeDirectDocument, type DirectDocument } from './directModeling'
+import type { SolidNurbsCurve, SolidNurbsSurface } from '../kernel/solidNurbs'
 import { documentUnit, isDocumentLengthUnit, toMillimetres, type DocumentLengthUnit } from './documentUnits'
 
 /**
@@ -8,7 +9,8 @@ import { documentUnit, isDocumentLengthUnit, toMillimetres, type DocumentLengthU
  * JSON payload: the copied bodies and sketches in kernel millimetres, the base point in the
  * source document's units and that unit. Pasting maps the base point onto a target point given
  * in the target document's units, so the geometry keeps its physical size across documents
- * with different units. NURBS curves and surfaces are not part of the payload yet.
+ * with different units. Solid NURBS curves and surfaces travel too: their control points are
+ * Cartesian with separate weights, so the paste offset is an exact control-point translation.
  */
 export const DIRECT_CLIPBOARD_FORMAT = 'open-scad-viewer/direct-objects'
 export const DIRECT_CLIPBOARD_VERSION = 1
@@ -21,6 +23,9 @@ export interface DirectClipboardPayload {
   basePoint: Vec3
   sketches: DirectDocument['sketches']
   bodies: DirectDocument['bodies']
+  /** Optional so payloads written before NURBS support still parse. */
+  curves?: SolidNurbsCurve[]
+  surfaces?: SolidNurbsSurface[]
 }
 
 const finiteVec3 = (value: unknown): value is Vec3 =>
@@ -36,7 +41,18 @@ export function createDirectClipboardPayload(
   const sketches = document.sketches.filter(s => selected.has(s.id))
   // Linked instances need their source; copy them as independent bodies only when the source comes along.
   const bodies = document.bodies.filter(b => selected.has(b.id) && (!b.instance || selected.has(b.instance.sourceId)))
-  if (!sketches.length && !bodies.length) throw Error('Select bodies or sketches to copy.')
+  // Group membership belongs to the source document; a bridge keeps its link only when both sources come along.
+  const curves = (document.curves ?? [])
+    .filter(c => selected.has(c.id))
+    .map(({ group: _group, ...c }) =>
+      c.bridge && !(selected.has(c.bridge.sourceA) && selected.has(c.bridge.sourceB)) ? { ...c, bridge: undefined } : c,
+    )
+    .map(c => JSON.parse(JSON.stringify(c)) as SolidNurbsCurve)
+  const surfaces = (document.surfaces ?? [])
+    .filter(s => selected.has(s.id))
+    .map(({ group: _group, ...s }) => structuredClone(s))
+  if (!sketches.length && !bodies.length && !curves.length && !surfaces.length)
+    throw Error('Select bodies, sketches, curves or surfaces to copy.')
   const payload: DirectClipboardPayload = {
     format: DIRECT_CLIPBOARD_FORMAT,
     version: DIRECT_CLIPBOARD_VERSION,
@@ -49,6 +65,8 @@ export function createDirectClipboardPayload(
   const objects = JSON.parse(serializeDirectDocument({ version: 1, sketches, bodies }))
   payload.sketches = objects.sketches
   payload.bodies = objects.bodies
+  if (curves.length) payload.curves = curves
+  if (surfaces.length) payload.surfaces = surfaces
   const text = JSON.stringify(payload)
   if (text.length > MAX_DIRECT_CLIPBOARD_CHARACTERS) throw Error('The selection is too large to copy.')
   return text
@@ -70,10 +88,13 @@ export function parseDirectClipboardPayload(text: string): DirectClipboardPayloa
     !isDocumentLengthUnit(value.units) ||
     !finiteVec3(value.basePoint) ||
     !Array.isArray(value.sketches) ||
-    !Array.isArray(value.bodies)
+    !Array.isArray(value.bodies) ||
+    (value.curves !== undefined && !Array.isArray(value.curves)) ||
+    (value.surfaces !== undefined && !Array.isArray(value.surfaces))
   )
     throw Error('Copied objects are malformed.')
-  if (!value.sketches.length && !value.bodies.length) throw Error('Copied objects are malformed.')
+  if (!value.sketches.length && !value.bodies.length && !value.curves?.length && !value.surfaces?.length)
+    throw Error('Copied objects are malformed.')
   return value as DirectClipboardPayload
 }
 
@@ -101,7 +122,9 @@ export function pasteDirectClipboardPayload(
     ].map(o => o.id),
   )
   const ids = new Map<string, string>()
-  for (const object of [...payload.sketches, ...payload.bodies]) {
+  const payloadCurves = payload.curves ?? [],
+    payloadSurfaces = payload.surfaces ?? []
+  for (const object of [...payload.sketches, ...payload.bodies, ...payloadCurves, ...payloadSurfaces]) {
     let id = newId()
     while (taken.has(id) || [...ids.values()].includes(id)) id = newId()
     ids.set(object.id, id)
@@ -113,15 +136,34 @@ export function pasteDirectClipboardPayload(
       body.instance = { ...body.instance, sourceId: ids.get(body.instance.sourceId) ?? body.instance.sourceId }
     return body
   })
+  const shift = (p: number[]) => p.map((v, k) => v + (delta[k] ?? 0))
+  const curves = structuredClone(payloadCurves).map(c => {
+    const curve = { ...c, id: ids.get(c.id)!, curve: { ...c.curve, controlPoints: c.curve.controlPoints.map(shift) } }
+    if (curve.bridge)
+      curve.bridge = {
+        ...curve.bridge,
+        sourceA: ids.get(curve.bridge.sourceA)!,
+        sourceB: ids.get(curve.bridge.sourceB)!,
+      }
+    return curve
+  })
+  const surfaces = structuredClone(payloadSurfaces).map(s => ({
+    ...s,
+    id: ids.get(s.id)!,
+    surface: { ...s.surface, controlPoints: s.surface.controlPoints.map(row => row.map(shift)) },
+  }))
   let next = parseDirectDocument(
     serializeDirectDocument({
       ...target,
       sketches: [...target.sketches, ...sketches],
       bodies: [...target.bodies, ...bodies],
+      curves: [...(target.curves ?? []), ...curves],
+      surfaces: [...(target.surfaces ?? []), ...surfaces],
     }),
   )
   const created = [...ids.values()]
-  if (delta.some(v => v !== 0))
-    next = parseDirectDocument(serializeDirectDocument(transformSelection(next, created, delta, [0, 0, 1], 0, 1)))
+  const meshIds = [...sketches, ...bodies].map(o => o.id)
+  if (meshIds.length && delta.some(v => v !== 0))
+    next = parseDirectDocument(serializeDirectDocument(transformSelection(next, meshIds, delta, [0, 0, 1], 0, 1)))
   return { document: next, ids: created }
 }

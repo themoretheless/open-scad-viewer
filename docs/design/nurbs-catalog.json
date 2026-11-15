@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 264,
-  "unallocatedCount": 736,
+  "specifiedCount": 299,
+  "unallocatedCount": 701,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7129,6 +7129,803 @@
       "remainingQualification": [
         "Bounds the original curvature gap on a complete knot cell by the convex hull of exact coefficient ratios with positive denominator coefficients. Numeric endpoints are checked outward against the exact ratios.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0265",
+      "name": "Адаптивная карта областей по заданному порогу разности главных кривизн NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::refine_curvature_gap",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_refinement.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_threshold_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs",
+        "docs/qualification/nurbs-curvature-field-265-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-265-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exact dyadic subdivision of the threshold residual produces a full UV cover with proven inclusive comparisons or explicit unresolved leaves.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0266",
+      "name": "Изоляция пороговых корней разности главных кривизн на границе ячейки NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::curvature_gap_edge_roots",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_edge.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_edge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs",
+        "docs/qualification/nurbs-curvature-field-266-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-266-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exact original one-sided edge restriction and Bernstein sign variation retain exact dyadic roots and complete coverage by open brackets. Variation one proves one simple root. Coincident edges are represented separately.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0267",
+      "name": "Сертификат единственной ветви порогового контура кривизны на ячейке NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_graph",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_graph_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
+        "docs/qualification/nurbs-curvature-field-267-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-267-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Strict Bernstein derivative signs and opposite signs over two complete faces certify one simple contour crossing per transverse parameter in the chosen chart axis.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0268",
+      "name": "Выборка сертифицированной ветви порогового контура NURBS с гарантированными UV-интервалами",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::sample_curvature_gap_graph",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_graph_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
+        "docs/qualification/nurbs-curvature-field-268-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-268-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exactly lifts each transverse binary64 parameter and bisects only a certified unique contour. All returned intervals have exact dyadic unit coordinates and a width bounded by the requested depth.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0269",
+      "name": "Доказанный диапазон наклона порогового контура NURBS в исходных UV-координатах",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::curvature_gap_graph_slope",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_range.rs",
+        "docs/qualification/nurbs-curvature-field-269-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-269-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bounds the signed slope of a unique threshold contour by exact Bernstein coefficient ratios of the implicit derivatives in the two absolute knot clocks.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0270",
+      "name": "Непрерывный сертификат ошибки UV-ломаной порогового контура NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_polyline",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "docs/qualification/nurbs-curvature-field-270-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-270-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Covers the original cell with a polyline at supplied transverse parameters. Exact bracket midpoint error and implicit slope variation bound the whole segment in the absolute root clock. This is a UV parameter bound, not a world-space mesh or contour topology certificate.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0271",
+      "name": "Адаптивная UV-ломаная порогового контура NURBS по заданному допуску",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::adapt_curvature_gap_polyline",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "docs/qualification/nurbs-curvature-field-271-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-271-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Automatically inserts transverse midpoints where the continuous bound exceeds the absolute root-axis tolerance. Vertex and precision limits return the complete ordered cover with actual bounds, while exact work refusal is atomic.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0272",
+      "name": "Непрерывные границы второй производной порогового контура NURBS в исходном UV",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::curvature_gap_graph_second_derivative",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_second.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "docs/qualification/nurbs-curvature-field-272-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-272-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bounds the signed implicit second derivative on the certified contour. Exact rational coefficient proofs preserve constant derivatives even when unreduced degree exceeds the Bernstein hull limit.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0273",
+      "name": "Адаптивная UV-ломаная по границе второй производной контура NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::adapt_curvature_gap_polyline_second_order",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_second.rs",
+        "docs/qualification/nurbs-curvature-field-273-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-273-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Combines the certified second-derivative chord remainder with the first-order bound and exact vertex bracket error. The quadratic bound can meet a requested UV tolerance with fewer vertices.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0274",
+      "name": "Непрерывный сертификат отклонения пространственной ломаной от порогового контура NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_world_polyline",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs",
+        "crates/nurbs-core/src/analysis/surface_measure/jets.rs",
+        "docs/qualification/nurbs-curvature-field-274-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-274-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Lifts a certified UV contour to stored 3D vertices. The continuous Euclidean bound includes the UV certificate, UV-to-absolute rounding, interval point storage and the original patch Hessian along each chord.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0275",
+      "name": "Непрерывные границы длины пространственного порогового контура NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::measure_curvature_gap_contour",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs",
+        "crates/nurbs-core/src/analysis/surface_measure/jets.rs",
+        "docs/qualification/nurbs-curvature-field-275-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-275-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Combines interval bounds on the composed three-dimensional velocity with certified endpoint chord distances to enclose model-space arc length per segment and in total.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0276",
+      "name": "Сертифицированное расстояние от точки до пространственного порогового контура NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::distance_to_curvature_gap_contour",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_distance.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs",
+        "docs/qualification/nurbs-curvature-field-276-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-276-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exact rational clamped projection onto each stored chord and the continuous world error enclose the minimum Euclidean distance to the original contour. Reports which segment supplies the upper bound.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0277",
+      "name": "Пространственные ограничивающие параллелепипеды целого порогового контура NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::bound_curvature_gap_contour",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "docs/qualification/nurbs-curvature-field-277-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-277-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Outward per-segment world-axis boxes enclose the whole original contour for broad-phase exclusion.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0278",
+      "name": "Сертифицированное минимальное расстояние между двумя пространственными контурами кривизны NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::distance_between_curvature_gap_contours",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_pair_distance.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_distance.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs",
+        "docs/qualification/nurbs-curvature-field-278-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-278-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Combines exact segment-pair projections and continuous world-space contour errors. Certified boxes prune pairs that cannot improve the upper bound.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0279",
+      "name": "Сертифицированное сечение пространственного контура кривизны NURBS плоскостью",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::section_curvature_gap_contour",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_plane.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "docs/qualification/nurbs-curvature-field-279-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-279-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bounds every possible plane intersection by clipping an outward affine signed enclosure. Opposite strict endpoint signs certify a crossing without claiming uniqueness.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0280",
+      "name": "Совместное точное упрощение узлов и степеней NURBS-поверхности по U и V",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_knot_removal::compress_tensor_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal/compression.rs",
+        "crates/nurbs-core/src/editing/exact_surface_degree_reduction.rs",
+        "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
+        "crates/nurbs-core/tests/exact_tensor_compression_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-280-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-280-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Alternates exact tensor knot removal and smooth degree reduction across both axes, preserving the complete UV law and denominator under a shared work budget.",
+        "Clamped nonperiodic charts on both axes. Exhaustion preserves earlier proved edits. No global minimality or B-rep certificate.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0281",
+      "name": "Атомарное точное пакетное упрощение набора NURBS-патчей",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_knot_removal::compress_tensor_surface_batch",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal/compression.rs",
+        "crates/nurbs-core/src/editing/exact_surface_degree_reduction.rs",
+        "crates/nurbs-core/src/editing/exact_tensor_edit.rs",
+        "crates/nurbs-core/tests/exact_tensor_compression_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-281-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-281-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compresses independent input charts in order under one work and copy budget. A late refusal never publishes a partially compressed patch set.",
+        "Clamped nonperiodic charts on both axes. Exhaustion preserves earlier proved edits. No global minimality or B-rep certificate.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0282",
+      "name": "Точное объединение полосы смежных NURBS-патчей с удалением избыточных швов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_merge::merge_surface_strip",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_merge.rs",
+        "crates/nurbs-core/src/editing/exact_surface_merge/strip.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs",
+        "crates/nurbs-core/tests/exact_surface_strip_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-282-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-282-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Coalesces consecutive compatible charts while preserving both original parameter laws and removing only exactly redundant seam knots. Late failure withholds the entire strip.",
+        "Compatible ordered tensor charts. Retains absolute UV, transverse basis and exact denominators. No shell topology or B-rep certification.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0283",
+      "name": "Точное объединение прямоугольной сетки смежных NURBS-патчей с согласованием базисов",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_merge::merge_surface_grid",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_merge.rs",
+        "crates/nurbs-core/src/editing/exact_surface_merge/grid.rs",
+        "crates/nurbs-core/src/editing/exact_surface_merge/strip.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_insertion.rs",
+        "crates/nurbs-core/tests/exact_surface_grid_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-283-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-283-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Merges and compacts compatible rows, then inserts the union of exact transverse knots so that rows with different genuine seam structures remain joinable. Absolute UV maps and denominators are retained.",
+        "Ordered Cartesian charts with exact shared boundaries and compatible degrees. Arithmetic refusal never publishes a partial grid. No B-rep topology claim.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0284",
+      "name": "Распознавание прямоугольной UV-сетки из неупорядоченного набора NURBS-патчей",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_merge::infer_surface_grid_layout",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_merge.rs",
+        "crates/nurbs-core/src/editing/exact_surface_merge/layout.rs",
+        "crates/nurbs-core/tests/exact_surface_layout_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-284-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-284-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Uses exact stored UV endpoints to recover a V-major Cartesian tiling. Sparse occupancy distinguishes holes, duplicates and tiles spanning more than one Cartesian cell.",
+        "Exact UV layout only. Seam geometry and B-rep topology are independent checks.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0285",
+      "name": "Точное деление NURBS-поверхности на две части с общими полюсами и весами шва",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_knot_insertion::split_tensor_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_knot_insertion.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_insertion/split.rs",
+        "crates/nurbs-core/tests/exact_tensor_split_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-285-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-285-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certified knot insertion followed by structural slicing preserves the complete UV charts and a common rational gauge. The two parts share identical binary64 seam poles and weights.",
+        "Clamped nonperiodic selected axis; untouched axis retained. Unrepresentable or exhausted requests return no partial sides.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0286",
+      "name": "Точное разбиение NURBS-поверхности на сетку UV-патчей с общими швами",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное упрощение",
+      "nativeApi": "nurbs_core::editing::exact_surface_knot_insertion::tile_tensor_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_knot_insertion.rs",
+        "crates/nurbs-core/src/editing/exact_surface_knot_insertion/tiling.rs",
+        "crates/nurbs-core/tests/exact_tensor_split_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-286-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-286-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Refines one complete source tensor before slicing so every output uses the same rational gauge and literal seam poles. Absolute charts are retained and the returned grid can be merged exactly.",
+        "Clamped nonperiodic selected axis; untouched axis retained. Unrepresentable or exhausted requests return no partial sides.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0287",
+      "name": "Точное перепараметрирование Безье-кривых и патчей преобразованиями Мёбиуса",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::mobius_bezier_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_mobius_bezier_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-287-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-287-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Positive endpoint-preserving fractional-linear clocks act diagonally on the original Bernstein weights. A single exact gauge preserves the shape and orientation while changing interior parameter correspondence.",
+        "Single clamped nonperiodic Bézier charts; no automatic multi-span clock fitting. Finite exact weight bounds and affine endpoints are retained.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0288",
+      "name": "Точное перепараметрирование Мёбиуса для многопролётных NURBS-кривых и поверхностей",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::mobius_spline_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius_spline.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_mobius_spline_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-288-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-288-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Pulls back the entire clamped knot vector exactly, preserving multiplicities. The Cox–de Boor denominator products transform stored weights in one gauge and preserve the complete rational image.",
+        "Clamped nonperiodic axes. The original shape, orientation and absolute endpoints are retained. Nonrepresentable knots or weights refuse atomically.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0289",
+      "name": "Подбор точного преобразования Мёбиуса по опорным параметрам NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::fit_mobius_spline_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius_spline.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_mobius_spline_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-289-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-289-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Fits a positive rational clock from one absolute interior landmark per axis and preserves it exactly through knot and weight storage, including nonbinary clock factors.",
+        "Clamped nonperiodic axes. The original shape, orientation and absolute endpoints are retained. Nonrepresentable knots or weights refuse atomically.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0290",
+      "name": "Независимое точное перепараметрирование пролётов Безье с единым весом на шве",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::mobius_piecewise_bezier_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius_piecewise.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius.rs",
+        "crates/nurbs-core/tests/exact_mobius_piecewise_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-290-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-290-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Applies a different positive clock on each span of a piecewise Bézier curve or tensor patch. A shared cumulative homogeneous scale preserves the complete geometry and literal seam weights.",
+        "Clamped nonperiodic piecewise Bézier axes with degree-multiplicity interior knots. Absolute seam coordinates and geometric continuity are retained. Parameter derivatives can change.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0291",
+      "name": "Перенос абсолютных границ пролётов Безье с сохранением геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::relayout_bezier_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius_piecewise.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius.rs",
+        "crates/nurbs-core/tests/exact_mobius_piecewise_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-291-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-291-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Relayout a piecewise Bézier curve or tensor surface on a new absolute knot grid with independent positive span clocks.",
+        "Clamped nonperiodic piecewise Bézier axes. New absolute seams preserve both adjoining geometric images and share one positive weight scale.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0292",
+      "name": "Точный перенос UV-контура при перепараметризации Мёбиуса",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::pullback_mobius_pcurve",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/proof.rs",
+        "crates/nurbs-core/tests/exact_mobius_pcurve_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-292-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-292-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Transfer retained two-dimensional trim curves under independent inverse chart clocks, maintaining the source trim parameter and proving equality over complete spans.",
+        "Global rectangular axis clocks; exact storage and a Bernstein chart-membership proof are required on all spans. Trim topology qualification is separate.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0293",
+      "name": "Согласованная точная перепараметризация поверхности с UV-контурами",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::mobius_trimmed_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/trimmed_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius_spline.rs",
+        "crates/nurbs-core/tests/exact_mobius_trimmed_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-293-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-293-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Reclock a rational tensor patch and its ordered outer and inner trim loops together under one bounded operation.",
+        "Original and transferred loop endpoints must close exactly. Interior spans, orientation and world-space contour images are retained. No B-rep validity claim.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0294",
+      "name": "Точная проверка полного UV-контура на принадлежность прямоугольной области",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::certify_pcurve_chart_domain",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/tests/exact_pcurve_chart_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-294-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-294-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Certify a rational UV curve on its whole closed rectangular chart, distinguishing a true exit from even-multiplicity contacts and arithmetic refusal.",
+        "Exact original homogeneous spans. Positive NURBS weights and rational Sturm arithmetic; work exhaustion yields no decision.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0295",
+      "name": "Точная классификация пересечений UV-контура с координатным швом",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::classify_pcurve_seam",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam.rs",
+        "crates/nurbs-core/tests/exact_pcurve_seam_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-295-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-295-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Classify rational UV seam contacts per original span by exact multiplicity, including whole coincident spans and one-sided endpoints.",
+        "Coordinate seams U = constant or V = constant. Endpoint ownership is per original span, with no loop-level duplication rule.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0296",
+      "name": "Сертифицированная локализация пересечений UV-контура со швом",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::isolate_pcurve_seam",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/tests/exact_pcurve_seam_isolation_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-296-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-296-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Isolate each original rational pcurve seam contact in a certified absolute-parameter bracket, with exact crossing parity.",
+        "One-sided endpoints and coincident spans remain explicit. Single-root brackets have exact width bounds; an unresolved binary64 bracket refuses the whole request.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0297",
+      "name": "Точное разбиение рационального UV-контура по шву",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::split_pcurve_at_seam",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_split.rs",
+        "crates/nurbs-core/tests/exact_pcurve_seam_split_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-297-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-297-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Split original rational UV spans at representable seam contacts, keeping the absolute curve parameter and proving each stored piece against the original geometry.",
+        "Coincident spans are retained and open pieces record their seam side. Nonrepresentable cuts or derived poles refuse atomically.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0298",
+      "name": "Точный перенос UV-контура между кусочно-перепараметризованными сетками",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::pullback_relayout_pcurve",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_relayout.rs",
+        "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius_piecewise.rs",
+        "crates/nurbs-core/tests/exact_pcurve_relayout_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-298-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-298-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Transfer original rational UV trims through an independent piecewise Möbius relayout on each tensor axis.",
+        "Old and new ordered rectangular axes have corresponding spans. Coincident grid traces share their new boundary; exact cuts and storage are required.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0299",
+      "name": "Точная смена кусочной UV-сетки у поверхности с обрезкой",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::relayout_trimmed_bezier_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/trimmed_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_relayout.rs",
+        "crates/nurbs-core/tests/exact_trimmed_relayout_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-299-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-299-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Relayout a piecewise Bézier tensor patch with its ordered closed UV trims under a shared budget, preserving their three-dimensional images.",
+        "Closed source and output UV loops. One arithmetic budget; nonrepresentable cuts or poles withhold the entire result.",
         "WASM and application integration are separate."
       ]
     }

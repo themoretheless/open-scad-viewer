@@ -1539,6 +1539,7 @@ it('previews and applies instance rotation and scale without detaching the sourc
  const ui=await mount();await ui.click('Cube');await ui.click('Create linked instance');await commandKey(ui,'Enter')
  const before=ui.doc(),instance=before.bodies.find(b=>b.instance)!
  await ui.click('Transform instance')
+ expect(ui.button('Apply · Enter').props.disabled).toBe(true);expect(ui.text(ui.all()[0])).toContain('Set an offset, rotation or scale.')
  quantityField(ui,'Rotation, °').props['onUpdate:modelValue']('90')
  quantityField(ui,'Scale').props['onUpdate:modelValue']('2');await flushClearance()
  expect(ui.doc()).toEqual(before)
@@ -4851,20 +4852,7 @@ const MATRIX_STEPS=['palette','shortcut','exactInput','preview','apply','escape'
 // Known defects found by the matrix and recorded in the C2 roadmap row: "<command>:<step>".
 const MATRIX_KNOWN_FAILURES=new Set<string>([])
 type MatrixUi=Awaited<ReturnType<typeof mount>>
-type MatrixFixture={name:string;other:string;setup:(ui:MatrixUi)=>Promise<void>}
-// Creates objects with the toolbar, then selects every new one by its tree name (Shift adds).
-async function selectCreated(ui:MatrixUi,buttons:string[],...lists:('curves'|'surfaces'|'bodies')[]){
- const ids=(doc:Record<string,unknown>)=>lists.flatMap(list=>((doc[list] as {id:string}[]|undefined)??[]).map(o=>o.id))
- const known=new Set(ids(ui.doc()))
- for(const b of buttons){await ui.click(b);await flushClearance()}
- const created=ids(ui.doc()).filter(id=>!known.has(id))
- // Names repeat ("NURBS curve"), so rows are found by the scene key that carries the object ID.
- for(const [index,id] of created.entries()){
-  const row=ui.all().find(n=>n.tag==='button'&&typeof n.parent?.props['data-scene-key']==='string'&&n.parent.props['data-scene-key'].endsWith(id))
-  if(!row)throw Error('Missing scene row '+id)
-  row.props.onClick({shiftKey:index>0});await flushClearance()
- }
-}
+type MatrixFixture={name:string;other:string;draft?:string;setup:(ui:MatrixUi)=>Promise<void>}
 const MATRIX_FIXTURES:MatrixFixture[]=[
  {name:'empty selection',other:'Cube',setup:async()=>{}},
  {name:'closed sketch',other:'Cube',setup:async ui=>{await ui.click('Profile')}},
@@ -4878,13 +4866,39 @@ const MATRIX_FIXTURES:MatrixFixture[]=[
  {name:'B-rep edge',other:'Cube',setup:async ui=>{await ui.click('Box');await ui.click('Edges');await vi.waitFor(()=>expect(ui.all(ui.svg()).some(n=>n.props['data-topology-edge']!==undefined)).toBe(true));await ui.pointer(ui.all(ui.svg()).find(n=>n.props['data-topology-edge']!==undefined)!)}},
  {name:'NURBS curve',other:'Cube',setup:async ui=>{await ui.click('NURBS curve')}},
  {name:'NURBS surface',other:'Cube',setup:async ui=>{await ui.click('NURBS surface')}},
- {name:'two NURBS curves',other:'Cube',setup:async ui=>{await selectCreated(ui,['NURBS curve','NURBS curve'],'curves')}},
- {name:'four NURBS curves',other:'Cube',setup:async ui=>{await selectCreated(ui,['NURBS curve','NURBS curve','NURBS curve','NURBS curve'],'curves')}},
- {name:'two NURBS surfaces',other:'Cube',setup:async ui=>{await selectCreated(ui,['NURBS surface','NURBS surface'],'surfaces')}},
- {name:'two NURBS surfaces and a curve',other:'Cube',setup:async ui=>{await selectCreated(ui,['NURBS surface','NURBS surface','NURBS curve'],'surfaces','curves')}},
- {name:'two B-rep bodies',other:'Cube',setup:async ui=>{await selectCreated(ui,['Box','Box'],'bodies')}},
- {name:'linked instance',other:'Profile',setup:async ui=>{await ui.click('Cube');await ui.click('Create linked instance');await commandKey(ui,'Enter');await flushClearance()}},
+ // Seeded fixtures with inputs the commands accept; they replace the default draft, so `other` is a seeded object.
+ {name:'two NURBS curves',other:'Other curve',draft:matrixDraft({curves:[
+  {id:'loft-a',name:'Section A',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,0,0],[10,0,0]],weights:[1,1]}},
+  {id:'loft-b',name:'Section B',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,0,10],[10,0,10]],weights:[1,1]}},
+  {id:'other-curve',name:'Other curve',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,20,0],[10,20,0]],weights:[1,1]}}]}),
+  setup:async ui=>{await ui.click('Section A');await ui.click('Section B',true)}},
+ {name:'two NURBS surfaces',other:'Other surface',draft:matrixDraft({surfaces:matrixSurfaces()}),setup:async ui=>{await ui.click('Match reference');await ui.click('Match edited',true)}},
+ {name:'four boundary curves',other:'Other curve',draft:matrixDraft({curves:[...[[[0,0,0],[2,0,0]],[[0,2,0],[2,2,0]],[[0,0,0],[0,2,0]],[[2,0,0],[2,2,0]]].map((controlPoints,i)=>({id:'edge'+i,name:['Bottom','Top','Left','Right'][i],curve:{degree:1,knots:[0,0,1,1],controlPoints,weights:[1,1]}})),
+  {id:'other-curve',name:'Other curve',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,20,0],[10,20,0]],weights:[1,1]}}]}),
+  setup:async ui=>{for(const [i,name] of ['Bottom','Top','Left','Right'].entries())await ui.click(name,i>0)}},
+ {name:'runout source, planar end and spatial curve',other:'Other surface',draft:matrixDraft(matrixRunout()),setup:async ui=>{await ui.click('Source runout');await ui.click('End runout',true);await ui.click('Runout curve',true)}},
+ {name:'two B-rep bodies',other:'Profile',setup:async ui=>{await ui.click('Box');await ui.click('Box');await settle();const name=ui.doc().bodies.filter(body=>body.brep).at(-1)!.name
+  // Both boxes share a name: add the unselected tree entry to the selection.
+  for(const row of ui.all().filter(n=>n.tag==='button'&&ui.text(n)===name&&n.props['aria-pressed']===false))row.props.onClick({shiftKey:true});await settle()}},
+ {name:'linked instance',other:'Profile',setup:async ui=>{await ui.click('Box');await ui.click('Create linked instance');await settle(250);await commandKey(ui,'Enter');await settle(250);const instance=ui.doc().bodies.find(body=>body.instance);if(instance)await ui.click(instance.name)}},
+ {name:'undo history',other:'Cube',setup:async ui=>{await ui.click('Box');await settle();await ui.click('↶');await settle()}},
 ]
+function matrixDraft(extra:Record<string,unknown>){return JSON.stringify({version:1,sketches:[],bodies:[],...extra})}
+function matrixSurfaces(){
+ const surface={degreeU:3,degreeV:3,knotsU:[0,0,0,0,1,1,1,1],knotsV:[0,0,0,0,1,1,1,1],controlPoints:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>[i,j,.15*i*i+.1*i*j+.2*j*j])),weights:Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>1+.03*i+.02*j+.01*i*j))}
+ const a={id:'match-a',name:'Match reference',surface,segmentsU:4,segmentsV:4},b=structuredClone(a),c=structuredClone(a)
+ b.id='match-b';b.name='Match edited';b.surface.controlPoints.forEach(row=>row.forEach(p=>p[0]+=5))
+ c.id='other-surface';c.name='Other surface';c.surface.controlPoints.forEach(row=>row.forEach(p=>p[1]+=20))
+ return [a,b,c]
+}
+function matrixRunout(){
+ const source={degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]]}
+ const plane={...source,controlPoints:source.controlPoints.map(row=>row.map(p=>[p[0],1,p[1]]))}
+ const other={...source,controlPoints:source.controlPoints.map(row=>row.map(p=>[p[0],p[1]+20,0]))}
+ return {surfaces:[{id:'source-runout',name:'Source runout',surface:source,segmentsU:4,segmentsV:4},{id:'end-runout',name:'End runout',surface:plane,segmentsU:4,segmentsV:4},{id:'other-surface',name:'Other surface',surface:other,segmentsU:4,segmentsV:4}],
+  curves:[{id:'runout-curve',name:'Runout curve',curve:{degree:1,knots:[0,0,1,1],controlPoints:[[0,1,.1],[1,1,.1]],weights:[1,1]}}]}
+}
+const mountFixture=(fixture:MatrixFixture)=>mount({},fixture.draft)
 // Jobs that only feed display, snapping or restore; a worker error there is not a command failure.
 const DISPLAY_JOBS=new Set(['restoreDocument','displayMesh','topology','bodyEdges','bodySnaps','sketchSnaps','surfaceMesh','curveDisplay','profileDisplay','faceSketch','surfaceBoundary'])
 const settle=async(ms=120)=>{await new Promise(resolve=>setTimeout(resolve,ms));await flushClearance()}
@@ -4916,7 +4930,7 @@ async function openSolidCommandFromPalette(ui:MatrixUi,id:string){
 async function runSolidRow(id:string,fixture:MatrixFixture):Promise<MatrixRow>{
  const steps:Record<string,MatrixCell>={},set=(step:string,status:MatrixStatus,note?:string)=>{steps[step]={status,...(note?{note}:{})}}
  // A: palette (mouse), preview, Escape.
- resetWorkers();let ui=await mount();await fixture.setup(ui);clearWorkerCalls()
+ resetWorkers();let ui=await mountFixture(fixture);await fixture.setup(ui);clearWorkerCalls()
  const entry=ui.commands().find(c=>c.id===id) as {label:string;shortcut?:string}
  const label=entry.label,shortcut=entry.shortcut
  let before=ui.doc()
@@ -4936,7 +4950,7 @@ async function runSolidRow(id:string,fixture:MatrixFixture):Promise<MatrixRow>{
  }
  unmountAll()
  // B: exact input, Apply, Undo/Redo, repeat.
- resetWorkers();lastJobs=[];ui=await mount();await fixture.setup(ui);before=ui.doc();clearWorkerCalls()
+ resetWorkers();lastJobs=[];ui=await mountFixture(fixture);await fixture.setup(ui);before=ui.doc();clearWorkerCalls()
  await ui.click(label);await settle(kind==='modal'?250:120)
  if(kind==='modal'){
   await awaitApply(ui)
@@ -4949,7 +4963,12 @@ async function runSolidRow(id:string,fixture:MatrixFixture):Promise<MatrixRow>{
    field.props['onUpdate:modelValue'](field.props.type==='number'?next:String(next));await settle(150)
    const shown=Number(field.value)
    set('exactInput',shown===next?'pass':'fail',`${current} -> ${next}${shown===next?'':' (field shows '+field.value+')'}`)
-  }else set('exactInput','skip','no numeric field in the command panel')
+  }else{
+   // Identity defaults (offsets 0, scale 1) give nothing to apply; enter a 5 mm offset as a user would.
+   const zero=panel&&ui.all(panel).find(n=>n.tag==='input'&&n.props['onUpdate:modelValue']&&!n.props.disabled&&n.props.type!=='checkbox'&&n.props.type!=='range'&&String(n.value)!==''&&Number(n.value)===0)
+   if(zero){zero.props['onUpdate:modelValue'](zero.props.type==='number'?5:'5');await settle(150);set('exactInput',Number(zero.value)===5?'pass':'fail',`0 -> 5${Number(zero.value)===5?'':' (field shows '+zero.value+')'}`)}
+   else set('exactInput','skip','no numeric field in the command panel')
+  }
   const {enabled,reason}=await awaitApply(ui)
   if(!enabled){set('apply',reason?'skip':'fail',reason?`Apply blocked for this fixture: ${reason}`:'Apply disabled without a stated reason');set('undoRedo','skip','nothing applied');set('repeat','skip','nothing applied')}
   else{
@@ -4993,14 +5012,14 @@ async function runSolidRow(id:string,fixture:MatrixFixture):Promise<MatrixRow>{
  // C: shortcut, then selection change while the command is active.
  const key=solidShortcutKey(shortcut)
  if(key){
-  resetWorkers();ui=await mount();await fixture.setup(ui);before=ui.doc()
+  resetWorkers();ui=await mountFixture(fixture);await fixture.setup(ui);before=ui.doc()
   await commandKey(ui,key.key,undefined,{ctrlKey:key.ctrlKey,shiftKey:key.shiftKey});await settle()
   const reacted=!!applyButton(ui)||!same(ui.doc(),before)||kind==='view'
   set('shortcut',reacted?'pass':'fail',`${shortcut}${kind==='view'?' (view effect, not observable in the document)':reacted?'':' had no effect'}`)
   unmountAll()
  }else set('shortcut','skip','no shortcut assigned')
  if(kind==='modal'){
-  resetWorkers();ui=await mount();await fixture.setup(ui);before=ui.doc()
+  resetWorkers();ui=await mountFixture(fixture);await fixture.setup(ui);before=ui.doc()
   await ui.click(label);await settle(250)
   let error=''
   try{await ui.click(fixture.other);await settle(250)}catch(e){error=String(e).slice(0,120)}
@@ -5016,7 +5035,7 @@ async function runSolidRow(id:string,fixture:MatrixFixture):Promise<MatrixRow>{
   resetWorkers()
   const crash=(job:{kind?:string}|undefined)=>failing.includes(job?.kind??"")?Promise.reject(Object.assign(Error('internal crash detail'),{code:'CAD_CRASH'})):undefined
   previewWorkerRun.mockImplementation(crash);primitiveWorkerRun.mockImplementation(crash);measurementWorkerRun.mockImplementation(crash)
-  ui=await mount();await fixture.setup(ui);before=ui.doc()
+  ui=await mountFixture(fixture);await fixture.setup(ui);before=ui.doc()
   await ui.click(label);await settle(250)
   const apply=applyButton(ui)
   if(apply&&!apply.props.disabled){await commandKey(ui,'Enter');await settle()}
@@ -5038,7 +5057,7 @@ it('C2 matrix: drives every palette command through palette, shortcut, input, pr
  // Enumerate the Solid inventory and find the first fixture that enables each command.
  const fixtureFor=new Map<string,MatrixFixture>(),labels=new Map<string,{label:string;reason?:string}>()
  for(const fixture of MATRIX_FIXTURES){
-  resetWorkers();const ui=await mount();await fixture.setup(ui)
+  resetWorkers();const ui=await mountFixture(fixture);await fixture.setup(ui)
   for(const c of ui.commands()){
    if(!labels.has(c.id))labels.set(c.id,{label:c.label,reason:c.disabledReason})
    if(c.enabled!==false&&!fixtureFor.has(c.id))fixtureFor.set(c.id,fixture)
@@ -5127,6 +5146,58 @@ it('C2 tab order: one stop for the extrusion result mode, arrows switch it, and 
  const dialog=ui.all().find(n=>n.props.role==='dialog'&&String(n.props.class).includes('palette'))!
  expect(tabStops(ui,dialog)).toEqual(['input:Search commands / Поиск команд'])
 })
+
+it('C2 tab order: sketch tools and gizmo modes take one Tab stop each and arrows move between them',async()=>{
+ const ui=await mount()
+ const stops=tabStops(ui,ui.all()[0])
+ const sketchTools=['Select · V','Rectangle · R','Circle · C','Arc','Slot','Trim','Polyline · L'],gizmo=['Gizmo: move','Gizmo: rotate','Gizmo: scale']
+ const row=(names:string[])=>ui.all().filter(n=>n.tag==='button'&&n.props['data-roving']!==undefined&&names.includes(n.props['aria-label']))
+ expect(row(sketchTools)).toHaveLength(7);expect(row(gizmo)).toHaveLength(3)
+ expect(row(sketchTools).filter(n=>n.props.tabindex===0).map(n=>n.props['aria-label'])).toEqual(['Select · V'])
+ expect(row(gizmo).filter(n=>n.props.tabindex===0).map(n=>n.props['aria-label'])).toEqual(['Gizmo: move'])
+ const key=async(name:string,keyName:string)=>{const node=row([...sketchTools,...gizmo]).find(n=>n.props['aria-label']===name)!,prevented=vi.fn();node.props.onKeydown({key:keyName,currentTarget:node,preventDefault:prevented,stopPropagation(){}});await flushClearance();return prevented}
+ expect(await key('Select · V','ArrowRight')).toHaveBeenCalled()
+ const at=(name:string)=>row([...sketchTools,...gizmo]).find(n=>n.props['aria-label']===name)!
+ expect(at('Rectangle · R').props.tabindex).toBe(0);expect(at('Select · V').props.tabindex).toBe(-1)
+ expect(at('Select · V').props['aria-pressed']).toBe(true)
+ await key('Rectangle · R','ArrowLeft');await key('Select · V','ArrowLeft');expect(at('Polyline · L').props.tabindex).toBe(0)
+ expect(await key('Polyline · L','Tab')).not.toHaveBeenCalled()
+ await key('Gizmo: move','ArrowRight');expect(at('Gizmo: rotate').props['aria-pressed']).toBe(true);expect(at('Gizmo: rotate').props.tabindex).toBe(0)
+ // Before the roving stops the workspace exposed 8 more stops (7 sketch tools and 3 gizmo modes as separate stops).
+ expect(tabStops(ui,ui.all()[0]).length).toBe(stops.length)
+})
+
+it('C2 context switch: active group, model and panel changes during a command keep the document and history consistent',async()=>{
+ // Group: switching the active group while Extrude is open retargets the result without touching the document.
+ let ui=await mount();await ui.click('New empty group');await settle()
+ const groupSelect=()=>ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Active group')!
+ groupSelect().props['onUpdate:modelValue']('');await settle()
+ await ui.click('Profile');await ui.click('Extrude');await settle(250)
+ let before=ui.doc()
+ groupSelect().props['onUpdate:modelValue']('Group 1');await settle(250)
+ expect(ui.doc()).toEqual(before);expect(applyButton(ui)).toBeTruthy()
+ expect((await awaitApply(ui)).enabled).toBe(true)
+ await commandKey(ui,'Enter');await settle()
+ const added=ui.doc().bodies.filter(body=>!before.bodies.some(old=>old.id===body.id))
+ expect(added).toHaveLength(1);expect(added[0].group).toBe('Group 1')
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+ unmountAll()
+ // Model: a new seed document replaces the model, cancels the command and stays one Undo step.
+ ui=await mount();await ui.click('Profile');await ui.click('Extrude');await settle(250)
+ before=ui.doc()
+ await ui.setProps({seedDocument:cylinderSeed()});await settle(250)
+ expect(applyButton(ui)).toBeUndefined()
+ expect(ui.doc().bodies.map(body=>body.id)).toEqual(['imported-cylinder'])
+ await commandKey(ui,'Enter');await settle();expect(ui.doc().bodies.map(body=>body.id)).toEqual(['imported-cylinder'])
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+ unmountAll()
+ // Panel: closing and reopening the workspace during a command leaves no active command and no edit.
+ ui=await mount();await ui.click('Profile');await ui.click('Extrude');await settle(250)
+ before=ui.doc()
+ await ui.setProps({open:false});await settle();await ui.setProps({open:true});await settle(250)
+ expect(applyButton(ui)).toBeUndefined();expect(ui.doc()).toEqual(before)
+ await commandKey(ui,'Enter');await settle();expect(ui.doc()).toEqual(before)
+},60_000)
 
 it('evaluates unit expressions in the CV panel and flags invalid input with a localized message',async()=>{
  const requests:Array<{options:{point:number[]}}>=[]

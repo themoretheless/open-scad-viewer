@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0284",
+  "testedBase": "1422795fd8202943485c50a90dfb7ed4d76d2af1",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_layout_contracts",
+    "--test",
+    "exact_surface_grid_contracts",
+    "--test",
+    "exact_surface_strip_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 8,
+  "scope": [
+    "Uses exact stored UV endpoints to recover a V-major Cartesian tiling. Sparse occupancy distinguishes holes, duplicates and tiles spanning more than one Cartesian cell.",
+    "Exact UV layout only. Seam geometry and B-rep topology are independent checks."
+  ],
+  "logSha256": "aae3a0f1794c7e1e3d61493dd411e9882fa0aa8c04d4c6204f540708a66c32c1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_merge.rs": "a35cc4330a2f2e783e654754308c1300d36ab43694a4a1518f433cfb1b5575a0",
+    "crates/nurbs-core/src/editing/exact_surface_merge/layout.rs": "7e3dfc1154e3320fba0a41768d8f1eeb75bf90bfe53309c7143254703131375a",
+    "crates/nurbs-core/tests/exact_surface_layout_contracts.rs": "c293b56e37b46fd5d2f52b5e2923c37806092f42c837d732f11916ac7dc1a5d5"
+  }
+}

@@ -1,7 +1,13 @@
 use super::*;
 /// Exact polynomial de Boor on u=a+width*t. No floating trim/decomposition or
 /// rounded homogeneous products are admitted as original-source history.
-pub(super) fn span(s: &Curve, k: usize, a: &Q, width: &Q, w: &mut Work) -> PResult<Vec<Poly>> {
+pub(in crate::editing) fn span(
+    s: &Curve,
+    k: usize,
+    a: &Q,
+    width: &Q,
+    w: &mut Work,
+) -> PResult<Vec<Poly>> {
     let p = s.degree;
     let dim = s.control_points[0].len();
     let mut net = Vec::new();

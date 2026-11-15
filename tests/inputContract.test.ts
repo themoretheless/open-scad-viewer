@@ -237,6 +237,70 @@ describe('copy with a base point between documents', () => {
     expect(Math.min(...xs(document, 'pasted')) - Math.min(...xs(target, 'cube'))).toBeCloseTo(100, 6)
     expect(Math.max(...xs(document, 'pasted')) - Math.min(...xs(document, 'pasted'))).toBeCloseTo(2, 6)
   })
+  it('carries NURBS curves and surfaces with an exact control-point offset', () => {
+    const source: DirectDocument = {
+      ...cubeDocument('mm'),
+      curves: [
+        {
+          id: 'c',
+          name: 'Curve',
+          group: 'g',
+          curve: {
+            degree: 1,
+            knots: [0, 0, 1, 1],
+            controlPoints: [
+              [0, 0, 0],
+              [10, 0, 0],
+            ],
+            weights: [1, 1],
+          },
+          bridge: { sourceA: 'x', sourceB: 'y', endA: 'start', endB: 'end', tension: 1 },
+        },
+      ],
+      surfaces: [
+        {
+          id: 's',
+          name: 'Patch',
+          segmentsU: 4,
+          segmentsV: 4,
+          surface: {
+            degreeU: 1,
+            degreeV: 1,
+            knotsU: [0, 0, 1, 1],
+            knotsV: [0, 0, 1, 1],
+            controlPoints: [
+              [
+                [0, 0, 0],
+                [0, 5, 0],
+              ],
+              [
+                [5, 0, 0],
+                [5, 5, 0],
+              ],
+            ],
+            weights: [
+              [1, 1],
+              [1, 1],
+            ],
+          },
+        },
+      ],
+    }
+    const payload = parseDirectClipboardPayload(createDirectClipboardPayload(source, ['c', 's'], [0, 0, 0]))
+    expect(payload.bodies).toEqual([])
+    expect(payload.curves?.[0]).not.toHaveProperty('group')
+    expect(payload.curves?.[0]).not.toHaveProperty('bridge')
+    const { document, ids } = pasteDirectClipboardPayload(cubeDocument('cm'), payload, [1, 2, 3], () =>
+      crypto.randomUUID(),
+    )
+    expect(ids).toHaveLength(2)
+    expect(document.curves?.[0].curve.controlPoints).toEqual([
+      [10, 20, 30],
+      [20, 20, 30],
+    ])
+    expect(document.surfaces?.[0].surface.controlPoints[1][1]).toEqual([15, 25, 30])
+    expect(ids).toContain(document.surfaces?.[0].id)
+  })
   it('rejects foreign or newer payloads', () => {
     expect(() => parseDirectClipboardPayload('hello')).toThrow(/copied objects/)
     expect(() =>

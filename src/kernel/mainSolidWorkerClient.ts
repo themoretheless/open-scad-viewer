@@ -1,7 +1,9 @@
 import { countOperation } from '../dev/operationCounters'
-import {mainSolidExpectation, mainSolidResult, type MainSolidExpectation, type MainSolidJob, type MainSolidProgress, type MainSolidProgressMessage, type MainSolidRequest, type MainSolidResponse, type MainSolidResults} from './mainSolidProtocol'
+import {isResidentDocumentRef,mainSolidExpectation, mainSolidResult, type MainSolidExpectation, type MainSolidJob, type MainSolidProgress, type MainSolidProgressMessage, type MainSolidRequest, type MainSolidResponse, type MainSolidResults} from './mainSolidProtocol'
 import {decodeMainSolidResult} from './mainSolidWorkerTransport'
 import {validWorkerErrorField, validWorkerErrorTarget} from '../core/workerHandlerRuntime'
+import {applyDirectDocumentDelta,isDirectDocumentDelta} from './directDocumentDelta'
+import type {DirectDocument} from '../app/directModeling'
 
 export interface MainSolidPort {
   onmessage: ((event:MessageEvent) => void)|null
@@ -11,7 +13,13 @@ export interface MainSolidPort {
   terminate():void
 }
 export interface MainSolidTiming {clientElapsedMs:number;warmupMs:number;executeMs:number;prepareMs:number}
-export interface MainSolidRunOptions {signal?:AbortSignal | undefined; timeoutMs?:number | undefined; onTiming?:(timing:MainSolidTiming)=>void; onProgress?:(progress:MainSolidProgress)=>void}
+export interface MainSolidRunOptions {signal?:AbortSignal | undefined; timeoutMs?:number | undefined; onTiming?:(timing:MainSolidTiming)=>void; onProgress?:(progress:MainSolidProgress)=>void
+  /** `sceneEdit`/`pointEdit` only: keep `job.document` resident in the worker. The first request
+   * sends it (as `text()` when that returns the document's canonical serialization, which is far
+   * cheaper to clone than the object tree); later requests with the same object send only its
+   * key, and answers arrive as deltas against it. Unchanged objects of the result are then the
+   * base's own objects, so the base must not be mutated in place (published UI documents are not). */
+  residentDocument?:{text?:()=>string|undefined}}
 export class MainSolidWorkerError extends Error {
   /** Inspector field and scene ids carried by a coded refusal across the worker boundary. */
   declare readonly field?:string
@@ -31,6 +39,9 @@ export class MainSolidWorkerClient {
   private active:{fail:(error:Error, discard:boolean)=>void}|null=null
   private nextId=1
   private closed=false
+  private resident:{document:WeakRef<object>;key:string}|null=null
+  private readonly residentPrefix=crypto.randomUUID()
+  private residentSerial=0
   constructor(private readonly factory:()=>MainSolidPort) {}
 
   run<K extends MainSolidJob['kind']>(job:Extract<MainSolidJob,{kind:K}>, options:MainSolidRunOptions={}):Promise<MainSolidResults[K]> {
@@ -49,6 +60,21 @@ export class MainSolidWorkerClient {
     let worker:MainSolidPort
     try {worker=this.worker??=this.factory()}
     catch {return Promise.reject(new MainSolidWorkerError('CAD_STARTUP','Could not start CAD worker'))}
+    // The previous request is settled (or its worker discarded) by now: choose the wire form.
+    let wire:MainSolidJob=job,base:DirectDocument|undefined,retainAs:string|undefined
+    const drag=job as MainSolidJob
+    if(options.residentDocument&&(drag.kind==='sceneEdit'||drag.kind==='pointEdit')&&typeof drag.document==='object'&&!isResidentDocumentRef(drag.document)) {
+      const edit=drag
+      base=edit.document as DirectDocument
+      const resident=this.resident
+      if(resident&&resident.document.deref()===base)wire={...edit,document:{resident:resident.key},delta:true}
+      else {
+        retainAs=`${this.residentPrefix}:${++this.residentSerial}`
+        let text:string|undefined
+        try {text=options.residentDocument.text?.()} catch {text=undefined}
+        wire={...edit,document:text??base,retainAs,delta:true}
+      }
+    }
     const id=this.nextId++
     return new Promise((resolve,reject)=>{
       let settled=false
@@ -59,7 +85,11 @@ export class MainSolidWorkerClient {
         signal?.removeEventListener('abort',abort)
         worker.onmessage=null;worker.onerror=null;worker.onmessageerror=null
         if(this.active?.fail===fail)this.active=null
-        if(discard){if(this.worker===worker)this.worker=null;worker.terminate()}
+        if(discard){if(this.worker===worker){this.worker=null;this.resident=null}worker.terminate()}
+        // A new base is resident only once the worker answered for it; after a failed first
+        // request (or a worker that lost the document) the next request sends the base again.
+        else if(retainAs!==undefined)this.resident=error?null:{document:new WeakRef(base!),key:retainAs}
+        else if(error instanceof MainSolidWorkerError&&error.code==='CAD_RESIDENT_MISSING')this.resident=null
         error?reject(error):resolve(result!)
         // Observers cannot change command settlement, cancellation or geometry.
         if(onTiming && timing && [timing.warmupMs,timing.executeMs,timing.prepareMs].every(value=>Number.isFinite(value)&&value>=0)) {
@@ -87,7 +117,9 @@ export class MainSolidWorkerClient {
         }
         if('ok' in data&&data.ok===true && 'result' in data) {
           // Unpack transferred typed-array payloads before the plain-array protocol checks.
-          const result=decodeMainSolidResult(expected.kind,data.result)
+          let result=decodeMainSolidResult(expected.kind,data.result)
+          // A malformed delta decodes to undefined and fails the protocol check below.
+          if(base!==undefined&&isDirectDocumentDelta(result))result=applyDirectDocumentDelta(base,result)
           if(mainSolidResult(expected,result))finish(undefined,result as MainSolidResults[K],false,data.timing)
           else fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid CAD worker response'),true)
         } else if('ok' in data&&data.ok===false && 'error' in data && data.error
@@ -104,10 +136,10 @@ export class MainSolidWorkerClient {
       signal?.addEventListener('abort',abort,{once:true})
       timer=setTimeout(()=>fail(new MainSolidWorkerError('CAD_TIMEOUT','CAD operation exceeded its time limit'),true),timeoutMs)
       countOperation('solidWorkerRequests')
-      try {worker.postMessage({version:1,id,job,...(onTiming?{traceTiming:true}:{})})}
+      try {worker.postMessage({version:1,id,job:wire,...(onTiming?{traceTiming:true}:{})})}
       catch {fail(new MainSolidWorkerError('CAD_TRANSPORT','CAD request could not be sent'),true)}
     })
   }
   cancel(){this.active?.fail(cancelled(),true)}
-  dispose(){this.closed=true;this.cancel();this.worker?.terminate();this.worker=null}
+  dispose(){this.closed=true;this.cancel();this.worker?.terminate();this.worker=null;this.resident=null}
 }

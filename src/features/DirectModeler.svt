@@ -41,6 +41,7 @@ import { stringifyMeshJson } from '../exchange/meshJson'
 import { PickCycle, pickDirectMesh, pickDirectMeshHits, type PickHit } from '../app/directPicking'
 import { activeFrame, coordinateSystemLabel, COORDINATE_SYSTEMS, frameDeltaToWorld, frameFromFace, nextCoordinateSystem, type CoordinateSystem } from '../app/coordinateSystems'
 import { cplaneFrame, cplaneFromFrame, pivotFrame, savedPivot, snapPivot, withSavedPivot, type PivotSnap } from '../app/directPivots'
+import { rememberEdgeFeature, recallEdgeFeature, type EdgeFeatureMemory } from '../app/edgeFeatureEditing'
 import { createDirectClipboardPayload, parseDirectClipboardPayload, pasteDirectClipboardPayload } from '../app/directClipboard'
 import { documentUnit, fromMillimetres } from '../app/documentUnits'
 import { addToIsolation, isolateWithin, pruneIsolation, readIsolation, stepOutIsolation, type IsolationStack } from '../app/isolationStack'
@@ -86,6 +87,7 @@ import DraftConflictCopies from './directModeler/DraftConflictCopies.svt'
 import { useFileExchange } from './directModeler/useFileExchange'
 import { useDisplayAndSnapQueues } from './directModeler/useDisplayAndSnapQueues'
 import { useViewportLayerAndPolygons } from './directModeler/useViewportLayerAndPolygons'
+import { rovingTabStopKey } from './directModeler/rovingTabStop'
 const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null; appendBodies?: { bodies: DirectBody[]; token: number; group?: { name: string; source: string; replaces: string | null } } | null; paletteRequest?: number }>()
 const emit = defineEmits<{ backend: [gpu: boolean]; close: []; append: [source: string]; toMesh: []; 'edit-group': [request: { name: string; source: string; replaces: string | null }] }>()
 const ru = computed(() => props.locale === 'ru')
@@ -134,6 +136,7 @@ const {
   getFit: () => fit,
 })
 let history = new DirectHistory(initial)
+let edgeFeatureMemory: EdgeFeatureMemory | null = null
 const conflictCopiesOpen = ref(false)
 const document = shallowRef(history.syncedDocument)
 // Committed render snapshot; gestures publish separate documents and never update this ref.
@@ -387,6 +390,8 @@ function surfaceInputKey(e:KeyboardEvent,role:number){
 }
 
 const boxSelect=ref(false),selectionBox=ref<{start:Point2;end:Point2;pane:Pane}|null>(null),gizmoMode=ref<'move'|'rotate'|'scale'>('move')
+const SKETCH_TOOLS=['select','rectangle','circle','arc','slot','trim','polyline'] as const,sketchToolFocus=ref(''),sketchToolStop=computed(()=>(SKETCH_TOOLS as readonly string[]).includes(sketchToolFocus.value)?sketchToolFocus.value:(SKETCH_TOOLS as readonly string[]).includes(tool.value)?tool.value:'select')
+const sketchToolKey=(e:KeyboardEvent)=>{const next=rovingTabStopKey(e,SKETCH_TOOLS,sketchToolStop.value);if(next)sketchToolFocus.value=next},gizmoModeKey=(e:KeyboardEvent)=>{const next=rovingTabStopKey(e,['move','rotate','scale'],gizmoMode.value);if(next)gizmoMode.value=next as typeof gizmoMode.value}
 // Vertex editing of polygon bodies: drag selected vertices in the screen plane, one undo step on release.
 let vertexDrag:{svg:SVGSVGElement;pointer:number;start:Point2;ids:number[];before:DirectDocument;moved:boolean;inverse:DOMMatrix|null}|null=null
 // Tessellated bodies duplicate vertices per face; group indices by position so a drag moves the whole corner.
@@ -933,7 +938,17 @@ const {
   getNotice: () => notice.value,
   label,
 })
-const { advancedPolygons, advancedSurfacePolygons, advancedPreview, pointTrimPreviewPoints, pointTrimCut, patchBudgetCurve, patchGapPoints, applyAdvanced, axisVector, advancedBodyIds, advancedSurfaceIds, advancedSketches, advancedSketchDisplay, authoredEdges, bodyEdgesPending, cancelBodyEdges, refreshBodyEdges } = useAdvancedPreview({ activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commit, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady: () => kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies: () => sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed })
+const { advancedPolygons, advancedSurfacePolygons, advancedPreview, pointTrimPreviewPoints, pointTrimCut, patchBudgetCurve, patchGapPoints, applyAdvanced, axisVector, advancedBodyIds, advancedSurfaceIds, advancedSketches, advancedSketchDisplay, authoredEdges, bodyEdgesPending, cancelBodyEdges, refreshBodyEdges } = useAdvancedPreview({ onEdgeFeatureApplied: memory => { edgeFeatureMemory = memory }, activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commit, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady: () => kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies: () => sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed })
+// Undoing a fillet or chamfer brings its body back; reselect the edge chain it consumed (C10).
+watch(document,()=>{
+ if(!edgeFeatureMemory)return
+ const {edges,keep}=recallEdgeFeature(edgeFeatureMemory,document.value.bodies)
+ const bodyId=edgeFeatureMemory.bodyId
+ if(!keep)edgeFeatureMemory=null
+ if(!edges||advancedOp.value||operation.value)return
+ selection.value=bodyId;extraSelection.value=[];faceIndex.value=-1;openingFaces.value=[]
+ edgeIndex.value=edges[0];edgeIndexes.value=edges
+})
 watch(() => [props.open, kernelReady.value, smoothDisplay.value, renderBodies.value,
   previewBody.value, advancedPreview.value.document, previewingTransform.value,
   previewingTransform.value ? selectedIds.value.join(',') : ''] as const, () => {
@@ -1114,8 +1129,8 @@ function moveAt(e: PointerEvent) {
  * gesture start does not deep-copy the whole document. Callers must not mutate it. */
 function committedView():DirectDocument{return snapDocument.value}
 function sync(next:DirectDocument=history.syncedDocument) { snapDocument.value=next; document.value=next; const ids=new Set([...documentObjects(document.value),...document.value.sourceBodies??[]].map(o=>o.id));if(selection.value&&!ids.has(selection.value))selection.value='';extraSelection.value=extraSelection.value.filter(id=>ids.has(id)); if (gpuActive.value) settleAfterDrag(); const s=document.value.sketches.find(s=>s.id===selection.value);if(s&&!samePlane(s.plane,activePlane.value)){activePlane.value=s.plane??xyPlane();workplaneOutline.value=[]} undoable.value = history.canUndo; redoable.value = history.canRedo; persist() }
-function prepareCommit(next:DirectDocument,origin:'edit'|'file'='edit') {
- return prepareDocumentCommit(next,origin==='file'&&!lockedIds.value.length?undefined:snapDocument.value,history.objectIds,lockedIds.value,activeGroup.value,origin,label)
+function prepareCommit(next:DirectDocument,origin:'edit'|'file'='edit',resolved=false) {
+ return prepareDocumentCommit(next,origin==='file'&&!lockedIds.value.length?undefined:snapDocument.value,history.objectIds,lockedIds.value,activeGroup.value,origin,label,resolved)
 }
 function finishCommit(added:string[],next?:DirectDocument){
  sync(next)
@@ -1127,7 +1142,7 @@ function commit(next:DirectDocument){
 }
 /** Worker results already passed the authoritative parser: commit without re-validating here. */
 async function commitWorkerResult(next:DirectDocument):Promise<boolean>{
- const {validateLocked,added}=prepareCommit(next)
+ const {validateLocked,added}=prepareCommit(next,'edit',true)
  if(!await history.commitAsync(async()=>next,validateLocked))return false
  finishCommit(added,next);return true
 }
@@ -1224,7 +1239,7 @@ async function duplicate() {
  const generation=directTransformGeneration,before=committedView(),ids=[...selectedIds.value],copyIds=ids.map(()=>crypto.randomUUID())
  directTransformPending.value=true;directTransformOperation.value='duplicate';error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:before.bodies.some(body=>body.instance)?history.canonicalText(before)??serializeDirectDocument(before):before,options:{operation:'duplicate',id:ids[0]??'',ids,copyIds,createdId:'',x:10,y:10,z:0,axis:'z',angle:0,scale:1}})
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:'duplicate',id:ids[0]??'',ids,copyIds,createdId:'',x:10,y:10,z:0,axis:'z',angle:0,scale:1}},residentTransformBase(before))
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
   const applied=await history.commitAsync(async()=>result,validateLocked)
@@ -1291,7 +1306,9 @@ async function drainGizmoTransforms(){
   while(gizmoQueued&&epoch===gizmoEpoch){
    const job=gizmoQueued;gizmoQueued=null
    try{
-    const result=await gizmoWorker.run(job.job)
+    // The drag base stays resident in the worker: only the first move sends it, as snapshot text.
+    const base=job.job.document
+    const result=await gizmoWorker.run(job.job,{residentDocument:{text:()=>history.canonicalText(base)}})
     if(epoch!==gizmoEpoch)return
     if(job.revision!==gizmoRevision)continue
     if(gizmoApplyRevision===job.revision){
@@ -1330,12 +1347,15 @@ function cancelDirectTransform(){
  if(directTransformPending.value){history.cancelRestore();clearDragPreview()}
  directTransformPending.value=false
 }
+/** Transform requests name their base by key or send it as text; the answer is a delta whose
+ * unchanged objects are `before`'s own, which keeps the commit policy and history incremental. */
+const residentTransformBase=(before:DirectDocument)=>({residentDocument:{text:()=>history.canonicalText(before)??(before.bodies.some(body=>body.instance)?serializeDirectDocument(before):undefined)}})
 async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false,detach=false,metadata?:{operation:'group-create'|'group-move';group:string}){
  cancelDirectTransform()
  const generation=directTransformGeneration
  directTransformPending.value=true;directTransformOperation.value=metadata?.operation??(detach?'instance-detach':'transform');error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:before.bodies.some(body=>body.instance)?history.canonicalText(before)??serializeDirectDocument(before):before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}})
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}},residentTransformBase(before))
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
   result.blenderProjectId ??= snapDocument.value.blenderProjectId
@@ -1599,6 +1619,12 @@ function splitKey(e: KeyboardEvent) {
 // tessellation waits for the kernel's asynchronous warm-up and shows the working mesh until then.
 if (!kernelReady.value || restoringDraft.value) void restoreInitialDraft()
 const commandFailure = computed(() => Object.keys(invalidQuantities.value).length ? label('Исправьте числовой ввод', 'Correct the numeric input') : advancedOp.value ? advancedPreview.value.error : cornerActive.value ? cornerPreview.value.error : solidActive.value ? previewError.value : operation.value==='array'?sketchEditFailure.value:'')
+// C4: the `invalid` outline is an SVG layer above both the GPU canvas and the CPU polygons, so it shows on either backend.
+const invalidOverlayIds = computed<readonly string[]>(() => {
+  const ids = new Set(invalidSceneIds.value)
+  if (commandFailure.value && selectedBody.value && !(edgeIndexes.value.length && ['edge-fillet','chamfer'].includes(advancedOp.value ?? ''))) ids.add(selectedBody.value.id)
+  return [...ids]
+})
 const commandActive = computed(() => !!(advancedOp.value || operation.value || subtract.value || booleanPending.value || directTransformPending.value || gizmoPending.value || nativeNurbsPending.value))
 const commandHint = computed(() => {
   if(nativeNurbsPending.value&&nativeBrepMode.value)return label('Вычисляется B-rep. Esc — отменить.', 'Computing B-rep. Esc cancels.')
@@ -1644,8 +1670,10 @@ function cancelCommandState() {
 function cancelCommand(){cancelCommandState();tool.value='select';workspace.value?.focus()}
 
 function quantityValidity(key: string, valid: boolean) { if (valid) delete invalidQuantities.value[key]; else invalidQuantities.value[key] = true }
+// An identity instance transform would commit nothing; Apply waits for a changed value.
+const identityInstanceTransform = computed(() => advancedOp.value==='instance-transform' && !advanced.value.x && !advanced.value.y && !advanced.value.z && !advanced.value.angle && advanced.value.scale===1)
 const commandReady = computed(() => {
-  if(advancedOp.value==='edge-fillet' && advanced.value.filletMode==='partial-preview')return false
+  if((advancedOp.value==='edge-fillet' && advanced.value.filletMode==='partial-preview') || identityInstanceTransform.value)return false
   if (nativeNurbsPending.value || gizmoPending.value || directTransformPending.value || sketchEditPending.value || booleanPending.value || Object.keys(invalidQuantities.value).length) return false
   if (subtract.value) return !!(subtract.value.a.length && subtract.value.b.length)
   if (advancedOp.value) return !!advancedPreview.value.document
@@ -1669,6 +1697,7 @@ const commandBlockedReason = computed(() => {
   if (commandReady.value) return ''
   if (nativeNurbsPending.value || gizmoPending.value || directTransformPending.value || sketchEditPending.value || booleanPending.value || previewPending.value || bodyEditPending.value) return label('Дождитесь предпросмотра.', 'Wait for the preview.')
   if (Object.keys(invalidQuantities.value).length) return label('Исправьте числовой ввод.', 'Correct the numeric input.')
+  if (identityInstanceTransform.value) return label('Задайте смещение, поворот или масштаб.', 'Set an offset, rotation or scale.')
   if (advancedOp.value === 'edge-fillet' && advanced.value.filletMode === 'partial-preview') return label('Частичный предпросмотр нельзя применить.', 'A partial preview cannot be applied.')
   if (subtract.value) return !subtract.value.a.length ? label('Выберите тела A.', 'Select target bodies A.') : label('Выберите режущие тела B.', 'Select cutting bodies B.')
   if (commandFailure.value) return commandFailure.value
@@ -2185,6 +2214,12 @@ watch(()=>[props.open,kernelReady.value,selectedBody.value,document.value],()=>{
  cancelTopology(true)
  if(props.open&&kernelReady.value&&selectedBody.value)void prepareTopology(selectedBody.value)
 },{immediate:true,flush:'sync'})
+// Escape cancels topology preparation along with the command; choosing face picking for the
+// same, still selected body must prepare it again or the face list stays empty.
+watch(pickMode,mode=>{
+ const body=selectedBody.value
+ if(mode==='face'&&props.open&&kernelReady.value&&body&&!topologyPending.value&&!isTopologyReadyFor(body))void prepareTopology(body)
+})
 
 watch(()=>[props.open,kernelReady.value,selectedBody.value,document.value,pickMode.value],()=>void refreshBodyEdges(),{immediate:true,flush:'post'})
 
@@ -2467,7 +2502,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           <div class="pane-tools">
             <VrControls v-if="pane === '3d'" :get-scene="vrSnapshot" :available="renderBodies.some(body => body.mesh.indices.length > 0)" :locale="locale" />
             <template v-if="pane === '2d'">
-              <button v-for="(name, value) in { select: label('Выбор · V', 'Select · V'), rectangle: label('Прямоугольник · R', 'Rectangle · R'), circle: label('Круг · C', 'Circle · C'), arc: label('Дуга', 'Arc'), slot: label('Паз', 'Slot'), trim: label('Обрезать','Trim'), polyline: label('Ломаная · L', 'Polyline · L') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="tool === value" @click="beginSketch(value)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
+              <button v-for="(name, value) in { select: label('Выбор · V', 'Select · V'), rectangle: label('Прямоугольник · R', 'Rectangle · R'), circle: label('Круг · C', 'Circle · C'), arc: label('Дуга', 'Arc'), slot: label('Паз', 'Slot'), trim: label('Обрезать','Trim'), polyline: label('Ломаная · L', 'Polyline · L') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="tool === value" :tabindex="sketchToolStop === value ? 0 : -1" :data-roving="value" @keydown="sketchToolKey" @click="sketchToolFocus = ''; beginSketch(value)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
               <button class="tool-icon" :title="label('Рамка','Box select')" :aria-label="label('Рамка','Box select')" :aria-pressed="boxSelect" @click="boxSelect=!boxSelect"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.box" /></svg></button>
               <button :title="label('Вернуться к плоскости XY','Back to the XY plane')" @click="resetWorkplane()">XY</button>
 
@@ -2495,7 +2530,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </div>
               <span class="tool-divider" aria-hidden="true"></span>
               <div class="tool-group" role="group" :aria-label="label('Манипулятор','Manipulator')">
-                <button v-for="(name, value) in { move: label('Манипулятор: двигать','Gizmo: move'), rotate: label('Манипулятор: вращать','Gizmo: rotate'), scale: label('Манипулятор: масштаб','Gizmo: scale') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="gizmoMode===value" @click="gizmoMode=value"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
+                <button v-for="(name, value) in { move: label('Манипулятор: двигать','Gizmo: move'), rotate: label('Манипулятор: вращать','Gizmo: rotate'), scale: label('Манипулятор: масштаб','Gizmo: scale') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="gizmoMode===value" :tabindex="gizmoMode===value?0:-1" :data-roving="value" @keydown="gizmoModeKey" @click="gizmoMode=value"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
               </div>
               <span class="tool-divider" aria-hidden="true"></span>
               <button class="tool-icon" :title="label('Обзор','Orbit')" :aria-label="label('Обзор','Orbit')" :aria-pressed="!movingBody" @click="movingBody = false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.orbit" /></svg></button>
@@ -2614,8 +2649,9 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <text :x="extrusionHandle.top[0]+views['3d']/35" :y="extrusionHandle.top[1]" :font-size="views['3d']/45" fill="#77eac5" pointer-events="none" style="user-select:none">{{ height.toFixed(2) }} mm</text>
               </g>
 
-              <g v-if="pane==='3d' && commandFailure && selectedBody && !(edgeIndexes.length && ['edge-fillet','chamfer'].includes(advancedOp??''))" class="invalid-input-geometry" pointer-events="none" aria-label="Operation input with an error">
-                <polygon v-for="p in polygons.filter(p=>p.id===selectedBody?.id)" :key="'invalid-'+p.key" :points="p.points" fill="none" stroke="var(--danger, #ff6978)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" />
+              <g v-if="pane==='3d' && invalidOverlayIds.length" class="invalid-input-geometry" :data-invalid-ids="invalidOverlayIds.join(' ')" pointer-events="none" aria-label="Operation input with an error">
+                <polygon v-for="p in polygons.filter(p=>invalidOverlayIds.includes(p.id))" :key="'invalid-'+p.key" :points="p.points" fill="none" stroke="var(--danger, #ff6978)" stroke-width="1.5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" />
+                <path v-for="s in document.sketches.filter(s=>invalidOverlayIds.includes(s.id)&&objectInView(s.id))" :key="'invalid-sketch-'+s.id" :d="sketchPath(s,'3d')" fill="none" stroke="var(--danger, #ff6978)" stroke-width="2" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" />
               </g>
               <g v-if="pane==='3d'" pointer-events="none">
                 <path v-for="s in document.sketches.filter(s=>objectInView(s.id))" :key="'plane-'+s.id" :d="sketchPath(s,'3d')" fill="none" stroke="#77eac5" stroke-opacity=".6" vector-effect="non-scaling-stroke" />
@@ -2729,7 +2765,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </g>
 
             </svg>
-            <CadDimensionOverlay v-if="pane==='3d' && inlineDimensionVisible && commandAnchor" :anchor="commandAnchor" :center="centers['3d']" :size="views['3d']" v-model="inlineDimension" :locale="locale" :failed="!!commandFailure" :label="label('Размер у манипулятора, мм','Dimension at manipulator, mm')" @validity="quantityValidity('inline',$event)" />
+            <CadDimensionOverlay v-if="pane==='3d' && inlineDimensionVisible && commandAnchor" :anchor="commandAnchor" :center="centers['3d']" :size="views['3d']" v-model="inlineDimension" :locale="locale" :failed="!!commandFailure" :label="label('Размер у манипулятора, мм','Dimension at manipulator, mm')" :min="['edge-fillet','chamfer','shell'].includes(advancedOp ?? '') ? .01 : undefined" @validity="quantityValidity('inline',$event)" />
             <div class="zoom-tools"><button :aria-label="label('Приблизить ', 'Zoom in ') + pane" @click="zoom(pane, .8)">+</button><button :aria-label="label('Отдалить ', 'Zoom out ') + pane" @click="zoom(pane, 1.25)">−</button></div>
             <div v-if="pane === '3d'" class="fps-badge" :class="{ low: fps > 0 && fps < 30 }" role="status" :aria-label="label('Кадров в секунду', 'Frames per second')">{{ fps }} FPS · {{ frameMs }} ms<template v-if="gpuActive"> · draw {{ drawMs }} ms</template></div>
             </div>

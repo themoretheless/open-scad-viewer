@@ -133,3 +133,67 @@ fn range_budget_and_late_singularity_are_atomic() {
     assert_eq!(r.refusal, Some(Refusal::UnprovedDenominator));
     assert!(r.cells.is_none());
 }
+
+#[test]
+fn subdivides_opposite_threshold_zones_and_keeps_an_exact_cover() {
+    use nurbs_core::editing::exact_surface_derivative::refine_curvature_gap;
+    let mut s = cylinder();
+    s.knots_u = vec![2., 2., 2., 6., 6., 6.];
+    s.weights = vec![vec![1.; 2]; 3];
+    s.control_points = [(0., 0.), (0.5, 0.), (1., 1.)]
+        .map(|(x, z)| vec![vec![x, 0., z], vec![x, 1., z]])
+        .to_vec();
+    let r = refine_curvature_gap(&s, 1., 6, WORK).unwrap();
+    let regions = r.regions.unwrap_or_else(|| panic!("{:?}", r.refusal));
+    let mut area = [0.; 3];
+    for region in &regions {
+        assert_eq!(region.original_domain, [[2., 6.], [0., 1.]]);
+        let [[lo, hi], [v0, v1]] = region.unit_domain;
+        let residual = |u: f64| 4. - (1. + 4. * u * u).powi(3);
+        let index = match region.comparison {
+            CurvatureGapComparison::AtLeast => {
+                assert!(residual(hi) >= 0.);
+                0
+            }
+            CurvatureGapComparison::AtMost => {
+                assert!(residual(lo) <= 0.);
+                1
+            }
+            CurvatureGapComparison::CornerStraddle => {
+                assert!(residual(lo) > 0. && residual(hi) < 0.);
+                assert!(hi - lo <= 0.125);
+                2
+            }
+            status => panic!("unexpected {status:?}"),
+        };
+        area[index] += (hi - lo) * (v1 - v0);
+    }
+    assert!(area.iter().all(|value| *value > 0.));
+    assert_eq!(area.iter().sum::<f64>(), 1.);
+    for (i, a) in regions.iter().enumerate() {
+        for b in &regions[i + 1..] {
+            assert!(
+                (0..2).any(|axis| a.unit_domain[axis][1] <= b.unit_domain[axis][0]
+                    || b.unit_domain[axis][1] <= a.unit_domain[axis][0])
+            );
+        }
+    }
+    let short = refine_curvature_gap(&s, 1., 6, r.work_used - 1).unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.regions.is_none());
+}
+
+#[test]
+fn a_constant_identity_stops_without_splitting() {
+    use nurbs_core::editing::exact_surface_derivative::refine_curvature_gap;
+    let s = cylinder();
+    let r = refine_curvature_gap(&s, 1., 8, WORK).unwrap();
+    let regions = r.regions.unwrap();
+    assert_eq!(regions.len(), 1);
+    assert_eq!(regions[0].unit_domain, [[0., 1.]; 2]);
+    assert_eq!(
+        regions[0].comparison,
+        CurvatureGapComparison::EqualEverywhere
+    );
+    assert!(refine_curvature_gap(&s, 1., 9, WORK).is_err());
+}

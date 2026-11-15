@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0286",
+  "testedBase": "5b8c233da1439671a0e6f662c9ee2c4dd432bede",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_tensor_split_contracts",
+    "--test",
+    "exact_surface_knot_insertion_contracts",
+    "--test",
+    "exact_surface_grid_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 15,
+  "scope": [
+    "Refines one complete source tensor before slicing so every output uses the same rational gauge and literal seam poles. Absolute charts are retained and the returned grid can be merged exactly.",
+    "Clamped nonperiodic selected axis; untouched axis retained. Unrepresentable or exhausted requests return no partial sides."
+  ],
+  "logSha256": "5ade925ab317ce55154b13e5ea84586a18e79377bf8de8b8fd5dc02f31af00b6",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_knot_insertion.rs": "6e3ae93f5329df59c3c85a7508ff1065d61bca3ed75a3a1e7080425c6b20803e",
+    "crates/nurbs-core/src/editing/exact_surface_knot_insertion/tiling.rs": "5cb5daeceee06f29193ae83f7bbb8c708f392b2542923685182d620e3a70a582",
+    "crates/nurbs-core/tests/exact_tensor_split_contracts.rs": "5eb638ab1a231d8045469dfafa114405a50a67b65974f6f210f6b42f6829d020"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0299",
+  "testedBase": "d88cdcf15abfa8420a8d1f39bf51116dd2f4e5af",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_trimmed_relayout_contracts",
+    "--test",
+    "exact_mobius_trimmed_contracts",
+    "--test",
+    "exact_pcurve_relayout_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Relayout a piecewise B\u00e9zier tensor patch with its ordered closed UV trims under a shared budget, preserving their three-dimensional images.",
+    "Closed source and output UV loops. One arithmetic budget; nonrepresentable cuts or poles withhold the entire result."
+  ],
+  "logSha256": "b4e0a6b244444e145db64866eca789cef36c920eed5e1d218c8f6869dba5a83b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "14aec1691ef0eeced28d9445b5b441f866facae44a7e14077c9d19336029fc29",
+    "crates/nurbs-core/src/editing/exact_projective/trimmed_mobius.rs": "594277c8915a97327a5e9b97d45143d03383fbf0540411d2c0839cf67eb970b3",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_relayout.rs": "02c376c15ec091922315305c86de8cbd4e3f60aa4997ddcf76c3a167530d93cf",
+    "crates/nurbs-core/tests/exact_trimmed_relayout_contracts.rs": "83a1b035c2bf3f54d658032d7c398cb89be1ba7c3379112cb7a9f4fdf4c38ea3"
+  }
+}

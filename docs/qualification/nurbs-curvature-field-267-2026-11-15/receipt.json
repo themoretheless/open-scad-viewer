@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0267",
+  "testedBase": "d3b0abd1c4b426bf806548d701758a815f0a4eac",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_graph_contracts",
+    "--test",
+    "curvature_gap_edge_contracts",
+    "--test",
+    "curvature_gap_threshold_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 13,
+  "scope": [
+    "Strict Bernstein derivative signs and opposite signs over two complete faces certify one simple contour crossing per transverse parameter in the chosen chart axis.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "818dde0116a9d6fcc4d4c9c831af23b69041643c842963ddd199be53c2b842e3",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "74a27958f6aac0bcecbd568b2007de1d17ccd6d31b131c8b8de245a0bf048020",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs": "9da49c868aa77fb5688151ec39cdc316a4af1646d32dac8abdc0cf377f42e6b2",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_graph_contracts.rs": "7364f37fd6a287fe0e90c33ea20576857c17672c5732d6fff993f519a3874563",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs": "2caf811e137eeeb3539dbd115b9df24e464b0dd8c85104699de3a046dfb7f9a0"
+  }
+}

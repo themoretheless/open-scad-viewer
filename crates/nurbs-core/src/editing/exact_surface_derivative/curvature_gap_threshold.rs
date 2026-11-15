@@ -74,17 +74,7 @@ fn audit(source: &Surface, level: f64, work: &mut Work) -> PResult<Vec<Curvature
             if v[0] == v[1] {
                 continue;
             }
-            let target =
-                original_target(source, ku, kv, Field::SquaredPrincipalCurvatureGap, work)?;
-            // Use an exact constant identity when available. Otherwise the
-            // original denominator is the cube of the positive squared normal.
-            let target = polynomial::constant_field(&target, work)?.unwrap_or(target);
-            let [numerator, _, _, mut denominator]: [Poly; 4] =
-                target.try_into().map_err(|_| Refusal::UnprovedIdentity)?;
-            for coefficient in denominator.values_mut() {
-                *coefficient = work.op(coefficient, &level, |a, b| a * b)?;
-            }
-            let residual = polynomial::subtract(numerator, &denominator, work)?;
+            let residual = threshold_residual(source, ku, kv, &level, work)?;
             let comparison = compare(&residual, work)?;
             cells.push(CurvatureGapCell {
                 domain: [u, v],
@@ -93,6 +83,25 @@ fn audit(source: &Surface, level: f64, work: &mut Work) -> PResult<Vec<Curvature
         }
     }
     Ok(cells)
+}
+
+pub(super) fn threshold_residual(
+    source: &Surface,
+    ku: usize,
+    kv: usize,
+    level: &Q,
+    work: &mut Work,
+) -> PResult<Poly> {
+    let target = original_target(source, ku, kv, Field::SquaredPrincipalCurvatureGap, work)?;
+    // The original denominator is positive. An exact constant identity
+    // replaces that denominator with one before the degree check.
+    let target = polynomial::constant_field(&target, work)?.unwrap_or(target);
+    let [numerator, _, _, mut denominator]: [Poly; 4] =
+        target.try_into().map_err(|_| Refusal::UnprovedIdentity)?;
+    for coefficient in denominator.values_mut() {
+        *coefficient = work.op(coefficient, level, |a, b| a * b)?;
+    }
+    polynomial::subtract(numerator, &denominator, work)
 }
 
 fn compare(residual: &Poly, work: &mut Work) -> PResult<CurvatureGapComparison> {
@@ -105,18 +114,26 @@ fn compare(residual: &Poly, work: &mut Work) -> PResult<CurvatureGapComparison> 
         return Ok(Unresolved);
     }
     let net = storage::bernstein(residual, pu, pv, work)?;
+    Ok(compare_net(&net, [pu + 1, pv + 1]))
+}
+
+pub(super) fn compare_net(net: &[Q], [nu, nv]: [usize; 2]) -> CurvatureGapComparison {
+    use CurvatureGapComparison::*;
     if net.iter().all(|value| !value.is_negative()) {
-        return Ok(AtLeast);
+        return AtLeast;
     }
     if net.iter().all(|value| !value.is_positive()) {
-        return Ok(AtMost);
+        return AtMost;
     }
-    let corners = [&net[0], &net[pv], &net[pu * (pv + 1)], &net[net.len() - 1]];
-    Ok(
-        if corners.iter().any(|v| v.is_positive()) && corners.iter().any(|v| v.is_negative()) {
-            CornerStraddle
-        } else {
-            Unresolved
-        },
-    )
+    let corners = [
+        &net[0],
+        &net[nv - 1],
+        &net[(nu - 1) * nv],
+        &net[net.len() - 1],
+    ];
+    if corners.iter().any(|v| v.is_positive()) && corners.iter().any(|v| v.is_negative()) {
+        CornerStraddle
+    } else {
+        Unresolved
+    }
 }

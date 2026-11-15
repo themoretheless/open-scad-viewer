@@ -12,6 +12,10 @@ use crate::{
 use cad_predicates::{BezierIdentity, Reason};
 use num_rational::BigRational as Q;
 pub(super) mod denominator;
+mod split;
+mod tiling;
+pub use tiling::{TensorTiling, tile_tensor_surface};
+pub use split::{SplitRefusal, TensorSplit, split_tensor_surface};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Refusal {
     Arithmetic(curve_edit::Refusal),
