@@ -8,6 +8,8 @@ use crate::*;
 use std::collections::{BTreeMap, BTreeSet};
 
 mod boolean;
+mod coincident_faces;
+pub use coincident_faces::*;
 mod seam_boolean;
 pub use seam_boolean::{
     CertifiedSeamNormalizedBoolean, SeamNormalizedBooleanCertificate,
