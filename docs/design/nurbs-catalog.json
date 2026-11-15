@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 262,
-  "unallocatedCount": 738,
+  "specifiedCount": 263,
+  "unallocatedCount": 737,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7082,6 +7082,29 @@
       ],
       "remainingQualification": [
         "Exact dyadic Bernstein refinement covers each original cell. A positive coefficient net proves strict separation. Regions without that proof retain an existential nonumbilic status at the depth cap.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0263",
+      "name": "Сертификат сравнения квадрата разности главных кривизн NURBS с порогом",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::compare_curvature_gap",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_threshold_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs",
+        "docs/qualification/nurbs-curvature-field-263-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-263-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "An exact polynomial residual compares squared principal curvature separation to a positive threshold. Each cell reports inclusive bounds, identity, opposite corner signs or an unresolved comparison.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]
