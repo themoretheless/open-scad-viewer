@@ -193,6 +193,8 @@ pub mod queries {
     pub use crate::ray_surface;
     pub use crate::ss_intersection;
     pub use crate::surface_measure;
+    pub use crate::surface_chord_bound;
+    pub use crate::surface_volume;
     pub use crate::surface_shape_operator;
     pub use crate::surface_coordinate_flow;
     pub use crate::surface_contact;
