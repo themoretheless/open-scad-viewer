@@ -3,6 +3,7 @@ use crate::core::bounded_rational::{Error, Work};
 use crate::{Result, check, curve::Curve, surface::Surface};
 use num_rational::BigRational as Q;
 use num_traits::{Signed, Zero};
+mod chart_nonnegative;
 mod mobius;
 pub use mobius::{mobius_bezier_curve, mobius_bezier_surface};
 mod mobius_piecewise;
@@ -16,7 +17,10 @@ pub use mobius_spline::{
     mobius_spline_surface,
 };
 mod pcurve_mobius;
-pub use pcurve_mobius::{PcurvePullback, PcurvePullbackRefusal, pullback_mobius_pcurve};
+pub use pcurve_mobius::{
+    PcurveChartCertificate, PcurvePullback, PcurvePullbackRefusal, certify_pcurve_chart_domain,
+    pullback_mobius_pcurve,
+};
 mod proof;
 mod trimmed_mobius;
 pub use trimmed_mobius::{

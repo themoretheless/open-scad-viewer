@@ -1,5 +1,5 @@
 //! Pull back retained UV curves under independent Möbius chart clocks.
-use super::mobius::validate_clock;
+use super::{chart_nonnegative::nonnegative, mobius::validate_clock};
 use crate::editing::{
     exact_derivative::{self as exact, Refusal, extraction, proof},
     rational_edit,
@@ -7,7 +7,7 @@ use crate::editing::{
 };
 use crate::{Result, check, core::bounded_rational::Work, curve::Curve};
 use num_rational::BigRational as Q;
-use num_traits::{One, Signed};
+use num_traits::One;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PcurvePullbackRefusal {
@@ -43,17 +43,7 @@ pub fn pullback_mobius_pcurve(
     lambda: [f64; 2],
     max_work: u64,
 ) -> Result<PcurvePullback> {
-    source.validate()?;
-    check(
-        source.control_points[0].len() == 2,
-        "A retained pcurve needs exactly two coordinates",
-    )?;
-    check(
-        domain
-            .iter()
-            .all(|[a, b]| a.is_finite() && b.is_finite() && a < b),
-        "Pcurve pullback needs two finite nonempty UV intervals",
-    )?;
+    validate_chart(source, domain)?;
     validate_clock(&lambda, max_work)?;
     let mut work = Work {
         used: 0,
@@ -70,6 +60,77 @@ pub fn pullback_mobius_pcurve(
     })
 }
 
+#[derive(Clone, Debug)]
+pub struct PcurveChartCertificate {
+    /// True for containment, false if a span leaves the closed rectangle.
+    /// Absent on arithmetic refusal.
+    pub inside: Option<bool>,
+    pub work_used: u64,
+    pub refusal: Option<Refusal>,
+}
+
+/// Decide whether every one-sided span of a rational UV curve lies entirely
+/// in a closed rectangular chart, including exact contacts at even roots.
+/// The result is independent of whether a transferred curve can be stored.
+pub fn certify_pcurve_chart_domain(
+    source: &Curve,
+    domain: [[f64; 2]; 2],
+    max_work: u64,
+) -> Result<PcurveChartCertificate> {
+    validate_chart(source, domain)?;
+    validate_clock(&[], max_work)?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let proof = certify_chart(source, domain, &mut work);
+    let (inside, refusal) = match proof {
+        Ok(inside) => (Some(inside), None),
+        Err(reason) => (None, Some(reason)),
+    };
+    Ok(PcurveChartCertificate {
+        inside,
+        work_used: work.used,
+        refusal,
+    })
+}
+
+fn validate_chart(source: &Curve, domain: [[f64; 2]; 2]) -> Result<()> {
+    source.validate()?;
+    check(
+        source.control_points[0].len() == 2,
+        "A retained pcurve needs exactly two coordinates",
+    )?;
+    check(
+        domain
+            .iter()
+            .all(|[a, b]| a.is_finite() && b.is_finite() && a < b),
+        "A pcurve chart needs two finite nonempty UV intervals",
+    )?;
+    Ok(())
+}
+
+fn active_spans(source: &Curve) -> impl Iterator<Item = (usize, [f64; 2])> + '_ {
+    (source.degree..source.control_points.len()).filter_map(|span| {
+        let [a, b] = [source.knots[span], source.knots[span + 1]];
+        (a < b).then_some((span, [a, b]))
+    })
+}
+
+fn certify_chart(source: &Curve, domain: [[f64; 2]; 2], work: &mut Work) -> exact::PResult<bool> {
+    let a = ChartInterval::new(domain[0], work)?;
+    let b = ChartInterval::new(domain[1], work)?;
+    for (span, interval) in active_spans(source) {
+        let h = original_span(source, span, interval, work)?;
+        if a.contained(&h[0], &h[2], source.degree, work)?.is_none()
+            || b.contained(&h[1], &h[2], source.degree, work)?.is_none()
+        {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
 fn pieces(
     source: &Curve,
     domain: [[f64; 2]; 2],
@@ -81,11 +142,7 @@ fn pieces(
         inverse_axis(domain[1], lambda[1], work)?,
     ];
     let mut pieces = Vec::new();
-    for span in source.degree..source.control_points.len() {
-        let [a, b] = [source.knots[span], source.knots[span + 1]];
-        if a == b {
-            continue;
-        }
+    for (span, [a, b]) in active_spans(source) {
         let h = original_span(source, span, [a, b], work)?;
         let u = remap_component(&h[0], &h[2], &axes[0], source.degree, work)?;
         let v = remap_component(&h[1], &h[2], &axes[1], source.degree, work)?;
@@ -94,25 +151,52 @@ fn pieces(
     Ok(pieces)
 }
 
-struct InverseAxis {
+struct ChartInterval {
     origin: Q,
     width: Q,
+}
+
+impl ChartInterval {
+    fn new([a, b]: [f64; 2], work: &mut Work) -> exact::PResult<Self> {
+        let origin = work.lift(a)?;
+        let end = work.lift(b)?;
+        let width = work.op(&end, &origin, |a, b| a - b)?;
+        Ok(Self { origin, width })
+    }
+
+    fn contained(
+        &self,
+        coordinate: &Poly,
+        weight: &Poly,
+        degree: usize,
+        work: &mut Work,
+    ) -> exact::PResult<Option<[Poly; 2]>> {
+        let shifted = exact::add(coordinate, &scale(weight, &self.origin, work)?, true, work)?;
+        let extent = scale(weight, &self.width, work)?;
+        let remaining = exact::add(&extent, &shifted, true, work)?;
+        if nonnegative(&shifted, degree, work)? && nonnegative(&remaining, degree, work)? {
+            Ok(Some([shifted, extent]))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+struct InverseAxis {
+    interval: ChartInterval,
     inverse_minus_one: Q,
     scaled_inverse: Q,
 }
 
-fn inverse_axis([a, b]: [f64; 2], lambda: f64, work: &mut Work) -> exact::PResult<InverseAxis> {
-    let origin = work.lift(a)?;
-    let end = work.lift(b)?;
-    let width = work.op(&end, &origin, |a, b| a - b)?;
+fn inverse_axis(domain: [f64; 2], lambda: f64, work: &mut Work) -> exact::PResult<InverseAxis> {
+    let interval = ChartInterval::new(domain, work)?;
     let lambda = work.lift(lambda)?;
     let one = Q::one();
     let inverse = work.op(&one, &lambda, |a, b| a / b)?;
     let inverse_minus_one = work.op(&inverse, &one, |a, b| a - b)?;
-    let scaled_inverse = work.op(&width, &inverse, |a, b| a * b)?;
+    let scaled_inverse = work.op(&interval.width, &inverse, |a, b| a * b)?;
     Ok(InverseAxis {
-        origin,
-        width,
+        interval,
         inverse_minus_one,
         scaled_inverse,
     })
@@ -137,18 +221,10 @@ fn remap_component(
     degree: usize,
     work: &mut Work,
 ) -> std::result::Result<[Poly; 2], PcurvePullbackRefusal> {
-    let shifted = exact::add(coordinate, &scale(weight, &axis.origin, work)?, true, work)?;
-    let extent = scale(weight, &axis.width, work)?;
-    let remaining = exact::add(&extent, &shifted, true, work)?;
-    for bound in [&shifted, &remaining] {
-        if poly::bernstein(bound, degree, work)
-            .map_err(Refusal::from)?
-            .iter()
-            .any(Signed::is_negative)
-        {
-            return Err(PcurvePullbackRefusal::UnprovedChartDomain);
-        }
-    }
+    let [shifted, extent] = axis
+        .interval
+        .contained(coordinate, weight, degree, work)?
+        .ok_or(PcurvePullbackRefusal::UnprovedChartDomain)?;
     // D = width W + (1/lambda - 1)(H - a W). The chart proof gives
     // D > 0 because it is a positive linear combination of the two sides.
     let denominator = exact::add(
@@ -158,7 +234,7 @@ fn remap_component(
         work,
     )?;
     let numerator = exact::add(
-        &scale(&denominator, &axis.origin, work)?,
+        &scale(&denominator, &axis.interval.origin, work)?,
         &scale(&shifted, &axis.scaled_inverse, work)?,
         false,
         work,
