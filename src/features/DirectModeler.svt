@@ -432,7 +432,7 @@ type DragWorkerJob=Extract<MainSolidJob,{kind:'sceneEdit'|'pointEdit'}>&{documen
 const pointEditActive=ref(false)
 let numericPointEdit=false
 let gizmoQueued:{job:DragWorkerJob;revision:number}|null=null
-let manipulatorDrag:{svg:SVGSVGElement;pointer:number;x:number;y:number;kind:'move'|'rotate'|'scale'|'push'|'split';axis:'x'|'y'|'z';direction:Point2;before:DirectDocument;initial:number;startPoint:Point2;center:Point2;delta?:Vec3}|null=null
+let manipulatorDrag:{svg:SVGSVGElement;pointer:number;x:number;y:number;kind:'move'|'rotate'|'scale'|'push'|'split';axis:'x'|'y'|'z';vector:Vec3;direction:Point2;before:DirectDocument;initial:number;startPoint:Point2;center:Point2;delta?:Vec3}|null=null
 
 let curveDrag:{id:string;kind:'center'|'radius'|'start'|'end';before:DirectDocument;pointer:number;inverse:DOMMatrix|null}|null=null
 let cvDrag:{id:string;u:number;v:number;before:DirectDocument;point:number[];start:Point2;pointer:number;svg:SVGSVGElement;inverse:DOMMatrix|null}|null=null
@@ -1003,9 +1003,11 @@ const gizmoLength=computed(()=>{
  const view=views.value['3d'],extent=gizmoBounds.value?.extent??0
  return Math.min(view/3,Math.max(view/40,extent*.7))
 })
+/** Gizmo arm direction: the axes of the active coordinate system (World, CPlane or Local). */
+function gizmoAxisVector(axis:'x'|'y'|'z'):Vec3{return [...transformFrame.value[axis]] as Vec3}
 const gizmoAxes=computed(()=>gizmoCenter.value?(['x','y','z'] as const).map((axis,i)=>{
- const n=axisVector(axis),c=gizmoCenter.value!,length=gizmoLength.value
- const u=unit3(cross3(n,n[0]?[0,1,0]:[1,0,0])),v=cross3(n,u)
+ const n=gizmoAxisVector(axis),c=gizmoCenter.value!,length=gizmoLength.value
+ const u=unit3(cross3(n,Math.abs(n[0])>.9?[0,1,0]:[1,0,0])),v=cross3(n,u)
  return {axis,color:['#ff7777','#77df9d','#77baff'][i],base:project(c,'3d'),tip:project(c.map((x,k)=>x+n[k]*length),'3d'),ring:Array.from({length:65},(_,i)=>{const a=i*Math.PI/32;return project(c.map((x,k)=>x+length*.7*(u[k]*Math.cos(a)+v[k]*Math.sin(a))),'3d').join(',')}).join(' ')}
 }):[])
 function startGizmo(e:PointerEvent,kind:'move'|'rotate'|'scale'|'push'|'split',axis:'x'|'y'|'z') {
@@ -1015,10 +1017,10 @@ function startGizmo(e:PointerEvent,kind:'move'|'rotate'|'scale'|'push'|'split',a
  if(kind==='rotate'||kind==='scale')previewingTransform.value=true
  e.preventDefault();e.stopPropagation();const svg=canvasOf(e),center=kind==='push'?selectedFace.value?.center:gizmoCenter.value;if(!center)return
  svg.focus()
- const n=kind==='push'?selectedFace.value!.normal:axisVector(axis),a=project(center,'3d'),b=project(center.map((x,i)=>x+n[i]),'3d')
+ const n=kind==='push'?selectedFace.value!.normal:kind==='split'?axisVector(axis):gizmoAxisVector(axis),a=project(center,'3d'),b=project(center.map((x,i)=>x+n[i]),'3d')
  if(kind==='push'){advanced.value.distance=0;beginAdvanced('push')}
  dragConstraint.value=kind==='push'?label('Нормаль грани','Face normal'):axis.toUpperCase()
- manipulatorDrag={svg,pointer:e.pointerId,x:e.clientX,y:e.clientY,kind,axis,direction:[b[0]-a[0],b[1]-a[1]],before:committedView(),initial:advanced.value.distance,startPoint:position(e),center:project(center,'3d')};svg.setPointerCapture(e.pointerId)
+ manipulatorDrag={svg,pointer:e.pointerId,x:e.clientX,y:e.clientY,kind,axis,vector:[...n] as Vec3,direction:[b[0]-a[0],b[1]-a[1]],before:committedView(),initial:advanced.value.distance,startPoint:position(e),center:project(center,'3d')};svg.setPointerCapture(e.pointerId)
 }
 function startCurve(e:PointerEvent,kind:'center'|'radius'|'start'|'end'){
  if(!requireSketchSnaps(e))return
@@ -1104,6 +1106,26 @@ function downAt(e: PointerEvent, pane: Pane) {
     } catch { /* canvas not ready: fall through to the plain handler */ }
   }
   down(e, pane)
+}
+
+/**
+ * Pointer down on an SVG body polygon (no GPU layer). The same ray pick as the GPU view runs
+ * here so Alt+click and a quick repeated click cycle overlapping objects by depth; the
+ * polygon under the pointer is the fallback when the ray finds nothing.
+ */
+function downOnPolygon(e: PointerEvent, id: string, triangle: number) {
+  if (e.button === 0) {
+    try {
+      // A plain click keeps the polygon the user sees; only Alt or a repeat click cycles.
+      const cycling = e.altKey || e.timeStamp - lastPickDown < 500
+      const hit = pickAt(e, position(e))
+      if (cycling && hit && hit.id !== id) {
+        if ((document.value.surfaces ?? []).some(s => s.id === hit.id)) { pickObject(hit.id, '3d', e.shiftKey); return }
+        down(e, '3d', hit.id, null, hit.triangle); return
+      }
+    } catch { /* fall back to the polygon */ }
+  }
+  down(e, '3d', id, null, triangle)
 }
 
 let lastHoverPick = 0
@@ -1292,8 +1314,8 @@ function requestDragJob(job:DragWorkerJob){
  gizmoQueued={job,revision:++gizmoRevision}
  if(!gizmoRunning)void drainGizmoTransforms()
 }
-function requestGizmoTransform(before:DirectDocument,axis:'x'|'y'|'z',rotation:number,factor:number){
- requestDragJob({kind:'sceneEdit',document:before,options:{operation:'transform',id:selection.value,ids:[...selectedIds.value],createdId:'',x:0,y:0,z:0,axis,angle:rotation,scale:factor}})
+function requestGizmoTransform(before:DirectDocument,axis:Vec3,rotation:number,factor:number){
+ requestDragJob({kind:'sceneEdit',document:before,options:{operation:'transform',id:selection.value,ids:[...selectedIds.value],createdId:'',x:0,y:0,z:0,axis:[...axis] as Vec3,angle:rotation,scale:factor}})
 }
 async function drainGizmoTransforms(){
  const epoch=gizmoEpoch;gizmoRunning=true
@@ -1345,12 +1367,12 @@ function cancelDirectTransform(){
 /** Transform requests name their base by key or send it as text; the answer is a delta whose
  * unchanged objects are `before`'s own, which keeps the commit policy and history incremental. */
 const residentTransformBase=(before:DirectDocument)=>({residentDocument:{text:()=>history.canonicalText(before)??(before.bodies.some(body=>body.instance)?serializeDirectDocument(before):undefined)}})
-async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false,detach=false,metadata?:{operation:'group-create'|'group-move';group:string}){
+async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false,detach=false,metadata?:{operation:'group-create'|'group-move';group:string},axis:Vec3=[0,0,1]){
  cancelDirectTransform()
  const generation=directTransformGeneration
  directTransformPending.value=true;directTransformOperation.value=metadata?.operation??(detach?'instance-detach':'transform');error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}},residentTransformBase(before))
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:rotation&&(axis[0]||axis[1]||axis[2]!==1)?axis:'z',angle:rotation,scale:factor}},residentTransformBase(before))
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
   result.blenderProjectId ??= snapDocument.value.blenderProjectId
@@ -1377,10 +1399,11 @@ function cycleCoordinateSystem() { coordinateSystem.value = nextCoordinateSystem
 function transform(){
  if(directTransformPending.value||transformInputInvalid.value)return
  const frame=transformFrame.value
- // The kernel rotates about world Z only; refuse a rotation the frame would tilt.
- if(angle.value!==0&&Math.abs(frame.z[2])<1-1e-9){error.value=label('Поворот в этой системе координат пока поддерживается только вокруг мировой оси Z.','Rotation in this coordinate system is only supported about the world Z axis for now.');return}
+ // The angle turns about the active frame's Z axis, which may be tilted (CPlane/Local).
+ // A lone sketch rotates in its own plane only while the frame Z stays parallel to world Z.
+ const localSketch=!!selectedSketch.value&&selectedIds.value.length===1&&Math.abs(frame.z[2])>1-1e-9
  cancelCommand()
- void commitDirectTransform(snapDocument.value,selectedIds.value,frameDeltaToWorld(frame,[dx.value,dy.value,dz.value]),frame.z[2]<0?-angle.value:angle.value,scale.value,!!selectedSketch.value&&selectedIds.value.length===1,true)
+ void commitDirectTransform(snapDocument.value,selectedIds.value,frameDeltaToWorld(frame,[dx.value,dy.value,dz.value]),localSketch&&frame.z[2]<0?-angle.value:angle.value,scale.value,localSketch,true,false,undefined,[...frame.z] as Vec3)
 }
 function selectionVertices(): number[] {
  const out:number[]=[]
@@ -1966,13 +1989,15 @@ function move(e: PointerEvent) {
     if(!x&&!y&&!gizmoBase)return
     let distance=l>.001?(x*g.direction[0]+y*g.direction[1])/l:-y
     if(g.kind!=='move')distance=snapDistance(distance,e)
-    if(g.kind==='move'&&gizmoCenter.value){const anchor=gizmoCenter.value,axis=['x','y','z'].indexOf(g.axis),target=anchor.map((v,i)=>v+(i===axis?distance:0)) as Vec3;distance=snapped3(target,e,g.before,selectedIds.value,anchor,axis)[axis]-anchor[axis]}
+    // Snapping runs along world axes; a tilted CPlane/Local arm moves freely along its own direction.
+    const worldAxis=g.vector.findIndex(v=>Math.abs(v)>1-1e-9)
+    if(g.kind==='move'&&gizmoCenter.value&&worldAxis>=0){const anchor=gizmoCenter.value,sign=Math.sign(g.vector[worldAxis]),target=anchor.map((v,i)=>v+(i===worldAxis?distance*sign:0)) as Vec3;distance=(snapped3(target,e,g.before,selectedIds.value,anchor,worldAxis)[worldAxis]-anchor[worldAxis])*sign}
     if(g.kind==='push'||g.kind==='split'){advanced.value.distance=Math.round((distance+(g.kind==='split'?g.initial:0))*100)/100;return}
-    const p=position(e),rotation=(Math.atan2(p[1]-g.center[1],p[0]-g.center[0])-Math.atan2(g.startPoint[1]-g.center[1],g.startPoint[0]-g.center[0]))*180/Math.PI*(projectDirectPoint(axisVector(g.axis),camera.value)[2]>=0?-1:1)
+    const p=position(e),rotation=(Math.atan2(p[1]-g.center[1],p[0]-g.center[0])-Math.atan2(g.startPoint[1]-g.center[1],g.startPoint[0]-g.center[0]))*180/Math.PI*(projectDirectPoint(g.vector,camera.value)[2]>=0?-1:1)
     if(g.kind==='move'){
       // Pure translation along an axis previews as a constant screen offset, so it skips
       // both the kernel round trip and the reactive re-render of every polygon.
-      const worldDelta=axisVector(g.axis).map(v=>v*distance) as Vec3
+      const worldDelta=g.vector.map(v=>v*distance) as Vec3
       g.delta=worldDelta
       const previewIds=translationPreviewIds(selectedIds.value)
       if(!hasDragNodes())setDragNodes(collectDragNodes(g.svg,previewIds))
@@ -1981,7 +2006,7 @@ function move(e: PointerEvent) {
       applyDragPreviewTransform(offset,previewIds,worldDelta as [number,number,number])
       return
     }
-    requestGizmoTransform(g.before,g.axis,g.kind==='rotate'?rotation:0,g.kind==='scale'?Math.max(.01,1+distance/(views.value['3d']/7)):1);return
+    requestGizmoTransform(g.before,g.vector,g.kind==='rotate'?rotation:0,g.kind==='scale'?Math.max(.01,1+distance/(views.value['3d']/7)):1);return
   }
   if (heightDrag && heightDrag.pointer === e.pointerId) {
     const n=cross3((selectedSketch.value?.plane??xyPlane()).u,(selectedSketch.value?.plane??xyPlane()).v), projected=projectDirectPoint(n,camera.value)
@@ -2588,7 +2613,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </g>
               <g v-else>
                 <!-- Stateless SVG slots follow painter order; update geometry and hit identity without moving DOM nodes. -->
-                <CpuOrbitCanvas :active="cpuOrbitActive" :triangles="cpuOrbitTriangles" :size="views['3d']" :left="centers['3d'][0]-views['3d']/2" :top="centers['3d'][1]-views['3d']/2" @ready="cpuOrbitReady=$event" /><template v-if="!gpuActive && !(cpuOrbitActive && cpuOrbitReady)"><template v-for="(p, slot) in polygons" :key="slot"><polygon v-if="p.preview" :data-preview-body="p.id" :points="p.points" :fill="p.preview===2?(extrusionMode==='difference'?'#ff647c':'#75e4b8'):p.id==='preview-split'?'#ffc977':'#77eac5'" :fill-opacity="p.preview===2?.28:.45" stroke="none" pointer-events="none"/><polygon v-else-if="p.surface" v-show="!advancedPreview.document || !advancedSurfaceIds.includes(p.id)" :data-surface="p.id" :points="p.points" :fill="selectedIds.includes(p.id)?'#8061bd':'#315f72'" fill-opacity=".72" stroke="none" :pointer-events="objectSelectable(p.id)?undefined:'none'" @pointerdown.stop="pickObject(p.id,'3d')"/><polygon v-else :opacity="p.material?.opacity??1" :data-body="p.id" :data-triangle="p.triangle" v-show="!advancedPreview.document || !advancedBodyIds.has(p.id)" :points="p.points" :style="{color:polygonColor(p)}" fill="currentColor" :stroke="(p.material?.opacity??1)<1?'none':'currentColor'" :pointer-events="objectSelectable(p.id)?undefined:'none'" stroke-width="1" stroke-linejoin="round" @pointerenter="hovered = p.id" @pointerleave="hovered = ''" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, p.id, null, p.triangle)" /></template></template>
+                <CpuOrbitCanvas :active="cpuOrbitActive" :triangles="cpuOrbitTriangles" :size="views['3d']" :left="centers['3d'][0]-views['3d']/2" :top="centers['3d'][1]-views['3d']/2" @ready="cpuOrbitReady=$event" /><template v-if="!gpuActive && !(cpuOrbitActive && cpuOrbitReady)"><template v-for="(p, slot) in polygons" :key="slot"><polygon v-if="p.preview" :data-preview-body="p.id" :points="p.points" :fill="p.preview===2?(extrusionMode==='difference'?'#ff647c':'#75e4b8'):p.id==='preview-split'?'#ffc977':'#77eac5'" :fill-opacity="p.preview===2?.28:.45" stroke="none" pointer-events="none"/><polygon v-else-if="p.surface" v-show="!advancedPreview.document || !advancedSurfaceIds.includes(p.id)" :data-surface="p.id" :points="p.points" :fill="selectedIds.includes(p.id)?'#8061bd':'#315f72'" fill-opacity=".72" stroke="none" :pointer-events="objectSelectable(p.id)?undefined:'none'" @pointerdown.stop="pickObject(p.id,'3d')"/><polygon v-else :opacity="p.material?.opacity??1" :data-body="p.id" :data-triangle="p.triangle" v-show="!advancedPreview.document || !advancedBodyIds.has(p.id)" :points="p.points" :style="{color:polygonColor(p)}" fill="currentColor" :stroke="(p.material?.opacity??1)<1?'none':'currentColor'" :pointer-events="objectSelectable(p.id)?undefined:'none'" stroke-width="1" stroke-linejoin="round" @pointerenter="hovered = p.id" @pointerleave="hovered = ''" vector-effect="non-scaling-stroke" @pointerdown.stop="downOnPolygon($event, p.id, p.triangle)" /></template></template>
                 <polygon v-show="!advancedPreview.document || !advancedSurfaceIds.includes(p.id)" pointer-events="none" v-for="p in gpuActive?nurbsSurfacePolygons:[]" :data-surface="p.id" :key="'surface-'+p.key" :points="p.points" fill="transparent" stroke="none" />
                 <polyline :pointer-events="objectSelectable(curve.id)?undefined:'none'" v-for="curve in nurbsCurvePaths" v-show="!(advancedOp==='nurbs-curve-match' && advancedPreview.document && curve.id===surfaceInputs[1])" :key="'curve-'+curve.id" :data-diagnostic="curve.id===runoutProblemCurve?'runout-target':curve.id===patchBudgetCurve?'patch-budget':undefined" :points="curve.points" fill="none" :stroke="curve.id===patchBudgetCurve||curve.id===runoutProblemCurve?'#ff647c':selectedIds.includes(curve.id)?'#ffc977':'#77eac5'" stroke-width="3" vector-effect="non-scaling-stroke" @pointerdown.stop="pickNurbsCurve($event,curve.id)" />
                 <g v-if="selectedNurbs" class="nurbs-cage">

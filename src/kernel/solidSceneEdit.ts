@@ -7,7 +7,7 @@ import {createSolidInstance,transformSolidInstance,resolveSolidInstances,detachS
 import {createRuledSketchLoft} from './geometry/brep'
 import {stringifyMeshJson} from '../exchange/meshJson'
 export type SolidSceneEditOperation='duplicate'|'sketch-transform'|'transform'|'instance-create'|'instance-transform'|'instance-place'|'instance-detach'|'group-create'|'group-move'|'loft'
-export interface SolidSceneEditOptions {operation:SolidSceneEditOperation;id:string;ids:string[];createdId:string;x:number;y:number;z:number;axis:'x'|'y'|'z';angle:number;scale:number;group?:string;copyIds?:string[]}
+export interface SolidSceneEditOptions {operation:SolidSceneEditOperation;id:string;ids:string[];createdId:string;x:number;y:number;z:number;axis:'x'|'y'|'z'|[number,number,number];angle:number;scale:number;group?:string;copyIds?:string[]}
 export function isSolidSceneEdit(operation:unknown):operation is SolidSceneEditOperation{return ['duplicate','sketch-transform','transform','instance-create','instance-transform','instance-place','instance-detach','group-create','group-move','loft'].includes(String(operation))}
 export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOptions,instanceCache?:SolidInstanceBatchCache):DirectDocument {
  if(p.operation==='duplicate'){
@@ -20,7 +20,9 @@ export function applySolidSceneEdit(document:DirectDocument,p:SolidSceneEditOpti
   return resolveSolidInstances(next,instanceCache)
  }
  if(p.operation==='instance-detach')return detachSolidInstances(document,p.ids,instanceCache)
- const axis=p.axis==='x'?[1,0,0] as const:p.axis==='y'?[0,1,0] as const:[0,0,1] as const
+ // A frame axis (CPlane/Local) arrives as a vector; world axes keep their letter.
+ const axis=Array.isArray(p.axis)?p.axis:p.axis==='x'?[1,0,0] as const:p.axis==='y'?[0,1,0] as const:[0,0,1] as const
+ if(Array.isArray(p.axis)&&(p.axis.length!==3||!p.axis.every(Number.isFinite)||Math.hypot(...p.axis)<1e-9))throw Error('Invalid transform axis.')
  if(p.operation==='transform')return resolveSolidInstances(transformSelection(document,p.ids,[p.x,p.y,p.z],[...axis],p.angle,p.scale),instanceCache)
  if(p.operation==='instance-transform')return transformSolidInstance(document,p.id,[p.x,p.y,p.z],[...axis],p.angle,p.scale,instanceCache)
  if(p.operation==='instance-create')return createSolidInstance(document,p.id,p.createdId,[[1,0,0,p.x],[0,1,0,p.y],[0,0,1,p.z],[0,0,0,1]],instanceCache)

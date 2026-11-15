@@ -5250,6 +5250,19 @@ it('lists overlapping objects on right-click with names and selection cues, and 
  expect(ui.button(box.name).props['aria-pressed']).toBe(true)
  expect(menu()).toBeUndefined()
 })
+it('cycles overlapping objects by depth with Alt+click in the SVG view without GPU',async()=>{
+ const ui=await mount();await ui.click('Box');const box=ui.doc().bodies.at(-1)!
+ await ui.click('Cube');const cube=ui.doc().bodies.find(b=>b.name==='Cube')!
+ const selected=()=>[box,cube].filter(b=>ui.button(b.name).props['aria-pressed']===true).map(b=>b.id)
+ const svg=ui.svg(),polygon=()=>ui.all().find(n=>n.tag==='polygon'&&n.props['data-body']===cube.id)!
+ svg.props.onPointerup?.(ui.event(svg,0,0))
+ const seen=new Set<string>()
+ for(let i=0;i<2;i++){
+  polygon().props.onPointerdown({...ui.event(polygon(),0,0),altKey:true});svg.props.onPointerup({...ui.event(svg,0,0),altKey:true});await flushClearance()
+  expect(selected()).toHaveLength(1);seen.add(selected()[0])
+ }
+ expect([...seen].sort()).toEqual([box.id,cube.id].sort())
+})
 it('saves a pivot in the document and switches coordinate systems from the panel and keyboard',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Properties')
  await ui.click('Pivot: origin')
