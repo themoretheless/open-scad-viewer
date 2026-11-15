@@ -127,47 +127,131 @@ fn metadata_name(args: &str) -> Option<&str> {
     Some(&args[start..end])
 }
 
-pub(crate) fn restore_v2_identity(text: &str, model: &mut Model) -> Result<StepIdentityReport> {
-    let entities = parse_entities(text);
+/// Parses one `OSCAD_TOPO/2|kind|index|TopoId` name; `None` when the entity
+/// carries no identity metadata.
+fn parse_identity_record(ty: &str, args: &str) -> Result<Option<(TopoKind, usize, TopoId)>> {
+    let Some(payload) = metadata_name(args).and_then(|n| n.strip_prefix("OSCAD_TOPO/2|")) else {
+        return Ok(None);
+    };
+    let mut parts = payload.split('|');
+    let kind = TopoKind::parse(parts.next().unwrap_or(""))
+        .ok_or_else(|| refuse("STEP identity metadata has unknown topology kind"))?;
+    let index = parts
+        .next()
+        .ok_or_else(|| refuse("STEP identity metadata is missing index"))?
+        .parse::<usize>()
+        .map_err(|_| refuse("STEP identity metadata index is invalid"))?;
+    let id = TopoId::parse(
+        parts
+            .next()
+            .ok_or_else(|| refuse("STEP identity metadata is missing TopoId"))?,
+    )
+    .map_err(refuse)?;
+    if parts.next().is_some() || id.kind() != kind {
+        return Err(refuse("STEP identity metadata kind mismatch"));
+    }
+    let expected_ty = match kind {
+        TopoKind::Vertex => ty == "VERTEX_POINT",
+        TopoKind::Edge => ty == "EDGE_CURVE",
+        TopoKind::Loop => ty == "EDGE_LOOP",
+        TopoKind::Face => ty == "ADVANCED_FACE",
+        TopoKind::Shell => ty == "CLOSED_SHELL",
+        TopoKind::Body => ty == "MANIFOLD_SOLID_BREP" || ty == "BREP_WITH_VOIDS",
+        TopoKind::ControlPoint => false,
+    };
+    if !expected_ty {
+        return Err(refuse("Duplicate or misplaced STEP identity metadata"));
+    }
+    Ok(Some((kind, index, id)))
+}
+
+fn collect_identity_metadata(
+    entities: &BTreeMap<usize, (String, String)>,
+) -> Result<BTreeMap<(TopoKind, usize), TopoId>> {
     let mut found = BTreeMap::<(TopoKind, usize), TopoId>::new();
     let mut seen_ids = BTreeSet::new();
     for (ty, args) in entities.values() {
-        let Some(name) = metadata_name(args) else {
+        let Some((kind, index, id)) = parse_identity_record(ty, args)? else {
             continue;
         };
-        let Some(payload) = name.strip_prefix("OSCAD_TOPO/2|") else {
-            continue;
-        };
-        let mut parts = payload.split('|');
-        let kind = TopoKind::parse(parts.next().unwrap_or(""))
-            .ok_or_else(|| refuse("STEP identity metadata has unknown topology kind"))?;
-        let index = parts
-            .next()
-            .ok_or_else(|| refuse("STEP identity metadata is missing index"))?
-            .parse::<usize>()
-            .map_err(|_| refuse("STEP identity metadata index is invalid"))?;
-        let id = TopoId::parse(
-            parts
-                .next()
-                .ok_or_else(|| refuse("STEP identity metadata is missing TopoId"))?,
-        )
-        .map_err(refuse)?;
-        if parts.next().is_some() || id.kind() != kind {
-            return Err(refuse("STEP identity metadata kind mismatch"));
-        }
-        let expected_ty = match kind {
-            TopoKind::Vertex => ty == "VERTEX_POINT",
-            TopoKind::Edge => ty == "EDGE_CURVE",
-            TopoKind::Loop => ty == "EDGE_LOOP",
-            TopoKind::Face => ty == "ADVANCED_FACE",
-            TopoKind::Shell => ty == "CLOSED_SHELL",
-            TopoKind::Body => ty == "MANIFOLD_SOLID_BREP" || ty == "BREP_WITH_VOIDS",
-            TopoKind::ControlPoint => false,
-        };
-        if !expected_ty || found.insert((kind, index), id).is_some() || !seen_ids.insert(id) {
+        if found.insert((kind, index), id).is_some() || !seen_ids.insert(id) {
             return Err(refuse("Duplicate or misplaced STEP identity metadata"));
         }
     }
+    Ok(found)
+}
+
+/// Replaces every topology id of the model with its recorded identity and
+/// returns the old-to-new map.
+fn assign_identities(
+    found: &BTreeMap<(TopoKind, usize), TopoId>,
+    model: &mut Model,
+) -> Result<BTreeMap<TopoId, TopoId>> {
+    let mut remap = BTreeMap::<TopoId, TopoId>::new();
+    let topo = &mut model.1;
+    for (kind, target) in [
+        (TopoKind::Vertex, &mut topo.vertices),
+        (TopoKind::Edge, &mut topo.edges),
+        (TopoKind::Loop, &mut topo.loops),
+        (TopoKind::Face, &mut topo.faces),
+        (TopoKind::Shell, &mut topo.shells),
+        (TopoKind::Body, &mut topo.bodies),
+    ] {
+        for (index, value) in target.iter_mut().enumerate() {
+            let replacement = *found
+                .get(&(kind, index))
+                .ok_or_else(|| refuse("STEP identity metadata is not topology-bijective"))?;
+            remap.insert(*value, replacement);
+            *value = replacement;
+        }
+    }
+    Ok(remap)
+}
+
+/// Rewrites the change set and lineage through `remap`, then re-registers the
+/// current topology nodes.
+fn remap_identity_lineage(model: &mut Model, remap: &BTreeMap<TopoId, TopoId>) {
+    let topo = &mut model.1;
+    topo.change_set.nodes = topo
+        .change_set
+        .nodes
+        .iter()
+        .map(|(id, kind)| (remap.get(id).copied().unwrap_or(*id), *kind))
+        .collect();
+    let relations = topo
+        .change_set
+        .changes
+        .iter_mut()
+        .map(|c| (&mut c.parents, &mut c.children))
+        .chain(
+            topo.lineage
+                .iter_mut()
+                .map(|r| (&mut r.parents, &mut r.children)),
+        );
+    for (parents, children) in relations {
+        for id in parents.iter_mut().chain(children.iter_mut()) {
+            if let Some(replacement) = remap.get(id) {
+                *id = *replacement;
+            }
+        }
+    }
+    for (kind, ids) in [
+        (TopoKind::Vertex, topo.vertices.as_slice()),
+        (TopoKind::Edge, topo.edges.as_slice()),
+        (TopoKind::Loop, topo.loops.as_slice()),
+        (TopoKind::Face, topo.faces.as_slice()),
+        (TopoKind::Shell, topo.shells.as_slice()),
+        (TopoKind::Body, topo.bodies.as_slice()),
+    ] {
+        topo.change_set
+            .nodes
+            .extend(ids.iter().copied().map(|id| (id, kind)));
+    }
+}
+
+pub(crate) fn restore_v2_identity(text: &str, model: &mut Model) -> Result<StepIdentityReport> {
+    let entities = parse_entities(text);
+    let found = collect_identity_metadata(&entities)?;
     if found.is_empty() {
         let count = topology_count(model);
         return Ok(StepIdentityReport {
@@ -182,61 +266,8 @@ pub(crate) fn restore_v2_identity(text: &str, model: &mut Model) -> Result<StepI
     if found.len() != expected {
         return Err(refuse("Partial STEP identity metadata is not admitted"));
     }
-    let mut remap = BTreeMap::<TopoId, TopoId>::new();
-    let assign = |kind: TopoKind,
-                  target: &mut [TopoId],
-                  remap: &mut BTreeMap<TopoId, TopoId>|
-     -> Result<()> {
-        for (index, value) in target.iter_mut().enumerate() {
-            let replacement = *found
-                .get(&(kind, index))
-                .ok_or_else(|| refuse("STEP identity metadata is not topology-bijective"))?;
-            remap.insert(*value, replacement);
-            *value = replacement;
-        }
-        Ok(())
-    };
-    assign(TopoKind::Vertex, &mut model.1.vertices, &mut remap)?;
-    assign(TopoKind::Edge, &mut model.1.edges, &mut remap)?;
-    assign(TopoKind::Loop, &mut model.1.loops, &mut remap)?;
-    assign(TopoKind::Face, &mut model.1.faces, &mut remap)?;
-    assign(TopoKind::Shell, &mut model.1.shells, &mut remap)?;
-    assign(TopoKind::Body, &mut model.1.bodies, &mut remap)?;
-    model.1.change_set.nodes = model
-        .1
-        .change_set
-        .nodes
-        .iter()
-        .map(|(id, kind)| (remap.get(id).copied().unwrap_or(*id), *kind))
-        .collect();
-    for change in &mut model.1.change_set.changes {
-        for id in change.parents.iter_mut().chain(&mut change.children) {
-            if let Some(replacement) = remap.get(id) {
-                *id = *replacement;
-            }
-        }
-    }
-    for relation in &mut model.1.lineage {
-        for id in relation.parents.iter_mut().chain(&mut relation.children) {
-            if let Some(replacement) = remap.get(id) {
-                *id = *replacement;
-            }
-        }
-    }
-    for (kind, ids) in [
-        (TopoKind::Vertex, model.1.vertices.as_slice()),
-        (TopoKind::Edge, model.1.edges.as_slice()),
-        (TopoKind::Loop, model.1.loops.as_slice()),
-        (TopoKind::Face, model.1.faces.as_slice()),
-        (TopoKind::Shell, model.1.shells.as_slice()),
-        (TopoKind::Body, model.1.bodies.as_slice()),
-    ] {
-        model
-            .1
-            .change_set
-            .nodes
-            .extend(ids.iter().copied().map(|id| (id, kind)));
-    }
+    let remap = assign_identities(&found, model)?;
+    remap_identity_lineage(model, &remap);
     model
         .1
         .change_set
