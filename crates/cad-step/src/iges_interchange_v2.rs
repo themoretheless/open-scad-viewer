@@ -1739,24 +1739,50 @@ impl<'a> Builder<'a> {
     }
 
     fn build(mut self) -> Result<(Model, TopologyMapping)> {
-        if let Some(&de) = self.e.keys().find(|&&de| self.e[&de].directory.ty == 141) {
+        self.reject_boundary_141()?;
+        let vertex_lists = self.collect_vertex_lists()?;
+        let (edge_lists, curve_edges) = self.build_edge_lists(&vertex_lists)?;
+        let loop_map = self.build_edge_loops(&edge_lists)?;
+        let mut face_map = self.build_loop_faces(&loop_map)?;
+        self.build_trimmed_faces(&curve_edges, &mut face_map)?;
+        let shell_map = self.build_shells(&face_map)?;
+        self.build_bodies(&shell_map)?;
+        self.finish()
+    }
+
+    fn reject_boundary_141(&self) -> Result<()> {
+        if let Some((&de, _)) = self.e.iter().find(|(_, e)| e.directory.ty == 141) {
             return Err(trimmed_unsupported(
                 de,
                 "IGES 141 boundary entities are not admitted; use 143 or 142 with both curve representations",
             ));
         }
+        Ok(())
+    }
+
+    fn entities_of_type(&self, ty: usize) -> impl Iterator<Item = (usize, &'a Entity)> + use<'a> {
+        let entities: &'a BTreeMap<usize, Entity> = self.e;
+        entities
+            .iter()
+            .filter(move |(_, e)| e.directory.ty == ty)
+            .map(|(&de, e)| (de, e))
+    }
+
+    fn collect_vertex_lists(&mut self) -> Result<BTreeMap<usize, Vec<usize>>> {
         let mut vertex_lists = BTreeMap::new();
-        for (&de, e) in self.e {
-            if e.directory.ty == 502 {
-                vertex_lists.insert(de, self.vertex_list(de)?);
-            }
+        for (de, _) in self.entities_of_type(502) {
+            vertex_lists.insert(de, self.vertex_list(de)?);
         }
+        Ok(vertex_lists)
+    }
+
+    fn build_edge_lists(
+        &mut self,
+        vertex_lists: &BTreeMap<usize, Vec<usize>>,
+    ) -> Result<(EdgeListIndex, BTreeMap<usize, usize>)> {
         let mut edge_lists = BTreeMap::<(usize, usize), usize>::new();
         let mut curve_edges = BTreeMap::<usize, usize>::new();
-        for (&de, e) in self.e {
-            if e.directory.ty != 504 {
-                continue;
-            }
+        for (de, e) in self.entities_of_type(504) {
             let v = &e.values;
             let n = u(v, 1, "edge count")?;
             if v.len() != 2 + 5 * n {
@@ -1770,13 +1796,9 @@ impl<'a> Builder<'a> {
                 let vi0 = u(v, at + 2, "start vertex index")?;
                 let vl1 = u(v, at + 3, "end vertex list")?;
                 let vi1 = u(v, at + 4, "end vertex index")?;
-                let a = *vertex_lists
-                    .get(&vl0)
-                    .and_then(|x| x.get(vi0.checked_sub(1)?))
+                let a = list_vertex(vertex_lists, vl0, vi0)
                     .ok_or_else(|| refuse("Invalid IGES start vertex index"))?;
-                let b = *vertex_lists
-                    .get(&vl1)
-                    .and_then(|x| x.get(vi1.checked_sub(1)?))
+                let b = list_vertex(vertex_lists, vl1, vi1)
                     .ok_or_else(|| refuse("Invalid IGES end vertex index"))?;
                 let index = self.edges.len();
                 self.edges.push(Edge {
@@ -1789,36 +1811,22 @@ impl<'a> Builder<'a> {
                 curve_edges.insert(curve_de, index);
             }
         }
+        Ok((edge_lists, curve_edges))
+    }
+
+    fn build_edge_loops(
+        &mut self,
+        edge_lists: &BTreeMap<(usize, usize), usize>,
+    ) -> Result<BTreeMap<usize, usize>> {
         let mut loop_map = BTreeMap::new();
-        for (&de, e) in self.e {
-            if e.directory.ty != 508 {
-                continue;
-            }
+        for (de, e) in self.entities_of_type(508) {
             let v = &e.values;
             let n = u(v, 1, "loop member count")?;
             let mut at = 2;
             let mut coedges = Vec::new();
             for _ in 0..n {
-                if u(v, at, "loop member type")? != 0 {
-                    return Err(refuse("Vertex-only IGES loop member is unsupported"));
-                }
-                let el = u(v, at + 1, "loop edge list")?;
-                let ei = u(v, at + 2, "loop edge index")?;
-                let reversed = u(v, at + 3, "loop orientation")? == 0;
-                let pcount = u(v, at + 4, "loop pcurve count")?;
-                if pcount != 1 {
-                    return Err(refuse("Each IGES loop edge requires exactly one pcurve"));
-                }
-                let iso = u(v, at + 5, "loop pcurve isoparametric")?;
-                if iso > 1 {
-                    return Err(refuse("Invalid IGES isoparametric flag"));
-                }
-                let pcurve = self.curve(u(v, at + 6, "loop pcurve")?, 2)?;
-                let edge = *edge_lists
-                    .get(&(el, ei))
-                    .ok_or_else(|| refuse("Invalid IGES edge-list reference"))?;
-                coedges.push(Coedge::new(edge, reversed, pcurve));
-                at += 7;
+                coedges.push(self.edge_loop_member(v, at, edge_lists)?);
+                at += LOOP_MEMBER_WIDTH;
             }
             if at != v.len() {
                 return Err(refuse("Trailing IGES loop parameters"));
@@ -1828,11 +1836,80 @@ impl<'a> Builder<'a> {
             self.loop_de.push(de);
             loop_map.insert(de, index);
         }
-        let mut face_map = BTreeMap::new();
-        for (&de, e) in self.e {
-            if e.directory.ty != 510 {
-                continue;
+        Ok(loop_map)
+    }
+
+    fn edge_loop_member(
+        &self,
+        v: &[String],
+        at: usize,
+        edge_lists: &BTreeMap<(usize, usize), usize>,
+    ) -> Result<Coedge> {
+        if u(v, at, "loop member type")? != 0 {
+            return Err(refuse("Vertex-only IGES loop member is unsupported"));
+        }
+        let el = u(v, at + 1, "loop edge list")?;
+        let ei = u(v, at + 2, "loop edge index")?;
+        let reversed = u(v, at + 3, "loop orientation")? == 0;
+        let pcount = u(v, at + 4, "loop pcurve count")?;
+        if pcount != 1 {
+            return Err(refuse("Each IGES loop edge requires exactly one pcurve"));
+        }
+        let iso = u(v, at + 5, "loop pcurve isoparametric")?;
+        if iso > 1 {
+            return Err(refuse("Invalid IGES isoparametric flag"));
+        }
+        let pcurve = self.curve(u(v, at + 6, "loop pcurve")?, 2)?;
+        let edge = *edge_lists
+            .get(&(el, ei))
+            .ok_or_else(|| refuse("Invalid IGES edge-list reference"))?;
+        Ok(Coedge::new(edge, reversed, pcurve))
+    }
+
+    fn verify_face_loops(&self, loops: &[usize], surface: &Surface) -> Result<()> {
+        for loop_index in loops {
+            let face_loop = self
+                .loops
+                .get(*loop_index)
+                .ok_or_else(|| refuse("Missing IGES face loop"))?;
+            for coedge in &face_loop.coedges {
+                let edge = self
+                    .edges
+                    .get(coedge.edge)
+                    .ok_or_else(|| refuse("Invalid IGES edge-list reference"))?;
+                verify_correspondence(edge, &coedge.pcurve, surface, coedge.reversed)?;
             }
+        }
+        Ok(())
+    }
+
+    fn push_face(
+        &mut self,
+        de: usize,
+        surface: Surface,
+        loops: &[usize],
+        face_map: &mut BTreeMap<usize, usize>,
+    ) -> Result<()> {
+        let (&outer, holes) = loops
+            .split_first()
+            .ok_or_else(|| refuse("Malformed IGES face"))?;
+        let index = self.faces.len();
+        self.faces.push(Face {
+            surface,
+            outer,
+            holes: holes.to_vec(),
+        });
+        self.face_de.push(de);
+        face_map.insert(de, index);
+        Ok(())
+    }
+
+    fn build_loop_faces(
+        &mut self,
+        loop_map: &BTreeMap<usize, usize>,
+    ) -> Result<BTreeMap<usize, usize>> {
+        let mut face_map = BTreeMap::new();
+        for (de, e) in self.entities_of_type(510) {
             let v = &e.values;
             let surface = surface128(self.e, u(v, 1, "face surface")?, self.scale)?;
             let n = u(v, 2, "face loop count")?;
@@ -1847,121 +1924,58 @@ impl<'a> Builder<'a> {
                         .ok_or_else(|| refuse("Missing IGES face loop"))
                 })
                 .collect::<Result<Vec<_>>>()?;
-            for loop_index in &loops {
-                for coedge in &self.loops[*loop_index].coedges {
-                    verify_correspondence(
-                        &self.edges[coedge.edge],
-                        &coedge.pcurve,
-                        &surface,
-                        coedge.reversed,
-                    )?;
-                }
-            }
-            let index = self.faces.len();
-            self.faces.push(Face {
-                surface,
-                outer: loops[0],
-                holes: loops[1..].to_vec(),
-            });
-            self.face_de.push(de);
-            face_map.insert(de, index);
+            self.verify_face_loops(&loops, &surface)?;
+            self.push_face(de, surface, &loops, &mut face_map)?;
         }
-        let referenced_boundaries = self
-            .e
-            .values()
-            .filter(|entity| entity.directory.ty == 144)
-            .flat_map(|entity| {
-                let v = &entity.values;
-                let n = u(v, 3, "trimmed surface inner boundary count").unwrap_or(0);
-                (4..5 + n).filter_map(move |at| u(v, at, "trimmed boundary").ok())
-            })
-            .collect::<BTreeSet<_>>();
+        Ok(face_map)
+    }
+
+    fn build_trimmed_faces(
+        &mut self,
+        curve_edges: &BTreeMap<usize, usize>,
+        face_map: &mut BTreeMap<usize, usize>,
+    ) -> Result<()> {
+        let referenced_boundaries = referenced_trimmed_boundaries(self.e);
         let mut owned_edges = BTreeSet::new();
-        for (&de, e) in self.e {
+        let entities: &'a BTreeMap<usize, Entity> = self.e;
+        for (&de, e) in entities {
             if !matches!(e.directory.ty, 143 | 144)
                 || (e.directory.ty == 143 && referenced_boundaries.contains(&de))
             {
                 continue;
             }
-            let v = &e.values;
-            let (surface_de, boundaries) = if e.directory.ty == 144 {
-                if v.len() < 5 {
-                    return Err(trimmed_error(
-                        "BREP_IGES_V2_TRIMMED_DANGLING",
-                        format!("Malformed IGES trimmed surface DE {de}"),
-                    ));
-                }
-                if u(v, 2, "trimmed surface outer flag")? != 1 {
-                    return Err(trimmed_unsupported(
-                        de,
-                        "natural outer boundary without an explicit 143/142 loop",
-                    ));
-                }
-                let n = u(v, 3, "trimmed surface inner boundary count")?;
-                if n > MAX_TOPOLOGY || v.len() != 5 + n {
-                    return Err(trimmed_error(
-                        "BREP_IGES_V2_TRIMMED_BUDGET",
-                        format!("Invalid or excessive IGES trimmed DE {de} boundary count {n}"),
-                    ));
-                }
-                let outer = u(v, 4, "trimmed surface outer boundary")?;
-                if outer == 0 {
-                    return Err(trimmed_error(
-                        "BREP_IGES_V2_TRIMMED_DANGLING",
-                        format!("Missing outer boundary in IGES trimmed surface DE {de}"),
-                    ));
-                }
-                (
-                    u(v, 1, "trimmed surface geometry")?,
-                    (4..5 + n)
-                        .map(|at| u(v, at, "trimmed boundary"))
-                        .collect::<Result<Vec<_>>>()?,
-                )
-            } else {
-                (u(v, 3, "bounded surface geometry")?, vec![de])
-            };
+            let (surface_de, boundaries) = trimmed_face_boundaries(de, e)?;
             let mut loops = Vec::with_capacity(boundaries.len());
             for boundary in boundaries {
                 let index =
-                    self.trimmed_loop(boundary, surface_de, &curve_edges, &mut owned_edges)?;
-                Self::orient_trimmed_loop(
-                    boundary,
-                    &mut self.loops[index].coedges,
-                    loops.is_empty(),
-                )?;
+                    self.trimmed_loop(boundary, surface_de, curve_edges, &mut owned_edges)?;
+                let coedges = &mut self
+                    .loops
+                    .get_mut(index)
+                    .ok_or_else(|| refuse("Missing IGES face loop"))?
+                    .coedges;
+                Self::orient_trimmed_loop(boundary, coedges, loops.is_empty())?;
                 loops.push(index);
             }
             let surface = surface128(self.e, surface_de, self.scale)?;
-            for loop_index in &loops {
-                for coedge in &self.loops[*loop_index].coedges {
-                    verify_correspondence(
-                        &self.edges[coedge.edge],
-                        &coedge.pcurve,
-                        &surface,
-                        coedge.reversed,
+            self.verify_face_loops(&loops, &surface)
+                .map_err(|error| {
+                    trimmed_error(
+                        "BREP_IGES_V2_TRIMMED_DANGLING",
+                        format!("IGES trimmed/bounded DE {de}: {}", error.message),
                     )
-                    .map_err(|error| {
-                        trimmed_error(
-                            "BREP_IGES_V2_TRIMMED_DANGLING",
-                            format!("IGES trimmed/bounded DE {de}: {}", error.message),
-                        )
-                    })?;
-                }
-            }
-            let index = self.faces.len();
-            self.faces.push(Face {
-                surface,
-                outer: loops[0],
-                holes: loops[1..].to_vec(),
-            });
-            self.face_de.push(de);
-            face_map.insert(de, index);
+                })?;
+            self.push_face(de, surface, &loops, face_map)?;
         }
+        Ok(())
+    }
+
+    fn build_shells(
+        &mut self,
+        face_map: &BTreeMap<usize, usize>,
+    ) -> Result<BTreeMap<usize, usize>> {
         let mut shell_map = BTreeMap::new();
-        for (&de, e) in self.e {
-            if e.directory.ty != 514 {
-                continue;
-            }
+        for (de, e) in self.entities_of_type(514) {
             let v = &e.values;
             let n = u(v, 1, "shell face count")?;
             if n == 0 || v.len() != 2 + 2 * n {
@@ -1986,10 +2000,11 @@ impl<'a> Builder<'a> {
             self.shell_de.push(de);
             shell_map.insert(de, index);
         }
-        for (&de, e) in self.e {
-            if e.directory.ty != 186 {
-                continue;
-            }
+        Ok(shell_map)
+    }
+
+    fn build_bodies(&mut self, shell_map: &BTreeMap<usize, usize>) -> Result<()> {
+        for (de, e) in self.entities_of_type(186) {
             let v = &e.values;
             let outer = *shell_map
                 .get(&u(v, 1, "solid outer shell")?)
@@ -2012,6 +2027,10 @@ impl<'a> Builder<'a> {
             });
             self.body_de.push(de);
         }
+        Ok(())
+    }
+
+    fn finish(self) -> Result<(Model, TopologyMapping)> {
         if self.bodies.is_empty() && self.shells.iter().all(|shell| shell.closed) {
             return Err(refuse(
                 "IGES contains neither a manifold solid B-rep (186) nor an open shell (514 form 1)",
@@ -2034,7 +2053,7 @@ impl<'a> Builder<'a> {
                 faces: self.faces,
                 shells: self.shells,
                 bodies: self.bodies,
-                tolerance_mm: 1e-7,
+                tolerance_mm: IMPORT_TOLERANCE_MM,
             },
             TopologyIds::default(),
         );
@@ -2053,6 +2072,71 @@ impl<'a> Builder<'a> {
         }
         Ok((model, map))
     }
+}
+
+/// Maps an IGES 504 edge list DE and its 1-based member index to an edge.
+type EdgeListIndex = BTreeMap<(usize, usize), usize>;
+
+const LOOP_MEMBER_WIDTH: usize = 7;
+const IMPORT_TOLERANCE_MM: f64 = 1e-7;
+
+fn list_vertex(
+    vertex_lists: &BTreeMap<usize, Vec<usize>>,
+    list: usize,
+    index: usize,
+) -> Option<usize> {
+    vertex_lists.get(&list)?.get(index.checked_sub(1)?).copied()
+}
+
+fn referenced_trimmed_boundaries(entities: &BTreeMap<usize, Entity>) -> BTreeSet<usize> {
+    entities
+        .values()
+        .filter(|entity| entity.directory.ty == 144)
+        .flat_map(|entity| {
+            let v = &entity.values;
+            let n = u(v, 3, "trimmed surface inner boundary count").unwrap_or(0);
+            (4..5 + n).filter_map(move |at| u(v, at, "trimmed boundary").ok())
+        })
+        .collect()
+}
+
+fn trimmed_face_boundaries(de: usize, e: &Entity) -> Result<(usize, Vec<usize>)> {
+    let v = &e.values;
+    if e.directory.ty != 144 {
+        return Ok((u(v, 3, "bounded surface geometry")?, vec![de]));
+    }
+    if v.len() < 5 {
+        return Err(trimmed_error(
+            "BREP_IGES_V2_TRIMMED_DANGLING",
+            format!("Malformed IGES trimmed surface DE {de}"),
+        ));
+    }
+    if u(v, 2, "trimmed surface outer flag")? != 1 {
+        return Err(trimmed_unsupported(
+            de,
+            "natural outer boundary without an explicit 143/142 loop",
+        ));
+    }
+    let n = u(v, 3, "trimmed surface inner boundary count")?;
+    if n > MAX_TOPOLOGY || v.len() != 5 + n {
+        return Err(trimmed_error(
+            "BREP_IGES_V2_TRIMMED_BUDGET",
+            format!("Invalid or excessive IGES trimmed DE {de} boundary count {n}"),
+        ));
+    }
+    let outer = u(v, 4, "trimmed surface outer boundary")?;
+    if outer == 0 {
+        return Err(trimmed_error(
+            "BREP_IGES_V2_TRIMMED_DANGLING",
+            format!("Missing outer boundary in IGES trimmed surface DE {de}"),
+        ));
+    }
+    Ok((
+        u(v, 1, "trimmed surface geometry")?,
+        (4..5 + n)
+            .map(|at| u(v, at, "trimmed boundary"))
+            .collect::<Result<Vec<_>>>()?,
+    ))
 }
 
 fn restore_identity(
