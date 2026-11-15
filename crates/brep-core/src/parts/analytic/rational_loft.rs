@@ -41,11 +41,7 @@ fn point(c: &Curve, start: bool) -> P {
     };
     [p[0], p[1], p[2]]
 }
-struct Cap {
-    normal: P,
-    surface: Surface,
-    loops: Vec<Vec<Curve>>,
-}
+use super::trimmed_cap_loft::Cap;
 mod caps;
 use caps::*;
 
