@@ -1,17 +1,13 @@
 use super::*;
 
-/// Borrowing variant of [`difference_many`]: avoids deep-cloning the cutters
-/// at call sites that only hold references.
-pub fn difference_many_refs(
-    base: &Mesh,
-    cutters: &[&Mesh],
-    pairwise: &mut dyn FnMut(&Mesh, &Mesh) -> Result<Mesh>,
-    batch: usize,
-) -> Result<Mesh> {
+/// Fold plan of [`difference_many_refs`]: batches of mutually separated
+/// cutter indices subtracted in order, or `None` when the base is empty.
+/// Cooperative drivers replay this plan to match the one-shot fold exactly.
+pub fn difference_batches(base: &Mesh, cutters: &[&Mesh], batch: usize) -> Option<Vec<Vec<usize>>> {
     let batch = batch.max(1);
     let base_box = bounds(base);
     if base_box.is_none() {
-        return Ok(crate::solid::primitives::empty());
+        return None;
     }
     let boxes: Vec<_> = cutters.iter().map(|m| bounds(m)).collect();
     let pad = bounds_pad(&[&[base_box][..], &boxes[..]].concat());
@@ -31,6 +27,20 @@ pub fn difference_many_refs(
             None => batches.push(vec![i]),
         }
     }
+    Some(batches)
+}
+
+/// Borrowing variant of [`difference_many`]: avoids deep-cloning the cutters
+/// at call sites that only hold references.
+pub fn difference_many_refs(
+    base: &Mesh,
+    cutters: &[&Mesh],
+    pairwise: &mut dyn FnMut(&Mesh, &Mesh) -> Result<Mesh>,
+    batch: usize,
+) -> Result<Mesh> {
+    let Some(batches) = difference_batches(base, cutters, batch) else {
+        return Ok(crate::solid::primitives::empty());
+    };
     let mut result = base.clone();
     for members in batches {
         let cutter = if members.len() == 1 {

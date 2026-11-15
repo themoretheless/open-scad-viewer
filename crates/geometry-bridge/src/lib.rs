@@ -101,6 +101,7 @@ pub mod intersections;
 #[cfg(feature = "gpu")]
 pub mod lattice_gpu;
 mod mesh;
+pub(crate) mod kernel_jobs;
 pub mod mesh_analysis;
 mod mesh_display;
 mod mesh_editor;

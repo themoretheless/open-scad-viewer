@@ -117,6 +117,7 @@ import {
 } from '../parser/expressionEvaluator'
 import {
   booleanShapes,
+  booleanShapesCooperative,
   differenceChildren,
   dxfLinearExtrude,
   dxfRotateExtrude,
@@ -512,9 +513,9 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
         return {...shape,geometry:kernelCall(ctx,node.p,()=>ctx.kernel.bend3!(shape.geometry,radius,center,reverse,step))}
       })
     }
-    case 'union': return booleanShapes(await childShapes(), 'union', ctx, node.p)
+    case 'union': return await booleanShapesCooperative(await childShapes(), 'union', ctx, node.p)
     case 'difference': return await differenceChildren(node, ctx, evalNodes, evalPreparedNodes)
-    case 'intersection': return booleanShapes(await childShapes(), 'intersection', ctx, node.p)
+    case 'intersection': return await booleanShapesCooperative(await childShapes(), 'intersection', ctx, node.p)
     case 'minkowski': {
       requireStableProfile(ctx, node)
       return minkowskiShapes(await childShapes(), node, ctx)
@@ -616,7 +617,7 @@ async function evalNode(node: CallNode, parent: EvalContext): Promise<Shape[]> {
     case 'render': {
       if (isStableProfile(ctx)) {
         evaluateStableBuiltinModuleArguments(node, ['convexity'], [], ctx)
-        return booleanShapes(await childShapes(), 'union', ctx, node.p, 'render')
+        return await booleanShapesCooperative(await childShapes(), 'union', ctx, node.p, 'render')
       }
       return await childShapes()
     }
@@ -848,7 +849,7 @@ async function evalUserModule(
     }
     env = new Map(definitionEnv)
     for (const [name, value] of parameterValues) env.set(name, value)
-    return booleanShapes(await evalNodes(module.children, {
+    return await booleanShapesCooperative(await evalNodes(module.children, {
       ...definitionContext,
       env,
       callChildren: {

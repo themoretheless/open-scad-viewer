@@ -90,6 +90,16 @@ export interface CadKernelOps {
     operation: 'union' | 'intersection' | 'difference',
     inputs: readonly CadKernelHandle[],
   ): CadKernelHandle
+  /**
+   * Optional cooperative Boolean: the same result as `boolean3`, evaluated as a
+   * kernel start/step/cancel job that awaits `checkpoint` between pairwise
+   * operations. Wrappers that must observe every Boolean (recorders) omit it.
+   */
+  boolean3Cooperatively?(
+    operation: 'union' | 'intersection' | 'difference',
+    inputs: readonly CadKernelHandle[],
+    checkpoint: () => Promise<void>,
+  ): Promise<CadKernelHandle>
   hull2(inputs: readonly CadKernelHandle[]): CadKernelHandle
   hull3(inputs: readonly CadKernelHandle[]): CadKernelHandle
   linearExtrude(
@@ -383,6 +393,10 @@ export function createCadKernelOps(
       if (operation === 'union') return handle(3, wasm.CadSolid.union(solids))
       if (operation === 'intersection') return handle(3, wasm.CadSolid.intersection(solids))
       return handle(3, wasm.CadSolid.difference(solids))
+    },
+    async boolean3Cooperatively(operation, inputs, checkpoint) {
+      const solids = geometries3(inputs)
+      return handle(3, await wasm.CadSolid.combineCooperatively(solids, operation, checkpoint))
     },
     hull2(inputs) {
       return handle(2, wasm.CrossSection.hull(geometries2(inputs)))

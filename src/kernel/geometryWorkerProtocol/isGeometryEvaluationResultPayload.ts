@@ -233,6 +233,14 @@ export function isGeometryWorkerRequest(value: unknown): value is GeometryWorker
   }
 }
 
+function isKernelJobProgress(value: unknown): boolean {
+  if (!isRecord(value) || !hasExactKeys(value, ['kind', 'done', 'total', 'steps'])) return false
+  const {kind, done, total, steps} = value
+  return (kind === 'mesh-boolean' || kind === 'render-prepare')
+    && Number.isSafeInteger(done) && Number.isSafeInteger(total) && Number.isSafeInteger(steps)
+    && (done as number) >= 0 && (done as number) <= (total as number) && (steps as number) >= 1
+}
+
 export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerWireEvent {
   try {
     if (!isRecord(value)
@@ -254,7 +262,7 @@ export function isGeometryWorkerEvent(value: unknown): value is GeometryWorkerWi
         return hasExactKeys(value, [
           'protocolVersion', 'documentRevision', 'jobId', 'quality', 'sourceSha256',
           'status', 'phase', 'progress',
-        ]) && (value.progress === null
+        ], ['kernelJob']) && (value.kernelJob === undefined || isKernelJobProgress(value.kernelJob)) && (value.progress === null
           || (typeof value.progress === 'number'
             && Number.isFinite(value.progress)
             && value.progress >= 0

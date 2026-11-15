@@ -98,6 +98,15 @@ export function kernelCall<T>(ctx: EvalContext, p: number, run: () => T): T {
   }
 }
 
+export async function kernelCallAsync<T>(ctx: EvalContext, p: number, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run()
+  } catch (error) {
+    if (error instanceof OpenSCADParseError || error instanceof AbortedError) throw error
+    throw positionKernelError(ctx.source, p, error)
+  }
+}
+
 export function registerStringValue(value: string, ctx: EvalContext, p: number, limitLabel = 'Evaluation'): string {
   ctx.valueBudget.used += Math.max(1, value.length)
   if (ctx.valueBudget.used > MAX_EVALUATED_VALUE_UNITS) {

@@ -165,7 +165,7 @@ export interface KernelRenderMesh {
   readonly faceIds: Uint32Array<ArrayBuffer>
 }
 
-function copyRenderMesh(wasm: ReturnType<typeof kernelRuntime>['exports'], buffer: ArrayBuffer, handle: number): KernelRenderMesh {
+export function copyRenderMesh(wasm: ReturnType<typeof kernelRuntime>['exports'], buffer: ArrayBuffer, handle: number): KernelRenderMesh {
   const u32 = (slot: number) => new Uint32Array(new Uint32Array(buffer, wasm.abi_array_field(handle, slot), wasm.abi_array_field(handle, slot + 1)))
   return {
     vertices: new Float32Array(new Float32Array(buffer, wasm.abi_array_field(handle, 0), wasm.abi_array_field(handle, 1))),
