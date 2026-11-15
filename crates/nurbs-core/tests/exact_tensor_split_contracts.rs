@@ -129,3 +129,59 @@ fn rational_split_has_one_common_gauge_on_both_sides() {
     let point = left.evaluate(0.5, 8.).unwrap().point;
     assert!((point[0] - 0.75).abs() < 1e-14);
 }
+
+#[test]
+fn global_refinement_tiles_both_uv_axes_and_round_trips() {
+    use nurbs_core::editing::{
+        exact_surface_knot_insertion::tile_tensor_surface, exact_surface_merge::merge_surface_grid,
+    };
+    let s = quadratic();
+    let report = tile_tensor_surface(&s, &[3., 4.], &[8.], WORK).unwrap();
+    let tiles = report
+        .patches
+        .unwrap_or_else(|| panic!("{:?}", report.refusal));
+    assert_eq!((report.columns, report.rows, tiles.len()), (3, 2, 6));
+    assert_eq!(tiles[1].knots_u, [3., 3., 3., 4., 4., 4.]);
+    assert_eq!(tiles[3].knots_v, [8., 8., 8., 9., 9., 9.]);
+    assert_eq!(
+        tiles[0].control_points.last(),
+        tiles[1].control_points.first()
+    );
+    for (a, b) in tiles[0].weights.iter().zip(&tiles[3].weights) {
+        assert_eq!(a.last(), b.first());
+    }
+    let merged = merge_surface_grid(&tiles, 3, WORK)
+        .unwrap()
+        .surface
+        .unwrap();
+    for (u, v) in [(2., 7.), (3.5, 7.5), (4., 8.), (6., 9.)] {
+        let a = s.evaluate(u, v).unwrap().point;
+        let b = merged.evaluate(u, v).unwrap().point;
+        assert!(a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-14));
+    }
+}
+
+#[test]
+fn an_unrepresentable_late_cut_or_short_copy_budget_withholds_every_tile() {
+    use nurbs_core::editing::exact_surface_knot_insertion::tile_tensor_surface;
+    let s = quadratic();
+    let full = tile_tensor_surface(&s, &[4.], &[8.], WORK).unwrap();
+    let short = tile_tensor_surface(&s, &[4.], &[8.], full.work_used - 1).unwrap();
+    assert_eq!(short.refusal, Some(SplitRefusal::ResourceLimit));
+    assert!(short.patches.is_none());
+    assert!(tile_tensor_surface(&s, &[4., 3.], &[8.], WORK).is_err());
+    let mut rational = s;
+    rational.degree_v = 1;
+    rational.knots_v = vec![0., 0., 1., 1.];
+    for (points, weights) in rational
+        .control_points
+        .iter_mut()
+        .zip(&mut rational.weights)
+    {
+        points.remove(1);
+        *weights = vec![1., 2.];
+    }
+    let refused = tile_tensor_surface(&rational, &[4.], &[0.25], WORK).unwrap();
+    assert!(matches!(refused.refusal, Some(SplitRefusal::Insertion(_))));
+    assert!(refused.patches.is_none());
+}
