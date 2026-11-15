@@ -74,6 +74,16 @@ pub fn certify_pcurve_seam_gap(
 }
 
 fn within(a: &[Poly], b: &[Poly], tolerance_squared: &Q, work: &mut Work) -> PResult<bool> {
+    let residual = gap_residual(a, b, tolerance_squared, work)?;
+    nonnegative(&residual, residual.len().saturating_sub(1), work)
+}
+
+pub(super) fn gap_residual(
+    a: &[Poly],
+    b: &[Poly],
+    tolerance_squared: &Q,
+    work: &mut Work,
+) -> PResult<Poly> {
     let weight = poly::multiply(&a[3], &b[3], work)?;
     let limit = scale(
         &poly::multiply(&weight, &weight, work)?,
@@ -88,5 +98,5 @@ fn within(a: &[Poly], b: &[Poly], tolerance_squared: &Q, work: &mut Work) -> PRe
         let square = poly::multiply(&delta, &delta, work)?;
         residual = add(&residual, &square, true, work)?;
     }
-    nonnegative(&residual, residual.len().saturating_sub(1), work)
+    Ok(residual)
 }
