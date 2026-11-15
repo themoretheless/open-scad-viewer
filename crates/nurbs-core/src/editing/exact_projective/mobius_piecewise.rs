@@ -5,6 +5,14 @@ use super::{
 };
 use num_traits::One;
 
+#[derive(Clone, Copy, Debug)]
+pub struct BezierSpanLayout<'a> {
+    /// Ordered absolute endpoints, including both ends of the chart.
+    pub breaks: &'a [f64],
+    /// One positive Möbius factor per span.
+    pub factors: &'a [f64],
+}
+
 /// Reclock each span of a clamped piecewise Bézier curve independently.
 /// Interior knots must have degree multiplicity and stay at their original
 /// coordinates. The seam weights share one exact global gauge. Geometric
@@ -12,6 +20,26 @@ use num_traits::One;
 pub fn mobius_piecewise_bezier_curve(
     source: &Curve,
     lambda: &[f64],
+    max_work: u64,
+) -> Result<Report<Curve>> {
+    apply_curve(source, lambda, None, max_work)
+}
+
+/// Assign new absolute span boundaries and independent local clocks while
+/// retaining the original geometric image and one common seam gauge.
+pub fn relayout_bezier_curve(
+    source: &Curve,
+    layout: BezierSpanLayout<'_>,
+    max_work: u64,
+) -> Result<Report<Curve>> {
+    validate_layout(layout)?;
+    apply_curve(source, layout.factors, Some(layout.breaks), max_work)
+}
+
+fn apply_curve(
+    source: &Curve,
+    lambda: &[f64],
+    breaks: Option<&[f64]>,
     max_work: u64,
 ) -> Result<Report<Curve>> {
     source.validate()?;
@@ -36,6 +64,9 @@ pub fn mobius_piecewise_bezier_curve(
         }
         let mut out = source.clone();
         out.weights = exact_weights(&weights, &mut work)?;
+        if let Some(breaks) = breaks {
+            out.knots = expand_breaks(breaks, source.degree);
+        }
         out.validate().map_err(|_| Refusal::InvalidOutput)?;
         Ok(out)
     })();
@@ -49,6 +80,36 @@ pub fn mobius_piecewise_bezier_surface(
     source: &Surface,
     lambda_u: &[f64],
     lambda_v: &[f64],
+    max_work: u64,
+) -> Result<Report<Surface>> {
+    apply_surface(source, lambda_u, lambda_v, [None; 2], max_work)
+}
+
+/// Assign independent absolute U/V span layouts, preserving the original
+/// tensor image and shared seam controls. Trims in the old UV coordinates
+/// need the matching parameter map separately.
+pub fn relayout_bezier_surface(
+    source: &Surface,
+    layouts: [BezierSpanLayout<'_>; 2],
+    max_work: u64,
+) -> Result<Report<Surface>> {
+    let [u, v] = layouts;
+    validate_layout(u)?;
+    validate_layout(v)?;
+    apply_surface(
+        source,
+        u.factors,
+        v.factors,
+        [Some(u.breaks), Some(v.breaks)],
+        max_work,
+    )
+}
+
+fn apply_surface(
+    source: &Surface,
+    lambda_u: &[f64],
+    lambda_v: &[f64],
+    breaks: [Option<&[f64]>; 2],
     max_work: u64,
 ) -> Result<Report<Surface>> {
     source.validate()?;
@@ -90,6 +151,12 @@ pub fn mobius_piecewise_bezier_surface(
             .chunks(nv)
             .map(<[f64]>::to_vec)
             .collect();
+        if let Some(breaks) = breaks[0] {
+            out.knots_u = expand_breaks(breaks, source.degree_u);
+        }
+        if let Some(breaks) = breaks[1] {
+            out.knots_v = expand_breaks(breaks, source.degree_v);
+        }
         out.validate().map_err(|_| Refusal::InvalidOutput)?;
         Ok(out)
     })();
@@ -126,4 +193,23 @@ fn factors(degree: usize, lambda: &[f64], work: &mut Work) -> PResult<Vec<Q>> {
         }
     }
     Ok(factors)
+}
+
+fn validate_layout(layout: BezierSpanLayout<'_>) -> Result<()> {
+    check(
+        layout.factors.len().checked_add(1) == Some(layout.breaks.len())
+            && !layout.factors.is_empty()
+            && layout.breaks.iter().all(|k| k.is_finite())
+            && layout.breaks.windows(2).all(|pair| pair[0] < pair[1]),
+        "Bézier span layout requires one increasing finite interval per factor",
+    )
+}
+
+fn expand_breaks(breaks: &[f64], degree: usize) -> Vec<f64> {
+    let mut knots = vec![breaks[0]];
+    for &knot in breaks {
+        knots.extend(std::iter::repeat_n(knot, degree));
+    }
+    knots.push(breaks[breaks.len() - 1]);
+    knots
 }

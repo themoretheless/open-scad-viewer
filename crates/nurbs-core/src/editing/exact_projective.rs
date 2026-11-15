@@ -6,7 +6,10 @@ use num_traits::{Signed, Zero};
 mod mobius;
 pub use mobius::{mobius_bezier_curve, mobius_bezier_surface};
 mod mobius_piecewise;
-pub use mobius_piecewise::{mobius_piecewise_bezier_curve, mobius_piecewise_bezier_surface};
+pub use mobius_piecewise::{
+    BezierSpanLayout, mobius_piecewise_bezier_curve, mobius_piecewise_bezier_surface,
+    relayout_bezier_curve, relayout_bezier_surface,
+};
 mod mobius_spline;
 pub use mobius_spline::{
     MobiusLandmark, fit_mobius_spline_curve, fit_mobius_spline_surface, mobius_spline_curve,

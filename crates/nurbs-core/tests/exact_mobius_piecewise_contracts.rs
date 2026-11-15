@@ -122,3 +122,76 @@ fn unsupported_span_basis_and_insufficient_work_are_refused() {
     smooth.weights.remove(2);
     assert!(mobius_piecewise_bezier_curve(&smooth, &[2., 0.5], WORK).is_err());
 }
+
+#[test]
+fn curve_relayout_moves_a_seam_and_preserves_both_span_images() {
+    use nurbs_core::editing::exact_projective::{BezierSpanLayout, relayout_bezier_curve};
+    let source = curve();
+    let out = relayout_bezier_curve(
+        &source,
+        BezierSpanLayout {
+            breaks: &[-2., 4., 10.],
+            factors: &[2., 0.5],
+        },
+        WORK,
+    )
+    .unwrap()
+    .geometry
+    .unwrap();
+    assert_eq!(out.knots, [-2., -2., -2., 4., 4., 10., 10., 10.]);
+    for (new, old) in [(-2., 0.), (0., 1.), (4., 2.), (7., 7. / 3.), (10., 3.)] {
+        let a = out.evaluate(new).unwrap().point;
+        let b = source.evaluate(old).unwrap().point;
+        assert!(
+            a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-14),
+            "{new} -> {old}"
+        );
+    }
+}
+
+#[test]
+fn tensor_relayout_changes_both_absolute_axes_and_refuses_invalid_partitions() {
+    use nurbs_core::editing::exact_projective::{BezierSpanLayout, relayout_bezier_surface};
+    let source = Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 1., 1.],
+        knots_v: vec![0., 0., 1., 1.],
+        control_points: [0., 1.]
+            .map(|u| [0., 1.].map(|v| vec![u, v, u * v]).to_vec())
+            .to_vec(),
+        weights: vec![vec![1.; 2]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let u = BezierSpanLayout {
+        breaks: &[7., 9.],
+        factors: &[2.],
+    };
+    let v = BezierSpanLayout {
+        breaks: &[-3., 3.],
+        factors: &[0.5],
+    };
+    let r = relayout_bezier_surface(&source, [u, v], WORK).unwrap();
+    let out = r.geometry.unwrap();
+    let a = out.evaluate(8., 0.).unwrap().point;
+    let b = source.evaluate(2. / 3., 1. / 3.).unwrap().point;
+    assert!(a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-14));
+    assert!(
+        relayout_bezier_surface(
+            &source,
+            [
+                BezierSpanLayout {
+                    breaks: &[9., 7.],
+                    ..u
+                },
+                v
+            ],
+            WORK
+        )
+        .is_err()
+    );
+    let short = relayout_bezier_surface(&source, [u, v], r.work_used - 1).unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.geometry.is_none());
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 290,
-  "unallocatedCount": 710,
+  "specifiedCount": 291,
+  "unallocatedCount": 709,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7728,6 +7728,27 @@
       "remainingQualification": [
         "Applies a different positive clock on each span of a piecewise Bézier curve or tensor patch. A shared cumulative homogeneous scale preserves the complete geometry and literal seam weights.",
         "Clamped nonperiodic piecewise Bézier axes with degree-multiplicity interior knots. Absolute seam coordinates and geometric continuity are retained. Parameter derivatives can change.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0291",
+      "name": "Перенос абсолютных границ пролётов Безье с сохранением геометрии",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::relayout_bezier_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius_piecewise.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius.rs",
+        "crates/nurbs-core/tests/exact_mobius_piecewise_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-291-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-291-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Relayout a piecewise Bézier curve or tensor surface on a new absolute knot grid with independent positive span clocks.",
+        "Clamped nonperiodic piecewise Bézier axes. New absolute seams preserve both adjoining geometric images and share one positive weight scale.",
         "WASM and application integration are separate."
       ]
     }
