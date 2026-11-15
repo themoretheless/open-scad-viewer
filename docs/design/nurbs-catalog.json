@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 257,
-  "unallocatedCount": 743,
+  "specifiedCount": 258,
+  "unallocatedCount": 742,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6974,6 +6974,26 @@
       "remainingQualification": [
         "Covers the complete supplied rectangular UV grid for either diagonal in each cell. The worst bound includes actual vertex displacement and charges all original knot rectangles against a single budget. Only finite rectilinear untrimmed grids with increasing axes are admitted.",
         "Application and WASM delivery are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0258",
+      "name": "Точное и непрерывно ограниченное поле гауссовой кривизны NURBS-поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::gaussian_curvature",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/gaussian.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/gaussian_curvature_field_contracts.rs",
+        "docs/qualification/nurbs-gaussian-curvature-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-gaussian-curvature-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exact or continuously error-bounded [K,0,0] field on the original UV cells. The original squared area normal must have a strictly positive tensor Bernstein enclosure before cancellation. Singular or unresolved cells and storage/work refusals return no partial fields.",
+        "One-sided original clocks and inverse-length-squared units. WASM and application delivery are separate."
       ]
     }
   ],

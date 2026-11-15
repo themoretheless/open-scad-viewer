@@ -11,6 +11,7 @@ use num_traits::{One, Zero};
 use std::collections::BTreeMap;
 mod content;
 mod extraction;
+mod gaussian;
 mod mixed;
 pub(super) mod polynomial;
 pub(super) mod storage;
@@ -71,6 +72,7 @@ pub(super) enum Field {
     AreaNormal,
     Metric,
     Mixed([usize; 2]),
+    GaussianCurvature,
 }
 fn area_target(h: &[Poly], widths: &[Q], w: &mut Work) -> PResult<Vec<Poly>> {
     let u = target(h, Axis::U, &widths[0], w)?;
@@ -134,6 +136,7 @@ pub(super) fn original_target(
         Field::AreaNormal => area_target(&h, &widths, w)?,
         Field::Metric => metric_target(&h, &widths, w)?,
         Field::Mixed(orders) => mixed::target(&h, orders, &widths, w)?,
+        Field::GaussianCurvature => gaussian::target(&h, &widths, w)?,
     })
 }
 pub(super) fn reduced_target(target: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
@@ -195,6 +198,15 @@ pub fn mixed_partial(source: &Surface, orders: [usize; 2], max_work: u64) -> Res
     )?;
     apply(source, Field::Mixed(orders), max_work)
 }
+/// Construct the scalar Gaussian curvature carrier `[K, 0, 0]` on every
+/// original UV cell. K has units of inverse length squared. The original
+/// squared area normal must have strictly positive tensor Bernstein
+/// coefficients on each cell before cancellation. Unresolved or singular
+/// cells and nonrepresentable exact outputs refuse the entire result.
+pub fn gaussian_curvature(source: &Surface, max_work: u64) -> Result<Report> {
+    apply(source, Field::GaussianCurvature, max_work)
+}
+
 fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {
     source.validate()?;
     check(
