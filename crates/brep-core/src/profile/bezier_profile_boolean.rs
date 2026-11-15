@@ -1,5 +1,6 @@
 //! Native transverse polynomial profile Boolean. Trims retain source controls;
 //! only shared endpoint roundoff is conformed within the requested tolerance.
+use super::arrangement_ops as arrangement;
 use super::{Result, controls, point_inside, refused};
 use crate::Curve;
 use nurbs_core::intersection::{
@@ -72,6 +73,16 @@ fn contains(loops: &[Vec<Curve>], p: [f64; 2], tol: f64) -> Result<bool> {
     }
     Ok(inside)
 }
+/// Pair work allowed before the Boolean refuses.
+const PAIR_BUDGET: usize = arrangement::PAIR_BUDGET;
+/// Relative coefficient roundoff admitted for a proposed overlap carrier.
+const OVERLAP_ROUNDOFF: f64 = 256.;
+/// Relative roundoff admitted when comparing retained fragment controls.
+const FRAGMENT_ROUNDOFF: f64 = 256.;
+
+/// `(a span, b span, same orientation, a range, b range)` of a shared carrier.
+type SharedRange = (usize, usize, bool, [f64; 2], [f64; 2]);
+
 pub fn boolean(
     a: &[Vec<Curve>],
     b: &[Vec<Curve>],
@@ -85,209 +96,284 @@ pub fn boolean(
     let b = super::orient_even_odd(b, tolerance)?;
     let av: Vec<_> = a.iter().flatten().cloned().collect();
     let bv: Vec<_> = b.iter().flatten().cloned().collect();
-    if av.len() + bv.len() > 1022 {
+    if av.len() + bv.len() > arrangement::MAX_ARRANGEMENT_SPANS {
         return Err(refused("Bézier Boolean exceeds 1022 source spans"));
     }
-    let mut cuts: Vec<Vec<f64>> = av.iter().chain(&bv).map(|c| c.domain().to_vec()).collect();
-    let mut aliases: Vec<usize> = (0..cuts.len()).collect();
-    let mut shared = Vec::new();
-    let mut linear = vec![false; cuts.len()];
-    let mut work = 0;
-    for (i, ca) in av.iter().enumerate() {
-        for (j, cb) in bv.iter().enumerate() {
-            if let Some(forward) = same(ca, cb, tolerance) {
-                let old = aliases[av.len() + j];
-                let new = aliases[i];
-                for alias in &mut aliases {
-                    if *alias == old {
-                        *alias = new;
-                    }
-                }
-                shared.push((i, j, forward, ca.domain(), cb.domain()));
-                continue;
-            }
-            let pa = controls(ca)?;
-            let pb = controls(cb)?;
-            if (0..2).any(|k| {
-                let min = |p: &Vec<[f64; 2]>| p.iter().map(|q| q[k]).fold(f64::INFINITY, f64::min);
-                let max =
-                    |p: &Vec<[f64; 2]>| p.iter().map(|q| q[k]).fold(f64::NEG_INFINITY, f64::max);
-                max(&pa) + 8. * tolerance < min(&pb) || max(&pb) + 8. * tolerance < min(&pa)
-            }) {
-                continue;
-            }
-            // A supporting coordinate plane can contain endpoint tangencies.
-            // Positive Bernstein weights and one strictly interior control on
-            // each side prove that the open spans never reach that plane.
-            if super::supporting_hulls_separate(&pa, &pb) {
-                continue;
-            }
-            let shared_endpoint = [pa[0], *pa.last().unwrap()]
-                .into_iter()
-                .find(|p| *p == pb[0] || *p == *pb.last().unwrap());
-            if shared_endpoint.is_some_and(|p| super::shared_hulls_separate(&pa, &pb, p)) {
-                continue;
-            }
-            work += 1;
-            if work > 8192 {
-                return Err(refused("Bézier Boolean pair budget exceeded"));
-            }
-            use nurbs_core::intersection::planar_scalar::{Relation, intersect};
-            if let Some(relation) = intersect(ca, cb, tolerance)? {
-                let overlap = match relation {
-                    Relation::Points(points) => {
-                        for point in points {
-                            cuts[i].push(point.first);
-                            cuts[av.len() + j].push(point.second);
-                        }
-                        continue;
-                    }
-                    Relation::Coincident {
-                        reversed,
-                        linear: straight,
-                    } => (ca.domain(), cb.domain(), reversed, straight),
-                    Relation::Overlap {
-                        points,
-                        linear,
-                        first,
-                        second,
-                        reversed,
-                    } => {
-                        for point in points {
-                            cuts[i].push(point[0]);
-                            cuts[av.len() + j].push(point[1]);
-                        }
-                        (first, second, reversed, linear)
-                    }
-                };
-                let (ar, br, reversed, straight) = overlap;
-                cuts[i].extend(ar);
-                cuts[av.len() + j].extend(br);
-                let old = aliases[av.len() + j];
-                let new = aliases[i];
-                let straight = straight || linear[old] || linear[new];
-                for alias in &mut aliases {
-                    if *alias == old {
-                        *alias = new;
-                    }
-                }
-                linear[new] = straight;
-                shared.push((i, j, !reversed, ar, br));
-                continue;
-            }
-            let report = intersect_curve_curve_report(&lift(ca), &lift(cb), None)?;
-            if !report.report.unresolved.is_empty() {
-                if let Some((events,_))=checked_cuts(ca,cb,false){
-                    for p in events{cuts[i].push(p[0]);cuts[av.len()+j].push(p[1]);}
-                    continue;
-                }
-                return Err(refused("Bézier Boolean intersection is unresolved"));
-            }
-            for event in report.report.components {
-                if event.kind == CurveCurveComponentKind::Overlap {
-                    let x = ca.trim(event.first_interval[0], event.first_interval[1])?;
-                    let y = cb.trim(event.second_interval[0], event.second_interval[1])?;
-                    let forward = same(&x, &y, tolerance)
-                        .or_else(|| {
-                            // Interval intersection proposes an overlap; retained
-                            // polynomial Bernstein coefficients independently admit it.
-                            if x.degree != y.degree || x.weights != y.weights {
-                                return None;
-                            }
-                            for forward in [true, false] {
-                                let yy = if forward {
-                                    y.clone()
-                                } else {
-                                    y.reverse().ok()?
-                                };
-                                if x.control_points
-                                    .iter()
-                                    .zip(&yy.control_points)
-                                    .all(|(p, q)| {
-                                        p.iter().zip(q).all(|(a, b)| {
-                                            (a - b).abs()
-                                                <= 256.
-                                                    * f64::EPSILON
-                                                    * a.abs().max(b.abs()).max(1.)
-                                        })
-                                    })
-                                {
-                                    return Some(forward);
-                                }
-                            }
-                            None
-                        })
-                        .ok_or_else(|| refused("Bézier overlap carrier identity is unresolved"))?;
-                    cuts[i].extend(event.first_interval);
-                    cuts[av.len() + j].extend(event.second_interval);
-                    let old = aliases[av.len() + j];
-                    let new = aliases[i];
-                    for alias in &mut aliases {
-                        if *alias == old {
-                            *alias = new;
-                        }
-                    }
-                    shared.push((i, j, forward, event.first_interval, event.second_interval));
-                    continue;
-                }
-                if !matches!(
-                    event.contact,
-                    ContactClass::Transverse
-                        | ContactClass::Boundary
-                        | ContactClass::OddTangency
-                        | ContactClass::EvenTangency
-                ) {
-                    return Err(refused("Bézier Boolean contact is unresolved"));
-                }
-                if event.residual > tolerance {
-                    return Err(refused("Bézier Boolean event residual exceeds tolerance"));
-                }
-                cuts[i].push(event.first);
-                cuts[av.len() + j].push(event.second);
-            }
+    let mut census = BooleanCensus::new(&av, &bv, tolerance);
+    for i in 0..av.len() {
+        for j in 0..bv.len() {
+            census.pair(i, j)?;
         }
     }
+    let BooleanCensus {
+        mut cuts,
+        aliases,
+        shared,
+        linear,
+        mut work,
+        ..
+    } = census;
     let sources: Vec<_> = av.iter().chain(&bv).cloned().collect();
     super::coincidence_ops::synchronize(&sources, &aliases, &mut cuts, tolerance, &mut work)?;
-    let mut selected: Vec<(Curve, usize)> = Vec::new();
-    for (index, source) in av.iter().chain(&bv).enumerate() {
+    let mut selector = FragmentSelector {
+        op,
+        tolerance,
+        aliases: &aliases,
+        shared: &shared,
+        linear: &linear,
+        selected: Vec::new(),
+    };
+    for (index, source) in sources.iter().enumerate() {
         let from_a = index < av.len();
-        let local = if from_a { index } else { index - av.len() };
-        let other = if from_a { &b } else { &a };
+        let side = SourceSide {
+            from_a,
+            local: if from_a { index } else { index - av.len() },
+            other: if from_a { &b } else { &a },
+        };
         super::coincidence_ops::coalesce(source, &mut cuts[index], tolerance, &mut work)?;
-        for interval in cuts[index].windows(2) {
+        selector.select_source(source, index, &side, &cuts[index])?;
+    }
+    assemble(selector.selected, tolerance, op == "union" || op == "difference")
+}
+
+/// Pairwise event census of the two operands' source spans.
+struct BooleanCensus<'a> {
+    a_spans: &'a [Curve],
+    b_spans: &'a [Curve],
+    tolerance: f64,
+    cuts: Vec<Vec<f64>>,
+    aliases: Vec<usize>,
+    shared: Vec<SharedRange>,
+    linear: Vec<bool>,
+    work: usize,
+}
+
+impl<'a> BooleanCensus<'a> {
+    fn new(a_spans: &'a [Curve], b_spans: &'a [Curve], tolerance: f64) -> Self {
+        let cuts: Vec<Vec<f64>> = a_spans
+            .iter()
+            .chain(b_spans)
+            .map(|c| c.domain().to_vec())
+            .collect();
+        let count = cuts.len();
+        Self {
+            a_spans,
+            b_spans,
+            tolerance,
+            cuts,
+            aliases: (0..count).collect(),
+            shared: Vec::new(),
+            linear: vec![false; count],
+            work: 0,
+        }
+    }
+
+    fn pair(&mut self, i: usize, j: usize) -> Result<()> {
+        let (a_spans, b_spans) = (self.a_spans, self.b_spans);
+        let (ca, cb) = (&a_spans[i], &b_spans[j]);
+        if let Some(forward) = same(ca, cb, self.tolerance) {
+            self.record_shared(i, j, forward, ca.domain(), cb.domain());
+            return Ok(());
+        }
+        if self.rejected_by_hulls(ca, cb)? {
+            return Ok(());
+        }
+        self.work += 1;
+        if self.work > PAIR_BUDGET {
+            return Err(refused("Bézier Boolean pair budget exceeded"));
+        }
+        if self.planar_relation(i, j, ca, cb)? {
+            return Ok(());
+        }
+        self.report_events(i, j, ca, cb)
+    }
+
+    /// Control hulls that cannot meet, by box gap or supporting-plane proof.
+    fn rejected_by_hulls(&self, ca: &Curve, cb: &Curve) -> Result<bool> {
+        let pa = controls(ca)?;
+        let pb = controls(cb)?;
+        let tolerance = self.tolerance;
+        if (0..2).any(|k| {
+            let min = |p: &Vec<[f64; 2]>| p.iter().map(|q| q[k]).fold(f64::INFINITY, f64::min);
+            let max = |p: &Vec<[f64; 2]>| p.iter().map(|q| q[k]).fold(f64::NEG_INFINITY, f64::max);
+            max(&pa) + arrangement::HULL_GAP * tolerance < min(&pb)
+                || max(&pb) + arrangement::HULL_GAP * tolerance < min(&pa)
+        }) {
+            return Ok(true);
+        }
+        // A supporting coordinate plane can contain endpoint tangencies.
+        // Positive Bernstein weights and one strictly interior control on
+        // each side prove that the open spans never reach that plane.
+        if super::supporting_hulls_separate(&pa, &pb) {
+            return Ok(true);
+        }
+        let (a_first, a_last) = arrangement::control_ends(&pa)?;
+        let (b_first, b_last) = arrangement::control_ends(&pb)?;
+        let shared_endpoint = [*a_first, *a_last]
+            .into_iter()
+            .find(|p| p == b_first || p == b_last);
+        Ok(shared_endpoint.is_some_and(|p| super::shared_hulls_separate(&pa, &pb, p)))
+    }
+
+    fn push_event(&mut self, i: usize, j: usize, first: f64, second: f64) {
+        self.cuts[i].push(first);
+        self.cuts[self.a_spans.len() + j].push(second);
+    }
+
+    /// Merge the carriers of `a[i]` and `b[j]`; returns the previous class ids.
+    fn record_shared(
+        &mut self,
+        i: usize,
+        j: usize,
+        forward: bool,
+        a_range: [f64; 2],
+        b_range: [f64; 2],
+    ) -> (usize, usize) {
+        let classes = arrangement::merge_alias(&mut self.aliases, i, self.a_spans.len() + j);
+        self.shared.push((i, j, forward, a_range, b_range));
+        classes
+    }
+
+    /// Exact planar scalar relation; `false` when it does not apply.
+    fn planar_relation(&mut self, i: usize, j: usize, ca: &Curve, cb: &Curve) -> Result<bool> {
+        use nurbs_core::intersection::planar_scalar::{Relation, intersect};
+        let Some(relation) = intersect(ca, cb, self.tolerance)? else {
+            return Ok(false);
+        };
+        let (a_range, b_range, reversed, straight) = match relation {
+            Relation::Points(points) => {
+                for point in points {
+                    self.push_event(i, j, point.first, point.second);
+                }
+                return Ok(true);
+            }
+            Relation::Coincident {
+                reversed,
+                linear: straight,
+            } => (ca.domain(), cb.domain(), reversed, straight),
+            Relation::Overlap {
+                points,
+                linear,
+                first,
+                second,
+                reversed,
+            } => {
+                for point in points {
+                    self.push_event(i, j, point[0], point[1]);
+                }
+                (first, second, reversed, linear)
+            }
+        };
+        self.cuts[i].extend(a_range);
+        self.cuts[self.a_spans.len() + j].extend(b_range);
+        let (old, new) = self.record_shared(i, j, !reversed, a_range, b_range);
+        self.linear[new] = straight || self.linear[old] || self.linear[new];
+        Ok(true)
+    }
+
+    /// Interval intersection report, with the checked census as fallback.
+    fn report_events(&mut self, i: usize, j: usize, ca: &Curve, cb: &Curve) -> Result<()> {
+        let report = intersect_curve_curve_report(&lift(ca), &lift(cb), None)?;
+        if !report.report.unresolved.is_empty() {
+            if let Some((events, _)) = checked_cuts(ca, cb, false) {
+                for p in events {
+                    self.push_event(i, j, p[0], p[1]);
+                }
+                return Ok(());
+            }
+            return Err(refused("Bézier Boolean intersection is unresolved"));
+        }
+        for event in report.report.components {
+            if event.kind == CurveCurveComponentKind::Overlap {
+                let x = ca.trim(event.first_interval[0], event.first_interval[1])?;
+                let y = cb.trim(event.second_interval[0], event.second_interval[1])?;
+                let forward = same(&x, &y, self.tolerance)
+                    .or_else(|| coefficient_orientation(&x, &y))
+                    .ok_or_else(|| refused("Bézier overlap carrier identity is unresolved"))?;
+                self.cuts[i].extend(event.first_interval);
+                self.cuts[self.a_spans.len() + j].extend(event.second_interval);
+                self.record_shared(i, j, forward, event.first_interval, event.second_interval);
+                continue;
+            }
+            if !matches!(
+                event.contact,
+                ContactClass::Transverse
+                    | ContactClass::Boundary
+                    | ContactClass::OddTangency
+                    | ContactClass::EvenTangency
+            ) {
+                return Err(refused("Bézier Boolean contact is unresolved"));
+            }
+            if event.residual > self.tolerance {
+                return Err(refused("Bézier Boolean event residual exceeds tolerance"));
+            }
+            self.push_event(i, j, event.first, event.second);
+        }
+        Ok(())
+    }
+}
+
+/// Interval intersection proposes an overlap; retained polynomial Bernstein
+/// coefficients independently admit it, in one of the two orientations.
+fn coefficient_orientation(x: &Curve, y: &Curve) -> Option<bool> {
+    if x.degree != y.degree || x.weights != y.weights {
+        return None;
+    }
+    for forward in [true, false] {
+        let yy = if forward { y.clone() } else { y.reverse().ok()? };
+        if x.control_points.iter().zip(&yy.control_points).all(|(p, q)| {
+            p.iter().zip(q).all(|(a, b)| {
+                (a - b).abs() <= OVERLAP_ROUNDOFF * f64::EPSILON * a.abs().max(b.abs()).max(1.)
+            })
+        }) {
+            return Some(forward);
+        }
+    }
+    None
+}
+
+/// Which operand a source span comes from, and the other operand's loops.
+struct SourceSide<'a> {
+    from_a: bool,
+    local: usize,
+    other: &'a [Vec<Curve>],
+}
+
+/// Material classification and deduplication of trimmed source fragments.
+struct FragmentSelector<'a> {
+    op: &'a str,
+    tolerance: f64,
+    aliases: &'a [usize],
+    shared: &'a [SharedRange],
+    linear: &'a [bool],
+    selected: Vec<(Curve, usize)>,
+}
+
+impl FragmentSelector<'_> {
+    fn select_source(
+        &mut self,
+        source: &Curve,
+        index: usize,
+        side: &SourceSide,
+        cuts: &[f64],
+    ) -> Result<()> {
+        for interval in cuts.windows(2) {
             if interval[1] <= interval[0] {
                 continue;
             }
             let mut piece = source.trim(interval[0], interval[1])?;
             let p = piece.evaluate(interval[0] * 0.5 + interval[1] * 0.5)?.point;
-            let neighbor = shared.iter().find_map(|(i, j, same, ar, br)| {
-                let range = if from_a { ar } else { br };
-                let mid = interval[0] * 0.5 + interval[1] * 0.5;
-                if ((from_a && *i == local) || (!from_a && *j == local))
-                    && range[0] < mid
-                    && mid < range[1]
-                {
-                    Some(*same)
-                } else {
-                    None
-                }
-            });
-            let (ol, or) = if let Some(forward) = neighbor {
+            let mid = interval[0] * 0.5 + interval[1] * 0.5;
+            let (ol, or) = if let Some(forward) = self.shared_orientation(side, mid) {
                 (forward, !forward)
             } else {
-                let inside = contains(other, [p[0], p[1]], tolerance)?;
+                let inside = contains(side.other, [p[0], p[1]], self.tolerance)?;
                 (inside, inside)
             };
-            let left = if from_a {
-                material(op, true, ol)
+            let (left, right) = if side.from_a {
+                (material(self.op, true, ol), material(self.op, false, or))
             } else {
-                material(op, ol, true)
-            };
-            let right = if from_a {
-                material(op, false, or)
-            } else {
-                material(op, or, false)
+                (material(self.op, ol, true), material(self.op, or, false))
             };
             if left == right {
                 continue;
@@ -295,89 +381,76 @@ pub fn boolean(
             if !left {
                 piece = piece.reverse()?;
             }
-            let alias = aliases[index];
-            let mut coincident_piece = false;
-            for (c, id) in &selected {
-                if *id == alias {
-                    let scale = c
-                        .control_points
-                        .iter()
-                        .chain(&piece.control_points)
-                        .flatten()
-                        .map(|v| v.abs())
-                        .fold(1., f64::max);
-                    let limit = (4096. * f64::EPSILON * scale).min(tolerance * 0.001);
-                    if crate::profile_certificate::certify_curve_agreement(
-                        c,
-                        &piece,
-                        c.domain(),
-                        piece.domain(),
-                    )
-                    .is_ok()
-                        || crate::profile_certificate::certify_nonlinear_curve_agreement(
-                            c,
-                            &piece,
-                            c.domain(),
-                            piece.domain(),
-                        )
-                        .is_ok()
-                        || nurbs_core::intersection::planar_coincidence::agreement(c, &piece)?
-                            .is_some_and(|e| e <= limit)
-                    {
-                        coincident_piece = true;
-                        break;
-                    }
-                }
-            }
-            if coincident_piece {
+            let alias = self.aliases[index];
+            if self.coincides_with_selected(&piece, alias)?
+                || self.duplicates_selected(&piece, alias)?
+            {
                 continue;
             }
-            if selected.iter().any(|(c, id)| {
-                // Endpoint agreement is sufficient only for source carriers
-                // independently proved straight by the exact scalar reduction.
-                if *id == alias && linear[alias] {
-                    let endpoints = |c: &Curve| {
-                        [
-                            c.control_points.first().unwrap().clone(),
-                            c.control_points.last().unwrap().clone(),
-                        ]
-                    };
-                    if endpoints(c)
-                        .iter()
-                        .zip(endpoints(&piece))
-                        .all(|(p, q)| (p[0] - q[0]).hypot(p[1] - q[1]) <= 8. * tolerance)
-                    {
-                        return true;
-                    }
-                }
-                c.degree == piece.degree
-                    && c.control_points.len() == piece.control_points.len()
-                    && c.weights.iter().zip(&piece.weights).all(|(x, y)| {
-                        (x / c.weights[0] - y / piece.weights[0]).abs() <= 256. * f64::EPSILON
-                    })
-                    && c.control_points
-                        .iter()
-                        .zip(&piece.control_points)
-                        .all(|(p, q)| {
-                            p.iter().zip(q).all(|(x, y)| {
-                                (x - y).abs()
-                                    <= if *id == alias {
-                                        8. * tolerance
-                                    } else {
-                                        256. * f64::EPSILON * x.abs().max(y.abs()).max(1.)
-                                    }
-                            })
-                        })
-            }) {
-                continue;
-            }
-            selected.push((piece, alias));
-            if selected.len() > 2048 {
+            self.selected.push((piece, alias));
+            if self.selected.len() > arrangement::FRAGMENT_BUDGET {
                 return Err(refused("Bézier Boolean fragment budget exceeded"));
             }
         }
+        Ok(())
     }
-    assemble(selected, tolerance, op == "union" || op == "difference")
+
+    /// Orientation of a shared carrier range strictly containing `mid`.
+    fn shared_orientation(&self, side: &SourceSide, mid: f64) -> Option<bool> {
+        self.shared.iter().find_map(|(i, j, same, ar, br)| {
+            let range = if side.from_a { ar } else { br };
+            let owner = if side.from_a { *i } else { *j };
+            (owner == side.local && range[0] < mid && mid < range[1]).then_some(*same)
+        })
+    }
+
+    fn coincides_with_selected(&self, piece: &Curve, alias: usize) -> Result<bool> {
+        for (c, id) in &self.selected {
+            if *id == alias && arrangement::fragments_agree(c, piece, self.tolerance)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    fn duplicates_selected(&self, piece: &Curve, alias: usize) -> Result<bool> {
+        let tolerance = self.tolerance;
+        for (c, id) in &self.selected {
+            // Endpoint agreement is sufficient only for source carriers
+            // independently proved straight by the exact scalar reduction.
+            if *id == alias && self.linear[alias] {
+                let (c_first, c_last) = arrangement::control_ends(&c.control_points)?;
+                let (p_first, p_last) = arrangement::control_ends(&piece.control_points)?;
+                if [(c_first, p_first), (c_last, p_last)].iter().all(|(p, q)| {
+                    (p[0] - q[0]).hypot(p[1] - q[1]) <= arrangement::HULL_GAP * tolerance
+                }) {
+                    return Ok(true);
+                }
+            }
+            let control_limit = |x: f64, y: f64| {
+                if *id == alias {
+                    arrangement::HULL_GAP * tolerance
+                } else {
+                    FRAGMENT_ROUNDOFF * f64::EPSILON * x.abs().max(y.abs()).max(1.)
+                }
+            };
+            if c.degree == piece.degree
+                && c.control_points.len() == piece.control_points.len()
+                && c.weights.iter().zip(&piece.weights).all(|(x, y)| {
+                    (x / c.weights[0] - y / piece.weights[0]).abs()
+                        <= FRAGMENT_ROUNDOFF * f64::EPSILON
+                })
+                && c.control_points.iter().zip(&piece.control_points).all(|(p, q)| {
+                    p.iter()
+                        .zip(q)
+                        .all(|(x, y)| (x - y).abs() <= control_limit(*x, *y))
+                })
+            {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
 }
 pub(super) fn assemble(
     mut selected: Vec<(Curve, usize)>,

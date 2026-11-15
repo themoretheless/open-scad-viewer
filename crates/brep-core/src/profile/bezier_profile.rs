@@ -9,6 +9,8 @@ pub use boolean_ops::boolean;
 #[path = "bezier_profile_normalize.rs"]
 mod normalize_ops;
 pub use normalize_ops::normalize;
+#[path = "bezier_profile_arrangement.rs"]
+mod arrangement_ops;
 #[path = "bezier_profile_area.rs"]
 mod area_ops;
 #[path = "bezier_profile_coincidence.rs"]
