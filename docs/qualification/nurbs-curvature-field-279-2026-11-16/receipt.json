@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0279",
+  "testedBase": "e31ec9c1e4f6955fa3d6412b8af9c438a2af33d4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_slope_contracts",
+    "--test",
+    "curvature_gap_graph_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 35,
+  "scope": [
+    "Bounds every possible plane intersection by clipping an outward affine signed enclosure. Opposite strict endpoint signs certify a crossing without claiming uniqueness.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "84ecd766537aea1394be8824bd33148ed6c78de7704075000b5e7f89e939583b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "81247412382104536bb5e9e957d8c1e245a541b92452afa245f84cffbcc79b6b",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_plane.rs": "e0dd84b3f1d1098d511be9314ec3c68c638ae9e42aa90841360fd4296fa4f5fa",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs": "9cb885b3a7a49d5ee658f772a2c2e0894ca7a2b8b2bdd35e010f48fa1504c5c5",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs": "175285f206e3c094512d1c96bf946ba880016ab3c45b6aeee22ad2ded0e899e6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs": "180372d100b3158615c45fee072cb294c095bc0ad34d2c218c99856ea65a42d7"
+  }
+}

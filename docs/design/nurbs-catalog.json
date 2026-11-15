@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 278,
-  "unallocatedCount": 722,
+  "specifiedCount": 279,
+  "unallocatedCount": 721,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7470,6 +7470,30 @@
       ],
       "remainingQualification": [
         "Combines exact segment-pair projections and continuous world-space contour errors. Certified boxes prune pairs that cannot improve the upper bound.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0279",
+      "name": "Сертифицированное сечение пространственного контура кривизны NURBS плоскостью",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::section_curvature_gap_contour",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_plane.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "docs/qualification/nurbs-curvature-field-279-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-279-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Bounds every possible plane intersection by clipping an outward affine signed enclosure. Opposite strict endpoint signs certify a crossing without claiming uniqueness.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]

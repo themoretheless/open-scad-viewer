@@ -28,6 +28,11 @@ mod curvature_gap_pair_distance;
 pub use curvature_gap_pair_distance::{
     CurvatureGapContourSpec, CurvatureGapPairDistance, distance_between_curvature_gap_contours,
 };
+mod curvature_gap_plane;
+pub use curvature_gap_plane::{
+    CurvatureGapPlaneAudit, CurvatureGapPlaneEvent, CurvatureGapPlaneStatus,
+    section_curvature_gap_contour,
+};
 mod curvature_gap_polyline;
 pub use curvature_gap_polyline::{
     AdaptiveCurvaturePolyline, AdaptiveCurvaturePolylineOptions, CurvatureGapPolyline,

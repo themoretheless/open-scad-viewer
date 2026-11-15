@@ -617,3 +617,50 @@ fn intersecting_contours_allow_zero_and_late_work_refusal_returns_no_distance() 
     assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
     assert!(short.distance_bounds.is_none() && short.upper_segments.is_none());
 }
+
+#[test]
+fn plane_section_proves_crossing_and_localizes_it_in_the_original_clock() {
+    use nurbs_core::editing::exact_surface_derivative::{
+        CurvatureGapPlaneStatus, section_curvature_gap_contour,
+    };
+    let surface = sheared_parabola(0., 9.);
+    let spec = contour_spec(&surface, &[7., 8., 9.]);
+    for (normal, offset) in [([0., 2., 0.], 0.5), ([0., -2., 0.], -0.5)] {
+        let events = section_curvature_gap_contour(spec, normal, offset, WORK)
+            .unwrap()
+            .events
+            .unwrap();
+        assert_eq!(events.len(), 1);
+        let event = events[0];
+        assert_eq!(event.segment, 0);
+        assert_eq!(event.status, CurvatureGapPlaneStatus::Crossing);
+        let [lo, hi] = event.transverse;
+        assert!(lo <= 7.5 && 7.5 <= hi && hi - lo < 1e-8, "{event:?}");
+    }
+}
+
+#[test]
+fn plane_section_distinguishes_disjoint_and_coincident_contours() {
+    use nurbs_core::editing::exact_surface_derivative::{
+        CurvatureGapPlaneStatus, section_curvature_gap_contour,
+    };
+    let surface = sheared_parabola(0., 9.);
+    let spec = contour_spec(&surface, &[7., 9.]);
+    let run = |offset| section_curvature_gap_contour(spec, [1., 0., 0.], offset, WORK).unwrap();
+    assert!(run(0.).events.unwrap().is_empty());
+    let events = run(0.5).events.unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].status, CurvatureGapPlaneStatus::Possible);
+    assert_eq!(events[0].transverse, [7., 9.]);
+}
+
+#[test]
+fn an_invalid_plane_or_unfinished_contour_cannot_produce_a_section() {
+    use nurbs_core::editing::exact_surface_derivative::section_curvature_gap_contour;
+    let surface = sheared_parabola(0., 9.);
+    let spec = contour_spec(&surface, &[7., 9.]);
+    assert!(section_curvature_gap_contour(spec, [0.; 3], 1., WORK).is_err());
+    let short = section_curvature_gap_contour(spec, [0., 1., 0.], 0.25, 1).unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.events.is_none());
+}
