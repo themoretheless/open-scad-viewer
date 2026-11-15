@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 276,
-  "unallocatedCount": 724,
+  "specifiedCount": 277,
+  "unallocatedCount": 723,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7420,6 +7420,30 @@
       ],
       "remainingQualification": [
         "Exact rational clamped projection onto each stored chord and the continuous world error enclose the minimum Euclidean distance to the original contour. Reports which segment supplies the upper bound.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0277",
+      "name": "Пространственные ограничивающие параллелепипеды целого порогового контура NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::bound_curvature_gap_contour",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs",
+        "docs/qualification/nurbs-curvature-field-277-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-277-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Outward per-segment world-axis boxes enclose the whole original contour for broad-phase exclusion.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]

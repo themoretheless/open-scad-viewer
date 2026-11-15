@@ -228,3 +228,53 @@ pub fn measure_curvature_gap_contour(
     report.length_bounds = Some([total.lo.max(0.), total.hi]);
     Ok(report)
 }
+
+#[derive(Clone, Debug)]
+pub struct CurvatureGapWorldBounds {
+    pub uv: CurvatureGapPolyline,
+    /// Axis-aligned world boxes in transverse order, one per chord.
+    pub segment_bounds: Option<Vec<[[f64; 2]; 3]>>,
+    /// World-axis ranges enclosing the entire original contour in this cell.
+    pub bounds: Option<[[f64; 2]; 3]>,
+}
+
+/// Bound the proven branch by axis-aligned world boxes. Each chord's
+/// continuous Euclidean error expands all three coordinate intervals
+/// outwards. Boxes can reject spatial overlap but cannot prove contact.
+pub fn bound_curvature_gap_contour(
+    source: &Surface,
+    span: [usize; 2],
+    axis: Axis,
+    level: f64,
+    transverse: &[f64],
+    max_depth: u8,
+    max_work: u64,
+) -> Result<CurvatureGapWorldBounds> {
+    let world = certify_curvature_gap_world_polyline(
+        source, span, axis, level, transverse, max_depth, max_work,
+    )?;
+    let mut report = CurvatureGapWorldBounds {
+        uv: world.uv,
+        segment_bounds: None,
+        bounds: None,
+    };
+    let (Some(points), Some(errors)) = (world.points, world.world_error_upper) else {
+        return Ok(report);
+    };
+    let mut segments = Vec::with_capacity(errors.len());
+    let mut overall = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
+    for (pair, error) in points.windows(2).zip(errors) {
+        let mut bounds = [[0.; 2]; 3];
+        let offset = I::new(-error, error)?;
+        for i in 0..3 {
+            let [a, b] = [pair[0][i], pair[1][i]];
+            let bound = I::new(a.min(b), a.max(b))?.add(offset)?;
+            bounds[i] = [bound.lo, bound.hi];
+            overall[i] = [overall[i][0].min(bound.lo), overall[i][1].max(bound.hi)];
+        }
+        segments.push(bounds);
+    }
+    report.segment_bounds = Some(segments);
+    report.bounds = Some(overall);
+    Ok(report)
+}

@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0277",
+  "testedBase": "ca0e72af65f60a3bf05c3a693e01bcf792d197ce",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_slope_contracts",
+    "--test",
+    "curvature_gap_graph_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 30,
+  "scope": [
+    "Outward per-segment world-axis boxes enclose the whole original contour for broad-phase exclusion.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "b694050593950a717fc37be3b7182eb965cf6aee876b6b837284d35dfa7f5aca",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "44e227d65279e0a13760b865cbb540489e1f18fc7bfaf9e6ba0ca136145a681c",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs": "cd27d873525fa0fe9d2b89dfdd7cd74b0141cb7f22c58aa4fd6459e88aff7eb8",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs": "97013df85276982050037b3979efb2282230000ac7140665d12675ec8145a449",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs": "175285f206e3c094512d1c96bf946ba880016ab3c45b6aeee22ad2ded0e899e6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs": "180372d100b3158615c45fee072cb294c095bc0ad34d2c218c99856ea65a42d7"
+  }
+}

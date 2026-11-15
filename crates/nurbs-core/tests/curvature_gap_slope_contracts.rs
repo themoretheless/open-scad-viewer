@@ -501,3 +501,38 @@ fn point_query_validation_and_late_work_refusal_are_atomic() {
     assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
     assert!(short.distance_bounds.is_none() && short.upper_segment.is_none());
 }
+
+#[test]
+fn world_boxes_cover_each_complete_interval_and_can_exclude_distant_points() {
+    use nurbs_core::editing::exact_surface_derivative::bound_curvature_gap_contour;
+    let s = sheared_parabola(0.125, 9.);
+    let x = ((4f64.cbrt() - 1.) / 4.).sqrt();
+    let r = bound_curvature_gap_contour(&s, [2, 2], Axis::U, 1., &[7., 8., 9.], 12, WORK).unwrap();
+    let segments = r.segment_bounds.unwrap();
+    let overall = r.bounds.unwrap();
+    assert_eq!(segments.len(), 2);
+    for (i, bounds) in segments.iter().enumerate() {
+        for sample in [0., 0.25, 0.5, 0.75, 1.] {
+            let point = [x, (i as f64 + sample) * 0.5, x * x];
+            for axis in 0..3 {
+                let [lo, hi] = bounds[axis];
+                assert!(lo <= point[axis] && point[axis] <= hi);
+                assert!(overall[axis][0] <= lo && hi <= overall[axis][1]);
+            }
+        }
+    }
+    assert!(overall[0][1] < 2.);
+}
+
+#[test]
+fn world_boxes_are_absent_when_the_contour_has_no_certificate() {
+    use nurbs_core::editing::exact_surface_derivative::bound_curvature_gap_contour;
+    let s = sheared_parabola(0.125, 9.);
+    let unresolved =
+        bound_curvature_gap_contour(&s, [2, 2], Axis::V, 1., &[2., 6.], 16, WORK).unwrap();
+    assert_eq!(unresolved.uv.graph, Some(CurvatureGapGraph::Unresolved));
+    assert!(unresolved.bounds.is_none() && unresolved.segment_bounds.is_none());
+    let short = bound_curvature_gap_contour(&s, [2, 2], Axis::U, 1., &[7., 9.], 16, 1).unwrap();
+    assert_eq!(short.uv.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.bounds.is_none() && short.segment_bounds.is_none());
+}
