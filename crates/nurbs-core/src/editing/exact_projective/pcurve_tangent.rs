@@ -104,7 +104,7 @@ fn audit_piece(
     Ok(ControlFlow::Continue(()))
 }
 
-fn singular(normal: &[Poly], work: &mut Work) -> PResult<bool> {
+pub(super) fn singular(normal: &[Poly], work: &mut Work) -> PResult<bool> {
     let mut common = Poly::new();
     for component in normal.iter().filter(|p| !p.is_empty()) {
         common = if common.is_empty() {
