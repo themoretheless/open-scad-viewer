@@ -47,6 +47,8 @@ import { translate, type TranslateParams } from './i18n/appStrings'
 import { useAppearance } from './composables/useAppearance'
 import { useEditorFind } from './composables/useEditorFind'
 import { createTextareaEditorAdapter } from './editor/EditorAdapter'
+import { createCodeMirrorEditorAdapter, resolveEditorEngine } from './editor/codemirrorAdapter'
+import { useCodeMirrorEditor } from './composables/useCodeMirrorEditor'
 import { WORKSPACE_MODES, workspaceModeHint, workspaceModeLabel } from './app/workspaceModes'
 const DirectModeler = defineAsyncComponent(() => import('./features/DirectModeler.svt'))
 const MeshModeler = defineAsyncComponent(() => import('./features/MeshModeler.svt'))
@@ -104,8 +106,15 @@ const editorWidth = ref(clamp(Number(storageGet('scad-editor-width')) || 440, 30
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const editorRef = ref<HTMLTextAreaElement | null>(null)
+const codeMirrorHostRef = ref<HTMLDivElement | null>(null)
+/** CodeMirror 6 by default; `?editor=textarea` or the `scad-editor-engine` storage flag selects the textarea fallback. */
+const editorEngine = resolveEditorEngine(typeof location === 'undefined' ? '' : location.search, storageGet('scad-editor-engine'))
+const codeMirror = useCodeMirrorEditor({
+  host: codeMirrorHostRef, code, ariaLabel: () => t('editor'), maxLength: MAX_WORKSPACE_SOURCE_LENGTH,
+  onUserEdit: () => handleEditorInput(), onSelection: () => syncSourceHighlightFromEditor(), onKeydown: event => handleEditorKey(event)
+})
 /** All editor reads and writes go through this engine-neutral adapter (ROADMAP P4). */
-const editor = createTextareaEditorAdapter(editorRef)
+const editor = editorEngine === 'textarea' ? createTextareaEditorAdapter(editorRef) : createCodeMirrorEditorAdapter(codeMirror.engine)
 const highlightRef = ref<HTMLPreElement | null>(null)
 const selectedEditorName = ref('')
 const {
@@ -685,7 +694,8 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
           <button type="button" :aria-label="t('closeSearch')" @click="closeEditorFind">×</button>
         </div>
 
-        <div class="code-editor" :style="{ '--line-number-digits': Math.max(2, String(editorLineCount).length) }">
+        <div v-if="editorEngine === 'codemirror'" ref="codeMirrorHostRef" class="code-editor code-editor-cm" data-editor-engine="codemirror" />
+        <div v-else class="code-editor" :style="{ '--line-number-digits': Math.max(2, String(editorLineCount).length) }">
         <div v-if="foldedLines.size" class="folded-editor code" aria-label="Свернутый код">
           <div v-for="row in foldedRows" :key="row.line" class="folded-row">
             <span class="folded-number">{{ row.line + 1 }}</span>

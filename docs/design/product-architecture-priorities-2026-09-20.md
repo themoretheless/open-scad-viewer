@@ -142,6 +142,81 @@ wanted and a ~1 MB gzip lazily loaded chunk is acceptable. The bundle figures
 in the table are approximate public sizes, not measured in this repository;
 measure them with `vite build` after installing the chosen package.
 
+## Step 2 status: CodeMirror 6 integrated (2026-11-15)
+
+The user chose CodeMirror 6. Packages pinned exactly: `@codemirror/state`
+6.7.6, `@codemirror/view` 6.43.15, `@codemirror/commands` 6.11.1,
+`@codemirror/language` 6.13.1, `@codemirror/search` 6.7.2 and
+`@lezer/highlight` 1.2.5 (used directly for highlight tags).
+
+- `src/editor/codemirrorCore.ts` is the headless logic layer
+  (`@codemirror/state` + `@codemirror/commands` only): CodeMirror history with
+  `newGroupDelay` 500 ms, programmatic edits tagged `input.programmatic` and
+  isolated with `isolateHistory('full')` so format, find/replace, customizer,
+  preset and Tab indent are each exactly one undo step on the engine's history
+  (this closes the textarea gap where `setRangeText` edits were not undoable),
+  `setRangeText`-compatible selection modes, whole-document `setText` reduced
+  to a minimal prefix/suffix change, and a highlight `StateField` mapped
+  through edits.
+- `src/editor/codemirrorAdapter.ts` holds `createCodeMirrorEditorAdapter`,
+  which has no runtime CodeMirror import; `src/editor/codemirrorView.ts`
+  (line numbers, fold gutter over the existing `editorBlocks`, a
+  `StreamLanguage` tokenizer with the same classes as `highlightCode` for
+  OpenSCAD and Rush, `highlightSelectionMatches`, highlight decorations,
+  history/default keymaps without Tab, aria label, focus ring, a CSS-variable
+  theme) is loaded with `import()` by `useCodeMirrorEditor`.
+- The app uses CodeMirror by default. `?editor=textarea` or the
+  `scad-editor-engine=textarea` storage flag selects the textarea fallback.
+  Find/replace keeps the existing `useEditorFind` bar through the adapter;
+  the CodeMirror search panel is not bound. Tab stays the app's
+  `indentSelection` handler. IME composition is one undo step through
+  CodeMirror's `input.type.compose` joining, and the `code` model is updated
+  once after compositionend.
+- Tests: `tests/editorAdapter.test.ts` runs the adapter contract (text,
+  selection mapping, unmounted no-op, highlights, find/replace, Tab indent,
+  scene pick reveal) against both engines; CodeMirror runs over a DOM-free
+  host with real `@codemirror/state` transactions, plus history tests
+  (coalescing window, programmatic isolation, composition joining, highlight
+  mapping). No jsdom/happy-dom is installed, so the view wiring is covered by
+  `scripts/check-browser-smoke.mjs` (type, undo/redo groups across a 700 ms
+  pause, Ctrl/⌘+F find selecting in CodeMirror, Tab indent as one undo step,
+  syntax colours in light and dark, editor screenshots in both themes).
+
+### Before / after
+
+Same machine and command as the baseline. The textarea numbers were re-run on
+2026-11-15 next to the CodeMirror ones; the 2026-11-14 values are kept for
+reference. CodeMirror "highlight refresh" is `ensureSyntaxTree` up to the
+visible window (~60 lines past the caret) after the edit, i.e. the incremental
+StreamLanguage re-parse the view needs before painting; layout and paint are
+not included for either engine.
+
+| Source | Engine | Keystroke→model | Highlight refresh |
+|---|---|---|---|
+| 5,000 lines | textarea (11-14) | 0.06 ms | 47 ms |
+| 5,000 lines | textarea (11-15, 3 runs) | 0.06 ms | 32–72 ms |
+| 5,000 lines | CodeMirror 6 (3 runs) | 0.27–0.32 ms | 0.34–0.39 ms |
+| 20,000 lines | textarea (11-14) | 0.05 ms | 295 ms |
+| 20,000 lines | textarea (11-15, 3 runs) | 0.05 ms | 135–141 ms |
+| 20,000 lines | CodeMirror 6 (3 runs) | 0.43–0.53 ms | 0.27–0.29 ms |
+
+CodeMirror's keystroke→model includes `doc.toString()` for the `code` model,
+which is why it is above the textarea's.
+
+Bundle (`npx vite build`): entry chunk `index-*.js` 240.31 kB / 74.19 kB gzip
+before, 242.59 kB / 74.96 kB gzip after (+2.3 kB / +0.8 kB gzip for the
+adapter, the mount composable and the engine flag). CodeMirror itself is a
+separate lazily loaded chunk of 308.89 kB / 100.52 kB gzip, fetched when the
+source editor mounts. That is larger than the 120–200 kB estimate above; the
+fold gutter, search (selection-match highlighting) and the default keymap
+are included.
+
+Remaining: desktop/mobile screenshots of the full shell and a screen-reader
+pass are not done (the smoke captures only the editor pane in both themes);
+the textarea-only folded view and indent guides have no CodeMirror
+counterpart beyond the fold gutter; the chunk could be trimmed by dropping
+`@codemirror/search`.
+
 ## Greenfield choices that still apply
 
 - Keep source semantics and evaluated IR in one runtime. Return handles,
