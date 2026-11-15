@@ -86,6 +86,7 @@ import DraftConflictCopies from './directModeler/DraftConflictCopies.svt'
 import { useFileExchange } from './directModeler/useFileExchange'
 import { useDisplayAndSnapQueues } from './directModeler/useDisplayAndSnapQueues'
 import { useViewportLayerAndPolygons } from './directModeler/useViewportLayerAndPolygons'
+import { rovingTabStopKey } from './directModeler/rovingTabStop'
 const props = defineProps<{ open: boolean; locale: string; canAppend: boolean; remainingSource: number; embedded?: boolean; initialDocument?: DirectDocument; initialSelection?: string; seedDocument?: DirectDocument | null; appendBodies?: { bodies: DirectBody[]; token: number; group?: { name: string; source: string; replaces: string | null } } | null; paletteRequest?: number }>()
 const emit = defineEmits<{ backend: [gpu: boolean]; close: []; append: [source: string]; toMesh: []; 'edit-group': [request: { name: string; source: string; replaces: string | null }] }>()
 const ru = computed(() => props.locale === 'ru')
@@ -382,6 +383,8 @@ function surfaceInputKey(e:KeyboardEvent,role:number){
 }
 
 const boxSelect=ref(false),selectionBox=ref<{start:Point2;end:Point2;pane:Pane}|null>(null),gizmoMode=ref<'move'|'rotate'|'scale'>('move')
+const SKETCH_TOOLS=['select','rectangle','circle','arc','slot','trim','polyline'] as const,sketchToolFocus=ref(''),sketchToolStop=computed(()=>(SKETCH_TOOLS as readonly string[]).includes(sketchToolFocus.value)?sketchToolFocus.value:(SKETCH_TOOLS as readonly string[]).includes(tool.value)?tool.value:'select')
+const sketchToolKey=(e:KeyboardEvent)=>{const next=rovingTabStopKey(e,SKETCH_TOOLS,sketchToolStop.value);if(next)sketchToolFocus.value=next},gizmoModeKey=(e:KeyboardEvent)=>{const next=rovingTabStopKey(e,['move','rotate','scale'],gizmoMode.value);if(next)gizmoMode.value=next as typeof gizmoMode.value}
 // Vertex editing of polygon bodies: drag selected vertices in the screen plane, one undo step on release.
 let vertexDrag:{svg:SVGSVGElement;pointer:number;start:Point2;ids:number[];before:DirectDocument;moved:boolean;inverse:DOMMatrix|null}|null=null
 // Tessellated bodies duplicate vertices per face; group indices by position so a drag moves the whole corner.
@@ -1643,8 +1646,10 @@ function cancelCommandState() {
 function cancelCommand(){cancelCommandState();tool.value='select';workspace.value?.focus()}
 
 function quantityValidity(key: string, valid: boolean) { if (valid) delete invalidQuantities.value[key]; else invalidQuantities.value[key] = true }
+// An identity instance transform would commit nothing; Apply waits for a changed value.
+const identityInstanceTransform = computed(() => advancedOp.value==='instance-transform' && !advanced.value.x && !advanced.value.y && !advanced.value.z && !advanced.value.angle && advanced.value.scale===1)
 const commandReady = computed(() => {
-  if(advancedOp.value==='edge-fillet' && advanced.value.filletMode==='partial-preview')return false
+  if((advancedOp.value==='edge-fillet' && advanced.value.filletMode==='partial-preview') || identityInstanceTransform.value)return false
   if (nativeNurbsPending.value || gizmoPending.value || directTransformPending.value || sketchEditPending.value || booleanPending.value || Object.keys(invalidQuantities.value).length) return false
   if (subtract.value) return !!(subtract.value.a.length && subtract.value.b.length)
   if (advancedOp.value) return !!advancedPreview.value.document
@@ -1668,6 +1673,7 @@ const commandBlockedReason = computed(() => {
   if (commandReady.value) return ''
   if (nativeNurbsPending.value || gizmoPending.value || directTransformPending.value || sketchEditPending.value || booleanPending.value || previewPending.value || bodyEditPending.value) return label('Дождитесь предпросмотра.', 'Wait for the preview.')
   if (Object.keys(invalidQuantities.value).length) return label('Исправьте числовой ввод.', 'Correct the numeric input.')
+  if (identityInstanceTransform.value) return label('Задайте смещение, поворот или масштаб.', 'Set an offset, rotation or scale.')
   if (advancedOp.value === 'edge-fillet' && advanced.value.filletMode === 'partial-preview') return label('Частичный предпросмотр нельзя применить.', 'A partial preview cannot be applied.')
   if (subtract.value) return !subtract.value.a.length ? label('Выберите тела A.', 'Select target bodies A.') : label('Выберите режущие тела B.', 'Select cutting bodies B.')
   if (commandFailure.value) return commandFailure.value
@@ -2466,7 +2472,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           <div class="pane-tools">
             <VrControls v-if="pane === '3d'" :get-scene="vrSnapshot" :available="renderBodies.some(body => body.mesh.indices.length > 0)" :locale="locale" />
             <template v-if="pane === '2d'">
-              <button v-for="(name, value) in { select: label('Выбор · V', 'Select · V'), rectangle: label('Прямоугольник · R', 'Rectangle · R'), circle: label('Круг · C', 'Circle · C'), arc: label('Дуга', 'Arc'), slot: label('Паз', 'Slot'), trim: label('Обрезать','Trim'), polyline: label('Ломаная · L', 'Polyline · L') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="tool === value" @click="beginSketch(value)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
+              <button v-for="(name, value) in { select: label('Выбор · V', 'Select · V'), rectangle: label('Прямоугольник · R', 'Rectangle · R'), circle: label('Круг · C', 'Circle · C'), arc: label('Дуга', 'Arc'), slot: label('Паз', 'Slot'), trim: label('Обрезать','Trim'), polyline: label('Ломаная · L', 'Polyline · L') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="tool === value" :tabindex="sketchToolStop === value ? 0 : -1" :data-roving="value" @keydown="sketchToolKey" @click="sketchToolFocus = ''; beginSketch(value)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
               <button class="tool-icon" :title="label('Рамка','Box select')" :aria-label="label('Рамка','Box select')" :aria-pressed="boxSelect" @click="boxSelect=!boxSelect"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.box" /></svg></button>
               <button :title="label('Вернуться к плоскости XY','Back to the XY plane')" @click="resetWorkplane()">XY</button>
 
@@ -2494,7 +2500,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </div>
               <span class="tool-divider" aria-hidden="true"></span>
               <div class="tool-group" role="group" :aria-label="label('Манипулятор','Manipulator')">
-                <button v-for="(name, value) in { move: label('Манипулятор: двигать','Gizmo: move'), rotate: label('Манипулятор: вращать','Gizmo: rotate'), scale: label('Манипулятор: масштаб','Gizmo: scale') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="gizmoMode===value" @click="gizmoMode=value"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
+                <button v-for="(name, value) in { move: label('Манипулятор: двигать','Gizmo: move'), rotate: label('Манипулятор: вращать','Gizmo: rotate'), scale: label('Манипулятор: масштаб','Gizmo: scale') }" :key="value" class="tool-icon" :title="name" :aria-label="name" :aria-pressed="gizmoMode===value" :tabindex="gizmoMode===value?0:-1" :data-roving="value" @keydown="gizmoModeKey" @click="gizmoMode=value"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS[value]" /></svg></button>
               </div>
               <span class="tool-divider" aria-hidden="true"></span>
               <button class="tool-icon" :title="label('Обзор','Orbit')" :aria-label="label('Обзор','Orbit')" :aria-pressed="!movingBody" @click="movingBody = false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path :d="TOOL_ICONS.orbit" /></svg></button>
