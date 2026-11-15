@@ -1,5 +1,6 @@
 //! Shared assertions for the STEP identity tests.
 #![allow(dead_code)]
+pub mod brep_generator;
 use std::collections::BTreeMap;
 
 /// STEP v6 writes the authored chart and face senses unchanged, so the import must match the
