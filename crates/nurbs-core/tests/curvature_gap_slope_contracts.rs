@@ -274,3 +274,393 @@ fn late_second_derivative_budget_refuses_atomically() {
     assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
     assert!(short.graph.is_none() && short.second_derivative.is_none());
 }
+
+#[test]
+fn second_order_adaptation_meets_the_same_tolerance_with_fewer_vertices() {
+    use nurbs_core::editing::exact_surface_derivative::{
+        AdaptiveCurvaturePolylineOptions, CurvaturePolylineStop, adapt_curvature_gap_polyline,
+        adapt_curvature_gap_polyline_second_order,
+    };
+    let s = quadratic_transverse_chart();
+    let options = AdaptiveCurvaturePolylineOptions {
+        max_error: 0.1,
+        max_vertices: 32,
+        root_depth: 16,
+        max_work: WORK,
+    };
+    let first = adapt_curvature_gap_polyline(&s, [2, 4], Axis::U, 0.5, options).unwrap();
+    let second =
+        adapt_curvature_gap_polyline_second_order(&s, [2, 4], Axis::U, 0.5, options).unwrap();
+    assert_eq!(first.stop, Some(CurvaturePolylineStop::ToleranceMet));
+    assert_eq!(second.stop, first.stop);
+    assert!(first.polyline.samples.unwrap().len() > 3);
+    assert_eq!(second.polyline.samples.unwrap().len(), 3);
+    assert_eq!(
+        second.polyline.segment_error_upper.unwrap(),
+        vec![3. / 64.; 2]
+    );
+}
+
+#[test]
+fn second_order_adaptation_keeps_the_error_from_inexact_vertices() {
+    use nurbs_core::editing::exact_surface_derivative::{
+        AdaptiveCurvaturePolylineOptions, CurvaturePolylineStop,
+        adapt_curvature_gap_polyline_second_order,
+    };
+    let s = sheared_parabola(0.125, 9.);
+    let options = AdaptiveCurvaturePolylineOptions {
+        max_error: 0.001,
+        max_vertices: 2,
+        root_depth: 10,
+        max_work: WORK,
+    };
+    let r = adapt_curvature_gap_polyline_second_order(&s, [2, 2], Axis::U, 1., options).unwrap();
+    assert_eq!(r.stop, Some(CurvaturePolylineStop::VertexLimit));
+    assert_eq!(r.polyline.segment_error_upper.unwrap(), vec![1. / 512.]);
+}
+
+#[test]
+fn world_polyline_covers_the_analytic_contour_between_vertices() {
+    use nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_world_polyline;
+    let mut s = sheared_parabola(0.125, 9.);
+    // Keep the parabolic cylinder and change the transverse clock to
+    // y(s) = (s+s²)/2. At x=1/2 the physical contour is a straight line,
+    // but the chord error at equal transverse parameters is 1/8.
+    for row in &mut s.control_points {
+        row[1][1] = 0.25;
+    }
+    let evaluate = |grid: &[f64]| {
+        certify_curvature_gap_world_polyline(&s, [2, 2], Axis::U, 0.5, grid, 16, WORK).unwrap()
+    };
+    let coarse = evaluate(&[7., 9.]);
+    let world = coarse
+        .points
+        .unwrap_or_else(|| panic!("{:?}", coarse.uv.graph));
+    let errors = coarse.world_error_upper.unwrap();
+    assert!(errors[0] >= 0.125);
+    assert!((world[0][0] - 0.5).abs() < 1e-12 && (world[1][2] - 0.25).abs() < 1e-12);
+    let fine = evaluate(&[7., 8., 9.]);
+    let fine_points = fine.points.unwrap();
+    let fine_errors = fine.world_error_upper.unwrap();
+    for i in 0..2 {
+        let span_mid = (i as f64 + 0.5) * 0.5;
+        let y = (span_mid + span_mid * span_mid) * 0.5;
+        let exact = [0.5, y, 0.25];
+        let error = (0..3)
+            .map(|axis| {
+                let p = (fine_points[i][axis] + fine_points[i + 1][axis]) * 0.5;
+                (p - exact[axis]).powi(2)
+            })
+            .sum::<f64>()
+            .sqrt();
+        assert!(error <= fine_errors[i]);
+        assert!(fine_errors[i] < errors[0]);
+    }
+}
+
+#[test]
+fn world_polyline_preserves_unresolved_graph_and_exact_work_refusal() {
+    use nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_world_polyline;
+    let s = sheared_parabola(0.125, 9.);
+    let unresolved =
+        certify_curvature_gap_world_polyline(&s, [2, 2], Axis::V, 1., &[2., 6.], 16, WORK).unwrap();
+    assert_eq!(unresolved.uv.graph, Some(CurvatureGapGraph::Unresolved));
+    assert!(unresolved.points.is_none() && unresolved.world_error_upper.is_none());
+    let short =
+        certify_curvature_gap_world_polyline(&s, [2, 2], Axis::U, 1., &[7., 9.], 16, 1).unwrap();
+    assert_eq!(short.uv.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.points.is_none() && short.world_error_upper.is_none());
+}
+
+#[test]
+fn world_bound_includes_displacement_from_coarse_root_brackets() {
+    use nurbs_core::editing::exact_surface_derivative::certify_curvature_gap_world_polyline;
+    let s = sheared_parabola(0.125, 9.);
+    let r =
+        certify_curvature_gap_world_polyline(&s, [2, 2], Axis::U, 1., &[7., 9.], 3, WORK).unwrap();
+    let x = ((4f64.cbrt() - 1.) / 4.).sqrt();
+    let upper = r.world_error_upper.unwrap()[0];
+    for (i, point) in r.points.unwrap().iter().enumerate() {
+        let exact = [x, i as f64, x * x];
+        let distance = (0..3)
+            .map(|axis| (point[axis] - exact[axis]).powi(2))
+            .sum::<f64>()
+            .sqrt();
+        assert!(
+            distance > 1e-4 && distance <= upper,
+            "{distance} <= {upper}"
+        );
+    }
+}
+
+#[test]
+fn model_space_arc_length_bounds_enclose_analytic_lengths_under_clock_scaling() {
+    use nurbs_core::editing::exact_surface_derivative::measure_curvature_gap_contour;
+    let mut s = sheared_parabola(0.125, 9.);
+    for row in &mut s.control_points {
+        for (j, point) in row.iter_mut().enumerate() {
+            point[1] = [0., 0.5, 2.][j];
+        }
+    }
+    // The x=1/2 locus is a line of length two. Its transverse clock is
+    // nonlinear, so the first half has length 3/4 and the second 5/4.
+    let r =
+        measure_curvature_gap_contour(&s, [2, 2], Axis::U, 0.5, &[7., 8., 9.], 16, WORK).unwrap();
+    let segments = r.segment_bounds.as_ref().unwrap_or_else(|| panic!("{r:?}"));
+    for ([lo, hi], exact) in segments.iter().copied().zip([0.75, 1.25]) {
+        assert!(0. < lo && lo <= exact && exact <= hi);
+    }
+    let [lo, hi] = r.length_bounds.unwrap();
+    assert!(lo <= 2. && 2. <= hi && hi.is_finite(), "{:?}", [lo, hi]);
+    let affine = sheared_parabola(0., 9.);
+    let r =
+        measure_curvature_gap_contour(&affine, [2, 2], Axis::U, 0.5, &[7., 9.], 16, WORK).unwrap();
+    let [lo, hi] = r.length_bounds.unwrap();
+    assert!(lo <= 1. && 1. <= hi && hi < 1.000_000_01, "{r:?}");
+}
+
+#[test]
+fn arc_length_requires_a_graph_and_refuses_on_a_late_work_limit() {
+    use nurbs_core::editing::exact_surface_derivative::measure_curvature_gap_contour;
+    let s = sheared_parabola(0.125, 9.);
+    let unresolved =
+        measure_curvature_gap_contour(&s, [2, 2], Axis::V, 1., &[2., 6.], 16, WORK).unwrap();
+    assert_eq!(unresolved.graph, Some(CurvatureGapGraph::Unresolved));
+    assert!(unresolved.segment_bounds.is_none() && unresolved.length_bounds.is_none());
+    let complete =
+        measure_curvature_gap_contour(&s, [2, 2], Axis::U, 1., &[7., 9.], 16, WORK).unwrap();
+    assert!(complete.length_bounds.is_some());
+    let short = measure_curvature_gap_contour(
+        &s,
+        [2, 2],
+        Axis::U,
+        1.,
+        &[7., 9.],
+        16,
+        complete.work_used - 1,
+    )
+    .unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.length_bounds.is_none() && short.segment_bounds.is_none());
+}
+
+#[test]
+fn model_space_point_distance_certifies_interior_and_endpoint_projections() {
+    use nurbs_core::editing::exact_surface_derivative::distance_to_curvature_gap_contour;
+    let s = sheared_parabola(0., 9.);
+    for (point, segment) in [([1.5, 0.25, 0.25], 0), ([0.5, 2., 0.25], 1)] {
+        let r = distance_to_curvature_gap_contour(
+            &s,
+            [2, 2],
+            Axis::U,
+            0.5,
+            point,
+            &[7., 8., 9.],
+            16,
+            WORK,
+        )
+        .unwrap();
+        let [lo, hi] = r.distance_bounds.unwrap();
+        assert!(lo <= 1. && 1. <= hi && hi - lo < 1e-8, "{r:?}");
+        assert_eq!(r.upper_segment, Some(segment));
+    }
+}
+
+#[test]
+fn point_distance_encloses_zero_and_coarse_contour_uncertainty() {
+    use nurbs_core::editing::exact_surface_derivative::distance_to_curvature_gap_contour;
+    let s = sheared_parabola(0.125, 9.);
+    let x = ((4f64.cbrt() - 1.) / 4.).sqrt();
+    let r = distance_to_curvature_gap_contour(
+        &s,
+        [2, 2],
+        Axis::U,
+        1.,
+        [x, 0.5, x * x],
+        &[7., 9.],
+        3,
+        WORK,
+    )
+    .unwrap();
+    let [lo, hi] = r.distance_bounds.unwrap();
+    assert_eq!(lo, 0.);
+    assert!(hi > 1e-4 && hi.is_finite());
+    assert_eq!(r.upper_segment, Some(0));
+}
+
+#[test]
+fn point_query_validation_and_late_work_refusal_are_atomic() {
+    use nurbs_core::editing::exact_surface_derivative::distance_to_curvature_gap_contour;
+    let s = sheared_parabola(0., 9.);
+    let run = |point, work| {
+        distance_to_curvature_gap_contour(&s, [2, 2], Axis::U, 0.5, point, &[7., 9.], 16, work)
+    };
+    assert!(run([f64::NAN, 0., 0.], WORK).is_err());
+    let full = run([1.5, 0.25, 0.25], WORK).unwrap();
+    let short = run([1.5, 0.25, 0.25], full.work_used - 1).unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.distance_bounds.is_none() && short.upper_segment.is_none());
+}
+
+#[test]
+fn world_boxes_cover_each_complete_interval_and_can_exclude_distant_points() {
+    use nurbs_core::editing::exact_surface_derivative::bound_curvature_gap_contour;
+    let s = sheared_parabola(0.125, 9.);
+    let x = ((4f64.cbrt() - 1.) / 4.).sqrt();
+    let r = bound_curvature_gap_contour(&s, [2, 2], Axis::U, 1., &[7., 8., 9.], 12, WORK).unwrap();
+    let segments = r.segment_bounds.unwrap();
+    let overall = r.bounds.unwrap();
+    assert_eq!(segments.len(), 2);
+    for (i, bounds) in segments.iter().enumerate() {
+        for sample in [0., 0.25, 0.5, 0.75, 1.] {
+            let point = [x, (i as f64 + sample) * 0.5, x * x];
+            for axis in 0..3 {
+                let [lo, hi] = bounds[axis];
+                assert!(lo <= point[axis] && point[axis] <= hi);
+                assert!(overall[axis][0] <= lo && hi <= overall[axis][1]);
+            }
+        }
+    }
+    assert!(overall[0][1] < 2.);
+}
+
+#[test]
+fn world_boxes_are_absent_when_the_contour_has_no_certificate() {
+    use nurbs_core::editing::exact_surface_derivative::bound_curvature_gap_contour;
+    let s = sheared_parabola(0.125, 9.);
+    let unresolved =
+        bound_curvature_gap_contour(&s, [2, 2], Axis::V, 1., &[2., 6.], 16, WORK).unwrap();
+    assert_eq!(unresolved.uv.graph, Some(CurvatureGapGraph::Unresolved));
+    assert!(unresolved.bounds.is_none() && unresolved.segment_bounds.is_none());
+    let short = bound_curvature_gap_contour(&s, [2, 2], Axis::U, 1., &[7., 9.], 16, 1).unwrap();
+    assert_eq!(short.uv.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.bounds.is_none() && short.segment_bounds.is_none());
+}
+
+fn contour_spec<'a>(
+    surface: &'a Surface,
+    transverse: &'a [f64],
+) -> nurbs_core::editing::exact_surface_derivative::CurvatureGapContourSpec<'a> {
+    use nurbs_core::editing::exact_surface_derivative::CurvatureGapContourSpec;
+    CurvatureGapContourSpec {
+        surface,
+        span: [2, 2],
+        axis: Axis::U,
+        level: 0.5,
+        transverse,
+        root_depth: 16,
+    }
+}
+
+#[test]
+fn contour_pair_distance_finds_the_interior_skew_minimum() {
+    use nurbs_core::editing::exact_surface_derivative::distance_between_curvature_gap_contours;
+    let a = sheared_parabola(0., 9.);
+    let mut b = a.clone();
+    for p in b.control_points.iter_mut().flatten() {
+        p.swap(0, 1);
+        p[2] += 1.;
+    }
+    let r = distance_between_curvature_gap_contours(
+        contour_spec(&a, &[7., 9.]),
+        contour_spec(&b, &[7., 9.]),
+        WORK,
+    )
+    .unwrap();
+    let [lo, hi] = r.distance_bounds.unwrap();
+    assert!(lo <= 1. && 1. <= hi && hi - lo < 1e-8, "{r:?}");
+    assert_eq!(r.upper_segments, Some([0, 0]));
+    assert_eq!(r.compared_pairs, 1);
+}
+
+#[test]
+fn parallel_contours_prune_far_pairs_without_changing_their_distance() {
+    use nurbs_core::editing::exact_surface_derivative::distance_between_curvature_gap_contours;
+    let a = sheared_parabola(0., 9.);
+    let mut b = a.clone();
+    for p in b.control_points.iter_mut().flatten() {
+        p[0] += 1.;
+    }
+    let grid = [7., 7.5, 8., 8.5, 9.];
+    let r = distance_between_curvature_gap_contours(
+        contour_spec(&a, &grid),
+        contour_spec(&b, &grid),
+        WORK,
+    )
+    .unwrap();
+    let [lo, hi] = r.distance_bounds.unwrap();
+    assert!(lo <= 1. && 1. <= hi && hi - lo < 1e-8, "{r:?}");
+    assert!(r.pruned_pairs > 0);
+    assert_eq!(r.compared_pairs + r.pruned_pairs, 16);
+}
+
+#[test]
+fn intersecting_contours_allow_zero_and_late_work_refusal_returns_no_distance() {
+    use nurbs_core::editing::exact_surface_derivative::distance_between_curvature_gap_contours;
+    let a = sheared_parabola(0., 9.);
+    let mut b = a.clone();
+    for p in b.control_points.iter_mut().flatten() {
+        p.swap(0, 1);
+    }
+    let run = |work| {
+        distance_between_curvature_gap_contours(
+            contour_spec(&a, &[7., 9.]),
+            contour_spec(&b, &[7., 9.]),
+            work,
+        )
+    };
+    let full = run(WORK).unwrap();
+    let [lo, hi] = full.distance_bounds.unwrap();
+    assert_eq!(lo, 0.);
+    assert!(hi < 1e-8);
+    let short = run(full.work_used - 1).unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.distance_bounds.is_none() && short.upper_segments.is_none());
+}
+
+#[test]
+fn plane_section_proves_crossing_and_localizes_it_in_the_original_clock() {
+    use nurbs_core::editing::exact_surface_derivative::{
+        CurvatureGapPlaneStatus, section_curvature_gap_contour,
+    };
+    let surface = sheared_parabola(0., 9.);
+    let spec = contour_spec(&surface, &[7., 8., 9.]);
+    for (normal, offset) in [([0., 2., 0.], 0.5), ([0., -2., 0.], -0.5)] {
+        let events = section_curvature_gap_contour(spec, normal, offset, WORK)
+            .unwrap()
+            .events
+            .unwrap();
+        assert_eq!(events.len(), 1);
+        let event = events[0];
+        assert_eq!(event.segment, 0);
+        assert_eq!(event.status, CurvatureGapPlaneStatus::Crossing);
+        let [lo, hi] = event.transverse;
+        assert!(lo <= 7.5 && 7.5 <= hi && hi - lo < 1e-8, "{event:?}");
+    }
+}
+
+#[test]
+fn plane_section_distinguishes_disjoint_and_coincident_contours() {
+    use nurbs_core::editing::exact_surface_derivative::{
+        CurvatureGapPlaneStatus, section_curvature_gap_contour,
+    };
+    let surface = sheared_parabola(0., 9.);
+    let spec = contour_spec(&surface, &[7., 9.]);
+    let run = |offset| section_curvature_gap_contour(spec, [1., 0., 0.], offset, WORK).unwrap();
+    assert!(run(0.).events.unwrap().is_empty());
+    let events = run(0.5).events.unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].status, CurvatureGapPlaneStatus::Possible);
+    assert_eq!(events[0].transverse, [7., 9.]);
+}
+
+#[test]
+fn an_invalid_plane_or_unfinished_contour_cannot_produce_a_section() {
+    use nurbs_core::editing::exact_surface_derivative::section_curvature_gap_contour;
+    let surface = sheared_parabola(0., 9.);
+    let spec = contour_spec(&surface, &[7., 9.]);
+    assert!(section_curvature_gap_contour(spec, [0.; 3], 1., WORK).is_err());
+    let short = section_curvature_gap_contour(spec, [0., 1., 0.], 0.25, 1).unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.events.is_none());
+}

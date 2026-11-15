@@ -4,6 +4,7 @@ use super::{
         CurvatureGapGraph, CurvatureGapSample, classify, sample_certified, validate_request,
     },
     curvature_gap_range::outward,
+    curvature_gap_second::second_bounds,
     curvature_gap_slope::slope_bounds,
     curvature_gap_threshold::threshold_residual,
     *,
@@ -106,7 +107,7 @@ fn segment_errors(
     let slope_width = width(slope, work)?;
     let mut errors = Vec::with_capacity(samples.len() - 1);
     for pair in samples.windows(2) {
-        let Some(upper) = segment_error(&pair[0], &pair[1], &root_width, &slope_width, work)?
+        let Some(upper) = segment_error(&pair[0], &pair[1], &root_width, &slope_width, None, work)?
         else {
             return Ok(None);
         };
@@ -120,6 +121,7 @@ fn segment_error(
     b: &CurvatureGapSample,
     root_width: &Q,
     slope_width: &Q,
+    second_abs: Option<&Q>,
     work: &mut Work,
 ) -> PResult<Option<f64>> {
     let h = width([a.transverse, b.transverse], work)?;
@@ -128,6 +130,15 @@ fn segment_error(
     // Left and right secant slopes differ by at most M-m, multiplied
     // by lambda(1-lambda) h. Add the maximum endpoint rounding error.
     let chord = work.op(&h, slope_width, |a, b| a * b / Q::from_integer(4.into()))?;
+    let chord = if let Some(second_abs) = second_abs {
+        // The linear interpolant remainder is bounded by max|u''| h²/8.
+        let h_squared = work.op(&h, &h, |a, b| a * b)?;
+        chord.min(work.op(&h_squared, second_abs, |a, b| {
+            a * b / Q::from_integer(8.into())
+        })?)
+    } else {
+        chord
+    };
     let endpoints = work.op(root_width, &a.max(b), |a, b| {
         a * b / Q::from_integer(2.into())
     })?;
@@ -168,6 +179,30 @@ pub fn adapt_curvature_gap_polyline(
     level: f64,
     options: AdaptiveCurvaturePolylineOptions,
 ) -> Result<AdaptiveCurvaturePolyline> {
+    adapt(source, span, axis, level, options, false)
+}
+
+/// Refine using the tighter of the slope and second derivative chord
+/// bounds wherever the second derivative has a finite certificate.
+/// The requested tolerance is in the absolute root parameter.
+pub fn adapt_curvature_gap_polyline_second_order(
+    source: &Surface,
+    span: [usize; 2],
+    axis: Axis,
+    level: f64,
+    options: AdaptiveCurvaturePolylineOptions,
+) -> Result<AdaptiveCurvaturePolyline> {
+    adapt(source, span, axis, level, options, true)
+}
+
+fn adapt(
+    source: &Surface,
+    span: [usize; 2],
+    axis: Axis,
+    level: f64,
+    options: AdaptiveCurvaturePolylineOptions,
+    use_second: bool,
+) -> Result<AdaptiveCurvaturePolyline> {
     use CurvaturePolylineStop::*;
     let domain = validate_request(source, span, level, options.max_work)?;
     check(
@@ -202,6 +237,13 @@ pub fn adapt_curvature_gap_polyline(
         };
         let root_width = width(domain[root_axis], &mut work)?;
         let slope_width = width(slope, &mut work)?;
+        let second_abs = if use_second {
+            second_bounds(&residual, domain, axis, increasing, &mut work)?
+                .map(|[lo, hi]| work.lift(lo.abs().max(hi.abs())))
+                .transpose()?
+        } else {
+            None
+        };
         let sample = |parameters: &[f64], work: &mut Work| {
             sample_certified(
                 &residual,
@@ -220,7 +262,15 @@ pub fn adapt_curvature_gap_polyline(
         let mut vertices = 2;
         let mut stop = ToleranceMet;
         while let Some((a, b)) = pending.pop() {
-            let Some(error) = segment_error(&a, &b, &root_width, &slope_width, &mut work)? else {
+            let Some(error) = segment_error(
+                &a,
+                &b,
+                &root_width,
+                &slope_width,
+                second_abs.as_ref(),
+                &mut work,
+            )?
+            else {
                 return Ok((graph, None));
             };
             if error > options.max_error {

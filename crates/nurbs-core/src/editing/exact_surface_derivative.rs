@@ -12,6 +12,8 @@ use std::collections::BTreeMap;
 mod content;
 mod curvature;
 mod curvature_gap;
+mod curvature_gap_distance;
+pub use curvature_gap_distance::{CurvatureGapDistance, distance_to_curvature_gap_contour};
 mod curvature_gap_edge;
 pub use curvature_gap_edge::{
     CurvatureGapEdge, EdgeThresholdAudit, EdgeThresholdBracket, EdgeThresholdRoots,
@@ -22,10 +24,20 @@ pub use curvature_gap_graph::{
     CurvatureGapGraph, CurvatureGapGraphAudit, CurvatureGapSample, CurvatureGapSamples,
     certify_curvature_gap_graph, sample_curvature_gap_graph,
 };
+mod curvature_gap_pair_distance;
+pub use curvature_gap_pair_distance::{
+    CurvatureGapContourSpec, CurvatureGapPairDistance, distance_between_curvature_gap_contours,
+};
+mod curvature_gap_plane;
+pub use curvature_gap_plane::{
+    CurvatureGapPlaneAudit, CurvatureGapPlaneEvent, CurvatureGapPlaneStatus,
+    section_curvature_gap_contour,
+};
 mod curvature_gap_polyline;
 pub use curvature_gap_polyline::{
     AdaptiveCurvaturePolyline, AdaptiveCurvaturePolylineOptions, CurvatureGapPolyline,
-    CurvaturePolylineStop, adapt_curvature_gap_polyline, certify_curvature_gap_polyline,
+    CurvaturePolylineStop, adapt_curvature_gap_polyline, adapt_curvature_gap_polyline_second_order,
+    certify_curvature_gap_polyline,
 };
 mod curvature_gap_range;
 mod curvature_gap_second;
@@ -33,6 +45,12 @@ pub use curvature_gap_second::{
     CurvatureGapSecondDerivativeAudit, curvature_gap_graph_second_derivative,
 };
 mod curvature_gap_slope;
+mod curvature_gap_world;
+pub use curvature_gap_world::{
+    CurvatureGapLength, CurvatureGapWorldBounds, CurvatureGapWorldPolyline,
+    bound_curvature_gap_contour, certify_curvature_gap_world_polyline,
+    measure_curvature_gap_contour,
+};
 pub use curvature_gap_slope::{CurvatureGapSlopeAudit, curvature_gap_graph_slope};
 mod curvature_gap_refinement;
 pub use curvature_gap_refinement::{

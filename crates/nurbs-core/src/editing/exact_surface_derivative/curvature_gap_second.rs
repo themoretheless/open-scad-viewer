@@ -54,7 +54,7 @@ pub fn curvature_gap_graph_second_derivative(
     })
 }
 
-fn second_bounds(
+pub(super) fn second_bounds(
     residual: &Poly,
     domain: [[f64; 2]; 2],
     axis: Axis,

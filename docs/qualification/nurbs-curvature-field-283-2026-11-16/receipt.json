@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0283",
+  "testedBase": "d47a6d15002022c18dbe858060f266fcf55a42a8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_grid_contracts",
+    "--test",
+    "exact_surface_strip_contracts",
+    "--test",
+    "exact_surface_knot_insertion_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 10,
+  "scope": [
+    "Merges and compacts compatible rows, then inserts the union of exact transverse knots so that rows with different genuine seam structures remain joinable. Absolute UV maps and denominators are retained.",
+    "Ordered Cartesian charts with exact shared boundaries and compatible degrees. Arithmetic refusal never publishes a partial grid. No B-rep topology claim."
+  ],
+  "logSha256": "236e70b8fd029d0952916cea35b6195037d2b1f4feaa65a26de59790548f3909",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_merge.rs": "43394750ca984d49a92af70d89f8171bd0a2c06d89fa27af54f839a3425ddd4b",
+    "crates/nurbs-core/src/editing/exact_surface_merge/grid.rs": "980cd6784b7c7418c9275d10ce1a1cb111d941b53a8d1d7f5603802ffbed9135",
+    "crates/nurbs-core/src/editing/exact_surface_merge/strip.rs": "d5c5773010dbd43a7527ef4988b21889849f3a650dda88c17c4462765091b34b",
+    "crates/nurbs-core/src/editing/exact_surface_knot_insertion.rs": "323690872a451c753529bb48ed2255589df673e523cfdd2098d571ace1bea8ae",
+    "crates/nurbs-core/tests/exact_surface_grid_contracts.rs": "46ffbae716fe9ff222b58843e94e78267c573ce677a92f9751ccd2229dc5dd51"
+  }
+}

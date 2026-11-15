@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0275",
+  "testedBase": "351321781613853ca067868832304b1007171fc8",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_slope_contracts",
+    "--test",
+    "curvature_gap_graph_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 25,
+  "scope": [
+    "Combines interval bounds on the composed three-dimensional velocity with certified endpoint chord distances to enclose model-space arc length per segment and in total.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "f43676efc5dbe7c40510469e6ee44d963469aceb47a9fc4c1213364152174ead",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "71519d643011bea278163b683ea642668c40e14052f72096d7bf646558a0bb00",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_world.rs": "edd9fecbe2360055965358727daaecfaea3d8f81d2b934d6ad894fa9e47a097f",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs": "899ec505628bc354bbeb828b58430ea7b94cca7a5df1c5f7e4ed85ce7a9989dd",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs": "175285f206e3c094512d1c96bf946ba880016ab3c45b6aeee22ad2ded0e899e6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs": "180372d100b3158615c45fee072cb294c095bc0ad34d2c218c99856ea65a42d7",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs": "1038e12b477979ca874b6209b8ec825286a35856c34765cc3c89af92af4deefa",
+    "crates/nurbs-core/src/analysis/surface_measure/jets.rs": "cf7adeb52653b88daf998627a262c70a0ea36a50b5d1a3d6fb0af2d36ca42266"
+  }
+}
