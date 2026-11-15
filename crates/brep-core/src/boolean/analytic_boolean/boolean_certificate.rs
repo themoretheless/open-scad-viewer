@@ -229,6 +229,17 @@ pub(super) fn imprint_reports(a: &Model, b: &Model) -> Result<Vec<Report<Analyti
             "Cylinder wall×wall contact is outside the Complete imprint matrix",
         ));
     }
+    // A certified tangent generator is a Complete contact, but the imprint
+    // matrix has no assembly for touching walls or caps.
+    if reports
+        .iter()
+        .flat_map(|report| &report.components)
+        .any(|component| matches!(component, AnalyticSsComponent::TangentLine { .. }))
+    {
+        return Err(refuse(
+            "Certified tangent cylinder contact is outside the Complete imprint matrix",
+        ));
+    }
 
     Ok(reports)
 }

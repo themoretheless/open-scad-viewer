@@ -2,7 +2,10 @@
 //!
 //! Only the frozen contacts below may publish `Coverage::Complete`. Out-of-matrix
 //! pairs refuse with typed Incomplete/Unsupported. No mesh, seed marching, or
-//! tolerance growth participates.
+//! tolerance growth participates. Tangent and near-tangent contacts of the
+//! plane/sphere, sphere/sphere, plane/cylinder (axis parallel to the plane) and
+//! parallel cylinder/cylinder pairs are decided by exact discriminant signs
+//! (`exact_contact`), never by a distance band.
 
 use crate::{
     Contact, Coverage, CurvePlaneComponent, CurvePoint, Options, Plane, Report, UnresolvedReason,
@@ -13,6 +16,7 @@ use nurbs_core::{Error, Result};
 use crate::vec3::{add, cross, dot, norm, scale as mul, sub};
 
 mod analytic_ss_component;
+mod exact_contact;
 mod cylinder_sphere;
 #[cfg(test)]
 mod tests;
