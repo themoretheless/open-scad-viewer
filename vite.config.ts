@@ -7,7 +7,7 @@ import { pwaBuildPlugin } from './scripts/pwa-build.mjs'
 // Keep readable names for budgeted payloads and workers; content hashes identify
 // smaller lazy chunks without repeating long module names in every import URL.
 function runtimeChunkFileName(chunk: {name: string}) {
-  return /bytes|\.worker$|^(index|renderer|DirectModeler|MainModelingTools|codemirrorView|geometryBuildEngine|profileIntersections|wasmStreaming)$/.test(chunk.name)
+  return /bytes|\.worker$|^(index|renderer|DirectModeler|MainModelingTools|codemirrorView|geometryBuildEngine|profileIntersections|wasmStreaming|workerHandlerRuntime)$/.test(chunk.name)
     ? 'assets/[name]-[hash].js' : 'assets/[hash].js'
 }
 
