@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 306,
-  "unallocatedCount": 694,
+  "specifiedCount": 307,
+  "unallocatedCount": 693,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8080,6 +8080,28 @@
       "remainingQualification": [
         "Isolate every strict gap violation band on the common parameter partition, with certified root brackets and exact endpoint membership.",
         "The bands use the provided absolute parameter correspondence and preserve partition boundaries. Equal-threshold contacts are excluded from strict violations.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0307",
+      "name": "Сертифицированная локализация участков UV-шва с превышением углового допуска",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::isolate_pcurve_seam_angle",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_angle.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_angle_bands.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_gap_bands.rs",
+        "crates/nurbs-core/tests/exact_pcurve_angle_bands_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-307-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-307-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Isolate strict angular tolerance violations with exact rational sign and root proofs on the complete shared parameter partition.",
+        "Unoriented regular tangent planes; all strict bands with certified endpoint brackets. Singular normals and arithmetic refusal withhold all bands.",
         "WASM and application integration are separate."
       ]
     }

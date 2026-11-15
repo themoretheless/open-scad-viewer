@@ -87,14 +87,18 @@ fn dot(a: &[Poly], b: &[Poly], work: &mut Work) -> PResult<Poly> {
 }
 
 fn within(a: &[Poly], b: &[Poly], limit: &Q, work: &mut Work) -> PResult<bool> {
+    let residual = angle_residual(a, b, limit, work)?;
+    nonnegative(&residual, residual.len().saturating_sub(1), work)
+}
+
+pub(super) fn angle_residual(a: &[Poly], b: &[Poly], limit: &Q, work: &mut Work) -> PResult<Poly> {
     let product = dot(a, b, work)?;
     let cosine_numerator = poly::multiply(&product, &product, work)?;
     let norm_product = poly::multiply(&dot(a, a, work)?, &dot(b, b, work)?, work)?;
-    let residual = add(
+    add(
         &cosine_numerator,
         &scale(&norm_product, limit, work)?,
         true,
         work,
-    )?;
-    nonnegative(&residual, residual.len().saturating_sub(1), work)
+    )
 }

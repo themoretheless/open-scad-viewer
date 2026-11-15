@@ -85,7 +85,7 @@ pub fn isolate_pcurve_seam_gap(
     })
 }
 
-fn append_bands(
+pub(super) fn append_bands(
     residual: &Poly,
     parameter: [f64; 2],
     width: &Q,
