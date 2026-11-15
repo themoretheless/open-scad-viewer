@@ -466,15 +466,38 @@ fn model_bounds(model: &Model) -> ([f64; 3], [f64; 3]) {
     (min, max)
 }
 
-fn recognize_tube(model: &Model) -> Option<AnalyticKind> {
-    if model.validate().is_err()
-        || model.bodies.len() != 1
-        || model.shells.len() != 1
-        || model.faces.len() != 10
-        || model.vertices.len() != 16
-    {
+/// Shortest cap-normal cross product treated as a valid plane normal.
+const TUBE_CAP_NORMAL_MIN: f64 = 1e-12;
+/// Shortest axial extent / radial direction a recovered tube may have.
+const TUBE_MIN_EXTENT: f64 = 1e-9;
+/// Thinnest wall (outer minus inner radius) a recovered tube may have.
+const TUBE_MIN_WALL: f64 = 1e-5;
+
+/// Unit normal of a bilinear cap face from its first control-point corner.
+fn cap_plane_normal(face: &brep_core::Face) -> Option<[f64; 3]> {
+    let cps = &face.surface.control_points;
+    if cps.len() < 2 || cps[0].len() < 2 || cps[0][0].len() != 3 {
         return None;
     }
+    let a = &cps[0][0];
+    let b = &cps[1][0];
+    let c = &cps[0][1];
+    let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let n = [
+        u[1] * v[2] - u[2] * v[1],
+        u[2] * v[0] - u[0] * v[2],
+        u[0] * v[1] - u[1] * v[0],
+    ];
+    let len = n[0].hypot(n[1]).hypot(n[2]);
+    if !(len.is_finite() && len > TUBE_CAP_NORMAL_MIN) {
+        return None;
+    }
+    Some([n[0] / len, n[1] / len, n[2] / len])
+}
+
+/// Two planar holed caps and eight rational sides; returns the cap axis.
+fn tube_cap_axis(model: &Model) -> Option<[f64; 3]> {
     let caps: Vec<_> = model
         .faces
         .iter()
@@ -485,79 +508,94 @@ fn recognize_tube(model: &Model) -> Option<AnalyticKind> {
         .iter()
         .filter(|f| f.surface.degree_u == 2 && f.surface.degree_v == 1)
         .count();
-    if caps.len() != 2 || sides != 8 {
+    let [cap0, cap1] = caps[..] else {
+        return None;
+    };
+    if sides != 8 {
         return None;
     }
-    let plane_normal = |face: &brep_core::Face| -> Option<[f64; 3]> {
-        let cps = &face.surface.control_points;
-        if cps.len() < 2 || cps[0].len() < 2 || cps[0][0].len() != 3 {
-            return None;
-        }
-        let a = &cps[0][0];
-        let b = &cps[1][0];
-        let c = &cps[0][1];
-        let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-        let v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-        let n = [
-            u[1] * v[2] - u[2] * v[1],
-            u[2] * v[0] - u[0] * v[2],
-            u[0] * v[1] - u[1] * v[0],
-        ];
-        let len = n[0].hypot(n[1]).hypot(n[2]);
-        if !(len.is_finite() && len > 1e-12) {
-            return None;
-        }
-        Some([n[0] / len, n[1] / len, n[2] / len])
-    };
-    let mut axis = plane_normal(caps[0])?;
-    if let Some(n1) = plane_normal(caps[1])
+    let mut axis = cap_plane_normal(cap0)?;
+    if let Some(n1) = cap_plane_normal(cap1)
         && axis[0] * n1[0] + axis[1] * n1[1] + axis[2] * n1[2] < 0.
     {
         axis = [-axis[0], -axis[1], -axis[2]];
     }
+    Some(axis)
+}
+
+/// Axial and radial extents of the model's vertices about `centroid`/`axis`.
+struct TubeRadialProfile {
+    z_min: f64,
+    z_max: f64,
+    inner: f64,
+    outer: f64,
+    outer_radial: Option<[f64; 3]>,
+}
+
+impl TubeRadialProfile {
+    fn measure(model: &Model, centroid: [f64; 3], axis: [f64; 3]) -> Option<Self> {
+        let mut zs = Vec::new();
+        let mut radii = Vec::new();
+        let mut outer_pt = None;
+        for v in &model.vertices {
+            let d = [
+                v.point[0] - centroid[0],
+                v.point[1] - centroid[1],
+                v.point[2] - centroid[2],
+            ];
+            let z = d[0] * axis[0] + d[1] * axis[1] + d[2] * axis[2];
+            let radial = [d[0] - z * axis[0], d[1] - z * axis[1], d[2] - z * axis[2]];
+            let r = radial[0].hypot(radial[1]).hypot(radial[2]);
+            zs.push(z);
+            radii.push(r);
+            if outer_pt
+                .map(|(_, or): ([f64; 3], f64)| r > or)
+                .unwrap_or(true)
+            {
+                outer_pt = Some((radial, r));
+            }
+        }
+        zs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+        radii.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+        Some(Self {
+            z_min: *zs.first()?,
+            z_max: *zs.last()?,
+            inner: *radii.first()?,
+            outer: *radii.last()?,
+            outer_radial: outer_pt.map(|(radial, _)| radial),
+        })
+    }
+}
+
+fn recognize_tube(model: &Model) -> Option<AnalyticKind> {
+    if model.validate().is_err()
+        || model.bodies.len() != 1
+        || model.shells.len() != 1
+        || model.faces.len() != 10
+        || model.vertices.len() != 16
+    {
+        return None;
+    }
+    let axis = tube_cap_axis(model)?;
     let mut centroid = [0.; 3];
     for v in &model.vertices {
         for k in 0..3 {
             centroid[k] += v.point[k] / model.vertices.len() as f64;
         }
     }
-    let mut zs = Vec::new();
-    let mut radii = Vec::new();
-    let mut outer_pt = None;
-    for v in &model.vertices {
-        let d = [
-            v.point[0] - centroid[0],
-            v.point[1] - centroid[1],
-            v.point[2] - centroid[2],
-        ];
-        let z = d[0] * axis[0] + d[1] * axis[1] + d[2] * axis[2];
-        let radial = [d[0] - z * axis[0], d[1] - z * axis[1], d[2] - z * axis[2]];
-        let r = radial[0].hypot(radial[1]).hypot(radial[2]);
-        zs.push(z);
-        radii.push(r);
-        if outer_pt
-            .map(|(_, or): ([f64; 3], f64)| r > or)
-            .unwrap_or(true)
-        {
-            outer_pt = Some((radial, r));
-        }
-    }
-    zs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
-    radii.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
-    let z0 = zs[0];
-    let z1 = zs[zs.len() - 1];
-    let height = z1 - z0;
-    if !(height.is_finite() && height > 1e-9) {
+    let profile = TubeRadialProfile::measure(model, centroid, axis)?;
+    let z0 = profile.z_min;
+    let height = profile.z_max - z0;
+    if !(height.is_finite() && height > TUBE_MIN_EXTENT) {
         return None;
     }
-    let inner = radii[0];
-    let outer = radii[radii.len() - 1];
-    if !(outer - inner >= 1e-5 && inner > 0.) {
+    let (inner, outer) = (profile.inner, profile.outer);
+    if !(outer - inner >= TUBE_MIN_WALL && inner > 0.) {
         return None;
     }
-    let (radial, _) = outer_pt?;
+    let radial = profile.outer_radial?;
     let rlen = radial[0].hypot(radial[1]).hypot(radial[2]);
-    if !(rlen.is_finite() && rlen > 1e-9) {
+    if !(rlen.is_finite() && rlen > TUBE_MIN_EXTENT) {
         return None;
     }
     let ref_dir = [radial[0] / rlen, radial[1] / rlen, radial[2] / rlen];
