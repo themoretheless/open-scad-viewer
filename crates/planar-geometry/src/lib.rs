@@ -15,6 +15,7 @@ pub mod edit;
 pub mod effects;
 pub mod limits;
 pub mod measure;
+mod monotone;
 pub mod path;
 pub mod path_offset;
 pub mod pathfinder;

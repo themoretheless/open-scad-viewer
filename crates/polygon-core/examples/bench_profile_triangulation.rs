@@ -1,15 +1,20 @@
-//! Native profile triangulation baseline, including explicit refusal samples.
+//! Native profile triangulation baseline (monotone sweep vs the previous ear clipping), including explicit refusal samples.
 //! Run --release; validation and input construction are outside measured time.
 #[path = "../../planar-geometry/tests/support/profile.rs"]
 mod profile;
 use planar_geometry::rings::{area, planar};
-use planar_geometry::triangulation::triangulate_profile;
+use planar_geometry::triangulation::{triangulate_profile, triangulate_profile_ear_clipping};
 use polygon_core::solid::{
     primitives::{cube, cylinder, join},
     section::slice,
 };
 use std::{hint::black_box, time::Instant};
 use value_codec::json;
+
+type Triangulator = fn(
+    &[[f64; 2]],
+    &[Vec<[f64; 2]>],
+) -> planar_geometry::Result<planar_geometry::tessellation::FillMesh>;
 
 fn main() {
     let mut samples = vec![];
@@ -35,19 +40,27 @@ fn main() {
         };
         fixtures
             .push(json!({"kind":kind,"side":side,"segments":segments,"outer":outer,"holes":holes}));
-        for iteration in 0..12 {
-            let start = Instant::now();
-            let result = triangulate_profile(black_box(&outer), black_box(&holes));
-            let wall_ms = start.elapsed().as_secs_f64() * 1000.;
-            let (status, error, triangles) = match &result {
-                Ok(mesh) => {
-                    profile::validate(mesh, &outer, &holes);
-                    ("ok", "", mesh.indices.len() / 3)
+        for (algorithm, run) in [
+            ("monotone", triangulate_profile as Triangulator),
+            (
+                "ear-clipping",
+                triangulate_profile_ear_clipping as Triangulator,
+            ),
+        ] {
+            for iteration in 0..12 {
+                let start = Instant::now();
+                let result = run(black_box(&outer), black_box(&holes));
+                let wall_ms = start.elapsed().as_secs_f64() * 1000.;
+                let (status, error, triangles) = match &result {
+                    Ok(mesh) => {
+                        profile::validate(mesh, &outer, &holes);
+                        ("ok", "", mesh.indices.len() / 3)
+                    }
+                    Err(error) => ("refused", error.message.as_str(), 0),
+                };
+                if iteration >= 3 {
+                    samples.push(json!({"algorithm":algorithm,"kind":kind,"side": side, "segments": segments, "vertices": outer.len() + holes.iter().map(Vec::len).sum::<usize>(), "iteration": iteration - 3, "wallMs": wall_ms, "status": status, "error": error, "triangles": triangles}));
                 }
-                Err(error) => ("refused", error.message.as_str(), 0),
-            };
-            if iteration >= 3 {
-                samples.push(json!({"kind":kind,"side": side, "segments": segments, "vertices": outer.len() + holes.iter().map(Vec::len).sum::<usize>(), "iteration": iteration - 3, "wallMs": wall_ms, "status": status, "error": error, "triangles": triangles}));
             }
         }
     }
