@@ -29,6 +29,12 @@ const profiles=Object.freeze({
   '15596aa8bd7c26888ae18fd1b0bcea49c36af76ef50b1a5558a6e164c142e938':Object.freeze({
     version:11,geometryChunkBytes:6_280_000,totalAssetBytes:12_050_000,
   }),
+  // v12: exact fba78e bytes (G0 v107 / runtime v12 re-freeze). Measured locally:
+  // 6,272,442 packed geometry bytes and 12,057,424 total asset bytes, including the
+  // CodeMirror editor and other main-branch UI growth. Caps keep a small reviewed margin.
+  'fba78e35f862c3259769f5d7a2458b6f060a61a104c5e7b94e3b13ec2d5da837':Object.freeze({
+    version:12,geometryChunkBytes:6_280_000,totalAssetBytes:12_070_000,
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
