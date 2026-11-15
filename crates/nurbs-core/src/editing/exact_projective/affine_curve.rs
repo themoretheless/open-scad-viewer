@@ -14,10 +14,7 @@ pub fn affine_curve_clock(
     max_work: u64,
 ) -> Result<Report<Curve>> {
     source.validate()?;
-    check(
-        endpoints.iter().all(|t| t.is_finite() && t.abs() <= 1e9) && endpoints[0] != endpoints[1],
-        "An affine curve clock needs two distinct finite endpoints within knot limits",
-    )?;
+    validate_endpoints(endpoints)?;
     validate_clock(&[], max_work)?;
     let mut work = Work {
         used: 0,
@@ -28,7 +25,30 @@ pub fn affine_curve_clock(
 }
 
 fn transform(source: &Curve, [start, end]: [f64; 2], work: &mut Work) -> PResult<Curve> {
-    let [a, b] = source.domain();
+    let knots = map_knots(&source.knots, source.domain(), [start, end], work)?;
+    let mut out = source.clone();
+    if start > end {
+        out.control_points.reverse();
+        out.weights.reverse();
+    }
+    out.knots = knots;
+    out.validate().map_err(|_| Refusal::InvalidOutput)?;
+    Ok(out)
+}
+
+pub(super) fn validate_endpoints(endpoints: [f64; 2]) -> Result<()> {
+    check(
+        endpoints.iter().all(|t| t.is_finite() && t.abs() <= 1e9) && endpoints[0] != endpoints[1],
+        "An affine clock needs two distinct finite endpoints within knot limits",
+    )
+}
+
+pub(super) fn map_knots(
+    source: &[f64],
+    [a, b]: [f64; 2],
+    [start, end]: [f64; 2],
+    work: &mut Work,
+) -> PResult<Vec<f64>> {
     let old_start = work.lift(a)?;
     let old_end = work.lift(b)?;
     let new_start = work.lift(start)?;
@@ -36,21 +56,16 @@ fn transform(source: &Curve, [start, end]: [f64; 2], work: &mut Work) -> PResult
     let original_width = work.op(&old_end, &old_start, |a, b| a - b)?;
     let output_width = work.op(&new_end, &new_start, |a, b| a - b)?;
     let scale = work.op(&output_width, &original_width, |a, b| a / b)?;
-    let mut knots = Vec::with_capacity(source.knots.len());
-    for &knot in &source.knots {
+    let mut knots = Vec::with_capacity(source.len());
+    for &knot in source {
         let k = work.lift(knot)?;
         let offset = work.op(&k, &old_start, |a, b| a - b)?;
         let delta = work.op(&offset, &scale, |a, b| a * b)?;
         let absolute = work.op(&new_start, &delta, |a, b| a + b)?;
         knots.push(work.float(&absolute)?);
     }
-    let mut out = source.clone();
     if start > end {
         knots.reverse();
-        out.control_points.reverse();
-        out.weights.reverse();
     }
-    out.knots = knots;
-    out.validate().map_err(|_| Refusal::InvalidOutput)?;
-    Ok(out)
+    Ok(knots)
 }

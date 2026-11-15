@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 309,
-  "unallocatedCount": 691,
+  "specifiedCount": 310,
+  "unallocatedCount": 690,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8144,6 +8144,27 @@
       "remainingQualification": [
         "Compare both endpoint-induced affine seam correspondences and keep evidence for each orientation under one shared budget.",
         "Endpoint-induced affine correspondences with exact storage of transformed knots. An unrepresentable clock or exhausted budget is distinguished from geometric mismatch.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0310",
+      "name": "Точная независимая аффинная перепараметризация осей NURBS-поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::affine_surface_clock",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/affine_surface.rs",
+        "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs",
+        "crates/nurbs-core/tests/exact_affine_surface_clock_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-310-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-310-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Map both tensor axes to independent absolute ranges and directions with exact knot storage and a matching control-net permutation.",
+        "Independent signs and domains on both tensor axes, including exterior and periodic knots. Nonrepresentable output refuses atomically.",
         "WASM and application integration are separate."
       ]
     }
