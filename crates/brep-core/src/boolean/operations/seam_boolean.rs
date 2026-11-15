@@ -106,7 +106,13 @@ pub fn certify_seam_normalized_boolean(
     }
     // False prevents recursive seam retries. Every successful path still runs
     // its usual geometry/material gates on the proved-equivalent full Models.
-    let mut model = super::boolean::boolean_impl(&na, &nb, operation, false)?;
+    let model = super::boolean::boolean_impl(&na, &nb, operation, false)?;
+    // Same optional coplanar cleanup as the standard boolean(), so a certified
+    // seam-normalized result keeps standard-operation authority.
+    let mut model = match super::coincident_faces::merge_coplanar_faces(&model) {
+        Ok((merged, _)) => merged,
+        Err(_) => model,
+    };
     model.inherit_topology_ids(&[&na, &nb]);
     model.refresh_change_set(&[a, b]);
     model.validate()?;
