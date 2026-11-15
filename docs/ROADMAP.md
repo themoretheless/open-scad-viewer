@@ -17,7 +17,6 @@
 | 2 | Стенд матрицы команд и контрольные модели | C2, C3 | браузерный стенд прогоняет все команды палитры, отчёт со списком дефектов |
 | 3 | Сертифицированное касание в пересечениях поверхность/поверхность | N1 | касательные контакты SS (`nurbs-intersect/src/{analytic_ss,nurbs_ss}`) возвращают точку или кривую с кратностью вместо `TangencyOrMultipleRoot`, вырожденные ветви трассируются под сертификатом; кривая/плоскость уже сделана (`queries/curve_plane_tangency.rs`: точные знаки Бернштейна, `Contact::Tangent { multiplicity }`, тесты в `queries/tests/tangency.rs`) |
 | 4 | Вывести в редактор готовые нативные результаты | N4 | история Full Round, closed graph Boolean и непрерывный offset доступны командами редактора с отменой, Undo и экспортом в STEP |
-| 5 | Сверка квалификационных доказательств | P1 | четыре набора доказательств и `audit:qualification-drift` зелёные; делать в момент низкой активности в ядре |
 
 ## Параллельные потоки
 
@@ -29,7 +28,7 @@
 | Б. Доставка в продукт | `geometry-bridge`, `geometry-wasm`, `src/kernel` | N4 → C15, N14 | новые операции добавлять в стиле таблиц обработчиков L1 |
 | В. Оболочка UI | `App.svt`, `DirectModeler.svt`, `src/components` | C5 → C6 → C7 → C9; затем P4, P7 | границы `src/` из M9/M10 |
 | Г. Отзывчивость и масштаб | workers, `directTransactions`, `sceneController`; `geometry-bridge/src/{abi,mesh}.rs` | C1 → C8 → C14; S2 отдельным исполнителем | S2 пересекается с L1/L2 |
-| Д. Тесты, CI, квалификация | `tests/`, `tools/`, `.github/` | P2 → C2, C3 → P5 → N17 → N18; P1 последним | S4 (медленные тесты), C1 (LFS) |
+| Д. Тесты, CI, квалификация | `tests/`, `tools/`, `.github/` | P2 → C2, C3 → P5 → N17 → N18 | S4 (медленные тесты), C1 (LFS) |
 | Е. Manifold | `manifold-core`, `manifold-ops`, `tools/manifold-bench` | S4 → S5 → S7, S8, S9 → S1 | O2, O4 (размер WASM, горячие пути) |
 | Ж. Обмен | `cad-step` | N8 → N9 → N10, C13 | M1: весь STEP/IGES в `cad-step` |
 | З. Независимые | каждый в своём крейте | S10, S11, S14, S15, S16, C12, C22 | — |
