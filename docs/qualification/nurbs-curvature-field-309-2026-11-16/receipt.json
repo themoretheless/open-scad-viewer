@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0309",
+  "testedBase": "c041cb73bd18b6802b916af8c3c5812e5a940aee",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_orientation_contracts",
+    "--test",
+    "exact_affine_curve_clock_contracts",
+    "--test",
+    "exact_surface_pcurve_seam_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Compare both endpoint-induced affine seam correspondences and keep evidence for each orientation under one shared budget.",
+    "Endpoint-induced affine correspondences with exact storage of transformed knots. An unrepresentable clock or exhausted budget is distinguished from geometric mismatch."
+  ],
+  "logSha256": "2803f3e01b86c18c7084a0207057500bdcaa59db9cc99062a886ee11302dd4bd",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "a637a212ddb6fdd88737b3c2d462e374e2c598aaeba1a86fc985af0f4ac83a5e",
+    "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs": "c13d23ce2432b443dcc1f8d3c7d45f62ee345d5b5ad5d5f7acd7d24112d4e2f4",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_orientation.rs": "46e7749d14a1a299ebb0a3f751815db3a35a731e969227eda79a0ffc970d339d",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_agreement.rs": "e3fc3c3054e03f755ca86fd1b08163323a48959f74d3cf7378ec33a37650b7f7",
+    "crates/nurbs-core/tests/exact_pcurve_orientation_contracts.rs": "0dfd83de3c968383a2cd92d55cce5c23533fb1d90a271b3c7fcbf289d7675c18"
+  }
+}
