@@ -107,89 +107,145 @@ fn handle_capped_loft_with_caps(v: &Value) -> Result<Value> {
     )?)
 }
 
-fn handle_progressive_profile_body(v: &Value) -> Result<Value> {
-    use nurbs_core::progressive_sweep::{Options, Orientation, Spacing};
-    let orientation_raw = field::<String>(v, "orientation")?;
-    let orientation = match orientation_raw.as_str() {
-        "rmf" => Orientation::RotationMinimizing,
-        "fixed" | "authored" => Orientation::Fixed,
-        "fixed_normal" => Orientation::FixedNormal,
-        "frenet" => Orientation::Frenet,
-        "corrected_frenet" => Orientation::CorrectedFrenet,
-        _ => {
+/// Request fields shared by every progressive profile body constructor, parsed in the
+/// order the transport has always validated them.
+pub(crate) struct ProgressiveProfileInputs {
+    pub(crate) orientation: String,
+    pub(crate) options: nurbs_core::progressive_sweep::Options,
+    loops: Vec<Vec<Curve>>,
+    path: Curve,
+    scale: Curve,
+    twist: Curve,
+    affine_laws: Option<(Option<Curve>, Option<Curve>)>,
+    default_axes: Curve,
+    default_center: Curve,
+    frames: Option<(Curve, Curve)>,
+    guide: Option<Curve>,
+    contact: Option<(usize, f64)>,
+}
+
+impl ProgressiveProfileInputs {
+    pub(crate) fn parse(v: &Value) -> Result<Self> {
+        use nurbs_core::progressive_sweep::{Options, Orientation, Spacing};
+        let orientation_raw = field::<String>(v, "orientation")?;
+        let orientation = match orientation_raw.as_str() {
+            "rmf" => Orientation::RotationMinimizing,
+            "fixed" | "authored" => Orientation::Fixed,
+            "fixed_normal" => Orientation::FixedNormal,
+            "frenet" => Orientation::Frenet,
+            "corrected_frenet" => Orientation::CorrectedFrenet,
+            _ => {
+                return Err(Error::new(
+                    "BREP_RATIONAL_SWEEP_REFUSED",
+                    "Unknown orientation",
+                ));
+            }
+        };
+        let spacing = match field::<String>(v, "spacing")?.as_str() {
+            "parameter" => Spacing::Parameter,
+            "arc_length" => Spacing::ArcLength {
+                tolerance: field(v, "length_tolerance")?,
+                max_cells: field(v, "length_max_cells")?,
+            },
+            _ => return Err(Error::new("BREP_RATIONAL_SWEEP_REFUSED", "Unknown spacing")),
+        };
+        let authored = orientation_raw == "authored";
+        let options = Options {
+            normal: field(v, "normal")?,
+            orientation: if authored {
+                Orientation::Fixed
+            } else {
+                orientation
+            },
+            spacing,
+            initial_sections: field(v, "initial_sections")?,
+            max_sections: field(v, "max_sections")?,
+            max_deviation: field(v, "max_deviation")?,
+        };
+        let loops = field::<Vec<Vec<Curve>>>(v, "loops")?;
+        let path = field::<Curve>(v, "path")?;
+        let scale = field::<Curve>(v, "scale")?;
+        let twist = field::<Curve>(v, "twist")?;
+        let axes = optional_field::<Curve>(v, "axis_scale")?;
+        let center = optional_field::<Curve>(v, "center_law")?;
+        let guide = optional_field::<Curve>(v, "orientation_guide")?;
+        let contact = optional_field::<f64>(v, "contact_parameter")?;
+        let contact_profile = optional_field::<usize>(v, "contact_profile")?;
+        if (contact.is_some() && guide.is_none())
+            || (contact_profile.is_some() && contact.is_none())
+        {
             return Err(Error::new(
                 "BREP_RATIONAL_SWEEP_REFUSED",
-                "Unknown orientation",
+                "Contact anchor requires orientation guide and parameter",
             ));
         }
-    };
-    let spacing = match field::<String>(v, "spacing")?.as_str() {
-        "parameter" => Spacing::Parameter,
-        "arc_length" => Spacing::ArcLength {
-            tolerance: field(v, "length_tolerance")?,
-            max_cells: field(v, "length_max_cells")?,
-        },
-        _ => return Err(Error::new("BREP_RATIONAL_SWEEP_REFUSED", "Unknown spacing")),
-    };
-    let authored = orientation_raw == "authored";
-    let options = Options {
-        normal: field(v, "normal")?,
-        orientation: if authored {
-            Orientation::Fixed
+        if authored && guide.is_some() {
+            return Err(Error::new(
+                "BREP_RATIONAL_SWEEP_REFUSED",
+                "Orientation guide cannot be combined with authored frames",
+            ));
+        }
+        let frame_axis = if authored {
+            Some(field::<Curve>(v, "frame_axis")?)
         } else {
-            orientation
-        },
-        spacing,
-        initial_sections: field(v, "initial_sections")?,
-        max_sections: field(v, "max_sections")?,
-        max_deviation: field(v, "max_deviation")?,
-    };
-    let loops = field::<Vec<Vec<Curve>>>(v, "loops")?;
-    let path = field::<Curve>(v, "path")?;
-    let scale = field::<Curve>(v, "scale")?;
-    let twist = field::<Curve>(v, "twist")?;
-    let axes = optional_field::<Curve>(v, "axis_scale")?;
-    let center = optional_field::<Curve>(v, "center_law")?;
-    let guide = optional_field::<Curve>(v, "orientation_guide")?;
-    let contact = optional_field::<f64>(v, "contact_parameter")?;
-    let contact_profile = optional_field::<usize>(v, "contact_profile")?;
-    if (contact.is_some() && guide.is_none()) || (contact_profile.is_some() && contact.is_none()) {
-        return Err(Error::new(
-            "BREP_RATIONAL_SWEEP_REFUSED",
-            "Contact anchor requires orientation guide and parameter",
-        ));
+            None
+        };
+        let frame_normal = if authored {
+            Some(field::<Curve>(v, "frame_normal")?)
+        } else {
+            None
+        };
+        let default_axes = nurbs_core::progressive_sweep::constant_vector_law([1.; 3])?;
+        let default_center = nurbs_core::progressive_sweep::constant_vector_law([0.; 3])?;
+        let affine_laws = if authored || guide.is_some() || axes.is_some() || center.is_some() {
+            Some((axes, center))
+        } else {
+            None
+        };
+        Ok(Self {
+            orientation: orientation_raw,
+            options,
+            loops,
+            path,
+            scale,
+            twist,
+            affine_laws,
+            default_axes,
+            default_center,
+            frames: frame_axis.zip(frame_normal),
+            guide,
+            contact: contact.map(|p| (contact_profile.unwrap_or(0), p)),
+        })
     }
-    if authored && guide.is_some() {
-        return Err(Error::new(
-            "BREP_RATIONAL_SWEEP_REFUSED",
-            "Orientation guide cannot be combined with authored frames",
-        ));
+
+    pub(crate) fn laws(&self) -> brep_core::analytic::ProgressiveLaws<'_> {
+        brep_core::analytic::ProgressiveLaws {
+            loops: &self.loops,
+            path: &self.path,
+            scale: &self.scale,
+            twist: &self.twist,
+            affine: self.affine_laws.as_ref().map(|(axes, center)| {
+                (
+                    axes.as_ref().unwrap_or(&self.default_axes),
+                    center.as_ref().unwrap_or(&self.default_center),
+                )
+            }),
+            frames: self.frames.as_ref().map(|(axis, normal)| (axis, normal)),
+            guidance: self.guide.as_ref().map(|g| (g, self.contact)),
+        }
     }
-    let frame_axis = if authored {
-        Some(field::<Curve>(v, "frame_axis")?)
-    } else {
-        None
-    };
-    let frame_normal = if authored {
-        Some(field::<Curve>(v, "frame_normal")?)
-    } else {
-        None
-    };
-    let default_axes = nurbs_core::progressive_sweep::constant_vector_law([1.; 3])?;
-    let default_center = nurbs_core::progressive_sweep::constant_vector_law([0.; 3])?;
-    let affine = if authored || guide.is_some() || axes.is_some() || center.is_some() {
-        Some((
-            axes.as_ref().unwrap_or(&default_axes),
-            center.as_ref().unwrap_or(&default_center),
-        ))
-    } else {
-        None
-    };
+}
+
+pub(crate) fn handle_progressive_profile_body(v: &Value) -> Result<Value> {
+    let inputs = ProgressiveProfileInputs::parse(v)?;
     let correction = parse_cap_correction(v)?;
-    let rmf_policy = parse_rmf_policy(v, &orientation_raw)?;
-    let result = brep_core::analytic::progressive_profile_body_with_rmf_policy(brep_core::analytic::ProgressiveLaws { loops: &loops, path: &path, scale: &scale, twist: &twist, affine, frames: frame_axis.as_ref().zip(frame_normal.as_ref()), guidance: guide
-            .as_ref()
-            .map(|g| (g, contact.map(|p| (contact_profile.unwrap_or(0), p)))) }, options, correction, rmf_policy)?;
+    let rmf_policy = parse_rmf_policy(v, &inputs.orientation)?;
+    let result = brep_core::analytic::progressive_profile_body_with_rmf_policy(
+        inputs.laws(),
+        inputs.options,
+        correction,
+        rmf_policy,
+    )?;
     encode_progressive_profile_body(result, rmf_policy)
 }
 
@@ -256,7 +312,9 @@ fn encode_progressive_profile_body(
     Ok(output)
 }
 
-fn parse_cap_correction(v: &Value) -> Result<Option<brep_core::analytic::EndpointCapCorrection>> {
+pub(crate) fn parse_cap_correction(
+    v: &Value,
+) -> Result<Option<brep_core::analytic::EndpointCapCorrection>> {
     let tolerance = optional_field::<f64>(v, "cap_correction_tolerance")?;
     let quantum = optional_field::<f64>(v, "cap_correction_quantum")?;
     let max_work = optional_field::<u64>(v, "cap_correction_max_work")?;
@@ -273,7 +331,10 @@ fn parse_cap_correction(v: &Value) -> Result<Option<brep_core::analytic::Endpoin
     }))
 }
 
-fn parse_rmf_policy(v: &Value, orientation: &str) -> Result<Option<(usize, usize, usize)>> {
+pub(crate) fn parse_rmf_policy(
+    v: &Value,
+    orientation: &str,
+) -> Result<Option<(usize, usize, usize)>> {
     let rmf_steps = optional_field::<usize>(v, "rmf_transport_steps")?;
     let rmf_cells = optional_field::<usize>(v, "error_max_cells")?;
     let rmf_products = optional_field::<usize>(v, "error_max_products")?;

@@ -29,6 +29,7 @@ pub mod contact_tangent;
 pub mod envelope;
 pub mod envelope_fit;
 pub mod contact_pcurve;
+pub(crate) mod polynomial_fit;
 pub mod contact_trims;
 pub mod face_loops;
 pub mod patch_boundary;

@@ -210,7 +210,7 @@ pub use analytic_features::{
     audited_multi_edge_fillet, audited_multi_section_loft, audited_parallel_frame_sweep,
     exact_analytic_shell, exact_annular_fillet, exact_convex_chamfer, exact_convex_prism_fillet,
     exact_layered_prism_fillet, exact_simple_prism_fillet, exact_valence3_corner_blend,
-    exact_variable_radius_fillet, export_iges, frame_law_ruled_sweep, import_iges,
+    exact_variable_radius_fillet, frame_law_ruled_sweep,
 };
 pub use close_topology::{
     AuditedTopologyComplex, BodyRole, CLOSE_TOPOLOGY_CAPABILITY, CLOSE_TOPOLOGY_IGES_CAPABILITY,

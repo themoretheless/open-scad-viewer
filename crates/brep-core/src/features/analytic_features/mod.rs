@@ -56,7 +56,6 @@ mod audited_feature_result;
 mod exact_analytic_shell;
 mod exact_variable_radius_fillet;
 mod frame_law_ruled_sweep;
-mod import_iges;
 pub use analytic_fillet::*;
 pub use audited_bent_rmf_sweep::*;
 pub use audited_feature_result::*;
@@ -65,5 +64,4 @@ pub use exact_variable_radius_fillet::*;
 pub use frame_law_ruled_sweep::*;
 
 mod independent_corners;
-pub use import_iges::*;
 pub use independent_corners::*;
