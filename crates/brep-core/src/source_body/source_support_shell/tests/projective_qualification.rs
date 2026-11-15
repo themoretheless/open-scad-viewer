@@ -2349,11 +2349,14 @@
         let projection=[[vectors[1][1]/determinant,-vectors[1][0]/determinant,0.],
             [-vectors[0][1]/determinant,vectors[0][0]/determinant,0.]];
         let shell_work=||crate::source_profile_body::ShellReplayLimits{
-            boundary:boundary_work(),projection,cut_spans_per_section:32,mapping_cells_per_section:200,
-            fragments_per_section:100,controls:1000,join_cells:1000,join_spans:10000,exterior_drivers:1000,
-            collapsed_ends:[1,1],subdivisions:16,quotient_cells:256,retained_cells:2048,retained_spans:12288,
-            transition_cells:2000,transition_spans:100000,exact_work_per_rail:100000000,
-            drivers_per_rail:100000,fragments_per_rail:100,outer_exact_work:100000000,outer_drivers:100000,shell_uses:1000};
+            boundary:boundary_work(),projection,controls:1000,
+            section:crate::source_profile_body::ShellSectionLimits{cut_spans:32,mapping_cells:200,fragments:100},
+            join:crate::source_profile_body::ShellJoinLimits{cells:1000,spans:10000,exterior_drivers:1000},
+            quotient:crate::source_profile_body::ShellQuotientLimits{collapsed_ends:[1,1],subdivisions:16,cells:256},
+            patches:crate::source_profile_body::ShellPatchLimits{retained_cells:2048,retained_spans:12288,
+                transition_cells:2000,transition_spans:100000},
+            rail:crate::source_profile_body::ShellRailLimits{exact_work:100000000,drivers:100000,fragments:100},
+            outer:crate::source_profile_body::ShellOuterLimits{exact_work:100000000,drivers:100000},shell_uses:1000};
         if let Ok(path)=std::env::var("BREP_EXPRESSION_REPLAY_REQUEST_PATH") {
             let request=value_codec::json!({"op":"cad_expression_shell_restore",
                 "proposalDefinition":rebuilt.definition().unwrap(),"boundaryDefinition":boundary_recipe,

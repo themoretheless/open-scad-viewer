@@ -625,7 +625,10 @@ pub use assembled_shell::{TransitionCoordinateContact, TransitionCoordinateRepor
 #[path = "source_profile_shell_replay.rs"]
 mod shell_replay;
 #[cfg(feature = "codec")]
-pub use shell_replay::{ShellReplayLimits, ShellReplayReport, with_restored_expression_shell};
+pub use shell_replay::{
+    ShellJoinLimits, ShellOuterLimits, ShellPatchLimits, ShellQuotientLimits, ShellRailLimits,
+    ShellReplayLimits, ShellReplayReport, ShellSectionLimits, with_restored_expression_shell,
+};
 
 #[cfg(feature = "codec")]
 #[path = "source_profile_recipe_identity.rs"]
