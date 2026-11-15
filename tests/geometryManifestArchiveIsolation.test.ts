@@ -29,7 +29,7 @@ it('keeps historical manifests byte-identical when current evidence changes', as
   }
 })
 
-it('keeps v6 through v9 runtime records immutable when current v10 evidence changes',async()=>{
+it('keeps v6 through v10 runtime records immutable when current v11 evidence changes',async()=>{
  const oldMesh=GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v6']
  const oldBrep=GEOMETRY_MANIFEST_ARCHIVE['brep-closed-v6']
  const oldMeshV7=GEOMETRY_MANIFEST_ARCHIVE['own-rust-node-v7']
@@ -46,6 +46,8 @@ it('keeps v6 through v9 runtime records immutable when current v10 evidence chan
   expect(refreshed['brep-closed-v8'].manifestDigest).toBe('84044b5663d7dfd790d01ac79de118270574699fe0c059ac8b1776e2f1a8fe58')
   expect(refreshed['own-rust-node-v9'].manifestDigest).toBe('b47594219e725a1416c426f76111e3b113fecee10025b94e41e30856902af1d4')
   expect(refreshed['brep-closed-v9'].manifestDigest).toBe('e0e66d367228efb219d171319c45bc0ac74b50b56cc6145f32a43ffb8ed6e9da')
-  expect(refreshed['own-rust-node-v10'].qualification.recordId).toBe('candidate-test')
+  expect(refreshed['own-rust-node-v10'].manifestDigest).toBe('b28d2d479b3f762c96bd6cb34776c2c72d995049decfa155d249ab9e0199466f')
+  expect(refreshed['brep-closed-v10'].manifestDigest).toBe('351e44c7c5417ddc14aca135eccaba13bc99544fa715f751600f8be6e8c663e5')
+  expect(refreshed['own-rust-node-v11'].qualification.recordId).toBe('candidate-test')
  }finally{vi.doUnmock('../src/core/currentRuntimeGeometryEvidence');vi.resetModules()}
 })

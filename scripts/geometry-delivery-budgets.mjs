@@ -23,6 +23,12 @@ const profiles=Object.freeze({
   'baf58e7051b0a9b39b54b61525ba014abb0e1bcf0b71c9a73df418e796cfb254':Object.freeze({
     version:10,geometryChunkBytes:5_370_000,totalAssetBytes:10_160_000,
   }),
+  // v11: exact 15596a bytes (G0 v106 / runtime v11 re-freeze). Measured locally:
+  // 6,272,449 packed geometry bytes and 12,034,839 total asset bytes; the kernel grew
+  // from 15.9 MB to 17.7 MB raw since baf58e. Caps keep a small reviewed margin.
+  '15596aa8bd7c26888ae18fd1b0bcea49c36af76ef50b1a5558a6e164c142e938':Object.freeze({
+    version:11,geometryChunkBytes:6_280_000,totalAssetBytes:12_050_000,
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
