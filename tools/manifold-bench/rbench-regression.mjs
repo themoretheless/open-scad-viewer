@@ -74,10 +74,11 @@ function measureRun(run, label) {
 
 const DEFAULT_MAX_REGRESSION = 0.15
 
-/** Both kernel suites; a checkout that predates a suite simply lacks its example. */
+/** Kernel suites; a checkout that predates a suite simply lacks its example. */
 const SUITES = [
   { crate: 'manifold-core', example: 'bench_manifold' },
   { crate: 'manifold-ops', example: 'bench_manifold_ops' },
+  { crate: 'polygon-core', example: 'bench_csg_fixtures' },
 ]
 
 /** rbench names for the host, matching `run.environment`. */
