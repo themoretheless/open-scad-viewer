@@ -99,7 +99,7 @@ fn bound(target: &[Poly], work: &mut Work) -> PResult<Option<[f64; 2]>> {
     Ok(Some([lo, hi]))
 }
 
-fn outward(value: &Q, upper: bool, work: &mut Work) -> PResult<Option<f64>> {
+pub(super) fn outward(value: &Q, upper: bool, work: &mut Work) -> PResult<Option<f64>> {
     let Some(mut approx) = value.to_f64().filter(|x| x.is_finite()) else {
         return Ok(None);
     };

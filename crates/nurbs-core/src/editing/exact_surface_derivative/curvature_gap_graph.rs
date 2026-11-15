@@ -57,7 +57,7 @@ pub fn certify_curvature_gap_graph(
     })
 }
 
-fn validate_request(
+pub(super) fn validate_request(
     source: &Surface,
     span: [usize; 2],
     level: f64,
@@ -89,7 +89,7 @@ fn validate_request(
     Ok(domain)
 }
 
-fn classify(residual: &Poly, axis: Axis, work: &mut Work) -> PResult<CurvatureGapGraph> {
+pub(super) fn classify(residual: &Poly, axis: Axis, work: &mut Work) -> PResult<CurvatureGapGraph> {
     use CurvatureGapGraph::*;
     if residual.is_empty() {
         return Ok(EverywhereAtLevel);

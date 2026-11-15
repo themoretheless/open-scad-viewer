@@ -23,6 +23,8 @@ pub use curvature_gap_graph::{
     certify_curvature_gap_graph, sample_curvature_gap_graph,
 };
 mod curvature_gap_range;
+mod curvature_gap_slope;
+pub use curvature_gap_slope::{CurvatureGapSlopeAudit, curvature_gap_graph_slope};
 mod curvature_gap_refinement;
 pub use curvature_gap_refinement::{
     CurvatureGapRegion, RefinedCurvatureGapAudit, refine_curvature_gap,
