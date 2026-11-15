@@ -19,10 +19,12 @@ pub mod history_snapshots;
 #[cfg(feature = "codec")]
 pub mod import_policy;
 pub mod journal;
+pub mod operation_contracts;
 pub(crate) mod operation_tolerance;
 pub mod pcurve_repair;
 pub mod region_replacement;
 pub mod rounded_patch_network;
 #[cfg(feature = "codec")]
 pub mod tolerance_unify;
+pub mod tolerance_hierarchy;
 pub mod transactions;

@@ -23,6 +23,7 @@ import type { SolidNurbsCurve, SolidNurbsSurface } from '../kernel/solidNurbs'
 import type { NurbsBrep } from '../kernel/geometry/brep'
 import type {DirectStepDisplay,DirectStepSceneProduct,DirectStepSceneTree} from '../kernel/cadNurbsStep'
 import { BrepInspectionCache } from '../kernel/brepInspectionCache'
+import { isDocumentLengthUnit, type DocumentLengthUnit } from './documentUnits'
 
 export type Point2 = [number, number]
 export interface DirectSketch { group?: string; id: string; name: string; points: Point2[]; closed: boolean; editablePath?: BezierPathJson; retainedProfile?: BrepProfile; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[] }
@@ -38,7 +39,7 @@ export interface DirectInterchangeMetadata {
     sceneTree?:DirectStepSceneTree;display?:DirectStepDisplay;xde?:DirectStepSceneProduct[];
     lod0CacheKey?:string;lod0ShellCacheKeys?:string[]}
 }
-export interface DirectDocument { sourceBodies?:SourceBodyRecord[]; version: 1; blenderProjectId?: string; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
+export interface DirectDocument { sourceBodies?:SourceBodyRecord[]; version: 1; blenderProjectId?: string; units?: DocumentLengthUnit; sketches: DirectSketch[]; bodies: DirectBody[]; curves?: SolidNurbsCurve[]; surfaces?: SolidNurbsSurface[]; groups?: DirectGroup[]; interchange?: DirectInterchangeMetadata }
 export const emptyDirectDocument = (): DirectDocument => ({ version: 1, sketches: [], bodies: [], curves: [], surfaces: [] })
 const clone = <T>(value: T): T => { countOperation('documentClones'); return structuredClone(value) }
 const DEEP_JSON_NORMALIZATION = Symbol('deep JSON normalization')
@@ -79,6 +80,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
   const d = JSON.parse(text) as DirectDocument
   if (!d || d.version !== 1 || !Array.isArray(d.sketches) || !Array.isArray(d.bodies) || d.sketches.length + d.bodies.length > 200+MAX_DIRECT_INSTANCES) throw new Error('Invalid direct modeling document.')
   if(d.blenderProjectId!==undefined&&(typeof d.blenderProjectId!=='string'||!d.blenderProjectId.trim()||d.blenderProjectId.length>100))throw Error('Invalid Blender project identity.')
+  if(d.units!==undefined&&!isDocumentLengthUnit(d.units))throw Error('Invalid document length unit.')
   if(d.sourceBodies!==undefined&&(!Array.isArray(d.sourceBodies)||d.sourceBodies.length>200))throw Error('Invalid source Body collection.')
   const sourceCount=d.sourceBodies?.length??0
   let instanceCount=0;for(const body of d.bodies)if(body?.instance)instanceCount++
