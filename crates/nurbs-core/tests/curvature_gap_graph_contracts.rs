@@ -80,3 +80,58 @@ fn validates_original_span_and_returns_no_certificate_on_short_work() {
     assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
     assert!(short.graph.is_none());
 }
+
+#[test]
+fn samples_in_order_with_checked_brackets_in_both_orientations() {
+    use nurbs_core::editing::exact_surface_derivative::sample_curvature_gap_graph;
+    let mut s = parabola();
+    let parameters = [9., 7.25, 8., 7.];
+    let x = ((4f64.cbrt() - 1.) / 4.).sqrt();
+    let t = (x - 0.25) / 0.75;
+    for reverse in [false, true] {
+        if reverse {
+            s.control_points.reverse();
+        }
+        let r = sample_curvature_gap_graph(&s, [2, 1], Axis::U, 1., &parameters, 14, WORK).unwrap();
+        let samples = r.samples.unwrap_or_else(|| panic!("{:?}", r.refusal));
+        for (sample, expected) in samples.iter().zip(parameters) {
+            assert_eq!(sample.transverse, expected);
+            let [lo, hi] = sample.root_interval;
+            let root = if reverse { 1. - t } else { t };
+            assert!(lo < root && root < hi);
+            assert_eq!(hi - lo, 1. / 16384.);
+        }
+        assert_eq!(samples.len(), parameters.len());
+    }
+}
+
+#[test]
+fn exact_midpoint_is_retained_as_a_single_parameter() {
+    use nurbs_core::editing::exact_surface_derivative::sample_curvature_gap_graph;
+    let mut s = parabola();
+    s.control_points = [(0.25, 0.0625), (0.5, 0.1875), (0.75, 0.5625)]
+        .map(|(x, z)| vec![vec![x, 0., z], vec![x, 1., z]])
+        .to_vec();
+    let r = sample_curvature_gap_graph(&s, [2, 1], Axis::U, 0.5, &[8.], 16, WORK).unwrap();
+    assert_eq!(r.samples.unwrap()[0].root_interval, [0.5, 0.5]);
+}
+
+#[test]
+fn sample_batch_validates_inputs_and_refuses_atomically() {
+    use nurbs_core::editing::exact_surface_derivative::sample_curvature_gap_graph;
+    let s = parabola();
+    let sample = |axis, parameters: &[f64], work| {
+        sample_curvature_gap_graph(&s, [2, 1], axis, 1., parameters, 8, work)
+    };
+    assert!(sample(Axis::U, &[6.99], WORK).is_err());
+    assert!(sample(Axis::U, &[f64::NAN], WORK).is_err());
+    assert!(sample(Axis::U, &[], WORK).is_err());
+    let unresolved = sample(Axis::V, &[3.], WORK).unwrap();
+    assert_eq!(unresolved.graph, Some(CurvatureGapGraph::Unresolved));
+    assert!(unresolved.samples.is_none());
+    let full = sample(Axis::U, &[7., 8.], WORK).unwrap();
+    assert_eq!(full.samples.unwrap().len(), 2);
+    let short = sample(Axis::U, &[7., 8.], full.work_used - 1).unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.samples.is_none() && short.graph.is_none());
+}

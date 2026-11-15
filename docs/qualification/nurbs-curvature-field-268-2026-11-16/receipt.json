@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0268",
+  "testedBase": "bda625fad3ad5b3fa0fc9901fac6a25cf0c9c0ce",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_graph_contracts",
+    "--test",
+    "curvature_gap_edge_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 8,
+  "scope": [
+    "Exactly lifts each transverse binary64 parameter and bisects only a certified unique contour. All returned intervals have exact dyadic unit coordinates and a width bounded by the requested depth.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "b0a2eb8212303769084954d08e5eb17cef9795fdfa729aa94c3bfd409f087da9",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "11839f79c0f83a88025b348ce1fd003c473a1922b9531a83685c867a4ee61742",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs": "18dda4c6e8aecf3d790463deee57130c7caad7e35e435d90ec90ed0e93dd0fe1",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_graph_contracts.rs": "f3e89e0a939926b93901356114e96b923159e66f2236c589573e957760929972",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs": "2caf811e137eeeb3539dbd115b9df24e464b0dd8c85104699de3a046dfb7f9a0"
+  }
+}

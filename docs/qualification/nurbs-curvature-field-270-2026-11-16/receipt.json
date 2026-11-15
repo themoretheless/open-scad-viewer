@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0270",
+  "testedBase": "30838ead10e060c6a399cec28350d1b4dcefa536",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_slope_contracts",
+    "--test",
+    "curvature_gap_graph_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 11,
+  "scope": [
+    "Covers the original cell with a polyline at supplied transverse parameters. Exact bracket midpoint error and implicit slope variation bound the whole segment in the absolute root clock. This is a UV parameter bound, not a world-space mesh or contour topology certificate.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "2e235ec031c9e64e4215ff2441f0512c2f36a8de7cb8d74c6f4e9a645d5fd44c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "47faca8543a3640bfd2f176ea6e499634d99ea5fc441192d2285e8d07d5633ff",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs": "94223a6489e951b449a74e00d3eafd2e54ec29e61ea6facf8a3c07edad7e7e33",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs": "42be89424381d5533edb5df031a4794142f698449538f3f77f9f402d587ca6b6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs": "175285f206e3c094512d1c96bf946ba880016ab3c45b6aeee22ad2ded0e899e6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs": "60fd1b692b660bcfec2bfa42eddb55733f15a44ed71732f2bddc0a5622d44812"
+  }
+}
