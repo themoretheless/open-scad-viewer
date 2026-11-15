@@ -1,5 +1,6 @@
 import { callGeometryRust } from './geometry/kernel'
 import { diagnoseManifoldInKernel } from './geometry/manifoldAnalysis'
+import type { DrawingSheet } from '../app/drawingSheets'
 
 /**
  * Orthographic drawing sheet of one triangle mesh: hidden-line views (visible
@@ -125,6 +126,44 @@ export function createDrawingViews(mesh: DrawingMesh, options: DrawingViewsOptio
   return { svg, views: raw.views, section: raw.section, printChecks }
 }
 
+/**
+ * Overall width and height of one view cell as dimension lines below and to the
+ * right of the projected extents (model mm, so ISO and SECTION get them too).
+ */
+function overallDimensions(box: number[], scale: number, ox: number, oy: number): string {
+  const w = box[2] - box[0]
+  const h = box[3] - box[1]
+  const x1 = ox + w * scale
+  const y1 = oy + h * scale
+  const label = (x: number, y: number, value: number, rotate: boolean) =>
+    `<text x="${fmt(x)}" y="${fmt(y)}"${rotate ? ` transform="rotate(-90 ${fmt(x)} ${fmt(y)})"` : ''} text-anchor="middle" fill="black" stroke="none" font-family="sans-serif" font-size="2.5">${fmt(value)}</text>`
+  const parts: string[] = []
+  if (w > 1e-9) {
+    const y = y1 + 4
+    parts.push(
+      `<path d="M${fmt(ox)} ${fmt(y1 + 1)}V${fmt(y + 1)}M${fmt(x1)} ${fmt(y1 + 1)}V${fmt(y + 1)}M${fmt(ox)} ${fmt(y)}H${fmt(x1)}"/>`,
+    )
+    parts.push(label((ox + x1) / 2, y - 0.8, w, false))
+  }
+  if (h > 1e-9) {
+    const x = x1 + 4
+    parts.push(
+      `<path d="M${fmt(x1 + 1)} ${fmt(oy)}H${fmt(x + 1)}M${fmt(x1 + 1)} ${fmt(y1)}H${fmt(x + 1)}M${fmt(x)} ${fmt(oy)}V${fmt(y1)}"/>`,
+    )
+    parts.push(label(x - 0.8, (oy + y1) / 2, h, true))
+  }
+  return parts.length
+    ? `<g class="dimension" data-width="${fmt(w)}" data-height="${fmt(h)}" stroke-width=".13">${parts.join('')}</g>`
+    : ''
+}
+
+/** Drawing views as a `drawingSheets` sheet (size from the SVG), ready for `vectorDrawingPdf`. */
+export function drawingViewsSheet(result: DrawingViewsResult, title = 'Drawing'): DrawingSheet {
+  const size = /width="([\d.]+)mm" height="([\d.]+)mm"/.exec(result.svg)
+  if (!size) throw new Error('Drawing SVG has no millimetre size.')
+  return { svg: result.svg, width: Number(size[1]), height: Number(size[2]), title, kind: 'drawing' }
+}
+
 function drawingSvg(raw: RustDrawing, checks: DrawingPrintChecks, title: string): string {
   const cells: { label: string; body: (s: number, ox: number, oy: number) => string; box: number[] }[] = []
   for (const v of raw.views) {
@@ -174,7 +213,7 @@ function drawingSvg(raw: RustDrawing, checks: DrawingPrintChecks, title: string)
     const ox = 10 + (i % columns) * cell + (cell - 20 - (c.box[2] - c.box[0]) * scale) / 2
     const oy = 20 + Math.floor(i / columns) * cell + 8
     const lx = 10 + (i % columns) * cell
-    return `<g data-view="${escapeXml(c.label)}"><text x="${fmt(lx)}" y="${fmt(oy - 3)}" fill="black" stroke="none" font-family="sans-serif" font-size="3">${escapeXml(c.label)}</text>${c.body(scale, ox, oy)}</g>`
+    return `<g data-view="${escapeXml(c.label)}"><text x="${fmt(lx)}" y="${fmt(oy - 3)}" fill="black" stroke="none" font-family="sans-serif" font-size="3">${escapeXml(c.label)}</text>${c.body(scale, ox, oy)}${overallDimensions(c.box, scale, ox, oy)}</g>`
   })
   const mm = (x: number | null) => (x === null ? '—' : `${fmt(x)} mm`)
   const status = (ok: boolean) => (ok ? 'OK' : 'FAIL')
