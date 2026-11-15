@@ -443,3 +443,61 @@ fn arc_length_requires_a_graph_and_refuses_on_a_late_work_limit() {
     assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
     assert!(short.length_bounds.is_none() && short.segment_bounds.is_none());
 }
+
+#[test]
+fn model_space_point_distance_certifies_interior_and_endpoint_projections() {
+    use nurbs_core::editing::exact_surface_derivative::distance_to_curvature_gap_contour;
+    let s = sheared_parabola(0., 9.);
+    for (point, segment) in [([1.5, 0.25, 0.25], 0), ([0.5, 2., 0.25], 1)] {
+        let r = distance_to_curvature_gap_contour(
+            &s,
+            [2, 2],
+            Axis::U,
+            0.5,
+            point,
+            &[7., 8., 9.],
+            16,
+            WORK,
+        )
+        .unwrap();
+        let [lo, hi] = r.distance_bounds.unwrap();
+        assert!(lo <= 1. && 1. <= hi && hi - lo < 1e-8, "{r:?}");
+        assert_eq!(r.upper_segment, Some(segment));
+    }
+}
+
+#[test]
+fn point_distance_encloses_zero_and_coarse_contour_uncertainty() {
+    use nurbs_core::editing::exact_surface_derivative::distance_to_curvature_gap_contour;
+    let s = sheared_parabola(0.125, 9.);
+    let x = ((4f64.cbrt() - 1.) / 4.).sqrt();
+    let r = distance_to_curvature_gap_contour(
+        &s,
+        [2, 2],
+        Axis::U,
+        1.,
+        [x, 0.5, x * x],
+        &[7., 9.],
+        3,
+        WORK,
+    )
+    .unwrap();
+    let [lo, hi] = r.distance_bounds.unwrap();
+    assert_eq!(lo, 0.);
+    assert!(hi > 1e-4 && hi.is_finite());
+    assert_eq!(r.upper_segment, Some(0));
+}
+
+#[test]
+fn point_query_validation_and_late_work_refusal_are_atomic() {
+    use nurbs_core::editing::exact_surface_derivative::distance_to_curvature_gap_contour;
+    let s = sheared_parabola(0., 9.);
+    let run = |point, work| {
+        distance_to_curvature_gap_contour(&s, [2, 2], Axis::U, 0.5, point, &[7., 9.], 16, work)
+    };
+    assert!(run([f64::NAN, 0., 0.], WORK).is_err());
+    let full = run([1.5, 0.25, 0.25], WORK).unwrap();
+    let short = run([1.5, 0.25, 0.25], full.work_used - 1).unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.distance_bounds.is_none() && short.upper_segment.is_none());
+}
