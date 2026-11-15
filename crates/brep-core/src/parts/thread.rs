@@ -315,10 +315,17 @@ fn movement_upper_bound(original: [f64; 3], p: [f64; 3]) -> f64 {
     }
 }
 
+/// Refusal texts of one sheet edit's boundary recheck.
+struct BoundaryRecheckMessages {
+    exhausted: &'static str,
+    unproved: &'static str,
+}
+
 /// Recheck every boundary use of the edited sheet under one budget.
-fn verify_aligned_boundaries(
+fn verify_edited_boundaries(
     result: &Model,
     max_verification_cells: usize,
+    messages: BoundaryRecheckMessages,
 ) -> Result<(Vec<Report>, usize)> {
     use nurbs_core::curve_surface_agreement::{self, Status};
     let mut used = 0;
@@ -327,7 +334,7 @@ fn verify_aligned_boundaries(
         if used == max_verification_cells {
             return Err(Error::new(
                 "BREP_THREAD_PATCH_UNRESOLVED",
-                "Alignment verification budget exhausted",
+                messages.exhausted,
             ));
         }
         let report = curve_surface_agreement::verify(
@@ -342,7 +349,7 @@ fn verify_aligned_boundaries(
         if report.status != Status::WithinTolerance {
             return Err(Error::new(
                 "BREP_THREAD_PATCH_UNRESOLVED",
-                "Edited boundary agreement unproved",
+                messages.unproved,
             ));
         }
         agreements.push(report);
@@ -379,7 +386,14 @@ pub fn align_patch_endpoints_many(
             *last = vertices[e.vertices[1]].point.to_vec();
         }
     }
-    let (agreements, used) = verify_aligned_boundaries(&result, max_verification_cells)?;
+    let (agreements, used) = verify_edited_boundaries(
+        &result,
+        max_verification_cells,
+        BoundaryRecheckMessages {
+            exhausted: "Alignment verification budget exhausted",
+            unproved: "Edited boundary agreement unproved",
+        },
+    )?;
     result.rebuild_topology_ids();
     result.inherit_topology_ids(&[target]);
     result.validate()?;
