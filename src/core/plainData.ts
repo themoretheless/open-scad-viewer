@@ -8,6 +8,11 @@ export function record(value: unknown): Record<string, unknown> | null {
     : null
 }
 
+/** Type-guard form of `record`: a plain object whose prototype is `Object.prototype` or `null`. */
+export function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return record(value) !== null
+}
+
 export function ownData(value: object, key: string): unknown {
   const descriptor = Object.getOwnPropertyDescriptor(value, key)
   return descriptor !== undefined && Object.hasOwn(descriptor, 'value')
