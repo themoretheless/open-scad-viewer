@@ -120,6 +120,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--danger);bo
 [data-sel-state=operand]{outline:3px double var(--sel-operand);outline-offset:-3px}
 [data-sel-state=preview]{outline:2px dashed var(--sel-preview);outline-offset:-2px}
 [data-sel-state=invalid]{outline:3px dashed var(--sel-invalid);outline-offset:-3px}
+svg [data-sel-state=invalid]{outline:none;stroke:var(--sel-invalid);stroke-width:3px;stroke-dasharray:1 3}
 [data-sel-state=locked]{outline:2px dotted var(--sel-locked);outline-offset:-2px}
 .sel-state-mark{display:inline-block;min-width:1ch;font-family:var(--font-ui,sans-serif);font-size:11px;line-height:1}
 [data-sel-state=hover] .sel-state-mark{color:var(--sel-hover)}[data-sel-state=selected] .sel-state-mark{color:var(--sel-selected)}[data-sel-state=operand] .sel-state-mark{color:var(--sel-operand)}[data-sel-state=preview] .sel-state-mark{color:var(--sel-preview)}[data-sel-state=invalid] .sel-state-mark{color:var(--sel-invalid)}[data-sel-state=locked] .sel-state-mark{color:var(--sel-locked)}

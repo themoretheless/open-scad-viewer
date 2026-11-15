@@ -39,6 +39,8 @@ export interface UseViewportLayerAndPolygonsOptions {
   selectedFaceTriangles: ComputedRef<Set<number>>
   pickMode: Ref<'body' | 'face' | 'edge' | 'vertex'>
   hovered: Ref<string>
+  /** Scene ids a failed calculation points at (selection state `invalid`); tinted through the per-triangle hue hook. */
+  invalidIds?: Readonly<Ref<readonly string[]>>
   extrusionMode: Ref<'new' | 'union' | 'difference'>
   previewBody: ShallowRef<ReturnType<typeof directExtrusionTool> | null>
   previewReplacesTarget: ComputedRef<boolean>
@@ -56,6 +58,9 @@ export interface UseViewportLayerAndPolygonsOptions {
   getNotice: () => string
   label: (ru: string, en: string) => string
 }
+
+/** Hue of the `invalid` selection state in the GPU viewport (red, distinct from operand B at 350). */
+export const INVALID_HUE = 0
 
 export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygonsOptions) {
   const {hasDragNodes, setDragNodes, fpsTick, applyDragPreviewTransform, clearDragPreview, settleAfterDrag, displayMeshFor, shadeFromNormal, stopGpuLayer, retryGpuLayer, mountGpuCanvas, refreshDisplayPreparation, vrSnapshot, meshPolygons, polygonColor, surfacePolygons} = createViewportOperations({
@@ -237,7 +242,9 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
       const display = displayMeshFor(b)
       const flat = (display.flat ??= smoothTriangleList(display.mesh.positions, display.mesh.indices))
       const count = display.mesh.indices.length / 3
-      const bodyHue = subtract?.a.includes(b.id)
+      const bodyHue = options.invalidIds?.value.includes(b.id)
+        ? INVALID_HUE
+        : subtract?.a.includes(b.id)
         ? 45
         : subtract?.b.includes(b.id)
           ? 350
@@ -296,7 +303,15 @@ export function useViewportLayerAndPolygons(options: UseViewportLayerAndPolygons
         id: item.id,
         positions: flat.positions,
         normals: flat.normals,
-        hues: new Float32Array(mesh.indices.length / 3).fill(!preview && options.selectedIds.value.includes(item.id) ? 266 : -1),
+        hues: new Float32Array(mesh.indices.length / 3).fill(
+          preview
+            ? -1
+            : options.invalidIds?.value.includes(item.id)
+              ? INVALID_HUE
+              : options.selectedIds.value.includes(item.id)
+                ? 266
+                : -1,
+        ),
         color: preview ? [0.467, 0.918, 0.773] : [0.192, 0.373, 0.447],
         metallic: undefined,
         roughness: undefined,
