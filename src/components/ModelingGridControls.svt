@@ -4,6 +4,8 @@ export { computeAdaptiveGridStepMm, type AdaptiveGridStep }
 </script>
 <script setup lang="ts">
 import { ref, watch } from 'svet'
+import { evaluateUnitExpression } from '../app/documentUnits'
+import { evaluateSafeMathExpression } from '../kernel/cadQuantity'
 import { GRID_UNITS, useModelingGrid, type GridUnit } from '../app/modelingGrid'
 const props = defineProps<{ locale: string; snapping?: boolean }>()
 const settings = useModelingGrid()
@@ -11,9 +13,16 @@ const { unit, size, enabled, grid, geometry, guides, keypoints, relations, radiu
 const draftSize = ref<string | number>(size.value)
 watch(size, value => { draftSize.value = value })
 const label = (ru: string, en: string) => props.locale === 'ru' ? ru : en
+const sizeError = ref('')
+/** Accepts expressions with units (`1in`, `10mm+5cm`); bare numbers use the selected cell unit. */
 function changeSize(event: Event) {
   const input = event.target as HTMLInputElement
-  settings.setSize(input.valueAsNumber)
+  const result = evaluateUnitExpression(String(input.value), evaluateSafeMathExpression, { defaultUnit: unit.value })
+  if (!result.valid || !settings.setSize(result.value / GRID_UNITS[unit.value])) {
+    sizeError.value = result.valid || result.reason === 'range' ? label('Клетка: от 0,000001 до 1000000 мм', 'Cell: 0.000001 to 1000000 mm') : result.reason === 'unit' ? label('Допустимые единицы: mm, cm, m, in', 'Allowed units: mm, cm, m, in') : label('Введите число или выражение', 'Enter a number or expression')
+    return
+  }
+  sizeError.value = ''
   draftSize.value = size.value
   input.value = String(size.value)
 }
@@ -21,7 +30,8 @@ function changeRadius(event:Event) { const input=event.target as HTMLInputElemen
 </script>
 <template>
   <div class="modeling-grid-controls">
-    <label>{{ label('Клетка', 'Cell') }} <input v-model="draftSize" type="number" min="0" step="any" :aria-label="label('Размер клетки', 'Cell size')" @change="changeSize"></label>
+    <label>{{ label('Клетка', 'Cell') }} <input v-model="draftSize" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" :aria-label="label('Размер клетки', 'Cell size')" :aria-invalid="sizeError ? 'true' : undefined" :aria-describedby="sizeError ? 'grid-size-error' : undefined" @change="changeSize"></label>
+    <small v-if="sizeError" id="grid-size-error" role="alert">{{ sizeError }}</small>
     <select :value="unit" :aria-label="label('Единицы клетки', 'Cell units')" @change="settings.setUnit(($event.target as HTMLSelectElement).value as GridUnit)">
       <option v-for="(_, value) in GRID_UNITS" :key="value" :value="value">{{ value }}</option>
     </select>
@@ -39,5 +49,5 @@ function changeRadius(event:Event) { const input=event.target as HTMLInputElemen
   </div>
 </template>
 <style scoped>
-.modeling-grid-controls{padding:5px 8px;display:flex;align-items:center;gap:5px;font-size:11px;flex-wrap:wrap}.modeling-grid-controls label{display:flex;align-items:center;gap:4px}.modeling-grid-controls input[type=number]{width:66px}.modeling-grid-controls input,.modeling-grid-controls select,.modeling-grid-controls summary{color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:4px;font:inherit}.modeling-grid-controls details{position:relative}.modeling-grid-controls summary{cursor:pointer;list-style:none}.modeling-grid-controls summary::-webkit-details-marker{display:none}.modeling-grid-controls details>div{position:absolute;right:0;top:100%;z-index:30;min-width:230px;display:grid;gap:9px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
+.modeling-grid-controls{padding:5px 8px;display:flex;align-items:center;gap:5px;font-size:11px;flex-wrap:wrap}.modeling-grid-controls label{display:flex;align-items:center;gap:4px}.modeling-grid-controls input[type=number],.modeling-grid-controls input[type=text]{width:66px}.modeling-grid-controls small{color:var(--danger,#ff6978)}.modeling-grid-controls input,.modeling-grid-controls select,.modeling-grid-controls summary{color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:4px;font:inherit}.modeling-grid-controls details{position:relative}.modeling-grid-controls summary{cursor:pointer;list-style:none}.modeling-grid-controls summary::-webkit-details-marker{display:none}.modeling-grid-controls details>div{position:absolute;right:0;top:100%;z-index:30;min-width:230px;display:grid;gap:9px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
 </style>

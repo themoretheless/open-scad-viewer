@@ -31,14 +31,19 @@ import CadQuantityInput from '../components/CadQuantityInput.svt'
 import RunoutControls from '../components/RunoutControls.svt'
 import {numericRectangle,numericSlotSources} from '../app/numericSketchAuthoring'
 import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../kernel/solidSurfaceDiagnostics'
-import { computed, nextTick, onUnmounted, ref, shallowRef, watch, watchEffect } from 'svet'
+import { computed, nextTick, onUnmounted, reactive, ref, shallowRef, watch, watchEffect } from 'svet'
 import {solidVertexCount} from '../kernel/solidMeasurements'
 import {isSolidProfileEdit,type SolidProfileEditOptions} from '../kernel/solidProfileEdit'
 import {isSolidSceneEdit} from '../kernel/solidSceneEdit'
 import {isSolidBodyEdit,type SolidBodyEditOptions} from '../kernel/solidBodyEdit'
 import {assignSolidMaterial} from '../kernel/solidMaterial'
 import { stringifyMeshJson } from '../exchange/meshJson'
-import { pickDirectMesh } from '../app/directPicking'
+import { PickCycle, pickDirectMesh, pickDirectMeshHits, type PickHit } from '../app/directPicking'
+import { activeFrame, coordinateSystemLabel, COORDINATE_SYSTEMS, frameDeltaToWorld, frameFromFace, nextCoordinateSystem, type CoordinateSystem } from '../app/coordinateSystems'
+import { cplaneFrame, cplaneFromFrame, pivotFrame, savedPivot, snapPivot, withSavedPivot, type PivotSnap } from '../app/directPivots'
+import { createDirectClipboardPayload, parseDirectClipboardPayload, pasteDirectClipboardPayload } from '../app/directClipboard'
+import { documentUnit, fromMillimetres } from '../app/documentUnits'
+import { addToIsolation, isolateWithin, pruneIsolation, readIsolation, stepOutIsolation, type IsolationStack } from '../app/isolationStack'
 import ModelingFloorGrid from '../components/ModelingFloorGrid.svt'
 import ModelingGridControls from '../components/ModelingGridControls.svt'
 import WorkspaceActionBar from '../components/WorkspaceActionBar.svt'
@@ -203,6 +208,8 @@ function touchDown(e: PointerEvent, pane: Pane) {
   const first = touchPointers.values().next().value
   if (first && (first.pane !== pane || touchPointers.size >= 2)) { e.stopPropagation(); return }
   touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY, pane, svg })
+  cancelLongPress()
+  if (pane === '3d' && touchPointers.size === 1) { const start = { clientX: e.clientX, clientY: e.clientY, offsetX: e.offsetX, offsetY: e.offsetY, currentTarget: svg } as unknown as PointerEvent; longPress = setTimeout(() => { longPress = undefined; if (touchPointers.size === 1) openPickCandidates(start, pane) }, 550) }
   svg.setPointerCapture(e.pointerId)
   if (touchPointers.size === 2) {
     // A second finger cancels the edit preview before taking over the camera.
@@ -219,6 +226,7 @@ function touchDown(e: PointerEvent, pane: Pane) {
 function touchMove(e: PointerEvent) {
   const point = touchPointers.get(e.pointerId)
   if (!point) return
+  if (longPress && Math.hypot(e.clientX - point.x, e.clientY - point.y) > 8) cancelLongPress()
   if (!multiTouch) { point.x = e.clientX; point.y = e.clientY; return }
   e.stopPropagation(); e.preventDefault()
   const other = [...touchPointers.entries()].find(([id]) => id !== e.pointerId)?.[1]
@@ -241,6 +249,7 @@ function touchMove(e: PointerEvent) {
 }
 function touchEnd(e: PointerEvent) {
   if (!touchPointers.has(e.pointerId)) return
+  cancelLongPress()
   touchPointers.delete(e.pointerId)
   if (multiTouch) {
     e.stopPropagation()
@@ -448,6 +457,8 @@ const selectedNurbsSurface = computed(() => document.value.surfaces?.find(s => s
 const selectedNurbs = computed(() => selectedNurbsCurve.value ?? selectedNurbsSurface.value)
 const cvU = ref(0), cvV = ref(0), cvX = ref(0), cvY = ref(0), cvZ = ref(0), cvWeight = ref(1), knotValue = ref(.5)
 const cvInvalidField=ref('')
+const cvFieldValid=reactive<Record<'x'|'y'|'z'|'weight',boolean>>({x:true,y:true,z:true,weight:true})
+const cvVariables=computed(()=>({x:cvX.value,y:cvY.value,z:cvZ.value}))
 const cvInputError=computed(()=>cvInvalidField.value==='weight'?label('Введите положительный вес контрольной точки.','Enter a positive control point weight.'):cvInvalidField.value?label('Введите конечное число в поле ','Enter a finite number in field ')+cvInvalidField.value.toUpperCase()+'.':'')
 watch(()=>[selection.value,cvU.value,cvV.value,cvX.value,cvY.value,cvZ.value,cvWeight.value],()=>{cvInvalidField.value=''})
 const trimBounds = ref<[number,number,number,number]>([0,1,0,1])
@@ -615,7 +626,8 @@ watch(selection, async () => {
 })
 function pickObject(id:string,pane:Pane,add=false) {
  if(id && !objectSelectable(id))return
- if (isolatedBodyIds.value.length && !isolatedBodyIds.value.includes(id)) isolatedBodyIds.value = []
+ // Picking an object hidden by isolation steps out until it is visible again.
+ while (isolationStack.value.length && !isolatedBodyIds.value.includes(id)) isolationStack.value = stepOutIsolation(isolationStack.value)
 
  if(subtract.value&&id&&document.value.bodies.some(b=>b.id===id)){subtractPick(id,add);mode.value=pane;return}
  if(id!==selection.value){faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]}
@@ -800,7 +812,16 @@ watch(()=>[props.open,bodyEditRevision.value,advancedOp.value,document.value,sel
 const previewReplacesTarget=computed(()=>solidActive.value&&extrusionMode.value!=='new'&&(!!previewBody.value||previewEmpty.value))
 // Presentation state stays outside the persisted CAD document and undo history.
 const compactWorkspace = ref(true)
-const isolatedBodyIds = ref<string[]>([])
+// Nested isolation: each level narrows the previous one; the innermost level is what the views show.
+const isolationStack = shallowRef<IsolationStack>([])
+const isolatedBodyIds = computed<string[]>({
+ get:()=>[...(isolationStack.value.at(-1)??[])],
+ set:ids=>{
+  if(!ids.length){isolationStack.value=[];return}
+  const deeper=isolateWithin(isolationStack.value,ids)
+  isolationStack.value=deeper!==isolationStack.value?deeper:[...isolationStack.value.slice(0,-1),[...new Set(ids)]]
+ },
+})
 const workspaceKey=props.embedded?'scad-main-workspace-v1':'scad-solid-workspace-v1'
 watch(restoringDraft,pending=>{
  if(pending)return
@@ -809,26 +830,35 @@ watch(restoringDraft,pending=>{
   if(!state || state.version!==1)return
   const ids=new Set([...documentObjects(document.value),...document.value.sourceBodies??[]].map(o=>o.id))
   const read=(value:unknown):string[]=>Array.isArray(value)?value.filter((id):id is string=>typeof id==='string'&&ids.has(id)).slice(0,1000):[]
-  hiddenIds.value=read(state.hidden);lockedIds.value=read(state.locked);isolatedBodyIds.value=read(state.isolated)
+  hiddenIds.value=read(state.hidden);lockedIds.value=read(state.locked);isolationStack.value=readIsolation(state.isolated,id=>ids.has(id))
   if(typeof state.group==='string' && ((document.value.groups??[]).some(g=>g.name===state.group)||documentObjects(document.value).some(o=>o.group===state.group)))activeGroup.value=state.group
  }catch{/* Invalid workspace preferences do not affect the CAD document. */}
 },{immediate:true})
-watch([hiddenIds,lockedIds,isolatedBodyIds,activeGroup],()=>{
- if(!restoringDraft.value)storageSet(workspaceKey,JSON.stringify({version:1,hidden:hiddenIds.value,locked:lockedIds.value,isolated:isolatedBodyIds.value,group:activeGroup.value}))
+watch([hiddenIds,lockedIds,isolationStack,activeGroup],()=>{
+ if(!restoringDraft.value)storageSet(workspaceKey,JSON.stringify({version:1,hidden:hiddenIds.value,locked:lockedIds.value,isolated:isolationStack.value,group:activeGroup.value}))
 })
 const sceneBodies = computed(() => document.value.bodies.filter(b => objectVisible(b.id) && (!isolatedBodyIds.value.length || isolatedBodyIds.value.includes(b.id))))
 function toggleBodyIsolation() {
   cancelCommandState()
-  if (isolatedBodyIds.value.length) { isolatedBodyIds.value = []; return }
-  isolatedBodyIds.value = document.value.bodies.filter(b => selectedIds.value.includes(b.id)).map(b => b.id)
+  if (isolationStack.value.length) { stepOutOfIsolation(); return }
+  isolationStack.value = isolateWithin(isolationStack.value, document.value.bodies.filter(b => selectedIds.value.includes(b.id)).map(b => b.id))
   hovered.value = ''
 }
+/** Isolate the selection inside the current isolation level. */
+const canIsolateDeeper = computed(() => isolationStack.value.length > 0 && isolateWithin(isolationStack.value, selectedIds.value) !== isolationStack.value)
+function isolateDeeper() {
+  cancelCommandState()
+  isolationStack.value = isolateWithin(isolationStack.value, selectedIds.value)
+  hovered.value = ''
+}
+function stepOutOfIsolation() {
+  isolationStack.value = stepOutIsolation(isolationStack.value)
+}
 watch(() => document.value, d => {
-  if (!isolatedBodyIds.value.length) return
+  if (!isolationStack.value.length) return
   const ids = new Set([...documentObjects(d),...d.sourceBodies??[]].map(object => object.id))
-  const retained = isolatedBodyIds.value.filter(id => ids.has(id))
   // Preview snapshots retain identity; only invalidate visibility when an isolated object disappears.
-  if (retained.length !== isolatedBodyIds.value.length) isolatedBodyIds.value = retained
+  isolationStack.value = pruneIsolation(isolationStack.value, id => ids.has(id))
 })
 const renderBodies=computed(()=>previewReplacesTarget.value?sceneBodies.value.flatMap(b=>b.id===targetBody.value?(previewBody.value?[previewBody.value]:[]):[b]):sceneBodies.value)
 const {
@@ -1005,10 +1035,43 @@ function trimAt(id:string,p:Point2){run(()=>{
 
 function run(action: () => void) { error.value = ''; try { action() } catch (e) { error.value = e instanceof Error ? e.message : String(e) } }
 
-function pickBodyAt(p: Point2): { id: string; triangle: number } | null {
+function pickCandidatesAt() {
   const candidates=[...sceneBodies.value,...(document.value.surfaces??[]).filter(s=>objectInView(s.id)).flatMap(s=>{const mesh=surfaceDisplayQueue.get(s);return mesh?[{id:s.id,mesh}]:[]})]
-  return pickDirectMesh(p, camera.value, candidates.filter(b=>objectSelectable(b.id)))
+  return candidates.filter(b=>objectSelectable(b.id))
 }
+function pickBodyAt(p: Point2): { id: string; triangle: number } | null {
+  return pickDirectMesh(p, camera.value, pickCandidatesAt())
+}
+// Overlapping objects (roadmap C6): Alt+click or a quick repeated click at the same spot
+// selects the next object by depth; right-click or a touch long-press lists them all.
+const pickCycle = new PickCycle(4)
+let lastPickDown = -Infinity
+const pickCandidates = shallowRef<{ pane: Pane; point: Point2; hits: PickHit[]; x: number; y: number } | null>(null)
+function pickAt(e: PointerEvent, p: Point2): PickHit | null {
+  const hits = pickDirectMeshHits(p, camera.value, pickCandidatesAt())
+  const repeat = e.timeStamp - lastPickDown < 500
+  lastPickDown = e.timeStamp
+  if (e.button !== 0 || e.shiftKey || hits.length < 2 || (!e.altKey && !repeat)) { pickCycle.reset(); if (hits[0]) pickCycle.choose(p, hits); return hits[0] ?? null }
+  return pickCycle.choose(p, hits, { cycle: e.altKey })
+}
+function openPickCandidates(e: MouseEvent | PointerEvent, pane: Pane) {
+  if (pane !== '3d') return
+  let hits: PickHit[] = []
+  const p = position(e as PointerEvent)
+  try { hits = pickDirectMeshHits(p, camera.value, pickCandidatesAt()) } catch { hits = [] }
+  pickCandidates.value = hits.length ? { pane, point: p, hits, x: e.offsetX ?? 0, y: e.offsetY ?? 0 } : null
+}
+function closePickCandidates() { pickCandidates.value = null; void nextTick(() => workspace.value?.focus()) }
+function choosePickCandidate(id: string) {
+  const menu = pickCandidates.value
+  if (!menu) return
+  pickCycle.pin(menu.point, menu.hits, id)
+  pickCandidates.value = null
+  pickObject(id, menu.pane)
+}
+const objectName = (id: string) => documentObjects(document.value).find(o => o.id === id)?.name ?? id
+let longPress: ReturnType<typeof setTimeout> | undefined
+function cancelLongPress() { clearTimeout(longPress); longPress = undefined }
 
 /** Pointer down on the canvas itself: with the GPU layer active, resolve the surface by ray. */
 function downAt(e: PointerEvent, pane: Pane) {
@@ -1016,7 +1079,7 @@ function downAt(e: PointerEvent, pane: Pane) {
   // and only without one does it fall back to panning.
   if (pane === '3d' && gpuActive.value && e.button !== 1) {
     try {
-      const hit = pickBodyAt(position(e))
+      const hit = pickAt(e, position(e))
       if (hit) {
         if((document.value.surfaces??[]).some(s=>s.id===hit.id)){
           if(e.button===0){pickObject(hit.id,pane,e.shiftKey);return}
@@ -1046,7 +1109,7 @@ function prepareCommit(next:DirectDocument,origin:'edit'|'file'='edit') {
 }
 function finishCommit(added:string[],next?:DirectDocument){
  sync(next)
- if(isolatedBodyIds.value.length)isolatedBodyIds.value=[...new Set([...isolatedBodyIds.value,...added])]
+ isolationStack.value=addToIsolation(isolationStack.value,added)
 }
 function commit(next:DirectDocument){
  const {validateLocked,added}=prepareCommit(next)
@@ -1281,10 +1344,75 @@ const transformInputInvalid=computed(()=>Object.keys(transformInputErrors.value)
 function transformValidity(key:string,valid:boolean){
  if(valid)delete transformInputErrors.value[key];else{transformInputErrors.value[key]=true;cancelDirectTransform()}
 }
+// Coordinate systems (roadmap C6): numeric moves are typed in the active frame.
+const coordinateSystem = ref<CoordinateSystem>('world')
+const selectionPivot = computed(() => selectedIds.value.length ? savedPivot(document.value, selectedIds.value) : undefined)
+const transformFrame = computed(() => activeFrame(coordinateSystem.value, { cplane: cplaneFrame(document.value.cplane), local: pivotFrame(selectionPivot.value) }))
+function cycleCoordinateSystem() { coordinateSystem.value = nextCoordinateSystem(coordinateSystem.value) }
 function transform(){
  if(directTransformPending.value||transformInputInvalid.value)return
+ const frame=transformFrame.value
+ // The kernel rotates about world Z only; refuse a rotation the frame would tilt.
+ if(angle.value!==0&&Math.abs(frame.z[2])<1-1e-9){error.value=label('Поворот в этой системе координат пока поддерживается только вокруг мировой оси Z.','Rotation in this coordinate system is only supported about the world Z axis for now.');return}
  cancelCommand()
- void commitDirectTransform(snapDocument.value,selectedIds.value,[dx.value,dy.value,dz.value],angle.value,scale.value,!!selectedSketch.value&&selectedIds.value.length===1,true)
+ void commitDirectTransform(snapDocument.value,selectedIds.value,frameDeltaToWorld(frame,[dx.value,dy.value,dz.value]),frame.z[2]<0?-angle.value:angle.value,scale.value,!!selectedSketch.value&&selectedIds.value.length===1,true)
+}
+function selectionVertices(): number[] {
+ const out:number[]=[]
+ for(const body of document.value.bodies)if(selectedIds.value.includes(body.id))for(let i=0;i<body.mesh.positions.length;i++)out.push(body.mesh.positions[i])
+ for(const sketch of document.value.sketches)if(selectedIds.value.includes(sketch.id))for(const p of sketch.points)out.push(p[0],p[1],0)
+ return out
+}
+function selectionCenter(vertices=selectionVertices()): Vec3 {
+ if(!vertices.length)return [0,0,0]
+ const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity]
+ for(let i=0;i<vertices.length;i+=3)for(let k=0;k<3;k++){lo[k]=Math.min(lo[k],vertices[i+k]);hi[k]=Math.max(hi[k],vertices[i+k])}
+ return [0,1,2].map(k=>(lo[k]+hi[k])/2) as Vec3
+}
+function selectedFacePoints(): Vec3[] | null {
+ const body=selectedBody.value
+ if(!body||faceIndex.value<0)return null
+ const {positions,indices}=body.mesh,t=faceIndex.value*3
+ if(t+2>=indices.length)return null
+ return [0,1,2].map(k=>{const v=indices[t+k]*3;return [positions[v],positions[v+1],positions[v+2]] as Vec3})
+}
+/** Save the selection's pivot snapped to a vertex, its center or the origin; a selected face orients the Local frame. */
+function setPivot(snap: PivotSnap) { run(() => {
+ const vertices=selectionVertices(),center=selectionCenter(vertices)
+ const face=selectedFacePoints(),frame=face?frameFromFace(face):null
+ const point=snapPivot(snap,face&&snap==='vertex'?frame!.origin:center,{vertices,center})
+ commit(withSavedPivot(history.document,selectedIds.value,{point,snap,...(frame?{axes:{x:frame.x,z:frame.z}}:{})}))
+}) }
+function clearPivot() { run(() => commit(withSavedPivot(history.document,selectedIds.value,null))) }
+function setCPlaneFromFace() { run(() => {
+ const face=selectedFacePoints()
+ if(!face)throw Error(label('Выберите грань тела, чтобы задать CPlane.','Select a body face to set the CPlane.'))
+ commit({...history.document,cplane:cplaneFromFrame(frameFromFace(face))});coordinateSystem.value='cplane'
+}) }
+function clearCPlane() { run(() => { const {cplane:_drop,...rest}=history.document;commit(rest as DirectDocument);if(coordinateSystem.value==='cplane')coordinateSystem.value='world' }) }
+// Copy with a base point (roadmap C6): the clipboard holds a versioned JSON payload so it can be pasted into another document.
+let clipboardFallback=''
+const pasteTarget=ref<[number,number,number]>([0,0,0])
+const clipboardNotice=ref('')
+async function copySelection() {
+ try {
+  const base=selectionPivot.value?.point??selectionCenter()
+  const unit=documentUnit(history.document)
+  const text=createDirectClipboardPayload(history.document,selectedIds.value,base.map(v=>fromMillimetres(v,unit)) as Vec3)
+  clipboardFallback=text
+  try{await navigator.clipboard?.writeText(text)}catch{/* Fall back to the in-app clipboard. */}
+  clipboardNotice.value=label('Скопировано с опорной точкой ','Copied with base point ')+base.map(v=>Number(fromMillimetres(v,unit).toFixed(4))).join(', ')+' '+unit
+ } catch(e) { error.value=e instanceof Error?e.message:String(e) }
+}
+async function pasteClipboard() {
+ let text=clipboardFallback
+ try{const read=await navigator.clipboard?.readText();if(read)text=read}catch{/* Use the in-app clipboard. */}
+ run(()=>{
+  if(!text)throw Error(label('Буфер обмена пуст.','The clipboard is empty.'))
+  const {document:next,ids}=pasteDirectClipboardPayload(history.document,parseDirectClipboardPayload(text),[...pasteTarget.value] as Vec3)
+  commit(next);selection.value=ids[0]??'';extraSelection.value=ids.slice(1)
+  clipboardNotice.value=label('Вставлено объектов: ','Pasted objects: ')+ids.length
+ })
 }
 function appendBodies() {
   run(() => {
@@ -1938,6 +2066,8 @@ function keydown(e: KeyboardEvent) {
   if (paletteOpen.value) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); paletteOpen.value = true; return }
   if (e.isComposing) return
+  if (e.key === 'Escape' && pickCandidates.value) { e.preventDefault(); closePickCandidates(); return }
+  if (e.key === 'Escape' && isolationStack.value.length && !commandActive.value && !gesture && !draft.value.length && !exactCardOpen.value) { e.preventDefault(); stepOutOfIsolation(); return }
   if (e.key === 'Escape') { e.preventDefault(); frozenBodyPanel.value?.cancel(); cancelSourceWall();cancelSourceSeam();cancelSourceDisplay();sourceEdgeSelection.value=''; const boundaryWasPending=boundaryAgreementPending.value||faceContactsPending.value; if(diagnosticsPending.value||intersectionPending.value||boundaryWasPending)diagnosticsOpen.value=false;exactCardOpen.value = false; cancelCommand(); if(boundaryWasPending)void nextTick(()=>workspace.value?.focus()); return }
   if (e.key === 'Enter' && commandActive.value) {
     // Native controls retain Enter, including Cancel, operand selection and the File menu.
@@ -1949,6 +2079,9 @@ function keydown(e: KeyboardEvent) {
   if(tool.value==='polyline' && draft.value.length && (e.key==='Backspace'||((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.shiftKey))){e.preventDefault();undoDraftPoint();return}
   if(tool.value==='polyline' && e.key==='Enter'){if((e.target as HTMLElement).closest?.('button, summary, a[href], select'))return;e.preventDefault();finish(false);return}
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); return }
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'c' && selectedIds.value.length) { e.preventDefault(); void copySelection(); return }
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'v') { e.preventDefault(); void pasteClipboard(); return }
+  if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === 'KeyC') { e.preventDefault(); cycleCoordinateSystem(); return }
   if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'r') { e.preventDefault(); repeatCommand(); return }
   if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     const k = e.key.toLowerCase(), tools = { v:'select', r:'rectangle', c:'circle', l:'polyline' } as const
@@ -1967,8 +2100,8 @@ if (props.initialDocument) void nextTick(() => { fit('2d'); fit('3d') })
 const { primitiveG2Enabled, primitiveG2Size, primitiveG2Individual, primitiveG2Sizes, failedPrimitive, primitiveG2Invalid, roundGeometry, primitiveSize, primitiveTopRadius, primitiveInnerRadius, TOOL_ICONS, primitiveLabel, primitivePending, cancelPrimitive, addPrimitive, bridgeEndA, bridgeEndB, bridgeTension, bridgeError, bridgeTensionInvalid, addBridgeCurve, updateDimensionSketch, dimensionLabels, addNurbs } = usePrimitives({ activeGroup, advancedOp, brepSegments, cancelCommand, commit, document, error, finishCommit, fit, history, label, lockedIds, nativeNurbsPending, operation, pickObject, prepareCommit, props, isRestoreDisposed, run, runNativeNurbs, selectedCurvePair, tool, visibleSketches, workspace })
 function updateCv() { run(() => {
   const point = [cvX.value, cvY.value, cvZ.value]
-  const invalid=point.findIndex(value=>!Number.isFinite(value))
-  cvInvalidField.value=invalid>=0?['x','y','z'][invalid]:!Number.isFinite(cvWeight.value)||cvWeight.value<=0?'weight':''
+  const invalid=point.findIndex((value,i)=>!Number.isFinite(value)||!cvFieldValid[(['x','y','z'] as const)[i]])
+  cvInvalidField.value=invalid>=0?['x','y','z'][invalid]:!cvFieldValid.weight||!Number.isFinite(cvWeight.value)||cvWeight.value<=0?'weight':''
   if(cvInvalidField.value){
     const field=cvInvalidField.value
     void nextTick(()=>workspace.value?.querySelector<HTMLInputElement>(`[data-cv-field="${field}"]`)?.focus())
@@ -2306,6 +2439,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
       <button :aria-pressed="snap" @click="snap = !snap">{{ label('Привязки', 'Snapping') }}: {{ snap ? label('вкл', 'on') : label('выкл', 'off') }}</button>
       <span>{{ label('Плоскость', 'Plane') }}: {{ workplaneBodyId ? label('на грани', 'on face') : samePlane(activePlane, xyPlane()) ? 'XY' : label('пользовательская', 'custom') }}</span>
       <button :disabled="!isolatedBodyIds.length && !selectedBody" :aria-pressed="!!isolatedBodyIds.length" @click="toggleBodyIsolation">{{ isolatedBodyIds.length ? label('Выйти из изоляции', 'Exit isolation') : label('Изолировать тела', 'Isolate bodies') }}</button>
+      <button v-if="canIsolateDeeper" @click="isolateDeeper">{{ label('Изолировать внутри', 'Isolate within') }}</button>
+      <small v-if="isolationStack.length > 1" aria-live="polite">{{ label('Уровень изоляции: ', 'Isolation level: ') + isolationStack.length }}</small>
       <span>{{ label('Выбрано', 'Selected') }}: {{ selectedIds.length }}</span>
       <span v-if="selectedGroup">{{ label('Группа выбора', 'Selection group') }}: {{ selectedGroup }}</span>
       <span class="state-legend" :aria-label="label('Состояния выбора','Selection states')"><span v-for="state in SELECTION_STATE_ORDER" :key="state" class="state-chip" :data-sel-state="state"><span class="sel-state-mark" aria-hidden="true">{{ SELECTION_STATES[state].glyph }}</span>{{ selectionStateLabel(state, locale) }}</span></span>
@@ -2376,8 +2511,12 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
           <div class="canvas-wrap" :class="{'profile-preparation-pane':pane==='2d' && (isProfileCommand(advancedOp)||advancedOp==='offset')}">
             <div class="canvas-viewport">
             <ModelingGridControls :locale="locale" snapping />
+            <div v-if="pickCandidates && pickCandidates.pane === pane" class="pick-candidates" role="menu" :aria-label="label('Объекты под курсором', 'Objects under the cursor')" :style="{ left: pickCandidates.x + 'px', top: pickCandidates.y + 'px' }" @keydown.escape.stop.prevent="closePickCandidates">
+              <button v-for="(hit, index) in pickCandidates.hits" :key="hit.id" type="button" role="menuitem" :data-sel-state="sceneRowState(hit.id)" @click="choosePickCandidate(hit.id)"><span aria-hidden="true">{{ index + 1 }}.</span> {{ objectName(hit.id) }}<small v-if="sceneRowState(hit.id)"> · {{ SELECTION_STATES[sceneRowState(hit.id)!].glyph }} {{ selectionStateLabel(sceneRowState(hit.id)!, locale) }}</small></button>
+              <button type="button" role="menuitem" @click="closePickCandidates">{{ label('Закрыть', 'Close') }}</button>
+            </div>
             <canvas v-if="pane === '3d'" :ref="mountGpuCanvas" class="gpu-layer" :style="{visibility:gpuActive?'visible':'hidden'}" aria-hidden="true"></canvas>
-            <svg @pointerdown.capture="touchDown($event, pane)" @pointermove.capture="touchMove" @pointerup.capture="touchEnd" :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent @wheel.prevent="wheelZoom($event, pane)" @pointerdown="downAt($event, pane)" @pointermove="moveAt" @pointerleave="gpuActive && (hovered = '')" @pointerup="up" @pointercancel="cancelInputGesture" @lostpointercapture="touchPointers.has($event.pointerId) ? cancelInputGesture() : !multiTouch && (gesture || manipulatorDrag || heightDrag || orbitDrag || curveDrag || cvDrag || vertexDrag || selectionBox) && cancelGesture()" @dragstart.prevent @selectstart.prevent @mousedown.prevent draggable="false">
+            <svg @pointerdown.capture="touchDown($event, pane)" @pointermove.capture="touchMove" @pointerup.capture="touchEnd" :viewBox="viewBox(pane)" tabindex="0" :aria-label="pane === '2d' ? label('Холст эскизов 2D', '2D sketch canvas') : label('Холст тел 3D', '3D body canvas')" @contextmenu.prevent="openPickCandidates($event, pane)" @wheel.prevent="wheelZoom($event, pane)" @pointerdown="downAt($event, pane)" @pointermove="moveAt" @pointerleave="gpuActive && (hovered = '')" @pointerup="up" @pointercancel="cancelInputGesture" @lostpointercapture="touchPointers.has($event.pointerId) ? cancelInputGesture() : !multiTouch && (gesture || manipulatorDrag || heightDrag || orbitDrag || curveDrag || cvDrag || vertexDrag || selectionBox) && cancelGesture()" @dragstart.prevent @selectstart.prevent @mousedown.prevent draggable="false">
               <defs><pattern :id="'direct-grid-' + pane" :width="sketchGridStep" :height="sketchGridStep" patternUnits="userSpaceOnUse"><path :d="`M ${sketchGridStep} 0 L 0 0 0 ${sketchGridStep}`" fill="none" stroke="var(--border)" stroke-opacity=".45" stroke-width=".5" vector-effect="non-scaling-stroke" /></pattern></defs>
               <rect v-if="pane === '2d'" x="-2000000" y="-2000000" width="4000000" height="4000000" :fill="'url(#direct-grid-' + pane + ')'" />
               <ModelingFloorGrid v-if="pane === '3d' && floorVisible" :camera="camera" :size="views['3d']" :center="centers['3d']" />
@@ -2783,10 +2922,10 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </template>
               <label>U / CV <select v-model.number="cvU"><option v-for="(_,i) in (selectedNurbsCurve?.curve.controlPoints ?? selectedNurbsSurface?.surface.controlPoints ?? [])" :key="i" :value="i">{{ i }}</option></select></label>
               <label v-if="selectedNurbsSurface">V / CV <select v-model.number="cvV"><option v-for="(_,i) in selectedNurbsSurface.surface.controlPoints[cvU] ?? []" :key="i" :value="i">{{ i }}</option></select></label>
-              <label>X <input data-cv-field="x" :aria-invalid="cvInvalidField==='x'" :aria-describedby="cvInvalidField==='x'?'cv-input-error':undefined" v-model.number="cvX" type="number" step=".5"></label>
-              <label>Y <input data-cv-field="y" :aria-invalid="cvInvalidField==='y'" :aria-describedby="cvInvalidField==='y'?'cv-input-error':undefined" v-model.number="cvY" type="number" step=".5"></label>
-              <label>Z <input data-cv-field="z" :aria-invalid="cvInvalidField==='z'" :aria-describedby="cvInvalidField==='z'?'cv-input-error':undefined" v-model.number="cvZ" type="number" step=".5"></label>
-              <label>{{ label('Вес','Weight') }} <input data-cv-field="weight" :aria-invalid="cvInvalidField==='weight'" :aria-describedby="cvInvalidField==='weight'?'cv-input-error':undefined" v-model.number="cvWeight" type="number" min=".000001" step=".1"></label>
+              <label>X <CadQuantityInput data-cv-field="x" :aria-label="'CV X'" :aria-invalid="cvInvalidField==='x'" :aria-describedby="cvInvalidField==='x'?'cv-input-error':undefined" v-model="cvX" :locale="locale" :variables="cvVariables" @validity="cvFieldValid.x=$event" /></label>
+              <label>Y <CadQuantityInput data-cv-field="y" :aria-label="'CV Y'" :aria-invalid="cvInvalidField==='y'" :aria-describedby="cvInvalidField==='y'?'cv-input-error':undefined" v-model="cvY" :locale="locale" :variables="cvVariables" @validity="cvFieldValid.y=$event" /></label>
+              <label>Z <CadQuantityInput data-cv-field="z" :aria-label="'CV Z'" :aria-invalid="cvInvalidField==='z'" :aria-describedby="cvInvalidField==='z'?'cv-input-error':undefined" v-model="cvZ" :locale="locale" :variables="cvVariables" @validity="cvFieldValid.z=$event" /></label>
+              <label>{{ label('Вес','Weight') }} <CadQuantityInput data-cv-field="weight" :aria-label="label('Вес CV','CV weight')" :aria-invalid="cvInvalidField==='weight'" :aria-describedby="cvInvalidField==='weight'?'cv-input-error':undefined" v-model="cvWeight" kind="scalar" :locale="locale" :min=".000001" @validity="cvFieldValid.weight=$event" /></label>
               <small v-if="cvInputError" id="cv-input-error" role="alert">{{ cvInputError }}</small>
               <button class="primary" :disabled="gizmoPending" @click="updateCv">{{ label('Применить CV','Apply CV') }}</button>
               <label>{{ label('Параметр узла / iso','Knot / iso parameter') }} <input v-model.number="knotValue" type="number" step=".1"></label>
@@ -2934,6 +3073,26 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
         <label>↻ <CadQuantityInput v-model="angle" kind="angle" :locale="locale" :aria-label="label('Поворот Z', 'Z rotation')" @validity="transformValidity('angle',$event)" />°</label><label>× <CadQuantityInput v-model="scale" kind="scalar" :locale="locale" :min=".001" :aria-label="label('Масштаб', 'Scale')" @validity="transformValidity('scale',$event)" /></label>
       </div>
       <div v-if="!selectedBody?.instance" class="exact-actions"><button class="primary" :disabled="directTransformPending||transformInputInvalid" @click="transform">{{ label('Применить', 'Apply') }}</button></div>
+      <div v-if="!selectedBody?.instance" class="input-frames" role="group" :aria-label="label('Опорная точка и система координат','Pivot and coordinate system')">
+        <label :title="label('Alt+C — следующая система','Alt+C cycles the system')">{{ label('Система координат','Coordinate system') }} <select :value="coordinateSystem" @change="coordinateSystem=(($event.target as HTMLSelectElement).value as CoordinateSystem)" :aria-label="label('Система координат','Coordinate system')"><option v-for="system in COORDINATE_SYSTEMS" :key="system" :value="system">{{ coordinateSystemLabel(system, locale) }}</option></select></label>
+        <small v-if="coordinateSystem==='cplane'&&!document.cplane">{{ label('CPlane не задана: используются мировые оси.','No CPlane set: world axes are used.') }}</small>
+        <small v-if="coordinateSystem==='local'&&!selectionPivot?.axes">{{ label('Локальные оси не заданы: используются мировые оси.','No local axes saved: world axes are used.') }}</small>
+        <div class="input-frame-actions">
+          <button type="button" @click="setPivot('vertex')">{{ label('Опорная точка: вершина','Pivot: vertex') }}</button>
+          <button type="button" @click="setPivot('center')">{{ label('Опорная точка: центр','Pivot: center') }}</button>
+          <button type="button" @click="setPivot('origin')">{{ label('Опорная точка: начало','Pivot: origin') }}</button>
+          <button v-if="selectionPivot" type="button" @click="clearPivot">{{ label('Сбросить опорную точку','Clear pivot') }}</button>
+          <button type="button" :disabled="faceIndex<0" @click="setCPlaneFromFace">{{ label('CPlane по грани','CPlane from face') }}</button>
+          <button v-if="document.cplane" type="button" @click="clearCPlane">{{ label('Сбросить CPlane','Clear CPlane') }}</button>
+        </div>
+        <small v-if="selectionPivot" aria-live="polite">{{ label('Опорная точка','Pivot') }}: {{ selectionPivot.point.map(v=>Number(v.toFixed(4))).join(', ') }}</small>
+        <div class="input-frame-actions">
+          <button type="button" :aria-keyshortcuts="'Control+C'" @click="copySelection">{{ label('Копировать с опорной точкой','Copy with base point') }}</button>
+          <label v-for="(axis,i) in ['X','Y','Z']" :key="axis">{{ label('Вставить в ','Paste at ') + axis }}<CadQuantityInput v-model="pasteTarget[i]" :locale="locale" :aria-label="label('Точка вставки ','Paste point ')+axis" /></label>
+          <button type="button" :aria-keyshortcuts="'Control+V'" @click="pasteClipboard">{{ label('Вставить','Paste') }}</button>
+        </div>
+        <small v-if="clipboardNotice" role="status">{{ clipboardNotice }}</small>
+      </div>
       <p v-if="selectedBody?.instance">{{ label('Связанный экземпляр · источник: ','Linked instance · source: ') + (document.bodies.find(b=>b.id===selectedBody?.instance?.sourceId)?.name??selectedBody.instance.sourceId) }}</p>
       <template v-if="selectedBody?.instance">
         <button @click="executeSolidCommand('instance-transform')">{{ label('Преобразовать экземпляр','Transform instance') }}</button>

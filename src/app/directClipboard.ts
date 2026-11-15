@@ -46,17 +46,7 @@ export function createDirectClipboardPayload(
     bodies: [],
   }
   // Serialize through the document writer so meshes become plain JSON arrays.
-  const objects = JSON.parse(
-    serializeDirectDocument({
-      ...document,
-      sketches,
-      bodies,
-      curves: [],
-      surfaces: [],
-      sourceBodies: undefined,
-      groups: undefined,
-    }),
-  )
+  const objects = JSON.parse(serializeDirectDocument({ version: 1, sketches, bodies }))
   payload.sketches = objects.sketches
   payload.bodies = objects.bodies
   const text = JSON.stringify(payload)
