@@ -1570,73 +1570,7 @@ impl<'a> Builder<'a> {
                 format!("Missing IGES boundary DE {de}"),
             )
         })?;
-        let v = &entity.values;
-        let (surface, segments) = match entity.directory.ty {
-            143 => {
-                let kind = u(v, 1, "bounded surface boundary type")?;
-                let preference = u(v, 2, "bounded surface preference")?;
-                if !matches!(kind, 0 | 2) || matches!(preference, 1) {
-                    return Err(trimmed_unsupported(
-                        de,
-                        "3D-only boundary without reliable parameterization",
-                    ));
-                }
-                if !matches!(preference, 0 | 2 | 3) {
-                    return Err(trimmed_unsupported(de, "unknown representation preference"));
-                }
-                let n = u(v, 4, "bounded surface segment count")?;
-                if n == 0 || n > MAX_COMPOSITE_SEGMENTS || v.len() != 5 + 3 * n {
-                    return Err(trimmed_error(
-                        "BREP_IGES_V2_TRIMMED_BUDGET",
-                        format!("Invalid or excessive IGES boundary DE {de} segment count {n}"),
-                    ));
-                }
-                (
-                    u(v, 3, "bounded surface geometry")?,
-                    (0..n)
-                        .map(|i| {
-                            Ok((
-                                u(v, 5 + 3 * i, "boundary model curve")?,
-                                u(v, 6 + 3 * i, "boundary pcurve")?,
-                                u(v, 7 + 3 * i, "boundary sense")?,
-                            ))
-                        })
-                        .collect::<Result<Vec<_>>>()?,
-                )
-            }
-            142 => {
-                if v.len() != 6 {
-                    return Err(trimmed_error(
-                        "BREP_IGES_V2_TRIMMED_DANGLING",
-                        format!("Malformed IGES curve-on-surface DE {de}"),
-                    ));
-                }
-                let preference = u(v, 5, "curve-on-surface preference")?;
-                if !matches!(preference, 0 | 2 | 3) {
-                    return Err(trimmed_unsupported(
-                        de,
-                        "3D-only or model-preferred boundary without reliable parameterization",
-                    ));
-                }
-                (
-                    u(v, 2, "curve-on-surface geometry")?,
-                    vec![(
-                        u(v, 3, "boundary model curve")?,
-                        u(v, 4, "boundary pcurve")?,
-                        1,
-                    )],
-                )
-            }
-            _ => {
-                return Err(trimmed_unsupported(
-                    de,
-                    format!(
-                        "boundary type {} is unsupported; expected 143 or 142",
-                        entity.directory.ty
-                    ),
-                ));
-            }
-        };
+        let (surface, segments) = trimmed_boundary_segments(de, entity)?;
         if surface != expected_surface {
             return Err(trimmed_error(
                 "BREP_IGES_V2_TRIMMED_DANGLING",
@@ -1647,80 +1581,11 @@ impl<'a> Builder<'a> {
         }
         let surface = surface128(self.e, expected_surface, self.scale)?;
         let mut coedges = Vec::with_capacity(segments.len());
-        for (curve_de, pcurve_de, sense) in segments {
-            if curve_de == 0 || pcurve_de == 0 {
-                return Err(trimmed_unsupported(
-                    de,
-                    "boundary requires both 3D curve and pcurve; projection is not inferred",
-                ));
-            }
-            if !matches!(sense, 1 | 2) {
-                return Err(trimmed_unsupported(de, "boundary sense must be 1 or 2"));
-            }
-            let curve = self.curve(curve_de, 3)?;
-            let pcurve = self.curve(pcurve_de, 2)?;
-            let edge = if let Some(edge) = curve_edges.get(&curve_de) {
-                *edge
-            } else {
-                let domain = curve.domain();
-                let a = self.trimmed_vertex(de, curve.evaluate(domain[0])?.point)?;
-                let b = self.trimmed_vertex(de, curve.evaluate(domain[1])?.point)?;
-                let edge = self.edges.len();
-                self.edges.push(Edge {
-                    degenerate: a == b,
-                    vertices: [a, b],
-                    curve,
-                });
-                self.edge_de.push(de);
-                owned_edges.insert(edge);
-                edge
-            };
-            coedges.push(Coedge::new(edge, sense == 2, pcurve));
+        for segment in segments {
+            coedges.push(self.trimmed_boundary_coedge(de, segment, curve_edges, owned_edges)?);
         }
         for index in 1..coedges.len() {
-            let (mut previous_xyz, _) = self.directed_endpoints(&coedges[index - 1])?;
-            let (current_xyz, _) = self.directed_endpoints(&coedges[index])?;
-            let distance = |a: &[f64], b: &[f64]| {
-                a.iter()
-                    .zip(b)
-                    .map(|(x, y)| (x - y) * (x - y))
-                    .sum::<f64>()
-                    .sqrt()
-            };
-            let mut end_start = distance(&previous_xyz[1], &current_xyz[0]);
-            let mut end_end = distance(&previous_xyz[1], &current_xyz[1]);
-            if index == 1
-                && end_start > self.merge_tolerance_mm
-                && end_end > self.merge_tolerance_mm
-            {
-                let start_start = distance(&previous_xyz[0], &current_xyz[0]);
-                let start_end = distance(&previous_xyz[0], &current_xyz[1]);
-                if start_start <= self.merge_tolerance_mm || start_end <= self.merge_tolerance_mm {
-                    Self::flip_trimmed_coedge(&mut coedges[0])?;
-                    (previous_xyz, _) = self.directed_endpoints(&coedges[0])?;
-                    end_start = distance(&previous_xyz[1], &current_xyz[0]);
-                    end_end = distance(&previous_xyz[1], &current_xyz[1]);
-                }
-            }
-            if end_start <= self.merge_tolerance_mm && end_end <= self.merge_tolerance_mm {
-                return Err(trimmed_error(
-                    "BREP_IGES_V2_TRIMMED_AMBIGUOUS",
-                    format!("IGES boundary DE {de} has ambiguous orientation at segment {index}"),
-                ));
-            }
-            if end_start > self.merge_tolerance_mm {
-                if end_end > self.merge_tolerance_mm {
-                    let gap = end_start.min(end_end);
-                    return Err(trimmed_error(
-                        "BREP_IGES_V2_TRIMMED_GAP",
-                        format!(
-                            "IGES boundary DE {de} is open at segment {index}: gap_mm={gap:.17e}, tolerance_mm={:.17e}",
-                            self.merge_tolerance_mm
-                        ),
-                    ));
-                }
-                Self::flip_trimmed_coedge(&mut coedges[index])?;
-            }
+            self.chain_trimmed_segment(de, index, &mut coedges)?;
         }
         for index in 0..coedges.len() {
             let next = (index + 1) % coedges.len();
@@ -1736,6 +1601,83 @@ impl<'a> Builder<'a> {
         self.loops.push(Loop { coedges });
         self.loop_de.push(de);
         Ok(index)
+    }
+
+    fn trimmed_boundary_coedge(
+        &mut self,
+        de: usize,
+        (curve_de, pcurve_de, sense): BoundarySegment,
+        curve_edges: &BTreeMap<usize, usize>,
+        owned_edges: &mut BTreeSet<usize>,
+    ) -> Result<Coedge> {
+        if curve_de == 0 || pcurve_de == 0 {
+            return Err(trimmed_unsupported(
+                de,
+                "boundary requires both 3D curve and pcurve; projection is not inferred",
+            ));
+        }
+        if !matches!(sense, 1 | 2) {
+            return Err(trimmed_unsupported(de, "boundary sense must be 1 or 2"));
+        }
+        let curve = self.curve(curve_de, 3)?;
+        let pcurve = self.curve(pcurve_de, 2)?;
+        let edge = if let Some(edge) = curve_edges.get(&curve_de) {
+            *edge
+        } else {
+            let domain = curve.domain();
+            let a = self.trimmed_vertex(de, curve.evaluate(domain[0])?.point)?;
+            let b = self.trimmed_vertex(de, curve.evaluate(domain[1])?.point)?;
+            let edge = self.edges.len();
+            self.edges.push(Edge {
+                degenerate: a == b,
+                vertices: [a, b],
+                curve,
+            });
+            self.edge_de.push(de);
+            owned_edges.insert(edge);
+            edge
+        };
+        Ok(Coedge::new(edge, sense == 2, pcurve))
+    }
+
+    /// Orients segment `index` so that it starts where segment `index - 1`
+    /// ends, flipping the first segment once when only its start matches.
+    fn chain_trimmed_segment(&self, de: usize, index: usize, coedges: &mut [Coedge]) -> Result<()> {
+        let tolerance = self.merge_tolerance_mm;
+        let (mut previous_xyz, _) =
+            self.directed_endpoints(boundary_segment(coedges, de, index - 1)?)?;
+        let (current_xyz, _) = self.directed_endpoints(boundary_segment(coedges, de, index)?)?;
+        let mut end_start = point_distance(&previous_xyz[1], &current_xyz[0]);
+        let mut end_end = point_distance(&previous_xyz[1], &current_xyz[1]);
+        if index == 1 && end_start > tolerance && end_end > tolerance {
+            let start_start = point_distance(&previous_xyz[0], &current_xyz[0]);
+            let start_end = point_distance(&previous_xyz[0], &current_xyz[1]);
+            if start_start <= tolerance || start_end <= tolerance {
+                Self::flip_trimmed_coedge(boundary_segment_mut(coedges, de, 0)?)?;
+                (previous_xyz, _) = self.directed_endpoints(boundary_segment(coedges, de, 0)?)?;
+                end_start = point_distance(&previous_xyz[1], &current_xyz[0]);
+                end_end = point_distance(&previous_xyz[1], &current_xyz[1]);
+            }
+        }
+        if end_start <= tolerance && end_end <= tolerance {
+            return Err(trimmed_error(
+                "BREP_IGES_V2_TRIMMED_AMBIGUOUS",
+                format!("IGES boundary DE {de} has ambiguous orientation at segment {index}"),
+            ));
+        }
+        if end_start > tolerance {
+            if end_end > tolerance {
+                let gap = end_start.min(end_end);
+                return Err(trimmed_error(
+                    "BREP_IGES_V2_TRIMMED_GAP",
+                    format!(
+                        "IGES boundary DE {de} is open at segment {index}: gap_mm={gap:.17e}, tolerance_mm={tolerance:.17e}"
+                    ),
+                ));
+            }
+            Self::flip_trimmed_coedge(boundary_segment_mut(coedges, de, index)?)?;
+        }
+        Ok(())
     }
 
     fn build(mut self) -> Result<(Model, TopologyMapping)> {
@@ -1958,13 +1900,12 @@ impl<'a> Builder<'a> {
                 loops.push(index);
             }
             let surface = surface128(self.e, surface_de, self.scale)?;
-            self.verify_face_loops(&loops, &surface)
-                .map_err(|error| {
-                    trimmed_error(
-                        "BREP_IGES_V2_TRIMMED_DANGLING",
-                        format!("IGES trimmed/bounded DE {de}: {}", error.message),
-                    )
-                })?;
+            self.verify_face_loops(&loops, &surface).map_err(|error| {
+                trimmed_error(
+                    "BREP_IGES_V2_TRIMMED_DANGLING",
+                    format!("IGES trimmed/bounded DE {de}: {}", error.message),
+                )
+            })?;
             self.push_face(de, surface, &loops, face_map)?;
         }
         Ok(())
@@ -2072,6 +2013,105 @@ impl<'a> Builder<'a> {
         }
         Ok((model, map))
     }
+}
+
+/// One IGES boundary segment: model curve DE, parameter curve DE and sense.
+type BoundarySegment = (usize, usize, usize);
+
+/// Reads the surface DE and the segments of an IGES 143 or 142 boundary.
+fn trimmed_boundary_segments(de: usize, entity: &Entity) -> Result<(usize, Vec<BoundarySegment>)> {
+    let v = &entity.values;
+    match entity.directory.ty {
+        143 => {
+            let kind = u(v, 1, "bounded surface boundary type")?;
+            let preference = u(v, 2, "bounded surface preference")?;
+            if !matches!(kind, 0 | 2) || matches!(preference, 1) {
+                return Err(trimmed_unsupported(
+                    de,
+                    "3D-only boundary without reliable parameterization",
+                ));
+            }
+            if !matches!(preference, 0 | 2 | 3) {
+                return Err(trimmed_unsupported(de, "unknown representation preference"));
+            }
+            let n = u(v, 4, "bounded surface segment count")?;
+            if n == 0 || n > MAX_COMPOSITE_SEGMENTS || v.len() != 5 + 3 * n {
+                return Err(trimmed_error(
+                    "BREP_IGES_V2_TRIMMED_BUDGET",
+                    format!("Invalid or excessive IGES boundary DE {de} segment count {n}"),
+                ));
+            }
+            Ok((
+                u(v, 3, "bounded surface geometry")?,
+                (0..n)
+                    .map(|i| {
+                        Ok((
+                            u(v, 5 + 3 * i, "boundary model curve")?,
+                            u(v, 6 + 3 * i, "boundary pcurve")?,
+                            u(v, 7 + 3 * i, "boundary sense")?,
+                        ))
+                    })
+                    .collect::<Result<Vec<_>>>()?,
+            ))
+        }
+        142 => {
+            if v.len() != 6 {
+                return Err(trimmed_error(
+                    "BREP_IGES_V2_TRIMMED_DANGLING",
+                    format!("Malformed IGES curve-on-surface DE {de}"),
+                ));
+            }
+            let preference = u(v, 5, "curve-on-surface preference")?;
+            if !matches!(preference, 0 | 2 | 3) {
+                return Err(trimmed_unsupported(
+                    de,
+                    "3D-only or model-preferred boundary without reliable parameterization",
+                ));
+            }
+            Ok((
+                u(v, 2, "curve-on-surface geometry")?,
+                vec![(
+                    u(v, 3, "boundary model curve")?,
+                    u(v, 4, "boundary pcurve")?,
+                    1,
+                )],
+            ))
+        }
+        _ => Err(trimmed_unsupported(
+            de,
+            format!(
+                "boundary type {} is unsupported; expected 143 or 142",
+                entity.directory.ty
+            ),
+        )),
+    }
+}
+
+fn point_distance(a: &[f64], b: &[f64]) -> f64 {
+    a.iter()
+        .zip(b)
+        .map(|(x, y)| (x - y) * (x - y))
+        .sum::<f64>()
+        .sqrt()
+}
+
+fn missing_boundary_segment(de: usize, index: usize) -> Error {
+    trimmed_error(
+        "BREP_IGES_V2_TRIMMED_DANGLING",
+        format!("IGES boundary DE {de} has no segment {index}"),
+    )
+}
+
+fn boundary_segment(coedges: &[Coedge], de: usize, index: usize) -> Result<&Coedge> {
+    coedges
+        .get(index)
+        .ok_or_else(|| missing_boundary_segment(de, index))
+}
+
+fn boundary_segment_mut(coedges: &mut [Coedge], de: usize, index: usize) -> Result<&mut Coedge> {
+    coedges
+        .get_mut(index)
+        .ok_or_else(|| missing_boundary_segment(de, index))
 }
 
 /// Maps an IGES 504 edge list DE and its 1-based member index to an edge.
