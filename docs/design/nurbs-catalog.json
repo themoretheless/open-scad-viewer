@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 297,
-  "unallocatedCount": 703,
+  "specifiedCount": 298,
+  "unallocatedCount": 702,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7881,6 +7881,30 @@
       "remainingQualification": [
         "Split original rational UV spans at representable seam contacts, keeping the absolute curve parameter and proving each stored piece against the original geometry.",
         "Coincident spans are retained and open pieces record their seam side. Nonrepresentable cuts or derived poles refuse atomically.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0298",
+      "name": "Точный перенос UV-контура между кусочно-перепараметризованными сетками",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::pullback_relayout_pcurve",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_relayout.rs",
+        "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius_piecewise.rs",
+        "crates/nurbs-core/tests/exact_pcurve_relayout_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-298-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-298-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Transfer original rational UV trims through an independent piecewise Möbius relayout on each tensor axis.",
+        "Old and new ordered rectangular axes have corresponding spans. Coincident grid traces share their new boundary; exact cuts and storage are required.",
         "WASM and application integration are separate."
       ]
     }

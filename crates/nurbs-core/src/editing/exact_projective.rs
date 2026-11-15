@@ -21,6 +21,8 @@ pub use pcurve_mobius::{
     PcurveChartCertificate, PcurvePullback, PcurvePullbackRefusal, certify_pcurve_chart_domain,
     pullback_mobius_pcurve,
 };
+mod pcurve_relayout;
+pub use pcurve_relayout::pullback_relayout_pcurve;
 mod pcurve_seam;
 pub use pcurve_seam::{
     PcurveSeamContact, PcurveSeamReport, PcurveSeamSpan, UvAxis, classify_pcurve_seam,

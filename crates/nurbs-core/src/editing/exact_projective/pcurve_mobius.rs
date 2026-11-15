@@ -95,7 +95,7 @@ pub fn certify_pcurve_chart_domain(
     })
 }
 
-fn validate_chart(source: &Curve, domain: [[f64; 2]; 2]) -> Result<()> {
+pub(super) fn validate_chart(source: &Curve, domain: [[f64; 2]; 2]) -> Result<()> {
     source.validate()?;
     check(
         source.control_points[0].len() == 2,
@@ -182,21 +182,40 @@ impl ChartInterval {
     }
 }
 
-struct InverseAxis {
+pub(super) struct InverseAxis {
     interval: ChartInterval,
+    new_origin: Q,
     inverse_minus_one: Q,
     scaled_inverse: Q,
 }
 
 fn inverse_axis(domain: [f64; 2], lambda: f64, work: &mut Work) -> exact::PResult<InverseAxis> {
-    let interval = ChartInterval::new(domain, work)?;
+    relocated_axis(domain, domain, lambda, work)
+}
+
+pub(super) fn relocated_axis(
+    old: [f64; 2],
+    new: [f64; 2],
+    lambda: f64,
+    work: &mut Work,
+) -> exact::PResult<InverseAxis> {
+    let interval = ChartInterval::new(old, work)?;
+    let output = if old == new {
+        ChartInterval {
+            origin: interval.origin.clone(),
+            width: interval.width.clone(),
+        }
+    } else {
+        ChartInterval::new(new, work)?
+    };
     let lambda = work.lift(lambda)?;
     let one = Q::one();
     let inverse = work.op(&one, &lambda, |a, b| a / b)?;
     let inverse_minus_one = work.op(&inverse, &one, |a, b| a - b)?;
-    let scaled_inverse = work.op(&interval.width, &inverse, |a, b| a * b)?;
+    let scaled_inverse = work.op(&output.width, &inverse, |a, b| a * b)?;
     Ok(InverseAxis {
         interval,
+        new_origin: output.origin,
         inverse_minus_one,
         scaled_inverse,
     })
@@ -214,7 +233,7 @@ pub(super) fn original_span(
     extraction::span(source, span, &a, &width, work)
 }
 
-fn remap_component(
+pub(super) fn remap_component(
     coordinate: &Poly,
     weight: &Poly,
     axis: &InverseAxis,
@@ -234,7 +253,7 @@ fn remap_component(
         work,
     )?;
     let numerator = exact::add(
-        &scale(&denominator, &axis.interval.origin, work)?,
+        &scale(&denominator, &axis.new_origin, work)?,
         &scale(&shifted, &axis.scaled_inverse, work)?,
         false,
         work,
@@ -251,7 +270,7 @@ pub(super) fn scale(poly: &Poly, factor: &Q, work: &mut Work) -> exact::PResult<
     Ok(scaled)
 }
 
-fn store_piece(
+pub(super) fn store_piece(
     interval: [f64; 2],
     [nu, du]: &[Poly; 2],
     [nv, dv]: &[Poly; 2],

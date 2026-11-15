@@ -9,7 +9,10 @@ use crate::{
     Result, check,
     core::bounded_rational::Work,
     curve::Curve,
-    editing::exact_derivative::{PResult, Refusal},
+    editing::{
+        exact_derivative::{PResult, Refusal},
+        rational_factor::polynomial::Poly,
+    },
 };
 use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
@@ -93,16 +96,7 @@ pub(super) fn isolate(
             } else {
                 let at_start = power[0].is_zero();
                 let at_end = super::chart_nonnegative::sum(&power, work)?.is_zero();
-                let [distinct, odd] = interior_contact_factors(&power, work)?;
-                let roots = Isolator {
-                    distinct: SturmChain::new(distinct, work)?,
-                    odd: SturmChain::new(odd, work)?,
-                    domain: parameter,
-                    origin: work.lift(parameter[0])?,
-                    width: distance(parameter, work)?,
-                    max_width: max_width.as_ref(),
-                }
-                .roots(work)?;
+                let roots = isolate_power(&power, parameter, max_width.as_ref(), work)?;
                 PcurveSeamIsolation::Discrete {
                     at_start,
                     at_end,
@@ -112,6 +106,24 @@ pub(super) fn isolate(
             Ok(PcurveSeamIsolatedSpan { parameter, contact })
         })
         .collect()
+}
+
+pub(super) fn isolate_power(
+    power: &Poly,
+    domain: [f64; 2],
+    max_width: Option<&Q>,
+    work: &mut Work,
+) -> PResult<Vec<PcurveSeamRoot>> {
+    let [distinct, odd] = interior_contact_factors(power, work)?;
+    Isolator {
+        distinct: SturmChain::new(distinct, work)?,
+        odd: SturmChain::new(odd, work)?,
+        domain,
+        origin: work.lift(domain[0])?,
+        width: distance(domain, work)?,
+        max_width,
+    }
+    .roots(work)
 }
 
 struct Isolator<'a> {

@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0298",
+  "testedBase": "4c962e9d1cfb5d976082a064068ce92886804bd5",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_relayout_contracts",
+    "--test",
+    "exact_mobius_piecewise_contracts",
+    "--test",
+    "exact_mobius_pcurve_contracts",
+    "--test",
+    "exact_pcurve_seam_split_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 12,
+  "scope": [
+    "Transfer original rational UV trims through an independent piecewise M\u00f6bius relayout on each tensor axis.",
+    "Old and new ordered rectangular axes have corresponding spans. Coincident grid traces share their new boundary; exact cuts and storage are required."
+  ],
+  "logSha256": "2e57fb18b6741c893d84768339b2f67100d9527ef49453e39903362ac13f993c",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "d202fdcf0600f489f5e59b354d8b00a12bc20ba623b3b4c278eecfaee1421ad8",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs": "e81d9598dc274a8abc87f9d43a4dc610880326d21eaa8b3ab78e797078249cc6",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "9e8a27a60bb7a747dee8c02194f3552b1214194dab7cd739d2fe4d361521bcc3",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_relayout.rs": "02c376c15ec091922315305c86de8cbd4e3f60aa4997ddcf76c3a167530d93cf",
+    "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs": "e25193374c62ec7c6df79ddc8a620050330e2e120bb2b45a8db1f579540e7254",
+    "crates/nurbs-core/src/editing/exact_projective/mobius_piecewise.rs": "6241101717fc9bd691d459f65982ddbd1bc763285b96a07febd1048a486f0dca",
+    "crates/nurbs-core/tests/exact_pcurve_relayout_contracts.rs": "20dc2904b817d6ea81eeb95237be0304d57285c3f94cc789650ca682195daf38"
+  }
+}
