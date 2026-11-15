@@ -17,6 +17,10 @@ pub use curvature_gap_edge::{
     CurvatureGapEdge, EdgeThresholdAudit, EdgeThresholdBracket, EdgeThresholdRoots,
     curvature_gap_edge_roots,
 };
+mod curvature_gap_graph;
+pub use curvature_gap_graph::{
+    CurvatureGapGraph, CurvatureGapGraphAudit, certify_curvature_gap_graph,
+};
 mod curvature_gap_range;
 mod curvature_gap_refinement;
 pub use curvature_gap_refinement::{
