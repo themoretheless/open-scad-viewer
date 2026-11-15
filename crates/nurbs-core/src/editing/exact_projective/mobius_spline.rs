@@ -10,6 +10,18 @@ struct ClockBasis {
     factors: Vec<Q>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct MobiusLandmark {
+    pub original: f64,
+    pub new: f64,
+}
+
+#[derive(Clone, Copy)]
+enum Clock {
+    Factor(f64),
+    Landmark(MobiusLandmark),
+}
+
 /// Apply t ↦ λt/(1+(λ-1)t) in the unit domain of a clamped NURBS curve.
 /// Each interior knot is pulled back exactly into the same absolute
 /// interval. If a knot or the common-gauge weights cannot be stored in
@@ -17,6 +29,24 @@ struct ClockBasis {
 pub fn mobius_spline_curve(source: &Curve, lambda: f64, max_work: u64) -> Result<Report<Curve>> {
     source.validate()?;
     validate_clock(&[lambda], max_work)?;
+    apply_curve(source, Clock::Factor(lambda), max_work)
+}
+
+/// Reclock a curve so the requested new interior parameter evaluates at
+/// the original landmark. Both domain endpoints stay fixed. The fitted
+/// fractional-linear factor is kept exact, even if it is not binary64.
+pub fn fit_mobius_spline_curve(
+    source: &Curve,
+    landmark: MobiusLandmark,
+    max_work: u64,
+) -> Result<Report<Curve>> {
+    source.validate()?;
+    validate_clock(&[], max_work)?;
+    validate_landmark(landmark, source.domain())?;
+    apply_curve(source, Clock::Landmark(landmark), max_work)
+}
+
+fn apply_curve(source: &Curve, clock: Clock, max_work: u64) -> Result<Report<Curve>> {
     clamped(
         source.degree,
         &source.knots,
@@ -32,7 +62,7 @@ pub fn mobius_spline_curve(source: &Curve, lambda: f64, max_work: u64) -> Result
             &source.knots,
             source.degree,
             source.control_points.len(),
-            lambda,
+            clock,
             &mut work,
         )?;
         let mut weights = Vec::with_capacity(source.weights.len());
@@ -59,6 +89,36 @@ pub fn mobius_spline_surface(
 ) -> Result<Report<Surface>> {
     source.validate()?;
     validate_clock(&lambda, max_work)?;
+    apply_surface(source, lambda.map(Clock::Factor), max_work)
+}
+
+/// Fit independent interior UV landmark correspondences on a tensor
+/// surface, retaining the absolute domains and one common weight gauge.
+pub fn fit_mobius_spline_surface(
+    source: &Surface,
+    landmarks: [MobiusLandmark; 2],
+    max_work: u64,
+) -> Result<Report<Surface>> {
+    source.validate()?;
+    validate_clock(&[], max_work)?;
+    validate_landmark(
+        landmarks[0],
+        [
+            source.knots_u[source.degree_u],
+            source.knots_u[source.control_points.len()],
+        ],
+    )?;
+    validate_landmark(
+        landmarks[1],
+        [
+            source.knots_v[source.degree_v],
+            source.knots_v[source.control_points[0].len()],
+        ],
+    )?;
+    apply_surface(source, landmarks.map(Clock::Landmark), max_work)
+}
+
+fn apply_surface(source: &Surface, clocks: [Clock; 2], max_work: u64) -> Result<Report<Surface>> {
     let nu = source.control_points.len();
     let nv = source.control_points[0].len();
     clamped(source.degree_u, &source.knots_u, nu, source.periodic_u)?;
@@ -68,8 +128,8 @@ pub fn mobius_spline_surface(
         limit: max_work,
     };
     let out = (|| {
-        let u = basis(&source.knots_u, source.degree_u, nu, lambda[0], &mut work)?;
-        let v = basis(&source.knots_v, source.degree_v, nv, lambda[1], &mut work)?;
+        let u = basis(&source.knots_u, source.degree_u, nu, clocks[0], &mut work)?;
+        let v = basis(&source.knots_v, source.degree_v, nv, clocks[1], &mut work)?;
         let mut weights = Vec::with_capacity(nu * nv);
         for (row, u_factor) in source.weights.iter().zip(u.factors) {
             for (&weight, v_factor) in row.iter().zip(&v.factors) {
@@ -104,13 +164,16 @@ fn basis(
     knots: &[f64],
     degree: usize,
     count: usize,
-    lambda: f64,
+    clock: Clock,
     w: &mut Work,
 ) -> PResult<ClockBasis> {
     let a = w.lift(knots[degree])?;
     let b = w.lift(knots[count])?;
     let width = w.op(&b, &a, |a, b| a - b)?;
-    let lambda = w.lift(lambda)?;
+    let lambda = match clock {
+        Clock::Factor(lambda) => w.lift(lambda)?,
+        Clock::Landmark(landmark) => factor(landmark, &a, &b, w)?,
+    };
     let one = Q::one();
     let c = w.op(&lambda, &one, |a, b| a - b)?;
     let mut transformed = Vec::with_capacity(knots.len());
@@ -150,4 +213,23 @@ fn basis(
         knots: transformed,
         factors,
     })
+}
+
+fn validate_landmark(landmark: MobiusLandmark, [a, b]: [f64; 2]) -> Result<()> {
+    check(
+        a < landmark.original && landmark.original < b && a < landmark.new && landmark.new < b,
+        "Möbius landmarks must both be strictly inside the absolute domain",
+    )
+}
+
+fn factor(landmark: MobiusLandmark, a: &Q, b: &Q, work: &mut Work) -> PResult<Q> {
+    let original = work.lift(landmark.original)?;
+    let new = work.lift(landmark.new)?;
+    let old_left = work.op(&original, a, |a, b| a - b)?;
+    let old_right = work.op(b, &original, |a, b| a - b)?;
+    let new_left = work.op(&new, a, |a, b| a - b)?;
+    let new_right = work.op(b, &new, |a, b| a - b)?;
+    let numerator = work.op(&old_left, &new_right, |a, b| a * b)?;
+    let denominator = work.op(&old_right, &new_left, |a, b| a * b)?;
+    Ok(work.op(&numerator, &denominator, |a, b| a / b)?)
 }

@@ -105,3 +105,76 @@ fn nonbinary_inverse_knot_and_insufficient_work_are_refused_atomically() {
     assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
     assert!(short.geometry.is_none());
 }
+
+#[test]
+fn landmark_fitting_keeps_a_nonbinary_factor_and_exactly_moves_the_break() {
+    use nurbs_core::editing::exact_projective::{MobiusLandmark, fit_mobius_spline_curve};
+    let curve = Curve {
+        degree: 1,
+        knots: vec![0., 0., 2., 5., 5.],
+        control_points: vec![vec![0., 0.], vec![2., 1.], vec![5., 1.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let correspondence = MobiusLandmark {
+        original: 2.,
+        new: 2.5,
+    };
+    let report = fit_mobius_spline_curve(&curve, correspondence, WORK).unwrap();
+    let out = report
+        .geometry
+        .unwrap_or_else(|| panic!("{:?}", report.refusal));
+    assert_eq!(out.knots, [0., 0., 2.5, 5., 5.]);
+    assert_eq!(out.control_points, curve.control_points);
+    for new in [0., 1., 2.5, 4., 5.] {
+        let old = 10. * new / (15. - new);
+        let a = curve.evaluate(old).unwrap().point;
+        let b = out.evaluate(new).unwrap().point;
+        assert!(a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-14));
+    }
+}
+
+#[test]
+fn fits_two_independent_landmarks_and_refuses_invalid_or_short_requests() {
+    use nurbs_core::editing::exact_projective::{MobiusLandmark, fit_mobius_spline_surface};
+    let source = Surface {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0., 0., 5., 5.],
+        knots_v: vec![0., 0., 5., 5.],
+        control_points: vec![
+            vec![vec![0., 0., 0.], vec![0., 5., 0.]],
+            vec![vec![5., 0., 0.], vec![5., 5., 1.]],
+        ],
+        weights: vec![vec![1.; 2]; 2],
+        periodic_u: false,
+        periodic_v: false,
+    };
+    let landmarks = [
+        MobiusLandmark {
+            original: 2.,
+            new: 2.5,
+        },
+        MobiusLandmark {
+            original: 4.,
+            new: 2.5,
+        },
+    ];
+    let r = fit_mobius_spline_surface(&source, landmarks, WORK).unwrap();
+    let s = r.geometry.unwrap();
+    assert_eq!(s.control_points, source.control_points);
+    let actual = s.evaluate(2.5, 2.5).unwrap().point;
+    let expected = source.evaluate(2., 4.).unwrap().point;
+    assert!(
+        actual
+            .iter()
+            .zip(expected)
+            .all(|(x, y)| (x - y).abs() < 1e-14)
+    );
+    let short = fit_mobius_spline_surface(&source, landmarks, r.work_used - 1).unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.geometry.is_none());
+    let mut invalid = landmarks;
+    invalid[0].new = 5.;
+    assert!(fit_mobius_spline_surface(&source, invalid, WORK).is_err());
+}
