@@ -31,7 +31,7 @@ npm run test:rbench
 npm run bench:kernel:check
 ```
 
-The runner executes the release `manifold-core` and `manifold-ops` rbench suites (thorough profile) and compares wall-clock medians normalized to nanoseconds per operation against `rbench-baseline.<os>-<arch>.json` for the host. The default budget is 15%; exceeding it exits nonzero and still writes `tmp/rbench-comparison.json`. Baseline cases missing from the run, changed contracts, incomplete samples, and OS/architecture mismatches are errors; cases added since the baseline are reported as `NEW` and not gated. A stored baseline is meaningful only for repeated measurements on the same machine. Record a replacement only after reviewing an intentional performance change:
+The runner executes the release `manifold-core`, `manifold-ops` and `polygon-core` (`bench_csg_fixtures`: `medium-csg`, `dense-sphere`) rbench suites (thorough profile) and compares wall-clock medians normalized to nanoseconds per operation against `rbench-baseline.<os>-<arch>.json` for the host. The default budget is 15%; exceeding it exits nonzero and still writes `tmp/rbench-comparison.json`. Baseline cases missing from the run, changed contracts, incomplete samples, and OS/architecture mismatches are errors; cases added since the baseline are reported as `NEW` and not gated. A stored baseline is meaningful only for repeated measurements on the same machine. Record a replacement only after reviewing an intentional performance change:
 
 ```sh
 npm run bench:kernel:record
