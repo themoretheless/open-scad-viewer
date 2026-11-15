@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 265,
-  "unallocatedCount": 735,
+  "specifiedCount": 266,
+  "unallocatedCount": 734,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7152,6 +7152,30 @@
       ],
       "remainingQualification": [
         "Exact dyadic subdivision of the threshold residual produces a full UV cover with proven inclusive comparisons or explicit unresolved leaves.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0266",
+      "name": "Изоляция пороговых корней разности главных кривизн на границе ячейки NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::curvature_gap_edge_roots",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_edge.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/curvature_gap_edge_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs",
+        "docs/qualification/nurbs-curvature-field-266-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-266-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Exact original one-sided edge restriction and Bernstein sign variation retain exact dyadic roots and complete coverage by open brackets. Variation one proves one simple root. Coincident edges are represented separately.",
         "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
         "WASM and application integration are separate."
       ]

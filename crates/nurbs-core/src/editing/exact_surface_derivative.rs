@@ -12,6 +12,11 @@ use std::collections::BTreeMap;
 mod content;
 mod curvature;
 mod curvature_gap;
+mod curvature_gap_edge;
+pub use curvature_gap_edge::{
+    CurvatureGapEdge, EdgeThresholdAudit, EdgeThresholdBracket, EdgeThresholdRoots,
+    curvature_gap_edge_roots,
+};
 mod curvature_gap_range;
 mod curvature_gap_refinement;
 pub use curvature_gap_refinement::{
