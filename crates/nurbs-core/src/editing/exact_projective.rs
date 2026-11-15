@@ -15,6 +15,8 @@ pub use mobius_spline::{
     MobiusLandmark, fit_mobius_spline_curve, fit_mobius_spline_surface, mobius_spline_curve,
     mobius_spline_surface,
 };
+mod pcurve_mobius;
+pub use pcurve_mobius::{PcurvePullback, PcurvePullbackRefusal, pullback_mobius_pcurve};
 mod proof;
 /// Row-major homogeneous map: `[x*w,y*w,z*w,w] -> M * H`.
 pub type Matrix = [[f64; 4]; 4];

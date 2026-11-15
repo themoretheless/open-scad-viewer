@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 291,
-  "unallocatedCount": 709,
+  "specifiedCount": 292,
+  "unallocatedCount": 708,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7749,6 +7749,29 @@
       "remainingQualification": [
         "Relayout a piecewise Bézier curve or tensor surface on a new absolute knot grid with independent positive span clocks.",
         "Clamped nonperiodic piecewise Bézier axes. New absolute seams preserve both adjoining geometric images and share one positive weight scale.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0292",
+      "name": "Точный перенос UV-контура при перепараметризации Мёбиуса",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::pullback_mobius_pcurve",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_derivative/proof.rs",
+        "crates/nurbs-core/tests/exact_mobius_pcurve_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-292-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-292-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Transfer retained two-dimensional trim curves under independent inverse chart clocks, maintaining the source trim parameter and proving equality over complete spans.",
+        "Global rectangular axis clocks; exact storage and a Bernstein chart-membership proof are required on all spans. Trim topology qualification is separate.",
         "WASM and application integration are separate."
       ]
     }
