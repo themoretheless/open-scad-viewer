@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 289,
-  "unallocatedCount": 711,
+  "specifiedCount": 290,
+  "unallocatedCount": 710,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7707,6 +7707,27 @@
       "remainingQualification": [
         "Fits a positive rational clock from one absolute interior landmark per axis and preserves it exactly through knot and weight storage, including nonbinary clock factors.",
         "Clamped nonperiodic axes. The original shape, orientation and absolute endpoints are retained. Nonrepresentable knots or weights refuse atomically.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0290",
+      "name": "Независимое точное перепараметрирование пролётов Безье с единым весом на шве",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::mobius_piecewise_bezier_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius_piecewise.rs",
+        "crates/nurbs-core/src/editing/exact_projective/mobius.rs",
+        "crates/nurbs-core/tests/exact_mobius_piecewise_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-290-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-290-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Applies a different positive clock on each span of a piecewise Bézier curve or tensor patch. A shared cumulative homogeneous scale preserves the complete geometry and literal seam weights.",
+        "Clamped nonperiodic piecewise Bézier axes with degree-multiplicity interior knots. Absolute seam coordinates and geometric continuity are retained. Parameter derivatives can change.",
         "WASM and application integration are separate."
       ]
     }
