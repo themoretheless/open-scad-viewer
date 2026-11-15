@@ -85,11 +85,13 @@
 }
 .direct-workspace .pane-tools .tool-icon { width: 30px; height: 30px; }
 .direct-workspace .pane-tools .tool-divider { height: 16px; background: var(--hairline); }
-.direct-workspace .pane > .modeling-grid-controls {
+.direct-workspace .canvas-viewport :deep(.modeling-grid-controls) {
   position: absolute; z-index: 3; left: 10px; bottom: 10px; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px);
 }
-.direct-workspace .pane > .modeling-grid-controls :deep(details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
+.direct-workspace .canvas-viewport :deep(.modeling-grid-controls details > div) { top: auto; bottom: 100%; right: auto; left: 0; }
+/* The grid controls take the bottom-left corner, so the frame-time badge sits above them. */
+.direct-workspace .canvas-viewport .fps-badge { bottom: 52px; }
 .direct-workspace .workspace-state { gap: 6px 10px; padding: 3px 12px; border-bottom: 1px solid var(--hairline); background: var(--surface); }
 .direct-workspace .workspace-state .state-legend { display: none; }
 .direct-workspace .command-guidance {
