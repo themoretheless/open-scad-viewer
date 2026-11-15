@@ -40,6 +40,7 @@ mod proof;
 mod trimmed_mobius;
 pub use trimmed_mobius::{
     ReclockedTrimmedSurface, TrimmedMobiusRefusal, TrimmedMobiusReport, mobius_trimmed_surface,
+    relayout_trimmed_bezier_surface,
 };
 /// Row-major homogeneous map: `[x*w,y*w,z*w,w] -> M * H`.
 pub type Matrix = [[f64; 4]; 4];

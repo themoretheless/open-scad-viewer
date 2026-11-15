@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 298,
-  "unallocatedCount": 702,
+  "specifiedCount": 299,
+  "unallocatedCount": 701,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7905,6 +7905,27 @@
       "remainingQualification": [
         "Transfer original rational UV trims through an independent piecewise Möbius relayout on each tensor axis.",
         "Old and new ordered rectangular axes have corresponding spans. Coincident grid traces share their new boundary; exact cuts and storage are required.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0299",
+      "name": "Точная смена кусочной UV-сетки у поверхности с обрезкой",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::relayout_trimmed_bezier_surface",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/trimmed_mobius.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_relayout.rs",
+        "crates/nurbs-core/tests/exact_trimmed_relayout_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-299-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-299-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Relayout a piecewise Bézier tensor patch with its ordered closed UV trims under a shared budget, preserving their three-dimensional images.",
+        "Closed source and output UV loops. One arithmetic budget; nonrepresentable cuts or poles withhold the entire result.",
         "WASM and application integration are separate."
       ]
     }
