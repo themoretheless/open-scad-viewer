@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 300,
-  "unallocatedCount": 700,
+  "specifiedCount": 301,
+  "unallocatedCount": 699,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -7950,6 +7950,27 @@
       "remainingQualification": [
         "Compose an authored rational pcurve with the exact original tensor basis across knot cells and store its complete world-space curve in the same absolute parameter.",
         "Natural UV rectangle with exact representable cell cuts, poles and weights. Verified in the authored pcurve clock. Topological edge authority remains separate.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0301",
+      "name": "Точная сверка пространственного ребра с UV-контуром на поверхности",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::compare_pcurve_edge",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_agreement.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_lift.rs",
+        "crates/nurbs-core/tests/exact_pcurve_edge_agreement_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-301-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-301-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compare original homogeneous edge and tensor-composed trim traces on their full common parameter partition without storing reconstructed edge pieces.",
+        "Same absolute curve parameter domain, exact UV grid cuts. Reports an exact mismatch even when endpoint positions agree. No generated edge binary64 storage required.",
         "WASM and application integration are separate."
       ]
     }

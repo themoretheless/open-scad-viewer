@@ -21,6 +21,7 @@ use crate::{
 };
 use num_rational::BigRational as Q;
 use num_traits::One;
+use std::ops::ControlFlow;
 
 type LiftResult<T> = std::result::Result<T, PcurvePullbackRefusal>;
 
@@ -44,21 +45,7 @@ pub fn lift_pcurve_to_surface(
     pcurve: &Curve,
     max_work: u64,
 ) -> Result<PcurveLiftReport> {
-    surface.validate()?;
-    validate_clock(&[], max_work)?;
-    let axes = [
-        CellAxis::new(
-            surface.degree_u,
-            &surface.knots_u,
-            surface.control_points.len(),
-        ),
-        CellAxis::new(
-            surface.degree_v,
-            &surface.knots_v,
-            surface.control_points[0].len(),
-        ),
-    ];
-    validate_chart(pcurve, axes.each_ref().map(CellAxis::domain))?;
+    let axes = validate_inputs(surface, pcurve, max_work)?;
     let mut work = Work {
         used: 0,
         limit: max_work,
@@ -74,7 +61,30 @@ pub fn lift_pcurve_to_surface(
     })
 }
 
-struct CellAxis {
+pub(super) fn validate_inputs(
+    surface: &Surface,
+    pcurve: &Curve,
+    max_work: u64,
+) -> Result<[CellAxis; 2]> {
+    surface.validate()?;
+    validate_clock(&[], max_work)?;
+    let axes = [
+        CellAxis::new(
+            surface.degree_u,
+            &surface.knots_u,
+            surface.control_points.len(),
+        ),
+        CellAxis::new(
+            surface.degree_v,
+            &surface.knots_v,
+            surface.control_points[0].len(),
+        ),
+    ];
+    validate_chart(pcurve, axes.each_ref().map(CellAxis::domain))?;
+    Ok(axes)
+}
+
+pub(super) struct CellAxis {
     breaks: Vec<f64>,
     spans: Vec<usize>,
 }
@@ -138,21 +148,52 @@ fn lift(
     axes: &[CellAxis; 2],
     work: &mut Work,
 ) -> LiftResult<Vec<Curve>> {
-    let exact = exact_breaks([&axes[0].breaks, &axes[1].breaks], work)?;
     let mut pieces = Vec::new();
+    let _: ControlFlow<()> = trace_cells(
+        surface,
+        pcurve,
+        axes,
+        &[],
+        work,
+        |parameter, target, work| {
+            pieces.push(store_target(parameter, target, work)?);
+            Ok(ControlFlow::Continue(()))
+        },
+    )?;
+    Ok(pieces)
+}
+
+pub(super) fn trace_cells<B>(
+    surface: &Surface,
+    pcurve: &Curve,
+    axes: &[CellAxis; 2],
+    extra_breaks: &[f64],
+    work: &mut Work,
+    mut visit: impl FnMut([f64; 2], &[Poly], &mut Work) -> LiftResult<ControlFlow<B>>,
+) -> LiftResult<ControlFlow<B>> {
+    let exact = exact_breaks([&axes[0].breaks, &axes[1].breaks], work)?;
     for (span, original) in active_spans(pcurve) {
         let h = original_span(pcurve, span, original, work)?;
-        let cuts = grid_cuts(&h, &exact, original, work)?;
+        let mut cuts = grid_cuts(&h, &exact, original, work)?;
+        let start = extra_breaks.partition_point(|&t| t <= original[0]);
+        let end = extra_breaks.partition_point(|&t| t < original[1]);
+        if start < end {
+            cuts.extend_from_slice(&extra_breaks[start..end]);
+            cuts.sort_by(f64::total_cmp);
+            cuts.dedup_by(|a, b| *a == *b);
+        }
         for pair in cuts.windows(2) {
             let parameter = [pair[0], pair[1]];
             let h = original_span(pcurve, span, parameter, work)?;
             let u = axes[0].locate(&h[0], &h[2], &exact[0], pcurve.degree, work)?;
             let v = axes[1].locate(&h[1], &h[2], &exact[1], pcurve.degree, work)?;
             let target = compose(surface, u, v, work)?;
-            pieces.push(store_target(parameter, &target, work)?);
+            if let ControlFlow::Break(value) = visit(parameter, &target, work)? {
+                return Ok(ControlFlow::Break(value));
+            }
         }
     }
-    Ok(pieces)
+    Ok(ControlFlow::Continue(()))
 }
 
 fn compose(surface: &Surface, u: CellInput, v: CellInput, work: &mut Work) -> PResult<Vec<Poly>> {
