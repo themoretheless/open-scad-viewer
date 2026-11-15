@@ -208,15 +208,6 @@ pub fn face_plane(mesh: MeshView<'_>, vertices: &[usize], normal: [f64; 3]) -> R
     }
     let point = |i: usize| -> [f64; 3] { std::array::from_fn(|k| mesh.positions[i * 3 + k]) };
     let origin = point(vertices[0]);
-    let mut direction = None;
-    for &i in vertices {
-        let p = point(i);
-        let d: [f64; 3] = std::array::from_fn(|k| p[k] - origin[k]);
-        if d[0].hypot(d[1]).hypot(d[2]) > 1e-7 {
-            direction = Some(d);
-            break;
-        }
-    }
     let unit = |p: [f64; 3]| -> Result<[f64; 3]> {
         let length = p[0].hypot(p[1]).hypot(p[2]);
         if !length.is_finite() || length < 1e-9 {
@@ -225,6 +216,41 @@ pub fn face_plane(mesh: MeshView<'_>, vertices: &[usize], normal: [f64; 3]) -> R
         Ok(p.map(|x| x / length))
     };
     let normal = unit(normal)?;
+    let offset = |i: usize| -> [f64; 3] {
+        let p = point(i);
+        std::array::from_fn(|k| p[k] - origin[k])
+    };
+    let length = |d: [f64; 3]| d[0].hypot(d[1]).hypot(d[2]);
+    // Vertex order follows the tessellation's triangle order, so the first distinct
+    // vertex may sit across a triangulation diagonal. Prefer a direction along the
+    // face's outer boundary (every other vertex on one side of it); fall back to the
+    // first distinct vertex for faces where the origin is not a hull vertex.
+    let side = |d: [f64; 3], q: [f64; 3]| {
+        let c = [d[1] * q[2] - d[2] * q[1], d[2] * q[0] - d[0] * q[2], d[0] * q[1] - d[1] * q[0]];
+        dot(normal, c)
+    };
+    let mut first = None;
+    let mut boundary = None;
+    for &i in vertices {
+        let d = offset(i);
+        if length(d) <= 1e-7 {
+            continue;
+        }
+        first.get_or_insert(d);
+        let (mut left, mut right) = (false, false);
+        for &j in vertices {
+            let q = offset(j);
+            let s = side(d, q);
+            let tolerance = 1e-9 * length(d) * length(q).max(1.0);
+            left |= s > tolerance;
+            right |= s < -tolerance;
+        }
+        if !(left && right) {
+            boundary = Some(d);
+            break;
+        }
+    }
+    let direction = boundary.or(first);
     let u = unit(direction.ok_or_else(|| input("Degenerate face workplane."))?)?;
     if dot(normal, u).abs() > 1e-6 {
         return Err(input("Face direction is not tangent to its support."));
@@ -271,6 +297,19 @@ mod tests {
             }
         );
         assert!(face_plane(mesh, &[0, 1, 6], [0., 0., 1.]).is_err());
+    }
+    #[test]
+    fn face_workplane_follows_a_boundary_edge_not_a_triangulation_diagonal() {
+        // Square split along (0,0)-(1,1): the second listed vertex is across the diagonal.
+        let positions = [0., 0., 0., 1., 1., 0., 0., 1., 0., 1., 0., 0.];
+        let indices = [0, 1, 2, 0, 3, 1];
+        let mesh = MeshView::new(&positions, &indices);
+        let t = topology(mesh).unwrap();
+        assert_eq!(t.faces.len(), 1);
+        let p = face_plane(mesh, &t.faces[0].vertices, t.faces[0].normal).unwrap();
+        assert_eq!(p.origin, [0.; 3]);
+        assert_eq!(p.u, [0., 1., 0.]);
+        assert_eq!(p.v, [-1., 0., 0.]);
     }
     #[test]
     fn invalid_indices_are_rejected_before_traversal() {
