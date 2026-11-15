@@ -5,9 +5,6 @@ use nurbs_core::{
     normal_alignment::{PairReport, ProfilePathReport},
 };
 
-/// Inclusive upper bound on the cell and span budgets of one path walk.
-const MAX_PATH_WORK: usize = 100_000;
-
 fn path_work_refusal() -> Error {
     Error::new("BREP_PROFILE_SEAM", "Bound original pcurve and normal work")
 }
@@ -22,8 +19,8 @@ fn validate_path_work(
         || canonical[0] < 0.
         || canonical[1] > 1.
         || canonical[0] >= canonical[1]
-        || !(1..=MAX_PATH_WORK).contains(&max_cells)
-        || !(1..=MAX_PATH_WORK).contains(&max_spans)
+        || !(1..=span_work::MAX_WORK).contains(&max_cells)
+        || !(1..=span_work::MAX_WORK).contains(&max_spans)
         || !threshold.is_finite()
         || !(0. ..1.).contains(&threshold)
     {
@@ -139,11 +136,7 @@ impl PathWalk<'_, '_, '_> {
                 self.order[side],
                 I::new(q[0], q[1])?,
             )?;
-            let spent = (c.degree..c.control_points.len())
-                .filter(|&i| {
-                    c.knots[i] < c.knots[i + 1] && c.knots[i] <= t.hi && c.knots[i + 1] >= t.lo
-                })
-                .count();
+            let spent = span_work::touched_spans(c, t);
             if spent > self.max_spans - out.spans {
                 return Ok(None);
             }

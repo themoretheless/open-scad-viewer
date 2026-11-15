@@ -683,6 +683,8 @@ mod face;
 mod qualify_transported_neighbor;
 #[path="source_profile_body/split_source_use.rs"]
 mod split_source_use;
+#[path="source_profile_body/span_work.rs"]
+mod span_work;
 #[path="source_profile_body/cut_endpoint.rs"]
 mod cut_endpoint;
 #[path="source_profile_body/inspect_curved_edge_interval_policy.rs"]
