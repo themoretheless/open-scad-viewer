@@ -23,6 +23,8 @@ on:
       - 'scripts/verify-loft-step-matrix.py'
       - 'scripts/verify-advanced-loft-solid.py'
       - 'scripts/verify-source-capped-body-step.py'
+      - 'scripts/verify-step-roundtrip-corpus.py'
+      - 'tests/fixtures/step-v*/**'
       - 'docs/qualification/projective-capped-canal-step-fixture-2026-10-11.json'
       - '.github/workflows/independent-step-occt.yml'
   push:
@@ -47,6 +49,8 @@ on:
       - 'scripts/verify-loft-step-matrix.py'
       - 'scripts/verify-advanced-loft-solid.py'
       - 'scripts/verify-source-capped-body-step.py'
+      - 'scripts/verify-step-roundtrip-corpus.py'
+      - 'tests/fixtures/step-v*/**'
       - 'docs/qualification/projective-capped-canal-step-fixture-2026-10-11.json'
       - '.github/workflows/independent-step-occt.yml'
 
@@ -94,7 +98,7 @@ jobs:
           python -c 'import OCP; assert OCP.__version__ == "8.0.1.0"'
 
       - name: Prepare absolute fixture output directories
-        run: mkdir -p "$STEP_OUTPUT_ROOT/rational" "$STEP_OUTPUT_ROOT/guided" "$STEP_OUTPUT_ROOT/loft-matrix" "$STEP_OUTPUT_ROOT/natural" "$STEP_OUTPUT_ROOT/projective"
+        run: mkdir -p "$STEP_OUTPUT_ROOT/rational" "$STEP_OUTPUT_ROOT/guided" "$STEP_OUTPUT_ROOT/loft-matrix" "$STEP_OUTPUT_ROOT/natural" "$STEP_OUTPUT_ROOT/projective" "$STEP_OUTPUT_ROOT/roundtrip-corpus"
 
       - name: Generate rational hollow STEP v5/v6/v9
         run: |
@@ -145,6 +149,14 @@ jobs:
             "$STEP_OUTPUT_ROOT/projective/projective-capped-source-v6.step" \
             "$STEP_OUTPUT_ROOT/projective/projective-capped-source-v6-verification.json" \
             docs/qualification/projective-capped-canal-step-fixture-2026-10-11.json
+
+      - name: Generate edited STEP round-trip corpus
+        env:
+          STEP_CORPUS_OUTPUT: ${{ github.workspace }}/output/qualification/independent-step/roundtrip-corpus
+        run: cargo test --locked --manifest-path crates/Cargo.toml -p cad-step --test exchange_round_trip_corpus
+
+      - name: Verify edited STEP round-trip corpus with OCCT
+        run: python scripts/verify-step-roundtrip-corpus.py "$STEP_OUTPUT_ROOT/roundtrip-corpus"
 
       - name: Upload fresh fixtures and OCCT reports
         if: always()

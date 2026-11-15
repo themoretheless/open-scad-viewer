@@ -7,8 +7,90 @@ use std::collections::BTreeMap;
 fn colour(red: f64, green: f64, blue: f64) -> StepPresentationStyle {
     StepPresentationStyle {
         colour: Some(StepColour::new(red, green, blue).unwrap()),
-        layers: Vec::new(),
+        ..StepPresentationStyle::default()
     }
+}
+
+#[test]
+fn transparency_round_trips_and_resolves_independently_of_colour() {
+    let model = brep_core::cuboid([0.; 3], [2., 3., 4.]).unwrap();
+    let mut semantic = StepSemanticMetadata::empty(&model);
+    semantic.presentation.body_styles[0] =
+        Some(StepPresentationStyle { transparency: Some(0.25), ..colour(0.2, 0.4, 0.6) });
+    // Face 1 overrides only transparency, so it inherits the body colour.
+    semantic.presentation.face_styles[1] =
+        Some(StepPresentationStyle { transparency: Some(0.75), ..StepPresentationStyle::default() });
+    semantic.presentation.face_styles[2] = Some(colour(1., 0., 0.));
+
+    let (step, _, _) = export_step_v9_with_metadata(&model, &semantic).unwrap();
+    assert!(step.contains("SURFACE_STYLE_TRANSPARENT(2.5"));
+    assert!(step.contains("SURFACE_STYLE_RENDERING_WITH_PROPERTIES(.NORMAL_SHADING."));
+    assert!(step.contains("SURFACE_STYLE_USAGE(.BOTH."));
+
+    let (_, _, _, imported) = import_step_v9_with_metadata(&step).unwrap();
+    let p = &imported.presentation;
+    let body = StepColour::new(0.2, 0.4, 0.6).unwrap();
+    assert_eq!(p.face_style(0, 0).unwrap().colour, Some(body));
+    assert_eq!(p.face_style(0, 0).unwrap().transparency, Some(0.25));
+    assert_eq!(p.face_style(1, 0).unwrap().colour, Some(body));
+    assert_eq!(p.face_style(1, 0).unwrap().transparency, Some(0.75));
+    assert_eq!(p.face_style(2, 0).unwrap().colour, Some(StepColour::new(1., 0., 0.).unwrap()));
+    assert_eq!(p.face_style(2, 0).unwrap().transparency, Some(0.25));
+    assert!(p.unsupported.is_empty(), "{:?}", p.unsupported);
+}
+
+#[test]
+fn opencascade_style_rendering_transparency_is_read() {
+    // Shape of the AP242 styling OpenCascade's STEPCAFControl writer emits for
+    // a transparent coloured solid.
+    let model = brep_core::cuboid([0.; 3], [1., 1., 1.]).unwrap();
+    let mut semantic = StepSemanticMetadata::empty(&model);
+    semantic.presentation.body_styles[0] = Some(colour(0.5, 0.5, 0.5));
+    let (step, _, _) = export_step_v9_with_metadata(&model, &semantic).unwrap();
+    let fill = step
+        .lines()
+        .find(|line| line.contains("SURFACE_STYLE_FILL_AREA("))
+        .unwrap()
+        .split('=')
+        .next()
+        .unwrap()
+        .trim()
+        .to_owned();
+    let colour_ref = step
+        .lines()
+        .find(|line| line.contains("COLOUR_RGB("))
+        .unwrap()
+        .split('=')
+        .next()
+        .unwrap()
+        .trim()
+        .to_owned();
+    let occt = step
+        .replacen(
+            "DATA;\n",
+            &format!(
+                "DATA;\n#900001=SURFACE_STYLE_TRANSPARENT(0.4);\n#900002=SURFACE_STYLE_RENDERING_WITH_PROPERTIES(.NORMAL_SHADING.,{colour_ref},(#900001));\n"
+            ),
+            1,
+        )
+        .replace(
+            &format!("SURFACE_SIDE_STYLE('',({fill}))"),
+            &format!("SURFACE_SIDE_STYLE('',({fill},#900002))"),
+        );
+    assert_ne!(occt, step);
+    let (_, _, _, imported) = import_step_v9_with_metadata(&occt).unwrap();
+    let style = imported.presentation.face_style(0, 0).unwrap();
+    assert_eq!(style.transparency, Some(0.4));
+    assert_eq!(style.colour, Some(StepColour::new(0.5, 0.5, 0.5).unwrap()));
+}
+
+#[test]
+fn out_of_range_transparency_is_refused_on_export() {
+    let model = brep_core::cuboid([0.; 3], [1., 1., 1.]).unwrap();
+    let mut semantic = StepSemanticMetadata::empty(&model);
+    semantic.presentation.body_styles[0] =
+        Some(StepPresentationStyle { transparency: Some(1.5), ..StepPresentationStyle::default() });
+    assert!(export_step_v9_with_metadata(&model, &semantic).is_err());
 }
 
 #[test]
