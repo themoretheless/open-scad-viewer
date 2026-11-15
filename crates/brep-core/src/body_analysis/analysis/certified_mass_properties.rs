@@ -395,6 +395,201 @@ pub(super) fn conditioned_surface_grid(surface: &Surface, budget: &mut Budget) -
     }
     Ok(result)
 }
+/// Fraction of `narrowest surface span * tolerance` admitted as the trim
+/// residual at a knot crossing.
+const CROSSING_RESIDUAL_FRACTION: f64 = 0.01;
+/// Fraction of the trim domain used as the default root parameter tolerance.
+const CROSSING_PARAMETER_FRACTION: f64 = 1e-13;
+/// Box cap of one trim/knot-plane intersection.
+const CROSSING_MAX_BOXES: usize = 65536;
+/// Subdivision depth cap of one trim/knot-plane intersection.
+const CROSSING_MAX_DEPTH: usize = 64;
+
+/// Locates trim parameters where one curve crosses surface knot lines.
+struct KnotCrossings<'a> {
+    curve: &'a Curve,
+    domain: [f64; 2],
+    base_spans: Vec<[f64; 2]>,
+    tolerance: f64,
+}
+
+impl KnotCrossings<'_> {
+    /// Linear UV spans have an algebraic inverse. Keep their own knot
+    /// endpoints, including C0 derivative breaks, in the schedule.
+    fn is_linear(&self) -> bool {
+        self.curve.degree == 1 && self.curve.weights.iter().all(|w| *w == self.curve.weights[0])
+    }
+
+    fn linear(
+        &self,
+        axis: usize,
+        knot: f64,
+        breaks: &mut Vec<f64>,
+        budget: &mut Budget,
+    ) -> Result<()> {
+        for [a, b] in &self.base_spans {
+            spend(budget, 2)?;
+            let x = self.curve.evaluate(*a)?.point[axis];
+            let y = self.curve.evaluate(*b)?.point[axis];
+            if (x < knot && knot < y) || (y < knot && knot < x) {
+                breaks.push(a + (b - a) * (knot - x) / (y - x));
+            }
+        }
+        Ok(())
+    }
+
+    /// Positive rational weights give a conservative first derivative
+    /// bound from homogeneous control differences.
+    fn speed_bound(&self, axis: usize, knot: f64) -> f64 {
+        let curve = self.curve;
+        let min_weight = curve.weights.iter().copied().fold(f64::INFINITY, f64::min);
+        let min_span = self
+            .base_spans
+            .iter()
+            .map(|s| s[1] - s[0])
+            .fold(f64::INFINITY, f64::min);
+        let magnitude = curve
+            .control_points
+            .iter()
+            .map(|p| (p[axis] - knot).abs())
+            .fold(0., f64::max);
+        let mut numerator_delta: f64 = 0.;
+        let mut weight_delta: f64 = 0.;
+        for (points, weights) in curve.control_points.windows(2).zip(curve.weights.windows(2)) {
+            numerator_delta = numerator_delta.max(
+                ((points[1][axis] - knot) * weights[1] - (points[0][axis] - knot) * weights[0])
+                    .abs(),
+            );
+            weight_delta = weight_delta.max((weights[1] - weights[0]).abs());
+        }
+        curve.degree as f64 * (numerator_delta + magnitude * weight_delta) / (min_span * min_weight)
+    }
+
+    /// Root uncertainty must be small relative to the narrowest surface knot span.
+    fn rational(
+        &self,
+        axis: usize,
+        knot: f64,
+        narrowest: f64,
+        breaks: &mut Vec<f64>,
+        budget: &mut Budget,
+    ) -> Result<()> {
+        use crate::intersections::{Coverage, CurvePlaneComponent, Options, Plane, curve_plane};
+        let curve = self.curve;
+        let speed_bound = self.speed_bound(axis, knot);
+        let residual_target = narrowest * self.tolerance * CROSSING_RESIDUAL_FRACTION;
+        let parameter_target = (self.domain[1] - self.domain[0]) * CROSSING_PARAMETER_FRACTION;
+        let parameter_target = parameter_target.min(residual_target / speed_bound);
+        if !parameter_target.is_finite() || parameter_target <= 0. {
+            return Err(Error::new(
+                "BREP_ANALYSIS_INDETERMINATE",
+                "Trim knot crossing cannot be isolated at the requested tolerance",
+            ));
+        }
+        spend(budget, curve.control_points.len())?;
+        let remaining = budget
+            .limit
+            .saturating_sub(budget.used)
+            .min(CROSSING_MAX_BOXES);
+        if remaining == 0 {
+            spend(budget, 1)?;
+        }
+        let mut lifted = curve.clone();
+        for p in &mut lifted.control_points {
+            p.push(0.);
+        }
+        let mut normal = [0.; 3];
+        normal[axis] = 1.;
+        let report = curve_plane(
+            &lifted,
+            Plane {
+                normal,
+                offset: knot,
+            },
+            Options {
+                distance_tolerance: residual_target,
+                parameter_tolerance: parameter_target,
+                max_depth: CROSSING_MAX_DEPTH,
+                max_boxes: remaining,
+            },
+        )?;
+        spend(budget, report.boxes_visited)?;
+        if report.coverage != Coverage::NumericallyResolved || !report.unresolved.is_empty() {
+            return Err(Error::new(
+                "BREP_ANALYSIS_INDETERMINATE",
+                "Unresolved trim/surface-knot crossing prevents mass quadrature",
+            ));
+        }
+        for component in report.components {
+            match component {
+                CurvePlaneComponent::Point(root) => {
+                    if (root.parameter_interval[1] - root.parameter_interval[0]) * speed_bound
+                        > residual_target
+                    {
+                        return Err(Error::new(
+                            "BREP_ANALYSIS_INDETERMINATE",
+                            "Trim knot root uncertainty exceeds mass quadrature tolerance",
+                        ));
+                    }
+                    breaks.push(root.parameter);
+                }
+                CurvePlaneComponent::Overlap {
+                    parameter_interval,
+                    control_residual,
+                } => {
+                    if control_residual != 0. {
+                        return Err(Error::new(
+                            "BREP_ANALYSIS_INDETERMINATE",
+                            "Near-coincident trim knot span prevents mass quadrature",
+                        ));
+                    }
+                    breaks.extend(parameter_interval);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Adds every crossing of the trim with the internal knots of one axis.
+    fn axis(
+        &self,
+        axis: usize,
+        knots: &[f64],
+        breaks: &mut Vec<f64>,
+        budget: &mut Budget,
+    ) -> Result<()> {
+        let (Some(&first), Some(&last)) = (knots.first(), knots.last()) else {
+            return Err(Error::new(
+                "BREP_ANALYSIS_INDETERMINATE",
+                "Empty surface integration grid prevents mass quadrature",
+            ));
+        };
+        let surface_domain = [first, last];
+        let narrowest = spans(knots, surface_domain)
+            .iter()
+            .map(|s| s[1] - s[0])
+            .fold(f64::INFINITY, f64::min);
+        let internal = knots
+            .iter()
+            .copied()
+            .filter(|k| *k > surface_domain[0] && *k < surface_domain[1]);
+        let coordinates = || self.curve.control_points.iter().map(|p| p[axis]);
+        let low = coordinates().fold(f64::INFINITY, f64::min);
+        let high = coordinates().fold(f64::NEG_INFINITY, f64::max);
+        for knot in internal {
+            if knot <= low || knot >= high {
+                continue;
+            }
+            if self.is_linear() {
+                self.linear(axis, knot, breaks, budget)?;
+            } else {
+                self.rational(axis, knot, narrowest, breaks, budget)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 /// The outer Green integral must break wherever a trim crosses either surface
 /// knot family. Splitting only the inner U integral misses arbitrarily narrow
 /// V spans and can falsely report quadrature convergence.
@@ -404,7 +599,6 @@ pub(super) fn trim_intervals(
     tolerance: f64,
     budget: &mut Budget,
 ) -> Result<Vec<[f64; 2]>> {
-    use crate::intersections::{Coverage, CurvePlaneComponent, Options, Plane, curve_plane};
     let domain = curve.domain();
     let mut breaks = conditioned_curve_breaks(curve, budget)?;
     let base_spans = spans(&breaks, domain);
@@ -416,138 +610,14 @@ pub(super) fn trim_intervals(
     {
         return Ok(base_spans);
     }
-    for axis in 0..2 {
-        let knots = &surface_grid[axis];
-        let surface_domain = [knots[0], *knots.last().unwrap()];
-        let surface_spans = spans(knots, surface_domain);
-        let narrowest = surface_spans
-            .iter()
-            .map(|s| s[1] - s[0])
-            .fold(f64::INFINITY, f64::min);
-        let internal = knots
-            .iter()
-            .copied()
-            .filter(|k| *k > surface_domain[0] && *k < surface_domain[1]);
-        let low = curve
-            .control_points
-            .iter()
-            .map(|p| p[axis])
-            .fold(f64::INFINITY, f64::min);
-        let high = curve
-            .control_points
-            .iter()
-            .map(|p| p[axis])
-            .fold(f64::NEG_INFINITY, f64::max);
-        for knot in internal {
-            if knot <= low || knot >= high {
-                continue;
-            }
-            // Linear UV spans have an algebraic inverse. Keep their own knot
-            // endpoints, including C0 derivative breaks, in the schedule.
-            if curve.degree == 1 && curve.weights.iter().all(|w| *w == curve.weights[0]) {
-                for [a, b] in &base_spans {
-                    spend(budget, 2)?;
-                    let x = curve.evaluate(*a)?.point[axis];
-                    let y = curve.evaluate(*b)?.point[axis];
-                    if (x < knot && knot < y) || (y < knot && knot < x) {
-                        breaks.push(a + (b - a) * (knot - x) / (y - x));
-                    }
-                }
-                continue;
-            }
-            // Positive rational weights give a conservative first derivative
-            // bound from homogeneous control differences. Root uncertainty
-            // must be small relative to the narrowest surface knot span.
-            let min_weight = curve.weights.iter().copied().fold(f64::INFINITY, f64::min);
-            let min_span = base_spans
-                .iter()
-                .map(|s| s[1] - s[0])
-                .fold(f64::INFINITY, f64::min);
-            let magnitude = curve
-                .control_points
-                .iter()
-                .map(|p| (p[axis] - knot).abs())
-                .fold(0., f64::max);
-            let mut numerator_delta: f64 = 0.;
-            let mut weight_delta: f64 = 0.;
-            for i in 0..curve.weights.len() - 1 {
-                numerator_delta = numerator_delta.max(
-                    ((curve.control_points[i + 1][axis] - knot) * curve.weights[i + 1]
-                        - (curve.control_points[i][axis] - knot) * curve.weights[i])
-                        .abs(),
-                );
-                weight_delta = weight_delta.max((curve.weights[i + 1] - curve.weights[i]).abs());
-            }
-            let speed_bound = curve.degree as f64 * (numerator_delta + magnitude * weight_delta)
-                / (min_span * min_weight);
-            let residual_target = narrowest * tolerance * 0.01;
-            let parameter_target = (domain[1] - domain[0]) * 1e-13;
-            let parameter_target = parameter_target.min(residual_target / speed_bound);
-            if !parameter_target.is_finite() || parameter_target <= 0. {
-                return Err(Error::new(
-                    "BREP_ANALYSIS_INDETERMINATE",
-                    "Trim knot crossing cannot be isolated at the requested tolerance",
-                ));
-            }
-            spend(budget, curve.control_points.len())?;
-            let remaining = budget.limit.saturating_sub(budget.used).min(65536);
-            if remaining == 0 {
-                spend(budget, 1)?;
-            }
-            let mut lifted = curve.clone();
-            for p in &mut lifted.control_points {
-                p.push(0.);
-            }
-            let mut normal = [0.; 3];
-            normal[axis] = 1.;
-            let report = curve_plane(
-                &lifted,
-                Plane {
-                    normal,
-                    offset: knot,
-                },
-                Options {
-                    distance_tolerance: residual_target,
-                    parameter_tolerance: parameter_target,
-                    max_depth: 64,
-                    max_boxes: remaining,
-                },
-            )?;
-            spend(budget, report.boxes_visited)?;
-            if report.coverage != Coverage::NumericallyResolved || !report.unresolved.is_empty() {
-                return Err(Error::new(
-                    "BREP_ANALYSIS_INDETERMINATE",
-                    "Unresolved trim/surface-knot crossing prevents mass quadrature",
-                ));
-            }
-            for component in report.components {
-                match component {
-                    CurvePlaneComponent::Point(root) => {
-                        if (root.parameter_interval[1] - root.parameter_interval[0]) * speed_bound
-                            > residual_target
-                        {
-                            return Err(Error::new(
-                                "BREP_ANALYSIS_INDETERMINATE",
-                                "Trim knot root uncertainty exceeds mass quadrature tolerance",
-                            ));
-                        }
-                        breaks.push(root.parameter);
-                    }
-                    CurvePlaneComponent::Overlap {
-                        parameter_interval,
-                        control_residual,
-                    } => {
-                        if control_residual != 0. {
-                            return Err(Error::new(
-                                "BREP_ANALYSIS_INDETERMINATE",
-                                "Near-coincident trim knot span prevents mass quadrature",
-                            ));
-                        }
-                        breaks.extend(parameter_interval);
-                    }
-                }
-            }
-        }
+    let crossings = KnotCrossings {
+        curve,
+        domain,
+        base_spans,
+        tolerance,
+    };
+    for (axis, knots) in surface_grid.iter().enumerate() {
+        crossings.axis(axis, knots, &mut breaks, budget)?;
     }
     breaks.sort_by(f64::total_cmp);
     breaks.dedup();
