@@ -35,7 +35,10 @@ pub use curvature_gap_second::{
 };
 mod curvature_gap_slope;
 mod curvature_gap_world;
-pub use curvature_gap_world::{CurvatureGapWorldPolyline, certify_curvature_gap_world_polyline};
+pub use curvature_gap_world::{
+    CurvatureGapLength, CurvatureGapWorldPolyline, certify_curvature_gap_world_polyline,
+    measure_curvature_gap_contour,
+};
 pub use curvature_gap_slope::{CurvatureGapSlopeAudit, curvature_gap_graph_slope};
 mod curvature_gap_refinement;
 pub use curvature_gap_refinement::{

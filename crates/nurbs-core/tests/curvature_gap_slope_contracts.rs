@@ -392,3 +392,54 @@ fn world_bound_includes_displacement_from_coarse_root_brackets() {
         );
     }
 }
+
+#[test]
+fn model_space_arc_length_bounds_enclose_analytic_lengths_under_clock_scaling() {
+    use nurbs_core::editing::exact_surface_derivative::measure_curvature_gap_contour;
+    let mut s = sheared_parabola(0.125, 9.);
+    for row in &mut s.control_points {
+        for (j, point) in row.iter_mut().enumerate() {
+            point[1] = [0., 0.5, 2.][j];
+        }
+    }
+    // The x=1/2 locus is a line of length two. Its transverse clock is
+    // nonlinear, so the first half has length 3/4 and the second 5/4.
+    let r =
+        measure_curvature_gap_contour(&s, [2, 2], Axis::U, 0.5, &[7., 8., 9.], 16, WORK).unwrap();
+    let segments = r.segment_bounds.as_ref().unwrap_or_else(|| panic!("{r:?}"));
+    for ([lo, hi], exact) in segments.iter().copied().zip([0.75, 1.25]) {
+        assert!(0. < lo && lo <= exact && exact <= hi);
+    }
+    let [lo, hi] = r.length_bounds.unwrap();
+    assert!(lo <= 2. && 2. <= hi && hi.is_finite(), "{:?}", [lo, hi]);
+    let affine = sheared_parabola(0., 9.);
+    let r =
+        measure_curvature_gap_contour(&affine, [2, 2], Axis::U, 0.5, &[7., 9.], 16, WORK).unwrap();
+    let [lo, hi] = r.length_bounds.unwrap();
+    assert!(lo <= 1. && 1. <= hi && hi < 1.000_000_01, "{r:?}");
+}
+
+#[test]
+fn arc_length_requires_a_graph_and_refuses_on_a_late_work_limit() {
+    use nurbs_core::editing::exact_surface_derivative::measure_curvature_gap_contour;
+    let s = sheared_parabola(0.125, 9.);
+    let unresolved =
+        measure_curvature_gap_contour(&s, [2, 2], Axis::V, 1., &[2., 6.], 16, WORK).unwrap();
+    assert_eq!(unresolved.graph, Some(CurvatureGapGraph::Unresolved));
+    assert!(unresolved.segment_bounds.is_none() && unresolved.length_bounds.is_none());
+    let complete =
+        measure_curvature_gap_contour(&s, [2, 2], Axis::U, 1., &[7., 9.], 16, WORK).unwrap();
+    assert!(complete.length_bounds.is_some());
+    let short = measure_curvature_gap_contour(
+        &s,
+        [2, 2],
+        Axis::U,
+        1.,
+        &[7., 9.],
+        16,
+        complete.work_used - 1,
+    )
+    .unwrap();
+    assert_eq!(short.refusal, Some(Refusal::ResourceLimit));
+    assert!(short.length_bounds.is_none() && short.segment_bounds.is_none());
+}

@@ -1,6 +1,8 @@
 //! World-space error for a certified curvature contour's stored polyline.
 use super::{
+    curvature_gap_graph::CurvatureGapGraph,
     curvature_gap_polyline::{CurvatureGapPolyline, certify_curvature_gap_polyline},
+    curvature_gap_slope::curvature_gap_graph_slope,
     *,
 };
 use crate::{
@@ -140,4 +142,89 @@ fn surface_vertex(
     let point = position.map(|i| i.lo.midpoint(i.hi));
     let error = box_distance(&position, &point.map(I::point))?.1;
     Ok((point, error))
+}
+
+#[derive(Clone, Debug)]
+pub struct CurvatureGapLength {
+    pub graph: Option<CurvatureGapGraph>,
+    /// Euclidean arc length bounds over each transverse interval, in order.
+    pub segment_bounds: Option<Vec<[f64; 2]>>,
+    pub length_bounds: Option<[f64; 2]>,
+    pub work_used: u64,
+    pub refusal: Option<Refusal>,
+}
+
+/// Enclose the length of a certified contour in model units. The lower
+/// bounds use endpoint distances minus certified position errors. Interval
+/// bounds on the surface velocity composed with the contour slope supply
+/// upper bounds and an independent speed-based lower bound. Both proofs
+/// share the caller's exact work budget.
+pub fn measure_curvature_gap_contour(
+    source: &Surface,
+    span: [usize; 2],
+    axis: Axis,
+    level: f64,
+    transverse: &[f64],
+    max_depth: u8,
+    max_work: u64,
+) -> Result<CurvatureGapLength> {
+    let world = certify_curvature_gap_world_polyline(
+        source, span, axis, level, transverse, max_depth, max_work,
+    )?;
+    let mut report = CurvatureGapLength {
+        graph: world.uv.graph,
+        segment_bounds: None,
+        length_bounds: None,
+        work_used: world.uv.work_used,
+        refusal: world.uv.refusal,
+    };
+    let (Some(points), Some(errors)) = (world.points, world.world_error_upper) else {
+        return Ok(report);
+    };
+    let remaining = max_work - report.work_used;
+    if remaining == 0 {
+        report.graph = None;
+        report.refusal = Some(Refusal::ResourceLimit);
+        return Ok(report);
+    }
+    let slope = curvature_gap_graph_slope(source, span, axis, level, remaining)?;
+    report.work_used += slope.work_used;
+    if let Some(reason) = slope.refusal {
+        report.graph = None;
+        report.refusal = Some(reason);
+    }
+    let Some([min_slope, max_slope]) = slope.slope else {
+        return Ok(report);
+    };
+
+    let domain = world.uv.domain;
+    let j = jets::calculate(source, span, domain, None)?;
+    let widths = [difference(domain[0])?, difference(domain[1])?];
+    let (root, root_jet, other_jet) = match axis {
+        Axis::U => (0, j[1][0], j[0][1]),
+        Axis::V => (1, j[0][1], j[1][0]),
+    };
+    let root_rate = I::new(min_slope, max_slope)?.div(widths[root])?;
+    let other_rate = I::point(1.).div(widths[1 - root])?;
+    let mut velocity = [I::point(0.); 3];
+    for i in 0..3 {
+        velocity[i] = root_jet[i]
+            .mul(root_rate)?
+            .add(other_jet[i].mul(other_rate)?)?;
+    }
+    let speed = norm(velocity)?;
+    let mut segments = Vec::with_capacity(errors.len());
+    let mut total = I::point(0.);
+    for ((points, params), error) in points.windows(2).zip(transverse.windows(2)).zip(errors) {
+        let integrated = speed.mul(difference([params[0], params[1]])?)?;
+        let (chord_lower, _) = box_distance(&points[0].map(I::point), &points[1].map(I::point))?;
+        let doubled_error = I::point(error).mul(I::point(2.))?;
+        let lower = I::point(chord_lower).sub(doubled_error)?.lo;
+        let segment = I::new(integrated.lo.max(lower).max(0.), integrated.hi)?;
+        segments.push([segment.lo, segment.hi]);
+        total = total.add(segment)?;
+    }
+    report.segment_bounds = Some(segments);
+    report.length_bounds = Some([total.lo.max(0.), total.hi]);
+    Ok(report)
 }
