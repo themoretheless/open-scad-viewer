@@ -788,3 +788,51 @@ fn torus_tangent_to_its_own_seam_at_a_vertex_is_refused() {
     let error = cone_torus_boolean(&frustum, &torus, "union").unwrap_err();
     assert_eq!(error.code, "BREP_UNSUPPORTED_OPERATION");
 }
+
+#[test]
+fn cylinder_drilled_through_gear_caps_balances_volumes() {
+    use std::f64::consts::PI;
+    let volume = |m: &Model| {
+        brep_core::analysis::mass_properties(m, 1e-5, 2_000_000)
+            .unwrap()
+            .signed_volume_mm3
+    };
+    let spur = brep_core::gear(&brep_core::GearSpec {
+        module: 2.,
+        teeth: 20,
+        height: 6.,
+        ..brep_core::GearSpec::default()
+    })
+    .unwrap();
+    // Off the gear axis, through both caps, clear of every tooth.
+    let drill = translated(&brep_core::analytic::cylinder(4., 10.).unwrap(), [0.3, -0.2, -2.]);
+    let (vg, vc) = (volume(&spur), PI * 16. * 10.);
+    let hole = PI * 16. * 6.;
+    let tol = 1e-3 * vg;
+    let d = cylinder_drill_boolean(&spur, &drill, "difference").unwrap();
+    let i = cylinder_drill_boolean(&drill, &spur, "intersection").unwrap();
+    let u = cylinder_drill_boolean(&spur, &drill, "union").unwrap();
+    let c = cylinder_drill_boolean(&drill, &spur, "difference").unwrap();
+    for m in [&d, &i, &u, &c] {
+        m.validate().unwrap();
+    }
+    assert!((volume(&d) - (vg - hole)).abs() <= tol, "difference {}", volume(&d));
+    assert!((volume(&i) - hole).abs() <= tol, "intersection {}", volume(&i));
+    assert!((volume(&u) - (vg + vc - hole)).abs() <= tol, "union {}", volume(&u));
+    assert!((volume(&c) - (vc - hole)).abs() <= tol, "cylinder minus gear {}", volume(&c));
+}
+
+#[test]
+fn drill_refuses_a_cylinder_that_grazes_the_teeth() {
+    let spur = brep_core::gear(&brep_core::GearSpec {
+        module: 2.,
+        teeth: 20,
+        height: 6.,
+        ..brep_core::GearSpec::default()
+    })
+    .unwrap();
+    // Reaches the tooth flanks: outside what the drill family certifies.
+    let drill = translated(&brep_core::analytic::cylinder(4., 10.).unwrap(), [18., 0., -2.]);
+    let error = cylinder_drill_boolean(&spur, &drill, "difference").unwrap_err();
+    assert_eq!(error.code, "BREP_UNSUPPORTED_OPERATION");
+}

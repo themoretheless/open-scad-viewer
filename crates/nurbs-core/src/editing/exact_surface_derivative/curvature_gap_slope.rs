@@ -79,10 +79,38 @@ pub(super) fn slope_bounds(
     let d_root = polynomial::derivative(residual, axes[root], &width(root, work)?, work)?;
     let d_transverse =
         polynomial::derivative(residual, axes[transverse], &width(transverse, work)?, work)?;
-    let derivatives = [d_transverse, d_root];
-    let (pu, pv) = storage::degrees(&derivatives);
-    let denominator = storage::bernstein(&derivatives[1], pu, pv, work)?;
-    let numerator = storage::bernstein(&derivatives[0], pu, pv, work)?;
+    let zero = Poly::new();
+    let numerator = polynomial::subtract(zero, &d_transverse, work)?;
+    ratio_bounds(&numerator, &d_root, increasing, work)
+}
+
+pub(super) fn ratio_bounds(
+    numerator: &Poly,
+    denominator: &Poly,
+    increasing: bool,
+    work: &mut Work,
+) -> PResult<Option<[f64; 2]>> {
+    let (pu, pv) = (
+        numerator
+            .keys()
+            .chain(denominator.keys())
+            .map(|k| k.0)
+            .max()
+            .unwrap_or(0)
+            .max(1),
+        numerator
+            .keys()
+            .chain(denominator.keys())
+            .map(|k| k.1)
+            .max()
+            .unwrap_or(0)
+            .max(1),
+    );
+    if pu > 25 || pv > 25 {
+        return Ok(None);
+    }
+    let denominator = storage::bernstein(denominator, pu, pv, work)?;
+    let numerator = storage::bernstein(numerator, pu, pv, work)?;
     if !denominator.iter().all(|q| {
         if increasing {
             q.is_positive()
@@ -96,7 +124,7 @@ pub(super) fn slope_bounds(
     // ratios even when all denominator coefficients are negative.
     let mut extrema: Option<[Q; 2]> = None;
     for (n, d) in numerator.iter().zip(&denominator) {
-        let ratio = work.op(n, d, |n, d| -n / d)?;
+        let ratio = work.op(n, d, |n, d| n / d)?;
         extrema = Some(match extrema {
             Some([lo, hi]) => [lo.min(ratio.clone()), hi.max(ratio)],
             None => [ratio.clone(), ratio],
