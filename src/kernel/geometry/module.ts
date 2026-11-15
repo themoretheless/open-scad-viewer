@@ -1,6 +1,7 @@
 /** Legacy-call adapter to our handle-based Rust CAD kernel. No foreign CAD runtime. */
 import { callGeometryRust, withCadMesh, importCadMesh } from './kernel';
 import { renderMeshInKernel, type KernelRenderMesh } from './meshAnalysis';
+import { booleanSolidsCooperativelyInKernel, type KernelBooleanOperation, type KernelJobCheckpoint } from './kernelJobs';
 export type Vec2 = [number, number];
 export type Vec3 = [number, number, number];
 export type Mat3 = [number, number, number, number, number, number, number, number, number];
@@ -72,6 +73,8 @@ export class CadSolid extends Handle {
     static difference(values: CadSolid[]) { return this.combine(values, 'difference'); }
     static compose(values: CadSolid[]) { return this.combine(values, 'compose'); }
     private static combine(values: CadSolid[], operation: string) { return new CadSolid(call('combine', { ids: values.map(v => v.handle), dimension: 3, operation })); }
+    /** Same result as union/difference/intersection, driven as a start/step/cancel kernel job. */
+    static async combineCooperatively(values: CadSolid[], operation: KernelBooleanOperation, checkpoint: KernelJobCheckpoint) { return new CadSolid(await booleanSolidsCooperativelyInKernel(values.map(v => v.handle), operation, checkpoint)); }
     static hull(values: CadSolid[]) { return new CadSolid(call('hull', { ids: values.map(v => v.handle), dimension: 3 })); }
     static extrude(section: CrossSection, height: number, slices = 0, twist = 0, scale: Vec2 = [1, 1], center = false) { return new CadSolid(call('extrude', { id: section.handle, height, slices: slices + 1, twist, scale, center })); }
     static revolve(section: CrossSection, segments = 32, angle = 360) { return new CadSolid(call('revolve', { id: section.handle, segments, angle })); }
@@ -197,6 +200,8 @@ export default async function Module(): Promise<CadToplevel> {
             Object.setPrototypeOf(value, Section.prototype);
         else if (Array.isArray(value))
             return value.map(localize);
+        else if (value instanceof Promise)
+            return value.then(localize);
         return value;
     };
     for (const [base, local] of [[CadSolid, Solid], [CrossSection, Section]] as const) {

@@ -78,9 +78,10 @@ export interface BuildCoordinatorOptions {
   now?: () => number
   timers?: CoordinatorTimers
   /**
-   * Allows an already-finishing worker to stay warm. Once the grace expires,
-   * the worker is replaced because synchronous WASM work cannot be
-   * cooperatively interrupted. Defaults to immediate hard preemption.
+   * Allows a cancelled worker to finish its current cooperative kernel step
+   * and stay warm. Once the grace expires the worker is replaced, which is
+   * the hard boundary for a step that never yields. Defaults to immediate
+   * hard preemption.
    */
   supersedeGraceMs?: number
   /** Maximum silence from a live Worker. Omit to disable automatic recovery. */
@@ -234,18 +235,34 @@ export class BuildCoordinator {
     return request.jobId
   }
 
+  /**
+   * Cancels every unfinished build without replacing the Worker. Kernel work
+   * runs as start/step/cancel jobs that yield to the Worker message loop, so
+   * the cancel message is observed within a bounded number of steps and the
+   * warm Worker (with its compiled WASM) serves the next build. Cancelled jobs
+   * whose terminal event has not arrived yet are tracked as superseded; the
+   * supersede grace timer stays the hard boundary should one never yield.
+   */
   cancel(reason: GeometryCancelReason = 'user') {
     if (this.snapshot.status === 'disposed') return
     this.clearHardRestartTimer()
-    for (const record of this.jobs.values()) {
-      if (record.lifecycle === 'terminal' || record.lifecycle === 'superseded') continue
-      if (record.workerGeneration !== null) this.postCancel(record, reason)
-      record.lifecycle = 'terminal'
+    this.clearWorkerSilenceTimer()
+    const generation = this.binding?.generation
+    for (const [jobId, record] of this.jobs) {
+      if (record.lifecycle === 'superseded') continue
+      if (record.lifecycle === 'terminal' || record.workerGeneration === null || record.workerGeneration !== generation) {
+        record.lifecycle = 'terminal'
+        this.jobs.delete(jobId)
+        continue
+      }
+      this.postCancel(record, reason)
+      record.lifecycle = 'superseded'
+      this.supersededWorkerJobs.add(jobId)
     }
-    this.pendingJobIds.length = 0
-    this.supersededWorkerJobs.clear()
-    this.destroyWorker()
-    this.jobs.clear()
+    for (const jobId of this.pendingJobIds.splice(0)) {
+      const record = this.jobs.get(jobId)
+      if (record && record.lifecycle === 'queued') this.jobs.delete(jobId)
+    }
     this.latestJobByQuality.clear()
     this.setState({
       status: 'cancelled',
@@ -259,6 +276,8 @@ export class BuildCoordinator {
   dispose() {
     if (this.snapshot.status === 'disposed') return
     this.cancel('disposed')
+    this.supersededWorkerJobs.clear()
+    this.destroyWorker()
     this.jobs.clear()
     this.latestJobByQuality.clear()
     this.setState({

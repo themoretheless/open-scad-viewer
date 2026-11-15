@@ -14,6 +14,7 @@ import { meshTransferables } from '../core/mesh'
 import {createSelectionSurfacePublisher} from '../app/selectionSurfacePublisher'
 import {surfaceGroupsInKernel} from '../kernel/geometry/meshAnalysis'
 import {warmGeometryKernel} from '../kernel/geometry/kernel'
+import {latestKernelJobProgress} from '../kernel/geometry/kernelJobs'
 import type { GeometryExecutionDescriptor } from '../core/geometryExecution'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
@@ -199,11 +200,12 @@ async function runBuild(
     phase = 'compiling'
     postEvent(jobEvent(request, { status: 'progress', phase, progress: null }))
     // The parser's top-level statement loop yields to the event loop
-    // periodically, so queued cancel messages are delivered mid-parse and
-    // shouldAbort stops a superseded/cancelled evaluation cooperatively — the
-    // warm worker (and its cached WASM) survives. A single wedged statement
-    // still cannot yield; BuildCoordinator's grace timer replaces the worker
-    // in that case and remains the hard cancellation boundary.
+    // periodically, and n-ary Booleans and render preparation run as kernel
+    // start/step/cancel jobs that yield between bounded steps, so queued
+    // cancel messages are delivered mid-evaluation and shouldAbort stops a
+    // superseded/cancelled build cooperatively: the warm worker (and its
+    // cached WASM) survives. A single pairwise Boolean is one step and cannot
+    // be split; BuildCoordinator's grace timer remains the hard boundary.
     const built = await defaultGeometryBuildEngine.buildSource(request.source, {
       quality: request.quality,
       purpose: request.quality,
@@ -237,7 +239,13 @@ async function runBuild(
         const now = performance.now()
         if (now - lastHeartbeat >= HEARTBEAT_THROTTLE_MS) {
           lastHeartbeat = now
-          postEvent(jobEvent(request, { status: 'progress', phase: 'compiling', progress: null }))
+          // Long Booleans run as kernel start/step/cancel jobs; this hook
+          // runs between their steps, after queued cancel messages had a turn.
+          const kernelJob = latestKernelJobProgress()
+          postEvent(jobEvent(request, {
+            status: 'progress', phase: 'compiling', progress: null,
+            ...(kernelJob ? {kernelJob: {kind: kernelJob.kind, done: kernelJob.done, total: kernelJob.total, steps: kernelJob.steps}} : {}),
+          }))
         }
       },
     })

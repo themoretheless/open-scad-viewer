@@ -52,6 +52,7 @@ import {
   currentEntityId,
   evaluateStableBuiltinModuleArguments,
   kernelCall,
+  kernelCallAsync,
   trackedSolid,
   warn,
 } from '.././expressionEvaluator'
@@ -355,4 +356,45 @@ export function booleanShapes(
   const sections = shapes.map(shape => (shape as Shape2D).geometry)
   const geometry = kernelCall(ctx, p, () => ctx.kernel.boolean2(operation, sections))
   return [{ dimension: 2, geometry, color: shapes[0].color, entityId: currentEntityId(ctx) }]
+}
+
+/**
+ * `booleanShapes` with 3D Booleans evaluated as a kernel start/step/cancel
+ * job when a host observes the evaluation: the job yields to the host's
+ * message loop between pairwise operations, so a cancel arrives within one
+ * step instead of after the whole fold. Results are identical to the
+ * synchronous path, which remains in use for unobserved evaluations and for
+ * kernels (recorders) that do not offer the cooperative operation.
+ */
+export async function booleanShapesCooperative(
+  sourceShapes: Shape[],
+  operation: 'union' | 'intersection',
+  ctx: EvalContext,
+  p: number,
+  diagnosticName: string = operation,
+): Promise<Shape[]> {
+  const control = ctx.control
+  if (!control?.cooperative || ctx.kernel.boolean3Cooperatively === undefined
+    || sourceShapes.length <= 1 || sourceShapes[0]!.dimension !== 3) {
+    return booleanShapes(sourceShapes, operation, ctx, p, diagnosticName)
+  }
+  const shapes = homogeneousShapes(sourceShapes, operation, ctx, p, diagnosticName)
+  if (shapes.length <= 1 || shapes[0]!.dimension !== 3) return booleanShapes(shapes, operation, ctx, p, diagnosticName)
+  control.poll()
+  const geometry = await cooperativeBoolean3(ctx, p, operation, shapes.map(shape => (shape as Shape3D).geometry))
+  return [{ dimension: 3, geometry, color: shapes[0]!.color, entityId: currentEntityId(ctx) }]
+}
+
+/** One cooperative 3D Boolean; the checkpoint polls abort and yields when due. */
+export function cooperativeBoolean3(
+  ctx: EvalContext,
+  p: number,
+  operation: 'union' | 'intersection' | 'difference',
+  solids: readonly CadKernelHandle[],
+): Promise<CadKernelHandle> {
+  const control = ctx.control!
+  return kernelCallAsync(ctx, p, () => ctx.kernel.boolean3Cooperatively!(operation, solids, async () => {
+    control.poll()
+    await control.yieldIfDue()
+  }))
 }

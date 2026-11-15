@@ -779,7 +779,8 @@ describe('coordinator Worker silence recovery', () => {
     staleGrace()
     expect(timers.size).toBe(0)
     expect(workers).toHaveLength(1)
-    expect(workers[0].terminated).toBe(true)
+    // Cancel keeps the warm Worker (cooperative kernel jobs); dispose terminates it.
+    expect(workers[0].terminated).toBe(operation === 'dispose')
     expect(published).toEqual([])
     expect(coordinator.state.status).toBe(operation === 'dispose' ? 'disposed' : 'cancelled')
   })
@@ -866,4 +867,65 @@ it('routes current sweep previews separately and drops stale or superseded previ
  coordinator.cancel('user')
  workers[0]!.emitMessage(preview(first))
  expect(previews).toHaveLength(1)
+})
+
+describe('BuildCoordinator cooperative cancellation', () => {
+  const cancelled = (request: GeometryBuildRequest): GeometryWorkerEvent => ({
+    ...accepted(request), status: 'cancelled', phase: 'compiling', reason: 'user', durationMs: 1,
+  } as GeometryWorkerEvent)
+
+  it('cancels through the worker protocol and reuses the same Worker for later builds', () => {
+    const timers = new FakeTimers()
+    const { coordinator, workers, published } = harness({ grace: 300, timers })
+    coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'full' })
+    const first = buildRequests(workers[0]!)[0]!
+    coordinator.cancel('user')
+    expect(workers).toHaveLength(1)
+    expect(workers[0]!.terminated).toBe(false)
+    expect(workers[0]!.messages.at(-1)).toMatchObject({ type: 'cancel', jobId: first.jobId, reason: 'user' })
+    expect(coordinator.state).toMatchObject({ status: 'cancelled', activeJobIds: [] })
+    // The worker acknowledges within its next kernel step; nothing is published.
+    workers[0]!.emitMessage(cancelled(first))
+    expect(published).toHaveLength(0)
+
+    coordinator.requestBuild({ documentRevision: 2, source: 'cube(2);', quality: 'full' })
+    expect(workers).toHaveLength(1)
+    const second = buildRequests(workers[0]!).at(-1)!
+    expect(second.documentRevision).toBe(2)
+    workers[0]!.emitMessage(success(second))
+    expect(published.map(result => result.jobId)).toEqual([second.jobId])
+    expect(coordinator.diagnostics).toMatchObject({ workerStarts: 1, hardRestarts: 0 })
+  })
+
+  it('waits for a cancelled job to acknowledge before reusing the Worker, and replaces it only after the grace', () => {
+    const timers = new FakeTimers()
+    const { coordinator, workers, published } = harness({ grace: 300, timers })
+    coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'full' })
+    const first = buildRequests(workers[0]!)[0]!
+    coordinator.cancel('user')
+    coordinator.requestBuild({ documentRevision: 2, source: 'cube(2);', quality: 'full' })
+    expect(buildRequests(workers[0]!)).toHaveLength(1)
+    workers[0]!.emitMessage(cancelled(first))
+    const second = buildRequests(workers[0]!).at(-1)!
+    expect(second.documentRevision).toBe(2)
+    expect(workers[0]!.terminated).toBe(false)
+    workers[0]!.emitMessage(success(second))
+    expect(published.map(result => result.jobId)).toEqual([second.jobId])
+
+    // A job that never yields keeps the hard boundary: grace expiry replaces the Worker.
+    coordinator.requestBuild({ documentRevision: 3, source: 'cube(3);', quality: 'full' })
+    coordinator.cancel('user')
+    coordinator.requestBuild({ documentRevision: 4, source: 'cube(4);', quality: 'full' })
+    timers.advance(300)
+    expect(workers[0]!.terminated).toBe(true)
+    expect(workers).toHaveLength(2)
+    expect(buildRequests(workers[1]!).at(-1)!.documentRevision).toBe(4)
+  })
+
+  it('dispose still terminates the Worker', () => {
+    const { coordinator, workers } = harness({ grace: 300 })
+    coordinator.requestBuild({ documentRevision: 1, source: 'cube(1);', quality: 'full' })
+    coordinator.dispose()
+    expect(workers[0]!.terminated).toBe(true)
+  })
 })

@@ -10,7 +10,7 @@ export { isGeometryEvaluationResultPayload, isGeometryWorkerRequest, isGeometryW
  * version in every message makes an old, cached worker fail visibly instead of
  * accidentally publishing data into a newer application state.
  */
-export const GEOMETRY_WORKER_PROTOCOL_VERSION = 12 as const
+export const GEOMETRY_WORKER_PROTOCOL_VERSION = 13 as const
 
 export type GeometryWorkerProtocolVersion = typeof GEOMETRY_WORKER_PROTOCOL_VERSION
 export type GeometryJobId = number
@@ -67,11 +67,21 @@ export interface GeometryBuildStarted extends GeometryJobEnvelope {
   phase: 'initializing' | 'compiling'
 }
 
+/** Progress of the kernel start/step/cancel job running inside a build. */
+export interface GeometryKernelJobProgress {
+  kind: 'mesh-boolean' | 'render-prepare'
+  done: number
+  total: number
+  /** Cooperative units stepped so far; cancellation is observed between them. */
+  steps: number
+}
+
 export interface GeometryBuildProgress extends GeometryJobEnvelope {
   status: 'progress'
   phase: GeometryBuildPhase
   /** Null means that the current kernel phase cannot report meaningful completion. */
   progress: number | null
+  kernelJob?: GeometryKernelJobProgress
 }
 
 /** Display-only per-node sweep geometry, never an authoritative publication. */

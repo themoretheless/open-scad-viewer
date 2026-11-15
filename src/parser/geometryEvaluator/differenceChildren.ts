@@ -49,7 +49,7 @@ import {
   warn,
 } from '.././expressionEvaluator'
 import { EvalNodesFn, EvalPreparedNodesFn, stableGeometrySemanticsContext, stableFragmentInputFromEvaluated } from './EvalNodesFn'
-import { booleanShapes, homogeneousShapes } from './segments'
+import { booleanShapes, booleanShapesCooperative, cooperativeBoolean3, homogeneousShapes } from './segments'
 
 
 export async function differenceChildren(
@@ -62,7 +62,7 @@ export async function differenceChildren(
   const childContext = isStableProfile(ctx)
     ? enterStableStatementScope(node.children, ctx)
     : null
-  const base = booleanShapes(
+  const base = await booleanShapesCooperative(
     childContext === null
       ? await evalNodes([node.children[0]], ctx)
       : await evalPreparedNodes([node.children[0]], childContext),
@@ -80,7 +80,7 @@ export async function differenceChildren(
     const shapes = childContext === null
       ? await evalNodes([child], ctx)
       : await evalPreparedNodes([child], childContext)
-    cutterOperands.push(...booleanShapes(shapes, 'union', ctx, node.p))
+    cutterOperands.push(...await booleanShapesCooperative(shapes, 'union', ctx, node.p))
   }
   const cutters = homogeneousShapes(cutterOperands, 'union', ctx, node.p)
   if (base.length === 0 || cutters.length === 0) return base
@@ -96,7 +96,9 @@ export async function differenceChildren(
     const operands = [base[0].geometry, ...cutters.map(cutter => (cutter as Shape3D).geometry)]
     return [{
       dimension: 3,
-      geometry: kernelCall(ctx, node.p, () => ctx.kernel.boolean3('difference', operands)),
+      geometry: ctx.control?.cooperative && ctx.kernel.boolean3Cooperatively !== undefined
+        ? await cooperativeBoolean3(ctx, node.p, 'difference', operands)
+        : kernelCall(ctx, node.p, () => ctx.kernel.boolean3('difference', operands)),
       color: base[0].color,
       entityId: currentEntityId(ctx),
     }]
