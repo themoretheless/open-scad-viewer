@@ -4,7 +4,7 @@
  * Documents without `units` are millimetre documents.
  */
 export const DOCUMENT_LENGTH_UNITS = ['mm', 'cm', 'm', 'in'] as const
-export type DocumentLengthUnit = typeof DOCUMENT_LENGTH_UNITS[number]
+export type DocumentLengthUnit = (typeof DOCUMENT_LENGTH_UNITS)[number]
 
 /** Exact factors; the inch is 25.4 mm by definition. */
 export const MM_PER_UNIT: Readonly<Record<DocumentLengthUnit, number>> = { mm: 1, cm: 10, m: 1000, in: 25.4 }
