@@ -9,6 +9,7 @@ import {
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
   isGeometryWorkerEvent,
+  materializeGeometryWorkerEvent,
   type GeometryBuildRequest,
   type GeometryWorkerEvent,
 } from '../src/kernel/geometryWorkerProtocol'
@@ -78,7 +79,8 @@ function waitForMessage<T>(worker: Worker, predicate: (value: unknown) => value 
     const onMessage = (value: unknown) => {
       if (!predicate(value)) return
       cleanup()
-      resolve(value)
+      // Successes cross as a GeometryScene; assertions read the host mesh view.
+      resolve((isGeometryWorkerEvent(value) ? materializeGeometryWorkerEvent(value) : value) as T)
     }
     const onError = (error: Error) => {
       cleanup()
@@ -268,7 +270,7 @@ it.each(['progressive-sweep','contact-progressive-hollow-body','progressive-mite
  let cancelOnPreview=false
  worker.on('message',(value:unknown)=>{
   if(!isGeometryWorkerEvent(value))return
-  events.push(value)
+  events.push(materializeGeometryWorkerEvent(value))
   if(cancelOnPreview&&value.status==='sweep-preview'){
    cancelOnPreview=false
    worker.postMessage({protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,type:'cancel',

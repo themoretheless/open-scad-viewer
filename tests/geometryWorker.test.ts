@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
   isGeometryWorkerEvent,
+  materializeGeometryWorkerEvent,
   type GeometryBuildRequest,
   type GeometryWorkerEvent,
   type GeometryWorkerRequest,
@@ -20,12 +21,15 @@ vi.mock('../src/language/openscadParser', async importOriginal => {
 })
 
 class FakeWorkerScope {
+  /** Host view: successes are materialized from their wire GeometryScene. */
   readonly events: GeometryWorkerEvent[] = []
+  readonly wireEvents: unknown[] = []
   readonly transfers: Transferable[][] = []
   private readonly listeners = new Map<string, Set<EventListenerOrEventListenerObject>>()
 
   postMessage(event: GeometryWorkerEvent, options: { transfer?: Transferable[] } = {}) {
-    this.events.push(event)
+    this.wireEvents.push(event)
+    this.events.push(isGeometryWorkerEvent(event) ? materializeGeometryWorkerEvent(event) : event)
     this.transfers.push([...(options.transfer ?? [])])
   }
 
@@ -165,7 +169,7 @@ it('publishes requested selection patches through the real WASM boundary', async
     documentRevision: 1, jobId: 1, source, sourceSha256: sha256Hex(source), quality: 'full', selectionSurfaces: true})
   await vi.waitFor(() => expect(scope.events.at(-1)?.status).toBe('succeeded'))
   const result = scope.events.at(-1)!
-  expect(isGeometryWorkerEvent(result)).toBe(true)
+  expect(isGeometryWorkerEvent(scope.wireEvents.at(-1))).toBe(true)
   if (result.status !== 'succeeded') throw new Error('Expected success')
   expect(result.meshes[0].faceIdsInferred).toBe(true)
   expect(result.meshes[0].faceIdsAuthoritative).not.toBe(true)

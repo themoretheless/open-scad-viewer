@@ -11,6 +11,8 @@ import {
 import { AbortedError, OpenSCADParseError } from '../language/openscadParser'
 import { isExactSolidRequest } from '../kernel/solid/exactSolidProtocol'
 import { meshTransferables } from '../core/mesh'
+import { geometrySceneFromMeshes, geometrySceneTransferables } from '../core/scene'
+import type { GeometryEvaluationResult } from '../core/build'
 import {createSelectionSurfacePublisher} from '../app/selectionSurfacePublisher'
 import {surfaceGroupsInKernel} from '../kernel/geometry/meshAnalysis'
 import {warmGeometryKernel} from '../kernel/geometry/kernel'
@@ -23,7 +25,7 @@ import {
   type GeometryBuildRequest,
   type GeometryBuildTerminal,
   type GeometryCancelReason,
-  type GeometryWorkerEvent,
+  type GeometryWorkerWireEvent,
   type GeometryWorkerRequest,
 } from '../kernel/geometryWorkerProtocol'
 
@@ -51,20 +53,20 @@ const UNPUBLISHABLE_RESULT_ERROR = Object.freeze({
   message: `Geometry result cannot be published under protocol v${GEOMETRY_WORKER_PROTOCOL_VERSION}`,
 } satisfies GeometryBuildError)
 
-function postEvent(event: GeometryWorkerEvent, transfer: Transferable[] = []) {
+function postEvent(event: GeometryWorkerWireEvent, transfer: Transferable[] = []) {
   self.postMessage(event, { transfer })
 }
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, Extract<keyof T, K>> : never
 type GeometryJobEventPayload = DistributiveOmit<
-  GeometryWorkerEvent,
+  GeometryWorkerWireEvent,
   'protocolVersion' | 'documentRevision' | 'jobId' | 'quality' | 'sourceSha256'
 >
 
 function jobEvent<T extends GeometryJobEventPayload>(
   request: GeometryBuildRequest,
   event: T,
-): GeometryWorkerEvent {
+): GeometryWorkerWireEvent {
   return {
     protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
     documentRevision: request.documentRevision,
@@ -72,7 +74,12 @@ function jobEvent<T extends GeometryJobEventPayload>(
     quality: request.quality,
     sourceSha256: request.sourceSha256,
     ...event,
-  } as GeometryWorkerEvent
+  } as GeometryWorkerWireEvent
+}
+
+/** Shared tessellation crosses the boundary once, as scene assets referenced by entities. */
+function withScene({ meshes, ...summary }: GeometryEvaluationResult) {
+  return { ...summary, scene: geometrySceneFromMeshes(meshes) }
 }
 
 function elapsed(job: ActiveJob) {
@@ -138,7 +145,7 @@ function terminalState(
   job: ActiveJob,
   phase: GeometryBuildTerminal['phase'],
   execution = plannedExecution(job.request),
-): GeometryBuildTerminal | null {
+): Exclude<GeometryBuildTerminal, { status: 'succeeded' }> | null {
   const { request } = job
   if (job.cancelled) {
     return jobEvent(request, {
@@ -147,7 +154,7 @@ function terminalState(
       ...(execution ? { execution } : {}),
       reason: job.cancelled,
       durationMs: elapsed(job),
-    }) as GeometryBuildTerminal
+    }) as Exclude<GeometryBuildTerminal, { status: 'succeeded' }>
   }
   const supersededBy = staleReplacement(request)
   if (supersededBy) {
@@ -157,7 +164,7 @@ function terminalState(
       ...(execution ? { execution } : {}),
       supersededBy,
       durationMs: elapsed(job),
-    }) as GeometryBuildTerminal
+    }) as Exclude<GeometryBuildTerminal, { status: 'succeeded' }>
   }
   return null
 }
@@ -278,7 +285,7 @@ async function runBuild(
       status: 'succeeded',
       phase: 'complete',
       execution: built.execution,
-      ...result,
+      ...withScene(result),
       durationMs: elapsed(job),
     })
     // Validate the complete success packet while every ArrayBuffer is still
@@ -295,7 +302,7 @@ async function runBuild(
       }))
       return
     }
-    postEvent(response, meshTransferables(result.meshes))
+    postEvent(response, response.status === 'succeeded' ? geometrySceneTransferables(response.scene) : [])
   } catch (error) {
     const attachedExecution = geometryExecutionForError(error) ?? completedExecution
     const terminal = terminalState(job, phase, attachedExecution ?? plannedExecution(request))
