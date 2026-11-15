@@ -42,6 +42,8 @@ mod pcurve_seam_split;
 pub use pcurve_seam_split::{
     PcurveSeamPiece, PcurveSeamSide, PcurveSeamSplitReport, split_pcurve_at_seam,
 };
+mod pcurve_tangent;
+pub use pcurve_tangent::{PcurveTangentOutcome, PcurveTangentReport, compare_pcurve_tangent_planes};
 mod proof;
 mod trimmed_mobius;
 pub use trimmed_mobius::{

@@ -1,7 +1,7 @@
 //! Exact comparison of authored world-space and surface-owned edge traces.
 use super::{
     PcurvePullbackRefusal,
-    pcurve_lift::{trace_cells, validate_inputs},
+    pcurve_lift::{trace_cells, trace_fields, validate_inputs},
     pcurve_mobius::original_span,
 };
 use crate::{
@@ -85,7 +85,7 @@ fn agreement_report(
     PcurveEdgeAgreementReport { outcome, work_used }
 }
 
-fn compare_trace(
+pub(super) fn compare_trace(
     parameter: [f64; 2],
     original: &[Poly],
     target: &[Poly],
@@ -115,24 +115,41 @@ pub fn compare_surface_pcurve_seam(
     right: (&Surface, &Curve),
     max_work: u64,
 ) -> Result<PcurveEdgeAgreementReport> {
-    let left_axes = validate_inputs(left.0, left.1, max_work)?;
-    let right_axes = validate_inputs(right.0, right.1, max_work)?;
-    check(
-        left.1.domain() == right.1.domain(),
-        "Paired UV traces must use the same absolute parameter domain",
-    )?;
     let mut work = Work {
         used: 0,
         limit: max_work,
     };
-    let result = (|| {
+    let result = compare_surface_fields(left, right, false, &mut work, compare_trace)?;
+    Ok(agreement_report(result, work.used))
+}
+
+pub(super) fn compare_surface_fields<B>(
+    left: (&Surface, &Curve),
+    right: (&Surface, &Curve),
+    include_normal: bool,
+    work: &mut Work,
+    mut compare: impl FnMut(
+        [f64; 2],
+        &[Poly],
+        &[Poly],
+        &mut Work,
+    ) -> std::result::Result<ControlFlow<B>, PcurvePullbackRefusal>,
+) -> Result<std::result::Result<ControlFlow<B>, PcurvePullbackRefusal>> {
+    let left_axes = validate_inputs(left.0, left.1, work.limit)?;
+    let right_axes = validate_inputs(right.0, right.1, work.limit)?;
+    check(
+        left.1.domain() == right.1.domain(),
+        "Paired UV traces must use the same absolute parameter domain",
+    )?;
+    Ok((|| {
         let mut left_pieces = Vec::new();
-        let _: ControlFlow<()> = trace_cells(
+        let _: ControlFlow<()> = trace_fields(
             left.0,
             left.1,
             &left_axes,
             &[],
-            &mut work,
+            include_normal,
+            work,
             |parameter, target, _| {
                 left_pieces.push((parameter, target.to_vec()));
                 Ok(ControlFlow::Continue(()))
@@ -142,12 +159,13 @@ pub fn compare_surface_pcurve_seam(
             .iter()
             .map(|(parameter, _)| parameter[1])
             .collect();
-        trace_cells(
+        trace_fields(
             right.0,
             right.1,
             &right_axes,
             &breaks,
-            &mut work,
+            include_normal,
+            work,
             |parameter, target, work| {
                 let index = breaks.partition_point(|&end| end <= parameter[0]);
                 let Some((cover, original)) = left_pieces.get(index) else {
@@ -157,15 +175,14 @@ pub fn compare_surface_pcurve_seam(
                     return Err(Refusal::UnprovedIdentity.into());
                 }
                 if parameter == *cover {
-                    compare_trace(parameter, original, target, work)
+                    compare(parameter, original, target, work)
                 } else {
                     let restricted = restrict_trace(original, *cover, parameter, work)?;
-                    compare_trace(parameter, &restricted, target, work)
+                    compare(parameter, &restricted, target, work)
                 }
             },
         )
-    })();
-    Ok(agreement_report(result, work.used))
+    })())
 }
 
 fn restrict_trace(

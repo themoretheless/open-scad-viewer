@@ -169,6 +169,18 @@ pub(super) fn trace_cells<B>(
     axes: &[CellAxis; 2],
     extra_breaks: &[f64],
     work: &mut Work,
+    visit: impl FnMut([f64; 2], &[Poly], &mut Work) -> LiftResult<ControlFlow<B>>,
+) -> LiftResult<ControlFlow<B>> {
+    trace_fields(surface, pcurve, axes, extra_breaks, false, work, visit)
+}
+
+pub(super) fn trace_fields<B>(
+    surface: &Surface,
+    pcurve: &Curve,
+    axes: &[CellAxis; 2],
+    extra_breaks: &[f64],
+    include_normal: bool,
+    work: &mut Work,
     mut visit: impl FnMut([f64; 2], &[Poly], &mut Work) -> LiftResult<ControlFlow<B>>,
 ) -> LiftResult<ControlFlow<B>> {
     let exact = exact_breaks([&axes[0].breaks, &axes[1].breaks], work)?;
@@ -187,7 +199,7 @@ pub(super) fn trace_cells<B>(
             let h = original_span(pcurve, span, parameter, work)?;
             let u = axes[0].locate(&h[0], &h[2], &exact[0], pcurve.degree, work)?;
             let v = axes[1].locate(&h[1], &h[2], &exact[1], pcurve.degree, work)?;
-            let target = compose(surface, u, v, work)?;
+            let target = compose(surface, u, v, include_normal, work)?;
             if let ControlFlow::Break(value) = visit(parameter, &target, work)? {
                 return Ok(ControlFlow::Break(value));
             }
@@ -196,27 +208,53 @@ pub(super) fn trace_cells<B>(
     Ok(ControlFlow::Continue(()))
 }
 
-fn compose(surface: &Surface, u: CellInput, v: CellInput, work: &mut Work) -> PResult<Vec<Poly>> {
+fn compose(
+    surface: &Surface,
+    u: CellInput,
+    v: CellInput,
+    include_normal: bool,
+    work: &mut Work,
+) -> PResult<Vec<Poly>> {
     let input = tensor::extraction::cell(
         surface,
         u.span,
         v.span,
         [u.domain, v.domain],
-        &[u.width, v.width],
+        &[u.width.clone(), v.width.clone()],
         work,
     )
-    .map_err(|reason| match reason {
-        tensor::Refusal::ResourceLimit => Refusal::ResourceLimit,
-        tensor::Refusal::NotRepresentable => Refusal::NotRepresentable,
-        tensor::Refusal::OutputDegreeLimit => Refusal::OutputDegreeLimit,
-        tensor::Refusal::UnprovedDenominator => Refusal::UnprovedDenominator,
-        tensor::Refusal::InvalidOutput => Refusal::InvalidOutput,
-        tensor::Refusal::UnprovedIdentity => Refusal::UnprovedIdentity,
-    })?;
+    .map_err(tensor_refusal)?;
+    let mut position = substitute(&input, &u, &v, [surface.degree_u, surface.degree_v], work)?;
+    if include_normal {
+        let normal = super::pcurve_tangent::normal_numerators(&input, work)?;
+        let degree_u = normal
+            .iter()
+            .flat_map(|p| p.keys())
+            .map(|&(i, _)| i)
+            .max()
+            .unwrap_or(0);
+        let degree_v = normal
+            .iter()
+            .flat_map(|p| p.keys())
+            .map(|&(_, j)| j)
+            .max()
+            .unwrap_or(0);
+        position.extend(substitute(&normal, &u, &v, [degree_u, degree_v], work)?);
+    }
+    Ok(position)
+}
+
+fn substitute(
+    input: &[tensor::Poly],
+    u: &CellInput,
+    v: &CellInput,
+    [degree_u, degree_v]: [usize; 2],
+    work: &mut Work,
+) -> PResult<Vec<Poly>> {
     // Clear each axis denominator to its tensor degree, leaving the same
     // common polynomial factor on all four homogeneous coordinates.
-    let bu = powers(u.numerator, u.denominator, surface.degree_u, work)?;
-    let bv = powers(v.numerator, v.denominator, surface.degree_v, work)?;
+    let bu = powers(&u.numerator, &u.denominator, degree_u, work)?;
+    let bv = powers(&v.numerator, &v.denominator, degree_v, work)?;
     input
         .iter()
         .map(|channel| {
@@ -230,11 +268,11 @@ fn compose(surface: &Surface, u: CellInput, v: CellInput, work: &mut Work) -> PR
         .collect()
 }
 
-fn powers(n: Poly, d: Poly, degree: usize, work: &mut Work) -> PResult<Vec<Poly>> {
-    fn sequence(base: Poly, degree: usize, work: &mut Work) -> PResult<Vec<Poly>> {
+fn powers(n: &Poly, d: &Poly, degree: usize, work: &mut Work) -> PResult<Vec<Poly>> {
+    fn sequence(base: &Poly, degree: usize, work: &mut Work) -> PResult<Vec<Poly>> {
         let mut powers = vec![vec![Q::one()]];
         for i in 0..degree {
-            powers.push(uni::multiply(&powers[i], &base, work)?);
+            powers.push(uni::multiply(&powers[i], base, work)?);
         }
         Ok(powers)
     }
@@ -244,4 +282,15 @@ fn powers(n: Poly, d: Poly, degree: usize, work: &mut Work) -> PResult<Vec<Poly>
         .zip(d.iter().rev())
         .map(|(n, d)| uni::multiply(n, d, work).map_err(Into::into))
         .collect()
+}
+
+pub(super) fn tensor_refusal(reason: tensor::Refusal) -> Refusal {
+    match reason {
+        tensor::Refusal::ResourceLimit => Refusal::ResourceLimit,
+        tensor::Refusal::NotRepresentable => Refusal::NotRepresentable,
+        tensor::Refusal::OutputDegreeLimit => Refusal::OutputDegreeLimit,
+        tensor::Refusal::UnprovedDenominator => Refusal::UnprovedDenominator,
+        tensor::Refusal::InvalidOutput => Refusal::InvalidOutput,
+        tensor::Refusal::UnprovedIdentity => Refusal::UnprovedIdentity,
+    }
 }
