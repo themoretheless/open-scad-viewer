@@ -1,10 +1,8 @@
+use super::exact_contact::{self, Side};
 use super::*;
 
 pub(super) fn invalid(message: &str) -> Error {
     Error::new("BREP_ANALYTIC_SS_INVALID", message)
-}
-fn unsupported(message: &str) -> Error {
-    Error::new("BREP_ANALYTIC_SS_UNSUPPORTED", message)
 }
 
 
@@ -26,6 +24,14 @@ pub enum AnalyticSsComponent {
     Line {
         start: [f64; 3],
         end: [f64; 3],
+    },
+    /// Certified tangential contact along a generator: the exact contact
+    /// discriminant of the binary64 inputs is zero, so the surfaces touch
+    /// along this segment without crossing (`multiplicity` is 2).
+    TangentLine {
+        start: [f64; 3],
+        end: [f64; 3],
+        multiplicity: u32,
     },
     Circle {
         center: [f64; 3],
@@ -177,6 +183,7 @@ pub fn plane_cylinder(
     options: Options,
 ) -> Result<Report<AnalyticSsComponent>> {
     let options = options.validate()?;
+    let plane_input = plane;
     let plane = plane.normalized()?;
     let axis = normalize(axis_dir)?;
     if !(radius.is_finite() && radius > 0.)
@@ -188,43 +195,68 @@ pub fn plane_cylinder(
     }
     let cos = dot(plane.normal, axis).abs();
     let tol = options.distance_tolerance;
-    // Parallel: |n·axis| ≈ 0 → generators are lines (0/1/2).
-    if cos <= 1e-12 {
-        let center_dist = plane.distance(axis_origin).abs();
-        if (center_dist - radius).abs() <= tol {
-            // Tangent generator — refuse as degenerate contact for this matrix.
+    // Axis exactly parallel to the plane: generators are lines (0/1/2),
+    // decided by the exact sign of the section discriminant.
+    match exact_contact::exactly_orthogonal(plane_input.normal, axis_dir) {
+        None => {
             return Ok(incomplete_report(
                 vec![height[0], height[1]],
                 UnresolvedReason::TangencyOrMultipleRoot,
             ));
         }
-        if center_dist > radius + tol {
-            return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
-        }
-        if center_dist + tol < radius {
-            let offset = (radius * radius - center_dist * center_dist).sqrt();
-            if !offset.is_finite() {
+        Some(true) => {
+            let Some((side, chord2)) = exact_contact::plane_round(
+                plane_input.normal,
+                plane_input.offset,
+                axis_origin,
+                radius,
+            ) else {
                 return Ok(incomplete_report(
                     vec![height[0], height[1]],
-                    UnresolvedReason::NearCoincidence,
+                    UnresolvedReason::TangencyOrMultipleRoot,
                 ));
-            }
-            let lateral = normalize(cross(plane.normal, axis))?;
-            let toward = mul(plane.normal, -plane.distance(axis_origin).signum());
+            };
+            let center_dist = plane.distance(axis_origin).abs();
+            let toward = if plane.distance(axis_origin) > 0. {
+                mul(plane.normal, -1.)
+            } else {
+                plane.normal
+            };
             let base = add(axis_origin, mul(toward, center_dist));
-            let mut components = Vec::new();
-            for sign in [-1., 1.] {
-                let foot = add(base, mul(lateral, sign * offset));
-                let start = add(foot, mul(axis, height[0]));
-                let end = add(foot, mul(axis, height[1]));
-                components.push(AnalyticSsComponent::Line { start, end });
-            }
-            return Ok(complete_report(components));
+            return Ok(match side {
+                Side::Apart => complete_report(vec![AnalyticSsComponent::Empty]),
+                Side::Touching => {
+                    // Exact tangency: the foot lies on the plane at distance r.
+                    let foot = add(axis_origin, mul(toward, radius));
+                    complete_report(vec![AnalyticSsComponent::TangentLine {
+                        start: add(foot, mul(axis, height[0])),
+                        end: add(foot, mul(axis, height[1])),
+                        multiplicity: 2,
+                    }])
+                }
+                Side::Cutting => {
+                    let offset = chord2.max(0.).sqrt();
+                    let lateral = normalize(cross(plane.normal, axis))?;
+                    let mut components = Vec::new();
+                    for sign in [-1., 1.] {
+                        let foot = add(base, mul(lateral, sign * offset));
+                        let start = add(foot, mul(axis, height[0]));
+                        let end = add(foot, mul(axis, height[1]));
+                        components.push(AnalyticSsComponent::Line { start, end });
+                    }
+                    complete_report(components)
+                }
+            });
         }
-        return Ok(incomplete_report(
-            vec![height[0], height[1]],
-            UnresolvedReason::NearCoincidence,
-        ));
+        Some(false) if cos <= 1e-12 => {
+            // Nearly but not exactly parallel: the section is an ellipse far
+            // longer than any certified height window; refuse explicitly.
+            return Ok(incomplete_report(
+                vec![height[0], height[1]],
+                UnresolvedReason::NearCoincidence,
+            ));
+        }
+        Some(false) => {}
     }
     // Perpendicular: circle in the cutting plane, clipped to height.
     if (cos - 1.).abs() <= 1e-12 {
@@ -297,34 +329,33 @@ pub fn plane_sphere(
     radius: f64,
     options: Options,
 ) -> Result<Report<AnalyticSsComponent>> {
-    let options = options.validate()?;
+    options.validate()?;
+    let plane_input = plane;
     let plane = plane.normalized()?;
     if !(radius.is_finite() && radius > 0.) || !center.iter().all(|x| x.is_finite()) {
         return Err(invalid("Sphere parameters must be finite and positive"));
     }
+    let Some((side, chord2)) =
+        exact_contact::plane_round(plane_input.normal, plane_input.offset, center, radius)
+    else {
+        return Ok(incomplete_report(
+            vec![],
+            UnresolvedReason::TangencyOrMultipleRoot,
+        ));
+    };
     let d = plane.distance(center);
-    let tol = options.distance_tolerance;
-    if d.abs() > radius + tol {
-        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
-    }
-    if (d.abs() - radius).abs() <= tol {
-        return Ok(complete_report(vec![AnalyticSsComponent::Point {
+    Ok(match side {
+        Side::Apart => complete_report(vec![AnalyticSsComponent::Empty]),
+        Side::Touching => complete_report(vec![AnalyticSsComponent::Point {
             point: sub(center, mul(plane.normal, d.signum() * radius)),
-            contact: Contact::Boundary,
-        }]));
-    }
-    if d.abs() + tol < radius {
-        let circle_r = (radius * radius - d * d).sqrt();
-        if !circle_r.is_finite() {
-            return Ok(incomplete_report(vec![], UnresolvedReason::NearCoincidence));
-        }
-        return Ok(complete_report(vec![AnalyticSsComponent::Circle {
+            contact: Contact::Tangent { multiplicity: 2 },
+        }]),
+        Side::Cutting => complete_report(vec![AnalyticSsComponent::Circle {
             center: sub(center, mul(plane.normal, d)),
             normal: plane.normal,
-            radius: circle_r,
-        }]));
-    }
-    Ok(incomplete_report(vec![], UnresolvedReason::NearCoincidence))
+            radius: chord2.max(0.).sqrt(),
+        }]),
+    })
 }
 
 /// Finite right circular cone (apex at origin tip along +axis, slope r/h) × plane.
@@ -406,68 +437,80 @@ pub fn cylinder_cylinder(
     } = b;
     let options = options.validate()?;
     let a_axis = normalize(a_dir)?;
-    let b_axis = normalize(b_dir)?;
+    normalize(b_dir)?;
     if !(a_radius.is_finite() && b_radius.is_finite() && a_radius > 0. && b_radius > 0.) {
         return Err(invalid("Cylinder radii must be positive and finite"));
     }
-    let parallel = cross(a_axis, b_axis);
-    if norm(parallel) > 1e-12 {
+    let refuse_box = vec![a_height[0], a_height[1], b_height[0], b_height[1]];
+    let tol = options.distance_tolerance;
+    let z0 = a_height[0].max(b_height[0]);
+    let z1 = a_height[1].min(b_height[1]);
+    match exact_contact::exactly_parallel(a_dir, b_dir) {
+        None => {
+            return Ok(incomplete_report(
+                refuse_box,
+                UnresolvedReason::TangencyOrMultipleRoot,
+            ));
+        }
+        Some(false) => {
+            return Ok(incomplete_report(
+                refuse_box,
+                UnresolvedReason::UnsupportedSurface,
+            ));
+        }
+        Some(true) => {}
+    }
+    if z1 < z0 - tol {
+        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
+    }
+    let Some(sides) =
+        exact_contact::parallel_cylinder_pair(a_origin, a_dir, a_radius, b_origin, b_radius)
+    else {
         return Ok(incomplete_report(
-            vec![a_height[0], a_height[1], b_height[0], b_height[1]],
-            UnresolvedReason::UnsupportedSurface,
+            refuse_box,
+            UnresolvedReason::TangencyOrMultipleRoot,
         ));
+    };
+    // Coaxial: coincident walls (same radius) have no transverse curve, and
+    // distinct radii are nested; both Complete empty.
+    if sides.concentric
+        || sides.external == Side::Apart
+        || sides.internal == Side::Cutting
+    {
+        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
     }
     let delta = sub(b_origin, a_origin);
     let radial = sub(delta, mul(a_axis, dot(delta, a_axis)));
     let separation = norm(radial);
-    let tol = options.distance_tolerance;
-    let z0 = a_height[0].max(b_height[0]);
-    let z1 = a_height[1].min(b_height[1]);
-    if z1 < z0 - tol {
-        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
-    }
-    if separation > a_radius + b_radius + tol {
-        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
-    }
-    // Strict nesting without wall contact: |r_a - r_b| > separation.
-    let nested = (a_radius - b_radius).abs() > separation + tol;
-    if nested {
-        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
-    }
-    // Coincident walls (same radius, shared axis): no transverse curve; Complete empty.
-    if separation <= tol && (a_radius - b_radius).abs() <= tol {
-        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
-    }
-    // Near-tangent band: refuse Incomplete (not certified for imprint).
-    if (separation - (a_radius + b_radius)).abs() <= tol
-        || (separation - (a_radius - b_radius).abs()).abs() <= tol
-    {
+    if !(separation.is_finite() && separation > 0.) {
         return Ok(incomplete_report(
-            vec![a_height[0], a_height[1], b_height[0], b_height[1]],
+            refuse_box,
             UnresolvedReason::NearCoincidence,
         ));
     }
-    // Transverse parallel wall contact → two generator lines from 2D circle×circle.
-    if separation <= tol {
-        let _ = unsupported;
-        return Ok(incomplete_report(
-            vec![a_height[0], a_height[1], b_height[0], b_height[1]],
-            UnresolvedReason::UnsupportedSurface,
-        ));
+    let axial = |p: [f64; 3]| -> f64 { dot(sub(p, a_origin), a_axis) };
+    let lift = |p: [f64; 3], z: f64| -> [f64; 3] { add(p, mul(a_axis, z - axial(p))) };
+    if sides.external == Side::Touching || sides.internal == Side::Touching {
+        let toward = if sides.internal == Side::Touching && a_radius < b_radius {
+            -1.
+        } else {
+            1.
+        };
+        let foot = add(a_origin, mul(radial, toward * a_radius / separation));
+        return Ok(complete_report(vec![AnalyticSsComponent::TangentLine {
+            start: lift(foot, z0),
+            end: lift(foot, z1),
+            multiplicity: 2,
+        }]));
     }
     let ux = radial[0] / separation;
     let uy = radial[1] / separation;
     let uz = radial[2] / separation;
     let a =
         (a_radius * a_radius - b_radius * b_radius + separation * separation) / (2. * separation);
-    let h2 = a_radius * a_radius - a * a;
-    if h2 <= 0. {
-        return Ok(incomplete_report(
-            vec![a_height[0], a_height[1], b_height[0], b_height[1]],
-            UnresolvedReason::NearCoincidence,
-        ));
-    }
-    let h = h2.sqrt();
+    // The exact sides prove two distinct generators; rounding can only
+    // shrink the half-chord, never remove a branch.
+    let h = (a_radius * a_radius - a * a).max(0.).sqrt();
     let mid = add(a_origin, mul([ux, uy, uz], a));
     // Perpendicular in the plane orthogonal to the shared axis.
     let px = a_axis[1] * uz - a_axis[2] * uy;
@@ -483,17 +526,6 @@ pub fn cylinder_cylinder(
     let (px, py, pz) = (px / pn * h, py / pn * h, pz / pn * h);
     let p0 = [mid[0] + px, mid[1] + py, mid[2] + pz];
     let p1 = [mid[0] - px, mid[1] - py, mid[2] - pz];
-    let start0 = add(
-        p0,
-        mul(a_axis, z0 - dot(p0, a_axis) + dot(a_origin, a_axis)),
-    );
-    // Project intersection points onto the axis parameter range [z0, z1].
-    let axial0 = |p: [f64; 3]| -> f64 { dot(sub(p, a_origin), a_axis) };
-    let lift = |p: [f64; 3], z: f64| -> [f64; 3] {
-        let cur = axial0(p);
-        add(p, mul(a_axis, z - cur))
-    };
-    let _ = start0;
     Ok(complete_report(vec![
         AnalyticSsComponent::Line {
             start: lift(p0, z0),
@@ -514,47 +546,49 @@ pub fn sphere_sphere(
     b_radius: f64,
     options: Options,
 ) -> Result<Report<AnalyticSsComponent>> {
-    let options = options.validate()?;
+    options.validate()?;
     if !(a_radius.is_finite() && b_radius.is_finite() && a_radius > 0. && b_radius > 0.)
         || !a_center.iter().chain(&b_center).all(|x| x.is_finite())
     {
         return Err(invalid("Sphere parameters must be finite and positive"));
     }
+    let Some(sides) = exact_contact::sphere_pair(a_center, a_radius, b_center, b_radius) else {
+        return Ok(incomplete_report(
+            vec![],
+            UnresolvedReason::TangencyOrMultipleRoot,
+        ));
+    };
+    if sides.concentric {
+        if a_radius == b_radius {
+            // Exactly coincident spheres: a surface overlap, not a curve.
+            return Ok(incomplete_report(vec![], UnresolvedReason::NearCoincidence));
+        }
+        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
+    }
+    if sides.external == Side::Apart || sides.internal == Side::Cutting {
+        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
+    }
     let delta = sub(b_center, a_center);
-    let d = norm(delta);
-    let tol = options.distance_tolerance;
-    if d > a_radius + b_radius + tol {
-        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
-    }
-    if d + tol < (a_radius - b_radius).abs() {
-        return Ok(complete_report(vec![AnalyticSsComponent::Empty]));
-    }
-    if (d - (a_radius + b_radius)).abs() <= tol || (d - (a_radius - b_radius).abs()).abs() <= tol {
-        if d <= tol {
-            return Ok(incomplete_report(vec![], UnresolvedReason::NearCoincidence));
-        }
-        let t = a_radius / d;
+    let axis = normalize(delta)?;
+    if sides.external == Side::Touching || sides.internal == Side::Touching {
+        // External contact, or internal contact with the larger sphere `a`,
+        // touches on the `b` side of `a`; inside a larger `b` it is opposite.
+        let toward = if sides.internal == Side::Touching && a_radius < b_radius {
+            -1.
+        } else {
+            1.
+        };
         return Ok(complete_report(vec![AnalyticSsComponent::Point {
-            point: add(a_center, mul(delta, t)),
-            contact: Contact::Boundary,
+            point: add(a_center, mul(axis, toward * a_radius)),
+            contact: Contact::Tangent { multiplicity: 2 },
         }]));
     }
-    if d <= tol {
-        return Ok(incomplete_report(vec![], UnresolvedReason::NearCoincidence));
-    }
-    if d + tol < a_radius + b_radius && d > (a_radius - b_radius).abs() + tol {
-        let x = (a_radius * a_radius - b_radius * b_radius + d * d) / (2. * d);
-        let r2 = a_radius * a_radius - x * x;
-        if r2 <= 0. {
-            return Ok(incomplete_report(vec![], UnresolvedReason::NearCoincidence));
-        }
-        let circle_r = r2.sqrt();
-        let axis = normalize(delta)?;
-        return Ok(complete_report(vec![AnalyticSsComponent::Circle {
-            center: add(a_center, mul(axis, x)),
-            normal: axis,
-            radius: circle_r,
-        }]));
-    }
-    Ok(incomplete_report(vec![], UnresolvedReason::NearCoincidence))
+    let d = norm(delta);
+    let x = (a_radius * a_radius - b_radius * b_radius + d * d) / (2. * d);
+    let circle_r = (a_radius * a_radius - x * x).max(0.).sqrt();
+    Ok(complete_report(vec![AnalyticSsComponent::Circle {
+        center: add(a_center, mul(axis, x)),
+        normal: axis,
+        radius: circle_r,
+    }]))
 }

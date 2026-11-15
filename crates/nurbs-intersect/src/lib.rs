@@ -7,6 +7,7 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 pub mod analytic_ss;
 pub mod coverage_verifier;
+mod exact_expansion;
 pub mod nurbs_ss;
 pub mod predicate_evidence;
 mod queries;
