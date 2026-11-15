@@ -5,6 +5,11 @@ import { useSourceProvenanceCaret } from '../src/composables/useSourceProvenance
 import type { MeshData } from '../src/core/mesh'
 import { createTextareaEditorAdapter, type TextareaLike } from '../src/editor/EditorAdapter'
 import type { WebGPURenderer } from '../src/render/webgpuRenderer'
+import { ensureSyntaxTree } from '@codemirror/language'
+import { Transaction } from '@codemirror/state'
+import { createCodeMirrorEditorAdapter, type CodeMirrorEngine } from '../src/editor/codemirrorAdapter'
+import { createEngineCore, createHeadlessHost } from '../src/editor/codemirrorCore'
+import { scadRushLanguage } from '../src/editor/codemirrorView'
 
 /**
  * Input-latency baseline of the textarea editor (ROADMAP P4). Measures the
@@ -97,11 +102,75 @@ function measure(lines: number, keystrokes: number) {
   return { model: median(model), highlight: median(highlight), bytes: initial.length }
 }
 
+/**
+ * The same keystroke on the CodeMirror engine: a typed transaction through the
+ * real history, the `code` model and caret sync ("model"), then the incremental
+ * StreamLanguage re-parse of the visible window (~60 lines at the caret) that
+ * the view needs before it can paint highlighting ("highlight").
+ */
+function measureCodeMirror(lines: number, keystrokes: number) {
+  const initial = source(lines)
+  const host = createHeadlessHost(initial, [scadRushLanguage])
+  const engine = {
+    ...createEngineCore(host, { scrollIntoView: false }),
+    onComposition: () => () => {},
+  } as unknown as CodeMirrorEngine
+  const adapter = createCodeMirrorEditorAdapter(ref(engine))
+  const code = ref(initial)
+  const meshes: MeshData[] = []
+  for (let i = 0, offset = 0; i < lines; i += 10) {
+    meshes.push({ provenance: [{ source: { id: i, start: offset, end: offset + 60 } }] } as unknown as MeshData)
+    offset += 700
+  }
+  const caret = useSourceProvenanceCaret({
+    code,
+    editor: adapter,
+    selectedEditorName: ref(''),
+    sceneMeshes: computed(() => meshes),
+    sourceMatchesEditor: computed(() => true),
+    getRenderer: () => ({ setSourceHighlight() {} }) as unknown as WebGPURenderer,
+    showNotice: () => {},
+    translate: k => k,
+  })
+  const middle = initial.length >> 1
+  const visibleEnd = () => Math.min(host.state.doc.length, host.state.doc.lineAt(middle).to + 60 * 80)
+  // First paint: parse up to the visible window once.
+  ensureSyntaxTree(host.state, visibleEnd(), 10_000)
+  const model: number[] = []
+  const highlight: number[] = []
+  for (let k = 0; k < keystrokes; k++) {
+    const t0 = performance.now()
+    host.dispatch({
+      changes: { from: middle + k, insert: 'x' },
+      selection: { anchor: middle + k + 1 },
+      userEvent: 'input.type',
+      annotations: Transaction.time.of(Date.now()),
+    })
+    code.value = adapter.getText()
+    caret.syncSourceHighlightFromEditor()
+    const t1 = performance.now()
+    ensureSyntaxTree(host.state, visibleEnd(), 10_000)
+    const t2 = performance.now()
+    model.push(t1 - t0)
+    highlight.push(t2 - t1)
+  }
+  return { model: median(model), highlight: median(highlight), bytes: initial.length }
+}
+
 describe('editor input latency baseline', () => {
+  it.each([5_000, 20_000])('measures CodeMirror keystroke latency on %i lines', lines => {
+    const result = measureCodeMirror(lines, 15)
+    console.log(
+      `[editor-latency] engine=codemirror lines=${lines} chars=${result.bytes} keystroke→model median=${result.model.toFixed(2)}ms ` +
+        `highlight refresh median=${result.highlight.toFixed(2)}ms`,
+    )
+    expect(result.model + result.highlight).toBeLessThan(5_000)
+  })
+
   it.each([5_000, 20_000])('measures keystroke latency on %i lines', lines => {
     const result = measure(lines, 15)
     console.log(
-      `[editor-latency] lines=${lines} chars=${result.bytes} keystroke→model median=${result.model.toFixed(2)}ms ` +
+      `[editor-latency] engine=textarea lines=${lines} chars=${result.bytes} keystroke→model median=${result.model.toFixed(2)}ms ` +
         `highlight refresh median=${result.highlight.toFixed(2)}ms`,
     )
     expect(result.model + result.highlight).toBeLessThan(5_000)
