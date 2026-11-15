@@ -22,7 +22,7 @@ export interface SolidBooleanResult {
 export function applySolidBoolean(source:DirectDocument,options:SolidBooleanOptions):SolidBooleanResult {
  const d=structuredClone(source),{operation,a,b,segments,ru}=options
  const label=(r:string,e:string)=>ru?r:e
- if(!a.length||!b.length)throw new DirectInputError('DIRECT_BOOLEAN_OPERANDS',label('Заполните оба поля: A — из чего вычитаем, B — что вычитаем.','Fill both fields: A is what to subtract from, B is what to subtract.'))
+ if(!a.length||!b.length)throw new DirectInputError('DIRECT_BOOLEAN_OPERANDS',label('Заполните оба поля: A — из чего вычитаем, B — что вычитаем.','Fill both fields: A is what to subtract from, B is what to subtract.'),a.length?'booleanB':'booleanA')
  const ids=[...a,...b]
  if(new Set(ids).size!==ids.length)throw new DirectInputError('DIRECT_BOOLEAN_DUPLICATE',label('Тело должно быть только в одном поле A или B.','Each body must occur once, in either A or B.'),undefined,ids.filter((id,i)=>ids.indexOf(id)!==i))
  const bodyOf=(id:string)=>{const body=d.bodies.find(item=>item.id===id);if(!body)throw Error(label('Тело больше не существует.','A body no longer exists.'));return body}

@@ -39,7 +39,7 @@ export function sketchDimensions(sketch:DirectSketch,edit?:{index:number;value:n
   return measured
 }
 export function editSketchDimension(sketch:DirectSketch,index:number,value:number):DirectSketch {
-  if(sketch.analytic) { const dimension=sketch.dimensions?.[index]; if(!dimension || (dimension.kind!=='radius'&&dimension.kind!=='diameter')) throw Error('Analytic curves support radius and diameter dimensions only.'); const radius=dimension.kind==='diameter'?value/2:value; if(!(radius>0&&Number.isFinite(radius))) throw new DirectInputError('DIRECT_DIMENSION_POSITIVE','Radius must be positive.','dimension',[sketch.id]); const analytic={...sketch.analytic,radius}; return {...sketch,analytic,points:sampleCurve(analytic)} }
+  if(sketch.analytic) { const dimension=sketch.dimensions?.[index]; if(!dimension || (dimension.kind!=='radius'&&dimension.kind!=='diameter')) throw new DirectInputError('DIRECT_DIMENSION_ANALYTIC','Analytic curves support radius and diameter dimensions only.','dimension'); const radius=dimension.kind==='diameter'?value/2:value; if(!(radius>0&&Number.isFinite(radius))) throw new DirectInputError('DIRECT_DIMENSION_POSITIVE','Radius must be positive.','dimension',[sketch.id]); const analytic={...sketch.analytic,radius}; return {...sketch,analytic,points:sampleCurve(analytic)} }
   return {...sketch,points:sketchDimensions(sketch,{index,value}).points}
 }
 export function bridgeNurbsCurves(a:NurbsCurve,b:NurbsCurve,endA:'start'|'end'='end',endB:'start'|'end'='start',tension=1):NurbsCurve {

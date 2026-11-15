@@ -1,3 +1,4 @@
+import { DirectInputError } from '../i18n/kernelErrors'
 import { cross3, xyPlane, transformSketch, type SketchPlane } from './directSketchGeometry'
 import { booleanPolygonMeshes, type PolygonMesh } from '../kernel/geometry/polygon'
 import { extrudeDirectSketch, parseDirectDocument, type DirectBody, type DirectDocument, type DirectSketch, type Point2 } from './directModeling'
@@ -52,12 +53,12 @@ export function directExtrusionTool(sketch: DirectSketch, height: number, baseZ:
 }
 export function applyDirectExtrusion(document: DirectDocument, sketchId: string, height: number, baseZ: number, operation: 'new' | 'union' | 'difference', targetId: string, id: string): DirectDocument {
   const next = parseDirectDocument(stringifyMeshJson(document)), sketch = next.sketches.find(s => s.id === sketchId)
-  if (!sketch) throw new Error('Select a sketch.')
+  if (!sketch) throw new DirectInputError('DIRECT_PROFILE_MISSING','Select a sketch.')
   const tool = directExtrusionTool(sketch, height, baseZ)
   if (operation === 'new') { tool.id = id; next.bodies.push(tool) }
   else {
     const target = next.bodies.find(b => b.id === targetId)
-    if (!target) throw new Error('Select the target body.')
+    if (!target) throw new DirectInputError('DIRECT_TARGET_BODY','Select the target body.')
     const mesh = booleanPolygonMeshes(target.mesh, tool.mesh, operation)
     if (!mesh.indices.length) next.bodies = next.bodies.filter(b => b.id !== target.id)
     else target.mesh = { positions: mesh.positions, indices: mesh.indices }

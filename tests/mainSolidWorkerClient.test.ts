@@ -352,3 +352,20 @@ it('accepts measured thermal properties and rejects inconsistent results',async(
   await expect(task).rejects.toMatchObject({code:'CAD_PROTOCOL'})
  }
 })
+
+it('carries the optional field and target ids of a coded refusal and rejects malformed or unknown error keys',async()=>{
+  const {client,ports}=setup()
+  const marked=client.run({kind:'truss',model:model()})
+  ports[0].reply({ok:false,error:{name:'DirectInputError',code:'DIRECT_CURVES_DISTINCT',message:'Choose distinct curves.',field:'radius',target:['c1','c2']}})
+  await expect(marked).rejects.toMatchObject({code:'DIRECT_CURVES_DISTINCT',field:'radius',targetIds:['c1','c2']})
+  const plain=client.run({kind:'truss',model:model()})
+  ports[0].reply({ok:false,error:{name:'Error',code:'BREP_INVALID_INPUT',message:'x'}})
+  const error=await plain.catch(e=>e)
+  expect(error).toMatchObject({code:'BREP_INVALID_INPUT',targetIds:[]})
+  expect('field' in error).toBe(false)
+  for(const bad of [{field:''},{field:'x'.repeat(65)},{field:3},{target:[]},{target:['']},{target:'c1'},{target:Array.from({length:65},(_,i)=>'b'+i)},{extra:true}]){
+    const run=client.run({kind:'truss',model:model()})
+    ports.at(-1)!.reply({ok:false,error:{name:'Error',code:'BREP_INVALID_INPUT',message:'x',...bad}})
+    await expect(run,JSON.stringify(bad)).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+  }
+})

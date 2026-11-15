@@ -273,7 +273,7 @@ transaction:DirectDocument;}
 export type MainSolidRequest = {version:1; id:number; job:MainSolidJob; traceTiming?:boolean}
 export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']; timing?:{warmupMs:number;executeMs:number;prepareMs:number}} & (
   | {ok:true; result:MainSolidResults[keyof MainSolidResults]}
-  | {ok:false; error:{name:string; message:string; code?:string}}
+  | {ok:false; error:{name:string; message:string; code?:string; field?:string; target?:string[]}}
 )
 export interface MainSolidProgress {phase:string;completed:number;total:number}
 export type MainSolidProgressMessage = {version:1;id:number;kind:MainSolidJob['kind'];progress:MainSolidProgress}
