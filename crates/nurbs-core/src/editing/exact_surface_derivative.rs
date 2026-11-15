@@ -13,6 +13,10 @@ mod content;
 mod curvature;
 mod curvature_gap;
 mod curvature_gap_range;
+mod curvature_gap_refinement;
+pub use curvature_gap_refinement::{
+    CurvatureGapRegion, RefinedCurvatureGapAudit, refine_curvature_gap,
+};
 pub use curvature_gap_range::{CurvatureGapRangeCell, CurvatureGapRanges, curvature_gap_ranges};
 mod curvature_gap_threshold;
 pub use curvature_gap_threshold::{

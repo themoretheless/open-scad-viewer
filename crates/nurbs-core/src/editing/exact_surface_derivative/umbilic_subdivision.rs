@@ -113,7 +113,12 @@ fn audit(source: &Surface, max_depth: u8, work: &mut Work) -> PResult<Vec<Umbili
     Ok(regions)
 }
 
-fn split(net: &[Q], size: [usize; 2], axis: usize, work: &mut Work) -> PResult<[Vec<Q>; 2]> {
+pub(super) fn split(
+    net: &[Q],
+    size: [usize; 2],
+    axis: usize,
+    work: &mut Work,
+) -> PResult<[Vec<Q>; 2]> {
     let [nu, nv] = size;
     let len = size[axis];
     let lines = size[1 - axis];
