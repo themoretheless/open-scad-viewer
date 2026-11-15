@@ -16,7 +16,7 @@ export interface SolidGpuBody {
   positions: Float32Array
   /** Smoothed vertex normals matching `positions`. */
   normals: Float32Array
-  /** HSL hue per triangle (220 base, 266 selected, 190 hovered, 40 selected face). */
+  /** HSL hue per triangle (220 base, 266 selected, 190 hovered, 40 selected face, 0 invalid). */
   hues: Float32Array
   /** RGB color used when the triangle hue is negative. */
   color?: [number,number,number] | undefined

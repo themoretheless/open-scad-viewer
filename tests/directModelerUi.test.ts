@@ -5185,3 +5185,75 @@ it('copies with a base point and pastes at a target point',async()=>{
  expect(pasted).not.toBe(cube)
  expect(Math.min(...xs(pasted))-Math.min(...xs(cube))).toBeCloseTo(50,6)
 })
+
+// C4: advanced commands point a refusal at their inspector field and at the scene objects.
+const invalidRows=(ui:Awaited<ReturnType<typeof mount>>)=>ui.all().filter(n=>n.tag==='li'&&n.props['data-sel-state']==='invalid').map(n=>ui.text(n))
+it('marks the chamfer size field and the body when the exact chamfer is refused',async()=>{
+ previewWorkerRun.mockImplementation(job=>job.kind==='bodyEdit'?Promise.reject(Object.assign(Error('Chamfer distance too large for edge'),{code:'BREP_EXACT_CHAMFER_REFUSED',targetIds:[]})):undefined)
+ const ui=await mount();await ui.click('Cube');const cube=ui.doc().bodies[0]
+ await ui.click('Edges');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polyline'&&n.props.onPointerdown)!)
+ await ui.click('Chamfer 3D');await flushClearance()
+ const field=ui.all(ui.all().find(n=>n.tag==='label'&&ui.text(n).startsWith('Radius / size, mm'))!).find(n=>n.tag==='input')!
+ expect(field.props['aria-invalid']).toBe(true)
+ expect(String(field.props['aria-describedby'])).toContain('advanced-command-error')
+ expect(ui.all().find(n=>n.props.id==='advanced-command-error')).toBeTruthy()
+ expect(invalidRows(ui).some(text=>text.includes(cube.name))).toBe(true)
+ const polygons=ui.all(ui.svg()).filter(n=>n.tag==='polygon'&&n.props['data-body']===cube.id)
+ expect(polygons.length).toBeGreaterThan(0)
+ expect(polygons.every(n=>n.props['data-sel-state']==='invalid')).toBe(true)
+ await commandKey(ui,'Escape');await flushClearance()
+ expect(invalidRows(ui)).toEqual([])
+})
+it('marks the end radius field when a variable fillet is refused across the worker boundary',async()=>{
+ previewWorkerRun.mockImplementation(job=>job.kind==='bodyEdit'?Promise.reject(Object.assign(Error('variable radius refused'),{code:'BREP_VARIABLE_RADIUS_FILLET_REFUSED',field:'endRadius',targetIds:[]})):undefined)
+ const brep=createBrepBox([0,0,0],[10,10,10]),built=tessellateNurbsBrep(brep,1)
+ const ui=await mount({},stringifyMeshJson({version:1,sketches:[],bodies:[{id:'box',name:'Box',brep,mesh:{positions:built.positions,indices:built.indices}}]}))
+ await ui.click('Box');await ui.click('Edges');await flushClearance();await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polyline'&&n.props.onPointerdown)!)
+ await ui.click('Fillet 3D');await flushClearance()
+ const mode=ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Fillet type')!
+ mode.props['onUpdate:modelValue']('variable');mode.props.onChange?.({target:{value:'variable'}});await flushClearance()
+ const end=ui.all().find(n=>n.tag==='label'&&ui.text(n).startsWith('Radius B, mm'))
+ const field=end?ui.all(end).find(n=>n.tag==='input')!:ui.all(ui.all().find(n=>n.tag==='label'&&ui.text(n).startsWith('Radius / size, mm'))!).find(n=>n.tag==='input')!
+ expect(end).toBeTruthy()
+ expect(field.props['aria-invalid']).toBe(true)
+ expect(ui.all().find(n=>n.props.id==='advanced-command-error')).toBeTruthy()
+})
+it('marks the NURBS loft inputs and the curve overlay when the same curve is chosen twice',async()=>{
+ const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');a.name='First curve';b.name='Second curve'
+ b.curve.controlPoints=b.curve.controlPoints.map(([x,y,z])=>[x,y,z+10])
+ previewWorkerRun.mockImplementation(job=>job.kind==='surfaceBuild'?Promise.reject(Object.assign(Error('Choose distinct curves.'),{name:'DirectInputError',code:'DIRECT_CURVES_DISTINCT',targetIds:['b']})):undefined)
+ const ui=await mount({},JSON.stringify({version:1,sketches:[],bodies:[],curves:[a,b]}))
+ await ui.click('First curve');await ui.click('Second curve',true);await ui.click('NURBS loft');await flushClearance()
+ const alert=ui.all().find(n=>n.props.id==='advanced-command-error')!
+ expect(ui.text(alert)).toContain('Choose a distinct curve for each role.')
+ const selects=ui.all().filter(n=>n.tag==='select'&&String(n.props['aria-label']).startsWith('Section '))
+ expect(selects.map(n=>n.props['aria-invalid'])).toEqual([undefined,'true'])
+ const curve=ui.all(ui.svg()).find(n=>n.tag==='polyline'&&n.props['data-sel-state']==='invalid')
+ expect(curve).toBeTruthy()
+ expect(invalidRows(ui).some(text=>text.includes('Second curve'))).toBe(true)
+})
+it('marks the Boolean operand body and its field when the exact Boolean is refused',async()=>{
+ previewWorkerRun.mockImplementation(job=>job.kind==='boolean'?Promise.reject(Object.assign(Error('refused'),{code:'BREP_ANALYTIC_BOOLEAN_REFUSED',targetIds:['Cutter']})):undefined)
+ const brep=createBrepCylinder(3,5),mesh=tessellateNurbsBrep(brep,4)
+ const body=(id:string)=>({id,name:id,brep:structuredClone(brep),mesh:{positions:mesh.positions,indices:mesh.indices}})
+ const ui=await mount({},stringifyMeshJson({version:1,sketches:[],bodies:[body('Stock'),body('Cutter')]}))
+ const before=ui.doc()
+ await ui.click('Stock');await ui.click('Cutter',true);await ui.click('B-rep Union');await flushClearance()
+ expect(ui.text(ui.all()[0])).toContain('An exact Boolean is unproven for these bodies')
+ expect(invalidRows(ui).some(text=>text.includes('Cutter'))).toBe(true)
+ expect(invalidRows(ui).some(text=>text.includes('Stock'))).toBe(false)
+ expect(ui.doc()).toEqual(before)
+})
+it('marks the sweep deviation field when the framed sweep exceeds its budget',async()=>{
+ const a=createSolidNurbsCurve('a'),b=createSolidNurbsCurve('b');a.name='Profile curve';b.name='Path curve'
+ b.curve.controlPoints=b.curve.controlPoints.map(([x,y,z])=>[z,x,y+10])
+ const report={accepted:false,sampledControlDeviation:2,budget:.01,stations:8,sections:4,continuousBound:false,method:'double-reflection-fourfold-section-refinement',closedPath:false}
+ previewWorkerRun.mockImplementation(job=>job.kind==='surfaceBuild'?Promise.resolve({document:null,error:'Sweep sampled deviation 2 exceeds budget 0.01. Adjust sections or budget.',report}):undefined)
+ const ui=await mount({},JSON.stringify({version:1,sketches:[],bodies:[],curves:[a,b]}))
+ await ui.click('Profile curve');await ui.click('Path curve',true);await ui.click('Sweep');await flushClearance()
+ const orientation=ui.all().find(n=>n.tag==='select'&&n.props['aria-label']==='Sweep orientation')!
+ orientation.props['onUpdate:modelValue']('framed');orientation.props.onChange?.({target:{value:'framed'}});await flushClearance()
+ const field=ui.all(ui.all().find(n=>n.tag==='label'&&ui.text(n).startsWith('Deviation budget, mm'))!).find(n=>n.tag==='input')!
+ expect(field.props['aria-invalid']).toBe(true)
+ expect(invalidRows(ui).length).toBe(2)
+})

@@ -40,6 +40,39 @@ export const KERNEL_ERROR_REASONS = [
   'booleanDuplicate',
   'invalidSize',
   'invalidSelection',
+  'curveInput',
+  'geometryInput',
+  'brepInput',
+  'unsupportedOperation',
+  'brepLimit',
+  'nurbsLimit',
+  'numeric',
+  'profileContacts',
+  'threadPatch',
+  'rationalSweep',
+  'sweepFrame',
+  'sourceContact',
+  'filletRefused',
+  'variableFillet',
+  'chamferRefused',
+  'cornerBlend',
+  'tessellation',
+  'massProperties',
+  'stepExport',
+  'analysisIndeterminate',
+  'offsetCap',
+  'invalidTopology',
+  'booleanRefused',
+  'curvesDistinct',
+  'curveMissing',
+  'patternSource',
+  'patternGrid',
+  'patternRadial',
+  'dimensionAnalytic',
+  'surfaceInputs',
+  'sweepDeviation',
+  'profilePlane',
+  'targetBody',
 ] as const
 export type KernelErrorReason = (typeof KERNEL_ERROR_REASONS)[number]
 
@@ -65,6 +98,20 @@ export const KERNEL_ERROR_STEPS = [
   'fillOperands',
   'removeDuplicate',
   'selectEdges',
+  'reduceRadius',
+  'reduceChamfer',
+  'fixCurve',
+  'chooseDistinct',
+  'reselectInputs',
+  'selectSource',
+  'patternCount',
+  'useRadius',
+  'refineSweep',
+  'samePlane',
+  'selectTarget',
+  'useMeshExport',
+  'reduceComplexity',
+  'separateProfiles',
 ] as const
 export type KernelErrorStep = (typeof KERNEL_ERROR_STEPS)[number]
 
@@ -74,6 +121,8 @@ export interface KernelErrorSpec {
   step: KernelErrorStep
   /** Inspector field id (`data-field`) to mark with `aria-invalid`. */
   field?: string
+  /** The exact message is still broad: the English UI keeps the kernel text as detail. */
+  detail?: true
 }
 
 /** Codes that need a message more specific than their family. */
@@ -105,6 +154,50 @@ const SPECIFIC: Partial<Record<KernelErrorCode, KernelErrorSpec>> = {
   ENGINE_UNAVAILABLE: { reason: 'unavailable', input: 'none', step: 'reload' },
   GEOMETRY_ABI_MISMATCH: { reason: 'unavailable', input: 'none', step: 'reload' },
   CAD_SOURCE_BODY_RESTORE: { reason: 'topology', input: 'body', step: 'undo' },
+  // The most frequent kernel codes (by occurrence in crates and tests) get exact texts.
+  NURBS_INVALID_INPUT: { reason: 'curveInput', input: 'curve', step: 'fixCurve', detail: true },
+  GEOMETRY_INVALID_INPUT: { reason: 'geometryInput', input: 'none', step: 'checkInput', detail: true },
+  BREP_INVALID_INPUT: { reason: 'brepInput', input: 'body', step: 'checkInput', detail: true },
+  FRAME_INVALID_INPUT: { reason: 'sweepFrame', input: 'curve', step: 'changeGeometry', detail: true },
+  BREP_UNSUPPORTED_OPERATION: { reason: 'unsupportedOperation', input: 'body', step: 'changeGeometry', detail: true },
+  NURBS_NUMERIC_ERROR: { reason: 'numeric', input: 'curve', step: 'reduceComplexity', detail: true },
+  BREP_RESOURCE_LIMIT: { reason: 'brepLimit', input: 'body', step: 'simplify' },
+  NURBS_RESOURCE_LIMIT: { reason: 'nurbsLimit', input: 'curve', step: 'reduceComplexity' },
+  BREP_PROFILE_CONTACTS: { reason: 'profileContacts', input: 'sketch', step: 'separateProfiles' },
+  BREP_THREAD_PATCH_UNRESOLVED: { reason: 'threadPatch', input: 'sketch', step: 'changeParameters' },
+  BREP_INVALID_THREAD_PATCH: { reason: 'threadPatch', input: 'sketch', step: 'changeParameters' },
+  BREP_RATIONAL_SWEEP_REFUSED: { reason: 'rationalSweep', input: 'curve', step: 'changeGeometry' },
+  BREP_SOURCE_CONTACT: { reason: 'sourceContact', input: 'face', step: 'changeGeometry' },
+  BREP_VARIABLE_RADIUS_FILLET_REFUSED: {
+    reason: 'variableFillet',
+    input: 'field',
+    field: 'endRadius',
+    step: 'reduceRadius',
+  },
+  BREP_ANALYTIC_FILLET_REFUSED: { reason: 'filletRefused', input: 'field', field: 'radius', step: 'reduceRadius' },
+  BREP_EXACT_FILLET_REFUSED: { reason: 'filletRefused', input: 'field', field: 'radius', step: 'reduceRadius' },
+  BREP_ANALYTIC_CHAMFER_REFUSED: { reason: 'chamferRefused', input: 'field', field: 'radius', step: 'reduceChamfer' },
+  BREP_EXACT_CHAMFER_REFUSED: { reason: 'chamferRefused', input: 'field', field: 'radius', step: 'reduceChamfer' },
+  BREP_VALENCE3_CORNER_BLEND_REFUSED: { reason: 'cornerBlend', input: 'field', field: 'radius', step: 'reduceRadius' },
+  BREP_CERTIFIED_TESSELLATION_REFUSED: { reason: 'tessellation', input: 'body', step: 'simplify' },
+  BREP_CERTIFIED_MASS_REFUSED: { reason: 'massProperties', input: 'body', step: 'simplify' },
+  BREP_NURBS_STEP_REFUSED: { reason: 'stepExport', input: 'body', step: 'useMeshExport' },
+  BREP_STEP_REFUSED: { reason: 'stepExport', input: 'body', step: 'useMeshExport' },
+  BREP_ANALYSIS_INDETERMINATE: { reason: 'analysisIndeterminate', input: 'body', step: 'changeParameters' },
+  BREP_OFFSET_CAP_REFUSED: { reason: 'offsetCap', input: 'field', field: 'distance', step: 'changeParameters' },
+  BREP_INVALID_TOPOLOGY: { reason: 'invalidTopology', input: 'body', step: 'undo' },
+  BREP_ANALYTIC_BOOLEAN_REFUSED: { reason: 'booleanRefused', input: 'body', step: 'changeGeometry' },
+  // TypeScript-side refusals that used to throw uncoded text.
+  DIRECT_CURVES_DISTINCT: { reason: 'curvesDistinct', input: 'curve', step: 'chooseDistinct' },
+  DIRECT_CURVE_MISSING: { reason: 'curveMissing', input: 'curve', step: 'reselectInputs' },
+  DIRECT_SURFACE_INPUTS: { reason: 'surfaceInputs', input: 'curve', step: 'reselectInputs' },
+  DIRECT_SWEEP_DEVIATION: { reason: 'sweepDeviation', input: 'field', field: 'sweepDeviation', step: 'refineSweep' },
+  DIRECT_PATTERN_SOURCE: { reason: 'patternSource', input: 'body', step: 'selectSource' },
+  DIRECT_PATTERN_GRID: { reason: 'patternGrid', input: 'field', field: 'patternCount', step: 'patternCount' },
+  DIRECT_PATTERN_RADIAL: { reason: 'patternRadial', input: 'field', field: 'patternCount', step: 'patternCount' },
+  DIRECT_DIMENSION_ANALYTIC: { reason: 'dimensionAnalytic', input: 'sketch', step: 'useRadius' },
+  DIRECT_PROFILE_PLANE: { reason: 'profilePlane', input: 'sketch', step: 'samePlane' },
+  DIRECT_TARGET_BODY: { reason: 'targetBody', input: 'body', step: 'selectTarget' },
 }
 
 function familyInput(code: string): KernelErrorInput {
@@ -202,7 +295,7 @@ export function presentKernelError(
   const field = errorField(error) ?? spec?.field
   // Family messages are generic; kernel texts are English, so only the English UI keeps them as detail.
   const detail =
-    lang === 'en' && !(code in SPECIFIC) && raw.trim()
+    lang === 'en' && (!spec || !(code in SPECIFIC) || spec.detail) && raw.trim()
       ? ` ${translate(lang, 'kernelErrorDetail', { detail: raw.trim() })}`
       : ''
   return {
