@@ -10,9 +10,12 @@ use num_rational::BigRational as Q;
 use num_traits::{One, Signed, Zero};
 
 pub(super) fn nonnegative(power: &Poly, degree: usize, work: &mut Work) -> PResult<bool> {
-    if poly::bernstein(power, degree, work)?
-        .iter()
-        .all(|q| !q.is_negative())
+    // The fast basis conversion uses integer binomials at curve degree.
+    // Composed distance polynomials can exceed that range.
+    if degree <= 25
+        && poly::bernstein(power, degree, work)?
+            .iter()
+            .all(|q| !q.is_negative())
     {
         return Ok(true);
     }

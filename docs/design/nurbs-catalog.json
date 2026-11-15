@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 303,
-  "unallocatedCount": 697,
+  "specifiedCount": 304,
+  "unallocatedCount": 696,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8014,6 +8014,28 @@
       "remainingQualification": [
         "Prove positional and regular tangent-plane agreement over a paired surface seam by exact rational composition and full-interval normal tests.",
         "Exact shared parameter domain, including one-sided endpoint normal checks. Normal orientation is free; no side-of-face or manifold authority.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0304",
+      "name": "Сертифицированная непрерывная проверка допуска зазора вдоль UV-шва",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_projective::certify_pcurve_seam_gap",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_projective.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_gap.rs",
+        "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_agreement.rs",
+        "crates/nurbs-core/tests/exact_pcurve_gap_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-304-2026-11-16/receipt.json",
+        "docs/qualification/nurbs-curvature-field-304-2026-11-16/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enforce the Euclidean gap tolerance over the entire shared absolute seam correspondence using exact squared-distance polynomial signs.",
+        "Provided absolute parameter correspondence. Exact cell cuts and arithmetic budget; the test includes extrema at the tolerance and returns the first violating interval.",
         "WASM and application integration are separate."
       ]
     }
