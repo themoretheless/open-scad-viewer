@@ -22,6 +22,7 @@ import { meshToNurbs, meshToNurbsBrep, meshToSdf, meshToSubdivision, tessellateN
 import { tessellateSubdivision } from '../../kernel/geometry/subdivision'
 
 import { buildNativePrimitive } from './buildNativePrimitive'
+import { selectBrepEdges } from './selectBrepEdges'
 type NativeNode = ReturnType<typeof compileRushGraphNurbs>['resolved_document']['nodes'][number]
 export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, _request: OwnNurbsRequest, resolveSweep?: SweepResolver, resolveBody?: BodyResolver, resolveMiter?: MiterResolver, resolveStations?:StationResolver) {
     const cache = new Map<string, Value>()
@@ -428,8 +429,8 @@ export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, _request:
                 case 'brep_extrude_curves':
                     result={kind:'brep',data:extrudeBrepCurves(n.loops.map(wire=>wire.map(needCurve)),n.z_min,n.z_max)};break;
                 case 'brep_boolean': result={kind:'brep',data:booleanNurbsBrep(needBrep(n.inputs[0]),needBrep(n.inputs[1]),n.operation)};break;
-                case 'brep_chamfer': result={kind:'brep',data:chamferNurbsBrepEdges(needBrep(n.input),n.edges,n.size)};break;
-                case 'brep_fillet': result={kind:'brep',data:filletNurbsBrepEdges(needBrep(n.input),n.edges,n.radius,n.segments)};break;
+                case 'brep_chamfer': {const model=needBrep(n.input);result={kind:'brep',data:chamferNurbsBrepEdges(model,selectBrepEdges(model,n.edges),n.size)};break;}
+                case 'brep_fillet': {const model=needBrep(n.input);result={kind:'brep',data:filletNurbsBrepEdges(model,selectBrepEdges(model,n.edges),n.radius,n.segments)};break;}
                 case 'brep_tessellate': {
                     const input=get(n.input);if(input.kind!=='brep')throw new Error('Expected a B-rep model');
                     result={kind:'mesh',data:tessellateNurbsBrep(input.data,n.segments)};

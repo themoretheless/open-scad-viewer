@@ -1204,6 +1204,32 @@
                   "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
                 }
               },
+              "circles": {
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                    },
+                    "center": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                    },
+                    "radius": {
+                      "$ref": "#/$defs/__schema1"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "center",
+                    "radius"
+                  ],
+                  "additionalProperties": false
+                }
+              },
               "constraints": {
                 "maxItems": 48,
                 "type": "array",
@@ -1352,8 +1378,195 @@
                         "d"
                       ],
                       "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "radius"
+                        },
+                        "circle": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "value": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "circle",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "concentric",
+                            "equal_radius"
+                          ]
+                        },
+                        "a": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "b": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "a",
+                        "b"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "point_on_circle"
+                        },
+                        "point": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "circle": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "point",
+                        "circle"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "tangent_line_circle"
+                        },
+                        "a": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "b": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "circle": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "a",
+                        "b",
+                        "circle"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "tangent_circles"
+                        },
+                        "a": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "b": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                        },
+                        "internal": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "a",
+                        "b",
+                        "internal"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
+                }
+              },
+              "arcs": {
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                    },
+                    "circle": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                    },
+                    "ccw": {
+                      "default": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "circle",
+                    "ccw"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "holes": {
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
                 }
               },
               "allow_underconstrained": {
@@ -3294,6 +3507,32 @@
                             "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
                           }
                         },
+                        "circles": {
+                          "maxItems": 8,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              },
+                              "center": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              },
+                              "radius": {
+                                "$ref": "#/$defs/__schema1"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "center",
+                              "radius"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
                         "constraints": {
                           "maxItems": 48,
                           "type": "array",
@@ -3442,8 +3681,195 @@
                                   "d"
                                 ],
                                 "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "radius"
+                                  },
+                                  "circle": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "value": {
+                                    "$ref": "#/$defs/__schema1"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "circle",
+                                  "value"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "concentric",
+                                      "equal_radius"
+                                    ]
+                                  },
+                                  "a": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "b": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "a",
+                                  "b"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "point_on_circle"
+                                  },
+                                  "point": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "circle": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "point",
+                                  "circle"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "tangent_line_circle"
+                                  },
+                                  "a": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "b": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "circle": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "a",
+                                  "b",
+                                  "circle"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "tangent_circles"
+                                  },
+                                  "a": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "b": {
+                                    "type": "string",
+                                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                                  },
+                                  "internal": {
+                                    "default": false,
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "kind",
+                                  "a",
+                                  "b",
+                                  "internal"
+                                ],
+                                "additionalProperties": false
                               }
                             ]
+                          }
+                        },
+                        "arcs": {
+                          "maxItems": 16,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "from": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              },
+                              "circle": {
+                                "type": "string",
+                                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+                              },
+                              "ccw": {
+                                "default": true,
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "from",
+                              "circle",
+                              "ccw"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "holes": {
+                          "maxItems": 8,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
                           }
                         },
                         "allow_underconstrained": {
