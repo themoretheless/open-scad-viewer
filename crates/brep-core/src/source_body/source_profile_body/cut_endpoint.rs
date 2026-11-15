@@ -1,5 +1,110 @@
 //! source profile body operations: cut_endpoint.
 use super::*;
+use nurbs_core::interval_eval::Interval as I;
+
+/// Section end at `parameter` on a selected edge use that must be affine
+/// along `axis` on the preserved natural `boundary` of its face.
+struct AffineCut<'e> {
+    edge: &'e crate::source_shared_edge::SharedEdge,
+    side: usize,
+    axis: usize,
+    parameter: f64,
+    boundary: f64,
+}
+
+impl AffineCut<'_> {
+    /// Canonical carrier enclosure of the cut, or `None` when the selected
+    /// use is not an affine natural-boundary line through the parameter.
+    fn canonical(&self, profile: &WeightProfile<'_>) -> Result<Option<I>> {
+        let Self {
+            edge,
+            side,
+            axis,
+            parameter,
+            boundary,
+        } = *self;
+        let use_ = &edge.uses()[side];
+        let c = use_.curve();
+        if !same(use_.surface(), profile.source())
+            || c.periodic
+            || c.degree != 1
+            || c.control_points.len() != 2
+            || c.weights[0] != c.weights[1]
+            || c.control_points
+                .iter()
+                .any(|p| p.len() != 2 || p[1 - axis] != boundary)
+            || c.control_points[0][axis] == c.control_points[1][axis]
+        {
+            return Ok(None);
+        }
+        let ends = [c.control_points[0][axis], c.control_points[1][axis]];
+        if parameter < ends[0].min(ends[1]) || parameter > ends[0].max(ends[1]) {
+            return Ok(None);
+        }
+        let normalized = I::point(parameter)
+            .sub(I::point(ends[0]))?
+            .div_signed(I::point(ends[1]).sub(I::point(ends[0]))?)?
+            .intersect(0., 1.)?;
+        let d = c.domain();
+        let t = I::point(d[0])
+            .add(normalized.mul(I::point(d[1]).sub(I::point(d[0]))?)?)?
+            .intersect(d[0], d[1])?;
+        Ok(Some(
+            crate::source_seam_tangency::map(edge, side, t)?.intersect(0., 1.)?,
+        ))
+    }
+
+    /// Whether both retained original uses still own the canonical cut.
+    fn retained(&self, canonical: I) -> Result<bool> {
+        let edge = self.edge;
+        if !edge.maps_complete_canonical_source()
+            && !edge.covers_retained_canonical_interval([canonical.lo, canonical.hi])?
+        {
+            return Ok(false);
+        }
+        for current in 0..2 {
+            let t = crate::source_seam_tangency::inverse(edge, current, canonical)?;
+            let ends = edge.uses()[current].parameter_bounds();
+            if t.lo < ends[0][1].min(ends[1][1]) || t.hi > ends[0][0].max(ends[1][0]) {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+
+    /// Neighbor UV and world enclosures of the cut; `None` when the span
+    /// budget is exhausted before both curves are charged.
+    #[allow(clippy::type_complexity)]
+    fn enclose(
+        &self,
+        canonical: I,
+        max_spans: usize,
+        spans: &mut usize,
+    ) -> Result<Option<([[f64; 2]; 2], [[f64; 2]; 3])>> {
+        let edge = self.edge;
+        let neighbor = 1 - self.side;
+        let nc = edge.uses()[neighbor].curve();
+        let t = crate::source_seam_tangency::inverse(edge, neighbor, canonical)?;
+        let world = edge.world();
+        let d = world.domain();
+        let w = I::point(d[0])
+            .add(canonical.mul(I::point(d[1]).sub(I::point(d[0]))?)?)?
+            .intersect(d[0], d[1])?;
+        for (curve, t) in [(nc, t), (world, w)] {
+            let spent = span_work::touched_spans(curve, t);
+            if spent > max_spans - *spans {
+                return Ok(None);
+            }
+            *spans += spent;
+        }
+        let uv = nurbs_core::interval_eval::evaluate_interval(nc, t)?;
+        let point = nurbs_core::interval_eval::evaluate_interval(world, w)?;
+        Ok(Some((
+            [[uv[0].lo, uv[0].hi], [uv[1].lo, uv[1].hi]],
+            std::array::from_fn(|k| [point[k].lo, point[k].hi]),
+        )))
+    }
+}
 impl<'a> Proposal<'a> {
 /// Bind a new section end to both retained original edge uses. The selected
     /// use must be affine on a preserved natural boundary; its neighbor may
@@ -13,7 +118,6 @@ impl<'a> Proposal<'a> {
         index: usize,
         max_spans: usize,
     ) -> Result<CutEndpointReport<'p, 'a>> {
-        use nurbs_core::interval_eval::Interval as I;
         let profile = self
             .profile(face)
             .ok_or_else(|| Error::new("BREP_PROFILE_CUT", "Choose a proposed face"))?;
@@ -23,7 +127,7 @@ impl<'a> Proposal<'a> {
             .uses()
             .get(index)
             .ok_or_else(|| Error::new("BREP_PROFILE_CUT", "Choose an owned edge"))?;
-        if max_spans > 100000 {
+        if max_spans > span_work::MAX_WORK {
             return Err(Error::new("BREP_PROFILE_CUT", "Bound cut parameter work"));
         }
         let mut out = CutEndpointReport {
@@ -35,7 +139,9 @@ impl<'a> Proposal<'a> {
             return Ok(out);
         };
         let edge = &shell.edges()[index];
-        let regions = shell.regions().unwrap();
+        let regions = shell
+            .regions()
+            .ok_or_else(|| Error::new("BREP_PROFILE_CUT", "Choose an owned edge"))?;
         if (0..2).any(|i| {
             !same(
                 edge.uses()[i].surface(),
@@ -44,83 +150,35 @@ impl<'a> Proposal<'a> {
         }) {
             return Ok(out);
         }
-        let use_ = &edge.uses()[side];
-        let c = use_.curve();
-        let boundary = section.range()[usize::from(high)];
-        if !same(use_.surface(), profile.source())
-            || c.periodic
-            || c.degree != 1
-            || c.control_points.len() != 2
-            || c.weights[0] != c.weights[1]
-            || c.control_points
-                .iter()
-                .any(|p| p.len() != 2 || p[1 - axis] != boundary)
-            || c.control_points[0][axis] == c.control_points[1][axis]
-        {
+        let cut = AffineCut {
+            edge,
+            side,
+            axis,
+            parameter,
+            boundary: section.range()[usize::from(high)],
+        };
+        let Some(canonical) = cut.canonical(profile)? else {
             return Ok(out);
-        }
-        let ends = [c.control_points[0][axis], c.control_points[1][axis]];
-        if parameter < ends[0].min(ends[1]) || parameter > ends[0].max(ends[1]) {
-            return Ok(out);
-        }
-        let normalized = I::point(parameter)
-            .sub(I::point(ends[0]))?
-            .div_signed(I::point(ends[1]).sub(I::point(ends[0]))?)?
-            .intersect(0., 1.)?;
-        let d = c.domain();
-        let t = I::point(d[0])
-            .add(normalized.mul(I::point(d[1]).sub(I::point(d[0]))?)?)?
-            .intersect(d[0], d[1])?;
-        let canonical = crate::source_seam_tangency::map(edge, side, t)?.intersect(0., 1.)?;
-        if !edge.maps_complete_canonical_source()
-            && !edge.covers_retained_canonical_interval([canonical.lo, canonical.hi])?
-        {
+        };
+        if !cut.retained(canonical)? {
             out.reason = "profile-cut-retained-parameter-unproven";
             return Ok(out);
         }
-        for current in 0..2 {
-            let t = crate::source_seam_tangency::inverse(edge, current, canonical)?;
-            let ends = edge.uses()[current].parameter_bounds();
-            if t.lo < ends[0][1].min(ends[1][1]) || t.hi > ends[0][0].max(ends[1][0]) {
-                out.reason = "profile-cut-retained-parameter-unproven";
-                return Ok(out);
-            }
-        }
-        let neighbor = 1 - side;
-        let nc = edge.uses()[neighbor].curve();
-        let t = crate::source_seam_tangency::inverse(edge, neighbor, canonical)?;
-        let world = edge.world();
-        let d = world.domain();
-        let w = I::point(d[0])
-            .add(canonical.mul(I::point(d[1]).sub(I::point(d[0]))?)?)?
-            .intersect(d[0], d[1])?;
-        for (curve, t) in [(nc, t), (world, w)] {
-            let spent = (curve.degree..curve.control_points.len())
-                .filter(|&i| {
-                    curve.knots[i] < curve.knots[i + 1]
-                        && curve.knots[i] <= t.hi
-                        && curve.knots[i + 1] >= t.lo
-                })
-                .count();
-            if spent > max_spans - out.spans {
-                out.reason = "profile-cut-work-limit";
-                return Ok(out);
-            }
-            out.spans += spent;
-        }
-        let uv = nurbs_core::interval_eval::evaluate_interval(nc, t)?;
-        let point = nurbs_core::interval_eval::evaluate_interval(world, w)?;
+        let Some((neighbor_uv, world)) = cut.enclose(canonical, max_spans, &mut out.spans)? else {
+            out.reason = "profile-cut-work-limit";
+            return Ok(out);
+        };
         out.endpoint = Some(CutEndpoint {
             proposal: self,
             face,
-            neighbor: addresses[neighbor].face,
+            neighbor: addresses[1 - side].face,
             edge: index,
             axis,
             parameter,
             high,
             canonical: [canonical.lo, canonical.hi],
-            neighbor_uv: [[uv[0].lo, uv[0].hi], [uv[1].lo, uv[1].hi]],
-            world: std::array::from_fn(|k| [point[k].lo, point[k].hi]),
+            neighbor_uv,
+            world,
         });
         out.reason = "profile-cut-endpoint-owned";
         Ok(out)
