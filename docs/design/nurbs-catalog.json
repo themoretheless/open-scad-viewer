@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 258,
-  "unallocatedCount": 742,
+  "specifiedCount": 259,
+  "unallocatedCount": 741,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6994,6 +6994,28 @@
       "remainingQualification": [
         "Exact or continuously error-bounded [K,0,0] field on the original UV cells. The original squared area normal must have a strictly positive tensor Bernstein enclosure before cancellation. Singular or unresolved cells and storage/work refusals return no partial fields.",
         "One-sided original clocks and inverse-length-squared units. WASM and application delivery are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0259",
+      "name": "Точное и непрерывно ограниченное поле квадрата средней кривизны NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::squared_mean_curvature",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/mean_curvature.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs",
+        "crates/nurbs-core/src/editing/bounded_surface_differential.rs",
+        "crates/nurbs-core/tests/mean_curvature_field_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-259-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-curvature-field-259-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "H² is expressed with original rational first and second forms as a scalar field in inverse length squared. The sign of the mean curvature and the normal orientation are outside the squared invariant.",
+        "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage.",
+        "WASM and application integration are separate."
       ]
     }
   ],

@@ -1,32 +1,11 @@
 //! Gaussian curvature using the original rational jets.
 use super::*;
-use num_traits::Signed;
-
-fn dot(a: &[Poly], b: &[Poly], work: &mut Work) -> PResult<Poly> {
-    let mut sum = Poly::new();
-    for (a, b) in a[..3].iter().zip(&b[..3]) {
-        for (key, value) in polynomial::multiply(a, b, work)? {
-            polynomial::accumulate(&mut sum, key, &value, work)?;
-        }
-    }
-    Ok(sum)
-}
+use curvature::{dot, require_regular};
 
 pub(super) fn target(h: &[Poly], widths: &[Q], work: &mut Work) -> PResult<Vec<Poly>> {
     let normal = area_target(h, widths, work)?;
     let norm_squared = dot(&normal, &normal, work)?;
-    let (pu, pv) = storage::degrees(std::slice::from_ref(&norm_squared));
-    if pu > 25 || pv > 25 {
-        return Err(Refusal::OutputDegreeLimit);
-    }
-    // A zero Jacobian makes K undefined, even if the determinant vanishes.
-    // Prove the original squared normal positive before building or reducing K.
-    if !storage::bernstein(&norm_squared, pu, pv, work)?
-        .iter()
-        .all(Signed::is_positive)
-    {
-        return Err(Refusal::UnprovedDenominator);
-    }
+    require_regular(&norm_squared, work)?;
 
     let uu = dot(&normal, &mixed::target(h, [2, 0], widths, work)?, work)?;
     let uv = dot(&normal, &mixed::target(h, [1, 1], widths, work)?, work)?;

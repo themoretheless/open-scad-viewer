@@ -10,8 +10,10 @@ use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
 use std::collections::BTreeMap;
 mod content;
+mod curvature;
 mod extraction;
 mod gaussian;
+mod mean_curvature;
 mod mixed;
 pub(super) mod polynomial;
 pub(super) mod storage;
@@ -73,6 +75,7 @@ pub(super) enum Field {
     Metric,
     Mixed([usize; 2]),
     GaussianCurvature,
+    SquaredMeanCurvature,
 }
 fn area_target(h: &[Poly], widths: &[Q], w: &mut Work) -> PResult<Vec<Poly>> {
     let u = target(h, Axis::U, &widths[0], w)?;
@@ -137,6 +140,7 @@ pub(super) fn original_target(
         Field::Metric => metric_target(&h, &widths, w)?,
         Field::Mixed(orders) => mixed::target(&h, orders, &widths, w)?,
         Field::GaussianCurvature => gaussian::target(&h, &widths, w)?,
+        Field::SquaredMeanCurvature => mean_curvature::target(&h, &widths, w)?,
     })
 }
 pub(super) fn reduced_target(target: &[Poly], w: &mut Work) -> PResult<Vec<Poly>> {
@@ -205,6 +209,14 @@ pub fn mixed_partial(source: &Surface, orders: [usize; 2], max_work: u64) -> Res
 /// cells and nonrepresentable exact outputs refuse the entire result.
 pub fn gaussian_curvature(source: &Surface, max_work: u64) -> Result<Report> {
     apply(source, Field::GaussianCurvature, max_work)
+}
+
+/// Construct the rational scalar carrier `[H², 0, 0]` on all original UV cells.
+/// H is half the sum of signed principal curvatures. Squaring makes the
+/// value independent of normal orientation. The original normal must be
+/// proved regular on every cell, even when the curvature is zero.
+pub fn squared_mean_curvature(source: &Surface, max_work: u64) -> Result<Report> {
+    apply(source, Field::SquaredMeanCurvature, max_work)
 }
 
 fn apply(source: &Surface, field: Field, max_work: u64) -> Result<Report> {

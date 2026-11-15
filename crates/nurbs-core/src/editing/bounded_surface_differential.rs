@@ -137,6 +137,14 @@ pub fn gaussian_curvature(source: &Surface, max_error: f64, max_work: u64) -> Re
     apply(source, exact::Field::GaussianCurvature, max_error, max_work)
 }
 
+/// Construct `[H², 0, 0]` with a continuous absolute error at most
+/// `max_error` on every original UV cell. Units are inverse length squared.
+/// The original normal regularity check precedes reduction and rounding.
+pub fn squared_mean_curvature(source: &Surface, max_error: f64, max_work: u64) -> Result<Report> {
+    source.validate()?;
+    apply(source, exact::Field::SquaredMeanCurvature, max_error, max_work)
+}
+
 fn apply(
     source: &Surface,
     field: exact::Field,
