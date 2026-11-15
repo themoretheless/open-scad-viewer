@@ -26,7 +26,7 @@ const MARGIN: f64 = 1e-6;
 /// Largest distance from a cut point to the seam edge it lies on.
 const EDGE_GAP: f64 = 1e-6;
 
-fn refuse(message: &str) -> Error {
+pub(super) fn refuse(message: &str) -> Error {
     Error::new("BREP_UNSUPPORTED_OPERATION", message)
 }
 
@@ -62,7 +62,7 @@ fn at_vertex(model: &Model, p: [f64; 3]) -> Option<usize> {
 }
 
 /// How a cut point attaches to the operands' original topology.
-fn network_end(models: [&Model; 2], p: [f64; 3], free_id: &mut usize) -> Result<NetworkEnd> {
+pub(super) fn network_end(models: [&Model; 2], p: [f64; 3], free_id: &mut usize) -> Result<NetworkEnd> {
     let vertices = models.map(|m| at_vertex(m, p));
     match vertices {
         [Some(_), Some(_)] => Err(refuse("Pair Boolean: network vertex at original vertices of both operands")),
@@ -97,6 +97,20 @@ fn on_edge(model: &Model, p: [f64; 3]) -> Result<Option<(usize, f64)>> {
     let mut best: Option<(f64, usize, f64)> = None;
     for (index, edge) in model.edges.iter().enumerate() {
         if edge.degenerate {
+            continue;
+        }
+        // The curve lies in the box of its control points: skip edges whose
+        // box is farther than the gap (and never invert on them).
+        let mut lo = [f64::INFINITY; 3];
+        let mut hi = [f64::NEG_INFINITY; 3];
+        for c in &edge.curve.control_points {
+            for k in 0..3 {
+                lo[k] = lo[k].min(c[k]);
+                hi[k] = hi[k].max(c[k]);
+            }
+        }
+        let outside: f64 = (0..3).map(|k| (lo[k] - p[k]).max(p[k] - hi[k]).max(0.).powi(2)).sum();
+        if outside.sqrt() > EDGE_GAP {
             continue;
         }
         let report = nurbs_core::analysis::point_inversion::invert_point(&edge.curve, &p, options)?;
@@ -429,13 +443,13 @@ fn decide(signed: f64, what: &str) -> Result<bool> {
     Ok(signed < 0.)
 }
 
+/// Cuts closer than this in 3D are one crossing.
+const SLIVER: f64 = 1e-6;
+
 /// Boolean of two canonical solids of revolution (`a` a cylinder or cone,
 /// `b` a torus, or any pair of `Other`) from certified, complete traced
 /// loops lying on their curved walls.
 #[allow(clippy::too_many_arguments)]
-/// Cuts closer than this in 3D are one crossing.
-const SLIVER: f64 = 1e-6;
-
 fn pair_boolean(
     a_model: &Model,
     b_model: &Model,
@@ -623,7 +637,7 @@ fn pair_boolean(
     network_boolean(a_model, b_model, operation, &network, inside, tolerance)
 }
 
-fn inside_cylinder(c: &crate::sphere_cylinder::CanonicalCylinder, p: [f64; 3]) -> Result<bool> {
+pub(super) fn inside_cylinder(c: &crate::sphere_cylinder::CanonicalCylinder, p: [f64; 3]) -> Result<bool> {
     let d = sub(p, c.center);
     let z = dot(d, c.axis);
     let rho = dot(d, c.frame[0]).hypot(dot(d, c.frame[1]));
