@@ -93,13 +93,123 @@ fn line(data: &BoundaryDefinition, reversed: bool) -> ParameterLine {
     }
     ParameterLine { points }
 }
+/// Largest numerator/denominator bit length admitted for an exact graph vertex.
+const MAX_VERTEX_BITS: u64 = 8192;
+/// Admitted control-point counts of a saved exact graph edge.
+const GRAPH_EDGE_POINTS: std::ops::RangeInclusive<usize> = 2..=33;
+/// Admitted number of transition panels in one strip.
+const MAX_PANELS: usize = 64;
+/// Supported B-rep tolerance interval, in millimetres.
+const TOLERANCE_MM: std::ops::RangeInclusive<f64> = 1e-10..=1e-2;
+/// Whole-panel curvature bound (1/mm) and its sample budget.
+const MAX_CURVATURE_PER_MM: f64 = 10.;
+const CURVATURE_SAMPLES: usize = 100_000;
+/// Position and normal tolerances of the internal G2 join check.
+const G2_POSITION_TOLERANCE: f64 = 1e-5;
+const G2_NORMAL_TOLERANCE: f64 = 1e-5;
+const PANEL_SIDES: [Boundary; 4] = [
+    Boundary::UMin,
+    Boundary::UMax,
+    Boundary::VMin,
+    Boundary::VMax,
+];
+/// Root restriction and vertex ownership of one saved graph edge.
+fn check_graph_edge(
+    model: &Topology,
+    edge: &brep_topology::Edge<Edge>,
+    budget: &mut Budget,
+) -> Result<()> {
+    let definition = BoundaryDefinition {
+        points: edge.curve.root.points.clone(),
+        uv: [[Q::zero(), Q::zero()], [Q::one(), Q::zero()]],
+    };
+    let restricted = definition.restricted(edge.curve.range.clone(), budget)?;
+    require(
+        restricted.points == edge.curve.points,
+        "Saved edge lost its original root restriction",
+    )?;
+    require(
+        !edge.degenerate && GRAPH_EDGE_POINTS.contains(&edge.curve.points.len()),
+        "Unsupported exact graph edge",
+    )?;
+    let owned = match (edge.curve.points.first(), edge.curve.points.last()) {
+        (Some(first), Some(last)) => {
+            first == &model.vertices[edge.vertices[0]].point
+                && last == &model.vertices[edge.vertices[1]].point
+        }
+        _ => false,
+    };
+    require(owned, "Exact edge endpoints do not own their vertices")
+}
+/// Coefficient comparisons when coedge `c` is the exact restriction of patch
+/// boundary `side`; `None` when its parameter line is not on that boundary.
+fn side_lift(
+    model: &Topology,
+    patch: &Patch,
+    c: &brep_topology::Coedge<ParameterLine>,
+    side: Boundary,
+    budget: &mut Budget,
+) -> Result<Option<usize>> {
+    let mut data = patch.boundary_definition(side, budget)?;
+    let free = usize::from(data.uv[0][0] == data.uv[1][0]);
+    let fixed = 1 - free;
+    if c.pcurve
+        .points
+        .iter()
+        .any(|p| p[fixed] != data.uv[0][fixed])
+    {
+        return Ok(None);
+    }
+    let width = &data.uv[1][free] - &data.uv[0][free];
+    let parameters = c
+        .pcurve
+        .points
+        .each_ref()
+        .map(|p| (&p[free] - &data.uv[0][free]) / &width);
+    if parameters[0] == parameters[1]
+        || parameters.iter().any(|q| q < &Q::zero() || q > &Q::one())
+    {
+        return Ok(None);
+    }
+    let forward = parameters[0] < parameters[1];
+    let range = if forward {
+        parameters
+    } else {
+        [parameters[1].clone(), parameters[0].clone()]
+    };
+    data = data.restricted(range, budget)?;
+    if !forward {
+        data.points.reverse();
+    }
+    let edge = &model.edges[c.edge].curve;
+    require(
+        edge.points.len() == data.points.len(),
+        "Edge and surface boundary degrees differ",
+    )?;
+    let mut comparisons = 0;
+    for (i, p) in data.points.iter().enumerate() {
+        let q = &edge.points[if c.reversed {
+            edge.points.len() - 1 - i
+        } else {
+            i
+        }];
+        comparisons += 3;
+        require(
+            p == q,
+            "Saved canonical edge does not match its exact face lift",
+        )?;
+    }
+    Ok(Some(comparisons))
+}
 /// Local full-boundary geometry and incidence only. Mutable clones never inherit
 /// the Strip owner. Closed-body/global external-face validity is not implied.
 pub fn inspect_geometry(model: &Topology, budget: &mut Budget) -> Result<GeometryReport> {
     model.validate_topology_with_vertices(|p| {
         require(
             p.iter().all(|q| {
-                q.denom().is_positive() && q.numer().bits() <= 8192 && q.denom().bits() <= 8192
+                q.denom().is_positive()
+                    && q.numer().bits() <= MAX_VERTEX_BITS
+                    && q.denom().bits() <= MAX_VERTEX_BITS
             }),
             "Vertex exceeds exact graph bit budget",
         )
@@ -111,24 +221,7 @@ pub fn inspect_geometry(model: &Topology, budget: &mut Budget) -> Result<Geometr
     };
     let mut uses = vec![0; model.edges.len()];
     for edge in &model.edges {
-        let definition = BoundaryDefinition {
-            points: edge.curve.root.points.clone(),
-            uv: [[Q::zero(), Q::zero()], [Q::one(), Q::zero()]],
-        };
-        let restricted = definition.restricted(edge.curve.range.clone(), budget)?;
-        require(
-            restricted.points == edge.curve.points,
-            "Saved edge lost its original root restriction",
-        )?;
-        require(
-            !edge.degenerate && (2..=33).contains(&edge.curve.points.len()),
-            "Unsupported exact graph edge",
-        )?;
-        require(
-            edge.curve.points.first().unwrap() == &model.vertices[edge.vertices[0]].point
-                && edge.curve.points.last().unwrap() == &model.vertices[edge.vertices[1]].point,
-            "Exact edge endpoints do not own their vertices",
-        )?;
+        check_graph_edge(model, edge, budget)?;
     }
     for face in &model.faces {
         require(
@@ -140,68 +233,20 @@ pub fn inspect_geometry(model: &Topology, budget: &mut Budget) -> Result<Geometr
                 c.trim().is_none(),
                 "Partial graph coedge clocks require separate qualification",
             )?;
-            let mut matched = false;
-            for side in [
-                Boundary::UMin,
-                Boundary::UMax,
-                Boundary::VMin,
-                Boundary::VMax,
-            ] {
-                let mut data = face.surface.boundary_definition(side, budget)?;
-                let free = usize::from(data.uv[0][0] == data.uv[1][0]);
-                let fixed = 1 - free;
-                if c.pcurve
-                    .points
-                    .iter()
-                    .any(|p| p[fixed] != data.uv[0][fixed])
-                {
-                    continue;
+            let mut matched = None;
+            for side in PANEL_SIDES {
+                matched = side_lift(model, &face.surface, c, side, budget)?;
+                if matched.is_some() {
+                    break;
                 }
-                let width = &data.uv[1][free] - &data.uv[0][free];
-                let parameters = c
-                    .pcurve
-                    .points
-                    .each_ref()
-                    .map(|p| (&p[free] - &data.uv[0][free]) / &width);
-                if parameters[0] == parameters[1]
-                    || parameters.iter().any(|q| q < &Q::zero() || q > &Q::one())
-                {
-                    continue;
-                }
-                let forward = parameters[0] < parameters[1];
-                let range = if forward {
-                    parameters
-                } else {
-                    [parameters[1].clone(), parameters[0].clone()]
-                };
-                data = data.restricted(range, budget)?;
-                if !forward {
-                    data.points.reverse();
-                }
-                let edge = &model.edges[c.edge].curve;
-                require(
-                    edge.points.len() == data.points.len(),
-                    "Edge and surface boundary degrees differ",
-                )?;
-                for (i, p) in data.points.iter().enumerate() {
-                    let q = &edge.points[if c.reversed {
-                        edge.points.len() - 1 - i
-                    } else {
-                        i
-                    }];
-                    report.coefficient_comparisons += 3;
-                    require(
-                        p == q,
-                        "Saved canonical edge does not match its exact face lift",
-                    )?;
-                }
-                matched = true;
-                break;
             }
-            require(
-                matched,
-                "Saved parameter line is not an exact original patch-boundary restriction",
-            )?;
+            let Some(comparisons) = matched else {
+                return Err(Error::new(
+                    "BREP_EXACT_GRAPH_STRIP",
+                    "Saved parameter line is not an exact original patch-boundary restriction",
+                ));
+            };
+            report.coefficient_comparisons += comparisons;
             report.boundary_uses += 1;
             uses[c.edge] += 1;
         }
@@ -213,89 +258,120 @@ pub fn inspect_geometry(model: &Topology, budget: &mut Budget) -> Result<Geometr
         .collect();
     Ok(report)
 }
-/// Fresh source-contact, internal G2, whole-panel 10/mm curvature and exact
-/// canonical-boundary checks before publishing an immutable OPEN strip owner.
-/// Sharing uses construction identity, never nearest-position edge welding.
-pub fn assemble(panels: Vec<Patch>, tolerance_mm: f64, budget: &mut Budget) -> Result<Strip> {
-    require(
-        !panels.is_empty() && panels.len() <= 64,
-        "Choose 1..64 exact transition panels",
-    )?;
-    require(
-        tolerance_mm.is_finite() && (1e-10..=1e-2).contains(&tolerance_mm),
-        "Choose a supported B-rep tolerance",
-    )?;
-    let mut joins = Vec::new();
+/// Per-panel curvature fields and internal G2 joins of consecutive panels.
+fn certify_panels(
+    panels: &[Patch],
+    budget: &mut Budget,
+) -> Result<(Vec<CurvatureReport>, Vec<JoinReport>)> {
     let mut fields = Vec::new();
-    for p in &panels {
+    for p in panels {
         require(
             p.contact_jets() == [true; 2],
             "Source contact two-jets are unproven",
         )?;
-        let field = p.inspect_curvature(10., 100_000, budget)?;
+        let field = p.inspect_curvature(MAX_CURVATURE_PER_MM, CURVATURE_SAMPLES, budget)?;
         require(
             field.decision == CurvatureDecision::Within,
             "Exact panel field does not pass 10/mm curvature",
         )?;
         fields.push(field);
     }
+    let mut joins = Vec::new();
     for pair in panels.windows(2) {
-        let join = pair[0].inspect_join_g2(&pair[1], 1e-5, 1e-5, budget)?;
+        let join =
+            pair[0].inspect_join_g2(&pair[1], G2_POSITION_TOLERANCE, G2_NORMAL_TOLERANCE, budget)?;
         require(
             join.within && join.position_exact,
             "Exact transition internal G2 join is unproven",
         )?;
         joins.push(join);
     }
-    let n = panels.len();
-    let mut vertices = Vec::new();
-    let mut edges = Vec::new();
+    Ok((fields, joins))
+}
+type StripVertices = Vec<brep_topology::Vertex<[Q; 3]>>;
+type StripEdges = Vec<brep_topology::Edge<Edge>>;
+/// Station vertices (two per station) and station edges, in panel order.
+fn station_edges(panels: &[Patch], budget: &mut Budget) -> Result<(StripVertices, StripEdges)> {
     let mut stations = Vec::new();
-    stations.push(panels[0].boundary_definition(Boundary::UMin, budget)?);
-    for p in &panels {
+    if let Some(first) = panels.first() {
+        stations.push(first.boundary_definition(Boundary::UMin, budget)?);
+    }
+    for p in panels {
         stations.push(p.boundary_definition(Boundary::UMax, budget)?);
     }
+    let mut vertices = Vec::new();
+    let mut edges = Vec::new();
     for station in &stations {
+        let (Some(start), Some(end)) = (station.points.first(), station.points.last()) else {
+            return Err(Error::new(
+                "BREP_EXACT_GRAPH_STRIP",
+                "Transition station has no control points",
+            ));
+        };
         let first = vertices.len();
         vertices.push(brep_topology::Vertex {
-            point: station.points[0].clone(),
+            point: start.clone(),
         });
-        vertices.push(brep_topology::Vertex {
-            point: station.points.last().unwrap().clone(),
-        });
+        vertices.push(brep_topology::Vertex { point: end.clone() });
         edges.push(brep_topology::Edge {
             degenerate: false,
             vertices: [first, first + 1],
             curve: Edge::original(station.points.clone(), edges.len()),
         });
     }
+    Ok((vertices, edges))
+}
+/// Appends panel `i`'s bottom/top edges and its four-coedge outer loop.
+fn panel_loop(
+    i: usize,
+    p: &Patch,
+    edges: &mut StripEdges,
+    budget: &mut Budget,
+) -> Result<brep_topology::Loop<ParameterLine>> {
+    let bottom = p.boundary_definition(Boundary::VMin, budget)?;
+    let top = p.boundary_definition(Boundary::VMax, budget)?;
+    let left = p.boundary_definition(Boundary::UMin, budget)?;
+    let right = p.boundary_definition(Boundary::UMax, budget)?;
+    let bottom_id = edges.len();
+    edges.push(brep_topology::Edge {
+        degenerate: false,
+        vertices: [2 * i, 2 * i + 2],
+        curve: Edge::original(bottom.points.clone(), edges.len()),
+    });
+    let top_id = edges.len();
+    edges.push(brep_topology::Edge {
+        degenerate: false,
+        vertices: [2 * i + 1, 2 * i + 3],
+        curve: Edge::original(top.points.clone(), edges.len()),
+    });
+    Ok(brep_topology::Loop {
+        coedges: vec![
+            brep_topology::Coedge::new(bottom_id, false, line(&bottom, false)),
+            brep_topology::Coedge::new(i + 1, false, line(&right, false)),
+            brep_topology::Coedge::new(top_id, true, line(&top, true)),
+            brep_topology::Coedge::new(i, true, line(&left, true)),
+        ],
+    })
+}
+/// Fresh source-contact, internal G2, whole-panel 10/mm curvature and exact
+/// canonical-boundary checks before publishing an immutable OPEN strip owner.
+/// Sharing uses construction identity, never nearest-position edge welding.
+pub fn assemble(panels: Vec<Patch>, tolerance_mm: f64, budget: &mut Budget) -> Result<Strip> {
+    require(
+        !panels.is_empty() && panels.len() <= MAX_PANELS,
+        "Choose 1..64 exact transition panels",
+    )?;
+    require(
+        tolerance_mm.is_finite() && TOLERANCE_MM.contains(&tolerance_mm),
+        "Choose a supported B-rep tolerance",
+    )?;
+    let (fields, joins) = certify_panels(&panels, budget)?;
+    let n = panels.len();
+    let (vertices, mut edges) = station_edges(&panels, budget)?;
     let mut loops = Vec::new();
     let mut faces = Vec::new();
     for (i, p) in panels.into_iter().enumerate() {
-        let bottom = p.boundary_definition(Boundary::VMin, budget)?;
-        let top = p.boundary_definition(Boundary::VMax, budget)?;
-        let left = p.boundary_definition(Boundary::UMin, budget)?;
-        let right = p.boundary_definition(Boundary::UMax, budget)?;
-        let bottom_id = edges.len();
-        edges.push(brep_topology::Edge {
-            degenerate: false,
-            vertices: [2 * i, 2 * i + 2],
-            curve: Edge::original(bottom.points.clone(), edges.len()),
-        });
-        let top_id = edges.len();
-        edges.push(brep_topology::Edge {
-            degenerate: false,
-            vertices: [2 * i + 1, 2 * i + 3],
-            curve: Edge::original(top.points.clone(), edges.len()),
-        });
-        loops.push(brep_topology::Loop {
-            coedges: vec![
-                brep_topology::Coedge::new(bottom_id, false, line(&bottom, false)),
-                brep_topology::Coedge::new(i + 1, false, line(&right, false)),
-                brep_topology::Coedge::new(top_id, true, line(&top, true)),
-                brep_topology::Coedge::new(i, true, line(&left, true)),
-            ],
-        });
+        loops.push(panel_loop(i, &p, &mut edges, budget)?);
         faces.push(brep_topology::Face {
             surface: Arc::new(p),
             outer: i,

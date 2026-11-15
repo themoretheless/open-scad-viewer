@@ -95,34 +95,16 @@ pub struct BevelBodyCandidate {
     /// Closure and source error do not imply geometric solid admission.
     pub solid_geometry_certified: bool,
 }
-/// Build a closed topological body from an original qualified spherical profile.
-/// Caps are explicit ruled fans to the outer/inner cone-distance axis points;
-/// they are not planar faces or spherical caps. Their ideal reference uses the
-/// same original profile and exact nominal axis points. This candidate still
-/// requires original profile embedding and full solid qualification.
-pub fn bevel_body_candidate(
-    source: &QualifiedBevelOutline,
-    tolerance: f64,
-    max_cells: usize,
-    max_exact_work: u64,
-) -> Result<BevelBodyCandidate> {
-    source.reverify()?;
-    if !tolerance.is_finite() || tolerance <= 0. {
-        return Err(refuse("Bevel body needs finite positive tolerance"));
-    }
-    let curves = source.curves();
-    let n = curves.len();
-    if n * 3 > crate::MAX_FACES {
-        return Err(refuse("Bevel fan-cap body exceeds the face budget"));
-    }
-    let ranges = source.source().source().parameters().cone_distances;
-    let distances = ranges.map(midpoint);
-    let ratio = distances[0] / distances[1];
-    if !(0. < ratio && ratio < 1.) {
-        return Err(refuse("Bevel radial scale is unrepresentable"));
-    }
-    let nominal_ratio =
-        I::new(ranges[0][0], ranges[0][1])?.div(I::new(ranges[1][0], ranges[1][1])?)?;
+/// Faces per profile curve: one wall plus two fan-cap faces.
+const FACES_PER_CURVE: usize = 3;
+/// Coordinates per control point combined by the conservative L1 norm.
+const COORDINATE_COUNT: f64 = 3.;
+/// Unresolved closure uses quoted in a refusal.
+const REPORTED_UNRESOLVED_USES: usize = 3;
+
+/// Scales the outer profile to the inner cone distance and bounds the
+/// coordinate rounding against the nominal ratio.
+fn scaled_inner_profile(curves: &[Curve], ratio: f64, nominal_ratio: I) -> Result<(Vec<Curve>, f64)> {
     let mut inner = curves.to_vec();
     let mut radial_error = 0_f64;
     for c in &mut inner {
@@ -137,25 +119,32 @@ pub fn bevel_body_candidate(
             }
         }
     }
-    let radial_error = I::point(radial_error).mul(I::point(3.))?.hi;
-    let wall_error = I::point(source.certificate().world_error_upper)
-        .add(I::point(radial_error))?
-        .hi;
+    let radial_error = I::point(radial_error).mul(I::point(COORDINATE_COUNT))?.hi;
+    Ok((inner, radial_error))
+}
+
+fn axis_center_error(distances: [f64; 2], ranges: [[f64; 2]; 2]) -> Result<f64> {
     let mut center_error = 0_f64;
-    for i in 0..2 {
-        let d = I::point(distances[i]).sub(I::new(ranges[i][0], ranges[i][1])?)?;
+    for (distance, range) in distances.into_iter().zip(ranges) {
+        let d = I::point(distance).sub(I::new(range[0], range[1])?)?;
         center_error = center_error.max(d.lo.abs().max(d.hi.abs()));
     }
-    let cap_error = wall_error.max(center_error);
-    let error = wall_error.max(cap_error);
-    if error > tolerance {
-        return Err(refuse(
-            "Bevel radial/cap nominal error exceeds requested tolerance",
-        ));
-    }
-    let axes = [[0., 0., distances[0]], [0., 0., distances[1]]];
+    Ok(center_error)
+}
+
+/// Edge ids of the fan body: profile levels, radial walls, cap spokes, poles.
+struct FanEdges {
+    edges: Vec<Edge>,
+    level: [Vec<usize>; 2],
+    radial: Vec<usize>,
+    spokes: [Vec<usize>; 2],
+    pole: [usize; 2],
+}
+
+fn fan_vertices(profiles: [&[Curve]; 2], axes: [[f64; 3]; 2]) -> Vec<Vertex> {
+    let n = profiles[0].len();
     let mut vertices = Vec::with_capacity(2 * n + 2);
-    for profile in [inner.as_slice(), curves] {
+    for profile in profiles {
         for c in profile {
             vertices.push(Vertex {
                 point: point(&c.control_points[0]),
@@ -163,9 +152,14 @@ pub fn bevel_body_candidate(
         }
     }
     vertices.extend(axes.map(|point| Vertex { point }));
+    vertices
+}
+
+fn fan_edges(profiles: [&[Curve]; 2], axes: [[f64; 3]; 2], vertices: &[Vertex]) -> FanEdges {
+    let n = profiles[0].len();
     let mut edges = Vec::new();
     let mut level = [Vec::new(), Vec::new()];
-    for (l, profile) in [inner.as_slice(), curves].into_iter().enumerate() {
+    for (l, profile) in profiles.into_iter().enumerate() {
         for (j, c) in profile.iter().enumerate() {
             level[l].push(add_edge(
                 &mut edges,
@@ -203,6 +197,27 @@ pub fn bevel_body_candidate(
             true,
         )
     });
+    FanEdges {
+        edges,
+        level,
+        radial,
+        spokes,
+        pole,
+    }
+}
+
+/// Closed fan-cap body over the inner and outer profiles.
+fn fan_body(profiles: [&[Curve]; 2], axes: [[f64; 3]; 2], tolerance: f64) -> Result<Model> {
+    let [inner, curves] = profiles;
+    let n = curves.len();
+    let vertices = fan_vertices(profiles, axes);
+    let FanEdges {
+        edges,
+        level,
+        radial,
+        spokes,
+        pole,
+    } = fan_edges(profiles, axes, &vertices);
     let mut faces = Vec::new();
     let mut loops = Vec::new();
     let mut uses = Vec::new();
@@ -248,7 +263,15 @@ pub fn bevel_body_candidate(
     );
     model.rebuild_topology_ids();
     model.validate()?;
-    let closure = crate::watertight::inspect_with_exact(&model, max_cells, max_exact_work)?;
+    Ok(model)
+}
+
+fn inspect_closure(
+    model: &Model,
+    max_cells: usize,
+    max_exact_work: u64,
+) -> Result<crate::watertight::QualifiedReport> {
+    let closure = crate::watertight::inspect_with_exact(model, max_cells, max_exact_work)?;
     if closure.closure.status != crate::watertight::Closure::WithinTolerance {
         return Err(Error::new(
             "BREP_BEVEL_BODY_UNPROVEN",
@@ -264,11 +287,57 @@ pub fn bevel_body_candidate(
                     .iter()
                     .filter(|u| u.status
                         != nurbs_core::curve_surface_agreement::Status::WithinTolerance)
-                    .take(3)
+                    .take(REPORTED_UNRESOLVED_USES)
                     .collect::<Vec<_>>()
             ),
         ));
     }
+    Ok(closure)
+}
+
+/// Build a closed topological body from an original qualified spherical profile.
+/// Caps are explicit ruled fans to the outer/inner cone-distance axis points;
+/// they are not planar faces or spherical caps. Their ideal reference uses the
+/// same original profile and exact nominal axis points. This candidate still
+/// requires original profile embedding and full solid qualification.
+pub fn bevel_body_candidate(
+    source: &QualifiedBevelOutline,
+    tolerance: f64,
+    max_cells: usize,
+    max_exact_work: u64,
+) -> Result<BevelBodyCandidate> {
+    source.reverify()?;
+    if !tolerance.is_finite() || tolerance <= 0. {
+        return Err(refuse("Bevel body needs finite positive tolerance"));
+    }
+    let curves = source.curves();
+    let n = curves.len();
+    if n * FACES_PER_CURVE > crate::MAX_FACES {
+        return Err(refuse("Bevel fan-cap body exceeds the face budget"));
+    }
+    let ranges = source.source().source().parameters().cone_distances;
+    let distances = ranges.map(midpoint);
+    let ratio = distances[0] / distances[1];
+    if !(0. < ratio && ratio < 1.) {
+        return Err(refuse("Bevel radial scale is unrepresentable"));
+    }
+    let nominal_ratio =
+        I::new(ranges[0][0], ranges[0][1])?.div(I::new(ranges[1][0], ranges[1][1])?)?;
+    let (inner, radial_error) = scaled_inner_profile(curves, ratio, nominal_ratio)?;
+    let wall_error = I::point(source.certificate().world_error_upper)
+        .add(I::point(radial_error))?
+        .hi;
+    let center_error = axis_center_error(distances, ranges)?;
+    let cap_error = wall_error.max(center_error);
+    let error = wall_error.max(cap_error);
+    if error > tolerance {
+        return Err(refuse(
+            "Bevel radial/cap nominal error exceeds requested tolerance",
+        ));
+    }
+    let axes = [[0., 0., distances[0]], [0., 0., distances[1]]];
+    let model = fan_body([inner.as_slice(), curves], axes, tolerance)?;
+    let closure = inspect_closure(&model, max_cells, max_exact_work)?;
     Ok(BevelBodyCandidate {
         model,
         world_error_upper: error,

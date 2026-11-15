@@ -199,23 +199,31 @@ fn push_crossing_roots(
     }
 }
 
-/// Closed-form rotation limits; `Ok(None)` when the neighborhood is outside
-/// the planar prediction subset (curved faces/edges, axis not in the face
-/// plane, unsupported corner incidence).
-fn rotation_limits(
+/// Model tolerances spanned by the linear on-plane / on-axis test.
+const LINEAR_TOLERANCE_FACTOR: f64 = 8.;
+/// Largest `|n·k|` for which the axis lies in the face plane.
+const AXIS_IN_PLANE_LIMIT: f64 = 1e-9;
+/// Parallel tolerance of the slide-line plane intersection.
+const PLANE_PAIR_TOLERANCE: f64 = 1e-9;
+/// Parallel tolerance of the slide-line / face-plane intersection.
+const LINE_PLANE_TOLERANCE: f64 = 1e-12;
+
+/// The face plane when the axis lies in it and every face is planar with
+/// straight edges; `None` outside the planar prediction subset.
+fn planar_neighborhood(
     model: &Model,
     face: usize,
     axis: &Axis,
+    linear: f64,
     guard: &mut BudgetGuard,
-) -> Result<Option<Vec<DraftLimit>>> {
-    let linear = model.tolerance_mm * 8.;
+) -> Result<Option<PlaneEq>> {
     let Ok(plane) = face_plane_fit(model, face) else {
         return Ok(None);
     };
     // The axis must lie in the face plane: point on the plane, direction
     // perpendicular to the plane normal.
     if (dot(plane.normal, axis.point) - plane.offset).abs() > linear
-        || dot(plane.normal, axis.direction).abs() > 1e-9
+        || dot(plane.normal, axis.direction).abs() > AXIS_IN_PLANE_LIMIT
     {
         return Ok(None);
     }
@@ -234,13 +242,95 @@ fn rotation_limits(
             }
         }
     }
-    let polygons = canonical_polygons(model, &BTreeMap::new(), guard)?;
+    Ok(Some(plane))
+}
+
+/// Rotation of the driven coplanar region about the axis.
+struct RotationFrame<'a> {
+    axis: &'a Axis,
+    planes: &'a [PlaneEq],
+    driven: &'a BTreeSet<usize>,
+    /// Face plane normal `n`, axis direction `k` and `m = k × n`.
+    n: [f64; 3],
+    k: [f64; 3],
+    m: [f64; 3],
+}
+
+impl RotationFrame<'_> {
+    /// Rigid rotation about the axis: signed distance to a fixed plane Q is
+    /// C + A cosθ + B sinθ.
+    fn rigid(&self, events: &mut Vec<DraftLimit>, v: usize, axial: f64, radial: [f64; 3]) {
+        let k = self.k;
+        let pivot = crate::direct_edit::add(self.axis.point, mul(k, axial));
+        for (f, &q) in self.planes.iter().enumerate() {
+            if self.driven.contains(&f) {
+                continue;
+            }
+            push_crossing_roots(
+                events,
+                v,
+                Some(f),
+                dot(q.normal, pivot) - q.offset,
+                dot(q.normal, radial),
+                dot(q.normal, cross(k, radial)),
+            );
+        }
+    }
+
+    /// A vertex sliding on the line of its two non-driven faces; `None` when
+    /// those planes do not intersect in a line.
+    fn sliding(&self, events: &mut Vec<DraftLimit>, v: usize, fixed: [usize; 2]) -> Option<()> {
+        let (n, m) = (self.n, self.m);
+        let (n1, n2) = (self.planes[fixed[0]], self.planes[fixed[1]]);
+        let (lp, ld) = intersect_planes(n1, n2, PLANE_PAIR_TOLERANCE)?;
+        // The slide line becomes parallel to the rotating
+        // plane: ld·n(θ) = 0, a pure harmonic root.
+        push_harmonic_roots(events, v, None, dot(ld, n), dot(ld, m));
+        for (f, &plane) in self.planes.iter().enumerate() {
+            if self.driven.contains(&f) || f == fixed[0] || f == fixed[1] {
+                continue;
+            }
+            // The sliding vertex reaches plane Q exactly when
+            // the fixed point w = L ∩ Q lies on P'(θ).
+            let Some(w) = line_plane(lp, ld, plane, LINE_PLANE_TOLERANCE) else {
+                continue;
+            };
+            let rw = sub(w, self.axis.point);
+            push_harmonic_roots(events, v, Some(f), dot(n, rw), dot(m, rw));
+        }
+        Some(())
+    }
+}
+
+/// Closed-form rotation limits; `Ok(None)` when the neighborhood is outside
+/// the planar prediction subset (curved faces/edges, axis not in the face
+/// plane, unsupported corner incidence).
+fn rotation_limits(
+    model: &Model,
+    face: usize,
+    axis: &Axis,
+    guard: &mut BudgetGuard,
+) -> Result<Option<Vec<DraftLimit>>> {
+    let linear = model.tolerance_mm * LINEAR_TOLERANCE_FACTOR;
+    let Some(plane) = planar_neighborhood(model, face, axis, linear, guard)? else {
+        return Ok(None);
+    };
+    let planes: Vec<PlaneEq> = canonical_polygons(model, &BTreeMap::new(), guard)?
+        .iter()
+        .map(|poly| poly.plane)
+        .collect();
     let adjacency = edge_face_adjacency(model, guard)?;
     let driven = coplanar_component(model, face, plane, &BTreeSet::new(), &adjacency, guard)?;
     let incidence = vertex_face_incidence(model);
-    let n = plane.normal;
     let k = axis.direction;
-    let m = cross(k, n);
+    let frame = RotationFrame {
+        axis,
+        planes: &planes,
+        driven: &driven,
+        n: plane.normal,
+        k,
+        m: cross(k, plane.normal),
+    };
     let mut events = Vec::new();
     let mut seen = BTreeSet::new();
     for &d in &driven {
@@ -262,54 +352,11 @@ fn rotation_limits(
                     .copied()
                     .filter(|f| !driven.contains(f))
                     .collect();
-                match non_driven.len() {
-                    0 => {
-                        // Rigid rotation about the axis: signed distance to a
-                        // fixed plane Q is C + A cosθ + B sinθ.
-                        let pivot = crate::direct_edit::add(axis.point, mul(k, axial));
-                        for (f, poly) in polygons.iter().enumerate() {
-                            if driven.contains(&f) {
-                                continue;
-                            }
-                            let q: PlaneEq = poly.plane;
-                            push_crossing_roots(
-                                &mut events,
-                                v,
-                                Some(f),
-                                dot(q.normal, pivot) - q.offset,
-                                dot(q.normal, radial),
-                                dot(q.normal, cross(k, radial)),
-                            );
-                        }
-                    }
-                    2 => {
-                        let (n1, n2) = (polygons[non_driven[0]].plane, polygons[non_driven[1]].plane);
-                        let Some((lp, ld)) = intersect_planes(n1, n2, 1e-9) else {
+                match non_driven[..] {
+                    [] => frame.rigid(&mut events, v, axial, radial),
+                    [a, b] => {
+                        if frame.sliding(&mut events, v, [a, b]).is_none() {
                             return Ok(None);
-                        };
-                        // The slide line becomes parallel to the rotating
-                        // plane: ld·n(θ) = 0, a pure harmonic root.
-                        push_harmonic_roots(&mut events, v, None, dot(ld, n), dot(ld, m));
-                        for (f, poly) in polygons.iter().enumerate() {
-                            if driven.contains(&f)
-                                || f == non_driven[0]
-                                || f == non_driven[1]
-                            {
-                                continue;
-                            }
-                            // The sliding vertex reaches plane Q exactly when
-                            // the fixed point w = L ∩ Q lies on P'(θ).
-                            let Some(w) = line_plane(lp, ld, poly.plane, 1e-12) else {
-                                continue;
-                            };
-                            let rw = sub(w, axis.point);
-                            push_harmonic_roots(
-                                &mut events,
-                                v,
-                                Some(f),
-                                dot(n, rw),
-                                dot(m, rw),
-                            );
                         }
                     }
                     _ => return Ok(None),

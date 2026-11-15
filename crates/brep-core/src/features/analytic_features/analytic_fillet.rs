@@ -1,103 +1,22 @@
 use super::*;
 
+const VALENCE3_REFUSED: &str = "BREP_VALENCE3_CORNER_BLEND_REFUSED";
+/// Floor for the corner-recognition tolerance.
+const MIN_CORNER_TOLERANCE: f64 = 1e-9;
+
 pub(super) fn exact_axis_aligned_valence3_corner_blend(
     model: &Model,
     edges: &[usize],
     radius: f64,
 ) -> Result<AuditedFeatureResult> {
-    audit_solid(model).map_err(|_| {
-        refuse(
-            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-            "Valence-3 corner blend source must pass the global solid audit",
-        )
-    })?;
-    if !(radius.is_finite() && radius > 0.) {
-        return Err(refuse(
-            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-            "Valence-3 radius must be finite and positive",
-        ));
-    }
-    if edges.len() != 3
-        || edges
-            .iter()
-            .copied()
-            .collect::<std::collections::BTreeSet<_>>()
-            .len()
-            != 3
-    {
-        return Err(refuse(
-            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-            "exact-valence3-corner-blend/1 admits exactly three distinct concurrent cuboid edges",
-        ));
-    }
-    if !is_axis_aligned_cuboid(model) {
-        return Err(refuse(
-            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-            "exact-valence3-corner-blend/1 admits axis-aligned planar cuboids only",
-        ));
-    }
-    let (min, max) = model_bounds(model);
-    if (0..3).any(|i| max[i] - min[i] <= 2. * radius) {
-        return Err(refuse(
-            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-            "Cuboid extents too small for the valence-3 radius",
-        ));
-    }
-    let mut corner_vertex = None;
-    for &edge in edges {
-        if edge >= model.edges.len() {
-            return Err(refuse(
-                "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-                "Edge index out of range",
-            ));
-        }
-        if model.edges[edge].curve.degree != 1 {
-            return Err(refuse(
-                "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-                "Curved edges are outside exact-valence3-corner-blend/1",
-            ));
-        }
-    }
-    // Three distinct edges must share one cuboid corner.
-    let sets: Vec<[usize; 2]> = edges.iter().map(|&e| model.edges[e].vertices).collect();
-    for &v in &sets[0] {
-        if sets[1].contains(&v) && sets[2].contains(&v) {
-            corner_vertex = Some(v);
-            break;
-        }
-    }
-    let Some(vid) = corner_vertex else {
-        return Err(refuse(
-            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-            "Selected edges do not meet at a single valence-3 vertex",
-        ));
-    };
-    let p = model.vertices[vid].point;
-    // Reflect each minimum coordinate to the maximum corner. This is an
-    // isometry: radius and contact angles remain unchanged. affine() also
-    // reverses shell uses for odd reflections and preserves topology IDs.
-    let tolerance = model.tolerance_mm.max(1e-9);
-    let mut placement = [[0.; 4]; 4];
-    placement[3][3] = 1.;
-    for i in 0..3 {
-        if (p[i] - max[i]).abs() <= tolerance {
-            placement[i][i] = 1.;
-        } else if (p[i] - min[i]).abs() <= tolerance {
-            placement[i][i] = -1.;
-            placement[i][3] = min[i] + max[i];
-        } else {
-            return Err(refuse(
-                "BREP_VALENCE3_CORNER_BLEND_REFUSED",
-                "Selected vertex must be a cuboid corner",
-            ));
-        }
-    }
+    let (min, max, vid) = valence3_corner_vertex(model, edges, radius)?;
+    let placement = max_corner_reflection(model, model.vertices[vid].point, min, max)?;
     let local_source = crate::transform::affine(model, placement)?;
     let local_result =
         crate::imprint_pipeline::valence3_cuboid_max_corner(&local_source, min, max, radius)
             .map_err(|error| {
                 refuse(
-                    "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+                    VALENCE3_REFUSED,
                     &format!("Valence-3 authorship refused: {}", error.message),
                 )
             })?;
@@ -115,7 +34,7 @@ pub(super) fn exact_axis_aligned_valence3_corner_blend(
         .count();
     if spheres != 1 || cylinders < 3 {
         return Err(refuse(
-            "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+            VALENCE3_REFUSED,
             "Valence-3 result missing sphere octant or three cylinder faces",
         ));
     }
@@ -128,8 +47,110 @@ pub(super) fn exact_axis_aligned_valence3_corner_blend(
             "plane_cylinder_sphere_network",
         ],
         radius,
-        "BREP_VALENCE3_CORNER_BLEND_REFUSED",
+        VALENCE3_REFUSED,
     )
+}
+
+/// Audits the request; returns the cuboid bounds and the shared corner vertex.
+fn valence3_corner_vertex(
+    model: &Model,
+    edges: &[usize],
+    radius: f64,
+) -> Result<([f64; 3], [f64; 3], usize)> {
+    audit_solid(model).map_err(|_| {
+        refuse(
+            VALENCE3_REFUSED,
+            "Valence-3 corner blend source must pass the global solid audit",
+        )
+    })?;
+    if !(radius.is_finite() && radius > 0.) {
+        return Err(refuse(
+            VALENCE3_REFUSED,
+            "Valence-3 radius must be finite and positive",
+        ));
+    }
+    if edges.len() != 3
+        || edges
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            != 3
+    {
+        return Err(refuse(
+            VALENCE3_REFUSED,
+            "exact-valence3-corner-blend/1 admits exactly three distinct concurrent cuboid edges",
+        ));
+    }
+    if !is_axis_aligned_cuboid(model) {
+        return Err(refuse(
+            VALENCE3_REFUSED,
+            "exact-valence3-corner-blend/1 admits axis-aligned planar cuboids only",
+        ));
+    }
+    let (min, max) = model_bounds(model);
+    if (0..3).any(|i| max[i] - min[i] <= 2. * radius) {
+        return Err(refuse(
+            VALENCE3_REFUSED,
+            "Cuboid extents too small for the valence-3 radius",
+        ));
+    }
+    let mut sets = Vec::with_capacity(edges.len());
+    for &edge in edges {
+        let Some(edge_ref) = model.edges.get(edge) else {
+            return Err(refuse(VALENCE3_REFUSED, "Edge index out of range"));
+        };
+        if edge_ref.curve.degree != 1 {
+            return Err(refuse(
+                VALENCE3_REFUSED,
+                "Curved edges are outside exact-valence3-corner-blend/1",
+            ));
+        }
+        sets.push(edge_ref.vertices);
+    }
+    // Three distinct edges must share one cuboid corner.
+    let corner_vertex = match sets.as_slice() {
+        [first, second, third] => first
+            .iter()
+            .copied()
+            .find(|v| second.contains(v) && third.contains(v)),
+        _ => None,
+    };
+    let Some(vid) = corner_vertex else {
+        return Err(refuse(
+            VALENCE3_REFUSED,
+            "Selected edges do not meet at a single valence-3 vertex",
+        ));
+    };
+    Ok((min, max, vid))
+}
+
+/// Reflect each minimum coordinate to the maximum corner. This is an
+/// isometry: radius and contact angles remain unchanged. affine() also
+/// reverses shell uses for odd reflections and preserves topology IDs.
+fn max_corner_reflection(
+    model: &Model,
+    p: [f64; 3],
+    min: [f64; 3],
+    max: [f64; 3],
+) -> Result<[[f64; 4]; 4]> {
+    let tolerance = model.tolerance_mm.max(MIN_CORNER_TOLERANCE);
+    let mut placement = [[0.; 4]; 4];
+    placement[3][3] = 1.;
+    for i in 0..3 {
+        if (p[i] - max[i]).abs() <= tolerance {
+            placement[i][i] = 1.;
+        } else if (p[i] - min[i]).abs() <= tolerance {
+            placement[i][i] = -1.;
+            placement[i][3] = min[i] + max[i];
+        } else {
+            return Err(refuse(
+                VALENCE3_REFUSED,
+                "Selected vertex must be a cuboid corner",
+            ));
+        }
+    }
+    Ok(placement)
 }
 
 /// AF-01: cuboid single convex edge → cylindrical fillet via corner cutter − cylinder.
@@ -413,86 +434,24 @@ pub fn audited_multi_edge_fillet(
         naming_complete,
     })
 }
+const CHAMFER_REFUSED: &str = "BREP_ANALYTIC_CHAMFER_REFUSED";
+/// Absolute tolerance for recognizing a vertical edge.
+const CHAMFER_VERTICAL_TOLERANCE: f64 = 1e-12;
+/// Absolute tolerance for placing the edge on a cuboid corner.
+const CHAMFER_CORNER_TOLERANCE: f64 = 1e-9;
+
 pub fn analytic_chamfer(
     model: &Model,
     edge: usize,
     distance: f64,
 ) -> Result<(Model, FeatureCertificate)> {
-    model.validate()?;
-    if !(distance.is_finite() && distance > 0.) {
-        return Err(refuse(
-            "BREP_ANALYTIC_CHAMFER_REFUSED",
-            "Chamfer distance must be finite and positive",
-        ));
-    }
-    if !is_axis_aligned_cuboid(model) {
-        return Err(refuse(
-            "BREP_ANALYTIC_CHAMFER_REFUSED",
-            "analytic-chamfer/1 admits axis-aligned planar cuboids only",
-        ));
-    }
-    if edge >= model.edges.len() {
-        return Err(refuse(
-            "BREP_ANALYTIC_CHAMFER_REFUSED",
-            "Edge index out of range",
-        ));
-    }
-    let edge_ref = &model.edges[edge];
-    if edge_ref.curve.degree != 1 {
-        return Err(refuse(
-            "BREP_ANALYTIC_CHAMFER_REFUSED",
-            "Curved edges are outside analytic-chamfer/1",
-        ));
-    }
-    let a = model.vertices[edge_ref.vertices[0]].point;
-    let b = model.vertices[edge_ref.vertices[1]].point;
-    let dir = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-    let len = dir[0].hypot(dir[1]).hypot(dir[2]);
-    if !(len.is_finite() && len > distance * 2.) {
-        return Err(refuse(
-            "BREP_ANALYTIC_CHAMFER_REFUSED",
-            "Edge too short for the requested chamfer distance",
-        ));
-    }
-    let (min, max) = model_bounds(model);
-    let span = [max[0] - min[0], max[1] - min[1], max[2] - min[2]];
-    if span.iter().any(|s| *s <= distance * 2.) {
-        return Err(refuse(
-            "BREP_ANALYTIC_CHAMFER_REFUSED",
-            "Cuboid extents too small for chamfer distance",
-        ));
-    }
-    let vertical = dir[0].abs() <= 1e-12 && dir[1].abs() <= 1e-12 && dir[2].abs() > 1e-12;
-    if !vertical {
-        return Err(refuse(
-            "BREP_ANALYTIC_CHAMFER_REFUSED",
-            "AF-01 walking slice admits vertical (+Z) cuboid edges only",
-        ));
-    }
+    let (a, b, len, min, max) = vertical_chamfer_edge(model, edge, distance)?;
     let z0 = a[2].min(b[2]);
     let height = len;
     let x = (a[0] + b[0]) * 0.5;
     let y = (a[1] + b[1]) * 0.5;
-    let sx = if (x - max[0]).abs() <= 1e-9 {
-        1.
-    } else if (x - min[0]).abs() <= 1e-9 {
-        -1.
-    } else {
-        return Err(refuse(
-            "BREP_ANALYTIC_CHAMFER_REFUSED",
-            "Selected edge is not on a cuboid corner",
-        ));
-    };
-    let sy = if (y - max[1]).abs() <= 1e-9 {
-        1.
-    } else if (y - min[1]).abs() <= 1e-9 {
-        -1.
-    } else {
-        return Err(refuse(
-            "BREP_ANALYTIC_CHAMFER_REFUSED",
-            "Selected edge is not on a cuboid corner",
-        ));
-    };
+    let sx = cuboid_corner_side(x, min[0], max[0])?;
+    let sy = cuboid_corner_side(y, min[1], max[1])?;
     // Right-triangular cutter at the selected corner. Keep its profile CCW.
     let mut profile = [[x - sx * distance, y], [x, y - sy * distance], [x, y]];
     let area2 = (profile[1][0] - profile[0][0]) * (profile[2][1] - profile[0][1])
@@ -510,7 +469,7 @@ pub fn analytic_chamfer(
         .any(|f| f.surface.degree_u > 1 || f.surface.degree_v > 1)
     {
         return Err(refuse(
-            "BREP_ANALYTIC_CHAMFER_REFUSED",
+            CHAMFER_REFUSED,
             "Unexpected curved face in planar chamfer result",
         ));
     }
@@ -522,4 +481,77 @@ pub fn analytic_chamfer(
             notes: vec!["af01_planar_chamfer_edge", "not_mesh_bevel"],
         },
     ))
+}
+
+/// +1 at the maximum face, -1 at the minimum face, refused otherwise.
+fn cuboid_corner_side(coordinate: f64, min: f64, max: f64) -> Result<f64> {
+    if (coordinate - max).abs() <= CHAMFER_CORNER_TOLERANCE {
+        Ok(1.)
+    } else if (coordinate - min).abs() <= CHAMFER_CORNER_TOLERANCE {
+        Ok(-1.)
+    } else {
+        Err(refuse(
+            CHAMFER_REFUSED,
+            "Selected edge is not on a cuboid corner",
+        ))
+    }
+}
+
+/// Audits the request; returns the edge endpoints, its length and the cuboid bounds.
+#[allow(clippy::type_complexity)]
+fn vertical_chamfer_edge(
+    model: &Model,
+    edge: usize,
+    distance: f64,
+) -> Result<([f64; 3], [f64; 3], f64, [f64; 3], [f64; 3])> {
+    model.validate()?;
+    if !(distance.is_finite() && distance > 0.) {
+        return Err(refuse(
+            CHAMFER_REFUSED,
+            "Chamfer distance must be finite and positive",
+        ));
+    }
+    if !is_axis_aligned_cuboid(model) {
+        return Err(refuse(
+            CHAMFER_REFUSED,
+            "analytic-chamfer/1 admits axis-aligned planar cuboids only",
+        ));
+    }
+    let Some(edge_ref) = model.edges.get(edge) else {
+        return Err(refuse(CHAMFER_REFUSED, "Edge index out of range"));
+    };
+    if edge_ref.curve.degree != 1 {
+        return Err(refuse(
+            CHAMFER_REFUSED,
+            "Curved edges are outside analytic-chamfer/1",
+        ));
+    }
+    let a = model.vertices[edge_ref.vertices[0]].point;
+    let b = model.vertices[edge_ref.vertices[1]].point;
+    let dir = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let len = dir[0].hypot(dir[1]).hypot(dir[2]);
+    if !(len.is_finite() && len > distance * 2.) {
+        return Err(refuse(
+            CHAMFER_REFUSED,
+            "Edge too short for the requested chamfer distance",
+        ));
+    }
+    let (min, max) = model_bounds(model);
+    let span = [max[0] - min[0], max[1] - min[1], max[2] - min[2]];
+    if span.iter().any(|s| *s <= distance * 2.) {
+        return Err(refuse(
+            CHAMFER_REFUSED,
+            "Cuboid extents too small for chamfer distance",
+        ));
+    }
+    let vertical = dir[0].abs() <= CHAMFER_VERTICAL_TOLERANCE
+        && dir[1].abs() <= CHAMFER_VERTICAL_TOLERANCE
+        && dir[2].abs() > CHAMFER_VERTICAL_TOLERANCE;
+    if !vertical {
+        return Err(refuse(
+            CHAMFER_REFUSED,
+            "AF-01 walking slice admits vertical (+Z) cuboid edges only",
+        ));
+    }
+    Ok((a, b, len, min, max))
 }

@@ -3,7 +3,7 @@
 pub mod complete;
 pub mod geometric;
 pub mod tangent;
-use crate::{Error, MAX_COEDGES, MAX_ENTITIES, MAX_FACES, Model, Result};
+use crate::{Error, Face, MAX_COEDGES, MAX_ENTITIES, MAX_FACES, Model, Result};
 use nurbs_core::{
     continuity::{self, ProjectiveSeam, ProjectiveSeamCollectionReport},
     curve::Curve,
@@ -85,14 +85,31 @@ pub(crate) fn boundary(s: &Surface, p: &Curve, axis: Axis) -> Option<&'static st
         (Axis::Station, _) => "vMax",
     })
 }
-pub fn inspect_axis(
-    model: &Model,
-    cap_faces: &[usize],
-    axis: Axis,
-    max_work: u64,
-) -> Result<AxisReport> {
+/// Full parameter side of a coedge (profile first, then station) and whether
+/// its use runs along increasing free parameter.
+pub(crate) fn coedge_side(
+    s: &Surface,
+    pcurve: &Curve,
+    reversed: bool,
+) -> Option<(&'static str, bool)> {
+    let label = boundary(s, pcurve, Axis::Profile).or_else(|| boundary(s, pcurve, Axis::Station))?;
+    let free = usize::from(label.starts_with('u'));
+    let [first, last] = pcurve.control_points.as_slice() else {
+        return None;
+    };
+    Some((label, (last.get(free) > first.get(free)) != reversed))
+}
+/// Upper bound on the exact work one retained smoothness audit may spend.
+const MAX_SMOOTHNESS_WORK: u64 = 2_000_000;
+fn invalid(message: &str) -> Error {
+    Error::new("BREP_SWEEP_SMOOTHNESS_INVALID", message)
+}
+fn face_wires(face: &Face) -> impl Iterator<Item = usize> + '_ {
+    std::iter::once(face.outer).chain(face.holes.iter().copied())
+}
+fn require_limits(model: &Model, max_work: u64) -> Result<()> {
     require(
-        max_work <= 2000000
+        max_work <= MAX_SMOOTHNESS_WORK
             && model.faces.len() <= MAX_FACES
             && model.edges.len() <= MAX_ENTITIES
             && model.loops.len() <= MAX_ENTITIES,
@@ -101,7 +118,14 @@ pub fn inspect_axis(
     require(
         model.loops.iter().map(|w| w.coedges.len()).sum::<usize>() <= MAX_COEDGES,
         "Too many retained smoothness coedges",
-    )?;
+    )
+}
+/// Cap faces and the edges their loops own.
+struct CapScope {
+    caps: Vec<bool>,
+    cap_owned: Vec<bool>,
+}
+fn cap_scope(model: &Model, cap_faces: &[usize]) -> Result<CapScope> {
     let mut caps = vec![false; model.faces.len()];
     let mut cap_owned = vec![false; model.edges.len()];
     for &face in cap_faces {
@@ -110,63 +134,86 @@ pub fn inspect_axis(
             "Invalid station smoothness cap scope",
         )?;
         caps[face] = true;
-        let f = &model.faces[face];
-        for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
-            let wire = model
-                .loops
-                .get(wire)
-                .ok_or_else(|| Error::new("BREP_SWEEP_SMOOTHNESS_INVALID", "Invalid cap loop"))?;
+        for wire in face_wires(&model.faces[face]) {
+            let wire = model.loops.get(wire).ok_or_else(|| invalid("Invalid cap loop"))?;
             for c in &wire.coedges {
                 require(c.edge < cap_owned.len(), "Invalid cap edge")?;
                 cap_owned[c.edge] = true;
             }
         }
     }
-    let mut uses = vec![Vec::<(usize, &'static str)>::new(); model.edges.len()];
-    let mut edge_order = Vec::with_capacity(model.edges.len());
-    let mut unclassified_faces = Vec::new();
+    Ok(CapScope { caps, cap_owned })
+}
+/// Exact full parameter-side uses of every wall edge, in first-seen order.
+struct WallUses {
+    uses: Vec<Vec<(usize, &'static str)>>,
+    edge_order: Vec<usize>,
+    unclassified_faces: Vec<usize>,
+}
+fn wall_uses(model: &Model, caps: &[bool], axis: Axis) -> Result<WallUses> {
+    let mut out = WallUses {
+        uses: vec![Vec::new(); model.edges.len()],
+        edge_order: Vec::with_capacity(model.edges.len()),
+        unclassified_faces: Vec::new(),
+    };
     for (index, face) in model.faces.iter().enumerate() {
         if caps[index] {
             continue;
         }
         let mut found = [false; 2];
-        for wire in std::iter::once(face.outer).chain(face.holes.iter().copied()) {
-            let wire = model
-                .loops
-                .get(wire)
-                .ok_or_else(|| Error::new("BREP_SWEEP_SMOOTHNESS_INVALID", "Invalid wall loop"))?;
+        for wire in face_wires(face) {
+            let wire = model.loops.get(wire).ok_or_else(|| invalid("Invalid wall loop"))?;
             for c in &wire.coedges {
-                require(c.edge < uses.len(), "Invalid wall edge")?;
+                require(c.edge < out.uses.len(), "Invalid wall edge")?;
                 if let Some(label) = boundary(&face.surface, &c.pcurve, axis) {
                     found[usize::from(label.ends_with("Max"))] = true;
-                    if uses[c.edge].is_empty() {
-                        uses[c.edge].reserve_exact(2);
-                        edge_order.push(c.edge);
+                    if out.uses[c.edge].is_empty() {
+                        out.uses[c.edge].reserve_exact(2);
+                        out.edge_order.push(c.edge);
                     }
-                    uses[c.edge].push((index, label));
+                    out.uses[c.edge].push((index, label));
                 }
             }
         }
         if !found.into_iter().all(|v| v) {
-            unclassified_faces.push(index);
+            out.unclassified_faces.push(index);
         }
     }
-    let mut seams = Vec::with_capacity(edge_order.len());
-    let mut edge_ids = Vec::with_capacity(edge_order.len());
-    let mut cap_edges = Vec::new();
-    let mut unpaired_edges = Vec::new();
-    for edge in edge_order {
-        let list = &uses[edge];
-        if axis == Axis::Station && list.len() == 1 && cap_owned[edge] {
-            cap_edges.push(edge);
+    Ok(out)
+}
+/// Paired wall seams plus the edges that stayed caps or unpaired.
+struct SeamPairs {
+    seams: Vec<ProjectiveSeam>,
+    edge_ids: Vec<usize>,
+    cap_edges: Vec<usize>,
+    unpaired_edges: Vec<usize>,
+}
+fn pair_seams(
+    model: &Model,
+    walls: &WallUses,
+    cap_owned: &[bool],
+    axis: Axis,
+) -> Result<SeamPairs> {
+    let mut out = SeamPairs {
+        seams: Vec::with_capacity(walls.edge_order.len()),
+        edge_ids: Vec::with_capacity(walls.edge_order.len()),
+        cap_edges: Vec::new(),
+        unpaired_edges: Vec::new(),
+    };
+    for &edge in &walls.edge_order {
+        let list = &walls.uses[edge];
+        let station_cap = axis == Axis::Station && cap_owned[edge];
+        if station_cap && list.len() == 1 {
+            out.cap_edges.push(edge);
             continue;
         }
-        if list.len() != 2 || axis == Axis::Station && cap_owned[edge] {
-            unpaired_edges.push(edge);
-            continue;
-        }
-        let (a, ab) = list[0];
-        let (b, bb) = list[1];
+        let [(a, ab), (b, bb)] = match list.as_slice() {
+            [first, second] if !station_cap => [*first, *second],
+            _ => {
+                out.unpaired_edges.push(edge);
+                continue;
+            }
+        };
         let normal_scale = if axis == Axis::Profile {
             1.
         } else {
@@ -177,27 +224,54 @@ pub fn inspect_axis(
                 bb,
             )?
         };
-        seams.push(ProjectiveSeam {
+        out.seams.push(ProjectiveSeam {
             patches: [a, b],
             boundaries: [ab.into(), bb.into()],
             order: 2,
             normal_scale,
         });
-        edge_ids.push(edge);
+        out.edge_ids.push(edge);
     }
+    Ok(out)
+}
+/// One collection proof; an incomplete extraction never certifies.
+fn inspect_seams(
+    patches: &[Surface],
+    seams: &[ProjectiveSeam],
+    max_work: u64,
+    extraction_complete: bool,
+) -> Result<ProjectiveSeamCollectionReport> {
+    let mut report =
+        continuity::inspect_projective_seam_collection_until_refused(patches, seams, max_work)?;
+    if !extraction_complete {
+        report.certified = false;
+        report.certified_order = None;
+    }
+    Ok(report)
+}
+pub fn inspect_axis(
+    model: &Model,
+    cap_faces: &[usize],
+    axis: Axis,
+    max_work: u64,
+) -> Result<AxisReport> {
+    require_limits(model, max_work)?;
+    let CapScope { caps, cap_owned } = cap_scope(model, cap_faces)?;
+    let walls = wall_uses(model, &caps, axis)?;
+    let SeamPairs {
+        mut seams,
+        edge_ids,
+        cap_edges,
+        unpaired_edges,
+    } = pair_seams(model, &walls, &cap_owned, axis)?;
+    let unclassified_faces = walls.unclassified_faces;
     let patches = model
         .faces
         .iter()
         .map(|f| f.surface.clone())
         .collect::<Vec<_>>();
     let extraction_complete = unclassified_faces.is_empty() && unpaired_edges.is_empty();
-    let mut g2 = continuity::inspect_projective_seam_collection_until_refused(
-        &patches, &seams, max_work,
-    )?;
-    if !extraction_complete {
-        g2.certified = false;
-        g2.certified_order = None;
-    }
+    let g2 = inspect_seams(&patches, &seams, max_work, extraction_complete)?;
     let mut exact_work = g2.exact_work;
     let g1 = if g2.certified {
         None
@@ -205,16 +279,7 @@ pub fn inspect_axis(
         for seam in &mut seams {
             seam.order = 1;
         }
-        let mut proof =
-            continuity::inspect_projective_seam_collection_until_refused(
-                &patches,
-                &seams,
-                max_work - exact_work,
-            )?;
-        if !extraction_complete {
-            proof.certified = false;
-            proof.certified_order = None;
-        }
+        let proof = inspect_seams(&patches, &seams, max_work - exact_work, extraction_complete)?;
         exact_work += proof.exact_work;
         Some(proof)
     };

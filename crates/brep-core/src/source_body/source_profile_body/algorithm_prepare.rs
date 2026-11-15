@@ -18,23 +18,7 @@ pub fn prepare<'a>(body: &'a Body, specs: &[FaceSpec], limits: Limits) -> Result
         .shell()
         .regions()
         .ok_or_else(|| Error::new("BREP_PROFILE_BODY", "Require original retained regions"))?;
-    if specs.is_empty()
-        || specs.len() > regions.len()
-        || limits.controls > 1_000_000
-        || limits.fragments > 100000
-        || !limits.position_tolerance.is_finite()
-        || limits.position_tolerance < 0.
-        || specs.iter().any(|f| f.face >= regions.len())
-        || specs
-            .iter()
-            .enumerate()
-            .any(|(i, f)| specs[..i].iter().any(|a| a.face == f.face))
-    {
-        return Err(Error::new(
-            "BREP_PROFILE_BODY",
-            "Choose distinct owned faces and finite bounded proposal limits",
-        ));
-    }
+    validate(specs, &limits, regions.len())?;
     let mut out = Report {
         proposal: None,
         controls: 0,
@@ -59,62 +43,10 @@ pub fn prepare<'a>(body: &'a Body, specs: &[FaceSpec], limits: Limits) -> Result
             out.reason = "profile-body-position-tolerance-unproven";
             return Ok(out);
         }
-        // Check all natural boundaries, including collapsed rails absent from
-        // the retained wire. This preserves original pole and edge positions.
-        for axis in 0..2 {
-            for high in [false, true] {
-                let (boundary, used) =
-                    profile.preserved_boundary(axis, high, limits.controls - out.controls)?;
-                out.controls += used;
-                if boundary.is_none() {
-                    out.reason = "profile-body-boundary-identity-unproven";
-                    return Ok(out);
-                }
-            }
-        }
-        let domains = [
-            [
-                source.knots_u[source.degree_u],
-                source.knots_u[source.control_points.len()],
-            ],
-            [
-                source.knots_v[source.degree_v],
-                source.knots_v[source.control_points[0].len()],
-            ],
-        ];
-        for wire in region.loops() {
-            for fragment in wire {
-                if out.fragments == limits.fragments {
-                    return Ok(out);
-                }
-                out.fragments += 1;
-                if !same(fragment.surface(), source) || fragment.curve().periodic {
-                    out.reason = "profile-body-contour-source-unproven";
-                    return Ok(out);
-                }
-                let mut fixed = [true; 4];
-                for point in &fragment.curve().control_points {
-                    if out.controls == limits.controls {
-                        return Ok(out);
-                    }
-                    out.controls += 1;
-                    if point.len() != 2
-                        || (0..2).any(|a| point[a] < domains[a][0] || point[a] > domains[a][1])
-                    {
-                        out.reason = "profile-body-contour-boundary-unproven";
-                        return Ok(out);
-                    }
-                    for axis in 0..2 {
-                        for high in 0..2 {
-                            fixed[2 * axis + high] &= point[axis] == domains[axis][high];
-                        }
-                    }
-                }
-                if !fixed.iter().any(|x| *x) {
-                    out.reason = "profile-body-interior-trim-unproven";
-                    return Ok(out);
-                }
-            }
+        if !boundaries_preserved(&profile, &limits, &mut out)?
+            || !contours_on_boundary(region.loops(), source, &limits, &mut out)
+        {
+            return Ok(out);
         }
         for (k, error) in profile.axis_deviation_upper().into_iter().enumerate() {
             deviation[k] = deviation[k].max(error);
@@ -132,4 +64,101 @@ pub fn prepare<'a>(body: &'a Body, specs: &[FaceSpec], limits: Limits) -> Result
         position_tolerance: limits.position_tolerance,
     });
     Ok(out)
+}
+
+/// Inclusive upper bound on the control-point budget of one preparation.
+const MAX_CONTROLS: usize = 1_000_000;
+
+fn validate(specs: &[FaceSpec], limits: &Limits, regions: usize) -> Result<()> {
+    if specs.is_empty()
+        || specs.len() > regions
+        || limits.controls > MAX_CONTROLS
+        || limits.fragments > span_work::MAX_WORK
+        || !limits.position_tolerance.is_finite()
+        || limits.position_tolerance < 0.
+        || specs.iter().any(|f| f.face >= regions)
+        || specs
+            .iter()
+            .enumerate()
+            .any(|(i, f)| specs[..i].iter().any(|a| a.face == f.face))
+    {
+        return Err(Error::new(
+            "BREP_PROFILE_BODY",
+            "Choose distinct owned faces and finite bounded proposal limits",
+        ));
+    }
+    Ok(())
+}
+
+/// Check all natural boundaries, including collapsed rails absent from the
+/// retained wire. This preserves original pole and edge positions.
+fn boundaries_preserved(
+    profile: &WeightProfile<'_>,
+    limits: &Limits,
+    out: &mut Report<'_>,
+) -> Result<bool> {
+    for axis in 0..2 {
+        for high in [false, true] {
+            let (boundary, used) =
+                profile.preserved_boundary(axis, high, limits.controls - out.controls)?;
+            out.controls += used;
+            if boundary.is_none() {
+                out.reason = "profile-body-boundary-identity-unproven";
+                return Ok(false);
+            }
+        }
+    }
+    Ok(true)
+}
+
+/// Every retained trim fragment must stay on its source and touch at least
+/// one natural boundary line with all of its control points.
+fn contours_on_boundary(
+    loops: &[Vec<crate::source_boundary_fragment::Fragment>],
+    source: &Surface,
+    limits: &Limits,
+    out: &mut Report<'_>,
+) -> bool {
+    let domains = [
+        [
+            source.knots_u[source.degree_u],
+            source.knots_u[source.control_points.len()],
+        ],
+        [
+            source.knots_v[source.degree_v],
+            source.knots_v[source.control_points[0].len()],
+        ],
+    ];
+    for fragment in loops.iter().flatten() {
+        if out.fragments == limits.fragments {
+            return false;
+        }
+        out.fragments += 1;
+        if !same(fragment.surface(), source) || fragment.curve().periodic {
+            out.reason = "profile-body-contour-source-unproven";
+            return false;
+        }
+        let mut fixed = [true; 4];
+        for point in &fragment.curve().control_points {
+            if out.controls == limits.controls {
+                return false;
+            }
+            out.controls += 1;
+            if point.len() != 2 || (0..2).any(|a| point[a] < domains[a][0] || point[a] > domains[a][1])
+            {
+                out.reason = "profile-body-contour-boundary-unproven";
+                return false;
+            }
+            for axis in 0..2 {
+                for high in 0..2 {
+                    fixed[2 * axis + high] &= point[axis] == domains[axis][high];
+                }
+            }
+        }
+        if !fixed.iter().any(|x| *x) {
+            out.reason = "profile-body-interior-trim-unproven";
+            return false;
+        }
+    }
+    true
 }

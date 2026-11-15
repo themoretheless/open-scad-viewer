@@ -355,39 +355,31 @@ impl Builder<'_> {
         Ok(id)
     }
 }
-pub(super) fn build(
-    pocket: &AlgebraicModelPocket,
-    arcs: &BTreeMap<u32, arcs::ArcData>,
-    uv: &BTreeMap<u32, [Q; 2]>,
-    removed: bool,
-) -> Result<Model> {
-    let mut model = Model::empty(pocket.original.tolerance_mm)?;
-    if !removed {
-        model.faces = pocket.original.faces.clone();
-    }
-    let mut b = Builder {
-        pocket,
-        arcs,
-        uv,
-        model,
-        vertices: BTreeMap::new(),
-        edges: BTreeMap::new(),
-        source_slots: BTreeSet::new(),
-        groups: vec![
-            vec![];
-            if removed {
-                pocket.certificate.components.len()
-            } else {
-                1
-            }
-        ],
-        work: Work::default(),
-    };
-    if !removed {
+/// Each cycle reversed in order and orientation, as seen from the opposite side.
+fn flipped_loops(loops: &[Vec<PocketEdgeUse>]) -> Vec<Vec<PocketEdgeUse>> {
+    loops
+        .iter()
+        .map(|c| {
+            c.iter()
+                .rev()
+                .map(|e| {
+                    let mut e = e.clone();
+                    e.positive ^= true;
+                    e
+                })
+                .collect()
+        })
+        .collect()
+}
+impl Builder<'_> {
+    /// The pocket kept inside the original solid: every certificate face
+    /// lands in one shell and every original face slot is refilled.
+    fn add_retained_faces(&mut self) -> Result<()> {
+        let pocket = self.pocket;
         for f in &pocket.certificate.faces {
             match &f.kind {
                 PocketFaceKind::Source { face, reversed } => {
-                    b.face(
+                    self.face(
                         Carrier::Source(*face),
                         *reversed,
                         &f.loops,
@@ -402,29 +394,27 @@ pub(super) fn build(
                     reversed,
                     ..
                 } => {
-                    b.face(
+                    let slot = outside_triangle.then_some(*source_face);
+                    self.face(
                         Carrier::Source(*source_face),
                         *reversed,
                         &f.loops,
-                        if *outside_triangle {
-                            Some(*source_face)
-                        } else {
-                            None
-                        },
-                        if *outside_triangle {
-                            Some(*source_face)
-                        } else {
-                            None
-                        },
+                        slot,
+                        slot,
                         0,
                     )?;
                 }
                 PocketFaceKind::Floor { reversed, .. } => {
-                    b.face(Carrier::Floor, *reversed, &f.loops, None, None, 0)?;
+                    self.face(Carrier::Floor, *reversed, &f.loops, None, None, 0)?;
                 }
                 PocketFaceKind::Wall { domain_edge } => {
-                    let positive = f.loops[0][0].positive;
-                    b.face(
+                    let positive = f
+                        .loops
+                        .first()
+                        .and_then(|l| l.first())
+                        .ok_or_else(|| fail("ordinary Model pocket wall has no edges"))?
+                        .positive;
+                    self.face(
                         Carrier::Wall(*domain_edge),
                         !positive,
                         &f.loops,
@@ -435,118 +425,148 @@ pub(super) fn build(
                 }
             }
         }
-        if b.source_slots.len() != pocket.original.faces.len() {
+        if self.source_slots.len() != pocket.original.faces.len() {
             return Err(fail(
                 "ordinary Model conversion did not preserve every original face slot",
             ));
         }
-    } else {
+        Ok(())
+    }
+    /// The removed material: each floor component becomes its own closed
+    /// shell capped by the source carrier. Returns the component owning each
+    /// seam domain edge.
+    fn add_removed_caps(&mut self) -> Result<BTreeMap<u32, usize>> {
+        let pocket = self.pocket;
         let mut owner = BTreeMap::new();
         for f in &pocket.certificate.faces {
-            if let PocketFaceKind::Floor {
+            let PocketFaceKind::Floor {
                 component,
                 reversed,
                 ..
             } = &f.kind
-            {
-                let top = f
-                    .loops
-                    .iter()
-                    .map(|c| {
-                        c.iter()
-                            .map(|e| {
-                                let mut e = e.clone();
-                                if let PocketEdge::Bottom(id) = e.edge {
-                                    owner.insert(id, *component as usize);
-                                    e.edge = PocketEdge::Top(id);
-                                }
-                                e
-                            })
-                            .collect()
-                    })
-                    .collect::<Vec<_>>();
-                let source_use = pocket.original.shells[0]
-                    .faces
-                    .iter()
-                    .find(|u| u.face == pocket.certificate.source_face)
-                    .unwrap();
-                b.face(
-                    Carrier::Source(pocket.certificate.source_face),
-                    source_use.reversed,
-                    &top,
-                    None,
-                    None,
-                    *component as usize,
-                )?;
-                let bottom = f
-                    .loops
-                    .iter()
-                    .map(|c| {
-                        c.iter()
-                            .rev()
-                            .map(|e| {
-                                let mut e = e.clone();
-                                e.positive ^= true;
-                                e
-                            })
-                            .collect()
-                    })
-                    .collect::<Vec<_>>();
-                b.face(
-                    Carrier::Floor,
-                    !*reversed,
-                    &bottom,
-                    None,
-                    None,
-                    *component as usize,
-                )?;
-            }
+            else {
+                continue;
+            };
+            let component = *component as usize;
+            let top = f
+                .loops
+                .iter()
+                .map(|c| {
+                    c.iter()
+                        .map(|e| {
+                            let mut e = e.clone();
+                            if let PocketEdge::Bottom(id) = e.edge {
+                                owner.insert(id, component);
+                                e.edge = PocketEdge::Top(id);
+                            }
+                            e
+                        })
+                        .collect()
+                })
+                .collect::<Vec<_>>();
+            let source_use = pocket
+                .original
+                .shells
+                .first()
+                .and_then(|s| {
+                    s.faces
+                        .iter()
+                        .find(|u| u.face == pocket.certificate.source_face)
+                })
+                .ok_or_else(|| fail("ordinary Model pocket source face is not on a shell"))?;
+            self.face(
+                Carrier::Source(pocket.certificate.source_face),
+                source_use.reversed,
+                &top,
+                None,
+                None,
+                component,
+            )?;
+            self.face(
+                Carrier::Floor,
+                !*reversed,
+                &flipped_loops(&f.loops),
+                None,
+                None,
+                component,
+            )?;
         }
-        for f in &pocket.certificate.faces {
-            if let PocketFaceKind::Wall { domain_edge } = f.kind {
-                let cycles: Vec<Vec<PocketEdgeUse>> = f
-                    .loops
-                    .iter()
-                    .map(|c| {
-                        c.iter()
-                            .rev()
-                            .map(|e| {
-                                let mut e = e.clone();
-                                e.positive ^= true;
-                                e
-                            })
-                            .collect()
-                    })
-                    .collect::<Vec<_>>();
-                let positive = cycles[0]
-                    .iter()
-                    .find(|e| matches!(e.edge, PocketEdge::Top(_)))
-                    .unwrap()
-                    .positive;
-                b.face(
-                    Carrier::Wall(domain_edge),
-                    !positive,
-                    &cycles,
-                    None,
-                    None,
-                    owner[&domain_edge],
-                )?;
-            }
+        Ok(owner)
+    }
+    fn add_removed_walls(&mut self, owner: &BTreeMap<u32, usize>) -> Result<()> {
+        for f in &self.pocket.certificate.faces {
+            let PocketFaceKind::Wall { domain_edge } = f.kind else {
+                continue;
+            };
+            let cycles = flipped_loops(&f.loops);
+            let positive = cycles
+                .first()
+                .and_then(|c| c.iter().find(|e| matches!(e.edge, PocketEdge::Top(_))))
+                .ok_or_else(|| fail("ordinary Model pocket wall has no top edge"))?
+                .positive;
+            let group = *owner
+                .get(&domain_edge)
+                .ok_or_else(|| fail("ordinary Model pocket wall has no floor component"))?;
+            self.face(
+                Carrier::Wall(domain_edge),
+                !positive,
+                &cycles,
+                None,
+                None,
+                group,
+            )?;
         }
+        Ok(())
     }
-    for faces in b.groups {
-        let s = b.model.shells.len();
-        b.model.shells.push(Shell {
-            faces,
-            closed: true,
-        });
-        b.model.bodies.push(Body {
-            outer_shell: s,
-            inner_shells: vec![],
-        });
+    fn finish(mut self) -> Result<Model> {
+        for faces in std::mem::take(&mut self.groups) {
+            let s = self.model.shells.len();
+            self.model.shells.push(Shell {
+                faces,
+                closed: true,
+            });
+            self.model.bodies.push(Body {
+                outer_shell: s,
+                inner_shells: vec![],
+            });
+        }
+        self.model.rebuild_topology_ids();
+        self.model.inherit_topology_ids(&[&self.pocket.original]);
+        self.model.validate()?;
+        Ok(self.model)
     }
-    b.model.rebuild_topology_ids();
-    b.model.inherit_topology_ids(&[&pocket.original]);
-    b.model.validate()?;
-    Ok(b.model)
+}
+pub(super) fn build(
+    pocket: &AlgebraicModelPocket,
+    arcs: &BTreeMap<u32, arcs::ArcData>,
+    uv: &BTreeMap<u32, [Q; 2]>,
+    removed: bool,
+) -> Result<Model> {
+    let mut model = Model::empty(pocket.original.tolerance_mm)?;
+    if !removed {
+        model.faces = pocket.original.faces.clone();
+    }
+    let group_count = if removed {
+        pocket.certificate.components.len()
+    } else {
+        1
+    };
+    let mut b = Builder {
+        pocket,
+        arcs,
+        uv,
+        model,
+        vertices: BTreeMap::new(),
+        edges: BTreeMap::new(),
+        source_slots: BTreeSet::new(),
+        groups: vec![vec![]; group_count],
+        work: Work::default(),
+    };
+    if removed {
+        let owner = b.add_removed_caps()?;
+        b.add_removed_walls(&owner)?;
+    } else {
+        b.add_retained_faces()?;
+    }
+    b.finish()
 }

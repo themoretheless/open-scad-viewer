@@ -61,6 +61,94 @@ pub fn axis_line(curve: &Curve, from: [f64; 2], to: [f64; 2]) -> bool {
         && curve.weights == [1., 1.]
 }
 
+/// Faces of the canonical stereographic sphere.
+const PATCH_COUNT: usize = 8;
+/// Pole and equator vertices of the canonical stereographic sphere.
+const VERTEX_COUNT: usize = 6;
+/// Smallest and largest admitted sphere radius.
+const RADIUS_RANGE: std::ops::RangeInclusive<f64> = 1e-5..=1e6;
+/// Absolute floor added to the relative control-point recognition band.
+const ABSOLUTE_SLACK: f64 = 1e-12;
+
+/// Certifies one face's exact biquadratic stereographic surface structure,
+/// weights, and quarter-disk trims (arc plus both axis lines).
+fn stereographic_patch_structure(model: &Model, face_index: usize) -> bool {
+    let face = &model.faces[face_index];
+    let surface = &face.surface;
+    if surface.degree_u != 2
+        || surface.degree_v != 2
+        || surface.periodic_u
+        || surface.periodic_v
+        || surface.knots_u != [0., 0., 0., 1., 1., 1.]
+        || surface.knots_v != [0., 0., 0., 1., 1., 1.]
+        || surface.control_points.len() != 3
+        || surface.control_points.iter().any(|row| row.len() != 3)
+        || surface.weights.len() != 3
+        || surface.weights.iter().any(|row| row.len() != 3)
+        || !face.holes.is_empty()
+    {
+        return false;
+    }
+    for (i, row) in surface.weights.iter().enumerate() {
+        for (j, w) in row.iter().enumerate() {
+            if *w != 1. + SQUARE[i] + SQUARE[j] {
+                return false;
+            }
+        }
+    }
+    let loop_ = &model.loops[face.outer];
+    if loop_.coedges.len() != 3 {
+        return false;
+    }
+    let mut trims = [false; 3];
+    for coedge in &loop_.coedges {
+        let pcurve = &coedge.pcurve;
+        if unit_quarter_arc(pcurve) {
+            trims[0] = true;
+        } else if axis_line(pcurve, [0., 0.], [1., 0.]) {
+            trims[1] = true;
+        } else if axis_line(pcurve, [0., 1.], [0., 0.]) {
+            trims[2] = true;
+        }
+    }
+    trims.into_iter().all(|hit| hit)
+}
+
+/// Certifies every control point of one patch against the exact
+/// stereographic construction in its recovered frame; returns the worst
+/// deviation.
+fn patch_control_deviation(
+    surface: &nurbs_core::surface::Surface,
+    center: [f64; 3],
+    radius: f64,
+    frame: &PatchFrame,
+) -> Option<f64> {
+    let PatchFrame { a, b, pole } = *frame;
+    let mut error: f64 = 0.;
+    for i in 0..3 {
+        for j in 0..3 {
+            let w = 1. + SQUARE[i] + SQUARE[j];
+            let expected: [f64; 3] = std::array::from_fn(|axis| {
+                center[axis]
+                    + (2. * radius * (LINEAR[i] * a[axis] + LINEAR[j] * b[axis])
+                        + radius * (1. - SQUARE[i] - SQUARE[j]) * pole[axis])
+                        / w
+            });
+            let actual = surface.control_points.get(i)?.get(j)?;
+            if actual.len() != 3 {
+                return None;
+            }
+            let deviation = (0..3).map(|k| actual[k] - expected[k]).collect::<Vec<_>>();
+            let deviation = deviation[0].hypot(deviation[1]).hypot(deviation[2]);
+            if !deviation.is_finite() || deviation > RECOGNITION * radius + ABSOLUTE_SLACK {
+                return None;
+            }
+            error = error.max(deviation);
+        }
+    }
+    Some(error)
+}
+
 /// Recognizes a canonical stereographic sphere solid, certifying every patch
 /// control point and weight against the exact construction in its recovered
 /// frame, the exact quarter-disk trim pcurves, and a globally consistent
@@ -69,8 +157,8 @@ pub fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
     model.validate()?;
     if model.bodies.len() != 1
         || model.shells.len() != 1
-        || model.faces.len() != 8
-        || model.vertices.len() != 6
+        || model.faces.len() != PATCH_COUNT
+        || model.vertices.len() != VERTEX_COUNT
     {
         return Ok(None);
     }
@@ -88,7 +176,7 @@ pub fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
         let d = sub(vertex.point, center);
         radius += d[0].hypot(d[1]).hypot(d[2]) / 6.;
     }
-    if !radius.is_finite() || !(1e-5..=1e6).contains(&radius) {
+    if !radius.is_finite() || !RADIUS_RANGE.contains(&radius) {
         return Ok(None);
     }
     let mut error: f64 = 0.;
@@ -99,48 +187,12 @@ pub fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
     if error > RECOGNITION * radius {
         return Ok(None);
     }
-    let mut frames = Vec::with_capacity(8);
-    for face in &model.faces {
+    let mut frames = Vec::with_capacity(PATCH_COUNT);
+    for (face_index, face) in model.faces.iter().enumerate() {
+        if !stereographic_patch_structure(model, face_index) {
+            return Ok(None);
+        }
         let surface = &face.surface;
-        if surface.degree_u != 2
-            || surface.degree_v != 2
-            || surface.periodic_u
-            || surface.periodic_v
-            || surface.knots_u != [0., 0., 0., 1., 1., 1.]
-            || surface.knots_v != [0., 0., 0., 1., 1., 1.]
-            || surface.control_points.len() != 3
-            || surface.control_points.iter().any(|row| row.len() != 3)
-            || surface.weights.len() != 3
-            || surface.weights.iter().any(|row| row.len() != 3)
-            || !face.holes.is_empty()
-        {
-            return Ok(None);
-        }
-        for (i, row) in surface.weights.iter().enumerate() {
-            for (j, w) in row.iter().enumerate() {
-                if *w != 1. + SQUARE[i] + SQUARE[j] {
-                    return Ok(None);
-                }
-            }
-        }
-        let loop_ = &model.loops[face.outer];
-        if loop_.coedges.len() != 3 {
-            return Ok(None);
-        }
-        let mut trims = [false; 3];
-        for coedge in &loop_.coedges {
-            let pcurve = &coedge.pcurve;
-            if unit_quarter_arc(pcurve) {
-                trims[0] = true;
-            } else if axis_line(pcurve, [0., 0.], [1., 0.]) {
-                trims[1] = true;
-            } else if axis_line(pcurve, [0., 1.], [0., 0.]) {
-                trims[2] = true;
-            }
-        }
-        if !trims.into_iter().all(|hit| hit) {
-            return Ok(None);
-        }
         let pole_point = surface.evaluate(0., 0.)?.point;
         let a_point = surface.evaluate(1., 0.)?.point;
         let b_point = surface.evaluate(0., 1.)?.point;
@@ -157,30 +209,14 @@ pub fn recognize(model: &Model) -> Result<Option<CanonicalSphere>> {
                 return Ok(None);
             }
         }
-        for i in 0..3 {
-            for j in 0..3 {
-                let w = 1. + SQUARE[i] + SQUARE[j];
-                let expected: [f64; 3] = std::array::from_fn(|axis| {
-                    center[axis]
-                        + (2. * radius * (LINEAR[i] * a[axis] + LINEAR[j] * b[axis])
-                            + radius * (1. - SQUARE[i] - SQUARE[j]) * pole[axis])
-                            / w
-                });
-                let actual = &surface.control_points[i][j];
-                if actual.len() != 3 {
-                    return Ok(None);
-                }
-                let deviation = (0..3).map(|k| actual[k] - expected[k]).collect::<Vec<_>>();
-                let deviation = deviation[0].hypot(deviation[1]).hypot(deviation[2]);
-                if !deviation.is_finite() || deviation > RECOGNITION * radius + 1e-12 {
-                    return Ok(None);
-                }
-                error = error.max(deviation);
-            }
-        }
-        frames.push(PatchFrame { a, b, pole });
+        let frame = PatchFrame { a, b, pole };
+        let Some(deviation) = patch_control_deviation(surface, center, radius, &frame) else {
+            return Ok(None);
+        };
+        error = error.max(deviation);
+        frames.push(frame);
     }
-    frames::finish(center,radius,error,frames,None)
+    frames::finish(center, radius, error, frames, None)
 }
 
 impl CanonicalSphere {
@@ -294,18 +330,20 @@ pub(super) fn clip_circle(center: [f64; 2], rho: f64) -> Option<(f64, f64)> {
         return None;
     }
     // Merge spans separated only by touch-scale gaps, across the wraparound.
-    let mut merged = vec![spans[0]];
-    for &span in &spans[1..] {
-        let last = merged.last_mut().unwrap();
-        if span.0 - last.1 <= 1e-9 {
-            last.1 = span.1;
-        } else {
-            merged.push(span);
+    let mut merged: Vec<(f64, f64)> = Vec::with_capacity(spans.len());
+    for &span in &spans {
+        match merged.last_mut() {
+            Some(last) if span.0 - last.1 <= 1e-9 => last.1 = span.1,
+            _ => merged.push(span),
         }
     }
-    if merged.len() > 1 && merged[0].0 + TAU - merged.last().unwrap().1 <= 1e-9 {
+    let wraps = match (merged.first(), merged.last()) {
+        (Some(first), Some(last)) => merged.len() > 1 && first.0 + TAU - last.1 <= 1e-9,
+        _ => false,
+    };
+    if wraps {
         let first = merged.remove(0);
-        let last = merged.last_mut().unwrap();
+        let last = merged.last_mut()?;
         // The merged span wraps the angle origin: keep the swept-interval
         // contract (ccw, end - start in (0, TAU]) by unwrapping the end past
         // TAU instead of emitting a negative sweep (which circle_arcs would

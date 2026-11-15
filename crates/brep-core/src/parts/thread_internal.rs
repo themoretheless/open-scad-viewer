@@ -122,13 +122,9 @@ struct CapEdge {
     end: usize,
     outer: bool,
 }
-fn cap(
-    model: &mut Model,
-    z: f64,
-    bottom: bool,
-    inner_faces: usize,
-    limits: FiniteThreadLimits,
-) -> Result<CapProfileProof> {
+/// Collect the free boundary edges lying exactly in the plane `z`, directed so
+/// that the cap face (reversed for the bottom cap) runs against each owner.
+fn collect_cap_edges(model: &Model, z: f64, bottom: bool, inner_faces: usize) -> Vec<CapEdge> {
     let mut incidence = vec![0usize; model.edges.len()];
     for f in &model.faces {
         for &li in std::iter::once(&f.outer).chain(f.holes.iter()) {
@@ -162,6 +158,11 @@ fn cap(
             }
         }
     }
+    edges
+}
+
+/// Chain the directed cap edges into closed single-role cycles, outer first.
+fn chain_cap_cycles(edges: &[CapEdge], inner_faces: usize) -> Result<Vec<Vec<usize>>> {
     let mut outgoing = std::collections::BTreeMap::new();
     let mut incoming = std::collections::BTreeSet::new();
     for (i, e) in edges.iter().enumerate() {
@@ -208,14 +209,14 @@ fn cap(
     if !edges[cycles[0][0]].outer || (inner_faces > 0 && edges[cycles[1][0]].outer) {
         return Err(fail("Annular material roles are unresolved"));
     }
-    let wires: Vec<Vec<_>> = cycles
-        .iter()
-        .map(|c| {
-            c.iter()
-                .map(|&i| oriented_xy(&model.edges[edges[i].edge].curve, edges[i].reverse))
-                .collect()
-        })
-        .collect();
+    Ok(cycles)
+}
+
+/// Certify the cap wires as an exact profile inside the per-cap budgets.
+fn certify_cap_profile(
+    wires: Vec<Vec<nurbs_core::curve::Curve>>,
+    limits: FiniteThreadLimits,
+) -> Result<CapProfileProof> {
     let span_count = wires
         .iter()
         .flatten()
@@ -239,6 +240,16 @@ fn cap(
             "Annular exact profile witness exceeds its admitted budget",
         ));
     }
+    Ok(CapProfileProof {
+        wires,
+        certificate: witness,
+        verified,
+    })
+}
+
+/// Bilinear plane at `z` with identity XY parameterization covering the wires
+/// with a factor-two margin (and at least the unit square).
+fn cap_plane(wires: &[Vec<nurbs_core::curve::Curve>], z: f64) -> Surface {
     let extent = wires
         .iter()
         .flatten()
@@ -246,7 +257,7 @@ fn cap(
         .map(|x| x.abs())
         .fold(1_f64, f64::max)
         * 2.;
-    let surface = Surface {
+    Surface {
         degree_u: 1,
         degree_v: 1,
         knots_u: vec![-extent, -extent, extent, extent],
@@ -258,22 +269,34 @@ fn cap(
         weights: vec![vec![1.; 2]; 2],
         periodic_u: false,
         periodic_v: false,
-    };
+    }
+}
+
+fn cap(
+    model: &mut Model,
+    z: f64,
+    bottom: bool,
+    inner_faces: usize,
+    limits: FiniteThreadLimits,
+) -> Result<CapProfileProof> {
+    let edges = collect_cap_edges(model, z, bottom, inner_faces);
+    let cycles = chain_cap_cycles(&edges, inner_faces)?;
+    let wires: Vec<Vec<_>> = cycles
+        .iter()
+        .map(|c| {
+            c.iter()
+                .map(|&i| oriented_xy(&model.edges[edges[i].edge].curve, edges[i].reverse))
+                .collect()
+        })
+        .collect();
+    let proof = certify_cap_profile(wires.clone(), limits)?;
+    let surface = cap_plane(&wires, z);
     let mut loops = Vec::new();
-    let proof = CapProfileProof {
-        wires: wires.clone(),
-        certificate: witness,
-        verified,
-    };
     for (cycle, wire) in cycles.iter().zip(wires) {
         let coedges = cycle
             .iter()
             .zip(wire)
-            .map(|(&i, pcurve)| Coedge::new(
-                edges[i].edge,
-                edges[i].reverse,
-                pcurve,
-            ))
+            .map(|(&i, pcurve)| Coedge::new(edges[i].edge, edges[i].reverse, pcurve))
             .collect();
         loops.push(model.loops.len());
         model.loops.push(Loop { coedges });

@@ -142,16 +142,11 @@ fn parameters(original: &[[Q; 2]; 2], actual: &[[Q; 2]; 2]) -> Option<[Q; 2]> {
     }
     Some(r)
 }
-impl Roof {
-    /// Bind named original chart intervals, then prove complete world-curve
-    /// equality after exact restriction/elevation. No spatial search/welding.
-    pub fn bind_original_boundaries(
-        &self,
-        source: &Model,
-        source_faces: [usize; 2],
-        budget: &mut Budget,
-    ) -> Result<OriginalBoundaryMap> {
-        source.validate()?;
+fn refuse<T>(message: &str) -> Result<T> {
+    Err(Error::new("BREP_EXACT_GRAPH_STRIP", message))
+}
+impl OriginalBoundaryMap {
+    fn new(source: &Model, source_faces: [usize; 2]) -> Result<Self> {
         require(
             source_faces[0] != source_faces[1]
                 && source_faces.iter().all(|&i| i < source.faces.len())
@@ -166,7 +161,7 @@ impl Roof {
             "Original source-hole mapping is unsupported",
         )?;
         let loops = std::array::from_fn(|s| source.loops[faces[s].outer].clone());
-        let mut map = OriginalBoundaryMap {
+        Ok(Self {
             links: Vec::new(),
             endpoints: Vec::new(),
             face_indices: source_faces,
@@ -176,7 +171,104 @@ impl Roof {
             curves: BTreeMap::new(),
             vertices: BTreeMap::new(),
             roof_roots: Vec::new(),
+        })
+    }
+    /// Records the named endpoints, curve and roof root of a newly bound edge.
+    fn record(&mut self, roof: &Roof, source: &Model, link: OriginalEdgeLink) -> Result<()> {
+        let edge = &roof.topology().edges[link.roof_edge];
+        let source_edge = &source.edges[link.source_edge];
+        for end in 0..2 {
+            let parameter =
+                link.source_range[usize::from(link.reversed_from_source) ^ end].clone();
+            let vertex = if parameter == Q::zero() {
+                Some(source_edge.vertices[0])
+            } else if parameter == Q::one() {
+                Some(source_edge.vertices[1])
+            } else {
+                None
+            };
+            if let Some(v) = vertex {
+                let point = super::original_body::exact_point(source.vertices[v].point)?;
+                require(
+                    point == roof.topology().vertices[edge.vertices[end]].point,
+                    "Original vertex identity and exact roof endpoint disagree",
+                )?;
+                self.vertices
+                    .insert(v, (source.vertices[v].point, source.1.vertices[v]));
+            }
+            self.endpoints.push(OriginalEndpointLink {
+                roof_vertex: edge.vertices[end],
+                source_edge_id: link.source_id,
+                source_parameter: parameter,
+                source_vertex: vertex,
+                source_vertex_id: vertex.map(|i| source.1.vertices[i]),
+            });
+        }
+        self.curves
+            .insert(link.source_edge, (source_edge.clone(), link.source_id));
+        self.roof_roots.push((
+            link.roof_edge,
+            edge.curve.root.clone(),
+            edge.curve.range.clone(),
+        ));
+        self.links.push(link);
+        Ok(())
+    }
+}
+impl Roof {
+    /// The original coedge whose exact restriction equals roof edge
+    /// `roof_edge` traversed over the UV interval `actual`, if any.
+    fn match_original(
+        &self,
+        source: &Model,
+        original: &crate::Coedge,
+        roof_edge: usize,
+        actual: &[[Q; 2]; 2],
+        budget: &mut Budget,
+    ) -> Result<Option<OriginalEdgeLink>> {
+        let uv = canonical_uv(original, &source.edges[original.edge].curve)?;
+        let Some(r) = parameters(&uv, actual) else {
+            return Ok(None);
         };
+        let reversed = r[0] > r[1];
+        let range = if reversed {
+            [r[1].clone(), r[0].clone()]
+        } else {
+            r
+        };
+        let points = polynomial(&source.edges[original.edge].curve)?;
+        let mut restricted = BoundaryDefinition {
+            points,
+            uv: [[Q::zero(), Q::zero()], [Q::one(), Q::zero()]],
+        }
+        .restricted(range.clone(), budget)?
+        .points;
+        if reversed {
+            restricted.reverse();
+        }
+        let equal = polynomial_points_equal(
+            &restricted,
+            self.topology().edges[roof_edge].curve.points(),
+            budget,
+        )?;
+        Ok(equal.then(|| OriginalEdgeLink {
+            roof_edge,
+            source_edge: original.edge,
+            source_id: source.1.edges[original.edge],
+            source_range: range,
+            reversed_from_source: reversed,
+        }))
+    }
+    /// Bind named original chart intervals, then prove complete world-curve
+    /// equality after exact restriction/elevation. No spatial search/welding.
+    pub fn bind_original_boundaries(
+        &self,
+        source: &Model,
+        source_faces: [usize; 2],
+        budget: &mut Budget,
+    ) -> Result<OriginalBoundaryMap> {
+        source.validate()?;
+        let mut map = OriginalBoundaryMap::new(source, source_faces)?;
         let mut by_roof = BTreeMap::new();
         for face in &self.topology().faces {
             let FaceGeometry::Retained(region) = &face.surface else {
@@ -192,55 +284,25 @@ impl Roof {
                     continue;
                 };
                 let c = &self.topology().loops[face.outer].coedges[index];
-                let mut actual = [
-                    u.uv_points()[0].clone(),
-                    u.uv_points().last().unwrap().clone(),
-                ];
+                let uv_points = u.uv_points();
+                let (Some(first), Some(last)) = (uv_points.first(), uv_points.last()) else {
+                    return refuse("Retained natural use has no UV points");
+                };
+                let mut actual = [first.clone(), last.clone()];
                 if *reverse ^ c.reversed {
                     actual.reverse();
                 }
                 let mut matches = Vec::new();
                 for original in &map.loops[side].coedges {
-                    let uv = canonical_uv(original, &source.edges[original.edge].curve)?;
-                    let Some(r) = parameters(&uv, &actual) else {
-                        continue;
-                    };
-                    let reversed = r[0] > r[1];
-                    let range = if reversed {
-                        [r[1].clone(), r[0].clone()]
-                    } else {
-                        r
-                    };
-                    let curve = &source.edges[original.edge].curve;
-                    let points = polynomial(curve)?;
-                    let mut restricted = BoundaryDefinition {
-                        points,
-                        uv: [[Q::zero(), Q::zero()], [Q::one(), Q::zero()]],
-                    }
-                    .restricted(range.clone(), budget)?
-                    .points;
-                    if reversed {
-                        restricted.reverse();
-                    }
-                    if polynomial_points_equal(
-                        &restricted,
-                        self.topology().edges[c.edge].curve.points(),
-                        budget,
-                    )? {
-                        matches.push(OriginalEdgeLink {
-                            roof_edge: c.edge,
-                            source_edge: original.edge,
-                            source_id: source.1.edges[original.edge],
-                            source_range: range,
-                            reversed_from_source: reversed,
-                        });
+                    if let Some(link) =
+                        self.match_original(source, original, c.edge, &actual, budget)?
+                    {
+                        matches.push(link);
                     }
                 }
-                require(
-                    matches.len() == 1,
-                    "Original named source boundary is missing or ambiguous",
-                )?;
-                let link = matches.pop().unwrap();
+                let (Some(link), true) = (matches.pop(), matches.is_empty()) else {
+                    return refuse("Original named source boundary is missing or ambiguous");
+                };
                 if let Some(&old) = by_roof.get(&link.roof_edge) {
                     let prior: &OriginalEdgeLink = &map.links[old];
                     require(
@@ -252,46 +314,8 @@ impl Roof {
                     )?;
                     continue;
                 }
-                let edge = &self.topology().edges[link.roof_edge];
-                let source_edge = &source.edges[link.source_edge];
-                for end in 0..2 {
-                    let parameter =
-                        link.source_range[usize::from(link.reversed_from_source) ^ end].clone();
-                    let vertex = if parameter == Q::zero() {
-                        Some(source_edge.vertices[0])
-                    } else if parameter == Q::one() {
-                        Some(source_edge.vertices[1])
-                    } else {
-                        None
-                    };
-                    if let Some(v) = vertex {
-                        let point = source.vertices[v].point.map(|x| Q::from_float(x).unwrap());
-                        require(
-                            point == self.topology().vertices[edge.vertices[end]].point,
-                            "Original vertex identity and exact roof endpoint disagree",
-                        )?;
-                        map.vertices
-                            .insert(v, (source.vertices[v].point, source.1.vertices[v]));
-                    }
-                    map.endpoints.push(OriginalEndpointLink {
-                        roof_vertex: edge.vertices[end],
-                        source_edge_id: link.source_id,
-                        source_parameter: parameter,
-                        source_vertex: vertex,
-                        source_vertex_id: vertex.map(|i| source.1.vertices[i]),
-                    });
-                }
-                map.curves.insert(
-                    link.source_edge,
-                    (source_edge.clone(), link.source_id),
-                );
-                map.roof_roots.push((
-                    link.roof_edge,
-                    edge.curve.root.clone(),
-                    edge.curve.range.clone(),
-                ));
                 by_roof.insert(link.roof_edge, map.links.len());
-                map.links.push(link);
+                map.record(self, source, link)?;
             }
         }
         require(

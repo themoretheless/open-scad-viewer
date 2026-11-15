@@ -1,5 +1,19 @@
 use super::*;
 
+const MIN_SWEEP_STATIONS: usize = 3;
+const MAX_SWEEP_STATIONS: usize = 16;
+const MIN_SWEEP_SCALE: f64 = 0.125;
+const MAX_SWEEP_SCALE: f64 = 8.;
+/// Squared station distance below which the path is treated as closed.
+const CLOSED_LOOP_DISTANCE_SQUARED: f64 = 1e-12;
+/// Smallest admissible cosine between adjacent span tangents.
+const MIN_TURN_COSINE: f64 = 0.25;
+/// Additive separation margin between nonadjacent swept spans.
+const SEPARATION_MARGIN: f64 = 1e-6;
+/// Tangent z-component above which the RMF seed helper switches to +X.
+const SEED_HELPER_SWITCH: f64 = 0.9;
+const SWEEP_FRAME_REFUSED: &str = "BREP_SWEEP_FRAME_REFUSED";
+
 /// Qualified bent-path successor. Paths are open piecewise degree-1 Bezier
 /// chains (2..16 stations); each span therefore has an exact zero curvature
 /// Bernstein hull. Station turns are bounded, frames use discrete RMF
@@ -10,148 +24,15 @@ pub fn audited_bent_rmf_sweep(
     twist_radians: &[f64],
     scales: &[f64],
 ) -> Result<AuditedFeatureResult> {
-    if path.len() < 3 || path.len() > 16 || profile.len() < 3 || profile.len() > 16 {
-        return Err(refuse(
-            "BREP_SWEEP_RESOURCE_REFUSED",
-            "Qualified bent RMF sweep admits 3..16 stations and 3..16 profile vertices",
-        ));
-    }
-    if twist_radians.len() != path.len() || scales.len() != path.len() {
-        return Err(refuse(
-            "BREP_SWEEP_LAW_REFUSED",
-            "Twist and scale laws require one exact value per path station",
-        ));
-    }
-    if path
-        .iter()
-        .flatten()
-        .chain(profile.iter().flatten())
-        .any(|x| !x.is_finite())
-    {
-        return Err(refuse(
-            "BREP_SWEEP_PATH_REFUSED",
-            "Path and profile coefficients must be finite",
-        ));
-    }
-    let profile3 = profile.iter().map(|p| [p[0], p[1], 0.]).collect::<Vec<_>>();
-    convex_section_area(&profile3)?;
-    if scales
-        .iter()
-        .any(|scale| !scale.is_finite() || *scale < 0.125 || *scale > 8.)
-    {
-        return Err(refuse(
-            "BREP_SWEEP_SCALE_REFUSED",
-            "Scale Bernstein bounds must stay positive in 0.125..8",
-        ));
-    }
-    if twist_radians
-        .iter()
-        .any(|twist| !twist.is_finite() || twist.abs() > std::f64::consts::PI)
-        || twist_radians
-            .windows(2)
-            .any(|law| (law[1] - law[0]).abs() > std::f64::consts::FRAC_PI_2)
-    {
-        return Err(refuse(
-            "BREP_SWEEP_TWIST_REFUSED",
-            "Twist must be finite, bounded by pi, and change by at most pi/2 per span",
-        ));
-    }
-    let tangents = path
-        .windows(2)
-        .map(|span| {
-            unit3(sub3(span[1], span[0])).ok_or_else(|| {
-                refuse(
-                    "BREP_SWEEP_CUSP_REFUSED",
-                    "A path span has a zero derivative Bernstein hull",
-                )
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
-    if sub3(path[0], *path.last().unwrap())
-        .iter()
-        .map(|x| x * x)
-        .sum::<f64>()
-        <= 1e-12
-    {
-        return Err(refuse(
-            "BREP_SWEEP_CLOSED_LOOP_REFUSED",
-            "Closed path holonomy is outside this finite RMF successor",
-        ));
-    }
-    for turn in tangents.windows(2) {
-        let cosine = dot3(turn[0], turn[1]);
-        if cosine <= 0.25 {
-            return Err(refuse(
-                "BREP_SWEEP_FRAME_REFUSED",
-                "Adjacent path spans exceed the certified RMF turn bound or form a cusp",
-            ));
-        }
-    }
+    validate_sweep_laws(profile, path, twist_radians, scales)?;
+    let tangents = certified_span_tangents(path)?;
     let radius = profile
         .iter()
         .map(|point| point[0].hypot(point[1]))
         .fold(0., f64::max)
         * scales.iter().copied().fold(0., f64::max);
-    for i in 0..tangents.len() {
-        for j in i + 2..tangents.len() {
-            if segment_distance_squared(path[i], path[i + 1], path[j], path[j + 1])
-                <= (2. * radius + 1e-6).powi(2)
-            {
-                return Err(refuse(
-                    "BREP_SWEEP_SELF_INTERSECTION_REFUSED",
-                    "Nonadjacent swept-span convex hulls do not have a positive global separation bound",
-                ));
-            }
-        }
-    }
-    let mut frames = Vec::with_capacity(path.len());
-    let helper = if tangents[0][2].abs() < 0.9 {
-        [0., 0., 1.]
-    } else {
-        [1., 0., 0.]
-    };
-    let mut normal = unit3(cross3(cross3(tangents[0], helper), tangents[0]))
-        .ok_or_else(|| refuse("BREP_SWEEP_FRAME_REFUSED", "RMF seed frame is singular"))?;
-    for i in 0..path.len() {
-        let tangent = if i == 0 {
-            tangents[0]
-        } else if i == path.len() - 1 {
-            *tangents.last().unwrap()
-        } else {
-            unit3([
-                tangents[i - 1][0] + tangents[i][0],
-                tangents[i - 1][1] + tangents[i][1],
-                tangents[i - 1][2] + tangents[i][2],
-            ])
-            .ok_or_else(|| {
-                refuse(
-                    "BREP_SWEEP_FRAME_REFUSED",
-                    "RMF tangent bisector is singular",
-                )
-            })?
-        };
-        normal = unit3([
-            normal[0] - dot3(normal, tangent) * tangent[0],
-            normal[1] - dot3(normal, tangent) * tangent[1],
-            normal[2] - dot3(normal, tangent) * tangent[2],
-        ])
-        .ok_or_else(|| {
-            refuse(
-                "BREP_SWEEP_FRAME_REFUSED",
-                "RMF projection denominator bound reached zero",
-            )
-        })?;
-        let binormal = unit3(cross3(tangent, normal))
-            .ok_or_else(|| refuse("BREP_SWEEP_FRAME_REFUSED", "RMF binormal is singular"))?;
-        let (sin, cos) = twist_radians[i].sin_cos();
-        let twisted_n = [
-            cos * normal[0] + sin * binormal[0],
-            cos * normal[1] + sin * binormal[1],
-            cos * normal[2] + sin * binormal[2],
-        ];
-        let twisted_b = cross3(tangent, twisted_n);
-        frames.push((twisted_n, twisted_b));
-    }
+    check_span_separation(path, tangents.len(), radius)?;
+    let frames = rmf_station_frames(&tangents, twist_radians)?;
     let sections = path
         .iter()
         .zip(frames.iter())
@@ -185,6 +66,169 @@ pub fn audited_bent_rmf_sweep(
         ],
         radius,
     )
+}
+
+/// Station/vertex counts, finiteness, profile convexity, scale and twist laws.
+fn validate_sweep_laws(
+    profile: &[[f64; 2]],
+    path: &[[f64; 3]],
+    twist_radians: &[f64],
+    scales: &[f64],
+) -> Result<()> {
+    let stations = MIN_SWEEP_STATIONS..=MAX_SWEEP_STATIONS;
+    if !stations.contains(&path.len()) || !stations.contains(&profile.len()) {
+        return Err(refuse(
+            "BREP_SWEEP_RESOURCE_REFUSED",
+            "Qualified bent RMF sweep admits 3..16 stations and 3..16 profile vertices",
+        ));
+    }
+    if twist_radians.len() != path.len() || scales.len() != path.len() {
+        return Err(refuse(
+            "BREP_SWEEP_LAW_REFUSED",
+            "Twist and scale laws require one exact value per path station",
+        ));
+    }
+    if path
+        .iter()
+        .flatten()
+        .chain(profile.iter().flatten())
+        .any(|x| !x.is_finite())
+    {
+        return Err(refuse(
+            "BREP_SWEEP_PATH_REFUSED",
+            "Path and profile coefficients must be finite",
+        ));
+    }
+    let profile3 = profile.iter().map(|p| [p[0], p[1], 0.]).collect::<Vec<_>>();
+    convex_section_area(&profile3)?;
+    if scales
+        .iter()
+        .any(|scale| !scale.is_finite() || *scale < MIN_SWEEP_SCALE || *scale > MAX_SWEEP_SCALE)
+    {
+        return Err(refuse(
+            "BREP_SWEEP_SCALE_REFUSED",
+            "Scale Bernstein bounds must stay positive in 0.125..8",
+        ));
+    }
+    if twist_radians
+        .iter()
+        .any(|twist| !twist.is_finite() || twist.abs() > std::f64::consts::PI)
+        || twist_radians
+            .windows(2)
+            .any(|law| (law[1] - law[0]).abs() > std::f64::consts::FRAC_PI_2)
+    {
+        return Err(refuse(
+            "BREP_SWEEP_TWIST_REFUSED",
+            "Twist must be finite, bounded by pi, and change by at most pi/2 per span",
+        ));
+    }
+    Ok(())
+}
+
+/// Unit span tangents; refuses cusps, closed loops and excessive turns.
+fn certified_span_tangents(path: &[[f64; 3]]) -> Result<Vec<[f64; 3]>> {
+    let tangents = path
+        .windows(2)
+        .map(|span| {
+            unit3(sub3(span[1], span[0])).ok_or_else(|| {
+                refuse(
+                    "BREP_SWEEP_CUSP_REFUSED",
+                    "A path span has a zero derivative Bernstein hull",
+                )
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let closed = match path {
+        [first, .., last] => {
+            sub3(*first, *last).iter().map(|x| x * x).sum::<f64>() <= CLOSED_LOOP_DISTANCE_SQUARED
+        }
+        _ => false,
+    };
+    if closed {
+        return Err(refuse(
+            "BREP_SWEEP_CLOSED_LOOP_REFUSED",
+            "Closed path holonomy is outside this finite RMF successor",
+        ));
+    }
+    for turn in tangents.windows(2) {
+        if dot3(turn[0], turn[1]) <= MIN_TURN_COSINE {
+            return Err(refuse(
+                SWEEP_FRAME_REFUSED,
+                "Adjacent path spans exceed the certified RMF turn bound or form a cusp",
+            ));
+        }
+    }
+    Ok(tangents)
+}
+
+fn check_span_separation(path: &[[f64; 3]], spans: usize, radius: f64) -> Result<()> {
+    for i in 0..spans {
+        for j in i + 2..spans {
+            if segment_distance_squared(path[i], path[i + 1], path[j], path[j + 1])
+                <= (2. * radius + SEPARATION_MARGIN).powi(2)
+            {
+                return Err(refuse(
+                    "BREP_SWEEP_SELF_INTERSECTION_REFUSED",
+                    "Nonadjacent swept-span convex hulls do not have a positive global separation bound",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Discrete rotation-minimizing (normal, binormal) per station, twisted by the law.
+fn rmf_station_frames(
+    tangents: &[[f64; 3]],
+    twist_radians: &[f64],
+) -> Result<Vec<([f64; 3], [f64; 3])>> {
+    let (Some(&first), Some(&last)) = (tangents.first(), tangents.last()) else {
+        return Err(refuse(SWEEP_FRAME_REFUSED, "RMF seed frame is singular"));
+    };
+    let stations = tangents.len() + 1;
+    let mut frames = Vec::with_capacity(stations);
+    let helper = if first[2].abs() < SEED_HELPER_SWITCH {
+        [0., 0., 1.]
+    } else {
+        [1., 0., 0.]
+    };
+    let mut normal = unit3(cross3(cross3(first, helper), first))
+        .ok_or_else(|| refuse(SWEEP_FRAME_REFUSED, "RMF seed frame is singular"))?;
+    for (i, twist) in twist_radians.iter().enumerate().take(stations) {
+        let tangent = if i == 0 {
+            first
+        } else if i == stations - 1 {
+            last
+        } else {
+            unit3([
+                tangents[i - 1][0] + tangents[i][0],
+                tangents[i - 1][1] + tangents[i][1],
+                tangents[i - 1][2] + tangents[i][2],
+            ])
+            .ok_or_else(|| refuse(SWEEP_FRAME_REFUSED, "RMF tangent bisector is singular"))?
+        };
+        normal = unit3([
+            normal[0] - dot3(normal, tangent) * tangent[0],
+            normal[1] - dot3(normal, tangent) * tangent[1],
+            normal[2] - dot3(normal, tangent) * tangent[2],
+        ])
+        .ok_or_else(|| {
+            refuse(
+                SWEEP_FRAME_REFUSED,
+                "RMF projection denominator bound reached zero",
+            )
+        })?;
+        let binormal = unit3(cross3(tangent, normal))
+            .ok_or_else(|| refuse(SWEEP_FRAME_REFUSED, "RMF binormal is singular"))?;
+        let (sin, cos) = twist.sin_cos();
+        let twisted_n = [
+            cos * normal[0] + sin * binormal[0],
+            cos * normal[1] + sin * binormal[1],
+            cos * normal[2] + sin * binormal[2],
+        ];
+        frames.push((twisted_n, cross3(tangent, twisted_n)));
+    }
+    Ok(frames)
 }
 
 /// AS-01 cuboid (open top or closed offset) plus cylinder wall offset.
@@ -329,16 +373,88 @@ pub(super) type AnalyticTube = (f64, f64, f64, [f64; 3], [f64; 3], [[f64; 3]; 2]
 /// Experimental preview construction for one top outer quarter-rim edge.
 /// This returns no feature certificate: result boundary proof and complete
 /// source ownership qualification are still required before command admission.
+const PARTIAL_PREVIEW_REFUSED: &str = "BREP_PARTIAL_ANNULAR_PREVIEW_REFUSED";
+/// Face count of the authored partial annular preview layout.
+const PARTIAL_PREVIEW_FACES: usize = 27;
+/// Leading faces grouped as three five-face blend sectors.
+const PARTIAL_PREVIEW_BLEND_FACES: usize = 15;
+const QUARTER_KNOTS: [f64; 6] = [0., 0., 0., 1., 1., 1.];
+const QUARTER_WEIGHT_TOLERANCE: f64 = 1e-12;
+
+/// Recognized tube parameters shared by the preview stages.
+struct PreviewTube {
+    outer: f64,
+    inner: f64,
+    height: f64,
+    origin: [f64; 3],
+    axis: [f64; 3],
+    tolerance: f64,
+}
+
+impl PreviewTube {
+    /// Component of `p - origin` orthogonal to the axis.
+    fn radial(&self, p: &[f64]) -> [f64; 3] {
+        let d = sub3([p[0], p[1], p[2]], self.origin);
+        let z = dot3(d, self.axis);
+        [
+            d[0] - z * self.axis[0],
+            d[1] - z * self.axis[1],
+            d[2] - z * self.axis[2],
+        ]
+    }
+}
+
 pub fn build_partial_annular_preview(
     model: &Model,
     edge_index: usize,
     radius: f64,
 ) -> Result<Model> {
-    const CODE: &str = "BREP_PARTIAL_ANNULAR_PREVIEW_REFUSED";
+    const CODE: &str = PARTIAL_PREVIEW_REFUSED;
     model.validate()?;
     audit_solid(model)?;
     let (outer, inner, height, origin, axis, _) = recognize_analytic_tube(model)
         .ok_or_else(|| refuse(CODE, "Preview source must be a recognized annular cylinder"))?;
+    let tube = PreviewTube {
+        outer,
+        inner,
+        height,
+        origin,
+        axis,
+        tolerance: tube_tolerance(outer, height),
+    };
+    let ([first, second], direction) = top_outer_quarter_frame(model, edge_index, &tube)?;
+    let local = crate::circular_blend::partial_annular_quarter(
+        outer,
+        inner,
+        height,
+        radius,
+        direction,
+        model.tolerance_mm,
+    )?;
+    let mut result = place_axial(&local, [first, second], axis, origin)?;
+    result.inherit_topology_ids(&[model]);
+    persist_single_body(model, &mut result)?;
+    let face_relations = preview_face_relations(model, &result, &tube)?;
+    Model::record_relations(
+        &mut result.1.lineage,
+        "face",
+        &model.1.faces,
+        &result.1.faces,
+        &face_relations,
+    );
+    result.refresh_change_set(&[model]);
+    result.validate()?;
+    Ok(result)
+}
+
+/// Certifies the selected edge as a top outer quarter circle and returns its
+/// radial frame plus the sweep direction sign.
+fn top_outer_quarter_frame(
+    model: &Model,
+    edge_index: usize,
+    tube: &PreviewTube,
+) -> Result<([[f64; 3]; 2], f64)> {
+    const CODE: &str = PARTIAL_PREVIEW_REFUSED;
     let edge = model
         .edges
         .get(edge_index)
@@ -346,24 +462,22 @@ pub fn build_partial_annular_preview(
     let curve = &edge.curve;
     if curve.degree != 2
         || curve.periodic
-        || curve.knots != [0., 0., 0., 1., 1., 1.]
+        || curve.knots != QUARTER_KNOTS
         || curve.control_points.len() != 3
         || curve.weights.len() != 3
     {
         return Err(refuse(CODE, "Select a top outer quarter-circle edge"));
     }
-    let tolerance = (outer.max(height) * 1e-10).max(1e-12);
+    let (axis, height, outer, tolerance) = (tube.axis, tube.height, tube.outer, tube.tolerance);
     let local: Vec<_> = curve
         .control_points
         .iter()
-        .map(|p| sub3([p[0], p[1], p[2]], origin))
+        .map(|p| sub3([p[0], p[1], p[2]], tube.origin))
         .collect();
-    let radial: Vec<_> = local
+    let radial: Vec<_> = curve
+        .control_points
         .iter()
-        .map(|p| {
-            let z = dot3(*p, axis);
-            [p[0] - z * axis[0], p[1] - z * axis[1], p[2] - z * axis[2]]
-        })
+        .map(|p| tube.radial(p))
         .collect();
     if local
         .iter()
@@ -377,7 +491,7 @@ pub fn build_partial_annular_preview(
             .weights
             .iter()
             .zip([1., std::f64::consts::FRAC_1_SQRT_2, 1.])
-            .any(|(a, b)| (*a - b).abs() > 1e-12)
+            .any(|(a, b)| (*a - b).abs() > QUARTER_WEIGHT_TOLERANCE)
     {
         return Err(refuse(
             CODE,
@@ -386,48 +500,59 @@ pub fn build_partial_annular_preview(
     }
     let first = unit3(radial[0]).ok_or_else(|| refuse(CODE, "Invalid radial frame"))?;
     let second = unit3(cross3(axis, first)).ok_or_else(|| refuse(CODE, "Invalid radial frame"))?;
-    let direction = dot3(radial[2], second).signum();
-    let local = crate::circular_blend::partial_annular_quarter(
-        outer,
-        inner,
-        height,
-        radius,
-        direction,
-        model.tolerance_mm,
-    )?;
-    let mut result = place_axial(&local, [first, second], axis, origin)?;
-    result.inherit_topology_ids(&[model]);
-    // This explicitly selected edit replaces exactly one source body with
-    // exactly one result body. Preserve its identity independently of the
-    // changed shell signature. Persisted means entity identity, not geometry.
-    if model.bodies.len() != 1 || result.bodies.len() != 1 {
+    Ok(([first, second], dot3(radial[2], second).signum()))
+}
+
+/// This explicitly selected edit replaces exactly one source body with
+/// exactly one result body. Preserve its identity independently of the
+/// changed shell signature. Persisted means entity identity, not geometry.
+fn persist_single_body(model: &Model, result: &mut Model) -> Result<()> {
+    let (Some(&body_id), true, true) = (
+        model.1.bodies.first(),
+        model.bodies.len() == 1,
+        result.bodies.len() == 1,
+    ) else {
         return Err(refuse(
-            CODE,
+            PARTIAL_PREVIEW_REFUSED,
             "Preview requires one source and one result body",
         ));
-    }
-    let body_id = model.1.bodies[0];
-    result.1.bodies[0] = body_id;
+    };
+    let Some(slot) = result.1.bodies.first_mut() else {
+        return Err(refuse(
+            PARTIAL_PREVIEW_REFUSED,
+            "Preview requires one source and one result body",
+        ));
+    };
+    *slot = body_id;
     result.1.lineage.push(crate::TopologyLineageRecord {
         operation: "persist".into(),
         entity_kind: "body".into(),
         parents: vec![body_id],
         children: vec![body_id],
     });
+    Ok(())
+}
+
+/// Source face owning each retained preview support (empty for new blends).
+fn preview_face_relations(
+    model: &Model,
+    result: &Model,
+    tube: &PreviewTube,
+) -> Result<Vec<Vec<usize>>> {
     let mut face_relations = vec![vec![]; result.faces.len()];
-    if result.faces.len() != 27 {
+    if result.faces.len() != PARTIAL_PREVIEW_FACES {
         return Err(refuse(
-            CODE,
+            PARTIAL_PREVIEW_REFUSED,
             "Unexpected partial annular preview face layout",
         ));
     }
     for (target_index, target) in result.faces.iter().enumerate() {
         // The prototype author fixes this face ordering: three
         // five-face blend sectors, then three four-face unrounded sectors.
-        let role = if target_index < 15 {
+        let role = if target_index < PARTIAL_PREVIEW_BLEND_FACES {
             target_index % 5
         } else {
-            [1, 2, 3, 4][(target_index - 15) % 4]
+            (target_index - PARTIAL_PREVIEW_BLEND_FACES) % 4 + 1
         };
         if role == 0 {
             continue;
@@ -437,66 +562,64 @@ pub fn build_partial_annular_preview(
             .iter()
             .enumerate()
             .filter_map(|(source_index, source)| {
-                let s = &source.surface;
-                if role == 1 || role == 4 {
-                    let z = if role == 1 { height } else { 0. };
-                    return (s.degree_u == 1
-                        && s.degree_v == 1
-                        && s.control_points.iter().flatten().all(|p| {
-                            (dot3(sub3([p[0], p[1], p[2]], origin), axis) - z).abs() <= tolerance
-                        }))
-                    .then_some(source_index);
-                }
-                if s.degree_u != 2 || s.degree_v != 1 {
-                    return None;
-                }
-                let radial_point = |p: &Vec<f64>| {
-                    let d = sub3([p[0], p[1], p[2]], origin);
-                    let z = dot3(d, axis);
-                    [d[0] - z * axis[0], d[1] - z * axis[1], d[2] - z * axis[2]]
-                };
-                let a = radial_point(&s.control_points[0][0]);
-                let b = radial_point(&s.control_points[2][0]);
-                let expected = if role == 2 { outer } else { inner };
-                if (dot3(a, a).sqrt() - expected).abs() > tolerance {
-                    return None;
-                }
-                let controls: Vec<_> = target
-                    .surface
-                    .control_points
-                    .iter()
-                    .flatten()
-                    .map(radial_point)
-                    .collect();
-                let contained = controls.iter().all(|p| {
-                    dot3(*p, a) >= -outer * tolerance && dot3(*p, b) >= -outer * tolerance
-                });
-                let interior = controls
-                    .iter()
-                    .any(|p| dot3(*p, a) > outer * tolerance && dot3(*p, b) > outer * tolerance);
-                (contained && interior).then_some(source_index)
+                retained_support_matches(&source.surface, &target.surface, role, tube)
+                    .then_some(source_index)
             })
             .collect();
         if candidates.len() != 1 {
             return Err(refuse(
-                CODE,
+                PARTIAL_PREVIEW_REFUSED,
                 "Retained preview support has ambiguous source ownership",
             ));
         }
         face_relations[target_index] = candidates;
     }
-    Model::record_relations(
-        &mut result.1.lineage,
-        "face",
-        &model.1.faces,
-        &result.1.faces,
-        &face_relations,
-    );
-    result.refresh_change_set(&[model]);
-    result.validate()?;
-    Ok(result)
+    Ok(face_relations)
 }
 
+/// Role 1/4: top/bottom planar cap; role 2/3: outer/inner quarter cylinder
+/// whose sector contains the target's control net.
+fn retained_support_matches(
+    s: &nurbs_core::surface::Surface,
+    target: &nurbs_core::surface::Surface,
+    role: usize,
+    tube: &PreviewTube,
+) -> bool {
+    let (outer, tolerance) = (tube.outer, tube.tolerance);
+    if role == 1 || role == 4 {
+        let z = if role == 1 { tube.height } else { 0. };
+        return s.degree_u == 1
+            && s.degree_v == 1
+            && s.control_points.iter().flatten().all(|p| {
+                (dot3(sub3([p[0], p[1], p[2]], tube.origin), tube.axis) - z).abs() <= tolerance
+            });
+    }
+    if s.degree_u != 2 || s.degree_v != 1 {
+        return false;
+    }
+    let a = tube.radial(&s.control_points[0][0]);
+    let b = tube.radial(&s.control_points[2][0]);
+    let expected = if role == 2 { outer } else { tube.inner };
+    if (dot3(a, a).sqrt() - expected).abs() > tolerance {
+        return false;
+    }
+    let controls: Vec<_> = target
+        .control_points
+        .iter()
+        .flatten()
+        .map(|p| tube.radial(p))
+        .collect();
+    let contained = controls
+        .iter()
+        .all(|p| dot3(*p, a) >= -outer * tolerance && dot3(*p, b) >= -outer * tolerance);
+    let interior = controls
+        .iter()
+        .any(|p| dot3(*p, a) > outer * tolerance && dot3(*p, b) > outer * tolerance);
+    contained && interior
+}
+
+/// Full circular rims of a recognized annular cylinder. Partial arcs require
+/// endpoint transitions and are refused rather than extending the selection.
 /// Full circular rims of a recognized annular cylinder. Partial arcs require
 /// endpoint transitions and are refused rather than extending the selection.
 pub fn exact_annular_fillet(
@@ -520,49 +643,10 @@ pub fn exact_annular_fillet(
     {
         return Err(refuse(CODE, "Duplicate or invalid annular edge selection"));
     }
-    let (outer, inner, height, origin, axis, frame) = recognize_analytic_tube(model)
+    let tube = recognize_analytic_tube(model)
         .ok_or_else(|| refuse(CODE, "Source must be an exact annular cylinder"))?;
-    let tolerance = (outer.max(height) * 1e-10).max(1e-12);
-    let mut rings: [Vec<usize>; 4] = std::array::from_fn(|_| Vec::new());
-    for (index, edge) in model.edges.iter().enumerate() {
-        if edge.curve.degree != 2 {
-            continue;
-        }
-        let slots: Option<Vec<usize>> = edge
-            .vertices
-            .iter()
-            .map(|vertex| {
-                let d = sub3(model.vertices[*vertex].point, origin);
-                let z = dot3(d, axis);
-                let r = dot3(d, frame[0]).hypot(dot3(d, frame[1]));
-                let top = if z.abs() <= tolerance {
-                    false
-                } else if (z - height).abs() <= tolerance {
-                    true
-                } else {
-                    return None;
-                };
-                let outside = if (r - outer).abs() <= tolerance {
-                    true
-                } else if (r - inner).abs() <= tolerance {
-                    false
-                } else {
-                    return None;
-                };
-                Some(match (outside, top) {
-                    (false, false) => 0,
-                    (true, false) => 1,
-                    (true, true) => 2,
-                    (false, true) => 3,
-                })
-            })
-            .collect();
-        if let Some(slots) = slots {
-            if slots[0] == slots[1] {
-                rings[slots[0]].push(index);
-            }
-        }
-    }
+    let (outer, inner, height, origin, axis, frame) = tube;
+    let rings = annular_rim_rings(model, tube);
     if rings.iter().any(|ring| ring.len() != 4) {
         return Err(refuse(
             CODE,
@@ -611,4 +695,51 @@ pub fn exact_annular_fillet(
         outer.max(height),
         CODE,
     )
+}
+
+/// Quadratic edges grouped by rim: 0 inner-bottom, 1 outer-bottom,
+/// 2 outer-top, 3 inner-top. Edges off every rim are skipped.
+fn annular_rim_rings(
+    model: &Model,
+    (outer, inner, height, origin, axis, frame): AnalyticTube,
+) -> [Vec<usize>; 4] {
+    let tolerance = tube_tolerance(outer, height);
+    let rim_slot = |vertex: usize| -> Option<usize> {
+        let d = sub3(model.vertices.get(vertex)?.point, origin);
+        let z = dot3(d, axis);
+        let r = dot3(d, frame[0]).hypot(dot3(d, frame[1]));
+        let top = if z.abs() <= tolerance {
+            false
+        } else if (z - height).abs() <= tolerance {
+            true
+        } else {
+            return None;
+        };
+        let outside = if (r - outer).abs() <= tolerance {
+            true
+        } else if (r - inner).abs() <= tolerance {
+            false
+        } else {
+            return None;
+        };
+        Some(match (outside, top) {
+            (false, false) => 0,
+            (true, false) => 1,
+            (true, true) => 2,
+            (false, true) => 3,
+        })
+    };
+    let mut rings: [Vec<usize>; 4] = std::array::from_fn(|_| Vec::new());
+    for (index, edge) in model.edges.iter().enumerate() {
+        if edge.curve.degree != 2 {
+            continue;
+        }
+        let slots: Option<Vec<usize>> = edge.vertices.iter().map(|v| rim_slot(*v)).collect();
+        if let Some([a, b, ..]) = slots.as_deref()
+            && a == b
+        {
+            rings[*a].push(index);
+        }
+    }
+    rings
 }

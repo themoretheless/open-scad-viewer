@@ -195,13 +195,122 @@ fn panel_lift(
         "Saved panel UV use is not an original boundary restriction",
     ))
 }
+/// Largest numerator/denominator bit length admitted for an exact roof vertex.
+const MAX_VERTEX_BITS: u64 = 8192;
+/// Admitted control-point counts of a saved exact roof edge.
+const ROOF_EDGE_POINTS: std::ops::RangeInclusive<usize> = 2..=33;
+fn roof_error<T>(message: &str) -> Result<T> {
+    Err(Error::new("BREP_EXACT_GRAPH_ROOF", message))
+}
+/// Root restriction and endpoint identity of one saved edge.
+fn check_roof_edge(
+    m: &RoofTopology,
+    edge: &brep_topology::Edge<Edge>,
+    budget: &mut Budget,
+) -> Result<usize> {
+    require(
+        !edge.degenerate && ROOF_EDGE_POINTS.contains(&edge.curve.points.len()),
+        "Unsupported exact roof edge",
+    )?;
+    let root = BoundaryDefinition {
+        points: edge.curve.root.points.clone(),
+        uv: [[Q::zero(), Q::zero()], [Q::one(), Q::zero()]],
+    }
+    .restricted(edge.curve.range.clone(), budget)?;
+    let comparisons = points_equal(&root.points, &edge.curve.points)?;
+    let ends_match = match (edge.curve.points.first(), edge.curve.points.last()) {
+        (Some(first), Some(last)) => {
+            *first == m.vertices[edge.vertices[0]].point
+                && *last == m.vertices[edge.vertices[1]].point
+        }
+        _ => false,
+    };
+    require(ends_match, "Exact roof edge lost its vertex endpoints")?;
+    Ok(comparisons)
+}
+/// Retained source use `i` of `region` against coedge `c` over `edge`.
+fn check_retained_use(
+    region: &RetainedRegion,
+    index: usize,
+    i: usize,
+    c: &brep_topology::Coedge<FaceUseGeometry>,
+    edge: &Edge,
+) -> Result<usize> {
+    require(index == i, "Retained source UV loop order changed")?;
+    let (u, reverse) = &region.uses()[i];
+    if let Some(original) = u.edge() {
+        require(
+            original == c.edge,
+            "Retained use lost its bound transition edge identity",
+        )?;
+    }
+    match u {
+        RetainedUse::Contact(binding) => require(
+            Arc::ptr_eq(&edge.root, &binding.root)
+                && edge.range == *binding.contact.root_parameters(),
+            "Retained contact root ownership changed",
+        )?,
+        RetainedUse::End(binding) => require(
+            Arc::ptr_eq(&edge.root, &binding.root)
+                && edge.range == *binding.contact.root_parameters(),
+            "Retained end root ownership changed",
+        )?,
+        RetainedUse::Natural(_) => (),
+    }
+    require(
+        c.reversed == *reverse,
+        "Retained source use direction changed",
+    )?;
+    points_equal(u.points(), &edge.points)
+}
+/// Imported original use `i` of a loop with `loop_len` coedges.
+fn check_imported_use(
+    original: &ImportedFace,
+    index: usize,
+    i: usize,
+    loop_len: usize,
+    c: &brep_topology::Coedge<FaceUseGeometry>,
+    edge: &Edge,
+    budget: &mut Budget,
+) -> Result<usize> {
+    require(
+        index == i && loop_len == original.uses.len(),
+        "Imported original UV loop order changed",
+    )?;
+    let u = &original.uses[i];
+    require(
+        c.edge == u.edge
+            && c.reversed == u.reversed
+            && Arc::ptr_eq(&edge.root, &u.root)
+            && edge.range == u.range,
+        "Imported original use identity/direction changed",
+    )?;
+    let expected = nurbs_core::original_graph_transition::polynomial_surface_line(
+        &original.surface,
+        u.uv.clone(),
+        budget,
+    )?;
+    let mut actual = edge.points.clone();
+    if c.reversed {
+        actual.reverse();
+    }
+    require(
+        nurbs_core::original_graph_transition::polynomial_points_equal(
+            &expected, &actual, budget,
+        )?,
+        "Imported original face lift differs from saved exact edge",
+    )?;
+    Ok(3 * expected.len().max(actual.len()))
+}
 /// Fresh local topology, roots, endpoints and actual saved face-use lifts.
 /// This is not a solid/global intersection or retained-face curvature proof.
 pub fn inspect_roof_geometry(m: &RoofTopology, budget: &mut Budget) -> Result<GeometryReport> {
     m.validate_topology_with_vertices(|p| {
         require(
             p.iter().all(|q| {
-                q.denom().is_positive() && q.numer().bits() <= 8192 && q.denom().bits() <= 8192
+                q.denom().is_positive()
+                    && q.numer().bits() <= MAX_VERTEX_BITS
+                    && q.denom().bits() <= MAX_VERTEX_BITS
             }),
             "Invalid exact roof vertex",
         )
@@ -213,21 +322,7 @@ pub fn inspect_roof_geometry(m: &RoofTopology, budget: &mut Budget) -> Result<Ge
     };
     let mut counts = vec![0; m.edges.len()];
     for edge in &m.edges {
-        require(
-            !edge.degenerate && (2..=33).contains(&edge.curve.points.len()),
-            "Unsupported exact roof edge",
-        )?;
-        let root = BoundaryDefinition {
-            points: edge.curve.root.points.clone(),
-            uv: [[Q::zero(), Q::zero()], [Q::one(), Q::zero()]],
-        }
-        .restricted(edge.curve.range.clone(), budget)?;
-        report.coefficient_comparisons += points_equal(&root.points, &edge.curve.points)?;
-        require(
-            edge.curve.points[0] == m.vertices[edge.vertices[0]].point
-                && *edge.curve.points.last().unwrap() == m.vertices[edge.vertices[1]].point,
-            "Exact roof edge lost its vertex endpoints",
-        )?;
+        report.coefficient_comparisons += check_roof_edge(m, edge, budget)?;
     }
     for face in &m.faces {
         require(face.holes.is_empty(), "Unsupported exact roof holes")?;
@@ -246,68 +341,12 @@ pub fn inspect_roof_geometry(m: &RoofTopology, budget: &mut Budget) -> Result<Ge
                     panel_lift(p, line, c.reversed, edge, budget)?
                 }
                 (FaceGeometry::Retained(region), FaceUseGeometry::Retained(index)) => {
-                    require(*index == i, "Retained source UV loop order changed")?;
-                    let (u, reverse) = &region.uses()[i];
-                    if let Some(original) = u.edge() {
-                        require(
-                            original == c.edge,
-                            "Retained use lost its bound transition edge identity",
-                        )?;
-                    }
-
-                    match u {
-                        RetainedUse::Contact(binding) => require(
-                            Arc::ptr_eq(&edge.root, &binding.root)
-                                && edge.range == *binding.contact.root_parameters(),
-                            "Retained contact root ownership changed",
-                        )?,
-                        RetainedUse::End(binding) => require(
-                            Arc::ptr_eq(&edge.root, &binding.root)
-                                && edge.range == *binding.contact.root_parameters(),
-                            "Retained end root ownership changed",
-                        )?,
-                        RetainedUse::Natural(_) => (),
-                    }
-                    require(
-                        c.reversed == *reverse,
-                        "Retained source use direction changed",
-                    )?;
-                    points_equal(u.points(), &edge.points)?
+                    check_retained_use(region, *index, i, c, edge)?
                 }
                 (FaceGeometry::Imported(original), FaceUseGeometry::Imported(index)) => {
-                    require(
-                        *index == i && cs.len() == original.uses.len(),
-                        "Imported original UV loop order changed",
-                    )?;
-                    let u = &original.uses[i];
-                    require(
-                        c.edge == u.edge && c.reversed == u.reversed
-                            && Arc::ptr_eq(&edge.root,&u.root) && edge.range==u.range,
-                        "Imported original use identity/direction changed",
-                    )?;
-                    let expected = nurbs_core::original_graph_transition::polynomial_surface_line(
-                        &original.surface,
-                        u.uv.clone(),
-                        budget,
-                    )?;
-                    let mut actual = edge.points.clone();
-                    if c.reversed {
-                        actual.reverse();
-                    }
-                    require(
-                        nurbs_core::original_graph_transition::polynomial_points_equal(
-                            &expected, &actual, budget,
-                        )?,
-                        "Imported original face lift differs from saved exact edge",
-                    )?;
-                    3 * expected.len().max(actual.len())
+                    check_imported_use(original, *index, i, cs.len(), c, edge, budget)?
                 }
-                _ => {
-                    return Err(Error::new(
-                        "BREP_EXACT_GRAPH_ROOF",
-                        "Face and parameter geometry kinds disagree",
-                    ));
-                }
+                _ => return roof_error("Face and parameter geometry kinds disagree"),
             };
             report.boundary_uses += 1;
             counts[c.edge] += 1;
@@ -319,6 +358,140 @@ pub fn inspect_roof_geometry(m: &RoofTopology, budget: &mut Budget) -> Result<Ge
         .filter_map(|(i, &n)| (n == 1).then_some(i))
         .collect();
     Ok(report)
+}
+/// Mutable roof topology while retained source regions are sewn onto the strip.
+struct RoofSewing {
+    vertices: Vec<brep_topology::Vertex<[Q; 3]>>,
+    edges: Vec<brep_topology::Edge<Edge>>,
+    loops: Vec<brep_topology::Loop<FaceUseGeometry>>,
+    faces: Vec<brep_topology::Face<FaceGeometry>>,
+    face_uses: Vec<brep_topology::FaceUse>,
+    map: BTreeMap<VertexKey, usize>,
+    creases: BTreeMap<(Q, Q), usize>,
+}
+impl RoofSewing {
+    fn new(topology: &Topology) -> Self {
+        let loops = topology
+            .loops
+            .iter()
+            .map(|l| brep_topology::Loop {
+                coedges: l
+                    .coedges
+                    .iter()
+                    .map(|c| {
+                        brep_topology::Coedge::new(
+                            c.edge,
+                            c.reversed,
+                            FaceUseGeometry::Transition(c.pcurve.clone()),
+                        )
+                    })
+                    .collect(),
+            })
+            .collect();
+        let faces = topology
+            .faces
+            .iter()
+            .map(|f| brep_topology::Face {
+                surface: FaceGeometry::Transition(f.surface.clone()),
+                outer: f.outer,
+                holes: vec![],
+            })
+            .collect();
+        Self {
+            vertices: topology.vertices.clone(),
+            edges: topology.edges.clone(),
+            loops,
+            faces,
+            face_uses: topology.shells[0].faces.clone(),
+            map: BTreeMap::new(),
+            creases: BTreeMap::new(),
+        }
+    }
+    /// Establish exact source-chart endpoint identities from BOTH neighboring
+    /// source uses before allocating any natural outer-source corner.
+    fn bind_source_endpoints(&mut self, regions: &[Arc<RetainedRegion>]) -> Result<()> {
+        for region in regions {
+            for (u, _) in region.uses() {
+                if let Some(id) = u.edge() {
+                    let edge = &self.edges[id];
+                    require(
+                        edge.curve.points == u.points(),
+                        "Source binding and saved edge disagree",
+                    )?;
+                    let uv = u.uv_points();
+                    let (Some(first), Some(last)) = (uv.first(), uv.last()) else {
+                        return roof_error("Retained source use has no UV points");
+                    };
+                    let ends = edge.vertices;
+                    bind(&mut self.map, key(region.side(), first), ends[0])?;
+                    bind(&mut self.map, key(region.side(), last), ends[1])?;
+                }
+            }
+        }
+        Ok(())
+    }
+    /// Edge of a natural (unbound) source use; named crease intervals are shared.
+    fn natural_edge(&mut self, side: usize, u: &RetainedUse) -> Result<usize> {
+        let uv = u.uv_points();
+        let xyz = u.points();
+        let (Some(uv_first), Some(uv_last), Some(xyz_first), Some(xyz_last)) =
+            (uv.first(), uv.last(), xyz.first(), xyz.last())
+        else {
+            return roof_error("Retained source use has no UV points");
+        };
+        let va = vertex(&mut self.map, &mut self.vertices, side, uv_first, xyz_first)?;
+        let vb = vertex(&mut self.map, &mut self.vertices, side, uv_last, xyz_last)?;
+        let crease = uv_first[1].is_zero() && uv_last[1].is_zero();
+        let key = (uv_first[0].clone(), uv_last[0].clone());
+        if crease {
+            require(key.0 < key.1, "Original source crease clock must increase")?;
+            if let Some(&id) = self.creases.get(&key) {
+                let old = &self.edges[id];
+                require(
+                    old.vertices == [va, vb] && old.curve.points == xyz,
+                    "Named original crease does not share exact geometry and vertices",
+                )?;
+                return Ok(id);
+            }
+        }
+        let id = self.edges.len();
+        self.edges.push(brep_topology::Edge {
+            degenerate: false,
+            vertices: [va, vb],
+            curve: Edge::original(xyz.to_vec(), id),
+        });
+        if crease {
+            self.creases.insert(key, id);
+        }
+        Ok(id)
+    }
+    fn sew_region(&mut self, region: Arc<RetainedRegion>) -> Result<()> {
+        let mut coedges = Vec::new();
+        for (index, (u, reverse)) in region.uses().iter().enumerate() {
+            let edge = match u.edge() {
+                Some(id) => id,
+                None => self.natural_edge(region.side(), u)?,
+            };
+            coedges.push(brep_topology::Coedge::new(
+                edge,
+                *reverse,
+                FaceUseGeometry::Retained(index),
+            ));
+        }
+        let face = self.faces.len();
+        let outer = self.loops.len();
+        self.loops.push(brep_topology::Loop { coedges });
+        self.face_uses.push(brep_topology::FaceUse {
+            face,
+            reversed: region.side() == 0,
+        });
+        self.faces.push(brep_topology::Face {
+            surface: FaceGeometry::Retained(region),
+            outer,
+            holes: vec![],
+        });
+        Ok(())
+    }
 }
 impl Strip {
     /// Consume the proposal strip and sew fresh retained original-source regions.
@@ -336,133 +509,22 @@ impl Strip {
             .iter()
             .map(|r| inspect_source_support_field(r.source()))
             .collect::<Result<Vec<_>>>()?;
-        let mut vertices = self.topology.vertices.clone();
-        let mut edges = self.topology.edges.clone();
-        let mut map = BTreeMap::new();
-        // Establish exact source-chart endpoint identities from BOTH neighboring
-        // source uses before allocating any natural outer-source corner.
-        for region in &regions {
-            for (u, _) in region.uses() {
-                if let Some(id) = u.edge() {
-                    let edge = &edges[id];
-                    require(
-                        edge.curve.points == u.points(),
-                        "Source binding and saved edge disagree",
-                    )?;
-                    bind(
-                        &mut map,
-                        key(region.side(), &u.uv_points()[0]),
-                        edge.vertices[0],
-                    )?;
-                    bind(
-                        &mut map,
-                        key(region.side(), u.uv_points().last().unwrap()),
-                        edge.vertices[1],
-                    )?;
-                }
-            }
-        }
-        let mut loops = self
-            .topology
-            .loops
-            .iter()
-            .map(|l| brep_topology::Loop {
-                coedges: l
-                    .coedges
-                    .iter()
-                    .map(|c| {
-                        brep_topology::Coedge::new(
-                            c.edge,
-                            c.reversed,
-                            FaceUseGeometry::Transition(c.pcurve.clone()),
-                        )
-                    })
-                    .collect(),
-            })
-            .collect::<Vec<_>>();
-        let mut faces = self
-            .topology
-            .faces
-            .iter()
-            .map(|f| brep_topology::Face {
-                surface: FaceGeometry::Transition(f.surface.clone()),
-                outer: f.outer,
-                holes: vec![],
-            })
-            .collect::<Vec<_>>();
-        let mut face_uses = self.topology.shells[0].faces.clone();
-        let mut creases = BTreeMap::new();
+        let mut sewing = RoofSewing::new(&self.topology);
+        sewing.bind_source_endpoints(&regions)?;
         for region in regions {
-            let mut coedges = Vec::new();
-            for (index, (u, reverse)) in region.uses().iter().enumerate() {
-                let edge = if let Some(id) = u.edge() {
-                    id
-                } else {
-                    let uv = u.uv_points();
-                    let xyz = u.points();
-                    let va = vertex(&mut map, &mut vertices, region.side(), &uv[0], &xyz[0])?;
-                    let vb = vertex(
-                        &mut map,
-                        &mut vertices,
-                        region.side(),
-                        uv.last().unwrap(),
-                        xyz.last().unwrap(),
-                    )?;
-                    let crease = uv[0][1].is_zero() && uv.last().unwrap()[1].is_zero();
-                    let key = (uv[0][0].clone(), uv.last().unwrap()[0].clone());
-                    if crease {
-                        require(key.0 < key.1, "Original source crease clock must increase")?;
-                    }
-                    if let Some(&id) = if crease { creases.get(&key) } else { None } {
-                        let old: &brep_topology::Edge<Edge> = &edges[id];
-                        require(
-                            old.vertices == [va, vb] && old.curve.points == xyz,
-                            "Named original crease does not share exact geometry and vertices",
-                        )?;
-                        id
-                    } else {
-                        let id = edges.len();
-                        edges.push(brep_topology::Edge {
-                            degenerate: false,
-                            vertices: [va, vb],
-                            curve: Edge::original(xyz.to_vec(), id),
-                        });
-                        if crease {
-                            creases.insert(key, id);
-                        }
-                        id
-                    }
-                };
-                coedges.push(brep_topology::Coedge::new(
-                    edge,
-                    *reverse,
-                    FaceUseGeometry::Retained(index),
-                ));
-            }
-            let face = faces.len();
-            let outer = loops.len();
-            loops.push(brep_topology::Loop { coedges });
-            face_uses.push(brep_topology::FaceUse {
-                face,
-                reversed: region.side() == 0,
-            });
-            faces.push(brep_topology::Face {
-                surface: FaceGeometry::Retained(region),
-                outer,
-                holes: vec![],
-            });
+            sewing.sew_region(region)?;
         }
         require(
-            creases.len() == 2,
+            sewing.creases.len() == 2,
             "Expected the two retained original crease intervals",
         )?;
         let topology = RoofTopology {
-            vertices,
-            edges,
-            loops,
-            faces,
+            vertices: sewing.vertices,
+            edges: sewing.edges,
+            loops: sewing.loops,
+            faces: sewing.faces,
             shells: vec![brep_topology::Shell {
-                faces: face_uses,
+                faces: sewing.face_uses,
                 closed: false,
             }],
             bodies: vec![],

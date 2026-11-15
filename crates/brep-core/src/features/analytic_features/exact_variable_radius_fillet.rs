@@ -1,5 +1,44 @@
 use super::*;
 
+const EXACT_FILLET_REFUSED: &str = "BREP_EXACT_FILLET_REFUSED";
+/// Edge-direction x-component above which the frame helper switches to +Y.
+const PRISM_HELPER_SWITCH: f64 = 0.8;
+/// Prism recognition tolerance as a multiple of the model tolerance.
+const PRISM_TOLERANCE_FACTOR: f64 = 16.;
+
+/// Orthonormal prism frame (w along the extrusion) and its measured caps.
+struct PrismFrame {
+    u: [f64; 3],
+    v: [f64; 3],
+    w: [f64; 3],
+    local_vertices: Vec<[f64; 3]>,
+    z0: f64,
+    z1: f64,
+    tol: f64,
+}
+
+impl PrismFrame {
+    fn to_local(&self) -> [[f64; 4]; 4] {
+        let (u, v, w) = (self.u, self.v, self.w);
+        [
+            [u[0], u[1], u[2], 0.],
+            [v[0], v[1], v[2], 0.],
+            [w[0], w[1], w[2], 0.],
+            [0., 0., 0., 1.],
+        ]
+    }
+
+    fn to_world(&self) -> [[f64; 4]; 4] {
+        let (u, v, w) = (self.u, self.v, self.w);
+        [
+            [u[0], v[0], w[0], 0.],
+            [u[1], v[1], w[1], 0.],
+            [u[2], v[2], w[2], 0.],
+            [0., 0., 0., 1.],
+        ]
+    }
+}
+
 pub(super) fn exact_prism_fillet(
     model: &Model,
     edges: &[usize],
@@ -8,7 +47,7 @@ pub(super) fn exact_prism_fillet(
 ) -> Result<AuditedFeatureResult> {
     audit_solid(model).map_err(|_| {
         refuse(
-            "BREP_EXACT_FILLET_REFUSED",
+            EXACT_FILLET_REFUSED,
             "Fillet source must pass the global solid audit",
         )
     })?;
@@ -21,152 +60,36 @@ pub(super) fn exact_prism_fillet(
             .any(|face| face.surface.degree_u != 1 || face.surface.degree_v != 1)
     {
         return Err(refuse(
-            "BREP_EXACT_FILLET_REFUSED",
+            EXACT_FILLET_REFUSED,
             "Exact prism fillet requires selected straight edges, planar faces, and positive constant radius",
         ));
     }
     let selected: std::collections::BTreeSet<_> = edges.iter().copied().collect();
     if selected.len() != edges.len() || selected.iter().any(|edge| *edge >= model.edges.len()) {
         return Err(refuse(
-            "BREP_EXACT_FILLET_REFUSED",
+            EXACT_FILLET_REFUSED,
             "Selected fillet edges must be unique authored edges",
         ));
     }
-    let first = &model.edges[edges[0]];
-    let p0 = model.vertices[first.vertices[0]].point;
-    let p1 = model.vertices[first.vertices[1]].point;
-    let w = unit3(sub3(p1, p0)).ok_or_else(|| {
-        refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Selected fillet edge is collapsed",
-        )
-    })?;
-    let helper = if w[0].abs() < 0.8 {
-        [1., 0., 0.]
-    } else {
-        [0., 1., 0.]
-    };
-    let u = unit3(cross3(helper, w)).unwrap();
-    let v = cross3(w, u);
-    let local = |p: [f64; 3]| [dot3(p, u), dot3(p, v), dot3(p, w)];
-    let local_vertices: Vec<_> = model
-        .vertices
-        .iter()
-        .map(|vertex| local(vertex.point))
-        .collect();
-    let z0 = local_vertices
-        .iter()
-        .map(|point| point[2])
-        .fold(f64::INFINITY, f64::min);
-    let z1 = local_vertices
-        .iter()
-        .map(|point| point[2])
-        .fold(f64::NEG_INFINITY, f64::max);
-    let tol = model.tolerance_mm * 16.;
-    if z1 - z0 <= tol
-        || local_vertices
-            .iter()
-            .any(|point| (point[2] - z0).abs() > tol && (point[2] - z1).abs() > tol)
-    {
-        return Err(refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Selected edges do not define a two-cap planar prism",
-        ));
-    }
-    let profile = ordered_prism_cap_profile(model, &local_vertices, z0, tol)?;
-    let top = ordered_prism_cap_profile(model, &local_vertices, z1, tol)?;
-    if top.len() != profile.len()
-        || top.iter().any(|a| {
-            !profile
-                .iter()
-                .any(|b| (a[0] - b[0]).hypot(a[1] - b[1]) <= tol)
-        })
-    {
-        return Err(refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Prism caps must have matching projected boundaries",
-        ));
-    }
-    if profile.len() < 3
-        || require_convex
-            && profile.iter().enumerate().any(|(i, a)| {
-                let b = profile[(i + 1) % profile.len()];
-                let c = profile[(i + 2) % profile.len()];
-                (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]) <= tol
-            })
-    {
-        return Err(refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Prism profile must be strictly convex",
-        ));
-    }
-    let mut longitudinal = vec![None; profile.len()];
-    for (edge_id, edge) in model.edges.iter().enumerate() {
-        let [a, b] = edge.vertices.map(|vertex| local_vertices[vertex]);
-        let spans_caps = ((a[2] - z0).abs() <= tol && (b[2] - z1).abs() <= tol)
-            || ((b[2] - z0).abs() <= tol && (a[2] - z1).abs() <= tol);
-        if (a[0] - b[0]).hypot(a[1] - b[1]) > tol || !spans_caps {
-            continue;
-        }
-        let index = profile
-            .iter()
-            .position(|p| (p[0] - a[0]).hypot(p[1] - a[1]) <= tol)
-            .ok_or_else(|| {
-                refuse(
-                    "BREP_EXACT_FILLET_REFUSED",
-                    "Longitudinal edge does not correspond to the convex cap profile",
-                )
-            })?;
-        longitudinal[index] = Some(edge_id);
-    }
-    if longitudinal.iter().any(Option::is_none)
-        || selected.iter().any(|edge| {
-            !longitudinal
-                .iter()
-                .any(|candidate| candidate == &Some(*edge))
-        })
-    {
-        return Err(refuse(
-            "BREP_EXACT_FILLET_REFUSED",
-            "Cap edges and valence-3 corner chains require an unavailable exact transition proof",
-        ));
-    }
-    let rounded: Vec<_> = longitudinal
-        .iter()
-        .map(|edge| selected.contains(&edge.unwrap()))
-        .collect();
-    let local_source = crate::transform::affine(
-        model,
-        [
-            [u[0], u[1], u[2], 0.],
-            [v[0], v[1], v[2], 0.],
-            [w[0], w[1], w[2], 0.],
-            [0., 0., 0., 1.],
-        ],
-    )?;
+    let frame = prism_frame(model, edges[0])?;
+    let profile = matched_prism_profile(model, &frame, require_convex)?;
+    let rounded = rounded_longitudinal_edges(model, &frame, &profile, &selected)?;
+    let local_source = crate::transform::affine(model, frame.to_local())?;
     let local_result = crate::imprint_pipeline::rounded_convex_prism_edges(
         &local_source,
         &profile,
         &rounded,
         radius,
-        z0,
-        z1,
+        frame.z0,
+        frame.z1,
     )
     .map_err(|error| {
         refuse(
-            "BREP_EXACT_FILLET_REFUSED",
+            EXACT_FILLET_REFUSED,
             &format!("Exact prism fillet feasibility refused: {}", error.message),
         )
     })?;
-    let result = crate::transform::affine(
-        &local_result,
-        [
-            [u[0], v[0], w[0], 0.],
-            [u[1], v[1], w[1], 0.],
-            [u[2], v[2], w[2], 0.],
-            [0., 0., 0., 1.],
-        ],
-    )?;
+    let result = crate::transform::affine(&local_result, frame.to_world())?;
     certify_blend_result(
         result,
         if require_convex {
@@ -182,8 +105,146 @@ pub(super) fn exact_prism_fillet(
             "no_mesh_fallback",
         ],
         radius,
-        "BREP_EXACT_FILLET_REFUSED",
+        EXACT_FILLET_REFUSED,
     )
+}
+
+/// Frame along the first selected edge; every vertex must lie on one of two caps.
+fn prism_frame(model: &Model, first_edge: usize) -> Result<PrismFrame> {
+    let collapsed = || refuse(EXACT_FILLET_REFUSED, "Selected fillet edge is collapsed");
+    let first = &model.edges[first_edge];
+    let p0 = model.vertices[first.vertices[0]].point;
+    let p1 = model.vertices[first.vertices[1]].point;
+    let w = unit3(sub3(p1, p0)).ok_or_else(collapsed)?;
+    let helper = if w[0].abs() < PRISM_HELPER_SWITCH {
+        [1., 0., 0.]
+    } else {
+        [0., 1., 0.]
+    };
+    let u = unit3(cross3(helper, w)).ok_or_else(collapsed)?;
+    let v = cross3(w, u);
+    let local_vertices: Vec<_> = model
+        .vertices
+        .iter()
+        .map(|vertex| {
+            [
+                dot3(vertex.point, u),
+                dot3(vertex.point, v),
+                dot3(vertex.point, w),
+            ]
+        })
+        .collect();
+    let z0 = local_vertices
+        .iter()
+        .map(|point| point[2])
+        .fold(f64::INFINITY, f64::min);
+    let z1 = local_vertices
+        .iter()
+        .map(|point| point[2])
+        .fold(f64::NEG_INFINITY, f64::max);
+    let tol = model.tolerance_mm * PRISM_TOLERANCE_FACTOR;
+    if z1 - z0 <= tol
+        || local_vertices
+            .iter()
+            .any(|point| (point[2] - z0).abs() > tol && (point[2] - z1).abs() > tol)
+    {
+        return Err(refuse(
+            EXACT_FILLET_REFUSED,
+            "Selected edges do not define a two-cap planar prism",
+        ));
+    }
+    Ok(PrismFrame {
+        u,
+        v,
+        w,
+        local_vertices,
+        z0,
+        z1,
+        tol,
+    })
+}
+
+/// Bottom cap profile, checked against the top cap and (optionally) convexity.
+fn matched_prism_profile(
+    model: &Model,
+    frame: &PrismFrame,
+    require_convex: bool,
+) -> Result<Vec<[f64; 2]>> {
+    let tol = frame.tol;
+    let profile = ordered_prism_cap_profile(model, &frame.local_vertices, frame.z0, tol)?;
+    let top = ordered_prism_cap_profile(model, &frame.local_vertices, frame.z1, tol)?;
+    if top.len() != profile.len()
+        || top.iter().any(|a| {
+            !profile
+                .iter()
+                .any(|b| (a[0] - b[0]).hypot(a[1] - b[1]) <= tol)
+        })
+    {
+        return Err(refuse(
+            EXACT_FILLET_REFUSED,
+            "Prism caps must have matching projected boundaries",
+        ));
+    }
+    if profile.len() < 3
+        || require_convex
+            && profile.iter().enumerate().any(|(i, a)| {
+                let b = profile[(i + 1) % profile.len()];
+                let c = profile[(i + 2) % profile.len()];
+                (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]) <= tol
+            })
+    {
+        return Err(refuse(
+            EXACT_FILLET_REFUSED,
+            "Prism profile must be strictly convex",
+        ));
+    }
+    Ok(profile)
+}
+
+/// Per-profile-vertex flag: is its longitudinal edge selected.
+fn rounded_longitudinal_edges(
+    model: &Model,
+    frame: &PrismFrame,
+    profile: &[[f64; 2]],
+    selected: &std::collections::BTreeSet<usize>,
+) -> Result<Vec<bool>> {
+    let (z0, z1, tol) = (frame.z0, frame.z1, frame.tol);
+    let mut longitudinal = vec![None; profile.len()];
+    for (edge_id, edge) in model.edges.iter().enumerate() {
+        let [a, b] = edge.vertices.map(|vertex| frame.local_vertices[vertex]);
+        let spans_caps = ((a[2] - z0).abs() <= tol && (b[2] - z1).abs() <= tol)
+            || ((b[2] - z0).abs() <= tol && (a[2] - z1).abs() <= tol);
+        if (a[0] - b[0]).hypot(a[1] - b[1]) > tol || !spans_caps {
+            continue;
+        }
+        let index = profile
+            .iter()
+            .position(|p| (p[0] - a[0]).hypot(p[1] - a[1]) <= tol)
+            .ok_or_else(|| {
+                refuse(
+                    EXACT_FILLET_REFUSED,
+                    "Longitudinal edge does not correspond to the convex cap profile",
+                )
+            })?;
+        longitudinal[index] = Some(edge_id);
+    }
+    let transition_refused = || {
+        refuse(
+            EXACT_FILLET_REFUSED,
+            "Cap edges and valence-3 corner chains require an unavailable exact transition proof",
+        )
+    };
+    let longitudinal: Vec<usize> = longitudinal
+        .into_iter()
+        .collect::<Option<_>>()
+        .ok_or_else(transition_refused)?;
+    if selected.iter().any(|edge| !longitudinal.contains(edge)) {
+        return Err(transition_refused());
+    }
+    Ok(longitudinal
+        .iter()
+        .map(|edge| selected.contains(edge))
+        .collect())
 }
 
 /// Exact linear cross-section radius law on one edge of an audited cuboid.
@@ -283,78 +344,28 @@ pub fn exact_variable_radius_fillet(
     )
 }
 
+const VARIABLE_RADIUS_REFUSED: &str = "BREP_VARIABLE_RADIUS_FILLET_REFUSED";
+/// Absolute coordinate tolerance for recognizing a vertical edge.
+const VERTICAL_EDGE_TOLERANCE: f64 = 1e-12;
+
 pub(super) fn exact_axis_aligned_variable_radius_fillet(
     model: &Model,
     edges: &[usize],
     radii: &[[f64; 2]],
 ) -> Result<AuditedFeatureResult> {
-    audit_solid(model).map_err(|_| {
-        refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
-            "Variable-radius fillet source must pass the global solid audit",
-        )
-    })?;
-    if edges.len() != 1 || radii.len() != 1 {
-        return Err(refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
-            "exact-variable-radius-fillet/1 admits exactly one vertical cuboid edge and one linear radius pair",
-        ));
-    }
-    let [r0, r1] = radii[0];
-    if !(r0.is_finite() && r1.is_finite() && r0 > 0. && r1 > 0.) {
-        return Err(refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
-            "Endpoint radii must be finite and positive",
-        ));
-    }
-    if (r0 - r1).abs() <= model.tolerance_mm.max(1e-12) {
-        return Err(refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
-            "Constant radius must use the constant-radius fillet capabilities; refuse silent substitution",
-        ));
-    }
-    if !is_axis_aligned_cuboid(model) {
-        return Err(refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
-            "exact-variable-radius-fillet/1 admits axis-aligned planar cuboids only",
-        ));
-    }
-    let edge = edges[0];
-    if edge >= model.edges.len() {
-        return Err(refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
-            "Edge index out of range",
-        ));
-    }
-    let edge_ref = &model.edges[edge];
-    if edge_ref.curve.degree != 1 {
-        return Err(refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
-            "Curved edges are outside exact-variable-radius-fillet/1",
-        ));
-    }
-    let a = model.vertices[edge_ref.vertices[0]].point;
-    let b = model.vertices[edge_ref.vertices[1]].point;
-    let dir = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-    let vertical = dir[0].abs() <= 1e-12 && dir[1].abs() <= 1e-12 && dir[2].abs() > 1e-12;
-    if !vertical {
-        return Err(refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
-            "exact-variable-radius-fillet/1 admits vertical (+Z) cuboid edges only",
-        ));
-    }
+    let ([r0, r1], a, b) = vertical_variable_radius_edge(model, edges, radii)?;
     let (min, max) = model_bounds(model);
     let rmax = r0.max(r1);
     if max[0] - min[0] <= 2. * rmax || max[1] - min[1] <= 2. * rmax {
         return Err(refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            VARIABLE_RADIUS_REFUSED,
             "Cuboid extents too small for the endpoint radii",
         ));
     }
     let height = (a[2] - b[2]).abs();
     if !(height.is_finite() && height > rmax * 2.) {
         return Err(refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            VARIABLE_RADIUS_REFUSED,
             "Edge too short for the requested endpoint radii",
         ));
     }
@@ -382,7 +393,7 @@ pub(super) fn exact_axis_aligned_variable_radius_fillet(
     )
     .map_err(|error| {
         refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            VARIABLE_RADIUS_REFUSED,
             &format!(
                 "Variable-radius fillet authorship refused: {}",
                 error.message
@@ -399,7 +410,7 @@ pub(super) fn exact_axis_aligned_variable_radius_fillet(
     });
     if !has_cone {
         return Err(refuse(
-            "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+            VARIABLE_RADIUS_REFUSED,
             "Variable-radius result missing conical fillet face",
         ));
     }
@@ -413,8 +424,70 @@ pub(super) fn exact_axis_aligned_variable_radius_fillet(
             "no_valence3_corner",
         ],
         rmax,
-        "BREP_VARIABLE_RADIUS_FILLET_REFUSED",
+        VARIABLE_RADIUS_REFUSED,
     )
+}
+
+/// Audits the source and radius law; returns the radii and the endpoints of
+/// the single selected vertical cuboid edge.
+fn vertical_variable_radius_edge(
+    model: &Model,
+    edges: &[usize],
+    radii: &[[f64; 2]],
+) -> Result<([f64; 2], [f64; 3], [f64; 3])> {
+    audit_solid(model).map_err(|_| {
+        refuse(
+            VARIABLE_RADIUS_REFUSED,
+            "Variable-radius fillet source must pass the global solid audit",
+        )
+    })?;
+    let ([edge], [[r0, r1]]) = (edges, radii) else {
+        return Err(refuse(
+            VARIABLE_RADIUS_REFUSED,
+            "exact-variable-radius-fillet/1 admits exactly one vertical cuboid edge and one linear radius pair",
+        ));
+    };
+    let (r0, r1) = (*r0, *r1);
+    if !(r0.is_finite() && r1.is_finite() && r0 > 0. && r1 > 0.) {
+        return Err(refuse(
+            VARIABLE_RADIUS_REFUSED,
+            "Endpoint radii must be finite and positive",
+        ));
+    }
+    if (r0 - r1).abs() <= model.tolerance_mm.max(1e-12) {
+        return Err(refuse(
+            VARIABLE_RADIUS_REFUSED,
+            "Constant radius must use the constant-radius fillet capabilities; refuse silent substitution",
+        ));
+    }
+    if !is_axis_aligned_cuboid(model) {
+        return Err(refuse(
+            VARIABLE_RADIUS_REFUSED,
+            "exact-variable-radius-fillet/1 admits axis-aligned planar cuboids only",
+        ));
+    }
+    let Some(edge_ref) = model.edges.get(*edge) else {
+        return Err(refuse(VARIABLE_RADIUS_REFUSED, "Edge index out of range"));
+    };
+    if edge_ref.curve.degree != 1 {
+        return Err(refuse(
+            VARIABLE_RADIUS_REFUSED,
+            "Curved edges are outside exact-variable-radius-fillet/1",
+        ));
+    }
+    let a = model.vertices[edge_ref.vertices[0]].point;
+    let b = model.vertices[edge_ref.vertices[1]].point;
+    let dir = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let vertical = dir[0].abs() <= VERTICAL_EDGE_TOLERANCE
+        && dir[1].abs() <= VERTICAL_EDGE_TOLERANCE
+        && dir[2].abs() > VERTICAL_EDGE_TOLERANCE;
+    if !vertical {
+        return Err(refuse(
+            VARIABLE_RADIUS_REFUSED,
+            "exact-variable-radius-fillet/1 admits vertical (+Z) cuboid edges only",
+        ));
+    }
+    Ok(([r0, r1], a, b))
 }
 
 /// Exact equal-radius valence-3 corner blend: three concurrent cuboid edges at the
