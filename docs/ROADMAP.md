@@ -93,7 +93,7 @@
 | **C23. Quad-патчи и глобальный решатель G2/формы.** | P2 | L | да | — | [plasticity-remaining](design/plasticity-remaining-2026-11-02.md) п. 5, 6 |
 | **C24. Sub-D и меш в NURBS, восстановление геометрии.** | P2 | L | да | C23 | [cad-remaining](design/cad-remaining-2026-09-29.md) P3 п. 3, 4 |
 | **C25. Автосинхронизация с Blender и обмен с Cinema 4D.** | P2 | L | да | C13 | [cad-remaining](design/cad-remaining-2026-09-29.md) P3 п. 1, 2 |
-| **C26. Пробелы CAD в языке Rush.** Дуги, окружности и касания в эскизе (решатель уже есть, нужна проводка), запросы рёбер и граней, проверки сборок; кривые Boolean, STEP и offset после пакетов ядра | P2 | M | да | N6 (кривые Boolean) | [rush-cad-roadmap](design/rush-cad-roadmap.md) |
+| **C26. Пробелы CAD в языке Rush (остаток).** Сделано в rush/ir-1 и rush/nurbs-1: окружности, дуги границы, отверстия и касания в эскизе; запросы рёбер и граней для brep_chamfer/brep_fillet; контакт и минимальный зазор в rush_interference. Осталось: эскизы и сборки в текстовом Rush /1 (сейчас только JSON-граф), точный B-rep-зазор вместо сеточного, проверка зазора по траектории движения, отдельный путь STEP из Rush, offset; кривые Boolean после пакетов ядра | P2 | M | да | N6 (кривые Boolean) | [rush-cad-roadmap](design/rush-cad-roadmap.md) |
 
 ## 3. Подсистемы
 
