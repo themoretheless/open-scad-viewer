@@ -655,10 +655,6 @@ pub(crate) fn cap_boundaries_exact(model: &Model, max_work: u64) -> Result<(bool
 
 
 #[cfg(test)]
-#[path = "../tests/sweep_miter_owned.rs"]
-mod tests;
-
-#[cfg(test)]
 #[path = "sweep_miter_owned/tests/direct_source_regressions_integration.rs"]
 mod direct_source_regressions;
 
