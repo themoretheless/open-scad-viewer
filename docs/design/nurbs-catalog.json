@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 255,
-  "unallocatedCount": 745,
+  "specifiedCount": 256,
+  "unallocatedCount": 744,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -6937,6 +6937,24 @@
       ],
       "remainingQualification": [
         "An outward interval certificate using normalized second jets and the weighted variance bound. It covers exact surface samples in every triangle contained in the cell, with original knot pieces and an explicit cell budget. Crossing a knot requires C1 continuity.",
+        "Application and WASM delivery are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0256",
+      "name": "Сертификат отклонения сохранённого треугольника от участка NURBS",
+      "status": "native",
+      "prioritySet": "native-1000-certified-tessellation",
+      "category": "Измерения и запросы",
+      "nativeApi": "nurbs_core::surface_chord_bound::triangle_interpolation_error",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/surface_chord_bound.rs",
+        "crates/nurbs-core/tests/chord_interpolation_contracts.rs",
+        "docs/qualification/nurbs-chord-interpolation-256-2026-11-15/receipt.json",
+        "docs/qualification/nurbs-chord-interpolation-256-2026-11-15/native.log.gz"
+      ],
+      "remainingQualification": [
+        "The report combines the continuous interpolation error and the outward maximum displacement of stored vertices from exact surface points. Matching barycentric coordinates give the geometric correspondence. Mesh topology is outside this API.",
         "Application and WASM delivery are separate."
       ]
     }

@@ -108,6 +108,53 @@ pub fn cell_interpolation_error(
     Ok(uu.add(uv.mul(I::point(2.))?)?.add(vv)?.mul(I::point(0.125))?.hi)
 }
 
+/// Upper bounds for the parameter-matched deviation of a stored triangle.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TriangleInterpolationError {
+    /// Error of the triangle through the exact surface samples.
+    pub interpolation: f64,
+    /// Maximum displacement of a stored vertex from its exact sample.
+    pub vertex_displacement: f64,
+    /// Outward-rounded sum of both error bounds.
+    pub total: f64,
+}
+
+/// Bound the deviation from the exact surface over the parameter triangle to
+/// the stored triangle at matching barycentric coordinates. The UV triangle
+/// must have a bounding rectangle of positive width in both axes. The
+/// result concerns this correspondence and does not certify mesh topology.
+pub fn triangle_interpolation_error(
+    s: &Surface,
+    uv: [[f64; 2]; 3],
+    vertices: [[f64; 3]; 3],
+    max_cells: usize,
+) -> Result<TriangleInterpolationError> {
+    check(
+        uv.iter()
+            .flatten()
+            .chain(vertices.iter().flatten())
+            .all(|x| x.is_finite()),
+        "Triangle parameters and vertices must be finite",
+    )?;
+    let domain = std::array::from_fn(|axis| {
+        let [a, b, c] = uv.map(|p| p[axis]);
+        [a.min(b).min(c), a.max(b).max(c)]
+    });
+    let interpolation = cell_interpolation_error(s, domain, max_cells)?;
+    let mut vertex_displacement = 0f64;
+    for (uv, point) in uv.into_iter().zip(vertices) {
+        vertex_displacement = vertex_displacement.max(point_distance(s, uv, point)?);
+    }
+    let total = I::point(interpolation)
+        .add(I::point(vertex_displacement))?
+        .hi;
+    Ok(TriangleInterpolationError {
+        interpolation,
+        vertex_displacement,
+        total,
+    })
+}
+
 /// Upper bound on `|S(uv) - q|`, evaluated with interval jets.
 pub fn point_distance(s: &Surface, uv: [f64; 2], q: [f64; 3]) -> Result<f64> {
     let locate = |knots: &[f64], degree: usize, count: usize, t: f64| -> Result<(usize, [f64; 2], usize)> {

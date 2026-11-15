@@ -1,4 +1,7 @@
-use nurbs_core::{surface::Surface, surface_chord_bound::cell_interpolation_error};
+use nurbs_core::{
+    surface::Surface,
+    surface_chord_bound::{cell_interpolation_error, triangle_interpolation_error},
+};
 
 const UNIT: [[f64; 2]; 2] = [[0., 1.], [0., 1.]];
 
@@ -102,4 +105,33 @@ fn rational_denominator_is_included_in_the_interpolation_bound() {
         bound >= (1f64 / 6.).next_up() && bound.is_finite(),
         "{bound}"
     );
+}
+
+#[test]
+fn stored_triangle_bound_includes_vertex_displacement() {
+    let s = quadratic(false);
+    let uv = [[0., 0.], [1., 1.], [0., 1.]];
+    let stored = [[0., 0., 0.25], [1., 1., 3.25], [0., 1., 1.25]];
+    let error = triangle_interpolation_error(&s, uv, stored, 1).unwrap();
+    assert!((0.75..0.750_000_01).contains(&error.interpolation));
+    assert!((0.25..0.250_000_01).contains(&error.vertex_displacement));
+    // At the midpoint of the diagonal, the two deviations have the
+    // same direction. The surface is one whole unit below the mesh.
+    assert!((1.0..1.000_000_01).contains(&error.total));
+}
+
+#[test]
+fn stored_triangle_validates_coordinates_and_respects_cell_budget() {
+    let s = quadratic(true);
+    let uv = [[0., 0.], [1., 1.], [0., 1.]];
+    let stored = [[0., 0., 0.], [1., 1., 3.], [0., 1., 1.]];
+    assert!(triangle_interpolation_error(&s, uv, stored, 1).is_err());
+    let mut invalid = stored;
+    invalid[1][2] = f64::INFINITY;
+    assert!(triangle_interpolation_error(&s, uv, invalid, 2).is_err());
+    let mut outside = uv;
+    outside[0][1] = -0.5;
+    assert!(triangle_interpolation_error(&s, outside, stored, 2).is_err());
+    let error = triangle_interpolation_error(&s, uv, stored, 2).unwrap();
+    assert!((0.75..0.750_000_01).contains(&error.total));
 }
