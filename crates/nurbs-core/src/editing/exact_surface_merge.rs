@@ -2,6 +2,8 @@
 use crate::{Result,surface::{Surface,Axis}};
 mod grid;
 pub use grid::{GridMerge, GridRefusal, merge_surface_grid};
+mod layout;
+pub use layout::{GridLayoutRefusal, SurfaceGridLayout, SurfaceGridLayoutAudit, infer_surface_grid_layout};
 mod strip;
 pub use strip::{StripMerge, StripRefusal, merge_surface_strip};
 
