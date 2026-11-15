@@ -228,3 +228,95 @@ fn project(surface: &Surface, work: &mut Work) -> Proof<PlanarProjectionOutcome>
         },
     ))
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlanarLiftRefusal {
+    ResourceLimit,
+    NotRepresentable,
+    InvalidOutput,
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanarLiftReport {
+    pub surface: Option<Surface>,
+    pub refusal: Option<PlanarLiftRefusal>,
+    pub work_used: u64,
+}
+
+/// Lift a possibly edited XY control net using its exact rational plane
+/// equation. Every stored pole, including exterior poles, must fit exactly
+/// in binary64 and satisfy the surface coordinate limits. The tensor basis
+/// and weights are retained and no partial surface is returned on refusal.
+pub fn lift_planar_surface(
+    projection: &PlanarSurfaceProjection,
+    max_work: u64,
+) -> Result<PlanarLiftReport> {
+    projection.surface.validate()?;
+    validate_budget(max_work)?;
+    let [x, y] = projection.retained_axes;
+    let z = projection.omitted_axis;
+    check(
+        x < 3 && y < 3 && z < 3 && x != y && x != z && y != z,
+        "Planar lift needs a permutation of the three Cartesian axes",
+    )?;
+    check(
+        projection
+            .surface
+            .control_points
+            .iter()
+            .flatten()
+            .all(|p| p[2] == 0.),
+        "Planar lift needs an XY control net with zero Z",
+    )?;
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let result = lift_control_net(projection, &mut work);
+    let (surface, refusal) = match result {
+        Ok(surface) => (Some(surface), None),
+        Err(reason) => (None, Some(reason)),
+    };
+    Ok(PlanarLiftReport {
+        surface,
+        refusal,
+        work_used: work.used,
+    })
+}
+
+fn lift_control_net(
+    projection: &PlanarSurfaceProjection,
+    work: &mut Work,
+) -> std::result::Result<Surface, PlanarLiftRefusal> {
+    let mut surface = projection.surface.clone();
+    let [x_axis, y_axis] = projection.retained_axes;
+    for p in surface.control_points.iter_mut().flatten() {
+        let [x, y] = [p[0], p[1]];
+        let z = lift_omitted(projection, x, y, work).map_err(|reason| match reason {
+            Error::ResourceLimit => PlanarLiftRefusal::ResourceLimit,
+            Error::NotRepresentable => PlanarLiftRefusal::NotRepresentable,
+        })?;
+        p[x_axis] = x;
+        p[y_axis] = y;
+        p[projection.omitted_axis] = z;
+    }
+    surface
+        .validate()
+        .map_err(|_| PlanarLiftRefusal::InvalidOutput)?;
+    Ok(surface)
+}
+
+fn lift_omitted(
+    projection: &PlanarSurfaceProjection,
+    x: f64,
+    y: f64,
+    work: &mut Work,
+) -> Proof<f64> {
+    let x = work.lift(x)?;
+    let y = work.lift(y)?;
+    let sx = work.op(&projection.slopes[0], &x, |a, b| a * b)?;
+    let sy = work.op(&projection.slopes[1], &y, |a, b| a * b)?;
+    let total = work.op(&sx, &sy, |a, b| a + b)?;
+    let z = work.op(&projection.offset, &total, |a, b| a + b)?;
+    work.float(&z)
+}

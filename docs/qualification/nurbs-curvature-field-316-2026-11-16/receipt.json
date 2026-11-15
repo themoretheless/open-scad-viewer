@@ -1,0 +1,31 @@
+{
+  "id": "NURBS-0316",
+  "testedBase": "4de218f9e98fda02b98424d00e6ae4cac1aeb8e9",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_planar_surface_lift_contracts",
+    "--test",
+    "exact_planar_surface_projection_contracts",
+    "--test",
+    "exact_surface_affine_hull_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Lift an edited planar tensor control net through its exact rational inverse chart while retaining the original spline basis.",
+    "The exact inverse accepts nonbinary plane coefficients. Every final pole must be representable as binary64 and satisfy the surface limits."
+  ],
+  "logSha256": "6bc5e533faeedd253f40e459f1573a0990ec60472481a234015da69a9ae9ee01",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "e5b8b5d9c367c0101a0e8309e2b38ba3f93eae4f1988c70d29f1c8c112e9ff05",
+    "crates/nurbs-core/tests/exact_planar_surface_lift_contracts.rs": "ab201ac1c68b6fdac6f07c6c9386d304a8e4b0d751e1e1e29512cf1aae46a7d0"
+  }
+}
