@@ -446,6 +446,187 @@ fn find_small_bosses(
         .collect())
 }
 
+/// Default fillet radius limit, relative to the bbox diagonal.
+const DEFAULT_FILLET_RADIUS_REL: f64 = 0.05;
+/// Default hole diameter limit, relative to the bbox diagonal.
+const DEFAULT_HOLE_DIAMETER_REL: f64 = 0.1;
+/// Default volume limit, relative to the cubed bbox diagonal.
+const DEFAULT_VOLUME_REL: f64 = 0.01;
+/// Default short-face area limit, relative to the squared bbox diagonal.
+const DEFAULT_SHORT_FACE_AREA_REL: f64 = 1e-3;
+
+/// Resolved absolute thresholds of one scan.
+struct SmallThresholds {
+    bbox_diagonal: f64,
+    fillet_radius_max: f64,
+    hole_diameter_max: f64,
+    volume_max: f64,
+    short_face_area_max: f64,
+}
+
+fn resolve_thresholds(model: &Model, options: &SmallFeatureOptions) -> Result<SmallThresholds> {
+    let bbox_diagonal = positive_threshold(model_bbox_diagonal(model), "bbox_diagonal")?;
+    let fillet_radius_max = positive_threshold(
+        options
+            .fillet_radius_max
+            .unwrap_or(DEFAULT_FILLET_RADIUS_REL * bbox_diagonal),
+        "fillet_radius_max",
+    )?;
+    let hole_diameter_max = positive_threshold(
+        options
+            .hole_diameter_max
+            .unwrap_or(DEFAULT_HOLE_DIAMETER_REL * bbox_diagonal),
+        "hole_diameter_max",
+    )?;
+    let volume_max = positive_threshold(
+        options
+            .volume_max
+            .unwrap_or(DEFAULT_VOLUME_REL * bbox_diagonal * bbox_diagonal * bbox_diagonal),
+        "volume_max",
+    )?;
+    let short_face_area_rel = positive_threshold(
+        options
+            .short_face_area_rel
+            .unwrap_or(DEFAULT_SHORT_FACE_AREA_REL),
+        "short_face_area_rel",
+    )?;
+    let short_face_area_max = positive_threshold(
+        short_face_area_rel * bbox_diagonal * bbox_diagonal,
+        "short_face_area_max",
+    )?;
+    Ok(SmallThresholds {
+        bbox_diagonal,
+        fillet_radius_max,
+        hole_diameter_max,
+        volume_max,
+        short_face_area_max,
+    })
+}
+
+/// Trimmed area of one face from its fresh attributes.
+fn fresh_area(graph: &Aag, face: usize) -> Result<f64> {
+    graph.nodes[face]
+        .attrs
+        .as_ref()
+        .map(|attrs| attrs.area)
+        .ok_or_else(|| small_error(STALE_ATTRS_MESSAGE))
+}
+
+/// Candidates found so far and the faces they claim.
+struct SmallScan<'a> {
+    model: &'a Model,
+    graph: &'a Aag,
+    budget: &'a Budget,
+    limits: SmallThresholds,
+    candidates: Vec<SmallFeature>,
+    claimed: BTreeSet<usize>,
+}
+
+impl SmallScan<'_> {
+    fn push(&mut self, feature: SmallFeature) {
+        self.claimed.extend(feature.faces.iter().copied());
+        self.candidates.push(feature);
+    }
+
+    fn collect_fillets(&mut self, guard: &mut BudgetGuard) -> Result<()> {
+        let fillet_radius_max = self.limits.fillet_radius_max;
+        let fillet_options = FilletChainOptions {
+            radius_max: Some(fillet_radius_max),
+            ..FilletChainOptions::default()
+        };
+        let fillets = crate::aag_fillets::find_fillet_chains_with(
+            self.model,
+            self.graph,
+            self.budget,
+            &fillet_options,
+        )?;
+        for chain in fillets {
+            guard.tick()?;
+            if chain.radius_max >= fillet_radius_max {
+                continue;
+            }
+            let mut area = 0f64;
+            for &face in &chain.faces {
+                area += fresh_area(self.graph, face)?;
+            }
+            self.push(SmallFeature {
+                kind: SmallFeatureKind::Fillet,
+                faces: chain.faces,
+                size: chain.radius_max,
+                delta_volume: (2. / std::f64::consts::PI - 0.5) * chain.radius_max * area,
+            });
+        }
+        Ok(())
+    }
+
+    fn collect_holes(&mut self, guard: &mut BudgetGuard) -> Result<()> {
+        for hole in find_holes(self.model, self.graph, self.budget)? {
+            guard.tick()?;
+            if hole.diameter >= self.limits.hole_diameter_max {
+                continue;
+            }
+            let radius = 0.5 * hole.diameter;
+            self.push(SmallFeature {
+                kind: SmallFeatureKind::Hole,
+                faces: hole.faces,
+                size: hole.diameter,
+                delta_volume: std::f64::consts::PI * radius * radius * hole.depth,
+            });
+        }
+        Ok(())
+    }
+
+    fn collect_pockets_and_bosses(&mut self, guard: &mut BudgetGuard) -> Result<()> {
+        // With no concave edge neither a pocket nor a boss base ring can exist.
+        // Besides being a cheap rejection, this keeps large disjoint-solid scans
+        // out of the pocket matcher's all-edges validation path.
+        let has_concave = self
+            .graph
+            .edges
+            .iter()
+            .any(|edge| edge.class == DihedralClass::Concave);
+        if !has_concave {
+            return Ok(());
+        }
+        let volume_max = self.limits.volume_max;
+        for pocket in find_pockets(self.model, self.graph, self.budget)? {
+            guard.tick()?;
+            let delta_volume = pocket.floor_area * pocket.depth;
+            if delta_volume >= volume_max {
+                continue;
+            }
+            self.push(SmallFeature {
+                kind: SmallFeatureKind::Pocket,
+                faces: pocket.faces,
+                size: pocket.depth,
+                delta_volume,
+            });
+        }
+        for boss in find_small_bosses(self.model, self.graph, self.budget, volume_max)? {
+            guard.tick()?;
+            self.push(boss);
+        }
+        Ok(())
+    }
+
+    fn collect_short_faces(&mut self, guard: &mut BudgetGuard) -> Result<()> {
+        for face in 0..self.graph.nodes.len() {
+            guard.tick()?;
+            let area = fresh_area(self.graph, face)?;
+            require_finite_f64(area, "face area")?;
+            if area < self.limits.short_face_area_max && !self.claimed.contains(&face) {
+                self.candidates.push(SmallFeature {
+                    kind: SmallFeatureKind::ShortFace,
+                    faces: vec![face],
+                    size: area,
+                    delta_volume: 0.,
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
 /// List small fillets, holes, pockets, bosses and short faces without changing
 /// the model. Comparisons are strict (`size < threshold`, or estimated volume
 /// `< volume_max`). `graph` must cover the model and carry fresh attributes;
@@ -465,138 +646,32 @@ pub fn scan_small_features(
         return Err(small_error("AAG node count does not match model faces"));
     }
     if !graph.stale_face_attrs(model).is_empty() {
-        return Err(small_error(
-            "AAG face attributes missing or stale; run attach_face_attrs first",
-        ));
+        return Err(small_error(STALE_ATTRS_MESSAGE));
     }
-    let bbox_diagonal = positive_threshold(model_bbox_diagonal(model), "bbox_diagonal")?;
-    let fillet_radius_max = positive_threshold(
-        options.fillet_radius_max.unwrap_or(0.05 * bbox_diagonal),
-        "fillet_radius_max",
-    )?;
-    let hole_diameter_max = positive_threshold(
-        options.hole_diameter_max.unwrap_or(0.1 * bbox_diagonal),
-        "hole_diameter_max",
-    )?;
-    let volume_max = positive_threshold(
-        options
-            .volume_max
-            .unwrap_or(0.01 * bbox_diagonal * bbox_diagonal * bbox_diagonal),
-        "volume_max",
-    )?;
-    let short_face_area_rel = positive_threshold(
-        options.short_face_area_rel.unwrap_or(1e-3),
-        "short_face_area_rel",
-    )?;
-    let short_face_area_max = positive_threshold(
-        short_face_area_rel * bbox_diagonal * bbox_diagonal,
-        "short_face_area_max",
-    )?;
+    let limits = resolve_thresholds(model, options)?;
 
     let mut guard = budget.guard("aag-scan-small");
     guard.check()?;
-    let mut candidates = Vec::new();
-    let mut claimed = BTreeSet::new();
-    let mut push = |feature: SmallFeature| {
-        claimed.extend(feature.faces.iter().copied());
-        candidates.push(feature);
-    };
-
-    let fillet_options = FilletChainOptions {
-        radius_max: Some(fillet_radius_max),
-        ..FilletChainOptions::default()
-    };
-    let fillets = crate::aag_fillets::find_fillet_chains_with(
+    let mut scan = SmallScan {
         model,
         graph,
         budget,
-        &fillet_options,
-    )?;
-    for chain in fillets {
-        guard.tick()?;
-        if chain.radius_max >= fillet_radius_max {
-            continue;
-        }
-        let area: f64 = chain
-            .faces
-            .iter()
-            .map(|&face| {
-                graph.nodes[face]
-                    .attrs
-                    .as_ref()
-                    .expect("fresh attrs checked")
-                    .area
-            })
-            .sum();
-        push(SmallFeature {
-            kind: SmallFeatureKind::Fillet,
-            faces: chain.faces,
-            size: chain.radius_max,
-            delta_volume: (2. / std::f64::consts::PI - 0.5) * chain.radius_max * area,
-        });
-    }
-
-    for hole in find_holes(model, graph, budget)? {
-        guard.tick()?;
-        if hole.diameter >= hole_diameter_max {
-            continue;
-        }
-        let radius = 0.5 * hole.diameter;
-        push(SmallFeature {
-            kind: SmallFeatureKind::Hole,
-            faces: hole.faces,
-            size: hole.diameter,
-            delta_volume: std::f64::consts::PI * radius * radius * hole.depth,
-        });
-    }
-
-    // With no concave edge neither a pocket nor a boss base ring can exist.
-    // Besides being a cheap rejection, this keeps large disjoint-solid scans
-    // out of the pocket matcher's all-edges validation path.
-    let has_concave = graph
-        .edges
-        .iter()
-        .any(|edge| edge.class == DihedralClass::Concave);
-    if has_concave {
-        for pocket in find_pockets(model, graph, budget)? {
-            guard.tick()?;
-            let delta_volume = pocket.floor_area * pocket.depth;
-            if delta_volume >= volume_max {
-                continue;
-            }
-            push(SmallFeature {
-                kind: SmallFeatureKind::Pocket,
-                faces: pocket.faces,
-                size: pocket.depth,
-                delta_volume,
-            });
-        }
-        for boss in find_small_bosses(model, graph, budget, volume_max)? {
-            guard.tick()?;
-            push(boss);
-        }
-    }
-
-    for (face, node) in graph.nodes.iter().enumerate() {
-        guard.tick()?;
-        let area = node.attrs.as_ref().expect("fresh attrs checked").area;
-        require_finite_f64(area, "face area")?;
-        if area < short_face_area_max && !claimed.contains(&face) {
-            candidates.push(SmallFeature {
-                kind: SmallFeatureKind::ShortFace,
-                faces: vec![face],
-                size: area,
-                delta_volume: 0.,
-            });
-        }
-    }
+        limits,
+        candidates: Vec::new(),
+        claimed: BTreeSet::new(),
+    };
+    scan.collect_fillets(&mut guard)?;
+    scan.collect_holes(&mut guard)?;
+    scan.collect_pockets_and_bosses(&mut guard)?;
+    scan.collect_short_faces(&mut guard)?;
     guard.check()?;
+    let limits = scan.limits;
     Ok(SmallFeatureReport {
-        candidates,
-        bbox_diagonal,
-        fillet_radius_max,
-        hole_diameter_max,
-        volume_max,
-        short_face_area_max,
+        candidates: scan.candidates,
+        bbox_diagonal: limits.bbox_diagonal,
+        fillet_radius_max: limits.fillet_radius_max,
+        hole_diameter_max: limits.hole_diameter_max,
+        volume_max: limits.volume_max,
+        short_face_area_max: limits.short_face_area_max,
     })
 }
