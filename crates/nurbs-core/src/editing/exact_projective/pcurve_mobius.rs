@@ -117,7 +117,7 @@ pub(super) fn active_spans(source: &Curve) -> impl Iterator<Item = (usize, [f64;
     })
 }
 
-fn certify_chart(source: &Curve, domain: [[f64; 2]; 2], work: &mut Work) -> exact::PResult<bool> {
+pub(super) fn certify_chart(source: &Curve, domain: [[f64; 2]; 2], work: &mut Work) -> exact::PResult<bool> {
     let a = ChartInterval::new(domain[0], work)?;
     let b = ChartInterval::new(domain[1], work)?;
     for (span, interval) in active_spans(source) {

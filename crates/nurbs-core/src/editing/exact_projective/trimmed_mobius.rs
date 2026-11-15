@@ -99,7 +99,7 @@ pub fn relayout_trimmed_bezier_surface(
     )
 }
 
-fn transfer_report(
+pub(super) fn transfer_report(
     loops: &[Vec<Curve>],
     max_work: u64,
     map_surface: impl FnOnce() -> Result<Report<Surface>>,

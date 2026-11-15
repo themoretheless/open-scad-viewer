@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0312",
+  "testedBase": "0c4cc815f77c7f3c685cf75238a2313ce7da8300",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_trimmed_transpose_contracts",
+    "--test",
+    "exact_affine_trim_contracts",
+    "--test",
+    "exact_trimmed_relayout_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Exchange both tensor axes and every closed UV trim together, including different basis degrees and rational weights.",
+    "Natural UV domain containment and exact loop closure. The signed permutation reverses winding and preserves original curve clocks and world-space traces."
+  ],
+  "logSha256": "03cdde3b0878ffca8d6631d97f2e4b6347d91b19428fb4cf0a0b6132afc303dd",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "9569c82a01fbcbf6e998c80ce474d1e05e36296d70b9c3e746067fc7f07b11d9",
+    "crates/nurbs-core/src/editing/exact_projective/affine_trim.rs": "68eaaa0fbafe468697abd071aa366c47145291da1cdef9c4e877b9f802f5f789",
+    "crates/nurbs-geometry/src/surface_transpose.rs": "1e20f73c3bab9abd5fd76204f57cd9cb6690398c30b8980f924e3a84930f883a",
+    "crates/nurbs-core/tests/exact_trimmed_transpose_contracts.rs": "04e67593dc090714f41016a7ae00114363f3d55a60f99f39d63bf6640bcf5abc"
+  }
+}
