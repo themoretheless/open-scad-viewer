@@ -313,6 +313,100 @@ pub(crate) fn certify_opposite(
     Ok(None)
 }
 
+/// Largest control net, per surface, accepted by the plane separation proof.
+const MAX_SEPARATION_CONTROLS: usize = 4096;
+/// Largest control net, per surface, for which pairwise control midpoints are
+/// proposed as plane candidates.
+const MAX_MIDPOINT_CONTROLS: usize = 16;
+
+/// Proposed third plane points: the origin, unit axes and, for small nets,
+/// rounded midpoints of every control pair across the two surfaces.
+fn candidate_points(a: &Surface, b: &Surface) -> Vec<Vec<f64>> {
+    // Candidate planes for a straight edge still require exact edge incidence
+    // and opposite strict signs for every off-boundary control point below.
+    let mut candidates = vec![
+        vec![0., 0., 0.],
+        vec![1., 0., 0.],
+        vec![0., 1., 0.],
+        vec![0., 0., 1.],
+    ];
+    let controls = [a, b].map(|s| s.control_points.iter().flatten().collect::<Vec<_>>());
+    if controls.iter().all(|ps| ps.len() <= MAX_MIDPOINT_CONTROLS) {
+        for x in &controls[0] {
+            for y in &controls[1] {
+                let p = (0..3).map(|k| 0.5 * x[k] + 0.5 * y[k]).collect::<Vec<_>>();
+                if p.iter().all(|x| x.is_finite()) {
+                    candidates.push(p);
+                }
+            }
+        }
+    }
+    candidates
+}
+
+/// `plane` is noncollinear and contains every edge control point exactly.
+fn edge_plane(plane: [&[f64]; 3], points: &[&[f64]]) -> bool {
+    [[0, 1], [0, 2], [1, 2]].iter().any(|&axes| {
+        matches!(
+            orient(&plane, Some(axes)),
+            Some(Sign::Positive | Sign::Negative)
+        )
+    }) && points
+        .iter()
+        .all(|p| orient(&[plane[0], plane[1], plane[2], p], None) == Some(Sign::Zero))
+}
+
+/// Strict common plane side of every off-boundary control point of `surface`,
+/// with the owned boundary row exactly in the plane.
+fn strict_side(plane: [&[f64]; 3], surface: &Surface, bound: (usize, usize)) -> Option<Sign> {
+    let [p0, p1, p2] = plane;
+    let mut side = None;
+    for (u, row) in surface.control_points.iter().enumerate() {
+        for (v, p) in row.iter().enumerate() {
+            let sign = orient(&[p0, p1, p2, p], None)?;
+            if [u, v][bound.0] == bound.1 {
+                if sign != Sign::Zero {
+                    return None;
+                }
+            } else {
+                if sign == Sign::Zero {
+                    continue;
+                }
+                if side.is_some_and(|s| s != sign) {
+                    return None;
+                }
+                side = Some(sign);
+            }
+        }
+    }
+    let size = [
+        surface.control_points.len(),
+        surface.control_points.first()?.len(),
+    ][bound.0];
+    let opposite = if bound.1 == 0 { size.checked_sub(1)? } else { 0 };
+    let mut zeros = false;
+    for (u, row) in surface.control_points.iter().enumerate() {
+        for (v, p) in row.iter().enumerate() {
+            if [u, v][bound.0] == bound.1 {
+                continue;
+            }
+            if orient(&[p0, p1, p2, p], None)? == Sign::Zero {
+                zeros = true;
+                if [u, v][bound.0] == opposite {
+                    return None;
+                }
+            }
+        }
+    }
+    if zeros && size != [surface.degree_u, surface.degree_v][bound.0] + 1 {
+        return None;
+    }
+    // With positive weights, the opposite endpoint Bernstein row has
+    // positive basis everywhere off this boundary, including free ends.
+    // Zero intermediate rows cannot add a second contact with the plane.
+    side
+}
+
 /// Sufficient certificate for two curved surfaces on opposite sides of the
 /// plane of a shared noncollinear Bezier edge. All inputs are original source
 /// representations; no rounded normal or fitted plane enters the proof.
@@ -329,12 +423,10 @@ pub fn separates_surfaces(
     pcurve_b.validate()?;
     edge.validate()?;
     for s in [a, b] {
+        let columns = s.control_points.first().map_or(0, Vec::len);
         if s.periodic_u
             || s.periodic_v
-            || s.control_points
-                .len()
-                .saturating_mul(s.control_points[0].len())
-                > 4096
+            || s.control_points.len().saturating_mul(columns) > MAX_SEPARATION_CONTROLS
         {
             return Ok(false);
         }
@@ -343,29 +435,13 @@ pub fn separates_surfaces(
         return Ok(false);
     };
     let points: Vec<_> = edge.control_points.iter().map(|p| p.as_slice()).collect();
-    let p0 = points[0];
+    let Some(&p0) = points.first() else {
+        return Ok(false);
+    };
     let Some(p1) = points.iter().copied().find(|p| *p != p0) else {
         return Ok(false);
     };
-    // Candidate planes for a straight edge still require exact edge incidence
-    // and opposite strict signs for every off-boundary control point below.
-    let mut candidates = vec![
-        vec![0., 0., 0.],
-        vec![1., 0., 0.],
-        vec![0., 1., 0.],
-        vec![0., 0., 1.],
-    ];
-    let controls = [a, b].map(|s| s.control_points.iter().flatten().collect::<Vec<_>>());
-    if controls.iter().all(|ps| ps.len() <= 16) {
-        for x in &controls[0] {
-            for y in &controls[1] {
-                let p = (0..3).map(|k| 0.5 * x[k] + 0.5 * y[k]).collect::<Vec<_>>();
-                if p.iter().all(|x| x.is_finite()) {
-                    candidates.push(p);
-                }
-            }
-        }
-    }
+    let candidates = candidate_points(a, b);
     // Rounded midpoints propose planes only; every incidence and strict side
     // below is decided exactly on original retained coefficients.
     for p2 in points
@@ -373,69 +449,12 @@ pub fn separates_surfaces(
         .copied()
         .chain(candidates.iter().map(|p| p.as_slice()))
     {
-        if ![[0, 1], [0, 2], [1, 2]].iter().any(|&axes| {
-            matches!(
-                orient(&[p0, p1, p2], Some(axes)),
-                Some(Sign::Positive | Sign::Negative)
-            )
-        }) {
+        let plane = [p0, p1, p2];
+        if !edge_plane(plane, &points) {
             continue;
         }
-        if !points
-            .iter()
-            .all(|p| orient(&[p0, p1, p2, p], None) == Some(Sign::Zero))
-        {
-            continue;
-        }
-        let strict_side = |surface: &Surface, bound: (usize, usize)| -> Option<Sign> {
-            let mut side = None;
-            for (u, row) in surface.control_points.iter().enumerate() {
-                for (v, p) in row.iter().enumerate() {
-                    let sign = orient(&[p0, p1, p2, p], None)?;
-                    if [u, v][bound.0] == bound.1 {
-                        if sign != Sign::Zero {
-                            return None;
-                        }
-                    } else {
-                        if sign == Sign::Zero {
-                            continue;
-                        }
-                        if side.is_some_and(|s| s != sign) {
-                            return None;
-                        }
-                        side = Some(sign);
-                    }
-                }
-            }
-            let size = [
-                surface.control_points.len(),
-                surface.control_points[0].len(),
-            ][bound.0];
-            let opposite = if bound.1 == 0 { size - 1 } else { 0 };
-            let mut zeros = false;
-            for (u, row) in surface.control_points.iter().enumerate() {
-                for (v, p) in row.iter().enumerate() {
-                    if [u, v][bound.0] == bound.1 {
-                        continue;
-                    }
-                    if orient(&[p0, p1, p2, p], None)? == Sign::Zero {
-                        zeros = true;
-                        if [u, v][bound.0] == opposite {
-                            return None;
-                        }
-                    }
-                }
-            }
-            if zeros && size != [surface.degree_u, surface.degree_v][bound.0] + 1 {
-                return None;
-            }
-            // With positive weights, the opposite endpoint Bernstein row has
-            // positive basis everywhere off this boundary, including free ends.
-            // Zero intermediate rows cannot add a second contact with the plane.
-            side
-        };
         if matches!(
-            (strict_side(a, ba), strict_side(b, bb)),
+            (strict_side(plane, a, ba), strict_side(plane, b, bb)),
             (Some(Sign::Positive), Some(Sign::Negative))
                 | (Some(Sign::Negative), Some(Sign::Positive))
         ) {
