@@ -85,7 +85,7 @@ const documentResult=<T extends {document:DirectDocument}>(job:{document:DirectD
 let residentRestore:{text:string;document:DirectDocument}|null=null
 const restoreDocumentResult=(job:{text:string;base?:string}):DirectDocument=>{
   let reuse:Map<string,Pick<DirectDocument['bodies'][number],'mesh'|'brep'>>|undefined
-  if(typeof job.base==='string'&&residentRestore?.text===job.base){
+  if(typeof job.base==='string'&&residentRestore?.text===job.base&&job.text.includes('"instance"')){
     const ids=snapshotReusableInstances(job.base,job.text)
     if(ids.size){reuse=new Map();for(const body of residentRestore.document.bodies)if(ids.has(body.id))reuse.set(body.id,resolvedInstanceGeometry(body))}
   }

@@ -25,9 +25,10 @@ import {
   applyDirectDocumentDelta,
   directDocumentDelta,
   directSnapshotDelta,
+  snapshotReusableInstances,
   isDirectDocumentDelta,
 } from '../src/kernel/directDocumentDelta'
-import { resolveSolidInstances } from '../src/kernel/solidInstances'
+import { resolveSolidInstances, resolvedInstanceGeometry } from '../src/kernel/solidInstances'
 import { SolidInstanceBatchCache } from '../src/kernel/solidInstanceBatchCache'
 import { setLiveBodyPattern } from '../src/app/liveBodyPattern'
 import { applySolidBoolean } from '../src/kernel/solidBoolean'
@@ -349,6 +350,55 @@ for (const scene of scenes.filter(scene => !sceneFilter || scene.name.includes(s
       deltaUndoHistory = new DirectHistory(document)
       deltaUndoHistory.commit(renamed())
       deltaUndoPublished = deltaUndoHistory.syncedDocument
+    },
+  )
+  // C1/C14: the worker keeps the last restored document resident with its snapshot text; the
+  // next step from it (Undo then Redo, repeated Undo) reuses its resolved linked instances
+  // (`snapshotReusableInstances` -> `parseDirectDocument(..., reuseInstances)`).
+  let resident: { text: string; document: DirectDocument } | null = null
+  const residentLoad =
+    (history: DirectHistory, published: () => DirectDocument, keep: (d: DirectDocument) => void) =>
+    async (text: string) => {
+      const base = published(),
+        baseText = history.canonicalText(base)
+      if (baseText === undefined) throw Error('published document is not canonical')
+      let reuse: Map<string, Pick<DirectBody, 'mesh' | 'brep'>> | undefined
+      if (resident?.text === baseText && text.includes('"instance"')) {
+        const ids = snapshotReusableInstances(baseText, text)
+        reuse = new Map()
+        for (const body of resident.document.bodies)
+          if (ids.has(body.id)) reuse.set(body.id, resolvedInstanceGeometry(body))
+      }
+      const next = parseDirectDocument(text, workerCache, reuse)
+      resident = { text, document: next }
+      const wire = structuredClone(directSnapshotDelta(baseText, text, next) ?? next)
+      const rebuilt = isDirectDocumentDelta(wire) ? applyDirectDocumentDelta(base, wire) : wire
+      if (!rebuilt) throw Error('delta did not apply')
+      keep(rebuilt)
+      return rebuilt
+    }
+  let residentHistory = new DirectHistory(document),
+    residentPublished = residentHistory.syncedDocument
+  const residentStep = () =>
+    residentLoad(
+      residentHistory,
+      () => residentPublished,
+      d => (residentPublished = d),
+    )
+  await measure(
+    name,
+    'history Redo: resident base in worker, unchanged instances reused (C1/C14)',
+    'DirectModeler undo(true) -> restoreDocument{base} after undo()',
+    'preview',
+    async () => {
+      if (!(await residentHistory.restoreAsync('redo', residentStep()))) throw Error('Redo did not apply')
+    },
+    async () => {
+      residentHistory = new DirectHistory(document)
+      residentHistory.commit(renamed())
+      residentPublished = residentHistory.syncedDocument
+      resident = null
+      await residentHistory.restoreAsync('undo', residentStep())
     },
   )
   // The first synchronous commit after an async restore adopts the restored document instead
