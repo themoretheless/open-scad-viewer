@@ -22,17 +22,25 @@ export interface WboitPixel {
   readonly reveal: number
 }
 
-/** Upper clamp of the WGSL weight; also bounds one fragment's accumulation contribution. */
-export const WBOIT_WEIGHT_MAX = 3e3
+/**
+ * Upper clamp of the WGSL weight; also bounds one fragment's accumulation
+ * contribution (the shader multiplies the weight by alpha), so rgba16float
+ * holds floor(65504 / 500) = 131 fully opaque layers before it overflows.
+ */
+export const WBOIT_WEIGHT_MAX = 5e2
 export const WBOIT_WEIGHT_MIN = 1e-2
 /** Largest finite rgba16float value. */
 export const HALF_FLOAT_MAX = 65504
 
-/** Same expression as `wboitWeight` in the WGSL produced by `toWboitShader`. */
-export function wboitWeight(depth: number, alpha: number): number {
-  const a = Math.min(1, alpha) * 8 + 0.01
+/**
+ * Same expression as `wboitWeight` in the WGSL produced by `toWboitShader`.
+ * The weight depends on depth only: alpha already scales the accumulated
+ * value, so an alpha term here would only push the weight into the clamp.
+ * Nearer fragments weigh up to 8000x more than fragments at the far plane.
+ */
+export function wboitWeight(depth: number, _alpha?: number): number {
   const b = 1 - depth * 0.95
-  return Math.min(WBOIT_WEIGHT_MAX, Math.max(WBOIT_WEIGHT_MIN, a ** 3 * 1e8 * b ** 3))
+  return Math.min(WBOIT_WEIGHT_MAX, Math.max(WBOIT_WEIGHT_MIN, WBOIT_WEIGHT_MAX * b ** 3))
 }
 
 /** Clear values of the accumulation pass. */

@@ -71,9 +71,8 @@ struct WboitOutput {
 }
 
 fn wboitWeight(depth: f32, alpha: f32) -> f32 {
-  let a = min(1.0, alpha) * 8.0 + 0.01;
   let b = 1.0 - depth * 0.95;
-  return clamp(pow(a, 3.0) * 1e8 * pow(b, 3.0), 1e-2, 3e3);
+  return clamp(5e2 * b * b * b, 1e-2, 5e2);
 }
 
 fn fs_color(v: V) -> vec4f {

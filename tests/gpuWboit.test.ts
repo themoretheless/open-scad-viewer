@@ -1,3 +1,4 @@
+import { wboitWeight } from '../src/render/wboitReference'
 import { describe, expect, it, vi } from 'vitest'
 import {
   GpuWboitRenderer,
@@ -192,12 +193,6 @@ describe('GpuWboitRenderer', () => {
     // Model two overlapping transparent fragments
     const fragA = { r: 1.0, g: 0.2, b: 0.2, a: 0.6, z: 0.3 }
     const fragB = { r: 0.2, g: 0.4, b: 1.0, a: 0.4, z: 0.7 }
-
-    function wboitWeight(z: number, a: number) {
-      const aClamped = Math.min(1.0, a) * 8.0 + 0.01
-      const b = 1.0 - z * 0.95
-      return Math.min(Math.max(Math.pow(aClamped, 3) * 1e8 * Math.pow(b, 3), 1e-2), 3e3)
-    }
 
     const wA = wboitWeight(fragA.z, fragA.a)
     const wB = wboitWeight(fragB.z, fragB.a)

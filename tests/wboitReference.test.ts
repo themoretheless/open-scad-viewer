@@ -29,9 +29,8 @@ function permutations<T>(items: readonly T[]): T[][] {
 describe('WBOIT CPU reference qualification', () => {
   it('pins the reference weight to the WGSL emitted by toWboitShader', () => {
     const wgsl = toWboitShader(MESH_WGSL)
-    expect(wgsl).toContain('let a = min(1.0, alpha) * 8.0 + 0.01;')
     expect(wgsl).toContain('let b = 1.0 - depth * 0.95;')
-    expect(wgsl).toContain('return clamp(pow(a, 3.0) * 1e8 * pow(b, 3.0), 1e-2, 3e3);')
+    expect(wgsl).toContain('return clamp(5e2 * b * b * b, 1e-2, 5e2);')
     expect(wgsl).toContain('vec4f(c.rgb * alpha, alpha) * w')
     expect(wgsl).toContain('vec4f(alpha, 0.0, 0.0, 0.0)')
   })
@@ -78,30 +77,35 @@ describe('WBOIT CPU reference qualification', () => {
     expect(compositeWboit(accumulateWboit([]), background)).toEqual(background)
   })
 
-  it('documents the qualification limits of the current weight function', () => {
-    // From alpha 0.25 up the weight saturates at the clamp for every depth, so
-    // the pass reduces to an alpha-weighted average with no depth preference.
-    for (const depth of [0, 0.25, 0.5, 0.75, 1]) expect(wboitWeight(depth, 0.25)).toBe(WBOIT_WEIGHT_MAX)
-    const near = compositeWboit(
-      accumulateWboit([
-        { ...layers[0], depth: 0.01 },
-        { ...layers[2], depth: 0.99 },
-      ]),
-      background,
-    )
-    const far = compositeWboit(
-      accumulateWboit([
-        { ...layers[0], depth: 0.99 },
-        { ...layers[2], depth: 0.01 },
-      ]),
-      background,
-    )
-    for (let channel = 0; channel < 3; channel++) expect(near[channel]).toBeCloseTo(far[channel], 12)
-    // rgba16float headroom: at the weight cap and alpha 1, 22 layers overflow the accumulation alpha.
-    expect(Math.floor(HALF_FLOAT_MAX / WBOIT_WEIGHT_MAX)).toBe(21)
-    const deep = accumulateWboit(
-      Array.from({ length: 22 }, (_, index) => ({ color: [1, 1, 1] as Rgb, alpha: 1, depth: index / 22 })),
-    )
-    expect(deep.accum[3]).toBeGreaterThan(HALF_FLOAT_MAX)
+  it('prefers nearer layers and does not saturate with alpha', () => {
+    // The weight falls monotonically with depth for any alpha.
+    for (const alpha of [0.1, 0.25, 0.5, 1]) {
+      expect(wboitWeight(0, alpha)).toBe(WBOIT_WEIGHT_MAX)
+      expect(wboitWeight(0.25, alpha)).toBeGreaterThan(wboitWeight(0.5, alpha))
+      expect(wboitWeight(0.5, alpha)).toBeGreaterThan(wboitWeight(0.75, alpha))
+      expect(wboitWeight(0.75, alpha)).toBeGreaterThan(wboitWeight(1, alpha))
+    }
+    // Swapping which layer is in front moves the result towards the front layer,
+    // as sorted compositing does.
+    const redNear = [
+      { ...layers[0], depth: 0.01 },
+      { ...layers[2], depth: 0.99 },
+    ]
+    const blueNear = [
+      { ...layers[0], depth: 0.99 },
+      { ...layers[2], depth: 0.01 },
+    ]
+    const a = compositeWboit(accumulateWboit(redNear), background)
+    const b = compositeWboit(accumulateWboit(blueNear), background)
+    expect(a[0]).toBeGreaterThan(b[0])
+    expect(b[2]).toBeGreaterThan(a[2])
+  })
+
+  it('keeps rgba16float headroom for 131 opaque layers at the weight cap', () => {
+    expect(Math.floor(HALF_FLOAT_MAX / WBOIT_WEIGHT_MAX)).toBe(131)
+    const opaque = (count: number) =>
+      accumulateWboit(Array.from({ length: count }, () => ({ color: [1, 1, 1] as Rgb, alpha: 1, depth: 0 })))
+    expect(opaque(131).accum[3]).toBeLessThanOrEqual(HALF_FLOAT_MAX)
+    expect(opaque(132).accum[3]).toBeGreaterThan(HALF_FLOAT_MAX)
   })
 })
