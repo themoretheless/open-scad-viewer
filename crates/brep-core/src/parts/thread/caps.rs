@@ -26,19 +26,16 @@ pub fn cap_patch_network_plane_general(
         Some([max_trim_pairs, max_trim_cells, max_domain_cells]),
     )
 }
-pub(super) fn cap_patch_network_impl(
+/// Verification cells one network cap may spend.
+const MAX_CAP_CELLS: usize = 100000;
+/// Curves the cap boundary chain assembler may examine.
+const MAX_CAP_CHAIN_CURVES: usize = 65536;
+
+/// Free forward boundary uses lying exactly in the plane, with their curves.
+fn planar_boundary_uses(
     source: &Model,
     z_plane: f64,
-    max_verification_cells: usize,
-    trim_limits: Option<[usize; 3]>,
-) -> Result<(Model, usize)> {
-    source.validate()?;
-    if !z_plane.is_finite() || max_verification_cells > 100000 {
-        return Err(Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Cap needs finite plane and at most 100000 cells",
-        ));
-    }
+) -> (Vec<[usize; 2]>, Vec<nurbs_core::curve::Curve>) {
     let mut incidence = vec![0; source.edges.len()];
     for c in source.loops.iter().flat_map(|l| &l.coedges) {
         incidence[c.edge] += 1;
@@ -57,29 +54,24 @@ pub(super) fn cap_patch_network_impl(
             }
         }
     }
-    if curves.is_empty() {
-        return Err(Error::new(
-            "BREP_THREAD_PATCH_UNRESOLVED",
-            "No exact planar cap boundary",
-        ));
-    }
-    let chain = nurbs_core::curve_chain::assemble(&curves, source.tolerance_mm, 65536)?;
-    if !chain.all_endpoints_equal
-        || chain.cyclic_chains.len() != 1
-        || !chain.unresolved_curves.is_empty()
-    {
-        return Err(Error::new(
-            "BREP_THREAD_PATCH_UNRESOLVED",
-            "Cap requires one exactly closed boundary cycle",
-        ));
-    }
-    let cycle = &chain.cyclic_chains[0];
-    let side_wire: Vec<_> = cycle.iter().map(|&i| curves[i].clone()).collect();
-    let (mut cap, mut used, side_positive) = if let Some([pairs, cells, domain]) = trim_limits {
+    (addresses, curves)
+}
+
+/// Build the cap sheet for the side wire, through the general trimmed
+/// builder when trim limits are given, and report whether the side wire runs
+/// positively.
+fn build_network_cap(
+    side_wire: Vec<nurbs_core::curve::Curve>,
+    z_plane: f64,
+    tolerance: f64,
+    max_verification_cells: usize,
+    trim_limits: Option<[usize; 3]>,
+) -> Result<(Model, usize, bool)> {
+    if let Some([pairs, cells, domain]) = trim_limits {
         let report = crate::planar_cap::build_sheet_general_oriented(
             &[side_wire],
             z_plane,
-            source.tolerance_mm,
+            tolerance,
             crate::planar_cap::GeneralCapLimits {
                 max_trim_pairs: pairs,
                 max_trim_cells: cells,
@@ -93,54 +85,105 @@ pub(super) fn cap_patch_network_impl(
                 "General cap trim region is unproved",
             )
         })?;
-        (cap, report.agreement_cells, !report.orientation_reversed)
+        return Ok((cap, report.agreement_cells, !report.orientation_reversed));
+    }
+    let area: f64 = side_wire
+        .iter()
+        .flat_map(|c| c.control_points.windows(2))
+        .map(|p| p[0][0] * p[1][1] - p[1][0] * p[0][1])
+        .sum();
+    if !area.is_finite() || area == 0. {
+        return Err(Error::new(
+            "BREP_THREAD_PATCH_UNRESOLVED",
+            "Cap orientation is unresolved",
+        ));
+    }
+    let wire = if area > 0. {
+        side_wire
     } else {
-        let area: f64 = side_wire
+        side_wire
             .iter()
-            .flat_map(|c| c.control_points.windows(2))
-            .map(|p| p[0][0] * p[1][1] - p[1][0] * p[0][1])
-            .sum();
-        if !area.is_finite() || area == 0. {
-            return Err(Error::new(
-                "BREP_THREAD_PATCH_UNRESOLVED",
-                "Cap orientation is unresolved",
-            ));
-        }
-        let wire = if area > 0. {
-            side_wire
-        } else {
-            side_wire
-                .iter()
-                .rev()
-                .map(|c| c.reverse())
-                .collect::<Result<Vec<_>>>()?
-        };
-        let (cap, cells) = crate::planar_cap::build_sheet_with_report(
-            &[wire],
-            z_plane,
-            source.tolerance_mm,
-            max_verification_cells,
-        )?;
-        (cap, cells, area > 0.)
+            .rev()
+            .map(|c| c.reverse())
+            .collect::<Result<Vec<_>>>()?
     };
+    let (cap, cells) = crate::planar_cap::build_sheet_with_report(
+        &[wire],
+        z_plane,
+        tolerance,
+        max_verification_cells,
+    )?;
+    Ok((cap, cells, area > 0.))
+}
+
+/// Reverse the cap sheet so it opposes a positively running side wire,
+/// mirroring its pcurves in U.
+fn reverse_network_cap(cap: &mut Model) -> Result<()> {
+    let cap_surface = &cap.faces[0].surface;
+    let u_ends = [
+        cap_surface.knots_u[cap_surface.degree_u],
+        cap_surface.knots_u[cap_surface.control_points.len()],
+    ];
+    cap.faces[0].surface.control_points.reverse();
+    cap.faces[0].surface.weights.reverse();
+    for e in &mut cap.edges {
+        e.curve = e.curve.reverse()?;
+        e.vertices.swap(0, 1);
+    }
+    cap.loops[0].coedges.reverse();
+    for c in &mut cap.loops[0].coedges {
+        c.pcurve = c.pcurve.reverse()?;
+        for p in &mut c.pcurve.control_points {
+            p[0] = u_ends[0] + (u_ends[1] - p[0]);
+        }
+    }
+    cap.rebuild_topology_ids();
+    cap.validate()?;
+    Ok(())
+}
+
+pub(super) fn cap_patch_network_impl(
+    source: &Model,
+    z_plane: f64,
+    max_verification_cells: usize,
+    trim_limits: Option<[usize; 3]>,
+) -> Result<(Model, usize)> {
+    source.validate()?;
+    if !z_plane.is_finite() || max_verification_cells > MAX_CAP_CELLS {
+        return Err(Error::new(
+            "BREP_INVALID_THREAD_PATCH",
+            "Cap needs finite plane and at most 100000 cells",
+        ));
+    }
+    let (addresses, curves) = planar_boundary_uses(source, z_plane);
+    if curves.is_empty() {
+        return Err(Error::new(
+            "BREP_THREAD_PATCH_UNRESOLVED",
+            "No exact planar cap boundary",
+        ));
+    }
+    let chain =
+        nurbs_core::curve_chain::assemble(&curves, source.tolerance_mm, MAX_CAP_CHAIN_CURVES)?;
+    if !chain.all_endpoints_equal
+        || chain.cyclic_chains.len() != 1
+        || !chain.unresolved_curves.is_empty()
+    {
+        return Err(Error::new(
+            "BREP_THREAD_PATCH_UNRESOLVED",
+            "Cap requires one exactly closed boundary cycle",
+        ));
+    }
+    let cycle = &chain.cyclic_chains[0];
+    let side_wire: Vec<_> = cycle.iter().map(|&i| curves[i].clone()).collect();
+    let (mut cap, mut used, side_positive) = build_network_cap(
+        side_wire,
+        z_plane,
+        source.tolerance_mm,
+        max_verification_cells,
+        trim_limits,
+    )?;
     if side_positive {
-        let cap_surface=&cap.faces[0].surface;
-        let u_ends=[cap_surface.knots_u[cap_surface.degree_u],cap_surface.knots_u[cap_surface.control_points.len()]];
-        cap.faces[0].surface.control_points.reverse();
-        cap.faces[0].surface.weights.reverse();
-        for e in &mut cap.edges {
-            e.curve = e.curve.reverse()?;
-            e.vertices.swap(0, 1);
-        }
-        cap.loops[0].coedges.reverse();
-        for c in &mut cap.loops[0].coedges {
-            c.pcurve = c.pcurve.reverse()?;
-            for p in &mut c.pcurve.control_points {
-                p[0] = u_ends[0] + (u_ends[1] - p[0]);
-            }
-        }
-        cap.rebuild_topology_ids();
-        cap.validate()?;
+        reverse_network_cap(&mut cap)?;
     }
     let pairs: Vec<_> = cycle
         .iter()
@@ -200,22 +243,27 @@ pub fn trimmed_patch_sheet_with_planar_ends(
     Ok(aligned)
 }
 
-/// Put selected boundary curves exactly on Z planes, including their shared
-/// vertices and incident endpoint controls. Positive rational weights bound
-/// continuous curve change by the maximum outward Z-control displacement.
-pub fn planarize_patch_edges(
+fn invalid_planarization() -> Error {
+    Error::new(
+        "BREP_INVALID_THREAD_PATCH",
+        "Planarization requires a clamped single-face sheet and compatible finite planes",
+    )
+}
+
+/// Requested Z of every touched vertex and edge.
+type PlaneAssignments = (
+    std::collections::BTreeMap<usize, f64>,
+    std::collections::BTreeMap<usize, f64>,
+);
+
+/// Validate the sheet and collect one compatible plane per touched vertex
+/// and edge.
+fn collect_plane_assignments(
     target: &Model,
     planes: &[(usize, f64)],
     max_change: f64,
     max_verification_cells: usize,
-) -> Result<EndpointAlignment> {
-    use nurbs_core::curve_surface_agreement::{self, Status};
-    let invalid = || {
-        Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Planarization requires a clamped single-face sheet and compatible finite planes",
-        )
-    };
+) -> Result<PlaneAssignments> {
     target.validate()?;
     if target.faces.len() != 1
         || target.loops.len() != 1
@@ -226,48 +274,57 @@ pub fn planarize_patch_edges(
         || planes.len() > target.edges.len()
         || !max_change.is_finite()
         || max_change < 0.
-        || max_verification_cells > 100000
+        || max_verification_cells > MAX_ALIGNMENT_CELLS
     {
-        return Err(invalid());
+        return Err(invalid_planarization());
     }
     let mut vertices = std::collections::BTreeMap::new();
     let mut edges = std::collections::BTreeMap::new();
     for &(index, z) in planes {
         if !z.is_finite() {
-            return Err(invalid());
+            return Err(invalid_planarization());
         }
-        let c = target.loops[0].coedges.get(index).ok_or_else(invalid)?;
-        if let Some(previous) = edges.insert(c.edge, z) {
-            if previous != z {
-                return Err(invalid());
-            }
+        let c = target.loops[0]
+            .coedges
+            .get(index)
+            .ok_or_else(invalid_planarization)?;
+        if let Some(previous) = edges.insert(c.edge, z)
+            && previous != z
+        {
+            return Err(invalid_planarization());
         }
         for v in target.edges[c.edge].vertices {
-            if let Some(previous) = vertices.insert(v, z) {
-                if previous != z {
-                    return Err(invalid());
-                }
+            if let Some(previous) = vertices.insert(v, z)
+                && previous != z
+            {
+                return Err(invalid_planarization());
             }
         }
     }
     for e in &target.edges {
         let c = &e.curve;
-        let [a, b] = c.domain();
-        if c.control_points[0].len() != 3
-            || !c.knots[..=c.degree].iter().all(|&k| k == a)
-            || !c.knots[c.knots.len() - c.degree - 1..]
-                .iter()
-                .all(|&k| k == b)
-            || c.control_points.first().unwrap().as_slice()
-                != target.vertices[e.vertices[0]].point.as_slice()
-            || c.control_points.last().unwrap().as_slice()
-                != target.vertices[e.vertices[1]].point.as_slice()
+        if !clamped_spatial(c) {
+            return Err(invalid_planarization());
+        }
+        let first = c.control_points.first().ok_or_else(invalid_planarization)?;
+        let last = c.control_points.last().ok_or_else(invalid_planarization)?;
+        if first.as_slice() != target.vertices[e.vertices[0]].point.as_slice()
+            || last.as_slice() != target.vertices[e.vertices[1]].point.as_slice()
         {
-            return Err(invalid());
+            return Err(invalid_planarization());
         }
     }
-    let mut result = target.clone();
-    for (&v, &z) in &vertices {
+    Ok((vertices, edges))
+}
+
+/// Move the assigned vertices and controls onto their planes and return the
+/// outward-rounded largest Z-control displacement.
+fn apply_plane_assignments(
+    target: &Model,
+    result: &mut Model,
+    (vertices, edges): &PlaneAssignments,
+) -> f64 {
+    for (&v, &z) in vertices {
         result.vertices[v].point[2] = z;
     }
     let mut bound: f64 = 0.;
@@ -280,8 +337,10 @@ pub fn planarize_patch_edges(
         if let Some(&z) = vertices.get(&e.vertices[0]) {
             e.curve.control_points[0][2] = z;
         }
-        if let Some(&z) = vertices.get(&e.vertices[1]) {
-            e.curve.control_points.last_mut().unwrap()[2] = z;
+        if let Some(&z) = vertices.get(&e.vertices[1])
+            && let Some(last) = e.curve.control_points.last_mut()
+        {
+            last[2] = z;
         }
         for (p, original) in e
             .curve
@@ -294,38 +353,36 @@ pub fn planarize_patch_edges(
             }
         }
     }
+    bound
+}
+
+/// Put selected boundary curves exactly on Z planes, including their shared
+/// vertices and incident endpoint controls. Positive rational weights bound
+/// continuous curve change by the maximum outward Z-control displacement.
+pub fn planarize_patch_edges(
+    target: &Model,
+    planes: &[(usize, f64)],
+    max_change: f64,
+    max_verification_cells: usize,
+) -> Result<EndpointAlignment> {
+    let assignments =
+        collect_plane_assignments(target, planes, max_change, max_verification_cells)?;
+    let mut result = target.clone();
+    let bound = apply_plane_assignments(target, &mut result, &assignments);
     if !bound.is_finite() || bound > max_change {
         return Err(Error::new(
             "BREP_THREAD_PATCH_UNRESOLVED",
             "Planar edge displacement exceeds requested budget",
         ));
     }
-    let mut used = 0;
-    let mut agreements = Vec::new();
-    for c in &result.loops[0].coedges {
-        if used == max_verification_cells {
-            return Err(Error::new(
-                "BREP_THREAD_PATCH_UNRESOLVED",
-                "Planarization verifier budget exhausted",
-            ));
-        }
-        let report = curve_surface_agreement::verify(
-            &result.edges[c.edge].curve,
-            &c.pcurve,
-            &result.faces[0].surface,
-            c.reversed,
-            result.tolerance_mm,
-            max_verification_cells - used,
-        )?;
-        used += report.cells;
-        if report.status != Status::WithinTolerance {
-            return Err(Error::new(
-                "BREP_THREAD_PATCH_UNRESOLVED",
-                "Planarized boundary agreement unproved",
-            ));
-        }
-        agreements.push(report);
-    }
+    let (agreements, used) = verify_edited_boundaries(
+        &result,
+        max_verification_cells,
+        BoundaryRecheckMessages {
+            exhausted: "Planarization verifier budget exhausted",
+            unproved: "Planarized boundary agreement unproved",
+        },
+    )?;
     result.rebuild_topology_ids();
     result.inherit_topology_ids(&[target]);
     result.validate()?;

@@ -552,8 +552,8 @@ pub(super) fn len<'a>(
 ) -> BResult<Value<'a>> {
     expect_count("len", argc, &[1])?;
     match &arg(0)? {
-        Value::Str(deref!(s)) => Ok(Value::Number(s.chars().count() as f64)),
-        Value::Vector(deref!(items)) => Ok(Value::Number(items.len() as f64)),
+        Value::Str(s) => Ok(Value::Number(s.chars().count() as f64)),
+        Value::Vector(items) => Ok(Value::Number(items.len() as f64)),
         _ => fail("len", "argument 1 must be a string or vector"),
     }
 }

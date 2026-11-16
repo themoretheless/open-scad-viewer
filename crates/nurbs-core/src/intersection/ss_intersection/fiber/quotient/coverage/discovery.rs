@@ -1,4 +1,5 @@
 use super::*;
+use crate::ss_intersection::fiber_coverage::AffineGraphExclusion;
 fn hull(
     source: &FiberSources,
     domain: [[f64; 2]; 4],
@@ -158,6 +159,7 @@ pub(super) fn construct(
             });
         }
     }
+    let affine_exclusion = AffineGraphExclusion::new(source).ok();
     let mut nodes = vec![QuotientCoverageNode { domain, kind: None }];
     let mut stack = vec![(0, 0)];
     let natural = natural(source);
@@ -177,6 +179,21 @@ pub(super) fn construct(
             report.excluded_cells += 1;
             nodes[id].kind = Some(QuotientCoverageKind::Excluded(attempt));
             continue;
+        }
+        if let Some(affine) = &affine_exclusion
+            && work.used < work.max
+        {
+            work.used += 1;
+            if affine.excludes(d)? {
+                let mut proof = attempt;
+                proof.status = FiberStatus::Excluded;
+                proof.reason = "original-quotient-affine-graph-separation";
+                proof.rectangles += 1;
+                proof.residual_box = None;
+                report.excluded_cells += 1;
+                nodes[id].kind = Some(QuotientCoverageKind::Excluded(proof));
+                continue;
+            }
         }
         if let Some(kind) = root_chart(fibers, d, &mut work)? {
             if matches!(kind, QuotientCoverageKind::Excluded(_)) {
@@ -242,6 +259,7 @@ pub(super) fn construct(
         nodes,
         limits,
         report: report.clone(),
+        nonperiodic: None,
     };
     Ok(QuotientCoverageResult {
         report,

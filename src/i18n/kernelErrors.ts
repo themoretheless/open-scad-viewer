@@ -40,6 +40,7 @@ export const KERNEL_ERROR_REASONS = [
   'booleanDuplicate',
   'invalidSize',
   'invalidSelection',
+  'stepAssemblyContent',
   'curveInput',
   'geometryInput',
   'brepInput',
@@ -73,7 +74,6 @@ export const KERNEL_ERROR_REASONS = [
   'sweepDeviation',
   'profilePlane',
   'targetBody',
-  'stepAssemblyContent',
 ] as const
 export type KernelErrorReason = (typeof KERNEL_ERROR_REASONS)[number]
 
@@ -99,6 +99,7 @@ export const KERNEL_ERROR_STEPS = [
   'fillOperands',
   'removeDuplicate',
   'selectEdges',
+  'exportBodiesOnly',
   'reduceRadius',
   'reduceChamfer',
   'fixCurve',
@@ -113,7 +114,6 @@ export const KERNEL_ERROR_STEPS = [
   'useMeshExport',
   'reduceComplexity',
   'separateProfiles',
-  'exportBodiesOnly',
 ] as const
 export type KernelErrorStep = (typeof KERNEL_ERROR_STEPS)[number]
 

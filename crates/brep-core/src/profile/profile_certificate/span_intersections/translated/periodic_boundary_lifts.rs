@@ -70,6 +70,195 @@ fn derive(o: &OwnedPeriodicBoundaryLifts) -> Result<(Vec<OriginalPeriodicBoundar
         &vec![true; n],
     )
 }
+const MAX_DARTS: usize = 1000000;
+const MAX_PARTS: usize = 1000000;
+const MAX_REFINEMENTS: usize = 512;
+/// Shared state of lifting every admitted boundary walk onto the original
+/// source clocks.
+struct Lifter<'a> {
+    ports: &'a [OriginalPeriodicPort],
+    charts: &'a [OriginalPeriodicVertexChart],
+    cover: &'a OwnedOriginalPeriodicPieces,
+    original: Vec<Vec<Cell>>,
+    periods: [Q; 2],
+    max_refinements: usize,
+    max_parts: usize,
+    expected: &'a [bool],
+    seen: Vec<bool>,
+    parts_count: usize,
+}
+impl Lifter<'_> {
+    /// The admitted dart leaving `vertex` and its opposite endpoint on the
+    /// same directed native carrier, charged once against the allowance.
+    fn carrier(
+        &mut self,
+        dart: usize,
+        vertex: usize,
+    ) -> Result<(&OriginalPeriodicPort, &OriginalPeriodicPort)> {
+        if dart >= self.ports.len() || self.seen[dart] || !self.expected[dart] {
+            return Err(refused(
+                "Original periodic boundary lift duplicates or invents a dart",
+            ));
+        }
+        self.seen[dart] = true;
+        if self.parts_count >= self.max_parts {
+            return Err(refused(
+                "Complete original boundary lift exhausted its part allowance",
+            ));
+        }
+        self.parts_count += 1;
+        let p = &self.ports[dart];
+        let q = self
+            .ports
+            .get(p.edge * 2 + (1 - p.end))
+            .ok_or_else(|| refused("Original boundary lift lost opposite edge endpoint"))?;
+        if p.vertex != vertex
+            || p.edge != q.edge
+            || p.piece != q.piece
+            || p.source != q.source
+            || p.cell != q.cell
+            || p.interval != q.interval
+            || p.cut == q.cut
+            || p.direction != -q.direction
+        {
+            return Err(refused(
+                "Original boundary lift lost its directed native carrier",
+            ));
+        }
+        Ok((p, q))
+    }
+    /// Both endpoints of the original cell lifted by `translation`, each in
+    /// its own selected root field.
+    fn endpoints(
+        &self,
+        p: &OriginalPeriodicPort,
+        parameters: &[OriginalSourceParameter; 2],
+        translation: &[Q; 2],
+    ) -> Result<[[[ExactPolynomial; 2]; 2]; 2]> {
+        let cell = &self.original[p.source][p.cell];
+        let mut endpoints = Vec::new();
+        for parameter in parameters {
+            let f = decode_polynomial(&parameter.primitive)?;
+            let map = decode_polynomial(&parameter.parameter)?;
+            let root = [
+                decode_ratio(&parameter.interval[0])?,
+                decode_ratio(&parameter.interval[1])?,
+            ];
+            let point = arithmetic::shore_events::translated_point(
+                &cell.net,
+                &cell.domain,
+                &map,
+                &f,
+                &root,
+                translation,
+                self.max_refinements,
+            )?;
+            endpoints.push(point.map(|c| c.map(|p| polynomial(&p))));
+        }
+        endpoints
+            .try_into()
+            .map_err(|_| refused("Incomplete lifted original endpoints"))
+    }
+    /// One lifted part of a walk at deck history `history`; returns the part
+    /// and the history after it.
+    fn part(
+        &mut self,
+        dart: usize,
+        vertex: &mut usize,
+        history: &[BigInt; 2],
+    ) -> Result<(OriginalPeriodicBoundaryPart, [BigInt; 2])> {
+        let (p, q) = self.carrier(dart, *vertex)?;
+        let (p, q) = (p.clone(), q.clone());
+        let a = &self.charts[p.vertex].uses[p.chart_use];
+        let b = &self.charts[q.vertex].uses[q.chart_use];
+        let cuts = [
+            OriginalPeriodicChartCutRef {
+                piece: p.piece,
+                cut: p.cut,
+            },
+            OriginalPeriodicChartCutRef {
+                piece: q.piece,
+                cut: q.cut,
+            },
+        ];
+        if a.source != cuts[0] || b.source != cuts[1] {
+            return Err(refused(
+                "Original boundary lift uses unrelated vertex transport",
+            ));
+        }
+        let depart = shift(&a.period_shift)?;
+        let arrive = shift(&b.period_shift)?;
+        let deck = [&history[0] + &depart[0], &history[1] + &depart[1]];
+        let piece = &self.cover.pieces()[p.piece];
+        let translation = [
+            decode_ratio(&piece.translation[0])?
+                + Q::from_integer(deck[0].clone()) * &self.periods[0],
+            decode_ratio(&piece.translation[1])?
+                + Q::from_integer(deck[1].clone()) * &self.periods[1],
+        ];
+        let parameters = [a.parameter.clone(), b.parameter.clone()];
+        let endpoints = self.endpoints(&p, &parameters, &translation)?;
+        let next = [
+            &history[0] + &depart[0] - &arrive[0],
+            &history[1] + &depart[1] - &arrive[1],
+        ];
+        *vertex = q.vertex;
+        let part = OriginalPeriodicBoundaryPart {
+            dart,
+            edge: p.edge,
+            piece: p.piece,
+            source: p.source,
+            cell: p.cell,
+            interval: p.interval,
+            direction: p.direction,
+            cuts,
+            parameters,
+            period_shift: deck.map(|q| q.to_string()),
+            translation: translation.map(|q| ratio(&q)),
+            endpoints,
+        };
+        Ok((part, next))
+    }
+    /// One closed walk lifted part by part; it must return to its quotient
+    /// vertex and keep unwrapped coordinates unshifted.
+    fn walk(&mut self, cycle: usize, walk: &[usize]) -> Result<OriginalPeriodicBoundaryWalk> {
+        let &first = walk
+            .first()
+            .ok_or_else(|| refused("Original periodic boundary walk is empty"))?;
+        let start_vertex = self
+            .ports
+            .get(first)
+            .ok_or_else(|| refused("Original periodic walk has unknown start dart"))?
+            .vertex;
+        let mut vertex = start_vertex;
+        let mut history = [BigInt::from(0), BigInt::from(0)];
+        let mut parts = Vec::new();
+        for &dart in walk {
+            let (part, next) = self.part(dart, &mut vertex, &history)?;
+            parts.push(part);
+            history = next;
+        }
+        if vertex != start_vertex {
+            return Err(refused(
+                "Original boundary lift does not return to its actual quotient vertex",
+            ));
+        }
+        let wrapped = self.cover.wrapped();
+        if (0..2).any(|axis| !wrapped[axis] && history[axis] != BigInt::from(0)) {
+            return Err(refused("Boundary homology changes an unwrapped coordinate"));
+        }
+        let net_translation = std::array::from_fn::<_, 2, _>(|axis| {
+            ratio(&(Q::from_integer(history[axis].clone()) * &self.periods[axis]))
+        });
+        Ok(OriginalPeriodicBoundaryWalk {
+            cycle,
+            start_vertex,
+            parts,
+            homology: history.map(|q| q.to_string()),
+            net_translation,
+        })
+    }
+}
 /// Internal shared ORIGINAL-clock lifting kernel. Callers independently replay
 /// their complete typed cycle owner before supplying its exact admitted mask.
 pub(in super::super) fn lift_walks(
@@ -80,170 +269,55 @@ pub(in super::super) fn lift_walks(
     expected: &[bool],
 ) -> Result<(Vec<OriginalPeriodicBoundaryWalk>, usize)> {
     let charts = ports.owner();
-    let graph = charts.owner();
-    let cover = graph.owner().owner().pieces();
+    let cover = charts.owner().owner().owner().pieces();
     let n = ports.ports().len();
-    if expected.len() != n || n > 1000000 {
+    if expected.len() != n || n > MAX_DARTS {
         return Err(refused("Original selected lift mask omits physical darts"));
     }
     let required = expected.iter().filter(|v| **v).count();
-    if max_refinements > 512 || max_parts == 0 || max_parts > 1000000 || required > max_parts {
+    if max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_PARTS).contains(&max_parts)
+        || required > max_parts
+    {
         return Err(refused(
             "Complete original periodic boundary lift exceeds allowance",
         ));
     }
-    let domain = cover.chart();
-    let periods = domain.map(|d| Q::from_float(d[1]).unwrap() - Q::from_float(d[0]).unwrap());
-    let mut original = Vec::new();
-    for c in cover.sources() {
-        original.push(cells(c)?);
+    let mut periods = [Q::zero(), Q::zero()];
+    for (period, d) in periods.iter_mut().zip(cover.chart()) {
+        let [Some(low), Some(high)] = d.map(Q::from_float) else {
+            return Err(refused("Original periodic chart bound is not finite"));
+        };
+        *period = high - low;
     }
-    let mut seen = vec![false; n];
-    let mut walks = Vec::new();
-    let mut parts_count = 0;
-    for (cycle, walk) in cycles.iter().enumerate() {
-        let &first = walk
-            .first()
-            .ok_or_else(|| refused("Original periodic boundary walk is empty"))?;
-        let first_port = ports
-            .ports()
-            .get(first)
-            .ok_or_else(|| refused("Original periodic walk has unknown start dart"))?;
-        let start_vertex = first_port.vertex;
-        let mut vertex = start_vertex;
-        let mut history = [BigInt::from(0), BigInt::from(0)];
-        let mut parts = Vec::new();
-        for &dart in walk {
-            if dart >= n || seen[dart] || !expected[dart] {
-                return Err(refused(
-                    "Original periodic boundary lift duplicates or invents a dart",
-                ));
-            }
-            seen[dart] = true;
-            if parts_count >= max_parts {
-                return Err(refused(
-                    "Complete original boundary lift exhausted its part allowance",
-                ));
-            }
-            parts_count += 1;
-            let p = &ports.ports()[dart];
-            let twin = p.edge * 2 + (1 - p.end);
-            let q = ports
-                .ports()
-                .get(twin)
-                .ok_or_else(|| refused("Original boundary lift lost opposite edge endpoint"))?;
-            if p.vertex != vertex
-                || p.edge != q.edge
-                || p.piece != q.piece
-                || p.source != q.source
-                || p.cell != q.cell
-                || p.interval != q.interval
-                || p.cut == q.cut
-                || p.direction != -q.direction
-            {
-                return Err(refused(
-                    "Original boundary lift lost its directed native carrier",
-                ));
-            }
-            let a = &charts.charts()[p.vertex].uses[p.chart_use];
-            let b = &charts.charts()[q.vertex].uses[q.chart_use];
-            let cuts = [
-                OriginalPeriodicChartCutRef {
-                    piece: p.piece,
-                    cut: p.cut,
-                },
-                OriginalPeriodicChartCutRef {
-                    piece: q.piece,
-                    cut: q.cut,
-                },
-            ];
-            if a.source != cuts[0] || b.source != cuts[1] {
-                return Err(refused(
-                    "Original boundary lift uses unrelated vertex transport",
-                ));
-            }
-            let depart = shift(&a.period_shift)?;
-            let arrive = shift(&b.period_shift)?;
-            let deck = [&history[0] + &depart[0], &history[1] + &depart[1]];
-            let piece = &cover.pieces()[p.piece];
-            let offset = std::array::from_fn::<_, 2, _>(|axis| {
-                Q::from_integer(deck[axis].clone()) * &periods[axis]
-            });
-            let translation = [
-                decode_ratio(&piece.translation[0])? + &offset[0],
-                decode_ratio(&piece.translation[1])? + &offset[1],
-            ];
-            let parameters = [a.parameter.clone(), b.parameter.clone()];
-            let cell = &original[p.source][p.cell];
-            let mut endpoints = Vec::new();
-            for parameter in &parameters {
-                let f = decode_polynomial(&parameter.primitive)?;
-                let map = decode_polynomial(&parameter.parameter)?;
-                let root = [
-                    decode_ratio(&parameter.interval[0])?,
-                    decode_ratio(&parameter.interval[1])?,
-                ];
-                let point = arithmetic::shore_events::translated_point(
-                    &cell.net,
-                    &cell.domain,
-                    &map,
-                    &f,
-                    &root,
-                    &translation,
-                    max_refinements,
-                )?;
-                endpoints.push(point.map(|c| c.map(|p| polynomial(&p))));
-            }
-            parts.push(OriginalPeriodicBoundaryPart {
-                dart,
-                edge: p.edge,
-                piece: p.piece,
-                source: p.source,
-                cell: p.cell,
-                interval: p.interval,
-                direction: p.direction,
-                cuts,
-                parameters,
-                period_shift: deck.map(|q| q.to_string()),
-                translation: translation.map(|q| ratio(&q)),
-                endpoints: endpoints
-                    .try_into()
-                    .map_err(|_| refused("Incomplete lifted original endpoints"))?,
-            });
-            history = [
-                &history[0] + &depart[0] - &arrive[0],
-                &history[1] + &depart[1] - &arrive[1],
-            ];
-            vertex = q.vertex;
-        }
-        if vertex != start_vertex {
-            return Err(refused(
-                "Original boundary lift does not return to its actual quotient vertex",
-            ));
-        }
-        let wrapped = cover.wrapped();
-        for axis in 0..2 {
-            if !wrapped[axis] && history[axis] != BigInt::from(0) {
-                return Err(refused("Boundary homology changes an unwrapped coordinate"));
-            }
-        }
-        let net_translation = std::array::from_fn::<_, 2, _>(|axis| {
-            ratio(&(Q::from_integer(history[axis].clone()) * &periods[axis]))
-        });
-        walks.push(OriginalPeriodicBoundaryWalk {
-            cycle,
-            start_vertex,
-            parts,
-            homology: history.map(|q| q.to_string()),
-            net_translation,
-        });
-    }
-    if parts_count != expected.iter().filter(|v| **v).count() || seen != expected {
+    let original = cover
+        .sources()
+        .iter()
+        .map(cells)
+        .collect::<Result<Vec<_>>>()?;
+    let mut lifter = Lifter {
+        ports: ports.ports(),
+        charts: charts.charts(),
+        cover,
+        original,
+        periods,
+        max_refinements,
+        max_parts,
+        expected,
+        seen: vec![false; n],
+        parts_count: 0,
+    };
+    let walks = cycles
+        .iter()
+        .enumerate()
+        .map(|(cycle, walk)| lifter.walk(cycle, walk))
+        .collect::<Result<Vec<_>>>()?;
+    if lifter.parts_count != required || lifter.seen != expected {
         return Err(refused(
             "Original periodic boundary lift omits directed source darts",
         ));
     }
-    Ok((walks, parts_count))
+    Ok((walks, lifter.parts_count))
 }
 impl OwnedPeriodicBoundaryLifts {
     pub fn owner(&self) -> &Arc<OwnedPeriodicCycles> {

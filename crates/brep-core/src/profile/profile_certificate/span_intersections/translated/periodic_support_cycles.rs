@@ -86,6 +86,93 @@ type Data = (
     Vec<Vec<usize>>,
     Vec<Option<usize>>,
 );
+const MAX_DARTS: usize = 1000000;
+const MAX_REFINEMENTS: usize = 512;
+/// Whether one source germ is a natural port on `axis`: its edge has a
+/// natural carrier on a support boundary with that fixed axis. Such a port
+/// must lie on the vertex's own boundary side, and no germ may leave the
+/// closed supporting domain there.
+fn natural_port(
+    o: &OwnedPeriodicSupportCycles,
+    p: &OriginalPeriodicPort,
+    bound: Option<usize>,
+    axis: usize,
+) -> Result<bool> {
+    let support = o.owner.rule().support();
+    let carriers = o.owner.sides()[p.edge].probes().natural_carriers();
+    let matching = carriers
+        .iter()
+        .filter(|c| support.boundaries()[c.boundary].fixed_axis == axis)
+        .collect::<Vec<_>>();
+    if !matching.is_empty() {
+        let end =
+            bound.ok_or_else(|| refused("Natural port is not on its owned source domain side"))?;
+        if matching
+            .iter()
+            .any(|c| support.boundaries()[c.boundary].end != end)
+        {
+            return Err(refused(
+                "Natural source port is assigned to the opposite support boundary",
+            ));
+        }
+    }
+    if let Some(end) = bound
+        && ((end == 0 && p.component_signs[axis] < 0) || (end == 1 && p.component_signs[axis] > 0))
+    {
+        return Err(refused(
+            "An original one-sided germ leaves the closed supporting domain",
+        ));
+    }
+    Ok(!matching.is_empty())
+}
+/// One support vertex with the natural ports it owns on each axis: none in
+/// the interior, two on a side, one per axis at a corner.
+fn support_vertex(
+    o: &OwnedPeriodicSupportCycles,
+    ports: &[OriginalPeriodicPort],
+    vertex: usize,
+    row: &[usize],
+    natural_bounds: [Option<usize>; 2],
+) -> Result<OriginalPeriodicSupportVertex> {
+    let mut natural_ports: [Vec<usize>; 2] = std::array::from_fn(|_| Vec::new());
+    for &dart in row {
+        let p = ports
+            .get(dart)
+            .ok_or_else(|| refused("Support vertex names a missing source germ"))?;
+        if p.vertex != vertex
+            || p.end > 1
+            || p.edge.checked_mul(2).and_then(|v| v.checked_add(p.end)) != Some(dart)
+        {
+            return Err(refused(
+                "Support germ is not its original physical endpoint dart",
+            ));
+        }
+        for axis in 0..2 {
+            if natural_port(o, p, natural_bounds[axis], axis)? {
+                natural_ports[axis].push(dart);
+            }
+        }
+    }
+    for axis in 0..2 {
+        let required = if natural_bounds[axis].is_none() {
+            0
+        } else if natural_bounds[1 - axis].is_some() {
+            1
+        } else {
+            2
+        };
+        if natural_ports[axis].len() != required {
+            return Err(refused(
+                "Support vertex does not own its complete natural half-disc/corner ports",
+            ));
+        }
+    }
+    Ok(OriginalPeriodicSupportVertex {
+        vertex,
+        natural_bounds,
+        natural_ports,
+    })
+}
 fn derive(o: &OwnedPeriodicSupportCycles) -> Result<Data> {
     let _replay = super::periodic_replay::scope();
     let jumps = o.owner.rule().material().base().owner();
@@ -95,7 +182,10 @@ fn derive(o: &OwnedPeriodicSupportCycles) -> Result<Data> {
         .len()
         .checked_mul(2)
         .ok_or_else(|| refused("Support cycle dart count overflow"))?;
-    if !(1..=1000000).contains(&o.max_darts) || n > o.max_darts || o.max_refinements > 512 {
+    if !(1..=MAX_DARTS).contains(&o.max_darts)
+        || n > o.max_darts
+        || o.max_refinements > MAX_REFINEMENTS
+    {
         return Err(refused("Invalid complete support sector/dart allowance"));
     }
     super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
@@ -112,7 +202,6 @@ fn derive(o: &OwnedPeriodicSupportCycles) -> Result<Data> {
             "Support sectors use a different actual physical graph or incomplete rotation",
         ));
     }
-    let support = o.owner.rule().support();
     let mut vertices = Vec::new();
     for (vertex, row) in rows.iter().enumerate() {
         let use_ = charts.charts()[vertex]
@@ -120,69 +209,7 @@ fn derive(o: &OwnedPeriodicSupportCycles) -> Result<Data> {
             .first()
             .ok_or_else(|| refused("Support sector lacks an original vertex point"))?;
         let natural_bounds = bounds(use_, cover.chart(), cover.wrapped(), o.max_refinements)?;
-        let mut natural_ports: [Vec<usize>; 2] = std::array::from_fn(|_| Vec::new());
-        for &dart in row {
-            let p = ports
-                .get(dart)
-                .ok_or_else(|| refused("Support vertex names a missing source germ"))?;
-            if p.vertex != vertex
-                || p.end > 1
-                || p.edge.checked_mul(2).and_then(|v| v.checked_add(p.end)) != Some(dart)
-            {
-                return Err(refused(
-                    "Support germ is not its original physical endpoint dart",
-                ));
-            }
-            for axis in 0..2 {
-                let carriers = o.owner.sides()[p.edge].probes().natural_carriers();
-                let matching = carriers
-                    .iter()
-                    .filter(|c| support.boundaries()[c.boundary].fixed_axis == axis)
-                    .collect::<Vec<_>>();
-                if !matching.is_empty() {
-                    let end = natural_bounds[axis].ok_or_else(|| {
-                        refused("Natural port is not on its owned source domain side")
-                    })?;
-                    if matching
-                        .iter()
-                        .any(|c| support.boundaries()[c.boundary].end != end)
-                    {
-                        return Err(refused(
-                            "Natural source port is assigned to the opposite support boundary",
-                        ));
-                    }
-                    natural_ports[axis].push(dart);
-                }
-                if let Some(end) = natural_bounds[axis] {
-                    if (end == 0 && p.component_signs[axis] < 0)
-                        || (end == 1 && p.component_signs[axis] > 0)
-                    {
-                        return Err(refused(
-                            "An original one-sided germ leaves the closed supporting domain",
-                        ));
-                    }
-                }
-            }
-        }
-        for axis in 0..2 {
-            let required = if natural_bounds[axis].is_none() {
-                0
-            } else if natural_bounds[1 - axis].is_some() {
-                1
-            } else {
-                2
-            };
-            if natural_ports[axis].len() != required {
-                return Err(refused(
-                    "Support vertex does not own its complete natural half-disc/corner ports",
-                ));
-            }
-        }
-        vertices.push(OriginalPeriodicSupportVertex {
-            vertex,
-            natural_bounds,
-            natural_ports,
-        });
+        vertices.push(support_vertex(o, ports, vertex, row, natural_bounds)?);
     }
     let operands = o
         .owner

@@ -61,20 +61,19 @@ fn validate(model: &Topology) -> Result<()> {
         Ok(())
     })
 }
-fn build(
-    sources: &[Wire],
-    height: &[Q; 2],
-    tolerance_mm: f64,
-) -> Result<(Topology, Vec<[usize; 3]>, Agreement)> {
+const MAX_PROFILES: usize = 64;
+const MAX_SPANS: usize = 254;
+/// Profiles, heights and span count are within the exact extrusion budget,
+/// and every profile span replays as a regular source.
+fn verify_sources(sources: &[Wire], height: &[Q; 2]) -> Result<()> {
     let count = sources
         .iter()
         .flat_map(|w| &w.pieces)
         .map(Vec::len)
         .sum::<usize>();
     if sources.is_empty()
-        || sources.len() > 64
-        || count == 0
-        || count > 254
+        || sources.len() > MAX_PROFILES
+        || !(1..=MAX_SPANS).contains(&count)
         || height[0] >= height[1]
         || height
             .iter()
@@ -90,15 +89,10 @@ fn build(
             smooth::regular(&span.net)?;
         }
     }
-    let mut model = Topology {
-        vertices: vec![],
-        edges: vec![],
-        loops: vec![],
-        faces: vec![],
-        shells: vec![],
-        bodies: vec![],
-        tolerance_mm,
-    };
+    Ok(())
+}
+/// Axis-aligned bounds of all profile control points, used as the cap chart.
+fn cap_bounds(sources: &[Wire]) -> Result<[[Q; 2]; 2]> {
     let first = &sources[0].pieces[0][0].net[0];
     let p = [&first[0] / &first[2], &first[1] / &first[2]];
     let mut bounds = [p.clone(), p];
@@ -117,9 +111,60 @@ fn build(
     if (0..2).any(|a| bounds[0][a] >= bounds[1][a]) {
         return Err(refused("Degenerate exact cap chart"));
     }
-    let mut cap_loops: [Vec<usize>; 2] = [vec![], vec![]];
-    let mut wall_sources = Vec::new();
-    for (wi, wire) in sources.iter().enumerate() {
+    Ok(bounds)
+}
+/// The prism topology under construction: walls are added profile by
+/// profile, then the two caps close the shell.
+struct Prism<'a> {
+    model: Topology,
+    height: &'a [Q; 2],
+    cap_loops: [Vec<usize>; 2],
+    wall_sources: Vec<[usize; 3]>,
+}
+impl Prism<'_> {
+    /// One wall face over a profile span, bounded by its two horizontal
+    /// edges and the vertical edges at its ends.
+    fn wall(&mut self, profile: &[[Q; 3]], horizontal: [usize; 2], vertical: [usize; 2]) {
+        let lo = &self.height[0];
+        let hi = &self.height[1];
+        let outer = add_loop(
+            &mut self.model,
+            vec![
+                Coedge::new(
+                    horizontal[0],
+                    false,
+                    line([Q::zero(), lo.clone()], [Q::one(), lo.clone()]),
+                ),
+                Coedge::new(
+                    vertical[1],
+                    false,
+                    line([Q::one(), lo.clone()], [Q::one(), hi.clone()]),
+                ),
+                Coedge::new(
+                    horizontal[1],
+                    true,
+                    line([Q::one(), hi.clone()], [Q::zero(), hi.clone()]),
+                ),
+                Coedge::new(
+                    vertical[0],
+                    true,
+                    line([Q::zero(), hi.clone()], [Q::zero(), lo.clone()]),
+                ),
+            ],
+        );
+        self.model.faces.push(Face {
+            surface: Surface {
+                kind: Kind::Wall {
+                    profile: profile.to_vec(),
+                    height: self.height.clone(),
+                },
+            },
+            outer,
+            holes: vec![],
+        });
+    }
+    /// Vertices, edges, cap loops and wall faces of one closed profile.
+    fn profile(&mut self, wi: usize, wire: &Wire) {
         let spans = wire
             .pieces
             .iter()
@@ -130,9 +175,9 @@ fn build(
         let mut vertices: [Vec<usize>; 2] = [vec![], vec![]];
         for (_, _, s) in &spans {
             for z in 0..2 {
-                vertices[z].push(model.vertices.len());
-                model.vertices.push(Vertex {
-                    point: point(&s.net[0], &height[z]),
+                vertices[z].push(self.model.vertices.len());
+                self.model.vertices.push(Vertex {
+                    point: point(&s.net[0], &self.height[z]),
                 });
             }
         }
@@ -142,15 +187,15 @@ fn build(
             let j = (i + 1) % n;
             for z in 0..2 {
                 horizontal[z].push(add_edge(
-                    &mut model,
+                    &mut self.model,
                     [vertices[z][i], vertices[z][j]],
-                    lifted(&s.net, &height[z]),
+                    lifted(&s.net, &self.height[z]),
                 ));
             }
-            let a = model.vertices[vertices[0][i]].point.clone();
-            let b = model.vertices[vertices[1][i]].point.clone();
+            let a = self.model.vertices[vertices[0][i]].point.clone();
+            let b = self.model.vertices[vertices[1][i]].point.clone();
             vertical.push(add_edge(
-                &mut model,
+                &mut self.model,
                 [vertices[0][i], vertices[1][i]],
                 Curve3 {
                     net: [a, b]
@@ -167,80 +212,77 @@ fn build(
                     Coedge::new(horizontal[z][i], false, Pcurve { net: s.net.clone() })
                 })
                 .collect();
-            cap_loops[z].push(add_loop(&mut model, coedges));
+            self.cap_loops[z].push(add_loop(&mut self.model, coedges));
         }
         for (i, (pi, si, s)) in spans.iter().enumerate() {
             let j = (i + 1) % n;
-            let lo = &height[0];
-            let hi = &height[1];
-            let outer = add_loop(
-                &mut model,
-                vec![
-                    Coedge::new(
-                        horizontal[0][i],
-                        false,
-                        line([Q::zero(), lo.clone()], [Q::one(), lo.clone()]),
-                    ),
-                    Coedge::new(
-                        vertical[j],
-                        false,
-                        line([Q::one(), lo.clone()], [Q::one(), hi.clone()]),
-                    ),
-                    Coedge::new(
-                        horizontal[1][i],
-                        true,
-                        line([Q::one(), hi.clone()], [Q::zero(), hi.clone()]),
-                    ),
-                    Coedge::new(
-                        vertical[i],
-                        true,
-                        line([Q::zero(), hi.clone()], [Q::zero(), lo.clone()]),
-                    ),
-                ],
+            self.wall(
+                &s.net,
+                [horizontal[0][i], horizontal[1][i]],
+                [vertical[i], vertical[j]],
             );
-            model.faces.push(Face {
-                surface: Surface {
-                    kind: Kind::Wall {
-                        profile: s.net.clone(),
-                        height: height.clone(),
-                    },
-                },
-                outer,
-                holes: vec![],
-            });
-            wall_sources.push([wi, *pi, *si]);
+            self.wall_sources.push([wi, *pi, *si]);
         }
     }
-    let mut uses = (0..model.faces.len())
-        .map(|face| FaceUse {
-            face,
-            reversed: false,
-        })
-        .collect::<Vec<_>>();
-    for z in 0..2 {
-        uses.push(FaceUse {
-            face: model.faces.len(),
-            reversed: z == 0,
-        });
-        model.faces.push(Face {
-            surface: Surface {
-                kind: Kind::Cap {
-                    z: height[z].clone(),
-                    bounds: bounds.clone(),
+    /// The two caps close the shell of all wall faces. No Body role is
+    /// manufactured from closed incidence alone.
+    fn close(&mut self, bounds: [[Q; 2]; 2]) {
+        let mut uses = (0..self.model.faces.len())
+            .map(|face| FaceUse {
+                face,
+                reversed: false,
+            })
+            .collect::<Vec<_>>();
+        for z in 0..2 {
+            uses.push(FaceUse {
+                face: self.model.faces.len(),
+                reversed: z == 0,
+            });
+            self.model.faces.push(Face {
+                surface: Surface {
+                    kind: Kind::Cap {
+                        z: self.height[z].clone(),
+                        bounds: bounds.clone(),
+                    },
                 },
-            },
-            outer: cap_loops[z][0],
-            holes: cap_loops[z][1..].to_vec(),
+                outer: self.cap_loops[z][0],
+                holes: self.cap_loops[z][1..].to_vec(),
+            });
+        }
+        self.model.shells.push(Shell {
+            faces: uses,
+            closed: true,
         });
     }
-    model.shells.push(Shell {
-        faces: uses,
-        closed: true,
-    });
-    // No Body role is manufactured from closed incidence alone.
-    validate(&model)?;
-    let agreement = verify_geometry(&model)?;
-    Ok((model, wall_sources, agreement))
+}
+fn build(
+    sources: &[Wire],
+    height: &[Q; 2],
+    tolerance_mm: f64,
+) -> Result<(Topology, Vec<[usize; 3]>, Agreement)> {
+    verify_sources(sources, height)?;
+    let mut prism = Prism {
+        model: Topology {
+            vertices: vec![],
+            edges: vec![],
+            loops: vec![],
+            faces: vec![],
+            shells: vec![],
+            bodies: vec![],
+            tolerance_mm,
+        },
+        height,
+        cap_loops: [vec![], vec![]],
+        wall_sources: Vec::new(),
+    };
+    let bounds = cap_bounds(sources)?;
+    for (wi, wire) in sources.iter().enumerate() {
+        prism.profile(wi, wire);
+    }
+    prism.close(bounds);
+    validate(&prism.model)?;
+    let agreement = verify_geometry(&prism.model)?;
+    Ok((prism.model, prism.wall_sources, agreement))
 }
 pub fn extrude(
     sources: &[Wire],

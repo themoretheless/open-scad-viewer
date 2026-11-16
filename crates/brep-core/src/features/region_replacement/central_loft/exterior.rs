@@ -230,7 +230,16 @@ impl CentralLoftCandidate<'_, '_, '_> {
                 let source_pc = self.originals[boundary]
                     .1
                     .trim(parameter[0], parameter[1])?;
-                let target_pc = self.pcurves[boundary].trim(parameter[0], parameter[1])?;
+                let rim = &self.pcurves[boundary];
+                let [a, b] = [rim.control_points[0][0], rim.control_points[1][0]];
+                let lo = a.min(b).max(s.knots_u[s.degree_u]);
+                let hi = a.max(b).min(s.knots_u[s.control_points.len()]);
+                // The partition was defined in the target chart's U domain.
+                // Keep its actual knots at shared roots: evaluating the affine
+                // rim after a U -> clock -> U round trip can miss a knot by an ulp.
+                let [start, end] = if a < b { [lo, hi] } else { [hi, lo] };
+                let v = rim.control_points[0][1];
+                let target_pc = Curve::from_polyline(vec![vec![start, v], vec![end, v]])?;
                 self.inspect_network_support_piece(
                     s,
                     boundary,

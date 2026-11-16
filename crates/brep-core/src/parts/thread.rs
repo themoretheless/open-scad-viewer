@@ -54,6 +54,76 @@ pub fn qualify_closed_candidate(
     })
 }
 
+/// Subdivision budget of the top-cap normal direction bound.
+const TOP_CAP_NORMAL_SUBDIVISIONS: usize = 100;
+
+fn missing_top_cap() -> Error {
+    Error::new(
+        "BREP_THREAD_PATCH_UNRESOLVED",
+        "Candidate needs a planar top-cap orientation witness",
+    )
+}
+
+/// Whether the shell must be reversed so the highest planar cap faces +Z.
+fn top_cap_orientation_reversed(model: &Model) -> Result<bool> {
+    let (face, _) = model
+        .faces
+        .iter()
+        .enumerate()
+        .filter_map(|(i, f)| {
+            let z = f.surface.control_points[0][0][2];
+            f.surface
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == z)
+                .then_some((i, z))
+        })
+        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .ok_or_else(missing_top_cap)?;
+    let surface = &model.faces[face].surface;
+    let domain = [
+        [
+            surface.knots_u[surface.degree_u],
+            surface.knots_u[surface.control_points.len()],
+        ],
+        [
+            surface.knots_v[surface.degree_v],
+            surface.knots_v[surface.control_points[0].len()],
+        ],
+    ];
+    let mut normal = nurbs_core::surface_injectivity::normal_direction_bounds(
+        surface,
+        domain,
+        [0., 0., 1.],
+        TOP_CAP_NORMAL_SUBDIVISIONS,
+    )?
+    .ok_or_else(|| {
+        Error::new(
+            "BREP_THREAD_PATCH_UNRESOLVED",
+            "Top-cap normal direction is unresolved",
+        )
+    })?;
+    let use_ = model.shells[0]
+        .faces
+        .iter()
+        .find(|u| u.face == face)
+        .ok_or_else(missing_top_cap)?;
+    if use_.reversed {
+        normal = [-normal[1], -normal[0]];
+    }
+    if normal[1] < 0. {
+        Ok(true)
+    } else if normal[0] > 0. {
+        Ok(false)
+    } else {
+        Err(Error::new(
+            "BREP_THREAD_PATCH_UNRESOLVED",
+            "Top-cap normal sign is unresolved",
+        ))
+    }
+}
+
 /// Admit combinatorial closure, orient by the highest planar cap normal,
 /// then require positive numerical signed volume.
 /// Returns an explicitly unqualified body candidate; independent embedding,
@@ -82,68 +152,7 @@ pub fn closed_body_candidate(
     });
     model.rebuild_topology_ids();
     model.validate()?;
-    let (face, _) = model
-        .faces
-        .iter()
-        .enumerate()
-        .filter_map(|(i, f)| {
-            let z = f.surface.control_points[0][0][2];
-            f.surface
-                .control_points
-                .iter()
-                .flatten()
-                .all(|p| p[2] == z)
-                .then_some((i, z))
-        })
-        .max_by(|a, b| a.1.total_cmp(&b.1))
-        .ok_or_else(|| {
-            Error::new(
-                "BREP_THREAD_PATCH_UNRESOLVED",
-                "Candidate needs a planar top-cap orientation witness",
-            )
-        })?;
-    let surface = &model.faces[face].surface;
-    let domain = [
-        [
-            surface.knots_u[surface.degree_u],
-            surface.knots_u[surface.control_points.len()],
-        ],
-        [
-            surface.knots_v[surface.degree_v],
-            surface.knots_v[surface.control_points[0].len()],
-        ],
-    ];
-    let mut normal = nurbs_core::surface_injectivity::normal_direction_bounds(
-        surface,
-        domain,
-        [0., 0., 1.],
-        100,
-    )?
-    .ok_or_else(|| {
-        Error::new(
-            "BREP_THREAD_PATCH_UNRESOLVED",
-            "Top-cap normal direction is unresolved",
-        )
-    })?;
-    if model.shells[0]
-        .faces
-        .iter()
-        .find(|u| u.face == face)
-        .unwrap()
-        .reversed
-    {
-        normal = [-normal[1], -normal[0]];
-    }
-    let reversed = if normal[1] < 0. {
-        true
-    } else if normal[0] > 0. {
-        false
-    } else {
-        return Err(Error::new(
-            "BREP_THREAD_PATCH_UNRESOLVED",
-            "Top-cap normal sign is unresolved",
-        ));
-    };
+    let reversed = top_cap_orientation_reversed(&model)?;
     if reversed {
         for use_ in &mut model.shells[0].faces {
             use_.reversed = !use_.reversed;
@@ -193,122 +202,148 @@ pub fn align_patch_endpoints(
         max_verification_cells,
     )
 }
-/// Agree on all endpoint assignments before editing. Conflicting assignments
-/// to the same vertex refuse, even when their difference is below tolerance.
-pub fn align_patch_endpoints_many(
+/// Verification cells one endpoint alignment may spend.
+const MAX_ALIGNMENT_CELLS: usize = 100000;
+
+fn invalid_alignment() -> Error {
+    Error::new(
+        "BREP_INVALID_THREAD_PATCH",
+        "Endpoint alignment requires a clamped single-face sheet and finite movement budget",
+    )
+}
+
+fn clamped_spatial(c: &nurbs_core::curve::Curve) -> bool {
+    let [a, b] = c.domain();
+    c.control_points[0].len() == 3
+        && c.knots[..=c.degree].iter().all(|&k| k == a)
+        && c.knots[c.knots.len() - c.degree - 1..]
+            .iter()
+            .all(|&k| k == b)
+}
+
+/// Refuse anything but a clamped single-face open sheet whose edge ends sit
+/// exactly on their vertices, with a finite movement and cell budget.
+fn check_alignment_input(
     target: &Model,
     boundaries: &[(usize, &nurbs_core::curve::Curve)],
     max_change: f64,
     max_verification_cells: usize,
-) -> Result<EndpointAlignment> {
-    use nurbs_core::curve_surface_agreement::{self, Status};
-    let invalid = || {
-        Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Endpoint alignment requires a clamped single-face sheet and finite movement budget",
-        )
-    };
+) -> Result<()> {
     target.validate()?;
     if boundaries.is_empty() || boundaries.len() > target.edges.len() {
-        return Err(invalid());
+        return Err(invalid_alignment());
     }
     for (_, curve) in boundaries {
         curve.validate()?;
     }
     if !max_change.is_finite()
         || max_change < 0.
-        || max_verification_cells > 100000
+        || max_verification_cells > MAX_ALIGNMENT_CELLS
         || target.faces.len() != 1
         || target.loops.len() != 1
         || target.shells.len() != 1
         || target.shells[0].closed
         || !target.bodies.is_empty()
     {
-        return Err(invalid());
+        return Err(invalid_alignment());
     }
-    let clamped = |c: &nurbs_core::curve::Curve| {
-        let [a, b] = c.domain();
-        c.control_points[0].len() == 3
-            && c.knots[..=c.degree].iter().all(|&k| k == a)
-            && c.knots[c.knots.len() - c.degree - 1..]
-                .iter()
-                .all(|&k| k == b)
-    };
-    if boundaries.iter().any(|(_, c)| !clamped(c))
-        || target.edges.iter().any(|e| !clamped(&e.curve))
+    if boundaries.iter().any(|(_, c)| !clamped_spatial(c))
+        || target.edges.iter().any(|e| !clamped_spatial(&e.curve))
     {
-        return Err(invalid());
+        return Err(invalid_alignment());
     }
     for e in &target.edges {
-        if e.curve.control_points.first().unwrap().as_slice()
-            != target.vertices[e.vertices[0]].point.as_slice()
-            || e.curve.control_points.last().unwrap().as_slice()
-                != target.vertices[e.vertices[1]].point.as_slice()
+        let first = e
+            .curve
+            .control_points
+            .first()
+            .ok_or_else(invalid_alignment)?;
+        let last = e
+            .curve
+            .control_points
+            .last()
+            .ok_or_else(invalid_alignment)?;
+        if first.as_slice() != target.vertices[e.vertices[0]].point.as_slice()
+            || last.as_slice() != target.vertices[e.vertices[1]].point.as_slice()
         {
-            return Err(invalid());
+            return Err(invalid_alignment());
         }
     }
+    Ok(())
+}
+
+/// Desired position of every touched vertex; the source curve runs against
+/// the forward target coedge. Conflicting assignments refuse.
+fn collect_endpoint_assignments(
+    target: &Model,
+    boundaries: &[(usize, &nurbs_core::curve::Curve)],
+) -> Result<std::collections::BTreeMap<usize, [f64; 3]>> {
     let mut assignments = std::collections::BTreeMap::new();
     for &(index, curve) in boundaries {
-        let coedge = target.loops[0].coedges.get(index).ok_or_else(invalid)?;
+        let coedge = target.loops[0]
+            .coedges
+            .get(index)
+            .ok_or_else(invalid_alignment)?;
         if coedge.reversed {
-            return Err(invalid());
+            return Err(invalid_alignment());
         }
         let edge = &target.edges[coedge.edge];
         let desired = [
-            curve.control_points.last().unwrap(),
+            curve.control_points.last().ok_or_else(invalid_alignment)?,
             &curve.control_points[0],
         ];
         for i in 0..2 {
             let p = [desired[i][0], desired[i][1], desired[i][2]];
-            if let Some(previous) = assignments.insert(edge.vertices[i], p) {
-                if previous != p {
-                    return Err(Error::new(
-                        "BREP_INVALID_THREAD_PATCH",
-                        "Conflicting endpoint assignments",
-                    ));
-                }
+            if let Some(previous) = assignments.insert(edge.vertices[i], p)
+                && previous != p
+            {
+                return Err(Error::new(
+                    "BREP_INVALID_THREAD_PATCH",
+                    "Conflicting endpoint assignments",
+                ));
             }
         }
     }
-    let mut result = target.clone();
-    let mut bound: f64 = 0.;
-    for (vertex, p) in assignments {
-        let original = target.vertices[vertex].point;
-        let mut squared: f64 = 0.;
-        for axis in 0..3 {
-            if original[axis] == p[axis] {
-                continue;
-            }
-            let delta = (original[axis] - p[axis]).abs().next_up();
-            squared = (squared + (delta * delta).next_up()).next_up();
+    Ok(assignments)
+}
+
+/// Outward-rounded Euclidean distance between two points.
+fn movement_upper_bound(original: [f64; 3], p: [f64; 3]) -> f64 {
+    let mut squared: f64 = 0.;
+    for axis in 0..3 {
+        if original[axis] == p[axis] {
+            continue;
         }
-        let movement = if squared == 0. {
-            0.
-        } else {
-            squared.sqrt().next_up()
-        };
-        bound = bound.max(movement);
-        result.vertices[vertex].point = p;
+        let delta = (original[axis] - p[axis]).abs().next_up();
+        squared = (squared + (delta * delta).next_up()).next_up();
     }
-    if !bound.is_finite() || bound > max_change {
-        return Err(Error::new(
-            "BREP_THREAD_PATCH_UNRESOLVED",
-            "Endpoint movement exceeds requested budget",
-        ));
+    if squared == 0. {
+        0.
+    } else {
+        squared.sqrt().next_up()
     }
-    let vertices = &result.0.vertices;
-    for e in &mut result.0.edges {
-        e.curve.control_points[0] = vertices[e.vertices[0]].point.to_vec();
-        *e.curve.control_points.last_mut().unwrap() = vertices[e.vertices[1]].point.to_vec();
-    }
+}
+
+/// Refusal texts of one sheet edit's boundary recheck.
+struct BoundaryRecheckMessages {
+    exhausted: &'static str,
+    unproved: &'static str,
+}
+
+/// Recheck every boundary use of the edited sheet under one budget.
+fn verify_edited_boundaries(
+    result: &Model,
+    max_verification_cells: usize,
+    messages: BoundaryRecheckMessages,
+) -> Result<(Vec<Report>, usize)> {
+    use nurbs_core::curve_surface_agreement::{self, Status};
     let mut used = 0;
     let mut agreements = Vec::new();
     for c in &result.loops[0].coedges {
         if used == max_verification_cells {
             return Err(Error::new(
                 "BREP_THREAD_PATCH_UNRESOLVED",
-                "Alignment verification budget exhausted",
+                messages.exhausted,
             ));
         }
         let report = curve_surface_agreement::verify(
@@ -323,11 +358,51 @@ pub fn align_patch_endpoints_many(
         if report.status != Status::WithinTolerance {
             return Err(Error::new(
                 "BREP_THREAD_PATCH_UNRESOLVED",
-                "Edited boundary agreement unproved",
+                messages.unproved,
             ));
         }
         agreements.push(report);
     }
+    Ok((agreements, used))
+}
+
+/// Agree on all endpoint assignments before editing. Conflicting assignments
+/// to the same vertex refuse, even when their difference is below tolerance.
+pub fn align_patch_endpoints_many(
+    target: &Model,
+    boundaries: &[(usize, &nurbs_core::curve::Curve)],
+    max_change: f64,
+    max_verification_cells: usize,
+) -> Result<EndpointAlignment> {
+    check_alignment_input(target, boundaries, max_change, max_verification_cells)?;
+    let assignments = collect_endpoint_assignments(target, boundaries)?;
+    let mut result = target.clone();
+    let mut bound: f64 = 0.;
+    for (vertex, p) in assignments {
+        bound = bound.max(movement_upper_bound(target.vertices[vertex].point, p));
+        result.vertices[vertex].point = p;
+    }
+    if !bound.is_finite() || bound > max_change {
+        return Err(Error::new(
+            "BREP_THREAD_PATCH_UNRESOLVED",
+            "Endpoint movement exceeds requested budget",
+        ));
+    }
+    let vertices = &result.0.vertices;
+    for e in &mut result.0.edges {
+        e.curve.control_points[0] = vertices[e.vertices[0]].point.to_vec();
+        if let Some(last) = e.curve.control_points.last_mut() {
+            *last = vertices[e.vertices[1]].point.to_vec();
+        }
+    }
+    let (agreements, used) = verify_edited_boundaries(
+        &result,
+        max_verification_cells,
+        BoundaryRecheckMessages {
+            exhausted: "Alignment verification budget exhausted",
+            unproved: "Edited boundary agreement unproved",
+        },
+    )?;
     result.rebuild_topology_ids();
     result.inherit_topology_ids(&[target]);
     result.validate()?;
@@ -549,38 +624,60 @@ pub(crate) fn cap_external_screw_network(
     internal::external_network_candidate(network, hand, z_limits, limits)
 }
 
-pub fn clipped_patch_network(
+/// Total verification cells one clipped patch network may spend.
+const MAX_NETWORK_CELLS: usize = 10_000_000;
+/// Verification cells one sheet, alignment or attach step may spend.
+const MAX_STEP_CELLS: usize = 100000;
+/// Retained patches one clipped network may hold.
+const MAX_NETWORK_PATCHES: usize = 254;
+
+type PatchKey = (usize, usize, usize, usize);
+/// `([assembled wire, coedge], sheet coedge)` boundary correspondences.
+type BoundaryPairs = Vec<([usize; 2], usize)>;
+
+fn patch_key(p: &nurbs_core::thread::Patch) -> PatchKey {
+    (p.start, p.turn, p.quarter, p.profile_segment)
+}
+
+/// Key of the patch following `p` along the profile (axis 0) or the turn
+/// (axis 1) in a screw network with `starts` starts.
+fn patch_neighbour(p: &nurbs_core::thread::Patch, axis: usize, starts: usize) -> PatchKey {
+    if axis == 0 {
+        if p.profile_segment < 4 {
+            (p.start, p.turn, p.quarter, p.profile_segment + 1)
+        } else if p.start + 1 < starts {
+            (p.start + 1, p.turn, p.quarter, 0)
+        } else {
+            (0, p.turn + 1, p.quarter, 0)
+        }
+    } else if p.quarter < 3 {
+        (p.start, p.turn, p.quarter + 1, p.profile_segment)
+    } else {
+        (p.start, p.turn + 1, 0, p.profile_segment)
+    }
+}
+
+fn iso_boundary(m: &Model, wire: usize, axis: usize, value: f64) -> Option<usize> {
+    m.loops[wire]
+        .coedges
+        .iter()
+        .position(|c| c.pcurve.control_points.iter().all(|p| p[axis] == value))
+}
+
+/// Fit one sheet per retained candidate, returning the sheets, the cells used
+/// and the largest planar-end curve change.
+fn fit_network_sheets(
     trims: &nurbs_core::thread::TrimCandidates,
-    starts: usize,
     z_limits: [f64; 2],
     fit: PatchFit,
     max_curve_change: f64,
     max_verification_cells: usize,
-) -> Result<TurnSheet> {
+) -> Result<(Vec<Model>, usize, f64)> {
     let PatchFit {
         max_uv_error,
         tolerance,
         max_spans,
     } = fit;
-    if !(1..=8).contains(&starts) || trims.requested_z_bounds != z_limits {
-        return Err(Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Screw network source or slab changed",
-        ));
-    }
-    if max_verification_cells > 10_000_000 {
-        return Err(Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Network budget exceeds 10000000 cells",
-        ));
-    }
-
-    if !trims.unresolved.is_empty() || trims.candidates.is_empty() || trims.candidates.len() > 254 {
-        return Err(Error::new(
-            "BREP_THREAD_PATCH_UNRESOLVED",
-            "Network needs 1..254 retained patches without unresolved clipping",
-        ));
-    }
     let mut sheets = Vec::new();
     let mut used = 0;
     let mut adjustment: f64 = 0.;
@@ -589,7 +686,7 @@ pub fn clipped_patch_network(
         for &z in &z_limits {
             planar |= !c.plane_boundary_indices(z)?.is_empty();
         }
-        let remaining = (max_verification_cells - used).min(100000);
+        let remaining = (max_verification_cells - used).min(MAX_STEP_CELLS);
         if planar {
             let sheet = trimmed_patch_sheet_with_planar_ends(
                 c,
@@ -609,94 +706,165 @@ pub fn clipped_patch_network(
             sheets.push(sheet.model);
         }
     }
-    let key = |p: &nurbs_core::thread::Patch| (p.start, p.turn, p.quarter, p.profile_segment);
-    let neighbour = |p: &nurbs_core::thread::Patch, axis: usize| {
-        if axis == 0 {
-            if p.profile_segment < 4 {
-                (p.start, p.turn, p.quarter, p.profile_segment + 1)
-            } else if p.start + 1 < starts {
-                (p.start + 1, p.turn, p.quarter, 0)
-            } else {
-                (0, p.turn + 1, p.quarter, 0)
-            }
-        } else if p.quarter < 3 {
-            (p.start, p.turn, p.quarter + 1, p.profile_segment)
-        } else {
-            (p.start, p.turn + 1, 0, p.profile_segment)
-        }
-    };
-    let boundary = |m: &Model, wire: usize, axis: usize, value: f64| {
-        m.loops[wire]
-            .coedges
-            .iter()
-            .position(|c| c.pcurve.control_points.iter().all(|p| p[axis] == value))
-    };
-    let mut order = vec![0];
-    let mut model = sheets[0].clone();
-    while order.len() < sheets.len() {
-        let mut next = None;
-        for j in 0..sheets.len() {
-            if order.contains(&j) {
-                continue;
-            }
-            let mut pairs = Vec::new();
-            for (wire, &i) in order.iter().enumerate() {
-                for axis in 0..2 {
-                    let p = &trims.candidates[i].patch;
-                    let q = &trims.candidates[j].patch;
-                    let values = if neighbour(p, axis) == key(q) {
-                        Some((1., 0.))
-                    } else if neighbour(q, axis) == key(p) {
-                        Some((0., 1.))
-                    } else {
-                        None
-                    };
-                    if let Some((sv, tv)) = values {
-                        if let (Some(s), Some(t)) = (
-                            boundary(&model, wire, axis, sv),
-                            boundary(&sheets[j], 0, axis, tv),
-                        ) {
-                            pairs.push(([wire, s], t));
-                        }
-                    }
+    Ok((sheets, used, adjustment))
+}
+
+/// Grows the assembled network one neighbouring sheet at a time.
+struct NetworkAssembly<'a> {
+    trims: &'a nurbs_core::thread::TrimCandidates,
+    sheets: &'a [Model],
+    starts: usize,
+    max_curve_change: f64,
+    max_verification_cells: usize,
+    order: Vec<usize>,
+    model: Model,
+    used: usize,
+    adjustment: f64,
+}
+
+impl NetworkAssembly<'_> {
+    /// Shared boundaries between the assembled wires and sheet `j`.
+    fn shared_boundaries(&self, j: usize) -> BoundaryPairs {
+        let mut pairs = Vec::new();
+        for (wire, &i) in self.order.iter().enumerate() {
+            for axis in 0..2 {
+                let p = &self.trims.candidates[i].patch;
+                let q = &self.trims.candidates[j].patch;
+                let values = if patch_neighbour(p, axis, self.starts) == patch_key(q) {
+                    Some((1., 0.))
+                } else if patch_neighbour(q, axis, self.starts) == patch_key(p) {
+                    Some((0., 1.))
+                } else {
+                    None
+                };
+                if let Some((sv, tv)) = values
+                    && let (Some(s), Some(t)) = (
+                        iso_boundary(&self.model, wire, axis, sv),
+                        iso_boundary(&self.sheets[j], 0, axis, tv),
+                    )
+                {
+                    pairs.push(([wire, s], t));
                 }
             }
-            if !pairs.is_empty() {
-                next = Some((j, pairs));
-                break;
-            }
         }
-        let (j, pairs) = next.ok_or_else(|| {
-            Error::new(
-                "BREP_THREAD_PATCH_UNRESOLVED",
-                "Retained patch network is disconnected",
-            )
-        })?;
+        pairs
+    }
+
+    fn next_neighbour(&self) -> Result<(usize, BoundaryPairs)> {
+        (0..self.sheets.len())
+            .filter(|j| !self.order.contains(j))
+            .map(|j| (j, self.shared_boundaries(j)))
+            .find(|(_, pairs)| !pairs.is_empty())
+            .ok_or_else(|| {
+                Error::new(
+                    "BREP_THREAD_PATCH_UNRESOLVED",
+                    "Retained patch network is disconnected",
+                )
+            })
+    }
+
+    fn remaining(&self) -> usize {
+        (self.max_verification_cells - self.used).min(MAX_STEP_CELLS)
+    }
+
+    fn attach_next(&mut self) -> Result<()> {
+        let (j, pairs) = self.next_neighbour()?;
+        let model = &self.model;
         let assignments: Vec<_> = pairs
             .iter()
             .map(|&(s, t)| (t, &model.edges[model.loops[s[0]].coedges[s[1]].edge].curve))
             .collect();
         let aligned = align_patch_endpoints_many(
-            &sheets[j],
+            &self.sheets[j],
             &assignments,
-            max_curve_change,
-            (max_verification_cells - used).min(100000),
+            self.max_curve_change,
+            self.remaining(),
         )?;
-        used += aligned.verification_cells;
-        adjustment = adjustment.max(aligned.max_curve_change_upper_bound);
-        let (assembled, cells) = attach_patch_sheet_edges(
-            &model,
-            &aligned.model,
-            &pairs,
-            (max_verification_cells - used).min(100000),
-        )?;
-        used += cells;
-        model = assembled;
-        order.push(j);
+        self.used += aligned.verification_cells;
+        self.adjustment = self.adjustment.max(aligned.max_curve_change_upper_bound);
+        let (assembled, cells) =
+            attach_patch_sheet_edges(&self.model, &aligned.model, &pairs, self.remaining())?;
+        self.used += cells;
+        self.model = assembled;
+        self.order.push(j);
+        Ok(())
+    }
+}
+
+pub fn clipped_patch_network(
+    trims: &nurbs_core::thread::TrimCandidates,
+    starts: usize,
+    z_limits: [f64; 2],
+    fit: PatchFit,
+    max_curve_change: f64,
+    max_verification_cells: usize,
+) -> Result<TurnSheet> {
+    if !(1..=8).contains(&starts) || trims.requested_z_bounds != z_limits {
+        return Err(Error::new(
+            "BREP_INVALID_THREAD_PATCH",
+            "Screw network source or slab changed",
+        ));
+    }
+    if max_verification_cells > MAX_NETWORK_CELLS {
+        return Err(Error::new(
+            "BREP_INVALID_THREAD_PATCH",
+            "Network budget exceeds 10000000 cells",
+        ));
+    }
+
+    assemble_clipped_network(
+        trims,
+        starts,
+        z_limits,
+        fit,
+        max_curve_change,
+        max_verification_cells,
+    )
+}
+
+/// Fit and join every retained candidate of a clipped screw network after
+/// the caller has checked its source and global budget.
+fn assemble_clipped_network(
+    trims: &nurbs_core::thread::TrimCandidates,
+    starts: usize,
+    z_limits: [f64; 2],
+    fit: PatchFit,
+    max_curve_change: f64,
+    max_verification_cells: usize,
+) -> Result<TurnSheet> {
+    if !trims.unresolved.is_empty()
+        || trims.candidates.is_empty()
+        || trims.candidates.len() > MAX_NETWORK_PATCHES
+    {
+        return Err(Error::new(
+            "BREP_THREAD_PATCH_UNRESOLVED",
+            "Network needs 1..254 retained patches without unresolved clipping",
+        ));
+    }
+    let (sheets, used, adjustment) = fit_network_sheets(
+        trims,
+        z_limits,
+        fit,
+        max_curve_change,
+        max_verification_cells,
+    )?;
+    let mut assembly = NetworkAssembly {
+        trims,
+        sheets: &sheets,
+        starts,
+        max_curve_change,
+        max_verification_cells,
+        order: vec![0],
+        model: sheets[0].clone(),
+        used,
+        adjustment,
+    };
+    while assembly.order.len() < sheets.len() {
+        assembly.attach_next()?;
     }
     Ok(TurnSheet {
-        model,
-        verification_cells: used,
-        max_endpoint_adjustment_upper_bound: adjustment,
+        model: assembly.model,
+        verification_cells: assembly.used,
+        max_endpoint_adjustment_upper_bound: assembly.adjustment,
     })
 }

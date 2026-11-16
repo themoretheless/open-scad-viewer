@@ -212,6 +212,546 @@ fn operands(
     let b = admitted.into_solid().unwrap();
     (a, aface, b)
 }
+fn automatic_census_limits() -> mixed::ClosedSsCensusLimits {
+    mixed::ClosedSsCensusLimits {
+        discovery: ss::ClosedSSBuildLimits {
+            max_charts: 192,
+            max_repairs: 128,
+            seed_steps: 32,
+            proposal_rectangles: 250000,
+            coverage: ss::CoverageLimits { max_cells: 65536, max_rectangles: 100000, max_depth: 32 },
+            components: ss::MixedComponentDiscoveryLimits { max_bridges: 191, ..Default::default() },
+            ..Default::default()
+        },
+        cycle: ss::ClosedFiberCycleLimits { max_steps: 256, max_candidates: 8192, max_start_attempts: 64, ..Default::default() },
+        coverage: ss::CoverageLimits { max_cells: 65536, max_rectangles: 1000000, max_depth: 48 },
+        ..Default::default()
+    }
+}
+
+#[test]
+fn automatic_closed_branches_build_annular_intersection() {
+    let (a, aface, _) = operands(false, false);
+    let mut widened = a.model().clone();
+    let surface = &mut widened.faces[aface].surface;
+    let points = surface.control_points.clone();
+    assert_eq!([surface.degree_u, surface.degree_v], [1, 1]);
+    surface.knots_u = vec![-0.125, -0.125, 1.125, 1.125];
+    surface.knots_v = surface.knots_u.clone();
+    for (i, u) in [-0.125, 1.125].into_iter().enumerate() {
+        for (j, v) in [-0.125, 1.125].into_iter().enumerate() {
+            surface.control_points[i][j] = (0..3).map(|k| {
+                points[0][0][k] + u * (points[1][0][k] - points[0][0][k])
+                    + v * (points[0][1][k] - points[0][0][k])
+            }).collect();
+        }
+    }
+    // The larger affine carrier represents the same finite face in the
+    // original authored UV loop. Its extra UV domain is outside the cut.
+    widened.rebuild_topology_ids();
+    let a = solid::qualify(widened, policy::policy()).unwrap().into_solid().unwrap();
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let b = solid::qualify(graph::above_body(), limits).unwrap().into_solid().unwrap();
+    assert!(mixed::QualifiedInteriorSsCensus::discover_closed_branches(
+        [(&a, usize::MAX), (&b, 1)], Default::default(),
+    ).is_err());
+    let directions = [[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]];
+    let (census, result, [lo, hi]) =
+        mixed::QualifiedInteriorSsCensus::assemble_closed_ss_boolean_between(
+            [&a, &b], solid::BooleanMaterialOp::Intersection, &directions, 1e-9,
+            mixed::ClosedSsBooleanLimits {
+                census: automatic_census_limits(),
+                max_pair_attempts: 4,
+                volume: mixed::RootBoundaryVolumeLimits {
+                    absolute_error: 5e-4, cells: 16384, ..Default::default()
+                },
+                ..Default::default()
+            },
+        ).unwrap();
+    let source = census.coverage().fibers()[0].source();
+    assert_eq!(source.first(), &a.model().faces[aface].surface);
+    assert_eq!(source.second(), &b.model().faces[1].surface);
+    assert!(!census.coverage().covers_entire_surfaces());
+    assert_eq!(census.coverage().domain(), [[0., 1.]; 4]);
+    assert_eq!(census.components().len(), 2);
+    let topology = result.topology();
+    assert_eq!(topology.bodies.len(), 1);
+    assert_eq!(topology.faces.len(), 2);
+    assert!(topology.faces.iter().all(|face| face.holes.len() == 1));
+    assert!(topology.boundary_edges().is_empty());
+    let expected = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(lo <= expected && expected <= hi);
+
+    let (difference, [lo, hi]) = mixed::QualifiedInteriorSsCensus::assemble_multi_face_boolean(
+        [&a, &b],
+        &[census],
+        solid::BooleanMaterialOp::Difference,
+        &directions,
+        1e-9,
+        mixed::ClosedSsBooleanLimits {
+            volume: mixed::RootBoundaryVolumeLimits {
+                absolute_error: 2e-3, cells: 16384, ..Default::default()
+            },
+            ..Default::default()
+        },
+    ).unwrap();
+    let topology = difference.topology();
+    assert_eq!(topology.bodies.len(), 1);
+    assert!(topology.bodies[0].inner_shells.is_empty());
+    assert!(topology.boundary_edges().is_empty());
+    assert!(lo <= 10. - expected && 10. - expected <= hi);
+}
+
+#[test]
+fn rational_face_census_builds_closed_annular_intersection() {
+    check_rational_face_census(false);
+}
+
+#[test]
+fn rotated_multispan_rational_face_census_builds_closed_annular_intersection() {
+    check_rational_face_census(true);
+}
+
+fn check_rational_face_census(rotated_multispan: bool) {
+    let (stock, face, _) = operands(false, false);
+    let mut model = stock.model().clone();
+    let plane = &mut model.faces[face].surface;
+    plane.degree_u = 2;
+    plane.knots_u = vec![0., 0., 0., 1., 1., 1.];
+    plane.control_points = [0., 0.25, 1.]
+        .map(|x| vec![vec![x, 0., 0.], vec![x, 1., 0.]])
+        .to_vec();
+    plane.weights = vec![vec![1.; 2], vec![2.; 2], vec![3.; 2]];
+    if rotated_multispan {
+        plane.knots_u = vec![0., 0., 0., 0.5, 1., 1., 1.];
+        plane.control_points = [0., 0.125, 0.6875, 1.]
+            .map(|x| vec![vec![x, 0., 0.], vec![x, 1., 0.]])
+            .to_vec();
+        plane.weights = [0.5, 1., 2., 2.5].map(|w| vec![w; 2]).to_vec();
+    }
+    model.rebuild_topology_ids();
+    let mut cutter = graph::above_body();
+    let mut directions = [[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]];
+    if rotated_multispan {
+        let rotation = [
+            [0., 0., -1., 0.],
+            [0., 1., 0., 0.],
+            [1., 0., 0., 0.],
+            [0., 0., 0., 1.],
+        ];
+        model = brep_core::transform::affine(&model, rotation).unwrap();
+        cutter = brep_core::transform::affine(&cutter, rotation).unwrap();
+        directions = directions.map(|[x, y, z]| [-z, y, x]);
+    }
+    let mut policy = policy::policy();
+    policy.geometry.boundary.contacts.cells_per_pair = 1024;
+    policy.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let a = solid::qualify(model, policy).unwrap().into_solid().expect("rational box admission");
+    let b = solid::qualify(cutter, policy).unwrap().into_solid().unwrap();
+    let (census, result, [lo, hi]) =
+        mixed::QualifiedInteriorSsCensus::assemble_closed_ss_boolean_between(
+            [&a, &b],
+            solid::BooleanMaterialOp::Intersection,
+            &directions,
+            1e-9,
+            mixed::ClosedSsBooleanLimits {
+                census: automatic_census_limits(),
+                volume: mixed::RootBoundaryVolumeLimits {
+                    axis: if rotated_multispan { 0 } else { 2 },
+                    absolute_error: 5e-4, cells: 16384, ..Default::default()
+                },
+                ..Default::default()
+            },
+        ).unwrap();
+    assert_eq!(census.face_indices(), [face, 1]);
+    assert_eq!(census.components().len(), 2);
+    let source = census.coverage().fibers()[0].source();
+    assert_eq!(source.first(), &a.model().faces[face].surface);
+    let topology = result.topology();
+    assert_eq!(topology.bodies.len(), 1);
+    assert_eq!(topology.faces.len(), 2);
+    assert!(topology.faces.iter().all(|face| face.holes.len() == 1));
+    assert!(topology.boundary_edges().is_empty());
+    let expected = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}, expected {expected}");
+}
+
+#[test]
+fn two_ss_face_pairs_build_two_intersection_bodies() {
+    let (a, aface, _) = operands(false, false);
+    let graph = graph::above_body();
+    let shift = [
+        [1., 0., 0., 4.],
+        [0., 1., 0., 0.],
+        [0., 0., 1., 0.],
+        [0., 0., 0., 1.],
+    ];
+    let shifted_a = brep_core::transform::affine(a.model(), shift).unwrap();
+    let shifted_b = brep_core::transform::affine(&graph, shift).unwrap();
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let combine = |original, shifted| {
+        let model = brep_core::operations::boolean(original, shifted, "union").unwrap();
+        let solid = solid::qualify(model, limits).unwrap().into_solid().unwrap();
+        assert_eq!(solid.model().bodies.len(), 2);
+        solid
+    };
+    let [a_faces, b_faces] = [
+        [&a.model().faces[aface].surface, &shifted_a.faces[aface].surface],
+        [&graph.faces[1].surface, &shifted_b.faces[1].surface],
+    ];
+    let first = combine(a.model(), &shifted_a);
+    let second = combine(&graph, &shifted_b);
+    let find_face = |solid: &solid::QualifiedClosedSolid, surface| {
+        solid.model().faces.iter().position(|face| &face.surface == surface).unwrap()
+    };
+    let censuses = std::array::from_fn::<_, 2, _>(|pair| census_for_faces(
+        &first, find_face(&first, a_faces[pair]),
+        &second, find_face(&second, b_faces[pair]),
+        false, COUNT, false,
+    ));
+    let (result, [lo, hi]) = mixed::QualifiedInteriorSsCensus::assemble_multi_face_boolean(
+        [&first, &second],
+        &censuses,
+        solid::BooleanMaterialOp::Intersection,
+        &[[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]],
+        1e-9,
+        mixed::ClosedSsBooleanLimits {
+            volume: mixed::RootBoundaryVolumeLimits {
+                absolute_error: 2e-3, cells: 16384, ..Default::default()
+            },
+            ..Default::default()
+        },
+    ).unwrap();
+    let topology = result.topology();
+    assert_eq!(topology.bodies.len(), 2);
+    assert_eq!(topology.shells.len(), 2);
+    assert!(topology.shells.iter().all(|shell| shell.closed && shell.faces.len() == 2));
+    assert!(topology.faces.iter().all(|face| face.holes.len() == 1));
+    assert!(topology.boundary_edges().is_empty());
+    let expected = 12. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}, expected {expected}");
+}
+
+#[test]
+fn automatic_ss_network_shares_one_original_face() {
+    let stock = brep_core::cuboid([0., 0., -10.], [8., 1., 0.]).unwrap();
+    let graph = graph::above_body();
+    let shifted = brep_core::transform::affine(&graph, [
+        [1., 0., 0., 4.],
+        [0., 1., 0., 0.],
+        [0., 0., 1., 0.],
+        [0., 0., 0., 1.],
+    ]).unwrap();
+    let opposing = brep_core::operations::boolean(&graph, &shifted, "union").unwrap();
+    let mut policy = policy::policy();
+    policy.geometry.boundary.contacts.cells_per_pair = 1024;
+    policy.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let a = solid::qualify(stock, policy).unwrap().into_solid().unwrap();
+    let b = solid::qualify(opposing, policy).unwrap().into_solid().unwrap();
+    let (censuses, result, [lo, hi]) =
+        mixed::QualifiedInteriorSsCensus::assemble_closed_ss_network_boolean_between(
+            [&a, &b],
+            solid::BooleanMaterialOp::Intersection,
+            &[[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]],
+            1e-9,
+            mixed::ClosedSsBooleanLimits {
+                census: automatic_census_limits(),
+                cells_per_support: 1024,
+                volume: mixed::RootBoundaryVolumeLimits {
+                    absolute_error: 2e-3, cells: 16384, ..Default::default()
+                },
+                ..Default::default()
+            },
+        ).unwrap();
+    assert_eq!(censuses.len(), 2);
+    let [first, second] = [censuses[0].face_indices(), censuses[1].face_indices()];
+    assert_eq!(first[0], second[0]);
+    assert_ne!(first[1], second[1]);
+    assert!(censuses.iter().all(|census| census.components().len() == 2));
+
+    let topology = result.topology();
+    assert_eq!(topology.bodies.len(), 2);
+    assert_eq!(topology.shells.len(), 2);
+    assert!(topology.shells.iter().all(|shell| shell.closed && shell.faces.len() == 2));
+    assert!(topology.faces.iter().all(|face| face.holes.len() == 1));
+    assert!(topology.boundary_edges().is_empty());
+    let expected = 12. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}, expected {expected}");
+}
+
+#[test]
+fn intersection_keeps_annulus_between_two_closed_contours() {
+    let (a, aface, _) = operands(false, false);
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let b = solid::qualify(graph::above_body(), limits).unwrap().into_solid().unwrap();
+    let census = census_for(&a, aface, &b, false);
+    let cut = (census.as_ref(), 0, Default::default());
+    let (multi, regions) =
+        mixed::QualifiedInteriorSsCensus::build_multi_face_arrangement(&a, &[cut]).unwrap();
+    let single = census.build_face_arrangement(0, Default::default()).unwrap();
+    assert_eq!(regions[0], single.region_faces());
+    assert_eq!(multi.topology().faces.len(), single.model().topology().faces.len());
+    assert!(mixed::QualifiedInteriorSsCensus::build_multi_face_arrangement(&a, &[cut, cut]).is_err());
+    assert!(mixed::QualifiedInteriorSsCensus::build_multi_face_arrangement(&b, &[cut]).is_err());
+    let union = census.select_automatic_paired_boolean_patches(
+        solid::BooleanMaterialOp::Union,
+        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+        Default::default(),
+        [Default::default(); 2],
+        4096,
+        64,
+    ).unwrap();
+    for (side, input) in [&a, &b].into_iter().enumerate() {
+        let arrangement = union.arrangements()[side];
+        let faces = union.uncut_faces()[side];
+        assert_eq!(faces.len(), input.model().faces.len() - 1);
+        assert_eq!(union.cut_regions()[side].len(), 2);
+        for face in faces {
+            assert!(!arrangement.region_faces().contains(&face.face));
+            let source = input.model().shells.iter().flat_map(|shell| &shell.faces)
+                .find(|source| source.face == face.face).unwrap();
+            assert_eq!(face.reversed, source.reversed);
+        }
+    }
+    let (sewn_union, [union_lo, union_hi]) = census.assemble_paired_union(
+        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+        1e-9,
+        Default::default(),
+        [Default::default(); 2],
+        mixed::RootBoundaryVolumeLimits { absolute_error: 2e-3, cells: 4096, ..Default::default() },
+        solid::VolumeLimits {
+            axis: 2, origin: 0., absolute_error: 2e-3, cells: 4096, spans: 16384,
+            domain_cells: 100000, algebra: Default::default(),
+        },
+        4096,
+        64,
+    ).unwrap();
+    // Both original boxes have unit footprint and thickness ten.
+    let overlap = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(union_lo <= 20. - overlap && 20. - overlap <= union_hi, "{union_lo}..{union_hi}");
+    assert!(union_hi - union_lo <= 2e-3);
+    let topology = sewn_union.topology();
+    assert_eq!(topology.shells.len(), 2);
+    assert!(topology.shells.iter().all(|shell| shell.closed));
+    let mut shell_sizes: Vec<_> = topology.shells.iter().map(|shell| shell.faces.len()).collect();
+    shell_sizes.sort_unstable();
+    assert_eq!(shell_sizes, [2, a.model().faces.len() + b.model().faces.len()]);
+    assert!(topology.boundary_edges().is_empty());
+    assert!(topology.edges.iter().any(|edge| matches!(edge.curve, mixed::MixedEdge::Rational(_))));
+    assert!(topology.edges.iter().any(|edge| matches!(edge.curve, mixed::MixedEdge::Root(_))));
+    let inner_shell = topology.shells.iter().position(|shell| shell.faces.len() == 2).unwrap();
+    let directions = [[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]];
+    assert!(union.shell_is_inside(
+        inner_shell, 1 - inner_shell, 1e-9, &directions, Default::default(),
+    ).unwrap());
+    assert!(!union.shell_is_inside(
+        1 - inner_shell, inner_shell, 1e-9, &directions, Default::default(),
+    ).unwrap());
+    for (shell, point, expected) in [
+        (1 - inner_shell, [0.5, 0.5, 0.02], true),
+        (inner_shell, [0.5, 0.5, 0.02], true),
+        (1 - inner_shell, [0.5, 0.5, -1.], true),
+        (inner_shell, [0.5, 0.5, -1.], false),
+        (1 - inner_shell, [1.5, 0.5, 0.02], false),
+    ] {
+        let report = union.classify_shell_point(
+            shell, 1e-9, point, &directions, Default::default(),
+        ).unwrap();
+        assert_eq!(report.parity, Some(expected), "{shell} {point:?}: {report:?}");
+    }
+    let flux = union.paired_shell_signed_volume(
+        inner_shell,
+        1e-9,
+        mixed::RootBoundaryVolumeLimits { absolute_error: 5e-4, cells: 4096, ..Default::default() },
+    ).unwrap();
+    let [lo, hi] = flux.signed_bounds.unwrap();
+    let r2 = 0.15625_f64.powi(2);
+    let outer_r2 = 0.3125_f64.powi(2);
+    let signed_cavity = -6. * std::f64::consts::PI * r2.powi(2) * (3. * outer_r2 - r2);
+    assert!(flux.accuracy_proven && hi < 0.);
+    assert!(lo <= signed_cavity && signed_cavity <= hi, "{lo}..{hi}");
+    let exterior = union.shell_signed_volume(
+        1 - inner_shell,
+        1e-9,
+        1e-9,
+        mixed::RootBoundaryVolumeLimits {
+            absolute_error: 2e-3,
+            cells: 32768,
+            arc_subdivisions: 64,
+            ..Default::default()
+        },
+    ).unwrap();
+    let [lo, hi] = exterior.signed_bounds.unwrap();
+    let expected_exterior = 20. - overlap - signed_cavity;
+    assert!(exterior.accuracy_proven && lo > 0., "{exterior:?}");
+    assert!(lo <= expected_exterior && expected_exterior <= hi, "{lo}..{hi}");
+    let assemble_material = |operation| census.assemble_automatic_paired_boolean(
+        operation,
+        &directions,
+        1e-9,
+        Default::default(),
+        [Default::default(); 2],
+        mixed::RootBoundaryVolumeLimits {
+            absolute_error: 8e-3,
+            cells: 32768,
+            arc_subdivisions: 64,
+            ..Default::default()
+        },
+        4096,
+        64,
+    );
+    let (body, [body_lo, body_hi]) = assemble_material(solid::BooleanMaterialOp::Union).unwrap();
+    let bodies = &body.topology().bodies;
+    assert_eq!(bodies.len(), 1);
+    assert_eq!(bodies[0].outer_shell, 1 - inner_shell);
+    assert_eq!(bodies[0].inner_shells, [inner_shell]);
+    assert!(body_lo <= 20. - overlap && 20. - overlap <= body_hi);
+    assert!(body_hi - body_lo <= 8e-3);
+    assert!(body_lo <= union_hi && union_lo <= body_hi);
+    let (difference, [difference_lo, difference_hi]) =
+        assemble_material(solid::BooleanMaterialOp::Difference).unwrap();
+    assert_eq!(difference.topology().bodies.len(), 1);
+    assert!(difference.topology().bodies[0].inner_shells.is_empty());
+    assert!(difference.topology().boundary_edges().is_empty());
+    assert!(difference_lo <= 10. - overlap && 10. - overlap <= difference_hi);
+    assert!(difference_hi - difference_lo <= 8e-3);
+    let assemble = |cells_per_support| {
+        census.assemble_automatic_paired_boolean(
+            solid::BooleanMaterialOp::Intersection,
+            &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+            1e-9,
+            Default::default(),
+            [Default::default(); 2],
+            mixed::RootBoundaryVolumeLimits {
+                absolute_error: 5e-4,
+                cells: 4096,
+                ..Default::default()
+            },
+            4096,
+            cells_per_support,
+        )
+    };
+    let err = assemble(1).err().expect("One probe cannot cover three regions");
+    assert!(err.to_string().contains("Boolean region witness search found"));
+    let (result, [lo, hi]) = assemble(64).unwrap();
+    let topology = result.topology();
+    assert_eq!(topology.bodies.len(), 1);
+    assert_eq!(topology.shells.len(), 1);
+    assert_eq!(topology.faces.len(), 2);
+    assert!(topology.faces.iter().all(|face| face.holes.len() == 1));
+    assert!(topology.boundary_edges().is_empty());
+    let expected = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}");
+}
+
+#[test]
+fn multi_face_xor_retains_two_closed_bodies_at_common_ss_rims() {
+    let (a, aface, _) = operands(false, false);
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let b = solid::qualify(graph::above_body(), limits).unwrap().into_solid().unwrap();
+    let census = census_with_anchors(&a, aface, &b, false, COUNT, true);
+    let (xor, [xor_lo, xor_hi]) = mixed::QualifiedInteriorSsCensus::assemble_multi_face_boolean(
+        [&a, &b],
+        &[census],
+        solid::BooleanMaterialOp::Xor,
+        &[[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]],
+        1e-9,
+        mixed::ClosedSsBooleanLimits {
+            volume: mixed::RootBoundaryVolumeLimits {
+                absolute_error: 8e-3,
+                cells: 32768,
+                arc_subdivisions: 64,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    ).unwrap();
+    let overlap = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    let xor = xor.topology();
+    assert_eq!(xor.bodies.len(), 2);
+    assert_eq!(xor.shells.len(), 2);
+    assert!(xor.boundary_edges().is_empty());
+    let root_edges = |shell: usize| {
+        xor.shells[shell].faces.iter()
+            .flat_map(|use_| {
+                let face = &xor.faces[use_.face];
+                std::iter::once(face.outer).chain(face.holes.iter().copied())
+            })
+            .flat_map(|wire| &xor.loops[wire].coedges)
+            .filter_map(|coedge| match &xor.edges[coedge.edge].curve {
+                mixed::MixedEdge::Root(edge) => Some((coedge.edge, edge)),
+                _ => None,
+            })
+            .collect::<std::collections::BTreeMap<_, _>>()
+    };
+    let first = root_edges(xor.bodies[0].outer_shell);
+    let second = root_edges(xor.bodies[1].outer_shell);
+    assert!(!first.is_empty());
+    assert_eq!(first.len(), second.len());
+    assert!(first.keys().all(|id| !second.contains_key(id)));
+    assert!(first.values().all(|edge| second.values().any(|other| {
+        edge.start().point().same_selector(other.start().point())
+            && edge.end().point().same_selector(other.end().point())
+    })));
+    assert!(xor_lo <= 20. - 2. * overlap && 20. - 2. * overlap <= xor_hi);
+    assert!(xor_hi - xor_lo <= 8e-3);
+}
+
+#[test]
+fn union_flux_preserves_a_rational_hole_inside_a_closed_ss_rim() {
+    let hole = vec![
+        [0.46875, 0.46875], [0.46875, 0.53125],
+        [0.53125, 0.53125], [0.53125, 0.46875],
+    ];
+    let model = brep_core::extrude_polygon_with_holes(
+        &[[0., 0.], [1., 0.], [1., 1.], [0., 1.]], &[hole], -10., 0.,
+    ).unwrap();
+    let aface = model.faces.iter().position(|face| {
+        face.surface.control_points.iter().flatten().all(|point| point[2] == 0.)
+    }).unwrap();
+    let a = solid::qualify(model, policy::policy()).unwrap().into_solid().unwrap();
+    let mut limits = policy::policy();
+    limits.geometry.boundary.contacts.cells_per_pair = 1024;
+    limits.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    let b = solid::qualify(graph::above_body(), limits).unwrap().into_solid().unwrap();
+    let census = census_for(&a, aface, &b, false);
+    let union = census.select_automatic_paired_boolean_patches(
+        solid::BooleanMaterialOp::Union,
+        &[[1., 0.317, 0.173], [0.239, 1., 0.419], [0.137, 0.283, 1.]],
+        Default::default(), [Default::default(); 2], 4096, 64,
+    ).unwrap();
+    let model = union.sew_closed_shells(1e-9).unwrap();
+    let topology = model.topology();
+    assert_eq!(topology.shells.len(), 1);
+    let is_root = |loop_id: usize| {
+        let edge = topology.loops[loop_id].coedges[0].edge;
+        matches!(topology.edges[edge].curve, mixed::MixedEdge::Root(_))
+    };
+    assert!(topology.faces.iter().any(|face| {
+        is_root(face.outer) && face.holes.iter().any(|&hole| !is_root(hole))
+    }));
+    let flux = union.shell_signed_volume(
+        0, 1e-9, 1e-9,
+        mixed::RootBoundaryVolumeLimits {
+            origin: 0.015625, absolute_error: 5e-3, cells: 65536, spans: 65536,
+            arc_subdivisions: 64, ..Default::default()
+        },
+    ).unwrap();
+    let [lo, hi] = flux.signed_bounds.unwrap();
+    let overlap = 6. * std::f64::consts::PI * (0.3125_f64.powi(2) - 0.15625_f64.powi(2)).powi(3);
+    let expected = 20. - overlap - 10. * 0.0625_f64.powi(2);
+    assert!(flux.accuracy_proven && lo > 0., "{flux:?}");
+    assert!(lo <= expected && expected <= hi, "{lo}..{hi}, expected {expected}");
+}
+
 fn run(with_holes: bool, mirrored: bool) {
     let (a, aface, b) = operands(with_holes, mirrored);
     let census = census_for(&a, aface, &b, mirrored);
@@ -963,8 +1503,31 @@ fn census_for_count(
     mirrored: bool,
     count: usize,
 ) -> Arc<mixed::QualifiedInteriorSsCensus> {
+    census_with_anchors(a, aface, b, mirrored, count, false)
+}
+
+fn census_with_anchors(
+    a: &solid::QualifiedClosedSolid,
+    aface: usize,
+    b: &solid::QualifiedClosedSolid,
+    mirrored: bool,
+    count: usize,
+    automatic: bool,
+) -> Arc<mixed::QualifiedInteriorSsCensus> {
+    census_for_faces(a, aface, b, 1, mirrored, count, automatic)
+}
+
+fn census_for_faces(
+    a: &solid::QualifiedClosedSolid,
+    aface: usize,
+    b: &solid::QualifiedClosedSolid,
+    bface: usize,
+    mirrored: bool,
+    count: usize,
+    automatic: bool,
+) -> Arc<mixed::QualifiedInteriorSsCensus> {
     let source =
-        ss::FiberSources::new(&a.model().faces[aface].surface, &b.model().faces[1].surface)
+        ss::FiberSources::new(&a.model().faces[aface].surface, &b.model().faces[bface].surface)
             .unwrap();
     let mut charts = family_count(&source, 0.3125, mirrored, count);
     charts.extend(family_count(&source, 0.15625, mirrored, count));
@@ -980,7 +1543,7 @@ fn census_for_count(
                     &a,
                     aface,
                     &b,
-                    1,
+                    bface,
                     wire,
                     [[0.5; 2]; 2],
                     Default::default(),
@@ -1026,6 +1589,11 @@ fn census_for_count(
         coverage.report().cells,
         coverage.report().rectangles
     );
+    if automatic {
+        return Arc::new(mixed::QualifiedInteriorSsCensus::qualify_with_automatic_anchors(
+            loops, coverage, Default::default(), 4096,
+        ).unwrap());
+    }
     let anchors: Vec<_> = quotient
         .iter()
         .enumerate()

@@ -5,12 +5,12 @@ mod arithmetic;
 mod partition;
 use arithmetic::*;
 pub use partition::{
-    CutPartitionLimits, OpenPathStep, OpenSSFaceLimits, OpenSSNetworkCut, OpenSSNetworkPort,
+    CutPartitionLimits, OpenPathStep, OpenSSFaceLimits, OpenSSBooleanEdgeUse, OpenSSNetworkCut, OpenSSNetworkPort,
     OpenSSPairSide, OpenSSPathLimits, OpenSSPathRequest, OpenSSRootGuard, OpenSSSegment,
     PartitionedCutVertex, QualifiedCutPartitions, QualifiedOpenSSFace, QualifiedOpenSSNetwork,
     QualifiedOpenSSPair, QualifiedOpenSSPath, partition_cut_representatives,
     partition_open_ss_network, partition_open_ss_pair, partition_open_ss_path,
-    qualify_open_ss_path,
+    assemble_exact_patch_solid, OpenSSIntersectionCompletionLimits, discover_open_ss_network, discover_open_ss_path, discover_open_ss_paths, qualify_open_ss_path,
 };
 #[cfg(test)]
 mod tests;

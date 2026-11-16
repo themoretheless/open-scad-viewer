@@ -423,7 +423,7 @@ impl Compiler {
         }
         self.resolve_function_bounds(def, &mut bs)?;
         let previous = std::mem::replace(&mut self.active, bs.clone());
-        let result: R<V> = try {
+        let result: R<V> = (|| {
             let mut locals: Set<String> = inputs.iter().map(|f| s(f, "name").into()).collect();
             let mut statement_checks = Vec::new();
             for st in arr(def, "items") {
@@ -447,7 +447,7 @@ impl Compiler {
                 };
                 for name in names {
                     if !locals.insert(name.into()) {
-                        do yeet crate::error(format!("Duplicate local {name}"));
+                        return Err(crate::error(format!("Duplicate local {name}")));
                     }
                     scope.shift_remove(name);
                 }
@@ -458,21 +458,21 @@ impl Compiler {
             let result = self.eval(&def["left"], &scope, b + 1)?;
             let output = if flag(def, "inferResult") {
                 if matches!(result, V::Void(_)) {
-                    do yeet crate::error("A result expression cannot return a no-result function");
+                    return Err(crate::error("A result expression cannot return a no-result function"));
                 }
                 result
             } else if flag(def, "singleResult") {
                 self.check_type(result, &def["outputs"][0]["type"], &bs, "result", 0)?
             } else {
                 let V::Record(mut r, _, _, _) = result else {
-                    do yeet crate::error("ret must return named fields");
+                    return Err(crate::error("ret must return named fields"));
                 };
                 if r.len() != arr(def, "outputs").len()
                     || arr(def, "outputs")
                         .iter()
                         .any(|f| !r.contains_key(s(f, "name")))
                 {
-                    do yeet crate::error("ret fields must exactly match named results");
+                    return Err(crate::error("ret fields must exactly match named results"));
                 }
                 let mut out = Map::new();
                 for field in arr(def, "outputs") {
@@ -497,15 +497,15 @@ impl Compiler {
             checks.extend(statement_checks);
             gather(&output, &mut checks);
             if checks.len() > 256 {
-                do yeet crate::error("Function type checks exceed 256");
+                return Err(crate::error("Function type checks exceed 256"));
             }
             if flag(def, "voidResult") {
-                V::Void(checks)
+                Ok(V::Void(checks))
             } else {
                 let output = self.protect(output, &checks)?;
-                self.memo_value(output)?
+                Ok(self.memo_value(output)?)
             }
-        };
+        })();
         self.active = previous;
         result
     }

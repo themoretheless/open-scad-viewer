@@ -233,36 +233,75 @@ pub fn sew_patch_boundaries(
 ) -> Result<(Model, SharedPatchEdge)> {
     sew_boundaries_impl(model, left, right, max_verification_cells, true)
 }
-pub(super) fn sew_boundaries_impl(
-    model: &Model,
-    left: [usize; 2],
-    right: [usize; 2],
+/// One boundary use taking part in a seam: its world curve, coedge and face
+/// surface.
+#[derive(Clone, Copy)]
+struct SeamUse<'a> {
+    curve: &'a nurbs_core::curve::Curve,
+    coedge: &'a Coedge,
+    surface: &'a nurbs_core::surface::Surface,
+}
+
+/// Prove that the kept use's world curve also bounds the replaced use, which
+/// runs against it, and transfer the replaced use's trim onto the kept curve.
+fn prove_seam(
+    kept: SeamUse<'_>,
+    replaced: SeamUse<'_>,
+    tolerance: f64,
     max_verification_cells: usize,
-    validate_input: bool,
-) -> Result<(Model, SharedPatchEdge)> {
-    if validate_input {
-        model.validate()?;
-    }
-    let invalid = || {
-        Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Sew needs distinct forward boundary uses in one open shell",
-        )
+) -> Result<(Option<brep_topology::CoedgeTrim>, SharedPatchEdge)> {
+    let provisional = nurbs_core::thread::MappedEdge {
+        curve: kept.curve.clone(),
+        pcurve: kept.coedge.pcurve.clone(),
+        agreement: Report {
+            status: nurbs_core::curve_surface_agreement::Status::Unresolved,
+            cells: 0,
+            witness: None,
+            witness_distance: None,
+        },
+        requested_world_tolerance: tolerance,
     };
+    let transferred_trim =
+        transfer_coedge_trim(replaced.curve, kept.curve, replaced.coedge.trim())?;
+    let shared = share_patch_edge_with_trims(
+        &provisional,
+        kept.coedge.trim(),
+        kept.surface,
+        TargetUse {
+            pcurve: &replaced.coedge.pcurve,
+            proof: replaced.coedge.trim().map(|trim| (replaced.curve, trim)),
+            surface: replaced.surface,
+            reversed: true,
+        },
+        tolerance,
+        max_verification_cells,
+    )?;
+    Ok((transferred_trim, shared))
+}
+
+fn invalid_sew() -> Error {
+    Error::new(
+        "BREP_INVALID_THREAD_PATCH",
+        "Sew needs distinct forward boundary uses in one open shell",
+    )
+}
+
+/// The two forward free boundary uses of a sew and their face owners.
+fn select_sew_uses(model: &Model, left: [usize; 2], right: [usize; 2]) -> Result<[SeamUse<'_>; 2]> {
     if model.shells.len() != 1 || model.shells[0].closed || !model.bodies.is_empty() {
-        return Err(invalid());
+        return Err(invalid_sew());
     }
     let coedge = |address: [usize; 2]| {
         model
             .loops
             .get(address[0])
             .and_then(|l| l.coedges.get(address[1]))
-            .ok_or_else(invalid)
+            .ok_or_else(invalid_sew)
     };
     let lc = coedge(left)?;
     let rc = coedge(right)?;
     if lc.edge == rc.edge || lc.reversed || rc.reversed {
-        return Err(invalid());
+        return Err(invalid_sew());
     }
     for edge in [lc.edge, rc.edge] {
         if model
@@ -273,7 +312,7 @@ pub(super) fn sew_boundaries_impl(
             .count()
             != 1
         {
-            return Err(invalid());
+            return Err(invalid_sew());
         }
     }
     let owner = |wire| {
@@ -281,61 +320,46 @@ pub(super) fn sew_boundaries_impl(
             .faces
             .iter()
             .find(|f| f.outer == wire)
-            .ok_or_else(invalid)
+            .ok_or_else(invalid_sew)
     };
     let lf = owner(left[0])?;
     let rf = owner(right[0])?;
-    let le = &model.edges[lc.edge];
-    let re = &model.edges[rc.edge];
+    Ok([
+        SeamUse {
+            curve: &model.edges[lc.edge].curve,
+            coedge: lc,
+            surface: &lf.surface,
+        },
+        SeamUse {
+            curve: &model.edges[rc.edge].curve,
+            coedge: rc,
+            surface: &rf.surface,
+        },
+    ])
+}
+
+/// Map each right-edge vertex onto the opposite left-edge vertex, refusing
+/// any end that is not exactly equal.
+fn sew_vertex_map(model: &Model, le: &Edge, re: &Edge) -> Result<Vec<usize>> {
     let mut vertex_map: Vec<_> = (0..model.vertices.len()).collect();
     for i in 0..2 {
         let old = re.vertices[i];
         let new = le.vertices[1 - i];
         if model.vertices[old].point != model.vertices[new].point {
-            return Err(invalid());
+            return Err(invalid_sew());
         }
         vertex_map[old] = new;
     }
-    let provisional = nurbs_core::thread::MappedEdge {
-        curve: le.curve.clone(),
-        pcurve: lc.pcurve.clone(),
-        agreement: Report {
-            status: nurbs_core::curve_surface_agreement::Status::Unresolved,
-            cells: 0,
-            witness: None,
-            witness_distance: None,
-        },
-        requested_world_tolerance: model.tolerance_mm,
-    };
-    let transferred_trim = transfer_coedge_trim(&re.curve, &le.curve, rc.trim())?;
-    let proof = share_patch_edge_with_trims(
-        &provisional,
-        lc.trim(),
-        &lf.surface,
-        TargetUse {
-            pcurve: &rc.pcurve,
-            proof: rc.trim().map(|trim| (&re.curve, trim)),
-            surface: &rf.surface,
-            reversed: true,
-        },
-        model.tolerance_mm,
-        max_verification_cells,
-    )?;
-    let mut result = model.clone();
-    result.loops[right[0]].coedges[right[1]].edge = lc.edge;
-    result.loops[right[0]].coedges[right[1]].reversed = true;
-    if let Some(trim) = transferred_trim {
-        let coedge = result.loops[right[0]].coedges[right[1]].clone();
-        result.loops[right[0]].coedges[right[1]] = coedge.with_trim(trim)?;
-    }
-    result.edges.remove(rc.edge);
-    for c in result.loops.iter_mut().flat_map(|l| &mut l.coedges) {
-        if c.edge > rc.edge {
-            c.edge -= 1;
-        }
-    }
-    // Resolve endpoint unions before compacting; reject cycles rather than
-    // silently assigning a different coordinate or breaking incidence.
+    Ok(vertex_map)
+}
+
+/// Resolve endpoint unions before compacting; reject cycles rather than
+/// silently assigning a different coordinate or breaking incidence.
+fn compact_sewn_vertices(
+    model: &Model,
+    result: &mut Model,
+    mut vertex_map: Vec<usize>,
+) -> Result<()> {
     for i in 0..vertex_map.len() {
         let mut v = i;
         let mut steps = 0;
@@ -343,7 +367,7 @@ pub(super) fn sew_boundaries_impl(
             v = vertex_map[v];
             steps += 1;
             if steps > vertex_map.len() {
-                return Err(invalid());
+                return Err(invalid_sew());
             }
         }
         vertex_map[i] = v;
@@ -360,6 +384,38 @@ pub(super) fn sew_boundaries_impl(
         edge.vertices = edge.vertices.map(|v| compact[vertex_map[v]]);
     }
     result.vertices = vertices;
+    Ok(())
+}
+
+pub(super) fn sew_boundaries_impl(
+    model: &Model,
+    left: [usize; 2],
+    right: [usize; 2],
+    max_verification_cells: usize,
+    validate_input: bool,
+) -> Result<(Model, SharedPatchEdge)> {
+    if validate_input {
+        model.validate()?;
+    }
+    let [kept, replaced] = select_sew_uses(model, left, right)?;
+    let (lc, rc) = (kept.coedge, replaced.coedge);
+    let vertex_map = sew_vertex_map(model, &model.edges[lc.edge], &model.edges[rc.edge])?;
+    let (transferred_trim, proof) =
+        prove_seam(kept, replaced, model.tolerance_mm, max_verification_cells)?;
+    let mut result = model.clone();
+    result.loops[right[0]].coedges[right[1]].edge = lc.edge;
+    result.loops[right[0]].coedges[right[1]].reversed = true;
+    if let Some(trim) = transferred_trim {
+        let coedge = result.loops[right[0]].coedges[right[1]].clone();
+        result.loops[right[0]].coedges[right[1]] = coedge.with_trim(trim)?;
+    }
+    result.edges.remove(rc.edge);
+    for c in result.loops.iter_mut().flat_map(|l| &mut l.coedges) {
+        if c.edge > rc.edge {
+            c.edge -= 1;
+        }
+    }
+    compact_sewn_vertices(model, &mut result, vertex_map)?;
     result.rebuild_topology_ids();
     if validate_input {
         result.inherit_topology_ids(&[model]);
@@ -495,22 +551,23 @@ pub fn attach_patch_sheet_edges(
     Ok((result, used))
 }
 
-pub(super) fn attach_impl(
-    source: &Model,
-    target: &Model,
-    source_loop: usize,
-    source_coedge: usize,
-    target_coedge: usize,
-    max_verification_cells: usize,
-    validate_result: bool,
-) -> Result<(Model, SharedPatchEdge)> {
+/// The validated pieces of one attach request: the source face and coedge,
+/// and the target coedge, both forward and with opposite exact endpoints.
+struct AttachSelection<'a> {
+    source_face: &'a Face,
+    sc: &'a Coedge,
+    tc: &'a Coedge,
+}
+
+fn invalid_patch(message: &'static str) -> Error {
+    Error::new("BREP_INVALID_THREAD_PATCH", message)
+}
+
+fn check_attach_models(source: &Model, target: &Model) -> Result<()> {
     source.validate()?;
     target.validate()?;
     if target.faces.len() != 1 || target.loops.len() != 1 {
-        return Err(Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Target must be a single-loop face",
-        ));
+        return Err(invalid_patch("Target must be a single-loop face"));
     }
     for model in [source, target] {
         if model.shells.len() != 1
@@ -518,29 +575,34 @@ pub(super) fn attach_impl(
             || !model.bodies.is_empty()
             || model.faces.iter().any(|f| !f.holes.is_empty())
         {
-            return Err(Error::new(
-                "BREP_INVALID_THREAD_PATCH",
+            return Err(invalid_patch(
                 "Join requires open shells without bodies or holes",
             ));
         }
     }
-    let source_wire = source.loops.get(source_loop).ok_or_else(|| {
-        Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Source loop index out of range",
-        )
-    })?;
+    Ok(())
+}
+
+fn select_attach_coedges<'a>(
+    source: &'a Model,
+    target: &'a Model,
+    source_loop: usize,
+    source_coedge: usize,
+    target_coedge: usize,
+) -> Result<AttachSelection<'a>> {
+    let source_wire = source
+        .loops
+        .get(source_loop)
+        .ok_or_else(|| invalid_patch("Source loop index out of range"))?;
     let source_face = source
         .faces
         .iter()
         .find(|f| f.outer == source_loop)
-        .ok_or_else(|| Error::new("BREP_INVALID_THREAD_PATCH", "Source loop has no face owner"))?;
-    let sc = source_wire.coedges.get(source_coedge).ok_or_else(|| {
-        Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Source coedge index out of range",
-        )
-    })?;
+        .ok_or_else(|| invalid_patch("Source loop has no face owner"))?;
+    let sc = source_wire
+        .coedges
+        .get(source_coedge)
+        .ok_or_else(|| invalid_patch("Source coedge index out of range"))?;
     if source
         .loops
         .iter()
@@ -549,91 +611,107 @@ pub(super) fn attach_impl(
         .count()
         != 1
     {
-        return Err(Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Selected source edge is not a boundary edge",
-        ));
+        return Err(invalid_patch("Selected source edge is not a boundary edge"));
     }
-    let tc = target.loops[0].coedges.get(target_coedge).ok_or_else(|| {
-        Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Target coedge index out of range",
-        )
-    })?;
+    let tc = target.loops[0]
+        .coedges
+        .get(target_coedge)
+        .ok_or_else(|| invalid_patch("Target coedge index out of range"))?;
     if sc.reversed || tc.reversed {
-        return Err(Error::new(
-            "BREP_INVALID_THREAD_PATCH",
-            "Join expects forward source sheet coedges",
-        ));
+        return Err(invalid_patch("Join expects forward source sheet coedges"));
     }
     let se = &source.edges[sc.edge];
     let te = &target.edges[tc.edge];
     if source.vertices[se.vertices[0]].point != target.vertices[te.vertices[1]].point
         || source.vertices[se.vertices[1]].point != target.vertices[te.vertices[0]].point
     {
-        return Err(Error::new(
-            "BREP_INVALID_THREAD_PATCH",
+        return Err(invalid_patch(
             "Join needs exact opposite boundary endpoints",
         ));
     }
-    let tolerance = source.tolerance_mm.min(target.tolerance_mm);
-    let provisional = nurbs_core::thread::MappedEdge {
-        curve: se.curve.clone(),
-        pcurve: sc.pcurve.clone(),
-        agreement: Report {
-            status: nurbs_core::curve_surface_agreement::Status::Unresolved,
-            cells: 0,
-            witness: None,
-            witness_distance: None,
+    Ok(AttachSelection {
+        source_face,
+        sc,
+        tc,
+    })
+}
+
+fn verify_attach_seam(
+    source: &Model,
+    target: &Model,
+    selection: &AttachSelection<'_>,
+    tolerance: f64,
+    max_verification_cells: usize,
+) -> Result<(Option<brep_topology::CoedgeTrim>, SharedPatchEdge)> {
+    let AttachSelection {
+        source_face,
+        sc,
+        tc,
+    } = *selection;
+    prove_seam(
+        SeamUse {
+            curve: &source.edges[sc.edge].curve,
+            coedge: sc,
+            surface: &source_face.surface,
         },
-        requested_world_tolerance: tolerance,
-    };
-    let transferred_trim = transfer_coedge_trim(&te.curve, &se.curve, tc.trim())?;
-    let shared = share_patch_edge_with_trims(
-        &provisional,
-        sc.trim(),
-        &source_face.surface,
-        TargetUse {
-            pcurve: &tc.pcurve,
-            proof: tc.trim().map(|trim| (&te.curve, trim)),
+        SeamUse {
+            curve: &target.edges[tc.edge].curve,
+            coedge: tc,
             surface: &target.faces[0].surface,
-            reversed: true,
         },
         tolerance,
         max_verification_cells,
-    )?;
-    let mut result = source.clone();
-    result.tolerance_mm = tolerance;
+    )
+}
+
+/// Map every target vertex into `result`: the seam ends onto the source ends,
+/// other exact matches onto their unique source vertex, the rest appended.
+fn merge_attach_vertices(
+    source: &Model,
+    target: &Model,
+    result: &mut Model,
+    se: &Edge,
+    te: &Edge,
+) -> Result<Vec<usize>> {
     let mut vertices = vec![usize::MAX; target.vertices.len()];
     vertices[te.vertices[0]] = se.vertices[1];
     vertices[te.vertices[1]] = se.vertices[0];
     for (i, vertex) in target.vertices.iter().enumerate() {
-        if vertices[i] == usize::MAX {
-            let matches: Vec<_> = source
-                .vertices
-                .iter()
-                .enumerate()
-                .filter(|(_, v)| v.point == vertex.point)
-                .map(|(i, _)| i)
-                .collect();
-            if matches.len() > 1 {
-                return Err(Error::new(
-                    "BREP_INVALID_THREAD_PATCH",
-                    "Ambiguous exact vertex correspondence",
-                ));
-            }
-            if let Some(&existing) = matches.first() {
-                vertices[i] = existing;
-            } else {
-                vertices[i] = result.vertices.len();
-                result.vertices.push(vertex.clone());
-            }
+        if vertices[i] != usize::MAX {
+            continue;
+        }
+        let matches: Vec<_> = source
+            .vertices
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| v.point == vertex.point)
+            .map(|(i, _)| i)
+            .collect();
+        if matches.len() > 1 {
+            return Err(invalid_patch("Ambiguous exact vertex correspondence"));
+        }
+        if let Some(&existing) = matches.first() {
+            vertices[i] = existing;
+        } else {
+            vertices[i] = result.vertices.len();
+            result.vertices.push(vertex.clone());
         }
     }
+    Ok(vertices)
+}
+
+/// Append every target edge except the seam, which reuses the source edge.
+fn merge_attach_edges(
+    target: &Model,
+    result: &mut Model,
+    vertices: &[usize],
+    seam: [usize; 2],
+) -> Vec<usize> {
+    let [source_edge, target_edge] = seam;
     let mut edges = vec![usize::MAX; target.edges.len()];
-    edges[tc.edge] = sc.edge;
+    edges[target_edge] = source_edge;
     for (i, edge) in target.edges.iter().enumerate() {
-        if i == tc.edge {
+        if i == target_edge {
             continue;
         }
         edges[i] = result.edges.len();
@@ -641,6 +719,18 @@ pub(super) fn attach_impl(
         edge.vertices = edge.vertices.map(|v| vertices[v]);
         result.edges.push(edge);
     }
+    edges
+}
+
+/// Append the target loop (seam coedge reversed, carrying the transferred
+/// trim) and its face to the single shell of `result`.
+fn push_attach_face(
+    target: &Model,
+    result: &mut Model,
+    edges: &[usize],
+    seam_edge: usize,
+    transferred_trim: Option<brep_topology::CoedgeTrim>,
+) -> Result<()> {
     let outer = result.loops.len();
     result.loops.push(Loop {
         coedges: target.loops[0]
@@ -649,7 +739,7 @@ pub(super) fn attach_impl(
             .map(|c| {
                 let mut mapped = c.clone();
                 mapped.edge = edges[c.edge];
-                if c.edge == tc.edge {
+                if c.edge == seam_edge {
                     mapped.reversed = true;
                     if let Some(trim) = transferred_trim {
                         mapped = mapped.with_trim(trim)?;
@@ -669,6 +759,37 @@ pub(super) fn attach_impl(
         face,
         reversed: false,
     });
+    Ok(())
+}
+
+pub(super) fn attach_impl(
+    source: &Model,
+    target: &Model,
+    source_loop: usize,
+    source_coedge: usize,
+    target_coedge: usize,
+    max_verification_cells: usize,
+    validate_result: bool,
+) -> Result<(Model, SharedPatchEdge)> {
+    check_attach_models(source, target)?;
+    let selection =
+        select_attach_coedges(source, target, source_loop, source_coedge, target_coedge)?;
+    let tolerance = source.tolerance_mm.min(target.tolerance_mm);
+    let (transferred_trim, shared) = verify_attach_seam(
+        source,
+        target,
+        &selection,
+        tolerance,
+        max_verification_cells,
+    )?;
+    let AttachSelection { sc, tc, .. } = selection;
+    let se = &source.edges[sc.edge];
+    let te = &target.edges[tc.edge];
+    let mut result = source.clone();
+    result.tolerance_mm = tolerance;
+    let vertices = merge_attach_vertices(source, target, &mut result, se, te)?;
+    let edges = merge_attach_edges(target, &mut result, &vertices, [sc.edge, tc.edge]);
+    push_attach_face(target, &mut result, &edges, tc.edge, transferred_trim)?;
     result.rebuild_topology_ids();
     if validate_result {
         result.inherit_topology_ids(&[source, target]);

@@ -64,6 +64,10 @@ pub fn classify_point(
         cells: 0,
         domain_cells: 0,
     };
+    let face_domains = (0..model.faces.len())
+        .map(|i| FaceDomain::new(model, i, tolerance_uv))
+        .collect::<Result<Vec<_>>>()?;
+    let surfaces: Vec<_> = model.faces.iter().map(|f| &f.surface).collect();
     for (i, &direction) in directions.iter().enumerate() {
         let cells = max_cells - result.cells;
         let domains = max_domain_cells - result.domain_cells;
@@ -73,13 +77,17 @@ pub fn classify_point(
         // Reserve work for later directions instead of letting a tangent ray
         // consume the complete budget. Unused work carries forward.
         let remaining = directions.len() - i;
-        let attempt = classify_ray(
-            model,
+        let attempt = classify_surface_ray(
+            &surfaces,
             point,
             direction,
             tolerance_uv,
             (cells / remaining).max(1),
             (domains / remaining).max(1),
+            |face, uv, work| {
+                let c = face_domains[face].classify(uv, work)?;
+                Ok((c.location, c.cells))
+            },
         )?;
         result.cells += attempt.cells;
         result.domain_cells += attempt.domain_cells;

@@ -4,7 +4,12 @@ import type { NativeGeometryArtifact } from '../src/core/nativeGeometry'
 import type { DisplayLevelPayload, DisplayLevelSummaryEntry } from '../src/kernel/displayLevelService'
 import { DisplayLevelService } from '../src/kernel/displayLevelService'
 import { createDisplayLevelWorkerHandler, type DisplayLevelResponse } from '../src/kernel/displayLevelWorkerRuntime'
-import { rayBoxHit } from '../src/render/boundingBoxDisplay'
+import {
+  BoundingBoxLayer,
+  buildBoundingBoxLines,
+  BOX_VERTICES_PER_MESH,
+  rayBoxHit,
+} from '../src/render/boundingBoxDisplay'
 import { isDeferredLevel, levelByteSize } from '../src/render/deferredLevels'
 import {
   DISPLAY_BUDGET_PRESETS,
@@ -13,6 +18,7 @@ import {
   ProgressiveLevelStore,
   type IdleScheduler,
 } from '../src/render/displayScheduler'
+import { MeshDisplayController } from '../src/render/meshDisplayController'
 import { createMeshLodState, updateMeshLods } from '../src/render/meshLod'
 import type { NativePickingCache } from '../src/render/nativePickingCache'
 import { OnDemandLevelSource, type DisplayLevelProvider } from '../src/render/onDemandLevels'
@@ -24,6 +30,7 @@ import type { ViewerLodCamera } from '../src/render/viewerLod'
 import * as viewerLod from '../src/render/viewerLod'
 import { displayQualityStorageKey, readDisplayQuality, useDisplayQuality } from '../src/composables/useDisplayQuality'
 import { buildMeshBvh } from '../src/kernel/meshBvh'
+import { GpuResidencyCache } from '../src/render/gpuResidencyCache'
 
 interface FakeBuffer {
   size: number
@@ -187,6 +194,34 @@ afterEach(() => {
 })
 
 describe('bounding-box draw path', () => {
+  it('batches the 12 edges of every boxed, drawable mesh into one line list', () => {
+    const a = mesh({ color: [0.2, 0.4, 0.6, 0.5] })
+    const b = mesh({ center: [5, 0, 0] })
+    const hidden = mesh()
+    a.displayBox = b.displayBox = hidden.displayBox = true
+    hidden.visible = false
+    const lines = buildBoundingBoxLines([a, b, hidden, mesh()], () => true)
+    expect(lines.length).toBe(2 * BOX_VERTICES_PER_MESH * 7)
+    expect(lines.slice(0, 7)).toEqual([-1, -1, -1, 0.2, 0.4, 0.6, 1])
+    expect(buildBoundingBoxLines([a, b], index => index === 1).length).toBe(BOX_VERTICES_PER_MESH * 7)
+  })
+
+  it('rewrites the batched buffer only when the box set changes', () => {
+    const { dev, writes, created } = device()
+    const layer = new BoundingBoxLayer()
+    const a = mesh()
+    a.displayBox = true
+    layer.update(dev, [a], () => true)
+    layer.update(dev, [a], () => true)
+    expect(writes).toHaveLength(1)
+    expect(layer.boxCount).toBe(1)
+    a.displayBox = false
+    layer.update(dev, [a], () => true)
+    expect(layer.boxCount).toBe(0)
+    layer.release()
+    expect(created.every(buffer => buffer.destroyed)).toBe(true)
+  })
+
   it('intersects rays with the world box', () => {
     const bounds = { min: [-1, -1, -1] as [number, number, number], max: [1, 1, 1] as [number, number, number] }
     expect(rayBoxHit({ origin: [0, 0, 5], direction: [0, 0, -1] }, bounds)).toEqual({
@@ -201,8 +236,7 @@ describe('bounding-box draw path', () => {
   it('picks a boxed mesh by its box without querying triangles', () => {
     const boxed = mesh({ center: [0, 0, 0] })
     const behind = mesh({ center: [0, 0, -5] })
-    boxed.lod = createMeshLodState(boxed, [level(4, 0.4), level(16, 0.1)])!
-    boxed.lod.boxed = true
+    boxed.displayBox = true
     const nativePicking = picking()
     const meshes = [boxed, behind]
     const hits = findHitCandidatesForRay(
@@ -241,11 +275,9 @@ describe('bounding-box draw path', () => {
     const { dev } = device()
     const near = mesh({ levels: [level(4, 0.4), level(16, 0.1)], center: [0, 0, 5] })
     const far = mesh({ levels: [level(4, 0.4), level(16, 0.1)], center: [0, 0, -5000] })
-    updateMeshLods(dev, [near, far], camera, picking(), undefined, {
-      budget: { ...DISPLAY_BUDGET_PRESETS.medium, boundingBoxProxies: true },
-    })
-    expect(near.lod?.boxed).toBe(false)
-    expect(far.lod?.boxed).toBe(true)
+    updateMeshLods(dev, [near, far], camera, picking(), undefined, { budget: DISPLAY_BUDGET_PRESETS.medium })
+    expect(near.displayBox).toBe(false)
+    expect(far.displayBox).toBe(true)
     expect(far.lod?.current).toBe(0)
   })
 })
@@ -275,7 +307,7 @@ describe('display budget presets', () => {
     expect(displayQuality.value).toBe('medium')
     setDisplayQuality('low')
     expect(store.get(displayQualityStorageKey('main'))).toBe('low')
-    expect(renderer.getDisplayBudget()).toBe(DISPLAY_BUDGET_PRESETS.low)
+    expect(renderer.getDisplayBudget()).toEqual({ ...DISPLAY_BUDGET_PRESETS.low, boundingBoxProxies: true })
     expect(readDisplayQuality('main')).toBe('low')
     expect(readDisplayQuality('other')).toBe('medium')
     store.set(displayQualityStorageKey('other'), 'bogus')
@@ -351,6 +383,46 @@ describe('levels produced on demand', () => {
     expect(updateMeshLods(dev, [m], camera, picking())).toEqual([])
     expect(m.lod?.current).toBeNull()
     expect(created).toHaveLength(0)
+  })
+
+  it('drives summaries, selection and boxes through the display controller', async () => {
+    vi.spyOn(viewerLod, 'selectViewerLod').mockImplementation(levels => ({
+      level: levels.length - 1,
+      projectedError: 0,
+      withinPixelBudget: true,
+      reason: 'initial',
+    }))
+    const fake = fakeProvider(summary)
+    const requestRender = vi.fn()
+    const controller = new MeshDisplayController(requestRender, () => fake.provider)
+    const { dev } = device()
+    const near = mesh({ assetId: 'asset:near', native: snapshot('{"geometry":{"n":1}}'), center: [0, 0, 5] })
+    const far = mesh({ assetId: 'asset:far', native: snapshot('{"geometry":{"f":1}}'), center: [0, 0, -5000] })
+    const residency = new GpuResidencyCache(1e6)
+    const frame = (key: string) => ({
+      dev,
+      meshes: [near, far],
+      camera,
+      selectionKey: key,
+      sceneEpoch: 1,
+      residency,
+      nativePicking: picking(),
+      drawable: () => true,
+    })
+    expect(controller.update(frame('a'))).toEqual([])
+    expect(fake.summaries).toHaveLength(2)
+    fake.answerSummaries()
+    await flushPromises()
+    expect(requestRender).toHaveBeenCalled()
+    controller.update(frame('a'))
+    expect(near.lod).toBeDefined()
+    expect(far.displayBox).toBe(true)
+    expect(controller.boxes.boxCount).toBe(1)
+    expect(fake.levels.map(request => request.index)).toEqual([1, 0])
+    expect(controller.setBudget(DISPLAY_BUDGET_PRESETS.medium)).toBe(false)
+    expect(controller.setBudget(DISPLAY_BUDGET_PRESETS.high)).toBe(true)
+    controller.dispose()
+    expect(fake.provider.dispose).toHaveBeenCalled()
   })
 })
 

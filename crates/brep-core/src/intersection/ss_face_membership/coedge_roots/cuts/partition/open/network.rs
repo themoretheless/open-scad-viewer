@@ -2,6 +2,19 @@
 use super::*;
 mod bridges;
 mod graph;
+mod material;
+mod material_seams;
+mod sew;
+pub use sew::assemble_exact_patch_solid;
+pub use material_seams::OpenSSBooleanEdgeUse;
+/// Separate bounds for candidate enumeration, exact clipping and rim sewing.
+#[derive(Clone, Copy)]
+pub struct OpenSSIntersectionCompletionLimits {
+    pub face_pairs: usize,
+    pub polygon_tests_per_pair: usize,
+    pub rim_pairs: usize,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct OpenSSNetworkCut {
     pub path: usize,
@@ -17,7 +30,7 @@ pub struct OpenSSNetworkPort {
     pub vertices: [usize; 2],
 }
 pub struct QualifiedOpenSSNetwork<'s, 'i, 'p, 'r, 'a> {
-    paths: Vec<&'s QualifiedOpenSSPath<'i, 'p, 'r, 'a>>,
+    source: NetworkSource<'s, 'i, 'p, 'r, 'a>,
     limits: OpenSSFaceLimits,
     models: Vec<Model>,
     faces: [Vec<usize>; 2],
@@ -27,7 +40,64 @@ pub struct QualifiedOpenSSNetwork<'s, 'i, 'p, 'r, 'a> {
     pairs: usize,
     operations: usize,
 }
+enum NetworkSource<'s, 'i, 'p, 'r, 'a> {
+    Paths(Vec<&'s QualifiedOpenSSPath<'i, 'p, 'r, 'a>>),
+    Boundary {
+        input: &'i QualifiedCutPartitions<'p, 'r, 'a>,
+        side: usize,
+        limits: OpenSSPathLimits,
+    },
+}
 impl QualifiedOpenSSNetwork<'_, '_, '_, '_, '_> {
+    fn boolean_descendant(
+        &self,
+        query: crate::closed_solid::BooleanFace<'_>,
+        descendant: usize,
+    ) -> Result<(&Model, f64)> {
+        use crate::closed_solid::BooleanSourceSide;
+        let input = match &self.source {
+            NetworkSource::Paths(paths) => paths[0].input,
+            NetworkSource::Boundary { input, .. } => input,
+        };
+        let side = usize::from(query.side == BooleanSourceSide::Second);
+        let original = input.source.roots.faces;
+        let model = &self.models[input.side_model[side]];
+        if original[side].1 != query.face
+            || original
+                .iter()
+                .zip(query.solids)
+                .any(|((model, _), solid)| *model != solid.model())
+            || !self.faces[side].contains(&descendant)
+            || model.faces[descendant].surface != original[side].0.faces[query.face].surface
+        {
+            return Err(unproven(
+                "Boolean query does not identify an SS descendant of the supplied solids",
+            ));
+        }
+        Ok((model, input.source.limits.uv_tolerance))
+    }
+
+    /// Select Boolean material throughout a UV rectangle inside an actual
+    /// descendant face. Extending this decision to the whole descendant
+    /// requires coverage of its remaining area.
+    pub fn qualify_boolean_rectangle(
+        &self,
+        query: crate::closed_solid::BooleanFace<'_>,
+        descendant: usize,
+        rectangle: [[f64; 2]; 2],
+        directions: &[[f64; 3]],
+        limits: crate::closed_solid::BooleanFaceBoxLimits,
+    ) -> Result<crate::closed_solid::QualifiedBooleanFaceBox> {
+        let (model, tolerance) = self.boolean_descendant(query, descendant)?;
+        let domain = crate::face_domain::FaceDomain::new(model, descendant, tolerance)?;
+        if domain.classify(rectangle, limits.domain_cells)?.location != Location::Inside {
+            return Err(unproven(
+                "Boolean rectangle is not proved inside the SS descendant",
+            ));
+        }
+        crate::closed_solid::qualify_boolean_face_box(query, rectangle, directions, limits)
+    }
+
     pub fn models(&self) -> &[Model] {
         &self.models
     }
@@ -50,7 +120,15 @@ impl QualifiedOpenSSNetwork<'_, '_, '_, '_, '_> {
         self.operations
     }
     pub fn reverify(&self) -> Result<()> {
-        let r = partition_open_ss_network(&self.paths, self.limits)?;
+        let r = match &self.source {
+            NetworkSource::Paths(paths) => partition_open_ss_network(paths, self.limits)?,
+            NetworkSource::Boundary {
+                input,
+                side,
+                limits,
+            } => discover_open_ss_network(input, *side, *limits, self.limits)?
+                .ok_or_else(|| unproven("Discovered SS network lost its retained paths"))?,
+        };
         if self.models != r.models
             || self.faces != r.faces
             || self.cuts != r.cuts
@@ -63,6 +141,47 @@ impl QualifiedOpenSSNetwork<'_, '_, '_, '_, '_> {
         }
         Ok(())
     }
+}
+
+/// Automatically find and apply the retained open cuts between certified
+/// boundary events. The result retains the source needed to repeat discovery.
+/// No open interval is represented by an empty result.
+pub fn discover_open_ss_network<'i, 'p, 'r, 'a>(
+    input: &'i QualifiedCutPartitions<'p, 'r, 'a>,
+    side: usize,
+    path_limits: OpenSSPathLimits,
+    face_limits: OpenSSFaceLimits,
+) -> Result<Option<QualifiedOpenSSNetwork<'i, 'i, 'p, 'r, 'a>>> {
+    let paths = discover_open_ss_paths(input, side, path_limits)?;
+    if paths.is_empty() {
+        return Ok(None);
+    }
+    let paths: Vec<_> = paths.iter().collect();
+    let QualifiedOpenSSNetwork {
+        models,
+        faces,
+        cuts,
+        ports,
+        cells,
+        pairs,
+        operations,
+        ..
+    } = partition_open_ss_network(&paths, face_limits)?;
+    Ok(Some(QualifiedOpenSSNetwork {
+        source: NetworkSource::Boundary {
+            input,
+            side,
+            limits: path_limits,
+        },
+        limits: face_limits,
+        models,
+        faces,
+        cuts,
+        ports,
+        cells,
+        pairs,
+        operations,
+    }))
 }
 /// Each path must share the identical immutable cut-partition owner. Unique
 /// actual endpoint ownership selects current descendants, never nearest faces.
@@ -256,7 +375,7 @@ pub fn partition_open_ss_network<'s, 'i, 'p, 'r, 'a>(
         m.refresh_change_set(&[&input.models[i]]);
     }
     Ok(QualifiedOpenSSNetwork {
-        paths: paths.to_vec(),
+        source: NetworkSource::Paths(paths.to_vec()),
         limits,
         models,
         faces,

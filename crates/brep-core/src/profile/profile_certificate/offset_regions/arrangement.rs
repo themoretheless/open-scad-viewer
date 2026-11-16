@@ -210,18 +210,17 @@ pub(in crate::profile::profile_certificate) fn boolean(a: &Rings, b: &Rings, op:
 pub(in crate::profile::profile_certificate) fn union(rings: &Rings) -> Result<Rings> {
     arrange(std::slice::from_ref(rings), &|w| w[0] > 0, 8192)
 }
-fn arrange(sets: &[Rings], material: &dyn Fn(&[i64]) -> bool, max_edges: usize) -> Result<Rings> {
-    let originals: Vec<_> = sets.iter().map(edges).collect();
-    let original: Vec<_> = originals
-        .iter()
-        .enumerate()
-        .flat_map(|(owner, es)| es.iter().cloned().map(move |e| (e, owner)))
-        .collect();
-    if original.len() > max_edges {
-        return Err(refused(
-            "Exact region arrangement input edge budget exceeded",
-        ));
-    }
+const MAX_INCIDENCES: usize = 32768;
+const MAX_ATOMIC_EDGES: usize = 8192;
+const MAX_RING_STEPS: usize = 8192;
+const MAX_OUTPUT_VERTICES: usize = 4096;
+/// An input edge with the index of the ring set it came from.
+type OwnedEdge = (Edge, usize);
+/// Winding jump of every ring set across one atomic edge.
+type AtomicEdges = BTreeMap<Edge, Vec<i64>>;
+/// Parameters along every input edge where another edge meets it, always
+/// including both ends.
+fn segment_cuts(original: &[OwnedEdge]) -> Result<Vec<Vec<Q>>> {
     let bboxes: Vec<[(&Q, &Q); 2]> = original
         .iter()
         .map(|((a, b), _)| {
@@ -249,14 +248,19 @@ fn arrange(sets: &[Rings], material: &dyn Fn(&[i64]) -> bool, max_edges: usize) 
             let ((c, d), _) = &original[j];
             let (x, y) = parameters(a, b, c, d);
             incidences += x.len() + y.len();
-            if incidences > 32768 {
+            if incidences > MAX_INCIDENCES {
                 return Err(refused("Offset arrangement incidence budget exceeded"));
             }
             cuts[i].extend(x);
             cuts[j].extend(y);
         }
     }
-    let mut atomic = BTreeMap::<Edge, Vec<i64>>::new();
+    Ok(cuts)
+}
+/// Splits every input edge at its cuts into atomic edges with a canonical
+/// direction, summing the signed uses of each ring set.
+fn atomic_edges(original: &[OwnedEdge], mut cuts: Vec<Vec<Q>>, sets: usize) -> Result<AtomicEdges> {
+    let mut atomic = AtomicEdges::new();
     for (((a, b), owner), cut) in original.iter().zip(&mut cuts) {
         cut.sort();
         cut.dedup();
@@ -267,15 +271,23 @@ fn arrange(sets: &[Rings], material: &dyn Fn(&[i64]) -> bool, max_edges: usize) 
                 continue;
             }
             let (key, sign) = if x < y { ((x, y), 1) } else { ((y, x), -1) };
-            atomic.entry(key).or_insert_with(|| vec![0; sets.len()])[*owner] += sign;
+            atomic.entry(key).or_insert_with(|| vec![0; sets])[*owner] += sign;
         }
     }
-    if atomic.len() > 8192 {
+    if atomic.len() > MAX_ATOMIC_EDGES {
         return Err(refused("Offset arrangement atomic edge budget exceeded"));
     }
-    let all: Vec<_> = atomic.keys().cloned().collect();
+    Ok(atomic)
+}
+/// Atomic edges with material on exactly one side, directed so the
+/// material lies on their left.
+fn material_boundary(
+    atomic: &AtomicEdges,
+    originals: &[Vec<Edge>],
+    material: &dyn Fn(&[i64]) -> bool,
+) -> Result<BTreeSet<Edge>> {
     let mut selected = BTreeSet::<Edge>::new();
-    for ((a, b), jump) in &atomic {
+    for ((a, b), jump) in atomic {
         if jump.iter().all(|j| *j == 0) {
             continue;
         }
@@ -293,56 +305,131 @@ fn arrange(sets: &[Rings], material: &dyn Fn(&[i64]) -> bool, max_edges: usize) 
             selected.insert((b.clone(), a.clone()));
         }
     }
+    Ok(selected)
+}
+/// Neighbours of every arrangement vertex in angular order.
+fn rotations(atomic: &AtomicEdges) -> BTreeMap<Point, Vec<Point>> {
     let mut around = BTreeMap::<Point, Vec<Point>>::new();
-    for (a, b) in &all {
+    for (a, b) in atomic.keys() {
         around.entry(a.clone()).or_default().push(b.clone());
         around.entry(b.clone()).or_default().push(a.clone());
     }
     for (center, neighbors) in &mut around {
         neighbors.sort_by(|a, b| angle(&difference(a, center), &difference(b, center)));
     }
+    around
+}
+/// Follows the selected boundary from `first`, turning to the next selected
+/// edge clockwise at every vertex, until it closes.
+fn trace_ring(
+    first: &Edge,
+    selected: &BTreeSet<Edge>,
+    around: &BTreeMap<Point, Vec<Point>>,
+    used: &mut BTreeSet<Edge>,
+) -> Result<Vec<Point>> {
+    let mut ring = Vec::new();
+    let mut edge = first.clone();
+    loop {
+        if !used.insert(edge.clone()) {
+            return Err(refused("Offset region boundary does not close canonically"));
+        }
+        ring.push(edge.0.clone());
+        let neighbors = around
+            .get(&edge.1)
+            .ok_or_else(|| refused("Missing offset halfedge twin"))?;
+        let index = neighbors
+            .iter()
+            .position(|p| *p == edge.0)
+            .ok_or_else(|| refused("Missing offset halfedge twin"))?;
+        let next = (1..=neighbors.len())
+            .find_map(|n| {
+                let p = &neighbors[(index + neighbors.len() - n) % neighbors.len()];
+                selected
+                    .contains(&(edge.1.clone(), p.clone()))
+                    .then_some((edge.1.clone(), p.clone()))
+            })
+            .ok_or_else(|| refused("Offset selected boundary is open"))?;
+        if next == *first {
+            return Ok(ring);
+        }
+        edge = next;
+        if ring.len() > MAX_RING_STEPS {
+            return Err(refused("Offset boundary traversal budget exceeded"));
+        }
+    }
+}
+fn arrange(sets: &[Rings], material: &dyn Fn(&[i64]) -> bool, max_edges: usize) -> Result<Rings> {
+    arrange_with_limits(sets, material, max_edges, None)
+}
+
+/// Exact linear intersection in a shared UV chart, retaining collinear
+/// arrangement vertices as possible shared BRep edge endpoints.
+pub(crate) fn intersection_rings(
+    first: Vec<Vec<[Q; 2]>>,
+    second: Vec<Vec<[Q; 2]>>,
+    max_work: usize,
+) -> Result<Vec<Vec<Vec<[Q; 2]>>>> {
+    let rings = arrange_with_limits(
+        &[first, second],
+        &|w| w[0] > 0 && w[1] > 0,
+        8192,
+        Some(max_work),
+    )?;
+    Ok(groups(&rings)?
+        .into_iter()
+        .map(|group| group.into_iter().map(|i| rings[i].clone()).collect())
+        .collect())
+}
+
+fn arrange_with_limits(
+    sets: &[Rings],
+    material: &dyn Fn(&[i64]) -> bool,
+    max_edges: usize,
+    max_work: Option<usize>,
+) -> Result<Rings> {
+    let originals: Vec<_> = sets.iter().map(edges).collect();
+    let original: Vec<OwnedEdge> = originals
+        .iter()
+        .enumerate()
+        .flat_map(|(owner, es)| es.iter().cloned().map(move |e| (e, owner)))
+        .collect();
+    if original.len() > max_edges {
+        return Err(refused(
+            "Exact region arrangement input edge budget exceeded",
+        ));
+    }
+    let count = original.len();
+    let pair_tests = count.saturating_mul(count.saturating_sub(1)) / 2;
+    let budget_error = || {
+        crate::Error::new("BREP_RESOURCE_LIMIT", "Exact UV arrangement exceeded its work budget")
+    };
+    if max_work.is_some_and(|work| pair_tests > work) {
+        return Err(budget_error());
+    }
+    let cuts = segment_cuts(&original)?;
+    let atomic = atomic_edges(&original, cuts, sets.len())?;
+    if max_work
+        .is_some_and(|work| pair_tests.saturating_add(count.saturating_mul(atomic.len())) > work)
+    {
+        return Err(budget_error());
+    }
+    let selected = material_boundary(&atomic, &originals, material)?;
+    let around = rotations(&atomic);
     let mut used = BTreeSet::new();
     let mut result = Vec::new();
     for first in &selected {
         if used.contains(first) {
             continue;
         }
-        let mut ring = Vec::new();
-        let mut edge = first.clone();
-        loop {
-            if !used.insert(edge.clone()) {
-                return Err(refused("Offset region boundary does not close canonically"));
-            }
-            ring.push(edge.0.clone());
-            let neighbors = &around[&edge.1];
-            let index = neighbors
-                .iter()
-                .position(|p| *p == edge.0)
-                .ok_or_else(|| refused("Missing offset halfedge twin"))?;
-            let next = (1..=neighbors.len())
-                .find_map(|n| {
-                    let p = &neighbors[(index + neighbors.len() - n) % neighbors.len()];
-                    selected
-                        .contains(&(edge.1.clone(), p.clone()))
-                        .then_some((edge.1.clone(), p.clone()))
-                })
-                .ok_or_else(|| refused("Offset selected boundary is open"))?;
-            if next == *first {
-                break;
-            }
-            edge = next;
-            if ring.len() > 8192 {
-                return Err(refused("Offset boundary traversal budget exceeded"));
-            }
-        }
-        let ring = simplify(ring);
+        let ring = trace_ring(first, &selected, &around, &mut used)?;
+        let ring = if max_work.is_some() { ring } else { simplify(ring) };
         if ring.len() < 3 || area(&ring).is_zero() {
             return Err(refused("Offset positive region has a degenerate boundary"));
         }
         result.push(ring);
     }
     result.sort();
-    if result.iter().map(Vec::len).sum::<usize>() > 4096 {
+    if result.iter().map(Vec::len).sum::<usize>() > MAX_OUTPUT_VERTICES {
         return Err(refused("Offset region output vertex budget exceeded"));
     }
     Ok(result)

@@ -44,15 +44,16 @@ pub struct RationalClosedWork {
     pub cap_cells: usize,
     pub orientation_cells: usize,
 }
-pub struct RationalClosedReport {
-    pub certified: bool,
-    /// What is proven about the swept source boundary.
-    pub source: RationalClosedSource,
-    pub topology_preserved: bool,
-    /// Work spent, each counter bounded by its limit in `RationalClosedLimits`.
-    pub work: RationalClosedWork,
+#[derive(Default)]
+pub struct RationalClosedAudits {
     pub material: Option<nurbs_core::trim_region_audit::Report>,
     pub volume: Option<nurbs_core::progressive_sweep::IdealVolumeReport>,
+    pub binding: Option<smooth::BindingReport>,
+    pub smoothness: Option<crate::sweep_smoothness::complete::Report>,
+    pub c0_regularity: Option<crate::boundary_embedding::regularity::Report>,
+    pub c0_agreement: Option<crate::boundary_agreement::ExactReport>,
+}
+pub struct RationalClosedChart {
     pub proof_coordinates: Option<affine_volume::ProofCoordinates>,
     pub source_shear: Option<affine_volume::SourceShearReport>,
     /// Original positive-weight UV trim hull. Valid material audit precedes it.
@@ -60,10 +61,18 @@ pub struct RationalClosedReport {
     /// Outward normalized carrier rectangle containing all filled material.
     pub proof_uv_window: [[f64; 2]; 2],
     pub material_plane_chart: Option<affine_volume::MaterialPlaneReport>,
-    pub binding: Option<smooth::BindingReport>,
-    pub smoothness: Option<crate::sweep_smoothness::complete::Report>,
-    pub c0_regularity: Option<crate::boundary_embedding::regularity::Report>,
-    pub c0_agreement: Option<crate::boundary_agreement::ExactReport>,
+}
+pub struct RationalClosedReport {
+    pub certified: bool,
+    /// What is proven about the swept source boundary.
+    pub source: RationalClosedSource,
+    pub topology_preserved: bool,
+    /// Work spent, each counter bounded by its limit in `RationalClosedLimits`.
+    pub work: RationalClosedWork,
+    /// Independent audits of the authored body.
+    pub audits: RationalClosedAudits,
+    /// Affine proof chart of the material region.
+    pub chart: RationalClosedChart,
     pub caps: Vec<FilledGraphCapReport>,
     pub reason: Option<&'static str>,
 }
@@ -237,17 +246,14 @@ fn rational_closed_impl(
         },
         topology_preserved: false,
         work: RationalClosedWork::default(),
-        material: None,
-        volume: None,
-        proof_coordinates: None,
-        source_shear: None,
-        material_uv_bounds: None,
-        proof_uv_window: [[0., 1.]; 2],
-        material_plane_chart: None,
-        binding: None,
-        smoothness: None,
-        c0_regularity: None,
-        c0_agreement: None,
+        audits: RationalClosedAudits::default(),
+        chart: RationalClosedChart {
+            proof_coordinates: None,
+            source_shear: None,
+            material_uv_bounds: None,
+            proof_uv_window: [[0., 1.]; 2],
+            material_plane_chart: None,
+        },
         caps: Vec::new(),
         reason: None,
     };
@@ -269,7 +275,7 @@ fn rational_closed_impl(
         l.material.domain_cells,
     )?;
     let proven = trim.valid == Some(true);
-    r.material = Some(trim);
+    r.audits.material = Some(trim);
     if !proven {
         return Ok(refuse(r, "rational-original-material-unproved"));
     }
@@ -364,8 +370,8 @@ fn rational_closed_impl(
     }
     r.work.source_exact_work += 16;
     if let Some(window) = affine_volume::normalize_uv_window(&material.surface, bounds)? {
-        r.material_uv_bounds = Some(bounds);
-        r.proof_uv_window = window;
+        r.chart.material_uv_bounds = Some(bounds);
+        r.chart.proof_uv_window = window;
     }
     let chart = affine_volume::inspect_material_plane(
         &material.surface,
@@ -378,12 +384,12 @@ fn rational_closed_impl(
         return Ok(refuse(r, "rational-material-plane-chart-work-limit"));
     }
     let orientation_point = if let Some(chart) = chart.chart.as_ref() {
-        r.material_plane_chart = Some(chart.report().clone());
+        r.chart.material_plane_chart = Some(chart.report().clone());
         chart.report().orientation_parameter
     } else {
         [
-            r.proof_uv_window[0][0] + (r.proof_uv_window[0][1] - r.proof_uv_window[0][0]) * 0.5,
-            r.proof_uv_window[1][0] + (r.proof_uv_window[1][1] - r.proof_uv_window[1][0]) * 0.5,
+            r.chart.proof_uv_window[0][0] + (r.chart.proof_uv_window[0][1] - r.chart.proof_uv_window[0][0]) * 0.5,
+            r.chart.proof_uv_window[1][0] + (r.chart.proof_uv_window[1][1] - r.chart.proof_uv_window[1][0]) * 0.5,
             0.5,
         ]
     };
@@ -394,7 +400,7 @@ fn rational_closed_impl(
     let proof_window = if chart.chart.is_some() {
         [[0., 1.]; 2]
     } else {
-        r.proof_uv_window
+        r.chart.proof_uv_window
     };
     let proof = affine_volume::certify_rational_preconditioned_window(
         proof_carrier,
@@ -406,13 +412,13 @@ fn rational_closed_impl(
         l.volume.cells,
         l.volume.exact_work,
     )?;
-    r.proof_coordinates = proof.coordinates;
-    r.source_shear = proof.source_shear;
+    r.chart.proof_coordinates = proof.coordinates;
+    r.chart.source_shear = proof.source_shear;
     let volume = proof.volume;
     let proven = volume.embedding_certified
         && volume.regularity_certified
         && volume.parameter_topology_preserved;
-    r.volume = Some(volume);
+    r.audits.volume = Some(volume);
     if !proven {
         return Ok(refuse(r, "original-rational-filled-volume-unproved"));
     }
@@ -501,7 +507,7 @@ fn rational_closed_impl(
     };
     let binding = smooth::binding_rational(&model, profiles, motion, origin, l.binding_work)?;
     let proven = binding.certified;
-    r.binding = Some(binding);
+    r.audits.binding = Some(binding);
     if !proven {
         return Ok(refuse(
             r,
@@ -521,7 +527,7 @@ fn rational_closed_impl(
     let Some(sign) = sign.sign else {
         return Ok(refuse(r, "rational-source-world-orientation-unproved"));
     };
-    let trim = r.material.as_ref().unwrap();
+    let trim = r.audits.material.as_ref().unwrap();
     let winding = trim.winding[0].unwrap();
     if winding.abs() != 1 || trim.winding.iter().skip(1).any(|w| *w != Some(-winding)) {
         return Ok(refuse(r, "rational-material-shell-roles-unproved"));
@@ -533,7 +539,7 @@ fn rational_closed_impl(
                 return Ok(refuse(r, "rational-face-orientation-work-limit"));
             }
             r.work.orientation_cells += 1;
-            let Some(parity) = r.binding.as_ref().unwrap().orientation_reversed(u.face) else {
+            let Some(parity) = r.audits.binding.as_ref().unwrap().orientation_reversed(u.face) else {
                 return Ok(refuse(r, "rational-face-chart-orientation-unproved"));
             };
             let expected = reversed ^ parity;
@@ -555,14 +561,14 @@ fn rational_closed_impl(
         let agreement =
             crate::boundary_agreement::verify_exact(&model, l.smoothness.agreement_work)?;
         let proven = agreement.all_equal && agreement.all_joins_exact;
-        r.c0_agreement = Some(agreement);
+        r.audits.c0_agreement = Some(agreement);
         if !proven {
             return Ok(refuse(r, "rational-complete-c0-agreement-unproved"));
         }
         let regular =
             crate::boundary_embedding::regularity::inspect(&model, l.smoothness.regularity_cells)?;
         let proven = regular.all_faces_regular;
-        r.c0_regularity = Some(regular);
+        r.audits.c0_regularity = Some(regular);
         if !proven {
             return Ok(refuse(r, "rational-complete-c0-regularity-unproved"));
         }
@@ -573,7 +579,7 @@ fn rational_closed_impl(
         } else {
             smoothness.g1_certified
         };
-        r.smoothness = Some(smoothness);
+        r.audits.smoothness = Some(smoothness);
         if !proven {
             return Ok(refuse(
                 r,
@@ -585,7 +591,7 @@ fn rational_closed_impl(
         let offset = profiles[..cap.ring].iter().map(Vec::len).sum::<usize>() + cap.span;
         for layer in 0..motion.len() {
             let Some(face) = r
-                .binding
+                .audits.binding
                 .as_ref()
                 .unwrap()
                 .source_face(layer * spans + offset)

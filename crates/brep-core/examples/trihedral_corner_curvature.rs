@@ -52,6 +52,79 @@ fn stock_limits() -> source_box::Limits {
         },
     }
 }
+/// Sample only to choose point queries. The trimmed-face interval evaluator
+/// independently proves each reported violation.
+fn probe_central_curvature(body: &r::SewnCornerNetworkCandidate, handle: f64) -> Result<()> {
+    for &face in body.central_faces() {
+        let s = &body.model().faces[face].surface;
+        let u = [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]];
+        let v = [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]];
+        let mut samples = Vec::new();
+        for i in 1..32 {
+            for j in 1..32 {
+                let uv = [
+                    u[0] + (u[1] - u[0]) * i as f64 / 32.,
+                    v[0] + (v[1] - v[0]) * j as f64 / 32.,
+                ];
+                if let Some((gaussian, mean)) = s.evaluate(uv[0], uv[1])?.curvatures() {
+                    let curvature = mean.abs() + (mean * mean - gaussian).max(0.).sqrt();
+                    if curvature.is_finite() {
+                        samples.push((curvature, uv));
+                    }
+                }
+            }
+        }
+        samples.sort_by(|a, b| b.0.total_cmp(&a.0));
+        let hints: Vec<_> = samples.iter().take(8).map(|sample| sample.1).collect();
+        let report = face_curvature::inspect(
+            body.model(),
+            face,
+            r::SEWN_CORNER_CURVATURE_LIMIT,
+            1e-8,
+            face_curvature::Limits { cells: 64, domain_cells: 1000, shape_cells: 1000 },
+            &hints,
+        )?;
+        println!(
+            "candidate handle_mm={handle} stage=network_body_point_probe face={face} decision={:?} witness={:?} uv={:?}",
+            report.decision, report.witness_curvature, report.witness_uv,
+        );
+    }
+    Ok(())
+}
+
+fn seam_curvature_upper(
+    surface: &nurbs_core::surface::Surface,
+    boundary: nurbs_core::analysis::surface_boundary::Boundary,
+) -> Result<Option<f64>> {
+    use nurbs_core::surface_shape_operator::{absolute_spectral_bounds, boundary_bounds};
+    let mut pending = vec![[0., 1.]];
+    let mut upper: f64 = 0.;
+    for _ in 0..4096 {
+        let Some([a, b]) = pending.pop() else {
+            return Ok(Some(upper));
+        };
+        let report = boundary_bounds(surface, boundary, [a, b], false)?;
+        if let Some(tensor) = report.tensor {
+            if let Some([lower, bound]) = absolute_spectral_bounds(tensor)? {
+                if bound <= r::SEWN_CORNER_CURVATURE_LIMIT {
+                    upper = upper.max(bound);
+                    continue;
+                }
+                if lower > r::SEWN_CORNER_CURVATURE_LIMIT {
+                    return Ok(None);
+                }
+            }
+        }
+        if b - a <= 1. / 65536. {
+            return Ok(None);
+        }
+        let middle = (a + b) * 0.5;
+        pending.push([middle, b]);
+        pending.push([a, middle]);
+    }
+    Ok(pending.is_empty().then_some(upper))
+}
+
 fn main() -> Result<()> {
     let mut handles = Vec::new();
     let mut profile = None;
@@ -60,6 +133,14 @@ fn main() -> Result<()> {
     let mut quartic = false;
     let mut rim_origin=0usize;
     let mut degree9=false;
+    let mut runout = 0.1;
+    let mut network_only = false;
+    let mut field_cells = 5000;
+    let mut peak_sweeps = 0;
+    let mut joint_peak_sweeps = 0;
+    let mut window_sweeps = 0;
+    let mut post_peak_sweeps = 0;
+    let mut post_degree_v = None;
     for arg in std::env::args().skip(1) {
         let parse = |s: &str| {
             s.parse::<f64>().map_err(|_| {
@@ -72,6 +153,34 @@ fn main() -> Result<()> {
         if let Some(value)=arg.strip_prefix("--rim-origin=") {
             rim_origin=value.parse::<usize>().map_err(|_|Error::new("CORNER_PROBE_INPUT","Expected rim origin 0, 1 or 2"))?;
             if rim_origin>=3 {return Err(Error::new("CORNER_PROBE_INPUT","Expected rim origin 0, 1 or 2"));}
+        } else if let Some(value) = arg.strip_prefix("--runout=") {
+            runout = parse(value)?;
+            if !runout.is_finite() || runout <= 0. {
+                return Err(Error::new("CORNER_PROBE_INPUT", "Use a positive finite runout"));
+            }
+        } else if let Some(value) = arg.strip_prefix("--window-sweeps=") {
+            window_sweeps = value.parse::<usize>().ok().filter(|n| (1..=256).contains(n))
+                .ok_or_else(|| Error::new("CORNER_PROBE_INPUT", "Use 1 to 256 local curvature sweeps"))?;
+        } else if let Some(value) = arg.strip_prefix("--joint-peak-sweeps=") {
+            joint_peak_sweeps = value.parse::<usize>().ok().filter(|n| (1..=32).contains(n))
+                .ok_or_else(|| Error::new("CORNER_PROBE_INPUT", "Use 1 to 32 joint curvature sweeps"))?;
+        } else if let Some(value) = arg.strip_prefix("--post-degree-v=") {
+            post_degree_v = Some(value.parse::<usize>().ok().filter(|n| (9..=12).contains(n))
+                .ok_or_else(|| Error::new("CORNER_PROBE_INPUT", "Use a V degree from 9 to 12"))?);
+        } else if let Some(value) = arg.strip_prefix("--post-peak-sweeps=") {
+            post_peak_sweeps = value.parse::<usize>().ok().filter(|n| (1..=64).contains(n))
+                .ok_or_else(|| Error::new("CORNER_PROBE_INPUT", "Use 1 to 64 refinement sweeps after the joint search"))?;
+        } else if let Some(value) = arg.strip_prefix("--peak-sweeps=") {
+            peak_sweeps = value.parse::<usize>().ok().filter(|n| (1..=16).contains(n))
+                .ok_or_else(|| Error::new("CORNER_PROBE_INPUT", "Use 1 to 16 curvature refinement sweeps"))?;
+        } else if let Some(value) = arg.strip_prefix("--field-cells=") {
+            field_cells = value.parse::<usize>().ok().filter(|n| (1..=50000).contains(n))
+                .ok_or_else(|| Error::new("CORNER_PROBE_INPUT", "Use 1 to 50000 curvature cells"))?;
+        } else if arg == "--network-only" {
+            network_only = true;
+            degree9 = true;
+            quartic = true;
+            bounded = true;
         } else if arg == "--degree9-joint" {
             degree9=true;
         } else if arg == "--quartic-profile" {
@@ -132,7 +241,7 @@ fn main() -> Result<()> {
                 shell: 0,
                 vertex: 0,
                 requested: &requested,
-                runout_mm: 0.1,
+                runout_mm: runout,
                 span_mm: 2.,
             },
             limits,
@@ -145,7 +254,7 @@ fn main() -> Result<()> {
                 shell: 0,
                 vertex: 0,
                 requested: &requested,
-                runout_mm: 0.1,
+                runout_mm: runout,
                 span_mm: 2.,
             },
             limits,
@@ -158,7 +267,7 @@ fn main() -> Result<()> {
                 shell: 0,
                 vertex: 0,
                 requested: &requested,
-                runout_mm: 0.1,
+                runout_mm: runout,
                 span_mm: 2.,
             },
             limits,
@@ -171,7 +280,7 @@ fn main() -> Result<()> {
                 shell: 0,
                 vertex: 0,
                 requested: &requested,
-                runout_mm: 0.1,
+                runout_mm: runout,
                 span_mm: 2.,
             },
             limits,
@@ -184,14 +293,14 @@ fn main() -> Result<()> {
                 shell: 0,
                 vertex: 0,
                 requested: &requested,
-                runout_mm: 0.1,
+                runout_mm: runout,
                 span_mm: 2.,
             },
             limits,
         )?
     };
     println!(
-        "inputs stock_mm=10 radii_mm=[0.1,0.2,0.35] profile={profile:?} bounded={bounded} rim_origin={rim_origin} curvature_limit_per_mm=10"
+        "inputs stock_mm=10 radii_mm=[0.1,0.2,0.35] runout_mm={runout} profile={profile:?} bounded={bounded} rim_origin={rim_origin} curvature_limit_per_mm=10"
     );
     if bounded {
         for (i, s) in strips.strips.iter().enumerate() {
@@ -227,7 +336,7 @@ fn main() -> Result<()> {
                 continue;
             }
         };
-        if bounded {
+        if bounded && !network_only {
             let s = c.surface();
             let p = s.degree_u;
             let q = s.degree_v;
@@ -292,7 +401,7 @@ fn main() -> Result<()> {
             }
             }
         }
-        if quartic {
+        if quartic && !network_only {
             match c.propose_common_denominator_patches(1000000) {
                 Ok(patches) => {
                     println!("candidate handle_mm={handle} stage=common_denominator proposal_patches={} degrees={:?} admitted=false", patches.len(), patches.iter().map(|s|s.degree_u).collect::<Vec<_>>());
@@ -319,7 +428,7 @@ fn main() -> Result<()> {
                 Err(e) => println!("candidate handle_mm={handle} stage=common_denominator refused={e:?}"),
             }
         }
-        if quartic {
+        if quartic && !network_only {
             match c.propose_reconciled_patches(1000000) {
                 Err(e)=>println!("candidate handle_mm={handle} stage=reconciled refused={e:?}"),
                 Ok(patches)=>{
@@ -344,7 +453,7 @@ fn main() -> Result<()> {
                 }
             }
         }
-        if quartic {
+        if quartic && !network_only {
             for relaxation in [0.,0.25,0.5,0.75,1.] {
                 match c.propose_fair_patches(1000000,relaxation) {
                     Err(e)=>println!("candidate handle_mm={handle} stage=fair relaxation={relaxation} refused={e:?}"),
@@ -369,7 +478,7 @@ fn main() -> Result<()> {
                 }
             }
         }
-        if quartic {
+        if quartic && !network_only {
             for relaxation in [0.,0.25,0.5,0.75,1.] {
                 match c.propose_bivariate_patches(1000000,relaxation) {
                     Err(e)=>println!("candidate handle_mm={handle} stage=bivariate relaxation={relaxation} refused={e:?}"),
@@ -394,7 +503,7 @@ fn main() -> Result<()> {
                 }
             }
         }
-        if quartic {
+        if quartic && !network_only {
             for sweeps in [0,2,4,6] {
                 println!("candidate handle_mm={handle} stage=curvature_search sweeps={sweeps} state=start evaluations_limit={}",if sweeps==0 {0} else {50000});
                 let candidate=if sweeps==0 {c.propose_bivariate_patches(1000000,1.)} else {c.propose_curvature_search_patches(1000000,50000,sweeps)};
@@ -442,40 +551,114 @@ fn main() -> Result<()> {
                     Err(e)=>println!("candidate handle_mm={handle} stage=joint_seam_search sweeps={sweeps} refused={e:?}"),
                     Ok(patches)=>{
                         println!("candidate handle_mm={handle} stage=joint_seam_search sweeps={sweeps} patches={} admitted=false",patches.len());
+                        let patches = if peak_sweeps == 0 {
+                            patches
+                        } else {
+                            c.refine_curvature_peaks(&patches, peak_sweeps, 2_000_000)?
+                        };
+                        let patches = if joint_peak_sweeps == 0 {
+                            patches
+                        } else {
+                            let seams = [2, 3];
+                            let refined = c.refine_joint_curvature_peaks(&patches, &seams, joint_peak_sweeps)?;
+                            for seam in seams {
+                                let before = &patches[seam];
+                                let after = &refined[seam];
+                                let last = before.degree_u;
+                                println!("candidate handle_mm={handle} stage=joint_peak_refinement seam={seam} root_changed={} jet_rows_changed={}",
+                                    before.control_points[last] != after.control_points[last],
+                                    before.control_points[last-2..last] != after.control_points[last-2..last]);
+                            }
+                            refined
+                        };
+                        let patches = if post_peak_sweeps == 0 {
+                            patches
+                        } else {
+                            c.refine_coordinated_curvature(&patches, post_peak_sweeps, post_degree_v)?
+                        };
+                        let mut patches = patches;
+                        let mut remaining = window_sweeps;
+                        while remaining > 0 {
+                            let sweeps = remaining.min(64);
+                            patches = c.refine_shared_curvature_window(&patches, 3, sweeps)?;
+                            remaining -= sweeps;
+                        }
                         if degree9 {
                             match c.sew_network_candidate(&patches,r::CornerSewLimits {cells:100000,exact_work:1000000,trim_pairs:10000,domain_cells:100000}) {
                                 Ok(body)=>{
                                     println!("candidate handle_mm={handle} stage=network_body faces={} edges={} vertices={} bodies={} closed={} cells={} final_g2_seams={} trims_valid={} solid_admitted=false",body.model().faces.len(),body.model().edges.len(),body.model().vertices.len(),body.model().bodies.len(),body.model().shells[0].closed,body.cells,body.final_jets().len(),body.trims().all_valid);
                                     for (i,r) in body.final_jets().iter().enumerate() {println!("candidate handle_mm={handle} stage=network_body_g2 seam={i} decision={:?} normal={:?} tensor={:?} regular={} pending={}",r.decision,r.normal,r.tensor,r.regularity_proven,r.pending);}
-                                    let uv=[0.5285379208722983,0.125];let r=nurbs_core::surface_shape_operator::rectangle_bounds(&body.model().faces[body.central_faces()[2]].surface,[[uv[0];2],[uv[1];2]],8)?;
-                                    if let Some(t)=r.shape.tensor {if let Some(k)=nurbs_core::surface_shape_operator::absolute_spectral_bounds(t)? {println!("candidate handle_mm={handle} stage=network_body_cap witness_lower={} limit=10 admitted=false",k[0]);}}
+                                    for (i, pair) in body.central_faces().windows(2).enumerate() {
+                                        let faces = &body.model().faces;
+                                        let proof = nurbs_core::surface_g2_pcurves::inspect_original_patch_pair(
+                                            &faces[pair[0]].surface, &faces[pair[1]].surface,
+                                            1e-5, 1e-4, 6000,
+                                        )?;
+                                        println!("candidate handle_mm={handle} stage=network_body_internal_g2 seam={i} decision={:?} normal={:?} tensor={:?} regular={} pending={}", proof.decision, proof.normal, proof.tensor, proof.regularity_proven, proof.pending);
+                                        if window_sweeps > 0 && [2, 3].contains(&i) {
+                                            use nurbs_core::analysis::surface_boundary::Boundary;
+                                            let left = seam_curvature_upper(&faces[pair[0]].surface, Boundary::UMax)?;
+                                            let right = seam_curvature_upper(&faces[pair[1]].surface, Boundary::UMin)?;
+                                            // The paired G2 report bounds the Frobenius norm of
+                                            // the world shape-operator difference. Its upper bound
+                                            // also bounds the spectral norm, so transfer a direct
+                                            // side bound with an outward-rounded triangle sum.
+                                            let both = if proof.regularity_proven && proof.pending == 0
+                                                && proof.decision == nurbs_core::surface_join::Decision::WithinTolerance
+                                                && proof.tensor[1].is_finite()
+                                            {
+                                                left.into_iter().chain(right)
+                                                    .map(|k| (k + proof.tensor[1]).next_up())
+                                                    .reduce(f64::min)
+                                            } else {
+                                                None
+                                            };
+                                            println!("candidate handle_mm={handle} stage=network_seam_interval_cap seam={i} left_upper={left:?} right_upper={right:?} both_upper={both:?}");
+                                        }
+                                    }
+                                    probe_central_curvature(&body, handle)?;
+                                    let audit = body.inspect_one_sided_curvature(1e-8, face_curvature::Limits {
+                                        cells: field_cells,
+                                        domain_cells: field_cells * 20,
+                                        shape_cells: field_cells * 20,
+                                    })?;
+                                    for face in &audit.faces {
+                                        let report = &face.report;
+                                        println!("candidate handle_mm={handle} stage=network_body_face_cap face={} decision={:?} upper={:?} witness={:?} uv={:?} reason={}", face.face, report.decision, report.absolute_curvature_upper, report.witness_curvature, report.witness_uv, report.reason);
+                                    }
+                                    println!("candidate handle_mm={handle} stage=network_body_cap one_sided=true complete={} within={} examined_faces={} next_face={:?}", audit.complete, audit.within_limit, audit.faces.len(), audit.next_face);
                                 },
                                 Err(e)=>println!("candidate handle_mm={handle} stage=network_body refused={e:?}"),
                             }
-                            match c.assemble_open_network(&patches,100000,1000000) {
-                                Ok(shell)=>{
-                                    println!("candidate handle_mm={handle} stage=open_network faces={} edges={} vertices={} internal_edges={} bindings={} bodies={} closed={} cells={}",shell.model().faces.len(),shell.model().edges.len(),shell.model().vertices.len(),shell.shared_edges().len(),shell.support_binding_proposals().len(),shell.model().bodies.len(),shell.model().shells[0].closed,shell.cells);
-                                    for binding in shell.support_binding_proposals() {
-                                        let proof=nurbs_core::curve_surface_agreement::verify(&shell.model().edges[binding.edge].curve,&binding.pcurve,&binding.support,false,1e-7,10000)?;
-                                        println!("candidate handle_mm={handle} stage=network_support_binding boundary={} patch={} edge={} status={:?} cells={} witness={:?} distance={:?}",binding.boundary,binding.patch,binding.edge,proof.status,proof.cells,proof.witness,proof.witness_distance);
-                                    }
-                                },
-                                Err(e)=>println!("candidate handle_mm={handle} stage=open_network refused={e:?}"),
+                            if network_only && joint_peak_sweeps == 0 {
+                                continue;
                             }
-                            for r in c.inspect_network_exterior_support_jets(&patches,100000,1000000)? {
-                                match r.report {
-                                    Err(e)=>println!("candidate handle_mm={handle} stage=network_support boundary={} patch={} refused={e:?}",r.boundary,r.patch),
-                                    Ok(p)=>println!("candidate handle_mm={handle} stage=network_support boundary={} patch={} clock={:?} position={} decision={:?} regular={} normal={:?} tensor={:?} cells={} pending={} profile_unresolved={} source_unresolved={}",r.boundary,r.patch,r.parameter,p.positions.proven,p.decision,p.regularity_proven,p.normal,p.tensor,p.cells,p.pending,p.profile_unresolved_queries,p.source_unresolved_queries),
+                            if !network_only {
+                                match c.assemble_open_network(&patches,100000,1000000) {
+                                    Ok(shell)=>{
+                                        println!("candidate handle_mm={handle} stage=open_network faces={} edges={} vertices={} internal_edges={} bindings={} bodies={} closed={} cells={}",shell.model().faces.len(),shell.model().edges.len(),shell.model().vertices.len(),shell.shared_edges().len(),shell.support_binding_proposals().len(),shell.model().bodies.len(),shell.model().shells[0].closed,shell.cells);
+                                        for binding in shell.support_binding_proposals() {
+                                            let proof=nurbs_core::curve_surface_agreement::verify(&shell.model().edges[binding.edge].curve,&binding.pcurve,&binding.support,false,1e-7,10000)?;
+                                            println!("candidate handle_mm={handle} stage=network_support_binding boundary={} patch={} edge={} status={:?} cells={} witness={:?} distance={:?}",binding.boundary,binding.patch,binding.edge,proof.status,proof.cells,proof.witness,proof.witness_distance);
+                                        }
+                                    },
+                                    Err(e)=>println!("candidate handle_mm={handle} stage=open_network refused={e:?}"),
                                 }
-                            }
-                            match c.inspect_network_exterior_jets(&patches,100000,1000000) {
-                                Err(e)=>println!("candidate handle_mm={handle} stage=network_exterior refused={e:?}"),
-                                Ok(reports)=>for r in reports {
-                                    println!("candidate handle_mm={handle} stage=network_exterior boundary={} patch={} clock={:?} position={} shape={:?}",r.boundary,r.patch,r.parameter,r.report.positions.proven,r.report.geometric);
-                                    for (side,p) in r.report.positions.sides.iter().enumerate() {
-                                        println!("candidate handle_mm={handle} stage=network_position boundary={} patch={} side={side} exact={:?} interval={:?}",r.boundary,r.patch,p.exact,p.interval);
+                                for r in c.inspect_network_exterior_support_jets(&patches,100000,1000000)? {
+                                    match r.report {
+                                        Err(e)=>println!("candidate handle_mm={handle} stage=network_support boundary={} patch={} refused={e:?}",r.boundary,r.patch),
+                                        Ok(p)=>println!("candidate handle_mm={handle} stage=network_support boundary={} patch={} clock={:?} position={} decision={:?} regular={} normal={:?} tensor={:?} cells={} pending={} profile_unresolved={} source_unresolved={}",r.boundary,r.patch,r.parameter,p.positions.proven,p.decision,p.regularity_proven,p.normal,p.tensor,p.cells,p.pending,p.profile_unresolved_queries,p.source_unresolved_queries),
                                     }
+                                }
+                                match c.inspect_network_exterior_jets(&patches,100000,1000000) {
+                                    Err(e)=>println!("candidate handle_mm={handle} stage=network_exterior refused={e:?}"),
+                                    Ok(reports)=>for r in reports {
+                                        println!("candidate handle_mm={handle} stage=network_exterior boundary={} patch={} clock={:?} position={} shape={:?}",r.boundary,r.patch,r.parameter,r.report.positions.proven,r.report.geometric);
+                                        for (side,p) in r.report.positions.sides.iter().enumerate() {
+                                            println!("candidate handle_mm={handle} stage=network_position boundary={} patch={} side={side} exact={:?} interval={:?}",r.boundary,r.patch,p.exact,p.interval);
+                                        }
 
+                                    }
                                 }
                             }
                         }
@@ -497,7 +680,12 @@ fn main() -> Result<()> {
                             if sweeps==6 || degree9 {for (side,s) in pair.iter().enumerate() {
                                 let u=if side==0 {s.knots_u[s.control_points.len()]} else {s.knots_u[s.degree_u]};
                                 let mut worst=0f64;let mut at=0.;let mut unresolved=0;
-                                for v in [0.,0.125,0.25,0.5,0.75,0.875,1.] {
+                                let samples: Vec<_> = if joint_peak_sweeps > 0 {
+                                    (0..=32).map(|j| j as f64 / 32.).collect()
+                                } else {
+                                    vec![0., 0.125, 0.25, 0.5, 0.75, 0.875, 1.]
+                                };
+                                for v in samples {
                                     let r=nurbs_core::surface_shape_operator::rectangle_bounds(s,[[u;2],[v;2]],8)?;
                                     let k=match r.shape.tensor {Some(t)=>nurbs_core::surface_shape_operator::absolute_spectral_bounds(t)?,None=>None};
                                     if let Some(k)=k {if k[0]>worst {worst=k[0];at=v;}} else {unresolved+=1;}
@@ -508,6 +696,9 @@ fn main() -> Result<()> {
                     }
                 }
             }
+        }
+        if network_only {
+            continue;
         }
         if bounded {
             for (knot, raw) in c.inspect_internal_span_joins(6000)? {

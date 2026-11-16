@@ -6,8 +6,15 @@
 use crate::{Result, check, distance_bounds::Interval as I, surface::Surface};
 mod separable_monotone;
 mod affine_separable;
+pub(crate) mod exact_affine_xy;
+pub use exact_affine_xy::certify_affine_parameterization;
 mod rational_clock;
 mod rational_separable;
+pub(crate) mod rational_triangular;
+pub(crate) mod rational_cones;
+pub(crate) mod rational_rails;
+pub(crate) mod rational_rectangle;
+pub(crate) mod rational_quadrilateral;
 /// Whole-chart injectivity, allowing exact strictly monotone coordinates with
 /// isolated zero derivatives. Unlike `certify_contraction`, this does NOT prove
 /// immersion/rank. Consumers requiring regularity must prove it independently.
@@ -15,6 +22,55 @@ pub fn certify_chart(s:&Surface,max_work:usize)->Result<Report> {
     let mut report=certify_contraction(s,max_work)?;
     if report.proven || matches!(report.reason,"periodic-domain"|
         "collapsed-boundary-requires-quotient-proof"|"work-limit") {return Ok(report);}
+    if report.spans < max_work && rational_triangular::likely_coupled(s) {
+        if let Some(axes) = rational_triangular::certify(s, &mut report.spans, max_work) {
+            report.proven = true;
+            report.reason = "global-exact-rational-triangular";
+            report.projection = Some(axes);
+            report.linear_projection = None;
+            report.projective_projection = None;
+            report.polar_projection = None;
+            report.polar_p_matrix = None;
+            report.contraction_upper = None;
+            return Ok(report);
+        }
+    }
+    if report.spans < max_work && rational_triangular::likely_coupled(s) {
+        if let Some(axes) = rational_rectangle::certify(s, &mut report.spans, max_work) {
+            report.proven = true;
+            report.projection = Some(axes);
+            report.reason = "global-rational-rectangle-jacobian";
+            return Ok(report);
+        }
+    }
+    if report.spans < max_work && rational_triangular::likely_coupled(s) {
+        if let Some(axes) = rational_quadrilateral::certify(s, &mut report.spans, max_work) {
+            report.proven = true;
+            report.projection = Some(axes);
+            report.reason = "global-rational-convex-quadrilateral-jacobian";
+            return Ok(report);
+        }
+    }
+    if report.spans < max_work && rational_triangular::likely_coupled(s) {
+        if let Some(proof) = rational_cones::certify(s, &mut report.spans, max_work) {
+            report.proven = true;
+            report.projection = Some(proof.axes);
+            report.reason = if proof.diagonally_dominant {
+                "global-rational-bernstein-column-cones"
+            } else {
+                "global-rational-bernstein-column-determinant"
+            };
+            return Ok(report);
+        }
+    }
+    if report.spans < max_work && rational_triangular::likely_coupled(s) {
+        if let Some(axes) = rational_rails::certify(s, &mut report.spans, max_work) {
+            report.proven = true;
+            report.projection = Some(axes);
+            report.reason = "global-rational-monotone-rails";
+            return Ok(report);
+        }
+    }
     if let Some(axes)=separable_monotone::certify(s,&mut report.spans,max_work)? {
         report.proven=true;report.projection=Some(axes);
         report.reason="global-separable-coordinate-monotonicity";
@@ -37,8 +93,29 @@ pub fn certify_chart(s:&Surface,max_work:usize)->Result<Report> {
             report.polar_projection=None;report.polar_p_matrix=None;report.contraction_upper=None;
         }
     }
+    admit_exact_affine_xy(s, &mut report, max_work);
     if !report.proven && report.spans==max_work {report.reason="work-limit";}
     Ok(report)
+}
+
+fn admit_exact_affine_xy(s: &Surface, report: &mut Report, max_spans: usize) {
+    if report.proven || report.spans == max_spans || s.periodic_u || s.periodic_v {
+        return;
+    }
+    report.spans += 1;
+    if let Some(axes) = exact_affine_xy::projection(s) {
+        *report = Report {
+            proven: true,
+            projection: Some(axes),
+            linear_projection: None,
+            projective_projection: None,
+            polar_projection: None,
+            polar_p_matrix: None,
+            contraction_upper: None,
+            spans: report.spans,
+            reason: "global-exact-affine-coordinate-projection",
+        };
+    }
 }
 #[derive(Clone, Debug)]
 pub struct Report {
@@ -615,7 +692,11 @@ pub fn certify_on_refined(
             }
         }
     }
-    certify_original_cover(s, cover, report, max_spans, max_depth, "rectangle-projection-contraction")
+    let mut proof = certify_original_cover(
+        s, cover, report, max_spans, max_depth, "rectangle-projection-contraction",
+    )?;
+    admit_exact_affine_xy(s, &mut proof, max_spans);
+    Ok(proof)
 }
 
 fn certify_original_cover(

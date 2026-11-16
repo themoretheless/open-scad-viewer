@@ -310,104 +310,151 @@ impl<'a> RationalParameterRef<'a> {
         }
     }
 }
+/// Refinement step at which the shared image polynomial is first tried.
+const IMAGE_ATTEMPT_STEP: usize = 8;
+/// The value `n / d` selected at one isolated root of `f`.
+struct Fraction {
+    f: Poly,
+    n: Poly,
+    d: Poly,
+    root: [Q; 2],
+    /// Set when the fraction is one rational number at the root.
+    constant: Option<Q>,
+}
+impl Fraction {
+    fn new((f, n, d): (Poly, Poly, Poly), root: &[Q; 2]) -> Result<Self> {
+        let constant = constant_fraction(&f, &n, &d, root)?;
+        Ok(Self {
+            f,
+            n,
+            d,
+            root: root.clone(),
+            constant,
+        })
+    }
+    fn range(&self) -> Option<[Q; 2]> {
+        self.constant
+            .as_ref()
+            .map(|c| [c.clone(), c.clone()])
+            .or_else(|| fraction_range(&self.n, &self.d, &self.root))
+    }
+    fn equals(&self, c: &Q) -> Result<bool> {
+        let scaled = self.d.iter().map(|q| q * c).collect::<Poly>();
+        coordinates::zero_at(&sub(&self.n, &scaled), &self.f, &self.root)
+    }
+    fn annihilated_by(&self, h: &Poly) -> Result<bool> {
+        coordinates::zero_at(
+            &compose_fraction(h, &self.n, &self.d, &self.f)?,
+            &self.f,
+            &self.root,
+        )
+    }
+}
+/// Order decided by exact identities alone: constants, a constant against a
+/// fraction, or two fractions at the same root of one primitive.
+fn exact_order(x: &Fraction, y: &Fraction) -> Result<Option<Ordering>> {
+    if let (Some(a), Some(b)) = (&x.constant, &y.constant) {
+        return Ok(Some(a.cmp(b)));
+    }
+    if let Some(c) = &x.constant {
+        if y.equals(c)? {
+            return Ok(Some(Ordering::Equal));
+        }
+    }
+    if let Some(c) = &y.constant {
+        if x.equals(c)? {
+            return Ok(Some(Ordering::Equal));
+        }
+    }
+    if x.f == y.f {
+        let intersection = [
+            x.root[0].clone().max(y.root[0].clone()),
+            x.root[1].clone().min(y.root[1].clone()),
+        ];
+        if intersection[0] <= intersection[1]
+            && closed_roots(&x.f, &intersection)? == 1
+            && coordinates::zero_at(
+                &sub(&product(&x.n, &y.d), &product(&y.n, &x.d)),
+                &x.f,
+                &intersection,
+            )?
+        {
+            return Ok(Some(Ordering::Equal));
+        }
+    }
+    Ok(None)
+}
+/// Order decided by two value enclosures, when they are disjoint or exact.
+fn enclosure_order(x: &[Q; 2], y: &[Q; 2]) -> Option<Ordering> {
+    if x[1] < y[0] {
+        Some(Ordering::Less)
+    } else if x[0] > y[1] {
+        Some(Ordering::Greater)
+    } else if x[0] == x[1] && y[0] == y[1] {
+        Some(x[0].cmp(&y[0]))
+    } else {
+        None
+    }
+}
+/// A polynomial that vanishes at both selected values, when their image
+/// polynomials share a factor that does.
+fn common_image(x: &Fraction, y: &Fraction, max_matrix: usize) -> Result<Option<Poly>> {
+    let (Ok(left), Ok(right)) = (
+        fraction_image(&x.f, &x.n, &x.d, max_matrix),
+        fraction_image(&y.f, &y.n, &y.d, max_matrix),
+    ) else {
+        return Ok(None);
+    };
+    let h = gcd(&left, &right)?;
+    Ok((h.len() > 1 && x.annihilated_by(&h)? && y.annihilated_by(&h)?).then_some(h))
+}
 pub(in crate::profile::profile_certificate) fn compare_rational(
     first: RationalParameterRef<'_>,
     second: RationalParameterRef<'_>,
     max_refinements: usize,
     max_matrix: usize,
 ) -> Result<Ordering> {
-    let RationalParameterRef {
-        primitive: f,
-        fraction: x,
-        interval: a,
-    } = first;
-    let RationalParameterRef {
-        primitive: g,
-        fraction: y,
-        interval: b,
-    } = second;
-    let (f, n, d) = prepare_fraction(f, x[0], x[1], a)?;
-    let (g, m, e) = prepare_fraction(g, y[0], y[1], b)?;
-    let ca = constant_fraction(&f, &n, &d, a)?;
-    let cb = constant_fraction(&g, &m, &e, b)?;
-    if let (Some(a), Some(b)) = (&ca, &cb) {
-        return Ok(a.cmp(b));
+    let left = prepare_fraction(
+        first.primitive,
+        first.fraction[0],
+        first.fraction[1],
+        first.interval,
+    )?;
+    let right = prepare_fraction(
+        second.primitive,
+        second.fraction[0],
+        second.fraction[1],
+        second.interval,
+    )?;
+    let mut x = Fraction::new(left, first.interval)?;
+    let mut y = Fraction::new(right, second.interval)?;
+    if let Some(order) = exact_order(&x, &y)? {
+        return Ok(order);
     }
-    if let Some(c) = &ca {
-        if coordinates::zero_at(&sub(&m, &e.iter().map(|q| q * c).collect::<Poly>()), &g, b)? {
-            return Ok(Ordering::Equal);
-        }
-    }
-    if let Some(c) = &cb {
-        if coordinates::zero_at(&sub(&n, &d.iter().map(|q| q * c).collect::<Poly>()), &f, a)? {
-            return Ok(Ordering::Equal);
-        }
-    }
-    if f == g {
-        let intersection = [
-            a[0].clone().max(b[0].clone()),
-            a[1].clone().min(b[1].clone()),
-        ];
-        if intersection[0] <= intersection[1]
-            && closed_roots(&f, &intersection)? == 1
-            && coordinates::zero_at(&sub(&product(&n, &e), &product(&m, &d)), &f, &intersection)?
-        {
-            return Ok(Ordering::Equal);
-        }
-    }
-    let (mut a, mut b) = (a.clone(), b.clone());
     let mut attempted = false;
     let mut common = None;
     for step in 0..=max_refinements {
-        let x = ca
-            .as_ref()
-            .map(|c| [c.clone(), c.clone()])
-            .or_else(|| fraction_range(&n, &d, &a));
-        let y = cb
-            .as_ref()
-            .map(|c| [c.clone(), c.clone()])
-            .or_else(|| fraction_range(&m, &e, &b));
-        if let (Some(x), Some(y)) = (x, y) {
-            if x[1] < y[0] {
-                return Ok(Ordering::Less);
+        if let (Some(r), Some(s)) = (x.range(), y.range()) {
+            if let Some(order) = enclosure_order(&r, &s) {
+                return Ok(order);
             }
-            if x[0] > y[1] {
-                return Ok(Ordering::Greater);
-            }
-            if x[0] == x[1] && y[0] == y[1] {
-                return Ok(x[0].cmp(&y[0]));
-            }
-            if !attempted && (step >= 8 || step == max_refinements) {
+            if !attempted && (step >= IMAGE_ATTEMPT_STEP || step == max_refinements) {
                 attempted = true;
-                if let (Ok(left), Ok(right)) = (
-                    fraction_image(&f, &n, &d, max_matrix),
-                    fraction_image(&g, &m, &e, max_matrix),
-                ) {
-                    let h = gcd(&left, &right)?;
-                    if h.len() > 1
-                        && coordinates::zero_at(&compose_fraction(&h, &n, &d, &f)?, &f, &a)?
-                        && coordinates::zero_at(&compose_fraction(&h, &m, &e, &g)?, &g, &b)?
-                    {
-                        common = Some(h);
-                    }
-                }
+                common = common_image(&x, &y, max_matrix)?;
             }
             if let Some(h) = &common {
-                if closed_roots(
-                    h,
-                    &[
-                        x[0].clone().min(y[0].clone()),
-                        x[1].clone().max(y[1].clone()),
-                    ],
-                )? == 1
-                {
+                let hull = [
+                    r[0].clone().min(s[0].clone()),
+                    r[1].clone().max(s[1].clone()),
+                ];
+                if closed_roots(h, &hull)? == 1 {
                     return Ok(Ordering::Equal);
                 }
             }
         }
         if step < max_refinements {
-            refine(&f, &mut a)?;
-            refine(&g, &mut b)?;
+            refine(&x.f, &mut x.root)?;
+            refine(&y.f, &mut y.root)?;
         }
     }
     Err(refused(

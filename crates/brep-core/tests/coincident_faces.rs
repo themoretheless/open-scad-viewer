@@ -241,3 +241,29 @@ fn coplanar_region_boolean_on_shared_plane() {
     let other = top_face(&b, 0.);
     assert!(coplanar_face_region_boolean(&a, fa, &b, other, "union").is_err());
 }
+
+#[test]
+fn convex_overlap_keeps_exact_vertices_on_a_tilted_plane() {
+    use brep_core::boolean::operations::exact_convex_coplanar_overlap;
+    use num_rational::BigRational as Q;
+    let lift = |[x, y]: [f64; 2]| [x, y, x + 2. * y];
+    let first = [[0., 0.], [2., 0.], [2., 1.], [0., 1.]].map(lift);
+    let mut second = [[0., 0.], [2., 0.], [2., 3.]].map(lift);
+    second.reverse();
+    let overlap = exact_convex_coplanar_overlap(&first, &second, 100).unwrap();
+    let rational = |n: i32, d: i32| Q::new(n.into(), d.into());
+    assert_eq!(overlap, vec![
+        [rational(0, 1), rational(0, 1), rational(0, 1)],
+        [rational(2, 1), rational(0, 1), rational(2, 1)],
+        [rational(2, 1), rational(1, 1), rational(4, 1)],
+        [rational(2, 3), rational(1, 1), rational(8, 3)],
+    ]);
+    let touching = [[2., 0.], [3., 0.], [3., 1.], [2., 1.]].map(lift);
+    assert!(exact_convex_coplanar_overlap(&first, &touching, 100).unwrap().is_empty());
+    assert!(exact_convex_coplanar_overlap(&first, &second, 8).is_err());
+    let mut displaced = second;
+    displaced[0][2] += 1e-12;
+    assert!(exact_convex_coplanar_overlap(&first, &displaced, 100).is_err());
+    let concave = [[0., 0.], [2., 0.], [1., 0.5], [2., 1.], [0., 1.]].map(lift);
+    assert!(exact_convex_coplanar_overlap(&first, &concave, 100).is_err());
+}

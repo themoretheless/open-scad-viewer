@@ -33,9 +33,9 @@ pub(super) fn qualify(
     }
     analyze(&inside)
 }
-fn analyze(inside: &[Vec<bool>]) -> Result<(Vec<Option<usize>>, Vec<usize>)> {
+pub(in super::super::super) fn analyze(inside: &[Vec<bool>]) -> Result<(Vec<Option<usize>>, Vec<usize>)> {
     let n = inside.len();
-    if !(2..=64).contains(&n) || inside.iter().any(|r| r.len() != n) || (0..n).any(|i| inside[i][i])
+    if !(1..=64).contains(&n) || inside.iter().any(|r| r.len() != n) || (0..n).any(|i| inside[i][i])
     {
         return Err(unproved("Invalid strict root containment matrix"));
     }
@@ -64,13 +64,18 @@ fn analyze(inside: &[Vec<bool>]) -> Result<(Vec<Option<usize>>, Vec<usize>)> {
     }
     let mut depths = vec![0; n];
     for i in 0..n {
+        let mut ancestors = vec![false; n];
         let mut current = parents[i];
         while let Some(p) = current {
+            ancestors[p] = true;
             depths[i] += 1;
             if depths[i] >= n {
                 return Err(unproved("Root containment graph has a cycle"));
             }
             current = parents[p];
+        }
+        if ancestors != inside[i] {
+            return Err(unproved("Root containment has an incomplete ancestor chain"));
         }
     }
     Ok((parents, depths))

@@ -34,6 +34,7 @@ type GraphFrame<'a> = (usize, &'a Surface, [f64; 3], [f64; 3], [f64; 3], [f64; 3
 mod author_general_nurbs_boolean;
 mod author_general_operation_naming;
 mod g6_maturity;
+mod graph_containment_clearance;
 mod nurbs_boolean_graph_containment_v4;
 mod nurbs_boolean_graph_patch_v3;
 mod nurbs_boolean_imprint_certificate;
@@ -46,6 +47,7 @@ pub use nurbs_intersect::nurbs_ss::{
 pub use author_general_nurbs_boolean::*;
 use author_general_operation_naming::*;
 pub use g6_maturity::*;
+use graph_containment_clearance::*;
 pub use nurbs_boolean_graph_containment_v4::*;
 pub use nurbs_boolean_graph_patch_v3::*;
 pub use nurbs_boolean_imprint_certificate::*;

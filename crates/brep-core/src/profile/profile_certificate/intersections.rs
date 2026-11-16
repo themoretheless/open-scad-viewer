@@ -108,13 +108,124 @@ pub fn certify_curve_intersections(
     verify_curve_intersections(a, b, &c)?;
     Ok(c)
 }
+const MAX_EVENTS: usize = 128;
+/// Exact rational value of a finite certificate parameter.
+fn exact(value: f64) -> Result<Q> {
+    Q::from_float(value).ok_or_else(|| refused("Intersection event list is not canonical"))
+}
+/// A certificate's claims against the exact intersection system of its curves.
+struct Census<'a> {
+    c: &'a CurveIntersectionCertificate,
+    equations: [arithmetic::bivariate::Bi; 2],
+    projections: Vec<Q>,
+    singular: Vec<Q>,
+}
+impl Census<'_> {
+    /// Every root of the resultant is a claimed projection parameter, and
+    /// every claimed parameter is a root.
+    fn verify_projections(&self) -> Result<()> {
+        let r = arithmetic::resultant(&self.equations[0], &self.equations[1])?;
+        if !arithmetic::roots_accounted(&r, &self.projections)?
+            || self
+                .projections
+                .iter()
+                .any(|s| !arithmetic::at(&r, s).is_zero())
+        {
+            return Err(refused(
+                "Intersection projection census is incomplete or false",
+            ));
+        }
+        Ok(())
+    }
+    /// Events are canonically ordered, lie in the unit square, and solve
+    /// both equations exactly.
+    fn verify_events(&self) -> Result<()> {
+        let c = self.c;
+        let mut previous = None;
+        for event in &c.events {
+            if event
+                .iter()
+                .any(|f| !f.is_finite() || !(0.0..=1.0).contains(f))
+                || c.self_pair && event[0] >= event[1]
+                || previous.is_some_and(|p: [f64; 2]| {
+                    p[0] > event[0] || p[0] == event[0] && p[1] >= event[1]
+                })
+            {
+                return Err(refused("Intersection event list is not canonical"));
+            }
+            previous = Some(*event);
+            let s = exact(event[0])?;
+            let t = exact(event[1])?;
+            if !self.projections.contains(&s)
+                || c.self_pair && !self.projections.contains(&t)
+                || self
+                    .equations
+                    .iter()
+                    .any(|p| !arithmetic::at(&arithmetic::fiber(p, &s), &t).is_zero())
+            {
+                return Err(refused("Claimed exact intersection event is false"));
+            }
+        }
+        Ok(())
+    }
+    /// Diagonal singularities exist only for a self pair and solve both
+    /// equations on the diagonal.
+    fn verify_singular(&self) -> Result<()> {
+        if !self.c.self_pair && !self.singular.is_empty() {
+            return Err(refused("Pair certificate cannot claim self singularities"));
+        }
+        for s in &self.singular {
+            if !self.projections.contains(s)
+                || self
+                    .equations
+                    .iter()
+                    .any(|p| !arithmetic::at(&arithmetic::fiber(p, s), s).is_zero())
+            {
+                return Err(refused("Claimed diagonal singularity is false"));
+            }
+        }
+        Ok(())
+    }
+    /// On every projection fiber, the claimed events and singularities are
+    /// all the common roots.
+    fn verify_fibers(&self) -> Result<()> {
+        let c = self.c;
+        for s in &self.projections {
+            let mut values = Vec::new();
+            for event in &c.events {
+                let a = exact(event[0])?;
+                let b = exact(event[1])?;
+                if a == *s {
+                    values.push(b.clone());
+                }
+                if c.self_pair && b == *s {
+                    values.push(a);
+                }
+            }
+            if self.singular.contains(s) {
+                values.push(s.clone());
+            }
+            let fiber = arithmetic::fiber_gcd(&self.equations, s)?;
+            if !arithmetic::roots_accounted(&fiber, &values)? {
+                return Err(refused("Intersection fiber census omits an event"));
+            }
+        }
+        Ok(())
+    }
+}
+/// Natural curve parameter of a normalized one.
+fn global(curve: &Curve, u: f64) -> Result<f64> {
+    let d = curve.domain();
+    let (lo, hi) = (exact(d[0])?, exact(d[1])?);
+    float(&(&lo + (hi - &lo) * exact(u)?))
+}
 pub fn verify_curve_intersections(
     a: &Curve,
     b: &Curve,
     c: &CurveIntersectionCertificate,
 ) -> Result<VerifiedCurveIntersections> {
     let (source, x, y) = input(a, b, c.self_pair)?;
-    if c.version != 1 || c.source != source || c.events.len() > 128 {
+    if c.version != 1 || c.source != source || c.events.len() > MAX_EVENTS {
         return Err(refused("Intersection certificate source or size mismatch"));
     }
     let projections = qlist(&c.projection_parameters)?;
@@ -130,79 +241,17 @@ pub fn verify_curve_intersections(
             return Err(refused("False injective self-intersection census"));
         }
     } else {
-        let equations = arithmetic::intersection_polynomials(&x, &y, c.self_pair)?;
-        let r = arithmetic::resultant(&equations[0], &equations[1])?;
-        if !arithmetic::roots_accounted(&r, &projections)?
-            || projections.iter().any(|s| !arithmetic::at(&r, s).is_zero())
-        {
-            return Err(refused(
-                "Intersection projection census is incomplete or false",
-            ));
-        }
-        let mut previous = None;
-        for event in &c.events {
-            if event
-                .iter()
-                .any(|f| !f.is_finite() || !(0.0..=1.0).contains(f))
-                || c.self_pair && event[0] >= event[1]
-                || previous.is_some_and(|p: [f64; 2]| {
-                    p[0] > event[0] || p[0] == event[0] && p[1] >= event[1]
-                })
-            {
-                return Err(refused("Intersection event list is not canonical"));
-            }
-            previous = Some(*event);
-            let s = Q::from_float(event[0]).unwrap();
-            let t = Q::from_float(event[1]).unwrap();
-            if !projections.contains(&s)
-                || c.self_pair && !projections.contains(&t)
-                || equations
-                    .iter()
-                    .any(|p| !arithmetic::at(&arithmetic::fiber(p, &s), &t).is_zero())
-            {
-                return Err(refused("Claimed exact intersection event is false"));
-            }
-        }
-        if !c.self_pair && !singular.is_empty() {
-            return Err(refused("Pair certificate cannot claim self singularities"));
-        }
-        for s in &singular {
-            if !projections.contains(s)
-                || equations
-                    .iter()
-                    .any(|p| !arithmetic::at(&arithmetic::fiber(p, s), s).is_zero())
-            {
-                return Err(refused("Claimed diagonal singularity is false"));
-            }
-        }
-        for s in &projections {
-            let mut values = Vec::new();
-            for event in &c.events {
-                let a = Q::from_float(event[0]).unwrap();
-                let b = Q::from_float(event[1]).unwrap();
-                if a == *s {
-                    values.push(b.clone());
-                }
-                if c.self_pair && b == *s {
-                    values.push(a);
-                }
-            }
-            if singular.contains(s) {
-                values.push(s.clone());
-            }
-            if !arithmetic::roots_accounted(&arithmetic::fiber_gcd(&equations, s)?, &values)? {
-                return Err(refused("Intersection fiber census omits an event"));
-            }
-        }
+        let census = Census {
+            c,
+            equations: arithmetic::intersection_polynomials(&x, &y, c.self_pair)?,
+            projections,
+            singular,
+        };
+        census.verify_projections()?;
+        census.verify_events()?;
+        census.verify_singular()?;
+        census.verify_fibers()?;
     }
-    let global = |curve: &Curve, u: f64| -> Result<f64> {
-        let d = curve.domain();
-        float(
-            &(Q::from_float(d[0]).unwrap()
-                + (Q::from_float(d[1]).unwrap() - Q::from_float(d[0]).unwrap())
-                    * Q::from_float(u).unwrap()),
-        )
-    };
     Ok(VerifiedCurveIntersections {
         events: c
             .events

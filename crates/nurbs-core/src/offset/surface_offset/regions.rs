@@ -198,7 +198,6 @@ impl Pair {
 /// No partial region pair is published. Side choice is explicit; original BRep
 /// incidence/material-sector inference, world seams and closed solids remain
 /// independent downstream obligations.
-#[allow(clippy::too_many_arguments)]
 pub fn fit_pair(
     faces: crate::offset::contact_pcurve::OffsetFaces<'_>,
     domain: super::contact_curve::ContactDomain,

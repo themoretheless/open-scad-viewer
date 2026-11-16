@@ -2349,11 +2349,14 @@
         let projection=[[vectors[1][1]/determinant,-vectors[1][0]/determinant,0.],
             [-vectors[0][1]/determinant,vectors[0][0]/determinant,0.]];
         let shell_work=||crate::source_profile_body::ShellReplayLimits{
-            boundary:boundary_work(),projection,cut_spans_per_section:32,mapping_cells_per_section:200,
-            fragments_per_section:100,controls:1000,join_cells:1000,join_spans:10000,exterior_drivers:1000,
-            collapsed_ends:[1,1],subdivisions:16,quotient_cells:256,retained_cells:2048,retained_spans:12288,
-            transition_cells:2000,transition_spans:100000,exact_work_per_rail:100000000,
-            drivers_per_rail:100000,fragments_per_rail:100,outer_exact_work:100000000,outer_drivers:100000,shell_uses:1000};
+            boundary:boundary_work(),projection,controls:1000,
+            section:crate::source_profile_body::ShellSectionLimits{cut_spans:32,mapping_cells:200,fragments:100},
+            join:crate::source_profile_body::ShellJoinLimits{cells:1000,spans:10000,exterior_drivers:1000},
+            quotient:crate::source_profile_body::ShellQuotientLimits{collapsed_ends:[1,1],subdivisions:16,cells:256},
+            patches:crate::source_profile_body::ShellPatchLimits{retained_cells:2048,retained_spans:12288,
+                transition_cells:2000,transition_spans:100000},
+            rail:crate::source_profile_body::ShellRailLimits{exact_work:100000000,drivers:100000,fragments:100},
+            outer:crate::source_profile_body::ShellOuterLimits{exact_work:100000000,drivers:100000},shell_uses:1000};
         if let Ok(path)=std::env::var("BREP_EXPRESSION_REPLAY_REQUEST_PATH") {
             let request=value_codec::json!({"op":"cad_expression_shell_restore",
                 "proposalDefinition":rebuilt.definition().unwrap(),"boundaryDefinition":boundary_recipe,
@@ -2750,6 +2753,7 @@
     }
 
     #[test]
+    #[cfg_attr(not(feature = "slow-proofs"), ignore = "slow proof, run with --features slow-proofs")]
     fn annular_corrected_expression_authored_radius() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -2816,14 +2820,17 @@
     }
 
     #[test]
+    #[cfg_attr(not(feature = "slow-proofs"), ignore = "slow proof, run with --features slow-proofs")]
     fn restricted_profile_seams_match_owned_neighbor_supports() {
         restricted_profile_seam_control(false,false);
     }
     #[test]
+    #[cfg_attr(not(feature = "slow-proofs"), ignore = "slow proof, run with --features slow-proofs")]
     fn partial_rational_multispan_carrier_transfers_owned_transition_contact() {
         restricted_profile_seam_control(true,false);
     }
     #[test]
+    #[cfg_attr(not(feature = "slow-proofs"), ignore = "slow proof, run with --features slow-proofs")]
     fn partial_rational_transition_has_owned_oriented_volume() {
         restricted_profile_seam_control(true,true);
     }
@@ -6489,10 +6496,10 @@
             );
             assert!(!wall.complete && wall.cells == 0 && wall.spans == 0);
             assert_eq!(
-                wall.total_pairs,
+                wall.pairs.total,
                 expression.faces().len() * (expression.faces().len() + 1) / 2
             );
-            assert_eq!(wall.pending.len(), wall.total_pairs);
+            assert_eq!(wall.pending.len(), wall.pairs.total);
             for face in 0..expression.faces().len() {
                 assert!(wall.pending.iter().any(|p| p.faces == [face, face]));
             }
@@ -6502,8 +6509,8 @@
                     v.parse::<usize>()
                         .expect("wall cell budget must be an integer")
                 })
-                .unwrap_or(wall.total_pairs);
-            assert!(wall_cells >= wall.total_pairs && wall_cells <= 100000);
+                .unwrap_or(wall.pairs.total);
+            assert!(wall_cells >= wall.pairs.total && wall_cells <= 100000);
             let trim_cells = std::env::var("BREP_EXPRESSION_WALL_TRIM_CELLS")
                 .ok()
                 .map(|v| v.parse::<usize>().expect("trim budget must be an integer"))
@@ -6552,16 +6559,16 @@
             );
             eprintln!(
                 "expression whole-wall initial={} total={} pending={} cells={} spans={} distanceExcluded={} angleExcluded={} planarExcluded={} intrinsicExcluded={} cacheHits={}",
-                wall.initial_pairs_checked,
-                wall.total_pairs,
+                wall.pairs.initial_checked,
+                wall.pairs.total,
                 wall.pending.len(),
                 wall.cells,
                 wall.spans,
-                wall.distance_excluded,
-                wall.angle_excluded,
-                wall.planar_excluded,
+                wall.excluded.distance,
+                wall.excluded.angle,
+                wall.excluded.planar,
                 wall.intrinsic.excluded,
-                wall.cache_hits
+                wall.pairs.cache_hits
             );
             assert_eq!(
                 wall.pending.len(),
@@ -6619,18 +6626,18 @@
             }
             assert!(wall.profile_transition.checked <= wall.cells);
             assert!(wall.profile_transition.excluded <= wall.profile_transition.checked);
-            assert!(wall.profile_transition.excluded <= wall.angle_excluded);
+            assert!(wall.profile_transition.excluded <= wall.excluded.angle);
             assert!(wall.profile_transition.spans <= wall.spans);
             assert_eq!(
-                wall.initial_pairs_checked, wall.total_pairs,
+                wall.pairs.initial_checked, wall.pairs.total,
                 "visit every original pair before refinement"
             );
             assert!(
-                wall.planar_excluded > 0,
+                wall.excluded.planar > 0,
                 "exact planar self/coplanar products must be excluded"
             );
             assert!(
-                wall.cache_hits > 0,
+                wall.pairs.cache_hits > 0,
                 "reuse paid rectangles only within this owner-bound audit"
             );
             assert!(wall.plane_controls <= expression.faces().len() * 1000);
@@ -6640,7 +6647,7 @@
                 wall.pending.is_empty(),
                 "coverage cannot hide pending rectangles"
             );
-            if wall_cells == wall.total_pairs {
+            if wall_cells == wall.pairs.total {
                 assert!(
                     !wall.complete,
                     "the initial-pair budget cannot cover all refinements"

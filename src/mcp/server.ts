@@ -125,6 +125,7 @@ export async function runMcpServer(
       store,
       geometry,
       officialRuntime: activeOfficialRuntime,
+      localEditor: true,
       onRequestSettled: requestId => activeTransport.settleRequest(requestId),
       onRequestCancelled: requestId => activeTransport.cancelRequest(requestId),
     }), {

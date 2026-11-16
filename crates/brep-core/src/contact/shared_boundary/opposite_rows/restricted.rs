@@ -53,177 +53,98 @@ fn owners(model: &Model, face: usize, w: &mut Work) -> Option<(BTreeSet<usize>, 
     }
     Some((edges, vertices))
 }
-pub(super) fn prove(
-    model: &Model,
-    faces: [usize; 2],
-    planar: usize,
-    w: &mut Work,
-) -> Option<crate::boundary_hull_contact::Certificate> {
-    let a = &model.faces[faces[1 - planar]];
-    let b = &model.faces[faces[planar]];
-    let s = &a.surface;
-    let p = &b.surface;
-    let n = [s.control_points.len(), s.control_points[0].len()];
-    let degree = [s.degree_u, s.degree_v];
-    let knots = [&s.knots_u, &s.knots_v];
-    if s.periodic_u
-        || s.periodic_v
-        || n != [degree[0] + 1, degree[1] + 1]
-        || n.iter().any(|&n| n < 2 || n > 33)
-    {
-        return None;
-    }
-    for axis in 0..2 {
-        for (i, &k) in knots[axis].iter().enumerate() {
-            w.charge()?;
-            if k != knots[axis][if i <= degree[axis] {
-                degree[axis]
+/// How one zero natural row of the strip meets the second carrier.
+enum RowContact {
+    /// The row is a complete shared edge.
+    Edge(usize),
+    /// The row's hull is strictly outside the second original hull.
+    Disjoint,
+    /// The row's hull touches the second hull at one actual shared vertex.
+    Vertex(usize),
+}
+
+/// Exact data shared by both rows of one covered axis.
+struct AxisProof<'a> {
+    model: &'a Model,
+    face: &'a brep_topology::Face<Surface>,
+    surface: &'a Surface,
+    other_edges: BTreeSet<usize>,
+    common: Vec<usize>,
+    other_box: [[f64; 2]; 3],
+    axis: usize,
+}
+
+impl AxisProof<'_> {
+    fn row_box(&self, row: usize, free: usize, w: &mut Work) -> Option<[[f64; 2]; 3]> {
+        let s = self.surface;
+        let mut poles = Vec::with_capacity(free);
+        for j in 0..free {
+            let pole = if self.axis == 0 {
+                s.control_points.get(row)?.get(j)?
             } else {
-                n[axis]
-            }] {
-                return None;
-            }
+                s.control_points.get(j)?.get(row)?
+            };
+            poles.push(pole.as_slice());
         }
+        hull(poles.into_iter(), w)
     }
-    let plane = [
-        p.control_points[0][0].as_slice(),
-        p.control_points[p.control_points.len() - 1][0].as_slice(),
-        p.control_points[0][p.control_points[0].len() - 1].as_slice(),
-    ];
-    let mut noncollinear = false;
-    for axes in [[0, 1], [0, 2], [1, 2]] {
-        w.charge()?;
-        match orient(&plane, Some(axes))? {
-            Sign::Zero => {}
-            _ => {
-                noncollinear = true;
-                break;
-            }
+
+    fn row_contact(&self, row: usize, free: usize, w: &mut Work) -> Option<RowContact> {
+        let found = strip::boundary_edge(
+            self.model,
+            self.face,
+            self.surface,
+            &self.other_edges,
+            (self.axis, row),
+            w,
+        )?;
+        if let Some(edge) = found {
+            return Some(RowContact::Edge(edge));
         }
-    }
-    if !noncollinear {
-        return None;
-    }
-    for (point, &weight) in p
-        .control_points
-        .iter()
-        .flatten()
-        .zip(p.weights.iter().flatten())
-    {
-        w.charge()?;
-        if !weight.is_finite() || weight <= 0. || w.side(plane, point)? != Sign::Zero {
+        let row_box = self.row_box(row, free, w)?;
+        let other_box = self.other_box;
+        if (0..3).any(|k| row_box[k][1] < other_box[k][0] || other_box[k][1] < row_box[k][0]) {
+            return Some(RowContact::Disjoint);
+        }
+        let overlap: [[f64; 2]; 3] = std::array::from_fn(|k| {
+            [
+                row_box[k][0].max(other_box[k][0]),
+                row_box[k][1].min(other_box[k][1]),
+            ]
+        });
+        if overlap.iter().any(|d| d[0] != d[1]) {
             return None;
         }
-    }
-    let mut side = None;
-    let mut signs = vec![vec![Sign::Zero; n[1]]; n[0]];
-    for u in 0..n[0] {
-        for v in 0..n[1] {
+        let point = overlap.map(|d| d[0]);
+        for &v in &self.common {
             w.charge()?;
-            if !s.weights[u][v].is_finite() || s.weights[u][v] <= 0. {
-                return None;
-            }
-            let sign = w.side(plane, &s.control_points[u][v])?;
-            signs[u][v] = sign;
-            if sign != Sign::Zero {
-                if side.is_some_and(|old| old != sign) {
-                    return None;
-                }
-                side = Some(sign);
+            if self.model.vertices[v].point == point {
+                return Some(RowContact::Vertex(v));
             }
         }
+        None
     }
-    side?; // Coplanar surfaces require independent region/overlap proofs.
-    for axis in 0..2 {
-        if n[axis] < 3 {
-            continue;
-        }
-        let at = |i: usize, j: usize| if axis == 0 { signs[i][j] } else { signs[j][i] };
-        // Both end rows vanish. Every free-coordinate control column has a
-        // strict interior coefficient. Positive rational Bernstein bases make
-        // the ENTIRE open strip strictly sided, even at its other boundaries.
-        let mut covered = true;
-        for j in 0..n[1 - axis] {
-            w.charge()?;
-            covered &= at(0, j) == Sign::Zero
-                && at(n[axis] - 1, j) == Sign::Zero
-                && (1..n[axis] - 1).any(|i| at(i, j) != Sign::Zero);
-        }
-        if !covered {
-            continue;
-        }
-        let (other, bv) = owners(model, faces[planar], w)?;
-        let (_, av) = owners(model, faces[1 - planar], w)?;
-        let common = av.intersection(&bv).copied().collect::<Vec<_>>();
-        let other_box = hull(p.control_points.iter().flatten().map(|p| p.as_slice()), w)?;
+
+    fn certificate(
+        &self,
+        faces: [usize; 2],
+        n: [usize; 2],
+        w: &mut Work,
+    ) -> Option<crate::boundary_hull_contact::Certificate> {
+        let free = n[1 - self.axis];
         let mut edges = Vec::new();
         let mut vertex = None;
-        for row in [0, n[axis] - 1] {
-            let mut found = None;
-            'wires: for wire in std::iter::once(a.outer).chain(a.holes.iter().copied()) {
-                for c in &model.loops[wire].coedges {
-                    w.charge()?;
-                    if !other.contains(&c.edge) || c.trim().is_some() {
-                        continue;
+        for row in [0, n[self.axis] - 1] {
+            match self.row_contact(row, free, w)? {
+                RowContact::Edge(edge) => edges.push(edge),
+                RowContact::Disjoint => {}
+                RowContact::Vertex(v) => {
+                    if vertex.is_some_and(|previous| previous != v) {
+                        return None;
                     }
-                    let e = &model.edges[c.edge];
-                    let curve = &e.curve;
-                    if curve.control_points.first()?.as_slice()
-                        != model.vertices[e.vertices[0]].point
-                        || curve.control_points.last()?.as_slice()
-                            != model.vertices[e.vertices[1]].point
-                    {
-                        continue;
-                    }
-                    // Complete rational boundary identity, never endpoint-only
-                    // recognition. Failed exact predicate work is charged too.
-                    w.charge()?;
-                    if boundary(s, &c.pcurve, curve) == Some((axis, row)) {
-                        found = Some(c.edge);
-                        break 'wires;
-                    }
+                    vertex = Some(v);
                 }
             }
-            if let Some(edge) = found {
-                edges.push(edge);
-                continue;
-            }
-            let row_box = hull(
-                (0..n[1 - axis]).map(|j| {
-                    if axis == 0 {
-                        s.control_points[row][j].as_slice()
-                    } else {
-                        s.control_points[j][row].as_slice()
-                    }
-                }),
-                w,
-            )?;
-            if (0..3).any(|k| row_box[k][1] < other_box[k][0] || other_box[k][1] < row_box[k][0]) {
-                continue;
-            }
-            let overlap: [[f64; 2]; 3] = std::array::from_fn(|k| {
-                [
-                    row_box[k][0].max(other_box[k][0]),
-                    row_box[k][1].min(other_box[k][1]),
-                ]
-            });
-            if overlap.iter().any(|d| d[0] != d[1]) {
-                return None;
-            }
-            let point = overlap.map(|d| d[0]);
-            let mut owned = None;
-            for &v in &common {
-                w.charge()?;
-                if model.vertices[v].point == point {
-                    owned = Some(v);
-                    break;
-                }
-            }
-            let v = owned?;
-            if vertex.is_some_and(|previous| previous != v) {
-                return None;
-            }
-            vertex = Some(v);
         }
         if edges.len() == 2 && edges[0] == edges[1] {
             return None;
@@ -233,21 +154,12 @@ pub(super) fn prove(
         if edges.is_empty() && vertex.is_none() || !edges.is_empty() && vertex.is_some() {
             return None;
         }
-        let mut enclosure = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
-        for &e in &edges {
-            for pole in &model.edges[e].curve.control_points {
-                w.charge()?;
-                for k in 0..3 {
-                    enclosure[k][0] = enclosure[k][0].min(pole[k]);
-                    enclosure[k][1] = enclosure[k][1].max(pole[k]);
-                }
-            }
-        }
+        let mut enclosure = strip::edge_enclosure(self.model, &edges, w)?;
         if let Some(v) = vertex {
             w.charge()?;
-            enclosure = model.vertices[v].point.map(|x| [x, x]);
+            enclosure = self.model.vertices[v].point.map(|x| [x, x]);
         }
-        return Some(crate::boundary_hull_contact::Certificate {
+        Some(crate::boundary_hull_contact::Certificate {
             faces,
             contact_enclosure: enclosure,
             edges,
@@ -255,7 +167,36 @@ pub(super) fn prove(
             joined_proof: None,
             polar_join: None,
             source_join: None,
-        });
+        })
+    }
+}
+
+pub(super) fn prove(
+    model: &Model,
+    faces: [usize; 2],
+    planar: usize,
+    w: &mut Work,
+) -> Option<crate::boundary_hull_contact::Certificate> {
+    let a = &model.faces[faces[1 - planar]];
+    let p = &model.faces[faces[planar]].surface;
+    let net = strip::signed_net(&a.surface, p, w)?;
+    let n = net.n;
+    for axis in 0..2 {
+        if n[axis] < 3 || !net.covered(axis, w)? {
+            continue;
+        }
+        let (other_edges, bv) = owners(model, faces[planar], w)?;
+        let (_, av) = owners(model, faces[1 - planar], w)?;
+        let proof = AxisProof {
+            model,
+            face: a,
+            surface: &a.surface,
+            other_edges,
+            common: av.intersection(&bv).copied().collect(),
+            other_box: hull(p.control_points.iter().flatten().map(|p| p.as_slice()), w)?,
+            axis,
+        };
+        return proof.certificate(faces, n, w);
     }
     None
 }

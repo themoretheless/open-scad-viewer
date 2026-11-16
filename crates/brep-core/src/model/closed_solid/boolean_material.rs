@@ -27,6 +27,40 @@ pub enum BooleanSourceSide {
     First,
     Second,
 }
+/// Result boundary orientation relative to the source body's outward normal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BooleanFaceDisposition {
+    Discard,
+    Keep,
+    Reverse,
+}
+
+impl BooleanMaterialOp {
+    /// Evaluate the two sides of a source boundary when the other operand
+    /// has a uniform material value across that boundary.
+    pub fn face_disposition(
+        self,
+        side: BooleanSourceSide,
+        other_inside: bool,
+    ) -> BooleanFaceDisposition {
+        let (inside, outside) = match side {
+            BooleanSourceSide::First => (
+                self.material(true, other_inside),
+                self.material(false, other_inside),
+            ),
+            BooleanSourceSide::Second => (
+                self.material(other_inside, true),
+                self.material(other_inside, false),
+            ),
+        };
+        match (inside, outside) {
+            (true, false) => BooleanFaceDisposition::Keep,
+            (false, true) => BooleanFaceDisposition::Reverse,
+            _ => BooleanFaceDisposition::Discard,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct BooleanFaceSeedLimits {
     pub domain_cells: usize,
@@ -163,18 +197,9 @@ pub fn qualify_boolean_face_seed(
         ));
     }
     let seed = qualify_surface_material_seed(other, &f.surface, uv, directions, limits.material)?;
-    let (inside, outside) = match side {
-        BooleanSourceSide::First => (
-            operation.material(true, seed.inside()),
-            operation.material(false, seed.inside()),
-        ),
-        BooleanSourceSide::Second => (
-            operation.material(seed.inside(), true),
-            operation.material(seed.inside(), false),
-        ),
-    };
-    let retain = inside != outside;
-    let reverse_material_normal = retain && !inside;
+    let disposition = operation.face_disposition(side, seed.inside());
+    let retain = disposition != BooleanFaceDisposition::Discard;
+    let reverse_material_normal = disposition == BooleanFaceDisposition::Reverse;
     let reversed_surface = use_.reversed ^ reverse_material_normal;
     Ok(QualifiedBooleanFaceSeed {
         a: a.clone(),

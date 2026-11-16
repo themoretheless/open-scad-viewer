@@ -71,15 +71,35 @@ fn local_boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Model>>
         return Ok(None);
     };
     let tolerance = a.tolerance_mm.max(b.tolerance_mm);
-    let construct = |loops: &[Vec<nurbs_core::curve::Curve>], lo, hi| -> Result<Model> {
+    let construct = |(loops, exact): (Vec<Vec<nurbs_core::curve::Curve>>, bool), lo, hi| -> Result<Model> {
         if loops.is_empty() {
             return Model::empty(tolerance);
         }
-        let mut result = prism::extrude(loops, lo, hi)?;
+        let mut result = if exact {
+            prism::extrude_exact_profile(&loops, lo, hi)?
+        } else {
+            prism::extrude(&loops, lo, hi)?
+        };
         result.tolerance_mm = tolerance;
         result.inherit_topology_ids(&[a, b]);
         result.validate()?;
         Ok(result)
+    };
+    let periodic = a.faces.iter().chain(&b.faces)
+        .any(|face| face.surface.periodic_u || face.surface.periodic_v);
+    let planar = |operation| {
+        if periodic {
+            let sources = [&pa.loops[..], &pb.loops[..]];
+            let exact = match operation {
+                "intersection" => Some(crate::boolean::operations::intersect_planar_pcurves(sources, 4096)),
+                "difference" => Some(crate::boolean::operations::subtract_planar_pcurves(sources, 4096)),
+                _ => None,
+            };
+            if let Some(Ok(loops)) = exact {
+                return Ok((loops, true));
+            }
+        }
+        planar_trim::boolean(&pa.loops, &pb.loops, operation, tolerance).map(|loops| (loops, false))
     };
     let low = pa.z_min.max(pb.z_min);
     let high = pa.z_max.min(pb.z_max);
@@ -87,14 +107,14 @@ fn local_boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Model>>
         if low >= high {
             return Ok(Some(Model::empty(tolerance)?));
         }
-        let loops = planar_trim::boolean(&pa.loops, &pb.loops, operation, tolerance)?;
-        return Ok(Some(construct(&loops, low, high)?));
+        let loops = planar(operation)?;
+        return Ok(Some(construct(loops, low, high)?));
     }
     if operation == "difference" && low >= high {
         return Ok(Some(a.clone()));
     }
     if operation == "difference" {
-        let overlap = planar_trim::boolean(&pa.loops, &pb.loops, "intersection", tolerance)?;
+        let (overlap, _) = planar("intersection")?;
         if overlap.is_empty() {
             return Ok(Some(a.clone()));
         }
@@ -102,10 +122,10 @@ fn local_boolean(a: &Model, b: &Model, operation: &str) -> Result<Option<Model>>
     let same_height = pa.z_min == pb.z_min && pa.z_max == pb.z_max;
     let through_cut = operation == "difference" && pb.z_min <= pa.z_min && pb.z_max >= pa.z_max;
     if same_height || through_cut {
-        let loops = planar_trim::boolean(&pa.loops, &pb.loops, operation, tolerance)?;
-        return Ok(Some(construct(&loops, pa.z_min, pa.z_max)?));
+        let loops = planar(operation)?;
+        return Ok(Some(construct(loops, pa.z_min, pa.z_max)?));
     }
-    let a_only = planar_trim::boolean(&pa.loops, &pb.loops, "difference", tolerance)?;
+    let (a_only, _) = planar("difference")?;
     let a_interval = [pa.z_min, pa.z_max];
     let b_interval = [pb.z_min, pb.z_max];
     if operation == "difference" && a_only.is_empty() {

@@ -20,6 +20,17 @@ fn original_closed_component_has_an_oriented_first_return_cycle_and_shared_ports
     for port in cycle.ports() {
         port.selector().reverify().unwrap();
     }
+    let wire = cycle.to_root_wire(Default::default()).unwrap();
+    assert_eq!(wire.edges().len(), cycle.arcs().len());
+    for (index, edge) in wire.edges().iter().enumerate() {
+        let next = &wire.edges()[(index + 1) % wire.edges().len()];
+        assert!(edge.end().point().same_selector(next.start().point()));
+        assert_eq!(edge.forward(), cycle.arcs()[index].forward());
+    }
+    for support in 0..2 {
+        let w = ss::qualify_original_ss_winding(&wire, support, [0.5, 0.5], Default::default()).unwrap();
+        assert_eq!(w.winding().abs(), 1);
+    }
     assert_eq!(before, (source.first().clone(), source.second().clone()));
 }
 #[test]
@@ -121,6 +132,12 @@ fn rational_projective_carriers_keep_original_closed_cycle_and_saved_trace() {
     )
     .unwrap();
     let cycle = ss::order_closed_fiber_cycle(&owner, 0, Default::default()).unwrap();
+    let wire = cycle.to_root_wire(Default::default()).unwrap();
+    for support in 0..2 {
+        let winding =
+            ss::qualify_original_ss_winding(&wire, support, [0.5, 0.5], Default::default()).unwrap();
+        assert_eq!(winding.winding().abs(), 1);
+    }
     let trace = ss::construct_closed_fiber_trace(
         &cycle,
         ss::ClosedFiberTraceLimits {

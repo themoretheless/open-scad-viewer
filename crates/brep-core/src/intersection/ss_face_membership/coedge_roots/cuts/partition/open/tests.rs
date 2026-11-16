@@ -1,6 +1,30 @@
 use super::*;
 use crate::ss_face_membership::tests::{curves, fixtures, model, surface};
 const HOLE: [[f64; 2]; 2] = [[0.5625, 0.875], [0.4375, 0.5625]];
+
+#[test]
+fn finite_open_discovery_accepts_exterior_events_hidden_by_the_other_hole() {
+    let c = curves(0.0625);
+    let original = c.original();
+    let small = [[0.625, 0.8125], [0.46875, 0.53125]];
+    let m = [
+        model(original.source().first(), Some(HOLE)),
+        model(original.source().second(), Some(small)),
+    ];
+    let roots = roots(&c, &m);
+    assert!(roots.records.iter().flat_map(|record| &record.events)
+        .any(|event| event.other_face_location == Location::Outside));
+    let reps = qualify_cut_representatives(&roots, Default::default()).unwrap();
+    assert_eq!(reps.nodes().len(), 2);
+    let input = partition_cut_representatives(&reps, Default::default()).unwrap();
+    let paths = discover_open_ss_paths(&input, 0, Default::default()).unwrap();
+    assert_eq!(paths.len(), 1);
+    assert_eq!(paths[0].request(), &request(&input, false));
+    let cut = partition_open_ss_path(&paths[0], Default::default()).unwrap();
+    assert_eq!(cut.models()[0].faces.len(), 2);
+    cut.reverify().unwrap();
+}
+
 fn roots<'a>(c: &'a ss::QualifiedGraphCurves, m: &'a [Model; 2]) -> QualifiedFacePairRoots<'a> {
     qualify_coedge_roots(
         c.original(),
@@ -61,7 +85,17 @@ fn original_ellipse_roots_author_a_real_same_hole_face_contour() {
     let roots = roots(&c, &m);
     let reps = qualify_cut_representatives(&roots, Default::default()).unwrap();
     let input = partition_cut_representatives(&reps, Default::default()).unwrap();
-    let path = qualify_open_ss_path(&input, request(&input, false), Default::default()).unwrap();
+    let expected = request(&input, false);
+    let nodes = [expected.start_node, expected.end_node];
+    let path = discover_open_ss_path(&input, 0, nodes, Default::default()).unwrap();
+    assert_eq!(path.request(), &expected);
+    let mut reversed_nodes = nodes;
+    reversed_nodes.reverse();
+    let reversed = discover_open_ss_path(&input, 0, reversed_nodes, Default::default()).unwrap();
+    assert_eq!(reversed.request(), &request(&input, true));
+    assert!(discover_open_ss_path(&input, 0, nodes, OpenSSPathLimits {
+        operations: 1, ..Default::default()
+    }).is_err());
     assert_eq!(path.segments().len(), 4);
     for guard in path.guards() {
         assert!(guard.world_error_upper <= path.world_tolerance());
@@ -209,7 +243,13 @@ fn original_graph_vertex_ports_support_open_line_branches() {
         end_node: node(ends[1]),
         steps,
     };
-    let path = qualify_open_ss_path(&input, r, Default::default()).unwrap();
+    let path = discover_open_ss_path(
+        &input,
+        r.side,
+        [r.start_node, r.end_node],
+        Default::default(),
+    ).unwrap();
+    assert_eq!(path.request(), &r);
     assert!(path.guards().iter().all(|g| g.clock[0] == g.clock[1]));
     let result = partition_open_ss_path(&path, Default::default()).unwrap();
     assert_eq!(result.models()[0].faces.len(), 2);

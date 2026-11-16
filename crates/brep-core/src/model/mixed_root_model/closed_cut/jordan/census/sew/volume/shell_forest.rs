@@ -1,6 +1,7 @@
 //! Even/odd material from an exhaustive set of immutable pairwise root proofs.
 use super::*;
 mod nesting;
+pub(in super::super) use nesting::analyze as analyze_shell_nesting;
 mod topology;
 pub struct QualifiedRootShellForest {
     roots: Vec<Arc<QualifiedPairedRootSolid>>,

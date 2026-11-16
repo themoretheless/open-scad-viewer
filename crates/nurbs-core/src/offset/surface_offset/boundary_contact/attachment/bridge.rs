@@ -134,7 +134,6 @@ impl Report {
 /// proposal, path-link and endpoint-link allowances. This is not one global
 /// allowance silently reused by several proof calls. No material/embedding or
 /// complete original-root-set claim follows from these connected subsets.
-#[allow(clippy::too_many_arguments)]
 pub fn connect(
     surfaces: [&Surface; 2],
     distances: [f64; 2],

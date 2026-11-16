@@ -68,18 +68,22 @@ pub(super) fn lifted(
             selected.push(p.exact.clone());
         }
     }
-    if selected.len() != 1 {
-        return Err(refused(
+    match selected.pop() {
+        Some(only) if selected.is_empty() => Ok(only),
+        _ => Err(refused(
             "Original common clipping boundary has no unique target traversal",
-        ));
+        )),
     }
-    Ok(selected.pop().unwrap())
 }
-fn derive(o: &OwnedOriginalCommonClips) -> Result<Vec<OriginalCommonClip>> {
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+const MAX_CLIPS: usize = 4096;
+/// Limits are valid and all four owners replay on one shared source.
+fn verify_context(o: &OwnedOriginalCommonClips) -> Result<()> {
     if !o.width.is_finite()
         || !(1e-18..=1e-3).contains(&o.width)
-        || o.limits.max_refinements > 512
-        || !(1..=128).contains(&o.limits.max_resultant_size)
+        || o.limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&o.limits.max_resultant_size)
     {
         return Err(refused("Invalid original common clip limits"));
     }
@@ -95,92 +99,104 @@ fn derive(o: &OwnedOriginalCommonClips) -> Result<Vec<OriginalCommonClip>> {
             "Original common clip contexts do not share the same source",
         ));
     }
+    Ok(())
+}
+/// Endpoint indices of a component in increasing order on the shared clock.
+fn ordered_ends(c: &OriginalOverlapComponent) -> [usize; 2] {
+    if c.directions[0] > 0 { [0, 1] } else { [1, 0] }
+}
+/// The base component clipped against one third component.
+struct ClipPair<'a> {
+    o: &'a OwnedOriginalCommonClips,
+    base: &'a OriginalOverlapComponent,
+    third: &'a OriginalOverlapComponent,
+}
+impl ClipPair<'_> {
+    fn node(&self, origin: OriginalCommonClipOrigin) -> &AlgebraicEventNode {
+        match origin {
+            OriginalCommonClipOrigin::BaseEndpoint(i) => &self.base.endpoints[i],
+            OriginalCommonClipOrigin::ThirdEndpoint(i) => &self.third.endpoints[i],
+        }
+    }
+    /// The later lower end and the earlier upper end, when they bound a
+    /// nonempty common interval.
+    fn bounds(&self) -> Result<Option<[OriginalCommonClipOrigin; 2]>> {
+        let (be, te) = (ordered_ends(self.base), ordered_ends(self.third));
+        let pick = |end: usize, keep_base: Ordering| -> Result<OriginalCommonClipOrigin> {
+            let order = parameter_cmp(
+                &self.base.endpoints[be[end]],
+                0,
+                &self.third.endpoints[te[end]],
+                0,
+                self.o.limits,
+            )?;
+            Ok(if order != keep_base {
+                OriginalCommonClipOrigin::BaseEndpoint(be[end])
+            } else {
+                OriginalCommonClipOrigin::ThirdEndpoint(te[end])
+            })
+        };
+        let lower = pick(0, Ordering::Less)?;
+        let upper = pick(1, Ordering::Greater)?;
+        let nonempty = parameter_cmp(self.node(lower), 0, self.node(upper), 0, self.o.limits)?
+            == Ordering::Less;
+        Ok(nonempty.then_some([lower, upper]))
+    }
+    /// A clip end with its exact position on both clocks: its own endpoint
+    /// and its lift onto the other component.
+    fn boundary(&self, origin: OriginalCommonClipOrigin) -> Result<OriginalCommonClipBoundary> {
+        let o = self.o;
+        let positions = match origin {
+            OriginalCommonClipOrigin::BaseEndpoint(i) => {
+                let cut = endpoint_cut(&o.base_cuts, self.base.pair, i)?;
+                [
+                    self.base.endpoints[i].exact.clone(),
+                    lifted(
+                        o.base_cuts.clone(),
+                        cut,
+                        &o.third.owner().sources()[1],
+                        self.third,
+                        o.width,
+                        o.limits,
+                    )?,
+                ]
+            }
+            OriginalCommonClipOrigin::ThirdEndpoint(i) => {
+                let cut = endpoint_cut(&o.third_cuts, self.third.pair, i)?;
+                [
+                    lifted(
+                        o.third_cuts.clone(),
+                        cut,
+                        &o.base.owner().sources()[1],
+                        self.base,
+                        o.width,
+                        o.limits,
+                    )?,
+                    self.third.endpoints[i].exact.clone(),
+                ]
+            }
+        };
+        Ok(OriginalCommonClipBoundary { origin, positions })
+    }
+}
+fn derive(o: &OwnedOriginalCommonClips) -> Result<Vec<OriginalCommonClip>> {
+    verify_context(o)?;
     let base = o
         .base
         .components()
         .get(o.component)
         .ok_or_else(|| refused("Unknown base common component"))?;
-    let be = if base.directions[0] > 0 {
-        [0, 1]
-    } else {
-        [1, 0]
-    };
     let mut out = Vec::new();
     for (third_component, third) in o.third.components().iter().enumerate() {
-        let te = if third.directions[0] > 0 {
-            [0, 1]
-        } else {
-            [1, 0]
-        };
-        let lower = if parameter_cmp(
-            &base.endpoints[be[0]],
-            0,
-            &third.endpoints[te[0]],
-            0,
-            o.limits,
-        )? != Ordering::Less
-        {
-            OriginalCommonClipOrigin::BaseEndpoint(be[0])
-        } else {
-            OriginalCommonClipOrigin::ThirdEndpoint(te[0])
-        };
-        let upper = if parameter_cmp(
-            &base.endpoints[be[1]],
-            0,
-            &third.endpoints[te[1]],
-            0,
-            o.limits,
-        )? != Ordering::Greater
-        {
-            OriginalCommonClipOrigin::BaseEndpoint(be[1])
-        } else {
-            OriginalCommonClipOrigin::ThirdEndpoint(te[1])
-        };
-        let node = |r| match r {
-            OriginalCommonClipOrigin::BaseEndpoint(i) => &base.endpoints[i],
-            OriginalCommonClipOrigin::ThirdEndpoint(i) => &third.endpoints[i],
-        };
-        if parameter_cmp(node(lower), 0, node(upper), 0, o.limits)? != Ordering::Less {
+        let pair = ClipPair { o, base, third };
+        let Some([lower, upper]) = pair.bounds()? else {
             continue;
-        }
-        let make = |origin| -> Result<OriginalCommonClipBoundary> {
-            let positions = match origin {
-                OriginalCommonClipOrigin::BaseEndpoint(i) => {
-                    let cut = endpoint_cut(&o.base_cuts, base.pair, i)?;
-                    [
-                        base.endpoints[i].exact.clone(),
-                        lifted(
-                            o.base_cuts.clone(),
-                            cut,
-                            &o.third.owner().sources()[1],
-                            third,
-                            o.width,
-                            o.limits,
-                        )?,
-                    ]
-                }
-                OriginalCommonClipOrigin::ThirdEndpoint(i) => {
-                    let cut = endpoint_cut(&o.third_cuts, third.pair, i)?;
-                    [
-                        lifted(
-                            o.third_cuts.clone(),
-                            cut,
-                            &o.base.owner().sources()[1],
-                            base,
-                            o.width,
-                            o.limits,
-                        )?,
-                        third.endpoints[i].exact.clone(),
-                    ]
-                }
-            };
-            Ok(OriginalCommonClipBoundary { origin, positions })
         };
         out.push(OriginalCommonClip {
             third_component,
-            boundaries: [make(lower)?, make(upper)?],
+            boundaries: [pair.boundary(lower)?, pair.boundary(upper)?],
         });
-        if out.len() > 4096 {
+        if out.len() > MAX_CLIPS {
             return Err(refused("Original common clip component allowance exceeded"));
         }
     }

@@ -47,6 +47,139 @@ pub(in crate::profile::profile_certificate) fn contribution(
     contribution_status(net, domain, bounds, point, refinements, matrix)?
         .ok_or_else(|| refused("Winding query lies on the selected original source curve"))
 }
+const MAX_NET: usize = 9;
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+/// A ray query against one owned subinterval of an original cell.
+struct RayQuery<'a> {
+    net: &'a [[Q; 3]],
+    domain: &'a [Q; 2],
+    bounds: &'a [ParameterValue; 2],
+    point: &'a [Q; 2],
+    refinements: usize,
+    matrix: usize,
+}
+impl RayQuery<'_> {
+    fn order(&self, a: &ParameterValue, b: &ParameterValue) -> Result<Ordering> {
+        parameter_order::compare(
+            parameter_order::ParameterRef::new(&a.primitive, &a.value, &a.interval),
+            parameter_order::ParameterRef::new(&b.primitive, &b.value, &b.interval),
+            self.refinements,
+            self.matrix,
+        )
+    }
+    /// The net is a valid rational cell and the bounds a positive owned
+    /// subinterval of its domain.
+    fn verify(&self) -> Result<()> {
+        if !(2..=MAX_NET).contains(&self.net.len())
+            || self.net.iter().any(|p| p[2] <= Q::zero())
+            || self.domain[0] >= self.domain[1]
+            || self.refinements > MAX_REFINEMENTS
+            || !(1..=MAX_RESULTANT_SIZE).contains(&self.matrix)
+        {
+            return Err(refused("Invalid selected original ray context"));
+        }
+        let rational = |q: &Q| ParameterValue {
+            primitive: vec![Q::zero(), Q::one()],
+            value: trim(vec![q.clone()]),
+            interval: [Q::zero(), Q::zero()],
+        };
+        if self.order(&self.bounds[0], &self.bounds[1])? != Ordering::Less
+            || self.order(&self.bounds[0], &rational(&self.domain[0]))? == Ordering::Less
+            || self.order(&self.bounds[1], &rational(&self.domain[1]))? == Ordering::Greater
+        {
+            return Err(refused(
+                "Selected ray interval is not a positive owned subinterval of its original cell",
+            ));
+        }
+        Ok(())
+    }
+    /// Order of a root against the lower and the upper bound.
+    fn against_bounds(&self, primitive: &Poly, root: &[Q; 2]) -> Result<[Ordering; 2]> {
+        let at = |bound: &ParameterValue| {
+            compare(
+                primitive,
+                root,
+                self.domain,
+                bound,
+                self.refinements,
+                self.matrix,
+            )
+        };
+        Ok([at(&self.bounds[0])?, at(&self.bounds[1])?])
+    }
+    /// The cell lies on the horizontal line of the point: the point is on
+    /// the selected interval exactly when an owned crossing hits its x.
+    fn horizontal(&self) -> Result<Option<i64>> {
+        let roots = shore_events::produce(
+            self.net,
+            self.domain,
+            0,
+            &self.point[0],
+            &Q::new(1.into(), 1024.into()),
+            self.refinements,
+        )?;
+        let Some(roots) = roots else {
+            return Ok(None);
+        };
+        for root in roots {
+            let [lower, upper] = self.against_bounds(&root.primitive, &root.root)?;
+            if lower != Ordering::Less && upper != Ordering::Greater {
+                return Ok(None);
+            }
+        }
+        Ok(Some(0))
+    }
+    /// Half jump at an owned interval end, from the one-sided germ of the
+    /// crossing; zero when the end is the cell's own end.
+    fn end_jump(&self, g: &Poly, interval: &[Q; 2], lower: bool) -> Result<i8> {
+        let cell_end = if lower {
+            vec![-Q::one(), Q::one()]
+        } else {
+            vec![Q::zero(), Q::one()]
+        };
+        if event_coordinates::zero_at(&cell_end, g, interval)? {
+            return Ok(0);
+        }
+        let positive = germ(g, interval, lower, self.refinements)? > 0;
+        Ok(if lower {
+            i8::from(positive)
+        } else {
+            -i8::from(positive)
+        })
+    }
+    /// Signed crossings of the rightward ray from the point by the owned
+    /// subinterval; None when the point lies on it.
+    fn crossings(&self, g: &Poly) -> Result<Option<i64>> {
+        let census = ray_winding::produce_for_clipping(self.net, self.point)?;
+        ray_winding::verify_for_clipping(self.net, self.point, &census)?;
+        let mut total = 0i64;
+        for root in census.roots {
+            let interval = [
+                super::super::algebraic_intersections::decode_ratio(&root.interval[0])?,
+                super::super::algebraic_intersections::decode_ratio(&root.interval[1])?,
+            ];
+            let [lower, upper] = self.against_bounds(g, &interval)?;
+            if lower == Ordering::Less || upper == Ordering::Greater || root.sign_x < 0 {
+                continue;
+            }
+            if root.sign_x == 0 {
+                return Ok(None);
+            }
+            let jump = if lower == Ordering::Equal {
+                self.end_jump(g, &interval, true)?
+            } else if upper == Ordering::Equal {
+                self.end_jump(g, &interval, false)?
+            } else {
+                root.jump
+            };
+            total = total
+                .checked_add(i64::from(jump))
+                .ok_or_else(|| refused("Selected original ray winding overflow"))?;
+        }
+        Ok(Some(total))
+    }
+}
 /// None is a PROVED boundary point on the closed selected interval. A full-cell
 /// boundary outside the owned interval is not a selected boundary or failure.
 pub(in crate::profile::profile_certificate) fn contribution_status(
@@ -57,118 +190,26 @@ pub(in crate::profile::profile_certificate) fn contribution_status(
     refinements: usize,
     matrix: usize,
 ) -> Result<Option<i64>> {
-    if net.len() < 2
-        || net.len() > 9
-        || net.iter().any(|p| p[2] <= Q::zero())
-        || domain[0] >= domain[1]
-        || refinements > 512
-        || !(1..=128).contains(&matrix)
-    {
-        return Err(refused("Invalid selected original ray context"));
-    }
-    let order = |a: &ParameterValue, b: &ParameterValue| {
-        parameter_order::compare(
-            parameter_order::ParameterRef::new(&a.primitive, &a.value, &a.interval),
-            parameter_order::ParameterRef::new(&b.primitive, &b.value, &b.interval),
-            refinements,
-            matrix,
-        )
+    let query = RayQuery {
+        net,
+        domain,
+        bounds,
+        point,
+        refinements,
+        matrix,
     };
-    let rational = |q: &Q| ParameterValue {
-        primitive: vec![Q::zero(), Q::one()],
-        value: trim(vec![q.clone()]),
-        interval: [Q::zero(), Q::zero()],
-    };
-    if order(&bounds[0], &bounds[1])? != Ordering::Less
-        || order(&bounds[0], &rational(&domain[0]))? == Ordering::Less
-        || order(&bounds[1], &rational(&domain[1]))? == Ordering::Greater
-    {
-        return Err(refused(
-            "Selected ray interval is not a positive owned subinterval of its original cell",
-        ));
-    }
+    query.verify()?;
     let w = power(net, 2);
     let g = sub(
         &power(net, 1),
         &w.iter().map(|w| w * &point[1]).collect::<Poly>(),
     );
     if g.is_empty() {
-        let roots = shore_events::produce(
-            net,
-            domain,
-            0,
-            &point[0],
-            &Q::new(1.into(), 1024.into()),
-            refinements,
-        )?;
-        let Some(roots) = roots else {
-            return Ok(None);
-        };
-        for root in roots {
-            let lower = compare(
-                &root.primitive,
-                &root.root,
-                domain,
-                &bounds[0],
-                refinements,
-                matrix,
-            )?;
-            let upper = compare(
-                &root.primitive,
-                &root.root,
-                domain,
-                &bounds[1],
-                refinements,
-                matrix,
-            )?;
-            if lower != Ordering::Less && upper != Ordering::Greater {
-                return Ok(None);
-            }
-        }
-        return Ok(Some(0));
+        query.horizontal()
+    } else {
+        query.crossings(&g)
     }
-    let census = ray_winding::produce_for_clipping(net, point)?;
-    ray_winding::verify_for_clipping(net, point, &census)?;
-    let mut total = 0i64;
-    for root in census.roots {
-        let interval = [
-            super::super::algebraic_intersections::decode_ratio(&root.interval[0])?,
-            super::super::algebraic_intersections::decode_ratio(&root.interval[1])?,
-        ];
-        let lower = compare(&g, &interval, domain, &bounds[0], refinements, matrix)?;
-        let upper = compare(&g, &interval, domain, &bounds[1], refinements, matrix)?;
-        if lower == Ordering::Less || upper == Ordering::Greater || root.sign_x < 0 {
-            continue;
-        }
-        if root.sign_x == 0 {
-            return Ok(None);
-        }
-        let jump = if lower == Ordering::Equal {
-            if event_coordinates::zero_at(&vec![-Q::one(), Q::one()], &g, &interval)? {
-                0
-            } else {
-                i8::from(germ(&g, &interval, true, refinements)? > 0)
-            }
-        } else if upper == Ordering::Equal {
-            if event_coordinates::zero_at(&vec![Q::zero(), Q::one()], &g, &interval)? {
-                0
-            } else {
-                -i8::from(germ(&g, &interval, false, refinements)? > 0)
-            }
-        } else {
-            root.jump
-        };
-        total = total
-            .checked_add(i64::from(jump))
-            .ok_or_else(|| refused("Selected original ray winding overflow"))?;
-    }
-    Ok(Some(total))
 }
-/// Signed change of winding across a finite axis-aligned path segment.
-/// The source retains its native clock and exact algebraic cuts. None proves
-/// a selected-source endpoint contact. A coincident supporting cell is an
-/// explicit nongeneric path refusal, never silently counted as zero crossings.
-#[cfg(test)]
 pub(in crate::profile::profile_certificate) fn axis_segment(
     net: &[[Q; 3]],
     domain: &[Q; 2],

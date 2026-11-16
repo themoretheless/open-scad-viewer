@@ -76,15 +76,8 @@ pub fn inspect(model: &Model, limits: Limits) -> Result<Report> {
     for (face, f) in model.faces.iter().enumerate() {
         for wire in std::iter::once(f.outer).chain(f.holes.iter().copied()) {
             for c in &model.loops[wire].coedges {
-                let label = boundary(&f.surface, &c.pcurve, Axis::Profile)
-                    .or_else(|| boundary(&f.surface, &c.pcurve, Axis::Station));
-                let direction = label.map(|l| {
-                    let free = usize::from(l.starts_with('u'));
-                    (c.pcurve.control_points.last().unwrap()[free]
-                        > c.pcurve.control_points[0][free])
-                        != c.reversed
-                });
-                uses[c.edge].push((face, label, direction));
+                let side = coedge_side(&f.surface, &c.pcurve, c.reversed);
+                uses[c.edge].push((face, side.map(|s| s.0), side.map(|s| s.1)));
             }
         }
     }

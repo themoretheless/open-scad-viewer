@@ -57,6 +57,27 @@ fn periodic_cylinder_section_has_one_complete_closed_contour_and_original_seam()
     assert_eq!(saved, (source.first().clone(), source.second().clone()));
 }
 #[test]
+fn periodic_section_preserves_the_original_rational_plane_and_seam() {
+    let original = pair(1., 1.);
+    let mut rational = original.second().clone();
+    rational.degree_u = 2;
+    rational.knots_u = vec![-3., -3., -3., 5., 5., 5.];
+    rational.control_points = [-2., -1., 2.].map(|x| {
+        vec![vec![x, -2., 1.], vec![x, 2., 1.]]
+    }).to_vec();
+    rational.weights = vec![vec![1.; 2], vec![2.; 2], vec![3.; 2]];
+    let source = ss::FiberSources::new(original.first(), &rational).unwrap();
+    let owner = own(&source);
+    assert_eq!(owner.kind(), ss::PeriodicPlaneSSKind::ClosedContour);
+    assert_eq!(owner.source().second(), &rational);
+    assert_eq!(owner.periodic_axis(), 0);
+    assert_eq!(owner.level_control_points(), own(&original).level_control_points());
+    let wire = owner.to_root_wire(Default::default(), 64).unwrap();
+    wire.reverify().unwrap();
+    assert!(wire.edges().iter().all(|edge| edge.curve().source().second() == &rational));
+}
+
+#[test]
 fn positive_taper_keeps_exact_level_coefficients() {
     let o = own(&pair(0.5, 1.));
     assert_eq!(o.kind(), ss::PeriodicPlaneSSKind::ClosedContour);
@@ -75,6 +96,10 @@ fn rational_clock_is_not_rounded_and_natural_domains_are_preserved() {
     let o = own(&source);
     assert_eq!(o.transverse_parameter(), Some(&Q::new(2.into(), 3.into())));
     assert_eq!(o.kind(), ss::PeriodicPlaneSSKind::ClosedContour);
+    o.to_root_wire(Default::default(), 64)
+        .unwrap()
+        .reverify()
+        .unwrap();
 }
 #[test]
 fn either_collapsed_shore_is_one_point_instead_of_a_degenerate_closed_edge() {
@@ -144,6 +169,11 @@ fn parameter_axis_and_operand_reversal_keep_original_quotient_ownership() {
         let o = own(&source);
         assert_eq!(o.periodic_axis(), 1);
         assert_eq!(o.periodic_surface(), usize::from(reverse));
+        let wire = o.to_root_wire(Default::default(), 64).unwrap();
+        wire.reverify().unwrap();
+        let mut expected = [0; 4];
+        expected[2 * usize::from(reverse) + 1] = 1;
+        assert_eq!(wire.edges().last().unwrap().end().phase(), expected);
     }
 }
 #[test]

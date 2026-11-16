@@ -25,7 +25,31 @@ pub fn inspect(surface: &Surface, max_cells: usize) -> Result<Report> {
         (1..=100000).contains(&max_cells),
         "Regularity needs 1..100000 cells",
     )?;
-    if let Some(report) = bernstein::inspect(surface, max_cells)? {
+    let mut triangular_work = 0;
+    use crate::surface_injectivity::rational_triangular;
+    let coupled = rational_triangular::likely_coupled(surface);
+    if coupled && (rational_triangular::certify(
+        surface, &mut triangular_work, max_cells / 2,
+    ).is_some() || crate::surface_injectivity::rational_rectangle::certify(
+        surface, &mut triangular_work, max_cells / 2,
+    ).is_some() || crate::surface_injectivity::rational_quadrilateral::certify(
+        surface, &mut triangular_work, max_cells / 2,
+    ).is_some() || crate::surface_injectivity::rational_cones::certify(
+        surface, &mut triangular_work, max_cells / 2,
+    ).is_some() || crate::surface_injectivity::rational_rails::certify(
+        surface, &mut triangular_work, max_cells / 2,
+    ).is_some()) {
+        return Ok(Report {
+            spanwise_regular: true,
+            interior_basis_c1: true,
+            unresolved: Vec::new(),
+            cells: triangular_work,
+            proven_cells: 1,
+        });
+    }
+    let max_cells = max_cells - triangular_work;
+    if let Some(mut report) = bernstein::inspect(surface, max_cells)? {
+        report.cells += triangular_work;
         return Ok(report);
     }
     let mut pending = Vec::new();
@@ -101,7 +125,7 @@ pub fn inspect(surface: &Surface, max_cells: usize) -> Result<Report> {
             surface.control_points[0].len(),
         ),
         unresolved,
-        cells,
+        cells: cells + triangular_work,
         proven_cells,
     })
 }

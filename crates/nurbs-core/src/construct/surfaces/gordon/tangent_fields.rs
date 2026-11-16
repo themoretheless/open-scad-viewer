@@ -12,6 +12,7 @@ use crate::{
 #[cfg(test)]
 /// Rational quotient rule: dP/dv = (X_v W-X W_v)/W².
 /// Returns one Bezier curve per U span, with the authored U domain.
+#[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
 pub(super) fn boundary_v_derivative(surface: &Surface, end: bool) -> Result<Vec<Curve>> {
     surface.validate()?;
     check(

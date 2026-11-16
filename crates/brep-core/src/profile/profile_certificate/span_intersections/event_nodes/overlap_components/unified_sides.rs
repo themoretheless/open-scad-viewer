@@ -20,6 +20,114 @@ fn bound(v: &OriginalSourceParameter) -> Result<ParameterValue> {
         interval: [decode_ratio(&v.interval[0])?, decode_ratio(&v.interval[1])?],
     })
 }
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+/// The side parameter lies strictly between the two cuts of the carrier.
+fn verify_interior(
+    owner: &OwnedOriginalSourceCarriers,
+    c: &OriginalUnifiedCarrier,
+    parameter: &Q,
+    limits: ParameterOrderLimits,
+) -> Result<()> {
+    for (end, expected) in [std::cmp::Ordering::Less, std::cmp::Ordering::Greater]
+        .into_iter()
+        .enumerate()
+    {
+        let b = bound(&owner.cuts()[c.source][c.cuts[end]].value)?;
+        let order = arithmetic::parameter_order::compare(
+            arithmetic::parameter_order::ParameterRef::new(&b.primitive, &b.value, &b.interval),
+            arithmetic::parameter_order::ParameterRef::new(
+                &vec![Q::zero(), Q::one()],
+                &vec![parameter.clone()],
+                &[Q::zero(), Q::zero()],
+            ),
+            limits.max_refinements,
+            limits.max_resultant_size,
+        )?;
+        if order != expected {
+            return Err(refused(
+                "Unified side parameter is outside its original atomic carrier",
+            ));
+        }
+    }
+    Ok(())
+}
+/// The carrier cuts in the local parameter of its cell.
+fn local_bounds(
+    owner: &OwnedOriginalSourceCarriers,
+    c: &OriginalUnifiedCarrier,
+    cell: &Cell,
+) -> Result<[ParameterValue; 2]> {
+    let mut bounds = [
+        bound(&owner.cuts()[c.source][c.cuts[0]].value)?,
+        bound(&owner.cuts()[c.source][c.cuts[1]].value)?,
+    ];
+    for b in &mut bounds {
+        if b.value.is_empty() {
+            b.value.push(-cell.domain[0].clone());
+        } else {
+            b.value[0] -= &cell.domain[0];
+        }
+        for v in &mut b.value {
+            *v /= &cell.domain[1] - &cell.domain[0];
+        }
+    }
+    Ok(bounds)
+}
+/// All source cells as one net list, with the first net of every source.
+struct SourceNets {
+    nets: Vec<Vec<[Q; 3]>>,
+    cells: Vec<Vec<Cell>>,
+    offsets: Vec<usize>,
+}
+impl SourceNets {
+    fn new(owner: &OwnedOriginalSourceCarriers) -> Result<Self> {
+        let mut out = Self {
+            nets: Vec::new(),
+            cells: Vec::new(),
+            offsets: Vec::new(),
+        };
+        for curve in owner.dictionary().sources() {
+            let cs = cells(curve)?;
+            out.offsets.push(out.nets.len());
+            out.nets.extend(cs.iter().map(|c| c.net.clone()));
+            out.cells.push(cs);
+        }
+        Ok(out)
+    }
+    fn cell(&self, c: &OriginalUnifiedCarrier) -> &Cell {
+        &self.cells[c.source][c.cell]
+    }
+    /// Center intervals of every carrier of the edge, and the winding jump
+    /// each wire makes across the edge.
+    fn centers(
+        &self,
+        owner: &OwnedOriginalSourceCarriers,
+        e: &OriginalUnifiedEdge,
+        loops: &[Vec<Curve>],
+    ) -> Result<(Vec<arithmetic::carrier_sides::CenterInterval>, Vec<i64>)> {
+        let wires = loops
+            .iter()
+            .enumerate()
+            .flat_map(|(wire, curves)| curves.iter().map(move |_| wire))
+            .collect::<Vec<_>>();
+        let mut centers = Vec::new();
+        let mut jumps = vec![0i64; loops.len()];
+        for use_ in &e.carriers {
+            let c = &owner.carriers()[use_.carrier];
+            centers.push(arithmetic::carrier_sides::CenterInterval {
+                cell: self.offsets[c.source] + c.cell,
+                bounds: local_bounds(owner, c, self.cell(c))?,
+            });
+            let wire = wires[c.source];
+            jumps[wire] = jumps[wire]
+                .checked_add(if use_.reversed { -1 } else { 1 })
+                .ok_or_else(|| refused("Unified original winding jump overflow"))?;
+        }
+        Ok((centers, jumps))
+    }
+}
+type SideProof = ([PointWindingCertificate; 2], Vec<i64>);
 fn derive(
     graph: &OwnedOriginalUnifiedGraph,
     loops: &[Vec<Curve>],
@@ -27,8 +135,10 @@ fn derive(
     parameter: &ExactRatio,
     radius: &ExactRatio,
     limits: ParameterOrderLimits,
-) -> Result<([PointWindingCertificate; 2], Vec<i64>)> {
-    if limits.max_refinements > 512 || !(1..=128).contains(&limits.max_resultant_size) {
+) -> Result<SideProof> {
+    if limits.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&limits.max_resultant_size)
+    {
         return Err(refused("Invalid unified side proof budget"));
     }
     graph.reverify_source()?;
@@ -46,78 +156,15 @@ fn derive(
     let representative = e.carriers[0];
     let c = &owner.carriers()[representative.carrier];
     let parameter = decode_ratio(parameter)?;
-    for end in 0..2 {
-        let b = bound(&owner.cuts()[c.source][c.cuts[end]].value)?;
-        let cmp = arithmetic::parameter_order::compare(
-            arithmetic::parameter_order::ParameterRef::new(&b.primitive, &b.value, &b.interval),
-            arithmetic::parameter_order::ParameterRef::new(
-                &vec![Q::zero(), Q::one()],
-                &vec![parameter.clone()],
-                &[Q::zero(), Q::zero()],
-            ),
-            limits.max_refinements,
-            limits.max_resultant_size,
-        )?;
-        if cmp
-            != if end == 0 {
-                std::cmp::Ordering::Less
-            } else {
-                std::cmp::Ordering::Greater
-            }
-        {
-            return Err(refused(
-                "Unified side parameter is outside its original atomic carrier",
-            ));
-        }
-    }
-    let mut nets = Vec::new();
-    let mut source_cells = Vec::new();
-    let mut offsets = Vec::new();
-    for curve in owner.dictionary().sources() {
-        let cs = cells(curve)?;
-        offsets.push(nets.len());
-        nets.extend(cs.iter().map(|c| c.net.clone()));
-        source_cells.push(cs);
-    }
-    let mut centers = Vec::new();
-    let mut jumps = vec![0i64; loops.len()];
-    let wires = loops
-        .iter()
-        .enumerate()
-        .flat_map(|(wire, curves)| curves.iter().map(move |_| wire))
-        .collect::<Vec<_>>();
-    for use_ in &e.carriers {
-        let c = &owner.carriers()[use_.carrier];
-        let cell = &source_cells[c.source][c.cell];
-        let mut bounds = [
-            bound(&owner.cuts()[c.source][c.cuts[0]].value)?,
-            bound(&owner.cuts()[c.source][c.cuts[1]].value)?,
-        ];
-        for b in &mut bounds {
-            if b.value.is_empty() {
-                b.value.push(-cell.domain[0].clone());
-            } else {
-                b.value[0] -= &cell.domain[0];
-            }
-            for v in &mut b.value {
-                *v /= &cell.domain[1] - &cell.domain[0];
-            }
-        }
-        centers.push(arithmetic::carrier_sides::CenterInterval {
-            cell: offsets[c.source] + c.cell,
-            bounds,
-        });
-        let wire = wires[c.source];
-        jumps[wire] = jumps[wire]
-            .checked_add(if use_.reversed { -1 } else { 1 })
-            .ok_or_else(|| refused("Unified original winding jump overflow"))?;
-    }
-    let cell = &source_cells[c.source][c.cell];
+    verify_interior(owner, c, &parameter, limits)?;
+    let sources = SourceNets::new(owner)?;
+    let (centers, jumps) = sources.centers(owner, e, loops)?;
+    let cell = sources.cell(c);
     let local = (&parameter - &cell.domain[0]) / (&cell.domain[1] - &cell.domain[0]);
     let mut queries = arithmetic::carrier_sides::probes_with_centers(
         arithmetic::carrier_sides::TransverseSegment {
-            nets: &nets,
-            selected: offsets[c.source] + c.cell,
+            nets: &sources.nets,
+            selected: sources.offsets[c.source] + c.cell,
             t: &local,
             radius: &decode_ratio(radius)?,
             refinements: limits.max_refinements,
@@ -132,14 +179,14 @@ fn derive(
         certify_rational_point_winding(loops, queries[0].clone().map(|q| ratio(&q)))?,
         certify_rational_point_winding(loops, queries[1].clone().map(|q| ratio(&q)))?,
     ];
-    for wire in 0..loops.len() {
-        if certificates[0].windings[wire].checked_sub(certificates[1].windings[wire])
-            != Some(jumps[wire])
-        {
-            return Err(refused(
-                "Unified original side winding disagrees with complete source contributions",
-            ));
-        }
+    let consistent = (0..loops.len()).all(|wire| {
+        certificates[0].windings[wire].checked_sub(certificates[1].windings[wire])
+            == Some(jumps[wire])
+    });
+    if !consistent {
+        return Err(refused(
+            "Unified original side winding disagrees with complete source contributions",
+        ));
     }
     Ok((certificates, jumps))
 }
@@ -215,11 +262,11 @@ pub fn own_original_unified_sides_automatically(
             "Invalid automatic unified winding census or budgets",
         ));
     }
+    let sources = SourceNets::new(graph.owner())?;
     let mut out = Vec::new();
     for (edge, e) in graph.edges().iter().enumerate() {
         let c = &graph.owner().carriers()[e.carriers[0].carrier];
-        let actual = cells(&graph.owner().dictionary().sources()[c.source])?;
-        let cell = &actual[c.cell];
+        let cell = sources.cell(c);
         let parameter = arithmetic::carrier_sides::interior(
             &[(cell.net.clone(), cell.domain.clone())],
             [
@@ -228,15 +275,12 @@ pub fn own_original_unified_sides_automatically(
             ],
             limits.max_refinements,
         )?;
-        let all_cells = graph.owner().dictionary().sources().iter()
-            .map(cells).collect::<Result<Vec<_>>>()?;
-        let selected = all_cells[..c.source].iter().map(Vec::len).sum::<usize>() + c.cell;
-        let nets = all_cells.iter().flatten().map(|c| c.net.clone()).collect::<Vec<_>>();
+        let selected = sources.offsets[c.source] + c.cell;
         let local = (&parameter - &cell.domain[0]) / (&cell.domain[1] - &cell.domain[0]);
         // Only proposes a scale. The unchanged full transverse and winding
         // proof below remains the sole authority, including center ownership.
         let mut radius = arithmetic::carrier_sides::radius::suggest(
-            &nets, selected, &local, limits.max_refinements,
+            &sources.nets, selected, &local, limits.max_refinements,
         ).unwrap_or_else(|_| Q::one());
         let mut proved = None;
         for step in 0..=radius_halvings {

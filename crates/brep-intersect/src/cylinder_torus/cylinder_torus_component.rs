@@ -175,7 +175,18 @@ pub fn intersect_cylinder_torus(
             report.unresolved(domain, UnresolvedReason::NearCoincidence);
             return Ok(report);
         }
-        return general(report, domain, cylinder_model, torus_model, &cylinder, &torus, band, terms);
+        return general(
+            report,
+            domain,
+            Pair {
+                cylinder_model,
+                torus_model,
+                cylinder: &cylinder,
+                torus: &torus,
+            },
+            band,
+            terms,
+        );
     }
     let axis = cylinder.axis;
     let along = dot(delta, axis);
@@ -196,7 +207,18 @@ pub fn intersect_cylinder_torus(
             report.unresolved(domain, UnresolvedReason::NearCoincidence);
             return Ok(report);
         }
-        return general(report, domain, cylinder_model, torus_model, &cylinder, &torus, band, terms);
+        return general(
+            report,
+            domain,
+            Pair {
+                cylinder_model,
+                torus_model,
+                cylinder: &cylinder,
+                torus: &torus,
+            },
+            band,
+            terms,
+        );
     }
     let (r, big_r, r_c, half) = (
         torus.minor,
@@ -307,19 +329,40 @@ pub fn intersect_cylinder_torus(
     Ok(report)
 }
 
+/// The two operands of a cylinder/torus intersection: their models and
+/// canonical forms.
+#[derive(Clone, Copy)]
+struct Pair<'a> {
+    cylinder_model: &'a Model,
+    torus_model: &'a Model,
+    cylinder: &'a CanonicalCylinder,
+    torus: &'a CanonicalTorus,
+}
+
+/// The traced wall contact handed to [`capped`]: the wall and ring
+/// implicits, the wall loops and whether they are provably complete.
+struct WallContact<'a> {
+    wall: &'a crate::implicit_trace::CylinderImplicit,
+    ring: &'a crate::implicit_trace::TorusImplicit,
+    loops: Vec<Vec<Curve>>,
+    complete: bool,
+}
+
 /// General tilted or offset pair. Only a torus strictly between the cap
 /// planes is handled: then every contact is a closed loop on the side wall.
-#[allow(clippy::too_many_arguments)]
 fn general(
     mut report: Report<CylinderTorusComponent>,
     domain: Vec<f64>,
-    cylinder_model: &Model,
-    torus_model: &Model,
-    cylinder: &CanonicalCylinder,
-    torus: &CanonicalTorus,
+    pair: Pair<'_>,
     band: f64,
     terms: f64,
 ) -> Result<Report<CylinderTorusComponent>> {
+    let Pair {
+        cylinder_model,
+        torus_model,
+        cylinder,
+        torus,
+    } = pair;
     // Axial extent of the torus along the cylinder axis:
     // |s| + R sqrt(1 - (a_t . a_c)^2) + r.
     let s = dot(sub(torus.center, cylinder.center), cylinder.axis);
@@ -377,7 +420,18 @@ fn general(
         &all,
     );
     if reaches_cap {
-        return capped(report, domain, cylinder_model, torus_model, cylinder, torus, &wall, &ring, terms, all, complete);
+        return capped(
+            report,
+            domain,
+            pair,
+            WallContact {
+                wall: &wall,
+                ring: &ring,
+                loops: all,
+                complete,
+            },
+            terms,
+        );
     }
     if loops.is_empty() {
         // No loop found: an empty answer only with the certificate.
@@ -415,20 +469,25 @@ fn general(
 /// The torus reaches a cap plane: wall loops clipped to the slab, plane x
 /// torus loops traced on each reached cap plane and clipped to the disk,
 /// joined into closed cycles, recertified, lifted.
-#[allow(clippy::too_many_arguments)]
 fn capped(
     mut report: Report<CylinderTorusComponent>,
     domain: Vec<f64>,
-    cylinder_model: &Model,
-    torus_model: &Model,
-    cylinder: &CanonicalCylinder,
-    torus: &CanonicalTorus,
-    wall: &crate::implicit_trace::CylinderImplicit,
-    ring: &crate::implicit_trace::TorusImplicit,
+    pair: Pair<'_>,
+    contact: WallContact<'_>,
     terms: f64,
-    wall_loops: Vec<Vec<Curve>>,
-    wall_complete: bool,
 ) -> Result<Report<CylinderTorusComponent>> {
+    let Pair {
+        cylinder_model,
+        torus_model,
+        cylinder,
+        torus,
+    } = pair;
+    let WallContact {
+        wall,
+        ring,
+        loops: wall_loops,
+        complete: wall_complete,
+    } = contact;
     let refuse = |mut report: Report<CylinderTorusComponent>, reason| {
         report.components.clear();
         report.unresolved(domain.clone(), reason);

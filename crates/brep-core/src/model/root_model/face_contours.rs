@@ -11,6 +11,27 @@ impl RootBrep {
     /// nesting and retained material must be qualified independently.
     pub fn face_contours(surface: Surface, outer: RootFaceContour,
         holes: Vec<RootFaceContour>, tolerance_mm: f64) -> Result<Self> {
+        Self::assemble_face_contours(surface, outer, holes, tolerance_mm, false)
+    }
+
+    /// Assemble a candidate face whose contour joints agree modulo certified
+    /// native periods. The result can be inspected with periodic UV closure.
+    pub fn periodic_face_contours(
+        surface: Surface,
+        outer: RootFaceContour,
+        holes: Vec<RootFaceContour>,
+        tolerance_mm: f64,
+    ) -> Result<Self> {
+        Self::assemble_face_contours(surface, outer, holes, tolerance_mm, true)
+    }
+
+    fn assemble_face_contours(
+        surface: Surface,
+        outer: RootFaceContour,
+        holes: Vec<RootFaceContour>,
+        tolerance_mm: f64,
+        periodic: bool,
+    ) -> Result<Self> {
         if holes.len()>64 {return Err(unproved("Root face hole budget exhausted"));}
         surface.validate()?;
         let mut t=RootTopology {vertices:vec![],edges:vec![],loops:vec![],faces:vec![],
@@ -26,7 +47,15 @@ impl RootBrep {
                 let selected=if support==0 {source.first()} else {source.second()};
                 if selected!=&surface {return Err(unproved("Root face support belongs to another surface"));}
                 let next=(i+1)%edges.len();
-                qualify_root_uv_joint(edge.end(),support,edges[next].start(),contour.supports[next])?;
+                if periodic {
+                    qualify_root_uv_joint_period_delta(
+                        edge.end(), support, edges[next].start(), contour.supports[next],
+                    )?;
+                } else {
+                    qualify_root_uv_joint(
+                        edge.end(), support, edges[next].start(), contour.supports[next],
+                    )?;
+                }
                 let mut vertices=[0;2];
                 for (k,port) in [edge.start(),edge.end()].into_iter().enumerate() {
                     vertices[k]=if let Some(id)=t.vertices.iter().position(|v|v.point.selector.same_selector(port.point())) {id}

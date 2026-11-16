@@ -41,7 +41,7 @@ test('admits only the archived390 bytes within unchanged caps and measured margi
  assert.throws(()=>selectGeometryDeliveryBudget(createHash('sha256').update(changed).digest('hex')),/no reviewed delivery budget/)
 })
 
-test('binds the reviewed baf artifact to unchanged caps after sept payload verification',()=>{
+test('preserves the baf geometry cap and accounts for the Svet asset budget',()=>{
  const review=JSON.parse(readFileSync(new URL('../docs/qualification/geometry-delivery-baf58e-2026-11-02/review.json',import.meta.url),'utf8'))
  const bytes=readFileSync(new URL('../'+review.artifact,import.meta.url))
  assert.equal(createHash('sha256').update(bytes).digest('hex'),review.wasmSha256)
@@ -49,7 +49,8 @@ test('binds the reviewed baf artifact to unchanged caps after sept payload verif
  const prior=selectGeometryDeliveryBudget('390fb9f1e731a8de56228e7bcb6454eae96f28f06df621a9d1ca8f489b2a0201')
  assert.equal(profile.version,10)
  assert.equal(profile.geometryChunkBytes,prior.geometryChunkBytes)
- assert.equal(profile.totalAssetBytes,prior.totalAssetBytes)
+ assert.equal(review.limits.totalAssetBytes,prior.totalAssetBytes)
+ assert.equal(profile.totalAssetBytes,10_160_000)
  assert.ok(review.measurement<=profile.geometryChunkBytes)
  assert.ok(review.privateViteAssetBytes<=profile.totalAssetBytes)
  const altered=Buffer.from(bytes);altered[altered.length-1]^=1

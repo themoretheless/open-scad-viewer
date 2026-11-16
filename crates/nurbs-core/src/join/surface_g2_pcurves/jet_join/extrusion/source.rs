@@ -203,6 +203,7 @@ impl<'a> Source<'a> {
     /// Exact original product structure removes the stationary parameter from
     /// the projected trace before arithmetic. It is not an approximate iso
     /// extraction or a new source surface. Nonproducts keep the full lift.
+    #[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
     pub fn projected_trace(&self, axis: usize) -> Result<Homogeneous> {
         self.trace_on([I::point(0.), I::point(1.)], axis, self.origin)
     }

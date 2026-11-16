@@ -98,7 +98,10 @@ pub fn qualify(model: Model, policy: AdmissionPolicy) -> Result<ClosedSolidAdmis
 #[cfg(feature = "codec")]
 mod healing;
 #[cfg(feature = "codec")]
-pub use healing::{GeometricHealing, GeometricHealingStatus, heal_and_qualify};
+pub use healing::{
+    GeometricHealing, GeometricHealingStatus, heal_and_qualify, heal_and_rebuild_shells,
+    sew_gaps_and_rebuild_shells,
+};
 mod shell_repair;
 pub use shell_repair::{ShellRepair, ShellRepairPolicy, rebuild_even_odd_shells};
 mod material_seed;
@@ -107,7 +110,7 @@ pub use material_seed::{
 };
 mod boolean_material;
 pub use boolean_material::{
-    BooleanFace, BooleanFaceSeedLimits, BooleanMaterialOp, BooleanSourceSide,
+    BooleanFace, BooleanFaceDisposition, BooleanFaceSeedLimits, BooleanMaterialOp, BooleanSourceSide,
     QualifiedBooleanFaceSeed, qualify_boolean_face_seed,
 };
 mod volume;

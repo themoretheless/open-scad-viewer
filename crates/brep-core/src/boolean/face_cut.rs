@@ -84,6 +84,7 @@ pub use closed::{
 };
 pub(crate) use closed::{partition_bridges_with_tolerances, partition_path_graph_with_tolerances};
 
+#[derive(Clone)]
 pub struct Segment {
     pub curve: Curve,
     /// Original surface chart, increasing in the same direction as curve.

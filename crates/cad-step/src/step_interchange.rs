@@ -127,47 +127,131 @@ fn metadata_name(args: &str) -> Option<&str> {
     Some(&args[start..end])
 }
 
-pub(crate) fn restore_v2_identity(text: &str, model: &mut Model) -> Result<StepIdentityReport> {
-    let entities = parse_entities(text);
+/// Parses one `OSCAD_TOPO/2|kind|index|TopoId` name; `None` when the entity
+/// carries no identity metadata.
+fn parse_identity_record(ty: &str, args: &str) -> Result<Option<(TopoKind, usize, TopoId)>> {
+    let Some(payload) = metadata_name(args).and_then(|n| n.strip_prefix("OSCAD_TOPO/2|")) else {
+        return Ok(None);
+    };
+    let mut parts = payload.split('|');
+    let kind = TopoKind::parse(parts.next().unwrap_or(""))
+        .ok_or_else(|| refuse("STEP identity metadata has unknown topology kind"))?;
+    let index = parts
+        .next()
+        .ok_or_else(|| refuse("STEP identity metadata is missing index"))?
+        .parse::<usize>()
+        .map_err(|_| refuse("STEP identity metadata index is invalid"))?;
+    let id = TopoId::parse(
+        parts
+            .next()
+            .ok_or_else(|| refuse("STEP identity metadata is missing TopoId"))?,
+    )
+    .map_err(refuse)?;
+    if parts.next().is_some() || id.kind() != kind {
+        return Err(refuse("STEP identity metadata kind mismatch"));
+    }
+    let expected_ty = match kind {
+        TopoKind::Vertex => ty == "VERTEX_POINT",
+        TopoKind::Edge => ty == "EDGE_CURVE",
+        TopoKind::Loop => ty == "EDGE_LOOP",
+        TopoKind::Face => ty == "ADVANCED_FACE",
+        TopoKind::Shell => ty == "CLOSED_SHELL",
+        TopoKind::Body => ty == "MANIFOLD_SOLID_BREP" || ty == "BREP_WITH_VOIDS",
+        TopoKind::ControlPoint => false,
+    };
+    if !expected_ty {
+        return Err(refuse("Duplicate or misplaced STEP identity metadata"));
+    }
+    Ok(Some((kind, index, id)))
+}
+
+fn collect_identity_metadata(
+    entities: &BTreeMap<usize, (String, String)>,
+) -> Result<BTreeMap<(TopoKind, usize), TopoId>> {
     let mut found = BTreeMap::<(TopoKind, usize), TopoId>::new();
     let mut seen_ids = BTreeSet::new();
     for (ty, args) in entities.values() {
-        let Some(name) = metadata_name(args) else {
+        let Some((kind, index, id)) = parse_identity_record(ty, args)? else {
             continue;
         };
-        let Some(payload) = name.strip_prefix("OSCAD_TOPO/2|") else {
-            continue;
-        };
-        let mut parts = payload.split('|');
-        let kind = TopoKind::parse(parts.next().unwrap_or(""))
-            .ok_or_else(|| refuse("STEP identity metadata has unknown topology kind"))?;
-        let index = parts
-            .next()
-            .ok_or_else(|| refuse("STEP identity metadata is missing index"))?
-            .parse::<usize>()
-            .map_err(|_| refuse("STEP identity metadata index is invalid"))?;
-        let id = TopoId::parse(
-            parts
-                .next()
-                .ok_or_else(|| refuse("STEP identity metadata is missing TopoId"))?,
-        )
-        .map_err(refuse)?;
-        if parts.next().is_some() || id.kind() != kind {
-            return Err(refuse("STEP identity metadata kind mismatch"));
-        }
-        let expected_ty = match kind {
-            TopoKind::Vertex => ty == "VERTEX_POINT",
-            TopoKind::Edge => ty == "EDGE_CURVE",
-            TopoKind::Loop => ty == "EDGE_LOOP",
-            TopoKind::Face => ty == "ADVANCED_FACE",
-            TopoKind::Shell => ty == "CLOSED_SHELL",
-            TopoKind::Body => ty == "MANIFOLD_SOLID_BREP" || ty == "BREP_WITH_VOIDS",
-            TopoKind::ControlPoint => false,
-        };
-        if !expected_ty || found.insert((kind, index), id).is_some() || !seen_ids.insert(id) {
+        if found.insert((kind, index), id).is_some() || !seen_ids.insert(id) {
             return Err(refuse("Duplicate or misplaced STEP identity metadata"));
         }
     }
+    Ok(found)
+}
+
+/// Replaces every topology id of the model with its recorded identity and
+/// returns the old-to-new map.
+fn assign_identities(
+    found: &BTreeMap<(TopoKind, usize), TopoId>,
+    model: &mut Model,
+) -> Result<BTreeMap<TopoId, TopoId>> {
+    let mut remap = BTreeMap::<TopoId, TopoId>::new();
+    let topo = &mut model.1;
+    for (kind, target) in [
+        (TopoKind::Vertex, &mut topo.vertices),
+        (TopoKind::Edge, &mut topo.edges),
+        (TopoKind::Loop, &mut topo.loops),
+        (TopoKind::Face, &mut topo.faces),
+        (TopoKind::Shell, &mut topo.shells),
+        (TopoKind::Body, &mut topo.bodies),
+    ] {
+        for (index, value) in target.iter_mut().enumerate() {
+            let replacement = *found
+                .get(&(kind, index))
+                .ok_or_else(|| refuse("STEP identity metadata is not topology-bijective"))?;
+            remap.insert(*value, replacement);
+            *value = replacement;
+        }
+    }
+    Ok(remap)
+}
+
+/// Rewrites the change set and lineage through `remap`, then re-registers the
+/// current topology nodes.
+fn remap_identity_lineage(model: &mut Model, remap: &BTreeMap<TopoId, TopoId>) {
+    let topo = &mut model.1;
+    topo.change_set.nodes = topo
+        .change_set
+        .nodes
+        .iter()
+        .map(|(id, kind)| (remap.get(id).copied().unwrap_or(*id), *kind))
+        .collect();
+    let relations = topo
+        .change_set
+        .changes
+        .iter_mut()
+        .map(|c| (&mut c.parents, &mut c.children))
+        .chain(
+            topo.lineage
+                .iter_mut()
+                .map(|r| (&mut r.parents, &mut r.children)),
+        );
+    for (parents, children) in relations {
+        for id in parents.iter_mut().chain(children.iter_mut()) {
+            if let Some(replacement) = remap.get(id) {
+                *id = *replacement;
+            }
+        }
+    }
+    for (kind, ids) in [
+        (TopoKind::Vertex, topo.vertices.as_slice()),
+        (TopoKind::Edge, topo.edges.as_slice()),
+        (TopoKind::Loop, topo.loops.as_slice()),
+        (TopoKind::Face, topo.faces.as_slice()),
+        (TopoKind::Shell, topo.shells.as_slice()),
+        (TopoKind::Body, topo.bodies.as_slice()),
+    ] {
+        topo.change_set
+            .nodes
+            .extend(ids.iter().copied().map(|id| (id, kind)));
+    }
+}
+
+pub(crate) fn restore_v2_identity(text: &str, model: &mut Model) -> Result<StepIdentityReport> {
+    let entities = parse_entities(text);
+    let found = collect_identity_metadata(&entities)?;
     if found.is_empty() {
         let count = topology_count(model);
         return Ok(StepIdentityReport {
@@ -182,61 +266,8 @@ pub(crate) fn restore_v2_identity(text: &str, model: &mut Model) -> Result<StepI
     if found.len() != expected {
         return Err(refuse("Partial STEP identity metadata is not admitted"));
     }
-    let mut remap = BTreeMap::<TopoId, TopoId>::new();
-    let assign = |kind: TopoKind,
-                  target: &mut [TopoId],
-                  remap: &mut BTreeMap<TopoId, TopoId>|
-     -> Result<()> {
-        for (index, value) in target.iter_mut().enumerate() {
-            let replacement = *found
-                .get(&(kind, index))
-                .ok_or_else(|| refuse("STEP identity metadata is not topology-bijective"))?;
-            remap.insert(*value, replacement);
-            *value = replacement;
-        }
-        Ok(())
-    };
-    assign(TopoKind::Vertex, &mut model.1.vertices, &mut remap)?;
-    assign(TopoKind::Edge, &mut model.1.edges, &mut remap)?;
-    assign(TopoKind::Loop, &mut model.1.loops, &mut remap)?;
-    assign(TopoKind::Face, &mut model.1.faces, &mut remap)?;
-    assign(TopoKind::Shell, &mut model.1.shells, &mut remap)?;
-    assign(TopoKind::Body, &mut model.1.bodies, &mut remap)?;
-    model.1.change_set.nodes = model
-        .1
-        .change_set
-        .nodes
-        .iter()
-        .map(|(id, kind)| (remap.get(id).copied().unwrap_or(*id), *kind))
-        .collect();
-    for change in &mut model.1.change_set.changes {
-        for id in change.parents.iter_mut().chain(&mut change.children) {
-            if let Some(replacement) = remap.get(id) {
-                *id = *replacement;
-            }
-        }
-    }
-    for relation in &mut model.1.lineage {
-        for id in relation.parents.iter_mut().chain(&mut relation.children) {
-            if let Some(replacement) = remap.get(id) {
-                *id = *replacement;
-            }
-        }
-    }
-    for (kind, ids) in [
-        (TopoKind::Vertex, model.1.vertices.as_slice()),
-        (TopoKind::Edge, model.1.edges.as_slice()),
-        (TopoKind::Loop, model.1.loops.as_slice()),
-        (TopoKind::Face, model.1.faces.as_slice()),
-        (TopoKind::Shell, model.1.shells.as_slice()),
-        (TopoKind::Body, model.1.bodies.as_slice()),
-    ] {
-        model
-            .1
-            .change_set
-            .nodes
-            .extend(ids.iter().copied().map(|id| (id, kind)));
-    }
+    let remap = assign_identities(&found, model)?;
+    remap_identity_lineage(model, &remap);
     model
         .1
         .change_set
@@ -435,15 +466,38 @@ fn model_bounds(model: &Model) -> ([f64; 3], [f64; 3]) {
     (min, max)
 }
 
-fn recognize_tube(model: &Model) -> Option<AnalyticKind> {
-    if model.validate().is_err()
-        || model.bodies.len() != 1
-        || model.shells.len() != 1
-        || model.faces.len() != 10
-        || model.vertices.len() != 16
-    {
+/// Shortest cap-normal cross product treated as a valid plane normal.
+const TUBE_CAP_NORMAL_MIN: f64 = 1e-12;
+/// Shortest axial extent / radial direction a recovered tube may have.
+const TUBE_MIN_EXTENT: f64 = 1e-9;
+/// Thinnest wall (outer minus inner radius) a recovered tube may have.
+const TUBE_MIN_WALL: f64 = 1e-5;
+
+/// Unit normal of a bilinear cap face from its first control-point corner.
+fn cap_plane_normal(face: &brep_core::Face) -> Option<[f64; 3]> {
+    let cps = &face.surface.control_points;
+    if cps.len() < 2 || cps[0].len() < 2 || cps[0][0].len() != 3 {
         return None;
     }
+    let a = &cps[0][0];
+    let b = &cps[1][0];
+    let c = &cps[0][1];
+    let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    let v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let n = [
+        u[1] * v[2] - u[2] * v[1],
+        u[2] * v[0] - u[0] * v[2],
+        u[0] * v[1] - u[1] * v[0],
+    ];
+    let len = n[0].hypot(n[1]).hypot(n[2]);
+    if !(len.is_finite() && len > TUBE_CAP_NORMAL_MIN) {
+        return None;
+    }
+    Some([n[0] / len, n[1] / len, n[2] / len])
+}
+
+/// Two planar holed caps and eight rational sides; returns the cap axis.
+fn tube_cap_axis(model: &Model) -> Option<[f64; 3]> {
     let caps: Vec<_> = model
         .faces
         .iter()
@@ -454,79 +508,94 @@ fn recognize_tube(model: &Model) -> Option<AnalyticKind> {
         .iter()
         .filter(|f| f.surface.degree_u == 2 && f.surface.degree_v == 1)
         .count();
-    if caps.len() != 2 || sides != 8 {
+    let [cap0, cap1] = caps[..] else {
+        return None;
+    };
+    if sides != 8 {
         return None;
     }
-    let plane_normal = |face: &brep_core::Face| -> Option<[f64; 3]> {
-        let cps = &face.surface.control_points;
-        if cps.len() < 2 || cps[0].len() < 2 || cps[0][0].len() != 3 {
-            return None;
-        }
-        let a = &cps[0][0];
-        let b = &cps[1][0];
-        let c = &cps[0][1];
-        let u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-        let v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-        let n = [
-            u[1] * v[2] - u[2] * v[1],
-            u[2] * v[0] - u[0] * v[2],
-            u[0] * v[1] - u[1] * v[0],
-        ];
-        let len = n[0].hypot(n[1]).hypot(n[2]);
-        if !(len.is_finite() && len > 1e-12) {
-            return None;
-        }
-        Some([n[0] / len, n[1] / len, n[2] / len])
-    };
-    let mut axis = plane_normal(caps[0])?;
-    if let Some(n1) = plane_normal(caps[1])
+    let mut axis = cap_plane_normal(cap0)?;
+    if let Some(n1) = cap_plane_normal(cap1)
         && axis[0] * n1[0] + axis[1] * n1[1] + axis[2] * n1[2] < 0.
     {
         axis = [-axis[0], -axis[1], -axis[2]];
     }
+    Some(axis)
+}
+
+/// Axial and radial extents of the model's vertices about `centroid`/`axis`.
+struct TubeRadialProfile {
+    z_min: f64,
+    z_max: f64,
+    inner: f64,
+    outer: f64,
+    outer_radial: Option<[f64; 3]>,
+}
+
+impl TubeRadialProfile {
+    fn measure(model: &Model, centroid: [f64; 3], axis: [f64; 3]) -> Option<Self> {
+        let mut zs = Vec::new();
+        let mut radii = Vec::new();
+        let mut outer_pt = None;
+        for v in &model.vertices {
+            let d = [
+                v.point[0] - centroid[0],
+                v.point[1] - centroid[1],
+                v.point[2] - centroid[2],
+            ];
+            let z = d[0] * axis[0] + d[1] * axis[1] + d[2] * axis[2];
+            let radial = [d[0] - z * axis[0], d[1] - z * axis[1], d[2] - z * axis[2]];
+            let r = radial[0].hypot(radial[1]).hypot(radial[2]);
+            zs.push(z);
+            radii.push(r);
+            if outer_pt
+                .map(|(_, or): ([f64; 3], f64)| r > or)
+                .unwrap_or(true)
+            {
+                outer_pt = Some((radial, r));
+            }
+        }
+        zs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+        radii.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+        Some(Self {
+            z_min: *zs.first()?,
+            z_max: *zs.last()?,
+            inner: *radii.first()?,
+            outer: *radii.last()?,
+            outer_radial: outer_pt.map(|(radial, _)| radial),
+        })
+    }
+}
+
+fn recognize_tube(model: &Model) -> Option<AnalyticKind> {
+    if model.validate().is_err()
+        || model.bodies.len() != 1
+        || model.shells.len() != 1
+        || model.faces.len() != 10
+        || model.vertices.len() != 16
+    {
+        return None;
+    }
+    let axis = tube_cap_axis(model)?;
     let mut centroid = [0.; 3];
     for v in &model.vertices {
         for k in 0..3 {
             centroid[k] += v.point[k] / model.vertices.len() as f64;
         }
     }
-    let mut zs = Vec::new();
-    let mut radii = Vec::new();
-    let mut outer_pt = None;
-    for v in &model.vertices {
-        let d = [
-            v.point[0] - centroid[0],
-            v.point[1] - centroid[1],
-            v.point[2] - centroid[2],
-        ];
-        let z = d[0] * axis[0] + d[1] * axis[1] + d[2] * axis[2];
-        let radial = [d[0] - z * axis[0], d[1] - z * axis[1], d[2] - z * axis[2]];
-        let r = radial[0].hypot(radial[1]).hypot(radial[2]);
-        zs.push(z);
-        radii.push(r);
-        if outer_pt
-            .map(|(_, or): ([f64; 3], f64)| r > or)
-            .unwrap_or(true)
-        {
-            outer_pt = Some((radial, r));
-        }
-    }
-    zs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
-    radii.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
-    let z0 = zs[0];
-    let z1 = zs[zs.len() - 1];
-    let height = z1 - z0;
-    if !(height.is_finite() && height > 1e-9) {
+    let profile = TubeRadialProfile::measure(model, centroid, axis)?;
+    let z0 = profile.z_min;
+    let height = profile.z_max - z0;
+    if !(height.is_finite() && height > TUBE_MIN_EXTENT) {
         return None;
     }
-    let inner = radii[0];
-    let outer = radii[radii.len() - 1];
-    if !(outer - inner >= 1e-5 && inner > 0.) {
+    let (inner, outer) = (profile.inner, profile.outer);
+    if !(outer - inner >= TUBE_MIN_WALL && inner > 0.) {
         return None;
     }
-    let (radial, _) = outer_pt?;
+    let radial = profile.outer_radial?;
     let rlen = radial[0].hypot(radial[1]).hypot(radial[2]);
-    if !(rlen.is_finite() && rlen > 1e-9) {
+    if !(rlen.is_finite() && rlen > TUBE_MIN_EXTENT) {
         return None;
     }
     let ref_dir = [radial[0] / rlen, radial[1] / rlen, radial[2] / rlen];
@@ -881,6 +950,178 @@ fn write_cuboid_topology(w: &mut StepWriter, min: [f64; 3], max: [f64; 3]) {
     w.close_shell(&face_ids);
 }
 
+/// Height below which a frustum's semi-angle is treated as zero.
+const FRUSTUM_FLAT_HEIGHT: f64 = 1e-15;
+
+/// Axis placement shared by the rotational analytic kinds.
+struct AxialPlacement {
+    origin: [f64; 3],
+    axis: [f64; 3],
+    ref_dir: [f64; 3],
+    top: [f64; 3],
+    height: f64,
+}
+
+impl AxialPlacement {
+    fn new(origin: [f64; 3], axis: [f64; 3], frame: &[[f64; 3]; 2], height: f64) -> Self {
+        Self {
+            origin,
+            axis,
+            ref_dir: frame[0],
+            top: add3(origin, scale3(axis, height)),
+            height,
+        }
+    }
+
+    fn axis2_at(&self, w: &mut StepWriter, origin: [f64; 3]) -> usize {
+        w.axis2(origin, self.axis, self.ref_dir)
+    }
+
+    fn plane_at(&self, w: &mut StepWriter, origin: [f64; 3]) -> (usize, usize) {
+        let ax = self.axis2_at(w, origin);
+        let plane = w.emit(format!("PLANE('',#{ax})"));
+        (ax, plane)
+    }
+
+    fn rim_point(&self, center: [f64; 3], radius: f64) -> [f64; 3] {
+        add3(center, scale3(self.ref_dir, radius))
+    }
+}
+
+fn write_cylinder(w: &mut StepWriter, at: &AxialPlacement, radius: f64) {
+    let ax_cyl = at.axis2_at(w, at.origin);
+    let cyl = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_cyl},{:.15})", radius));
+    let (ax_bot, plane_b) = at.plane_at(w, at.origin);
+    let (ax_top, plane_t) = at.plane_at(w, at.top);
+
+    let pid_b = w.cartesian(at.rim_point(at.origin, radius));
+    let pid_t = w.cartesian(at.rim_point(at.top, radius));
+    let vid_b = w.vertex_point(pid_b);
+    let vid_t = w.vertex_point(pid_t);
+    let circ_b = w.circle_edge(vid_b, vid_b, ax_bot, radius);
+    let circ_t = w.circle_edge(vid_t, vid_t, ax_top, radius);
+    let ruling = w.line_edge(vid_b, vid_t, pid_b, at.axis);
+
+    let face_ids = [
+        w.face_from_edges(cyl, &[circ_b, ruling, circ_t]),
+        w.face_from_edges(plane_b, &[circ_b]),
+        w.face_from_edges(plane_t, &[circ_t]),
+    ];
+    w.close_shell(&face_ids);
+}
+
+/// Cap faces and rim edges collected while emitting the two frustum ends.
+#[derive(Default)]
+struct FrustumEnds {
+    cap_faces: Vec<usize>,
+    rim_edges: Vec<usize>,
+}
+
+impl FrustumEnds {
+    /// Emits one frustum end: a capped circle when `radius > 0`, otherwise an
+    /// apex vertex. Returns `(vertex, point)`.
+    fn write_end(
+        &mut self,
+        w: &mut StepWriter,
+        at: &AxialPlacement,
+        center: [f64; 3],
+        radius: f64,
+    ) -> (usize, usize) {
+        if radius > 0. {
+            let (ax, plane) = at.plane_at(w, center);
+            let pid = w.cartesian(at.rim_point(center, radius));
+            let vid = w.vertex_point(pid);
+            let circ = w.circle_edge(vid, vid, ax, radius);
+            self.cap_faces.push(w.face_from_edges(plane, &[circ]));
+            self.rim_edges.push(circ);
+            (vid, pid)
+        } else {
+            let pid = w.cartesian(center);
+            (w.vertex_point(pid), pid)
+        }
+    }
+}
+
+fn write_frustum(w: &mut StepWriter, at: &AxialPlacement, r_bottom: f64, r_top: f64) {
+    let semi = if at.height.abs() > FRUSTUM_FLAT_HEIGHT {
+        ((r_top - r_bottom) / at.height).atan()
+    } else {
+        0.
+    };
+    let ax_cone = at.axis2_at(w, at.origin);
+    let cone = w.emit(format!(
+        "CONICAL_SURFACE('',#{ax_cone},{:.15},{:.15})",
+        r_bottom, semi
+    ));
+    let mut ends = FrustumEnds::default();
+    let (vid_b, pid_b) = ends.write_end(w, at, at.origin, r_bottom);
+    let (vid_t, _pid_t) = ends.write_end(w, at, at.top, r_top);
+    let FrustumEnds {
+        cap_faces: mut face_ids,
+        rim_edges: mut side,
+    } = ends;
+    side.push(w.line_edge(vid_b, vid_t, pid_b, at.axis));
+    face_ids.insert(0, w.face_from_edges(cone, &side));
+    w.close_shell(&face_ids);
+}
+
+fn write_sphere(w: &mut StepWriter, center: [f64; 3], radius: f64) {
+    let ax = w.axis2(center, [0., 0., 1.], [1., 0., 0.]);
+    let surf = w.emit(format!("SPHERICAL_SURFACE('',#{ax},{:.15})", radius));
+    let p = [center[0] + radius, center[1], center[2]];
+    let pid = w.cartesian(p);
+    let vid = w.vertex_point(pid);
+    let circ = w.circle_edge(vid, vid, ax, radius);
+    let face = w.face_from_edges(surf, &[circ]);
+    w.close_shell(&[face]);
+}
+
+fn write_torus(w: &mut StepWriter, at: &AxialPlacement, major: f64, minor: f64) {
+    let ax = at.axis2_at(w, at.origin);
+    let surf = w.emit(format!(
+        "TOROIDAL_SURFACE('',#{ax},{:.15},{:.15})",
+        major, minor
+    ));
+    let pid = w.cartesian(at.rim_point(at.origin, major + minor));
+    let vid = w.vertex_point(pid);
+    let circ = w.circle_edge(vid, vid, ax, major);
+    let face = w.face_from_edges(surf, &[circ]);
+    w.close_shell(&[face]);
+}
+
+fn write_tube(w: &mut StepWriter, at: &AxialPlacement, outer: f64, inner: f64) {
+    let ax_o = at.axis2_at(w, at.origin);
+    let cyl_o = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_o},{:.15})", outer));
+    let ax_i = at.axis2_at(w, at.origin);
+    let cyl_i = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_i},{:.15})", inner));
+    let (ax_bot, plane_b) = at.plane_at(w, at.origin);
+    let (ax_top, plane_t) = at.plane_at(w, at.top);
+
+    let pid_bo = w.cartesian(at.rim_point(at.origin, outer));
+    let pid_bi = w.cartesian(at.rim_point(at.origin, inner));
+    let pid_to = w.cartesian(at.rim_point(at.top, outer));
+    let pid_ti = w.cartesian(at.rim_point(at.top, inner));
+    let vid_bo = w.vertex_point(pid_bo);
+    let vid_bi = w.vertex_point(pid_bi);
+    let vid_to = w.vertex_point(pid_to);
+    let vid_ti = w.vertex_point(pid_ti);
+
+    let circ_bo = w.circle_edge(vid_bo, vid_bo, ax_bot, outer);
+    let circ_bi = w.circle_edge(vid_bi, vid_bi, ax_bot, inner);
+    let circ_to = w.circle_edge(vid_to, vid_to, ax_top, outer);
+    let circ_ti = w.circle_edge(vid_ti, vid_ti, ax_top, inner);
+    let ruling_o = w.line_edge(vid_bo, vid_to, pid_bo, at.axis);
+    let ruling_i = w.line_edge(vid_bi, vid_ti, pid_bi, at.axis);
+
+    let face_ids = [
+        w.face_from_edges(cyl_o, &[circ_bo, ruling_o, circ_to]),
+        w.face_from_edges(cyl_i, &[circ_bi, ruling_i, circ_ti]),
+        w.annular_face(plane_b, circ_bo, circ_bi),
+        w.annular_face(plane_t, circ_to, circ_ti),
+    ];
+    w.close_shell(&face_ids);
+}
+
 fn export_kind(kind: &AnalyticKind) -> Result<(String, FeatureCertificate)> {
     let mut w = StepWriter::new();
     let preamble = vec![
@@ -898,41 +1139,18 @@ fn export_kind(kind: &AnalyticKind) -> Result<(String, FeatureCertificate)> {
     let _ctx = w.emit("APPLICATION_CONTEXT('configuration controlled 3D design')".into());
 
     match kind {
-        AnalyticKind::Cuboid { min, max } => {
-            write_cuboid_topology(&mut w, *min, *max);
-        }
+        AnalyticKind::Cuboid { min, max } => write_cuboid_topology(&mut w, *min, *max),
         AnalyticKind::Cylinder {
             radius,
             height,
             origin,
             axis,
             frame,
-        } => {
-            let top_o = add3(*origin, scale3(*axis, *height));
-            let ax_cyl = w.axis2(*origin, *axis, frame[0]);
-            let cyl = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_cyl},{:.15})", radius));
-            let ax_bot = w.axis2(*origin, *axis, frame[0]);
-            let plane_b = w.emit(format!("PLANE('',#{ax_bot})"));
-            let ax_top = w.axis2(top_o, *axis, frame[0]);
-            let plane_t = w.emit(format!("PLANE('',#{ax_top})"));
-
-            let p_bot = add3(*origin, scale3(frame[0], *radius));
-            let p_top = add3(top_o, scale3(frame[0], *radius));
-            let pid_b = w.cartesian(p_bot);
-            let pid_t = w.cartesian(p_top);
-            let vid_b = w.vertex_point(pid_b);
-            let vid_t = w.vertex_point(pid_t);
-            let circ_b = w.circle_edge(vid_b, vid_b, ax_bot, *radius);
-            let circ_t = w.circle_edge(vid_t, vid_t, ax_top, *radius);
-            let ruling = w.line_edge(vid_b, vid_t, pid_b, *axis);
-
-            let face_ids = [
-                w.face_from_edges(cyl, &[circ_b, ruling, circ_t]),
-                w.face_from_edges(plane_b, &[circ_b]),
-                w.face_from_edges(plane_t, &[circ_t]),
-            ];
-            w.close_shell(&face_ids);
-        }
+        } => write_cylinder(
+            &mut w,
+            &AxialPlacement::new(*origin, *axis, frame, *height),
+            *radius,
+        ),
         AnalyticKind::Frustum {
             r_bottom,
             r_top,
@@ -940,96 +1158,25 @@ fn export_kind(kind: &AnalyticKind) -> Result<(String, FeatureCertificate)> {
             origin,
             axis,
             frame,
-        } => {
-            let top_o = add3(*origin, scale3(*axis, *height));
-            let semi = if (*height).abs() > 1e-15 {
-                ((*r_top - *r_bottom) / *height).atan()
-            } else {
-                0.
-            };
-            let ax_cone = w.axis2(*origin, *axis, frame[0]);
-            let cone = w.emit(format!(
-                "CONICAL_SURFACE('',#{ax_cone},{:.15},{:.15})",
-                r_bottom, semi
-            ));
-            let mut face_ids = Vec::new();
-            let mut side_edges = Vec::new();
-
-            let (circ_b, vid_b, pid_b) = if *r_bottom > 0. {
-                let ax_bot = w.axis2(*origin, *axis, frame[0]);
-                let plane_b = w.emit(format!("PLANE('',#{ax_bot})"));
-                let p = add3(*origin, scale3(frame[0], *r_bottom));
-                let pid = w.cartesian(p);
-                let vid = w.vertex_point(pid);
-                let circ = w.circle_edge(vid, vid, ax_bot, *r_bottom);
-                face_ids.push(w.face_from_edges(plane_b, &[circ]));
-                side_edges.push(circ);
-                (Some(circ), Some(vid), Some(pid))
-            } else {
-                let p = *origin;
-                let pid = w.cartesian(p);
-                let vid = w.vertex_point(pid);
-                (None, Some(vid), Some(pid))
-            };
-
-            let (circ_t, vid_t, _pid_t) = if *r_top > 0. {
-                let ax_top = w.axis2(top_o, *axis, frame[0]);
-                let plane_t = w.emit(format!("PLANE('',#{ax_top})"));
-                let p = add3(top_o, scale3(frame[0], *r_top));
-                let pid = w.cartesian(p);
-                let vid = w.vertex_point(pid);
-                let circ = w.circle_edge(vid, vid, ax_top, *r_top);
-                face_ids.push(w.face_from_edges(plane_t, &[circ]));
-                side_edges.push(circ);
-                (Some(circ), Some(vid), Some(pid))
-            } else {
-                let p = top_o;
-                let pid = w.cartesian(p);
-                let vid = w.vertex_point(pid);
-                (None, Some(vid), Some(pid))
-            };
-
-            let ruling = w.line_edge(
-                vid_b.expect("both cap branches always emit a bottom vertex"),
-                vid_t.expect("both cap branches always emit a top vertex"),
-                pid_b.expect("both cap branches always emit a bottom point"),
-                *axis,
-            );
-            let mut side = side_edges;
-            side.push(ruling);
-            let _ = (circ_b, circ_t);
-            face_ids.insert(0, w.face_from_edges(cone, &side));
-            w.close_shell(&face_ids);
-        }
-        AnalyticKind::Sphere { center, radius } => {
-            let ax = w.axis2(*center, [0., 0., 1.], [1., 0., 0.]);
-            let surf = w.emit(format!("SPHERICAL_SURFACE('',#{ax},{:.15})", radius));
-            let p = [center[0] + *radius, center[1], center[2]];
-            let pid = w.cartesian(p);
-            let vid = w.vertex_point(pid);
-            let circ = w.circle_edge(vid, vid, ax, *radius);
-            let face = w.face_from_edges(surf, &[circ]);
-            w.close_shell(&[face]);
-        }
+        } => write_frustum(
+            &mut w,
+            &AxialPlacement::new(*origin, *axis, frame, *height),
+            *r_bottom,
+            *r_top,
+        ),
+        AnalyticKind::Sphere { center, radius } => write_sphere(&mut w, *center, *radius),
         AnalyticKind::Torus {
             major,
             minor,
             center,
             axis,
             frame,
-        } => {
-            let ax = w.axis2(*center, *axis, frame[0]);
-            let surf = w.emit(format!(
-                "TOROIDAL_SURFACE('',#{ax},{:.15},{:.15})",
-                major, minor
-            ));
-            let p = add3(*center, scale3(frame[0], *major + *minor));
-            let pid = w.cartesian(p);
-            let vid = w.vertex_point(pid);
-            let circ = w.circle_edge(vid, vid, ax, *major);
-            let face = w.face_from_edges(surf, &[circ]);
-            w.close_shell(&[face]);
-        }
+        } => write_torus(
+            &mut w,
+            &AxialPlacement::new(*center, *axis, frame, 0.),
+            *major,
+            *minor,
+        ),
         AnalyticKind::Tube {
             outer,
             inner,
@@ -1037,45 +1184,12 @@ fn export_kind(kind: &AnalyticKind) -> Result<(String, FeatureCertificate)> {
             origin,
             axis,
             frame,
-        } => {
-            let top_o = add3(*origin, scale3(*axis, *height));
-            let ax_o = w.axis2(*origin, *axis, frame[0]);
-            let cyl_o = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_o},{:.15})", outer));
-            let ax_i = w.axis2(*origin, *axis, frame[0]);
-            let cyl_i = w.emit(format!("CYLINDRICAL_SURFACE('',#{ax_i},{:.15})", inner));
-            let ax_bot = w.axis2(*origin, *axis, frame[0]);
-            let plane_b = w.emit(format!("PLANE('',#{ax_bot})"));
-            let ax_top = w.axis2(top_o, *axis, frame[0]);
-            let plane_t = w.emit(format!("PLANE('',#{ax_top})"));
-
-            let p_bo = add3(*origin, scale3(frame[0], *outer));
-            let p_bi = add3(*origin, scale3(frame[0], *inner));
-            let p_to = add3(top_o, scale3(frame[0], *outer));
-            let p_ti = add3(top_o, scale3(frame[0], *inner));
-            let pid_bo = w.cartesian(p_bo);
-            let pid_bi = w.cartesian(p_bi);
-            let pid_to = w.cartesian(p_to);
-            let pid_ti = w.cartesian(p_ti);
-            let vid_bo = w.vertex_point(pid_bo);
-            let vid_bi = w.vertex_point(pid_bi);
-            let vid_to = w.vertex_point(pid_to);
-            let vid_ti = w.vertex_point(pid_ti);
-
-            let circ_bo = w.circle_edge(vid_bo, vid_bo, ax_bot, *outer);
-            let circ_bi = w.circle_edge(vid_bi, vid_bi, ax_bot, *inner);
-            let circ_to = w.circle_edge(vid_to, vid_to, ax_top, *outer);
-            let circ_ti = w.circle_edge(vid_ti, vid_ti, ax_top, *inner);
-            let ruling_o = w.line_edge(vid_bo, vid_to, pid_bo, *axis);
-            let ruling_i = w.line_edge(vid_bi, vid_ti, pid_bi, *axis);
-
-            let face_ids = [
-                w.face_from_edges(cyl_o, &[circ_bo, ruling_o, circ_to]),
-                w.face_from_edges(cyl_i, &[circ_bi, ruling_i, circ_ti]),
-                w.annular_face(plane_b, circ_bo, circ_bi),
-                w.annular_face(plane_t, circ_to, circ_ti),
-            ];
-            w.close_shell(&face_ids);
-        }
+        } => write_tube(
+            &mut w,
+            &AxialPlacement::new(*origin, *axis, frame, *height),
+            *outer,
+            *inner,
+        ),
     }
 
     let mut out = preamble;
@@ -1265,163 +1379,185 @@ fn frame_from_axis_ref(axis: [f64; 3], ref_dir: [f64; 3]) -> [[f64; 3]; 2] {
     [ref_dir, y]
 }
 
-fn kind_from_surfaces(entities: &BTreeMap<usize, (String, String)>) -> Option<AnalyticKind> {
-    let mut spherical = None;
-    let mut toroidal = None;
-    let mut cylindrical = Vec::new();
-    let mut conical = None;
-    let mut planes = 0usize;
-    for (ty, args) in entities.values() {
-        match ty.as_str() {
-            "SPHERICAL_SURFACE" => {
-                let parts: Vec<&str> = args.split(',').collect();
-                if parts.len() >= 2 {
-                    let axis_id: usize = parts[parts.len() - 2]
-                        .trim()
-                        .trim_start_matches('#')
-                        .parse()
-                        .ok()?;
-                    let radius: f64 = parts[parts.len() - 1].trim().parse().ok()?;
-                    let (o, _, _) = resolve_axis2(entities, axis_id)?;
-                    spherical = Some(AnalyticKind::Sphere { center: o, radius });
-                }
-            }
-            "TOROIDAL_SURFACE" => {
-                let parts: Vec<&str> = args.split(',').collect();
-                if parts.len() >= 3 {
-                    let axis_id: usize = parts[parts.len() - 3]
-                        .trim()
-                        .trim_start_matches('#')
-                        .parse()
-                        .ok()?;
-                    let major: f64 = parts[parts.len() - 2].trim().parse().ok()?;
-                    let minor: f64 = parts[parts.len() - 1].trim().parse().ok()?;
-                    let (o, a, r) = resolve_axis2(entities, axis_id)?;
-                    toroidal = Some(AnalyticKind::Torus {
-                        major,
-                        minor,
-                        center: o,
-                        axis: a,
-                        frame: frame_from_axis_ref(a, r),
-                    });
-                }
-            }
-            "CYLINDRICAL_SURFACE" => {
-                let parts: Vec<&str> = args.split(',').collect();
-                if parts.len() >= 2 {
-                    let axis_id: usize = parts[parts.len() - 2]
-                        .trim()
-                        .trim_start_matches('#')
-                        .parse()
-                        .ok()?;
-                    let radius: f64 = parts[parts.len() - 1].trim().parse().ok()?;
-                    if let Some((o, a, r)) = resolve_axis2(entities, axis_id) {
-                        cylindrical.push((radius, o, a, r));
+/// Radius at or below which a recovered single-cap cone end counts as an apex.
+const CONE_APEX_RADIUS_TOL: f64 = 1e-12;
+/// Recovered frustum radii at or below this snap to an exact apex.
+const CONE_APEX_SNAP: f64 = 1e-9;
+
+type CylinderSurface = (f64, [f64; 3], [f64; 3], [f64; 3]);
+type ConeSurface = (f64, [f64; 3], [f64; 3], [f64; 3], f64);
+
+/// Splits the trailing `#axis, real...` arguments of an elementary surface.
+/// Outer `None`: a present argument failed to parse (the whole recognition
+/// refuses). Inner `None`: too few arguments, so the surface is skipped.
+fn surface_tail(args: &str, reals: usize) -> Option<Option<(usize, Vec<f64>)>> {
+    let parts: Vec<&str> = args.split(',').collect();
+    if parts.len() < reals + 1 {
+        return Some(None);
+    }
+    let tail = &parts[parts.len() - reals - 1..];
+    let axis_id: usize = tail[0].trim().trim_start_matches('#').parse().ok()?;
+    let values = tail[1..]
+        .iter()
+        .map(|v| v.trim().parse::<f64>().ok())
+        .collect::<Option<Vec<f64>>>()?;
+    Some(Some((axis_id, values)))
+}
+
+/// Elementary surfaces found in one Part21 entity index.
+#[derive(Default)]
+struct SurfaceCensus {
+    spherical: Option<AnalyticKind>,
+    toroidal: Option<AnalyticKind>,
+    cylindrical: Vec<CylinderSurface>,
+    conical: Option<ConeSurface>,
+    planes: usize,
+}
+
+impl SurfaceCensus {
+    fn collect(entities: &BTreeMap<usize, (String, String)>) -> Option<Self> {
+        let mut census = Self::default();
+        for (ty, args) in entities.values() {
+            match ty.as_str() {
+                "SPHERICAL_SURFACE" => {
+                    if let Some((axis_id, v)) = surface_tail(args, 1)? {
+                        let (o, _, _) = resolve_axis2(entities, axis_id)?;
+                        census.spherical = Some(AnalyticKind::Sphere {
+                            center: o,
+                            radius: v[0],
+                        });
                     }
                 }
-            }
-            "CONICAL_SURFACE" => {
-                let parts: Vec<&str> = args.split(',').collect();
-                if parts.len() >= 3 {
-                    let axis_id: usize = parts[parts.len() - 3]
-                        .trim()
-                        .trim_start_matches('#')
-                        .parse()
-                        .ok()?;
-                    let r_bottom: f64 = parts[parts.len() - 2].trim().parse().ok()?;
-                    let semi: f64 = parts[parts.len() - 1].trim().parse().ok()?;
-                    let (o, a, r) = resolve_axis2(entities, axis_id)?;
-                    conical = Some((r_bottom, o, a, r, semi));
+                "TOROIDAL_SURFACE" => {
+                    if let Some((axis_id, v)) = surface_tail(args, 2)? {
+                        let (o, a, r) = resolve_axis2(entities, axis_id)?;
+                        census.toroidal = Some(AnalyticKind::Torus {
+                            major: v[0],
+                            minor: v[1],
+                            center: o,
+                            axis: a,
+                            frame: frame_from_axis_ref(a, r),
+                        });
+                    }
                 }
+                "CYLINDRICAL_SURFACE" => {
+                    if let Some((axis_id, v)) = surface_tail(args, 1)?
+                        && let Some((o, a, r)) = resolve_axis2(entities, axis_id)
+                    {
+                        census.cylindrical.push((v[0], o, a, r));
+                    }
+                }
+                "CONICAL_SURFACE" => {
+                    if let Some((axis_id, v)) = surface_tail(args, 2)? {
+                        let (o, a, r) = resolve_axis2(entities, axis_id)?;
+                        census.conical = Some((v[0], o, a, r, v[1]));
+                    }
+                }
+                "PLANE" => census.planes += 1,
+                _ => {}
             }
-            "PLANE" => planes += 1,
-            _ => {}
+        }
+        Some(census)
+    }
+}
+
+fn frustum_from_cone(
+    entities: &BTreeMap<usize, (String, String)>,
+    plane_origins: &[[f64; 3]],
+    (rb, o, a, r, semi): ConeSurface,
+) -> Option<AnalyticKind> {
+    let height = if plane_origins.len() >= 2 {
+        axial_height_from_planes(o, a, plane_origins)?
+    } else {
+        // Apex / single-cap only: one radius must be zero after recovery.
+        let height = axial_height_from_points(entities, o, a)?;
+        let r_top = rb + height * semi.tan();
+        if !(rb.abs() <= CONE_APEX_RADIUS_TOL || r_top.abs() <= CONE_APEX_RADIUS_TOL) {
+            return None;
+        }
+        height
+    };
+    // `tan` differs across libm implementations; a true apex must recover to exactly 0.
+    let snap_apex = |r: f64| if r.abs() <= CONE_APEX_SNAP { 0. } else { r };
+    let r_top = snap_apex(rb + height * semi.tan());
+    Some(AnalyticKind::Frustum {
+        r_bottom: snap_apex(rb),
+        r_top,
+        height,
+        origin: o,
+        axis: a,
+        frame: frame_from_axis_ref(a, r),
+    })
+}
+
+fn tube_from_cylinders(
+    cylindrical: &[CylinderSurface],
+    plane_origins: &[[f64; 3]],
+) -> Option<AnalyticKind> {
+    let mut pair = cylindrical.to_vec();
+    pair.sort_by(|x, y| x.0.partial_cmp(&y.0).unwrap_or(Ordering::Equal));
+    let [(inner, o, a, r), (outer, _, _, _)] = pair[..] else {
+        return None;
+    };
+    let height = axial_height_from_planes(o, a, plane_origins)?;
+    Some(AnalyticKind::Tube {
+        outer,
+        inner,
+        height,
+        origin: o,
+        axis: a,
+        frame: frame_from_axis_ref(a, r),
+    })
+}
+
+fn cuboid_from_points(entities: &BTreeMap<usize, (String, String)>) -> Option<AnalyticKind> {
+    let mut min = [f64::INFINITY; 3];
+    let mut max = [f64::NEG_INFINITY; 3];
+    let mut n = 0usize;
+    for (ty, args) in entities.values() {
+        if ty == "CARTESIAN_POINT"
+            && let Some(coords) = args.rsplit_once('(').map(|(_, c)| c.trim_end_matches(')'))
+            && let Some(p) = parse_vec3(coords)
+        {
+            for i in 0..3 {
+                min[i] = min[i].min(p[i]);
+                max[i] = max[i].max(p[i]);
+            }
+            n += 1;
         }
     }
+    (n >= 4 && min.iter().all(|v| v.is_finite()) && max.iter().all(|v| v.is_finite()))
+        .then_some(AnalyticKind::Cuboid { min, max })
+}
+
+fn kind_from_surfaces(entities: &BTreeMap<usize, (String, String)>) -> Option<AnalyticKind> {
+    let census = SurfaceCensus::collect(entities)?;
     let plane_origins = plane_axis_origins(entities);
 
-    if let Some(s) = spherical {
+    if let Some(s) = census.spherical {
         return Some(s);
     }
-    if let Some(t) = toroidal {
+    if let Some(t) = census.toroidal {
         return Some(t);
     }
-    if let Some((rb, o, a, r, semi)) = conical {
-        let height = if plane_origins.len() >= 2 {
-            axial_height_from_planes(o, a, &plane_origins)?
-        } else {
-            // Apex / single-cap only: one radius must be zero after recovery.
-            let height = axial_height_from_points(entities, o, a)?;
-            let r_top = rb + height * semi.tan();
-            if !(rb.abs() <= 1e-12 || r_top.abs() <= 1e-12) {
-                return None;
-            }
-            height
-        };
-        // `tan` differs across libm implementations; a true apex must recover to exactly 0.
-        let snap_apex = |r: f64| if r.abs() <= 1e-9 { 0. } else { r };
-        let r_top = snap_apex(rb + height * semi.tan());
-        return Some(AnalyticKind::Frustum {
-            r_bottom: snap_apex(rb),
-            r_top,
-            height,
-            origin: o,
-            axis: a,
-            frame: frame_from_axis_ref(a, r),
-        });
+    if let Some(cone) = census.conical {
+        return frustum_from_cone(entities, &plane_origins, cone);
     }
-    if cylindrical.len() == 1 {
-        let (radius, o, a, r) = cylindrical[0];
-        let height = axial_height_from_planes(o, a, &plane_origins)?;
-        return Some(AnalyticKind::Cylinder {
-            radius,
-            height,
-            origin: o,
-            axis: a,
-            frame: frame_from_axis_ref(a, r),
-        });
-    }
-    if cylindrical.len() == 2 {
-        let mut pair = cylindrical.clone();
-        pair.sort_by(|x, y| x.0.partial_cmp(&y.0).unwrap_or(Ordering::Equal));
-        let (inner, outer) = (pair[0].0, pair[1].0);
-        let (_, o, a, r) = pair[0];
-        let height = axial_height_from_planes(o, a, &plane_origins)?;
-        return Some(AnalyticKind::Tube {
-            outer,
-            inner,
-            height,
-            origin: o,
-            axis: a,
-            frame: frame_from_axis_ref(a, r),
-        });
-    }
-    if planes >= 6
-        && spherical.is_none()
-        && toroidal.is_none()
-        && cylindrical.is_empty()
-        && conical.is_none()
-    {
-        let mut min = [f64::INFINITY; 3];
-        let mut max = [f64::NEG_INFINITY; 3];
-        let mut n = 0usize;
-        for (ty, args) in entities.values() {
-            if ty == "CARTESIAN_POINT"
-                && let Some(coords) = args.rsplit_once('(').map(|(_, c)| c.trim_end_matches(')'))
-                && let Some(p) = parse_vec3(coords)
-            {
-                for i in 0..3 {
-                    min[i] = min[i].min(p[i]);
-                    max[i] = max[i].max(p[i]);
-                }
-                n += 1;
-            }
+    match census.cylindrical[..] {
+        [(radius, o, a, r)] => {
+            let height = axial_height_from_planes(o, a, &plane_origins)?;
+            Some(AnalyticKind::Cylinder {
+                radius,
+                height,
+                origin: o,
+                axis: a,
+                frame: frame_from_axis_ref(a, r),
+            })
         }
-        if n >= 4 && min.iter().all(|v| v.is_finite()) && max.iter().all(|v| v.is_finite()) {
-            return Some(AnalyticKind::Cuboid { min, max });
-        }
+        [_, _] => tube_from_cylinders(&census.cylindrical, &plane_origins),
+        [] if census.planes >= 6 => cuboid_from_points(entities),
+        _ => None,
     }
-    None
 }
 
 fn refuse_mesh_payloads(text: &str) -> Result<()> {
@@ -1498,6 +1634,135 @@ fn require_entity_type(
     Ok(())
 }
 
+/// Surface types an analytic ADVANCED_FACE may carry.
+const ANALYTIC_FACE_SURFACES: [&str; 5] = [
+    "PLANE",
+    "CYLINDRICAL_SURFACE",
+    "CONICAL_SURFACE",
+    "SPHERICAL_SURFACE",
+    "TOROIDAL_SURFACE",
+];
+
+/// Walks the topology chain under one MANIFOLD_SOLID_BREP, collecting every
+/// linked entity id. One method per topology level.
+struct SolidGraphWalk<'a> {
+    entities: &'a BTreeMap<usize, (String, String)>,
+    closure: BTreeSet<usize>,
+}
+
+impl SolidGraphWalk<'_> {
+    /// Checks `id` against `allowed`, records it, and returns its references.
+    fn link(&mut self, id: usize, allowed: &[&str], owner: &str) -> Result<Vec<usize>> {
+        require_entity_type(self.entities, id, allowed, owner)?;
+        self.closure.insert(id);
+        self.refs_of(id)
+    }
+
+    fn refs_of(&self, id: usize) -> Result<Vec<usize>> {
+        let (_, args) = self
+            .entities
+            .get(&id)
+            .ok_or_else(|| refuse(&format!("Linked STEP entity #{id} is missing")))?;
+        Ok(entity_refs(args))
+    }
+
+    fn walk_solid(&mut self, solid: usize) -> Result<()> {
+        self.closure.insert(solid);
+        let [shell] = self.refs_of(solid)?[..] else {
+            return Err(refuse(
+                "MANIFOLD_SOLID_BREP must reference exactly one CLOSED_SHELL",
+            ));
+        };
+        let faces = self.link(shell, &["CLOSED_SHELL"], "MANIFOLD_SOLID_BREP")?;
+        if faces.is_empty() {
+            return Err(refuse("CLOSED_SHELL must reference ADVANCED_FACE entities"));
+        }
+        faces.into_iter().try_for_each(|face| self.walk_face(face))
+    }
+
+    fn walk_face(&mut self, face: usize) -> Result<()> {
+        let refs = self.link(face, &["ADVANCED_FACE"], "CLOSED_SHELL")?;
+        let Some((&surface, bounds)) = refs.split_last().filter(|(_, b)| !b.is_empty()) else {
+            return Err(refuse(
+                "ADVANCED_FACE requires at least one bound and one surface",
+            ));
+        };
+        require_entity_type(
+            self.entities,
+            surface,
+            &ANALYTIC_FACE_SURFACES,
+            "ADVANCED_FACE",
+        )?;
+        self.closure.insert(surface);
+        bounds.iter().try_for_each(|&bound| self.walk_bound(bound))
+    }
+
+    fn walk_bound(&mut self, bound: usize) -> Result<()> {
+        let loops = self.link(bound, &["FACE_OUTER_BOUND", "FACE_BOUND"], "ADVANCED_FACE")?;
+        let [loop_id] = loops[..] else {
+            return Err(refuse("FACE bound must reference exactly one EDGE_LOOP"));
+        };
+        let oriented_edges = self.link(loop_id, &["EDGE_LOOP"], "FACE bound")?;
+        if oriented_edges.is_empty() {
+            return Err(refuse("EDGE_LOOP must reference ORIENTED_EDGE entities"));
+        }
+        oriented_edges
+            .into_iter()
+            .try_for_each(|oriented| self.walk_oriented_edge(oriented))
+    }
+
+    fn walk_oriented_edge(&mut self, oriented: usize) -> Result<()> {
+        let edge_refs = self.link(oriented, &["ORIENTED_EDGE"], "EDGE_LOOP")?;
+        let [edge] = edge_refs[..] else {
+            return Err(refuse(
+                "ORIENTED_EDGE must reference exactly one EDGE_CURVE",
+            ));
+        };
+        let geometry_refs = self.link(edge, &["EDGE_CURVE"], "ORIENTED_EDGE")?;
+        let [start, end, curve] = geometry_refs[..] else {
+            return Err(refuse(
+                "EDGE_CURVE must reference two vertices and one curve",
+            ));
+        };
+        self.walk_vertex(start)?;
+        self.walk_vertex(end)?;
+        require_entity_type(self.entities, curve, &["LINE", "CIRCLE"], "EDGE_CURVE")?;
+        self.closure.insert(curve);
+        Ok(())
+    }
+
+    fn walk_vertex(&mut self, vertex: usize) -> Result<()> {
+        let point_refs = self.link(vertex, &["VERTEX_POINT"], "EDGE_CURVE")?;
+        let [point] = point_refs[..] else {
+            return Err(refuse(
+                "VERTEX_POINT must reference exactly one CARTESIAN_POINT",
+            ));
+        };
+        require_entity_type(self.entities, point, &["CARTESIAN_POINT"], "VERTEX_POINT")?;
+        self.closure.insert(point);
+        Ok(())
+    }
+
+    /// Include geometric placement dependencies, but only from already-linked
+    /// topology/surface/curve entities.
+    fn close_dependencies(mut self) -> Result<BTreeSet<usize>> {
+        let mut frontier: Vec<usize> = self.closure.iter().copied().collect();
+        while let Some(id) = frontier.pop() {
+            for reference in self.refs_of(id)? {
+                if !self.entities.contains_key(&reference) {
+                    return Err(refuse(&format!(
+                        "Linked STEP entity #{id} has broken dependency #{reference}"
+                    )));
+                }
+                if self.closure.insert(reference) {
+                    frontier.push(reference);
+                }
+            }
+        }
+        Ok(self.closure)
+    }
+}
+
 /// Validate the exact topology chain reachable from MANIFOLD_SOLID_BREP and
 /// return its dependency closure. Orphan entities are deliberately excluded
 /// from surface recognition and the curved CIRCLE gate.
@@ -1506,127 +1771,17 @@ fn validate_solid_graph(entities: &BTreeMap<usize, (String, String)>) -> Result<
         .iter()
         .filter_map(|(id, (ty, _))| (ty == "MANIFOLD_SOLID_BREP").then_some(*id))
         .collect();
-    if solids.len() != 1 {
+    let [solid] = solids[..] else {
         return Err(refuse(
             "Analytic STEP requires exactly one MANIFOLD_SOLID_BREP",
         ));
-    }
-    let mut closure = BTreeSet::new();
-    let solid = solids[0];
-    closure.insert(solid);
-    let solid_refs = entity_refs(&entities[&solid].1);
-    if solid_refs.len() != 1 {
-        return Err(refuse(
-            "MANIFOLD_SOLID_BREP must reference exactly one CLOSED_SHELL",
-        ));
-    }
-    let shell = solid_refs[0];
-    require_entity_type(entities, shell, &["CLOSED_SHELL"], "MANIFOLD_SOLID_BREP")?;
-    closure.insert(shell);
-    let faces = entity_refs(&entities[&shell].1);
-    if faces.is_empty() {
-        return Err(refuse("CLOSED_SHELL must reference ADVANCED_FACE entities"));
-    }
-    for face in faces {
-        require_entity_type(entities, face, &["ADVANCED_FACE"], "CLOSED_SHELL")?;
-        closure.insert(face);
-        let refs = entity_refs(&entities[&face].1);
-        if refs.len() < 2 {
-            return Err(refuse(
-                "ADVANCED_FACE requires at least one bound and one surface",
-            ));
-        }
-        let surface = *refs.last().unwrap();
-        require_entity_type(
-            entities,
-            surface,
-            &[
-                "PLANE",
-                "CYLINDRICAL_SURFACE",
-                "CONICAL_SURFACE",
-                "SPHERICAL_SURFACE",
-                "TOROIDAL_SURFACE",
-            ],
-            "ADVANCED_FACE",
-        )?;
-        closure.insert(surface);
-        for bound in &refs[..refs.len() - 1] {
-            require_entity_type(
-                entities,
-                *bound,
-                &["FACE_OUTER_BOUND", "FACE_BOUND"],
-                "ADVANCED_FACE",
-            )?;
-            closure.insert(*bound);
-            let loops = entity_refs(&entities[bound].1);
-            if loops.len() != 1 {
-                return Err(refuse("FACE bound must reference exactly one EDGE_LOOP"));
-            }
-            let loop_id = loops[0];
-            require_entity_type(entities, loop_id, &["EDGE_LOOP"], "FACE bound")?;
-            closure.insert(loop_id);
-            let oriented_edges = entity_refs(&entities[&loop_id].1);
-            if oriented_edges.is_empty() {
-                return Err(refuse("EDGE_LOOP must reference ORIENTED_EDGE entities"));
-            }
-            for oriented in oriented_edges {
-                require_entity_type(entities, oriented, &["ORIENTED_EDGE"], "EDGE_LOOP")?;
-                closure.insert(oriented);
-                let edge_refs = entity_refs(&entities[&oriented].1);
-                if edge_refs.len() != 1 {
-                    return Err(refuse(
-                        "ORIENTED_EDGE must reference exactly one EDGE_CURVE",
-                    ));
-                }
-                let edge = edge_refs[0];
-                require_entity_type(entities, edge, &["EDGE_CURVE"], "ORIENTED_EDGE")?;
-                closure.insert(edge);
-                let geometry_refs = entity_refs(&entities[&edge].1);
-                if geometry_refs.len() != 3 {
-                    return Err(refuse(
-                        "EDGE_CURVE must reference two vertices and one curve",
-                    ));
-                }
-                for vertex in &geometry_refs[..2] {
-                    require_entity_type(entities, *vertex, &["VERTEX_POINT"], "EDGE_CURVE")?;
-                    closure.insert(*vertex);
-                    let point_refs = entity_refs(&entities[vertex].1);
-                    if point_refs.len() != 1 {
-                        return Err(refuse(
-                            "VERTEX_POINT must reference exactly one CARTESIAN_POINT",
-                        ));
-                    }
-                    require_entity_type(
-                        entities,
-                        point_refs[0],
-                        &["CARTESIAN_POINT"],
-                        "VERTEX_POINT",
-                    )?;
-                    closure.insert(point_refs[0]);
-                }
-                let curve = geometry_refs[2];
-                require_entity_type(entities, curve, &["LINE", "CIRCLE"], "EDGE_CURVE")?;
-                closure.insert(curve);
-            }
-        }
-    }
-
-    // Include geometric placement dependencies, but only from already-linked
-    // topology/surface/curve entities.
-    let mut frontier: Vec<usize> = closure.iter().copied().collect();
-    while let Some(id) = frontier.pop() {
-        for reference in entity_refs(&entities[&id].1) {
-            if !entities.contains_key(&reference) {
-                return Err(refuse(&format!(
-                    "Linked STEP entity #{id} has broken dependency #{reference}"
-                )));
-            }
-            if closure.insert(reference) {
-                frontier.push(reference);
-            }
-        }
-    }
-    Ok(closure)
+    };
+    let mut walk = SolidGraphWalk {
+        entities,
+        closure: BTreeSet::new(),
+    };
+    walk.walk_solid(solid)?;
+    walk.close_dependencies()
 }
 
 fn curved_requires_circle(kind: &AnalyticKind) -> bool {

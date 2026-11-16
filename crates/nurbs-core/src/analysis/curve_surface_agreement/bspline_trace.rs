@@ -40,6 +40,34 @@ pub(super) fn verify(
         if !forward && !backward {
             continue;
         }
+        // A clamped, nonperiodic transverse end can collapse an entire
+        // periodic rim to one point, with no matching world spline basis.
+        if !periodic[fixed] && periodic[free] {
+            let k = knots[fixed];
+            let d = degrees[fixed];
+            let n = counts[fixed];
+            let at = a[fixed];
+            let row = if k[..=d].iter().all(|&t| t == at) && k[d + 1] > at {
+                Some(0)
+            } else if k[n..].iter().all(|&t| t == at) && k[n - 1] < at {
+                Some(n - 1)
+            } else {
+                None
+            };
+            if let Some(row) = row {
+                let target = (0..counts[free]).map(|i| {
+                    let (u, v) = if fixed == 0 { (row, i) } else { (i, row) };
+                    let p = &s.control_points[u][v];
+                    [p[0], p[1], p[2], s.weights[u][v]]
+                }).collect::<Vec<_>>();
+                let point = &c.control_points[0];
+                if c.control_points.iter().all(|p| p == point)
+                    && target.iter().all(|p| p[..3] == point[..])
+                {
+                    return super::structured_boundary::bind(c, p, s, target, Vec::new(), true, max_work);
+                }
+            }
+        }
         let clamped = knots[fixed][..=degrees[fixed]]
             .iter()
             .all(|&v| v == knots[fixed][degrees[fixed]])

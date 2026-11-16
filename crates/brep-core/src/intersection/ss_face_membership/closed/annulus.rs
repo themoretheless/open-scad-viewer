@@ -43,20 +43,99 @@ impl ClosedGraphAnnulus {
 pub(super) fn source_key(side: usize, edge: usize) -> u64 {
     ((side as u64 + 1) << 60) | edge as u64
 }
-pub fn assemble_closed_graph_annulus(
-    material: &QualifiedClosedGraphMaterial<'_, '_, '_, '_, '_, '_>,
-    minuend: usize,
-    limits: GraphAnnulusLimits,
-) -> Result<ClosedGraphAnnulus> {
+/// Upper bound on the operation budget a caller may request.
+const MAX_ANNULUS_OPERATIONS: usize = 1_000_000;
+/// Output faces, their edge keys and their placement senses, in shell order.
+#[derive(Default)]
+struct AnnulusFragments {
+    faces: Vec<face::QualifiedFace>,
+    keys: Vec<Vec<u64>>,
+    senses: Vec<bool>,
+}
+impl AnnulusFragments {
+    fn push(&mut self, report: face::Report, keys: Vec<u64>, reversed: bool) -> Result<()> {
+        self.faces
+            .push(report.face.ok_or_else(|| unproven(report.reason))?);
+        self.keys.push(keys);
+        self.senses.push(reversed);
+        Ok(())
+    }
+}
+/// Operation budget shared by every annulus stage.
+struct AnnulusBudget {
+    spent: usize,
+    limit: usize,
+}
+impl AnnulusBudget {
+    fn charge(&mut self, amount: usize) -> Result<()> {
+        charge(&mut self.spent, self.limit, amount)
+    }
+}
+fn validate_annulus_request(minuend: usize, limits: &GraphAnnulusLimits) -> Result<()> {
     if minuend > 1
-        || !(1..=1000000).contains(&limits.operations)
+        || !(1..=MAX_ANNULUS_OPERATIONS).contains(&limits.operations)
         || !limits.tolerance_uv.is_finite()
         || limits.tolerance_uv <= 0.
     {
         return Err(invalid("Choose bounded graph annulus work and an operand"));
     }
-    let mut operations = 0;
-    charge(&mut operations, limits.operations, material.operations())?;
+    Ok(())
+}
+/// Rebuilds one sector wire, mapping SS-owned edges to their original
+/// identity and keeping untouched roof edges under their source key.
+fn sector_wire(
+    budget: &mut AnnulusBudget,
+    model: &Model,
+    source: &Model,
+    region: &ClosedBranchFaces,
+    side: usize,
+    wire_index: usize,
+) -> Result<(Vec<face::Boundary>, Vec<u64>)> {
+    let mut wire = Vec::new();
+    let mut keys = Vec::new();
+    for c in &model.loops[wire_index].coedges {
+        budget.charge(1)?;
+        if c.trim().is_some() {
+            return Err(unproven("Annulus requires complete source clocks"));
+        }
+        let edge = &model.edges[c.edge];
+        let owner = region.edges.iter().find(|e| e.edge == c.edge);
+        let (curve, reversed, key) = if let Some(owner) = owner {
+            (
+                if owner.reversed {
+                    edge.curve.reverse()?
+                } else {
+                    edge.curve.clone()
+                },
+                c.reversed ^ owner.reversed,
+                owner.original_edge as u64,
+            )
+        } else {
+            if source.edges.get(c.edge) != Some(edge) {
+                return Err(unproven("Annulus lost original roof edge"));
+            }
+            (edge.curve.clone(), c.reversed, source_key(side, c.edge))
+        };
+        wire.push(face::Boundary {
+            curve,
+            pcurve: c.pcurve.clone(),
+            reversed,
+        });
+        keys.push(key);
+    }
+    Ok((wire, keys))
+}
+pub fn assemble_closed_graph_annulus(
+    material: &QualifiedClosedGraphMaterial<'_, '_, '_, '_, '_, '_>,
+    minuend: usize,
+    limits: GraphAnnulusLimits,
+) -> Result<ClosedGraphAnnulus> {
+    validate_annulus_request(minuend, &limits)?;
+    let mut budget = AnnulusBudget {
+        spent: 0,
+        limit: limits.operations,
+    };
+    budget.charge(material.operations())?;
     material.reverify()?;
     let bodies = material.bodies();
     let tolerance = bodies[0].source().tolerance_mm;
@@ -66,9 +145,7 @@ pub fn assemble_closed_graph_annulus(
     let context = ToleranceContext::from_brep_tolerance_mm(tolerance)
         .map_err(|_| invalid("Invalid annulus tolerance"))?;
     let closed = material.source().source();
-    let mut fragments = Vec::new();
-    let mut keys = Vec::new();
-    let mut senses = Vec::new();
+    let mut fragments = AnnulusFragments::default();
     for side in 0..2 {
         let sector = material
             .faces()
@@ -91,38 +168,9 @@ pub fn assemble_closed_graph_annulus(
         let mut wires = Vec::new();
         let mut face_keys = Vec::new();
         for w in std::iter::once(support.outer).chain(support.holes.iter().copied()) {
-            let mut wire = Vec::new();
-            for c in &model.loops[w].coedges {
-                charge(&mut operations, limits.operations, 1)?;
-                if c.trim().is_some() {
-                    return Err(unproven("Annulus requires complete source clocks"));
-                }
-                let edge = &model.edges[c.edge];
-                let owner = region.edges.iter().find(|e| e.edge == c.edge);
-                let (curve, reversed, key) = if let Some(owner) = owner {
-                    (
-                        if owner.reversed {
-                            edge.curve.reverse()?
-                        } else {
-                            edge.curve.clone()
-                        },
-                        c.reversed ^ owner.reversed,
-                        owner.original_edge as u64,
-                    )
-                } else {
-                    if source.edges.get(c.edge) != Some(edge) {
-                        return Err(unproven("Annulus lost original roof edge"));
-                    }
-                    (edge.curve.clone(), c.reversed, source_key(side, c.edge))
-                };
-                wire.push(face::Boundary {
-                    curve,
-                    pcurve: c.pcurve.clone(),
-                    reversed,
-                });
-                face_keys.push(key);
-            }
+            let (wire, keys) = sector_wire(&mut budget, model, source, region, side, w)?;
             wires.push(wire);
+            face_keys.extend(keys);
         }
         let report = face::assemble(
             &context,
@@ -131,11 +179,10 @@ pub fn assemble_closed_graph_annulus(
             limits.tolerance_uv,
             limits.face,
         )?;
-        fragments.push(report.face.ok_or_else(|| unproven(report.reason))?);
-        keys.push(face_keys);
-        senses.push(bodies[side].equivalent_body().reverse_orientation() ^ (side != minuend));
+        let reversed = bodies[side].equivalent_body().reverse_orientation() ^ (side != minuend);
+        fragments.push(report, face_keys, reversed)?;
     }
-    for strip in walls::build(bodies, minuend, &mut operations, limits.operations)? {
+    for strip in walls::build(bodies, minuend, &mut budget.spent, limits.operations)? {
         let report = face::assemble(
             &context,
             &strip.surface,
@@ -143,15 +190,14 @@ pub fn assemble_closed_graph_annulus(
             limits.tolerance_uv,
             limits.face,
         )?;
-        fragments.push(report.face.ok_or_else(|| unproven(report.reason))?);
-        keys.push(strip.keys);
-        senses.push(bodies[minuend].equivalent_body().reverse_orientation());
+        let reversed = bodies[minuend].equivalent_body().reverse_orientation();
+        fragments.push(report, strip.keys, reversed)?;
     }
-    let placements: Vec<_> = (0..fragments.len())
+    let placements: Vec<_> = (0..fragments.faces.len())
         .map(|i| shell::Placement {
-            face: &fragments[i],
-            reversed: senses[i],
-            edge_keys: &keys[i],
+            face: &fragments.faces[i],
+            reversed: fragments.senses[i],
+            edge_keys: &fragments.keys[i],
         })
         .collect();
     let boundary = shell::assemble(
@@ -162,7 +208,7 @@ pub fn assemble_closed_graph_annulus(
     Ok(ClosedGraphAnnulus {
         boundary,
         minuend,
-        operations,
+        operations: budget.spent,
     })
 }
 #[cfg(test)]

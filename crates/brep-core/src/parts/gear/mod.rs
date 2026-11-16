@@ -31,6 +31,7 @@ const ARC_WEIGHT_MAX_SWEEP: f64 = PI - 1e-6;
 
 mod gear_spec;
 mod gear_with_report;
+mod profile_stages;
 #[cfg(test)]
 mod tests;
 pub use gear_spec::*;

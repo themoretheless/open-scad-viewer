@@ -5,6 +5,7 @@ pub fn auto_repair_impl(
     operations: &[AutoRepairOperation],
     prior: Option<&HealingReport>,
     tolerant_caps: Option<(f64, f64)>,
+    defer_material_roles: bool,
 ) -> HealingRun {
     let input_hash = model_hash(model);
     if let Some(prior) = prior
@@ -49,10 +50,16 @@ pub fn auto_repair_impl(
                         *to,
                         per_entity,
                         cumulative_cap - cumulative,
+                        defer_material_roles,
                     )
+                } else if defer_material_roles {
+                    crate::transactions::snap_before_shell_repair(&staged, *vertex, *to)
                 } else {
                     authorized_heal_endpoint(&staged, *vertex, *to)
                 }
+            }
+            AutoRepairOperation::RefitEdge { edge, replacement } if defer_material_roles => {
+                crate::transactions::refit_before_shell_repair(&staged, *edge, replacement.clone())
             }
             AutoRepairOperation::RefitEdge { edge, replacement } => {
                 authorized_heal_refit(&staged, *edge, replacement.clone())

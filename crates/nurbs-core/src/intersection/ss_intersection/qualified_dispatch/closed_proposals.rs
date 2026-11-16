@@ -134,19 +134,23 @@ fn proposal(
         ]
     })
 }
+pub(super) fn natural_product(source: &FiberSources) -> [[f64; 2]; 4] {
+    let a = surface_domain(source.first());
+    let b = surface_domain(source.second());
+    [a[0], a[1], b[0], b[1]]
+}
+
 pub(super) fn construct(
     source: &FiberSources,
+    domain: [[f64; 2]; 4],
     limits: ClosedSSBuildLimits,
 ) -> crate::Result<(Vec<QualifiedFiber>, usize)> {
     crate::check(
         (2..=32).contains(&limits.seed_steps)
             && (1..=4096).contains(&limits.max_seeds)
-            && (1..=100000).contains(&limits.proposal_rectangles),
+            && (1..=250000).contains(&limits.proposal_rectangles),
         "Need bounded closed intersection proposals",
     )?;
-    let a = surface_domain(source.first());
-    let b = surface_domain(source.second());
-    let domain = [a[0], a[1], b[0], b[1]];
     let mut charts: Vec<QualifiedFiber> = vec![];
     let mut used = 0;
     let mut seeds = 0;
@@ -217,7 +221,7 @@ pub(super) fn construct(
                     let result = source.certify_contracted(
                         proposal,
                         AXES[free],
-                        limits.proposal_rectangles - used,
+                        (limits.proposal_rectangles - used).min(100000),
                     )?;
                     used += result.rectangles();
                     if let Some(f) = result.into_fiber() {
@@ -238,13 +242,11 @@ pub(super) fn construct(
 /// resolve. The cell is not assumed nonempty; only fresh operators may admit it.
 fn repair_one(
     source: &FiberSources,
+    domain: [[f64; 2]; 4],
     cell: [[f64; 2]; 4],
     remaining: usize,
     preferred: Option<usize>,
 ) -> crate::Result<(Option<QualifiedFiber>, usize)> {
-    let a = surface_domain(source.first());
-    let b = surface_domain(source.second());
-    let domain = [a[0], a[1], b[0], b[1]];
     let seed = std::array::from_fn(|k| {
         ((cell[k][0] * 0.5 + cell[k][1] * 0.5) - domain[k][0]) / (domain[k][1] - domain[k][0])
     });
@@ -266,16 +268,18 @@ fn repair_one(
         let free = (0..4)
             .max_by(|&a, &b| minor(a).total_cmp(&minor(b)))
             .unwrap();
-        for level in 0..5 {
+        for level in 0..8 {
             if used == remaining {
                 return Ok((None, used));
             }
             let h = 0.0625 / (1usize << level) as f64;
             let proposal = proposal(source, domain, x, free, h);
-            let attempt = source.certify_contracted(proposal, AXES[free], remaining - used)?;
+            let attempt = source.certify_contracted(proposal, AXES[free], (remaining - used).min(100000))?;
             used += attempt.rectangles();
             if let Some(f) = attempt.into_fiber() {
-                return Ok((Some(f), used));
+                if (0..4).all(|k| f.domain()[k][0] <= cell[k][1] && cell[k][0] <= f.domain()[k][1]) {
+                    return Ok((Some(f), used));
+                }
             }
         }
     }
@@ -286,27 +290,28 @@ fn repair_one(
 /// original remaining ledger; NONE is coverage authority until the fresh census.
 pub(super) fn repair(
     source: &FiberSources,
+    domain: [[f64; 2]; 4],
     cell: [[f64; 2]; 4],
     remaining: usize,
     max_charts: usize,
 ) -> crate::Result<(Vec<QualifiedFiber>, usize)> {
-    let (first, mut used) = repair_one(source, cell, remaining, None)?;
+    let (first, mut used) = repair_one(source, domain, cell, remaining, None)?;
     let Some(first) = first else {
         return Ok((vec![], used));
     };
     let axis = first.free_axis().index();
-    let domain = first.domain();
+    let chart = first.domain();
     let mut charts = vec![first];
     for fraction in [0.125, 0.875] {
         if used == remaining || charts.len() == max_charts {
             break;
         }
-        let mut neighbor = domain;
-        let center = domain[axis][0] + fraction * (domain[axis][1] - domain[axis][0]);
+        let mut neighbor = chart;
+        let center = chart[axis][0] + fraction * (chart[axis][1] - chart[axis][0]);
         // A singleton proposal coordinate is allowed here; repair_one uses
         // only its center as a Newton seed and proves a fresh positive box.
         neighbor[axis] = [center, center];
-        let (extra, work) = repair_one(source, neighbor, remaining - used, Some(axis))?;
+        let (extra, work) = repair_one(source, domain, neighbor, remaining - used, Some(axis))?;
         used += work;
         if let Some(extra) = extra {
             charts.push(extra);
@@ -382,7 +387,7 @@ pub(super) fn compact(
             domain[axis] = [cut[0], cut[1]];
             let result = f
                 .source()
-                .certify_contracted(domain, f.free_axis(), max - *used)?;
+                .certify_contracted(domain, f.free_axis(), (max - *used).min(100000))?;
             *used += result.rectangles();
             let Some(part) = result.into_fiber() else {
                 covered = false;

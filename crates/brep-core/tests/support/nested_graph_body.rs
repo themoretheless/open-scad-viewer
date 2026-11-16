@@ -17,7 +17,7 @@ fn mul(a: &[[Q; 5]; 5], b: &[[Q; 5]; 5]) -> [[Q; 5]; 5] {
     }
     out
 }
-fn control(o: &[f64], u: [f64; 3], v: [f64; 3]) -> Vec<Vec<Vec<f64>>> {
+fn control(o: &[f64], u: [f64; 3], v: [f64; 3], sign: f64) -> Vec<Vec<Vec<f64>>> {
     let affine = |k: usize| {
         let mut p = std::array::from_fn(|_| std::array::from_fn(|_| Q::zero()));
         p[0][0] = q(o[k] - 0.5);
@@ -40,7 +40,7 @@ fn control(o: &[f64], u: [f64; 3], v: [f64; 3]) -> Vec<Vec<Vec<f64>>> {
     let mut p = mul(&a, &b);
     for row in &mut p {
         for x in row {
-            *x *= q(36.);
+            *x *= q(sign * 36.);
         }
     }
     p[0][0] += q(o[2]);
@@ -81,17 +81,30 @@ fn control(o: &[f64], u: [f64; 3], v: [f64; 3]) -> Vec<Vec<Vec<f64>>> {
         .collect()
 }
 pub fn body() -> brep_core::Model {
+    warped_box(1.)
+}
+
+pub fn above_body() -> brep_core::Model {
+    brep_core::transform::affine(&warped_box(-1.), [
+        [1., 0., 0., 0.],
+        [0., 1., 0., 0.],
+        [0., 0., -1., 0.],
+        [0., 0., 0., 1.],
+    ]).unwrap()
+}
+
+fn warped_box(sign: f64) -> brep_core::Model {
     let mut m = brep_core::cuboid([0., 0., -10.], [1., 1., 0.]).unwrap();
     let knots = || vec![0., 0., 0., 0., 0., 1., 1., 1., 1., 1.];
     for v in &mut m.vertices {
         let r = (v.point[0] - 0.5).powi(2) + (v.point[1] - 0.5).powi(2);
-        v.point[2] += 36. * (r - 0.3125_f64.powi(2)) * (r - 0.15625_f64.powi(2));
+        v.point[2] += sign * 36. * (r - 0.3125_f64.powi(2)) * (r - 0.15625_f64.powi(2));
     }
     for e in &mut m.edges {
         let p = e.curve.control_points[0].clone();
         let end = &e.curve.control_points[1];
         let u = std::array::from_fn(|k| end[k] - p[k]);
-        let net = control(&p, u, [0.; 3]);
+        let net = control(&p, u, [0.; 3], sign);
         e.curve = nurbs_core::curve::Curve {
             degree: 4,
             knots: knots(),
@@ -109,7 +122,7 @@ pub fn body() -> brep_core::Model {
             degree_v: 4,
             knots_u: knots(),
             knots_v: knots(),
-            control_points: control(o, u, v),
+            control_points: control(o, u, v, sign),
             weights: vec![vec![1.; 5]; 5],
             periodic_u: false,
             periodic_v: false,

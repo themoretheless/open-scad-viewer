@@ -86,7 +86,7 @@ impl QualifiedClosedFiberBranches {
             .ok_or_else(|| crate::input("Owned closed-branch point remains unproved"))
     }
     pub fn reverify(&self) -> Result<()> {
-        let fresh = assemble_closed_fiber_branches(self.owner.clone(), self.limits)?;
+        let fresh = assemble_closed_fiber_branches_impl(self.owner.clone(), self.limits, false)?;
         check(
             self.branches == fresh.branches
                 && self.trims == fresh.trims
@@ -100,26 +100,24 @@ impl QualifiedClosedFiberBranches {
         )
     }
 }
-fn c1_source(s: &Surface) -> Result<()> {
+fn c1_source(s: &Surface, uv: [[f64; 2]; 2]) -> Result<()> {
     s.validate()?;
-    check(
-        !s.periodic_u && !s.periodic_v,
-        "Closed branch proof does not identify periodic chart boundaries",
-    )?;
-    for (degree, knots, n) in [
-        (s.degree_u, &s.knots_u, s.control_points.len()),
-        (s.degree_v, &s.knots_v, s.control_points[0].len()),
-    ] {
-        check(
-            degree > 0,
-            "Closed branches require two-dimensional C1 carriers",
-        )?;
+    for ((degree, knots, n, periodic), [start, end]) in [
+        (s.degree_u, &s.knots_u, s.control_points.len(), s.periodic_u),
+        (s.degree_v, &s.knots_v, s.control_points[0].len(), s.periodic_v),
+    ].into_iter().zip(uv) {
+        check(degree > 0, "Closed branches require two-dimensional C1 carriers")?;
         let low = knots[degree];
         let high = knots[n];
-        check(
-            knots[..=degree].iter().all(|&t| t == low) && knots[n..].iter().all(|&t| t == high),
-            "Closed branch proof requires original clamped endpoint continuity",
-        )?;
+        if periodic {
+            check(low < start && end < high, "Closed branch box must avoid the periodic seam")?;
+        } else {
+            check(
+                (low < start || knots[..=degree].iter().all(|&t| t == low))
+                    && (end < high || knots[n..].iter().all(|&t| t == high)),
+                "Closed branch proof requires original clamped endpoint continuity",
+            )?;
+        }
         let mut i = 0;
         while i < knots.len() {
             let mut j = i + 1;
@@ -127,8 +125,8 @@ fn c1_source(s: &Surface) -> Result<()> {
                 j += 1;
             }
             check(
-                !(low < knots[i] && knots[i] < high) || j - i < degree,
-                "Original carrier lacks the source-wide C1 knot-continuity gate",
+                !(start < knots[i] && knots[i] < end) || j - i < degree,
+                "Original carrier lacks C1 knot continuity inside the closed branch box",
             )?;
             i = j;
         }
@@ -170,6 +168,21 @@ pub fn assemble_closed_fiber_branches(
     owner: Arc<DiscoveredMixedFiberComponents>,
     limits: ClosedFiberBranchLimits,
 ) -> Result<QualifiedClosedFiberBranches> {
+    assemble_closed_fiber_branches_impl(owner, limits, true)
+}
+
+pub(crate) fn assemble_closed_fiber_branches_in_box(
+    owner: Arc<DiscoveredMixedFiberComponents>,
+    limits: ClosedFiberBranchLimits,
+) -> Result<QualifiedClosedFiberBranches> {
+    assemble_closed_fiber_branches_impl(owner, limits, false)
+}
+
+fn assemble_closed_fiber_branches_impl(
+    owner: Arc<DiscoveredMixedFiberComponents>,
+    limits: ClosedFiberBranchLimits,
+    require_natural_domain: bool,
+) -> Result<QualifiedClosedFiberBranches> {
     check(
         (1..=65536).contains(&limits.max_branches)
             && (1..=100000).contains(&limits.max_injectivity_spans_per_surface)
@@ -180,7 +193,7 @@ pub fn assemble_closed_fiber_branches(
     let core = owner.proof();
     let cover = core.coverage();
     check(
-        cover.covers_entire_surfaces(),
+        !require_natural_domain || cover.covers_entire_surfaces(),
         "Closed branch census requires the entire original surface product",
     )?;
     check(
@@ -189,9 +202,12 @@ pub fn assemble_closed_fiber_branches(
     )?;
     let first = &cover.fibers()[0];
     let sources = first.source();
-    c1_source(sources.first())?;
-    c1_source(sources.second())?;
     let product = cover.domain();
+    // The affine evaluator is equal to the original surface in the same UV
+    // clock. Continuity and injectivity thus transfer across redundant knots.
+    let [first, second] = sources.evaluation_surfaces();
+    c1_source(first, [product[0], product[1]])?;
+    c1_source(second, [product[2], product[3]])?;
     let roots = cover
         .fibers()
         .iter()
@@ -210,15 +226,31 @@ pub fn assemble_closed_fiber_branches(
     )?;
     let mut injections = vec![];
     for (s, uv) in [
-        (sources.first(), [product[0], product[1]]),
-        (sources.second(), [product[2], product[3]]),
+        (first, [product[0], product[1]]),
+        (second, [product[2], product[3]]),
     ] {
-        let proof = surface_injectivity::certify_on_refined(
-            s,
-            uv,
-            limits.max_injectivity_spans_per_surface,
-            limits.injectivity_refinement_depth,
-        )?;
+        let proof = if s.periodic_u || s.periodic_v {
+            let proof = surface_injectivity::certify_seam_glued_rectangle(
+                s, uv.map(|axis| vec![axis]),
+                limits.max_injectivity_spans_per_surface, limits.injectivity_refinement_depth,
+            )?;
+            surface_injectivity::Report {
+                proven: proof.proven,
+                projection: None,
+                linear_projection: proof.projection,
+                projective_projection: None,
+                polar_projection: None,
+                polar_p_matrix: None,
+                contraction_upper: proof.contraction_upper,
+                spans: proof.spans,
+                reason: proof.reason,
+            }
+        } else {
+            surface_injectivity::certify_on_refined(
+                s, uv, limits.max_injectivity_spans_per_surface,
+                limits.injectivity_refinement_depth,
+            )?
+        };
         check(
             proof.proven,
             "Both original complete carriers need global injection for closed world branches",

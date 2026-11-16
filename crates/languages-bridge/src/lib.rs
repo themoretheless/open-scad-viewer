@@ -4,7 +4,6 @@
 //! only parses and compiles source into documents, and the host runs the geometry operations they name.
 // Adapters turn bad input into typed errors instead of panicking (refactor plan L6).
 #![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
-#![feature(try_blocks, yeet_expr)]
 pub mod abi;
 mod openscad;
 use value_codec::{Value, json};
@@ -75,7 +74,7 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
         }
     };
     let controls = graph["customizer"].take();
-    let result = try {
+    let result = (|| -> rush_runtime::Result<Value> {
         let nodes = graph["nodes"].take();
         let node_list = nodes.as_array().ok_or_else(|| {
             rush_runtime::Error::new("invalid_document", "/nodes", "Expected nodes.")
@@ -125,21 +124,21 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
                 .as_array()
                 .is_some_and(|items| !items.is_empty());
             if has_constraints || has_checks {
-                do yeet rush_runtime::Error::new(
+                return Err(rush_runtime::Error::new(
                     "text_error",
                     "",
                     "NURBS text checks are not supported; use the build topology report",
-                );
+                ));
             }
             if graph.get("segments").is_some() {
-                do yeet rush_runtime::Error::new(
+                return Err(rush_runtime::Error::new(
                     "text_error",
                     "",
                     "segments applies only to legacy geometry; use explicit tessellation arguments for own geometry",
-                );
+                ));
             }
             let Value::Array(nodes) = nodes else {
-                do yeet rush_runtime::Error::new("invalid_document", "/nodes", "Expected nodes.");
+                return Err(rush_runtime::Error::new("invalid_document", "/nodes", "Expected nodes."));
             };
             let parameters = graph["parameters"].as_array().ok_or_else(|| {
                 rush_runtime::Error::new("invalid_document", "/parameters", "Expected parameters.")
@@ -187,8 +186,8 @@ pub(crate) fn execute_text_value(source: &str) -> Value {
             rush_runtime::compile(Value::Object(document))?
         };
         compiled["customizer"] = controls.clone();
-        compiled
-    };
+        Ok(compiled)
+    })();
     runtime_value(result, Some(controls))
 }
 
@@ -235,7 +234,7 @@ pub fn abi_language(op: u32, value: Value) -> Value {
             ),
         },
         5 => runtime_value(
-            try {
+            (|| -> rush_runtime::Result<Value> {
                 let nodes = value["nodes"].as_array().ok_or_else(|| {
                     rush_runtime::Error::new("invalid_document", "/nodes", "Expected nodes")
                 })?;
@@ -249,8 +248,8 @@ pub fn abi_language(op: u32, value: Value) -> Value {
                 let root = value["root"].as_str().ok_or_else(|| {
                     rush_runtime::Error::new("invalid_document", "/root", "Expected root")
                 })?;
-                rush_runtime::nurbs::compile_text(nodes.clone(), parameters, root.into())?
-            },
+                rush_runtime::nurbs::compile_text(nodes.clone(), parameters, root.into())
+            })(),
             None,
         ),
         10 => openscad::scad_compile(&value),

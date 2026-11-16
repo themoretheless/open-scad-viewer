@@ -141,6 +141,115 @@ pub(super) fn nurbs_boolean_graph_patch_transverse(
     capability: &'static str,
     rational: bool,
 ) -> Result<(Model, CurvedGraphBooleanCertificate)> {
+    let (source, cutter, frame) = select_v3_operands(a, b, operation, rational)?;
+    let (source_face, top, origin, u, v, floor_offset) = frame;
+    let context = source
+        .tolerance_context()
+        .map_err(|_| refuse("V3 source tolerance context is invalid"))?;
+    let (iso, plane) = v3_cutting_face(top, cutter, &context, rational)?;
+    let keep_positive_parameter = v3_keep_positive_parameter(
+        &iso,
+        cutter,
+        plane,
+        context.spatial_bounds().clear_mm,
+        operation == "intersection",
+    )?;
+    let fixed = iso.fixed_parameter;
+    let bounds = match iso.first_axis {
+        ExactIsoAxis::U if keep_positive_parameter => [fixed, 1., 0., 1.],
+        ExactIsoAxis::U => [0., fixed, 0., 1.],
+        ExactIsoAxis::V if keep_positive_parameter => [0., 1., fixed, 1.],
+        ExactIsoAxis::V => [0., 1., 0., fixed],
+    };
+    let arrangement = v3_iso_tensor_arrangement(&context, iso.first_axis, fixed)?;
+    let uv_trace = iso
+        .uv_traces
+        .first()
+        .ok_or_else(|| refuse("V3 exact iso authority was revoked"))?;
+    let correspondence = crate::trim_sew::prove_curve_pcurve_correspondence(
+        &context,
+        &iso.curve,
+        top,
+        uv_trace,
+        crate::trim_sew::ParameterOrientation::Same,
+        crate::trim_sew::BoundaryUse {
+            face: source_face,
+            wire: source.faces[source_face].outer,
+            cyclic_index: 0,
+            reversed: false,
+        },
+    )?;
+    let mut result = clipped_graph_solid(source, top, origin, u, v, floor_offset, bounds)?;
+    let seam = V3Seam::new(iso.first_axis, keep_positive_parameter);
+    let source_id = source.1.faces[source_face];
+    seam.record_lineage(&mut result, source, source_id, capability)?;
+    let audited = LocallyValidatedModel::new(result)?.audit()?;
+    let mut audit = audited.certificate().clone();
+    audit.notes.push("v3_graph_patch_cell_separation_ok");
+    audit
+        .notes
+        .push("v3_graph_patch_self_intersection_exclusion_ok");
+    let result = audited.into_model();
+    let (denominator_lower_bound, denominator_upper_bound) =
+        rational_weight_bounds(top).unwrap_or((1., 1.));
+    let cert = CurvedGraphBooleanCertificate {
+        capability,
+        status: "Complete",
+        operation: operation.into(),
+        cut: GraphBooleanCut {
+            axis: iso.first_axis,
+            fixed_parameter: fixed,
+            tensor_cells: arrangement.cells.len(),
+        },
+        lineage: GraphBooleanLineage {
+            source_face: source_id.to_string(),
+            retained_face: result.1.faces[1].to_string(),
+            deleted_region: if keep_positive_parameter {
+                "lower-parameter-cell"
+            } else {
+                "upper-parameter-cell"
+            },
+            intersection_edge: result.1.edges[seam.edge(&result)?].to_string(),
+        },
+        sew: audit.sew.clone(),
+        audit,
+        change_set: result.1.change_set.clone(),
+        proofs: GraphBooleanProofs {
+            exact_correspondence: correspondence.permits_exact_correspondence(),
+            naming_complete: result.persistent_naming_complete(),
+            no_fallback: true,
+            separation_proof: true,
+            homogeneous_root_proof: rational,
+        },
+        conditioning: GraphBooleanConditioning {
+            denominator_lower_bound,
+            weight_condition_number: denominator_upper_bound / denominator_lower_bound,
+            resource_bound: (top.degree_u + 1) * (top.degree_v + 1),
+        },
+    };
+    if !cert.permits_topology_change() {
+        return Err(refuse("V3 aggregate certificate failed closed"));
+    }
+    Ok((result, cert))
+}
+
+/// Multiplier applied to the cutter tolerance when admitting planar faces.
+const V3_PLANAR_TOLERANCE_FACTOR: f64 = 8.;
+/// Smallest tolerance used to recover the cutting-face plane.
+const V3_MIN_PLANAR_TOLERANCE_MM: f64 = 1e-9;
+/// Tensor arrangement cell and resource limits for the single iso split.
+const V3_TENSOR_ITERATION_LIMIT: usize = 1;
+const V3_TENSOR_RESOURCE_LIMIT: usize = 16;
+/// Primitive id of the iso split line after the four rectangle boundaries.
+const V3_ISO_EDGE_ID: usize = 4;
+
+/// Validates operands and returns `(source, cutter, frame)`.
+fn select_v3_operands<'a>(
+    a: &'a Model,
+    b: &'a Model,
+    operation: &str,
+    rational: bool,
+) -> Result<(&'a Model, &'a Model, GraphFrame<'a>)> {
     a.validate()?;
     b.validate()?;
     if operation == "union" {
@@ -167,27 +276,41 @@ pub(super) fn nurbs_boolean_graph_patch_transverse(
     }
     if cutter.bodies.len() != 1
         || cutter.shells.len() != 1
-        || cutter
-            .faces
-            .iter()
-            .any(|face| planar_support(&face.surface, cutter.tolerance_mm * 8.).is_none())
+        || cutter.faces.iter().any(|face| {
+            planar_support(
+                &face.surface,
+                cutter.tolerance_mm * V3_PLANAR_TOLERANCE_FACTOR,
+            )
+            .is_none()
+        })
     {
         return Err(refuse("V3 cutter must be one affine-planar closed solid"));
     }
-    let (source_face, top, origin, u, v, floor_offset) = frame;
-    let context = source
-        .tolerance_context()
-        .map_err(|_| refuse("V3 source tolerance context is invalid"))?;
+    Ok((source, cutter, frame))
+}
+
+/// Plane `(origin, unit normal)` of an affine cutter face.
+type PlaneSupport = ([f64; 3], [f64; 3]);
+
+/// The unique cutter face with an exact iso intersection and its plane.
+fn v3_cutting_face(
+    top: &Surface,
+    cutter: &Model,
+    context: &cad_predicates::ToleranceContext,
+    rational: bool,
+) -> Result<(ExactIsoIntersectionCertificate, PlaneSupport)> {
+    let tolerance =
+        cutter.tolerance_mm.max(V3_MIN_PLANAR_TOLERANCE_MM) * V3_PLANAR_TOLERANCE_FACTOR;
     let mut matches = Vec::new();
     for face in &cutter.faces {
         let certificate = if rational {
-            certify_exact_rational_planar_iso_intersection(top, &face.surface, &context)
+            certify_exact_rational_planar_iso_intersection(top, &face.surface, context)
         } else {
-            certify_exact_planar_iso_intersection(top, &face.surface, &context)
+            certify_exact_planar_iso_intersection(top, &face.surface, context)
         };
         if let Ok(certificate) = certificate {
-            let support =
-                planar_support(&face.surface, cutter.tolerance_mm.max(1e-9) * 8.).unwrap();
+            let support = planar_support(&face.surface, tolerance)
+                .ok_or_else(|| refuse("V3 cutter must be one affine-planar closed solid"))?;
             matches.push((certificate, support));
         }
     }
@@ -196,11 +319,21 @@ pub(super) fn nurbs_boolean_graph_patch_transverse(
             "V3 cutter must expose exactly one strict-interior iso cutting face",
         ));
     }
-    let (iso, (plane_origin, plane_normal)) = matches.remove(0);
+    let (iso, plane) = matches.remove(0);
     if !iso.permits_topology_authorship() {
         return Err(refuse("V3 exact iso authority was revoked"));
     }
-    let clear = context.spatial_bounds().clear_mm;
+    Ok((iso, plane))
+}
+
+/// Whether the retained cell lies on the positive side of the iso parameter.
+fn v3_keep_positive_parameter(
+    iso: &ExactIsoIntersectionCertificate,
+    cutter: &Model,
+    (plane_origin, plane_normal): PlaneSupport,
+    clear: f64,
+    keep_cutter_side: bool,
+) -> Result<bool> {
     let distances: Vec<_> = cutter
         .vertices
         .iter()
@@ -214,16 +347,15 @@ pub(super) fn nurbs_boolean_graph_patch_transverse(
         ));
     }
     let cutter_sign = if positive { 1. } else { -1. };
-    let keep_cutter_side = operation == "intersection";
-    let keep_positive_parameter =
-        (cutter_sign == iso.transverse_signed_distance_slope.signum()) == keep_cutter_side;
-    let fixed = iso.fixed_parameter;
-    let bounds = match iso.first_axis {
-        ExactIsoAxis::U if keep_positive_parameter => [fixed, 1., 0., 1.],
-        ExactIsoAxis::U => [0., fixed, 0., 1.],
-        ExactIsoAxis::V if keep_positive_parameter => [0., 1., fixed, 1.],
-        ExactIsoAxis::V => [0., 1., 0., fixed],
-    };
+    Ok((cutter_sign == iso.transverse_signed_distance_slope.signum()) == keep_cutter_side)
+}
+
+/// Unit tensor rectangle arrangement split by the certified iso line.
+fn v3_iso_tensor_arrangement(
+    context: &cad_predicates::ToleranceContext,
+    axis: ExactIsoAxis,
+    fixed: f64,
+) -> Result<crate::uv_arrangement::LiftedUvArrangement> {
     use crate::uv_arrangement::{
         LiftedUvGeometry, LiftedUvPrimitive, TensorAxis, TensorBoundary,
         arrange_tensor_bezier_graph_uv,
@@ -243,9 +375,9 @@ pub(super) fn nurbs_boolean_graph_patch_transverse(
     })
     .collect();
     primitives.push(LiftedUvPrimitive {
-        edge_id: 4,
+        edge_id: V3_ISO_EDGE_ID,
         geometry: LiftedUvGeometry::TensorIsoLine {
-            axis: match iso.first_axis {
+            axis: match axis {
                 ExactIsoAxis::U => TensorAxis::U,
                 ExactIsoAxis::V => TensorAxis::V,
             },
@@ -253,96 +385,66 @@ pub(super) fn nurbs_boolean_graph_patch_transverse(
             interval: [0., 1.],
         },
     });
-    let arrangement = arrange_tensor_bezier_graph_uv(&context, domain, &primitives, 1, 16)?;
-    let correspondence = crate::trim_sew::prove_curve_pcurve_correspondence(
-        &context,
-        &iso.curve,
-        top,
-        &iso.uv_traces[0],
-        crate::trim_sew::ParameterOrientation::Same,
-        crate::trim_sew::BoundaryUse {
-            face: source_face,
-            wire: source.faces[source_face].outer,
-            cyclic_index: 0,
-            reversed: false,
-        },
-    )?;
-    let mut result = clipped_graph_solid(source, top, origin, u, v, floor_offset, bounds)?;
-    let seam_vertices = match (iso.first_axis, keep_positive_parameter) {
-        (ExactIsoAxis::U, true) => (4, 7),
-        (ExactIsoAxis::U, false) => (5, 6),
-        (ExactIsoAxis::V, true) => (4, 5),
-        (ExactIsoAxis::V, false) => (6, 7),
-    };
-    let seam_edge = edge_between(&result, seam_vertices.0, seam_vertices.1)?;
-    let seam_face = match (iso.first_axis, keep_positive_parameter) {
-        (ExactIsoAxis::U, true) => 5,
-        (ExactIsoAxis::U, false) => 3,
-        (ExactIsoAxis::V, true) => 2,
-        (ExactIsoAxis::V, false) => 4,
-    };
-    let source_id = source.1.faces[source_face];
-    let retained_id = result.1.faces[1];
-    result.1.lineage.push(TopologyLineageRecord {
-        operation: "split".into(),
-        entity_kind: "face".into(),
-        parents: vec![source_id],
-        children: vec![retained_id, result.1.faces[seam_face]],
-    });
-    result.refresh_change_set(&[source]);
-    let seam_id = result.1.edges[seam_edge];
-    for change in &mut result.1.change_set.changes {
-        if change.topo_kind == crate::TopoKind::Face && change.parents.contains(&source_id) {
-            change.role = "curved-source-face-split-retained-deleted".into();
-            change.provenance.operation = capability.into();
-        }
-        if change.topo_kind == crate::TopoKind::Edge && change.children.contains(&seam_id) {
-            change.role = "generated-intersection-edge".into();
-            change.provenance.operation = capability.into();
-        }
+    arrange_tensor_bezier_graph_uv(
+        context,
+        domain,
+        &primitives,
+        V3_TENSOR_ITERATION_LIMIT,
+        V3_TENSOR_RESOURCE_LIMIT,
+    )
+}
+
+/// Seam edge (by its clipped-box vertices) and seam side face of the V3 cell.
+struct V3Seam {
+    vertices: (usize, usize),
+    face: usize,
+}
+
+impl V3Seam {
+    fn new(axis: ExactIsoAxis, keep_positive_parameter: bool) -> Self {
+        let (vertices, face) = match (axis, keep_positive_parameter) {
+            (ExactIsoAxis::U, true) => ((4, 7), 5),
+            (ExactIsoAxis::U, false) => ((5, 6), 3),
+            (ExactIsoAxis::V, true) => ((4, 5), 2),
+            (ExactIsoAxis::V, false) => ((6, 7), 4),
+        };
+        Self { vertices, face }
     }
-    result.1.change_set.validate()?;
-    let audited = LocallyValidatedModel::new(result)?.audit()?;
-    let mut audit = audited.certificate().clone();
-    audit.notes.push("v3_graph_patch_cell_separation_ok");
-    audit
-        .notes
-        .push("v3_graph_patch_self_intersection_exclusion_ok");
-    let result = audited.into_model();
-    let (denominator_lower_bound, denominator_upper_bound) =
-        rational_weight_bounds(top).unwrap_or((1., 1.));
-    let cert = CurvedGraphBooleanCertificate {
-        capability,
-        status: "Complete",
-        operation: operation.into(),
-        axis: iso.first_axis,
-        fixed_parameter: fixed,
-        source_face: source_id.to_string(),
-        retained_face: result.1.faces[1].to_string(),
-        deleted_region: if keep_positive_parameter {
-            "lower-parameter-cell"
-        } else {
-            "upper-parameter-cell"
-        },
-        intersection_edge: result.1.edges[edge_between(&result, seam_vertices.0, seam_vertices.1)?]
-            .to_string(),
-        tensor_cells: arrangement.cells.len(),
-        exact_correspondence: correspondence.permits_exact_correspondence(),
-        sew: audit.sew.clone(),
-        audit,
-        change_set: result.1.change_set.clone(),
-        naming_complete: result.persistent_naming_complete(),
-        no_fallback: true,
-        separation_proof: true,
-        homogeneous_root_proof: rational,
-        denominator_lower_bound,
-        weight_condition_number: denominator_upper_bound / denominator_lower_bound,
-        resource_bound: (top.degree_u + 1) * (top.degree_v + 1),
-    };
-    if !cert.permits_topology_change() {
-        return Err(refuse("V3 aggregate certificate failed closed"));
+
+    fn edge(&self, model: &Model) -> Result<usize> {
+        edge_between(model, self.vertices.0, self.vertices.1)
     }
-    Ok((result, cert))
+
+    /// Records the split lineage and classifies the change set roles.
+    fn record_lineage(
+        &self,
+        result: &mut Model,
+        source: &Model,
+        source_id: TopoId,
+        capability: &'static str,
+    ) -> Result<()> {
+        let seam_edge = self.edge(result)?;
+        let retained_id = result.1.faces[1];
+        result.1.lineage.push(TopologyLineageRecord {
+            operation: "split".into(),
+            entity_kind: "face".into(),
+            parents: vec![source_id],
+            children: vec![retained_id, result.1.faces[self.face]],
+        });
+        result.refresh_change_set(&[source]);
+        let seam_id = result.1.edges[seam_edge];
+        for change in &mut result.1.change_set.changes {
+            if change.topo_kind == crate::TopoKind::Face && change.parents.contains(&source_id) {
+                change.role = "curved-source-face-split-retained-deleted".into();
+                change.provenance.operation = capability.into();
+            }
+            if change.topo_kind == crate::TopoKind::Edge && change.children.contains(&seam_id) {
+                change.role = "generated-intersection-edge".into();
+                change.provenance.operation = capability.into();
+            }
+        }
+        result.1.change_set.validate()
+    }
 }
 
 pub fn nurbs_boolean_graph_patch_v3(

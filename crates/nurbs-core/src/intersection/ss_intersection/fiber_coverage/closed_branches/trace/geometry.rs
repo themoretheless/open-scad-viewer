@@ -44,16 +44,60 @@ pub(super) fn world_bounds(s: &Surface, box4: Box4, w: &mut Work) -> Result<[[f6
     )?;
     Ok(bounds)
 }
+/// Both original surfaces contain the same root image. Intersect their
+/// independent enclosures to avoid inheriting a loose bound from one chart.
+pub(super) fn shared_world_bounds(
+    source: &FiberSources,
+    root: Box4,
+    w: &mut Work,
+) -> Result<[[f64; 2]; 3]> {
+    let first = world_bounds(source.first(), root, w)?;
+    let second = world_bounds(source.second(), [root[2], root[3], root[0], root[1]], w)?;
+    let shared = std::array::from_fn(|axis| {
+        [
+            first[axis][0].max(second[axis][0]),
+            first[axis][1].min(second[axis][1]),
+        ]
+    });
+    check(
+        shared.iter().all(|[lo, hi]| lo <= hi),
+        "Original root world enclosures disagree",
+    )?;
+    Ok(shared)
+}
+
 pub(super) fn tube_errors(
     fibers: &[QualifiedFiber; 2],
     ports: &[&Port; 2],
+    original_ports: [Box4; 2],
     w: &mut Work,
 ) -> Result<(f64, [f64; 2])> {
     let mut world = 0_f64;
     let mut uv = [0_f64; 2];
-    for (f, port) in fibers.iter().zip(ports) {
-        let roots = super::super::cycle::point_bounds(f)?;
-        let b = world_bounds(f.source().first(), roots, w)?;
+    for ((f, port), original) in fibers.iter().zip(ports).zip(original_ports) {
+        let mut roots = super::super::cycle::point_bounds(f)?;
+        let domain = f.domain();
+        let [lo, hi] = domain[f.free_axis().index()];
+        if contained(original, domain) {
+            let transport = if lo == hi {
+                Some(original)
+            } else {
+                let (transport, cells) = f.transported_root_bounds(original, w.remaining()?)?;
+                w.used += cells;
+                transport
+            };
+            if let Some(transport) = transport {
+                for axis in 0..4 {
+                    roots[axis][0] = roots[axis][0].max(transport[axis][0]);
+                    roots[axis][1] = roots[axis][1].min(transport[axis][1]);
+                }
+                check(
+                    roots.iter().all(|[lo, hi]| lo <= hi),
+                    "Endpoint root bounds disagree",
+                )?;
+            }
+        }
+        let b = shared_world_bounds(f.source(), roots, w)?;
         let mut width = I::point(0.);
         for k in 0..3 {
             width = width.add(

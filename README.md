@@ -291,6 +291,22 @@ Example MCP client configuration (replace the repository path):
 }
 ```
 
+To open a catalog model in a running local editor, open the OpenSCADA tab
+served by `npm run dev` or `npm run preview` and keep it visible. Then call
+`openscad_open_in_editor` from the stdio MCP server with `model_id` and,
+optionally, `revision` and `port`. For example:
+
+```json
+{"model_id":"<catalog id>","revision":0,"port":5173}
+```
+
+The command loads the source into the current workspace, starts a full build,
+and selects **Parameters**. The tool returns `opened` after the tab acknowledges
+the editor change. The build completes separately. By default the tool connects
+to port 5173 on the same computer. Set `OPENSCADA_EDITOR_PORT` in the MCP
+server environment for a different default. A static deployment does not
+provide the local bridge.
+
 Available tools:
 
 - `openscad_save_model`, `openscad_get_model`, `openscad_list_models`, and

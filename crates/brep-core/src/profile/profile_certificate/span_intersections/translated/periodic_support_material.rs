@@ -25,37 +25,67 @@ fn same_wires(support: &OwnedPeriodicSupportBoundaries, owner: &OwnedPeriodicWir
         owner.owner().owner().seam_contacts().embedding().wires(),
     )
 }
-fn derive_probes(
-    o: &OwnedPeriodicSupportSideProbes,
-) -> Result<(
-    periodic_material_sides::ProbeData,
-    [bool; 2],
-    Vec<OriginalPeriodicNaturalCarrier>,
-)> {
-    let _replay = super::periodic_replay::scope();
-    super::periodic_replay::verify_arc(&o.support, |x| x.reverify_source())?;
-    if !same_wires(&o.support, &o.owner) {
-        return Err(refused(
-            "Support probes do not own the augmented original wire census",
-        ));
-    }
-    let data = periodic_material_sides::source_probe_data(
-        &o.owner, o.edge, &o.radius, o.limits, true, true,
-    )?;
-    let graph = o.owner.owner().owner();
-    let e = &graph.edges()[o.edge];
-    let cover = graph.owner().owner().pieces();
-    let chart = cover.chart().map(|d| d.map(|v| Q::from_float(v).unwrap()));
-    let wrapped = cover.wrapped();
-    let mut exterior = [false; 2];
-    for side in 0..2 {
-        for axis in 0..2 {
-            let q = decode_ratio(&data.1[side][axis])?;
-            if !wrapped[axis] && (q < chart[axis][0] || q > chart[axis][1]) {
-                exterior[side] = true;
+/// The exact chart rectangle and which of its axes are periodic.
+struct ChartFrame {
+    chart: [[Q; 2]; 2],
+    wrapped: [bool; 2],
+}
+impl ChartFrame {
+    fn new(o: &OwnedPeriodicSupportSideProbes) -> Result<Self> {
+        let cover = o.owner.owner().owner().owner().owner().pieces();
+        let mut chart = [[Q::zero(), Q::zero()], [Q::zero(), Q::zero()]];
+        for (exact, bounds) in chart.iter_mut().zip(cover.chart()) {
+            for (q, v) in exact.iter_mut().zip(bounds) {
+                *q = Q::from_float(v)
+                    .ok_or_else(|| refused("Support probe chart bound is not finite"))?;
             }
         }
+        Ok(Self {
+            chart,
+            wrapped: cover.wrapped(),
+        })
     }
+    /// Which probe points leave the chart across a natural boundary.
+    fn exterior(&self, points: &[[ExactRatio; 2]; 2]) -> Result<[bool; 2]> {
+        let mut exterior = [false; 2];
+        for (side, point) in points.iter().enumerate() {
+            for axis in 0..2 {
+                let q = decode_ratio(&point[axis])?;
+                if !self.wrapped[axis] && (q < self.chart[axis][0] || q > self.chart[axis][1]) {
+                    exterior[side] = true;
+                }
+            }
+        }
+        Ok(exterior)
+    }
+    /// The exterior point lies beyond the owned natural side and strictly
+    /// between the natural boundaries of the other axis.
+    fn verify_beyond(&self, point: &[ExactRatio; 2], fixed_axis: usize, end: usize) -> Result<()> {
+        for axis in 0..2 {
+            if self.wrapped[axis] {
+                continue;
+            }
+            let q = decode_ratio(&point[axis])?;
+            let [low, high] = &self.chart[axis];
+            if axis == fixed_axis {
+                let beyond = if end == 0 { q < *low } else { q > *high };
+                if !beyond {
+                    return Err(refused(
+                        "Exterior point is not beyond the owned natural domain side",
+                    ));
+                }
+            } else if q <= *low || q >= *high {
+                return Err(refused(
+                    "Natural support probe crosses an unrelated natural boundary",
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+/// Carriers of the probed edge that are natural boundaries of the support.
+fn natural_carriers(o: &OwnedPeriodicSupportSideProbes) -> Vec<OriginalPeriodicNaturalCarrier> {
+    let e = &o.owner.owner().owner().edges()[o.edge];
     let mut natural = Vec::new();
     for (carrier, c) in e.carriers.iter().enumerate() {
         for (boundary, b) in o.support.boundaries().iter().enumerate() {
@@ -68,58 +98,71 @@ fn derive_probes(
             }
         }
     }
-    if natural.is_empty() {
+    natural
+}
+/// All natural carriers name one half-space, exactly its outer probe is
+/// exterior, and that probe lies beyond the owned boundary.
+fn verify_natural(
+    o: &OwnedPeriodicSupportSideProbes,
+    frame: &ChartFrame,
+    data: &periodic_material_sides::ProbeData,
+    exterior: &[bool; 2],
+    natural: &[OriginalPeriodicNaturalCarrier],
+) -> Result<()> {
+    let Some(first) = natural.first() else {
         if exterior.iter().any(|v| *v) {
             return Err(refused(
                 "An exterior support probe lacks an actual natural source carrier",
             ));
         }
-    } else {
-        let first = &natural[0];
-        let boundary = &o.support.boundaries()[first.boundary];
-        if natural.iter().any(|c| {
-            let b = &o.support.boundaries()[c.boundary];
-            b.fixed_axis != boundary.fixed_axis
-                || b.end != boundary.end
-                || c.inward_left != first.inward_left
-        }) {
-            return Err(refused(
-                "Natural source carriers disagree on the actual support half-space",
-            ));
-        }
-        let inside = usize::from(!first.inward_left);
-        let outside = 1 - inside;
-        if exterior[inside] || !exterior[outside] {
-            return Err(refused(
-                "Natural support probes do not have exactly one proved inward side",
-            ));
-        }
-        if data.3.iter().flatten().any(|k| k != "0") {
-            return Err(refused(
-                "Natural edge normal unexpectedly needs a periodic chart transport",
-            ));
-        }
-        for axis in 0..2 {
-            if !wrapped[axis] {
-                let q = decode_ratio(&data.1[outside][axis])?;
-                if axis == boundary.fixed_axis {
-                    if !(if boundary.end == 0 {
-                        q < chart[axis][0]
-                    } else {
-                        q > chart[axis][1]
-                    }) {
-                        return Err(refused(
-                            "Exterior point is not beyond the owned natural domain side",
-                        ));
-                    }
-                } else if q <= chart[axis][0] || q >= chart[axis][1] {
-                    return Err(refused(
-                        "Natural support probe crosses an unrelated natural boundary",
-                    ));
-                }
-            }
-        }
+        return Ok(());
+    };
+    let boundary = &o.support.boundaries()[first.boundary];
+    if natural.iter().any(|c| {
+        let b = &o.support.boundaries()[c.boundary];
+        b.fixed_axis != boundary.fixed_axis
+            || b.end != boundary.end
+            || c.inward_left != first.inward_left
+    }) {
+        return Err(refused(
+            "Natural source carriers disagree on the actual support half-space",
+        ));
     }
+    let inside = usize::from(!first.inward_left);
+    let outside = 1 - inside;
+    if exterior[inside] || !exterior[outside] {
+        return Err(refused(
+            "Natural support probes do not have exactly one proved inward side",
+        ));
+    }
+    if data.3.iter().flatten().any(|k| k != "0") {
+        return Err(refused(
+            "Natural edge normal unexpectedly needs a periodic chart transport",
+        ));
+    }
+    frame.verify_beyond(&data.1[outside], boundary.fixed_axis, boundary.end)
+}
+/// Probe data of one edge, its exterior sides and its natural carriers.
+type SupportProbes = (
+    periodic_material_sides::ProbeData,
+    [bool; 2],
+    Vec<OriginalPeriodicNaturalCarrier>,
+);
+fn derive_probes(o: &OwnedPeriodicSupportSideProbes) -> Result<SupportProbes> {
+    let _replay = super::periodic_replay::scope();
+    super::periodic_replay::verify_arc(&o.support, |x| x.reverify_source())?;
+    if !same_wires(&o.support, &o.owner) {
+        return Err(refused(
+            "Support probes do not own the augmented original wire census",
+        ));
+    }
+    let data = periodic_material_sides::source_probe_data(
+        &o.owner, o.edge, &o.radius, o.limits, true, true,
+    )?;
+    let frame = ChartFrame::new(o)?;
+    let exterior = frame.exterior(&data.1)?;
+    let natural = natural_carriers(o);
+    verify_natural(o, &frame, &data, &exterior, &natural)?;
     Ok((data, exterior, natural))
 }
 impl OwnedPeriodicSupportSideProbes {

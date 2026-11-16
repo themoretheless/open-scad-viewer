@@ -1,5 +1,4 @@
 //! Deterministic photo reconstruction. Algorithms use Rust std only; host owns codecs and UI.
-#![feature(try_blocks, yeet_expr)]
 pub mod bundle;
 pub mod calibration;
 pub mod camera;

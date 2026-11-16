@@ -58,11 +58,8 @@ pub(super) fn verify(t: &QualifiedClosedFiberTrace, fresh: bool) -> Result<()> {
             "Closed port parameters changed",
         )?;
         if fresh {
-            let bounds = world_bounds(
-                f.source().first(),
-                t.cycle.ports()[i].parameter_bounds(),
-                &mut work,
-            )?;
+            let bounds =
+                shared_world_bounds(f.source(), t.cycle.ports()[i].parameter_bounds(), &mut work)?;
             check(
                 a.world == bounds.map(midpoint),
                 "Closed port world enclosure changed",
@@ -98,7 +95,15 @@ pub(super) fn verify(t: &QualifiedClosedFiberTrace, fresh: bool) -> Result<()> {
             "Closed endpoint rephasing bands overlap",
         )?;
         if fresh {
-            let (world, uv) = tube_errors(&tubes.fibers, &[a, b], &mut work)?;
+            let (world, uv) = tube_errors(
+                &tubes.fibers,
+                &[a, b],
+                [
+                    t.cycle.ports()[i].parameter_bounds(),
+                    t.cycle.ports()[(i + 1) % n].parameter_bounds(),
+                ],
+                &mut work,
+            )?;
             check(
                 world == tubes.world && uv == tubes.uv,
                 "Closed endpoint tube errors changed",

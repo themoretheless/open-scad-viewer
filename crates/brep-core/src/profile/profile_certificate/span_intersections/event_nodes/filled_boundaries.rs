@@ -17,6 +17,16 @@ type BoundaryData = (
     Vec<Option<usize>>,
     Vec<Vec<usize>>,
 );
+const MESSAGES: filled_selection::Messages = filled_selection::Messages {
+    product_overflow: "Filled winding product overflow",
+    total_overflow: "Filled winding total overflow",
+    sectors: "Exact vertex sectors disagree with source-side winding labels",
+    missing_twin: "Filled incoming carrier twin is missing",
+    no_outgoing: "Filled boundary has no outgoing material edge",
+    permutation: "Filled boundary successor is not a complete selected permutation",
+    missing_successor: "Filled boundary successor is missing",
+    orbit: "Filled boundary walk joins a different orbit",
+};
 fn derive(
     cycles: &OwnedOriginalCarrierCycles,
     sides: &[OwnedOriginalCarrierSides],
@@ -59,18 +69,7 @@ fn derive(
                 ));
             }
         }
-        let weighted = |values: &[i64]| -> Result<i64> {
-            values
-                .iter()
-                .zip(coefficients)
-                .try_fold(0i64, |sum, (&w, &c)| {
-                    sum.checked_add(
-                        w.checked_mul(i64::from(c))
-                            .ok_or_else(|| refused("Filled winding product overflow"))?,
-                    )
-                    .ok_or_else(|| refused("Filled winding total overflow"))
-                })
-        };
+        let weighted = |values: &[i64]| filled_selection::weighted(values, coefficients, &MESSAGES);
         winding.push([weighted(&left.windings)?, weighted(&right.windings)?]);
     }
     if sides.is_empty() && !coefficients.is_empty() {
@@ -78,66 +77,14 @@ fn derive(
             "Empty carrier census cannot own nonempty wire coefficients",
         ));
     }
-    let left = |h: usize| winding[h / 2][h % 2];
-    let right = |h: usize| winding[h / 2][1 - h % 2];
-    for rotation in cycles.rotations() {
-        for i in 0..rotation.len() {
-            if left(rotation[i]) != right(rotation[(i + 1) % rotation.len()]) {
-                return Err(refused(
-                    "Exact vertex sectors disagree with source-side winding labels",
-                ));
-            }
-        }
+    let (retained, successor, boundaries) = filled_selection::Halfedges {
+        count: 2 * winding.len(),
+        rotations: cycles.rotations(),
+        side: |h: usize| [winding[h / 2][h % 2], winding[h / 2][1 - h % 2]],
+        arrive: |h: usize| (graph.ends()[h / 2][1 - h % 2], h ^ 1),
+        messages: &MESSAGES,
     }
-    let n = 2 * winding.len();
-    let retained = (0..n)
-        .filter(|h| left(*h) != 0 && right(*h) == 0)
-        .collect::<Vec<_>>();
-    let mut selected = vec![false; n];
-    for h in &retained {
-        selected[*h] = true;
-    }
-    let mut successor = vec![None; n];
-    for &h in &retained {
-        let target = graph.ends()[h / 2][if h % 2 == 0 { 1 } else { 0 }];
-        let rotation = &cycles.rotations()[target];
-        let twin = rotation
-            .iter()
-            .position(|p| *p == h ^ 1)
-            .ok_or_else(|| refused("Filled incoming carrier twin is missing"))?;
-        let next = (1..=rotation.len())
-            .map(|step| rotation[(twin + rotation.len() - step) % rotation.len()])
-            .find(|p| selected[*p])
-            .ok_or_else(|| refused("Filled boundary has no outgoing material edge"))?;
-        successor[h] = Some(next);
-    }
-    let mut indegree = vec![0; n];
-    for h in &retained {
-        indegree[successor[*h].unwrap()] += 1;
-    }
-    if (0..n).any(|h| indegree[h] != usize::from(selected[h])) {
-        return Err(refused(
-            "Filled boundary successor is not a complete selected permutation",
-        ));
-    }
-    let mut visited = vec![false; n];
-    let mut boundaries = Vec::new();
-    for &start in &retained {
-        if visited[start] {
-            continue;
-        }
-        let mut boundary = Vec::new();
-        let mut h = start;
-        while !visited[h] {
-            visited[h] = true;
-            boundary.push(h);
-            h = successor[h].unwrap();
-        }
-        if h != start {
-            return Err(refused("Filled boundary walk joins a different orbit"));
-        }
-        boundaries.push(boundary);
-    }
+    .select()?;
     Ok((winding, retained, successor, boundaries))
 }
 impl OwnedOriginalFilledBoundaries {

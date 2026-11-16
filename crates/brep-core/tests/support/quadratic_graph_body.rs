@@ -2,8 +2,21 @@
 //! Test geometry is authored independently of the SS and material algorithms.
 use brep_core::Model;
 pub fn bowl() -> Model {
+    warped_box(1.)
+}
+
+pub fn above_bowl() -> Model {
+    brep_core::transform::affine(&warped_box(-1.), [
+        [1., 0., 0., 0.],
+        [0., 1., 0., 0.],
+        [0., 0., -1., 0.],
+        [0., 0., 0., 1.],
+    ]).unwrap()
+}
+
+fn warped_box(sign: f64) -> Model {
     let mut model = brep_core::cuboid([0., 0., -1.], [1., 1., 0.]).unwrap();
-    let shift = |x: f64, y: f64| x * x + y * y - x - y + 0.5 - 0.3125_f64.powi(2);
+    let shift = |x: f64, y: f64| sign * (x * x + y * y - x - y + 0.5 - 0.3125_f64.powi(2));
     for v in &mut model.vertices {
         v.point[2] += shift(v.point[0], v.point[1]);
     }
@@ -17,7 +30,7 @@ pub fn bowl() -> Model {
         let mut mid = (0..3)
             .map(|k| start[k] * 0.5 + end[k] * 0.5)
             .collect::<Vec<_>>();
-        mid[2] -= ((q[0] - p[0]).powi(2) + (q[1] - p[1]).powi(2)) * 0.5;
+        mid[2] -= sign * ((q[0] - p[0]).powi(2) + (q[1] - p[1]).powi(2)) * 0.5;
         edge.curve = nurbs_core::curve::Curve {
             degree: 2,
             knots: vec![0., 0., 0., 1., 1., 1.],
@@ -47,7 +60,7 @@ pub fn bowl() -> Model {
                         let mut p = (0..3)
                             .map(|k| o[k] + u[k] * s + v[k] * t)
                             .collect::<Vec<_>>();
-                        p[2] += square(0) + square(1) - p[0] - p[1] + 0.5 - 0.3125_f64.powi(2);
+                        p[2] += sign * (square(0) + square(1) - p[0] - p[1] + 0.5 - 0.3125_f64.powi(2));
                         p
                     })
                     .collect()

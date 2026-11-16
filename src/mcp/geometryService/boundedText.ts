@@ -1,7 +1,18 @@
 import type { ArtifactFormat } from '../modelStore'
 import { extractCustomizerParameters } from '../../language/scadCustomizer'
 import type { CustomizerParameter, CustomizerValue } from '../../language/scadCustomizer'
-import { CustomizerValueError, InvalidGeometryError, MAX_ANALYSIS_OBJECTS, MAX_ANALYSIS_OPTIONS, MAX_ANALYSIS_PARAMETERS, MAX_ANALYSIS_SOURCES_PER_OBJECT, MAX_ANALYSIS_TEXT_LENGTH, MAX_ANALYSIS_WARNINGS, MAX_ANALYSIS_WARNING_LENGTH, MAX_ARTIFACT_BYTES } from '../geometryService'
+import {
+  CustomizerValueError,
+  InvalidGeometryError,
+  MAX_ANALYSIS_OBJECTS,
+  MAX_ANALYSIS_OPTIONS,
+  MAX_ANALYSIS_PARAMETERS,
+  MAX_ANALYSIS_SOURCES_PER_OBJECT,
+  MAX_ANALYSIS_TEXT_LENGTH,
+  MAX_ANALYSIS_WARNINGS,
+  MAX_ANALYSIS_WARNING_LENGTH,
+  MAX_ARTIFACT_BYTES,
+} from '../geometryService'
 import type { CustomizerParameterSummary, GeometryAnalysis, ObjectAnalysis, SourceSummary } from '../geometryService'
 import type { GeometryBuildResult } from '../../kernel/geometryBuildEngine'
 import type { GeometryExecutionDescriptor } from '../../core/geometryExecution'
@@ -12,7 +23,7 @@ export function boundedText(value: string, maxLength = MAX_ANALYSIS_TEXT_LENGTH)
   if (value.length <= maxLength) return value
   let end = maxLength - 1
   const last = value.charCodeAt(end - 1)
-  if (last >= 0xD800 && last <= 0xDBFF) end--
+  if (last >= 0xd800 && last <= 0xdbff) end--
   return `${value.slice(0, end)}…`
 }
 
@@ -26,11 +37,17 @@ export function validateFiniteGeometry(result: GeometryBuildResult['result']): v
   for (const [meshIndex, mesh] of result.meshes.entries()) {
     let transformColorFinite = true
     for (let i = 0; i < mesh.transform.length; i++) {
-      if (!Number.isFinite(mesh.transform[i])) { transformColorFinite = false; break }
+      if (!Number.isFinite(mesh.transform[i])) {
+        transformColorFinite = false
+        break
+      }
     }
     if (transformColorFinite) {
       for (let i = 0; i < mesh.color.length; i++) {
-        if (!Number.isFinite(mesh.color[i])) { transformColorFinite = false; break }
+        if (!Number.isFinite(mesh.color[i])) {
+          transformColorFinite = false
+          break
+        }
       }
     }
     if (!transformColorFinite) {
@@ -43,18 +60,25 @@ export function validateFiniteGeometry(result: GeometryBuildResult['result']): v
       const x = vertices[offset]
       const y = vertices[offset + 1]
       const z = vertices[offset + 2]
-      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)
-        || !Number.isFinite(vertices[offset + 3]) || !Number.isFinite(vertices[offset + 4])
-        || !Number.isFinite(vertices[offset + 5])) {
+      if (
+        !Number.isFinite(x) ||
+        !Number.isFinite(y) ||
+        !Number.isFinite(z) ||
+        !Number.isFinite(vertices[offset + 3]) ||
+        !Number.isFinite(vertices[offset + 4]) ||
+        !Number.isFinite(vertices[offset + 5])
+      ) {
         throw new InvalidGeometryError(`Mesh ${meshIndex} has a non-finite vertex`)
       }
       // Scalar equivalent of transformPoint(mesh.transform, [x, y, z]) with the
       // same homogeneous-division fallback, checked without allocating Vec3.
       const w = m[12] * x + m[13] * y + m[14] * z + m[15]
       const iw = Number.isFinite(w) && Math.abs(w) > 1e-12 ? 1 / w : 1
-      if (!Number.isFinite((m[0] * x + m[1] * y + m[2] * z + m[3]) * iw)
-        || !Number.isFinite((m[4] * x + m[5] * y + m[6] * z + m[7]) * iw)
-        || !Number.isFinite((m[8] * x + m[9] * y + m[10] * z + m[11]) * iw)) {
+      if (
+        !Number.isFinite((m[0] * x + m[1] * y + m[2] * z + m[3]) * iw) ||
+        !Number.isFinite((m[4] * x + m[5] * y + m[6] * z + m[7]) * iw) ||
+        !Number.isFinite((m[8] * x + m[9] * y + m[10] * z + m[11]) * iw)
+      ) {
         throw new InvalidGeometryError(`Mesh ${meshIndex} has a non-finite world-space vertex`)
       }
     }
@@ -89,9 +113,12 @@ export function summarizeSources(mesh: MeshData): { sources: SourceSummary[]; tr
     const label = boundedText(run.source.label)
     const operationId = run.source.operationId ? boundedText(run.source.operationId) : null
     const instanceId = run.source.instanceId ? boundedText(run.source.instanceId) : null
-    if (label !== run.source.label
-      || operationId !== (run.source.operationId ?? null)
-      || instanceId !== (run.source.instanceId ?? null)) truncated = true
+    if (
+      label !== run.source.label ||
+      operationId !== (run.source.operationId ?? null) ||
+      instanceId !== (run.source.instanceId ?? null)
+    )
+      truncated = true
     sources.set(key, {
       label,
       start: run.source.start,
@@ -129,13 +156,13 @@ export function parameterSummary(parameter: CustomizerParameter): {
   }
   return {
     summary,
-    truncated: summary.name !== parameter.name
-      || summary.label !== parameter.label
-      || summary.value !== parameter.value
-      || (parameter.options !== undefined && (
-        parameter.options.length > MAX_ANALYSIS_OPTIONS
-        || parameter.options.some((option, index) => index < MAX_ANALYSIS_OPTIONS && options?.[index] !== option)
-      )),
+    truncated:
+      summary.name !== parameter.name ||
+      summary.label !== parameter.label ||
+      summary.value !== parameter.value ||
+      (parameter.options !== undefined &&
+        (parameter.options.length > MAX_ANALYSIS_OPTIONS ||
+          parameter.options.some((option, index) => index < MAX_ANALYSIS_OPTIONS && options?.[index] !== option))),
   }
 }
 
@@ -157,10 +184,12 @@ export function summarizeResult(
       entityId,
       vertices: inspection.vertices,
       triangles: inspection.triangles,
-      bounds: inspection.bounds ? {
-        min: [...inspection.bounds.min],
-        max: [...inspection.bounds.max],
-      } : null,
+      bounds: inspection.bounds
+        ? {
+            min: [...inspection.bounds.min],
+            max: [...inspection.bounds.max],
+          }
+        : null,
       dimensions: [...inspection.dimensions],
       center: inspection.center ? [...inspection.center] : null,
       color: [...mesh.color],
@@ -170,34 +199,40 @@ export function summarizeResult(
     }
   })
   const bounded = inspected.filter(entry => entry.inspection.bounds !== null)
-  const bounds = bounded.length ? {
-    min: [
-      Math.min(...bounded.map(entry => entry.inspection.bounds!.min[0])),
-      Math.min(...bounded.map(entry => entry.inspection.bounds!.min[1])),
-      Math.min(...bounded.map(entry => entry.inspection.bounds!.min[2])),
-    ] as [number, number, number],
-    max: [
-      Math.max(...bounded.map(entry => entry.inspection.bounds!.max[0])),
-      Math.max(...bounded.map(entry => entry.inspection.bounds!.max[1])),
-      Math.max(...bounded.map(entry => entry.inspection.bounds!.max[2])),
-    ] as [number, number, number],
-  } : null
-  const topology = inspected.reduce((total, { mesh }) => ({
-    boundary: total.boundary + mesh.topology.boundary,
-    crease: total.crease + mesh.topology.crease,
-    nonManifold: total.nonManifold + mesh.topology.nonManifold,
-    degenerate: total.degenerate + mesh.topology.degenerate,
-  }), { boundary: 0, crease: 0, nonManifold: 0, degenerate: 0 })
+  const bounds = bounded.length
+    ? {
+        min: [
+          Math.min(...bounded.map(entry => entry.inspection.bounds!.min[0])),
+          Math.min(...bounded.map(entry => entry.inspection.bounds!.min[1])),
+          Math.min(...bounded.map(entry => entry.inspection.bounds!.min[2])),
+        ] as [number, number, number],
+        max: [
+          Math.max(...bounded.map(entry => entry.inspection.bounds!.max[0])),
+          Math.max(...bounded.map(entry => entry.inspection.bounds!.max[1])),
+          Math.max(...bounded.map(entry => entry.inspection.bounds!.max[2])),
+        ] as [number, number, number],
+      }
+    : null
+  const topology = inspected.reduce(
+    (total, { mesh }) => ({
+      boundary: total.boundary + mesh.topology.boundary,
+      crease: total.crease + mesh.topology.crease,
+      nonManifold: total.nonManifold + mesh.topology.nonManifold,
+      degenerate: total.degenerate + mesh.topology.degenerate,
+    }),
+    { boundary: 0, crease: 0, nonManifold: 0, degenerate: 0 },
+  )
   const parameters = extractCustomizerParameters(source)
   const parameterSummaries = parameters.slice(0, MAX_ANALYSIS_PARAMETERS).map(parameterSummary)
-  const warnings = result.warnings.slice(0, MAX_ANALYSIS_WARNINGS).map(warning => (
-    boundedText(warning, MAX_ANALYSIS_WARNING_LENGTH)
-  ))
-  detailsTruncated ||= inspected.length > MAX_ANALYSIS_OBJECTS
-    || parameters.length > MAX_ANALYSIS_PARAMETERS
-    || parameterSummaries.some(parameter => parameter.truncated)
-    || result.warnings.length > MAX_ANALYSIS_WARNINGS
-    || warnings.some((warning, index) => warning !== result.warnings[index])
+  const warnings = result.warnings
+    .slice(0, MAX_ANALYSIS_WARNINGS)
+    .map(warning => boundedText(warning, MAX_ANALYSIS_WARNING_LENGTH))
+  detailsTruncated ||=
+    inspected.length > MAX_ANALYSIS_OBJECTS ||
+    parameters.length > MAX_ANALYSIS_PARAMETERS ||
+    parameterSummaries.some(parameter => parameter.truncated) ||
+    result.warnings.length > MAX_ANALYSIS_WARNINGS ||
+    warnings.some((warning, index) => warning !== result.warnings[index])
 
   return {
     execution,
@@ -213,8 +248,8 @@ export function summarizeResult(
     topology,
     warnings,
     parameters: parameterSummaries.map(parameter => parameter.summary),
-    parametersTruncated: parameters.length > MAX_ANALYSIS_PARAMETERS
-      || parameterSummaries.some(parameter => parameter.truncated),
+    parametersTruncated:
+      parameters.length > MAX_ANALYSIS_PARAMETERS || parameterSummaries.some(parameter => parameter.truncated),
     objects,
     objectsTruncated: inspected.length > MAX_ANALYSIS_OBJECTS,
     detailsTruncated,
@@ -245,6 +280,10 @@ export function validateArtifactLimit(maxBytes: number): void {
 }
 
 export function estimatedExportBytes(meshes: readonly MeshData[], format: ArtifactFormat): number {
+  if (format === 'step') {
+    const geometryBytes = meshes.reduce((sum, mesh) => sum + (mesh.nativeGeometry?.geometryJson.length ?? 0), 0)
+    return 1024 + geometryBytes
+  }
   const triangles = meshes.reduce((sum, mesh) => sum + Math.floor(mesh.indices.length / 3), 0)
   if (format === 'stl') return 84 + triangles * 50
   const vertices = meshes.reduce((sum, mesh) => sum + Math.floor(mesh.vertices.length / 6), 0)

@@ -71,7 +71,7 @@ pub(super) fn ord<'a>(
         return fail("ord", "expects 1 argument");
     }
     let value = arg(0)?;
-    let Value::Str(deref!(s)) = &value else {
+    let Value::Str(s) = &value else {
         return fail("ord", "argument 1 must be a string");
     };
     // Rust strings are well-formed UTF-8 by construction, so the TS
@@ -311,7 +311,7 @@ pub(super) fn search<'a>(
         0
     };
 
-    if let (Value::Str(deref!(needle)), Value::Str(deref!(table))) = (&needle, &table) {
+    if let (Value::Str(needle), Value::Str(table)) = (&needle, &table) {
         let table_characters: Vec<char> = table.chars().collect();
         let mut output: Vec<Value<'a>> = Vec::with_capacity(needle.len());
         for character in needle.chars() {

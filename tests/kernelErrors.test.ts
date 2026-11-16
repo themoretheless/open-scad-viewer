@@ -119,6 +119,33 @@ describe('kernel error presentation', () => {
   })
 })
 
+describe('OpenSCAD language diagnostics', () => {
+  const codes = [...readFileSync('src/core/languageContract.ts', 'utf8').matchAll(/'(E_[A-Z0-9_]+)'/g)].map(m => m[1]!)
+
+  it('maps every language diagnostic code to a reason with RU and EN text', () => {
+    expect(codes.length).toBeGreaterThan(30)
+    for (const code of codes) {
+      const reason = languageErrorReason(code)
+      expect(reason, code).toBeDefined()
+      expect(LANGUAGE_ERROR_REASONS).toContain(reason)
+      expect(APP_STRINGS.ru[`languageError.${reason}`], code).toBeTruthy()
+      expect(APP_STRINGS.en[`languageError.${reason}`], code).toBeTruthy()
+    }
+  })
+
+  it('localizes coded build errors and keeps the evaluator text as detail', () => {
+    const t = (key: string) => translate('ru', key)
+    const text = presentLanguageError({ code: 'E_IMPORT_FILE_MISSING', message: 'Line 2, column 1: missing.stl' }, t)
+    expect(text).toMatch(/^Файл не найден/)
+    expect(text).toContain('(E_IMPORT_FILE_MISSING)')
+    expect(text).toContain('missing.stl')
+    expect(languageErrorReason('E_FEATURE_INCLUDE')).toBe('unsupportedFeature')
+    expect(languageErrorReason('E_TEXT_GLYPH_LIMIT')).toBe('limit')
+    expect(presentLanguageError({ code: 'BREP_FAILED', message: 'raw' }, t)).toBe('raw')
+    expect(presentLanguageError({ message: 'Line 1, column 1: syntax' }, t)).toBe('Line 1, column 1: syntax')
+  })
+})
+
 const FREQUENT_KERNEL_CODES = [
   'NURBS_INVALID_INPUT',
   'BREP_RESOURCE_LIMIT',
@@ -251,32 +278,5 @@ describe('exact kernel messages and coded TypeScript refusals', () => {
       expect(ru, code).toMatch(/[а-яё]/i)
       expect(ru, code).not.toContain('x')
     }
-  })
-})
-
-describe('OpenSCAD language diagnostics', () => {
-  const codes = [...readFileSync('src/core/languageContract.ts', 'utf8').matchAll(/'(E_[A-Z0-9_]+)'/g)].map(m => m[1]!)
-
-  it('maps every language diagnostic code to a reason with RU and EN text', () => {
-    expect(codes.length).toBeGreaterThan(30)
-    for (const code of codes) {
-      const reason = languageErrorReason(code)
-      expect(reason, code).toBeDefined()
-      expect(LANGUAGE_ERROR_REASONS).toContain(reason)
-      expect(APP_STRINGS.ru[`languageError.${reason}`], code).toBeTruthy()
-      expect(APP_STRINGS.en[`languageError.${reason}`], code).toBeTruthy()
-    }
-  })
-
-  it('localizes coded build errors and keeps the evaluator text as detail', () => {
-    const t = (key: string) => translate('ru', key)
-    const text = presentLanguageError({ code: 'E_IMPORT_FILE_MISSING', message: 'Line 2, column 1: missing.stl' }, t)
-    expect(text).toMatch(/^Файл не найден/)
-    expect(text).toContain('(E_IMPORT_FILE_MISSING)')
-    expect(text).toContain('missing.stl')
-    expect(languageErrorReason('E_FEATURE_INCLUDE')).toBe('unsupportedFeature')
-    expect(languageErrorReason('E_TEXT_GLYPH_LIMIT')).toBe('limit')
-    expect(presentLanguageError({ code: 'BREP_FAILED', message: 'raw' }, t)).toBe('raw')
-    expect(presentLanguageError({ message: 'Line 1, column 1: syntax' }, t)).toBe('Line 1, column 1: syntax')
   })
 })

@@ -625,7 +625,10 @@ pub use assembled_shell::{TransitionCoordinateContact, TransitionCoordinateRepor
 #[path = "source_profile_shell_replay.rs"]
 mod shell_replay;
 #[cfg(feature = "codec")]
-pub use shell_replay::{ShellReplayLimits, ShellReplayReport, with_restored_expression_shell};
+pub use shell_replay::{
+    ShellJoinLimits, ShellOuterLimits, ShellPatchLimits, ShellQuotientLimits, ShellRailLimits,
+    ShellReplayLimits, ShellReplayReport, ShellSectionLimits, with_restored_expression_shell,
+};
 
 #[cfg(feature = "codec")]
 #[path = "source_profile_recipe_identity.rs"]
@@ -683,6 +686,8 @@ mod face;
 mod qualify_transported_neighbor;
 #[path="source_profile_body/split_source_use.rs"]
 mod split_source_use;
+#[path="source_profile_body/span_work.rs"]
+mod span_work;
 #[path="source_profile_body/cut_endpoint.rs"]
 mod cut_endpoint;
 #[path="source_profile_body/inspect_curved_edge_interval_policy.rs"]

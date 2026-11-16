@@ -176,7 +176,18 @@ pub fn intersect_cone_torus(
             report.unresolved(domain, UnresolvedReason::NearCoincidence);
             return Ok(report);
         }
-        return general(report, domain, cone_model, torus_model, &cone, &torus, band, terms);
+        return general(
+            report,
+            domain,
+            Pair {
+                cone_model,
+                torus_model,
+                cone: &cone,
+                torus: &torus,
+            },
+            band,
+            terms,
+        );
     }
     // Coaxiality: a center-line distance at pure rounding scale snaps to
     // zero; a recognition-scale offset is near_coincidence, never forced;
@@ -196,7 +207,18 @@ pub fn intersect_cone_torus(
             report.unresolved(domain, UnresolvedReason::NearCoincidence);
             return Ok(report);
         }
-        return general(report, domain, cone_model, torus_model, &cone, &torus, band, terms);
+        return general(
+            report,
+            domain,
+            Pair {
+                cone_model,
+                torus_model,
+                cone: &cone,
+                torus: &torus,
+            },
+            band,
+            terms,
+        );
     }
     let (r, big_r) = (torus.minor, torus.major);
     let (r_b, m, h) = (cone.r_bottom, cone.slope, cone.height);
@@ -346,20 +368,41 @@ pub fn intersect_cone_torus(
     Ok(report)
 }
 
+/// The two operands of a cone/torus intersection: their models and
+/// canonical forms.
+#[derive(Clone, Copy)]
+struct Pair<'a> {
+    cone_model: &'a Model,
+    torus_model: &'a Model,
+    cone: &'a CanonicalCone,
+    torus: &'a CanonicalTorus,
+}
+
+/// The traced wall contact handed to [`capped`]: the wall and ring
+/// implicits, the wall loops and whether they are provably complete.
+struct WallContact<'a> {
+    wall: &'a crate::implicit_trace::ConeImplicit,
+    ring: &'a crate::implicit_trace::TorusImplicit,
+    loops: Vec<Vec<Curve>>,
+    complete: bool,
+}
+
 /// General tilted or offset pair. Only a torus strictly between the cap
 /// planes and on the authored nappe's side of the apex is handled: then every
 /// contact is a closed loop on the side wall.
-#[allow(clippy::too_many_arguments)]
 fn general(
     mut report: Report<ConeTorusComponent>,
     domain: Vec<f64>,
-    cone_model: &Model,
-    torus_model: &Model,
-    cone: &CanonicalCone,
-    torus: &CanonicalTorus,
+    pair: Pair<'_>,
     band: f64,
     terms: f64,
 ) -> Result<Report<ConeTorusComponent>> {
+    let Pair {
+        cone_model,
+        torus_model,
+        cone,
+        torus,
+    } = pair;
     let s = dot(sub(torus.center, cone.bottom), cone.axis);
     let c = dot(torus.axis, cone.axis).clamp(-1., 1.);
     let reach = torus.major * (1. - c * c).sqrt() + torus.minor;
@@ -412,7 +455,18 @@ fn general(
         &all,
     );
     if reaches_cap {
-        return capped(report, domain, cone_model, torus_model, cone, torus, &wall, &ring, terms, all, complete);
+        return capped(
+            report,
+            domain,
+            pair,
+            WallContact {
+                wall: &wall,
+                ring: &ring,
+                loops: all,
+                complete,
+            },
+            terms,
+        );
     }
     if loops.is_empty() {
         if !complete {
@@ -447,20 +501,25 @@ fn general(
 
 /// The torus reaches a cap plane of the frustum: as for the cylinder, with
 /// ring caps of radii `r_bottom` and `r_top`.
-#[allow(clippy::too_many_arguments)]
 fn capped(
     mut report: Report<ConeTorusComponent>,
     domain: Vec<f64>,
-    cone_model: &Model,
-    torus_model: &Model,
-    cone: &CanonicalCone,
-    torus: &CanonicalTorus,
-    wall: &crate::implicit_trace::ConeImplicit,
-    ring: &crate::implicit_trace::TorusImplicit,
+    pair: Pair<'_>,
+    contact: WallContact<'_>,
     terms: f64,
-    wall_loops: Vec<Vec<Curve>>,
-    wall_complete: bool,
 ) -> Result<Report<ConeTorusComponent>> {
+    let Pair {
+        cone_model,
+        torus_model,
+        cone,
+        torus,
+    } = pair;
+    let WallContact {
+        wall,
+        ring,
+        loops: wall_loops,
+        complete: wall_complete,
+    } = contact;
     let refuse = |mut report: Report<ConeTorusComponent>, reason| {
         report.components.clear();
         report.unresolved(domain.clone(), reason);

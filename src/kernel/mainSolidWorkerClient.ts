@@ -1,9 +1,9 @@
 import { countOperation } from '../dev/operationCounters'
 import {isResidentDocumentRef,mainSolidExpectation, mainSolidResult, type MainSolidExpectation, type MainSolidJob, type MainSolidProgress, type MainSolidProgressMessage, type MainSolidRequest, type MainSolidResponse, type MainSolidResults} from './mainSolidProtocol'
 import {decodeMainSolidResult} from './mainSolidWorkerTransport'
-import {validWorkerErrorField, validWorkerErrorTarget} from '../core/workerHandlerRuntime'
 import {applyDirectDocumentDelta,isDirectDocumentDelta} from './directDocumentDelta'
 import type {DirectDocument} from '../app/directModeling'
+import {validWorkerErrorField, validWorkerErrorTarget} from '../core/workerHandlerRuntime'
 
 export interface MainSolidPort {
   onmessage: ((event:MessageEvent) => void)|null

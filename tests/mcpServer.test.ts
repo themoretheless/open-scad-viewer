@@ -4,17 +4,10 @@ import { RUSH_GRAPH_PREVIEW_TRIANGLE_LIMIT } from '../src/mcp/rushGraphPreview'
 import { CURRENT_GEOMETRY_MANIFEST_VERSIONS, GEOMETRY_MANIFEST_ARCHIVE } from '../src/core/geometryExecution'
 import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  fromJsonSchema,
-  InMemoryTransport,
-  type JSONRPCMessage,
-  type McpServer,
-} from '@modelcontextprotocol/server'
+import { fromJsonSchema, InMemoryTransport, type JSONRPCMessage } from '@modelcontextprotocol/server'
 import { createRushGraphMcpServer as createOpenScadMcpServer } from '../src/mcp/createRushGraphServer'
 import { BoundedTransport } from '../src/mcp/boundedTransport'
-import {
-  persistedFailureStatus,
-} from '../src/mcp/createServer'
+import { persistedFailureStatus } from '../src/mcp/createServer'
 import { DuckDbModelStore } from '../src/mcp/duckdbModelStore'
 import { HeadlessGeometryService, type McpGeometryService } from '../src/mcp/geometryService'
 import type { ModelStore } from '../src/mcp/modelStore'
@@ -33,11 +26,13 @@ afterEach(async () => {
   await Promise.all(closeables.splice(0).map(close => close()))
 })
 
-async function connectedServer(options: {
-  maxInFlightRequests?: number
-  decorateStore?: (store: ModelStore) => ModelStore
-  geometry?: McpGeometryService
-} = {}) {
+async function connectedServer(
+  options: {
+    maxInFlightRequests?: number
+    decorateStore?: (store: ModelStore) => ModelStore
+    geometry?: McpGeometryService
+  } = {},
+) {
   const baseStore = await DuckDbModelStore.open(':memory:')
   const store = options.decorateStore?.(baseStore) ?? baseStore
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
@@ -117,7 +112,7 @@ describe('OpenSCAD MCP server', () => {
     await vi.waitFor(() => expect(settledIds.has(pingId)).toBe(true))
     await new Promise<void>(resolve => setTimeout(resolve, 0))
 
-    const listed = await request('tools/list') as { tools: unknown[] }
+    const listed = (await request('tools/list')) as { tools: unknown[] }
     expect(listed.tools.length).toBeGreaterThan(0)
   })
 
@@ -125,52 +120,64 @@ describe('OpenSCAD MCP server', () => {
     const { request, initialize } = await connectedServer()
     expect(initialize.instructions).toContain('openscad_check')
     expect(initialize.instructions).toContain('First call rush_language')
-    const listed = await request('tools/list') as {
-      tools: Array<{ name: string; annotations?: { destructiveHint?: boolean; readOnlyHint?: boolean } }>
+    const listed = (await request('tools/list')) as {
+      tools: Array<{
+        name: string
+        outputSchema?: unknown
+        annotations?: { destructiveHint?: boolean; readOnlyHint?: boolean }
+      }>
     }
-    expect(listed.tools.map(tool => tool.name).sort()).toEqual([
-      'mesh_convert',
-      'rush_check',
-      'rush_compile',
-      'rush_export',
-      'rush_generate',
-      'rush_interference',
-      'rush_language',
-      'rush_modify',
-      'rush_nurbs_build',
-      'rush_nurbs_compile',
-      'rush_nurbs_evaluate',
-      'rush_nurbs_export',
-      'rush_nurbs_intersect',
-      'rush_nurbs_language',
-      'rush_nurbs_offset_deviation',
-      'rush_report',
-      'rush_set_parameters',
-      'rush_svg_export',
-      'rush_svg_extrude',
-      'rush_svg_preview',
-      'rush_frontend_compile',
-      'openscad_analyze',
-      'openscad_brep_capabilities',
-      'openscad_build_history',
-      'openscad_catalog_stats',
-      'openscad_check',
-      'openscad_compare',
-      'openscad_customize',
-      'openscad_customize_model',
-      'openscad_direct_transaction',
-      'openscad_export',
-      'openscad_get_model',
-      'openscad_independent_check',
-      'openscad_independent_export',
-      'openscad_list_engines',
-      'openscad_list_model_revisions',
-      'openscad_list_models',
-      'openscad_official_check',
-      'openscad_official_export',
-      'openscad_official_status',
-      'openscad_save_model',
-    ].sort())
+    expect(listed.tools.map(tool => tool.name).sort()).toEqual(
+      [
+        'mesh_convert',
+        'rush_check',
+        'rush_compile',
+        'rush_export',
+        'rush_generate',
+        'rush_interference',
+        'rush_language',
+        'rush_modify',
+        'rush_nurbs_build',
+        'rush_nurbs_compile',
+        'rush_nurbs_evaluate',
+        'rush_nurbs_export',
+        'rush_nurbs_intersect',
+        'rush_nurbs_language',
+        'rush_nurbs_offset_deviation',
+        'rush_report',
+        'rush_set_parameters',
+        'rush_svg_export',
+        'rush_svg_extrude',
+        'rush_svg_preview',
+        'rush_frontend_compile',
+        'openscad_analyze',
+        'openscad_brep_capabilities',
+        'openscad_build_history',
+        'openscad_catalog_stats',
+        'openscad_check',
+        'openscad_compare',
+        'openscad_customize',
+        'openscad_customize_model',
+        'openscad_direct_transaction',
+        'openscad_export',
+        'openscad_export_handoff_bundle',
+        'openscad_get_model',
+        'openscad_import_handoff_bundle',
+        'openscad_independent_check',
+        'openscad_independent_export',
+        'openscad_list_engines',
+        'openscad_list_model_revisions',
+        'openscad_list_models',
+        'openscad_official_check',
+        'openscad_official_export',
+        'openscad_official_status',
+        'openscad_parameter_sweep',
+        'openscad_save_model',
+      ].sort(),
+    )
+    for (const tool of listed.tools) {
+      expect(tool.outputSchema, `${tool.name} should declare outputSchema`).toBeDefined()
+    }
     const tools = new Map(listed.tools.map(tool => [tool.name, tool]))
     expect(tools.get('openscad_analyze')?.annotations).toMatchObject({
       readOnlyHint: false,
@@ -204,87 +211,94 @@ describe('OpenSCAD MCP server', () => {
       destructiveHint: true,
     })
 
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_save_model',
       arguments: { id: 'integration:part', name: 'Integration', source: 'cube(3);' },
-    }) as { structuredContent: { model: { id: string; revision: number; resource_uri: string } } }
+    })) as { structuredContent: { model: { id: string; revision: number; resource_uri: string } } }
     expect(called.structuredContent.model).toMatchObject({
       id: 'integration:part',
       revision: 0,
       resource_uri: 'openscad://models/integration%3Apart',
     })
 
-    const resource = await request('resources/read', {
+    const resource = (await request('resources/read', {
       uri: called.structuredContent.model.resource_uri,
-    }) as {
+    })) as {
       contents: Array<{ text: string; mimeType: string }>
     }
-    expect(resource.contents).toEqual([expect.objectContaining({
-      text: 'cube(3);',
-      mimeType: 'text/x-openscad',
-    })])
+    expect(resource.contents).toEqual([
+      expect.objectContaining({
+        text: 'cube(3);',
+        mimeType: 'text/x-openscad',
+      }),
+    ])
 
     // The product keeps its 250 ms cold-start admission budget. Poll the
     // resource until the asynchronous provider is ready before asserting it.
-    await expect.poll(async () => {
-      const capabilities = await request('resources/read', {
-        uri: 'openscad://capabilities',
-      }) as { contents: Array<{ text: string }> }
-      return JSON.parse(capabilities.contents[0].text) as Record<string, unknown>
-    }, { timeout: 10_000 }).toMatchObject({
-      protocol_versions: expect.arrayContaining(['2026-07-28', '2025-11-25']),
-      geometry_engines: {
-        source_directed_routing: true,
-        automatic_fallback: false,
-        engines: [
-          { engine_class: 'mesh', permanent: true, availability: 'available' },
-          { engine_class: 'brep', permanent: true, availability: 'available' },
-        ],
-      },
-      geometry_host: {
-        id: 'mcp-geometry-host-isolation-v1',
-        contract_version: 1,
-        scope: 'node-mcp-stdio',
-        boundary: 'worker-thread',
-        provider_lifecycle: 'disposable-worker-per-job',
-        limits: {
-          max_admitted_jobs: 8,
-          max_concurrent_workers: 1,
-          job_deadline_ms: 30_000,
-          startup_timeout_ms: 10_000,
-          cancellation_grace_ms: 25,
-          worker_join_timeout_ms: 5_000,
+    await expect
+      .poll(
+        async () => {
+          const capabilities = (await request('resources/read', {
+            uri: 'openscad://capabilities',
+          })) as { contents: Array<{ text: string }> }
+          return JSON.parse(capabilities.contents[0].text) as Record<string, unknown>
         },
-        enforcement: {
-          queue_time_in_deadline: true,
-          hard_terminate_after_cancel_grace: true,
-          worker_terminal_settles_only_after_join: true,
-          next_job_only_after_worker_join: true,
-          join_timeout_rejects_and_quarantines: true,
-          unjoined_worker_unref_on_quarantine: true,
-          host_environment_inherited: false,
-          quarantine_after_join_timeout: true,
-          worker_reuse: false,
+        { timeout: 10_000 },
+      )
+      .toMatchObject({
+        protocol_versions: expect.arrayContaining(['2026-07-28', '2025-11-25']),
+        geometry_engines: {
+          source_directed_routing: true,
+          automatic_fallback: false,
+          engines: [
+            { engine_class: 'mesh', permanent: true, availability: 'available' },
+            { engine_class: 'brep', permanent: true, availability: 'available' },
+          ],
         },
-        residual_risks: {
-          subprocess_boundary: false,
-          os_enforced_memory_limit: false,
-          filesystem_sandbox: false,
-          network_sandbox: false,
-          worker_threads_share_process: true,
+        geometry_host: {
+          id: 'mcp-geometry-host-isolation-v1',
+          contract_version: 1,
+          scope: 'node-mcp-stdio',
+          boundary: 'worker-thread',
+          provider_lifecycle: 'disposable-worker-per-job',
+          limits: {
+            max_admitted_jobs: 8,
+            max_concurrent_workers: 1,
+            job_deadline_ms: 30_000,
+            startup_timeout_ms: 10_000,
+            cancellation_grace_ms: 25,
+            worker_join_timeout_ms: 5_000,
+          },
+          enforcement: {
+            queue_time_in_deadline: true,
+            hard_terminate_after_cancel_grace: true,
+            worker_terminal_settles_only_after_join: true,
+            next_job_only_after_worker_join: true,
+            join_timeout_rejects_and_quarantines: true,
+            unjoined_worker_unref_on_quarantine: true,
+            host_environment_inherited: false,
+            quarantine_after_join_timeout: true,
+            worker_reuse: false,
+          },
+          residual_risks: {
+            subprocess_boundary: false,
+            os_enforced_memory_limit: false,
+            filesystem_sandbox: false,
+            network_sandbox: false,
+            worker_threads_share_process: true,
+          },
         },
-      },
-      limits: { pending_geometry_jobs: 8 },
-      persistence: { arbitrary_sql: false, browser_indexeddb_synchronized: false },
-    })
+        limits: { pending_geometry_jobs: 8 },
+        persistence: { arbitrary_sql: false, browser_indexeddb_synchronized: false },
+      })
   })
 
   it('discovers immutable engine manifests and executes B-rep without mesh fallback', async () => {
     const { request } = await connectedServer()
-    const listed = await request('tools/call', {
+    const listed = (await request('tools/call', {
       name: 'openscad_list_engines',
       arguments: {},
-    }) as {
+    })) as {
       structuredContent: {
         geometry_engines: {
           automatic_fallback: boolean
@@ -310,7 +324,7 @@ describe('OpenSCAD MCP server', () => {
     })
 
     const brepManifestUri = listed.structuredContent.geometry_engines.engines[1].manifest_resource_uri
-    const manifest = await request('resources/read', { uri: brepManifestUri }) as {
+    const manifest = (await request('resources/read', { uri: brepManifestUri })) as {
       contents: Array<{ text: string }>
     }
     const manifestJson = JSON.parse(manifest.contents[0].text) as Record<string, unknown>
@@ -348,11 +362,10 @@ describe('OpenSCAD MCP server', () => {
     expect(manifestJson).not.toHaveProperty('availability')
     expect(manifestJson).not.toHaveProperty('unavailable_reason')
 
-    const meshManifest = await request('resources/read', {
+    const meshManifest = (await request('resources/read', {
       uri: 'openscad://engines/mesh/capabilities/own-rust-node-v1',
-    }) as { contents: Array<{ text: string }> }
-    const meshManifestJson = JSON.parse(meshManifest.contents[0].text) as
-      Record<string, unknown>
+    })) as { contents: Array<{ text: string }> }
+    const meshManifestJson = JSON.parse(meshManifest.contents[0].text) as Record<string, unknown>
     expect(meshManifestJson).toMatchObject({
       engine_class: 'mesh',
       capability_manifest_version: 'own-rust-node-v1',
@@ -367,17 +380,23 @@ describe('OpenSCAD MCP server', () => {
     })
     expect(meshManifestJson).not.toHaveProperty('geometry_host')
     expect(meshManifestJson).not.toHaveProperty('mcp_host_contract_id')
-    await expect(request('resources/read', {
-      uri: 'openscad://engines/mesh/capabilities/manifold-node-v1',
-    })).rejects.toThrow(/not found/i)
-    await expect(request('resources/read', {
-      uri: 'openscad://engines/brep/capabilities/own-rust-node-v1',
-    })).rejects.toThrow(/not found/i)
-    await expect(request('resources/read', {
-      uri: 'openscad://engines/mesh/capabilities/missing-v1',
-    })).rejects.toThrow(/not found/i)
+    await expect(
+      request('resources/read', {
+        uri: 'openscad://engines/mesh/capabilities/manifold-node-v1',
+      }),
+    ).rejects.toThrow(/not found/i)
+    await expect(
+      request('resources/read', {
+        uri: 'openscad://engines/brep/capabilities/own-rust-node-v1',
+      }),
+    ).rejects.toThrow(/not found/i)
+    await expect(
+      request('resources/read', {
+        uri: 'openscad://engines/mesh/capabilities/missing-v1',
+      }),
+    ).rejects.toThrow(/not found/i)
 
-    const parity = await request('resources/read', { uri: 'openscad://parity' }) as {
+    const parity = (await request('resources/read', { uri: 'openscad://parity' })) as {
       contents: Array<{ text: string }>
     }
     const parityJson = JSON.parse(parity.contents[0].text) as {
@@ -427,38 +446,43 @@ describe('OpenSCAD MCP server', () => {
         },
       ],
     })
-    expect(createHash('sha256').update(canonicalJson(parityJson.policy.payload)).digest('hex'))
-      .toBe(parityJson.policy.sha256)
+    expect(createHash('sha256').update(canonicalJson(parityJson.policy.payload)).digest('hex')).toBe(
+      parityJson.policy.sha256,
+    )
     expect(parityJson.policy.payload).not.toHaveProperty('mcp_host')
     expect(parityJson.policy.payload).not.toHaveProperty('geometry_host')
     const advertisedEngines = listed.structuredContent.geometry_engines.engines
-    expect(parityJson.engines.map(engine => ({
-      engine_class: engine.engine_class,
-      capability_manifest_version: engine.capability_manifest_version,
-      manifest_digest: engine.manifest_digest,
-      kernel_fingerprint: engine.kernel_fingerprint,
-    }))).toEqual(advertisedEngines.map(engine => ({
-      engine_class: engine.engine_class,
-      capability_manifest_version: (engine as unknown as Record<string, unknown>).capability_manifest_version,
-      manifest_digest: (engine as unknown as Record<string, unknown>).manifest_digest,
-      kernel_fingerprint: (engine as unknown as Record<string, unknown>).kernel_fingerprint,
-    })))
+    expect(
+      parityJson.engines.map(engine => ({
+        engine_class: engine.engine_class,
+        capability_manifest_version: engine.capability_manifest_version,
+        manifest_digest: engine.manifest_digest,
+        kernel_fingerprint: engine.kernel_fingerprint,
+      })),
+    ).toEqual(
+      advertisedEngines.map(engine => ({
+        engine_class: engine.engine_class,
+        capability_manifest_version: (engine as unknown as Record<string, unknown>).capability_manifest_version,
+        manifest_digest: (engine as unknown as Record<string, unknown>).manifest_digest,
+        kernel_fingerprint: (engine as unknown as Record<string, unknown>).kernel_fingerprint,
+      })),
+    )
 
     const source = '// @language openscad-viewer/brep-1\ncube(1);'
-    const checked = await request('tools/call', {
+    const checked = (await request('tools/call', {
       name: 'openscad_check',
       arguments: { source, quality: 'full' },
-    }) as { isError?: boolean; structuredContent: { analysis: { execution: { engine_class: string } } } }
+    })) as { isError?: boolean; structuredContent: { analysis: { execution: { engine_class: string } } } }
     expect(checked).toMatchObject({
       structuredContent: {
         analysis: { execution: { engine_class: 'brep' } },
       },
     })
 
-    const analyzed = await request('tools/call', {
+    const analyzed = (await request('tools/call', {
       name: 'openscad_analyze',
       arguments: { source, quality: 'full' },
-    }) as {
+    })) as {
       isError?: boolean
       structuredContent: {
         build: { status: string; execution: { engine_class: string; evidence: string } }
@@ -477,21 +501,17 @@ describe('OpenSCAD MCP server', () => {
   it('returns a schema-valid public error when engine discovery fails', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const geometry = new HeadlessGeometryService()
-    vi.spyOn(geometry, 'capabilities').mockRejectedValue(
-      new Error('synthetic engine discovery failure'),
-    )
+    vi.spyOn(geometry, 'capabilities').mockRejectedValue(new Error('synthetic engine discovery failure'))
     const { request } = await connectedServer({ geometry })
-    const listed = await request('tools/list') as {
+    const listed = (await request('tools/list')) as {
       tools: Array<{ name: string; outputSchema?: Record<string, unknown> }>
     }
-    const outputSchema = listed.tools.find(tool => (
-      tool.name === 'openscad_list_engines'
-    ))?.outputSchema
+    const outputSchema = listed.tools.find(tool => tool.name === 'openscad_list_engines')?.outputSchema
 
-    const failed = await request('tools/call', {
+    const failed = (await request('tools/call', {
       name: 'openscad_list_engines',
       arguments: {},
-    }) as {
+    })) as {
       isError: boolean
       structuredContent: {
         error: { code: string; retryable: boolean; correlation_id: string }
@@ -509,8 +529,7 @@ describe('OpenSCAD MCP server', () => {
       },
     })
     expect(outputSchema).toBeDefined()
-    const validation = await fromJsonSchema(outputSchema!)['~standard']
-      .validate(failed.structuredContent)
+    const validation = await fromJsonSchema(outputSchema!)['~standard'].validate(failed.structuredContent)
     expect(validation).not.toHaveProperty('issues')
     log.mockRestore()
   })
@@ -519,25 +538,26 @@ describe('OpenSCAD MCP server', () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     let recordAttempts = 0
     const { request } = await connectedServer({
-      decorateStore: store => new Proxy(store, {
-        get(target, property) {
-          if (property === 'recordBuild') {
-            return async (...args: Parameters<ModelStore['recordBuild']>) => {
-              recordAttempts++
-              if (recordAttempts === 1) throw new Error('injected persistence failure')
-              return await target.recordBuild(...args)
+      decorateStore: store =>
+        new Proxy(store, {
+          get(target, property) {
+            if (property === 'recordBuild') {
+              return async (...args: Parameters<ModelStore['recordBuild']>) => {
+                recordAttempts++
+                if (recordAttempts === 1) throw new Error('injected persistence failure')
+                return await target.recordBuild(...args)
+              }
             }
-          }
-          const value = Reflect.get(target, property, target) as unknown
-          return typeof value === 'function' ? value.bind(target) : value
-        },
-      }),
+            const value = Reflect.get(target, property, target) as unknown
+            return typeof value === 'function' ? value.bind(target) : value
+          },
+        }),
     })
 
-    const result = await request('tools/call', {
+    const result = (await request('tools/call', {
       name: 'openscad_analyze',
       arguments: { source: 'cube(1);', quality: 'full' },
-    }) as {
+    })) as {
       isError: boolean
       structuredContent: {
         execution: { engine_class: string; evidence: string }
@@ -564,15 +584,13 @@ describe('OpenSCAD MCP server', () => {
     const request = new AbortController()
     request.abort('client stopped waiting')
     expect(request.signal.aborted).toBe(true)
-    expect(persistedFailureStatus(new Error('unrelated provider failure settled after abort')))
-      .toBe('failed')
-    expect(persistedFailureStatus(new DOMException('cancelled', 'AbortError')))
-      .toBe('cancelled')
+    expect(persistedFailureStatus(new Error('unrelated provider failure settled after abort'))).toBe('failed')
+    expect(persistedFailureStatus(new DOMException('cancelled', 'AbortError'))).toBe('cancelled')
   })
 
   it('advertises the source selector as an inspectable JSON Schema XOR', async () => {
     const { request } = await connectedServer()
-    const listed = await request('tools/list') as {
+    const listed = (await request('tools/list')) as {
       tools: Array<{
         name: string
         inputSchema: {
@@ -591,18 +609,18 @@ describe('OpenSCAD MCP server', () => {
     expect(variants?.[0].properties?.model_id).toEqual({ not: {} })
     expect(variants?.[1].properties?.source).toEqual({ not: {} })
 
-    const neither = await request('tools/call', {
+    const neither = (await request('tools/call', {
       name: 'openscad_analyze',
       arguments: { quality: 'full' },
-    }) as { isError: boolean; content: Array<{ text: string }> }
-    const both = await request('tools/call', {
+    })) as { isError: boolean; content: Array<{ text: string }> }
+    const both = (await request('tools/call', {
       name: 'openscad_analyze',
       arguments: { source: 'cube(1);', model_id: 'integration:part' },
-    }) as { isError: boolean; content: Array<{ text: string }> }
-    const inlineRevision = await request('tools/call', {
+    })) as { isError: boolean; content: Array<{ text: string }> }
+    const inlineRevision = (await request('tools/call', {
       name: 'openscad_check',
       arguments: { source: 'cube(1);', revision: 0 },
-    }) as { isError: boolean; content: Array<{ text: string }> }
+    })) as { isError: boolean; content: Array<{ text: string }> }
 
     expect(neither).toMatchObject({ isError: true })
     expect(neither.content[0].text).toMatch(/Input validation error/)
@@ -614,13 +632,13 @@ describe('OpenSCAD MCP server', () => {
 
   it('rejects oversized Customizer strings before response amplification', async () => {
     const { request } = await connectedServer()
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_customize',
       arguments: {
         source: 'label = "";',
         values: { label: 'x'.repeat(64 * 1024 + 1) },
       },
-    }) as { isError: boolean; content: Array<{ text: string }> }
+    })) as { isError: boolean; content: Array<{ text: string }> }
 
     expect(called).toMatchObject({ isError: true })
     expect(called.content[0].text).toMatch(/Input validation error/)
@@ -636,14 +654,14 @@ describe('OpenSCAD MCP server', () => {
       ['provider', 'brep'],
       ['automatic_fallback', true],
     ] as const) {
-      const called = await request('tools/call', {
+      const called = (await request('tools/call', {
         name: 'openscad_check',
         arguments: { source: 'cube(1);', quality: 'preview', [field]: value },
-      }) as { isError: boolean; content: Array<{ text: string }> }
+      })) as { isError: boolean; content: Array<{ text: string }> }
       expect(called, field).toMatchObject({ isError: true })
       expect(called.content[0].text, field).toMatch(/Input validation error/)
 
-      const customized = await request('tools/call', {
+      const customized = (await request('tools/call', {
         name: 'openscad_customize_model',
         arguments: {
           model_id: 'override:must-not-resolve',
@@ -651,7 +669,7 @@ describe('OpenSCAD MCP server', () => {
           values: {},
           [field]: value,
         },
-      }) as { isError: boolean; content: Array<{ text: string }> }
+      })) as { isError: boolean; content: Array<{ text: string }> }
       expect(customized, `customize_model:${field}`).toMatchObject({ isError: true })
       expect(customized.content[0].text, `customize_model:${field}`).toMatch(/Input validation error/)
     }
@@ -659,7 +677,7 @@ describe('OpenSCAD MCP server', () => {
 
   it('returns a machine-readable revision conflict with recovery details', async () => {
     const { request } = await connectedServer()
-    const listed = await request('tools/list') as {
+    const listed = (await request('tools/list')) as {
       tools: Array<{ name: string; outputSchema?: Record<string, unknown> }>
     }
     const outputSchema = listed.tools.find(tool => tool.name === 'openscad_save_model')?.outputSchema
@@ -669,7 +687,7 @@ describe('OpenSCAD MCP server', () => {
       arguments: { id: 'conflict:part', name: 'Conflict', source: 'cube(1);' },
     })
 
-    const conflict = await request('tools/call', {
+    const conflict = (await request('tools/call', {
       name: 'openscad_save_model',
       arguments: {
         id: 'conflict:part',
@@ -677,7 +695,7 @@ describe('OpenSCAD MCP server', () => {
         source: 'cube(2);',
         expected_revision: 4,
       },
-    }) as {
+    })) as {
       isError: boolean
       structuredContent: {
         error: {
@@ -717,14 +735,14 @@ describe('OpenSCAD MCP server', () => {
       },
     })
 
-    const customized = await request('tools/call', {
+    const customized = (await request('tools/call', {
       name: 'openscad_customize_model',
       arguments: {
         model_id: 'customize:part',
         expected_revision: 0,
         values: { size: 3 },
       },
-    }) as {
+    })) as {
       structuredContent: {
         model: { revision: number }
         applied: string[]
@@ -737,21 +755,21 @@ describe('OpenSCAD MCP server', () => {
       parameters: [expect.objectContaining({ name: 'size', value: 3 })],
     })
 
-    const stored = await request('tools/call', {
+    const stored = (await request('tools/call', {
       name: 'openscad_get_model',
       arguments: { id: 'customize:part' },
-    }) as { structuredContent: { model: { source: string; revision: number } } }
+    })) as { structuredContent: { model: { source: string; revision: number } } }
     expect(stored.structuredContent.model).toMatchObject({ revision: 1 })
     expect(stored.structuredContent.model.source).toContain('size = 3;')
 
-    const stale = await request('tools/call', {
+    const stale = (await request('tools/call', {
       name: 'openscad_customize_model',
       arguments: {
         model_id: 'customize:part',
         expected_revision: 0,
         values: { size: 4 },
       },
-    }) as { isError: boolean; structuredContent: { error: { code: string } } }
+    })) as { isError: boolean; structuredContent: { error: { code: string } } }
     expect(stale).toMatchObject({
       isError: true,
       structuredContent: { error: { code: 'revision_conflict' } },
@@ -774,10 +792,10 @@ describe('OpenSCAD MCP server', () => {
       },
     })
 
-    const listed = await request('tools/call', {
+    const listed = (await request('tools/call', {
       name: 'openscad_list_model_revisions',
       arguments: { id: 'revision:part', limit: 10 },
-    }) as {
+    })) as {
       structuredContent: {
         revisions: Array<{ revision: number; resource_uri: string }>
       }
@@ -790,18 +808,20 @@ describe('OpenSCAD MCP server', () => {
       }),
     ])
 
-    const original = await request('resources/read', {
+    const original = (await request('resources/read', {
       uri: 'openscad://models/revision%3Apart/revisions/0',
-    }) as { contents: Array<{ text: string; mimeType: string }> }
-    expect(original.contents).toEqual([expect.objectContaining({
-      text: 'cube(1);',
-      mimeType: 'text/x-openscad',
-    })])
+    })) as { contents: Array<{ text: string; mimeType: string }> }
+    expect(original.contents).toEqual([
+      expect.objectContaining({
+        text: 'cube(1);',
+        mimeType: 'text/x-openscad',
+      }),
+    ])
 
-    const historical = await request('tools/call', {
+    const historical = (await request('tools/call', {
       name: 'openscad_get_model',
       arguments: { id: 'revision:part', revision: 0 },
-    }) as { structuredContent: { model: { source: string; revision: number; resource_uri: string } } }
+    })) as { structuredContent: { model: { source: string; revision: number; resource_uri: string } } }
     expect(historical.structuredContent.model).toMatchObject({
       source: 'cube(1);',
       revision: 0,
@@ -825,10 +845,10 @@ describe('OpenSCAD MCP server', () => {
       },
     })
 
-    const historical = await request('tools/call', {
+    const historical = (await request('tools/call', {
       name: 'openscad_check',
       arguments: { model_id: 'history:part', revision: 0, quality: 'full' },
-    }) as {
+    })) as {
       structuredContent: {
         model_revision: number
         analysis: { volume: number }
@@ -839,14 +859,14 @@ describe('OpenSCAD MCP server', () => {
       analysis: { volume: 1 },
     })
 
-    const compared = await request('tools/call', {
+    const compared = (await request('tools/call', {
       name: 'openscad_compare',
       arguments: {
         left: { model_id: 'history:part', revision: 0 },
         right: { model_id: 'history:part', revision: 1 },
         quality: 'full',
       },
-    }) as {
+    })) as {
       structuredContent: {
         left: { volume: number }
         right: { volume: number }
@@ -859,14 +879,14 @@ describe('OpenSCAD MCP server', () => {
       delta: { volume: 7, surface_area: 18, dimensions: [1, 1, 1] },
     })
 
-    const failedComparison = await request('tools/call', {
+    const failedComparison = (await request('tools/call', {
       name: 'openscad_compare',
       arguments: {
         left: { source: 'cube(1);' },
         right: { source: '// @language unsupported/future\ncube(2);' },
         quality: 'full',
       },
-    }) as {
+    })) as {
       isError: boolean
       structuredContent: {
         error: { code: string }
@@ -893,25 +913,25 @@ describe('OpenSCAD MCP server', () => {
       },
     })
 
-    const emptyHistory = await request('tools/call', {
+    const emptyHistory = (await request('tools/call', {
       name: 'openscad_build_history',
       arguments: { model_id: 'history:part' },
-    }) as { structuredContent: { builds: unknown[] } }
+    })) as { structuredContent: { builds: unknown[] } }
     expect(emptyHistory.structuredContent.builds).toEqual([])
 
-    const current = await request('tools/call', {
+    const current = (await request('tools/call', {
       name: 'openscad_check',
       arguments: { model_id: 'history:part', quality: 'full' },
-    }) as { structuredContent: { model_revision: number; analysis: { volume: number } } }
+    })) as { structuredContent: { model_revision: number; analysis: { volume: number } } }
     expect(current.structuredContent).toMatchObject({
       model_revision: 1,
       analysis: { volume: 8 },
     })
 
-    const recorded = await request('tools/call', {
+    const recorded = (await request('tools/call', {
       name: 'openscad_analyze',
       arguments: { model_id: 'history:part', revision: 0, quality: 'full' },
-    }) as {
+    })) as {
       structuredContent: {
         build: { model_revision: number }
         analysis: { volume: number }
@@ -925,7 +945,7 @@ describe('OpenSCAD MCP server', () => {
 
   it('advertises guided review and customization prompts', async () => {
     const { request } = await connectedServer()
-    const listed = await request('prompts/list') as {
+    const listed = (await request('prompts/list')) as {
       prompts: Array<{ name: string; description?: string }>
     }
     expect(listed.prompts.map(prompt => prompt.name).sort()).toEqual([
@@ -933,20 +953,20 @@ describe('OpenSCAD MCP server', () => {
       'openscad_review_model',
     ])
 
-    const prompt = await request('prompts/get', {
+    const prompt = (await request('prompts/get', {
       name: 'openscad_review_model',
       arguments: { model_id: 'review:part', revision: '3', goal: 'Check dimensions' },
-    }) as { messages: Array<{ content: { text: string } }> }
+    })) as { messages: Array<{ content: { text: string } }> }
     expect(prompt.messages[0].content.text).toContain('{"model_id":"review:part","revision":3}')
     expect(prompt.messages[0].content.text).toContain('Do not save or export')
   })
 
   it('compiles through MCP and records a DuckDB build result', async () => {
     const { request } = await connectedServer()
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_analyze',
       arguments: { source: 'cube(2);', quality: 'full' },
-    }) as {
+    })) as {
       structuredContent: {
         build: { status: string; resource_uri: string }
         analysis: { triangle_count: number; volume: number }
@@ -968,10 +988,10 @@ describe('OpenSCAD MCP server', () => {
       analysis: { triangle_count: 12, volume: 8 },
     })
 
-    const history = await request('tools/call', {
+    const history = (await request('tools/call', {
       name: 'openscad_build_history',
       arguments: { limit: 10 },
-    }) as { structuredContent: { builds: Array<{ status: string }> } }
+    })) as { structuredContent: { builds: Array<{ status: string }> } }
     expect(history.structuredContent.builds).toHaveLength(1)
     expect(history.structuredContent.builds[0].status).toBe('succeeded')
   })
@@ -979,29 +999,26 @@ describe('OpenSCAD MCP server', () => {
   it('records own-rust runtime provenance on new executions', async () => {
     const { request } = await connectedServer()
     const source = 'cube(1);'
-    const current = await request('tools/call', {
+    const current = (await request('tools/call', {
       name: 'openscad_check',
       arguments: { source, quality: 'full' },
-    }) as { structuredContent: { analysis: { execution: Record<string, unknown> } } }
+    })) as { structuredContent: { analysis: { execution: Record<string, unknown> } } }
     expect(current.structuredContent.analysis.execution).toMatchObject({
       capability_manifest_version: CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh,
       manifest_digest: GEOMETRY_MANIFEST_ARCHIVE[CURRENT_GEOMETRY_MANIFEST_VERSIONS.mesh].manifestDigest,
       evidence: 'runtime',
     })
 
-    const listedTools = await request('tools/list') as {
+    const listedTools = (await request('tools/list')) as {
       tools: Array<{ name: string; outputSchema?: Record<string, unknown> }>
     }
-    const historySchema = listedTools.tools.find(tool => (
-      tool.name === 'openscad_build_history'
-    ))?.outputSchema
+    const historySchema = listedTools.tools.find(tool => tool.name === 'openscad_build_history')?.outputSchema
     expect(historySchema).toBeDefined()
-    const history = await request('tools/call', {
+    const history = (await request('tools/call', {
       name: 'openscad_build_history',
       arguments: { limit: 10 },
-    }) as { structuredContent: { builds: Array<{ execution: Record<string, unknown> }> } }
-    const validation = await fromJsonSchema(historySchema!)['~standard']
-      .validate(history.structuredContent)
+    })) as { structuredContent: { builds: Array<{ execution: Record<string, unknown> }> } }
+    const validation = await fromJsonSchema(historySchema!)['~standard'].validate(history.structuredContent)
     expect(validation).not.toHaveProperty('issues')
   })
 
@@ -1016,10 +1033,10 @@ describe('OpenSCAD MCP server', () => {
       arguments: { model_id: 'stats:part', quality: 'full' },
     })
 
-    const result = await request('tools/call', {
+    const result = (await request('tools/call', {
       name: 'openscad_catalog_stats',
       arguments: {},
-    }) as {
+    })) as {
       structuredContent: {
         stats: {
           models: number
@@ -1041,10 +1058,10 @@ describe('OpenSCAD MCP server', () => {
 
   it('exports a bounded DuckDB artifact and serves it as an MCP resource', async () => {
     const { request } = await connectedServer()
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_export',
       arguments: { source: 'cube(1);', format: 'stl', file_name: 'cube' },
-    }) as {
+    })) as {
       structuredContent: {
         artifact: { resource_uri: string; file_name: string; byte_length: number }
       }
@@ -1054,38 +1071,40 @@ describe('OpenSCAD MCP server', () => {
       file_name: 'cube.stl',
       byte_length: 84 + 12 * 50,
     })
-    expect(called.content).toContainEqual(expect.objectContaining({
-      type: 'resource_link',
-      uri: called.structuredContent.artifact.resource_uri,
-    }))
+    expect(called.content).toContainEqual(
+      expect.objectContaining({
+        type: 'resource_link',
+        uri: called.structuredContent.artifact.resource_uri,
+      }),
+    )
 
-    const resource = await request('resources/read', {
+    const resource = (await request('resources/read', {
       uri: called.structuredContent.artifact.resource_uri,
-    }) as { contents: Array<{ blob: string; mimeType: string }> }
+    })) as { contents: Array<{ blob: string; mimeType: string }> }
     expect(resource.contents[0].mimeType).toBe('model/stl')
     expect(Buffer.from(resource.contents[0].blob, 'base64')).toHaveLength(84 + 12 * 50)
   })
 
   it('truncates long Unicode export names without splitting a surrogate pair', async () => {
     const { request } = await connectedServer()
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_export',
       arguments: {
         source: 'cube(1);',
         format: 'stl',
         file_name: `${'a'.repeat(250)}😀`,
       },
-    }) as { structuredContent: { artifact: { file_name: string } } }
+    })) as { structuredContent: { artifact: { file_name: string } } }
 
     expect(called.structuredContent.artifact.file_name).toBe(`${'a'.repeat(250)}.stl`)
   })
 
   it('returns positioned compiler failures and records them in build history', async () => {
     const { request } = await connectedServer()
-    const called = await request('tools/call', {
+    const called = (await request('tools/call', {
       name: 'openscad_analyze',
       arguments: { source: 'cube(1);\nunsupported(); // SECRET_TOKEN' },
-    }) as {
+    })) as {
       isError: boolean
       content: Array<{ type: string; text: string }>
       structuredContent: { error: { code: string; line: number; column: number } }
@@ -1105,10 +1124,10 @@ describe('OpenSCAD MCP server', () => {
     })
     expect(called.content[0].text).not.toContain('SECRET_TOKEN')
 
-    const history = await request('tools/call', {
+    const history = (await request('tools/call', {
       name: 'openscad_build_history',
       arguments: {},
-    }) as { structuredContent: { builds: Array<{ status: string; error: { line: number } }> } }
+    })) as { structuredContent: { builds: Array<{ status: string; error: { line: number } }> } }
     expect(history.structuredContent.builds).toEqual([
       expect.objectContaining({ status: 'failed', error: expect.objectContaining({ line: 2 }) }),
     ])
@@ -1117,9 +1136,8 @@ describe('OpenSCAD MCP server', () => {
 
   it('emits resource list_changed notifications after persisted MCP writes', async () => {
     const { request, notifications } = await connectedServer()
-    const listChangedCount = () => notifications.filter(method => (
-      method === 'notifications/resources/list_changed'
-    )).length
+    const listChangedCount = () =>
+      notifications.filter(method => method === 'notifications/resources/list_changed').length
 
     await request('tools/call', {
       name: 'openscad_save_model',
@@ -1147,114 +1165,245 @@ describe('RushGraph MCP language workflow', () => {
     const { request, initialize } = await connectedServer()
     expect(initialize.instructions).toContain('openscad_check')
     expect(initialize.instructions).toContain('First call rush_language')
-    const resource = await request('resources/read', { uri: 'openscad://language/rush-1' }) as { contents: Array<{ text: string }> }
+    const resource = (await request('resources/read', { uri: 'openscad://language/rush-1' })) as {
+      contents: Array<{ text: string }>
+    }
     const contract = JSON.parse(resource.contents[0].text)
     expect(contract.language).toBe('rush/ir-1')
     expect(contract.schema.additionalProperties).toBe(false)
     expect(contract.guide).toContain('lexical closures')
     expect(contract.guide).toContain('type_policy:')
-    const modified = await request('tools/call', {name:'rush_modify', arguments:{
-      document:{language:'rush/ir-1',units:'mm',parameters:[],nodes:[{id:'b',op:'box',size:[10,10,10]}],root:'b'},
-      modification:{operation:'split',axis:'z',position:4},
-    }}) as {isError?:boolean;structuredContent:{results:Array<{analysis:{volume:number}}>}}
+    const modified = (await request('tools/call', {
+      name: 'rush_modify',
+      arguments: {
+        document: {
+          language: 'rush/ir-1',
+          units: 'mm',
+          parameters: [],
+          nodes: [{ id: 'b', op: 'box', size: [10, 10, 10] }],
+          root: 'b',
+        },
+        modification: { operation: 'split', axis: 'z', position: 4 },
+      },
+    })) as { isError?: boolean; structuredContent: { results: Array<{ analysis: { volume: number } }> } }
     expect(modified.isError).not.toBe(true)
-    expect(modified.structuredContent.results[0].analysis.volume).toBeCloseTo(400,6)
-    expect(modified.structuredContent.results[1].analysis.volume).toBeCloseTo(600,6)
+    expect(modified.structuredContent.results[0].analysis.volume).toBeCloseTo(400, 6)
+    expect(modified.structuredContent.results[1].analysis.volume).toBeCloseTo(600, 6)
 
-    const assembly = await request('tools/call', { name: 'rush_check', arguments: { document: contract.assembly_example } }) as { isError?: boolean; structuredContent: { assembly_components: Array<{ id: string; matrix: number[] }>; analysis: { meshCount: number } } }
+    const assembly = (await request('tools/call', {
+      name: 'rush_check',
+      arguments: { document: contract.assembly_example },
+    })) as {
+      isError?: boolean
+      structuredContent: {
+        assembly_components: Array<{ id: string; matrix: number[] }>
+        analysis: { meshCount: number }
+      }
+    }
     expect(assembly.isError).toBe(false)
     expect(assembly.structuredContent.analysis.meshCount).toBe(2)
     expect(assembly.structuredContent.assembly_components[1].matrix[11]).toBeCloseTo(5.3)
-    const sketch = await request('tools/call', { name: 'rush_check', arguments: { document: contract.sketch_example } }) as { isError?: boolean; structuredContent: { sketch_solutions: Array<{ status: string }>; analysis: { volume: number } } }
+    const sketch = (await request('tools/call', {
+      name: 'rush_check',
+      arguments: { document: contract.sketch_example },
+    })) as {
+      isError?: boolean
+      structuredContent: { sketch_solutions: Array<{ status: string }>; analysis: { volume: number } }
+    }
     expect(sketch.isError).toBe(false)
     expect(sketch.structuredContent.sketch_solutions[0].status).toBe('solved')
     expect(sketch.structuredContent.analysis.volume).toBeCloseTo(600, 3)
-    const typed = await request('tools/call', { name: 'rush_compile', arguments: { document: contract.units_example } }) as { structuredContent: { document: unknown; document_sha256: string; constraint_report: Array<{ passed: boolean }> } }
+    const typed = (await request('tools/call', {
+      name: 'rush_compile',
+      arguments: { document: contract.units_example },
+    })) as {
+      structuredContent: { document: unknown; document_sha256: string; constraint_report: Array<{ passed: boolean }> }
+    }
     expect(typed.structuredContent.constraint_report[0].passed).toBe(true)
-    const rejected = await request('tools/call', { name: 'rush_set_parameters', arguments: { document: typed.structuredContent.document, expected_document_sha256: typed.structuredContent.document_sha256, updates: [{ id: 'wall', value: 0.6 }] } }) as { isError: boolean; structuredContent: { error: { code: string; details: unknown[] } } }
+    const rejected = (await request('tools/call', {
+      name: 'rush_set_parameters',
+      arguments: {
+        document: typed.structuredContent.document,
+        expected_document_sha256: typed.structuredContent.document_sha256,
+        updates: [{ id: 'wall', value: 0.6 }],
+      },
+    })) as { isError: boolean; structuredContent: { error: { code: string; details: unknown[] } } }
     expect(rejected.isError).toBe(true)
     expect(rejected.structuredContent.error.code).toBe('constraint_failed')
-    expect(rejected.structuredContent.error.details).toContainEqual(expect.objectContaining({ id: 'minimumWall', actual: 0.6, expected: 1.2, passed: false }))
-    const functional = await request('tools/call', { name: 'rush_check', arguments: { document: contract.functional_example } }) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
+    expect(rejected.structuredContent.error.details).toContainEqual(
+      expect.objectContaining({ id: 'minimumWall', actual: 0.6, expected: 1.2, passed: false }),
+    )
+    const functional = (await request('tools/call', {
+      name: 'rush_check',
+      arguments: { document: contract.functional_example },
+    })) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
     expect(functional.isError).toBe(false)
     expect(functional.structuredContent.analysis.volume).toBeCloseTo(24)
-    const report = await request('tools/call', { name: 'rush_report', arguments: { document: contract.units_example } }) as { content: Array<{ type: string }>; structuredContent: { images_status: string; references: Array<{ node_id: string | null }> } }
+    const report = (await request('tools/call', {
+      name: 'rush_report',
+      arguments: { document: contract.units_example },
+    })) as {
+      content: Array<{ type: string }>
+      structuredContent: { images_status: string; references: Array<{ node_id: string | null }> }
+    }
     expect(report.structuredContent.images_status).toBe('rendered')
     expect(report.content.filter(item => item.type === 'image')).toHaveLength(3)
     expect(report.structuredContent.references.some(item => item.node_id === 'plate')).toBe(true)
-    const compiled = await request('tools/call', { name: 'rush_compile', arguments: { document: RUSH_GRAPH_EXAMPLE } }) as { structuredContent: { document: unknown; document_sha256: string } }
-    const changed = await request('tools/call', { name: 'rush_set_parameters', arguments: { document: compiled.structuredContent.document, expected_document_sha256: compiled.structuredContent.document_sha256, updates: [{ id: 'width', value: 50 }] } }) as { structuredContent: { document: unknown } }
-    const checked = await request('tools/call', { name: 'rush_check', arguments: { document: changed.structuredContent.document } }) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
+    const compiled = (await request('tools/call', {
+      name: 'rush_compile',
+      arguments: { document: RUSH_GRAPH_EXAMPLE },
+    })) as { structuredContent: { document: unknown; document_sha256: string } }
+    const changed = (await request('tools/call', {
+      name: 'rush_set_parameters',
+      arguments: {
+        document: compiled.structuredContent.document,
+        expected_document_sha256: compiled.structuredContent.document_sha256,
+        updates: [{ id: 'width', value: 50 }],
+      },
+    })) as { structuredContent: { document: unknown } }
+    const checked = (await request('tools/call', {
+      name: 'rush_check',
+      arguments: { document: changed.structuredContent.document },
+    })) as { isError?: boolean; structuredContent: { analysis: { volume: number } } }
     expect(checked.isError).toBe(false)
     expect(checked.structuredContent.analysis.volume).toBeGreaterThan(11000)
   })
 })
 
-describe('Mechanical generators over MCP',()=>{
-  it('generates readable models, returns individual planetary parts and exports a thread',async()=>{
-    const {request}=await connectedServer()
-    const resource=await request('resources/read',{uri:'openscad://language/rush-mechanical'}) as {contents:Array<{text:string}>}
+describe('Mechanical generators over MCP', () => {
+  it('generates readable models, returns individual planetary parts and exports a thread', async () => {
+    const { request } = await connectedServer()
+    const resource = (await request('resources/read', { uri: 'openscad://language/rush-mechanical' })) as {
+      contents: Array<{ text: string }>
+    }
     expect(JSON.parse(resource.contents[0].text).examples.thread).toBeTruthy()
-    for(const kind of ['gear','planetary_gears','thread']) {
-      const response=await request('tools/call',{name:'rush_generate',arguments:{kind}}) as {isError?:boolean;content:Array<{type:string}>;structuredContent:{document:unknown;analysis:{volume:number;meshCount:number;triangleCount:number};mechanical_reports:unknown[];mechanical_parts:Array<{document:unknown}>}}
-      expect(response.isError,JSON.stringify(response.structuredContent).slice(0,500)).not.toBe(true)
+    for (const kind of ['gear', 'planetary_gears', 'thread']) {
+      const response = (await request('tools/call', { name: 'rush_generate', arguments: { kind } })) as {
+        isError?: boolean
+        content: Array<{ type: string }>
+        structuredContent: {
+          document: unknown
+          analysis: { volume: number; meshCount: number; triangleCount: number }
+          mechanical_reports: unknown[]
+          mechanical_parts: Array<{ document: unknown }>
+        }
+      }
+      expect(response.isError, JSON.stringify(response.structuredContent).slice(0, 500)).not.toBe(true)
       expect(response.structuredContent.analysis.volume).toBeGreaterThan(0)
-      expect(response.content.filter(c=>c.type==='image'), `${kind}: ${JSON.stringify({
-        images_status: Reflect.get(response.structuredContent, 'images_status'),
-        image_error: Reflect.get(response.structuredContent, 'image_error'),
-      })}`).toHaveLength(3)
+      expect(
+        response.content.filter(c => c.type === 'image'),
+        `${kind}: ${JSON.stringify({
+          images_status: Reflect.get(response.structuredContent, 'images_status'),
+          image_error: Reflect.get(response.structuredContent, 'image_error'),
+        })}`,
+      ).toHaveLength(3)
       expect(response.structuredContent.mechanical_reports).toHaveLength(1)
       expect(response.structuredContent.document).toMatchObject({ segments: 48 })
       const primaryHash = Reflect.get(response.structuredContent, 'document_sha256')
       const previewHash = Reflect.get(response.structuredContent, 'preview_document_sha256')
       expect(previewHash).toMatch(/^[a-f0-9]{64}$/)
-      const expectedPreview = response.structuredContent.analysis.triangleCount > RUSH_GRAPH_PREVIEW_TRIANGLE_LIMIT
-        ? compileRushGraph({ ...(response.structuredContent.document as Record<string, unknown>), segments: 12 }).document_sha256
-        : primaryHash
+      const expectedPreview =
+        response.structuredContent.analysis.triangleCount > RUSH_GRAPH_PREVIEW_TRIANGLE_LIMIT
+          ? compileRushGraph({ ...(response.structuredContent.document as Record<string, unknown>), segments: 12 })
+              .document_sha256
+          : primaryHash
       expect(previewHash).toBe(expectedPreview)
-      if(kind==='planetary_gears')expect(response.structuredContent.mechanical_parts).toHaveLength(5)
-      const exported=await request('tools/call',{name:'rush_export',arguments:{document:response.structuredContent.document,format:'3mf'}}) as {isError?:boolean;content:Array<{resource:{blob:string}}>}
+      if (kind === 'planetary_gears') expect(response.structuredContent.mechanical_parts).toHaveLength(5)
+      const exported = (await request('tools/call', {
+        name: 'rush_export',
+        arguments: { document: response.structuredContent.document, format: '3mf' },
+      })) as { isError?: boolean; content: Array<{ resource: { blob: string } }> }
       expect(exported.isError).not.toBe(true)
-      expect(Buffer.from(exported.content[0].resource.blob,'base64').readUInt32LE(0)).toBe(0x04034b50)
+      expect(Buffer.from(exported.content[0].resource.blob, 'base64').readUInt32LE(0)).toBe(0x04034b50)
     }
-    const small=await request('tools/call',{name:'rush_generate',arguments:{kind:'gear',teeth:8}}) as {isError?:boolean;structuredContent:{mechanical_reports:unknown[]}}
+    const small = (await request('tools/call', { name: 'rush_generate', arguments: { kind: 'gear', teeth: 8 } })) as {
+      isError?: boolean
+      structuredContent: { mechanical_reports: unknown[] }
+    }
     expect(small.isError).not.toBe(true)
-    expect(small.structuredContent.mechanical_reports).toEqual([expect.objectContaining({
-      teeth: 8, minimum_external_teeth_without_undercut: 18, root_transition: 'radial_below_base_circle',
-    })])
-    const rejected=await request('tools/call',{name:'rush_generate',arguments:{kind:'gear',teeth:2}}) as {isError:boolean;structuredContent:{error:{code:string}}}
+    expect(small.structuredContent.mechanical_reports).toEqual([
+      expect.objectContaining({
+        teeth: 8,
+        minimum_external_teeth_without_undercut: 18,
+        root_transition: 'radial_below_base_circle',
+      }),
+    ])
+    const rejected = (await request('tools/call', {
+      name: 'rush_generate',
+      arguments: { kind: 'gear', teeth: 2 },
+    })) as { isError: boolean; structuredContent: { error: { code: string } } }
     expect(rejected.isError).toBe(true)
     expect(rejected.structuredContent.error.code).toBe('invalid_mechanical_geometry')
-  },30000)
+  }, 30000)
 })
 
 describe('mesh_convert tool', () => {
   const cubeObj = [
-    'v 0 0 0', 'v 1 0 0', 'v 1 1 0', 'v 0 1 0', 'v 0 0 1', 'v 1 0 1', 'v 1 1 1', 'v 0 1 1',
-    'f 1 4 3 2', 'f 5 6 7 8', 'f 1 2 6 5', 'f 2 3 7 6', 'f 3 4 8 7', 'f 4 1 5 8', '',
+    'v 0 0 0',
+    'v 1 0 0',
+    'v 1 1 0',
+    'v 0 1 0',
+    'v 0 0 1',
+    'v 1 0 1',
+    'v 1 1 1',
+    'v 0 1 1',
+    'f 1 4 3 2',
+    'f 5 6 7 8',
+    'f 1 2 6 5',
+    'f 2 3 7 6',
+    'f 3 4 8 7',
+    'f 4 1 5 8',
+    '',
   ].join('\n')
-  type Converted = { isError?: boolean; structuredContent: { format: string; file_name: string; source: { format: string; triangle_count: number; vertex_count: number }; error?: { code: string } }; content: Array<{ type: string; resource?: { blob: string; mimeType: string } }> }
+  type Converted = {
+    isError?: boolean
+    structuredContent: {
+      format: string
+      file_name: string
+      source: { format: string; triangle_count: number; vertex_count: number }
+      error?: { code: string }
+    }
+    content: Array<{ type: string; resource?: { blob: string; mimeType: string } }>
+  }
 
   it('converts an OBJ upload to 3MF and back to PLY through embedded resources', async () => {
     const { request } = await connectedServer()
-    const to3mf = await request('tools/call', { name: 'mesh_convert', arguments: { file_name: 'cube.obj', data_base64: Buffer.from(cubeObj).toString('base64'), format: '3mf' } }) as Converted
+    const to3mf = (await request('tools/call', {
+      name: 'mesh_convert',
+      arguments: { file_name: 'cube.obj', data_base64: Buffer.from(cubeObj).toString('base64'), format: '3mf' },
+    })) as Converted
     expect(to3mf.isError).not.toBe(true)
-    expect(to3mf.structuredContent).toMatchObject({ format: '3mf', file_name: 'cube.3mf', source: { format: 'obj', triangle_count: 12, vertex_count: 8 } })
+    expect(to3mf.structuredContent).toMatchObject({
+      format: '3mf',
+      file_name: 'cube.3mf',
+      source: { format: 'obj', triangle_count: 12, vertex_count: 8 },
+    })
     const blob = to3mf.content.find(item => item.type === 'resource')?.resource
     expect(blob?.mimeType).toBe('model/3mf')
     expect(Buffer.from(blob!.blob, 'base64').readUInt32LE(0)).toBe(0x04034b50)
-    const toPly = await request('tools/call', { name: 'mesh_convert', arguments: { file_name: 'cube.3mf', data_base64: blob!.blob, format: 'ply' } }) as Converted
+    const toPly = (await request('tools/call', {
+      name: 'mesh_convert',
+      arguments: { file_name: 'cube.3mf', data_base64: blob!.blob, format: 'ply' },
+    })) as Converted
     expect(toPly.isError).not.toBe(true)
     expect(toPly.structuredContent.source).toMatchObject({ format: '3mf', triangle_count: 12, vertex_count: 8 })
-    expect(Buffer.from(toPly.content.find(item => item.type === 'resource')!.resource!.blob, 'base64').toString()).toContain('element face 12')
+    expect(
+      Buffer.from(toPly.content.find(item => item.type === 'resource')!.resource!.blob, 'base64').toString(),
+    ).toContain('element face 12')
   })
 
   it('reports typed errors for unsupported input and bad base64', async () => {
     const { request } = await connectedServer()
-    const unsupported = await request('tools/call', { name: 'mesh_convert', arguments: { file_name: 'model.gltf', data_base64: Buffer.from('{}').toString('base64'), format: 'stl' } }) as Converted
+    const unsupported = (await request('tools/call', {
+      name: 'mesh_convert',
+      arguments: { file_name: 'model.gltf', data_base64: Buffer.from('{}').toString('base64'), format: 'stl' },
+    })) as Converted
     expect(unsupported.isError).toBe(true)
     expect(unsupported.structuredContent.error?.code).toBe('unsupported-format')
-    const garbage = await request('tools/call', { name: 'mesh_convert', arguments: { file_name: 'cube.obj', data_base64: '!!!', format: 'stl' } }) as Converted
+    const garbage = (await request('tools/call', {
+      name: 'mesh_convert',
+      arguments: { file_name: 'cube.obj', data_base64: '!!!', format: 'stl' },
+    })) as Converted
     expect(garbage.isError).toBe(true)
     expect(garbage.structuredContent.error?.code).toBe('invalid-data')
   })

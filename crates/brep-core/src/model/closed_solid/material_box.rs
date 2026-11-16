@@ -130,6 +130,8 @@ pub fn qualify_surface_material_box(
     {
         return Err(unproved("Original material box span allowance exhausted"));
     }
+    let affine = !periodic[0] && !periodic[1] && crate::face_domain::affine_support(surface);
+    let mut affine_hull = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
     for corner in 0..4 {
         let p: [f64; 2] = std::array::from_fn(|k| {
             let x = rectangle[k][(corner >> k) & 1];
@@ -140,13 +142,27 @@ pub fn qualify_surface_material_box(
             }
         });
         surface.evaluate(p[0], p[1])?;
+        if affine {
+            let point = interval_eval::evaluate_surface_interval(
+                surface, Interval::point(p[0]), Interval::point(p[1]),
+            )?;
+            for axis in 0..3 {
+                affine_hull[axis][0] = affine_hull[axis][0].min(point[axis].lo);
+                affine_hull[axis][1] = affine_hull[axis][1].max(point[axis].hi);
+            }
+        }
     }
-    let bounds = interval_eval::evaluate_surface_interval(
-        surface,
-        Interval::new(rectangle[0][0], rectangle[0][1])?,
-        Interval::new(rectangle[1][0], rectangle[1][1])?,
-    )?;
-    let enclosure = std::array::from_fn(|k| [bounds[k].lo, bounds[k].hi]);
+    // A proved affine chart maps the entire rectangle into its corner hull.
+    let enclosure = if affine {
+        affine_hull
+    } else {
+        let bounds = interval_eval::evaluate_surface_interval(
+            surface,
+            Interval::new(rectangle[0][0], rectangle[0][1])?,
+            Interval::new(rectangle[1][0], rectangle[1][1])?,
+        )?;
+        std::array::from_fn(|k| [bounds[k].lo, bounds[k].hi])
+    };
     let material = super::separation::qualify(
         solid,
         enclosure,

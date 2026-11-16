@@ -4,7 +4,6 @@
 //! compiler front-end in `src/services/openscadCompiler.ts`; diagnostics keep
 //! the exact messages, codes and UTF-16 source positions of the TS parser so
 //! the language conformance corpus gates parity.
-#![feature(deref_patterns)]
 #![forbid(unsafe_code)]
 
 pub mod ast;

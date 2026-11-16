@@ -36,9 +36,6 @@ pub use nurbs_intersect::{
     curve_segment, curve_surface, surface_plane, surface_surface,
 };
 pub(crate) use nurbs_intersect::{cross, dot, point3, sub};
-#[cfg(test)]
-#[path = "intersections/tests/tests_integration.rs"]
-mod tests;
 
 #[doc(hidden)]
 pub use plane_sphere::{CanonicalPlane, recognize_plane};

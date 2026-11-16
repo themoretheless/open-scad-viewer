@@ -7,6 +7,8 @@ publish.workspace = true
 
 [features]
 default = ["codec"]
+# Long exact-proof tests; ignored unless enabled.
+slow-proofs = []
 codec = ["dep:value-codec", "nurbs-core/codec", "brep-topology/codec", "cad-predicates/codec", "nurbs-intersect/codec"]
 
 [dependencies]

@@ -56,17 +56,12 @@ fn record(
     *slot = Some(vertex);
     Ok(())
 }
-fn derive(
-    owner: &OwnedOriginalSourceCarriers,
-) -> Result<(
-    Vec<OriginalUnifiedVertex>,
-    Vec<Vec<usize>>,
-    Vec<OriginalUnifiedEdge>,
-    Vec<Vec<OriginalUnifiedIncidence>>,
-)> {
-    owner.reverify_source()?;
-    // A scalar knot cut can join left/right coedges only when the ORIGINAL
-    // source is exactly C0. Discontinuous shores need separate cut-side owners.
+const MAX_GRAPH_ITEMS: usize = 8192;
+/// The two cut-vertex slots of every event, keyed by owner and cut.
+type EventSides = BTreeMap<(usize, usize), [Option<usize>; 2]>;
+/// A scalar knot cut can join left/right coedges only when the ORIGINAL
+/// source is exactly C0. Discontinuous shores need separate cut-side owners.
+fn verify_continuity(owner: &OwnedOriginalSourceCarriers) -> Result<()> {
     for source in owner.dictionary().sources() {
         let c = cells(source)?;
         for pair in c.windows(2) {
@@ -79,16 +74,26 @@ fn derive(
             }
         }
     }
+    Ok(())
+}
+/// First slot of every source in the flat cut numbering, and the cut count.
+fn cut_offsets(owner: &OwnedOriginalSourceCarriers) -> Result<(Vec<usize>, usize)> {
     let mut offsets = Vec::new();
     let mut count = 0;
     for cuts in owner.cuts() {
         offsets.push(count);
         count += cuts.len();
     }
-    if count > 8192 || owner.carriers().len() > 8192 {
+    if count > MAX_GRAPH_ITEMS || owner.carriers().len() > MAX_GRAPH_ITEMS {
         return Err(refused("Unified original contact graph allowance exceeded"));
     }
-    let mut parent = (0..count).collect::<Vec<_>>();
+    Ok((offsets, count))
+}
+/// Cut slots named by pair events and by common cuts.
+fn event_sides(
+    owner: &OwnedOriginalSourceCarriers,
+    offsets: &[usize],
+) -> Result<(EventSides, EventSides)> {
     let mut pairs = BTreeMap::new();
     let mut common = BTreeMap::new();
     for (source, cuts) in owner.cuts().iter().enumerate() {
@@ -109,34 +114,71 @@ fn derive(
             }
         }
     }
+    Ok((pairs, common))
+}
+/// Joins the two cut slots of one event. The messages name a missing
+/// event, a missing first side and a missing second side.
+fn join(
+    parent: &mut [usize],
+    sides: &EventSides,
+    key: (usize, usize),
+    [missing, first, second]: [&'static str; 3],
+) -> Result<()> {
+    let p = sides.get(&key).ok_or_else(|| refused(missing))?;
+    let a = p[0].ok_or_else(|| refused(first))?;
+    let b = p[1].ok_or_else(|| refused(second))?;
+    link(parent, a, b);
+    Ok(())
+}
+/// Union-find over cut slots after every pair event and common cut joined
+/// its two sides.
+fn unify(
+    owner: &OwnedOriginalSourceCarriers,
+    offsets: &[usize],
+    count: usize,
+) -> Result<Vec<usize>> {
+    let (pairs, common) = event_sides(owner, offsets)?;
+    let mut parent = (0..count).collect::<Vec<_>>();
     for (pair, cuts) in owner.pair_cuts().iter().enumerate() {
         for cut in 0..cuts.cuts().len() {
-            let p = pairs
-                .get(&(pair, cut))
-                .ok_or_else(|| refused("Unified graph omits an original pair event"))?;
-            let a =
-                p[0].ok_or_else(|| refused("Unified graph omits first original event parameter"))?;
-            let b =
-                p[1].ok_or_else(|| refused("Unified graph omits second original event parameter"))?;
-            link(&mut parent, a, b);
+            join(
+                &mut parent,
+                &pairs,
+                (pair, cut),
+                [
+                    "Unified graph omits an original pair event",
+                    "Unified graph omits first original event parameter",
+                    "Unified graph omits second original event parameter",
+                ],
+            )?;
         }
     }
     for (partition, p) in owner.dictionary().partitions().iter().enumerate() {
         for cut in 0..p.owner.cuts().len() {
-            let p = common
-                .get(&(partition, cut))
-                .ok_or_else(|| refused("Unified graph omits a common cut"))?;
-            let a =
-                p[0].ok_or_else(|| refused("Unified graph omits first original common parameter"))?;
-            let b = p[1]
-                .ok_or_else(|| refused("Unified graph omits second original common parameter"))?;
-            link(&mut parent, a, b);
+            join(
+                &mut parent,
+                &common,
+                (partition, cut),
+                [
+                    "Unified graph omits a common cut",
+                    "Unified graph omits first original common parameter",
+                    "Unified graph omits second original common parameter",
+                ],
+            )?;
         }
     }
+    Ok(parent)
+}
+/// Vertices as classes of joined cuts, and the vertex of every cut.
+fn vertices(
+    owner: &OwnedOriginalSourceCarriers,
+    offsets: &[usize],
+    parent: &mut [usize],
+) -> (Vec<OriginalUnifiedVertex>, Vec<Vec<usize>>) {
     let mut groups = BTreeMap::<usize, Vec<[usize; 2]>>::new();
     for (source, cuts) in owner.cuts().iter().enumerate() {
         for cut in 0..cuts.len() {
-            let r = root(&mut parent, offsets[source] + cut);
+            let r = root(parent, offsets[source] + cut);
             groups.entry(r).or_default().push([source, cut]);
         }
     }
@@ -154,6 +196,13 @@ fn derive(
             cut_vertices[source][cut] = v;
         }
     }
+    (vertices, cut_vertices)
+}
+/// Carriers grouped into edges: one group per common edge of the
+/// dictionary, then one per carrier that is not common.
+fn carrier_groups(
+    owner: &OwnedOriginalSourceCarriers,
+) -> Result<Vec<(Option<usize>, Vec<OriginalUnifiedEdgeCarrier>)>> {
     let mut common_groups = vec![Vec::new(); owner.dictionary().edges().len()];
     let mut single = Vec::new();
     for (carrier, c) in owner.carriers().iter().enumerate() {
@@ -171,25 +220,32 @@ fn derive(
             }]);
         }
     }
-    let mut edges = Vec::new();
-    for (common_edge, carriers) in common_groups
+    Ok(common_groups
         .into_iter()
         .enumerate()
         .map(|(e, c)| (Some(e), c))
         .chain(single.into_iter().map(|c| (None, c)))
-    {
-        if carriers.is_empty() {
-            return Err(refused("Unified graph loses an original common edge"));
+        .collect())
+}
+/// Edges whose carriers all agree on the two end vertices.
+fn edges(
+    owner: &OwnedOriginalSourceCarriers,
+    cut_vertices: &[Vec<usize>],
+) -> Result<Vec<OriginalUnifiedEdge>> {
+    let ends = |use_: &OriginalUnifiedEdgeCarrier| {
+        let c = &owner.carriers()[use_.carrier];
+        let mut v = c.cuts.map(|cut| cut_vertices[c.source][cut]);
+        if use_.reversed {
+            v.swap(0, 1);
         }
-        let ends = |use_: &OriginalUnifiedEdgeCarrier| {
-            let c = &owner.carriers()[use_.carrier];
-            let mut v = c.cuts.map(|cut| cut_vertices[c.source][cut]);
-            if use_.reversed {
-                v.swap(0, 1);
-            }
-            v
-        };
-        let vertices = ends(&carriers[0]);
+        v
+    };
+    let mut edges = Vec::new();
+    for (common_edge, carriers) in carrier_groups(owner)? {
+        let first = carriers
+            .first()
+            .ok_or_else(|| refused("Unified graph loses an original common edge"))?;
+        let vertices = ends(first);
         if carriers.iter().any(|c| ends(c) != vertices) {
             return Err(refused(
                 "Unified graph common branches disagree on actual endpoint vertices",
@@ -201,6 +257,22 @@ fn derive(
             carriers,
         });
     }
+    Ok(edges)
+}
+/// Vertices, the vertex of every cut, edges and edge ends at every vertex.
+type UnifiedGraph = (
+    Vec<OriginalUnifiedVertex>,
+    Vec<Vec<usize>>,
+    Vec<OriginalUnifiedEdge>,
+    Vec<Vec<OriginalUnifiedIncidence>>,
+);
+fn derive(owner: &OwnedOriginalSourceCarriers) -> Result<UnifiedGraph> {
+    owner.reverify_source()?;
+    verify_continuity(owner)?;
+    let (offsets, count) = cut_offsets(owner)?;
+    let mut parent = unify(owner, &offsets, count)?;
+    let (vertices, cut_vertices) = vertices(owner, &offsets, &mut parent);
+    let edges = edges(owner, &cut_vertices)?;
     let mut incidences = vec![Vec::new(); vertices.len()];
     for (edge, e) in edges.iter().enumerate() {
         for endpoint in 0..2 {

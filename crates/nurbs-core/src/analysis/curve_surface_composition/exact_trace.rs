@@ -280,6 +280,7 @@ impl Support {
     #[cfg(test)]
     /// Each derivative uses the same homogeneous pcurve denominator power.
     /// Thus rational source jet quotient formulas can cancel it algebraically.
+    #[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
     pub(super) fn compose(
         &self,
         pc: &Curve,
@@ -654,6 +655,7 @@ use spline_extraction::blossom;
 /// then express it in the surface knot cell. Spline extraction and traversal
 /// conversion use exact rational arithmetic, not rounded knot insertion.
 /// A range crossing knots refuses; callers must cover all original spans.
+#[cfg_attr(not(test), allow(dead_code, reason = "called only by tests"))]
 pub(super) fn pcurve(
     c: &Curve,
     range: [f64; 2],

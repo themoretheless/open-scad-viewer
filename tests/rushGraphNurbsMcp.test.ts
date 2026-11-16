@@ -8,33 +8,83 @@ type RpcValue = Record<string, unknown>
 type ToolResult = {
   isError?: boolean
   structuredContent: Record<string, unknown>
-  content: Array<{ type: string; text?: string; data?: string; mimeType?: string; resource?: { uri: string; mimeType: string; blob: string } }>
+  content: Array<{
+    type: string
+    text?: string
+    data?: string
+    mimeType?: string
+    resource?: { uri: string; mimeType: string; blob: string }
+  }>
 }
 
 describe('own NURBS through the MCP protocol', () => {
   let request: (method: string, params?: RpcValue) => Promise<RpcValue>
   let close: () => Promise<void>
-  const tool = async (name: string, arguments_: RpcValue) => await request('tools/call', { name, arguments: arguments_ }) as unknown as ToolResult
+  const tool = async (name: string, arguments_: RpcValue) =>
+    (await request('tools/call', { name, arguments: arguments_ })) as unknown as ToolResult
 
-  it('checks saved graph offset deviation through MCP and its real disposable Rust process',async()=>{
-    const document={language:'rush/nurbs-1',units:'mm',nodes:[
-      {id:'a',op:'plane_patch',origin:[0,0,0],axis_u:[1,0,0],axis_v:[0,1,0]},
-      {id:'b',op:'transform',input:'a',matrix:[[1,0,0,0],[0,1,0,0],[0,0,1,.25],[0,0,0,1]]},
-    ],root:'b'};
-    const input={document,source:'a',candidate:'b',distance:.25,tolerance:1e-8,maxCells:1000,maxDepth:24};
-    const accepted=await tool('rush_nurbs_offset_deviation',input);
-    expect(accepted.isError,JSON.stringify(accepted)).not.toBe(true);
-    expect(accepted.structuredContent).toMatchObject({ok:true,offsetDeviation:{decision:'within_tolerance',continuousBound:true,topologyAuthority:false}});
-    const limited=await tool('rush_nurbs_offset_deviation',{...input,maxCells:0});
-    expect(limited.structuredContent).toMatchObject({ok:true,offsetDeviation:{decision:'unresolved',errorUpper:null,continuousBound:false}});
-  });
+  it('checks saved graph offset deviation through MCP and its real disposable Rust process', async () => {
+    const document = {
+      language: 'rush/nurbs-1',
+      units: 'mm',
+      nodes: [
+        { id: 'a', op: 'plane_patch', origin: [0, 0, 0], axis_u: [1, 0, 0], axis_v: [0, 1, 0] },
+        {
+          id: 'b',
+          op: 'transform',
+          input: 'a',
+          matrix: [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0.25],
+            [0, 0, 0, 1],
+          ],
+        },
+      ],
+      root: 'b',
+    }
+    const input = {
+      document,
+      source: 'a',
+      candidate: 'b',
+      distance: 0.25,
+      tolerance: 1e-8,
+      maxCells: 1000,
+      maxDepth: 24,
+    }
+    const accepted = await tool('rush_nurbs_offset_deviation', input)
+    expect(accepted.isError, JSON.stringify(accepted)).not.toBe(true)
+    expect(accepted.structuredContent).toMatchObject({
+      ok: true,
+      offsetDeviation: { decision: 'within_tolerance', continuousBound: true, topologyAuthority: false },
+    })
+    const limited = await tool('rush_nurbs_offset_deviation', { ...input, maxCells: 0 })
+    expect(limited.structuredContent).toMatchObject({
+      ok: true,
+      offsetDeviation: { decision: 'unresolved', errorUpper: null, continuousBound: false },
+    })
+  })
 
   it('accepts mesh_boolean over MCP and skips previews for an empty result', async () => {
     const base = structuredClone(RUSH_GRAPH_NURBS_SURFACE_EXAMPLE)
-    const document = { ...base, nodes: [...base.nodes, {id:'empty',op:'mesh_boolean',inputs:[base.root,base.root],operation:'difference'}], root:'empty' }
-    const result = await tool('rush_nurbs_build', {document})
+    const document = {
+      ...base,
+      nodes: [
+        ...base.nodes,
+        { id: 'empty', op: 'mesh_boolean', inputs: [base.root, base.root], operation: 'difference' },
+      ],
+      root: 'empty',
+    }
+    const result = await tool('rush_nurbs_build', { document })
     expect(result.isError, JSON.stringify(result)).not.toBe(true)
-    expect(result.structuredContent).toMatchObject({report:{bounds:null,mesh:{triangleCount:0,construction:'boolean',boolean:{operation:'difference'}}},images_status:'unavailable',image_error:null})
+    expect(result.structuredContent).toMatchObject({
+      report: {
+        bounds: null,
+        mesh: { triangleCount: 0, construction: 'boolean', boolean: { operation: 'difference' } },
+      },
+      images_status: 'unavailable',
+      image_error: null,
+    })
     expect(result.content.some(c => c.type === 'image')).toBe(false)
   })
 
@@ -55,27 +105,52 @@ describe('own NURBS through the MCP protocol', () => {
     request = async (method, params = {}) => {
       const id = ++nextId
       const response = new Promise<RpcValue>((resolve, reject) => {
-        const timer = setTimeout(() => { pending.delete(id); reject(new Error(`MCP timeout: ${method}`)) }, 10_000)
-        pending.set(id, value => { clearTimeout(timer); resolve(value) })
+        const timer = setTimeout(() => {
+          pending.delete(id)
+          reject(new Error(`MCP timeout: ${method}`))
+        }, 10_000)
+        pending.set(id, value => {
+          clearTimeout(timer)
+          resolve(value)
+        })
       })
       await clientTransport.send({ jsonrpc: '2.0', id, method, params } as JSONRPCMessage)
       const envelope = await response
       if (envelope.error) throw new Error(JSON.stringify(envelope.error))
       return envelope.result as RpcValue
     }
-    await request('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'own-nurbs-conformance', version: '1.0.0' } })
+    await request('initialize', {
+      protocolVersion: '2025-11-25',
+      capabilities: {},
+      clientInfo: { name: 'own-nurbs-conformance', version: '1.0.0' },
+    })
     await clientTransport.send({ jsonrpc: '2.0', method: 'notifications/initialized' } as JSONRPCMessage)
-    close = async () => { await server.close(); await clientTransport.close() }
+    close = async () => {
+      await server.close()
+      await clientTransport.close()
+    }
   })
   afterAll(async () => close?.())
 
   it('discovers the own-kernel tools and provides a language resource with precise export limits', async () => {
-    const listed = await request('tools/list') as { tools: Array<{ name: string; annotations: { readOnlyHint: boolean } }> }
-    expect(listed.tools.map(tool => tool.name).sort()).toEqual(['rush_nurbs_build', 'rush_nurbs_compile', 'rush_nurbs_evaluate', 'rush_nurbs_export', 'rush_nurbs_intersect', 'rush_nurbs_language', 'rush_nurbs_offset_deviation'])
+    const listed = (await request('tools/list')) as {
+      tools: Array<{ name: string; annotations: { readOnlyHint: boolean } }>
+    }
+    expect(listed.tools.map(tool => tool.name).sort()).toEqual([
+      'rush_nurbs_build',
+      'rush_nurbs_compile',
+      'rush_nurbs_evaluate',
+      'rush_nurbs_export',
+      'rush_nurbs_intersect',
+      'rush_nurbs_language',
+      'rush_nurbs_offset_deviation',
+    ])
     expect(listed.tools.every(tool => tool.annotations.readOnlyHint)).toBe(true)
-    const resources = await request('resources/list') as { resources: Array<{ uri: string }> }
+    const resources = (await request('resources/list')) as { resources: Array<{ uri: string }> }
     expect(resources.resources.map(resource => resource.uri)).toContain('openscad://language/rush-nurbs-1')
-    const read = await request('resources/read', { uri: 'openscad://language/rush-nurbs-1' }) as { contents: Array<{ text: string }> }
+    const read = (await request('resources/read', { uri: 'openscad://language/rush-nurbs-1' })) as {
+      contents: Array<{ text: string }>
+    }
     const language = JSON.parse(read.contents[0].text)
     expect(language.language).toBe('rush/nurbs-1')
     expect(language.guide).toContain('own Rust numerical kernel')
@@ -89,17 +164,50 @@ describe('own NURBS through the MCP protocol', () => {
   it('returns intersection evidence without granting topology mutation and recovers after invalid input', async () => {
     const invalid = await tool('rush_nurbs_intersect', { mode: 'surface_surface', first: {}, second: {} })
     expect(invalid.isError).toBe(true)
-    expect(invalid.structuredContent).toMatchObject({ error: { code: 'NURBS_REQUEST_FAILED', message: expect.any(String) } })
+    expect(invalid.structuredContent).toMatchObject({
+      error: { code: 'NURBS_REQUEST_FAILED', message: expect.any(String) },
+    })
     const xy = {
-      degreeU: 1, degreeV: 1, knotsU: [0, 0, 1, 1], knotsV: [0, 0, 1, 1],
-      controlPoints: [[[0, 0, 0], [0, 1, 0]], [[1, 0, 0], [1, 1, 0]]], weights: [[1, 1], [1, 1]],
+      degreeU: 1,
+      degreeV: 1,
+      knotsU: [0, 0, 1, 1],
+      knotsV: [0, 0, 1, 1],
+      controlPoints: [
+        [
+          [0, 0, 0],
+          [0, 1, 0],
+        ],
+        [
+          [1, 0, 0],
+          [1, 1, 0],
+        ],
+      ],
+      weights: [
+        [1, 1],
+        [1, 1],
+      ],
     }
-    const xz = { ...xy, controlPoints: [[[0, 0, 0], [0, 0, 1]], [[1, 0, 0], [1, 0, 1]]] }
+    const xz = {
+      ...xy,
+      controlPoints: [
+        [
+          [0, 0, 0],
+          [0, 0, 1],
+        ],
+        [
+          [1, 0, 0],
+          [1, 0, 1],
+        ],
+      ],
+    }
     const result = await tool('rush_nurbs_intersect', { mode: 'surface_surface', first: xy, second: xz })
     expect(result.isError).toBe(false)
     expect(result.structuredContent).toMatchObject({
-      version: 'nurbs-ss/1', kind: 'surface_surface', coverage: { complete: true },
-      booleanMutationAuthority: false, topologyAuthority: { granted: false },
+      version: 'nurbs-ss/1',
+      kind: 'surface_surface',
+      coverage: { complete: true },
+      booleanMutationAuthority: false,
+      topologyAuthority: { granted: false },
       components: expect.arrayContaining([expect.objectContaining({ kind: 'curve' })]),
       branchGraph: { components: expect.arrayContaining([expect.any(Object)]) },
     })
@@ -114,11 +222,16 @@ describe('own NURBS through the MCP protocol', () => {
     expect(JSON.stringify(normalized)).toContain('"param":"height"')
     expect(JSON.stringify(compiled.structuredContent.resolved_document)).not.toContain('"param":')
 
-    const evaluated = await tool('rush_nurbs_evaluate', { document: RUSH_GRAPH_NURBS_EXAMPLE, evaluations: [{ node: 'arc', u: 0.5 }] })
+    const evaluated = await tool('rush_nurbs_evaluate', {
+      document: RUSH_GRAPH_NURBS_EXAMPLE,
+      evaluations: [{ node: 'arc', u: 0.5 }],
+    })
     expect(evaluated.isError).toBe(false)
     expect(evaluated.structuredContent.execution_target).toBe('own-nurbs')
     expect(evaluated.structuredContent.automatic_fallback).toBe(false)
-    const value = (evaluated.structuredContent.evaluations as Array<{ point: number[]; d1: number[]; derivative_status: string }>)[0]
+    const value = (
+      evaluated.structuredContent.evaluations as Array<{ point: number[]; d1: number[]; derivative_status: string }>
+    )[0]
     expect(value.point[0]).toBeCloseTo(10 * Math.SQRT1_2, 10)
     expect(value.point[1]).toBeCloseTo(10 * Math.SQRT1_2, 10)
     expect(value.d1[0]).toBeCloseTo(-20 / (1 + Math.SQRT1_2), 10)
@@ -132,7 +245,12 @@ describe('own NURBS through the MCP protocol', () => {
     expect(built.structuredContent.execution_target).toBe('own-nurbs')
     expect(built.structuredContent.images_status).toBe('rendered')
     expect(built.structuredContent.views).toEqual(['front', 'top', 'isometric'])
-    const report = built.structuredContent.report as { kernel: string; mesh: { closed: boolean; signedVolumeMm3: number; selfIntersectionStatus: string }; printability: string; error_bound_certified: boolean }
+    const report = built.structuredContent.report as {
+      kernel: string
+      mesh: { closed: boolean; signedVolumeMm3: number; selfIntersectionStatus: string }
+      printability: string
+      error_bound_certified: boolean
+    }
     expect(report.kernel).toBe('own-rust-nurbs')
     expect(report.mesh.closed).toBe(true)
     expect(report.mesh.signedVolumeMm3).toBeCloseTo(800, 6)
@@ -188,7 +306,10 @@ describe('own NURBS through the MCP protocol', () => {
     const openStl = await tool('rush_nurbs_export', { document: RUSH_GRAPH_NURBS_EXAMPLE, format: 'stl' })
     expect(openStl.isError).toBe(true)
     expect(openStl.content.some(item => item.type === 'resource')).toBe(false)
-    const recovered = await tool('rush_nurbs_evaluate', { document: RUSH_GRAPH_NURBS_EXAMPLE, evaluations: [{ node: 'arc', u: 0 }] })
+    const recovered = await tool('rush_nurbs_evaluate', {
+      document: RUSH_GRAPH_NURBS_EXAMPLE,
+      evaluations: [{ node: 'arc', u: 0 }],
+    })
     expect(recovered.isError).toBe(false)
     expect((recovered.structuredContent.evaluations as Array<{ point: number[] }>)[0].point).toEqual([10, 0, 0])
   })
@@ -198,12 +319,32 @@ describe('own NURBS through the MCP protocol', () => {
     expect(result.isError).toBe(true)
     expect(result.content.some(item => item.type === 'resource')).toBe(false)
   })
+
+  it('exports exact B-rep solids to AP242 STEP without falling back for non-B-rep graphs', async () => {
+    const brepDoc = {
+      language: 'rush/nurbs-1',
+      units: 'mm',
+      parameters: [],
+      nodes: [{ id: 'box', op: 'brep_box', min: [0, 0, 0], max: [10, 20, 5] }],
+      root: 'box',
+    }
+    const exported = await tool('rush_nurbs_export', { document: brepDoc, format: 'step' })
+    expect(exported.isError, JSON.stringify(exported)).toBe(false)
+    const resource = exported.content.find(item => item.type === 'resource')?.resource
+    expect(resource).toBeDefined()
+    expect(resource!.uri).toMatch(/^rush:\/\/nurbs-export\/[a-f0-9]{64}\.step$/)
+    expect(resource!.mimeType).toBe('model/step')
+    const stepText = Buffer.from(resource!.blob, 'base64').toString('utf8')
+    expect(stepText).toContain('ISO-10303-21;')
+    expect(stepText).toContain('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF')
+    expect(stepText).toContain('MANIFOLD_SOLID_BREP')
+  })
   it('transports a binary 3MF package through the actual own-kernel process', async () => {
     const result = await tool('rush_nurbs_export', { document: RUSH_GRAPH_NURBS_SURFACE_EXAMPLE, format: '3mf' })
     expect(result.isError).toBe(false)
-    const resource = result.content.find((c: any) => c.type === 'resource') as any
-    expect(resource.resource.uri).toMatch(/\.3mf$/)
-    expect(Buffer.from(resource.resource.blob, 'base64').readUInt32LE(0)).toBe(0x04034b50)
+    const resource = result.content.find(c => c.type === 'resource')?.resource
+    expect(resource).toBeDefined()
+    expect(resource!.uri).toMatch(/\.3mf$/)
+    expect(Buffer.from(resource!.blob, 'base64').readUInt32LE(0)).toBe(0x04034b50)
   })
-
 })

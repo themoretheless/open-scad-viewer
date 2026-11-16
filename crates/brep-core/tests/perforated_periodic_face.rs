@@ -49,6 +49,19 @@ fn authored_partial_hole_clocks_remain_exactly_owned_on_both_faces() {
     let saved = s.clone();
     let p = edge_partition::split(&s, 3, &[0.375], "hole-clocks", Limits::default()).unwrap();
     assert_eq!(p.relations().len(), 2);
+    for relation in p.relations() {
+        let [first, last] = relation.fragments.as_slice() else {
+            panic!("partial trim should be retained on both children");
+        };
+        assert_eq!(first.relation_range[0], num_rational::BigRational::from_integer(0.into()));
+        assert_eq!(first.relation_range[1], last.relation_range[0]);
+        assert_eq!(last.relation_range[1], num_rational::BigRational::from_integer(1.into()));
+        for fragment in &relation.fragments {
+            let saved_use = p.model().loops[relation.wire].coedges.iter()
+                .find(|c| c.edge == fragment.edge).unwrap();
+            assert_eq!(saved_use.trim(), Some(fragment.transferred));
+        }
+    }
     assert!(p.reverify().unwrap().trim_regions_valid);
     assert_eq!(s, saved);
 }

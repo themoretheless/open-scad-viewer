@@ -10,8 +10,8 @@
  * observed within one step and the Worker itself is never replaced.
  */
 import { copyBuffer } from './bufferTransport'
-import { GeometryKernelError, decodeNurbsResult, kernelRuntime } from './kernel'
-import { copyRenderMesh, type KernelRenderMesh } from './meshAnalysis'
+import { GeometryKernelError, callGeometryRust, decodeNurbsResult, kernelRuntime } from './kernel'
+import { copyRenderMesh, renderMeshInKernel, type KernelRenderMesh } from './meshAnalysis'
 
 export type KernelJobKind = 'mesh-boolean' | 'render-prepare'
 
@@ -98,6 +98,10 @@ export async function booleanSolidsCooperativelyInKernel(
   const op = KERNEL_BOOLEAN_OPERATIONS[operation]
   if (op === undefined) throw new GeometryKernelError('GEOMETRY_INVALID_INPUT', 'Invalid Boolean operation')
   const { exports: wasm, takeResponse } = kernelRuntime()
+  if (typeof wasm.abi_job_boolean_start !== 'function') {
+    await checkpoint(null)
+    return callGeometryRust<number>('cad', { action: 'combine', ids: [...ids], dimension: 3, operation })
+  }
   const handles = new Uint32Array(ids)
   const { result } = await driveKernelJob(
     () => {
@@ -125,6 +129,10 @@ export async function renderMeshCooperativelyInKernel(
     throw new GeometryKernelError('GEOMETRY_INVALID_INPUT', 'Invalid CAD handle')
   if (!Number.isFinite(creaseCosine)) throw new GeometryKernelError('GEOMETRY_INVALID_INPUT', 'Invalid crease cosine')
   const { exports: wasm, memory, takeResponse } = kernelRuntime()
+  if (typeof wasm.abi_job_render_start !== 'function') {
+    await checkpoint(null)
+    return renderMeshInKernel(id, creaseCosine)
+  }
   const { result: handle } = await driveKernelJob(
     () => decodeNurbsResult<number>(takeResponse(wasm.abi_job_render_start(id, creaseCosine))),
     checkpoint,

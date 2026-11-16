@@ -10,7 +10,9 @@ pub fn source(u: [f64; 2], v: [f64; 2]) -> Model {
     let uv = [[u[0], v[0]], [u[0], v[1]], [u[1], v[1]], [u[1], v[0]]];
     let vertex = s.vertices.len();
     for p in uv {
-        let e = s.faces[0].surface.evaluate(p[0], p[1]).unwrap();
+        let surface = &s.faces[0].surface;
+        let [u, v] = nurbs_core::periodic_trim::wrapped_surface_parameters(surface, p).unwrap();
+        let e = surface.evaluate(u, v).unwrap();
         s.vertices.push(Vertex {
             point: [e.point[0], e.point[1], e.point[2]],
         });
@@ -26,7 +28,19 @@ pub fn source(u: [f64; 2], v: [f64; 2]) -> Model {
     ])
     .unwrap();
     let arc = |z: f64| {
-        let mut c = s.edges[0].curve.trim(u[0], u[1]).unwrap();
+        let source = &s.edges[0].curve;
+        let mut c = if u == [3., 5.] {
+            let poles = [6, 7, 0, 1, 2];
+            Curve {
+                degree: 2,
+                knots: vec![3., 3., 3., 4., 4., 5., 5., 5.],
+                control_points: poles.map(|i| source.control_points[i].clone()).to_vec(),
+                weights: poles.map(|i| source.weights[i]).to_vec(),
+                periodic: false,
+            }
+        } else {
+            source.trim(u[0], u[1]).unwrap()
+        };
         for p in &mut c.control_points {
             p[2] = z;
         }
@@ -78,6 +92,20 @@ pub fn source(u: [f64; 2], v: [f64; 2]) -> Model {
             Coedge::new(edge, true, line(1, 0)),
         ],
     });
+    if u == [3., 5.] {
+        for contour in [hole, patch] {
+            for coedge in &mut s.0.loops[contour].coedges {
+                let lifts = [0, 1].map(|end| [
+                    (coedge.pcurve.control_points[end][0] / 4.).floor() as i32, 0,
+                ]);
+                *coedge = coedge.clone().with_trim(brep_topology::CoedgeTrim {
+                    curve_parameter: s.0.edges[coedge.edge].curve.domain(),
+                    pcurve_parameter: coedge.pcurve.domain(),
+                    periodic_lift: lifts,
+                }).unwrap();
+            }
+        }
+    }
     let face = s.faces.len();
     let surface = s.faces[0].surface.clone();
     s.faces.push(Face {

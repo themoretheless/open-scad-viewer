@@ -32,7 +32,6 @@ mod fibered_body;
 mod parametric_edges;
 mod revolve_region_angle;
 mod sphere_poles;
-mod sphere_regular;
 pub use cylinder::*;
 pub use fibered_body::{
     FiberedBody, FiberedBodyAttempt, FiberedBodyLimits, FiberedBodyReport, FiberedSource,

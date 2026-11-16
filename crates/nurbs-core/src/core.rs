@@ -15,6 +15,7 @@ pub use nurbs_geometry::curve;
 pub use nurbs_geometry::derivatives;
 pub use nurbs_geometry::surface;
 pub use nurbs_geometry::surface_transpose;
+pub use nurbs_geometry::surface_decompose;
 pub use nurbs_geometry::vec3_ext;
 pub use nurbs_geometry::span_domains;
 pub use nurbs_geometry::curve_identity;

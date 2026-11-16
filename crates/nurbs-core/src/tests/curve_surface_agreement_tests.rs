@@ -176,13 +176,47 @@
         }
     }
     #[test]
-    fn exact_identity_leaves_multispan_definitions_unproven() {
+    fn exact_affine_lift_compares_different_knot_partitions() {
         let c=Curve {degree:1,knots:vec![0.,0.,0.5,1.,1.],
             control_points:vec![vec![0.,0.,0.],vec![0.5,0.5,0.],vec![1.,1.,0.]],
             weights:vec![1.;3],periodic:false};
         let p=line(vec![vec![0.,0.],vec![1.,1.]]);
-        assert!(verify_exact(&c,&p,&plane(),false,1000000).unwrap().is_none());
+        assert_eq!(verify_exact(&c,&p,&plane(),false,1000000).unwrap().unwrap().outcome,
+            cad_predicates::BezierIdentity::Equal);
         assert_eq!(verify(&c,&p,&plane(),false,1e-6,10000).unwrap().status,Status::WithinTolerance);
+    }
+    #[test]
+    fn exact_affine_lift_preserves_reversed_rational_multispan_pcurves() {
+        use cad_predicates::BezierIdentity;
+        let uv = Curve {
+            degree: 2,
+            knots: vec![0., 0., 0., 0.25, 1., 1., 1.],
+            control_points: vec![vec![0., 0.], vec![0.25, 0.5], vec![0.5, 0.5], vec![1., 1.]],
+            weights: vec![1., 2., 1., 2.],
+            periodic: false,
+        };
+        let mut world = uv.reverse().unwrap();
+        for p in &mut world.control_points {
+            p.push(0.);
+        }
+        world.knots.iter_mut().for_each(|knot| *knot = 2. + 4. * *knot);
+        assert_eq!(verify_exact(&world, &uv, &plane(), true, 1000000)
+            .unwrap().unwrap().outcome, BezierIdentity::Equal);
+        for (world_range, uv_range) in [
+            ([2.5, 5.5], [0.125, 0.875]),
+            ([5.5, 2.5], [0.875, 0.125]),
+        ] {
+            let proof = verify_exact_trimmed(&world, &uv, &plane(), true, world_range, uv_range, 1000000)
+                .unwrap().unwrap();
+            assert_eq!(proof.outcome, BezierIdentity::Equal);
+        }
+        let unequal = verify_exact_trimmed(
+            &world, &uv, &plane(), true, [2.5, 5.5], [0.25, 0.875], 1000000,
+        ).unwrap().unwrap();
+        assert_eq!(unequal.outcome, BezierIdentity::Different);
+        world.control_points[1][2] = 1e-12;
+        assert_eq!(verify_exact(&world, &uv, &plane(), true, 1000000)
+            .unwrap().unwrap().outcome, BezierIdentity::Different);
     }
     #[test]
     fn exact_identity_is_distinct_from_tolerance_and_preserves_reversal() {

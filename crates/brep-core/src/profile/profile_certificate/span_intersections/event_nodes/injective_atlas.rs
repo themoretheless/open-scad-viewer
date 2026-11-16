@@ -42,28 +42,31 @@ fn derive(
     regularity.reverify_source()?;
     cover_surface(regularity.coverage().topology().seams().surface(), limits)
 }
-// Caller owns the original supporting surface; the cover always includes its
-// complete original knot domain, never a sampled or fitted replacement.
-pub(super) fn cover_surface(
-    surface: &nurbs_core::surface::Surface,
-    limits: OriginalInjectiveAtlasLimits,
-) -> Result<(Vec<OriginalInjectiveChart>, usize, usize)> {
-    surface.validate()?;
-    if !(1..=100000).contains(&limits.max_cells)
-        || !(1..=100000).contains(&limits.max_span_work)
-        || limits.max_depth > 32
-        || limits.proof_refinement_depth > 6
+const MAX_CELLS: usize = 100000;
+const MAX_SPAN_WORK: usize = 100000;
+const MAX_DEPTH: usize = 32;
+const MAX_PROOF_REFINEMENT_DEPTH: usize = 6;
+type Domain = [[f64; 2]; 2];
+fn verify_limits(limits: &OriginalInjectiveAtlasLimits) -> Result<()> {
+    if !(1..=MAX_CELLS).contains(&limits.max_cells)
+        || !(1..=MAX_SPAN_WORK).contains(&limits.max_span_work)
+        || limits.max_depth > MAX_DEPTH
+        || limits.proof_refinement_depth > MAX_PROOF_REFINEMENT_DEPTH
     {
         return Err(refused("Invalid original injective atlas work allowance"));
     }
-    let mut pending = Vec::new();
+    Ok(())
+}
+/// Every nonempty knot cell of the original surface, at depth zero.
+fn knot_cells(surface: &nurbs_core::surface::Surface) -> Vec<(Domain, usize)> {
+    let mut cells = Vec::new();
     for u in surface.degree_u..surface.control_points.len() {
         if surface.knots_u[u] >= surface.knots_u[u + 1] {
             continue;
         }
         for v in surface.degree_v..surface.control_points[0].len() {
             if surface.knots_v[v] < surface.knots_v[v + 1] {
-                pending.push((
+                cells.push((
                     [
                         [surface.knots_u[u], surface.knots_u[u + 1]],
                         [surface.knots_v[v], surface.knots_v[v + 1]],
@@ -73,6 +76,70 @@ pub(super) fn cover_surface(
             }
         }
     }
+    cells
+}
+/// A proved cell as a chart with its common projection and contraction.
+fn proved_chart(
+    domain: Domain,
+    report: nurbs_core::surface_injectivity::Report,
+) -> Result<OriginalInjectiveChart> {
+    let projection = report
+        .projection
+        .ok_or_else(|| refused("Original injective chart has no proved common projection"))?;
+    let contraction = report
+        .contraction_upper
+        .ok_or_else(|| refused("Original injective chart has no contraction bound"))?;
+    if !contraction.is_finite() || !(0. ..1.).contains(&contraction) || report.spans == 0 {
+        return Err(refused(
+            "Original injective chart has an invalid common contraction proof",
+        ));
+    }
+    Ok(OriginalInjectiveChart {
+        domain,
+        projection,
+        contraction_upper: contraction,
+        span_work: report.spans,
+    })
+}
+/// Halves of a cell along the axis that alternates with depth, falling back
+/// to the other axis when the midpoint is not strictly representable.
+fn bisect(domain: Domain, depth: usize) -> Result<[Domain; 2]> {
+    let (axis, midpoint) = [depth % 2, 1 - depth % 2]
+        .into_iter()
+        .map(|axis| (axis, domain[axis][0] * 0.5 + domain[axis][1] * 0.5))
+        .find(|&(axis, m)| domain[axis][0] < m && m < domain[axis][1])
+        .ok_or_else(|| {
+            refused("Original injective atlas has no strict representable subdivision")
+        })?;
+    let mut first = domain;
+    let mut second = domain;
+    first[axis][1] = midpoint;
+    second[axis][0] = midpoint;
+    Ok([first, second])
+}
+/// Charts in lexicographic order of their domains.
+fn sort_charts(charts: &mut [OriginalInjectiveChart]) {
+    charts.sort_by(|a, b| {
+        a.domain
+            .iter()
+            .flatten()
+            .zip(b.domain.iter().flatten())
+            .find_map(|(x, y)| {
+                let order = x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal);
+                (order != std::cmp::Ordering::Equal).then_some(order)
+            })
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+}
+// Caller owns the original supporting surface; the cover always includes its
+// complete original knot domain, never a sampled or fitted replacement.
+pub(super) fn cover_surface(
+    surface: &nurbs_core::surface::Surface,
+    limits: OriginalInjectiveAtlasLimits,
+) -> Result<(Vec<OriginalInjectiveChart>, usize, usize)> {
+    surface.validate()?;
+    verify_limits(&limits)?;
+    let mut pending = knot_cells(surface);
     let mut created = pending.len();
     let mut work = 0;
     let mut charts = Vec::new();
@@ -101,23 +168,7 @@ pub(super) fn cover_surface(
         }
         work += report.spans;
         if report.proven {
-            let projection = report.projection.ok_or_else(|| {
-                refused("Original injective chart has no proved common projection")
-            })?;
-            let contraction = report
-                .contraction_upper
-                .ok_or_else(|| refused("Original injective chart has no contraction bound"))?;
-            if !contraction.is_finite() || !(0. ..1.).contains(&contraction) || report.spans == 0 {
-                return Err(refused(
-                    "Original injective chart has an invalid common contraction proof",
-                ));
-            }
-            charts.push(OriginalInjectiveChart {
-                domain,
-                projection,
-                contraction_upper: contraction,
-                span_work: report.spans,
-            });
+            charts.push(proved_chart(domain, report)?);
             continue;
         }
         if depth == limits.max_depth
@@ -128,36 +179,12 @@ pub(super) fn cover_surface(
                 "Original injective chart remains unresolved within atlas allowance",
             ));
         }
-        let mut split = None;
-        for axis in [depth % 2, 1 - depth % 2] {
-            let midpoint = domain[axis][0] * 0.5 + domain[axis][1] * 0.5;
-            if domain[axis][0] < midpoint && midpoint < domain[axis][1] {
-                split = Some((axis, midpoint));
-                break;
-            }
-        }
-        let (axis, midpoint) = split.ok_or_else(|| {
-            refused("Original injective atlas has no strict representable subdivision")
-        })?;
-        let mut first = domain;
-        let mut second = domain;
-        first[axis][1] = midpoint;
-        second[axis][0] = midpoint;
+        let [first, second] = bisect(domain, depth)?;
         pending.push((second, depth + 1));
         pending.push((first, depth + 1));
         created += 2;
     }
-    charts.sort_by(|a, b| {
-        a.domain
-            .iter()
-            .flatten()
-            .zip(b.domain.iter().flatten())
-            .find_map(|(x, y)| {
-                let order = x.partial_cmp(y).unwrap();
-                (order != std::cmp::Ordering::Equal).then_some(order)
-            })
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    sort_charts(&mut charts);
     Ok((charts, created, work))
 }
 impl OwnedOriginalInjectiveChartAtlas {

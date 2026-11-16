@@ -45,6 +45,7 @@ impl QualifiedRootPairedChordSplit {
         let mut splits = Vec::new();
         let mut holes = Vec::new();
         let mut boundaries = Vec::new();
+        let mut trim_budget = limits.boundary.geometry;
         for side in 0..2 {
             let t = faces[side].topology();
             if t.faces.len() != 1 {
@@ -52,6 +53,7 @@ impl QualifiedRootPairedChordSplit {
                     "Paired chord split requires single-face source models per support",
                 ));
             }
+            faces[side].audit_face_trim_arcs(0, &mut trim_budget)?;
             let candidate = RootFaceChordSplit::split(
                 faces[side].clone(),
                 0,
@@ -72,6 +74,9 @@ impl QualifiedRootPairedChordSplit {
                     .map(|l| l.coedges.len())
                     .sum(),
             )?;
+            for child in split.face_children() {
+                split.output().audit_face_trim_arcs(child, &mut trim_budget)?;
+            }
             splits.push(split);
             holes.push(routed);
             boundaries.push(boundary);

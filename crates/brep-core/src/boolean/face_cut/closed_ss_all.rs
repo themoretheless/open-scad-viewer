@@ -5,6 +5,8 @@ use nurbs_core::ss_intersection as ss;
 pub struct ClosedSsNetwork {
     pub models: [Model; 2],
     pub traces: Vec<ss::QualifiedClosedFiberTrace>,
+    pub coverage_domain: [[f64; 2]; 4],
+    pub covers_entire_surfaces: bool,
     /// Current faces descended from the respective original support face.
     pub faces: [Vec<usize>; 2],
     /// Cut budgets apply per candidate finite face; at most (branches+1)
@@ -35,7 +37,14 @@ pub fn partition_all_closed_ss(
         ));
     }
     let source = ss::FiberSources::new(&a.surface, &b.surface)?;
-    let owner = ss::construct_qualified_closed_ss_branches(&source, limits.branches)?;
+    let owner = super::closed_ss::discover_closed_branches(
+        &source,
+        [(first, a.outer), (second, b.outer)],
+        limits.branches,
+    )?;
+    let coverage = owner.owner().proof().coverage();
+    let coverage_domain = coverage.domain();
+    let covers_entire_surfaces = coverage.covers_entire_surfaces();
     if owner.branches().is_empty() || owner.branches().len() > 64 {
         return Err(unproven("No bounded complete original closed census"));
     }
@@ -47,7 +56,7 @@ pub fn partition_all_closed_ss(
     let mut models = [first.clone(), second.clone()];
     let mut faces = [vec![first_face], vec![second_face]];
     let mut placement_attempts = 0;
-    for trace in &traces {
+    for (component, trace) in traces.iter().enumerate() {
         for support in 0..2 {
             let path: Vec<Segment> = trace
                 .segments()
@@ -58,25 +67,35 @@ pub fn partition_all_closed_ss(
                 })
                 .collect();
             let mut selected = None;
+            let mut first_failure = None;
             for &face in &faces[support] {
                 placement_attempts += 1;
-                if let Ok(candidate) = closed::partition_closed(
+                match closed::partition_closed(
                     &models[support],
                     face,
                     &path,
                     limits.trace.tolerance_uv,
                     limits.cut,
                 ) {
-                    if selected.is_some() {
-                        return Err(unproven(
-                            "Closed SS component has ambiguous finite-face ownership",
-                        ));
+                    Ok(candidate) => {
+                        if selected.replace(candidate).is_some() {
+                            return Err(unproven(&format!(
+                                "Closed SS component {component} has ambiguous finite-face ownership on support {support}"
+                            )));
+                        }
                     }
-                    selected = Some(candidate);
+                    Err(error) => {
+                        first_failure.get_or_insert((face, error));
+                    }
                 }
             }
             let cut = selected.ok_or_else(|| {
-                unproven("A complete original closed component has no proved finite-face placement")
+                let failure = first_failure
+                    .map(|(face, error)| format!(" (face {face}: {error})"))
+                    .unwrap_or_default();
+                unproven(&format!(
+                    "Closed SS component {component} has no proved finite-face placement on support {support}{failure}"
+                ))
             })?;
             faces[support].push(cut.faces[1]);
             models[support] = cut.model;
@@ -93,6 +112,8 @@ pub fn partition_all_closed_ss(
     Ok(ClosedSsNetwork {
         models,
         traces,
+        coverage_domain,
+        covers_entire_surfaces,
         faces,
         placement_attempts,
     })

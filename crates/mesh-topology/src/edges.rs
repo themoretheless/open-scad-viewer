@@ -264,6 +264,98 @@ fn classify_edge_group(
         EdgeKind::Hidden
     }
 }
+/// Edge occurrences and face normals of the non-degenerate triangles, shared
+/// by the synchronous and resumable builders so both visit triangles alike.
+struct Occurrences {
+    edge_a: Vec<u32>,
+    edge_b: Vec<u32>,
+    // f32 storage matches the Float32Array rounding of the reference.
+    face_normals: Vec<f32>,
+    occurrence_order: Vec<u32>,
+    edge_count: usize,
+    degenerate: u32,
+}
+
+impl Occurrences {
+    fn new(triangle_index_count: usize) -> Self {
+        Self {
+            edge_a: vec![0u32; triangle_index_count],
+            edge_b: vec![0u32; triangle_index_count],
+            face_normals: vec![0f32; triangle_index_count],
+            occurrence_order: vec![0u32; triangle_index_count],
+            edge_count: 0,
+            degenerate: 0,
+        }
+    }
+
+    fn add_occurrence(&mut self, occurrence: usize, first: u32, second: u32) {
+        self.edge_a[occurrence] = first.min(second);
+        self.edge_b[occurrence] = first.max(second);
+        self.occurrence_order[self.edge_count] = occurrence as u32;
+        self.edge_count += 1;
+    }
+
+    /// Record the triangle starting at index `i`, or count it as degenerate.
+    fn add_triangle(
+        &mut self,
+        vertices: &[f32],
+        triangle_indices: &[u32],
+        parent: &[u32],
+        i: usize,
+    ) {
+        let i0 = triangle_indices[i] as usize;
+        let i1 = triangle_indices[i + 1] as usize;
+        let i2 = triangle_indices[i + 2] as usize;
+        let v0 = parent[i0];
+        let v1 = parent[i1];
+        let v2 = parent[i2];
+
+        if v0 == v1 || v1 == v2 || v2 == v0 {
+            self.degenerate += 1;
+            return;
+        }
+
+        let p0 = i0 * VERTEX_STRIDE;
+        let p1 = i1 * VERTEX_STRIDE;
+        let p2 = i2 * VERTEX_STRIDE;
+        let e10x = vertices[p1] as f64 - vertices[p0] as f64;
+        let e10y = vertices[p1 + 1] as f64 - vertices[p0 + 1] as f64;
+        let e10z = vertices[p1 + 2] as f64 - vertices[p0 + 2] as f64;
+        let e20x = vertices[p2] as f64 - vertices[p0] as f64;
+        let e20y = vertices[p2 + 1] as f64 - vertices[p0 + 1] as f64;
+        let e20z = vertices[p2 + 2] as f64 - vertices[p0 + 2] as f64;
+        let cross_x = e10y * e20z - e10z * e20y;
+        let cross_y = e10z * e20x - e10x * e20z;
+        let cross_z = e10x * e20y - e10y * e20x;
+        let twice_area = hypot3(cross_x, cross_y, cross_z);
+        let edge_scale =
+            e10x * e10x + e10y * e10y + e10z * e10z + e20x * e20x + e20y * e20y + e20z * e20z;
+        let area_epsilon = edge_scale * AREA_EPSILON_FACTOR;
+
+        if !twice_area.is_finite() || twice_area <= area_epsilon {
+            self.degenerate += 1;
+            return;
+        }
+
+        self.face_normals[i] = (cross_x / twice_area) as f32;
+        self.face_normals[i + 1] = (cross_y / twice_area) as f32;
+        self.face_normals[i + 2] = (cross_z / twice_area) as f32;
+        self.add_occurrence(i, v0, v1);
+        self.add_occurrence(i + 1, v1, v2);
+        self.add_occurrence(i + 2, v2, v0);
+    }
+
+    fn into_parts(self) -> (Vec<u32>, Vec<u32>, Vec<f32>, Vec<u32>, usize, u32) {
+        (
+            self.edge_a,
+            self.edge_b,
+            self.face_normals,
+            self.occurrence_order,
+            self.edge_count,
+            self.degenerate,
+        )
+    }
+}
 
 /// Extract semantic edges. `crease_dot_threshold` is computed by the host
 /// (Math.cos of the clamped angle) so the comparison constant matches the
@@ -294,98 +386,14 @@ pub fn extract_semantic_edges(
         parent[i] = root as u32;
     }
 
-    let max_edge_occurrences = triangle_indices.len();
-    let mut edge_a = vec![0u32; max_edge_occurrences];
-    let mut edge_b = vec![0u32; max_edge_occurrences];
-    // f32 storage matches the Float32Array rounding of the reference.
-    let mut face_normals = vec![0f32; triangle_indices.len()];
-    let mut occurrence_order = vec![0u32; max_edge_occurrences];
-    let mut edge_count = 0usize;
-    let mut degenerate = 0u32;
-
-    let add_occurrence = |edge_a: &mut [u32],
-                          edge_b: &mut [u32],
-                          occurrence_order: &mut [u32],
-                          edge_count: usize,
-                          occurrence: usize,
-                          first: u32,
-                          second: u32| {
-        edge_a[occurrence] = first.min(second);
-        edge_b[occurrence] = first.max(second);
-        occurrence_order[edge_count] = occurrence as u32;
-        edge_count + 1
-    };
-
+    let mut occurrences = Occurrences::new(triangle_indices.len());
     let mut i = 0usize;
     while i < triangle_indices.len() {
-        let i0 = triangle_indices[i] as usize;
-        let i1 = triangle_indices[i + 1] as usize;
-        let i2 = triangle_indices[i + 2] as usize;
-        let v0 = parent[i0];
-        let v1 = parent[i1];
-        let v2 = parent[i2];
-
-        if v0 == v1 || v1 == v2 || v2 == v0 {
-            degenerate += 1;
-            i += 3;
-            continue;
-        }
-
-        let p0 = i0 * VERTEX_STRIDE;
-        let p1 = i1 * VERTEX_STRIDE;
-        let p2 = i2 * VERTEX_STRIDE;
-        let e10x = vertices[p1] as f64 - vertices[p0] as f64;
-        let e10y = vertices[p1 + 1] as f64 - vertices[p0 + 1] as f64;
-        let e10z = vertices[p1 + 2] as f64 - vertices[p0 + 2] as f64;
-        let e20x = vertices[p2] as f64 - vertices[p0] as f64;
-        let e20y = vertices[p2 + 1] as f64 - vertices[p0 + 1] as f64;
-        let e20z = vertices[p2 + 2] as f64 - vertices[p0 + 2] as f64;
-        let cross_x = e10y * e20z - e10z * e20y;
-        let cross_y = e10z * e20x - e10x * e20z;
-        let cross_z = e10x * e20y - e10y * e20x;
-        let twice_area = hypot3(cross_x, cross_y, cross_z);
-        let edge_scale =
-            e10x * e10x + e10y * e10y + e10z * e10z + e20x * e20x + e20y * e20y + e20z * e20z;
-        let area_epsilon = edge_scale * AREA_EPSILON_FACTOR;
-
-        if !twice_area.is_finite() || twice_area <= area_epsilon {
-            degenerate += 1;
-            i += 3;
-            continue;
-        }
-
-        face_normals[i] = (cross_x / twice_area) as f32;
-        face_normals[i + 1] = (cross_y / twice_area) as f32;
-        face_normals[i + 2] = (cross_z / twice_area) as f32;
-        edge_count = add_occurrence(
-            &mut edge_a,
-            &mut edge_b,
-            &mut occurrence_order,
-            edge_count,
-            i,
-            v0,
-            v1,
-        );
-        edge_count = add_occurrence(
-            &mut edge_a,
-            &mut edge_b,
-            &mut occurrence_order,
-            edge_count,
-            i + 1,
-            v1,
-            v2,
-        );
-        edge_count = add_occurrence(
-            &mut edge_a,
-            &mut edge_b,
-            &mut occurrence_order,
-            edge_count,
-            i + 2,
-            v2,
-            v0,
-        );
+        occurrences.add_triangle(vertices, triangle_indices, &parent, i);
         i += 3;
     }
+    let (edge_a, edge_b, face_normals, occurrence_order, edge_count, degenerate) =
+        occurrences.into_parts();
 
     let sorted_occurrences =
         radix_sort_edge_occurrences(&edge_a, &edge_b, &occurrence_order, edge_count);

@@ -62,6 +62,7 @@ pub use fiber::{
     cover_quotient_fiber_box, cover_quotient_fiber_surfaces, discover_quotient_fiber_surfaces,
 };
 pub use fiber_coverage::{
+    exclude_shared_frame_graph_contact, shared_frame_graph_contact_corners,
     ClosedFiberBranchLimits, ClosedFiberCycleLimits, ClosedFiberRootPort, ClosedFiberTraceLimits,
     ClosedFiberTraceSegment, CoverageLimits, DiscoveredFiberTransition,
     DiscoveredMixedFiberComponents, FiberAtlasCoverageResult, FiberBridgeSpec,
@@ -772,26 +773,24 @@ pub use quadratic_graph::{QuadraticGraphSSLimits, QuadraticGraphSSKind, Original
 mod qualified_dispatch;
 pub use qualified_dispatch::{
     PeriodicSSBuildLimits,PeriodicPlaneSSKind,QualifiedPeriodicPlaneSS,qualify_periodic_plane_ss,
-    ClosedSSBuildLimits, IsolatedGraphContactSpec, QualifiedIsolatedGraphContact,
+    QualifiedConvexGraphContact, discover_convex_graph_contact, qualify_convex_graph_contact,
+    ClosedSSBuildLimits, ExactIsolatedGraphContactSpec, IsolatedGraphContactSpec, QualifiedIsolatedGraphContact,
     QualifiedSSBuildLimits, QualifiedSurfaceIntersection, construct_qualified_closed_ss_branches,
-    construct_qualified_ss_branches, qualify_isolated_graph_contact, discover_isolated_graph_contact,
+    construct_qualified_closed_ss_branches_in_box,
+    construct_qualified_ss_branches, qualify_exact_isolated_graph_contact, qualify_isolated_graph_contact, discover_isolated_graph_contact,
 };
 
 pub use quadratic_graph::{GraphCurveTolerances, GraphCurveBuildLimits, GraphCurveVertex, GraphEdgeCurves, QualifiedGraphCurves, construct_graph_curves};
 
 pub use quadratic_graph::{GraphRootEdgeClock, GraphRootLocation, GraphRootBinding, QualifiedGraphBoundaryBindings, bind_graph_boundary_roots, GraphBoundaryRoot, GraphBoundaryRootLimits, QualifiedGraphBoundaryRoots, qualify_graph_boundary_roots};
-
 pub use quadratic_graph::{QualifiedGraphSupport,qualify_graph_support};
-
 pub use quadratic_graph::{QualifiedPolynomialSurface,qualify_polynomial_surface};
-
 mod polynomial_order;
 pub use polynomial_order::{GraphOrderLimits, QualifiedGraphMaterialOrder, certify_polynomial_graph_order, prove_polynomial_graph_boundary_side, prove_graph_projection_inside};
-
 mod algebraic;
 pub use algebraic::{SsThirdSurfaceBranchLimits,SsThirdSurfaceBranchEntry,QualifiedSsThirdSurfaceBranchCensus,SsThirdSurfaceExclusionKind,QualifiedSsThirdSurfaceExclusion,SsThirdSurfaceMembershipLimits,QualifiedSsThirdSurfacePoint,QualifiedSsThirdSurfaceCandidates,qualify_ss_third_surface_candidates,QualifiedPoleSsRootArc,qualify_pole_ss_root_arc,DeflatedSsFiberLimits,DeflatedSsFiberReport,QualifiedDeflatedSsFiber,DeflatedSsFiberResult,qualify_deflated_ss_fiber,QualifiedSsPoleStratum,QualifiedSsPoleSaturation,qualify_ss_pole_stratum,qualify_ss_pole_saturation,ExactSsDeflationProof,QualifiedSsDeflatedSystem,qualify_ss_deflated_system,ExactSsGroebnerLimits,QualifiedSsGroebnerBasis,qualify_ss_groebner_basis,ExactSsAlgebraLimits,ExactSsPolynomial,QualifiedOriginalSsIdeal,qualify_original_ss_ideal};
 mod root_curve;
-pub use root_curve::{SsRootEdgePartitionLimits,QualifiedOriginalSsEdgePartition,SsAlgebraicRootCensusLimits,QualifiedSsAlgebraicRootCensus,QualifiedOriginalSsJoint,QualifiedOriginalSsKnotJoint,QualifiedOriginalSsWireJoint,QualifiedOriginalSsGraphWindow,OriginalSsRootEdge,OriginalSsRootWire,OriginalSsPortKind,QualifiedOriginalSsPort,bind_original_ss_port,bind_original_ss_third_port,OriginalSsRootCurve,OriginalSsRootPoint,SsAlgebraicClockLimits,SsAlgebraicClockEnclosure,QualifiedSsAlgebraicClock,SsAlgebraicPointLimits,SsAlgebraicPointBounds,OriginalSsAlgebraicPoint,QualifiedSsAlgebraicPort,OriginalSsAlgebraicEdge,OriginalSsCurveLimits,OriginalSsCurveBounds};
+pub use root_curve::{SsRootEdgePartitionLimits, QualifiedOriginalSsEdgePartition, SsAlgebraicRootCensusLimits, QualifiedSsAlgebraicRootCensus, QualifiedOriginalSsJoint, QualifiedOriginalSsGraphWindow, OriginalSsRootEdge, OriginalSsRootWire, OriginalSsPortKind, QualifiedOriginalSsPort, bind_original_ss_port, bind_original_ss_third_port, bind_original_ss_third_port_with_phase, OriginalSsRootCurve, OriginalSsRootPoint, SsAlgebraicClockLimits, SsAlgebraicClockEnclosure, QualifiedSsAlgebraicClock, SsAlgebraicPointLimits, SsAlgebraicPointBounds, OriginalSsAlgebraicPoint, QualifiedSsAlgebraicPort, OriginalSsAlgebraicEdge, OriginalSsCurveLimits, OriginalSsCurveBounds, QualifiedOriginalSsKnotJoint, QualifiedOriginalSsWireJoint};
 pub use root_curve::{OriginalSsWindingLimits,QualifiedOriginalSsWinding,qualify_original_ss_winding};
 pub use algebraic::{QualifiedSsRootNode,QualifiedSsBlowupChart,QualifiedSsBlowupRootArc,qualify_ss_root_node,qualify_ss_blowup_chart,qualify_ss_blowup_root_arc};
 pub use root_curve::{OriginalSsPathLimits,QualifiedOriginalSsPathParity,qualify_original_ss_path_parity};

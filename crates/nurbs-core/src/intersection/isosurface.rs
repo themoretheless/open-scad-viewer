@@ -382,7 +382,6 @@ pub fn polygonize_sdf(
 
 /// Per-cell vertex for dual contouring: QEF minimizer clamped to the cell,
 /// centroid of edge intersections as the degenerate fallback.
-#[allow(clippy::too_many_arguments)]
 fn cell_vertex(
     eval: &mut Evaluator,
     corners: [[f64; 3]; 8],

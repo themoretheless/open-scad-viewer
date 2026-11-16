@@ -50,34 +50,48 @@ pub struct OwnedPeriodicSupportIncidence {
     max_entities: usize,
     data: Data,
 }
-fn derive(o: &OwnedPeriodicSupportIncidence) -> Result<Data> {
-    let _replay = super::periodic_replay::scope();
-    if !(1..=1000000).contains(&o.max_entities) {
-        return Err(refused("Invalid original boundary incidence allowance"));
+const MAX_ENTITIES: usize = 1000000;
+/// The incidence records under construction, counted against the allowance.
+struct Incidence {
+    max_entities: usize,
+    entities: usize,
+    /// Trace of every (walk, part).
+    lookup: BTreeMap<(usize, usize), usize>,
+    vertex_map: BTreeMap<usize, usize>,
+    vertices: Vec<OriginalPeriodicSurfaceIncidenceVertex>,
+    edges: Vec<OriginalPeriodicSurfaceIncidenceEdge>,
+}
+impl Incidence {
+    /// Incidence vertex of one original source vertex, created on first use.
+    fn vertex(&mut self, source_vertex: usize) -> Result<usize> {
+        if let Some(&i) = self.vertex_map.get(&source_vertex) {
+            return Ok(i);
+        }
+        self.entities = self
+            .entities
+            .checked_add(1)
+            .filter(|n| *n <= self.max_entities)
+            .ok_or_else(|| refused("Original boundary vertex census exceeds allowance"))?;
+        let i = self.vertices.len();
+        self.vertex_map.insert(source_vertex, i);
+        self.vertices.push(OriginalPeriodicSurfaceIncidenceVertex {
+            source_vertex,
+            endpoints: Vec::new(),
+            fans: Vec::new(),
+        });
+        Ok(i)
     }
-    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
-    let lifts = o.owner.owner().owner().owner();
-    let cycles = lifts.owner();
-    let ports = cycles.rotation().owner();
-    let traces = o.owner.traces();
-    // Edges + two endpoint uses + one successor fan per trace, plus loops.
-    // Check this census BEFORE allocating the derived records and lookup maps.
-    let mut entities = traces
-        .len()
-        .checked_mul(4)
-        .and_then(|n| n.checked_add(lifts.walks().len()))
-        .filter(|n| *n <= o.max_entities)
-        .ok_or_else(|| refused("Complete original boundary incidence exceeds allowance"))?;
-    let mut lookup = BTreeMap::new();
-    let mut vertex_map = BTreeMap::new();
-    let mut vertices: Vec<OriginalPeriodicSurfaceIncidenceVertex> = Vec::new();
-    let mut edges = Vec::with_capacity(traces.len());
-    for (trace, t) in traces.iter().enumerate() {
-        if lookup.insert((t.walk, t.part), trace).is_some() {
+    /// Edge of one trace between the vertices of its dart and twin ports.
+    fn edge(
+        &mut self,
+        trace: usize,
+        t: &OriginalPeriodicSurfaceTrace,
+        ports: &[OriginalPeriodicPort],
+    ) -> Result<()> {
+        if self.lookup.insert((t.walk, t.part), trace).is_some() {
             return Err(refused("Boundary incidence repeats an original trace"));
         }
         let p = ports
-            .ports()
             .get(t.original.dart)
             .ok_or_else(|| refused("Boundary incidence lost original port"))?;
         if p.end > 1
@@ -96,7 +110,6 @@ fn derive(o: &OwnedPeriodicSupportIncidence) -> Result<Data> {
             .and_then(|n| n.checked_add(1 - p.end))
             .ok_or_else(|| refused("Boundary incidence twin overflow"))?;
         let q = ports
-            .ports()
             .get(twin)
             .ok_or_else(|| refused("Boundary incidence lost actual opposite port"))?;
         if q.edge != p.edge || q.end != 1 - p.end {
@@ -104,43 +117,37 @@ fn derive(o: &OwnedPeriodicSupportIncidence) -> Result<Data> {
         }
         let mut ends = [0, 0];
         for (end, source_vertex) in [p.vertex, q.vertex].into_iter().enumerate() {
-            let vertex = if let Some(&i) = vertex_map.get(&source_vertex) {
-                i
-            } else {
-                entities = entities
-                    .checked_add(1)
-                    .filter(|n| *n <= o.max_entities)
-                    .ok_or_else(|| refused("Original boundary vertex census exceeds allowance"))?;
-                let i = vertices.len();
-                vertex_map.insert(source_vertex, i);
-                vertices.push(OriginalPeriodicSurfaceIncidenceVertex {
-                    source_vertex,
-                    endpoints: Vec::new(),
-                    fans: Vec::new(),
-                });
-                i
-            };
+            let vertex = self.vertex(source_vertex)?;
             ends[end] = vertex;
-            vertices[vertex]
+            self.vertices[vertex]
                 .endpoints
                 .push(OriginalPeriodicSurfaceEndpointUse { trace, end });
         }
-        edges.push(OriginalPeriodicSurfaceIncidenceEdge {
+        self.edges.push(OriginalPeriodicSurfaceIncidenceEdge {
             trace,
             vertices: ends,
         });
+        Ok(())
     }
-    let mut loops = Vec::with_capacity(lifts.walks().len());
-    let mut used = vec![false; traces.len()];
-    for (walk, w) in lifts.walks().iter().enumerate() {
-        if w.parts.is_empty() {
+    /// Loop of one selected walk. Consecutive traces stay in one material
+    /// component, follow the source-sector successor and share a vertex,
+    /// where they form one boundary fan.
+    fn walk_loop(
+        &mut self,
+        walk: usize,
+        parts: usize,
+        traces: &[OriginalPeriodicSurfaceTrace],
+        successor: &[Option<usize>],
+        used: &mut [bool],
+    ) -> Result<OriginalPeriodicSurfaceIncidenceLoop> {
+        if parts == 0 {
             return Err(refused(
                 "Original boundary incidence has an empty selected walk",
             ));
         }
-        let indices = (0..w.parts.len())
+        let indices = (0..parts)
             .map(|part| {
-                lookup
+                self.lookup
                     .get(&(walk, part))
                     .copied()
                     .ok_or_else(|| refused("Original boundary incidence omits a selected part"))
@@ -158,15 +165,16 @@ fn derive(o: &OwnedPeriodicSupportIncidence) -> Result<Data> {
                 ));
             }
             used[incoming] = true;
-            if cycles.successor().get(traces[incoming].original.dart)
+            let shared = self.edges[incoming].vertices[1];
+            if successor.get(traces[incoming].original.dart)
                 != Some(&Some(traces[outgoing].original.dart))
-                || edges[incoming].vertices[1] != edges[outgoing].vertices[0]
+                || shared != self.edges[outgoing].vertices[0]
             {
                 return Err(refused(
                     "Boundary incidence lost its actual source-sector successor or physical vertex",
                 ));
             }
-            vertices[edges[incoming].vertices[1]]
+            self.vertices[shared]
                 .fans
                 .push(OriginalPeriodicSurfaceBoundaryFan {
                     component,
@@ -175,58 +183,96 @@ fn derive(o: &OwnedPeriodicSupportIncidence) -> Result<Data> {
                     outgoing,
                 });
         }
-        loops.push(OriginalPeriodicSurfaceIncidenceLoop {
+        Ok(OriginalPeriodicSurfaceIncidenceLoop {
             component,
             walk,
             traces: indices,
-        });
+        })
+    }
+}
+/// Every endpoint use at a vertex belongs to exactly one fan: the end of
+/// its incoming trace or the start of its outgoing trace.
+fn verify_fans(v: &OriginalPeriodicSurfaceIncidenceVertex) -> Result<()> {
+    if v.endpoints.len() != v.fans.len() * 2 {
+        return Err(refused(
+            "Original incidence has incomplete material endpoint fans",
+        ));
+    }
+    let mut remaining = v
+        .endpoints
+        .iter()
+        .map(|u| (u.trace, u.end))
+        .collect::<BTreeSet<_>>();
+    if remaining.len() != v.endpoints.len() {
+        return Err(refused("Original incidence repeats an endpoint use"));
+    }
+    for f in &v.fans {
+        for endpoint in [(f.incoming, 1), (f.outgoing, 0)] {
+            if !remaining.remove(&endpoint) {
+                return Err(refused(
+                    "Original incidence duplicates or rebinds a material fan endpoint",
+                ));
+            }
+        }
+    }
+    if !remaining.is_empty() {
+        return Err(refused("Original incidence lost endpoint fan coverage"));
+    }
+    Ok(())
+}
+fn derive(o: &OwnedPeriodicSupportIncidence) -> Result<Data> {
+    let _replay = super::periodic_replay::scope();
+    if !(1..=MAX_ENTITIES).contains(&o.max_entities) {
+        return Err(refused("Invalid original boundary incidence allowance"));
+    }
+    super::periodic_replay::verify_arc(&o.owner, |owner| owner.reverify_source())?;
+    let lifts = o.owner.owner().owner().owner();
+    let cycles = lifts.owner();
+    let ports = cycles.rotation().owner();
+    let traces = o.owner.traces();
+    // Edges + two endpoint uses + one successor fan per trace, plus loops.
+    // Check this census BEFORE allocating the derived records and lookup maps.
+    let entities = traces
+        .len()
+        .checked_mul(4)
+        .and_then(|n| n.checked_add(lifts.walks().len()))
+        .filter(|n| *n <= o.max_entities)
+        .ok_or_else(|| refused("Complete original boundary incidence exceeds allowance"))?;
+    let mut incidence = Incidence {
+        max_entities: o.max_entities,
+        entities,
+        lookup: BTreeMap::new(),
+        vertex_map: BTreeMap::new(),
+        vertices: Vec::new(),
+        edges: Vec::with_capacity(traces.len()),
+    };
+    for (trace, t) in traces.iter().enumerate() {
+        incidence.edge(trace, t, ports.ports())?;
+    }
+    let mut loops = Vec::with_capacity(lifts.walks().len());
+    let mut used = vec![false; traces.len()];
+    for (walk, w) in lifts.walks().iter().enumerate() {
+        loops.push(incidence.walk_loop(
+            walk,
+            w.parts.len(),
+            traces,
+            cycles.successor(),
+            &mut used,
+        )?);
     }
     if used.iter().any(|v| !*v) {
         return Err(refused(
             "Original incidence omitted selected trace coverage",
         ));
     }
-    for v in &vertices {
-        if v.endpoints.len() != v.fans.len() * 2 {
-            return Err(refused(
-                "Original incidence has incomplete material endpoint fans",
-            ));
-        }
-        let mut remaining = v
-            .endpoints
-            .iter()
-            .map(|u| (u.trace, u.end))
-            .collect::<BTreeSet<_>>();
-        if remaining.len() != v.endpoints.len() {
-            return Err(refused("Original incidence repeats an endpoint use"));
-        }
-        for f in &v.fans {
-            for u in [
-                OriginalPeriodicSurfaceEndpointUse {
-                    trace: f.incoming,
-                    end: 1,
-                },
-                OriginalPeriodicSurfaceEndpointUse {
-                    trace: f.outgoing,
-                    end: 0,
-                },
-            ] {
-                if !remaining.remove(&(u.trace, u.end)) {
-                    return Err(refused(
-                        "Original incidence duplicates or rebinds a material fan endpoint",
-                    ));
-                }
-            }
-        }
-        if !remaining.is_empty() {
-            return Err(refused("Original incidence lost endpoint fan coverage"));
-        }
+    for v in &incidence.vertices {
+        verify_fans(v)?;
     }
     Ok(Data {
-        vertices,
-        edges,
+        vertices: incidence.vertices,
+        edges: incidence.edges,
         loops,
-        entities,
+        entities: incidence.entities,
     })
 }
 impl OwnedPeriodicSupportIncidence {

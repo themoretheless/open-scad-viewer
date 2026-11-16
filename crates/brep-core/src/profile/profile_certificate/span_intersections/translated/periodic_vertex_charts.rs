@@ -88,11 +88,13 @@ type Assigned = (
     [BigInt; 2],
     Option<(OriginalPeriodicChartCutRef, usize, bool)>,
 );
-fn derive(o: &OwnedPeriodicVertexCharts) -> Result<(Vec<OriginalPeriodicVertexChart>, usize)> {
-    if o.max_refinements > 512 || o.max_steps == 0 || o.max_steps > 1000000 {
-        return Err(refused("Invalid complete local vertex chart allowance"));
-    }
-    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
+const MAX_REFINEMENTS: usize = 512;
+const MAX_STEPS: usize = 1000000;
+type Adjacency = BTreeMap<OriginalPeriodicChartCutRef, Vec<ArcStep>>;
+/// Physical vertex of every original cut use; each cut has one vertex.
+fn vertex_classes(
+    o: &OwnedPeriodicVertexCharts,
+) -> Result<BTreeMap<OriginalPeriodicChartCutRef, usize>> {
     let mut vertex_of = BTreeMap::new();
     for (vertex, v) in o.owner.vertices().iter().enumerate() {
         for &r in &v.uses {
@@ -103,7 +105,15 @@ fn derive(o: &OwnedPeriodicVertexCharts) -> Result<(Vec<OriginalPeriodicVertexCh
             }
         }
     }
-    let mut adjacency: BTreeMap<OriginalPeriodicChartCutRef, Vec<ArcStep>> = BTreeMap::new();
+    Ok(vertex_of)
+}
+/// Both directions of every contact relation as period-shift steps, and the
+/// relations of every vertex.
+fn transport_graph(
+    o: &OwnedPeriodicVertexCharts,
+    vertex_of: &BTreeMap<OriginalPeriodicChartCutRef, usize>,
+) -> Result<(Adjacency, Vec<Vec<usize>>)> {
+    let mut adjacency = Adjacency::new();
     let mut relations = vec![Vec::new(); o.owner.vertices().len()];
     for (index, r) in o.owner.relations().iter().enumerate() {
         let a = *vertex_of
@@ -128,34 +138,37 @@ fn derive(o: &OwnedPeriodicVertexCharts) -> Result<(Vec<OriginalPeriodicVertexCh
             .push((r.cuts[0], d.map(|q| -q), index, true));
         relations[a].push(index);
     }
-    let arrangement = o.owner.owner().owner();
-    let cover = arrangement.pieces();
-    let originals = cover
-        .sources()
-        .iter()
-        .map(cells)
-        .collect::<Result<Vec<_>>>()?;
-    let chart = cover.chart();
-    let periods = chart.map(|v| Q::from_float(v[1]).unwrap() - Q::from_float(v[0]).unwrap());
-    let mut charts = Vec::new();
-    let mut steps = 0;
-    for (vertex, v) in o.owner.vertices().iter().enumerate() {
-        let canonical = *v
-            .uses
-            .first()
-            .ok_or_else(|| refused("Physical vertex has no actual original cut use"))?;
-        let mut assigned: BTreeMap<OriginalPeriodicChartCutRef, Assigned> = BTreeMap::new();
+    Ok((adjacency, relations))
+}
+/// Charts of every physical vertex, with the transport steps charged so far.
+struct ChartBuilder<'a> {
+    o: &'a OwnedPeriodicVertexCharts,
+    adjacency: Adjacency,
+    cover: &'a OwnedOriginalPeriodicPieces,
+    originals: Vec<Vec<Cell>>,
+    periods: [Q; 2],
+    steps: usize,
+}
+impl ChartBuilder<'_> {
+    /// Period shift of every use reachable from the canonical use, with the
+    /// relation it was reached through; cycles must close without defect.
+    fn transport(
+        &mut self,
+        canonical: OriginalPeriodicChartCutRef,
+    ) -> Result<BTreeMap<OriginalPeriodicChartCutRef, Assigned>> {
+        let mut assigned = BTreeMap::new();
         assigned.insert(canonical, ([BigInt::from(0), BigInt::from(0)], None));
         let mut stack = vec![canonical];
         while let Some(source) = stack.pop() {
-            let current = assigned[&source].0.clone();
-            for (target, delta, index, reverse) in adjacency.get(&source).into_iter().flatten() {
-                if steps >= o.max_steps {
+            let current: [BigInt; 2] = assigned[&source].0.clone();
+            for (target, delta, index, reverse) in self.adjacency.get(&source).into_iter().flatten()
+            {
+                if self.steps >= self.o.max_steps {
                     return Err(refused(
                         "Complete vertex chart transport exhausted its relation allowance",
                     ));
                 }
-                steps += 1;
+                self.steps += 1;
                 let shift = [&current[0] + &delta[0], &current[1] + &delta[1]];
                 if let Some(existing) = assigned.get(target) {
                     if existing.0 != shift {
@@ -169,58 +182,121 @@ fn derive(o: &OwnedPeriodicVertexCharts) -> Result<(Vec<OriginalPeriodicVertexCh
                 }
             }
         }
-        if assigned.len() != v.uses.len() {
+        Ok(assigned)
+    }
+    /// One use placed in the chart: its original cut point translated by the
+    /// piece offset and the transported period shift.
+    fn chart_use(
+        &self,
+        source: OriginalPeriodicChartCutRef,
+        (shift, parent): Assigned,
+    ) -> Result<OriginalPeriodicVertexChartUse> {
+        let translation = std::array::from_fn::<_, 2, _>(|axis| {
+            Q::from_integer(shift[axis].clone()) * &self.periods[axis]
+        });
+        let piece = &self.cover.pieces()[source.piece];
+        let parameter = self.o.owner.owner().cuts()[source.piece][source.cut]
+            .value
+            .clone();
+        let cell = &self.originals[piece.source][piece.cell];
+        let f = decode_polynomial(&parameter.primitive)?;
+        let map = decode_polynomial(&parameter.parameter)?;
+        let root = [
+            decode_ratio(&parameter.interval[0])?,
+            decode_ratio(&parameter.interval[1])?,
+        ];
+        let offset = [
+            decode_ratio(&piece.translation[0])? + &translation[0],
+            decode_ratio(&piece.translation[1])? + &translation[1],
+        ];
+        let point = arithmetic::shore_events::translated_point(
+            &cell.net,
+            &cell.domain,
+            &map,
+            &f,
+            &root,
+            &offset,
+            self.o.max_refinements,
+        )?;
+        Ok(OriginalPeriodicVertexChartUse {
+            source,
+            period_shift: shift.map(|q| q.to_string()),
+            translation: translation.map(|q| ratio(&q)),
+            parent,
+            parameter,
+            position: point.map(|c| c.map(|p| polynomial(&p))),
+        })
+    }
+    /// The chart of one vertex: every use must be reached by transport.
+    fn chart(
+        &mut self,
+        vertex: usize,
+        uses: &[OriginalPeriodicChartCutRef],
+        relations: Vec<usize>,
+    ) -> Result<OriginalPeriodicVertexChart> {
+        let canonical = *uses
+            .first()
+            .ok_or_else(|| refused("Physical vertex has no actual original cut use"))?;
+        let mut assigned = self.transport(canonical)?;
+        if assigned.len() != uses.len() {
             return Err(refused(
                 "Physical vertex has unconnected/unproved chart uses",
             ));
         }
-        let mut uses = Vec::new();
-        for source in &v.uses {
-            let (shift, parent) = assigned[source].clone();
-            let translation = std::array::from_fn::<_, 2, _>(|axis| {
-                Q::from_integer(shift[axis].clone()) * &periods[axis]
-            });
-            let piece = &cover.pieces()[source.piece];
-            let parameter = o.owner.owner().cuts()[source.piece][source.cut]
-                .value
-                .clone();
-            let cell = &originals[piece.source][piece.cell];
-            let f = decode_polynomial(&parameter.primitive)?;
-            let map = decode_polynomial(&parameter.parameter)?;
-            let root = [
-                decode_ratio(&parameter.interval[0])?,
-                decode_ratio(&parameter.interval[1])?,
-            ];
-            let offset = [
-                decode_ratio(&piece.translation[0])? + &translation[0],
-                decode_ratio(&piece.translation[1])? + &translation[1],
-            ];
-            let point = arithmetic::shore_events::translated_point(
-                &cell.net,
-                &cell.domain,
-                &map,
-                &f,
-                &root,
-                &offset,
-                o.max_refinements,
-            )?;
-            uses.push(OriginalPeriodicVertexChartUse {
-                source: *source,
-                period_shift: shift.map(|q| q.to_string()),
-                translation: translation.map(|q| ratio(&q)),
-                parent,
-                parameter,
-                position: point.map(|c| c.map(|p| polynomial(&p))),
-            });
-        }
-        charts.push(OriginalPeriodicVertexChart {
+        let uses = uses
+            .iter()
+            .map(|source| {
+                let entry = assigned.remove(source).ok_or_else(|| {
+                    refused("Physical vertex has unconnected/unproved chart uses")
+                })?;
+                self.chart_use(*source, entry)
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(OriginalPeriodicVertexChart {
             vertex,
             canonical,
             uses,
-            relations: relations[vertex].clone(),
-        });
+            relations,
+        })
     }
-    Ok((charts, steps))
+}
+fn derive(o: &OwnedPeriodicVertexCharts) -> Result<(Vec<OriginalPeriodicVertexChart>, usize)> {
+    if o.max_refinements > MAX_REFINEMENTS || !(1..=MAX_STEPS).contains(&o.max_steps) {
+        return Err(refused("Invalid complete local vertex chart allowance"));
+    }
+    super::periodic_replay::verify_arc(&o.owner, |x| x.reverify_source())?;
+    let vertex_of = vertex_classes(o)?;
+    let (adjacency, relations) = transport_graph(o, &vertex_of)?;
+    let cover = o.owner.owner().owner().pieces();
+    let originals = cover
+        .sources()
+        .iter()
+        .map(cells)
+        .collect::<Result<Vec<_>>>()?;
+    let mut periods = [Q::zero(), Q::zero()];
+    for (period, d) in periods.iter_mut().zip(cover.chart()) {
+        let [Some(low), Some(high)] = d.map(Q::from_float) else {
+            return Err(refused("Original periodic chart bound is not finite"));
+        };
+        *period = high - low;
+    }
+    let mut builder = ChartBuilder {
+        o,
+        adjacency,
+        cover,
+        originals,
+        periods,
+        steps: 0,
+    };
+    let charts = o
+        .owner
+        .vertices()
+        .iter()
+        .zip(relations)
+        .enumerate()
+        .map(|(vertex, (v, relations))| builder.chart(vertex, &v.uses, relations))
+        .collect::<Result<Vec<_>>>()?;
+    Ok((charts, builder.steps))
 }
 impl OwnedPeriodicVertexCharts {
     pub fn owner(&self) -> &Arc<OwnedPeriodicQuotientGraph> {

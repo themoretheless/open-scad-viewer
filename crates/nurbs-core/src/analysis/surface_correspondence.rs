@@ -115,20 +115,38 @@ pub fn inspect(a: &Surface, b: &Surface, tolerance: f64, limits: Limits) -> Resu
     if limits.cells == 0 {
         return Ok(out);
     }
-    if a.degree_u == b.degree_u
+    let same_spline_basis = a.degree_u == b.degree_u
         && a.degree_v == b.degree_v
         && a.knots_u == b.knots_u
-        && a.knots_v == b.knots_v
-        && a.weights == b.weights
-    {
+        && a.knots_v == b.knots_v;
+    let mut same_weights = a.weights == b.weights;
+    if same_spline_basis && !same_weights {
+        // A common binary scale cancels from all rational basis functions.
+        // The division proposes a scale only. Check every product exactly.
+        let scale = b.weights[0][0] / a.weights[0][0];
+        if scale.is_normal() && scale.to_bits().trailing_zeros() >= 52 {
+            same_weights = true;
+            for (&x, &y) in a.weights.iter().flatten().zip(b.weights.iter().flatten()) {
+                if out.products == limits.products {
+                    return Ok(out);
+                }
+                out.products += 1;
+                if crate::exact_curve_segments::exact_mul(x, scale) != Some(y) {
+                    same_weights = false;
+                    break;
+                }
+            }
+        }
+    }
+    if same_spline_basis && same_weights {
         // Identical positive rational basis: difference is a convex combination
         // of original control differences. No rounded decomposition is needed.
         let cost = 3 * a.control_points.len() * a.control_points[0].len();
-        if cost > limits.products {
+        if cost > limits.products - out.products {
             return Ok(out);
         }
         out.cells = 1;
-        out.products = cost;
+        out.products += cost;
         let mut maximum = 0_f64;
         for (pa, pb) in a
             .control_points

@@ -1,6 +1,8 @@
 /**
  * Display-quality preset of one viewer (low / medium / high), persisted per
- * viewer key and applied to the renderer's LOD scheduler budget.
+ * viewer key. Choosing a preset writes its byte budget and target error into
+ * the shared display budget setting (keeping the box proxy choice) and applies
+ * that budget to the renderer's LOD scheduler.
  */
 import { ref, watch, type Ref } from 'svet'
 import { storageGet, storageSet } from '../core/safeStorage'
@@ -10,6 +12,8 @@ import {
   type DisplayBudget,
   type DisplayQualityPreset,
 } from '../render/displayScheduler'
+import { boxProxiesOn } from '../render/displayScheduler'
+import { getDisplayBudget, setDisplayBudget as storeDisplayBudget } from '../render/displayBudgetSetting'
 import { registerDisplayLevelProvider, WorkerDisplayLevelProvider } from '../render/onDemandLevels'
 
 /** Finer certified B-rep levels are produced on demand by a dedicated worker. */
@@ -42,11 +46,13 @@ export function useDisplayQuality(options: {
 }) {
   registerDisplayLevelWorker()
   const preset = ref<DisplayQualityPreset>(readDisplayQuality(options.viewer))
-  const apply = () => options.getRenderer()?.setDisplayBudget(DISPLAY_BUDGET_PRESETS[preset.value])
+  const apply = () => options.getRenderer()?.setDisplayBudget(getDisplayBudget())
   function setDisplayQuality(next: DisplayQualityPreset) {
     if (!isDisplayQualityPreset(next)) return
     preset.value = next
     storageSet(displayQualityStorageKey(options.viewer), next)
+    const { budgetBytes, targetErrorPixels } = DISPLAY_BUDGET_PRESETS[next]
+    storeDisplayBudget({ budgetBytes, targetErrorPixels, boundingBoxProxies: boxProxiesOn(getDisplayBudget()) })
     apply()
   }
   if (options.rendererReady) watch(options.rendererReady, ready => ready && apply(), { immediate: true })

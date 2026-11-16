@@ -53,6 +53,32 @@ fn sources(form: [f64; 4], center: [f64; 2]) -> ss::FiberSources {
 fn contains(i: [f64; 2], x: f64) {
     assert!(i[0] <= x && x <= i[1], "{i:?} misses {x}")
 }
+
+#[test]
+fn affine_graph_gap_has_exact_finite_boundary_ports() {
+    let qualify = |slope: [f64; 2], constant: f64| {
+        let source = sources([0.; 4], [0.5; 2]);
+        let mut first = source.first().clone();
+        for point in first.control_points.iter_mut().flatten() {
+            point[2] += constant + slope[0] * point[0] + slope[1] * point[1];
+        }
+        let source = ss::FiberSources::new(&first, source.second()).unwrap();
+        ss::qualify_quadratic_graph_ss(&source, Default::default())
+    };
+    let line = qualify([1., -1.], 0.).unwrap();
+    assert_eq!(line.kind(), K::TransverseLine);
+    assert_eq!(line.edges()[0].multiplicity, 1);
+    assert_eq!(
+        line.edges()[0].geometry,
+        ss::OriginalGraphSSEdgeGeometry::Segment([[0., 0.], [1., 1.]])
+    );
+    line.reverify().unwrap();
+    let corner = qualify([1., 1.], 0.).unwrap();
+    assert_eq!(corner.kind(), K::IsolatedBoundaryPoint);
+    assert!(corner.edges().is_empty());
+    assert_eq!(qualify([1., 1.], 1.).unwrap().kind(), K::Empty);
+    assert!(qualify([3., 0.], -1.).is_err());
+}
 fn check_ellipse(form: [f64; 4], center: [f64; 2]) {
     let source = sources(form, center);
     let owner = ss::qualify_quadratic_graph_ss(&source, Default::default()).unwrap();

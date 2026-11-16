@@ -111,6 +111,14 @@ pub fn thicken_patch_with_cap(
     )
 }
 
+const MAX_DEGREE: usize = 16;
+const MAX_COORDINATE: f64 = 1e6;
+const MIN_TOLERANCE: f64 = 1e-10;
+const MAX_TOLERANCE: f64 = 1e-2;
+const MAX_LIMIT: usize = 1000000;
+const MAX_INSPECTION_CELLS: usize = 100000;
+const INPUT_CODE: &str = "BREP_THICKNESS_INPUT";
+
 fn thicken_impl(
     source: &Surface,
     signed_thickness: f64,
@@ -119,42 +127,7 @@ fn thicken_impl(
     cap: Option<(&Surface, f64, usize)>,
 ) -> Result<Report> {
     source.validate()?;
-    let clamped = |k: &[f64], p: usize, n: usize| {
-        n == p + 1 && k[..n].iter().all(|&x| x == k[p]) && k[n..].iter().all(|&x| x == k[n])
-    };
-    if !(1..=16).contains(&source.degree_u)
-        || !(1..=16).contains(&source.degree_v)
-        || source.periodic_u
-        || source.periodic_v
-        || !clamped(
-            &source.knots_u,
-            source.degree_u,
-            source.control_points.len(),
-        )
-        || !clamped(
-            &source.knots_v,
-            source.degree_v,
-            source.control_points[0].len(),
-        )
-        || source
-            .control_points
-            .iter()
-            .flatten()
-            .any(|p| p.len() != 3 || p.iter().any(|x| x.abs() > 1e6))
-        || !signed_thickness.is_finite()
-        || signed_thickness == 0.
-        || signed_thickness.abs() > 1e6
-        || !tolerance.is_finite()
-        || !(1e-10..=1e-2).contains(&tolerance)
-        || !(1..=1000000).contains(&limits.regularity_cells)
-        || !(1..=1000000).contains(&limits.agreement_cells)
-        || !(1..=1000000).contains(&limits.exact_work)
-    {
-        return Err(Error::new(
-            "BREP_THICKNESS_INPUT",
-            "Expected one bounded full rational Bezier chart, nonzero signed thickness, tolerance 1e-10..1e-2 and positive bounded work",
-        ));
-    }
+    admit_input(source, signed_thickness, tolerance, limits)?;
     let mut out = Report {
         model: None,
         stop: Stop::RegularityUnresolved,
@@ -168,113 +141,33 @@ fn thicken_impl(
         solid_geometry_certified: false,
         normal_offset_certificate: None,
     };
-    // Two exactly constant coordinates constrain the entire positive rational
-    // image to a line. Its two-dimensional normal is identically zero; no
-    // subdivision budget can repair this source-rank deficiency.
-    let fixed_axes = (0..3)
-        .filter(|&k| {
-            source
-                .control_points
-                .iter()
-                .flatten()
-                .all(|p| p[k] == source.control_points[0][0][k])
-        })
-        .count();
-    if fixed_axes >= 2 {
+    if source_rank_deficient(source) {
         out.stop = Stop::SourceDegenerate;
         return Ok(out);
     }
-    let source_reg = surface_regularity::inspect(source, limits.regularity_cells.min(100000))?;
-    out.regularity_cells += source_reg.cells;
-    let valid = source_reg.spanwise_regular;
-    out.regularity.push(source_reg);
-    if !valid {
+    if !inspect_regular(&mut out, source, limits)? {
         return Ok(out);
     }
-    let offset_surface = if let Some((candidate, error_tolerance, cells)) = cap {
-        let proof = surface_offset::certify_candidate(
-            source,
-            candidate,
-            signed_thickness,
-            error_tolerance,
-            cells,
-        )?;
-        let status = proof.status;
-        out.continuous_thickness_error_upper = proof.error_upper;
-        out.rounding_inclusive_thickness_certified =
-            status == surface_offset::CandidateStatus::Within;
-        out.normal_offset_certificate = Some(proof);
-        if status != surface_offset::CandidateStatus::Within {
-            out.stop = if status == surface_offset::CandidateStatus::Exceeds {
-                Stop::NormalOffsetExceedsTolerance
-            } else {
-                Stop::NormalOffsetUnresolved
-            };
-            return Ok(out);
-        }
-        candidate.clone()
-    } else {
-        let offset = match surface_offset::offset(source, signed_thickness, tolerance) {
-            Ok(candidate)
-                if candidate.surface.degree_u == source.degree_u
-                    && candidate.surface.degree_v == source.degree_v
-                    && candidate.surface.knots_u == source.knots_u
-                    && candidate.surface.knots_v == source.knots_v
-                    && candidate.surface.weights == source.weights =>
-            {
-                candidate
-            }
-            candidate => {
-                out.offset_fallback_reason = Some(match candidate {
-                Ok(_) => "Adaptive offset changed the original basis; retaining an exactly owned same-basis candidate".into(),
-                Err(error) => format!("Adaptive offset unavailable: {}", error.message),
-            });
-                surface_offset::offset_preserving_basis(source, signed_thickness)?
-            }
-        };
-        out.max_sampled_thickness_deviation = Some(offset.max_deviation);
-        if !offset.degenerate_regions.is_empty() || offset.exceeds_fold_free_bound {
-            out.stop = Stop::OffsetDegeneracy;
-            return Ok(out);
-        }
-        if offset.max_deviation > tolerance {
-            out.stop = Stop::SampledToleranceNotMet;
-            return Ok(out);
-        }
-        offset.surface
+    let offset_surface = match cap {
+        Some(cap) => certified_cap(&mut out, source, signed_thickness, cap)?,
+        None => sampled_offset(&mut out, source, signed_thickness, tolerance)?,
+    };
+    let Some(offset_surface) = offset_surface else {
+        return Ok(out);
     };
     if offset_surface
         .control_points
         .iter()
         .flatten()
-        .any(|p| p.iter().any(|x| !x.is_finite() || x.abs() > 1e6))
+        .any(|p| p.iter().any(|x| !x.is_finite() || x.abs() > MAX_COORDINATE))
     {
-        return Err(Error::new(
-            "BREP_THICKNESS_INPUT",
-            "Offset coordinates exceed bound",
-        ));
+        return Err(Error::new(INPUT_CODE, "Offset coordinates exceed bound"));
     }
-    let mut patches = Vec::with_capacity(6);
-    patches.push(source.clone());
-    patches.push(offset_surface);
-    for i in 0..4 {
-        patches.push(side(
-            &crate::rounded_patch_network::boundary(source, i).0,
-            &crate::rounded_patch_network::boundary(&patches[1], i).0,
-        ));
-    }
+    let patches = closed_patches(source, offset_surface);
     for patch in patches.iter().skip(1) {
-        if out.regularity_cells == limits.regularity_cells {
-            return Ok(out);
-        }
-        let r = surface_regularity::inspect(
-            patch,
-            (limits.regularity_cells - out.regularity_cells).min(100000),
-        )?;
-        out.regularity_cells += r.cells;
-        let valid = r.spanwise_regular;
-        out.regularity.push(r);
-        if !valid {
+        if out.regularity_cells == limits.regularity_cells
+            || !inspect_regular(&mut out, patch, limits)?
+        {
             return Ok(out);
         }
     }
@@ -301,4 +194,156 @@ fn thicken_impl(
         Stop::ConstructedSampledThickness
     };
     Ok(out)
+}
+
+fn admit_input(
+    source: &Surface,
+    signed_thickness: f64,
+    tolerance: f64,
+    limits: Limits,
+) -> Result<()> {
+    let clamped = |k: &[f64], p: usize, n: usize| {
+        n == p + 1 && k[..n].iter().all(|&x| x == k[p]) && k[n..].iter().all(|&x| x == k[n])
+    };
+    let columns = source.control_points.first().map_or(0, Vec::len);
+    let admitted = (1..=MAX_DEGREE).contains(&source.degree_u)
+        && (1..=MAX_DEGREE).contains(&source.degree_v)
+        && !source.periodic_u
+        && !source.periodic_v
+        && clamped(
+            &source.knots_u,
+            source.degree_u,
+            source.control_points.len(),
+        )
+        && clamped(&source.knots_v, source.degree_v, columns)
+        && !source
+            .control_points
+            .iter()
+            .flatten()
+            .any(|p| p.len() != 3 || p.iter().any(|x| x.abs() > MAX_COORDINATE))
+        && signed_thickness.is_finite()
+        && signed_thickness != 0.
+        && signed_thickness.abs() <= MAX_COORDINATE
+        && tolerance.is_finite()
+        && (MIN_TOLERANCE..=MAX_TOLERANCE).contains(&tolerance)
+        && (1..=MAX_LIMIT).contains(&limits.regularity_cells)
+        && (1..=MAX_LIMIT).contains(&limits.agreement_cells)
+        && (1..=MAX_LIMIT as u64).contains(&limits.exact_work);
+    if admitted {
+        Ok(())
+    } else {
+        Err(Error::new(
+            INPUT_CODE,
+            "Expected one bounded full rational Bezier chart, nonzero signed thickness, tolerance 1e-10..1e-2 and positive bounded work",
+        ))
+    }
+}
+
+/// Two exactly constant coordinates constrain the entire positive rational
+/// image to a line. Its two-dimensional normal is identically zero; no
+/// subdivision budget can repair this source-rank deficiency.
+fn source_rank_deficient(source: &Surface) -> bool {
+    let Some(first) = source.control_points.iter().flatten().next() else {
+        return false;
+    };
+    let fixed_axes = (0..3)
+        .filter(|&k| {
+            source
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[k] == first[k])
+        })
+        .count();
+    fixed_axes >= 2
+}
+
+/// Inspect one patch within the remaining shared budget; records the report.
+fn inspect_regular(out: &mut Report, patch: &Surface, limits: Limits) -> Result<bool> {
+    let r = surface_regularity::inspect(
+        patch,
+        (limits.regularity_cells - out.regularity_cells).min(MAX_INSPECTION_CELLS),
+    )?;
+    out.regularity_cells += r.cells;
+    let valid = r.spanwise_regular;
+    out.regularity.push(r);
+    Ok(valid)
+}
+
+fn certified_cap(
+    out: &mut Report,
+    source: &Surface,
+    signed_thickness: f64,
+    (candidate, error_tolerance, cells): (&Surface, f64, usize),
+) -> Result<Option<Surface>> {
+    let proof = surface_offset::certify_candidate(
+        source,
+        candidate,
+        signed_thickness,
+        error_tolerance,
+        cells,
+    )?;
+    let status = proof.status;
+    out.continuous_thickness_error_upper = proof.error_upper;
+    out.rounding_inclusive_thickness_certified = status == surface_offset::CandidateStatus::Within;
+    out.normal_offset_certificate = Some(proof);
+    if status != surface_offset::CandidateStatus::Within {
+        out.stop = if status == surface_offset::CandidateStatus::Exceeds {
+            Stop::NormalOffsetExceedsTolerance
+        } else {
+            Stop::NormalOffsetUnresolved
+        };
+        return Ok(None);
+    }
+    Ok(Some(candidate.clone()))
+}
+
+fn sampled_offset(
+    out: &mut Report,
+    source: &Surface,
+    signed_thickness: f64,
+    tolerance: f64,
+) -> Result<Option<Surface>> {
+    let offset = match surface_offset::offset(source, signed_thickness, tolerance) {
+        Ok(candidate)
+            if candidate.surface.degree_u == source.degree_u
+                && candidate.surface.degree_v == source.degree_v
+                && candidate.surface.knots_u == source.knots_u
+                && candidate.surface.knots_v == source.knots_v
+                && candidate.surface.weights == source.weights =>
+        {
+            candidate
+        }
+        candidate => {
+            out.offset_fallback_reason = Some(match candidate {
+                Ok(_) => "Adaptive offset changed the original basis; retaining an exactly owned same-basis candidate".into(),
+                Err(error) => format!("Adaptive offset unavailable: {}", error.message),
+            });
+            surface_offset::offset_preserving_basis(source, signed_thickness)?
+        }
+    };
+    out.max_sampled_thickness_deviation = Some(offset.max_deviation);
+    if !offset.degenerate_regions.is_empty() || offset.exceeds_fold_free_bound {
+        out.stop = Stop::OffsetDegeneracy;
+        return Ok(None);
+    }
+    if offset.max_deviation > tolerance {
+        out.stop = Stop::SampledToleranceNotMet;
+        return Ok(None);
+    }
+    Ok(Some(offset.surface))
+}
+
+/// Source cap, offset cap and the four exactly shared ruled sides.
+fn closed_patches(source: &Surface, offset_surface: Surface) -> Vec<Surface> {
+    let mut patches = Vec::with_capacity(6);
+    patches.push(source.clone());
+    patches.push(offset_surface);
+    for i in 0..4 {
+        patches.push(side(
+            &crate::rounded_patch_network::boundary(source, i).0,
+            &crate::rounded_patch_network::boundary(&patches[1], i).0,
+        ));
+    }
+    patches
 }

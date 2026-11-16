@@ -16,6 +16,17 @@ type Data = (
     Vec<Option<usize>>,
     Vec<Vec<usize>>,
 );
+use super::super::filled_selection as selection;
+const MESSAGES: selection::Messages = selection::Messages {
+    product_overflow: "Unified material winding product overflow",
+    total_overflow: "Unified material winding total overflow",
+    sectors: "Unified exact vertex sectors disagree on material winding",
+    missing_twin: "Unified filled incoming twin is missing",
+    no_outgoing: "Unified filled boundary has no outgoing material branch",
+    permutation: "Unified filled successor is not a complete selected permutation",
+    missing_successor: "Unified filled successor is missing",
+    orbit: "Unified filled boundary joins a different orbit",
+};
 fn derive(
     cycles: &OwnedOriginalUnifiedCycles,
     sides: &[OwnedOriginalUnifiedSides],
@@ -45,93 +56,33 @@ fn derive(
             ));
         }
         side.reverify_source()?;
-        let weighted = |values: &[i64]| {
-            values
-                .iter()
-                .zip(coefficients)
-                .try_fold(0i64, |sum, (&w, &c)| {
-                    sum.checked_add(
-                        w.checked_mul(i64::from(c))
-                            .ok_or_else(|| refused("Unified material winding product overflow"))?,
-                    )
-                    .ok_or_else(|| refused("Unified material winding total overflow"))
-                })
-        };
+        let weighted = |values: &[i64]| selection::weighted(values, coefficients, &MESSAGES);
         winding.push([
             weighted(&side.certificates()[0].windings)?,
             weighted(&side.certificates()[1].windings)?,
         ]);
     }
-    let left = |h: usize| {
-        let p = &ports.ports()[h];
-        winding[p.edge][p.endpoint]
-    };
-    let right = |h: usize| {
-        let p = &ports.ports()[h];
-        winding[p.edge][1 - p.endpoint]
-    };
-    for r in rotation.rotations() {
-        for i in 0..r.len() {
-            if left(r[i]) != right(r[(i + 1) % r.len()]) {
-                return Err(refused(
-                    "Unified exact vertex sectors disagree on material winding",
-                ));
-            }
-        }
-    }
-    let count = ports.ports().len();
-    let retained = (0..count)
-        .filter(|&h| left(h) != 0 && right(h) == 0)
-        .collect::<Vec<_>>();
-    let mut selected = vec![false; count];
-    for &h in &retained {
-        selected[h] = true;
-    }
     let mut endpoint_ports = vec![[usize::MAX; 2]; graph.edges().len()];
     for (h, p) in ports.ports().iter().enumerate() {
         endpoint_ports[p.edge][p.endpoint] = h;
     }
-    let mut successor = vec![None; count];
-    let mut indegree = vec![0usize; count];
-    for &h in &retained {
-        let p = &ports.ports()[h];
-        let target = graph.edges()[p.edge].vertices[1 - p.endpoint];
-        let r = &rotation.rotations()[target];
-        let twin = endpoint_ports[p.edge][1 - p.endpoint];
-        let at = r
-            .iter()
-            .position(|&v| v == twin)
-            .ok_or_else(|| refused("Unified filled incoming twin is missing"))?;
-        let next = (1..=r.len())
-            .map(|step| r[(at + r.len() - step) % r.len()])
-            .find(|&v| selected[v])
-            .ok_or_else(|| refused("Unified filled boundary has no outgoing material branch"))?;
-        successor[h] = Some(next);
-        indegree[next] += 1;
+    let (retained, successor, boundaries) = selection::Halfedges {
+        count: ports.ports().len(),
+        rotations: rotation.rotations(),
+        side: |h: usize| {
+            let p = &ports.ports()[h];
+            [winding[p.edge][p.endpoint], winding[p.edge][1 - p.endpoint]]
+        },
+        arrive: |h: usize| {
+            let p = &ports.ports()[h];
+            (
+                graph.edges()[p.edge].vertices[1 - p.endpoint],
+                endpoint_ports[p.edge][1 - p.endpoint],
+            )
+        },
+        messages: &MESSAGES,
     }
-    if (0..count).any(|h| indegree[h] != usize::from(selected[h])) {
-        return Err(refused(
-            "Unified filled successor is not a complete selected permutation",
-        ));
-    }
-    let mut visited = vec![false; count];
-    let mut boundaries = Vec::new();
-    for &seed in &retained {
-        if visited[seed] {
-            continue;
-        }
-        let mut h = seed;
-        let mut boundary = Vec::new();
-        while !visited[h] {
-            visited[h] = true;
-            boundary.push(h);
-            h = successor[h].ok_or_else(|| refused("Unified filled successor is missing"))?;
-        }
-        if h != seed {
-            return Err(refused("Unified filled boundary joins a different orbit"));
-        }
-        boundaries.push(boundary);
-    }
+    .select()?;
     Ok((winding, retained, successor, boundaries))
 }
 impl OwnedOriginalUnifiedFilled {

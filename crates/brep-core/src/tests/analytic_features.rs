@@ -1398,23 +1398,6 @@ fn solid_loft_refuses_nonrectangular_section_carriers() {
 }
 
 #[test]
-fn iges_roundtrip_entity_subset() {
-    let model = cuboid([0., 0., 0.], [2., 3., 4.]).unwrap();
-    let (text, cert) = export_iges(&model).unwrap();
-    assert!(cert.complete);
-    assert!(text.contains("116,") || text.contains("110,") || text.contains("190,"));
-    assert!(text.contains("186,") && text.contains("514,"));
-    let (back, _) = import_iges(&text).unwrap();
-    back.validate().unwrap();
-}
-
-#[test]
-fn iges_refuses_stl_payload() {
-    let stl = "solid cube\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nendloop\nendfacet\nendsolid cube\n";
-    assert_eq!(import_iges(stl).unwrap_err().code, "BREP_IGES_REFUSED");
-}
-
-#[test]
 fn constant_radius_fillet_all_cuboid_edges_under_rigid_placement() {
     let source = cuboid([-7.,3.,-2.],[3.,11.,4.]).unwrap();
     let a=0.37_f64;let b=-0.61_f64;

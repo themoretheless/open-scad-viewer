@@ -57,6 +57,10 @@ jobs:
         run: cargo test --locked --manifest-path crates/Cargo.toml --workspace aag -- --test-threads=1
       - name: Test remaining native workspace cases
         run: cargo test --locked --manifest-path crates/Cargo.toml --workspace -- --skip aag
+      # Five source shell proofs take minutes each in debug; they are ignored above
+      # and run here once, optimized.
+      - name: Test slow source shell proofs
+        run: cargo test --locked --release --manifest-path crates/Cargo.toml -p brep-core --features slow-proofs --lib source_body -- --skip aag
       - name: Test required manifold library and ABI smoke
         run: |
           npm run test:manifold:core

@@ -171,6 +171,7 @@ fn taylor_integral(
 }
 /// Derivatives are with respect to the original surface parameters. Physical
 /// UV section area is applied exactly once, including non-unit knot domains.
+/// If the section exceeds the span budget, no spans are integrated.
 pub fn bound(
     s: &Surface,
     rectangle: [[f64; 2]; 2],
@@ -210,8 +211,20 @@ pub fn bound(
     };
     let mut total = I::point(0.);
     let mut density = [f64::INFINITY, f64::NEG_INFINITY];
-    for u in crate::sweep_support::audit::nonempty_spans(knots[0], degrees[0], counts[0]) {
-        for v in crate::sweep_support::audit::nonempty_spans(knots[1], degrees[1], counts[1]) {
+    let intersecting_spans = |axis: usize| {
+        crate::sweep_support::audit::nonempty_spans(knots[axis], degrees[axis], counts[axis])
+            .into_iter()
+            .filter(move |&i| {
+                knots[axis][i] < rectangle[axis][1] && knots[axis][i + 1] > rectangle[axis][0]
+            })
+    };
+    let u_spans: Vec<_> = intersecting_spans(0).collect();
+    let v_spans: Vec<_> = intersecting_spans(1).collect();
+    if u_spans.len().saturating_mul(v_spans.len()) > max_spans {
+        return Ok(out);
+    }
+    for u in u_spans {
+        for &v in &v_spans {
             let indices = [u, v];
             let section = std::array::from_fn(|a| {
                 [
@@ -219,12 +232,6 @@ pub fn bound(
                     rectangle[a][1].min(knots[a][indices[a] + 1]),
                 ]
             });
-            if section.iter().any(|a| a[0] >= a[1]) {
-                continue;
-            }
-            if out.spans == max_spans {
-                return Ok(out);
-            }
             out.spans += 1;
             let position = crate::surface_distance::rectangle_bounds(s, section)?;
             let j = crate::surface_injectivity::section_jacobian(s, indices, section)?;
@@ -359,12 +366,13 @@ mod tests {
         assert_eq!(r.spans, 2);
         let r = r.bound.unwrap();
         assert!(r.integral[0] <= 30. && 30. <= r.integral[1]);
-        assert!(
-            bound(&s, [[2., 4.], [3., 7.]], 2, 0., 1)
-                .unwrap()
-                .bound
-                .is_none()
-        );
+        let rejected = bound(&s, [[2., 4.], [3., 7.]], 2, 0., 1).unwrap();
+        assert!(rejected.bound.is_none());
+        assert_eq!(rejected.spans, 0);
+        let affordable = bound(&s, [[3., 4.], [3., 7.]], 2, 0., 1).unwrap();
+        assert_eq!(affordable.spans, 1);
+        let integral = affordable.bound.unwrap().integral;
+        assert!(integral[0] <= 15. && 15. <= integral[1]);
         let mut s = plane();
         s.weights = vec![vec![1., 2.], vec![3., 6.]];
         let r = bound(&s, [[2., 4.], [3., 7.]], 2, 0., 10)

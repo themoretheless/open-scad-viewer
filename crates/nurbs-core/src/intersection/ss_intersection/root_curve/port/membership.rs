@@ -11,6 +11,67 @@ pub(in super::super) fn bind(
     let bounds = point.enclose(limits)?;
     bind_bounds(&point.curve, &bounds, point.clock_bounds()?, target, phase)
 }
+fn native_period(source: &FiberSources, coordinate: usize) -> Result<Option<Q>> {
+    let surface = if coordinate < 2 { source.first() } else { source.second() };
+    let axis = coordinate % 2;
+    let (knots, degree, count, periodic) = if axis == 0 {
+        (&surface.knots_u, surface.degree_u, surface.control_points.len(), surface.periodic_u)
+    } else {
+        (&surface.knots_v, surface.degree_v, surface.control_points[0].len(), surface.periodic_v)
+    };
+    if !periodic || crate::periodic_trim::verify_surface_seam_identity(surface, axis)?.is_none() {
+        return Ok(None);
+    }
+    Ok(Some(q(knots[count])? - q(knots[degree])?))
+}
+
+pub(super) fn infer_phase(
+    point: &OriginalSsRootPoint,
+    target: &OriginalSsRootCurve,
+    limits: OriginalSsCurveLimits,
+) -> Result<[i32; 4]> {
+    let source = point.curve.source();
+    let other = target.source();
+    check(
+        source.first() == other.first() && source.second() == other.second(),
+        "Original SS endpoint carriers or ordered roles differ",
+    )?;
+    let image = point.enclose(limits)?.uv;
+    let fixed = point.curve.free_axis().index();
+    let clock = point.clock_bounds()?;
+    let frame = frames::frame(&point.curve)?;
+    let target_frame = frames::frame(target)?;
+    let domain = target.coordinate_domain();
+    let mut phase = [0; 4];
+    for k in 0..4 {
+        check(target_frame[k][1] > Q::zero(), "Original SS endpoint frame is not increasing")?;
+        let bounds = if k == fixed {
+            clock.each_ref().map(|value| &frame[k][0] + &frame[k][1] * value)
+        } else {
+            [q(image[k][0])?, q(image[k][1])?]
+        };
+        let target_bounds = [
+            &target_frame[k][0] + &target_frame[k][1] * q(domain[k][0])?,
+            &target_frame[k][0] + &target_frame[k][1] * q(domain[k][1])?,
+        ];
+        let period = native_period(other, k)?;
+        let mut found = None;
+        for offset in -2..=2 {
+            let shift = match &period {
+                Some(period) => period * Q::from_integer(offset.into()),
+                None if offset == 0 => Q::zero(),
+                None => continue,
+            };
+            if target_bounds[0] <= &bounds[0] + &shift && &bounds[1] + &shift <= target_bounds[1] {
+                check(found.is_none(), "Original SS endpoint has ambiguous native phase")?;
+                found = Some(offset);
+            }
+        }
+        phase[k] = found.ok_or_else(|| crate::input("No proved native phase for original SS endpoint"))?;
+    }
+    Ok(phase)
+}
+
 pub(crate) fn bind_bounds(
     source: &OriginalSsRootCurve,
     bounds: &OriginalSsCurveBounds,
@@ -40,32 +101,12 @@ pub(crate) fn bind_bounds(
     ];
     let free = target.free_axis().index();
     for k in 0..4 {
-        let surface = if k < 2 { b.first() } else { b.second() };
-        let (knots, p, n, periodic) = if k % 2 == 0 {
-            (
-                &surface.knots_u,
-                surface.degree_u,
-                surface.control_points.len(),
-                surface.periodic_u,
-            )
-        } else {
-            (
-                &surface.knots_v,
-                surface.degree_v,
-                surface.control_points[0].len(),
-                surface.periodic_v,
-            )
-        };
         let shift = if phase[k] == 0 {
             Q::zero()
         } else {
-            check(
-                periodic
-                    && crate::periodic_trim::verify_surface_seam_identity(surface, k % 2)?
-                        .is_some(),
-                "Original SS endpoint phase has no exact native seam identity",
-            )?;
-            (q(knots[n])? - q(knots[p])?) * Q::from_integer(phase[k].into())
+            native_period(b, k)?
+                .ok_or_else(|| crate::input("Original SS endpoint phase has no exact native seam identity"))?
+                * Q::from_integer(phase[k].into())
         };
         let lo = (&target_box[k][0] + &shift - &target_frame[k][0]) / &target_frame[k][1];
         let hi = (&target_box[k][1] + shift - &target_frame[k][0]) / &target_frame[k][1];

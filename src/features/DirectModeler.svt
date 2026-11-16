@@ -332,9 +332,10 @@ function markError(error:unknown){
  const fallback:readonly string[]=presented.input==='sketch'?(selectedSketch.value?[selectedSketch.value.id]:[])
   :['body','face','edge'].includes(presented.input)?((selectedBody.value?.id??targetBody.value)?[selectedBody.value?.id??targetBody.value]:[])
   :['curve','surface'].includes(presented.input)?(curveInputs.length?curveInputs:selection.value?[selection.value]:[])
-  :presented.input==='field'&&['radius','endRadius','distance'].includes(presented.field??'')&&selectedBody.value?[selectedBody.value.id]
-  // Other parameter refusals mark the object the command reads (the profile sketch or the body).
-  :presented.input==='field'?[selectedSketch.value?.id??selectedBody.value?.id].filter((id):id is string=>!!id):[]
+  :presented.input==='field'?(['radius','endRadius','distance'].includes(presented.field??'')&&selectedBody.value?[selectedBody.value.id]
+   // A parameter refusal also marks the object the command reads (the profile sketch or the body).
+   :(selectedSketch.value?.id??selectedBody.value?.id)?[(selectedSketch.value?.id??selectedBody.value?.id)!]:[])
+  :[]
  errorField.value=presented.field??''
  invalidSceneIds.value=presented.targetIds.length?presented.targetIds:fallback
 }

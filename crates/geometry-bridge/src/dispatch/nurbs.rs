@@ -5,6 +5,11 @@ mod booleans_and_features;
 mod lofts_and_sweeps;
 mod primitives_and_transforms;
 
+pub(crate) use lofts_and_sweeps::{
+    ProgressiveProfileInputs, handle_progressive_profile_body, parse_cap_correction,
+    parse_rmf_policy,
+};
+
 pub(crate) fn route(v: Value) -> Routed {
     let op = v["op"].as_str().unwrap_or("");
     if primitives_and_transforms::OPS.contains(&op) {

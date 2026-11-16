@@ -1,3 +1,6 @@
+import {qualifyIsolatedSsContact} from './isolatedSsContact'
+import {qualifyPeriodicBand,intersectPeriodicStockBand} from './periodicBand'
+import {assembleClosedSsNetworkBoolean} from './closedSsBoolean'
 import {restoreFrozenGraphBody,displayFrozenGraphBody} from './frozenGraphBody'
 import {inspectNurbsOffsetDeviation} from './nurbsOffsetDeviation'
 import {createSourceGraphG2Preview} from './sourceGraphG2Preview'
@@ -101,6 +104,10 @@ const restoreDocumentResult=(job:{text:string;base?:string}):DirectDocument=>{
 async function execute(job:MainSolidJob,onProgress?:(progress:MainSolidProgress)=>void):Promise<MainSolidResults[keyof MainSolidResults]> {
   switch(job.kind) {
 case 'frozenGraphBodyDisplay':return displayFrozenGraphBody(job.artifact,job.segments,job.options)
+case 'isolatedSsContact':return qualifyIsolatedSsContact(job.request)
+case 'periodicBand':return qualifyPeriodicBand(job.request)
+case 'periodicStockIntersection':return intersectPeriodicStockBand(job.request)
+case 'closedSsNetworkBoolean':return assembleClosedSsNetworkBoolean(job.request)
 case 'frozenGraphBodyRestore':return restoreFrozenGraphBody(job.artifact,job.options)
 case 'sourceGraphG2Preview':return createSourceGraphG2Preview(job.sources,job.width,job.options)
 case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)

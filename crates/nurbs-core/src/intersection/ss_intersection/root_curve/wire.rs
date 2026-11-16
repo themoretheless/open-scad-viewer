@@ -51,6 +51,65 @@ impl OriginalSsRootEdge {
             a[1].clone().max(b[1].clone()),
         ]
     }
+    /// Inner clock interval guaranteed to belong to the edge in original UV.
+    /// Algebraic endpoint uncertainty shrinks this interval conservatively.
+    pub fn original_inner_clock(&self) -> Result<[Q; 2]> {
+        self.inner_clock(false)
+    }
+
+    /// Recover exact rational endpoints using the projected clock polynomial.
+    /// Other endpoints keep their conservative inward bounds.
+    pub fn original_inner_clock_with_projection(&self) -> Result<[Q; 2]> {
+        self.inner_clock(true)
+    }
+
+    fn inner_clock(&self, project: bool) -> Result<[Q; 2]> {
+        let axis = match self.curve().free_axis() {
+            FiberAxis::FirstU => 0,
+            FiberAxis::FirstV => 1,
+            FiberAxis::SecondU => 2,
+            FiberAxis::SecondV => 3,
+        };
+        let [offset, scale] = &frames::frame(self.curve())?[axis];
+        let (low, high) = if self.forward {
+            (&self.start, &self.end)
+        } else {
+            (&self.end, &self.start)
+        };
+        let endpoint = |port: &QualifiedOriginalSsPort, inward: usize| {
+            let bounds = port.parameter_bounds();
+            if project && bounds[0] != bounds[1] && port.phase() == [0; 4]
+                && port.kind() == OriginalSsPortKind::OriginalParameterRoot
+                && let Ok(point) = port.point().reparameterize_to(
+                    self.curve().clone(), Default::default(), Default::default(),
+                )
+                && let Some(point) = point.algebraic_point()
+            {
+                let coefficients = point.clock().polynomial();
+                if let [constant, linear] = coefficients {
+                    let exact = -constant / linear;
+                    if bounds[0] <= exact && exact <= bounds[1] {
+                        return offset + scale * exact;
+                    }
+                }
+                // CAD knots and selector clocks often have short dyadic
+                // representations. Use the interval only to propose one.
+                let midpoint = (&bounds[0] + &bounds[1]) / Q::from_integer(2.into());
+                for bits in 0..=32 {
+                    let denominator = Q::from_integer((1_i64 << bits).into());
+                    let candidate = (&midpoint * &denominator).round() / denominator;
+                    if bounds[0] <= candidate && candidate <= bounds[1]
+                        && point.clock().equals_rational(&candidate, Default::default())
+                            .is_ok_and(|(equal, _)| equal)
+                    {
+                        return offset + scale * candidate;
+                    }
+                }
+            }
+            offset + scale * &bounds[inward]
+        };
+        Ok([endpoint(low, 1), endpoint(high, 0)])
+    }
     pub fn enclose(&self, limits: OriginalSsCurveLimits) -> Result<OriginalSsCurveBounds> {
         let bounds = self.parameter_bounds();
         let natural = self.curve().parameter_domain();

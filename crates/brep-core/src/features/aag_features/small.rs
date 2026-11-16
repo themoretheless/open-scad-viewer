@@ -101,43 +101,50 @@ pub(super) struct PendingBoss {
     wall_dirs: Vec<([f64; 3], [f64; 3])>,
 }
 
-/// Mirror of the simple floor-and-walls pocket template: a planar top grows
-/// across convex edges, internal edges are convex/smooth, and the base ring
-/// is concave. Expensive material probes run only after graph validation and
-/// global face-set deduplication.
-pub(super) fn find_boss_candidates(
-    model: &Model,
-    graph: &Aag,
-    budget: &Budget,
+/// Minimum boss height, in multiples of `model.tolerance_mm`.
+const MIN_BOSS_HEIGHT_TOLERANCE_FACTOR: f64 = 10.;
+/// A boss wall leaning further than this off perpendicular faces the top.
+const MAX_BOSS_WALL_LEAN_DEG: f64 = 45.;
+
+/// One face adjacency: (other face, class, aag edge index).
+type FaceLink = (usize, DihedralClass, usize);
+
+/// Center and outward normal of one boss wall.
+type WallDir = ([f64; 3], [f64; 3]);
+
+/// Top plane and height of a boss candidate.
+struct BossTop {
+    center: [f64; 3],
+    normal: [f64; 3],
+    height: f64,
+}
+
+/// Boss search state shared by every seed.
+struct BossSearch<'a> {
+    model: &'a Model,
+    graph: &'a Aag,
+    attrs: Vec<&'a FaceAttrs>,
+    adjacency: Vec<Vec<FaceLink>>,
+    linear_tol: f64,
     volume_max: f64,
-) -> Result<Vec<PendingBoss>> {
-    let n = model.faces.len();
-    let attrs_of = |face: usize| {
-        graph.nodes[face]
-            .attrs
-            .as_ref()
-            .expect("fresh attrs checked")
-    };
-    let wall_eligible = |face: usize| {
+    seen: BTreeMap<Vec<usize>, usize>,
+    pending: Vec<PendingBoss>,
+}
+
+impl BossSearch<'_> {
+    fn wall_eligible(&self, face: usize) -> bool {
         matches!(
-            attrs_of(face).class,
+            self.attrs[face].class,
             SurfaceClass::Plane | SurfaceClass::Cone | SurfaceClass::Cylinder
         )
-    };
-    let mut adjacency = vec![Vec::<(usize, DihedralClass, usize)>::new(); n];
-    for (edge_index, edge) in graph.edges.iter().enumerate() {
-        if edge.uses.len() == 2 {
-            let (a, b) = (edge.uses[0].face, edge.uses[1].face);
-            adjacency[a].push((b, edge.class, edge_index));
-            adjacency[b].push((a, edge.class, edge_index));
-        }
     }
 
-    let linear_tol = (model.tolerance_mm * 100.).max(1e-7);
-    let same_plane = |a: usize, b: usize| -> Result<bool> {
-        if attrs_of(a).class != SurfaceClass::Plane || attrs_of(b).class != SurfaceClass::Plane {
+    fn same_plane(&self, a: usize, b: usize) -> Result<bool> {
+        if self.attrs[a].class != SurfaceClass::Plane || self.attrs[b].class != SurfaceClass::Plane
+        {
             return Ok(false);
         }
+        let model = self.model;
         let (Some(na), Some(nb)) = (
             super::pockets::outward_normal(model, a, 0.5, 0.5)?,
             super::pockets::outward_normal(model, b, 0.5, 0.5)?,
@@ -147,34 +154,32 @@ pub(super) fn find_boss_candidates(
         let pa = super::pockets::face_point(model, a, 0.5, 0.5)?;
         let pb = super::pockets::face_point(model, b, 0.5, 0.5)?;
         Ok(dot(na, nb) > 1. - AXIS_DOT_TOLERANCE
-            && (dot(na, pa) - dot(nb, pb)).abs() <= linear_tol)
-    };
+            && (dot(na, pa) - dot(nb, pb)).abs() <= self.linear_tol)
+    }
 
-    let mut guard = budget.guard("aag-small-bosses");
-    guard.check()?;
-    let mut seen: BTreeMap<Vec<usize>, usize> = BTreeMap::new();
-    let mut pending: Vec<PendingBoss> = Vec::new();
-    for seed in 0..n {
-        guard.tick()?;
-        if attrs_of(seed).class != SurfaceClass::Plane {
-            continue;
-        }
+    /// Planar top grows across convex edges (walls) and coplanar smooth
+    /// siblings (more top).
+    fn grow_roles(
+        &self,
+        seed: usize,
+        guard: &mut BudgetGuard,
+    ) -> Result<BTreeMap<usize, BossRole>> {
         let mut roles = BTreeMap::from([(seed, BossRole::Top)]);
         let mut queue = VecDeque::from([seed]);
         while let Some(face) = queue.pop_front() {
             guard.tick()?;
-            for &(other, class, _) in &adjacency[face] {
+            for &(other, class, _) in &self.adjacency[face] {
                 if roles.contains_key(&other) {
                     continue;
                 }
                 let add = match class {
                     DihedralClass::Convex
-                        if roles[&face] == BossRole::Top && wall_eligible(other) =>
+                        if roles[&face] == BossRole::Top && self.wall_eligible(other) =>
                     {
                         Some(BossRole::Wall)
                     }
                     DihedralClass::Smooth if roles[&face] == BossRole::Top => {
-                        if same_plane(seed, other)? {
+                        if self.same_plane(seed, other)? {
                             Some(BossRole::Top)
                         } else {
                             None
@@ -188,147 +193,234 @@ pub(super) fn find_boss_candidates(
                 }
             }
         }
-        let walls: Vec<usize> = roles
-            .iter()
-            .filter_map(|(&face, &role)| (role == BossRole::Wall).then_some(face))
-            .collect();
-        if walls.is_empty() {
-            continue;
-        }
+        Ok(roles)
+    }
 
-        let mut valid = true;
+    /// Internal edges convex/smooth, outside edges a concave base ring.
+    /// Returns the base-ring edge midpoints; `None` rejects the candidate.
+    fn base_ring_points(
+        &self,
+        roles: &BTreeMap<usize, BossRole>,
+        guard: &mut BudgetGuard,
+    ) -> Result<Option<Vec<[f64; 3]>>> {
         let mut has_base_ring = false;
         let mut rim_points = Vec::new();
         for &face in roles.keys() {
-            for &(other, class, edge_index) in &adjacency[face] {
+            for &(other, class, edge_index) in &self.adjacency[face] {
                 guard.tick()?;
                 if roles.contains_key(&other) {
                     if !matches!(class, DihedralClass::Convex | DihedralClass::Smooth) {
-                        valid = false;
-                        break;
+                        return Ok(None);
                     }
-                } else {
-                    if class != DihedralClass::Concave {
-                        valid = false;
-                        break;
-                    }
-                    has_base_ring = true;
-                    let edge = &model.edges[graph.edges[edge_index].edge];
-                    let domain = edge.curve.domain();
-                    let mid = edge.curve.evaluate(0.5 * (domain[0] + domain[1]))?.point;
-                    if mid.len() == 3 {
-                        rim_points.push([mid[0], mid[1], mid[2]]);
-                    }
+                    continue;
+                }
+                if class != DihedralClass::Concave {
+                    return Ok(None);
+                }
+                has_base_ring = true;
+                let edge = &self.model.edges[self.graph.edges[edge_index].edge];
+                let domain = edge.curve.domain();
+                let mid = edge.curve.evaluate(0.5 * (domain[0] + domain[1]))?.point;
+                if mid.len() == 3 {
+                    rim_points.push([mid[0], mid[1], mid[2]]);
                 }
             }
-            if !valid {
-                break;
-            }
         }
-        if !valid || !has_base_ring || rim_points.is_empty() {
-            continue;
-        }
+        Ok((has_base_ring && !rim_points.is_empty()).then_some(rim_points))
+    }
 
-        let Some(top_normal) = super::pockets::outward_normal(model, seed, 0.5, 0.5)? else {
-            continue;
+    /// Top plane and top-to-base height; `None` rejects the candidate.
+    fn boss_top(&self, seed: usize, rim_points: &[[f64; 3]]) -> Result<Option<BossTop>> {
+        let model = self.model;
+        let Some(normal) = super::pockets::outward_normal(model, seed, 0.5, 0.5)? else {
+            return Ok(None);
         };
-        let top_center = super::pockets::face_point(model, seed, 0.5, 0.5)?;
-        let top_offset = dot(top_normal, top_center);
+        let center = super::pockets::face_point(model, seed, 0.5, 0.5)?;
+        let top_offset = dot(normal, center);
         let base_offset = rim_points
             .iter()
-            .map(|point| dot(top_normal, *point))
+            .map(|point| dot(normal, *point))
             .fold(f64::INFINITY, f64::min);
         let height = top_offset - base_offset;
-        if !(height.is_finite() && height > 10. * model.tolerance_mm) {
-            continue;
+        if !(height.is_finite() && height > MIN_BOSS_HEIGHT_TOLERANCE_FACTOR * model.tolerance_mm) {
+            return Ok(None);
         }
+        Ok(Some(BossTop {
+            center,
+            normal,
+            height,
+        }))
+    }
 
+    /// (center, outward normal) per wall; `None` when a wall is singular or
+    /// leans past the limit.
+    fn wall_dirs(
+        &self,
+        walls: &[usize],
+        top_normal: [f64; 3],
+        guard: &mut BudgetGuard,
+    ) -> Result<Option<Vec<WallDir>>> {
         let mut wall_dirs = Vec::with_capacity(walls.len());
-        for &wall in &walls {
+        for &wall in walls {
             guard.tick()?;
             let (Some(normal), center) = (
-                super::pockets::outward_normal(model, wall, 0.5, 0.5)?,
-                super::pockets::face_point(model, wall, 0.5, 0.5)?,
+                super::pockets::outward_normal(self.model, wall, 0.5, 0.5)?,
+                super::pockets::face_point(self.model, wall, 0.5, 0.5)?,
             ) else {
-                valid = false;
-                break;
+                return Ok(None);
             };
             let lean = dot(normal, top_normal).clamp(-1., 1.).asin().to_degrees();
-            if lean.abs() > 45. {
-                valid = false;
-                break;
+            if lean.abs() > MAX_BOSS_WALL_LEAN_DEG {
+                return Ok(None);
             }
             wall_dirs.push((center, normal));
         }
-        if !valid {
-            continue;
+        Ok(Some(wall_dirs))
+    }
+
+    /// Grow and validate one planar seed; records a new or taller reading.
+    fn try_seed(&mut self, seed: usize, guard: &mut BudgetGuard) -> Result<()> {
+        if self.attrs[seed].class != SurfaceClass::Plane {
+            return Ok(());
         }
-        let top_faces: Vec<usize> = roles
-            .iter()
-            .filter_map(|(&face, &role)| (role == BossRole::Top).then_some(face))
-            .collect();
-        let top_area: f64 = top_faces.iter().map(|&face| attrs_of(face).area).sum();
-        let delta_volume = top_area * height;
-        if !delta_volume.is_finite() || delta_volume >= volume_max {
-            continue;
+        let roles = self.grow_roles(seed, guard)?;
+        let with_role = |want: BossRole| -> Vec<usize> {
+            roles
+                .iter()
+                .filter_map(|(&face, &role)| (role == want).then_some(face))
+                .collect()
+        };
+        let walls = with_role(BossRole::Wall);
+        if walls.is_empty() {
+            return Ok(());
+        }
+        let Some(rim_points) = self.base_ring_points(&roles, guard)? else {
+            return Ok(());
+        };
+        let Some(top) = self.boss_top(seed, &rim_points)? else {
+            return Ok(());
+        };
+        let Some(wall_dirs) = self.wall_dirs(&walls, top.normal, guard)? else {
+            return Ok(());
+        };
+        let top_faces = with_role(BossRole::Top);
+        let top_area: f64 = top_faces.iter().map(|&face| self.attrs[face].area).sum();
+        let delta_volume = top_area * top.height;
+        if !delta_volume.is_finite() || delta_volume >= self.volume_max {
+            return Ok(());
         }
         let mut faces = top_faces;
         faces.extend_from_slice(&walls);
         faces.sort_unstable();
         let candidate = PendingBoss {
             faces: faces.clone(),
-            top_center,
-            top_normal,
-            height,
+            top_center: top.center,
+            top_normal: top.normal,
+            height: top.height,
             delta_volume,
             wall_dirs,
         };
-        match seen.get(&faces).copied() {
-            Some(index) if pending[index].height >= height => {}
-            Some(index) => pending[index] = candidate,
+        match self.seen.get(&faces).copied() {
+            Some(index) if self.pending[index].height >= top.height => {}
+            Some(index) => self.pending[index] = candidate,
             None => {
-                seen.insert(faces, pending.len());
-                pending.push(candidate);
+                self.seen.insert(faces, self.pending.len());
+                self.pending.push(candidate);
             }
+        }
+        Ok(())
+    }
+}
+
+/// Material probes for one deduplicated candidate: void above the top, and
+/// at every wall air outside with material on the opposite side. This
+/// ray-parity pair rejects cavities even when their edge signs were
+/// partitioned unusually by a boolean.
+fn boss_probes_clear(
+    model: &Model,
+    candidate: &PendingBoss,
+    guard: &mut BudgetGuard,
+) -> Result<bool> {
+    let eps = probe_offset(model, candidate.height);
+    let above_top = [
+        candidate.top_center[0] + candidate.top_normal[0] * eps,
+        candidate.top_center[1] + candidate.top_normal[1] * eps,
+        candidate.top_center[2] + candidate.top_normal[2] * eps,
+    ];
+    if super::pockets::probe_inside(model, above_top)? != Some(false) {
+        return Ok(false);
+    }
+    for (center, normal) in &candidate.wall_dirs {
+        guard.tick()?;
+        let outside = [
+            center[0] + normal[0] * eps,
+            center[1] + normal[1] * eps,
+            center[2] + normal[2] * eps,
+        ];
+        let inside = [
+            center[0] - normal[0] * eps,
+            center[1] - normal[1] * eps,
+            center[2] - normal[2] * eps,
+        ];
+        if super::pockets::probe_inside(model, outside)? != Some(false)
+            || super::pockets::probe_inside(model, inside)? != Some(true)
+        {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// Mirror of the simple floor-and-walls pocket template: a planar top grows
+/// across convex edges, internal edges are convex/smooth, and the base ring
+/// is concave. Expensive material probes run only after graph validation and
+/// global face-set deduplication.
+pub(super) fn find_boss_candidates(
+    model: &Model,
+    graph: &Aag,
+    budget: &Budget,
+    volume_max: f64,
+) -> Result<Vec<PendingBoss>> {
+    let n = model.faces.len();
+    let attrs = graph
+        .nodes
+        .iter()
+        .map(|node| {
+            node.attrs
+                .as_ref()
+                .ok_or_else(|| small_error(STALE_ATTRS_MESSAGE))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let mut adjacency = vec![Vec::<FaceLink>::new(); n];
+    for (edge_index, edge) in graph.edges.iter().enumerate() {
+        if edge.uses.len() == 2 {
+            let (a, b) = (edge.uses[0].face, edge.uses[1].face);
+            adjacency[a].push((b, edge.class, edge_index));
+            adjacency[b].push((a, edge.class, edge_index));
         }
     }
 
-    let mut bosses = Vec::new();
-    for candidate in pending {
+    let mut guard = budget.guard("aag-small-bosses");
+    guard.check()?;
+    let mut search = BossSearch {
+        model,
+        graph,
+        attrs,
+        adjacency,
+        linear_tol: linear_tolerance(model),
+        volume_max,
+        seen: BTreeMap::new(),
+        pending: Vec::new(),
+    };
+    for seed in 0..n {
         guard.tick()?;
-        let eps = (1e-3 * candidate.height).max(10. * model.tolerance_mm);
-        let above_top = [
-            candidate.top_center[0] + candidate.top_normal[0] * eps,
-            candidate.top_center[1] + candidate.top_normal[1] * eps,
-            candidate.top_center[2] + candidate.top_normal[2] * eps,
-        ];
-        if super::pockets::probe_inside(model, above_top)? != Some(false) {
-            continue;
-        }
-        // Boss wall: outward is air, the opposite side is material. This
-        // ray-parity pair rejects cavities even when their edge signs were
-        // partitioned unusually by a boolean.
-        let mut walls_open = true;
-        for (center, normal) in &candidate.wall_dirs {
-            guard.tick()?;
-            let outside = [
-                center[0] + normal[0] * eps,
-                center[1] + normal[1] * eps,
-                center[2] + normal[2] * eps,
-            ];
-            let inside = [
-                center[0] - normal[0] * eps,
-                center[1] - normal[1] * eps,
-                center[2] - normal[2] * eps,
-            ];
-            if super::pockets::probe_inside(model, outside)? != Some(false)
-                || super::pockets::probe_inside(model, inside)? != Some(true)
-            {
-                walls_open = false;
-                break;
-            }
-        }
-        if walls_open {
+        search.try_seed(seed, &mut guard)?;
+    }
+
+    let mut bosses = Vec::new();
+    for candidate in search.pending {
+        guard.tick()?;
+        if boss_probes_clear(model, &candidate, &mut guard)? {
             bosses.push(candidate);
         }
     }
@@ -354,6 +446,187 @@ fn find_small_bosses(
         .collect())
 }
 
+/// Default fillet radius limit, relative to the bbox diagonal.
+const DEFAULT_FILLET_RADIUS_REL: f64 = 0.05;
+/// Default hole diameter limit, relative to the bbox diagonal.
+const DEFAULT_HOLE_DIAMETER_REL: f64 = 0.1;
+/// Default volume limit, relative to the cubed bbox diagonal.
+const DEFAULT_VOLUME_REL: f64 = 0.01;
+/// Default short-face area limit, relative to the squared bbox diagonal.
+const DEFAULT_SHORT_FACE_AREA_REL: f64 = 1e-3;
+
+/// Resolved absolute thresholds of one scan.
+struct SmallThresholds {
+    bbox_diagonal: f64,
+    fillet_radius_max: f64,
+    hole_diameter_max: f64,
+    volume_max: f64,
+    short_face_area_max: f64,
+}
+
+fn resolve_thresholds(model: &Model, options: &SmallFeatureOptions) -> Result<SmallThresholds> {
+    let bbox_diagonal = positive_threshold(model_bbox_diagonal(model), "bbox_diagonal")?;
+    let fillet_radius_max = positive_threshold(
+        options
+            .fillet_radius_max
+            .unwrap_or(DEFAULT_FILLET_RADIUS_REL * bbox_diagonal),
+        "fillet_radius_max",
+    )?;
+    let hole_diameter_max = positive_threshold(
+        options
+            .hole_diameter_max
+            .unwrap_or(DEFAULT_HOLE_DIAMETER_REL * bbox_diagonal),
+        "hole_diameter_max",
+    )?;
+    let volume_max = positive_threshold(
+        options
+            .volume_max
+            .unwrap_or(DEFAULT_VOLUME_REL * bbox_diagonal * bbox_diagonal * bbox_diagonal),
+        "volume_max",
+    )?;
+    let short_face_area_rel = positive_threshold(
+        options
+            .short_face_area_rel
+            .unwrap_or(DEFAULT_SHORT_FACE_AREA_REL),
+        "short_face_area_rel",
+    )?;
+    let short_face_area_max = positive_threshold(
+        short_face_area_rel * bbox_diagonal * bbox_diagonal,
+        "short_face_area_max",
+    )?;
+    Ok(SmallThresholds {
+        bbox_diagonal,
+        fillet_radius_max,
+        hole_diameter_max,
+        volume_max,
+        short_face_area_max,
+    })
+}
+
+/// Trimmed area of one face from its fresh attributes.
+fn fresh_area(graph: &Aag, face: usize) -> Result<f64> {
+    graph.nodes[face]
+        .attrs
+        .as_ref()
+        .map(|attrs| attrs.area)
+        .ok_or_else(|| small_error(STALE_ATTRS_MESSAGE))
+}
+
+/// Candidates found so far and the faces they claim.
+struct SmallScan<'a> {
+    model: &'a Model,
+    graph: &'a Aag,
+    budget: &'a Budget,
+    limits: SmallThresholds,
+    candidates: Vec<SmallFeature>,
+    claimed: BTreeSet<usize>,
+}
+
+impl SmallScan<'_> {
+    fn push(&mut self, feature: SmallFeature) {
+        self.claimed.extend(feature.faces.iter().copied());
+        self.candidates.push(feature);
+    }
+
+    fn collect_fillets(&mut self, guard: &mut BudgetGuard) -> Result<()> {
+        let fillet_radius_max = self.limits.fillet_radius_max;
+        let fillet_options = FilletChainOptions {
+            radius_max: Some(fillet_radius_max),
+            ..FilletChainOptions::default()
+        };
+        let fillets = crate::aag_fillets::find_fillet_chains_with(
+            self.model,
+            self.graph,
+            self.budget,
+            &fillet_options,
+        )?;
+        for chain in fillets {
+            guard.tick()?;
+            if chain.radius_max >= fillet_radius_max {
+                continue;
+            }
+            let mut area = 0f64;
+            for &face in &chain.faces {
+                area += fresh_area(self.graph, face)?;
+            }
+            self.push(SmallFeature {
+                kind: SmallFeatureKind::Fillet,
+                faces: chain.faces,
+                size: chain.radius_max,
+                delta_volume: (2. / std::f64::consts::PI - 0.5) * chain.radius_max * area,
+            });
+        }
+        Ok(())
+    }
+
+    fn collect_holes(&mut self, guard: &mut BudgetGuard) -> Result<()> {
+        for hole in find_holes(self.model, self.graph, self.budget)? {
+            guard.tick()?;
+            if hole.diameter >= self.limits.hole_diameter_max {
+                continue;
+            }
+            let radius = 0.5 * hole.diameter;
+            self.push(SmallFeature {
+                kind: SmallFeatureKind::Hole,
+                faces: hole.faces,
+                size: hole.diameter,
+                delta_volume: std::f64::consts::PI * radius * radius * hole.depth,
+            });
+        }
+        Ok(())
+    }
+
+    fn collect_pockets_and_bosses(&mut self, guard: &mut BudgetGuard) -> Result<()> {
+        // With no concave edge neither a pocket nor a boss base ring can exist.
+        // Besides being a cheap rejection, this keeps large disjoint-solid scans
+        // out of the pocket matcher's all-edges validation path.
+        let has_concave = self
+            .graph
+            .edges
+            .iter()
+            .any(|edge| edge.class == DihedralClass::Concave);
+        if !has_concave {
+            return Ok(());
+        }
+        let volume_max = self.limits.volume_max;
+        for pocket in find_pockets(self.model, self.graph, self.budget)? {
+            guard.tick()?;
+            let delta_volume = pocket.floor_area * pocket.depth;
+            if delta_volume >= volume_max {
+                continue;
+            }
+            self.push(SmallFeature {
+                kind: SmallFeatureKind::Pocket,
+                faces: pocket.faces,
+                size: pocket.depth,
+                delta_volume,
+            });
+        }
+        for boss in find_small_bosses(self.model, self.graph, self.budget, volume_max)? {
+            guard.tick()?;
+            self.push(boss);
+        }
+        Ok(())
+    }
+
+    fn collect_short_faces(&mut self, guard: &mut BudgetGuard) -> Result<()> {
+        for face in 0..self.graph.nodes.len() {
+            guard.tick()?;
+            let area = fresh_area(self.graph, face)?;
+            require_finite_f64(area, "face area")?;
+            if area < self.limits.short_face_area_max && !self.claimed.contains(&face) {
+                self.candidates.push(SmallFeature {
+                    kind: SmallFeatureKind::ShortFace,
+                    faces: vec![face],
+                    size: area,
+                    delta_volume: 0.,
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
 /// List small fillets, holes, pockets, bosses and short faces without changing
 /// the model. Comparisons are strict (`size < threshold`, or estimated volume
 /// `< volume_max`). `graph` must cover the model and carry fresh attributes;
@@ -373,138 +646,32 @@ pub fn scan_small_features(
         return Err(small_error("AAG node count does not match model faces"));
     }
     if !graph.stale_face_attrs(model).is_empty() {
-        return Err(small_error(
-            "AAG face attributes missing or stale; run attach_face_attrs first",
-        ));
+        return Err(small_error(STALE_ATTRS_MESSAGE));
     }
-    let bbox_diagonal = positive_threshold(model_bbox_diagonal(model), "bbox_diagonal")?;
-    let fillet_radius_max = positive_threshold(
-        options.fillet_radius_max.unwrap_or(0.05 * bbox_diagonal),
-        "fillet_radius_max",
-    )?;
-    let hole_diameter_max = positive_threshold(
-        options.hole_diameter_max.unwrap_or(0.1 * bbox_diagonal),
-        "hole_diameter_max",
-    )?;
-    let volume_max = positive_threshold(
-        options
-            .volume_max
-            .unwrap_or(0.01 * bbox_diagonal * bbox_diagonal * bbox_diagonal),
-        "volume_max",
-    )?;
-    let short_face_area_rel = positive_threshold(
-        options.short_face_area_rel.unwrap_or(1e-3),
-        "short_face_area_rel",
-    )?;
-    let short_face_area_max = positive_threshold(
-        short_face_area_rel * bbox_diagonal * bbox_diagonal,
-        "short_face_area_max",
-    )?;
+    let limits = resolve_thresholds(model, options)?;
 
     let mut guard = budget.guard("aag-scan-small");
     guard.check()?;
-    let mut candidates = Vec::new();
-    let mut claimed = BTreeSet::new();
-    let mut push = |feature: SmallFeature| {
-        claimed.extend(feature.faces.iter().copied());
-        candidates.push(feature);
-    };
-
-    let fillet_options = FilletChainOptions {
-        radius_max: Some(fillet_radius_max),
-        ..FilletChainOptions::default()
-    };
-    let fillets = crate::aag_fillets::find_fillet_chains_with(
+    let mut scan = SmallScan {
         model,
         graph,
         budget,
-        &fillet_options,
-    )?;
-    for chain in fillets {
-        guard.tick()?;
-        if chain.radius_max >= fillet_radius_max {
-            continue;
-        }
-        let area: f64 = chain
-            .faces
-            .iter()
-            .map(|&face| {
-                graph.nodes[face]
-                    .attrs
-                    .as_ref()
-                    .expect("fresh attrs checked")
-                    .area
-            })
-            .sum();
-        push(SmallFeature {
-            kind: SmallFeatureKind::Fillet,
-            faces: chain.faces,
-            size: chain.radius_max,
-            delta_volume: (2. / std::f64::consts::PI - 0.5) * chain.radius_max * area,
-        });
-    }
-
-    for hole in find_holes(model, graph, budget)? {
-        guard.tick()?;
-        if hole.diameter >= hole_diameter_max {
-            continue;
-        }
-        let radius = 0.5 * hole.diameter;
-        push(SmallFeature {
-            kind: SmallFeatureKind::Hole,
-            faces: hole.faces,
-            size: hole.diameter,
-            delta_volume: std::f64::consts::PI * radius * radius * hole.depth,
-        });
-    }
-
-    // With no concave edge neither a pocket nor a boss base ring can exist.
-    // Besides being a cheap rejection, this keeps large disjoint-solid scans
-    // out of the pocket matcher's all-edges validation path.
-    let has_concave = graph
-        .edges
-        .iter()
-        .any(|edge| edge.class == DihedralClass::Concave);
-    if has_concave {
-        for pocket in find_pockets(model, graph, budget)? {
-            guard.tick()?;
-            let delta_volume = pocket.floor_area * pocket.depth;
-            if delta_volume >= volume_max {
-                continue;
-            }
-            push(SmallFeature {
-                kind: SmallFeatureKind::Pocket,
-                faces: pocket.faces,
-                size: pocket.depth,
-                delta_volume,
-            });
-        }
-        for boss in find_small_bosses(model, graph, budget, volume_max)? {
-            guard.tick()?;
-            push(boss);
-        }
-    }
-
-    for (face, node) in graph.nodes.iter().enumerate() {
-        guard.tick()?;
-        let area = node.attrs.as_ref().expect("fresh attrs checked").area;
-        require_finite_f64(area, "face area")?;
-        if area < short_face_area_max && !claimed.contains(&face) {
-            candidates.push(SmallFeature {
-                kind: SmallFeatureKind::ShortFace,
-                faces: vec![face],
-                size: area,
-                delta_volume: 0.,
-            });
-        }
-    }
+        limits,
+        candidates: Vec::new(),
+        claimed: BTreeSet::new(),
+    };
+    scan.collect_fillets(&mut guard)?;
+    scan.collect_holes(&mut guard)?;
+    scan.collect_pockets_and_bosses(&mut guard)?;
+    scan.collect_short_faces(&mut guard)?;
     guard.check()?;
+    let limits = scan.limits;
     Ok(SmallFeatureReport {
-        candidates,
-        bbox_diagonal,
-        fillet_radius_max,
-        hole_diameter_max,
-        volume_max,
-        short_face_area_max,
+        candidates: scan.candidates,
+        bbox_diagonal: limits.bbox_diagonal,
+        fillet_radius_max: limits.fillet_radius_max,
+        hole_diameter_max: limits.hole_diameter_max,
+        volume_max: limits.volume_max,
+        short_face_area_max: limits.short_face_area_max,
     })
 }

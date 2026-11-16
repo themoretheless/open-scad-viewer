@@ -232,7 +232,6 @@ fn paired_boxes(
     )
 }
 
-#[allow(clippy::too_many_arguments)]
 /// The two intersected surfaces with the parameter domains being searched.
 #[derive(Clone, Copy)]
 struct SurfacePair<'a> {

@@ -7,11 +7,8 @@ import type { MeshData } from '../../core/mesh'
 import { isNativeGeometryArtifact } from '../../core/nativeGeometry'
 import { isNonNegativeFiniteNumber, isNonNegativeSafeInteger } from '../../core/workerPayloadPrimitives'
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  if (value === null || Array.isArray(value) || typeof value !== 'object') return false
-  const prototype = Object.getPrototypeOf(value)
-  return prototype === Object.prototype || prototype === null
-}
+export { isPlainRecord as isRecord } from '../../core/plainData'
+import { isPlainRecord as isRecord } from '../../core/plainData'
 
 export function isDenseExactArray(value: unknown, maximumLength = Number.MAX_SAFE_INTEGER): value is unknown[] {
   if (!Array.isArray(value) || value.length > maximumLength) return false

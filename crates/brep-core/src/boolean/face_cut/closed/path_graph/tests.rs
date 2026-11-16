@@ -194,7 +194,10 @@ fn dangling_bridge_trees_crossed_paths_and_exhaustion_do_not_publish_slits() {
 fn compacted_graph_result_matches_the_exchange_fixture() {
     let (m, p) = fixture();
     let r = partition_path_graph(&m, 0, &p, 1e-8, Default::default()).unwrap();
-    crate::exchange_fixtures::assert_matches("face_cut_path_graph", value_codec::json!({"model": value_codec::to_value(&r.model).unwrap()}));
+    crate::exchange_fixtures::assert_matches(
+        "face_cut_path_graph",
+        value_codec::json!({"model": value_codec::to_value(&r.model).unwrap()}),
+    );
 }
 
 #[test]

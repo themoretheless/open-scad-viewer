@@ -5,6 +5,9 @@ mod closed_ss;
 
 const OPS: &[&str] = &[
     "brep_partition_closed_ss", "brep_partition_all_closed_ss",
+    "brep_qualify_periodic_band", "brep_intersect_periodic_stock_band",
+    "brep_qualify_isolated_ss_contact",
+    "brep_assemble_closed_ss_boolean", "brep_assemble_closed_ss_network_boolean",
     "brep_profile_normalize","brep_profile_cleanup","brep_nurbs_bezier_profiles_extrude",
     "minkowski_3d_certify",
     "minkowski_3d_verify",
@@ -81,6 +84,11 @@ pub(crate) fn route(v: Value) -> Routed {
 fn handle(v: Value) -> Result<Value> {
     match v["op"].as_str().unwrap_or("") {
         "brep_partition_closed_ss" => closed_ss::partition(v),
+        "brep_qualify_periodic_band" => closed_ss::qualify_periodic_band(v),
+        "brep_intersect_periodic_stock_band" => closed_ss::intersect_periodic_stock_band(v),
+        "brep_qualify_isolated_ss_contact" => closed_ss::qualify_isolated_contact(v),
+        "brep_assemble_closed_ss_boolean" => closed_ss::assemble_boolean(v, false),
+        "brep_assemble_closed_ss_network_boolean" => closed_ss::assemble_boolean(v, true),
         "brep_partition_all_closed_ss" => closed_ss::network(v),
         "brep_boundary_certificate" => cad_boundary_certificate::inspect(v),
         "brep_nurbs_bezier_profiles_extrude"=>extrude_profiles(v),

@@ -51,26 +51,27 @@ fn link(parent: &mut [usize], a: usize, b: usize) {
     let b = root(parent, b);
     parent[a.max(b)] = a.min(b);
 }
-fn build(
+const MAX_REFINEMENTS: usize = 512;
+const MAX_RESULTANT_SIZE: usize = 128;
+const MAX_SOURCES: usize = 32;
+const MAX_EVENTS: usize = 4096;
+const MAX_COMPARISONS: usize = 65536;
+/// The allowance is valid and the pairs are exactly the ordered pairs
+/// `i <= j` of the sources, one owner each.
+fn verify_census(
     sources: &[Curve],
     pairs: &[[usize; 2]],
     owners: &[Arc<CurveEventNodes>],
     width: f64,
     l: ContactAtlasLimits,
-) -> Result<(
-    Vec<ContactOccurrence>,
-    Vec<Vec<usize>>,
-    Vec<Vec<Vec<SourceContactParameter>>>,
-    usize,
-)> {
+) -> Result<()> {
     if !width.is_finite()
         || !(1e-18..=1e-3).contains(&width)
-        || l.parameters.max_refinements > 512
-        || !(1..=128).contains(&l.parameters.max_resultant_size)
-        || sources.len() > 32
-        || l.max_events > 4096
-        || l.max_events == 0
-        || l.max_comparisons > 65536
+        || l.parameters.max_refinements > MAX_REFINEMENTS
+        || !(1..=MAX_RESULTANT_SIZE).contains(&l.parameters.max_resultant_size)
+        || sources.len() > MAX_SOURCES
+        || !(1..=MAX_EVENTS).contains(&l.max_events)
+        || l.max_comparisons > MAX_COMPARISONS
         || pairs.len() != sources.len() * (sources.len() + 1) / 2
         || pairs.len() != owners.len()
     {
@@ -78,17 +79,22 @@ fn build(
             "Invalid original contact atlas source census or allowance",
         ));
     }
-    let mut expected = Vec::new();
-    for i in 0..sources.len() {
-        for j in i..sources.len() {
-            expected.push([i, j]);
-        }
-    }
-    if pairs != expected {
+    let expected = (0..sources.len()).flat_map(|i| (i..sources.len()).map(move |j| [i, j]));
+    if !pairs.iter().copied().eq(expected) {
         return Err(refused(
             "Original contact atlas omits or reorders a source pair",
         ));
     }
+    Ok(())
+}
+/// Every event node of every pair, after each owner is bound to its sources.
+fn occurrences(
+    sources: &[Curve],
+    pairs: &[[usize; 2]],
+    owners: &[Arc<CurveEventNodes>],
+    width: f64,
+    max_events: usize,
+) -> Result<Vec<ContactOccurrence>> {
     let mut occurrences = Vec::new();
     for (pair, (ids, owner)) in pairs.iter().zip(owners).enumerate() {
         owner.reverify_source()?;
@@ -106,74 +112,113 @@ fn build(
             ));
         }
         for node in 0..owner.nodes.len() {
-            if occurrences.len() == l.max_events {
+            if occurrences.len() == max_events {
                 return Err(refused("Original contact event allowance exhausted"));
             }
             occurrences.push(ContactOccurrence { pair, node });
         }
     }
-    let mut ordered = vec![Vec::<Vec<SourceContactParameter>>::new(); sources.len()];
-    let mut parent = (0..occurrences.len()).collect::<Vec<_>>();
-    let mut comparisons = 0;
-    for (index, o) in occurrences.iter().enumerate() {
-        for side in 0..2 {
-            let curve = pairs[o.pair][side];
-            let candidate = SourceContactParameter {
-                occurrence: index,
-                side,
-            };
-            let mut lo = 0;
-            let mut hi = ordered[curve].len();
-            let mut same = None;
-            while lo < hi {
-                if comparisons == l.max_comparisons {
-                    return Err(refused("Original parameter comparison allowance exhausted"));
+    Ok(occurrences)
+}
+/// Event parameters of every source in increasing order, equal parameters
+/// grouped, with occurrences that share a parameter joined.
+struct ParameterOrder<'a> {
+    pairs: &'a [[usize; 2]],
+    owners: &'a [Arc<CurveEventNodes>],
+    occurrences: &'a [ContactOccurrence],
+    l: ContactAtlasLimits,
+    ordered: Vec<Vec<Vec<SourceContactParameter>>>,
+    parent: Vec<usize>,
+    comparisons: usize,
+}
+impl ParameterOrder<'_> {
+    fn order(&mut self, a: SourceContactParameter, b: SourceContactParameter) -> Result<Ordering> {
+        if self.comparisons == self.l.max_comparisons {
+            return Err(refused("Original parameter comparison allowance exhausted"));
+        }
+        self.comparisons += 1;
+        let reference = |r: SourceContactParameter| {
+            let o = self.occurrences[r.occurrence];
+            (
+                self.owners[o.pair].clone(),
+                EventParameterRef {
+                    node: o.node,
+                    source: r.side,
+                },
+            )
+        };
+        let (first, x) = reference(a);
+        let (second, y) = reference(b);
+        Ok(compare_event_parameters(first, x, second, y, self.l.parameters)?.ordering())
+    }
+    /// Places one parameter by binary search: joins an equal group or opens
+    /// a new one.
+    fn place(&mut self, candidate: SourceContactParameter) -> Result<()> {
+        let curve = self.pairs[self.occurrences[candidate.occurrence].pair][candidate.side];
+        let (mut lo, mut hi) = (0, self.ordered[curve].len());
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            let previous = self.ordered[curve][mid][0];
+            match self.order(candidate, previous)? {
+                Ordering::Less => hi = mid,
+                Ordering::Greater => lo = mid + 1,
+                Ordering::Equal => {
+                    link(&mut self.parent, candidate.occurrence, previous.occurrence);
+                    self.ordered[curve][mid].push(candidate);
+                    return Ok(());
                 }
-                comparisons += 1;
-                let mid = lo + (hi - lo) / 2;
-                let previous = ordered[curve][mid][0];
-                let p = occurrences[previous.occurrence];
-                let order = compare_event_parameters(
-                    owners[o.pair].clone(),
-                    EventParameterRef {
-                        node: o.node,
-                        source: side,
-                    },
-                    owners[p.pair].clone(),
-                    EventParameterRef {
-                        node: p.node,
-                        source: previous.side,
-                    },
-                    l.parameters,
-                )?
-                .ordering();
-                match order {
-                    Ordering::Less => hi = mid,
-                    Ordering::Greater => lo = mid + 1,
-                    Ordering::Equal => {
-                        same = Some(mid);
-                        break;
-                    }
-                }
-            }
-            if let Some(position) = same {
-                link(&mut parent, index, ordered[curve][position][0].occurrence);
-                ordered[curve][position].push(candidate);
-            } else {
-                ordered[curve].insert(lo, vec![candidate]);
             }
         }
+        self.ordered[curve].insert(lo, vec![candidate]);
+        Ok(())
     }
-    let mut groups = Vec::<Vec<usize>>::new();
-    let mut ids = std::collections::BTreeMap::new();
-    for i in 0..occurrences.len() {
-        let root = root(&mut parent, i);
-        let id = *ids.entry(root).or_insert_with(|| {
-            groups.push(Vec::new());
-            groups.len() - 1
-        });
-        groups[id].push(i);
+    /// Classes of joined occurrences, numbered by their first member.
+    fn groups(&mut self) -> Vec<Vec<usize>> {
+        let mut groups = Vec::<Vec<usize>>::new();
+        let mut ids = std::collections::BTreeMap::new();
+        for i in 0..self.occurrences.len() {
+            let root = root(&mut self.parent, i);
+            let id = *ids.entry(root).or_insert_with(|| {
+                groups.push(Vec::new());
+                groups.len() - 1
+            });
+            groups[id].push(i);
+        }
+        groups
     }
+}
+/// Occurrences, contact groups, ordered parameters and comparisons used.
+type Atlas = (
+    Vec<ContactOccurrence>,
+    Vec<Vec<usize>>,
+    Vec<Vec<Vec<SourceContactParameter>>>,
+    usize,
+);
+fn build(
+    sources: &[Curve],
+    pairs: &[[usize; 2]],
+    owners: &[Arc<CurveEventNodes>],
+    width: f64,
+    l: ContactAtlasLimits,
+) -> Result<Atlas> {
+    verify_census(sources, pairs, owners, width, l)?;
+    let occurrences = occurrences(sources, pairs, owners, width, l.max_events)?;
+    let mut order = ParameterOrder {
+        pairs,
+        owners,
+        occurrences: &occurrences,
+        l,
+        ordered: vec![Vec::new(); sources.len()],
+        parent: (0..occurrences.len()).collect(),
+        comparisons: 0,
+    };
+    for occurrence in 0..occurrences.len() {
+        for side in 0..2 {
+            order.place(SourceContactParameter { occurrence, side })?;
+        }
+    }
+    let groups = order.groups();
+    let (ordered, comparisons) = (order.ordered, order.comparisons);
     Ok((occurrences, groups, ordered, comparisons))
 }
 impl OriginalContactAtlas {

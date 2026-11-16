@@ -1,3 +1,6 @@
+import { validIsolatedSsContactReport } from '../isolatedSsContact'
+import { validPeriodicBandReport, validPeriodicStockIntersectionReport } from '../periodicBand'
+import { validClosedSsNetworkBooleanResult } from '../closedSsBoolean'
 import { isBondedSolidResult } from '../bondedSolidProtocol'
 import { validExpressionShell } from '../expressionShell'
 import { validExpressionInspection } from '../expressionShellInspection'
@@ -102,6 +105,10 @@ const directDocumentEntry = (_job: unknown, value: unknown): boolean =>
   validDirectDocument(value)
 
 const RESULT_VALIDATORS: ResultValidatorMap = {
+  isolatedSsContact: (_, value) => validIsolatedSsContactReport(value),
+  periodicBand: (job, value) => validPeriodicBandReport(value, job.sourceKey),
+  periodicStockIntersection: (job, value) => validPeriodicStockIntersectionReport(value, job.sourceKey),
+  closedSsNetworkBoolean: (job, value) => validClosedSsNetworkBooleanResult(value, job),
   expressionShellRestore: validExpressionShell,
   expressionShellInspect: validExpressionInspection,
   sourceBodyRestore: validSourceBody,
