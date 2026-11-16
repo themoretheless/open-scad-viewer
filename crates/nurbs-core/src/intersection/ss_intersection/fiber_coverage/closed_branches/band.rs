@@ -1,10 +1,10 @@
 //! Refine an original uniform root band, including singleton point selectors.
 use super::*;
-pub(super) struct RootBand {
+pub(crate) struct RootBand {
     pub fiber: QualifiedFiber,
     pub cells: usize,
 }
-pub(super) fn refine_band(f: &QualifiedFiber, interval: [f64; 2], max: usize) -> Result<RootBand> {
+pub(crate) fn refine_band(f: &QualifiedFiber, interval: [f64; 2], max: usize) -> Result<RootBand> {
     check(max > 0, "No original root band work")?;
     let mut d = f.domain();
     d[f.free_axis().index()] = interval;
@@ -36,7 +36,7 @@ pub(super) fn refine_band(f: &QualifiedFiber, interval: [f64; 2], max: usize) ->
             || next
                 .iter()
                 .enumerate()
-                .any(|(k, d)| k != point.free_axis().index() && d[0] >= d[1])
+                .any(|(k, d)| k != point.free_axis().index() && d[0] > d[1])
         {
             break;
         }

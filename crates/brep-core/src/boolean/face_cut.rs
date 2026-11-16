@@ -24,7 +24,9 @@ pub use retention_network::{
 };
 #[path = "face_cut/contact_retention.rs"]
 mod contact_retention;
-pub use contact_retention::{ContactFaceCut, ContactRetention, ContactRetentionLimits, plan_contact_retention};
+pub use contact_retention::{
+    ContactFaceCut, ContactRetention, ContactRetentionLimits, plan_contact_retention,
+};
 
 #[path = "face_cut/rooted_retention.rs"]
 mod rooted_retention;
@@ -79,8 +81,7 @@ use endpoint_loop::owned_boundary;
 mod closed;
 pub use closed::{
     BridgePartition, BridgePath, ClosedCutLimits, ClosedPartition, HolePartition,
-    PathGraphPartition, partition_bridges, partition_path_graph,
-    partition_same_hole,
+    PathGraphPartition, partition_bridges, partition_path_graph, partition_same_hole,
 };
 pub(crate) use closed::{partition_bridges_with_tolerances, partition_path_graph_with_tolerances};
 
@@ -783,6 +784,11 @@ mod closed_api;
 pub use closed_api::{ClosedCutBudget, partition_closed};
 
 mod closed_ss;
-pub use closed_ss::{ClosedSsLimits,ClosedSsPartition,partition_closed_ss};
+pub use closed_ss::{ClosedSsLimits, ClosedSsPartition, partition_closed_ss};
 mod closed_ss_all;
-pub use closed_ss_all::{ClosedSsNetwork,partition_all_closed_ss};
+pub use closed_ss_all::{ClosedSsNetwork, partition_all_closed_ss};
+mod open_ss;
+pub use open_ss::{
+    OpenSsComponentsPartition, OpenSsLimits, OpenSsPartition, partition_open_ss,
+    partition_open_ss_components, partition_open_ss_components_automatic,
+};

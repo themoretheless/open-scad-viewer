@@ -347,3 +347,252 @@ fn shared_vertex_proposal_requires_both_complete_original_face_lifts() {
     );
     assert_eq!(model, before);
 }
+
+#[test]
+fn shared_world_and_uv_vertex_proposals_require_every_complete_face_lift() {
+    let model = brep_core::cuboid([0.; 3], [2., 3., 4.]).unwrap();
+    let before = model.clone();
+    let edge = 0;
+    let [a, b] = model.edges[edge].curve.domain();
+    let parameter = a + (b - a) * 0.5;
+    let p = model.edges[edge].curve.evaluate(parameter).unwrap().point;
+    let mut vertex = [p[0], p[1], p[2]];
+    vertex[0] += model.tolerance_mm * 0.25;
+    let mut cuts = cuts(&model, edge, 0.5);
+    cuts.reverse();
+    assert!(cuts.iter().any(|cut| {
+        let c = &model.loops[cut.wire].coedges[cut.coedge];
+        c.reversed
+    }));
+    assert!(cuts.iter().any(|cut| {
+        let c = &model.loops[cut.wire].coedges[cut.coedge];
+        !c.reversed
+    }));
+    let uv: Vec<[f64; 2]> = cuts
+        .iter()
+        .map(|cut| {
+            model.loops[cut.wire].coedges[cut.coedge]
+                .pcurve
+                .evaluate(cut.parameter)
+                .unwrap()
+                .point
+                .try_into()
+                .unwrap()
+        })
+        .collect();
+    let out = edge_partition::partition_to_vertex_and_uv(
+        &model, edge, parameter, &cuts, vertex, &uv, 100000,
+    )
+    .unwrap();
+    out.model.validate().unwrap();
+    assert!(out.model.persistent_naming_complete());
+    assert!(
+        brep_core::boundary_agreement::verify(&out.model, 100000)
+            .unwrap()
+            .complete
+    );
+    for (cut, uv) in cuts.iter().zip(&uv) {
+        let children = &out.model.loops[cut.wire].coedges[cut.coedge..=cut.coedge + 1];
+        assert_eq!(
+            children[0].pcurve.control_points.last().unwrap(),
+            &uv.to_vec()
+        );
+        assert_eq!(children[1].pcurve.control_points[0], uv.to_vec());
+    }
+
+    let mut far_world = vertex;
+    far_world[0] += model.tolerance_mm * 8.;
+    assert!(
+        edge_partition::partition_to_vertex_and_uv(
+            &model, edge, parameter, &cuts, far_world, &uv, 100000,
+        )
+        .is_err()
+    );
+    let mut far_uv = uv.clone();
+    far_uv[0][0] += 1.;
+    assert!(
+        edge_partition::partition_to_vertex_and_uv(
+            &model, edge, parameter, &cuts, vertex, &far_uv, 100000,
+        )
+        .is_err()
+    );
+    assert!(
+        edge_partition::partition_to_vertex_and_uv(
+            &model,
+            edge,
+            parameter,
+            &cuts,
+            vertex,
+            &uv[..1],
+            100000,
+        )
+        .is_err()
+    );
+    let mut nonfinite = uv.clone();
+    nonfinite[0][0] = f64::NAN;
+    assert!(
+        edge_partition::partition_to_vertex_and_uv(
+            &model, edge, parameter, &cuts, vertex, &nonfinite, 100000,
+        )
+        .is_err()
+    );
+    assert!(
+        edge_partition::partition_to_vertex_and_uv(&model, edge, parameter, &cuts, vertex, &uv, 0,)
+            .is_err()
+    );
+    assert_eq!(model, before);
+}
+
+fn partially_trimmed_cuboid() -> (Model, usize) {
+    let mut model = brep_core::cuboid([0.; 3], [2., 3., 4.]).unwrap();
+    let edge = 0;
+    for knot in &mut model.edges[edge].curve.knots {
+        *knot = 2. + *knot * 3.;
+    }
+    let curve = model.edges[edge].curve.domain();
+    for wire in &mut model.loops {
+        for c in &mut wire.coedges {
+            if c.edge != edge {
+                continue;
+            }
+            for knot in &mut c.pcurve.knots {
+                *knot = -1. + *knot * 2.;
+            }
+            let pcurve = c.pcurve.domain();
+            let window = |domain: [f64; 2]| {
+                [
+                    domain[0] + (domain[1] - domain[0]) * 0.2,
+                    domain[0] + (domain[1] - domain[0]) * 0.8,
+                ]
+            };
+            *c = c
+                .clone()
+                .with_trim(brep_topology::CoedgeTrim {
+                    curve_parameter: window(curve),
+                    pcurve_parameter: window(pcurve),
+                    periodic_lift: [[0; 2]; 2],
+                })
+                .unwrap();
+        }
+    }
+    model.rebuild_topology_ids();
+    model.validate().unwrap();
+    assert!(
+        brep_core::boundary_agreement::verify(&model, 100000)
+            .unwrap()
+            .complete
+    );
+    (model, edge)
+}
+
+#[test]
+fn shared_vertex_proposal_preserves_partial_trim_windows_on_both_children() {
+    let (model, edge) = partially_trimmed_cuboid();
+    let before = model.clone();
+    let fraction = 0.4;
+    let [a, b] = model.edges[edge].curve.domain();
+    let parameter = a + (b - a) * fraction;
+    let vertex = model.edges[edge]
+        .curve
+        .evaluate(parameter)
+        .unwrap()
+        .point
+        .try_into()
+        .unwrap();
+    let cuts = cuts(&model, edge, fraction);
+    assert!(cuts.iter().any(|cut| {
+        model.loops[cut.wire].coedges[cut.coedge].reversed
+    }));
+    assert!(cuts.iter().any(|cut| {
+        !model.loops[cut.wire].coedges[cut.coedge].reversed
+    }));
+    let uv: Vec<[f64; 2]> = cuts
+        .iter()
+        .map(|cut| {
+            model.loops[cut.wire].coedges[cut.coedge]
+                .pcurve
+                .evaluate(cut.parameter)
+                .unwrap()
+                .point
+                .try_into()
+                .unwrap()
+        })
+        .collect();
+    let out = edge_partition::partition_to_vertex_and_uv(
+        &model, edge, parameter, &cuts, vertex, &uv, 100000,
+    )
+    .unwrap();
+    out.model.validate().unwrap();
+    assert!(
+        brep_core::boundary_agreement::verify(&out.model, 100000)
+            .unwrap()
+            .complete
+    );
+    for cut in &cuts {
+        let original = &model.loops[cut.wire].coedges[cut.coedge];
+        let trim = original.trim().unwrap();
+        let authored_curve_cut = if original.reversed {
+            a + b - parameter
+        } else {
+            parameter
+        };
+        let children = &out.model.loops[cut.wire].coedges[cut.coedge..=cut.coedge + 1];
+        for (fragment, child) in children.iter().enumerate() {
+            let transferred = child.trim().expect("trim must survive edge partition");
+            let curve = if fragment == 0 {
+                [trim.curve_parameter[0], authored_curve_cut]
+            } else {
+                [authored_curve_cut, trim.curve_parameter[1]]
+            };
+            let domain = out.model.edges[child.edge].curve.domain();
+            let shift = if original.reversed {
+                domain[0] + domain[1] - a - b
+            } else {
+                0.
+            };
+            assert_eq!(transferred.curve_parameter, curve.map(|v| v + shift));
+            assert_eq!(
+                transferred.pcurve_parameter,
+                if fragment == 0 {
+                    [trim.pcurve_parameter[0], cut.parameter]
+                } else {
+                    [cut.parameter, trim.pcurve_parameter[1]]
+                }
+            );
+            assert_eq!(transferred.periodic_lift, [[0; 2]; 2]);
+        }
+    }
+    assert_eq!(model, before);
+
+    for fraction in [0.1, 0.2, 0.8, 0.9] {
+        let parameter = a + (b - a) * fraction;
+        let cuts = crate::cuts(&model, edge, fraction);
+        let vertex = model.edges[edge]
+            .curve
+            .evaluate(parameter)
+            .unwrap()
+            .point
+            .try_into()
+            .unwrap();
+        let uv: Vec<[f64; 2]> = cuts
+            .iter()
+            .map(|cut| {
+                model.loops[cut.wire].coedges[cut.coedge]
+                    .pcurve
+                    .evaluate(cut.parameter)
+                    .unwrap()
+                    .point
+                    .try_into()
+                    .unwrap()
+            })
+            .collect();
+        assert!(
+            edge_partition::partition_to_vertex_and_uv(
+                &model, edge, parameter, &cuts, vertex, &uv, 100000,
+            )
+            .is_err(),
+            "cut fraction {fraction} must not escape or collapse an authored trim"
+        );
+        assert_eq!(model, before);
+    }
+}

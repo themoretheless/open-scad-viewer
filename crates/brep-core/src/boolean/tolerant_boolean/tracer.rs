@@ -241,7 +241,6 @@ impl<'m> Tracer<'m> {
         };
         // Refine: edge curve C(t) meets the other surface S(s,r).
         let curve = &chart.model.edges[edge].curve;
-        let domain = curve.domain();
         let trim_domain = [c[0].min(c[1]), c[0].max(c[1])];
         let other = if left_a { &self.b } else { &self.a };
         let mut t = t0;
@@ -287,13 +286,32 @@ impl<'m> Tracer<'m> {
                 "Tolerant Boolean: boundary hit did not converge on the trim edge",
             ));
         }
-        let vertex_epsilon = 1e-6 * (domain[1] - domain[0]);
-        if (t - domain[0]).abs() <= vertex_epsilon
-            || (t - domain[1]).abs() <= vertex_epsilon
-        {
-            return Err(unsupported(
-                "Tolerant Boolean: the intersection passes through a vertex of an operand",
-            ));
+        // Newton can stall a few parameters next to an original vertex. Snap
+        // only after evaluating the exact vertex against the other surface;
+        // a merely nearby crossing remains an ordinary interior edge hit. The
+        // full-edge endpoint must also belong to this coedge's authored trim.
+        let domain = curve.domain();
+        let vertex_epsilon = 1e-4 * (domain[1] - domain[0]);
+        let endpoint = if (t - domain[0]).abs() <= vertex_epsilon {
+            Some(domain[0])
+        } else if (t - domain[1]).abs() <= vertex_epsilon {
+            Some(domain[1])
+        } else {
+            None
+        };
+        let mut original_vertex = None;
+        if let Some(endpoint) = endpoint {
+            let exact = curve.evaluate(endpoint)?.point;
+            let residual = norm(sub([exact[0], exact[1], exact[2]], other.jet(uv)?.p));
+            if residual <= 1e-4 * self.scale
+                && trim_domain[0] <= endpoint
+                && endpoint <= trim_domain[1]
+            {
+                t = endpoint;
+                original_vertex = Some(
+                    chart.model.edges[edge].vertices[if endpoint == domain[0] { 0 } else { 1 }],
+                );
+            }
         }
         if !other.inside(uv) || other.boundary_distance(uv) < 1e-6 {
             return Err(unsupported(
@@ -328,6 +346,7 @@ impl<'m> Tracer<'m> {
             operand,
             edge,
             t,
+            original_vertex,
             point,
             a,
             b,
@@ -378,6 +397,43 @@ impl<'m> Tracer<'m> {
         Ok(None)
     }
 
+    /// Whether a failed seed is an isolated transverse contact at an active
+    /// trim corner. A coincident boundary ending at that corner must remain a
+    /// refusal: every edge lying on the other surface has a tangent in that
+    /// surface's tangent plane. Regular tangencies fail the direction check.
+    pub(super) fn isolated_transverse_vertex_contact(&self, pt: &TracePoint) -> Result<bool> {
+        if self.direction(pt)?.is_none() {
+            return Ok(false);
+        }
+        let mut corner = false;
+        for (chart, other, other_uv) in [(&self.a, &self.b, pt.b), (&self.b, &self.a, pt.a)] {
+            let other_normal = unit(cross(other.jet(other_uv)?.du, other.jet(other_uv)?.dv));
+            for sampled in chart.coedges.iter().flatten() {
+                let curve = &chart.model.edges[sampled.edge].curve;
+                let c = sampled.curve_parameter;
+                for (end, inward) in [(0usize, 1.), (1usize, -1.)] {
+                    let endpoint = curve.evaluate(c[end])?.point;
+                    let endpoint = [endpoint[0], endpoint[1], endpoint[2]];
+                    if dist(endpoint, pt.p) > 1e-4 * self.scale {
+                        continue;
+                    }
+                    corner = true;
+                    let near = curve
+                        .evaluate(c[end] + inward * (c[1] - c[0]) * 1e-6)?
+                        .point;
+                    let tangent = unit(sub([near[0], near[1], near[2]], endpoint));
+                    let (Some(tangent), Some(normal)) = (tangent, other_normal) else {
+                        return Ok(false);
+                    };
+                    if dot(tangent, normal).abs() <= 1e-3 {
+                        return Ok(false);
+                    }
+                }
+            }
+        }
+        Ok(corner)
+    }
+
     /// All intersection chains of the face pair.
     pub(super) fn trace_all(&self, seeds_per_axis: usize) -> Result<Vec<Chain>> {
         let mut chains: Vec<Chain> = Vec::new();
@@ -420,13 +476,16 @@ impl<'m> Tracer<'m> {
                 {
                     // Newton slid this seed onto a trim edge (a clamped seam
                     // crossing is a valid intersection point). Step along the
-                    // curve into the regions and trace from there; when no
-                    // such step exists the surfaces meet along the edge
-                    // itself, which this path cannot author.
+                    // curve into the regions and trace from there. An isolated
+                    // contact at an existing corner has no arc on this face
+                    // pair; other failed exits remain fail-closed because they
+                    // may be a coincident boundary this path cannot author.
                     match self.step_inside(&pt)? {
                         Some(inner) => inner,
                         None => {
-                            grazing += 1;
+                            if !self.isolated_transverse_vertex_contact(&pt)? {
+                                grazing += 1;
+                            }
                             continue;
                         }
                     }
