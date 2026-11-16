@@ -252,16 +252,17 @@ const models = [
       await faces.selectOption({ label: top })
       await ui.command('Эскиз на грани')
       await ui.solid.getByText('Плоскость: XY', { exact: true }).waitFor({ state: 'detached' })
-      // The face frame is origin (0, 10, 10), u = −Y, v = +X. The ruled loft pairs section vertices
-      // by index, so the square starts at world (2, 2) like the base starts at (0, 0); a rectangle
-      // drawn in this frame would start at another corner and give a twisted loft (453.3 mm³).
+      // The face workplane is anchored at a boundary corner with u along a boundary edge, so u
+      // runs into the face and v = n × u points out of it: the 6 mm square sits 2 mm inside both
+      // edges at local x ∈ [2, 8], y ∈ [−8, −2]. The ruled loft re-corresponds section winding
+      // and start vertex itself, so the point order is free.
       await ui.edit('top square 6×6 on the face', async () => {
         await ui.command('Polyline')
         for (const [x, y] of [
-          [8, 2],
-          [8, 8],
-          [2, 8],
-          [2, 2],
+          [8, -2],
+          [8, -8],
+          [2, -8],
+          [2, -2],
         ]) {
           await ui.input('Координата точки X', `${x} mm`)
           await ui.input('Координата точки Y', `${y} mm`)

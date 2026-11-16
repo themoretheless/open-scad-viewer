@@ -262,11 +262,76 @@ pub(crate) fn piecewise_ruled_loft(sections: &[Vec<P>]) -> Result<Model> {
     }
     build.finish()
 }
+fn newell_normal(section: &[P]) -> P {
+    let mut n = [0.; 3];
+    for i in 0..section.len() {
+        let a = section[i];
+        let b = section[(i + 1) % section.len()];
+        n[0] += (a[1] - b[1]) * (a[2] + b[2]);
+        n[1] += (a[2] - b[2]) * (a[0] + b[0]);
+        n[2] += (a[0] - b[0]) * (a[1] + b[1]);
+    }
+    n
+}
+fn centroid(section: &[P]) -> P {
+    let mut c = [0.; 3];
+    for p in section {
+        for k in 0..3 {
+            c[k] += p[k] / section.len() as f64;
+        }
+    }
+    c
+}
+/// Sketch frames are arbitrary, so section vertex lists may start at any corner
+/// and run either way. Each section after the first is re-indexed to the winding
+/// of its predecessor and rotated to the start vertex whose centroid-relative
+/// world positions are nearest to the predecessor's, so rulings never twist
+/// because of how a sketch happened to be drawn.
+fn correspond_sections(sections: &[Vec<P>]) -> Vec<Vec<P>> {
+    let mut out: Vec<Vec<P>> = Vec::with_capacity(sections.len());
+    let mut first = sections[0].clone();
+    let rise = sub(centroid(&sections[sections.len() - 1]), centroid(&first));
+    if dot(newell_normal(&first), rise) < 0. {
+        // Orient the first loop so the stack runs along its normal, keeping its start vertex.
+        first[1..].reverse();
+    }
+    out.push(first);
+    for section in &sections[1..] {
+        let previous = out.last().expect("first section pushed");
+        let mut current = section.clone();
+        if dot(newell_normal(previous), newell_normal(&current)) < 0. {
+            current.reverse();
+        }
+        let (c0, c1) = (centroid(previous), centroid(&current));
+        let count = current.len();
+        let cost = |shift: usize| -> f64 {
+            (0..count)
+                .map(|i| {
+                    let a = sub(previous[i], c0);
+                    let b = sub(current[(i + shift) % count], c1);
+                    let d = sub(a, b);
+                    dot(d, d)
+                })
+                .sum()
+        };
+        let best = (0..count)
+            .min_by(|&a, &b| cost(a).total_cmp(&cost(b)))
+            .unwrap_or(0);
+        current.rotate_left(best);
+        out.push(current);
+    }
+    out
+}
 /// Matching vertices define a straight ruling between each adjacent section.
 /// Subdivided Bernstein support bounds admit convex intermediate profiles.
 /// This bounded numerical admission is sufficient, not a certified or complete
 /// test of all valid correspondences. Surface joins across stations are C0.
 pub fn ruled_loft(sections: &[Vec<P>]) -> Result<Model> {
+    let comparable = sections.len() >= 2
+        && !sections[0].is_empty()
+        && sections.iter().all(|s| s.len() == sections[0].len());
+    let corresponded = if comparable { correspond_sections(sections) } else { sections.to_vec() };
+    let sections = corresponded.as_slice();
     crate::operations::admit_loft_sections(sections)?;
     let count = sections[0].len();
     if (sections.len() - 1) * count + 2 > 256 {
@@ -399,6 +464,49 @@ pub fn ruled_loft(sections: &[Vec<P>]) -> Result<Model> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn frustum_sections() -> (Vec<P>, Vec<P>) {
+        let base = vec![[0., 0., 0.], [10., 0., 0.], [10., 10., 0.], [0., 10., 0.]];
+        let top = vec![[2., 2., 10.], [8., 2., 10.], [8., 8., 10.], [2., 8., 10.]];
+        (base, top)
+    }
+    #[test]
+    fn rotated_and_reversed_section_frames_give_the_untwisted_correspondence() {
+        let (base, top) = frustum_sections();
+        let reference = correspond_sections(&[base.clone(), top.clone()]);
+        assert_eq!(reference[1], top);
+        for shift in 0..4 {
+            for reversed in [false, true] {
+                let mut drawn = top.clone();
+                if reversed {
+                    drawn.reverse();
+                }
+                drawn.rotate_left(shift);
+                let fixed = correspond_sections(&[base.clone(), drawn.clone()]);
+                assert_eq!(fixed[1], top, "shift {shift} reversed {reversed}");
+                ruled_loft(&[base.clone(), drawn]).unwrap().validate().unwrap();
+            }
+        }
+    }
+    #[test]
+    fn a_clockwise_base_is_reoriented_along_the_stack() {
+        let (base, top) = frustum_sections();
+        let mut clockwise = base.clone();
+        clockwise[1..].reverse();
+        let mut drawn = top.clone();
+        drawn.rotate_left(2);
+        let fixed = correspond_sections(&[clockwise.clone(), drawn.clone()]);
+        assert_eq!(fixed, vec![base, top]);
+        ruled_loft(&[clockwise, drawn]).unwrap().validate().unwrap();
+    }
+    #[test]
+    fn correspondence_survives_an_offset_top_section() {
+        let (base, top) = frustum_sections();
+        let offset: Vec<P> = top.iter().map(|p| [p[0] + 30., p[1] - 7., p[2]]).collect();
+        let mut drawn = offset.clone();
+        drawn.reverse();
+        drawn.rotate_left(1);
+        assert_eq!(correspond_sections(&[base, drawn])[1], offset);
+    }
     #[test]
     fn valid_twisted_profiles_are_admitted_after_bound_refinement() {
         let base = vec![[-1., -1., 0.], [1., -1., 0.], [1., 1., 0.], [-1., 1., 0.]];
@@ -436,7 +544,10 @@ mod tests {
         assert_eq!(model.edges.len(), 12);
         assert_eq!(model.validate().unwrap().boundary_edge_count, 0);
         assert!(model.loops.iter().all(|l| l.coedges.len() == 4));
-        let twisted = base.iter().map(|p| [-p[0], -p[1], 3.]).collect();
-        assert!(ruled_loft(&[base, twisted]).is_err());
+        // A half-turn index shift is re-corresponded instead of collapsing the rulings.
+        let shifted: Vec<P> = base.iter().map(|p| [-p[0], -p[1], 3.]).collect();
+        let aligned = correspond_sections(&[base.clone(), shifted.clone()]);
+        assert_eq!(aligned[1], base.iter().map(|p| [p[0], p[1], 3.]).collect::<Vec<_>>());
+        assert_eq!(ruled_loft(&[base, shifted]).unwrap().validate().unwrap().boundary_edge_count, 0);
     }
 }
