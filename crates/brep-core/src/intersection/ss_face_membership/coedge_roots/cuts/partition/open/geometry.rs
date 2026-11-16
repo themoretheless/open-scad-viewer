@@ -106,7 +106,7 @@ pub(super) fn classify_cores(
     used: &mut usize,
     cells: &mut usize,
     limits: OpenSSPathLimits,
-) -> Result<()> {
+) -> Result<bool> {
     let faces = input.source.roots.faces;
     let domains = [
         FaceDomain::new(faces[0].0, faces[0].1, uv)?,
@@ -134,14 +134,17 @@ pub(super) fn classify_cores(
                 spend(cells, limits.cells, r.cells)?;
                 r.location
             };
+            if location == Location::Outside {
+                return Ok(false);
+            }
             if location != Location::Inside {
                 return Err(unproven(
-                    "Original SS core is outside a retained face or unresolved",
+                    "Original SS core retained-face location is unresolved",
                 ));
             }
         }
     }
-    Ok(())
+    Ok(true)
 }
 pub(super) fn guard(
     input: &QualifiedCutPartitions<'_, '_, '_>,

@@ -8,6 +8,7 @@ mod product_iso;
 mod boundary_coefficients;
 mod vertical_boundary;
 mod rational_boundary_residual;
+mod affine_bspline_lift;
 mod oriented_bezier;
 pub use point_lift::verify_exact_point;
 use crate::distance_bounds::{Interval, box_distance};
@@ -334,6 +335,12 @@ fn verify_exact_impl(c:&Curve,p:&Curve,s:&Surface,reversed:bool,max_work:u64,req
         // decline such a basis, so it must not preempt this stronger proof.
         if let Some(identity)=owned_boundary::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
         if let Some(identity)=bspline_trace::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
+        if let Some(identity)=affine_bspline_lift::verify(c,p,s,reversed,max_work)? {return Ok(Some(identity));}
+        if s.periodic_u || s.periodic_v {
+            if let Some(identity) = trimmed_boundary::verify(c, p, s, reversed, c.domain(), p.domain(), max_work)? {
+                return Ok(Some(identity));
+            }
+        }
     }
     let bezier=|knots:&[f64],degree:usize,n:usize| n==degree+1
         && knots[..=degree].iter().all(|x|*x==knots[degree])

@@ -6,7 +6,33 @@ pub struct QualifiedRootShellCharts {
     source: Arc<RootBrep>,
     max_spans: usize,
     bounds: Vec<[[f64; 2]; 2]>,
-    trim_domains: Vec<Arc<QualifiedRootPeriodicFace>>,
+    trim_domains: Vec<RootShellTrimDomain>,
+}
+
+#[derive(Clone, Debug)]
+pub(super) enum RootShellTrimDomain {
+    Lifted(Arc<QualifiedRootPeriodicFace>),
+    Quotient {
+        source: Arc<RootBrep>,
+        face: usize,
+        limits: ss::OriginalSsPathLimits,
+    },
+}
+
+impl RootShellTrimDomain {
+    pub(super) fn classify_box(&self, query: [[f64; 2]; 2]) -> Result<RootFaceRegion> {
+        match self {
+            Self::Lifted(domain) => Ok(domain.classify_box(query)?.region().clone()),
+            Self::Quotient { source, face, limits } => {
+                let proof = source.qualify_periodic_face_membership_box(*face, query, *limits)?;
+                Ok(if proof.inside() {
+                    RootFaceRegion::InsideSupport
+                } else {
+                    RootFaceRegion::OutsideOuter
+                })
+            }
+        }
+    }
 }
 
 impl QualifiedRootShellCharts {
@@ -23,7 +49,7 @@ impl QualifiedRootShellCharts {
                 "Chart qualification requires one closed root shell and a positive span budget",
             ));
         }
-        QualifiedRootPeriodicUvClosure::qualify(
+        let closure = QualifiedRootPeriodicUvClosure::qualify(
             source.clone(),
             topology
                 .loops
@@ -48,6 +74,36 @@ impl QualifiedRootShellCharts {
                 require_distinct_trim_vertices(vertices)?;
             }
             source.audit_face_trim_arcs(index, &mut remaining)?;
+            if closure.loops().iter().any(|lift| lift.face == index && lift.winding != [0, 0]) {
+                let periodic_axis = match (face.surface.periodic_u, face.surface.periodic_v) {
+                    (true, false) => 0,
+                    (false, true) => 1,
+                    _ => return Err(unproved("Quotient shell chart needs exactly one periodic axis")),
+                };
+                let report = nurbs_core::surface_injectivity::certify_periodic_extrusion(
+                    &face.surface, periodic_axis, max_spans, max_spans,
+                )?;
+                if !report.proven || !report.regular_interior {
+                    return Err(unproved("Root shell quotient carrier injectivity or regularity remains unproved"));
+                }
+                let cover = periodic_material::periodic_face_cover_root(
+                    &source, index, remaining,
+                )?;
+                if let Some(end) = report.collapsed_end {
+                    let transverse = 1 - periodic_axis;
+                    let native = crate::boolean_robustness::surface_uv_domains(&face.surface);
+                    if cover[transverse][end] == native[transverse][end] {
+                        return Err(unproved("Root shell trim cover reaches a collapsed shore"));
+                    }
+                }
+                rectangles.push(cover);
+                trim_domains.push(RootShellTrimDomain::Quotient {
+                    source: source.clone(),
+                    face: index,
+                    limits: ss::OriginalSsPathLimits { geometry, ..Default::default() },
+                });
+                continue;
+            }
             let bounds = winding::lifted_loop_bounds(&source, index, face.outer, &mut remaining)?;
             let report =
                 nurbs_core::surface_injectivity::certify_on(&face.surface, bounds, max_spans)?;
@@ -57,14 +113,14 @@ impl QualifiedRootShellCharts {
                 ));
             }
             rectangles.push(bounds);
-            trim_domains.push(Arc::new(QualifiedRootPeriodicFace::qualify(
+            trim_domains.push(RootShellTrimDomain::Lifted(Arc::new(QualifiedRootPeriodicFace::qualify(
                 source.clone(),
                 index,
                 ss::OriginalSsWindingLimits {
                     geometry,
                     ..Default::default()
                 },
-            )?));
+            )?)));
         }
         Ok(Self {
             source,
@@ -82,7 +138,7 @@ impl QualifiedRootShellCharts {
         self.bounds[face]
     }
 
-    pub(super) fn trim_domain(&self, face: usize) -> &Arc<QualifiedRootPeriodicFace> {
+    pub(super) fn trim_domain(&self, face: usize) -> &RootShellTrimDomain {
         &self.trim_domains[face]
     }
 
@@ -113,8 +169,40 @@ impl RootBrep {
             .faces
             .get(face)
             .ok_or_else(|| unproved("Missing root trim face"))?;
-        for id in std::iter::once(data.outer).chain(data.holes.iter().copied()) {
-            audit_trim_arc_separation(self, face, id, remaining)?;
+        let ids: Vec<_> = std::iter::once(data.outer)
+            .chain(data.holes.iter().copied())
+            .collect();
+        let mut quotient_boundary = false;
+        for &id in &ids {
+            let lift = uv_closure::qualify_loop_lift(self, face, id, false)?;
+            quotient_boundary |= lift.winding != [0, 0];
+            audit_trim_arc_separation(self, face, id, lift, remaining)?;
+        }
+        if quotient_boundary {
+            let periods = winding::face_periods(&data.surface);
+            let periodic = [data.surface.periodic_u, data.surface.periodic_v];
+            let covers = ids
+                .iter()
+                .map(|&id| {
+                    let lift = uv_closure::qualify_loop_lift(self, face, id, false)?;
+                    trim_arc_cover(
+                        self.topology(),
+                        id,
+                        lift.coedge_offsets,
+                        &periods,
+                        remaining,
+                    )
+                })
+                .collect::<Result<Vec<_>>>()?;
+            for (i, first) in covers.iter().enumerate() {
+                for second in &covers[i + 1..] {
+                    for a in first {
+                        for b in second {
+                            audit_trim_arc_pair([a, b], &periods, periodic, false, remaining)?;
+                        }
+                    }
+                }
+            }
         }
         Ok(())
     }
@@ -124,6 +212,7 @@ fn audit_trim_arc_separation(
     source: &RootBrep,
     face_id: usize,
     loop_id: usize,
+    lift: RootUvLoopLift,
     remaining: &mut ss::OriginalSsCurveLimits,
 ) -> Result<()> {
     let topology = source.topology();
@@ -149,13 +238,83 @@ fn audit_trim_arc_separation(
     if arcs.len() < 4 && !has_period {
         return Ok(());
     }
-    let lift = uv_closure::qualify_loop_lift(source, face_id, loop_id, false)?;
     if lift.winding != [0, 0] {
-        return Err(unproved("Root trim separation requires a closed UV lift"));
+        return qualify_monotone_periodic_trim(topology, loop_id, periodic, lift.winding);
     }
-    let arcs = arcs
+    let arcs = trim_arc_cover(topology, loop_id, lift.coedge_offsets, &periods, remaining)?;
+    for a in 0..arcs.len() {
+        for b in a..arcs.len() {
+            let incident = b <= a + 1 || (a == 0 && b == arcs.len() - 1);
+            if !incident || has_period {
+                audit_trim_arc_pair(
+                    [&arcs[a], &arcs[b]],
+                    &periods,
+                    periodic,
+                    incident,
+                    remaining,
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn qualify_monotone_periodic_trim(
+    topology: &RootTopology,
+    loop_id: usize,
+    periodic: [bool; 2],
+    winding: [i32; 2],
+) -> Result<()> {
+    let axis = match winding {
+        [-1 | 1, 0] if periodic[0] => 0,
+        [0, -1 | 1] if periodic[1] => 1,
+        _ => return Err(unproved("Root trim needs a simple one-period graph")),
+    };
+    for coedge in &topology.loops[loop_id].coedges {
+        let edge = &topology.edges[coedge.edge].curve;
+        let clock = match edge.curve().free_axis() {
+            ss::FiberAxis::FirstU => 0,
+            ss::FiberAxis::FirstV => 1,
+            ss::FiberAxis::SecondU => 2,
+            ss::FiberAxis::SecondV => 3,
+        };
+        if clock != 2 * coedge.pcurve.support + axis
+            || (edge.forward() ^ coedge.reversed) != (winding[axis] > 0)
+            || [edge.start(), edge.end()].iter().any(|port| {
+                let bounds = port.parameter_bounds();
+                bounds[0] != bounds[1]
+            })
+        {
+            return Err(unproved(
+                "Root trim does not traverse the periodic graph monotonically",
+            ));
+        }
+    }
+    // Consecutive exact clock intervals meet in the lifted chart and progress
+    // strictly in one direction. Their total length is exactly one period,
+    // so each quotient coordinate has just one boundary value.
+    Ok(())
+}
+
+type TrimArc<'a> = (
+    &'a Arc<ss::OriginalSsRootCurve>,
+    usize,
+    [f64; 2],
+    [[f64; 2]; 2],
+    [num_rational::BigRational; 2],
+);
+
+fn trim_arc_cover<'a>(
+    topology: &'a RootTopology,
+    loop_id: usize,
+    offsets: Vec<[i32; 2]>,
+    periods: &[num_rational::BigRational; 2],
+    remaining: &mut ss::OriginalSsCurveLimits,
+) -> Result<Vec<TrimArc<'a>>> {
+    topology.loops[loop_id]
+        .coedges
         .iter()
-        .zip(lift.coedge_offsets)
+        .zip(offsets)
         .map(|(use_, offset)| {
             let edge = &topology.edges[use_.edge].curve;
             let clock = edge.parameter_bounds();
@@ -172,70 +331,68 @@ fn audit_trim_arc_separation(
             let uv = winding::translate(uv, &shift)?;
             Ok((edge.curve(), support, range, uv, shift))
         })
-        .collect::<Result<Vec<_>>>()?;
-    for a in 0..arcs.len() {
-        for b in a..arcs.len() {
-            let incident = b <= a + 1 || (a == 0 && b == arcs.len() - 1);
-            if incident && !has_period {
-                continue;
-            }
+        .collect()
+}
+
+fn audit_trim_arc_pair(
+    pair: [&TrimArc<'_>; 2],
+    periods: &[num_rational::BigRational; 2],
+    periodic: [bool; 2],
+    incident: bool,
+    remaining: &mut ss::OriginalSsCurveLimits,
+) -> Result<()> {
+    remaining.interval_operations = remaining
+        .interval_operations
+        .checked_sub(1)
+        .ok_or_else(|| unproved("Root trim arc pair budget exhausted"))?;
+    let offsets = face_region::overlapping_period_offsets(pair[1].3, pair[0].3, periods, periodic)?;
+    face_region::visit_period_offsets(offsets, |offset| {
+        if incident && offset == [0, 0] {
+            return Ok(());
+        }
+        let shift = std::array::from_fn(|axis| {
+            &periods[axis] * num_rational::BigRational::from_integer(offset[axis].into())
+        });
+        let mut initial = pair.map(|arc| (arc.2, arc.3));
+        initial[1].1 = winding::translate(initial[1].1, &shift)?;
+        let mut pending = vec![initial];
+        while let Some(mut boxes) = pending.pop() {
             remaining.interval_operations = remaining
                 .interval_operations
                 .checked_sub(1)
-                .ok_or_else(|| unproved("Root trim arc pair budget exhausted"))?;
-            let pair = [&arcs[a], &arcs[b]];
-            let offsets =
-                face_region::overlapping_period_offsets(pair[1].3, pair[0].3, &periods, periodic)?;
-            face_region::visit_period_offsets(offsets, |offset| {
-                if incident && offset == [0, 0] {
-                    return Ok(());
-                }
-                let shift = std::array::from_fn(|axis| {
-                    &periods[axis] * num_rational::BigRational::from_integer(offset[axis].into())
-                });
-                let mut initial = pair.map(|arc| (arc.2, arc.3));
-                initial[1].1 = winding::translate(initial[1].1, &shift)?;
-                let mut pending = vec![initial];
-                while let Some(mut boxes) = pending.pop() {
-                    remaining.interval_operations = remaining
-                        .interval_operations
-                        .checked_sub(1)
-                        .ok_or_else(|| unproved("Root trim arc subdivision budget exhausted"))?;
-                    if (0..2).any(|axis| {
-                        boxes[0].1[axis][1] < boxes[1].1[axis][0]
-                            || boxes[1].1[axis][1] < boxes[0].1[axis][0]
-                    }) {
-                        continue;
-                    }
-                    let width = |side: usize| boxes[side].0[1] - boxes[side].0[0];
-                    let side = usize::from(width(1) > width(0));
-                    let [lo, hi] = boxes[side].0;
-                    let mid = lo * 0.5 + hi * 0.5;
-                    if !(lo < mid && mid < hi) {
-                        return Err(unproved(
-                            "Root trim arcs or their period copies may intersect",
-                        ));
-                    }
-                    let (curve, support, _, _, chart_shift) = pair[side];
-                    for range in [[lo, mid], [mid, hi]] {
-                        let uv = winding::translate(
-                            winding::project(curve, range, *support, remaining)?,
-                            chart_shift,
-                        )?;
-                        let uv = if side == 1 {
-                            winding::translate(uv, &shift)?
-                        } else {
-                            uv
-                        };
-                        boxes[side] = (range, uv);
-                        pending.push(boxes);
-                    }
-                }
-                Ok(())
-            })?;
+                .ok_or_else(|| unproved("Root trim arc subdivision budget exhausted"))?;
+            if (0..2).any(|axis| {
+                boxes[0].1[axis][1] < boxes[1].1[axis][0]
+                    || boxes[1].1[axis][1] < boxes[0].1[axis][0]
+            }) {
+                continue;
+            }
+            let width = |side: usize| boxes[side].0[1] - boxes[side].0[0];
+            let side = usize::from(width(1) > width(0));
+            let [lo, hi] = boxes[side].0;
+            let mid = lo * 0.5 + hi * 0.5;
+            if !(lo < mid && mid < hi) {
+                return Err(unproved(
+                    "Root trim arcs or their period copies may intersect",
+                ));
+            }
+            let (curve, support, _, _, chart_shift) = pair[side];
+            for range in [[lo, mid], [mid, hi]] {
+                let uv = winding::translate(
+                    winding::project(curve, range, *support, remaining)?,
+                    chart_shift,
+                )?;
+                let uv = if side == 1 {
+                    winding::translate(uv, &shift)?
+                } else {
+                    uv
+                };
+                boxes[side] = (range, uv);
+                pending.push(boxes);
+            }
         }
-    }
-    Ok(())
+        Ok(())
+    })
 }
 
 fn adjacent_trim_arcs_overlap(
@@ -760,35 +917,7 @@ impl QualifiedRootShellCharts {
         }
         let mut refinement_cells = 4096;
         let projected_clocks = std::sync::OnceLock::new();
-        for node in coverage.nodes() {
-            let mut root = node.domain();
-            let chart = match node.kind() {
-                Some(ss::QuotientCoverageKind::Chart(chart)) => *chart,
-                Some(ss::QuotientCoverageKind::RootImage {
-                    chart,
-                    axis,
-                    report,
-                }) => {
-                    let image = report
-                        .root_image
-                        .ok_or_else(|| unproved("Missing census root enclosure"))?;
-                    let free = fiber_axis_index(*axis);
-                    for (bounds, image) in root
-                        .iter_mut()
-                        .enumerate()
-                        .filter_map(|(axis, bounds)| (axis != free).then_some(bounds))
-                        .zip(image)
-                    {
-                        bounds[0] = bounds[0].max(image[0]);
-                        bounds[1] = bounds[1].min(image[1]);
-                    }
-                    *chart
-                }
-                Some(
-                    ss::QuotientCoverageKind::Excluded(_) | ss::QuotientCoverageKind::Split { .. },
-                ) => continue,
-                None => return Err(unproved("Incomplete shared edge contact census")),
-            };
+        for (chart, mut root) in coverage.root_enclosures()? {
             let fiber = &coverage.fibers()[chart];
             let free = fiber_axis_index(fiber.free_axis());
             let periods = [
@@ -852,9 +981,9 @@ impl QualifiedRootShellCharts {
             let outside_trim = |window: [[f64; 2]; 4]| {
                 faces.into_iter().enumerate().any(|(side, face)| {
                     let query = [window[side * 2], window[side * 2 + 1]];
-                    self.trim_domain(face).classify_box(query).is_ok_and(|proof| {
+                    self.trim_domain(face).classify_box(query).is_ok_and(|region| {
                         matches!(
-                            proof.region(),
+                            region,
                             RootFaceRegion::OutsideOuter | RootFaceRegion::ExcludedByHoles(_)
                         )
                     })
@@ -1288,11 +1417,66 @@ pub struct QualifiedRootShellContacts {
     censuses: Vec<([usize; 2], ss::QualifiedQuotientCoverage)>,
     max_cells: usize,
     separated_pairs: usize,
+    section_pairs: usize,
+}
+
+impl QualifiedRootShellCharts {
+    fn qualify_periodic_section_contact(&self, faces: [usize; 2]) -> Result<()> {
+        use num_rational::BigRational as Q;
+        use num_traits::ToPrimitive;
+        let topology = self.source.topology();
+        let [a, b] = faces.map(|id| &topology.faces[id]);
+        let sources = ss::FiberSources::new(&a.surface, &b.surface)?;
+        let section = ss::qualify_periodic_plane_ss(&sources, Default::default())?;
+        if section.kind() != ss::PeriodicPlaneSSKind::ClosedContour {
+            return Err(unproved("Incident periodic faces need a complete regular section"));
+        }
+        let periodic_support = section.periodic_surface();
+        let axis = section.periodic_axis();
+        let surface = &topology.faces[faces[periodic_support]].surface;
+        let bounds = crate::boolean_robustness::surface_uv_domains(surface)[axis]
+            .map(|value| Q::from_float(value).unwrap());
+        let period = &bounds[1] - &bounds[0];
+        let edges = |face: &brep_topology::Face<Surface>, support| {
+            std::iter::once(face.outer).chain(face.holes.iter().copied())
+                .flat_map(|loop_id| &topology.loops[loop_id].coedges)
+                .filter(|coedge| coedge.pcurve.support == support)
+                .map(|coedge| coedge.edge)
+                .collect::<std::collections::BTreeSet<_>>()
+        };
+        let mut clocks = Vec::new();
+        for &id in edges(a, 0).intersection(&edges(b, 1)) {
+            let edge = &topology.edges[id].curve;
+            let original = edge.curve().source();
+            if original.first() != &a.surface || original.second() != &b.surface
+                || fiber_axis_index(edge.curve().free_axis()) != 2 * periodic_support + axis
+            {
+                return Err(unproved("Periodic section edge has a foreign carrier or clock"));
+            }
+            let [lo, hi] = edge.original_inner_clock()?;
+            let min = ((&bounds[0] - &hi) / &period).ceil().to_i32()
+                .ok_or_else(|| unproved("Periodic section clock shift overflow"))?;
+            let max = ((&bounds[1] - &lo) / &period).floor().to_i32()
+                .ok_or_else(|| unproved("Periodic section clock shift overflow"))?;
+            if i64::from(max) - i64::from(min) > 4 {
+                return Err(unproved("Periodic section edge crosses too many native periods"));
+            }
+            for shift in min..=max {
+                let offset = &period * Q::from_integer(shift.into());
+                clocks.push([&lo + &offset, &hi + &offset]);
+            }
+        }
+        if !covers_clock(clocks, bounds) {
+            return Err(unproved("Shared edges do not cover the complete periodic section"));
+        }
+        Ok(())
+    }
 }
 
 impl QualifiedRootShellContacts {
-    /// Require a census for each incident face pair and prove separation for
-    /// every other pair. Census face indices follow its original surface order.
+    /// Account for each incident face pair through an SS census or a proved
+    /// periodic plane section. Nonincident pairs must be separated.
+    /// Census face indices follow the original surface order.
     pub fn qualify(
         charts: QualifiedRootShellCharts,
         censuses: Vec<([usize; 2], ss::QualifiedQuotientCoverage)>,
@@ -1329,10 +1513,22 @@ impl QualifiedRootShellContacts {
                 }
             }
         }
-        if !incident.iter().copied().eq(supplied.keys().copied()) {
-            return Err(unproved(
-                "Shell contact census must cover exactly the incident face pairs",
-            ));
+        if supplied.keys().any(|pair| !incident.contains(pair)) {
+            return Err(unproved("Shell contact census refers to a nonincident face pair"));
+        }
+        let mut section_pairs = 0;
+        for pair in incident.iter().filter(|pair| !supplied.contains_key(*pair)) {
+            if !pair.iter().any(|&index| {
+                let s = &topology.faces[index].surface;
+                s.periodic_u || s.periodic_v
+            }) {
+                return Err(unproved("Shell contact census must cover exactly the incident face pairs"));
+            }
+            if let Err(error) = charts.qualify_periodic_section_contact(*pair) {
+                charts.qualify_periodic_section_contact([pair[1], pair[0]])
+                    .map_err(|_| error)?;
+            }
+            section_pairs += 1;
         }
         let separated_pairs = charts.qualify_nonincident_separation(max_cells)?;
         for (faces, census) in &censuses {
@@ -1343,6 +1539,7 @@ impl QualifiedRootShellContacts {
             censuses,
             max_cells,
             separated_pairs,
+            section_pairs,
         })
     }
 
@@ -1355,7 +1552,7 @@ impl QualifiedRootShellContacts {
     }
 
     pub fn incident_pairs(&self) -> usize {
-        self.censuses.len()
+        self.censuses.len() + self.section_pairs
     }
 
     pub fn reverify(&self, geometry: ss::OriginalSsCurveLimits) -> Result<()> {

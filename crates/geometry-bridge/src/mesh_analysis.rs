@@ -129,7 +129,7 @@ pub fn analyze_solid(
 // Jobs own their display buffers and pinned BVH future. No linear-memory view
 // or source-solid borrow survives a step on the host. IDs never get recycled:
 // cancelling a stale job cannot drop a newer one.
-type AnalysisFuture = std::pin::Pin<Box<dyn std::future::Future<Output = SolidAnalysis>>>;
+type AnalysisFuture = std::pin::Pin<Box<dyn std::future::Future<Output = crate::Result<SolidAnalysis>>>>;
 #[derive(Default)]
 struct AnalysisJobs {
     next: u32,
@@ -185,13 +185,20 @@ pub fn start_solid_analysis(
                     })
             })
         });
-        let (mesh, cached_edges) = match cached {
-            Some((mesh, edges)) => (mesh, Some(edges)),
-            None => (crate::mesh::render_buffers(id, normal_cosine)?, None),
+        // Render preparation runs inside the job through the same cooperative
+        // start/step path as `kernel_jobs`, so it yields between batches.
+        let (cached, render) = match cached {
+            Some((mesh, edges)) => (Some((mesh, edges)), None),
+            None => (None, Some(crate::mesh::render_buffers_job(id, normal_cosine)?)),
         };
         jobs.jobs[slot_idx] = Some((
             next,
             Box::pin(async move {
+                let (mesh, cached_edges) = match (cached, render) {
+                    (Some((mesh, edges)), _) => (mesh, Some(edges)),
+                    (None, Some(render)) => (render.await?, None),
+                    (None, None) => unreachable!("either a template or a render job"),
+                };
                 let bvh = mesh_query::build_mesh_bvh_cooperative(
                     &mesh.vertices,
                     &mesh.indices,
@@ -200,7 +207,7 @@ pub fn start_solid_analysis(
                 )
                 .await;
                 if let Some(edges) = cached_edges {
-                    return SolidAnalysis { mesh, bvh, edges };
+                    return Ok(SolidAnalysis { mesh, bvh, edges });
                 }
                 // Let the host observe cancellation before entering edge extraction,
                 // which also yields internally. No partial result has been published.
@@ -238,7 +245,7 @@ pub fn start_solid_analysis(
                         });
                     });
                 }
-                SolidAnalysis { mesh, bvh, edges }
+                Ok(SolidAnalysis { mesh, bvh, edges })
             }),
         ));
         jobs.next = next;
@@ -262,7 +269,7 @@ pub fn step_solid_analysis(id: u32) -> crate::Result<usize> {
             std::task::Poll::Pending => Ok(0),
             std::task::Poll::Ready(result) => {
                 jobs.jobs[slot_idx] = None;
-                Ok(store(AnalysisBuffers::Solid(result)))
+                Ok(store(AnalysisBuffers::Solid(result?)))
             }
         }
     })
@@ -640,6 +647,18 @@ pub fn free(handle: usize) {
             *slot = None;
         }
     });
+}
+
+/// Consume a stored render result (tests compare it with the one-shot path).
+#[cfg(test)]
+pub(crate) fn take_render(handle: usize) -> Option<crate::mesh::RenderMesh> {
+    RESULTS.with(|results| {
+        let mut results = results.borrow_mut();
+        match handle.checked_sub(1).and_then(|i| results.get_mut(i)).map(Option::take) {
+            Some(Some(AnalysisBuffers::Render(mesh))) => Some(mesh),
+            _ => None,
+        }
+    })
 }
 
 #[cfg(test)]

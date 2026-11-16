@@ -715,6 +715,7 @@ dependencies = [
  "mesh-topology",
  "nurbs-core",
  "nurbs-intersect",
+ "nurbs-numerics",
  "osv-math",
  "planar-geometry",
  "polygon-core",

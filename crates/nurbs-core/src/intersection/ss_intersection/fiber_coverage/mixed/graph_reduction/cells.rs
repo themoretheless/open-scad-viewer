@@ -4,16 +4,15 @@ use num_traits::ToPrimitive;
 pub(super) fn full_cell() -> Cell {
     std::array::from_fn(|_| [q(0.).unwrap(), q(1.).unwrap()])
 }
-pub(super) fn cut(cell: &Cell, axis: usize) -> Result<[Cell; 2]> {
+pub(super) fn cut(cell: &Cell, axis: usize, at: &Q) -> Result<[Cell; 2]> {
     check(axis < 2, "Invalid reduced coverage split axis")?;
-    let mid = (&cell[axis][0] + &cell[axis][1]) / Q::from_integer(2.into());
     check(
-        cell[axis][0] < mid && mid < cell[axis][1],
+        cell[axis][0] < *at && *at < cell[axis][1],
         "Invalid exact reduced parameter cell",
     )?;
     let mut out = [cell.clone(), cell.clone()];
-    out[0][axis][1] = mid.clone();
-    out[1][axis][0] = mid;
+    out[0][axis][1] = at.clone();
+    out[1][axis][0] = at.clone();
     Ok(out)
 }
 pub(super) fn diagnostic(cell: &Cell, domain: Box4) -> Result<Box4> {
@@ -23,21 +22,25 @@ pub(super) fn diagnostic(cell: &Cell, domain: Box4) -> Result<Box4> {
         let width = q(domain[k][1])? - &lo;
         for end in 0..2 {
             let exact = &lo + &width * &cell[k % 2][end];
-            let v = exact
-                .to_f64()
-                .filter(|x| x.is_finite())
-                .ok_or_else(|| crate::input("Nonfinite original coverage diagnostic"))?;
-            let outward = if end == 0 && q(v)? > exact {
-                v.next_down()
-            } else if end == 1 && q(v)? < exact {
-                v.next_up()
-            } else {
-                v
-            };
+            let outward = outward(&exact, end == 1)?;
             out[k][end] = outward.max(domain[k][0]).min(domain[k][1]);
         }
     }
     Ok(out)
+}
+pub(super) fn outward(exact: &Q, upper: bool) -> Result<f64> {
+    let v = exact
+        .to_f64()
+        .filter(|x| x.is_finite())
+        .ok_or_else(|| crate::input("Nonfinite original coverage diagnostic"))?;
+    let rounded = q(v)?;
+    Ok(if !upper && rounded > *exact {
+        v.next_down()
+    } else if upper && rounded < *exact {
+        v.next_up()
+    } else {
+        v
+    })
 }
 #[cfg(test)]
 mod tests {
@@ -49,7 +52,7 @@ mod tests {
             [third.clone(), Q::new(2.into(), 3.into())],
             [q(0.).unwrap(), q(1.).unwrap()],
         ];
-        let children = cut(&cell, 0).unwrap();
+        let children = cut(&cell, 0, &Q::new(5.into(), 12.into())).unwrap();
         assert_eq!(children[0][0][1], children[1][0][0]);
         assert_eq!(children[0][0][0], third);
         assert_eq!(children[1][0][1], cell[0][1]);

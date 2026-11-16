@@ -9,6 +9,8 @@ mod frames;
 mod window;
 mod joint;
 pub use joint::QualifiedOriginalSsJoint;
+mod knot_joint;
+pub use knot_joint::{QualifiedOriginalSsKnotJoint, QualifiedOriginalSsWireJoint};
 pub use window::QualifiedOriginalSsGraphWindow;
 mod query;
 #[derive(Clone, Debug)]

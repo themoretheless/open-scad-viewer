@@ -95,11 +95,25 @@ fn planar(
         .collect::<Vec<_>>();
     let origin = [points[0][0], points[0][1], points[0][2]];
     let vector = |p: &Vec<f64>| super::super::sub([p[0], p[1], p[2]], origin);
-    let x = points
-        .iter()
-        .map(|p| vector(p))
-        .max_by(|a, b| super::super::dot(*a, *a).total_cmp(&super::super::dot(*b, *b)))
-        .ok_or_else(|| error("Empty closure plane"))?;
+    // Prefer the support chart's own u direction: on axis-aligned supports it
+    // keeps the closure chart axis-aligned, so cap trims stay exact and cheap
+    // to audit. A net diagonal (e.g. 45 degrees on a square support) gives
+    // inexact UVs whose trim audit can exhaust the cell budget.
+    let u_edge = source.faces[first]
+        .surface
+        .control_points
+        .last()
+        .and_then(|row| row.first())
+        .map(vector)
+        .filter(|v| super::super::dot(*v, *v) > 0.);
+    let x = match u_edge {
+        Some(x) => x,
+        None => points
+            .iter()
+            .map(|p| vector(p))
+            .max_by(|a, b| super::super::dot(*a, *a).total_cmp(&super::super::dot(*b, *b)))
+            .ok_or_else(|| error("Empty closure plane"))?,
+    };
     let n = points
         .iter()
         .map(|p| super::super::cross(x, vector(p)))

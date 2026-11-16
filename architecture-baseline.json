@@ -557,7 +557,11 @@
     "benchmarks": 6,
     "benchmarks/own-cad": 12,
     "benchmarks/rush": 37,
+<<<<<<< HEAD
     "scripts": 615,
+=======
+    "scripts": 495,
+>>>>>>> roadmap-next2
     "src/app": 12,
     "src/composables": 4,
     "src/core": 1,
@@ -582,12 +586,16 @@
     "benchmarks/rush": 30,
     "examples": 1,
     "examples/skadis-box": 10,
+<<<<<<< HEAD
     "scripts": 515,
+=======
+    "scripts": 451,
+>>>>>>> roadmap-next2
     "src": 2,
     "src/app": 73,
     "src/components": 4,
     "src/composables": 14,
-    "src/core": 32,
+    "src/core": 31,
     "src/data": 2,
     "src/dev": 1,
     "src/exchange": 31,

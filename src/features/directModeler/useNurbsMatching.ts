@@ -153,7 +153,8 @@ function bodyCalculationFailure(error:unknown,hasRetryButton=true):string {
  if(code==='CAD_CRASH')return label('Вычисление прервано из-за сбоя. Модель не изменена. ','The calculation stopped unexpectedly. The model is unchanged. ')+(hasRetryButton?label('Нажмите «Повторить вычисление».','Choose Retry calculation.'):label('Повторите операцию с выбранными телами.','Run the operation again with the selected bodies.'))
  if(code==='CAD_TIMEOUT')return label('Истекло время расчёта. Модель не изменена. Упростите геометрию или повторите расчёт.','The calculation timed out. The model is unchanged. Simplify geometry or retry.')
  if(code==='CAD_TRANSPORT'||code==='CAD_PROTOCOL')return label('Не удалось получить корректный результат вычисления. Модель не изменена. Повторите вычисление.','A valid calculation result could not be received. The model is unchanged. Retry the calculation.')
- if(!errorCode(error))return error instanceof Error?error.message:String(error)
+ // The surface panel words duplicate-curve refusals per role; keep its local text (the field marks still use the code).
+ if(!errorCode(error)||code==='DIRECT_CURVES_DISTINCT')return error instanceof Error?error.message:String(error)
  const lang=label('ru','en') as 'ru'|'en'
  return presentKernelError(error,lang,{target:selectedBody.value?.name??selectedNurbsCurve.value?.name}).message
 }

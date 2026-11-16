@@ -365,12 +365,18 @@ Reopen these only for a demonstrated regression.
   on an aligned 4×4 hole grid and caps profiles at 2,048 vertices, which blocks
   the prism path and coplanar simplification for 64-hole plates; sequential
   BSP steps then re-fragment whole caps (14,700 triangles after 14 steps).
-- **Acceptance remaining:** robust polygon-with-holes triangulation (monotone
-  sweep, no coordinate nudging) behind the prism path, `extrude_rings` and
-  `simplify`; an ADR choosing between an arrangement-based Boolean on
-  `cad-predicates` and `manifold-rust`; `bench:cpu` `medium-csg` and
-  `dense-sphere` fixtures passing or explicitly re-scoped to the kernel's
-  documented per-mesh budget.
+- **Done 2026-11-15:** polygon-with-holes triangulation by monotone sweep
+  (exact predicates, no coordinate nudging, constrained Delaunay flips) behind
+  the prism path, `extrude_rings` and `simplify`; 6× faster than the ear
+  clipper at 3,204 vertices and BSP-only drilled panels no longer refuse.
+  [ADR 0013](adr/0013-native-csg-scaling-arrangement-boolean.md) proposes an
+  own arrangement Boolean on `cad-predicates` instead of `manifold-rust`.
+  rbench `bench_csg_fixtures` gates `medium-csg` (64 holes, 33 ms) and
+  `dense-sphere` re-scoped to overlapping `$fn=32` spheres and separated
+  `$fn=128` spheres at 15%.
+- **Acceptance remaining:** the arrangement Boolean itself (overlapping
+  spheres refuse at `$fn=48` in BSP construction); `bench:cpu` `dense-sphere`
+  (3 × `$fn=256`) stays above `MAX_MESH_TRIANGLES`.
 
 ### Print P2 — mesh sections to G-code preview
 

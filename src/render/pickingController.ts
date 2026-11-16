@@ -1,5 +1,6 @@
 import { rayAabbDistance, type Aabb3, type Vec3 } from '../kernel/geometry/math3d'
 import type { MeshBvhHit } from '../kernel/meshBvh'
+import { boxPickHit, isBoxed, rayBoxHit } from './boundingBoxDisplay'
 import type { NativePickingCache } from './nativePickingCache'
 import { selectedCornerInKernel } from '../kernel/geometry/viewport'
 import type { MeshProvenanceRun } from '../core/mesh'
@@ -124,6 +125,8 @@ export function findHitCandidatesForRay(
     /** Reusable growing buffer; only the first `excludedCount` entries are live. */
     excludedTriangles: Uint32Array
     excludedCount: number
+    /** Set for meshes drawn as their bounding box: the box is the whole hit. */
+    box?: PickHit
   }
   const frontier: HitCursor[] = []
   const cursorBefore = (a: HitCursor, b: HitCursor) => a.hit.t < b.hit.t
@@ -169,6 +172,15 @@ export function findHitCandidatesForRay(
     const index = candidate.id
     if (!ctx.isMeshVisible(index)) return true
     const mesh = ctx.meshes[index]
+    if (isBoxed(mesh)) {
+      const box = rayBoxHit(ray, mesh.worldBounds)
+      if (box) {
+        const hit = { t: box.t, triangleIndex: -1, worldPoint: box.point } as unknown as MeshBvhHit
+        const pick = boxPickHit(index, mesh, box.point, box.normal)
+        insertFrontier({ meshIndex: index, mesh, hit, excludedTriangles: new Uint32Array(0), excludedCount: 0, box: pick })
+      }
+      return true
+    }
     const hit = ctx.nativePicking.query(mesh.vb, mesh.vertices, mesh.indices, mesh.bvh.vertexStride, mesh.bvh.leafSize, ray, {
       localFromWorld: mesh.inverseTransform,
     })
@@ -201,7 +213,7 @@ export function findHitCandidatesForRay(
     )
     if (!clipped) {
       const { meshIndex, mesh, hit } = cursor
-      const value = pickHitFromBvh(meshIndex, mesh, hit, ctx.selectionMode)
+      const value = cursor.box ?? pickHitFromBvh(meshIndex, mesh, hit, ctx.selectionMode)
       const key = value ? selectionCandidateKey(value, ctx.selectionMode) : null
       if (value && key !== null && !seen.has(key)) {
         seen.add(key)
@@ -209,7 +221,7 @@ export function findHitCandidatesForRay(
       }
     }
 
-    const needsContinuation = clipped || ctx.selectionMode !== 'object'
+    const needsContinuation = !cursor.box && (clipped || ctx.selectionMode !== 'object')
     if (!needsContinuation || continuations >= MAX_DEPTH_CONTINUATIONS || candidates.length >= limit) continue
     continuations++
     // Append-only exclusions: grow the buffer amortized instead of rebuilding

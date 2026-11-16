@@ -90,7 +90,11 @@ fn append_skip_reasons(report: &mut crate::healing_report::HealingReport) {
 /// same write-set weighting as the authorized transaction. Cap refusals and
 /// post-repair residual gaps never expose a partially sewn model.
 pub fn sew_tolerant(model: &Model, budget: SewingBudget) -> Result<HealingRun> {
-    sew_tolerant_inner(model, budget).map(|(run, _)| run)
+    sew_tolerant_inner(model, budget, false).map(|(run, _)| run)
+}
+
+pub(crate) fn sew_before_shell_repair(model: &Model, budget: SewingBudget) -> Result<HealingRun> {
+    sew_tolerant_inner(model, budget, true).map(|(run, _)| run)
 }
 
 #[derive(Clone, Debug)]
@@ -101,7 +105,7 @@ pub struct CertifiedSewingRun {
 
 pub fn sew_tolerant_certified(model: &Model, budget: SewingBudget) -> Result<CertifiedSewingRun> {
     let input_mm = model.tolerance_mm;
-    let (mut run, handoff) = sew_tolerant_inner(model, budget)?;
+    let (mut run, handoff) = sew_tolerant_inner(model, budget, false)?;
     let tolerance_handoff = match handoff {
         Some(tolerance_handoff) => tolerance_handoff,
         None => crate::enforce_model_tolerance_handoff(
@@ -244,6 +248,7 @@ fn finalize_sewing_stage_skips(
 fn sew_tolerant_inner(
     model: &Model,
     budget: SewingBudget,
+    defer_material_roles: bool,
 ) -> Result<(HealingRun, Option<crate::ModelToleranceHandoff>)> {
     crate::admit_operation_input(cad_predicates::OperationBoundary::Sewing, model.tolerance_mm)?;
     // Endpoint-gap inputs are intentionally invalid solids; the existing defect
@@ -275,6 +280,7 @@ fn sew_tolerant_inner(
         &operations,
         budget.user_cap_mm,
         budget.cumulative_cap_mm,
+        defer_material_roles,
     );
 
     if run.report.status == HealingStatus::Complete && !operations.is_empty() {

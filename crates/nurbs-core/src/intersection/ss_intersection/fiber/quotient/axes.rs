@@ -150,22 +150,17 @@ pub(super) fn contains(
         // Finite binary64 values are exact binary rationals. Without a deck
         // translation their order is already exact; no rational arithmetic or
         // rounded period subtraction is needed for this common census path.
+        if lift[k][0] <= d[0] && d[1] <= lift[k][1] {
+            continue;
+        }
         if !periodic(s, k % 2) {
-            if lift[k][0] <= d[0] && d[1] <= lift[k][1] {
-                continue;
-            }
             return Ok(false);
         }
         let period = q(n[1])? - q(n[0])?;
-        let mut inside = false;
-        for shift in -1..=1 {
-            if shift != 0 && !periodic(s, k % 2) {
-                continue;
-            }
-            let delta = &period * Q::from_integer(shift.into());
-            inside |= q(lift[k][0])? <= q(d[0])? + &delta && q(d[1])? + delta <= q(lift[k][1])?;
-        }
-        if !inside {
+        let (lift_lo, lift_hi) = (q(lift[k][0])?, q(lift[k][1])?);
+        let (lo, hi) = (q(d[0])?, q(d[1])?);
+        let negative_shift = lift_lo <= &lo - &period && &hi - &period <= lift_hi;
+        if !negative_shift && !(lift_lo <= &lo + &period && &hi + &period <= lift_hi) {
             return Ok(false);
         }
     }

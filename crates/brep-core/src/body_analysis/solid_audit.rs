@@ -495,6 +495,15 @@ pub fn audit_solid(model: &Model) -> Result<SolidAuditCertificate> {
 }
 
 fn audit_validated(model: &Model) -> Result<SolidAuditCertificate> {
+    audit_with_material_roles(model, true)
+}
+
+pub(crate) fn audit_before_shell_repair(model: &Model) -> Result<SolidAuditCertificate> {
+    model.validate()?;
+    audit_with_material_roles(model, false)
+}
+
+fn audit_with_material_roles(model: &Model, check_material_roles: bool) -> Result<SolidAuditCertificate> {
     let mut notes = Vec::new();
     if model.bodies.len() > 8 {
         return Err(refuse("SolidSet body budget exceeded (max 8 lumps)"));
@@ -555,7 +564,7 @@ fn audit_validated(model: &Model) -> Result<SolidAuditCertificate> {
     for body in &model.bodies {
         let outer = shell_bounds[body.outer_shell];
         for &inner in &body.inner_shells {
-            if !supported_cavity_containment(model, body.outer_shell, inner)? {
+            if check_material_roles && !supported_cavity_containment(model, body.outer_shell, inner)? {
                 return Err(refuse(
                     "Cavity shell lacks a strict analytic containment proof",
                 ));
@@ -570,7 +579,8 @@ fn audit_validated(model: &Model) -> Result<SolidAuditCertificate> {
     }
     for i in 0..body_bounds.len() {
         for j in i + 1..body_bounds.len() {
-            if !body_bounds[i].separated(body_bounds[j], margin)
+            if check_material_roles
+                && !body_bounds[i].separated(body_bounds[j], margin)
                 && !body_bounds[i].interiors_disjoint(body_bounds[j])
                 && !supported_body_separation(model, i, j)?
             {
@@ -580,7 +590,11 @@ fn audit_validated(model: &Model) -> Result<SolidAuditCertificate> {
             }
         }
     }
-    notes.push("finite_matrix_bounds_ok");
+    notes.push(if check_material_roles {
+        "finite_matrix_bounds_ok"
+    } else {
+        "material_roles_pending_geometry"
+    });
 
     let pair_count = model
         .faces
@@ -623,7 +637,7 @@ fn audit_validated(model: &Model) -> Result<SolidAuditCertificate> {
     };
 
     Ok(SolidAuditCertificate {
-        ok: sew.complete,
+        ok: check_material_roles && sew.complete,
         body_count: model.bodies.len(),
         shell_count: model.shells.len(),
         sew,

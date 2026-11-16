@@ -30,11 +30,21 @@ import { fillSceneUniforms } from '../uniformFill'
 
 import {
   NO_GHOST_MESHES,
+  type OverlaySlot,
 } from '../types'
 
 import { sortEdgeDraws, sortOpaqueDraws } from '../drawSorting'
 import { EncodeFramePassContext, groupByShadingModel, setObjectStyleImmediate } from './groupByShadingModel'
 
+
+/** Line-list overlay (position + RGBA) drawn with the selection overlay pipeline. */
+function drawLineSlot(pass: GPURenderPassEncoder, pipeline: GPURenderPipeline, sceneBG: GPUBindGroup, slot: OverlaySlot) {
+  if (!slot.buffer || !slot.count) return
+  pass.setPipeline(pipeline)
+  pass.setBindGroup(0, sceneBG)
+  pass.setVertexBuffer(0, slot.buffer)
+  pass.draw(slot.count)
+}
 
 export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
   const {
@@ -336,25 +346,13 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
     }
   }
 
-  if (!frame.geometryFade && !frame.geometryGhosts.length && !hasMorph && frame.sourceLineSlot.buffer && frame.sourceLineSlot.count) {
-    pass.setPipeline(getRenderPipeline('selectionOverlay', { topology: 'line-list' }))
-    pass.setBindGroup(0, sceneBG)
-    pass.setVertexBuffer(0, frame.sourceLineSlot.buffer)
-    pass.draw(frame.sourceLineSlot.count)
-  }
-
-  if (!frame.geometryFade && !frame.geometryGhosts.length && !hasMorph && frame.selectionLineSlot.buffer && frame.selectionLineSlot.count) {
-    pass.setPipeline(getRenderPipeline('selectionOverlay', { topology: 'line-list' }))
-    pass.setBindGroup(0, sceneBG)
-    pass.setVertexBuffer(0, frame.selectionLineSlot.buffer)
-    pass.draw(frame.selectionLineSlot.count)
-  }
-
-  if (!frame.geometryFade && !frame.geometryGhosts.length && !hasMorph && frame.deepSelectionLineSlot.buffer && frame.deepSelectionLineSlot.count) {
-    pass.setPipeline(getRenderPipeline('selectionOverlay', { topology: 'line-list', depth: DEEP_DEPTH }))
-    pass.setBindGroup(0, sceneBG)
-    pass.setVertexBuffer(0, frame.deepSelectionLineSlot.buffer)
-    pass.draw(frame.deepSelectionLineSlot.count)
+  const overlaysStable = !frame.geometryFade && !frame.geometryGhosts.length && !hasMorph
+  const lineList = getRenderPipeline('selectionOverlay', { topology: 'line-list' })
+  drawLineSlot(pass, lineList, sceneBG, frame.boundingBoxSlot)
+  if (overlaysStable) drawLineSlot(pass, lineList, sceneBG, frame.sourceLineSlot)
+  if (overlaysStable) drawLineSlot(pass, lineList, sceneBG, frame.selectionLineSlot)
+  if (overlaysStable && frame.deepSelectionLineSlot.buffer && frame.deepSelectionLineSlot.count) {
+    drawLineSlot(pass, getRenderPipeline('selectionOverlay', { topology: 'line-list', depth: DEEP_DEPTH }), sceneBG, frame.deepSelectionLineSlot)
   }
 
   pass.end()

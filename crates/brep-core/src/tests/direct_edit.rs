@@ -447,13 +447,15 @@ fn move_pocket_floor_deeper_and_shallower() {
 
 #[test]
 fn move_absorbs_thin_wall_between_pockets() {
-    let model = crate::boolean(
+    // boolean() now merges coplanar fragments; keep them here so the strip
+    // between the pockets is its own face that the move must absorb.
+    let model = crate::operations::boolean_keeping_coplanar_faces(
         &crate::cuboid([0., 0., 0.], [10., 10., 10.]).unwrap(),
         &crate::cuboid([2., 2., 4.], [4.75, 8., 12.]).unwrap(),
         "difference",
     )
     .unwrap();
-    let model = crate::boolean(
+    let model = crate::operations::boolean_keeping_coplanar_faces(
         &model,
         &crate::cuboid([5.25, 2., 4.], [8., 8., 12.]).unwrap(),
         "difference",
@@ -506,9 +508,10 @@ fn move_absorbs_thin_wall_between_pockets() {
 
 #[test]
 fn move_top_plane_carries_coplanar_shards() {
-    // The boolean fragments the block's top into coplanar shards; moving
-    // one shard must drive the whole coplanar component.
-    let model = crate::boolean(
+    // The raw Boolean (without the coplanar merge that boolean() applies)
+    // fragments the block's top into coplanar shards; moving one shard must
+    // drive the whole coplanar component.
+    let model = crate::operations::boolean_keeping_coplanar_faces(
         &crate::cuboid([0.; 3], [40., 30., 20.]).unwrap(),
         &crate::cuboid([2., 2., 2.], [38., 28., 22.]).unwrap(),
         "difference",

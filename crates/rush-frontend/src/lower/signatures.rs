@@ -44,6 +44,7 @@ pub(super) fn signature(name: &str) -> Option<&'static [&'static str]> {
         "brep_extrude_curves" => &["loops", "z_min", "z_max"],
         "brep_chamfer" => &["edges", "size"],
         "brep_fillet" => &["edges", "radius", "segments"],
+        "brep_full_round_exact" => &["faces", "segments"],
         "brep_tessellate" => &["segments"],
         "brep_smooth_sweep_stations" => &["wall_tolerance","quantum","max_work","smoothness_max_work"],
         "brep_smooth_miter_stations" => &["wall_tolerance","quantum","max_work","max_deviation"],

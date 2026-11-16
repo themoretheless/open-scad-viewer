@@ -6,6 +6,31 @@ mod patch_shells;
 type RegionSeed = [[f64; 2]; 2];
 type MaterialSeed = (RegionSeed, Option<bool>);
 
+#[derive(Clone, Copy)]
+pub struct ClosedSsBooleanLimits {
+    pub census: ClosedSsCensusLimits,
+    pub material: CutMaterialLimits,
+    pub arrangement: [CensusArrangementLimits; 2],
+    pub volume: RootBoundaryVolumeLimits,
+    pub max_pair_attempts: usize,
+    pub max_carrier_cells: usize,
+    pub cells_per_support: usize,
+}
+
+impl Default for ClosedSsBooleanLimits {
+    fn default() -> Self {
+        Self {
+            census: Default::default(),
+            material: Default::default(),
+            arrangement: [Default::default(); 2],
+            volume: Default::default(),
+            max_pair_attempts: 16,
+            max_carrier_cells: 4096,
+            cells_per_support: 64,
+        }
+    }
+}
+
 enum RegionSearch {
     Provided([Vec<MaterialSeed>; 2]),
     Automatic { cells_per_support: usize },
@@ -80,41 +105,396 @@ impl QualifiedPairedRootBoundary {
         Ok(())
     }
 }
-fn insert_edge(t: &mut MixedTopology, edge: &ss::OriginalSsRootEdge) -> Result<usize> {
-    for (id, old) in t.edges.iter().enumerate() {
-        if let MixedEdge::Root(old) = &old.curve {
-            if old.start().point().same_selector(edge.start().point())
-                && old.end().point().same_selector(edge.end().point())
-                && old.curve().same_definition(edge.curve())?
-            {
-                return Ok(id);
+#[derive(Default)]
+struct RootSewIndex {
+    vertices_by_curve: std::collections::HashMap<*const ss::OriginalSsRootCurve, Vec<usize>>,
+    edges_by_vertices: std::collections::HashMap<[usize; 2], Vec<usize>>,
+}
+
+impl RootSewIndex {
+    fn insert_edge(&mut self, topology: &mut MixedTopology, edge: &ss::OriginalSsRootEdge) -> Result<usize> {
+        let vertices = [edge.start(), edge.end()].map(|port| {
+            let point = port.point();
+            // Literal curve identity is required by same_selector. The map
+            // narrows candidates while exact clock equality still decides.
+            let candidates = self.vertices_by_curve.entry(Arc::as_ptr(point.curve())).or_default();
+            if let Some(id) = candidates.iter().copied().find(|&id| {
+                matches!(&topology.vertices[id].point, MixedVertex::Root(p) if p.same_selector(point))
+            }) {
+                return id;
+            }
+            let id = topology.vertices.len();
+            topology.vertices.push(brep_topology::Vertex { point: MixedVertex::Root(point.clone()) });
+            candidates.push(id);
+            id
+        });
+        let candidates = self.edges_by_vertices.entry(vertices).or_default();
+        for &id in candidates.iter() {
+            if let MixedEdge::Root(old) = &topology.edges[id].curve {
+                if old.curve().same_definition(edge.curve())? {
+                    return Ok(id);
+                }
             }
         }
+        let id = topology.edges.len();
+        topology.edges.push(brep_topology::Edge {
+            degenerate: false,
+            vertices,
+            curve: MixedEdge::Root(edge.clone()),
+        });
+        candidates.push(id);
+        Ok(id)
     }
-    let mut vertices = [0; 2];
-    for (i, port) in [edge.start(), edge.end()].into_iter().enumerate() {
-        vertices[i] =
-            if let Some(id) = t.vertices.iter().position(
-                |v| matches!(&v.point,MixedVertex::Root(p) if p.same_selector(port.point())),
-            ) {
-                id
-            } else {
-                let id = t.vertices.len();
-                t.vertices.push(brep_topology::Vertex {
-                    point: MixedVertex::Root(port.point().clone()),
-                });
-                id
-            };
-    }
-    let id = t.edges.len();
-    t.edges.push(brep_topology::Edge {
-        degenerate: false,
-        vertices,
-        curve: MixedEdge::Root(edge.clone()),
-    });
-    Ok(id)
 }
+
+/// Classify every untouched finite face, excluding cells outside its trim.
+fn classify_uncut_faces(
+    solids: [&crate::closed_solid::QualifiedClosedSolid; 2],
+    is_cut: impl Fn(usize) -> bool,
+    tolerance_uv: f64,
+    operation: crate::closed_solid::BooleanMaterialOp,
+    role: crate::closed_solid::BooleanSourceSide,
+    directions: &[[f64; 3]],
+    material: CutMaterialLimits,
+    max_carrier_cells: &mut usize,
+) -> Result<Vec<brep_topology::FaceUse>> {
+    use crate::closed_solid::{BooleanFaceDisposition, qualify_surface_material_box};
+
+    let [source, opposing] = solids;
+    let mut uncut = Vec::new();
+    for (id, face) in source.model().faces.iter().enumerate() {
+        if is_cut(id) {
+            continue;
+        }
+        let domain = crate::face_domain::FaceDomain::new(
+            source.model(),
+            id,
+            tolerance_uv,
+        )?;
+        let s = &face.surface;
+        let cover = finite_face_cover(source.model(), id)?;
+        let mut pending = vec![cover];
+        let mut disposition = None;
+        while let Some(mut cell) = pending.pop() {
+            *max_carrier_cells = max_carrier_cells.checked_sub(1)
+                .ok_or_else(|| unproved("Boolean carrier cover exhausted"))?;
+            if domain.classify(cell, material.boolean.domain_cells)?.location == Location::Outside {
+                continue;
+            }
+            let cell_disposition = qualify_surface_material_box(
+                opposing, s, cell, directions, material.boolean.material,
+            ).ok().map(|proof| operation.face_disposition(role, proof.inside()));
+            if let Some(current) = cell_disposition {
+                if disposition.is_some_and(|prior| prior != current) {
+                    return Err(unproved("Uncut Boolean face has no proved uniform disposition"));
+                }
+                disposition = Some(current);
+                continue;
+            }
+            let (axis, mid, _) = cell.iter().zip(cover).enumerate()
+                .filter_map(|(axis, (&[lo, hi], [start, end]))| {
+                    let mid = lo * 0.5 + hi * 0.5;
+                    (lo < mid && mid < hi).then_some((axis, mid, (hi - lo) / (end - start)))
+                })
+                .max_by(|a, b| a.2.total_cmp(&b.2))
+                .ok_or_else(|| unproved("Boolean carrier material remains unresolved"))?;
+            let mut right = cell;
+            cell[axis][1] = mid;
+            right[axis][0] = mid;
+            pending.extend([right, cell]);
+        }
+        match disposition {
+            Some(BooleanFaceDisposition::Discard) => (),
+            Some(BooleanFaceDisposition::Keep | BooleanFaceDisposition::Reverse) => {
+                let mut uses = source.model().shells.iter()
+                    .flat_map(|shell| &shell.faces).filter(|use_| use_.face == id);
+                let use_ = uses.next().filter(|_| uses.next().is_none())
+                    .ok_or_else(|| unproved("Uncut Boolean face needs one source material use"))?;
+                uncut.push(brep_topology::FaceUse {
+                    face: id,
+                    reversed: use_.reversed ^ (disposition == Some(BooleanFaceDisposition::Reverse)),
+                });
+            }
+            None => return Err(unproved("Uncut Boolean face has no covered material domain")),
+        }
+    }
+    Ok(uncut)
+}
+
+fn boolean_containment_limits(
+    tolerance_uv: f64,
+    volume: RootBoundaryVolumeLimits,
+) -> RootMaterialBoxLimits {
+    RootMaterialBoxLimits {
+        point: RootSolidPointLimits {
+            tolerance_uv,
+            arc_subdivisions: volume.arc_subdivisions,
+            band_queries: volume.band_queries,
+            winding_queries: volume.winding_queries,
+            winding: volume.winding,
+            geometry: volume.geometry,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
 impl QualifiedInteriorSsCensus {
+    /// Search face pairs and publish only an independently admitted Boolean.
+    /// A successful pair must account for all other faces on both operands.
+    pub fn assemble_closed_ss_boolean_between(
+        solids: [&crate::closed_solid::QualifiedClosedSolid; 2],
+        operation: crate::closed_solid::BooleanMaterialOp,
+        directions: &[[f64; 3]],
+        tolerance_mm: f64,
+        limits: ClosedSsBooleanLimits,
+    ) -> Result<(Arc<Self>, MixedBrep, [f64; 2])> {
+        let (mut censuses, body, volume) = Self::search_closed_ss_boolean(
+            solids, operation, directions, tolerance_mm, limits, false,
+        )?;
+        let census = censuses.pop().ok_or_else(|| unproved("Missing closed SS Boolean census"))?;
+        Ok((census, body, volume))
+    }
+
+    /// Discover original-face SS cuts and try a joint material assembly when
+    /// no individual pair accounts for the full Boolean.
+    pub fn assemble_closed_ss_network_boolean_between(
+        solids: [&crate::closed_solid::QualifiedClosedSolid; 2],
+        operation: crate::closed_solid::BooleanMaterialOp,
+        directions: &[[f64; 3]],
+        tolerance_mm: f64,
+        limits: ClosedSsBooleanLimits,
+    ) -> Result<(Vec<Arc<Self>>, MixedBrep, [f64; 2])> {
+        Self::search_closed_ss_boolean(solids, operation, directions, tolerance_mm, limits, true)
+    }
+
+    fn search_closed_ss_boolean(
+        solids: [&crate::closed_solid::QualifiedClosedSolid; 2],
+        operation: crate::closed_solid::BooleanMaterialOp,
+        directions: &[[f64; 3]],
+        tolerance_mm: f64,
+        limits: ClosedSsBooleanLimits,
+        allow_network: bool,
+    ) -> Result<(Vec<Arc<Self>>, MixedBrep, [f64; 2])> {
+        let mut first_failure = None;
+        let mut network_failure = None;
+        let mut censuses = Vec::new();
+        for [a, b] in overlapping_face_pairs(solids, limits.max_pair_attempts)? {
+            let attempt = match Self::discover_closed_branches(
+                [(solids[0], a), (solids[1], b)], limits.census,
+            ) {
+                Ok(census) => {
+                    let census = Arc::new(census);
+                    match census.assemble_automatic_paired_boolean(
+                        operation, directions, tolerance_mm, limits.material,
+                        limits.arrangement, limits.volume, limits.max_carrier_cells,
+                        limits.cells_per_support,
+                    ) {
+                        Ok((body, volume)) => return Ok((vec![census], body, volume)),
+                        Err(error) => {
+                            if allow_network {
+                                censuses.push(census);
+                                if censuses.len() > 1 {
+                                    match Self::assemble_multi_face_boolean(
+                                        solids, &censuses, operation, directions, tolerance_mm, limits,
+                                    ) {
+                                        Ok((body, volume)) => return Ok((censuses, body, volume)),
+                                        Err(error) => network_failure = Some(error),
+                                    }
+                                }
+                            }
+                            error
+                        }
+                    }
+                }
+                Err(error) => error,
+            };
+            first_failure.get_or_insert_with(|| {
+                unproved(&format!("Closed SS Boolean face pair [{a}, {b}]: {}", attempt.message))
+            });
+        }
+        Err(network_failure.or(first_failure)
+            .unwrap_or_else(|| unproved("No overlapping face pair qualified for closed SS Boolean")))
+    }
+
+    /// Assemble the boundary of a Boolean from a network of certified closed
+    /// cuts. Unmatched cut-face pairs must be separated.
+    pub fn sew_multi_face_boolean(
+        solids: [&crate::closed_solid::QualifiedClosedSolid; 2],
+        censuses: &[Arc<Self>],
+        operation: crate::closed_solid::BooleanMaterialOp,
+        directions: &[[f64; 3]],
+        tolerance_mm: f64,
+        limits: ClosedSsBooleanLimits,
+    ) -> Result<MixedBrep> {
+        if operation == crate::closed_solid::BooleanMaterialOp::Xor {
+            return Err(unproved("Use material body assembly for multi-face XOR"));
+        }
+        let [(a, first), (b, second)] =
+            Self::select_multi_face_boolean(solids, censuses, operation, directions, limits)?;
+        patch_shells::sew_selected_shells(
+            [(a.topology(), first), (b.topology(), second)], tolerance_mm,
+        )
+    }
+
+    fn select_multi_face_boolean(
+        solids: [&crate::closed_solid::QualifiedClosedSolid; 2],
+        censuses: &[Arc<Self>],
+        operation: crate::closed_solid::BooleanMaterialOp,
+        directions: &[[f64; 3]],
+        limits: ClosedSsBooleanLimits,
+    ) -> Result<[(MixedBrep, Vec<brep_topology::FaceUse>); 2]> {
+        use crate::closed_solid::BooleanSourceSide;
+        if censuses.is_empty() || !(1..=16384).contains(&limits.cells_per_support)
+            || !(1..=16384).contains(&limits.max_carrier_cells)
+        {
+            return Err(unproved("Multi-face Boolean requires cuts and bounded material search"));
+        }
+        let mut groups = [std::collections::BTreeMap::new(), std::collections::BTreeMap::new()];
+        let mut matched = std::collections::BTreeSet::new();
+        for census in censuses {
+            let parents = [census.parent(0)?, census.parent(1)?];
+            let pair = parents.map(|cut| cut.face);
+            if !matched.insert(pair) {
+                return Err(unproved("Duplicate complete census for one face pair"));
+            }
+            for (side, cut) in parents.into_iter().enumerate() {
+                if !std::ptr::eq(cut.source.model(), solids[side].model()) {
+                    return Err(unproved("Multi-face Boolean cut operands do not match"));
+                }
+                groups[side].entry(cut.face).or_insert_with(Vec::new)
+                    .extend(census.loops.iter().map(|component| (&component.cuts[side], side)));
+            }
+        }
+        // Loops from different pairs on the same face cannot meet: their
+        // opposing loops lie strictly inside distinct embedded operand faces.
+        let faces = groups.each_ref().map(|group| group.keys().copied().collect::<Vec<_>>());
+        let tolerance_uv = censuses.iter().flat_map(|census| &census.loops[0].cuts)
+            .map(|cut| cut.limits.tolerance_uv).fold(f64::INFINITY, f64::min);
+        let bounds = std::array::from_fn::<Vec<_>, 2, _>(|side| {
+            faces[side].iter().map(|&face| {
+                finite_face_world_bounds(solids[side].model(), face)
+            }).collect()
+        });
+        let mut budget = limits.max_carrier_cells;
+        let mut domain_budget = limits.material.boolean.domain_cells;
+        for (i, first) in bounds[0].iter().enumerate() {
+            for (j, second) in bounds[1].iter().enumerate() {
+                let indices = [faces[0][i], faces[1][j]];
+                if matched.contains(&indices) || bounds_separated(first, second) {
+                    continue;
+                }
+                let models = solids.map(|solid| solid.model());
+                let [a, b] = std::array::from_fn::<_, 2, _>(|side| {
+                    &models[side].faces[indices[side]].surface
+                });
+                use nurbs_core::surface_contact_search as contact;
+                if budget == 0 {
+                    return Err(unproved("Cut-face separation work exhausted"));
+                }
+                let report = if [a, b].iter().any(|s| s.periodic_u || s.periodic_v) {
+                    let covers = [
+                        finite_face_cover(models[0], indices[0])?,
+                        finite_face_cover(models[1], indices[1])?,
+                    ];
+                    contact::search_chart_rectangles(a, b, covers, budget)?
+                } else {
+                    if domain_budget == 0 {
+                        return Err(unproved("Cut-face trim separation work exhausted"));
+                    }
+                    let first = crate::face_domain::FaceDomain::new(
+                        models[0], indices[0], tolerance_uv,
+                    )?;
+                    let second = crate::face_domain::FaceDomain::new(
+                        models[1], indices[1], tolerance_uv,
+                    )?;
+                    contact::search_trimmed_with_control_hulls(
+                        a, b, [&first.region, &second.region], budget, domain_budget,
+                    )?
+                };
+                if !report.absence_proven {
+                    return Err(unproved(&format!(
+                        "Unmatched cut-face pair {indices:?} has no complete separation proof"
+                    )));
+                }
+                budget -= report.cells;
+                domain_budget -= report.domain_cells;
+            }
+        }
+        let [(a, a_layouts), (b, b_layouts)] = [
+            Self::build_network_face_layout(solids[0], &groups[0], limits.arrangement[0])?,
+            Self::build_network_face_layout(solids[1], &groups[1], limits.arrangement[1])?,
+        ];
+        let mut selected = [Vec::new(), Vec::new()];
+        for (side, (role, layouts)) in [
+            (BooleanSourceSide::First, a_layouts),
+            (BooleanSourceSide::Second, b_layouts),
+        ].into_iter().enumerate() {
+            selected[side] = classify_uncut_faces(
+                [solids[side], solids[1 - side]], |face| groups[side].contains_key(&face),
+                tolerance_uv, operation, role, directions, limits.material, &mut budget,
+            )?;
+            for ((&face, cuts), (parents, faces)) in groups[side].iter().zip(layouts) {
+                selected[side].extend(arrangement::discover_network_face_material(
+                    crate::closed_solid::BooleanFace { solids, operation, side: role, face },
+                    side, cuts, &parents, &faces, directions, limits.material, limits.cells_per_support,
+                )?);
+            }
+        }
+        let [first, second] = selected;
+        Ok([(a, first), (b, second)])
+    }
+
+    /// Assemble and validate material bodies from a certified multi-face cut network.
+    pub fn assemble_multi_face_boolean(
+        solids: [&crate::closed_solid::QualifiedClosedSolid; 2],
+        censuses: &[Arc<Self>],
+        operation: crate::closed_solid::BooleanMaterialOp,
+        directions: &[[f64; 3]],
+        tolerance_mm: f64,
+        limits: ClosedSsBooleanLimits,
+    ) -> Result<(MixedBrep, [f64; 2])> {
+        let tolerance_uv = censuses.iter().flat_map(|census| &census.loops[0].cuts)
+            .map(|cut| cut.limits.tolerance_uv)
+            .fold(f64::INFINITY, f64::min);
+        let containment = boolean_containment_limits(tolerance_uv, limits.volume);
+        if operation != crate::closed_solid::BooleanMaterialOp::Xor {
+            let boundary = Self::sew_multi_face_boolean(
+                solids, censuses, operation, directions, tolerance_mm, limits,
+            )?;
+            return patch_shells::admit_disjoint_boolean_shells(
+                boundary, directions, containment, limits.volume,
+            );
+        }
+
+        let layouts = Self::select_multi_face_boolean(solids, censuses, operation, directions, limits)?;
+        let mut halves = std::array::from_fn::<_, 2, _>(|_| [Vec::new(), Vec::new()]);
+        for (side, (layout, selected)) in layouts.iter().enumerate() {
+            let mut normals = vec![None; layout.topology().faces.len()];
+            for use_ in layout.topology().shells.iter().flat_map(|shell| &shell.faces) {
+                normals[use_.face] = Some(use_.reversed);
+            }
+            for face in selected {
+                let original = normals[face.face]
+                    .ok_or_else(|| unproved("XOR face has no original material orientation"))?;
+                halves[side ^ usize::from(face.reversed != original)][side].push(face.clone());
+            }
+        }
+        let [a, b] = layouts.each_ref().map(|(layout, _)| layout.topology());
+        let volume = RootBoundaryVolumeLimits {
+            absolute_error: limits.volume.absolute_error / 2.1,
+            ..limits.volume
+        };
+        let admit = |[first, second]: [Vec<brep_topology::FaceUse>; 2]| {
+            let boundary = patch_shells::sew_selected_shells(
+                [(a, first), (b, second)], tolerance_mm,
+            )?;
+            patch_shells::admit_disjoint_boolean_shells(boundary, directions, containment, volume)
+        };
+        let [first, second] = halves;
+        patch_shells::combine_boolean_differences(admit(first)?, admit(second)?, limits.volume)
+    }
+
     /// Build a closed two-patch intersection candidate from certified
     /// material seeds. The seeds select regions on these two supports.
     /// Additional operand faces require a separate completeness proof.
@@ -281,19 +661,9 @@ impl QualifiedInteriorSsCensus {
         max_carrier_cells: usize,
         cells_per_support: usize,
     ) -> Result<(MixedBrep, [f64; 2])> {
-        let containment = RootMaterialBoxLimits {
-            point: RootSolidPointLimits {
-                tolerance_uv: self.parent(0)?.limits.tolerance_uv
-                    .min(self.parent(1)?.limits.tolerance_uv),
-                arc_subdivisions: volume.arc_subdivisions,
-                band_queries: volume.band_queries,
-                winding_queries: volume.winding_queries,
-                winding: volume.winding,
-                geometry: volume.geometry,
-                ..Default::default()
-            },
-            ..Default::default()
-        };
+        let tolerance_uv = self.parent(0)?.limits.tolerance_uv
+            .min(self.parent(1)?.limits.tolerance_uv);
+        let containment = boolean_containment_limits(tolerance_uv, volume);
         let patches = self.select_automatic_paired_boolean_patches(
             operation, directions, material, arrangement, max_carrier_cells, cells_per_support,
         )?;
@@ -403,7 +773,7 @@ impl QualifiedInteriorSsCensus {
                 return Err(unproved("Boolean requires a bounded region witness search"));
             }
         }
-        use crate::closed_solid::{BooleanFaceDisposition, BooleanSourceSide, qualify_surface_material_box};
+        use crate::closed_solid::BooleanSourceSide;
         if !(1..=16384).contains(&max_carrier_cells) {
             return Err(unproved("Boolean requires a bounded carrier cover"));
         }
@@ -442,71 +812,16 @@ impl QualifiedInteriorSsCensus {
                     retained
                 }
             };
-            for (id, face) in cut.source.model().faces.iter().enumerate() {
-                if id == cut.face {
-                    continue;
-                }
-                let domain = crate::face_domain::FaceDomain::new(
-                    cut.source.model(),
-                    id,
-                    cut.limits.tolerance_uv,
-                )?;
-                let s = &face.surface;
-                let mut pending = vec![[
-                    [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
-                    [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],
-                ]];
-                let mut disposition = None;
-                while let Some(mut cell) = pending.pop() {
-                    max_carrier_cells = max_carrier_cells.checked_sub(1)
-                        .ok_or_else(|| unproved("Boolean carrier cover exhausted"))?;
-                    let opposing_material = qualify_surface_material_box(
-                        &parents[1 - side].source, s, cell, directions, material.boolean.material,
-                    );
-                    let cell_disposition = opposing_material.ok()
-                        .map(|proof| operation.face_disposition(role, proof.inside()));
-                    if cell_disposition == Some(BooleanFaceDisposition::Discard)
-                        && disposition.is_none_or(|prior| prior == BooleanFaceDisposition::Discard)
-                    {
-                        disposition = cell_disposition;
-                        continue;
-                    }
-                    if domain.classify(cell, material.boolean.domain_cells)?.location == Location::Outside {
-                        continue;
-                    }
-                    if let Some(current) = cell_disposition {
-                        if disposition.is_some_and(|prior| prior != current) {
-                            return Err(unproved("Uncut Boolean face has no proved uniform disposition"));
-                        }
-                        disposition = Some(current);
-                        continue;
-                    }
-                    let axis = usize::from(cell[1][1] - cell[1][0] > cell[0][1] - cell[0][0]);
-                    let [lo, hi] = cell[axis];
-                    let mid = lo * 0.5 + hi * 0.5;
-                    if !(lo < mid && mid < hi) {
-                        return Err(unproved("Boolean carrier material remains unresolved"));
-                    }
-                    let mut right = cell;
-                    cell[axis][1] = mid;
-                    right[axis][0] = mid;
-                    pending.extend([right, cell]);
-                }
-                match disposition {
-                    Some(BooleanFaceDisposition::Discard) => (),
-                    Some(BooleanFaceDisposition::Keep | BooleanFaceDisposition::Reverse) => {
-                        let mut uses = cut.source.model().shells.iter()
-                            .flat_map(|shell| &shell.faces).filter(|use_| use_.face == id);
-                        let use_ = uses.next().filter(|_| uses.next().is_none())
-                            .ok_or_else(|| unproved("Uncut Boolean face needs one source material use"))?;
-                        uncut[side].push(brep_topology::FaceUse {
-                            face: id,
-                            reversed: use_.reversed ^ (disposition == Some(BooleanFaceDisposition::Reverse)),
-                        });
-                    }
-                    None => return Err(unproved("Uncut Boolean face has no covered material domain")),
-                }
-            }
+            uncut[side] = classify_uncut_faces(
+                [&cut.source, &parents[1 - side].source],
+                |face| face == cut.face,
+                cut.limits.tolerance_uv,
+                operation,
+                role,
+                directions,
+                material,
+                &mut max_carrier_cells,
+            )?;
         }
         Ok(PairedBooleanPatches { layouts, regions: selections, uncut })
     }
@@ -646,6 +961,7 @@ impl QualifiedInteriorSsCensus {
             bodies: Vec::new(),
             tolerance_mm,
         };
+        let mut root_index = RootSewIndex::default();
         let mut incidence: Vec<Vec<(usize, bool)>> = Vec::new();
         let mut hole_counts = [0; 2];
         for support in 0..2 {
@@ -667,7 +983,7 @@ impl QualifiedInteriorSsCensus {
                     if c.trim().is_some() || pcurve.support != support {
                         return Err(unproved("Foreign paired root projection"));
                     }
-                    let id = insert_edge(&mut t, edge)?;
+                    let id = root_index.insert_edge(&mut t, edge)?;
                     while incidence.len() <= id {
                         incidence.push(Vec::new());
                     }

@@ -83,6 +83,48 @@ pub(super) fn vector(data: &Data, diagonal: [f64; 2], w: &mut Work) -> Result<[f
     }
     Ok(out)
 }
+
+pub(super) fn transverse(data: &mut Data, slope: [f64; 2], constant: f64, w: &mut Work) -> Result<()> {
+    let mut points = Vec::new();
+    for axis in 0..2 {
+        let varying = 1 - axis;
+        for side in [0., 1.] {
+            let start = if side == 0. { constant } else { w.add(constant, slope[axis])? };
+            let end = w.add(start, slope[varying])?;
+            let mut point = [0.; 2];
+            point[axis] = side;
+            if start == 0. {
+                points.push(point);
+            }
+            if end == 0. {
+                point[varying] = 1.;
+                points.push(point);
+            }
+            if start != 0. && end != 0. && start.is_sign_negative() != end.is_sign_negative() {
+                point[varying] = w.div(-start, slope[varying])?;
+                points.push(point);
+            }
+        }
+    }
+    points.sort_by(|a, b| a[0].total_cmp(&b[0]).then(a[1].total_cmp(&b[1])));
+    points.dedup();
+    match points.as_slice() {
+        [] => {}
+        [point] => {
+            data.kind = QuadraticGraphSSKind::IsolatedBoundaryPoint;
+            data.vertices.push(OriginalGraphSSVertex {
+                point: OriginalGraphSSPoint::Normalized(*point),
+                singular: false,
+            });
+        }
+        &[first, second] => {
+            data.kind = QuadraticGraphSSKind::TransverseLine;
+            segment(data, [first, second], 1);
+        }
+        _ => return Err(crate::input("Affine gap has inconsistent rectangle ports")),
+    }
+    Ok(())
+}
 pub(super) fn double(data: &mut Data, w: &mut Work) -> Result<()> {
     let axis = usize::from(data.diagonal[0] == 0.);
     let mut diagonal = [0.; 2];

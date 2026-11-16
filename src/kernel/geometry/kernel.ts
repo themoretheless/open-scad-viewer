@@ -68,6 +68,10 @@ interface KernelExports extends WebAssembly.Exports {
  abi_solid_analysis_start(id:number,normalCosine:number,edgeCosine:number,leaf:number):bigint
  abi_solid_analysis_step(job:number):bigint
  abi_solid_analysis_cancel(job:number):void
+ abi_job_boolean_start(idsPtr:number,idsLen:number,op:number):bigint
+ abi_job_render_start(id:number,creaseCosine:number):bigint
+ abi_job_step(job:number,budget:number):bigint
+ abi_job_cancel(job:number):void
  abi_array_field(handle:number,slot:number):number
  abi_array_free(handle:number):void
  abi_manifold_abi_version():number

@@ -148,7 +148,7 @@ pub(super) fn construct(
     crate::check(
         (2..=32).contains(&limits.seed_steps)
             && (1..=4096).contains(&limits.max_seeds)
-            && (1..=100000).contains(&limits.proposal_rectangles),
+            && (1..=250000).contains(&limits.proposal_rectangles),
         "Need bounded closed intersection proposals",
     )?;
     let mut charts: Vec<QualifiedFiber> = vec![];
@@ -221,7 +221,7 @@ pub(super) fn construct(
                     let result = source.certify_contracted(
                         proposal,
                         AXES[free],
-                        limits.proposal_rectangles - used,
+                        (limits.proposal_rectangles - used).min(100000),
                     )?;
                     used += result.rectangles();
                     if let Some(f) = result.into_fiber() {
@@ -268,16 +268,18 @@ fn repair_one(
         let free = (0..4)
             .max_by(|&a, &b| minor(a).total_cmp(&minor(b)))
             .unwrap();
-        for level in 0..5 {
+        for level in 0..8 {
             if used == remaining {
                 return Ok((None, used));
             }
             let h = 0.0625 / (1usize << level) as f64;
             let proposal = proposal(source, domain, x, free, h);
-            let attempt = source.certify_contracted(proposal, AXES[free], remaining - used)?;
+            let attempt = source.certify_contracted(proposal, AXES[free], (remaining - used).min(100000))?;
             used += attempt.rectangles();
             if let Some(f) = attempt.into_fiber() {
-                return Ok((Some(f), used));
+                if (0..4).all(|k| f.domain()[k][0] <= cell[k][1] && cell[k][0] <= f.domain()[k][1]) {
+                    return Ok((Some(f), used));
+                }
             }
         }
     }
@@ -385,7 +387,7 @@ pub(super) fn compact(
             domain[axis] = [cut[0], cut[1]];
             let result = f
                 .source()
-                .certify_contracted(domain, f.free_axis(), max - *used)?;
+                .certify_contracted(domain, f.free_axis(), (max - *used).min(100000))?;
             *used += result.rectangles();
             let Some(part) = result.into_fiber() else {
                 covered = false;

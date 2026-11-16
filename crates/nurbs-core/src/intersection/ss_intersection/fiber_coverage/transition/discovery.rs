@@ -116,6 +116,23 @@ pub fn discover_fiber_transition(
     }
     let free = first.free_axis().index();
     let mut pending = VecDeque::from([(common, 0)]);
+    // A common chart box can contain much more than a common root. Seed a
+    // second proposal clipped to the certified images of both original charts.
+    // The original common box remains in the search.
+    let mut root_overlap = common;
+    for chart in [first, second] {
+        if let Some(image) = chart.report().root_image {
+            for (axis, interval) in (0..4).filter(|&a| a != chart.free_axis().index()).zip(image) {
+                root_overlap[axis][0] = root_overlap[axis][0].max(interval[0]);
+                root_overlap[axis][1] = root_overlap[axis][1].min(interval[1]);
+            }
+        }
+    }
+    if limits.max_depth > 0 && limits.max_proposals > 1 && root_overlap != common
+        && root_overlap.iter().all(|[lo, hi]| lo < hi)
+    {
+        pending.push_back((root_overlap, 1));
+    }
     while let Some((domain, depth)) = pending.pop_front() {
         if out.attempts.len() == limits.max_proposals {
             out.reason = "proposal-budget-unproven";

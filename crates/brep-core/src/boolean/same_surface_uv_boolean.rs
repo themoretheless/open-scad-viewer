@@ -640,6 +640,34 @@ pub fn boolean_same_surface_uv(
 
 /// The result is a certified UV-region arrangement, not an authored 3D solid.
 /// Every limit used by a successful run is replayed from its certificate.
+/// Regularized 2D Boolean of material-left linear regions that already share
+/// one parameter chart (outer loops counter-clockwise, holes clockwise). This
+/// is the same arrangement kernel used for same-carrier faces, exposed for
+/// callers that map coincident faces on distinct carriers into a common chart.
+pub fn boolean_uv_regions(
+    first: &[UvRegion],
+    second: &[UvRegion],
+    operation: UvBooleanOperation,
+    limits: SameSurfaceUvLimits,
+) -> Result<Vec<UvRegion>> {
+    if !limits.tolerance_uv.is_finite()
+        || limits.tolerance_uv <= 0.
+        || limits.max_segments < 3
+        || limits.max_work == 0
+    {
+        return Err(Error::new(
+            "BREP_RESOURCE_LIMIT",
+            "UV limits must be finite, positive and usable",
+        ));
+    }
+    for region in first.iter().chain(second) {
+        if area(&region.outer) <= 0. || region.holes.iter().any(|h| area(h) >= 0.) {
+            return Err(refused("UV outer/hole winding is not material-left"));
+        }
+    }
+    Ok(arrangement(first, second, operation, limits)?.0)
+}
+
 pub fn boolean_same_surface_uv_with_limits(
     first: UvOperand<'_>,
     second: UvOperand<'_>,

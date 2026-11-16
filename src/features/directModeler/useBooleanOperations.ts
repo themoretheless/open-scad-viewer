@@ -1,3 +1,4 @@
+import {DirectInputError} from '../../i18n/kernelErrors'
 import {ref,shallowRef,watch,onUnmounted,type Ref} from 'svet'
 import type {DirectDocument} from '../../app/directModeling'
 import type {SolidBooleanOptions} from '../../kernel/solidBoolean'
@@ -60,7 +61,7 @@ function applyBrepBoolean(operation:BrepBooleanOperation){run(()=>{
  if(booleanPending.value)return
  cancelCommand()
  const ids=selectedIds.value.filter(id=>document.value.bodies.some(b=>b.id===id))
- if(ids.length!==2)throw Error(label('Выберите ровно два тела: первое выбранное — A.','Select exactly two bodies; the first selected body is A.'))
+ if(ids.length!==2)throw new DirectInputError('DIRECT_BOOLEAN_OPERANDS',label('Выберите ровно два тела: первое выбранное — A.','Select exactly two bodies; the first selected body is A.'),undefined,ids)
  void runBoolean({operation,a:[ids[0]],b:[ids[1]],segments:brepSegments.value,ru:ru.value})
 })}
 

@@ -764,7 +764,14 @@ pub fn auto_repair(
     operations: &[AutoRepairOperation],
     prior: Option<&HealingReport>,
 ) -> HealingRun {
-    auto_repair_impl(model, operations, prior, None)
+    auto_repair_impl(model, operations, prior, None, false)
+}
+
+pub(crate) fn auto_repair_before_shell_rebuild(
+    model: &Model,
+    operations: &[AutoRepairOperation],
+) -> HealingRun {
+    auto_repair_impl(model, operations, None, None, true)
 }
 
 pub(crate) fn auto_repair_tolerant(
@@ -772,12 +779,14 @@ pub(crate) fn auto_repair_tolerant(
     operations: &[AutoRepairOperation],
     per_entity_cap_mm: f64,
     cumulative_cap_mm: f64,
+    defer_material_roles: bool,
 ) -> HealingRun {
     auto_repair_impl(
         model,
         operations,
         None,
         Some((per_entity_cap_mm, cumulative_cap_mm)),
+        defer_material_roles,
     )
 }
 

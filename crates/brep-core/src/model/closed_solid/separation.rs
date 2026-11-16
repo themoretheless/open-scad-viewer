@@ -79,8 +79,7 @@ pub(super) fn qualify(
         let work = trimmed::exclude(
             solid,
             i,
-            witness,
-            radius,
+            bounds,
             share - distance.cells,
             max_trim_cells - domain_cells,
         )?;

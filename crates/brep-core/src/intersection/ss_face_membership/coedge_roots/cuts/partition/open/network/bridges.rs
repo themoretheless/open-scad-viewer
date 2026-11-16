@@ -236,7 +236,7 @@ pub(super) fn try_pair<'s, 'i, 'p, 'r, 'a>(
         })
         .collect();
     Ok(Some(QualifiedOpenSSNetwork {
-        paths: paths.to_vec(),
+        source: NetworkSource::Paths(paths.to_vec()),
         limits,
         models,
         faces,

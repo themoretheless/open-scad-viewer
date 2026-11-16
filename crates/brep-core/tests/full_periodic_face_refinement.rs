@@ -92,3 +92,24 @@ fn transposed_full_lap_face_keeps_both_actual_uses_and_oriented_material() {
     assert!((p.evidence().numerical_volume_mm3 - 2. * std::f64::consts::PI).abs() < 1e-5);
     assert_eq!(s, saved);
 }
+
+#[test]
+fn explicit_full_range_at_the_period_end_keeps_exact_boundary_proof() {
+    let mut model = fixture::source();
+    let coedge = &model.loops[0].coedges[1];
+    let trim = brep_topology::CoedgeTrim {
+        curve_parameter: model.edges[coedge.edge].curve.domain(),
+        pcurve_parameter: coedge.pcurve.domain(),
+        periodic_lift: [[1, 0]; 2],
+    };
+    model.loops[0].coedges[1] = coedge.clone().with_trim(trim).unwrap();
+    model.rebuild_topology_ids();
+    let report = brep_core::boundary_agreement::verify_exact(&model, 1_000_000).unwrap();
+    assert_eq!(report.joins[0], (0, 0, Some(true)));
+    assert!(
+        report.uses[1].decision.as_ref().is_some_and(|decision|
+            decision.outcome == cad_predicates::BezierIdentity::Equal),
+        "period-end seam decision: {:?}",
+        report.uses[1].decision
+    );
+}

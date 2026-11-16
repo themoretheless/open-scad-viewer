@@ -9,6 +9,7 @@ import type { MeshLodLevel } from '../core/mesh'
 import type { NativePickingCache } from './nativePickingCache'
 import type { GMesh } from './types'
 import { planDisplayCaps, type DisplayBudget, type LevelBuffers, type ProgressiveLevelStore } from './displayScheduler'
+import { isDeferredLevel } from './deferredLevels'
 import { pixelsPerUnit, selectViewerLod, type ViewerLodCamera } from './viewerLod'
 
 export interface GMeshLodState {
@@ -58,7 +59,7 @@ export function bindMeshLod(
   shared?: LevelBuffers,
 ): boolean {
   const lod = mesh.lod
-  if (!lod || lod.current === level || !lod.levels[level]) return false
+  if (!lod || lod.current === level || !lod.levels[level] || isDeferredLevel(lod.levels[level])) return false
   const data = lod.levels[level]
   // Shared buffers are owned by the display cache, not by this mesh.
   let buffers = shared ?? lod.buffers[level]
@@ -152,7 +153,9 @@ export function updateMeshLods(
       lod.current,
       { pixelsPerUnit: pixelsPerUnit(camera, center, radius), ...policy },
     )
-    const target = Math.min(selection.level, plan?.get(mesh)?.maxLevel ?? selection.level)
+    const entry = plan?.get(mesh)
+    mesh.displayBox = entry?.representation === 'bounding-box'
+    const target = Math.min(selection.level, entry?.maxLevel ?? selection.level)
     if (display.store) {
       const resolved = display.store.resolve(dev, mesh, target)
       if (resolved && bindMeshLod(dev, mesh, resolved.level, nativePicking, resolved.buffers)) changed.push(mesh)

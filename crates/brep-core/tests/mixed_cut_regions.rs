@@ -154,6 +154,20 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
         "Original curved input lacks complete continuous material admission"
     );
     let b = admission.into_solid().unwrap();
+    let owner = ss::construct_qualified_closed_ss_branches(
+        wire.edges()[0].curve().source(), Default::default(),
+    ).unwrap();
+    let cycle = ss::order_closed_fiber_cycle(&owner, 0, Default::default()).unwrap();
+    let automatic = mixed::QualifiedInteriorSsLoop::qualify_from_cycle(
+        [(&a, 1), (&b, 1)], &cycle, Default::default(), 64,
+    ).unwrap();
+    assert_eq!(automatic.joints().len(), cycle.arcs().len());
+    automatic.reverify().unwrap();
+    for cut in automatic.cuts() {
+        assert_ne!(cut.source_face(), cut.inside_face());
+        cut.model().topology().validate_topology_with_vertices(|_| Ok(())).unwrap();
+    }
+
     let jordan = mixed::qualify_paired_interior_loop(&a,1,&b,1,&wire,[[0.5;2];2],Default::default()).unwrap();
     assert_eq!(jordan.joints().len(), wire.edges().len());
     assert!(!jordan.cuts()[0].geometry_admitted());
@@ -314,6 +328,26 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
     assert!(lo <= expected && expected <= hi);
     assert_eq!(common.topology().bodies.len(), 1);
     assert!(common.topology().boundary_edges().is_empty());
+    let automatic_census = std::sync::Arc::new(
+        mixed::QualifiedInteriorSsCensus::qualify_from_closed_branches(
+            [(&perforated, cut_face), (&above, 1)],
+            &owner,
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            64,
+            4096,
+        ).unwrap(),
+    );
+    let (automatic_common, [lo, hi]) = automatic_census.assemble_automatic_paired_boolean(
+        Op::Intersection, &directions, 1e-7, Default::default(), [Default::default(); 2],
+        mixed::RootBoundaryVolumeLimits { absolute_error: 5e-4, cells: 16384, ..Default::default() },
+        2048, 64,
+    ).unwrap();
+    assert!(lo <= expected && expected <= hi);
+    assert_eq!(automatic_common.topology().bodies.len(), 1);
+    assert!(automatic_common.topology().boundary_edges().is_empty());
     let arrangement=std::sync::Arc::new(census.build_face_arrangement(0,Default::default()).unwrap());
     let bound=arrangement.qualify_boolean_rectangle(Op::Difference,[[0.48,0.52],[0.66,0.70]],&directions,Default::default()).unwrap();
     assert_eq!(bound.face(),arrangement.region_faces()[1]);
@@ -412,4 +446,44 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
     assert!(subtraction.retain() && subtraction.reverse_material_normal());
     subtraction.reverify().unwrap();
     assert!(!cut.material_classified() && !cut.geometry_admitted());
+}
+
+/// A mixed-root loop crossing an interior knot line of the curved support.
+/// The two crossing branches are split into one carrier per original span;
+/// the Jordan neighbourhood half admits it only through certified
+/// cross-carrier knot joints. Full paired admission with material still needs
+/// the knotted curved body itself to be a qualified closed solid, which the
+/// Bezier-only shared-boundary certificates refuse today (tripwire below).
+#[test]
+fn loop_crossing_an_interior_knot_has_certified_jordan_neighbourhoods() {
+    let a = source();
+    let wire = fixture::wire_knotted();
+    let joints = mixed::qualify_loop_neighborhoods(&wire, 12, Default::default()).unwrap();
+    assert_eq!(joints.len(), 10);
+    assert_eq!(joints.iter().filter(|j| j.knot().is_some()).count(), 2);
+    for j in &joints {
+        j.reverify().unwrap();
+    }
+    // Uncertified cases still refuse: plain single-graph joints, a starved
+    // enclosure budget, and an excessive joint budget.
+    assert!(wire.qualify_joints(12, Default::default()).is_err());
+    let starved = ss::OriginalSsCurveLimits { max_refinements: 0, native_rectangles: 1, interval_operations: 1, world_rectangles: 1, ..Default::default() };
+    assert!(mixed::qualify_loop_neighborhoods(&wire, 12, starved).is_err());
+    assert!(mixed::qualify_loop_neighborhoods(&wire, 25, Default::default()).is_err());
+    // The unknotted loop is unchanged: every joint stays regular.
+    let plain = mixed::qualify_loop_neighborhoods(&fixture::wire(), 12, Default::default()).unwrap();
+    assert!(plain.iter().all(|j| j.knot().is_none()));
+    // The planar side splits into a finite inside piece across the knot line.
+    let cut = mixed::split_closed_contour_candidate(&a, 1, &wire, 0, [0.5; 2], Default::default()).unwrap();
+    assert_ne!(cut.inside_face(), cut.source_face());
+    // Tripwire: the knotted curved body is not yet an admitted closed solid,
+    // so paired admission and material on the curved side stay unproved.
+    let mut b = graph::bowl();
+    b.faces[1].surface = fixture::insert_half_knot_u(&b.faces[1].surface);
+    b.validate().unwrap();
+    assert_eq!(&b.faces[1].surface, wire.edges()[0].curve().source().second());
+    let mut curved_policy = policy::policy();
+    curved_policy.geometry.boundary.contacts.cells_per_pair = 256;
+    curved_policy.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    assert!(solid::qualify(b, curved_policy).unwrap().solid().is_none());
 }

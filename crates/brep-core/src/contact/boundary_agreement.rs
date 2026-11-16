@@ -228,14 +228,21 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
             curves.clear();
             curves.extend(model.loops[wire].coedges.iter().map(|c|c.pcurve.clone()));
             let coedges=&model.loops[wire].coedges;
-            let closed=if coedges.iter().any(|c|c.trim().is_some()) {
-                if coedges.iter().any(|c|c.trim().is_some_and(|t|t.periodic_lift!=[[0;2];2])) {None}
-                else {
-                    let ranges=coedges.iter().map(|c|c.trim().map_or_else(||c.pcurve.domain(),|t|t.pcurve_parameter)).collect::<Vec<_>>();
-                    let joins=nurbs_core::trim_domain::exact_trimmed_loop_joins(&curves,&ranges,max_work-report.work)?;
-                    report.work+=joins.work_used;joins.closed
-                }
-            }else{nurbs_core::trim_domain::exact_loop_joins(&curves)?};
+            let ranges = coedges
+                .iter()
+                .map(|c| c.trim().map_or_else(|| c.pcurve.domain(), |t| t.pcurve_parameter))
+                .collect::<Vec<_>>();
+            // The authored lift describes the endpoint's sheet. Literal joins
+            // in the same chart need no periodic equivalence proof.
+            let closed = if curves.iter().zip(&ranges).all(|(c, r)| c.domain() == *r) {
+                nurbs_core::trim_domain::exact_loop_joins(&curves)?
+            } else {
+                let joins = nurbs_core::trim_domain::exact_trimmed_loop_joins(
+                    &curves, &ranges, max_work - report.work,
+                )?;
+                report.work += joins.work_used;
+                joins.closed
+            };
             report.all_joins_exact &= closed==Some(true);
             report.joins.push((face_id,wire,closed));
             for (coedge_id,coedge) in model.loops[wire].coedges.iter().enumerate() {
@@ -254,9 +261,21 @@ pub fn verify_exact(model: &Model, max_work: u64) -> Result<ExactReport> {
         let decision=if report.work<max_work {
             if let Some(trim)=coedge.trim() {
                 trim_nodes(model,&model.faces[face],coedge)?;
-                if trim.periodic_lift==[[0;2];2] {
-                    curve_surface_agreement::verify_exact_trimmed(&model.edges[coedge.edge].curve,&coedge.pcurve,&model.faces[face].surface,coedge.reversed,trim.curve_parameter,trim.pcurve_parameter,max_work-report.work)?
-                }else{None}
+                let curve = &model.edges[coedge.edge].curve;
+                let surface = &model.faces[face].surface;
+                if trim.periodic_lift != [[0; 2]; 2]
+                    && trim.curve_parameter == curve.domain()
+                    && trim.pcurve_parameter == coedge.pcurve.domain()
+                {
+                    curve_surface_agreement::verify_exact(
+                        curve, &coedge.pcurve, surface, coedge.reversed, max_work - report.work,
+                    )?
+                } else {
+                    curve_surface_agreement::verify_exact_trimmed(
+                        curve, &coedge.pcurve, surface, coedge.reversed,
+                        trim.curve_parameter, trim.pcurve_parameter, max_work - report.work,
+                    )?
+                }
             }else{
                 curve_surface_agreement::verify_exact(&model.edges[coedge.edge].curve,&coedge.pcurve,&model.faces[face].surface,coedge.reversed,max_work-report.work)?
             }

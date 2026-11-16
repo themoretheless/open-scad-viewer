@@ -132,6 +132,7 @@ mod measure;
 mod minkowski;
 mod offset;
 mod offset_regions;
+pub(crate) use offset_regions::arrangement::intersection_rings;
 pub use minkowski::{
     certify_minkowski_disk_offset, certify_minkowski_sum, verify_minkowski_region,
     ExactRegionRings, MinkowskiRegionCertificate, VerifiedMinkowskiRegion,
@@ -159,6 +160,18 @@ pub(crate) fn nonstationary_span(c: &Curve, axis: usize) -> Result<bool> {
     }
     let nets = extraction::nets(&[vec![c.clone()]])?;
     Ok(nets.len() == 1 && arithmetic::no_stationary(&nets[0].1, axis))
+}
+
+/// Exact homogeneous Bernstein controls on a bounded interval within one
+/// original knot cell. The caller retains the source clock separately.
+pub(crate) fn exact_curve_bernstein_interval(c: &Curve, a: &Q, b: &Q) -> Result<Vec<[Q; 3]>> {
+    c.validate()?;
+    if c.periodic || c.degree == 0 || c.degree > 16
+        || c.control_points.iter().any(|p| p.len() != 2)
+    {
+        return Err(refused("Exact restriction needs a bounded nonperiodic planar curve"));
+    }
+    extraction::interval(c, a, b)
 }
 pub use measure::{
     certify_measure, verify_measure, ExactAreaInterval, ProfileMeasureCertificate,
@@ -721,3 +734,12 @@ use algorithm_separated::separated;
 
 mod algebraic_branches;
 pub use algebraic_branches::{AlgebraicSetDimension,AlgebraicBranchKind,AlgebraicBranchEdge,AlgebraicBranchVertex,AlgebraicBranchComponent,AlgebraicBranchCertificate,VerifiedAlgebraicBranches,certify_algebraic_branches,verify_algebraic_branches};
+
+/// Green area of the represented curve. The caller owns closure, Jordan
+/// embedding and orientation authority.
+pub(crate) fn signed_curve_area_bounds(curve: &Curve, depth: u8) -> Result<[Q; 2]> {
+    let range = orientation::bounds(&[vec![curve.clone()]], depth)?
+        .pop()
+        .ok_or_else(|| refused("Missing exact curve area"))?;
+    Ok([range.lo, range.hi])
+}

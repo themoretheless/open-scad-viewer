@@ -33,6 +33,7 @@ import {
   type ShadingModel,
 } from './rendererContracts'
 import type { WebGPUFrameDiagnostics } from './types'
+import { DEFAULT_DISPLAY_BUDGET, type DisplayBudget } from './displayScheduler'
 import { ISO_PITCH, ISO_YAW, standardViewOrientation, type ProjectionMode, type StandardView } from './viewportModel'
 import type { GpuBufferArena, GpuCsgTree, GpuWboitRenderer, SlicerResult, WebGPURenderer } from './webgpuRenderer'
 
@@ -108,6 +109,7 @@ export class RecordingRenderer implements PublicRenderer {
   private sceneUploads = 0
   private uploadMetrics: SceneUploadMetrics = { geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 0 }
 
+  private displayBudget: DisplayBudget = DEFAULT_DISPLAY_BUDGET
   private record(method: string) {
     this.callCounts.set(method, (this.callCounts.get(method) ?? 0) + 1)
     if (this.callLog.length >= CALL_LOG_LIMIT) this.callLog.shift()
@@ -511,6 +513,12 @@ export class RecordingRenderer implements PublicRenderer {
     this.shadows = enabled
     this.requestRender()
   }
+  setDisplayBudget(budget: DisplayBudget) {
+    this.record('setDisplayBudget')
+    this.displayBudget = budget
+    this.requestRender()
+  }
+  getDisplayBudget = (): DisplayBudget => this.displayBudget
   setGridVisible(visible: boolean) {
     this.record('setGridVisible')
     this.gridVisible = visible

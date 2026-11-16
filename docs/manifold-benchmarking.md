@@ -41,7 +41,12 @@ repair of its defected variant, and `metrics` at 5,120 triangles. The
 companion `manifold-ops` suite (`-p manifold-ops --example bench_manifold_ops`)
 covers union and difference of two overlapping 320-triangle spheres,
 self-intersection and mass-properties diagnostics, `hull_mesh`, and
-decimation from 5,120 to 1,280 triangles, all on 5,120-triangle spheres. Each measured operation
+decimation from 5,120 to 1,280 triangles, all on 5,120-triangle spheres. The
+`polygon-core` suite (`-p polygon-core --example bench_csg_fixtures`) holds
+the native `medium-csg` (panel minus 64 cylinders through the bridge policy)
+and `dense-sphere` cases (overlapping `$fn=32` spheres through the BSP,
+three separated `$fn=128` spheres); `--example csg_ladder` prints the wider
+scaling ladder used by ADR 0013. Each measured operation
 asserts properties of its result, so returning a faster invalid answer fails
 instead of producing an apparently good timing. Input creation and input drop
 are outside the measured lifecycle; output drop is included.

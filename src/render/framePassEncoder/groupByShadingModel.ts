@@ -235,6 +235,8 @@ export interface EncodeFramePassContext {
   readonly sourceLineSlot: OverlaySlot
   readonly selectionLineSlot: OverlaySlot
   readonly deepSelectionLineSlot: OverlaySlot
+  /** Batched wireframe boxes of meshes on the 'bounding-box' representation. */
+  readonly boundingBoxSlot: OverlaySlot
   readonly styleScratch: Float32Array<ArrayBuffer>
   readonly csgPreviewTree: GpuCsgTree | null
   readonly ensureCsgDepthStencil: (dev: GPUDevice, width: number, height: number) => GPUTextureView | null

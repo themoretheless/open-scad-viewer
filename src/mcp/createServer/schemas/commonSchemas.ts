@@ -11,6 +11,7 @@ import {
 import { type OfficialOpenScadRuntimeService } from '../../officialOpenScadRuntimeService'
 
 export interface CreateOpenScadMcpServerOptions {
+  readonly localEditor?: boolean
   store: ModelStore
   additionalInstructions?: string
   geometry?: McpGeometryService

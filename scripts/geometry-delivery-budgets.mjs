@@ -35,6 +35,44 @@ const profiles=Object.freeze({
   'fba78e35f862c3259769f5d7a2458b6f060a61a104c5e7b94e3b13ec2d5da837':Object.freeze({
     version:12,geometryChunkBytes:6_280_000,totalAssetBytes:12_070_000,
   }),
+  // v13: periodic section body and current merged geometry sources. Measured
+  // 18,030,969 raw WASM bytes, 6,424,363 packed geometry bytes and 12,281,514
+  // asset bytes. Both browser Worker loading paths verified this exact digest.
+  '15f93b60958953d09a0c72e1e581636cd148d672470bc473e83387b112bcba30':Object.freeze({
+    version:13,geometryChunkBytes:6_430_000,totalAssetBytes:12_290_000,rawGeometryBytes:18_040_000,
+    namedJsChunkBytes:Object.freeze({
+      index:250_500,DirectModeler:494_000,geometryBuildEngine:335_200,wasmStreaming:195_600,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/6YzdHiG9.js':108_000}),
+  }),
+  // v14: exact isolated contact certificates. Local production measured
+  // 18,062,286 raw WASM bytes, 6,435,493 packed geometry bytes and 12,293,327
+  // asset bytes. The raw kernel grew by 31,317 bytes over v13.
+  '94dc1e2fae7de0c1764723278e22892aee749fc2b9a805ebe0c5c4a3b74837d0':Object.freeze({
+    version:14,geometryChunkBytes:6_440_000,totalAssetBytes:12_300_000,rawGeometryBytes:18_070_000,
+    namedJsChunkBytes:Object.freeze({
+      index:250_500,DirectModeler:494_000,geometryBuildEngine:335_200,wasmStreaming:195_600,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/CgGnarTW.js':108_000}),
+  }),
+  // v15: closed SS network Boolean. Local production measured 18,339,084 raw
+  // WASM bytes, 6,537,252 packed geometry bytes and 12,401,470 asset bytes.
+  '842f0872b21f2add7b9ee3cad71cd37dae38db02991f2fac96a859d4808d0f85':Object.freeze({
+    version:15,geometryChunkBytes:6_545_000,totalAssetBytes:12_410_000,rawGeometryBytes:18_345_000,
+    namedJsChunkBytes:Object.freeze({
+      index:250_500,DirectModeler:494_000,geometryBuildEngine:335_200,wasmStreaming:195_600,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/BjrmXJqH.js':111_500}),
+  }),
+  // v16: periodic stock intersection. Measured production build:
+  // 18,523,833 raw WASM bytes, 6,604,053 packed geometry bytes, up to 12,468,855 asset bytes.
+  '6e11301a009b087851660ace975eeee6230c4fdc89f16baa73bfd1cd1f63989e':Object.freeze({
+    version:16,geometryChunkBytes:6_612_000,totalAssetBytes:12_475_000,rawGeometryBytes:18_530_000,
+    namedJsChunkBytes:Object.freeze({
+      index:250_500,DirectModeler:494_000,geometryBuildEngine:335_200,wasmStreaming:195_600,
+    }),
+    exactJsChunkBytes:Object.freeze({'assets/DZpgor1M.js':111_500}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){

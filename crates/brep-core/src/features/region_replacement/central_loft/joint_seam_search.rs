@@ -11,7 +11,14 @@ fn overall(patches: &[Score], seams: &[Score]) -> Score {
         .chain(seams)
         .fold((0f64, 0.), |a, b| (a.0.max(b.0), a.1 + b.1))
 }
-fn seam_score(a: &Surface, b: &Surface, work: &mut Work) -> Result<Score> {
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Sampling {
+    Coarse,
+    Peaks,
+    Local,
+}
+
+fn seam_score(a: &Surface, b: &Surface, sampling: Sampling, work: &mut Work) -> Result<Score> {
     let sensitivity = |s: &Surface, end: bool| {
         let p = s.degree_u;
         let (root, second) = if end { (p, p - 2) } else { (0, 2) };
@@ -34,7 +41,15 @@ fn seam_score(a: &Surface, b: &Surface, work: &mut Work) -> Result<Score> {
     let mut score = (0f64, 0.);
     // One numerically stable side proposes a score; independent original field
     // checks still cover BOTH actual sides and every seam after construction.
-    for t in [0., 0.125, 0.25, 0.5, 0.75, 0.875, 1.] {
+    let coarse = [0., 0.125, 0.25, 0.5, 0.75, 0.875, 1.];
+    let dense = std::array::from_fn::<_, 17, _>(|i| i as f64 / 16.);
+    let local = std::array::from_fn::<_, 65, _>(|i| i as f64 / 64.);
+    let samples: &[f64] = match sampling {
+        Sampling::Coarse => &coarse,
+        Sampling::Peaks => &dense,
+        Sampling::Local => &local,
+    };
+    for &t in samples {
         work.charge(1)?;
         let e = s.evaluate(u, v0 + (v1 - v0) * t)?;
         let Some((g, h)) = e.curvatures() else {
@@ -44,6 +59,13 @@ fn seam_score(a: &Surface, b: &Surface, work: &mut Work) -> Result<Score> {
         if !k.is_finite() {
             return Ok((f64::INFINITY, f64::INFINITY));
         }
+        let cap = super::SEWN_CORNER_CURVATURE_LIMIT;
+        let k = match sampling {
+            Sampling::Coarse => k,
+            Sampling::Peaks => k + 32. * (k - cap).max(0.),
+            // Leave margin at the seam while the neighboring fields improve.
+            Sampling::Local => k + 128. * (k - 0.95 * cap).max(0.),
+        };
         score.0 = score.0.max(k);
         score.1 += k * k;
     }
@@ -62,9 +84,80 @@ pub(super) fn propose(
     evaluations: &mut Work,
     repairs: &mut Work,
 ) -> Result<Vec<Surface>> {
+    search(
+        source,
+        sweeps,
+        stock,
+        None,
+        Sampling::Coarse,
+        evaluations,
+        repairs,
+    )
+}
+
+pub(super) fn refine_peaks(
+    source: &[Surface],
+    sweeps: usize,
+    stock: [[f64; 2]; 3],
+    seams: &[usize],
+    evaluations: &mut Work,
+    repairs: &mut Work,
+) -> Result<Vec<Surface>> {
+    require(
+        !seams.is_empty() && seams.iter().all(|&i| i < source.len().saturating_sub(1)),
+        "Select valid internal seams for curvature refinement",
+    )?;
+    search(
+        source,
+        sweeps,
+        stock,
+        Some(seams),
+        Sampling::Peaks,
+        evaluations,
+        repairs,
+    )
+}
+
+pub(super) fn refine_local(
+    source: &[Surface],
+    sweeps: usize,
+    stock: [[f64; 2]; 3],
+    evaluations: &mut Work,
+    repairs: &mut Work,
+) -> Result<Vec<Surface>> {
+    require(
+        source.len() == 3,
+        "Local search needs the face and its two neighbors",
+    )?;
+    search(
+        source,
+        sweeps,
+        stock,
+        None,
+        Sampling::Local,
+        evaluations,
+        repairs,
+    )
+}
+
+fn search(
+    source: &[Surface],
+    sweeps: usize,
+    stock: [[f64; 2]; 3],
+    active_seams: Option<&[usize]>,
+    sampling: Sampling,
+    evaluations: &mut Work,
+    repairs: &mut Work,
+) -> Result<Vec<Surface>> {
+    let peak_guided = sampling != Sampling::Coarse;
     require(
         (2..=32).contains(&source.len())
-            && (1..=8).contains(&sweeps)
+            && (1..=match sampling {
+                Sampling::Coarse => 8,
+                Sampling::Peaks => 32,
+                Sampling::Local => 64,
+            })
+                .contains(&sweeps)
             && stock
                 .iter()
                 .all(|b| b[0].is_finite() && b[1].is_finite() && b[0] <= b[1]),
@@ -82,15 +175,34 @@ pub(super) fn propose(
         )?;
     }
     let mut net = source.to_vec();
-    let mut ps = net
-        .iter()
-        .map(|s| curvature_search::score(s, evaluations))
-        .collect::<Result<Vec<_>>>()?;
+    let scan = |patches: &[Surface], work: &mut Work| {
+        patches
+            .iter()
+            .map(|s| curvature_search::scan(s, work))
+            .collect::<Result<Vec<_>>>()
+    };
+    let mut field = if peak_guided {
+        scan(&net, evaluations)?
+    } else {
+        Vec::new()
+    };
+    let patch_score = |s: &Surface,
+                       patch: usize,
+                       work: &mut Work,
+                       field: &[(
+        Score,
+        [[f64; 2]; curvature_search::TILES * curvature_search::TILES],
+    )]| {
+        if let Some((_, peaks)) = field.get(patch) {
+            curvature_search::score_at(s, curvature_search::coarse_points().chain(*peaks), work)
+        } else {
+            curvature_search::score(s, work)
+        }
+    };
     let mut ss = net
         .windows(2)
-        .map(|p| seam_score(&p[0], &p[1], evaluations))
+        .map(|pair| seam_score(&pair[0], &pair[1], sampling, evaluations))
         .collect::<Result<Vec<_>>>()?;
-    let mut best = overall(&ps, &ss);
     let spread = (0..3)
         .map(|k| {
             let lo = net
@@ -106,13 +218,30 @@ pub(super) fn propose(
             hi - lo
         })
         .fold(0f64, f64::max);
-    let mut step = (spread / 8.).min(0.1);
+    let mut step = (spread / 8.).min(match sampling {
+        Sampling::Coarse => 0.1,
+        Sampling::Peaks => 0.03,
+        Sampling::Local => 0.008,
+    });
+    let score_patches = |patches: &[Surface], work: &mut Work, field: &[_]| {
+        patches
+            .iter()
+            .enumerate()
+            .map(|(i, s)| patch_score(s, i, work, field))
+            .collect::<Result<Vec<_>>>()
+    };
+    let mut ps = score_patches(&net, evaluations, &field)?;
     for sweep in 0..sweeps {
+        let original = peak_guided.then(|| (net.clone(), ps.clone(), ss.clone()));
+        let mut best = overall(&ps, &ss);
         // Alternate scalar and paired V modes. Coupled opposite changes can
         // reduce endpoint curvature without forcing a large midpoint bulge;
         // they must be evaluated atomically, never as two scalar acceptances.
         for kind in 0..3 {
             for i in 0..net.len() - 1 {
+                if active_seams.is_some_and(|seams| !seams.contains(&i)) {
+                    continue;
+                }
                 let rows = (3..=net[i].degree_v - 3).collect::<Vec<_>>();
                 let mut patterns: Vec<Vec<(usize, f64)>> = Vec::new();
                 if sweep % 2 == 0 {
@@ -176,7 +305,12 @@ pub(super) fn propose(
                             } else {
                                 1.
                             };
-                            parameters.push((row, old, sign * scaling * block));
+                            let jet_scale = if sampling == Sampling::Local {
+                                [1., 2., 8.][kind]
+                            } else {
+                                1.
+                            };
+                            parameters.push((row, old, sign * scaling * block * jet_scale));
                         }
                         let mut chosen = original.clone();
                         let mut chosen_ps = [ps[i], ps[i + 1]];
@@ -218,10 +352,10 @@ pub(super) fn propose(
                                 continue;
                             }
                             let trial_ps = [
-                                curvature_search::score(&trial[0], evaluations)?,
-                                curvature_search::score(&trial[1], evaluations)?,
+                                patch_score(&trial[0], i, evaluations, &field)?,
+                                patch_score(&trial[1], i + 1, evaluations, &field)?,
                             ];
-                            let trial_ss = seam_score(&trial[0], &trial[1], evaluations)?;
+                            let trial_ss = seam_score(&trial[0], &trial[1], sampling, evaluations)?;
                             let mut all_ps = ps.clone();
                             all_ps[i] = trial_ps[0];
                             all_ps[i + 1] = trial_ps[1];
@@ -261,7 +395,7 @@ pub(super) fn propose(
                                 continue;
                             }
                             net[p].control_points[i][j][k] = value;
-                            let score = curvature_search::score(&net[p], evaluations)?;
+                            let score = patch_score(&net[p], p, evaluations, &field)?;
                             let mut all = ps.clone();
                             all[p] = score;
                             let total = overall(&all, &ss);
@@ -278,10 +412,29 @@ pub(super) fn propose(
                 }
             }
         }
-        step *= 0.5;
+        if let Some((original_net, original_patches, original_seams)) = original {
+            let measured = scan(&net, evaluations)?;
+            let score = |field: &[(Score, _)], seams| {
+                overall(
+                    &field.iter().map(|sample| sample.0).collect::<Vec<_>>(),
+                    seams,
+                )
+            };
+            if better(score(&measured, &ss), score(&field, &original_seams)) {
+                field = measured;
+                ps = score_patches(&net, evaluations, &field)?;
+            } else {
+                net = original_net;
+                ps = original_patches;
+                ss = original_seams;
+                step *= 0.5;
+            }
+        } else {
+            step *= 0.5;
+        }
     }
     require(
-        best.0.is_finite(),
+        overall(&ps, &ss).0.is_finite(),
         "Joint seam search has no regular sampled candidate",
     )?;
     for s in &net {
@@ -331,6 +484,7 @@ mod tests {
         let old = seam_score(
             &s[0],
             &s[1],
+            Sampling::Coarse,
             &mut Work {
                 used: 0,
                 max: 100000,
@@ -354,6 +508,7 @@ mod tests {
         let new = seam_score(
             &q[0],
             &q[1],
+            Sampling::Coarse,
             &mut Work {
                 used: 0,
                 max: 100000,

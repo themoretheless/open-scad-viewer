@@ -103,6 +103,20 @@ pub(crate) fn cap_pcurve(curve: &Curve, bounds: [[f64; 2]; 2]) -> Curve {
 /// General rational loops require bounded simplicity, separation and nesting
 /// proofs. Unsupported or unproven containment is refused before construction.
 pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
+    extrude_impl(loops, z_min, z_max, false)
+}
+
+/// Keep the original Cartesian profile coordinates as the affine cap chart.
+pub(crate) fn extrude_exact_profile(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
+    extrude_impl(loops, z_min, z_max, true)
+}
+
+fn extrude_impl(
+    loops: &[Vec<Curve>],
+    z_min: f64,
+    z_max: f64,
+    exact_caps: bool,
+) -> Result<Model> {
     if !z_min.is_finite()
         || !z_max.is_finite()
         || z_min.abs() > 1e6
@@ -152,6 +166,18 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
             }
             // Every active knot span owns a separate boundary edge. A closed
             // multi-span circle must not collapse to one display chord at LOD1.
+            if let Some(spans) =
+                nurbs_core::curve_partition_agreement::exact_bezier_span_partition(curve)?
+            {
+                normalized_wire.extend(spans.iter().map(normalized));
+                if normalized_wire.len() > MAX_PROFILE_CURVES {
+                    return Err(Error::new(
+                        "BREP_RESOURCE_LIMIT",
+                        "Prism profile exceeds 254 active curve spans",
+                    ));
+                }
+                continue;
+            }
             let [start, end] = curve.domain();
             let mut breaks: Vec<_> = curve
                 .knots
@@ -207,6 +233,18 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
         if (0..2).any(|i| bounds[1][i] <= bounds[0][i]) {
             return Err(unsupported("Prism profile has degenerate bounds"));
         }
+        let cap_curve = |curve: &Curve| {
+            if exact_caps { curve.clone() } else { cap_pcurve(curve, bounds) }
+        };
+        let cap = |z| {
+            let mut surface = cap_surface(bounds, z);
+            if exact_caps {
+                let [[x0, y0], [x1, y1]] = bounds;
+                surface.knots_u = vec![x0, x0, x1, x1];
+                surface.knots_v = vec![y0, y0, y1, y1];
+            }
+            surface
+        };
         let mut face_uses = Vec::new();
         let mut bottom_loops = Vec::new();
         let mut top_loops = Vec::new();
@@ -215,7 +253,7 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
             let mut bottom = Vec::new();
             let mut top = Vec::new();
             for curve in wire {
-                let p = curve.evaluate(0.)?.point;
+                let p = &curve.control_points[0];
                 bottom.push(model.vertices.len());
                 model.vertices.push(Vertex {
                     point: [p[0], p[1], z_min],
@@ -250,7 +288,7 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
                 .map(|(i, c)| Coedge::new(
                     low_edges[i],
                     false,
-                    cap_pcurve(c, bounds),
+                    cap_curve(c),
                 ))
                 .collect();
             let top_wire = wire
@@ -259,7 +297,7 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
                 .map(|(i, c)| Coedge::new(
                     high_edges[i],
                     false,
-                    cap_pcurve(c, bounds),
+                    cap_curve(c),
                 ))
                 .collect();
             bottom_loops.push(push_loop(&mut model, bottom_wire));
@@ -310,14 +348,14 @@ pub fn extrude(loops: &[Vec<Curve>], z_min: f64, z_max: f64) -> Result<Model> {
         }
         face_uses.push(push_face(
             &mut model,
-            cap_surface(bounds, z_min),
+            cap(z_min),
             bottom_loops[0],
             bottom_loops[1..].to_vec(),
             true,
         ));
         face_uses.push(push_face(
             &mut model,
-            cap_surface(bounds, z_max),
+            cap(z_max),
             top_loops[0],
             top_loops[1..].to_vec(),
             false,
@@ -460,6 +498,25 @@ pub(crate) fn planar_cap_z(surface: &Surface) -> Option<f64> {
     }
     Some(z)
 }
+// Periodic source curves and surface shores are compared on the original
+// clocks. In particular, a stored seam is not an extra material boundary.
+fn periodic_boundary_agrees(model: &Model, c: &Coedge, surface: &Surface) -> Result<bool> {
+    let curve = &model.edges[c.edge].curve;
+    if let Some(trim) = c.trim() {
+        if trim.curve_parameter != curve.domain()
+            || trim.pcurve_parameter != c.pcurve.domain()
+            || crate::boundary_agreement::periodic_lifts(surface, &c.pcurve, trim.pcurve_parameter)?
+                != trim.periodic_lift
+        {
+            return Ok(false);
+        }
+    }
+    let proof = nurbs_core::curve_surface_agreement::verify_exact(
+        curve, &c.pcurve, surface, c.reversed, 100000,
+    )?;
+    Ok(proof.is_some_and(|p| p.outcome == cad_predicates::BezierIdentity::Equal))
+}
+
 fn cap_is_proven(model: &Model, usage: &FaceUse, z_min: f64, z_max: f64) -> Result<bool> {
     let Some(z) = planar_cap_z(&model.faces[usage.face].surface) else {
         return Ok(false);
@@ -500,6 +557,12 @@ pub(crate) fn cap_plane_is_proven(
             let edge = &model.edges[coedge.edge];
             if edge.degenerate || edge.curve.control_points.iter().any(|p| p[2] != z) {
                 return Ok(false);
+            }
+            if edge.curve.periodic || coedge.pcurve.periodic {
+                if !periodic_boundary_agrees(model, coedge, surface)? {
+                    return Ok(false);
+                }
+                continue;
             }
             // Affine substitution in the complete rational pcurve control net
             // proves carrier agreement, including portions between samples.
@@ -613,11 +676,12 @@ pub(crate) fn side_is_proven(
     {
         return Ok(false);
     }
+    let periodic_profile = surface.periodic_u || surface.periodic_v;
     let mut boundaries = BTreeMap::<(usize,usize),Vec<[f64;2]>>::new();
     for coedge in &model.loops[face.outer].coedges {
         let pcurve = &coedge.pcurve;
         if coedge.trim().is_some_and(|t| t.curve_parameter != model.edges[coedge.edge].curve.domain()
-            || t.pcurve_parameter != pcurve.domain() || t.periodic_lift != [[0;2];2]) || pcurve.degree != 1
+            || t.pcurve_parameter != pcurve.domain() || (!periodic_profile && t.periodic_lift != [[0;2];2])) || pcurve.degree != 1
             || pcurve.control_points.len() != 2
             || pcurve.weights[0] != pcurve.weights[1]
             || pcurve.periodic
@@ -644,6 +708,12 @@ pub(crate) fn side_is_proven(
         if a[varying] == b[varying] || a[varying].min(b[varying]) < domain[varying][0]
             || a[varying].max(b[varying]) > domain[varying][1] { return Ok(false); }
         boundaries.entry((constant,side)).or_default().push([a[varying],b[varying]]);
+        if periodic_profile {
+            if model.edges[coedge.edge].degenerate || !periodic_boundary_agrees(model, coedge, surface)? {
+                return Ok(false);
+            }
+            continue;
+        }
         let mut iso = surface.iso(if constant == 0 { Axis::U } else { Axis::V }, a[constant])?;
         if [a[varying].min(b[varying]),a[varying].max(b[varying])] != carrier_domain[varying] {
             iso = iso.trim(a[varying].min(b[varying]), a[varying].max(b[varying]))?;
@@ -733,6 +803,32 @@ pub fn recognize(model: &Model) -> Result<Option<ProfilePrism>> {
                             coedges.reverse();
                         }
                         for c in coedges {
+                            let original = &model.edges[c.edge].curve;
+                            if original.periodic {
+                                if !nurbs_core::curve_partition_agreement::verify_periodic_source_closure(original)? {
+                                    return Ok(None);
+                                }
+                                let Some(mut spans) =
+                                    nurbs_core::curve_partition_agreement::exact_bezier_span_partition(original)?
+                                else {
+                                    return Ok(None);
+                                };
+                                let reversed = c.reversed ^ usage.reversed;
+                                if reversed {
+                                    spans.reverse();
+                                }
+                                for piece in spans {
+                                    let mut piece = normalized(&piece);
+                                    if reversed {
+                                        piece = piece.reverse()?;
+                                    }
+                                    for p in &mut piece.control_points {
+                                        p.pop();
+                                    }
+                                    profile.push(piece);
+                                }
+                                continue;
+                            }
                             let mut curve = directed_edge(model, c)?;
                             if usage.reversed {
                                 curve = curve.reverse()?;

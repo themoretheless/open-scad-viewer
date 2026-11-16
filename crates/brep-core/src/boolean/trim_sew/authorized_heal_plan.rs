@@ -472,12 +472,13 @@ impl AuthorizedHealPlan {
 }
 
 pub(crate) fn apply_authorized_heal(model: &Model, plan: &AuthorizedHealPlan) -> Result<Model> {
-    apply_authorized_heal_checked(model, plan, |_| Ok(()))
+    apply_authorized_heal_checked(model, plan, false, |_| Ok(()))
 }
 
 pub(crate) fn apply_authorized_heal_checked(
     model: &Model,
     plan: &AuthorizedHealPlan,
+    defer_material_roles: bool,
     mut before_operation: impl FnMut(usize) -> Result<()>,
 ) -> Result<Model> {
     let admission = if plan.tolerant_endpoints {
@@ -638,7 +639,11 @@ pub(crate) fn apply_authorized_heal_checked(
     }
     next.validate()?;
     sew_closed_model_edges(&next)?;
-    crate::solid_audit::audit_solid(&next)?;
+    if defer_material_roles {
+        crate::solid_audit::audit_before_shell_repair(&next)?;
+    } else {
+        crate::solid_audit::audit_solid(&next)?;
+    }
     Ok(next)
 }
 

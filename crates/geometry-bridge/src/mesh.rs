@@ -721,9 +721,33 @@ fn minkowski(a: &Mesh, b: &Mesh) -> Result<Mesh> {
     Ok(result)
 }
 
-/// A detached export snapshot. Its vectors remain valid until the JS lease is freed.
-/// Commands may delete the source solid without invalidating this snapshot.
+// Planar face ids of the most recently exported/rendered solid. Export,
+// render and analysis of one retained solid share a single computation; the
+// weak pointer proves the cached entry still describes the same shape.
+type FaceIdEntry = (u32, std::rc::Weak<Shape>, Rc<Vec<u32>>);
+thread_local! {
+    static FACE_IDS: RefCell<Option<FaceIdEntry>> = const { RefCell::new(None) };
+}
+#[cfg(test)]
+thread_local! {
+    pub(crate) static FACE_ID_COMPUTATIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+fn cached_face_ids(id: u32, shape: &Rc<Shape>) -> Result<Rc<Vec<u32>>> {
+    let hit = FACE_IDS.with(|slot| {
+        slot.borrow().as_ref().and_then(|(cached_id, weak, ids)| {
+            (*cached_id == id && std::ptr::eq(weak.as_ptr(), Rc::as_ptr(shape))).then(|| ids.clone())
+        })
+    });
+    if let Some(ids) = hit {
+        return Ok(ids);
+    }
+    let ids = Rc::new(face_ids(solid(shape)?)?);
+    FACE_IDS.with(|slot| *slot.borrow_mut() = Some((id, Rc::downgrade(shape), ids.clone())));
+    Ok(ids)
+}
 fn face_ids(m: &Mesh) -> Result<Vec<u32>> {
+    #[cfg(test)]
+    FACE_ID_COMPUTATIONS.with(|c| c.set(c.get() + 1));
     let mut groups = std::collections::BTreeMap::new();
     let mut ids = Vec::with_capacity(m.indices.len() / 3);
     let scale = m.positions.iter().fold(1_f64, |a, b| a.max(b.abs()));
@@ -754,7 +778,7 @@ pub(crate) fn export_buffers(id: u32) -> Result<crate::CadMeshBuffer> {
     Ok(crate::CadMeshBuffer {
         positions: m.positions.iter().map(|&v| if v.abs() < scale * 1e-14 { 0. } else { v }).collect(),
         indices: m.indices.iter().map(|&v| v as u32).collect(),
-        face_ids: face_ids(m)?,
+        face_ids: (*cached_face_ids(id, &shape)?).clone(),
     })
 }
 /// Admission before display-buffer allocation for a resumable analysis.
@@ -769,7 +793,147 @@ pub(crate) fn check_analysis_triangle_budget(id: u32, limit: usize) -> Result<()
 pub(crate) fn render_buffers(id: u32, crease_cosine: f64) -> Result<RenderMesh> {
     let shape = get(id)?;
     let m = solid(&shape)?;
-    Ok(crate::mesh_render::render_parts(&m.positions, &m.indices, face_ids(m)?, crease_cosine))
+    let ids = (*cached_face_ids(id, &shape)?).clone();
+    Ok(crate::mesh_render::render_parts(&m.positions, &m.indices, ids, crease_cosine))
+}
+/// Cooperative counterpart of [`render_buffers`]: owns the source shape, so
+/// deleting the solid mid-job cannot invalidate it, and yields between
+/// bounded batches. Bit-identical to the one-shot path.
+pub(crate) fn render_buffers_job(
+    id: u32,
+    crease_cosine: f64,
+) -> Result<impl std::future::Future<Output = Result<RenderMesh>> + 'static> {
+    let shape = get(id)?;
+    solid(&shape)?;
+    Ok(async move {
+        let ids = (*cached_face_ids(id, &shape)?).clone();
+        crate::mesh_render::yield_once().await;
+        let m = solid(&shape)?;
+        Ok(crate::mesh_render::render_parts_cooperative(&m.positions, &m.indices, ids, crease_cosine).await)
+    })
+}
+/// Operation of a cooperative mesh Boolean job.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum BooleanJobOp {
+    Union,
+    Difference,
+    Intersection,
+}
+impl BooleanJobOp {
+    pub(crate) fn name(self) -> &'static str {
+        match self {
+            Self::Union => "union",
+            Self::Difference => "difference",
+            Self::Intersection => "intersection",
+        }
+    }
+}
+/// Pairwise steps of the n-ary fold, known before the job runs (progress total).
+fn boolean_plan(meshes: &[&Mesh], op: BooleanJobOp) -> (Vec<Vec<usize>>, usize) {
+    match op {
+        BooleanJobOp::Union => {
+            let groups = boolean::union_groups(meshes);
+            let steps = groups.iter().map(|g| g.len().saturating_sub(1)).sum();
+            (groups, steps)
+        }
+        BooleanJobOp::Difference => match meshes.split_first() {
+            Some((base, cutters)) => {
+                let batches = boolean::difference_batches(base, cutters, DIFFERENCE_BATCH).unwrap_or_default();
+                let steps = batches.len();
+                (batches, steps)
+            }
+            None => (vec![], 0),
+        },
+        BooleanJobOp::Intersection => (vec![], meshes.len().saturating_sub(1)),
+    }
+}
+/// Cooperative n-ary Boolean over retained solids. Replays exactly the fold
+/// plan of [`combine_solids`] (bound groups for union, separated cutter
+/// batches for difference, a pairwise chain for intersection) and yields to
+/// the host after every pairwise operation, checking `token` there. The job
+/// owns its operand shapes. Completion stores the result and returns its id.
+pub(crate) fn boolean_job(
+    ids: &[u32],
+    op: BooleanJobOp,
+    token: nurbs_numerics::progress::CancellationToken,
+    progress: Rc<crate::kernel_jobs::JobProgress>,
+) -> Result<impl std::future::Future<Output = Result<Value>> + 'static> {
+    let shapes: Vec<Rc<Shape>> = ids.iter().map(|&id| get(id)).collect::<Result<_>>()?;
+    for s in &shapes {
+        solid(s)?;
+    }
+    Ok(async move {
+        let meshes: Vec<&Mesh> = shapes.iter().map(|s| solid(s)).collect::<Result<_>>()?;
+        let (plan, total) = boolean_plan(&meshes, op);
+        progress.set(0, total as u64);
+        let mut done = 0_u64;
+        let mut checkpoint = || -> Result<()> {
+            done += 1;
+            progress.set(done, total as u64);
+            token.check("mesh boolean").map_err(|c| input(&c.to_string()))
+        };
+        let pairwise = |a: &Mesh, b: &Mesh| boolean(a, b, op.name());
+        let result = match (op, meshes.split_first()) {
+            (_, None) => solid::empty(),
+            (BooleanJobOp::Union, _) => {
+                let mut parts = Vec::new();
+                for group in plan {
+                    let mut folded: Option<Mesh> = None;
+                    for i in group {
+                        folded = Some(match folded {
+                            None => meshes[i].clone(),
+                            Some(m) => {
+                                let m = pairwise(&m, meshes[i])?;
+                                checkpoint()?;
+                                crate::mesh_render::yield_once().await;
+                                m
+                            }
+                        });
+                    }
+                    if let Some(m) = folded {
+                        parts.push(m);
+                    }
+                }
+                match parts.len() {
+                    0 => solid::empty(),
+                    1 => parts.pop().expect("one part"),
+                    _ => solid::join(&parts)?,
+                }
+            }
+            (BooleanJobOp::Difference, Some((base, cutters))) => {
+                if boolean::bounds(base).is_none() {
+                    solid::empty()
+                } else {
+                    let mut result = (*base).clone();
+                    for members in plan {
+                        let cutter = if members.len() == 1 {
+                            cutters[members[0]].clone()
+                        } else {
+                            let parts: Vec<Mesh> = members.iter().map(|&j| cutters[j].clone()).collect();
+                            solid::join(&parts)?
+                        };
+                        result = pairwise(&result, &cutter)?;
+                        checkpoint()?;
+                        crate::mesh_render::yield_once().await;
+                        if result.indices.is_empty() {
+                            break;
+                        }
+                    }
+                    result
+                }
+            }
+            (BooleanJobOp::Intersection, Some((first, rest))) => {
+                let mut m = (*first).clone();
+                for b in rest {
+                    m = pairwise(&m, b)?;
+                    checkpoint()?;
+                    crate::mesh_render::yield_once().await;
+                }
+                m
+            }
+        };
+        put_solid(result)
+    })
 }
 /// Numeric contract: positions arrive as f64 (legacy f32 uploads are widened
 /// by the ABI before this call), so authored coordinates enter the kernel

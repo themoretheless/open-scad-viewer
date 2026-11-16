@@ -306,6 +306,88 @@ impl CentralLoftCandidate<'_, '_, '_> {
             },
         )
     }
+    /// Rebuild free interiors against the strongest sampled curvature in each
+    /// region, preserving the original and shared boundary two-jets.
+    /// The result still needs independent seam and whole-field verification.
+    pub fn refine_curvature_peaks(
+        &self,
+        patches: &[Surface],
+        sweeps: usize,
+        evaluations: usize,
+    ) -> Result<Vec<Surface>> {
+        require(evaluations <= 2_000_000, "Bound peak refinement evaluations")?;
+        curvature_search::refine_peaks(
+            patches, sweeps, self.stock, &mut Work { used: 0, max: evaluations },
+        )
+    }
+
+    /// Refine selected shared internal curves, their common two-jets and the
+    /// neighboring interiors against sampled curvature. Sew and verify the result.
+    pub fn refine_joint_curvature_peaks(
+        &self,
+        patches: &[Surface],
+        seams: &[usize],
+        sweeps: usize,
+    ) -> Result<Vec<Surface>> {
+        joint_seam_search::refine_peaks(
+            patches,
+            sweeps,
+            self.stock,
+            seams,
+            &mut Work { used: 0, max: 4_000_000 },
+            &mut Work { used: 0, max: 4_000_000 },
+        )
+    }
+
+    /// Move neighboring interior poles together while holding all boundary
+    /// two-jets fixed. Final curvature admission is independent of the search.
+    pub fn refine_coordinated_curvature(
+        &self,
+        patches: &[Surface],
+        sweeps: usize,
+        degree_v: Option<usize>,
+    ) -> Result<Vec<Surface>> {
+        let elevated;
+        let patches = if let Some(degree) = degree_v {
+            require(degree <= 12, "Bound curvature proof degree")?;
+            elevated = interior_fairing::elevate_v(
+                patches, degree, &mut Work { used: 0, max: 500_000 },
+            )?;
+            &elevated
+        } else {
+            patches
+        };
+        curvature_search::refine_coordinated(
+            patches,
+            sweeps,
+            self.stock,
+            &mut Work { used: 0, max: 16_000_000 },
+        )
+    }
+
+    /// Rebuild a face and the two seams it shares with its neighbors.
+    /// The two outside seams of this three-patch window keep their two-jets.
+    pub fn refine_shared_curvature_window(
+        &self,
+        patches: &[Surface],
+        face: usize,
+        sweeps: usize,
+    ) -> Result<Vec<Surface>> {
+        require(face > 0 && face < patches.len().saturating_sub(1),
+            "Curvature window needs a neighbor on both sides")?;
+        let mut candidate = patches.to_vec();
+        let window = &mut candidate[face - 1..=face + 1];
+        let refined = joint_seam_search::refine_local(
+            window,
+            sweeps,
+            self.stock,
+            &mut Work { used: 0, max: 8_000_000 },
+            &mut Work { used: 0, max: 8_000_000 },
+        )?;
+        window.clone_from_slice(&refined);
+        Ok(candidate)
+    }
+
     /// Separate degree-5 coupled proposal; no body or curvature authority.
     pub fn propose_reconciled_patches(&self, operations: usize) -> Result<Vec<Surface>> {
         let mut patches = propose_authored(&self.surface, operations / 2, Some(&self.authored))?;

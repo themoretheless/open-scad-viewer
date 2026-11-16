@@ -88,6 +88,7 @@ struct Pair {
 pub struct FiberSources {
     pair: Arc<Pair>,
     equations: Option<Arc<Pair>>,
+    affine_views: [Option<Arc<Surface>>; 2],
 }
 impl FiberSources {
     pub fn new(first: &Surface, second: &Surface) -> Result<Self> {
@@ -95,6 +96,11 @@ impl FiberSources {
         second.validate()?;
         Ok(Self {
             equations: None,
+            affine_views: [first, second].map(|surface| {
+                crate::surface_injectivity::exact_affine_xy::equivalent_affine_surface(surface)
+                    .or_else(|| super::fiber_coverage::equivalent_multispan_affine_surface(surface))
+                    .map(Arc::new)
+            }),
             pair: Arc::new(Pair {
                 first: first.clone(),
                 second: second.clone(),
@@ -130,8 +136,14 @@ impl FiberSources {
             )?;
             Ok([&p.first, &p.second])
         } else {
-            Ok([self.first(), self.second()])
+            Ok(self.evaluation_surfaces())
         }
+    }
+    pub(super) fn evaluation_surfaces(&self) -> [&Surface; 2] {
+        [
+            self.affine_views[0].as_deref().unwrap_or_else(|| self.first()),
+            self.affine_views[1].as_deref().unwrap_or_else(|| self.second()),
+        ]
     }
     pub fn first(&self) -> &Surface {
         &self.pair.first

@@ -144,6 +144,38 @@ impl OrderedClosedFiberCycle {
     pub fn arcs(&self) -> &[OrderedClosedFiberArc] {
         &self.arcs
     }
+    /// Preserve the native intersection graphs and shared point selectors
+    /// as one oriented wire on both original supports.
+    pub fn to_root_wire(
+        &self,
+        limits: crate::ss_intersection::OriginalSsCurveLimits,
+    ) -> Result<crate::ss_intersection::OriginalSsRootWire> {
+        use crate::ss_intersection::{
+            OriginalSsRootCurve, OriginalSsRootEdge, OriginalSsRootPoint, OriginalSsRootWire,
+            bind_original_ss_port,
+        };
+        use std::sync::Arc;
+
+        let points = self.ports().iter().map(|port| {
+            let selector = port.selector();
+            let range = selector.domain()[selector.free_axis().index()];
+            check(range[0] == range[1], "Closed cycle port needs one exact native clock")?;
+            let curve = Arc::new(OriginalSsRootCurve::from_native(selector.clone()));
+            Ok(Arc::new(OriginalSsRootPoint::new(curve, range[0])?))
+        }).collect::<Result<Vec<_>>>()?;
+        let mut edges = Vec::with_capacity(self.arcs().len());
+        for (index, arc) in self.arcs().iter().enumerate() {
+            let curve = Arc::new(OriginalSsRootCurve::from_native(arc.fiber().clone()));
+            let next = (index + 1) % points.len();
+            let start = bind_original_ss_port(points[index].clone(), curve.clone(), [0; 4], limits)?;
+            let end = bind_original_ss_port(points[next].clone(), curve, [0; 4], limits)?;
+            let edge = OriginalSsRootEdge::new(start, end)?;
+            check(edge.forward() == arc.forward(), "Exact SS edge clock disagrees with cycle")?;
+            edges.push(edge);
+        }
+        OriginalSsRootWire::new(edges)
+    }
+
     pub fn rectangles(&self) -> usize {
         self.rectangles
     }

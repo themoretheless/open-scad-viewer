@@ -65,7 +65,7 @@ fn charge(remaining: &mut usize, n: usize) -> Result<()> {
     *remaining -= n;
     Ok(())
 }
-pub(super) fn verify(
+pub(crate) fn verify(
     model: &Model,
     face: usize,
     remaining: &mut usize,
@@ -129,8 +129,28 @@ pub(super) fn verify(
     if *remaining == 0 {
         return Err(error("Periodic face chart proof work exhausted"));
     }
+    let split = axes.each_ref().map(|pieces| pieces.len() == 2);
     let r = nurbs_core::surface_injectivity::certify_seam_glued_rectangle(s, axes, *remaining, 4)?;
     charge(remaining, r.spans)?;
+    if !r.proven && *remaining > 0 && *pairs < max_pairs {
+        // A split chart may have no common planar projection. Restricting
+        // a globally embedded periodic carrier still proves injectivity.
+        for k in 0..2 {
+            if !split[k] || [s.periodic_u, s.periodic_v][1 - k] {
+                continue;
+            }
+            let proof = nurbs_core::surface_injectivity::certify_periodic_extrusion(
+                s, k, max_pairs - *pairs, *remaining,
+            )?;
+            charge(remaining, proof.cells)?;
+            *pairs += proof.pairs;
+            if proof.proven && proof.regular_interior
+                && proof.collapsed_end.is_none_or(|end| bounds[1 - k][end] != natural[1 - k][end])
+            {
+                return Ok(true);
+            }
+        }
+    }
     if !r.proven {
         return Err(error(format!(
             "Complete periodic face enclosure injectivity remains unproven: {}",

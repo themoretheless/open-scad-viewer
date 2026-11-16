@@ -27,6 +27,17 @@ impl QualifiedOriginalSsPort {
     pub fn point(&self) -> &Arc<OriginalSsRootPoint> {
         &self.point
     }
+    /// Infer the unique certified deck shift that puts a regular source
+    /// selector inside the target's native graph. Refuse ambiguous lifts.
+    pub fn bind_with_inferred_phase(
+        point: Arc<OriginalSsRootPoint>,
+        target: Arc<OriginalSsRootCurve>,
+        limits: OriginalSsCurveLimits,
+    ) -> Result<Self> {
+        let phase = membership::infer_phase(&point, &target, limits)?;
+        bind_original_ss_port(point, target, phase, limits)
+    }
+
     pub fn target(&self) -> &Arc<OriginalSsRootCurve> {
         &self.target
     }

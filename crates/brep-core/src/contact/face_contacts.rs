@@ -642,6 +642,12 @@ impl PairContext<'_> {
             self.source_volume_chart(&mut work, out)?;
         }
         self.control_hull_separation(&mut work, sa, sb, out);
+        if work.periodic && self.chart_open(&work, out) {
+            work.hull_disjoint = crate::boundary_hull_contact::periodic_cap_disjoint(self.model, faces);
+            work.hull_cells = 1;
+            work.pair_allowance -= 1;
+            out.cells += 1;
+        }
         self.chart_partitions(&mut work, out)?;
         if !volume_first && !work.periodic && self.chart_open(&work, out) {
             self.source_volume_chart(&mut work, out)?;

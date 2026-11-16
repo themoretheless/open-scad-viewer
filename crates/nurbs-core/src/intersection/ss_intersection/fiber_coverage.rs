@@ -18,6 +18,10 @@ pub use world_trace::{
 };
 mod transition;
 use crate::{Result, check, surface::Surface};
+pub(super) use mixed::cover_graph_fiber_box;
+pub(in crate::intersection::ss_intersection) use mixed::{
+    AffineGraphExclusion, equivalent_multispan_affine_surface,
+};
 pub use mixed::{
     exclude_shared_frame_graph_contact, shared_frame_graph_contact_corners,
     MixedCoverageKind, MixedCoverageNode, MixedFiberCoverageResult, QualifiedMixedFiberCoverage,
@@ -44,6 +48,9 @@ impl Default for CoverageLimits {
         }
     }
 }
+pub(super) const MAX_MIXED_FIBERS: usize = 192;
+const MAX_MIXED_FIBER_PAIRS: usize = MAX_MIXED_FIBERS * (MAX_MIXED_FIBERS - 1) / 2;
+
 impl CoverageLimits {
     fn validate(self) -> Result<()> {
         check(
