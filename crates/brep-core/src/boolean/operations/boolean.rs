@@ -116,6 +116,12 @@ pub(super) fn boolean_impl(
                 {
                     return Ok(model);
                 }
+                if let Some(model) =
+                    crate::boolean::separated_prisms::try_separated_prism_boolean(a, b, operation)
+                        .or_else(|e| if proof_refusal(e.code) { Ok(None) } else { Err(e) })?
+                {
+                    return Ok(model);
+                }
                 Err(Error::new(
                     "BREP_NURBS_BOOLEAN_UNPROVED",
                     format!(

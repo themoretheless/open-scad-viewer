@@ -142,13 +142,12 @@ fn gears_take_part_in_booleans() {
         ],
     )
     .unwrap();
-    // The ruled tooth flanks are outside the analytic matrix as well, so the
-    // fail-closed core refuses the union rather than guess the clearance.
-    let refused = operations::boolean(&spur, &mate, "union")
-        .err()
-        .expect("pair: unexpectedly certified");
-    assert!(
-        matches!(refused.code, "BREP_NURBS_BOOLEAN_UNPROVED" | "BREP_UNSUPPORTED_OPERATION"),
-        "pair: {refused:?}"
-    );
+    // The pair is a union of straight prisms on a common axis whose wall
+    // profiles are certified apart, so it keeps both bodies unchanged.
+    let pair = operations::boolean(&spur, &mate, "union")
+        .unwrap_or_else(|e| panic!("pair: {} {}", e.code, e.message));
+    pair.validate().unwrap();
+    let v_mate = closed(&mate, "mate");
+    let v_pair = closed(&pair, "meshing pair");
+    assert!((v_pair - v_full - v_mate).abs() < 1e-6 * v_pair, "{v_pair} vs {v_full} + {v_mate}");
 }

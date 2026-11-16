@@ -18,6 +18,7 @@ pub mod operations;
 pub(crate) mod profile_imprint;
 pub mod retained_uv_boolean;
 pub(crate) mod retained_uv_rim;
+pub(crate) mod separated_prisms;
 pub mod same_surface_uv_boolean;
 pub(crate) mod sphere_boolean;
 pub(crate) mod sphere_mate;
