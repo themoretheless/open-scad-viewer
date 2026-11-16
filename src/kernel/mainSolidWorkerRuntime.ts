@@ -91,7 +91,10 @@ const restoreDocumentResult=(job:{text:string;base?:string}):DirectDocument=>{
   }
   residentRestore=null
   const next=parseDirectDocument(job.text,instanceCache,reuse)
-  residentRestore={text:job.text,document:next}
+  // A commit payload (`DirectHistory.commitPayload`) is not always the canonical snapshot text
+  // the client later names as `base`; keep the canonical form so the next commit or Undo/Redo
+  // from this state finds it. Only linked instances benefit, so other documents keep the text.
+  residentRestore={text:job.text.includes('"instance"')?serializeDirectDocument(next):job.text,document:next}
   if(typeof job.base!=='string')return next
   return (directSnapshotDelta(job.base,job.text,next) as unknown as DirectDocument|undefined)??next
 }

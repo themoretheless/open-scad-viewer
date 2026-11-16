@@ -237,6 +237,55 @@ for (const scene of scenes.filter(scene => !sceneFilter || scene.name.includes(s
     'visual',
     () => prepareDocumentCommit(next, document, [], [], '', 'edit', (ru: string) => ru, true),
   )
+  // C1 (sixth pass): `commitInWorker` as it runs now. The edit is built from the published
+  // document (unchanged objects shared), the policy skips shared objects, the payload names the
+  // published snapshot as `base`, and the worker answers a delta that the client rebuilds from
+  // the published objects, so `commitAsync` adopts them without comparing.
+  let c1History = new DirectHistory(document),
+    c1Published = c1History.syncedDocument,
+    c1Next = c1Published,
+    c1Wire: unknown
+  const c1Setup = () => {
+    c1History = new DirectHistory(document)
+    c1Published = c1History.syncedDocument
+    c1Next = {
+      ...c1Published,
+      bodies: [{ ...c1Published.bodies[0]!, name: `renamed-${Math.random()}` }, ...c1Published.bodies.slice(1)],
+    }
+  }
+  c1Setup()
+  await measure(
+    name,
+    'commitInWorker before postMessage: prepareDocumentCommit + commitPayload + base text (C1)',
+    'DirectModeler commitInWorker (edit sharing published objects)',
+    'visual',
+    () => {
+      prepareDocumentCommit(c1Next, c1Published, [], [], '', 'edit', (ru: string) => ru)
+      const baseText = c1History.canonicalText(c1Published)
+      if (baseText === undefined) throw Error('published document is not canonical')
+      return [c1History.commitPayload(c1Next), baseText]
+    },
+    c1Setup,
+  )
+  const c1WorkerCache = new SolidInstanceBatchCache()
+  await measure(
+    name,
+    'commitInWorker after the worker: delta answer -> commitAsync (C1)',
+    'DirectModeler commitInWorker -> restoreDocument{base} -> commitAsync',
+    'visual',
+    async () => {
+      const rebuilt = applyDirectDocumentDelta(c1Published, c1Wire)
+      if (!rebuilt) throw Error('delta did not apply')
+      if (!(await c1History.commitAsync(async () => rebuilt))) throw Error('commit did not apply')
+    },
+    () => {
+      c1Setup()
+      const baseText = c1History.canonicalText(c1Published)!,
+        text = c1History.commitPayload(c1Next)
+      const parsed = parseDirectDocument(text, c1WorkerCache)
+      c1Wire = structuredClone(directSnapshotDelta(baseText, text, parsed) ?? parsed)
+    },
+  )
   // C1: a worker result that shares the published document's unchanged objects (a delta
   // answer rebuilt on the client) commits by reusing the history's own copies of them.
   let sharedHistory = new DirectHistory(document)

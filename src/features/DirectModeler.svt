@@ -1167,7 +1167,11 @@ function commitInWorker(build:()=>DirectDocument|undefined,after?:(next:DirectDo
    if(!next)return false
    const {validateLocked,added}=prepareCommit(next)
    const base=history.snapshotKey
-   const validated=await commitWorker.run({kind:'restoreDocument',text:history.commitPayload(next)})
+   // Against the published state: the worker answers only the objects that differ from it (and
+   // reuses its resident parse of that state for unchanged linked instances), so the unchanged
+   // objects stay the published ones and `commitAsync` adopts them without comparing.
+   const view=snapDocument.value,baseText=history.canonicalText(view)
+   const validated=await commitWorker.run({kind:'restoreDocument',text:history.commitPayload(next),...(baseText!==undefined?{base:baseText}:{})},{restoreBase:view})
    if(history.snapshotKey!==base||!props.open)return false
    if(!await history.commitAsync(async()=>validated,validateLocked))return false
    finishCommit(added,validated);after?.(validated);return true

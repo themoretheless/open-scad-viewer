@@ -556,6 +556,8 @@ export class DirectHistory {
     return stringifyMeshJson({...document,bodies:document.bodies.map(body=>{
       if(!body?.instance||body.mesh===undefined)return body
       const old=known.get(body.id)
+      // A published copy of the owned item (not mutated in place, as `twins` assumes) is unchanged.
+      if(old&&this.twins.get(body)===old){const {mesh:_mesh,brep:_brep,...linked}=body;return linked}
       if(!old?.instance||!sameMeshJson(old.mesh,body.mesh)||!sameMeshJson(old.brep,body.brep))return body
       const {mesh:_mesh,brep:_brep,...linked}=body
       return linked

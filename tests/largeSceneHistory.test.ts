@@ -158,6 +158,29 @@ it('keeps the linked-instance commit policy while comparing without serializatio
   ).toThrow('Объект заблокирован')
 })
 
+it('treats objects shared with the published document as unchanged in the commit policy and payload', async () => {
+  const document = await linkedScene(3)
+  const history = new DirectHistory(document)
+  const published = history.syncedDocument
+  // An edit built from the published document shares its unchanged objects.
+  const renamed = { ...published, bodies: [{ ...published.bodies[0]!, name: 'Renamed' }, ...published.bodies.slice(1)] }
+  expect(() => prepareDocumentCommit(renamed, published, [], [], '', 'edit', label)).not.toThrow()
+  const payload = JSON.parse(history.commitPayload(renamed)) as DirectDocument
+  // Shared instances leave out their cached geometry, exactly as equal copies do.
+  expect(payload.bodies.slice(1).every(body => body.mesh === undefined)).toBe(true)
+  expect(history.commitPayload(renamed)).toBe(history.commitPayload(structuredClone(renamed)))
+  // A copy whose live instance geometry differs is still rejected and still sent in full.
+  const tampered = structuredClone(renamed)
+  ;(tampered.bodies[2]!.mesh.positions as number[] | Float64Array)[0] = 123
+  expect(() => prepareDocumentCommit(tampered, published, [], [], '', 'edit', label)).toThrow('Измените источник')
+  expect((JSON.parse(history.commitPayload(tampered)) as DirectDocument).bodies[2]!.mesh).toBeDefined()
+  // A shared instance whose source changed is still compared against the new source.
+  const sourceEdited = structuredClone(published)
+  ;(sourceEdited.bodies[0]!.mesh.positions as number[] | Float64Array)[0] = 7
+  const stale = { ...sourceEdited, bodies: [sourceEdited.bodies[0]!, ...published.bodies.slice(1)] }
+  expect(() => prepareDocumentCommit(stale, published, [], [], '', 'edit', label)).not.toThrow()
+})
+
 it('stays inside generous time bounds on 1 source + 299 linked instances', async () => {
   const document = await linkedScene(299)
   const history = new DirectHistory(document)
