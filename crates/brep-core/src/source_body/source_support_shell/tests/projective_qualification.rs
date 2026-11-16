@@ -2753,6 +2753,7 @@
     }
 
     #[test]
+    #[cfg_attr(not(feature = "slow-proofs"), ignore = "slow proof, run with --features slow-proofs")]
     fn annular_corrected_expression_authored_radius() {
         let model=crate::circular_blend::partial_annular_quarter(20.,5.,6.,1.25,1.,1e-7).unwrap();
         let shell=prepare(&model,limits()).unwrap().shell.unwrap();
@@ -2819,14 +2820,17 @@
     }
 
     #[test]
+    #[cfg_attr(not(feature = "slow-proofs"), ignore = "slow proof, run with --features slow-proofs")]
     fn restricted_profile_seams_match_owned_neighbor_supports() {
         restricted_profile_seam_control(false,false);
     }
     #[test]
+    #[cfg_attr(not(feature = "slow-proofs"), ignore = "slow proof, run with --features slow-proofs")]
     fn partial_rational_multispan_carrier_transfers_owned_transition_contact() {
         restricted_profile_seam_control(true,false);
     }
     #[test]
+    #[cfg_attr(not(feature = "slow-proofs"), ignore = "slow proof, run with --features slow-proofs")]
     fn partial_rational_transition_has_owned_oriented_volume() {
         restricted_profile_seam_control(true,true);
     }
