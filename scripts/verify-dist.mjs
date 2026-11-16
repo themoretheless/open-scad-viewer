@@ -165,7 +165,7 @@ const jsChunkBudgets = [
   [/^assets\/codemirrorView-[^/]+\.js$/, 309_400], // CodeMirror 6 editor view: measured 308,892 bytes.
   [/^assets\/geometryBuildEngine-[^/]+\.js$/, 332_900], // Geometry build engine and semantic lowering: measured 332,379 bytes (was 330,732).
   [/^assets\/wasmStreaming-[^/]+\.js$/, 196_300], // Merge of origin/main (worker commit deltas against the published state): measured 195,710 bytes (was 195,195 with kernel jobs, worker protocol v13; 187,929 before).
-  [/^assets\/workerHandlerRuntime-[^/]+\.js$/, 108_900], // Shared worker handler runtime and coded error validation: measured 108,416 bytes.
+  [/^assets\/workerHandlerRuntime-[^/]+\.js$/, 113_400], // Shared worker handler runtime and coded error validation, grown by origin/main worker code (main budgeted it as a hashed chunk at 111,500): measured 112,878 bytes (was 108,416).
   [/^assets\/profileIntersections-[^/]+\.js$/, 107_100], // Profile intersection presentation: measured 106,582 bytes.
   // WASM brotli unpacking helper chunk, measured: 122,900 bytes.
   [/^assets\/wasm-brotli-bytes-[^/]+\.js$/, 140_000],
@@ -178,8 +178,8 @@ for (const required of ['.html', '.css', '.js']) {
   if (!files.some(file => file.extension === required)) throw new Error(`dist is missing a ${required} artifact`)
 }
 for (const file of files) {
-  // Raw streaming WASM: the 74d427 geometry kernel measures 17,760,859 bytes (runtime v13);
-  // the cap keeps ~39 KB headroom. Previously 17,700,000 for fba78e (17,659,035 bytes).
+  // Raw streaming WASM: the geometry kernel takes the rawGeometryBytes of its delivery profile
+  // (61b587, runtime v13 record: 18,531,352 bytes); other kernels keep 17,700,000.
   const streamingWasmLimit = /^wasm\/(geometry-kernel|language-kernel|photogrammetry)\.wasm$/.test(file.path)
     ? (file.path === 'wasm/geometry-kernel.wasm' ? geometryDelivery.rawGeometryBytes ?? 17_700_000 : 17_700_000)
     : undefined

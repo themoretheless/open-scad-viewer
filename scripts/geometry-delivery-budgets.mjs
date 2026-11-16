@@ -73,6 +73,18 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({'assets/DZpgor1M.js':111_500}),
   }),
+  // v17: origin/main merged with ruled loft section correspondence and boundary-anchored face
+  // workplanes (runtime v13 record). Measured production build: 18,531,352 raw WASM bytes,
+  // 6,611,760 packed geometry bytes and 12,501,640 asset bytes. The index, DirectModeler and
+  // wasmStreaming chunks measure 256,066, 496,707 and 195,621 bytes, identical with main's
+  // src/core, so their growth over v16 comes from main.
+  '61b58706d1412023064cc2bbfa2bbbaa48243caea45014d5a22d2b6276609ffc':Object.freeze({
+    version:17,geometryChunkBytes:6_620_000,totalAssetBytes:12_510_000,rawGeometryBytes:18_540_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:497_300,geometryBuildEngine:335_200,wasmStreaming:196_200,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
