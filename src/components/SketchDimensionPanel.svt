@@ -2,7 +2,8 @@
 import { computed, ref, watch } from 'svet'
 import CadQuantityInput from './CadQuantityInput.svt'
 import type { DirectSketch } from '../app/directModeling'
-import { sketchDimensions, sketchDimensionStatus, editSketchDimension, type SketchDimension } from '../app/directDimensions'
+import { sketchDimensions, sketchDimensionStatus, editSketchDimension, lengthDimensionConstraints, type SketchDimension } from '../app/directDimensions'
+import { addSketchConstraint, sketchConstraintResidual, SKETCH_CONSTRAINT_TOLERANCE_MM, type SketchConstraint } from '../app/sketchConstraints'
 const props=defineProps<{sketch:DirectSketch;locale:string}>()
 const emit=defineEmits<{change:[sketch:DirectSketch]}>()
 const kind=ref<'length'|'angle'|'horizontal'|'vertical'|'radius'|'diameter'>('length'),a=ref(0),b=ref(1),c=ref(2),error=ref('')
@@ -12,9 +13,16 @@ watch(()=>props.sketch,()=>{values.value={};valid.value={};error.value=''})
 watch(()=>props.sketch.analytic,curve=>{kind.value=curve?'radius':'length'},{immediate:true})
 const constraintState=computed(()=>{try{return sketchDimensionStatus(props.sketch)}catch{return null}})
 const measurements=computed(()=>sketchDimensions(props.sketch).measurements)
-function apply(work:()=>DirectSketch){try{const next=work();sketchDimensions(next);emit('change',next);error.value=''}catch(e){error.value=e instanceof Error?e.message:String(e);if(error.value.includes('conflict'))error.value=label('Размеры противоречат друг другу. Изменение не применено.','Dimensions conflict. The change was not applied.')}}
+function apply(work:()=>DirectSketch){try{const next=work();sketchDimensions(next);emit('change',next);error.value=''}catch(e){error.value=e instanceof Error?e.message:String(e);if(error.value.includes('conflict'))error.value=label('Размеры противоречат друг другу или ограничениям. Изменение не применено.','Dimensions conflict with each other or with constraints. The change was not applied.')}}
 function add(){apply(()=>({...props.sketch,dimensions:[...(props.sketch.dimensions??[]),props.sketch.analytic && kind.value!=='diameter'?{kind:'radius'}:kind.value==='radius'||kind.value==='diameter'?{kind:kind.value}:{kind:kind.value,a:a.value,b:b.value,...(kind.value==='angle'?{c:c.value}:{})} as SketchDimension]}))}
 function edit(index:number){if(valid.value[index]!==false&&values.value[index]!==undefined)apply(()=>editSketchDimension(props.sketch,index,values.value[index]))}
+const constraintKind=ref<SketchConstraint['kind']>('horizontal'),segmentA=ref(0),segmentB=ref(1)
+const constrainable=computed(()=>!props.sketch.analytic&&!props.sketch.retainedProfile&&!props.sketch.editablePath&&props.sketch.points.length>=3&&props.sketch.points.length<=16)
+const segments=computed(()=>{const n=props.sketch.points.length;return Array.from({length:props.sketch.closed?n:n-1},(_,i)=>[i,(i+1)%n] as [number,number])})
+const pairKind=computed(()=>constraintKind.value!=='horizontal'&&constraintKind.value!=='vertical')
+const constraintSymbol=(kind:SketchConstraint['kind'])=>kind==='horizontal'?'—':kind==='vertical'?'|':kind==='parallel'?'∥':kind==='perpendicular'?'⊥':'='
+function addConstraint(){apply(()=>{const s1=segments.value[segmentA.value],s2=segments.value[segmentB.value];if(!s1||(pairKind.value&&!s2))throw Error(label('Выберите отрезки эскиза.','Choose sketch segments.'));const constraint:SketchConstraint=pairKind.value?{kind:constraintKind.value as 'parallel',a:s1[0],b:s1[1],c:s2![0],d:s2![1]}:{kind:constraintKind.value as 'horizontal',a:s1[0],b:s1[1]};return addSketchConstraint(props.sketch,constraint,lengthDimensionConstraints(props.sketch))})}
+function removeConstraint(index:number){apply(()=>({...props.sketch,constraints:props.sketch.constraints?.filter((_,i)=>i!==index)}))}
 function remove(index:number){apply(()=>({...props.sketch,dimensions:props.sketch.dimensions?.filter((_,i)=>i!==index)}))}
 </script>
 <template>
@@ -28,6 +36,15 @@ function remove(index:number){apply(()=>({...props.sketch,dimensions:props.sketc
     <small>{{ label('Введите размер и нажмите ✓ или Enter. Одиночная длина перемещает B, угол — C; остальные измерения обновляются.','Enter a value, then press ✓ or Enter. A single length moves B; an angle moves C. Other measurements update.') }}</small>
     <small>{{ label('Несколько размеров длины решаются совместно для 3–16 точек. Горизонталь и вертикаль задают расстояние по оси, а не ограничение направления.', 'Multiple lengths are solved together for 3–16 points. Horizontal and vertical dimensions measure axis distances, not direction constraints.') }}</small>
     <small v-if="constraintState" role="status">{{ label('Свободных степеней: ','Degrees of freedom: ')+constraintState.degrees_of_freedom }} · {{ label('включая положение эскиза','including sketch placement') }}<template v-if="constraintState.redundant_equations"> · {{ label('Избыточных размеров: ','Redundant dimensions: ')+constraintState.redundant_equations }}</template></small>
+    <template v-if="constrainable">
+      <strong>{{ label('Ограничения эскиза','Sketch constraints') }}</strong>
+      <small>{{ label('Отрезок задаётся начальной точкой: 0 — отрезок 0–1. Ограничения сохраняются в документе и учитываются при изменении размеров длины.','A segment is named by its start point: 0 is segment 0–1. Constraints are saved in the document and kept when length dimensions change.') }}</small>
+      <div class="point-inputs"><select v-model="constraintKind" aria-label="Constraint kind"><option value="horizontal">{{ label('Горизонтально','Horizontal') }}</option><option value="vertical">{{ label('Вертикально','Vertical') }}</option><option value="parallel">{{ label('Параллельно','Parallel') }}</option><option value="perpendicular">{{ label('Перпендикулярно','Perpendicular') }}</option><option value="equal_length">{{ label('Равная длина','Equal length') }}</option></select>
+        <select v-model.number="segmentA" aria-label="Constraint segment A"><option v-for="(seg,i) in segments" :key="i" :value="i">{{ seg[0]+'–'+seg[1] }}</option></select>
+        <select v-if="pairKind" v-model.number="segmentB" aria-label="Constraint segment B"><option v-for="(seg,i) in segments" :key="i" :value="i">{{ seg[0]+'–'+seg[1] }}</option></select></div>
+      <button @click="addConstraint">{{ label('Добавить ограничение','Add constraint') }}</button>
+      <div v-for="(constraint,i) in sketch.constraints??[]" :key="'c'+i" class="dimension-row" :aria-invalid="sketchConstraintResidual(sketch.points,constraint)>SKETCH_CONSTRAINT_TOLERANCE_MM*10">{{ constraintSymbol(constraint.kind) }} {{ constraint.a+'–'+constraint.b }}{{ 'c' in constraint ? ' · '+constraint.c+'–'+constraint.d : '' }}<small v-if="sketchConstraintResidual(sketch.points,constraint)>SKETCH_CONSTRAINT_TOLERANCE_MM*10">{{ label('нарушено','violated') }}</small><button :aria-label="label('Удалить ограничение ','Delete constraint ')+i" @click="removeConstraint(i)">×</button></div>
+    </template>
     <p v-if="error" role="alert">{{ error }}</p>
   </section>
 </template>

@@ -10,7 +10,7 @@ export function directCornerTool(sketch: DirectSketch, vertex: number, radius: n
   requirePolylineSketch(sketch)
   if(!Number.isFinite(radius)) throw new Error('Radius must be at least 0.01 mm.')
   const points=callGeometryRust<Point2[]>('cad_sampled_corner',{sketch,vertex,radius,kind})
-  const result={...bakeSketch(sketch),points};delete result.dimensions;return result
+  const result={...bakeSketch(sketch),points};delete result.dimensions;delete result.constraints;return result
 }
 
 export interface DirectRevolveOptions { axis: 'x'|'y'; offset: number; angle: number; segments: number }

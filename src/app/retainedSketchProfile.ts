@@ -24,7 +24,7 @@ export function sketchProfile(sketch:DirectSketch):BrepProfile {
 export function withRetainedProfile(sketch:DirectSketch,profile:BrepProfile):DirectSketch {
  if(!profile.loops.length)throw Error('The profile contains no material.')
  const next={...sketch,retainedProfile:profile,points:retainedProfileDisplay(profile)[0],closed:true}
- delete next.analytic;delete next.dimensions;delete next.editablePath
+ delete next.analytic;delete next.dimensions;delete next.constraints;delete next.editablePath
  return next
 }
 export function combineSketchProfiles(sketches:DirectSketch[],operation:BrepProfileBooleanOperation):DirectSketch {

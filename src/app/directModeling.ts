@@ -13,6 +13,7 @@ import {cloneDocumentTree} from './documentClone'
 import {sameMeshJson} from '../exchange/sameMeshJson'
 import {resolveSolidInstances,type SolidInstanceLink} from '../kernel/solidInstances'
 import { sketchDimensions, type SketchDimension } from './directDimensions'
+import { validateSketchConstraints, type SketchConstraint } from './sketchConstraints'
 import {callGeometryRust} from '../kernel/geometry/kernel'
 import {validatePivots,validCPlane,type DirectCPlane,type DirectPivot} from './directPivots'
 import { MAX_DOCUMENT_CHARACTERS, MAX_BODY_MESH_COMPONENTS } from '../core/directDocumentLimits'
@@ -29,7 +30,7 @@ import { BrepInspectionCache } from '../kernel/brepInspectionCache'
 import { isDocumentLengthUnit, type DocumentLengthUnit } from './documentUnits'
 
 export type Point2 = [number, number]
-export interface DirectSketch { group?: string; id: string; name: string; points: Point2[]; closed: boolean; editablePath?: BezierPathJson; retainedProfile?: BrepProfile; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[] }
+export interface DirectSketch { group?: string; id: string; name: string; points: Point2[]; closed: boolean; editablePath?: BezierPathJson; retainedProfile?: BrepProfile; analytic?: AnalyticCurve; plane?: SketchPlane; supportBodyId?: string; dimensions?: SketchDimension[]; constraints?: SketchConstraint[] }
 /** `group` names a flat, optional grouping shown in the scene list. Bodies built from
  * source share one, so a rebuild can be recognised, replaced or deleted as a unit. */
 export interface DirectMaterial { name: string; color: string; metallic?: number; roughness?: number; opacity?: number }
@@ -182,7 +183,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     if(s.supportBodyId!==undefined&&(typeof s.supportBodyId!=='string'||s.supportBodyId.length>200))throw new Error('Invalid sketch support body.')
     if(s.editablePath!==undefined) Object.assign(s,withEditableSketchPath(s,s.editablePath))
     if(s.retainedProfile){
-      if(s.analytic||s.dimensions?.length)throw Error('Retained profiles cannot carry polygon dimensions or a second analytic definition.')
+      if(s.analytic||s.dimensions?.length||s.constraints?.length)throw Error('Retained profiles cannot carry polygon dimensions or a second analytic definition.')
       const profile=validateBrepProfile(s.retainedProfile.loops,'material-left',s.retainedProfile.toleranceMm)
       Object.assign(s,withRetainedProfile(s,profile))
     }
@@ -196,6 +197,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
       if (!Array.isArray(s.dimensions)) throw Error('Invalid sketch dimensions.')
       sketchDimensions(s)
     }
+    validateSketchConstraints(s)
     yield
   }
   const validUnitChannel = (v: number | undefined) => v === undefined || (Number.isFinite(v) && v >= 0 && v <= 1)
