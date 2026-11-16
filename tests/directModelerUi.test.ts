@@ -175,7 +175,8 @@ it('edits physical material parameters without losing color or history, then res
  const change=async(label:string,value:string)=>{
   const input=ui.all().find(n=>n.tag==='input'&&n.props['aria-label']===label)!
   expect(input).toBeDefined()
-  input.props.onChange({target:{value}});await nextTick()
+  // Material edits validate in the CAD worker and commit in order.
+  input.props.onChange({target:{value}});await flushClearance()
  }
  await change('Metallic','1');await change('Roughness','0.2');await change('Material color','#b87333')
  expect(ui.doc().bodies[0].material).toEqual({name:'Custom',color:'#b87333',metallic:1,roughness:.2})
@@ -184,6 +185,26 @@ it('edits physical material parameters without losing color or history, then res
  await ui.click('↷')
  const saved=ui.serialized(),restored=await mount({},saved)
  expect(restored.doc().bodies[0].material).toEqual({name:'Custom',color:'#b87333',metallic:1,roughness:.2})
+})
+
+it('queues worker-validated material commits in order and drops a commit overtaken by Undo',async()=>{
+ const ui=await mount()
+ await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&n.props['aria-label']==='Cube')).toBe(true))
+ await ui.click('Cube');await ui.click('Properties')
+ const input=(label:string)=>ui.all().find(n=>n.tag==='input'&&n.props['aria-label']===label)!
+ // Both edits are issued before either validation finishes; the second builds on the first.
+ input('Metallic').props.onChange({target:{value:'1'}});input('Roughness').props.onChange({target:{value:'0.3'}})
+ await flushClearance()
+ expect(ui.doc().bodies[0].material).toMatchObject({metallic:1,roughness:.3})
+ const before=ui.serialized()
+ // A delete whose validation is overtaken by Undo is discarded, not applied over the restored state.
+ let release!:()=>void
+ previewWorkerRun.mockImplementationOnce(async(job:{kind:string;text:string})=>{
+  const {parseDirectDocument}=await import('../src/app/directModeling')
+  await new Promise<void>(resolve=>{release=resolve});return parseDirectDocument(job.text)
+ })
+ await ui.click('Delete');await ui.click('↶');release();await flushClearance()
+ expect(ui.doc().bodies).toHaveLength(1);expect(ui.serialized()).not.toBe(before)
 })
 
 it('imports a mesh through the Solid worker with Full manifold repair',async()=>{
@@ -548,7 +569,7 @@ it('binds analytic radius editing and offset without baking the curve',async()=>
 it('binds extend and trim to the selected 2D edge',async()=>{
  const ui=await mount();await ui.click('Line');await ui.click('Extend');await ui.click('Apply · Enter');expect(ui.doc().sketches.find(s=>s.id==='line')?.points.at(-1)).toEqual([5,-5])
  await ui.click('Trim');const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!,path=ui.all(svg).find(n=>n.tag==='path'&&n.props.d==='M 0,5 L 5,5')!
- await ui.pointer(path,2,5);expect(ui.doc().sketches.some(s=>s.id==='line')).toBe(false)
+ await ui.pointer(path,2,5);await flushClearance();expect(ui.doc().sketches.some(s=>s.id==='line')).toBe(false)
  await ui.click('↶');expect(ui.doc().sketches.find(s=>s.id==='line')?.points.at(-1)).toEqual([5,-5])
 })
 it('creates a sketch on the selected face and preserves its plane through extrusion',async()=>{
@@ -982,7 +1003,7 @@ async function commandKey(ui: Awaited<ReturnType<typeof mount>>, key: string, ta
  const workspace=ui.all().find(n=>n.tag==='section'&&n.props.onKeydown)!
  const prevented=vi.fn()
  workspace.props.onKeydown({key,target:target??{matches:()=>false,closest:()=>null},preventDefault:prevented,stopPropagation(){},...extra})
- await nextTick()
+ await flushClearance()
  return prevented
 }
 
@@ -1181,7 +1202,7 @@ it('undoes polyline points locally and commits the remaining line only on Enter'
  const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
  for(const [x,y] of [[40,-40],[60,-40],[60,-60]]){svg.props.onPointerdown({...ui.event(svg,x,y),altKey:true});await nextTick()}
  await commandKey(ui,'z',undefined,{ctrlKey:true});expect(ui.doc()).toEqual(before)
- await commandKey(ui,'Enter');expect(ui.doc().sketches.at(-1)!.points).toEqual([[40,40],[60,40]])
+ await commandKey(ui,'Enter');await flushClearance();expect(ui.doc().sketches.at(-1)!.points).toEqual([[40,40],[60,40]])
  expect(ui.doc().sketches.at(-1)!.closed).toBe(false)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
@@ -2420,8 +2441,9 @@ it('uses the latest corner candidate and ignores circular copies after Escape',a
 
 it('applies one circular-copy candidate and exposes invalid array parameters',async()=>{
  const ui=await mount();await ui.click('Profile');const before=ui.doc();await ui.click('Circular copies')
- const calls=previewWorkerRun.mock.calls.length
- await ui.click('Apply · Enter');expect(previewWorkerRun.mock.calls.length).toBe(calls)
+ // Apply commits the computed candidate (validated by the commit worker) without recomputing it.
+ const edits=()=>previewWorkerRun.mock.calls.filter(([job])=>(job as {kind?:string}).kind==='sketchEdit').length,calls=edits()
+ await ui.click('Apply · Enter');expect(edits()).toBe(calls)
  expect(ui.doc().sketches).toHaveLength(before.sketches.length+7)
  expect(new Set(ui.doc().sketches.map(s=>s.id)).size).toBe(ui.doc().sketches.length)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
@@ -3707,7 +3729,7 @@ it('retries a failed body calculation without changing inputs or adding history 
  retry.resolve(applySolidBodyEdit(retry.job.document,retry.job.options));await flushClearance()
  expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).not.toContain('worker unavailable')
  expect(ui.button('Retry calculation').props.disabled).toBe(false)
- const count=requests.length;await commandKey(ui,'Enter');expect(requests).toHaveLength(count)
+ const count=requests.length;await commandKey(ui,'Enter');await flushClearance();expect(requests).toHaveLength(count)
  expect(ui.doc().bodies).toHaveLength(2);await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 
@@ -3876,7 +3898,7 @@ it.each(['Fillet','DogEar','Circular copies'])('retries sketch command %s after 
  expect(ui.button('Retry calculation').props.disabled).toBe(true)
  retry.resolve(applySolidSketchEdit(retry.job.document,retry.job.options));await flushClearance()
  expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(false)
- const count=requests.length;await commandKey(ui,'Enter');expect(requests).toHaveLength(count)
+ const count=requests.length;await commandKey(ui,'Enter');await flushClearance();expect(requests).toHaveLength(count)
  expect(ui.doc()).not.toEqual(before);await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 
@@ -3891,7 +3913,7 @@ it.each(['Fillet','DogEar','Circular copies'].flatMap(command=>[false,true].map(
  if(failure)old.reject(Error('obsolete sketch group'));else old.resolve(applySolidSketchEdit(old.job.document,old.job.options))
  await flushClearance();expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(true)
  expect(ui.text(ui.all()[0])).not.toContain('obsolete sketch group')
- current.resolve(applySolidSketchEdit(current.job.document,current.job.options));await flushClearance();await commandKey(ui,'Enter')
+ current.resolve(applySolidSketchEdit(current.job.document,current.job.options));await flushClearance();await commandKey(ui,'Enter');await flushClearance()
  expect(ui.doc()).not.toEqual(before)
  if(command==='Circular copies')for(const sketch of ui.doc().sketches.filter(s=>s.id!=='s'))expect(sketch.group).toBe('Destination')
  await ui.click('↶');expect(ui.doc()).toEqual(before)
@@ -5252,6 +5274,19 @@ it('lists overlapping objects on right-click with names and selection cues, and 
  expect(ui.button(box.name).props['aria-pressed']).toBe(true)
  expect(menu()).toBeUndefined()
 })
+it('cycles overlapping objects by depth with Alt+click in the SVG view without GPU',async()=>{
+ const ui=await mount();await ui.click('Box');const box=ui.doc().bodies.at(-1)!
+ await ui.click('Cube');const cube=ui.doc().bodies.find(b=>b.name==='Cube')!
+ const selected=()=>[box,cube].filter(b=>ui.button(b.name).props['aria-pressed']===true).map(b=>b.id)
+ const svg=ui.svg(),polygon=()=>ui.all().find(n=>n.tag==='polygon'&&n.props['data-body']===cube.id)!
+ svg.props.onPointerup?.(ui.event(svg,0,0))
+ const seen=new Set<string>()
+ for(let i=0;i<2;i++){
+  polygon().props.onPointerdown({...ui.event(polygon(),0,0),altKey:true});svg.props.onPointerup({...ui.event(svg,0,0),altKey:true});await flushClearance()
+  expect(selected()).toHaveLength(1);seen.add(selected()[0])
+ }
+ expect([...seen].sort()).toEqual([box.id,cube.id].sort())
+})
 it('saves a pivot in the document and switches coordinate systems from the panel and keyboard',async()=>{
  const ui=await mount();await ui.click('Cube');await ui.click('Properties')
  await ui.click('Pivot: origin')
@@ -5348,4 +5383,204 @@ it('marks the sweep deviation field when the framed sweep exceeds its budget',as
  const field=ui.all(ui.all().find(n=>n.tag==='label'&&ui.text(n).startsWith('Deviation budget, mm'))!).find(n=>n.tag==='input')!
  expect(field.props['aria-invalid']).toBe(true)
  expect(invalidRows(ui).length).toBe(2)
+})
+
+it('commits native NURBS results in the worker, drops a result superseded by an edit and reports a failed commit',async()=>{
+ const ui=await mount();await ui.click('+ NURBS curve');const withBox=ui.doc()
+ const commits:Array<{job:{text:string};resolve:(value:DirectDocument)=>void;reject:(error:Error)=>void}>=[]
+ const hold=()=>previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise((resolve,reject)=>commits.push({job:job as {text:string},resolve,reject})):undefined)
+ const pickCurve=async()=>{ui.all().find(n=>n.tag==='button'&&ui.text(n)==='NURBS curve')!.props.onClick({shiftKey:false});await flushClearance()}
+ hold()
+ await ui.click('Insert knot');await flushClearance();expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(withBox)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('Box');await flushClearance();const undone=ui.doc()
+ commits[0].resolve(parseDirectDocument(commits[0].job.text));await flushClearance();expect(ui.doc()).toEqual(undone)
+ hold();await pickCurve()
+ await ui.click('Insert knot');await flushClearance();expect(commits).toHaveLength(2)
+ commits[1].reject(Error('commit validation failed'));await flushClearance()
+ expect(ui.doc()).toEqual(undone);expect(ui.text(ui.all()[0])).toContain('commit validation failed')
+ await ui.click('Insert knot');await flushClearance();commits[2].resolve(parseDirectDocument(commits[2].job.text));await flushClearance()
+ expect(ui.doc().curves![0].curve.knots.length).toBeGreaterThan(undone.curves![0].curve.knots.length)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');await flushClearance();expect(ui.doc()).toEqual(undone)
+})
+
+it('commits a retessellated B-rep mesh in the worker and keeps the scene when that commit fails',async()=>{
+ const ui=await mount({seedDocument:cylinderSeed()});await ui.click('Imported cylinder');await ui.click('B-rep detail');const before=ui.doc()
+ const commits:Array<{job:{text:string};resolve:(value:DirectDocument)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise((resolve,reject)=>commits.push({job:job as {text:string},resolve,reject})):undefined)
+ const field=ui.all().find(n=>n.tag==='input'&&n.parent&&ui.text(n.parent).startsWith('B-rep detail'))!
+ field.props['onUpdate:modelValue'](8);await flushClearance();await ui.click('Retessellate');await flushClearance()
+ expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('mesh commit failed'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('mesh commit failed')
+ await ui.click('Retessellate');await flushClearance();commits[1].resolve(parseDirectDocument(commits[1].job.text));await flushClearance()
+ expect(ui.doc().bodies[0].mesh.indices.length).toBeGreaterThan(before.bodies[0].mesh.indices.length)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');await flushClearance();expect(ui.doc()).toEqual(before)
+})
+
+it('commits appended mesh bodies in the worker, selects them after the commit and drops a result superseded by an edit',async()=>{
+ const ui=await mount();const before=ui.doc()
+ const commits:Array<{job:{text:string};resolve:(value:DirectDocument)=>void}>=[]
+ const hold=()=>previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise(resolve=>commits.push({job:job as {text:string},resolve})):undefined)
+ const body=(id:string)=>({id,name:`Imported ${id}`,mesh:{positions:[0,0,0,1,0,0,0,1,0,0,0,1],indices:[0,2,1,0,1,3,0,3,2,1,2,3]}})
+ hold();await ui.setProps({appendBodies:{bodies:[body('m1')],group:{name:'Mesh',source:'a.stl'}}});await flushClearance()
+ expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('Box');await flushClearance();const edited=ui.doc()
+ commits[0].resolve(parseDirectDocument(commits[0].job.text));await flushClearance();expect(ui.doc()).toEqual(edited)
+ hold();await ui.setProps({appendBodies:{bodies:[body('m2')],group:{name:'Mesh',source:'b.stl'}}});await flushClearance()
+ commits[1].resolve(parseDirectDocument(commits[1].job.text));await flushClearance()
+ expect(ui.doc().bodies.map(b=>b.id)).toContain('m2');expect(ui.doc().groups?.map(g=>g.name)).toContain('Mesh')
+ expect(ui.text(ui.all()[0])).toContain('Imported m2')
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');await flushClearance();expect(ui.doc()).toEqual(edited)
+})
+
+it('commits NURBS surface segment fields through the worker',async()=>{
+ const ui=await mount();await ui.click('+ NURBS surface');const before=ui.doc()
+ const commits:Array<{job:{text:string};resolve:(value:DirectDocument)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise(resolve=>commits.push({job:job as {text:string},resolve})):undefined)
+ const input=ui.all().find(n=>n.tag==='label'&&ui.text(n).startsWith('U segments'))!.children.find(n=>n.tag==='input')!
+ input.props['onUpdate:modelValue'](12);input.props.onChange();await flushClearance()
+ expect(commits).toHaveLength(1);expect(commits[0].job.text).toContain('"segmentsU":12')
+ commits[0].resolve(parseDirectDocument(commits[0].job.text));await flushClearance()
+ expect(ui.doc().surfaces![0].segmentsU).toBe(12)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');await flushClearance();expect(ui.doc()).toEqual(before)
+})
+
+
+type WorkerJob=Parameters<typeof previewWorkerRun>[0]
+type HeldCommit={job:{text:string};resolve:(value:DirectDocument)=>void;reject:(error:Error)=>void}
+function holdWorkerCommits(other:(job:WorkerJob,options:Parameters<typeof previewWorkerRun>[1])=>unknown=()=>undefined){
+ const commits:HeldCommit[]=[]
+ previewWorkerRun.mockImplementation((job,options)=>job.kind==='restoreDocument'?new Promise((resolve,reject)=>commits.push({job:job as {text:string},resolve,reject})):other(job,options))
+ return commits
+}
+const landCommit=async(commit:HeldCommit)=>{commit.resolve(parseDirectDocument(commit.job.text));await flushClearance()}
+const applyVisible=(ui:Awaited<ReturnType<typeof mount>>)=>ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Apply · Enter')
+const waitForCommits=async(commits:HeldCommit[],count:number)=>{for(let i=0;i<20&&commits.length<count;i++)await flushClearance()}
+
+it('commits the extrusion preview in the worker, closes the command only after it lands and keeps the scene when it fails',async()=>{
+ const ui=await mount();await ui.click('Profile');await ui.click('Extrude');await settle(250);const before=ui.doc()
+ const commits=holdWorkerCommits()
+ await commandKey(ui,'Enter');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before);expect(applyVisible(ui)).toBe(true)
+ commits[0].reject(Error('extrude commit failed'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('extrude commit failed');expect(applyVisible(ui)).toBe(true)
+ await commandKey(ui,'Enter');expect(commits).toHaveLength(2);await landCommit(commits[1])
+ expect(ui.doc().bodies).toHaveLength(before.bodies.length+1);expect(applyVisible(ui)).toBe(false)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('commits an advanced command in the worker and drops its result when an edit lands first',async()=>{
+ const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
+ ui.all().find(n=>n.props['aria-label']==='Dimension at manipulator, mm')!.props['onUpdate:modelValue'](5);await flushClearance()
+ const commits=holdWorkerCommits()
+ await commandKey(ui,'Enter',{closest:()=>null} as unknown as Node);expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('Box');await flushClearance();const edited=ui.doc()
+ expect(edited).not.toEqual(before)
+ await landCommit(commits[0]);expect(ui.doc()).toEqual(edited)
+ await ui.click('Cube');await ui.click('Split')
+ ui.all().find(n=>n.props['aria-label']==='Dimension at manipulator, mm')!.props['onUpdate:modelValue'](5);await flushClearance()
+ const next=holdWorkerCommits()
+ await commandKey(ui,'Enter',{closest:()=>null} as unknown as Node);expect(next).toHaveLength(1);await landCommit(next[0])
+ expect(ui.doc().bodies).toHaveLength(edited.bodies.length+1)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(edited)
+})
+
+it('commits an imported mesh in the worker, selects it after the commit and reports a failed commit',async()=>{
+ const {importMeshFile}=await import('../src/exchange/meshImport')
+ const commits=holdWorkerCommits((job,options)=>job.kind==='meshImport'?importMeshFile(job.fileName,job.input,job.options,options.onProgress):undefined)
+ const ui=await mount(),before=ui.doc()
+ const bytes=new TextEncoder().encode(['v 0 0 0','v 1 0 0','v 0 1 0','v 0 0 1','f 1 3 2','f 1 2 4','f 2 3 4','f 1 4 3'].join('\n'))
+ const input=ui.all().find(n=>n.tag==='input'&&n.props.type==='file'&&n.props.accept?.includes('.stl'))!
+ const importFile=async(name:string)=>{const target={files:[{name,arrayBuffer:async()=>bytes.buffer}],value:name},count=commits.length,done=input.props.onChange({target});await waitForCommits(commits,count+1);return {target,done}}
+ const first=await importFile('fail.obj');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('mesh import commit failed'));await first.done;await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('mesh import commit failed');expect(first.target.value).toBe('')
+ const second=await importFile('tetra.obj');expect(commits).toHaveLength(2);expect(ui.doc()).toEqual(before)
+ await landCommit(commits[1]);await second.done
+ expect(ui.doc().bodies.at(-1)?.name).toBe('tetra');expect(ui.button('tetra').props['aria-pressed']).toBe(true)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('commits STEP bodies in the worker and keeps the import busy until that commit lands',async()=>{
+ const step=await import('../src/kernel/solidStepExchange')
+ const prepare=vi.spyOn(step,'prepareSolidStepImport').mockImplementation(async(_text,current)=>{
+  const body={...extrudeDirectSketch({id:'p',name:'P',closed:true,points:[[0,0],[5,0],[5,5],[0,5]]},5,'step-body'),name:'STEP body'}
+  return {document:{...current,bodies:[...current.bodies,body]},selected:body.id,report:{retained:false,occurrenceIdentities:[]}} as unknown as Awaited<ReturnType<typeof step.prepareSolidStepImport>>
+ })
+ try{
+  const ui=await mount(),before=ui.doc()
+  const commits=holdWorkerCommits()
+  const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.step,.stp')!
+  const target={files:[{size:8,text:async()=>'ISO-10303-21;'}],value:'a.step'}
+  const done=input.props.onChange({target});await waitForCommits(commits,1)
+  expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before);expect(ui.button('Import STEP').props.disabled).toBe(true)
+  await landCommit(commits[0]);await done;await flushClearance()
+  expect(ui.doc().bodies.at(-1)?.name).toBe('STEP body');expect(ui.text(ui.all()[0])).toContain('STEP: mesh imported.')
+  expect(ui.button('Import STEP').props.disabled).toBe(false);expect(target.value).toBe('')
+  previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+ }finally{prepare.mockRestore()}
+})
+
+it('commits SVG profiles in the worker, selects them after the commit and reports a failed commit',async()=>{
+ const ui=await mount(),before=ui.doc()
+ svgWorkerRun.mockResolvedValue({contours:[[[0,0],[10,0],[0,10]]],warnings:[]})
+ const commits=holdWorkerCommits()
+ const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.svg,image/svg+xml')!
+ const importFile=async(name:string)=>{const target={files:[{name,size:100,text:async()=>'<svg/>'}],value:name},count=commits.length,done=input.props.onChange({target});await waitForCommits(commits,count+1);return {target,done}}
+ const first=await importFile('fail.svg');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('svg commit failed'));await first.done;await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('svg commit failed');expect(first.target.value).toBe('')
+ const second=await importFile('shape.svg');expect(commits).toHaveLength(2);expect(ui.doc()).toEqual(before)
+ await landCommit(commits[1]);await second.done;await flushClearance()
+ const added=ui.doc().sketches.at(-1)!;expect(added.name).toContain('shape.svg');expect(ui.button(added.name).props['aria-pressed']).toBe(true)
+ expect(ui.text(ui.all()[0])).toContain('SVG imported.')
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('commits new NURBS objects in the worker and selects them only after the commit lands',async()=>{
+ const ui=await mount(),before=ui.doc()
+ const commits=holdWorkerCommits()
+ await ui.click('+ NURBS curve');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('nurbs commit failed'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('nurbs commit failed')
+ await ui.click('+ NURBS curve');expect(commits).toHaveLength(2);await landCommit(commits[1])
+ expect(ui.doc().curves).toHaveLength((before.curves?.length??0)+1);expect(ui.text(ui.all()[0])).toContain('NURBS curve · CV')
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('commits a sketch dimension in the worker',async()=>{
+ const ui=await mount();await ui.click('Cube');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Sketch on face')
+ const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
+ svg.props.onPointerdown({...ui.event(svg,1,-1),altKey:true});svg.props.onPointermove({...ui.event(svg,3,-3),altKey:true});svg.props.onPointerup({...ui.event(svg,3,-3),altKey:true});await flushClearance()
+ await ui.click('Sketch dimensions');await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Add dimension')).toBe(true));await ui.click('Add dimension');const before=ui.doc()
+ ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Dimension 0')!.props['onUpdate:modelValue']('3');await nextTick()
+ const commits=holdWorkerCommits()
+ await ui.click('Apply dimension 0');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ await landCommit(commits[0])
+ const resized=ui.doc();expect(resized.sketches.at(-1)!.points[1][0]-resized.sketches.at(-1)!.points[0][0]).toBeCloseTo(3)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('deletes a group in the worker, keeps the scene when that commit fails and restores it with Undo',async()=>{
+ const body={...extrudeDirectSketch({id:'p',name:'P',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'grouped'),name:'Grouped',group:'G'}
+ const ui=await mount({},stringifyMeshJson({version:1,sketches:[],bodies:[body],groups:[{name:'G',source:''}]})),before=ui.doc()
+ const commits=holdWorkerCommits()
+ await ui.click('Delete group G');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('group commit failed'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('group commit failed')
+ await ui.click('Delete group G');expect(commits).toHaveLength(2);await landCommit(commits[1])
+ expect(ui.doc().bodies).toEqual([]);expect(ui.doc().groups).toBeUndefined()
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('commits a released CV drag in the worker and reports a failed commit through the drag error',async()=>{
+ const {applySolidPointEdit}=await import('../src/kernel/solidPointEdit')
+ const ui=await mount();await ui.click('+ NURBS surface');const before=ui.doc(),svg=ui.svg()
+ const commits=holdWorkerCommits(job=>job.kind==='pointEdit'?Promise.resolve(applySolidPointEdit(job.document,job.options)):undefined)
+ const drag=async(x:number)=>{const count=commits.length;await ui.pointer(ui.all(svg).find(n=>n.tag==='circle'&&n.props.onPointerdown)!,0,0);svg.props.onPointermove({...ui.event(svg,x,5),altKey:true});svg.props.onPointerup({...ui.event(svg,x,5),altKey:true});svg.props.onLostpointercapture(ui.event(svg,x,5));await waitForCommits(commits,count+1)}
+ await drag(10);expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('cv commit failed'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('cv commit failed')
+ await drag(12);expect(commits).toHaveLength(2);await landCommit(commits[1])
+ expect(ui.doc().surfaces).not.toEqual(before.surfaces)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
 })

@@ -9,10 +9,13 @@ import { withSelectionSurfaces } from '../../kernel/meshSurfaceGroups'
 import { planScenePublication } from '../../app/scenePublication'
 import type { WebGPURenderer } from '../../render/webgpuRenderer'
 import { createViewportRenderer } from '../../render/viewportRendererFactory'
+import { getDisplayBudget, subscribeDisplayBudget } from '../../render/displayBudgetSetting'
 import { buildSources } from '../../appHelpers'
 import type {RendererRecoveryNavigationSnapshot} from '../useBuildAndRendererLifecycle'
 import type {RendererOperationsContext} from './rendererOperationsContext'
 export function createRendererOperations(context: RendererOperationsContext) {
+// One subscription per lifecycle; it always targets the current renderer.
+let unsubscribeDisplayBudget: (() => void) | null = null
 async function initializeViewportRenderer() {
     const canvas = context.options.canvasRef.value
     if (!canvas || !context.options.isComponentActive() || !context.options.sourceViewportVisible.value || context.options.rendererInitializing.value) return
@@ -46,6 +49,8 @@ async function initializeViewportRenderer() {
     void nextRenderer.setMatcapTexture(context.options.matcapId.value).catch(() => {})
     void nextRenderer.setEnvMap(context.options.envId.value).catch(() => {})
     nextRenderer.setShadowsEnabled(context.options.shadowsEnabled.value)
+    nextRenderer.setDisplayBudget(getDisplayBudget())
+    unsubscribeDisplayBudget ??= subscribeDisplayBudget(budget => context.renderer?.setDisplayBudget(budget))
     nextRenderer.setBackgroundColor(context.options.effectiveCanvasColor())
     // Applied after the app-theme background so a theme backgroundColor wins.
     nextRenderer.setTheme(context.options.renderThemeId.value)
@@ -138,6 +143,7 @@ async function recoverRenderer(
       void instance.setMatcapTexture(context.options.matcapId.value).catch(() => {})
       void instance.setEnvMap(context.options.envId.value).catch(() => {})
       instance.setShadowsEnabled(context.options.shadowsEnabled.value)
+      instance.setDisplayBudget(getDisplayBudget())
       instance.setBackgroundColor(context.options.effectiveCanvasColor())
       instance.setTheme(context.options.renderThemeId.value)
       instance.setSelectionMode(context.options.selectionMode.value)

@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0302",
+  "testedBase": "1ccaf9ab1ec1b88dc38d309d0301ffcf5e3a11ed",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_pcurve_seam_contracts",
+    "--test",
+    "exact_pcurve_edge_agreement_contracts",
+    "--test",
+    "exact_pcurve_lift_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 7,
+  "scope": [
+    "Prove equality or locate the first exact mismatch between paired surface-owned trim traces over the union of their parameter partitions.",
+    "Shared absolute trim parameter, arbitrary different covered UV cells, exact representable cell cuts. No intermediate space-curve storage needed."
+  ],
+  "logSha256": "7ba4ed985ffaebfccce278ba293bf5d80c944a59367d68128df95ff1c839f2dc",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "d823cec6b67765f3884e3a47e7c9c009f6f82a01b872d03a636751f6ad831da0",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_agreement.rs": "72d2bdd12ba9b8e3ab8b5142e22c1ceed6e9dd5767a761e8d6ebda93928b52f3",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_lift.rs": "9a3dc2dfcb647ccbc160d1e7969ab594468722954f7e9fca52f4dab0995864d7",
+    "crates/nurbs-core/tests/exact_surface_pcurve_seam_contracts.rs": "9bb7aee9b913db345d441d88c44da9d881dc786a3fad9f6da02a8f59132c0657"
+  }
+}

@@ -8,6 +8,7 @@
  * reject any drift between the two public surfaces.
  */
 import type { MeshData } from '../core/mesh'
+import { DEFAULT_DISPLAY_BUDGET, sameDisplayBudget, type DisplayBudget } from './displayScheduler'
 import { carryMeshPublication } from './sceneDelta'
 import { countOperation } from '../dev/operationCounters'
 import { CameraHistory, cameraStatesEqual, type CameraHistorySnapshot, type CameraState } from './cameraHistory'
@@ -33,7 +34,6 @@ import {
   type ShadingModel,
 } from './rendererContracts'
 import type { WebGPUFrameDiagnostics } from './types'
-import { DEFAULT_DISPLAY_BUDGET, type DisplayBudget } from './displayScheduler'
 import { ISO_PITCH, ISO_YAW, standardViewOrientation, type ProjectionMode, type StandardView } from './viewportModel'
 import type { GpuBufferArena, GpuCsgTree, GpuWboitRenderer, SlicerResult, WebGPURenderer } from './webgpuRenderer'
 
@@ -60,6 +60,7 @@ export interface RecordingSceneState {
   readonly framesDrawn: number
   readonly sceneUploads: number
   readonly measuring: boolean
+  readonly displayBudget: DisplayBudget
   readonly calls: Readonly<Record<string, number>>
 }
 
@@ -92,6 +93,7 @@ export class RecordingRenderer implements PublicRenderer {
   private shadows = false
   private gridVisible = true
   private transparency: 'sorted' | 'wboit' = 'sorted'
+  private displayBudget: DisplayBudget = DEFAULT_DISPLAY_BUDGET
   private csgTree: GpuCsgTree | null = null
   private measurement: DistanceMeasurement | null = null
   private camera: CameraState = {
@@ -109,7 +111,6 @@ export class RecordingRenderer implements PublicRenderer {
   private sceneUploads = 0
   private uploadMetrics: SceneUploadMetrics = { geometryUploadBytes: 0, geometryBuffersCreated: 0, reusedEntities: 0 }
 
-  private displayBudget: DisplayBudget = DEFAULT_DISPLAY_BUDGET
   private record(method: string) {
     this.callCounts.set(method, (this.callCounts.get(method) ?? 0) + 1)
     if (this.callLog.length >= CALL_LOG_LIMIT) this.callLog.shift()
@@ -177,6 +178,7 @@ export class RecordingRenderer implements PublicRenderer {
       framesDrawn: this.framesDrawn,
       sceneUploads: this.sceneUploads,
       measuring: this.measurement !== null,
+      displayBudget: this.displayBudget,
       calls: Object.fromEntries(this.callCounts),
     }
   }
@@ -513,12 +515,6 @@ export class RecordingRenderer implements PublicRenderer {
     this.shadows = enabled
     this.requestRender()
   }
-  setDisplayBudget(budget: DisplayBudget) {
-    this.record('setDisplayBudget')
-    this.displayBudget = budget
-    this.requestRender()
-  }
-  getDisplayBudget = (): DisplayBudget => this.displayBudget
   setGridVisible(visible: boolean) {
     this.record('setGridVisible')
     this.gridVisible = visible
@@ -536,6 +532,15 @@ export class RecordingRenderer implements PublicRenderer {
   setSection(_enabled: boolean, _normal: readonly [number, number, number], _offset: number) {
     this.record('setSection')
     this.requestRender()
+  }
+  setDisplayBudget(budget: DisplayBudget) {
+    this.record('setDisplayBudget')
+    if (sameDisplayBudget(this.displayBudget, budget)) return
+    this.displayBudget = budget
+    this.requestRender()
+  }
+  getDisplayBudget(): DisplayBudget {
+    return this.displayBudget
   }
   getTransparencyMode(): 'sorted' | 'wboit' {
     return this.transparency

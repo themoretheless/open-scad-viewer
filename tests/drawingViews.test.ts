@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createDrawingViews, type DrawingMesh } from '../src/kernel/drawingViews'
+import { vectorDrawingPdf } from '../src/app/drawingSheets'
+import { createDrawingViews, drawingViewsSheet, type DrawingMesh } from '../src/kernel/drawingViews'
 
 type P = [number, number, number]
 
@@ -111,6 +112,31 @@ describe('drawing views with hidden lines', () => {
     ).toEqual([-5, 5])
     expect(count(r.views[1].segments)).toEqual([32, 0])
     expect(r.svg).not.toContain('class="hidden"')
+  })
+})
+
+describe('sheet dimensions and export', () => {
+  it('dimensions every view including ISO and SECTION', () => {
+    const r = createDrawingViews(cubeWithHole(), { section: { view: 'top', offset: 10, spacing: 1 } })
+    const dims = [
+      ...r.svg.matchAll(/<g data-view="([^"]+)">.*?<g class="dimension" data-width="([\d.]+)" data-height="([\d.]+)"/g),
+    ]
+    const byView = Object.fromEntries(dims.map(d => [d[1], [Number(d[2]), Number(d[3])]]))
+    expect(Object.keys(byView)).toEqual(['FRONT', 'TOP', 'RIGHT', 'ISO', 'SECTION TOP'])
+    expect(byView.FRONT).toEqual([20, 20])
+    expect(byView['SECTION TOP']).toEqual([20, 20])
+    expect(byView.ISO[0]).toBeGreaterThan(20)
+    expect(r.svg).toMatch(/scale [\d.]+:1/)
+  })
+
+  it('converts to a drawing sheet and a vector PDF', () => {
+    const r = createDrawingViews(cubeWithHole(), { views: ['front', 'top'] })
+    const sheet = drawingViewsSheet(r, 'Cube')
+    expect(sheet).toMatchObject({ title: 'Cube', kind: 'drawing', width: 190, height: 150 })
+    const pdf = new TextDecoder().decode(vectorDrawingPdf([sheet]))
+    expect(pdf.startsWith('%PDF-')).toBe(true)
+    expect(pdf).toContain('%%EOF')
+    expect(() => drawingViewsSheet({ ...r, svg: '<svg/>' })).toThrow()
   })
 })
 

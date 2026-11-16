@@ -153,16 +153,16 @@ const exactRoundCurve=computed(()=>{
  return {kind:tool.value==='arc'?'arc' as const:'circle' as const,center:[...draftPoint.value] as Point2,radius:draftRadius.value,start:tool.value==='arc'?draftArcStart.value:0,sweep:tool.value==='arc'?draftArcSweep.value:360}
 })
 const exactRoundPoints=computed(()=>(tool.value==='circle'||tool.value==='arc')&&exactRoundCurve.value?sampleCurve(exactRoundCurve.value):[])
-function createExactRoundCurve(){if((tool.value!=='circle'&&tool.value!=='arc')||!exactRoundCurve.value)return;run(()=>{addSketch(sampleCurve(exactRoundCurve.value!),exactRoundCurve.value!.kind==='circle',exactRoundCurve.value!);draft.value=[];draftCursor.value=null;tool.value='select'})}
+function createExactRoundCurve(){if((tool.value!=='circle'&&tool.value!=='arc')||!exactRoundCurve.value)return;run(()=>{addSketch(sampleCurve(exactRoundCurve.value!),exactRoundCurve.value!.kind==='circle',exactRoundCurve.value!,undefined,()=>{draft.value=[];draftCursor.value=null;tool.value='select'})})}
 const draftSize=ref<Point2>([20,10]),draftSizeValid=ref([true,true]),draftEnd=ref<Point2>([20,0]),draftEndValid=ref([true,true])
 const exactRectangle=computed(()=>draftPointValid.value.every(Boolean)&&draftSizeValid.value.every(Boolean)?numericRectangle(draftPoint.value,draftSize.value):null)
-function createExactRectangle(){if(tool.value!=='rectangle'||!exactRectangle.value)return;run(()=>{addSketch(exactRectangle.value!,true);draft.value=[];draftCursor.value=null;tool.value='select'})}
+function createExactRectangle(){if(tool.value!=='rectangle'||!exactRectangle.value)return;run(()=>{addSketch(exactRectangle.value!,true,undefined,undefined,()=>{draft.value=[];draftCursor.value=null;tool.value='select'})})}
 const numericSlotWorker=createSolidPreviewWorker(),numericSlotPending=ref(false),numericSlotResult=shallowRef<DirectSketch|null>(null),numericSlotError=ref(false),numericSlotRetry=ref(0)
 let numericSlotGeneration=0,numericSlotAutoApply=false
 function cancelNumericSlot(){numericSlotGeneration++;numericSlotWorker.cancel();numericSlotPending.value=false;numericSlotResult.value=null;numericSlotError.value=false;numericSlotAutoApply=false}
 onUnmounted(()=>{cancelNumericSlot();numericSlotWorker.dispose()})
 const numericSlotInput=computed(()=>draftPointValid.value.every(Boolean)&&draftEndValid.value.every(Boolean)&&slotWidthValid.value?numericSlotSources(draftPoint.value,draftEnd.value,slotWidth.value,activePlane.value):null)
-function createExactSlot(){const sketch=numericSlotResult.value;if(tool.value!=='slot'||numericSlotPending.value||!sketch?.retainedProfile||!numericSlotInput.value)return;run(()=>{addSketch(sketch.points,true,undefined,sketch.retainedProfile);draft.value=[];draftCursor.value=null;tool.value='select'})}
+function createExactSlot(){const sketch=numericSlotResult.value;if(tool.value!=='slot'||numericSlotPending.value||!sketch?.retainedProfile||!numericSlotInput.value)return;run(()=>{addSketch(sketch.points,true,undefined,sketch.retainedProfile,()=>{draft.value=[];draftCursor.value=null;tool.value='select'})})}
 function refreshNumericSlot(){
  const autoApply=numericSlotAutoApply;cancelNumericSlot()
  if(!props.open||tool.value!=='slot'||!numericSlotInput.value)return
@@ -309,8 +309,8 @@ function cancelSketchEdit(){sketchEditGeneration++;sketchEditWorker.cancel();ske
 onUnmounted(()=>{cancelSketchEdit();sketchEditWorker.dispose()})
 const cornerPreview = computed(() => ({sketch:cornerActive.value?sketchEditResult.value?.sketches.find(s=>s.id===selection.value)??null:null,error:sketchEditFailure.value}))
 function beginCorner(kind: 'fillet'|'dogear') { boxSelect.value=false; if (!selectedSketch.value?.closed) return; cancelCommand(); tool.value = 'select'; operation.value = kind; mode.value = '2d' }
-function applySketchEdit(){run(()=>{const next=sketchEditResult.value;if(!next||sketchEditPending.value)return;commit(next);operation.value=null})}
-function applyCorner(){applySketchEdit()}
+function applySketchEdit(){const next=sketchEditResult.value;if(!next||sketchEditPending.value)return;return commitInWorker(()=>next,()=>{operation.value=null})}
+function applyCorner(){return applySketchEdit()}
 const profileIds = ref<string[]>([]), previewEmpty = ref(false)
 const baseZ = ref(0), extrusionMode = ref<'new' | 'union' | 'difference'>('new'), targetBody = ref('')
 const copyCount = ref(8), copySweep = ref(360), copyX = ref(0), copyY = ref(0)
@@ -332,7 +332,9 @@ function markError(error:unknown){
  const fallback:readonly string[]=presented.input==='sketch'?(selectedSketch.value?[selectedSketch.value.id]:[])
   :['body','face','edge'].includes(presented.input)?((selectedBody.value?.id??targetBody.value)?[selectedBody.value?.id??targetBody.value]:[])
   :['curve','surface'].includes(presented.input)?(curveInputs.length?curveInputs:selection.value?[selection.value]:[])
-  :presented.input==='field'&&['radius','endRadius','distance'].includes(presented.field??'')&&selectedBody.value?[selectedBody.value.id]:[]
+  :presented.input==='field'&&['radius','endRadius','distance'].includes(presented.field??'')&&selectedBody.value?[selectedBody.value.id]
+  // Other parameter refusals mark the object the command reads (the profile sketch or the body).
+  :presented.input==='field'?[selectedSketch.value?.id??selectedBody.value?.id].filter((id):id is string=>!!id):[]
  errorField.value=presented.field??''
  invalidSceneIds.value=presented.targetIds.length?presented.targetIds:fallback
 }
@@ -436,7 +438,7 @@ type DragWorkerJob=Extract<MainSolidJob,{kind:'sceneEdit'|'pointEdit'}>&{documen
 const pointEditActive=ref(false)
 let numericPointEdit=false
 let gizmoQueued:{job:DragWorkerJob;revision:number}|null=null
-let manipulatorDrag:{svg:SVGSVGElement;pointer:number;x:number;y:number;kind:'move'|'rotate'|'scale'|'push'|'split';axis:'x'|'y'|'z';direction:Point2;before:DirectDocument;initial:number;startPoint:Point2;center:Point2;delta?:Vec3}|null=null
+let manipulatorDrag:{svg:SVGSVGElement;pointer:number;x:number;y:number;kind:'move'|'rotate'|'scale'|'push'|'split';axis:'x'|'y'|'z';vector:Vec3;direction:Point2;before:DirectDocument;initial:number;startPoint:Point2;center:Point2;delta?:Vec3}|null=null
 
 let curveDrag:{id:string;kind:'center'|'radius'|'start'|'end';before:DirectDocument;pointer:number;inverse:DOMMatrix|null}|null=null
 let cvDrag:{id:string;u:number;v:number;before:DirectDocument;point:number[];start:Point2;pointer:number;svg:SVGSVGElement;inverse:DOMMatrix|null}|null=null
@@ -454,13 +456,13 @@ watch(() => props.open, async open => {
 const selectedSketch = computed(() => document.value.sketches.find(s => s.id === selection.value))
 function changeBodyMaterial(event:Event) {
  const color=(event.target as HTMLInputElement).value
- run(()=>commit(assignSolidMaterial(document.value,selectedIds.value,{...selectedBody.value?.material,name:'Custom',color})))
+ void commitInWorker(()=>assignSolidMaterial(snapDocument.value,selectedIds.value,{...selectedBody.value?.material,name:'Custom',color}))
 }
 function changeMaterialParameter(key:'metallic'|'roughness'|'opacity',event:Event){
  const value=Number((event.target as HTMLInputElement).value)
- run(()=>commit(assignSolidMaterial(document.value,selectedIds.value,{name:'Custom',color:'#7094ba',...selectedBody.value?.material,[key]:value})))
+ void commitInWorker(()=>assignSolidMaterial(snapDocument.value,selectedIds.value,{name:'Custom',color:'#7094ba',...selectedBody.value?.material,[key]:value}))
 }
-function resetBodyMaterial(){run(()=>commit(assignSolidMaterial(document.value,selectedIds.value)))}
+function resetBodyMaterial(){void commitInWorker(()=>assignSolidMaterial(snapDocument.value,selectedIds.value))}
 const selectedBody = computed(() => document.value.bodies.find(s => s.id === selection.value))
 const selectedNurbsCurve = computed(() => document.value.curves?.find(s => s.id === selection.value))
 const selectedNurbsSurface = computed(() => document.value.surfaces?.find(s => s.id === selection.value))
@@ -712,7 +714,7 @@ async function runNativeBrep(options:Exclude<SolidBrepToolOptions,{kind:'display
   if(generation!==nativeNurbsGeneration||!props.open)return
   nativeNurbsPending.value=false;nativeBrepMode.value=null
   if(result.kind==='mass')brepMass.value=result.mass
-  else if(result.kind==='mesh')commit(result.document)
+  else if(result.kind==='mesh')void commitInWorker(()=>result.document)
  }catch(e){if(generation===nativeNurbsGeneration)error.value=e instanceof Error?e.message:String(e)}
  finally{if(generation===nativeNurbsGeneration){nativeNurbsPending.value=false;nativeBrepMode.value=null}}
 }
@@ -938,7 +940,7 @@ const {
   getNotice: () => notice.value,
   label,
 })
-const { advancedPolygons, advancedSurfacePolygons, advancedPreview, pointTrimPreviewPoints, pointTrimCut, patchBudgetCurve, patchGapPoints, applyAdvanced, axisVector, advancedBodyIds, advancedSurfaceIds, advancedSketches, advancedSketchDisplay, authoredEdges, bodyEdgesPending, cancelBodyEdges, refreshBodyEdges } = useAdvancedPreview({ onEdgeFeatureApplied: memory => { edgeFeatureMemory = memory }, activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commit, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady: () => kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies: () => sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed })
+const { advancedPolygons, advancedSurfacePolygons, advancedPreview, pointTrimPreviewPoints, pointTrimCut, patchBudgetCurve, patchGapPoints, applyAdvanced, axisVector, advancedBodyIds, advancedSurfaceIds, advancedSketches, advancedSketchDisplay, authoredEdges, bodyEdgesPending, cancelBodyEdges, refreshBodyEdges } = useAdvancedPreview({ onEdgeFeatureApplied: memory => { edgeFeatureMemory = memory }, activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commitInWorker, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady: () => kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies: () => sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed })
 // Undoing a fillet or chamfer brings its body back; reselect the edge chain it consumed (C10).
 watch(document,()=>{
  if(!edgeFeatureMemory)return
@@ -1008,9 +1010,11 @@ const gizmoLength=computed(()=>{
  const view=views.value['3d'],extent=gizmoBounds.value?.extent??0
  return Math.min(view/3,Math.max(view/40,extent*.7))
 })
+/** Gizmo arm direction: the axes of the active coordinate system (World, CPlane or Local). */
+function gizmoAxisVector(axis:'x'|'y'|'z'):Vec3{return [...transformFrame.value[axis]] as Vec3}
 const gizmoAxes=computed(()=>gizmoCenter.value?(['x','y','z'] as const).map((axis,i)=>{
- const n=axisVector(axis),c=gizmoCenter.value!,length=gizmoLength.value
- const u=unit3(cross3(n,n[0]?[0,1,0]:[1,0,0])),v=cross3(n,u)
+ const n=gizmoAxisVector(axis),c=gizmoCenter.value!,length=gizmoLength.value
+ const u=unit3(cross3(n,Math.abs(n[0])>.9?[0,1,0]:[1,0,0])),v=cross3(n,u)
  return {axis,color:['#ff7777','#77df9d','#77baff'][i],base:project(c,'3d'),tip:project(c.map((x,k)=>x+n[k]*length),'3d'),ring:Array.from({length:65},(_,i)=>{const a=i*Math.PI/32;return project(c.map((x,k)=>x+length*.7*(u[k]*Math.cos(a)+v[k]*Math.sin(a))),'3d').join(',')}).join(' ')}
 }):[])
 function startGizmo(e:PointerEvent,kind:'move'|'rotate'|'scale'|'push'|'split',axis:'x'|'y'|'z') {
@@ -1020,10 +1024,10 @@ function startGizmo(e:PointerEvent,kind:'move'|'rotate'|'scale'|'push'|'split',a
  if(kind==='rotate'||kind==='scale')previewingTransform.value=true
  e.preventDefault();e.stopPropagation();const svg=canvasOf(e),center=kind==='push'?selectedFace.value?.center:gizmoCenter.value;if(!center)return
  svg.focus()
- const n=kind==='push'?selectedFace.value!.normal:axisVector(axis),a=project(center,'3d'),b=project(center.map((x,i)=>x+n[i]),'3d')
+ const n=kind==='push'?selectedFace.value!.normal:kind==='split'?axisVector(axis):gizmoAxisVector(axis),a=project(center,'3d'),b=project(center.map((x,i)=>x+n[i]),'3d')
  if(kind==='push'){advanced.value.distance=0;beginAdvanced('push')}
  dragConstraint.value=kind==='push'?label('Нормаль грани','Face normal'):axis.toUpperCase()
- manipulatorDrag={svg,pointer:e.pointerId,x:e.clientX,y:e.clientY,kind,axis,direction:[b[0]-a[0],b[1]-a[1]],before:committedView(),initial:advanced.value.distance,startPoint:position(e),center:project(center,'3d')};svg.setPointerCapture(e.pointerId)
+ manipulatorDrag={svg,pointer:e.pointerId,x:e.clientX,y:e.clientY,kind,axis,vector:[...n] as Vec3,direction:[b[0]-a[0],b[1]-a[1]],before:committedView(),initial:advanced.value.distance,startPoint:position(e),center:project(center,'3d')};svg.setPointerCapture(e.pointerId)
 }
 function startCurve(e:PointerEvent,kind:'center'|'radius'|'start'|'end'){
  if(!requireSketchSnaps(e))return
@@ -1047,11 +1051,11 @@ function pickEdge(e:PointerEvent|KeyboardEvent,index:number){
  else {edgeIndex.value=index;edgeIndexes.value=[index]}
  faceIndex.value=-1;advancedOp.value=null
 }
-function trimAt(id:string,p:Point2){run(()=>{
+function trimAt(id:string,p:Point2){void commitInWorker(()=>{
  const d=history.document,s=d.sketches.find(s=>s.id===id);if(!s)return
  let best=Infinity,index=0,t=0
  for(let i=0;i<(s.closed?s.points.length:s.points.length-1);i++){const a=s.points[i],b=s.points[(i+1)%s.points.length],vx=b[0]-a[0],vy=b[1]-a[1],f=Math.max(0,Math.min(1,((p[0]-a[0])*vx+(p[1]-a[1])*vy)/(vx*vx+vy*vy))),dist=Math.hypot(p[0]-a[0]-f*vx,p[1]-a[1]-f*vy);if(dist<best){best=dist;index=i;t=f}}
- const pieces=trimSketch(s,index,t,d.sketches.filter(o=>samePlane(o.plane,s.plane)));pieces.forEach((p,i)=>{if(i)p.id=crypto.randomUUID()});d.sketches=d.sketches.filter(o=>o.id!==id);d.sketches.push(...pieces);commit(d)
+ const pieces=trimSketch(s,index,t,d.sketches.filter(o=>samePlane(o.plane,s.plane)));pieces.forEach((p,i)=>{if(i)p.id=crypto.randomUUID()});d.sketches=d.sketches.filter(o=>o.id!==id);d.sketches.push(...pieces);return d
 })}
 
 function run(action: () => void) { error.value = ''; try { action() } catch (e) { error.value = e instanceof Error ? e.message : String(e) } }
@@ -1111,6 +1115,26 @@ function downAt(e: PointerEvent, pane: Pane) {
   down(e, pane)
 }
 
+/**
+ * Pointer down on an SVG body polygon (no GPU layer). The same ray pick as the GPU view runs
+ * here so Alt+click and a quick repeated click cycle overlapping objects by depth; the
+ * polygon under the pointer is the fallback when the ray finds nothing.
+ */
+function downOnPolygon(e: PointerEvent, id: string, triangle: number) {
+  if (e.button === 0) {
+    try {
+      // A plain click keeps the polygon the user sees; only Alt or a repeat click cycles.
+      const cycling = e.altKey || e.timeStamp - lastPickDown < 500
+      const hit = pickAt(e, position(e))
+      if (cycling && hit && hit.id !== id) {
+        if ((document.value.surfaces ?? []).some(s => s.id === hit.id)) { pickObject(hit.id, '3d', e.shiftKey); return }
+        down(e, '3d', hit.id, null, hit.triangle); return
+      }
+    } catch { /* fall back to the polygon */ }
+  }
+  down(e, '3d', id, null, triangle)
+}
+
 let lastHoverPick = 0
 /** Pointer move: the drag logic first, then hover by ray while nothing is being dragged. */
 function moveAt(e: PointerEvent) {
@@ -1136,9 +1160,35 @@ function finishCommit(added:string[],next?:DirectDocument){
  sync(next)
  isolationStack.value=addToIsolation(isolationStack.value,added)
 }
-function commit(next:DirectDocument){
- const {validateLocked,added}=prepareCommit(next)
- history.commit(next,validateLocked);finishCommit(added)
+const commitWorker=createSolidPreviewWorker()
+let commitQueue:Promise<unknown>=Promise.resolve()
+/** Commands migrated off the synchronous `commit()`: `build` runs once the previous queued
+ * commit settled (so it sees the latest committed state), the worker runs the authoritative
+ * parser, and the result commits only if the history did not move meanwhile (Undo, another
+ * commit); a stale result is dropped. Errors land in `error`, as `run()` reports them. */
+function commitInWorker(build:()=>DirectDocument|undefined,after?:(next:DirectDocument)=>void,onError?:(message:string)=>void):Promise<boolean>{
+ error.value=''
+ const task=commitQueue.then(async()=>{
+  try{
+   const next=build()
+   if(!next)return false
+   const {validateLocked,added}=prepareCommit(next)
+   const base=history.snapshotKey
+   // Against the published state: the worker answers only the objects that differ from it (and
+   // reuses its resident parse of that state for unchanged linked instances), so the unchanged
+   // objects stay the published ones and `commitAsync` adopts them without comparing.
+   const view=snapDocument.value,baseText=history.canonicalText(view)
+   const validated=await commitWorker.run({kind:'restoreDocument',text:history.commitPayload(next),...(baseText!==undefined?{base:baseText}:{})},{restoreBase:view})
+   if(history.snapshotKey!==base||!props.open)return false
+   if(!await history.commitAsync(async()=>validated,validateLocked))return false
+   finishCommit(added,validated);after?.(validated);return true
+  }catch(e){
+   if(!(e instanceof Error&&e.name==='AbortError')){const message=e instanceof Error?e.message:String(e);if(onError)onError(message);else error.value=message}
+   return false
+  }
+ })
+ commitQueue=task
+ return task
 }
 /** Worker results already passed the authoritative parser: commit without re-validating here. */
 async function commitWorkerResult(next:DirectDocument):Promise<boolean>{
@@ -1155,8 +1205,10 @@ async function undo(redo = false) {
  workspace.value?.focus()
  try{
   let restored:DirectDocument|undefined
-  // History takes its own copy; the UI can own the original worker response.
-  const applied=await target.restoreAsync(redo?'redo':'undo',async text=>restored=await historyWorker.run({kind:'restoreDocument',text}))
+  // When the published document is the history's current state, the worker answers only the
+  // objects that differ from it and the rest stay the published objects.
+  const base=document.value,baseText=target.canonicalText(base)
+  const applied=await target.restoreAsync(redo?'redo':'undo',async text=>restored=await historyWorker.run({kind:'restoreDocument',text,...(baseText!==undefined?{base:baseText}:{})},{restoreBase:base}))
   if(generation!==historyGeneration||target!==history||!props.open)return
   historyPending.value=false
   if(applied&&restored)sync(restored)
@@ -1164,19 +1216,24 @@ async function undo(redo = false) {
  finally{if(generation===historyGeneration)historyPending.value=false}
 }
 watch(()=>[props.open,document.value,lockedIds.value.join(','),activeGroup.value],()=>{if(historyPending.value)cancelHistoryRestore()},{flush:'sync'})
-onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose()})
-function addSketch(points: Point2[], closed: boolean, analytic?: import('../app/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../kernel/geometry/brepProfile').BrepProfile) {
+onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose();commitWorker.dispose()})
+/** Validates the outline here (throws like before), commits in the worker, then selects the new
+ * sketch and runs `after` (draft reset, tool switch) only once the commit landed. */
+function addSketch(points: Point2[], closed: boolean, analytic?: import('../app/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../kernel/geometry/brepProfile').BrepProfile,after?:()=>void) {
   validateSimpleSketch(points,closed)
-  const d = history.document, id = crypto.randomUUID()
-  d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, ...(retainedProfile?{retainedProfile}:{}), plane: JSON.parse(JSON.stringify(activePlane.value)), ...(workplaneBodyId.value?{supportBodyId:workplaneBodyId.value}:{}) })
-  commit(d); pickObject(id,'2d')
+  const id = crypto.randomUUID(), plane = JSON.parse(JSON.stringify(activePlane.value)), supportBodyId = workplaneBodyId.value
+  void commitInWorker(() => {
+    const d = history.document
+    d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, ...(retainedProfile?{retainedProfile}:{}), plane, ...(supportBodyId?{supportBodyId}:{}) })
+    return d
+  }, () => { pickObject(id,'2d'); after?.() })
 }
 function beginSketch(value: typeof tool.value) {
   cancelGesture(); operation.value = null; advancedOp.value = null; boxSelect.value = false
   choosingSketchFace.value=false;draftPoint.value=[0,0];draftPointValid.value=[true,true];draftRadius.value=10;draftRadiusValid.value=true;draftArcStart.value=0;draftArcSweep.value=180;draftArcValid.value=[true,true];draftSize.value=[20,10];draftSizeValid.value=[true,true];draftEnd.value=[20,0];draftEndValid.value=[true,true];tool.value = value; mode.value = workplaneBodyId.value ? '3d' : '2d'; sketchPaneOpen.value = true
 }
 const canExtrudeSketch = computed(() => !!selectedSketch.value?.closed && tool.value === 'select' && !draft.value.length)
-function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed); draft.value = []; draftCursor.value=null; tool.value = 'select' }) }
+function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed, undefined, undefined, () => { draft.value = []; draftCursor.value=null; tool.value = 'select' }) }) }
 function beginExtrude(kind: 'extrude'|'revolve' = 'extrude') {
   if (!canExtrudeSketch.value) return
   cancelCommand(); boxSelect.value=false
@@ -1206,12 +1263,15 @@ function setExtrusionMode(value: 'new'|'union'|'difference') {
   extrusionMode.value=value
   if(selectedSketch.value?.supportBodyId && value!=='new')height.value=Math.abs(height.value)*(value==='difference'?-1:1)
 }
-function extrude() { run(() => {
+/** The preview result commits in the worker; the command closes and selects only once it landed. */
+function extrude() {
   const next=solidPreviewResult.value
   if(!next||previewPending.value||previewError.value)return
-  const id=previewBody.value?.id??'';commit(next)
-  operation.value=null;mode.value='3d';selection.value=extrusionMode.value==='new'?id:next.bodies.some(b=>b.id===targetBody.value)?targetBody.value:'';fit('3d')
-}) }
+  const id=previewBody.value?.id??'',created=extrusionMode.value==='new',target=targetBody.value
+  return commitInWorker(()=>next,committed=>{
+   operation.value=null;mode.value='3d';selection.value=created?id:committed.bodies.some(b=>b.id===target)?target:'';fit('3d')
+  })
+}
 watch(()=>[props.open,operation.value,document.value,selection.value,activeGroup.value,cornerVertex.value,cornerRadius.value,copyCount.value,copySweep.value,copyX.value,copyY.value,sketchEditRevision.value,invalidQuantitiesKey.value],()=>{
  cancelSketchEdit()
  const op=operation.value
@@ -1229,7 +1289,7 @@ watch(()=>[props.open,operation.value,document.value,selection.value,activeGroup
  })
 },{flush:'sync'})
 const copyPreview = computed(() => operation.value==='array'?sketchEditResult.value?.sketches.filter(s=>!document.value.sketches.some(source=>source.id===s.id))??[]:[])
-function applyCopies(){applySketchEdit()}
+function applyCopies(){return applySketchEdit()}
 const canDuplicate=computed(()=>selectedIds.value.length>0&&selectedIds.value.every(id=>document.value.bodies.some(body=>body.id===id)||document.value.sketches.some(sketch=>sketch.id===id)))
 async function duplicate() {
  if(directTransformPending.value)return
@@ -1272,16 +1332,16 @@ watch([document, () => props.open, operation, selectedSketch, profileIds, active
   }, 60)
 }, {flush:'sync'})
 watch(selection, () => { advancedOp.value=null; operation.value = null; previewBody.value = null; cornerVertex.value = 0 })
-function remove() { run(() => {
+function remove() {
   const selectedSet = new Set(selectedIds.value)
   advancedOp.value=null
-  const d = history.document
-  d.sketches = d.sketches.filter(s => !selectedSet.has(s.id))
-  d.bodies = d.bodies.filter(b => !selectedSet.has(b.id))
-  d.curves = d.curves!.filter(c => !selectedSet.has(c.id))
-  d.surfaces = d.surfaces!.filter(s => !selectedSet.has(s.id))
-  commit(d); selection.value = ''; extraSelection.value=[]
-}) }
+  // Built from the published state without copying it; the worker validates the result.
+  void commitInWorker(() => {
+    const d = snapDocument.value
+    return {...d, sketches: d.sketches.filter(s => !selectedSet.has(s.id)), bodies: d.bodies.filter(b => !selectedSet.has(b.id)),
+      curves: (d.curves ?? []).filter(c => !selectedSet.has(c.id)), surfaces: (d.surfaces ?? []).filter(s => !selectedSet.has(s.id))}
+  }, () => { selection.value = ''; extraSelection.value=[] })
+}
 function restoreGizmoPreview(){
  if(gizmoBase&&gizmoPublished===document.value){gizmoPublishing=true;document.value=gizmoBase;gizmoPublishing=false}
  gizmoPublished=null
@@ -1297,8 +1357,8 @@ function requestDragJob(job:DragWorkerJob){
  gizmoQueued={job,revision:++gizmoRevision}
  if(!gizmoRunning)void drainGizmoTransforms()
 }
-function requestGizmoTransform(before:DirectDocument,axis:'x'|'y'|'z',rotation:number,factor:number){
- requestDragJob({kind:'sceneEdit',document:before,options:{operation:'transform',id:selection.value,ids:[...selectedIds.value],createdId:'',x:0,y:0,z:0,axis,angle:rotation,scale:factor}})
+function requestGizmoTransform(before:DirectDocument,axis:Vec3,rotation:number,factor:number){
+ requestDragJob({kind:'sceneEdit',document:before,options:{operation:'transform',id:selection.value,ids:[...selectedIds.value],createdId:'',x:0,y:0,z:0,axis:[...axis] as Vec3,angle:rotation,scale:factor}})
 }
 async function drainGizmoTransforms(){
  const epoch=gizmoEpoch;gizmoRunning=true
@@ -1321,7 +1381,14 @@ async function drainGizmoTransforms(){
        const applied=await history.commitAsync(async()=>result,validateLocked)
        if(epoch!==gizmoEpoch||!applied)return
        previewingTransform.value=false;finishCommit(added,result)
-      }else{previewingTransform.value=false;commit(result)}
+      }else{
+       // Point edits commit in the worker; a failed commit reaches the drag error path below.
+       let failure:string|undefined
+       const applied=await commitInWorker(()=>result,undefined,message=>{failure=message})
+       if(failure!==undefined)throw Error(failure)
+       if(epoch!==gizmoEpoch||!applied)return
+       previewingTransform.value=false
+      }
      }finally{if(epoch===gizmoEpoch)gizmoHistoryPending=false;gizmoPublishing=false}
      gizmoBase=null;gizmoPublished=null;gizmoApplyRevision=null;gizmoPending.value=false;pointEditActive.value=false;settleAfterDrag()
     }else{
@@ -1350,12 +1417,12 @@ function cancelDirectTransform(){
 /** Transform requests name their base by key or send it as text; the answer is a delta whose
  * unchanged objects are `before`'s own, which keeps the commit policy and history incremental. */
 const residentTransformBase=(before:DirectDocument)=>({residentDocument:{text:()=>history.canonicalText(before)??(before.bodies.some(body=>body.instance)?serializeDirectDocument(before):undefined)}})
-async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false,detach=false,metadata?:{operation:'group-create'|'group-move';group:string}){
+async function commitDirectTransform(before:DirectDocument,ids:string[],delta:Vec3,rotation=0,factor=1,localSketch=false,resetFields=false,detach=false,metadata?:{operation:'group-create'|'group-move';group:string},axis:Vec3=[0,0,1]){
  cancelDirectTransform()
  const generation=directTransformGeneration
  directTransformPending.value=true;directTransformOperation.value=metadata?.operation??(detach?'instance-detach':'transform');error.value=''
  try{
-  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:'z',angle:rotation,scale:factor}},residentTransformBase(before))
+  const result=await directTransformWorker.run({kind:'sceneEdit',document:before,options:{operation:metadata?.operation??(detach?'instance-detach':localSketch?'sketch-transform':'transform'),group:metadata?.group,id:ids[0]??'',ids,createdId:'',x:delta[0],y:delta[1],z:delta[2],axis:rotation&&(axis[0]||axis[1]||axis[2]!==1)?axis:'z',angle:rotation,scale:factor}},residentTransformBase(before))
   if(generation!==directTransformGeneration)return
   const {validateLocked,added}=prepareCommit(result)
   result.blenderProjectId ??= snapDocument.value.blenderProjectId
@@ -1382,10 +1449,11 @@ function cycleCoordinateSystem() { coordinateSystem.value = nextCoordinateSystem
 function transform(){
  if(directTransformPending.value||transformInputInvalid.value)return
  const frame=transformFrame.value
- // The kernel rotates about world Z only; refuse a rotation the frame would tilt.
- if(angle.value!==0&&Math.abs(frame.z[2])<1-1e-9){error.value=label('Поворот в этой системе координат пока поддерживается только вокруг мировой оси Z.','Rotation in this coordinate system is only supported about the world Z axis for now.');return}
+ // The angle turns about the active frame's Z axis, which may be tilted (CPlane/Local).
+ // A lone sketch rotates in its own plane only while the frame Z stays parallel to world Z.
+ const localSketch=!!selectedSketch.value&&selectedIds.value.length===1&&Math.abs(frame.z[2])>1-1e-9
  cancelCommand()
- void commitDirectTransform(snapDocument.value,selectedIds.value,frameDeltaToWorld(frame,[dx.value,dy.value,dz.value]),frame.z[2]<0?-angle.value:angle.value,scale.value,!!selectedSketch.value&&selectedIds.value.length===1,true)
+ void commitDirectTransform(snapDocument.value,selectedIds.value,frameDeltaToWorld(frame,[dx.value,dy.value,dz.value]),localSketch&&frame.z[2]<0?-angle.value:angle.value,scale.value,localSketch,true,false,undefined,[...frame.z] as Vec3)
 }
 function selectionVertices(): number[] {
  const out:number[]=[]
@@ -1407,19 +1475,22 @@ function selectedFacePoints(): Vec3[] | null {
  return [0,1,2].map(k=>{const v=indices[t+k]*3;return [positions[v],positions[v+1],positions[v+2]] as Vec3})
 }
 /** Save the selection's pivot snapped to a vertex, its center or the origin; a selected face orients the Local frame. */
-function setPivot(snap: PivotSnap) { run(() => {
- const vertices=selectionVertices(),center=selectionCenter(vertices)
- const face=selectedFacePoints(),frame=face?frameFromFace(face):null
- const point=snapPivot(snap,face&&snap==='vertex'?frame!.origin:center,{vertices,center})
- commit(withSavedPivot(history.document,selectedIds.value,{point,snap,...(frame?{axes:{x:frame.x,z:frame.z}}:{})}))
-}) }
-function clearPivot() { run(() => commit(withSavedPivot(history.document,selectedIds.value,null))) }
-function setCPlaneFromFace() { run(() => {
+function setPivot(snap: PivotSnap) {
+ const ids=[...selectedIds.value]
+ void commitInWorker(() => {
+  const vertices=selectionVertices(),center=selectionCenter(vertices)
+  const face=selectedFacePoints(),frame=face?frameFromFace(face):null
+  const point=snapPivot(snap,face&&snap==='vertex'?frame!.origin:center,{vertices,center})
+  return withSavedPivot(history.document,ids,{point,snap,...(frame?{axes:{x:frame.x,z:frame.z}}:{})})
+ })
+}
+function clearPivot() { const ids=[...selectedIds.value];void commitInWorker(() => withSavedPivot(history.document,ids,null)) }
+function setCPlaneFromFace() { void commitInWorker(() => {
  const face=selectedFacePoints()
  if(!face)throw Error(label('Выберите грань тела, чтобы задать CPlane.','Select a body face to set the CPlane.'))
- commit({...history.document,cplane:cplaneFromFrame(frameFromFace(face))});coordinateSystem.value='cplane'
-}) }
-function clearCPlane() { run(() => { const {cplane:_drop,...rest}=history.document;commit(rest as DirectDocument);if(coordinateSystem.value==='cplane')coordinateSystem.value='world' }) }
+ return {...history.document,cplane:cplaneFromFrame(frameFromFace(face))}
+},()=>{coordinateSystem.value='cplane'}) }
+function clearCPlane() { void commitInWorker(() => { const {cplane:_drop,...rest}=history.document;return rest as DirectDocument },()=>{if(coordinateSystem.value==='cplane')coordinateSystem.value='world'}) }
 // Copy with a base point (roadmap C6): the clipboard holds a versioned JSON payload so it can be pasted into another document.
 let clipboardFallback=''
 const pasteTarget=ref<[number,number,number]>([0,0,0])
@@ -1437,10 +1508,14 @@ async function copySelection() {
 async function pasteClipboard() {
  let text=clipboardFallback
  try{const read=await navigator.clipboard?.readText();if(read)text=read}catch{/* Use the in-app clipboard. */}
- run(()=>{
+ const target=[...pasteTarget.value] as Vec3
+ let ids:string[]=[]
+ await commitInWorker(()=>{
   if(!text)throw Error(label('Буфер обмена пуст.','The clipboard is empty.'))
-  const {document:next,ids}=pasteDirectClipboardPayload(history.document,parseDirectClipboardPayload(text),[...pasteTarget.value] as Vec3)
-  commit(next);selection.value=ids[0]??'';extraSelection.value=ids.slice(1)
+  const pasted=pasteDirectClipboardPayload(history.document,parseDirectClipboardPayload(text),target)
+  ids=pasted.ids;return pasted.document
+ },()=>{
+  selection.value=ids[0]??'';extraSelection.value=ids.slice(1)
   clipboardNotice.value=label('Вставлено объектов: ','Pasted objects: ')+ids.length
  })
 }
@@ -1516,7 +1591,7 @@ const {
   cancelCommand,
   prepareCommit,
   finishCommit,
-  commit,
+  commitInWorker,
   sync,
   run,
   fit,
@@ -1707,12 +1782,15 @@ const commandBlockedReason = computed(() => {
 function applyCommand() {
   if (!commandReady.value) return
   const snapshot = captureCommand(), before = document.value
-  if (subtract.value) applySubtract()
-  else if (advancedOp.value) applyAdvanced()
-  else if (solidActive.value) extrude()
-  else if (cornerActive.value) applyCorner()
-  else applyCopies()
-  if (document.value !== before) { if(snapshot) lastCommand.value = snapshot; workspace.value?.focus() }
+  const settled = subtract.value ? applySubtract()
+    : advancedOp.value ? applyAdvanced()
+    : solidActive.value ? extrude()
+    : cornerActive.value ? applyCorner()
+    : applyCopies()
+  const record = () => { if(snapshot) lastCommand.value = snapshot; workspace.value?.focus() }
+  // Worker commits land later: the command is recorded for Repeat only once its commit landed.
+  if (document.value !== before) record()
+  else if (settled instanceof Promise) void settled.then(applied => { if (applied) record() })
 }
 watch(()=>advancedOp.value??operation.value,async command=>{
   if(!command)return
@@ -1971,13 +2049,15 @@ function move(e: PointerEvent) {
     if(!x&&!y&&!gizmoBase)return
     let distance=l>.001?(x*g.direction[0]+y*g.direction[1])/l:-y
     if(g.kind!=='move')distance=snapDistance(distance,e)
-    if(g.kind==='move'&&gizmoCenter.value){const anchor=gizmoCenter.value,axis=['x','y','z'].indexOf(g.axis),target=anchor.map((v,i)=>v+(i===axis?distance:0)) as Vec3;distance=snapped3(target,e,g.before,selectedIds.value,anchor,axis)[axis]-anchor[axis]}
+    // Snapping runs along world axes; a tilted CPlane/Local arm moves freely along its own direction.
+    const worldAxis=g.vector.findIndex(v=>Math.abs(v)>1-1e-9)
+    if(g.kind==='move'&&gizmoCenter.value&&worldAxis>=0){const anchor=gizmoCenter.value,sign=Math.sign(g.vector[worldAxis]),target=anchor.map((v,i)=>v+(i===worldAxis?distance*sign:0)) as Vec3;distance=(snapped3(target,e,g.before,selectedIds.value,anchor,worldAxis)[worldAxis]-anchor[worldAxis])*sign}
     if(g.kind==='push'||g.kind==='split'){advanced.value.distance=Math.round((distance+(g.kind==='split'?g.initial:0))*100)/100;return}
-    const p=position(e),rotation=(Math.atan2(p[1]-g.center[1],p[0]-g.center[0])-Math.atan2(g.startPoint[1]-g.center[1],g.startPoint[0]-g.center[0]))*180/Math.PI*(projectDirectPoint(axisVector(g.axis),camera.value)[2]>=0?-1:1)
+    const p=position(e),rotation=(Math.atan2(p[1]-g.center[1],p[0]-g.center[0])-Math.atan2(g.startPoint[1]-g.center[1],g.startPoint[0]-g.center[0]))*180/Math.PI*(projectDirectPoint(g.vector,camera.value)[2]>=0?-1:1)
     if(g.kind==='move'){
       // Pure translation along an axis previews as a constant screen offset, so it skips
       // both the kernel round trip and the reactive re-render of every polygon.
-      const worldDelta=axisVector(g.axis).map(v=>v*distance) as Vec3
+      const worldDelta=g.vector.map(v=>v*distance) as Vec3
       g.delta=worldDelta
       const previewIds=translationPreviewIds(selectedIds.value)
       if(!hasDragNodes())setDragNodes(collectDragNodes(g.svg,previewIds))
@@ -1986,7 +2066,7 @@ function move(e: PointerEvent) {
       applyDragPreviewTransform(offset,previewIds,worldDelta as [number,number,number])
       return
     }
-    requestGizmoTransform(g.before,g.axis,g.kind==='rotate'?rotation:0,g.kind==='scale'?Math.max(.01,1+distance/(views.value['3d']/7)):1);return
+    requestGizmoTransform(g.before,g.vector,g.kind==='rotate'?rotation:0,g.kind==='scale'?Math.max(.01,1+distance/(views.value['3d']/7)):1);return
   }
   if (heightDrag && heightDrag.pointer === e.pointerId) {
     const n=cross3((selectedSketch.value?.plane??xyPlane()).u,(selectedSketch.value?.plane??xyPlane()).v), projected=projectDirectPoint(n,camera.value)
@@ -2091,7 +2171,12 @@ function up(e: PointerEvent) {
       if((tool.value==='circle'||tool.value==='arc')&&points.length){const radius=Math.hypot(points[0][0]-start[0],points[0][1]-start[1]);if(radius>=.01){const analytic={kind:tool.value,center:start,radius,start:0,sweep:tool.value==='circle'?360:180} as const;addSketch(sampleCurve(analytic),tool.value==='circle',analytic)}}
       else if (points.length >= 3 && Math.abs(points.reduce((sum, p, i) => { const q = points[(i + 1) % points.length]; return sum + p[0] * q[1] - q[0] * p[1] }, 0)) > 1e-6) addSketch(points, true)
       draft.value = []; draftCursor.value=null; tool.value = 'select'
-    } else commit(document.value)
+    } else if(history.canonicalText(document.value)===undefined){
+      // Moves commit as body drags or worker edits; this branch only sees a release without a
+      // move. An unchanged published document needs no commit; anything else commits in the
+      // worker, and a failed commit restores the gesture's start.
+      void commitInWorker(()=>document.value).then(ok=>{if(!ok&&error.value&&stringifyMeshJson(history.document)===stringifyMeshJson(before))document.value=before})
+    }
   })
   if (error.value && stringifyMeshJson(history.document) === stringifyMeshJson(before)) document.value = before
 }
@@ -2136,7 +2221,7 @@ function keydown(e: KeyboardEvent) {
 }
 
 if (props.initialDocument) void nextTick(() => { fit('2d'); fit('3d') })
-const { primitiveG2Enabled, primitiveG2Size, primitiveG2Individual, primitiveG2Sizes, failedPrimitive, primitiveG2Invalid, roundGeometry, primitiveSize, primitiveTopRadius, primitiveInnerRadius, TOOL_ICONS, primitiveLabel, primitivePending, cancelPrimitive, addPrimitive, bridgeEndA, bridgeEndB, bridgeTension, bridgeError, bridgeTensionInvalid, addBridgeCurve, updateDimensionSketch, dimensionLabels, addNurbs } = usePrimitives({ activeGroup, advancedOp, brepSegments, cancelCommand, commit, document, error, finishCommit, fit, history, label, lockedIds, nativeNurbsPending, operation, pickObject, prepareCommit, props, isRestoreDisposed, run, runNativeNurbs, selectedCurvePair, tool, visibleSketches, workspace })
+const { primitiveG2Enabled, primitiveG2Size, primitiveG2Individual, primitiveG2Sizes, failedPrimitive, primitiveG2Invalid, roundGeometry, primitiveSize, primitiveTopRadius, primitiveInnerRadius, TOOL_ICONS, primitiveLabel, primitivePending, cancelPrimitive, addPrimitive, bridgeEndA, bridgeEndB, bridgeTension, bridgeError, bridgeTensionInvalid, addBridgeCurve, updateDimensionSketch, dimensionLabels, addNurbs } = usePrimitives({ activeGroup, advancedOp, brepSegments, cancelCommand, commitInWorker, document, error, finishCommit, fit, history, label, lockedIds, nativeNurbsPending, operation, pickObject, prepareCommit, props, isRestoreDisposed, run, runNativeNurbs, selectedCurvePair, tool, visibleSketches, workspace })
 function updateCv() { run(() => {
   const point = [cvX.value, cvY.value, cvZ.value]
   const invalid=point.findIndex((value,i)=>!Number.isFinite(value)||!cvFieldValid[(['x','y','z'] as const)[i]])
@@ -2158,9 +2243,11 @@ async function runNativeNurbs(options:SolidNurbsEditOptions){
  try{
   const result=await nativeNurbsWorker.run({kind:'nurbsEdit',document:committedView(),options})
   if(generation!==nativeNurbsGeneration||!props.open)return
-  nativeNurbsPending.value=false;commit(result)
-  if(options.kind==='trim')cvU.value=cvV.value=0
-  if('createdId' in options){pickObject(options.createdId,curveBake?'2d':'3d');if(curveBake||options.kind==='extrude')fit(curveBake?'2d':'3d')}
+  nativeNurbsPending.value=false
+  await commitInWorker(()=>result,()=>{
+   if(options.kind==='trim')cvU.value=cvV.value=0
+   if('createdId' in options){pickObject(options.createdId,curveBake?'2d':'3d');if(curveBake||options.kind==='extrude')fit(curveBake?'2d':'3d')}
+  },options.kind==='bridge'?message=>{bridgeError.value=message}:undefined)
  }catch(e){if(generation===nativeNurbsGeneration){const message=e instanceof Error?e.message:String(e);if(options.kind==='bridge')bridgeError.value=message;else error.value=message}}
  finally{if(generation===nativeNurbsGeneration)nativeNurbsPending.value=false}
 }
@@ -2183,7 +2270,7 @@ function bakeNurbs(){void runNativeNurbs({kind:'bake',id:selection.value,created
 // watcher after setup state is initialized, and consume each seed once so a
 // later open does not overwrite edits or an Undo of the import.
 const appliedSeeds = new WeakSet<DirectDocument>()
-const { openNewGroupFromMenu, bodySections, sceneRows, isolateGroup, removeGroup, openGroupDialog } = useSceneTree({ cancelCommandState, cancelGesture, commit, document, documentObjects, emit, extraSelection, fit, history, hovered, isolatedBodyIds, label, lockedIds, objectSelectable, run, selectedIds, selection, sync })
+const { openNewGroupFromMenu, bodySections, sceneRows, isolateGroup, removeGroup, openGroupDialog } = useSceneTree({ cancelCommandState, cancelGesture, commitInWorker, document, documentObjects, emit, extraSelection, fit, history, hovered, isolatedBodyIds, label, lockedIds, objectSelectable, run, selectedIds, selection, sync })
 
 /** A rebuild replaces the group of the same name, so repeated builds do not pile up. */
 watch(() => props.appendBodies, request => {
@@ -2204,9 +2291,9 @@ watch(() => props.appendBodies, request => {
       next.groups = [...groups, { name: built.name, source: built.source }]
     }
     cancelGesture()
-    commit(parseDirectDocument(stringifyMeshJson(next)))
-    selection.value = request.bodies[0]?.id ?? ''
-    sync()
+    // The worker runs the authoritative parser over the raw request bodies.
+    const selected=request.bodies[0]?.id ?? ''
+    void commitInWorker(()=>next,()=>{selection.value=selected;sync()})
   })
 })
 
@@ -2593,7 +2680,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </g>
               <g v-else>
                 <!-- Stateless SVG slots follow painter order; update geometry and hit identity without moving DOM nodes. -->
-                <CpuOrbitCanvas :active="cpuOrbitActive" :triangles="cpuOrbitTriangles" :size="views['3d']" :left="centers['3d'][0]-views['3d']/2" :top="centers['3d'][1]-views['3d']/2" @ready="cpuOrbitReady=$event" /><template v-if="!gpuActive && !(cpuOrbitActive && cpuOrbitReady)"><template v-for="(p, slot) in polygons" :key="slot"><polygon v-if="p.preview" :data-preview-body="p.id" :points="p.points" :fill="p.preview===2?(extrusionMode==='difference'?'#ff647c':'#75e4b8'):p.id==='preview-split'?'#ffc977':'#77eac5'" :fill-opacity="p.preview===2?.28:.45" stroke="none" pointer-events="none"/><polygon v-else-if="p.surface" v-show="!advancedPreview.document || !advancedSurfaceIds.includes(p.id)" :data-surface="p.id" :data-sel-state="invalidSceneIds.includes(p.id)?'invalid':undefined" :points="p.points" :fill="selectedIds.includes(p.id)?'#8061bd':'#315f72'" fill-opacity=".72" stroke="none" :pointer-events="objectSelectable(p.id)?undefined:'none'" @pointerdown.stop="pickObject(p.id,'3d')"/><polygon v-else :opacity="p.material?.opacity??1" :data-body="p.id" :data-sel-state="invalidSceneIds.includes(p.id)?'invalid':undefined" :data-triangle="p.triangle" v-show="!advancedPreview.document || !advancedBodyIds.has(p.id)" :points="p.points" :style="{color:polygonColor(p)}" fill="currentColor" :stroke="(p.material?.opacity??1)<1?'none':'currentColor'" :pointer-events="objectSelectable(p.id)?undefined:'none'" stroke-width="1" stroke-linejoin="round" @pointerenter="hovered = p.id" @pointerleave="hovered = ''" vector-effect="non-scaling-stroke" @pointerdown.stop="down($event, pane, p.id, null, p.triangle)" /></template></template>
+                <CpuOrbitCanvas :active="cpuOrbitActive" :triangles="cpuOrbitTriangles" :size="views['3d']" :left="centers['3d'][0]-views['3d']/2" :top="centers['3d'][1]-views['3d']/2" @ready="cpuOrbitReady=$event" /><template v-if="!gpuActive && !(cpuOrbitActive && cpuOrbitReady)"><template v-for="(p, slot) in polygons" :key="slot"><polygon v-if="p.preview" :data-preview-body="p.id" :points="p.points" :fill="p.preview===2?(extrusionMode==='difference'?'#ff647c':'#75e4b8'):p.id==='preview-split'?'#ffc977':'#77eac5'" :fill-opacity="p.preview===2?.28:.45" stroke="none" pointer-events="none"/><polygon v-else-if="p.surface" v-show="!advancedPreview.document || !advancedSurfaceIds.includes(p.id)" :data-surface="p.id" :data-sel-state="invalidSceneIds.includes(p.id)?'invalid':undefined" :points="p.points" :fill="selectedIds.includes(p.id)?'#8061bd':'#315f72'" fill-opacity=".72" stroke="none" :pointer-events="objectSelectable(p.id)?undefined:'none'" @pointerdown.stop="pickObject(p.id,'3d')"/><polygon v-else :opacity="p.material?.opacity??1" :data-body="p.id" :data-sel-state="invalidSceneIds.includes(p.id)?'invalid':undefined" :data-triangle="p.triangle" v-show="!advancedPreview.document || !advancedBodyIds.has(p.id)" :points="p.points" :style="{color:polygonColor(p)}" fill="currentColor" :stroke="(p.material?.opacity??1)<1?'none':'currentColor'" :pointer-events="objectSelectable(p.id)?undefined:'none'" stroke-width="1" stroke-linejoin="round" @pointerenter="hovered = p.id" @pointerleave="hovered = ''" vector-effect="non-scaling-stroke" @pointerdown.stop="downOnPolygon($event, p.id, p.triangle)" /></template></template>
                 <polygon v-show="!advancedPreview.document || !advancedSurfaceIds.includes(p.id)" pointer-events="none" v-for="p in gpuActive?nurbsSurfacePolygons:[]" :data-surface="p.id" :key="'surface-'+p.key" :points="p.points" fill="transparent" stroke="none" />
                 <polyline :pointer-events="objectSelectable(curve.id)?undefined:'none'" v-for="curve in nurbsCurvePaths" v-show="!(advancedOp==='nurbs-curve-match' && advancedPreview.document && curve.id===surfaceInputs[1])" :key="'curve-'+curve.id" :data-sel-state="invalidSceneIds.includes(curve.id)?'invalid':undefined" :data-diagnostic="curve.id===runoutProblemCurve?'runout-target':curve.id===patchBudgetCurve?'patch-budget':undefined" :points="curve.points" fill="none" :stroke="curve.id===patchBudgetCurve||curve.id===runoutProblemCurve?'#ff647c':selectedIds.includes(curve.id)?'#ffc977':'#77eac5'" stroke-width="3" vector-effect="non-scaling-stroke" @pointerdown.stop="pickNurbsCurve($event,curve.id)" />
                 <g v-if="selectedNurbs" class="nurbs-cage">
@@ -2983,8 +3070,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <small>{{ label('Прямоугольная обрезка сохраняет точную NURBS-поверхность в новом диапазоне параметров.','Rectangular parameter trim keeps an exact NURBS surface over the new domain.') }}</small>
                 <div class="trim-grid"><label>U min<input v-model.number="trimBounds[0]" type="number" step=".05"></label><label>U max<input v-model.number="trimBounds[1]" type="number" step=".05"></label><label>V min<input v-model.number="trimBounds[2]" type="number" step=".05"></label><label>V max<input v-model.number="trimBounds[3]" type="number" step=".05"></label></div>
                 <button :aria-disabled="nativeNurbsPending" @click="!nativeNurbsPending && trimNativeSurface()">{{ label('Обрезать диапазон UV','Trim UV domain') }}</button>
-                <label>U segments <input v-model.number="selectedNurbsSurface.segmentsU" type="number" min="2" max="64" @change="commit(document)"></label>
-                <label>V segments <input v-model.number="selectedNurbsSurface.segmentsV" type="number" min="2" max="64" @change="commit(document)"></label>
+                <label>U segments <input v-model.number="selectedNurbsSurface.segmentsU" type="number" min="2" max="64" @change="commitInWorker(()=>document)"></label>
+                <label>V segments <input v-model.number="selectedNurbsSurface.segmentsV" type="number" min="2" max="64" @change="commitInWorker(()=>document)"></label>
               </template>
               <button :aria-disabled="nativeNurbsPending" v-if="selectedNurbsCurve" @click="!nativeNurbsPending && curveToSurface()">{{ label('Выдавить NURBS 10 мм','Extrude NURBS 10 mm') }}</button>
               <button :aria-disabled="nativeNurbsPending" @click="!nativeNurbsPending && bakeNurbs()">{{ selectedNurbsSurface ? label('Bake поверхности в mesh-тело','Bake surface to mesh body') : label('Копировать sampled-кривую в эскиз','Copy sampled curve to sketch') }}</button>

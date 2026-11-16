@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0311",
+  "testedBase": "a51f21f9469e0ee49dc1379672c0f49c58047330",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_affine_trim_contracts",
+    "--test",
+    "exact_affine_surface_clock_contracts",
+    "--test",
+    "exact_trimmed_relayout_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Change the signed absolute UV domains of a rational tensor surface and its closed rational trims in one atomic operation.",
+    "Closed loops inside the active UV rectangle. Original trim knots and weights are retained, including under an axis reversal. Exact storage and a shared budget are required."
+  ],
+  "logSha256": "b5fcaa9e32e9c22de95f176a4be36476fbca15dd580741f173417cd9115c6ed8",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "0f653781bddfa6d6b0afb7430eedcdd89841922355e82fe957ed257a4b05f35a",
+    "crates/nurbs-core/src/editing/exact_projective/affine_trim.rs": "c9cad2eb9a04ddd523945d642fa7c62b4ef4f2a5fe39dd3ca55ec5df897f8e16",
+    "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs": "ba83917aca2ddaae8995f2aa09694b972028a1062a04ef90c08164b830686ea1",
+    "crates/nurbs-core/src/editing/exact_projective/trimmed_mobius.rs": "04b6a515366893e40a898271c34ef4edfa7918605b66be0192a56edcce23d085",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs": "08bd1b1a1fafe57bb988a55ca2c09f63b04baedd36f9c31e378e691593906b55",
+    "crates/nurbs-core/tests/exact_affine_trim_contracts.rs": "aebe572a2206096f2498820b140e95dcd8ffcf21c279cbdad2e0f4039d9a7959"
+  }
+}

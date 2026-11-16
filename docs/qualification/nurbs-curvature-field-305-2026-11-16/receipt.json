@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0305",
+  "testedBase": "e7b3e6f05b4d2ff7f2490d1529ba2eac7fb4216c",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_angle_contracts",
+    "--test",
+    "exact_pcurve_gap_contracts",
+    "--test",
+    "exact_pcurve_tangent_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 7,
+  "scope": [
+    "Certify an acute tangent-plane angle bound over a complete paired seam with exact squared cosine tests and explicit normal singularity handling.",
+    "Regular unoriented tangent planes and a shared parameter correspondence. Exact squared cosine threshold in [0, 1]; positional gap is a separate criterion."
+  ],
+  "logSha256": "081f0bea7490954f0ab78ab92739d5be5f7f2ad5a873d243ca7b9c7ba7f38fbf",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "522d4f93db213be305e0287997340711dee7f8b7053ccba3204da009324612d2",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_angle.rs": "b0a1f752b59663bbdf0566ee423729435659671c35043e62499473e87e08eb43",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_tangent.rs": "f534a9afcb6d5bc292afef9357d2fce81f3d96afbc7e8bd5cca5f122da24016f",
+    "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs": "d8d2ae4f7577379a4802da329788bbcf8b50e9617bb542a3719f8ebdd16d1f2f",
+    "crates/nurbs-core/tests/exact_pcurve_angle_contracts.rs": "b6b276cceff6009ca73b3f3fdef06c636446978068a71399bda0bb827212b974"
+  }
+}

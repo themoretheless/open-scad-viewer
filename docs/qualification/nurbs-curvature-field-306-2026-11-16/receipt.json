@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0306",
+  "testedBase": "9d4be4f12d8d1ac0ca2ac0c771259f0a3376e5b4",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_gap_bands_contracts",
+    "--test",
+    "exact_pcurve_gap_contracts",
+    "--test",
+    "exact_pcurve_seam_isolation_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Isolate every strict gap violation band on the common parameter partition, with certified root brackets and exact endpoint membership.",
+    "The bands use the provided absolute parameter correspondence and preserve partition boundaries. Equal-threshold contacts are excluded from strict violations."
+  ],
+  "logSha256": "a3463d95c9f8eaa45b316c7747b5e675633b6d6620c3aa015751ab14d3cd39be",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "165b0aad736813e52435d5a9322d9e06eaa5cf615e157cbee0f901a4b3bad44c",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_gap.rs": "9faff38c86b3d3b53a84817d48bdee2aedd547cdb933adfc35a10e17fa930ef5",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_gap_bands.rs": "5a5b8743192f4080ffd2983ab04884329af8e310d9f73cf028dd144f940a270a",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs": "9e8a27a60bb7a747dee8c02194f3552b1214194dab7cd739d2fe4d361521bcc3",
+    "crates/nurbs-core/tests/exact_pcurve_gap_bands_contracts.rs": "e01617ac195fbc3b0af9e65ab228b202369046094dc085b315a17f466fa2ddaa"
+  }
+}

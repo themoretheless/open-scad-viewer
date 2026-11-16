@@ -100,7 +100,7 @@ export function serializeDirectDraft(document:DirectDocument,serialized?:string)
  return serializeDirectDocument(persisted as unknown as DirectDocument)
 }
 
-function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBatchCache): Generator<void, DirectDocument> {
+function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBatchCache, reuseInstances?:ReadonlyMap<string,Pick<DirectBody,'mesh'|'brep'>>): Generator<void, DirectDocument> {
   // In-memory bound only; the browser draft has its own, smaller quota (see persist in DirectModeler).
   if (text.length > MAX_DOCUMENT_CHARACTERS) throw new Error('Document exceeds 64 MB.')
   const d = JSON.parse(text) as DirectDocument
@@ -240,6 +240,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     yield
   }
   // Validate serialized caches first, then derive linked geometry from validated sources.
+  const reused: Array<[number, DirectBody['mesh'], DirectBody['brep']]> = []
   if(d.bodies.some(body=>body.instance)) {
     // Bound expansion before allocating geometry: a small reference document must not
     // multiply a large source into an unbounded set of materialized copies.
@@ -256,10 +257,14 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
       expanded+=sourceSizes.get(body.instance.sourceId)??0
       if(expanded>MAX_DOCUMENT_CHARACTERS)throw Error('Expanded instance document exceeds 64 MB.')
     }
-    d.bodies=resolveSolidInstances(d,instanceCache).bodies
+    d.bodies=resolveSolidInstances(d,instanceCache,reuseInstances).bodies
     for (let i = 0; i < d.bodies.length; i++) {
       const body = d.bodies[i]
       if (!body.instance) continue
+      if (reuseInstances?.has(body.id)) {
+        // Already checked and normalized when it was resolved; attached after normalization below.
+        reused.push([i, body.mesh, body.brep]); body.mesh = { positions: [], indices: [] } as unknown as DirectBody["mesh"]; if (body.brep) body.brep = null as never; continue
+      }
       const pos = body.mesh.positions
       for (let j = 0; j < pos.length; j++) if (!finite(pos[j])) throw Error('Instance placement exceeds document coordinate bounds.')
     }
@@ -276,17 +281,19 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
   if(d.cplane!==undefined&&!validCPlane(d.cplane))throw Error('Invalid construction plane.')
   const pivots=validatePivots(d.pivots,new Set([...d.sketches,...d.bodies,...d.curves??[],...d.surfaces??[],...d.sourceBodies??[]].map(o=>(o as {id:string}).id)))
   if(pivots)d.pivots=pivots;else delete d.pivots
-  try { normalizeOwnedJson(d); return d }
+  const attachReused = (doc: DirectDocument) => { for (const [i, mesh, brep] of reused) { const body = doc.bodies[i]!; body.mesh = mesh; if (brep) body.brep = brep } return doc }
+  try { normalizeOwnedJson(d); return attachReused(d) }
   catch (error) {
     if (error !== DEEP_JSON_NORMALIZATION) throw error
     // This is a fast-path depth threshold, not a new document admission limit.
     // Keep the JSON round trip here: it also normalizes numbers (e.g. -0 → 0).
-    return JSON.parse(JSON.stringify(d))
+    return attachReused(JSON.parse(JSON.stringify(d)) as DirectDocument)
   }
 }
 
-export function parseDirectDocument(text: string, instanceCache?:SolidInstanceBatchCache): DirectDocument {
-  const validation = directDocumentValidation(text,instanceCache)
+/** `reuseInstances`: see `resolveSolidInstances`; only the worker's resident restore passes it. */
+export function parseDirectDocument(text: string, instanceCache?:SolidInstanceBatchCache, reuseInstances?:ReadonlyMap<string,Pick<DirectBody,'mesh'|'brep'>>): DirectDocument {
+  const validation = directDocumentValidation(text,instanceCache,reuseInstances)
   for (;;) {
     const step = validation.next()
     if (step.done) return step.value
@@ -426,7 +433,8 @@ export class DirectHistory {
     for(const key of Object.keys(record)){
       const value=record[key]
       let text:string|undefined
-      if(HISTORY_COLLECTIONS.has(key)&&Array.isArray(value))text='['+value.map(item=>this.fragment(key,item).text).join(',')+']'
+      // A published copy serializes like the owned item it twins, whose text is usually cached.
+      if(HISTORY_COLLECTIONS.has(key)&&Array.isArray(value))text='['+value.map(item=>this.fragment(key,(item&&typeof item==='object'&&this.twins.get(item))||item).text).join(',')+']'
       else text=stringifyMeshJson(value)
       if(text!==undefined)parts.push(JSON.stringify(key)+':'+text)
     }
@@ -472,13 +480,21 @@ export class DirectHistory {
   private sweep() { return sweepHistoryTextPool(this.textPool,[this.current,...this.past,...this.future]) }
   private past: DirectSnapshot[] = []
   private future: DirectSnapshot[] = []
-  private current: DirectSnapshot & {document?:DirectDocument; ids?:string[]}
+  private current: DirectSnapshot & {document?:DirectDocument; ids?:string[]; restored?:DirectDocument}
   constructor(document = emptyDirectDocument()) {
     const text = stringifyMeshJson(document)
     const validated = parseDirectDocument(text,this.instanceCache)
     this.current = { ...this.pack(validated), document: validated }
   }
   private get currentDocument():DirectDocument {
+    const restored=this.current.restored
+    if(restored&&!this.current.document){
+      delete this.current.restored
+      // The published result may have been mutated since (UI state should not be, but the
+      // history must not depend on it): keep the copy only if it still serializes to the snapshot.
+      const adopted=this.adopt(restored)
+      if(this.text(adopted)===unpackHistoryText(this.current))this.current.document=adopted
+    }
     return this.current.document ??= parseDirectDocument(unpackHistoryText(this.current),this.instanceCache)
   }
   /** Export identity is metadata: retain it across existing Undo/Redo states without adding a geometry edit. */
@@ -512,7 +528,7 @@ export class DirectHistory {
   get objectIds():string[] {
     // Async restore intentionally retains only a validated compact snapshot.
     // Reading identities must not resolve every linked instance on the UI thread.
-    const d=this.current.document??JSON.parse(unpackHistoryText(this.current)) as DirectDocument
+    const d=this.current.document??this.current.restored??JSON.parse(unpackHistoryText(this.current)) as DirectDocument
     return [...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[],...d.sourceBodies??[]].map(object=>object.id)
   }
   /** Immutable identity for consumers caching a committed snapshot across document copies. */
@@ -531,13 +547,17 @@ export class DirectHistory {
    * The parser rebuilds instance geometry from the source either way; omitting an unchanged
    * cache only skips serializing, parsing and re-checking geometry this history itself resolved.
    * A cache that differs from the current state is still sent and checked. */
+  /** The text `commit(document)` hands to the authoritative parser, for a worker to parse instead. */
+  commitPayload(document:DirectDocument):string { return this.commitText(document) }
   private commitText(document:DirectDocument):string {
-    const current=this.current.document
+    const current=this.current.restored?this.currentDocument:this.current.document
     if(!current||!Array.isArray(document.bodies)||!document.bodies.some(body=>body?.instance))return stringifyMeshJson(document)
     const known=new Map(current.bodies.map(body=>[body.id,body]))
     return stringifyMeshJson({...document,bodies:document.bodies.map(body=>{
       if(!body?.instance||body.mesh===undefined)return body
       const old=known.get(body.id)
+      // A published copy of the owned item (not mutated in place, as `twins` assumes) is unchanged.
+      if(old&&this.twins.get(body)===old){const {mesh:_mesh,brep:_brep,...linked}=body;return linked}
       if(!old?.instance||!sameMeshJson(old.mesh,body.mesh)||!sameMeshJson(old.brep,body.brep))return body
       const {mesh:_mesh,brep:_brep,...linked}=body
       return linked
@@ -610,10 +630,11 @@ export class DirectHistory {
     // A response for another snapshot cannot move the stacks. Geometry validation
     // belongs to the loader; re-parsing here would block the main thread again.
     if(this.text(loaded)!==unpackHistoryText(snapshot))throw Error('History restore returned a different document.')
-    // Retain the already validated immutable snapshot; materialize a private copy
-    // only if a synchronous history consumer asks for geometry later.
     from.pop();to.push({chunks:base.chunks,characters:base.characters})
-    this.current={...snapshot}
+    // Retain the compact snapshot plus the validated published result; a synchronous history
+    // consumer that asks for geometry later adopts it (copying only items this history does
+    // not already own) instead of re-parsing the snapshot on this thread.
+    this.current={...snapshot,restored:loaded}
     this.canonical.set(loaded,this.current)
     countOperation('historyRestores')
     return true

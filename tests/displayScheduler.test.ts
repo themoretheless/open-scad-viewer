@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MeshLodLevel } from '../src/core/mesh'
 import {
+  boundingBoxLineVertices,
   ByteLruCache,
+  DEFAULT_DISPLAY_BUDGET,
+  displayBudgetFor,
   planDisplayCaps,
   ProgressiveLevelStore,
   representationCap,
@@ -317,5 +320,65 @@ describe('meshLod with display planning', () => {
     releaseMeshLod(near, cache)
     expect(near.lod?.current).toBeNull()
     expect(bound.destroyed).toBe(false)
+  })
+
+  it('marks bounding-box entities as box proxies only when the budget asks for it', () => {
+    vi.spyOn(viewerLod, 'selectViewerLod').mockImplementation(levels => ({
+      level: levels.length - 1,
+      projectedError: 0,
+      withinPixelBudget: true,
+      reason: 'initial',
+    }))
+    const { dev } = device()
+    const cache = picking()
+    const near = mesh([level(4, 0.4), level(16, 0.1)], { center: [0, 0, 5] })
+    const far = mesh([level(4, 0.4), level(16, 0.1)], { center: [0, 0, -5000] })
+    const plain = { budgetBytes: 1e9, targetErrorPixels: 24 }
+    updateMeshLods(dev, [near, far], camera, cache, undefined, { budget: plain })
+    expect(far.lod?.current).toBe(0)
+    expect(far.lod?.boxed).toBe(false)
+    // Turning proxies on changes no level, yet the far mesh is reported so the frame redraws.
+    const proxied = { ...plain, boundingBoxProxies: true }
+    expect(updateMeshLods(dev, [near, far], camera, cache, undefined, { budget: proxied })).toEqual([far])
+    expect(far.lod?.boxed).toBe(true)
+    expect(near.lod?.boxed).toBe(false)
+    expect(updateMeshLods(dev, [near, far], camera, cache, undefined, { budget: proxied })).toEqual([])
+    expect(updateMeshLods(dev, [near, far], camera, cache, undefined, { budget: plain })).toEqual([far])
+    expect(far.lod?.boxed).toBe(false)
+  })
+})
+
+describe('bounding-box proxies', () => {
+  it('outlines the world box of each visible boxed mesh with twelve edges', () => {
+    const boxed = mesh([level(4, 0.4), level(16, 0.1)])
+    boxed.worldBounds.min = [0, 1, 2]
+    boxed.worldBounds.max = [3, 4, 5]
+    boxed.lod!.boxed = true
+    const shown = mesh([level(4, 0.4), level(16, 0.1)])
+    const hidden = mesh([level(4, 0.4), level(16, 0.1)])
+    hidden.lod!.boxed = true
+    hidden.visible = false
+    const values = boundingBoxLineVertices([boxed, shown, hidden], [0.1, 0.2, 0.3, 1])
+    expect(values).toHaveLength(24 * 7)
+    const points = new Set<string>()
+    for (let offset = 0; offset < values.length; offset += 7) {
+      expect(values.slice(offset + 3, offset + 7)).toEqual([0.1, 0.2, 0.3, 1])
+      points.add(values.slice(offset, offset + 3).join(','))
+    }
+    expect(points.size).toBe(8)
+    expect(points.has('0,1,2') && points.has('3,4,5') && points.has('3,1,5')).toBe(true)
+    // Every edge runs along exactly one axis.
+    for (let offset = 0; offset < values.length; offset += 14) {
+      const changed = [0, 1, 2].filter(axis => values[offset + axis] !== values[offset + 7 + axis])
+      expect(changed).toHaveLength(1)
+    }
+  })
+
+  it('snaps requested budgets to the offered megabyte steps', () => {
+    expect(displayBudgetFor(256)).toEqual(DEFAULT_DISPLAY_BUDGET)
+    expect(displayBudgetFor(300).budgetBytes).toBe(256 * 1024 * 1024)
+    expect(displayBudgetFor(10).budgetBytes).toBe(64 * 1024 * 1024)
+    expect(displayBudgetFor(1e6, true)).toMatchObject({ budgetBytes: 1024 * 1024 * 1024, boundingBoxProxies: true })
+    expect(displayBudgetFor(Number.NaN)).toEqual(DEFAULT_DISPLAY_BUDGET)
   })
 })

@@ -1,3 +1,4 @@
+import type { CommitInWorker } from './prepareDocumentCommit'
 import { type DirectBody, type DirectDocument, type DirectSketch, type DirectHistory } from '../../app/directModeling'
 import { type Pane, DEFAULT_GROUP_SOURCE } from './helpers'
 import { type SolidNurbsCurve, type SolidNurbsSurface } from '../../kernel/solidNurbs'
@@ -6,7 +7,7 @@ import { computed, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 export interface SceneTreeOptions {
   cancelCommandState: () => void
   cancelGesture: () => void
-  commit: (next: DirectDocument) => void
+  commitInWorker: CommitInWorker
   document: ShallowRef<DirectDocument>
   documentObjects: (d: DirectDocument) => (DirectSketch | DirectBody | SolidNurbsCurve | SolidNurbsSurface)[]
   emit: (event: 'edit-group', request: { name: string; source: string; replaces: string | null }) => void
@@ -25,7 +26,7 @@ export interface SceneTreeOptions {
 }
 
 export function useSceneTree(options: SceneTreeOptions) {
-  const { cancelCommandState, cancelGesture, commit, document, documentObjects, emit, extraSelection, fit, history, hovered, isolatedBodyIds, label, lockedIds, objectSelectable, run, selectedIds, selection, sync } = options
+  const { cancelCommandState, cancelGesture, commitInWorker, document, documentObjects, emit, extraSelection, fit, history, hovered, isolatedBodyIds, label, lockedIds, objectSelectable, run, selectedIds, selection, sync } = options
 /** Bodies listed by group, ungrouped first, each group keeping its insertion order. */
 const bodySections = computed(() => {
   const ungrouped = document.value.bodies.filter(body => body.group === undefined)
@@ -70,18 +71,21 @@ function isolateGroup(name:string) {
 function removeGroup(name: string) {
   run(() => {
     if(documentObjects(document.value).some(b=>b.group===name&&lockedIds.value.includes(b.id)))throw Error(label('Сначала разблокируйте объекты группы','Unlock the group objects first'))
-    const next = { ...history.document }
-    next.bodies = next.bodies.filter(body => body.group !== name)
-    next.sketches = next.sketches.filter(item=>item.group!==name)
-    if(next.curves)next.curves=next.curves.filter(item=>item.group!==name)
-    if(next.surfaces)next.surfaces=next.surfaces.filter(item=>item.group!==name)
-    const remaining = (next.groups ?? []).filter(group => group.name !== name)
-    if (remaining.length) next.groups = remaining
-    else delete next.groups
     cancelGesture()
-    commit(next)
-    if (!next.bodies.some(body => body.id === selection.value)) selection.value = ''
-    sync()
+    void commitInWorker(() => {
+      const next = { ...history.document }
+      next.bodies = next.bodies.filter(body => body.group !== name)
+      next.sketches = next.sketches.filter(item=>item.group!==name)
+      if(next.curves)next.curves=next.curves.filter(item=>item.group!==name)
+      if(next.surfaces)next.surfaces=next.surfaces.filter(item=>item.group!==name)
+      const remaining = (next.groups ?? []).filter(group => group.name !== name)
+      if (remaining.length) next.groups = remaining
+      else delete next.groups
+      return next
+    }, next => {
+      if (!next.bodies.some(body => body.id === selection.value)) selection.value = ''
+      sync()
+    })
   })
 }
 

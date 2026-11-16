@@ -26,7 +26,7 @@ async function runBoolean(options:SolidBooleanOptions,guided=false){
  const generation=booleanGeneration,snapshot=guided?state.captureCommand():null
  error.value='';state.setNotice('');booleanPending.value=true
  try{
-  const result=await booleanWorker.run({kind:'boolean',document:document.value,options})
+  const result=await booleanWorker.run({kind:'boolean',document:document.value,options},{documentDelta:true})
   if(generation!==booleanGeneration)return
   // Commit triggers the document watcher, so clear pending before publishing the transaction.
   booleanPending.value=false
@@ -47,7 +47,7 @@ async function applyMinkowski(){
  const generation=booleanGeneration
  error.value='';state.setNotice('');booleanPending.value=true
  try{
-  const result=await booleanWorker.run({kind:'minkowski3d',document:document.value,options:{ids:[ids[0],ids[1]],createdId:crypto.randomUUID(),ru:ru.value,maximumSourceDeviationMm:minkowskiDeviation.value}})
+  const result=await booleanWorker.run({kind:'minkowski3d',document:document.value,options:{ids:[ids[0],ids[1]],createdId:crypto.randomUUID(),ru:ru.value,maximumSourceDeviationMm:minkowskiDeviation.value}},{documentDelta:true})
   if(generation!==booleanGeneration)return
   booleanPending.value=false
   if(!await commit(result.document)||generation!==booleanGeneration)return
