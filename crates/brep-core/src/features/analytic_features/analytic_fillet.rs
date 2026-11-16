@@ -392,7 +392,8 @@ pub fn analytic_fillet_chain(
     ))
 }
 
-/// Audited successor wrapper around the exact multi-edge fillet author.
+/// Audited successor wrapper around the exact multi-edge fillet author, run
+/// under the Fillet contract (pre- and postconditions in `operation_contracts`).
 /// The result is published only after context-bound correspondence evidence,
 /// global solid audit, and persistent naming/ChangeSet evidence agree.
 pub fn audited_multi_edge_fillet(
@@ -400,7 +401,8 @@ pub fn audited_multi_edge_fillet(
     edges: &[usize],
     radius: f64,
 ) -> Result<AuditedFeatureResult> {
-    let (result, mut feature) = analytic_fillet_chain(model, edges, radius)?;
+    let (result, mut feature, _contract) =
+        crate::operation_contracts::contracted_analytic_fillet_chain(model, edges, radius)?;
     feature.capability = AUDITED_MULTI_EDGE_FILLET_CAPABILITY;
     let context = result.tolerance_context()?;
     let evidence = compose_predicate_evidence(
