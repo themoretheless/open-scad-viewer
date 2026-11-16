@@ -4,7 +4,7 @@
   "fingerprintId": "g0-toolchain-fingerprints-v108",
   "recordedAt": "2026-11-16",
   "previousFingerprintId": "g0-toolchain-fingerprints-v107",
-  "purpose": "Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work.",
+  "purpose": "Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work.",
   "claimBoundary": {
     "includes": [
       "Exact SHA-256 of listed lock/manifest/notices/toolchain files",
@@ -199,8 +199,8 @@
     {
       "id": "geometry-v3-source-19",
       "path": "crates/brep-core/src/parts/analytic/loft.rs",
-      "sha256": "a39fcdeafd9f58f8b9985d02bdb1074593ccd7c34ab4c7cfa933fd47e77c479b",
-      "byteLength": 15252
+      "sha256": "ca3ead89dd6d782fbbd07d3501be322d8c557e1afe150de624c87089dfc43888",
+      "byteLength": 19898
     },
     {
       "id": "geometry-v3-source-23",
@@ -2239,8 +2239,8 @@
     {
       "id": "geometry-v3-source-470",
       "path": "src/kernel/mainSolidProtocol.ts",
-      "sha256": "be86acb9122b7ab9db5fe9c22cbf51c00790936f75f785584010d6200bf4fef4",
-      "byteLength": 26642
+      "sha256": "ad3713ad4023752f2be8076052340fbcdbf7a42fc0cb2e497f50332a1cf75255",
+      "byteLength": 26760
     },
     {
       "id": "g1-v51-github-environment",
@@ -3181,8 +3181,8 @@
     {
       "id": "geometry-v3-source-643",
       "path": "crates/nurbs-core/src/analysis.rs",
-      "sha256": "0308bf0ebf714bc2b1947f4ce4902751d0f0d238a98e42094a17c4d889745666",
-      "byteLength": 2020
+      "sha256": "d758d9ee34748871f1582a9b8fef0f5474ff73f14da573be901a404e35d78a82",
+      "byteLength": 2048
     },
     {
       "id": "geometry-v3-source-644",
@@ -5533,7 +5533,7 @@
     {
       "id": "geometry-v3-source-1060",
       "path": "scripts/refresh-qualification-fingerprints.mjs",
-      "sha256": "e69226167e5c96874a9aac45a94a9c592f43cbab23e2d2ddc91611f52e3f2c16",
+      "sha256": "5dd15072c926151b8d5f3bb10a2888a13a3fdb4f5306c1cf3c8a56164bd7839b",
       "byteLength": 23388
     },
     {
@@ -5575,8 +5575,8 @@
     {
       "id": "geometry-v3-source-1067",
       "path": "scripts/verify-dist.mjs",
-      "sha256": "d0e2fc5eee4e51a12329502b1cef4d4f6326661965f465b30f176ceebc1cf31b",
-      "byteLength": 33354
+      "sha256": "5eea3945d95ff5ab2e39b0d8b83902b9731087be70691a0549341e922fc2bf4a",
+      "byteLength": 33555
     },
     {
       "id": "geometry-v3-source-1068",
@@ -5737,8 +5737,8 @@
     {
       "id": "geometry-v3-source-1097",
       "path": "tests/directModelerUi.test.ts",
-      "sha256": "97a5042021269b893044112c95624c2af60a1b8021c1991b4d699c1cafd0c973",
-      "byteLength": 409945
+      "sha256": "a9393e4ee5bf846d94982c51d4360273fd104b7da816ff8dd58e92b7b9d7be93",
+      "byteLength": 429539
     },
     {
       "id": "geometry-v3-source-1098",
@@ -6169,14 +6169,14 @@
     {
       "id": "geometry-v3-source-1167",
       "path": "docs/design/nurbs-api-map.md",
-      "sha256": "fb3773c1c916888bf29a2ebfee15c203a72a730c4a437fa549ecf313945dc876",
-      "byteLength": 226809
+      "sha256": "6f11690166d2e89a0ae2cc65edc9e601b90dfdf6808adb71d66ae0a6823882ad",
+      "byteLength": 243334
     },
     {
       "id": "geometry-v3-source-1168",
       "path": "docs/design/nurbs-catalog.json",
-      "sha256": "0f1b580c0170da5b1848693433e2cd06ebd2ea58817effdcef35990c255a56c0",
-      "byteLength": 382612
+      "sha256": "452e9b05dc1a38bd3029eb1e69600c1527a3b693b82c04d0b90b4969ec5d9a63",
+      "byteLength": 405171
     },
     {
       "id": "geometry-v3-source-1169",
@@ -6289,7 +6289,7 @@
     {
       "id": "geometry-v3-source-1186",
       "path": "architecture-baseline.json",
-      "sha256": "f15db3df60817977ca5bb3066f93e77014177444d36289d8802517ca0c8cb2e7",
+      "sha256": "bfb069d1ed105d71504255c6aa5b74c354c3355d5274880d7042390eedf66712",
       "byteLength": 46217
     },
     {
@@ -7903,8 +7903,8 @@
     {
       "id": "geometry-v3-source-2282",
       "path": "crates/mesh-topology/src/planar.rs",
-      "sha256": "2af213f8c56128e0e7af183dc1fc95dc551cd691ff978b4e069cf2b31e50d69f",
-      "byteLength": 12007
+      "sha256": "58e844aa6ef4ea4093ed26a1466b6176251fe38f0547be6e4039b451183c702e",
+      "byteLength": 13095
     },
     {
       "id": "geometry-v3-source-2283",
@@ -12835,8 +12835,8 @@
     {
       "id": "geometry-v3-source-3190",
       "path": "src/app/directModeling.ts",
-      "sha256": "e0a8eb347ec7529b2ae380c95ca8ecb8e05cbe68ed897edbd063fffd800a32b3",
-      "byteLength": 40855
+      "sha256": "9122c185dfb3be7f6d001a075a5facfc81a0222a372814c78d28c4cc24cb0106",
+      "byteLength": 42955
     },
     {
       "id": "geometry-v3-source-3191",
@@ -13201,14 +13201,14 @@
     {
       "id": "geometry-v3-source-3251",
       "path": "src/kernel/mainSolidWorkerClient.ts",
-      "sha256": "4070894f9e65e31b91c2efe336210b20db943d244779bf5ddac1c9c0ae274537",
-      "byteLength": 9714
+      "sha256": "7c836ff85403a359feffe3404f4c038b7bbd298a5bf34836c585b5cf5e510cc3",
+      "byteLength": 10826
     },
     {
       "id": "geometry-v3-source-3252",
       "path": "src/kernel/mainSolidWorkerRuntime.ts",
-      "sha256": "a84481cfdb3d6839af899599a998bfb396f372976503a18c9befe1a5064b0872",
-      "byteLength": 17027
+      "sha256": "8dde64290de4debf51cd81c49b58f437cc5132a95509976a85badbdb283e5e3d",
+      "byteLength": 19159
     },
     {
       "id": "geometry-v3-source-3253",
@@ -14059,8 +14059,8 @@
     {
       "id": "geometry-v3-source-3396",
       "path": "src/kernel/solidInstances.ts",
-      "sha256": "e887a122e747d56068e4c11ae31ef0c32da71f3b928a1d31b77581e29c0bb18d",
-      "byteLength": 5020
+      "sha256": "fb04f2889785819a4f42e848431850cad456d4d7e2908782c75eca5d518c2266",
+      "byteLength": 5797
     },
     {
       "id": "geometry-v3-source-3397",
@@ -14155,8 +14155,8 @@
     {
       "id": "geometry-v3-source-3412",
       "path": "src/kernel/solidSceneEdit.ts",
-      "sha256": "0eb20d59fc29779946e9e42c5b0a43e221de2320d798ce2fa3bc0f44060c6def",
-      "byteLength": 4704
+      "sha256": "f73e9814aedc44aebce87b98df0cee12f2d87f59108264105cc5a334422535bf",
+      "byteLength": 4985
     },
     {
       "id": "geometry-v3-source-3413",
@@ -14581,8 +14581,8 @@
     {
       "id": "geometry-v3-source-3484",
       "path": "src/render/webgpuRenderer.ts",
-      "sha256": "696c192c6b71a2760c9856053445c1b28111cb49bf3a48d9cfbd95137692b5a8",
-      "byteLength": 86220
+      "sha256": "1ecbf27579582ec15d7376bdfd673d34e4e13c5761bba8417bd229109df13b1c",
+      "byteLength": 89665
     },
     {
       "id": "geometry-v3-source-3485",
@@ -17293,8 +17293,8 @@
     {
       "id": "geometry-v3-source-3986",
       "path": "src/features/directModeler/useAdvancedPreview.ts",
-      "sha256": "83eee3b510e9368dc12dd2e5b63d5e49966beda8b97d86a6b922887e7ec26ccc",
-      "byteLength": 14475
+      "sha256": "b68dc60816d4924dc0a54b18dcde98b16293f1c2d3d3ce65d8d40bde76f6143a",
+      "byteLength": 14839
     },
     {
       "id": "geometry-v3-source-3987",
@@ -17323,14 +17323,14 @@
     {
       "id": "geometry-v3-source-3991",
       "path": "src/features/directModeler/usePrimitives.ts",
-      "sha256": "bf2c662dd02b3a77665b14fb48f43fd4841622fdc6fbf5c61be58596af532659",
-      "byteLength": 10037
+      "sha256": "f629425264deb604db6ec0ac3f667201070a046cba08f7ea0e64c9ec81dd575e",
+      "byteLength": 10266
     },
     {
       "id": "geometry-v3-source-3992",
       "path": "src/features/directModeler/useSceneTree.ts",
-      "sha256": "235c6d8dec9c45ebfdc4966039f900179a18a3e078f661baa8835273a0d6a32d",
-      "byteLength": 5911
+      "sha256": "78a04bdd3955ce33275532a8f51d4fdd42a228020a4117aeeddd55bde333ede6",
+      "byteLength": 6050
     },
     {
       "id": "geometry-v3-source-3993",
@@ -31321,8 +31321,8 @@
     {
       "id": "geometry-v3-source-6789",
       "path": "src/composables/useBuildAndRendererLifecycle/rendererOperations.ts",
-      "sha256": "e4b990a6736bf31adeffc42c2f067a4cd639033d4e85650d13a68ab7201858c5",
-      "byteLength": 17706
+      "sha256": "ff1937fe0654e50546706937240e53b9fe0f424bdeddd7b6f23f7ca6934e691a",
+      "byteLength": 18147
     },
     {
       "id": "geometry-v3-source-6790",
@@ -31381,7 +31381,7 @@
     {
       "id": "geometry-v3-source-6799",
       "path": "src/core/currentRuntimeGeometryEvidence.ts",
-      "sha256": "f3851ad5a883a04da97a6f3f1788b9e6064f9415fa998518cec33b7968135ba8",
+      "sha256": "3c330094d6689e8d0e26bbc091a411caf2b118490ec93d5a108a37d150cb2ad8",
       "byteLength": 658
     },
     {
@@ -31447,14 +31447,14 @@
     {
       "id": "geometry-v3-source-6827",
       "path": "src/features/directModeler/prepareDocumentCommit.ts",
-      "sha256": "18847851e6270fcc6d7bb9560e31bee28bd527ce4cf77082ca25220323aa4289",
-      "byteLength": 3313
+      "sha256": "2c656fb387f9442a0bb2ddae80d8a5de2b0810ba95b302556694f8a06f344788",
+      "byteLength": 3830
     },
     {
       "id": "geometry-v3-source-6828",
       "path": "src/features/directModeler/useBooleanOperations.ts",
-      "sha256": "c2421a56f5caa5638304dd91c267bdfbb0397d851260b099b655d260ff9a09e8",
-      "byteLength": 6612
+      "sha256": "c5c993d428406a02152c23030adccf510783690268e68dd0ffd18f0e7bd9cab4",
+      "byteLength": 6654
     },
     {
       "id": "geometry-v3-source-6829",
@@ -31471,14 +31471,14 @@
     {
       "id": "geometry-v3-source-6831",
       "path": "src/features/directModeler/useFileExchange.ts",
-      "sha256": "9886142ce7c808a95a235767e65607f4a618d974b36f92a300496607dd09330e",
-      "byteLength": 15247
+      "sha256": "1892a75570f3e74f5e6984670c4d26bc8e053461434fc017f12cec752c30e75c",
+      "byteLength": 16103
     },
     {
       "id": "geometry-v3-source-6832",
       "path": "src/features/directModeler/useSvgExchange.ts",
-      "sha256": "8ede0874bc1a6832ebc3d5c3b2b77bc382dabce92750ab2d621c8d936d2da621",
-      "byteLength": 6023
+      "sha256": "535cc140b22678ff6634cdf9a9028e29c229e0ca9a791cf79583d71b67462a54",
+      "byteLength": 6391
     },
     {
       "id": "geometry-v3-source-6833",
@@ -31633,14 +31633,14 @@
     {
       "id": "geometry-v3-source-6883",
       "path": "src/render/framePassEncoder/encodeAndSubmitFrame.ts",
-      "sha256": "95d9484e53b59d83bd438ff8447d5b9477b2fea0b69409597546e3110e004006",
-      "byteLength": 16610
+      "sha256": "182e7359cb121fcdacdc78751a7a2838863e17be7c77659c4238ed905f2bfcf4",
+      "byteLength": 17062
     },
     {
       "id": "geometry-v3-source-6884",
       "path": "src/render/framePassEncoder/groupByShadingModel.ts",
-      "sha256": "986def891b535b35a76eacfc4a38e39c0611afc9a76d37d58e6e55568a028534",
-      "byteLength": 8894
+      "sha256": "5d4305941ed6c7b846265a78815f580e73e8d0bce924aa270fb4359f20b8f6c3",
+      "byteLength": 8893
     },
     {
       "id": "geometry-v3-source-6885",
@@ -31663,8 +31663,8 @@
     {
       "id": "geometry-v3-source-6888",
       "path": "src/render/types.ts",
-      "sha256": "91741a5b08bedb8f5272371c8fdc4f9c26179033eafb95bb1a404896346a8303",
-      "byteLength": 8437
+      "sha256": "8c548c5dcf63c8c7ee30f59569b42768d40fc2e539c92ea2804c462abb612c67",
+      "byteLength": 8296
     },
     {
       "id": "geometry-v3-source-6889",
@@ -32647,8 +32647,8 @@
     {
       "id": "geometry-v3-source-7064",
       "path": "tests/directAdvancedTools.test.ts",
-      "sha256": "c44d69836c23c8f216bc71ca0007cdb206de4989ca7fc45264e38e09e6c09b5b",
-      "byteLength": 4782
+      "sha256": "d3e416f06f8574f543bb0f3c1f017728a5de94fc019efc5d5c6417af2f73dafa",
+      "byteLength": 7058
     },
     {
       "id": "geometry-v3-source-7065",
@@ -33439,8 +33439,8 @@
     {
       "id": "geometry-v3-source-7196",
       "path": "tests/mainSolidWorkerClient.test.ts",
-      "sha256": "e23445dd342fe22e55821dfa22c9b683d3b7d3af57b2c1509aeb745b59eacf86",
-      "byteLength": 25901
+      "sha256": "92dd38a871afe8d3544ccb67787ac4eb798a545dd57863eefbeffbe5a6f06de9",
+      "byteLength": 33126
     },
     {
       "id": "geometry-v3-source-7197",
@@ -33451,8 +33451,8 @@
     {
       "id": "geometry-v3-source-7198",
       "path": "tests/mainSolidWorkerRuntime.test.ts",
-      "sha256": "9512e339504c7874f81845a911e0215c7f80b8d1d78e60aa4d183d6962bcacc6",
-      "byteLength": 69727
+      "sha256": "eef2f7d86bf2a31df8cad5508b837d76111090ac33ea39a4b3b2652e1b8f9902",
+      "byteLength": 73835
     },
     {
       "id": "geometry-v3-source-7199",
@@ -36367,8 +36367,8 @@
     {
       "id": "geometry-v3-source-7683",
       "path": "scripts/geometry-delivery-budgets.mjs",
-      "sha256": "ae7c3b6fea88c071765f43e24e3eb2a0b07adc54842b60b6c8e294d8be1c9c57",
-      "byteLength": 3115
+      "sha256": "2237df705146ae3a23a865b8656ea15b2c1c8aef721cb59d77c47285c2d1d530",
+      "byteLength": 3182
     },
     {
       "id": "geometry-v3-source-7684",
@@ -37053,527 +37053,567 @@
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "crates-lockfile",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-10",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
+      "bindingId": "geometry-v3-source-19",
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "g1-v34-github-workflow",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "g1-v34-github-harness",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "g1-v34-clean-fragment-selector",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "g1-v34-ubuntu-selector",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-142",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-145",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-160",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-166",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-297",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-361",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-362",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-365",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-470",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-473",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-478",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-567",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
+      "bindingId": "geometry-v3-source-643",
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-787",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-847",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1027",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1028",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1035",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1046",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1060",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1067",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1072",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1074",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1077",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1097",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1099",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1100",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1167",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1168",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1186",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1213",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1215",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1220",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1256",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-1271",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-2074",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-2087",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-2109",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-2282",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-2373",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-2494",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-2527",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3085",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3156",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3165",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3187",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3189",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3190",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3191",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3220",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3251",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3252",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3253",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3331",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3342",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3375",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3393",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
+      "bindingId": "geometry-v3-source-3396",
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
+      "bindingId": "geometry-v3-source-3412",
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3418",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3420",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3484",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3485",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3510",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3757",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3759",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3760",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3843",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3844",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3884",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3986",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3990",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
+      "bindingId": "geometry-v3-source-3991",
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
+      "bindingId": "geometry-v3-source-3992",
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3993",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-3995",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-4012",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-4046",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6789",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6799",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6827",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6828",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6831",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
+      "bindingId": "geometry-v3-source-6832",
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6833",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6874",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6875",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6877",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6879",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6880",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6883",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6884",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6887",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
-    },
-    {
-      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
-      "bindingId": "geometry-v3-source-6888",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-6925",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-7015",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-7016",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-7030",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
+      "bindingId": "geometry-v3-source-7064",
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-7086",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-7153",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-7196",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+    },
+    {
+      "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
+      "bindingId": "geometry-v3-source-7198",
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-7683",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-7694",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-7764",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     },
     {
       "relativeTo": "docs/qualification/g0-toolchain-fingerprints-v107.json",
       "bindingId": "geometry-v3-source-7781",
-      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel a31807 (runtime v13) after the integration batch and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
+      "note": "Current bytes are newly bound in v108; v107 remains archived. Re-freeze for reproducible geometry kernel 74d427 (runtime v13) after the integration batch, boundary-anchored face workplanes, ruled loft section correspondence and main-branch Rust changes; preserve the finite G1 contract and reset all clean-run work."
     }
   ],
   "previousFingerprintSha256": "1375e884b250283dc89598b0353e93fb74b262b72c4b868bbd4e8d8be4db2d02"

@@ -13,11 +13,11 @@ export const REFRESH_REVIEW = 'docs/qualification/g0-v108-g1-v125-refreeze-revie
 export const OWN_RUST_EVIDENCE = 'docs/qualification/own-rust-cad-v86.json'
 const RUNTIME_EVIDENCE_PATHS = [
   'src/core/currentRuntimeGeometryEvidence.ts',
-  'docs/qualification/runtime-provider-a3180741d578-2026-11-16.json',
-  'docs/qualification/runtime-direct-api-a31807-2026-11-16/runtime-api-baseline.json',
-  'docs/qualification/runtime-direct-api-a31807-2026-11-16/runtime-binding.json',
-  'docs/qualification/runtime-direct-api-a31807-2026-11-16/node.json',
-  'docs/qualification/runtime-direct-api-a31807-2026-11-16/report.json',
+  'docs/qualification/runtime-provider-74d4272a11be-2026-11-16.json',
+  'docs/qualification/runtime-direct-api-74d427-2026-11-16/runtime-api-baseline.json',
+  'docs/qualification/runtime-direct-api-74d427-2026-11-16/runtime-binding.json',
+  'docs/qualification/runtime-direct-api-74d427-2026-11-16/node.json',
+  'docs/qualification/runtime-direct-api-74d427-2026-11-16/report.json',
 ]
 const MODULE_DELIVERY_PATHS = [
   'src/kernel/geometry/kernel.ts',

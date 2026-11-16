@@ -606,7 +606,7 @@
     "src/parser": 11,
     "src/render": 59,
     "src/workers": 9,
-    "tests": 772,
+    "tests": 770,
     "tools/browser-qualification": 48,
     "tools/manifold-bench": 7,
     "tools/refactor-audit": 4
