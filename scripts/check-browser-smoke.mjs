@@ -124,6 +124,12 @@ try {
   }
   const { solid, search, ready, command, input } = solidUi(page)
   const bodies = () => solid.locator('[data-body]').count()
+  // User-path commits land asynchronously (commitInWorker after the worker validates);
+  // wait for the history counter to move past `before` instead of reading it early.
+  const commitLanded = before =>
+    page.waitForFunction(n => window.__osvTest.operations().historyCommits > n, before.historyCommits, {
+      timeout: 30000,
+    })
   async function expectFocus(locator) {
     await page.waitForFunction(element => element === document.activeElement, await locator.elementHandle(), {
       timeout: 5000,
@@ -176,6 +182,7 @@ try {
     await input('Размер прямоугольника Высота', '6 mm')
     await solid.getByRole('button', { name: 'Создать прямоугольник', exact: true }).click()
     await ready()
+    await commitLanded(before)
     const used = delta(await operations(), before)
     budgets.rectangle = used
     assert.equal(used.historyCommits, BUDGET.historyCommitsPerApply, 'one rectangle = one history commit')
@@ -197,6 +204,7 @@ try {
       bodiesBefore,
     )
     bodiesAfterExtrude = await bodies()
+    await commitLanded(before)
     const used = delta(await operations(), before)
     budgets.extrude = used
     assert.equal(used.historyCommits, BUDGET.historyCommitsPerApply, 'one Apply = one history commit')
@@ -228,6 +236,7 @@ try {
   })
 
   async function rectangle(width, height) {
+    const before = await operations()
     await command('Rectangle')
     await input('Начальная координата X', '0 mm')
     await input('Начальная координата Y', '0 mm')
@@ -235,15 +244,16 @@ try {
     await input('Размер прямоугольника Высота', `${height} mm`)
     await solid.getByRole('button', { name: 'Создать прямоугольник', exact: true }).click()
     await ready()
+    await commitLanded(before)
     await page.keyboard.press('Escape')
   }
   async function waitBodies(predicate, arg) {
     await page.waitForFunction(
-      ([source, value]) =>
-        new Function('count', 'value', `return ${source}`)(
-          document.querySelectorAll('[aria-label="Solid — CAD-лепка"] [data-body]').length,
-          value,
-        ),
+      // No `new Function`: the page CSP forbids string evaluation.
+      ([source, value]) => {
+        const count = document.querySelectorAll('[aria-label="Solid — CAD-лепка"] [data-body]').length
+        return source === 'count > value' ? count > value : count === value
+      },
       [predicate, arg],
     )
   }
@@ -280,6 +290,7 @@ try {
     await solid.getByRole('button', { name: 'Готово · Enter', exact: true }).click()
     await ready()
     await waitBodies('count > value', bodiesBefore)
+    await commitLanded(before)
     const used = delta(await operations(), before)
     budgets.refusedThenCorrected = used
     assert.equal(
@@ -392,6 +403,7 @@ try {
     await solid.getByRole('button', { name: 'Готово · Enter', exact: true }).click()
     await ready()
     await page.waitForFunction(() => !document.querySelector('[data-dimension-grip]'))
+    await commitLanded(before)
     const used = delta(await operations(), before)
     budgets.filletGrip = used
     assert.equal(used.historyCommits, BUDGET.historyCommitsPerApply, 'one fillet Apply = one history commit')
