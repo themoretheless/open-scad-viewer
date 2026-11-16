@@ -153,16 +153,16 @@ const exactRoundCurve=computed(()=>{
  return {kind:tool.value==='arc'?'arc' as const:'circle' as const,center:[...draftPoint.value] as Point2,radius:draftRadius.value,start:tool.value==='arc'?draftArcStart.value:0,sweep:tool.value==='arc'?draftArcSweep.value:360}
 })
 const exactRoundPoints=computed(()=>(tool.value==='circle'||tool.value==='arc')&&exactRoundCurve.value?sampleCurve(exactRoundCurve.value):[])
-function createExactRoundCurve(){if((tool.value!=='circle'&&tool.value!=='arc')||!exactRoundCurve.value)return;run(()=>{addSketch(sampleCurve(exactRoundCurve.value!),exactRoundCurve.value!.kind==='circle',exactRoundCurve.value!);draft.value=[];draftCursor.value=null;tool.value='select'})}
+function createExactRoundCurve(){if((tool.value!=='circle'&&tool.value!=='arc')||!exactRoundCurve.value)return;run(()=>{addSketch(sampleCurve(exactRoundCurve.value!),exactRoundCurve.value!.kind==='circle',exactRoundCurve.value!,undefined,()=>{draft.value=[];draftCursor.value=null;tool.value='select'})})}
 const draftSize=ref<Point2>([20,10]),draftSizeValid=ref([true,true]),draftEnd=ref<Point2>([20,0]),draftEndValid=ref([true,true])
 const exactRectangle=computed(()=>draftPointValid.value.every(Boolean)&&draftSizeValid.value.every(Boolean)?numericRectangle(draftPoint.value,draftSize.value):null)
-function createExactRectangle(){if(tool.value!=='rectangle'||!exactRectangle.value)return;run(()=>{addSketch(exactRectangle.value!,true);draft.value=[];draftCursor.value=null;tool.value='select'})}
+function createExactRectangle(){if(tool.value!=='rectangle'||!exactRectangle.value)return;run(()=>{addSketch(exactRectangle.value!,true,undefined,undefined,()=>{draft.value=[];draftCursor.value=null;tool.value='select'})})}
 const numericSlotWorker=createSolidPreviewWorker(),numericSlotPending=ref(false),numericSlotResult=shallowRef<DirectSketch|null>(null),numericSlotError=ref(false),numericSlotRetry=ref(0)
 let numericSlotGeneration=0,numericSlotAutoApply=false
 function cancelNumericSlot(){numericSlotGeneration++;numericSlotWorker.cancel();numericSlotPending.value=false;numericSlotResult.value=null;numericSlotError.value=false;numericSlotAutoApply=false}
 onUnmounted(()=>{cancelNumericSlot();numericSlotWorker.dispose()})
 const numericSlotInput=computed(()=>draftPointValid.value.every(Boolean)&&draftEndValid.value.every(Boolean)&&slotWidthValid.value?numericSlotSources(draftPoint.value,draftEnd.value,slotWidth.value,activePlane.value):null)
-function createExactSlot(){const sketch=numericSlotResult.value;if(tool.value!=='slot'||numericSlotPending.value||!sketch?.retainedProfile||!numericSlotInput.value)return;run(()=>{addSketch(sketch.points,true,undefined,sketch.retainedProfile);draft.value=[];draftCursor.value=null;tool.value='select'})}
+function createExactSlot(){const sketch=numericSlotResult.value;if(tool.value!=='slot'||numericSlotPending.value||!sketch?.retainedProfile||!numericSlotInput.value)return;run(()=>{addSketch(sketch.points,true,undefined,sketch.retainedProfile,()=>{draft.value=[];draftCursor.value=null;tool.value='select'})})}
 function refreshNumericSlot(){
  const autoApply=numericSlotAutoApply;cancelNumericSlot()
  if(!props.open||tool.value!=='slot'||!numericSlotInput.value)return
@@ -309,7 +309,7 @@ function cancelSketchEdit(){sketchEditGeneration++;sketchEditWorker.cancel();ske
 onUnmounted(()=>{cancelSketchEdit();sketchEditWorker.dispose()})
 const cornerPreview = computed(() => ({sketch:cornerActive.value?sketchEditResult.value?.sketches.find(s=>s.id===selection.value)??null:null,error:sketchEditFailure.value}))
 function beginCorner(kind: 'fillet'|'dogear') { boxSelect.value=false; if (!selectedSketch.value?.closed) return; cancelCommand(); tool.value = 'select'; operation.value = kind; mode.value = '2d' }
-function applySketchEdit(){run(()=>{const next=sketchEditResult.value;if(!next||sketchEditPending.value)return;commit(next);operation.value=null})}
+function applySketchEdit(){const next=sketchEditResult.value;if(!next||sketchEditPending.value)return;void commitInWorker(()=>next,()=>{operation.value=null})}
 function applyCorner(){applySketchEdit()}
 const profileIds = ref<string[]>([]), previewEmpty = ref(false)
 const baseZ = ref(0), extrusionMode = ref<'new' | 'union' | 'difference'>('new'), targetBody = ref('')
@@ -1044,11 +1044,11 @@ function pickEdge(e:PointerEvent|KeyboardEvent,index:number){
  else {edgeIndex.value=index;edgeIndexes.value=[index]}
  faceIndex.value=-1;advancedOp.value=null
 }
-function trimAt(id:string,p:Point2){run(()=>{
+function trimAt(id:string,p:Point2){void commitInWorker(()=>{
  const d=history.document,s=d.sketches.find(s=>s.id===id);if(!s)return
  let best=Infinity,index=0,t=0
  for(let i=0;i<(s.closed?s.points.length:s.points.length-1);i++){const a=s.points[i],b=s.points[(i+1)%s.points.length],vx=b[0]-a[0],vy=b[1]-a[1],f=Math.max(0,Math.min(1,((p[0]-a[0])*vx+(p[1]-a[1])*vy)/(vx*vx+vy*vy))),dist=Math.hypot(p[0]-a[0]-f*vx,p[1]-a[1]-f*vy);if(dist<best){best=dist;index=i;t=f}}
- const pieces=trimSketch(s,index,t,d.sketches.filter(o=>samePlane(o.plane,s.plane)));pieces.forEach((p,i)=>{if(i)p.id=crypto.randomUUID()});d.sketches=d.sketches.filter(o=>o.id!==id);d.sketches.push(...pieces);commit(d)
+ const pieces=trimSketch(s,index,t,d.sketches.filter(o=>samePlane(o.plane,s.plane)));pieces.forEach((p,i)=>{if(i)p.id=crypto.randomUUID()});d.sketches=d.sketches.filter(o=>o.id!==id);d.sketches.push(...pieces);return d
 })}
 
 function run(action: () => void) { error.value = ''; try { action() } catch (e) { error.value = e instanceof Error ? e.message : String(e) } }
@@ -1210,18 +1210,23 @@ async function undo(redo = false) {
 }
 watch(()=>[props.open,document.value,lockedIds.value.join(','),activeGroup.value],()=>{if(historyPending.value)cancelHistoryRestore()},{flush:'sync'})
 onUnmounted(()=>{cancelHistoryRestore();historyWorker.dispose();commitWorker.dispose()})
-function addSketch(points: Point2[], closed: boolean, analytic?: import('../app/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../kernel/geometry/brepProfile').BrepProfile) {
+/** Validates the outline here (throws like before), commits in the worker, then selects the new
+ * sketch and runs `after` (draft reset, tool switch) only once the commit landed. */
+function addSketch(points: Point2[], closed: boolean, analytic?: import('../app/directSketchGeometry').AnalyticCurve,retainedProfile?:import('../kernel/geometry/brepProfile').BrepProfile,after?:()=>void) {
   validateSimpleSketch(points,closed)
-  const d = history.document, id = crypto.randomUUID()
-  d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, ...(retainedProfile?{retainedProfile}:{}), plane: JSON.parse(JSON.stringify(activePlane.value)), ...(workplaneBodyId.value?{supportBodyId:workplaneBodyId.value}:{}) })
-  commit(d); pickObject(id,'2d')
+  const id = crypto.randomUUID(), plane = JSON.parse(JSON.stringify(activePlane.value)), supportBodyId = workplaneBodyId.value
+  void commitInWorker(() => {
+    const d = history.document
+    d.sketches.push({ id, name: label('Эскиз ', 'Sketch ') + (d.sketches.length + 1), points, closed, analytic, ...(retainedProfile?{retainedProfile}:{}), plane, ...(supportBodyId?{supportBodyId}:{}) })
+    return d
+  }, () => { pickObject(id,'2d'); after?.() })
 }
 function beginSketch(value: typeof tool.value) {
   cancelGesture(); operation.value = null; advancedOp.value = null; boxSelect.value = false
   choosingSketchFace.value=false;draftPoint.value=[0,0];draftPointValid.value=[true,true];draftRadius.value=10;draftRadiusValid.value=true;draftArcStart.value=0;draftArcSweep.value=180;draftArcValid.value=[true,true];draftSize.value=[20,10];draftSizeValid.value=[true,true];draftEnd.value=[20,0];draftEndValid.value=[true,true];tool.value = value; mode.value = workplaneBodyId.value ? '3d' : '2d'; sketchPaneOpen.value = true
 }
 const canExtrudeSketch = computed(() => !!selectedSketch.value?.closed && tool.value === 'select' && !draft.value.length)
-function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed); draft.value = []; draftCursor.value=null; tool.value = 'select' }) }
+function finish(closed: boolean) { run(() => { if (draft.value.length < (closed ? 3 : 2)) return; addSketch(draft.value, closed, undefined, undefined, () => { draft.value = []; draftCursor.value=null; tool.value = 'select' }) }) }
 function beginExtrude(kind: 'extrude'|'revolve' = 'extrude') {
   if (!canExtrudeSketch.value) return
   cancelCommand(); boxSelect.value=false
@@ -1453,19 +1458,22 @@ function selectedFacePoints(): Vec3[] | null {
  return [0,1,2].map(k=>{const v=indices[t+k]*3;return [positions[v],positions[v+1],positions[v+2]] as Vec3})
 }
 /** Save the selection's pivot snapped to a vertex, its center or the origin; a selected face orients the Local frame. */
-function setPivot(snap: PivotSnap) { run(() => {
- const vertices=selectionVertices(),center=selectionCenter(vertices)
- const face=selectedFacePoints(),frame=face?frameFromFace(face):null
- const point=snapPivot(snap,face&&snap==='vertex'?frame!.origin:center,{vertices,center})
- commit(withSavedPivot(history.document,selectedIds.value,{point,snap,...(frame?{axes:{x:frame.x,z:frame.z}}:{})}))
-}) }
-function clearPivot() { run(() => commit(withSavedPivot(history.document,selectedIds.value,null))) }
-function setCPlaneFromFace() { run(() => {
+function setPivot(snap: PivotSnap) {
+ const ids=[...selectedIds.value]
+ void commitInWorker(() => {
+  const vertices=selectionVertices(),center=selectionCenter(vertices)
+  const face=selectedFacePoints(),frame=face?frameFromFace(face):null
+  const point=snapPivot(snap,face&&snap==='vertex'?frame!.origin:center,{vertices,center})
+  return withSavedPivot(history.document,ids,{point,snap,...(frame?{axes:{x:frame.x,z:frame.z}}:{})})
+ })
+}
+function clearPivot() { const ids=[...selectedIds.value];void commitInWorker(() => withSavedPivot(history.document,ids,null)) }
+function setCPlaneFromFace() { void commitInWorker(() => {
  const face=selectedFacePoints()
  if(!face)throw Error(label('Выберите грань тела, чтобы задать CPlane.','Select a body face to set the CPlane.'))
- commit({...history.document,cplane:cplaneFromFrame(frameFromFace(face))});coordinateSystem.value='cplane'
-}) }
-function clearCPlane() { run(() => { const {cplane:_drop,...rest}=history.document;commit(rest as DirectDocument);if(coordinateSystem.value==='cplane')coordinateSystem.value='world' }) }
+ return {...history.document,cplane:cplaneFromFrame(frameFromFace(face))}
+},()=>{coordinateSystem.value='cplane'}) }
+function clearCPlane() { void commitInWorker(() => { const {cplane:_drop,...rest}=history.document;return rest as DirectDocument },()=>{if(coordinateSystem.value==='cplane')coordinateSystem.value='world'}) }
 // Copy with a base point (roadmap C6): the clipboard holds a versioned JSON payload so it can be pasted into another document.
 let clipboardFallback=''
 const pasteTarget=ref<[number,number,number]>([0,0,0])
@@ -1483,10 +1491,14 @@ async function copySelection() {
 async function pasteClipboard() {
  let text=clipboardFallback
  try{const read=await navigator.clipboard?.readText();if(read)text=read}catch{/* Use the in-app clipboard. */}
- run(()=>{
+ const target=[...pasteTarget.value] as Vec3
+ let ids:string[]=[]
+ await commitInWorker(()=>{
   if(!text)throw Error(label('Буфер обмена пуст.','The clipboard is empty.'))
-  const {document:next,ids}=pasteDirectClipboardPayload(history.document,parseDirectClipboardPayload(text),[...pasteTarget.value] as Vec3)
-  commit(next);selection.value=ids[0]??'';extraSelection.value=ids.slice(1)
+  const pasted=pasteDirectClipboardPayload(history.document,parseDirectClipboardPayload(text),target)
+  ids=pasted.ids;return pasted.document
+ },()=>{
+  selection.value=ids[0]??'';extraSelection.value=ids.slice(1)
   clipboardNotice.value=label('Вставлено объектов: ','Pasted objects: ')+ids.length
  })
 }

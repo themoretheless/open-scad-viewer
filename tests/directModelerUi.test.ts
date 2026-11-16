@@ -569,7 +569,7 @@ it('binds analytic radius editing and offset without baking the curve',async()=>
 it('binds extend and trim to the selected 2D edge',async()=>{
  const ui=await mount();await ui.click('Line');await ui.click('Extend');await ui.click('Apply · Enter');expect(ui.doc().sketches.find(s=>s.id==='line')?.points.at(-1)).toEqual([5,-5])
  await ui.click('Trim');const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!,path=ui.all(svg).find(n=>n.tag==='path'&&n.props.d==='M 0,5 L 5,5')!
- await ui.pointer(path,2,5);expect(ui.doc().sketches.some(s=>s.id==='line')).toBe(false)
+ await ui.pointer(path,2,5);await flushClearance();expect(ui.doc().sketches.some(s=>s.id==='line')).toBe(false)
  await ui.click('↶');expect(ui.doc().sketches.find(s=>s.id==='line')?.points.at(-1)).toEqual([5,-5])
 })
 it('creates a sketch on the selected face and preserves its plane through extrusion',async()=>{
@@ -1202,7 +1202,7 @@ it('undoes polyline points locally and commits the remaining line only on Enter'
  const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
  for(const [x,y] of [[40,-40],[60,-40],[60,-60]]){svg.props.onPointerdown({...ui.event(svg,x,y),altKey:true});await nextTick()}
  await commandKey(ui,'z',undefined,{ctrlKey:true});expect(ui.doc()).toEqual(before)
- await commandKey(ui,'Enter');expect(ui.doc().sketches.at(-1)!.points).toEqual([[40,40],[60,40]])
+ await commandKey(ui,'Enter');await flushClearance();expect(ui.doc().sketches.at(-1)!.points).toEqual([[40,40],[60,40]])
  expect(ui.doc().sketches.at(-1)!.closed).toBe(false)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
@@ -2441,8 +2441,9 @@ it('uses the latest corner candidate and ignores circular copies after Escape',a
 
 it('applies one circular-copy candidate and exposes invalid array parameters',async()=>{
  const ui=await mount();await ui.click('Profile');const before=ui.doc();await ui.click('Circular copies')
- const calls=previewWorkerRun.mock.calls.length
- await ui.click('Apply · Enter');expect(previewWorkerRun.mock.calls.length).toBe(calls)
+ // Apply commits the computed candidate (validated by the commit worker) without recomputing it.
+ const edits=()=>previewWorkerRun.mock.calls.filter(([job])=>(job as {kind?:string}).kind==='sketchEdit').length,calls=edits()
+ await ui.click('Apply · Enter');expect(edits()).toBe(calls)
  expect(ui.doc().sketches).toHaveLength(before.sketches.length+7)
  expect(new Set(ui.doc().sketches.map(s=>s.id)).size).toBe(ui.doc().sketches.length)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
@@ -3728,7 +3729,7 @@ it('retries a failed body calculation without changing inputs or adding history 
  retry.resolve(applySolidBodyEdit(retry.job.document,retry.job.options));await flushClearance()
  expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).not.toContain('worker unavailable')
  expect(ui.button('Retry calculation').props.disabled).toBe(false)
- const count=requests.length;await commandKey(ui,'Enter');expect(requests).toHaveLength(count)
+ const count=requests.length;await commandKey(ui,'Enter');await flushClearance();expect(requests).toHaveLength(count)
  expect(ui.doc().bodies).toHaveLength(2);await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 
@@ -3897,7 +3898,7 @@ it.each(['Fillet','DogEar','Circular copies'])('retries sketch command %s after 
  expect(ui.button('Retry calculation').props.disabled).toBe(true)
  retry.resolve(applySolidSketchEdit(retry.job.document,retry.job.options));await flushClearance()
  expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(false)
- const count=requests.length;await commandKey(ui,'Enter');expect(requests).toHaveLength(count)
+ const count=requests.length;await commandKey(ui,'Enter');await flushClearance();expect(requests).toHaveLength(count)
  expect(ui.doc()).not.toEqual(before);await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 
@@ -3912,7 +3913,7 @@ it.each(['Fillet','DogEar','Circular copies'].flatMap(command=>[false,true].map(
  if(failure)old.reject(Error('obsolete sketch group'));else old.resolve(applySolidSketchEdit(old.job.document,old.job.options))
  await flushClearance();expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(true)
  expect(ui.text(ui.all()[0])).not.toContain('obsolete sketch group')
- current.resolve(applySolidSketchEdit(current.job.document,current.job.options));await flushClearance();await commandKey(ui,'Enter')
+ current.resolve(applySolidSketchEdit(current.job.document,current.job.options));await flushClearance();await commandKey(ui,'Enter');await flushClearance()
  expect(ui.doc()).not.toEqual(before)
  if(command==='Circular copies')for(const sketch of ui.doc().sketches.filter(s=>s.id!=='s'))expect(sketch.group).toBe('Destination')
  await ui.click('↶');expect(ui.doc()).toEqual(before)
