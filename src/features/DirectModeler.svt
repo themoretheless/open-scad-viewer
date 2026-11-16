@@ -708,7 +708,7 @@ async function runNativeBrep(options:Exclude<SolidBrepToolOptions,{kind:'display
   if(generation!==nativeNurbsGeneration||!props.open)return
   nativeNurbsPending.value=false;nativeBrepMode.value=null
   if(result.kind==='mass')brepMass.value=result.mass
-  else if(result.kind==='mesh')commit(result.document)
+  else if(result.kind==='mesh')void commitInWorker(()=>result.document)
  }catch(e){if(generation===nativeNurbsGeneration)error.value=e instanceof Error?e.message:String(e)}
  finally{if(generation===nativeNurbsGeneration){nativeNurbsPending.value=false;nativeBrepMode.value=null}}
 }
@@ -1163,7 +1163,7 @@ let commitQueue:Promise<unknown>=Promise.resolve()
  * commit settled (so it sees the latest committed state), the worker runs the authoritative
  * parser, and the result commits only if the history did not move meanwhile (Undo, another
  * commit); a stale result is dropped. Errors land in `error`, as `run()` reports them. */
-function commitInWorker(build:()=>DirectDocument|undefined,after?:(next:DirectDocument)=>void):Promise<boolean>{
+function commitInWorker(build:()=>DirectDocument|undefined,after?:(next:DirectDocument)=>void,onError?:(message:string)=>void):Promise<boolean>{
  error.value=''
  const task=commitQueue.then(async()=>{
   try{
@@ -1176,7 +1176,7 @@ function commitInWorker(build:()=>DirectDocument|undefined,after?:(next:DirectDo
    if(!await history.commitAsync(async()=>validated,validateLocked))return false
    finishCommit(added,validated);after?.(validated);return true
   }catch(e){
-   if(!(e instanceof Error&&e.name==='AbortError'))error.value=e instanceof Error?e.message:String(e)
+   if(!(e instanceof Error&&e.name==='AbortError')){const message=e instanceof Error?e.message:String(e);if(onError)onError(message);else error.value=message}
    return false
   }
  })
@@ -2151,7 +2151,12 @@ function up(e: PointerEvent) {
       if((tool.value==='circle'||tool.value==='arc')&&points.length){const radius=Math.hypot(points[0][0]-start[0],points[0][1]-start[1]);if(radius>=.01){const analytic={kind:tool.value,center:start,radius,start:0,sweep:tool.value==='circle'?360:180} as const;addSketch(sampleCurve(analytic),tool.value==='circle',analytic)}}
       else if (points.length >= 3 && Math.abs(points.reduce((sum, p, i) => { const q = points[(i + 1) % points.length]; return sum + p[0] * q[1] - q[0] * p[1] }, 0)) > 1e-6) addSketch(points, true)
       draft.value = []; draftCursor.value=null; tool.value = 'select'
-    } else commit(document.value)
+    } else if(history.canonicalText(document.value)===undefined){
+      // Moves commit as body drags or worker edits; this branch only sees a release without a
+      // move. An unchanged published document needs no commit; anything else commits in the
+      // worker, and a failed commit restores the gesture's start.
+      void commitInWorker(()=>document.value).then(ok=>{if(!ok&&error.value&&stringifyMeshJson(history.document)===stringifyMeshJson(before))document.value=before})
+    }
   })
   if (error.value && stringifyMeshJson(history.document) === stringifyMeshJson(before)) document.value = before
 }
@@ -2218,9 +2223,11 @@ async function runNativeNurbs(options:SolidNurbsEditOptions){
  try{
   const result=await nativeNurbsWorker.run({kind:'nurbsEdit',document:committedView(),options})
   if(generation!==nativeNurbsGeneration||!props.open)return
-  nativeNurbsPending.value=false;commit(result)
-  if(options.kind==='trim')cvU.value=cvV.value=0
-  if('createdId' in options){pickObject(options.createdId,curveBake?'2d':'3d');if(curveBake||options.kind==='extrude')fit(curveBake?'2d':'3d')}
+  nativeNurbsPending.value=false
+  await commitInWorker(()=>result,()=>{
+   if(options.kind==='trim')cvU.value=cvV.value=0
+   if('createdId' in options){pickObject(options.createdId,curveBake?'2d':'3d');if(curveBake||options.kind==='extrude')fit(curveBake?'2d':'3d')}
+  },options.kind==='bridge'?message=>{bridgeError.value=message}:undefined)
  }catch(e){if(generation===nativeNurbsGeneration){const message=e instanceof Error?e.message:String(e);if(options.kind==='bridge')bridgeError.value=message;else error.value=message}}
  finally{if(generation===nativeNurbsGeneration)nativeNurbsPending.value=false}
 }
@@ -2264,9 +2271,9 @@ watch(() => props.appendBodies, request => {
       next.groups = [...groups, { name: built.name, source: built.source }]
     }
     cancelGesture()
-    commit(parseDirectDocument(stringifyMeshJson(next)))
-    selection.value = request.bodies[0]?.id ?? ''
-    sync()
+    // The worker runs the authoritative parser over the raw request bodies.
+    const selected=request.bodies[0]?.id ?? ''
+    void commitInWorker(()=>next,()=>{selection.value=selected;sync()})
   })
 })
 
@@ -3043,8 +3050,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <small>{{ label('Прямоугольная обрезка сохраняет точную NURBS-поверхность в новом диапазоне параметров.','Rectangular parameter trim keeps an exact NURBS surface over the new domain.') }}</small>
                 <div class="trim-grid"><label>U min<input v-model.number="trimBounds[0]" type="number" step=".05"></label><label>U max<input v-model.number="trimBounds[1]" type="number" step=".05"></label><label>V min<input v-model.number="trimBounds[2]" type="number" step=".05"></label><label>V max<input v-model.number="trimBounds[3]" type="number" step=".05"></label></div>
                 <button :aria-disabled="nativeNurbsPending" @click="!nativeNurbsPending && trimNativeSurface()">{{ label('Обрезать диапазон UV','Trim UV domain') }}</button>
-                <label>U segments <input v-model.number="selectedNurbsSurface.segmentsU" type="number" min="2" max="64" @change="commit(document)"></label>
-                <label>V segments <input v-model.number="selectedNurbsSurface.segmentsV" type="number" min="2" max="64" @change="commit(document)"></label>
+                <label>U segments <input v-model.number="selectedNurbsSurface.segmentsU" type="number" min="2" max="64" @change="commitInWorker(()=>document)"></label>
+                <label>V segments <input v-model.number="selectedNurbsSurface.segmentsV" type="number" min="2" max="64" @change="commitInWorker(()=>document)"></label>
               </template>
               <button :aria-disabled="nativeNurbsPending" v-if="selectedNurbsCurve" @click="!nativeNurbsPending && curveToSurface()">{{ label('Выдавить NURBS 10 мм','Extrude NURBS 10 mm') }}</button>
               <button :aria-disabled="nativeNurbsPending" @click="!nativeNurbsPending && bakeNurbs()">{{ selectedNurbsSurface ? label('Bake поверхности в mesh-тело','Bake surface to mesh body') : label('Копировать sampled-кривую в эскиз','Copy sampled curve to sketch') }}</button>

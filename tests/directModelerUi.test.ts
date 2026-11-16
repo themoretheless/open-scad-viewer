@@ -5310,3 +5310,64 @@ it('copies with a base point and pastes at a target point',async()=>{
  expect(pasted).not.toBe(cube)
  expect(Math.min(...xs(pasted))-Math.min(...xs(cube))).toBeCloseTo(50,6)
 })
+
+it('commits native NURBS results in the worker, drops a result superseded by an edit and reports a failed commit',async()=>{
+ const ui=await mount();await ui.click('+ NURBS curve');const withBox=ui.doc()
+ const commits:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ const hold=()=>previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise((resolve,reject)=>commits.push({job,resolve,reject})):undefined)
+ const pickCurve=async()=>{ui.all().find(n=>n.tag==='button'&&ui.text(n)==='NURBS curve')!.props.onClick({shiftKey:false});await flushClearance()}
+ hold()
+ await ui.click('Insert knot');await flushClearance();expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(withBox)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('Box');await flushClearance();const undone=ui.doc()
+ commits[0].resolve(parseDirectDocument(commits[0].job.text));await flushClearance();expect(ui.doc()).toEqual(undone)
+ hold();await pickCurve()
+ await ui.click('Insert knot');await flushClearance();expect(commits).toHaveLength(2)
+ commits[1].reject(Error('commit validation failed'));await flushClearance()
+ expect(ui.doc()).toEqual(undone);expect(ui.text(ui.all()[0])).toContain('commit validation failed')
+ await ui.click('Insert knot');await flushClearance();commits[2].resolve(parseDirectDocument(commits[2].job.text));await flushClearance()
+ expect(ui.doc().curves![0].curve.knots.length).toBeGreaterThan(undone.curves![0].curve.knots.length)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');await flushClearance();expect(ui.doc()).toEqual(undone)
+})
+
+it('commits a retessellated B-rep mesh in the worker and keeps the scene when that commit fails',async()=>{
+ const ui=await mount({seedDocument:cylinderSeed()});await ui.click('Imported cylinder');await ui.click('B-rep detail');const before=ui.doc()
+ const commits:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise((resolve,reject)=>commits.push({job,resolve,reject})):undefined)
+ const field=ui.all().find(n=>n.tag==='input'&&n.parent&&ui.text(n.parent).startsWith('B-rep detail'))!
+ field.props['onUpdate:modelValue'](8);await flushClearance();await ui.click('Retessellate');await flushClearance()
+ expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('mesh commit failed'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('mesh commit failed')
+ await ui.click('Retessellate');await flushClearance();commits[1].resolve(parseDirectDocument(commits[1].job.text));await flushClearance()
+ expect(ui.doc().bodies[0].mesh.indices.length).toBeGreaterThan(before.bodies[0].mesh.indices.length)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');await flushClearance();expect(ui.doc()).toEqual(before)
+})
+
+it('commits appended mesh bodies in the worker, selects them after the commit and drops a result superseded by an edit',async()=>{
+ const ui=await mount();const before=ui.doc()
+ const commits:Array<{job:any;resolve:(value:any)=>void}>=[]
+ const hold=()=>previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise(resolve=>commits.push({job,resolve})):undefined)
+ const body=(id:string)=>({id,name:`Imported ${id}`,mesh:{positions:[0,0,0,1,0,0,0,1,0,0,0,1],indices:[0,2,1,0,1,3,0,3,2,1,2,3]}})
+ hold();await ui.setProps({appendBodies:{bodies:[body('m1')],group:{name:'Mesh',source:'a.stl'}}});await flushClearance()
+ expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('Box');await flushClearance();const edited=ui.doc()
+ commits[0].resolve(parseDirectDocument(commits[0].job.text));await flushClearance();expect(ui.doc()).toEqual(edited)
+ hold();await ui.setProps({appendBodies:{bodies:[body('m2')],group:{name:'Mesh',source:'b.stl'}}});await flushClearance()
+ commits[1].resolve(parseDirectDocument(commits[1].job.text));await flushClearance()
+ expect(ui.doc().bodies.map(b=>b.id)).toContain('m2');expect(ui.doc().groups?.map(g=>g.name)).toContain('Mesh')
+ expect(ui.text(ui.all()[0])).toContain('Imported m2')
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');await flushClearance();expect(ui.doc()).toEqual(edited)
+})
+
+it('commits NURBS surface segment fields through the worker',async()=>{
+ const ui=await mount();await ui.click('+ NURBS surface');const before=ui.doc()
+ const commits:Array<{job:any;resolve:(value:any)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise(resolve=>commits.push({job,resolve})):undefined)
+ const input=ui.all().find(n=>n.tag==='label'&&ui.text(n).startsWith('U segments'))!.children.find(n=>n.tag==='input')!
+ input.props['onUpdate:modelValue'](12);input.props.onChange();await flushClearance()
+ expect(commits).toHaveLength(1);expect(commits[0].job.text).toContain('"segmentsU":12')
+ commits[0].resolve(parseDirectDocument(commits[0].job.text));await flushClearance()
+ expect(ui.doc().surfaces![0].segmentsU).toBe(12)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');await flushClearance();expect(ui.doc()).toEqual(before)
+})
+
