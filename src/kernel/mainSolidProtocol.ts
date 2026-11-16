@@ -122,7 +122,7 @@ export type MainSolidJob =
   | {kind:'meshExport';mesh:MeshExportInput;target:import('../exchange/meshFormats').MeshExportFormat;options:MeshExportOptions}
   | {kind:'measureEdge';body:DirectBody;edge:number;parameter:number}
   | {kind:'displayMesh';mesh:PolygonMesh;brep?:NurbsBrep;segments:number}
-  | {kind:'restoreDocument';text:string}
+  | {kind:'restoreDocument';text:string;/** Snapshot text of the state the client holds: answer as a delta against it. */base?:string}
   | {kind:'primitive';document:DirectDocument;options:SolidPrimitiveOptions}
   | {kind:'rushGraphImport';document:DirectDocument;text:string;group?:string}
   | {kind:'brepTool';document:DirectDocument;options:SolidBrepToolOptions}
@@ -130,10 +130,10 @@ export type MainSolidJob =
   | {kind:'curveChainInspection';document:DirectDocument;ids:string[];maxPairs:number}
   | {kind:'trimmedCurveOffset';document:DirectDocument;options:TrimmedOffsetOptions}
   | {kind:'curveOffset';document:DirectDocument;options:SolidCurveOffsetOptions}
-  | {kind:'pointEdit';document:DirectDocument;options:SolidPointEditOptions}
+  | ({kind:'pointEdit';document:DirectDocument|string|ResidentDocumentRef;options:SolidPointEditOptions}&ResidentDocumentOptions)
   | {kind:'sketchEdit';document:DirectDocument;options:SolidSketchEditOptions}
-  | {kind:'boolean';document:DirectDocument;options:SolidBooleanOptions}
-  | {kind:'sceneEdit';document:DirectDocument|string;options:SolidSceneEditOptions}
+  | {kind:'boolean';document:DirectDocument;options:SolidBooleanOptions;delta?:true}
+  | ({kind:'sceneEdit';document:DirectDocument|string|ResidentDocumentRef;options:SolidSceneEditOptions}&ResidentDocumentOptions)
   | {kind:'curveMatch';args:Parameters<typeof matchSolidCurve>}
   | {kind:'surfaceMatch';args:Parameters<typeof matchSolidSurface>}
   | {kind:'seamPrepare';args:Parameters<typeof prepareSolidSurfaceSeams>}
@@ -169,7 +169,7 @@ export type MainSolidJob =
   | {kind:'drawingSheets';bodies:DirectBody[];options:DrawingSheetOptions}
   | {kind:'animationFrames';document:DirectDocument;animation:AssemblyAnimation;fps:number}
   | {kind:'animationSample';document:DirectDocument;animation:AssemblyAnimation;time:number}
-  | {kind:'minkowski3d';document:DirectDocument;options:SolidMinkowskiOptions}
+  | {kind:'minkowski3d';document:DirectDocument;options:SolidMinkowskiOptions;delta?:true}
 /** Exhaustive registry: adding a typed job must also admit it at the worker boundary. */
 export const MAIN_SOLID_JOB_KINDS:Readonly<Record<MainSolidJob['kind'],true>>={
  profileBridgeChords:true,
@@ -270,6 +270,13 @@ drawingPdf:Uint8Array;
 animationSample:{document:DirectDocument;camera:{yaw:number;pitch:number}};
 drawingSheets:DrawingSheet[];
 transaction:DirectDocument;}
+/** Names the base document a worker retained under `retainAs` in an earlier request. */
+export interface ResidentDocumentRef {resident:string}
+/** Drag edits send their base document once (`retainAs`), refer to it afterwards and may ask
+ * for the answer as a `DirectDocumentDelta` against it instead of a whole document. */
+export interface ResidentDocumentOptions {retainAs?:string;delta?:true}
+export const isResidentDocumentRef=(value:unknown):value is ResidentDocumentRef=>
+  !!value&&typeof value==='object'&&typeof (value as {resident?:unknown}).resident==='string'&&(value as {version?:unknown}).version===undefined
 export type MainSolidRequest = {version:1; id:number; job:MainSolidJob; traceTiming?:boolean}
 export type MainSolidResponse = {version:1; id:number; kind:MainSolidJob['kind']; timing?:{warmupMs:number;executeMs:number;prepareMs:number}} & (
   | {ok:true; result:MainSolidResults[keyof MainSolidResults]}

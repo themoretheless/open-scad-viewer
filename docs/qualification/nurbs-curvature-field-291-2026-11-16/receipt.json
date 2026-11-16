@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0291",
+  "testedBase": "db48c721dda54fab89ad8c7eb656ee1d1516586b",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_mobius_piecewise_contracts",
+    "--test",
+    "exact_mobius_bezier_contracts",
+    "--test",
+    "exact_mobius_spline_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 12,
+  "scope": [
+    "Relayout a piecewise B\u00e9zier curve or tensor surface on a new absolute knot grid with independent positive span clocks.",
+    "Clamped nonperiodic piecewise B\u00e9zier axes. New absolute seams preserve both adjoining geometric images and share one positive weight scale."
+  ],
+  "logSha256": "36d5da180623fd536e2fde167f6e66e231c8051372d9b504d938ae2e4fa2156a",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "710ab732822219f5fae00b7abcafa4715fb94d9c0f4a4ef31c994080ee862eff",
+    "crates/nurbs-core/src/editing/exact_projective/mobius_piecewise.rs": "513416cf074b179207abc3e36451a4bf2976d43d4e25b5b9093336c9fafffb09",
+    "crates/nurbs-core/src/editing/exact_projective/mobius.rs": "af236192c0c5a935d38c32d24efbd6b4c332665865ff940bd2476a5ee882afdb",
+    "crates/nurbs-core/tests/exact_mobius_piecewise_contracts.rs": "176357029f6affc7590d516a86c0593abb7395a4fd774231d8cd7a9564e1c98f"
+  }
+}

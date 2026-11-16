@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0303",
+  "testedBase": "80682aabded3059b93c3e77660f4fbdcdf7681e9",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_tangent_contracts",
+    "--test",
+    "exact_surface_pcurve_seam_contracts",
+    "--test",
+    "exact_pcurve_edge_agreement_contracts",
+    "--test",
+    "exact_pcurve_lift_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 10,
+  "scope": [
+    "Prove positional and regular tangent-plane agreement over a paired surface seam by exact rational composition and full-interval normal tests.",
+    "Exact shared parameter domain, including one-sided endpoint normal checks. Normal orientation is free; no side-of-face or manifold authority."
+  ],
+  "logSha256": "484d9f824d93dc35099012d7ca989fc740826d508dcd55f47430da1f2b925605",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "05210507f8c9c38ca3a3c344cddefcc90871bd77c12414a09dca9f5cb5c987d2",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_agreement.rs": "e3fc3c3054e03f755ca86fd1b08163323a48959f74d3cf7378ec33a37650b7f7",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_lift.rs": "6d25e545c6594834d64d59202d7cc9f49d1203757d8f21da8bf863480ed7eb31",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_tangent.rs": "0fa87f7036d393c7c0dead4e0c59e2839c5f425a751f87163d7d9dfb66924f8c",
+    "crates/nurbs-core/tests/exact_pcurve_tangent_contracts.rs": "1d679bad2156d306e53d91ec7cb9e8d7e20a09f2e74a735a0be7edc6bcf77098"
+  }
+}

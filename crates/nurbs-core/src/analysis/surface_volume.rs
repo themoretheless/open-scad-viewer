@@ -290,6 +290,29 @@ mod tests {
     }
 
     #[test]
+    fn oriented_volume_restores_reversed_caps_with_directional_flux() {
+        let mut patches = test_cuboid(2., 3., 5.);
+        // Reverse the retained clock on the upper cap. The input orientation
+        // flag must undo the resulting sign change in its normal.
+        patches[1].control_points.reverse();
+        patches[1].weights.reverse();
+        let caps = [(&patches[0], false), (&patches[1], true)];
+        let report =
+            enclosed_volume_oriented(&caps, Some([0., 0., 2.]), 1e-9, 2).unwrap();
+        assert_eq!(report.cells, 2);
+        assert!(report.within_tolerance);
+        assert!(report.bounds[0] <= 30. && 30. <= report.bounds[1], "{report:?}");
+
+        let inward = [(&patches[0], true), (&patches[1], false)];
+        let report =
+            enclosed_volume_oriented(&inward, Some([0., 0., -2.]), 1e-9, 2).unwrap();
+        assert!(report.within_tolerance);
+        assert!(report.bounds[0] <= -30. && -30. <= report.bounds[1], "{report:?}");
+        assert!(enclosed_volume_oriented(&caps, Some([0.; 3]), 1e-9, 2).is_err());
+        assert!(enclosed_volume_oriented(&caps, Some([0., 0., 1.]), 1e-9, 1).is_err());
+    }
+
+    #[test]
     fn rational_sphere_volume_and_area_enclose_analytic_values() {
         let r = 1.5;
         let sphere = crate::primitives::sphere([0.3, -0.2, 0.1], r).unwrap();

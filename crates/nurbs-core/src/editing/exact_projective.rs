@@ -3,7 +3,76 @@ use crate::core::bounded_rational::{Error, Work};
 use crate::{Result, check, curve::Curve, surface::Surface};
 use num_rational::BigRational as Q;
 use num_traits::{Signed, Zero};
+mod affine_curve;
+pub use affine_curve::affine_curve_clock;
+mod affine_surface;
+pub use affine_surface::affine_surface_clock;
+mod affine_trim;
+pub use affine_trim::{
+    TrimmedAxisOrder, affine_trimmed_surface_clock, remap_trimmed_surface_axes,
+    transpose_trimmed_surface,
+};
+mod chart_nonnegative;
+mod mobius;
+pub use mobius::{mobius_bezier_curve, mobius_bezier_surface};
+mod mobius_piecewise;
+pub use mobius_piecewise::{
+    BezierSpanLayout, mobius_piecewise_bezier_curve, mobius_piecewise_bezier_surface,
+    relayout_bezier_curve, relayout_bezier_surface,
+};
+mod mobius_spline;
+pub use mobius_spline::{
+    MobiusLandmark, fit_mobius_spline_curve, fit_mobius_spline_surface, mobius_spline_curve,
+    mobius_spline_surface,
+};
+mod pcurve_agreement;
+pub use pcurve_agreement::{
+    PcurveEdgeAgreement, PcurveEdgeAgreementReport, compare_pcurve_edge, compare_surface_pcurve_seam,
+};
+mod pcurve_angle;
+pub use pcurve_angle::{PcurveAngleOutcome, PcurveAngleReport, certify_pcurve_seam_angle};
+mod pcurve_angle_bands;
+pub use pcurve_angle_bands::{PcurveAngleBandsOutcome, PcurveAngleBandsReport, isolate_pcurve_seam_angle};
+mod pcurve_gap;
+pub use pcurve_gap::{PcurveGapOutcome, PcurveGapReport, certify_pcurve_seam_gap};
+mod pcurve_gap_bands;
+pub use pcurve_gap_bands::{
+    PcurveGapBand, PcurveGapBandsReport, PcurveGapBoundary, isolate_pcurve_seam_gap,
+};
+mod pcurve_lift;
+pub use pcurve_lift::{PcurveLiftReport, lift_pcurve_to_surface};
+mod pcurve_mobius;
+pub use pcurve_mobius::{
+    PcurveChartCertificate, PcurvePullback, PcurvePullbackRefusal, certify_pcurve_chart_domain,
+    pullback_mobius_pcurve,
+};
+mod pcurve_orientation;
+pub use pcurve_orientation::{
+    PcurveOrientationOutcome, PcurveOrientationReport, compare_pcurve_seam_orientations,
+};
+mod pcurve_relayout;
+pub use pcurve_relayout::pullback_relayout_pcurve;
+mod pcurve_seam;
+pub use pcurve_seam::{
+    PcurveSeamContact, PcurveSeamReport, PcurveSeamSpan, UvAxis, classify_pcurve_seam,
+};
+mod pcurve_seam_isolation;
+pub use pcurve_seam_isolation::{
+    PcurveSeamIsolatedSpan, PcurveSeamIsolation, PcurveSeamIsolationReport, PcurveSeamRoot,
+    isolate_pcurve_seam,
+};
+mod pcurve_seam_split;
+pub use pcurve_seam_split::{
+    PcurveSeamPiece, PcurveSeamSide, PcurveSeamSplitReport, split_pcurve_at_seam,
+};
+mod pcurve_tangent;
+pub use pcurve_tangent::{PcurveTangentOutcome, PcurveTangentReport, compare_pcurve_tangent_planes};
 mod proof;
+mod trimmed_mobius;
+pub use trimmed_mobius::{
+    ReclockedTrimmedSurface, TrimmedMobiusRefusal, TrimmedMobiusReport, mobius_trimmed_surface,
+    relayout_trimmed_bezier_surface,
+};
 /// Row-major homogeneous map: `[x*w,y*w,z*w,w] -> M * H`.
 pub type Matrix = [[f64; 4]; 4];
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0288",
+  "testedBase": "dcc899350c75e8110e40668b90da54979b3ec4b3",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_mobius_spline_contracts",
+    "--test",
+    "exact_mobius_bezier_contracts",
+    "--test",
+    "exact_projective_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 13,
+  "scope": [
+    "Pulls back the entire clamped knot vector exactly, preserving multiplicities. The Cox\u2013de Boor denominator products transform stored weights in one gauge and preserve the complete rational image.",
+    "Clamped nonperiodic axes. The original shape, orientation and absolute endpoints are retained. Nonrepresentable knots or weights refuse atomically."
+  ],
+  "logSha256": "7f723c68edb22f91c9864b4f7ad157214fbe028bd3ee53c090461c6beb558848",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "e40e32102a0a661d7aab2b9c90e4254acdcd436e74e895d1065c8ba1de99aa44",
+    "crates/nurbs-core/src/editing/exact_projective/mobius_spline.rs": "bcb9216e94f2d5fb03c2541546afb27e2bfec8fdb206442b90c25491da9a2a51",
+    "crates/nurbs-core/src/editing/exact_projective/mobius.rs": "af236192c0c5a935d38c32d24efbd6b4c332665865ff940bd2476a5ee882afdb",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_mobius_spline_contracts.rs": "f67ce2396787c69cf9ac26a246aba06fb95fc51e5f771b7a781d6ebc090feb8c"
+  }
+}

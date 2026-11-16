@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0273",
+  "testedBase": "df7f4dabf666238e3736ffd3bfb58e0b1729bd6a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_slope_contracts",
+    "--test",
+    "curvature_gap_graph_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 20,
+  "scope": [
+    "Combines the certified second-derivative chord remainder with the first-order bound and exact vertex bracket error. The quadratic bound can meet a requested UV tolerance with fewer vertices.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "83e0520f8c1709c72f196a12c555bb3b40c5a71c7e91ce0f9128cd05556db9ec",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "4727fa2d30b87b01c4a1c8ea17996e9684e6fcee88f6a014a8ea5ea575e1e49d",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_polyline.rs": "1038e12b477979ca874b6209b8ec825286a35856c34765cc3c89af92af4deefa",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs": "dda1b60af5ba201cdef448f4a8fff4942d645dca2084740cb3a7e87297880076",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs": "175285f206e3c094512d1c96bf946ba880016ab3c45b6aeee22ad2ded0e899e6",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs": "180372d100b3158615c45fee072cb294c095bc0ad34d2c218c99856ea65a42d7",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_second.rs": "acffe04f39a872d28ec9ef1344b804c4bc10d70d8a5ce2a6b5f52d046194904a"
+  }
+}

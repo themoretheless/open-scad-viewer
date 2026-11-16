@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0292",
+  "testedBase": "ad59c671029ca43c2fee3c8d339ed05a40767e46",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_mobius_pcurve_contracts",
+    "--test",
+    "exact_mobius_spline_contracts",
+    "--test",
+    "exact_curve_order_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 20,
+  "scope": [
+    "Transfer retained two-dimensional trim curves under independent inverse chart clocks, maintaining the source trim parameter and proving equality over complete spans.",
+    "Global rectangular axis clocks; exact storage and a Bernstein chart-membership proof are required on all spans. Trim topology qualification is separate."
+  ],
+  "logSha256": "df41423a3f1b8ef5d9ea04fe69c4e76592e1411bcd5ecbb682df46239a244ded",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "64bbc29fe9baa219e36d19ee00babd24ee758bb870bf070a1827b607148f87af",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs": "fca9920760db0a7bbf1d0449331615abe7b44c13118ded330e00d3a6294254f6",
+    "crates/nurbs-core/src/editing/exact_derivative.rs": "3e997e89d702f51310e9a375c45d396cfa36da0755a3b67d22b38a4c5c4d9937",
+    "crates/nurbs-core/src/editing/exact_derivative/extraction.rs": "5542382d5cef934a1f554ff7e403b8ad3cd95a9c91c7f912e5659b6fd823150e",
+    "crates/nurbs-core/src/editing/exact_derivative/proof.rs": "0034a3eb8f0b76d44e7b7eb2ad0e6a3ddbec9954c8bab6ba0004256d0c27729f",
+    "crates/nurbs-core/tests/exact_mobius_pcurve_contracts.rs": "ba2e152144696faa6af605955f4408b6d65f8d67b81f9d402e67dbd06267d3e9"
+  }
+}

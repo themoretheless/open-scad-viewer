@@ -3,6 +3,7 @@ import {extrudeDirectSketch,parseDirectDocument,emptyDirectDocument,DirectHistor
 import {solidTopology,pushPullFace,bevelSolidEdge,shellSolid,splitSolid,facePlane,transformSelection} from '../src/app/directSolidTools'
 import {sampleCurve,offsetSketch,trimSketch,extendSketch,transformSketch,worldPoint} from '../src/app/directSketchGeometry'
 import {directExtrusionTool} from '../src/app/directModelingTools'
+import {applySolidSceneEdit} from '../src/kernel/solidSceneEdit'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 const s:DirectSketch={id:'s',name:'s',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]}
 const box=()=>extrudeDirectSketch(s,10,'b')
@@ -59,5 +60,15 @@ describe('advanced direct modeling',()=>{
   const result=transformSelection(d,['b','c'],[5,0,0],[0,0,1],180,1),h=new DirectHistory(d)
   const min=(i:number)=>Math.min(...result.bodies[i].mesh.positions.filter((_,i)=>i%3===0))
   expect(min(0)).toBeCloseTo(25);expect(min(1)).toBeCloseTo(5);h.commit(result);expect(h.undo()).toEqual(d);expect(h.redo()).toEqual(result)
+ })
+ it('rotates the selection about a CPlane/Local axis that is not parallel to world Z',()=>{
+  const d=emptyDirectDocument();d.bodies=[box()]
+  const span=(doc:typeof d,k:number)=>{const v=doc.bodies[0].mesh.positions.filter((_,i)=>i%3===k);return Math.max(...v)-Math.min(...v)}
+  const options={operation:'transform' as const,id:'b',ids:['b'],createdId:'',x:0,y:0,z:0,angle:90,scale:1}
+  const turned=applySolidSceneEdit(d,{...options,axis:[1,0,0]})
+  expect(span(turned,2)).toBeCloseTo(span(d,1));expect(span(turned,1)).toBeCloseTo(span(d,2))
+  const tilted=applySolidSceneEdit(d,{...options,axis:[0,Math.SQRT1_2,Math.SQRT1_2],angle:180})
+  expect(span(tilted,1)).toBeCloseTo(span(d,2));expect(span(tilted,2)).toBeCloseTo(span(d,1))
+  expect(()=>applySolidSceneEdit(d,{...options,axis:[0,0,0]})).toThrow('Invalid transform axis.')
  })
 })

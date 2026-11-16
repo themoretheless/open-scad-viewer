@@ -5,6 +5,7 @@ import type {DisplayMesh} from './solidDisplayCache'
 import type { MainSolidJob, MainSolidResponse, MainSolidResults } from './mainSolidProtocol'
 import type { StructuralSections } from './structuralSections'
 import type { DirectDocument } from '../app/directModeling'
+import { isDirectDocumentDelta, type DirectDocumentDelta } from './directDocumentDelta'
 import type { MeshBooleanResult, MeshRepairResult } from './meshEditing'
 import type { ImportedMesh } from '../exchange/meshImport'
 
@@ -75,7 +76,11 @@ export function prepareMainSolidTransfer(response: MainSolidResponse): { respons
   if(response.ok && (response.kind==='restoreDocument'||response.kind==='rushGraphImport'||response.kind==='primitive'||response.kind==='sceneEdit')) {
     // These jobs validate a complete replacement, so parsed mesh buffers belong
     // exclusively to the response. Deduplicate buffers in case views share backing storage.
-    const bodies = (response.result as DirectDocument).bodies
+    // A delta answer carries only the changed bodies; items named by id stay with the client.
+    const result = response.result as DirectDocument | DirectDocumentDelta
+    const bodies = isDirectDocumentDelta(result)
+      ? ((result.collections.bodies ?? []).filter(item => typeof item === 'object') as DirectDocument['bodies'])
+      : result.bodies
     if (bodies.length <= 8) {
       const transfer: ArrayBuffer[] = []
       for (let i = 0; i < bodies.length; i++) {

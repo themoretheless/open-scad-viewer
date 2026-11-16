@@ -28,7 +28,7 @@ export async function exportSolidStepAssembly(document:DirectDocument):Promise<s
   if(!snapshot.bodies.length)throw Error('STEP assembly requires at least one body.')
   if(new Set(snapshot.bodies.map(body=>body.id)).size!==snapshot.bodies.length)throw Error('STEP assembly requires unique body IDs.')
   if(snapshot.sketches.length||snapshot.curves?.length||snapshot.surfaces?.length)
-    throw Error('STEP assembly currently requires a body-only document. Export sketches separately as SVG and remove auxiliary curves/surfaces from a copy.')
+    throw Object.assign(Error('STEP assembly currently requires a body-only document. Export sketches separately as SVG and remove auxiliary curves/surfaces from a copy.'), {code:'DIRECT_STEP_ASSEMBLY_CONTENT'})
   const missing=snapshot.bodies.filter(body=>!body.brep)
   if(missing.length)throw Error(`STEP assembly requires exact B-rep geometry: ${missing.map(b=>b.name).join(', ')}`)
   await warmGeometryKernel()

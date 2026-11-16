@@ -1,3 +1,4 @@
+import { auditAccessibility, type AccessibilityIssue } from './accessibilityAudit'
 import { operationCounts, resetOperationCounts } from './operationCounters'
 
 /**
@@ -21,6 +22,8 @@ export interface TestSeamHooks {
   resetOperations(): void
   /** Scene state of the most recently created recording renderer, if any. */
   viewport(): unknown
+  /** Accessibility issues in the current document (`auditAccessibility`). */
+  accessibility(): AccessibilityIssue[]
 }
 
 let viewportProbe: () => unknown = () => null
@@ -37,5 +40,6 @@ export function installTestSeamHooks(target: { __osvTest?: TestSeamHooks } = glo
     operations: operationCounts,
     resetOperations: resetOperationCounts,
     viewport: () => viewportProbe(),
+    accessibility: () => auditAccessibility(document.body),
   })
 }

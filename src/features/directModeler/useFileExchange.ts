@@ -1,3 +1,4 @@
+import type { CommitInWorker } from './prepareDocumentCommit'
 import { computed, ref, watch, type ComputedRef, type Ref, type ShallowRef } from 'svet'
 import {
   MAX_DOCUMENT_CHARACTERS,
@@ -59,7 +60,7 @@ export interface UseFileExchangeOptions {
     origin?: 'edit' | 'file',
   ) => { validateLocked: ((doc: DirectDocument) => void) | undefined; added: string[] }
   finishCommit: (added: string[], next?: DirectDocument) => void
-  commit: (next: DirectDocument) => void
+  commitInWorker: CommitInWorker
   sync: (next?: DirectDocument) => void
   run: (action: () => void) => void
   fit: (pane: Pane, selectedOnly?: boolean) => void
@@ -101,7 +102,7 @@ export function useFileExchange(options: UseFileExchangeOptions) {
     cancelCommand,
     prepareCommit,
     finishCommit,
-    commit,
+    commitInWorker,
     sync,
     fit,
     pickObject,
@@ -298,17 +299,26 @@ export function useFileExchange(options: UseFileExchangeOptions) {
       if (!current()) return
       // Publishing the document must not make its watcher cancel this completed import.
       historyPending.value = false
-      const d = history.document
       const id = crypto.randomUUID()
-      d.bodies.push({
-        id,
-        name: stripMeshExtension(file.name) || imported.format.toUpperCase(),
-        mesh: { positions: imported.positions, indices: imported.indices },
-      })
-      commit(d)
-      selection.value = id
-      mode.value = '3d'
-      setNotice(formatMeshImportNotice(imported, ru.value ? 'ru' : 'en'))
+      await commitInWorker(
+        () => {
+          const d = history.document
+          d.bodies.push({
+            id,
+            name: stripMeshExtension(file.name) || imported.format.toUpperCase(),
+            mesh: { positions: imported.positions, indices: imported.indices },
+          })
+          return d
+        },
+        () => {
+          selection.value = id
+          mode.value = '3d'
+          setNotice(formatMeshImportNotice(imported, ru.value ? 'ru' : 'en'))
+        },
+        message => {
+          if (generation === getHistoryGeneration()) error.value = message
+        },
+      )
     } catch (e) {
       if (generation === getHistoryGeneration()) error.value = e instanceof Error ? e.message : String(e)
     } finally {
@@ -344,20 +354,33 @@ export function useFileExchange(options: UseFileExchangeOptions) {
             : 'The scene changed during STEP import. Import again to add its bodies.',
         )
       }
-      commit(imported.document)
-      operation.value = null
-      advancedOp.value = null
-      subtract.value = null
-      boxSelect.value = false
-      pickObject(imported.selected, '3d')
-      fit('3d')
-      setNotice(
+      const changed = Error(
         imported.report.retained
-          ? label(
-              `AP242: ${imported.report.occurrenceIdentities.length} экземпляров; оригинал сохранён.`,
-              `AP242: ${imported.report.occurrenceIdentities.length} occurrence(s); original saved.`,
-            )
-          : label('STEP: сетка импортирована.', 'STEP: mesh imported.'),
+          ? 'AP242 original saved, but the scene changed during import. Import again to add its bodies.'
+          : 'The scene changed during STEP import. Import again to add its bodies.',
+      )
+      await commitInWorker(
+        () => {
+          // A commit queued ahead of this one would be overwritten by the prepared document.
+          if (document.value !== before) throw changed
+          return imported.document
+        },
+        () => {
+          operation.value = null
+          advancedOp.value = null
+          subtract.value = null
+          boxSelect.value = false
+          pickObject(imported.selected, '3d')
+          fit('3d')
+          setNotice(
+            imported.report.retained
+              ? label(
+                  `AP242: ${imported.report.occurrenceIdentities.length} ${({ one: 'экземпляр', few: 'экземпляра', many: 'экземпляров' } as Record<string, string>)[new Intl.PluralRules('ru').select(imported.report.occurrenceIdentities.length)] ?? 'экземпляра'}; оригинал сохранён.`,
+                  `AP242: ${imported.report.occurrenceIdentities.length} occurrence(s); original saved.`,
+                )
+              : label('STEP: сетка импортирована.', 'STEP: mesh imported.'),
+          )
+        },
       )
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)

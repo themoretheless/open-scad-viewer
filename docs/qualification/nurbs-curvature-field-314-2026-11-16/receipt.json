@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0314",
+  "testedBase": "8d452b1c50a90d69322e6ecfd1f0e0025761eba9",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_surface_affine_hull_contracts",
+    "--test",
+    "exact_trimmed_axis_remap_contracts",
+    "--test",
+    "exact_surface_derivative_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 11,
+  "scope": [
+    "Classify the affine dimension of a rational tensor surface with exact active-pole witnesses.",
+    "Positive weights and active tensor basis. Inactive exterior poles are excluded. Exact affine hull dimension does not imply surface regularity."
+  ],
+  "logSha256": "4da6335cb6ea04af121d0f9f698106c2998eb0f6a582c8bcc907a5cc1f838241",
+  "sourceSha256": {
+    "crates/nurbs-core/src/analysis.rs": "d758d9ee34748871f1582a9b8fef0f5474ff73f14da573be901a404e35d78a82",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "4e92453b65021c72959fedc7e234d70b4792c42df66f70c4c6b6736616b2f9ac",
+    "crates/nurbs-core/tests/exact_surface_affine_hull_contracts.rs": "dc9974d5f419b89ad03ea836fe901da4dc066554ec58ab9c60b64dfde77e1589"
+  }
+}

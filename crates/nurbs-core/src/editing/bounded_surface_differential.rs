@@ -126,7 +126,43 @@ fn patch(
 /// Any late refusal discards every earlier patch and bound.
 pub fn surface(source: &Surface, field: Field, max_error: f64, max_work: u64) -> Result<Report> {
     source.validate()?;
-    let field = original(field)?;
+    apply(source, original(field)?, max_error, max_work)
+}
+
+/// Construct the Gaussian curvature carrier with absolute error at most
+/// `max_error` everywhere on the original cells. The regularity check is
+/// identical to the exact constructor and precedes reduction and rounding.
+pub fn gaussian_curvature(source: &Surface, max_error: f64, max_work: u64) -> Result<Report> {
+    source.validate()?;
+    apply(source, exact::Field::GaussianCurvature, max_error, max_work)
+}
+
+/// Construct `[H², 0, 0]` with a continuous absolute error at most
+/// `max_error` on every original UV cell. Units are inverse length squared.
+/// The original normal regularity check precedes reduction and rounding.
+pub fn squared_mean_curvature(source: &Surface, max_error: f64, max_work: u64) -> Result<Report> {
+    source.validate()?;
+    apply(source, exact::Field::SquaredMeanCurvature, max_error, max_work)
+}
+
+/// Construct the squared principal curvature gap with a certified absolute
+/// error over each original UV cell. The rounded carrier and its error
+/// interval do not by themselves prove an umbilic or a positive gap.
+pub fn squared_principal_curvature_gap(
+    source: &Surface,
+    max_error: f64,
+    max_work: u64,
+) -> Result<Report> {
+    source.validate()?;
+    apply(source, exact::Field::SquaredPrincipalCurvatureGap, max_error, max_work)
+}
+
+fn apply(
+    source: &Surface,
+    field: exact::Field,
+    max_error: f64,
+    max_work: u64,
+) -> Result<Report> {
     check(
         max_error.is_finite() && max_error > 0.,
         "Field error must be finite and positive",

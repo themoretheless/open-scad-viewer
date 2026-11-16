@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0269",
+  "testedBase": "7e0d7883f332b7524ce8054cf706f99ccaf80f1d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_slope_contracts",
+    "--test",
+    "curvature_gap_graph_contracts",
+    "--test",
+    "curvature_gap_threshold_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 16,
+  "scope": [
+    "Bounds the signed slope of a unique threshold contour by exact Bernstein coefficient ratios of the implicit derivatives in the two absolute knot clocks.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "aad87cbd2f37e35281977d509671f38d0e90d9246758a5e3514ebbeca45cbb7f",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "5d4d3e9fdad3f1fc8028b72589d18d441d95565cffdd76eef224537e08a4eeba",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_slope.rs": "a40f0f4f87a2f09046e75b58116bb49d2183d670efc439d537539fa0dda023b2",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_slope_contracts.rs": "f7aede0cfa3d889580f21409913636eebfb428599433b980e12ae71f08659fec",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_graph.rs": "38951a197c8a74d18016b8ea6748c57e4b146c1cffd87c1fc1b59534ab53e855",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_range.rs": "d11200461dbad10b3bd56fdc1d91a678ced781962218c2a8bab4d24eac1ceccb"
+  }
+}

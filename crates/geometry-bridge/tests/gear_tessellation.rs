@@ -95,9 +95,9 @@ fn gear_bodies_tessellate_closed() {
 
 #[test]
 fn gears_take_part_in_booleans() {
-    // A bore drilled after the fact: no exact proof covers the ruled tooth
-    // walls against a cylinder, and the core is fail-closed, so it refuses
-    // instead of returning a numerical result.
+    // A bore drilled after the fact: the core is fail-closed on the ruled
+    // tooth walls, and the certified drill family resolves it because the
+    // cylinder only pierces the planar caps.
     let spur = gear(&GearSpec {
         module: 2.,
         teeth: 20,
@@ -115,14 +115,12 @@ fn gears_take_part_in_booleans() {
         ],
     )
     .unwrap();
-    let refused = operations::boolean(&spur, &drill, "difference")
-        .err()
-        .expect("bore: unexpectedly certified");
-    assert!(
-        matches!(refused.code, "BREP_NURBS_BOOLEAN_UNPROVED" | "BREP_UNSUPPORTED_OPERATION"),
-        "bore: {refused:?}"
-    );
-    closed(&spur, "spur");
+    let bored = brep_intersect::cylinder_drill_boolean(&spur, &drill, "difference")
+        .unwrap_or_else(|e| panic!("bore: {} {}", e.code, e.message));
+    bored.validate().unwrap();
+    let v = closed(&bored, "bored gear");
+    let v_full = closed(&spur, "spur");
+    assert!(v < v_full && v > 0.5 * v_full);
     // Two meshing spur gears with backlash: interleaved teeth, no material
     // in common.
     let mate = transform::affine(

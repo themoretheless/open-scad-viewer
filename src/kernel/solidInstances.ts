@@ -15,7 +15,13 @@ export function transformSolidInstance(document:DirectDocument,id:string,delta:n
  return resolveSolidInstances(next,cache)
 }
 /** References point directly to an independent source; geometry math stays in Rust. */
-export function resolveSolidInstances(document:DirectDocument,cache?:SolidInstanceBatchCache):DirectDocument {
+/** A resolved body's geometry for `resolveSolidInstances` `reuse`, keys in the body's own order
+ * so the rebuilt body serializes identically. */
+export const resolvedInstanceGeometry=(body:DirectBody):Pick<DirectBody,'mesh'|'brep'>=>
+ Object.fromEntries(Object.entries(body).filter(([key])=>key==='mesh'||key==='brep')) as Pick<DirectBody,'mesh'|'brep'>
+/** `reuse`: resolved geometry already validated for exactly this instance (same placement and
+ * source geometry), shared as is instead of being recomputed or copied from `cache`. */
+export function resolveSolidInstances(document:DirectDocument,cache?:SolidInstanceBatchCache,reuse?:ReadonlyMap<string,Pick<DirectBody,'mesh'|'brep'>>):DirectDocument {
  document=expandLiveBodyPatterns(document)
  const bodies=new Map(document.bodies.map(body=>[body.id,body]))
  const groups=new Map<string,DirectBody[]>()
@@ -29,8 +35,10 @@ export function resolveSolidInstances(document:DirectDocument,cache?:SolidInstan
   const group=groups.get(source.id)??[];group.push(body);groups.set(source.id,group)
  }
  const geometry=new Map<string,Pick<DirectBody,'mesh'|'brep'>>()
- for(const [sourceId,group] of groups){
+ for(const [sourceId,sourceGroup] of groups){
+  let group=sourceGroup
   const source=bodies.get(sourceId)!
+  if(reuse){group=group.filter(body=>{const known=reuse.get(body.id);if(known)geometry.set(body.id,known);return !known});if(!group.length)continue}
   const sourceText=stringifyMeshJson({mesh:source.mesh,brep:source.brep})
   const batchSize=Math.max(1,Math.min(32,Math.floor(1_000_000/sourceText.length)))
   // Each instance is an independent transform of the source, so results are cached per

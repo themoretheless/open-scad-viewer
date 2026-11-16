@@ -67,3 +67,5 @@ pub mod affine_support;
 pub mod bezier_curvature_bound;
 /// Normal cones and silhouettes of surfaces (formerly `numerics::normal_cone`).
 pub mod normal_cone;
+
+pub mod exact_affine_hull;

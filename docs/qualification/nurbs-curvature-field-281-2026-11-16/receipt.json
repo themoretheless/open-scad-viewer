@@ -1,0 +1,34 @@
+{
+  "id": "NURBS-0281",
+  "testedBase": "95341ef684378a1c140b44bdb9e2e9c98bfd1f4d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_tensor_compression_contracts",
+    "--test",
+    "exact_surface_knot_removal_contracts",
+    "--test",
+    "exact_surface_degree_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 21,
+  "scope": [
+    "Compresses independent input charts in order under one work and copy budget. A late refusal never publishes a partially compressed patch set.",
+    "Clamped nonperiodic charts on both axes. Exhaustion preserves earlier proved edits. No global minimality or B-rep certificate."
+  ],
+  "logSha256": "ca63e520107d9fcef32447e87977bdaef75ed6aea2ef96a9c5860f5a0d061252",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_knot_removal.rs": "f453be68e444b94048c55613cb0faf051bf53958ed1b35af48e4897ab16ef33a",
+    "crates/nurbs-core/src/editing/exact_surface_knot_removal/compression.rs": "c439978861b92fa3e3445e0a79ec13714aa87fe83d6fe0d218cd378548e492b8",
+    "crates/nurbs-core/src/editing/exact_surface_degree_reduction.rs": "eae0b9b04ea7d8649dc17406738f4ceba1b429b70d574408aff2b99231a611ca",
+    "crates/nurbs-core/src/editing/exact_tensor_edit.rs": "e645914783d990bd687cd2249943f86d3835d42dbc86b6d456821b5a296c6e8e",
+    "crates/nurbs-core/tests/exact_tensor_compression_contracts.rs": "4711152fdbec11dfe94160ff8ee3c32b0458a1cbdd443d71d8bb0bff759c9a5a"
+  }
+}

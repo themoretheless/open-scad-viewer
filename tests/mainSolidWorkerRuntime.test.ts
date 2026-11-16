@@ -510,6 +510,62 @@ it('restores compact linked geometry through the authoritative document parser',
  expect(messages.at(-1)).toMatchObject({id:2,kind:'restoreDocument',ok:false})
 })
 
+it('answers consecutive restores from the resident base with the same documents as a cold parse',async()=>{
+ const {emptyDirectDocument,serializeDirectDocument,parseDirectDocument}=await import('../src/app/directModeling')
+ const {createSolidInstance}=await import('../src/kernel/solidInstances')
+ const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {applyDirectDocumentDelta,isDirectDocumentDelta}=await import('../src/kernel/directDocumentDelta')
+ const {stringifyMeshJson}=await import('../src/exchange/meshJson')
+ const seed=emptyDirectDocument(),brep=createBrepBox([0,0,0],[2,3,4])
+ seed.bodies.push({id:'source',name:'Source',brep,mesh:tessellateNurbsBrep(brep,1)})
+ const a=parseDirectDocument(serializeDirectDocument(createSolidInstance(seed,'source','linked',[[1,0,0,10],[0,1,0,0],[0,0,1,0],[0,0,0,1]])))
+ const renamed=structuredClone(a);renamed.bodies[0]!.name='Renamed'
+ const moved=structuredClone(a);moved.bodies[1]!.instance!.matrix[1]![3]=7
+ const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
+ let published=a,id=1
+ for(const target of [renamed,a,moved,a]){
+  const text=serializeDirectDocument(target),base=serializeDirectDocument(published)
+  await handle({version:1,id:id++,job:{kind:'restoreDocument',text,base}})
+  const response=messages.at(-1)!
+  expect(response.ok).toBe(true)
+  if(!response.ok)return
+  const wire=structuredClone(response.result) as unknown
+  published=isDirectDocumentDelta(wire)?applyDirectDocumentDelta(published,wire)!:wire as typeof a
+  expect(stringifyMeshJson(published)).toBe(stringifyMeshJson(parseDirectDocument(text)))
+ }
+})
+
+it('answers worker commits against the published state as deltas equal to a cold parse',async()=>{
+ const {emptyDirectDocument,serializeDirectDocument,parseDirectDocument}=await import('../src/app/directModeling')
+ const {createSolidInstance}=await import('../src/kernel/solidInstances')
+ const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {applyDirectDocumentDelta,isDirectDocumentDelta}=await import('../src/kernel/directDocumentDelta')
+ const {stringifyMeshJson}=await import('../src/exchange/meshJson')
+ const seed=emptyDirectDocument(),brep=createBrepBox([0,0,0],[2,3,4])
+ seed.bodies.push({id:'source',name:'Source',brep,mesh:tessellateNurbsBrep(brep,1)})
+ const a=parseDirectDocument(serializeDirectDocument(createSolidInstance(createSolidInstance(seed,'source','one',[[1,0,0,10],[0,1,0,0],[0,0,1,0],[0,0,0,1]]),'source','two',[[1,0,0,20],[0,1,0,0],[0,0,1,0],[0,0,0,1]])))
+ const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
+ let published=a,id=1
+ // Like `DirectHistory.commitPayload`, a payload keeps the geometry of an instance it cannot vouch
+ // for (here the moved one), so it is not the canonical snapshot text; the next commit names the
+ // canonical text of the published result as its base.
+ for(const [edit,keep] of [[(d:typeof a)=>{d.bodies[0]!.name='Renamed'},''],[(d:typeof a)=>{d.bodies[2]!.instance!.matrix[1]![3]=5},'two'],[(d:typeof a)=>{d.bodies[1]!.name='One'},'']] as const){
+  const next=structuredClone(published);edit(next)
+  const text=stringifyMeshJson({...next,bodies:next.bodies.map(body=>{if(!body.instance||body.id===keep)return body;const {mesh:_m,brep:_b,...linked}=body;return linked})}),base=serializeDirectDocument(published)
+  await handle({version:1,id:id++,job:{kind:'restoreDocument',text,base}})
+  const response=messages.at(-1)!
+  expect(response.ok).toBe(true)
+  if(!response.ok)return
+  const wire=structuredClone(response.result) as unknown
+  expect(isDirectDocumentDelta(wire)).toBe(true)
+  const rebuilt=applyDirectDocumentDelta(published,wire)!
+  expect(stringifyMeshJson(rebuilt)).toBe(stringifyMeshJson(parseDirectDocument(text)))
+  // Unchanged objects are the published ones.
+  for(const body of rebuilt.bodies){const before=published.bodies.find(b=>b.id===body.id)!;if(stringifyMeshJson(before)===stringifyMeshJson(body))expect(body).toBe(before)}
+  published=rebuilt
+ }
+})
+
 it('prepares transferable display buffers without detaching request geometry',async()=>{
  const mesh={positions:new Float64Array([0,0,0,1,0,0,0,1,0]),indices:new Uint32Array([0,1,2])}
  let received:MainSolidResponse|undefined,transferred=0

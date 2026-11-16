@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0262",
+  "testedBase": "8f0842244bc01c9b5d60fe82adb5bd43607a9e64",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "umbilic_cell_contracts",
+    "--test",
+    "principal_curvature_gap_contracts"
+  ],
+  "newContractsPassed": 7,
+  "regressionContractsPassed": 5,
+  "scope": [
+    "Exact dyadic Bernstein refinement covers each original cell. A positive coefficient net proves strict separation. Regions without that proof retain an existential nonumbilic status at the depth cap.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "ad2879959e7d24bc838ade264088f4532be890180fa06ccba10c17a4ca505bfa",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "f3ab45204f6d01ec9de1571016ff585ae82535b41ad63bb4aaa244a84325e2de",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/umbilic_subdivision.rs": "43a9fd60a2205a423adeb13c74319714446729f0e209e581b46a68aa64edcff8",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/umbilic_cell_contracts.rs": "586aa8c25b89721bef538653ea0835dbb40841ddc605d0ad7eb1493c3d7d7f54",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs": "30a2c08f982e18f0947bdd53485095277213ced5aa2e8078af710b52abae943d"
+  }
+}

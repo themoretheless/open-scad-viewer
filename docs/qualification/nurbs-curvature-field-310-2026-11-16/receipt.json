@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0310",
+  "testedBase": "dd6f3ba144ef51f936f5e9f2511057680f11efbf",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_affine_surface_clock_contracts",
+    "--test",
+    "exact_affine_curve_clock_contracts",
+    "--test",
+    "exact_pcurve_orientation_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 6,
+  "scope": [
+    "Map both tensor axes to independent absolute ranges and directions with exact knot storage and a matching control-net permutation.",
+    "Independent signs and domains on both tensor axes, including exterior and periodic knots. Nonrepresentable output refuses atomically."
+  ],
+  "logSha256": "4cb44ad728e2eb13f080bcfdb571fd85f7899507ada5131709a9de7eb5756b6d",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "179471987844262574092bff6b1c65e5630a6b56d2a8a984bcd988a2ba5827cb",
+    "crates/nurbs-core/src/editing/exact_projective/affine_surface.rs": "0c322331746aa6d0ae0f4632ba264da1c0b979149ecaaaecb9bb93b92165632f",
+    "crates/nurbs-core/src/editing/exact_projective/affine_curve.rs": "4e23c699faed0812fa93c399bef1bed9d36b376e3a8738c8c00d48c2d0433504",
+    "crates/nurbs-core/tests/exact_affine_surface_clock_contracts.rs": "efc7096c32d2f7297b6e6c689dc1ff0232b356cc1e2c0cb19079c3aafb90bb7a"
+  }
+}

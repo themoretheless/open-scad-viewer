@@ -12,9 +12,9 @@ use num_rational::BigRational as Q;
 use num_traits::{One, Zero};
 mod binormal;
 mod curvature;
-mod extraction;
+pub(super) mod extraction;
 mod higher;
-mod proof;
+pub(super) mod proof;
 mod speed;
 mod torsion;
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -45,7 +45,7 @@ impl From<rational_factor::Refusal> for Refusal {
         }
     }
 }
-type PResult<T> = std::result::Result<T, Refusal>;
+pub(super) type PResult<T> = std::result::Result<T, Refusal>;
 #[derive(Clone, Debug)]
 pub struct Report {
     /// Complete original-span cover, or None on any refusal. At an internal knot
@@ -55,7 +55,7 @@ pub struct Report {
     pub work_used: u64,
     pub refusal: Option<Refusal>,
 }
-fn add(a: &Poly, b: &Poly, subtract: bool, w: &mut Work) -> PResult<Poly> {
+pub(super) fn add(a: &Poly, b: &Poly, subtract: bool, w: &mut Work) -> PResult<Poly> {
     let mut out = vec![Q::zero(); a.len().max(b.len())];
     for i in 0..out.len() {
         let zero = Q::zero();

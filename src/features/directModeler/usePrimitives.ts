@@ -1,3 +1,4 @@
+import type { CommitInWorker } from './prepareDocumentCommit'
 import {primitiveCreationError} from '../../app/primitiveCreationError'
 import { presentKernelError } from '../../i18n/kernelErrors'
 import { primitiveKinds, type Pane } from './helpers'
@@ -14,7 +15,7 @@ export interface PrimitivesOptions {
   advancedOp: Ref<"split" | "push" | "shell" | "curve" | "transform" | "offset" | "loft" | "chamfer" | "instance-create" | "instance-transform" | "instance-place" | "nurbs-loft" | "nurbs-sweep" | "nurbs-patch" | "nurbs-runout" | "nurbs-rebuild" | "nurbs-reduce" | "nurbs-surface-rebuild" | "nurbs-surface-reduce" | "profile-union" | "profile-difference" | "profile-intersection" | "extend" | "edge-fillet" | "profile-prepare" | "nurbs-offset" | "nurbs-point-trim" | "nurbs-match" | "nurbs-prepare" | "nurbs-curve-match" | null>
   brepSegments: Ref<number>
   cancelCommand: () => void
-  commit: (next: DirectDocument) => void
+  commitInWorker: CommitInWorker
   document: ShallowRef<DirectDocument>
   error: Ref<string>
   finishCommit: (added: string[], next?: DirectDocument) => void
@@ -37,7 +38,7 @@ export interface PrimitivesOptions {
 }
 
 export function usePrimitives(options: PrimitivesOptions) {
-  const { activeGroup, advancedOp, brepSegments, cancelCommand, commit, document, error, finishCommit, fit, history, label, lockedIds, nativeNurbsPending, operation, pickObject, prepareCommit, props, isRestoreDisposed, run, runNativeNurbs, selectedCurvePair, tool, visibleSketches, workspace } = options
+  const { activeGroup, advancedOp, brepSegments, cancelCommand, commitInWorker, document, error, finishCommit, fit, history, label, lockedIds, nativeNurbsPending, operation, pickObject, prepareCommit, props, isRestoreDisposed, run, runNativeNurbs, selectedCurvePair, tool, visibleSketches, workspace } = options
 const roundGeometry=ref<'exact'|'faceted'>('exact')
 const primitiveG2Enabled=ref(false),primitiveG2Size=ref(0.5)
 const primitiveG2Individual=ref(false),primitiveG2Sizes=ref<[number,number,number,number]>([0.5,0.5,0.5,0.5])
@@ -105,18 +106,26 @@ function addBridgeCurve(){
  void runNativeNurbs({kind:'bridge',id:pair[0],otherId:pair[1],endA:bridgeEndA.value,endB:bridgeEndB.value,tension:bridgeTension.value,createdId:crypto.randomUUID()})
 }
 function updateDimensionSketch(sketch:import('../../app/directModeling').DirectSketch){run(()=>{
-  const d=history.document,index=d.sketches.findIndex(s=>s.id===sketch.id)
-  if(index>=0){validateSimpleSketch(sketch.points,sketch.closed);d.sketches[index]=sketch;commit(d)}
+  if(!history.document.sketches.some(s=>s.id===sketch.id))return
+  validateSimpleSketch(sketch.points,sketch.closed)
+  void commitInWorker(()=>{
+   const d=history.document,index=d.sketches.findIndex(s=>s.id===sketch.id)
+   if(index<0)return
+   d.sketches[index]=sketch;return d
+  })
 })}
 const dimensionLabels=computed(()=>visibleSketches.value.flatMap(s=>{
   if(!s.dimensions?.length)return []
   return sketchDimensions(s).measurements.map((m,i)=>({key:s.id+'-'+i,point:m.label,lines:m.lines,text:(m.value===null?'—':m.value.toFixed(2))+(s.dimensions![i].kind==='angle'?'°':' mm')}))
 }))
 function addNurbs(kind: 'curve'|'surface') { run(() => {
-  const d = history.document, item = kind === 'curve' ? createSolidNurbsCurve() : createSolidNurbsSurface()
-  if (kind === 'curve') d.curves!.push(item as ReturnType<typeof createSolidNurbsCurve>)
-  else d.surfaces!.push(item as ReturnType<typeof createSolidNurbsSurface>)
-  commit(d); pickObject(item.id, '3d'); fit('3d')
+  const item = kind === 'curve' ? createSolidNurbsCurve() : createSolidNurbsSurface()
+  void commitInWorker(() => {
+    const d = history.document
+    if (kind === 'curve') d.curves!.push(item as ReturnType<typeof createSolidNurbsCurve>)
+    else d.surfaces!.push(item as ReturnType<typeof createSolidNurbsSurface>)
+    return d
+  }, () => { pickObject(item.id, '3d'); fit('3d') })
 }) }
   return { primitiveG2Enabled, primitiveG2Size, primitiveG2Individual, primitiveG2Sizes, failedPrimitive, primitiveG2Invalid, roundGeometry, primitiveSize, primitiveTopRadius, primitiveInnerRadius, TOOL_ICONS, primitiveLabel, primitivePending, cancelPrimitive, addPrimitive, bridgeEndA, bridgeEndB, bridgeTension, bridgeError, bridgeTensionInvalid, addBridgeCurve, updateDimensionSketch, dimensionLabels, addNurbs }
 }

@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0287",
+  "testedBase": "d0d0dc3b08f0f92cc008a17fb276aaa2497e0248",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_mobius_bezier_contracts",
+    "--test",
+    "exact_projective_contracts",
+    "--test",
+    "exact_projective_numeric_boundaries"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 13,
+  "scope": [
+    "Positive endpoint-preserving fractional-linear clocks act diagonally on the original Bernstein weights. A single exact gauge preserves the shape and orientation while changing interior parameter correspondence.",
+    "Single clamped nonperiodic B\u00e9zier charts; no automatic multi-span clock fitting. Finite exact weight bounds and affine endpoints are retained."
+  ],
+  "logSha256": "e1fc964e5560afffaa5c471dffd9de3b62e9af0fef5a0815f6c3ef5b03e63af1",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "4beb2717f1e656d7ca26cfecc4942155d171e57eccf5de828c28f3633f887fa6",
+    "crates/nurbs-core/src/editing/exact_projective/mobius.rs": "37dcb77d41d58fdf996b8c02432e0c87a63ecb7d423a8ffc00bfbc504415f33b",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_mobius_bezier_contracts.rs": "619d6a7f5c980c0b60f8e7b68443bcc8f27eaf6fb46ce25b0f796fec07b3074a"
+  }
+}

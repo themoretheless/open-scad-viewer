@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0294",
+  "testedBase": "ddf5b98f39216e58a1ee5bfa2b75ee3c746d2ecc",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_chart_contracts",
+    "--test",
+    "exact_mobius_pcurve_contracts",
+    "--test",
+    "exact_mobius_trimmed_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 7,
+  "scope": [
+    "Certify a rational UV curve on its whole closed rectangular chart, distinguishing a true exit from even-multiplicity contacts and arithmetic refusal.",
+    "Exact original homogeneous spans. Positive NURBS weights and rational Sturm arithmetic; work exhaustion yields no decision."
+  ],
+  "logSha256": "0f8505935e31855df6ce8fa1625179b4e1df9bcff8fcfd81e530e24a81dc9ac5",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "9107ed03bc12a938f6470f612e867f2bdb40eeabdbbbf478a421fafd43bb3b9d",
+    "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs": "485d7b0acaa68d0be57ed38e3f4286e8f4fafe3c06bedb5b907a28e94ece1753",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs": "96cbfb38dd4f2ff48f5474453d57877609088bfee55a65f1f6202bf3e611e850",
+    "crates/nurbs-core/tests/exact_pcurve_chart_contracts.rs": "25bed1f2bf344da7ab4ad2a2295f5f3902a2162d2889c604e3a61977a914be80"
+  }
+}

@@ -74,7 +74,13 @@ import { MeshDrawBundle } from './meshDrawBundle'
 import { ViewFrustum } from './viewFrustum'
 import { MeshInstances } from '../kernel/meshInstances'
 import { computeOrbitCameraFrame } from './orbitCameraProjection'
-import { DEFAULT_DISPLAY_BUDGET, ProgressiveLevelStore } from './displayScheduler'
+import {
+  boundingBoxLineVertices,
+  DEFAULT_DISPLAY_BUDGET,
+  ProgressiveLevelStore,
+  sameDisplayBudget,
+  type DisplayBudget,
+} from './displayScheduler'
 import { GpuResidencyCache } from './gpuResidencyCache'
 import { combineBounds, measureMeshBounds, type MeshBoundsCache } from './meshBounds'
 import { GpuGeometryCache } from './gpuGeometryCache'
@@ -131,6 +137,7 @@ import {
   rebuildSelectionOverlaySlots,
   rebuildSourceHighlightOverlaySlots,
   releaseOverlaySlot,
+  writeOverlaySlot,
 } from './overlayBuilder'
 import {
   destroySceneMeshes,
@@ -277,6 +284,8 @@ export class WebGPURenderer {
   private sourceHighlightId: number | null = null
   private sourceFaceSlot: OverlaySlot = { buffer: null, capacity: 0, count: 0 }
   private sourceLineSlot: OverlaySlot = { buffer: null, capacity: 0, count: 0 }
+  private boundingBoxLineSlot: OverlaySlot = { buffer: null, capacity: 0, count: 0 }
+  private displayBudget: DisplayBudget = DEFAULT_DISPLAY_BUDGET
   private cameraHistory = new CameraHistory(32)
   private depthCycleState: DepthCycleState | null = null
   private styleScratch = new Float32Array(4)
@@ -1002,6 +1011,19 @@ export class WebGPURenderer {
    * rebinds the 1×1 dummy and clears the enable flag, restoring the exact
    * pre-shadow look.
    */
+  /** Byte budget and proxy policy for the adaptive LOD display plan. */
+  setDisplayBudget(budget: DisplayBudget) {
+    if (sameDisplayBudget(this.displayBudget, budget)) return
+    this.displayBudget = budget
+    // Force reselection: the plan depends on the budget, not only the camera.
+    this.lastMeshLodKey = ''
+    this.requestRender()
+  }
+
+  getDisplayBudget(): DisplayBudget {
+    return this.displayBudget
+  }
+
   setShadowsEnabled(enabled: boolean) {
     if (this.textures.shadowsEnabled === enabled) return
     if (this.textures.setShadowsEnabled(enabled, this.dev)) {
@@ -1540,6 +1562,7 @@ export class WebGPURenderer {
       sourceFaceSlot: this.sourceFaceSlot,
       selectionFaceSlot: this.selectionFaceSlot,
       sourceLineSlot: this.sourceLineSlot,
+      boundingBoxLineSlot: this.boundingBoxLineSlot,
       selectionLineSlot: this.selectionLineSlot,
       deepSelectionLineSlot: this.deepSelectionLineSlot,
       styleScratch: this.styleScratch,
@@ -1664,10 +1687,13 @@ export class WebGPURenderer {
       changed = updateMeshLods(dev, this.meshes, {
         eye: camera.eye, distance: this.dist, eyeDistance: camera.eyeDistance,
         fovY: this.perspectiveFovY, projection: this.projection, viewportHeightPx,
-      }, this.nativePicking, undefined, { budget: DEFAULT_DISPLAY_BUDGET, store })
+      }, this.nativePicking, undefined, { budget: this.displayBudget, store })
     } catch {
       // A refused selection keeps the bound geometry; it is still a valid display.
       return
+    }
+    if (changed.length || this.boundingBoxLineSlot.count) {
+      writeOverlaySlot(dev, this.boundingBoxLineSlot, boundingBoxLineVertices(this.meshes, [...this.theme.edgeColor, 1]))
     }
     if (!changed.length) return
     const touched = new Set(changed)
@@ -1882,6 +1908,7 @@ export class WebGPURenderer {
   private clearSourceHighlightOverlayBuffers() {
     releaseOverlaySlot(this.sourceFaceSlot)
     releaseOverlaySlot(this.sourceLineSlot)
+    releaseOverlaySlot(this.boundingBoxLineSlot)
   }
 
   private sameOverlayTarget(a: PickHit | null, b: PickHit | null) {

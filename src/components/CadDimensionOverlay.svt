@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import {computed,onMounted,onUnmounted,ref} from 'svet'
 import CadQuantityInput from './CadQuantityInput.svt'
-const props=defineProps<{anchor:number[];center:number[];size:number;modelValue:number;locale:string;failed:boolean;label:string}>()
+import {dragDimensionValue} from '../app/edgeFeatureEditing'
+const props=defineProps<{anchor:number[];center:number[];size:number;modelValue:number;locale:string;failed:boolean;label:string;min?:number}>()
 const emit=defineEmits<{'update:modelValue':[number];validity:[boolean]}>()
 const root=ref<HTMLElement>(),extent=ref([0,0,32])
 let observer:ResizeObserver|undefined
@@ -11,19 +12,35 @@ onMounted(()=>{
  observer=new ResizeObserver(resize);observer.observe(host);if(root.value)observer.observe(root.value);resize()
 })
 onUnmounted(()=>observer?.disconnect())
+const pxPerMm=()=>Math.min(extent.value[0],extent.value[1])/props.size
+// Dragging the grip changes the value by the distance the pointer moves in model millimetres.
+function startDrag(e:PointerEvent){
+ if(e.button!==0)return
+ e.preventDefault()
+ const grip=e.currentTarget as HTMLElement,x0=e.clientX,start=props.modelValue,scale=pxPerMm()
+ grip.setPointerCapture?.(e.pointerId)
+ const move=(m:PointerEvent)=>emit('update:modelValue',dragDimensionValue(start,m.clientX-x0,scale,m.shiftKey?0:0.5,props.min??-Infinity))
+ const end=()=>{grip.removeEventListener('pointermove',move);grip.removeEventListener('pointerup',end);grip.removeEventListener('pointercancel',end)}
+ grip.addEventListener('pointermove',move);grip.addEventListener('pointerup',end);grip.addEventListener('pointercancel',end)
+}
+function stepKey(e:KeyboardEvent){
+ const sign=e.key==='ArrowRight'||e.key==='ArrowUp'?1:e.key==='ArrowLeft'||e.key==='ArrowDown'?-1:0
+ if(!sign)return
+ e.preventDefault();emit('update:modelValue',dragDimensionValue(props.modelValue,sign*(e.shiftKey?0.1:0.5),1,0,props.min??-Infinity))
+}
 const position=computed(()=>{
  const [width,height,fieldHeight]=extent.value,scale=Math.min(width,height)/props.size
- return {left:Math.max(4,Math.min(width-128,width/2+(props.anchor[0]-props.center[0])*scale+16))+'px',
+ return {left:Math.max(4,Math.min(width-148,width/2+(props.anchor[0]-props.center[0])*scale+16))+'px',
   top:Math.max(4,Math.min(height-fieldHeight-4,height/2+(props.anchor[1]-props.center[1])*scale-16))+'px'}
 })
 </script>
 <template>
  <label ref="root" class="gizmo-dimension" :class="{failed}" :style="position" @pointerdown.stop @wheel.stop>
-  <CadQuantityInput :model-value="modelValue" :locale="locale" :aria-label="label" step="0.5" @update:model-value="emit('update:modelValue',$event)" @validity="emit('validity',$event)" /><span class="dimension-unit">mm</span>
+  <CadQuantityInput :model-value="modelValue" :locale="locale" :aria-label="label" step="0.5" @update:model-value="emit('update:modelValue',$event)" @validity="emit('validity',$event)" /><span class="dimension-unit">mm</span><span class="dimension-grip" role="slider" tabindex="0" :aria-label="label" :aria-valuenow="modelValue" :aria-valuemin="min" data-dimension-grip title="⇔" @pointerdown.stop="startDrag" @keydown.stop="stepKey">⇔</span>
  </label>
 </template>
 <style scoped>
-.gizmo-dimension{position:absolute;z-index:4;display:flex;align-items:center;gap:4px;width:124px;box-sizing:border-box;padding:5px;background:var(--bg);color:var(--text);font:13px/1.2 var(--font-ui,system-ui);border:1px solid #77eac5;border-radius:5px}
+.gizmo-dimension{position:absolute;z-index:4;display:flex;align-items:center;gap:4px;width:144px;box-sizing:border-box;padding:5px;background:var(--bg);color:var(--text);font:13px/1.2 var(--font-ui,system-ui);border:1px solid #77eac5;border-radius:5px}
 .gizmo-dimension.failed{border-color:#f87171}
 .gizmo-dimension:focus-within{outline:2px solid var(--accent)}
 .gizmo-dimension :deep(.quantity-field){flex:1;min-width:0}
@@ -31,4 +48,6 @@ const position=computed(()=>{
 .gizmo-dimension :deep(input:focus-visible){outline:0}
 .gizmo-dimension :deep(small){font-size:11px}
 .dimension-unit{flex:none}
+.dimension-grip{flex:none;cursor:ew-resize;touch-action:none;user-select:none;padding:0 2px;border-radius:3px}
+.dimension-grip:focus-visible{outline:2px solid var(--accent)}
 </style>

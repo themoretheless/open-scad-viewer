@@ -576,8 +576,8 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
               <span class="menu-status" role="status">{{ persistenceLabel }}</span>
             </div>
           </details>
-          <input ref="fileInputRef" class="sr-only" type="file" :accept="SOURCE_FILE_ACCEPT" @change="openSelectedFile">
-          <input ref="convertInputRef" class="sr-only" type="file" :accept="MESH_IMPORT_ACCEPT" @change="convertSelectedFile">
+          <input ref="fileInputRef" class="sr-only" type="file" tabindex="-1" :aria-label="t('openFile')" :accept="SOURCE_FILE_ACCEPT" @change="openSelectedFile">
+          <input ref="convertInputRef" class="sr-only" type="file" tabindex="-1" :aria-label="t('convertFileHelp')" :accept="MESH_IMPORT_ACCEPT" @change="convertSelectedFile">
         </template>
         <template #generators>
           <button class="btn generators-button" type="button" aria-haspopup="dialog" @click="mechanicalGeneratorOpen = true">{{ t('generators') }}</button>

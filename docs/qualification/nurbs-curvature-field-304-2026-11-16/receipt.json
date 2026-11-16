@@ -1,0 +1,36 @@
+{
+  "id": "NURBS-0304",
+  "testedBase": "b21ad539d07681fe163696121484e97ceb191ce6",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_gap_contracts",
+    "--test",
+    "exact_pcurve_tangent_contracts",
+    "--test",
+    "exact_surface_pcurve_seam_contracts",
+    "--test",
+    "exact_pcurve_chart_contracts"
+  ],
+  "newContractsPassed": 3,
+  "regressionContractsPassed": 11,
+  "scope": [
+    "Enforce the Euclidean gap tolerance over the entire shared absolute seam correspondence using exact squared-distance polynomial signs.",
+    "Provided absolute parameter correspondence. Exact cell cuts and arithmetic budget; the test includes extrema at the tolerance and returns the first violating interval."
+  ],
+  "logSha256": "a6db3f111c6a216c88a07fb1b2597474cc594900240b7478cf9d52ae5896cf23",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "fe1dc6b3eb2b105e3b7ebf11df3183b411210ab3f294f637cbd17fdd88e06942",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_gap.rs": "451d14694bf7fba2523abe3308818f78790b1db2c3d8aa5d0f5cb42c34823fa6",
+    "crates/nurbs-core/src/editing/exact_projective/chart_nonnegative.rs": "d8d2ae4f7577379a4802da329788bbcf8b50e9617bb542a3719f8ebdd16d1f2f",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_agreement.rs": "e3fc3c3054e03f755ca86fd1b08163323a48959f74d3cf7378ec33a37650b7f7",
+    "crates/nurbs-core/tests/exact_pcurve_gap_contracts.rs": "0ab11fe232e192c9a6014f85278a2a8cf39ff12cb04f17ea27b144e6373f19b8"
+  }
+}

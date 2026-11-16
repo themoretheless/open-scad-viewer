@@ -6,9 +6,11 @@ import {
   resolveSelectionState,
   SELECTION_STATE_ORDER,
   SELECTION_STATES,
+  selectionStateRgb,
   type SelectionState,
   type ThemeName,
 } from '../src/ui/selectionStates'
+import { THEME_PRESETS } from '../src/render/rendererContracts'
 
 const css = readFileSync(resolve('src/features/styles/direct-modeler.css'), 'utf8')
 const states = Object.keys(SELECTION_STATES) as SelectionState[]
@@ -56,5 +58,32 @@ describe('selection state table', () => {
     expect(source).toContain('v-for="state in SELECTION_STATE_ORDER"')
     expect(source).toMatch(/class="dock-props" :data-sel-state=/)
     expect(css).toMatch(/input\[aria-invalid=true\][^{]*\{[^}]*border-style:dashed/)
+  })
+})
+
+describe('GPU selection colours', () => {
+  const toHex = (rgb: readonly number[]) =>
+    '#' +
+    rgb
+      .map(c =>
+        Math.round(c * 255)
+          .toString(16)
+          .padStart(2, '0'),
+      )
+      .join('')
+
+  it('converts table colours to 0..1 RGB without losing the 8-bit value', () => {
+    for (const state of states)
+      for (const theme of themes)
+        expect(toHex(selectionStateRgb(state, theme))).toBe(SELECTION_STATES[state].color[theme])
+  })
+
+  it('takes selectionColor and hoverColor of every render theme from the table', () => {
+    const themeOf: Record<string, ThemeName> = { default: 'dark', 'dark-contrast': 'dark', light: 'light' }
+    expect(THEME_PRESETS.map(t => t.id).sort()).toEqual(Object.keys(themeOf).sort())
+    for (const preset of THEME_PRESETS) {
+      expect(toHex(preset.selectionColor), preset.id).toBe(SELECTION_STATES.selected.color[themeOf[preset.id]])
+      expect(toHex(preset.hoverColor), preset.id).toBe(SELECTION_STATES.hover.color[themeOf[preset.id]])
+    }
   })
 })

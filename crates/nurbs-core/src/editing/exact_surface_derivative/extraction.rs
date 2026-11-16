@@ -62,7 +62,7 @@ fn basis(
     }
     Ok(prev)
 }
-pub(super) fn cell(
+pub(in crate::editing) fn cell(
     s: &Surface,
     ku: usize,
     kv: usize,

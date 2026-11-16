@@ -1,0 +1,33 @@
+{
+  "id": "NURBS-0263",
+  "testedBase": "83eee1091a2026fc7e31c91c64929d99ac9e5fc7",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "curvature_gap_threshold_contracts",
+    "--test",
+    "principal_curvature_gap_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 5,
+  "scope": [
+    "An exact polynomial residual compares squared principal curvature separation to a positive threshold. Each cell reports inclusive bounds, identity, opposite corner signs or an unresolved comparison.",
+    "Original normal rank is proved before cancellation, with original UV clocks and atomic refusal under the shared work and storage bounds. Native Rust coverage."
+  ],
+  "logSha256": "102a96c849071998288df58050259d68cf486eadc1ef50eaadc6d1ef77bc5476",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "4b118cedd6f5e97a26f13f5afd15347a53bec0c07abdcbe37872f6b2f255a8c7",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap_threshold.rs": "aad6781759b4190bee7fff72ee30c1d51c1bff9434cb06cbfe9d6936673594c0",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature.rs": "b4e2afeb855235f0f97e4ac7b851b8028e097c6b4f4950aa9bac8236b6b95a0a",
+    "crates/nurbs-core/src/editing/bounded_surface_differential.rs": "31e8669711df4c435a927c3493ad9d20203d17e41bf062343ec36365f0bb3733",
+    "crates/nurbs-core/tests/curvature_gap_threshold_contracts.rs": "4d7564ac0cefe1831cdec1ba97a9dc4a79d6b8c6d42c46b5d1dad933aaad3c58",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/curvature_gap.rs": "30a2c08f982e18f0947bdd53485095277213ced5aa2e8078af710b52abae943d"
+  }
+}

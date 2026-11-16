@@ -66,17 +66,45 @@ import {checkLatticeGraphInput, checkLatticeGraphMeshInput, isNominalLatticeGrap
 import {warmGeometryKernel} from './geometry/kernel'
 import {prepareMainSolidTransfer} from './mainSolidWorkerTransport'
 import {createWorkerHandler} from '../core/workerHandlerRuntime'
-import {MAIN_SOLID_JOB_KINDS,type MainSolidJob,type MainSolidProgress,type MainSolidProgressMessage,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
+import {directDocumentDelta,directSnapshotDelta,snapshotReusableInstances} from './directDocumentDelta'
+import {resolvedInstanceGeometry} from './solidInstances'
+import {MAIN_SOLID_JOB_KINDS,isResidentDocumentRef,type MainSolidJob,type MainSolidProgress,type MainSolidProgressMessage,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
 
 /** Run the authoritative history parser here so the UI can commit without re-validating on its thread. */
 const validatedDocumentResult=<T extends {document:DirectDocument}>(result:T):T=>({...result,document:parseDirectDocument(serializeDirectDocument(result.document),instanceCache)})
+/** Whole-scene rebuilds (Boolean, Minkowski) answer a `delta` request against the document the
+ * client sent: unchanged objects travel as ids and stay the client's own objects. */
+const documentResult=<T extends {document:DirectDocument}>(job:{document:DirectDocument;delta?:true},result:T):T=>{
+  const validated=validatedDocumentResult(result)
+  return job.delta===true?{...validated,document:directDocumentDelta(job.document,validated.document) as unknown as DirectDocument}:validated
+}
+/** Undo/Redo: validate the snapshot; with `base`, answer only what differs from the client's state. */
+/** The last restored document stays resident with its snapshot text: Undo/Redo steps that start
+ * from it (the client's base is that text) reuse its resolved linked instances instead of
+ * resolving and copying them again. Worker-private; never mutated after it is stored. */
+let residentRestore:{text:string;document:DirectDocument}|null=null
+const restoreDocumentResult=(job:{text:string;base?:string}):DirectDocument=>{
+  let reuse:Map<string,Pick<DirectDocument['bodies'][number],'mesh'|'brep'>>|undefined
+  if(typeof job.base==='string'&&residentRestore?.text===job.base&&job.text.includes('"instance"')){
+    const ids=snapshotReusableInstances(job.base,job.text)
+    if(ids.size){reuse=new Map();for(const body of residentRestore.document.bodies)if(ids.has(body.id))reuse.set(body.id,resolvedInstanceGeometry(body))}
+  }
+  residentRestore=null
+  const next=parseDirectDocument(job.text,instanceCache,reuse)
+  // A commit payload (`DirectHistory.commitPayload`) is not always the canonical snapshot text
+  // the client later names as `base`; keep the canonical form so the next commit or Undo/Redo
+  // from this state finds it. Only linked instances benefit, so other documents keep the text.
+  residentRestore={text:job.text.includes('"instance"')?serializeDirectDocument(next):job.text,document:next}
+  if(typeof job.base!=='string')return next
+  return (directSnapshotDelta(job.base,job.text,next) as unknown as DirectDocument|undefined)??next
+}
 async function execute(job:MainSolidJob,onProgress?:(progress:MainSolidProgress)=>void):Promise<MainSolidResults[keyof MainSolidResults]> {
   switch(job.kind) {
 case 'frozenGraphBodyDisplay':return displayFrozenGraphBody(job.artifact,job.segments,job.options)
 case 'frozenGraphBodyRestore':return restoreFrozenGraphBody(job.artifact,job.options)
 case 'sourceGraphG2Preview':return createSourceGraphG2Preview(job.sources,job.width,job.options)
 case 'g2RunoutSurface':return createG2RunoutSurface(job.source,job.plane,job.targetPcurve,job.options)
-case 'minkowski3d':return validatedDocumentResult((await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options))
+case 'minkowski3d':return documentResult(job,(await import('./solidMinkowski')).applySolidMinkowski(job.document,job.options))
 case 'animationFrames':return (await import('../exchange/assemblyFrameExport')).exportAssemblyFrames(job.document,job.animation,job.fps)
 case 'animationSample':return (await import('../app/assemblyAnimation')).sampleAssemblyAnimation(job.document,job.animation,job.time)
 case 'drawingPdf':return (await import('../app/drawingSheets')).vectorDrawingPdf(job.sheets)
@@ -127,17 +155,17 @@ case 'transaction':return executeDirectTransaction(job.document,job.script)
     case 'measureEdge':return measureSolidEdgeCurvature(job.body,job.edge,job.parameter)
     case 'primitive':return addSolidPrimitive(job.document,job.options)
     case 'displayMesh':return prepareSolidDisplay(job.mesh,job.brep,job.segments)
-    case 'restoreDocument':return parseDirectDocument(job.text,instanceCache)
+    case 'restoreDocument':return restoreDocumentResult(job)
     case 'rushGraphImport':return (await import('../exchange/solidRushGraphImport')).importSolidRushGraph(job.document,job.text,job.group)
     case 'brepTool':return applySolidBrepTool(job.document,job.options)
     case 'curveChainInspection':return (await import('../app/inspectCurrentCurveChain')).inspectCurrentCurveChain(job.document,job.ids,job.maxPairs)
     case 'trimmedCurveOffset':return (await import('./solidTrimmedCurveOffset')).offsetTrimmedSolidCurve(job.document,job.options)
     case 'curveOffset':return (await import('./solidCurveOffset')).offsetSolidCurve(job.document,job.options)
     case 'nurbsEdit':return (await import('./solidNurbsEdit')).applySolidNurbsEdit(job.document,job.options)
-    case 'pointEdit':return applySolidPointEdit(job.document,job.options)
+    case 'pointEdit':{const base=residentBase(job);return residentResult(job,base,applySolidPointEdit(base,job.options))}
     case 'sketchEdit':return applySolidSketchEdit(job.document,job.options)
-    case 'boolean':return validatedDocumentResult(applySolidBoolean(job.document,job.options))
-    case 'sceneEdit':return parseDirectDocument(serializeDirectDocument(applySolidSceneEdit(typeof job.document==='string'?parseDirectDocument(job.document,instanceCache):job.document,job.options,instanceCache)),instanceCache)
+    case 'boolean':return documentResult(job,applySolidBoolean(job.document,job.options))
+    case 'sceneEdit':{const base=residentBase(job);return residentResult(job,base,parseDirectDocument(serializeDirectDocument(applySolidSceneEdit(base,job.options,instanceCache)),instanceCache))}
     case 'curveMatch':return matchSolidCurve(...job.args)
     case 'surfaceMatch':return matchSolidSurface(...job.args)
     case 'seamPrepare':return prepareSolidSurfaceSeams(...job.args)
@@ -210,3 +238,20 @@ export function createMainSolidWorkerHandler(
 }
 
 const instanceCache=new SolidInstanceBatchCache()
+/** The base document of the current drag: sent once, then named by key on every move, so the
+ * UI thread does not clone the whole scene per pointer event. One slot per worker realm. */
+let residentDocument:{key:string;document:DirectDocument}|null=null
+type ResidentJob=Extract<MainSolidJob,{kind:'sceneEdit'|'pointEdit'}>
+function residentBase(job:ResidentJob):DirectDocument {
+  const source=job.document
+  if(isResidentDocumentRef(source)) {
+    if(residentDocument?.key!==source.resident)throw Object.assign(Error('CAD worker does not hold the referenced document.'),{code:'CAD_RESIDENT_MISSING'})
+    return residentDocument.document
+  }
+  const document=typeof source==='string'?parseDirectDocument(source,instanceCache):source
+  if(typeof job.retainAs==='string')residentDocument={key:job.retainAs,document}
+  return document
+}
+/** The client that asked for a delta rebuilds the document from its own copy of the base. */
+const residentResult=(job:ResidentJob,base:DirectDocument,result:DirectDocument):DirectDocument=>
+  job.delta===true?directDocumentDelta(base,result) as unknown as DirectDocument:result

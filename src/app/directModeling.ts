@@ -10,6 +10,7 @@ import {withRetainedProfile} from './retainedSketchProfile'
 import {validateBrepProfile,type BrepProfile} from '../kernel/geometry/brepProfile'
 import {SolidInstanceBatchCache} from '../kernel/solidInstanceBatchCache'
 import {cloneDocumentTree} from './documentClone'
+import {sameMeshJson} from '../exchange/sameMeshJson'
 import {resolveSolidInstances,type SolidInstanceLink} from '../kernel/solidInstances'
 import { sketchDimensions, type SketchDimension } from './directDimensions'
 import {callGeometryRust} from '../kernel/geometry/kernel'
@@ -99,7 +100,7 @@ export function serializeDirectDraft(document:DirectDocument,serialized?:string)
  return serializeDirectDocument(persisted as unknown as DirectDocument)
 }
 
-function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBatchCache): Generator<void, DirectDocument> {
+function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBatchCache, reuseInstances?:ReadonlyMap<string,Pick<DirectBody,'mesh'|'brep'>>): Generator<void, DirectDocument> {
   // In-memory bound only; the browser draft has its own, smaller quota (see persist in DirectModeler).
   if (text.length > MAX_DOCUMENT_CHARACTERS) throw new Error('Document exceeds 64 MB.')
   const d = JSON.parse(text) as DirectDocument
@@ -239,6 +240,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     yield
   }
   // Validate serialized caches first, then derive linked geometry from validated sources.
+  const reused: Array<[number, DirectBody['mesh'], DirectBody['brep']]> = []
   if(d.bodies.some(body=>body.instance)) {
     // Bound expansion before allocating geometry: a small reference document must not
     // multiply a large source into an unbounded set of materialized copies.
@@ -255,10 +257,14 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
       expanded+=sourceSizes.get(body.instance.sourceId)??0
       if(expanded>MAX_DOCUMENT_CHARACTERS)throw Error('Expanded instance document exceeds 64 MB.')
     }
-    d.bodies=resolveSolidInstances(d,instanceCache).bodies
+    d.bodies=resolveSolidInstances(d,instanceCache,reuseInstances).bodies
     for (let i = 0; i < d.bodies.length; i++) {
       const body = d.bodies[i]
       if (!body.instance) continue
+      if (reuseInstances?.has(body.id)) {
+        // Already checked and normalized when it was resolved; attached after normalization below.
+        reused.push([i, body.mesh, body.brep]); body.mesh = { positions: [], indices: [] } as unknown as DirectBody["mesh"]; if (body.brep) body.brep = null as never; continue
+      }
       const pos = body.mesh.positions
       for (let j = 0; j < pos.length; j++) if (!finite(pos[j])) throw Error('Instance placement exceeds document coordinate bounds.')
     }
@@ -275,17 +281,19 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
   if(d.cplane!==undefined&&!validCPlane(d.cplane))throw Error('Invalid construction plane.')
   const pivots=validatePivots(d.pivots,new Set([...d.sketches,...d.bodies,...d.curves??[],...d.surfaces??[],...d.sourceBodies??[]].map(o=>(o as {id:string}).id)))
   if(pivots)d.pivots=pivots;else delete d.pivots
-  try { normalizeOwnedJson(d); return d }
+  const attachReused = (doc: DirectDocument) => { for (const [i, mesh, brep] of reused) { const body = doc.bodies[i]!; body.mesh = mesh; if (brep) body.brep = brep } return doc }
+  try { normalizeOwnedJson(d); return attachReused(d) }
   catch (error) {
     if (error !== DEEP_JSON_NORMALIZATION) throw error
     // This is a fast-path depth threshold, not a new document admission limit.
     // Keep the JSON round trip here: it also normalizes numbers (e.g. -0 → 0).
-    return JSON.parse(JSON.stringify(d))
+    return attachReused(JSON.parse(JSON.stringify(d)) as DirectDocument)
   }
 }
 
-export function parseDirectDocument(text: string, instanceCache?:SolidInstanceBatchCache): DirectDocument {
-  const validation = directDocumentValidation(text,instanceCache)
+/** `reuseInstances`: see `resolveSolidInstances`; only the worker's resident restore passes it. */
+export function parseDirectDocument(text: string, instanceCache?:SolidInstanceBatchCache, reuseInstances?:ReadonlyMap<string,Pick<DirectBody,'mesh'|'brep'>>): DirectDocument {
+  const validation = directDocumentValidation(text,instanceCache,reuseInstances)
   for (;;) {
     const step = validation.next()
     if (step.done) return step.value
@@ -349,24 +357,144 @@ const aabbFromBrep = (brep: NurbsBrep): { inner: Aabb; outer: Aabb } => {
 
 /** Inactive snapshots retain compact text only; at most one current state owns geometry. */
 type DirectSnapshot = HistoryText
+const HISTORY_COLLECTIONS:ReadonlySet<string>=new Set(['sketches','bodies','curves','surfaces','sourceBodies'])
+/** One collection item exactly as `serializeDirectDocument` writes it. */
+const serializeDocumentItem=(key:string,item:unknown):string=>{
+  if(key==='bodies'&&item&&typeof item==='object'&&(item as DirectBody).instance){
+    const {mesh:_mesh,brep:_brep,...linked}=item as DirectBody
+    return stringifyMeshJson(linked)
+  }
+  return stringifyMeshJson(item)??'null'
+}
+const sameSnapshotText=(a:DirectSnapshot,b:DirectSnapshot):boolean=>{
+  if(a.characters!==b.characters)return false
+  if(a.chunks.length===b.chunks.length){
+    let same=true
+    for(let i=0;i<a.chunks.length;i++)if(a.chunks[i]!==b.chunks[i]){same=false;break}
+    if(same)return true
+  }
+  return unpackHistoryText(a)===unpackHistoryText(b)
+}
 export class DirectHistory {
   private restoreGeneration = 0
   /** Synchronous commit/undo/redo re-validate on this thread; unchanged linked instances
    * reuse their transformed geometry instead of re-running the kernel for every instance. */
   private instanceCache = new SolidInstanceBatchCache()
   private textPool = new Map<string,string>()
-  private snapshot(text:string):DirectSnapshot { return packHistoryText(text,this.textPool) }
+  /** Serialized form of history-owned collection items, by object identity. Owned items never
+   * escape (readers get copies), so an unchanged item is serialized and chunked once. */
+  private fragments=new WeakMap<object,{text:string;chunks?:readonly string[]}>()
+  /** Published item (UI document, worker result) -> the copy this history owns. Relies on
+   * published documents not being mutated in place, the rule `canonicalText` already relies on. */
+  private twins=new WeakMap<object,object>()
+  private fragment(key:string,item:unknown):{text:string;chunks?:readonly string[]} {
+    if(!item||typeof item!=='object')return {text:serializeDocumentItem(key,item)}
+    let entry=this.fragments.get(item)
+    if(!entry){entry={text:serializeDocumentItem(key,item)};this.fragments.set(item,entry)}
+    return entry
+  }
+  private pooled(part:string):string {
+    let shared=this.textPool.get(part)
+    if(shared===undefined){shared=part;this.textPool.set(part,shared)}
+    return shared
+  }
+  /** The snapshot of `serializeDirectDocument(document)`, assembled from per-item fragments.
+   * Chunk boundaries depend only on the items, so equal items share chunks across snapshots. */
+  private pack(document:DirectDocument):DirectSnapshot {
+    const record=document as unknown as Record<string,unknown>,chunks:string[]=[]
+    let characters=0,glue='{',first=true
+    const flush=()=>{if(glue){chunks.push(this.pooled(glue));characters+=glue.length;glue=''}}
+    for(const key of Object.keys(record)){
+      const value=record[key]
+      if(HISTORY_COLLECTIONS.has(key)&&Array.isArray(value)){
+        glue+=(first?'':',')+JSON.stringify(key)+':['
+        for(let i=0;i<value.length;i++){
+          if(i)glue+=','
+          const entry=this.fragment(key,value[i])
+          entry.chunks??=packHistoryText(entry.text,this.textPool).chunks
+          flush()
+          for(const chunk of entry.chunks)chunks.push(chunk)
+          characters+=entry.text.length
+        }
+        glue+=']'
+      }else{
+        const text=stringifyMeshJson(value)
+        if(text===undefined)continue
+        glue+=(first?'':',')+JSON.stringify(key)+':'+text
+      }
+      first=false
+    }
+    glue+='}';flush()
+    return {chunks,characters}
+  }
+  /** `serializeDirectDocument(document)` through the fragment cache (no chunking). */
+  private text(document:DirectDocument):string {
+    const record=document as unknown as Record<string,unknown>,parts:string[]=[]
+    for(const key of Object.keys(record)){
+      const value=record[key]
+      let text:string|undefined
+      // A published copy serializes like the owned item it twins, whose text is usually cached.
+      if(HISTORY_COLLECTIONS.has(key)&&Array.isArray(value))text='['+value.map(item=>this.fragment(key,(item&&typeof item==='object'&&this.twins.get(item))||item).text).join(',')+']'
+      else text=stringifyMeshJson(value)
+      if(text!==undefined)parts.push(JSON.stringify(key)+':'+text)
+    }
+    return '{'+parts.join(',')+'}'
+  }
+  /** A history-owned copy of a validated document. Items this history already owns a copy of
+   * (same published object, or equal to the current state's item with that id) are reused, so
+   * committing a result that shares most objects with the previous state copies only the rest. */
+  private adopt(loaded:DirectDocument):DirectDocument {
+    countOperation('documentClones')
+    const record=loaded as unknown as Record<string,unknown>,out:Record<string,unknown>={}
+    const current=this.current?.document as unknown as Record<string,unknown>|undefined
+    for(const key of Object.keys(record)){
+      const value=record[key]
+      if(!HISTORY_COLLECTIONS.has(key)||!Array.isArray(value)){out[key]=cloneDocumentTree(value);continue}
+      let known:Map<string,object>|undefined
+      out[key]=value.map((item:unknown)=>{
+        if(!item||typeof item!=='object')return cloneDocumentTree(item)
+        let own=this.twins.get(item)
+        if(own)return own
+        if(!known){known=new Map();const items=current?.[key];if(Array.isArray(items))for(const old of items as {id:string}[])if(old&&typeof old.id==='string')known.set(old.id,old)}
+        const previous=known.get((item as {id:string}).id)
+        own=previous&&sameMeshJson(previous,item)?previous:cloneDocumentTree(item)
+        this.twins.set(item,own)
+        return own
+      })
+    }
+    return out as unknown as DirectDocument
+  }
+  /** Links a fresh copy of the current state to the owned items it was copied from. */
+  private twin(copy:DirectDocument,own:DirectDocument) {
+    const a=copy as unknown as Record<string,unknown>,b=own as unknown as Record<string,unknown>
+    for(const key of HISTORY_COLLECTIONS){
+      const published=a[key],owned=b[key]
+      if(!Array.isArray(published)||!Array.isArray(owned)||published.length!==owned.length)continue
+      for(let i=0;i<published.length;i++){
+        const item=published[i],source=owned[i]
+        if(!item||typeof item!=='object'||!source||typeof source!=='object')continue
+        this.twins.set(item,source)
+      }
+    }
+  }
   private sweep() { return sweepHistoryTextPool(this.textPool,[this.current,...this.past,...this.future]) }
   private past: DirectSnapshot[] = []
   private future: DirectSnapshot[] = []
-  private current: DirectSnapshot & {document?:DirectDocument; ids?:string[]}
+  private current: DirectSnapshot & {document?:DirectDocument; ids?:string[]; restored?:DirectDocument}
   constructor(document = emptyDirectDocument()) {
     const text = stringifyMeshJson(document)
     const validated = parseDirectDocument(text,this.instanceCache)
-    const validatedText = serializeDirectDocument(validated)
-    this.current = { ...this.snapshot(validatedText), document: validated }
+    this.current = { ...this.pack(validated), document: validated }
   }
   private get currentDocument():DirectDocument {
+    const restored=this.current.restored
+    if(restored&&!this.current.document){
+      delete this.current.restored
+      // The published result may have been mutated since (UI state should not be, but the
+      // history must not depend on it): keep the copy only if it still serializes to the snapshot.
+      const adopted=this.adopt(restored)
+      if(this.text(adopted)===unpackHistoryText(this.current))this.current.document=adopted
+    }
     return this.current.document ??= parseDirectDocument(unpackHistoryText(this.current),this.instanceCache)
   }
   /** Export identity is metadata: retain it across existing Undo/Redo states without adding a geometry edit. */
@@ -377,8 +505,7 @@ export class DirectHistory {
       const document=JSON.parse(unpackHistoryText(snapshot)) as DirectDocument
       if(document.blenderProjectId)return snapshot
       document.blenderProjectId=id
-      const text=stringifyMeshJson(document)
-      return this.snapshot(text)
+      return this.pack(document)
     }
     this.past=this.past.map(stamp);this.future=this.future.map(stamp)
     this.current={...stamp(this.current),document:{...this.currentDocument,blenderProjectId:id}}
@@ -390,7 +517,7 @@ export class DirectHistory {
    * restore or `syncedDocument`. Autosave reuses the snapshot text instead of serializing. */
   private canonical = new WeakMap<object, DirectSnapshot>()
   /** A fresh copy of the current state, registered as matching the current snapshot. */
-  get syncedDocument() { const copy=this.document; this.canonical.set(copy,this.current); return copy }
+  get syncedDocument() { const own=this.currentDocument,copy=clone(own); this.twin(copy,own); this.canonical.set(copy,this.current); return copy }
   /** Serialized current state when `document` is a registered copy of it (not mutated in place
    * afterwards, which UI state never is); otherwise undefined and the caller serializes. */
   canonicalText(document:object):string|undefined {
@@ -401,7 +528,7 @@ export class DirectHistory {
   get objectIds():string[] {
     // Async restore intentionally retains only a validated compact snapshot.
     // Reading identities must not resolve every linked instance on the UI thread.
-    const d=this.current.document??JSON.parse(unpackHistoryText(this.current)) as DirectDocument
+    const d=this.current.document??this.current.restored??JSON.parse(unpackHistoryText(this.current)) as DirectDocument
     return [...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[],...d.sourceBodies??[]].map(object=>object.id)
   }
   /** Immutable identity for consumers caching a committed snapshot across document copies. */
@@ -413,14 +540,35 @@ export class DirectHistory {
       retainedCharacters:this.sweep()}
   }
   commit(document: DirectDocument, validateChange?: (resolved:DirectDocument)=>void) {
-    this.commitValidated(parseDirectDocument(stringifyMeshJson(document),this.instanceCache),validateChange)
+    this.commitValidated(parseDirectDocument(this.commitText(document),this.instanceCache),validateChange)
+  }
+  /** `stringifyMeshJson(document)` for the authoritative parser, leaving out the cached geometry
+   * of a linked instance when it equals the geometry the current state holds for that instance.
+   * The parser rebuilds instance geometry from the source either way; omitting an unchanged
+   * cache only skips serializing, parsing and re-checking geometry this history itself resolved.
+   * A cache that differs from the current state is still sent and checked. */
+  /** The text `commit(document)` hands to the authoritative parser, for a worker to parse instead. */
+  commitPayload(document:DirectDocument):string { return this.commitText(document) }
+  private commitText(document:DirectDocument):string {
+    const current=this.current.restored?this.currentDocument:this.current.document
+    if(!current||!Array.isArray(document.bodies)||!document.bodies.some(body=>body?.instance))return stringifyMeshJson(document)
+    const known=new Map(current.bodies.map(body=>[body.id,body]))
+    return stringifyMeshJson({...document,bodies:document.bodies.map(body=>{
+      if(!body?.instance||body.mesh===undefined)return body
+      const old=known.get(body.id)
+      // A published copy of the owned item (not mutated in place, as `twins` assumes) is unchanged.
+      if(old&&this.twins.get(body)===old){const {mesh:_mesh,brep:_brep,...linked}=body;return linked}
+      if(!old?.instance||!sameMeshJson(old.mesh,body.mesh)||!sameMeshJson(old.brep,body.brep))return body
+      const {mesh:_mesh,brep:_brep,...linked}=body
+      return linked
+    })})
   }
   /** Loader must run the authoritative parser; no history changes while it runs. */
   async commitAsync(load:()=>Promise<DirectDocument>,validateChange?:(resolved:DirectDocument)=>void):Promise<boolean> {
     const generation=++this.restoreGeneration,base=this.current
     const loaded=await load()
     if(generation!==this.restoreGeneration||this.current!==base)return false
-    this.commitValidated(clone(loaded),validateChange)
+    this.commitValidated(this.adopt(loaded),validateChange)
     if(loaded.blenderProjectId===this.currentDocument.blenderProjectId)this.canonical.set(loaded,this.current)
     return true
   }
@@ -431,10 +579,10 @@ export class DirectHistory {
     // Give the policy its own copy so it cannot mutate the validated state.
     if (validateChange) validateChange(clone(next))
     if(this.current!==base)throw Error('History changed during commit validation.')
-    const nextText = serializeDirectDocument(next)
-    if (nextText.length === this.current.characters && nextText === unpackHistoryText(this.current)) return
+    const packed = this.pack(next)
+    if (sameSnapshotText(packed, this.current)) return
     this.past.push({chunks:this.current.chunks,characters:this.current.characters})
-    this.current = { ...this.snapshot(nextText), document: next }; this.future = []
+    this.current = { ...packed, document: next }; this.future = []
     countOperation('historyCommits')
     // Count unique retained text, including the current snapshot. Keep at least
     // one undo state even when a single document exceeds the storage budget.
@@ -465,8 +613,8 @@ export class DirectHistory {
     const generation=++this.restoreGeneration,base=this.current
     const loaded=await load()
     if(generation!==this.restoreGeneration||this.current!==base)return false
-    const document=clone(loaded),text=serializeDirectDocument(document)
-    this.current={...this.snapshot(text),document};this.past=[];this.future=[];this.sweep()
+    const document=this.adopt(loaded)
+    this.current={...this.pack(document),document};this.past=[];this.future=[];this.sweep()
     return true
   }
   cancelRestore() { this.restoreGeneration++ }
@@ -481,11 +629,12 @@ export class DirectHistory {
     if(generation!==this.restoreGeneration||this.current!==base||from.at(-1)!==snapshot)return false
     // A response for another snapshot cannot move the stacks. Geometry validation
     // belongs to the loader; re-parsing here would block the main thread again.
-    if(serializeDirectDocument(loaded)!==unpackHistoryText(snapshot))throw Error('History restore returned a different document.')
-    // Retain the already validated immutable snapshot; materialize a private copy
-    // only if a synchronous history consumer asks for geometry later.
+    if(this.text(loaded)!==unpackHistoryText(snapshot))throw Error('History restore returned a different document.')
     from.pop();to.push({chunks:base.chunks,characters:base.characters})
-    this.current={...snapshot}
+    // Retain the compact snapshot plus the validated published result; a synchronous history
+    // consumer that asks for geometry later adopts it (copying only items this history does
+    // not already own) instead of re-parsing the snapshot on this thread.
+    this.current={...snapshot,restored:loaded}
     this.canonical.set(loaded,this.current)
     countOperation('historyRestores')
     return true

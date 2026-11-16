@@ -21,7 +21,14 @@ import {
 } from '../src/app/directModeling'
 import { stringifyMeshJson } from '../src/exchange/meshJson'
 import { prepareDocumentCommit } from '../src/features/directModeler/prepareDocumentCommit'
-import { resolveSolidInstances } from '../src/kernel/solidInstances'
+import {
+  applyDirectDocumentDelta,
+  directDocumentDelta,
+  directSnapshotDelta,
+  snapshotReusableInstances,
+  isDirectDocumentDelta,
+} from '../src/kernel/directDocumentDelta'
+import { resolveSolidInstances, resolvedInstanceGeometry } from '../src/kernel/solidInstances'
 import { SolidInstanceBatchCache } from '../src/kernel/solidInstanceBatchCache'
 import { setLiveBodyPattern } from '../src/app/liveBodyPattern'
 import { applySolidBoolean } from '../src/kernel/solidBoolean'
@@ -140,7 +147,8 @@ async function measure(
   rows.push({ path, site, target, scene, p50, p95, peakHeapMb, overTarget: p95 > TARGETS[target] })
 }
 
-for (const scene of scenes) {
+const sceneFilter = process.argv.find(arg => arg.startsWith('--scene='))?.slice('--scene='.length)
+for (const scene of scenes.filter(scene => !sceneFilter || scene.name.includes(sceneFilter))) {
   const document = scene.document()
   const name = scene.name
   const serialized = serializeDirectDocument(document)
@@ -222,6 +230,79 @@ for (const scene of scenes) {
   await measure(name, 'commit policy: prepareDocumentCommit', 'DirectModeler prepareCommit', 'visual', () =>
     prepareDocumentCommit(next, document, [], [], '', 'edit', (ru: string) => ru),
   )
+  await measure(
+    name,
+    'commit policy: prepareDocumentCommit, worker result (C1)',
+    'commitWorkerResult/gizmo -> prepareCommit(resolved)',
+    'visual',
+    () => prepareDocumentCommit(next, document, [], [], '', 'edit', (ru: string) => ru, true),
+  )
+  // C1 (sixth pass): `commitInWorker` as it runs now. The edit is built from the published
+  // document (unchanged objects shared), the policy skips shared objects, the payload names the
+  // published snapshot as `base`, and the worker answers a delta that the client rebuilds from
+  // the published objects, so `commitAsync` adopts them without comparing.
+  let c1History = new DirectHistory(document),
+    c1Published = c1History.syncedDocument,
+    c1Next = c1Published,
+    c1Wire: unknown
+  const c1Setup = () => {
+    c1History = new DirectHistory(document)
+    c1Published = c1History.syncedDocument
+    c1Next = {
+      ...c1Published,
+      bodies: [{ ...c1Published.bodies[0]!, name: `renamed-${Math.random()}` }, ...c1Published.bodies.slice(1)],
+    }
+  }
+  c1Setup()
+  await measure(
+    name,
+    'commitInWorker before postMessage: prepareDocumentCommit + commitPayload + base text (C1)',
+    'DirectModeler commitInWorker (edit sharing published objects)',
+    'visual',
+    () => {
+      prepareDocumentCommit(c1Next, c1Published, [], [], '', 'edit', (ru: string) => ru)
+      const baseText = c1History.canonicalText(c1Published)
+      if (baseText === undefined) throw Error('published document is not canonical')
+      return [c1History.commitPayload(c1Next), baseText]
+    },
+    c1Setup,
+  )
+  const c1WorkerCache = new SolidInstanceBatchCache()
+  await measure(
+    name,
+    'commitInWorker after the worker: delta answer -> commitAsync (C1)',
+    'DirectModeler commitInWorker -> restoreDocument{base} -> commitAsync',
+    'visual',
+    async () => {
+      const rebuilt = applyDirectDocumentDelta(c1Published, c1Wire)
+      if (!rebuilt) throw Error('delta did not apply')
+      if (!(await c1History.commitAsync(async () => rebuilt))) throw Error('commit did not apply')
+    },
+    () => {
+      c1Setup()
+      const baseText = c1History.canonicalText(c1Published)!,
+        text = c1History.commitPayload(c1Next)
+      const parsed = parseDirectDocument(text, c1WorkerCache)
+      c1Wire = structuredClone(directSnapshotDelta(baseText, text, parsed) ?? parsed)
+    },
+  )
+  // C1: a worker result that shares the published document's unchanged objects (a delta
+  // answer rebuilt on the client) commits by reusing the history's own copies of them.
+  let sharedHistory = new DirectHistory(document)
+  let shared = document
+  await measure(
+    name,
+    'history commit, worker result sharing unchanged objects (C1)',
+    'gizmo/transform delta -> commitAsync',
+    'visual',
+    () => sharedHistory.commitAsync(async () => shared),
+    () => {
+      sharedHistory = new DirectHistory(document)
+      const published = sharedHistory.syncedDocument
+      const renamedBody = { ...published.bodies[0]!, name: `renamed-${Math.random()}` }
+      shared = { ...published, bodies: [renamedBody, ...published.bodies.slice(1)] }
+    },
+  )
 
   // Undo/Redo: the worker parses the snapshot text (restoreDocument with its instance cache),
   // the response crosses postMessage (structuredClone proxy), the main thread applies it.
@@ -254,6 +335,147 @@ for (const scene of scenes) {
     () => {
       undoHistory = new DirectHistory(document)
       undoHistory.commit(renamed())
+    },
+  )
+  // C1/C14: restore answered as a delta against the published state (`restoreDocument` with
+  // `base`): the worker parses the snapshot and diffs snapshot texts, only changed objects cross
+  // postMessage, the client rebuilds the document from its published objects.
+  const restoreDelta =
+    (history: DirectHistory, published: () => DirectDocument, keep: (d: DirectDocument) => void) =>
+    async (text: string) => {
+      const base = published(),
+        baseText = history.canonicalText(base)
+      if (baseText === undefined) throw Error('published document is not canonical')
+      const next = parseDirectDocument(text, workerCache)
+      const wire = structuredClone(directSnapshotDelta(baseText, text, next) ?? next)
+      const rebuilt = isDirectDocumentDelta(wire) ? applyDirectDocumentDelta(base, wire) : wire
+      if (!rebuilt) throw Error('delta did not apply')
+      keep(rebuilt)
+      return rebuilt
+    }
+  let deltaRedoHistory = new DirectHistory(document),
+    deltaRedoPublished = deltaRedoHistory.syncedDocument
+  await measure(
+    name,
+    'history Redo: worker restore answered as delta + apply (C1/C14)',
+    'DirectModeler undo(true) -> restoreDocument{base}',
+    'preview',
+    async () => {
+      const load = restoreDelta(
+        deltaRedoHistory,
+        () => deltaRedoPublished,
+        d => (deltaRedoPublished = d),
+      )
+      if (!(await deltaRedoHistory.restoreAsync('redo', load))) throw Error('Redo did not apply')
+    },
+    async () => {
+      deltaRedoHistory = new DirectHistory(document)
+      deltaRedoHistory.commit(renamed())
+      deltaRedoPublished = deltaRedoHistory.syncedDocument
+      const load = restoreDelta(
+        deltaRedoHistory,
+        () => deltaRedoPublished,
+        d => (deltaRedoPublished = d),
+      )
+      await deltaRedoHistory.restoreAsync('undo', load)
+    },
+  )
+  let deltaUndoHistory = new DirectHistory(document),
+    deltaUndoPublished = deltaUndoHistory.syncedDocument
+  await measure(
+    name,
+    'history Undo: worker restore answered as delta + apply (C1/C14)',
+    'DirectModeler undo() -> restoreDocument{base}',
+    'preview',
+    async () => {
+      const load = restoreDelta(
+        deltaUndoHistory,
+        () => deltaUndoPublished,
+        d => (deltaUndoPublished = d),
+      )
+      if (!(await deltaUndoHistory.restoreAsync('undo', load))) throw Error('Undo did not apply')
+    },
+    () => {
+      deltaUndoHistory = new DirectHistory(document)
+      deltaUndoHistory.commit(renamed())
+      deltaUndoPublished = deltaUndoHistory.syncedDocument
+    },
+  )
+  // C1/C14: the worker keeps the last restored document resident with its snapshot text; the
+  // next step from it (Undo then Redo, repeated Undo) reuses its resolved linked instances
+  // (`snapshotReusableInstances` -> `parseDirectDocument(..., reuseInstances)`).
+  let resident: { text: string; document: DirectDocument } | null = null
+  const residentLoad =
+    (history: DirectHistory, published: () => DirectDocument, keep: (d: DirectDocument) => void) =>
+    async (text: string) => {
+      const base = published(),
+        baseText = history.canonicalText(base)
+      if (baseText === undefined) throw Error('published document is not canonical')
+      let reuse: Map<string, Pick<DirectBody, 'mesh' | 'brep'>> | undefined
+      if (resident?.text === baseText && text.includes('"instance"')) {
+        const ids = snapshotReusableInstances(baseText, text)
+        reuse = new Map()
+        for (const body of resident.document.bodies)
+          if (ids.has(body.id)) reuse.set(body.id, resolvedInstanceGeometry(body))
+      }
+      const next = parseDirectDocument(text, workerCache, reuse)
+      resident = { text, document: next }
+      const wire = structuredClone(directSnapshotDelta(baseText, text, next) ?? next)
+      const rebuilt = isDirectDocumentDelta(wire) ? applyDirectDocumentDelta(base, wire) : wire
+      if (!rebuilt) throw Error('delta did not apply')
+      keep(rebuilt)
+      return rebuilt
+    }
+  let residentHistory = new DirectHistory(document),
+    residentPublished = residentHistory.syncedDocument
+  const residentStep = () =>
+    residentLoad(
+      residentHistory,
+      () => residentPublished,
+      d => (residentPublished = d),
+    )
+  await measure(
+    name,
+    'history Redo: resident base in worker, unchanged instances reused (C1/C14)',
+    'DirectModeler undo(true) -> restoreDocument{base} after undo()',
+    'preview',
+    async () => {
+      if (!(await residentHistory.restoreAsync('redo', residentStep()))) throw Error('Redo did not apply')
+    },
+    async () => {
+      residentHistory = new DirectHistory(document)
+      residentHistory.commit(renamed())
+      residentPublished = residentHistory.syncedDocument
+      resident = null
+      await residentHistory.restoreAsync('undo', residentStep())
+    },
+  )
+  // The first synchronous commit after an async restore adopts the restored document instead
+  // of re-parsing the snapshot on the main thread.
+  let afterUndoHistory = new DirectHistory(document),
+    afterUndoNext = document
+  await measure(
+    name,
+    'history commit, synchronous, right after async Undo',
+    'DirectModeler commit() after undo()',
+    'preview',
+    () => afterUndoHistory.commit(afterUndoNext),
+    async () => {
+      afterUndoHistory = new DirectHistory(document)
+      afterUndoHistory.commit(renamed())
+      let published = afterUndoHistory.syncedDocument
+      await afterUndoHistory.restoreAsync(
+        'undo',
+        restoreDelta(
+          afterUndoHistory,
+          () => published,
+          d => (published = d),
+        ),
+      )
+      afterUndoNext = {
+        ...published,
+        bodies: [{ ...published.bodies[0]!, name: `again-${Math.random()}` }, ...published.bodies.slice(1)],
+      }
     },
   )
   const coldText = serializeDirectDocument(renamed())
@@ -304,6 +526,22 @@ for (const scene of scenes) {
       booleanValidated = parseDirectDocument(serializeDirectDocument(booleanResult.document))
     },
   )
+  // C1: the worker answers the Boolean as a delta against the sent document; the client
+  // rebuilds it from its published copy, so unchanged bodies are the history's own twins.
+  const booleanDelta = directDocumentDelta(document, booleanValidated)
+  let deltaHistory = new DirectHistory(document)
+  let deltaPublished = deltaHistory.syncedDocument
+  await measure(
+    name,
+    'direct Boolean apply: delta answer -> commitAsync (C1)',
+    'useBooleanOperations runBoolean(documentDelta) -> commitWorkerResult()',
+    'visual',
+    () => deltaHistory.commitAsync(async () => applyDirectDocumentDelta(deltaPublished, booleanDelta)!),
+    () => {
+      deltaHistory = new DirectHistory(document)
+      deltaPublished = deltaHistory.syncedDocument
+    },
+  )
 
   // Arrays: live pattern edit and its expansion into linked instances.
   const source = document.bodies.find(body => !body.instance)!.id
@@ -349,10 +587,41 @@ for (const scene of scenes) {
   )
   await measure(
     name,
-    'manipulator move: worker request clone (postMessage proxy)',
-    'requestDragJob -> gizmoWorker.run',
+    'manipulator move: worker request clone (postMessage proxy, before C1)',
+    'requestDragJob -> gizmoWorker.run (whole document)',
     'visual',
     () => structuredClone({ kind: 'sceneEdit', document }),
+  )
+  // C1: the drag base is resident in the worker. The first move sends the snapshot text,
+  // later moves only its key; the answer is a delta that the client applies to its base.
+  const residentText = new DirectHistory(document).snapshotKey
+  await measure(
+    name,
+    'manipulator first move: resident base as snapshot text (C1)',
+    'gizmoWorker.run residentDocument (first request)',
+    'visual',
+    () => structuredClone({ kind: 'sceneEdit', document: residentText, retainAs: 'k', delta: true }),
+  )
+  await measure(
+    name,
+    'manipulator move: resident key request clone (C1)',
+    'gizmoWorker.run residentDocument (later moves)',
+    'visual',
+    () =>
+      structuredClone({
+        kind: 'sceneEdit',
+        document: { resident: 'k' },
+        delta: true,
+        options: { operation: 'transform', x: 1 },
+      }),
+  )
+  const movedOne = { ...document, bodies: [{ ...document.bodies[0]!, name: 'moved' }, ...document.bodies.slice(1)] }
+  await measure(
+    name,
+    'manipulator move: delta answer (worker diff + clone + client apply) (C1)',
+    'mainSolidWorkerRuntime residentResult -> client applyDirectDocumentDelta',
+    'visual',
+    () => applyDirectDocumentDelta(document, structuredClone(directDocumentDelta(document, movedOne))),
   )
 
   // Screen projection: CPU ray pick (hover, GPU click) and CPU projection of all triangles.

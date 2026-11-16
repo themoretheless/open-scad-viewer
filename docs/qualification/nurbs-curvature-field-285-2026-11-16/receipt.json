@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0285",
+  "testedBase": "9e265ed0c750313a8b6c5a310a278a752556e407",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_tensor_split_contracts",
+    "--test",
+    "exact_surface_knot_insertion_contracts",
+    "--test",
+    "exact_surface_grid_contracts"
+  ],
+  "newContractsPassed": 5,
+  "regressionContractsPassed": 10,
+  "scope": [
+    "Certified knot insertion followed by structural slicing preserves the complete UV charts and a common rational gauge. The two parts share identical binary64 seam poles and weights.",
+    "Clamped nonperiodic selected axis; untouched axis retained. Unrepresentable or exhausted requests return no partial sides."
+  ],
+  "logSha256": "5e66ba6cee8339365c5a6c3d00b24e9035e05fef9a14acedd590a8c03415facc",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_surface_knot_insertion.rs": "45a13ca5c47e959a379a61d1491b5e675e11066a17f72923ab9fab0653f935a0",
+    "crates/nurbs-core/src/editing/exact_surface_knot_insertion/split.rs": "300ec4514acb38276b818318796d6c1e33c8dcc574bd6ea16104a2682adbdfc7",
+    "crates/nurbs-core/tests/exact_tensor_split_contracts.rs": "558352f28c582f270f0bba04a50047e18052f0eba189424ace8c2754e8f4625b"
+  }
+}

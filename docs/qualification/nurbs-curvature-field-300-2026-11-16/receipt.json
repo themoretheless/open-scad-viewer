@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0300",
+  "testedBase": "8507c27332c8f6bdbfaf45214652955782cea439",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_pcurve_lift_contracts",
+    "--test",
+    "exact_pcurve_relayout_contracts",
+    "--test",
+    "exact_trimmed_relayout_contracts",
+    "--test",
+    "exact_surface_derivative_contracts"
+  ],
+  "newContractsPassed": 4,
+  "regressionContractsPassed": 15,
+  "scope": [
+    "Compose an authored rational pcurve with the exact original tensor basis across knot cells and store its complete world-space curve in the same absolute parameter.",
+    "Natural UV rectangle with exact representable cell cuts, poles and weights. Verified in the authored pcurve clock. Topological edge authority remains separate."
+  ],
+  "logSha256": "b7319fe2fe3d9f7748b164b1e78533c562d1443082a0a3732306444ff81582ab",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_projective.rs": "36b954e24377ff97dfd230529774bd9970aff9275f6bfeb35635408dc685d23b",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_lift.rs": "185330af18024377a35817e562b3e2d0a3205f2cb4dff00eb3e978417a3436b3",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_mobius.rs": "4b0b7bccaa1d4b8c33906baecdb699df06aa20734ee6545e65da8ce9220f68d2",
+    "crates/nurbs-core/src/editing/exact_projective/pcurve_relayout.rs": "623a096067c29931adb818c261571d66fae5a633dbf4ef8ab0f11b1d749457cf",
+    "crates/nurbs-core/src/editing/exact_surface_derivative.rs": "088b4b521f795b708051fcd29eab41efc3bf6a29ef8e335562a624c12b2136ae",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs": "13c74cc94adafab6a07cfb3b1d442aa6ac3512dd8c4543b60bed425613281275",
+    "crates/nurbs-core/tests/exact_pcurve_lift_contracts.rs": "00f0af830e8a2a2f54ad99d9130e48f3c8bb4626742b6fe74167ed9372e2fa5e"
+  }
+}
