@@ -5313,8 +5313,8 @@ it('copies with a base point and pastes at a target point',async()=>{
 
 it('commits native NURBS results in the worker, drops a result superseded by an edit and reports a failed commit',async()=>{
  const ui=await mount();await ui.click('+ NURBS curve');const withBox=ui.doc()
- const commits:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
- const hold=()=>previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise((resolve,reject)=>commits.push({job,resolve,reject})):undefined)
+ const commits:Array<{job:{text:string};resolve:(value:DirectDocument)=>void;reject:(error:Error)=>void}>=[]
+ const hold=()=>previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise((resolve,reject)=>commits.push({job:job as {text:string},resolve,reject})):undefined)
  const pickCurve=async()=>{ui.all().find(n=>n.tag==='button'&&ui.text(n)==='NURBS curve')!.props.onClick({shiftKey:false});await flushClearance()}
  hold()
  await ui.click('Insert knot');await flushClearance();expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(withBox)
@@ -5331,8 +5331,8 @@ it('commits native NURBS results in the worker, drops a result superseded by an 
 
 it('commits a retessellated B-rep mesh in the worker and keeps the scene when that commit fails',async()=>{
  const ui=await mount({seedDocument:cylinderSeed()});await ui.click('Imported cylinder');await ui.click('B-rep detail');const before=ui.doc()
- const commits:Array<{job:any;resolve:(value:any)=>void;reject:(error:Error)=>void}>=[]
- previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise((resolve,reject)=>commits.push({job,resolve,reject})):undefined)
+ const commits:Array<{job:{text:string};resolve:(value:DirectDocument)=>void;reject:(error:Error)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise((resolve,reject)=>commits.push({job:job as {text:string},resolve,reject})):undefined)
  const field=ui.all().find(n=>n.tag==='input'&&n.parent&&ui.text(n.parent).startsWith('B-rep detail'))!
  field.props['onUpdate:modelValue'](8);await flushClearance();await ui.click('Retessellate');await flushClearance()
  expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
@@ -5345,8 +5345,8 @@ it('commits a retessellated B-rep mesh in the worker and keeps the scene when th
 
 it('commits appended mesh bodies in the worker, selects them after the commit and drops a result superseded by an edit',async()=>{
  const ui=await mount();const before=ui.doc()
- const commits:Array<{job:any;resolve:(value:any)=>void}>=[]
- const hold=()=>previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise(resolve=>commits.push({job,resolve})):undefined)
+ const commits:Array<{job:{text:string};resolve:(value:DirectDocument)=>void}>=[]
+ const hold=()=>previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise(resolve=>commits.push({job:job as {text:string},resolve})):undefined)
  const body=(id:string)=>({id,name:`Imported ${id}`,mesh:{positions:[0,0,0,1,0,0,0,1,0,0,0,1],indices:[0,2,1,0,1,3,0,3,2,1,2,3]}})
  hold();await ui.setProps({appendBodies:{bodies:[body('m1')],group:{name:'Mesh',source:'a.stl'}}});await flushClearance()
  expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
@@ -5361,8 +5361,8 @@ it('commits appended mesh bodies in the worker, selects them after the commit an
 
 it('commits NURBS surface segment fields through the worker',async()=>{
  const ui=await mount();await ui.click('+ NURBS surface');const before=ui.doc()
- const commits:Array<{job:any;resolve:(value:any)=>void}>=[]
- previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise(resolve=>commits.push({job,resolve})):undefined)
+ const commits:Array<{job:{text:string};resolve:(value:DirectDocument)=>void}>=[]
+ previewWorkerRun.mockImplementation(job=>job.kind==='restoreDocument'?new Promise(resolve=>commits.push({job:job as {text:string},resolve})):undefined)
  const input=ui.all().find(n=>n.tag==='label'&&ui.text(n).startsWith('U segments'))!.children.find(n=>n.tag==='input')!
  input.props['onUpdate:modelValue'](12);input.props.onChange();await flushClearance()
  expect(commits).toHaveLength(1);expect(commits[0].job.text).toContain('"segmentsU":12')
