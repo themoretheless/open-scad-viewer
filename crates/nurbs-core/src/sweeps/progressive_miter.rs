@@ -59,28 +59,48 @@ pub struct Options {
     pub max_steps: usize,
     pub max_deviation: f64,
 }
+/// Whether the rotation-minimizing frame transport is certified.
+#[derive(Clone, Debug)]
+pub struct FrameTransport {
+    pub certified: bool,
+    pub reason: Option<&'static str>,
+}
+/// Sampled and certified deviation of the level from the ideal sweep.
+#[derive(Clone, Debug)]
+pub struct ErrorBounds {
+    pub sampled_control_deviation: f64,
+    pub continuous_upper: f64,
+    pub certified_upper: Option<f64>,
+    pub endpoint_contour_upper: Option<[f64; 2]>,
+    pub certificate_cells: usize,
+    pub certificate_reason: Option<&'static str>,
+}
+/// Which optional laws shaped the sections.
+#[derive(Clone, Copy, Debug)]
+pub struct AppliedLaws {
+    pub affine_laws: bool,
+    pub authored_frames: bool,
+    pub orientation_guide: bool,
+}
+/// Spanwise regularity of the profile and the swept wall.
+#[derive(Clone, Debug)]
+pub struct Regularity {
+    pub profile_certified: bool,
+    pub wall_certified: Option<bool>,
+    pub cells: usize,
+    pub unresolved_wall_patches: Vec<[usize; 2]>,
+}
 #[derive(Clone, Debug)]
 pub struct Report {
     pub accepted: bool,
     pub phase_resolved: bool,
-    pub frame_transport_certified: bool,
-    pub frame_transport_reason: Option<&'static str>,
+    pub frame_transport: FrameTransport,
     pub steps: usize,
     pub sections: usize,
     pub stations: usize,
-    pub sampled_control_deviation: f64,
-    pub continuous_error_upper: f64,
-    pub certified_error_upper: Option<f64>,
-    pub affine_laws_applied: bool,
-    pub authored_frames_applied: bool,
-    pub orientation_guide_applied: bool,
-    pub endpoint_contour_error_upper: Option<[f64;2]>,
-    pub error_certificate_cells: usize,
-    pub error_certificate_reason: Option<&'static str>,
-    pub profile_regularity_certified: bool,
-    pub wall_regularity_certified: Option<bool>,
-    pub regularity_cells: usize,
-    pub unresolved_wall_patches: Vec<[usize; 2]>,
+    pub error: ErrorBounds,
+    pub applied: AppliedLaws,
+    pub regularity: Regularity,
     pub budget: f64,
     pub closed_path: bool,
     pub holonomy_correction: f64,
@@ -624,27 +644,35 @@ pub fn preview_retained_at(&self, steps: usize, sections: Vec<Vec<Curve>>) -> Re
                     .error_upper
                     .is_some_and(|upper| upper <= self.options.max_deviation),
             phase_resolved,
-            frame_transport_certified: self.transport_certificate.status
-                == scalar_certificate::Status::Certified,
-            frame_transport_reason: self.transport_certificate.reason,
+            frame_transport: FrameTransport {
+                certified: self.transport_certificate.status
+                    == scalar_certificate::Status::Certified,
+                reason: self.transport_certificate.reason,
+            },
             steps,
             sections: sections.len(),
             stations,
-            sampled_control_deviation: maximum,
-            continuous_error_upper:if self.affine_laws.is_some() || self.frame_laws.is_some() || self.orientation_guide.is_some(){certificate.error_upper.unwrap_or(f64::MAX)}else{continuous_error_upper},
-            certified_error_upper: certificate.error_upper,
-            affine_laws_applied: self.affine_laws.is_some(),
-            authored_frames_applied: self.frame_laws.is_some(),
-            orientation_guide_applied: self.orientation_guide.is_some(),
-            endpoint_contour_error_upper: certificate.endpoint_contour_error_upper,
-            error_certificate_cells: certificate.cells,
-            error_certificate_reason: certificate.reason,
-            profile_regularity_certified: profile_regularity.spanwise_regular,
-            wall_regularity_certified: wall_regularity.as_ref().map(|r| r.spanwise_regular),
-            regularity_cells: profile_regularity.cells
-                + wall_regularity.as_ref().map_or(0, |r| r.cells),
-            unresolved_wall_patches: wall_regularity
-                .map_or_else(Vec::new, |r| r.unresolved_patches),
+            error: ErrorBounds {
+                sampled_control_deviation: maximum,
+                continuous_upper:if self.affine_laws.is_some() || self.frame_laws.is_some() || self.orientation_guide.is_some(){certificate.error_upper.unwrap_or(f64::MAX)}else{continuous_error_upper},
+                certified_upper: certificate.error_upper,
+                endpoint_contour_upper: certificate.endpoint_contour_error_upper,
+                certificate_cells: certificate.cells,
+                certificate_reason: certificate.reason,
+            },
+            applied: AppliedLaws {
+                affine_laws: self.affine_laws.is_some(),
+                authored_frames: self.frame_laws.is_some(),
+                orientation_guide: self.orientation_guide.is_some(),
+            },
+            regularity: Regularity {
+                profile_certified: profile_regularity.spanwise_regular,
+                wall_certified: wall_regularity.as_ref().map(|r| r.spanwise_regular),
+                cells: profile_regularity.cells
+                    + wall_regularity.as_ref().map_or(0, |r| r.cells),
+                unresolved_wall_patches: wall_regularity
+                    .map_or_else(Vec::new, |r| r.unresolved_patches),
+            },
             budget: self.options.max_deviation,
             closed_path: self.options.closed,
             holonomy_correction: self.correction,

@@ -2,21 +2,9 @@ use nurbs_core::{
     surface::Surface,
     surface_offset::{self, CandidateStatus as S, ProposalLimits as L, ProposalStop as Stop},
 };
-fn plane() -> Surface {
-    Surface {
-        degree_u: 1,
-        degree_v: 1,
-        knots_u: vec![0., 0., 1., 1.],
-        knots_v: vec![0., 0., 1., 1.],
-        control_points: vec![
-            vec![vec![0., 0., 0.], vec![0., 1., 0.]],
-            vec![vec![1., 0., 0.], vec![1., 1., 0.]],
-        ],
-        weights: vec![vec![1.; 2]; 2],
-        periodic_u: false,
-        periodic_v: false,
-    }
-}
+#[path = "common/unit_plane.rs"]
+mod unit_plane;
+use unit_plane::plane;
 fn map() -> Surface {
     Surface {
         degree_u: 1,

@@ -223,9 +223,9 @@ fn complete_subdivision_proves_strongly_curved_graph_and_missing_work_refuses() 
         r.reason,
         r.cells,
         r.spans,
-        r.intrinsic_exclusions,
-        r.angular_exclusions,
-        r.distance_exclusions,
+        r.exclusions.intrinsic,
+        r.exclusions.angular,
+        r.exclusions.distance,
         r.pending
     );
     let c = r
@@ -234,7 +234,7 @@ fn complete_subdivision_proves_strongly_curved_graph_and_missing_work_refuses() 
     assert!(std::ptr::eq(c.surface(), &s));
     assert_eq!(c.minimum_mm(), 0.1);
     assert_eq!(c.max_sine_squared(), 1e-6);
-    assert!(r.intrinsic_exclusions > 1);
+    assert!(r.exclusions.intrinsic > 1);
     assert_eq!(r.pending, 0);
     assert!(r.uncertain.is_none());
     assert!(r.unresolved_pairs.is_empty());

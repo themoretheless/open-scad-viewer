@@ -3,6 +3,7 @@ import { diagnosticSnapshotGeometry } from './brepDiagnosticSnapshot'
 import {MAX_GEOMETRY_SOURCE_CHARACTERS, parseGeometrySourceRoutingHeader} from '../core/geometryExecution'
 import {MAX_NATIVE_GEOMETRY_CHARACTERS} from '../core/nativeGeometry'
 import {sha256Hex} from '../core/sha256'
+import {isPlainRecord as record} from '../core/plainData'
 import {geometryAssetId} from '../core/scene'
 import {semanticResultItems} from '../core/semanticProgram'
 import {normalizeSemanticProgram} from '../language/semantic/semanticProgramValidator'
@@ -44,10 +45,6 @@ export type BrepDiagnosticMessage =
  */
 export type BrepDiagnosticReceipt = Extract<BrepDiagnosticMessage, {status: 'succeeded'}>
 
-function record(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-    && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)
-}
 function keys(value: unknown, expected: readonly string[]): value is Record<string, unknown> {
   if (!record(value)) return false
   const own = Reflect.ownKeys(value)

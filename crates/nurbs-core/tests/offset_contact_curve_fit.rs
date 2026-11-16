@@ -2,21 +2,9 @@ use nurbs_core::{
     offset_contact_pcurve::{self as uv, FitLimits as L, FitStop as Stop},
     surface::Surface,
 };
-fn plane() -> Surface {
-    Surface {
-        degree_u: 1,
-        degree_v: 1,
-        knots_u: vec![0., 0., 1., 1.],
-        knots_v: vec![0., 0., 1., 1.],
-        control_points: vec![
-            vec![vec![0., 0., 0.], vec![0., 1., 0.]],
-            vec![vec![1., 0., 0.], vec![1., 1., 0.]],
-        ],
-        weights: vec![vec![1.; 2]; 2],
-        periodic_u: false,
-        periodic_v: false,
-    }
-}
+#[path = "common/unit_plane.rs"]
+mod unit_plane;
+use unit_plane::plane;
 #[test]
 fn independent_nonunit_source_parameters_get_both_fresh_whole_interval_proofs() {
     let mut a = plane();

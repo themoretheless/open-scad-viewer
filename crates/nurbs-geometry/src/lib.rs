@@ -57,6 +57,7 @@ pub mod derivatives;
 pub mod surface;
 /// U/V exchange of a surface (formerly `editing::surface_edit::transpose`).
 pub mod surface_transpose;
+pub mod surface_decompose;
 #[doc(hidden)]
 pub mod vec3_ext;
 /// Non-empty knot spans and natural parameter domains (formerly `certificates::audit`).

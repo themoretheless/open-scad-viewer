@@ -34,10 +34,10 @@ fn point(c: &Curve, start: bool) -> P {
     };
     [p[0], p[1], p[2]]
 }
-struct Cap {
-    normal: P,
-    surface: Surface,
-    loops: Vec<Vec<Curve>>,
+pub(super) struct Cap {
+    pub(super) normal: P,
+    pub(super) surface: Surface,
+    pub(super) loops: Vec<Vec<Curve>>,
 }
 /// Authored cap carrier and its outer/hole trims in carrier UV coordinates.
 /// Trim spans correspond in order to the endpoint section's Bezier spans.
@@ -79,7 +79,7 @@ fn supplied_cap(definition: &LoftCap, sections: &[Vec<Curve>]) -> Result<Cap> {
     let normal = unit(cross(u,v))?;
     Ok(Cap { normal, surface: s.clone(), loops })
 }
-fn cap(loops: &[Vec<Curve>]) -> Result<Cap> {
+pub(super) fn cap(loops: &[Vec<Curve>]) -> Result<Cap> {
     let origin = point(&loops[0][0], true);
     let u = unit(minus(point(&loops[0][0], false), origin))?;
     let candidate = loops[0]

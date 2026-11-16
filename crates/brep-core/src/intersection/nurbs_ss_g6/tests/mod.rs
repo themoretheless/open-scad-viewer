@@ -357,7 +357,7 @@ fn v3_graph_patch_u_v_degree_2_3_intersection_and_difference() {
                 certificate.permits_topology_change(),
                 "{du}x{dv} {operation}"
             );
-            assert_eq!(certificate.tensor_cells, 3);
+            assert_eq!(certificate.cut.tensor_cells, 3);
             assert!(
                 certificate
                     .audit
@@ -400,13 +400,13 @@ fn v3_graph_patch_transform_reflection_swap_and_refusals() {
         nurbs_boolean_graph_patch_v3(&cutter, &graph, "intersection").unwrap();
     assert!(certificate.permits_topology_change());
     let mut mutation = certificate.clone();
-    mutation.tensor_cells = 2;
+    mutation.cut.tensor_cells = 2;
     assert!(!mutation.permits_topology_change());
     let mut mutation = certificate.clone();
     mutation.sew.complete = false;
     assert!(!mutation.permits_topology_change());
     let mut mutation = certificate.clone();
-    mutation.naming_complete = false;
+    mutation.proofs.naming_complete = false;
     assert!(!mutation.permits_topology_change());
     let mut mutation = certificate.clone();
     mutation.change_set.changes.clear();
@@ -497,10 +497,10 @@ fn v5_rational_graph_has_homogeneous_root_denominator_and_resource_proofs() {
                 nurbs_boolean_rational_graph_patch_v5(&graph, &cutter, operation).unwrap();
             assert_eq!(certificate.capability, NURBS_BOOLEAN_CAPABILITY_V5);
             assert!(certificate.permits_topology_change());
-            assert!(certificate.homogeneous_root_proof);
-            assert!(certificate.denominator_lower_bound >= 0.25);
-            assert!(certificate.weight_condition_number <= 8.);
-            assert!(certificate.resource_bound <= 16);
+            assert!(certificate.proofs.homogeneous_root_proof);
+            assert!(certificate.conditioning.denominator_lower_bound >= 0.25);
+            assert!(certificate.conditioning.weight_condition_number <= 8.);
+            assert!(certificate.conditioning.resource_bound <= 16);
             assert!(
                 result.faces[1]
                     .surface
@@ -522,17 +522,17 @@ fn v5_weight_root_resource_tangency_and_certificate_mutations_refuse() {
     for mutation in [
         {
             let mut value = certificate.clone();
-            value.homogeneous_root_proof = false;
+            value.proofs.homogeneous_root_proof = false;
             value
         },
         {
             let mut value = certificate.clone();
-            value.denominator_lower_bound = 0.;
+            value.conditioning.denominator_lower_bound = 0.;
             value
         },
         {
             let mut value = certificate.clone();
-            value.resource_bound = 17;
+            value.conditioning.resource_bound = 17;
             value
         },
     ] {

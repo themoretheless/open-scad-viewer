@@ -27,21 +27,45 @@ pub struct CurvedGraphBooleanCertificate {
     pub capability: &'static str,
     pub status: &'static str,
     pub operation: String,
+    pub cut: GraphBooleanCut,
+    pub lineage: GraphBooleanLineage,
+    pub sew: SewCertificate,
+    pub audit: SolidAuditCertificate,
+    pub change_set: ChangeSet,
+    pub proofs: GraphBooleanProofs,
+    pub conditioning: GraphBooleanConditioning,
+}
+
+/// The exact iso-parameter cut through the graph patch.
+#[derive(Clone, Debug)]
+pub struct GraphBooleanCut {
     pub axis: ExactIsoAxis,
     pub fixed_parameter: f64,
+    pub tensor_cells: usize,
+}
+
+/// Persistent names of the faces and edge the boolean touched.
+#[derive(Clone, Debug)]
+pub struct GraphBooleanLineage {
     pub source_face: String,
     pub retained_face: String,
     pub deleted_region: &'static str,
     pub intersection_edge: String,
-    pub tensor_cells: usize,
+}
+
+/// Proof obligations discharged before the topology change is admitted.
+#[derive(Clone, Copy, Debug)]
+pub struct GraphBooleanProofs {
     pub exact_correspondence: bool,
-    pub sew: SewCertificate,
-    pub audit: SolidAuditCertificate,
-    pub change_set: ChangeSet,
     pub naming_complete: bool,
     pub no_fallback: bool,
     pub separation_proof: bool,
     pub homogeneous_root_proof: bool,
+}
+
+/// Rational weight conditioning, required only by the V5 capability.
+#[derive(Clone, Copy, Debug)]
+pub struct GraphBooleanConditioning {
     pub denominator_lower_bound: f64,
     pub weight_condition_number: f64,
     pub resource_bound: usize,
@@ -54,20 +78,20 @@ impl CurvedGraphBooleanCertificate {
             NURBS_BOOLEAN_CAPABILITY_V3 | NURBS_BOOLEAN_CAPABILITY_V4 | NURBS_BOOLEAN_CAPABILITY_V5
         ) && self.status == "Complete"
             && matches!(self.operation.as_str(), "intersection" | "difference")
-            && self.fixed_parameter > 0.
-            && self.fixed_parameter < 1.
-            && self.tensor_cells == 3
-            && self.exact_correspondence
+            && self.cut.fixed_parameter > 0.
+            && self.cut.fixed_parameter < 1.
+            && self.cut.tensor_cells == 3
+            && self.proofs.exact_correspondence
             && self.sew.complete
             && self.audit.ok
-            && self.naming_complete
-            && self.no_fallback
-            && self.separation_proof
+            && self.proofs.naming_complete
+            && self.proofs.no_fallback
+            && self.proofs.separation_proof
             && (self.capability != NURBS_BOOLEAN_CAPABILITY_V5
-                || (self.homogeneous_root_proof
-                    && self.denominator_lower_bound >= 0.25
-                    && self.weight_condition_number <= 8.
-                    && self.resource_bound <= 16))
+                || (self.proofs.homogeneous_root_proof
+                    && self.conditioning.denominator_lower_bound >= 0.25
+                    && self.conditioning.weight_condition_number <= 8.
+                    && self.conditioning.resource_bound <= 16))
             && !self.change_set.changes.is_empty()
             && self.change_set.validate().is_ok()
     }

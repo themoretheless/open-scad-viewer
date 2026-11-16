@@ -340,18 +340,20 @@ pub(crate) struct Cycle {
 /// Cycles of a sphere reaching a cap plane, each piece recertified against
 /// the sphere and the surface it lies on (the wall or a cap plane) and
 /// lifted onto both operands; `None` when anything does not certify.
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn certified_cycles(
-    sphere: &CanonicalSphere,
-    other: crate::sphere_torus::traced_lift::Other<'_>,
+    sides: crate::sphere_torus::traced_lift::SphereSides<'_>,
     slab: &Slab,
-    sphere_model: &Model,
-    other_model: &Model,
     s_implicit: &dyn crate::implicit_trace::Implicit,
     wall: &dyn crate::implicit_trace::Implicit,
     wall_distance: &dyn Fn(P) -> f64,
     loops: &[Vec<Curve>],
 ) -> Result<Option<Vec<Cycle>>> {
+    let crate::sphere_torus::traced_lift::SphereSides {
+        sphere,
+        other,
+        sphere_model,
+        other_model,
+    } = sides;
     let Ok(cycles) = capped_cycles_in(CapContacts::Sphere(sphere), slab, loops) else {
         return Ok(None);
     };

@@ -18,19 +18,33 @@ pub struct FiberedBodyLimits {
     pub smoothness_work: u64,
     pub order: usize,
 }
-pub struct FiberedBodyReport {
-    pub certified: bool,
-    pub source_boundary_exact: bool,
-    pub boundary_error_upper: Option<f64>,
+/// What is proven about the swept boundary of the body.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FiberedBoundary {
+    pub source_exact: bool,
+    pub error_upper: Option<f64>,
     pub topology_preserved: bool,
     pub absence_of_self_intersections: bool,
+    pub vertex_links_complete: bool,
+}
+/// Geometric continuity of the source and of the closing seam.
+#[derive(Clone, Copy, Debug)]
+pub struct FiberedSmoothness {
     pub source_g1: bool,
     pub source_g2: bool,
     pub seam_continuity: &'static str,
+}
+/// Independent audits run on the authored body.
+#[derive(Default)]
+pub struct FiberedAudits {
     pub volume: Option<fibered_volume::Report>,
     pub material: Option<nurbs_core::trim_region_audit::Report>,
     pub regularity: Option<crate::boundary_embedding::regularity::Report>,
     pub agreement: Option<crate::boundary_agreement::ExactReport>,
+}
+/// Work spent, each counter bounded by its limit in `FiberedBodyLimits`.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FiberedWork {
     pub profile_cells: usize,
     pub source_trace_work: u64,
     pub binding_rows: usize,
@@ -38,7 +52,13 @@ pub struct FiberedBodyReport {
     pub normal_cells: usize,
     pub inspected_profile_joins: usize,
     pub inspected_motion_joins: usize,
-    pub vertex_links_complete: bool,
+}
+pub struct FiberedBodyReport {
+    pub certified: bool,
+    pub boundary: FiberedBoundary,
+    pub smoothness: FiberedSmoothness,
+    pub audits: FiberedAudits,
+    pub work: FiberedWork,
     pub reason: Option<&'static str>,
 }
 pub struct FiberedBody {
@@ -67,25 +87,14 @@ fn refused(mut r: FiberedBodyReport, reason: &'static str) -> FiberedBodyAttempt
 fn empty() -> FiberedBodyReport {
     FiberedBodyReport {
         certified: false,
-        source_boundary_exact: false,
-        boundary_error_upper: None,
-        topology_preserved: false,
-        absence_of_self_intersections: false,
-        source_g1: false,
-        source_g2: false,
-        seam_continuity: "C0",
-        volume: None,
-        material: None,
-        regularity: None,
-        agreement: None,
-        profile_cells: 0,
-        source_trace_work: 0,
-        binding_rows: 0,
-        smoothness_work: 0,
-        normal_cells: 0,
-        inspected_profile_joins: 0,
-        inspected_motion_joins: 0,
-        vertex_links_complete: false,
+        boundary: FiberedBoundary::default(),
+        smoothness: FiberedSmoothness {
+            source_g1: false,
+            source_g2: false,
+            seam_continuity: "C0",
+        },
+        audits: FiberedAudits::default(),
+        work: FiberedWork::default(),
         reason: None,
     }
 }
@@ -130,11 +139,11 @@ fn normal_sign(
     let mut pending = vec![domain];
     let mut sign = None;
     while let Some(b) = pending.pop() {
-        if r.normal_cells == max {
+        if r.work.normal_cells == max {
             return Ok(None);
         }
         let bound = if let Some(end) = boundary {
-            r.normal_cells += 1;
+            r.work.normal_cells += 1;
             nurbs_core::surface_injectivity::boundary_normal_direction_bounds(
                 s, 1, end, b[0], direction,
             )?
@@ -143,9 +152,9 @@ fn normal_sign(
                 s,
                 b,
                 direction,
-                (max - r.normal_cells).min(100000),
+                (max - r.work.normal_cells).min(100000),
             )?;
-            r.normal_cells += q.spans;
+            r.work.normal_cells += q.spans;
             q.bounds
         };
         let Some(v) = bound else { return Ok(None) };
@@ -552,22 +561,22 @@ fn inspect(
     let valid = trim.valid == Some(true)
         && trim.winding.first() == Some(&Some(1))
         && trim.winding.iter().skip(1).all(|v| *v == Some(-1));
-    r.material = Some(trim);
+    r.audits.material = Some(trim);
     if !valid {
         return Ok(refused(r, "original-fiber-material-unproved"));
     }
     for (wire, trims) in profiles.iter().zip(&material.trims) {
         for (curve, uv) in wire.iter().zip(trims) {
-            if r.profile_cells == l.profile_cells {
+            if r.work.profile_cells == l.profile_cells {
                 return Ok(refused(r, "original-profile-regularity-work-limit"));
             }
             let regular =
-                nurbs_core::curve_regularity::inspect(curve, l.profile_cells - r.profile_cells)?;
-            r.profile_cells += regular.cells;
+                nurbs_core::curve_regularity::inspect(curve, l.profile_cells - r.work.profile_cells)?;
+            r.work.profile_cells += regular.cells;
             if !regular.spanwise_regular {
                 return Ok(refused(r, "original-profile-regularity-unproved"));
             }
-            if r.source_trace_work == l.source_trace_work {
+            if r.work.source_trace_work == l.source_trace_work {
                 return Ok(refused(r, "original-profile-carrier-work-limit"));
             }
             let proof = nurbs_core::curve_surface_agreement::verify_exact(
@@ -575,12 +584,12 @@ fn inspect(
                 uv,
                 &material.surface,
                 false,
-                l.source_trace_work - r.source_trace_work,
+                l.source_trace_work - r.work.source_trace_work,
             )?;
             let Some(p) = proof else {
                 return Ok(refused(r, "original-profile-carrier-binding-unproved"));
             };
-            r.source_trace_work += p.work_used;
+            r.work.source_trace_work += p.work_used;
             if p.outcome != cad_predicates::BezierIdentity::Equal {
                 return Ok(refused(r, "original-profile-carrier-binding-unproved"));
             }
@@ -590,7 +599,7 @@ fn inspect(
     let proven = volume.embedding_certified
         && volume.parameter_topology_preserved
         && volume.spanwise_interior_regular;
-    r.volume = Some(volume);
+    r.audits.volume = Some(volume);
     if !proven {
         return Ok(refused(r, "original-fiber-global-volume-unproved"));
     }
@@ -617,13 +626,13 @@ fn inspect(
     if rows > l.binding_rows {
         return Ok(refused(r, "original-fiber-binding-row-limit"));
     }
-    r.binding_rows = rows;
+    r.work.binding_rows = rows;
     let Some(mut wanted) = expected(profiles, material, origin, motion)? else {
         return Ok(refused(r, "original-fiber-exact-construction-unproved"));
     };
     let cap0 = wanted.faces.len() - 2;
     let cap1 = cap0 + 1;
-    let direction = r.volume.as_ref().unwrap().height_direction.unwrap();
+    let direction = r.audits.volume.as_ref().unwrap().height_direction.unwrap();
     let Some(cap_sign) = normal_sign(
         &wanted.faces[cap0].surface,
         domains(&wanted.faces[cap0].surface),
@@ -654,17 +663,17 @@ fn inspect(
     }
     let agreement = crate::boundary_agreement::verify_exact(&model, l.agreement_work)?;
     let valid = agreement.all_equal && agreement.all_joins_exact;
-    r.agreement = Some(agreement);
+    r.audits.agreement = Some(agreement);
     if !valid {
         return Ok(refused(r, "actual-original-fiber-edge-agreement-unproved"));
     }
-    r.vertex_links_complete = crate::sweep_smoothness::complete::vertex_links(&model);
-    if !r.vertex_links_complete {
+    r.boundary.vertex_links_complete = crate::sweep_smoothness::complete::vertex_links(&model);
+    if !r.boundary.vertex_links_complete {
         return Ok(refused(r, "actual-original-fiber-vertex-links-unproved"));
     }
     let regular = crate::boundary_embedding::regularity::inspect(&model, l.regularity_cells)?;
     let valid = regular.all_faces_regular;
-    r.regularity = Some(regular);
+    r.audits.regularity = Some(regular);
     if !valid {
         return Ok(refused(
             r,
@@ -677,15 +686,15 @@ fn inspect(
                 &pair[0],
                 &pair[1],
                 l.order,
-                l.smoothness_work - r.smoothness_work,
+                l.smoothness_work - r.work.smoothness_work,
             )?;
-            r.smoothness_work += work;
-            r.inspected_motion_joins += 1;
+            r.work.smoothness_work += work;
+            r.work.inspected_motion_joins += 1;
             if !ok {
                 return Ok(refused(r, "original-multipiece-motion-jets-unproved"));
             }
         }
-        if r.volume
+        if r.audits.volume
             .as_ref()
             .unwrap()
             .endpoint_height_flat_orders
@@ -701,10 +710,10 @@ fn inspect(
                     &wire[i],
                     &wire[(i + 1) % wire.len()],
                     l.order,
-                    l.smoothness_work - r.smoothness_work,
+                    l.smoothness_work - r.work.smoothness_work,
                 )?;
-                r.smoothness_work += work;
-                r.inspected_profile_joins += 1;
+                r.work.smoothness_work += work;
+                r.work.inspected_profile_joins += 1;
                 if !ok {
                     return Ok(refused(r, "original-profile-geometric-jets-unproved"));
                 }
@@ -763,13 +772,13 @@ fn inspect(
     // Exact binding transfers the SAME original global embedding/material
     // boundary and full differential compatibility to the returned geometry.
     r.certified = true;
-    r.source_boundary_exact = true;
-    r.boundary_error_upper = Some(0.);
-    r.topology_preserved = true;
-    r.absence_of_self_intersections = true;
-    r.source_g1 = l.order >= 1;
-    r.source_g2 = l.order == 2;
-    r.seam_continuity = match l.order {
+    r.boundary.source_exact = true;
+    r.boundary.error_upper = Some(0.);
+    r.boundary.topology_preserved = true;
+    r.boundary.absence_of_self_intersections = true;
+    r.smoothness.source_g1 = l.order >= 1;
+    r.smoothness.source_g2 = l.order == 2;
+    r.smoothness.seam_continuity = match l.order {
         2 => "G2",
         1 => "G1",
         _ => "C0",

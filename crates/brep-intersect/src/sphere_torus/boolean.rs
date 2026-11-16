@@ -15,7 +15,7 @@
 //! Refused: axial pairs (exact circles, handled by `brep_core::boolean`),
 //! tangencies, an uncertified component set, a network vertex at an
 //! original vertex, and any piece whose fits miss the tolerance.
-use super::traced_lift::{Context, Patch, point, seam_breaks};
+use super::traced_lift::{Context, Patch, SphereSides, point, seam_breaks};
 use super::*;
 use brep_core::network_boolean::{NetworkEnd, NetworkPiece, network_boolean};
 use nurbs_core::foundation::interpolation::{Parameterization, interpolate_curve};
@@ -191,32 +191,49 @@ pub fn sphere_torus_boolean(a: &Model, b: &Model, operation: &str) -> Result<Mod
         operands,
         operation,
         sphere_index,
-        &sphere,
-        super::traced_lift::Other::Torus(&torus),
-        sphere_model,
-        torus_model,
-        &loops,
-        tolerance,
-        &inside,
+        SphereSides {
+            sphere: &sphere,
+            other: super::traced_lift::Other::Torus(&torus),
+            sphere_model,
+            other_model: torus_model,
+        },
+        TracedLoops {
+            loops: &loops,
+            tolerance,
+            inside: &inside,
+        },
     )
+}
+
+/// Certified, complete traced loops of a pair, the tolerance they need and
+/// the material predicate (`inside(operand, point)`) used to keep regions.
+pub(crate) struct TracedLoops<'a> {
+    pub(crate) loops: &'a [Vec<Curve>],
+    pub(crate) tolerance: f64,
+    pub(crate) inside: &'a dyn Fn(usize, [f64; 3]) -> Result<bool>,
 }
 
 /// Boolean of a sphere and another canonical solid from certified, complete
 /// traced loops: cut at seams, fit on a common parameter, certify lifts and
 /// assemble with `inside` as the material predicate.
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn traced_boolean(
     operands: [&Model; 2],
     operation: &str,
     sphere_index: usize,
-    sphere: &CanonicalSphere,
-    other: super::traced_lift::Other<'_>,
-    sphere_model: &Model,
-    torus_model: &Model,
-    loops: &[Vec<Curve>],
-    mut tolerance: f64,
-    inside: &dyn Fn(usize, [f64; 3]) -> Result<bool>,
+    sides: SphereSides<'_>,
+    traced: TracedLoops<'_>,
 ) -> Result<Model> {
+    let SphereSides {
+        sphere,
+        other,
+        sphere_model,
+        other_model: torus_model,
+    } = sides;
+    let TracedLoops {
+        loops,
+        mut tolerance,
+        inside,
+    } = traced;
     let torus_index = 1 - sphere_index;
     let ctx = Context::new(sphere, other, sphere_model, torus_model);
     let mut network = Vec::new();
@@ -366,13 +383,17 @@ pub fn sphere_cylinder_boolean(a: &Model, b: &Model, operation: &str) -> Result<
         operands,
         operation,
         sphere_index,
-        &sphere,
-        super::traced_lift::Other::Cylinder(&cylinder),
-        sphere_model,
-        other_model,
-        &loops,
-        tolerance,
-        &inside,
+        SphereSides {
+            sphere: &sphere,
+            other: super::traced_lift::Other::Cylinder(&cylinder),
+            sphere_model,
+            other_model,
+        },
+        TracedLoops {
+            loops: &loops,
+            tolerance,
+            inside: &inside,
+        },
     )
 }
 
@@ -422,13 +443,17 @@ pub fn sphere_cone_boolean(a: &Model, b: &Model, operation: &str) -> Result<Mode
         operands,
         operation,
         sphere_index,
-        &sphere,
-        super::traced_lift::Other::Cone(&cone),
-        sphere_model,
-        other_model,
-        &loops,
-        tolerance,
-        &inside,
+        SphereSides {
+            sphere: &sphere,
+            other: super::traced_lift::Other::Cone(&cone),
+            sphere_model,
+            other_model,
+        },
+        TracedLoops {
+            loops: &loops,
+            tolerance,
+            inside: &inside,
+        },
     )
 }
 
@@ -449,17 +474,19 @@ const SLIVER: f64 = 1e-6;
 /// Boolean of two canonical solids of revolution (`a` a cylinder or cone,
 /// `b` a torus, or any pair of `Other`) from certified, complete traced
 /// loops lying on their curved walls.
-#[allow(clippy::too_many_arguments)]
 fn pair_boolean(
     a_model: &Model,
     b_model: &Model,
     operation: &str,
     a: super::traced_lift::Other<'_>,
     b: super::traced_lift::Other<'_>,
-    loops: &[Vec<Curve>],
-    mut tolerance: f64,
-    inside: &dyn Fn(usize, [f64; 3]) -> Result<bool>,
+    traced: TracedLoops<'_>,
 ) -> Result<Model> {
+    let TracedLoops {
+        loops,
+        mut tolerance,
+        inside,
+    } = traced;
     let sides = [(a, a_model), (b, b_model)];
     let label = |o: usize, p: [f64; 3]| {
         sides[o]
@@ -684,9 +711,11 @@ pub fn cylinder_torus_boolean(cylinder_model: &Model, torus_model: &Model, opera
         operation,
         super::traced_lift::Other::Cylinder(&cylinder),
         super::traced_lift::Other::Torus(&torus),
-        &loops,
-        tolerance,
-        &inside,
+        TracedLoops {
+            loops: &loops,
+            tolerance,
+            inside: &inside,
+        },
     )
 }
 
@@ -722,8 +751,10 @@ pub fn cone_torus_boolean(cone_model: &Model, torus_model: &Model, operation: &s
         operation,
         super::traced_lift::Other::Cone(&cone),
         super::traced_lift::Other::Torus(&torus),
-        &loops,
-        tolerance,
-        &inside,
+        TracedLoops {
+            loops: &loops,
+            tolerance,
+            inside: &inside,
+        },
     )
 }

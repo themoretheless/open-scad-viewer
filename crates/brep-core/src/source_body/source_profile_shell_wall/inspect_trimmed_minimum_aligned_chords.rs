@@ -55,15 +55,9 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             cells: 0,
             spans: 0,
             span_stages: ExpressionWallSpanStages::default(),
-            distance_excluded: 0,
-            angle_excluded: 0,
-            planar_excluded: 0,
+            excluded: ExpressionWallExclusions::default(),
             plane_controls: 0,
-            cache_hits: 0,
-            total_pairs,
-            initial_pairs_checked: 0,
-            symmetry_reused: 0,
-            trim_excluded: 0,
+            pairs: ExpressionWallPairs { total: total_pairs, ..Default::default() },
             domain_cells: 0,
             profile_transition: ExpressionWallTransitions::default(),
             intrinsic: ExpressionWallIntrinsic::default(),
@@ -122,7 +116,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             // the same immutable face. The representative may remain pending;
             // reusing it never turns uncertainty into an exclusion.
             if products.contains(&product) {
-                out.symmetry_reused += 1;
+                out.pairs.symmetry_reused += 1;
                 continue;
             }
             if out.cells == max_cells || out.spans == max_spans {
@@ -137,7 +131,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
             products.insert(product);
             out.cells += 1;
             if cell.domains == [domains[cell.faces[0]], domains[cell.faces[1]]] {
-                out.initial_pairs_checked += 1;
+                out.pairs.initial_checked += 1;
             }
             let mut outside = false;
             for side in 0..2 {
@@ -153,12 +147,12 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                             .any(|region| rectangle_contains(*region, cell.domains[side]))
                     })
                 {
-                    out.cache_hits += 1;
+                    out.pairs.cache_hits += 1;
                     outside = true;
                     break;
                 }
                 if let Some(&excluded) = trim_rectangles.get(&rectangle_key) {
-                    out.cache_hits += 1;
+                    out.pairs.cache_hits += 1;
                     if excluded {
                         outside = true;
                         break;
@@ -186,13 +180,13 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 }
             }
             if outside {
-                out.trim_excluded += 1;
+                out.excluded.trim += 1;
                 continue;
             }
             if matches!((planes[cell.faces[0]],planes[cell.faces[1]]),(Some(a),Some(b))
                 if crate::material_wall_coverage::same_plane(a,b))
             {
-                out.planar_excluded += 1;
+                out.excluded.planar += 1;
                 continue;
             }
             // Both retained pieces are restrictions of the same immutable
@@ -217,10 +211,10 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                             .iter()
                             .any(|region| rectangle_contains(*region, union))
                     }) {
-                    out.cache_hits += 1;
+                    out.pairs.cache_hits += 1;
                     Some(true)
                 } else if let Some(&decision) = intrinsic.get(&union_key) {
-                    out.cache_hits += 1;
+                    out.pairs.cache_hits += 1;
                     Some(decision)
                 } else if intrinsic_attempts
                     .get(&union_key)
@@ -229,7 +223,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                     // Exact same immutable query already refused with at least
                     // this much work. Keep it unresolved; no exclusion follows.
                     // A larger budget is allowed to retry the calculation.
-                    out.cache_hits += 1;
+                    out.pairs.cache_hits += 1;
                     None
                 } else {
                     out.intrinsic.checked += 1;
@@ -249,7 +243,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                             };
                             let hits = workspace.cache_hits();
                             let report = workspace.qualify_rectangle(union, budget)?;
-                            out.cache_hits += workspace.cache_hits() - hits;
+                            out.pairs.cache_hits += workspace.cache_hits() - hits;
                             (
                                 report.complete.then_some(report.certificate.is_some()),
                                 report.spans,
@@ -262,7 +256,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                                 max_sine_squared,
                                 budget,
                             )?;
-                            out.cache_hits += retained_chord_workspace.cache_hits() - hits;
+                            out.pairs.cache_hits += retained_chord_workspace.cache_hits() - hits;
                             result
                         }
                         ShellFaceKind::Transition => match &mut profile_chord_workspace {
@@ -273,7 +267,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                                     max_sine_squared,
                                     budget,
                                 )?;
-                                out.cache_hits += workspace.cache_hits() - hits;
+                                out.pairs.cache_hits += workspace.cache_hits() - hits;
                                 #[cfg(test)]
                                 {
                                     let direct = corrected_transition
@@ -325,7 +319,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 let key = key(cell.faces[side], cell.domains[side]);
                 if let Some(point) = positions.get(&key) {
                     points[side] = Some(*point);
-                    out.cache_hits += 1;
+                    out.pairs.cache_hits += 1;
                     continue;
                 }
                 let budget = (max_spans - out.spans).min(100000);
@@ -336,7 +330,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                         Some(workspace) => {
                             let hits=workspace.cache_hits();
                             let result=workspace.enclose_position(cell.domains[side],budget)?;
-                            out.cache_hits+=workspace.cache_hits()-hits;
+                            out.pairs.cache_hits+=workspace.cache_hits()-hits;
                             result
                         }
                         None => (None, 0),
@@ -371,14 +365,14 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 continue;
             };
             if nurbs_core::surface_distance::enclosure_distance(&a, &b)?.0 >= minimum_mm {
-                out.distance_excluded += 1;
+                out.excluded.distance += 1;
                 continue;
             }
             for side in 0..2 {
                 let key = key(cell.faces[side], cell.domains[side]);
                 if let Some(normal) = normal_cache.get(&key) {
                     normals[side] = Some(*normal);
-                    out.cache_hits += 1;
+                    out.pairs.cache_hits += 1;
                     continue;
                 }
                 let budget = (max_spans - out.spans).min(100000);
@@ -391,7 +385,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                             Some(workspace) => {
                                 let hits=workspace.cache_hits();
                                 let (jet, spent) = workspace.enclose_derivatives(cell.domains[side],budget)?;
-                                out.cache_hits+=workspace.cache_hits()-hits;
+                                out.pairs.cache_hits+=workspace.cache_hits()-hits;
                                 (jet.map(segment::normal_from_derivatives).transpose()?, spent)
                             }
                             None => (None, 0),
@@ -420,7 +414,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 normals,
                 max_sine_squared,
             )? {
-                out.angle_excluded += 1;
+                out.excluded.angle += 1;
                 continue;
             }
             if cell.faces[0] != cell.faces[1] && out.spans < max_spans {
@@ -452,7 +446,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                         let hits = workspace.cache_hits();
                         let (excluded, spent) =
                             workspace.inspect(cell.domains, projection, budget)?;
-                        out.cache_hits += workspace.cache_hits() - hits;
+                        out.pairs.cache_hits += workspace.cache_hits() - hits;
                         #[cfg(test)]
                         {
                             let direct =
@@ -477,7 +471,7 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                         out.spans += spent;
                         out.span_stages.shared_corner += spent;
                         if excluded {
-                            out.angle_excluded += 1;
+                            out.excluded.angle += 1;
                             continue;
                         }
                     }
@@ -503,11 +497,11 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                 let hits = workspace.cache_hits();
                 let (excluded, spent) =
                     workspace.inspect_pair(cell.domains, (max_spans - out.spans).min(100000))?;
-                out.cache_hits += workspace.cache_hits() - hits;
+                out.pairs.cache_hits += workspace.cache_hits() - hits;
                 out.spans += spent;
                 out.span_stages.original_pair += spent;
                 if excluded {
-                    out.angle_excluded += 1;
+                    out.excluded.angle += 1;
                     continue;
                 }
             }
@@ -521,11 +515,11 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                     max_sine_squared,
                     (max_spans - out.spans).min(100000),
                 )?;
-                out.cache_hits += retained_chord_workspace.cache_hits() - hits;
+                out.pairs.cache_hits += retained_chord_workspace.cache_hits() - hits;
                 out.spans += spent;
                 out.span_stages.retained_pair += spent;
                 if excluded == Some(true) {
-                    out.angle_excluded += 1;
+                    out.excluded.angle += 1;
                     continue;
                 }
             }
@@ -543,9 +537,9 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                     )?;
                     out.spans += spent;
                     out.span_stages.corrected_pair += spent;
-                    out.cache_hits += workspace.cache_hits() - hits;
+                    out.pairs.cache_hits += workspace.cache_hits() - hits;
                     if excluded == Some(true) {
-                        out.angle_excluded += 1;
+                        out.excluded.angle += 1;
                         continue;
                     }
                 }
@@ -573,10 +567,10 @@ impl EmbeddedExpressionGeometry<'_, '_, '_, '_, '_, '_, '_, '_, '_> {
                     )?;
                     out.spans += spent;
                     out.profile_transition.spans += spent;
-                    out.cache_hits += workspace.cache_hits() - hits;
+                    out.pairs.cache_hits += workspace.cache_hits() - hits;
                     match excluded {
                         Some(true) => {
-                            out.angle_excluded += 1;
+                            out.excluded.angle += 1;
                             out.profile_transition.excluded += 1;
                             continue;
                         }

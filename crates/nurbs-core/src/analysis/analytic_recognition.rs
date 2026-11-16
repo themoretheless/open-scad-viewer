@@ -255,7 +255,7 @@ pub fn certify_primitive(surface: &Surface, primitive: &AnalyticPrimitive) -> Re
     surface.validate()?;
     check(admissible(primitive), "Primitive parameters must be finite with unit axes and admissible radii")?;
     let mut worst = 0_f64;
-    for patch in crate::surface_edit::decompose(surface)? {
+    for patch in crate::core::surface_decompose::decompose(surface)? {
         match patch_bound(&patch, primitive) {
             Some(b) => worst = worst.max(b),
             None => return Ok(None),

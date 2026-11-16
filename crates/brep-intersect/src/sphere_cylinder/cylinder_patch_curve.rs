@@ -178,7 +178,20 @@ pub fn intersect_sphere_cylinder(
             report.unresolved(domain, UnresolvedReason::NearCoincidence);
             return Ok(report);
         }
-        return off_axis(&mut report, domain, sphere_model, cylinder_model, &sphere, &cylinder, s, d_perp, band, terms);
+        return off_axis(
+            &mut report,
+            domain,
+            Pair {
+                sphere_model,
+                cylinder_model,
+                sphere: &sphere,
+                cylinder: &cylinder,
+            },
+            s,
+            d_perp,
+            band,
+            terms,
+        );
     }
     let r = sphere.radius;
     let big_r = cylinder.radius;
@@ -274,22 +287,34 @@ pub fn intersect_sphere_cylinder(
     Ok(report)
 }
 
+/// The two operands of a sphere/cylinder intersection: their models and
+/// canonical forms.
+#[derive(Clone, Copy)]
+struct Pair<'a> {
+    sphere_model: &'a Model,
+    cylinder_model: &'a Model,
+    sphere: &'a CanonicalSphere,
+    cylinder: &'a CanonicalCylinder,
+}
+
 /// Off-axis pair. Only a sphere strictly between the cap planes is handled:
 /// then the caps are untouched and every contact is a closed loop on the
 /// side wall. A sphere provably outside or inside the wall resolves empty.
-#[allow(clippy::too_many_arguments)]
 fn off_axis(
     report: &mut Report<SphereCylinderComponent>,
     domain: Vec<f64>,
-    sphere_model: &Model,
-    cylinder_model: &Model,
-    sphere: &CanonicalSphere,
-    cylinder: &CanonicalCylinder,
+    pair: Pair<'_>,
     s: f64,
     d_perp: f64,
     band: f64,
     terms: f64,
 ) -> Result<Report<SphereCylinderComponent>> {
+    let Pair {
+        sphere_model,
+        cylinder_model,
+        sphere,
+        cylinder,
+    } = pair;
     let (r, big_r, half) = (sphere.radius, cylinder.radius, cylinder.half_height);
     let reaches_cap = s.abs() + r >= half - band;
     if reaches_cap {
@@ -349,7 +374,7 @@ fn off_axis(
                 return Ok(std::mem::take(report));
             }
         };
-        return capped(report, domain, sphere_model, cylinder_model, sphere, cylinder, &s_implicit, &c_implicit, loops);
+        return capped(report, domain, pair, &s_implicit, &c_implicit, loops);
     }
     match traced {
         Ok(loops) if !loops.is_empty() => {
@@ -402,18 +427,20 @@ fn off_axis(
 /// Contacts of a sphere reaching a cap plane: clipped wall loops plus cap
 /// circle arcs, joined into closed cycles, recertified piece by piece and
 /// lifted onto both operands.
-#[allow(clippy::too_many_arguments)]
 fn capped(
     report: &mut Report<SphereCylinderComponent>,
     domain: Vec<f64>,
-    sphere_model: &Model,
-    cylinder_model: &Model,
-    sphere: &CanonicalSphere,
-    cylinder: &CanonicalCylinder,
+    pair: Pair<'_>,
     s_implicit: &crate::implicit_trace::SphereImplicit,
     c_implicit: &crate::implicit_trace::CylinderImplicit,
     loops: Vec<crate::implicit_trace::TracedLoop>,
 ) -> Result<Report<SphereCylinderComponent>> {
+    let Pair {
+        sphere_model,
+        cylinder_model,
+        sphere,
+        cylinder,
+    } = pair;
     let wall: Vec<Vec<Curve>> = loops.iter().map(|l| l.pieces.clone()).collect();
     let frame = [cylinder.frame[0], cylinder.frame[1], cylinder.axis];
     // The wall contact on the infinite cylinder must be provably complete;
@@ -444,11 +471,13 @@ fn capped(
         (dot(d, frame[0]).hypot(dot(d, frame[1])) - cylinder.radius).abs()
     };
     let Some(cycles) = capped::certified_cycles(
-        sphere,
-        crate::sphere_torus::traced_lift::Other::Cylinder(cylinder),
+        crate::sphere_torus::traced_lift::SphereSides {
+            sphere,
+            other: crate::sphere_torus::traced_lift::Other::Cylinder(cylinder),
+            sphere_model,
+            other_model: cylinder_model,
+        },
         &slab,
-        sphere_model,
-        cylinder_model,
         s_implicit,
         c_implicit,
         &wall_distance,

@@ -336,8 +336,8 @@ fn rational_tangent_term_is_retained_and_original_frame_is_owned() {
         )
         .unwrap();
         assert!(limited.certificate.is_none() && limited.pending > 0 && limited.spans <= 1);
-        assert_eq!(limited.coordinate_path_attempts, 0);
-        assert_eq!(limited.coordinate_path_exclusions, 0);
+        assert_eq!(limited.coordinate_path.attempts, 0);
+        assert_eq!(limited.coordinate_path.exclusions, 0);
         assert!(
             crate::surface_self_chord_coverage::qualify_with_rational_pole(
                 &foreign,

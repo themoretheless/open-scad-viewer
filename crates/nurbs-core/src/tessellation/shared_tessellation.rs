@@ -163,7 +163,6 @@ pub fn tessellate(
 /// Work units are seam proofs, grid evaluations and triangulated cells
 /// (`2 * seams + patches * ((n + 1)^2 + n^2)`). A cancelled call returns
 /// `Cancelled` and no report; seam refusals return early without `finish`.
-#[allow(clippy::too_many_arguments)]
 pub fn tessellate_with(
     surfaces: &[Surface],
     seams: &[Seam],

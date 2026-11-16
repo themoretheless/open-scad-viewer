@@ -1,6 +1,6 @@
 use super::*;
 use topology::{edge, endpoint, vertex};
-fn line(a: [f64; 3], b: [f64; 3]) -> Result<Curve> {
+pub(super) fn line(a: [f64; 3], b: [f64; 3]) -> Result<Curve> {
     Curve::from_polyline(vec![a.to_vec(), b.to_vec()])
 }
 pub(super) fn assemble(
@@ -66,43 +66,8 @@ pub(super) fn assemble(
     let mut contact_edges = [[0; 2]; 3];
     let mut strip_fits = Vec::new();
     for (j, strip) in c.strips.strips.iter().enumerate() {
-        let selected = &source.edges[strip.source_edge];
-        let other = *selected
-            .vertices
-            .iter()
-            .find(|&&v| v != corner)
-            .ok_or_else(|| refuse("Missing retained source endpoint"))?;
-        require(
-            selected.curve.degree == 1 && selected.curve.weights[0] == selected.curve.weights[1],
-            "Initial corner sewing requires straight affine stock edges",
-        )?;
-        let axes: Vec<_> = (0..3)
-            .filter(|&k| source.vertices[corner].point[k] != source.vertices[other].point[k])
-            .collect();
-        require(axes.len() == 1, "Corner source edge must be axis aligned")?;
-        let axis = axes[0];
-        let far_cut = &strip.cutters[1].faces[strip.cutter_faces[1]].surface;
-        let fixed = far_cut.control_points[0][0][axis];
-        require(
-            far_cut
-                .control_points
-                .iter()
-                .flatten()
-                .all(|p| p[axis] == fixed)
-                && c.stock[axis][0] < fixed
-                && fixed < c.stock[axis][1],
-            "Actual far cutter must retain one stock-axis section",
-        )?;
-        let mut sharp = source.vertices[corner].point;
-        sharp[axis] = fixed;
-        let sharp_id = vertex(&mut m, sharp);
-        let mut ends = selected.vertices;
-        ends[usize::from(ends[1] == corner)] = sharp_id;
-        m.edges[strip.source_edge] = crate::Edge {
-            curve: line(m.vertices[ends[0]].point, m.vertices[ends[1]].point)?,
-            vertices: ends,
-            degenerate: false,
-        };
+        let section = retarget_source_edge(c, &mut m, corner, strip)?;
+        let (axis, fixed) = (section.axis, section.fixed);
         let near = usize::from(strip.end_order[0] != 0);
         let original = &strip.patch.ends[near].curve;
         let matches = c
@@ -148,120 +113,30 @@ pub(super) fn assemble(
         cells += proof.cells;
         strip_fits.push(proof);
         let patch = &fit.model;
-        let local_vertices = patch
-            .vertices
-            .iter()
-            .map(|v| vertex(&mut m, v.point))
-            .collect::<Vec<_>>();
-        let mut local_edges = Vec::new();
-        for e in &patch.edges {
-            local_edges.push(edge(
-                &mut m,
-                e.curve.clone(),
-                e.vertices.map(|v| local_vertices[v]),
-                e.degenerate,
-            ));
-        }
+        let (local_edges, face) = insert_patch(&mut m, patch);
+        strip_faces[j] = face;
         contact_edges[j] = fit.contacts.map(|e| local_edges[e]);
-        let mut wire = patch.loops[patch.faces[0].outer].clone();
-        for use_ in &mut wire.coedges {
-            use_.edge = local_edges[use_.edge];
-        }
-        let wire_id = m.loops.len();
-        m.loops.push(wire);
-        strip_faces[j] = m.faces.len();
-        m.faces.push(crate::Face {
-            surface: patch.faces[0].surface.clone(),
-            outer: wire_id,
-            holes: vec![],
-        });
         for side in 0..2 {
             extra[strip.support_faces[side]].push(local_edges[fit.contacts[side]]);
         }
         near_edges[j] = local_edges[fit.near];
         let far_edge = local_edges[fit.far];
-        let e = &m.edges[far_edge];
-        let ends = e.vertices;
-        let mut cap_edges = vec![far_edge];
-        for side in 0..2 {
-            let v = ends[side];
-            let boundary = line(m.vertices[v].point, sharp)?;
-            let id = edge(&mut m, boundary, [v, sharp_id], false);
-            extra[strip.support_faces[side]].push(id);
-            cap_edges.push(id);
-        }
-        let surface = planar::cap(c.stock, axis, fixed);
-        let uses = cap_edges
-            .into_iter()
-            .map(|e| Ok((e, planar::project(&m.edges[e].curve, &surface)?)))
-            .collect::<Result<Vec<_>>>()?;
-        let mut wire = topology::loop_from_edges(&m, uses)?;
-        topology::positive_loop(&mut wire, c.options.tolerance_uv, &mut cells, limits)?;
-        let outer = m.loops.len();
-        m.loops.push(wire);
-        cap_faces[j] = m.faces.len();
-        m.faces.push(crate::Face {
-            surface,
-            outer,
-            holes: vec![],
-        });
+        cap_faces[j] = cap_strip(
+            c,
+            &mut m,
+            &mut extra,
+            strip.support_faces,
+            far_edge,
+            &section,
+            (&mut cells, limits),
+        )?;
     }
     let mut central = crate::Loop {
         coedges: Vec::new(),
     };
     for i in 0..6 {
         let curve = &clocks.curves[i];
-        let (id, reverse) = if i % 2 == 0 {
-            let matches = near_edges
-                .iter()
-                .filter_map(|&id| {
-                    let actual = &m.edges[id].curve;
-                    if actual == curve {
-                        Some((id, false))
-                    } else if actual.reverse().ok().as_ref() == Some(curve) {
-                        Some((id, true))
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>();
-            require(
-                matches.len() == 1,
-                "Central seam lost its literal original strip curve",
-            )?;
-            matches[0]
-        } else {
-            let mut vertices = [0; 2];
-            for end in 0..2 {
-                let p = endpoint(curve, end);
-                let matches = near_edges
-                    .iter()
-                    .flat_map(|&e| m.edges[e].vertices)
-                    .collect::<std::collections::BTreeSet<_>>()
-                    .into_iter()
-                    .filter(|&v| m.vertices[v].point == p)
-                    .collect::<Vec<_>>();
-                require(
-                    matches.len() == 1,
-                    "Central connector endpoint is not uniquely source-owned",
-                )?;
-                vertices[end] = matches[0];
-            }
-            let id = edge(&mut m, curve.clone(), vertices, false);
-            let face = source
-                .faces
-                .iter()
-                .enumerate()
-                .filter(|(_, f)| f.surface == c.originals[i].0)
-                .map(|(f, _)| f)
-                .collect::<Vec<_>>();
-            require(
-                face.len() == 1,
-                "Central connector lost its original stock plane",
-            )?;
-            extra[face[0]].push(id);
-            (id, false)
-        };
+        let (id, reverse) = central_edge(c, &mut m, &mut extra, &near_edges, i, curve)?;
         let traversal_reverse = reverse
             ^ (clocks.pcurves[i].control_points[0][0]
                 > clocks.pcurves[i].control_points.last().unwrap()[0]);
@@ -310,51 +185,8 @@ pub(super) fn assemble(
         let outer = m.faces[f].outer;
         m.loops[outer] = wire;
     }
-    let map = topology::compact_vertices(&mut m);
-    let source_vertices = map[..source.vertices.len()].to_vec();
-    let seed = source.shells[0]
-        .faces
-        .iter()
-        .find(|u| u.face == 0)
-        .unwrap()
-        .reversed;
-    topology::orient(&mut m, seed)?;
-    m.inherit_topology_ids(&[source]);
-    m.validate()?;
-    require(
-        cells < limits.cells && exact <= limits.exact_work,
-        "No corner closure work remains",
-    )?;
-    let closure =
-        crate::watertight::inspect_with_exact(&m, limits.cells - cells, limits.exact_work - exact)?;
-    cells += closure.closure.agreement.cells;
-    exact += closure.exact.work;
-    require(
-        closure.closure.status == crate::watertight::Closure::WithinTolerance,
-        "Actual sewn corner boundary remains open or mismatched",
-    )?;
-    m.shells[0].closed = true;
-    m.bodies = vec![crate::Body {
-        outer_shell: 0,
-        inner_shells: vec![],
-    }];
-    m.inherit_topology_ids(&[source]);
-    m.validate()?;
-    require(cells < limits.cells, "No final corner trim work remains")?;
-    let allowance = (limits.cells - cells) / 2;
-    require(allowance > 0, "No final corner trim work remains")?;
-    let trims = crate::face_domain::audit_trim_regions(
-        &m,
-        c.options.tolerance_uv,
-        limits.trim_pairs,
-        allowance,
-        allowance.min(limits.domain_cells),
-    )?;
-    cells += trims.cells + trims.domain_cells;
-    require(
-        cells <= limits.cells,
-        "Final corner trim exceeded shared sewing work",
-    )?;
+    let (source_vertices, closure, trims) =
+        close_and_audit(c, &mut m, &mut cells, &mut exact, limits)?;
     let mut final_jets = final_jets::inspect(
         c,
         &m,
@@ -392,4 +224,257 @@ pub(super) fn assemble(
         cells,
         exact_work: exact,
     })
+}
+
+/// Axis and sharp corner of one strip's retained stock section.
+pub(super) struct StripSection {
+    pub(super) axis: usize,
+    pub(super) fixed: f64,
+    sharp: [f64; 3],
+    sharp_id: usize,
+}
+/// Re-end the selected straight stock edge at the far cutter's sharp corner.
+pub(super) fn retarget_source_edge(
+    c: &CentralLoftCandidate<'_, '_, '_>,
+    m: &mut Model,
+    corner: usize,
+    strip: &crate::region_replacement::StripPatch,
+) -> Result<StripSection> {
+    let source = c.body.source();
+    let selected = &source.edges[strip.source_edge];
+    let other = *selected
+        .vertices
+        .iter()
+        .find(|&&v| v != corner)
+        .ok_or_else(|| refuse("Missing retained source endpoint"))?;
+    require(
+        selected.curve.degree == 1 && selected.curve.weights[0] == selected.curve.weights[1],
+        "Initial corner sewing requires straight affine stock edges",
+    )?;
+    let axes: Vec<_> = (0..3)
+        .filter(|&k| source.vertices[corner].point[k] != source.vertices[other].point[k])
+        .collect();
+    require(axes.len() == 1, "Corner source edge must be axis aligned")?;
+    let axis = axes[0];
+    let far_cut = &strip.cutters[1].faces[strip.cutter_faces[1]].surface;
+    let fixed = far_cut.control_points[0][0][axis];
+    require(
+        far_cut
+            .control_points
+            .iter()
+            .flatten()
+            .all(|p| p[axis] == fixed)
+            && c.stock[axis][0] < fixed
+            && fixed < c.stock[axis][1],
+        "Actual far cutter must retain one stock-axis section",
+    )?;
+    let mut sharp = source.vertices[corner].point;
+    sharp[axis] = fixed;
+    let sharp_id = vertex(m, sharp);
+    let mut ends = selected.vertices;
+    ends[usize::from(ends[1] == corner)] = sharp_id;
+    m.edges[strip.source_edge] = crate::Edge {
+        curve: line(m.vertices[ends[0]].point, m.vertices[ends[1]].point)?,
+        vertices: ends,
+        degenerate: false,
+    };
+    Ok(StripSection {
+        axis,
+        fixed,
+        sharp,
+        sharp_id,
+    })
+}
+/// Copy one strip patch's vertices, edges, loop and face into `m`.
+pub(super) fn insert_patch(m: &mut Model, patch: &Model) -> (Vec<usize>, usize) {
+    let local_vertices = patch
+        .vertices
+        .iter()
+        .map(|v| vertex(m, v.point))
+        .collect::<Vec<_>>();
+    let mut local_edges = Vec::new();
+    for e in &patch.edges {
+        local_edges.push(edge(
+            m,
+            e.curve.clone(),
+            e.vertices.map(|v| local_vertices[v]),
+            e.degenerate,
+        ));
+    }
+    let mut wire = patch.loops[patch.faces[0].outer].clone();
+    for use_ in &mut wire.coedges {
+        use_.edge = local_edges[use_.edge];
+    }
+    let wire_id = m.loops.len();
+    m.loops.push(wire);
+    let face = m.faces.len();
+    m.faces.push(crate::Face {
+        surface: patch.faces[0].surface.clone(),
+        outer: wire_id,
+        holes: vec![],
+    });
+    (local_edges, face)
+}
+/// Close one strip's far end with a planar stock cap; returns the cap face.
+pub(super) fn cap_strip(
+    c: &CentralLoftCandidate<'_, '_, '_>,
+    m: &mut Model,
+    extra: &mut [Vec<usize>],
+    support_faces: [usize; 2],
+    far_edge: usize,
+    section: &StripSection,
+    (cells, limits): (&mut usize, CornerSewLimits),
+) -> Result<usize> {
+    let e = &m.edges[far_edge];
+    let ends = e.vertices;
+    let mut cap_edges = vec![far_edge];
+    for side in 0..2 {
+        let v = ends[side];
+        let boundary = line(m.vertices[v].point, section.sharp)?;
+        let id = edge(m, boundary, [v, section.sharp_id], false);
+        extra[support_faces[side]].push(id);
+        cap_edges.push(id);
+    }
+    let surface = planar::cap(c.stock, section.axis, section.fixed);
+    let uses = cap_edges
+        .into_iter()
+        .map(|e| Ok((e, planar::project(&m.edges[e].curve, &surface)?)))
+        .collect::<Result<Vec<_>>>()?;
+    let mut wire = topology::loop_from_edges(m, uses)?;
+    topology::positive_loop(&mut wire, c.options.tolerance_uv, cells, limits)?;
+    let outer = m.loops.len();
+    m.loops.push(wire);
+    let face = m.faces.len();
+    m.faces.push(crate::Face {
+        surface,
+        outer,
+        holes: vec![],
+    });
+    Ok(face)
+}
+/// Edge of central section `i`: the literal strip seam (even) or a new
+/// connector on its original stock plane (odd).
+pub(super) fn central_edge(
+    c: &CentralLoftCandidate<'_, '_, '_>,
+    m: &mut Model,
+    extra: &mut [Vec<usize>],
+    near_edges: &[usize; 3],
+    i: usize,
+    curve: &Curve,
+) -> Result<(usize, bool)> {
+    let source = c.body.source();
+    if i % 2 == 0 {
+        let matches = near_edges
+            .iter()
+            .filter_map(|&id| {
+                let actual = &m.edges[id].curve;
+                if actual == curve {
+                    Some((id, false))
+                } else if actual.reverse().ok().as_ref() == Some(curve) {
+                    Some((id, true))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        require(
+            matches.len() == 1,
+            "Central seam lost its literal original strip curve",
+        )?;
+        Ok(matches[0])
+    } else {
+        let mut vertices = [0; 2];
+        for end in 0..2 {
+            let p = endpoint(curve, end);
+            let matches = near_edges
+                .iter()
+                .flat_map(|&e| m.edges[e].vertices)
+                .collect::<std::collections::BTreeSet<_>>()
+                .into_iter()
+                .filter(|&v| m.vertices[v].point == p)
+                .collect::<Vec<_>>();
+            require(
+                matches.len() == 1,
+                "Central connector endpoint is not uniquely source-owned",
+            )?;
+            vertices[end] = matches[0];
+        }
+        let id = edge(m, curve.clone(), vertices, false);
+        let face = source
+            .faces
+            .iter()
+            .enumerate()
+            .filter(|(_, f)| f.surface == c.originals[i].0)
+            .map(|(f, _)| f)
+            .collect::<Vec<_>>();
+        require(
+            face.len() == 1,
+            "Central connector lost its original stock plane",
+        )?;
+        extra[face[0]].push(id);
+        Ok((id, false))
+    }
+}
+/// Compact, orient and close the sewn shell, then audit its corner closure and trims.
+pub(super) fn close_and_audit(
+    c: &CentralLoftCandidate<'_, '_, '_>,
+    m: &mut Model,
+    cells_io: &mut usize,
+    exact_io: &mut u64,
+    limits: CornerSewLimits,
+) -> Result<(
+    Vec<Option<usize>>,
+    crate::watertight::QualifiedReport,
+    crate::face_domain::TrimAudit,
+)> {
+    let source = c.body.source();
+    let (mut cells, mut exact) = (*cells_io, *exact_io);
+    let map = topology::compact_vertices(m);
+    let source_vertices = map[..source.vertices.len()].to_vec();
+    let seed = source.shells[0]
+        .faces
+        .iter()
+        .find(|u| u.face == 0)
+        .unwrap()
+        .reversed;
+    topology::orient(m, seed)?;
+    m.inherit_topology_ids(&[source]);
+    m.validate()?;
+    require(
+        cells < limits.cells && exact <= limits.exact_work,
+        "No corner closure work remains",
+    )?;
+    let closure =
+        crate::watertight::inspect_with_exact(m, limits.cells - cells, limits.exact_work - exact)?;
+    cells += closure.closure.agreement.cells;
+    exact += closure.exact.work;
+    require(
+        closure.closure.status == crate::watertight::Closure::WithinTolerance,
+        "Actual sewn corner boundary remains open or mismatched",
+    )?;
+    m.shells[0].closed = true;
+    m.bodies = vec![crate::Body {
+        outer_shell: 0,
+        inner_shells: vec![],
+    }];
+    m.inherit_topology_ids(&[source]);
+    m.validate()?;
+    require(cells < limits.cells, "No final corner trim work remains")?;
+    let allowance = (limits.cells - cells) / 2;
+    require(allowance > 0, "No final corner trim work remains")?;
+    let trims = crate::face_domain::audit_trim_regions(
+        m,
+        c.options.tolerance_uv,
+        limits.trim_pairs,
+        allowance,
+        allowance.min(limits.domain_cells),
+    )?;
+    cells += trims.cells + trims.domain_cells;
+    require(
+        cells <= limits.cells,
+        "Final corner trim exceeded shared sewing work",
+    )?;
+    *cells_io = cells;
+    *exact_io = exact;
+    Ok((source_vertices, closure, trims))
 }

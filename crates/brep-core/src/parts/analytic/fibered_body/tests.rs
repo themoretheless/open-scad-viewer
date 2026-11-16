@@ -105,11 +105,11 @@ fn body(attempt: FiberedBodyAttempt) -> Box<FiberedBody> {
         FiberedBodyAttempt::Refused(r) => panic!(
             "refused {:?}; normal={} regular={:?}, volume={:?} trace={} smooth={}",
             r.reason,
-            r.normal_cells,
-            r.regularity.as_ref().map(|x| &x.unresolved_faces),
-            r.volume.as_ref().map(|x| x.embedding_certified),
-            r.source_trace_work,
-            r.smoothness_work
+            r.work.normal_cells,
+            r.audits.regularity.as_ref().map(|x| &x.unresolved_faces),
+            r.audits.volume.as_ref().map(|x| x.embedding_certified),
+            r.work.source_trace_work,
+            r.work.smoothness_work
         ),
     }
 }
@@ -132,20 +132,20 @@ fn original_filled_flat_end_caps_and_walls_have_global_source_ownership_and_comp
     let r = b.report();
     assert!(
         r.certified
-            && r.source_g1
-            && r.source_g2
-            && r.topology_preserved
-            && r.absence_of_self_intersections
-            && r.source_boundary_exact
+            && r.smoothness.source_g1
+            && r.smoothness.source_g2
+            && r.boundary.topology_preserved
+            && r.boundary.absence_of_self_intersections
+            && r.boundary.source_exact
     );
-    assert_eq!(r.boundary_error_upper, Some(0.));
-    assert_eq!(r.inspected_profile_joins, 4);
+    assert_eq!(r.boundary.error_upper, Some(0.));
+    assert_eq!(r.work.inspected_profile_joins, 4);
     assert_eq!(b.model().faces.len(), 6);
     assert_eq!(
-        r.volume.as_ref().unwrap().known_singular_parameter_ends,
+        r.audits.volume.as_ref().unwrap().known_singular_parameter_ends,
         [true; 2]
     );
-    assert!(r.regularity.as_ref().unwrap().all_faces_regular);
+    assert!(r.audits.regularity.as_ref().unwrap().all_faces_regular);
     let before = b.model().clone();
     let a = body(
         verify_fibered_body(
@@ -166,11 +166,11 @@ fn original_filled_flat_end_caps_and_walls_have_global_source_ownership_and_comp
     assert_eq!(before, *b.model());
     eprintln!(
         "flat physical caps source/actual G2; normals={} regularity={} binding={} trace={} smooth={}",
-        r.normal_cells,
-        r.regularity.as_ref().unwrap().cells,
-        r.binding_rows,
-        r.source_trace_work,
-        r.smoothness_work
+        r.work.normal_cells,
+        r.audits.regularity.as_ref().unwrap().cells,
+        r.work.binding_rows,
+        r.work.source_trace_work,
+        r.work.smoothness_work
     );
 }
 #[test]
@@ -190,9 +190,9 @@ fn an_inner_wall_tangent_cusp_is_c0_and_cannot_be_promoted_to_g1_or_g2() {
         1e-8,
         l,
     ).unwrap());
-    assert!(b.report().topology_preserved);
-    assert!(!b.report().source_g1 && !b.report().source_g2);
-    assert_eq!(b.report().seam_continuity, "C0");
+    assert!(b.report().boundary.topology_preserved);
+    assert!(!b.report().smoothness.source_g1 && !b.report().smoothness.source_g2);
+    assert_eq!(b.report().smoothness.seam_continuity, "C0");
     for order in [1, 2] {
         l.order = order;
         let x = construct_fibered_body(
@@ -209,7 +209,7 @@ fn an_inner_wall_tangent_cusp_is_c0_and_cannot_be_promoted_to_g1_or_g2() {
         let FiberedBodyAttempt::Refused(r) = x else {
             panic!("cusp got G{order} Solid")
         };
-        assert!(!r.certified && !r.source_g1 && !r.source_g2);
+        assert!(!r.certified && !r.smoothness.source_g1 && !r.smoothness.source_g2);
         assert_eq!(
             r.reason,
             Some("complete-cap-wall-oriented-regularity-unproved")
@@ -236,12 +236,12 @@ fn source_binding_budget_failures_mutations_and_invalid_tail_inputs_never_return
         let mut l = limits();
         match stage {
             0 => l.volume.exact_work = 0,
-            1 => l.volume.cells = b.report().volume.as_ref().unwrap().cells - 1,
-            2 => l.source_trace_work = b.report().source_trace_work - 1,
-            3 => l.binding_rows = b.report().binding_rows - 1,
-            4 => l.agreement_work = b.report().agreement.as_ref().unwrap().work - 1,
-            5 => l.smoothness_work = b.report().smoothness_work - 1,
-            6 => l.normal_cells = b.report().normal_cells - 1,
+            1 => l.volume.cells = b.report().audits.volume.as_ref().unwrap().cells - 1,
+            2 => l.source_trace_work = b.report().work.source_trace_work - 1,
+            3 => l.binding_rows = b.report().work.binding_rows - 1,
+            4 => l.agreement_work = b.report().audits.agreement.as_ref().unwrap().work - 1,
+            5 => l.smoothness_work = b.report().work.smoothness_work - 1,
+            6 => l.normal_cells = b.report().work.normal_cells - 1,
             _ => unreachable!(),
         }
         let FiberedBodyAttempt::Refused(r) =
@@ -259,7 +259,7 @@ fn source_binding_budget_failures_mutations_and_invalid_tail_inputs_never_return
         else {
             panic!("short stage {stage} returned Solid")
         };
-        assert!(!r.certified && !r.source_g1 && !r.source_g2 && !r.topology_preserved);
+        assert!(!r.certified && !r.smoothness.source_g1 && !r.smoothness.source_g2 && !r.boundary.topology_preserved);
     }
     let mut changed = b.model().clone();
     changed.faces[0].surface.control_points[1][1][0] =
@@ -332,9 +332,9 @@ fn rational_weights_oblique_world_planes_and_descending_fibers_keep_original_and
             1e-8,
             limits(),
         ).unwrap());
-        assert!(b.report().source_g2);
+        assert!(b.report().smoothness.source_g2);
         assert_eq!(
-            b.report().volume.as_ref().unwrap().height_direction,
+            b.report().audits.volume.as_ref().unwrap().height_direction,
             Some(if descending { -1 } else { 1 })
         );
         let a = body(
@@ -354,7 +354,7 @@ fn rational_weights_oblique_world_planes_and_descending_fibers_keep_original_and
         assert_eq!(a.model(), b.model());
         eprintln!(
             "rational oblique descending={descending} source/actual caps G2 verified, normal cells={}",
-            b.report().normal_cells
+            b.report().work.normal_cells
         );
     }
 }
@@ -398,7 +398,7 @@ fn sharp_profile_corners_remain_explicit_c0_despite_flat_end_cap_jets() {
             1e-8,
             l,
         ).unwrap());
-    assert!(b.report().certified && !b.report().source_g1 && !b.report().source_g2);
+    assert!(b.report().certified && !b.report().smoothness.source_g1 && !b.report().smoothness.source_g2);
     for order in [1, 2] {
         l.order = order;
         let FiberedBodyAttempt::Refused(r) =
@@ -460,8 +460,8 @@ fn all_original_pose_seams_are_owned_even_at_nonbinary_global_station_parameters
             1e-8,
             limits(),
         ).unwrap());
-    assert!(b.report().source_g2);
-    assert_eq!(b.report().inspected_motion_joins, 2);
+    assert!(b.report().smoothness.source_g2);
+    assert_eq!(b.report().work.inspected_motion_joins, 2);
     assert_eq!(b.model().faces.len(), 14);
     let a = body(
         verify_fibered_body(
@@ -510,5 +510,5 @@ fn all_original_pose_seams_are_owned_even_at_nonbinary_global_station_parameters
         1e-8,
         l,
     ).unwrap());
-    assert!(b.report().source_g1 && !b.report().source_g2);
+    assert!(b.report().smoothness.source_g1 && !b.report().smoothness.source_g2);
 }

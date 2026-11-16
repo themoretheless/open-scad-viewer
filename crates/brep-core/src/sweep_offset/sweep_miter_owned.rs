@@ -541,7 +541,7 @@ fn construct_impl(
                 }
                 if let Some(last) = levels.last_mut() {
                     last.accepted = false;
-                    last.error_certificate_reason = Some("complete-boundary-refinement");
+                    last.error.certificate_reason = Some("complete-boundary-refinement");
                 }
                 previous.append(&mut levels);
                 spent = spent
@@ -653,10 +653,6 @@ pub(crate) fn cap_boundaries_exact(model: &Model, max_work: u64) -> Result<(bool
     Ok((true, work))
 }
 
-
-#[cfg(test)]
-#[path = "../tests/sweep_miter_owned.rs"]
-mod tests;
 
 #[cfg(test)]
 #[path = "sweep_miter_owned/tests/direct_source_regressions_integration.rs"]

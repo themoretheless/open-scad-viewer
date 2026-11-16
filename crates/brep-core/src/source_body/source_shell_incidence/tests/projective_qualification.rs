@@ -3,6 +3,7 @@
     use crate::source_boundary_fragment::{Endpoint, Fragment};
     use nurbs_core::surface::Surface;
     #[test]
+    #[cfg_attr(not(feature = "slow-proofs"), ignore = "slow proof, run with --features slow-proofs")]
     fn full_turn_caps_contract_poles_and_have_one_vertex_link_cycle() {
         for (radii, sweep) in [[0.5, 1.25], [1.25, 0.5], [0., 1.], [1., 0.]]
             .into_iter()

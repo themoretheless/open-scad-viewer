@@ -5,10 +5,11 @@ import {readFileSync, existsSync} from 'node:fs'
 import {resolve, posix} from 'node:path'
 
 export const SRC_LAYERS = {
-  core: 0, generated: 0, data: 0, i18n: 0, forma: 0,
-  kernel: 1, language: 1, parser: 1, exchange: 1, render: 1, fabrication: 1,
+  // dev holds leaf instrumentation (operation counters, test seam) with no internal imports.
+  core: 0, generated: 0, data: 0, i18n: 0, forma: 0, dev: 0,
+  kernel: 1, language: 1, editor: 1, parser: 1, exchange: 1, render: 1, fabrication: 1,
   services: 2, app: 2,
-  composables: 3, components: 3, features: 3, ui: 3, dev: 3, workers: 3, mcp: 3, '(app)': 3,
+  composables: 3, components: 3, features: 3, ui: 3, workers: 3, mcp: 3, '(app)': 3,
 }
 const EXTS = ['', '.ts', '.tsx', '.mts', '.js', '.mjs', '.svt', '.vue', '/index.ts']
 const SPEC = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\bexport\s*\*\s*from\s*|\bnew\s+URL\s*\(\s*)(['"])(\.{1,2}\/[^'"?#]*)/g

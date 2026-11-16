@@ -60,7 +60,6 @@ fn lift(c: &Curve) -> Result<Surface> {
 ///
 /// This proves world coincidence/error only. UV-sheet identity, material trim
 /// membership, source/curve regularity, embedding and BRep sewing are separate.
-#[allow(clippy::too_many_arguments)]
 /// The contact parameter domain: fixed axis, its drive interval, the free interval on the first
 /// face and the domain on the second face.
 #[derive(Clone, Copy, Debug)]
