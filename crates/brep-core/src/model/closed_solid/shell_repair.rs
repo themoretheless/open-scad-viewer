@@ -50,16 +50,38 @@ fn refused(message: &str) -> Error {
     Error::new("BREP_SHELL_REPAIR_UNPROVED", message)
 }
 fn run(out: &mut ShellRepair, policy: ShellRepairPolicy) -> Result<()> {
-    let initial = qualify(out.original.clone(), policy.establish_forest)?;
+    let mut seed = out.original.clone();
+    let mut owned = vec![false; seed.shells.len()];
+    let mut duplicate = false;
+    for body in &seed.bodies {
+        for shell in std::iter::once(body.outer_shell).chain(body.inner_shells.iter().copied()) {
+            let assigned = owned
+                .get_mut(shell)
+                .ok_or_else(|| refused("Imported body references a missing shell"))?;
+            duplicate |= std::mem::replace(assigned, true);
+        }
+    }
+    if duplicate || owned.iter().any(|assigned| !assigned) {
+        // Provisional roles only enable the independent geometric forest audit.
+        // Imported roles may be absent, incomplete, or assigned more than once.
+        seed.bodies = (0..seed.shells.len())
+            .map(|outer_shell| crate::Body {
+                outer_shell,
+                inner_shells: Vec::new(),
+            })
+            .collect();
+        seed.rebuild_topology_ids();
+    }
+    let initial = qualify(seed, policy.establish_forest)?;
     let parents = initial
         .geometry
         .nesting
         .as_ref()
         .and_then(|n| n.parents.clone());
     out.attempts.push(initial.geometry.clone());
-    if let Some(solid) = initial.solid {
-        out.solid = Some(solid);
-        return Ok(());
+    if initial.solid.is_some() {
+        // Even an unchanged forest must meet the caller's final policy.
+        return readmit(out, initial.candidate().clone(), policy.readmit);
     }
     if !initial.geometry.boundary.proven {
         return Err(refused(
@@ -122,7 +144,11 @@ fn run(out: &mut ShellRepair, policy: ShellRepairPolicy) -> Result<()> {
         }
     }
     candidate.rebuild_topology_ids();
-    let readmitted = qualify(candidate, policy.readmit)?;
+    readmit(out, candidate, policy.readmit)
+}
+
+fn readmit(out: &mut ShellRepair, candidate: Model, policy: AdmissionPolicy) -> Result<()> {
+    let readmitted = qualify(candidate, policy)?;
     out.attempts.push(readmitted.geometry.clone());
     out.solid = readmitted.solid;
     if out.solid.is_none() {

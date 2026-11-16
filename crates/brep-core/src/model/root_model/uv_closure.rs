@@ -11,7 +11,7 @@ fn ordinary(port: &ss::QualifiedOriginalSsPort) -> bool {
     matches!(
         port.kind(),
         ss::OriginalSsPortKind::SameRootSelector | ss::OriginalSsPortKind::OriginalParameterRoot
-    ) && port.phase() == [0; 4]
+    )
 }
 /// Prove that the two endpoints have identical native face coordinates.
 pub fn qualify_root_uv_joint(
@@ -57,8 +57,9 @@ pub fn qualify_root_uv_joint_period_delta(
                 && target.first() == original.first()
                 && target.second() == original.second()
             {
-                let phase = triple.phase();
-                return Ok([sign * phase[2 * ts], sign * phase[2 * ts + 1]]);
+                let a = triple.phase();
+                let b = plain.phase();
+                return Ok(std::array::from_fn(|axis| sign * (a[2 * ts + axis] - b[2 * ps + axis])));
             }
         }
     }
@@ -70,9 +71,13 @@ pub fn qualify_root_uv_joint_period_delta(
         && x.first() == y.first()
         && x.second() == y.second()
     {
-        // Both endpoint binders preserve all native coordinates of the same
-        // source point, including across different affine Cox spans/charts.
-        return Ok([0, 0]);
+        // Both ports bind the same exact selector. Each nonzero shift was
+        // admitted by the original seam identity in its endpoint binder.
+        let first = a.phase();
+        let second = b.phase();
+        return Ok(std::array::from_fn(|axis| {
+            second[2 * support_b + axis] - first[2 * support_a + axis]
+        }));
     }
     Err(unproved("Common-face native UV identity remains unproved"))
 }

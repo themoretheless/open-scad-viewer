@@ -1,3 +1,6 @@
+import type {IsolatedSsContactRequest} from './isolatedSsContact'
+import type {PeriodicBandRequest,PeriodicStockIntersectionRequest} from './periodicBand'
+import type {ClosedSsBooleanRequest} from './closedSsBoolean'
 import {parseBondedSolidInput} from './bondedSolidProtocol'
 import type {CadOptions} from './cadWorkbench'
 import type {MeshData} from '../core/mesh'
@@ -17,6 +20,22 @@ import {MainSolidWorkerClient,type MainSolidRunOptions} from './mainSolidWorkerC
 // superseding call) terminates the worker and the next operation recreates it.
 const shared=new MainSolidWorkerClient(()=>new Worker(new URL('../workers/mainSolid.worker.ts',import.meta.url),{type:'module'}))
 export function cancelMainSolid(){shared.cancel()}
+
+export function computeIsolatedSsContact(request:IsolatedSsContactRequest,options:MainSolidRunOptions={}){
+ return shared.run({kind:'isolatedSsContact',request},options)
+}
+
+export function computePeriodicBand(request:PeriodicBandRequest,options:MainSolidRunOptions={}){
+ return shared.run({kind:'periodicBand',request},options)
+}
+
+export function computePeriodicStockIntersection(request:PeriodicStockIntersectionRequest,options:MainSolidRunOptions={}){
+ return shared.run({kind:'periodicStockIntersection',request},options)
+}
+
+export function computeClosedSsNetworkBoolean(request:ClosedSsBooleanRequest,options:MainSolidRunOptions={}){
+ return shared.run({kind:'closedSsNetworkBoolean',request},options)
+}
 
 export function computeMainSolid(meshes:MeshData[],selected:number,hit:PickHit|null,operation:MainOperation,parameters:MainParameters):Promise<DirectDocument>{
  return shared.run({kind:'main',meshes,selected,hit,operation,parameters})

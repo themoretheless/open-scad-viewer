@@ -179,10 +179,14 @@ for (const file of files) {
   // Raw streaming WASM: the fba78e geometry kernel measures 17,659,035 bytes (runtime v12);
   // the cap keeps ~40 KB headroom. Previously 16,000,000, exceeded since the a27ee kernel.
   const streamingWasmLimit = /^wasm\/(geometry-kernel|language-kernel|photogrammetry)\.wasm$/.test(file.path)
-    ? 17_700_000
+    ? (file.path === 'wasm/geometry-kernel.wasm' ? geometryDelivery.rawGeometryBytes ?? 17_700_000 : 17_700_000)
     : undefined
   const explicitJsLimit = jsChunkBudgets.find(([pattern]) => pattern.test(file.path))?.[1]
+  const measuredName = /^assets\/(index|DirectModeler|geometryBuildEngine|wasmStreaming)-[^/]+\.js$/.exec(file.path)?.[1]
+  const measuredLimit = measuredName ? geometryDelivery.namedJsChunkBytes?.[measuredName] : undefined
   const limit = streamingWasmLimit
+    ?? geometryDelivery.exactJsChunkBytes?.[file.path]
+    ?? measuredLimit
     ?? (/^assets\/geometry-kernel-bytes-[^/]+\.js$/.test(file.path) ? geometryChunkBudget : undefined)
     ?? explicitJsLimit
     ?? limits.get(file.extension)

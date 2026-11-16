@@ -28,13 +28,14 @@ import { useWorkspaceModes } from './composables/useWorkspaceModes'
 import { useMainSourceHistory } from './composables/useMainSourceHistory'
 import { useCustomizerSource, useGeometryAnalysis } from './composables/useSourceInspection'
 import { useCommandDispatch, usePaletteCommands, type MainToolsHandle } from './composables/useAppCommands'
+import { useLocalEditorBridge } from './composables/useLocalEditorBridge'
 import { useShellActions } from './composables/useShellActions'
 import VrControls from './components/VrControls.svt'
 import ModelingGridControls from './components/ModelingGridControls.svt'
 import MaterialControls from './features/MaterialControls.svt'
 import DisplayQualityControl from './components/DisplayQualityControl.svt'
 import { clamp } from './kernel/geometry/math3d'
-import { isRushFrontend, SOURCE_FILE_ACCEPT, sourceFileExtension } from './language/rushFrontendDetect'
+import { isRushFrontend, SOURCE_FILE_ACCEPT, sourceFileExtension, withSourceExtension } from './language/rushFrontendDetect'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'svet'
 import { MESH_IMPORT_ACCEPT } from './exchange/meshFormats'
 import CommandPalette from './components/CommandPalette.svt'
@@ -74,7 +75,8 @@ import { ViewportController } from './render/viewportController'
 import { revealDiagnostic, type EditorDiagnostic } from './language/editorDiagnostics'
 import { setStorageFailureHandler, storageGet, storageSet } from './core/safeStorage'
 import { geometryExportEligibility } from './app/buildPromotionPolicy'
-import { MAX_WORKSPACE_SOURCE_LENGTH, updateWorkspaceDocument, type WorkspaceDocumentSnapshot } from './app/workspaceDocument'
+import { truncateWellFormed } from './core/unicode'
+import { MAX_WORKSPACE_FILE_NAME_LENGTH, MAX_WORKSPACE_SOURCE_LENGTH, updateWorkspaceDocument, workspaceSourceByteLength, type WorkspaceDocumentSnapshot } from './app/workspaceDocument'
 import type { BrowserWorkspacePersistence } from './app/workspacePersistence'
 import { assertThemeCatalog, THEME_CATALOG } from './app/themePreferences'
 import type { PickHit } from './render/rendererContracts'
@@ -511,6 +513,23 @@ async function loadEditorDocument(example: string, nextFileName: string) {
   applyingWorkspaceReplacement = false
   editor.focus({ preventScroll: true })
 }
+
+useLocalEditorBridge(async model => {
+  if (workspaceConflict.value || workspacePersistenceStatus.value === 'error' || isRestoringWorkspace()
+    || editor.isComposing() || groupEdit.value || workspaceSourceByteLength(model.source) > MAX_WORKSPACE_SOURCE_LENGTH) return false
+  const name = withSourceExtension(model.name, model.source)
+  const extension = name.slice(name.lastIndexOf('.'))
+  const nextFileName = truncateWellFormed(name.slice(0, -extension.length), MAX_WORKSPACE_FILE_NAME_LENGTH - extension.length) + extension
+  functionReferenceOpen.value = false
+  exampleGalleryOpen.value = false
+  mechanicalGeneratorOpen.value = false
+  editorOpen.value = true
+  dockOpen.value = true
+  dockTab.value = 'parameters'
+  await loadEditorDocument(model.source, nextFileName)
+  doRender('full')
+  return true
+})
 
 async function loadExample(id: string) {
   const example = EXAMPLES[id]

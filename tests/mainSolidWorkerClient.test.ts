@@ -4,6 +4,7 @@ import type {MainSolidJob,MainSolidRequest} from '../src/kernel/mainSolidProtoco
 import type {DirectDocument} from '../src/app/directModeling'
 import type {SolidSceneEditOptions} from '../src/kernel/solidSceneEdit'
 import type {TrussModel, TrussResponse} from '../src/kernel/trussAnalysis'
+import type {ClosedSsBooleanRequest} from '../src/kernel/closedSsBoolean'
 
 class Port implements MainSolidPort {
   onmessage:MainSolidPort['onmessage']=null
@@ -51,6 +52,60 @@ it('ignores old IDs on a warm realm and snapshots response dimensions',async()=>
   ports[0].reply({id:1,ok:true,result:response()})
   await Promise.resolve();expect(resolved).not.toHaveBeenCalled()
   ports[0].reply({ok:true,result:response()});await expect(next).resolves.toEqual(response())
+})
+
+it('binds a closed SS Boolean reply to the dispatched operand and volume axis',async()=>{
+  const {client,ports}=setup()
+  const brep={
+    toleranceMm:1e-9,vertices:[],edges:[],loops:[],shells:[],bodies:[],
+    faces:[{outer:0,holes:[],surface:{
+      degreeU:1,degreeV:1,knotsU:[0,0,1,1],knotsV:[0,0,1,1],
+      controlPoints:[[[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]]],weights:[[1,1],[1,1]],
+    }}],
+  }
+  const request:ClosedSsBooleanRequest={
+    operation:'intersection',a:brep,b:brep,toleranceMm:1e-9,toleranceUv:1e-8,volumeErrorMm3:0.001,volumeAxis:0,
+  }
+  const result={
+    source:{...structuredClone(request),op:'brep_assemble_closed_ss_network_boolean'},
+    branches:1,bodies:1,faces:2,edges:1,boundaryEdges:0,volumeBoundsMm3:[1,1.001],
+    facePairs:[{faces:[0,0],coverageDomain:[[0,1],[0,1],[0,1],[0,1]],branches:1}],
+    topology:{
+      vertices:1,edges:[{vertices:[0,0],degenerate:false,root:true}],
+      loops:[[{edge:0,reversed:false}],[{edge:0,reversed:true}]],
+      faces:[{outer:0,holes:[]},{outer:1,holes:[]}],
+      shells:[[{face:0,reversed:false},{face:1,reversed:false}]],
+      bodies:[{outerShell:0,innerShells:[]}],
+    },
+  }
+  const first=client.run({kind:'closedSsNetworkBoolean',request})
+  request.volumeAxis=1
+  ports[0].reply({ok:true,result})
+  await expect(first).resolves.toEqual(result)
+  const second=client.run({kind:'closedSsNetworkBoolean',request})
+  ports[0].reply({ok:true,result})
+  await expect(second).rejects.toMatchObject({code:'CAD_PROTOCOL'})
+})
+
+it('binds periodic stock intersection to both dispatched bodies', async () => {
+  const {client, ports} = setup()
+  const empty = {toleranceMm: 1e-7, vertices: [], edges: [], loops: [], faces: [], shells: [], bodies: []}
+  const request = {side: structuredClone(empty), stock: structuredClone(empty), toleranceUv: 1e-8}
+  const result = {
+    source: {...structuredClone(request), op: 'brep_intersect_periodic_stock_band'},
+    bodies: 1, faces: 3, edges: 8, boundaryEdges: 0, volumeBoundsMm3: [3.14, 3.15],
+  }
+  const first = client.run({kind: 'periodicStockIntersection', request})
+  request.stock.toleranceMm = 2e-7
+  ports[0].reply({ok: true, result})
+  await expect(first).resolves.toEqual(result)
+  const second = client.run({kind: 'periodicStockIntersection', request})
+  ports[0].reply({ok: true, result})
+  await expect(second).rejects.toMatchObject({code: 'CAD_PROTOCOL'})
+  request.stock.toleranceMm = 1e-7
+  const third = client.run({kind: 'periodicStockIntersection', request})
+  ports[1].reply({ok: true, result: {...result, volumeBoundsMm3: new Array(2)}})
+  await expect(third).rejects.toMatchObject({code: 'CAD_PROTOCOL'})
 })
 
 it.each([

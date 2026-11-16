@@ -96,6 +96,45 @@ enum EmbeddingMode<'a> {
         proposals: &'a [Option<[[i8; 3]; 2]>],
     },
 }
+/// Reuse the original-chart proof only after the actual retained topology
+/// has passed exact boundary agreement and trim admission.
+fn qualify_periodic_charts(
+    model: &Model,
+    agreement: &boundary_agreement::ExactReport,
+    trim: &face_domain::TrimAudit,
+    faces: &mut crate::face_injectivity::Report,
+    max_cells: usize,
+) {
+    if !agreement.all_equal || !agreement.all_joins_exact || !trim.all_valid {
+        return;
+    }
+    let mut remaining = max_cells.saturating_sub(faces.linear_cells);
+    let mut pairs = 0;
+    for report in &mut faces.faces {
+        let face = &model.faces[report.face];
+        if report.absence_proven() || !(face.surface.periodic_u || face.surface.periodic_v) {
+            continue;
+        }
+        let full_intervals = std::iter::once(face.outer)
+            .chain(face.holes.iter().copied())
+            .flat_map(|wire| &model.loops[wire].coedges)
+            .all(|coedge| {
+                coedge.trim().is_none_or(|trim| {
+                    trim.pcurve_parameter == coedge.pcurve.domain()
+                        && trim.curve_parameter == model.edges[coedge.edge].curve.domain()
+                })
+            });
+        if full_intervals && remaining > 0 && pairs < max_cells {
+            report.periodic_quotient =
+                crate::feature_ops::region_pattern::qualification::periodic_charts::verify(
+                    model, report.face, &mut remaining, &mut pairs, max_cells,
+                ).unwrap_or(false);
+        }
+    }
+    faces.linear_cells = max_cells - remaining;
+    faces.all_faces_injective = faces.faces.iter().all(|report| report.absence_proven());
+}
+
 fn inspect_impl(
     model: &Model,
     tolerance_uv: f64,
@@ -123,7 +162,7 @@ fn inspect_impl(
         limits.trim_cells,
         limits.trim_domain_cells,
     )?;
-    let faces = if compatibility {
+    let mut faces = if compatibility {
         crate::face_injectivity::inspect(model, limits.spans)?
     } else {
         crate::face_injectivity::inspect_with_projections(
@@ -133,6 +172,7 @@ fn inspect_impl(
             proposals,
         )?
     };
+    qualify_periodic_charts(model, &agreement, &trim, &mut faces, max_linear_cells);
     let winding = trim.faces.iter().all(|r| {
         r.as_ref()
             .is_some_and(|r| r.winding.first() == Some(&Some(1)))
@@ -252,6 +292,7 @@ pub(crate) struct Inspector {
     agreement: Option<boundary_agreement::ExactReport>,
     trim: Option<face_domain::TrimAudit>,
     face_work: Option<crate::face_injectivity::Inspector>,
+    max_linear_cells: usize,
     faces: Option<crate::face_injectivity::Report>,
     contact_work: Option<face_contacts::Inspector>,
     result: Option<Report>,
@@ -307,6 +348,7 @@ impl Inspector {
             agreement: Some(agreement),
             trim: Some(trim),
             face_work: Some(face_work),
+            max_linear_cells,
             faces: None,
             contact_work: None,
             result: None,
@@ -356,7 +398,11 @@ impl Inspector {
             let model = self.model.as_ref();
             let limits = self.limits;
             let sweep_hulls = self.sweep_hulls;
-            let faces = self.faces.as_ref().unwrap();
+            let faces = self.faces.as_mut().unwrap();
+            qualify_periodic_charts(
+                model, self.agreement.as_ref().unwrap(), self.trim.as_ref().unwrap(),
+                faces, self.max_linear_cells,
+            );
             let winding = self.trim.as_ref().unwrap().faces.iter().all(|r| {
                 r.as_ref()
                     .is_some_and(|r| r.winding.first() == Some(&Some(1)))
@@ -534,12 +580,13 @@ fn frozen_inspect_impl(
         limits.trim_cells,
         limits.trim_domain_cells,
     )?;
-    let faces = crate::face_injectivity::inspect_with_projections(
+    let mut faces = crate::face_injectivity::inspect_with_projections(
         model,
         limits.spans,
         max_linear_cells,
         proposals,
     )?;
+    qualify_periodic_charts(model, &agreement, &trim, &mut faces, max_linear_cells);
     let winding = trim.faces.iter().all(|r| {
         r.as_ref()
             .is_some_and(|r| r.winding.first() == Some(&Some(1)))

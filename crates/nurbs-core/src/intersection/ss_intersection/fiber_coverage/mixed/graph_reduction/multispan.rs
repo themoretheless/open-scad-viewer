@@ -20,12 +20,7 @@ fn admit_multi(s: &Surface) -> Result<()> {
             && s.control_points.len() <= 128
             && s.control_points[0].len() <= 128
             && s.control_points.iter().flatten().all(|p| p.len() == 3),
-        "Need bounded nonperiodic polynomial graph spans",
-    )?;
-    let w = s.weights[0][0];
-    check(
-        w > 0. && s.weights.iter().flatten().all(|v| *v == w),
-        "Need original constant positive graph weights",
+        "Need bounded nonperiodic original graph spans",
     )?;
     for (k, p, n) in [
         (&s.knots_u, s.degree_u, s.control_points.len()),
@@ -71,6 +66,11 @@ fn frame_multi(s: &Surface, work: &mut Work) -> Result<[Q; 4]> {
         delta.iter().all(|x| !x.is_zero()),
         "Degenerate original graph XY frame",
     )?;
+    if !constant_weights(s) {
+        // Rational frames are proposal data until every homogeneous span
+        // has verified the same global coefficients.
+        return Ok([origin[0].clone(), origin[1].clone(), delta[0].clone(), delta[1].clone()]);
+    }
     let mut greville = Vec::new();
     for (k, p, n) in [
         (&s.knots_u, s.degree_u, s.control_points.len()),
@@ -135,7 +135,12 @@ fn restrict(
     }
     Ok(out)
 }
-fn net(s: &Surface, cell: &Cell, work: &mut Work) -> Result<Net> {
+fn net_with(
+    s: &Surface,
+    cell: &Cell,
+    work: &mut Work,
+    control: impl Fn(usize, usize) -> Result<Q>,
+) -> Result<Net> {
     let mut spans = [0; 2];
     let mut ranges = Vec::new();
     let mut all_knots = Vec::new();
@@ -163,7 +168,7 @@ fn net(s: &Surface, cell: &Cell, work: &mut Work) -> Result<Net> {
     let mut net = vec![vec![Q::zero(); r + 1]; p + 1];
     for j in 0..=r {
         let base = (iu - p..=iu)
-            .map(|i| q(s.control_points[i][iv - r + j][2]))
+            .map(|i| control(i, iv - r + j))
             .collect::<Result<Vec<_>>>()?;
         let col = restrict(base, &all_knots[0], p, iu, &ranges[0], work)?;
         for i in 0..=p {
@@ -175,12 +180,97 @@ fn net(s: &Surface, cell: &Cell, work: &mut Work) -> Result<Net> {
     }
     Ok(net)
 }
+fn net(s: &Surface, cell: &Cell, work: &mut Work) -> Result<Net> {
+    net_with(s, cell, work, |i, j| q(s.control_points[i][j][2]))
+}
+
+fn rational_height(
+    s: &Surface,
+    cell: &Cell,
+    frame: &[Q; 4],
+    work: &mut Work,
+) -> Result<(Net, Net)> {
+    let weights = net_with(s, cell, work, |i, j| q(s.weights[i][j]))?;
+    let coordinate = |axis: usize, work: &mut Work| {
+        net_with(s, cell, work, |i, j| Ok(q(s.control_points[i][j][axis])? * q(s.weights[i][j])?))
+    };
+    for axis in 0..2 {
+        let [lo, hi] = cell[axis].each_ref().map(|u| &frame[axis] + &frame[axis + 2] * u);
+        let affine = if axis == 0 { vec![vec![lo], vec![hi]] } else { vec![vec![lo, hi]] };
+        charge(work)?;
+        check(
+            elevate(&coordinate(axis, work)?, axis) == rational::product(&weights, &affine),
+            "Original rational knot-cell affine projection identity failed",
+        )?;
+    }
+    Ok((coordinate(2, work)?, weights))
+}
+
+pub(in crate::intersection::ss_intersection) fn equivalent_multispan_affine_surface(s: &Surface) -> Option<Surface> {
+    admit_multi(s).ok()?;
+    if s.control_points.len() <= s.degree_u + 1 && s.control_points[0].len() <= s.degree_v + 1 {
+        return None;
+    }
+    let last_u = s.control_points.len() - 1;
+    let last_v = s.control_points[0].len() - 1;
+    let mut coefficients = Vec::with_capacity(3);
+    for axis in 0..3 {
+        let origin = q(s.control_points[0][0][axis]).ok()?;
+        let du = q(s.control_points[last_u][0][axis]).ok()? - &origin;
+        let dv = q(s.control_points[0][last_v][axis]).ok()? - &origin;
+        if q(s.control_points[last_u][last_v][axis]).ok()? != &origin + &du + &dv {
+            return None;
+        }
+        coefficients.push([origin, du, dv]);
+    }
+    if !(0..3).any(|axis| {
+        let [_, du, dv] = &coefficients[axis];
+        let [_, other_du, other_dv] = &coefficients[(axis + 1) % 3];
+        du * other_dv != dv * other_du
+    }) {
+        return None;
+    }
+    let mut work = Work { used: 0, max: 100_000 };
+    let mut u = normalized_knots(s, 0).ok()?;
+    let mut v = normalized_knots(s, 1).ok()?;
+    u.dedup();
+    v.dedup();
+    if (u.len() - 1) * (v.len() - 1) > 64 {
+        return None;
+    }
+    for a in u.windows(2) {
+        for b in v.windows(2) {
+            let cell = [[a[0].clone(), a[1].clone()], [b[0].clone(), b[1].clone()]];
+            let weights = net_with(s, &cell, &mut work, |i, j| q(s.weights[i][j])).ok()?;
+            for (axis, [origin, du, dv]) in coefficients.iter().enumerate() {
+                let affine = a.iter().map(|u| {
+                    b.iter().map(|v| origin + du * u + dv * v).collect()
+                }).collect();
+                let numerator = net_with(s, &cell, &mut work, |i, j| {
+                    Ok(q(s.control_points[i][j][axis])? * q(s.weights[i][j])?)
+                }).ok()?;
+                charge(&mut work).ok()?;
+                if elevate(&elevate(&numerator, 0), 1) != rational::product(&weights, &affine) {
+                    return None;
+                }
+            }
+        }
+    }
+    crate::surface_injectivity::exact_affine_xy::affine_corners(s)
+}
+
 pub(super) fn derive(source: &FiberSources, work: &mut Work) -> Result<Vec<(Cell, Net)>> {
     let (a, b) = (source.first(), source.second());
+    let polynomial = constant_weights(a) && constant_weights(b);
     check(
-        frame_multi(a, work)? == frame_multi(b, work)?,
-        "Original graph global XY frames differ",
+        polynomial || [a, b].iter().any(|s| {
+            s.control_points.len() > s.degree_u + 1
+                || s.control_points[0].len() > s.degree_v + 1
+        }),
+        "Single-span rational carriers use direct affine alignment",
     )?;
+    let frame = frame_multi(a, work)?;
+    check(frame == frame_multi(b, work)?, "Original graph global XY frames differ")?;
     let mut cuts = Vec::new();
     for axis in 0..2 {
         let mut k = normalized_knots(a, axis)?;
@@ -197,8 +287,21 @@ pub(super) fn derive(source: &FiberSources, work: &mut Work) -> Result<Vec<(Cell
     for u in cuts[0].windows(2) {
         for v in cuts[1].windows(2) {
             let cell = [[u[0].clone(), u[1].clone()], [v[0].clone(), v[1].clone()]];
-            let mut x = net(a, &cell, work)?;
-            let mut y = net(b, &cell, work)?;
+            let (mut x, mut y) = if polynomial {
+                (net(a, &cell, work)?, net(b, &cell, work)?)
+            } else {
+                let height = |surface, work: &mut Work| {
+                    if constant_weights(surface) {
+                        Ok((net(surface, &cell, work)?, vec![vec![Q::from_integer(1.into())]]))
+                    } else {
+                        rational_height(surface, &cell, &frame, work)
+                    }
+                };
+                let (a, wa) = height(a, work)?;
+                let (b, wb) = height(b, work)?;
+                charge(work)?;
+                (rational::product(&a, &wb), rational::product(&b, &wa))
+            };
             while x.len() < y.len() {
                 x = elevate(&x, 0);
             }
@@ -225,6 +328,46 @@ pub(super) fn derive(source: &FiberSources, work: &mut Work) -> Result<Vec<(Cell
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn rational_multispan_projection_is_proved_on_every_homogeneous_cell() {
+        let original = source();
+        let mut rational = original.first().clone();
+        rational.degree_u = 2;
+        rational.knots_u = vec![0., 0., 0., 0.5, 0.5, 1., 1., 1.];
+        rational.control_points = [0., 0.125, 0.5, 0.875, 1.]
+            .map(|x| vec![vec![x, 0., 0.], vec![x, 1., 0.]])
+            .to_vec();
+        rational.weights = [1., 2., 3., 2., 1.].map(|w| vec![w; 2]).to_vec();
+        let mut upper = original.first().clone();
+        for point in upper.control_points.iter_mut().flatten() {
+            point[2] = 1.;
+        }
+        let pair = FiberSources::new(&rational, &upper).unwrap();
+        let mut work = Work { used: 0, max: 100_000 };
+        let patches = derive(&pair, &mut work).unwrap();
+        assert_eq!(patches.len(), 2);
+        assert!(patches.iter().all(|(_, gap)| gap.iter().flatten().all(Q::is_positive)));
+        let mut oblique = rational.clone();
+        for point in oblique.control_points.iter_mut().flatten() {
+            let (x, y) = (point[0], point[1]);
+            point.copy_from_slice(&[x + y, x - y, x + 2. * y]);
+        }
+        let view = equivalent_multispan_affine_surface(&oblique).unwrap();
+        assert_eq!(view.control_points[1][1], [2., 0., 3.]);
+        assert_eq!(view.knots_u, [0., 0., 1., 1.]);
+        let mut polynomial = oblique.clone();
+        for (row, x) in polynomial.control_points.iter_mut().zip([0., 0.25, 0.5, 0.75, 1.]) {
+            *row = [0., 1.].map(|y| vec![x + y, x - y, x + 2. * y]).to_vec();
+        }
+        polynomial.weights = vec![vec![1.; 2]; 5];
+        assert_eq!(equivalent_multispan_affine_surface(&polynomial).unwrap(), view);
+        oblique.control_points[3][0][2] += 0.03125;
+        assert!(equivalent_multispan_affine_surface(&oblique).is_none());
+        rational.control_points[3][0][0] += 0.03125;
+        let pair = FiberSources::new(&rational, &upper).unwrap();
+        assert!(derive(&pair, &mut work).is_err());
+    }
+
     fn source() -> FiberSources {
         let a = Surface {
             degree_u: 1,

@@ -12,6 +12,17 @@ fn charge(work: &mut usize, max: usize) -> Option<()> {
     Some(())
 }
 
+/// Rounded products only prioritize a trial. No certificate depends on them.
+pub(crate) fn likely_coupled(s: &Surface) -> bool {
+    let w = &s.weights;
+    w.iter().skip(1).any(|row| {
+        row.iter()
+            .zip(&w[0])
+            .skip(1)
+            .any(|(&x, &y)| x * w[0][0] != row[0] * y)
+    })
+}
+
 pub(crate) fn certify(s: &Surface, work: &mut usize, max: usize) -> Option<[usize; 2]> {
     let degree = [s.degree_u, s.degree_v];
     if s.periodic_u

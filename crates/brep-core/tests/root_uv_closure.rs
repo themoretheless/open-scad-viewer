@@ -3,6 +3,174 @@ mod solid_policy;
 use brep_core::root_model::{RootBrep,QualifiedRootUvClosure,qualify_root_uv_joint};
 use std::sync::Arc;
 #[path="../../nurbs-core/tests/support/ss_root_circle.rs"] mod fixture;
+#[path = "../../nurbs-core/tests/common/periodic_ss_wire.rs"]
+mod periodic_wire;
+
+#[test]
+fn quotient_trim_audit_accepts_separated_winding_loops_and_refuses_overlap() {
+    use brep_core::root_model::RootFaceContour;
+    use nurbs_core::ss_intersection as ss;
+
+    let lower = periodic_wire::wire();
+    let surface = lower.edges()[0].curve().source().first().clone();
+    let contour = |wire: ss::OriginalSsRootWire| RootFaceContour {
+        supports: vec![0; wire.edges().len()], wire,
+    };
+    let reversed = |wire: &ss::OriginalSsRootWire| ss::OriginalSsRootWire::new(
+        wire.edges().iter().rev().map(|edge| {
+            ss::OriginalSsRootEdge::new(edge.end().clone(), edge.start().clone()).unwrap()
+        }).collect(),
+    ).unwrap();
+    let strip = RootBrep::periodic_face_contours(
+        surface.clone(), contour(lower.clone()),
+        vec![contour(reversed(&periodic_wire::wire_at_height(1.5)))], 1e-7,
+    ).unwrap();
+    strip.audit_face_trim_arc_separation(0, Default::default()).unwrap();
+    let overlapping = RootBrep::periodic_face_contours(
+        surface, contour(lower), vec![contour(reversed(&periodic_wire::wire()))], 1e-7,
+    ).unwrap();
+    assert!(overlapping.audit_face_trim_arc_separation(0, Default::default()).is_err());
+}
+
+#[test]
+fn opposite_periodic_boundary_windings_classify_strip_across_the_seam() {
+    use brep_core::root_model::RootFaceContour;
+    use nurbs_core::ss_intersection as ss;
+
+    let a = periodic_wire::wire();
+    let b = periodic_wire::wire_at_height(1.5);
+    let surface = a.edges()[0].curve().source().first().clone();
+    let opposite = ss::OriginalSsRootWire::new(b.edges().iter().rev().map(|edge| {
+        ss::OriginalSsRootEdge::new(edge.end().clone(), edge.start().clone()).unwrap()
+    }).collect()).unwrap();
+    let contour = |wire: ss::OriginalSsRootWire| RootFaceContour {
+        supports: vec![0; wire.edges().len()], wire,
+    };
+    let unmatched = Arc::new(RootBrep::periodic_face_contours(
+        surface.clone(), contour(a.clone()), vec![], 1e-7,
+    ).unwrap());
+    assert!(unmatched.qualify_periodic_face_path(0, [3.95, 0.25], [4.05, 0.625], Default::default()).is_err());
+    let face = Arc::new(RootBrep::periodic_face_contours(
+        surface, contour(a.clone()), vec![contour(opposite)], 1e-7,
+    ).unwrap());
+    for (to, inside) in [([4.05, 0.625], true), ([4.05, 0.875], false)] {
+        let proof = face.qualify_periodic_face_path(0, [3.95, 0.25], to, Default::default()).unwrap();
+        assert_eq!(proof.material_at_end(false), inside);
+        proof.reverify().unwrap();
+    }
+    for (point, inside) in [
+        ([3.95, 0.625], true),
+        ([4., 0.625], true),
+        ([4.05, 0.625], true),
+        ([8.05, 0.625], true),
+        ([4.05, 0.25], false),
+        ([4.05, 0.875], false),
+    ] {
+        let proof = face.qualify_periodic_face_membership(0, point, Default::default()).unwrap();
+        assert_eq!(proof.inside(), inside, "{point:?}");
+        proof.reverify().unwrap();
+    }
+    assert!(face.qualify_periodic_face_membership(0, [4.05, 0.5], Default::default()).is_err());
+
+    for (query, inside) in [
+        ([[3.95, 4.05], [0.6, 0.65]], true),
+        ([[7.95, 8.05], [0.6, 0.65]], true),
+        ([[3.95, 4.05], [0.2, 0.3]], false),
+    ] {
+        let proof = face.qualify_periodic_face_membership_box(0, query, Default::default()).unwrap();
+        assert_eq!(proof.inside(), inside);
+        proof.reverify().unwrap();
+    }
+    for query in [
+        [[3.95, 4.05], [0.49, 0.65]],
+        [[3.95, 4.05], [0.2, 0.99]],
+        [[3.95, 4.05], [0.5, 0.65]],
+    ] {
+        assert!(face.qualify_periodic_face_membership_box(0, query, Default::default()).is_err());
+    }
+
+    use brep_core::closed_solid::{self, BooleanFaceDisposition, BooleanMaterialOp, BooleanSourceSide};
+    use brep_core::root_model::QualifiedRootPeriodicFaceMaterial;
+    let solid = closed_solid::qualify(
+        brep_core::cuboid([-10., -10., 0.75], [10., 10., 1.75]).unwrap(),
+        solid_policy::policy(),
+    ).unwrap().into_solid().unwrap();
+    let directions = [[0., 0., 1.], [1., 0.317, 0.173], [0.239, 1., 0.419]];
+    let material = QualifiedRootPeriodicFaceMaterial::qualify(
+        face.clone(), 0, [[3.95, 4.05], [0.6, 0.65]], &solid, &directions,
+        Default::default(), Default::default(), 4096,
+    ).unwrap();
+    assert!(material.inside());
+    let keep = material.boolean_contribution(BooleanMaterialOp::Intersection, BooleanSourceSide::First).unwrap();
+    assert_eq!(keep.disposition(), BooleanFaceDisposition::Keep);
+    let reverse = material.boolean_contribution(BooleanMaterialOp::Difference, BooleanSourceSide::Second).unwrap();
+    assert_eq!(reverse.disposition(), BooleanFaceDisposition::Reverse);
+    assert!(!keep.patch().unwrap().topology().shells[0].faces[0].reversed);
+    assert!(reverse.patch().unwrap().topology().shells[0].faces[0].reversed);
+    material.reverify().unwrap();
+
+    use brep_core::root_model::{QualifiedRootShellPositiveFlux, RootPeriodicBandLimits, RootShellFluxLimits};
+    let lower = periodic_wire::section_at_height(1.);
+    let upper = periodic_wire::section_at_height(1.5);
+    let mut plane = upper.source().second().clone();
+    plane.control_points.swap(0, 1);
+    let reversed_pair = ss::FiberSources::new(&plane, upper.source().first()).unwrap();
+    let upper = ss::qualify_periodic_plane_ss(&reversed_pair, Default::default()).unwrap();
+    let limits = RootPeriodicBandLimits {
+        max_chart_attempts: 64,
+        max_orientation_probes: 128,
+        max_chart_spans: 8192,
+        max_contact_cells: 4096,
+        flux: RootShellFluxLimits {
+            axis: 2, origin: 1., max_cells: 2048, max_spans: 8192, max_depth: 16,
+            winding: Default::default(),
+        },
+    };
+    assert!(QualifiedRootShellPositiveFlux::qualify_periodic_band([&lower, &lower], 1e-7, limits).is_err());
+    let body = QualifiedRootShellPositiveFlux::qualify_periodic_band([&upper, &lower], 1e-7, limits).unwrap();
+    let model = body.to_body().unwrap();
+    assert_eq!(model.topology().faces.len(), 3);
+    assert_eq!(model.topology().edges.len(), 8);
+    assert!(model.topology().shells[0].closed);
+    assert!(model.topology().boundary_edges().is_empty());
+    assert_eq!(model.topology().bodies.len(), 1);
+    let flux = body.report();
+    let [lo, hi] = flux.signed_bounds;
+    let expected = std::f64::consts::PI * 0.5;
+    assert!(lo > 0. && lo <= expected && expected <= hi && hi - lo < 0.5, "{flux:?}");
+
+
+}
+
+#[test]
+fn inferred_phase_closes_original_ss_ports_on_the_periodic_face() {
+    use brep_core::root_model::{
+        QualifiedRootLoopWinding, QualifiedRootPeriodicUvClosure, RootFaceContour,
+        qualify_root_uv_joint_period_delta,
+    };
+    let wire = periodic_wire::wire();
+    let edges = wire.edges();
+    let end = edges.last().unwrap().end();
+    let start = edges[0].start();
+    assert_eq!(qualify_root_uv_joint_period_delta(end, 0, start, 0).unwrap(), [-1, 0]);
+    assert_eq!(qualify_root_uv_joint_period_delta(start, 0, end, 0).unwrap(), [1, 0]);
+    assert_eq!(qualify_root_uv_joint_period_delta(end, 1, start, 1).unwrap(), [0, 0]);
+    assert!(qualify_root_uv_joint(end, 0, start, 0).is_err());
+    let support = edges[0].curve().source().first().clone();
+    let supports = vec![0; edges.len()];
+    let face = Arc::new(RootBrep::periodic_face_contours(
+        support, RootFaceContour { wire, supports }, vec![], 1e-7,
+    ).unwrap());
+    let closure = QualifiedRootPeriodicUvClosure::qualify(face.clone(), 4).unwrap();
+    assert_eq!(closure.loops()[0].coedge_offsets, vec![[0, 0]; 4]);
+    assert_eq!(closure.loops()[0].winding, [1, 0]);
+    closure.reverify().unwrap();
+    assert!(QualifiedRootUvClosure::qualify(face.clone(), 4).is_err());
+    assert!(QualifiedRootLoopWinding::qualify_lifted(
+        face, 0, 0, [[0.25; 2]; 2], Default::default(),
+    ).is_err());
+}
+
 #[test]
 fn both_face_projections_have_exact_uv_closed_incidence() {
     let wire=fixture::wire();
@@ -602,4 +770,61 @@ fn lifted_winding_classifies_a_face_crossing_the_periodic_seam_twice() {
     assert!(classify(0.5, vec![[1, -1]]).is_err());
     assert!(classify(0.5, vec![]).is_err());
     assert!(W::qualify(face, 0, 0, [[0.5; 2], [0.; 2]], Default::default()).is_err());
+}
+
+#[test]
+fn periodic_band_trims_away_a_proved_collapsed_shore() {
+    use brep_core::root_model::{QualifiedRootShellPositiveFlux, RootPeriodicBandLimits, RootShellFluxLimits};
+    use nurbs_core::ss_intersection as ss;
+
+    let section = |height, rational_cap| {
+        let seed = periodic_wire::section_at_height(height);
+        let mut side = seed.source().first().clone();
+        for row in &mut side.control_points {
+            row[1][0] = 0.;
+            row[1][1] = 0.;
+        }
+        let mut cap = seed.source().second().clone();
+        if rational_cap {
+            let first = cap.control_points[0].clone();
+            let last = cap.control_points[1].clone();
+            let middle = first.iter().zip(&last).map(|(a, b)| {
+                a.iter().zip(b).map(|(a, b)| 0.75 * a + 0.25 * b).collect()
+            }).collect();
+            cap.degree_u = 2;
+            let [lo, hi] = [cap.knots_u[1], cap.knots_u[2]];
+            cap.knots_u = vec![lo, lo, lo, hi, hi, hi];
+            cap.control_points = vec![first, middle, last];
+            cap.weights = vec![vec![1.; 2], vec![2.; 2], vec![3.; 2]];
+        }
+        let pair = ss::FiberSources::new(&side, &cap).unwrap();
+        ss::qualify_periodic_plane_ss(&pair, Default::default()).unwrap()
+    };
+    let lower = section(1., false);
+    let upper = section(1.5, true);
+    assert_eq!(upper.support_proof().collapsed_end, Some(1));
+
+    let limits = RootPeriodicBandLimits {
+        max_chart_attempts: 64,
+        max_orientation_probes: 128,
+        max_chart_spans: 8192,
+        max_contact_cells: 4096,
+        flux: RootShellFluxLimits {
+            axis: 2, origin: 1., max_cells: 2048, max_spans: 8192, max_depth: 16,
+            winding: Default::default(),
+        },
+    };
+    let body = QualifiedRootShellPositiveFlux::qualify_periodic_band(
+        [&lower, &upper], 1e-7, limits,
+    ).unwrap();
+    body.reverify().unwrap();
+    assert!(body.report().cells < 64);
+    let [lo, hi] = body.report().signed_bounds;
+    let expected = 7. * std::f64::consts::PI / 96.;
+    assert!(lo > 0. && lo <= expected && expected <= hi && hi - lo < 0.001, "[{lo}, {hi}]");
+    let model = body.to_body().unwrap();
+    assert_eq!(model.topology().bodies.len(), 1);
+    assert_eq!(model.topology().faces.len(), 3);
+    assert!(model.topology().boundary_edges().is_empty());
+    assert!(model.topology().faces.iter().any(|face| &face.surface == upper.source().second()));
 }

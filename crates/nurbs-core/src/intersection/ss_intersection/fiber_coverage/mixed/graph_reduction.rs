@@ -9,13 +9,16 @@ type Cell = [[Q; 2]; 2];
 mod cells;
 use cells::{cut, diagnostic, full_cell};
 mod multispan;
+pub(in crate::intersection::ss_intersection) use multispan::equivalent_multispan_affine_surface;
 mod replay;
+mod rational;
 #[derive(Clone, Debug, PartialEq)]
 enum Node {
     Chart(usize),
     Image { index: usize, axis: usize },
+    ImageExcluded { axis: usize },
     Excluded,
-    Split { axis: usize, children: [usize; 2] },
+    Split { axis: usize, at: Q, children: [usize; 2] },
 }
 #[derive(Clone, Debug)]
 pub(super) struct Proof {
@@ -45,14 +48,17 @@ fn admit(s: &Surface) -> Result<()> {
             "Need full clamped graph domains",
         )?;
     }
-    let w = s.weights[0][0];
-    check(
-        w > 0. && s.weights.iter().flatten().all(|&v| v == w),
-        "Graph reduction requires positive constant weights",
-    )
+    Ok(())
 }
+
+fn constant_weights(s: &Surface) -> bool {
+    let w = s.weights[0][0];
+    s.weights.iter().flatten().all(|&value| value == w)
+}
+
 fn frame(s: &Surface) -> Result<[Q; 4]> {
     admit(s)?;
+    check(constant_weights(s), "Polynomial graph reduction requires constant weights")?;
     let x = q(s.control_points[0][0][0])?;
     let y = q(s.control_points[0][0][1])?;
     let dx = q(s.control_points[s.degree_u][0][0])? - &x;
@@ -73,6 +79,8 @@ fn frame(s: &Surface) -> Result<[Q; 4]> {
     }
     Ok([x, y, dx, dy])
 }
+
+
 fn elevate(n: &Net, axis: usize) -> Net {
     let (du, dv) = (n.len() - 1, n[0].len() - 1);
     let mut out =
@@ -124,10 +132,244 @@ fn derive(source: &FiberSources) -> Result<Net> {
         .map(|(b, a)| b.iter().zip(a).map(|(b, a)| b - a).collect())
         .collect())
 }
-/// Exclude a closed original UV box for polynomial carriers with the
-/// same injective affine XY frame.
+/// Exclude a closed original UV box for polynomial carriers whose affine
+/// XY projections have a common physical rectangle.
 pub fn exclude_shared_frame_graph_contact(source: &FiberSources, domain: [[f64; 2]; 4]) -> Result<bool> {
-    Ok(restrict_contact(source, domain)?.is_none_or(|(net, _)| excluded(&net)))
+    match restrict_contact(source, domain) {
+        Ok(result) => Ok(result.is_none_or(|(net, _)| excluded(&net))),
+        Err(_) => exclude_affine_graph_contact(source, domain),
+    }
+}
+
+/// Exact exclusion on the common physical XY rectangle of two affine graphs.
+/// The native parameter windows can differ in scale, orientation, and origin.
+fn exclude_affine_graph_contact(source: &FiberSources, domain: Box4) -> Result<bool> {
+    AffineGraphExclusion::new(source)?.excludes(domain)
+}
+
+pub(in crate::intersection::ss_intersection) struct AffineGraphExclusion {
+    frames: [[Q; 4]; 2],
+    support: Box4,
+    native_to_xy: [[Q; 2]; 4],
+    nets: [Net; 2],
+    weights: Option<[Net; 2]>,
+}
+
+impl AffineGraphExclusion {
+    pub(in crate::intersection::ss_intersection) fn new(source: &FiberSources) -> Result<Self> {
+        // A verified affine view can span several original knot intervals
+        // while preserving every native parameter used for box exclusion.
+        let surfaces = source.evaluation_surfaces();
+        let (frames, height_axis) = [[0, 1], [0, 2], [1, 0], [1, 2], [2, 0], [2, 1]]
+            .into_iter()
+            .find_map(|axes| {
+                let [a, b] = surfaces.map(|surface| {
+                    if axes == [0, 1] && constant_weights(surface) {
+                        frame(surface)
+                    } else {
+                        crate::surface_injectivity::exact_affine_xy::frame_on(surface, axes)
+                    }
+                });
+                Some(([a.ok()?, b.ok()?], 3 - axes[0] - axes[1]))
+            })
+            .ok_or_else(|| crate::input("Original surfaces have no common axis-aligned affine projection"))?;
+        let geometries = surfaces.map(|surface| -> Result<_> {
+            let height = surface.control_points[0][0][height_axis];
+            if constant_weights(surface)
+                || surface.control_points.iter().flatten().all(|point| point[height_axis] == height)
+            {
+                // A constant height cancels its denominator exactly, independently
+                // of the weights used to prove the original projection.
+                Ok((rational::coordinate_net(surface, height_axis, None)?, None))
+            } else {
+                let weights = rational::weight_net(surface)?;
+                let height = rational::coordinate_net(surface, height_axis, Some(&weights))?;
+                Ok((height, Some(weights)))
+            }
+        });
+        let [a, b] = geometries;
+        let [(ah, aw), (bh, bw)] = [a?, b?];
+        let weights = if aw.is_none() && bw.is_none() {
+            None
+        } else {
+            let ones = |net: &Net| vec![vec![Q::from_integer(1.into()); net[0].len()]; net.len()];
+            Some([aw.unwrap_or_else(|| ones(&ah)), bw.unwrap_or_else(|| ones(&bh))])
+        };
+        let support = natural(source);
+        let native_axis = |k: usize| -> Result<[Q; 2]> {
+            let frame = &frames[k / 2];
+            let axis = k % 2;
+            let lo = q(support[k][0])?;
+            let scale = &frame[axis + 2] / (q(support[k][1])? - &lo);
+            let offset = &frame[axis] - &scale * lo;
+            Ok([scale, offset])
+        };
+        let native_to_xy = [native_axis(0)?, native_axis(1)?, native_axis(2)?, native_axis(3)?];
+        Ok(Self {
+            frames,
+            support,
+            native_to_xy,
+            nets: [ah, bh],
+            weights,
+        })
+    }
+
+    pub(in crate::intersection::ss_intersection) fn excludes(&self, domain: Box4) -> Result<bool> {
+        Ok(self.aligned_gap(domain)?.is_none_or(|(gap, _)| excluded(&gap)))
+    }
+
+    pub(in crate::intersection::ss_intersection) fn matching_parameter(
+        &self,
+        axis: usize,
+        value: f64,
+    ) -> Result<[f64; 2]> {
+        let other = (axis + 2) % 4;
+        let [scale, offset] = &self.native_to_xy[other];
+        let physical = self.project_axis(axis, [value; 2])?;
+        let mapped = (&physical[0] - offset) / scale;
+        Ok([cells::outward(&mapped, false)?, cells::outward(&mapped, true)?])
+    }
+
+    pub(in crate::intersection::ss_intersection) fn excludes_subdivided(
+        &self,
+        domain: Box4,
+        max_cells: usize,
+    ) -> Result<(bool, usize)> {
+        if max_cells == 0 {
+            return Ok((false, 0));
+        }
+        let Some((gap, cell)) = self.aligned_gap(domain)? else {
+            return Ok((true, 1));
+        };
+        let active = cell.map(|[lo, hi]| lo < hi);
+        let half = Q::new(1.into(), 2.into());
+        let mut pending = vec![(gap, 0)];
+        let mut used = 0;
+        while let Some((net, depth)) = pending.pop() {
+            if used == max_cells {
+                return Ok((false, used));
+            }
+            used += 1;
+            if excluded(&net) {
+                continue;
+            }
+            if depth == 12 || !active.iter().any(|&axis| axis) {
+                return Ok((false, used));
+            }
+            let preferred = depth % 2;
+            let axis = if active[preferred] { preferred } else { 1 - preferred };
+            let [left, right] = split_at(&net, axis, &half);
+            pending.extend([(right, depth + 1), (left, depth + 1)]);
+        }
+        Ok((true, used))
+    }
+
+    fn project_axis(&self, axis: usize, bounds: [f64; 2]) -> Result<[Q; 2]> {
+        let [scale, offset] = &self.native_to_xy[axis];
+        let a = scale * q(bounds[0])? + offset;
+        let b = scale * q(bounds[1])? + offset;
+        Ok(if a <= b { [a, b] } else { [b, a] })
+    }
+
+    fn project_chart(&self, domain: Box4) -> Result<Cell> {
+        let intersect = |axis: usize| -> Result<[Q; 2]> {
+            let [a, b] = self.project_axis(axis, domain[axis])?;
+            let [c, d] = self.project_axis(axis + 2, domain[axis + 2])?;
+            Ok([a.max(c), b.min(d)])
+        };
+        Ok([intersect(0)?, intersect(1)?])
+    }
+
+    fn original_bounds(&self, cell: &Cell) -> Result<Box4> {
+        let mut result = [[0.; 2]; 4];
+        for (axis, bounds) in result.iter_mut().enumerate() {
+            let [scale, offset] = &self.native_to_xy[axis];
+            let [a, b] = &cell[axis % 2];
+            let a = (a - offset) / scale;
+            let b = (b - offset) / scale;
+            let (lo, hi) = if a <= b { (a, b) } else { (b, a) };
+            *bounds = [cells::outward(&lo, false)?, cells::outward(&hi, true)?];
+        }
+        Ok(result)
+    }
+
+    // Both height nets are reparameterized to the same physical rectangle.
+    // Keep that exact rectangle for mapping coverage cells back to original UV.
+    fn aligned_gap(&self, domain: Box4) -> Result<Option<(Net, Cell)>> {
+        let support = self.support;
+        check(
+            (0..4).all(|k| {
+                let [lo, hi] = domain[k];
+                support[k][0] <= lo && lo <= hi && hi <= support[k][1]
+            }),
+            "Affine graph exclusion window leaves natural support",
+        )?;
+        let frames = &self.frames;
+        let mut nets = self.nets.clone();
+        let mut weights = self.weights.clone();
+        let mut physical = full_cell();
+        for (axis, bounds) in physical.iter_mut().enumerate() {
+            let [a, b] = self.project_axis(axis, domain[axis])?;
+            let [c, d] = self.project_axis(axis + 2, domain[axis + 2])?;
+            let (lo, hi) = (a.max(c), b.min(d));
+            if lo > hi {
+                return Ok(None);
+            }
+            for side in 0..2 {
+                let frame = &frames[side];
+                let t = (&lo - &frame[axis]) / &frame[axis + 2];
+                let u = (&hi - &frame[axis]) / &frame[axis + 2];
+                restrict_affine_net(&mut nets[side], axis, &t, &u);
+                if let Some(weights) = &mut weights {
+                    restrict_affine_net(&mut weights[side], axis, &t, &u);
+                }
+            }
+            *bounds = [lo, hi];
+        }
+        if let Some(weights) = weights {
+            // Positive denominators leave the sign and zero set invariant.
+            let a = rational::product(&nets[0], &weights[1]);
+            let b = rational::product(&nets[1], &weights[0]);
+            return Ok(Some((b.iter().zip(&a)
+                .map(|(b, a)| b.iter().zip(a).map(|(b, a)| b - a).collect())
+                .collect(), physical)));
+        }
+        let rows = nets[0].len().max(nets[1].len());
+        let columns = nets[0][0].len().max(nets[1][0].len());
+        for net in &mut nets {
+            while net.len() < rows {
+                *net = elevate(net, 0);
+            }
+            while net[0].len() < columns {
+                *net = elevate(net, 1);
+            }
+        }
+        let gap = nets[1]
+            .iter()
+            .zip(&nets[0])
+            .map(|(b, a)| b.iter().zip(a).map(|(b, a)| b - a).collect())
+            .collect();
+        Ok(Some((gap, physical)))
+    }
+}
+
+fn restrict_affine_net(net: &mut Net, axis: usize, t: &Q, u: &Q) {
+    let reversed = t > u;
+    let (start, end) = if reversed { (u, t) } else { (t, u) };
+    let [prefix, _] = split_at(net, axis, end);
+    *net = if end.is_zero() {
+        prefix
+    } else {
+        let [_, suffix] = split_at(&prefix, axis, &(start / end));
+        suffix
+    };
+    if reversed {
+        if axis == 0 {
+            net.reverse();
+        } else {
+            net.iter_mut().for_each(|row| row.reverse());
+        }
+    }
 }
 
 /// If the restricted height difference has one sign and is nonzero on
@@ -204,8 +446,21 @@ fn restrict_contact(
     Ok(Some((net, ranges)))
 }
 
-fn split(n: &Net, axis: usize) -> [Net; 2] {
-    split_at(n, axis, &Q::new(1.into(), 2.into()))
+fn split_cell(cell: &Cell, net: &Net, axis: usize, at: &Q) -> Result<([Cell; 2], [Net; 2])> {
+    let cells = cut(cell, axis, at)?;
+    let parameter = (at - &cell[axis][0]) / (&cell[axis][1] - &cell[axis][0]);
+    Ok((cells, split_at(net, axis, &parameter)))
+}
+
+fn split_parameter(bounds: &[Q; 2], chart_bounds: impl Iterator<Item = Q>) -> Q {
+    let width = &bounds[1] - &bounds[0];
+    let mid = &bounds[0] + &width / Q::from_integer(2.into());
+    let quarter = width / Q::from_integer(4.into());
+    chart_bounds
+        .map(|at| ((&at - &mid).abs(), at))
+        .filter(|(distance, _)| *distance <= quarter)
+        .min()
+        .map_or(mid, |(_, at)| at)
 }
 fn split_at(n: &Net, axis: usize, parameter: &Q) -> [Net; 2] {
     let complement = Q::from_integer(1.into()) - parameter;
@@ -240,18 +495,37 @@ fn split_at(n: &Net, axis: usize, parameter: &Q) -> [Net; 2] {
 fn excluded(n: &Net) -> bool {
     n.iter().flatten().all(|v| v.is_positive()) || n.iter().flatten().all(|v| v.is_negative())
 }
-fn contained(cell: &Cell, domain: Box4, f: &QualifiedFiber) -> Result<bool> {
-    let actual = f.domain();
-    for k in 0..4 {
-        let lo = q(domain[k][0])?;
-        let width = q(domain[k][1])? - &lo;
-        if &lo + &width * &cell[k % 2][0] < q(actual[k][0])?
-            || &lo + &width * &cell[k % 2][1] > q(actual[k][1])?
-        {
-            return Ok(false);
-        }
-    }
-    Ok(true)
+// The affine XY map forces equal normalized parameters on the two carriers.
+// Pull each fiber back to that diagonal once before subdividing.
+fn diagonal_chart(domain: Box4, actual: Box4) -> Result<Cell> {
+    let normalized = |k: usize| -> Result<[Q; 2]> {
+        let origin = q(domain[k][0])?;
+        let width = q(domain[k][1])? - &origin;
+        Ok([
+            (q(actual[k][0])? - &origin) / &width,
+            (q(actual[k][1])? - &origin) / &width,
+        ])
+    };
+    let intersect = |axis| -> Result<[Q; 2]> {
+        let [a_lo, a_hi] = normalized(axis)?;
+        let [b_lo, b_hi] = normalized(axis + 2)?;
+        Ok([a_lo.max(b_lo), a_hi.min(b_hi)])
+    };
+    Ok([intersect(0)?, intersect(1)?])
+}
+
+fn contained(cell: &Cell, chart: &Cell) -> bool {
+    cell.iter()
+        .zip(chart)
+        .all(|(range, bounds)| bounds[0] <= range[0] && range[0] <= range[1] && range[1] <= bounds[1])
+}
+fn empty_image(image: &Cell) -> bool {
+    image.iter().any(|range| range[0] > range[1])
+}
+fn overlaps(cell: &Cell, chart: &Cell) -> bool {
+    cell.iter().zip(chart).all(|(range, bounds)| {
+        bounds[0] <= bounds[1] && bounds[0] <= range[1] && range[0] <= bounds[1]
+    })
 }
 fn root_image(cell: &Cell, n: &Net, axis: usize) -> Option<[[Q; 2]; 2]> {
     if axis >= 2 {
@@ -259,59 +533,90 @@ fn root_image(cell: &Cell, n: &Net, axis: usize) -> Option<[[Q; 2]; 2]> {
     }
     let count = if axis == 0 { n.len() } else { n[0].len() };
     let lines = if axis == 0 { n[0].len() } else { n.len() };
-    let mut derivatives = vec![];
-    let mut centers = vec![];
-    for line in 0..lines {
-        let mut p = (0..count)
-            .map(|k| {
-                if axis == 0 {
-                    n[k][line].clone()
-                } else {
-                    n[line][k].clone()
-                }
-            })
-            .collect::<Vec<_>>();
-        for k in 0..count - 1 {
-            derivatives.push((&p[k + 1] - &p[k]) * Q::from_integer((count - 1).into()));
-        }
-        for level in 1..count {
-            for k in 0..count - level {
-                p[k] = (&p[k] + &p[k + 1]) / Q::from_integer(2.into());
-            }
-        }
-        centers.push(p[0].clone());
-    }
-    let dlo = derivatives.iter().min()?.clone();
-    let dhi = derivatives.iter().max()?.clone();
-    if dlo <= Q::zero() && dhi >= Q::zero() {
+    let degree = count.checked_sub(1)?;
+    if degree == 0 {
         return None;
     }
-    let flo = centers.iter().min()?;
-    let fhi = centers.iter().max()?;
-    let quotients = [flo / &dlo, flo / &dhi, fhi / &dlo, fhi / &dhi];
+    let coefficient = |line: usize, k: usize| {
+        if axis == 0 { &n[k][line] } else { &n[line][k] }
+    };
+    // Reject a derivative enclosure containing zero before evaluating the
+    // Bernstein midpoint. Subdivision cells around extrema often reach here.
+    let first = coefficient(0, 1) - coefficient(0, 0);
+    let (mut dlo, mut dhi) = (first.clone(), first);
+    for line in 0..lines {
+        for k in 0..degree {
+            let gap = coefficient(line, k + 1) - coefficient(line, k);
+            if gap < dlo {
+                dlo = gap;
+            } else if gap > dhi {
+                dhi = gap;
+            }
+            if !dlo.is_positive() && !dhi.is_negative() {
+                return None;
+            }
+        }
+    }
+    let derivative_scale = num_bigint::BigInt::from(degree);
+    let (dlo, dhi) = (dlo * &derivative_scale, dhi * derivative_scale);
+
+    // Bernstein midpoint weights share the same power-of-two denominator.
+    let mut binomial = num_bigint::BigInt::from(1);
+    let midpoint_weights: Vec<_> = (0..count)
+        .map(|index| {
+            let weight = binomial.clone();
+            binomial *= degree - index;
+            binomial /= index + 1;
+            weight
+        })
+        .collect();
+    let midpoint_scale = num_bigint::BigInt::from(1) << degree;
+    let center = |line| {
+        // Subdivision frequently leaves one denominator divisible by every
+        // other denominator in the row. Accumulate its numerator in integers
+        // and reduce once. Noncommensurate rows keep the general exact sum.
+        let common = (0..count).map(|k| coefficient(line, k).denom()).max().unwrap();
+        let numerator = midpoint_weights.iter().enumerate()
+            .try_fold(num_bigint::BigInt::from(0), |sum, (k, weight)| {
+                let value = coefficient(line, k);
+                if !(common % value.denom()).is_zero() {
+                    return None;
+                }
+                Some(sum + value.numer() * (common / value.denom()) * weight)
+            });
+        if let Some(numerator) = numerator {
+            return Q::new(numerator, common * &midpoint_scale);
+        }
+        midpoint_weights.iter().enumerate()
+            .map(|(k, weight)| coefficient(line, k) * weight)
+            .sum::<Q>() / &midpoint_scale
+    };
+    let first = center(0);
+    let (mut flo, mut fhi) = (first.clone(), first);
+    for line in 1..lines {
+        let value = center(line);
+        if value < flo {
+            flo = value;
+        } else if value > fhi {
+            fhi = value;
+        }
+    }
+    // Both derivative bounds have the same strict sign. Reflect a negative
+    // denominator interval so each extremum needs only one exact division.
+    let (flo, fhi, dlo, dhi) = if dhi.is_negative() {
+        (-fhi, -flo, -dhi, -dlo)
+    } else {
+        (flo, fhi, dlo, dhi)
+    };
+    let quotient_lo = &flo / if flo.is_negative() { &dlo } else { &dhi };
+    let quotient_hi = &fhi / if fhi.is_positive() { &dlo } else { &dhi };
     let half = Q::new(1.into(), 2.into());
-    let lo = Q::zero().max(&half - quotients.iter().max()?);
-    let hi = Q::from_integer(1.into()).min(&half - quotients.iter().min()?);
+    let lo = Q::zero().max(&half - quotient_hi);
+    let hi = Q::from_integer(1.into()).min(&half - quotient_lo);
     let mut roots = cell.clone();
     let width = &roots[axis][1] - &roots[axis][0];
     roots[axis] = [&roots[axis][0] + &width * lo, &roots[axis][0] + &width * hi];
     Some(roots)
-}
-fn contained_image(cell: &[[Q; 2]; 2], domain: Box4, f: &QualifiedFiber) -> Result<bool> {
-    if cell.iter().any(|v| v[0] > v[1]) {
-        return Ok(true);
-    }
-    let actual = f.domain();
-    for k in 0..4 {
-        let lo = q(domain[k][0])?;
-        let width = q(domain[k][1])? - &lo;
-        if &lo + &width * &cell[k % 2][0] < q(actual[k][0])?
-            || &lo + &width * &cell[k % 2][1] > q(actual[k][1])?
-        {
-            return Ok(false);
-        }
-    }
-    Ok(true)
 }
 fn derive_patches(source: &FiberSources, work: &mut Work) -> Result<Vec<(Cell, Net)>> {
     if let Ok(net) = derive(source) {
@@ -319,19 +624,111 @@ fn derive_patches(source: &FiberSources, work: &mut Work) -> Result<Vec<(Cell, N
     }
     multispan::derive(source, work)
 }
+// The natural knot cells cover the normalized diagonal. Restrict each
+// Bernstein net and its cell together, retaining shared closed boundaries.
+fn window_patches(
+    patches: Vec<(Cell, Net)>,
+    window: &Cell,
+    work: &mut Work,
+) -> Result<Vec<(Cell, Net)>> {
+    let mut clipped = Vec::new();
+    for (mut cell, mut net) in patches {
+        let overlap: Cell = std::array::from_fn(|axis| {
+            [
+                cell[axis][0].clone().max(window[axis][0].clone()),
+                cell[axis][1].clone().min(window[axis][1].clone()),
+            ]
+        });
+        if overlap.iter().any(|bounds| bounds[0] >= bounds[1]) {
+            continue;
+        }
+        for (axis, bounds) in overlap.into_iter().enumerate() {
+            if bounds == cell[axis] {
+                continue;
+            }
+            tick(work)?;
+            let width = &cell[axis][1] - &cell[axis][0];
+            let lo = (&bounds[0] - &cell[axis][0]) / &width;
+            let hi = (&bounds[1] - &cell[axis][0]) / width;
+            let [prefix, _] = split_at(&net, axis, &hi);
+            let [_, suffix] = split_at(&prefix, axis, &(lo / hi));
+            cell[axis] = bounds;
+            net = suffix;
+        }
+        clipped.push((cell, net));
+    }
+    Ok(clipped)
+}
+
 fn tick(work: &mut Work) -> Result<()> {
     check(work.used < work.max, "Exact reduced graph work exhausted")?;
     work.used += 1;
     Ok(())
 }
-fn report(cells: usize, excluded_cells: usize, rectangles: usize) -> FiberCoverageReport {
+
+struct GraphProduct {
+    patches: Vec<(Cell, Net)>,
+    affine: Option<AffineGraphExclusion>,
+    support: Box4,
+}
+
+impl GraphProduct {
+    fn prepare(source: &FiberSources, domain: Box4, work: &mut Work) -> Result<Self> {
+        let support = natural(source);
+        let patches = match derive_patches(source, work) {
+            Ok(patches) => patches,
+            Err(error) if error.code == crate::RESOURCE_LIMIT => return Err(error),
+            Err(_) => {
+                let affine = AffineGraphExclusion::new(source)?;
+                tick(work)?;
+                let (net, cell) = affine.aligned_gap(domain)?
+                    .filter(|(_, cell)| cell.iter().all(|range| range[0] < range[1]))
+                    .ok_or_else(|| crate::input("Affine graph product has no positive XY overlap"))?;
+                return Ok(Self { patches: vec![(cell, net)], affine: Some(affine), support });
+            }
+        };
+        let patches = if domain == support {
+            patches
+        } else {
+            let window = diagonal_chart(support, domain)?;
+            check(
+                window.iter().all(|range| range[0] < range[1]),
+                "Reduced graph product has no positive diagonal overlap",
+            )?;
+            window_patches(patches, &window, work)?
+        };
+        Ok(Self { patches, affine: None, support })
+    }
+
+    fn chart(&self, domain: Box4) -> Result<Cell> {
+        match &self.affine {
+            Some(affine) => affine.project_chart(domain),
+            None => diagonal_chart(self.support, domain),
+        }
+    }
+
+    fn repair_box(&self, cell: &Cell, window: Box4) -> Result<Box4> {
+        let enclosure = match &self.affine {
+            Some(affine) => affine.original_bounds(cell)?,
+            None => diagnostic(cell, self.support)?,
+        };
+        Ok(std::array::from_fn(|axis| {
+            [
+                enclosure[axis][0].max(window[axis][0]),
+                enclosure[axis][1].min(window[axis][1]),
+            ]
+        }))
+    }
+}
+
+fn report(cells: usize, excluded_cells: usize, rectangles: usize, entire: bool) -> FiberCoverageReport {
     FiberCoverageReport {
         status: FiberCoverageStatus::Complete,
         reason: "complete-original-graph-reduction",
         cells,
         excluded_cells,
         rectangles,
-        requested_entire_surfaces: true,
+        requested_entire_surfaces: entire,
         unresolved_box: None,
     }
 }
@@ -339,23 +736,27 @@ fn report(cells: usize, excluded_cells: usize, rectangles: usize) -> FiberCovera
 /// reduction reports unresolved coverage; it never becomes an empty root set.
 pub(super) fn construct(
     fibers: &[QualifiedFiber],
+    window: Option<Box4>,
     limits: CoverageLimits,
 ) -> Result<Option<MixedFiberCoverageResult>> {
     limits.validate()?;
     if fibers.is_empty() {
         return Ok(None);
     }
-    let domain = natural(fibers[0].source());
+    let support = natural(fibers[0].source());
+    let domain = window.unwrap_or(support);
+    let entire = domain == support;
     validate(fibers, domain)?;
     let mut work = Work {
         used: 0,
         max: limits.max_rectangles,
     };
-    let patches = match derive_patches(fibers[0].source(), &mut work) {
-        Ok(patches) => patches,
+    let mut product = match GraphProduct::prepare(fibers[0].source(), domain, &mut work) {
+        Ok(product) => product,
         Err(error) if error.code == crate::RESOURCE_LIMIT => return Err(error),
         Err(_) => return Ok(None),
     };
+    let patches = std::mem::take(&mut product.patches);
     if patches.len() > limits.max_cells {
         return Err(crate::resource(
             "Original graph knot census exceeds cell budget",
@@ -364,7 +765,7 @@ pub(super) fn construct(
     let patch_roots = patches.len();
     let mut r = MixedFiberCoverageResult {
         coverage: None,
-        report: report(1, 0, 0),
+        report: report(1, 0, 0, entire),
     };
     r.report.status = FiberCoverageStatus::Unresolved;
     r.report.reason = "reduced-graph-unproved";
@@ -374,24 +775,39 @@ pub(super) fn construct(
             return Ok(Some(r));
         }
     }
+    let charts = fibers
+        .iter()
+        .map(|fiber| product.chart(fiber.domain()))
+        .collect::<Result<Vec<_>>>()?;
     let mut nodes = vec![Node::Excluded; patch_roots];
     let mut pending: Vec<_> = patches
         .into_iter()
         .enumerate()
-        .map(|(i, (cell, net))| (i, cell, net, 0))
+        .map(|(i, (cell, net))| {
+            let candidates = (0..charts.len()).collect::<Vec<_>>();
+            (i, cell, net, 0, candidates)
+        })
         .collect();
     let mut excludes = 0;
     let mut covered = 0;
-    while let Some((id, cell, net, depth)) = pending.pop() {
+    'cells: while let Some((id, cell, net, depth, mut candidates)) = pending.pop() {
         if tick(&mut work).is_err() {
             r.report.reason = "reduced-graph-work-budget";
-            r.report.unresolved_box = Some(diagnostic(&cell, domain)?);
+            r.report.unresolved_box = Some(product.repair_box(&cell, domain)?);
             break;
         }
+        if excluded(&net) {
+            nodes[id] = Node::Excluded;
+            excludes += 1;
+            continue;
+        }
+        // Descendants and their clipped root images stay inside this cell.
+        // Keep touching charts so ownership on shared closed edges is preserved.
+        candidates.retain(|&index| overlaps(&cell, &charts[index]));
         let mut owner = None;
-        for (i, f) in fibers.iter().enumerate() {
-            if contained(&cell, domain, f)? {
-                owner = Some(i);
+        for &index in &candidates {
+            if contained(&cell, &charts[index]) {
+                owner = Some(index);
                 break;
             }
         }
@@ -403,8 +819,13 @@ pub(super) fn construct(
         let mut image_owner = None;
         for axis in 0..2 {
             if let Some(roots) = root_image(&cell, &net, axis) {
-                for (index, f) in fibers.iter().enumerate() {
-                    if contained_image(&roots, domain, f)? {
+                if empty_image(&roots) {
+                    nodes[id] = Node::ImageExcluded { axis };
+                    excludes += 1;
+                    continue 'cells;
+                }
+                for &index in &candidates {
+                    if contained(&roots, &charts[index]) {
                         image_owner = Some((index, axis));
                         break;
                     }
@@ -419,32 +840,33 @@ pub(super) fn construct(
             covered += 1;
             continue;
         }
-        if excluded(&net) {
-            nodes[id] = Node::Excluded;
-            excludes += 1;
-            continue;
-        }
         if depth == limits.max_depth || nodes.len() + 2 > limits.max_cells {
             r.report.reason = "reduced-graph-subdivision-budget";
             // Diagnostic cell in ORIGINAL native coordinates, rounded outward.
-            r.report.unresolved_box = Some(diagnostic(&cell, domain)?);
+            r.report.unresolved_box = Some(product.repair_box(&cell, domain)?);
             break;
         }
         let axis = usize::from(&cell[1][1] - &cell[1][0] > &cell[0][1] - &cell[0][0]);
-        let cells = cut(&cell, axis)?;
-        let nets = split(&net, axis);
+        // A balanced cut on a chart shore avoids repeatedly bisecting cells
+        // that straddle the same certified ownership boundary.
+        let chart_bounds = candidates.iter()
+            .filter(|_| product.affine.is_some())
+            .flat_map(|&index| charts[index][axis].iter().cloned());
+        let at = split_parameter(&cell[axis], chart_bounds);
+        let (cells, nets) = split_cell(&cell, &net, axis, &at)?;
         let children = [nodes.len(), nodes.len() + 1];
         nodes.extend([Node::Excluded, Node::Excluded]);
-        nodes[id] = Node::Split { axis, children };
-        for k in (0..2).rev() {
-            pending.push((children[k], cells[k].clone(), nets[k].clone(), depth + 1));
-        }
+        nodes[id] = Node::Split { axis, at, children };
+        let [left_cell, right_cell] = cells;
+        let [left_net, right_net] = nets;
+        pending.push((children[1], right_cell, right_net, depth + 1, candidates.clone()));
+        pending.push((children[0], left_cell, left_net, depth + 1, candidates));
     }
     r.report.cells = nodes.len();
     r.report.excluded_cells = excludes;
     r.report.rectangles = work.used;
     if pending.is_empty() && r.report.unresolved_box.is_none() && covered > 0 {
-        r.report = report(nodes.len(), excludes, work.used);
+        r.report = report(nodes.len(), excludes, work.used, entire);
         r.coverage = Some(QualifiedMixedFiberCoverage {
             fibers: fibers.to_vec(),
             domain,
@@ -460,6 +882,111 @@ pub(super) fn construct(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn exact_midpoint_root_image_is_invariant_under_sign_and_degree_elevation() {
+        let cell = full_cell();
+        let net = vec![
+            vec![q(-0.25).unwrap(), q(-0.125).unwrap()],
+            vec![q(0.75).unwrap(), q(0.875).unwrap()],
+        ];
+        let expected = [[q(0.125).unwrap(), q(0.25).unwrap()], cell[1].clone()];
+        for degree in [1, 2, 3] {
+            let mut elevated = net.clone();
+            for _ in 1..degree {
+                elevated = elevate(&elevated, 0);
+            }
+            assert_eq!(root_image(&cell, &elevated, 0), Some(expected.clone()));
+            let transposed: Net = (0..elevated[0].len())
+                .map(|j| elevated.iter().map(|row| row[j].clone()).collect())
+                .collect();
+            assert_eq!(
+                root_image(&cell, &transposed, 1),
+                Some([expected[1].clone(), expected[0].clone()])
+            );
+            for value in elevated.iter_mut().flatten() {
+                *value = -&*value;
+            }
+            assert_eq!(root_image(&cell, &elevated, 0), Some(expected.clone()));
+        }
+        let turning_net = [0.25, -0.25, 0.25]
+            .into_iter()
+            .map(|value| vec![q(value).unwrap(); 2])
+            .collect();
+        assert_eq!(root_image(&cell, &turning_net, 0), None);
+
+        let unequal_denominators = vec![
+            vec![Q::new((-1).into(), 3.into()); 2],
+            vec![Q::new(2.into(), 5.into()); 2],
+        ];
+        let exact = Q::new(5.into(), 11.into());
+        assert_eq!(
+            root_image(&cell, &unequal_denominators, 0),
+            Some([[exact.clone(), exact], cell[1].clone()])
+        );
+    }
+
+    #[test]
+    fn window_patches_restrict_the_net_in_original_normalized_coordinates() {
+        let fraction = |n: i32, d: i32| Q::new(n.into(), d.into());
+        let net = vec![
+            vec![Q::zero(), fraction(2, 1)],
+            vec![fraction(1, 1), fraction(3, 1)],
+        ];
+        let window = [
+            [fraction(1, 4), fraction(3, 4)],
+            [fraction(1, 8), fraction(1, 2)],
+        ];
+        let mut work = Work { used: 0, max: 2 };
+        let clipped =
+            window_patches(vec![(full_cell(), net)], &window, &mut work).unwrap();
+        assert_eq!(work.used, 2);
+        assert_eq!(
+            clipped,
+            vec![(
+                window,
+                vec![
+                    vec![fraction(1, 2), fraction(5, 4)],
+                    vec![fraction(1, 1), fraction(7, 4)],
+                ],
+            )],
+        );
+    }
+
+    #[test]
+    fn diagonal_chart_intersects_distinct_native_parameter_ranges_exactly() {
+        let domain = [[-3., 3.], [2., 10.], [10., 13.], [-4., 0.]];
+        let chart = diagonal_chart(
+            domain,
+            [[-2., 2.], [3., 8.], [11., 13.], [-3., -1.]],
+        )
+        .unwrap();
+        let fraction = |n: i32, d: i32| Q::new(n.into(), d.into());
+        let expected = [
+            [fraction(1, 3), fraction(5, 6)],
+            [fraction(1, 4), fraction(3, 4)],
+        ];
+        assert_eq!(chart, expected);
+        assert!(contained(&expected, &chart));
+
+        let mut touching = expected.clone();
+        touching[0] = [Q::zero(), expected[0][0].clone()];
+        assert!(overlaps(&touching, &chart));
+        touching[0][1] -= fraction(1, 1_000_000);
+        assert!(!overlaps(&touching, &chart));
+
+        let mut outside = expected.clone();
+        outside[0][0] = fraction(1, 3) - fraction(1, 1_000_000);
+        assert!(!contained(&outside, &chart));
+
+        let disjoint = diagonal_chart(
+            domain,
+            [[-3., -2.], [2., 10.], [11., 13.], [-4., 0.]],
+        )
+        .unwrap();
+        assert!(!contained(&expected, &disjoint));
+    }
+
     #[test]
     fn exact_reduction_replay_rejects_missing_cells_and_forged_exclusions() {
         let mut a = Surface {
@@ -485,6 +1012,18 @@ mod tests {
             }
         }
         let source = super::super::super::super::FiberSources::new(&a, &b).unwrap();
+        let mut reversed = a.clone();
+        for (i, row) in reversed.control_points.iter_mut().enumerate() {
+            for point in row {
+                point[0] = 1.25 - 0.75 * i as f64;
+            }
+        }
+        let different = FiberSources::new(&reversed, &b).unwrap();
+        assert!(exclude_shared_frame_graph_contact(
+            &different,
+            [[0., 1.], [0., 0.125], [0.25, 0.75], [0., 0.125]],
+        ).unwrap());
+        assert!(!exclude_shared_frame_graph_contact(&different, [[0., 1.]; 4]).unwrap());
         let owner = crate::ss_intersection::construct_qualified_closed_ss_branches(
             &source,
             Default::default(),

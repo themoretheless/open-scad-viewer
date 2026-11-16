@@ -1,16 +1,19 @@
 //! Source-bound SS paths from immutable boundary roots and exact branch ports.
 use super::*;
 mod apply;
+mod discovery;
 mod geometry;
 mod network;
 mod pair;
 pub use network::{
-    OpenSSNetworkCut, OpenSSNetworkPort, QualifiedOpenSSNetwork, partition_open_ss_network,
+    OpenSSBooleanEdgeUse, OpenSSNetworkCut, OpenSSNetworkPort, QualifiedOpenSSNetwork, assemble_exact_patch_solid, OpenSSIntersectionCompletionLimits, discover_open_ss_network,
+    partition_open_ss_network,
 };
 pub use pair::{OpenSSPairSide, QualifiedOpenSSPair, partition_open_ss_pair};
 mod route;
 pub use apply::{OpenSSFaceLimits, QualifiedOpenSSFace, partition_open_ss_path};
 use geometry::*;
+pub use discovery::{discover_open_ss_path, discover_open_ss_paths};
 use route::*;
 #[cfg(test)]
 mod tests;
@@ -186,7 +189,9 @@ pub fn qualify_open_ss_path<'i, 'p, 'r, 'a>(
         },
     )?;
     spend(&mut operations, limits.operations, proxies.operations())?;
-    classify_cores(input, &parts, uv, &mut operations, &mut cells, limits)?;
+    if !classify_cores(input, &parts, uv, &mut operations, &mut cells, limits)? {
+        return Err(unproven("Original SS core is outside a retained face"));
+    }
     let mut segments = Vec::new();
     for (i, p) in parts.iter().enumerate() {
         let source = &proxies.edges()[p.step.original_edge];

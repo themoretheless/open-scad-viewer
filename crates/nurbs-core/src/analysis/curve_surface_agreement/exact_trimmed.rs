@@ -33,6 +33,17 @@ pub fn verify_exact_trimmed(
     {
         return Ok(Some(proof));
     }
+    if let Some(proof) = super::affine_bspline_lift::verify_ranges(
+        c,
+        p,
+        s,
+        reversed,
+        curve_range,
+        pcurve_range,
+        max_work,
+    )? {
+        return Ok(Some(proof));
+    }
     let bezier = |c: &Curve, max: usize, dim: usize| {
         let d = c.domain();
         !c.periodic

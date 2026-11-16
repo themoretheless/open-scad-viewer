@@ -133,6 +133,16 @@ fn contact_controls(model: &Model, face: usize) -> Vec<&[f64]> {
 }
 /// Input must be structurally valid. Does not establish its prerequisites.
 mod extended_support;
+mod periodic_cap;
+mod periodic_partition;
+pub(crate) use periodic_cap::disjoint as periodic_cap_disjoint;
+
+fn full_use(model: &Model, coedge: &crate::Coedge) -> bool {
+    coedge.trim().is_none_or(|trim| {
+        trim.curve_parameter == model.edges[coedge.edge].curve.domain()
+            && trim.pcurve_parameter == coedge.pcurve.domain()
+    })
+}
 pub(crate) fn certify(model: &Model, faces: [usize; 2]) -> Option<Certificate> {
     certify_original(model, faces).or_else(|| {
         extended_support::certify(model, faces).map(|c| Certificate {
@@ -148,6 +158,8 @@ pub(crate) fn certify(model: &Model, faces: [usize; 2]) -> Option<Certificate> {
 }
 fn certify_original(model: &Model, faces: [usize; 2]) -> Option<Certificate> {
     certify_axis(model, faces)
+        .or_else(|| periodic_cap::certify(model, faces))
+        .or_else(|| periodic_partition::certify(model, faces))
         .or_else(|| certify_edge_plane(model, faces))
         .or_else(|| certify_vertex_plane(model, faces))
         .or_else(|| certify_joined_charts(model, faces))

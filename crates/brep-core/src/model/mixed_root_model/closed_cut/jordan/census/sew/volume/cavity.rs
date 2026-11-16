@@ -397,22 +397,6 @@ impl crate::root_model::QualifiedRootShellPositiveFlux {
     }
 }
 
-fn bounds_separated(a: &[[f64; 2]; 3], b: &[[f64; 2]; 3]) -> bool {
-    a.iter().zip(b).any(|(a, b)| a[1] < b[0] || b[1] < a[0])
-}
-
-fn carrier_bounds<'a>(surfaces: impl Iterator<Item = &'a crate::Surface>) -> [[f64; 2]; 3] {
-    let mut bounds = [[f64::INFINITY, f64::NEG_INFINITY]; 3];
-    // Positive-weight NURBS carriers lie in their control hulls.
-    for point in surfaces.flat_map(|surface| surface.control_points.iter().flatten()) {
-        for (bound, &coordinate) in bounds.iter_mut().zip(point) {
-            bound[0] = bound[0].min(coordinate);
-            bound[1] = bound[1].max(coordinate);
-        }
-    }
-    bounds
-}
-
 fn material_domain(
     shell: &crate::root_model::QualifiedRootShellPositiveFlux,
     index: usize,

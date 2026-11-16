@@ -359,6 +359,34 @@ fn trace_ring(
     }
 }
 fn arrange(sets: &[Rings], material: &dyn Fn(&[i64]) -> bool, max_edges: usize) -> Result<Rings> {
+    arrange_with_limits(sets, material, max_edges, None)
+}
+
+/// Exact linear intersection in a shared UV chart, retaining collinear
+/// arrangement vertices as possible shared BRep edge endpoints.
+pub(crate) fn intersection_rings(
+    first: Vec<Vec<[Q; 2]>>,
+    second: Vec<Vec<[Q; 2]>>,
+    max_work: usize,
+) -> Result<Vec<Vec<Vec<[Q; 2]>>>> {
+    let rings = arrange_with_limits(
+        &[first, second],
+        &|w| w[0] > 0 && w[1] > 0,
+        8192,
+        Some(max_work),
+    )?;
+    Ok(groups(&rings)?
+        .into_iter()
+        .map(|group| group.into_iter().map(|i| rings[i].clone()).collect())
+        .collect())
+}
+
+fn arrange_with_limits(
+    sets: &[Rings],
+    material: &dyn Fn(&[i64]) -> bool,
+    max_edges: usize,
+    max_work: Option<usize>,
+) -> Result<Rings> {
     let originals: Vec<_> = sets.iter().map(edges).collect();
     let original: Vec<OwnedEdge> = originals
         .iter()
@@ -370,8 +398,21 @@ fn arrange(sets: &[Rings], material: &dyn Fn(&[i64]) -> bool, max_edges: usize) 
             "Exact region arrangement input edge budget exceeded",
         ));
     }
+    let count = original.len();
+    let pair_tests = count.saturating_mul(count.saturating_sub(1)) / 2;
+    let budget_error = || {
+        crate::Error::new("BREP_RESOURCE_LIMIT", "Exact UV arrangement exceeded its work budget")
+    };
+    if max_work.is_some_and(|work| pair_tests > work) {
+        return Err(budget_error());
+    }
     let cuts = segment_cuts(&original)?;
     let atomic = atomic_edges(&original, cuts, sets.len())?;
+    if max_work
+        .is_some_and(|work| pair_tests.saturating_add(count.saturating_mul(atomic.len())) > work)
+    {
+        return Err(budget_error());
+    }
     let selected = material_boundary(&atomic, &originals, material)?;
     let around = rotations(&atomic);
     let mut used = BTreeSet::new();
@@ -380,7 +421,8 @@ fn arrange(sets: &[Rings], material: &dyn Fn(&[i64]) -> bool, max_edges: usize) 
         if used.contains(first) {
             continue;
         }
-        let ring = simplify(trace_ring(first, &selected, &around, &mut used)?);
+        let ring = trace_ring(first, &selected, &around, &mut used)?;
+        let ring = if max_work.is_some() { ring } else { simplify(ring) };
         if ring.len() < 3 || area(&ring).is_zero() {
             return Err(refused("Offset positive region has a degenerate boundary"));
         }

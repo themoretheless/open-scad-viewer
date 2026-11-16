@@ -154,6 +154,20 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
         "Original curved input lacks complete continuous material admission"
     );
     let b = admission.into_solid().unwrap();
+    let owner = ss::construct_qualified_closed_ss_branches(
+        wire.edges()[0].curve().source(), Default::default(),
+    ).unwrap();
+    let cycle = ss::order_closed_fiber_cycle(&owner, 0, Default::default()).unwrap();
+    let automatic = mixed::QualifiedInteriorSsLoop::qualify_from_cycle(
+        [(&a, 1), (&b, 1)], &cycle, Default::default(), 64,
+    ).unwrap();
+    assert_eq!(automatic.joints().len(), cycle.arcs().len());
+    automatic.reverify().unwrap();
+    for cut in automatic.cuts() {
+        assert_ne!(cut.source_face(), cut.inside_face());
+        cut.model().topology().validate_topology_with_vertices(|_| Ok(())).unwrap();
+    }
+
     let jordan = mixed::qualify_paired_interior_loop(&a,1,&b,1,&wire,[[0.5;2];2],Default::default()).unwrap();
     assert_eq!(jordan.joints().len(), wire.edges().len());
     assert!(!jordan.cuts()[0].geometry_admitted());
@@ -314,6 +328,26 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
     assert!(lo <= expected && expected <= hi);
     assert_eq!(common.topology().bodies.len(), 1);
     assert!(common.topology().boundary_edges().is_empty());
+    let automatic_census = std::sync::Arc::new(
+        mixed::QualifiedInteriorSsCensus::qualify_from_closed_branches(
+            [(&perforated, cut_face), (&above, 1)],
+            &owner,
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            64,
+            4096,
+        ).unwrap(),
+    );
+    let (automatic_common, [lo, hi]) = automatic_census.assemble_automatic_paired_boolean(
+        Op::Intersection, &directions, 1e-7, Default::default(), [Default::default(); 2],
+        mixed::RootBoundaryVolumeLimits { absolute_error: 5e-4, cells: 16384, ..Default::default() },
+        2048, 64,
+    ).unwrap();
+    assert!(lo <= expected && expected <= hi);
+    assert_eq!(automatic_common.topology().bodies.len(), 1);
+    assert!(automatic_common.topology().boundary_edges().is_empty());
     let arrangement=std::sync::Arc::new(census.build_face_arrangement(0,Default::default()).unwrap());
     let bound=arrangement.qualify_boolean_rectangle(Op::Difference,[[0.48,0.52],[0.66,0.70]],&directions,Default::default()).unwrap();
     assert_eq!(bound.face(),arrangement.region_faces()[1]);

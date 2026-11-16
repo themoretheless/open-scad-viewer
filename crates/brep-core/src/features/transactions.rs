@@ -6,7 +6,7 @@ use crate::ChangeSet;
 use crate::Model;
 use crate::solid_audit::{LocallyValidatedModel, SolidAuditCertificate};
 use crate::trim_sew::{
-    AuthorizedHealPlan, HealOperation, SewCertificate, apply_authorized_heal,
+    AuthorizedHealPlan, HealOperation, SewCertificate,
     apply_authorized_heal_checked, prove_model_edge_correspondence, tolerant_endpoint_snapshot,
 };
 use brep_topology::RevisionState;
@@ -77,6 +77,7 @@ pub struct AuthorizedHealTransaction {
     staged_plan: Option<AuthorizedHealPlan>,
     displacement: Vec<HealDisplacementLedgerEntry>,
     cancellation: HealCancellation,
+    defer_material_roles: bool,
 }
 impl AuthorizedHealTransaction {
     pub fn begin(original: ModelSnapshot, cancellation: HealCancellation) -> Self {
@@ -86,6 +87,7 @@ impl AuthorizedHealTransaction {
             staged_plan: None,
             displacement: Vec::new(),
             cancellation,
+            defer_material_roles: false,
         }
     }
     pub fn apply(&mut self, plan: &AuthorizedHealPlan) -> Result<()> {
@@ -148,7 +150,7 @@ impl AuthorizedHealTransaction {
                 })
             })
             .collect::<Result<Vec<_>>>()?;
-        let staged = apply_authorized_heal_checked(self.original.model(), plan, |operation| {
+        let staged = apply_authorized_heal_checked(self.original.model(), plan, self.defer_material_roles, |operation| {
             if self.cancellation.is_cancelled() {
                 Err(Error::new(
                     "BREP_HEAL_CANCELLED",
@@ -191,17 +193,22 @@ impl AuthorizedHealTransaction {
         let plan = self.staged_plan.take().ok_or_else(|| {
             Error::new("BREP_HEAL_NOT_APPLIED", "No authorized heal plan is staged")
         })?;
-        let audited = LocallyValidatedModel::new(model)?.audit()?;
-        let sew = audited.certificate().sew.clone();
-        let audit = audited.certificate().clone();
-        let model = audited.into_model();
+        let (model, audit) = if self.defer_material_roles {
+            let audit = crate::solid_audit::audit_before_shell_repair(&model)?;
+            (model, audit)
+        } else {
+            let audited = LocallyValidatedModel::new(model)?.audit()?;
+            let audit = audited.certificate().clone();
+            (audited.into_model(), audit)
+        };
+        let sew = audit.sew.clone();
         if !model.persistent_naming_complete() {
             return Err(Error::new(
                 "BREP_HEAL_NAMING_INCOMPLETE",
                 "Authorized heal produced incomplete persistent naming",
             ));
         }
-        let reapplied = apply_authorized_heal(&model, &plan)?;
+        let reapplied = apply_authorized_heal_checked(&model, &plan, self.defer_material_roles, |_| Ok(()))?;
         if model != reapplied {
             return Err(Error::new(
                 "BREP_HEAL_NOT_IDEMPOTENT",
@@ -265,6 +272,24 @@ pub fn authorized_heal_endpoint(
     vertex: usize,
     to: [f64; 3],
 ) -> Result<AuthorizedHealResult> {
+    heal_endpoint(model, vertex, to, false)
+}
+
+#[cfg(feature = "codec")]
+pub(crate) fn snap_before_shell_repair(
+    model: &Model,
+    vertex: usize,
+    to: [f64; 3],
+) -> Result<AuthorizedHealResult> {
+    heal_endpoint(model, vertex, to, true)
+}
+
+fn heal_endpoint(
+    model: &Model,
+    vertex: usize,
+    to: [f64; 3],
+    defer_material_roles: bool,
+) -> Result<AuthorizedHealResult> {
     let context = model.tolerance_context()?;
     let expected_id =
         *model.1.vertices.get(vertex).ok_or_else(|| {
@@ -289,7 +314,7 @@ pub fn authorized_heal_endpoint(
         correspondence: proof,
     }
     .bind_native_proof();
-    execute_native_plan(model, &context, vec![operation])
+    execute_native_plan(model, &context, vec![operation], defer_material_roles)
 }
 
 /// Authorized endpoint sewing for an imported model whose only structural
@@ -301,6 +326,7 @@ pub(crate) fn authorized_heal_endpoint_tolerant(
     to: [f64; 3],
     per_entity_cap_mm: f64,
     cumulative_cap_mm: f64,
+    defer_material_roles: bool,
 ) -> Result<AuthorizedHealResult> {
     let context = model.tolerance_context()?;
     let expected_id = *model
@@ -339,6 +365,7 @@ pub(crate) fn authorized_heal_endpoint_tolerant(
         model: Arc::new(model.clone()),
     };
     let mut transaction = AuthorizedHealTransaction::begin(snapshot, HealCancellation::default());
+    transaction.defer_material_roles = defer_material_roles;
     transaction.apply(&plan)?;
     transaction.commit()
 }
@@ -347,6 +374,24 @@ pub fn authorized_heal_refit(
     model: &Model,
     edge: usize,
     replacement: nurbs_core::curve::Curve,
+) -> Result<AuthorizedHealResult> {
+    heal_refit(model, edge, replacement, false)
+}
+
+#[cfg(feature = "codec")]
+pub(crate) fn refit_before_shell_repair(
+    model: &Model,
+    edge: usize,
+    replacement: nurbs_core::curve::Curve,
+) -> Result<AuthorizedHealResult> {
+    heal_refit(model, edge, replacement, true)
+}
+
+fn heal_refit(
+    model: &Model,
+    edge: usize,
+    replacement: nurbs_core::curve::Curve,
+    defer_material_roles: bool,
 ) -> Result<AuthorizedHealResult> {
     let context = model.tolerance_context()?;
     let expected_id = *model
@@ -362,18 +407,20 @@ pub fn authorized_heal_refit(
         correspondence: proof,
     }
     .bind_native_proof();
-    execute_native_plan(model, &context, vec![operation])
+    execute_native_plan(model, &context, vec![operation], defer_material_roles)
 }
 
 fn execute_native_plan(
     model: &Model,
     context: &cad_predicates::ToleranceContext,
     operations: Vec<HealOperation>,
+    defer_material_roles: bool,
 ) -> Result<AuthorizedHealResult> {
     let cell = context.spatial_bounds().absolute_mm;
     let plan = AuthorizedHealPlan::new(model, context, operations, cell, cell)?;
     let snapshot = ModelSnapshot::new(model.clone())?;
     let mut transaction = AuthorizedHealTransaction::begin(snapshot, HealCancellation::default());
+    transaction.defer_material_roles = defer_material_roles;
     transaction.apply(&plan)?;
     transaction.commit()
 }

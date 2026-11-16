@@ -3,6 +3,7 @@ struct Work {
     used: usize,
     max: usize,
     candidates: usize,
+    transitions: std::collections::BTreeMap<[usize; 2], Option<QualifiedFiberTransition>>,
 }
 fn point(f: &QualifiedFiber, t: f64, w: &mut Work) -> Result<ClosedFiberRootPort> {
     if w.used == w.max {
@@ -16,10 +17,14 @@ fn point(f: &QualifiedFiber, t: f64, w: &mut Work) -> Result<ClosedFiberRootPort
 }
 fn transition(
     owner: &QualifiedClosedFiberBranches,
+    key: [usize; 2],
     a: &QualifiedFiber,
     b: &QualifiedFiber,
     w: &mut Work,
 ) -> Result<Option<QualifiedFiberTransition>> {
+    if let Some(cached) = w.transitions.get(&key) {
+        return Ok(cached.clone());
+    }
     for t in owner.owner().proof().transitions() {
         if orientation(t, a, b).is_some() {
             if t.rectangles() > w.max - w.used {
@@ -27,6 +32,7 @@ fn transition(
             }
             t.reverify()?;
             w.used += t.rectangles();
+            w.transitions.insert(key, Some(t.clone()));
             return Ok(Some(t.clone()));
         }
     }
@@ -53,7 +59,9 @@ fn transition(
         }
     };
     w.used += r.rectangles();
-    Ok(r.into_transition().map(|t| t.proof().clone()))
+    let result = r.into_transition().map(|t| t.proof().clone());
+    w.transitions.insert(key, result.clone());
+    Ok(result)
 }
 fn walk(
     owner: &QualifiedClosedFiberBranches,
@@ -68,6 +76,8 @@ fn walk(
     let all = owner.owner().proof().coverage().fibers();
     let mut pool: Vec<_> = ids.iter().map(|i| all[*i].clone()).collect();
     pool.swap(0, start_index);
+    let mut chart_ids = ids.clone();
+    chart_ids.swap(0, start_index);
     let free = pool[0].free_axis().index();
     let [a, b] = pool[0].domain()[free];
     let t = a + (b - a) * fraction;
@@ -92,7 +102,7 @@ fn walk(
             && inside(ports[0].bounds, f.domain(), true)
             && before(incoming, ports[0].bounds, axis, forward)
         {
-            let Some(close) = transition(owner, f, &pool[0], w)? else {
+            let Some(close) = transition(owner, [chart_ids[current], chart_ids[0]], f, &pool[0], w)? else {
                 return Ok(None);
             };
             let agrees = orientation(&close, f, &pool[0]).unwrap();
@@ -181,7 +191,7 @@ fn walk(
                     ));
                 }
                 w.candidates += 1;
-                let Some(tr) = transition(owner, f, &pool[next], w)? else {
+                let Some(tr) = transition(owner, [chart_ids[current], chart_ids[next]], f, &pool[next], w)? else {
                     continue;
                 };
                 let agrees = orientation(&tr, f, &pool[next]).unwrap();
@@ -233,6 +243,7 @@ pub fn order_closed_fiber_cycle(
         used: 0,
         max: limits.max_rectangles,
         candidates: 0,
+        transitions: Default::default(),
     };
     let count = owner.branches()[branch].charts.len();
     let fractions = [

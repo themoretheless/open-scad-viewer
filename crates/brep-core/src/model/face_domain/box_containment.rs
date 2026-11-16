@@ -85,11 +85,7 @@ pub fn inspect_box_containment(
     for wire in
         std::iter::once(model.faces[face].outer).chain(model.faces[face].holes.iter().copied())
     {
-        let curves = model.loops[wire]
-            .coedges
-            .iter()
-            .map(|c| c.pcurve.clone())
-            .collect::<Vec<_>>();
+        let curves = super::wire_pcurves(s, &model.loops[wire])?;
         check(
             nurbs_core::trim_domain::exact_loop_joins(&curves)? == Some(true),
             "Trimmed box inspection needs original closed UV loops",

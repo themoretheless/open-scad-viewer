@@ -253,6 +253,8 @@ mod chord_boundary;
 pub use chord_boundary::{RootChordBoundaryLimits,QualifiedRootChordBoundary};
 
 mod face_region;
+mod periodic_face_path;
+pub use periodic_face_path::{QualifiedRootPeriodicFaceMembership, QualifiedRootPeriodicFaceMembershipBox, QualifiedRootPeriodicFacePath};
 pub use face_region::{QualifiedRootPeriodicFace,QualifiedRootPeriodicFaceBox,QualifiedRootPeriodicFaceEdge,QualifiedRootPeriodicFacePoint,RootFaceRegion,QualifiedRootFaceRegion};
 
 mod retention;
@@ -265,7 +267,7 @@ mod periodic_split;
 pub use periodic_split::{QualifiedRootPeriodicChordSplit, QualifiedRootPeriodicChildSelection, QualifiedRootPeriodicChildMaterialSeed};
 
 mod periodic_material;
-pub use periodic_material::{QualifiedRootPeriodicChildMaterial, RootPeriodicBooleanContribution};
+pub use periodic_material::{QualifiedRootPeriodicChildMaterial, QualifiedRootPeriodicFaceMaterial, RootPeriodicBooleanContribution};
 
 mod sew;
 
@@ -273,4 +275,6 @@ mod shell_charts;
 pub use shell_charts::{QualifiedRootShellCharts, QualifiedRootShellContacts};
 
 mod shell_flux;
+mod periodic_band;
+pub use periodic_band::RootPeriodicBandLimits;
 pub use shell_flux::{QualifiedRootShellPositiveFlux, RootShellFluxLimits, RootShellFluxReport};

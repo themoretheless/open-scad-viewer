@@ -12,6 +12,8 @@ pub struct Face {
     pub result: Option<FaceReport>,
     pub linear: Option<nurbs_core::surface_linear_monotonicity::Report>,
     pub quotient: Option<Quotient>,
+    /// Actual retained periodic chart with certified seam ownership.
+    pub periodic_quotient: bool,
 }
 #[derive(Clone, Debug)]
 pub struct Quotient {
@@ -30,6 +32,7 @@ impl Face {
         self.result.as_ref().is_some_and(|r| r.proven)
             || self.linear.as_ref().is_some_and(|r| r.certified)
             || self.quotient.as_ref().is_some_and(|q| q.proven())
+            || self.periodic_quotient
     }
 }
 #[derive(Clone, Debug)]
@@ -134,6 +137,7 @@ fn inspect_impl(
             result,
             linear,
             quotient,
+            periodic_quotient: false,
         };
         report.all_faces_injective &= face.absence_proven();
         report.faces.push(face);
@@ -573,6 +577,7 @@ impl Inspector {
             result,
             linear,
             quotient,
+            periodic_quotient: false,
         };
         self.report.all_faces_injective &= face.absence_proven();
         self.report.faces.push(face);

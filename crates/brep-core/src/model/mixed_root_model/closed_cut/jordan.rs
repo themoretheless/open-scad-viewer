@@ -20,9 +20,39 @@ impl Default for InteriorLoopLimits {
 pub struct QualifiedInteriorSsLoop {
     cuts: [ClosedCutCandidate; 2],
     joints: Vec<ss::QualifiedOriginalSsWireJoint>,
+    cycle: Option<ss::OrderedClosedFiberCycle>,
     limits: InteriorLoopLimits,
 }
 impl QualifiedInteriorSsLoop {
+    /// Build a paired finite-face cut from an exact closed cycle. The
+    /// interior winding witnesses are searched independently in both UV charts.
+    pub fn qualify_from_cycle(
+        sources: [(&crate::closed_solid::QualifiedClosedSolid, usize); 2],
+        cycle: &ss::OrderedClosedFiberCycle,
+        limits: InteriorLoopLimits,
+        seed_cells_per_support: usize,
+    ) -> Result<Self> {
+        if !(1..=16384).contains(&seed_cells_per_support) {
+            return Err(unproved("Invalid closed cut seed search allowance"));
+        }
+        let wire = cycle.to_root_wire(limits.geometry)?;
+        let mut seeds = [[0.; 2]; 2];
+        for (support, &(source, face)) in sources.iter().enumerate() {
+            seeds[support] = find_cycle_cut_seed(
+                source.model(), face, &wire, support, limits.cuts[support], seed_cells_per_support,
+            )?;
+        }
+        let [(first, first_face), (second, second_face)] = sources;
+        injective(first, first_face)?;
+        injective(second, second_face)?;
+        // The cycle already owns the regular embedded branch and its entire
+        // first-return traversal. Reuse that proof at native chart boundaries.
+        let joints = wire.qualify_knot_aware_joints(limits.joint_depth, limits.geometry)?;
+        let a = split_closed_contour_candidate(first, first_face, &wire, 0, seeds[0], limits.cuts[0])?;
+        let b = split_closed_contour_candidate(second, second_face, &wire, 1, seeds[1], limits.cuts[1])?;
+        Ok(Self { cuts: [a, b], joints, cycle: Some(cycle.clone()), limits })
+    }
+
     pub fn cuts(&self) -> &[ClosedCutCandidate; 2] {
         &self.cuts
     }
@@ -30,6 +60,13 @@ impl QualifiedInteriorSsLoop {
         &self.joints
     }
     pub fn reverify(&self) -> Result<()> {
+        if let Some(cycle) = &self.cycle {
+            cycle.reverify()?;
+            for cut in &self.cuts {
+                cut.reverify()?;
+            }
+            return Ok(());
+        }
         let [a, b] = &self.cuts;
         a.source.reverify()?;
         b.source.reverify()?;
@@ -45,6 +82,47 @@ impl QualifiedInteriorSsLoop {
         .map(|_| ())
     }
 }
+fn find_cycle_cut_seed(
+    model: &crate::Model,
+    face: usize,
+    wire: &ss::OriginalSsRootWire,
+    support: usize,
+    limits: ClosedCutLimits,
+    cells: usize,
+) -> Result<[f64; 2]> {
+    let surface = &model.faces.get(face)
+        .ok_or_else(|| unproved("Cycle cut source face is absent"))?.surface;
+    let domain = crate::face_domain::FaceDomain::new(model, face, limits.tolerance_uv)?;
+    let native = crate::boolean_robustness::surface_uv_domains(surface);
+    let mut pending = std::collections::VecDeque::from([(native, 0)]);
+    let mut domain_cells = limits.placement_domain_cells;
+    for _ in 0..cells {
+        let Some((mut cell, axis)) = pending.pop_front() else { break };
+        let seed = cell.map(|[lo, hi]| lo * 0.5 + hi * 0.5);
+        if let Ok(winding) = ss::qualify_original_ss_winding(
+            wire, support, seed, limits.per_boundary_winding,
+        ) {
+            if matches!(winding.winding(), -1 | 1) {
+                if domain_cells == 0 {
+                    return Err(unproved("Cycle cut seed domain work exhausted"));
+                }
+                let classification = domain.classify(seed.map(|x| [x; 2]), domain_cells.min(100000))?;
+                domain_cells -= classification.cells;
+                if classification.location == Location::Inside {
+                    return Ok(seed);
+                }
+            }
+        }
+        if cell[axis][0] < seed[axis] && seed[axis] < cell[axis][1] {
+            let mut right = cell;
+            cell[axis][1] = seed[axis];
+            right[axis][0] = seed[axis];
+            pending.extend([(cell, 1 - axis), (right, 1 - axis)]);
+        }
+    }
+    Err(unproved(&format!("No interior cycle cut seed proved on support {support}")))
+}
+
 fn injective(body: &crate::closed_solid::QualifiedClosedSolid, face: usize) -> Result<()> {
     let f = body
         .geometry()
@@ -186,9 +264,10 @@ pub fn qualify_paired_interior_loop(
     Ok(QualifiedInteriorSsLoop {
         cuts: [a, b],
         joints,
+        cycle: None,
         limits,
     })
 }
 
 mod census;
-pub use census::{PairedRootSolidAdmission, QualifiedPairedRootSolid, QualifiedRootBoolean, SeparatedRootBoolean,QualifiedRootShellForest,RootRelationKind,RootRelationLimits,RootRelationWork,QualifiedRootRelation,RootDisjointBodyAssembly, RootShellSubtraction, RootCavityLimits,RootCavityCoverageWork,QualifiedRootCavitySolid,RootSurfaceMaterialLimits,QualifiedRootSurfaceMaterialBox,RootMaterialBoxLimits,RootMaterialBoxWork,QualifiedRootMaterialBox,RootSolidPointLimits, RootSolidPointReport, RootSolidRayReport, RootBoundaryVolumeLimits, RootBoundaryVolumeReport, PairedBooleanPatches, QualifiedPairedRootBoundary, QualifiedArrangementMaterialRectangle, CensusArrangementLimits, CensusFaceArrangement, CensusRectangleReport, QualifiedCensusMaterialRectangle, InteriorCensusAnchor, InteriorCensusLimits, QualifiedInteriorSsCensus, qualify_interior_ss_census};
+pub use census::{PairedRootSolidAdmission, QualifiedPairedRootSolid, QualifiedRootBoolean, SeparatedRootBoolean,QualifiedRootShellForest,RootRelationKind,RootRelationLimits,RootRelationWork,QualifiedRootRelation,RootDisjointBodyAssembly, RootShellSubtraction, RootCavityLimits,RootCavityCoverageWork,QualifiedRootCavitySolid,RootSurfaceMaterialLimits,QualifiedRootSurfaceMaterialBox,RootMaterialBoxLimits,RootMaterialBoxWork,QualifiedRootMaterialBox,RootSolidPointLimits, RootSolidPointReport, RootSolidRayReport, RootBoundaryVolumeLimits, RootBoundaryVolumeReport, ClosedSsBooleanLimits, PairedBooleanPatches, QualifiedPairedRootBoundary, QualifiedArrangementMaterialRectangle, CensusArrangementLimits, CensusFaceArrangement, CensusRectangleReport, QualifiedCensusMaterialRectangle, InteriorCensusAnchor, InteriorCensusLimits, ClosedSsCensusLimits, QualifiedInteriorSsCensus, qualify_interior_ss_census};

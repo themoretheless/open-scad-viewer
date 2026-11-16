@@ -137,31 +137,55 @@ fn non_mobius_nonbinary_factor_products_keep_exact_rational_ownership() {
     assert_eq!(s,before);
 }
 
-#[test]
-fn coupled_rational_walls_have_continuous_global_and_station_certificates() {
-    // Each wall has W(u,v) varying across both axes. Its z coordinate is
-    // exactly affine in v, while the fraction along the side depends on v.
+fn coupled_wall_body(coupled_coordinates: bool, monotone_rails: bool) -> Model {
+    // Interior weights vary across both axes. The optional height offset
+    // couples the station coordinate to the profile parameter as well.
     let corners = [[0., 0.], [4., 0.], [4., 4.], [0., 4.]];
     let sections = [0., 7., 14.].map(|z| {
-        vec![(0..4).map(|i| {
-            let [x, y] = corners[i];
-            let [xx, yy] = corners[(i + 1) % 4];
-            crate::line(vec![x, y, z], vec![xx, yy, z])
-        }).collect::<Vec<_>>()]
+        vec![
+            (0..4)
+                .map(|i| {
+                    let [x, y] = corners[i];
+                    let [xx, yy] = corners[(i + 1) % 4];
+                    crate::line(vec![x, y, z], vec![xx, yy, z])
+                })
+                .collect::<Vec<_>>(),
+        ]
     });
     let mut model = crate::rational_section_loft(&sections).unwrap();
-    let middle_weight = |xy: &[f64]| if xy[0] == xy[1] { 1. } else { 16. };
+    let middle_weight = |xy: &[f64]| {
+        if xy[0] == xy[1] {
+            1.
+        } else if monotone_rails {
+            32.
+        } else if coupled_coordinates {
+            2.
+        } else {
+            16.
+        }
+    };
     let station_poles = |a: &[f64], b: &[f64], w: f64| {
         // The first and last three coefficients are unchanged, so the
         // coupled interior weights do not alter the seam jets through order two.
-        (0..=7).map(|i| {
-            let distance = match i {
-                3 => 3. / w,
-                4 => 7. - 3. / w,
-                _ => i as f64,
-            };
-            vec![a[0], a[1], a[2] + distance * ((b[2] - a[2]) / 7.)]
-        }).collect()
+        (0..=7)
+            .map(|i| {
+                let distance = if monotone_rails {
+                    i as f64
+                } else {
+                    match i {
+                        3 => 3. / w,
+                        4 => 7. - 3. / w,
+                        _ => i as f64,
+                    }
+                };
+                let offset = if coupled_coordinates && !monotone_rails && w > 1. && i == 3 {
+                    0.125
+                } else {
+                    0.
+                };
+                vec![a[0], a[1], a[2] + distance * ((b[2] - a[2]) / 7.) + offset]
+            })
+            .collect()
     };
     let wall_count = model.faces.len() - 2;
     let knots = [vec![0.; 8], vec![1.; 8]].concat();
@@ -178,7 +202,9 @@ fn coupled_rational_walls_have_continuous_global_and_station_certificates() {
     }
     for edge in &mut model.0.edges {
         let curve = &mut edge.curve;
-        let [a, b] = curve.control_points.as_slice() else { continue };
+        let [a, b] = curve.control_points.as_slice() else {
+            continue;
+        };
         if a[..2] == b[..2] && a[2] != b[2] {
             let w = middle_weight(a);
             curve.control_points = station_poles(a, b, w);
@@ -188,18 +214,115 @@ fn coupled_rational_walls_have_continuous_global_and_station_certificates() {
         }
     }
     model.validate().unwrap();
+    model
+}
 
+#[test]
+fn coupled_rational_walls_have_continuous_global_and_station_certificates() {
+    check_coupled_wall_certificates(false, 1., false);
+}
+
+#[test]
+fn coupled_coordinates_without_affine_recovery_keep_joint_certificates() {
+    check_coupled_wall_certificates(true, 1., false);
+}
+
+#[test]
+fn coupled_coordinates_without_column_dominance_keep_joint_certificates() {
+    check_coupled_wall_certificates(true, 16., false);
+}
+
+#[test]
+fn coupled_rails_keep_joint_certificates_after_independent_column_refusal() {
+    check_coupled_wall_certificates(true, 1., true);
+}
+
+fn check_coupled_wall_certificates(
+    coupled_coordinates: bool,
+    profile_scale: f64,
+    monotone_rails: bool,
+) {
+    let model = coupled_wall_body(coupled_coordinates, monotone_rails);
+    let model = if profile_scale == 1. {
+        model
+    } else {
+        crate::transform::affine(
+            &model,
+            [
+                [profile_scale, 0., 0., 0.],
+                [0., profile_scale, 0., 0.],
+                [0., 0., 1., 0.],
+                [0., 0., 0., 1.],
+            ],
+        )
+        .unwrap()
+    };
+    let wall_count = model.faces.len() - 2;
     let surface = &model.faces[0].surface;
     assert_ne!(surface.weights[0][3], surface.weights[1][3]);
     let chart = nurbs_core::surface_injectivity::certify_chart(surface, 1000).unwrap();
     assert!(chart.proven, "{chart:?}");
-    assert_eq!(chart.reason, "global-exact-rational-triangular");
+    let expected = if coupled_coordinates {
+        let (du, dv) = surface
+            .evaluate(0.5, 0.25)
+            .unwrap()
+            .first_derivatives()
+            .unwrap();
+        // On the first wall, y is constant. The tangent directions at
+        // the two natural edges exclude any affine combination of x
+        // and z that could recover one parameter throughout the chart.
+        let (_, left_dv) = surface
+            .evaluate(0., 0.25)
+            .unwrap()
+            .first_derivatives()
+            .unwrap();
+        let (bottom_du, _) = surface
+            .evaluate(0.5, 0.)
+            .unwrap()
+            .first_derivatives()
+            .unwrap();
+        assert_eq!(left_dv[0], 0.);
+        assert_eq!(bottom_du[2], 0.);
+        assert_ne!(left_dv[2], 0.);
+        assert_ne!(bottom_du[0], 0.);
+        assert_ne!(du[2], 0.);
+        assert_ne!(dv[0], 0.);
+        let mut folded = surface.clone();
+        // Along u=0 the wall stays on one vertical line. This control
+        // displacement makes its height exceed both endpoints at v=1/2,
+        // forcing a repeated world point on that natural edge.
+        folded.control_points[0][3][2] += 1000.;
+        assert!(
+            folded.evaluate(0., 0.5).unwrap().point[2] > folded.evaluate(0., 1.).unwrap().point[2]
+        );
+        assert!(
+            !nurbs_core::surface_injectivity::certify_chart(&folded, 1000)
+                .unwrap()
+                .proven
+        );
+        if monotone_rails {
+            // The independent column route runs first and must refuse.
+            "global-rational-monotone-rails"
+        } else if profile_scale > 1. {
+            assert!(dv[0].abs() > dv[2].abs(), "column V: {dv:?}");
+            "global-rational-bernstein-column-determinant"
+        } else {
+            "global-rational-bernstein-column-cones"
+        }
+    } else {
+        let mut drift = surface.clone();
+        drift.control_points[0][3][2] = drift.control_points[0][3][2].next_up();
+        let changed = nurbs_core::surface_injectivity::certify_chart(&drift, 1000).unwrap();
+        assert_ne!(changed.reason, chart.reason);
+        "global-exact-rational-triangular"
+    };
+    assert_eq!(chart.reason, expected);
     assert!(chart.contraction_upper.is_none());
-    let mut drift = surface.clone();
-    drift.control_points[0][3][2] = drift.control_points[0][3][2].next_up();
-    let changed = nurbs_core::surface_injectivity::certify_chart(&drift, 1000).unwrap();
-    assert_ne!(changed.reason, chart.reason);
-    assert!(!nurbs_core::surface_injectivity::certify_chart(surface, chart.spans - 1).unwrap().proven);
+    assert!(
+        !nurbs_core::surface_injectivity::certify_chart(surface, chart.spans - 1)
+            .unwrap()
+            .proven
+    );
 
     let mut retained = model.clone();
     for face in &mut retained.0.faces[..wall_count] {
@@ -209,20 +332,134 @@ fn coupled_rational_walls_have_continuous_global_and_station_certificates() {
     }
     let full = inspect(&model, &retained, 1e-8, 0., limits()).unwrap();
     assert!(full.continuous_bound && full.error_upper == Some(0.));
-    assert!(full.certified, "{:?}; geometry {:?}", full.reason,
+    assert!(
+        full.certified,
+        "{:?}; geometry {:?}",
+        full.reason,
         full.reference_volume.as_ref().map(|volume| (
             volume.boundary.agreement.all_equal,
             volume.boundary.intersections.faces.all_faces_injective,
             volume.boundary.intersections.pairs.all_pairs_classified,
-        )));
+            &volume.boundary.intersections.faces,
+            volume
+                .boundary
+                .intersections
+                .pairs
+                .pairs
+                .iter()
+                .filter(|pair| pair.reason == "pair-unresolved")
+                .map(|pair| pair.faces)
+                .collect::<Vec<_>>(),
+        ))
+    );
     let mut short = limits();
     short.reference_volume.boundary.contacts.cells = 1;
     let refused = inspect(&model, &retained, 1e-8, 0., short).unwrap();
     assert!(refused.continuous_bound && !refused.certified);
     let caps = [wall_count, wall_count + 1];
     let station = crate::sweep_smoothness::inspect_axis(
+        &retained,
+        &caps,
+        crate::sweep_smoothness::Axis::Station,
+        2_000_000,
+    )
+    .unwrap();
+    assert!(station.extraction_complete && station.g1_certified && station.g2_certified);
+    assert_eq!(station.edge_ids.len(), 4);
+}
+
+#[test]
+fn rectangular_rational_wall_outside_the_rails_class_keeps_joint_certificates() {
+    check_polygonal_rational_wall_certificates(false);
+}
+
+#[test]
+fn oblique_quadrilateral_rational_walls_keep_joint_certificates() {
+    check_polygonal_rational_wall_certificates(true);
+}
+
+fn check_polygonal_rational_wall_certificates(oblique: bool) {
+    let corners = [[0., 0.], [4., 0.], [4., 4.], [0., 4.]];
+    let sections = [0., 4., 8.].map(|z| {
+        vec![(0..4)
+            .map(|i| {
+                let [x, y] = corners[i];
+                let [xx, yy] = corners[(i + 1) % 4];
+                crate::line(vec![x, y, z], vec![xx, yy, z])
+            })
+            .collect::<Vec<_>>()]
+    });
+    let mut reference = crate::rational_section_loft(&sections).unwrap();
+    let wall_count = reference.faces.len() - 2;
+    for face in &mut reference.0.faces[..wall_count] {
+        let surface = &mut face.surface;
+        let start = surface.control_points[0][0].clone();
+        let end = surface.control_points[1][1].clone();
+        surface.degree_u = 2;
+        surface.degree_v = 4;
+        surface.knots_u = [vec![0.; 3], vec![1.; 3]].concat();
+        surface.knots_v = [vec![0.; 5], vec![1.; 5]].concat();
+        surface.control_points = (0..=2)
+            .map(|u| {
+                let f = u as f64 * 0.5;
+                (0..=4)
+                    .map(|v| {
+                        vec![
+                            start[0] + f * (end[0] - start[0]),
+                            start[1] + f * (end[1] - start[1]),
+                            start[2] + v as f64,
+                        ]
+                    })
+                    .collect()
+            })
+            .collect();
+        surface.weights = vec![vec![1.; 5]; 3];
+        surface.weights[1][2] = 4.;
+        // Choose the central height so the homogeneous quotient has
+        // zero station acceleration on the internal side of each patch.
+        // The transverse acceleration agrees because the x/y net and
+        // weights are symmetric across the two station endpoints.
+        surface.control_points[1][2][2] = if start[2] == 0. { 3.5 } else { 4.5 };
+    }
+    if oblique {
+        reference = crate::transform::affine(&reference, [
+            [1., 0., 0., 0.],
+            [0., 1., 0., 0.],
+            [0.25, 0.25, 1., 0.],
+            [0., 0., 0., 1.],
+        ]).unwrap();
+    }
+    reference.validate().unwrap();
+    let wall = &reference.faces[0].surface;
+    let chart = nurbs_core::surface_injectivity::certify_chart(wall, 1000).unwrap();
+    assert!(chart.proven, "{chart:?}");
+    assert_eq!(chart.reason, if oblique {
+        "global-rational-convex-quadrilateral-jacobian"
+    } else {
+        "global-rational-rectangle-jacobian"
+    });
+    assert!(!nurbs_core::surface_injectivity::certify_chart(wall, chart.spans - 1).unwrap().proven);
+
+    let mut retained = reference.clone();
+    for face in &mut retained.0.faces[..wall_count] {
+        for weight in face.surface.weights.iter_mut().flatten() {
+            *weight *= 2.;
+        }
+    }
+    let full = inspect(&reference, &retained, 1e-8, 0., limits()).unwrap();
+    assert!(full.continuous_bound && full.error_upper == Some(0.));
+    assert!(full.certified, "{:?}; volumes {:?}",
+        full.reason, full.reference_volume.as_ref().map(|v| (
+            v.boundary.agreement.all_equal,
+            v.boundary.intersections.faces.all_faces_injective,
+            v.boundary.intersections.pairs.all_pairs_classified,
+            &v.boundary.intersections.faces,
+        )));
+    let caps = [wall_count, wall_count + 1];
+    let station = crate::sweep_smoothness::inspect_axis(
         &retained, &caps, crate::sweep_smoothness::Axis::Station, 2_000_000,
     ).unwrap();
-    assert!(station.extraction_complete && station.g1_certified && station.g2_certified);
+    assert!(station.extraction_complete && station.g1_certified && station.g2_certified,
+        "complete={} g1={} g2={}", station.extraction_complete, station.g1_certified, station.g2_certified);
     assert_eq!(station.edge_ids.len(), 4);
 }

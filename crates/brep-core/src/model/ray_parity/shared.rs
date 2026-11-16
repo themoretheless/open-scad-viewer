@@ -30,6 +30,20 @@ pub(crate) fn classify_surface_ray(
         domain_cells: 0,
     };
     for (face, s) in surfaces.iter().enumerate() {
+        s.validate()?;
+        // A positive-weight surface lies in the convex hull of its control
+        // points. Strict axis separation excludes the entire forward ray,
+        // including its origin, without restricting the spline or rounding.
+        if (0..3).any(|axis| {
+            let coordinates = s.control_points.iter().flatten().map(|p| p[axis]);
+            let origin = point[axis];
+            if direction[axis] >= 0. && coordinates.clone().all(|value| value < origin) {
+                return true;
+            }
+            direction[axis] <= 0. && coordinates.clone().all(|value| value > origin)
+        }) {
+            continue;
+        }
         let uv = [
             [s.knots_u[s.degree_u], s.knots_u[s.control_points.len()]],
             [s.knots_v[s.degree_v], s.knots_v[s.control_points[0].len()]],

@@ -133,7 +133,7 @@ async function handleAsset(request) {
 
 self.addEventListener('fetch', event => {
   const request = event.request
-  if (request.method !== 'GET') return
+  if (request.method !== 'GET' || new URL(request.url).pathname === '/__openscada/mcp-editor') return
 
   if (request.mode === 'navigate' || request.destination === 'document') {
     event.respondWith(handleNavigation(request))

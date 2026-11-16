@@ -4,7 +4,7 @@
 use super::*;
 use crate::surface_injectivity::{PeriodicExtrusionReport, certify_periodic_extrusion};
 use num_rational::BigRational as Q;
-use num_traits::{One, Zero};
+use num_traits::{One, ToPrimitive, Zero};
 #[derive(Clone, Copy, Debug)]
 pub struct PeriodicSSBuildLimits {
     pub max_pairs: usize,
@@ -131,7 +131,7 @@ pub(super) fn attempt(
         return Ok(None);
     }
     let axis = usize::from(s.periodic_v);
-    let Some((normal, height, ranges)) = rectangle(surfaces[1 - index])? else {
+    let Some((normal, height, ranges)) = rectangle(source.evaluation_surfaces()[1 - index])? else {
         return Ok(None);
     };
     let proof = certify_periodic_extrusion(s, axis, limits.max_pairs, limits.max_cells)?;
@@ -319,5 +319,112 @@ impl QualifiedPeriodicPlaneSS {
                 && self.support.regular_interior,
             "Original periodic section ownership changed",
         )
+    }
+
+    /// Lift a regular complete section into exact shared world/UV edges.
+    /// Each edge covers a bounded portion of one period of the original chart.
+    /// Requires an interior transverse parameter for strict fiber inclusion.
+    pub fn to_root_wire(
+        &self,
+        limits: OriginalSsCurveLimits,
+        max_chart_attempts: usize,
+    ) -> Result<OriginalSsRootWire> {
+        check(
+            self.kind() == PeriodicPlaneSSKind::ClosedContour && max_chart_attempts > 0,
+            "A regular closed periodic section and positive chart budget are required",
+        )?;
+        let surfaces = [self.source.first(), self.source.second()];
+        let surface = surfaces[self.data.surface];
+        let knots = [&surface.knots_u, &surface.knots_v][self.data.axis];
+        let free = 2 * self.data.surface + self.data.axis;
+        let axis = [
+            FiberAxis::FirstU,
+            FiberAxis::FirstV,
+            FiberAxis::SecondU,
+            FiberAxis::SecondV,
+        ][free];
+        let [a, b] = surfaces.map(crate::analysis::surface_boundary::domains);
+        let domain = [a[0], a[1], b[0], b[1]];
+        let [lo, hi] = domain[free];
+        let period = hi - lo;
+        let transverse = 2 * self.data.surface + (1 - self.data.axis);
+        let parameter = self
+            .transverse_parameter()
+            .ok_or_else(|| crate::input("Missing periodic section parameter"))?;
+        let center = parameter
+            .to_f64()
+            .ok_or_else(|| crate::input("Periodic section parameter has no finite enclosure"))?;
+        let [shore_lo, shore_hi] = domain[transverse];
+        let radius = (center - shore_lo).min(shore_hi - center) / 4.;
+        let transverse_window = [center - radius, center + radius];
+        check(
+            q(transverse_window[0])? < *parameter && *parameter < q(transverse_window[1])?,
+            "Periodic section has no interior transverse chart",
+        )?;
+        let mut pending: Vec<_> = knots
+            .windows(2)
+            .filter(|k| lo <= k[0] && k[0] < k[1] && k[1] <= hi)
+            .map(|k| [k[0], k[1]])
+            .rev()
+            .collect();
+        let mut charts = Vec::new();
+        let mut attempts = 0;
+        while let Some([lo, hi]) = pending.pop() {
+            if attempts == max_chart_attempts {
+                return Err(crate::resource(
+                    "Periodic section wire chart budget exhausted",
+                ));
+            }
+            attempts += 1;
+            let mut window = domain;
+            window[transverse] = transverse_window;
+            let padding = (hi - lo) / 32.;
+            window[free] = [lo - padding, hi + padding];
+            if window[free][1] - window[free][0] < period {
+                let result = self.source.certify_quotient(
+                    window,
+                    axis,
+                    FiberLimits {
+                        max_rectangles: limits.native_rectangles,
+                        preconditioner: None,
+                    },
+                )?;
+                if let Some(fiber) = result.into_fiber() {
+                    charts.push((lo, Arc::new(OriginalSsRootCurve::from_quotient(fiber))));
+                    continue;
+                }
+            }
+            let mid = lo.midpoint(hi);
+            check(
+                lo < mid && mid < hi,
+                "Periodic section chart cannot be refined",
+            )?;
+            pending.extend([[mid, hi], [lo, mid]]);
+        }
+        let points = charts
+            .iter()
+            .map(|(lo, curve)| OriginalSsRootPoint::new(curve.clone(), *lo).map(Arc::new))
+            .collect::<Result<Vec<_>>>()?;
+        let edges = charts
+            .into_iter()
+            .enumerate()
+            .map(|(i, (_, curve))| {
+                let start =
+                    bind_original_ss_port(points[i].clone(), curve.clone(), [0; 4], limits)?;
+                let end = QualifiedOriginalSsPort::bind_with_inferred_phase(
+                    points[(i + 1) % points.len()].clone(),
+                    curve,
+                    limits,
+                )?;
+                let mut expected_phase = [0; 4];
+                expected_phase[free] = i32::from(i + 1 == points.len());
+                check(
+                    end.phase() == expected_phase,
+                    "Periodic section edge has wrong phase",
+                )?;
+                OriginalSsRootEdge::new(start, end)
+            })
+            .collect::<Result<Vec<_>>>()?;
+        OriginalSsRootWire::new(edges)
     }
 }

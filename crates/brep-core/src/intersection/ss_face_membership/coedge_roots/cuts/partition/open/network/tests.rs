@@ -87,15 +87,22 @@ fn original_four_root_network_builds_both_caps_on_both_operands() {
     let reps = qualify_cut_representatives(&roots, Default::default()).unwrap();
     assert_eq!(reps.nodes().len(), 4);
     let input = partition_cut_representatives(&reps, Default::default()).unwrap();
-    let top = qualify_open_ss_path(&input, request(&input, true), Default::default()).unwrap();
-    let bottom = qualify_open_ss_path(&input, request(&input, false), Default::default()).unwrap();
-    let network = partition_open_ss_network(&[&top, &bottom], Default::default()).unwrap();
+    let paths = discover_open_ss_paths(&input, 0, Default::default()).unwrap();
+    let [top, bottom] = paths.as_slice() else {
+        panic!("Expected two retained intervals among four boundary events");
+    };
+    assert_eq!(top.request(), &request(&input, true));
+    assert_eq!(bottom.request(), &request(&input, false));
+    assert!(discover_open_ss_paths(&input, 0, OpenSSPathLimits {
+        operations: 1, ..Default::default()
+    }).is_err());
+    let network = partition_open_ss_network(&[top, bottom], Default::default()).unwrap();
     assert_eq!(network.faces()[0].len(), 3);
     assert_eq!(network.faces()[1].len(), 3);
     assert_eq!(network.cuts().len(), 2);
     for side in 0..2 {
         assert_eq!(network.models()[side].faces.len(), 3);
-        for (path, cut) in [&top, &bottom].into_iter().zip(network.cuts()) {
+        for (path, cut) in [top, bottom].into_iter().zip(network.cuts()) {
             for (i, &e) in cut.sides[side].edges.iter().enumerate() {
                 assert_eq!(
                     network.models()[side].edges[e].curve,
@@ -105,11 +112,11 @@ fn original_four_root_network_builds_both_caps_on_both_operands() {
         }
     }
     network.reverify().unwrap();
-    let reversed = partition_open_ss_network(&[&bottom, &top], Default::default()).unwrap();
+    let reversed = partition_open_ss_network(&[bottom, top], Default::default()).unwrap();
     reversed.reverify().unwrap();
     assert_eq!(reversed.models()[0].faces.len(), 3);
-    let single = partition_open_ss_network(&[&top], Default::default()).unwrap();
-    let pair = partition_open_ss_pair(&top, Default::default()).unwrap();
+    let single = partition_open_ss_network(&[top], Default::default()).unwrap();
+    let pair = partition_open_ss_pair(top, Default::default()).unwrap();
     assert_eq!(single.models(), pair.models());
     assert_eq!(m, before);
 }
@@ -214,65 +221,14 @@ fn crossing_source_branches_share_the_original_junction_on_both_actual_operands(
     .unwrap();
     let reps = qualify_cut_representatives(&roots, Default::default()).unwrap();
     let input = partition_cut_representatives(&reps, Default::default()).unwrap();
-    let mut paths = Vec::new();
-    for branch in original.branches() {
-        let ends: Vec<_> = original
-            .vertices()
-            .iter()
-            .enumerate()
-            .filter(|(v, _)| {
-                branch
-                    .edges
-                    .iter()
-                    .filter(|&&e| original.edges()[e].vertices.contains(v))
-                    .count()
-                    == 1
-            })
-            .map(|(v, _)| v)
-            .collect();
-        assert_eq!(ends.len(), 2);
-        let mut at = ends[0];
-        let mut pending = branch.edges.clone();
-        let mut steps = Vec::new();
-        while !pending.is_empty() {
-            let i = pending
-                .iter()
-                .position(|&e| original.edges()[e].vertices.contains(&at))
-                .unwrap();
-            let e = pending.remove(i);
-            let ports = original.edges()[e].vertices;
-            let reversed = ports[0] != at;
-            at = ports[usize::from(!reversed)];
-            steps.push(OpenPathStep {
-                original_edge: e,
-                reversed,
-            });
-        }
-        let node = |v| {
-            reps.nodes()
-                .iter()
-                .position(|n| n.original_vertex == Some(v))
-                .unwrap()
-        };
-        paths.push(
-            qualify_open_ss_path(
-                &input,
-                OpenSSPathRequest {
-                    side: 0,
-                    start_node: node(ends[0]),
-                    end_node: node(ends[1]),
-                    steps,
-                },
-                Default::default(),
-            )
-            .unwrap(),
-        );
-    }
+    let paths = discover_open_ss_paths(&input, 0, Default::default()).unwrap();
     assert_eq!(paths.len(), 2);
     for p in &paths {
         partition_open_ss_pair(p, Default::default()).unwrap();
     }
-    let result = partition_open_ss_network(&[&paths[0], &paths[1]], Default::default()).unwrap();
+    let result = discover_open_ss_network(&input, 0, Default::default(), Default::default())
+        .unwrap()
+        .unwrap();
     assert_eq!(result.cuts().len(), 3);
     assert_eq!(result.ports().len(), 1);
     for side in 0..2 {

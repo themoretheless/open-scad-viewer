@@ -7,12 +7,12 @@ mod cuts;
 mod query_identity;
 pub use cuts::{
     CutNode, CutPartitionLimits, CutRepresentative, CutRepresentativeLimits, OpenPathStep,
-    OpenSSFaceLimits, OpenSSNetworkCut, OpenSSNetworkPort, OpenSSPairSide, OpenSSPathLimits,
+    OpenSSFaceLimits, OpenSSBooleanEdgeUse, OpenSSNetworkCut, OpenSSNetworkPort, OpenSSPairSide, OpenSSPathLimits,
     OpenSSPathRequest, OpenSSRootGuard, OpenSSSegment, PartitionedCutVertex,
     QualifiedCutPartitions, QualifiedCutRepresentatives, QualifiedOpenSSFace,
     QualifiedOpenSSNetwork, QualifiedOpenSSPair, QualifiedOpenSSPath,
     partition_cut_representatives, partition_open_ss_network, partition_open_ss_pair,
-    partition_open_ss_path, qualify_cut_representatives, qualify_open_ss_path,
+    partition_open_ss_path, qualify_cut_representatives, assemble_exact_patch_solid, OpenSSIntersectionCompletionLimits, discover_open_ss_network, discover_open_ss_path, discover_open_ss_paths, qualify_open_ss_path,
 };
 #[cfg(test)]
 mod tests;

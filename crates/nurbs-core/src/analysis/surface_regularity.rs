@@ -26,15 +26,19 @@ pub fn inspect(surface: &Surface, max_cells: usize) -> Result<Report> {
         "Regularity needs 1..100000 cells",
     )?;
     let mut triangular_work = 0;
-    // A cheap proposal limits the exact trial to coupled weight nets.
-    // Rounded products only select the trial and never prove rank.
-    let w = &surface.weights;
-    let coupled = w.iter().skip(1).any(|row| {
-        row.iter().zip(&w[0]).skip(1).any(|(&x, &y)| x * w[0][0] != row[0] * y)
-    });
-    if coupled && crate::surface_injectivity::rational_triangular::certify(
+    use crate::surface_injectivity::rational_triangular;
+    let coupled = rational_triangular::likely_coupled(surface);
+    if coupled && (rational_triangular::certify(
         surface, &mut triangular_work, max_cells / 2,
-    ).is_some() {
+    ).is_some() || crate::surface_injectivity::rational_rectangle::certify(
+        surface, &mut triangular_work, max_cells / 2,
+    ).is_some() || crate::surface_injectivity::rational_quadrilateral::certify(
+        surface, &mut triangular_work, max_cells / 2,
+    ).is_some() || crate::surface_injectivity::rational_cones::certify(
+        surface, &mut triangular_work, max_cells / 2,
+    ).is_some() || crate::surface_injectivity::rational_rails::certify(
+        surface, &mut triangular_work, max_cells / 2,
+    ).is_some()) {
         return Ok(Report {
             spanwise_regular: true,
             interior_basis_c1: true,

@@ -24,118 +24,208 @@ impl QualifiedRootShellCharts {
     /// Bound oriented flux on the trimmed supports. Interpreting it as
     /// material volume requires a geometrically admitted boundary.
     pub fn signed_flux(&self, limits: RootShellFluxLimits) -> Result<RootShellFluxReport> {
-        if limits.axis >= 3
-            || !limits.origin.is_finite()
-            || !(1..=65536).contains(&limits.max_cells)
-            || !(1..=1_000_000).contains(&limits.max_spans)
-            || limits.max_depth > 24
-        {
-            return Err(unproved("Invalid root shell flux limits"));
-        }
-        let source = self.source();
-        let topology = source.topology();
-        let mut work = FluxWork {
-            limits,
-            cells: 0,
-            spans: 0,
-        };
-        let mut domains = Vec::new();
-        let mut pending = BinaryHeap::new();
-        let mut tree = Vec::new();
-        let mut roots = Vec::new();
-        for face_use in &topology.shells[0].faces {
-            let face = &topology.faces[face_use.face];
-            let surface = &face.surface;
-            let native = [
-                [
-                    surface.knots_u[surface.degree_u],
-                    surface.knots_u[surface.control_points.len()],
-                ],
-                [
-                    surface.knots_v[surface.degree_v],
-                    surface.knots_v[surface.control_points[0].len()],
-                ],
-            ];
-            // Positive rational weights preserve an exactly constant
-            // coordinate of the control net across the entire surface.
-            if surface
-                .control_points
-                .iter()
-                .flatten()
-                .all(|point| point[limits.axis] == limits.origin)
-            {
-                continue;
-            }
-            let domain = Arc::new(QualifiedRootPeriodicFace::qualify(
-                source.clone(),
-                face_use.face,
-                limits.winding,
-            )?);
-            let ranges = native_flux_cover(
-                self.face_bounds(face_use.face),
-                native,
-                &winding::face_periods(surface),
-                [surface.periodic_u, surface.periodic_v],
-            )?;
-            let face_index = domains.len();
-            domains.push((surface, domain, face_use.reversed));
-            let (surface, domain, reversed) = &domains[face_index];
-            for &u in &ranges[0] {
-                for &v in &ranges[1] {
-                    let cell = work
-                        .evaluate(surface, domain, [u, v], face_index, 0, *reversed)?
-                        .ok_or_else(|| unproved("Initial root shell flux cover exceeds budget"))?;
-                    roots.push(push_flux_node(&mut tree, &mut pending, cell, None));
-                }
-            }
-        }
-        while work.cells < limits.max_cells {
-            let Some(priority) = pending.pop() else { break };
-            let index = priority.index;
-            let parent = &tree[index].cell;
-            let Some(rectangles) = parent.split(limits.max_depth) else {
-                continue;
-            };
-            let (surface, domain, reversed) = &domains[parent.face];
-            let mut children = Vec::new();
-            let mut evaluated = false;
-            for rectangle in rectangles {
-                let child = work.evaluate(
-                    surface,
-                    domain,
-                    rectangle,
-                    parent.face,
-                    parent.depth + 1,
-                    *reversed,
-                )?;
-                evaluated |= child.is_some();
-                children.push(match child {
-                    Some(child) => child,
-                    None => parent.enclose_child(rectangle)?,
-                });
-            }
-            if !evaluated {
-                continue;
-            }
-            let [left, right]: [FluxCell; 2] = children
-                .try_into()
-                .map_err(|_| unproved("Incomplete flux subdivision"))?;
-            let left = push_flux_node(&mut tree, &mut pending, left, Some(index));
-            let right = push_flux_node(&mut tree, &mut pending, right, Some(index));
-            tree[index].children = Some([left, right]);
-            refine_flux_ancestors(&mut tree, index)?;
-        }
-        let sum = roots
-            .into_iter()
-            .try_fold(Interval::point(0.), |sum, index| {
-                sum.add(tree[index].cell.bound)
-            })?;
-        Ok(RootShellFluxReport {
-            signed_bounds: [sum.lo, sum.hi],
-            cells: work.cells,
-            spans: work.spans,
-        })
+        integrate_shell_flux(self.source(), Some(self), limits)
     }
+}
+
+impl RootBrep {
+    /// Integrate the oriented trims of one topologically closed shell.
+    /// A material volume still requires a separate shell embedding proof.
+    pub fn signed_trim_flux(
+        self: &Arc<Self>,
+        limits: RootShellFluxLimits,
+    ) -> Result<RootShellFluxReport> {
+        integrate_shell_flux(self, None, limits)
+    }
+}
+
+use super::shell_charts::RootShellTrimDomain;
+
+fn validate_flux_limits(limits: RootShellFluxLimits) -> Result<()> {
+    if limits.axis >= 3
+        || !limits.origin.is_finite()
+        || !(1..=65536).contains(&limits.max_cells)
+        || !(1..=1_000_000).contains(&limits.max_spans)
+        || limits.max_depth > 24
+    {
+        return Err(unproved("Invalid root shell flux limits"));
+    }
+    Ok(())
+}
+
+fn integrate_shell_flux(
+    source: &Arc<RootBrep>,
+    charts: Option<&QualifiedRootShellCharts>,
+    limits: RootShellFluxLimits,
+) -> Result<RootShellFluxReport> {
+    validate_flux_limits(limits)?;
+    let topology = source.topology();
+    if topology.shells.len() != 1 || !topology.shells[0].closed {
+        return Err(unproved("Signed trim flux requires one closed root shell"));
+    }
+    if charts.is_none() {
+        QualifiedRootPeriodicUvClosure::qualify(
+            source.clone(),
+            topology.loops.iter().map(|wire| wire.coedges.len()).sum(),
+        )?;
+    }
+    let mut work = FluxWork {
+        limits,
+        cells: 0,
+        spans: 0,
+    };
+    let mut domains = Vec::new();
+    let mut pending = BinaryHeap::new();
+    let mut tree = Vec::new();
+    let mut roots = Vec::new();
+    for face_use in &topology.shells[0].faces {
+        let face = &topology.faces[face_use.face];
+        let surface = &face.surface;
+        let native = [
+            [
+                surface.knots_u[surface.degree_u],
+                surface.knots_u[surface.control_points.len()],
+            ],
+            [
+                surface.knots_v[surface.degree_v],
+                surface.knots_v[surface.control_points[0].len()],
+            ],
+        ];
+        // Positive rational weights preserve an exactly constant
+        // coordinate of the control net across the entire surface.
+        if surface
+            .control_points
+            .iter()
+            .flatten()
+            .all(|point| point[limits.axis] == limits.origin)
+        {
+            continue;
+        }
+        if zero_axis_flux(surface, limits.axis) {
+            continue;
+        }
+        let periodic = [surface.periodic_u, surface.periodic_v];
+        let path_limits = ss::OriginalSsPathLimits {
+            max_segments: limits.winding.max_segments,
+            geometry: limits.winding.geometry,
+            ..Default::default()
+        };
+        let (domain, bounds) = if let Some(charts) = charts {
+            let domain = match charts.trim_domain(face_use.face) {
+                RootShellTrimDomain::Lifted(_) => {
+                    RootShellTrimDomain::Lifted(Arc::new(QualifiedRootPeriodicFace::qualify(
+                        source.clone(),
+                        face_use.face,
+                        limits.winding,
+                    )?))
+                }
+                RootShellTrimDomain::Quotient { .. } => RootShellTrimDomain::Quotient {
+                    source: source.clone(),
+                    face: face_use.face,
+                    limits: path_limits,
+                },
+            };
+            (domain, charts.face_bounds(face_use.face))
+        } else {
+            match QualifiedRootPeriodicFace::qualify(source.clone(), face_use.face, limits.winding)
+            {
+                Ok(domain) => (
+                    RootShellTrimDomain::Lifted(Arc::new(domain)),
+                    winding::lifted_loop_bounds(
+                        source,
+                        face_use.face,
+                        face.outer,
+                        &mut limits.winding.geometry.clone(),
+                    )?,
+                ),
+                Err(_) if surface.periodic_u != surface.periodic_v => (
+                    RootShellTrimDomain::Quotient {
+                        source: source.clone(),
+                        face: face_use.face,
+                        limits: path_limits,
+                    },
+                    periodic_material::periodic_face_cover_root(
+                        source,
+                        face_use.face,
+                        limits.winding.geometry,
+                    )?,
+                ),
+                Err(error) => return Err(error),
+            }
+        };
+        let ranges = native_flux_cover(bounds, native, &winding::face_periods(surface), periodic)?;
+        let face_index = domains.len();
+        domains.push((surface, domain, face_use.reversed));
+        let (surface, domain, reversed) = &domains[face_index];
+        for &u in &ranges[0] {
+            for &v in &ranges[1] {
+                let cell = work
+                    .evaluate(surface, domain, [u, v], face_index, 0, *reversed)?
+                    .ok_or_else(|| unproved("Initial root shell flux cover exceeds budget"))?;
+                roots.push(push_flux_node(&mut tree, &mut pending, cell, None));
+            }
+        }
+    }
+    while work.cells < limits.max_cells {
+        let Some(priority) = pending.pop() else { break };
+        let index = priority.index;
+        let parent = &tree[index].cell;
+        let Some(rectangles) = parent.split(limits.max_depth) else {
+            continue;
+        };
+        let (surface, domain, reversed) = &domains[parent.face];
+        let mut children = Vec::new();
+        let mut evaluated = false;
+        for rectangle in rectangles {
+            let child = work.evaluate(
+                surface,
+                domain,
+                rectangle,
+                parent.face,
+                parent.depth + 1,
+                *reversed,
+            )?;
+            evaluated |= child.is_some();
+            children.push(match child {
+                Some(child) => child,
+                None => parent.enclose_child(rectangle)?,
+            });
+        }
+        if !evaluated {
+            continue;
+        }
+        let [left, right]: [FluxCell; 2] = children
+            .try_into()
+            .map_err(|_| unproved("Incomplete flux subdivision"))?;
+        let left = push_flux_node(&mut tree, &mut pending, left, Some(index));
+        let right = push_flux_node(&mut tree, &mut pending, right, Some(index));
+        tree[index].children = Some([left, right]);
+        refine_flux_ancestors(&mut tree, index)?;
+    }
+    let sum = roots
+        .into_iter()
+        .try_fold(Interval::point(0.), |sum, index| {
+            sum.add(tree[index].cell.bound)
+        })?;
+    Ok(RootShellFluxReport {
+        signed_bounds: [sum.lo, sum.hi],
+        cells: work.cells,
+        spans: work.spans,
+    })
+}
+
+fn zero_axis_flux(surface: &Surface, axis: usize) -> bool {
+    // The projected rational surface is independent of V when each
+    // U-row has identical projected points and weights along V.
+    surface
+        .control_points
+        .iter()
+        .zip(&surface.weights)
+        .all(|(row, weights)| {
+            row.iter().zip(weights).all(|(point, &weight)| {
+                weight == weights[0] && (0..3).filter(|&k| k != axis).all(|k| point[k] == row[0][k])
+            })
+        })
 }
 
 fn native_flux_cover(
@@ -294,7 +384,7 @@ impl FluxWork {
     fn evaluate(
         &mut self,
         surface: &Surface,
-        domain: &Arc<QualifiedRootPeriodicFace>,
+        domain: &RootShellTrimDomain,
         rectangle: [[f64; 2]; 2],
         face: usize,
         depth: usize,
@@ -304,8 +394,7 @@ impl FluxWork {
             return Ok(None);
         }
         self.cells += 1;
-        let classification = domain.classify_box(rectangle).ok();
-        let region = classification.as_ref().map(|proof| proof.region());
+        let region = domain.classify_box(rectangle).ok();
         let mut density = Interval::point(0.);
         let interval = match region {
             Some(RootFaceRegion::OutsideOuter | RootFaceRegion::ExcludedByHoles(_)) => {
@@ -327,7 +416,7 @@ impl FluxWork {
                 let Some(bound) = report.bound else {
                     return Ok(None);
                 };
-                let inside = matches!(region, Some(RootFaceRegion::InsideSupport));
+                let inside = region == Some(RootFaceRegion::InsideSupport);
                 let [lo, hi] = bound.density;
                 density = if inside {
                     Interval::new(lo, hi)?
@@ -393,6 +482,7 @@ pub struct QualifiedRootShellPositiveFlux {
     contacts: QualifiedRootShellContacts,
     limits: RootShellFluxLimits,
     report: RootShellFluxReport,
+    band_measure: Option<Box<super::periodic_band::PeriodicBandMeasure>>,
 }
 
 impl QualifiedRootShellPositiveFlux {
@@ -400,7 +490,21 @@ impl QualifiedRootShellPositiveFlux {
         contacts: QualifiedRootShellContacts,
         limits: RootShellFluxLimits,
     ) -> Result<Self> {
-        let report = contacts.charts().signed_flux(limits)?;
+        Self::qualify_with_band_measure(contacts, limits, None)
+    }
+
+    pub(super) fn qualify_with_band_measure(
+        contacts: QualifiedRootShellContacts,
+        limits: RootShellFluxLimits,
+        band_measure: Option<super::periodic_band::PeriodicBandMeasure>,
+    ) -> Result<Self> {
+        validate_flux_limits(limits)?;
+        let (report, band_measure) = match band_measure.and_then(|measure| {
+            measure.report(limits).ok().map(|report| (report, Some(Box::new(measure))))
+        }) {
+            Some(measured) => measured,
+            None => (contacts.charts().signed_flux(limits)?, None),
+        };
         if !report.has_positive_lower_bound() {
             return Err(unproved(
                 "Root shell signed flux lacks a strictly positive lower bound",
@@ -410,6 +514,7 @@ impl QualifiedRootShellPositiveFlux {
             contacts,
             limits,
             report,
+            band_measure,
         })
     }
 
@@ -425,7 +530,9 @@ impl QualifiedRootShellPositiveFlux {
     /// The test uses a cover by UV rectangles and may conservatively fail.
     /// Interior containment remains possible after boundary separation.
     pub fn prove_boundary_separation(&self, other: &Self, max_cells: usize) -> Result<()> {
-        self.contacts.charts().prove_cross_shell_separation(other.contacts.charts(), max_cells)
+        self.contacts
+            .charts()
+            .prove_cross_shell_separation(other.contacts.charts(), max_cells)
     }
 
     /// Determine containment after proving that the two boundaries are disjoint.
@@ -436,9 +543,7 @@ impl QualifiedRootShellPositiveFlux {
         max_separation_cells: usize,
         limits: crate::mixed_root_model::RootSolidPointLimits,
     ) -> Result<crate::mixed_root_model::RootRelationKind> {
-        self.classify_shell_relation_with_rays(
-            other, &[direction], max_separation_cells, limits,
-        )
+        self.classify_shell_relation_with_rays(other, &[direction], max_separation_cells, limits)
     }
 
     /// Retry each witness with the supplied directions under divided work limits.
@@ -454,25 +559,35 @@ impl QualifiedRootShellPositiveFlux {
         if !(1..=16).contains(&count)
             || limits.ray_cells < count
             || limits.domain_queries < count
-            || directions.iter().any(|ray| {
-                !ray.iter().all(|x| x.is_finite()) || ray.iter().all(|x| *x == 0.)
-            })
+            || directions
+                .iter()
+                .any(|ray| !ray.iter().all(|x| x.is_finite()) || ray.iter().all(|x| *x == 0.))
         {
             return Err(unproved("Invalid root shell witness rays or work limits"));
         }
         self.prove_boundary_separation(other, max_separation_cells)?;
         let inside = |source: &Self, target: &Self| -> Result<bool> {
-            let vertex = source.source().topology().vertices.first()
+            let vertex = source
+                .source()
+                .topology()
+                .vertices
+                .first()
                 .ok_or_else(|| unproved("Root shell has no boundary witness"))?;
             let world = vertex.point.selector.enclose(limits.geometry)?.world;
-            target.contacts.charts().exclude_world_box(world, max_separation_cells)?;
+            target
+                .contacts
+                .charts()
+                .exclude_world_box(world, max_separation_cells)?;
             // The lower corner is in the same component of the target
             // complement as the exact source vertex.
             let point = world.map(|bounds| bounds[0]);
             for &direction in directions {
                 if let Some(parity) = target.classify_point(
-                    point, direction, limits.tolerance_uv,
-                    limits.ray_cells / count, limits.domain_queries / count,
+                    point,
+                    direction,
+                    limits.tolerance_uv,
+                    limits.ray_cells / count,
+                    limits.domain_queries / count,
                 )? {
                     return Ok(parity);
                 }
@@ -498,13 +613,26 @@ impl QualifiedRootShellPositiveFlux {
         domain_queries: usize,
     ) -> Result<Option<bool>> {
         use nurbs_core::trim_domain::Location;
-        let surfaces: Vec<_> = self.source().topology().faces.iter().map(|face| &face.surface).collect();
+        let surfaces: Vec<_> = self
+            .source()
+            .topology()
+            .faces
+            .iter()
+            .map(|face| &face.surface)
+            .collect();
         let report = crate::ray_parity::classify_surface_ray(
-            &surfaces, point, direction, tolerance_uv, ray_cells, domain_queries,
+            &surfaces,
+            point,
+            direction,
+            tolerance_uv,
+            ray_cells,
+            domain_queries,
             |face, uv, _| {
                 let location = match self.classify_face_box(face, uv) {
                     Ok(RootFaceRegion::InsideSupport) => Location::Inside,
-                    Ok(RootFaceRegion::OutsideOuter | RootFaceRegion::ExcludedByHoles(_)) => Location::Outside,
+                    Ok(RootFaceRegion::OutsideOuter | RootFaceRegion::ExcludedByHoles(_)) => {
+                        Location::Outside
+                    }
                     _ => Location::Unresolved,
                 };
                 Ok((location, 1))
@@ -523,7 +651,10 @@ impl QualifiedRootShellPositiveFlux {
         face: usize,
         domain: [[f64; 2]; 2],
     ) -> Result<RootFaceRegion> {
-        Ok(self.contacts.charts().trim_domain(face).classify_box(domain)?.region().clone())
+        self.contacts
+            .charts()
+            .trim_domain(face)
+            .classify_box(domain)
     }
 
     /// Materialize the certified shell as a single outer boundary of a body.
@@ -538,7 +669,10 @@ impl QualifiedRootShellPositiveFlux {
 
     pub fn reverify(&self) -> Result<()> {
         self.contacts.reverify(self.limits.winding.geometry)?;
-        let report = self.contacts.charts().signed_flux(self.limits)?;
+        let report = match &self.band_measure {
+            Some(measure) => measure.report(self.limits)?,
+            None => self.contacts.charts().signed_flux(self.limits)?,
+        };
         if !report.has_positive_lower_bound()
             || report.signed_bounds != self.report.signed_bounds
             || report.cells != self.report.cells

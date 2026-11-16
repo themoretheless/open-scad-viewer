@@ -203,8 +203,11 @@ fn assemble_closed_fiber_branches_impl(
     let first = &cover.fibers()[0];
     let sources = first.source();
     let product = cover.domain();
-    c1_source(sources.first(), [product[0], product[1]])?;
-    c1_source(sources.second(), [product[2], product[3]])?;
+    // The affine evaluator is equal to the original surface in the same UV
+    // clock. Continuity and injectivity thus transfer across redundant knots.
+    let [first, second] = sources.evaluation_surfaces();
+    c1_source(first, [product[0], product[1]])?;
+    c1_source(second, [product[2], product[3]])?;
     let roots = cover
         .fibers()
         .iter()
@@ -223,8 +226,8 @@ fn assemble_closed_fiber_branches_impl(
     )?;
     let mut injections = vec![];
     for (s, uv) in [
-        (sources.first(), [product[0], product[1]]),
-        (sources.second(), [product[2], product[3]]),
+        (first, [product[0], product[1]]),
+        (second, [product[2], product[3]]),
     ] {
         let proof = if s.periodic_u || s.periodic_v {
             let proof = surface_injectivity::certify_seam_glued_rectangle(

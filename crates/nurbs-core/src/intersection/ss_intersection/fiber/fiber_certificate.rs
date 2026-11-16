@@ -94,6 +94,7 @@ pub(super) fn certify(
         used: 0,
     };
     let run = (|| -> Result<()> {
+        let surfaces = source.evaluation_surfaces();
         let Some((a, ja)) = evaluate(surfaces[0], [domain[0], domain[1]], true, &mut budget)?
         else {
             out.reason = "rectangle-budget";

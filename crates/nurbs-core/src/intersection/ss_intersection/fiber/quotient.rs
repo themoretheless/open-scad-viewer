@@ -121,11 +121,9 @@ fn evaluate_sections(
     projection: Option<([[f64; 3]; 3], &[f64])>,
     budget: &mut Budget,
 ) -> Result<Option<Evaluation>> {
-    let s = if support == 0 {
-        source.first()
-    } else {
-        source.second()
-    };
+    // An exact affine evaluator keeps both the native UV clock and the
+    // original world map. Periodic carriers keep their authored sections.
+    let s = source.evaluation_surfaces()[support];
     let us = axes::sections(s, 0, domain[2 * support])?;
     let vs = axes::sections(s, 1, domain[2 * support + 1])?;
     let empty = I {

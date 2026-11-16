@@ -1,4 +1,4 @@
-//! Complete trim-aware exclusion forest for a Cartesian witness ball. This
+//! Complete trim-aware exclusion forest for a Cartesian source enclosure. This
 //! decides separation, rather than minimizing a point-to-surface distance.
 use super::*;
 use nurbs_core::{
@@ -8,8 +8,7 @@ use nurbs_core::{
 pub(super) fn exclude(
     solid: &QualifiedClosedSolid,
     face: usize,
-    witness: [f64; 3],
-    radius: f64,
+    target: [[f64; 2]; 3],
     max_cells: usize,
     max_domain: usize,
 ) -> Result<[usize; 2]> {
@@ -55,7 +54,7 @@ pub(super) fn exclude(
             Interval::new(d[1][0], d[1][1])?,
         )?;
         let bounds: [[f64; 2]; 3] = std::array::from_fn(|k| [b[k].lo, b[k].hi]);
-        if surface_distance::enclosure_distance(&bounds, &witness.map(|x| [x; 2]))?.0 > radius {
+        if surface_distance::enclosure_distance(&bounds, &target)?.0 > 0. {
             continue;
         }
         if domains < max_domain {
@@ -70,7 +69,7 @@ pub(super) fn exclude(
         let midpoint = d[axis][0] * 0.5 + d[axis][1] * 0.5;
         if depth == 64 || !(d[axis][0] < midpoint && midpoint < d[axis][1]) {
             return Err(unproved(
-                "Original retained ball contact or separation precision remains unresolved",
+                "Original retained enclosure contact or separation precision remains unresolved",
             ));
         }
         let mut a = d;

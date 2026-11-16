@@ -2,7 +2,10 @@
 //! exact period membership, including both seam aliases. No fitted geometry,
 //! component count, physical embedding or retained-region claim is inferred.
 use super::*;
-use crate::ss_intersection::{CoverageLimits, FiberCoverageReport, FiberCoverageStatus};
+use crate::ss_intersection::{
+    CoverageLimits, FiberCoverageReport, FiberCoverageStatus, QualifiedMixedFiberCoverage,
+};
+use std::sync::Arc;
 mod discovery;
 #[derive(Clone, Debug, PartialEq)]
 pub enum QuotientCoverageKind {
@@ -39,6 +42,7 @@ pub struct QualifiedQuotientCoverage {
     nodes: Vec<QuotientCoverageNode>,
     limits: CoverageLimits,
     report: FiberCoverageReport,
+    nonperiodic: Option<Arc<QualifiedMixedFiberCoverage>>,
 }
 pub struct QuotientCoverageResult {
     report: FiberCoverageReport,
@@ -56,11 +60,94 @@ impl QuotientCoverageResult {
     }
 }
 impl QualifiedQuotientCoverage {
+    /// Retain a complete original-product proof and its independently
+    /// certified quotient charts. With no periodic axes the quotient
+    /// identifies no parameters, so both proofs describe the same roots.
+    pub fn from_nonperiodic_mixed(
+        coverage: &QualifiedMixedFiberCoverage,
+        fibers: Vec<QualifiedQuotientFiber>,
+        limits: CoverageLimits,
+    ) -> Result<Self> {
+        let domain = coverage.domain();
+        validate(&fibers, domain, limits)?;
+        let sources = fibers[0].source();
+        check(
+            [sources.first(), sources.second()].into_iter().all(|s| !s.periodic_u && !s.periodic_v),
+            "A periodic quotient requires its own original-product forest",
+        )?;
+        check(
+            fibers.len() == coverage.fibers().len()
+                && fibers.iter().zip(coverage.fibers()).all(|(fiber, native)| {
+                    fiber.domain() == native.domain()
+                        && fiber.free_axis() == native.free_axis()
+                        && fiber.source().first() == native.source().first()
+                        && fiber.source().second() == native.source().second()
+                }),
+            "Quotient charts differ from the nonperiodic coverage proof",
+        )?;
+        let mut report = coverage.report().clone();
+        report.reason = "complete-nonperiodic-mixed-root-coverage";
+        for fiber in &fibers {
+            report.rectangles = report.rectangles.saturating_add(fiber.report().rectangles);
+        }
+        check(
+            report.cells <= limits.max_cells
+                && report.rectangles <= limits.max_rectangles
+                && coverage.depth_limit() <= limits.max_depth,
+            "Nonperiodic quotient coverage exceeds the requested work limits",
+        )?;
+        Ok(Self {
+            fibers,
+            domain,
+            nodes: vec![],
+            limits,
+            report,
+            nonperiodic: Some(Arc::new(coverage.clone())),
+        })
+    }
     pub fn fibers(&self) -> &[QualifiedQuotientFiber] {
         &self.fibers
     }
+    /// Original quotient forest nodes. A retained nonperiodic mixed proof
+    /// can certify complete coverage without materializing this forest.
     pub fn nodes(&self) -> &[QuotientCoverageNode] {
         &self.nodes
+    }
+    /// Closed original-coordinate enclosures of every root, paired with the
+    /// index of the verified owning chart. An enclosure may contain no roots.
+    pub fn root_enclosures(&self) -> Result<Vec<(usize, [[f64; 2]; 4])>> {
+        if self.nonperiodic.is_some() {
+            return Ok(self.fibers.iter().enumerate().map(|(i, fiber)| {
+                (i, fiber.domain())
+            }).collect());
+        }
+        let mut enclosures = Vec::new();
+        for node in &self.nodes {
+            let mut root = node.domain;
+            let chart = match &node.kind {
+                Some(QuotientCoverageKind::Chart(chart)) => *chart,
+                Some(QuotientCoverageKind::RootImage { chart, axis, report }) => {
+                    let image = report.root_image.ok_or_else(|| {
+                        crate::input("Missing quotient census root enclosure")
+                    })?;
+                    let free = axis.index();
+                    for (bounds, image) in root
+                        .iter_mut()
+                        .enumerate()
+                        .filter_map(|(axis, bounds)| (axis != free).then_some(bounds))
+                        .zip(image)
+                    {
+                        bounds[0] = bounds[0].max(image[0]);
+                        bounds[1] = bounds[1].min(image[1]);
+                    }
+                    *chart
+                }
+                Some(QuotientCoverageKind::Excluded(_) | QuotientCoverageKind::Split { .. }) => continue,
+                None => return Err(crate::input("Incomplete quotient census root enclosure")),
+            };
+            enclosures.push((chart, root));
+        }
+        Ok(enclosures)
     }
     pub fn report(&self) -> &FiberCoverageReport {
         &self.report
@@ -75,6 +162,13 @@ impl QualifiedQuotientCoverage {
     /// failed probes, with the same shared allowance. No stored verdict enters
     /// the reconstruction and no unresolved cell becomes a qualified leaf.
     pub fn reverify(&self) -> Result<()> {
+        if let Some(native) = &self.nonperiodic {
+            native.reverify()?;
+            for fiber in &self.fibers {
+                fiber.reverify()?;
+            }
+            return Ok(());
+        }
         let r = cover_quotient_fiber_box(&self.fibers, self.domain, self.limits)?;
         let fresh = r
             .into_coverage()

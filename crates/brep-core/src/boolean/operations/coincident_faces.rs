@@ -23,6 +23,13 @@ use nurbs_core::analysis::analytic_recognition::{
     AnalyticPrimitive, Recognition, certify_primitive, recognize_analytic_surface,
 };
 
+mod exact_overlap;
+pub(crate) use exact_overlap::{intersect_planar_pcurves, planar_boundaries_are_disjoint, reverse_exact, split_pcurve_on_line, subtract_planar_pcurves};
+pub use exact_overlap::{
+    exact_coplanar_intersection_patch, exact_coplanar_intersection_patches,
+    exact_convex_coplanar_overlap,
+};
+
 /// Carrier kind of a coincident face pair.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CarrierKind {

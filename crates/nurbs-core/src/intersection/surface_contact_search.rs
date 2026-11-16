@@ -64,7 +64,7 @@ pub fn search_domains(
         (1..=1_000_000).contains(&max_domain_cells),
         "Bound original domain classification work",
     )?;
-    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, false)
+    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, false, None)
 }
 fn natural(s: &Surface) -> [[f64; 2]; 2] {
     [
@@ -76,7 +76,17 @@ fn natural(s: &Surface) -> [[f64; 2]; 2] {
 /// remain explicit, including the current search cell. No mesh or seed convergence is
 /// used as a proof of absence. This searches surface charts, not trimmed faces.
 pub fn search(a: &Surface, b: &Surface, max_cells: usize) -> Result<Report> {
-    search_impl(a, b, max_cells, None, 0, false)
+    search_impl(a, b, max_cells, None, 0, false, None)
+}
+/// Search the closed product of two explicit native chart rectangles.
+/// A wrapped face must be covered in the native period by the caller.
+pub fn search_chart_rectangles(
+    a: &Surface,
+    b: &Surface,
+    rectangles: Cell,
+    max_cells: usize,
+) -> Result<Report> {
+    search_impl(a, b, max_cells, None, 0, false, Some(rectangles))
 }
 /// Search authored nonperiodic trimmed charts. Only complete outside
 /// classifications prune cells; only two inside classifications accept roots.
@@ -95,7 +105,7 @@ pub fn search_trimmed(
         (1..=1_000_000).contains(&max_domain_cells),
         "Trim contact work budget must be in 1..1000000",
     )?;
-    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, false)
+    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, false, None)
 }
 /// Sweep admission additionally prunes whole cells using outward oblique
 /// rational control hulls. Existing plain contact accounting stays unchanged.
@@ -114,7 +124,7 @@ pub fn search_trimmed_with_control_hulls(
         (1..=1_000_000).contains(&max_domain_cells),
         "Trim contact work budget must be in 1..1000000",
     )?;
-    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, true)
+    search_impl(a, b, max_cells, Some([domains[0],domains[1]]), max_domain_cells, true, None)
 }
 fn search_impl(
     a: &Surface,
@@ -123,6 +133,7 @@ fn search_impl(
     domains: Option<[&dyn DomainClassifier; 2]>,
     max_domain_cells: usize,
     control_hulls: bool,
+    rectangles: Option<Cell>,
 ) -> Result<Report> {
     a.validate()?;
     b.validate()?;
@@ -130,7 +141,16 @@ fn search_impl(
         (1..=100_000).contains(&max_cells),
         "Surface contact work budget must be in 1..100000",
     )?;
-    let initial = [natural(a), natural(b)];
+    let domains_uv = [natural(a), natural(b)];
+    let initial = rectangles.unwrap_or(domains_uv);
+    check(
+        initial.iter().zip(domains_uv).all(|(axes, native)| {
+            axes.iter().zip(native).all(|(&[lo, hi], [start, end])| {
+                start <= lo && lo < hi && hi <= end
+            })
+        }),
+        "Surface contact rectangles must have positive extent within native domains",
+    )?;
     let mut queue = VecDeque::from([initial]);
     let mut stalled = Vec::new();
     let mut cells = 0;
@@ -304,6 +324,32 @@ mod tests {
         assert!(!r.absence_proven);
         assert_eq!(r.unresolved, vec![[natural(&a), natural(&b)]]);
     }
+    #[test]
+    fn periodic_contact_search_keeps_only_the_certified_chart_cover() {
+        let profile = crate::curve::Curve {
+            degree: 1,
+            knots: vec![-0.25, 0., 0.25, 0.5, 0.75, 1., 1.25],
+            control_points: [[0., 0., 0.], [1., 0., 0.], [1., 1., 0.], [0., 1., 0.], [0., 0., 0.]]
+                .map(Vec::from).to_vec(),
+            weights: vec![1.; 5],
+            periodic: true,
+        };
+        let wall = crate::surface::extrude(&profile, [0., 0., 1.]).unwrap();
+        let mut section = plane();
+        for point in section.control_points.iter_mut().flatten() {
+            point[2] = 0.5;
+        }
+        assert!(!search(&wall, &section, 1).unwrap().absence_proven);
+        let cover = [[[0., 1.], [0., 0.25]], natural(&section)];
+        let report = search_chart_rectangles(&wall, &section, cover, 1).unwrap();
+        assert!(report.absence_proven);
+        assert_eq!(report.cells, 1);
+
+        let mut invalid = cover;
+        invalid[0][0][1] = 1.25;
+        assert!(search_chart_rectangles(&wall, &section, invalid, 1).is_err());
+    }
+
     #[test]
     fn coincident_charts_keep_full_parameter_coverage() {
         let a = plane();
