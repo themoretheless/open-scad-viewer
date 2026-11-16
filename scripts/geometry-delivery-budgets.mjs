@@ -35,6 +35,13 @@ const profiles=Object.freeze({
   'fba78e35f862c3259769f5d7a2458b6f060a61a104c5e7b94e3b13ec2d5da837':Object.freeze({
     version:12,geometryChunkBytes:6_280_000,totalAssetBytes:12_070_000,
   }),
+  // v13: exact a31807 bytes (G0 v108 / runtime v13 re-freeze). Measured locally:
+  // 6,311,061 packed geometry bytes and 12,169,021 total asset bytes; the kernel grew
+  // by 99,109 raw bytes and the integration batch added worker protocol v13 and
+  // kernel-job UI code. Caps keep a small reviewed margin.
+  'a3180741d578c3417b3e3d7b1c3f24f4ed9ec344d024a497a2b3342cddfbd974':Object.freeze({
+    version:13,geometryChunkBytes:6_320_000,totalAssetBytes:12_180_000,
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
