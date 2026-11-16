@@ -748,9 +748,14 @@ it('previews, applies and undoes a retained ruled loft from ordered sketch selec
  expect(analyzeNurbsBrep(result.bodies[0].brep!).signedVolumeMm3).toBeCloseTo(4*(2+c),6)
  expect(result.sketches).toEqual(before.sketches)
  await ui.click('↶');expect(ui.doc()).toEqual(before)
+ // Section order and winding are re-corresponded by the kernel, so the reversed selection lofts the same solid.
  await ui.click('Upper');await ui.click('Lower',true);await ui.click('B-rep loft')
- expect(ui.button('Apply · Enter').props.disabled).toBe(true)
- expect(ui.doc()).toEqual(before)
+ expect(ui.doc()).toEqual(before);expect(ui.button('Apply · Enter').props.disabled).toBe(false)
+ await ui.click('Apply · Enter')
+ const reversed=ui.doc();expect(reversed.bodies).toHaveLength(1)
+ expect(reversed.bodies[0].brep!.faces).toHaveLength(6)
+ expect(analyzeNurbsBrep(reversed.bodies[0].brep!).signedVolumeMm3).toBeCloseTo(4*(2+c),6)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
 })
 
 it('shares cell units between panes and snaps drawn corners to the configured grid',async()=>{
