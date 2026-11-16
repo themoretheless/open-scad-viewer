@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 316,
-  "unallocatedCount": 684,
+  "specifiedCount": 317,
+  "unallocatedCount": 683,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -4574,6 +4574,7 @@
       "nativeApi": "nurbs_core::surface_edit::decompose",
       "evidence": [
         "crates/nurbs-core/src/editing/surface_edit.rs",
+        "crates/nurbs-geometry/src/surface_decompose.rs",
         "crates/nurbs-core/tests/native_edits.rs",
         "docs/design/nurbs-native-edits.md",
         "crates/nurbs-core/examples/native_edits.rs"
@@ -8288,6 +8289,25 @@
       "remainingQualification": [
         "Lift an edited planar tensor control net through its exact rational inverse chart while retaining the original spline basis.",
         "The exact inverse accepts nonbinary plane coefficients. Every final pole must be representable as binary64 and satisfy the surface limits.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0317",
+      "name": "Общая точная двумерная проекция группы компланарных NURBS-поверхностей",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::exact_affine_hull::project_coplanar_surfaces",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/nurbs-core/tests/exact_shared_planar_projection_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-317-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-317-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Project a group into one exact planar coordinate system derived from the affine hull of all active surface images.",
+        "A two-dimensional combined active affine hull, up to 256 surfaces and one shared budget. Every member retains its own parameter basis.",
         "WASM and application integration are separate."
       ]
     }

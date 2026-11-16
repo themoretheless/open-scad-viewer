@@ -59,7 +59,7 @@ fn active(knots: &[f64], degree: usize, count: usize) -> impl Iterator<Item = us
 
 type Proof<T> = std::result::Result<T, Error>;
 
-fn classify(surface: &Surface, work: &mut Work) -> Proof<SurfaceAffineHull> {
+fn active_poles(surface: &Surface) -> impl Iterator<Item = [f64; 3]> + '_ {
     let u = active(
         &surface.knots_u,
         surface.degree_u,
@@ -70,12 +70,22 @@ fn classify(surface: &Surface, work: &mut Work) -> Proof<SurfaceAffineHull> {
         surface.degree_v,
         surface.control_points[0].len(),
     );
-    let mut points = u.flat_map(|i| {
+    u.flat_map(move |i| {
         v.clone().map(move |j| {
             let p = &surface.control_points[i][j];
             [p[0], p[1], p[2]]
         })
-    });
+    })
+}
+
+fn classify(surface: &Surface, work: &mut Work) -> Proof<SurfaceAffineHull> {
+    classify_poles(active_poles(surface), work)
+}
+
+fn classify_poles(
+    mut points: impl Iterator<Item = [f64; 3]>,
+    work: &mut Work,
+) -> Proof<SurfaceAffineHull> {
     let origin = points.next().expect("validated surface has active poles");
     let origin_q = lift(origin, work)?;
     let mut line = None;
@@ -184,49 +194,129 @@ pub fn project_planar_surface(surface: &Surface, max_work: u64) -> Result<Planar
 }
 
 fn project(surface: &Surface, work: &mut Work) -> Proof<PlanarProjectionOutcome> {
-    use num_traits::Signed;
     let hull = classify(surface, work)?;
-    let SurfaceAffineHull::Plane([a, b, c]) = hull else {
+    let SurfaceAffineHull::Plane(witnesses) = hull else {
         return Ok(PlanarProjectionOutcome::NotPlane(hull));
     };
-    let origin = lift(a, work)?;
-    let u = delta(&lift(b, work)?, &origin, work)?;
-    let v = delta(&lift(c, work)?, &origin, work)?;
-    let normal = cross(&u, &v, work)?;
-    let mut omitted_axis = 0;
-    for i in 1..3 {
-        if normal[i].abs() > normal[omitted_axis].abs() {
-            omitted_axis = i;
-        }
-    }
-    let retained_axes = match omitted_axis {
-        0 => [1, 2],
-        1 => [0, 2],
-        _ => [0, 1],
-    };
-    let [i, j] = retained_axes;
-    let n = &normal[omitted_axis];
-    let plane_constant = dot(&normal, &origin, work)?;
-    let offset = work.op(&plane_constant, n, |a, b| a / b)?;
-    let slopes = [
-        work.op(&normal[i], n, |a, b| -a / b)?,
-        work.op(&normal[j], n, |a, b| -a / b)?,
-    ];
-    let mut projected = surface.clone();
-    for pole in projected.control_points.iter_mut().flatten() {
-        work.charge(1)?;
-        let xy = [pole[i], pole[j]];
-        pole.copy_from_slice(&[xy[0], xy[1], 0.]);
-    }
+    let axes = ProjectionAxes::from_plane(witnesses, work)?;
     Ok(PlanarProjectionOutcome::Projected(
-        PlanarSurfaceProjection {
-            surface: projected,
+        axes.project(surface, work)?,
+    ))
+}
+
+struct ProjectionAxes {
+    retained_axes: [usize; 2],
+    omitted_axis: usize,
+    offset: Q,
+    slopes: [Q; 2],
+}
+
+impl ProjectionAxes {
+    fn from_plane([a, b, c]: [[f64; 3]; 3], work: &mut Work) -> Proof<Self> {
+        use num_traits::Signed;
+        let origin = lift(a, work)?;
+        let u = delta(&lift(b, work)?, &origin, work)?;
+        let v = delta(&lift(c, work)?, &origin, work)?;
+        let normal = cross(&u, &v, work)?;
+        let mut omitted_axis = 0;
+        for i in 1..3 {
+            if normal[i].abs() > normal[omitted_axis].abs() {
+                omitted_axis = i;
+            }
+        }
+        let retained_axes = match omitted_axis {
+            0 => [1, 2],
+            1 => [0, 2],
+            _ => [0, 1],
+        };
+        let [i, j] = retained_axes;
+        let n = &normal[omitted_axis];
+        let plane_constant = dot(&normal, &origin, work)?;
+        let offset = work.op(&plane_constant, n, |a, b| a / b)?;
+        let slopes = [
+            work.op(&normal[i], n, |a, b| -a / b)?,
+            work.op(&normal[j], n, |a, b| -a / b)?,
+        ];
+        Ok(Self {
             retained_axes,
             omitted_axis,
             offset,
             slopes,
-        },
-    ))
+        })
+    }
+
+    fn project(&self, surface: &Surface, work: &mut Work) -> Proof<PlanarSurfaceProjection> {
+        let mut projected = surface.clone();
+        let [i, j] = self.retained_axes;
+        for pole in projected.control_points.iter_mut().flatten() {
+            work.charge(1)?;
+            let xy = [pole[i], pole[j]];
+            pole.copy_from_slice(&[xy[0], xy[1], 0.]);
+        }
+        Ok(PlanarSurfaceProjection {
+            surface: projected,
+            retained_axes: self.retained_axes,
+            omitted_axis: self.omitted_axis,
+            offset: self.offset.clone(),
+            slopes: self.slopes.clone(),
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum SharedPlanarProjectionOutcome {
+    /// Original surface order, with identical retained axes and inverse equations.
+    Projected(Vec<PlanarSurfaceProjection>),
+    /// The union of the active surface images has affine dimension other than two.
+    NotPlane(SurfaceAffineHull),
+    ResourceLimit,
+}
+
+#[derive(Clone, Debug)]
+pub struct SharedPlanarProjectionReport {
+    pub outcome: SharedPlanarProjectionOutcome,
+    pub work_used: u64,
+}
+
+/// Project a group of surfaces into coordinates shared on one exact plane.
+/// The plane is obtained from the combined active poles, so a point or
+/// line member is valid if the entire group spans a plane. Each projected
+/// surface retains its own knots, weights and UV parameterization.
+pub fn project_coplanar_surfaces(
+    surfaces: &[Surface],
+    max_work: u64,
+) -> Result<SharedPlanarProjectionReport> {
+    check(
+        (1..=256).contains(&surfaces.len()),
+        "A shared planar projection needs 1..256 surfaces",
+    )?;
+    validate_budget(max_work)?;
+    for surface in surfaces {
+        surface.validate()?;
+    }
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let outcome =
+        project_group(surfaces, &mut work).unwrap_or(SharedPlanarProjectionOutcome::ResourceLimit);
+    Ok(SharedPlanarProjectionReport {
+        outcome,
+        work_used: work.used,
+    })
+}
+
+fn project_group(surfaces: &[Surface], work: &mut Work) -> Proof<SharedPlanarProjectionOutcome> {
+    let hull = classify_poles(surfaces.iter().flat_map(active_poles), work)?;
+    let SurfaceAffineHull::Plane(witnesses) = hull else {
+        return Ok(SharedPlanarProjectionOutcome::NotPlane(hull));
+    };
+    let axes = ProjectionAxes::from_plane(witnesses, work)?;
+    let projected = surfaces
+        .iter()
+        .map(|surface| axes.project(surface, work))
+        .collect::<Proof<Vec<_>>>()?;
+    Ok(SharedPlanarProjectionOutcome::Projected(projected))
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
