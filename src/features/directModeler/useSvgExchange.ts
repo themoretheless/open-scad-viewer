@@ -12,7 +12,7 @@ type SvgExchangeOptions = Pick<UseFileExchangeOptions,
   | 'isRestoreDisposed'
   | 'error'
   | 'history'
-  | 'commit'
+  | 'commitInWorker'
   | 'operation'
   | 'advancedOp'
   | 'subtract'
@@ -37,7 +37,7 @@ export function useSvgExchange(options: SvgExchangeOptions) {
     isRestoreDisposed,
     error,
     history,
-    commit,
+    commitInWorker,
     operation,
     advancedOp,
     subtract,
@@ -103,33 +103,44 @@ export function useSvgExchange(options: SvgExchangeOptions) {
             'SVG contour exceeds 512 vertices. Simplify the source profile.',
           ),
         )
-      const next = history.document
-      const ids = result.contours.map(points => {
-        const id = crypto.randomUUID()
-        next.sketches.push({
-          id,
-          name: `${file.name.slice(0, 70)} · ${next.sketches.length + 1}`,
-          closed: true,
-          points,
-        })
-        return id
-      })
-      commit(parseDirectDocument(serializeDirectDocument(next)))
-      operation.value = null
-      advancedOp.value = null
-      subtract.value = null
-      activePlane.value = xyPlane()
-      workplaneOutline.value = []
-      selection.value = ids[0]
-      extraSelection.value = ids.slice(1)
-      mode.value = '2d'
-      sketchPaneOpen.value = true
-      fit('2d')
-      setNotice(
-        label(
-          'SVG импортирован. Для отверстий выдавливайте выбранные контуры вместе.',
-          'SVG imported. Extrude the selected contours together to retain holes.',
-        ) + (result.warnings.length ? ' ' + result.warnings.join(' ') : ''),
+      const contours = result.contours
+      let ids: string[] = []
+      await commitInWorker(
+        () => {
+          const next = history.document
+          ids = contours.map(points => {
+            const id = crypto.randomUUID()
+            next.sketches.push({
+              id,
+              name: `${file.name.slice(0, 70)} · ${next.sketches.length + 1}`,
+              closed: true,
+              points,
+            })
+            return id
+          })
+          return parseDirectDocument(serializeDirectDocument(next))
+        },
+        () => {
+          operation.value = null
+          advancedOp.value = null
+          subtract.value = null
+          activePlane.value = xyPlane()
+          workplaneOutline.value = []
+          selection.value = ids[0]
+          extraSelection.value = ids.slice(1)
+          mode.value = '2d'
+          sketchPaneOpen.value = true
+          fit('2d')
+          setNotice(
+            label(
+              'SVG импортирован. Для отверстий выдавливайте выбранные контуры вместе.',
+              'SVG imported. Extrude the selected contours together to retain holes.',
+            ) + (result.warnings.length ? ' ' + result.warnings.join(' ') : ''),
+          )
+        },
+        message => {
+          if (!controller.signal.aborted) error.value = message
+        },
       )
     } catch (e) {
       if (!controller.signal.aborted) error.value = e instanceof Error ? e.message : String(e)

@@ -1003,7 +1003,7 @@ async function commandKey(ui: Awaited<ReturnType<typeof mount>>, key: string, ta
  const workspace=ui.all().find(n=>n.tag==='section'&&n.props.onKeydown)!
  const prevented=vi.fn()
  workspace.props.onKeydown({key,target:target??{matches:()=>false,closest:()=>null},preventDefault:prevented,stopPropagation(){},...extra})
- await nextTick()
+ await flushClearance()
  return prevented
 }
 
@@ -5371,3 +5371,142 @@ it('commits NURBS surface segment fields through the worker',async()=>{
  previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');await flushClearance();expect(ui.doc()).toEqual(before)
 })
 
+
+type WorkerJob=Parameters<typeof previewWorkerRun>[0]
+type HeldCommit={job:{text:string};resolve:(value:DirectDocument)=>void;reject:(error:Error)=>void}
+function holdWorkerCommits(other:(job:WorkerJob,options:Parameters<typeof previewWorkerRun>[1])=>unknown=()=>undefined){
+ const commits:HeldCommit[]=[]
+ previewWorkerRun.mockImplementation((job,options)=>job.kind==='restoreDocument'?new Promise((resolve,reject)=>commits.push({job:job as {text:string},resolve,reject})):other(job,options))
+ return commits
+}
+const landCommit=async(commit:HeldCommit)=>{commit.resolve(parseDirectDocument(commit.job.text));await flushClearance()}
+const applyVisible=(ui:Awaited<ReturnType<typeof mount>>)=>ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Apply · Enter')
+const waitForCommits=async(commits:HeldCommit[],count:number)=>{for(let i=0;i<20&&commits.length<count;i++)await flushClearance()}
+
+it('commits the extrusion preview in the worker, closes the command only after it lands and keeps the scene when it fails',async()=>{
+ const ui=await mount();await ui.click('Profile');await ui.click('Extrude');await settle(250);const before=ui.doc()
+ const commits=holdWorkerCommits()
+ await commandKey(ui,'Enter');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before);expect(applyVisible(ui)).toBe(true)
+ commits[0].reject(Error('extrude commit failed'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('extrude commit failed');expect(applyVisible(ui)).toBe(true)
+ await commandKey(ui,'Enter');expect(commits).toHaveLength(2);await landCommit(commits[1])
+ expect(ui.doc().bodies).toHaveLength(before.bodies.length+1);expect(applyVisible(ui)).toBe(false)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('commits an advanced command in the worker and drops its result when an edit lands first',async()=>{
+ const ui=await mount();await ui.click('Cube');const before=ui.doc();await ui.click('Split')
+ ui.all().find(n=>n.props['aria-label']==='Dimension at manipulator, mm')!.props['onUpdate:modelValue'](5);await flushClearance()
+ const commits=holdWorkerCommits()
+ await commandKey(ui,'Enter',{closest:()=>null} as unknown as Node);expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('Box');await flushClearance();const edited=ui.doc()
+ expect(edited).not.toEqual(before)
+ await landCommit(commits[0]);expect(ui.doc()).toEqual(edited)
+ await ui.click('Cube');await ui.click('Split')
+ ui.all().find(n=>n.props['aria-label']==='Dimension at manipulator, mm')!.props['onUpdate:modelValue'](5);await flushClearance()
+ const next=holdWorkerCommits()
+ await commandKey(ui,'Enter',{closest:()=>null} as unknown as Node);expect(next).toHaveLength(1);await landCommit(next[0])
+ expect(ui.doc().bodies).toHaveLength(edited.bodies.length+1)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(edited)
+})
+
+it('commits an imported mesh in the worker, selects it after the commit and reports a failed commit',async()=>{
+ const {importMeshFile}=await import('../src/exchange/meshImport')
+ const commits=holdWorkerCommits((job,options)=>job.kind==='meshImport'?importMeshFile(job.fileName,job.input,job.options,options.onProgress):undefined)
+ const ui=await mount(),before=ui.doc()
+ const bytes=new TextEncoder().encode(['v 0 0 0','v 1 0 0','v 0 1 0','v 0 0 1','f 1 3 2','f 1 2 4','f 2 3 4','f 1 4 3'].join('\n'))
+ const input=ui.all().find(n=>n.tag==='input'&&n.props.type==='file'&&n.props.accept?.includes('.stl'))!
+ const importFile=async(name:string)=>{const target={files:[{name,arrayBuffer:async()=>bytes.buffer}],value:name},count=commits.length,done=input.props.onChange({target});await waitForCommits(commits,count+1);return {target,done}}
+ const first=await importFile('fail.obj');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('mesh import commit failed'));await first.done;await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('mesh import commit failed');expect(first.target.value).toBe('')
+ const second=await importFile('tetra.obj');expect(commits).toHaveLength(2);expect(ui.doc()).toEqual(before)
+ await landCommit(commits[1]);await second.done
+ expect(ui.doc().bodies.at(-1)?.name).toBe('tetra');expect(ui.button('tetra').props['aria-pressed']).toBe(true)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('commits STEP bodies in the worker and keeps the import busy until that commit lands',async()=>{
+ const step=await import('../src/kernel/solidStepExchange')
+ const prepare=vi.spyOn(step,'prepareSolidStepImport').mockImplementation(async(_text,current)=>{
+  const body={...extrudeDirectSketch({id:'p',name:'P',closed:true,points:[[0,0],[5,0],[5,5],[0,5]]},5,'step-body'),name:'STEP body'}
+  return {document:{...current,bodies:[...current.bodies,body]},selected:body.id,report:{retained:false,occurrenceIdentities:[]}} as unknown as Awaited<ReturnType<typeof step.prepareSolidStepImport>>
+ })
+ try{
+  const ui=await mount(),before=ui.doc()
+  const commits=holdWorkerCommits()
+  const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.step,.stp')!
+  const target={files:[{size:8,text:async()=>'ISO-10303-21;'}],value:'a.step'}
+  const done=input.props.onChange({target});await waitForCommits(commits,1)
+  expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before);expect(ui.button('Import STEP').props.disabled).toBe(true)
+  await landCommit(commits[0]);await done;await flushClearance()
+  expect(ui.doc().bodies.at(-1)?.name).toBe('STEP body');expect(ui.text(ui.all()[0])).toContain('STEP: mesh imported.')
+  expect(ui.button('Import STEP').props.disabled).toBe(false);expect(target.value).toBe('')
+  previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+ }finally{prepare.mockRestore()}
+})
+
+it('commits SVG profiles in the worker, selects them after the commit and reports a failed commit',async()=>{
+ const ui=await mount(),before=ui.doc()
+ svgWorkerRun.mockResolvedValue({contours:[[[0,0],[10,0],[0,10]]],warnings:[]})
+ const commits=holdWorkerCommits()
+ const input=ui.all().find(n=>n.tag==='input'&&n.props.accept==='.svg,image/svg+xml')!
+ const importFile=async(name:string)=>{const target={files:[{name,size:100,text:async()=>'<svg/>'}],value:name},count=commits.length,done=input.props.onChange({target});await waitForCommits(commits,count+1);return {target,done}}
+ const first=await importFile('fail.svg');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('svg commit failed'));await first.done;await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('svg commit failed');expect(first.target.value).toBe('')
+ const second=await importFile('shape.svg');expect(commits).toHaveLength(2);expect(ui.doc()).toEqual(before)
+ await landCommit(commits[1]);await second.done;await flushClearance()
+ const added=ui.doc().sketches.at(-1)!;expect(added.name).toContain('shape.svg');expect(ui.button(added.name).props['aria-pressed']).toBe(true)
+ expect(ui.text(ui.all()[0])).toContain('SVG imported.')
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('commits new NURBS objects in the worker and selects them only after the commit lands',async()=>{
+ const ui=await mount(),before=ui.doc()
+ const commits=holdWorkerCommits()
+ await ui.click('+ NURBS curve');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('nurbs commit failed'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('nurbs commit failed')
+ await ui.click('+ NURBS curve');expect(commits).toHaveLength(2);await landCommit(commits[1])
+ expect(ui.doc().curves).toHaveLength((before.curves?.length??0)+1);expect(ui.text(ui.all()[0])).toContain('NURBS curve · CV')
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('commits a sketch dimension in the worker',async()=>{
+ const ui=await mount();await ui.click('Cube');await ui.click('Faces');await ui.pointer(ui.all(ui.svg()).find(n=>n.tag==='polygon')!);await ui.click('Sketch on face')
+ const svg=ui.all().find(n=>n.tag==='svg'&&n.props['aria-label']==='2D sketch canvas')!
+ svg.props.onPointerdown({...ui.event(svg,1,-1),altKey:true});svg.props.onPointermove({...ui.event(svg,3,-3),altKey:true});svg.props.onPointerup({...ui.event(svg,3,-3),altKey:true});await flushClearance()
+ await ui.click('Sketch dimensions');await vi.waitFor(()=>expect(ui.all().some(n=>n.tag==='button'&&ui.text(n)==='Add dimension')).toBe(true));await ui.click('Add dimension');const before=ui.doc()
+ ui.all().find(n=>n.tag==='input'&&n.props['aria-label']==='Dimension 0')!.props['onUpdate:modelValue']('3');await nextTick()
+ const commits=holdWorkerCommits()
+ await ui.click('Apply dimension 0');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ await landCommit(commits[0])
+ const resized=ui.doc();expect(resized.sketches.at(-1)!.points[1][0]-resized.sketches.at(-1)!.points[0][0]).toBeCloseTo(3)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('deletes a group in the worker, keeps the scene when that commit fails and restores it with Undo',async()=>{
+ const body={...extrudeDirectSketch({id:'p',name:'P',closed:true,points:[[0,0],[10,0],[10,10],[0,10]]},10,'grouped'),name:'Grouped',group:'G'}
+ const ui=await mount({},stringifyMeshJson({version:1,sketches:[],bodies:[body],groups:[{name:'G',source:''}]})),before=ui.doc()
+ const commits=holdWorkerCommits()
+ await ui.click('Delete group G');expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('group commit failed'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('group commit failed')
+ await ui.click('Delete group G');expect(commits).toHaveLength(2);await landCommit(commits[1])
+ expect(ui.doc().bodies).toEqual([]);expect(ui.doc().groups).toBeUndefined()
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('commits a released CV drag in the worker and reports a failed commit through the drag error',async()=>{
+ const {applySolidPointEdit}=await import('../src/kernel/solidPointEdit')
+ const ui=await mount();await ui.click('+ NURBS surface');const before=ui.doc(),svg=ui.svg()
+ const commits=holdWorkerCommits(job=>job.kind==='pointEdit'?Promise.resolve(applySolidPointEdit(job.document,job.options)):undefined)
+ const drag=async(x:number)=>{const count=commits.length;await ui.pointer(ui.all(svg).find(n=>n.tag==='circle'&&n.props.onPointerdown)!,0,0);svg.props.onPointermove({...ui.event(svg,x,5),altKey:true});svg.props.onPointerup({...ui.event(svg,x,5),altKey:true});svg.props.onLostpointercapture(ui.event(svg,x,5));await waitForCommits(commits,count+1)}
+ await drag(10);expect(commits).toHaveLength(1);expect(ui.doc()).toEqual(before)
+ commits[0].reject(Error('cv commit failed'));await flushClearance()
+ expect(ui.doc()).toEqual(before);expect(ui.text(ui.all()[0])).toContain('cv commit failed')
+ await drag(12);expect(commits).toHaveLength(2);await landCommit(commits[1])
+ expect(ui.doc().surfaces).not.toEqual(before.surfaces)
+ previewWorkerRun.mockImplementation(()=>undefined);await ui.click('↶');expect(ui.doc()).toEqual(before)
+})

@@ -309,8 +309,8 @@ function cancelSketchEdit(){sketchEditGeneration++;sketchEditWorker.cancel();ske
 onUnmounted(()=>{cancelSketchEdit();sketchEditWorker.dispose()})
 const cornerPreview = computed(() => ({sketch:cornerActive.value?sketchEditResult.value?.sketches.find(s=>s.id===selection.value)??null:null,error:sketchEditFailure.value}))
 function beginCorner(kind: 'fillet'|'dogear') { boxSelect.value=false; if (!selectedSketch.value?.closed) return; cancelCommand(); tool.value = 'select'; operation.value = kind; mode.value = '2d' }
-function applySketchEdit(){const next=sketchEditResult.value;if(!next||sketchEditPending.value)return;void commitInWorker(()=>next,()=>{operation.value=null})}
-function applyCorner(){applySketchEdit()}
+function applySketchEdit(){const next=sketchEditResult.value;if(!next||sketchEditPending.value)return;return commitInWorker(()=>next,()=>{operation.value=null})}
+function applyCorner(){return applySketchEdit()}
 const profileIds = ref<string[]>([]), previewEmpty = ref(false)
 const baseZ = ref(0), extrusionMode = ref<'new' | 'union' | 'difference'>('new'), targetBody = ref('')
 const copyCount = ref(8), copySweep = ref(360), copyX = ref(0), copyY = ref(0)
@@ -933,7 +933,7 @@ const {
   getNotice: () => notice.value,
   label,
 })
-const { advancedPolygons, advancedSurfacePolygons, advancedPreview, pointTrimPreviewPoints, pointTrimCut, patchBudgetCurve, patchGapPoints, applyAdvanced, axisVector, advancedBodyIds, advancedSurfaceIds, advancedSketches, advancedSketchDisplay, authoredEdges, bodyEdgesPending, cancelBodyEdges, refreshBodyEdges } = useAdvancedPreview({ onEdgeFeatureApplied: memory => { edgeFeatureMemory = memory }, activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commit, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady: () => kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies: () => sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed })
+const { advancedPolygons, advancedSurfacePolygons, advancedPreview, pointTrimPreviewPoints, pointTrimCut, patchBudgetCurve, patchGapPoints, applyAdvanced, axisVector, advancedBodyIds, advancedSurfaceIds, advancedSketches, advancedSketchDisplay, authoredEdges, bodyEdgesPending, cancelBodyEdges, refreshBodyEdges } = useAdvancedPreview({ onEdgeFeatureApplied: memory => { edgeFeatureMemory = memory }, activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commitInWorker, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady: () => kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies: () => sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed })
 // Undoing a fillet or chamfer brings its body back; reselect the edge chain it consumed (C10).
 watch(document,()=>{
  if(!edgeFeatureMemory)return
@@ -1153,10 +1153,6 @@ function finishCommit(added:string[],next?:DirectDocument){
  sync(next)
  isolationStack.value=addToIsolation(isolationStack.value,added)
 }
-function commit(next:DirectDocument){
- const {validateLocked,added}=prepareCommit(next)
- history.commit(next,validateLocked);finishCommit(added)
-}
 const commitWorker=createSolidPreviewWorker()
 let commitQueue:Promise<unknown>=Promise.resolve()
 /** Commands migrated off the synchronous `commit()`: `build` runs once the previous queued
@@ -1256,12 +1252,15 @@ function setExtrusionMode(value: 'new'|'union'|'difference') {
   extrusionMode.value=value
   if(selectedSketch.value?.supportBodyId && value!=='new')height.value=Math.abs(height.value)*(value==='difference'?-1:1)
 }
-function extrude() { run(() => {
+/** The preview result commits in the worker; the command closes and selects only once it landed. */
+function extrude() {
   const next=solidPreviewResult.value
   if(!next||previewPending.value||previewError.value)return
-  const id=previewBody.value?.id??'';commit(next)
-  operation.value=null;mode.value='3d';selection.value=extrusionMode.value==='new'?id:next.bodies.some(b=>b.id===targetBody.value)?targetBody.value:'';fit('3d')
-}) }
+  const id=previewBody.value?.id??'',created=extrusionMode.value==='new',target=targetBody.value
+  return commitInWorker(()=>next,committed=>{
+   operation.value=null;mode.value='3d';selection.value=created?id:committed.bodies.some(b=>b.id===target)?target:'';fit('3d')
+  })
+}
 watch(()=>[props.open,operation.value,document.value,selection.value,activeGroup.value,cornerVertex.value,cornerRadius.value,copyCount.value,copySweep.value,copyX.value,copyY.value,sketchEditRevision.value,invalidQuantitiesKey.value],()=>{
  cancelSketchEdit()
  const op=operation.value
@@ -1279,7 +1278,7 @@ watch(()=>[props.open,operation.value,document.value,selection.value,activeGroup
  })
 },{flush:'sync'})
 const copyPreview = computed(() => operation.value==='array'?sketchEditResult.value?.sketches.filter(s=>!document.value.sketches.some(source=>source.id===s.id))??[]:[])
-function applyCopies(){applySketchEdit()}
+function applyCopies(){return applySketchEdit()}
 const canDuplicate=computed(()=>selectedIds.value.length>0&&selectedIds.value.every(id=>document.value.bodies.some(body=>body.id===id)||document.value.sketches.some(sketch=>sketch.id===id)))
 async function duplicate() {
  if(directTransformPending.value)return
@@ -1371,7 +1370,14 @@ async function drainGizmoTransforms(){
        const applied=await history.commitAsync(async()=>result,validateLocked)
        if(epoch!==gizmoEpoch||!applied)return
        previewingTransform.value=false;finishCommit(added,result)
-      }else{previewingTransform.value=false;commit(result)}
+      }else{
+       // Point edits commit in the worker; a failed commit reaches the drag error path below.
+       let failure:string|undefined
+       const applied=await commitInWorker(()=>result,undefined,message=>{failure=message})
+       if(failure!==undefined)throw Error(failure)
+       if(epoch!==gizmoEpoch||!applied)return
+       previewingTransform.value=false
+      }
      }finally{if(epoch===gizmoEpoch)gizmoHistoryPending=false;gizmoPublishing=false}
      gizmoBase=null;gizmoPublished=null;gizmoApplyRevision=null;gizmoPending.value=false;pointEditActive.value=false;settleAfterDrag()
     }else{
@@ -1574,7 +1580,7 @@ const {
   cancelCommand,
   prepareCommit,
   finishCommit,
-  commit,
+  commitInWorker,
   sync,
   run,
   fit,
@@ -1765,12 +1771,15 @@ const commandBlockedReason = computed(() => {
 function applyCommand() {
   if (!commandReady.value) return
   const snapshot = captureCommand(), before = document.value
-  if (subtract.value) applySubtract()
-  else if (advancedOp.value) applyAdvanced()
-  else if (solidActive.value) extrude()
-  else if (cornerActive.value) applyCorner()
-  else applyCopies()
-  if (document.value !== before) { if(snapshot) lastCommand.value = snapshot; workspace.value?.focus() }
+  const settled = subtract.value ? applySubtract()
+    : advancedOp.value ? applyAdvanced()
+    : solidActive.value ? extrude()
+    : cornerActive.value ? applyCorner()
+    : applyCopies()
+  const record = () => { if(snapshot) lastCommand.value = snapshot; workspace.value?.focus() }
+  // Worker commits land later: the command is recorded for Repeat only once its commit landed.
+  if (document.value !== before) record()
+  else if (settled instanceof Promise) void settled.then(applied => { if (applied) record() })
 }
 watch(()=>advancedOp.value??operation.value,async command=>{
   if(!command)return
@@ -2201,7 +2210,7 @@ function keydown(e: KeyboardEvent) {
 }
 
 if (props.initialDocument) void nextTick(() => { fit('2d'); fit('3d') })
-const { primitiveG2Enabled, primitiveG2Size, primitiveG2Individual, primitiveG2Sizes, failedPrimitive, primitiveG2Invalid, roundGeometry, primitiveSize, primitiveTopRadius, primitiveInnerRadius, TOOL_ICONS, primitiveLabel, primitivePending, cancelPrimitive, addPrimitive, bridgeEndA, bridgeEndB, bridgeTension, bridgeError, bridgeTensionInvalid, addBridgeCurve, updateDimensionSketch, dimensionLabels, addNurbs } = usePrimitives({ activeGroup, advancedOp, brepSegments, cancelCommand, commit, document, error, finishCommit, fit, history, label, lockedIds, nativeNurbsPending, operation, pickObject, prepareCommit, props, isRestoreDisposed, run, runNativeNurbs, selectedCurvePair, tool, visibleSketches, workspace })
+const { primitiveG2Enabled, primitiveG2Size, primitiveG2Individual, primitiveG2Sizes, failedPrimitive, primitiveG2Invalid, roundGeometry, primitiveSize, primitiveTopRadius, primitiveInnerRadius, TOOL_ICONS, primitiveLabel, primitivePending, cancelPrimitive, addPrimitive, bridgeEndA, bridgeEndB, bridgeTension, bridgeError, bridgeTensionInvalid, addBridgeCurve, updateDimensionSketch, dimensionLabels, addNurbs } = usePrimitives({ activeGroup, advancedOp, brepSegments, cancelCommand, commitInWorker, document, error, finishCommit, fit, history, label, lockedIds, nativeNurbsPending, operation, pickObject, prepareCommit, props, isRestoreDisposed, run, runNativeNurbs, selectedCurvePair, tool, visibleSketches, workspace })
 function updateCv() { run(() => {
   const point = [cvX.value, cvY.value, cvZ.value]
   const invalid=point.findIndex((value,i)=>!Number.isFinite(value)||!cvFieldValid[(['x','y','z'] as const)[i]])
@@ -2250,7 +2259,7 @@ function bakeNurbs(){void runNativeNurbs({kind:'bake',id:selection.value,created
 // watcher after setup state is initialized, and consume each seed once so a
 // later open does not overwrite edits or an Undo of the import.
 const appliedSeeds = new WeakSet<DirectDocument>()
-const { openNewGroupFromMenu, bodySections, sceneRows, isolateGroup, removeGroup, openGroupDialog } = useSceneTree({ cancelCommandState, cancelGesture, commit, document, documentObjects, emit, extraSelection, fit, history, hovered, isolatedBodyIds, label, lockedIds, objectSelectable, run, selectedIds, selection, sync })
+const { openNewGroupFromMenu, bodySections, sceneRows, isolateGroup, removeGroup, openGroupDialog } = useSceneTree({ cancelCommandState, cancelGesture, commitInWorker, document, documentObjects, emit, extraSelection, fit, history, hovered, isolatedBodyIds, label, lockedIds, objectSelectable, run, selectedIds, selection, sync })
 
 /** A rebuild replaces the group of the same name, so repeated builds do not pile up. */
 watch(() => props.appendBodies, request => {

@@ -1,3 +1,4 @@
+import type { CommitInWorker } from './prepareDocumentCommit'
 import { rememberEdgeFeature } from '../../app/edgeFeatureEditing'
 import type { buildSolidSurface } from '../../kernel/solidSurfaceConstruction'
 import { isSolidNurbsRefit } from '../../kernel/solidCurveReduction'
@@ -23,7 +24,7 @@ export interface AdvancedPreviewOptions {
   bodyEditError: Ref<string>
   bodyEditPending: Ref<boolean>
   bodyEditResult: ShallowRef<DirectDocument | null>
-  commit: (next: DirectDocument) => void
+  commitInWorker: CommitInWorker
   curvePoints: (curve: NurbsCurve) => number[][]
   document: ShallowRef<DirectDocument>
   edgeIndex: Ref<number>
@@ -58,7 +59,7 @@ export interface AdvancedPreviewOptions {
 }
 
 export function useAdvancedPreview(options: AdvancedPreviewOptions) {
-  const { activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commit, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed } = options
+  const { activePlane, advanced, advancedOp, bodyEditError, bodyEditPending, bodyEditResult, commitInWorker, curvePoints, document, edgeIndex, edgeIndexes, error, extraSelection, faceIndex, isNurbsMatch, kernelReady, loftPreviewId, meshPolygons, openingFaces, pickMode, pickObject, profileLoops, props, resultAdvanced, run, samePlane, sceneBodies, selectedBody, selectedIds, selection, surfaceBuildResult, surfaceConstructionError, surfaceInputs, surfacePolygons, surfaceReversed } = options
 const advancedPreview = computed(() => {
  if(!advancedOp.value||(advancedOp.value==='profile-prepare'||isSolidNurbsRefit(advancedOp.value)||isNurbsMatch(advancedOp.value))&&bodyEditPending.value)return {document:null,error:'',rawError:'',sweepReport:null}
  if(isSolidSurfaceBuild(advancedOp.value)){const r=surfaceBuildResult.value,error=r?.error||bodyEditError.value;return {document:r?.document??null,error:error?surfaceConstructionError(error):'',rawError:error,sweepReport:r?.report??null}}
@@ -95,7 +96,8 @@ const patchGapPoints=computed(()=>{
   return evaluateNurbsCurve(curve,curve.knots[last?curve.controlPoints.length:curve.degree]).point as Vec3
  })}catch{return []}
 })
-function applyAdvanced(){run(()=>{
+/** Returns the worker commit when one was queued, so the caller can record the command once it landed. */
+function applyAdvanced():Promise<boolean>|undefined{let task:Promise<boolean>|undefined;run(()=>{
  if(!advancedPreview.value.document)return
  const d=structuredClone(advancedPreview.value.document),splitBody=d.bodies.find(b=>b.id==='preview-split');if(splitBody)splitBody.id=crypto.randomUUID()
  const prepared=advancedOp.value==='nurbs-prepare'
@@ -103,8 +105,9 @@ function applyAdvanced(){run(()=>{
  const created=(advancedOp.value==='instance-create'||advancedOp.value==='nurbs-offset'||advancedOp.value==='loft')?loftPreviewId.value:''
  // Edge features consume their edges; remember the chain so undo can restore the selection.
  const edgeMemory=advancedOp.value==='edge-fillet'||advancedOp.value==='chamfer'?rememberEdgeFeature(selectedBody.value,edgeIndexes.value.length?edgeIndexes.value:[edgeIndex.value]):null
- commit(d);options.onEdgeFeatureApplied?.(edgeMemory);advancedOp.value=null;if(profileId){selection.value=profileId;extraSelection.value=[]}if(prepared)advanced.value.matchReverse=false;if(created)pickObject(created,'3d');faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]
-})}
+ // Follow-ups run only once the worker commit landed; a result superseded meanwhile is dropped.
+ task=commitInWorker(()=>d,()=>{options.onEdgeFeatureApplied?.(edgeMemory);advancedOp.value=null;if(profileId){selection.value=profileId;extraSelection.value=[]}if(prepared)advanced.value.matchReverse=false;if(created)pickObject(created,'3d');faceIndex.value=edgeIndex.value=-1;edgeIndexes.value=[];openingFaces.value=[]})
+});return task}
 const axisVector=(axis:string):Vec3=>axis==='x'?[1,0,0]:axis==='y'?[0,1,0]:[0,0,1]
 const advancedBodyIds=computed(()=>new Set([...selectedIds.value,...sceneBodies().value.filter(b=>b.instance&&selectedIds.value.includes(b.instance.sourceId)).map(b=>b.id),'preview-split',loftPreviewId.value]))
 const advancedPolygons=computed(()=>advancedPreview.value.document?.bodies.filter(b=>advancedBodyIds.value.has(b.id)).flatMap(b=>meshPolygons(b,1)).sort((a,b)=>a.depth-b.depth)??[])

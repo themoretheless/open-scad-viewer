@@ -1,5 +1,8 @@
 import type {DirectDocument} from '../../app/directModeling'
 import {sameMeshJson} from '../../exchange/sameMeshJson'
+/** `commitInWorker` of the modeler: `build` runs after the previous queued commit, the worker validates,
+ * a stale result is dropped, `after` runs only once the commit landed, errors go to `onError` or `error`. */
+export type CommitInWorker=(build:()=>DirectDocument|undefined,after?:(next:DirectDocument)=>void,onError?:(message:string)=>void)=>Promise<boolean>
 const documentObjects=(d:DirectDocument)=>[...d.bodies,...d.sketches,...d.curves??[],...d.surfaces??[]]
 export function prepareDocumentCommit(next:DirectDocument,previous:DirectDocument|undefined,fallbackIds:Iterable<string>,lockedIds:string[],activeGroup:string,origin:'edit'|'file',label:(ru:string,en:string)=>string,resolved=false) {
   const existing=new Set(previous?documentObjects(previous).map(b=>b.id):fallbackIds)
