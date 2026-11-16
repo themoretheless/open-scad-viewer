@@ -207,7 +207,6 @@ pub fn face_plane(mesh: MeshView<'_>, vertices: &[usize], normal: [f64; 3]) -> R
         return Err(input("Invalid face vertices."));
     }
     let point = |i: usize| -> [f64; 3] { std::array::from_fn(|k| mesh.positions[i * 3 + k]) };
-    let origin = point(vertices[0]);
     let unit = |p: [f64; 3]| -> Result<[f64; 3]> {
         let length = p[0].hypot(p[1]).hypot(p[2]);
         if !length.is_finite() || length < 1e-9 {
@@ -216,41 +215,46 @@ pub fn face_plane(mesh: MeshView<'_>, vertices: &[usize], normal: [f64; 3]) -> R
         Ok(p.map(|x| x / length))
     };
     let normal = unit(normal)?;
-    let offset = |i: usize| -> [f64; 3] {
-        let p = point(i);
-        std::array::from_fn(|k| p[k] - origin[k])
-    };
+    let sub = |p: [f64; 3], o: [f64; 3]| -> [f64; 3] { std::array::from_fn(|k| p[k] - o[k]) };
     let length = |d: [f64; 3]| d[0].hypot(d[1]).hypot(d[2]);
-    // Vertex order follows the tessellation's triangle order, so the first distinct
-    // vertex may sit across a triangulation diagonal. Prefer a direction along the
-    // face's outer boundary (every other vertex on one side of it); fall back to the
-    // first distinct vertex for faces where the origin is not a hull vertex.
     let side = |d: [f64; 3], q: [f64; 3]| {
         let c = [d[1] * q[2] - d[2] * q[1], d[2] * q[0] - d[0] * q[2], d[0] * q[1] - d[1] * q[0]];
         dot(normal, c)
     };
-    let mut first = None;
-    let mut boundary = None;
-    for &i in vertices {
-        let d = offset(i);
-        if length(d) <= 1e-7 {
-            continue;
+    // Vertex order follows the tessellation's triangle order: the first vertex may be an
+    // interior fan centre and the next one may sit across a triangulation diagonal. Anchor
+    // the workplane at the first vertex on the face's outer boundary and run u along a
+    // boundary edge (every other vertex on one side of it). Faces without such a pair keep
+    // the first vertex and the first distinct direction.
+    let boundary_direction = |origin: [f64; 3]| -> Option<[f64; 3]> {
+        for &i in vertices {
+            let d = sub(point(i), origin);
+            if length(d) <= 1e-7 {
+                continue;
+            }
+            let (mut left, mut right) = (false, false);
+            for &j in vertices {
+                let q = sub(point(j), origin);
+                let s = side(d, q);
+                let tolerance = 1e-9 * length(d) * length(q).max(1.0);
+                left |= s > tolerance;
+                right |= s < -tolerance;
+            }
+            if !(left && right) {
+                return Some(d);
+            }
         }
-        first.get_or_insert(d);
-        let (mut left, mut right) = (false, false);
-        for &j in vertices {
-            let q = offset(j);
-            let s = side(d, q);
-            let tolerance = 1e-9 * length(d) * length(q).max(1.0);
-            left |= s > tolerance;
-            right |= s < -tolerance;
+        None
+    };
+    let anchored = vertices.iter().find_map(|&i| boundary_direction(point(i)).map(|d| (point(i), d)));
+    let (origin, direction) = match anchored {
+        Some((origin, d)) => (origin, Some(d)),
+        None => {
+            let origin = point(vertices[0]);
+            let first = vertices.iter().map(|&i| sub(point(i), origin)).find(|d| length(*d) > 1e-7);
+            (origin, first)
         }
-        if !(left && right) {
-            boundary = Some(d);
-            break;
-        }
-    }
-    let direction = boundary.or(first);
+    };
     let u = unit(direction.ok_or_else(|| input("Degenerate face workplane."))?)?;
     if dot(normal, u).abs() > 1e-6 {
         return Err(input("Face direction is not tangent to its support."));
@@ -310,6 +314,19 @@ mod tests {
         assert_eq!(p.origin, [0.; 3]);
         assert_eq!(p.u, [0., 1., 0.]);
         assert_eq!(p.v, [-1., 0., 0.]);
+    }
+    #[test]
+    fn face_workplane_anchors_at_a_boundary_vertex_not_a_fan_centre() {
+        // Square cap fanned from its centre (vertex 0).
+        let positions = [1., 1., 0., 0., 0., 0., 2., 0., 0., 2., 2., 0., 0., 2., 0.];
+        let indices = [0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 1];
+        let mesh = MeshView::new(&positions, &indices);
+        let t = topology(mesh).unwrap();
+        assert_eq!(t.faces.len(), 1);
+        let p = face_plane(mesh, &t.faces[0].vertices, t.faces[0].normal).unwrap();
+        assert_eq!(p.origin, [0.; 3]);
+        assert_eq!(p.u, [1., 0., 0.]);
+        assert_eq!(p.v, [0., 1., 0.]);
     }
     #[test]
     fn invalid_indices_are_rejected_before_traversal() {
