@@ -631,6 +631,23 @@ try {
     }
   })
 
+  await step('LOD budget control reaches the renderer seam', async () => {
+    await page.evaluate(() => {
+      for (const menu of document.querySelectorAll('details.viewport-material-menu')) menu.open = true
+    })
+    const budget = page.locator(
+      'select[aria-label="Detail level budget, MB"], select[aria-label="Бюджет уровней детализации, МБ"]',
+    )
+    await budget.first().selectOption('512')
+    const state = await viewport()
+    assert.equal(state.displayBudget.budgetBytes, 512 * 1024 * 1024, 'budget applied to the renderer')
+    assert.ok(state.calls.setDisplayBudget >= 2, 'budget set at creation and on change')
+    await budget.first().selectOption('256')
+    await page.evaluate(() => {
+      for (const menu of document.querySelectorAll('details.viewport-material-menu')) menu.open = false
+    })
+  })
+
   await step('CodeMirror source editor: typing, undo groups, find and Tab indent', async () => {
     const content = page.locator('.code-editor-cm .cm-content')
     await content.waitFor({ state: 'visible' })

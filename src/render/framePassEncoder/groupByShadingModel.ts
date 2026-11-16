@@ -233,6 +233,8 @@ export interface EncodeFramePassContext {
   readonly sourceFaceSlot: OverlaySlot
   readonly selectionFaceSlot: OverlaySlot
   readonly sourceLineSlot: OverlaySlot
+  /** Outlines of meshes the display plan shows as bounding-box proxies. */
+  readonly boundingBoxLineSlot: OverlaySlot
   readonly selectionLineSlot: OverlaySlot
   readonly deepSelectionLineSlot: OverlaySlot
   readonly styleScratch: Float32Array<ArrayBuffer>

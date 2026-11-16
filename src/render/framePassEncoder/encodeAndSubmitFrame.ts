@@ -116,6 +116,7 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
   if (!useWboit) frame.transparentSort.begin()
   for (let index = 0; index < meshes.length; index++) {
     const mesh = meshes[index]
+    if (mesh.lod?.boxed) continue
     if (!frame.isMeshVisible(index) || (!mesh.morph && !frame.viewFrustum.intersects(mesh.worldBounds.center, mesh.worldBounds.radius))) continue
     if (isTransparentAlpha(mesh.alpha)) {
       if (useWboit) frame.transparentDraws.push(mesh)
@@ -153,7 +154,7 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
       shadowPass.setBindGroup(0, sceneBG)
       for (let index = 0; index < meshes.length; index++) {
         const mesh = meshes[index]
-        if (!frame.isMeshVisible(index) || isTransparentAlpha(mesh.alpha)) continue
+        if (!frame.isMeshVisible(index) || mesh.lod?.boxed || isTransparentAlpha(mesh.alpha)) continue
         shadowPass.setBindGroup(1, mesh.bg)
         shadowPass.setVertexBuffer(0, mesh.vb)
         shadowPass.setVertexBuffer(1, mesh.morphSlot!)
@@ -334,6 +335,13 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
       pass.setIndexBuffer(selectedMesh.edgeIB, 'uint32')
       pass.drawIndexed(selectedMesh.edgeIC)
     }
+  }
+
+  if (frame.boundingBoxLineSlot.buffer && frame.boundingBoxLineSlot.count) {
+    pass.setPipeline(getRenderPipeline('selectionOverlay', { topology: 'line-list' }))
+    pass.setBindGroup(0, sceneBG)
+    pass.setVertexBuffer(0, frame.boundingBoxLineSlot.buffer)
+    pass.draw(frame.boundingBoxLineSlot.count)
   }
 
   if (!frame.geometryFade && !frame.geometryGhosts.length && !hasMorph && frame.sourceLineSlot.buffer && frame.sourceLineSlot.count) {

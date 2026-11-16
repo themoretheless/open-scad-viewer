@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { ref } from 'svet'
+import { DISPLAY_BUDGET_MEGABYTES, displayBudgetFor } from '../render/displayScheduler'
+import { getDisplayBudget, setDisplayBudget } from '../render/displayBudgetSetting'
 import { ENV_PRESETS, MATCAP_PRESETS, MATERIAL_PRESETS, THEME_PRESETS, type ShadingModel } from '../render/rendererContracts'
 
 const props = defineProps<{
@@ -32,6 +35,13 @@ const sliderValue = (event: Event) => (event.target as HTMLInputElement).valueAs
  * placeholder after applying, so picking the same preset again (after the
  * sliders moved) still fires `change`.
  */
+const MEGABYTE = 1024 * 1024
+const displayBudget = ref(getDisplayBudget())
+function updateDisplayBudget(megabytes: number, boundingBoxProxies: boolean) {
+  const next = displayBudgetFor(megabytes, boundingBoxProxies)
+  displayBudget.value = next
+  setDisplayBudget(next)
+}
 function applyPreset(select: HTMLSelectElement) {
   const id = select.value
   select.value = ''
@@ -117,6 +127,23 @@ function applyPreset(select: HTMLSelectElement) {
         :checked="shadowsEnabled"
         :aria-label="label('Контактные тени', 'Contact shadows')"
         @change="emit('update:shadowsEnabled', ($event.target as HTMLInputElement).checked)"
+      >
+    </label>
+    <label :title="label('Бюджет памяти GPU для уровней детализации', 'GPU memory budget for detail levels')">{{ label('Бюджет LOD', 'LOD budget') }}
+      <select
+        :value="String(displayBudget.budgetBytes / MEGABYTE)"
+        :aria-label="label('Бюджет уровней детализации, МБ', 'Detail level budget, MB')"
+        @change="updateDisplayBudget(Number(($event.target as HTMLSelectElement).value), !!displayBudget.boundingBoxProxies)"
+      >
+        <option v-for="megabytes in DISPLAY_BUDGET_MEGABYTES" :key="megabytes" :value="String(megabytes)">{{ megabytes }} MB</option>
+      </select>
+    </label>
+    <label :title="label('Мелкие и не влезшие в бюджет объекты рисовать габаритной рамкой', 'Draw small and over-budget objects as their bounding box')">{{ label('Рамки', 'Boxes') }}
+      <input
+        type="checkbox"
+        :checked="!!displayBudget.boundingBoxProxies"
+        :aria-label="label('Габаритные рамки вместо мелких объектов', 'Bounding boxes for small objects')"
+        @change="updateDisplayBudget(displayBudget.budgetBytes / MEGABYTE, ($event.target as HTMLInputElement).checked)"
       >
     </label>
   </div>

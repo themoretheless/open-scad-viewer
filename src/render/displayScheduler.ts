@@ -22,9 +22,75 @@ export interface DisplayBudget {
   readonly budgetBytes: number
   /** Entities projecting to at most this many pixels stay on the coarsest level. */
   readonly targetErrorPixels: number
+  /**
+   * Draw a 'bounding-box' entity as its world box outline instead of its
+   * coarsest level. Off keeps the coarsest certified level on screen.
+   */
+  readonly boundingBoxProxies?: boolean
 }
 
-export const DEFAULT_DISPLAY_BUDGET: DisplayBudget = { budgetBytes: 256 * 1024 * 1024, targetErrorPixels: 24 }
+export const DEFAULT_DISPLAY_BUDGET: DisplayBudget = {
+  budgetBytes: 256 * 1024 * 1024,
+  targetErrorPixels: 24,
+  boundingBoxProxies: false,
+}
+
+const MEGABYTE = 1024 * 1024
+/** Selectable display budgets in megabytes; the UI offers exactly these. */
+export const DISPLAY_BUDGET_MEGABYTES = [64, 128, 256, 512, 1024] as const
+
+/** Budget for a requested size in megabytes, snapped to the nearest offered step. */
+export function displayBudgetFor(megabytes: number, boundingBoxProxies = false): DisplayBudget {
+  const requested = Number.isFinite(megabytes) ? megabytes : DEFAULT_DISPLAY_BUDGET.budgetBytes / MEGABYTE
+  let best: number = DISPLAY_BUDGET_MEGABYTES[0]
+  for (const step of DISPLAY_BUDGET_MEGABYTES) {
+    if (Math.abs(step - requested) < Math.abs(best - requested)) best = step
+  }
+  return {
+    budgetBytes: best * MEGABYTE,
+    targetErrorPixels: DEFAULT_DISPLAY_BUDGET.targetErrorPixels,
+    boundingBoxProxies,
+  }
+}
+
+export const sameDisplayBudget = (a: DisplayBudget, b: DisplayBudget) =>
+  a.budgetBytes === b.budgetBytes &&
+  a.targetErrorPixels === b.targetErrorPixels &&
+  !!a.boundingBoxProxies === !!b.boundingBoxProxies
+
+/** The twelve edges of an axis-aligned box as corner index pairs (bit 0 = x, 1 = y, 2 = z). */
+const BOX_EDGES: readonly (readonly [number, number])[] = [
+  [0, 1],
+  [2, 3],
+  [4, 5],
+  [6, 7],
+  [0, 2],
+  [1, 3],
+  [4, 6],
+  [5, 7],
+  [0, 4],
+  [1, 5],
+  [2, 6],
+  [3, 7],
+]
+
+/**
+ * Line-list vertices (xyz + rgba, the selection overlay layout) outlining the
+ * world bounds of every mesh shown as a bounding-box proxy.
+ */
+export function boundingBoxLineVertices(meshes: readonly GMesh[], color: readonly number[]): number[] {
+  const values: number[] = []
+  for (const mesh of meshes) {
+    if (!mesh.visible || !mesh.lod?.boxed) continue
+    const { min, max } = mesh.worldBounds
+    for (const edge of BOX_EDGES) {
+      for (const corner of edge) {
+        values.push(corner & 1 ? max[0] : min[0], corner & 2 ? max[1] : min[1], corner & 4 ? max[2] : min[2], ...color)
+      }
+    }
+  }
+  return values
+}
 
 export interface DisplayPlanEntry {
   readonly representation: DisplayRepresentation
@@ -43,8 +109,9 @@ export function representationCap(representation: DisplayRepresentation, levelCo
 }
 
 /**
- * Pick a representation for every visible LOD mesh. No GPU bounding-box draw
- * path exists, so 'bounding-box' degrades to the coarsest certified level.
+ * Pick a representation for every visible LOD mesh. 'bounding-box' caps the
+ * mesh at its coarsest certified level; with `boundingBoxProxies` the renderer
+ * draws the box outline in place of that level.
  */
 export function planDisplayCaps(
   meshes: readonly GMesh[],
