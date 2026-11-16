@@ -8,7 +8,19 @@ use math_core::{cross2, sub2};
 const MAX_VERTICES: usize = 4096;
 const MAX_WORK: usize = 8_000_000;
 
+/// Triangulates `outer` minus `holes` by y-monotone sweep decomposition with
+/// exact predicates (see `monotone.rs`). Output positions are the input ring
+/// vertices (consecutive duplicates and zero-width spikes dropped).
 pub fn triangulate_profile(outer: &[[f64; 2]], holes: &[Vec<[f64; 2]>]) -> Result<FillMesh> {
+    crate::monotone::triangulate(outer, holes)
+}
+
+/// Previous bridged ear-clipping triangulator, kept for differential tests
+/// and the performance comparison in `bench_profile_triangulation`.
+pub fn triangulate_profile_ear_clipping(
+    outer: &[[f64; 2]],
+    holes: &[Vec<[f64; 2]>],
+) -> Result<FillMesh> {
     check(
         outer.len() >= 3 && holes.iter().all(|h| h.len() >= 3),
         "Profile rings need at least three vertices",
@@ -431,7 +443,7 @@ fn clip_ears(positions: &[[f64; 2]], ring: &[usize], work: &mut usize) -> Result
     Ok(indices)
 }
 
-fn exact_binary64_orientation(
+pub(crate) fn exact_binary64_orientation(
     pa: [f64; 2],
     pb: [f64; 2],
     pc: [f64; 2],

@@ -1,3 +1,4 @@
+import {DirectInputError} from '../i18n/kernelErrors'
 import type {DirectBody, DirectDocument} from './directModeling'
 import {callGeometryRust} from '../kernel/geometry/kernel'
 
@@ -32,10 +33,24 @@ export function expandLiveBodyPatterns(document:DirectDocument):DirectDocument {
  return {...document,bodies:[...independent,...copies]}
 }
 
+const finitePatternValues=(values:readonly number[])=>values.every(v=>Number.isFinite(v)&&Math.abs(v)<=1e6)
+/** Mirrors the kernel placement limits so a bad grid or radial count is refused with a code and its field. */
+export function validateLivePatternInput(pattern:LiveBodyPattern,sourceId:string):void {
+ if(pattern.kind==='grid'){
+  const {rows,columns,spacing}=pattern,count=rows*columns
+  if(!Number.isSafeInteger(rows)||!Number.isSafeInteger(columns)||rows<1||columns<1||count<2||count>256||!finitePatternValues(spacing))
+   throw new DirectInputError('DIRECT_PATTERN_GRID','Grid needs 2–256 placements and finite spacing.','patternCount',[sourceId])
+ }else if(pattern.kind==='radial'){
+  if(!Number.isSafeInteger(pattern.count)||pattern.count<2||pattern.count>256||!finitePatternValues(pattern.center))
+   throw new DirectInputError('DIRECT_PATTERN_RADIAL','Radial pattern needs 2–256 placements and a finite pivot.','patternCount',[sourceId])
+ }
+}
+
 export function setLiveBodyPattern(document:DirectDocument,sourceId:string,pattern:LiveBodyPattern|null):DirectDocument {
  const next=structuredClone(document),source=next.bodies.find(b=>b.id===sourceId)
- if(!source||source.instance)throw Error('Select an independent source body.')
+ if(!source||source.instance)throw new DirectInputError('DIRECT_PATTERN_SOURCE','Select an independent source body.',undefined,source?[source.id]:[])
  // Refuse invalid parameters now; otherwise they persist and fail on the next instance resolve.
+ if(pattern)validateLivePatternInput(pattern,sourceId)
  if(pattern)callGeometryRust<number[][][]>('cad_live_pattern',{pattern})
  next.bodies=next.bodies.filter(b=>!(b.instance?.pattern&&b.instance.sourceId===sourceId))
  if(pattern)source.livePattern=structuredClone(pattern);else delete source.livePattern
@@ -44,7 +59,7 @@ export function setLiveBodyPattern(document:DirectDocument,sourceId:string,patte
 
 export function detachLiveBodyPattern(document:DirectDocument,sourceId:string):DirectDocument {
  const next=structuredClone(document),source=next.bodies.find(b=>b.id===sourceId)
- if(!source?.livePattern)throw Error('Select a live pattern source.')
+ if(!source?.livePattern)throw new DirectInputError('DIRECT_PATTERN_SOURCE','Select a live pattern source.',undefined,source?[source.id]:[])
  delete source.livePattern
  for(const body of next.bodies)if(body.instance?.pattern&&body.instance.sourceId===sourceId)delete body.instance
  return next

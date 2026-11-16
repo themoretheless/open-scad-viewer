@@ -1,3 +1,5 @@
+import { callGeometryRust } from '../../kernel/geometry/kernel'
+import { prepareExactFullRoundDisplay } from '../../kernel/geometry/brepExactDisplay'
 import {buildProgressiveSweepNode} from './buildProgressiveSweepNode'
 import {buildDirectMiterNode} from './buildDirectMiterNode'
 import {readSweepCorrections} from './readSweepCorrections'
@@ -14,7 +16,7 @@ import type { NurbsSurface } from '../../kernel/nurbsSurface'
 import { evaluateSdf, tessellateSdfGpuAware as tessellateSdf } from '../../kernel/geometry/sdf'
 import type { SdfField } from '../../kernel/geometry/sdf'
 import { approximateArchimedeanSpiralNurbsCurve, approximateCatenaryNurbsCurve, approximateCatenoidNurbsPatches, approximateCatenoidNurbsSurface, approximateClothoidNurbsCurve, approximateConicalHelixNurbsCurve, approximateCycloidNurbsCurve, approximateEllipticHelixNurbsCurve, approximateEpicycloidNurbsCurve, approximateHelicoidNurbsPatches, approximateHelicoidNurbsSurface, approximateHelixNurbsCurve, approximateHypocycloidNurbsCurve, approximateInvoluteNurbsCurve, approximateLissajousNurbsCurve, approximateLogarithmicSpiralNurbsCurve, approximateScrewNurbsSurfaces, approximateSphericalSpiralNurbsCurve, approximateToroidalSpiralNurbsCurve, approximateTorusKnotNurbsCurve, approximateTrochoidNurbsCurve, approximateVariablePitchHelixNurbsCurve, autoGuidedLoftNurbsCurves, boundaryFillNurbsSurfaces, checkedPipeNurbsSurface, checkedProfileSweepNurbsSurface, checkedRibbonNurbsSurface, checkedVariablePipeNurbsSurface, circleRectangleTransitionNurbsPatches, circleTransitionNurbsSurface, clampedLoftNurbsCurves, closedLoftNurbsCurves, composeNurbsCurves, controlTangentLoftNurbsCurves, coonsNurbsPatch, ellipseTransitionNurbsSurface, extrudeNurbsCurve, extrudeNurbsCurvePatches, formulaNurbsCurve, formulaNurbsSurface, framedSweepNurbsCurve, gordonNurbsSurface, guidedLoftNurbsCurves, hermiteNurbsCurve, loftAlignedNurbsCurves, loftNurbsCurves, matchNurbsLoftEnds, naturalLoftNurbsCurves, naturalSplineNurbsCurve, revolveNurbsCurve, scaledSweepNurbsCurve, sweepNurbsCurve, triangularNurbsPatch, twistSweepNurbsCurve, twoGuideSweepNurbsCurve } from '../../kernel/nurbsConstructors'
-import { booleanPolygonMeshes, extrudePolygonProfile, inspectPolygonMesh, loftPolygonSections, revolvePolygonProfile, sweepPolygonProfile } from '../../kernel/geometry/polygon'
+import { booleanPolygonMeshes, extrudePolygonProfile, inspectPolygonMesh, loftPolygonSections, normalizePolygonMesh, revolvePolygonProfile, sweepPolygonProfile } from '../../kernel/geometry/polygon'
 import { createAutoCartesianGuidedLoft, createAutoControlTangentCartesianGuidedLoft, createCartesianGuidedLoft, createControlTangentCartesianGuidedLoft, createMappedNaturalLoft } from '../../kernel/nurbsFoundation'
 import { compileRushGraphNurbs } from '../rushGraphNurbsCompiler'
 import { tessellateNurbsSurface, thickenNurbsMesh } from '../../kernel/geometry/tessellation'
@@ -431,6 +433,13 @@ export function createOwnNurbsResolver(nodes: Map<string, NativeNode>, _request:
                 case 'brep_boolean': result={kind:'brep',data:booleanNurbsBrep(needBrep(n.inputs[0]),needBrep(n.inputs[1]),n.operation)};break;
                 case 'brep_chamfer': {const model=needBrep(n.input);result={kind:'brep',data:chamferNurbsBrepEdges(model,selectBrepEdges(model,n.edges),n.size)};break;}
                 case 'brep_fillet': {const model=needBrep(n.input);result={kind:'brep',data:filletNurbsBrepEdges(model,selectBrepEdges(model,n.edges),n.radius,n.segments)};break;}
+                case 'brep_full_round_exact': {
+                    // Rust constructs and proves the exact body; only its display mesh enters the graph.
+                    const artifact=callGeometryRust<Readonly<Record<string,unknown>>>('cad_full_round_exact',{source:needBrep(n.input),faces:n.faces});
+                    const display=prepareExactFullRoundDisplay(artifact,n.segments);
+                    result={kind:'mesh',data:normalizePolygonMesh({positions:display.displayVertices,indices:display.displayIndices,report:display.report,faceIds:display.faceIds,topologyFaceIds:display.topologyFaceIds})};
+                    break;
+                }
                 case 'brep_tessellate': {
                     const input=get(n.input);if(input.kind!=='brep')throw new Error('Expected a B-rep model');
                     result={kind:'mesh',data:tessellateNurbsBrep(input.data,n.segments)};

@@ -40,7 +40,7 @@ describe('display budget setting', () => {
     setDisplayBudget(displayBudgetFor(128, true))
     expect(seen).toHaveBeenCalledTimes(1)
     expect(seen).toHaveBeenCalledWith(next)
-    expect(JSON.parse(store.get(DISPLAY_BUDGET_STORAGE_KEY)!)).toEqual({ megabytes: 128, boundingBoxProxies: true })
+    expect(JSON.parse(store.get(DISPLAY_BUDGET_STORAGE_KEY)!)).toEqual({ megabytes: 128, boundingBoxProxies: true, targetErrorPixels: 24 })
     unsubscribe()
     setDisplayBudget(displayBudgetFor(64))
     expect(seen).toHaveBeenCalledTimes(1)

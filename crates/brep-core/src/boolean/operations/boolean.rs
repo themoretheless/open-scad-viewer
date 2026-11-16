@@ -2,6 +2,17 @@ use super::*;
 /// Bounded regularized CSG over retained boundary geometry. Empty results have
 /// no placeholder topology. Unsupported curved intersections remain explicit.
 pub fn boolean(a: &Model, b: &Model, operation: &str) -> Result<Model> {
+    let result = boolean_keeping_coplanar_faces(a, b, operation)?;
+    // Approximate coplanar cleanup: merge adjacent faces on one plane and drop
+    // their shared edges and collinear vertices. Optional, like the seam pass.
+    Ok(match super::coincident_faces::merge_coplanar_faces(&result) {
+        Ok((model, _)) => model,
+        Err(_) => result,
+    })
+}
+/// [`boolean`] without the final coplanar face merge: adjacent coplanar
+/// fragments produced by the Boolean are kept as separate faces.
+pub(crate) fn boolean_keeping_coplanar_faces(a: &Model, b: &Model, operation: &str) -> Result<Model> {
     for operand in [a, b] {
         if crate::boolean_robustness::classify_boolean_operand(operand)?
             == crate::boolean_robustness::BooleanOperandKind::Sheet

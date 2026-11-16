@@ -33,10 +33,10 @@ export function polygonSelfIntersects(points: readonly (readonly number[])[]): b
 }
 /** Nested contours use even/odd fill; circles remain rational curves. */
 export function extrudeSketchProfile(sketches: readonly DirectSketch[], height: number, offset=0): NurbsBrep {
-  if (!sketches.length || sketches.some(s=>!s.closed)) throw Error('Select at least one closed contour.')
+  if (!sketches.length || sketches.some(s=>!s.closed)) throw new DirectInputError('DIRECT_PROFILE_MISSING','Select at least one closed contour.',undefined,sketches.filter(s=>!s.closed).map(s=>s.id))
   if (!Number.isFinite(height)||Math.abs(height)<.00001||!Number.isFinite(offset)) throw new DirectInputError('DIRECT_EXTRUDE_HEIGHT','Extrusion height must be finite and nonzero.','height')
   const plane=sketches[0].plane??xyPlane()
-  if(sketches.some(s=>!sameSketchPlane(s.plane,plane))) throw Error('All profile contours must lie on the same workplane.')
+  if(sketches.some(s=>!sameSketchPlane(s.plane,plane))) throw new DirectInputError('DIRECT_PROFILE_PLANE','All profile contours must lie on the same workplane.',undefined,sketches.filter(s=>!sameSketchPlane(s.plane,plane)).map(s=>s.id))
   for(const sketch of sketches)if(!sketch.retainedProfile&&!sketch.analytic&&polygonSelfIntersects(sketch.points))
     throw new DirectInputError('DIRECT_SKETCH_SELF_INTERSECTION','Profile contour intersects itself.',undefined,[sketch.id])
   if(sketches.length===1&&!sketches[0].retainedProfile)return extrudeSketchBrep(sketches[0],height,offset)
@@ -63,7 +63,7 @@ export function buildDirectExtrusion(document: DirectDocument, options: DirectEx
   const sketches=options.sketchIds.map(id=>{const s=document.sketches.find(s=>s.id===id);if(!s)throw new DirectInputError('DIRECT_PROFILE_MISSING','Profile contour no longer exists.',undefined,[id]);return s})
   const tool=extrudeSketchProfile(sketches,options.height,options.offset)
   const target=document.bodies.find(b=>b.id===options.targetId)
-  if(options.operation!=='new'&&!target)throw Error('Select a target body.')
+  if(options.operation!=='new'&&!target)throw new DirectInputError('DIRECT_TARGET_BODY','Select a target body.')
   let brep:NurbsBrep|undefined=tool
   if(options.operation!=='new'&&target?.brep)brep=booleanNurbsBrep(target.brep,tool,options.operation)
   if(!brep.bodies.length)return null

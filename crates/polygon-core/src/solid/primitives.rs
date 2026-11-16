@@ -488,8 +488,9 @@ pub fn simplify(mesh: &Mesh) -> Result<Mesh> {
     }
 }
 
-/// Constrained ear clipping with visible bridges for holes. It reuses all input
-/// boundary coordinates, so neighboring solid faces acquire no extra T junctions.
+/// Monotone-sweep triangulation of a profile with holes (exact predicates,
+/// constrained Delaunay flips). It reuses all input boundary coordinates, so
+/// neighboring solid faces acquire no extra T junctions.
 pub fn triangulate(profile: &crate::solid::modeling::Profile) -> Result<Mesh> {
     let fill = planar_geometry::triangulation::triangulate_profile(&profile.outer, &profile.holes)?;
     let mesh = Mesh {

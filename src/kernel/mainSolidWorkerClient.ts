@@ -3,6 +3,7 @@ import {isResidentDocumentRef,mainSolidExpectation, mainSolidResult, type MainSo
 import {decodeMainSolidResult} from './mainSolidWorkerTransport'
 import {applyDirectDocumentDelta,isDirectDocumentDelta} from './directDocumentDelta'
 import type {DirectDocument} from '../app/directModeling'
+import {validWorkerErrorField, validWorkerErrorTarget} from '../core/workerHandlerRuntime'
 
 export interface MainSolidPort {
   onmessage: ((event:MessageEvent) => void)|null
@@ -26,8 +27,16 @@ export interface MainSolidRunOptions {signal?:AbortSignal | undefined; timeoutMs
    * `job.base`; the delta answer is rebuilt from it. Without it `base` is not sent. */
   restoreBase?:DirectDocument}
 export class MainSolidWorkerError extends Error {
-  constructor(readonly code:string, message:string, name='MainSolidWorkerError') {super(message);this.name=name}
+  /** Inspector field and scene ids carried by a coded refusal across the worker boundary. */
+  declare readonly field?:string
+  readonly targetIds:readonly string[]
+  constructor(readonly code:string, message:string, name='MainSolidWorkerError', mark:{field?:string|undefined;target?:readonly string[]|undefined}={}) {
+    super(message);this.name=name
+    if(mark.field!==undefined)this.field=mark.field
+    this.targetIds=mark.target?[...mark.target]:[]
+  }
 }
+const WIRE_ERROR_KEYS=new Set(['name','message','code','field','target'])
 const cancelled=()=>new MainSolidWorkerError('CAD_CANCELLED','Operation cancelled','AbortError')
 
 /** One warm CAD realm; noncooperative calls are cancelled by terminating it. */
@@ -130,8 +139,10 @@ export class MainSolidWorkerClient {
           else fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid CAD worker response'),true)
         } else if('ok' in data&&data.ok===false && 'error' in data && data.error
           && typeof data.error.name==='string' && typeof data.error.message==='string'
-          && (data.error.code===undefined || typeof data.error.code==='string')) {
-          finish(new MainSolidWorkerError(data.error.code??'CAD_OPERATION',data.error.message,data.error.name),undefined,false,data.timing)
+          && (data.error.code===undefined || typeof data.error.code==='string')
+          && validWorkerErrorField(data.error.field) && validWorkerErrorTarget(data.error.target)
+          && Object.keys(data.error).every(key=>WIRE_ERROR_KEYS.has(key))) {
+          finish(new MainSolidWorkerError(data.error.code??'CAD_OPERATION',data.error.message,data.error.name,{field:data.error.field,target:data.error.target}),undefined,false,data.timing)
         } else fail(new MainSolidWorkerError('CAD_PROTOCOL','Invalid CAD worker response'),true)
       }
       worker.onerror=event=>fail(new MainSolidWorkerError('CAD_CRASH',event.message||'CAD worker failed'),true)

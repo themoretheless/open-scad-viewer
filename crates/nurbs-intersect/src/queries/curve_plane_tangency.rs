@@ -18,56 +18,7 @@
 //! after knot insertion, not the knot edit itself.
 use super::*;
 
-type Expansion = Vec<f64>;
-
-fn two_sum(a: f64, b: f64) -> (f64, f64) {
-    let s = a + b;
-    let bb = s - a;
-    (s, (a - (s - bb)) + (b - bb))
-}
-/// Shewchuk grow-expansion with zero elimination: nonoverlapping output in
-/// increasing magnitude, so the sign is the sign of the last component.
-fn grow(e: &[f64], b: f64) -> Expansion {
-    let mut q = b;
-    let mut out = Vec::with_capacity(e.len() + 1);
-    for &x in e {
-        let (s, h) = two_sum(q, x);
-        if h != 0. {
-            out.push(h);
-        }
-        q = s;
-    }
-    if q != 0. {
-        out.push(q);
-    }
-    out
-}
-fn add(a: &[f64], b: &[f64]) -> Expansion {
-    b.iter().fold(a.to_vec(), |acc, &x| grow(&acc, x))
-}
-fn neg(a: &[f64]) -> Expansion {
-    a.iter().map(|x| -x).collect()
-}
-fn scale(a: &[f64], b: f64) -> Expansion {
-    let mut out = Vec::new();
-    for &x in a {
-        let p = x * b;
-        let e = x.mul_add(b, -p);
-        out = grow(&out, e);
-        out = grow(&out, p);
-    }
-    out
-}
-fn sign(a: &[f64]) -> i8 {
-    match a.last() {
-        None => 0,
-        Some(x) if *x > 0. => 1,
-        Some(_) => -1,
-    }
-}
-fn finite(a: &[f64]) -> bool {
-    a.iter().all(|x| x.is_finite() && (*x == 0. || x.abs() >= f64::MIN_POSITIVE * 4.))
-}
+use crate::exact_expansion::{Expansion, add, finite, grow, neg, scale, sign};
 
 fn exact_coefficients(curve: &Curve, plane: Plane) -> Option<Vec<Expansion>> {
     let mut out = Vec::with_capacity(curve.control_points.len());

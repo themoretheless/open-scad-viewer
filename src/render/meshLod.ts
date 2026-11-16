@@ -8,15 +8,14 @@
 import type { MeshLodLevel } from '../core/mesh'
 import type { NativePickingCache } from './nativePickingCache'
 import type { GMesh } from './types'
-import { planDisplayCaps, type DisplayBudget, type LevelBuffers, type ProgressiveLevelStore } from './displayScheduler'
+import { boxProxiesOn, planDisplayCaps, type DisplayBudget, type LevelBuffers, type ProgressiveLevelStore } from './displayScheduler'
+import { isDeferredLevel } from './deferredLevels'
 import { pixelsPerUnit, selectViewerLod, type ViewerLodCamera } from './viewerLod'
 
 export interface GMeshLodState {
   readonly levels: readonly MeshLodLevel[]
   /** Level currently bound to the mesh, or null while the base geometry is shown. */
   current: number | null
-  /** The display plan shows this mesh as its bounding-box outline instead of its triangles. */
-  boxed: boolean
   readonly buffers: (LevelBuffers | null)[]
   readonly base: Pick<
     GMesh,
@@ -42,7 +41,6 @@ export function createMeshLodState(
   return {
     levels,
     current: null,
-    boxed: false,
     buffers: levels.map(() => null),
     base: { vb, ib, ic, vertices, indices, edgeIndices, faceIds, bvh, provenance },
   }
@@ -61,7 +59,7 @@ export function bindMeshLod(
   shared?: LevelBuffers,
 ): boolean {
   const lod = mesh.lod
-  if (!lod || lod.current === level || !lod.levels[level]) return false
+  if (!lod || lod.current === level || !lod.levels[level] || isDeferredLevel(lod.levels[level])) return false
   const data = lod.levels[level]
   // Shared buffers are owned by the display cache, not by this mesh.
   let buffers = shared ?? lod.buffers[level]
@@ -162,10 +160,9 @@ export function updateMeshLods(
       const resolved = display.store.resolve(dev, mesh, target)
       rebound = !!resolved && bindMeshLod(dev, mesh, resolved.level, nativePicking, resolved.buffers)
     } else rebound = bindMeshLod(dev, mesh, target, nativePicking)
-    const boxed = !!display.budget?.boundingBoxProxies && entry?.representation === 'bounding-box'
-    const reboxed = lod.boxed !== boxed
-    lod.boxed = boxed
-    if (rebound || reboxed) changed.push(mesh)
+    // The frame encoder and the box layer read this every frame; it is not a geometry change.
+    mesh.displayBox = boxProxiesOn(display.budget) && entry?.representation === 'bounding-box'
+    if (rebound) changed.push(mesh)
   }
   display.store?.setBound(meshes)
   return changed

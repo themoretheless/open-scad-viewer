@@ -413,3 +413,43 @@ fn actual_intersecting_nurbs_bodies_select_material_on_both_finite_cut_pieces() 
     subtraction.reverify().unwrap();
     assert!(!cut.material_classified() && !cut.geometry_admitted());
 }
+
+/// A mixed-root loop crossing an interior knot line of the curved support.
+/// The two crossing branches are split into one carrier per original span;
+/// the Jordan neighbourhood half admits it only through certified
+/// cross-carrier knot joints. Full paired admission with material still needs
+/// the knotted curved body itself to be a qualified closed solid, which the
+/// Bezier-only shared-boundary certificates refuse today (tripwire below).
+#[test]
+fn loop_crossing_an_interior_knot_has_certified_jordan_neighbourhoods() {
+    let a = source();
+    let wire = fixture::wire_knotted();
+    let joints = mixed::qualify_loop_neighborhoods(&wire, 12, Default::default()).unwrap();
+    assert_eq!(joints.len(), 10);
+    assert_eq!(joints.iter().filter(|j| j.knot().is_some()).count(), 2);
+    for j in &joints {
+        j.reverify().unwrap();
+    }
+    // Uncertified cases still refuse: plain single-graph joints, a starved
+    // enclosure budget, and an excessive joint budget.
+    assert!(wire.qualify_joints(12, Default::default()).is_err());
+    let starved = ss::OriginalSsCurveLimits { max_refinements: 0, native_rectangles: 1, interval_operations: 1, world_rectangles: 1, ..Default::default() };
+    assert!(mixed::qualify_loop_neighborhoods(&wire, 12, starved).is_err());
+    assert!(mixed::qualify_loop_neighborhoods(&wire, 25, Default::default()).is_err());
+    // The unknotted loop is unchanged: every joint stays regular.
+    let plain = mixed::qualify_loop_neighborhoods(&fixture::wire(), 12, Default::default()).unwrap();
+    assert!(plain.iter().all(|j| j.knot().is_none()));
+    // The planar side splits into a finite inside piece across the knot line.
+    let cut = mixed::split_closed_contour_candidate(&a, 1, &wire, 0, [0.5; 2], Default::default()).unwrap();
+    assert_ne!(cut.inside_face(), cut.source_face());
+    // Tripwire: the knotted curved body is not yet an admitted closed solid,
+    // so paired admission and material on the curved side stay unproved.
+    let mut b = graph::bowl();
+    b.faces[1].surface = fixture::insert_half_knot_u(&b.faces[1].surface);
+    b.validate().unwrap();
+    assert_eq!(&b.faces[1].surface, wire.edges()[0].curve().source().second());
+    let mut curved_policy = policy::policy();
+    curved_policy.geometry.boundary.contacts.cells_per_pair = 256;
+    curved_policy.geometry.boundary.contacts.domain_cells_per_pair = 10000;
+    assert!(solid::qualify(b, curved_policy).unwrap().solid().is_none());
+}

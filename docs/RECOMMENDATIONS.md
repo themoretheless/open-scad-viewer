@@ -1,8 +1,8 @@
 # Recommendations & Roadmap
 
-> Updated 2026-11-13: removed 23 resolved items (5 open remain). The donor-era
+> Updated 2026-11-13: removed 23 resolved items (5 remain listed; on 2026-11-15 items 1.1 and 3.5 were marked done, leaving 4.5 open). The donor-era
 > `App.vue`, `openscadParser.ts` and `webgpuRenderer.ts` this plan targeted are
-> gone. The shell is now `src/App.svt` (~1.8k lines) with 38 `.svt` components in
+> gone. The shell is now `src/App.svt` (918 lines) with 38 `.svt` components in
 > `src/components/`, 19 in `src/features/` and 13 composables in
 > `src/composables/`; the language runs
 > in `crates/openscad-core` (`lexer.rs`, `parser/`, typed `ast.rs`, `eval/`)
@@ -29,16 +29,16 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 Goal: `src/App.svt` becomes a thin shell that composes children.
 
-- [~] **1.1** i18n: dictionaries already live in `src/i18n/appStrings.ts` (ru/en); `t()` in `App.svt` is still a plain key lookup with no interpolation/pluralization
+- [x] **1.1** i18n: dictionaries live in `src/i18n/appStrings.ts` (ru/en); `t()` in `App.svt` delegates to `translate()`, which substitutes `{name}` parameters and picks plural forms by `count` (`key_<category>` with `key_other` fallback)
 - [x] **1.4** Shared `Modal` and `SidePanel` (`src/components/`, behavior in `src/composables/useModalDialog.ts`): `role="dialog"`, `aria-modal`, title label, focus moved in, Tab/Shift+Tab trap, Escape, focus restore, background scroll lock. The export dialog (`ExportDialog.svt`), `KeyboardShortcuts.svt`, `ExampleGallery.svt`, `CommandPalette.svt` and `FunctionReference.svt` use `Modal`; `SidePanel` has no consumer yet (candidates in P7: `ScanPlanePanel`, DirectModeler operation cards). `MechanicalGenerator.svt` keeps the native `<dialog>` with `showModal()`. Covered by `tests/modalDialogUi.test.ts`
 
-**Exit criteria:** `App.svt` < 1,000 lines; build green; no behavior regressions. Also tracked as R4 in [recommendation.md](./recommendation.md). Status: `App.svt` is 894 lines after moving workspace modes, source history, palette commands and dispatch, shell actions, geometry analysis and customizer state into `src/composables/`, and the group source panel, export dialog, sweep evidence, performance panel and parameter suggestions into `src/components/`.
+**Exit criteria:** `App.svt` < 1,000 lines; build green; no behavior regressions. Also tracked as R4 in [recommendation.md](./recommendation.md). Status: `App.svt` is 918 lines after moving workspace modes, source history, palette commands and dispatch, shell actions, geometry analysis and customizer state into `src/composables/`, and the group source panel, export dialog, sweep evidence, performance panel and parameter suggestions into `src/components/`.
 
 ---
 
 ## Phase 3 — Build & test infrastructure
 
-- [ ] **3.5** Add **ESLint** + **Prettier** configs for TypeScript *(still nothing to run; `tsconfig.json` also still lacks `noUnusedLocals`/`noUnusedParameters`, see [ISSUES.md](./ISSUES.md) E1–E8)*
+- [x] **3.5** **ESLint** + **Prettier** configs for TypeScript: `eslint.config.mjs` and `.prettierrc.json` exist, `npm run lint` (`scripts/audit-lint.mjs`, ratchet baseline) runs in CI, and `tsconfig.json` has `noUnusedLocals`/`noUnusedParameters`; the remaining strictness work is ROADMAP P2
 
 **Exit criteria:** `npm run lint` exists and runs in CI.
 
@@ -55,6 +55,6 @@ Goal: `src/App.svt` becomes a thin shell that composes children.
 
 ## Suggested execution order
 
-1. **Phase 3.5** (lint config) — cheapest, and gives the remaining refactors an automated signal.
+1. **Phase 3.5** (lint config) — done; the ratchet now gives the remaining refactors an automated signal.
 2. **Phase 1** (finish shell decomposition) — together with R4 in [recommendation.md](./recommendation.md).
 3. **Phase 4.4–4.5** (accessibility).

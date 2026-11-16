@@ -1,4 +1,5 @@
-//! Sufficient Jordan admission for interior affine original SS graphs.
+//! Sufficient Jordan admission for interior affine original SS graphs,
+//! including loops crossing interior knot lines at certified knot joints.
 use super::*;
 #[derive(Clone, Copy)]
 pub struct InteriorLoopLimits {
@@ -18,14 +19,14 @@ impl Default for InteriorLoopLimits {
 }
 pub struct QualifiedInteriorSsLoop {
     cuts: [ClosedCutCandidate; 2],
-    joints: Vec<ss::QualifiedOriginalSsJoint>,
+    joints: Vec<ss::QualifiedOriginalSsWireJoint>,
     limits: InteriorLoopLimits,
 }
 impl QualifiedInteriorSsLoop {
     pub fn cuts(&self) -> &[ClosedCutCandidate; 2] {
         &self.cuts
     }
-    pub fn joints(&self) -> &[ss::QualifiedOriginalSsJoint] {
+    pub fn joints(&self) -> &[ss::QualifiedOriginalSsWireJoint] {
         &self.joints
     }
     pub fn reverify(&self) -> Result<()> {
@@ -63,16 +64,27 @@ fn injective(body: &crate::closed_solid::QualifiedClosedSolid, face: usize) -> R
     }
     Ok(())
 }
-fn neighborhood(edge: &ss::OriginalSsRootEdge, limits: ss::OriginalSsCurveLimits) -> Result<()> {
+/// `knots` lists the exact (coordinate, value) of certified cross-carrier
+/// knot joints at this edge's ends. Only there may the edge reach its
+/// carrier's span boundary; every other knot, seam or pole is still refused.
+fn neighborhood(
+    edge: &ss::OriginalSsRootEdge,
+    limits: ss::OriginalSsCurveLimits,
+    knots_at_ends: &[(usize, f64)],
+) -> Result<()> {
     let bounds = edge.enclose(limits)?;
     let original = bounds
         .uv
         .map(|d| d.map(|x| num_rational::BigRational::from_float(x).unwrap()));
     let window = edge.curve().qualify_graph_window(original)?;
     let d = edge.curve().coordinate_domain();
+    let q = |x| num_rational::BigRational::from_float(x).unwrap();
     for k in 0..4 {
-        let q = |x| num_rational::BigRational::from_float(x).unwrap();
-        if !(q(d[k][0]) < window.local_window()[k][0] && window.local_window()[k][1] < q(d[k][1])) {
+        let uv = bounds.uv[k];
+        // Side 0/1 of this coordinate ends on a certified knot joint.
+        let certified = |side: usize| knots_at_ends.iter().any(|(c, t)| *c == k && uv[side] == *t);
+        let local = window.local_window()[k].clone();
+        if !((q(d[k][0]) < local[0] || certified(0)) && (local[1] < q(d[k][1]) || certified(1))) {
             return Err(unproved(
                 "Entire loop edge lacks an interior source graph neighborhood",
             ));
@@ -88,9 +100,10 @@ fn neighborhood(edge: &ss::OriginalSsRootEdge, limits: ss::OriginalSsCurveLimits
         } else {
             (&s.knots_v, s.degree_v, s.control_points[0].len())
         };
-        let uv = bounds.uv[k];
         if !(knots[p] < uv[0] && uv[1] < knots[n])
-            || knots[p..=n].iter().any(|t| uv[0] <= *t && *t <= uv[1])
+            || knots[p..=n].iter().any(|t| {
+                uv[0] <= *t && *t <= uv[1] && !((*t == uv[0] && certified(0)) || (*t == uv[1] && certified(1)))
+            })
         {
             return Err(unproved(
                 "Loop needs explicit one-sided knot/seam/pole neighborhood admission",
@@ -98,6 +111,35 @@ fn neighborhood(edge: &ss::OriginalSsRootEdge, limits: ss::OriginalSsCurveLimits
         }
     }
     Ok(())
+}
+/// Geometry half of paired-loop admission: every literal joint is either a
+/// regular single-graph joint or a certified cross-carrier knot joint, and
+/// every whole edge has a compact interior graph neighbourhood except at its
+/// certified knot ends. Regular joints need one interior graph neighbourhood;
+/// knot joints need the two one-sided windows to cover an open neighbourhood
+/// with agreeing selectors on the knot line. Seams and poles stay refused.
+pub fn qualify_loop_neighborhoods(
+    wire: &ss::OriginalSsRootWire,
+    joint_depth: usize,
+    geometry: ss::OriginalSsCurveLimits,
+) -> Result<Vec<ss::QualifiedOriginalSsWireJoint>> {
+    if joint_depth > 24 {
+        return Err(unproved("Invalid interior-loop joint budget"));
+    }
+    let joints = wire.qualify_knot_aware_joints(joint_depth, geometry)?;
+    let n = wire.edges().len();
+    for (i, edge) in wire.edges().iter().enumerate() {
+        let mut knots = Vec::new();
+        for joint in [&joints[(i + n - 1) % n], &joints[i]] {
+            if let Some(k) = joint.knot() {
+                let value = num_traits::ToPrimitive::to_f64(k.knot())
+                    .ok_or_else(|| unproved("Knot joint value overflow"))?;
+                knots.push((k.coordinate(), value));
+            }
+        }
+        neighborhood(edge, geometry, &knots)?;
+    }
+    Ok(joints)
 }
 /// Both source supports must be the exact ordered original SS pair. Compact
 /// local graph neighborhoods make the root image a connected 1-manifold;
@@ -138,10 +180,7 @@ pub fn qualify_paired_interior_loop(
     }
     injective(first, first_face)?;
     injective(second, second_face)?;
-    for edge in wire.edges() {
-        neighborhood(edge, limits.geometry)?;
-    }
-    let joints = wire.qualify_joints(limits.joint_depth, limits.geometry)?;
+    let joints = qualify_loop_neighborhoods(wire, limits.joint_depth, limits.geometry)?;
     let a = split_closed_contour_candidate(first, first_face, wire, 0, seeds[0], limits.cuts[0])?;
     let b = split_closed_contour_candidate(second, second_face, wire, 1, seeds[1], limits.cuts[1])?;
     Ok(QualifiedInteriorSsLoop {

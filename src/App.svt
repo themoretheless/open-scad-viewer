@@ -32,6 +32,7 @@ import { useShellActions } from './composables/useShellActions'
 import VrControls from './components/VrControls.svt'
 import ModelingGridControls from './components/ModelingGridControls.svt'
 import MaterialControls from './features/MaterialControls.svt'
+import DisplayQualityControl from './components/DisplayQualityControl.svt'
 import { clamp } from './kernel/geometry/math3d'
 import { isRushFrontend, SOURCE_FILE_ACCEPT, sourceFileExtension } from './language/rushFrontendDetect'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'svet'
@@ -773,7 +774,7 @@ const { startResize, moveResize, stopResize, resizeEditorWithKeyboard } = useEdi
                 @update:env-id="setEnv"
                 @update:shadows-enabled="setShadows"
                 @apply-preset="applyMaterialPreset"
-              />
+              /><DisplayQualityControl :locale="lang" viewer="main" :get-renderer="getRenderer" :renderer-ready="gpuOk" />
             </details>
           </template>
           <template #scanToggle>

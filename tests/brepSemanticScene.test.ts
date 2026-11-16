@@ -1,3 +1,4 @@
+import {DisplayLevelService} from '../src/kernel/displayLevelService'
 import {describe, expect, it, vi} from 'vitest'
 import {buildBrepSemanticScene} from '../src/kernel/brepSemanticScene'
 import {lowerOpenSCADToSemanticProgram} from '../src/language/semantic/semanticProgramLowerer'
@@ -159,25 +160,36 @@ describe('real B-rep SemanticProgram scene assembly', () => {
 })
 
 describe('certified display levels on B-rep scene bodies', () => {
-  it('publishes ordered levels for curved bodies and carries them through validation and scene transport', async () => {
+  it('publishes no levels; the level service derives ordered levels from the snapshot and they still pass transport', async () => {
     const build = await buildBrepSemanticScene(lower('cylinder(h=4, r=2);'), policy)
     const [mesh] = build.result.meshes
-    expect(mesh.lods?.map(level => level.triangleCount).every((count, i, all) => i === 0 || count > all[i - 1])).toBe(true)
-    expect(mesh.lods?.length).toBe(3)
-    for (const [i, level] of mesh.lods!.entries()) {
-      expect(level.indices.length).toBe(level.triangleCount * 3)
-      expect(level.faceIds.length).toBe(level.triangleCount)
-      expect(level.provenance).toEqual([expect.objectContaining({triangleStart: 0, triangleEnd: level.triangleCount})])
-      if (i) expect(level.errorUpper).toBeLessThan(mesh.lods![i - 1].errorUpper)
-    }
-    expect(isGeometryEvaluationResultPayload(build.result)).toBe(true)
-    const [restored] = meshesFromGeometryScene(geometrySceneFromMeshes(build.result.meshes))
-    expect(restored.lods).toBe(mesh.lods)
+    expect(mesh.lods).toBeUndefined()
+    expect(mesh.nativeGeometry?.kind).toBe('brep')
+    const service = new DisplayLevelService()
+    const summary = service.summary(mesh.geometryAssetId!, mesh.nativeGeometry!.geometryJson)
+    expect(summary?.length).toBe(3)
+    const lods = summary!.map((entry, i) => {
+      const level = service.level(mesh.geometryAssetId!, mesh.nativeGeometry!.geometryJson, i)
+      expect(level.indices.length).toBe(entry.triangleCount * 3)
+      expect(level.faceIds.length).toBe(entry.triangleCount)
+      expect(level.vertices.length).toBe(entry.vertexCount * 6)
+      if (i) expect(entry.errorUpper).toBeLessThan(summary![i - 1].errorUpper)
+      if (i) expect(entry.triangleCount).toBeGreaterThan(summary![i - 1].triangleCount)
+      return {vertices: level.vertices, indices: level.indices, edgeIndices: level.edgeIndices, faceIds: level.faceIds,
+        bvh: level.bvh, triangleCount: entry.triangleCount, errorUpper: entry.errorUpper,
+        provenance: [{...mesh.provenance[0], triangleEnd: entry.triangleCount}]}
+    })
+    const withLevels = {...build.result, meshes: [{...mesh, lods}]}
+    expect(isGeometryEvaluationResultPayload(withLevels)).toBe(true)
+    const [restored] = meshesFromGeometryScene(geometrySceneFromMeshes(withLevels.meshes))
+    expect(restored.lods).toBe(lods)
   })
 
-  it('publishes no levels for planar bodies, which one level shows exactly', async () => {
+  it('has no levels for planar bodies, which one level shows exactly', async () => {
     const build = await buildBrepSemanticScene(lower('cube([2,3,4]);'), policy)
-    expect(build.result.meshes[0].lods).toBeUndefined()
+    const [mesh] = build.result.meshes
+    expect(mesh.lods).toBeUndefined()
+    expect(new DisplayLevelService().summary(mesh.geometryAssetId!, mesh.nativeGeometry!.geometryJson)).toBeNull()
     expect(isGeometryEvaluationResultPayload(build.result)).toBe(true)
   })
 })

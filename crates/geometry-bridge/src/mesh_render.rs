@@ -176,10 +176,61 @@ pub(crate) fn render_parts<I: RenderIndex>(
 }
 
 fn render_input<I: RenderIndex>(input: RenderInput<'_, I>, crease_cosine: f64) -> RenderMesh {
+    // Without cooperative checkpoints the future completes on its first poll.
+    let mut future = std::pin::pin!(render_input_impl::<false, I>(input, crease_cosine));
+    let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+    match future.as_mut().poll(&mut cx) {
+        std::task::Poll::Ready(mesh) => mesh,
+        std::task::Poll::Pending => unreachable!("non-cooperative render never yields"),
+    }
+}
+
+/// Index entries processed between cooperative checkpoints of render preparation.
+pub(crate) const RENDER_COOPERATIVE_BATCH: usize = 16_384;
+
+/// Cooperative render preparation: yields after adjacency construction and
+/// every [`RENDER_COOPERATIVE_BATCH`] index entries. Same arithmetic, in the
+/// same order, as [`render_parts`], so the result is bit-identical.
+pub(crate) async fn render_parts_cooperative<I: RenderIndex>(
+    positions: &[f64],
+    indices: &[I],
+    face_ids: Vec<u32>,
+    crease_cosine: f64,
+) -> RenderMesh {
+    render_input_impl::<true, I>(
+        RenderInput {
+            positions,
+            indices,
+            face_ids,
+        },
+        crease_cosine,
+    )
+    .await
+}
+
+pub(crate) async fn yield_once() {
+    let mut yielded = false;
+    std::future::poll_fn(|_| {
+        if std::mem::replace(&mut yielded, true) {
+            std::task::Poll::Ready(())
+        } else {
+            std::task::Poll::Pending
+        }
+    })
+    .await
+}
+
+async fn render_input_impl<const COOPERATIVE: bool, I: RenderIndex>(
+    input: RenderInput<'_, I>,
+    crease_cosine: f64,
+) -> RenderMesh {
     let positions = input.positions;
     let indices = input.indices;
     let vertex_count = positions.len() / 3;
     let adjacency = build_face_adjacency(positions, indices);
+    if COOPERATIVE {
+        yield_once().await;
+    }
     let mut vertices = Vec::<f32>::with_capacity(vertex_count * 6);
     let mut out_indices = Vec::with_capacity(indices.len());
     let mut properties = Vec::<PropertyVertex>::with_capacity(vertex_count);
@@ -192,6 +243,9 @@ fn render_input<I: RenderIndex>(input: RenderInput<'_, I>, crease_cosine: f64) -
     let mut merge_from = Vec::with_capacity(merge_capacity);
     let mut merge_to = Vec::with_capacity(merge_capacity);
     for (i, &id) in indices.iter().enumerate() {
+        if COOPERATIVE && i != 0 && i % RENDER_COOPERATIVE_BATCH == 0 {
+            yield_once().await;
+        }
         let source = id.as_usize();
         let face = adjacency.normals[i / 3];
         let face_is_axial_cap = face[0] == 0. && face[1] == 0. && face[2].abs() >= 1. - 1e-9;

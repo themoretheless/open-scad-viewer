@@ -57,6 +57,17 @@ it('answers edge and face queries on an exact box',()=>{
  expect(()=>selectBrepEdges(box,{min_length:10})).toThrow('matched no')
 })
 
+it('delivers native exact Full Round to rush/nurbs-1 text and JSON as a display mesh',async()=>{
+ const scene=await parseOpenSCAD('// @rush/1\nshow brep_box([0mm,0mm,0mm],[4mm,8mm,6mm]).brep_full_round_exact([5,4,3],4)')
+ expect(scene.meshes).toHaveLength(1)
+ expect(scene.meshes[0].indices.length).toBeGreaterThan(0)
+ const document={language:'rush/nurbs-1',units:'mm',parameters:[],nodes:[{id:'box',op:'brep_box',min:[0,0,0],max:[4,8,6]},{id:'round',op:'brep_full_round_exact',input:'box',faces:[5,4,3]}],root:'round'}
+ expect(compileRushGraphNurbs(document).resolved_document.nodes[1]).toMatchObject({faces:[5,4,3],segments:4})
+ expect(buildOwnNurbs(document,{action:'build'})).toBeDefined()
+ expect(()=>compileRushGraphNurbs({...document,nodes:[document.nodes[0],{...document.nodes[1],faces:[5,4]}]})).toThrow()
+ expect(()=>buildOwnNurbs({...document,nodes:[document.nodes[0],{...document.nodes[1],faces:[5,5,3]}]},{action:'build'})).toThrow()
+},60000)
+
 it('classifies concave edges of an L-shaped prism',()=>{
  const l=extrudeBrepPolygon([[0,0],[4,0],[4,1],[1,1],[1,4],[0,4]],0,2,[])
  const concave=selectBrepEdges(l,{convexity:'concave'})

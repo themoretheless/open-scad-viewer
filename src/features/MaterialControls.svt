@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'svet'
-import { DISPLAY_BUDGET_MEGABYTES, displayBudgetFor } from '../render/displayScheduler'
-import { getDisplayBudget, setDisplayBudget } from '../render/displayBudgetSetting'
+import { onUnmounted, ref } from 'svet'
+import { boxProxiesOn, DISPLAY_BUDGET_MEGABYTES, displayBudgetFor } from '../render/displayScheduler'
+import { getDisplayBudget, setDisplayBudget, subscribeDisplayBudget } from '../render/displayBudgetSetting'
 import { ENV_PRESETS, MATCAP_PRESETS, MATERIAL_PRESETS, THEME_PRESETS, type ShadingModel } from '../render/rendererContracts'
 
 const props = defineProps<{
@@ -37,8 +37,11 @@ const sliderValue = (event: Event) => (event.target as HTMLInputElement).valueAs
  */
 const MEGABYTE = 1024 * 1024
 const displayBudget = ref(getDisplayBudget())
+// The display-quality preset writes the same setting; follow it.
+onUnmounted(subscribeDisplayBudget(budget => (displayBudget.value = budget)))
 function updateDisplayBudget(megabytes: number, boundingBoxProxies: boolean) {
-  const next = displayBudgetFor(megabytes, boundingBoxProxies)
+  // The target error belongs to the display-quality preset; keep it.
+  const next = { ...displayBudgetFor(megabytes, boundingBoxProxies), targetErrorPixels: displayBudget.value.targetErrorPixels }
   displayBudget.value = next
   setDisplayBudget(next)
 }
@@ -133,7 +136,7 @@ function applyPreset(select: HTMLSelectElement) {
       <select
         :value="String(displayBudget.budgetBytes / MEGABYTE)"
         :aria-label="label('Бюджет уровней детализации, МБ', 'Detail level budget, MB')"
-        @change="updateDisplayBudget(Number(($event.target as HTMLSelectElement).value), !!displayBudget.boundingBoxProxies)"
+        @change="updateDisplayBudget(Number(($event.target as HTMLSelectElement).value), boxProxiesOn(displayBudget))"
       >
         <option v-for="megabytes in DISPLAY_BUDGET_MEGABYTES" :key="megabytes" :value="String(megabytes)">{{ megabytes }} MB</option>
       </select>
@@ -141,7 +144,7 @@ function applyPreset(select: HTMLSelectElement) {
     <label :title="label('Мелкие и не влезшие в бюджет объекты рисовать габаритной рамкой', 'Draw small and over-budget objects as their bounding box')">{{ label('Рамки', 'Boxes') }}
       <input
         type="checkbox"
-        :checked="!!displayBudget.boundingBoxProxies"
+        :checked="boxProxiesOn(displayBudget)"
         :aria-label="label('Габаритные рамки вместо мелких объектов', 'Bounding boxes for small objects')"
         @change="updateDisplayBudget(displayBudget.budgetBytes / MEGABYTE, ($event.target as HTMLInputElement).checked)"
       >

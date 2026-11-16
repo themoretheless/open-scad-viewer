@@ -1,0 +1,42 @@
+<script setup lang="ts">
+import { toRef } from 'svet'
+import { useDisplayQuality, type DisplayBudgetTarget } from '../composables/useDisplayQuality'
+import { DISPLAY_QUALITY_PRESETS, type DisplayQualityPreset } from '../render/displayScheduler'
+
+/** Display-quality budget preset of one viewer, persisted per viewer and applied to the LOD scheduler. */
+const props = defineProps<{
+  locale: string
+  viewer: string
+  getRenderer: () => DisplayBudgetTarget | null | undefined
+  rendererReady: boolean
+}>()
+const { displayQuality, setDisplayQuality } = useDisplayQuality({
+  viewer: props.viewer,
+  getRenderer: () => props.getRenderer(),
+  rendererReady: toRef(props, 'rendererReady'),
+})
+const label = (ru: string, en: string) => (props.locale === 'ru' ? ru : en)
+const onChange = (event: Event) => setDisplayQuality((event.target as HTMLSelectElement).value as DisplayQualityPreset)
+const names: Record<DisplayQualityPreset, [string, string]> = {
+  low: ['Низкое', 'Low'],
+  medium: ['Среднее', 'Medium'],
+  high: ['Высокое', 'High'],
+}
+</script>
+
+<template>
+  <label
+    class="display-quality-control"
+    :title="label('Бюджет памяти и детализации отображения', 'Display memory and detail budget')"
+    >{{ label('Качество отображения', 'Display quality') }}
+    <select
+      :value="displayQuality"
+      :aria-label="label('Качество отображения', 'Display quality')"
+      @change="onChange"
+    >
+      <option v-for="preset in DISPLAY_QUALITY_PRESETS" :key="preset" :value="preset">
+        {{ names[preset][locale === 'ru' ? 0 : 1] }}
+      </option>
+    </select>
+  </label>
+</template>

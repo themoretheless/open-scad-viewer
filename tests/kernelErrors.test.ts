@@ -145,3 +145,138 @@ describe('OpenSCAD language diagnostics', () => {
     expect(presentLanguageError({ message: 'Line 1, column 1: syntax' }, t)).toBe('Line 1, column 1: syntax')
   })
 })
+
+const FREQUENT_KERNEL_CODES = [
+  'NURBS_INVALID_INPUT',
+  'BREP_RESOURCE_LIMIT',
+  'GEOMETRY_INVALID_INPUT',
+  'BREP_INVALID_INPUT',
+  'BREP_UNSUPPORTED_OPERATION',
+  'BREP_PROFILE_CONTACTS',
+  'NURBS_NUMERIC_ERROR',
+  'NURBS_RESOURCE_LIMIT',
+  'BREP_THREAD_PATCH_UNRESOLVED',
+  'BREP_INVALID_THREAD_PATCH',
+  'BREP_RATIONAL_SWEEP_REFUSED',
+  'FRAME_INVALID_INPUT',
+  'BREP_SOURCE_CONTACT',
+  'BREP_VARIABLE_RADIUS_FILLET_REFUSED',
+  'BREP_ANALYTIC_FILLET_REFUSED',
+  'BREP_CERTIFIED_TESSELLATION_REFUSED',
+  'BREP_EXACT_FILLET_REFUSED',
+  'BREP_CERTIFIED_MASS_REFUSED',
+  'BREP_NURBS_STEP_REFUSED',
+  'BREP_ANALYSIS_INDETERMINATE',
+  'BREP_VALENCE3_CORNER_BLEND_REFUSED',
+  'BREP_OFFSET_CAP_REFUSED',
+  'BREP_INVALID_TOPOLOGY',
+] as const
+const FAMILY_REASONS = new Set([
+  'invalidInput',
+  'refused',
+  'unproven',
+  'resourceLimit',
+  'topology',
+  'importFile',
+  'failed',
+])
+
+describe('exact kernel messages and coded TypeScript refusals', () => {
+  it('gives the most frequent kernel codes an exact, non-family message in both languages', () => {
+    for (const code of FREQUENT_KERNEL_CODES) {
+      const spec = kernelErrorSpec(code)!
+      expect(FAMILY_REASONS.has(spec.reason), code).toBe(false)
+      for (const lang of ['ru', 'en'] as const) {
+        const message = presentKernelError({ code, message: 'kernel text' }, lang).message
+        expect(message, `${lang} ${code}`).toContain(code)
+        expect(message, `${lang} ${code}`).not.toMatch(/kernelError\.|kernelStep\./)
+      }
+    }
+  })
+
+  it('points fillet, chamfer, sweep, offset and pattern refusals at their inspector fields', () => {
+    expect(kernelErrorSpec('BREP_EXACT_FILLET_REFUSED')).toMatchObject({ field: 'radius', step: 'reduceRadius' })
+    expect(kernelErrorSpec('BREP_EXACT_CHAMFER_REFUSED')).toMatchObject({ field: 'radius', step: 'reduceChamfer' })
+    expect(kernelErrorSpec('BREP_VARIABLE_RADIUS_FILLET_REFUSED')?.field).toBe('endRadius')
+    expect(kernelErrorSpec('BREP_OFFSET_CAP_REFUSED')?.field).toBe('distance')
+    expect(kernelErrorSpec('DIRECT_SWEEP_DEVIATION')?.field).toBe('sweepDeviation')
+    expect(kernelErrorSpec('DIRECT_PATTERN_GRID')?.field).toBe('patternCount')
+    expect(presentKernelError({ code: 'BREP_EXACT_FILLET_REFUSED', message: '' }, 'ru').message).toMatch(
+      /^Скругление не подтверждено.*Уменьшите радиус/,
+    )
+  })
+
+  it('keeps the English kernel text only for exact messages that stay broad', () => {
+    expect(presentKernelError({ code: 'BREP_INVALID_INPUT', message: 'Face 3 is open' }, 'en').message).toMatch(
+      /Details: Face 3 is open$/,
+    )
+    expect(presentKernelError({ code: 'BREP_EXACT_FILLET_REFUSED', message: 'raw' }, 'en').message).not.toContain('raw')
+  })
+
+  it('maps the formerly uncoded TypeScript refusals to codes, fields and objects', async () => {
+    const { constructSolidSurface, buildSolidSurface } = await import('../src/kernel/solidSurfaceConstruction')
+    const { setLiveBodyPattern, validateLivePatternInput } = await import('../src/app/liveBodyPattern')
+    const { editSketchDimension } = await import('../src/app/directDimensions')
+    const doc = { bodies: [], sketches: [], curves: [] } as never
+    expect(() => constructSolidSurface(doc, ['c1', 'c1'], 'nurbs-loft', 's')).toThrow(
+      expect.objectContaining({ code: 'DIRECT_CURVES_DISTINCT', targetIds: ['c1'] }),
+    )
+    expect(() => constructSolidSurface(doc, ['c1', 'c2'], 'nurbs-loft', 's')).toThrow(
+      expect.objectContaining({ code: 'DIRECT_CURVE_MISSING' }),
+    )
+    expect(() => constructSolidSurface(doc, ['c1'], 'nurbs-sweep', 's')).toThrow(
+      expect.objectContaining({ code: 'DIRECT_SURFACE_INPUTS', targetIds: ['c1'] }),
+    )
+    // The worker builder rethrows coded refusals so their field and target ids cross the boundary.
+    expect(() =>
+      buildSolidSurface(doc, {
+        kind: 'nurbs-loft',
+        ids: ['c1', 'c1'],
+        id: 's',
+        reversed: [],
+        sweep: { mode: 'translation', normal: [0, 0, 1], sections: 4, maxDeviation: 1 },
+      }),
+    ).toThrow(expect.objectContaining({ code: 'DIRECT_CURVES_DISTINCT' }))
+    const body = { id: 'b', instance: { sourceId: 'x' } }
+    expect(() => setLiveBodyPattern({ bodies: [body], sketches: [] } as never, 'b', null)).toThrow(
+      expect.objectContaining({ code: 'DIRECT_PATTERN_SOURCE', targetIds: ['b'] }),
+    )
+    expect(() => validateLivePatternInput({ kind: 'grid', rows: 1, columns: 1, spacing: [1, 1] }, 'b')).toThrow(
+      expect.objectContaining({ code: 'DIRECT_PATTERN_GRID', field: 'patternCount', targetIds: ['b'] }),
+    )
+    expect(() => validateLivePatternInput({ kind: 'grid', rows: 2, columns: 2, spacing: [1, Infinity] }, 'b')).toThrow(
+      expect.objectContaining({ code: 'DIRECT_PATTERN_GRID' }),
+    )
+    expect(() => validateLivePatternInput({ kind: 'grid', rows: 16, columns: 17, spacing: [1, 1] }, 'b')).toThrow(
+      expect.objectContaining({ code: 'DIRECT_PATTERN_GRID' }),
+    )
+    expect(() => validateLivePatternInput({ kind: 'grid', rows: 16, columns: 16, spacing: [1, 1] }, 'b')).not.toThrow()
+    expect(() => validateLivePatternInput({ kind: 'radial', count: 1, axis: 'z', center: [0, 0, 0] }, 'b')).toThrow(
+      expect.objectContaining({ code: 'DIRECT_PATTERN_RADIAL' }),
+    )
+    const arc = {
+      id: 'a',
+      name: 'Arc',
+      closed: false,
+      points: [],
+      analytic: { kind: 'arc', center: [0, 0], radius: 1, start: 0, sweep: 90 },
+      dimensions: [],
+    }
+    expect(() => editSketchDimension(arc as never, 0, 2)).toThrow(
+      expect.objectContaining({ code: 'DIRECT_DIMENSION_ANALYTIC' }),
+    )
+    for (const code of [
+      'DIRECT_CURVES_DISTINCT',
+      'DIRECT_CURVE_MISSING',
+      'DIRECT_PATTERN_SOURCE',
+      'DIRECT_PATTERN_GRID',
+      'DIRECT_DIMENSION_ANALYTIC',
+      'DIRECT_PROFILE_PLANE',
+      'DIRECT_TARGET_BODY',
+    ] as const) {
+      const ru = presentKernelError(new DirectInputError(code, 'x'), 'ru').message
+      expect(ru, code).toMatch(/[а-яё]/i)
+      expect(ru, code).not.toContain('x')
+    }
+  })
+})

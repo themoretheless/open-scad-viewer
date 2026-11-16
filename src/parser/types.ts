@@ -97,6 +97,11 @@ export class CooperativeCheckpoint {
     this.enabled = shouldAbort !== undefined || onYield !== undefined
   }
 
+  /** True when a host observes this evaluation (abort or liveness callbacks). */
+  get cooperative(): boolean {
+    return this.enabled
+  }
+
   poll(): void {
     if (this.shouldAbort?.()) throw new AbortedError()
   }

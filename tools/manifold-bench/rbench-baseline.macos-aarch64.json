@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "id": "1794686711418833000-57982+1794686720183906000-58175",
+  "id": "1794686711418833000-57982+1794686720183906000-58175+1794711415371573000-69531",
   "status": "complete",
   "environment": {
     "arch": "aarch64",
@@ -228,6 +228,90 @@
         "completion": "synchronous function return",
         "lifecycle": "fresh input per operation; input setup/drop excluded; output drop included; chunks of <=64",
         "param.triangles": "5120",
+        "sample_target_ns": "10000000",
+        "samples": "100",
+        "warmup_ns": "200000000"
+      },
+      "metrics": [
+        {
+          "id": "wall",
+          "unit": "ns",
+          "scope": "current thread wall clock; scheduler included",
+          "phase": "measurement",
+          "statistic": "batch_total",
+          "direction": "lower"
+        }
+      ]
+    },
+    {
+      "id": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "contract": {
+        "completion": "synchronous function return",
+        "lifecycle": "fresh input per operation; input setup/drop excluded; output drop included; chunks of <=64",
+        "param.booleans": "64",
+        "sample_target_ns": "10000000",
+        "samples": "100",
+        "warmup_ns": "200000000"
+      },
+      "metrics": [
+        {
+          "id": "wall",
+          "unit": "ns",
+          "scope": "current thread wall clock; scheduler included",
+          "phase": "measurement",
+          "statistic": "batch_total",
+          "direction": "lower"
+        }
+      ]
+    },
+    {
+      "id": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "contract": {
+        "completion": "synchronous function return",
+        "lifecycle": "fresh input per operation; input setup/drop excluded; output drop included; chunks of <=64",
+        "param.triangles": "1920",
+        "sample_target_ns": "10000000",
+        "samples": "100",
+        "warmup_ns": "200000000"
+      },
+      "metrics": [
+        {
+          "id": "wall",
+          "unit": "ns",
+          "scope": "current thread wall clock; scheduler included",
+          "phase": "measurement",
+          "statistic": "batch_total",
+          "direction": "lower"
+        }
+      ]
+    },
+    {
+      "id": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "contract": {
+        "completion": "synchronous function return",
+        "lifecycle": "fresh input per operation; input setup/drop excluded; output drop included; chunks of <=64",
+        "param.triangles": "1920",
+        "sample_target_ns": "10000000",
+        "samples": "100",
+        "warmup_ns": "200000000"
+      },
+      "metrics": [
+        {
+          "id": "wall",
+          "unit": "ns",
+          "scope": "current thread wall clock; scheduler included",
+          "phase": "measurement",
+          "statistic": "batch_total",
+          "direction": "lower"
+        }
+      ]
+    },
+    {
+      "id": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "contract": {
+        "completion": "synchronous function return",
+        "lifecycle": "fresh input per operation; input setup/drop excluded; output drop included; chunks of <=64",
+        "param.triangles": "48384",
         "sample_target_ns": "10000000",
         "samples": "100",
         "warmup_ns": "200000000"
@@ -14541,6 +14625,5206 @@
       "sequence": 99,
       "value": "10820750",
       "operations": 2,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 0,
+      "value": "33379000",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 1,
+      "value": "33533541",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 2,
+      "value": "33132334",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 3,
+      "value": "33301083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 4,
+      "value": "33093041",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 5,
+      "value": "33479250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 6,
+      "value": "33482375",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 7,
+      "value": "33829291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 8,
+      "value": "33285333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 9,
+      "value": "33674583",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 10,
+      "value": "33301833",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 11,
+      "value": "33471166",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 12,
+      "value": "33205833",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 13,
+      "value": "33583458",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 14,
+      "value": "33502375",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 15,
+      "value": "32864750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 16,
+      "value": "32893333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 17,
+      "value": "33220167",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 18,
+      "value": "33478291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 19,
+      "value": "33049625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 20,
+      "value": "33377375",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 21,
+      "value": "33969584",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 22,
+      "value": "41688792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 23,
+      "value": "33447083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 24,
+      "value": "33129375",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 25,
+      "value": "33196959",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 26,
+      "value": "33359333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 27,
+      "value": "33063791",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 28,
+      "value": "32809125",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 29,
+      "value": "33406083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 30,
+      "value": "33241500",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 31,
+      "value": "33089250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 32,
+      "value": "33472333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 33,
+      "value": "33746625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 34,
+      "value": "37171458",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 35,
+      "value": "33357291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 36,
+      "value": "33557791",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 37,
+      "value": "33237417",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 38,
+      "value": "33229833",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 39,
+      "value": "33192875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 40,
+      "value": "33027709",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 41,
+      "value": "32889792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 42,
+      "value": "33328959",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 43,
+      "value": "33482208",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 44,
+      "value": "32980583",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 45,
+      "value": "33282791",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 46,
+      "value": "33389708",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 47,
+      "value": "33202791",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 48,
+      "value": "32943750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 49,
+      "value": "33203542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 50,
+      "value": "33137583",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 51,
+      "value": "33251333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 52,
+      "value": "33155709",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 53,
+      "value": "33230334",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 54,
+      "value": "33130375",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 55,
+      "value": "33273625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 56,
+      "value": "33039958",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 57,
+      "value": "33266083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 58,
+      "value": "33352667",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 59,
+      "value": "32923250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 60,
+      "value": "33105042",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 61,
+      "value": "33382292",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 62,
+      "value": "33166166",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 63,
+      "value": "33364084",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 64,
+      "value": "33224334",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 65,
+      "value": "33231625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 66,
+      "value": "32760708",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 67,
+      "value": "32924708",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 68,
+      "value": "33174208",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 69,
+      "value": "33258500",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 70,
+      "value": "33124000",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 71,
+      "value": "33087792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 72,
+      "value": "33457083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 73,
+      "value": "33354750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 74,
+      "value": "33391792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 75,
+      "value": "33198625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 76,
+      "value": "33172834",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 77,
+      "value": "33076125",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 78,
+      "value": "33347417",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 79,
+      "value": "33182042",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 80,
+      "value": "33355542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 81,
+      "value": "33327333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 82,
+      "value": "33252042",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 83,
+      "value": "33326041",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 84,
+      "value": "33287875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 85,
+      "value": "33131291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 86,
+      "value": "33384208",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 87,
+      "value": "33420792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 88,
+      "value": "33222250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 89,
+      "value": "33629583",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 90,
+      "value": "33211125",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 91,
+      "value": "33221792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 92,
+      "value": "33098542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 93,
+      "value": "33640583",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 94,
+      "value": "33729667",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 95,
+      "value": "33296792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 96,
+      "value": "33020542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 97,
+      "value": "33115125",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 98,
+      "value": "33228458",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/medium-csg/panel-minus-64-cylinders-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 99,
+      "value": "33332084",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 0,
+      "value": "45306041",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 1,
+      "value": "46068708",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 2,
+      "value": "45147000",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 3,
+      "value": "45093542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 4,
+      "value": "45061750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 5,
+      "value": "46082917",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 6,
+      "value": "45202666",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 7,
+      "value": "45484167",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 8,
+      "value": "45197750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 9,
+      "value": "45480125",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 10,
+      "value": "45534125",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 11,
+      "value": "45126084",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 12,
+      "value": "44905000",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 13,
+      "value": "45023917",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 14,
+      "value": "45398500",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 15,
+      "value": "45525333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 16,
+      "value": "44767083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 17,
+      "value": "45323000",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 18,
+      "value": "45197375",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 19,
+      "value": "45280875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 20,
+      "value": "45293541",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 21,
+      "value": "45609250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 22,
+      "value": "45344917",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 23,
+      "value": "57266042",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 24,
+      "value": "45452917",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 25,
+      "value": "45464708",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 26,
+      "value": "45301709",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 27,
+      "value": "45141416",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 28,
+      "value": "44995042",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 29,
+      "value": "44759458",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 30,
+      "value": "44948334",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 31,
+      "value": "44975791",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 32,
+      "value": "45063166",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 33,
+      "value": "45074417",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 34,
+      "value": "45045750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 35,
+      "value": "44950875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 36,
+      "value": "44926250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 37,
+      "value": "45130292",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 38,
+      "value": "45179000",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 39,
+      "value": "45026167",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 40,
+      "value": "45016167",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 41,
+      "value": "45076667",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 42,
+      "value": "45364333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 43,
+      "value": "45425625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 44,
+      "value": "45562917",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 45,
+      "value": "45786083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 46,
+      "value": "45461083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 47,
+      "value": "45512542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 48,
+      "value": "45362000",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 49,
+      "value": "45334958",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 50,
+      "value": "45544458",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 51,
+      "value": "45505041",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 52,
+      "value": "45555959",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 53,
+      "value": "45401500",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 54,
+      "value": "46018084",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 55,
+      "value": "45806875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 56,
+      "value": "45391875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 57,
+      "value": "45020833",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 58,
+      "value": "45262000",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 59,
+      "value": "45332250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 60,
+      "value": "45337333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 61,
+      "value": "45426958",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 62,
+      "value": "45524083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 63,
+      "value": "45076042",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 64,
+      "value": "45182084",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 65,
+      "value": "45484083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 66,
+      "value": "45474584",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 67,
+      "value": "45441417",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 68,
+      "value": "45685959",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 69,
+      "value": "45364417",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 70,
+      "value": "45596292",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 71,
+      "value": "44973292",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 72,
+      "value": "45338209",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 73,
+      "value": "45201542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 74,
+      "value": "45255292",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 75,
+      "value": "45890708",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 76,
+      "value": "45914042",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 77,
+      "value": "46349125",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 78,
+      "value": "45427750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 79,
+      "value": "45189500",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 80,
+      "value": "45101250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 81,
+      "value": "44909334",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 82,
+      "value": "45386875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 83,
+      "value": "44847542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 84,
+      "value": "45071916",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 85,
+      "value": "45009500",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 86,
+      "value": "45729542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 87,
+      "value": "44901875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 88,
+      "value": "45003417",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 89,
+      "value": "44890209",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 90,
+      "value": "45279750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 91,
+      "value": "45289375",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 92,
+      "value": "45252875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 93,
+      "value": "45527209",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 94,
+      "value": "45431792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 95,
+      "value": "45234834",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 96,
+      "value": "50110375",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 97,
+      "value": "45201916",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 98,
+      "value": "45349750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-union-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 99,
+      "value": "45706250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 0,
+      "value": "32906250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 1,
+      "value": "34102000",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 2,
+      "value": "44038583",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 3,
+      "value": "42792917",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 4,
+      "value": "32873291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 5,
+      "value": "32878542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 6,
+      "value": "33417333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 7,
+      "value": "33160291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 8,
+      "value": "33302125",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 9,
+      "value": "33706334",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 10,
+      "value": "33399291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 11,
+      "value": "33985375",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 12,
+      "value": "33376416",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 13,
+      "value": "33480833",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 14,
+      "value": "33112458",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 15,
+      "value": "33103250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 16,
+      "value": "33661958",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 17,
+      "value": "33225416",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 18,
+      "value": "33217875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 19,
+      "value": "33449833",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 20,
+      "value": "33170333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 21,
+      "value": "33068708",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 22,
+      "value": "33054875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 23,
+      "value": "33002916",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 24,
+      "value": "33059333",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 25,
+      "value": "33001500",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 26,
+      "value": "32931292",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 27,
+      "value": "33354291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 28,
+      "value": "32903666",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 29,
+      "value": "33209042",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 30,
+      "value": "32977583",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 31,
+      "value": "32850459",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 32,
+      "value": "32803500",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 33,
+      "value": "33114083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 34,
+      "value": "33007209",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 35,
+      "value": "32958417",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 36,
+      "value": "33011583",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 37,
+      "value": "33100625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 38,
+      "value": "33107291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 39,
+      "value": "33128750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 40,
+      "value": "32748625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 41,
+      "value": "32693500",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 42,
+      "value": "33145208",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 43,
+      "value": "32782792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 44,
+      "value": "33105917",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 45,
+      "value": "32969500",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 46,
+      "value": "32719917",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 47,
+      "value": "32945792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 48,
+      "value": "32989792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 49,
+      "value": "32912750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 50,
+      "value": "33112250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 51,
+      "value": "32954292",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 52,
+      "value": "33054792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 53,
+      "value": "32770708",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 54,
+      "value": "32925166",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 55,
+      "value": "32878917",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 56,
+      "value": "33107083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 57,
+      "value": "33080833",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 58,
+      "value": "32890000",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 59,
+      "value": "32869625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 60,
+      "value": "33173958",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 61,
+      "value": "39475625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 62,
+      "value": "32941916",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 63,
+      "value": "32917208",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 64,
+      "value": "33078167",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 65,
+      "value": "32756250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 66,
+      "value": "33173417",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 67,
+      "value": "33032625",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 68,
+      "value": "33130459",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 69,
+      "value": "33086417",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 70,
+      "value": "32920959",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 71,
+      "value": "32906000",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 72,
+      "value": "33019834",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 73,
+      "value": "32710916",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 74,
+      "value": "32940542",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 75,
+      "value": "32663125",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 76,
+      "value": "33086291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 77,
+      "value": "32757958",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 78,
+      "value": "33144750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 79,
+      "value": "33177084",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 80,
+      "value": "33270875",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 81,
+      "value": "32968416",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 82,
+      "value": "32941250",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 83,
+      "value": "32929084",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 84,
+      "value": "32740792",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 85,
+      "value": "32957291",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 86,
+      "value": "33151583",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 87,
+      "value": "33255666",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 88,
+      "value": "32935959",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 89,
+      "value": "32982833",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 90,
+      "value": "32979834",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 91,
+      "value": "33497083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 92,
+      "value": "33074209",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 93,
+      "value": "32874958",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 94,
+      "value": "32951750",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 95,
+      "value": "32869083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 96,
+      "value": "32872292",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 97,
+      "value": "32996084",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 98,
+      "value": "33100584",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/overlapping-difference-fn32",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 99,
+      "value": "33106083",
+      "operations": 1,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 0,
+      "value": "17523125",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 1,
+      "value": "17600667",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 2,
+      "value": "17478750",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 3,
+      "value": "17030791",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 4,
+      "value": "17097709",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 5,
+      "value": "17097792",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 6,
+      "value": "17580625",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 7,
+      "value": "17119500",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 8,
+      "value": "17050834",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 9,
+      "value": "17494375",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 10,
+      "value": "17012875",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 11,
+      "value": "17509834",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 12,
+      "value": "17095833",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 13,
+      "value": "17248875",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 14,
+      "value": "17324500",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 15,
+      "value": "17546583",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 16,
+      "value": "17562833",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 17,
+      "value": "17116709",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 18,
+      "value": "16809750",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 19,
+      "value": "17420875",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 20,
+      "value": "16976416",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 21,
+      "value": "17113125",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 22,
+      "value": "17353167",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 23,
+      "value": "17700625",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 24,
+      "value": "17227875",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 25,
+      "value": "17192792",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 26,
+      "value": "17080917",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 27,
+      "value": "16700583",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 28,
+      "value": "17437750",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 29,
+      "value": "17279250",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 30,
+      "value": "17354584",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 31,
+      "value": "16670959",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 32,
+      "value": "17455208",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 33,
+      "value": "17561250",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 34,
+      "value": "17629333",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 35,
+      "value": "17246166",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 36,
+      "value": "17470417",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 37,
+      "value": "17505458",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 38,
+      "value": "17122750",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 39,
+      "value": "17276833",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 40,
+      "value": "17175708",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 41,
+      "value": "17239250",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 42,
+      "value": "17140291",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 43,
+      "value": "17256042",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 44,
+      "value": "17481584",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 45,
+      "value": "17301958",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 46,
+      "value": "17211584",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 47,
+      "value": "17312125",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 48,
+      "value": "17500000",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 49,
+      "value": "17208917",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 50,
+      "value": "16862917",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 51,
+      "value": "17333750",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 52,
+      "value": "17116541",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 53,
+      "value": "17198291",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 54,
+      "value": "17250833",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 55,
+      "value": "16674209",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 56,
+      "value": "17367625",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 57,
+      "value": "16992375",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 58,
+      "value": "17181083",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 59,
+      "value": "17229458",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 60,
+      "value": "17064458",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 61,
+      "value": "16776667",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 62,
+      "value": "17331500",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 63,
+      "value": "17538750",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 64,
+      "value": "17181750",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 65,
+      "value": "17279666",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 66,
+      "value": "17024166",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 67,
+      "value": "17221250",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 68,
+      "value": "17502667",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 69,
+      "value": "17196959",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 70,
+      "value": "17151042",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 71,
+      "value": "17413500",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 72,
+      "value": "17362709",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 73,
+      "value": "17534875",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 74,
+      "value": "17170916",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 75,
+      "value": "17226833",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 76,
+      "value": "17281834",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 77,
+      "value": "17276334",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 78,
+      "value": "17164459",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 79,
+      "value": "17323416",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 80,
+      "value": "17329833",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 81,
+      "value": "16968209",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 82,
+      "value": "17501625",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 83,
+      "value": "17304125",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 84,
+      "value": "17131292",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 85,
+      "value": "17250708",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 86,
+      "value": "17408667",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 87,
+      "value": "16915500",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 88,
+      "value": "17116833",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 89,
+      "value": "17205000",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 90,
+      "value": "17427375",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 91,
+      "value": "17176958",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 92,
+      "value": "16823583",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 93,
+      "value": "17026125",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 94,
+      "value": "16863667",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 95,
+      "value": "17456083",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 96,
+      "value": "17081292",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 97,
+      "value": "16976166",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 98,
+      "value": "16964375",
+      "operations": 8,
+      "availability": {
+        "state": "available"
+      }
+    },
+    {
+      "case": "polygon-core/csg-fixtures/dense-sphere/separated-union-3x-fn128",
+      "metric": "wall",
+      "variant": "candidate",
+      "process": 0,
+      "pair": null,
+      "sequence": 99,
+      "value": "17139292",
+      "operations": 8,
       "availability": {
         "state": "available"
       }

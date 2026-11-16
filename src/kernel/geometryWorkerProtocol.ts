@@ -69,11 +69,21 @@ export interface GeometryBuildStarted extends GeometryJobEnvelope {
   phase: 'initializing' | 'compiling'
 }
 
+/** Progress of the kernel start/step/cancel job running inside a build. */
+export interface GeometryKernelJobProgress {
+  kind: 'mesh-boolean' | 'render-prepare'
+  done: number
+  total: number
+  /** Cooperative units stepped so far; cancellation is observed between them. */
+  steps: number
+}
+
 export interface GeometryBuildProgress extends GeometryJobEnvelope {
   status: 'progress'
   phase: GeometryBuildPhase
   /** Null means that the current kernel phase cannot report meaningful completion. */
   progress: number | null
+  kernelJob?: GeometryKernelJobProgress
 }
 
 /** Display-only per-node sweep geometry, never an authoritative publication. */
