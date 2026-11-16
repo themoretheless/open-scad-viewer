@@ -66,7 +66,8 @@ import {checkLatticeGraphInput, checkLatticeGraphMeshInput, isNominalLatticeGrap
 import {warmGeometryKernel} from './geometry/kernel'
 import {prepareMainSolidTransfer} from './mainSolidWorkerTransport'
 import {createWorkerHandler} from '../core/workerHandlerRuntime'
-import {directDocumentDelta,directSnapshotDelta} from './directDocumentDelta'
+import {directDocumentDelta,directSnapshotDelta,snapshotReusableInstances} from './directDocumentDelta'
+import {resolvedInstanceGeometry} from './solidInstances'
 import {MAIN_SOLID_JOB_KINDS,isResidentDocumentRef,type MainSolidJob,type MainSolidProgress,type MainSolidProgressMessage,type MainSolidRequest,type MainSolidResponse,type MainSolidResults} from './mainSolidProtocol'
 
 /** Run the authoritative history parser here so the UI can commit without re-validating on its thread. */
@@ -78,8 +79,19 @@ const documentResult=<T extends {document:DirectDocument}>(job:{document:DirectD
   return job.delta===true?{...validated,document:directDocumentDelta(job.document,validated.document) as unknown as DirectDocument}:validated
 }
 /** Undo/Redo: validate the snapshot; with `base`, answer only what differs from the client's state. */
+/** The last restored document stays resident with its snapshot text: Undo/Redo steps that start
+ * from it (the client's base is that text) reuse its resolved linked instances instead of
+ * resolving and copying them again. Worker-private; never mutated after it is stored. */
+let residentRestore:{text:string;document:DirectDocument}|null=null
 const restoreDocumentResult=(job:{text:string;base?:string}):DirectDocument=>{
-  const next=parseDirectDocument(job.text,instanceCache)
+  let reuse:Map<string,Pick<DirectDocument['bodies'][number],'mesh'|'brep'>>|undefined
+  if(typeof job.base==='string'&&residentRestore?.text===job.base){
+    const ids=snapshotReusableInstances(job.base,job.text)
+    if(ids.size){reuse=new Map();for(const body of residentRestore.document.bodies)if(ids.has(body.id))reuse.set(body.id,resolvedInstanceGeometry(body))}
+  }
+  residentRestore=null
+  const next=parseDirectDocument(job.text,instanceCache,reuse)
+  residentRestore={text:job.text,document:next}
   if(typeof job.base!=='string')return next
   return (directSnapshotDelta(job.base,job.text,next) as unknown as DirectDocument|undefined)??next
 }

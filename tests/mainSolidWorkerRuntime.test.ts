@@ -510,6 +510,31 @@ it('restores compact linked geometry through the authoritative document parser',
  expect(messages.at(-1)).toMatchObject({id:2,kind:'restoreDocument',ok:false})
 })
 
+it('answers consecutive restores from the resident base with the same documents as a cold parse',async()=>{
+ const {emptyDirectDocument,serializeDirectDocument,parseDirectDocument}=await import('../src/app/directModeling')
+ const {createSolidInstance}=await import('../src/kernel/solidInstances')
+ const {createBrepBox,tessellateNurbsBrep}=await import('../src/kernel/geometry/brep')
+ const {applyDirectDocumentDelta,isDirectDocumentDelta}=await import('../src/kernel/directDocumentDelta')
+ const {stringifyMeshJson}=await import('../src/exchange/meshJson')
+ const seed=emptyDirectDocument(),brep=createBrepBox([0,0,0],[2,3,4])
+ seed.bodies.push({id:'source',name:'Source',brep,mesh:tessellateNurbsBrep(brep,1)})
+ const a=parseDirectDocument(serializeDirectDocument(createSolidInstance(seed,'source','linked',[[1,0,0,10],[0,1,0,0],[0,0,1,0],[0,0,0,1]])))
+ const renamed=structuredClone(a);renamed.bodies[0]!.name='Renamed'
+ const moved=structuredClone(a);moved.bodies[1]!.instance!.matrix[1]![3]=7
+ const messages:MainSolidResponse[]=[],handle=createMainSolidWorkerHandler(message=>messages.push(message))
+ let published=a,id=1
+ for(const target of [renamed,a,moved,a]){
+  const text=serializeDirectDocument(target),base=serializeDirectDocument(published)
+  await handle({version:1,id:id++,job:{kind:'restoreDocument',text,base}})
+  const response=messages.at(-1)!
+  expect(response.ok).toBe(true)
+  if(!response.ok)return
+  const wire=structuredClone(response.result) as unknown
+  published=isDirectDocumentDelta(wire)?applyDirectDocumentDelta(published,wire)!:wire as typeof a
+  expect(stringifyMeshJson(published)).toBe(stringifyMeshJson(parseDirectDocument(text)))
+ }
+})
+
 it('prepares transferable display buffers without detaching request geometry',async()=>{
  const mesh={positions:new Float64Array([0,0,0,1,0,0,0,1,0]),indices:new Uint32Array([0,1,2])}
  let received:MainSolidResponse|undefined,transferred=0

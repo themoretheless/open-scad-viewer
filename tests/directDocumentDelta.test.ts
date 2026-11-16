@@ -1,5 +1,10 @@
 import { expect, it } from 'vitest'
-import { applyDirectDocumentDelta, directDocumentDelta, directSnapshotDelta } from '../src/kernel/directDocumentDelta'
+import {
+  applyDirectDocumentDelta,
+  directDocumentDelta,
+  directSnapshotDelta,
+  snapshotReusableInstances,
+} from '../src/kernel/directDocumentDelta'
 import { stringifyMeshJson } from '../src/exchange/meshJson'
 import type { DirectDocument } from '../src/app/directModeling'
 
@@ -58,7 +63,7 @@ it('refuses malformed deltas and unknown ids', () => {
 })
 
 it('answers a history restore by snapshot text and resends instances whose source changed', async () => {
-  const { createSolidInstance } = await import('../src/kernel/solidInstances')
+  const { createSolidInstance, resolvedInstanceGeometry } = await import('../src/kernel/solidInstances')
   const { createBrepBox, tessellateNurbsBrep } = await import('../src/kernel/geometry/brep')
   const { emptyDirectDocument, parseDirectDocument, serializeDirectDocument } =
     await import('../src/app/directModeling')
@@ -104,4 +109,20 @@ it('answers a history restore by snapshot text and resends instances whose sourc
     stringifyMeshJson(grownNext),
   )
   expect(directSnapshotDelta('not json', grownText, grownNext)).toBeUndefined()
+  // A resident holder of the base reuses only instances whose geometry cannot have changed.
+  expect([...snapshotReusableInstances(baseText, renamedText)]).toEqual(['instance'])
+  expect(snapshotReusableInstances(baseText, grownText).size).toBe(0)
+  const moved = structuredClone(linked)
+  moved.bodies.find(b => b.id === 'instance')!.instance!.matrix[0]![3] = 20
+  expect(snapshotReusableInstances(baseText, serializeDirectDocument(moved)).size).toBe(0)
+  expect(snapshotReusableInstances('not json', renamedText).size).toBe(0)
+  // Reusing the resident geometry yields the same document as resolving it again, sharing it.
+  const resident = linked.bodies.find(b => b.id === 'instance')!
+  const reused = parseDirectDocument(
+    renamedText,
+    undefined,
+    new Map([['instance', resolvedInstanceGeometry(resident)]]),
+  )
+  expect(stringifyMeshJson(reused)).toBe(stringifyMeshJson(next))
+  expect(reused.bodies.find(b => b.id === 'instance')!.mesh).toBe(resident.mesh)
 })

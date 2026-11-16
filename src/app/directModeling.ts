@@ -100,7 +100,7 @@ export function serializeDirectDraft(document:DirectDocument,serialized?:string)
  return serializeDirectDocument(persisted as unknown as DirectDocument)
 }
 
-function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBatchCache): Generator<void, DirectDocument> {
+function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBatchCache, reuseInstances?:ReadonlyMap<string,Pick<DirectBody,'mesh'|'brep'>>): Generator<void, DirectDocument> {
   // In-memory bound only; the browser draft has its own, smaller quota (see persist in DirectModeler).
   if (text.length > MAX_DOCUMENT_CHARACTERS) throw new Error('Document exceeds 64 MB.')
   const d = JSON.parse(text) as DirectDocument
@@ -240,6 +240,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     yield
   }
   // Validate serialized caches first, then derive linked geometry from validated sources.
+  const reused: Array<[number, DirectBody['mesh'], DirectBody['brep']]> = []
   if(d.bodies.some(body=>body.instance)) {
     // Bound expansion before allocating geometry: a small reference document must not
     // multiply a large source into an unbounded set of materialized copies.
@@ -256,10 +257,14 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
       expanded+=sourceSizes.get(body.instance.sourceId)??0
       if(expanded>MAX_DOCUMENT_CHARACTERS)throw Error('Expanded instance document exceeds 64 MB.')
     }
-    d.bodies=resolveSolidInstances(d,instanceCache).bodies
+    d.bodies=resolveSolidInstances(d,instanceCache,reuseInstances).bodies
     for (let i = 0; i < d.bodies.length; i++) {
       const body = d.bodies[i]
       if (!body.instance) continue
+      if (reuseInstances?.has(body.id)) {
+        // Already checked and normalized when it was resolved; attached after normalization below.
+        reused.push([i, body.mesh, body.brep]); body.mesh = { positions: [], indices: [] } as unknown as DirectBody["mesh"]; if (body.brep) body.brep = null as never; continue
+      }
       const pos = body.mesh.positions
       for (let j = 0; j < pos.length; j++) if (!finite(pos[j])) throw Error('Instance placement exceeds document coordinate bounds.')
     }
@@ -276,17 +281,19 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
   if(d.cplane!==undefined&&!validCPlane(d.cplane))throw Error('Invalid construction plane.')
   const pivots=validatePivots(d.pivots,new Set([...d.sketches,...d.bodies,...d.curves??[],...d.surfaces??[],...d.sourceBodies??[]].map(o=>(o as {id:string}).id)))
   if(pivots)d.pivots=pivots;else delete d.pivots
-  try { normalizeOwnedJson(d); return d }
+  const attachReused = (doc: DirectDocument) => { for (const [i, mesh, brep] of reused) { const body = doc.bodies[i]!; body.mesh = mesh; if (brep) body.brep = brep } return doc }
+  try { normalizeOwnedJson(d); return attachReused(d) }
   catch (error) {
     if (error !== DEEP_JSON_NORMALIZATION) throw error
     // This is a fast-path depth threshold, not a new document admission limit.
     // Keep the JSON round trip here: it also normalizes numbers (e.g. -0 → 0).
-    return JSON.parse(JSON.stringify(d))
+    return attachReused(JSON.parse(JSON.stringify(d)) as DirectDocument)
   }
 }
 
-export function parseDirectDocument(text: string, instanceCache?:SolidInstanceBatchCache): DirectDocument {
-  const validation = directDocumentValidation(text,instanceCache)
+/** `reuseInstances`: see `resolveSolidInstances`; only the worker's resident restore passes it. */
+export function parseDirectDocument(text: string, instanceCache?:SolidInstanceBatchCache, reuseInstances?:ReadonlyMap<string,Pick<DirectBody,'mesh'|'brep'>>): DirectDocument {
+  const validation = directDocumentValidation(text,instanceCache,reuseInstances)
   for (;;) {
     const step = validation.next()
     if (step.done) return step.value
