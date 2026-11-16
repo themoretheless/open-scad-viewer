@@ -56,9 +56,7 @@ export function displayBudgetFor(megabytes: number, boundingBoxProxies = true): 
 }
 
 export const sameDisplayBudget = (a: DisplayBudget, b: DisplayBudget) =>
-  a.budgetBytes === b.budgetBytes &&
-  a.targetErrorPixels === b.targetErrorPixels &&
-  boxProxiesOn(a) === boxProxiesOn(b)
+  a.budgetBytes === b.budgetBytes && a.targetErrorPixels === b.targetErrorPixels && boxProxiesOn(a) === boxProxiesOn(b)
 
 /** Box proxies are on unless the budget turns them off explicitly. */
 export const boxProxiesOn = (budget: DisplayBudget | undefined) => budget?.boundingBoxProxies !== false

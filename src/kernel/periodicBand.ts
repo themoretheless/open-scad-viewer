@@ -27,11 +27,21 @@ export function periodicBandSourceKey({ side, planes, toleranceMm }: PeriodicBan
 function validBandSummary(value: unknown, sourceKey: string): boolean {
   const report = value as Partial<PeriodicBandReport> | null
   const bounds = report?.volumeBoundsMm3
-  if (report?.bodies !== 1 || report.faces !== 3 || report.boundaryEdges !== 0
-    || typeof report.edges !== 'number' || !Number.isSafeInteger(report.edges) || report.edges < 2
-    || !Array.isArray(bounds) || bounds.length !== 2
-    || !Number.isFinite(bounds[0]) || !Number.isFinite(bounds[1])
-    || bounds[0] <= 0 || bounds[1] < bounds[0]) return false
+  if (
+    report?.bodies !== 1 ||
+    report.faces !== 3 ||
+    report.boundaryEdges !== 0 ||
+    typeof report.edges !== 'number' ||
+    !Number.isSafeInteger(report.edges) ||
+    report.edges < 2 ||
+    !Array.isArray(bounds) ||
+    bounds.length !== 2 ||
+    !Number.isFinite(bounds[0]) ||
+    !Number.isFinite(bounds[1]) ||
+    bounds[0] <= 0 ||
+    bounds[1] < bounds[0]
+  )
+    return false
   try {
     return canonicalJson(report.source) === sourceKey
   } catch {
@@ -61,19 +71,24 @@ export interface PeriodicStockIntersectionReport extends Omit<PeriodicBandReport
 const stockIntersectionOp = 'brep_intersect_periodic_stock_band' as const
 
 export function periodicStockIntersectionSourceKey({
-  side, stock, toleranceUv,
+  side,
+  stock,
+  toleranceUv,
 }: PeriodicStockIntersectionRequest): string {
   return canonicalJson({ op: stockIntersectionOp, side, stock, toleranceUv })
 }
 
 export function validPeriodicStockIntersectionReport(
-  value: unknown, sourceKey: string,
+  value: unknown,
+  sourceKey: string,
 ): value is PeriodicStockIntersectionReport {
   return validBandSummary(value, sourceKey)
 }
 
 export function intersectPeriodicStockBand({
-  side, stock, toleranceUv,
+  side,
+  stock,
+  toleranceUv,
 }: PeriodicStockIntersectionRequest): PeriodicStockIntersectionReport {
   return callGeometryRust(stockIntersectionOp, { side, stock, toleranceUv })
 }

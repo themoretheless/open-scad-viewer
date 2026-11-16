@@ -5,7 +5,13 @@
  * to the live one on change.
  */
 import { storageGet, storageSet } from '../core/safeStorage'
-import { boxProxiesOn, DEFAULT_DISPLAY_BUDGET, displayBudgetFor, sameDisplayBudget, type DisplayBudget } from './displayScheduler'
+import {
+  boxProxiesOn,
+  DEFAULT_DISPLAY_BUDGET,
+  displayBudgetFor,
+  sameDisplayBudget,
+  type DisplayBudget,
+} from './displayScheduler'
 
 export const DISPLAY_BUDGET_STORAGE_KEY = 'osv.displayBudget'
 

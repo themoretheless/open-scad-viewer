@@ -14,15 +14,16 @@ interface IsolatedSsContactPoint {
   coversEntireSurfaces: true
 }
 
-export type IsolatedSsContactReport = IsolatedSsContactPoint & (
-  | { proof: 'definite-hessian' }
-  | {
-    proof: 'definite-powers'
-    powers: [number, number]
-    diagonalCoefficients: [string, string]
-    mixedCoefficient: string
-  }
-)
+export type IsolatedSsContactReport = IsolatedSsContactPoint &
+  (
+    | { proof: 'definite-hessian' }
+    | {
+        proof: 'definite-powers'
+        powers: [number, number]
+        diagonalCoefficients: [string, string]
+        mixedCoefficient: string
+      }
+  )
 
 function rational(value: unknown): value is string {
   return typeof value === 'string' && /^(?:0|-?[1-9][0-9]*(?:\/[1-9][0-9]*)?)(?![\s\S])/.test(value)
@@ -34,16 +35,23 @@ function rationalPair(values: unknown): values is [string, string] {
 
 export function validIsolatedSsContactReport(value: unknown): value is IsolatedSsContactReport {
   const report = value as Partial<IsolatedSsContactReport> | null
-  if (report?.coversEntireSurfaces !== true
-    || !rationalPair(report.uvA) || !rationalPair(report.uvB) || !rationalPair(report.centerA)) {
+  if (
+    report?.coversEntireSurfaces !== true ||
+    !rationalPair(report.uvA) ||
+    !rationalPair(report.uvB) ||
+    !rationalPair(report.centerA)
+  ) {
     return false
   }
   if (report.proof === 'definite-hessian') return true
-  return report.proof === 'definite-powers'
-    && rationalPair(report.diagonalCoefficients)
-    && rational(report.mixedCoefficient)
-    && Array.isArray(report.powers) && report.powers.length === 2
-    && [report.powers[0], report.powers[1]].every(power => power === 2 || power === 4 || power === 6 || power === 8)
+  return (
+    report.proof === 'definite-powers' &&
+    rationalPair(report.diagonalCoefficients) &&
+    rational(report.mixedCoefficient) &&
+    Array.isArray(report.powers) &&
+    report.powers.length === 2 &&
+    [report.powers[0], report.powers[1]].every(power => power === 2 || power === 4 || power === 6 || power === 8)
+  )
 }
 
 export function qualifyIsolatedSsContact({ a, b }: IsolatedSsContactRequest): IsolatedSsContactReport {

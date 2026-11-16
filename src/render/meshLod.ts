@@ -8,7 +8,13 @@
 import type { MeshLodLevel } from '../core/mesh'
 import type { NativePickingCache } from './nativePickingCache'
 import type { GMesh } from './types'
-import { boxProxiesOn, planDisplayCaps, type DisplayBudget, type LevelBuffers, type ProgressiveLevelStore } from './displayScheduler'
+import {
+  boxProxiesOn,
+  planDisplayCaps,
+  type DisplayBudget,
+  type LevelBuffers,
+  type ProgressiveLevelStore,
+} from './displayScheduler'
 import { isDeferredLevel } from './deferredLevels'
 import { pixelsPerUnit, selectViewerLod, type ViewerLodCamera } from './viewerLod'
 
