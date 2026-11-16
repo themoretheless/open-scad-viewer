@@ -43,7 +43,9 @@ await mkdir(directory, { recursive: true })
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost')
-    if (url.pathname === '/favicon.ico') {
+    // No local MCP editor bridge runs here: answer its poll without the bridge header so the
+    // app stops polling, as a plain static host would without logging a failed request.
+    if (url.pathname === '/favicon.ico' || url.pathname === '/__openscada/mcp-editor') {
       res.writeHead(204).end()
       return
     }
