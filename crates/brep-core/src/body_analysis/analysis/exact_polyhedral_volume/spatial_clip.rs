@@ -1205,3 +1205,81 @@ pub fn exact_polyhedral_path_union_material_clip(
     union.exact_work = max_exact_work - remaining;
     Ok(union)
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralPathDifferenceInterval {
+    pub parameters: [Q; 2],
+    /// Whether the start and end parameters belong to the difference.
+    pub endpoints_included: [bool; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralPathMaterialDifference {
+    /// Ordered intervals of remaining material for each local span.
+    pub span_intervals: Vec<Vec<PolyhedralPathDifferenceInterval>>,
+    pub exact_work: u64,
+}
+
+/// Remove points belonging to any cutter's closed material from the stock's
+/// closed material along a polyline. An empty cutter list retains all stock.
+pub fn exact_polyhedral_path_material_difference(
+    stock: &QualifiedClosedSolid,
+    cutters: &[&QualifiedClosedSolid],
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPathMaterialDifference> {
+    let stock = exact_polyhedral_path_material_clip(stock, points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - stock.exact_work;
+    let removed = if cutters.is_empty() {
+        vec![Vec::new(); stock.span_intervals.len()]
+    } else {
+        if remaining == 0 {
+            return Err(super::work_exhausted());
+        }
+        let clip = exact_polyhedral_path_union_material_clip(cutters, points_mm, remaining)?;
+        remaining -= clip.exact_work;
+        clip.span_intervals
+    };
+    let mut span_intervals = Vec::with_capacity(stock.span_intervals.len());
+    for (stock, removed) in stock.span_intervals.into_iter().zip(removed) {
+        spend(&mut remaining, 4)?;
+        let mut kept = Vec::new();
+        let mut cuts = removed.into_iter().peekable();
+        'stock: for [lo, hi] in stock {
+            spend(&mut remaining, 4)?;
+            let mut start = lo;
+            let mut include_start = true;
+            while let Some([cut_lo, cut_hi]) = cuts.peek() {
+                spend(&mut remaining, 8)?;
+                if cut_lo > &hi {
+                    break;
+                }
+                if cut_hi < &start {
+                    cuts.next();
+                    continue;
+                }
+                if &start < cut_lo {
+                    kept.push(PolyhedralPathDifferenceInterval {
+                        parameters: [start, cut_lo.clone()],
+                        endpoints_included: [include_start, false],
+                    });
+                }
+                if cut_hi >= &hi {
+                    continue 'stock;
+                }
+                start = cut_hi.clone();
+                include_start = false;
+                cuts.next();
+            }
+            kept.push(PolyhedralPathDifferenceInterval {
+                parameters: [start, hi],
+                endpoints_included: [include_start, true],
+            });
+        }
+        span_intervals.push(kept);
+    }
+    Ok(ExactPolyhedralPathMaterialDifference {
+        span_intervals,
+        exact_work: max_exact_work - remaining,
+    })
+}

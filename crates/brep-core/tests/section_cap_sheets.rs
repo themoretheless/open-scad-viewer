@@ -4003,3 +4003,77 @@ fn exact_path_union_material_clip_keeps_isolated_contacts() {
     assert_eq!(report.span_intervals, [vec![[q(1, 2), q(1, 2)]]]);
     assert!(exact_polyhedral_path_union_material_clip(&[], &path, 1_000_000).is_err());
 }
+
+#[test]
+fn exact_path_material_difference_removes_touching_and_overlapping_cutters() {
+    use brep_core::analysis::{
+        PolyhedralPathDifferenceInterval, exact_polyhedral_path_material_difference,
+    };
+    use num_rational::BigRational as Q;
+    let stock = shifted_oblique_solid(0.);
+    let left = shifted_oblique_solid(-3.);
+    let right = shifted_oblique_solid(2.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x| [q(x, 1), q(0, 1), q(1, 1)];
+    let path = [point(-1), point(5), point(-1)];
+    let cutters = [&left, &right];
+    let report =
+        exact_polyhedral_path_material_difference(&stock, &cutters, &path, 1_000_000).unwrap();
+    assert_eq!(
+        report.span_intervals,
+        [
+            vec![PolyhedralPathDifferenceInterval {
+                parameters: [q(1, 6), q(1, 2)],
+                endpoints_included: [false, false],
+            }],
+            vec![PolyhedralPathDifferenceInterval {
+                parameters: [q(1, 2), q(5, 6)],
+                endpoints_included: [false, false],
+            }],
+        ],
+    );
+    assert_eq!(
+        exact_polyhedral_path_material_difference(&stock, &cutters, &path, report.exact_work)
+            .unwrap(),
+        report
+    );
+    assert!(
+        exact_polyhedral_path_material_difference(&stock, &cutters, &path, report.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn exact_path_material_difference_removes_a_single_point_inside_stock() {
+    use brep_core::{
+        analysis::{PolyhedralPathDifferenceInterval, exact_polyhedral_path_material_difference},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let cutter = &result.section.solid;
+    let stock = shifted_oblique_solid(-1.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x, y| [q(x, 2), q(y, 2), q(1, 1)];
+    let path = [point(-1, 1), point(1, -1)];
+    let interval = |lo, hi, endpoints_included| PolyhedralPathDifferenceInterval {
+        parameters: [lo, hi],
+        endpoints_included,
+    };
+    assert_eq!(
+        exact_polyhedral_path_material_difference(&stock, &[cutter], &path, 1_000_000)
+            .unwrap()
+            .span_intervals,
+        [vec![
+            interval(q(0, 1), q(1, 2), [true, false]),
+            interval(q(1, 2), q(1, 1), [false, true]),
+        ]]
+    );
+    assert_eq!(
+        exact_polyhedral_path_material_difference(&stock, &[], &path, 1_000_000)
+            .unwrap()
+            .span_intervals,
+        [vec![interval(q(0, 1), q(1, 1), [true, true])]],
+    );
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 445,
-  "unallocatedCount": 555,
+  "specifiedCount": 446,
+  "unallocatedCount": 554,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -11488,6 +11488,35 @@
       "remainingQualification": [
         "Unite exact material intervals from several solids along a spatial path.",
         "Sort and merge closed rational intervals across all solids for each span. Keep genuine gaps and isolated touches within the common work budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0446",
+      "name": "Точное отсечение ломаной по разности материалов нескольких тел",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_polyhedral_path_material_difference",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-446-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-446-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Subtract the union of cutter material from stock material along a spatial path.",
+        "Subtract sorted closed cutter intervals from exact stock intervals. Preserve remaining endpoint membership, including splits at isolated cutter contacts.",
         "WASM and application integration are separate."
       ]
     }
