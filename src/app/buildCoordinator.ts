@@ -1,7 +1,8 @@
 import { countOperation } from '../dev/operationCounters'
 import {
   GEOMETRY_WORKER_PROTOCOL_VERSION,
-  isGeometryWorkerEvent, materializeGeometryWorkerEvent,
+  isGeometryWorkerEvent,
+  materializeGeometryWorkerEvent,
   type DocumentRevision,
   type GeometryBuildError,
   type GeometryBuildFailure,
@@ -19,11 +20,14 @@ import {
 } from '../kernel/geometryWorkerProtocol'
 import { sha256Hex } from '../core/sha256'
 import type { GeometryQuality } from '../core/build'
+import { parseGeometrySourceRoutingHeader, planGeometrySourceExecution } from '../core/geometryExecution'
 import {
-  parseGeometrySourceRoutingHeader,
-  planGeometrySourceExecution,
-} from '../core/geometryExecution'
-import { assertInput, freezeAttestedWorkerEvent, qualityRank, sourceSpansFit, workerError } from './buildCoordinator/sourceSpansFit'
+  assertInput,
+  freezeAttestedWorkerEvent,
+  qualityRank,
+  sourceSpansFit,
+  workerError,
+} from './buildCoordinator/sourceSpansFit'
 
 export interface WorkerLike {
   postMessage(message: GeometryWorkerRequest): void
@@ -73,7 +77,7 @@ export interface BuildCoordinatorOptions {
   /** Called for publishable successes and failures only; stale jobs never reach it. */
   onPublish?: (outcome: PublishedGeometryBuild) => void
   onProgress?: (progress: GeometryBuildProgress) => void
-  onSweepPreview?: (preview:GeometrySweepPreview)=>void
+  onSweepPreview?: (preview: GeometrySweepPreview) => void
   onStateChange?: (state: BuildCoordinatorState) => void
   now?: () => number
   timers?: CoordinatorTimers
@@ -171,7 +175,9 @@ export class BuildCoordinator {
 
   private counters = { builds: 0, superseded: 0, workerStarts: 0, hardRestarts: 0 }
 
-  get diagnostics() { return { ...this.counters } }
+  get diagnostics() {
+    return { ...this.counters }
+  }
 
   get state(): BuildCoordinatorState {
     return this.snapshot
@@ -190,23 +196,25 @@ export class BuildCoordinator {
 
     const existingJobId = this.latestJobByQuality.get(input.quality)
     const existing = existingJobId === undefined ? undefined : this.jobs.get(existingJobId)
-    if (existing
-      && existing.request.documentRevision === input.documentRevision
-      && existing.request.source === input.source
-      && existing.lifecycle !== 'terminal'
-      && existing.lifecycle !== 'superseded') {
+    if (
+      existing &&
+      existing.request.documentRevision === input.documentRevision &&
+      existing.request.source === input.source &&
+      existing.lifecycle !== 'terminal' &&
+      existing.lifecycle !== 'superseded'
+    ) {
       return existing.request.jobId
     }
 
     const request: GeometryBuildRequest = {
       protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
       type: 'build',
-      ...(this.options.onSweepPreview?{acknowledgeSweepPreviews:true}:{}),
+      ...(this.options.onSweepPreview ? { acknowledgeSweepPreviews: true } : {}),
       documentRevision: input.documentRevision,
       jobId: this.nextJobId++,
       source: input.source,
       sourceSha256: sha256Hex(input.source),
-      ...(this.options.selectionSurfaces ? {selectionSurfaces: true} : {}),
+      ...(this.options.selectionSurfaces ? { selectionSurfaces: true } : {}),
       quality: input.quality,
     }
     const record: JobRecord = {
@@ -250,7 +258,11 @@ export class BuildCoordinator {
     const generation = this.binding?.generation
     for (const [jobId, record] of this.jobs) {
       if (record.lifecycle === 'superseded') continue
-      if (record.lifecycle === 'terminal' || record.workerGeneration === null || record.workerGeneration !== generation) {
+      if (
+        record.lifecycle === 'terminal' ||
+        record.workerGeneration === null ||
+        record.workerGeneration !== generation
+      ) {
         record.lifecycle = 'terminal'
         this.jobs.delete(jobId)
         continue
@@ -390,9 +402,12 @@ export class BuildCoordinator {
     for (let index = this.pendingJobIds.length - 1; index >= 0; index--) {
       const pendingId = this.pendingJobIds[index]!
       const pending = this.jobs.get(pendingId)
-      if (!pending
-        || pending.request.documentRevision !== record.request.documentRevision
-        || pending.request.quality !== record.request.quality) continue
+      if (
+        !pending ||
+        pending.request.documentRevision !== record.request.documentRevision ||
+        pending.request.quality !== record.request.quality
+      )
+        continue
       this.pendingJobIds.splice(index, 1)
       pending.lifecycle = 'terminal'
       this.jobs.delete(pendingId)
@@ -401,8 +416,10 @@ export class BuildCoordinator {
   }
 
   private isLatestPending(record: JobRecord) {
-    return record.request.documentRevision === this.latestRevision
-      && this.latestJobByQuality.get(record.request.quality) === record.request.jobId
+    return (
+      record.request.documentRevision === this.latestRevision &&
+      this.latestJobByQuality.get(record.request.quality) === record.request.jobId
+    )
   }
 
   private ensureWorker(record: JobRecord): WorkerBinding | null {
@@ -415,9 +432,13 @@ export class BuildCoordinator {
         this.handleWorkerMessage((event as MessageEvent<unknown>).data, generation)
       }
       const errorListener: EventListener = event => this.handleWorkerError(event, generation)
-      const messageErrorListener: EventListener = () => this.handleWorkerError({
-        message: 'Could not deserialize a geometry Worker message',
-      } as ErrorEvent, generation)
+      const messageErrorListener: EventListener = () =>
+        this.handleWorkerError(
+          {
+            message: 'Could not deserialize a geometry Worker message',
+          } as ErrorEvent,
+          generation,
+        )
       worker.addEventListener('message', messageListener)
       worker.addEventListener('error', errorListener)
       worker.addEventListener('messageerror', messageErrorListener)
@@ -510,11 +531,10 @@ export class BuildCoordinator {
       let routeMatches = false
       try {
         const route = parseGeometrySourceRoutingHeader(record.request.source)
-        routeMatches = route.languageContract === execution.languageContract
-          && route.requiredCapabilities.length === execution.requiredCapabilities.length
-          && route.requiredCapabilities.every((capability, index) => (
-            capability === execution.requiredCapabilities[index]
-          ))
+        routeMatches =
+          route.languageContract === execution.languageContract &&
+          route.requiredCapabilities.length === execution.requiredCapabilities.length &&
+          route.requiredCapabilities.every((capability, index) => capability === execution.requiredCapabilities[index])
       } catch {
         routeMatches = false
       }
@@ -545,7 +565,12 @@ export class BuildCoordinator {
     if (record.lifecycle !== 'terminal' && record.lifecycle !== 'superseded' && this.isCurrentLatest(record)) {
       this.armWorkerSilenceTimer()
     }
-    if (event.status === 'succeeded' || event.status === 'failed' || event.status === 'cancelled' || event.status === 'stale') {
+    if (
+      event.status === 'succeeded' ||
+      event.status === 'failed' ||
+      event.status === 'cancelled' ||
+      event.status === 'stale'
+    ) {
       if (record.lifecycle === 'superseded') {
         this.finishSupersededJob(event.jobId)
         return
@@ -565,12 +590,23 @@ export class BuildCoordinator {
     if (!this.isCurrentLatest(record)) return
     if (event.status === 'accepted') record.lifecycle = 'accepted'
     else if (event.status === 'started') record.lifecycle = 'started'
-    else if(event.status==='sweep-preview'){
-      try{this.options.onSweepPreview?.(event)}finally{
-        if(record.request.acknowledgeSweepPreviews)this.binding?.worker.postMessage({protocolVersion:GEOMETRY_WORKER_PROTOCOL_VERSION,type:'sweep-preview-ack',documentRevision:event.documentRevision,jobId:event.jobId,quality:event.quality,sourceSha256:event.sourceSha256,nodeId:event.nodeId,sections:event.sections})
+    else if (event.status === 'sweep-preview') {
+      try {
+        this.options.onSweepPreview?.(event)
+      } finally {
+        if (record.request.acknowledgeSweepPreviews)
+          this.binding?.worker.postMessage({
+            protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+            type: 'sweep-preview-ack',
+            documentRevision: event.documentRevision,
+            jobId: event.jobId,
+            quality: event.quality,
+            sourceSha256: event.sourceSha256,
+            nodeId: event.nodeId,
+            sections: event.sections,
+          })
       }
-    }
-    else this.options.onProgress?.(event)
+    } else this.options.onProgress?.(event)
 
     if (record.request.quality === this.requestedQuality()) {
       this.setState({
@@ -626,13 +662,14 @@ export class BuildCoordinator {
       this.updateAfterTerminal(record.request.jobId)
       return
     }
-    const hasHigherQualityWork = [...this.jobs.values()].some(candidate => (
-      candidate.request.documentRevision === this.latestRevision
-      && candidate.request.jobId !== record.request.jobId
-      && candidate.lifecycle !== 'terminal'
-      && candidate.lifecycle !== 'superseded'
-      && qualityRank(candidate.request.quality) > qualityRank(record.request.quality)
-    ))
+    const hasHigherQualityWork = [...this.jobs.values()].some(
+      candidate =>
+        candidate.request.documentRevision === this.latestRevision &&
+        candidate.request.jobId !== record.request.jobId &&
+        candidate.lifecycle !== 'terminal' &&
+        candidate.lifecycle !== 'superseded' &&
+        qualityRank(candidate.request.quality) > qualityRank(record.request.quality),
+    )
     if (hasHigherQualityWork) {
       this.updateAfterTerminal(record.request.jobId)
       return
@@ -712,18 +749,21 @@ export class BuildCoordinator {
     } catch {
       execution = undefined
     }
-    const event = freezeAttestedWorkerEvent({
-      protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
-      status: 'failed',
-      phase: effectiveRecord.lifecycle === 'queued' ? 'queued' : 'compiling',
-      documentRevision: effectiveRecord.request.documentRevision,
-      jobId: effectiveRecord.request.jobId,
-      quality: effectiveRecord.request.quality,
-      sourceSha256: effectiveRecord.request.sourceSha256,
-      ...(execution ? { execution } : {}),
-      error,
-      durationMs: Math.max(0, this.now() - effectiveRecord.requestedAt),
-    } satisfies GeometryBuildFailure, this.snapshotEvents) as GeometryBuildFailure
+    const event = freezeAttestedWorkerEvent(
+      {
+        protocolVersion: GEOMETRY_WORKER_PROTOCOL_VERSION,
+        status: 'failed',
+        phase: effectiveRecord.lifecycle === 'queued' ? 'queued' : 'compiling',
+        documentRevision: effectiveRecord.request.documentRevision,
+        jobId: effectiveRecord.request.jobId,
+        quality: effectiveRecord.request.quality,
+        sourceSha256: effectiveRecord.request.sourceSha256,
+        ...(execution ? { execution } : {}),
+        error,
+        durationMs: Math.max(0, this.now() - effectiveRecord.requestedAt),
+      } satisfies GeometryBuildFailure,
+      this.snapshotEvents,
+    ) as GeometryBuildFailure
     for (const candidate of this.jobs.values()) {
       if (generation === null || candidate.workerGeneration === generation) candidate.lifecycle = 'terminal'
     }
@@ -743,33 +783,43 @@ export class BuildCoordinator {
       activeJobIds: [],
       error,
     })
-    this.options.onPublish?.(Object.freeze({ ...event, hostElapsedMs: Math.max(0, this.now() - effectiveRecord.requestedAt) }))
+    this.options.onPublish?.(
+      Object.freeze({ ...event, hostElapsedMs: Math.max(0, this.now() - effectiveRecord.requestedAt) }),
+    )
   }
 
   private primaryCurrentJob(): JobRecord | null {
-    const candidates = [...this.jobs.values()].filter(record => (
-      record.request.documentRevision === this.latestRevision
-      && record.lifecycle !== 'terminal'
-      && record.lifecycle !== 'superseded'
-    ))
-    candidates.sort((a, b) => qualityRank(b.request.quality) - qualityRank(a.request.quality) || b.request.jobId - a.request.jobId)
+    const candidates = [...this.jobs.values()].filter(
+      record =>
+        record.request.documentRevision === this.latestRevision &&
+        record.lifecycle !== 'terminal' &&
+        record.lifecycle !== 'superseded',
+    )
+    candidates.sort(
+      (a, b) => qualityRank(b.request.quality) - qualityRank(a.request.quality) || b.request.jobId - a.request.jobId,
+    )
     return candidates[0] ?? null
   }
 
   private primaryActiveJob(generation: number): JobRecord | null {
-    const candidates = [...this.jobs.values()].filter(record => (
-      record.workerGeneration === generation
-      && record.request.documentRevision === this.latestRevision
-      && record.lifecycle !== 'terminal'
-      && record.lifecycle !== 'superseded'
-    ))
-    candidates.sort((a, b) => qualityRank(b.request.quality) - qualityRank(a.request.quality) || b.request.jobId - a.request.jobId)
+    const candidates = [...this.jobs.values()].filter(
+      record =>
+        record.workerGeneration === generation &&
+        record.request.documentRevision === this.latestRevision &&
+        record.lifecycle !== 'terminal' &&
+        record.lifecycle !== 'superseded',
+    )
+    candidates.sort(
+      (a, b) => qualityRank(b.request.quality) - qualityRank(a.request.quality) || b.request.jobId - a.request.jobId,
+    )
     return candidates[0] ?? null
   }
 
   private isCurrentLatest(record: JobRecord) {
-    return record.request.documentRevision === this.latestRevision
-      && this.latestJobByQuality.get(record.request.quality) === record.request.jobId
+    return (
+      record.request.documentRevision === this.latestRevision &&
+      this.latestJobByQuality.get(record.request.quality) === record.request.jobId
+    )
   }
 
   private requestedQuality(): GeometryQuality | null {
@@ -783,9 +833,12 @@ export class BuildCoordinator {
     const quality = this.requestedQuality()
     if (!quality) return null
     const active = this.currentActiveRecords().filter(record => record.request.quality === quality)
-    return active.reduce<number | null>((latest, record) => (
-      latest === null || record.request.jobId > latest ? record.request.jobId : latest
-    ), null) ?? this.snapshot.jobId
+    return (
+      active.reduce<number | null>(
+        (latest, record) => (latest === null || record.request.jobId > latest ? record.request.jobId : latest),
+        null,
+      ) ?? this.snapshot.jobId
+    )
   }
 
   private activeJobIds(exclude?: GeometryJobId): GeometryJobId[] {
@@ -795,13 +848,14 @@ export class BuildCoordinator {
   }
 
   private currentActiveRecords(exclude?: GeometryJobId): JobRecord[] {
-    return [...this.jobs.values()].filter(record => (
-      record.request.documentRevision === this.latestRevision
-      && record.request.jobId !== exclude
-      && record.lifecycle !== 'terminal'
-      && record.lifecycle !== 'superseded'
-      && this.latestJobByQuality.get(record.request.quality) === record.request.jobId
-    ))
+    return [...this.jobs.values()].filter(
+      record =>
+        record.request.documentRevision === this.latestRevision &&
+        record.request.jobId !== exclude &&
+        record.lifecycle !== 'terminal' &&
+        record.lifecycle !== 'superseded' &&
+        this.latestJobByQuality.get(record.request.quality) === record.request.jobId,
+    )
   }
 
   private updateAfterTerminal(exclude?: GeometryJobId) {
@@ -859,8 +913,8 @@ export class BuildCoordinator {
   }
 
   private armWorkerSilenceTimer() {
-    if (this.workerSilenceTimeoutMs === undefined || !this.binding
-      || !this.primaryActiveJob(this.binding.generation)) return
+    if (this.workerSilenceTimeoutMs === undefined || !this.binding || !this.primaryActiveJob(this.binding.generation))
+      return
     this.clearWorkerSilenceTimer()
     const token = this.workerSilenceToken
     const generation = this.binding.generation
@@ -885,8 +939,9 @@ export class BuildCoordinator {
     }
     // A newly requested full build can still get its own retry after preview
     // used its allowance. Never run that exhausted lower-quality job again.
-    const retry = this.currentActiveRecords().filter(record => record.workerGeneration === generation
-      && record.silenceRetries === 0)
+    const retry = this.currentActiveRecords().filter(
+      record => record.workerGeneration === generation && record.silenceRetries === 0,
+    )
     this.clearHardRestartTimer()
     this.counters.hardRestarts++
     this.destroyWorker()
@@ -909,8 +964,11 @@ export class BuildCoordinator {
   }
 
   private retireRedundantWork(primary: JobRecord): boolean {
-    if (primary.request.documentRevision !== this.latestRevision
-      || qualityRank(primary.request.quality) >= qualityRank(this.snapshot.publishedQuality)) return false
+    if (
+      primary.request.documentRevision !== this.latestRevision ||
+      qualityRank(primary.request.quality) >= qualityRank(this.snapshot.publishedQuality)
+    )
+      return false
     // Full geometry already won. A failed or silent leftover preview cannot
     // improve the document and must not replace that success with an error.
     this.clearHardRestartTimer()

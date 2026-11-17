@@ -18,18 +18,28 @@ function channels(hex: string): number[] {
 function mix(from: string, to: string, amount: number): string {
   const a = channels(from)
   const b = channels(to)
-  return `#${a.map((value, index) => Math.round(value + (b[index]! - value) * amount).toString(16).padStart(2, '0')).join('')}`
+  return `#${a
+    .map((value, index) =>
+      Math.round(value + (b[index]! - value) * amount)
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`
 }
 
 // Moves `color` toward `target` until it reaches `ratio` against `against`; stops at the target.
 function reach(color: string, target: string, against: string, ratio: number): string {
   let result = color
-  for (let step = 1; step <= 20 && contrastRatio(result, against) < ratio; step++) result = mix(color, target, step / 20)
+  for (let step = 1; step <= 20 && contrastRatio(result, against) < ratio; step++)
+    result = mix(color, target, step / 20)
   return result
 }
 
 /** Derives a complete, contrast-checked token set from one base tone and one accent. */
-export function customizeTokens(tokens: Readonly<Record<string, string>>, custom: ThemeCustomization): Record<string, string> {
+export function customizeTokens(
+  tokens: Readonly<Record<string, string>>,
+  custom: ThemeCustomization,
+): Record<string, string> {
   const result: Record<string, string> = {}
   let surface = tokens['--surface']!
   let text = tokens['--text']!
@@ -53,9 +63,13 @@ export function customizeTokens(tokens: Readonly<Record<string, string>>, custom
     text = reach(text, toward, surface, 4.5)
     const edge = dark ? 0.1 : 0.05
     Object.assign(result, {
-      '--bg': base, '--surface': surface, '--surface-raised': mix(base, toward, edge),
-      '--hover': mix(base, toward, edge * 0.7), '--hairline': mix(base, toward, edge + 0.04),
-      '--canvas-bg': mix(base, toward, dark ? 0.08 : 0.07), '--text': text,
+      '--bg': base,
+      '--surface': surface,
+      '--surface-raised': mix(base, toward, edge),
+      '--hover': mix(base, toward, edge * 0.7),
+      '--hairline': mix(base, toward, edge + 0.04),
+      '--canvas-bg': mix(base, toward, dark ? 0.08 : 0.07),
+      '--text': text,
       '--text-dim': reach(mix(text, base, 0.35), text, surface, 4.5),
       '--border': reach(mix(base, toward, 0.4), toward, surface, 3),
     })

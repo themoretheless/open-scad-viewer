@@ -96,9 +96,16 @@ export function parseSweepPayload(blob: Uint8Array): GpuSweepPayload {
       sources[s] = { image, floats: floats16 }
     }
     views[i] = {
-      mapWidth, mapHeight, needed, refImage,
-      step, refF, refCx, refCy,
-      hypotheses, sources,
+      mapWidth,
+      mapHeight,
+      needed,
+      refImage,
+      step,
+      refF,
+      refCx,
+      refCy,
+      hypotheses,
+      sources,
     }
   }
   return { imageWidth, imageHeight, imageOffset, gray, hypothesesPerView, patchRadius, views }
@@ -108,7 +115,11 @@ const EMPTY_F32 = new Float32Array(0)
 
 /** Scores every present view with the kernel's shader; views stay in image order.
  * One pass, one submit, concurrent readbacks; the shared gray raster uploads once. */
-export async function runGpuSweep(blob: Uint8Array, wgsl: string, wgslVariants?: readonly WgslVariant[]): Promise<Float32Array> {
+export async function runGpuSweep(
+  blob: Uint8Array,
+  wgsl: string,
+  wgslVariants?: readonly WgslVariant[],
+): Promise<Float32Array> {
   const payload = parseSweepPayload(blob)
   const patchLen = (payload.patchRadius * 2 + 1) ** 2
   const dispatches = []
@@ -160,7 +171,11 @@ export async function runGpuSweep(blob: Uint8Array, wgsl: string, wgslVariants?:
       outputBytes: scoresFloats * 4,
       workgroups: [Math.ceil(view.mapWidth / 16), Math.ceil(view.mapHeight / 16), 1] as [number, number, number],
       variantWorkgroups: {
-        [SWEEP_LINEAR_INDEXING_VARIANT]: [Math.ceil((view.mapWidth * view.mapHeight) / 256), 1, 1] as [number, number, number],
+        [SWEEP_LINEAR_INDEXING_VARIANT]: [Math.ceil((view.mapWidth * view.mapHeight) / 256), 1, 1] as [
+          number,
+          number,
+          number,
+        ],
       },
     })
   }

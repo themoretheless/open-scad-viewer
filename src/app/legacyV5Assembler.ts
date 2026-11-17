@@ -1,12 +1,6 @@
 import { boundedSceneEntityId } from '../core/boundedSceneEntityId'
 import type { GeometryQuality } from '../core/build'
-import type {
-  MeshData,
-  MeshProvenanceRun,
-  MeshSourceReference,
-  SceneEntityId,
-  SourceOperationId,
-} from '../core/mesh'
+import type { MeshData, MeshProvenanceRun, MeshSourceReference, SceneEntityId, SourceOperationId } from '../core/mesh'
 import {
   semanticNodeProducerOperationNames,
   type SemanticIdentityValue,
@@ -49,9 +43,7 @@ export interface LegacyV5AssemblyResult {
 }
 
 export type LegacyV5AssemblyErrorCode =
-  | 'E_LEGACY_V5_ABORTED'
-  | 'E_LEGACY_V5_NORMALS_MISSING'
-  | 'E_LEGACY_V5_TRIANGLE_LIMIT'
+  'E_LEGACY_V5_ABORTED' | 'E_LEGACY_V5_NORMALS_MISSING' | 'E_LEGACY_V5_TRIANGLE_LIMIT'
 
 export class LegacyV5AssemblyError extends Error {
   constructor(
@@ -74,12 +66,13 @@ function sameStructuralPath(
   left: SemanticStaticOperation['structuralPath'],
   right: SemanticStaticOperation['structuralPath'],
 ): boolean {
-  return left.length === right.length && left.every((segment, index) => {
-    const candidate = right[index]!
-    return segment.kind === candidate.kind
-      && segment.name === candidate.name
-      && segment.ordinal === candidate.ordinal
-  })
+  return (
+    left.length === right.length &&
+    left.every((segment, index) => {
+      const candidate = right[index]!
+      return segment.kind === candidate.kind && segment.name === candidate.name && segment.ordinal === candidate.ordinal
+    })
+  )
 }
 
 function directSiblingOrdinal(
@@ -91,18 +84,18 @@ function directSiblingOrdinal(
   let ordinal = 0
   for (const candidate of operations) {
     if (candidate.id >= operation.id) break
-    if (candidate.parent === operation.parent
-      && directStatementType(candidate) === statementType
-      && candidate.name === operation.name) ordinal++
+    if (
+      candidate.parent === operation.parent &&
+      directStatementType(candidate) === statementType &&
+      candidate.name === operation.name
+    )
+      ordinal++
   }
   return ordinal
 }
 
 /** Exact compatibility projection for the pinned compiler's `op:...` IDs. */
-export function legacyOperationId(
-  program: SemanticProgramV1,
-  operationIndex: number,
-): SourceOperationId {
+export function legacyOperationId(program: SemanticProgramV1, operationIndex: number): SourceOperationId {
   const operation = program.core.operations[operationIndex]
   if (operation === undefined) throw new TypeError('Semantic operation index is out of bounds')
   const tokens = ['root']
@@ -110,9 +103,7 @@ export function legacyOperationId(
   for (let length = 1; length <= operation.structuralPath.length; length++) {
     const path = operation.structuralPath.slice(0, length)
     const segment = path[length - 1]!
-    const pathOperation = program.core.operations.find(candidate => (
-      sameStructuralPath(candidate.structuralPath, path)
-    ))
+    const pathOperation = program.core.operations.find(candidate => sameStructuralPath(candidate.structuralPath, path))
     if (segment.kind === 'call' || (segment.kind === 'control' && !segment.name.startsWith('$'))) {
       if (pathOperation === undefined) throw new TypeError('Semantic operation path is incomplete')
       tokens.push(`call:${segment.name}#${directSiblingOrdinal(pathOperation, program.core.operations)}`)
@@ -134,12 +125,18 @@ export function legacyOperationId(
 
 function legacyIdentityValue(value: SemanticIdentityValue): string {
   switch (value.tag) {
-    case 'undefined': return 'undef'
-    case 'null': return 'null'
-    case 'boolean': return String(value.value)
-    case 'number': return String(value.value)
-    case 'string': return JSON.stringify(value.value)
-    case 'vector': return `[${value.items.map(legacyIdentityValue).join(',')}]`
+    case 'undefined':
+      return 'undef'
+    case 'null':
+      return 'null'
+    case 'boolean':
+      return String(value.value)
+    case 'number':
+      return String(value.value)
+    case 'string':
+      return JSON.stringify(value.value)
+    case 'vector':
+      return `[${value.items.map(legacyIdentityValue).join(',')}]`
   }
 }
 
@@ -160,10 +157,7 @@ function runtimeOccurrenceChain(
 }
 
 /** Exact compatibility projection for the pinned evaluator's entity path. */
-export function legacySceneEntityId(
-  program: SemanticProgramV1,
-  occurrence: SemanticOccurrence,
-): SceneEntityId {
+export function legacySceneEntityId(program: SemanticProgramV1, occurrence: SemanticOccurrence): SceneEntityId {
   let path = 'root'
   for (const runtime of runtimeOccurrenceChain(program, occurrence)) {
     const operation = program.core.operations[runtime.operation]!
@@ -242,7 +236,9 @@ export async function assembleLegacyV5Result(
   // observable shape count.
   const sections = execution.outputs.filter(output => output.value.valueType.space === 'd2')
   if (sections.length > 0) {
-    warnings.push(`${sections.length} top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()`)
+    warnings.push(
+      `${sections.length} top-level 2D object(s) are not displayed; wrap them in linear_extrude() or rotate_extrude()`,
+    )
   }
 
   const meshes: MeshData[] = []
@@ -267,10 +263,7 @@ export async function assembleLegacyV5Result(
       )
     }
     if (kernelMesh.numProp < 6) {
-      throw new LegacyV5AssemblyError(
-        'E_LEGACY_V5_NORMALS_MISSING',
-        'Geometry kernel did not produce normals',
-      )
+      throw new LegacyV5AssemblyError('E_LEGACY_V5_NORMALS_MISSING', 'Geometry kernel did not produce normals')
     }
     const vertices = new Float32Array(kernelMesh.numVert * 6)
     for (let vertex = 0; vertex < kernelMesh.numVert; vertex++) {
@@ -295,9 +288,7 @@ export async function assembleLegacyV5Result(
       provenance.push({
         triangleStart,
         triangleEnd,
-        source: sourceNode === undefined
-          ? null
-          : sourceReference(artifact.program, producers, sourceNode, originalId),
+        source: sourceNode === undefined ? null : sourceReference(artifact.program, producers, sourceNode, originalId),
         backside: ((kernelMesh.runFlags[run] ?? 0) & 1) !== 0,
       })
       if ((run & 0x1fff) === 0x1fff) await yieldForCancellation(options)

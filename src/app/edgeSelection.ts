@@ -4,12 +4,7 @@ function addAdjacent(adjacent: Map<number, number[]>, v: number, edgeIndex: numb
   else adjacent.set(v, [edgeIndex])
 }
 
-function extendEndpoint(
-  adjacent: Map<number, number[]>,
-  selected: Set<number>,
-  pending: number[],
-  v: number,
-): void {
+function extendEndpoint(adjacent: Map<number, number[]>, selected: Set<number>, pending: number[], v: number): void {
   const list = adjacent.get(v)
   if (!list || list.length !== 2) return
   for (let k = 0; k < 2; k++) {

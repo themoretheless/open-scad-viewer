@@ -48,16 +48,45 @@ export function swapKeyboardLayout(text: string): string {
   for (const char of text) {
     const lower = char.toLowerCase()
     const mapped = LAYOUT_SWAP.get(lower)
-    out += mapped === undefined ? char : (char === lower ? mapped : mapped.toUpperCase())
+    out += mapped === undefined ? char : char === lower ? mapped : mapped.toUpperCase()
   }
   return out
 }
 
 const CYRILLIC_TO_LATIN_PHONETIC: Readonly<Record<string, string>> = {
-  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'zh', з: 'z',
-  и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r',
-  с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch',
-  ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+  а: 'a',
+  б: 'b',
+  в: 'v',
+  г: 'g',
+  д: 'd',
+  е: 'e',
+  ё: 'yo',
+  ж: 'zh',
+  з: 'z',
+  и: 'i',
+  й: 'y',
+  к: 'k',
+  л: 'l',
+  м: 'm',
+  н: 'n',
+  о: 'o',
+  п: 'p',
+  р: 'r',
+  с: 's',
+  т: 't',
+  у: 'u',
+  ф: 'f',
+  х: 'kh',
+  ц: 'ts',
+  ч: 'ch',
+  ш: 'sh',
+  щ: 'shch',
+  ъ: '',
+  ы: 'y',
+  ь: '',
+  э: 'e',
+  ю: 'yu',
+  я: 'ya',
 }
 
 const CAD_BILINGUAL_SYNONYMS: Readonly<Record<string, readonly string[]>> = {
@@ -117,27 +146,49 @@ export function transliterateCommandText(text: string): string {
     .replace(/yu/g, 'ю')
     .replace(/ya/g, 'я')
     .replace(/ph/g, 'ф')
-    .replace(/[a-z]/g, ch => ({
-      a: 'а', b: 'б', c: 'к', d: 'д', e: 'е', f: 'ф', g: 'г', h: 'х',
-      i: 'и', j: 'й', k: 'к', l: 'л', m: 'м', n: 'н', o: 'о', p: 'п',
-      q: 'к', r: 'р', s: 'с', t: 'т', u: 'у', v: 'в', w: 'в', x: 'кс',
-      y: 'ы', z: 'з',
-    }[ch] ?? ch))
+    .replace(
+      /[a-z]/g,
+      ch =>
+        ({
+          a: 'а',
+          b: 'б',
+          c: 'к',
+          d: 'д',
+          e: 'е',
+          f: 'ф',
+          g: 'г',
+          h: 'х',
+          i: 'и',
+          j: 'й',
+          k: 'к',
+          l: 'л',
+          m: 'м',
+          n: 'н',
+          o: 'о',
+          p: 'п',
+          q: 'к',
+          r: 'р',
+          s: 'с',
+          t: 'т',
+          u: 'у',
+          v: 'в',
+          w: 'в',
+          x: 'кс',
+          y: 'ы',
+          z: 'з',
+        })[ch] ?? ch,
+    )
 }
 
-export function rankPaletteCommands(
-  commands: readonly PaletteCommand[],
-  rawQuery: string,
-): PaletteCommand[] {
+export function rankPaletteCommands(commands: readonly PaletteCommand[], rawQuery: string): PaletteCommand[] {
   const query = normalizeCommandText(rawQuery)
   // The same keys on the other layout: "dsxtcnm" typed on Latin is "вычесть" on Cyrillic.
   // The swapped spelling competes with the typed one and ranks a hair lower on a tie.
   const swapped = normalizeCommandText(swapKeyboardLayout(rawQuery))
   const alternate = swapped && swapped !== query ? swapped : null
   const transliterated = normalizeCommandText(transliterateCommandText(rawQuery))
-  const phoneticAlternate = transliterated && transliterated !== query && transliterated !== alternate
-    ? transliterated
-    : null
+  const phoneticAlternate =
+    transliterated && transliterated !== query && transliterated !== alternate ? transliterated : null
   const synonymCandidates = new Set<string>()
   for (const q of [query, alternate, phoneticAlternate]) {
     if (!q) continue
@@ -150,11 +201,8 @@ export function rankPaletteCommands(
     return commands
       .map((command, order) => ({ command, order }))
       .sort((a, b) => {
-        const availability = Number(!isPaletteCommandEnabled(a.command))
-          - Number(!isPaletteCommandEnabled(b.command))
-        return availability
-          || compareMru(a.command, b.command)
-          || a.order - b.order
+        const availability = Number(!isPaletteCommandEnabled(a.command)) - Number(!isPaletteCommandEnabled(b.command))
+        return availability || compareMru(a.command, b.command) || a.order - b.order
       })
       .map(({ command }) => command)
   }
@@ -174,11 +222,7 @@ export function rankPaletteCommands(
       }
     })
     .filter(item => Number.isFinite(item.score))
-    .sort((a, b) => (
-      a.score - b.score
-      || compareMru(a.command, b.command)
-      || a.order - b.order
-    ))
+    .sort((a, b) => a.score - b.score || compareMru(a.command, b.command) || a.order - b.order)
     .map(({ command }) => command)
 }
 
@@ -196,9 +240,7 @@ export function nextEnabledCommandIndex(
   direction: 1 | -1,
 ): number {
   if (!commands.length) return -1
-  const start = currentIndex >= 0 && currentIndex < commands.length
-    ? currentIndex
-    : direction === 1 ? -1 : 0
+  const start = currentIndex >= 0 && currentIndex < commands.length ? currentIndex : direction === 1 ? -1 : 0
 
   for (let step = 1; step <= commands.length; step += 1) {
     const index = (start + direction * step + commands.length) % commands.length
@@ -214,9 +256,7 @@ export function nextPaletteCommandIndex(
   direction: 1 | -1,
 ): number {
   if (!commands.length) return -1
-  const start = currentIndex >= 0 && currentIndex < commands.length
-    ? currentIndex
-    : direction === 1 ? -1 : 0
+  const start = currentIndex >= 0 && currentIndex < commands.length ? currentIndex : direction === 1 ? -1 : 0
   return (start + direction + commands.length) % commands.length
 }
 
@@ -243,9 +283,7 @@ function getPreparedFields(command: PaletteCommand): readonly PreparedSearchFiel
   const cached = COMMAND_FIELDS_CACHE.get(command)
   if (cached !== undefined) return cached
 
-  const keywordFields = typeof command.keywords === 'string'
-    ? [command.keywords]
-    : command.keywords ?? []
+  const keywordFields = typeof command.keywords === 'string' ? [command.keywords] : (command.keywords ?? [])
   const rawFields: SearchField[] = [
     { value: command.label, bias: 0 },
     ...(command.aliases ?? []).map(value => ({ value, bias: 4 })),
@@ -308,9 +346,8 @@ function scoreQueryTokens(valueTokens: readonly string[], queryTokens: readonly 
     let bestPenalty = NO_MATCH
     for (let index = searchFrom; index < valueTokens.length; index += 1) {
       const token = valueTokens[index] ?? ''
-      const penalty = token === queryToken
-        ? 0
-        : token.startsWith(queryToken) ? 8 + lengthPenalty(token, queryToken) : NO_MATCH
+      const penalty =
+        token === queryToken ? 0 : token.startsWith(queryToken) ? 8 + lengthPenalty(token, queryToken) : NO_MATCH
       if (penalty < bestPenalty) {
         bestIndex = index
         bestPenalty = penalty
@@ -381,17 +418,8 @@ function damerauLevenshtein(a: string, b: string, maximum: number): number {
     let rowMinimum = NO_MATCH
     for (let j = 1; j <= right.length; j += 1) {
       const substitution = left[i - 1] === right[j - 1] ? 0 : 1
-      let distance = Math.min(
-        matrix[i - 1]![j]! + 1,
-        matrix[i]![j - 1]! + 1,
-        matrix[i - 1]![j - 1]! + substitution,
-      )
-      if (
-        i > 1
-        && j > 1
-        && left[i - 1] === right[j - 2]
-        && left[i - 2] === right[j - 1]
-      ) {
+      let distance = Math.min(matrix[i - 1]![j]! + 1, matrix[i]![j - 1]! + 1, matrix[i - 1]![j - 1]! + substitution)
+      if (i > 1 && j > 1 && left[i - 1] === right[j - 2] && left[i - 2] === right[j - 1]) {
         distance = Math.min(distance, matrix[i - 2]![j - 2]! + 1)
       }
       matrix[i]![j] = distance

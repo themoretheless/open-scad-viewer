@@ -70,7 +70,7 @@ function validFileName(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= MAX_WORKSPACE_FILE_NAME_LENGTH
 }
 
-export const workspaceSourceByteLength=(value:string):number=>new TextEncoder().encode(value).byteLength
+export const workspaceSourceByteLength = (value: string): number => new TextEncoder().encode(value).byteLength
 
 function fallbackDocumentId(): string {
   const cryptoApi = globalThis.crypto
@@ -122,9 +122,13 @@ export function updateWorkspaceDocument(
   const source = update.source ?? previous.source
   const fileName = update.fileName ?? previous.fileName
   const parameterPresets = update.parameterPresets ?? previous.parameterPresets
-  if (source === previous.source && fileName === previous.fileName
-    && (parameterPresets === previous.parameterPresets
-      || parameterPresetsJson(parameterPresets) === parameterPresetsJson(previous.parameterPresets))) return previous
+  if (
+    source === previous.source &&
+    fileName === previous.fileName &&
+    (parameterPresets === previous.parameterPresets ||
+      parameterPresetsJson(parameterPresets) === parameterPresetsJson(previous.parameterPresets))
+  )
+    return previous
   return requireValidWorkspaceDocument({
     ...previous,
     source,
@@ -146,12 +150,13 @@ export function workspaceDocumentAdvances(
   next: WorkspaceDocumentSnapshot,
 ): boolean {
   if (workspaceDocumentsEqual(previous, next)) return true
-  if (previous.documentId !== next.documentId
-    || next.mutation <= previous.mutation
-    || next.revision < previous.revision) return false
-  return previous.source === next.source
-    ? next.revision === previous.revision
-    : next.revision > previous.revision
+  if (
+    previous.documentId !== next.documentId ||
+    next.mutation <= previous.mutation ||
+    next.revision < previous.revision
+  )
+    return false
+  return previous.source === next.source ? next.revision === previous.revision : next.revision > previous.revision
 }
 
 export function parseWorkspaceDocument(serialized: string): WorkspaceDocumentSnapshot | null {
@@ -182,13 +187,12 @@ export function parseWorkspaceRecovery(serialized: string): WorkspaceRecoveryRec
     }
     const snapshot = parseWorkspaceDocumentValue(candidate.snapshot)
     if (!snapshot || !candidate.base || typeof candidate.base !== 'object') return null
-    const writerId = candidate.writerId === undefined || candidate.writerId === null
-      ? null
-      : (typeof candidate.writerId === 'string'
-          && candidate.writerId.length > 0
-          && candidate.writerId.length <= 128
-        ? candidate.writerId
-        : undefined)
+    const writerId =
+      candidate.writerId === undefined || candidate.writerId === null
+        ? null
+        : typeof candidate.writerId === 'string' && candidate.writerId.length > 0 && candidate.writerId.length <= 128
+          ? candidate.writerId
+          : undefined
     if (writerId === undefined) return null
     if (candidate.base.status === 'unknown') return { snapshot, base: { status: 'unknown' }, writerId }
     if (candidate.base.status === 'empty') return { snapshot, base: { status: 'empty' }, writerId }
@@ -206,20 +210,21 @@ export function parseWorkspaceRecovery(serialized: string): WorkspaceRecoveryRec
 export function parseWorkspaceDocumentValue(value: unknown): WorkspaceDocumentSnapshot | null {
   if (!value || typeof value !== 'object') return null
   const candidate = value as Partial<Record<keyof WorkspaceDocumentSnapshot, unknown>>
-  if ((candidate.schemaVersion !== WORKSPACE_SCHEMA_VERSION && candidate.schemaVersion !== 1)
-    || !validDocumentId(candidate.documentId)
-    || !validFileName(candidate.fileName)
-    || typeof candidate.source !== 'string'
-    || workspaceSourceByteLength(candidate.source) > MAX_WORKSPACE_SOURCE_LENGTH) return null
+  if (
+    (candidate.schemaVersion !== WORKSPACE_SCHEMA_VERSION && candidate.schemaVersion !== 1) ||
+    !validDocumentId(candidate.documentId) ||
+    !validFileName(candidate.fileName) ||
+    typeof candidate.source !== 'string' ||
+    workspaceSourceByteLength(candidate.source) > MAX_WORKSPACE_SOURCE_LENGTH
+  )
+    return null
   const parameterPresets = candidate.schemaVersion === 1 ? [] : parseParameterPresets(candidate.parameterPresets)
   if (parameterPresets === null) return null
   const revision = finiteRevision(candidate.revision)
   // Schema v1 originally shipped without a general mutation counter. Treat
   // its geometry revision as the migration baseline, then persist mutation on
   // the next write. This keeps old local snapshots readable.
-  const mutation = candidate.mutation === undefined
-    ? revision
-    : finiteRevision(candidate.mutation)
+  const mutation = candidate.mutation === undefined ? revision : finiteRevision(candidate.mutation)
   const updatedAt = finiteRevision(candidate.updatedAt)
   if (revision === null || mutation === null || mutation < revision || updatedAt === null) return null
   return {
@@ -246,14 +251,16 @@ export function workspaceDocumentsEqual(
 ): boolean {
   if (left === right) return true
   if (!left || !right) return false
-  return left.schemaVersion === right.schemaVersion
-    && left.documentId === right.documentId
-    && left.fileName === right.fileName
-    && left.source === right.source
-    && parameterPresetsJson(left.parameterPresets) === parameterPresetsJson(right.parameterPresets)
-    && left.mutation === right.mutation
-    && left.revision === right.revision
-    && left.updatedAt === right.updatedAt
+  return (
+    left.schemaVersion === right.schemaVersion &&
+    left.documentId === right.documentId &&
+    left.fileName === right.fileName &&
+    left.source === right.source &&
+    parameterPresetsJson(left.parameterPresets) === parameterPresetsJson(right.parameterPresets) &&
+    left.mutation === right.mutation &&
+    left.revision === right.revision &&
+    left.updatedAt === right.updatedAt
+  )
 }
 
 /** Read only an actually persisted localStorage snapshot/legacy source. */
@@ -261,13 +268,10 @@ export function loadStoredWorkspaceDocument(
   storage: WorkspaceStorage,
   legacySourceKey = WORKSPACE_LEGACY_SOURCE_KEY,
 ): WorkspaceDocumentSnapshot | null {
-  return loadVersionedWorkspaceDocument(storage)
-    ?? loadLegacyWorkspaceDocument(storage, legacySourceKey)
+  return loadVersionedWorkspaceDocument(storage) ?? loadLegacyWorkspaceDocument(storage, legacySourceKey)
 }
 
-export function loadVersionedWorkspaceDocument(
-  storage: WorkspaceStorage,
-): WorkspaceDocumentSnapshot | null {
+export function loadVersionedWorkspaceDocument(storage: WorkspaceStorage): WorkspaceDocumentSnapshot | null {
   return loadWorkspaceRecovery(storage)?.snapshot ?? null
 }
 
@@ -304,24 +308,27 @@ export function loadLegacyTabsWorkspaceDocument(storage: WorkspaceStorage): Work
     if (!serialized || serialized.length > MAX_LEGACY_TABS_SERIALIZED_LENGTH) return null
     const value = JSON.parse(serialized) as unknown
     if (!Array.isArray(value) || value.length === 0 || value.length > MAX_LEGACY_TABS) return null
-    const tabs = value.filter((candidate): candidate is { id: string; name: string; code: string } => (
-      !!candidate && typeof candidate === 'object'
-      && typeof (candidate as { id?: unknown }).id === 'string'
-      && (candidate as { id: string }).id.length > 0
-      && (candidate as { id: string }).id.length <= 128
-      && typeof (candidate as { name?: unknown }).name === 'string'
-      && typeof (candidate as { code?: unknown }).code === 'string'
-      && (candidate as { code: string }).code.length <= MAX_WORKSPACE_SOURCE_LENGTH
-    ))
+    const tabs = value.filter(
+      (candidate): candidate is { id: string; name: string; code: string } =>
+        !!candidate &&
+        typeof candidate === 'object' &&
+        typeof (candidate as { id?: unknown }).id === 'string' &&
+        (candidate as { id: string }).id.length > 0 &&
+        (candidate as { id: string }).id.length <= 128 &&
+        typeof (candidate as { name?: unknown }).name === 'string' &&
+        typeof (candidate as { code?: unknown }).code === 'string' &&
+        (candidate as { code: string }).code.length <= MAX_WORKSPACE_SOURCE_LENGTH,
+    )
     if (tabs.length !== value.length || new Set(tabs.map(tab => tab.id)).size !== tabs.length) return null
     const activeId = storage.getItem(WORKSPACE_LEGACY_ACTIVE_TAB_KEY)
     const selected = tabs.find(tab => tab.id === activeId) ?? tabs[0]!
     const rawName = selected.name.trim()
-    const fileName = rawName.length > 0 && rawName.length <= MAX_WORKSPACE_FILE_NAME_LENGTH
-      ? (/\.(scad|r)$/i.test(rawName)
+    const fileName =
+      rawName.length > 0 && rawName.length <= MAX_WORKSPACE_FILE_NAME_LENGTH
+        ? /\.(scad|r)$/i.test(rawName)
           ? rawName
-          : `${rawName.slice(0, MAX_WORKSPACE_FILE_NAME_LENGTH - 5)}${isRushFrontend(selected.code) ? '.r' : '.scad'}`)
-      : 'model.scad'
+          : `${rawName.slice(0, MAX_WORKSPACE_FILE_NAME_LENGTH - 5)}${isRushFrontend(selected.code) ? '.r' : '.scad'}`
+        : 'model.scad'
     return createWorkspaceDocument(selected.code, { fileName })
   } catch {
     return null
@@ -333,8 +340,7 @@ export function loadWorkspaceDocument(
   fallbackSource: string,
   legacySourceKey = WORKSPACE_LEGACY_SOURCE_KEY,
 ): WorkspaceDocumentSnapshot {
-  return loadStoredWorkspaceDocument(storage, legacySourceKey)
-    ?? createWorkspaceDocument(fallbackSource)
+  return loadStoredWorkspaceDocument(storage, legacySourceKey) ?? createWorkspaceDocument(fallbackSource)
 }
 
 export function saveWorkspaceDocument(storage: WorkspaceStorage, document: WorkspaceDocumentSnapshot): boolean {
@@ -357,17 +363,20 @@ export function saveWorkspaceRecovery(
   try {
     if (writerId !== undefined && (writerId.length === 0 || writerId.length > 128)) return false
     const snapshot = requireValidWorkspaceDocument(document)
-    const validatedBase: WorkspaceRecoveryBase = base.status === 'found'
-      ? { status: 'found', snapshot: requireValidWorkspaceDocument(base.snapshot) }
-      : { status: base.status }
-    if (validatedBase.status === 'found'
-      && !workspaceDocumentAdvances(validatedBase.snapshot, snapshot)) return false
-    storage.setItem(storageKey, JSON.stringify({
-      recoveryVersion: WORKSPACE_RECOVERY_VERSION,
-      snapshot,
-      base: validatedBase,
-      writerId: writerId ?? null,
-    }))
+    const validatedBase: WorkspaceRecoveryBase =
+      base.status === 'found'
+        ? { status: 'found', snapshot: requireValidWorkspaceDocument(base.snapshot) }
+        : { status: base.status }
+    if (validatedBase.status === 'found' && !workspaceDocumentAdvances(validatedBase.snapshot, snapshot)) return false
+    storage.setItem(
+      storageKey,
+      JSON.stringify({
+        recoveryVersion: WORKSPACE_RECOVERY_VERSION,
+        snapshot,
+        base: validatedBase,
+        writerId: writerId ?? null,
+      }),
+    )
     return true
   } catch {
     return false
