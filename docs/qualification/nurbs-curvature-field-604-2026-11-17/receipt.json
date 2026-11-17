@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0604",
+  "testedBase": "f5df656129e55c04d503e088ed0d540c9a19c4a7",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 188,
+  "scope": [
+    "Integrate the surface area density over a certified trim chart, retaining conservative boundary-cell bounds.",
+    "Verify true surface area across support knot cells with hole subtraction, conservative unresolved rectangles and independent cell budgets."
+  ],
+  "logSha256": "c0149487a0006de4e8473bbf60ba23bd17372ab0d9695df36d0ba6ac3065b973",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "6959be4995ccfddbc9f496db169715f83f86162fcd56e7e5a7690ae1ada05bdf",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "c49992d41479310e67a925884e97390cabdad0d7b97f119844ba9098f7b3814c"
+  }
+}

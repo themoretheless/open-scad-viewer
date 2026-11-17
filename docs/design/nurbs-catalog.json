@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 603,
-  "unallocatedCount": 397,
+  "specifiedCount": 604,
+  "unallocatedCount": 396,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15071,6 +15071,26 @@
       "remainingQualification": [
         "Enclose the maximizing unit normal when the projected area vector is separated from zero.",
         "Verify direction bounds for a nonplanar face with a hole and withhold a direction when the area vector may be zero.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0604",
+      "name": "Гарантированные границы площади самой периодически обрезанной NURBS-грани",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::periodic_trim_patch_area",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "docs/qualification/nurbs-curvature-field-604-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-604-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Integrate the surface area density over a certified trim chart, retaining conservative boundary-cell bounds.",
+        "Verify true surface area across support knot cells with hole subtraction, conservative unresolved rectangles and independent cell budgets.",
         "WASM and application integration are separate."
       ]
     }

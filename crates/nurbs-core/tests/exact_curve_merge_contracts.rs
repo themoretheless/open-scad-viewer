@@ -6009,3 +6009,72 @@ fn periodic_trim_max_projection_direction_requires_nonzero_area_vector() {
     assert!(zero.normal_bounds.is_none());
     assert_eq!(zero.maximum.maximum_bounds.unwrap()[0], 0.);
 }
+
+#[test]
+fn periodic_trim_surface_area_encloses_true_area_across_seam_and_hole() {
+    use nurbs_core::{
+        analysis::surface_measure::periodic_trim_patch_area,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let patches = build_exact_periodic_surface_trim_patches(&source, &[&outer, &hole], 1_000_000)
+        .unwrap()
+        .patches
+        .unwrap();
+    let report = periodic_trim_patch_area(&patches[0], 0.05, 1e-10, 10_000, 1_000_000).unwrap();
+    let area = report.area.unwrap();
+    assert!(area.bounds[0] <= 1.25 && 1.25 <= area.bounds[1], "{area:?}");
+    assert!(area.within_tolerance, "{area:?}");
+    assert!(report.trim_cells <= 1_000_000 && area.cells <= 10_000);
+}
+
+#[test]
+fn periodic_trim_surface_area_retains_conservative_bounds_when_trim_budget_runs_out() {
+    use nurbs_core::{
+        analysis::surface_measure::periodic_trim_patch_area,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let patches = build_exact_periodic_surface_trim_patches(&source, &[&outer], 1_000_000)
+        .unwrap()
+        .patches
+        .unwrap();
+    let insufficient = periodic_trim_patch_area(&patches[0], 0.01, 1e-10, 1, 1).unwrap();
+    assert_eq!(insufficient.minimum_surface_cells, 2);
+    assert!(insufficient.area.is_none());
+    let coarse = periodic_trim_patch_area(&patches[0], 0.01, 1e-10, 2, 1).unwrap();
+    let area = coarse.area.unwrap();
+    assert_eq!(area.bounds[0], 0.);
+    assert!(area.bounds[1] >= 1.5);
+    assert!(!area.within_tolerance);
+    assert_eq!(coarse.trim_cells, 1);
+}

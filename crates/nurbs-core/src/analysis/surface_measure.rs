@@ -221,3 +221,141 @@ pub fn area(s: &Surface, tolerance: f64, max_cells: usize) -> Result<AreaReport>
         heap.push(right);
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct TrimmedAreaReport {
+    /// Bounds on the area of the retained parameter region, counted with multiplicity.
+    pub area: Option<AreaReport>,
+    pub minimum_surface_cells: usize,
+    pub trim_cells: usize,
+}
+
+/// Enclose the true surface area of a periodic trim patch, including holes.
+/// A UV rectangle unresolved by the trim classifier contributes zero to the
+/// lower bound and its entire surface area to the upper bound.
+pub fn periodic_trim_patch_area(
+    patch: &crate::editing::exact_periodic_surface::PeriodicTrimPatch,
+    tolerance: f64,
+    tolerance_uv: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedAreaReport> {
+    use crate::trim_domain::{Location, TrimDomain};
+
+    let surface = &patch.surface;
+    surface.validate()?;
+    check(
+        tolerance.is_finite()
+            && tolerance > 0.
+            && (1..=100_000).contains(&max_surface_cells)
+            && (1..=1_000_000).contains(&max_trim_cells),
+        "Trimmed area needs positive finite tolerance and valid surface and trim cell limits",
+    )?;
+    let trim = TrimDomain::new(&patch.trim.loops, tolerance_uv)?;
+    let active = |knots: &[f64], degree, count| {
+        (degree..count)
+            .filter(|&i| knots[i] < knots[i + 1])
+            .collect::<Vec<_>>()
+    };
+    let u = active(
+        &surface.knots_u,
+        surface.degree_u,
+        surface.control_points.len(),
+    );
+    let v = active(
+        &surface.knots_v,
+        surface.degree_v,
+        surface.control_points[0].len(),
+    );
+    let minimum_surface_cells = u.len() * v.len();
+    if minimum_surface_cells > max_surface_cells {
+        return Ok(TrimmedAreaReport {
+            area: None,
+            minimum_surface_cells,
+            trim_cells: 0,
+        });
+    }
+
+    let mut trim_cells = 0;
+    let mut make_cell = |span, domain, serial| -> Result<Cell> {
+        let remaining = max_trim_cells - trim_cells;
+        let location = if remaining == 0 {
+            Location::Unresolved
+        } else {
+            let report = trim.classify(domain, remaining.min(100_000))?;
+            trim_cells += report.cells;
+            report.location
+        };
+        if location == Location::Outside {
+            return Ok(Cell {
+                span,
+                domain,
+                area: Interval::point(0.),
+                serial,
+            });
+        }
+        let mut candidate = cell(surface, span, domain, serial)?;
+        if location == Location::Unresolved {
+            candidate.area.lo = 0.;
+        }
+        Ok(candidate)
+    };
+
+    let mut cells = 0;
+    let mut heap = BinaryHeap::new();
+    for u in u {
+        for &v in &v {
+            let domain = [
+                [surface.knots_u[u], surface.knots_u[u + 1]],
+                [surface.knots_v[v], surface.knots_v[v + 1]],
+            ];
+            heap.push(make_cell([u, v], domain, cells)?);
+            cells += 1;
+        }
+    }
+    let mut total = sum(&heap)?;
+    let area = loop {
+        let current = report(total, cells, tolerance, StopReason::WorkLimit)?;
+        if current.within_tolerance || cells + 2 > max_surface_cells {
+            let recomputed = report(sum(&heap)?, cells, tolerance, StopReason::WorkLimit)?;
+            if recomputed.within_tolerance || cells + 2 > max_surface_cells {
+                break recomputed;
+            }
+        }
+        let parent = heap
+            .pop()
+            .ok_or_else(|| crate::numeric_err("Trimmed area has no active cells"))?;
+        let width = parent.domain.map(|[start, end]| end - start);
+        let preferred = usize::from(width[1] > width[0]);
+        let split = [preferred, 1 - preferred].into_iter().find_map(|axis| {
+            let [lo, hi] = parent.domain[axis];
+            let mid = crate::distance_bounds::midpoint(lo, hi);
+            (lo < mid && mid < hi).then_some((axis, mid))
+        });
+        let Some((axis, mid)) = split else {
+            heap.push(parent);
+            break report(sum(&heap)?, cells, tolerance, StopReason::PrecisionLimit)?;
+        };
+        let mut left = parent.domain;
+        let mut right = parent.domain;
+        left[axis][1] = mid;
+        right[axis][0] = mid;
+        let left = make_cell(parent.span, left, cells)?;
+        let right = make_cell(parent.span, right, cells + 1)?;
+        cells += 2;
+        total = Interval::new(
+            (total.lo - parent.area.lo).next_down(),
+            (total.hi - parent.area.hi).next_up(),
+        )?
+        .add(left.area)?
+        .add(right.area)?;
+        total.lo = total.lo.max(0.);
+        heap.push(left);
+        heap.push(right);
+    };
+    Ok(TrimmedAreaReport {
+        area: Some(area),
+        minimum_surface_cells,
+        trim_cells,
+    })
+}
