@@ -50,7 +50,7 @@ import ModelingFloorGrid from '../components/ModelingFloorGrid.svt'
 import ModelingGridControls from '../components/ModelingGridControls.svt'
 import WorkspaceActionBar from '../components/WorkspaceActionBar.svt'
 import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
-import { sameSketchPlane, type DirectExtrusionOperation as ExtrusionMode } from '../app/directExtrusion'
+import { previewTargetBodies, sameSketchPlane, type DirectExtrusionOperation as ExtrusionMode } from '../app/directExtrusion'
 import { useModelingGrid } from '../app/modelingGrid'
 import { resolveModelingSnap, type SnapKind, type SnapGeometry } from '../app/modelingSnaps'
 import CommandPalette from '../components/CommandPalette.svt'
@@ -893,7 +893,8 @@ watch(() => document.value, d => {
   // Preview snapshots retain identity; only invalidate visibility when an isolated object disappears.
   isolationStack.value = pruneIsolation(isolationStack.value, id => ids.has(id))
 })
-const renderBodies=computed(()=>previewReplacesTarget.value?sceneBodies.value.flatMap(b=>b.id===targetBody.value?(previewBody.value?[previewBody.value]:[]):[b]):sceneBodies.value)
+// C9: the primary target and every extra target show their previewed result before Apply.
+const renderBodies=computed(()=>previewReplacesTarget.value?previewTargetBodies(sceneBodies.value,extraTargetIds.value,solidPreviewResult.value?.bodies,{id:targetBody.value,body:previewBody.value}):sceneBodies.value)
 const {
   fps,
   frameMs,

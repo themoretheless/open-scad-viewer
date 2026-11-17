@@ -1,5 +1,5 @@
 import { describe,expect,it } from 'vitest'
-import { applyDirectExtrusionProfile, extrudeSketchProfile, buildDirectExtrusion } from '../src/app/directExtrusion'
+import { applyDirectExtrusionProfile, previewTargetBodies, extrudeSketchProfile, buildDirectExtrusion } from '../src/app/directExtrusion'
 import { analyzeNurbsBrep, createBrepBox, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
 import { type DirectDocument, type DirectSketch } from '../src/app/directModeling'
 import { facePlane, solidTopology } from '../src/app/directSolidTools'
@@ -172,5 +172,17 @@ describe('extrusion Boolean inside the command',()=>{
   expect(()=>applyDirectExtrusionProfile(d,{sketchIds:['cut'],height:12,offset:-1,operation:'difference',targetId:'a',targetIds:['a'],id:'x'})).toThrow(expect.objectContaining({code:'DIRECT_TARGET_BODY',targetIds:['a']}))
   expect(()=>applyDirectExtrusionProfile(d,{sketchIds:['cut'],height:12,offset:-1,operation:'difference',targetId:'a',targetIds:['gone'],id:'x'})).toThrow(expect.objectContaining({targetIds:['gone']}))
   expect(JSON.stringify(d)).toBe(before)
+ })
+})
+
+describe('C9 preview of extra target bodies',()=>{
+ const a={id:'a',v:0},b={id:'b',v:0},c={id:'c',v:0}
+ it('replaces the primary and every extra target, drops consumed ones, keeps the rest',()=>{
+  const result=[{id:'a',v:1},{id:'c',v:1}]
+  expect(previewTargetBodies([a,b,c],['b','c'],result,{id:'a',body:{id:'a',v:2}})).toEqual([{id:'a',v:2},{id:'c',v:1}])
+ })
+ it('keeps extras unchanged while no result is available',()=>{
+  expect(previewTargetBodies([a,b],['b'],null,{id:'a',body:null})).toEqual([b])
+  expect(previewTargetBodies([a,b],[],undefined)).toEqual([a,b])
  })
 })

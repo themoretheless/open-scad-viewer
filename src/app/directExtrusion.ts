@@ -72,6 +72,18 @@ export function directExtrusionTargets(options: Pick<DirectExtrusionOptions,'ope
   if(!ids.length)throw new DirectInputError('DIRECT_TARGET_BODY','Select a target body.')
   return ids
 }
+/**
+ * C9 preview: swaps every combination target in the scene for its previewed result, so extra
+ * `targetIds` change in the viewport before Apply. A target missing from the result (consumed
+ * by a difference or an empty intersection) disappears; bodies that are not targets stay as is.
+ */
+export function previewTargetBodies<B extends {id:string}>(scene:readonly B[],targetIds:readonly string[],result:readonly B[]|null|undefined,primary?:{id:string;body:B|null}):B[] {
+  const replaced=new Map<string,B|null>()
+  if(result)for(const id of targetIds)replaced.set(id,result.find(b=>b.id===id)??null)
+  if(primary)replaced.set(primary.id,primary.body)
+  if(!replaced.size)return [...scene]
+  return scene.flatMap(b=>{if(!replaced.has(b.id))return [b];const next=replaced.get(b.id);return next?[next]:[]})
+}
 /** Shared preview/commit path; the input document is never changed. */
 export function buildDirectExtrusion(document: DirectDocument, options: DirectExtrusionOptions): DirectBody | null {
   const sketches=options.sketchIds.map(id=>{const s=document.sketches.find(s=>s.id===id);if(!s)throw new DirectInputError('DIRECT_PROFILE_MISSING','Profile contour no longer exists.',undefined,[id]);return s})

@@ -3868,6 +3868,30 @@ it.each(['Extrude · E','Revolve'])('C9: %s offers Intersect and sends extra tar
   expect(requests.at(-1)!.options).toMatchObject({operation:'new',targetIds:[]})
  }finally{vi.useRealTimers()}
 })
+it('C9: the viewport preview replaces extra target bodies before Apply',async()=>{
+ const ui=await mount();await ui.click('Cube');await ui.click('Split');await ui.click('Apply · Enter');await settle();await ui.click('Profile')
+ const before=ui.doc()
+ previewWorkerRun.mockImplementation(job=>{
+  if(!['extrusion','revolve'].includes(job.kind))return undefined
+  const options=job.options as {targetIds?:string[]}
+  // A difference that consumes every extra target: the primary stays, the extras vanish.
+  return Promise.resolve({...job.document,bodies:job.document.bodies.filter((b:{id:string})=>!options.targetIds?.includes(b.id))})
+ })
+ vi.useFakeTimers()
+ try{
+  await ui.click('Extrude · E');await vi.advanceTimersByTimeAsync(100)
+  await ui.click('Cut');await vi.advanceTimersByTimeAsync(100)
+  const fieldset=ui.all().find(n=>n.props['data-extra-targets']!==undefined)!
+  const extra=ui.all(fieldset).find(n=>n.tag==='input')!.props.value as string
+  const drawn=()=>ui.all().some(n=>n.props['data-body']===extra)
+  expect(drawn()).toBe(true)
+  ui.all(fieldset).find(n=>n.tag==='input')!.props['onUpdate:modelValue']([extra]);await nextTick();await vi.advanceTimersByTimeAsync(100)
+  expect(drawn()).toBe(false)
+  expect(ui.doc()).toEqual(before)
+  ui.all(ui.all().find(n=>n.props['data-extra-targets']!==undefined)!).find(n=>n.tag==='input')!.props['onUpdate:modelValue']([]);await nextTick();await vi.advanceTimersByTimeAsync(100)
+  expect(drawn()).toBe(true)
+ }finally{vi.useRealTimers()}
+})
 it('C9: the extra target list is labelled in Russian',async()=>{
  const ui=await mount({locale:'ru'});await ui.click('Cube');await ui.click('Разрезать');await commandKey(ui,'Enter');await settle();await ui.click('Profile')
  expect(ui.doc().bodies).toHaveLength(2)
