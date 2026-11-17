@@ -4311,3 +4311,79 @@ fn periodic_trim_edges_withhold_all_results_on_invalid_contour_topology() {
         Some(PeriodicTrimEdgeRefusal::Patch(_))
     ));
 }
+
+
+#[test]
+fn periodic_trim_edge_sources_partition_oriented_segments() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_edges;
+    let hole = [
+        [0.125, 0.125],
+        [0.625, 0.125],
+        [0.625, 0.625],
+        [0.125, 0.625],
+        [0.125, 0.125],
+    ];
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let report = build_exact_periodic_surface_trim_edges(
+        &doubly_periodic_tensor(),
+        &[&hole, &outer],
+        1_000_000,
+    )
+    .unwrap();
+    let mut patch = report.patches.unwrap().remove(0);
+    let sources = patch.edge_sources().unwrap();
+    for (segment, pieces) in sources[0].chunks_exact(2).enumerate() {
+        assert_eq!(pieces[0].contour, 1);
+        assert_eq!(pieces[1].contour, 1);
+        assert_eq!(pieces[0].segment, segment);
+        assert_eq!(pieces[1].segment, segment);
+        assert_eq!(pieces[0].interval, [0., 0.5]);
+        assert_eq!(pieces[1].interval, [0.5, 1.]);
+    }
+    assert_eq!(sources[0].len(), 8);
+    assert_eq!(sources[1].len(), 4);
+    for (segment, edge) in sources[1].iter().enumerate() {
+        assert_eq!(
+            (edge.contour, edge.segment, edge.interval),
+            (0, segment, [0., 1.])
+        );
+    }
+    patch.loops[0].remove(0);
+    assert!(patch.edge_sources().is_err());
+}
+
+#[test]
+fn periodic_trim_edge_sources_continue_segment_indices_across_chunk_clocks() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_edges;
+    let outer = [
+        [0.125, 0.125],
+        [0.625, 0.125],
+        [0.625, 0.625],
+        [0.125, 0.625],
+        [0.125, 0.125],
+    ];
+    let mut patch =
+        build_exact_periodic_surface_trim_edges(&doubly_periodic_tensor(), &[&outer], 1_000_000)
+            .unwrap()
+            .patches
+            .unwrap()
+            .remove(0);
+    let first_chunk = patch.patch.trim.loops[0][0].clone();
+    patch.patch.trim.loops[0].push(first_chunk);
+    let repeated_clock = patch.loops[0].clone();
+    patch.loops[0].extend(repeated_clock);
+    let sources = patch.edge_sources().unwrap();
+    assert_eq!(
+        sources[0]
+            .iter()
+            .map(|edge| edge.segment)
+            .collect::<Vec<_>>(),
+        (0..8).collect::<Vec<_>>()
+    );
+}

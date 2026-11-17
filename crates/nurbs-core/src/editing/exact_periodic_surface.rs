@@ -4030,6 +4030,73 @@ pub struct PeriodicTrimPatchEdges {
     pub loops: Vec<Vec<PeriodicTrimEdge>>,
 }
 
+/// Location of one lifted edge on its source polygon.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PeriodicTrimEdgeSource {
+    /// Original input contour index.
+    pub contour: usize,
+    /// Segment index after orienting the polygon for its outer or hole role.
+    pub segment: usize,
+    /// Parameter interval within that oriented segment, from zero to one.
+    pub interval: [f64; 2],
+}
+
+impl PeriodicTrimPatchEdges {
+    /// Map each lifted edge to its source contour and oriented polygon interval.
+    /// The outer/hole grouping and edge order match `self.loops`.
+    pub fn edge_sources(&self) -> Result<Vec<Vec<PeriodicTrimEdgeSource>>> {
+        let trim = &self.patch.trim;
+        let error = || crate::input("Periodic trim edge domains do not partition the source");
+        if self.loops.len() != trim.loops.len() || self.loops.len() != trim.contours.len() {
+            return Err(error());
+        }
+        self.loops
+            .iter()
+            .zip(&trim.loops)
+            .zip(&trim.contours)
+            .map(|((edges, polylines), &contour)| {
+                let mut edges = edges.iter();
+                let mut segment_offset = 0;
+                let mut sources = Vec::new();
+                for polyline in polylines {
+                    polyline.validate()?;
+                    let segment_count = polyline.control_points.len() - 1;
+                    let [start, end] = polyline.domain();
+                    if polyline.degree != 1 || start != 0. || end != segment_count as f64 {
+                        return Err(error());
+                    }
+                    let mut next = start;
+                    while next < end {
+                        let edge = edges.next().ok_or_else(error)?;
+                        edge.pcurve.validate()?;
+                        edge.curve.validate()?;
+                        let [lo, hi] = edge.pcurve.domain();
+                        let segment = next.floor();
+                        if lo != next
+                            || hi <= lo
+                            || hi > segment + 1.
+                            || edge.curve.domain() != [lo, hi]
+                        {
+                            return Err(error());
+                        }
+                        sources.push(PeriodicTrimEdgeSource {
+                            contour,
+                            segment: segment_offset + segment as usize,
+                            interval: [lo - segment, hi - segment],
+                        });
+                        next = hi;
+                    }
+                    segment_offset += segment_count;
+                }
+                if edges.next().is_some() {
+                    return Err(error());
+                }
+                Ok(sources)
+            })
+            .collect()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PeriodicTrimEdgeRefusal {
     Patch(PeriodicTrimPatchRefusal),

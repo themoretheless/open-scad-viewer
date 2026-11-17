@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 562,
-  "unallocatedCount": 438,
+  "specifiedCount": 563,
+  "unallocatedCount": 437,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -14273,6 +14273,25 @@
       "remainingQualification": [
         "Retain original contour identities across trim chart extraction, hole nesting, and edge subdivision.",
         "Each input contour resolves to a persistent face and wire ID and an outer/hole role after a validated build.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0563",
+      "name": "Параметрическая привязка рёбер периодической обрезки к сегментам исходного контура",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimPatchEdges::edge_sources",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-563-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-563-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Locate every generated edge on the source contour, oriented segment, and local interval.",
+        "Verify seam-split intervals, holes, chunk parameter resets, and rejection of incomplete edge partitions.",
         "WASM and application integration are separate."
       ]
     }
