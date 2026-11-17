@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 377,
-  "unallocatedCount": 623,
+  "specifiedCount": 378,
+  "unallocatedCount": 622,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9679,6 +9679,29 @@
       "remainingQualification": [
         "Store nonbinary cap supports as exactly planar binary64 surfaces within a certified tolerance.",
         "Joint binary64 corner rounding preserves exact affine closure. The maximum corner error bounds the entire support surface, and each stored coedge is certified against the rounded support.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0378",
+      "name": "Сшивка B-rep-крышек с исходными кромками открытой оболочки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::attach_section_caps",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "docs/qualification/nurbs-curvature-field-378-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-378-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Attach certified section caps to explicit open shell boundary cycles without duplicating source edges or vertices.",
+        "Explicit complete boundary cycles reuse original edge and vertex identities. Cap face senses oppose the physical side traversals; full topology validation certifies any resulting shell closure.",
         "WASM and application integration are separate."
       ]
     }

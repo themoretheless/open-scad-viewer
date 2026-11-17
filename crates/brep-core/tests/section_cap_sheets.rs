@@ -113,3 +113,162 @@ fn supports_zero_tolerance_for_an_exactly_storable_plane() {
     assert_eq!(report.support_error_upper, [Q::from_integer(0.into())]);
     assert_eq!(report.sheet.model.faces.len(), 1);
 }
+
+fn open_hollow_prism() -> (brep_core::Model, Vec<Vec<[usize; 2]>>) {
+    use brep_core::prism::extrude;
+    let outline = |lo, hi| {
+        ring(lo, hi, |_| 0.)
+            .into_iter()
+            .map(|curve| {
+                Curve::from_polyline(
+                    curve
+                        .control_points
+                        .iter()
+                        .map(|p| p[..2].to_vec())
+                        .collect(),
+                )
+                .unwrap()
+            })
+            .collect::<Vec<_>>()
+    };
+    let outer = outline([0., 0.], [4., 4.]);
+    let hole: Vec<_> = outline([1., 1.], [2., 2.])
+        .into_iter()
+        .rev()
+        .map(|curve| curve.reverse().unwrap())
+        .collect();
+    let mut source = extrude(&[outer, hole], 0., 2.).unwrap();
+    let cap = source
+        .faces
+        .iter()
+        .position(|face| {
+            face.surface
+                .control_points
+                .iter()
+                .flatten()
+                .all(|p| p[2] == 2.)
+        })
+        .unwrap();
+    let removed = source.faces.remove(cap);
+    let mut removed_loops = vec![removed.outer];
+    removed_loops.extend(removed.holes);
+    let cap_use = source.shells[0]
+        .faces
+        .iter()
+        .find(|u| u.face == cap)
+        .unwrap();
+    let edge_rings: Vec<_> = removed_loops
+        .iter()
+        .map(|&wire| {
+            let mut edges: Vec<_> = source.loops[wire].coedges.iter().map(|c| c.edge).collect();
+            if !cap_use.reversed {
+                edges.reverse();
+            }
+            edges
+        })
+        .collect();
+    removed_loops.sort_unstable();
+    for &wire in removed_loops.iter().rev() {
+        source.loops.remove(wire);
+    }
+    for face in &mut source.faces {
+        face.outer -= removed_loops.iter().filter(|&&i| i < face.outer).count();
+        for hole in &mut face.holes {
+            *hole -= removed_loops.iter().filter(|&&i| i < *hole).count();
+        }
+    }
+    source.shells[0].faces.retain(|u| u.face != cap);
+    for face_use in &mut source.shells[0].faces {
+        if face_use.face > cap {
+            face_use.face -= 1;
+        }
+    }
+    source.shells[0].closed = false;
+    source.bodies.clear();
+    source.rebuild_topology_ids();
+    source.validate().unwrap();
+    let addresses = edge_rings
+        .into_iter()
+        .map(|edges| {
+            edges
+                .into_iter()
+                .map(|edge| {
+                    source
+                        .loops
+                        .iter()
+                        .enumerate()
+                        .find_map(|(i, wire)| {
+                            wire.coedges
+                                .iter()
+                                .position(|c| c.edge == edge)
+                                .map(|j| [i, j])
+                        })
+                        .unwrap()
+                })
+                .collect()
+        })
+        .collect();
+    (source, addresses)
+}
+
+#[test]
+fn closes_a_hollow_shell_with_one_cap_and_reuses_all_boundary_edges() {
+    use brep_core::planar_cap::attach_section_caps;
+    let (source, rings) = open_hollow_prism();
+    assert_eq!(source.validate().unwrap().boundary_edge_count, 8);
+    let wire: Vec<_> = rings.iter().map(Vec::as_slice).collect();
+    let report =
+        attach_section_caps(&source, 0, &wire, [0., 0., 1.], 2., 1_000_000, 10_000).unwrap();
+    assert_eq!(report.cap_faces.len(), 1);
+    assert_eq!(report.model.faces[report.cap_faces[0]].holes.len(), 1);
+    assert_eq!(report.model.edges, source.edges);
+    assert_eq!(report.model.vertices, source.vertices);
+    assert_eq!(report.model.validate().unwrap().boundary_edge_count, 0);
+    assert!(report.model.shells[0].closed);
+    assert!(!source.shells[0].closed);
+    assert!(
+        attach_section_caps(
+            &source,
+            0,
+            &wire,
+            [0., 0., 1.],
+            2.,
+            report.exact_work - 1,
+            10_000
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn refuses_duplicate_and_disordered_section_uses_without_mutating_the_source() {
+    use brep_core::planar_cap::attach_section_caps;
+    let (source, mut rings) = open_hollow_prism();
+    let before = source.clone();
+    assert!(
+        attach_section_caps(
+            &source,
+            0,
+            &[&rings[0], &rings[0]],
+            [0., 0., 1.],
+            2.,
+            1_000_000,
+            10_000
+        )
+        .is_err()
+    );
+    rings[0].swap(1, 2);
+    assert!(
+        attach_section_caps(
+            &source,
+            0,
+            &[&rings[0], &rings[1]],
+            [0., 0., 1.],
+            2.,
+            1_000_000,
+            10_000
+        )
+        .is_err()
+    );
+    assert_eq!(source, before);
+}

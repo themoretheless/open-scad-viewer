@@ -434,3 +434,6 @@ pub use section_sheets::{
     BoundedSectionSheetReport, SectionSheetOptions, SectionSheetReport, build_section_sheets,
     build_section_sheets_with_support_tolerance,
 };
+
+mod attach_sections;
+pub use attach_sections::{AttachedSectionCaps, attach_section_caps};

@@ -1,0 +1,37 @@
+{
+  "id": "NURBS-0378",
+  "testedBase": "9408e60f5037b54942b308fe0060954a39e09323",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 81,
+  "scope": [
+    "Attach certified section caps to explicit open shell boundary cycles without duplicating source edges or vertices.",
+    "Explicit complete boundary cycles reuse original edge and vertex identities. Cap face senses oppose the physical side traversals; full topology validation certifies any resulting shell closure."
+  ],
+  "logSha256": "795e1b4df2c67904bb35a60d33aac204fdabc962c31e1ae6cf28517947c45168",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "dafdd68c5d8f4c822825b5d540e7975c4f22d888a02b3eccbbb1c28548ec327f",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "06d66ad4e5376806ebb7fea5d587ba38298528904a7c624a5797f5a6f1c49ebc",
+    "crates/brep-core/tests/section_cap_sheets.rs": "db3915224abb0231b3eb8a5e4ebd0272567bc68b64e975a624eee464b4e993d5",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "4017e2b1f8f9318efd55e938be4d303fe206924c010e189676dd4cc2014a5ced"
+  }
+}
