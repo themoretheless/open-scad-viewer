@@ -187,3 +187,6 @@ pub fn attach_section_caps(
 fn invalid(message: &str) -> Error {
     Error::new("BREP_INVALID_SECTION_ATTACHMENT", message)
 }
+
+mod discover;
+pub use discover::{DiscoveredSectionCaps, discover_and_attach_section_caps};

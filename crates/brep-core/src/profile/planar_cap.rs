@@ -436,4 +436,6 @@ pub use section_sheets::{
 };
 
 mod attach_sections;
-pub use attach_sections::{AttachedSectionCaps, attach_section_caps};
+pub use attach_sections::{
+    AttachedSectionCaps, DiscoveredSectionCaps, attach_section_caps, discover_and_attach_section_caps,
+};

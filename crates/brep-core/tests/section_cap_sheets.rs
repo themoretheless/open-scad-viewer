@@ -272,3 +272,41 @@ fn refuses_duplicate_and_disordered_section_uses_without_mutating_the_source() {
     );
     assert_eq!(source, before);
 }
+
+#[test]
+fn discovers_both_free_rings_and_closes_a_hollow_shell() {
+    use brep_core::planar_cap::discover_and_attach_section_caps;
+    let (source, _) = open_hollow_prism();
+    let report =
+        discover_and_attach_section_caps(&source, 0, [0., 0., 1.], 2., 1_000_000, 10_000).unwrap();
+    assert_eq!(
+        report.rings.iter().map(Vec::len).collect::<Vec<_>>(),
+        [4, 4]
+    );
+    let cap = &report.attachment;
+    assert_eq!(cap.cap_faces.len(), 1);
+    assert_eq!(cap.model.faces[cap.cap_faces[0]].holes.len(), 1);
+    assert_eq!(cap.model.edges, source.edges);
+    assert_eq!(cap.model.vertices, source.vertices);
+    assert!(cap.model.shells[0].closed);
+    assert_eq!(cap.model.validate().unwrap().boundary_edge_count, 0);
+    let total = report.discovery_work + cap.exact_work;
+    assert!(discover_and_attach_section_caps(&source, 0, [0., 0., 1.], 2., total, 10_000).is_ok());
+    assert!(
+        discover_and_attach_section_caps(&source, 0, [0., 0., 1.], 2., total - 1, 10_000).is_err()
+    );
+}
+
+#[test]
+fn refuses_empty_and_partial_section_cycles_atomically() {
+    use brep_core::planar_cap::discover_and_attach_section_caps;
+    let (source, _) = open_hollow_prism();
+    let before = source.clone();
+    assert!(
+        discover_and_attach_section_caps(&source, 0, [0., 0., 1.], 1., 1_000_000, 10_000).is_err()
+    );
+    assert!(
+        discover_and_attach_section_caps(&source, 0, [1., 0., 0.], 0., 1_000_000, 10_000).is_err()
+    );
+    assert_eq!(source, before);
+}

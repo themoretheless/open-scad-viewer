@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 378,
-  "unallocatedCount": 622,
+  "specifiedCount": 379,
+  "unallocatedCount": 621,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9702,6 +9702,30 @@
       "remainingQualification": [
         "Attach certified section caps to explicit open shell boundary cycles without duplicating source edges or vertices.",
         "Explicit complete boundary cycles reuse original edge and vertex identities. Cap face senses oppose the physical side traversals; full topology validation certifies any resulting shell closure.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0379",
+      "name": "Автоматический поиск граничных циклов и сшивка плоских B-rep-крышек",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::discover_and_attach_section_caps",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "docs/qualification/nurbs-curvature-field-379-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-379-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Find free boundary cycles on an exact section plane and attach validated caps without a manual edge list.",
+        "Exact rational pole residuals identify eligible free edges, and source vertex identities assemble complete cycles. Discovery and attachment share a work budget.",
         "WASM and application integration are separate."
       ]
     }
