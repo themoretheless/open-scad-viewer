@@ -4,7 +4,6 @@ import {
   multiplyMat4,
   translationMat4,
   scaleMat4,
-  rotationEulerMat4,
   normalMatrixFromModel,
   generateUnitCube,
   generateUnitCylinder,

@@ -56,7 +56,6 @@ import {
   createBrepTube,
   analyzeNurbsBrep,
   createBrepCylinder,
-  createBrepSphere,
   transformNurbsBrep,
   tessellateNurbsBrep,
 } from '../src/kernel/geometry/brep'

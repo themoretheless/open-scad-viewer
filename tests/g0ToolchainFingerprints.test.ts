@@ -15,7 +15,6 @@ import { dirname, join, resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   FROZEN_ARCHIVES,
-  REFRESH_EXECUTORS,
   REFRESH_OUTPUTS,
   prepareQualificationRefresh,
   publishQualificationRefresh,

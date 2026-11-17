@@ -8,16 +8,16 @@ vi.mock('../src/exchange/downloadArtifact', () => ({ downloadBytes }))
 const repairControl = vi.hoisted(() => ({
   defer: false,
   events: [] as { phase: string; completed: number; total: number }[],
-  resolve: (value?: unknown) => {},
-  reject: (reason?: unknown) => {},
+  resolve: (_value?: unknown) => {},
+  reject: (_reason?: unknown) => {},
   cancel: vi.fn(),
   dispose: vi.fn(),
 }))
 const manifoldControl = vi.hoisted(() => ({
   defer: false,
   events: [] as { phase: string; completed: number; total: number }[],
-  resolve: (value?: unknown) => {},
-  reject: (reason?: unknown) => {},
+  resolve: (_value?: unknown) => {},
+  reject: (_reason?: unknown) => {},
   cancel: vi.fn(),
   dispose: vi.fn(),
 }))

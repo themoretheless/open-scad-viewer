@@ -10,7 +10,7 @@ const control = vi.hoisted(() => ({
   dispose: vi.fn(),
   jobs: [] as any[],
   events: [] as { phase: string; completed: number; total: number }[],
-  resolve: (value?: unknown) => {},
+  resolve: (_value?: unknown) => {},
 }))
 const download = vi.hoisted(() => vi.fn())
 

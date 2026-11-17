@@ -4,7 +4,7 @@ import MainModelingOverlay from '../src/features/MainModelingOverlay.svt'
 import MainSketchTools from '../src/features/MainSketchTools.svt'
 import CadWorkbenchPanel from '../src/features/CadWorkbenchPanel.svt'
 import { previewMeshes } from '../src/app/mainModeling'
-import { extrudeDirectSketch, type DirectDocument } from '../src/app/directModeling'
+import { extrudeDirectSketch } from '../src/app/directModeling'
 import { sampleCurve } from '../src/app/directSketchGeometry'
 import { inspectPolygonMesh } from '../src/kernel/geometry/polygon'
 class Node {

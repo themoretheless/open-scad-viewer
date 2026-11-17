@@ -64,18 +64,18 @@ export function evalCompiledAst(ast: CompiledExprAst, ctx: FormaRenderContext): 
     }
     case 'unary': {
       const v = evalCompiledAst(ast.arg, ctx)
-      if (ast.op === '!') return !Boolean(v)
+      if (ast.op === '!') return !v
       if (ast.op === '-') return -Number(v)
       return +Number(v)
     }
     case 'binary': {
       if (ast.op === '||') {
         const l = evalCompiledAst(ast.left, ctx)
-        return Boolean(l) ? l : evalCompiledAst(ast.right, ctx)
+        return l ? l : evalCompiledAst(ast.right, ctx)
       }
       if (ast.op === '&&') {
         const l = evalCompiledAst(ast.left, ctx)
-        return Boolean(l) ? evalCompiledAst(ast.right, ctx) : l
+        return l ? evalCompiledAst(ast.right, ctx) : l
       }
       if (ast.op === '??') {
         const l = evalCompiledAst(ast.left, ctx)
@@ -160,7 +160,7 @@ function buildAriaAndDomAttrs(el: FormaElementNode, ctx: FormaRenderContext, ext
   if (extraClass) cls.push(extraClass)
   const userClass = evalProp(el, 'class', ctx) ?? evalProp(el, 'className', ctx)
   if (userClass) cls.push(String(userClass))
-  if (Boolean(evalProp(el, 'active', ctx))) cls.push('active')
+  if (evalProp(el, 'active', ctx)) cls.push('active')
   if (cls.length) attrs.class = cls.join(' ')
 
   const id = evalProp(el, 'id', ctx)

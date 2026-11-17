@@ -41,7 +41,7 @@ it('resolves an attached sketch plane after a body parameter changes', async () 
   const { resolveSketchSupport } = await import('../src/app/mainSketchAssociation')
   const a = (await parseOpenSCAD('cube([10,10,10]);')).meshes,
     b = (await parseOpenSCAD('cube([10,10,20]);')).meshes
-  const top = Array.from(a[0].faceIds).find((id, i) => {
+  const top = Array.from(a[0].faceIds).find((id, _i) => {
     try {
       return resolveSketchSupport(a, { entity: a[0].entityId!, face: id }).origin[2] === 10
     } catch {

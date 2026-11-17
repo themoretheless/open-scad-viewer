@@ -1,12 +1,6 @@
 import { wboitWeight } from '../src/render/wboitReference'
 import { describe, expect, it, vi } from 'vitest'
-import {
-  GpuWboitRenderer,
-  toWboitShader,
-  WBOIT_ACCUM_FORMAT,
-  WBOIT_REVEAL_FORMAT,
-  WBOIT_COMPOSITE_WGSL,
-} from '../src/render/gpuWboit'
+import { GpuWboitRenderer, toWboitShader, WBOIT_ACCUM_FORMAT, WBOIT_REVEAL_FORMAT } from '../src/render/gpuWboit'
 import { MESH_WGSL } from '../src/render/shaders'
 
 function createFakeDevice() {

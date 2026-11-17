@@ -83,7 +83,7 @@ it('bounds whole-model sample work and skips singular regions without marking th
     model = structuredClone(source)
   model.faces = Array.from({ length: 10000 }, () => structuredClone(source.faces[0]))
   let evaluations = 0
-  const singular = (s: any, u: number, v: number) => {
+  const singular = (_s: any, _u: number, _v: number) => {
     evaluations++
     return { point: [0, 0, 0], normal: null } as any
   }

@@ -78,7 +78,7 @@ fn wboitWeight(depth: f32, alpha: f32) -> f32 {
 fn fs_color(v: V) -> vec4f {
 `
 
-  let replaced = source.replace(targetSignature, prefix)
+  const replaced = source.replace(targetSignature, prefix)
 
   const suffix = /* wgsl */ `
 

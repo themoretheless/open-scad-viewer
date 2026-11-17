@@ -20,7 +20,7 @@ describe('RushGraph structural pattern matching', () => {
     ['"hook"', '"hook"', 1],
     ['"Hook"', '"hook"', 0],
     ['""', '""', 1],
-    ['"a\\\"b"', '"a\\\"b"', 1],
+    ['"a\\"b"', '"a\\"b"', 1],
     ['10mm', '1cm', 1],
     ['1m', '1000mm', 1],
     ['90deg', '90deg', 1],

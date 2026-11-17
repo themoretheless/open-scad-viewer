@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   referenceRefineSubdivision,
   runGpuSubdivisionRefine,
-  referenceBrushSubdivision,
   runGpuBrushSubdivision,
   CATMULL_CLARK_WGSL,
 } from '../src/render/gpuSubdivision'

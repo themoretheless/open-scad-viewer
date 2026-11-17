@@ -2,7 +2,6 @@ import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
 import { Worker } from 'node:worker_threads'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { GeometryQuality } from '../src/core/build'
 import {
   ACTIVE_GEOMETRY_MANIFEST_VERSIONS,
   GEOMETRY_ENGINE_ROUTES,

@@ -382,7 +382,7 @@ export function normalizeSemanticProgram(input: unknown, exactSource?: string): 
     if (exactSource !== undefined) attestSemanticProgramSource(program, exactSource)
     return program
   }
-  let snapshot = snapshotJsonValue(input, '$', 0, new Set(), { values: 0 })
+  const snapshot = snapshotJsonValue(input, '$', 0, new Set(), { values: 0 })
   if (!isRecord(snapshot)) fail('E_SEMANTIC_SCHEMA', '$', 'expected a semantic program envelope')
   if (snapshot.version === 0) {
     fail(
@@ -441,7 +441,7 @@ export function normalizeDecodedSemanticProgramCore(input: unknown): SemanticPro
 }
 
 export function normalizeSemanticProgramCoreInput(input: unknown): SemanticProgramCoreV1 {
-  let snapshot = snapshotJsonValue(input, '$', 0, new Set(), { values: 0 })
+  const snapshot = snapshotJsonValue(input, '$', 0, new Set(), { values: 0 })
   if (!isRecord(snapshot)) fail('E_SEMANTIC_SCHEMA', '$', 'expected a semantic program core or envelope')
   if (snapshot.version === 0) {
     fail(

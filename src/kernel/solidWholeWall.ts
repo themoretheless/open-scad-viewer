@@ -136,7 +136,7 @@ export function validWholeWall(e: ReturnType<typeof wholeWallExpectation>, value
   if (!d.enumerationComplete || !Number.isFinite(lower)) lower = 0
   if (d.lowerBoundMm !== lower) return false
   const c = r.candidate
-  let reason = !c.proven
+  const reason = !c.proven
     ? 'material-chord-unproven'
     : c.normalAlignment !== 'angular-tolerance'
       ? 'candidate-normal-unproven'
