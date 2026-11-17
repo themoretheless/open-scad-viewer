@@ -25,7 +25,7 @@ export function constructSolidSurface(document:DirectDocument,ids:string[],kind:
 
 export interface SolidSurfaceBuildOptions {kind:SolidSurfaceConstruction;ids:string[];id:string;group?:string;reversed:boolean[];sweep:SweepOptions;patchPreparation?:{enabled:boolean;maxError:number};runout?:Parameters<typeof createG2WorldRunout>[3];
  /** Sweep only: close the profile into a solid and add or combine it instead of adding a surface. */
- body?:Pick<SolidSweepBodyOptions,'operation'|'targetId'|'targetIds'|'name'|'tessellation'>}
+ body?:Pick<SolidSweepBodyOptions,'operation'|'targetId'|'targetIds'|'name'|'tessellation'|'pathTolerance'>}
 const SOLID_SURFACE_BUILDS = new Set<string>(['nurbs-loft','nurbs-sweep','nurbs-patch','nurbs-runout'])
 export function isSolidSurfaceBuild(kind:unknown):kind is SolidSurfaceConstruction{return typeof kind==='string'&&SOLID_SURFACE_BUILDS.has(kind)}
 export function buildSolidSurface(document:DirectDocument,p:SolidSurfaceBuildOptions):{document:DirectDocument|null;error:string;report:FramedSweepResult['report']|null;patchReports?:CoonsBoundaryPreparation['report'][];runoutReport?:G2RunoutReport}{

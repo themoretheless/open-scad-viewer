@@ -16,10 +16,10 @@ const MAX_PATH_POINTS = 10_000
 export function sampleCurveArrayPath(
   curve: NurbsCurve,
   toleranceMm = DEFAULT_CURVE_PATH_TOLERANCE_MM,
-): { points: Vec3[]; closed: boolean } {
-  const refuse = (message: string): never => {
+  refuse: (message: string) => never = message => {
     throw new DirectInputError('DIRECT_PATTERN_ARRAY', message, 'patternCount', [])
-  }
+  },
+): { points: Vec3[]; closed: boolean } {
   if (!(toleranceMm >= 1e-6 && toleranceMm <= 10)) refuse('Curve path tolerance must be between 0.000001 and 10 mm.')
   const p = curve.degree,
     a = curve.knots[p],

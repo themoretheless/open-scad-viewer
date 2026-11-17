@@ -3,6 +3,7 @@ import { parseDirectDocument, type DirectDocument, type DirectBody } from '../ap
 import { directExtrusionTargets, type DirectExtrusionOperation } from '../app/directExtrusion'
 import { stringifyMeshJson } from '../exchange/meshJson'
 import { reverseNurbsCurve, type NurbsCurve } from './nurbsCurve'
+import { buildSmoothSweepToolBrep } from './solidSweepSmoothPath'
 import { booleanNurbsBrep, createMiterBrepProfileBody, tessellateNurbsBrep, type NurbsBrep } from './geometry/brep'
 
 /** Sweep result step (C9): keep the open surface, or close the profile into a solid and combine it. */
@@ -17,6 +18,8 @@ export interface SolidSweepBodyOptions {
   id: string
   name: string
   tessellation?: number
+  /** Chordal tolerance for sampling a smooth (arc, circle, spline) path, in mm. */
+  pathTolerance?: number
 }
 
 const lift = (p: readonly number[]): [number, number, number] => [p[0] ?? 0, p[1] ?? 0, p[2] ?? 0]
@@ -35,12 +38,12 @@ function curveById(document: DirectDocument, id: string, reversed: boolean): Nur
 
 /**
  * Solid sweep tool: the closed profile is carried along a polyline path with mitred stations
- * and capped at both ends. The profile stays where it was drawn and must lie in the plane
- * normal to the first path segment.
+ * and capped at both ends. Arc, circle and spline paths go through `buildSmoothSweepToolBrep`.
+ * The profile stays where it was drawn and must lie in the plane normal to the path start.
  */
 export function buildSweepToolBrep(
   document: DirectDocument,
-  options: Pick<SolidSweepBodyOptions, 'profileId' | 'pathId' | 'reversed'>,
+  options: Pick<SolidSweepBodyOptions, 'profileId' | 'pathId' | 'reversed' | 'pathTolerance'>,
 ): NurbsBrep {
   if (options.profileId === options.pathId)
     throw new DirectInputError('DIRECT_CURVES_DISTINCT', 'Choose distinct curves.', undefined, [options.profileId])
@@ -51,10 +54,10 @@ export function buildSweepToolBrep(
     throw new DirectInputError('DIRECT_SURFACE_INPUTS', 'A solid sweep needs a closed profile curve.', undefined, [
       options.profileId,
     ])
-  if (path.degree !== 1)
-    throw new DirectInputError('DIRECT_SURFACE_INPUTS', 'A solid sweep needs a polyline path (degree 1).', undefined, [
-      options.pathId,
-    ])
+  // C9: arc, circle and spline paths are sampled to a chordal tolerance and the profile is
+  // carried along them with a rotation-minimizing frame.
+  if (path.degree !== 1 || path.periodic)
+    return buildSmoothSweepToolBrep(profile, path, [options.profileId, options.pathId], options.pathTolerance)
   const points = path.controlPoints.map(lift).filter((p, i, all) => i === 0 || Math.hypot(...sub(p, all[i - 1])) > 1e-9)
   if (points.length < 2)
     throw new DirectInputError('DIRECT_SURFACE_INPUTS', 'The sweep path needs two distinct points.', undefined, [

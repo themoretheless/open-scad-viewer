@@ -122,7 +122,7 @@ it('C9: an empty sweep intersection removes only that target; refusals leave the
       id: 't',
       name: 'T',
     }),
-  ).toThrow(/polyline path/)
+  ).toThrow(/plane normal to the path/)
   expect(() =>
     applySolidSweepBody(d, {
       profileId: 'small',

@@ -4023,6 +4023,44 @@ it.each(['Extrude · E','Revolve'])('retries %s preview after a worker crash and
  }finally{vi.useRealTimers()}
 })
 
+it.each(['en','ru'])('C9 sweep smooth: Sweep builds a new body along an arc path (%s)',async locale=>{
+ await geometryKernel.warmGeometryKernel()
+ const {circleNurbsCurve,circleNurbsArc}=await import('../src/kernel/nurbsConstructors')
+ const seed={version:1,sketches:[],bodies:[],curves:[
+  {id:'prof',name:'Ring profile',curve:circleNurbsCurve([20,0,0],[0,1,0],2)},
+  {id:'arc',name:'Arc path',curve:circleNurbsArc([0,0,0],[0,0,1],20,0,90)},
+ ]} as unknown as DirectDocument
+ const ui=await mount({locale},stringifyMeshJson(seed))
+ await ui.click('Ring profile');await ui.click('Arc path',true);const before=ui.doc()
+ await ui.click(locale==='ru'?'Перенос профиля по пути':'Sweep')
+ await ui.click(locale==='ru'?'Новое тело':'New body');await flushClearance()
+ const field=ui.all().find(n=>n.props['data-sweep-path-tolerance']!==undefined)!
+ expect(ui.text(field)).toContain(locale==='ru'?'Точность гладкого пути, мм':'Smooth path tolerance, mm')
+ const hint=ui.all().find(n=>n.tag==='small'&&ui.text(n).includes(locale==='ru'?'дуге, кругу или сплайну':'arc, circle or spline'))
+ expect(hint).toBeTruthy()
+ await commandKey(ui,'Enter')
+ const after=ui.doc()
+ expect(after.bodies).toHaveLength(1)
+ expect(after.bodies[0].brep!.faces.length).toBeGreaterThan(2)
+ await ui.click('↶');expect(ui.doc()).toEqual(before)
+})
+
+it('C9 sweep smooth: a path tighter than the profile is refused with the sweep path message',async()=>{
+ await geometryKernel.warmGeometryKernel()
+ const {circleNurbsCurve,circleNurbsArc}=await import('../src/kernel/nurbsConstructors')
+ const seed={version:1,sketches:[],bodies:[],curves:[
+  {id:'prof',name:'Wide profile',curve:circleNurbsCurve([1.5,0,0],[0,1,0],2)},
+  {id:'arc',name:'Tight path',curve:circleNurbsArc([0,0,0],[0,0,1],1.5,0,90)},
+ ]} as unknown as DirectDocument
+ const ui=await mount({},stringifyMeshJson(seed))
+ await ui.click('Wide profile');await ui.click('Tight path',true);const before=ui.doc()
+ await ui.click('Sweep');await ui.click('New body');await flushClearance();await settle()
+ await commandKey(ui,'Enter');await flushClearance()
+ expect(ui.doc()).toEqual(before)
+ const alert=ui.all().find(n=>n.props.id==='advanced-command-error')!
+ expect(ui.text(alert)).toContain('bends tighter than the profile radius')
+})
+
 it.each(['Extrude · E','Revolve'])('C9: %s offers Intersect and sends extra target bodies in one command',async command=>{
  const requests:Array<{kind:string;options:Record<string,unknown>}>=[]
  const ui=await mount();await ui.click('Cube');await ui.click('Split');await ui.click('Apply · Enter');await settle();await ui.click('Profile')
