@@ -5459,3 +5459,80 @@ fn exact_coplanar_profile_overlap_mass_handles_disconnected_and_zero_area_inters
     assert_eq!(report.centroid_mm, None);
     assert_eq!(report.area_squared_mm4, q(0, 1));
 }
+
+#[test]
+fn exact_coplanar_profile_relation_distinguishes_all_overlap_and_touch_classes() {
+    use brep_core::analysis::{
+        CoplanarPolylineRegionRelation::*, classify_exact_coplanar_planar_polyline_regions,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x: i64, y: i64| [q(x), q(y), q(x + y)];
+    let rect = |x, y, a, b| [p(x, y), p(a, y), p(a, b), p(x, b), p(x, y)];
+    let outer = rect(0, 0, 4, 4);
+    for (other, expected) in [
+        (rect(5, 0, 6, 1), Disjoint),
+        (rect(4, 4, 6, 6), TouchingAtPoints),
+        (rect(4, 1, 6, 3), TouchingAlongEdges),
+        (rect(2, 2, 6, 6), PartialOverlap),
+        (rect(1, 1, 2, 2), SecondInsideFirst),
+        (rect(0, 0, 6, 6), FirstInsideSecond),
+        (outer.clone(), Equal),
+    ] {
+        let report =
+            classify_exact_coplanar_planar_polyline_regions(&outer, &[], &other, &[], 1_000_000)
+                .unwrap();
+        assert_eq!(report.relation, expected);
+        assert_eq!(
+            classify_exact_coplanar_planar_polyline_regions(
+                &outer,
+                &[],
+                &other,
+                &[],
+                report.exact_work
+            )
+            .unwrap(),
+            report
+        );
+        assert!(
+            classify_exact_coplanar_planar_polyline_regions(
+                &outer,
+                &[],
+                &other,
+                &[],
+                report.exact_work - 1
+            )
+            .is_err()
+        );
+    }
+}
+
+#[test]
+fn exact_coplanar_profile_relation_respects_voids_and_hole_boundary_contact() {
+    use brep_core::analysis::{
+        CoplanarPolylineRegionRelation::*, classify_exact_coplanar_planar_polyline_regions,
+    };
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y| [q(x), q(y), q(0)];
+    let rect = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let outline = rect(0, 6);
+    let hole = rect(1, 5);
+    let inside_void = rect(2, 4);
+    let reversed = hole.clone().into_iter().rev().collect::<Vec<_>>();
+    for (other, expected) in [
+        (&inside_void[..], Disjoint),
+        (&reversed[..], TouchingAlongEdges),
+        (&outline[..], FirstInsideSecond),
+    ] {
+        let report = classify_exact_coplanar_planar_polyline_regions(
+            &outline,
+            &[&hole],
+            other,
+            &[],
+            1_000_000,
+        )
+        .unwrap();
+        assert_eq!(report.relation, expected);
+    }
+}

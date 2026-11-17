@@ -2852,7 +2852,7 @@ pub fn exact_coplanar_planar_polyline_region_overlap_area(
     second_holes_mm: &[&[[Q; 3]]],
     max_exact_work: u64,
 ) -> Result<ExactCoplanarPolylineRegionOverlapArea> {
-    let (area, _) = coplanar_profile_overlap(
+    let (area, _, _) = coplanar_profile_overlap(
         first_outer_mm,
         first_holes_mm,
         second_outer_mm,
@@ -2881,7 +2881,7 @@ pub fn exact_coplanar_planar_polyline_region_overlap_mass(
     second_holes_mm: &[&[[Q; 3]]],
     max_exact_work: u64,
 ) -> Result<ExactCoplanarPolylineRegionOverlapMass> {
-    let (area, centroid_mm) = coplanar_profile_overlap(
+    let (area, centroid_mm, _) = coplanar_profile_overlap(
         first_outer_mm,
         first_holes_mm,
         second_outer_mm,
@@ -2904,7 +2904,11 @@ fn coplanar_profile_overlap(
     second_holes_mm: &[&[[Q; 3]]],
     max_exact_work: u64,
     measure_centroid: bool,
-) -> Result<(ExactCoplanarPolylineRegionOverlapArea, Option<[Q; 3]>)> {
+) -> Result<(
+    ExactCoplanarPolylineRegionOverlapArea,
+    Option<[Q; 3]>,
+    [Q; 2],
+)> {
     let a =
         exact_planar_spatial_polyline_region_mass(first_outer_mm, first_holes_mm, max_exact_work)?;
     let mut remaining = max_exact_work - a.exact_work;
@@ -2993,6 +2997,7 @@ fn coplanar_profile_overlap(
             exact_work: max_exact_work - remaining,
         },
         centroid,
+        [a.area_squared_mm4, b.area_squared_mm4],
     ))
 }
 
@@ -3068,4 +3073,82 @@ fn projected_triangle_overlap(
         polygon = clipped;
     }
     Ok(polygon)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CoplanarPolylineRegionRelation {
+    Disjoint,
+    TouchingAtPoints,
+    TouchingAlongEdges,
+    PartialOverlap,
+    FirstInsideSecond,
+    SecondInsideFirst,
+    Equal,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCoplanarPolylineRegionRelation {
+    pub relation: CoplanarPolylineRegionRelation,
+    pub overlap_area_squared_mm4: Q,
+    pub exact_work: u64,
+}
+
+/// Classify two filled coplanar profiles. Containment includes shared
+/// boundaries. Touching variants apply only when common area is zero.
+pub fn classify_exact_coplanar_planar_polyline_regions(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    max_exact_work: u64,
+) -> Result<ExactCoplanarPolylineRegionRelation> {
+    use CoplanarPolylineRegionRelation::*;
+
+    let (area, _, [first_area, second_area]) = coplanar_profile_overlap(
+        first_outer_mm,
+        first_holes_mm,
+        second_outer_mm,
+        second_holes_mm,
+        max_exact_work,
+        false,
+    )?;
+    let mut remaining = max_exact_work - area.exact_work;
+    spend(&mut remaining, 4)?;
+    let overlap = area.area_squared_mm4;
+    let relation = if overlap.is_zero() {
+        let first = std::iter::once(first_outer_mm).chain(first_holes_mm.iter().copied());
+        let second = std::iter::once(second_outer_mm).chain(second_holes_mm.iter().copied());
+        let mut relation = Disjoint;
+        'contours: for a in first {
+            for b in second.clone() {
+                for pa in a.windows(2) {
+                    for pb in b.windows(2) {
+                        spend(&mut remaining, 64)?;
+                        if let Some((_, points)) = intersect_spatial_segments(pa, pb) {
+                            if points[0] != points[1] {
+                                relation = TouchingAlongEdges;
+                                break 'contours;
+                            }
+                            relation = TouchingAtPoints;
+                        }
+                    }
+                }
+            }
+        }
+        relation
+    } else {
+        // A nonempty difference of regular closed polygonal regions
+        // contains a positive-area subset of the larger region.
+        match (overlap == first_area, overlap == second_area) {
+            (true, true) => Equal,
+            (true, false) => FirstInsideSecond,
+            (false, true) => SecondInsideFirst,
+            (false, false) => PartialOverlap,
+        }
+    };
+    Ok(ExactCoplanarPolylineRegionRelation {
+        relation,
+        overlap_area_squared_mm4: overlap,
+        exact_work: max_exact_work - remaining,
+    })
 }
