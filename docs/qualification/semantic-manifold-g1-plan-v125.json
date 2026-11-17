@@ -38,7 +38,7 @@
     "kind": "post-freeze-harness-amendment",
     "previousPlanId": "semantic-manifold-g1-plan-v124",
     "previousPlanSha256": "c404e17838d110fe790bbef73318009b6f1f022e054938b3b38600af8f9386b3",
-    "reason": "Re-freeze for reproducible geometry kernel 9cb8eb (runtime v13) after the Fillet operation contract for audited multi-edge fillet, the nested graph column Boolean and off-axis sphere tracing across a cone apex plane; preserve the finite G1 contract and reset all clean-run work.",
+    "reason": "Re-freeze for reproducible geometry kernel 7467ec (runtime v13) after exact planar face mass properties, the N8 atomic healing edge split across both face uses and the N9 STEP /10 ordinary pcurve repair; preserve the finite G1 contract and reset all clean-run work.",
     "changes": [
       "Recompute artifact and canonical bundle digests from current source bytes.",
       "Bind the exact GitHub Actions workflow, evidence-producing harness, selectors, and hosted-runner image identities.",
@@ -480,10 +480,10 @@
           "docs/qualification/runtime-direct-api-15596a-2026-11-15/report.json",
           "docs/qualification/runtime-direct-api-15596a-2026-11-15/runtime-api-baseline.json",
           "docs/qualification/runtime-direct-api-15596a-2026-11-15/runtime-binding.json",
-          "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/node.json",
-          "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/report.json",
-          "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/runtime-api-baseline.json",
-          "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/runtime-binding.json",
+          "docs/qualification/runtime-direct-api-7467ec-2026-11-17/node.json",
+          "docs/qualification/runtime-direct-api-7467ec-2026-11-17/report.json",
+          "docs/qualification/runtime-direct-api-7467ec-2026-11-17/runtime-api-baseline.json",
+          "docs/qualification/runtime-direct-api-7467ec-2026-11-17/runtime-binding.json",
           "docs/qualification/runtime-direct-api-a27ee2-2026-11-09/node.json",
           "docs/qualification/runtime-direct-api-a27ee2-2026-11-09/report.json",
           "docs/qualification/runtime-direct-api-a27ee2-2026-11-09/runtime-api-baseline.json",
@@ -493,7 +493,7 @@
           "docs/qualification/runtime-direct-api-fba78e-2026-11-15/runtime-api-baseline.json",
           "docs/qualification/runtime-direct-api-fba78e-2026-11-15/runtime-binding.json",
           "docs/qualification/runtime-provider-15596aa8bd7c-2026-11-15.json",
-          "docs/qualification/runtime-provider-9cb8ebbc7747-2026-11-17.json",
+          "docs/qualification/runtime-provider-7467ec8b0d7e-2026-11-17.json",
           "docs/qualification/runtime-provider-fba78e35f862-2026-11-15.json",
           "src/app/legacyV5Assembler.ts",
           "src/core/build.ts",
@@ -537,7 +537,7 @@
         "sha256": {
           "state": "frozen",
           "algorithm": "sha256",
-          "value": "1b86931524942d6333eb2bc94e5b30601725b43a136d0b3f65ae9f02ce83311f",
+          "value": "e388bcaddf97c3218c58829f39515fa104e0f07c4550b1bc479e822337dab6e3",
           "byteLength": 7786,
           "verifiedBy": "qualification artifact validator recomputes the canonical path-plus-file-digest stream"
         }

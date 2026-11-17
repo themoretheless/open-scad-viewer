@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "statusId": "g0-v108-g1-v125-refreeze-status-v1",
   "recordedAt": "2026-11-17",
-  "reason": "Re-freeze for reproducible geometry kernel 9cb8eb (runtime v13) after the Fillet operation contract for audited multi-edge fillet, the nested graph column Boolean and off-axis sphere tracing across a cone apex plane; preserve the finite G1 contract and reset all clean-run work.",
+  "reason": "Re-freeze for reproducible geometry kernel 7467ec (runtime v13) after exact planar face mass properties, the N8 atomic healing edge split across both face uses and the N9 STEP /10 ordinary pcurve repair; preserve the finite G1 contract and reset all clean-run work.",
   "qualificationClaim": "none",
   "qualificationApproval": "not-approved",
   "g0Closed": false,
@@ -3984,19 +3984,19 @@
     {
       "id": "fingerprint",
       "path": "docs/qualification/g0-toolchain-fingerprints-v108.json",
-      "sha256": "61093e2c45666859984a953fdd1b2ec5815cfbc44d412a3c9ffe54440ac7ec28",
-      "byteLength": 1621124
+      "sha256": "eb2d8a90cdfd257cfccbc159c3b50662d427514ef33591188325a10eda38b120",
+      "byteLength": 1619939
     },
     {
       "id": "plan",
       "path": "docs/qualification/semantic-manifold-g1-plan-v125.json",
-      "sha256": "9214c2513d999e63b05c2b34b0e2b0c8e93ebe1d4190262fa31b66c6a65edaf7",
-      "byteLength": 80766
+      "sha256": "60dac3f264b00e290651f0b0c3f8b031fd3768b6baa7c51fe5df6e747025f49c",
+      "byteLength": 80753
     }
   ],
   "inputSnapshot": {
     "canonicalization": "UTF-8 records sorted by path: path + NUL + lowercase-file-sha256 + LF",
-    "sha256": "8dae39ecbc66a0bb8e09a4e0246844d4e12889425460f6eaad2d2262db7e4b8d",
+    "sha256": "457b6f32b045165b2cd4226b727ae57ebfb8c1e922b7fe51c4209108c5ffd878",
     "byteLength": 799399,
     "files": [
       {
@@ -4026,7 +4026,7 @@
       },
       {
         "path": "architecture-baseline.json",
-        "sha256": "bf66491711d57c298fa489235702b256afaab8b40bc397fe6a2af4ad199a7fd2",
+        "sha256": "05a2bbff8f469fb503180a01d48d321c0568394e33b591fe3fdd96c5bdd6b284",
         "byteLength": 45968
       },
       {
@@ -4341,8 +4341,8 @@
       },
       {
         "path": "crates/brep-core/src/body_analysis/analysis/tests/mod.rs",
-        "sha256": "b2ac587d52469101a1c4acc476054f42f7c69e0e796f3bad965df10b99933804",
-        "byteLength": 10462
+        "sha256": "219dbe3e99fd78017f594ed06fca23e18bc7f4b07f388a2de82568ca032ea761",
+        "byteLength": 10750
       },
       {
         "path": "crates/brep-core/src/body_analysis/analysis/tests/surface_classify.rs",
@@ -5306,8 +5306,8 @@
       },
       {
         "path": "crates/brep-core/src/features/healing/edge_fix.rs",
-        "sha256": "79fc1169485d6dba1af0df18427013e8b77590d61bfb51e92a987eb418ad2117",
-        "byteLength": 22042
+        "sha256": "59a6c21c5b06bf5c568263feaa52e00c773a65d04dac8a3dad19aec35154c33a",
+        "byteLength": 25851
       },
       {
         "path": "crates/brep-core/src/features/healing/mod.rs",
@@ -10021,13 +10021,13 @@
       },
       {
         "path": "crates/cad-step/src/step_interchange_v3.rs",
-        "sha256": "29ed500d1588d6615d47dd5480ec1ec43421a100a98930f59b6e970c36925e0f",
-        "byteLength": 97757
+        "sha256": "fd0bd17fc303bf725e7c4674532cd9bee09ef9761845c7946084f7f9b179f64b",
+        "byteLength": 97929
       },
       {
         "path": "crates/cad-step/src/step_interchange_v3/pcurve_binding.rs",
-        "sha256": "632bb64f0c0302afcf065e53067283c849d3ca9c8cf6826a8bf17e12269cd771",
-        "byteLength": 11983
+        "sha256": "9a793f59b06303fc01816f49482332020a237473523d59f7f93a6242d9a16f93",
+        "byteLength": 13737
       },
       {
         "path": "crates/cad-step/src/step_interchange_v3/units.rs",
@@ -10076,8 +10076,8 @@
       },
       {
         "path": "crates/cad-step/src/tests/step_interchange_v3.rs",
-        "sha256": "8434e3a32b527949964e28abe21faacb52a6c7547a78af748f97aa2da2d864d7",
-        "byteLength": 103432
+        "sha256": "bed6187d4852f06dabaad2d575f81247300ba1502e11bccf07a47fcda34510c6",
+        "byteLength": 106390
       },
       {
         "path": "crates/cad-step/tests/analysis_freeform.rs",
@@ -12506,8 +12506,8 @@
       },
       {
         "path": "crates/nurbs-core/src/analysis.rs",
-        "sha256": "d758d9ee34748871f1582a9b8fef0f5474ff73f14da573be901a404e35d78a82",
-        "byteLength": 2048
+        "sha256": "2f112ceac5f49cb2d90da53bc7a8526aabdae8f00a54f1be592f71990298113b",
+        "byteLength": 2176
       },
       {
         "path": "crates/nurbs-core/src/analysis/affine_support.rs",
@@ -15651,8 +15651,8 @@
       },
       {
         "path": "crates/nurbs-core/src/trim.rs",
-        "sha256": "d42498f86d0a2e748001dc8604907641791cce277a433b08872f66bede426c2f",
-        "byteLength": 330
+        "sha256": "d78b6a846d0a8db975ef42dc6a776cff79e3f026e4bc893c7209be90da19000a",
+        "byteLength": 359
       },
       {
         "path": "crates/nurbs-core/src/trim/periodic_trim.rs",
@@ -15771,8 +15771,8 @@
       },
       {
         "path": "crates/nurbs-core/src/trim/planar_area.rs",
-        "sha256": "83862ddb00eac287dc1c8a3d9338cc972a1f63fc342f08315b7d04217fb8c534",
-        "byteLength": 10452
+        "sha256": "63fd9aa15dd324bba702346ee28b73724a14578163ce9375353e63beda69ffe0",
+        "byteLength": 10463
       },
       {
         "path": "crates/nurbs-core/src/trim/profile_projected_jordan.rs",
@@ -20026,13 +20026,13 @@
       },
       {
         "path": "docs/design/nurbs-api-map.md",
-        "sha256": "7301df6739ab3a1fbd49337bd1b2a0116f596f836b2d5747b384a61358c4e29d",
-        "byteLength": 244181
+        "sha256": "0eb5a85938d0c8e62140491a757e2b3f2cf0b6d946e52b2b2ce32aa5a9dd511c",
+        "byteLength": 255687
       },
       {
         "path": "docs/design/nurbs-catalog.json",
-        "sha256": "6ec2bdc3270077e5bb0b736d116d82b955a5ccfc017ab4205167d0294afd0e42",
-        "byteLength": 406360
+        "sha256": "bb08132811f346f238cc653b3f85c93145e3917250d8ff92d99cda7a6cf55a65",
+        "byteLength": 422343
       },
       {
         "path": "docs/design/nurbs-exact-degree-reduction.md",
@@ -20851,8 +20851,8 @@
       },
       {
         "path": "docs/qualification/g0-v108-g1-v125-refreeze-review.md",
-        "sha256": "e67adebdff7d3d5b786bf123a2a938955526b90dbb3826954336af0f934b8edd",
-        "byteLength": 2257
+        "sha256": "f3deb61eec33ad79b32478e1eb5844b164127655c3a6b619dadd241187ba349a",
+        "byteLength": 2421
       },
       {
         "path": "docs/qualification/g0-v11-g1-v28-refreeze-review.md",
@@ -24815,23 +24815,23 @@
         "byteLength": 1731
       },
       {
-        "path": "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/node.json",
-        "sha256": "6b02e29c16193200724fbe4817c774e8c319a3fedcd52d2f10c7bf7a82ed92ec",
-        "byteLength": 36114
+        "path": "docs/qualification/runtime-direct-api-7467ec-2026-11-17/node.json",
+        "sha256": "48cc27bff226b769a9727fe2aba7d75c1a23381ad82b1177c3ee55c945677345",
+        "byteLength": 36129
       },
       {
-        "path": "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/report.json",
-        "sha256": "615f5f3aa614067866fd5f80e4309e4ab596e5f6951832fdec74431042755ec9",
-        "byteLength": 1183
+        "path": "docs/qualification/runtime-direct-api-7467ec-2026-11-17/report.json",
+        "sha256": "cd2c328ad0c0554552e4e2f70424bfd1e89f16d96040cf64aea70f0432078a7a",
+        "byteLength": 1182
       },
       {
-        "path": "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/runtime-api-baseline.json",
-        "sha256": "6f422d275686ff612ca36e8fc9646fa20f2fc884c0a742be3a5877db1b365a68",
+        "path": "docs/qualification/runtime-direct-api-7467ec-2026-11-17/runtime-api-baseline.json",
+        "sha256": "569ba957da7de48e46d318f343da315628c1d041c502f9f252c15db5e1535dcc",
         "byteLength": 950
       },
       {
-        "path": "docs/qualification/runtime-direct-api-9cb8eb-2026-11-17/runtime-binding.json",
-        "sha256": "55bd7436bdc1df87bf2c2284fabc1cc976f2e3d6734f1791175ae79b9a785633",
+        "path": "docs/qualification/runtime-direct-api-7467ec-2026-11-17/runtime-binding.json",
+        "sha256": "539f7f9cfafc2c9ccf107dc2fa80d189f3a5733d630b0042528ac2209eb6534b",
         "byteLength": 1618
       },
       {
@@ -24900,14 +24900,14 @@
         "byteLength": 1610
       },
       {
+        "path": "docs/qualification/runtime-provider-7467ec8b0d7e-2026-11-17.json",
+        "sha256": "0313123a25f538815824ed4f8f6f43f3a48279cb5fe0690af0afe37a81e7c7c2",
+        "byteLength": 1681
+      },
+      {
         "path": "docs/qualification/runtime-provider-91521ffbc325-2026-10-31.json",
         "sha256": "52136718c815349a399bec349787b9419580976f1e58620742e091516a1cf4c8",
         "byteLength": 1591
-      },
-      {
-        "path": "docs/qualification/runtime-provider-9cb8ebbc7747-2026-11-17.json",
-        "sha256": "a60dca6d5693b03b96a6c9ca71cff31bc4c82d24416eb20404878b159c6694ec",
-        "byteLength": 1681
       },
       {
         "path": "docs/qualification/runtime-provider-baf58e7051b0-2026-11-02.json",
@@ -28416,8 +28416,8 @@
       },
       {
         "path": "scripts/geometry-delivery-budgets.mjs",
-        "sha256": "c52a910e04e341b2688319d5ecd05ce3b7cad297a3ad146d2bb7c7dfbe5ceff3",
-        "byteLength": 5808
+        "sha256": "2bee1b11fa7d85ffdfa5c96ebc94db329b3f6d137f09e7117dafdcd8ab57e1a2",
+        "byteLength": 7500
       },
       {
         "path": "scripts/globalGeometryChecks.mts",
@@ -29081,7 +29081,7 @@
       },
       {
         "path": "scripts/refresh-qualification-fingerprints.mjs",
-        "sha256": "d4af46702a6900899dcd5795e600c67f0ade9a2a5c7f6a3f3d6b454170a49ffd",
+        "sha256": "f05d66c5043c04778abc20e88f76b737b7a986ada82ab62542600efb9e2110ba",
         "byteLength": 23388
       },
       {
@@ -29996,7 +29996,7 @@
       },
       {
         "path": "scripts/verify-dist.mjs",
-        "sha256": "02c2ba2945b036a9c52d4c5f7b8bf7409bb024e910c0aa6307bc465110d821a0",
+        "sha256": "7607f53b63be15b5b43ee48f485dc42a14f8fb0bc3a84b8ab881fac5701deaf4",
         "byteLength": 34045
       },
       {
@@ -30546,13 +30546,13 @@
       },
       {
         "path": "src/app/directExtrusion.ts",
-        "sha256": "69f8e02f4c5b53d8785cdfe4c9cd6e27cccadf46d53ab76ef64cbdb35827f747",
-        "byteLength": 7410
+        "sha256": "511509b9daa73819825fa4476c4154165b8f31e176955e1e202f31f24c05acd0",
+        "byteLength": 14721
       },
       {
         "path": "src/app/directModeling.ts",
-        "sha256": "7dae4d353b0218826f50f36d58099faf45dce34fa894bf10fe298c37e9b9ffa1",
-        "byteLength": 43374
+        "sha256": "3d9c8d2c7823b3cd394c675085af62fbe32d25fc0746650a096b64c273ea2cef",
+        "byteLength": 43680
       },
       {
         "path": "src/app/directModelingTools.ts",
@@ -30566,8 +30566,8 @@
       },
       {
         "path": "src/app/directSketchGeometry.ts",
-        "sha256": "37a7881ee12e10b3537e0f5634e449ac6b4076c110009c670849f2b1900a2bfd",
-        "byteLength": 10001
+        "sha256": "248a65c9c34aca5d7a5568aad149e1900e0d8a637d68e6a98e158096883f9be8",
+        "byteLength": 12131
       },
       {
         "path": "src/app/directSolidTools.ts",
@@ -30751,8 +30751,8 @@
       },
       {
         "path": "src/app/retainedSketchProfile.ts",
-        "sha256": "0fcc082e30174985c6e925dc0c65dfe5435395fb714fbe15480c909e26c94ffe",
-        "byteLength": 3984
+        "sha256": "f3b4305358a6922620d1be321bc1c7c02cbe2f3f72a45c665a6baf50c3f85d5d",
+        "byteLength": 5831
       },
       {
         "path": "src/app/rovingFocus.ts",
@@ -31001,7 +31001,7 @@
       },
       {
         "path": "src/core/currentRuntimeGeometryEvidence.ts",
-        "sha256": "9962c50b8bbb20a82c3e66e97a050003aa3745910ebe8bb215abaca95c6f0cbc",
+        "sha256": "5fc498ef99dbda688ff6115941e9ff3d8fb722f347736fbb895c6199555e6b66",
         "byteLength": 658
       },
       {
@@ -31506,13 +31506,13 @@
       },
       {
         "path": "src/features/directModeler/usePrimitives.ts",
-        "sha256": "a976debafc1cf0d38d2aa4be2620dd333337bac7473c9ef925e07d1520503b37",
-        "byteLength": 10285
+        "sha256": "574571794e72b337735df9a080180e994f435c3b5ed6cd96d56dd754221a5697",
+        "byteLength": 10649
       },
       {
         "path": "src/features/directModeler/useSceneTree.ts",
-        "sha256": "78a04bdd3955ce33275532a8f51d4fdd42a228020a4117aeeddd55bde333ede6",
-        "byteLength": 6050
+        "sha256": "233cb7a3b99378ced02a412c8887e4f7d9204c69183b260e49ab4f67134c14e9",
+        "byteLength": 6158
       },
       {
         "path": "src/features/directModeler/useSourceBodyTools.ts",
@@ -31576,8 +31576,8 @@
       },
       {
         "path": "src/i18n/appStrings.ts",
-        "sha256": "57e6f863869d24943a9eb54e5dc7ccda33633c01c030a372dfe7b7b6263c8db8",
-        "byteLength": 40787
+        "sha256": "a04a7d06f852a604e7381dcd8a048ff1d2278c35b68a37a6bd0548584c0634f5",
+        "byteLength": 41817
       },
       {
         "path": "src/kernel/annularG2Evidence.ts",
@@ -32361,8 +32361,8 @@
       },
       {
         "path": "src/kernel/solidBoolean.ts",
-        "sha256": "5656343a21f4a2d6510702131f0255e520596680ed6ea0c79ca4507865e1d37a",
-        "byteLength": 5486
+        "sha256": "04f7e7efa73c1c68718f2282442fd49c2ef7ba07964ff078acc5cef457452a9b",
+        "byteLength": 6281
       },
       {
         "path": "src/kernel/solidBoundaryAgreement.ts",
@@ -32521,8 +32521,8 @@
       },
       {
         "path": "src/kernel/solidPointEdit.ts",
-        "sha256": "333d84fc404ccee2389d96dcce18e514e296f697b5709292f40376d423e57c55",
-        "byteLength": 3051
+        "sha256": "ba004e59e98d9448b7b406f7d1afbc44147538ccffbfaea7b97acc5f14bb0a3d",
+        "byteLength": 3287
       },
       {
         "path": "src/kernel/solidPreviewWorker.ts",
@@ -32541,8 +32541,8 @@
       },
       {
         "path": "src/kernel/solidProfileEdit.ts",
-        "sha256": "c0df9663a5a68688f2cec978da6060f2f655e52df9d8a27ec8de9825682a85ed",
-        "byteLength": 2428
+        "sha256": "8f29bb26f8d3e65cad32331dc7f6f400747178ac87ed54cf3da97212c25930a8",
+        "byteLength": 2644
       },
       {
         "path": "src/kernel/solidProfilePreparation.ts",
@@ -32556,8 +32556,8 @@
       },
       {
         "path": "src/kernel/solidSceneEdit.ts",
-        "sha256": "76f2466d338b4b8e9bfd30f2fcd8d64cec27808d0f0a66ce782208ce6e784701",
-        "byteLength": 6505
+        "sha256": "1f7cdaed2c73e1d9c45dccaa8f939f1507e3cf6b9d095ce6dc45f4358e1ce517",
+        "byteLength": 6921
       },
       {
         "path": "src/kernel/solidSelfIntersection.ts",
@@ -32601,8 +32601,8 @@
       },
       {
         "path": "src/kernel/solidSurfaceConstruction.ts",
-        "sha256": "0b2023fa6aa471f1ede3ea8d426cf40fe20782824fdec2c4c672433fedb1a262",
-        "byteLength": 6030
+        "sha256": "ae54b7403228b429749988abe6d5d0968994bc26ab72d5ba2b984dd3711bee46",
+        "byteLength": 6493
       },
       {
         "path": "src/kernel/solidSurfaceDiagnostics.ts",
@@ -34606,8 +34606,8 @@
       },
       {
         "path": "tests/directExtrusion.test.ts",
-        "sha256": "f4086d384e99fdd2603c95897e82c5e7fbbe6067e8eb51eab94abcbfdafbd3d6",
-        "byteLength": 13703
+        "sha256": "69a8cd51b7ef95e3fbc28af9f7db1cf561d19791992761b88728ace26d94cc38",
+        "byteLength": 20484
       },
       {
         "path": "tests/directGeometryProtocol.test.ts",
@@ -34621,8 +34621,8 @@
       },
       {
         "path": "tests/directModelerUi.test.ts",
-        "sha256": "6b74e59e93f2cf7f915ea281a3c7ac113aa0fa0458178ec06003e03b948be756",
-        "byteLength": 433042
+        "sha256": "c639bbb9672d4ce94d4168b71e9e86f0ea81f972a7d416207b7bcc530bd9060f",
+        "byteLength": 450621
       },
       {
         "path": "tests/directModeling.test.ts",
@@ -38148,6 +38148,12 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-05",
+      "previousSha256": "29ed500d1588d6615d47dd5480ec1ec43421a100a98930f59b6e970c36925e0f",
+      "currentSha256": "fd0bd17fc303bf725e7c4674532cd9bee09ef9761845c7946084f7f9b179f64b"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-06",
       "previousSha256": "cdf411e829058e3db445ca4ac4fe1f11dd48106be05027ab7a4a8736e0d8a8c0",
       "currentSha256": "7f7bc68225bd7896f8803a44eee7bbcdff1390ab1bf499b067c5d2aa96ed7c24"
@@ -38340,6 +38346,12 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-441",
+      "previousSha256": "83862ddb00eac287dc1c8a3d9338cc972a1f63fc342f08315b7d04217fb8c534",
+      "currentSha256": "63fd9aa15dd324bba702346ee28b73724a14578163ce9375353e63beda69ffe0"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-449",
       "previousSha256": "2c4c046d5bd5cbbbd50e9c533b4ac08bbf0948c528e8550f3c69cbd0f429ad7a",
       "currentSha256": "0882eb89aabe5576ed0e26da59021673615b34c2fa04c0e9958a9de0ee974228"
@@ -38474,7 +38486,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-643",
       "previousSha256": "0308bf0ebf714bc2b1947f4ce4902751d0f0d238a98e42094a17c4d889745666",
-      "currentSha256": "d758d9ee34748871f1582a9b8fef0f5474ff73f14da573be901a404e35d78a82"
+      "currentSha256": "2f112ceac5f49cb2d90da53bc7a8526aabdae8f00a54f1be592f71990298113b"
     },
     {
       "kind": "g0-artifact",
@@ -38574,6 +38586,12 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-1006",
+      "previousSha256": "d42498f86d0a2e748001dc8604907641791cce277a433b08872f66bede426c2f",
+      "currentSha256": "d78b6a846d0a8db975ef42dc6a776cff79e3f026e4bc893c7209be90da19000a"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-1007",
       "previousSha256": "42c0d55aa16a0343711fa5847963c27133b878a3c9385879e3feb650d1c0ce0b",
       "currentSha256": "f56223cacef64c33c83f0885ddbc343c9ddff188aeefe47551d41400c0f2222f"
@@ -38612,13 +38630,13 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1060",
       "previousSha256": "0f6cf6079da4e0e2c7654d3877e8bc318ad6fc7910c626f67a86d1a6fe15e2d4",
-      "currentSha256": "d4af46702a6900899dcd5795e600c67f0ade9a2a5c7f6a3f3d6b454170a49ffd"
+      "currentSha256": "f05d66c5043c04778abc20e88f76b737b7a986ada82ab62542600efb9e2110ba"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1067",
       "previousSha256": "a7972b2f715310a6d22cccd6a8ecce1ca2e9d1244b275ba0b8b1cce88479137d",
-      "currentSha256": "02c2ba2945b036a9c52d4c5f7b8bf7409bb024e910c0aa6307bc465110d821a0"
+      "currentSha256": "7607f53b63be15b5b43ee48f485dc42a14f8fb0bc3a84b8ab881fac5701deaf4"
     },
     {
       "kind": "g0-artifact",
@@ -38642,7 +38660,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1097",
       "previousSha256": "7e21db24f6bd95c086b0a5bc871ea608203437a20336191be12ec3511a6600d8",
-      "currentSha256": "6b74e59e93f2cf7f915ea281a3c7ac113aa0fa0458178ec06003e03b948be756"
+      "currentSha256": "c639bbb9672d4ce94d4168b71e9e86f0ea81f972a7d416207b7bcc530bd9060f"
     },
     {
       "kind": "g0-artifact",
@@ -38666,19 +38684,19 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1167",
       "previousSha256": "4529c4c1f237ecd7ea2c4a875ae0a9e0ef63b497325fbfdd80dd07d1ab5fe971",
-      "currentSha256": "7301df6739ab3a1fbd49337bd1b2a0116f596f836b2d5747b384a61358c4e29d"
+      "currentSha256": "0eb5a85938d0c8e62140491a757e2b3f2cf0b6d946e52b2b2ce32aa5a9dd511c"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1168",
       "previousSha256": "315864afbe377864a498ade509b883bb872652f6d5e1124ed35e9574f4053ad8",
-      "currentSha256": "6ec2bdc3270077e5bb0b736d116d82b955a5ccfc017ab4205167d0294afd0e42"
+      "currentSha256": "bb08132811f346f238cc653b3f85c93145e3917250d8ff92d99cda7a6cf55a65"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-1186",
       "previousSha256": "29560721acd711906477bb120c6f99990be28fd3df7b4d7fb28a0d7efeb306d9",
-      "currentSha256": "bf66491711d57c298fa489235702b256afaab8b40bc397fe6a2af4ad199a7fd2"
+      "currentSha256": "05a2bbff8f469fb503180a01d48d321c0568394e33b591fe3fdd96c5bdd6b284"
     },
     {
       "kind": "g0-artifact",
@@ -38751,6 +38769,12 @@
       "id": "geometry-v3-source-1313",
       "previousSha256": "62a75deaa7fa773dfcf6cd7978aefecc78991118d62d864902a085d44f422467",
       "currentSha256": "777710e604754e1f76fd530261be60d8f69be09dc741d8b5c24465635c1b9358"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-1323",
+      "previousSha256": "8434e3a32b527949964e28abe21faacb52a6c7547a78af748f97aa2da2d864d7",
+      "currentSha256": "bed6187d4852f06dabaad2d575f81247300ba1502e11bccf07a47fcda34510c6"
     },
     {
       "kind": "g0-artifact",
@@ -39014,13 +39038,13 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3189",
       "previousSha256": "86344cc6c0bace3873928ea06656e307c9b399167fe6c4c0df4cbaf086e76aea",
-      "currentSha256": "69f8e02f4c5b53d8785cdfe4c9cd6e27cccadf46d53ab76ef64cbdb35827f747"
+      "currentSha256": "511509b9daa73819825fa4476c4154165b8f31e176955e1e202f31f24c05acd0"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3190",
       "previousSha256": "25da7c858e54a39bdf178ef9405a59446741a10108015f78257349fbf71f973d",
-      "currentSha256": "7dae4d353b0218826f50f36d58099faf45dce34fa894bf10fe298c37e9b9ffa1"
+      "currentSha256": "3d9c8d2c7823b3cd394c675085af62fbe32d25fc0746650a096b64c273ea2cef"
     },
     {
       "kind": "g0-artifact",
@@ -39033,6 +39057,12 @@
       "id": "geometry-v3-source-3192",
       "previousSha256": "d1c04a0979791558a026f22694311fe74acfa380259bf93eb24d70645ef3cdb0",
       "currentSha256": "7228e2da219f79a6dca1a70b168d9be13171dcd48d0571568b1c41a520b28ee6"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3193",
+      "previousSha256": "37a7881ee12e10b3537e0f5634e449ac6b4076c110009c670849f2b1900a2bfd",
+      "currentSha256": "248a65c9c34aca5d7a5568aad149e1900e0d8a637d68e6a98e158096883f9be8"
     },
     {
       "kind": "g0-artifact",
@@ -39098,7 +39128,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3333",
       "previousSha256": "ff42306f720e7422f380dd17eaebe61064218ec01822594d3264e950d1d2672e",
-      "currentSha256": "0fcc082e30174985c6e925dc0c65dfe5435395fb714fbe15480c909e26c94ffe"
+      "currentSha256": "f3b4305358a6922620d1be321bc1c7c02cbe2f3f72a45c665a6baf50c3f85d5d"
     },
     {
       "kind": "g0-artifact",
@@ -39110,7 +39140,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3375",
       "previousSha256": "cb366e134ede5dce716c411c7dcd43469a1df93a2191934c8fdc2f158c49c0f8",
-      "currentSha256": "5656343a21f4a2d6510702131f0255e520596680ed6ea0c79ca4507865e1d37a"
+      "currentSha256": "04f7e7efa73c1c68718f2282442fd49c2ef7ba07964ff078acc5cef457452a9b"
     },
     {
       "kind": "g0-artifact",
@@ -39128,7 +39158,13 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3405",
       "previousSha256": "e715ccebff51f8a2779a79e296c41cb43868a95876207be0537ab20fa0311405",
-      "currentSha256": "333d84fc404ccee2389d96dcce18e514e296f697b5709292f40376d423e57c55"
+      "currentSha256": "ba004e59e98d9448b7b406f7d1afbc44147538ccffbfaea7b97acc5f14bb0a3d"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3409",
+      "previousSha256": "c0df9663a5a68688f2cec978da6060f2f655e52df9d8a27ec8de9825682a85ed",
+      "currentSha256": "8f29bb26f8d3e65cad32331dc7f6f400747178ac87ed54cf3da97212c25930a8"
     },
     {
       "kind": "g0-artifact",
@@ -39140,7 +39176,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3412",
       "previousSha256": "0eb20d59fc29779946e9e42c5b0a43e221de2320d798ce2fa3bc0f44060c6def",
-      "currentSha256": "76f2466d338b4b8e9bfd30f2fcd8d64cec27808d0f0a66ce782208ce6e784701"
+      "currentSha256": "1f7cdaed2c73e1d9c45dccaa8f939f1507e3cf6b9d095ce6dc45f4358e1ce517"
     },
     {
       "kind": "g0-artifact",
@@ -39152,7 +39188,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3420",
       "previousSha256": "7eccd7dd6c40a475485f4fa444324af48d1bd0255776262dfd61fdd7ca57bade",
-      "currentSha256": "0b2023fa6aa471f1ede3ea8d426cf40fe20782824fdec2c4c672433fedb1a262"
+      "currentSha256": "ae54b7403228b429749988abe6d5d0968994bc26ab72d5ba2b984dd3711bee46"
     },
     {
       "kind": "g0-artifact",
@@ -39183,6 +39219,12 @@
       "id": "geometry-v3-source-3502",
       "previousSha256": "87f6fece0bd40c6031da14ef4e2795ef573386e585a2db964508604ef8065c2f",
       "currentSha256": "d373b5fee72995d82352180e684a95a6bd0e11c40454e7062311f71d5cbef6af"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-3504",
+      "previousSha256": "b2ac587d52469101a1c4acc476054f42f7c69e0e796f3bad965df10b99933804",
+      "currentSha256": "219dbe3e99fd78017f594ed06fca23e18bc7f4b07f388a2de82568ca032ea761"
     },
     {
       "kind": "g0-artifact",
@@ -39494,13 +39536,13 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3991",
       "previousSha256": "bf2c662dd02b3a77665b14fb48f43fd4841622fdc6fbf5c61be58596af532659",
-      "currentSha256": "a976debafc1cf0d38d2aa4be2620dd333337bac7473c9ef925e07d1520503b37"
+      "currentSha256": "574571794e72b337735df9a080180e994f435c3b5ed6cd96d56dd754221a5697"
     },
     {
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3992",
       "previousSha256": "235c6d8dec9c45ebfdc4966039f900179a18a3e078f661baa8835273a0d6a32d",
-      "currentSha256": "78a04bdd3955ce33275532a8f51d4fdd42a228020a4117aeeddd55bde333ede6"
+      "currentSha256": "233cb7a3b99378ced02a412c8887e4f7d9204c69183b260e49ab4f67134c14e9"
     },
     {
       "kind": "g0-artifact",
@@ -39512,7 +39554,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-3995",
       "previousSha256": "a57f69080021bd0a8d428f9ae115fe93a89182ad20792f0839727715fd39d515",
-      "currentSha256": "57e6f863869d24943a9eb54e5dc7ccda33633c01c030a372dfe7b7b6263c8db8"
+      "currentSha256": "a04a7d06f852a604e7381dcd8a048ff1d2278c35b68a37a6bd0548584c0634f5"
     },
     {
       "kind": "g0-artifact",
@@ -39801,6 +39843,12 @@
       "id": "geometry-v3-source-5061",
       "previousSha256": "a0be4904ec0c21069b971e7a63fb4a49a7d1de898d42b1a8912841ce316a6199",
       "currentSha256": "1085479d416c8877e5ff35e8930c6cc1dde0a896fd09d25f655ce7b00f446454"
+    },
+    {
+      "kind": "g0-artifact",
+      "id": "geometry-v3-source-5065",
+      "previousSha256": "79fc1169485d6dba1af0df18427013e8b77590d61bfb51e92a987eb418ad2117",
+      "currentSha256": "59a6c21c5b06bf5c568263feaa52e00c773a65d04dac8a3dad19aec35154c33a"
     },
     {
       "kind": "g0-artifact",
@@ -40218,6 +40266,12 @@
     },
     {
       "kind": "g0-artifact",
+      "id": "geometry-v3-source-5485",
+      "previousSha256": "632bb64f0c0302afcf065e53067283c849d3ca9c8cf6826a8bf17e12269cd771",
+      "currentSha256": "9a793f59b06303fc01816f49482332020a237473523d59f7f93a6242d9a16f93"
+    },
+    {
+      "kind": "g0-artifact",
       "id": "geometry-v3-source-5495",
       "previousSha256": "9c86c837fba7d3bd5ce901a415a84af22887688c87839638c891e878b672daed",
       "currentSha256": "06128f3332e9047ce1d7045c1bb1750956e6fa115d3045a82d0421704f116401"
@@ -40394,7 +40448,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-6799",
       "previousSha256": "26180a52682dc2c57f8a5a2c366abe7b876aa24ab4da2c42f9183c18269facc7",
-      "currentSha256": "9962c50b8bbb20a82c3e66e97a050003aa3745910ebe8bb215abaca95c6f0cbc"
+      "currentSha256": "5fc498ef99dbda688ff6115941e9ff3d8fb722f347736fbb895c6199555e6b66"
     },
     {
       "kind": "g0-artifact",
@@ -40586,7 +40640,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-7068",
       "previousSha256": "f1db14d4c3ccf987eb9592d14b1b33f8e0ed291b122b483c4baf510f0c4f6938",
-      "currentSha256": "f4086d384e99fdd2603c95897e82c5e7fbbe6067e8eb51eab94abcbfdafbd3d6"
+      "currentSha256": "69a8cd51b7ef95e3fbc28af9f7db1cf561d19791992761b88728ace26d94cc38"
     },
     {
       "kind": "g0-artifact",
@@ -40634,7 +40688,7 @@
       "kind": "g0-artifact",
       "id": "geometry-v3-source-7683",
       "previousSha256": "d8183efb4c2847aef196fcf6be2a847a8e81e4ec70f3e2e877dbfb0144d282b0",
-      "currentSha256": "c52a910e04e341b2688319d5ecd05ce3b7cad297a3ad146d2bb7c7dfbe5ceff3"
+      "currentSha256": "2bee1b11fa7d85ffdfa5c96ebc94db329b3f6d137f09e7117dafdcd8ab57e1a2"
     },
     {
       "kind": "g0-artifact",
@@ -40670,7 +40724,7 @@
       "kind": "g1-bundle",
       "id": "g1-candidate-bundle",
       "previousSha256": "ec81383dbe4029f9d98e725cd8a03486c25ea3cb925737557362eedbdbb20448",
-      "currentSha256": "1b86931524942d6333eb2bc94e5b30601725b43a136d0b3f65ae9f02ce83311f"
+      "currentSha256": "e388bcaddf97c3218c58829f39515fa104e0f07c4550b1bc479e822337dab6e3"
     },
     {
       "kind": "g1-bundle",

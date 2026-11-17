@@ -97,6 +97,18 @@ const profiles=Object.freeze({
     }),
     exactJsChunkBytes:Object.freeze({}),
   }),
+  // v19: healing edge split across both face uses, STEP /10 ordinary pcurve repair and exact planar
+  // face mass properties. Measured production build: 18,558,145 raw WASM bytes, 6,617,591 packed
+  // geometry bytes and 12,581,815 asset bytes. The index, DirectModeler, geometryBuildEngine and
+  // wasmStreaming chunks measure 256,134, 510,648, 332,568 and 196,179 bytes; the kernel change is
+  // Rust-only, so the DirectModeler growth over v18 (500,918) comes from main.
+  '7467ec8b0d7e378a0510cf94790bf4da2146b7b735d4204a80975e2afa514986':Object.freeze({
+    version:19,geometryChunkBytes:6_626_000,totalAssetBytes:12_590_000,rawGeometryBytes:18_567_000,
+    namedJsChunkBytes:Object.freeze({
+      index:256_600,DirectModeler:511_200,geometryBuildEngine:335_200,wasmStreaming:196_700,
+    }),
+    exactJsChunkBytes:Object.freeze({}),
+  }),
 })
 
 export function selectGeometryDeliveryBudget(wasmSha256){
