@@ -4786,3 +4786,79 @@ fn periodic_trim_contour_audit_withholds_results_on_gap_or_exhaustion() {
     assert!(gap.joins.is_none());
     assert_eq!(gap.refusal, Some(Refusal::InvalidOutput));
 }
+
+#[test]
+fn periodic_trim_contour_length_encloses_seam_perimeter_and_hole_separately() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&hole, &outer], 1_000_000)
+            .unwrap();
+    for (contour, expected, minimum) in [(0, 2.5, 4), (1, 5., 6)] {
+        let report = result
+            .measure_input_contour_length(contour, 1e-8, 100)
+            .unwrap();
+        assert_eq!(report.minimum_cells, minimum);
+        let length = report.length.unwrap();
+        assert!(
+            length.bounds[0] <= expected && expected <= length.bounds[1],
+            "{length:?}"
+        );
+        assert!(length.within_tolerance);
+        assert!(length.cells <= 100);
+    }
+    assert!(
+        result
+            .measure_input_contour_length(2, 1e-8, 100)
+            .unwrap()
+            .length
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_trim_contour_length_withholds_partial_perimeter_and_reports_uncertainty() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer],
+        1_000_000,
+    )
+    .unwrap();
+    let limited = result.measure_input_contour_length(0, 1e-12, 7).unwrap();
+    assert_eq!(limited.minimum_cells, 8);
+    assert!(limited.length.is_none());
+    let tight = result
+        .measure_input_contour_length(0, 1e-30, 8)
+        .unwrap()
+        .length
+        .unwrap();
+    assert_eq!(tight.cells, 8);
+    assert!(!tight.within_tolerance);
+    assert!(tight.bounds[0] <= tight.bounds[1]);
+}

@@ -4819,3 +4819,101 @@ fn evaluate_trim_bezier(
     };
     Ok((point, tangent))
 }
+
+/// Certified length enclosure for a complete source contour. An absent
+/// enclosure means the contour was unavailable or its minimum cell budget
+/// could not be met.
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimContourLength {
+    pub length: Option<crate::analysis::curve_measure::LengthReport>,
+    pub minimum_cells: usize,
+}
+
+impl PeriodicTrimInputEdges {
+    /// Enclose the world-space arc length of every piece of a source contour.
+    /// One cell budget covers the entire contour, including all seam pieces.
+    pub fn measure_input_contour_length(
+        &self,
+        contour: usize,
+        tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimContourLength> {
+        use crate::{
+            analysis::curve_measure::{LengthReport, StopReason, length},
+            distance_bounds::Interval,
+        };
+
+        crate::check(
+            tolerance.is_finite() && tolerance > 0. && (1..=100_000).contains(&max_cells),
+            "Periodic trim length needs positive finite tolerance and 1..100000 cells",
+        )?;
+        let mut curves = Vec::new();
+        for patch in self.geometry.patches.iter().flatten() {
+            crate::check(
+                patch.patch.trim.contours.len() == patch.loops.len(),
+                "Periodic trim length contour and loop counts differ",
+            )?;
+            for (&source, path) in patch.patch.trim.contours.iter().zip(&patch.loops) {
+                if source == contour {
+                    curves.extend(path.iter().map(|edge| &edge.curve));
+                }
+            }
+        }
+        let mut spans = Vec::with_capacity(curves.len());
+        for curve in &curves {
+            curve.validate()?;
+            spans.push(
+                curve.knots[curve.degree..=curve.control_points.len()]
+                    .windows(2)
+                    .filter(|knots| knots[0] < knots[1])
+                    .count(),
+            );
+        }
+        let minimum_cells = spans.iter().sum();
+        if curves.is_empty() || minimum_cells > max_cells {
+            return Ok(PeriodicTrimContourLength {
+                length: None,
+                minimum_cells,
+            });
+        }
+
+        let piece_tolerance = (tolerance / curves.len() as f64).max(f64::from_bits(1));
+        let mut remaining_minimum = minimum_cells;
+        let mut cells = 0;
+        let mut bounds = Interval::point(0.);
+        let mut stop = StopReason::PrecisionLimit;
+        for (curve, minimum) in curves.into_iter().zip(spans) {
+            remaining_minimum -= minimum;
+            let report = length(
+                curve,
+                piece_tolerance,
+                max_cells - cells - remaining_minimum,
+            )?;
+            if report.stop_reason == StopReason::WorkLimit {
+                stop = StopReason::WorkLimit;
+            }
+            cells += report.cells;
+            bounds = bounds.add(Interval::new(report.bounds[0], report.bounds[1])?)?;
+        }
+        let lo = bounds.lo.max(0.);
+        let hi = bounds.hi;
+        let value = lo + (hi - lo) * 0.5;
+        let error_upper = (value - lo).max(hi - value).next_up();
+        let within_tolerance = error_upper <= tolerance;
+        Ok(PeriodicTrimContourLength {
+            length: Some(LengthReport {
+                value,
+                bounds: [lo, hi],
+                error_upper,
+                within_tolerance,
+                cells,
+                stop_reason: if within_tolerance {
+                    StopReason::Tolerance
+                } else {
+                    stop
+                },
+            }),
+            minimum_cells,
+        })
+    }
+}
