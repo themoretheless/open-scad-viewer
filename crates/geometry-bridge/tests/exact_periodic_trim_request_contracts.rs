@@ -503,3 +503,46 @@ fn trimmed_surface_mass_properties_operation_withholds_unproved_center() {
     assert!(report["principalMomentBoundsMm4"].is_null());
     assert_eq!(report["withinMomentTolerance"], false);
 }
+
+fn window_mass_request(window: [[f64; 2]; 2]) -> Value {
+    let mut request = surface_area_request(10_000, 500_000);
+    request["op"] = json!("brep_measure_exact_periodic_trim_window_mass_properties");
+    request["uvWindow"] = json!(window);
+    request["toleranceMm2"] = json!(0.001);
+    request["momentToleranceMm4"] = json!(1e-8);
+    request
+}
+
+#[test]
+fn window_mass_properties_operation_reports_clipped_area_and_centroid() {
+    let response = run(&window_mass_request([[3.75, 4.25], [0.375, 0.625]]));
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    let area = &report["boundsMm2"];
+    assert!(area[0].as_f64().unwrap() <= 0.1875 && 0.1875 <= area[1].as_f64().unwrap());
+    let centroid = report["centroidBoundsMm"].as_array().unwrap();
+    for (interval, expected) in centroid.iter().zip([1. / 48., 1. / 12., 1.]) {
+        assert!(
+            interval[0].as_f64().unwrap() <= expected && expected <= interval[1].as_f64().unwrap()
+        );
+    }
+    assert_eq!(
+        report["principalMomentBoundsMm4"].as_array().unwrap().len(),
+        3
+    );
+}
+
+#[test]
+fn window_mass_properties_operation_distinguishes_empty_and_invalid_windows() {
+    let response = run(&window_mass_request([[5., 6.], [0.25, 0.5]]));
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    assert_eq!(report["boundsMm2"], json!([0., 0.]));
+    assert_eq!(report["surfaceCells"], 0);
+    assert!(report["centroidBoundsMm"].is_null());
+    assert!(report["principalMomentBoundsMm4"].is_null());
+    assert_eq!(
+        run(&window_mass_request([[4.25, 3.75], [0.375, 0.625]]))["ok"],
+        false
+    );
+}

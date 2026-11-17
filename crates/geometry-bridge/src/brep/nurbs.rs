@@ -1100,12 +1100,35 @@ fn periodic_trim_patch_area_response(
 pub fn exact_periodic_trim_surface_area_request(
     request: &value_codec::Value,
 ) -> Result<value_codec::Value> {
-    periodic_trim_surface_measure_response(request, None)
+    periodic_trim_surface_measure_response(request, None, None)
 }
 
 /// Measure area, centroid and central inertia on one certified trim partition.
 pub fn exact_periodic_trim_surface_mass_properties_request(
     request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    periodic_trim_surface_mass_response(request, None)
+}
+
+/// Measure mass properties inside a window in the unwrapped patch UV chart.
+pub fn exact_periodic_trim_surface_window_mass_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    let window: [[f64; 2]; 2] = crate::field(request, "uvWindow")?;
+    if !window
+        .iter()
+        .all(|&[lo, hi]| lo.is_finite() && hi.is_finite() && lo < hi)
+    {
+        return Err(input(
+            "Trimmed area window needs finite increasing UV intervals",
+        ));
+    }
+    periodic_trim_surface_mass_response(request, Some(window))
+}
+
+fn periodic_trim_surface_mass_response(
+    request: &value_codec::Value,
+    window: Option<[[f64; 2]; 2]>,
 ) -> Result<value_codec::Value> {
     let tolerance: f64 = crate::field(request, "momentToleranceMm4")?;
     if !tolerance.is_finite() || tolerance <= 0. {
@@ -1113,17 +1136,19 @@ pub fn exact_periodic_trim_surface_mass_properties_request(
             "Principal moment tolerance must be positive and finite",
         ));
     }
-    periodic_trim_surface_measure_response(request, Some(tolerance))
+    periodic_trim_surface_measure_response(request, Some(tolerance), window)
 }
 
 fn periodic_trim_surface_measure_response(
     request: &value_codec::Value,
     moment_tolerance: Option<f64>,
+    window: Option<[[f64; 2]; 2]>,
 ) -> Result<value_codec::Value> {
     use crate::field;
     use nurbs_core::{
         analysis::surface_measure::{
             StopReason, periodic_trim_patch_area, trimmed_surface_central_inertia,
+            trimmed_surface_central_inertia_in_window,
         },
         editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
         trim_domain::TrimDomain,
@@ -1182,14 +1207,25 @@ fn periodic_trim_surface_measure_response(
     };
     let measure = if let Some(moment_tolerance) = moment_tolerance {
         let trim = TrimDomain::new(&patch.trim.loops, tolerance_uv)?;
-        let report = trimmed_surface_central_inertia(
-            &patch.surface,
-            &trim,
-            tolerance,
-            max_surface,
-            max_trim,
-        )?
-        .bound_principal_moments(moment_tolerance)?;
+        let central = if let Some(window) = window {
+            trimmed_surface_central_inertia_in_window(
+                &patch.surface,
+                &trim,
+                window,
+                tolerance,
+                max_surface,
+                max_trim,
+            )?
+        } else {
+            trimmed_surface_central_inertia(
+                &patch.surface,
+                &trim,
+                tolerance,
+                max_surface,
+                max_trim,
+            )?
+        };
+        let report = central.bound_principal_moments(moment_tolerance)?;
         response["centroidBoundsMm"] = json!(report.central.centroid.centroid_bounds);
         response["centralInertiaBoundsMm4"] = json!(report.central.central_inertia_bounds);
         response["principalMomentBoundsMm4"] = json!(report.principal_bounds);

@@ -248,3 +248,16 @@ const coarseMass = call(request.maxWork, massOp, { ...massOptions, maxSurfaceCel
 assert.equal(coarseMass.centroidBoundsMm, null)
 assert.equal(coarseMass.principalMomentBoundsMm4, null)
 console.log('WASM ABI returned trimmed area centroid, central inertia and principal moment bounds.')
+
+const windowMassOp = 'brep_measure_exact_periodic_trim_window_mass_properties'
+const windowOptions = { ...massOptions, toleranceMm2: 0.001, maxSurfaceCells: 10_000, maxTrimCells: 500_000 }
+const windowMass = call(request.maxWork, windowMassOp, { ...windowOptions, uvWindow: [[3.75, 4.25], [0.375, 0.625]] })
+assert.ok(windowMass.boundsMm2)
+const [windowLo, windowHi] = windowMass.boundsMm2
+assert.ok(typeof windowLo === 'number' && typeof windowHi === 'number' && windowLo <= 0.1875 && 0.1875 <= windowHi)
+assert.ok(windowMass.centroidBoundsMm)
+assert.ok(windowMass.centroidBoundsMm[0][0] <= 1 / 48 && 1 / 48 <= windowMass.centroidBoundsMm[0][1])
+const emptyWindow = call(request.maxWork, windowMassOp, { ...windowOptions, uvWindow: [[5, 6], [0.25, 0.5]] })
+assert.deepEqual(emptyWindow.boundsMm2, [0, 0])
+assert.equal(emptyWindow.centroidBoundsMm, null)
+console.log('WASM ABI enclosed mass properties inside a clipped UV window.')
