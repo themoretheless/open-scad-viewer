@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   addSketchCurveConstraint,
+  pruneSketchCurveConstraints,
   sketchCurveConstraintName,
   sketchCurveConstraintResidual,
   validateSketchCurveConstraints,
@@ -104,12 +105,25 @@ describe('sketch curve constraints', () => {
     ).toThrow(/circle or arc/)
   })
 
-  it('round-trips through the document and rejects dangling references', () => {
+  it('round-trips through the document and drops dangling references on load', () => {
     const a = addSketchCurveConstraint(circle('A', [3, 4], 2), { kind: 'concentric', ref: 'R' }, [ref])
     const doc = { ...emptyDirectDocument(), sketches: [ref, a] }
     const back = parseDirectDocument(serializeDirectDocument(doc))
     expect(back.sketches[1]!.curveConstraints).toEqual([{ kind: 'concentric', ref: 'R' }])
-    expect(() => parseDirectDocument(serializeDirectDocument({ ...doc, sketches: [a] }))).toThrow(/missing sketch/)
+    const loaded = parseDirectDocument(serializeDirectDocument({ ...doc, sketches: [a] }))
+    expect(loaded.sketches[0]!.curveConstraints).toBeUndefined()
+    expect(loaded.sketches[0]!.analytic!.center[0]).toBeCloseTo(0, 6)
+  })
+
+  it('drops constraints that reference a deleted sketch and keeps the rest', () => {
+    const other = circle('S', [30, 0], 4)
+    let a = addSketchCurveConstraint(circle('A', [3, 4], 2), { kind: 'concentric', ref: 'R' }, [ref, other])
+    a = addSketchCurveConstraint(a, { kind: 'equal_radius', ref: 'S' }, [ref, other])
+    const all = [ref, other, a]
+    expect(pruneSketchCurveConstraints(all)).toBe(all)
+    const pruned = pruneSketchCurveConstraints([other, a])
+    expect(pruned[1]!.curveConstraints).toEqual([{ kind: 'equal_radius', ref: 'S' }])
+    expect(pruneSketchCurveConstraints([a])[0]!.curveConstraints).toBeUndefined()
   })
 
   it('names constraints in RU and EN', () => {

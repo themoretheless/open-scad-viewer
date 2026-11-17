@@ -2,6 +2,7 @@ import type { CommitInWorker } from './prepareDocumentCommit'
 import { type DirectBody, type DirectDocument, type DirectSketch, type DirectHistory } from '../../app/directModeling'
 import { type Pane, DEFAULT_GROUP_SOURCE } from './helpers'
 import { type SolidNurbsCurve, type SolidNurbsSurface } from '../../kernel/solidNurbs'
+import { pruneSketchCurveConstraints } from '../../app/sketchCurveConstraints'
 import { computed, type Ref, type ShallowRef, type ComputedRef } from 'svet'
 
 export interface SceneTreeOptions {
@@ -75,7 +76,7 @@ function removeGroup(name: string) {
     void commitInWorker(() => {
       const next = { ...history.document }
       next.bodies = next.bodies.filter(body => body.group !== name)
-      next.sketches = next.sketches.filter(item=>item.group!==name)
+      next.sketches = pruneSketchCurveConstraints(next.sketches.filter(item=>item.group!==name))
       if(next.curves)next.curves=next.curves.filter(item=>item.group!==name)
       if(next.surfaces)next.surfaces=next.surfaces.filter(item=>item.group!==name)
       const remaining = (next.groups ?? []).filter(group => group.name !== name)

@@ -14,7 +14,7 @@ import {sameMeshJson} from '../exchange/sameMeshJson'
 import {resolveSolidInstances,type SolidInstanceLink} from '../kernel/solidInstances'
 import { sketchDimensions, type SketchDimension } from './directDimensions'
 import { validateSketchConstraints, type SketchConstraint } from './sketchConstraints'
-import { validateSketchCurveConstraints, type SketchCurveConstraint } from './sketchCurveConstraints'
+import { pruneSketchCurveConstraints, validateSketchCurveConstraints, type SketchCurveConstraint } from './sketchCurveConstraints'
 import {callGeometryRust} from '../kernel/geometry/kernel'
 import {validatePivots,validCPlane,type DirectCPlane,type DirectPivot} from './directPivots'
 import { MAX_DOCUMENT_CHARACTERS, MAX_BODY_MESH_COMPONENTS } from '../core/directDocumentLimits'
@@ -201,6 +201,7 @@ function* directDocumentValidation(text: string, instanceCache?:SolidInstanceBat
     validateSketchConstraints(s)
     yield
   }
+  d.sketches = pruneSketchCurveConstraints(d.sketches)
   for (const s of d.sketches) validateSketchCurveConstraints(s, d.sketches)
   const validUnitChannel = (v: number | undefined) => v === undefined || (Number.isFinite(v) && v >= 0 && v <= 1)
   for (const b of d.bodies) {

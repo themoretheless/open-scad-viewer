@@ -61,6 +61,7 @@ import { bodyPoints, DirectHistory, directBodiesScad, parseDirectDocument, seria
 import type {SolidSketchEditOptions} from '../kernel/solidSketchEdit'
 import { validateSimpleSketch, slotSketch, sampleCurve, bakeSketch, trimSketchConstraints, worldPoint, xyPlane, unit3, cross3, type SketchPlane, type Vec3 } from '../app/directSketchGeometry'
 import { droppedConstraintsNotice } from '../app/sketchConstraints'
+import { pruneSketchCurveConstraints } from '../app/sketchCurveConstraints'
 import { storageGet, storageSet } from '../core/safeStorage'
 import type {SolidBooleanOptions} from '../kernel/solidBoolean'
 import { defaultDirectCamera, directExtrusionTool, projectDirectPoint, unprojectDirectXY, unprojectDirectPlane } from '../app/directModelingTools'
@@ -1439,7 +1440,7 @@ function remove() {
   // Built from the published state without copying it; the worker validates the result.
   void commitInWorker(() => {
     const d = snapDocument.value
-    return {...d, sketches: d.sketches.filter(s => !selectedSet.has(s.id)), bodies: d.bodies.filter(b => !selectedSet.has(b.id)),
+    return {...d, sketches: pruneSketchCurveConstraints(d.sketches.filter(s => !selectedSet.has(s.id))), bodies: d.bodies.filter(b => !selectedSet.has(b.id)),
       curves: (d.curves ?? []).filter(c => !selectedSet.has(c.id)), surfaces: (d.surfaces ?? []).filter(s => !selectedSet.has(s.id))}
   }, () => { selection.value = ''; extraSelection.value=[] })
 }

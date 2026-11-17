@@ -190,3 +190,26 @@ export function sketchCurveConstraintName(c: SketchCurveConstraint, locale: stri
   const internal = c.kind === 'tangent_circle' && c.internal
   return locale === 'ru' ? `${ru}${internal ? ' (внутреннее)' : ''}` : `${en}${internal ? ' (internal)' : ''}`
 }
+
+/**
+ * Drops curve constraints whose referenced sketch is missing or no longer on the same plane (for example
+ * after a delete). Returns the same array when nothing changed.
+ */
+export function pruneSketchCurveConstraints<T extends CurveSketch>(sketches: readonly T[]): T[] {
+  const byId = new Map(sketches.map(s => [s.id, s]))
+  let changed = false
+  const out = sketches.map(s => {
+    if (!Array.isArray(s.curveConstraints) || !s.curveConstraints.length) return s
+    const kept = s.curveConstraints.filter(c => {
+      const ref = c && typeof c === 'object' ? byId.get(c.ref) : undefined
+      return ref !== undefined && ref !== s && samePlane(ref.plane, s.plane)
+    })
+    if (kept.length === s.curveConstraints.length) return s
+    changed = true
+    const next = { ...s }
+    if (kept.length) next.curveConstraints = kept
+    else delete next.curveConstraints
+    return next
+  })
+  return changed ? out : (sketches as T[])
+}
