@@ -4516,3 +4516,67 @@ fn periodic_trim_input_point_withholds_results_when_work_is_exhausted() {
     assert!(report.point.is_none());
     assert_eq!(report.refusal, Some(Refusal::ResourceLimit));
 }
+
+#[test]
+fn periodic_trim_tangents_distinguish_periodic_corner_and_follow_input_direction() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let q = |n: i64, d: i64| num_rational::BigRational::new(n.into(), d.into());
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [3.5, 0.875],
+        [0.5, 0.875],
+        [0.5, 0.125],
+        [3.5, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let seam = result
+        .evaluate_input_tangents(0, 3, &q(1, 2), 1_000_000)
+        .unwrap()
+        .tangents
+        .unwrap();
+    assert_eq!(seam.before, Some([q(-1, 1), q(0, 1), q(0, 1)]));
+    assert_eq!(seam.after, Some([q(0, 1), q(1, 1), q(0, 1)]));
+    let interior = result
+        .evaluate_input_tangents(0, 3, &q(1, 3), 1_000_000)
+        .unwrap()
+        .tangents
+        .unwrap();
+    assert_eq!(interior.before, seam.before);
+    assert_eq!(interior.after, seam.before);
+    let end = result
+        .evaluate_input_tangents(0, 3, &q(1, 1), 1_000_000)
+        .unwrap()
+        .tangents
+        .unwrap();
+    assert_eq!(end.before, seam.after);
+    assert_eq!(end.after, None);
+}
+
+#[test]
+fn periodic_trim_tangents_withhold_values_under_exhausted_budget() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    use nurbs_core::editing::rational_factor::Refusal;
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let result = build_exact_periodic_surface_trim_input_edges(
+        &doubly_periodic_tensor(),
+        &[&outer],
+        1_000_000,
+    )
+    .unwrap();
+    let seam = num_rational::BigRational::new(1.into(), 2.into());
+    let report = result.evaluate_input_tangents(0, 0, &seam, 1).unwrap();
+    assert!(report.tangents.is_none());
+    assert_eq!(report.refusal, Some(Refusal::ResourceLimit));
+}

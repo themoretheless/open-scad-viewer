@@ -4290,6 +4290,26 @@ pub struct PeriodicTrimInputPoint {
     pub refusal: Option<ExactRefusal>,
 }
 
+/// Exact Cartesian derivatives in increasing original segment parameter.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PeriodicTrimInputTangents {
+    pub before: Option<[BigRational; 3]>,
+    pub after: Option<[BigRational; 3]>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimTangentReport {
+    pub tangents: Option<PeriodicTrimInputTangents>,
+    pub work_used: u64,
+    pub refusal: Option<ExactRefusal>,
+}
+
+#[derive(Default)]
+struct PeriodicTrimInputSample {
+    point: Option<[BigRational; 3]>,
+    tangents: PeriodicTrimInputTangents,
+}
+
 impl PeriodicTrimInputEdges {
     /// Evaluate an original contour segment at a rational parameter, and
     /// require the exact 3D values of all incident pieces to agree.
@@ -4308,9 +4328,9 @@ impl PeriodicTrimInputEdges {
             used: 0,
             limit: max_work,
         };
-        let result = self.evaluate_input_point_with_work(contour, segment, parameter, &mut work);
+        let result = self.evaluate_input_sample(contour, segment, parameter, false, &mut work);
         let (point, refusal) = match result {
-            Ok(point) => (point, None),
+            Ok(sample) => (sample.point, None),
             Err(reason) => (None, Some(reason)),
         };
         Ok(PeriodicTrimInputPoint {
@@ -4320,20 +4340,50 @@ impl PeriodicTrimInputEdges {
         })
     }
 
-    fn evaluate_input_point_with_work(
+    /// Evaluate both one-sided tangents, retaining geometric creases at splits.
+    /// At an original segment endpoint only the side within that segment is present.
+    pub fn evaluate_input_tangents(
         &self,
         contour: usize,
         segment: usize,
         parameter: &BigRational,
+        max_work: u64,
+    ) -> Result<PeriodicTrimTangentReport> {
+        crate::check(
+            (1..=cad_predicates::MAX_WORK).contains(&max_work),
+            "Exact periodic trim tangent work must be in 1..=1000000",
+        )?;
+        let mut work = Work {
+            used: 0,
+            limit: max_work,
+        };
+        let result = self.evaluate_input_sample(contour, segment, parameter, true, &mut work);
+        let (tangents, refusal) = match result {
+            Ok(sample) => (sample.point.map(|_| sample.tangents), None),
+            Err(reason) => (None, Some(reason)),
+        };
+        Ok(PeriodicTrimTangentReport {
+            tangents,
+            work_used: work.used,
+            refusal,
+        })
+    }
+
+    fn evaluate_input_sample(
+        &self,
+        contour: usize,
+        segment: usize,
+        parameter: &BigRational,
+        with_tangent: bool,
         work: &mut Work,
-    ) -> std::result::Result<Option<[BigRational; 3]>, ExactRefusal> {
+    ) -> std::result::Result<PeriodicTrimInputSample, ExactRefusal> {
         let Some(patches) = &self.geometry.patches else {
-            return Ok(None);
+            return Ok(PeriodicTrimInputSample::default());
         };
         if patches.len() != self.sources.len() {
             return Err(ExactRefusal::InvalidOutput);
         }
-        let mut point = None;
+        let mut sample = PeriodicTrimInputSample::default();
         for (patch, sources) in patches.iter().zip(&self.sources) {
             if patch.loops.len() != sources.len() {
                 return Err(ExactRefusal::InvalidOutput);
@@ -4357,26 +4407,48 @@ impl PeriodicTrimInputEdges {
                     let offset = work.op(parameter, start, |a, b| a - b)?;
                     let width = work.op(end, start, |a, b| a - b)?;
                     let fraction = work.op(&offset, &width, |a, b| a / b)?;
-                    let candidate = evaluate_trim_bezier(&edge.curve, &fraction, work)?;
-                    if point
+                    let (candidate, tangent) = evaluate_trim_bezier(
+                        &edge.curve,
+                        &fraction,
+                        with_tangent.then_some(&width),
+                        work,
+                    )?;
+                    if sample
+                        .point
                         .as_ref()
                         .is_some_and(|previous| previous != &candidate)
                     {
                         return Err(ExactRefusal::InvalidOutput);
                     }
-                    point = Some(candidate);
+                    sample.point = Some(candidate);
+                    if let Some(tangent) = tangent {
+                        for (include, side) in [
+                            (parameter > start.min(end), &mut sample.tangents.before),
+                            (parameter < start.max(end), &mut sample.tangents.after),
+                        ] {
+                            if include {
+                                if side.as_ref().is_some_and(|previous| previous != &tangent) {
+                                    return Err(ExactRefusal::InvalidOutput);
+                                }
+                                *side = Some(tangent.clone());
+                            }
+                        }
+                    }
                 }
             }
         }
-        Ok(point)
+        Ok(sample)
     }
 }
+
+type TrimBezierSample = ([BigRational; 3], Option<[BigRational; 3]>);
 
 fn evaluate_trim_bezier(
     curve: &Curve,
     fraction: &BigRational,
+    input_width: Option<&BigRational>,
     work: &mut Work,
-) -> std::result::Result<[BigRational; 3], ExactRefusal> {
+) -> std::result::Result<TrimBezierSample, ExactRefusal> {
     use num_traits::{One, Zero};
 
     curve.validate().map_err(|_| ExactRefusal::InvalidOutput)?;
@@ -4407,7 +4479,17 @@ fn evaluate_trim_bezier(
         pole[3] = weight;
         net.push(pole);
     }
+    let mut derivative = None;
     for width in (1..count).rev() {
+        if width == 1 && input_width.is_some() {
+            let degree = BigRational::from_integer(curve.degree.into());
+            let mut values = net[0].clone();
+            for (axis, value) in values.iter_mut().enumerate() {
+                let delta = work.op(&net[1][axis], &net[0][axis], |a, b| a - b)?;
+                *value = work.op(&degree, &delta, |a, b| a * b)?;
+            }
+            derivative = Some(values);
+        }
         for i in 0..width {
             for axis in 0..4 {
                 let left = work.op(&net[i][axis], &complement, |a, b| a * b)?;
@@ -4420,9 +4502,22 @@ fn evaluate_trim_bezier(
     if w.is_zero() {
         return Err(ExactRefusal::InvalidOutput);
     }
-    Ok([
+    let point = [
         work.op(&x, &w, |a, b| a / b)?,
         work.op(&y, &w, |a, b| a / b)?,
         work.op(&z, &w, |a, b| a / b)?,
-    ])
+    ];
+    let tangent = if let (Some([dx, dy, dz, dw]), Some(width)) = (derivative, input_width) {
+        let divisor = work.op(&w, width, |a, b| a * b)?;
+        let mut tangent = [dx, dy, dz];
+        for (value, point) in tangent.iter_mut().zip(&point) {
+            let weight_term = work.op(point, &dw, |a, b| a * b)?;
+            let numerator = work.op(value, &weight_term, |a, b| a - b)?;
+            *value = work.op(&numerator, &divisor, |a, b| a / b)?;
+        }
+        Some(tangent)
+    } else {
+        None
+    };
+    Ok((point, tangent))
 }
