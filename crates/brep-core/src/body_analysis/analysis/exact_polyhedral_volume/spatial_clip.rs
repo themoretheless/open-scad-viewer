@@ -520,3 +520,8 @@ pub fn exact_polyhedral_ball_clearance(
         exact_work: max_exact_work - remaining + result.exact_work,
     })
 }
+
+mod sweep_clearance;
+pub use sweep_clearance::{
+    ExactPolyhedralSweptBallClearance, exact_polyhedral_swept_ball_clearance,
+};

@@ -2952,3 +2952,66 @@ fn exact_ball_clearance_handles_zero_radius_on_a_retained_face() {
     );
     assert!(exact_polyhedral_ball_clearance(&solid, &center, &q(-1, 8), 1_000_000).is_err());
 }
+
+#[test]
+fn swept_ball_detects_boundary_contact_between_clear_endpoints() {
+    use brep_core::{
+        analysis::{
+            PolyhedralBallRelation, exact_polyhedral_ball_clearance,
+            exact_polyhedral_swept_ball_clearance,
+        },
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    use std::cmp::Ordering;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let p = |x, y, z| [x, y, z].map(|n: i64| Q::from_integer(n.into()));
+    let path = [p(-1, 3, 1), p(5, 3, 1)];
+    let radius = Q::new(1.into(), 2.into());
+    for center in &path {
+        assert_eq!(
+            exact_polyhedral_ball_clearance(solid, center, &radius, 1_000_000)
+                .unwrap()
+                .relation,
+            PolyhedralBallRelation::Outside
+        );
+    }
+    let report = exact_polyhedral_swept_ball_clearance(solid, &path, &radius, 1_000_000).unwrap();
+    assert_eq!(report.clearance, Ordering::Less);
+    assert_eq!(report.distance_squared_mm2, Q::from_integer(0.into()));
+    assert_eq!(report.center_mm, report.boundary_mm);
+    assert!(
+        exact_polyhedral_swept_ball_clearance(solid, &path, &radius, report.exact_work).is_ok()
+    );
+    assert!(
+        exact_polyhedral_swept_ball_clearance(solid, &path, &radius, report.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn swept_ball_finds_exact_tangency_above_a_trimmed_cap() {
+    use brep_core::{
+        analysis::exact_polyhedral_swept_ball_clearance,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    use std::cmp::Ordering;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let p = |x, y, z| [x, y, z].map(|n: i64| Q::from_integer(n.into()));
+    let report = exact_polyhedral_swept_ball_clearance(
+        solid,
+        &[p(-1, 3, 3), p(5, 3, 3)],
+        &Q::from_integer(1.into()),
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(report.clearance, Ordering::Equal);
+    assert_eq!(report.distance_squared_mm2, Q::from_integer(1.into()));
+    assert_eq!(&report.center_mm[..2], &report.boundary_mm[..2]);
+    assert_eq!(report.boundary_mm[2], Q::from_integer(2.into()));
+}
