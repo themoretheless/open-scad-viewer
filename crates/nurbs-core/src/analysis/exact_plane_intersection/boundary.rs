@@ -239,3 +239,9 @@ mod section_length;
 pub use section_length::{
     PlanarSectionLength, PlanarSectionLengthReport, measure_quadratic_planar_section_material,
 };
+
+mod section_geometry;
+pub use section_geometry::{
+    PlanarSectionGeometryOutcome, PlanarSectionGeometryReport, PlanarSectionRationalEdge,
+    PlanarSectionRationalGeometry, build_quadratic_planar_section_geometry,
+};

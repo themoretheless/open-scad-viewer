@@ -170,7 +170,11 @@ fn square_root_range(
     Ok(range)
 }
 
-fn scaled_width_squared([lo, hi]: &[Q; 2], scale_squared: &Q, work: &mut Work) -> Checked<Q> {
+pub(super) fn scaled_width_squared(
+    [lo, hi]: &[Q; 2],
+    scale_squared: &Q,
+    work: &mut Work,
+) -> Checked<Q> {
     let width = work.op(hi, lo, |a, b| a - b)?;
     let square = work.op(&width, &width, |a, b| a * b)?;
     Ok(work.op(&square, scale_squared, |a, b| a * b)?)

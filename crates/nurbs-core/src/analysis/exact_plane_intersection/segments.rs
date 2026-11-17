@@ -86,7 +86,7 @@ pub fn build_planar_intersection_segments(
     })
 }
 
-fn segment(
+pub(super) fn segment(
     line: &ExactSupportLine,
     axes: [[usize; 2]; 2],
     parameter: [Q; 2],

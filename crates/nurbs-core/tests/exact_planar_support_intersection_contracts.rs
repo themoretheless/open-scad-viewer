@@ -8,11 +8,12 @@ use nurbs_core::{
             AdaptiveBoundaryOptions, AlgebraicBoundaryClock, AlgebraicPlanarContacts,
             BoundaryResolution, BoundedPlanarBoundaryIntersection, ClassifiedPlanarSection,
             ExactPlanarIntersectionSegment, PlanarBoundaryIntersection, PlanarFaceContactPartition,
-            PlanarIntersectionSegments, PlanarSectionLength, PlanarSectionMaterial,
-            PlanarSectionOutcome, PlanarSectionWindingOptions, PlanarSegmentStorage,
-            StoredPlanarIntersection, SupportPlaneIntersection, TrimmedPlanarIntersection,
-            assemble_quadratic_planar_section_material, bound_planar_face_boundary_intersection,
-            build_planar_intersection_segments, classify_planar_face_contacts,
+            PlanarIntersectionSegments, PlanarSectionGeometryOutcome, PlanarSectionLength,
+            PlanarSectionMaterial, PlanarSectionOutcome, PlanarSectionWindingOptions,
+            PlanarSegmentStorage, StoredPlanarIntersection, SupportPlaneIntersection,
+            TrimmedPlanarIntersection, assemble_quadratic_planar_section_material,
+            bound_planar_face_boundary_intersection, build_planar_intersection_segments,
+            build_quadratic_planar_section_geometry, classify_planar_face_contacts,
             classify_quadratic_planar_section, enclose_algebraic_planar_boundary_point,
             intersect_planar_face_boundaries, intersect_planar_face_boundary_contacts,
             intersect_planar_supports, intersect_trimmed_planar_faces,
@@ -1571,5 +1572,76 @@ fn bounds_the_length_between_irrational_endpoints() {
     assert_eq!(
         limited.outcome,
         PlanarSectionLength::Refused(nurbs_core::editing::exact_derivative::Refusal::ResourceLimit)
+    );
+}
+
+#[test]
+fn constructs_certified_inward_segments_between_irrational_endpoints() {
+    use nurbs_core::editing::exact_derivative::Refusal;
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![irrational_contact_loop(0.5, 1., false)];
+    b.loops = vec![irrational_contact_loop(0.5, 1., true)];
+    let options = section_winding_options(10_000);
+    let tolerance = 1e-12;
+    let report = build_quadratic_planar_section_geometry(&a, &b, options, tolerance).unwrap();
+    let PlanarSectionGeometryOutcome::Transverse(geometry) = report.outcome else {
+        panic!("{:?}", report.outcome);
+    };
+    assert!(geometry.points.is_empty());
+    assert_eq!(geometry.possible, [[0, 1]]);
+    let [edge] = geometry.edges.as_slice() else {
+        panic!("{:?}", geometry.edges);
+    };
+    assert_eq!(edge.events, [0, 1]);
+    let [start, end] = &edge.segment.parameter;
+    assert!(start < end);
+    let equation = |t: &Q| (q(3, 1) * t - q(1, 1)).pow(2) - q(1, 2);
+    assert!(equation(start) < q(0, 1) && equation(end) < q(0, 1));
+    assert_eq!(
+        edge.segment.xyz,
+        [
+            [start.clone(), q(0, 1), q(0, 1)],
+            [end.clone(), q(0, 1), q(0, 1)]
+        ]
+    );
+    assert_eq!(
+        edge.segment.pcurves,
+        std::array::from_fn(|_| [[start.clone(), q(0, 1)], [end.clone(), q(0, 1)]])
+    );
+    let limit = Q::from_float(tolerance).unwrap().pow(2);
+    assert!(
+        edge.endpoint_error_squared
+            .iter()
+            .all(|error| error > &q(0, 1) && error <= &limit)
+    );
+    let exact = build_quadratic_planar_section_geometry(&a, &b, options, 0.).unwrap();
+    assert_eq!(
+        exact.outcome,
+        PlanarSectionGeometryOutcome::Refused(Refusal::NotRepresentable)
+    );
+}
+
+#[test]
+fn keeps_rational_segments_at_zero_tolerance_and_retains_singletons() {
+    let [mut a, mut b] = perpendicular_boundary_faces();
+    a.loops = vec![rectangle([-2., 2.], [-1., 1.], false)];
+    b.loops = vec![rectangle([-1., 1.], [-1., 1.], false)];
+    let options = section_winding_options(10_000);
+    let report = build_quadratic_planar_section_geometry(&a, &b, options, 0.).unwrap();
+    let PlanarSectionGeometryOutcome::Transverse(geometry) = report.outcome else {
+        panic!("{:?}", report.outcome);
+    };
+    assert_eq!(geometry.edges[0].segment.parameter, [q(-1, 1), q(1, 1)]);
+    assert_eq!(geometry.edges[0].endpoint_error_squared, [q(0, 1), q(0, 1)]);
+    a.loops = vec![irrational_contact_loop(0., 1., false)];
+    let report = build_quadratic_planar_section_geometry(&a, &b, options, 0.).unwrap();
+    let PlanarSectionGeometryOutcome::Transverse(geometry) = report.outcome else {
+        panic!("{:?}", report.outcome);
+    };
+    assert!(geometry.edges.is_empty());
+    assert_eq!(geometry.points, [1]);
+    assert_eq!(
+        geometry.section.events[1].clock,
+        AlgebraicBoundaryClock::Rational(q(1, 3))
     );
 }

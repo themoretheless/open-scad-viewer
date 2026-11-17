@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 357,
-  "unallocatedCount": 643,
+  "specifiedCount": 358,
+  "unallocatedCount": 642,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9184,6 +9184,32 @@
       "remainingQualification": [
         "Bound the total material length along a finite transverse section, including algebraic endpoints and unresolved winding.",
         "Sum lower endpoint differences over proven components and upper differences over possible components, then apply the exact Euclidean metric of the support clock.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0358",
+      "name": "Точные рациональные отрезки внутри общего материала между алгебраическими концами",
+      "status": "native",
+      "prioritySet": "native-1000-intersections",
+      "category": "Пересечения",
+      "nativeApi": "nurbs_core::analysis::exact_plane_intersection::build_quadratic_planar_section_geometry",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/exact_plane_intersection.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary.rs",
+        "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs",
+        "crates/nurbs-core/src/editing/exact_projective/pcurve_seam_isolation.rs",
+        "crates/nurbs-core/tests/exact_planar_support_intersection_contracts.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section_geometry.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/section/material.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/boundary/algebraic_enclosure.rs",
+        "crates/nurbs-core/src/analysis/exact_plane_intersection/segments.rs",
+        "docs/qualification/nurbs-curvature-field-358-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-358-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Build exact rational spatial and chart geometry contained in proven transverse section components with bounded endpoint setbacks.",
+        "Inward sides of separated algebraic endpoint brackets give rational subsegments wholly inside verified material. Exact chart lifting synchronizes both pcurves, and singleton contacts retain their original event.",
         "WASM and application integration are separate."
       ]
     }
