@@ -837,6 +837,11 @@ fn automatically_caps_nested_rims_as_one_face_with_a_hole() {
 
 fn open_prism_with_nonbinary_cap_support() -> brep_core::Model {
     let (mut source, _) = open_prism(false);
+    map_prism_to_nonbinary_cap_support(&mut source);
+    source
+}
+
+fn map_prism_to_nonbinary_cap_support(source: &mut brep_core::Model) {
     let map = |point: &mut [f64]| {
         let (x, y, z) = (point[0], point[1], point[2]);
         point.copy_from_slice(&[0.5 * x + 0.25 * y, -0.5 * x + 0.5 * y, z + 0.25 * y]);
@@ -856,7 +861,6 @@ fn open_prism_with_nonbinary_cap_support() -> brep_core::Model {
     }
     source.rebuild_topology_ids();
     source.validate().unwrap();
-    source
 }
 
 #[test]
@@ -1180,5 +1184,67 @@ fn compact_exact_cap_support_stays_inside_the_vertex_coordinate_range() {
         brep_core::boundary_agreement::verify_exact(&report.model, 1_000_000)
             .unwrap()
             .all_equal
+    );
+}
+
+#[test]
+fn attaches_an_expanded_exact_cap_to_only_the_selected_rim() {
+    use brep_core::planar_cap::{
+        attach_section_caps_with_expanded_exact_support, infer_section_planes,
+    };
+    use num_rational::BigRational as Q;
+    let (mut source, _) = open_prism(false);
+    remove_prism_cap(&mut source, 0.);
+    map_prism_to_nonbinary_cap_support(&mut source);
+    assert_eq!(source.validate().unwrap().boundary_edge_count, 8);
+    let inferred = infer_section_planes(&source, 0, 1_000_000).unwrap();
+    let top = inferred
+        .planes
+        .iter()
+        .find(|plane| plane.offset == Q::from_integer((-6).into()))
+        .unwrap();
+    let rings: Vec<_> = top.rings.iter().map(Vec::as_slice).collect();
+    let result = attach_section_caps_with_expanded_exact_support(
+        &source,
+        0,
+        &rings,
+        [-1., -1., 3.],
+        6.,
+        1_000_000,
+        10_000,
+    )
+    .unwrap();
+    assert_eq!(result.cap_faces.len(), 1);
+    assert!(!result.model.shells[0].closed);
+    assert_eq!(result.model.validate().unwrap().boundary_edge_count, 4);
+    assert_eq!(result.model.edges, source.edges);
+    assert_eq!(result.model.vertices, source.vertices);
+    assert!(
+        brep_core::boundary_agreement::verify_exact(&result.model, 1_000_000)
+            .unwrap()
+            .all_equal
+    );
+    assert_eq!(source.validate().unwrap().boundary_edge_count, 8);
+}
+
+#[test]
+fn expanded_exact_attachment_refuses_a_plane_offset_within_model_tolerance() {
+    use brep_core::planar_cap::{
+        attach_section_caps_with_expanded_exact_support, infer_section_planes,
+    };
+    let source = open_prism_with_nonbinary_cap_support();
+    let inferred = infer_section_planes(&source, 0, 1_000_000).unwrap();
+    let rings: Vec<_> = inferred.planes[0].rings.iter().map(Vec::as_slice).collect();
+    assert!(
+        attach_section_caps_with_expanded_exact_support(
+            &source,
+            0,
+            &rings,
+            [-1., -1., 3.],
+            6. + source.tolerance_mm / 8.,
+            1_000_000,
+            10_000,
+        )
+        .is_err()
     );
 }

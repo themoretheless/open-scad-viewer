@@ -1,8 +1,8 @@
 use super::{
     AttachedSectionCaps, BoundedSectionAttachment, BoundedSectionPlane, SectionAttachmentOptions,
-    SectionPlane, Support, attach, close_shell_with_bounded_inferred_section_caps,
-    close_shell_with_bounded_section_caps, close_shell_with_section_caps, discover::close_inferred,
-    invalid,
+    SectionPlane, attach_section_caps_with_expanded_exact_support,
+    close_shell_with_bounded_inferred_section_caps, close_shell_with_bounded_section_caps,
+    close_shell_with_section_caps, discover::close_inferred, invalid,
 };
 use crate::{
     Body, Model,
@@ -115,17 +115,9 @@ pub fn build_expanded_inferred_section_solid(
         options.max_exact_work,
         options.max_verification_cells,
         |current, rings, normal, offset, work, cells| {
-            attach(
-                current,
-                0,
-                rings,
-                normal,
-                offset,
-                work,
-                cells,
-                Support::ExpandedExact,
+            attach_section_caps_with_expanded_exact_support(
+                current, 0, rings, normal, offset, work, cells,
             )
-            .map(|report| report.attachment)
         },
     )?;
     qualify_attachment(source, attachment, options)

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 394,
-  "unallocatedCount": 606,
+  "specifiedCount": 395,
+  "unallocatedCount": 605,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10133,6 +10133,35 @@
       "remainingQualification": [
         "Prefer compact exact cap lattice candidates to reduce support overhang at large coordinate offsets.",
         "A bounded dyadic refinement sequence prefers smaller rim overhang while retaining coarser candidates for exact storage. Each lift attempt consumes the caller’s work budget.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0395",
+      "name": "Сшивка точных расширенных крышек по выбранным кромкам оболочки",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::attach_section_caps_with_expanded_exact_support",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs",
+        "crates/brep-core/src/contact/boundary_agreement.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs",
+        "docs/qualification/nurbs-curvature-field-395-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-395-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Attach exact expanded cap supports to explicitly selected rim cycles, leaving other free openings available.",
+        "Explicit coedge addresses select the free rims to cap. Exact planar supports preserve original edge identity while unrelated free cycles stay open.",
         "WASM and application integration are separate."
       ]
     }

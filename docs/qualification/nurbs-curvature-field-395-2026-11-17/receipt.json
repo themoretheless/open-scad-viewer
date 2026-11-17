@@ -1,0 +1,42 @@
+{
+  "id": "NURBS-0395",
+  "testedBase": "b8452b4637e220ab6fc83c1ad67101407f0943ac",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 114,
+  "scope": [
+    "Attach exact expanded cap supports to explicitly selected rim cycles, leaving other free openings available.",
+    "Explicit coedge addresses select the free rims to cap. Exact planar supports preserve original edge identity while unrelated free cycles stay open."
+  ],
+  "logSha256": "4d512e5a8b737c543b43da81e35fb1c0b9e7fd0a1885dfa7a21cb5a830bf0a92",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "d09b1988b00212d147e6de1cb1b0bb5e96d053d4f978d204c9f63b050b01bdca",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "a8e31b03caeea67e0bf6202278950ab1433e4900ab12959a9a8d681473304278",
+    "crates/brep-core/tests/section_cap_sheets.rs": "0cb51f47ef4cdaea8f5623abe6247a1976fb68925f187e1e35366320b3e5b265",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/profile/planar_cap/attach_sections.rs": "ac10f0d38030894a7f0a269a0ca578e3cfac197c78307efd2415b37c88d7e058",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs": "a4d0e821ecf52cc2696d7194e81d4d72dbed9309803e342fde6379ffb49a1e66",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs": "1ee32de89a9ce420fc4a4d2236cc3b991f477391341e01b6c0996fcd9898ab71",
+    "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs": "b354b108e78cefd988c066490de00a364e317183d0c93db402bcf0931f84d77f",
+    "crates/brep-core/src/contact/boundary_agreement.rs": "d90d598ed52451d4d6ed02c3880dd1a31c2f78bccafcfb6324b8b2d4d9a3e22a",
+    "crates/brep-core/src/profile/planar_cap/attach_sections/solid.rs": "586eb5c1deab2fec1bc807f53f5c138f8fd4184e0bf03858d67bdfda774790cc"
+  }
+}

@@ -49,6 +49,30 @@ pub fn attach_section_caps(
     .map(|report| report.attachment)
 }
 
+/// Sew exact caps onto the selected free cycles, allowing their supports to
+/// extend beyond the rim in UV. Other free cycles can remain open.
+pub fn attach_section_caps_with_expanded_exact_support(
+    source: &Model,
+    shell: usize,
+    rings: &[&[[usize; 2]]],
+    normal: [f64; 3],
+    offset: f64,
+    max_exact_work: u64,
+    max_verification_cells: usize,
+) -> Result<AttachedSectionCaps> {
+    attach(
+        source,
+        shell,
+        rings,
+        normal,
+        offset,
+        max_exact_work,
+        max_verification_cells,
+        Support::ExpandedExact,
+    )
+    .map(|report| report.attachment)
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct SectionAttachmentOptions {
     pub max_exact_work: u64,

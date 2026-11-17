@@ -439,7 +439,8 @@ mod attach_sections;
 pub use attach_sections::{
     AttachedSectionCaps, BoundedSectionAttachment, BoundedSectionPlane, DiscoveredBoundedSectionCaps,
     DiscoveredSectionCaps, SectionAttachmentOptions,
-    SectionPlane, attach_section_caps, attach_section_caps_with_support_tolerance,
+    SectionPlane, attach_section_caps, attach_section_caps_with_expanded_exact_support,
+    attach_section_caps_with_support_tolerance,
     close_shell_with_bounded_section_caps, close_shell_with_section_caps, discover_and_attach_section_caps,
     discover_and_attach_section_caps_with_support_tolerance,
 };
