@@ -405,7 +405,7 @@ fn restrict_periodic_rectangle(
 pub struct StripPartitionReport {
     pub strips: Option<Vec<Surface>>,
     pub work_used: u64,
-    /// Zero-based strip index, absent if rotating the seam failed.
+    /// Zero-based strip index, absent if preparing the periodic support failed.
     pub refused_strip: Option<usize>,
     pub refusal: Option<GaugeMergeRefusal>,
 }
@@ -418,6 +418,35 @@ pub fn partition_exact_periodic_surface_axis(
     source: &Surface,
     axis: Axis,
     seam: f64,
+    cuts: &[f64],
+    max_work: u64,
+) -> Result<StripPartitionReport> {
+    partition_periodic_surface_interval(source, axis, seam, None, cuts, max_work)
+}
+
+/// Partition an absolute interval across full and partial periodic turns.
+/// Cuts must increase strictly inside the interval. All strips share one
+/// exact cyclic extension and one work budget.
+pub fn partition_exact_periodic_surface_over_turns(
+    source: &Surface,
+    axis: Axis,
+    interval: [f64; 2],
+    cuts: &[f64],
+    max_work: u64,
+) -> Result<StripPartitionReport> {
+    let [start, end] = interval;
+    crate::check(
+        start.is_finite() && end.is_finite() && start < end,
+        "Periodic partition needs an increasing finite interval",
+    )?;
+    partition_periodic_surface_interval(source, axis, start, Some(end), cuts, max_work)
+}
+
+fn partition_periodic_surface_interval(
+    source: &Surface,
+    axis: Axis,
+    seam: f64,
+    end: Option<f64>,
     cuts: &[f64],
     max_work: u64,
 ) -> Result<StripPartitionReport> {
@@ -434,7 +463,9 @@ pub fn partition_exact_periodic_surface_axis(
             refusal: rotated.refusal,
         });
     };
-    let [start, end] = row(&surface, axis, 0).domain();
+    let reference = row(&surface, axis, 0);
+    let [start, one_turn_end] = reference.domain();
+    let end = end.unwrap_or(one_turn_end);
     let mut left = start;
     for &cut in cuts {
         crate::check(
@@ -447,6 +478,21 @@ pub fn partition_exact_periodic_surface_axis(
     let mut work = Work {
         used: rotated.work_used,
         limit: max_work,
+    };
+    let surface = if end > one_turn_end {
+        match extend_tensor_support(&surface, axis, reference, end, &mut work) {
+            Ok(surface) => surface,
+            Err(reason) => {
+                return Ok(StripPartitionReport {
+                    strips: None,
+                    work_used: work.used,
+                    refused_strip: None,
+                    refusal: Some(GaugeMergeRefusal::Exact(reason)),
+                });
+            }
+        }
+    } else {
+        surface
     };
     let mut strips = Vec::with_capacity(cuts.len() + 1);
     let mut left = start;

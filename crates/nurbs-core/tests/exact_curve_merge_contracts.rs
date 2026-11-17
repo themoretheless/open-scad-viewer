@@ -2974,3 +2974,66 @@ fn multiturn_periodic_rectangle_withholds_first_strip_if_second_axis_is_oversize
         Some(GaugeMergeRefusal::Exact(Refusal::ResourceLimit))
     );
 }
+
+#[test]
+fn multiturn_surface_partition_keeps_all_cut_coordinates_and_the_other_period() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::partition_exact_periodic_surface_over_turns, surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    let interval = [3.5, 13.25];
+    let cuts = [4., 8.5, 12.];
+    let report =
+        partition_exact_periodic_surface_over_turns(&source, Axis::V, interval, &cuts, 1_000_000)
+            .unwrap();
+    let strips = report.strips.unwrap();
+    for (strip, [lo, hi]) in strips
+        .iter()
+        .zip([[3.5, 4.], [4., 8.5], [8.5, 12.], [12., 13.25]])
+    {
+        assert!(strip.periodic_u && !strip.periodic_v);
+        assert_eq!(
+            [
+                strip.knots_v[1],
+                strip.knots_v[strip.control_points[0].len()]
+            ],
+            [lo, hi]
+        );
+        for t in [lo, (lo + hi) / 2., hi] {
+            assert_eq!(
+                strip.evaluate(2.25, t).unwrap().point,
+                source.evaluate(2.25, t % 4.).unwrap().point
+            );
+        }
+    }
+    let short = partition_exact_periodic_surface_over_turns(
+        &source,
+        Axis::V,
+        interval,
+        &cuts,
+        report.work_used - 1,
+    )
+    .unwrap();
+    assert_eq!(short.refused_strip, Some(3));
+    assert!(short.strips.is_none());
+}
+
+#[test]
+fn multiturn_surface_partition_refuses_out_of_range_and_unordered_cuts() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::partition_exact_periodic_surface_over_turns, surface::Axis,
+    };
+    let source = doubly_periodic_tensor();
+    for cuts in [&[8., 6.][..], &[8., 8.], &[13.25], &[3.], &[f64::NAN]] {
+        assert!(
+            partition_exact_periodic_surface_over_turns(
+                &source,
+                Axis::U,
+                [3.5, 13.25],
+                cuts,
+                1_000_000
+            )
+            .is_err()
+        );
+    }
+}
