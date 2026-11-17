@@ -50,13 +50,13 @@ const SCRATCH_TRI_PTS = new Float64Array(9)
 function triangleVertexIndices(indices: Uint32Array, triangleIndex: number): [number, number, number] | null {
   const offset = triangleIndex * 3
   if (!Number.isInteger(triangleIndex) || triangleIndex < 0 || offset + 2 >= indices.length) return null
-  return [indices[offset], indices[offset + 1], indices[offset + 2]]
+  return [indices[offset]!, indices[offset + 1]!, indices[offset + 2]!]
 }
 
 function worldVertex(vertices: Float32Array, transform: Mat4, vertexIndex: number): Vec3 | null {
   const offset = vertexIndex * 6
   if (!Number.isInteger(vertexIndex) || vertexIndex < 0 || offset + 2 >= vertices.length) return null
-  const point: Vec3 = [vertices[offset], vertices[offset + 1], vertices[offset + 2]]
+  const point: Vec3 = [vertices[offset]!, vertices[offset + 1]!, vertices[offset + 2]!]
   if (!point.every(Number.isFinite)) return null
   const world = transformPoint(transform, point)
   return world.every(Number.isFinite) ? world : null
@@ -71,15 +71,15 @@ function writeWorldVertex(
 ): boolean {
   const offset = vertexIndex * 6
   if (!Number.isInteger(vertexIndex) || vertexIndex < 0 || offset + 2 >= vertices.length) return false
-  const x = vertices[offset]
-  const y = vertices[offset + 1]
-  const z = vertices[offset + 2]
+  const x = vertices[offset]!
+  const y = vertices[offset + 1]!
+  const z = vertices[offset + 2]!
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return false
-  const w = transform[12] * x + transform[13] * y + transform[14] * z + transform[15]
+  const w = transform[12]! * x + transform[13]! * y + transform[14]! * z + transform[15]!
   const iw = Number.isFinite(w) && Math.abs(w) > 1e-12 ? 1 / w : 1
-  const wx = (transform[0] * x + transform[1] * y + transform[2] * z + transform[3]) * iw
-  const wy = (transform[4] * x + transform[5] * y + transform[6] * z + transform[7]) * iw
-  const wz = (transform[8] * x + transform[9] * y + transform[10] * z + transform[11]) * iw
+  const wx = (transform[0]! * x + transform[1]! * y + transform[2]! * z + transform[3]!) * iw
+  const wy = (transform[4]! * x + transform[5]! * y + transform[6]! * z + transform[7]!) * iw
+  const wz = (transform[8]! * x + transform[9]! * y + transform[10]! * z + transform[11]!) * iw
   if (!Number.isFinite(wx) || !Number.isFinite(wy) || !Number.isFinite(wz)) return false
   out[outOffset] = wx
   out[outOffset + 1] = wy
@@ -128,7 +128,7 @@ export function buildFaceTriangleIndex(
 
   let maxId = 0
   for (let triangle = 0; triangle < count; triangle++) {
-    const id = faceIds[triangle]
+    const id = faceIds[triangle]!
     if (id > maxId) maxId = id
   }
   // Manifold face ids are bounded by the halfedge count (3 × triangles); a
@@ -136,14 +136,14 @@ export function buildFaceTriangleIndex(
   if (maxId > count * 4 + 1024) return null
 
   const offsets = new Uint32Array(maxId + 2)
-  for (let triangle = 0; triangle < count; triangle++) offsets[faceIds[triangle] + 1]++
-  for (let id = 0; id <= maxId; id++) offsets[id + 1] += offsets[id]
+  for (let triangle = 0; triangle < count; triangle++) offsets[faceIds[triangle]! + 1]!++
+  for (let id = 0; id <= maxId; id++) offsets[id + 1]! += offsets[id]!
 
   const triangles = new Uint32Array(count)
   const cursor = new Uint32Array(maxId + 1)
   for (let triangle = 0; triangle < count; triangle++) {
-    const id = faceIds[triangle]
-    triangles[offsets[id] + cursor[id]++] = triangle
+    const id = faceIds[triangle]!
+    triangles[offsets[id]! + cursor[id]!++] = triangle
   }
   return { triangleCount: count, offsets, triangles }
 }
@@ -179,8 +179,8 @@ export function buildFaceOverlayGeometry(
     if (faceIndex && faceIndex.triangleCount === triangleCount) {
       // O(face) path: the CSR rows hold the same ascending triangle order the
       // direct scan produces, so the generated geometry is identical.
-      const start = faceId + 1 < faceIndex.offsets.length ? faceIndex.offsets[faceId] : 0
-      const end = faceId + 1 < faceIndex.offsets.length ? faceIndex.offsets[faceId + 1] : 0
+      const start = faceId + 1 < faceIndex.offsets.length ? faceIndex.offsets[faceId]! : 0
+      const end = faceId + 1 < faceIndex.offsets.length ? faceIndex.offsets[faceId + 1]! : 0
       if (end > start && end - start <= maxFaceTriangles) {
         faceTriangles = faceIndex.triangles.subarray(start, end)
       }
@@ -201,12 +201,12 @@ export function buildFaceOverlayGeometry(
   const edges = new Map<number | string, EdgeUse>()
   const canonicalByPos = new Map<string, number>()
   for (let idx = 0; idx < faceTriangles.length; idx++) {
-    const triangle = faceTriangles[idx]
+    const triangle = faceTriangles[idx]!
     const triOffset = triangle * 3
     if (!Number.isInteger(triangle) || triangle < 0 || triOffset + 2 >= indices.length) continue
-    const i0 = indices[triOffset]
-    const i1 = indices[triOffset + 1]
-    const i2 = indices[triOffset + 2]
+    const i0 = indices[triOffset]!
+    const i1 = indices[triOffset + 1]!
+    const i2 = indices[triOffset + 2]!
     if (
       !writeWorldVertex(vertices, transform, i0, SCRATCH_TRI_PTS, 0) ||
       !writeWorldVertex(vertices, transform, i1, SCRATCH_TRI_PTS, 3) ||
@@ -215,7 +215,7 @@ export function buildFaceOverlayGeometry(
       continue
     }
     for (let k = 0; k < 9; k++) {
-      trianglePositions[writtenPositions++] = SCRATCH_TRI_PTS[k]
+      trianglePositions[writtenPositions++] = SCRATCH_TRI_PTS[k]!
     }
 
     recordEdge(edges, vertices, i0, i1, canonicalByPos)
@@ -238,7 +238,7 @@ export function buildFaceOverlayGeometry(
       continue
     }
     for (let k = 0; k < 6; k++) {
-      boundaryPositions[boundaryOffset + k] = SCRATCH_TRI_PTS[k]
+      boundaryPositions[boundaryOffset + k] = SCRATCH_TRI_PTS[k]!
     }
     boundaryOffset += 6
   }
@@ -260,9 +260,9 @@ export function pointOverlayPosition(
   const vertexIndices = triangleVertexIndices(indices, triangleIndex)
   if (!vertexIndices || barycentric.length !== 3 || !barycentric.every(Number.isFinite)) return null
   let corner = 0
-  if (barycentric[1] > barycentric[corner]) corner = 1
-  if (barycentric[2] > barycentric[corner]) corner = 2
-  return worldVertex(vertices, transform, vertexIndices[corner])
+  if (barycentric[1] > barycentric[corner]!) corner = 1
+  if (barycentric[2] > barycentric[corner]!) corner = 2
+  return worldVertex(vertices, transform, vertexIndices[corner]!)
 }
 
 /**
@@ -312,9 +312,9 @@ export function buildSourceOverlayGeometry(
       if (writtenTriangles >= allocationTriangles) break outer
       const triOffset = triangle * 3
       if (!Number.isInteger(triangle) || triangle < 0 || triOffset + 2 >= indices.length) continue
-      const i0 = indices[triOffset]
-      const i1 = indices[triOffset + 1]
-      const i2 = indices[triOffset + 2]
+      const i0 = indices[triOffset]!
+      const i1 = indices[triOffset + 1]!
+      const i2 = indices[triOffset + 2]!
       if (
         !writeWorldVertex(vertices, transform, i0, SCRATCH_TRI_PTS, 0) ||
         !writeWorldVertex(vertices, transform, i1, SCRATCH_TRI_PTS, 3) ||
@@ -325,7 +325,7 @@ export function buildSourceOverlayGeometry(
 
       const target = writtenTriangles * 9
       for (let k = 0; k < 9; k++) {
-        trianglePositions[target + k] = SCRATCH_TRI_PTS[k]
+        trianglePositions[target + k] = SCRATCH_TRI_PTS[k]!
       }
       writtenTriangles++
 
@@ -350,7 +350,7 @@ export function buildSourceOverlayGeometry(
       continue
     }
     for (let k = 0; k < 6; k++) {
-      boundaryPositions[boundaryOffset + k] = SCRATCH_TRI_PTS[k]
+      boundaryPositions[boundaryOffset + k] = SCRATCH_TRI_PTS[k]!
     }
     boundaryOffset += 6
   }

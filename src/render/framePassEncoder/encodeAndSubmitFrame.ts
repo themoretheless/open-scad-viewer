@@ -125,7 +125,7 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
   frame.opaqueDraws.length = frame.edgeDraws.length = frame.transparentDraws.length = 0
   if (!useWboit) frame.transparentSort.begin()
   for (let index = 0; index < meshes.length; index++) {
-    const mesh = meshes[index]
+    const mesh = meshes[index]!
     if (mesh.displayBox) continue
     if (!frame.isMeshVisible(index) || (!mesh.morph && !frame.viewFrustum.intersects(mesh.worldBounds.center, mesh.worldBounds.radius))) continue
     if (isTransparentAlpha(mesh.alpha)) {
@@ -163,7 +163,7 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
       shadowPass.setPipeline(getRenderPipeline('meshShadow'))
       shadowPass.setBindGroup(0, sceneBG)
       for (let index = 0; index < meshes.length; index++) {
-        const mesh = meshes[index]
+        const mesh = meshes[index]!
         if (!frame.isMeshVisible(index) || mesh.displayBox || isTransparentAlpha(mesh.alpha)) continue
         shadowPass.setBindGroup(1, mesh.bg)
         shadowPass.setVertexBuffer(0, mesh.vb)
@@ -237,7 +237,7 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
       frame.opaqueBundle.draw(pass, dev, fmt, getRenderPipeline('mesh'), sceneBG, frame.opaqueDraws, false, textures.shadowBG ?? undefined)
     } else if (customOpaque) {
       for (const group of groupByShadingModel(frame.opaqueDraws)) {
-        const shaderId = resolveMeshShaderId(group[0].shadingModel)
+        const shaderId = resolveMeshShaderId(group[0]!.shadingModel)
         frame.opaqueBundle.draw(pass, dev, fmt, getRenderPipeline(shaderId), sceneBG, group,
           false, extraBindGroupForShader(shaderId))
       }
@@ -258,7 +258,7 @@ export function encodeAndSubmitFrame(frame: EncodeFramePassContext): void {
       ghostMeshes.forEach((mesh, index) => frame.transparentSort.add(meshes.length + index, mesh.worldBounds.center))
       const transparentOrder = frame.transparentSort.sort(eye, frame.tx, frame.ty, frame.tz)
       frame.transparentDraws.length = 0
-      for (const { index } of transparentOrder) frame.transparentDraws.push(index < meshes.length ? meshes[index] : ghostMeshes[index - meshes.length])
+      for (const { index } of transparentOrder) frame.transparentDraws.push(index < meshes.length ? meshes[index]! : ghostMeshes[index - meshes.length]!)
       const customTransparent = frame.transparentDraws.some(mesh => mesh.shadingModel !== 'phong')
       if (!customTransparent && (transitioning || !frame.transparentInstances.draw(pass, dev, pipelines.instanceBGL, getRenderPipeline('mesh', { variant: 'instanced', blend: 'alpha', depth: TRANSPARENT_DEPTH }), sceneBG, frame.transparentDraws, false, textures.shadowBG ?? undefined))) {
         for (const g of frame.transparentDraws) {

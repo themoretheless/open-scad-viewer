@@ -9,7 +9,7 @@ export function prepareVrScene(meshes: readonly Pick<MeshData, 'vertices' | 'ind
     if (visibility[index] === false || (isolated && selectedIndex !== index) || !mesh.indices.length) return []
     const base = mesh.material?.baseColor ?? [1, 1, 1]
     return [{ vertices: mesh.vertices, indices: mesh.indices, transform: mesh.transform,
-      color: mesh.color.map((v, i) => i < 3 ? v * base[i] : v) }]
+      color: mesh.color.map((v, i) => i < 3 ? v * base[i]! : v) }]
   }))
 }
 
@@ -17,7 +17,7 @@ export function prepareVrScene(meshes: readonly Pick<MeshData, 'vertices' | 'ind
 export function prepareVrPolygons(meshes: readonly { positions: ArrayLike<number>; indices: ArrayLike<number>; color?: readonly number[] | undefined }[]): VrMesh[] {
   return prepareVrScene(meshes.map(mesh => {
     const vertices = new Float32Array(mesh.positions.length * 2)
-    for (let i = 0; i < mesh.positions.length; i++) vertices[Math.floor(i / 3) * 6 + i % 3] = mesh.positions[i]
+    for (let i = 0; i < mesh.positions.length; i++) vertices[Math.floor(i / 3) * 6 + i % 3] = mesh.positions[i]!
     return {
       vertices, indices: new Uint32Array(mesh.indices),
       transform: new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]),

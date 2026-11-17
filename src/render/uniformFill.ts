@@ -18,8 +18,8 @@ function multiplyRowMajor(a: Mat4, b: Mat4): Mat4 {
   const out = new Float32Array(16)
   for (let row = 0; row < 4; row++) {
     for (let column = 0; column < 4; column++) {
-      out[row * 4 + column] = a[row * 4] * b[column] + a[row * 4 + 1] * b[4 + column]
-        + a[row * 4 + 2] * b[8 + column] + a[row * 4 + 3] * b[12 + column]
+      out[row * 4 + column] = a[row * 4]! * b[column]! + a[row * 4 + 1]! * b[4 + column]!
+        + a[row * 4 + 2]! * b[8 + column]! + a[row * 4 + 3]! * b[12 + column]!
     }
   }
   return out
@@ -52,7 +52,7 @@ export function shadowLightVP(out: Float32Array, offset: number, bounds: ShadowB
   const proj = orthographic(-extent, extent, -extent, extent, 0, extent * 4)
   const vp = multiplyRowMajor(proj, view)
   for (let row = 0; row < 4; row++) {
-    for (let column = 0; column < 4; column++) out[offset + column * 4 + row] = vp[row * 4 + column]
+    for (let column = 0; column < 4; column++) out[offset + column * 4 + row] = vp[row * 4 + column]!
   }
 }
 
@@ -85,8 +85,8 @@ export function fillSceneUniforms(sd: Float32Array, params: SceneUniformParams) 
   const invOff = SCENE_UNIFORM_LAYOUT.inverseVPFloatOffset
   for (let row = 0; row < 4; row++) {
     for (let column = 0; column < 4; column++) {
-      sd[vpOff + column * 4 + row] = viewProjection[row * 4 + column]
-      sd[invOff + column * 4 + row] = inverseVP[row * 4 + column]
+      sd[vpOff + column * 4 + row] = viewProjection[row * 4 + column]!
+      sd[invOff + column * 4 + row] = inverseVP[row * 4 + column]!
     }
   }
   const eyeOff = SCENE_UNIFORM_LAYOUT.eyeFloatOffset
@@ -113,7 +113,7 @@ export function fillSceneUniforms(sd: Float32Array, params: SceneUniformParams) 
   sd.set(theme.capColor, SCENE_UNIFORM_LAYOUT.capFloatOffset)
   if (params.shadowActive) {
     shadowLightVP(sd, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset, params.bounds,
-      [sd[lightOff], sd[lightOff + 1], sd[lightOff + 2]])
+      [sd[lightOff], sd[lightOff + 1]!, sd[lightOff + 2]!])
   } else {
     sd.fill(0, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset, SCENE_UNIFORM_LAYOUT.lightVPFloatOffset + 16)
   }
@@ -151,7 +151,7 @@ export function fillObjectUniform(
   defaultMaterial: DefaultMaterial,
 ) {
   for (let row = 0; row < 4; row++) {
-    for (let column = 0; column < 4; column++) uniform[column * 4 + row] = transform[row * 4 + column]
+    for (let column = 0; column < 4; column++) uniform[column * 4 + row] = transform[row * 4 + column]!
   }
   // Column-major bytes for inverse-transpose(row-major model).
   uniform.set(inverseTransform, 16)

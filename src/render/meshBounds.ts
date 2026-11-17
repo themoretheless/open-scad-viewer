@@ -39,22 +39,22 @@ export function measureMeshBounds(
     }
   }
 
-  const m0 = transform[0],
-    m1 = transform[1],
-    m2 = transform[2],
-    m3 = transform[3]
-  const m4 = transform[4],
-    m5 = transform[5],
-    m6 = transform[6],
-    m7 = transform[7]
-  const m8 = transform[8],
-    m9 = transform[9],
-    m10 = transform[10],
-    m11 = transform[11]
-  const m12 = transform[12],
-    m13 = transform[13],
-    m14 = transform[14],
-    m15 = transform[15]
+  const m0 = transform[0]!,
+    m1 = transform[1]!,
+    m2 = transform[2]!,
+    m3 = transform[3]!
+  const m4 = transform[4]!,
+    m5 = transform[5]!,
+    m6 = transform[6]!,
+    m7 = transform[7]!
+  const m8 = transform[8]!,
+    m9 = transform[9]!,
+    m10 = transform[10]!,
+    m11 = transform[11]!
+  const m12 = transform[12]!,
+    m13 = transform[13]!,
+    m14 = transform[14]!,
+    m15 = transform[15]!
 
   let lMinX = Infinity,
     lMinY = Infinity,
@@ -69,9 +69,9 @@ export function measureMeshBounds(
     wMaxY = -Infinity,
     wMaxZ = -Infinity
   for (let i = 0; i + 2 < vertices.length; i += 6) {
-    const x = vertices[i],
-      y = vertices[i + 1],
-      z = vertices[i + 2]
+    const x = vertices[i]!,
+      y = vertices[i + 1]!,
+      z = vertices[i + 2]!
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue
     const w = m12 * x + m13 * y + m14 * z + m15
     const iw = Number.isFinite(w) && Math.abs(w) > 1e-12 ? 1 / w : 1
@@ -119,8 +119,8 @@ export function combineBounds(bounds: Bounds[]): Bounds | null {
   const max: Vec3 = [-Infinity, -Infinity, -Infinity]
   for (const bound of bounds) {
     for (let axis = 0; axis < 3; axis++) {
-      min[axis] = Math.min(min[axis], bound.min[axis])
-      max[axis] = Math.max(max[axis], bound.max[axis])
+      min[axis] = Math.min(min[axis]!, bound.min[axis]!)
+      max[axis] = Math.max(max[axis]!, bound.max[axis]!)
     }
   }
   const center: Vec3 = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2]
@@ -141,7 +141,7 @@ export async function sliceVisibleMeshes(
 ): Promise<Array<{ meshIndex: number; slice: SlicerResult }>> {
   const results: Array<{ meshIndex: number; slice: SlicerResult }> = []
   for (let i = 0; i < meshes.length; i++) {
-    const m = meshes[i]
+    const m = meshes[i]!
     if (!m.visible) continue
     const slice = await runGpuMeshSlicer(m.vertices, m.indices, {
       strideFloats: 6,

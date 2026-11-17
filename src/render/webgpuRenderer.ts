@@ -906,7 +906,7 @@ export class WebGPURenderer {
 
   fitSelection(): boolean {
     if (this.selected === null || !this.meshes[this.selected]) return false
-    this.fitBounds(this.meshes[this.selected].worldBounds)
+    this.fitBounds(this.meshes[this.selected]!.worldBounds)
     return true
   }
 
@@ -1031,7 +1031,7 @@ export class WebGPURenderer {
     let changed = false
     const visibleBounds: Bounds[] = []
     for (let index = 0; index < this.meshes.length; index++) {
-      const mesh = this.meshes[index]
+      const mesh = this.meshes[index]!
       const nextVisible = visibility[index]
       if (typeof nextVisible === 'boolean' && mesh.visible !== nextVisible) {
         mesh.visible = nextVisible
@@ -1089,7 +1089,7 @@ export class WebGPURenderer {
 
   setPreselection(index: number | null) {
     this.cancelPendingHover()
-    if (index !== null && (!this.meshes[index] || !this.meshes[index].visible)) index = null
+    if (index !== null && (!this.meshes[index] || !this.meshes[index]!.visible)) index = null
     if (this.hovered === index && this.hoveredHit === null) return
     this.hovered = index
     this.hoveredHit = null
@@ -1220,7 +1220,7 @@ export class WebGPURenderer {
   }
 
   private setSelection(index: number | null, hit: PickHit | null = null) {
-    if (index !== null && (!this.meshes[index] || !this.meshes[index].visible)) index = null
+    if (index !== null && (!this.meshes[index] || !this.meshes[index]!.visible)) index = null
     if (this.selected === index && this.selectedHit === hit && (!this.isolated || index !== null)) return
     const previousSelected = this.selected
     const wasIsolated = this.isolated
@@ -1513,7 +1513,7 @@ export class WebGPURenderer {
         return this.csgRenderer
       },
       getWboitRenderer: () => this.wboitRenderer,
-      isMeshVisible: index => this.isMeshVisible(index) && !this.meshes[index].displayBox,
+      isMeshVisible: index => this.isMeshVisible(index) && !this.meshes[index]!.displayBox,
       boundingBoxSlot: this.display.boxes.slot,
       usesObjectSelectionStyle: index => this.usesObjectSelectionStyle(index),
       usesObjectHoverStyle: index => this.usesObjectHoverStyle(index),
@@ -1623,11 +1623,11 @@ export class WebGPURenderer {
     if (!changed.length) return
     const touched = new Set(changed)
     // Triangle-level hits index the previous level's triangles.
-    if (this.selectedHit && this.selected !== null && touched.has(this.meshes[this.selected])) {
+    if (this.selectedHit && this.selected !== null && touched.has(this.meshes[this.selected]!)) {
       this.selectedHit = null
       this.clearSelectionOverlayBuffers()
     }
-    if (this.hoveredHit && this.hovered !== null && touched.has(this.meshes[this.hovered])) this.hoveredHit = null
+    if (this.hoveredHit && this.hovered !== null && touched.has(this.meshes[this.hovered]!)) this.hoveredHit = null
     this.resetDepthCycle()
     this.clearDrawCaches()
     this.rebuildEdgeBufferCache()
@@ -1798,7 +1798,7 @@ export class WebGPURenderer {
   private emitMeasurementChange() {
     const points = this.measurementPoints.map(point => [...point] as Vec3)
     const distance = points.length === 2
-      ? Math.hypot(points[1][0] - points[0][0], points[1][1] - points[0][1], points[1][2] - points[0][2])
+      ? Math.hypot(points[1]![0]! - points[0]![0]!, points[1]![1]! - points[0]![1]!, points[1]![2]! - points[0]![2]!)
       : null
     try {
       this.onMeasurementChange?.(points.length ? { points, distance } : null, this.measureActive)

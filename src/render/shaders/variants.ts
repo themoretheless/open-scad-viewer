@@ -28,7 +28,7 @@ export function supportsImmediateAddressSpace() {
  * doubles as the marker for the shader family.
  */
 export function instancedObjectShader(source: string, output: 'V' | 'EdgeV') {
-  const replacements = [
+  const replacements: Array<[string, string]> = [
     ['var<uniform> ob: Obj;', 'var<storage, read> objects: array<Obj>;'],
     [`struct ${output} {`, `struct ${output} { @location(2) @interpolate(flat) instance: u32,`],
     ['@vertex fn vs(', '@vertex fn vs(@builtin(instance_index) instance: u32, '],

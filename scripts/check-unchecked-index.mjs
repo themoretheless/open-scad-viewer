@@ -17,6 +17,7 @@ export const CLEAN_PATHS = Object.freeze([
   'src/forma/',
   'src/main.ts',
   'src/parser/',
+  'src/render/',
 ])
 
 /** Path prefixes checked through `tsconfig.mcp.json`, which the root project does not include. */

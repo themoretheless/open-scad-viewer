@@ -178,7 +178,7 @@ export function updateMeshLods(
 export function worldScale(transform: Float32Array): number {
   let scale = 0
   for (let column = 0; column < 3; column++) {
-    scale = Math.max(scale, Math.hypot(transform[column], transform[4 + column], transform[8 + column]))
+    scale = Math.max(scale, Math.hypot(transform[column]!, transform[4 + column]!, transform[8 + column]!))
   }
   return scale > 0 && Number.isFinite(scale) ? scale : 1
 }

@@ -284,7 +284,7 @@ export function referenceSolveTrussPcg(
       let rNormSq = 0
       for (let dof = 0; dof < numDofs; dof++) {
         if (csr.freeMask[dof]) {
-          u[dof] += alpha * p[dof]!
+          u[dof]! += alpha * p[dof]!
           const rNext = r[dof]! - alpha * Ap[dof]!
           r[dof] = rNext
           rNormSq += rNext * rNext

@@ -19,11 +19,11 @@ export class TransparentBsp {
       const offset=index*stride
       const v0=new Array<number>(width),v1=new Array<number>(width),v2=new Array<number>(width)
       for(let k=0;k<width;k++){
-        v0[k]=vertices[offset+k]
-        v1[k]=vertices[offset+width+k]
-        v2[k]=vertices[offset+width*2+k]
+        v0[k]=vertices[offset+k]!
+        v1[k]=vertices[offset+width+k]!
+        v2[k]=vertices[offset+width*2+k]!
       }
-      output.push({owner:this.owners[owners[index]],triangle:[v0,v1,v2]})
+      output.push({owner:this.owners[owners[index]!]!,triangle:[v0,v1,v2]})
     })
     return output
   }
@@ -34,7 +34,7 @@ export class TransparentBsp {
     let offset=0
     this.visit(towardEye,index=>{
       const src=index*stride
-      for(let k=0;k<stride;k++)target[offset+k]=vertices[src+k]
+      for(let k=0;k<stride;k++)target[offset+k]=vertices[src+k]!
       offset+=stride
     })
   }
@@ -48,10 +48,10 @@ export class TransparentBsp {
       const item=stack.pop()!
       if(item<0){accept(-item-1);continue}
       const offset=(item-1)*4
-      const positive=planes[offset]*ex+planes[offset+1]*ey+planes[offset+2]*ez>=0
+      const positive=planes[offset]!*ex+planes[offset+1]!*ey+planes[offset+2]!*ez>=0
       const near=links[offset+(positive?0:1)],far=links[offset+(positive?1:0)]
       if(near)stack.push(near)
-      const start=links[offset+2],count=links[offset+3]
+      const start=links[offset+2]!,count=links[offset+3]!
       for(let i=count-1;i>=0;i--)stack.push(-(start+i+1))
       if(far)stack.push(far)
     }

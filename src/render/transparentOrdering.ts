@@ -65,7 +65,7 @@ export class TransparentSortBuffer {
     // movements then give the native adaptive sort an almost sorted sequence.
     if (this.membershipChanged || this.ordered.length !== this.count) {
       this.ordered.length = this.count
-      for (let i = 0; i < this.count; i++) this.ordered[i] = this.pool[i]
+      for (let i = 0; i < this.count; i++) this.ordered[i] = this.pool[i]!
     }
     let dx = tx - eye[0], dy = ty - eye[1], dz = tz - eye[2]
     const length = Math.hypot(dx, dy, dz)

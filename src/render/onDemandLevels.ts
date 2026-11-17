@@ -90,7 +90,7 @@ export class OnDemandLevelSource {
     const base = mesh.lod?.base.provenance[0]
     const done = this.provider.level(key, entry.json, index, abort.signal).then(payload => {
       if (abort.signal.aborted) throw abortError()
-      const previous = levels[index]
+      const previous = levels[index]!
       levels[index] = {
         ...payload,
         provenance: [

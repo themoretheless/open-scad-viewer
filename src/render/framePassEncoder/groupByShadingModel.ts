@@ -115,7 +115,7 @@ export function advanceSceneGeometryAnimation(
     else {
       active = true
       ghost.meshes.forEach((mesh, i) => {
-        mesh.alpha = ghost.alphas[i] * (1 - t * t * (3 - 2 * t))
+        mesh.alpha = ghost.alphas[i]! * (1 - t * t * (3 - 2 * t))
         ctx.styleScratch[0] = mesh.alpha
         ctx.styleScratch[1] = 0
         ctx.styleScratch[2] = 0
@@ -136,7 +136,7 @@ export function advanceSceneGeometryAnimation(
       const uniform = ctx.objectUniformScratch
       for (let row = 0; row < 4; row++) {
         for (let column = 0; column < 4; column++) {
-          uniform[column * 4 + row] = morph.currentMatrix[row * 4 + column]
+          uniform[column * 4 + row] = morph.currentMatrix[row * 4 + column]!
         }
       }
       invert(morph.currentMatrix, uniform.subarray(16, 32))

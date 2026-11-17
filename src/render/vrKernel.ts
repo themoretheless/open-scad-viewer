@@ -43,7 +43,7 @@ export function prepareKernelScene(meshes: readonly KernelMesh[]): PreparedVrMes
     for (const mesh of meshes) {
       if (mesh.transform.length !== 16 || mesh.color.length !== 4) throw new Error('Invalid VR geometry')
       uint(mesh.vertices.length); uint(mesh.indices.length)
-      for (let i = 0; i < 16; i++) float(mesh.transform[i])
+      for (let i = 0; i < 16; i++) float(mesh.transform[i]!)
       mesh.color.forEach(float)
       mesh.vertices.forEach(float)
       mesh.indices.forEach(uint)

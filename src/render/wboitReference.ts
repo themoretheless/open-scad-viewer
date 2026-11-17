@@ -70,7 +70,7 @@ export function compositeWboit(pixel: WboitPixel, background: Rgb): Rgb {
   const total = Math.max(pixel.accum[3], 1e-5)
   const alpha = 1 - pixel.reveal
   return [0, 1, 2].map(
-    channel => (pixel.accum[channel] / total) * alpha + background[channel] * (1 - alpha),
+    channel => (pixel.accum[channel]! / total) * alpha + background[channel]! * (1 - alpha),
   ) as unknown as Rgb
 }
 
@@ -79,7 +79,7 @@ export function sortedOverReference(fragments: readonly WboitFragment[], backgro
   const ordered = [...fragments].sort((left, right) => right.depth - left.depth)
   let out: [number, number, number] = [...background]
   for (const { color, alpha } of ordered) {
-    out = [0, 1, 2].map(channel => color[channel] * alpha + out[channel] * (1 - alpha)) as [number, number, number]
+    out = [0, 1, 2].map(channel => color[channel]! * alpha + out[channel]! * (1 - alpha)) as [number, number, number]
   }
   return out
 }

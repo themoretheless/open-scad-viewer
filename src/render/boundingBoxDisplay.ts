@@ -67,14 +67,14 @@ export function rayBoxHit(
   let axis = 0
   let sign = 1
   for (let i = 0; i < 3; i++) {
-    const o = ray.origin[i]
-    const d = ray.direction[i]
+    const o = ray.origin[i]!
+    const d = ray.direction[i]!
     if (Math.abs(d) < 1e-15) {
-      if (o < bounds.min[i] || o > bounds.max[i]) return null
+      if (o < bounds.min[i]! || o > bounds.max[i]!) return null
       continue
     }
-    let t0 = (bounds.min[i] - o) / d
-    let t1 = (bounds.max[i] - o) / d
+    let t0 = (bounds.min[i]! - o) / d
+    let t1 = (bounds.max[i]! - o) / d
     let entrySign = -1
     if (t0 > t1) {
       ;[t0, t1] = [t1, t0]

@@ -86,9 +86,9 @@ export function sameTypedArray(left: Float32Array | Uint32Array, right: Float32A
 export function extractPositions(vertices: Float32Array): Float32Array {
   const positions = new Float32Array(vertices.length / 2)
   for (let source = 0, target = 0; source < vertices.length; source += 6, target += 3) {
-    positions[target] = vertices[source]
-    positions[target + 1] = vertices[source + 1]
-    positions[target + 2] = vertices[source + 2]
+    positions[target] = vertices[source]!
+    positions[target + 1] = vertices[source + 1]!
+    positions[target + 2] = vertices[source + 2]!
   }
   return positions
 }
@@ -100,9 +100,9 @@ export function blendMorphPositions(morph: { from: Float32Array; target: Float32
   const target = morph.target
   const out = new Float32Array(morph.from.length)
   for (let index = 0, vertex = 0; index < out.length; index += 3, vertex += 6) {
-    out[index] = morph.from[index] + (target[vertex] - morph.from[index]) * eased
-    out[index + 1] = morph.from[index + 1] + (target[vertex + 1] - morph.from[index + 1]) * eased
-    out[index + 2] = morph.from[index + 2] + (target[vertex + 2] - morph.from[index + 2]) * eased
+    out[index] = morph.from[index]! + (target[vertex]! - morph.from[index]!) * eased
+    out[index + 1] = morph.from[index + 1]! + (target[vertex + 1]! - morph.from[index + 1]!) * eased
+    out[index + 2] = morph.from[index + 2]! + (target[vertex + 2]! - morph.from[index + 2]!) * eased
   }
   return out
 }

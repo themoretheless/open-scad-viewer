@@ -153,7 +153,7 @@ const EMPTY_U32 = new Uint32Array(0)
     // Compute readback exposes raw bytes through Float32Array views; these
     // shader outputs are u32, so preserve their bits rather than convert values.
     const asU32 = (view: Float32Array) => new Uint32Array(view.buffer, view.byteOffset, view.byteLength / 4)
-    const count = Math.min(results[0] ? asU32(results[0])[0] : 0, maxEdges)
+    const count = Math.min(results[0] ? asU32(results[0])[0]! : 0, maxEdges)
     const rawIndices = results[1] ? asU32(results[1]) : undefined
     if (rawIndices) {
       return { indices: rawIndices.slice(0, count * 2), edgeCount: count }

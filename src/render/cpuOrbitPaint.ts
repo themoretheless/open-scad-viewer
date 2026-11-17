@@ -6,8 +6,8 @@ export function paintCpuOrbit(ctx:CanvasRenderingContext2D,triangles:readonly Cp
  ctx.lineWidth=size/cssWidth;ctx.lineJoin='round'
  for(const triangle of triangles){
   ctx.globalAlpha=triangle.opacity;ctx.fillStyle=ctx.strokeStyle=triangle.color
-  ctx.beginPath();ctx.moveTo(triangle.vertices[0][0],triangle.vertices[0][1])
-  for(let i=1;i<triangle.vertices.length;i++)ctx.lineTo(triangle.vertices[i][0],triangle.vertices[i][1])
+  ctx.beginPath();ctx.moveTo(triangle.vertices[0]![0]!,triangle.vertices[0]![1]!)
+  for(let i=1;i<triangle.vertices.length;i++)ctx.lineTo(triangle.vertices[i]![0]!,triangle.vertices[i]![1]!)
   ctx.closePath();ctx.fill();if(triangle.stroke)ctx.stroke()
  }
  ctx.globalAlpha=1

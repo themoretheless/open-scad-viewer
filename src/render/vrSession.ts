@@ -118,7 +118,13 @@ export class VrPresentation {
       if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error('VR shader link failed')
       gl.useProgram(program)
       const location = gl.getAttribLocation(program, 'position')
-      const uniforms = Object.fromEntries(['projection', 'view', 'anchor', 'color'].map(name => [name, gl!.getUniformLocation(program!, name)]))
+      const uniformLocation = (name: string) => gl!.getUniformLocation(program!, name)
+      const uniforms = {
+        projection: uniformLocation('projection'),
+        view: uniformLocation('view'),
+        anchor: uniformLocation('anchor'),
+        color: uniformLocation('color'),
+      }
       const draws = meshes.map(mesh => {
         const upload = (target: number, data: Float32Array | Uint32Array) => {
           const buffer = gl!.createBuffer()

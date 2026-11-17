@@ -98,7 +98,7 @@ export function computeOrbitCameraFrame(o: OrbitProjectionOptions) {
   if (o.bounds) {
     const { min, max } = o.bounds
     for (let i = 0; i < 3; i++) {
-      if (!(Number.isFinite(min[i]) && Number.isFinite(max[i]) && min[i] <= max[i])) invalid()
+      if (!(Number.isFinite(min[i]) && Number.isFinite(max[i]) && min[i]! <= max[i]!)) invalid()
     }
     const cx = min[0] * 0.5 + max[0] * 0.5
     const cy = min[1] * 0.5 + max[1] * 0.5
@@ -144,16 +144,16 @@ export function computeOrbitCameraFrame(o: OrbitProjectionOptions) {
   const viewProjection = new Float32Array(16)
   for (let r = 0; r < 4; r++) {
     const r4 = r * 4
-    const p0 = SCRATCH_PROJECTION[r4]
-    const p1 = SCRATCH_PROJECTION[r4 + 1]
-    const p2 = SCRATCH_PROJECTION[r4 + 2]
-    const p3 = SCRATCH_PROJECTION[r4 + 3]
+    const p0 = SCRATCH_PROJECTION[r4]!
+    const p1 = SCRATCH_PROJECTION[r4 + 1]!
+    const p2 = SCRATCH_PROJECTION[r4 + 2]!
+    const p3 = SCRATCH_PROJECTION[r4 + 3]!
     for (let c = 0; c < 4; c++) {
       const sum =
-        p0 * SCRATCH_VIEW[c] +
-        p1 * SCRATCH_VIEW[4 + c] +
-        p2 * SCRATCH_VIEW[8 + c] +
-        p3 * SCRATCH_VIEW[12 + c]
+        p0 * SCRATCH_VIEW[c]! +
+        p1 * SCRATCH_VIEW[4 + c]! +
+        p2 * SCRATCH_VIEW[8 + c]! +
+        p3 * SCRATCH_VIEW[12 + c]!
       const v = fround(sum)
       if (!Number.isFinite(v)) invalid()
       viewProjection[r4 + c] = v

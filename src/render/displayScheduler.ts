@@ -122,11 +122,11 @@ export function planDisplayCaps(
       admittedBytes,
       budgetBytes: budget.budgetBytes,
       exactAvailable: levels.length > 1,
-      previewBytes: levelBytes(levels[representationCap('preview', levels.length)]),
-      exactBytes: levelBytes(levels[levels.length - 1]),
+      previewBytes: levelBytes(levels[representationCap('preview', levels.length)]!),
+      exactBytes: levelBytes(levels[levels.length - 1]!),
     })
     const maxLevel = representationCap(representation, levels.length)
-    admittedBytes += levelBytes(levels[maxLevel])
+    admittedBytes += levelBytes(levels[maxLevel]!)
     plan.set(mesh, { representation, maxLevel, projectedPixels })
   }
   return plan
@@ -290,7 +290,7 @@ export class ProgressiveLevelStore {
 
   private request(dev: GPUDevice, mesh: GMesh, level: number) {
     const key = cacheKey(geometryKey(mesh), level)
-    const source = mesh.lod!.levels[level]
+    const source = mesh.lod!.levels[level]!
     const queued = this.pending.get(key)
     if (queued && queued.source === source) return
     const ticket = { generation: ++this.generation, source }

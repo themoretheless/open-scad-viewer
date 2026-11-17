@@ -272,8 +272,8 @@ export function referenceBrushSubdivision(
   cage: SubdivisionCage,
   brush: GeometryBrush
 ): SubdivisionCage {
-  const [cx, cy, cz] = brush.center
-  const [dx, dy, dz] = brush.displacement
+  const [cx = Number.NaN, cy = Number.NaN, cz = Number.NaN] = brush.center
+  const [dx = Number.NaN, dy = Number.NaN, dz = Number.NaN] = brush.displacement
   const r = brush.radius
   if (!(r > 0) || !Number.isFinite(r) || ![cx, cy, cz, dx, dy, dz].every(Number.isFinite)) {
     throw new Error('Invalid subdivision brush')

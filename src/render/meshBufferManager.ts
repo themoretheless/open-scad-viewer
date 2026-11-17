@@ -165,7 +165,7 @@ export function stageSceneMeshes(
           material: m.material,
           shadingModel: m.material?.shadingModel ?? ctx.defaultShadingModel,
         })
-        const added = next[next.length - 1]
+        const added = next[next.length - 1]!
         added.lod = createMeshLodState(added, m.lods)
         if (keptUniform) { claimedUniforms.set(keptUniform.ub, keptUniform); retainedGeometryBuffers.add(keptUniform.ub) }
         if (added.assetId) {
@@ -310,11 +310,11 @@ export function reconcileMeshStyles(
   if (!dev) return
   const ease = geometryFadeProgress * geometryFadeProgress * (3 - 2 * geometryFadeProgress)
   for (let index = 0; index < meshes.length; index++) {
-    const mesh = meshes[index]
+    const mesh = meshes[index]!
     const selected = usesObjectSelectionStyle(index) ? 1 : 0
     const hovered = usesObjectHoverStyle(index) && !selected ? 1 : 0
     const materialAlpha = mesh.material ? mesh.material.alpha ?? 1 : defaultMaterialAlpha
-    const alpha = effectiveDisplayAlpha(mesh.color[3] * materialAlpha, displayMode) * ease
+    const alpha = effectiveDisplayAlpha(mesh.color[3]! * materialAlpha, displayMode) * ease
     const edgeOpacity = (selected || hovered ? 1 : displayMode === 'edges' ? 0.7 : 0) * ease
     mesh.alpha = alpha
     if (mesh.styleAlpha === alpha && mesh.styleSelected === selected

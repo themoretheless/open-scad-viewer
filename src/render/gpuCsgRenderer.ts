@@ -295,7 +295,7 @@ export class GpuCsgRenderer {
     const sceneBG = this.ensureSceneUniforms(dev, pipelines, opts)
 
     for (let termIdx = 0; termIdx < tree.terms.length; termIdx++) {
-      const term = tree.terms[termIdx]
+      const term = tree.terms[termIdx]!
       const isFirstTerm = termIdx === 0
       const baseMesh = this.geometryCache.getPrimitiveMesh(dev, term.positive)
       const baseBG = this.createObjectBindGroup(dev, pipelines, term.positive, false)

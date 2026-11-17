@@ -25,7 +25,7 @@ export function sourceForTriangle(mesh: GMesh, triangleIndex: number): MeshProve
   let high = mesh.provenance.length - 1
   while (low <= high) {
     const middle = (low + high) >>> 1
-    const run = mesh.provenance[middle]
+    const run = mesh.provenance[middle]!
     if (triangleIndex < run.triangleStart) high = middle - 1
     else if (triangleIndex >= run.triangleEnd) low = middle + 1
     else return run
@@ -69,9 +69,9 @@ export function isSectionClipped(
   sectionOffset: number,
 ): boolean {
   return sectionEnabled && (
-    point[0] * sectionNormal[0]
-    + point[1] * sectionNormal[1]
-    + point[2] * sectionNormal[2]
+    point[0]! * sectionNormal[0]
+    + point[1]! * sectionNormal[1]
+    + point[2]! * sectionNormal[2]
   ) < sectionOffset
 }
 
@@ -139,13 +139,13 @@ export function findHitCandidatesForRay(
     let child = frontier.length - 1
     while (child > 0) {
       const parent = (child - 1) >>> 1
-      if (!cursorBefore(frontier[child], frontier[parent])) break
-      ;[frontier[parent], frontier[child]] = [frontier[child], frontier[parent]]
+      if (!cursorBefore(frontier[child]!, frontier[parent]!)) break
+      ;[frontier[parent], frontier[child]] = [frontier[child]!, frontier[parent]!]
       child = parent
     }
   }
   const takeNearest = () => {
-    const nearest = frontier[0]
+    const nearest = frontier[0]!
     const last = frontier.pop()!
     if (frontier.length) {
       frontier[0] = last
@@ -155,9 +155,9 @@ export function findHitCandidatesForRay(
         const right = left + 1
         if (left >= frontier.length) break
         let child = left
-        if (right < frontier.length && cursorBefore(frontier[right], frontier[left])) child = right
-        if (!cursorBefore(frontier[child], frontier[parent])) break
-        ;[frontier[parent], frontier[child]] = [frontier[child], frontier[parent]]
+        if (right < frontier.length && cursorBefore(frontier[right]!, frontier[left]!)) child = right
+        if (!cursorBefore(frontier[child]!, frontier[parent]!)) break
+        ;[frontier[parent], frontier[child]] = [frontier[child]!, frontier[parent]!]
         parent = child
       }
     }
@@ -171,7 +171,7 @@ export function findHitCandidatesForRay(
     if (!candidate) return false
     const index = candidate.id
     if (!ctx.isMeshVisible(index)) return true
-    const mesh = ctx.meshes[index]
+    const mesh = ctx.meshes[index]!
     if (isBoxed(mesh)) {
       const box = rayBoxHit(ray, mesh.worldBounds)
       if (box) {
@@ -200,7 +200,7 @@ export function findHitCandidatesForRay(
     while (
       frontier.length
       && boundsCursor < boundsCandidates.length
-      && boundsCandidates[boundsCursor].distance <= frontier[0].hit.t
+      && boundsCandidates[boundsCursor]!.distance <= frontier[0]!.hit.t
     ) addNextBoundsCandidate()
     if (!frontier.length) break
 

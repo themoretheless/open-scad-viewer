@@ -78,7 +78,7 @@ export function diffSceneEntities(previous: readonly DeltaMesh[], next: readonly
       return
     }
     persisted.add(previousIndex)
-    const old = previous[previousIndex]
+    const old = previous[previousIndex]!
     if (!sameGeometry(old, mesh)) geometryChanged.push(index)
     else if (!sameTypedArray(old.transform, mesh.transform)) transformChanged.push(index)
     else stable.set(previousIndex, index)

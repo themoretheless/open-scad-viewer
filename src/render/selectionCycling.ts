@@ -33,13 +33,13 @@ export function normalizeDepthCandidates<T>(
   if (!limit) return []
   const result: Array<{ candidate: DepthCandidate<T>; order: number }> = []
   for (let order = 0; order < candidates.length; order += 1) {
-    const candidate = candidates[order]
+    const candidate = candidates[order]!
     if (!candidate.key.length || !Number.isFinite(candidate.distance) || candidate.distance < 0) continue
 
     const duplicate = result.findIndex(item => item.candidate.key === candidate.key)
     if (duplicate >= 0) {
-      if (candidate.distance < result[duplicate].candidate.distance) {
-        result[duplicate] = { candidate, order: result[duplicate].order }
+      if (candidate.distance < result[duplicate]!.candidate.distance) {
+        result[duplicate] = { candidate, order: result[duplicate]!.order }
       }
     } else {
       result.push({ candidate, order })

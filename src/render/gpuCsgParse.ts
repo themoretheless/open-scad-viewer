@@ -31,11 +31,11 @@ export function flattenCsgNode(node: GpuCsgNode, parentTransform: Float32Array =
   if (node.op === 'difference') {
     if (node.children.length === 0) return []
     // First child is positive base
-    const baseTerms = flattenCsgNode(node.children[0], currentTransform)
+    const baseTerms = flattenCsgNode(node.children[0]!, currentTransform)
     // Subsequent children are cutters
     const cutterPrimitives: GpuCsgPrimitive[] = []
     for (let i = 1; i < node.children.length; i++) {
-      const cutterTerms = flattenCsgNode(node.children[i], currentTransform)
+      const cutterTerms = flattenCsgNode(node.children[i]!, currentTransform)
       for (const ct of cutterTerms) {
         cutterPrimitives.push(ct.positive)
       }
@@ -50,11 +50,11 @@ export function flattenCsgNode(node: GpuCsgNode, parentTransform: Float32Array =
 
   if (node.op === 'intersection') {
     if (node.children.length === 0) return []
-    if (node.children.length === 1) return flattenCsgNode(node.children[0], currentTransform)
+    if (node.children.length === 1) return flattenCsgNode(node.children[0]!, currentTransform)
 
     // In SCS / Goldfeather, intersection A ∩ B is rendered as A clipped to B (and B clipped to A)
-    const termsA = flattenCsgNode(node.children[0], currentTransform)
-    const termsB = flattenCsgNode(node.children[1], currentTransform)
+    const termsA = flattenCsgNode(node.children[0]!, currentTransform)
+    const termsB = flattenCsgNode(node.children[1]!, currentTransform)
 
     const result: GpuCsgTerm[] = []
     for (const a of termsA) {

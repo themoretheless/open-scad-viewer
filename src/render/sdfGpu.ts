@@ -102,7 +102,7 @@ export async function runSdfSweep(payload: SdfGpuPayload): Promise<Float32Array>
     entryPoint: 'main',
     dispatches: [dispatch],
   })
-  return values
+  return values!
 }
 
 /**

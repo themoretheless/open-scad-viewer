@@ -57,7 +57,7 @@ export class MeshDrawBundle {
     let changed = !this.bundle || this.pipeline !== pipeline || this.scene !== scene
       || this.extraGroup !== (extraGroup ?? null) || this.meshes.length !== meshes.length
     for (let i = 0; !changed && i < meshes.length; i++) {
-      const mesh = meshes[i]
+      const mesh = meshes[i]!
       changed = this.meshes[i] !== mesh || this.indices[i] !== (edges ? mesh.edgeIB : mesh.ib)
         || this.morphSlots[i] !== mesh.morphSlot
         || this.counts[i] !== (edges ? mesh.edgeIC : mesh.ic)
@@ -68,7 +68,7 @@ export class MeshDrawBundle {
       const bundle = encoder.finish()
       this.meshes.length = this.indices.length = this.morphSlots.length = this.counts.length = meshes.length
       for (let i = 0; i < meshes.length; i++) {
-        const mesh = meshes[i]
+        const mesh = meshes[i]!
         this.meshes[i] = mesh
         this.indices[i] = edges ? mesh.edgeIB : mesh.ib
         this.morphSlots[i] = mesh.morphSlot

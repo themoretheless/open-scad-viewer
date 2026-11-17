@@ -63,7 +63,7 @@ export function appendColoredPositions(
   color: readonly number[],
 ): void {
   for (let offset = 0; offset + 2 < positions.length; offset += 3) {
-    target.push(positions[offset], positions[offset + 1], positions[offset + 2], ...color)
+    target.push(positions[offset]!, positions[offset + 1]!, positions[offset + 2]!, ...color)
   }
 }
 
@@ -132,12 +132,12 @@ export function rebuildMeasurementBufferData(
   const colors = [[1, 0.55, 0.08, 1], [0.1, 0.82, 1, 1]]
   const line = (a: Vec3, b: Vec3, color: number[]) => data.push(...a, ...color, ...b, ...color)
   measurementPoints.forEach((point, index) => {
-    const color = colors[index] ?? colors[0]
+    const color = colors[index] ?? colors[0]!
     line([point[0] - markerSize, point[1], point[2]], [point[0] + markerSize, point[1], point[2]], color)
     line([point[0], point[1] - markerSize, point[2]], [point[0], point[1] + markerSize, point[2]], color)
     line([point[0], point[1], point[2] - markerSize], [point[0], point[1], point[2] + markerSize], color)
   })
-  if (measurementPoints.length === 2) line(measurementPoints[0], measurementPoints[1], [1, 0.83, 0.26, 1])
+  if (measurementPoints.length === 2) line(measurementPoints[0]!, measurementPoints[1]!, [1, 0.83, 0.26, 1])
   const values = new Float32Array(data)
   const buffer = dev.createBuffer({ size: values.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST })
   dev.queue.writeBuffer(buffer, 0, values)
@@ -220,7 +220,7 @@ export function rebuildSourceHighlightOverlaySlots(options: {
   let remainingTriangles = MAX_SOURCE_OVERLAY_TRIANGLES
   for (let index = 0; index < options.meshes.length && remainingTriangles > 0; index++) {
     if (!options.isMeshVisible(index)) continue
-    const mesh = options.meshes[index]
+    const mesh = options.meshes[index]!
     const geometry = buildSourceOverlayGeometry(
       mesh.vertices,
       mesh.indices,

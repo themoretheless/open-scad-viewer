@@ -32,7 +32,7 @@ export function cameraStatesEqual(a: CameraState, b: CameraState, epsilon = 1e-8
   return Math.abs(a.yaw - b.yaw) <= epsilon
     && Math.abs(a.pitch - b.pitch) <= epsilon
     && Math.abs(a.distance - b.distance) <= epsilon * scale
-    && a.target.every((value, axis) => Math.abs(value - b.target[axis]) <= epsilon * scale)
+    && a.target.every((value, axis) => Math.abs(value - b.target[axis]!) <= epsilon * scale)
 }
 
 /** Bounded, deduplicated snapshots captured before committed camera actions. */

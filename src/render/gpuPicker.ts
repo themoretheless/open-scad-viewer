@@ -240,7 +240,7 @@ export class GpuPicker {
     this.scratchObjU32[16] = index + 1
 
     dev.queue.writeBuffer(this.objUBs[index], 0, this.scratchObjData)
-    return this.objBGs[index]
+    return this.objBGs[index]!
   }
 
   /**
@@ -302,7 +302,7 @@ export class GpuPicker {
     pass.setBindGroup(0, this.sceneBG!)
 
     for (let index = 0; index < meshes.length; index++) {
-      const mesh = meshes[index]
+      const mesh = meshes[index]!
       if (!mesh.visible || mesh.ic === 0) continue
       drawnMeshes++
       const objBG = this.ensureObjectBindGroup(dev, index, mesh)
@@ -329,7 +329,7 @@ export class GpuPicker {
       await this.readbackBuffer!.mapAsync(GPUMapMode.READ)
       if (this.deviceLost || !this.readbackBuffer) return null
       const array = new Uint32Array(this.readbackBuffer.getMappedRange())
-      const rawId = array[0]
+      const rawId = array[0]!
       this.readbackBuffer.unmap()
       return rawId > 0 ? rawId - 1 : null
     } catch {

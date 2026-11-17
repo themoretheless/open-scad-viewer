@@ -41,7 +41,7 @@ const disposed = new WeakSet<SceneAabbIndex>()
 let activeItemCount = 0
 
 function center(item: BvhItem, axis: number): number {
-  return item.min[axis] * 0.5 + item.max[axis] * 0.5
+  return item.min[axis]! * 0.5 + item.max[axis]! * 0.5
 }
 
 function buildNode(items: BvhItem[], leafSize: number, counter: { count: number }): BvhNode {
@@ -51,16 +51,16 @@ function buildNode(items: BvhItem[], leafSize: number, counter: { count: number 
   let cmin0 = Infinity, cmin1 = Infinity, cmin2 = Infinity
   let cmax0 = -Infinity, cmax1 = -Infinity, cmax2 = -Infinity
   for (let i = 0; i < items.length; i++) {
-    const it = items[i]
-    if (it.min[0] < min0) min0 = it.min[0]
-    if (it.min[1] < min1) min1 = it.min[1]
-    if (it.min[2] < min2) min2 = it.min[2]
-    if (it.max[0] > max0) max0 = it.max[0]
-    if (it.max[1] > max1) max1 = it.max[1]
-    if (it.max[2] > max2) max2 = it.max[2]
-    const c0 = it.min[0] * 0.5 + it.max[0] * 0.5
-    const c1 = it.min[1] * 0.5 + it.max[1] * 0.5
-    const c2 = it.min[2] * 0.5 + it.max[2] * 0.5
+    const it = items[i]!
+    if (it.min[0]! < min0) min0 = it.min[0]!
+    if (it.min[1]! < min1) min1 = it.min[1]!
+    if (it.min[2]! < min2) min2 = it.min[2]!
+    if (it.max[0]! > max0) max0 = it.max[0]!
+    if (it.max[1]! > max1) max1 = it.max[1]!
+    if (it.max[2]! > max2) max2 = it.max[2]!
+    const c0 = it.min[0]! * 0.5 + it.max[0]! * 0.5
+    const c1 = it.min[1]! * 0.5 + it.max[1]! * 0.5
+    const c2 = it.min[2]! * 0.5 + it.max[2]! * 0.5
     if (c0 < cmin0) cmin0 = c0
     if (c1 < cmin1) cmin1 = c1
     if (c2 < cmin2) cmin2 = c2
@@ -111,14 +111,14 @@ function entryDistance(
   let near = 0
   let far = maximum
   for (let a = 0; a < 3; a++) {
-    const dir = direction[a]
-    const orig = origin[a]
+    const dir = direction[a]!
+    const orig = origin[a]!
     if (dir === 0) {
-      if (orig < min[a] || orig > max[a]) return null
+      if (orig < min[a]! || orig > max[a]!) return null
       continue
     }
-    let start = parameter(min[a], orig, dir)
-    let end = parameter(max[a], orig, dir)
+    let start = parameter(min[a]!, orig, dir)
+    let end = parameter(max[a]!, orig, dir)
     if (start > end) {
       const tmp = start
       start = end
@@ -135,7 +135,7 @@ function entryDistance(
 export function buildSceneAabbIndex(source: readonly SceneAabbItem[], requestedLeafSize = 4): SceneAabbIndex {
   const admitted: SceneAabbItem[] = []
   for (let i = 0; i < source.length; i++) {
-    const item = source[i]
+    const item = source[i]!
     if (
       Number.isSafeInteger(item.id) &&
       item.bounds.min.every(Number.isFinite) &&
@@ -151,7 +151,7 @@ export function buildSceneAabbIndex(source: readonly SceneAabbItem[], requestedL
   const leafSize = Number.isFinite(requestedLeafSize) ? Math.max(1, Math.min(32, Math.trunc(requestedLeafSize))) : 4
   const validItems: BvhItem[] = []
   for (let i = 0; i < admitted.length; i++) {
-    const item = admitted[i]
+    const item = admitted[i]!
     const min = item.bounds.min
     const max = item.bounds.max
     if (min[0] <= max[0] && min[1] <= max[1] && min[2] <= max[2]) {
@@ -203,7 +203,7 @@ export function querySceneAabbIndex(index: SceneAabbIndex, ray: Ray3, maximumDis
     if (node.items !== null) {
       const items = node.items
       for (let i = 0; i < items.length; i++) {
-        const item = items[i]
+        const item = items[i]!
         const distance = entryDistance(ray.origin, ray.direction, item.min, item.max, maximum)
         if (distance !== null) {
           result.push({ id: item.id, distance })

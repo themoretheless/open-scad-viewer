@@ -61,7 +61,7 @@ export const MATERIAL_PRESETS: readonly MaterialDef[] = [
   { id: 'glass', name: 'Glass', baseColor: [0.75, 0.88, 0.95], metallic: 0, roughness: 0.08, emissive: [0, 0, 0], shadingModel: 'pbr', alpha: 0.35 },
   { id: 'anodized-aluminum', name: 'Anodized Aluminum', baseColor: [0.25, 0.45, 0.85], metallic: 1, roughness: 0.45, emissive: [0, 0, 0], shadingModel: 'pbr' },
 ]
-export const DEFAULT_MATERIAL: MaterialDef = MATERIAL_PRESETS[0]
+export const DEFAULT_MATERIAL: MaterialDef = MATERIAL_PRESETS[0]!
 
 /** Looks up a material preset by id; undefined when unknown. */
 export function getMaterialPreset(id: string): MaterialDef | undefined {
@@ -87,7 +87,7 @@ export const MATCAP_PRESETS: readonly MatcapPreset[] = [
   { id: 'chrome', name: 'Chrome', url: 'matcaps/chrome.png' },
   { id: 'pearl', name: 'Pearl', url: 'matcaps/pearl.png' },
 ]
-export const DEFAULT_MATCAP: MatcapPreset = MATCAP_PRESETS[0]
+export const DEFAULT_MATCAP: MatcapPreset = MATCAP_PRESETS[0]!
 
 /** Looks up a matcap preset by id; undefined when unknown. */
 export function getMatcapPreset(id: string): MatcapPreset | undefined {
@@ -113,7 +113,7 @@ export const ENV_PRESETS: readonly EnvPreset[] = [
   { id: 'outdoor-sky', name: 'Outdoor Sky', url: 'env/outdoor-sky.png' },
   { id: 'workshop', name: 'Workshop', url: 'env/workshop.png' },
 ]
-export const DEFAULT_ENV: EnvPreset = ENV_PRESETS[0]
+export const DEFAULT_ENV: EnvPreset = ENV_PRESETS[0]!
 
 /** Looks up an environment-map preset by id; undefined when unknown. */
 export function getEnvPreset(id: string): EnvPreset | undefined {
@@ -150,7 +150,7 @@ export const THEME_PRESETS: readonly RenderTheme[] = [
   { id: 'dark-contrast', name: 'Dark Contrast', selectionColor: selectionStateRgb('selected', 'dark'), hoverColor: selectionStateRgb('hover', 'dark'), edgeColor: [0, 0, 0.01], xrayColor: [1, 0.5, 0.1], gridColor: [0.55, 0.55, 0.6], capColor: [0.8, 0.82, 0.88], backgroundColor: [0.05, 0.05, 0.07] },
   { id: 'light', name: 'Light', selectionColor: selectionStateRgb('selected', 'light'), hoverColor: selectionStateRgb('hover', 'light'), edgeColor: [0.1, 0.1, 0.12], xrayColor: [0.85, 0.3, 0.05], gridColor: [0.6, 0.6, 0.62], capColor: [0.58, 0.6, 0.66], backgroundColor: [0.92, 0.92, 0.94] },
 ]
-export const DEFAULT_THEME: RenderTheme = THEME_PRESETS[0]
+export const DEFAULT_THEME: RenderTheme = THEME_PRESETS[0]!
 
 /** Looks up a render theme preset by id; undefined when unknown. */
 export function getThemePreset(id: string): RenderTheme | undefined {
