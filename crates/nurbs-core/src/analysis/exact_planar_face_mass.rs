@@ -159,3 +159,92 @@ fn dot(row: &[Q; 3], values: [&Q; 3], work: &mut Work) -> Exact<Q> {
         Ok(work.op(&sum, &product, |a, b| a + b)?)
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPrincipalPlaneMoments {
+    /// The signed principal pair in ascending order is
+    /// (midpoint ± sqrt(half_gap_squared)) * sqrt(area_scale_squared).
+    pub midpoint: Q,
+    pub half_gap_squared: Q,
+    pub area_scale_squared: Q,
+}
+
+impl ExactPrincipalPlaneMoments {
+    /// True when the two physical in-plane moments are identical.
+    pub fn is_isotropic(&self) -> bool {
+        self.half_gap_squared.is_zero()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ExactPrincipalPlaneOutcome {
+    Moments(ExactPrincipalPlaneMoments),
+    ZeroSignedArea,
+    MassRefused(ExactWorldPlaneMassOutcome),
+    SpectrumRefused(Refusal),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPrincipalPlaneReport {
+    pub outcome: ExactPrincipalPlaneOutcome,
+    pub work_used: u64,
+}
+
+/// Derive the exact signed principal moments in the supporting plane.
+/// One world tensor eigenvalue belongs to the plane normal and is zero.
+/// The remaining pair has rational invariants and is retained in algebraic
+/// form so close eigenvalues and distinct isotropy are resolved exactly.
+pub fn exact_projected_face_principal_moments(
+    face: &ProjectedTrimmedFace,
+    max_work: u64,
+) -> Result<ExactPrincipalPlaneReport> {
+    let report = exact_projected_face_mass(face, max_work)?;
+    let mut work = Work {
+        used: report.work_used,
+        limit: max_work,
+    };
+    let outcome = match report.outcome {
+        ExactWorldPlaneMassOutcome::Mass(mass) => match mass.centroidal_second_moments {
+            Some(tensor) => principal_pair(&tensor, mass.area_scale_squared, &mut work)
+                .map(ExactPrincipalPlaneOutcome::Moments)
+                .unwrap_or_else(ExactPrincipalPlaneOutcome::SpectrumRefused),
+            None => ExactPrincipalPlaneOutcome::ZeroSignedArea,
+        },
+        refusal => ExactPrincipalPlaneOutcome::MassRefused(refusal),
+    };
+    Ok(ExactPrincipalPlaneReport {
+        outcome,
+        work_used: work.used,
+    })
+}
+
+fn principal_pair(
+    tensor: &[[Q; 3]; 3],
+    area_scale_squared: Q,
+    work: &mut Work,
+) -> Exact<ExactPrincipalPlaneMoments> {
+    use num_traits::Signed;
+    let two = Q::from_integer(2.into());
+    let trace = work.op(&tensor[0][0], &tensor[1][1], |a, b| a + b)?;
+    let trace = work.op(&trace, &tensor[2][2], |a, b| a + b)?;
+    let midpoint = work.op(&trace, &two, |a, b| a / b)?;
+    // The second elementary symmetric polynomial is the product of the
+    // two in-plane eigenvalues because the normal eigenvalue is zero.
+    let mut pair_product = Q::zero();
+    for (i, j) in [(0, 1), (0, 2), (1, 2)] {
+        let diagonal = work.op(&tensor[i][i], &tensor[j][j], |a, b| a * b)?;
+        let off_diagonal = work.op(&tensor[i][j], &tensor[i][j], |a, b| a * b)?;
+        let minor = work.op(&diagonal, &off_diagonal, |a, b| a - b)?;
+        pair_product = work.op(&pair_product, &minor, |a, b| a + b)?;
+    }
+    let midpoint_squared = work.op(&midpoint, &midpoint, |a, b| a * b)?;
+    let half_gap_squared = work.op(&midpoint_squared, &pair_product, |a, b| a - b)?;
+    if half_gap_squared.is_negative() {
+        return Err(Refusal::UnprovedIdentity);
+    }
+    Ok(ExactPrincipalPlaneMoments {
+        midpoint,
+        half_gap_squared,
+        area_scale_squared,
+    })
+}
