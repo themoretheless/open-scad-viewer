@@ -5931,3 +5931,81 @@ fn periodic_trim_max_projection_preserves_complete_bounds_under_cell_limit() {
     assert_eq!(coarse.cells, 8);
     assert!(!coarse.within_tolerance);
 }
+
+#[test]
+fn periodic_trim_max_projection_direction_encloses_optimal_unit_normal() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&hole, &outer], 1_000_000)
+            .unwrap();
+    let optimal = result
+        .bound_input_patch_max_projection_direction(1, 1e-8, 100)
+        .unwrap();
+    let r = 13.0_f64.sqrt();
+    for ([lo, hi], expected) in
+        optimal
+            .normal_bounds
+            .unwrap()
+            .into_iter()
+            .zip([-3. / r, -2. / r, 0.])
+    {
+        assert!(lo <= expected && expected <= hi);
+        assert!(hi - lo < 1e-8);
+    }
+    let previous = result
+        .bound_input_patch_max_projected_area(1, 1e-8, 100)
+        .unwrap();
+    assert_eq!(optimal.maximum.maximum_bounds, previous.maximum_bounds);
+}
+
+#[test]
+fn periodic_trim_max_projection_direction_requires_nonzero_area_vector() {
+    use nurbs_core::editing::exact_periodic_surface::build_exact_periodic_surface_trim_input_edges;
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let mut result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let short = result
+        .bound_input_patch_max_projection_direction(0, 1e-8, 5)
+        .unwrap();
+    assert!(short.normal_bounds.is_none() && short.maximum.maximum_bounds.is_none());
+    for edge in &mut result.geometry.patches.as_mut().unwrap()[0].loops[0] {
+        for point in &mut edge.curve.control_points {
+            point[2] = 0.25;
+        }
+    }
+    let zero = result
+        .bound_input_patch_max_projection_direction(0, 1e-8, 100)
+        .unwrap();
+    assert!(zero.normal_bounds.is_none());
+    assert_eq!(zero.maximum.maximum_bounds.unwrap()[0], 0.);
+}

@@ -6277,33 +6277,98 @@ impl PeriodicTrimInputEdges {
         tolerance: f64,
         max_cells: usize,
     ) -> Result<PeriodicTrimMaximumProjection> {
-        use crate::distance_bounds::{Interval, box_distance};
+        let area = self.maximum_projection_components(outer_contour, tolerance, max_cells)?;
+        Ok(maximum_trim_projection(&area, tolerance)?.0)
+    }
 
+    fn maximum_projection_components(
+        &self,
+        outer_contour: usize,
+        tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimProjectedAreaBounds> {
         crate::check(
             tolerance.is_finite() && tolerance > 0.,
             "Maximum projected area needs positive finite tolerance",
         )?;
         let component_tolerance = (tolerance * 0.5).max(f64::from_bits(1));
-        let area =
-            self.bound_input_patch_projected_area(outer_contour, component_tolerance, max_cells)?;
-        let maximum_bounds = area
-            .bounds
-            .map(|[[x0, x1], [y0, y1], [z0, z1]]| -> Result<[f64; 2]> {
-                let components = [
-                    Interval::new(x0, x1)?,
-                    Interval::new(y0, y1)?,
-                    Interval::new(z0, z1)?,
-                ];
-                let (lo, hi) = box_distance(&components, &[Interval::point(0.); 3])?;
-                Ok([lo, hi])
-            })
-            .transpose()?;
-        Ok(PeriodicTrimMaximumProjection {
+        self.bound_input_patch_projected_area(outer_contour, component_tolerance, max_cells)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PeriodicTrimProjectionDirection {
+    pub maximum: PeriodicTrimMaximumProjection,
+    /// Component bounds of the maximizing unit normal. Present when the
+    /// oriented area vector is proved to be nonzero.
+    pub normal_bounds: Option<[[f64; 2]; 3]>,
+}
+
+impl PeriodicTrimInputEdges {
+    /// Enclose the direction that maximizes the signed projected area.
+    /// The tolerance controls the area enclosure; inspect the direction
+    /// intervals separately for angular precision.
+    pub fn bound_input_patch_max_projection_direction(
+        &self,
+        outer_contour: usize,
+        tolerance: f64,
+        max_cells: usize,
+    ) -> Result<PeriodicTrimProjectionDirection> {
+        use crate::distance_bounds::Interval;
+
+        let area = self.maximum_projection_components(outer_contour, tolerance, max_cells)?;
+        let (maximum, components) = maximum_trim_projection(&area, tolerance)?;
+        let mut normal_bounds = None;
+        if let (Some([lo, hi]), Some(components)) = (maximum.maximum_bounds, components)
+            && lo > 0.
+        {
+            let magnitude = Interval::new(lo, hi)?;
+            let mut normal = [[0.; 2]; 3];
+            for (out, component) in normal.iter_mut().zip(components) {
+                let normalized = component.div(magnitude)?.intersect(-1., 1.)?;
+                *out = [normalized.lo, normalized.hi];
+            }
+            normal_bounds = Some(normal);
+        }
+        Ok(PeriodicTrimProjectionDirection {
+            maximum,
+            normal_bounds,
+        })
+    }
+}
+
+fn maximum_trim_projection(
+    area: &PeriodicTrimProjectedAreaBounds,
+    tolerance: f64,
+) -> Result<(
+    PeriodicTrimMaximumProjection,
+    Option<[crate::distance_bounds::Interval; 3]>,
+)> {
+    use crate::distance_bounds::{Interval, box_distance};
+
+    let components = area
+        .bounds
+        .map(|[[x0, x1], [y0, y1], [z0, z1]]| -> Result<_> {
+            Ok([
+                Interval::new(x0, x1)?,
+                Interval::new(y0, y1)?,
+                Interval::new(z0, z1)?,
+            ])
+        })
+        .transpose()?;
+    let maximum_bounds = components
+        .map(|components| {
+            box_distance(&components, &[Interval::point(0.); 3]).map(|(lo, hi)| [lo, hi])
+        })
+        .transpose()?;
+    Ok((
+        PeriodicTrimMaximumProjection {
             within_tolerance: maximum_bounds
                 .is_some_and(|[lo, hi]| (hi - lo).next_up() <= tolerance),
             maximum_bounds,
             cells: area.cells,
             minimum_cells: area.minimum_cells,
-        })
-    }
+        },
+        components,
+    ))
 }

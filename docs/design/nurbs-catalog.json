@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 602,
-  "unallocatedCount": 398,
+  "specifiedCount": 603,
+  "unallocatedCount": 397,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15052,6 +15052,25 @@
       "remainingQualification": [
         "Enclose maximum signed projected area over all unit normals via the oriented area vector.",
         "Verify an analytic nonplanar optimum with a hole, a matching optimal normal, and complete bounds under a cell limit.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0603",
+      "name": "Гарантированные границы оптимального направления проекции периодической грани",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_periodic_surface::PeriodicTrimInputEdges::bound_input_patch_max_projection_direction",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-603-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-603-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the maximizing unit normal when the projected area vector is separated from zero.",
+        "Verify direction bounds for a nonplanar face with a hole and withhold a direction when the area vector may be zero.",
         "WASM and application integration are separate."
       ]
     }
