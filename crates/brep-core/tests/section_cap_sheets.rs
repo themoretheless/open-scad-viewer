@@ -3015,3 +3015,60 @@ fn swept_ball_finds_exact_tangency_above_a_trimmed_cap() {
     assert_eq!(&report.center_mm[..2], &report.boundary_mm[..2]);
     assert_eq!(report.boundary_mm[2], Q::from_integer(2.into()));
 }
+
+#[test]
+fn swept_path_finds_the_first_minimizing_span_and_reuses_faces() {
+    use brep_core::analysis::{
+        exact_polyhedral_swept_ball_clearance, exact_polyhedral_swept_path_clearance,
+    };
+    use num_rational::BigRational as Q;
+    use std::cmp::Ordering;
+    let solid = shifted_oblique_solid(0.);
+    let p = |x, y, z| [x, y, z].map(|n: i64| Q::from_integer(n.into()));
+    let path = [p(-2, 0, 5), p(2, 0, 5), p(2, 0, 4), p(2, 0, 4)];
+    let radius = Q::from_integer(1.into());
+    let report = exact_polyhedral_swept_path_clearance(&solid, &path, &radius, 1_000_000).unwrap();
+    assert_eq!(report.span, 1);
+    assert_eq!(report.nearest.clearance, Ordering::Greater);
+    let mut work = 0;
+    for (i, pair) in path.windows(2).enumerate() {
+        let single = exact_polyhedral_swept_ball_clearance(
+            &solid,
+            &[pair[0].clone(), pair[1].clone()],
+            &radius,
+            1_000_000,
+        )
+        .unwrap();
+        assert!(single.distance_squared_mm2 >= report.nearest.distance_squared_mm2);
+        if i == report.span {
+            assert_eq!(single.center_mm, report.nearest.center_mm);
+            assert_eq!(single.boundary_mm, report.nearest.boundary_mm);
+        }
+        work += single.exact_work;
+    }
+    assert!(report.exact_work < work);
+    assert!(
+        exact_polyhedral_swept_path_clearance(&solid, &path, &radius, report.exact_work).is_ok()
+    );
+    assert!(
+        exact_polyhedral_swept_path_clearance(&solid, &path, &radius, report.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn swept_path_reports_interior_contact_and_validates_the_entire_input() {
+    use brep_core::analysis::exact_polyhedral_swept_path_clearance;
+    use num_rational::BigRational as Q;
+    use std::cmp::Ordering;
+    let solid = shifted_oblique_solid(0.);
+    let p = |x, y, z| [x, y, z].map(|n: i64| Q::from_integer(n.into()));
+    let radius = Q::from_integer(1.into());
+    let mut path = [p(1, 0, 5), p(1, 0, 4), p(1, 0, -1), p(1, 0, 5)];
+    let report = exact_polyhedral_swept_path_clearance(&solid, &path, &radius, 1_000_000).unwrap();
+    assert_eq!(report.span, 1);
+    assert_eq!(report.nearest.clearance, Ordering::Less);
+    assert_eq!(report.nearest.center_mm, report.nearest.boundary_mm);
+    path[3][0] = Q::from_integer(num_bigint::BigInt::from(1) << 8192);
+    assert!(exact_polyhedral_swept_path_clearance(&solid, &path, &radius, 1_000_000).is_err());
+}
