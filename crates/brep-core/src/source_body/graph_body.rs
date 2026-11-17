@@ -7,6 +7,7 @@ use nurbs_core::ss_intersection::{
 #[cfg(test)]
 pub(crate) mod tests;
 mod topology;
+pub mod nested;
 pub struct Limits {
     /// Shared structural/coefficient work, with each core graph query <=4096.
     pub operations: usize,
