@@ -881,4 +881,7 @@ mod section_loops;
 pub use section_loops::*;
 
 mod spatial_clip;
-pub use spatial_clip::{ExactPolyhedralSegmentClip, exact_polyhedral_segment_clip};
+pub use spatial_clip::{
+    ExactPolyhedralPointLocation, ExactPolyhedralSegmentClip, PolyhedralPointLocation,
+    exact_polyhedral_point_location, exact_polyhedral_segment_clip,
+};

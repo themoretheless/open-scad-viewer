@@ -2727,3 +2727,49 @@ fn spatial_clip_still_refuses_contact_with_a_retained_coplanar_wall() {
     };
     assert!(exact_polyhedral_segment_clip(solid, &[p(-1), p(3)], 1_000_000).is_err());
 }
+
+#[test]
+fn exact_spatial_classification_distinguishes_material_hole_and_boundary() {
+    use brep_core::{
+        analysis::{PolyhedralPointLocation::*, exact_polyhedral_point_location},
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64| Q::new(n.into(), 2.into());
+    for (p, expected) in [
+        ([1, 1, 1], Material),
+        ([3, 3, 2], Exterior),
+        ([10, 3, 2], Exterior),
+    ] {
+        let p = p.map(q);
+        let report = exact_polyhedral_point_location(solid, &p, 1_000_000).unwrap();
+        assert_eq!(report.location, expected);
+        assert!(exact_polyhedral_point_location(solid, &p, report.exact_work).is_ok());
+        assert!(exact_polyhedral_point_location(solid, &p, report.exact_work - 1).is_err());
+    }
+    for p in [[2, 3, 2], [0, 0, 0], [8, 8, 2]] {
+        let report = exact_polyhedral_point_location(solid, &p.map(q), 1_000_000).unwrap();
+        assert!(matches!(report.location, Boundary { face } if face < solid.model().faces.len()));
+    }
+}
+
+#[test]
+fn exact_spatial_classification_admits_rational_coordinates_on_an_oblique_solid() {
+    use brep_core::analysis::{PolyhedralPointLocation::Material, exact_polyhedral_point_location};
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let point = [
+        Q::new(3.into(), 2.into()),
+        Q::from_integer(0.into()),
+        Q::new(7.into(), 6.into()),
+    ];
+    assert_eq!(
+        exact_polyhedral_point_location(&solid, &point, 1_000_000)
+            .unwrap()
+            .location,
+        Material
+    );
+}

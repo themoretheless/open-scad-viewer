@@ -1,0 +1,38 @@
+{
+  "id": "NURBS-0425",
+  "testedBase": "5de920590b4b347d6d47eca7aa794c0dc090d374",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 174,
+  "scope": [
+    "Classify rational world coordinates as material, exterior or exact boundary on qualified polyhedral solids.",
+    "An exact retained-face search handles boundaries before ray parity. Degenerate directions are retried under one bounded work budget, and rational inputs are preserved."
+  ],
+  "logSha256": "42567383a40c531f450527f090065e5ae8f5afe27b0de70eec5ad3020de17c6e",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "41e6ec0093f101fe6b6314e887d4d7c981b1b7fb91d263cc60ed3dcb0144e981",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "749b0f37f5712bdcd16544e5346b0605d20edb1ae1642eacc57cdc195a23a983",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "4e92eacab377b3cdc07b28b0a42a86555c76bb7d68984384f3f7b180a53ad925"
+  }
+}

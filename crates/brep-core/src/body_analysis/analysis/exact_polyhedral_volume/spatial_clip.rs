@@ -41,57 +41,11 @@ pub fn exact_polyhedral_segment_clip(
     }
     let direction: [Q; 3] = std::array::from_fn(|i| &end[i] - &start[i]);
     let mut remaining = max_exact_work;
-    let mut faces = BTreeMap::<usize, FaceBoundary>::new();
-    visit_polyhedral_boundary(solid, &mut remaining, |face, origin, a, b, _, remaining| {
-        spend(remaining, 24)?;
-        let boundary = faces.entry(face).or_insert_with(|| FaceBoundary {
-            origin: origin.clone(),
-            normal: None,
-            segments: Vec::new(),
-        });
-        if boundary.normal.is_none() {
-            let u: [Q; 3] = std::array::from_fn(|i| &a[i] - &origin[i]);
-            let v: [Q; 3] = std::array::from_fn(|i| &b[i] - &origin[i]);
-            let normal = [(1, 2), (2, 0), (0, 1)].map(|(j, k)| &u[j] * &v[k] - &u[k] * &v[j]);
-            if normal.iter().any(|value| !value.is_zero()) {
-                boundary.normal = Some(normal);
-            }
-        }
-        boundary.segments.push([a.clone(), b.clone()]);
-        Ok(())
-    })?;
-
-    let mut crossings = Vec::new();
-    for boundary in faces.into_values() {
-        spend(&mut remaining, 24)?;
-        let normal = boundary
-            .normal
-            .ok_or_else(|| refuse("Clip face has no planar boundary normal"))?;
-        let denominator = dot(&normal, &direction);
-        let delta = std::array::from_fn(|i| &boundary.origin[i] - &start[i]);
-        let numerator = dot(&normal, &delta);
-        let omitted = normal.iter().position(|value| !value.is_zero()).unwrap();
-        let axes = [(omitted + 1) % 3, (omitted + 2) % 3];
-        if denominator.is_zero() {
-            if numerator.is_zero()
-                && coplanar_line_hits_boundary(
-                    &boundary.segments,
-                    start,
-                    &direction,
-                    axes,
-                    &mut remaining,
-                )?
-            {
-                return Err(refuse("Clip line contacts a retained coplanar face"));
-            }
-            continue;
-        }
-        let t = numerator / denominator;
-        let point = std::array::from_fn(|i| &start[i] + &t * &direction[i]);
-        if inside_face(&boundary.segments, &point, axes, &mut remaining)? {
-            crossings.push(t);
-        }
-    }
+    let faces = prepare_faces(solid, &mut remaining)?;
+    let mut crossings =
+        line_crossings(&faces, start, &direction, &mut remaining)?.ok_or_else(|| {
+            refuse("Clip line contacts a retained face boundary or lies along a face")
+        })?;
     let count = crossings.len();
     if count > 0 {
         spend(
@@ -119,6 +73,158 @@ pub fn exact_polyhedral_segment_clip(
     })
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PolyhedralPointLocation {
+    Exterior,
+    Material,
+    Boundary { face: usize },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralPointLocation {
+    pub location: PolyhedralPointLocation,
+    pub exact_work: u64,
+}
+
+/// Classify a rational world-space point in qualified polyhedral material.
+/// An exact boundary hit returns one incident source face. Interior parity
+/// uses a ray with no edge, vertex, or retained coplanar contacts.
+pub fn exact_polyhedral_point_location(
+    solid: &QualifiedClosedSolid,
+    point_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPointLocation> {
+    if point_mm
+        .iter()
+        .any(|q| q.numer().bits().max(q.denom().bits()) > 8192)
+    {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Point coordinates exceed the exact bit limit",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    let faces = prepare_faces(solid, &mut remaining)?;
+    for (&face, boundary) in &faces {
+        spend(&mut remaining, 12)?;
+        let normal = face_normal(boundary)?;
+        let delta = std::array::from_fn(|i| &point_mm[i] - &boundary.origin[i]);
+        if dot(normal, &delta).is_zero()
+            && point_in_face(
+                &boundary.segments,
+                point_mm,
+                plane_axes(normal),
+                &mut remaining,
+            )? != FaceLocation::Outside
+        {
+            return Ok(ExactPolyhedralPointLocation {
+                location: PolyhedralPointLocation::Boundary { face },
+                exact_work: max_exact_work - remaining,
+            });
+        }
+    }
+    // A nonzero plane condition evaluated on (1, k, k²) has at most
+    // two roots. Retry degenerate lines while charging the common budget.
+    for k in 1_u64.. {
+        spend(&mut remaining, 8)?;
+        let direction = [1, k, k * k].map(|value| Q::from_integer(value.into()));
+        if let Some(crossings) = line_crossings(&faces, point_mm, &direction, &mut remaining)? {
+            spend(&mut remaining, crossings.len() as u64)?;
+            if crossings.len() % 2 != 0 {
+                return Err(refuse("Point ray requires paired full-line crossings"));
+            }
+            let inside = crossings.iter().filter(|t| t.is_positive()).count() % 2 == 1;
+            let location = if inside {
+                PolyhedralPointLocation::Material
+            } else {
+                PolyhedralPointLocation::Exterior
+            };
+            return Ok(ExactPolyhedralPointLocation {
+                location,
+                exact_work: max_exact_work - remaining,
+            });
+        }
+    }
+    unreachable!("bounded ray search cannot exhaust the integer range")
+}
+
+fn prepare_faces(
+    solid: &QualifiedClosedSolid,
+    remaining: &mut u64,
+) -> Result<BTreeMap<usize, FaceBoundary>> {
+    let mut faces = BTreeMap::<usize, FaceBoundary>::new();
+    visit_polyhedral_boundary(solid, remaining, |face, origin, a, b, _, remaining| {
+        spend(remaining, 24)?;
+        let boundary = faces.entry(face).or_insert_with(|| FaceBoundary {
+            origin: origin.clone(),
+            normal: None,
+            segments: Vec::new(),
+        });
+        if boundary.normal.is_none() {
+            let u: [Q; 3] = std::array::from_fn(|i| &a[i] - &origin[i]);
+            let v: [Q; 3] = std::array::from_fn(|i| &b[i] - &origin[i]);
+            let normal = [(1, 2), (2, 0), (0, 1)].map(|(j, k)| &u[j] * &v[k] - &u[k] * &v[j]);
+            if normal.iter().any(|value| !value.is_zero()) {
+                boundary.normal = Some(normal);
+            }
+        }
+        boundary.segments.push([a.clone(), b.clone()]);
+        Ok(())
+    })?;
+
+    Ok(faces)
+}
+
+fn face_normal(face: &FaceBoundary) -> Result<&[Q; 3]> {
+    face.normal
+        .as_ref()
+        .ok_or_else(|| refuse("Clip face has no planar boundary normal"))
+}
+
+fn plane_axes(normal: &[Q; 3]) -> [usize; 2] {
+    let omitted = normal.iter().position(|value| !value.is_zero()).unwrap();
+    [(omitted + 1) % 3, (omitted + 2) % 3]
+}
+
+fn line_crossings(
+    faces: &BTreeMap<usize, FaceBoundary>,
+    start: &[Q; 3],
+    direction: &[Q; 3],
+    remaining: &mut u64,
+) -> Result<Option<Vec<Q>>> {
+    let mut crossings = Vec::new();
+    for boundary in faces.values() {
+        spend(remaining, 24)?;
+        let normal = face_normal(boundary)?;
+        let denominator = dot(normal, direction);
+        let delta = std::array::from_fn(|i| &boundary.origin[i] - &start[i]);
+        let numerator = dot(normal, &delta);
+        let axes = plane_axes(normal);
+        if denominator.is_zero() {
+            if numerator.is_zero()
+                && coplanar_line_hits_boundary(
+                    &boundary.segments,
+                    start,
+                    direction,
+                    axes,
+                    remaining,
+                )?
+            {
+                return Ok(None);
+            }
+            continue;
+        }
+        let t = numerator / denominator;
+        let point = std::array::from_fn(|i| &start[i] + &t * &direction[i]);
+        match point_in_face(&boundary.segments, &point, axes, remaining)? {
+            FaceLocation::Inside => crossings.push(t),
+            FaceLocation::Boundary => return Ok(None),
+            FaceLocation::Outside => {}
+        }
+    }
+    Ok(Some(crossings))
+}
+
 fn coplanar_line_hits_boundary(
     segments: &[[[Q; 3]; 2]],
     start: &[Q; 3],
@@ -144,12 +250,19 @@ fn dot(a: &[Q; 3], b: &[Q; 3]) -> Q {
     a.iter().zip(b).map(|(a, b)| a * b).sum()
 }
 
-fn inside_face(
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum FaceLocation {
+    Inside,
+    Outside,
+    Boundary,
+}
+
+fn point_in_face(
     segments: &[[[Q; 3]; 2]],
     point: &[Q; 3],
     [u, v]: [usize; 2],
     remaining: &mut u64,
-) -> Result<bool> {
+) -> Result<FaceLocation> {
     let [x, y] = [&point[u], &point[v]];
     let mut inside = false;
     for [a, b] in segments {
@@ -161,11 +274,15 @@ fn inside_face(
             && std::cmp::min(&a[v], &b[v]) <= y
             && y <= std::cmp::max(&a[v], &b[v])
         {
-            return Err(refuse("Clip line intersects a face boundary"));
+            return Ok(FaceLocation::Boundary);
         }
         if (&a[v] > y) != (&b[v] > y) && side.is_positive() == (b[v] > a[v]) {
             inside = !inside;
         }
     }
-    Ok(inside)
+    Ok(if inside {
+        FaceLocation::Inside
+    } else {
+        FaceLocation::Outside
+    })
 }
