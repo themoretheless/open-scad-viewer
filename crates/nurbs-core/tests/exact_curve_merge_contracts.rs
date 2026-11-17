@@ -4650,3 +4650,69 @@ fn periodic_trim_tangent_join_distinguishes_collinear_speeds_and_reversal() {
         assert_eq!(report.join, Some(expected));
     }
 }
+
+#[test]
+fn periodic_trim_vertex_join_uses_adjacent_segments_and_wraps_closed_contour() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        PeriodicTrimTangentJoin, build_exact_periodic_surface_trim_input_edges,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [0.125, 0.125],
+        [0.25, 0.125],
+        [0.375, 0.125],
+        [0.375, 0.875],
+        [0.125, 0.875],
+        [0.125, 0.125],
+    ];
+    let result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    for (vertex, expected) in [
+        (0, Some(PeriodicTrimTangentJoin::Corner)),
+        (1, Some(PeriodicTrimTangentJoin::C1)),
+        (2, Some(PeriodicTrimTangentJoin::Corner)),
+        (5, None),
+    ] {
+        let report = result
+            .classify_input_vertex_join(0, vertex, 1_000_000)
+            .unwrap();
+        assert_eq!(report.join, expected, "{report:?}");
+        assert!(report.refusal.is_none());
+    }
+}
+
+#[test]
+fn periodic_trim_vertex_join_refuses_disconnected_geometry_and_exhaustion() {
+    use nurbs_core::editing::{
+        exact_periodic_surface::build_exact_periodic_surface_trim_input_edges,
+        rational_factor::Refusal,
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [0.125, 0.125],
+        [0.375, 0.125],
+        [0.375, 0.875],
+        [0.125, 0.875],
+        [0.125, 0.125],
+    ];
+    let mut result =
+        build_exact_periodic_surface_trim_input_edges(&source, &[&outer], 1_000_000).unwrap();
+    let exhausted = result.classify_input_vertex_join(0, 0, 1).unwrap();
+    assert_eq!(exhausted.refusal, Some(Refusal::ResourceLimit));
+    assert!(exhausted.join.is_none());
+
+    result.geometry.patches.as_mut().unwrap()[0].loops[0][0]
+        .curve
+        .control_points[0][0] = 0.25;
+    let disconnected = result.classify_input_vertex_join(0, 0, 1_000_000).unwrap();
+    assert_eq!(disconnected.refusal, Some(Refusal::InvalidOutput));
+    assert!(disconnected.join.is_none());
+}

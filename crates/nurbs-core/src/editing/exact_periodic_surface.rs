@@ -4423,6 +4423,78 @@ impl PeriodicTrimInputEdges {
         })
     }
 
+    /// Classify the join at an original polygon vertex. Vertex zero joins
+    /// the last segment to the first, as the input polygon is closed.
+    pub fn classify_input_vertex_join(
+        &self,
+        contour: usize,
+        vertex: usize,
+        max_work: u64,
+    ) -> Result<PeriodicTrimTangentJoinReport> {
+        crate::check(
+            (1..=cad_predicates::MAX_WORK).contains(&max_work),
+            "Exact periodic trim vertex join work must be in 1..=1000000",
+        )?;
+        let mut work = Work {
+            used: 0,
+            limit: max_work,
+        };
+        let result = self.classify_input_vertex_with_work(contour, vertex, &mut work);
+        let (join, refusal) = match result {
+            Ok(join) => (join, None),
+            Err(reason) => (None, Some(reason)),
+        };
+        Ok(PeriodicTrimTangentJoinReport {
+            join,
+            work_used: work.used,
+            refusal,
+        })
+    }
+
+    fn classify_input_vertex_with_work(
+        &self,
+        contour: usize,
+        vertex: usize,
+        work: &mut Work,
+    ) -> std::result::Result<Option<PeriodicTrimTangentJoin>, ExactRefusal> {
+        use num_traits::{One, Zero};
+
+        let outgoing =
+            self.evaluate_input_sample(contour, vertex, &BigRational::zero(), true, work)?;
+        let Some(point) = outgoing.point else {
+            return Ok(None);
+        };
+        let previous = if vertex > 0 {
+            vertex - 1
+        } else {
+            let mut last = 0;
+            for edge in self.sources.iter().flatten().flatten() {
+                work.charge(1)?;
+                if edge.contour == contour {
+                    last = last.max(edge.segment);
+                }
+            }
+            last
+        };
+        let incoming =
+            self.evaluate_input_sample(contour, previous, &BigRational::one(), true, work)?;
+        let (Some(before), Some(after)) = (incoming.tangents.before, outgoing.tangents.after)
+        else {
+            return Err(ExactRefusal::InvalidOutput);
+        };
+        if incoming.point.as_ref() != Some(&point) {
+            return Err(ExactRefusal::InvalidOutput);
+        }
+        classify_trim_tangent_pair(
+            &PeriodicTrimInputTangents {
+                before: Some(before),
+                after: Some(after),
+            },
+            work,
+        )
+        .map(Some)
+    }
+
     fn evaluate_input_sample(
         &self,
         contour: usize,
