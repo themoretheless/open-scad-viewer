@@ -27,7 +27,7 @@ describe('C9 extrude up to a body',()=>{
     expect(()=>extrudeHeightUpToBody(undefined,0,flat,'near')).toThrow(/nonzero/)
   })
 })
-import { applyDirectExtrusionProfile, previewTargetBodies, extrudeHeightUpToBody, extrudeHeightUpToPlane, planarFaceTargets, brepFacePlane, extrudeSketchProfile, buildDirectExtrusion } from '../src/app/directExtrusion'
+import { applyDirectExtrusionProfile, previewTargetBodies, extrudeHeightUpToBody, extrudeHeightUpToPlane, planarFaceTargets, planarFaceTargetAtTriangle, brepFacePlane, extrudeSketchProfile, buildDirectExtrusion } from '../src/app/directExtrusion'
 import { analyzeNurbsBrep, createBrepBox, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
 import { type DirectDocument, type DirectSketch } from '../src/app/directModeling'
 import { facePlane, solidTopology } from '../src/app/directSolidTools'
@@ -243,5 +243,16 @@ describe('C9 extrude up to a face or plane',()=>{
     const brep={toleranceMm:1e-6,faces:[{surface:{controlPoints:[[[0,0,3],[1,0,3]],[[0,1,3],[1,1,3]]]}},{surface:{controlPoints:[[[0,0,0],[1,0,1]],[[0,1,0],[1,1,0]]]}}]}
     const faces=planarFaceTargets({id:'b',mesh:{positions:new Float64Array(),indices:new Uint32Array()},brep} as never)
     expect(faces.map(f=>f.face)).toEqual([0])
+  })
+  it('maps a picked triangle to its planar face and rejects curved or missing faces',()=>{
+    const quad={id:'q',mesh:{positions:new Float64Array([0,0,2, 1,0,2, 1,1,2, 0,1,2, 0,0,5]),indices:new Uint32Array([0,1,2, 0,2,3, 0,1,4])}}
+    expect(planarFaceTargetAtTriangle(quad,1)).toEqual(planarFaceTargets(quad)[0])
+    expect(planarFaceTargetAtTriangle(quad,2)).toEqual(planarFaceTargets(quad)[1])
+    expect(planarFaceTargetAtTriangle(quad,3)).toBeNull()
+    expect(planarFaceTargetAtTriangle(quad,-1)).toBeNull()
+    const brep={toleranceMm:1e-6,faces:[{surface:{controlPoints:[[[0,0,3],[1,0,3]],[[0,1,3],[1,1,3]]]}},{surface:{controlPoints:[[[0,0,0],[1,0,1]],[[0,1,0],[1,1,0]]]}}]}
+    const mesh={positions:new Float64Array([0,0,3, 1,0,3, 1,1,3, 0,0,0, 1,0,1, 1,1,0]),indices:new Uint32Array([0,1,2, 3,4,5])}
+    expect(planarFaceTargetAtTriangle({id:'b',mesh,brep} as never,0)?.face).toBe(0)
+    expect(planarFaceTargetAtTriangle({id:'b',mesh,brep} as never,1)).toBeNull()
   })
 })

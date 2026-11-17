@@ -124,6 +124,24 @@ export function planarFaceTargets(body: Pick<DirectBody,'id'|'mesh'|'brep'>, lim
   }
   return [...groups.values()]
 }
+/**
+ * C9: the planar face target under a picked working-mesh triangle, or null when the triangle lies on a
+ * curved face (its tangent plane is never offered in place of the face) or the index is out of range.
+ */
+export function planarFaceTargetAtTriangle(body: Pick<DirectBody,'id'|'mesh'|'brep'>, triangle: number): PlanarFaceTarget|null {
+  const pos=body.mesh.positions, idx=body.mesh.indices
+  if(!Number.isInteger(triangle)||triangle<0||triangle*3+2>=idx.length)return null
+  const pts=[0,1,2].map(k=>{const v=idx[triangle*3+k];return [pos[v*3],pos[v*3+1],pos[v*3+2]]})
+  const n=cross3([pts[1][0]-pts[0][0],pts[1][1]-pts[0][1],pts[1][2]-pts[0][2]],[pts[2][0]-pts[0][0],pts[2][1]-pts[0][1],pts[2][2]-pts[0][2]]),l=Math.hypot(n[0],n[1],n[2])
+  if(!(l>1e-12))return null
+  const size=Math.max(1,...pts.flat().map(Math.abs)), tol=Math.max((body.brep?.toleranceMm??0)*10,1e-5*size)
+  for(const f of planarFaceTargets(body,Infinity)){
+    const fl=Math.hypot(f.normal[0],f.normal[1],f.normal[2])
+    if(!(fl>0)||Math.abs(Math.abs(n[0]*f.normal[0]+n[1]*f.normal[1]+n[2]*f.normal[2])/(l*fl)-1)>1e-4)continue
+    if(pts.every(p=>Math.abs((p[0]-f.origin[0])*f.normal[0]+(p[1]-f.origin[1])*f.normal[1]+(p[2]-f.origin[2])*f.normal[2])/fl<=tol))return f
+  }
+  return null
+}
 /** The plane through a flat control net, or null when the net is curved. */
 export function brepFacePlane(controlPoints: readonly (readonly (readonly number[])[])[], tolerance=1e-6): ExtrudeUpToPlane|null {
   const pts=controlPoints.flat()

@@ -43,7 +43,7 @@ import {sampleCurve} from '../src/app/directSketchGeometry'
 import {inspectPolygonMesh} from '../src/kernel/geometry/polygon'
 import {stringifyMeshJson} from '../src/exchange/meshJson'
 import {createBrepBox,createBrepTube,analyzeNurbsBrep,createBrepCylinder,createBrepSphere,transformNurbsBrep,tessellateNurbsBrep} from '../src/kernel/geometry/brep'
-import {extrudeHeightUpToBody,extrudeHeightUpToPlane,planarFaceTargets} from '../src/app/directExtrusion'
+import {extrudeHeightUpToBody,extrudeHeightUpToPlane,planarFaceTargets,planarFaceTargetAtTriangle} from '../src/app/directExtrusion'
 vi.mock('../src/kernel/solidDraftHeadStore',()=>({readSolidDraftHead:async()=>null,writeSolidDraftHead:async(key:string,_expected:string|null,text:string)=>({key,revision:crypto.randomUUID(),text})}))
 const previewWorkerRun=vi.hoisted(()=>vi.fn())
 const downloadArtifactBytes=vi.hoisted(()=>vi.fn())
@@ -3924,6 +3924,29 @@ it.each(['en','ru'])('C9: Extrude sets its height up to a chosen planar face or 
   const unreachable=faces.find(f=>{try{extrudeHeightUpToPlane(sketch.plane,0,f);return false}catch{return true}})!
   select.props['onUpdate:modelValue'](`face:${unreachable.bodyId}:${unreachable.face}`);await nextTick()
   expect(ui.all().some(n=>n.props['data-up-to-error']!==undefined)).toBe(true)
+  expect(ui.doc()).toEqual(before)
+ }finally{vi.useRealTimers()}
+})
+it.each(['en','ru'])('C9: Extrude sets its height up to a planar face picked in the viewport (%s)',async locale=>{
+ const requests:Array<{kind:string;options:{height:number;offset:number;sketchIds:string[]}}>=[]
+ const ui=await mount({locale});await ui.click('Cube');await ui.click(locale==='ru'?'Разрезать':'Split');await commandKey(ui,'Enter');await settle();await ui.click('Profile')
+ previewWorkerRun.mockImplementation(job=>{if(job.kind==='extrusion')requests.push(job as never);return undefined})
+ const before=ui.doc()
+ vi.useFakeTimers()
+ try{
+  await ui.click(locale==='ru'?'Выдавить · E':'Extrude · E');await vi.advanceTimersByTimeAsync(100)
+  const pick=()=>ui.all().find(n=>n.props['data-pick-up-to-face']!==undefined)!
+  expect(ui.text(pick())).toBe(locale==='ru'?'Выбрать грань во вьюпорте':'Pick face in viewport')
+  pick().props.onClick();await nextTick()
+  expect(pick().props['aria-pressed']).toBe(true)
+  expect(ui.text(pick())).toBe(locale==='ru'?'Кликните плоскую грань тела во вьюпорте':'Click a planar body face in the viewport')
+  const sketch=before.sketches.find(s=>s.id===requests.at(-1)!.options.sketchIds[0])!
+  const reach=(f:ReturnType<typeof planarFaceTargets>[number]|null)=>{try{return f?Math.abs(extrudeHeightUpToPlane(sketch.plane,0,f))>1e-3:false}catch{return false}}
+  const polygon=ui.all(ui.svg()).find(n=>{if(n.tag!=='polygon'||!n.props['data-body'])return false;const body=before.bodies.find(b=>b.id===n.props['data-body']);return !!body&&reach(planarFaceTargetAtTriangle(body,Number(n.props['data-triangle'])))})!
+  const body=before.bodies.find(b=>b.id===polygon.props['data-body'])!,face=planarFaceTargetAtTriangle(body,Number(polygon.props['data-triangle']))!
+  await ui.pointer(polygon);await vi.advanceTimersByTimeAsync(100)
+  expect(pick().props['aria-pressed']).toBe(false)
+  expect(requests.at(-1)!.options.height).toBeCloseTo(extrudeHeightUpToPlane(sketch.plane,0,face),5)
   expect(ui.doc()).toEqual(before)
  }finally{vi.useRealTimers()}
 })

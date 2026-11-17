@@ -50,7 +50,7 @@ import ModelingFloorGrid from '../components/ModelingFloorGrid.svt'
 import ModelingGridControls from '../components/ModelingGridControls.svt'
 import WorkspaceActionBar from '../components/WorkspaceActionBar.svt'
 import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
-import { extrudeHeightUpToBody, extrudeHeightUpToPlane, planarFaceTargets, type ExtrudeUpToPlane, previewTargetBodies, sameSketchPlane, type DirectExtrusionOperation as ExtrusionMode } from '../app/directExtrusion'
+import { extrudeHeightUpToBody, extrudeHeightUpToPlane, planarFaceTargetAtTriangle, planarFaceTargets, type ExtrudeUpToPlane, previewTargetBodies, sameSketchPlane, type DirectExtrusionOperation as ExtrusionMode } from '../app/directExtrusion'
 import type { SweepResultMode } from '../kernel/solidSweepBody'
 import { useModelingGrid } from '../app/modelingGrid'
 import { resolveModelingSnap, type SnapKind, type SnapGeometry } from '../app/modelingSnaps'
@@ -1312,6 +1312,18 @@ function extrudeUpToPlane(value: string) {
   catch { upToError.value = label('Плоскость недостижима: она параллельна нормали профиля или совпадает с плоскостью профиля.', 'The plane cannot be reached: it runs parallel to the profile normal or coincides with the profile plane.') }
 }
 watch(upToPlaneChoice, value => { if (value) extrudeUpToPlane(value) })
+const pickingUpToFace = ref(false)
+/** C9: the next click on a body face in the 3D view sets the extrusion height up to that planar face. */
+function pickUpToFace(bodyId: string, triangle: number) {
+  pickingUpToFace.value = false; upToError.value = ''
+  const body = document.value.bodies.find(b => b.id === bodyId), sketch = document.value.sketches.find(s => s.id === (profileIds.value[0] ?? selection.value))
+  if (!body || !sketch) return
+  const face = planarFaceTargetAtTriangle(body, triangle)
+  if (!face) { upToError.value = label('Выбранная грань кривая: выдавить до неё можно только до плоской грани.', 'The picked face is curved: Extrude can only reach a planar face.'); return }
+  try { height.value = Number(extrudeHeightUpToPlane(sketch.plane, baseZ.value, face).toFixed(6)) }
+  catch { upToError.value = label('Плоскость недостижима: она параллельна нормали профиля или совпадает с плоскостью профиля.', 'The plane cannot be reached: it runs parallel to the profile normal or coincides with the profile plane.') }
+}
+watch(operation, () => { pickingUpToFace.value = false })
 const extraTargetChoices=computed(()=>document.value.bodies.filter(b=>b.id!==targetBody.value))
 // C9 Sweep result step: 'surface' keeps the open NURBS surface; other modes build a capped solid and combine it.
 function sweepBodyOptions(operation:string|null,a:typeof advanced.value){
@@ -2039,13 +2051,14 @@ function position(e: PointerEvent): Point2 {
   return [point.x, point.y]
 }
 function plane(p: Point2, pane: Pane): Point2 { return pane === '2d' ? [p[0], -p[1]] : unprojectDirectXY(p,camera.value) }
-function cancelGesture() { cancelFaceSketch(); cancelNativeNurbs();cancelGizmoWorker();dragConstraint.value=''; draftCursor.value=null;choosingSketchFace.value=false; clearDragPreview(); previewingTransform.value=false; if(vertexDrag){document.value=vertexDrag.before;vertexDrag=null} if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { if(!gesture.pan)document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; heightDragging.value = false; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null; cameraDragging.value = false }
+function cancelGesture() { pickingUpToFace.value=false; cancelFaceSketch(); cancelNativeNurbs();cancelGizmoWorker();dragConstraint.value=''; draftCursor.value=null;choosingSketchFace.value=false; clearDragPreview(); previewingTransform.value=false; if(vertexDrag){document.value=vertexDrag.before;vertexDrag=null} if(cvDrag){document.value=cvDrag.before;cvDrag=null} if(curveDrag){document.value=curveDrag.before;curveDrag=null} if(manipulatorDrag){document.value=manipulatorDrag.before;if(manipulatorDrag.kind==='push')advancedOp.value=null;if(manipulatorDrag.kind==='split')advanced.value.distance=manipulatorDrag.initial;manipulatorDrag=null}selectionBox.value=null; if (gesture) { if(!gesture.pan)document.value = gesture.document; gesture = null } if (heightDrag) height.value = heightDrag.height; heightDrag = null; heightDragging.value = false; orbitDrag = null; draft.value = []; drawMeasure.value = ''; snapMarker.value = null; cameraDragging.value = false }
 function down(e: PointerEvent, pane: Pane, id = '', vertex: number | null = null, triangle = -1) {
  cancelNativeNurbs();cancelGizmoWorker()
  if(directTransformPending.value)cancelDirectTransform()
   if(id && !objectSelectable(id)) return
   if (![0, 1, 2].includes(e.button) || gesture) return
   if(e.button===0&&id&&e.shiftKey&&pickMode.value==='body'){pickObject(id,pane,true);return}
+  if(pickingUpToFace.value&&pane==='3d'&&e.button===0&&!e.shiftKey&&id&&triangle>=0){pickUpToFace(id,triangle);return}
   const pan = e.button === 1 || e.shiftKey || (pane === '2d' && e.button === 2)
   const target = e.target as SVGElement
   const svg = (target instanceof SVGSVGElement ? target : target.ownerSVGElement)!
@@ -3186,6 +3199,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <label v-if="operation === 'extrude'">{{ label('Высота, мм', 'Height, mm') }}<CadQuantityInput data-field="height" :aria-invalid="errorField==='height'?'true':undefined" :aria-describedby="errorField==='height'?'solid-preview-error':undefined" :aria-label="label('Высота, мм', 'Height, mm')" v-model="height" kind="length" :locale="locale" @validity="quantityValidity('height', $event)" step="1" /></label>
               <label v-if="operation === 'extrude' && document.bodies.length" data-extrude-up-to>{{ label('Высота до тела', 'Height up to body') }}<select v-model="upToChoice"><option value="">{{ label('Выберите тело и сторону', 'Choose a body and side') }}</option><option v-for="o in upToOptions" :key="o.value" :value="o.value">{{ o.text }}</option></select></label>
               <label v-if="operation === 'extrude'" data-extrude-up-to-plane>{{ label('Высота до грани или плоскости', 'Height up to face or plane') }}<select v-model="upToPlaneChoice"><option value="">{{ label('Выберите грань или плоскость', 'Choose a face or plane') }}</option><option v-for="o in upToPlaneTargets" :key="o.value" :value="o.value">{{ o.text }}</option></select></label>
+              <button v-if="operation === 'extrude'" type="button" data-pick-up-to-face :aria-pressed="pickingUpToFace" @click="pickingUpToFace = !pickingUpToFace">{{ pickingUpToFace ? label('Кликните плоскую грань тела во вьюпорте', 'Click a planar body face in the viewport') : label('Выбрать грань во вьюпорте', 'Pick face in viewport') }}</button>
               <small v-if="upToError" role="alert" data-up-to-error>{{ upToError }}</small>
               <label v-if="operation === 'extrude'">{{ label('Смещение от плоскости, мм', 'Plane offset, mm') }}<CadQuantityInput :aria-label="label('Смещение от плоскости, мм', 'Plane offset, mm')" v-model="baseZ" kind="length" :locale="locale" @validity="quantityValidity('baseZ', $event)" step="1" /></label>
               <template v-if="operation === 'revolve'">
