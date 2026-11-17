@@ -2849,3 +2849,150 @@ fn polygon_edges_contact(
         || (cdb.is_eq() && in_polygon_edge_bounds(b, c, d))
         || ([abc, abd, cda, cdb].iter().all(|o| !o.is_eq()) && abc != abd && cda != cdb))
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPathPairReport {
+    /// Boundary disjointness, including across all relevant period translates.
+    pub disjoint: Option<bool>,
+    pub contact: Option<PeriodicPathContact>,
+    pub work_used: u64,
+    pub refusal: Option<PeriodicPathAreaRefusal>,
+}
+
+/// Check two closed shortest-step polygon lifts for boundary contact.
+/// Disjoint boundaries can still enclose nested regions. A contact reports
+/// one edge from each input and the period translation of the second.
+pub fn check_exact_periodic_surface_path_contact(
+    source: &Surface,
+    first: &[[f64; 2]],
+    second: &[[f64; 2]],
+    max_work: u64,
+) -> Result<PeriodicPathPairReport> {
+    use PeriodicPathAreaRefusal as Failure;
+
+    crate::check(
+        [first, second]
+            .iter()
+            .all(|path| path.len() >= 4 && path.first() == path.last()),
+        "Periodic contact needs two closed polygons",
+    )?;
+    let refused = |reason, work_used| PeriodicPathPairReport {
+        disjoint: None,
+        contact: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    let mut work_used = 0;
+    let mut lift = |path: &[[f64; 2]]| -> Result<std::result::Result<Vec<[f64; 2]>, Failure>> {
+        if work_used == max_work {
+            return Ok(Err(Failure::Arithmetic(ExactRefusal::ResourceLimit)));
+        }
+        let report = lift_exact_periodic_surface_path(source, path, max_work - work_used)?;
+        work_used += report.work_used;
+        let Some(points) = report.parameters else {
+            return Ok(Err(Failure::Lift(report.refusal.unwrap_or(
+                PeriodicLiftRefusal::Arithmetic(ExactRefusal::InvalidOutput),
+            ))));
+        };
+        if points.first() != points.last() {
+            return Ok(Err(Failure::NonzeroWinding));
+        }
+        Ok(Ok(points))
+    };
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact periodic contact work must be in 1..=1000000",
+    )?;
+    let first = match lift(first)? {
+        Ok(points) => points,
+        Err(reason) => return Ok(refused(reason, work_used)),
+    };
+    let second = match lift(second)? {
+        Ok(points) => points,
+        Err(reason) => return Ok(refused(reason, work_used)),
+    };
+    let domains = [Axis::U, Axis::V].map(|axis| {
+        let axis = row(source, axis, 0);
+        axis.periodic.then(|| axis.domain())
+    });
+    let mut work = Work {
+        used: work_used,
+        limit: max_work,
+    };
+    let mut compare = || -> std::result::Result<_, ExactRefusal> {
+        let a = prepare_lifted_polygon(&first, domains, &mut work)?;
+        let b = prepare_lifted_polygon(&second, [None; 2], &mut work)?;
+        find_periodic_path_pair_contact(&a, &b, &mut work)
+    };
+    Ok(match compare() {
+        Ok(contact) => PeriodicPathPairReport {
+            disjoint: Some(contact.is_none()),
+            contact,
+            work_used: work.used,
+            refusal: None,
+        },
+        Err(reason) => refused(Failure::Arithmetic(reason), work.used),
+    })
+}
+
+fn find_periodic_path_pair_contact(
+    a: &LiftedPolygon,
+    b: &LiftedPolygon,
+    work: &mut Work,
+) -> std::result::Result<Option<PeriodicPathContact>, ExactRefusal> {
+    use num_traits::ToPrimitive;
+
+    let mut turns = [[0_i64; 2]; 2];
+    for (axis, limits) in turns.iter_mut().enumerate() {
+        let [a_lo, a_hi] = &a.bounds[axis];
+        let [b_lo, b_hi] = &b.bounds[axis];
+        if let Some(period) = &a.periods[axis] {
+            let start = work.op(a_lo, b_hi, |a, b| a - b)?;
+            let end = work.op(a_hi, b_lo, |a, b| a - b)?;
+            limits[0] = work
+                .op(&start, period, |a, b| (a / b).ceil())?
+                .to_integer()
+                .to_i64()
+                .ok_or(ExactRefusal::ResourceLimit)?;
+            limits[1] = work
+                .op(&end, period, |a, b| (a / b).floor())?
+                .to_integer()
+                .to_i64()
+                .ok_or(ExactRefusal::ResourceLimit)?;
+            if limits[0] > limits[1] {
+                return Ok(None);
+            }
+        } else if a_hi < b_lo || b_hi < a_lo {
+            return Ok(None);
+        }
+    }
+    for u in turns[0][0]..=turns[0][1] {
+        for v in turns[1][0]..=turns[1][1] {
+            let offset = [u, v];
+            let mut shift = [BigRational::default(), BigRational::default()];
+            for axis in 0..2 {
+                if let Some(period) = &a.periods[axis] {
+                    let turns = BigRational::from_integer(offset[axis].into());
+                    shift[axis] = work.op(period, &turns, |a, b| a * b)?;
+                }
+            }
+            let translated = b
+                .points
+                .iter()
+                .map(|p| translate_polygon_vertex(p, &shift, work))
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+            for (i, edge) in a.points.windows(2).enumerate() {
+                for (j, other) in translated.windows(2).enumerate() {
+                    work.charge(1)?;
+                    if polygon_edges_contact(&edge[0], &edge[1], &other[0], &other[1], work)? {
+                        return Ok(Some(PeriodicPathContact {
+                            edges: [i, j],
+                            turns: offset,
+                        }));
+                    }
+                }
+            }
+        }
+    }
+    Ok(None)
+}

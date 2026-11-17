@@ -3603,3 +3603,58 @@ fn periodic_path_simplicity_detects_overlap_with_a_translated_copy() {
     assert_eq!(report.simple, Some(false));
     assert_eq!(report.contact.unwrap().turns, [1, 0]);
 }
+
+#[test]
+fn periodic_contour_pair_detects_contact_only_after_translation() {
+    use nurbs_core::editing::exact_periodic_surface::check_exact_periodic_surface_path_contact;
+    let source = doubly_periodic_tensor();
+    let a = [
+        [0.125, 0.5],
+        [0.5, 0.5],
+        [0.5, 1.5],
+        [0.125, 1.5],
+        [0.125, 0.5],
+    ];
+    let b = [
+        [3.75, 0.75],
+        [0.125, 0.75],
+        [0.125, 1.25],
+        [3.75, 1.25],
+        [3.75, 0.75],
+    ];
+    let report = check_exact_periodic_surface_path_contact(&source, &a, &b, 1_000_000).unwrap();
+    assert_eq!(report.disjoint, Some(false));
+    let hit = report.contact.unwrap();
+    assert_eq!(hit.turns, [-1, 0]);
+    assert_eq!(hit.edges, [3, 0]);
+    assert!(
+        check_exact_periodic_surface_path_contact(&source, &a, &b, report.work_used - 1)
+            .unwrap()
+            .disjoint
+            .is_none()
+    );
+}
+
+#[test]
+fn periodic_contour_pair_certifies_disjoint_boundaries_of_nested_loops() {
+    use nurbs_core::editing::exact_periodic_surface::check_exact_periodic_surface_path_contact;
+    let source = doubly_periodic_tensor();
+    let outer = [
+        [3.25, 3.25],
+        [0.75, 3.25],
+        [0.75, 0.75],
+        [3.25, 0.75],
+        [3.25, 3.25],
+    ];
+    let inner = [
+        [3.75, 3.75],
+        [0.25, 3.75],
+        [0.25, 0.25],
+        [3.75, 0.25],
+        [3.75, 3.75],
+    ];
+    let report =
+        check_exact_periodic_surface_path_contact(&source, &outer, &inner, 1_000_000).unwrap();
+    assert_eq!(report.disjoint, Some(true));
+    assert!(report.contact.is_none());
+}
