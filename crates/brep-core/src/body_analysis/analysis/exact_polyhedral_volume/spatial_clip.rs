@@ -4613,3 +4613,101 @@ fn integrate_swept_cell(
     }
     Ok(six_volume)
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactParallelProfileExtrusionOverlap {
+    /// Common axial range in units of the first sweep, or none if the
+    /// axial ranges are disjoint. This range is independent of the footprints.
+    pub common_sweep_range: Option<[Q; 2]>,
+    pub volume_mm3: Q,
+    pub exact_work: u64,
+}
+
+/// Measure the common volume of two planar profile extrusions with
+/// parallel supporting planes and collinear sweep vectors. Opposite sweep
+/// directions are allowed. Each profile can have disjoint interior holes.
+pub fn exact_parallel_planar_profile_extrusion_overlap(
+    first_outer_mm: &[[Q; 3]],
+    first_holes_mm: &[&[[Q; 3]]],
+    first_sweep_mm: &[Q; 3],
+    second_outer_mm: &[[Q; 3]],
+    second_holes_mm: &[&[[Q; 3]]],
+    second_sweep_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<ExactParallelProfileExtrusionOverlap> {
+    super::validate_work(max_exact_work)?;
+    validate_point(first_sweep_mm)?;
+    validate_point(second_sweep_mm)?;
+    let Some(axis) = first_sweep_mm.iter().position(|coord| !coord.is_zero()) else {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Extrusion requires a nonzero sweep",
+        ));
+    };
+    let ratio = &second_sweep_mm[axis] / &first_sweep_mm[axis];
+    if ratio.is_zero() || (0..3).any(|i| second_sweep_mm[i] != &ratio * &first_sweep_mm[i]) {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Extrusion sweeps must be nonzero and collinear",
+        ));
+    }
+    let support = exact_planar_spatial_polyline_area(first_outer_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - support.exact_work;
+    spend(&mut remaining, 24)?;
+    let origin = second_outer_mm.first().ok_or_else(|| {
+        Error::new(
+            "BREP_INVALID_INPUT",
+            "Second extrusion requires a closed profile",
+        )
+    })?;
+    validate_point(origin)?;
+    let normal = &support.area_vector_mm2;
+    let height = dot(normal, first_sweep_mm);
+    if height.is_zero() {
+        return Err(refuse("Extrusion sweep lies in the first profile plane"));
+    }
+    let delta = std::array::from_fn(|i| &origin[i] - &first_outer_mm[0][i]);
+    let from = dot(normal, &delta) / height;
+    let to = &from + ratio;
+    let translation: [Q; 3] = std::array::from_fn(|i| &from * &first_sweep_mm[i]);
+    let mut translate = |ring: &[[Q; 3]]| -> Result<Vec<[Q; 3]>> {
+        ring.iter()
+            .map(|point| {
+                spend(&mut remaining, 12)?;
+                validate_point(point)?;
+                Ok(std::array::from_fn(|i| &point[i] - &translation[i]))
+            })
+            .collect()
+    };
+    let second_outer = translate(second_outer_mm)?;
+    let second_holes = second_holes_mm
+        .iter()
+        .map(|ring| translate(ring))
+        .collect::<Result<Vec<_>>>()?;
+    let second_holes: Vec<_> = second_holes.iter().map(Vec::as_slice).collect();
+    if remaining == 0 {
+        return Err(super::work_exhausted());
+    }
+    let overlap = exact_coplanar_planar_polyline_region_overlap_area(
+        first_outer_mm,
+        first_holes_mm,
+        &second_outer,
+        &second_holes,
+        remaining,
+    )?;
+    remaining -= overlap.exact_work;
+    spend(&mut remaining, 16)?;
+    let lo = from.clone().min(to.clone()).max(Q::zero());
+    let hi = from.max(to).min(Q::one());
+    let common_sweep_range = (lo <= hi).then_some([lo, hi]);
+    let volume_mm3 = common_sweep_range
+        .as_ref()
+        .map_or_else(Q::zero, |[lo, hi]| {
+            dot(&overlap.area_vector_mm2, first_sweep_mm).abs() * (hi - lo)
+        });
+    Ok(ExactParallelProfileExtrusionOverlap {
+        common_sweep_range,
+        volume_mm3,
+        exact_work: max_exact_work - remaining,
+    })
+}

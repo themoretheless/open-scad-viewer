@@ -6866,3 +6866,89 @@ fn exact_boolean_extrusion_volume_split_cuts_holes_with_a_plane_parallel_to_swee
         (q(32), q(32), q(64))
     );
 }
+
+#[test]
+fn exact_parallel_profile_extrusion_overlap_accounts_for_holes_and_opposite_oblique_sweeps() {
+    use brep_core::analysis::exact_parallel_planar_profile_extrusion_overlap;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(0, 1)];
+    let rect = |lo, hi| [p(lo, lo), p(hi, lo), p(hi, hi), p(lo, hi), p(lo, lo)];
+    let a = rect(0, 6);
+    let hole = rect(2, 4);
+    let b = rect(1, 5).map(|[x, y, z]| [x + q(2, 1), y, z + q(8, 1)]);
+    let sweep_a = [q(1, 1), q(0, 1), q(4, 1)];
+    let sweep_b = [q(-3, 2), q(0, 1), q(-6, 1)];
+    let overlap = |budget| {
+        exact_parallel_planar_profile_extrusion_overlap(
+            &a,
+            &[&hole],
+            &sweep_a,
+            &b,
+            &[],
+            &sweep_b,
+            budget,
+        )
+    };
+    let report = overlap(1_000_000).unwrap();
+    assert_eq!(report.common_sweep_range, Some([q(1, 2), q(1, 1)]));
+    assert_eq!(report.volume_mm3, q(24, 1));
+    assert_eq!(overlap(report.exact_work).unwrap(), report);
+    assert!(overlap(report.exact_work - 1).is_err());
+    let reverse = exact_parallel_planar_profile_extrusion_overlap(
+        &b,
+        &[],
+        &sweep_b,
+        &a,
+        &[&hole],
+        &sweep_a,
+        1_000_000,
+    )
+    .unwrap();
+    assert_eq!(reverse.volume_mm3, report.volume_mm3);
+}
+
+#[test]
+fn exact_parallel_profile_extrusion_overlap_distinguishes_contacts_and_disjoint_ranges() {
+    use brep_core::analysis::exact_parallel_planar_profile_extrusion_overlap;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let ring = |z| {
+        [
+            [q(0), q(0), q(z)],
+            [q(2), q(0), q(z)],
+            [q(2), q(2), q(z)],
+            [q(0), q(2), q(z)],
+            [q(0), q(0), q(z)],
+        ]
+    };
+    let a = ring(0);
+    let sweep = [q(0), q(0), q(2)];
+    for (z, expected) in [(2, Some([q(1), q(1)])), (3, None)] {
+        let b = ring(z);
+        let report = exact_parallel_planar_profile_extrusion_overlap(
+            &a,
+            &[],
+            &sweep,
+            &b,
+            &[],
+            &sweep,
+            1_000_000,
+        )
+        .unwrap();
+        assert_eq!(report.common_sweep_range, expected);
+        assert_eq!(report.volume_mm3, q(0));
+    }
+    assert!(
+        exact_parallel_planar_profile_extrusion_overlap(
+            &a,
+            &[],
+            &sweep,
+            &a,
+            &[],
+            &[q(1), q(0), q(2)],
+            1_000_000
+        )
+        .is_err()
+    );
+}
