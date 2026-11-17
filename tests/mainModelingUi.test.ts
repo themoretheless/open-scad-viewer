@@ -148,3 +148,44 @@ it('outlines a closed sketch as a region with a hole before viewport extrusion',
  const volume=inspectPolygonMesh(bodies[0].mesh).signedVolumeMm3
  expect(volume).toBeGreaterThan(750);expect(volume).toBeLessThan(850)
 })
+const coincidentSketches=():string=>{
+ const analytic={kind:'circle' as const,center:[0,0] as [number,number],radius:5,start:0,sweep:360}
+ const R={id:'R',name:'R',points:sampleCurve(analytic),closed:true,analytic}
+ const L={id:'L',name:'L',points:[[0,0],[20,0],[20,10]],closed:false,curveConstraints:[{kind:'coincident',ref:'R',point:0,target:'center'}],constraints:[{kind:'horizontal',a:0,b:1}]}
+ return JSON.stringify({version:1,sketches:[R,L],bodies:[]})
+}
+const sketchProps={plane:null,project:(p:number[])=>[p[0],p[1]],ray:(x:number,y:number)=>({origin:[x,y,100],direction:[0,0,-1]}),revision:0,locale:'en'}
+it('C7 coincident: shows constraint glyphs in the main sketch overlay, selects one and deletes only it with Delete, undo returns it',async()=>{
+ const ui=await mount(MainSketchTools,sketchProps,coincidentSketches())
+ const glyphs=()=>ui.all().filter(n=>n.tag==='g'&&n.props['data-constraint-glyph'])
+ expect(glyphs().map(g=>g.props['data-constraint-glyph']).sort()).toEqual(['coincident','horizontal'])
+ const coincident=glyphs().find(g=>g.props['data-constraint-glyph']==='coincident')!
+ expect(ui.text(coincident)).toContain('●')
+ const rect=ui.all(coincident).find(n=>n.tag==='rect')!
+ // About 14 px from vertex 0 at the origin, diagonally.
+ expect(Math.hypot(rect.props.x+9,rect.props.y+9)).toBeCloseTo(14,6)
+ coincident.props.onPointerdown(ui.event(coincident));await nextTick()
+ expect(glyphs().find(g=>g.props['data-constraint-glyph']==='coincident')!.props['aria-pressed']).toBe(true)
+ expect(glyphs().find(g=>g.props['data-constraint-glyph']==='horizontal')!.props['aria-pressed']).toBe(false)
+ const svg=ui.all().find(n=>n.tag==='svg')!
+ svg.props.onKeydown({key:'Delete',preventDefault(){}});await nextTick()
+ expect(glyphs().map(g=>g.props['data-constraint-glyph'])).toEqual(['horizontal'])
+ ui.all().find(n=>n.tag==='button'&&ui.text(n)==='↶')!.props.onClick({});await nextTick()
+ expect(glyphs().map(g=>g.props['data-constraint-glyph']).sort()).toEqual(['coincident','horizontal'])
+ // Delete without a selected glyph leaves the constraints alone.
+ svg.props.onKeydown({key:'Delete',preventDefault(){}});await nextTick()
+ expect(glyphs()).toHaveLength(2)
+})
+it('C7 coincident: a main sketch vertex drag keeps the coincident vertex on its target and refuses dragging it away',async()=>{
+ const ui=await mount(MainSketchTools,sketchProps,coincidentSketches())
+ const svg=ui.all().find(n=>n.tag==='svg')!,line=()=>ui.all().filter(n=>n.tag==='polyline'&&n.props['stroke-width']==='3')[1]!
+ line().props.onPointerdown(ui.event(line(),10,0));await nextTick()
+ const handles=()=>ui.all().filter(n=>n.tag==='circle'&&String(n.props.r)==='5')
+ const end=handles()[2]!;end.props.onPointerdown(ui.event(end,20,10));svg.props.onPointermove(ui.event(svg,40,30));svg.props.onPointerup();await nextTick()
+ expect(handles()[2]!.props.cx).toBeCloseTo(40,6);expect(handles()[0]!.props.cx).toBeCloseTo(0,9);expect(handles()[0]!.props.cy).toBeCloseTo(0,9)
+ const before=line().props.points,first=handles()[0]!
+ first.props.onPointerdown(ui.event(first,0,0));svg.props.onPointermove(ui.event(svg,-30,-30));await nextTick()
+ expect(line().props.points).toEqual(before)
+ expect(ui.text(ui.all().find(n=>n.props.role==='status')!)).toContain('edit was refused')
+ svg.props.onPointerup();await nextTick();expect(line().props.points).toEqual(before)
+})
