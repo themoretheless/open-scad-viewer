@@ -214,3 +214,189 @@ fn contacts(
     }
     Ok(CoplanarRayOutcome::Contacts(out))
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct CoplanarRayPartitionOptions {
+    pub max_curve_parameter_width: f64,
+    pub winding_tolerance: f64,
+    pub max_winding_cells: usize,
+    pub max_work: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CoplanarRayGap {
+    /// Open interval in the original ray parameter, disjoint from all contacts.
+    pub parameter: [Q; 2],
+    pub location: crate::trim::trim_domain::Location,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CoplanarRayPartition {
+    /// Nonnegative, ordered, disjoint enclosures of all boundary contacts.
+    pub contact_bands: Vec<[Q; 2]>,
+    pub gaps: Vec<CoplanarRayGap>,
+    /// Every parameter strictly greater than this is outside.
+    pub outside_after: Q,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CoplanarRayPartitionOutcome {
+    Partition(CoplanarRayPartition),
+    NotCoplanar,
+    Refused(Refusal),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CoplanarRayPartitionReport {
+    pub outcome: CoplanarRayPartitionOutcome,
+    pub work_used: u64,
+    pub winding_cells: usize,
+}
+
+/// Certify contact-free coplanar ray intervals as inside or outside the
+/// nonzero-winding region. Overlapping contact enclosures, including
+/// coincident spans, become one band. Unresolved winding stays explicit
+/// on a gap. The unbounded ray tail is outside after the last contact band.
+pub fn partition_coplanar_face_ray(
+    face: &ProjectedTrimmedFace,
+    origin: [f64; 3],
+    direction: [f64; 3],
+    options: CoplanarRayPartitionOptions,
+) -> Result<CoplanarRayPartitionReport> {
+    check(
+        (1..=100_000).contains(&options.max_winding_cells)
+            && options.winding_tolerance.is_finite()
+            && options.winding_tolerance > 0.,
+        "Coplanar ray partition requires a positive winding tolerance and bounded winding work",
+    )?;
+    let contacts = contact_coplanar_face_ray(
+        face,
+        origin,
+        direction,
+        options.max_curve_parameter_width,
+        options.max_work,
+    )?;
+    let mut work = Work {
+        used: contacts.work_used,
+        limit: options.max_work,
+    };
+    let mut winding_cells = 0;
+    let outcome = match contacts.outcome {
+        CoplanarRayOutcome::Contacts(events) => {
+            let domain =
+                crate::trim::trim_domain::TrimDomain::new(&face.loops, options.winding_tolerance)?;
+            let axis = face.projection.retained_axes;
+            let projected = [axis.map(|i| origin[i]), axis.map(|i| direction[i])];
+            let bands = merge_contact_bands(events);
+            partition_gaps(
+                bands,
+                &domain,
+                projected,
+                options.max_winding_cells,
+                &mut work,
+                &mut winding_cells,
+            )?
+        }
+        CoplanarRayOutcome::NotCoplanar => CoplanarRayPartitionOutcome::NotCoplanar,
+        CoplanarRayOutcome::Refused(reason) => CoplanarRayPartitionOutcome::Refused(reason),
+    };
+    Ok(CoplanarRayPartitionReport {
+        outcome,
+        work_used: work.used,
+        winding_cells,
+    })
+}
+
+fn merge_contact_bands(events: Vec<CoplanarRayContact>) -> Vec<[Q; 2]> {
+    use num_traits::Zero;
+    let mut intervals: Vec<_> = events
+        .into_iter()
+        .map(|event| {
+            let [lo, hi] = event.ray_parameter;
+            [lo.max(Q::zero()), hi]
+        })
+        .collect();
+    intervals.sort_unstable();
+    let mut bands: Vec<[Q; 2]> = Vec::new();
+    for [lo, hi] in intervals {
+        if let Some(last) = bands.last_mut()
+            && lo <= last[1]
+        {
+            if hi > last[1] {
+                last[1] = hi;
+            }
+        } else {
+            bands.push([lo, hi]);
+        }
+    }
+    bands
+}
+
+fn partition_gaps(
+    contact_bands: Vec<[Q; 2]>,
+    domain: &crate::trim::trim_domain::TrimDomain,
+    projected_ray: [[f64; 2]; 2],
+    max_winding_cells: usize,
+    work: &mut Work,
+    winding_cells: &mut usize,
+) -> Result<CoplanarRayPartitionOutcome> {
+    use crate::trim::trim_domain::Location;
+    use num_traits::Zero;
+    let mut gaps = Vec::new();
+    let mut previous = Q::zero();
+    for [lo, hi] in &contact_bands {
+        if &previous < lo {
+            let mut location = Location::Unresolved;
+            let remaining = max_winding_cells - *winding_cells;
+            if remaining > 0 {
+                let rectangle = match gap_midpoint(projected_ray, &previous, lo, work) {
+                    Ok(rectangle) => rectangle,
+                    Err(reason) => return Ok(CoplanarRayPartitionOutcome::Refused(reason)),
+                };
+                if let Some(rectangle) = rectangle {
+                    let classification = domain.classify(rectangle, remaining)?;
+                    *winding_cells += classification.cells;
+                    location = classification.location;
+                } else {
+                    location = Location::Outside;
+                }
+            }
+            gaps.push(CoplanarRayGap {
+                parameter: [previous, lo.clone()],
+                location,
+            });
+        }
+        previous = hi.clone();
+    }
+    Ok(CoplanarRayPartitionOutcome::Partition(
+        CoplanarRayPartition {
+            contact_bands,
+            gaps,
+            outside_after: previous,
+        },
+    ))
+}
+
+fn gap_midpoint(
+    [origin, direction]: [[f64; 2]; 2],
+    lo: &Q,
+    hi: &Q,
+    work: &mut Work,
+) -> std::result::Result<Option<[[f64; 2]; 2]>, Refusal> {
+    let parameter = work.op(lo, hi, |a, b| (a + b) / Q::from_integer(2.into()))?;
+    let cap = Q::from_integer(1_000_000_000.into());
+    let mut result = [[0.; 2]; 2];
+    for i in 0..2 {
+        let origin = work.lift(origin[i])?;
+        let direction = work.lift(direction[i])?;
+        let offset = work.op(&direction, &parameter, |a, b| a * b)?;
+        let point = work.op(&origin, &offset, |a, b| a + b)?;
+        if point.abs() > cap {
+            return Ok(None);
+        }
+        let interval = super::planar_face_area::rational_interval(&point)
+            .map_err(|_| Refusal::NotRepresentable)?;
+        result[i] = [interval.lo, interval.hi];
+    }
+    Ok(Some(result))
+}

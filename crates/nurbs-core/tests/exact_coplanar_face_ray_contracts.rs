@@ -110,3 +110,78 @@ fn rejects_noncoplanar_and_returns_no_partial_events_on_exhaustion() {
     assert!(matches!(limited.outcome, CoplanarRayOutcome::Refused(_)));
     assert!(limited.work_used <= 1);
 }
+
+fn partition_options() -> nurbs_core::analysis::planar_coplanar_ray::CoplanarRayPartitionOptions {
+    nurbs_core::analysis::planar_coplanar_ray::CoplanarRayPartitionOptions {
+        max_curve_parameter_width: 1e-9,
+        winding_tolerance: 1e-8,
+        max_winding_cells: 1024,
+        max_work: WORK,
+    }
+}
+
+#[test]
+fn certifies_two_material_gaps_separated_by_a_hole() {
+    use nurbs_core::{
+        analysis::planar_coplanar_ray::{CoplanarRayPartitionOutcome, partition_coplanar_face_ray},
+        trim::trim_domain::Location,
+    };
+    let report = partition_coplanar_face_ray(
+        &projected(false),
+        [-1., 0.5, -0.5],
+        [1., 0., 1.],
+        partition_options(),
+    )
+    .unwrap();
+    let CoplanarRayPartitionOutcome::Partition(partition) = report.outcome else {
+        panic!("{:?}", report.outcome)
+    };
+    assert_eq!(partition.contact_bands.len(), 4);
+    assert_eq!(
+        partition
+            .gaps
+            .iter()
+            .map(|g| g.location)
+            .collect::<Vec<_>>(),
+        [
+            Location::Outside,
+            Location::Inside,
+            Location::Outside,
+            Location::Inside
+        ]
+    );
+    for (range, t) in partition.contact_bands.into_iter().zip([
+        Q::from_integer(1.into()),
+        Q::new(5.into(), 4.into()),
+        Q::new(7.into(), 4.into()),
+        Q::from_integer(2.into()),
+    ]) {
+        assert!(range[0] <= t && t <= range[1]);
+    }
+    assert!(partition.outside_after >= Q::from_integer(2.into()));
+    assert!(report.winding_cells <= 1024);
+}
+
+#[test]
+fn merges_coincident_spans_and_retains_unresolved_gaps() {
+    use nurbs_core::{
+        analysis::planar_coplanar_ray::{
+            CoplanarRayPartitionOptions, CoplanarRayPartitionOutcome, partition_coplanar_face_ray,
+        },
+        trim::trim_domain::Location,
+    };
+    let opts = CoplanarRayPartitionOptions {
+        max_winding_cells: 1,
+        ..partition_options()
+    };
+    let report =
+        partition_coplanar_face_ray(&projected(false), [-0.5, 0., -0.5], [1., 0., 1.], opts)
+            .unwrap();
+    let CoplanarRayPartitionOutcome::Partition(partition) = report.outcome else {
+        panic!("{:?}", report.outcome)
+    };
+    assert_eq!(partition.contact_bands.len(), 1);
+    assert_eq!(partition.gaps.len(), 1);
+    assert_eq!(partition.gaps[0].location, Location::Unresolved);
+    assert_eq!(report.winding_cells, 1);
+}

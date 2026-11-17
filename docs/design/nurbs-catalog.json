@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 336,
-  "unallocatedCount": 664,
+  "specifiedCount": 337,
+  "unallocatedCount": 663,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -8697,6 +8697,26 @@
       "remainingQualification": [
         "Find coplanar ray boundary contacts with exact line coefficients and certified ray-parameter enclosures.",
         "Exact coplanarity and closed rational contours. Contacts retain coincident spans and one-sided endpoint ownership. No material intervals are inferred.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0337",
+      "name": "Сертифицированные участки компланарного луча внутри плоской NURBS-грани с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::analysis::planar_coplanar_ray::partition_coplanar_face_ray",
+      "evidence": [
+        "crates/nurbs-core/src/analysis/planar_coplanar_ray.rs",
+        "crates/nurbs-core/src/trim/trim_domain.rs",
+        "crates/nurbs-core/tests/exact_coplanar_face_ray_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-337-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-337-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Partition a coplanar ray into certified contact-free material or exterior intervals and conservative contact bands.",
+        "Closed rational contours with nonzero winding. Merged contact bands remain conservative, and exhausted classification yields unresolved gaps.",
         "WASM and application integration are separate."
       ]
     }
