@@ -2455,3 +2455,82 @@ fn periodic_basis_matching_refuses_inexact_elevated_control_points() {
         Some(PeriodicAssemblyRefusal::Exact(Refusal::NotRepresentable))
     );
 }
+
+fn periodic_strips_with_mixed_assembly_degrees() -> (
+    nurbs_core::surface::Surface,
+    Vec<nurbs_core::surface::Surface>,
+) {
+    use nurbs_core::{
+        editing::exact_periodic_surface::partition_exact_periodic_surface_axis,
+        surface::{Axis, extrude},
+    };
+    let mut profile = periodic_unit_square();
+    for point in &mut profile.control_points {
+        point.push(0.);
+    }
+    let source = extrude(&profile, [0., 0., 2.]).unwrap();
+    let mut strips = partition_exact_periodic_surface_axis(&source, Axis::U, 0., &[2.], 1_000_000)
+        .unwrap()
+        .strips
+        .unwrap();
+    let high = &mut strips[1];
+    high.degree_u = 2;
+    high.knots_u = vec![2., 2., 2., 3., 3., 4., 4., 4.];
+    for i in [1, 0] {
+        let middle = high.control_points[i]
+            .iter()
+            .zip(&high.control_points[i + 1])
+            .map(|(a, b)| a.iter().zip(b).map(|(a, b)| (a + b) / 2.).collect())
+            .collect();
+        high.control_points.insert(i + 1, middle);
+        high.weights.insert(i + 1, vec![1.; 2]);
+    }
+    (source, strips)
+}
+
+#[test]
+fn periodic_strip_assembly_matches_degrees_along_the_assembly_axis() {
+    use nurbs_core::{
+        editing::exact_periodic_surface::assemble_periodic_surface_axis_with_exact_degree_matching,
+        surface::Axis,
+    };
+    let (source, strips) = periodic_strips_with_mixed_assembly_degrees();
+    let report =
+        assemble_periodic_surface_axis_with_exact_degree_matching(&strips, Axis::U, 1_000_000)
+            .unwrap();
+    assert_eq!(report.refusal, None);
+    let surface = report.surface.unwrap();
+    assert_eq!(surface.degree_u, 2);
+    assert!(surface.periodic_u);
+    for u in [0., 0.5, 1., 1.5, 2., 2.5, 3.5, 4.] {
+        for v in [0., 0.25, 1.] {
+            assert_eq!(
+                surface.evaluate(u, v).unwrap().point,
+                source.evaluate(u, v).unwrap().point
+            );
+        }
+    }
+}
+
+#[test]
+fn periodic_strip_assembly_refuses_unstorable_elevation_along_the_assembly_axis() {
+    use nurbs_core::{
+        editing::{
+            exact_periodic_surface::{
+                PeriodicAssemblyRefusal, assemble_periodic_surface_axis_with_exact_degree_matching,
+            },
+            rational_factor::Refusal,
+        },
+        surface::Axis,
+    };
+    let (_, mut strips) = periodic_strips_with_mixed_assembly_degrees();
+    strips[0].weights[1] = vec![2.; 2];
+    let report =
+        assemble_periodic_surface_axis_with_exact_degree_matching(&strips, Axis::U, 1_000_000)
+            .unwrap();
+    assert!(report.surface.is_none());
+    assert_eq!(
+        report.refusal,
+        Some(PeriodicAssemblyRefusal::Exact(Refusal::NotRepresentable))
+    );
+}

@@ -1,0 +1,35 @@
+{
+  "id": "NURBS-0526",
+  "testedBase": "ee06b0eaced1f9191181c22e4943943fb75a6397",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts",
+    "--test",
+    "periodic_seam"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 109,
+  "scope": [
+    "Elevate mixed assembly-axis degrees, match transverse bases, and preserve the full UV laws.",
+    "Elevate the selected and transverse tensor axes to their respective maximum degrees before periodic assembly."
+  ],
+  "logSha256": "bdec8b4cd9e4335dc518bc31e4184dbf4f292b8d8ebd4a7463f268c7faa93a0b",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "fcd79415f30b3141d647802d092e0589d596cbf56c3b11efaae4ef4cef569015",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "c63bd2ba06ceb877278a757205965d82786c41bd5d0e2d6e0ffb3812ed738137",
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "4dd51cf84b8cb5666fc30f756a77ee813b5b452c4bb7abade67e22c92f941dfc"
+  }
+}

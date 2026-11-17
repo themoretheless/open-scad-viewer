@@ -911,6 +911,25 @@ pub fn assemble_periodic_surface_axis_with_exact_basis_matching(
     axis: Axis,
     max_work: u64,
 ) -> Result<PeriodicAssemblyReport> {
+    assemble_with_matching_degrees(strips, axis, max_work, false)
+}
+
+/// Match degrees along the periodic assembly axis as well as the clamped
+/// transverse bases. Elevation preserves both original parameter laws.
+pub fn assemble_periodic_surface_axis_with_exact_degree_matching(
+    strips: &[Surface],
+    axis: Axis,
+    max_work: u64,
+) -> Result<PeriodicAssemblyReport> {
+    assemble_with_matching_degrees(strips, axis, max_work, true)
+}
+
+fn assemble_with_matching_degrees(
+    strips: &[Surface],
+    axis: Axis,
+    max_work: u64,
+    match_selected: bool,
+) -> Result<PeriodicAssemblyReport> {
     use PeriodicAssemblyRefusal as Failure;
 
     crate::check(
@@ -928,58 +947,37 @@ pub fn assemble_periodic_surface_axis_with_exact_basis_matching(
         Axis::U => Axis::V,
         Axis::V => Axis::U,
     };
-    let degree = strips
-        .iter()
-        .map(|s| axis_degree(s, transverse))
-        .max()
-        .unwrap_or(0);
     let mut work = Work {
         used: 0,
         limit: max_work,
     };
-    let mut prepared = Vec::with_capacity(strips.len());
     let refuse = |reason, work_used| PeriodicAssemblyReport {
         surface: None,
         work_used,
         refusal: Some(reason),
     };
-    for (index, strip) in strips.iter().enumerate() {
-        let basis = row(strip, transverse, 0);
-        let [lo, hi] = basis.domain();
-        let p = basis.degree;
-        if basis.periodic
-            || !basis.knots[..=p].iter().all(|&k| k == lo)
-            || !basis.knots[basis.control_points.len()..]
-                .iter()
-                .all(|&k| k == hi)
-        {
-            return Ok(refuse(
-                Failure::Join {
-                    strip: index,
-                    reason: super::exact_surface_merge::Refusal::OtherBasisMismatch,
-                },
-                work.used,
-            ));
+    let prepared = if match_selected {
+        match elevate_strip_axes(
+            strips,
+            axis,
+            super::exact_surface_merge::Refusal::NonClamped,
+            &mut work,
+        ) {
+            Ok(prepared) => prepared,
+            Err(reason) => return Ok(refuse(reason, work.used)),
         }
-        if p == degree {
-            prepared.push(strip.clone());
-            continue;
-        }
-        let mut breaks = basis.knots;
-        breaks.dedup();
-        if (breaks.len() - 1) * degree + 1 > 256 {
-            return Ok(refuse(
-                Failure::Exact(ExactRefusal::ResourceLimit),
-                work.used,
-            ));
-        }
-        match rebuild_surface_axis(strip, transverse, degree, false, &mut work, |row, work| {
-            super::exact_knot_insertion::elevated_homogeneous(row, degree, &breaks, work)
-        }) {
-            Ok(surface) => prepared.push(surface),
-            Err(reason) => return Ok(refuse(Failure::Exact(reason), work.used)),
-        }
-    }
+    } else {
+        strips.to_vec()
+    };
+    let prepared = match elevate_strip_axes(
+        &prepared,
+        transverse,
+        super::exact_surface_merge::Refusal::OtherBasisMismatch,
+        &mut work,
+    ) {
+        Ok(prepared) => prepared,
+        Err(reason) => return Ok(refuse(reason, work.used)),
+    };
     if work.used == max_work {
         return Ok(refuse(
             Failure::Exact(ExactRefusal::ResourceLimit),
@@ -993,4 +991,51 @@ pub fn assemble_periodic_surface_axis_with_exact_basis_matching(
     )?;
     report.work_used += work.used;
     Ok(report)
+}
+
+fn elevate_strip_axes(
+    strips: &[Surface],
+    axis: Axis,
+    mismatch: super::exact_surface_merge::Refusal,
+    work: &mut Work,
+) -> std::result::Result<Vec<Surface>, PeriodicAssemblyRefusal> {
+    use PeriodicAssemblyRefusal as Failure;
+    let degree = strips
+        .iter()
+        .map(|s| axis_degree(s, axis))
+        .max()
+        .unwrap_or(0);
+    let mut prepared = Vec::with_capacity(strips.len());
+    for (index, strip) in strips.iter().enumerate() {
+        let basis = row(strip, axis, 0);
+        let [lo, hi] = basis.domain();
+        let p = basis.degree;
+        if basis.periodic
+            || !basis.knots[..=p].iter().all(|&k| k == lo)
+            || !basis.knots[basis.control_points.len()..]
+                .iter()
+                .all(|&k| k == hi)
+        {
+            return Err(Failure::Join {
+                strip: index,
+                reason: mismatch,
+            });
+        }
+        if p == degree {
+            prepared.push(strip.clone());
+            continue;
+        }
+        let mut breaks = basis.knots;
+        breaks.dedup();
+        if (breaks.len() - 1) * degree + 1 > 256 {
+            return Err(Failure::Exact(ExactRefusal::ResourceLimit));
+        }
+        match rebuild_surface_axis(strip, axis, degree, false, work, |row, work| {
+            super::exact_knot_insertion::elevated_homogeneous(row, degree, &breaks, work)
+        }) {
+            Ok(surface) => prepared.push(surface),
+            Err(reason) => return Err(Failure::Exact(reason)),
+        }
+    }
+    Ok(prepared)
 }
