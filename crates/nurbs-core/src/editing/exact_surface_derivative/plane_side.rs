@@ -284,3 +284,6 @@ pub use split_periodic::{
     PeriodicSurfacePlaneTrimSplit, PeriodicSurfacePlaneTrimSplitReport,
     split_periodic_surface_strip_by_plane,
 };
+
+mod cap;
+pub use cap::{PlanarSectionCap, PlanarSectionCapReport, cap_surface_plane_section};

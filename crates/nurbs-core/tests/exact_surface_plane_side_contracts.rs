@@ -6,11 +6,11 @@ use nurbs_core::{
         SurfacePlaneWorldPolylineOptions, SurfacePlaneWorldStripOptions,
         approximate_surface_plane_graph, approximate_surface_plane_graph_xyz,
         approximate_surface_plane_strip_xyz, audit_surface_plane_graphs, audit_surface_plane_side,
-        close_periodic_surface_plane_strip_xyz, refine_surface_plane_side,
-        sample_surface_plane_graph, split_periodic_surface_strip_by_plane,
-        split_surface_cell_by_plane, stitch_surface_plane_graph_strip,
-        store_periodic_surface_plane_section, store_surface_plane_section_curve,
-        store_surface_plane_section_pair,
+        cap_surface_plane_section, close_periodic_surface_plane_strip_xyz,
+        refine_surface_plane_side, sample_surface_plane_graph,
+        split_periodic_surface_strip_by_plane, split_surface_cell_by_plane,
+        stitch_surface_plane_graph_strip, store_periodic_surface_plane_section,
+        store_surface_plane_section_curve, store_surface_plane_section_pair,
     },
     surface::Surface,
 };
@@ -1050,4 +1050,75 @@ fn reverses_periodic_trim_labels_when_the_plane_normal_flips() {
     for (a, b) in positive.positive.iter().zip(&negative.negative) {
         assert_eq!(a.control_points, b.control_points);
     }
+}
+
+#[test]
+fn caps_a_stored_periodic_section_with_a_simple_exact_plane_chart() {
+    use nurbs_core::trim::trim_domain::{Location, TrimDomain, exact_loop_joins};
+    let patch = periodic_section_patch();
+    let stored = store_periodic_surface_plane_section(
+        &patch,
+        [0., 0., 1.],
+        0.,
+        periodic_section_options(),
+        0.05,
+    )
+    .unwrap()
+    .outcome
+    .unwrap();
+    let edges: Vec<_> = stored
+        .pieces
+        .into_iter()
+        .map(|piece| piece.spatial.curve)
+        .collect();
+    let report = cap_surface_plane_section(&edges, [0., 0., 1.], 0., 0., WORK).unwrap();
+    let cap = report.outcome.unwrap();
+    assert_eq!(cap.boundary_gap_upper, q(0));
+    assert_eq!(cap.face.projection.omitted_axis, 2);
+    assert_eq!(cap.face.projection.retained_axes, [0, 1]);
+    assert_eq!(exact_loop_joins(&cap.face.loops[0]).unwrap(), Some(true));
+    let proof = TrimDomain::new(&cap.face.loops, 1e-9)
+        .unwrap()
+        .classify_point([0., 0.], 10_000)
+        .unwrap();
+    assert_eq!(proof.location, Location::Inside);
+    assert_eq!(proof.winding, Some(1));
+    let flipped = cap_surface_plane_section(&edges, [0., 0., -1.], 0., 0., WORK)
+        .unwrap()
+        .outcome
+        .unwrap();
+    assert_eq!(flipped.face.projection.retained_axes, [1, 0]);
+    assert_ne!(flipped.reversed, cap.reversed);
+    let limited =
+        cap_surface_plane_section(&edges, [0., 0., 1.], 0., 0., report.work_used - 1).unwrap();
+    assert!(matches!(limited.outcome, Err(Refusal::ResourceLimit)));
+}
+
+#[test]
+fn certifies_projection_gap_and_refuses_a_self_crossing_cap() {
+    use nurbs_core::curve::Curve;
+    let z = 1. / 3.;
+    let polygon = |points: &[[f64; 2]]| {
+        Curve::from_polyline(points.iter().map(|&[x, y]| vec![x, y, z]).collect()).unwrap()
+    };
+    let square = polygon(&[[0., 0.], [1., 0.], [1., 1.], [0., 1.], [0., 0.]]);
+    let report =
+        cap_surface_plane_section(&[square.clone()], [0., 0., 3.], 1., 1e-15, WORK).unwrap();
+    let cap = report.outcome.unwrap();
+    let third = Q::new(1.into(), 3.into());
+    assert_eq!(cap.face.projection.offset, third);
+    assert_eq!(cap.boundary_gap_upper, third - Q::from_float(z).unwrap());
+    assert!(matches!(
+        cap_surface_plane_section(&[square], [0., 0., 3.], 1., 0., WORK)
+            .unwrap()
+            .outcome,
+        Err(Refusal::UnprovedIdentity)
+    ));
+    let bow = polygon(&[[0., 0.], [1., 1.], [0., 1.], [1., 0.], [0., 0.]]);
+    assert!(matches!(
+        cap_surface_plane_section(&[bow], [0., 0., 3.], 1., 1e-15, WORK)
+            .unwrap()
+            .outcome,
+        Err(Refusal::UnprovedIdentity)
+    ));
 }

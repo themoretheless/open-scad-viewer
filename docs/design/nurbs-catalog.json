@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 372,
-  "unallocatedCount": 628,
+  "specifiedCount": 373,
+  "unallocatedCount": 627,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -9559,6 +9559,31 @@
       "remainingQualification": [
         "Split a full periodic knot strip into complementary positively oriented UV trim loops along a certified section chain.",
         "Strict monotone traversal and exact joins close both unwrapped UV loops. They use opposite directions of the shared section and retain its certified periodic identification and sign orientation.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0373",
+      "name": "Плоская крышка по замкнутой цепочке согласованных NURBS-кромок",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "nurbs_core::editing::exact_surface_derivative::cap_surface_plane_section",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_surface_derivative.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/extraction.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/storage.rs",
+        "crates/nurbs-core/tests/exact_surface_plane_side_contracts.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/nurbs-core/src/analysis/planar_trim_projection.rs",
+        "docs/qualification/nurbs-curvature-field-373-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-373-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Build a planar trimmed cap from a simple closed section edge chain with a continuous boundary gap certificate.",
+        "The dominant normal defines an exact support chart. Rational segment predicates and signed area certify a simple oriented cap loop. Affine lift bounds each entire edge by its endpoint gap.",
         "WASM and application integration are separate."
       ]
     }
