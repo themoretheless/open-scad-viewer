@@ -1915,3 +1915,57 @@ fn distinguishes_touching_and_overlapping_projections() {
         );
     }
 }
+
+#[test]
+fn classifies_planes_against_exact_trimmed_polyhedral_extrema() {
+    use brep_core::analysis::{PolyhedralPlaneRelation::*, exact_polyhedral_plane_relation};
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let normal = [-1., -1., 3.];
+    for (offset, expected, residuals) in [
+        (-2., Positive, [2, 8]),
+        (0., TouchesFromPositive, [0, 6]),
+        (3., Crosses, [-3, 3]),
+        (6., TouchesFromNegative, [-6, 0]),
+        (8., Negative, [-8, -2]),
+    ] {
+        let report = exact_polyhedral_plane_relation(&solid, normal, offset, 1_000_000).unwrap();
+        assert_eq!(report.relation, expected);
+        assert_eq!(
+            report.residual_bounds,
+            residuals.map(|n| Q::from_integer(n.into()))
+        );
+        let distance = if matches!(expected, Positive | Negative) {
+            4
+        } else {
+            0
+        };
+        assert_eq!(
+            report.distance_squared_mm2,
+            Q::new(distance.into(), 11.into())
+        );
+        for (point, residual) in report.witnesses_mm.iter().zip(report.residual_bounds) {
+            assert_eq!(
+                -&point[0] - &point[1] + &point[2] * Q::from_integer(3.into())
+                    - Q::from_float(offset).unwrap(),
+                residual
+            );
+        }
+    }
+}
+
+#[test]
+fn exact_plane_distance_is_invariant_under_rescaling_and_orientation() {
+    use brep_core::analysis::{PolyhedralPlaneRelation::*, exact_polyhedral_plane_relation};
+    let solid = shifted_oblique_solid(0.);
+    let report = exact_polyhedral_plane_relation(&solid, [-1., -1., 3.], 8., 1_000_000).unwrap();
+    let reversed =
+        exact_polyhedral_plane_relation(&solid, [2., 2., -6.], -16., report.exact_work).unwrap();
+    assert_eq!(report.relation, Negative);
+    assert_eq!(reversed.relation, Positive);
+    assert_eq!(report.distance_squared_mm2, reversed.distance_squared_mm2);
+    assert!(
+        exact_polyhedral_plane_relation(&solid, [-1., -1., 3.], 8., report.exact_work - 1).is_err()
+    );
+    assert!(exact_polyhedral_plane_relation(&solid, [0.; 3], 8., 1_000_000).is_err());
+}

@@ -369,6 +369,76 @@ pub fn exact_polyhedral_projection(
     })
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PolyhedralPlaneRelation {
+    Negative,
+    TouchesFromNegative,
+    Crosses,
+    TouchesFromPositive,
+    Positive,
+}
+
+#[derive(Clone, Debug)]
+pub struct ExactPolyhedralPlaneRelation {
+    pub relation: PolyhedralPlaneRelation,
+    /// Exact extrema of `normal · point - offset`.
+    pub residual_bounds: [Q; 2],
+    /// Boundary points attaining the two residual bounds.
+    pub witnesses_mm: [[Q; 3]; 2],
+    /// Exact square of the minimum distance to the plane.
+    pub distance_squared_mm2: Q,
+    pub exact_work: u64,
+}
+
+/// Classify a single qualified polyhedral body against a plane given by
+/// `normal · point = offset`. Restricting this operation to one body ensures
+/// opposite-side extrema witness a crossing of a connected outer boundary.
+pub fn exact_polyhedral_plane_relation(
+    solid: &QualifiedClosedSolid,
+    normal: [f64; 3],
+    offset: f64,
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPlaneRelation> {
+    validate_work(max_exact_work)?;
+    let offset = Q::from_float(offset)
+        .ok_or_else(|| Error::new("BREP_INVALID_INPUT", "Section plane offset must be finite"))?;
+    if solid.model().bodies.len() != 1 {
+        return Err(refuse(
+            "Plane relation requires one connected material body",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    spend(&mut remaining, 20)?;
+    if remaining == 0 {
+        return Err(work_exhausted());
+    }
+    let projection = exact_polyhedral_projection(solid, normal, remaining)?;
+    let residual_bounds = projection.dot_bounds.map(|bound| bound - &offset);
+    let [lo, hi] = &residual_bounds;
+    let (relation, gap) = if hi.is_negative() {
+        (PolyhedralPlaneRelation::Negative, Some(hi))
+    } else if lo.is_positive() {
+        (PolyhedralPlaneRelation::Positive, Some(lo))
+    } else if hi.is_zero() {
+        (PolyhedralPlaneRelation::TouchesFromNegative, None)
+    } else if lo.is_zero() {
+        (PolyhedralPlaneRelation::TouchesFromPositive, None)
+    } else {
+        (PolyhedralPlaneRelation::Crosses, None)
+    };
+    let distance_squared_mm2 = gap.map_or_else(Q::zero, |value| {
+        let norm_squared: Q = lift(&normal).iter().map(|x| x * x).sum();
+        value.pow(2) / norm_squared
+    });
+    Ok(ExactPolyhedralPlaneRelation {
+        relation,
+        residual_bounds,
+        witnesses_mm: projection.witnesses_mm,
+        distance_squared_mm2,
+        exact_work: max_exact_work - remaining + projection.exact_work,
+    })
+}
+
 #[derive(Clone, Debug)]
 pub struct ExactPolyhedralAxisSeparation {
     /// Positive for disjoint intervals, zero for touching intervals, and
