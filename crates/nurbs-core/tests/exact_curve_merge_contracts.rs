@@ -3154,3 +3154,39 @@ fn exact_periodic_surface_evaluation_refuses_rounding_at_the_upper_seam() {
         .unwrap();
     assert!(evaluate_exact_wrapped_surface_point(&open, [1., -0.125], 1_000_000).is_err());
 }
+
+#[test]
+fn wrapped_periodic_surface_batch_matches_individual_evaluation_in_input_order() {
+    use nurbs_core::editing::exact_periodic_surface::{
+        evaluate_exact_wrapped_surface_point, evaluate_exact_wrapped_surface_points,
+    };
+    let source = doubly_periodic_tensor();
+    let uv = [[-4.25, 14.25], [4., -8.], [3.25, 1.75], [-4.25, 14.25]];
+    let report = evaluate_exact_wrapped_surface_points(&source, &uv, 1_000_000).unwrap();
+    let samples = report.samples.unwrap();
+    assert_eq!(samples.len(), uv.len());
+    for (sample, uv) in samples.into_iter().zip(uv) {
+        let single = evaluate_exact_wrapped_surface_point(&source, uv, 1_000_000).unwrap();
+        assert_eq!(sample, (single.native_uv.unwrap(), single.point.unwrap()));
+    }
+    let short = evaluate_exact_wrapped_surface_points(&source, &uv, report.work_used - 1).unwrap();
+    assert_eq!(short.refused_sample, Some(3));
+    assert!(short.samples.is_none());
+}
+
+#[test]
+fn wrapped_periodic_surface_batch_identifies_unstorable_sample_without_a_prefix() {
+    use nurbs_core::editing::{
+        exact_periodic_surface::evaluate_exact_wrapped_surface_points, rational_factor::Refusal,
+    };
+    let source = doubly_periodic_tensor();
+    let report = evaluate_exact_wrapped_surface_points(
+        &source,
+        &[[1., 2.], [-2f64.powi(-54), 0.], [2., 3.]],
+        1_000_000,
+    )
+    .unwrap();
+    assert!(report.samples.is_none());
+    assert_eq!(report.refused_sample, Some(1));
+    assert_eq!(report.refusal, Some(Refusal::NotRepresentable));
+}

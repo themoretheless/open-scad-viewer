@@ -1803,3 +1803,96 @@ fn wrap_parameter_exact(
     let reduced = work.op(&value, &shift, |value, shift| value - shift)?;
     Ok(work.float(&reduced)?)
 }
+
+#[derive(Clone, Debug)]
+pub struct PeriodicPointBatchReport {
+    /// Native parameters and evaluated points in input order.
+    pub samples: Option<Vec<([f64; 2], [f64; 3])>>,
+    pub work_used: u64,
+    /// Index of the first point whose exact reduction failed.
+    pub refused_sample: Option<usize>,
+    pub refusal: Option<ExactRefusal>,
+}
+
+/// Evaluate a batch after exact periodic parameter reduction. Validate
+/// the surface and prove its periodic axes once, then reuse one evaluator
+/// and one reduction budget. No prefix is returned after a refusal.
+pub fn evaluate_exact_wrapped_surface_points(
+    source: &Surface,
+    parameters: &[[f64; 2]],
+    max_work: u64,
+) -> Result<PeriodicPointBatchReport> {
+    use crate::surface::SurfaceEvaluator;
+
+    crate::check(
+        parameters.len() <= 4096,
+        "Periodic surface batch supports at most 4096 points",
+    )?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact parameter wrapping work must be in 1..=1000000",
+    )?;
+    let mut evaluator = SurfaceEvaluator::new(source)?;
+    let mut axes = [([0., 0.], false); 2];
+    for (i, axis) in [Axis::U, Axis::V].into_iter().enumerate() {
+        let reference = row(source, axis, 0);
+        if reference.periodic
+            && !crate::analysis::curve_partition_agreement::verify_periodic_source_closure(
+                &reference,
+            )?
+        {
+            return Ok(PeriodicPointBatchReport {
+                samples: None,
+                work_used: 0,
+                refused_sample: None,
+                refusal: Some(ExactRefusal::InvalidOutput),
+            });
+        }
+        axes[i] = (reference.domain(), reference.periodic);
+    }
+    for uv in parameters {
+        for (&value, ([lo, hi], periodic)) in uv.iter().zip(axes) {
+            crate::check(value.is_finite(), "Surface parameters must be finite")?;
+            crate::check(
+                periodic || (lo <= value && value <= hi),
+                "Parameter is outside the nonperiodic axis",
+            )?;
+        }
+    }
+
+    let mut samples = Vec::with_capacity(parameters.len());
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    for (index, &uv) in parameters.iter().enumerate() {
+        let mut reduce = || -> std::result::Result<[f64; 2], ExactRefusal> {
+            work.charge(1)?;
+            let mut native = uv;
+            for (value, (domain, periodic)) in native.iter_mut().zip(axes) {
+                if periodic {
+                    *value = wrap_parameter_exact(*value, domain, &mut work)?;
+                }
+            }
+            Ok(native)
+        };
+        let native = match reduce() {
+            Ok(native) => native,
+            Err(reason) => {
+                return Ok(PeriodicPointBatchReport {
+                    samples: None,
+                    work_used: work.used,
+                    refused_sample: Some(index),
+                    refusal: Some(reason),
+                });
+            }
+        };
+        samples.push((native, evaluator.evaluate(native[0], native[1])?.point));
+    }
+    Ok(PeriodicPointBatchReport {
+        samples: Some(samples),
+        work_used: work.used,
+        refused_sample: None,
+        refusal: None,
+    })
+}
