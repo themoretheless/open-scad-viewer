@@ -16,6 +16,7 @@ import {
 } from './displayScheduler'
 import type { GpuResidencyCache } from './gpuResidencyCache'
 import { BoundingBoxLayer } from './boundingBoxDisplay'
+import { ClusterLevelSource } from './clusterLevels'
 import { updateMeshLods } from './meshLod'
 import type { NativePickingCache } from './nativePickingCache'
 import { createDisplayLevelProvider, OnDemandLevelSource, type DisplayLevelProvider } from './onDemandLevels'
@@ -43,14 +44,21 @@ export class MeshDisplayController {
   private onDemand: OnDemandLevelSource | null = null
   /** Stable loader handed to level stores; the on-demand source may appear after the store. */
   private readonly loader: DeferredLevelLoader = {
-    load: (mesh, level) => this.onDemand?.load(mesh, level) ?? Promise.reject(new Error('No display level source')),
-    cancelStale: (mesh, keep) => this.onDemand?.cancelStale(mesh, keep),
+    load: (mesh, level) =>
+      this.clusters.owns(mesh)
+        ? this.clusters.load(mesh, level)
+        : (this.onDemand?.load(mesh, level) ?? Promise.reject(new Error('No display level source'))),
+    cancelStale: (mesh, keep) => {
+      if (!this.clusters.owns(mesh)) this.onDemand?.cancelStale(mesh, keep)
+    },
   }
 
   constructor(
     /** Ask for a frame; called when a level or summary landed after the frame that wanted it. */
     private readonly requestRender: () => void,
     private readonly createProvider: () => DisplayLevelProvider | null = createDisplayLevelProvider,
+    /** Coarse levels built lazily for large plain meshes published without `lods`. */
+    private readonly clusters: ClusterLevelSource = new ClusterLevelSource(),
   ) {}
 
   get displayBudget(): DisplayBudget {
@@ -78,6 +86,7 @@ export class MeshDisplayController {
       if (this.store && this.store.epoch !== frame.sceneEpoch) source.retain(frame.meshes)
       attached = source.attach(frame.meshes).length
     }
+    attached += this.clusters.attach(frame.meshes).length
     let changed: GMesh[] = []
     if (frame.meshes.some(mesh => mesh.lod)) {
       const key = `${frame.selectionKey}|${this.budget.budgetBytes}|${this.budget.targetErrorPixels}|${boxProxiesOn(this.budget)}`

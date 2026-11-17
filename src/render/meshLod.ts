@@ -67,6 +67,7 @@ export function bindMeshLod(
   const lod = mesh.lod
   if (!lod || lod.current === level || !lod.levels[level] || isDeferredLevel(lod.levels[level])) return false
   const data = lod.levels[level]
+  if (isBaseLevel(lod, data)) return restoreBase(mesh, lod, level, nativePicking)
   // Shared buffers are owned by the display cache, not by this mesh.
   let buffers = shared ?? lod.buffers[level]
   if (!buffers) {
@@ -103,22 +104,37 @@ export function bindMeshLod(
 
 /** The base edge buffer may be shared with other instances of the same asset; leave it alive. */
 function isBaseEdgeBuffer(mesh: GMesh): boolean {
-  return mesh.lod?.current === null
+  return !!mesh.lod && mesh.vb === mesh.lod.base.vb
 }
 
-/** Restore base views before destruction so shared-asset bookkeeping sees the published buffers. */
-export function releaseMeshLod(mesh: GMesh, nativePicking: NativePickingCache): void {
-  const lod = mesh.lod
-  if (!lod) return
-  if (lod.current !== null) {
+/** A level that aliases the published geometry (lazily built LOD states use the base as their finest level). */
+export const isBaseLevel = (lod: GMeshLodState, level: MeshLodLevel | undefined) =>
+  !!level && level.vertices === lod.base.vertices && level.indices === lod.base.indices
+
+/** Bind the published buffers again instead of uploading a copy of the base geometry. */
+function restoreBase(
+  mesh: GMesh,
+  lod: GMeshLodState,
+  level: number | null,
+  nativePicking: NativePickingCache,
+): boolean {
+  if (mesh.vb !== lod.base.vb) {
     nativePicking.release(mesh.vb)
     mesh.edgeIB?.destroy()
     mesh.edgeIB = null
     mesh.edgeIC = 0
     Object.assign(mesh, lod.base)
     mesh.faceIndex = undefined
-    lod.current = null
   }
+  lod.current = level
+  return true
+}
+
+/** Restore base views before destruction so shared-asset bookkeeping sees the published buffers. */
+export function releaseMeshLod(mesh: GMesh, nativePicking: NativePickingCache): void {
+  const lod = mesh.lod
+  if (!lod) return
+  restoreBase(mesh, lod, null, nativePicking)
   for (const buffers of lod.buffers) {
     buffers?.vb.destroy()
     buffers?.ib.destroy()
@@ -162,7 +178,7 @@ export function updateMeshLods(
     const entry = plan?.get(mesh)
     const target = Math.min(selection.level, entry?.maxLevel ?? selection.level)
     let rebound: boolean
-    if (display.store) {
+    if (display.store && !isBaseLevel(lod, lod.levels[target])) {
       const resolved = display.store.resolve(dev, mesh, target)
       rebound = !!resolved && bindMeshLod(dev, mesh, resolved.level, nativePicking, resolved.buffers)
     } else rebound = bindMeshLod(dev, mesh, target, nativePicking)
