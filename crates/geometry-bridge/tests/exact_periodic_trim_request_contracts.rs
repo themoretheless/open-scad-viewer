@@ -546,3 +546,50 @@ fn window_mass_properties_operation_distinguishes_empty_and_invalid_windows() {
         false
     );
 }
+
+fn patch_set_mass_request(max_cells: usize) -> Value {
+    let mut request = surface_area_request(max_cells, 1_000_000);
+    request["op"] = json!("brep_measure_exact_periodic_trim_patch_set_mass_properties");
+    request["contours"].as_array_mut().unwrap().push(json!([
+        [0.1875, 0.375],
+        [0.3125, 0.375],
+        [0.3125, 0.625],
+        [0.1875, 0.625],
+        [0.1875, 0.375]
+    ]));
+    request
+}
+
+#[test]
+fn patch_set_mass_operation_returns_shared_centroid_and_island_area() {
+    let response = run(&patch_set_mass_request(20_000));
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    let components = report["componentAreas"].as_array().unwrap();
+    assert_eq!(components.len(), 2);
+    assert_eq!(components[1]["outerContour"], 2);
+    for (interval, expected) in [
+        (&report["boundsMm2"], 1.3125),
+        (&components[1]["boundsMm2"], 0.0625),
+        (&report["centroidBoundsMm"][0], 3. / 28.),
+    ] {
+        assert!(
+            interval[0].as_f64().unwrap() <= expected && expected <= interval[1].as_f64().unwrap()
+        );
+    }
+    assert_eq!(
+        report["centralInertiaBoundsMm4"].as_array().unwrap().len(),
+        3
+    );
+}
+
+#[test]
+fn patch_set_mass_operation_does_not_publish_partial_components() {
+    let response = run(&patch_set_mass_request(2));
+    assert_eq!(response["ok"], true, "{response}");
+    let report = &response["value"];
+    assert_eq!(report["status"], "workLimit");
+    assert_eq!(report["minimumSurfaceCells"], 3);
+    assert_eq!(report["componentAreas"], json!([]));
+    assert!(report["boundsMm2"].is_null() && report["centroidBoundsMm"].is_null());
+}

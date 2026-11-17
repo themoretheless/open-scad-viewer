@@ -21,6 +21,7 @@ interface Report {
     topologyIds: { edges: string[] }
   } | null
   edgeBindings?: { edgeId: string; contour: number; segment: number; interval?: [number, number]; parameters?: [Rational, Rational] }[]
+  componentAreas?: { outerContour: number; boundsMm2: [number, number] }[]
   centroidBoundsMm?: [number, number][] | null
   centralInertiaBoundsMm4?: [number, number][][] | null
   principalMomentBoundsMm4?: [number, number][] | null
@@ -261,3 +262,21 @@ const emptyWindow = call(request.maxWork, windowMassOp, { ...windowOptions, uvWi
 assert.deepEqual(emptyWindow.boundsMm2, [0, 0])
 assert.equal(emptyWindow.centroidBoundsMm, null)
 console.log('WASM ABI enclosed mass properties inside a clipped UV window.')
+
+const patchSetOp = 'brep_measure_exact_periodic_trim_patch_set_mass_properties'
+const island = [[0.1875, 0.375], [0.3125, 0.375], [0.3125, 0.625], [0.1875, 0.625], [0.1875, 0.375]]
+const patchSetOptions = {
+  ...surfaceAreaOptions, contours: [...request.contours, island], maxTrimCells: 1_000_000,
+}
+const patchSet = call(request.maxWork, patchSetOp, { ...patchSetOptions, maxSurfaceCells: 20_000 })
+assert.equal(patchSet.componentAreas?.length, 2)
+assert.equal(patchSet.componentAreas?.[1].outerContour, 2)
+const islandBounds = patchSet.componentAreas?.[1].boundsMm2
+assert.ok(islandBounds && islandBounds[0] <= 0.0625 && 0.0625 <= islandBounds[1])
+assert.ok(patchSet.centroidBoundsMm)
+assert.equal(patchSet.centralInertiaBoundsMm4?.length, 3)
+const incompleteSet = call(request.maxWork, patchSetOp, { ...patchSetOptions, maxSurfaceCells: 2 })
+assert.equal(incompleteSet.status, 'workLimit')
+assert.deepEqual(incompleteSet.componentAreas, [])
+assert.equal(incompleteSet.boundsMm2, null)
+console.log('WASM ABI returned complete multi-component trimmed surface mass properties.')

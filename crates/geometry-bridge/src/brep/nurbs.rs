@@ -1147,7 +1147,7 @@ fn periodic_trim_surface_measure_response(
     use crate::field;
     use nurbs_core::{
         analysis::surface_measure::{
-            StopReason, periodic_trim_patch_area, trimmed_surface_central_inertia,
+            periodic_trim_patch_area, trimmed_surface_central_inertia,
             trimmed_surface_central_inertia_in_window,
         },
         editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
@@ -1234,11 +1234,21 @@ fn periodic_trim_surface_measure_response(
     } else {
         periodic_trim_patch_area(patch, tolerance, tolerance_uv, max_surface, max_trim)?
     };
+    write_trimmed_surface_area(&mut response, measure);
+    Ok(response)
+}
+
+fn write_trimmed_surface_area(
+    response: &mut value_codec::Value,
+    measure: nurbs_core::analysis::surface_measure::TrimmedAreaReport,
+) {
+    use nurbs_core::analysis::surface_measure::StopReason;
+    use value_codec::json;
     response["minimumSurfaceCells"] = json!(measure.minimum_surface_cells);
     response["trimCells"] = json!(measure.trim_cells);
     let Some(area) = measure.area else {
         response["status"] = json!("workLimit");
-        return Ok(response);
+        return;
     };
     response["boundsMm2"] = json!(area.bounds);
     response["surfaceCells"] = json!(area.cells);
@@ -1248,5 +1258,69 @@ fn periodic_trim_surface_measure_response(
         StopReason::WorkLimit => "workLimit",
         StopReason::PrecisionLimit => "precisionLimit",
     });
+}
+
+/// Measure the common mass properties of all retained periodic trim components.
+pub fn exact_periodic_trim_patch_set_mass_request(
+    request: &value_codec::Value,
+) -> Result<value_codec::Value> {
+    use crate::field;
+    use nurbs_core::{
+        analysis::surface_measure::periodic_trim_patch_set_central_inertia,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+    };
+    use value_codec::json;
+
+    let source: nurbs_core::surface::Surface = field(request, "surface")?;
+    let contours: Vec<Vec<[f64; 2]>> = field(request, "contours")?;
+    let tolerance: f64 = field(request, "toleranceMm2")?;
+    let tolerance_uv: f64 = field(request, "toleranceUv")?;
+    let max_work: u64 = field(request, "maxWork")?;
+    let max_surface: usize = field(request, "maxSurfaceCells")?;
+    let max_trim: usize = field(request, "maxTrimCells")?;
+    if [tolerance, tolerance_uv]
+        .iter()
+        .any(|t| !t.is_finite() || *t <= 0.)
+        || !(1..=100_000).contains(&max_surface)
+        || !(1..=1_000_000).contains(&max_trim)
+    {
+        return Err(input(
+            "Invalid tolerance or cell limit for trimmed patch set",
+        ));
+    }
+    let contours = contours.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let build = build_exact_periodic_surface_trim_patches(&source, &contours, max_work)?;
+    let mut response = json!({
+        "boundsMm2": null, "withinTolerance": false, "surfaceCells": 0,
+        "minimumSurfaceCells": null, "trimCells": 0, "workUsed": build.work_used,
+        "status": "buildRefused", "componentAreas": [],
+        "centroidBoundsMm": null, "centralInertiaBoundsMm4": null,
+    });
+    let Some(patches) = build.patches else {
+        return Ok(response);
+    };
+    let mass = periodic_trim_patch_set_central_inertia(
+        &patches,
+        tolerance,
+        tolerance_uv,
+        max_surface,
+        max_trim,
+    )?;
+    let measure = mass.centroid.measure;
+    let components = patches
+        .iter()
+        .zip(measure.components)
+        .map(|(patch, area)| {
+            json!({
+                "outerContour": patch.trim.contours[0],
+                "boundsMm2": area.bounds,
+                "surfaceCells": area.cells,
+            })
+        })
+        .collect::<Vec<_>>();
+    response["componentAreas"] = json!(components);
+    response["centroidBoundsMm"] = json!(mass.centroid.centroid_bounds);
+    response["centralInertiaBoundsMm4"] = json!(mass.central_inertia_bounds);
+    write_trimmed_surface_area(&mut response, measure.total);
     Ok(response)
 }

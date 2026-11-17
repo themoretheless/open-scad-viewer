@@ -1,0 +1,48 @@
+{
+  "id": "NURBS-0618",
+  "testedBase": "8f4809f63f848a5e294bda37caff2042a458961d",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "geometry-bridge",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_periodic_trim_request_contracts",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 236,
+  "scope": [
+    "Expose total and component area, common centroid and central inertia through one WASM operation.",
+    "Verify nested-island areas, common centroid, tensor delivery, and absence of partial component sets through the compiled WASM ABI."
+  ],
+  "logSha256": "7f11f63e03861fc262108ea8c817d05cdaac520fd5a36bc580e6838823b078e7",
+  "sourceSha256": {
+    "crates/geometry-bridge/src/brep/nurbs.rs": "731a739d2d0c96de5f196dc466a99cdbdcb77704367117d7390cf6e70f0fcc5a",
+    "crates/geometry-bridge/src/dispatch/brep.rs": "72468f161540b728b202dd71795ea8966449596fe5bb6813e5e718efdd80cca6",
+    "crates/geometry-bridge/tests/exact_periodic_trim_request_contracts.rs": "3fded53f7f63c7e40b3ad46f0b3e545b3cfd5c4e8412bf99316c409f5108fbb1",
+    "scripts/check-exact-periodic-trim-sheet-abi.mts": "15abf6230cee327f6d7d1f10fcc39a6840d22daa62fcd4ef0596bb89e4800d0c"
+  },
+  "wasmVerification": {
+    "build": [
+      "cargo",
+      "build",
+      "--locked",
+      "--offline",
+      "--manifest-path",
+      "crates/Cargo.toml",
+      "-p",
+      "geometry-wasm",
+      "--target",
+      "wasm32-unknown-unknown"
+    ],
+    "probe": "node_modules/.bin/tsx scripts/check-exact-periodic-trim-sheet-abi.mts <geometry_wasm.wasm>"
+  }
+}
