@@ -77,3 +77,5 @@ pub mod planar_face_area;
 pub mod exact_planar_face_mass;
 
 pub mod bounded_planar_face_mass;
+
+pub mod planar_face_perimeter;
