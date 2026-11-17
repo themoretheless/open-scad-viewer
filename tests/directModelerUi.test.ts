@@ -38,6 +38,8 @@ beforeAll(async () => {
   await import('../src/components/SolidVolumeWitness.svt')
   await import('../src/components/SolidVolumeDistance.svt')
   await import('../src/components/MaterialPathCheck.svt')
+  await import('../src/components/BodyArrayRoundControls.svt')
+  await import('../src/components/NurbsSweepRebuildControls.svt')
   await import('../src/components/VrControls.svt')
   await import('../src/features/GcodePanel.svt')
   await import('../src/features/LaserCamPanel.svt')

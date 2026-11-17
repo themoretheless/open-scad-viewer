@@ -1,0 +1,59 @@
+<script setup lang="ts">
+import CadQuantityInput from './CadQuantityInput.svt'
+import { canRedoFullRound, canUndoFullRound } from '../app/directExactFullRound'
+import type { DirectBody } from '../app/directModeling'
+import type { SolidFullRoundAction } from '../kernel/solidFullRound'
+// Full Round, instance array and live array fields load on first use so they stay out of the modeler chunk.
+// The fields edit the shared reactive command options in place, as the inline template did.
+const props = defineProps<{
+  op: string
+  advanced: Record<string, any>
+  locale: string
+  selectedBody?: DirectBody
+  hasLivePattern: boolean
+  errorField: string
+}>()
+const emit = defineEmits<{ 'update:advanced': [{ fullRoundAction: SolidFullRoundAction }]; validity: [string, boolean] }>()
+const label = (ru: string, en: string) => (props.locale === 'ru' ? ru : en)
+</script>
+<template>
+  <template v-if="op==='full-round'">
+    <label>{{ label('Сегменты отображения','Display segments') }}<input v-model.number="advanced.fullRoundSegments" data-field="fullRoundSegments" type="number" min="1" max="32" step="1" :aria-label="label('Сегменты отображения','Display segments')"></label>
+    <div v-if="selectedBody?.exactFullRound" class="segmented" role="radiogroup" data-full-round-history :aria-label="label('История скругления','Full Round history')"><button v-for="(name,value) in {undo:label('Шаг назад','Step back'),redo:label('Шаг вперёд','Step forward')}" :key="value" type="button" role="radio" :aria-checked="advanced.fullRoundAction===value" :disabled="value==='undo'?!canUndoFullRound(selectedBody):!canRedoFullRound(selectedBody)" :data-mode="value" @click="emit('update:advanced',{fullRoundAction:value})">{{ name }}</button></div>
+    <template v-else>
+      <label v-for="(key,i) in (['fullRoundFaceA','fullRoundFaceB','fullRoundFaceC'] as const)" :key="key">{{ label('Грань ','Face ')+(i+1) }}<input v-model.number="advanced[key]" :data-field="key" type="number" min="0" step="1" :aria-label="label('Грань ','Face ')+(i+1)"></label>
+    </template>
+    <small>{{ selectedBody?.exactFullRound?label('Шаги нативной истории скругления. Undo приложения отменяет и этот шаг.','Steps through the native Full Round history. App Undo also reverts this step.'):label('Три разные исходные грани тела выдавливания: две боковые и средняя. Точное тело строит и проверяет ядро; отображается сетка, её погрешность не сертифицирована.','Three distinct original faces of an extrusion body: two sides and the middle face. The kernel builds and proves the exact body; the display mesh error is not certified.') }}</small>
+  </template>
+  <template v-if="op==='instance-array'">
+    <small>{{ label('Копии связаны с источником. Для массива по пути выберите вместе с телом линию эскиза или NURBS-кривую.','Copies stay linked to the source. For a path array, select a sketch line or a NURBS curve together with the body.') }}</small>
+    <label>{{ label('Тип массива','Array type') }}<select v-model="advanced.arrayKind"><option value="step">{{ label('По шагу','By step') }}</option><option value="extent">{{ label('По общему охвату','By total extent') }}</option><option value="path">{{ label('По пути','Along path') }}</option></select></label>
+    <label>{{ label('Количество','Count') }}<CadQuantityInput :aria-label="label('Количество','Count')" v-model="advanced.arrayCount" kind="scalar" :locale="locale" @validity="emit('validity','array.count',$event)" :min="2" :max="256" step="1" /></label>
+    <template v-if="advanced.arrayKind!=='path'">
+      <label>{{ label('Ось','Axis') }}<select v-model="advanced.axis"><option value="x">X</option><option value="y">Y</option><option value="z">Z</option></select></label>
+      <label>{{ advanced.arrayKind==='step'?label('Шаг','Step'):label('Охват','Extent') }}<CadQuantityInput :aria-label="advanced.arrayKind==='step'?label('Шаг','Step'):label('Охват','Extent')" v-model="advanced.distance" kind="length" :locale="locale" @validity="emit('validity','array.distance',$event)" /></label>
+    </template>
+    <label v-else><input type="checkbox" v-model="advanced.arrayAlign" />{{ label('Выравнивать по касательной','Align to tangent') }}</label>
+  </template>
+  <template v-if="op==='live-pattern'">
+    <small>{{ label('Параметры хранятся на теле-источнике: копии пересчитываются при правке источника, массив можно изменить позже этой же командой.','Parameters are stored on the source body: copies follow source edits, and this command edits the array later.') }}</small>
+    <label>{{ label('Тип массива','Array type') }}<select v-model="advanced.patternKind" data-field="patternKind"><option value="grid">{{ label('Сетка','Grid') }}</option><option value="radial">{{ label('По кругу','Radial') }}</option><option value="mirror">{{ label('Зеркало','Mirror') }}</option><option v-if="hasLivePattern" value="none">{{ label('Убрать массив','Remove array') }}</option></select></label>
+    <template v-if="advanced.patternKind==='grid'">
+      <label>{{ label('Строки','Rows') }}<CadQuantityInput :aria-label="label('Строки','Rows')" data-field="patternCount" :aria-invalid="errorField==='patternCount'?'true':undefined" :aria-describedby="errorField==='patternCount'?'advanced-command-error':undefined" v-model="advanced.patternRows" kind="scalar" :locale="locale" @validity="emit('validity','pattern.rows',$event)" :min="1" :max="256" step="1" /></label>
+      <label>{{ label('Столбцы','Columns') }}<CadQuantityInput :aria-label="label('Столбцы','Columns')" data-field="patternCount" :aria-invalid="errorField==='patternCount'?'true':undefined" :aria-describedby="errorField==='patternCount'?'advanced-command-error':undefined" v-model="advanced.patternColumns" kind="scalar" :locale="locale" @validity="emit('validity','pattern.columns',$event)" :min="1" :max="256" step="1" /></label>
+      <label>{{ label('Шаг X','Spacing X') }}<CadQuantityInput :aria-label="label('Шаг X','Spacing X')" v-model="advanced.patternSpacingX" kind="length" :locale="locale" @validity="emit('validity','pattern.spacingX',$event)" /></label>
+      <label>{{ label('Шаг Y','Spacing Y') }}<CadQuantityInput :aria-label="label('Шаг Y','Spacing Y')" v-model="advanced.patternSpacingY" kind="length" :locale="locale" @validity="emit('validity','pattern.spacingY',$event)" /></label>
+    </template>
+    <template v-else-if="advanced.patternKind!=='none'">
+      <label v-if="advanced.patternKind==='radial'">{{ label('Количество','Count') }}<CadQuantityInput :aria-label="label('Количество','Count')" data-field="patternCount" :aria-invalid="errorField==='patternCount'?'true':undefined" :aria-describedby="errorField==='patternCount'?'advanced-command-error':undefined" v-model="advanced.patternCount" kind="scalar" :locale="locale" @validity="emit('validity','pattern.count',$event)" :min="2" :max="256" step="1" /></label>
+      <label>{{ label('Ось','Axis') }}<select v-model="advanced.patternAxis"><option value="x">X</option><option value="y">Y</option><option value="z">Z</option></select></label>
+      <label>{{ label('Центр X','Center X') }}<CadQuantityInput :aria-label="label('Центр X','Center X')" v-model="advanced.patternCenterX" kind="length" :locale="locale" @validity="emit('validity','pattern.cx',$event)" /></label>
+      <label>{{ label('Центр Y','Center Y') }}<CadQuantityInput :aria-label="label('Центр Y','Center Y')" v-model="advanced.patternCenterY" kind="length" :locale="locale" @validity="emit('validity','pattern.cy',$event)" /></label>
+      <label>{{ label('Центр Z','Center Z') }}<CadQuantityInput :aria-label="label('Центр Z','Center Z')" v-model="advanced.patternCenterZ" kind="length" :locale="locale" @validity="emit('validity','pattern.cz',$event)" /></label>
+    </template>
+  </template>
+</template>
+<style scoped>
+.segmented{display:flex;gap:5px}
+.segmented button{padding:5px 8px;font-size:12px}
+</style>

@@ -6,7 +6,7 @@ const {
   SolidGcodePanel, SolidLaserPanel, VrControls, SceneVirtualList,
   SketchDimensionPanel, ProfileIntersectionPresentation, CurvePointTrimControls, CurveOffsetPreview,
   CurveOffsetConstructionInfo, CurveOffsetControls, CoonsPreparationControls, ShellDistanceSummary,
-  SolidVolumeWitness, SolidVolumeDistance, MaterialPathCheck
+  SolidVolumeWitness, SolidVolumeDistance, MaterialPathCheck, BodyArrayRoundControls, NurbsSweepRebuildControls
 }=createAsyncPanels()
 import {useBooleanOperations} from './directModeler/useBooleanOperations'
 import {prepareDocumentCommit} from './directModeler/prepareDocumentCommit'
@@ -34,15 +34,15 @@ import CadQuantityInput from '../components/CadQuantityInput.svt'
 import RunoutControls from '../components/RunoutControls.svt'
 import {numericRectangle,numericSlotSources} from '../app/numericSketchAuthoring'
 import {ellipseSketchCurve,resizeSlot,slotDimensions,slotMatchesSketch,tangentArc,tangentArcConstraint,type SlotDefinition} from '../app/sketchPrimitives'
-import {projectSketchToPlane,type ProjectedSketch} from '../app/sketchProjection'
-import {projectSolidFaceToPlane} from '../kernel/solidFaceSketch'
+import type {ProjectedSketch} from '../app/sketchProjection'
 import {type SurfaceBoundaryReport,type SurfaceBoundaryOptions} from '../kernel/solidSurfaceDiagnostics'
 import { computed, nextTick, onUnmounted, reactive, ref, shallowRef, watch, watchEffect } from 'svet'
 import {solidVertexCount} from '../kernel/solidMeasurements'
 import {isSolidProfileEdit,type SolidProfileEditOptions} from '../kernel/solidProfileEdit'
 import {combineSketchProfiles,sketchProfileRegionDisplay,sketchProfileRegions} from '../app/retainedSketchProfile'
 import {isSolidSceneEdit} from '../kernel/solidSceneEdit'
-import {isSolidBodyEdit,type SolidBodyEditOptions} from '../kernel/solidBodyEdit'
+import {isSolidBodyEdit} from '../kernel/solidBodyEditOperation'
+import type {SolidBodyEditOptions} from '../kernel/solidBodyEdit'
 import {canRedoFullRound,canUndoFullRound} from '../app/directExactFullRound'
 import type {SolidFullRoundAction} from '../kernel/solidFullRound'
 import {assignSolidMaterial} from '../kernel/solidMaterial'
@@ -51,7 +51,6 @@ import { PickCycle, pickDirectMesh, pickDirectMeshHits, type PickHit } from '../
 import { activeFrame, coordinateSystemLabel, COORDINATE_SYSTEMS, frameDeltaToWorld, frameFromFace, nextCoordinateSystem, type CoordinateSystem } from '../app/coordinateSystems'
 import { cplaneFrame, cplaneFromFrame, pivotFrame, savedPivot, snapPivot, withSavedPivot, type PivotSnap } from '../app/directPivots'
 import { rememberEdgeFeature, recallEdgeFeature, type EdgeFeatureMemory } from '../app/edgeFeatureEditing'
-import { createDirectClipboardPayload, parseDirectClipboardPayload, pasteDirectClipboardPayload } from '../app/directClipboard'
 import { DOCUMENT_LENGTH_UNITS, documentUnit, fromMillimetres, parseDocumentLengthUnit } from '../app/documentUnits'
 import { addToIsolation, isolateWithin, pruneIsolation, readIsolation, stepOutIsolation, type IsolationStack } from '../app/isolationStack'
 import ModelingFloorGrid from '../components/ModelingFloorGrid.svt'
@@ -170,8 +169,10 @@ const tangentArcCurve=computed(()=>{const s=selectedSketch.value;return tool.val
 // Projection adds exact sketches without changing the sources: Shift-selected sketches go onto the plane of the first
 // selected sketch, a lone sketch on another plane goes onto the active plane, and a selected body face goes onto the
 // active plane. Refusals keep the document unchanged.
-function projectSketch(){
+// The projection helpers load on first use so they stay out of the modeler chunk.
+async function projectSketch(){
  error.value=''
+ const [{projectSketchToPlane},{projectSolidFaceToPlane}]=await Promise.all([import('../app/sketchProjection'),import('../kernel/solidFaceSketch')])
  const sketch=selectedSketch.value,body=selectedBody.value,lang=props.locale==='ru'?'ru':'en'
  const sources=document.value.sketches.filter(o=>extraSelection.value.includes(o.id))
  let projected:ProjectedSketch[]
@@ -1722,8 +1723,11 @@ function clearCPlane() { void commitInWorker(() => { const {cplane:_drop,...rest
 let clipboardFallback=''
 const pasteTarget=ref<[number,number,number]>([0,0,0])
 const clipboardNotice=ref('')
+// The clipboard payload module loads on first copy or paste so it stays out of the modeler chunk.
+const loadClipboard=()=>import('../app/directClipboard')
 async function copySelection() {
  try {
+  const {createDirectClipboardPayload}=await loadClipboard()
   const base=selectionPivot.value?.point??selectionCenter()
   const unit=documentUnit(history.document)
   const text=createDirectClipboardPayload(history.document,selectedIds.value,base.map(v=>fromMillimetres(v,unit)) as Vec3)
@@ -1733,6 +1737,7 @@ async function copySelection() {
  } catch(e) { error.value=e instanceof Error?e.message:String(e) }
 }
 async function pasteClipboard() {
+ const {parseDirectClipboardPayload,pasteDirectClipboardPayload}=await loadClipboard()
  let text=clipboardFallback
  try{const read=await navigator.clipboard?.readText();if(read)text=read}catch{/* Use the in-app clipboard. */}
  const target=[...pasteTarget.value] as Vec3
@@ -3189,14 +3194,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <output v-if="profilePreparation?.value?.report.accepted" data-testid="profile-preparation-report">{{ profilePreparation.value.report.accepted?label('Контур замкнут. Добавлено отрезков: ','Closed contour. Added connectors: ')+profilePreparation.value.report.connectors.length:profilePreparationError(profilePreparation.value.report.reason,profilePreparation.value.report.segmentDefect?.kind) }}</output>
                 <ProfileIntersectionPresentation v-if="profilePreparation?.value" mode="status" :report="profilePreparation.value.report" :locale="locale"/>
               </template>
-              <template v-if="advancedOp==='full-round'">
-                <label>{{ label('Сегменты отображения','Display segments') }}<input v-model.number="advanced.fullRoundSegments" data-field="fullRoundSegments" type="number" min="1" max="32" step="1" :aria-label="label('Сегменты отображения','Display segments')"></label>
-                <div v-if="selectedBody?.exactFullRound" class="segmented" role="radiogroup" data-full-round-history :aria-label="label('История скругления','Full Round history')"><button v-for="(name,value) in {undo:label('Шаг назад','Step back'),redo:label('Шаг вперёд','Step forward')}" :key="value" type="button" role="radio" :aria-checked="advanced.fullRoundAction===value" :disabled="value==='undo'?!canUndoFullRound(selectedBody):!canRedoFullRound(selectedBody)" :data-mode="value" @click="advanced={...advanced,fullRoundAction:value}">{{ name }}</button></div>
-                <template v-else>
-                  <label v-for="(key,i) in (['fullRoundFaceA','fullRoundFaceB','fullRoundFaceC'] as const)" :key="key">{{ label('Грань ','Face ')+(i+1) }}<input v-model.number="advanced[key]" :data-field="key" type="number" min="0" step="1" :aria-label="label('Грань ','Face ')+(i+1)"></label>
-                </template>
-                <small>{{ selectedBody?.exactFullRound?label('Шаги нативной истории скругления. Undo приложения отменяет и этот шаг.','Steps through the native Full Round history. App Undo also reverts this step.'):label('Три разные исходные грани тела выдавливания: две боковые и средняя. Точное тело строит и проверяет ядро; отображается сетка, её погрешность не сертифицирована.','Three distinct original faces of an extrusion body: two sides and the middle face. The kernel builds and proves the exact body; the display mesh error is not certified.') }}</small>
-              </template>
+              <BodyArrayRoundControls v-if="advancedOp==='full-round'" :op="advancedOp" :advanced="advanced" @update:advanced="value=>advanced={...advanced,...value}" :locale="locale" :selected-body="selectedBody" :has-live-pattern="!!livePatternSource?.livePattern" :error-field="errorField" @validity="quantityValidity"/>
               <CurvePointTrimControls v-if="advancedOp==='nurbs-point-trim'" :advanced="advanced" @update:advanced="value=>advanced={...advanced,...value}" :locale="locale" :dimension="selectedNurbsCurve?.curve.controlPoints[0]?.length??3" :pick="pointTrimPick" :cut="pointTrimCut" @numeric="pointTrimNumeric" @validity="quantityValidity" />
               <template v-if="advancedOp==='nurbs-curve-match'">
                 <label v-for="(role,i) in [label('A · опорная','A · reference'),label('B · изменяемая','B · edited')]" :key="role">{{ role }}<select v-model="surfaceInputs[i]" :aria-label="role"><option v-for="item in document.curves" :key="item.id" :value="item.id">{{ item.name }}</option></select></label>
@@ -3218,40 +3216,14 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
                 <small>{{ label('Изменяемых рядов B, включая границу: ','Edited boundary B and adjacent rows: ') }}{{ advanced.matchOrder+1 }}</small>
                 <output v-if="surfaceMatch?.value" data-testid="surface-match-report">{{ label('Верхняя граница ошибки: ','Error upper bound: ') }}<span style="white-space:nowrap">{{ surfaceMatch.value.report.errorUpper.toExponential(3) }} mm</span> · {{ surfaceMatch.value.report.accepted?label('Допуск подтверждён','Tolerance confirmed'):surfaceMatchError(surfaceMatch.value.report.reason) }}</output>
               </template>
-              <template v-if="advancedOp==='nurbs-surface-rebuild'||advancedOp==='nurbs-rebuild'||advancedOp==='nurbs-reduce'||advancedOp==='nurbs-surface-reduce'">
-                <label v-if="advancedOp==='nurbs-surface-rebuild'||advancedOp==='nurbs-surface-reduce'">{{ label('Направление','Direction') }}<select v-model="advanced.surfaceAxis" :aria-label="label('Направление','Direction')"><option value="u">U</option><option value="v">V</option></select></label>
-                <label>{{ label('Новая степень','Target degree') }}<input v-model.number="advanced.reduceDegree" type="number" min="1" :max="(advancedOp==='nurbs-rebuild'||advancedOp==='nurbs-surface-rebuild')?25:(selectedNurbsSurface?(advanced.surfaceAxis==='u'?selectedNurbsSurface.surface.degreeU:selectedNurbsSurface.surface.degreeV):selectedNurbsCurve?.curve.degree??2)-1" step="1"></label>
-                <label v-if="advancedOp==='nurbs-rebuild'||advancedOp==='nurbs-surface-rebuild'">{{ label('Управляющих точек','Control points') }}<input v-model.number="advanced.rebuildControls" type="number" :min="advanced.reduceDegree*(rebuildPeriodic?2:1)+1" max="256" step="1"></label>
-                <small v-if="advancedOp==='nurbs-surface-rebuild'">{{ label('Перестраивается выбранное направление U/V. Периодические швы сохраняются.','Rebuilds the chosen U/V direction. Periodic seams are preserved.') }}</small>
-                <small v-if="advancedOp==='nurbs-rebuild'">{{ selectedNurbsCurve?.curve.periodic?label('Периодический шов сохраняется. Число точек включает повтор первых точек и должно быть больше удвоенной степени. Оценка допуска консервативна.','The periodic seam is preserved. Control count includes repeated points and must exceed twice the degree. The deviation bound is conservative.'):label('Равномерные узлы, непериодическая кривая. Оценка допуска консервативна.','Uniform knots, non-periodic curve. The deviation bound is conservative.') }}</small>
-                <small v-if="advancedOp==='nurbs-surface-rebuild'&&rebuildPeriodic">{{ label('Число точек включает повтор на шве и должно быть больше удвоенной степени.','Control count includes the seam repeat and must exceed twice the degree.') }}</small>
-                <label>{{ label('Допуск отклонения, мм','Deviation tolerance, mm') }}<CadQuantityInput :aria-label="label('Допуск отклонения, мм','Deviation tolerance, mm')" v-model="advanced.maxError" :locale="locale" :min="0" @validity="quantityValidity('reduceError',$event)" /></label>
-                <output v-if="nurbsReduction?.value">{{ label('Верхняя граница отклонения: ','Deviation upper bound: ')+nurbsReduction.value.certificate.hausdorffErrorUpper }} mm</output>
-                <small>{{ label('Применение доступно только при подтверждённом допуске. ID и исходная геометрия в истории сохраняются.','Apply requires an accepted tolerance certificate. Identity and the original geometry in history are preserved.') }}</small>
-              </template>
+              <NurbsSweepRebuildControls v-if="advancedOp==='nurbs-surface-rebuild'||advancedOp==='nurbs-rebuild'||advancedOp==='nurbs-reduce'||advancedOp==='nurbs-surface-reduce'" :op="advancedOp" :advanced="advanced" :locale="locale" :bodies="document.bodies" :error-field="errorField" @validity="quantityValidity" :selected-nurbs-surface="selectedNurbsSurface" :selected-nurbs-curve="selectedNurbsCurve" :rebuild-periodic="rebuildPeriodic" :reduction="nurbsReduction?.value"/>
               <RunoutControls v-if="advancedOp==='nurbs-runout'" :label="label" :locale="locale" :surfaces="document.surfaces??[]" :curves="document.curves??[]" :curve-invalid="!!runoutProblemCurve" :plane-invalid="advancedPreview.rawError.includes('affine plane')" :report="surfaceBuildResult?.runoutReport"
                 v-model:inputs="surfaceInputs" v-model:boundary="advanced.matchBoundaryA" v-model:position="advanced.runoutPosition" v-model:tangent-length="advanced.runoutTangentLength" v-model:flip="advanced.runoutFlip" v-model:reverse="advanced.matchReverse" @length-validity="quantityValidity('runoutTangentLength',$event)" />
               <template v-if="advancedOp==='nurbs-loft'||advancedOp==='nurbs-sweep'||advancedOp==='nurbs-patch'">
                 <small v-if="advancedOp==='nurbs-patch'">{{ label('Низ и верх идут вдоль U, левая и правая — вдоль V. Соедините концы и согласуйте веса.','Bottom/top follow U; left/right follow V. Connect endpoints and match weights.') }}</small>
                 <CoonsPreparationControls v-if="advancedOp==='nurbs-patch'" v-model:enabled="advanced.patchPrepare" v-model:budget="advanced.patchError" :locale="locale" :reports="surfaceBuildResult?.patchReports" @validity="quantityValidity('patchError',$event)" />
                 <small v-if="advancedOp!=='nurbs-patch' &amp;&amp; (advancedOp!=='nurbs-sweep'||advanced.sweepMode==='translation')">{{ advancedOp==='nurbs-sweep'?label('Профиль переносится вдоль пути с неизменной ориентацией. Результат — открытая NURBS-поверхность.','The profile translates along the path with fixed orientation. The result is an open NURBS surface.'):label('Сечения соединяются линейчато в указанном порядке. Степени и узлы согласуются без изменения кривых.','Sections are joined with ruled spans in the given order. Degrees and knots are aligned without changing the curves.') }}</small>
-                <template v-if="advancedOp==='nurbs-sweep'">
-                  <div class="segmented" role="radiogroup" data-sweep-result :aria-label="label('Результат протяжки','Sweep result')"><button v-for="(name,value) in {surface:label('Поверхность','Surface'),new:label('Новое тело','New body'),union:label('Добавить','Add'),difference:label('Вычесть','Cut'),intersection:label('Пересечь','Intersect')}" :key="value" type="button" role="radio" :aria-checked="advanced.sweepResult===value" :data-mode="value" @click="setSweepResult(value)">{{ name }}</button></div>
-                  <small v-if="advanced.sweepResult!=='surface'">{{ label('Замкнутый профиль протягивается по ломаной, дуге, кругу или сплайну с торцами (по замкнутому пути получается кольцо). Профиль должен лежать в плоскости, перпендикулярной пути в его начале, и не может быть шире радиуса кривизны пути.','The closed profile is swept along a polyline, arc, circle or spline path and capped (a closed path gives a ring). The profile must lie in the plane normal to the path at its start and cannot be wider than the path curvature radius.') }}</small>
-                  <label v-if="advanced.sweepResult!=='surface'" data-sweep-path-tolerance>{{ label('Точность гладкого пути, мм','Smooth path tolerance, mm') }}<CadQuantityInput :aria-label="label('Точность гладкого пути, мм','Smooth path tolerance, mm')" data-field="sweepPathTolerance" v-model="advanced.sweepPathTolerance" kind="length" :locale="locale" :min="0.000001" @validity="quantityValidity('sweepPathTolerance',$event)" /></label>
-                  <label v-if="advanced.sweepResult!=='surface'&amp;&amp;advanced.sweepResult!=='new'">{{ label('Тело','Body') }}<select v-model="advanced.sweepTarget" data-sweep-target><option v-for="b in document.bodies" :key="b.id" :value="b.id">{{ b.name }}</option></select></label>
-                  <fieldset v-if="advanced.sweepResult!=='surface'&amp;&amp;advanced.sweepResult!=='new'&amp;&amp;document.bodies.length>1" class="profile-choices" data-sweep-extra-targets><legend>{{ label('Также применить к телам','Also apply to bodies') }}</legend><label v-for="b in document.bodies.filter(b=>b.id!==advanced.sweepTarget)" :key="b.id"><input v-model="advanced.sweepExtraTargets" type="checkbox" :value="b.id">{{ b.name }}</label><small>{{ label('Каждое тело комбинируется с инструментом отдельно.','Each body is combined with the tool separately.') }}</small></fieldset>
-                  <label>{{ label('Ориентация профиля','Profile orientation') }}<select v-model="advanced.sweepMode" aria-label="Sweep orientation" @change="quantityValidity('sweepDeviation',true)"><option value="translation">{{ label('Постоянная','Fixed') }}</option><option value="framed">{{ label('По касательной пути','Follow path tangent') }}</option></select></label>
-                  <template v-if="advanced.sweepMode==='framed'">
-                    <label>{{ label('Число сечений','Sections') }}<input v-model.number="advanced.sweepSections" type="number" min="2" max="32" step="1" aria-label="Sweep sections"></label>
-                    <label>{{ label('Предел отклонения, мм','Deviation budget, mm') }}<CadQuantityInput :aria-label="label('Предел отклонения, мм','Deviation budget, mm')" data-field="sweepDeviation" :aria-invalid="errorField==='sweepDeviation'?'true':undefined" :aria-describedby="errorField==='sweepDeviation'?'advanced-command-error':undefined" v-model="advanced.sweepDeviation" kind="length" :locale="locale" :min="0" @validity="quantityValidity('sweepDeviation',$event)" /></label>
-                    <label>{{ label('Начальное направление X','Initial direction X') }}<input v-model.number="advanced.sweepNormalX" type="number" aria-label="Sweep normal X"></label>
-                    <label>{{ label('Начальное направление Y','Initial direction Y') }}<input v-model.number="advanced.sweepNormalY" type="number" aria-label="Sweep normal Y"></label>
-                    <label>{{ label('Начальное направление Z','Initial direction Z') }}<input v-model.number="advanced.sweepNormalZ" type="number" aria-label="Sweep normal Z"></label>
-                    <small v-if="advancedPreview.sweepReport" data-diagnostic="sweep-refinement">{{ label('Измеренное отклонение: ','Sampled deviation: ') }}{{ advancedPreview.sweepReport.sampledControlDeviation.toPrecision(4) }} {{ label('мм; проверено сечений: ','mm; checked stations: ') }}{{ advancedPreview.sweepReport.stations }}<template v-if="advancedPreview.sweepReport.closedPath"> · {{ label('Замкнутый шов C0','Closed C0 seam') }}</template></small>
-                    <small>{{ label('Направление не должно быть параллельно начальной касательной. Проверка сравнивает сечения с вчетверо более частым построением; непрерывный допуск не подтверждается. Замкнутый шов C0; разрывы касательной отклоняются.','The direction must not be parallel to the initial tangent. The check compares sections against fourfold refinement; it does not certify continuous tolerance. Closed seams are C0; tangent discontinuities are refused.') }}</small>
-                  </template>
-                </template>
+                <NurbsSweepRebuildControls v-if="advancedOp==='nurbs-sweep'" op="nurbs-sweep" :advanced="advanced" :locale="locale" :bodies="document.bodies" :error-field="errorField" @validity="quantityValidity" :sweep-report="advancedPreview.sweepReport" @sweep-result="setSweepResult"/>
                 <label v-for="(_,i) in surfaceInputs" :key="i">{{ surfaceInputLabel(i) }}<select v-model="surfaceInputs[i]" :aria-label="surfaceInputLabel(i)" :aria-invalid="surfaceInputs[i]&&invalidSceneIds.includes(surfaceInputs[i]!)?'true':undefined" :aria-describedby="surfaceInputs[i]&&invalidSceneIds.includes(surfaceInputs[i]!)?'advanced-command-error':undefined" @keydown="surfaceInputKey($event,i)"><option v-for="curve in document.curves" :key="curve.id" :value="curve.id">{{ curve.name }}</option></select></label>
                 <label v-for="(_,i) in surfaceInputs" :key="'reverse-'+i"><input type="checkbox" v-model="surfaceReversed[i]">{{ label('Развернуть: ','Reverse: ')+surfaceInputLabel(i) }}</label>
                 <button v-if="advancedOp!=='nurbs-patch'" @click="surfaceInputs=[...surfaceInputs].reverse();surfaceReversed=[...surfaceReversed].reverse()">{{ label('Обратить порядок входов','Reverse input order') }}</button>
@@ -3275,33 +3247,8 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               </template>
               <small v-if="advancedOp==='curve' && invalidQuantities['curve.sweep-range']" id="curve-sweep-error" role="alert">{{ label('Модуль угла дуги должен быть от 0,1° до 360°. Измените угол; знак задаёт направление.','Arc sweep magnitude must be between 0.1° and 360°. Change the sweep; its sign sets the direction.') }}</small>
               <label v-if="advancedOp==='extend'">{{ label('Конец','Endpoint') }}<select v-model="advanced.end"><option value="start">{{ label('Начало','Start') }}</option><option value="end">{{ label('Конец','End') }}</option></select></label>
-              <template v-if="advancedOp==='instance-array'">
-                <small>{{ label('Копии связаны с источником. Для массива по пути выберите вместе с телом линию эскиза или NURBS-кривую.','Copies stay linked to the source. For a path array, select a sketch line or a NURBS curve together with the body.') }}</small>
-                <label>{{ label('Тип массива','Array type') }}<select v-model="advanced.arrayKind"><option value="step">{{ label('По шагу','By step') }}</option><option value="extent">{{ label('По общему охвату','By total extent') }}</option><option value="path">{{ label('По пути','Along path') }}</option></select></label>
-                <label>{{ label('Количество','Count') }}<CadQuantityInput :aria-label="label('Количество','Count')" v-model="advanced.arrayCount" kind="scalar" :locale="locale" @validity="quantityValidity('array.count',$event)" :min="2" :max="256" step="1" /></label>
-                <template v-if="advanced.arrayKind!=='path'">
-                  <label>{{ label('Ось','Axis') }}<select v-model="advanced.axis"><option value="x">X</option><option value="y">Y</option><option value="z">Z</option></select></label>
-                  <label>{{ advanced.arrayKind==='step'?label('Шаг','Step'):label('Охват','Extent') }}<CadQuantityInput :aria-label="advanced.arrayKind==='step'?label('Шаг','Step'):label('Охват','Extent')" v-model="advanced.distance" kind="length" :locale="locale" @validity="quantityValidity('array.distance',$event)" /></label>
-                </template>
-                <label v-else><input type="checkbox" v-model="advanced.arrayAlign" />{{ label('Выравнивать по касательной','Align to tangent') }}</label>
-              </template>
-              <template v-if="advancedOp==='live-pattern'">
-                <small>{{ label('Параметры хранятся на теле-источнике: копии пересчитываются при правке источника, массив можно изменить позже этой же командой.','Parameters are stored on the source body: copies follow source edits, and this command edits the array later.') }}</small>
-                <label>{{ label('Тип массива','Array type') }}<select v-model="advanced.patternKind" data-field="patternKind"><option value="grid">{{ label('Сетка','Grid') }}</option><option value="radial">{{ label('По кругу','Radial') }}</option><option value="mirror">{{ label('Зеркало','Mirror') }}</option><option v-if="livePatternSource?.livePattern" value="none">{{ label('Убрать массив','Remove array') }}</option></select></label>
-                <template v-if="advanced.patternKind==='grid'">
-                  <label>{{ label('Строки','Rows') }}<CadQuantityInput :aria-label="label('Строки','Rows')" data-field="patternCount" :aria-invalid="errorField==='patternCount'?'true':undefined" :aria-describedby="errorField==='patternCount'?'advanced-command-error':undefined" v-model="advanced.patternRows" kind="scalar" :locale="locale" @validity="quantityValidity('pattern.rows',$event)" :min="1" :max="256" step="1" /></label>
-                  <label>{{ label('Столбцы','Columns') }}<CadQuantityInput :aria-label="label('Столбцы','Columns')" data-field="patternCount" :aria-invalid="errorField==='patternCount'?'true':undefined" :aria-describedby="errorField==='patternCount'?'advanced-command-error':undefined" v-model="advanced.patternColumns" kind="scalar" :locale="locale" @validity="quantityValidity('pattern.columns',$event)" :min="1" :max="256" step="1" /></label>
-                  <label>{{ label('Шаг X','Spacing X') }}<CadQuantityInput :aria-label="label('Шаг X','Spacing X')" v-model="advanced.patternSpacingX" kind="length" :locale="locale" @validity="quantityValidity('pattern.spacingX',$event)" /></label>
-                  <label>{{ label('Шаг Y','Spacing Y') }}<CadQuantityInput :aria-label="label('Шаг Y','Spacing Y')" v-model="advanced.patternSpacingY" kind="length" :locale="locale" @validity="quantityValidity('pattern.spacingY',$event)" /></label>
-                </template>
-                <template v-else-if="advanced.patternKind!=='none'">
-                  <label v-if="advanced.patternKind==='radial'">{{ label('Количество','Count') }}<CadQuantityInput :aria-label="label('Количество','Count')" data-field="patternCount" :aria-invalid="errorField==='patternCount'?'true':undefined" :aria-describedby="errorField==='patternCount'?'advanced-command-error':undefined" v-model="advanced.patternCount" kind="scalar" :locale="locale" @validity="quantityValidity('pattern.count',$event)" :min="2" :max="256" step="1" /></label>
-                  <label>{{ label('Ось','Axis') }}<select v-model="advanced.patternAxis"><option value="x">X</option><option value="y">Y</option><option value="z">Z</option></select></label>
-                  <label>{{ label('Центр X','Center X') }}<CadQuantityInput :aria-label="label('Центр X','Center X')" v-model="advanced.patternCenterX" kind="length" :locale="locale" @validity="quantityValidity('pattern.cx',$event)" /></label>
-                  <label>{{ label('Центр Y','Center Y') }}<CadQuantityInput :aria-label="label('Центр Y','Center Y')" v-model="advanced.patternCenterY" kind="length" :locale="locale" @validity="quantityValidity('pattern.cy',$event)" /></label>
-                  <label>{{ label('Центр Z','Center Z') }}<CadQuantityInput :aria-label="label('Центр Z','Center Z')" v-model="advanced.patternCenterZ" kind="length" :locale="locale" @validity="quantityValidity('pattern.cz',$event)" /></label>
-                </template>
-              </template>
+              <BodyArrayRoundControls v-if="advancedOp==='instance-array'" :op="advancedOp" :advanced="advanced" @update:advanced="value=>advanced={...advanced,...value}" :locale="locale" :selected-body="selectedBody" :has-live-pattern="!!livePatternSource?.livePattern" :error-field="errorField" @validity="quantityValidity"/>
+              <BodyArrayRoundControls v-if="advancedOp==='live-pattern'" :op="advancedOp" :advanced="advanced" @update:advanced="value=>advanced={...advanced,...value}" :locale="locale" :selected-body="selectedBody" :has-live-pattern="!!livePatternSource?.livePattern" :error-field="errorField" @validity="quantityValidity"/>
               <template v-if="advancedOp==='instance-create'||advancedOp==='instance-place'">
                 <small>{{ label('Смещение относительно источника. Правки источника обновляют экземпляр.','Offset from the source. Editing the source updates the instance.') }}</small>
                 <label>X<CadQuantityInput aria-label="X" v-model="advanced.x" :locale="locale" @validity="quantityValidity('instance.x',$event)" /></label>

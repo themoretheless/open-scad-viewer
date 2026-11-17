@@ -1,4 +1,10 @@
-import { defineAsyncComponent } from 'svet'
+import { defineAsyncComponent, h } from 'svet'
+
+// Shown in place of a command panel while its module loads for the first time.
+function PanelLoading(props: unknown) {
+  const ru = (props as { locale?: string } | null)?.locale === 'ru'
+  return h('small', { role: 'status', 'aria-busy': 'true', 'data-panel-loading': '' }, ru ? 'Загрузка…' : 'Loading…')
+}
 
 const ExpressionShellCheck = defineAsyncComponent(() => import('../../components/ExpressionShellCheck.svt'))
 const SurfacePairChecks = defineAsyncComponent(() => import('../../components/SurfacePairChecks.svt'))
@@ -24,6 +30,14 @@ const CoonsPreparationControls = defineAsyncComponent(() => import('../../compon
 const ShellDistanceSummary = defineAsyncComponent(() => import('../../components/ShellDistanceSummary.svt'))
 const SolidVolumeWitness = defineAsyncComponent(() => import('../../components/SolidVolumeWitness.svt'))
 const SolidVolumeDistance = defineAsyncComponent(() => import('../../components/SolidVolumeDistance.svt'))
+const BodyArrayRoundControls = defineAsyncComponent({
+  loader: () => import('../../components/BodyArrayRoundControls.svt'),
+  loadingComponent: PanelLoading,
+})
+const NurbsSweepRebuildControls = defineAsyncComponent({
+  loader: () => import('../../components/NurbsSweepRebuildControls.svt'),
+  loadingComponent: PanelLoading,
+})
 const MaterialPathCheck = defineAsyncComponent(() => import('../../components/MaterialPathCheck.svt'))
 
 const panels = {
@@ -50,6 +64,8 @@ const panels = {
   SolidVolumeWitness,
   SolidVolumeDistance,
   MaterialPathCheck,
+  BodyArrayRoundControls,
+  NurbsSweepRebuildControls,
 }
 
 export function createAsyncPanels() {

@@ -1,0 +1,56 @@
+<script setup lang="ts">
+import CadQuantityInput from './CadQuantityInput.svt'
+import type { DirectBody } from '../app/directModeling'
+import type { SolidNurbsCurve, SolidNurbsSurface } from '../kernel/solidNurbs'
+import type { SweepResultMode } from '../kernel/solidSweepBody'
+// NURBS rebuild/reduce and sweep fields load on first use so they stay out of the modeler chunk.
+// The fields edit the shared reactive command options in place, as the inline template did.
+const props = defineProps<{
+  op: string
+  advanced: Record<string, any>
+  locale: string
+  bodies: DirectBody[]
+  errorField: string
+  selectedNurbsSurface?: SolidNurbsSurface
+  selectedNurbsCurve?: SolidNurbsCurve
+  rebuildPeriodic?: boolean
+  reduction?: { certificate: { hausdorffErrorUpper: number } } | null
+  sweepReport?: { sampledControlDeviation: number; stations: number; closedPath?: boolean } | null
+}>()
+const emit = defineEmits<{ validity: [string, boolean]; 'sweep-result': [SweepResultMode] }>()
+const label = (ru: string, en: string) => (props.locale === 'ru' ? ru : en)
+</script>
+<template>
+  <template v-if="op==='nurbs-sweep'">
+    <div class="segmented" role="radiogroup" data-sweep-result :aria-label="label('Результат протяжки','Sweep result')"><button v-for="(name,value) in {surface:label('Поверхность','Surface'),new:label('Новое тело','New body'),union:label('Добавить','Add'),difference:label('Вычесть','Cut'),intersection:label('Пересечь','Intersect')}" :key="value" type="button" role="radio" :aria-checked="advanced.sweepResult===value" :data-mode="value" @click="emit('sweep-result',value)">{{ name }}</button></div>
+    <small v-if="advanced.sweepResult!=='surface'">{{ label('Замкнутый профиль протягивается по ломаной, дуге, кругу или сплайну с торцами (по замкнутому пути получается кольцо). Профиль должен лежать в плоскости, перпендикулярной пути в его начале, и не может быть шире радиуса кривизны пути.','The closed profile is swept along a polyline, arc, circle or spline path and capped (a closed path gives a ring). The profile must lie in the plane normal to the path at its start and cannot be wider than the path curvature radius.') }}</small>
+    <label v-if="advanced.sweepResult!=='surface'" data-sweep-path-tolerance>{{ label('Точность гладкого пути, мм','Smooth path tolerance, mm') }}<CadQuantityInput :aria-label="label('Точность гладкого пути, мм','Smooth path tolerance, mm')" data-field="sweepPathTolerance" v-model="advanced.sweepPathTolerance" kind="length" :locale="locale" :min="0.000001" @validity="emit('validity','sweepPathTolerance',$event)" /></label>
+    <label v-if="advanced.sweepResult!=='surface'&amp;&amp;advanced.sweepResult!=='new'">{{ label('Тело','Body') }}<select v-model="advanced.sweepTarget" data-sweep-target><option v-for="b in bodies" :key="b.id" :value="b.id">{{ b.name }}</option></select></label>
+    <fieldset v-if="advanced.sweepResult!=='surface'&amp;&amp;advanced.sweepResult!=='new'&amp;&amp;bodies.length>1" class="profile-choices" data-sweep-extra-targets><legend>{{ label('Также применить к телам','Also apply to bodies') }}</legend><label v-for="b in bodies.filter(b=>b.id!==advanced.sweepTarget)" :key="b.id"><input v-model="advanced.sweepExtraTargets" type="checkbox" :value="b.id">{{ b.name }}</label><small>{{ label('Каждое тело комбинируется с инструментом отдельно.','Each body is combined with the tool separately.') }}</small></fieldset>
+    <label>{{ label('Ориентация профиля','Profile orientation') }}<select v-model="advanced.sweepMode" aria-label="Sweep orientation" @change="emit('validity','sweepDeviation',true)"><option value="translation">{{ label('Постоянная','Fixed') }}</option><option value="framed">{{ label('По касательной пути','Follow path tangent') }}</option></select></label>
+    <template v-if="advanced.sweepMode==='framed'">
+      <label>{{ label('Число сечений','Sections') }}<input v-model.number="advanced.sweepSections" type="number" min="2" max="32" step="1" aria-label="Sweep sections"></label>
+      <label>{{ label('Предел отклонения, мм','Deviation budget, mm') }}<CadQuantityInput :aria-label="label('Предел отклонения, мм','Deviation budget, mm')" data-field="sweepDeviation" :aria-invalid="errorField==='sweepDeviation'?'true':undefined" :aria-describedby="errorField==='sweepDeviation'?'advanced-command-error':undefined" v-model="advanced.sweepDeviation" kind="length" :locale="locale" :min="0" @validity="emit('validity','sweepDeviation',$event)" /></label>
+      <label>{{ label('Начальное направление X','Initial direction X') }}<input v-model.number="advanced.sweepNormalX" type="number" aria-label="Sweep normal X"></label>
+      <label>{{ label('Начальное направление Y','Initial direction Y') }}<input v-model.number="advanced.sweepNormalY" type="number" aria-label="Sweep normal Y"></label>
+      <label>{{ label('Начальное направление Z','Initial direction Z') }}<input v-model.number="advanced.sweepNormalZ" type="number" aria-label="Sweep normal Z"></label>
+      <small v-if="sweepReport" data-diagnostic="sweep-refinement">{{ label('Измеренное отклонение: ','Sampled deviation: ') }}{{ sweepReport.sampledControlDeviation.toPrecision(4) }} {{ label('мм; проверено сечений: ','mm; checked stations: ') }}{{ sweepReport.stations }}<template v-if="sweepReport.closedPath"> · {{ label('Замкнутый шов C0','Closed C0 seam') }}</template></small>
+      <small>{{ label('Направление не должно быть параллельно начальной касательной. Проверка сравнивает сечения с вчетверо более частым построением; непрерывный допуск не подтверждается. Замкнутый шов C0; разрывы касательной отклоняются.','The direction must not be parallel to the initial tangent. The check compares sections against fourfold refinement; it does not certify continuous tolerance. Closed seams are C0; tangent discontinuities are refused.') }}</small>
+    </template>
+  </template>
+  <template v-else>
+    <label v-if="op==='nurbs-surface-rebuild'||op==='nurbs-surface-reduce'">{{ label('Направление','Direction') }}<select v-model="advanced.surfaceAxis" :aria-label="label('Направление','Direction')"><option value="u">U</option><option value="v">V</option></select></label>
+    <label>{{ label('Новая степень','Target degree') }}<input v-model.number="advanced.reduceDegree" type="number" min="1" :max="(op==='nurbs-rebuild'||op==='nurbs-surface-rebuild')?25:(selectedNurbsSurface?(advanced.surfaceAxis==='u'?selectedNurbsSurface.surface.degreeU:selectedNurbsSurface.surface.degreeV):selectedNurbsCurve?.curve.degree??2)-1" step="1"></label>
+    <label v-if="op==='nurbs-rebuild'||op==='nurbs-surface-rebuild'">{{ label('Управляющих точек','Control points') }}<input v-model.number="advanced.rebuildControls" type="number" :min="advanced.reduceDegree*(rebuildPeriodic?2:1)+1" max="256" step="1"></label>
+    <small v-if="op==='nurbs-surface-rebuild'">{{ label('Перестраивается выбранное направление U/V. Периодические швы сохраняются.','Rebuilds the chosen U/V direction. Periodic seams are preserved.') }}</small>
+    <small v-if="op==='nurbs-rebuild'">{{ selectedNurbsCurve?.curve.periodic?label('Периодический шов сохраняется. Число точек включает повтор первых точек и должно быть больше удвоенной степени. Оценка допуска консервативна.','The periodic seam is preserved. Control count includes repeated points and must exceed twice the degree. The deviation bound is conservative.'):label('Равномерные узлы, непериодическая кривая. Оценка допуска консервативна.','Uniform knots, non-periodic curve. The deviation bound is conservative.') }}</small>
+    <small v-if="op==='nurbs-surface-rebuild'&&rebuildPeriodic">{{ label('Число точек включает повтор на шве и должно быть больше удвоенной степени.','Control count includes the seam repeat and must exceed twice the degree.') }}</small>
+    <label>{{ label('Допуск отклонения, мм','Deviation tolerance, mm') }}<CadQuantityInput :aria-label="label('Допуск отклонения, мм','Deviation tolerance, mm')" v-model="advanced.maxError" :locale="locale" :min="0" @validity="emit('validity','reduceError',$event)" /></label>
+    <output v-if="reduction">{{ label('Верхняя граница отклонения: ','Deviation upper bound: ')+reduction.certificate.hausdorffErrorUpper }} mm</output>
+    <small>{{ label('Применение доступно только при подтверждённом допуске. ID и исходная геометрия в истории сохраняются.','Apply requires an accepted tolerance certificate. Identity and the original geometry in history are preserved.') }}</small>
+  </template>
+</template>
+<style scoped>
+.segmented{display:flex;gap:5px}
+.segmented button{padding:5px 8px;font-size:12px}
+</style>
