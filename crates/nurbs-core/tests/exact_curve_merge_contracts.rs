@@ -6471,3 +6471,74 @@ fn trimmed_surface_central_inertia_requires_positive_area() {
     assert!(report.central_inertia_bounds.is_none());
     assert_eq!(report.centroid.measure.area.unwrap().bounds[0], 0.);
 }
+
+#[test]
+fn trimmed_principal_moments_bracket_rotation_and_repeated_eigenvalues() {
+    use nurbs_core::analysis::surface_measure::{
+        TrimmedAreaReport, TrimmedCentralInertiaReport, TrimmedCentroidReport,
+    };
+    let central = TrimmedCentralInertiaReport {
+        centroid: TrimmedCentroidReport {
+            measure: TrimmedAreaReport {
+                area: None,
+                minimum_surface_cells: 0,
+                trim_cells: 0,
+            },
+            centroid_bounds: None,
+        },
+        central_inertia_bounds: Some(
+            [[2., 1., 0.], [1., 2., 0.], [0., 0., 3.]].map(|row| row.map(|x| [x; 2])),
+        ),
+    };
+    let report = central.bound_principal_moments(1e-8).unwrap();
+    assert!(report.within_moment_tolerance);
+    for ([lo, hi], expected) in report
+        .principal_bounds
+        .unwrap()
+        .into_iter()
+        .zip([1., 3., 3.])
+    {
+        assert!(lo <= expected && expected <= hi);
+        assert!(hi - lo <= 1e-8);
+    }
+}
+
+#[test]
+fn trimmed_principal_moments_keep_uncertain_eigenvalue_ranges() {
+    use nurbs_core::analysis::surface_measure::{
+        TrimmedAreaReport, TrimmedCentralInertiaReport, TrimmedCentroidReport,
+    };
+    let mut central = TrimmedCentralInertiaReport {
+        centroid: TrimmedCentroidReport {
+            measure: TrimmedAreaReport {
+                area: None,
+                minimum_surface_cells: 0,
+                trim_cells: 0,
+            },
+            centroid_bounds: None,
+        },
+        central_inertia_bounds: None,
+    };
+    assert!(
+        central
+            .clone()
+            .bound_principal_moments(1e-8)
+            .unwrap()
+            .principal_bounds
+            .is_none()
+    );
+    let mut tensor = [[[0.; 2]; 3]; 3];
+    for (i, row) in tensor.iter_mut().enumerate() {
+        row[i] = [1., 2.];
+    }
+    central.central_inertia_bounds = Some(tensor);
+    let report = central.bound_principal_moments(1e-8).unwrap();
+    assert!(!report.within_moment_tolerance);
+    assert!(
+        report
+            .principal_bounds
+            .unwrap()
+            .iter()
+            .all(|b| b[0] <= 1. && b[1] >= 2.)
+    );
+}

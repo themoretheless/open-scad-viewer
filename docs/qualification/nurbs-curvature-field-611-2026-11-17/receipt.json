@@ -1,0 +1,28 @@
+{
+  "id": "NURBS-0611",
+  "testedBase": "5c4624d7b1c4fbfa2d432345a3449e35a47d8b2a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 200,
+  "scope": [
+    "Bound sorted principal inertia moments using interval LDL congruence and conservative bracketing.",
+    "Verify rotated tensors with repeated eigenvalues and retain conservative intervals when entry uncertainty prevents a spectral proof."
+  ],
+  "logSha256": "df5267478a92b56c260ba9808304523555334f3c65b4fd6048ba3f5a14b2c835",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_periodic_surface.rs": "0eb2b9c2faf9494d2c755613a6509654296a7b9fae30b2e3f1f860a80d90862d",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "15090df5585d279a2ae64a4727e6fa8d6ae0a5130ee30980cde7dc5539c585ba",
+    "crates/nurbs-core/src/analysis/surface_measure.rs": "79184743f48343c37bc3baeca31259486fec7988d7dd213b0c69692b5b4f42ad"
+  }
+}

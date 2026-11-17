@@ -668,3 +668,122 @@ fn enclose_trimmed_inertia(
     }
     Ok(bounds)
 }
+
+#[derive(Clone, Debug)]
+pub struct TrimmedPrincipalInertiaReport {
+    pub central: TrimmedCentralInertiaReport,
+    /// Enclosures in increasing eigenvalue order, including repeated moments.
+    pub principal_bounds: Option<[[f64; 2]; 3]>,
+    pub within_moment_tolerance: bool,
+}
+
+impl TrimmedCentralInertiaReport {
+    /// Bound the sorted principal moments without choosing axes for repeated
+    /// eigenvalues. A spectral comparison is used only if its sign is proved.
+    pub fn bound_principal_moments(
+        self,
+        moment_tolerance: f64,
+    ) -> Result<TrimmedPrincipalInertiaReport> {
+        check(
+            moment_tolerance.is_finite() && moment_tolerance > 0.,
+            "Principal moment tolerance must be positive and finite",
+        )?;
+        let principal_bounds = self
+            .central_inertia_bounds
+            .map(|bounds| principal_moment_intervals(bounds, moment_tolerance))
+            .transpose()?;
+        let within_moment_tolerance = principal_bounds.is_some_and(|bounds| {
+            bounds
+                .into_iter()
+                .all(|[lo, hi]| (hi - lo).next_up() <= moment_tolerance)
+        });
+        Ok(TrimmedPrincipalInertiaReport {
+            central: self,
+            principal_bounds,
+            within_moment_tolerance,
+        })
+    }
+}
+
+fn principal_moment_intervals(bounds: [[[f64; 2]; 3]; 3], tolerance: f64) -> Result<[[f64; 2]; 3]> {
+    let mut matrix = [[Interval::point(0.); 3]; 3];
+    let mut low = f64::INFINITY;
+    let mut high = f64::NEG_INFINITY;
+    for (i, row) in matrix.iter_mut().enumerate() {
+        let mut radius = 0.0_f64;
+        for (j, value) in row.iter_mut().enumerate() {
+            let [lo, hi] = bounds[i][j];
+            check(
+                bounds[i][j] == bounds[j][i],
+                "Principal moment tensor bounds must be symmetric",
+            )?;
+            *value = Interval::new(lo, hi)?;
+            if i != j {
+                radius = (radius + lo.abs().max(hi.abs())).next_up();
+            }
+        }
+        low = low.min((row[i].lo - radius).next_down());
+        high = high.max((row[i].hi + radius).next_up());
+    }
+    Interval::new(low, high)?;
+    let mut moments = [[low; 2]; 3];
+    for (index, moment) in moments.iter_mut().enumerate() {
+        let mut bounds = [low, high];
+        for _ in 0..96 {
+            let [lo, hi] = bounds;
+            let width = hi - lo;
+            if width.next_up() <= tolerance {
+                break;
+            }
+            let mid = crate::distance_bounds::midpoint(lo, hi);
+            for candidate in [
+                crate::distance_bounds::midpoint(lo, mid),
+                crate::distance_bounds::midpoint(mid, hi),
+            ] {
+                if !(bounds[0] < candidate && candidate < bounds[1]) {
+                    continue;
+                }
+                if let Some(negative) = shifted_inertia(matrix, candidate) {
+                    if negative <= index {
+                        bounds[0] = candidate;
+                    } else {
+                        bounds[1] = candidate;
+                    }
+                }
+            }
+            if bounds == [lo, hi] {
+                break;
+            }
+        }
+        *moment = bounds;
+    }
+    Ok(moments)
+}
+
+// Interval LDLᵀ congruence proves an eigenvalue count when every pivot
+// is separated from zero. Failure to prove a pivot does not move bounds.
+fn shifted_inertia(mut matrix: [[Interval; 3]; 3], shift: f64) -> Option<usize> {
+    for (i, row) in matrix.iter_mut().enumerate() {
+        row[i] = row[i].sub(Interval::point(shift)).ok()?;
+    }
+    let mut negative = 0;
+    for pivot in 0..3 {
+        let index = (pivot..3).find(|&i| matrix[i][i].lo > 0. || matrix[i][i].hi < 0.)?;
+        matrix.swap(pivot, index);
+        for row in &mut matrix {
+            row.swap(pivot, index);
+        }
+        let d = matrix[pivot][pivot];
+        negative += usize::from(d.hi < 0.);
+        for i in pivot + 1..3 {
+            let factor = matrix[i][pivot].div_signed(d).ok()?;
+            for j in i..3 {
+                let correction = factor.mul(matrix[j][pivot]).ok()?;
+                let entry = matrix[i][j].sub(correction).ok()?;
+                matrix[i][j] = entry;
+                matrix[j][i] = entry;
+            }
+        }
+    }
+    Some(negative)
+}
