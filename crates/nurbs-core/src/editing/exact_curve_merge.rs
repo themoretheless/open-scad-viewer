@@ -408,3 +408,166 @@ pub fn merge_and_simplify_exact_seam(
         removal_refusal,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactCurveSeamJetReport {
+    /// Left-minus-right Cartesian residuals for position and two derivatives.
+    pub residuals: Option<[Vec<num_rational::BigRational>; 3]>,
+    /// Highest consecutive equal order, or none if positions differ or proof was refused.
+    pub continuity_order: Option<usize>,
+    pub work_used: u64,
+    pub refusal: Option<GaugeMergeRefusal>,
+}
+
+/// Compare one-sided Cartesian jets at a shared absolute parameter.
+/// Rational weights and knot spacing are included in the quotient derivatives.
+pub fn compare_exact_curve_seam_jets(
+    left: &Curve,
+    right: &Curve,
+    max_work: u64,
+) -> Result<ExactCurveSeamJetReport> {
+    use super::rational_edit::Work;
+    use num_traits::Zero;
+
+    left.validate()?;
+    right.validate()?;
+    crate::check(
+        (1..=cad_predicates::MAX_WORK).contains(&max_work),
+        "Exact seam jet work must be in 1..=1000000",
+    )?;
+    let refused = |reason, work_used| ExactCurveSeamJetReport {
+        residuals: None,
+        continuity_order: None,
+        work_used,
+        refusal: Some(reason),
+    };
+    for (invalid, reason) in [
+        (left.periodic || right.periodic, Refusal::Periodic),
+        (
+            left.control_points[0].len() != right.control_points[0].len(),
+            Refusal::DimensionMismatch,
+        ),
+        (!clamped(left) || !clamped(right), Refusal::NonClamped),
+        (
+            left.domain()[1] != right.domain()[0],
+            Refusal::NonAdjacentDomain,
+        ),
+    ] {
+        if invalid {
+            return Ok(refused(GaugeMergeRefusal::Join(reason), 0));
+        }
+    }
+    let mut work = Work {
+        used: 0,
+        limit: max_work,
+    };
+    let mut compare = || {
+        let a = exact_endpoint_jets(left, true, &mut work)?;
+        let b = exact_endpoint_jets(right, false, &mut work)?;
+        let mut differences = [Vec::new(), Vec::new(), Vec::new()];
+        for ((a, b), residual) in a.into_iter().zip(b).zip(&mut differences) {
+            for (a, b) in a.into_iter().zip(b) {
+                residual.push(work.op(&a, &b, |a, b| a - b)?);
+            }
+        }
+        Ok::<_, super::rational_factor::Refusal>(differences)
+    };
+    let residuals = match compare() {
+        Ok(residuals) => residuals,
+        Err(reason) => return Ok(refused(GaugeMergeRefusal::Exact(reason), work.used)),
+    };
+    let continuity_order = residuals
+        .iter()
+        .take_while(|row| row.iter().all(Zero::is_zero))
+        .count()
+        .checked_sub(1);
+    Ok(ExactCurveSeamJetReport {
+        residuals: Some(residuals),
+        continuity_order,
+        work_used: work.used,
+        refusal: None,
+    })
+}
+
+fn exact_endpoint_jets(
+    curve: &Curve,
+    end: bool,
+    work: &mut super::rational_edit::Work,
+) -> std::result::Result<[Vec<num_rational::BigRational>; 3], super::rational_factor::Refusal> {
+    use num_rational::BigRational as Q;
+    use num_traits::{Signed, Zero};
+
+    let p = curve.degree;
+    let dimension = curve.control_points[0].len();
+    let [lo, hi] = curve.domain();
+    let endpoint = work.lift(if end { hi } else { lo })?;
+    let span = |offset: usize, work: &mut super::rational_edit::Work| {
+        let index = p + 1 + offset;
+        let index = if end {
+            curve.knots.len() - 1 - index
+        } else {
+            index
+        };
+        let knot = work.lift(curve.knots[index])?;
+        let width = work.op(&knot, &endpoint, |a, b| (a - b).abs())?;
+        if width.is_zero() {
+            return Err(super::rational_factor::Refusal::InvalidOutput);
+        }
+        Ok(width)
+    };
+    let mut poles = Vec::new();
+    for offset in 0..=p.min(2) {
+        let index = if end {
+            curve.control_points.len() - 1 - offset
+        } else {
+            offset
+        };
+        let weight = work.lift(curve.weights[index])?;
+        let mut pole = Vec::new();
+        for &coordinate in &curve.control_points[index] {
+            let coordinate = work.lift(coordinate)?;
+            pole.push(work.op(&coordinate, &weight, |a, b| a * b)?);
+        }
+        pole.push(weight);
+        poles.push(pole);
+    }
+    let width = span(0, work)?;
+    let scale = Q::from_integer(p.into()) / &width;
+    let mut first = Vec::new();
+    let mut second = vec![Q::zero(); dimension + 1];
+    for axis in 0..=dimension {
+        first.push(work.op(&poles[1][axis], &poles[0][axis], |a, b| (a - b) * &scale)?);
+    }
+    if p >= 2 {
+        let next_scale = Q::from_integer(p.into()) / span(1, work)?;
+        let second_scale = Q::from_integer((p - 1).into()) / &width;
+        for axis in 0..=dimension {
+            let next = work.op(&poles[2][axis], &poles[1][axis], |a, b| {
+                (a - b) * &next_scale
+            })?;
+            second[axis] = work.op(&next, &first[axis], |a, b| (a - b) * &second_scale)?;
+        }
+    }
+    if end {
+        first.iter_mut().for_each(|value| *value = -value.clone());
+    }
+    let mut jets = [Vec::new(), Vec::new(), Vec::new()];
+    let weight = &poles[0][dimension];
+    for axis in 0..dimension {
+        let position = work.op(&poles[0][axis], weight, |a, b| a / b)?;
+        let correction = work.op(&position, &first[dimension], |a, b| a * b)?;
+        let numerator = work.op(&first[axis], &correction, |a, b| a - b)?;
+        let tangent = work.op(&numerator, weight, |a, b| a / b)?;
+        let linear = work.op(&tangent, &first[dimension], |a, b| {
+            a * b * Q::from_integer(2.into())
+        })?;
+        let quadratic = work.op(&position, &second[dimension], |a, b| a * b)?;
+        let numerator = work.op(&second[axis], &linear, |a, b| a - b)?;
+        let numerator = work.op(&numerator, &quadratic, |a, b| a - b)?;
+        let acceleration = work.op(&numerator, weight, |a, b| a / b)?;
+        jets[0].push(position);
+        jets[1].push(tangent);
+        jets[2].push(acceleration);
+    }
+    Ok(jets)
+}

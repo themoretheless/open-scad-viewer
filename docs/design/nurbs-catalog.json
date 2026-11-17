@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 496,
-  "unallocatedCount": 504,
+  "specifiedCount": 497,
+  "unallocatedCount": 503,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12904,6 +12904,26 @@
       "remainingQualification": [
         "Join curves and remove only proven redundant seam knots under a shared budget.",
         "Use exact merge and prove each subsequent seam-knot removal over the complete curve. Preserve the last verified curve on a removal refusal.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0497",
+      "name": "Точное сравнение односторонних производных NURBS-кривых на стыке до C2",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::editing::exact_curve_merge::compare_exact_curve_seam_jets",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_curve_merge.rs",
+        "crates/nurbs-core/src/editing/rational_edit.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "docs/qualification/nurbs-curvature-field-497-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-497-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compare exact rational position, first and second derivatives on both sides of a shared parameter.",
+        "Differentiate endpoint homogeneous splines in the original knot clock and apply the exact quotient rule. Report signed rational residuals, including rational linear second derivatives.",
         "WASM and application integration are separate."
       ]
     }

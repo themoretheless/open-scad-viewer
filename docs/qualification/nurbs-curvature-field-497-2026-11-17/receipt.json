@@ -1,0 +1,32 @@
+{
+  "id": "NURBS-0497",
+  "testedBase": "c689f3ec819f5aa991a1fcc021b03c3822cf0206",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "exact_curve_merge_contracts",
+    "--test",
+    "exact_knot_insertion_contracts",
+    "--test",
+    "rational_factor_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 48,
+  "scope": [
+    "Compare exact rational position, first and second derivatives on both sides of a shared parameter.",
+    "Differentiate endpoint homogeneous splines in the original knot clock and apply the exact quotient rule. Report signed rational residuals, including rational linear second derivatives."
+  ],
+  "logSha256": "cba0fe9d360d4720ec14df3acc60fc7b28d94cb1b1911b2324966420fdbe1d45",
+  "sourceSha256": {
+    "crates/nurbs-core/src/editing/exact_curve_merge.rs": "eac0ed5752620ec6c813b99e67c00f409f9d14ebb380e96f552b443f8220bcee",
+    "crates/nurbs-core/src/editing/rational_edit.rs": "501a03d743cc5c09f60b1bb6435a9cafb68713db0585aead2bfb8022a8d09851",
+    "crates/nurbs-core/tests/exact_curve_merge_contracts.rs": "8334d589fd6e859079d7da71fbd130d235cf48b26bf6e25685de5939011fbef0"
+  }
+}

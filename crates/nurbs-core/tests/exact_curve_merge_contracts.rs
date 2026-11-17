@@ -553,3 +553,64 @@ fn compact_exact_seam_merge_preserves_a_geometrically_necessary_corner() {
     assert!(report.removal_refusal.is_some());
     assert_eq!(report.curve.unwrap(), merge(&a, &b).unwrap().curve.unwrap());
 }
+
+#[test]
+fn exact_curve_seam_jets_recover_rational_c2_despite_weight_gauge() {
+    use nurbs_core::editing::{
+        exact_curve_merge::compare_exact_curve_seam_jets, exact_knot_insertion::split,
+    };
+    let source = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![3., 0.]],
+        weights: vec![1., 2.],
+        periodic: false,
+    };
+    let [left, mut right] = split(&source, 0.5, 1_000_000).unwrap().pieces.unwrap();
+    right.weights.iter_mut().for_each(|weight| *weight *= 3.);
+    let report = compare_exact_curve_seam_jets(&left, &right, 1_000_000).unwrap();
+    assert_eq!(report.continuity_order, Some(2));
+    assert_eq!(
+        compare_exact_curve_seam_jets(&left, &right, report.work_used).unwrap(),
+        report
+    );
+    assert!(
+        compare_exact_curve_seam_jets(&left, &right, report.work_used - 1)
+            .unwrap()
+            .residuals
+            .is_none()
+    );
+}
+
+#[test]
+fn exact_curve_seam_jets_distinguish_matching_first_derivatives_from_c2() {
+    use num_rational::BigRational as Q;
+    use nurbs_core::editing::exact_curve_merge::compare_exact_curve_seam_jets;
+    let a = Curve {
+        degree: 1,
+        knots: vec![0., 0., 1., 1.],
+        control_points: vec![vec![0., 0.], vec![1., 0.]],
+        weights: vec![1.; 2],
+        periodic: false,
+    };
+    let mut b = Curve {
+        degree: 2,
+        knots: vec![1., 1., 1., 3., 3., 3.],
+        control_points: vec![vec![1., 0.], vec![2., 0.], vec![3., 2.]],
+        weights: vec![1.; 3],
+        periodic: false,
+    };
+    let report = compare_exact_curve_seam_jets(&a, &b, 1_000_000).unwrap();
+    assert_eq!(report.continuity_order, Some(1));
+    assert_eq!(
+        report.residuals.unwrap()[2][1],
+        Q::from_integer((-1).into())
+    );
+    b.control_points[1][0] = 2.5;
+    assert_eq!(
+        compare_exact_curve_seam_jets(&a, &b, 1_000_000)
+            .unwrap()
+            .continuity_order,
+        Some(0)
+    );
+}
