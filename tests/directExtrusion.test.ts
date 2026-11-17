@@ -27,7 +27,7 @@ describe('C9 extrude up to a body',()=>{
     expect(()=>extrudeHeightUpToBody(undefined,0,flat,'near')).toThrow(/nonzero/)
   })
 })
-import { applyDirectExtrusionProfile, previewTargetBodies, extrudeHeightUpToBody, extrudeSketchProfile, buildDirectExtrusion } from '../src/app/directExtrusion'
+import { applyDirectExtrusionProfile, previewTargetBodies, extrudeHeightUpToBody, extrudeHeightUpToPlane, planarFaceTargets, brepFacePlane, extrudeSketchProfile, buildDirectExtrusion } from '../src/app/directExtrusion'
 import { analyzeNurbsBrep, createBrepBox, tessellateNurbsBrep } from '../src/kernel/geometry/brep'
 import { type DirectDocument, type DirectSketch } from '../src/app/directModeling'
 import { facePlane, solidTopology } from '../src/app/directSolidTools'
@@ -213,4 +213,35 @@ describe('C9 preview of extra target bodies',()=>{
   expect(previewTargetBodies([a,b],['b'],null,{id:'a',body:null})).toEqual([b])
   expect(previewTargetBodies([a,b],[],undefined)).toEqual([a,b])
  })
+})
+
+describe('C9 extrude up to a face or plane',()=>{
+  it('meets a parallel plane at its offset, honouring the profile offset and sign',()=>{
+    expect(extrudeHeightUpToPlane(undefined,0,{origin:[5,5,4],normal:[0,0,2]})).toBeCloseTo(4)
+    expect(extrudeHeightUpToPlane(undefined,1,{origin:[0,0,4],normal:[0,0,-1]})).toBeCloseTo(3)
+    expect(extrudeHeightUpToPlane(undefined,0,{origin:[0,0,-2],normal:[0,0,1]})).toBeCloseTo(-2)
+  })
+  it('meets a tilted plane where the profile normal crosses it at the profile origin',()=>{
+    // Plane z = 3 + x, profile origin at x = 1.
+    expect(extrudeHeightUpToPlane({origin:[1,0,0],u:[1,0,0],v:[0,1,0]},0,{origin:[0,0,3],normal:[-1,0,1]})).toBeCloseTo(4)
+  })
+  it('refuses a plane parallel to the profile normal and a coincident plane with a coded error',()=>{
+    for(const target of [{origin:[0,0,0],normal:[1,0,0]},{origin:[0,0,0],normal:[0,0,1]},{origin:[0,0,0],normal:[0,0,0]}]){
+      try{extrudeHeightUpToPlane(undefined,0,target);expect.unreachable()}catch(e){expect((e as {code:string}).code).toBe('DIRECT_UP_TO_PLANE')}
+    }
+    expect(extrudeHeightUpToPlane(undefined,-1,{origin:[0,0,0],normal:[0,0,1]})).toBeCloseTo(1)
+  })
+  it('lists planar mesh faces as coplanar triangle groups',()=>{
+    const quad={id:'q',mesh:{positions:new Float64Array([0,0,2, 1,0,2, 1,1,2, 0,1,2, 0,0,5]),indices:new Uint32Array([0,1,2, 0,2,3, 0,1,4])}}
+    const faces=planarFaceTargets(quad)
+    expect(faces).toHaveLength(2)
+    expect(extrudeHeightUpToPlane(undefined,0,faces[0])).toBeCloseTo(2)
+  })
+  it('keeps flat B-rep control nets and leaves curved ones out',()=>{
+    expect(brepFacePlane([[[0,0,3],[1,0,3]],[[0,1,3],[1,1,3]]])!.normal.map(Math.abs)).toEqual([0,0,1])
+    expect(brepFacePlane([[[0,0,3],[1,0,3]],[[0,1,3],[1,1,4]]])).toBeNull()
+    const brep={toleranceMm:1e-6,faces:[{surface:{controlPoints:[[[0,0,3],[1,0,3]],[[0,1,3],[1,1,3]]]}},{surface:{controlPoints:[[[0,0,0],[1,0,1]],[[0,1,0],[1,1,0]]]}}]}
+    const faces=planarFaceTargets({id:'b',mesh:{positions:new Float64Array(),indices:new Uint32Array()},brep} as never)
+    expect(faces.map(f=>f.face)).toEqual([0])
+  })
 })

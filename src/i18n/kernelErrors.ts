@@ -75,6 +75,7 @@ export const KERNEL_ERROR_REASONS = [
   'sweepDeviation',
   'profilePlane',
   'targetBody',
+  'upToPlane',
 ] as const
 export type KernelErrorReason = (typeof KERNEL_ERROR_REASONS)[number]
 
@@ -203,6 +204,7 @@ const SPECIFIC: Partial<Record<KernelErrorCode, KernelErrorSpec>> = {
   DIRECT_DIMENSION_ANALYTIC: { reason: 'dimensionAnalytic', input: 'sketch', step: 'useRadius' },
   DIRECT_PROFILE_PLANE: { reason: 'profilePlane', input: 'sketch', step: 'samePlane' },
   DIRECT_TARGET_BODY: { reason: 'targetBody', input: 'body', step: 'selectTarget' },
+  DIRECT_UP_TO_PLANE: { reason: 'upToPlane', input: 'body', step: 'selectTarget', detail: true },
 }
 
 function familyInput(code: string): KernelErrorInput {

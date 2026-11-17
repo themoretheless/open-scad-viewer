@@ -50,7 +50,7 @@ import ModelingFloorGrid from '../components/ModelingFloorGrid.svt'
 import ModelingGridControls from '../components/ModelingGridControls.svt'
 import WorkspaceActionBar from '../components/WorkspaceActionBar.svt'
 import {createSolidPreviewWorker} from '../kernel/solidPreviewWorker'
-import { extrudeHeightUpToBody, previewTargetBodies, sameSketchPlane, type DirectExtrusionOperation as ExtrusionMode } from '../app/directExtrusion'
+import { extrudeHeightUpToBody, extrudeHeightUpToPlane, planarFaceTargets, type ExtrudeUpToPlane, previewTargetBodies, sameSketchPlane, type DirectExtrusionOperation as ExtrusionMode } from '../app/directExtrusion'
 import type { SweepResultMode } from '../kernel/solidSweepBody'
 import { useModelingGrid } from '../app/modelingGrid'
 import { resolveModelingSnap, type SnapKind, type SnapGeometry } from '../app/modelingSnaps'
@@ -1285,6 +1285,33 @@ function extrudeUpTo(value: string) {
 }
 const upToOptions = computed(() => document.value.bodies.flatMap(b => [{ value: `near:${b.id}`, text: `${b.name} · ${label('ближняя сторона', 'near side')}` }, { value: `far:${b.id}`, text: `${b.name} · ${label('дальняя сторона', 'far side')}` }]))
 watch(upToChoice, value => { if (value) extrudeUpTo(value) })
+const upToPlaneChoice = ref('')
+/** C9: construction planes (world, CPlane, other sketch planes) and planar body faces the profile can extrude up to. */
+const upToPlaneTargets = computed(() => {
+  const out: { value: string; text: string; plane: ExtrudeUpToPlane }[] = [
+    { value: 'world:xy', text: label('Мировая плоскость XY', 'World XY plane'), plane: { origin: [0, 0, 0], normal: [0, 0, 1] } },
+    { value: 'world:yz', text: label('Мировая плоскость YZ', 'World YZ plane'), plane: { origin: [0, 0, 0], normal: [1, 0, 0] } },
+    { value: 'world:xz', text: label('Мировая плоскость XZ', 'World XZ plane'), plane: { origin: [0, 0, 0], normal: [0, 1, 0] } },
+  ]
+  const cp = document.value.cplane
+  if (cp) out.push({ value: 'cplane', text: 'CPlane', plane: { origin: cp.origin, normal: cp.normal } })
+  const own = document.value.sketches.find(s => s.id === (profileIds.value[0] ?? selection.value))
+  for (const s of document.value.sketches) if (s.plane && !samePlane(s.plane, own?.plane)) {
+    const n = [s.plane.u[1] * s.plane.v[2] - s.plane.u[2] * s.plane.v[1], s.plane.u[2] * s.plane.v[0] - s.plane.u[0] * s.plane.v[2], s.plane.u[0] * s.plane.v[1] - s.plane.u[1] * s.plane.v[0]]
+    out.push({ value: `sketch:${s.id}`, text: `${label('Плоскость эскиза', 'Sketch plane')} ${s.name}`, plane: { origin: s.plane.origin, normal: n } })
+  }
+  for (const b of document.value.bodies) for (const f of planarFaceTargets(b)) out.push({ value: `face:${b.id}:${f.face}`, text: `${b.name} · ${label('плоская грань', 'planar face')} ${f.face + 1}`, plane: f })
+  return out
+})
+/** C9: sets the extrusion height where the profile normal meets the chosen face or plane. */
+function extrudeUpToPlane(value: string) {
+  upToPlaneChoice.value = ''; upToError.value = ''
+  const target = upToPlaneTargets.value.find(t => t.value === value), sketch = document.value.sketches.find(s => s.id === (profileIds.value[0] ?? selection.value))
+  if (!target || !sketch) return
+  try { height.value = Number(extrudeHeightUpToPlane(sketch.plane, baseZ.value, target.plane).toFixed(6)) }
+  catch { upToError.value = label('Плоскость недостижима: она параллельна нормали профиля или совпадает с плоскостью профиля.', 'The plane cannot be reached: it runs parallel to the profile normal or coincides with the profile plane.') }
+}
+watch(upToPlaneChoice, value => { if (value) extrudeUpToPlane(value) })
 const extraTargetChoices=computed(()=>document.value.bodies.filter(b=>b.id!==targetBody.value))
 // C9 Sweep result step: 'surface' keeps the open NURBS surface; other modes build a capped solid and combine it.
 function sweepBodyOptions(operation:string|null,a:typeof advanced.value){
@@ -3158,6 +3185,7 @@ watch([() => props.open, () => props.seedDocument, restoringDraft], ([open, seed
               <small v-if="previewEmpty">{{ label('Вырез полностью удалит выбранное тело.', 'The cut will remove the entire target body.') }}</small>
               <label v-if="operation === 'extrude'">{{ label('Высота, мм', 'Height, mm') }}<CadQuantityInput data-field="height" :aria-invalid="errorField==='height'?'true':undefined" :aria-describedby="errorField==='height'?'solid-preview-error':undefined" :aria-label="label('Высота, мм', 'Height, mm')" v-model="height" kind="length" :locale="locale" @validity="quantityValidity('height', $event)" step="1" /></label>
               <label v-if="operation === 'extrude' && document.bodies.length" data-extrude-up-to>{{ label('Высота до тела', 'Height up to body') }}<select v-model="upToChoice"><option value="">{{ label('Выберите тело и сторону', 'Choose a body and side') }}</option><option v-for="o in upToOptions" :key="o.value" :value="o.value">{{ o.text }}</option></select></label>
+              <label v-if="operation === 'extrude'" data-extrude-up-to-plane>{{ label('Высота до грани или плоскости', 'Height up to face or plane') }}<select v-model="upToPlaneChoice"><option value="">{{ label('Выберите грань или плоскость', 'Choose a face or plane') }}</option><option v-for="o in upToPlaneTargets" :key="o.value" :value="o.value">{{ o.text }}</option></select></label>
               <small v-if="upToError" role="alert" data-up-to-error>{{ upToError }}</small>
               <label v-if="operation === 'extrude'">{{ label('Смещение от плоскости, мм', 'Plane offset, mm') }}<CadQuantityInput :aria-label="label('Смещение от плоскости, мм', 'Plane offset, mm')" v-model="baseZ" kind="length" :locale="locale" @validity="quantityValidity('baseZ', $event)" step="1" /></label>
               <template v-if="operation === 'revolve'">
