@@ -1852,3 +1852,107 @@ pub fn self_intersections_exact_spatial_polyline(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactSpatialPolylineDistance {
+    pub distance_squared_mm2: Q,
+    pub spans: [usize; 2],
+    pub parameters: [Q; 2],
+    pub points_mm: [[Q; 3]; 2],
+    pub exact_work: u64,
+}
+
+/// Find the exact squared distance and a closest pair on two spatial
+/// polylines. Ties favor the first span pair, then the earliest local
+/// parameters. A repeated vertex can represent a point as a stationary span.
+pub fn distance_between_exact_spatial_polylines(
+    first_mm: &[[Q; 3]],
+    second_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactSpatialPolylineDistance> {
+    super::validate_work(max_exact_work)?;
+    if first_mm.len() < 2 || second_mm.len() < 2 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Each distance path requires two or more points",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    for point in first_mm.iter().chain(second_mm) {
+        spend(&mut remaining, 4)?;
+        validate_point(point)?;
+    }
+    let mut best: Option<ExactSpatialPolylineDistance> = None;
+    for (i, a) in first_mm.windows(2).enumerate() {
+        for (j, b) in second_mm.windows(2).enumerate() {
+            spend(&mut remaining, 160)?;
+            let (distance_squared_mm2, parameters, points_mm) = closest_spatial_segments(a, b);
+            if best
+                .as_ref()
+                .is_none_or(|entry| distance_squared_mm2 < entry.distance_squared_mm2)
+            {
+                best = Some(ExactSpatialPolylineDistance {
+                    distance_squared_mm2,
+                    spans: [i, j],
+                    parameters,
+                    points_mm,
+                    exact_work: 0,
+                });
+            }
+        }
+    }
+    let mut best = best.expect("validated paths have at least one span pair");
+    best.exact_work = max_exact_work - remaining;
+    Ok(best)
+}
+
+fn closest_spatial_segments(a: &[[Q; 3]], b: &[[Q; 3]]) -> (Q, [Q; 2], [[Q; 3]; 2]) {
+    let mut best = None;
+    let mut offer = |distance: Q, parameters: [Q; 2], points: [[Q; 3]; 2]| {
+        if best
+            .as_ref()
+            .is_none_or(|(current, at, _)| (&distance, &parameters) < (current, at))
+        {
+            best = Some((distance, parameters, points));
+        }
+    };
+    // A minimum on the boundary of the parameter square is an endpoint
+    // projection. Rank-deficient interior minima also reach this boundary.
+    for index in 0..2 {
+        let at = Q::from_integer(index.into());
+        let (closest, distance, t) = super::project_segment_point(&a[index], &b[0], &b[1]);
+        offer(
+            distance,
+            [at.clone(), t.unwrap_or_default()],
+            [a[index].clone(), closest],
+        );
+        let (closest, distance, t) = super::project_segment_point(&b[index], &a[0], &a[1]);
+        offer(
+            distance,
+            [t.unwrap_or_default(), at],
+            [closest, b[index].clone()],
+        );
+    }
+
+    let u = std::array::from_fn(|i| &a[1][i] - &a[0][i]);
+    let v = std::array::from_fn(|i| &b[1][i] - &b[0][i]);
+    let uu = dot(&u, &u);
+    let vv = dot(&v, &v);
+    let uv = dot(&u, &v);
+    let determinant = &uu * &vv - uv.pow(2);
+    if determinant.is_positive() {
+        let offset = std::array::from_fn(|i| &b[0][i] - &a[0][i]);
+        let du = dot(&u, &offset);
+        let dv = dot(&v, &offset);
+        let t = (&vv * &du - &uv * &dv) / &determinant;
+        let s = (&uv * &du - &uu * &dv) / determinant;
+        let unit = Q::zero()..=Q::one();
+        if unit.contains(&t) && unit.contains(&s) {
+            let first: [Q; 3] = std::array::from_fn(|i| &a[0][i] + &t * &u[i]);
+            let second: [Q; 3] = std::array::from_fn(|i| &b[0][i] + &s * &v[i]);
+            let distance = first.iter().zip(&second).map(|(p, q)| (p - q).pow(2)).sum();
+            offer(distance, [t, s], [first, second]);
+        }
+    }
+    best.expect("endpoint projections always exist")
+}

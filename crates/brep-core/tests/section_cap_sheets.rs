@@ -4475,3 +4475,45 @@ fn exact_spatial_polyline_self_intersections_keep_adjacent_retracing_and_remote_
     assert_eq!(report.intersections[0].spans, [0, 2]);
     assert_eq!(report.intersections[0].points_mm, [p(2, 0), p(2, 0)]);
 }
+
+#[test]
+fn exact_spatial_polyline_distance_finds_interior_pair_on_skew_spans() {
+    use brep_core::analysis::distance_between_exact_spatial_polylines;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y, z| [q(x, 1), q(y, 1), q(z, 1)];
+    let a = [p(0, 0, 0), p(3, 0, 0)];
+    let b = [p(1, -2, 2), p(2, 2, 2)];
+    let report = distance_between_exact_spatial_polylines(&a, &b, 1_000_000).unwrap();
+    assert_eq!(report.distance_squared_mm2, q(4, 1));
+    assert_eq!(report.spans, [0, 0]);
+    assert_eq!(report.parameters, [q(1, 2), q(1, 2)]);
+    assert_eq!(
+        report.points_mm,
+        [[q(3, 2), q(0, 1), q(0, 1)], [q(3, 2), q(0, 1), q(2, 1)]]
+    );
+    assert_eq!(
+        distance_between_exact_spatial_polylines(&a, &b, report.exact_work).unwrap(),
+        report
+    );
+    assert!(distance_between_exact_spatial_polylines(&a, &b, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_spatial_polyline_distance_handles_parallel_ties_and_stationary_spans() {
+    use brep_core::analysis::distance_between_exact_spatial_polylines;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x, y| [q(x, 1), q(y, 1), q(0, 1)];
+    let a = [p(0, 0), p(4, 0), p(4, 0)];
+    let b = [p(5, 1), p(2, 1), p(2, 1)];
+    let report = distance_between_exact_spatial_polylines(&a, &b, 1_000_000).unwrap();
+    assert_eq!(report.distance_squared_mm2, q(1, 1));
+    assert_eq!(report.spans, [0, 0]);
+    assert_eq!(report.parameters, [q(1, 2), q(1, 1)]);
+    assert_eq!(report.points_mm, [p(2, 0), p(2, 1)]);
+    let stationary = [p(4, 0), p(4, 0)];
+    let report = distance_between_exact_spatial_polylines(&stationary, &a, 1_000_000).unwrap();
+    assert_eq!(report.distance_squared_mm2, q(0, 1));
+    assert_eq!(report.parameters, [q(0, 1), q(1, 1)]);
+}
