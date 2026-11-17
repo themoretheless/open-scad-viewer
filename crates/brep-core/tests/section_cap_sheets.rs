@@ -4188,3 +4188,79 @@ fn bounded_path_coverage_lengths_enclose_irrational_distance_at_every_count() {
         assert!(hi - lo <= Q::from_float(tol).unwrap());
     }
 }
+
+#[test]
+fn exact_path_coverage_components_keep_shared_point_and_open_ends() {
+    use brep_core::analysis::{
+        PolyhedralPathCoverageComponent, exact_polyhedral_path_coverage_components,
+    };
+    use num_rational::BigRational as Q;
+    let a = shifted_oblique_solid(0.);
+    let b = shifted_oblique_solid(3.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x| [q(x, 1), q(0, 1), q(1, 1)];
+    let path = [point(-1), point(7)];
+    let solids = [&a, &b];
+    let part = |lo, hi, endpoints_included, points_mm| PolyhedralPathCoverageComponent {
+        parameters: [lo, hi],
+        endpoints_included,
+        points_mm,
+    };
+    let get = |count| {
+        exact_polyhedral_path_coverage_components(&solids, &path, count, 1_000_000).unwrap()
+    };
+    assert_eq!(
+        get(1..=1).components,
+        [
+            part(q(1, 8), q(1, 2), [true, false], vec![point(0), point(3)]),
+            part(q(1, 2), q(7, 8), [false, true], vec![point(3), point(6)]),
+        ]
+    );
+    assert_eq!(
+        get(2..=2).components,
+        [part(q(1, 2), q(1, 2), [true, true], vec![point(3)])]
+    );
+    let union = get(1..=2);
+    assert_eq!(
+        union.components,
+        [part(
+            q(1, 8),
+            q(7, 8),
+            [true, true],
+            vec![point(0), point(3), point(6)]
+        )]
+    );
+    assert_eq!(
+        exact_polyhedral_path_coverage_components(&solids, &path, 1..=2, union.exact_work).unwrap(),
+        union
+    );
+    assert!(
+        exact_polyhedral_path_coverage_components(&solids, &path, 1..=2, union.exact_work - 1)
+            .is_err()
+    );
+}
+
+#[test]
+fn exact_path_coverage_components_join_at_span_vertex_without_losing_it() {
+    use brep_core::analysis::{
+        PolyhedralPathCoverageComponent, exact_polyhedral_path_coverage_components,
+    };
+    use num_rational::BigRational as Q;
+    let a = shifted_oblique_solid(0.);
+    let b = shifted_oblique_solid(2.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let start = [q(0, 1), q(0, 1), q(1, 1)];
+    let vertex = [q(5, 2), q(0, 1), q(1, 1)];
+    let end = [q(5, 2), q(0, 1), q(2, 1)];
+    let path = [start, vertex.clone(), end.clone()];
+    let report =
+        exact_polyhedral_path_coverage_components(&[&a, &b], &path, 2..=2, 1_000_000).unwrap();
+    assert_eq!(
+        report.components,
+        [PolyhedralPathCoverageComponent {
+            parameters: [q(4, 5), q(2, 1)],
+            endpoints_included: [true, true],
+            points_mm: vec![[q(2, 1), q(0, 1), q(1, 1)], vertex, end],
+        }]
+    );
+}

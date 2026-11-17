@@ -1461,3 +1461,82 @@ pub fn bounded_polyhedral_path_coverage_lengths(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralPathCoverageComponent {
+    /// Global endpoints in span-index-plus-local-parameter coordinates.
+    pub parameters: [Q; 2],
+    pub endpoints_included: [bool; 2],
+    /// Exact vertices of the component closure, including excluded ends.
+    pub points_mm: Vec<[Q; 3]>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralPathCoverageComponents {
+    pub components: Vec<PolyhedralPathCoverageComponent>,
+    pub exact_work: u64,
+}
+
+/// Reconstruct connected path components whose closed material coverage
+/// count falls in the inclusive range. Connectivity uses path parameters.
+pub fn exact_polyhedral_path_coverage_components(
+    solids: &[&QualifiedClosedSolid],
+    points_mm: &[[Q; 3]],
+    count: std::ops::RangeInclusive<usize>,
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralPathCoverageComponents> {
+    if count.is_empty() || *count.end() > solids.len() {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Coverage count range must be within the solid count",
+        ));
+    }
+    let coverage = exact_polyhedral_path_coverage(solids, points_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - coverage.exact_work;
+    let mut components: Vec<PolyhedralPathCoverageComponent> = Vec::new();
+    for (span, (pair, parts)) in points_mm.windows(2).zip(coverage.spans).enumerate() {
+        spend(&mut remaining, 4)?;
+        let origin = Q::from_integer(span.into());
+        let direction: [Q; 3] = std::array::from_fn(|i| &pair[1][i] - &pair[0][i]);
+        let evaluate = |t: &Q| std::array::from_fn(|i| &pair[0][i] + t * &direction[i]);
+        for part in parts {
+            spend(&mut remaining, 2)?;
+            if !count.contains(&part.solids.len()) {
+                continue;
+            }
+            spend(&mut remaining, 16)?;
+            let [lo, hi] = part.parameters;
+            let parameters = [&origin + &lo, &origin + &hi];
+            let [include_start, include_end] = part.endpoints_included;
+            let end = evaluate(&hi);
+            if let Some(component) = components.last_mut()
+                && component.parameters[1] == parameters[0]
+                && (component.endpoints_included[1] || include_start)
+            {
+                component.endpoints_included[1] = include_end
+                    || (component.parameters[1] == parameters[1]
+                        && component.endpoints_included[1]);
+                component.parameters[1] = parameters[1].clone();
+                if component.points_mm.last() != Some(&end) {
+                    component.points_mm.push(end);
+                }
+            } else {
+                let start = evaluate(&lo);
+                let points_mm = if start == end {
+                    vec![start]
+                } else {
+                    vec![start, end]
+                };
+                components.push(PolyhedralPathCoverageComponent {
+                    parameters,
+                    endpoints_included: part.endpoints_included,
+                    points_mm,
+                });
+            }
+        }
+    }
+    Ok(ExactPolyhedralPathCoverageComponents {
+        components,
+        exact_work: max_exact_work - remaining,
+    })
+}
