@@ -1,0 +1,39 @@
+{
+  "id": "NURBS-0457",
+  "testedBase": "99e09bdfbd76f7dd0a9beb22ef465c42e585613a",
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "crates/Cargo.toml",
+    "-p",
+    "brep-core",
+    "-p",
+    "nurbs-core",
+    "--test",
+    "section_cap_sheets",
+    "--test",
+    "exact_surface_plane_side_contracts",
+    "--test",
+    "exact_planar_support_intersection_contracts"
+  ],
+  "newContractsPassed": 2,
+  "regressionContractsPassed": 238,
+  "scope": [
+    "Certify planarity and simplicity and compute exact oriented area for a spatial polygon.",
+    "A rational cross-product sum gives the oriented area vector. Orthogonality verifies exact planarity, and exact pairwise tests exclude self-intersection and retracing."
+  ],
+  "logSha256": "c9c108d580d540930fcbc2035871ee1fba385a5a70f12aaaa24b13c36db70e29",
+  "sourceSha256": {
+    "crates/brep-core/src/profile/planar_cap.rs": "f4647e55ecddf14d09e310f85f0d6830a9184421b74201017e85ec27a57d164a",
+    "crates/brep-core/src/profile/planar_cap/section_sheets.rs": "c8340a2e24daf6310a3ebd6877820588552bf1b3a58e5d7c0bc7ddce3bfd6bf2",
+    "crates/brep-core/tests/section_cap_sheets.rs": "a7317c01bd16e2c0f45b17ad7fd4150a3ae4a31446ce5fd80bc0fa4b6210d900",
+    "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs": "13227849f2f6b0fe37b49ff442277a36fa6f049336d3fd72994ccaa904eac6a9",
+    "crates/nurbs-core/src/analysis/exact_affine_hull.rs": "3026ff711328868f6c6226d6ec5e6c8c849e469896b217ee74cc013ce9154472",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs": "a061591667e966328068636fb2369d394ad3bc0119de5025f756f0b9cae1a377",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs": "9214caaba478956224a163714381517f0a99413a112165cf92aeb85c751d5674",
+    "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs": "8ede062350dde59a85651b267d276bf360e29d8b374169c9e434cf3e7b9805f7"
+  }
+}

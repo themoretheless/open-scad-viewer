@@ -2112,3 +2112,67 @@ pub fn node_exact_spatial_polyline(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarPolylineArea {
+    /// Oriented area vector in square millimeters, reversed by contour reversal.
+    pub area_vector_mm2: [Q; 3],
+    pub area_squared_mm4: Q,
+    pub exact_work: u64,
+}
+
+/// Certify that an explicitly closed spatial polyline encloses a simple
+/// planar region and compute its exact area vector and squared area.
+pub fn exact_planar_spatial_polyline_area(
+    points_mm: &[[Q; 3]],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylineArea> {
+    super::validate_work(max_exact_work)?;
+    if points_mm.len() < 4 || points_mm.first() != points_mm.last() {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Area requires an explicitly closed contour",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    for point in points_mm {
+        spend(&mut remaining, 4)?;
+        validate_point(point)?;
+    }
+    let origin = &points_mm[0];
+    let mut double_area = [Q::zero(), Q::zero(), Q::zero()];
+    for pair in points_mm.windows(2) {
+        spend(&mut remaining, 16)?;
+        let a: [Q; 3] = std::array::from_fn(|i| &pair[0][i] - &origin[i]);
+        let b: [Q; 3] = std::array::from_fn(|i| &pair[1][i] - &origin[i]);
+        for (k, (i, j)) in [(1, 2), (2, 0), (0, 1)].into_iter().enumerate() {
+            double_area[k] += &a[i] * &b[j] - &a[j] * &b[i];
+        }
+    }
+    if double_area.iter().all(Zero::is_zero) {
+        return Err(refuse("Contour has zero oriented area"));
+    }
+    for point in points_mm {
+        spend(&mut remaining, 12)?;
+        let offset = std::array::from_fn(|i| &point[i] - &origin[i]);
+        if !dot(&offset, &double_area).is_zero() {
+            return Err(refuse("Contour is not planar"));
+        }
+    }
+    if remaining == 0 {
+        return Err(super::work_exhausted());
+    }
+    let topology = self_intersections_exact_spatial_polyline(points_mm, remaining)?;
+    remaining -= topology.exact_work;
+    if !topology.intersections.is_empty() {
+        return Err(refuse("Contour has self-intersections"));
+    }
+    spend(&mut remaining, 12)?;
+    let two = Q::from_integer(2.into());
+    let area_vector_mm2 = double_area.map(|coord| coord / &two);
+    Ok(ExactPlanarPolylineArea {
+        area_squared_mm4: dot(&area_vector_mm2, &area_vector_mm2),
+        area_vector_mm2,
+        exact_work: max_exact_work - remaining,
+    })
+}

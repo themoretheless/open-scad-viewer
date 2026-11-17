@@ -4614,3 +4614,43 @@ fn exact_spatial_polyline_noding_preserves_retraced_and_stationary_occurrences()
         ],
     );
 }
+
+#[test]
+fn exact_planar_spatial_polyline_area_measures_tilted_profile_and_reversal() {
+    use brep_core::analysis::exact_planar_spatial_polyline_area;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x: i64, y: i64| [q(x + 5), q(y - 6), q(x + y + 7)];
+    let path = [p(0, 0), p(3, 0), p(3, 2), p(3, 2), p(0, 2), p(0, 0)];
+    let report = exact_planar_spatial_polyline_area(&path, 1_000_000).unwrap();
+    assert_eq!(report.area_vector_mm2, [q(-6), q(-6), q(6)]);
+    assert_eq!(report.area_squared_mm4, q(108));
+    assert_eq!(
+        exact_planar_spatial_polyline_area(&path, report.exact_work).unwrap(),
+        report
+    );
+    assert!(exact_planar_spatial_polyline_area(&path, report.exact_work - 1).is_err());
+    let reverse = path.into_iter().rev().collect::<Vec<_>>();
+    let reversed = exact_planar_spatial_polyline_area(&reverse, 1_000_000).unwrap();
+    assert_eq!(reversed.area_vector_mm2, [q(6), q(6), q(-6)]);
+    assert_eq!(reversed.area_squared_mm4, report.area_squared_mm4);
+}
+
+#[test]
+fn exact_planar_spatial_polyline_area_rejects_warped_and_self_crossing_profiles() {
+    use brep_core::analysis::exact_planar_spatial_polyline_area;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let p = |x, y, z| [q(x), q(y), q(z)];
+    let warped = [p(0, 0, 0), p(2, 0, 0), p(2, 2, 0), p(0, 2, 1), p(0, 0, 0)];
+    let crossing = [p(0, 0, 0), p(4, 4, 0), p(0, 4, 0), p(2, 0, 0), p(0, 0, 0)];
+    let collapsed = [p(0, 0, 0), p(2, 0, 0), p(1, 0, 0), p(0, 0, 0)];
+    for path in [
+        warped.as_slice(),
+        crossing.as_slice(),
+        collapsed.as_slice(),
+        &warped[..4],
+    ] {
+        assert!(exact_planar_spatial_polyline_area(path, 1_000_000).is_err());
+    }
+}
