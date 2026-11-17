@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 614,
-  "unallocatedCount": 386,
+  "specifiedCount": 615,
+  "unallocatedCount": 385,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -15295,6 +15295,26 @@
         "Expose area, centroid and central inertia within a selected unwrapped UV window through WASM.",
         "Verify clipped seam area and centroid, invalid window rejection, and exact zero area for a disjoint window through WASM.",
         "Editor and production delivery qualification remain."
+      ]
+    },
+    {
+      "id": "NURBS-0615",
+      "name": "Гарантированная суммарная площадь всех компонент периодической обрезки",
+      "status": "native",
+      "prioritySet": "native-1000-exact-simplification",
+      "category": "Точное редактирование",
+      "nativeApi": "nurbs_core::analysis::surface_measure::periodic_trim_patch_set_area",
+      "evidence": [
+        "crates/nurbs-core/src/editing/exact_periodic_surface.rs",
+        "crates/nurbs-core/tests/exact_curve_merge_contracts.rs",
+        "crates/nurbs-core/src/analysis/surface_measure.rs",
+        "docs/qualification/nurbs-curvature-field-615-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-615-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose total and component retained areas under shared integration and trim work limits.",
+        "Verify total area with a nested island, separate component enclosures and refusal of incomplete coverage under either shared budget.",
+        "WASM and application integration are separate."
       ]
     }
   ],

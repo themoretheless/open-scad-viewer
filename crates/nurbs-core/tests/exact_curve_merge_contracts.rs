@@ -6640,3 +6640,105 @@ fn trimmed_surface_window_inertia_withholds_for_disjoint_window() {
     assert!(report.centroid.centroid_bounds.is_none() && report.central_inertia_bounds.is_none());
     assert_eq!(report.centroid.measure.area.unwrap().bounds, [0.; 2]);
 }
+
+#[test]
+fn periodic_trim_patch_set_area_includes_island_under_shared_budget() {
+    use nurbs_core::{
+        analysis::surface_measure::periodic_trim_patch_set_area,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+    };
+    let mut profile = periodic_unit_square();
+    for pole in &mut profile.control_points {
+        pole.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let outer = [
+        [3.5, 0.125],
+        [0.5, 0.125],
+        [0.5, 0.875],
+        [3.5, 0.875],
+        [3.5, 0.125],
+    ];
+    let hole = [
+        [0.125, 0.25],
+        [0.375, 0.25],
+        [0.375, 0.75],
+        [0.125, 0.75],
+        [0.125, 0.25],
+    ];
+    let island = [
+        [0.1875, 0.375],
+        [0.3125, 0.375],
+        [0.3125, 0.625],
+        [0.1875, 0.625],
+        [0.1875, 0.375],
+    ];
+    let patches =
+        build_exact_periodic_surface_trim_patches(&source, &[&outer, &hole, &island], 1_000_000)
+            .unwrap()
+            .patches
+            .unwrap();
+    let result = periodic_trim_patch_set_area(&patches, 0.075, 1e-10, 10_000, 1_000_000).unwrap();
+    let total = result.total.area.unwrap();
+    assert!(
+        total.bounds[0] <= 1.3125 && 1.3125 <= total.bounds[1],
+        "{total:?}"
+    );
+    assert!(
+        total.within_tolerance && total.cells <= 10_000 && result.total.trim_cells <= 1_000_000,
+        "{total:?}; {:?}", result.components,
+    );
+    assert_eq!(result.components.len(), 2);
+    for (area, expected) in result.components.iter().zip([1.25, 0.0625]) {
+        assert!(area.bounds[0] <= expected && expected <= area.bounds[1]);
+    }
+    assert_eq!(
+        total.cells,
+        result
+            .components
+            .iter()
+            .map(|area| area.cells)
+            .sum::<usize>()
+    );
+}
+
+#[test]
+fn periodic_trim_patch_set_area_never_returns_partial_component_coverage() {
+    use nurbs_core::{
+        analysis::surface_measure::periodic_trim_patch_set_area,
+        editing::exact_periodic_surface::build_exact_periodic_surface_trim_patches,
+    };
+    let mut profile = periodic_unit_square();
+    for pole in &mut profile.control_points {
+        pole.push(0.);
+    }
+    let source = nurbs_core::surface::extrude(&profile, [0., 0., 2.]).unwrap();
+    let a = [
+        [0.125, 0.125],
+        [0.375, 0.125],
+        [0.375, 0.375],
+        [0.125, 0.375],
+        [0.125, 0.125],
+    ];
+    let b = [
+        [2.125, 0.625],
+        [2.375, 0.625],
+        [2.375, 0.875],
+        [2.125, 0.875],
+        [2.125, 0.625],
+    ];
+    let patches = build_exact_periodic_surface_trim_patches(&source, &[&a, &b], 1_000_000)
+        .unwrap()
+        .patches
+        .unwrap();
+    for (surface_cells, trim_cells) in [(1, 100), (100, 1)] {
+        let short =
+            periodic_trim_patch_set_area(&patches, 0.01, 1e-10, surface_cells, trim_cells).unwrap();
+        assert!(short.total.area.is_none() && short.components.is_empty());
+        assert_eq!(short.total.minimum_surface_cells, 2);
+    }
+    let coarse = periodic_trim_patch_set_area(&patches, 0.01, 1e-10, 2, 2).unwrap();
+    assert_eq!(coarse.components.len(), 2);
+    assert_eq!(coarse.total.trim_cells, 2);
+    assert!(coarse.total.area.unwrap().bounds[1] >= 0.25);
+}

@@ -829,3 +829,107 @@ fn shifted_inertia(mut matrix: [[Interval; 3]; 3], shift: f64) -> Option<usize> 
     }
     Some(negative)
 }
+
+#[derive(Clone, Debug)]
+pub struct TrimmedPatchSetAreaReport {
+    pub total: TrimmedAreaReport,
+    /// Area of each patch in input order. Empty if full coverage is unavailable.
+    pub components: Vec<AreaReport>,
+}
+
+/// Enclose the sum of the areas of a collection of periodic trim patches.
+/// Each patch contributes its own retained area, so overlapping world images
+/// count with multiplicity. Both cell budgets are shared across all patches.
+pub fn periodic_trim_patch_set_area(
+    patches: &[crate::editing::exact_periodic_surface::PeriodicTrimPatch],
+    tolerance: f64,
+    tolerance_uv: f64,
+    max_surface_cells: usize,
+    max_trim_cells: usize,
+) -> Result<TrimmedPatchSetAreaReport> {
+    check(
+        (1..=256).contains(&patches.len())
+            && [tolerance, tolerance_uv]
+                .iter()
+                .all(|t| t.is_finite() && *t > 0.)
+            && (1..=100_000).contains(&max_surface_cells)
+            && (1..=1_000_000).contains(&max_trim_cells),
+        "Trimmed patch set needs 1..256 patches, positive tolerances and valid cell limits",
+    )?;
+    let mut minima = Vec::with_capacity(patches.len());
+    for patch in patches {
+        let surface = &patch.surface;
+        surface.validate()?;
+        let count = |knots: &[f64], degree: usize, controls: usize| {
+            knots[degree..=controls]
+                .windows(2)
+                .filter(|pair| pair[0] < pair[1])
+                .count()
+        };
+        minima.push(
+            count(
+                &surface.knots_u,
+                surface.degree_u,
+                surface.control_points.len(),
+            ) * count(
+                &surface.knots_v,
+                surface.degree_v,
+                surface.control_points[0].len(),
+            ),
+        );
+    }
+    let minimum_surface_cells = minima.iter().sum();
+    if minimum_surface_cells > max_surface_cells || max_trim_cells < patches.len() {
+        return Ok(TrimmedPatchSetAreaReport {
+            total: TrimmedAreaReport {
+                area: None,
+                minimum_surface_cells,
+                trim_cells: 0,
+            },
+            components: Vec::new(),
+        });
+    }
+
+    let mut remaining_minimum = minimum_surface_cells;
+    let mut surface_cells = 0;
+    let mut trim_cells = 0;
+    let mut total = Interval::point(0.);
+    let mut components = Vec::with_capacity(patches.len());
+    let share = (tolerance / patches.len() as f64).max(f64::from_bits(1));
+    let mut stop = StopReason::PrecisionLimit;
+    for (index, (patch, minimum)) in patches.iter().zip(minima).enumerate() {
+        remaining_minimum -= minimum;
+        let measure = periodic_trim_patch_area(
+            patch,
+            share,
+            tolerance_uv,
+            minimum + (max_surface_cells - surface_cells - remaining_minimum - minimum)
+                / (patches.len() - index),
+            (max_trim_cells - trim_cells) / (patches.len() - index),
+        )?;
+        let area = measure
+            .area
+            .ok_or_else(|| crate::numeric_err("Missing prepared trim patch area"))?;
+        surface_cells += area.cells;
+        trim_cells += measure.trim_cells;
+        if area.stop_reason == StopReason::WorkLimit {
+            stop = StopReason::WorkLimit;
+        }
+        total = total.add(Interval::new(area.bounds[0], area.bounds[1])?)?;
+        components.push(area);
+    }
+    let area = report(
+        Interval::new(total.lo.max(0.), total.hi)?,
+        surface_cells,
+        tolerance,
+        stop,
+    )?;
+    Ok(TrimmedPatchSetAreaReport {
+        total: TrimmedAreaReport {
+            area: Some(area),
+            minimum_surface_cells,
+            trim_cells,
+        },
+        components,
+    })
+}
