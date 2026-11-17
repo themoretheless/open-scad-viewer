@@ -1589,3 +1589,44 @@ fn exact_centroid_follows_the_affine_map_of_an_oblique_solid() {
         [coordinate.clone(), Q::from_integer(0.into()), coordinate]
     );
 }
+
+#[test]
+fn exact_inertia_includes_the_products_of_inertia_from_a_shifted_hole() {
+    use brep_core::{
+        analysis::exact_polyhedral_inertia, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let report = exact_polyhedral_inertia(solid, 1_000_000).unwrap();
+    let q = |a: i64, b: i64| Q::new(a.into(), b.into());
+    assert_eq!(report.volume_mm3, q(30, 1));
+    assert_eq!(report.centroid_mm, [q(61, 30), q(61, 30), q(1, 1)]);
+    assert_eq!(
+        report.inertia_mm5,
+        [
+            [q(1559, 30), q(8, 15), q(0, 1)],
+            [q(8, 15), q(1559, 30), q(0, 1)],
+            [q(0, 1), q(0, 1), q(1259, 15)],
+        ]
+    );
+    assert!(exact_polyhedral_inertia(solid, report.exact_work).is_ok());
+    assert!(exact_polyhedral_inertia(solid, report.exact_work - 1).is_err());
+}
+
+#[test]
+fn exact_inertia_matches_the_affine_covariance_of_an_oblique_prism() {
+    use brep_core::{
+        analysis::exact_polyhedral_inertia, planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let source = open_prism_with_nonbinary_cap_support();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let report = exact_polyhedral_inertia(&result.section.solid, 1_000_000).unwrap();
+    let expected = [[13, 2, -1], [2, 10, -2], [-1, -2, 13]];
+    assert_eq!(
+        report.inertia_mm5,
+        expected.map(|row| row.map(|n| Q::from_integer(n.into())))
+    );
+}

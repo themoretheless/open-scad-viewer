@@ -57,6 +57,69 @@ pub fn exact_polyhedral_centroid(
     })
 }
 
+#[derive(Clone, Debug)]
+pub struct ExactPolyhedralInertia {
+    pub volume_mm3: Q,
+    pub centroid_mm: [Q; 3],
+    /// Inertia about the centroid, in world axes at unit volumetric density.
+    pub inertia_mm5: [[Q; 3]; 3],
+    pub exact_work: u64,
+}
+
+/// Integrate the exact centroidal inertia tensor of a qualified planar solid
+/// with full piecewise-linear edges, including signed contributions from voids.
+pub fn exact_polyhedral_inertia(
+    solid: &QualifiedClosedSolid,
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralInertia> {
+    let mut first: [Q; 3] = std::array::from_fn(|_| Q::zero());
+    let mut second: [[Q; 3]; 3] = std::array::from_fn(|_| std::array::from_fn(|_| Q::zero()));
+    let (six_volume, integration_work) =
+        integrate_polyhedral_boundary(solid, max_exact_work, |a, b, c, signed, remaining| {
+            spend(remaining, 72)?;
+            let sum: [Q; 3] = std::array::from_fn(|i| &a[i] + &b[i] + &c[i]);
+            for i in 0..3 {
+                first[i] += signed * &sum[i];
+                for j in i..3 {
+                    let paired = &a[i] * &a[j] + &b[i] * &b[j] + &c[i] * &c[j];
+                    second[i][j] += signed * (&sum[i] * &sum[j] + paired);
+                }
+            }
+            Ok(())
+        })?;
+    let mut remaining = max_exact_work - integration_work;
+    spend(&mut remaining, 48)?;
+    let exact_work = max_exact_work - remaining;
+
+    let volume_mm3 = &six_volume / Q::from_integer(6.into());
+    let first_denominator = six_volume * Q::from_integer(4.into());
+    let centroid_mm = first.map(|moment| moment / &first_denominator);
+    // The signed determinants are six times the tetrahedron volumes.
+    let second_denominator = Q::from_integer(120.into());
+    let centered: [[Q; 3]; 3] = std::array::from_fn(|i| {
+        std::array::from_fn(|j| {
+            &second[i.min(j)][i.max(j)] / &second_denominator
+                - &volume_mm3 * &centroid_mm[i] * &centroid_mm[j]
+        })
+    });
+    let trace = &centered[0][0] + &centered[1][1] + &centered[2][2];
+    let inertia_mm5 = std::array::from_fn(|i| {
+        std::array::from_fn(|j| {
+            if i == j {
+                &trace - &centered[i][i]
+            } else {
+                -&centered[i][j]
+            }
+        })
+    });
+    Ok(ExactPolyhedralInertia {
+        volume_mm3,
+        centroid_mm,
+        inertia_mm5,
+        exact_work,
+    })
+}
+
 fn integrate_polyhedral_boundary(
     solid: &QualifiedClosedSolid,
     max_exact_work: u64,
