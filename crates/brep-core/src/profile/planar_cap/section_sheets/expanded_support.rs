@@ -1,17 +1,19 @@
 use super::unresolved;
+use num_bigint::BigInt;
 use num_rational::BigRational as Q;
 use num_traits::ToPrimitive;
 use nurbs_core::{Result, analysis::exact_affine_hull::PlanarSurfaceProjection};
 
-/// Each coordinate changes by an integer multiple of the odd denominator
+/// Each coordinate changes by a dyadic multiple of the odd denominator
 /// of its slope. Its contribution to the omitted coordinate is then dyadic.
 pub(super) fn expand(
     projection: &PlanarSurfaceProjection,
     anchor: [f64; 2],
+    refine: bool,
 ) -> Result<PlanarSurfaceProjection> {
     let [u, v] = [&projection.surface.knots_u, &projection.surface.knots_v];
-    let [u0, u1] = enclose([u[0], u[3]], anchor[0], &projection.slopes[0])?;
-    let [v0, v1] = enclose([v[0], v[3]], anchor[1], &projection.slopes[1])?;
+    let [u0, u1] = enclose([u[0], u[3]], anchor[0], &projection.slopes[0], refine)?;
+    let [v0, v1] = enclose([v[0], v[3]], anchor[1], &projection.slopes[1], refine)?;
     let mut expanded = projection.clone();
     expanded.surface.knots_u = vec![u0, u0, u1, u1];
     expanded.surface.knots_v = vec![v0, v0, v1, v1];
@@ -22,12 +24,24 @@ pub(super) fn expand(
     Ok(expanded)
 }
 
-fn enclose([lo, hi]: [f64; 2], anchor: f64, slope: &Q) -> Result<[f64; 2]> {
+fn enclose([lo, hi]: [f64; 2], anchor: f64, slope: &Q, refine: bool) -> Result<[f64; 2]> {
     let denominator = slope.denom();
-    let step = Q::from_integer(denominator >> denominator.trailing_zeros().unwrap() as usize);
+    let mut step = Q::from_integer(denominator >> denominator.trailing_zeros().unwrap() as usize);
+    let lo = Q::from_float(lo).unwrap();
+    let hi = Q::from_float(hi).unwrap();
+    let width = &hi - &lo;
+    if refine && width < step {
+        let ratio = &step / width;
+        let bits = (ratio.numer().bits() - ratio.denom().bits()) as usize;
+        let mut divisor = BigInt::from(1) << bits;
+        if Q::from_integer(divisor.clone()) < ratio {
+            divisor <<= 1;
+        }
+        step /= divisor;
+    }
     let anchor = Q::from_float(anchor).unwrap();
-    let lower = ((Q::from_float(lo).unwrap() - &anchor) / &step).floor();
-    let upper = ((Q::from_float(hi).unwrap() - &anchor) / &step).ceil();
+    let lower = ((lo - &anchor) / &step).floor();
+    let upper = ((hi - &anchor) / &step).ceil();
     let store = |index: Q| {
         let bound = &anchor + &step * index;
         bound

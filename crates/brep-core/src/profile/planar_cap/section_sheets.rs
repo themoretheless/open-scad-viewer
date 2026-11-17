@@ -151,16 +151,28 @@ pub(super) fn build(
             if matches!(support, Support::ExpandedExact)
                 && lift.refusal == Some(PlanarLiftRefusal::NotRepresentable)
             {
-                const EXPANSION_WORK: u64 = 32;
-                let remaining = options.max_exact_work - exact_work;
-                if remaining <= EXPANSION_WORK {
-                    return Err(unresolved("Section plane expansion budget exhausted"));
-                }
                 let anchor = &region.cap.face.loops[0][0].control_points[0];
-                let expanded = expanded_support::expand(projection, [anchor[0], anchor[1]])?;
-                exact_work += EXPANSION_WORK;
-                lift = lift_planar_surface(&expanded, remaining - EXPANSION_WORK)?;
-                exact_work += lift.work_used;
+                let anchor = [anchor[0], anchor[1]];
+                for refine in [true, false] {
+                    const EXPANSION_WORK: u64 = 48;
+                    let remaining = options.max_exact_work - exact_work;
+                    if remaining <= EXPANSION_WORK {
+                        return Err(unresolved("Section plane expansion budget exhausted"));
+                    }
+                    exact_work += EXPANSION_WORK;
+                    let expanded = match expanded_support::expand(projection, anchor, refine) {
+                        Ok(expanded) => expanded,
+                        Err(_) if refine => continue,
+                        Err(error) => return Err(error),
+                    };
+                    lift = lift_planar_surface(&expanded, remaining - EXPANSION_WORK)?;
+                    exact_work += lift.work_used;
+                    if lift.surface.is_some()
+                        || lift.refusal == Some(PlanarLiftRefusal::ResourceLimit)
+                    {
+                        break;
+                    }
+                }
             }
             let surface = lift
                 .surface

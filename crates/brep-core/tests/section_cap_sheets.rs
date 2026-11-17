@@ -1108,3 +1108,45 @@ fn expanded_inferred_solid_refuses_budget_exhaustion_atomically() {
     assert!(build_expanded_inferred_section_solid(&source, options).is_err());
     assert_eq!(source, before);
 }
+
+#[test]
+fn refines_exact_oblique_support_for_submillimeter_rims() {
+    use brep_core::planar_cap::build_section_sheets_with_expanded_exact_support;
+    let shape = [
+        [0., 0., 2.],
+        [2., -2., 2.],
+        [3., 0., 3.],
+        [1., 2., 3.],
+        [0., 0., 2.],
+    ];
+    for scale in [1. / 32., 1. / 1024.] {
+        let ring: Vec<_> = shape
+            .windows(2)
+            .map(|pair| {
+                Curve::from_polyline(
+                    pair.iter()
+                        .map(|p| p.iter().map(|x| x * scale).collect())
+                        .collect(),
+                )
+                .unwrap()
+            })
+            .collect();
+        let report = build_section_sheets_with_expanded_exact_support(
+            &[&ring],
+            [-1., -1., 3.],
+            6. * scale,
+            options(),
+        )
+        .unwrap();
+        let face = &report.model.faces[0].surface;
+        for (knots, width) in [(&face.knots_u, 3. * scale), (&face.knots_v, 4. * scale)] {
+            let expanded = knots[3] - knots[0];
+            assert!(expanded >= width && expanded <= 3. * width);
+        }
+        assert!(
+            brep_core::boundary_agreement::verify_exact(&report.model, 1_000_000)
+                .unwrap()
+                .all_equal
+        );
+    }
+}

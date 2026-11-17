@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 392,
-  "unallocatedCount": 608,
+  "specifiedCount": 393,
+  "unallocatedCount": 607,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -10079,6 +10079,33 @@
       "remainingQualification": [
         "Close a standalone shell with inferred exact expanded cap supports and certify the material boundary and volume.",
         "Exact inferred rim planes are sewn onto expanded supports without moving any source edge or vertex. The resulting material boundary must pass solid admission and positive volume enclosure.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0393",
+      "name": "Масштабируемый шаг точной опоры для субмиллиметровых наклонных крышек",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::planar_cap::build_section_sheets_with_expanded_exact_support",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover.rs",
+        "crates/brep-core/src/profile/planar_cap/attach_sections/discover/infer.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets/expanded_support.rs",
+        "crates/brep-core/src/contact/boundary_agreement.rs",
+        "docs/qualification/nurbs-curvature-field-393-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-393-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Adapt the exact support lattice to submillimeter rims while preserving exact boundary identity.",
+        "Dyadic step refinement preserves cancellation of odd slope denominators while fitting the rim scale. Exact lift and edge identity checks cover the stored result.",
         "WASM and application integration are separate."
       ]
     }
