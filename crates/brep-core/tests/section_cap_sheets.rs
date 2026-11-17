@@ -2811,3 +2811,48 @@ fn exact_boundary_distance_projects_orthogonally_onto_an_oblique_cap() {
         q(0, 1)
     );
 }
+
+#[test]
+fn signed_distance_distinguishes_material_from_a_hole_and_its_wall() {
+    use brep_core::{
+        analysis::exact_polyhedral_signed_distance,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    for (x, signed) in [(3, -1), (5, 1), (4, 0)] {
+        let point = [q(x, 4), q(3, 2), q(1, 1)];
+        let report = exact_polyhedral_signed_distance(solid, &point, 1_000_000).unwrap();
+        assert_eq!(report.signed_distance_squared_mm2, q(signed, 16));
+        assert_eq!(report.nearest_mm, [q(1, 1), q(3, 2), q(1, 1)]);
+        assert!(exact_polyhedral_signed_distance(solid, &point, report.exact_work).is_ok());
+        assert!(exact_polyhedral_signed_distance(solid, &point, report.exact_work - 1).is_err());
+    }
+}
+
+#[test]
+fn signed_distance_uses_exact_oblique_face_projection() {
+    use brep_core::analysis::{
+        exact_polyhedral_boundary_distance, exact_polyhedral_point_location,
+        exact_polyhedral_signed_distance,
+    };
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    for direction in [-1, 1] {
+        let point = [
+            q(24 - direction, 16),
+            q(-direction, 16),
+            q(40 + 3 * direction, 16),
+        ];
+        let report = exact_polyhedral_signed_distance(&solid, &point, 1_000_000).unwrap();
+        assert_eq!(report.signed_distance_squared_mm2, q(11 * direction, 256));
+        assert_eq!(report.nearest_mm, [q(3, 2), q(0, 1), q(5, 2)]);
+        let nearest = exact_polyhedral_boundary_distance(&solid, &point, 1_000_000).unwrap();
+        let location = exact_polyhedral_point_location(&solid, &point, 1_000_000).unwrap();
+        assert!(report.exact_work < nearest.exact_work + location.exact_work);
+    }
+}

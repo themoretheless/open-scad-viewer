@@ -94,15 +94,7 @@ pub fn exact_polyhedral_point_location(
     point_mm: &[Q; 3],
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralPointLocation> {
-    if point_mm
-        .iter()
-        .any(|q| q.numer().bits().max(q.denom().bits()) > 8192)
-    {
-        return Err(Error::new(
-            "BREP_INVALID_INPUT",
-            "Point coordinates exceed the exact bit limit",
-        ));
-    }
+    validate_point(point_mm)?;
     let mut remaining = max_exact_work;
     let faces = prepare_faces(solid, &mut remaining)?;
     for (&face, boundary) in &faces {
@@ -123,13 +115,25 @@ pub fn exact_polyhedral_point_location(
             });
         }
     }
+    let location = classify_open_point(&faces, point_mm, &mut remaining)?;
+    Ok(ExactPolyhedralPointLocation {
+        location,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn classify_open_point(
+    faces: &BTreeMap<usize, FaceBoundary>,
+    point_mm: &[Q; 3],
+    remaining: &mut u64,
+) -> Result<PolyhedralPointLocation> {
     // A nonzero plane condition evaluated on (1, k, k²) has at most
     // two roots. Retry degenerate lines while charging the common budget.
     for k in 1_u64.. {
-        spend(&mut remaining, 8)?;
+        spend(remaining, 8)?;
         let direction = [1, k, k * k].map(|value| Q::from_integer(value.into()));
-        if let Some(crossings) = line_crossings(&faces, point_mm, &direction, &mut remaining)? {
-            spend(&mut remaining, crossings.len() as u64)?;
+        if let Some(crossings) = line_crossings(faces, point_mm, &direction, remaining)? {
+            spend(remaining, crossings.len() as u64)?;
             if crossings.len() % 2 != 0 {
                 return Err(refuse("Point ray requires paired full-line crossings"));
             }
@@ -139,10 +143,7 @@ pub fn exact_polyhedral_point_location(
             } else {
                 PolyhedralPointLocation::Exterior
             };
-            return Ok(ExactPolyhedralPointLocation {
-                location,
-                exact_work: max_exact_work - remaining,
-            });
+            return Ok(location);
         }
     }
     unreachable!("bounded ray search cannot exhaust the integer range")
@@ -165,6 +166,51 @@ pub fn exact_polyhedral_boundary_distance(
     point_mm: &[Q; 3],
     max_exact_work: u64,
 ) -> Result<ExactPolyhedralBoundaryDistance> {
+    validate_point(point_mm)?;
+    let mut remaining = max_exact_work;
+    let faces = prepare_faces(solid, &mut remaining)?;
+    let mut result = nearest_boundary(&faces, point_mm, &mut remaining)?;
+    result.exact_work = max_exact_work - remaining;
+    Ok(result)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPolyhedralSignedDistance {
+    /// Negative inside material, positive outside, and zero on the boundary.
+    /// The unsigned magnitude is the squared Euclidean distance.
+    pub signed_distance_squared_mm2: Q,
+    pub nearest_mm: [Q; 3],
+    pub face: usize,
+    pub exact_work: u64,
+}
+
+/// Evaluate signed distance to an exactly qualified polyhedral boundary.
+/// The same retained faces supply both the distance witness and material parity.
+pub fn exact_polyhedral_signed_distance(
+    solid: &QualifiedClosedSolid,
+    point_mm: &[Q; 3],
+    max_exact_work: u64,
+) -> Result<ExactPolyhedralSignedDistance> {
+    validate_point(point_mm)?;
+    let mut remaining = max_exact_work;
+    let faces = prepare_faces(solid, &mut remaining)?;
+    let nearest = nearest_boundary(&faces, point_mm, &mut remaining)?;
+    let mut squared = nearest.distance_squared_mm2;
+    if !squared.is_zero()
+        && classify_open_point(&faces, point_mm, &mut remaining)?
+            == PolyhedralPointLocation::Material
+    {
+        squared = -squared;
+    }
+    Ok(ExactPolyhedralSignedDistance {
+        signed_distance_squared_mm2: squared,
+        nearest_mm: nearest.point_mm,
+        face: nearest.face,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn validate_point(point_mm: &[Q; 3]) -> Result<()> {
     if point_mm
         .iter()
         .any(|q| q.numer().bits().max(q.denom().bits()) > 8192)
@@ -174,12 +220,18 @@ pub fn exact_polyhedral_boundary_distance(
             "Point coordinates exceed the exact bit limit",
         ));
     }
-    let mut remaining = max_exact_work;
-    let faces = prepare_faces(solid, &mut remaining)?;
+    Ok(())
+}
+
+fn nearest_boundary(
+    faces: &BTreeMap<usize, FaceBoundary>,
+    point_mm: &[Q; 3],
+    remaining: &mut u64,
+) -> Result<ExactPolyhedralBoundaryDistance> {
     let mut nearest = None::<ExactPolyhedralBoundaryDistance>;
-    for (face, boundary) in faces {
-        spend(&mut remaining, 32)?;
-        let normal = face_normal(&boundary)?;
+    for (&face, boundary) in faces {
+        spend(remaining, 32)?;
+        let normal = face_normal(boundary)?;
         let delta = std::array::from_fn(|i| &point_mm[i] - &boundary.origin[i]);
         let residual = dot(normal, &delta);
         let scale = &residual / dot(normal, normal);
@@ -208,22 +260,19 @@ pub fn exact_polyhedral_boundary_distance(
             &boundary.segments,
             &projected,
             plane_axes(normal),
-            &mut remaining,
+            remaining,
         )? != FaceLocation::Outside
         {
             consider(projected, plane_distance);
         } else {
-            for [a, b] in boundary.segments {
-                spend(&mut remaining, 40)?;
-                let (closest, squared) = nearest_segment_point(point_mm, &a, &b);
+            for [a, b] in &boundary.segments {
+                spend(remaining, 40)?;
+                let (closest, squared) = nearest_segment_point(point_mm, a, b);
                 consider(closest, squared);
             }
         }
     }
-    let mut result =
-        nearest.ok_or_else(|| refuse("Boundary distance requires at least one face"))?;
-    result.exact_work = max_exact_work - remaining;
-    Ok(result)
+    nearest.ok_or_else(|| refuse("Boundary distance requires at least one face"))
 }
 
 fn prepare_faces(
