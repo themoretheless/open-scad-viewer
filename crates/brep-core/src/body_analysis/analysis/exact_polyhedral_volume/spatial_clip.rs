@@ -2578,3 +2578,92 @@ pub fn bounded_planar_spatial_polyline_principal_moments(
         exact_work: max_exact_work - remaining,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExactPlanarPolylineRegionMass {
+    pub centroid_mm: [Q; 3],
+    /// Net area vector oriented by the outer contour.
+    pub area_vector_mm2: [Q; 3],
+    pub area_squared_mm4: Q,
+    pub exact_work: u64,
+}
+
+/// Compute area and centroid for a planar region with strictly interior,
+/// pairwise disjoint holes. Hole winding is immaterial.
+pub fn exact_planar_spatial_polyline_region_mass(
+    outer_mm: &[[Q; 3]],
+    holes_mm: &[&[[Q; 3]]],
+    max_exact_work: u64,
+) -> Result<ExactPlanarPolylineRegionMass> {
+    let outer = exact_planar_spatial_polyline_centroid(outer_mm, max_exact_work)?;
+    let mut remaining = max_exact_work - outer.exact_work;
+    let normal = &outer.area.area_vector_mm2;
+    let axes = plane_axes(normal);
+    let axis = 3 - axes[0] - axes[1];
+    let mut weight = normal[axis].abs();
+    let mut moment = outer.centroid_mm.map(|coord| coord * &weight);
+    let segments = |points: &[[Q; 3]], remaining: &mut u64| -> Result<Vec<[[Q; 3]; 2]>> {
+        spend(remaining, 8 * (points.len() as u64 - 1))?;
+        Ok(points
+            .windows(2)
+            .map(|pair| [pair[0].clone(), pair[1].clone()])
+            .collect())
+    };
+    let mut boundaries = vec![(outer_mm, segments(outer_mm, &mut remaining)?)];
+    for &hole in holes_mm {
+        if remaining == 0 {
+            return Err(super::work_exhausted());
+        }
+        let properties = exact_planar_spatial_polyline_centroid(hole, remaining)?;
+        remaining -= properties.exact_work;
+        for point in hole {
+            spend(&mut remaining, 16)?;
+            let offset = std::array::from_fn(|i| &point[i] - &outer_mm[0][i]);
+            if !dot(&offset, normal).is_zero() {
+                return Err(refuse("Hole does not lie on the outer support"));
+            }
+        }
+        let edges = segments(hole, &mut remaining)?;
+        for (index, (other, other_edges)) in boundaries.iter().enumerate() {
+            for edge in &edges {
+                for other_edge in other_edges {
+                    spend(&mut remaining, 64)?;
+                    if intersect_spatial_segments(edge, other_edge).is_some() {
+                        return Err(refuse("Profile contours intersect"));
+                    }
+                }
+            }
+            let hole_location = point_in_face(other_edges, &hole[0], axes, &mut remaining)?;
+            if index == 0 {
+                if hole_location != FaceLocation::Inside {
+                    return Err(refuse("Hole must lie strictly inside the exterior contour"));
+                }
+            } else if hole_location != FaceLocation::Outside
+                || point_in_face(&edges, &other[0], axes, &mut remaining)? != FaceLocation::Outside
+            {
+                return Err(refuse("Profile holes must be disjoint and unnested"));
+            }
+        }
+        spend(&mut remaining, 16)?;
+        let hole_weight = properties.area.area_vector_mm2[axis].abs();
+        for (sum, coord) in moment.iter_mut().zip(properties.centroid_mm) {
+            *sum -= coord * &hole_weight;
+        }
+        weight -= hole_weight;
+        boundaries.push((hole, edges));
+    }
+    spend(&mut remaining, 24)?;
+    if !weight.is_positive() {
+        return Err(refuse("Expected positive net profile area"));
+    }
+    let centroid_mm = moment.map(|component| component / &weight);
+    let area_vector_mm2 = normal
+        .each_ref()
+        .map(|component| component * &weight / normal[axis].abs());
+    Ok(ExactPlanarPolylineRegionMass {
+        centroid_mm,
+        area_squared_mm4: dot(&area_vector_mm2, &area_vector_mm2),
+        area_vector_mm2,
+        exact_work: max_exact_work - remaining,
+    })
+}

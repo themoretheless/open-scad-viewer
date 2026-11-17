@@ -5045,3 +5045,56 @@ fn bounded_planar_polyline_principal_moments_enclose_irrational_eigenvalues() {
     assert!(small_hi - small_lo <= width);
     assert!(large_hi - large_lo <= width);
 }
+
+#[test]
+fn exact_planar_polyline_region_mass_subtracts_disjoint_holes_independent_of_winding() {
+    use brep_core::analysis::exact_planar_spatial_polyline_region_mass;
+    use num_rational::BigRational as Q;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = |x: i64, y: i64| [q(x, 1), q(y, 1), q(x + y, 1)];
+    let rect = |x, y, a, b| [p(x, y), p(a, y), p(a, b), p(x, b), p(x, y)];
+    let outer = rect(0, 0, 6, 6);
+    let h1 = rect(1, 1, 2, 3);
+    let h2 = rect(3, 1, 5, 2).into_iter().rev().collect::<Vec<_>>();
+    let holes = [&h1[..], &h2[..]];
+    let report = exact_planar_spatial_polyline_region_mass(&outer, &holes, 1_000_000).unwrap();
+    assert_eq!(report.area_vector_mm2, [q(-32, 1), q(-32, 1), q(32, 1)]);
+    assert_eq!(report.area_squared_mm4, q(3072, 1));
+    assert_eq!(report.centroid_mm, [q(97, 32), q(101, 32), q(99, 16)]);
+    assert_eq!(
+        exact_planar_spatial_polyline_region_mass(&outer, &holes, report.exact_work).unwrap(),
+        report
+    );
+    assert!(
+        exact_planar_spatial_polyline_region_mass(&outer, &holes, report.exact_work - 1).is_err()
+    );
+}
+
+#[test]
+fn exact_planar_polyline_region_mass_refuses_touching_nested_and_off_plane_holes() {
+    use brep_core::analysis::exact_planar_spatial_polyline_region_mass;
+    use num_rational::BigRational as Q;
+    let q = |n: i64| Q::from_integer(n.into());
+    let rect = |x, y, a, b, z| {
+        [
+            [q(x), q(y), q(z)],
+            [q(a), q(y), q(z)],
+            [q(a), q(b), q(z)],
+            [q(x), q(b), q(z)],
+            [q(x), q(y), q(z)],
+        ]
+    };
+    let outer = rect(0, 0, 6, 6, 0);
+    let hole = rect(1, 1, 5, 5, 0);
+    let nested = rect(2, 2, 3, 3, 0);
+    let touching = rect(0, 1, 2, 3, 0);
+    let off_plane = rect(1, 1, 2, 3, 1);
+    assert!(
+        exact_planar_spatial_polyline_region_mass(&outer, &[&hole, &nested], 1_000_000).is_err()
+    );
+    assert!(
+        exact_planar_spatial_polyline_region_mass(&outer, &[&nested, &hole], 1_000_000).is_err()
+    );
+    assert!(exact_planar_spatial_polyline_region_mass(&outer, &[&touching], 1_000_000).is_err());
+    assert!(exact_planar_spatial_polyline_region_mass(&outer, &[&off_plane], 1_000_000).is_err());
+}

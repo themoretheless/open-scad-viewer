@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 464,
-  "unallocatedCount": 536,
+  "specifiedCount": 465,
+  "unallocatedCount": 535,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -12040,6 +12040,35 @@
       "remainingQualification": [
         "Enclose the two area-normalized principal moments of a planar profile.",
         "Use exact central moment invariants and the zero normal eigenvalue to reduce the in-plane spectrum to a quadratic. Enclose the square root by rational bounds.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0465",
+      "name": "Точные площадь и центр плоского профиля с отверстиями",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::exact_planar_spatial_polyline_region_mass",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "docs/qualification/nurbs-curvature-field-465-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-465-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Compute exact net area and centroid of a planar polygon with disjoint holes.",
+        "Certify coplanar, disjoint, strictly contained holes and subtract their exact projected areas and first moments independent of winding.",
         "WASM and application integration are separate."
       ]
     }
