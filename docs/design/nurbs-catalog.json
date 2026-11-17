@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "targetCount": 1000,
-  "specifiedCount": 433,
-  "unallocatedCount": 567,
+  "specifiedCount": 434,
+  "unallocatedCount": 566,
   "completionRule": "qualified requires native, JSON, WASM, TypeScript, Rush, editor, examples, geometric tests and declared export support",
   "figures": [
     {
@@ -11139,6 +11139,33 @@
       "remainingQualification": [
         "Isolate the first contacting span and its first boundary-contact parameter by exact prefix tests.",
         "Exact prefix minima provide a monotone contact predicate. Rational bisection encloses the first contact, including isolated tangencies and irrational parameters.",
+        "WASM and application integration are separate."
+      ]
+    },
+    {
+      "id": "NURBS-0434",
+      "name": "Гарантированные границы контакта движущегося шара по граням тела",
+      "status": "native",
+      "prioritySet": "native-1000-differential-fields",
+      "category": "Дифференциальная геометрия",
+      "nativeApi": "brep_core::analysis::bounded_polyhedral_swept_face_contact_ranges",
+      "evidence": [
+        "crates/brep-core/src/profile/planar_cap.rs",
+        "crates/brep-core/src/profile/planar_cap/section_sheets.rs",
+        "crates/brep-core/tests/section_cap_sheets.rs",
+        "crates/nurbs-core/src/editing/exact_surface_derivative/plane_side/cap/holes/arrangement.rs",
+        "crates/nurbs-core/src/analysis/exact_affine_hull.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip.rs",
+        "crates/brep-core/src/body_analysis/analysis/exact_polyhedral_volume/spatial_clip/sweep_clearance.rs",
+        "docs/qualification/nurbs-curvature-field-434-2026-11-17/receipt.json",
+        "docs/qualification/nurbs-curvature-field-434-2026-11-17/native.log.gz"
+      ],
+      "remainingQualification": [
+        "Enclose the first and last contact parameters of each retained face on each swept path span.",
+        "Independent exact prefix and suffix tests isolate contact extrema for each retained face and path span, even when the contact set has gaps.",
         "WASM and application integration are separate."
       ]
     }

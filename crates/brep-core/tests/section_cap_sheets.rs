@@ -3224,3 +3224,79 @@ fn first_contact_includes_tangency_and_initial_contact() {
         [q(0, 1), q(0, 1)]
     );
 }
+
+#[test]
+fn swept_face_ranges_enclose_extremes_of_disconnected_cap_contacts() {
+    use brep_core::{
+        analysis::bounded_polyhedral_swept_face_contact_ranges,
+        planar_cap::build_outward_inferred_section_solid,
+    };
+    use num_rational::BigRational as Q;
+    let (source, _) = open_hollow_prism();
+    let result = build_outward_inferred_section_solid(&source, section_solid_options()).unwrap();
+    let solid = &result.section.solid;
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let point = |x| [q(x, 1), q(3, 2), q(2, 1)];
+    let path = [point(-1), point(5)];
+    let report =
+        bounded_polyhedral_swept_face_contact_ranges(solid, &path, &q(0, 1), 1e-6, 1_000_000)
+            .unwrap();
+    let cap = report
+        .contacts
+        .iter()
+        .find(|entry| entry.face == result.section.cap_faces[0])
+        .unwrap();
+    assert_eq!(cap.span, 0);
+    for ([lo, hi], expected) in [
+        (&cap.first_parameter_bounds, q(1, 6)),
+        (&cap.last_parameter_bounds, q(5, 6)),
+    ] {
+        assert!(*lo <= expected && expected <= *hi);
+        assert!(hi - lo <= Q::from_float(1e-6).unwrap());
+    }
+    assert!(
+        bounded_polyhedral_swept_face_contact_ranges(
+            solid,
+            &path,
+            &q(0, 1),
+            1e-6,
+            report.exact_work
+        )
+        .is_ok()
+    );
+    assert!(
+        bounded_polyhedral_swept_face_contact_ranges(
+            solid,
+            &path,
+            &q(0, 1),
+            1e-6,
+            report.exact_work - 1
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn swept_face_ranges_retain_full_span_contacts_at_path_endpoints() {
+    use brep_core::analysis::bounded_polyhedral_swept_face_contact_ranges;
+    use num_rational::BigRational as Q;
+    let solid = shifted_oblique_solid(0.);
+    let q = |n: i64, d: i64| Q::new(n.into(), d.into());
+    let p = [q(3, 2), q(0, 1), q(5, 2)];
+    let path = [p.clone(), p.clone(), p];
+    let report =
+        bounded_polyhedral_swept_face_contact_ranges(&solid, &path, &q(0, 1), 1e-6, 1_000_000)
+            .unwrap();
+    assert_eq!(
+        report
+            .contacts
+            .iter()
+            .map(|hit| hit.span)
+            .collect::<Vec<_>>(),
+        [0, 1]
+    );
+    for hit in report.contacts {
+        assert_eq!(hit.first_parameter_bounds, [q(0, 1), q(0, 1)]);
+        assert_eq!(hit.last_parameter_bounds, [q(1, 1), q(1, 1)]);
+    }
+}

@@ -524,8 +524,9 @@ pub fn exact_polyhedral_ball_clearance(
 mod sweep_clearance;
 pub use sweep_clearance::{
     ExactPolyhedralSweptBallClearance, ExactPolyhedralSweptPathClearance,
-    ExactPolyhedralSweptPathMaterial, PolyhedralSweptPathContact, PolyhedralSweptPathFirstContact,
-    PolyhedralSweptPathRelation, bounded_polyhedral_swept_path_first_contact,
-    exact_polyhedral_swept_ball_clearance, exact_polyhedral_swept_path_clearance,
-    exact_polyhedral_swept_path_material,
+    ExactPolyhedralSweptPathMaterial, PolyhedralSweptFaceContactRange,
+    PolyhedralSweptFaceContactRanges, PolyhedralSweptPathContact, PolyhedralSweptPathFirstContact,
+    PolyhedralSweptPathRelation, bounded_polyhedral_swept_face_contact_ranges,
+    bounded_polyhedral_swept_path_first_contact, exact_polyhedral_swept_ball_clearance,
+    exact_polyhedral_swept_path_clearance, exact_polyhedral_swept_path_material,
 };

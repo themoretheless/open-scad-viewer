@@ -169,8 +169,8 @@ fn squared_radius(radius_mm: &Q) -> Result<Q> {
     Ok(radius_mm.pow(2))
 }
 
-fn swept_segment(
-    faces: &BTreeMap<usize, FaceBoundary>,
+fn swept_segment<'a>(
+    faces: impl IntoIterator<Item = (&'a usize, &'a FaceBoundary)>,
     start: &[Q; 3],
     end: &[Q; 3],
     radius_squared: &Q,
@@ -329,24 +329,17 @@ pub fn bounded_polyhedral_swept_path_first_contact(
             if sweep.clearance == Ordering::Greater {
                 continue;
             }
-            let direction = delta(end, start);
-            let (mut lo, mut hi) = (Q::zero(), Q::one());
-            let two = Q::from_integer(2.into());
-            while &hi - &lo > width {
-                spend(&mut remaining, 16)?;
-                let mid = (&lo + &hi) / &two;
-                let center = at(start, &direction, &mid);
-                let prefix =
-                    swept_segment(&faces, start, &center, &radius_squared, &mut remaining)?;
-                if prefix.clearance == Ordering::Greater {
-                    lo = mid;
-                } else {
-                    hi = mid;
-                }
-            }
+            let parameter_bounds = first_parameter_from_clear_start(
+                &faces,
+                start,
+                end,
+                &radius_squared,
+                &width,
+                &mut remaining,
+            )?;
             contact = Some(PolyhedralSweptPathContact {
                 span,
-                parameter_bounds: [lo, hi],
+                parameter_bounds,
             });
             break;
         }
@@ -355,4 +348,110 @@ pub fn bounded_polyhedral_swept_path_first_contact(
         contact,
         exact_work: max_exact_work - remaining,
     })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralSweptFaceContactRange {
+    pub span: usize,
+    pub face: usize,
+    pub first_parameter_bounds: [Q; 2],
+    pub last_parameter_bounds: [Q; 2],
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolyhedralSweptFaceContactRanges {
+    /// Ordered by path span, then source face index.
+    pub contacts: Vec<PolyhedralSweptFaceContactRange>,
+    pub exact_work: u64,
+}
+
+/// Enclose the first and last contact parameters of each retained face on
+/// each span. A face can have disjoint contacts, for instance across a hole;
+/// the two enclosures describe the extremes of that contact set.
+pub fn bounded_polyhedral_swept_face_contact_ranges(
+    solid: &QualifiedClosedSolid,
+    centers_mm: &[[Q; 3]],
+    radius_mm: &Q,
+    max_parameter_width: f64,
+    max_exact_work: u64,
+) -> Result<PolyhedralSweptFaceContactRanges> {
+    let radius_squared = squared_radius(radius_mm)?;
+    let width = super::super::enclosure_width(max_parameter_width)?;
+    if centers_mm.len() < 2 {
+        return Err(Error::new(
+            "BREP_INVALID_INPUT",
+            "Sweep path requires at least two centers",
+        ));
+    }
+    let mut remaining = max_exact_work;
+    let faces = prepare_faces(solid, &mut remaining)?;
+    for center in centers_mm {
+        spend(&mut remaining, 1)?;
+        validate_point(center)?;
+    }
+
+    let mut contacts = Vec::new();
+    for (span, pair) in centers_mm.windows(2).enumerate() {
+        let (start, end) = (&pair[0], &pair[1]);
+        for (face, boundary) in &faces {
+            let single = std::iter::once((face, boundary));
+            let sweep = swept_segment(single.clone(), start, end, &radius_squared, &mut remaining)?;
+            if sweep.clearance == Ordering::Greater {
+                continue;
+            }
+            let mut bounds = |a: &[Q; 3], b: &[Q; 3]| -> Result<[Q; 2]> {
+                if swept_segment(single.clone(), a, a, &radius_squared, &mut remaining)?.clearance
+                    != Ordering::Greater
+                {
+                    return Ok([Q::zero(), Q::zero()]);
+                }
+                first_parameter_from_clear_start(
+                    single.clone(),
+                    a,
+                    b,
+                    &radius_squared,
+                    &width,
+                    &mut remaining,
+                )
+            };
+            let first_parameter_bounds = bounds(start, end)?;
+            let [reverse_lo, reverse_hi] = bounds(end, start)?;
+            let last_parameter_bounds = [Q::one() - reverse_hi, Q::one() - reverse_lo];
+            contacts.push(PolyhedralSweptFaceContactRange {
+                span,
+                face: *face,
+                first_parameter_bounds,
+                last_parameter_bounds,
+            });
+        }
+    }
+    Ok(PolyhedralSweptFaceContactRanges {
+        contacts,
+        exact_work: max_exact_work - remaining,
+    })
+}
+
+fn first_parameter_from_clear_start<'a>(
+    faces: impl IntoIterator<Item = (&'a usize, &'a FaceBoundary)> + Clone,
+    start: &[Q; 3],
+    end: &[Q; 3],
+    radius_squared: &Q,
+    width: &Q,
+    remaining: &mut u64,
+) -> Result<[Q; 2]> {
+    let direction = delta(end, start);
+    let (mut lo, mut hi) = (Q::zero(), Q::one());
+    let two = Q::from_integer(2.into());
+    while &hi - &lo > *width {
+        spend(remaining, 16)?;
+        let mid = (&lo + &hi) / &two;
+        let center = at(start, &direction, &mid);
+        let prefix = swept_segment(faces.clone(), start, &center, radius_squared, remaining)?;
+        if prefix.clearance == Ordering::Greater {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    Ok([lo, hi])
 }
